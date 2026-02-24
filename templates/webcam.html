@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Live Webcam - MocapNET{% endblock %}
+
+{% block content %}
+<h1>Live Webcam Capture</h1>
+
+<div class="webcam-layout">
+    <div class="webcam-feed">
+        <video id="webcamVideo" autoplay playsinline></video>
+        <canvas id="webcamCanvas" style="display:none;"></canvas>
+    </div>
+
+    <div class="webcam-controls">
+        <button id="startBtn" class="btn btn-primary" onclick="startWebcam()">
+            <i class="fas fa-camera"></i> Start Webcam
+        </button>
+        <button id="recordBtn" class="btn btn-secondary" onclick="toggleRecording()" disabled>
+            <i class="fas fa-circle" style="color:red"></i> Record
+        </button>
+        <button id="stopBtn" class="btn btn-danger" onclick="stopWebcam()" disabled>
+            <i class="fas fa-stop"></i> Stop
+        </button>
+
+        <div class="record-info" id="recordInfo" style="display:none;">
+            <p>Recording: <span id="frameCount">0</span> frames</p>
+        </div>
+    </div>
+</div>
+
+<div class="info-box">
+    <h3>How it works</h3>
+    <p>The webcam captures video frames which are sent to the server via WebSocket.
+    MediaPipe processes each frame to extract 2D joint positions, then MocapNET
+    converts them to 3D motion capture data in BVH format.</p>
+    <p><strong>Note:</strong> This feature requires a working MocapNET2CSV build and MediaPipe installation.</p>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let mediaStream = null;
+let recording = false;
+let mediaRecorder = null;
+let chunks = [];
+
+async function startWebcam() {
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: 'user' }
+        });
+        document.getElementById('webcamVideo').srcObject = mediaStream;
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('recordBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = false;
+    } catch (err) {
+        alert('Could not access webcam: ' + err.message);
+    }
+}
+
+function toggleRecording() {
+    if (!recording) {
+        chunks = [];
+        mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'video/webm' });
+        mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+        mediaRecorder.onstop = uploadRecording;
+        mediaRecorder.start();
+        recording = true;
+        document.getElementById('recordBtn').innerHTML = '<i class="fas fa-stop" style="color:red"></i> Stop Recording';
+        document.getElementById('recordInfo').style.display = 'block';
+    } else {
+        mediaRecorder.stop();
+        recording = false;
+        document.getElementById('recordBtn').innerHTML = '<i class="fas fa-circle" style="color:red"></i> Record';
+        document.getElementById('recordInfo').style.display = 'none';
+    }
+}
+
+function stopWebcam() {
+    if (recording) toggleRecording();
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+    }
+    document.getElementById('webcamVideo').srcObject = null;
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('recordBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = true;
+}
+
+function uploadRecording() {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    const formData = new FormData();
+    formData.append('video', blob, 'webcam_recording.webm');
+    formData.append('fps', '30');
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+    fetch('/process/', {
+        method: 'POST',
+        body: formData,
+    }).then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        }
+    }).catch(err => alert('Upload failed: ' + err.message));
+}
+</script>
+{% endblock %}

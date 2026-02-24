@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Upload Video - MocapNET{% endblock %}
+
+{% block content %}
+<h1>Video &rarr; BVH</h1>
+
+<div class="upload-area" id="dropZone">
+    <form method="post" enctype="multipart/form-data" id="uploadForm">
+        {% csrf_token %}
+
+        <div class="drop-zone" id="dropTarget">
+            <i class="fas fa-cloud-upload-alt fa-3x"></i>
+            <p>Drag & drop video here or click to browse</p>
+            <input type="file" name="video" id="videoInput" accept="video/*" required>
+        </div>
+
+        <div class="form-group">
+            <label for="pipeline">2D Detection Pipeline:</label>
+            <div class="pipeline-options">
+                <label class="pipeline-option">
+                    <input type="radio" name="pipeline" value="mediapipe" checked>
+                    <span class="pipeline-label">MediaPipe</span>
+                    <span class="pipeline-desc">CPU - schnell, kein GPU n&ouml;tig</span>
+                </label>
+                <label class="pipeline-option {% if not status.openpose_exe or not status.openpose_models %}disabled{% endif %}">
+                    <input type="radio" name="pipeline" value="openpose"
+                        {% if not status.openpose_exe or not status.openpose_models %}disabled{% endif %}>
+                    <span class="pipeline-label">OpenPose</span>
+                    <span class="pipeline-desc">
+                        {% if status.openpose_exe and status.openpose_models %}
+                            CUDA GPU - genauer, langsamer
+                        {% else %}
+                            nicht verf&uuml;gbar
+                        {% endif %}
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="fps">FPS:</label>
+            <input type="number" name="fps" id="fps" value="30" min="1" max="120" step="0.1">
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-play"></i> Upload & Process
+        </button>
+    </form>
+</div>
+
+<div class="info-box">
+    <h3>Supported Formats</h3>
+    <p>MP4, WebM, AVI, MOV - any format supported by OpenCV</p>
+    <h3>Pipelines</h3>
+    <p><strong>MediaPipe</strong> (CPU): Fast, no GPU required. Uses MediaPipe Holistic for 2D detection.</p>
+    <p><strong>OpenPose</strong> (CUDA GPU): More accurate body pose detection. Requires NVIDIA GPU.</p>
+    <h3>Processing Steps</h3>
+    <ol>
+        <li>Video &rarr; 2D joint detection (MediaPipe or OpenPose)</li>
+        <li>2D Joints CSV &rarr; MocapNET Neural Network</li>
+        <li>MocapNET &rarr; BVH file (CMU Skeleton, 164 joints)</li>
+    </ol>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const dropTarget = document.getElementById('dropTarget');
+const videoInput = document.getElementById('videoInput');
+
+dropTarget.addEventListener('click', () => videoInput.click());
+
+dropTarget.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropTarget.classList.add('drag-over');
+});
+
+dropTarget.addEventListener('dragleave', () => {
+    dropTarget.classList.remove('drag-over');
+});
+
+dropTarget.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropTarget.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) {
+        videoInput.files = e.dataTransfer.files;
+        dropTarget.querySelector('p').textContent = e.dataTransfer.files[0].name;
+    }
+});
+
+videoInput.addEventListener('change', () => {
+    if (videoInput.files.length) {
+        dropTarget.querySelector('p').textContent = videoInput.files[0].name;
+    }
+});
+</script>
+{% endblock %}

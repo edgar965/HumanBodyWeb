@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}BVH Library - MocapNET{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<h1>BVH Library</h1>
+
+<div class="toolbar">
+    <a href="{% url 'scan_bvh' %}" class="btn btn-secondary">
+        <i class="fas fa-sync"></i> Scan for new files
+    </a>
+    <a href="{% url 'upload' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Create from Video
+    </a>
+</div>
+
+{% if files %}
+<div class="bvh-grid">
+    {% for file in files %}
+    <div class="bvh-card" data-path="{{ file.path }}">
+        <div class="bvh-preview" id="preview-{{ file.pk }}"></div>
+        <div class="bvh-info">
+            <h3>{{ file.name }}</h3>
+            <span class="badge badge-{{ file.source }}">{{ file.source }}</span>
+            <p class="bvh-path" title="{{ file.path }}">{{ file.path|truncatechars:50 }}</p>
+        </div>
+        <div class="bvh-actions">
+            <a href="{% url 'open_in_blender' file.pk %}" class="btn btn-sm btn-primary" title="Open in Blender">
+                <i class="fas fa-cube"></i> Blender
+            </a>
+            <a href="{% url 'delete_bvh' file.pk %}" class="btn btn-sm btn-danger"
+               onclick="return confirm('Remove from library?')" title="Remove">
+                <i class="fas fa-trash"></i>
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <i class="fas fa-folder-open fa-3x"></i>
+    <p>No BVH files yet. <a href="{% url 'upload' %}">Upload a video</a> or <a href="{% url 'scan_bvh' %}">scan directories</a>.</p>
+</div>
+{% endif %}
+{% endblock %}

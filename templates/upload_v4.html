@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Process v4 - MocapNET{% endblock %}
+
+{% block content %}
+<h1>Process v4 <small style="color:#888;">(Full Body + Face + Hands)</small></h1>
+
+<div class="upload-area" id="dropZone">
+    <form method="post" enctype="multipart/form-data" id="uploadForm">
+        {% csrf_token %}
+
+        <div class="drop-zone" id="dropTarget">
+            <i class="fas fa-cloud-upload-alt fa-3x"></i>
+            <p>Drag & drop video here or click to browse</p>
+            <input type="file" name="video" id="videoInput" accept="video/*" required>
+        </div>
+
+        <div class="form-group">
+            <label>Body Parts:</label>
+            <div class="pipeline-options" style="flex-wrap:wrap;">
+                <label class="pipeline-option" style="flex:0 0 auto;">
+                    <input type="checkbox" name="parts" value="body" checked>
+                    <span class="pipeline-label">Body</span>
+                </label>
+                <label class="pipeline-option" style="flex:0 0 auto;">
+                    <input type="checkbox" name="parts" value="hands" checked>
+                    <span class="pipeline-label">Hands</span>
+                </label>
+                <label class="pipeline-option" style="flex:0 0 auto;">
+                    <input type="checkbox" name="parts" value="face" checked>
+                    <span class="pipeline-label">Face</span>
+                </label>
+                <label class="pipeline-option" style="flex:0 0 auto;">
+                    <input type="checkbox" name="parts" value="mouth" checked>
+                    <span class="pipeline-label">Mouth</span>
+                </label>
+                <label class="pipeline-option" style="flex:0 0 auto;">
+                    <input type="checkbox" name="parts" value="eyes" checked>
+                    <span class="pipeline-label">Eyes</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="fps">FPS:</label>
+            <input type="number" name="fps" id="fps" value="30" min="1" max="120" step="0.1">
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-play"></i> Upload & Process
+        </button>
+    </form>
+</div>
+
+<div class="info-box">
+    <h3>MocapNET v4</h3>
+    <p>Full-body motion capture with <strong>165 bones</strong> including fingers, face, mouth, and eyes.</p>
+    <p>Uses integrated MediaPipe detection &mdash; no separate pipeline selection needed.</p>
+    <h3>Processing Steps</h3>
+    <ol>
+        <li>Video &rarr; MediaPipe 2D detection (integrated)</li>
+        <li>2D Joints &rarr; MocapNET v4 Neural Networks (ONNX)</li>
+        <li>MocapNET v4 &rarr; BVH file (165 bones, full body)</li>
+    </ol>
+    <h3>Body Parts</h3>
+    <p>Uncheck parts you don't need to speed up processing. "Body" is always recommended.</p>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const dropTarget = document.getElementById('dropTarget');
+const videoInput = document.getElementById('videoInput');
+
+dropTarget.addEventListener('click', () => videoInput.click());
+
+dropTarget.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropTarget.classList.add('drag-over');
+});
+
+dropTarget.addEventListener('dragleave', () => {
+    dropTarget.classList.remove('drag-over');
+});
+
+dropTarget.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropTarget.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) {
+        videoInput.files = e.dataTransfer.files;
+        dropTarget.querySelector('p').textContent = e.dataTransfer.files[0].name;
+    }
+});
+
+videoInput.addEventListener('change', () => {
+    if (videoInput.files.length) {
+        dropTarget.querySelector('p').textContent = videoInput.files[0].name;
+    }
+});
+</script>
+{% endblock %}

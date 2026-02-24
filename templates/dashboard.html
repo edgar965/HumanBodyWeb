@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - MocapNET{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="status-grid">
+    <div class="status-card {% if status.mocapnet_exe %}ok{% else %}error{% endif %}">
+        <i class="fas fa-cog"></i>
+        <h3>MocapNET2CSV</h3>
+        <p>{% if status.mocapnet_exe %}Ready{% else %}Not found{% endif %}</p>
+    </div>
+
+    <div class="status-card {% if status.mediapipe %}ok{% else %}error{% endif %}">
+        <i class="fas fa-eye"></i>
+        <h3>MediaPipe</h3>
+        <p>{% if status.mediapipe %}v{{ status.mediapipe_version }}{% else %}Not installed{% endif %}</p>
+    </div>
+
+    <div class="status-card {% if status.opencv %}ok{% else %}error{% endif %}">
+        <i class="fas fa-image"></i>
+        <h3>OpenCV</h3>
+        <p>{% if status.opencv %}v{{ status.opencv_version }}{% else %}Not installed{% endif %}</p>
+    </div>
+
+    <div class="status-card {% if status.models %}ok{% else %}error{% endif %}">
+        <i class="fas fa-brain"></i>
+        <h3>NN Models</h3>
+        <p>{% if status.models %}Downloaded{% else %}Missing{% endif %}</p>
+    </div>
+
+    <div class="status-card {% if status.openpose_exe and status.openpose_models %}ok{% else %}warn{% endif %}">
+        <i class="fas fa-running"></i>
+        <h3>OpenPose</h3>
+        <p>{% if status.openpose_exe and status.openpose_models %}CUDA Ready{% elif status.openpose_exe %}Models missing{% else %}Not installed{% endif %}</p>
+    </div>
+</div>
+
+<div class="quick-actions">
+    <h2>Quick Actions</h2>
+    <a href="{% url 'upload' %}" class="btn btn-primary">
+        <i class="fas fa-upload"></i> Upload Video
+    </a>
+    <a href="{% url 'webcam' %}" class="btn btn-secondary">
+        <i class="fas fa-camera"></i> Live Webcam
+    </a>
+    <a href="{% url 'scan_bvh' %}" class="btn btn-secondary">
+        <i class="fas fa-search"></i> Scan for BVH Files
+    </a>
+</div>
+
+{% if recent_jobs %}
+<div class="recent-jobs">
+    <h2>Recent Jobs</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Pipeline</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in recent_jobs %}
+            <tr>
+                <td>{{ job.name }}</td>
+                <td>{{ job.get_pipeline_display }}</td>
+                <td><span class="badge badge-{{ job.status }}">{{ job.get_status_display }}</span></td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ job.progress }}%"></div>
+                    </div>
+                </td>
+                <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
+                <td>
+                    <a href="{% url 'job_status' job.id %}">Details</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

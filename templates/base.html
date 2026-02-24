@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MocapNET{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-walking"></i> MocapNET
+        </div>
+        <div class="sidebar-links">
+            <a href="{% url 'dashboard' %}" class="{% if request.path == '/' %}active{% endif %}">
+                <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
+            </a>
+            <div class="sidebar-group {% if 'humanbody' in request.path %}open{% endif %}">
+                <a href="#" class="sidebar-group-toggle">
+                    <i class="fas fa-user"></i> <span>HumanBody</span>
+                    <i class="fas fa-chevron-down sidebar-chevron"></i>
+                </a>
+                <div class="sidebar-sub">
+                    <a href="{% url 'humanbody_config' %}" class="{% if request.path == '/humanbody/config/' %}active{% endif %}">
+                        <i class="fas fa-sliders-h"></i> <span>Konfiguration</span>
+                    </a>
+                    <a href="{% url 'humanbody_scene' %}" class="{% if request.path == '/humanbody/scene/' %}active{% endif %}">
+                        <i class="fas fa-lightbulb"></i> <span>Szene</span>
+                    </a>
+                    <a href="{% url 'humanbody_animations' %}" class="{% if request.path == '/humanbody/animations/' %}active{% endif %}">
+                        <i class="fas fa-running"></i> <span>Animationen</span>
+                    </a>
+                    <a href="{% url 'humanbody_test' %}" class="{% if request.path == '/humanbody/test/' %}active{% endif %}">
+                        <i class="fas fa-vial"></i> <span>Test</span>
+                    </a>
+                </div>
+            </div>
+            <div class="sidebar-group {% if 'process' in request.path %}open{% endif %}">
+                <a href="#" class="sidebar-group-toggle">
+                    <i class="fas fa-video"></i> <span>Process Videos</span>
+                    <i class="fas fa-chevron-down sidebar-chevron"></i>
+                </a>
+                <div class="sidebar-sub">
+                    <a href="{% url 'upload' %}" class="{% if request.path == '/process/' %}active{% endif %}">
+                        <i class="fas fa-upload"></i> <span>Process v2.1</span>
+                    </a>
+                    <a href="{% url 'upload_v4' %}" class="{% if request.path == '/process/v4/' %}active{% endif %}">
+                        <i class="fas fa-hand-sparkles"></i> <span>Process v4</span>
+                    </a>
+                    <a href="{% url 'processed' %}" class="{% if 'process/list' in request.path %}active{% endif %}">
+                        <i class="fas fa-list"></i> <span>Processed</span>
+                    </a>
+                </div>
+            </div>
+            <a href="{% url 'library' %}" class="{% if 'library' in request.path %}active{% endif %}">
+                <i class="fas fa-folder-open"></i> <span>BVH Library</span>
+            </a>
+            <a href="{% url 'webcam' %}" class="{% if 'webcam' in request.path %}active{% endif %}">
+                <i class="fas fa-camera"></i> <span>Webcam</span>
+            </a>
+            <a href="{% url 'settings' %}" class="{% if 'settings' in request.path %}active{% endif %}">
+                <i class="fas fa-cog"></i> <span>Settings</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+    document.querySelectorAll('.sidebar-group-toggle').forEach(function(toggle) {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggle.closest('.sidebar-group').classList.toggle('open');
+        });
+    });
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

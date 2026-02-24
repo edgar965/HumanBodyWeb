@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Settings - MocapNET{% endblock %}
+
+{% block content %}
+<h1>Settings</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="settings-card">
+        <h2><i class="fas fa-sliders-h"></i> Processing</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Progress Update Interval</strong>
+                <small>Update the progress bar every N frames during MediaPipe/OpenPose processing. Lower values give more frequent updates but slightly reduce performance.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="progress_update_interval"
+                       value="{{ settings.progress_update_interval }}"
+                       min="1" max="10000" step="1">
+            </div>
+        </div>
+
+        <div class="settings-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Save
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}

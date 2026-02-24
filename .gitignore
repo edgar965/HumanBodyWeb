@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Django
+db.sqlite3
+*.log
+media/uploads/
+media/output/
+
+# Node
+node_modules/
+
+# IDE
+.vs/
+.vscode/
+*.swp
+
+# Test artifacts
+test_*.png
+test_*.js
+
+# Misc
+nul
+~$*
+~WRL*
+.DS_Store
+Thumbs.db

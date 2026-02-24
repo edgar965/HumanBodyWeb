@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ job.name }} - MocapNET{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<h1>{{ job.name }}</h1>
+
+<div class="job-detail">
+    <div class="job-info">
+        <p><strong>Status:</strong> <span class="badge badge-{{ job.status }}" id="jobBadge">{{ job.get_status_display }}</span>
+        <span id="jobPhase" style="margin-left: 0.5rem; color: var(--text-muted);"></span></p>
+        <p><strong>Pipeline:</strong> {{ job.get_pipeline_display }}</p>
+        <p><strong>FPS:</strong> {{ job.fps }}</p>
+        <p><strong>Created:</strong> {{ job.created_at|date:"d.m.Y H:i:s" }}</p>
+
+        <div class="progress-bar large">
+            <div class="progress-fill" id="progressFill" style="width: {{ job.progress }}%">
+                <span id="progressText">{{ job.progress }}%</span>
+            </div>
+        </div>
+        <p id="progressDetail" style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.3rem;">{{ job.progress_detail }}</p>
+
+        {% if job.status == 'pending' %}
+        <form method="post" action="{% url 'start_processing' job.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-play"></i> Start Processing
+            </button>
+        </form>
+        {% elif job.status != 'complete' and job.status != 'failed' %}
+        <form method="post" action="{% url 'stop_processing' job.id %}" id="stopForm">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Stop processing?')">
+                <i class="fas fa-stop"></i> Stop
+            </button>
+        </form>
+        {% endif %}
+
+        {% if job.error_message %}
+        <div class="alert alert-error">
+            <strong>Error:</strong> {{ job.error_summary }}
+            {% if job.error_traceback %}
+            <details style="margin-top: 0.5rem;">
+                <summary style="cursor: pointer; color: var(--text-muted); font-size: 0.85rem;">Show full traceback</summary>
+                <pre style="margin-top: 0.5rem; padding: 0.75rem; background: rgba(0,0,0,0.3); border-radius: 6px; overflow-x: auto; font-size: 0.8rem; line-height: 1.4; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;">{{ job.error_traceback }}</pre>
+            </details>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if job.bvh_file %}
+        <div class="actions">
+            <a href="{% url 'job_result' job.id %}" class="btn btn-primary">
+                <i class="fas fa-eye"></i> View Result
+            </a>
+            <a href="{% url 'serve_bvh' job.id %}" class="btn btn-secondary" download>
+                <i class="fas fa-download"></i> Download BVH
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if job.bvh_file %}
+    <div class="viewer-container">
+        <h3>BVH Preview</h3>
+        <div id="bvhViewer" style="width:100%; height:400px; background:#1a1a2e;"></div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if job.status != 'complete' and job.status != 'failed' %}
+<script>
+// Poll for status updates
+const jobId = '{{ job.id }}';
+function pollStatus() {
+    fetch(`/api/job/${jobId}/status/`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('progressFill').style.width = data.progress + '%';
+            document.getElementById('progressText').textContent = data.progress + '%';
+            document.getElementById('progressDetail').textContent = data.progress_detail || '';
+            var labels = {
+                'pending': 'Pending',
+                'openpose': 'OpenPose',
+                'openpose_csv': 'CSV Convert',
+                'mediapipe': 'MediaPipe',
+                'mocapnet': 'MocapNET',
+                'v4_processing': 'MocapNET v4',
+                'complete': 'Complete',
+                'failed': 'Failed'
+            };
+            var phases = {
+                'openpose': '2D Pose Detection (GPU)',
+                'openpose_csv': 'Converting to CSV',
+                'mediapipe': '2D Pose Detection (CPU)',
+                'mocapnet': '3D Pose Estimation',
+                'v4_processing': 'MocapNET v4 (2D + 3D + IK)',
+            };
+            document.getElementById('jobBadge').textContent = labels[data.status] || data.status;
+            document.getElementById('jobBadge').className = 'badge badge-' + data.status;
+            document.getElementById('jobPhase').textContent = phases[data.status] || '';
+
+            if (data.status === 'complete' || data.status === 'failed') {
+                location.reload();
+            } else {
+                setTimeout(pollStatus, 2000);
+            }
+        })
+        .catch(() => setTimeout(pollStatus, 5000));
+}
+setTimeout(pollStatus, 2000);
+</script>
+{% endif %}
+
+{% if job.bvh_file %}
+<script src="{% static 'js/bvh_viewer.js' %}"></script>
+<script>
+    initBVHViewer('bvhViewer', '{{ job.bvh_file }}');
+</script>
+{% endif %}
+{% endblock %}

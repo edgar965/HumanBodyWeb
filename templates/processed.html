@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Processed Videos - MocapNET{% endblock %}
+
+{% block content %}
+<h1>Processed Videos</h1>
+
+{% if jobs %}
+<table class="processed-table">
+    <thead>
+        <tr>
+            <th>Thumb</th>
+            <th>BVH Name</th>
+            <th>Pipeline</th>
+            <th>Datum</th>
+            <th>Video</th>
+            <th>Video + Rig</th>
+            <th>Speichern BVH</th>
+            <th>Speichern Video: Nur Rig</th>
+            <th>Speichern Video mit Rig</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for job in jobs %}
+        <tr>
+            <td><img class="thumb" src="{% url 'video_thumbnail' job.id %}" alt="thumb"></td>
+            <td>{{ job.bvh_basename }}</td>
+            <td><span class="badge badge-{{ job.pipeline }}">{{ job.get_pipeline_display }}</span></td>
+            <td>{{ job.updated_at|date:"d.m.Y H:i" }}</td>
+            <td>
+                <button class="btn btn-sm btn-secondary btn-video"
+                        onclick="showVideo('{{ job.video_file.url }}', '{{ job.name }}')">
+                    <i class="fas fa-play"></i> Video
+                </button>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-primary" href="{% url 'job_result' job.id %}">
+                    <i class="fas fa-play-circle"></i> Video + Rig
+                </a>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-secondary" href="{% url 'serve_bvh' job.id %}" download title="Download BVH">
+                    <i class="fas fa-download"></i> BVH
+                </a>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-secondary" href="{% url 'save_rig_video' job.id %}" download title="Download Rig-only Video">
+                    <i class="fas fa-download"></i> Nur Rig
+                </a>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-secondary" href="{% url 'save_overlay_video' job.id %}" download title="Download Video mit Rig">
+                    <i class="fas fa-download"></i> Video+Rig
+                </a>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-danger" href="{% url 'delete_job' job.id %}"
+                   onclick="return confirm('Delete {{ job.name }}?')" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div id="videoPreview" class="video-preview-panel">
+    <div class="preview-header">
+        <h3 id="previewTitle"></h3>
+        <button class="btn btn-sm btn-secondary" onclick="closePreview()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <video id="previewVideo" controls></video>
+</div>
+
+{% else %}
+<div class="empty-state">
+    <i class="fas fa-film fa-3x"></i>
+    <p>No completed jobs yet.</p>
+    <p><a href="{% url 'upload' %}">Upload a video</a> to get started.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function showVideo(videoUrl, name) {
+    var panel = document.getElementById('videoPreview');
+    var video = document.getElementById('previewVideo');
+    var title = document.getElementById('previewTitle');
+    video.src = videoUrl;
+    title.textContent = name;
+    panel.classList.add('visible');
+    video.play();
+}
+function closePreview() {
+    var panel = document.getElementById('videoPreview');
+    var video = document.getElementById('previewVideo');
+    video.pause();
+    video.src = '';
+    panel.classList.remove('visible');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}HumanBody Konfiguration — MocapNET{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Override main-content for full-bleed viewer */
+    .main-content {
+        padding: 0 !important;
+        max-width: none !important;
+        width: calc(100vw - var(--sidebar-width));
+    }
+    .viewer-container {
+        display: flex;
+        width: 100%;
+        height: 100vh;
+        gap: 0;
+        position: relative;
+    }
+    .canvas-wrap {
+        flex: 1;
+        min-width: 0;
+        position: relative;
+    }
+    #viewer-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #111;
+        cursor: grab;
+    }
+    #viewer-canvas:active { cursor: grabbing; }
+    .viewer-buttons {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 10;
+        display: flex;
+        gap: 6px;
+    }
+    .viewer-btn {
+        padding: 8px 14px;
+        background: rgba(26, 26, 46, 0.85);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.82rem;
+        backdrop-filter: blur(4px);
+        transition: all 0.2s;
+    }
+    .viewer-btn:hover { border-color: var(--accent); color: var(--text); }
+    .viewer-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .viewer-panel {
+        width: 320px;
+        background: var(--bg-secondary);
+        border-left: 1px solid var(--border);
+        overflow-y: auto;
+        padding: 0;
+        flex-shrink: 0;
+    }
+    .panel-section {
+        border-bottom: 1px solid var(--border);
+        padding: 12px 16px;
+    }
+    .panel-section h3 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--accent);
+        margin-bottom: 10px;
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .panel-section h3 .chevron {
+        transition: transform 0.2s;
+        font-size: 0.7rem;
+    }
+    .panel-section.collapsed .panel-body { display: none; }
+    .panel-section.collapsed h3 .chevron { transform: rotate(-90deg); }
+
+    .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+    .slider-row label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        min-width: 100px;
+        flex-shrink: 0;
+    }
+    .slider-row input[type="range"] {
+        flex: 1;
+        accent-color: var(--accent);
+        height: 4px;
+    }
+    .slider-row .slider-val {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        min-width: 35px;
+        text-align: right;
+    }
+
+    select.viewer-select {
+        width: 100%;
+        padding: 6px 8px;
+        background: var(--bg-card);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+    }
+
+    .asset-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    .asset-btn {
+        padding: 6px 8px;
+        font-size: 0.78rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+    }
+    .asset-btn:hover { border-color: var(--accent); color: var(--text); }
+    .asset-btn.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+    .asset-btn.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .anim-controls {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-top: 8px;
+    }
+    .anim-controls button {
+        padding: 4px 10px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+    .anim-controls button:hover { border-color: var(--accent); }
+    .anim-controls input[type="range"] { flex: 1; accent-color: var(--accent); }
+
+    .status-bar {
+        padding: 8px 16px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        border-top: 1px solid var(--border);
+        background: var(--bg-primary);
+    }
+    .status-bar .connected { color: var(--success); }
+    .status-bar .disconnected { color: var(--danger); }
+
+    .morph-category {
+        margin-bottom: 4px;
+    }
+    .morph-category-header {
+        font-size: 0.78rem;
+        color: var(--text);
+        cursor: pointer;
+        padding: 4px 0;
+        user-select: none;
+    }
+    .morph-category-header:hover { color: var(--accent); }
+    .morph-category-body { display: none; }
+    .morph-category.open .morph-category-body { display: block; }
+
+    .btn-reset {
+        padding: 4px 12px;
+        font-size: 0.78rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        float: right;
+    }
+    .btn-reset:hover { border-color: var(--accent); color: var(--text); }
+
+    .btn-toggle {
+        padding: 6px 14px;
+        font-size: 0.82rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.2s;
+    }
+    .btn-toggle:hover { border-color: var(--accent); color: var(--text); }
+    .btn-toggle.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="viewer-container">
+    <div class="canvas-wrap">
+        <canvas id="viewer-canvas"></canvas>
+        <div class="viewer-buttons">
+            <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i> Model</button>
+            <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i> Rig</button>
+        </div>
+    </div>
+
+    <div class="viewer-panel">
+        <!-- Body Type -->
+        <div class="panel-section">
+            <h3>Body Type <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body">
+                <select id="body-type-select" class="viewer-select"></select>
+                <div class="slider-row">
+                    <label>Gender</label>
+                    <input type="range" id="gender-slider" min="0" max="100" value="0" step="1">
+                    <span class="slider-val" id="gender-val">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Morphs -->
+        <div class="panel-section">
+            <h3>Morphs <button class="btn-reset" id="reset-morphs">Reset</button> <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body" id="morphs-panel"></div>
+        </div>
+
+        <!-- Wardrobe -->
+        <div class="panel-section collapsed">
+            <h3>Wardrobe <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body" id="wardrobe-panel"></div>
+        </div>
+
+        <!-- Animations -->
+        <div class="panel-section collapsed">
+            <h3>Animations <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body" id="animation-panel"></div>
+        </div>
+
+        <!-- Status -->
+        <div class="status-bar">
+            WebSocket: <span id="ws-status" class="disconnected">Disconnected</span>
+            &nbsp;|&nbsp; <span id="vertex-count">—</span> vertices
+            &nbsp;|&nbsp; <span id="fps-display">—</span> fps
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+        "three-subdivide": "https://cdn.jsdelivr.net/npm/three-subdivide@1.1.5/build/index.module.js"
+    }
+}
+</script>
+<script type="module" src="{% static 'viewer/viewer.js' %}"></script>
+{% endblock %}

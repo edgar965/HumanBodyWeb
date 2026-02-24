@@ -1,0 +1,767 @@
+/**
+ * HumanBody Scene Configuration — Three.js renderer with live UI controls
+ * for lighting, renderer, camera, and material settings.
+ * Auto-saves to localStorage; all other pages read these settings.
+ */
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// =========================================================================
+// Light Presets
+// =========================================================================
+const LIGHT_PRESETS = {
+    studio: {
+        key:     { intensity: 3.0, color: 0xffffff, pos: [2, 4, -5] },
+        fill:    { intensity: 2.0, color: 0xeeeeff, pos: [-3, 3, -4] },
+        back:    { intensity: 2.5, color: 0xffeedd, pos: [0, 4, 5] },
+        ambient: { intensity: 0.8, color: 0xffffff },
+        exposure: 1.6
+    },
+    outdoor: {
+        key:     { intensity: 4.0, color: 0xfff5e0, pos: [5, 8, -2] },
+        fill:    { intensity: 1.5, color: 0x8899cc, pos: [-4, 2, -3] },
+        back:    { intensity: 1.0, color: 0xffeedd, pos: [-2, 3, 4] },
+        ambient: { intensity: 1.2, color: 0xddeeff },
+        exposure: 1.8
+    },
+    dramatic: {
+        key:     { intensity: 4.5, color: 0xffddaa, pos: [4, 3, -3] },
+        fill:    { intensity: 0.5, color: 0x4444aa, pos: [-3, 1, -2] },
+        back:    { intensity: 3.0, color: 0xff8844, pos: [0, 3, 5] },
+        ambient: { intensity: 0.3, color: 0x222244 },
+        exposure: 1.4
+    },
+    neutral: {
+        key:     { intensity: 2.5, color: 0xffffff, pos: [3, 5, -4] },
+        fill:    { intensity: 2.5, color: 0xffffff, pos: [-3, 5, -4] },
+        back:    { intensity: 2.0, color: 0xffffff, pos: [0, 4, 5] },
+        ambient: { intensity: 1.0, color: 0xffffff },
+        exposure: 1.6
+    }
+};
+
+const TONE_MAPPINGS = {
+    ACESFilmic: THREE.ACESFilmicToneMapping,
+    Linear:     THREE.LinearToneMapping,
+    Reinhard:   THREE.ReinhardToneMapping,
+    Cineon:     THREE.CineonToneMapping,
+    None:       THREE.NoToneMapping
+};
+
+// =========================================================================
+// Global state
+// =========================================================================
+let scene, camera, renderer, controls;
+let bodyMesh = null;
+let bodyGeometry = null;
+let clock = new THREE.Clock();
+let frameCount = 0;
+let fpsAccum = 0;
+
+// Lights — global so UI can modify them
+let keyLight, fillLight, backLight, ambientLight;
+
+// Rig
+let rigGroup = null;
+let rigVisible = false;
+let rigData = null;
+
+// Auto-save debounce
+let saveTimer = null;
+
+// =========================================================================
+// Initialization
+// =========================================================================
+function init() {
+    const canvas = document.getElementById('viewer-canvas');
+    const container = canvas.parentElement;
+    const w = container.clientWidth;
+    const h = container.clientHeight || window.innerHeight;
+
+    // Renderer
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(w, h);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.6;
+
+    // Scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+
+    // Camera
+    camera = new THREE.PerspectiveCamera(35, w / h, 0.01, 100);
+    camera.position.set(0, 1.0, 3.5);
+
+    // Controls
+    controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 0.9, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 0.5;
+    controls.maxDistance = 15;
+    controls.update();
+
+    // Lighting
+    keyLight = new THREE.DirectionalLight(0xffffff, 3.0);
+    keyLight.position.set(2, 4, -5);
+    scene.add(keyLight);
+
+    fillLight = new THREE.DirectionalLight(0xeeeeff, 2.0);
+    fillLight.position.set(-3, 3, -4);
+    scene.add(fillLight);
+
+    backLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+    backLight.position.set(0, 4, 5);
+    scene.add(backLight);
+
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    scene.add(ambientLight);
+
+    // Ground grid
+    const grid = new THREE.GridHelper(4, 20, 0x333355, 0x222244);
+    scene.add(grid);
+
+    // Resize
+    window.addEventListener('resize', onResize);
+
+    // Panel toggle
+    document.querySelectorAll('.panel-section h3').forEach(h3 => {
+        h3.addEventListener('click', () => {
+            h3.closest('.panel-section').classList.toggle('collapsed');
+        });
+    });
+
+    // Bind all UI controls
+    bindLightingUI();
+    bindRendererUI();
+    bindCameraUI();
+    bindMaterialUI();
+    bindActions();
+
+    // Rig toggle
+    const rigToggle = document.getElementById('rig-toggle');
+    if (rigToggle) {
+        rigToggle.addEventListener('click', () => {
+            rigVisible = !rigVisible;
+            if (rigGroup) rigGroup.visible = rigVisible;
+            rigToggle.classList.toggle('active', rigVisible);
+        });
+    }
+
+    // Model toggle
+    const modelToggle = document.getElementById('model-toggle');
+    if (modelToggle) {
+        modelToggle.addEventListener('click', () => {
+            if (bodyMesh) bodyMesh.visible = !bodyMesh.visible;
+            modelToggle.classList.toggle('active', bodyMesh && bodyMesh.visible);
+        });
+    }
+
+    // Load saved settings from localStorage
+    loadSettings();
+
+    // Start render loop
+    animate();
+
+    // Load mesh + rig
+    loadMesh();
+    loadRig();
+}
+
+function onResize() {
+    const container = renderer.domElement.parentElement;
+    const w = Math.max(container.clientWidth, 100);
+    const h = container.clientHeight || window.innerHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+    controls.update();
+    renderer.render(scene, camera);
+
+    // Update camera info display
+    updateCameraInfo();
+
+    // FPS counter
+    frameCount++;
+    fpsAccum += dt;
+    if (fpsAccum >= 1.0) {
+        document.getElementById('fps-display').textContent = frameCount;
+        frameCount = 0;
+        fpsAccum = 0;
+    }
+}
+
+function updateCameraInfo() {
+    const p = camera.position;
+    const t = controls.target;
+    document.getElementById('cam-pos').textContent =
+        `${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}`;
+    document.getElementById('cam-target').textContent =
+        `${t.x.toFixed(2)}, ${t.y.toFixed(2)}, ${t.z.toFixed(2)}`;
+}
+
+// =========================================================================
+// Auto-save — debounced save to localStorage on every change
+// =========================================================================
+function autoSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+        const settings = gatherSettings();
+        localStorage.setItem('humanbody_scene_settings', JSON.stringify(settings));
+    }, 300);
+}
+
+// =========================================================================
+// Mesh loading — full-mesh subdivision preserving all material groups
+// =========================================================================
+const BODY_MATERIALS = [
+    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 0 Skin
+    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 1 Censor
+    { color: 0x111111, roughness: 0.8,  metalness: 0.0 },  // 2 Eyelash
+    { color: 0x0a0a0a, roughness: 0.1,  metalness: 0.0 },  // 3 Pupil
+    { color: 0xf4f0e8, roughness: 0.2,  metalness: 0.0 },  // 4 Sclera
+    { color: 0xf4f0e8, roughness: 0.05, metalness: 0.0, opacity: 0.3, transparent: true },  // 5 Cornea
+    { color: 0x4a7a9b, roughness: 0.15, metalness: 0.0 },  // 6 Iris
+    { color: 0xb55a6a, roughness: 0.7,  metalness: 0.0 },  // 7 Tongue
+    { color: 0xf0ece0, roughness: 0.3,  metalness: 0.0 },  // 8 Teeth
+    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 9 Nails Hand
+    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 10 Nails Feet
+];
+
+function getSkinMat() {
+    if (!bodyMesh || !bodyMesh.material) return null;
+    return Array.isArray(bodyMesh.material) ? bodyMesh.material[0] : bodyMesh.material;
+}
+
+async function loadMesh() {
+    try {
+        const resp = await fetch('/api/character/mesh/');
+        const data = await resp.json();
+        if (data.error) { console.error(data.error); return; }
+
+        document.getElementById('vertex-count').textContent =
+            data.vertex_count.toLocaleString();
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+        const positions = new THREE.BufferAttribute(vertBuf, 3);
+
+        let index = null;
+        if (data.faces) {
+            const faceBuf = base64ToUint32(data.faces);
+            index = new THREE.BufferAttribute(faceBuf, 1);
+        }
+
+        let uvAttr = null;
+        if (data.uvs) {
+            const uvBuf = base64ToFloat32(data.uvs);
+            uvAttr = new THREE.BufferAttribute(uvBuf, 2);
+        }
+
+        const materials = BODY_MATERIALS.map(d => new THREE.MeshStandardMaterial({
+            color: d.color, roughness: d.roughness, metalness: d.metalness,
+            side: THREE.DoubleSide,
+            transparent: d.transparent || false,
+            opacity: d.opacity !== undefined ? d.opacity : 1.0,
+        }));
+
+        let geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', positions);
+        if (index) geo.setIndex(index);
+        if (uvAttr) geo.setAttribute('uv', uvAttr);
+
+        const groups = data.groups || [];
+
+        // Use server-computed normals (quad-topology based, no triangulation artifacts)
+        if (data.normals) {
+            const normalBuf = base64ToFloat32(data.normals);
+            blenderToThreeCoords(normalBuf);
+            geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+        } else {
+            geo.computeVertexNormals();
+        }
+
+        if (index && groups.length > 0) {
+            for (const g of groups) {
+                geo.addGroup(g.start, g.count, g.materialIndex);
+            }
+            bodyMesh = new THREE.Mesh(geo, materials);
+        } else {
+            bodyMesh = new THREE.Mesh(geo, materials[0]);
+        }
+
+        bodyGeometry = geo;
+        scene.add(bodyMesh);
+
+        document.getElementById('vertex-count').textContent =
+            geo.attributes.position.count.toLocaleString();
+
+        applySavedMaterial();
+        onResize();
+    } catch (e) {
+        console.error('Failed to load mesh:', e);
+    }
+}
+
+// =========================================================================
+// Rig visualization
+// =========================================================================
+async function loadRig() {
+    try {
+        const resp = await fetch('/api/character/rig/');
+        rigData = await resp.json();
+        if (!rigData.bones || rigData.bones.length === 0) return;
+        buildRigVisualization();
+    } catch (e) {
+        console.error('Failed to load rig:', e);
+    }
+}
+
+function buildRigVisualization() {
+    if (rigGroup) { scene.remove(rigGroup); rigGroup = null; }
+    if (!rigData || !rigData.bones) return;
+
+    rigGroup = new THREE.Group();
+    rigGroup.visible = rigVisible;
+
+    const boneMat = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 2, depthTest: false });
+    const jointMat = new THREE.MeshBasicMaterial({ color: 0x00ffaa, depthTest: false });
+    const jointGeo = new THREE.SphereGeometry(0.006, 6, 4);
+
+    const deformBones = rigData.bones.filter(b => b.deform);
+    deformBones.forEach(bone => {
+        const h = bone.head, t = bone.tail;
+        const head = new THREE.Vector3(h[0], h[2], -h[1]);
+        const tail = new THREE.Vector3(t[0], t[2], -t[1]);
+
+        const lineGeo = new THREE.BufferGeometry().setFromPoints([head, tail]);
+        rigGroup.add(new THREE.Line(lineGeo, boneMat));
+
+        const joint = new THREE.Mesh(jointGeo, jointMat);
+        joint.position.copy(head);
+        rigGroup.add(joint);
+    });
+
+    scene.add(rigGroup);
+}
+
+// =========================================================================
+// UI Bindings: Lighting
+// =========================================================================
+function bindLightingUI() {
+    function bindSlider(id, displayId, toDisplay, onChange) {
+        const slider = document.getElementById(id);
+        const display = document.getElementById(displayId);
+        slider.addEventListener('input', () => {
+            const v = parseFloat(slider.value);
+            display.textContent = toDisplay(v);
+            onChange(v);
+            autoSave();
+        });
+    }
+
+    // Key Light
+    bindSlider('key-intensity', 'key-intensity-val', v => (v / 100).toFixed(1), v => {
+        keyLight.intensity = v / 100;
+    });
+    document.getElementById('key-color').addEventListener('input', e => {
+        keyLight.color.set(e.target.value); autoSave();
+    });
+    bindSlider('key-pos-x', 'key-pos-x-val', v => (v / 10).toFixed(1), v => {
+        keyLight.position.x = v / 10;
+    });
+    bindSlider('key-pos-y', 'key-pos-y-val', v => (v / 10).toFixed(1), v => {
+        keyLight.position.y = v / 10;
+    });
+    bindSlider('key-pos-z', 'key-pos-z-val', v => (v / 10).toFixed(1), v => {
+        keyLight.position.z = v / 10;
+    });
+
+    // Fill Light
+    bindSlider('fill-intensity', 'fill-intensity-val', v => (v / 100).toFixed(1), v => {
+        fillLight.intensity = v / 100;
+    });
+    document.getElementById('fill-color').addEventListener('input', e => {
+        fillLight.color.set(e.target.value); autoSave();
+    });
+    bindSlider('fill-pos-x', 'fill-pos-x-val', v => (v / 10).toFixed(1), v => {
+        fillLight.position.x = v / 10;
+    });
+    bindSlider('fill-pos-y', 'fill-pos-y-val', v => (v / 10).toFixed(1), v => {
+        fillLight.position.y = v / 10;
+    });
+    bindSlider('fill-pos-z', 'fill-pos-z-val', v => (v / 10).toFixed(1), v => {
+        fillLight.position.z = v / 10;
+    });
+
+    // Back Light
+    bindSlider('back-intensity', 'back-intensity-val', v => (v / 100).toFixed(1), v => {
+        backLight.intensity = v / 100;
+    });
+    document.getElementById('back-color').addEventListener('input', e => {
+        backLight.color.set(e.target.value); autoSave();
+    });
+    bindSlider('back-pos-x', 'back-pos-x-val', v => (v / 10).toFixed(1), v => {
+        backLight.position.x = v / 10;
+    });
+    bindSlider('back-pos-y', 'back-pos-y-val', v => (v / 10).toFixed(1), v => {
+        backLight.position.y = v / 10;
+    });
+    bindSlider('back-pos-z', 'back-pos-z-val', v => (v / 10).toFixed(1), v => {
+        backLight.position.z = v / 10;
+    });
+
+    // Ambient
+    bindSlider('ambient-intensity', 'ambient-intensity-val', v => (v / 100).toFixed(1), v => {
+        ambientLight.intensity = v / 100;
+    });
+    document.getElementById('ambient-color').addEventListener('input', e => {
+        ambientLight.color.set(e.target.value); autoSave();
+    });
+
+    // Preset dropdown
+    document.getElementById('light-preset').addEventListener('change', e => {
+        const preset = LIGHT_PRESETS[e.target.value];
+        if (!preset) return;
+        applyPreset(preset);
+        autoSave();
+    });
+}
+
+function applyPreset(preset) {
+    keyLight.intensity = preset.key.intensity;
+    keyLight.color.setHex(preset.key.color);
+    keyLight.position.set(...preset.key.pos);
+
+    fillLight.intensity = preset.fill.intensity;
+    fillLight.color.setHex(preset.fill.color);
+    fillLight.position.set(...preset.fill.pos);
+
+    backLight.intensity = preset.back.intensity;
+    backLight.color.setHex(preset.back.color);
+    backLight.position.set(...preset.back.pos);
+
+    ambientLight.intensity = preset.ambient.intensity;
+    ambientLight.color.setHex(preset.ambient.color);
+
+    renderer.toneMappingExposure = preset.exposure;
+
+    syncUIFromState();
+}
+
+function syncUIFromState() {
+    setSlider('key-intensity', keyLight.intensity * 100, 'key-intensity-val', v => (v / 100).toFixed(1));
+    setColor('key-color', keyLight.color);
+    setSlider('key-pos-x', keyLight.position.x * 10, 'key-pos-x-val', v => (v / 10).toFixed(1));
+    setSlider('key-pos-y', keyLight.position.y * 10, 'key-pos-y-val', v => (v / 10).toFixed(1));
+    setSlider('key-pos-z', keyLight.position.z * 10, 'key-pos-z-val', v => (v / 10).toFixed(1));
+
+    setSlider('fill-intensity', fillLight.intensity * 100, 'fill-intensity-val', v => (v / 100).toFixed(1));
+    setColor('fill-color', fillLight.color);
+    setSlider('fill-pos-x', fillLight.position.x * 10, 'fill-pos-x-val', v => (v / 10).toFixed(1));
+    setSlider('fill-pos-y', fillLight.position.y * 10, 'fill-pos-y-val', v => (v / 10).toFixed(1));
+    setSlider('fill-pos-z', fillLight.position.z * 10, 'fill-pos-z-val', v => (v / 10).toFixed(1));
+
+    setSlider('back-intensity', backLight.intensity * 100, 'back-intensity-val', v => (v / 100).toFixed(1));
+    setColor('back-color', backLight.color);
+    setSlider('back-pos-x', backLight.position.x * 10, 'back-pos-x-val', v => (v / 10).toFixed(1));
+    setSlider('back-pos-y', backLight.position.y * 10, 'back-pos-y-val', v => (v / 10).toFixed(1));
+    setSlider('back-pos-z', backLight.position.z * 10, 'back-pos-z-val', v => (v / 10).toFixed(1));
+
+    setSlider('ambient-intensity', ambientLight.intensity * 100, 'ambient-intensity-val', v => (v / 100).toFixed(1));
+    setColor('ambient-color', ambientLight.color);
+
+    setSlider('exposure', renderer.toneMappingExposure * 100, 'exposure-val', v => (v / 100).toFixed(1));
+
+    const tmSelect = document.getElementById('tone-mapping');
+    for (const [name, val] of Object.entries(TONE_MAPPINGS)) {
+        if (val === renderer.toneMapping) { tmSelect.value = name; break; }
+    }
+
+    setColor('bg-color', scene.background);
+    setSlider('camera-fov', camera.fov, 'camera-fov-val', v => Math.round(v).toString());
+
+    const skin = getSkinMat();
+    if (skin) {
+        setColor('skin-color', skin.color);
+        setSlider('skin-roughness', skin.roughness * 100, 'skin-roughness-val', v => (v / 100).toFixed(2));
+        setSlider('skin-metalness', skin.metalness * 100, 'skin-metalness-val', v => (v / 100).toFixed(2));
+    }
+}
+
+function setSlider(id, value, displayId, toDisplay) {
+    const slider = document.getElementById(id);
+    slider.value = Math.round(value);
+    document.getElementById(displayId).textContent = toDisplay(parseFloat(slider.value));
+}
+
+function setColor(id, threeColor) {
+    document.getElementById(id).value = '#' + threeColor.getHexString();
+}
+
+// =========================================================================
+// UI Bindings: Renderer
+// =========================================================================
+function bindRendererUI() {
+    document.getElementById('tone-mapping').addEventListener('change', e => {
+        renderer.toneMapping = TONE_MAPPINGS[e.target.value] || THREE.ACESFilmicToneMapping;
+        autoSave();
+    });
+
+    const expSlider = document.getElementById('exposure');
+    const expVal = document.getElementById('exposure-val');
+    expSlider.addEventListener('input', () => {
+        const v = parseFloat(expSlider.value) / 100;
+        expVal.textContent = v.toFixed(1);
+        renderer.toneMappingExposure = v;
+        autoSave();
+    });
+
+    document.getElementById('bg-color').addEventListener('input', e => {
+        scene.background.set(e.target.value);
+        autoSave();
+    });
+}
+
+// =========================================================================
+// UI Bindings: Camera
+// =========================================================================
+function bindCameraUI() {
+    const fovSlider = document.getElementById('camera-fov');
+    const fovVal = document.getElementById('camera-fov-val');
+    fovSlider.addEventListener('input', () => {
+        const v = parseInt(fovSlider.value);
+        fovVal.textContent = v;
+        camera.fov = v;
+        camera.updateProjectionMatrix();
+        autoSave();
+    });
+}
+
+// =========================================================================
+// UI Bindings: Material
+// =========================================================================
+function bindMaterialUI() {
+    document.getElementById('skin-color').addEventListener('input', e => {
+        const mat = getSkinMat();
+        if (mat) mat.color.set(e.target.value);
+        autoSave();
+    });
+
+    const roughSlider = document.getElementById('skin-roughness');
+    const roughVal = document.getElementById('skin-roughness-val');
+    roughSlider.addEventListener('input', () => {
+        const v = parseFloat(roughSlider.value) / 100;
+        roughVal.textContent = v.toFixed(2);
+        const mat = getSkinMat();
+        if (mat) mat.roughness = v;
+        autoSave();
+    });
+
+    const metalSlider = document.getElementById('skin-metalness');
+    const metalVal = document.getElementById('skin-metalness-val');
+    metalSlider.addEventListener('input', () => {
+        const v = parseFloat(metalSlider.value) / 100;
+        metalVal.textContent = v.toFixed(2);
+        const mat = getSkinMat();
+        if (mat) mat.metalness = v;
+        autoSave();
+    });
+}
+
+function applySavedMaterial() {
+    const saved = localStorage.getItem('humanbody_scene_settings');
+    const mat = getSkinMat();
+    if (!saved || !mat) return;
+    try {
+        const s = JSON.parse(saved);
+        if (s.skin) {
+            if (s.skin.color) mat.color.set(s.skin.color);
+            if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
+            if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
+            syncUIFromState();
+        }
+    } catch (e) { /* ignore */ }
+}
+
+// =========================================================================
+// Actions
+// =========================================================================
+function bindActions() {
+    // Manual save (redundant with auto-save but gives visual confirmation)
+    document.getElementById('btn-apply').addEventListener('click', () => {
+        const settings = gatherSettings();
+        localStorage.setItem('humanbody_scene_settings', JSON.stringify(settings));
+        const btn = document.getElementById('btn-apply');
+        const orig = btn.textContent;
+        btn.textContent = 'Gespeichert!';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+    });
+
+    // Reset
+    document.getElementById('btn-reset').addEventListener('click', () => {
+        applyPreset(LIGHT_PRESETS.studio);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        scene.background.set(0x1a1a2e);
+        camera.fov = 35;
+        camera.updateProjectionMatrix();
+        const skinMat = getSkinMat();
+        if (skinMat) {
+            skinMat.color.setHex(0xd4a574);
+            skinMat.roughness = 0.55;
+            skinMat.metalness = 0.0;
+        }
+        document.getElementById('light-preset').value = 'studio';
+        syncUIFromState();
+        autoSave();
+    });
+
+    // Export
+    document.getElementById('btn-export').addEventListener('click', () => {
+        const settings = gatherSettings();
+        const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'humanbody_scene_settings.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+}
+
+function gatherSettings() {
+    return {
+        lighting: {
+            key: {
+                intensity: keyLight.intensity,
+                color: '#' + keyLight.color.getHexString(),
+                pos: [keyLight.position.x, keyLight.position.y, keyLight.position.z]
+            },
+            fill: {
+                intensity: fillLight.intensity,
+                color: '#' + fillLight.color.getHexString(),
+                pos: [fillLight.position.x, fillLight.position.y, fillLight.position.z]
+            },
+            back: {
+                intensity: backLight.intensity,
+                color: '#' + backLight.color.getHexString(),
+                pos: [backLight.position.x, backLight.position.y, backLight.position.z]
+            },
+            ambient: {
+                intensity: ambientLight.intensity,
+                color: '#' + ambientLight.color.getHexString()
+            }
+        },
+        renderer: {
+            toneMapping: document.getElementById('tone-mapping').value,
+            exposure: renderer.toneMappingExposure,
+            background: '#' + scene.background.getHexString()
+        },
+        camera: {
+            fov: camera.fov
+        },
+        skin: (() => {
+            const mat = getSkinMat();
+            return {
+                color: mat ? '#' + mat.color.getHexString() : '#d4a574',
+                roughness: mat ? mat.roughness : 0.55,
+                metalness: mat ? mat.metalness : 0.0
+            };
+        })()
+    };
+}
+
+// =========================================================================
+// Load settings from localStorage
+// =========================================================================
+function loadSettings() {
+    const saved = localStorage.getItem('humanbody_scene_settings');
+    if (!saved) return;
+
+    try {
+        const s = JSON.parse(saved);
+
+        if (s.lighting) {
+            if (s.lighting.key) {
+                keyLight.intensity = s.lighting.key.intensity;
+                keyLight.color.set(s.lighting.key.color);
+                keyLight.position.set(...s.lighting.key.pos);
+            }
+            if (s.lighting.fill) {
+                fillLight.intensity = s.lighting.fill.intensity;
+                fillLight.color.set(s.lighting.fill.color);
+                fillLight.position.set(...s.lighting.fill.pos);
+            }
+            if (s.lighting.back) {
+                backLight.intensity = s.lighting.back.intensity;
+                backLight.color.set(s.lighting.back.color);
+                backLight.position.set(...s.lighting.back.pos);
+            }
+            if (s.lighting.ambient) {
+                ambientLight.intensity = s.lighting.ambient.intensity;
+                ambientLight.color.set(s.lighting.ambient.color);
+            }
+        }
+
+        if (s.renderer) {
+            if (s.renderer.toneMapping && TONE_MAPPINGS[s.renderer.toneMapping] !== undefined) {
+                renderer.toneMapping = TONE_MAPPINGS[s.renderer.toneMapping];
+            }
+            if (s.renderer.exposure !== undefined) {
+                renderer.toneMappingExposure = s.renderer.exposure;
+            }
+            if (s.renderer.background) {
+                scene.background.set(s.renderer.background);
+            }
+        }
+
+        if (s.camera && s.camera.fov) {
+            camera.fov = s.camera.fov;
+            camera.updateProjectionMatrix();
+        }
+
+        document.getElementById('light-preset').value = '';
+        syncUIFromState();
+
+    } catch (e) {
+        console.warn('Failed to load scene settings:', e);
+    }
+}
+
+// =========================================================================
+// Utility
+// =========================================================================
+function base64ToFloat32(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Float32Array(bytes.buffer);
+}
+
+function base64ToUint32(b64) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Uint32Array(bytes.buffer);
+}
+
+function blenderToThreeCoords(buf) {
+    for (let i = 0; i < buf.length; i += 3) {
+        const y = buf[i + 1];
+        const z = buf[i + 2];
+        buf[i + 1] = z;
+        buf[i + 2] = -y;
+    }
+}
+
+// =========================================================================
+// Boot
+// =========================================================================
+init();
