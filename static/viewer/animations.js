@@ -507,7 +507,7 @@ function convertToDefSkinnedMesh(defSkel, swData) {
 let skelWrapper = null;
 
 function loadBVHAnimation(url, name, fc) {
-    stopAnimation();
+    stopAnimation(true);
 
     document.getElementById('anim-info').textContent = `Lade ${name}...`;
 
@@ -586,26 +586,28 @@ function loadBVHAnimation(url, name, fc) {
     });
 }
 
-function stopAnimation() {
+function stopAnimation(destroy = false) {
     if (currentAction) {
         currentAction.stop();
-        currentAction = null;
+        if (destroy) currentAction = null;
     }
     if (mixer) {
         mixer.stopAllAction();
-        mixer = null;
+        if (destroy) mixer = null;
     }
     // Reset DEF skeleton to rest pose so mesh returns to T-pose
     if (isSkinned && defSkeleton) {
         defSkeleton.skeleton.pose();
     }
-    if (skelWrapper) {
-        scene.remove(skelWrapper);
-        skelWrapper = null;
-    }
-    if (skeletonHelper) {
-        scene.remove(skeletonHelper);
-        skeletonHelper = null;
+    if (destroy) {
+        if (skelWrapper) {
+            scene.remove(skelWrapper);
+            skelWrapper = null;
+        }
+        if (skeletonHelper) {
+            scene.remove(skeletonHelper);
+            skeletonHelper = null;
+        }
     }
     playing = false;
 }
@@ -618,7 +620,12 @@ function bindPlaybackControls() {
     playBtn.addEventListener('click', () => {
         if (!currentAction) return;
         playing = !playing;
-        currentAction.paused = !playing;
+        if (playing) {
+            if (!currentAction.isRunning()) currentAction.play();
+            currentAction.paused = false;
+        } else {
+            currentAction.paused = true;
+        }
         playBtn.innerHTML = playing
             ? '<i class="fas fa-pause"></i>'
             : '<i class="fas fa-play"></i>';

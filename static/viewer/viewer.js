@@ -772,7 +772,7 @@ async function loadAnimations() {
 
         select.addEventListener('change', () => {
             if (!select.value) {
-                stopAnimation();
+                stopAnimation(true);
                 return;
             }
             loadBVHAnimation(select.value);
@@ -782,6 +782,7 @@ async function loadAnimations() {
             if (!currentAction) return;
             playing = !playing;
             if (playing) {
+                if (!currentAction.isRunning()) currentAction.play();
                 currentAction.paused = false;
                 playBtn.innerHTML = '<i class="fas fa-pause"></i>';
             } else {
@@ -813,7 +814,7 @@ async function loadAnimations() {
 let skelWrapper = null;
 
 function loadBVHAnimation(url) {
-    stopAnimation();
+    stopAnimation(true);
 
     bvhLoader.load(url, (result) => {
         const bvhBones = result.skeleton.bones;
@@ -894,26 +895,28 @@ function loadBVHAnimation(url) {
     });
 }
 
-function stopAnimation() {
+function stopAnimation(destroy = false) {
     if (currentAction) {
         currentAction.stop();
-        currentAction = null;
+        if (destroy) currentAction = null;
     }
     if (mixer) {
         mixer.stopAllAction();
-        mixer = null;
+        if (destroy) mixer = null;
     }
     // Reset skinned mesh back to bind pose
     if (isSkinned && bodyMesh && bodyMesh.isSkinnedMesh) {
         bodyMesh.skeleton.pose();
     }
-    if (skelWrapper) {
-        scene.remove(skelWrapper);
-        skelWrapper = null;
-    }
-    if (skeletonHelper) {
-        scene.remove(skeletonHelper);
-        skeletonHelper = null;
+    if (destroy) {
+        if (skelWrapper) {
+            scene.remove(skelWrapper);
+            skelWrapper = null;
+        }
+        if (skeletonHelper) {
+            scene.remove(skeletonHelper);
+            skeletonHelper = null;
+        }
     }
 }
 
