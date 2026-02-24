@@ -534,6 +534,8 @@ function loadBVHAnimation(url, name, fc) {
 
             // Play retargeted clip on the SkinnedMesh
             mixer = new THREE.AnimationMixer(bodyMesh);
+            const ss = document.getElementById('anim-speed');
+            if (ss) mixer.timeScale = parseInt(ss.value) / 100;
             currentAction = mixer.clipAction(clip);
             currentAction.play();
             playing = true;
@@ -572,6 +574,8 @@ function loadBVHAnimation(url, name, fc) {
             scene.add(skeletonHelper);
 
             mixer = new THREE.AnimationMixer(rootBone);
+            const ss2 = document.getElementById('anim-speed');
+            if (ss2) mixer.timeScale = parseInt(ss2.value) / 100;
             currentAction = mixer.clipAction(result.clip);
             currentAction.play();
             playing = true;
@@ -616,6 +620,16 @@ function bindPlaybackControls() {
     const playBtn = document.getElementById('anim-play');
     const stopBtn = document.getElementById('anim-stop');
     const timeline = document.getElementById('anim-timeline');
+    const speedSlider = document.getElementById('anim-speed');
+    const speedLabel = document.getElementById('speed-label');
+
+    if (speedSlider) {
+        speedSlider.addEventListener('input', () => {
+            const speed = parseInt(speedSlider.value) / 100;
+            speedLabel.textContent = `Speed: ${speed.toFixed(1)}x`;
+            if (mixer) mixer.timeScale = speed;
+        });
+    }
 
     playBtn.addEventListener('click', () => {
         if (!currentAction) return;

@@ -7,7 +7,6 @@
  *   SKIP:        head, shoulders — stay at rest pose
  */
 import * as THREE from 'three';
-alert('retarget.js v2 LOADED');
 
 // =========================================================================
 // BVH format detection

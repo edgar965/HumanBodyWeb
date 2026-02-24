@@ -744,6 +744,26 @@ async function loadAnimations() {
         }
         panel.appendChild(select);
 
+        // Speed slider
+        const speedRow = document.createElement('div');
+        speedRow.className = 'anim-speed';
+        const speedLabel = document.createElement('label');
+        speedLabel.textContent = 'Speed: 1.0x';
+        const speedSlider = document.createElement('input');
+        speedSlider.type = 'range';
+        speedSlider.min = 10;
+        speedSlider.max = 300;
+        speedSlider.value = 100;
+        speedSlider.step = 10;
+        speedSlider.addEventListener('input', () => {
+            const speed = parseInt(speedSlider.value) / 100;
+            speedLabel.textContent = `Speed: ${speed.toFixed(1)}x`;
+            if (mixer) mixer.timeScale = speed;
+        });
+        speedRow.appendChild(speedLabel);
+        speedRow.appendChild(speedSlider);
+        panel.appendChild(speedRow);
+
         // Controls
         const ctrls = document.createElement('div');
         ctrls.className = 'anim-controls';
@@ -822,20 +842,15 @@ function loadBVHAnimation(url) {
 
         // DEF skeleton path: retarget BVH to 176-bone DEF skeleton
         if (defSkeletonData && skinWeightData && bodyMesh) {
-            // Build DEF skeleton if not yet built
-            if (!defSkeleton) {
-                defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
+            // Convert mesh to SkinnedMesh first (builds defSkeleton internally)
+            if (!isSkinned) {
+                convertToDefSkinnedMesh(null, skinWeightData);
             }
 
             const format = detectBVHFormat(bvhBones);
             console.log(`BVH format: ${format}, retargeting to DEF skeleton...`);
             const clip = retargetBVHToDefClip(result, defSkeleton, format, { bodyMesh });
             console.log(`Retargeted clip: ${clip.tracks.length} tracks, ${clip.duration.toFixed(2)}s`);
-
-            // Convert mesh to SkinnedMesh if needed
-            if (!isSkinned) {
-                convertToDefSkinnedMesh(defSkeleton, skinWeightData);
-            }
 
             // SkeletonHelper
             if (skeletonHelper) scene.remove(skeletonHelper);
