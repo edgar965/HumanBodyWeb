@@ -8,8 +8,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
 MOCAPNET_ROOT = TOOLS_ROOT / 'MocapNET'   # A:\3DTools\MocapNET
 
-# Add humanbody_core to Python path
-_core_parent = str(TOOLS_ROOT)
+# Add humanbody_core to Python path (lives inside HumanBody/)
+HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody'
+_core_parent = str(HUMANBODY_ROOT)
 if _core_parent not in sys.path:
     sys.path.insert(0, _core_parent)
 
@@ -85,7 +86,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MOCAPNET_EXE = MOCAPNET_ROOT / 'MocapNET2CSV.exe'
 MEDIAPIPE_SCRIPT = MOCAPNET_ROOT / 'src' / 'python' / 'mediapipe' / 'mediapipeHolistic2CSV.py'
 BVH_OUTPUT_DIR = MOCAPNET_ROOT / 'output'
-BLENDER_BVH_DIR = Path(r'A:\3DTools\HumanBody\data\animations\bvh\MocapNET')
+BLENDER_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'
 
 # OpenPose paths
 OPENPOSE_ROOT = Path(r'A:\3DTools\OpenPose')
@@ -97,8 +98,7 @@ OPENPOSE_JSON2CSV_EXE = MOCAPNET_ROOT / 'convertOpenPoseJSONToCSV.exe'
 MOCAPNET_V4_ROOT = Path(r'A:\3DTools\MocapNET_v4')
 MOCAPNET_V4_SCRIPT = MOCAPNET_V4_ROOT / 'run_v4_pipeline.py'
 
-# HumanBody paths
-HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody'
+# HumanBody paths (HUMANBODY_ROOT defined above with sys.path)
 HUMANBODY_DATA_DIR = HUMANBODY_ROOT / 'data' / 'humanBody'
 HUMANBODY_ASSETS_DIR = HUMANBODY_ROOT / 'data' / 'assets'
 HUMANBODY_ASSETS_GLB_DIR = HUMANBODY_ROOT / 'data' / 'assets_glb'
