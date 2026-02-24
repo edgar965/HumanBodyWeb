@@ -593,11 +593,12 @@ function loadBVHAnimation(url, name, fc) {
 function stopAnimation(destroy = false) {
     if (currentAction) {
         currentAction.stop();
+        currentAction.reset();
         if (destroy) currentAction = null;
     }
-    if (mixer) {
+    if (mixer && destroy) {
         mixer.stopAllAction();
-        if (destroy) mixer = null;
+        mixer = null;
     }
     // Reset DEF skeleton to rest pose so mesh returns to T-pose
     if (isSkinned && defSkeleton) {
@@ -649,9 +650,6 @@ function bindPlaybackControls() {
         stopAnimation();
         playBtn.innerHTML = '<i class="fas fa-play"></i>';
         timeline.value = 0;
-        document.getElementById('anim-info').textContent = '—';
-        // Deselect all
-        document.querySelectorAll('.anim-item.active').forEach(el => el.classList.remove('active'));
     });
 
     timeline.addEventListener('input', () => {

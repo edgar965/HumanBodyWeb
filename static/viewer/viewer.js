@@ -913,11 +913,12 @@ function loadBVHAnimation(url) {
 function stopAnimation(destroy = false) {
     if (currentAction) {
         currentAction.stop();
+        currentAction.reset();
         if (destroy) currentAction = null;
     }
-    if (mixer) {
+    if (mixer && destroy) {
         mixer.stopAllAction();
-        if (destroy) mixer = null;
+        mixer = null;
     }
     // Reset skinned mesh back to bind pose
     if (isSkinned && bodyMesh && bodyMesh.isSkinnedMesh) {
