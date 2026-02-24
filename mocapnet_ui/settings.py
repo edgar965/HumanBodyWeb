@@ -2,6 +2,8 @@ import os
 import sys
 from pathlib import Path
 
+VERSION = '0.59'
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
 MOCAPNET_ROOT = TOOLS_ROOT / 'MocapNET'   # A:\3DTools\MocapNET
@@ -50,6 +52,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'mocapnet_ui.context_processors.version',
             ],
         },
     },
