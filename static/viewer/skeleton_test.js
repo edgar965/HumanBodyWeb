@@ -1,16 +1,17 @@
 /**
- * Skeleton Test — 4 skeletons side-by-side for bone-mapping debugging.
+ * Skeleton Test — 5 skeletons side-by-side for bone-mapping debugging.
  *
- * Left (red):    AutoRig DEF skeleton (176 bones)
- * Center-L (green): CMU BVH skeleton (~31 bones)
- * Center-R (orange): Mixamo BVH skeleton (~52 bones, with fingers)
- * Right (blue):  MocapNET v4 BVH skeleton (~150+ bones)
+ * Far-Left (red):     AutoRig DEF skeleton (176 bones)
+ * Left (green):       CMU BVH skeleton (~31 bones)
+ * Center (orange):    Mixamo BVH skeleton (~52 bones, with fingers)
+ * Right (blue):       MocapNET v4 BVH skeleton (~150+ bones)
+ * Far-Right (purple): Bandai BVH skeleton (~22 bones)
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET } from './retarget_hybrid.js?v=7';
+import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET, BVH_TO_DEF_BANDAI } from './retarget_hybrid.js?v=11';
 
 // =========================================================================
 // Global state
@@ -36,12 +37,13 @@ let skinWeightData = null;
 // All animations list (for auto-loading first of each type)
 let allAnimations = {};
 
-// Three skeleton groups
+// Five skeleton groups
 const skeletons = {
-    def:      { group: null, bones: null, labels: [], vizMeshes: [], color: 0xff4444, xOffset: -2.0, rootBone: null, boneByName: null, skeleton: null },
-    cmu:      { group: null, bones: null, labels: [], vizMeshes: [], color: 0x44ff44, xOffset: -0.7, rootBone: null, bvhResult: null, wrapper: null },
-    mixamo:   { group: null, bones: null, labels: [], vizMeshes: [], color: 0xffaa44, xOffset:  0.7, rootBone: null, bvhResult: null, wrapper: null },
-    mocapnet: { group: null, bones: null, labels: [], vizMeshes: [], color: 0x4488ff, xOffset:  2.0, rootBone: null, bvhResult: null, wrapper: null },
+    def:      { group: null, bones: null, labels: [], vizMeshes: [], color: 0xff4444, xOffset: -3.0, rootBone: null, boneByName: null, skeleton: null },
+    cmu:      { group: null, bones: null, labels: [], vizMeshes: [], color: 0x44ff44, xOffset: -1.5, rootBone: null, bvhResult: null, wrapper: null },
+    mixamo:   { group: null, bones: null, labels: [], vizMeshes: [], color: 0xffaa44, xOffset:  0.0, rootBone: null, bvhResult: null, wrapper: null },
+    mocapnet: { group: null, bones: null, labels: [], vizMeshes: [], color: 0x4488ff, xOffset:  1.5, rootBone: null, bvhResult: null, wrapper: null },
+    bandai:   { group: null, bones: null, labels: [], vizMeshes: [], color: 0xbb44ff, xOffset:  3.0, rootBone: null, bvhResult: null, wrapper: null },
 };
 
 // Shared materials for bone visualization
@@ -243,6 +245,9 @@ function bindToggles() {
     document.getElementById('toggle-mocapnet').addEventListener('change', (e) => {
         skeletons.mocapnet.group.visible = e.target.checked;
     });
+    document.getElementById('toggle-bandai').addEventListener('change', (e) => {
+        skeletons.bandai.group.visible = e.target.checked;
+    });
 }
 
 // =========================================================================
@@ -303,7 +308,7 @@ function createBoneLabels(bones, skelKey) {
     skel.labels.forEach(lbl => lbl.parent && lbl.parent.remove(lbl));
     skel.labels = [];
 
-    const colorMap = { def: '#ff6666', cmu: '#66ff66', mixamo: '#ffaa66', mocapnet: '#6699ff' };
+    const colorMap = { def: '#ff6666', cmu: '#66ff66', mixamo: '#ffaa66', mocapnet: '#6699ff', bandai: '#cc66ff' };
     const color = colorMap[skelKey] || '#ffffff';
     const showLabels = document.getElementById('toggle-labels').checked;
 
@@ -384,6 +389,62 @@ function placeBvhSkeleton(result, skelKey) {
     if (bones.length === 0) return;
 
     const rootBone = bones[0];
+
+    // For Bandai BVH, the rest-pose offsets have spine/limbs along X-axis
+    // (not standing upright). Apply frame-0 of the clip to get actual pose,
+    // and bake the joint_Root→Hips collapse into the clip tracks so the
+    // mixer doesn't undo it during playback.
+    if (skelKey === 'bandai' && result.clip && result.clip.tracks.length > 0) {
+        const boneMap = {};
+        for (const b of bones) boneMap[b.name] = b;
+
+        // Find clip tracks by bone name
+        const tracksByBone = {};
+        for (const track of result.clip.tracks) {
+            const dotIdx = track.name.indexOf('.');
+            if (dotIdx < 0) continue;
+            const boneName = track.name.substring(0, dotIdx);
+            const prop = track.name.substring(dotIdx + 1);
+            if (!tracksByBone[boneName]) tracksByBone[boneName] = {};
+            tracksByBone[boneName][prop] = track;
+        }
+
+        // Apply frame-0 rotations to bones (for correct rest-pose display)
+        for (const [boneName, tracks] of Object.entries(tracksByBone)) {
+            const bone = boneMap[boneName];
+            if (!bone) continue;
+            if (tracks.quaternion && tracks.quaternion.values.length >= 4) {
+                const v = tracks.quaternion.values;
+                bone.quaternion.set(v[0], v[1], v[2], v[3]);
+            }
+            if (tracks.position && tracks.position.values.length >= 3) {
+                const v = tracks.position.values;
+                bone.position.set(v[0], v[1], v[2]);
+            }
+        }
+
+        // Bake joint_Root→Hips collapse into clip tracks:
+        // Move Hips position data into joint_Root, zero out Hips position
+        const hips = boneMap['Hips'];
+        if (hips && hips.parent === rootBone) {
+            const rootPosTracks = tracksByBone['joint_Root']?.position;
+            const hipsPosTracks = tracksByBone['Hips']?.position;
+            if (rootPosTracks && hipsPosTracks) {
+                // Copy Hips position values → joint_Root position values
+                for (let i = 0; i < rootPosTracks.values.length && i < hipsPosTracks.values.length; i++) {
+                    rootPosTracks.values[i] = hipsPosTracks.values[i];
+                }
+                // Zero out Hips position values
+                for (let i = 0; i < hipsPosTracks.values.length; i++) {
+                    hipsPosTracks.values[i] = 0;
+                }
+            }
+            // Collapse bone positions for rest-pose display
+            rootBone.position.copy(hips.position);
+            hips.position.set(0, 0, 0);
+        }
+    }
+
     rootBone.updateWorldMatrix(true, true);
 
     // Measure height and scale to ~1.68m
@@ -394,9 +455,13 @@ function placeBvhSkeleton(result, skelKey) {
     const targetH = 1.68;
     const scale = targetH / bvhHeight;
 
-    // Wrapper group for scaling
+    // Wrapper group for scaling + centering
+    const center = new THREE.Vector3();
+    box.getCenter(center);
     const wrapper = new THREE.Group();
     wrapper.scale.set(scale, scale, scale);
+    // Center skeleton horizontally and put feet on ground
+    wrapper.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
     wrapper.add(rootBone);
     skel.group.add(wrapper);
     skel.wrapper = wrapper;
@@ -409,7 +474,7 @@ function placeBvhSkeleton(result, skelKey) {
     // Bone number labels
     createBoneLabels(bones, skelKey);
 
-    console.log(`${skelKey.toUpperCase()} skeleton placed: ${bones.length} bones, scale=${scale.toFixed(3)}`);
+    console.log(`${skelKey.toUpperCase()} skeleton placed: ${bones.length} bones, scale=${scale.toFixed(4)}, bvhH=${bvhHeight.toFixed(1)}, box.y=[${box.min.y.toFixed(1)},${box.max.y.toFixed(1)}], center.z=${center.z.toFixed(1)}, wrapper.z=${wrapper.position.z.toFixed(3)}`);
 }
 
 // =========================================================================
@@ -479,6 +544,7 @@ function autoLoadRestPoseSkeletons() {
     let cmuAnim = null;
     let mixamoAnim = null;
     let mocapnetAnim = null;
+    let bandaiAnim = null;
 
     for (const cat of Object.keys(allAnimations)) {
         for (const anim of allAnimations[cat]) {
@@ -486,6 +552,8 @@ function autoLoadRestPoseSkeletons() {
                 if (!mocapnetAnim) mocapnetAnim = anim;
             } else if (cat === 'Mixamo') {
                 if (!mixamoAnim) mixamoAnim = anim;
+            } else if (cat.startsWith('Bandai')) {
+                if (!bandaiAnim) bandaiAnim = anim;
             } else {
                 if (!cmuAnim) cmuAnim = anim;
             }
@@ -524,6 +592,17 @@ function autoLoadRestPoseSkeletons() {
             }
         });
     }
+
+    // Load Bandai rest-pose skeleton (purple)
+    if (bandaiAnim) {
+        bvhLoader.load(bandaiAnim.url, (result) => {
+            const format = detectBVHFormat(result.skeleton.bones);
+            if (format === 'BANDAI') {
+                placeBvhSkeleton(result, 'bandai');
+                skeletons.bandai.bvhResult = result;
+            }
+        });
+    }
 }
 
 // =========================================================================
@@ -549,6 +628,7 @@ function loadAndPlayAnimation(url, name, fc, category) {
         // --- BVH skeleton (position depends on format) ---
         const bvhKey = format === 'CMU' ? 'cmu'
                      : format === 'MIXAMO' ? 'mixamo'
+                     : format === 'BANDAI' ? 'bandai'
                      : 'mocapnet';
         const bvhSkel = skeletons[bvhKey];
 

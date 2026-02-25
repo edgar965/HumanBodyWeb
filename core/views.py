@@ -355,12 +355,16 @@ def _run_v4_pipeline(job, video_path, output_dir):
     video_stem = job.name.rsplit('.', 1)[0]
     bvh_output = str(output_dir / f'v4_{video_stem}.bvh')
 
+    # Stop-flag file for graceful cancellation
+    stop_flag = str(output_dir / 'STOP_FLAG')
+
     v4_script = str(settings.MOCAPNET_V4_SCRIPT)
     cmd = [
         'python', v4_script,
         '--from', str(video_path),
         '--output', bvh_output,
         '--all', '--headless',
+        '--stop-flag', stop_flag,
     ]
 
     stderr_lines = []
@@ -419,9 +423,21 @@ def _run_v4_pipeline(job, video_path, output_dir):
             reported = line[5:].strip()
             if reported and os.path.exists(reported):
                 bvh_output = reported
+        elif line.startswith('STOPPED:'):
+            # Graceful stop — partial BVH was saved
+            reported = line[8:].strip()
+            if reported and os.path.exists(reported):
+                bvh_output = reported
 
     proc.wait(timeout=1800)
     stderr_thread.join(timeout=5)
+
+    # Clean up stop flag if still present
+    if os.path.exists(stop_flag):
+        try:
+            os.remove(stop_flag)
+        except OSError:
+            pass
 
     if proc.returncode != 0:
         stderr = ''.join(stderr_lines).strip()
@@ -595,17 +611,40 @@ def start_processing(request, job_id):
 
 
 def stop_processing(request, job_id):
-    """Stop a running processing job."""
+    """Stop a running processing job (graceful stop via flag file for v4)."""
     job = get_object_or_404(BVHJob, id=job_id)
     jid = str(job.id)
-    # Kill active subprocess
-    proc = _active_procs.pop(jid, None)
+    proc = _active_procs.get(jid)
+
     if proc and proc.poll() is None:
-        proc.kill()
-        proc.wait(timeout=5)
-    job.status = 'failed'
-    job.error_message = 'Cancelled by user'
-    job.save()
+        # Try graceful stop via flag file (v4 pipeline checks this after each frame)
+        output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
+        stop_flag = output_dir / 'STOP_FLAG'
+        try:
+            stop_flag.parent.mkdir(parents=True, exist_ok=True)
+            stop_flag.write_text('stop')
+        except OSError:
+            pass
+
+        # Wait for process to exit gracefully (it will write partial BVH)
+        try:
+            proc.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            # Process didn't respond to flag — force kill
+            proc.kill()
+            proc.wait(timeout=5)
+            job.status = 'failed'
+            job.error_message = 'Cancelled by user (force kill)'
+            job.save()
+
+        _active_procs.pop(jid, None)
+        # If process exited gracefully, the background thread handles job status
+    else:
+        _active_procs.pop(jid, None)
+        job.status = 'failed'
+        job.error_message = 'Cancelled by user'
+        job.save()
+
     messages.info(request, 'Processing stopped.')
     return redirect('job_status', job_id=job.id)
 

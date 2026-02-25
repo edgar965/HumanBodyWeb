@@ -18,6 +18,8 @@ import * as THREE from 'three';
 
 export function detectBVHFormat(bones) {
     const names = new Set(bones.map(b => b.name));
+    // Bandai: uses Chest + UpperArm_L (underscore naming)
+    if (names.has('Chest') && names.has('UpperArm_L')) return 'BANDAI';
     if (names.has('Hips') && names.has('LeftArm')) {
         // Mixamo has Spine2, CMU does not (CMU uses LowerBack instead)
         return names.has('Spine2') ? 'MIXAMO' : 'CMU';
@@ -248,6 +250,32 @@ export const BVH_TO_DEF_MOCAPNET = {
     'orbicularis04.r': 'DEF-lid.B.R',
 };
 
+export const BVH_TO_DEF_BANDAI = {
+    // Bandai Namco skeleton (joint_Root → Hips → Spine → Chest → ...)
+    'Hips':        'DEF-spine',
+    'Spine':       'DEF-spine.001',
+    'Chest':       'DEF-spine.003',
+    'Neck':        'DEF-spine.004',
+    'Head':        'DEF-spine.006',
+    'Shoulder_L':  'DEF-shoulder.L',
+    'UpperArm_L':  'DEF-upper_arm.L',
+    'LowerArm_L':  'DEF-forearm.L',
+    'Hand_L':      'DEF-hand.L',
+    'Shoulder_R':  'DEF-shoulder.R',
+    'UpperArm_R':  'DEF-upper_arm.R',
+    'LowerArm_R':  'DEF-forearm.R',
+    'Hand_R':      'DEF-hand.R',
+    'UpperLeg_L':  'DEF-thigh.L',
+    'LowerLeg_L':  'DEF-shin.L',
+    'Foot_L':      'DEF-foot.L',
+    'Toes_L':      'DEF-toe.L',
+    'UpperLeg_R':  'DEF-thigh.R',
+    'LowerLeg_R':  'DEF-shin.R',
+    'Foot_R':      'DEF-foot.R',
+    'Toes_R':      'DEF-toe.R',
+    'joint_Root':  null,
+};
+
 // =========================================================================
 // Main retarget function
 // =========================================================================
@@ -272,6 +300,7 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const bvhClip = bvhResult.clip;
     const mapping = format === 'CMU' ? BVH_TO_DEF_CMU
                   : format === 'MIXAMO' ? BVH_TO_DEF_MIXAMO
+                  : format === 'BANDAI' ? BVH_TO_DEF_BANDAI
                   : BVH_TO_DEF_MOCAPNET;
 
     // --- DEF rest-pose world quaternions ---
@@ -339,13 +368,22 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     }
 
     // --- Height scale for root position ---
+    // Compute bounding box from bone hierarchy (position + quaternion chain) without
+    // any wrapper/group transforms. This is essential for Bandai BVH where frame-0
+    // quaternions define the standing pose — raw offset accumulation misses this.
     const skelBox = new THREE.Box3();
-    function accBvhPos(bone, parentPos) {
-        const wp = parentPos.clone().add(bone.position);
+    const _tmpQ2 = new THREE.Quaternion();
+    const _tmpV2 = new THREE.Vector3();
+    function accBvhWorldPos(bone, parentWQ, parentWP) {
+        _tmpV2.copy(bone.position).applyQuaternion(parentWQ);
+        const wp = parentWP.clone().add(_tmpV2);
         skelBox.expandByPoint(wp);
-        for (const c of bone.children) if (c.isBone) accBvhPos(c, wp);
+        _tmpQ2.copy(parentWQ).multiply(bone.quaternion);
+        for (const c of bone.children) {
+            if (c.isBone) accBvhWorldPos(c, _tmpQ2.clone(), wp);
+        }
     }
-    accBvhPos(bvhRoot, new THREE.Vector3());
+    accBvhWorldPos(bvhRoot, new THREE.Quaternion(), new THREE.Vector3());
     const bvhHeight = Math.max(skelBox.max.y - skelBox.min.y, 0.01);
     let bodyH = 1.68;
     if (opts.bodyMesh) {
@@ -434,6 +472,30 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const defAnimWorldQ = {};   // per-frame animated world Q cache
     const bvhWorldAnimQ = {};   // per-frame BVH world Q cache
 
+    // --- For Bandai: compute frame-0 BVH world Qs as "BVH rest world Q" ---
+    // Bandai's rest offsets don't represent standing pose; frame-0 rotations
+    // encode the actual standing pose. We need to extract the animation DELTA
+    // relative to frame-0, then apply that delta to DEF rest Qs.
+    const bvhRestWorldQ = {};
+    const isBandai = (format === 'BANDAI');
+    if (isBandai) {
+        for (const bvhName of bvhBonesSorted) {
+            const track = bvhQuatTracks[bvhName];
+            if (track) {
+                tmpQ.set(track.values[0], track.values[1],
+                         track.values[2], track.values[3]);
+            } else {
+                tmpQ.set(0, 0, 0, 1);
+            }
+            const parentName = bvhBoneParentName[bvhName];
+            if (parentName && bvhRestWorldQ[parentName]) {
+                bvhRestWorldQ[bvhName] = bvhRestWorldQ[parentName].clone().multiply(tmpQ);
+            } else {
+                bvhRestWorldQ[bvhName] = tmpQ.clone();
+            }
+        }
+    }
+
     // --- Per-frame retarget ---
     for (let f = 0; f < fc; f++) {
         const ti = f * 4;
@@ -467,9 +529,18 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
                 const bvhName = defToBvhName[defName];
                 const bvhWAQ = bvhWorldAnimQ[bvhName];
                 if (bvhWAQ) {
-                    // defWorldQ = bvhWorldAnimQ × offsetQ
-                    //   where offsetQ = dirCorrection × defWorldRestQ
-                    desiredWorldQ.copy(bvhWAQ).multiply(offsetQ[defName]).normalize();
+                    if (isBandai) {
+                        // Bandai: delta = bvhWorldAnimQ × bvhRestWorldQ⁻¹
+                        // desiredWorldQ = delta × defWorldRestQ
+                        const restQ = bvhRestWorldQ[bvhName];
+                        desiredWorldQ.copy(bvhWAQ)
+                            .multiply(restQ.clone().invert())
+                            .multiply(defWorldRestQ[defName])
+                            .normalize();
+                    } else {
+                        // Standard: defWorldQ = bvhWorldAnimQ × offsetQ
+                        desiredWorldQ.copy(bvhWAQ).multiply(offsetQ[defName]).normalize();
+                    }
                     // defLocalQ = parentAnimWQ⁻¹ × defWorldQ
                     tmpQ.copy(parentAnimWQ).invert().multiply(desiredWorldQ).normalize();
                 } else {
@@ -498,8 +569,17 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
 
     // Root position track
     const rootBvhName = bvhBones[0].name;
-    const rootPosDef = mapping[rootBvhName];
+    let rootPosDef = mapping[rootBvhName];
     const rootPosTrack = bvhPosTracks[rootBvhName];
+    // If BVH root maps to null (e.g. Bandai joint_Root), apply position to first mapped child
+    if (!rootPosDef && rootPosTrack) {
+        for (const child of bvhBones[0].children) {
+            if (child.isBone && mapping[child.name]) {
+                rootPosDef = mapping[child.name];
+                break;
+            }
+        }
+    }
     if (rootPosDef && rootPosTrack) {
         const defBone = defSkel.boneByName[rootPosDef];
         if (defBone) {

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=7';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=8';
 
 // =========================================================================
 // Global state
@@ -27,6 +27,9 @@ let fpsAccum = 0;
 let mixer = null;
 let currentAction = null;
 let skeletonHelper = null;
+let currentAnimName = '';
+let currentAnimFrames = 0;
+let currentAnimDuration = 0;
 
 // Wardrobe
 const loadedAssets = {};  // name -> THREE.Object3D
@@ -245,7 +248,21 @@ function animate() {
     const dt = clock.getDelta();
     controls.update();
 
-    if (mixer && playing) mixer.update(dt);
+    if (mixer && playing) {
+        mixer.update(dt);
+        // Update timeline slider + info text
+        if (currentAction && currentAnimDuration > 0) {
+            const t = currentAction.time;
+            const pct = Math.min(100, (t / currentAnimDuration) * 100);
+            const tl = document.getElementById('anim-timeline');
+            if (tl) tl.value = Math.round(pct);
+            const curSec = Math.floor(t);
+            const totSec = Math.floor(currentAnimDuration);
+            const curFrame = Math.round((t / currentAnimDuration) * currentAnimFrames);
+            const info = document.getElementById('anim-info');
+            if (info) info.textContent = `${currentAnimName} \u2014 ${curSec}/${totSec}s  ${curFrame}/${currentAnimFrames}f`;
+        }
+    }
 
     renderer.render(scene, camera);
 
@@ -891,6 +908,9 @@ function bindPlaybackControls() {
             stopAnimation();
             if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
             if (timeline) timeline.value = 0;
+            currentAnimName = '';
+            currentAnimFrames = 0;
+            currentAnimDuration = 0;
             const info = document.getElementById('anim-info');
             if (info) info.textContent = '\u2014';
         });
@@ -905,6 +925,14 @@ function bindPlaybackControls() {
                 const time = (parseInt(timeline.value) / 100) * clip.duration;
                 mixer.setTime(time);
                 currentAction.paused = wasPaused;
+                // Update info during scrub
+                if (currentAnimDuration > 0) {
+                    const curSec = Math.floor(time);
+                    const totSec = Math.floor(currentAnimDuration);
+                    const curFrame = Math.round((time / currentAnimDuration) * currentAnimFrames);
+                    const info = document.getElementById('anim-info');
+                    if (info) info.textContent = `${currentAnimName} \u2014 ${curSec}/${totSec}s  ${curFrame}/${currentAnimFrames}f`;
+                }
             }
         });
     }
@@ -997,9 +1025,14 @@ function loadBVHAnimation(url, name, fc) {
             playing = true;
         }
 
+        // Store clip info for live timeline updates
+        currentAnimName = name || 'Animation';
+        currentAnimFrames = fc || 0;
+        currentAnimDuration = currentAction ? currentAction.getClip().duration : result.clip.duration;
+
         const playBtn = document.getElementById('anim-play');
         if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        if (info) info.textContent = `${name || 'Animation'} — ${fc || '?'}f — ${result.clip.duration.toFixed(1)}s`;
+        if (info) info.textContent = `${currentAnimName} \u2014 0/${Math.floor(currentAnimDuration)}s  0/${currentAnimFrames}f`;
     }, undefined, (err) => {
         console.error('Failed to load BVH:', err);
         if (info) info.textContent = `Fehler: ${name || url}`;
