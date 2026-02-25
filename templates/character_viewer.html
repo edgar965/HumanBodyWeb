@@ -323,7 +323,7 @@
 
     <div class="viewer-panel">
         <!-- Body Type -->
-        <div class="panel-section">
+        <div class="panel-section" data-panel-key="body_type">
             <h3>Body Type <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
                 <select id="body-type-select" class="viewer-select"></select>
@@ -336,17 +336,32 @@
         </div>
 
         <!-- Morphs -->
-        <div class="panel-section">
+        <div class="panel-section" data-panel-key="morphs">
             <h3>Morphs <button class="btn-reset" id="reset-morphs">Reset</button> <span class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="morphs-panel"></div>
         </div>
 
         <!-- Cloth - from Template -->
-        <div class="panel-section">
+        <div class="panel-section" data-panel-key="cloth_template">
             <h3>Cloth - from Template <span class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="cloth-template-panel">
                 <div class="slider-row"><label>Template</label>
                     <select id="cloth-tpl-type" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
+                </div>
+                <div class="slider-row" style="gap:4px;">
+                    <label>Preset</label>
+                    <select id="cloth-tpl-preset" class="viewer-select" style="margin-bottom:0;flex:1;">
+                        <option value="">-- none --</option>
+                    </select>
+                    <button id="cloth-tpl-preset-load" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;width:auto;" title="Preset laden">
+                        <i class="fas fa-folder-open"></i>
+                    </button>
+                    <button id="cloth-tpl-preset-save" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;width:auto;" title="Preset speichern">
+                        <i class="fas fa-save"></i>
+                    </button>
+                    <button id="cloth-tpl-preset-saveas" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;width:auto;" title="Preset speichern unter...">
+                        <i class="fas fa-file-export"></i>
+                    </button>
                 </div>
                 <div class="slider-row"><label>Segments</label>
                     <input type="range" id="cloth-tpl-segments" min="16" max="64" value="32" step="2">
@@ -377,7 +392,7 @@
         </div>
 
         <!-- Cloth Builder -->
-        <div class="panel-section collapsed">
+        <div class="panel-section collapsed" data-panel-key="cloth_builder">
             <h3>Cloth Builder <span class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="cloth-builder-panel">
                 <div class="slider-row"><label>Region</label>
@@ -394,7 +409,7 @@
         </div>
 
         <!-- Cloth Primitive -->
-        <div class="panel-section collapsed">
+        <div class="panel-section collapsed" data-panel-key="cloth_primitive">
             <h3>Cloth - Primitive <span class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="cloth-prim-panel">
                 <div class="slider-row"><label>Primitive</label>
@@ -419,7 +434,7 @@
         </div>
 
         <!-- Hair -->
-        <div class="panel-section collapsed">
+        <div class="panel-section collapsed" data-panel-key="hair">
             <h3>Hair <span class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="hair-panel">
                 <select id="hair-style-select" class="viewer-select">
@@ -433,13 +448,13 @@
         </div>
 
         <!-- Wardrobe -->
-        <div class="panel-section collapsed">
+        <div class="panel-section collapsed" data-panel-key="wardrobe">
             <h3>Wardrobe <span class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="wardrobe-panel"></div>
         </div>
 
         <!-- Animations -->
-        <div class="panel-section collapsed">
+        <div class="panel-section collapsed" data-panel-key="animations">
             <h3>Animations <span class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="animation-panel">
                 <div class="anim-tree" id="anim-tree">
@@ -478,5 +493,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=13"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?v=20"></script>
 {% endblock %}

@@ -54,6 +54,27 @@ let hairColorData = {};  // name -> [r,g,b] (linear sRGB)
 let currentPresetName = '';
 
 // =========================================================================
+// Expanded panels from settings
+// =========================================================================
+function applyExpandedPanels() {
+    fetch('/api/settings/humanbody/')
+        .then(r => r.json())
+        .then(s => {
+            const expanded = s.expanded_panels_config;
+            if (!Array.isArray(expanded)) return;
+            document.querySelectorAll('.panel-section[data-panel-key]').forEach(panel => {
+                const key = panel.dataset.panelKey;
+                if (expanded.includes(key)) {
+                    panel.classList.remove('collapsed');
+                } else {
+                    panel.classList.add('collapsed');
+                }
+            });
+        })
+        .catch(() => {});
+}
+
+// =========================================================================
 // Initialization
 // =========================================================================
 function init() {
@@ -121,6 +142,9 @@ function init() {
             h3.closest('.panel-section').classList.toggle('collapsed');
         });
     });
+
+    // Apply expanded panels from settings
+    applyExpandedPanels();
 
     // Start render loop
     animate();
@@ -1059,6 +1083,143 @@ async function loadClothUI() {
             };
         }
 
+        // --- Template Preset UI ---
+        const TPL_CATEGORY = {
+            TPL_TSHIRT: 'Top', TPL_DRESS: 'Top',
+            TPL_PANTS: 'Pants', TPL_SKIRT: 'Pants',
+        };
+        const presetSelect = document.getElementById('cloth-tpl-preset');
+
+        async function refreshClothPresets() {
+            if (!presetSelect || !tplSelect) return;
+            const cat = TPL_CATEGORY[tplSelect.value] || 'Top';
+            try {
+                const r = await fetch(`/api/character/cloth/presets/?category=${cat}`);
+                const d = await r.json();
+                // Keep first option (-- none --)
+                while (presetSelect.options.length > 1) presetSelect.remove(1);
+                (d.presets || []).forEach(p => {
+                    const o = document.createElement('option');
+                    o.value = p.name;
+                    o.textContent = p.name;
+                    presetSelect.appendChild(o);
+                });
+            } catch (e) {
+                console.warn('Failed to load cloth presets:', e);
+            }
+        }
+
+        // Refresh presets when template changes
+        if (tplSelect) {
+            tplSelect.addEventListener('change', () => refreshClothPresets());
+            refreshClothPresets();  // initial load
+        }
+
+        // Helper: save preset via API
+        async function _saveClothPreset(name) {
+            const tpl = tplSelect ? tplSelect.value : 'TPL_TSHIRT';
+            const colorPicker = document.getElementById('cloth-color');
+            const presetData = {
+                template: tpl,
+                segments: _sliderVal('cloth-tpl-segments'),
+                tightness: _sliderVal('cloth-tpl-tightness') / 100,
+                top_extend: _sliderVal('cloth-tpl-top-ext') / 100,
+                bottom_extend: _sliderVal('cloth-tpl-bot-ext') / 100,
+                color: colorPicker ? colorPicker.value : '#404870',
+            };
+            try {
+                const r = await fetch('/api/character/cloth/presets/save/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, data: presetData }),
+                });
+                const res = await r.json();
+                if (res.ok) {
+                    await refreshClothPresets();
+                    const safeName = res.filename.replace('.json', '');
+                    if (presetSelect) presetSelect.value = safeName;
+                    console.log('Cloth preset saved:', res.filename);
+                    return true;
+                } else {
+                    alert('Fehler: ' + (res.error || 'Unbekannt'));
+                }
+            } catch (e) {
+                alert('Fehler: ' + e.message);
+            }
+            return false;
+        }
+
+        // Save preset (overwrite selected, or prompt if none selected)
+        const presetSaveBtn = document.getElementById('cloth-tpl-preset-save');
+        if (presetSaveBtn) {
+            presetSaveBtn.addEventListener('click', async () => {
+                let name = presetSelect ? presetSelect.value : '';
+                if (!name) {
+                    name = prompt('Preset-Name:');
+                    if (!name || !name.trim()) return;
+                    name = name.trim();
+                }
+                await _saveClothPreset(name);
+            });
+        }
+
+        // Save-As preset (always prompt for new name)
+        const presetSaveAsBtn = document.getElementById('cloth-tpl-preset-saveas');
+        if (presetSaveAsBtn) {
+            presetSaveAsBtn.addEventListener('click', async () => {
+                const suggested = presetSelect ? presetSelect.value : '';
+                const name = prompt('Preset-Name:', suggested);
+                if (!name || !name.trim()) return;
+                await _saveClothPreset(name.trim());
+            });
+        }
+
+        // Load preset
+        const presetLoadBtn = document.getElementById('cloth-tpl-preset-load');
+        if (presetLoadBtn) {
+            presetLoadBtn.addEventListener('click', async () => {
+                if (!presetSelect || !presetSelect.value) return;
+                const tpl = tplSelect ? tplSelect.value : 'TPL_TSHIRT';
+                const cat = TPL_CATEGORY[tpl] || 'Top';
+                try {
+                    const r = await fetch(`/api/character/cloth/presets/${cat}/${encodeURIComponent(presetSelect.value)}/`);
+                    const d = await r.json();
+                    if (d.error) { alert(d.error); return; }
+                    // Apply values to sliders + color picker
+                    if (d.template && tplSelect) tplSelect.value = d.template;
+                    const seg = document.getElementById('cloth-tpl-segments');
+                    const segVal = document.getElementById('cloth-tpl-segments-val');
+                    if (seg && d.segments !== undefined) {
+                        seg.value = d.segments;
+                        if (segVal) segVal.textContent = d.segments;
+                    }
+                    const tight = document.getElementById('cloth-tpl-tightness');
+                    const tightVal = document.getElementById('cloth-tpl-tightness-val');
+                    if (tight && d.tightness !== undefined) {
+                        tight.value = Math.round(d.tightness * 100);
+                        if (tightVal) tightVal.textContent = d.tightness.toFixed(2);
+                    }
+                    const topExt = document.getElementById('cloth-tpl-top-ext');
+                    const topExtVal = document.getElementById('cloth-tpl-top-ext-val');
+                    if (topExt && d.top_extend !== undefined) {
+                        topExt.value = Math.round(d.top_extend * 100);
+                        if (topExtVal) topExtVal.textContent = d.top_extend.toFixed(2) + ' m';
+                    }
+                    const botExt = document.getElementById('cloth-tpl-bot-ext');
+                    const botExtVal = document.getElementById('cloth-tpl-bot-ext-val');
+                    if (botExt && d.bottom_extend !== undefined) {
+                        botExt.value = Math.round(d.bottom_extend * 100);
+                        if (botExtVal) botExtVal.textContent = d.bottom_extend.toFixed(2) + ' m';
+                    }
+                    const colorPicker = document.getElementById('cloth-color');
+                    if (colorPicker && d.color) colorPicker.value = d.color;
+                    console.log('Cloth preset loaded:', presetSelect.value);
+                } catch (e) {
+                    alert('Fehler beim Laden: ' + e.message);
+                }
+            });
+        }
+
         const tplCreate = document.getElementById('cloth-tpl-create');
         if (tplCreate) {
             tplCreate.addEventListener('click', () => {
@@ -1076,9 +1237,8 @@ async function loadClothUI() {
                     console.warn(`No cloth "${key}" to update — use Create first`);
                     return;
                 }
-                // Preserve color from existing mesh
-                const existingColor = clothMeshes[key].material.color.getHexString();
-                loadCloth(key, params, `#${existingColor}`);
+                // Use color from color picker (not from existing mesh)
+                loadCloth(key, params);
             });
         }
 
@@ -1700,7 +1860,10 @@ function applyModelPreset(preset) {
             TOP: 'TPL_TSHIRT', PANTS: 'TPL_PANTS',
             SKIRT: 'TPL_SKIRT', DRESS: 'TPL_DRESS'
         }[last.region] || 'TPL_TSHIRT';
-        if (tplSelect) tplSelect.value = tpl;
+        if (tplSelect) {
+            tplSelect.value = tpl;
+            tplSelect.dispatchEvent(new Event('change'));
+        }
         const tight = last.tightness !== undefined ? last.tightness : 0.5;
         if (tplTight) { tplTight.value = Math.round(tight * 100); }
         if (tplTightVal) tplTightVal.textContent = tight.toFixed(2);

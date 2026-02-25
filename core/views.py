@@ -975,6 +975,13 @@ def app_settings(request):
             s.default_anim_config = request.POST.get('default_anim_config', '').strip()
             s.default_anim_scene = request.POST.get('default_anim_scene', '').strip()
             s.default_anim_animations = request.POST.get('default_anim_animations', '').strip()
+            # Expanded panels — collect checked checkboxes per page
+            config_panels = [k.replace('panel_config_', '') for k in request.POST
+                             if k.startswith('panel_config_') and request.POST[k] == 'on']
+            scene_panels = [k.replace('panel_scene_', '') for k in request.POST
+                            if k.startswith('panel_scene_') and request.POST[k] == 'on']
+            s.expanded_panels_config = json.dumps(config_panels)
+            s.expanded_panels_scene = json.dumps(scene_panels)
             s.save()
             messages.success(request, 'Settings saved.')
         except (ValueError, TypeError):

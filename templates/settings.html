@@ -69,6 +69,14 @@
                 </select>
             </div>
         </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Ausgeklappte Tabs</small>
+            </div>
+            <div class="settings-input" id="panels-config-wrap">
+                <!-- populated by JS -->
+            </div>
+        </div>
 
         <!-- Szene -->
         <div class="settings-row" style="margin-top:1rem;">
@@ -101,6 +109,14 @@
                 <select name="default_anim_scene" id="default-anim-scene" class="settings-select" style="flex:1;">
                     <option value="">— keine —</option>
                 </select>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Ausgeklappte Tabs</small>
+            </div>
+            <div class="settings-input" id="panels-scene-wrap">
+                <!-- populated by JS -->
             </div>
         </div>
 
@@ -177,6 +193,43 @@
             });
         })
         .catch(e => console.warn('Failed to load model presets:', e));
+
+    // Expanded panels checkboxes
+    const CONFIG_PANELS = [
+        ['body_type', 'Body Type'], ['morphs', 'Morphs'],
+        ['cloth_template', 'Cloth - from Template'], ['cloth_builder', 'Cloth Builder'],
+        ['cloth_primitive', 'Cloth - Primitive'], ['hair', 'Hair'],
+        ['wardrobe', 'Wardrobe'], ['animations', 'Animations'],
+    ];
+    const SCENE_PANELS = [
+        ['beleuchtung', 'Beleuchtung'], ['renderer', 'Renderer'],
+        ['kamera', 'Kamera'], ['material_skin', 'Material (Skin)'],
+        ['aktionen', 'Aktionen'],
+    ];
+    function buildPanelCheckboxes(wrapId, panels, prefix, expandedJson) {
+        const wrap = document.getElementById(wrapId);
+        if (!wrap) return;
+        let expanded = [];
+        try { expanded = JSON.parse(expandedJson || '[]'); } catch(e) {}
+        wrap.innerHTML = '';
+        panels.forEach(([key, label]) => {
+            const lbl = document.createElement('label');
+            lbl.className = 'settings-checkbox';
+            lbl.style.display = 'block';
+            lbl.style.marginBottom = '4px';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.name = prefix + key;
+            cb.checked = expanded.includes(key);
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode(' ' + label));
+            wrap.appendChild(lbl);
+        });
+    }
+    buildPanelCheckboxes('panels-config-wrap', CONFIG_PANELS, 'panel_config_',
+        "{{ settings.expanded_panels_config|escapejs }}");
+    buildPanelCheckboxes('panels-scene-wrap', SCENE_PANELS, 'panel_scene_',
+        "{{ settings.expanded_panels_scene|escapejs }}");
 
     // Populate animation lists
     fetch('/api/character/animations/')

@@ -194,7 +194,7 @@
 
     <div class="viewer-panel">
         <!-- Lighting -->
-        <div class="panel-section">
+        <div class="panel-section" data-panel-key="beleuchtung">
             <h3>Beleuchtung <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
                 <select id="light-preset" class="viewer-select">
@@ -309,7 +309,7 @@
         </div>
 
         <!-- Renderer -->
-        <div class="panel-section">
+        <div class="panel-section" data-panel-key="renderer">
             <h3>Renderer <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
                 <div class="slider-row">
@@ -335,7 +335,7 @@
         </div>
 
         <!-- Camera -->
-        <div class="panel-section">
+        <div class="panel-section" data-panel-key="kamera">
             <h3>Kamera <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
                 <div class="slider-row">
@@ -353,7 +353,7 @@
         </div>
 
         <!-- Material (Skin) -->
-        <div class="panel-section">
+        <div class="panel-section" data-panel-key="material_skin">
             <h3>Material (Skin) <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
                 <div class="slider-row">
@@ -374,7 +374,7 @@
         </div>
 
         <!-- Actions -->
-        <div class="panel-section">
+        <div class="panel-section" data-panel-key="aktionen">
             <h3>Aktionen <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
                 <button class="action-btn primary" id="btn-apply">Auf Konfiguration anwenden</button>
@@ -402,5 +402,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/scene_config.js' %}"></script>
+<script type="module" src="{% static 'viewer/scene_config.js' %}?v=2"></script>
 {% endblock %}

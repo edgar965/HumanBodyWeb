@@ -534,6 +534,8 @@ def humanbody_settings_api(request):
         'default_anim_config': s.default_anim_config,
         'default_anim_scene': s.default_anim_scene,
         'default_anim_animations': s.default_anim_animations,
+        'expanded_panels_config': json.loads(s.expanded_panels_config or '[]'),
+        'expanded_panels_scene': json.loads(s.expanded_panels_scene or '[]'),
     })
 
 
@@ -688,6 +690,95 @@ HAIR_COLORS = {
     "Burgundy":           {"viewport": (0.13, 0.085, 0.08)},
     "Plum":               {"viewport": (0.33, 0.17, 0.05)},
 }
+
+
+# =========================================================================
+# Cloth Template Presets
+# =========================================================================
+
+_TPL_CATEGORY = {
+    'TPL_TSHIRT': 'Top', 'TPL_DRESS': 'Top',
+    'TPL_PANTS': 'Pants', 'TPL_SKIRT': 'Pants',
+}
+
+
+def _cloth_preset_dir(category):
+    """Return Path for cloth template preset directory, creating if needed."""
+    d = settings.HUMANBODY_ASSETS_INSTANCE_DIR / category / 'clothFromTemplate'
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+@require_GET
+def cloth_preset_list(request):
+    """List all cloth template presets for a category (Top or Pants)."""
+    category = request.GET.get('category', '')
+    if category not in ('Top', 'Pants'):
+        return JsonResponse({'error': 'category must be Top or Pants'}, status=400)
+    d = _cloth_preset_dir(category)
+    presets = []
+    for f in sorted(d.glob('*.json')):
+        try:
+            data = json.loads(f.read_text(encoding='utf-8'))
+            presets.append({'name': f.stem, 'label': data.get('name', f.stem)})
+        except (json.JSONDecodeError, IOError):
+            presets.append({'name': f.stem, 'label': f.stem})
+    return JsonResponse({'presets': presets})
+
+
+@csrf_exempt
+@require_POST
+def cloth_preset_save(request):
+    """Save a cloth template preset."""
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    name = body.get('name', '').strip()
+    data = body.get('data')
+    if not name or not data:
+        return JsonResponse({'error': 'name and data required'}, status=400)
+
+    template = data.get('template', '')
+    category = _TPL_CATEGORY.get(template)
+    if not category:
+        return JsonResponse({'error': f'Unknown template: {template}'}, status=400)
+
+    safe_name = re.sub(r'[^\w\s\-]', '', name).strip()
+    if not safe_name:
+        return JsonResponse({'error': 'Invalid name'}, status=400)
+
+    d = _cloth_preset_dir(category)
+    fpath = os.path.normpath(os.path.join(str(d), f"{safe_name}.json"))
+    if not fpath.startswith(os.path.normpath(str(d))):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+
+    data['name'] = name
+    with open(fpath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return JsonResponse({'ok': True, 'filename': f"{safe_name}.json", 'category': category})
+
+
+@require_GET
+def cloth_preset_detail(request, category, name):
+    """Load a single cloth template preset."""
+    if category not in ('Top', 'Pants'):
+        return JsonResponse({'error': 'Invalid category'}, status=400)
+    if '/' in name or '\\' in name or '..' in name:
+        return JsonResponse({'error': 'Invalid name'}, status=400)
+
+    d = _cloth_preset_dir(category)
+    fpath = os.path.normpath(os.path.join(str(d), f"{name}.json"))
+    if not fpath.startswith(os.path.normpath(str(d))):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+    if not os.path.isfile(fpath):
+        return HttpResponseNotFound(f'Preset not found: {category}/{name}')
+
+    with open(fpath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return JsonResponse(data)
 
 
 @require_GET

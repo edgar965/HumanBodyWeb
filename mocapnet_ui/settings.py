@@ -103,6 +103,7 @@ HUMANBODY_DATA_DIR = HUMANBODY_ROOT / 'data' / 'humanBody'
 HUMANBODY_MODELS_DIR = HUMANBODY_ROOT / 'data' / 'models'
 HUMANBODY_ASSETS_DIR = HUMANBODY_ROOT / 'data' / 'assets'
 HUMANBODY_ASSETS_GLB_DIR = HUMANBODY_ROOT / 'data' / 'assets_glb'
+HUMANBODY_ASSETS_INSTANCE_DIR = HUMANBODY_ROOT / 'data' / 'assetsInstance'
 HUMANBODY_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'
 
 # Channel layers (in-memory for dev)

@@ -145,6 +145,22 @@ function init() {
         });
     });
 
+    // Apply expanded panels from settings
+    fetch('/api/settings/humanbody/')
+        .then(r => r.json())
+        .then(s => {
+            const expanded = s.expanded_panels_scene;
+            if (!Array.isArray(expanded)) return;
+            document.querySelectorAll('.panel-section[data-panel-key]').forEach(panel => {
+                if (expanded.includes(panel.dataset.panelKey)) {
+                    panel.classList.remove('collapsed');
+                } else {
+                    panel.classList.add('collapsed');
+                }
+            });
+        })
+        .catch(() => {});
+
     // Bind all UI controls
     bindLightingUI();
     bindRendererUI();

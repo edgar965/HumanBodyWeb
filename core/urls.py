@@ -47,6 +47,9 @@ urlpatterns = [
     # Cloth
     path('api/character/cloth/', character_api.character_cloth, name='character_cloth'),
     path('api/character/cloth/regions/', character_api.character_cloth_regions, name='character_cloth_regions'),
+    path('api/character/cloth/presets/', character_api.cloth_preset_list, name='cloth_preset_list'),
+    path('api/character/cloth/presets/save/', character_api.cloth_preset_save, name='cloth_preset_save'),
+    path('api/character/cloth/presets/<str:category>/<str:name>/', character_api.cloth_preset_detail, name='cloth_preset_detail'),
 
     # Hair
     path('api/character/hairstyles/', character_api.character_hairstyles, name='character_hairstyles'),
