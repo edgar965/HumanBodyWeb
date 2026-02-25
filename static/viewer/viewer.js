@@ -40,16 +40,18 @@ let defSkeleton = null;      // { skeleton, rootBone, bones, boneByName }
 let isSkinned = false;       // Flag: Mesh is already SkinnedMesh
 
 // Rig skeleton visualization
-let rigGroup = null;
 let rigVisible = false;
-let rigData = null;
 
 // Cloth — multiple pieces keyed by region
 const clothMeshes = {};  // region -> THREE.Mesh
+const clothParams = {};  // region -> { params, color }
 
 // Hair
 let hairMesh = null;
 let hairColorData = {};  // name -> [r,g,b] (linear sRGB)
+
+// Current preset name (set on load/save)
+let currentPresetName = '';
 
 // =========================================================================
 // Initialization
@@ -130,10 +132,10 @@ function init() {
     loadDefSkeleton();
     loadWardrobe();
     loadAnimations();
-    loadRig();
     loadClothUI();
     loadHairUI();
     initLoadPreset();
+    initSaveButtons();
     connectWebSocket();
 
     // Demo animation button — Play/Pause toggle
@@ -170,12 +172,26 @@ function init() {
         });
     }
 
-    // Rig toggle (floating button)
+    // Rig toggle — single SkeletonHelper from defSkeleton (animates automatically)
     const rigToggle = document.getElementById('rig-toggle');
     if (rigToggle) {
         rigToggle.addEventListener('click', () => {
             rigVisible = !rigVisible;
-            if (rigGroup) rigGroup.visible = rigVisible;
+            if (rigVisible) {
+                // Create helper if needed (from DEF skeleton when available)
+                if (!skeletonHelper && defSkeleton) {
+                    skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                    skeletonHelper.material.depthTest = false;
+                    skeletonHelper.material.depthWrite = false;
+                    skeletonHelper.material.color.set(0x00ffaa);
+                    skeletonHelper.material.linewidth = 2;
+                    skeletonHelper.renderOrder = 999;
+                    scene.add(skeletonHelper);
+                }
+                if (skeletonHelper) skeletonHelper.visible = true;
+            } else {
+                if (skeletonHelper) skeletonHelper.visible = false;
+            }
             rigToggle.classList.toggle('active', rigVisible);
         });
     }
@@ -470,6 +486,16 @@ function convertToDefSkinnedMesh(defSkel, swData) {
                 'bones:', defSkeleton.skeleton.bones.length,
                 'skinIndex:', !!bodyGeometry.attributes.skinIndex,
                 'skinWeight:', !!bodyGeometry.attributes.skinWeight);
+}
+
+/**
+ * Ensure body mesh is converted to SkinnedMesh (if skeleton data available).
+ * Call before creating cloth/hair SkinnedMeshes that share the skeleton.
+ */
+function ensureSkinned() {
+    if (isSkinned) return;
+    if (!defSkeletonData || !skinWeightData || !bodyMesh) return;
+    convertToDefSkinnedMesh(null, skinWeightData);
 }
 
 // Retarget imports from shared module (retarget.js)
@@ -884,15 +910,17 @@ function loadBVHAnimation(url, name, fc) {
             const clip = retargetBVHToDefClip(result, defSkeleton, format, { bodyMesh });
             console.log(`Retargeted clip: ${clip.tracks.length} tracks, ${clip.duration.toFixed(2)}s`);
 
-            // SkeletonHelper
-            if (skeletonHelper) scene.remove(skeletonHelper);
-            skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
-            skeletonHelper.material.depthTest = false;
-            skeletonHelper.material.depthWrite = false;
-            skeletonHelper.material.color.set(0x00ffaa);
-            skeletonHelper.material.linewidth = 2;
-            skeletonHelper.renderOrder = 999;
-            scene.add(skeletonHelper);
+            // Ensure SkeletonHelper exists for DEF skeleton
+            if (!skeletonHelper) {
+                skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                skeletonHelper.material.depthTest = false;
+                skeletonHelper.material.depthWrite = false;
+                skeletonHelper.material.color.set(0x00ffaa);
+                skeletonHelper.material.linewidth = 2;
+                skeletonHelper.renderOrder = 999;
+                skeletonHelper.visible = rigVisible;
+                scene.add(skeletonHelper);
+            }
 
             // Play on SkinnedMesh
             mixer = new THREE.AnimationMixer(bodyMesh);
@@ -934,6 +962,7 @@ function loadBVHAnimation(url, name, fc) {
             skeletonHelper.material.color.set(0x00ffaa);
             skeletonHelper.material.linewidth = 2;
             skeletonHelper.renderOrder = 999;
+            skeletonHelper.visible = rigVisible;
             scene.add(skeletonHelper);
 
             mixer = new THREE.AnimationMixer(rootBone);
@@ -967,73 +996,29 @@ function stopAnimation(destroy = false) {
     if (isSkinned && bodyMesh && bodyMesh.isSkinnedMesh) {
         bodyMesh.skeleton.pose();
     }
-    if (destroy) {
-        if (skelWrapper) {
-            scene.remove(skelWrapper);
-            skelWrapper = null;
-        }
-        if (skeletonHelper) {
-            scene.remove(skeletonHelper);
-            skeletonHelper = null;
-        }
+    // Clean up BVH fallback wrapper
+    if (skelWrapper) {
+        scene.remove(skelWrapper);
+        skelWrapper = null;
+    }
+    // Remove animation skeleton helper; recreate from DEF skeleton if rig is visible
+    if (skeletonHelper) {
+        scene.remove(skeletonHelper);
+        skeletonHelper = null;
+    }
+    if (rigVisible && defSkeleton) {
+        skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+        skeletonHelper.material.depthTest = false;
+        skeletonHelper.material.depthWrite = false;
+        skeletonHelper.material.color.set(0x00ffaa);
+        skeletonHelper.material.linewidth = 2;
+        skeletonHelper.renderOrder = 999;
+        scene.add(skeletonHelper);
     }
     playing = false;
 }
 
-// =========================================================================
-// Rig skeleton visualization
-// =========================================================================
-async function loadRig() {
-    try {
-        const resp = await fetch('/api/character/rig/');
-        rigData = await resp.json();
-        if (!rigData.bones || rigData.bones.length === 0) {
-            console.warn('No rig data available');
-            return;
-        }
-        buildRigVisualization();
-    } catch (e) {
-        console.error('Failed to load rig:', e);
-    }
-}
-
-function buildRigVisualization() {
-    if (rigGroup) {
-        scene.remove(rigGroup);
-        rigGroup = null;
-    }
-    if (!rigData || !rigData.bones) return;
-
-    rigGroup = new THREE.Group();
-    rigGroup.visible = rigVisible;
-
-    const boneMat = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 2, depthTest: false });
-    const jointMat = new THREE.MeshBasicMaterial({ color: 0x00ffaa, depthTest: false });
-    const jointGeo = new THREE.SphereGeometry(0.006, 6, 4);
-
-    // Only show deform bones for cleaner display
-    const deformBones = rigData.bones.filter(b => b.deform);
-
-    deformBones.forEach(bone => {
-        const h = bone.head;
-        const t = bone.tail;
-        // Convert Blender coords to Three.js: (x,y,z) -> (x,z,-y)
-        const head = new THREE.Vector3(h[0], h[2], -h[1]);
-        const tail = new THREE.Vector3(t[0], t[2], -t[1]);
-
-        // Bone line
-        const lineGeo = new THREE.BufferGeometry().setFromPoints([head, tail]);
-        const line = new THREE.Line(lineGeo, boneMat);
-        rigGroup.add(line);
-
-        // Joint sphere at head
-        const joint = new THREE.Mesh(jointGeo, jointMat);
-        joint.position.copy(head);
-        rigGroup.add(joint);
-    });
-
-    scene.add(rigGroup);
-}
+// (Rig visualization now uses SkeletonHelper from defSkeleton — no separate rigGroup)
 
 // =========================================================================
 // Cloth
@@ -1195,6 +1180,9 @@ async function loadCloth(key, params, color) {
     const createBtns = document.querySelectorAll('#cloth-tpl-create, #cloth-bld-create, #cloth-prim-create');
     createBtns.forEach(b => b.disabled = true);
 
+    // Ensure skinning is ready so cloth can share the skeleton
+    ensureSkinned();
+
     try {
         const qs = Object.entries(params)
             .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
@@ -1235,11 +1223,24 @@ async function loadCloth(key, params, color) {
             side: THREE.DoubleSide,
         });
 
-        const mesh = new THREE.Mesh(geo, mat);
+        // Create as SkinnedMesh if skin data available + body is skinned
+        let mesh;
+        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+            const siBuf = base64ToFloat32(data.skin_indices);
+            const swBuf = base64ToFloat32(data.skin_weights);
+            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
+            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
+            mesh = new THREE.SkinnedMesh(geo, mat);
+            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+        } else {
+            mesh = new THREE.Mesh(geo, mat);
+        }
+
         clothMeshes[key] = mesh;
+        clothParams[key] = { params, color: '#' + mesh.material.color.getHexString() };
         scene.add(mesh);
 
-        console.log(`Cloth ${key}: ${data.vertex_count} verts, ${data.face_count} tris`);
+        console.log(`Cloth ${key}: ${data.vertex_count} verts, ${data.face_count} tris, skinned=${mesh.isSkinnedMesh || false}`);
     } catch (e) {
         console.error('Failed to load cloth:', e);
     }
@@ -1253,6 +1254,7 @@ function removeClothRegion(key) {
         m.geometry.dispose();
         m.material.dispose();
         delete clothMeshes[key];
+        delete clothParams[key];
     }
 }
 
@@ -1314,18 +1316,70 @@ async function loadHairUI() {
 
 function loadHair(url) {
     removeHair();
+    ensureSkinned();
+
     gltfLoader.load(url, (gltf) => {
-        hairMesh = gltf.scene;
+        let hairGroup = gltf.scene;
+
+        // Convert hair meshes to SkinnedMesh bound to head bone
+        if (isSkinned && defSkeleton && skinWeightData) {
+            const headBoneIdx = _findHeadBoneIndex();
+            if (headBoneIdx >= 0) {
+                hairGroup = _skinifyHairGroup(hairGroup, headBoneIdx);
+            }
+        }
+
+        hairMesh = hairGroup;
         // Apply current hair color
         const colorSelect = document.getElementById('hair-color-select');
         if (colorSelect && colorSelect.value) {
             applyHairColorToObject(hairMesh, colorSelect.value);
         }
         scene.add(hairMesh);
-        console.log('Hair loaded:', url);
+        console.log('Hair loaded:', url, 'skinned=' + (isSkinned && defSkeleton ? 'yes' : 'no'));
     }, undefined, (err) => {
         console.error('Failed to load hair:', err);
     });
+}
+
+function _findHeadBoneIndex() {
+    if (!skinWeightData) return -1;
+    const names = skinWeightData.bone_names;
+    for (const tryName of ['DEF-spine.006', 'DEF-spine.005', 'DEF-head']) {
+        const idx = names.indexOf(tryName);
+        if (idx >= 0) return idx;
+    }
+    return -1;
+}
+
+function _skinifyHairGroup(gltfScene, headBoneIdx) {
+    // Collect all meshes from the GLB scene
+    const meshChildren = [];
+    gltfScene.traverse(child => {
+        if (child.isMesh) meshChildren.push(child);
+    });
+
+    const group = new THREE.Group();
+    for (const child of meshChildren) {
+        const geo = child.geometry.clone();
+        const vCount = geo.attributes.position.count;
+        const si = new Float32Array(vCount * 4);
+        const sw = new Float32Array(vCount * 4);
+        for (let v = 0; v < vCount; v++) {
+            si[v * 4] = headBoneIdx;
+            sw[v * 4] = 1.0;
+        }
+        geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(si, 4));
+        geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+
+        const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
+        // Apply the child's world transform so position is correct
+        child.updateWorldMatrix(true, false);
+        skinnedChild.applyMatrix4(child.matrixWorld);
+        skinnedChild.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+        group.add(skinnedChild);
+    }
+    return group;
 }
 
 function removeHair() {
@@ -1511,11 +1565,44 @@ async function loadDefaultPreset() {
     await new Promise(r => setTimeout(r, 500));
 
     try {
-        const resp = await fetch('/api/character/model/femaleWithClothes/');
+        // Determine default settings from settings API
+        let presetName = 'femaleWithClothes';
+        let showRig = false;
+        let defaultAnim = '';
+        try {
+            const settingsResp = await fetch('/api/settings/humanbody/');
+            if (settingsResp.ok) {
+                const s = await settingsResp.json();
+                if (s.config) presetName = s.config;
+                showRig = !!s.show_rig_config;
+                defaultAnim = s.default_anim_config || '';
+            }
+        } catch (e) { /* fallback to default */ }
+
+        // Apply rig visibility from settings
+        if (showRig) {
+            rigVisible = true;
+            const rigToggle = document.getElementById('rig-toggle');
+            if (rigToggle) rigToggle.classList.add('active');
+        }
+
+        const resp = await fetch(`/api/character/model/${encodeURIComponent(presetName)}/`);
         if (!resp.ok) return;
         const preset = await resp.json();
         applyModelPreset(preset);
-        console.log('Default preset loaded: femaleWithClothes');
+        console.log(`Default preset loaded: ${presetName}`);
+
+        // Auto-play default animation after preset is applied
+        if (defaultAnim) {
+            setTimeout(() => {
+                loadBVHAnimation(defaultAnim, 'Default', 0);
+                const demoBtn = document.getElementById('play-demo-anim');
+                if (demoBtn) {
+                    demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                    demoBtn.classList.add('active');
+                }
+            }, 1500);
+        }
     } catch (e) {
         console.warn('Failed to load default preset:', e);
     }
@@ -1642,7 +1729,310 @@ function applyModelPreset(preset) {
         }
     }
 
+    currentPresetName = preset.name || '';
+    // Store model state so other pages (Szene, Animationen) can read it
+    setTimeout(() => {
+        try {
+            localStorage.setItem('humanbody_current_model', JSON.stringify(gatherModelState()));
+        } catch (e) { /* ignore */ }
+    }, 2000);
     console.log(`Preset "${preset.name || 'unknown'}" applied`);
+}
+
+// =========================================================================
+// Save Model
+// =========================================================================
+function gatherModelState() {
+    const state = {};
+
+    // Body type
+    const bodySelect = document.getElementById('body-type-select');
+    if (bodySelect) state.body_type = bodySelect.value;
+
+    // Gender
+    const genderSlider = document.getElementById('gender-slider');
+    if (genderSlider) state.gender = parseInt(genderSlider.value);
+
+    // Morphs
+    const morphs = {};
+    const panel = document.getElementById('morphs-panel');
+    if (panel) {
+        panel.querySelectorAll('input[type="range"][data-morph]').forEach(slider => {
+            const val = parseInt(slider.value);
+            if (val !== 0) {
+                morphs[slider.dataset.morph] = val / 100;
+            }
+        });
+    }
+    state.morphs = morphs;
+
+    // Cloth — reconstruct from clothParams
+    const clothList = [];
+    for (const [key, cp] of Object.entries(clothParams)) {
+        const p = cp.params;
+        const entry = {};
+        if (p.method === 'template') {
+            entry.template = p.template;
+            entry.tightness = p.tightness !== undefined ? p.tightness : 0.5;
+            entry.segments = p.segments || 32;
+            if (p.top_extend) entry.top_extend = p.top_extend;
+            if (p.bottom_extend) entry.bottom_extend = p.bottom_extend;
+        } else if (p.method === 'builder') {
+            entry.method = 'builder';
+            entry.region = p.region;
+            entry.looseness = p.looseness;
+        } else if (p.method === 'primitive') {
+            entry.method = 'primitive';
+            entry.prim_type = p.prim_type;
+            entry.segments = p.segments;
+            entry.length = p.length;
+            if (p.flare) entry.flare = p.flare;
+        }
+        entry.color = cp.color;
+        clothList.push(entry);
+    }
+    state.cloth = clothList;
+
+    // Hair
+    const hairSelect = document.getElementById('hair-style-select');
+    const hairColorSelect = document.getElementById('hair-color-select');
+    if (hairSelect && hairSelect.value) {
+        state.hair_style = {
+            url: hairSelect.value,
+            name: hairSelect.options[hairSelect.selectedIndex]?.textContent || '',
+            color: hairColorSelect ? hairColorSelect.value : '',
+        };
+    }
+
+    // Wardrobe
+    const wardrobePanel = document.getElementById('wardrobe-panel');
+    const activeAssets = [];
+    if (wardrobePanel) {
+        wardrobePanel.querySelectorAll('.asset-btn.active').forEach(btn => {
+            activeAssets.push(btn.dataset.asset);
+        });
+    }
+    state.wardrobe = activeAssets;
+
+    // Scene settings from localStorage
+    const sceneSaved = localStorage.getItem('humanbody_scene_settings');
+    if (sceneSaved) {
+        try { state.scene = JSON.parse(sceneSaved); } catch (e) { /* ignore */ }
+    }
+
+    return state;
+}
+
+async function saveModel(name) {
+    const data = gatherModelState();
+    data.name = name;
+    try {
+        const resp = await fetch('/api/character/model/save/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, data }),
+        });
+        const result = await resp.json();
+        if (result.ok) {
+            currentPresetName = name;
+            console.log(`Model saved: ${result.filename}`);
+            return true;
+        } else {
+            alert('Fehler beim Speichern: ' + (result.error || 'Unbekannt'));
+            return false;
+        }
+    } catch (e) {
+        alert('Fehler beim Speichern: ' + e.message);
+        return false;
+    }
+}
+
+// ---- Save-Dialog (Modal) ----
+function createSaveDialog() {
+    if (document.getElementById('save-dialog-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'save-dialog-overlay';
+    overlay.innerHTML = `
+        <div class="save-dialog">
+            <div class="save-dialog-header">
+                <h3><i class="fas fa-file-export"></i> Modell speichern unter</h3>
+                <button class="save-dialog-close" title="Schließen">&times;</button>
+            </div>
+            <div class="save-dialog-body">
+                <label>Vorhandene Modelle:</label>
+                <div class="save-dialog-list" id="save-dialog-list"></div>
+                <label style="margin-top:12px;">Name:</label>
+                <input type="text" id="save-dialog-name" placeholder="Neuer Name..." autocomplete="off">
+            </div>
+            <div class="save-dialog-footer">
+                <button class="save-dialog-btn cancel" id="save-dialog-cancel">Abbrechen</button>
+                <button class="save-dialog-btn confirm" id="save-dialog-confirm"><i class="fas fa-save"></i> Speichern</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Inject styles once
+    if (!document.getElementById('save-dialog-styles')) {
+        const style = document.createElement('style');
+        style.id = 'save-dialog-styles';
+        style.textContent = `
+            #save-dialog-overlay {
+                display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
+                z-index:10000; align-items:center; justify-content:center;
+            }
+            #save-dialog-overlay.open { display:flex; }
+            .save-dialog {
+                background:var(--bg-secondary,#1e1e2e); border:1px solid var(--border,#333);
+                border-radius:8px; width:420px; max-height:80vh; display:flex; flex-direction:column;
+                box-shadow:0 8px 32px rgba(0,0,0,0.5);
+            }
+            .save-dialog-header {
+                display:flex; align-items:center; justify-content:space-between;
+                padding:14px 18px; border-bottom:1px solid var(--border,#333);
+            }
+            .save-dialog-header h3 { margin:0; font-size:1rem; color:var(--text,#eee); }
+            .save-dialog-close {
+                background:none; border:none; color:var(--text-muted,#888);
+                font-size:1.4rem; cursor:pointer; padding:0 4px; line-height:1;
+            }
+            .save-dialog-close:hover { color:var(--text,#eee); }
+            .save-dialog-body { padding:14px 18px; overflow-y:auto; }
+            .save-dialog-body label { display:block; font-size:0.85rem; color:var(--text-muted,#999); margin-bottom:6px; }
+            .save-dialog-list {
+                max-height:200px; overflow-y:auto; border:1px solid var(--border,#333);
+                border-radius:4px; background:var(--bg-primary,#12121e);
+            }
+            .save-dialog-item {
+                padding:8px 12px; cursor:pointer; font-size:0.9rem;
+                color:var(--text,#eee); border-bottom:1px solid var(--border,#222);
+            }
+            .save-dialog-item:last-child { border-bottom:none; }
+            .save-dialog-item:hover { background:var(--accent,#5865f2); color:#fff; }
+            .save-dialog-item.selected { background:var(--accent,#5865f2); color:#fff; }
+            #save-dialog-name {
+                width:100%; padding:8px 10px; border:1px solid var(--border,#333);
+                border-radius:4px; background:var(--bg-primary,#12121e);
+                color:var(--text,#eee); font-size:0.95rem; box-sizing:border-box;
+            }
+            #save-dialog-name:focus { outline:none; border-color:var(--accent,#5865f2); }
+            .save-dialog-footer {
+                display:flex; justify-content:flex-end; gap:8px;
+                padding:12px 18px; border-top:1px solid var(--border,#333);
+            }
+            .save-dialog-btn {
+                padding:8px 18px; border:1px solid var(--border,#333); border-radius:4px;
+                cursor:pointer; font-size:0.9rem;
+            }
+            .save-dialog-btn.cancel { background:transparent; color:var(--text-muted,#999); }
+            .save-dialog-btn.cancel:hover { color:var(--text,#eee); }
+            .save-dialog-btn.confirm {
+                background:var(--accent,#5865f2); color:#fff; border-color:var(--accent,#5865f2);
+            }
+            .save-dialog-btn.confirm:hover { filter:brightness(1.15); }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+function showSaveDialog() {
+    return new Promise((resolve) => {
+        createSaveDialog();
+        const overlay = document.getElementById('save-dialog-overlay');
+        const list = document.getElementById('save-dialog-list');
+        const nameInput = document.getElementById('save-dialog-name');
+        const confirmBtn = document.getElementById('save-dialog-confirm');
+        const cancelBtn = document.getElementById('save-dialog-cancel');
+        const closeBtn = overlay.querySelector('.save-dialog-close');
+
+        nameInput.value = currentPresetName || '';
+        list.innerHTML = '<div style="padding:8px 12px;color:var(--text-muted,#888);font-size:0.85rem;">Lade...</div>';
+        overlay.classList.add('open');
+        nameInput.focus();
+
+        // Load existing presets
+        fetch('/api/character/models/')
+            .then(r => r.json())
+            .then(data => {
+                list.innerHTML = '';
+                (data.presets || []).forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'save-dialog-item';
+                    item.textContent = p.label || p.name;
+                    item.dataset.name = p.name;
+                    item.addEventListener('click', () => {
+                        list.querySelectorAll('.save-dialog-item').forEach(i => i.classList.remove('selected'));
+                        item.classList.add('selected');
+                        nameInput.value = p.name;
+                        nameInput.focus();
+                    });
+                    list.appendChild(item);
+                });
+                if (list.children.length === 0) {
+                    list.innerHTML = '<div style="padding:8px 12px;color:var(--text-muted,#888);font-size:0.85rem;">Keine Modelle vorhanden</div>';
+                }
+            })
+            .catch(() => {
+                list.innerHTML = '<div style="padding:8px 12px;color:#f44;font-size:0.85rem;">Fehler beim Laden</div>';
+            });
+
+        function close(result) {
+            overlay.classList.remove('open');
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            closeBtn.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onOverlayClick);
+            nameInput.removeEventListener('keydown', onKeydown);
+            resolve(result);
+        }
+        function onConfirm() {
+            const name = nameInput.value.trim();
+            if (name) close(name); else nameInput.focus();
+        }
+        function onCancel() { close(null); }
+        function onOverlayClick(e) { if (e.target === overlay) close(null); }
+        function onKeydown(e) {
+            if (e.key === 'Enter') onConfirm();
+            if (e.key === 'Escape') onCancel();
+        }
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlayClick);
+        nameInput.addEventListener('keydown', onKeydown);
+    });
+}
+
+function initSaveButtons() {
+    const saveBtn = document.getElementById('save-model-btn');
+    const saveAsBtn = document.getElementById('save-model-as-btn');
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+            if (!currentPresetName) {
+                saveAsBtn?.click();
+                return;
+            }
+            const ok = await saveModel(currentPresetName);
+            if (ok) {
+                saveBtn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!';
+                setTimeout(() => { saveBtn.innerHTML = '<i class="fas fa-save"></i> Speichern'; }, 1500);
+            }
+        });
+    }
+
+    if (saveAsBtn) {
+        saveAsBtn.addEventListener('click', async () => {
+            const name = await showSaveDialog();
+            if (!name) return;
+            const ok = await saveModel(name);
+            if (ok) {
+                saveAsBtn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!';
+                setTimeout(() => { saveAsBtn.innerHTML = '<i class="fas fa-file-export"></i> Speichern unter'; }, 1500);
+            }
+        });
+    }
 }
 
 // =========================================================================

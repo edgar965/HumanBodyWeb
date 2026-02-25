@@ -100,6 +100,33 @@ class AppSettings(models.Model):
         default=10,
         help_text="Update progress every N frames during MediaPipe/OpenPose processing",
     )
+    default_model_config = models.CharField(
+        max_length=200, default='femaleWithClothes', blank=True,
+        help_text="Default model preset for Konfiguration page",
+    )
+    default_model_scene = models.CharField(
+        max_length=200, default='femaleWithClothes', blank=True,
+        help_text="Default model preset for Szene page",
+    )
+    default_model_animations = models.CharField(
+        max_length=200, default='femaleWithClothes', blank=True,
+        help_text="Default model preset for Animationen page",
+    )
+    show_rig_config = models.BooleanField(default=False, help_text="Show rig by default on Konfiguration page")
+    show_rig_scene = models.BooleanField(default=False, help_text="Show rig by default on Szene page")
+    show_rig_animations = models.BooleanField(default=False, help_text="Show rig by default on Animationen page")
+    default_anim_config = models.CharField(
+        max_length=300, default='', blank=True,
+        help_text="Default animation URL for Konfiguration page",
+    )
+    default_anim_scene = models.CharField(
+        max_length=300, default='', blank=True,
+        help_text="Default animation URL for Szene page",
+    )
+    default_anim_animations = models.CharField(
+        max_length=300, default='', blank=True,
+        help_text="Default animation URL for Animationen page",
+    )
 
     class Meta:
         verbose_name = "Settings"

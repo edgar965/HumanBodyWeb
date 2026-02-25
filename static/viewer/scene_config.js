@@ -76,9 +76,7 @@ let isSkinned = false;
 let skelWrapper = null;
 
 // Rig
-let rigGroup = null;
 let rigVisible = false;
-let rigData = null;
 
 // Auto-save debounce
 let saveTimer = null;
@@ -153,13 +151,27 @@ function init() {
     bindCameraUI();
     bindMaterialUI();
     bindActions();
+    initSaveButtons();
 
-    // Rig toggle
+    // Rig toggle — single SkeletonHelper from defSkeleton
     const rigToggle = document.getElementById('rig-toggle');
     if (rigToggle) {
         rigToggle.addEventListener('click', () => {
             rigVisible = !rigVisible;
-            if (rigGroup) rigGroup.visible = rigVisible;
+            if (rigVisible) {
+                if (!skeletonHelper && defSkeleton) {
+                    skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                    skeletonHelper.material.depthTest = false;
+                    skeletonHelper.material.depthWrite = false;
+                    skeletonHelper.material.color.set(0x00ffaa);
+                    skeletonHelper.material.linewidth = 2;
+                    skeletonHelper.renderOrder = 999;
+                    scene.add(skeletonHelper);
+                }
+                if (skeletonHelper) skeletonHelper.visible = true;
+            } else {
+                if (skeletonHelper) skeletonHelper.visible = false;
+            }
             rigToggle.classList.toggle('active', rigVisible);
         });
     }
@@ -204,7 +216,6 @@ function init() {
 
     // Load mesh + rig + skeleton data for animation
     loadMesh();
-    loadRig();
     loadDefSkeleton();
     loadSkinWeights();
 }
@@ -350,47 +361,7 @@ async function loadMesh() {
     }
 }
 
-// =========================================================================
-// Rig visualization
-// =========================================================================
-async function loadRig() {
-    try {
-        const resp = await fetch('/api/character/rig/');
-        rigData = await resp.json();
-        if (!rigData.bones || rigData.bones.length === 0) return;
-        buildRigVisualization();
-    } catch (e) {
-        console.error('Failed to load rig:', e);
-    }
-}
-
-function buildRigVisualization() {
-    if (rigGroup) { scene.remove(rigGroup); rigGroup = null; }
-    if (!rigData || !rigData.bones) return;
-
-    rigGroup = new THREE.Group();
-    rigGroup.visible = rigVisible;
-
-    const boneMat = new THREE.LineBasicMaterial({ color: 0x00ff88, linewidth: 2, depthTest: false });
-    const jointMat = new THREE.MeshBasicMaterial({ color: 0x00ffaa, depthTest: false });
-    const jointGeo = new THREE.SphereGeometry(0.006, 6, 4);
-
-    const deformBones = rigData.bones.filter(b => b.deform);
-    deformBones.forEach(bone => {
-        const h = bone.head, t = bone.tail;
-        const head = new THREE.Vector3(h[0], h[2], -h[1]);
-        const tail = new THREE.Vector3(t[0], t[2], -t[1]);
-
-        const lineGeo = new THREE.BufferGeometry().setFromPoints([head, tail]);
-        rigGroup.add(new THREE.Line(lineGeo, boneMat));
-
-        const joint = new THREE.Mesh(jointGeo, jointMat);
-        joint.position.copy(head);
-        rigGroup.add(joint);
-    });
-
-    scene.add(rigGroup);
-}
+// (Rig visualization now uses SkeletonHelper from defSkeleton — no separate rigGroup)
 
 // =========================================================================
 // UI Bindings: Lighting
@@ -871,13 +842,16 @@ function loadBVHAnimation(url, name, fc) {
             if (!isSkinned) convertToDefSkinnedMesh();
             const format = detectBVHFormat(bvhBones);
             const clip = retargetBVHToDefClip(result, defSkeleton, format, { bodyMesh });
-            if (skeletonHelper) scene.remove(skeletonHelper);
-            skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
-            skeletonHelper.material.depthTest = false;
-            skeletonHelper.material.depthWrite = false;
-            skeletonHelper.material.color.set(0x00ffaa);
-            skeletonHelper.renderOrder = 999;
-            scene.add(skeletonHelper);
+            // Ensure SkeletonHelper exists for DEF skeleton
+            if (!skeletonHelper) {
+                skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                skeletonHelper.material.depthTest = false;
+                skeletonHelper.material.depthWrite = false;
+                skeletonHelper.material.color.set(0x00ffaa);
+                skeletonHelper.renderOrder = 999;
+                skeletonHelper.visible = rigVisible;
+                scene.add(skeletonHelper);
+            }
             mixer = new THREE.AnimationMixer(bodyMesh);
             currentAction = mixer.clipAction(clip);
             currentAction.play();
@@ -902,6 +876,7 @@ function loadBVHAnimation(url, name, fc) {
             skeletonHelper.material.depthWrite = false;
             skeletonHelper.material.color.set(0x00ffaa);
             skeletonHelper.renderOrder = 999;
+            skeletonHelper.visible = rigVisible;
             scene.add(skeletonHelper);
             mixer = new THREE.AnimationMixer(rootBone);
             currentAction = mixer.clipAction(result.clip);
@@ -915,9 +890,16 @@ function stopAnimation(destroy = false) {
     if (currentAction) { currentAction.stop(); currentAction.reset(); if (destroy) currentAction = null; }
     if (mixer && destroy) { mixer.stopAllAction(); mixer = null; }
     if (isSkinned && defSkeleton) defSkeleton.skeleton.pose();
-    if (destroy) {
-        if (skelWrapper) { scene.remove(skelWrapper); skelWrapper = null; }
-        if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
+    // Clean up animation skeleton; recreate from DEF skeleton if rig visible
+    if (skelWrapper) { scene.remove(skelWrapper); skelWrapper = null; }
+    if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
+    if (rigVisible && defSkeleton) {
+        skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+        skeletonHelper.material.depthTest = false;
+        skeletonHelper.material.depthWrite = false;
+        skeletonHelper.material.color.set(0x00ffaa);
+        skeletonHelper.renderOrder = 999;
+        scene.add(skeletonHelper);
     }
     playing = false;
 }
@@ -945,6 +927,116 @@ function blenderToThreeCoords(buf) {
         const z = buf[i + 2];
         buf[i + 1] = z;
         buf[i + 2] = -y;
+    }
+}
+
+// =========================================================================
+// Save Model (scene + model state from localStorage)
+// =========================================================================
+let currentPresetName = '';
+
+function gatherModelState() {
+    // Model body/cloth/hair from localStorage (set by Konfiguration page)
+    let model = {};
+    const saved = localStorage.getItem('humanbody_current_model');
+    if (saved) {
+        try { model = JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    // Override scene with current scene settings
+    model.scene = gatherSettings();
+    return model;
+}
+
+function getCSRFToken() {
+    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : '';
+}
+
+async function saveModel(name) {
+    const data = gatherModelState();
+    data.name = name;
+    try {
+        const resp = await fetch('/api/character/model/save/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+            body: JSON.stringify({ name, data }),
+        });
+        const result = await resp.json();
+        if (result.ok) {
+            currentPresetName = name;
+            console.log(`Model saved: ${result.filename}`);
+            return true;
+        } else {
+            alert('Fehler beim Speichern: ' + (result.error || 'Unbekannt'));
+            return false;
+        }
+    } catch (e) {
+        alert('Fehler beim Speichern: ' + e.message);
+        return false;
+    }
+}
+
+async function loadDefaultPresetName() {
+    try {
+        const resp = await fetch('/api/settings/humanbody/');
+        if (resp.ok) {
+            const s = await resp.json();
+            if (s.scene) currentPresetName = s.scene;
+            // Apply rig visibility from settings
+            if (s.show_rig_scene) {
+                rigVisible = true;
+                const rigToggle = document.getElementById('rig-toggle');
+                if (rigToggle) rigToggle.classList.add('active');
+            }
+            // Auto-play default animation
+            if (s.default_anim_scene) {
+                // Wait for mesh + skeleton to be ready
+                const waitForMesh = async () => {
+                    const maxWait = 15000;
+                    const start = Date.now();
+                    while (!bodyMesh && Date.now() - start < maxWait) {
+                        await new Promise(r => setTimeout(r, 200));
+                    }
+                    if (bodyMesh) {
+                        await new Promise(r => setTimeout(r, 1000));
+                        loadBVHAnimation(s.default_anim_scene, 'Default', 0);
+                    }
+                };
+                waitForMesh();
+            }
+        }
+    } catch (e) { /* ignore */ }
+}
+
+function initSaveButtons() {
+    loadDefaultPresetName();
+    const saveBtn = document.getElementById('save-model-btn');
+    const saveAsBtn = document.getElementById('save-model-as-btn');
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', async () => {
+            if (!currentPresetName) {
+                saveAsBtn?.click();
+                return;
+            }
+            const ok = await saveModel(currentPresetName);
+            if (ok) {
+                saveBtn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!';
+                setTimeout(() => { saveBtn.innerHTML = '<i class="fas fa-save"></i> Speichern'; }, 1500);
+            }
+        });
+    }
+
+    if (saveAsBtn) {
+        saveAsBtn.addEventListener('click', async () => {
+            const name = prompt('Modell-Name:', currentPresetName || 'Mein Modell');
+            if (!name || !name.trim()) return;
+            const ok = await saveModel(name.trim());
+            if (ok) {
+                saveAsBtn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!';
+                setTimeout(() => { saveAsBtn.innerHTML = '<i class="fas fa-file-export"></i> Speichern unter'; }, 1500);
+            }
+        });
     }
 }
 

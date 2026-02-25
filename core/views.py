@@ -966,9 +966,19 @@ def app_settings(request):
             s.progress_update_interval = int(request.POST.get('progress_update_interval', 50))
             if s.progress_update_interval < 1:
                 s.progress_update_interval = 1
+            s.default_model_config = request.POST.get('default_model_config', '').strip() or 'femaleWithClothes'
+            s.default_model_scene = request.POST.get('default_model_scene', '').strip() or 'femaleWithClothes'
+            s.default_model_animations = request.POST.get('default_model_animations', '').strip() or 'femaleWithClothes'
+            s.show_rig_config = request.POST.get('show_rig_config') == 'on'
+            s.show_rig_scene = request.POST.get('show_rig_scene') == 'on'
+            s.show_rig_animations = request.POST.get('show_rig_animations') == 'on'
+            s.default_anim_config = request.POST.get('default_anim_config', '').strip()
+            s.default_anim_scene = request.POST.get('default_anim_scene', '').strip()
+            s.default_anim_animations = request.POST.get('default_anim_animations', '').strip()
             s.save()
             messages.success(request, 'Settings saved.')
         except (ValueError, TypeError):
             messages.error(request, 'Invalid value.')
         return redirect('settings')
-    return render(request, 'settings.html', {'settings': s})
+    models_dir = str(settings.HUMANBODY_MODELS_DIR)
+    return render(request, 'settings.html', {'settings': s, 'models_dir': models_dir})

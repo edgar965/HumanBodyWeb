@@ -3,6 +3,7 @@
 Uses humanbody_core for morphing computations.
 """
 import os
+import re
 import json
 import base64
 import logging
@@ -11,7 +12,10 @@ import numpy as np
 from django.shortcuts import render
 from django.http import JsonResponse, FileResponse, HttpResponseNotFound
 from django.conf import settings
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.csrf import csrf_exempt
+
+from .models import AppSettings
 
 from humanbody_core import MorphData, CharacterState, CharacterDefaults, MeshData
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
@@ -260,6 +264,47 @@ def character_def_skeleton(request):
 
 
 _propagated_skin_weights = None
+_base_skin_weights = None
+_base_skin_arrays = None   # (indices(N,4), weights(N,4)) float32
+
+
+def _get_base_skin_weights():
+    """Load and cache base mesh skin weights (18K vertices)."""
+    global _base_skin_weights
+    if _base_skin_weights is not None:
+        return _base_skin_weights
+    base_path = os.path.join(str(settings.HUMANBODY_DATA_DIR),
+                             'skin_weights_base.json')
+    if os.path.isfile(base_path):
+        with open(base_path, 'r', encoding='utf-8') as f:
+            _base_skin_weights = json.load(f)
+    return _base_skin_weights
+
+
+def _get_base_skin_arrays():
+    """Precompute compact (N,4) index/weight arrays for fast nearest-vertex
+    skin weight lookup.  Cached after first call."""
+    global _base_skin_arrays
+    if _base_skin_arrays is not None:
+        return _base_skin_arrays
+    sw = _get_base_skin_weights()
+    if sw is None:
+        return None
+    n = sw['vertex_count']
+    indices = np.zeros((n, 4), dtype=np.float32)
+    weights = np.zeros((n, 4), dtype=np.float32)
+    for v in range(n):
+        infs = sw['weights'][v]
+        if not infs:
+            continue
+        infs_sorted = sorted(infs, key=lambda x: x[1], reverse=True)[:4]
+        total = sum(w for _, w in infs_sorted) or 1.0
+        for j, (bi, bw) in enumerate(infs_sorted):
+            indices[v, j] = bi
+            weights[v, j] = bw / total
+    _base_skin_arrays = (indices, weights)
+    logger.info("Base skin arrays precomputed: %d vertices, 4 influences", n)
+    return _base_skin_arrays
 
 
 @require_GET
@@ -437,6 +482,61 @@ def character_model_detail(request, name):
     return JsonResponse(data)
 
 
+@csrf_exempt
+@require_POST
+def character_model_save(request):
+    """Save a model preset JSON file."""
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    name = body.get('name', '').strip()
+    data = body.get('data')
+    if not name or not data:
+        return JsonResponse({'error': 'name and data required'}, status=400)
+
+    # Sanitize filename: keep alphanumeric, spaces, hyphens, underscores
+    safe_name = re.sub(r'[^\w\s\-]', '', name).strip()
+    if not safe_name:
+        return JsonResponse({'error': 'Invalid name'}, status=400)
+
+    # Path traversal protection
+    models_dir = str(settings.HUMANBODY_MODELS_DIR)
+    fpath = os.path.normpath(os.path.join(models_dir, f"{safe_name}.json"))
+    if not fpath.startswith(os.path.normpath(models_dir)):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+
+    # Ensure directory exists
+    os.makedirs(models_dir, exist_ok=True)
+
+    # Ensure 'name' field in data matches
+    data['name'] = name
+
+    with open(fpath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return JsonResponse({'ok': True, 'filename': f"{safe_name}.json"})
+
+
+@require_GET
+def humanbody_settings_api(request):
+    """Return HumanBody default model settings."""
+    s = AppSettings.load()
+    return JsonResponse({
+        'models_dir': str(settings.HUMANBODY_MODELS_DIR),
+        'config': s.default_model_config,
+        'scene': s.default_model_scene,
+        'animations': s.default_model_animations,
+        'show_rig_config': s.show_rig_config,
+        'show_rig_scene': s.show_rig_scene,
+        'show_rig_animations': s.show_rig_animations,
+        'default_anim_config': s.default_anim_config,
+        'default_anim_scene': s.default_anim_scene,
+        'default_anim_animations': s.default_anim_animations,
+    })
+
+
 def character_bvh_file_cat(request, category, name):
     """Serve a BVH animation file from a category subdirectory."""
     bvh_root = os.path.dirname(str(settings.HUMANBODY_BVH_DIR))
@@ -524,7 +624,7 @@ def character_cloth(request):
     if result is None:
         return JsonResponse({'error': 'Failed to generate cloth'}, status=400)
 
-    return JsonResponse({
+    response_data = {
         'vertex_count': int(result['vertices'].shape[0]),
         'vertices': base64.b64encode(
             result['vertices'].tobytes()).decode('ascii'),
@@ -534,7 +634,24 @@ def character_cloth(request):
         'normals': base64.b64encode(
             result['normals'].tobytes()).decode('ascii'),
         'color': list(result['color']),
-    })
+    }
+
+    # Compute skin weights for cloth vertices (nearest body vertex)
+    skin_arrays = _get_base_skin_arrays()
+    if skin_arrays is not None:
+        from scipy.spatial import cKDTree
+        body_si, body_sw = skin_arrays
+        tree = cKDTree(vertices)
+        cloth_verts = result['vertices']
+        _, nearest = tree.query(cloth_verts)
+        cloth_si = body_si[nearest]   # (n_cloth, 4) float32
+        cloth_sw = body_sw[nearest]   # (n_cloth, 4) float32
+        response_data['skin_indices'] = base64.b64encode(
+            cloth_si.tobytes()).decode('ascii')
+        response_data['skin_weights'] = base64.b64encode(
+            cloth_sw.tobytes()).decode('ascii')
+
+    return JsonResponse(response_data)
 
 
 @require_GET

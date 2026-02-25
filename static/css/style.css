@@ -501,7 +501,8 @@ td a { color: var(--accent); text-decoration: none; }
     font-size: 0.85rem;
 }
 
-.settings-input input {
+.settings-input input[type="number"],
+.settings-input input[type="text"] {
     padding: 0.5rem;
     border: 1px solid var(--border);
     border-radius: 4px;
@@ -510,6 +511,38 @@ td a { color: var(--accent); text-decoration: none; }
     width: 100px;
     text-align: center;
     font-size: 1rem;
+}
+
+.settings-input input[type="text"] {
+    width: 100%;
+    text-align: left;
+}
+
+.settings-input select,
+.settings-select {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    color: var(--text);
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.settings-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.settings-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
 }
 
 .settings-actions {

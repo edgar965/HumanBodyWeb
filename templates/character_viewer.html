@@ -312,6 +312,8 @@
             <button id="play-demo-anim" class="viewer-btn" title="Catwalk Idle Animation abspielen"><i class="fas fa-walking"></i> Catwalk</button>
             <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i class="fas fa-folder-open"></i> Laden</button>
             <input type="file" id="load-preset-file" accept=".json" style="display:none">
+            <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
+            <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i class="fas fa-file-export"></i> Speichern unter</button>
         </div>
         <div class="viewer-buttons">
             <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i> Model</button>
@@ -476,5 +478,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=12"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?v=13"></script>
 {% endblock %}

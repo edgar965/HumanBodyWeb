@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Settings - MocapNET{% endblock %}
+{% block title %}Einstellungen - HumanBody{% endblock %}
 
 {% block content %}
-<h1>Settings</h1>
+<h1>Einstellungen</h1>
 
 <form method="post">
     {% csrf_token %}
@@ -20,12 +20,189 @@
                        min="1" max="10000" step="1">
             </div>
         </div>
+    </div>
 
-        <div class="settings-actions">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save"></i> Save
-            </button>
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-user"></i> HumanBody</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Pfad für Models</strong>
+                <small>Verzeichnis in dem die Model-Presets gespeichert werden.</small>
+            </div>
+            <div class="settings-input">
+                <input type="text" value="{{ models_dir }}" readonly
+                       style="background:var(--bg-tertiary,#2a2a3e);color:var(--text-muted,#999);cursor:default;">
+            </div>
+        </div>
+
+        <!-- Konfiguration -->
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Konfiguration</strong>
+                <small>Standard-Modell das beim Öffnen der Konfigurationsseite geladen wird.</small>
+            </div>
+            <div class="settings-input">
+                <select name="default_model_config" id="default-model-config" class="settings-select">
+                    <option value="">— wird geladen —</option>
+                </select>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Anzeige mit Rig</small>
+            </div>
+            <div class="settings-input">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="show_rig_config" {% if settings.show_rig_config %}checked{% endif %}>
+                    Rig beim Start anzeigen
+                </label>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Default Animation</small>
+            </div>
+            <div class="settings-input" style="display:flex;gap:8px;align-items:center;">
+                <select name="default_anim_config" id="default-anim-config" class="settings-select" style="flex:1;">
+                    <option value="">— keine —</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Szene -->
+        <div class="settings-row" style="margin-top:1rem;">
+            <div class="settings-label">
+                <strong>Szene</strong>
+                <small>Standard-Modell das beim Öffnen der Szene-Seite geladen wird.</small>
+            </div>
+            <div class="settings-input">
+                <select name="default_model_scene" id="default-model-scene" class="settings-select">
+                    <option value="">— wird geladen —</option>
+                </select>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Anzeige mit Rig</small>
+            </div>
+            <div class="settings-input">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="show_rig_scene" {% if settings.show_rig_scene %}checked{% endif %}>
+                    Rig beim Start anzeigen
+                </label>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Default Animation</small>
+            </div>
+            <div class="settings-input" style="display:flex;gap:8px;align-items:center;">
+                <select name="default_anim_scene" id="default-anim-scene" class="settings-select" style="flex:1;">
+                    <option value="">— keine —</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Animationen -->
+        <div class="settings-row" style="margin-top:1rem;">
+            <div class="settings-label">
+                <strong>Animationen</strong>
+                <small>Standard-Modell das beim Öffnen der Animationen-Seite geladen wird.</small>
+            </div>
+            <div class="settings-input">
+                <select name="default_model_animations" id="default-model-animations" class="settings-select">
+                    <option value="">— wird geladen —</option>
+                </select>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Anzeige mit Rig</small>
+            </div>
+            <div class="settings-input">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="show_rig_animations" {% if settings.show_rig_animations %}checked{% endif %}>
+                    Rig beim Start anzeigen
+                </label>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Default Animation</small>
+            </div>
+            <div class="settings-input" style="display:flex;gap:8px;align-items:center;">
+                <select name="default_anim_animations" id="default-anim-animations" class="settings-select" style="flex:1;">
+                    <option value="">— keine —</option>
+                </select>
+            </div>
         </div>
     </div>
+
+    <div class="settings-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Speichern
+        </button>
+    </div>
 </form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    const currentConfig = "{{ settings.default_model_config|escapejs }}";
+    const currentScene = "{{ settings.default_model_scene|escapejs }}";
+    const currentAnims = "{{ settings.default_model_animations|escapejs }}";
+    const currentAnimConfig = "{{ settings.default_anim_config|escapejs }}";
+    const currentAnimScene = "{{ settings.default_anim_scene|escapejs }}";
+    const currentAnimAnims = "{{ settings.default_anim_animations|escapejs }}";
+
+    // Populate model presets
+    fetch('/api/character/models/')
+        .then(r => r.json())
+        .then(data => {
+            const presets = data.presets || [];
+            ['default-model-config', 'default-model-scene', 'default-model-animations'].forEach((id, idx) => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const current = [currentConfig, currentScene, currentAnims][idx];
+                sel.innerHTML = '';
+                presets.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.name;
+                    opt.textContent = p.label || p.name;
+                    if (p.name === current) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            });
+        })
+        .catch(e => console.warn('Failed to load model presets:', e));
+
+    // Populate animation lists
+    fetch('/api/character/animations/')
+        .then(r => r.json())
+        .then(data => {
+            const cats = data.categories || {};
+            ['default-anim-config', 'default-anim-scene', 'default-anim-animations'].forEach((id, idx) => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const current = [currentAnimConfig, currentAnimScene, currentAnimAnims][idx];
+                // Keep "— keine —" as first option
+                for (const [catName, anims] of Object.entries(cats).sort()) {
+                    const grp = document.createElement('optgroup');
+                    grp.label = catName;
+                    anims.forEach(a => {
+                        const opt = document.createElement('option');
+                        opt.value = a.url;
+                        opt.textContent = a.name + (a.frames ? ` (${a.frames}f)` : '');
+                        if (a.url === current) opt.selected = true;
+                        grp.appendChild(opt);
+                    });
+                    sel.appendChild(grp);
+                }
+            });
+        })
+        .catch(e => console.warn('Failed to load animations:', e));
+})();
+</script>
 {% endblock %}
