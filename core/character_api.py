@@ -15,7 +15,9 @@ from django.views.decorators.http import require_GET
 
 from humanbody_core import MorphData, CharacterState, CharacterDefaults, MeshData
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
-from humanbody_core.cloth import generate_cloth, CLOTH_REGIONS, CLOTH_COLORS
+from humanbody_core.cloth import (generate_cloth, TEMPLATE_TYPES,
+                                  PRIMITIVE_TYPES, BUILDER_REGIONS,
+                                  CLOTH_REGIONS, CLOTH_COLORS)
 
 logger = logging.getLogger(__name__)
 
@@ -457,20 +459,20 @@ def character_bvh_file_cat(request, category, name):
 
 @require_GET
 def character_cloth(request):
-    """Generate a cloth mesh from body geometry and return as base64 binary.
+    """Generate a cloth mesh and return as base64 binary.
 
-    Query params:
-        region    — TOP, PANTS, SKIRT, FULL, UNDERWEAR, SHOES (default: TOP)
-        looseness — 0.0 to 2.0 (default: 0.3)
-        body_type — body type key (default: Female_Caucasian)
-        gender    — 0.0 to 1.0 (default: 0)
-        morph_*   — morph values
+    Query params (common):
+        body_type, gender, morph_*
+    Template method (default):
+        method=template, template=TPL_TSHIRT, tightness=0.5,
+        segments=32, top_extend=0, bottom_extend=0
+    Builder method:
+        method=builder, region=TOP, looseness=0.3
+    Primitive method:
+        method=primitive, prim_type=PRIM_SKIRT, segments=32,
+        length=0.5, flare=0.3
     """
-    region = request.GET.get('region', 'TOP').upper()
-    looseness = float(request.GET.get('looseness', 0.5))
-
-    if region not in CLOTH_REGIONS:
-        return JsonResponse({'error': f'Unknown region: {region}'}, status=400)
+    method = request.GET.get('method', 'template')
 
     md = _get_morph_data()
     cd = _get_char_defaults()
@@ -491,7 +493,34 @@ def character_cloth(request):
     if vertices is None:
         return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
 
-    result = generate_cloth(vertices, region=region, looseness=looseness)
+    # Collect method-specific params
+    kwargs = {
+        'method': method,
+        'template': request.GET.get('template'),
+        'region': request.GET.get('region'),
+        'tightness': float(request.GET['tightness'])
+        if 'tightness' in request.GET else None,
+        'looseness': float(request.GET.get('looseness', 0.5)),
+        'segments': int(request.GET.get('segments', 32)),
+        'top_extend': float(request.GET.get('top_extend', 0)),
+        'bottom_extend': float(request.GET.get('bottom_extend', 0)),
+        'prim_type': request.GET.get('prim_type'),
+        'length': float(request.GET.get('length', 0.5)),
+        'flare': float(request.GET.get('flare', 0.3)),
+    }
+
+    # Builder needs face topology
+    faces = None
+    if method == 'builder':
+        mesh = _get_mesh_data()
+        if mesh.faces is not None and mesh.faces.ndim == 2:
+            faces = mesh.faces
+
+    try:
+        result = generate_cloth(vertices, faces=faces, **kwargs)
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
     if result is None:
         return JsonResponse({'error': 'Failed to generate cloth'}, status=400)
 
@@ -510,15 +539,19 @@ def character_cloth(request):
 
 @require_GET
 def character_cloth_regions(request):
-    """Return available cloth region presets."""
-    regions = []
-    for key, info in CLOTH_REGIONS.items():
-        regions.append({
-            'key': key,
-            'label': info['label'],
-            'color': list(info['color']),
-        })
-    return JsonResponse({'regions': regions})
+    """Return all cloth options: templates, primitives, builder regions."""
+    templates = [{'key': k, 'label': v['label'], 'color': list(v['color'])}
+                 for k, v in TEMPLATE_TYPES.items()]
+    primitives = [{'key': k, 'label': v['label'], 'color': list(v['color'])}
+                  for k, v in PRIMITIVE_TYPES.items()]
+    builder = [{'key': k, 'label': k.replace('_', ' ').title(),
+                'color': list(v['color'])}
+               for k, v in BUILDER_REGIONS.items()]
+    return JsonResponse({
+        'templates': templates,
+        'primitives': primitives,
+        'builder_regions': builder,
+    })
 
 
 # =========================================================================

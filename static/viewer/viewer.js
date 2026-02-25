@@ -1008,87 +1008,149 @@ async function loadClothUI() {
     try {
         const resp = await fetch('/api/character/cloth/regions/');
         const data = await resp.json();
-        const select = document.getElementById('cloth-region-select');
-        if (!select) return;
 
-        (data.regions || []).forEach(r => {
-            const opt = document.createElement('option');
-            opt.value = r.key;
-            opt.textContent = r.label;
-            select.appendChild(opt);
-        });
-
-        const loosenessSlider = document.getElementById('cloth-looseness');
-        const loosenessVal = document.getElementById('cloth-looseness-val');
-        if (loosenessSlider) {
-            loosenessSlider.addEventListener('input', () => {
-                loosenessVal.textContent = (parseInt(loosenessSlider.value) / 100).toFixed(1);
+        // --- Template UI ---
+        const tplSelect = document.getElementById('cloth-tpl-type');
+        if (tplSelect) {
+            (data.templates || []).forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.key;
+                opt.textContent = t.label;
+                tplSelect.appendChild(opt);
             });
         }
 
-        // Generate button — adds cloth for selected region (multiple can coexist)
-        const genBtn = document.getElementById('cloth-refresh');
-        if (genBtn) {
-            genBtn.addEventListener('click', () => {
-                const region = select.value;
-                if (!region) return;
-                const looseness = parseInt(loosenessSlider.value) / 100;
-                loadCloth(region, looseness);
+        _bindSlider('cloth-tpl-segments', 'cloth-tpl-segments-val', v => v);
+        _bindSlider('cloth-tpl-tightness', 'cloth-tpl-tightness-val', v => (v / 100).toFixed(2));
+        _bindSlider('cloth-tpl-top-ext', 'cloth-tpl-top-ext-val', v => (v / 100).toFixed(2) + ' m');
+        _bindSlider('cloth-tpl-bot-ext', 'cloth-tpl-bot-ext-val', v => (v / 100).toFixed(2) + ' m');
+
+        const tplCreate = document.getElementById('cloth-tpl-create');
+        if (tplCreate) {
+            tplCreate.addEventListener('click', () => {
+                const tpl = tplSelect ? tplSelect.value : 'TPL_TSHIRT';
+                const segs = _sliderVal('cloth-tpl-segments');
+                const tight = _sliderVal('cloth-tpl-tightness') / 100;
+                const topExt = _sliderVal('cloth-tpl-top-ext') / 100;
+                const botExt = _sliderVal('cloth-tpl-bot-ext') / 100;
+                loadCloth(`tpl_${tpl}`, {
+                    method: 'template', template: tpl,
+                    segments: segs, tightness: tight,
+                    top_extend: topExt, bottom_extend: botExt,
+                });
             });
         }
 
-        // "No Cloth" removes all
-        select.addEventListener('change', () => {
-            if (!select.value) removeAllCloth();
-        });
+        // --- Builder UI ---
+        const bldSelect = document.getElementById('cloth-bld-region');
+        if (bldSelect) {
+            (data.builder_regions || []).forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.key;
+                opt.textContent = r.label;
+                bldSelect.appendChild(opt);
+            });
+        }
+        _bindSlider('cloth-bld-looseness', 'cloth-bld-looseness-val', v => (v / 100).toFixed(2));
 
-        // Remove All button
+        const bldCreate = document.getElementById('cloth-bld-create');
+        if (bldCreate) {
+            bldCreate.addEventListener('click', () => {
+                const region = bldSelect ? bldSelect.value : 'TOP';
+                const loose = _sliderVal('cloth-bld-looseness') / 100;
+                loadCloth(`bld_${region}`, {
+                    method: 'builder', region: region, looseness: loose,
+                });
+            });
+        }
+
+        // --- Primitive UI ---
+        const primSelect = document.getElementById('cloth-prim-type');
+        if (primSelect) {
+            (data.primitives || []).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.key;
+                opt.textContent = p.label;
+                primSelect.appendChild(opt);
+            });
+            primSelect.addEventListener('change', () => {
+                const flareRow = document.getElementById('cloth-prim-flare-row');
+                if (flareRow) flareRow.style.display =
+                    primSelect.value === 'PRIM_SKIRT' ? 'flex' : 'none';
+            });
+        }
+        _bindSlider('cloth-prim-segments', 'cloth-prim-segments-val', v => v);
+        _bindSlider('cloth-prim-length', 'cloth-prim-length-val', v => (v / 100).toFixed(2));
+        _bindSlider('cloth-prim-flare', 'cloth-prim-flare-val', v => (v / 100).toFixed(2));
+
+        const primCreate = document.getElementById('cloth-prim-create');
+        if (primCreate) {
+            primCreate.addEventListener('click', () => {
+                const pt = primSelect ? primSelect.value : 'PRIM_SKIRT';
+                const segs = _sliderVal('cloth-prim-segments');
+                const len = _sliderVal('cloth-prim-length') / 100;
+                const flare = _sliderVal('cloth-prim-flare') / 100;
+                loadCloth(`prim_${pt}`, {
+                    method: 'primitive', prim_type: pt,
+                    segments: segs, length: len, flare: flare,
+                });
+            });
+        }
+
+        // --- Remove All button ---
         const removeBtn = document.getElementById('cloth-remove-all');
         if (removeBtn) {
-            removeBtn.addEventListener('click', () => {
-                removeAllCloth();
-                select.value = '';
-            });
+            removeBtn.addEventListener('click', () => removeAllCloth());
         }
     } catch (e) {
         console.warn('Cloth UI not available:', e);
     }
 }
 
-async function loadCloth(region, looseness, color) {
-    const genBtn = document.getElementById('cloth-refresh');
-    if (genBtn) genBtn.textContent = 'Generating...';
+function _bindSlider(sliderId, valId, fmt) {
+    const slider = document.getElementById(sliderId);
+    const val = document.getElementById(valId);
+    if (slider && val) {
+        slider.addEventListener('input', () => {
+            val.textContent = fmt(parseInt(slider.value));
+        });
+    }
+}
+
+function _sliderVal(sliderId) {
+    const el = document.getElementById(sliderId);
+    return el ? parseInt(el.value) : 0;
+}
+
+async function loadCloth(key, params, color) {
+    const createBtns = document.querySelectorAll('#cloth-tpl-create, #cloth-bld-create, #cloth-prim-create');
+    createBtns.forEach(b => b.disabled = true);
 
     try {
-        const url = `/api/character/cloth/?region=${region}&looseness=${looseness}`;
-        const resp = await fetch(url);
+        const qs = Object.entries(params)
+            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+        const resp = await fetch(`/api/character/cloth/?${qs}`);
         const data = await resp.json();
         if (data.error) {
             console.error('Cloth error:', data.error);
-            if (genBtn) genBtn.textContent = 'Generate Cloth';
             return;
         }
 
-        // Remove only this region's previous mesh
-        removeClothRegion(region);
+        // Remove previous mesh with same key
+        removeClothRegion(key);
 
         const vertBuf = base64ToFloat32(data.vertices);
         blenderToThreeCoords(vertBuf);
-        const positions = new THREE.BufferAttribute(vertBuf, 3);
 
         const faceBuf = base64ToUint32(data.faces);
-        const index = new THREE.BufferAttribute(faceBuf, 1);
-
         const normalBuf = base64ToFloat32(data.normals);
         blenderToThreeCoords(normalBuf);
-        const normals = new THREE.BufferAttribute(normalBuf, 3);
 
         const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', positions);
-        geo.setIndex(index);
-        geo.setAttribute('normal', normals);
+        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
 
-        // Color priority: explicit param > picker > server default
         let matColor;
         if (color) {
             matColor = new THREE.Color(color);
@@ -1100,36 +1162,34 @@ async function loadCloth(region, looseness, color) {
         }
 
         const mat = new THREE.MeshStandardMaterial({
-            color: matColor,
-            roughness: 0.8,
-            metalness: 0.0,
+            color: matColor, roughness: 0.8, metalness: 0.0,
             side: THREE.DoubleSide,
         });
 
         const mesh = new THREE.Mesh(geo, mat);
-        clothMeshes[region] = mesh;
+        clothMeshes[key] = mesh;
         scene.add(mesh);
 
-        console.log(`Cloth ${region}: ${data.vertex_count} verts, ${data.face_count} tris`);
+        console.log(`Cloth ${key}: ${data.vertex_count} verts, ${data.face_count} tris`);
     } catch (e) {
         console.error('Failed to load cloth:', e);
     }
-    if (genBtn) genBtn.textContent = 'Generate Cloth';
+    createBtns.forEach(b => b.disabled = false);
 }
 
-function removeClothRegion(region) {
-    const m = clothMeshes[region];
+function removeClothRegion(key) {
+    const m = clothMeshes[key];
     if (m) {
         scene.remove(m);
         m.geometry.dispose();
         m.material.dispose();
-        delete clothMeshes[region];
+        delete clothMeshes[key];
     }
 }
 
 function removeAllCloth() {
-    for (const region of Object.keys(clothMeshes)) {
-        removeClothRegion(region);
+    for (const key of Object.keys(clothMeshes)) {
+        removeClothRegion(key);
     }
 }
 
@@ -1456,26 +1516,38 @@ function applyModelPreset(preset) {
     // 5. Cloth — generate one or more cloth pieces
     if (preset.cloth) {
         removeAllCloth();
-        // Support both single object and array
         const clothList = Array.isArray(preset.cloth) ? preset.cloth : [preset.cloth];
-        // Generate each piece with staggered delay so mesh is loaded
         clothList.forEach((c, i) => {
-            if (!c.region) return;
             setTimeout(() => {
-                loadCloth(c.region, c.looseness !== undefined ? c.looseness : 0.5, c.color || null);
-            }, 500 + i * 200);
+                // Support both old format (region) and new format (template)
+                const tpl = c.template || (c.region ? {
+                    TOP: 'TPL_TSHIRT', PANTS: 'TPL_PANTS',
+                    SKIRT: 'TPL_SKIRT', DRESS: 'TPL_DRESS'
+                }[c.region] : 'TPL_TSHIRT');
+                const tight = c.tightness !== undefined ? c.tightness : 0.5;
+                loadCloth(`tpl_${tpl}`, {
+                    method: 'template', template: tpl,
+                    tightness: tight,
+                    segments: c.segments || 32,
+                    top_extend: c.top_extend || 0,
+                    bottom_extend: c.bottom_extend || 0,
+                }, c.color || null);
+            }, 500 + i * 300);
         });
-        // Update UI to show last piece's settings
+        // Update template UI to show last piece
         const last = clothList[clothList.length - 1];
-        const regionSelect = document.getElementById('cloth-region-select');
-        const loosenessSlider = document.getElementById('cloth-looseness');
-        const loosenessVal = document.getElementById('cloth-looseness-val');
+        const tplSelect = document.getElementById('cloth-tpl-type');
+        const tplTight = document.getElementById('cloth-tpl-tightness');
+        const tplTightVal = document.getElementById('cloth-tpl-tightness-val');
         const colorPicker = document.getElementById('cloth-color');
-        if (regionSelect && last.region) regionSelect.value = last.region;
-        if (loosenessSlider && last.looseness !== undefined) {
-            loosenessSlider.value = Math.round(last.looseness * 100);
-            if (loosenessVal) loosenessVal.textContent = last.looseness.toFixed(1);
-        }
+        const tpl = last.template || {
+            TOP: 'TPL_TSHIRT', PANTS: 'TPL_PANTS',
+            SKIRT: 'TPL_SKIRT', DRESS: 'TPL_DRESS'
+        }[last.region] || 'TPL_TSHIRT';
+        if (tplSelect) tplSelect.value = tpl;
+        const tight = last.tightness !== undefined ? last.tightness : 0.5;
+        if (tplTight) { tplTight.value = Math.round(tight * 100); }
+        if (tplTightVal) tplTightVal.textContent = tight.toFixed(2);
         if (colorPicker && last.color) colorPicker.value = last.color;
     }
 

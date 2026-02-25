@@ -262,25 +262,77 @@
             <div class="panel-body" id="morphs-panel"></div>
         </div>
 
-        <!-- Cloth -->
-        <div class="panel-section collapsed">
-            <h3>Cloth <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="cloth-panel">
-                <select id="cloth-region-select" class="viewer-select">
-                    <option value="">— No Cloth —</option>
-                </select>
-                <div class="slider-row">
-                    <label>Looseness</label>
-                    <input type="range" id="cloth-looseness" min="0" max="100" value="50" step="5">
-                    <span class="slider-val" id="cloth-looseness-val">0.5</span>
+        <!-- Cloth - from Template -->
+        <div class="panel-section">
+            <h3>Cloth - from Template <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body" id="cloth-template-panel">
+                <div class="slider-row"><label>Template</label>
+                    <select id="cloth-tpl-type" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
                 </div>
-                <div class="slider-row">
-                    <label>Color</label>
+                <div class="slider-row"><label>Segments</label>
+                    <input type="range" id="cloth-tpl-segments" min="16" max="64" value="32" step="2">
+                    <span class="slider-val" id="cloth-tpl-segments-val">32</span>
+                </div>
+                <div class="slider-row"><label>Tightness</label>
+                    <input type="range" id="cloth-tpl-tightness" min="0" max="100" value="50" step="1">
+                    <span class="slider-val" id="cloth-tpl-tightness-val">0.50</span>
+                </div>
+                <div class="slider-row"><label>Top</label>
+                    <input type="range" id="cloth-tpl-top-ext" min="-30" max="30" value="0" step="1">
+                    <span class="slider-val" id="cloth-tpl-top-ext-val">0 m</span>
+                </div>
+                <div class="slider-row"><label>Bottom</label>
+                    <input type="range" id="cloth-tpl-bot-ext" min="-30" max="50" value="0" step="1">
+                    <span class="slider-val" id="cloth-tpl-bot-ext-val">0 m</span>
+                </div>
+                <div class="slider-row"><label>Color</label>
                     <input type="color" id="cloth-color" value="#404870" style="width:40px;height:24px;border:none;cursor:pointer;">
                 </div>
                 <div style="display:flex;gap:6px;margin-top:6px;">
-                    <button id="cloth-refresh" class="btn-toggle" style="flex:1;">Generate Cloth</button>
+                    <button id="cloth-tpl-create" class="btn-toggle" style="flex:1;"><i class="fas fa-plus"></i> Create Template</button>
                     <button id="cloth-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Remove all cloth"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cloth Builder -->
+        <div class="panel-section collapsed">
+            <h3>Cloth Builder <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body" id="cloth-builder-panel">
+                <div class="slider-row"><label>Region</label>
+                    <select id="cloth-bld-region" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
+                </div>
+                <div class="slider-row"><label>Looseness</label>
+                    <input type="range" id="cloth-bld-looseness" min="0" max="200" value="30" step="5">
+                    <span class="slider-val" id="cloth-bld-looseness-val">0.30</span>
+                </div>
+                <div style="margin-top:6px;">
+                    <button id="cloth-bld-create" class="btn-toggle" style="width:100%;"><i class="fas fa-plus"></i> Create Garment</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cloth Primitive -->
+        <div class="panel-section collapsed">
+            <h3>Cloth - Primitive <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body" id="cloth-prim-panel">
+                <div class="slider-row"><label>Primitive</label>
+                    <select id="cloth-prim-type" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
+                </div>
+                <div class="slider-row"><label>Segments</label>
+                    <input type="range" id="cloth-prim-segments" min="12" max="64" value="32" step="2">
+                    <span class="slider-val" id="cloth-prim-segments-val">32</span>
+                </div>
+                <div class="slider-row"><label>Length</label>
+                    <input type="range" id="cloth-prim-length" min="10" max="150" value="50" step="5">
+                    <span class="slider-val" id="cloth-prim-length-val">0.50</span>
+                </div>
+                <div class="slider-row" id="cloth-prim-flare-row"><label>Flare</label>
+                    <input type="range" id="cloth-prim-flare" min="0" max="200" value="30" step="5">
+                    <span class="slider-val" id="cloth-prim-flare-val">0.30</span>
+                </div>
+                <div style="margin-top:6px;">
+                    <button id="cloth-prim-create" class="btn-toggle" style="width:100%;"><i class="fas fa-plus"></i> Create Primitive</button>
                 </div>
             </div>
         </div>
@@ -331,5 +383,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=8"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?v=9"></script>
 {% endblock %}
