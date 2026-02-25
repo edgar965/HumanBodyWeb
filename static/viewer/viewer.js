@@ -136,6 +136,40 @@ function init() {
     initLoadPreset();
     connectWebSocket();
 
+    // Demo animation button — Play/Pause toggle
+    const demoBtn = document.getElementById('play-demo-anim');
+    if (demoBtn) {
+        demoBtn.addEventListener('click', () => {
+            if (!currentAction) {
+                // First click: load animation, open Animations panel
+                const animSection = document.getElementById('animation-panel')?.closest('.panel-section');
+                if (animSection && animSection.classList.contains('collapsed')) {
+                    animSection.classList.remove('collapsed');
+                }
+                loadBVHAnimation('/api/character/bvh/Mixamo/Catwalk_Idle_02/', 'Catwalk Idle 02', 0);
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.classList.add('active');
+            } else if (playing) {
+                // Pause
+                currentAction.paused = true;
+                playing = false;
+                demoBtn.innerHTML = '<i class="fas fa-play"></i> Catwalk';
+                demoBtn.classList.remove('active');
+                const playBtn = document.getElementById('anim-play');
+                if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            } else {
+                // Resume
+                if (!currentAction.isRunning()) currentAction.play();
+                currentAction.paused = false;
+                playing = true;
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.classList.add('active');
+                const playBtn = document.getElementById('anim-play');
+                if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            }
+        });
+    }
+
     // Rig toggle (floating button)
     const rigToggle = document.getElementById('rig-toggle');
     if (rigToggle) {
@@ -171,7 +205,7 @@ function animate() {
     const dt = clock.getDelta();
     controls.update();
 
-    if (mixer) mixer.update(dt);
+    if (mixer && playing) mixer.update(dt);
 
     renderer.render(scene, camera);
 
@@ -711,140 +745,128 @@ function toggleAsset(name, url, btn) {
 }
 
 // =========================================================================
-// Animation UI
+// Animation UI — tree-based (matching Animations page)
 // =========================================================================
+let playing = false;
+
 async function loadAnimations() {
     try {
         const resp = await fetch('/api/character/animations/');
         const data = await resp.json();
-        const panel = document.getElementById('animation-panel');
-        panel.innerHTML = '';
+        const tree = document.getElementById('anim-tree');
+        if (!tree) return;
+        tree.innerHTML = '';
 
-        // API returns { categories: { Walk: [...], Dance: [...], ... } }
         const categories = data.categories || {};
-        const allAnims = [];
-        for (const [cat, list] of Object.entries(categories)) {
-            for (const a of list) allAnims.push({ ...a, category: cat });
-        }
+        const catNames = Object.keys(categories).sort();
 
-        if (allAnims.length === 0) {
-            panel.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">No animations available</div>';
+        if (catNames.length === 0) {
+            tree.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Animationen gefunden</div>';
             return;
         }
 
-        const select = document.createElement('select');
-        select.className = 'viewer-select';
-        select.id = 'animation-select';
-        const none = document.createElement('option');
-        none.value = '';
-        none.textContent = '\u2014 Select Animation \u2014';
-        select.appendChild(none);
+        catNames.forEach(cat => {
+            const anims = categories[cat];
+            const catDiv = document.createElement('div');
+            catDiv.className = 'anim-category';
 
-        // Group by category
-        for (const [cat, list] of Object.entries(categories)) {
-            const group = document.createElement('optgroup');
-            group.label = cat;
-            for (const a of list) {
-                const opt = document.createElement('option');
-                opt.value = a.url;
-                opt.textContent = `${a.name} (${a.frames} frames)`;
-                group.appendChild(opt);
-            }
-            select.appendChild(group);
-        }
-        panel.appendChild(select);
+            const header = document.createElement('div');
+            header.className = 'anim-category-header';
+            header.innerHTML = `<span class="cat-chevron"><i class="fas fa-chevron-right"></i></span>
+                <span>${cat}</span>
+                <span class="cat-count">${anims.length}</span>`;
+            header.addEventListener('click', () => catDiv.classList.toggle('open'));
+            catDiv.appendChild(header);
 
-        // Speed slider
-        const speedRow = document.createElement('div');
-        speedRow.className = 'anim-speed';
-        const speedLabel = document.createElement('label');
-        speedLabel.textContent = 'Speed: 1.0x';
-        const speedSlider = document.createElement('input');
-        speedSlider.type = 'range';
-        speedSlider.min = 10;
-        speedSlider.max = 300;
-        speedSlider.value = 100;
-        speedSlider.step = 10;
+            const body = document.createElement('div');
+            body.className = 'anim-category-body';
+
+            anims.forEach(anim => {
+                const item = document.createElement('div');
+                item.className = 'anim-item';
+                item.dataset.url = anim.url;
+                item.innerHTML = `<span>${anim.name}</span><span class="frames">${anim.frames}f</span>`;
+                item.addEventListener('click', () => {
+                    tree.querySelectorAll('.anim-item.active').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    loadBVHAnimation(anim.url, anim.name, anim.frames);
+                });
+                body.appendChild(item);
+            });
+
+            catDiv.appendChild(body);
+            tree.appendChild(catDiv);
+        });
+
+        // Bind playback controls (static HTML elements)
+        bindPlaybackControls();
+    } catch (e) {
+        console.error('Failed to load animations:', e);
+    }
+}
+
+function bindPlaybackControls() {
+    const playBtn = document.getElementById('anim-play');
+    const stopBtn = document.getElementById('anim-stop');
+    const timeline = document.getElementById('anim-timeline');
+    const speedSlider = document.getElementById('anim-speed');
+    const speedLabel = document.getElementById('speed-label');
+
+    if (speedSlider && speedLabel) {
         speedSlider.addEventListener('input', () => {
             const speed = parseInt(speedSlider.value) / 100;
             speedLabel.textContent = `Speed: ${speed.toFixed(1)}x`;
             if (mixer) mixer.timeScale = speed;
         });
-        speedRow.appendChild(speedLabel);
-        speedRow.appendChild(speedSlider);
-        panel.appendChild(speedRow);
+    }
 
-        // Controls
-        const ctrls = document.createElement('div');
-        ctrls.className = 'anim-controls';
-
-        const playBtn = document.createElement('button');
-        playBtn.innerHTML = '<i class="fas fa-play"></i>';
-        playBtn.title = 'Play/Pause';
-
-        const stopBtn = document.createElement('button');
-        stopBtn.innerHTML = '<i class="fas fa-stop"></i>';
-        stopBtn.title = 'Stop';
-
-        const timeline = document.createElement('input');
-        timeline.type = 'range';
-        timeline.min = 0;
-        timeline.max = 100;
-        timeline.value = 0;
-        timeline.step = 1;
-
-        ctrls.appendChild(playBtn);
-        ctrls.appendChild(stopBtn);
-        ctrls.appendChild(timeline);
-        panel.appendChild(ctrls);
-
-        let playing = false;
-
-        select.addEventListener('change', () => {
-            if (!select.value) {
-                stopAnimation(true);
-                return;
-            }
-            loadBVHAnimation(select.value);
-        });
-
+    if (playBtn) {
         playBtn.addEventListener('click', () => {
             if (!currentAction) return;
             playing = !playing;
             if (playing) {
                 if (!currentAction.isRunning()) currentAction.play();
                 currentAction.paused = false;
-                playBtn.innerHTML = '<i class="fas fa-pause"></i>';
             } else {
                 currentAction.paused = true;
-                playBtn.innerHTML = '<i class="fas fa-play"></i>';
             }
+            playBtn.innerHTML = playing
+                ? '<i class="fas fa-pause"></i>'
+                : '<i class="fas fa-play"></i>';
         });
+    }
 
+    if (stopBtn) {
         stopBtn.addEventListener('click', () => {
             stopAnimation();
-            playBtn.innerHTML = '<i class="fas fa-play"></i>';
-            playing = false;
-            timeline.value = 0;
+            if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            if (timeline) timeline.value = 0;
+            const info = document.getElementById('anim-info');
+            if (info) info.textContent = '\u2014';
         });
+    }
 
-        // Scrub timeline
+    if (timeline) {
         timeline.addEventListener('input', () => {
             if (currentAction && mixer) {
+                const wasPaused = currentAction.paused;
+                currentAction.paused = false;
                 const clip = currentAction.getClip();
                 const time = (parseInt(timeline.value) / 100) * clip.duration;
                 mixer.setTime(time);
+                currentAction.paused = wasPaused;
             }
         });
-    } catch (e) {
-        console.error('Failed to load animations:', e);
     }
 }
 
 let skelWrapper = null;
 
-function loadBVHAnimation(url) {
+function loadBVHAnimation(url, name, fc) {
     stopAnimation(true);
+
+    const info = document.getElementById('anim-info');
+    if (info) info.textContent = `Lade ${name || 'Animation'}...`;
 
     bvhLoader.load(url, (result) => {
         const bvhBones = result.skeleton.bones;
@@ -874,8 +896,11 @@ function loadBVHAnimation(url) {
 
             // Play on SkinnedMesh
             mixer = new THREE.AnimationMixer(bodyMesh);
+            const ss = document.getElementById('anim-speed');
+            if (ss) mixer.timeScale = parseInt(ss.value) / 100;
             currentAction = mixer.clipAction(clip);
             currentAction.play();
+            playing = true;
         } else {
             // Fallback: separate BVH skeleton visualization (no mesh deformation)
             const rootBone = bvhBones[0];
@@ -912,11 +937,19 @@ function loadBVHAnimation(url) {
             scene.add(skeletonHelper);
 
             mixer = new THREE.AnimationMixer(rootBone);
+            const ss2 = document.getElementById('anim-speed');
+            if (ss2) mixer.timeScale = parseInt(ss2.value) / 100;
             currentAction = mixer.clipAction(result.clip);
             currentAction.play();
+            playing = true;
         }
+
+        const playBtn = document.getElementById('anim-play');
+        if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        if (info) info.textContent = `${name || 'Animation'} — ${fc || '?'}f — ${result.clip.duration.toFixed(1)}s`;
     }, undefined, (err) => {
         console.error('Failed to load BVH:', err);
+        if (info) info.textContent = `Fehler: ${name || url}`;
     });
 }
 
@@ -944,6 +977,7 @@ function stopAnimation(destroy = false) {
             skeletonHelper = null;
         }
     }
+    playing = false;
 }
 
 // =========================================================================
@@ -1025,19 +1059,54 @@ async function loadClothUI() {
         _bindSlider('cloth-tpl-top-ext', 'cloth-tpl-top-ext-val', v => (v / 100).toFixed(2) + ' m');
         _bindSlider('cloth-tpl-bot-ext', 'cloth-tpl-bot-ext-val', v => (v / 100).toFixed(2) + ' m');
 
+        // Helper: gather current template params
+        function _tplParams() {
+            const tpl = tplSelect ? tplSelect.value : 'TPL_TSHIRT';
+            return {
+                key: `tpl_${tpl}`,
+                params: {
+                    method: 'template', template: tpl,
+                    segments: _sliderVal('cloth-tpl-segments'),
+                    tightness: _sliderVal('cloth-tpl-tightness') / 100,
+                    top_extend: _sliderVal('cloth-tpl-top-ext') / 100,
+                    bottom_extend: _sliderVal('cloth-tpl-bot-ext') / 100,
+                },
+            };
+        }
+
         const tplCreate = document.getElementById('cloth-tpl-create');
         if (tplCreate) {
             tplCreate.addEventListener('click', () => {
+                const { key, params } = _tplParams();
+                loadCloth(key, params);
+            });
+        }
+
+        // Update button — re-generates the currently selected template cloth
+        const tplUpdate = document.getElementById('cloth-tpl-update');
+        if (tplUpdate) {
+            tplUpdate.addEventListener('click', () => {
+                const { key, params } = _tplParams();
+                if (!clothMeshes[key]) {
+                    console.warn(`No cloth "${key}" to update — use Create first`);
+                    return;
+                }
+                // Preserve color from existing mesh
+                const existingColor = clothMeshes[key].material.color.getHexString();
+                loadCloth(key, params, `#${existingColor}`);
+            });
+        }
+
+        // Delete current template
+        const tplDelete = document.getElementById('cloth-tpl-delete');
+        if (tplDelete) {
+            tplDelete.addEventListener('click', () => {
                 const tpl = tplSelect ? tplSelect.value : 'TPL_TSHIRT';
-                const segs = _sliderVal('cloth-tpl-segments');
-                const tight = _sliderVal('cloth-tpl-tightness') / 100;
-                const topExt = _sliderVal('cloth-tpl-top-ext') / 100;
-                const botExt = _sliderVal('cloth-tpl-bot-ext') / 100;
-                loadCloth(`tpl_${tpl}`, {
-                    method: 'template', template: tpl,
-                    segments: segs, tightness: tight,
-                    top_extend: topExt, bottom_extend: botExt,
-                });
+                const key = `tpl_${tpl}`;
+                if (clothMeshes[key]) {
+                    removeClothRegion(key);
+                    console.log(`Cloth "${key}" removed`);
+                }
             });
         }
 

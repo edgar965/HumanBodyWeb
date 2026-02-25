@@ -154,14 +154,85 @@
         cursor: not-allowed;
     }
 
+    .anim-tree {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        margin-bottom: 8px;
+    }
+    .anim-category {
+        border-bottom: 1px solid var(--border);
+    }
+    .anim-category:last-child { border-bottom: none; }
+    .anim-category-header {
+        font-size: 0.82rem;
+        color: var(--text);
+        cursor: pointer;
+        padding: 8px 12px;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background 0.15s;
+    }
+    .anim-category-header:hover { background: var(--bg-card); }
+    .anim-category-header .cat-chevron {
+        font-size: 0.65rem;
+        transition: transform 0.2s;
+        color: var(--text-muted);
+    }
+    .anim-category.open .cat-chevron { transform: rotate(90deg); }
+    .anim-category-header .cat-count {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-left: auto;
+    }
+    .anim-category-body {
+        display: none;
+    }
+    .anim-category.open .anim-category-body { display: block; }
+    .anim-item {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        padding: 5px 12px 5px 28px;
+        cursor: pointer;
+        transition: all 0.15s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .anim-item:hover { background: var(--bg-card); color: var(--text); }
+    .anim-item.active {
+        background: var(--accent);
+        color: #fff;
+    }
+    .anim-item .frames {
+        font-size: 0.7rem;
+        opacity: 0.7;
+    }
+
+    .anim-speed {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .anim-speed label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+        min-width: 80px;
+    }
+    .anim-speed input[type="range"] { flex: 1; accent-color: var(--accent); }
     .anim-controls {
         display: flex;
         gap: 6px;
         align-items: center;
-        margin-top: 8px;
+        margin-bottom: 4px;
     }
     .anim-controls button {
-        padding: 4px 10px;
+        padding: 6px 12px;
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: 4px;
@@ -171,6 +242,11 @@
     }
     .anim-controls button:hover { border-color: var(--accent); }
     .anim-controls input[type="range"] { flex: 1; accent-color: var(--accent); }
+    .anim-info {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
 
     .status-bar {
         padding: 8px 16px;
@@ -233,6 +309,7 @@
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
         <div class="viewer-buttons-left">
+            <button id="play-demo-anim" class="viewer-btn" title="Catwalk Idle Animation abspielen"><i class="fas fa-walking"></i> Catwalk</button>
             <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i class="fas fa-folder-open"></i> Laden</button>
             <input type="file" id="load-preset-file" accept=".json" style="display:none">
         </div>
@@ -289,8 +366,10 @@
                     <input type="color" id="cloth-color" value="#404870" style="width:40px;height:24px;border:none;cursor:pointer;">
                 </div>
                 <div style="display:flex;gap:6px;margin-top:6px;">
-                    <button id="cloth-tpl-create" class="btn-toggle" style="flex:1;"><i class="fas fa-plus"></i> Create Template</button>
-                    <button id="cloth-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Remove all cloth"><i class="fas fa-trash"></i></button>
+                    <button id="cloth-tpl-create" class="btn-toggle" style="flex:1;"><i class="fas fa-plus"></i> Create</button>
+                    <button id="cloth-tpl-update" class="btn-toggle" style="flex:1;"><i class="fas fa-sync-alt"></i> Update</button>
+                    <button id="cloth-tpl-delete" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Aktuelles Template löschen"><i class="fas fa-times"></i></button>
+                    <button id="cloth-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Cloth löschen"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>
@@ -360,7 +439,21 @@
         <!-- Animations -->
         <div class="panel-section collapsed">
             <h3>Animations <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="animation-panel"></div>
+            <div class="panel-body" id="animation-panel">
+                <div class="anim-tree" id="anim-tree">
+                    <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Animationen...</div>
+                </div>
+                <div class="anim-speed">
+                    <label id="speed-label">Speed: 1.0x</label>
+                    <input type="range" id="anim-speed" min="10" max="300" value="100" step="10">
+                </div>
+                <div class="anim-controls">
+                    <button id="anim-play" title="Play / Pause"><i class="fas fa-play"></i></button>
+                    <button id="anim-stop" title="Stop"><i class="fas fa-stop"></i></button>
+                    <input type="range" id="anim-timeline" min="0" max="100" value="0" step="1">
+                </div>
+                <div class="anim-info" id="anim-info">&mdash;</div>
+            </div>
         </div>
 
         <!-- Status -->
@@ -383,5 +476,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=9"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?v=12"></script>
 {% endblock %}

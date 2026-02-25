@@ -5,6 +5,8 @@
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=7';
 
 // =========================================================================
 // Light Presets
@@ -60,6 +62,18 @@ let fpsAccum = 0;
 
 // Lights — global so UI can modify them
 let keyLight, fillLight, backLight, ambientLight;
+
+// Animation
+let mixer = null;
+let currentAction = null;
+let skeletonHelper = null;
+let playing = false;
+const bvhLoader = new BVHLoader();
+let defSkeletonData = null;
+let skinWeightData = null;
+let defSkeleton = null;
+let isSkinned = false;
+let skelWrapper = null;
 
 // Rig
 let rigGroup = null;
@@ -159,15 +173,40 @@ function init() {
         });
     }
 
+    // Demo animation button — Play/Pause toggle
+    const demoBtn = document.getElementById('play-demo-anim');
+    if (demoBtn) {
+        demoBtn.addEventListener('click', () => {
+            if (!currentAction) {
+                loadBVHAnimation('/api/character/bvh/Mixamo/Catwalk_Idle_02/', 'Catwalk Idle 02', 0);
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.classList.add('active');
+            } else if (playing) {
+                currentAction.paused = true;
+                playing = false;
+                demoBtn.innerHTML = '<i class="fas fa-play"></i> Catwalk';
+                demoBtn.classList.remove('active');
+            } else {
+                if (!currentAction.isRunning()) currentAction.play();
+                currentAction.paused = false;
+                playing = true;
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.classList.add('active');
+            }
+        });
+    }
+
     // Load saved settings from localStorage
     loadSettings();
 
     // Start render loop
     animate();
 
-    // Load mesh + rig
+    // Load mesh + rig + skeleton data for animation
     loadMesh();
     loadRig();
+    loadDefSkeleton();
+    loadSkinWeights();
 }
 
 function onResize() {
@@ -183,6 +222,7 @@ function animate() {
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
     controls.update();
+    if (mixer && playing) mixer.update(dt);
     renderer.render(scene, camera);
 
     // Update camera info display
@@ -733,6 +773,153 @@ function loadSettings() {
     } catch (e) {
         console.warn('Failed to load scene settings:', e);
     }
+}
+
+// =========================================================================
+// DEF Skeleton + Skin Weights + BVH Animation
+// =========================================================================
+async function loadDefSkeleton() {
+    try {
+        const resp = await fetch('/api/character/def-skeleton/');
+        if (resp.ok) defSkeletonData = await resp.json();
+    } catch (e) { /* optional */ }
+}
+
+async function loadSkinWeights() {
+    try {
+        const resp = await fetch('/api/character/skin-weights/');
+        if (resp.ok) skinWeightData = await resp.json();
+    } catch (e) { /* optional */ }
+}
+
+function buildDefSkeleton(skelData, swData) {
+    const skelByName = {};
+    for (const b of skelData.bones) skelByName[b.name] = b;
+    const bones = [];
+    const boneByName = {};
+    let rootBone = null;
+    for (const name of swData.bone_names) {
+        const bone = new THREE.Bone();
+        bone.name = name.replace(/\./g, '_');
+        bones.push(bone);
+        boneByName[name] = bone;
+    }
+    for (let i = 0; i < swData.bone_names.length; i++) {
+        const name = swData.bone_names[i];
+        const bone = bones[i];
+        const data = skelByName[name];
+        if (!data) continue;
+        const p = data.local_position;
+        bone.position.set(p[0], p[2], -p[1]);
+        const q = data.local_quaternion;
+        bone.quaternion.set(q[1], q[3], -q[2], q[0]);
+        if (data.parent && boneByName[data.parent]) {
+            boneByName[data.parent].add(bone);
+        } else if (!rootBone) {
+            rootBone = bone;
+        }
+    }
+    for (let i = 0; i < bones.length; i++) {
+        const name = swData.bone_names[i];
+        const data = skelByName[name];
+        if (!data) continue;
+        if (!data.parent && bones[i] !== rootBone && rootBone) rootBone.add(bones[i]);
+    }
+    if (!rootBone && bones.length > 0) rootBone = bones[0];
+    rootBone.updateWorldMatrix(true, true);
+    return { skeleton: new THREE.Skeleton(bones), rootBone, bones, boneByName };
+}
+
+function convertToDefSkinnedMesh() {
+    if (isSkinned || !bodyMesh || !bodyGeometry || !skinWeightData) return;
+    bodyGeometry = bodyGeometry.clone();
+    const vCount = bodyGeometry.attributes.position.count;
+    const skinIndices = new Float32Array(vCount * 4);
+    const skinWeights = new Float32Array(vCount * 4);
+    for (let v = 0; v < vCount; v++) {
+        const infs = skinWeightData.weights[v] || [];
+        const sorted = infs.slice().sort((a, b) => b[1] - a[1]).slice(0, 4);
+        let sum = sorted.reduce((s, e) => s + e[1], 0);
+        if (sum < 1e-6) sum = 1;
+        for (let i = 0; i < 4; i++) {
+            skinIndices[v * 4 + i] = i < sorted.length ? sorted[i][0] : 0;
+            skinWeights[v * 4 + i] = i < sorted.length ? sorted[i][1] / sum : 0;
+        }
+    }
+    bodyGeometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
+    bodyGeometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+    defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
+    const mat = bodyMesh.material;
+    const pos = bodyMesh.position.clone();
+    const vis = bodyMesh.visible;
+    scene.remove(bodyMesh);
+    bodyMesh = new THREE.SkinnedMesh(bodyGeometry, mat);
+    bodyMesh.position.copy(pos);
+    bodyMesh.visible = vis;
+    bodyMesh.add(defSkeleton.rootBone);
+    bodyMesh.bind(defSkeleton.skeleton);
+    scene.add(bodyMesh);
+    isSkinned = true;
+}
+
+function loadBVHAnimation(url, name, fc) {
+    stopAnimation(true);
+    bvhLoader.load(url, (result) => {
+        const bvhBones = result.skeleton.bones;
+        if (bvhBones.length === 0) return;
+        if (defSkeletonData && skinWeightData && bodyMesh) {
+            if (!isSkinned) convertToDefSkinnedMesh();
+            const format = detectBVHFormat(bvhBones);
+            const clip = retargetBVHToDefClip(result, defSkeleton, format, { bodyMesh });
+            if (skeletonHelper) scene.remove(skeletonHelper);
+            skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+            skeletonHelper.material.depthTest = false;
+            skeletonHelper.material.depthWrite = false;
+            skeletonHelper.material.color.set(0x00ffaa);
+            skeletonHelper.renderOrder = 999;
+            scene.add(skeletonHelper);
+            mixer = new THREE.AnimationMixer(bodyMesh);
+            currentAction = mixer.clipAction(clip);
+            currentAction.play();
+            playing = true;
+        } else {
+            // Fallback: BVH skeleton only
+            const rootBone = bvhBones[0];
+            rootBone.updateWorldMatrix(true, true);
+            const skelBox = new THREE.Box3();
+            const tmpVec = new THREE.Vector3();
+            bvhBones.forEach(b => { b.updateWorldMatrix(true, false); b.getWorldPosition(tmpVec); skelBox.expandByPoint(tmpVec); });
+            let bodyHeight = 1.75;
+            if (bodyMesh) { const bb = new THREE.Box3().setFromObject(bodyMesh); if (!bb.isEmpty()) bodyHeight = bb.max.y - bb.min.y; }
+            const scale = bodyHeight / Math.max(skelBox.max.y - skelBox.min.y, 0.01);
+            skelWrapper = new THREE.Group();
+            skelWrapper.scale.set(scale, scale, scale);
+            skelWrapper.add(rootBone);
+            scene.add(skelWrapper);
+            if (skeletonHelper) scene.remove(skeletonHelper);
+            skeletonHelper = new THREE.SkeletonHelper(rootBone);
+            skeletonHelper.material.depthTest = false;
+            skeletonHelper.material.depthWrite = false;
+            skeletonHelper.material.color.set(0x00ffaa);
+            skeletonHelper.renderOrder = 999;
+            scene.add(skeletonHelper);
+            mixer = new THREE.AnimationMixer(rootBone);
+            currentAction = mixer.clipAction(result.clip);
+            currentAction.play();
+            playing = true;
+        }
+    }, undefined, (err) => { console.error('Failed to load BVH:', err); });
+}
+
+function stopAnimation(destroy = false) {
+    if (currentAction) { currentAction.stop(); currentAction.reset(); if (destroy) currentAction = null; }
+    if (mixer && destroy) { mixer.stopAllAction(); mixer = null; }
+    if (isSkinned && defSkeleton) defSkeleton.skeleton.pose();
+    if (destroy) {
+        if (skelWrapper) { scene.remove(skelWrapper); skelWrapper = null; }
+        if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
+    }
+    playing = false;
 }
 
 // =========================================================================

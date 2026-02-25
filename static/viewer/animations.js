@@ -116,6 +116,33 @@ function init() {
     // Animation controls
     bindPlaybackControls();
 
+    // Demo animation button — Play/Pause toggle
+    const demoBtn = document.getElementById('play-demo-anim');
+    if (demoBtn) {
+        demoBtn.addEventListener('click', () => {
+            if (!currentAction) {
+                loadBVHAnimation('/api/character/bvh/Mixamo/Catwalk_Idle_02/', 'Catwalk Idle 02', 0);
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.classList.add('active');
+            } else if (playing) {
+                currentAction.paused = true;
+                playing = false;
+                demoBtn.innerHTML = '<i class="fas fa-play"></i> Catwalk';
+                demoBtn.classList.remove('active');
+                const playBtn = document.getElementById('anim-play');
+                if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
+            } else {
+                if (!currentAction.isRunning()) currentAction.play();
+                currentAction.paused = false;
+                playing = true;
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.classList.add('active');
+                const playBtn = document.getElementById('anim-play');
+                if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            }
+        });
+    }
+
     // Rig toggle
     const rigToggle = document.getElementById('rig-toggle');
     if (rigToggle) {
