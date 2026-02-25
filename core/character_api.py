@@ -15,6 +15,7 @@ from django.views.decorators.http import require_GET
 
 from humanbody_core import MorphData, CharacterState, CharacterDefaults, MeshData
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
+from humanbody_core.cloth import generate_cloth, CLOTH_REGIONS, CLOTH_COLORS
 
 logger = logging.getLogger(__name__)
 
@@ -447,4 +448,131 @@ def character_bvh_file_cat(request, category, name):
         open(bvh_path, 'rb'),
         content_type='text/plain',
         filename=f'{name}.bvh',
+    )
+
+
+# =========================================================================
+# Cloth API
+# =========================================================================
+
+@require_GET
+def character_cloth(request):
+    """Generate a cloth mesh from body geometry and return as base64 binary.
+
+    Query params:
+        region    — TOP, PANTS, SKIRT, FULL, UNDERWEAR, SHOES (default: TOP)
+        looseness — 0.0 to 2.0 (default: 0.3)
+        body_type — body type key (default: Female_Caucasian)
+        gender    — 0.0 to 1.0 (default: 0)
+        morph_*   — morph values
+    """
+    region = request.GET.get('region', 'TOP').upper()
+    looseness = float(request.GET.get('looseness', 0.5))
+
+    if region not in CLOTH_REGIONS:
+        return JsonResponse({'error': f'Unknown region: {region}'}, status=400)
+
+    md = _get_morph_data()
+    cd = _get_char_defaults()
+
+    state = CharacterState(md, cd)
+    state.set_body_type(request.GET.get('body_type', 'Female_Caucasian'))
+    state.set_gender(float(request.GET.get('gender', 0)))
+
+    for key, val in request.GET.items():
+        if key.startswith('morph_'):
+            morph_name = key[len('morph_'):]
+            try:
+                state.set_morph(morph_name, float(val))
+            except ValueError:
+                pass
+
+    vertices = state.compute()
+    if vertices is None:
+        return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
+
+    result = generate_cloth(vertices, region=region, looseness=looseness)
+    if result is None:
+        return JsonResponse({'error': 'Failed to generate cloth'}, status=400)
+
+    return JsonResponse({
+        'vertex_count': int(result['vertices'].shape[0]),
+        'vertices': base64.b64encode(
+            result['vertices'].tobytes()).decode('ascii'),
+        'face_count': int(result['faces'].shape[0]),
+        'faces': base64.b64encode(
+            result['faces'].ravel().astype(np.uint32).tobytes()).decode('ascii'),
+        'normals': base64.b64encode(
+            result['normals'].tobytes()).decode('ascii'),
+        'color': list(result['color']),
+    })
+
+
+@require_GET
+def character_cloth_regions(request):
+    """Return available cloth region presets."""
+    regions = []
+    for key, info in CLOTH_REGIONS.items():
+        regions.append({
+            'key': key,
+            'label': info['label'],
+            'color': list(info['color']),
+        })
+    return JsonResponse({'regions': regions})
+
+
+# =========================================================================
+# Hair API
+# =========================================================================
+
+# Hair color presets (from hair.py — no bpy needed)
+HAIR_COLORS = {
+    "Silken Black":       {"viewport": (0.02, 0.02, 0.02)},
+    "Dark Brown":         {"viewport": (0.08, 0.04, 0.02)},
+    "Cocoa Brown":        {"viewport": (0.25, 0.12, 0.05)},
+    "Light Golden Brown": {"viewport": (0.7, 0.5, 0.25)},
+    "Honey Blonde":       {"viewport": (0.6, 0.26, 0.08)},
+    "Light Blonde":       {"viewport": (0.6, 0.3, 0.05)},
+    "Auburn":             {"viewport": (0.5, 0.2, 0.05)},
+    "Natural Black":      {"viewport": (0.05, 0.05, 0.05)},
+    "Burgundy":           {"viewport": (0.13, 0.085, 0.08)},
+    "Plum":               {"viewport": (0.33, 0.17, 0.05)},
+}
+
+
+@require_GET
+def character_hairstyles(request):
+    """Return available hairstyles (GLB files in hairstyles dir)."""
+    hairstyles_dir = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'hairstyles')
+    styles = []
+    if os.path.isdir(hairstyles_dir):
+        for fname in sorted(os.listdir(hairstyles_dir)):
+            if fname.endswith('.glb'):
+                name = fname[:-4]
+                label = name.replace('_', ' ').title()
+                styles.append({
+                    'name': name,
+                    'label': label,
+                    'url': f'/api/character/hairstyle/{name}/',
+                })
+    return JsonResponse({
+        'hairstyles': styles,
+        'colors': {k: v['viewport'] for k, v in HAIR_COLORS.items()},
+    })
+
+
+def character_hairstyle_glb(request, name):
+    """Serve a hairstyle GLB file."""
+    if '/' in name or '\\' in name or '..' in name:
+        return JsonResponse({'error': 'Invalid name'}, status=400)
+    hairstyles_dir = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'hairstyles')
+    glb_path = os.path.normpath(os.path.join(hairstyles_dir, f"{name}.glb"))
+    if not glb_path.startswith(os.path.normpath(hairstyles_dir)):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+    if not os.path.isfile(glb_path):
+        return HttpResponseNotFound(f'Hairstyle not found: {name}')
+    return FileResponse(
+        open(glb_path, 'rb'),
+        content_type='model/gltf-binary',
+        filename=f'{name}.glb',
     )

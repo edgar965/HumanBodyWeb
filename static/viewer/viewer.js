@@ -44,6 +44,13 @@ let rigGroup = null;
 let rigVisible = false;
 let rigData = null;
 
+// Cloth — multiple pieces keyed by region
+const clothMeshes = {};  // region -> THREE.Mesh
+
+// Hair
+let hairMesh = null;
+let hairColorData = {};  // name -> [r,g,b] (linear sRGB)
+
 // =========================================================================
 // Initialization
 // =========================================================================
@@ -124,6 +131,8 @@ function init() {
     loadWardrobe();
     loadAnimations();
     loadRig();
+    loadClothUI();
+    loadHairUI();
     initLoadPreset();
     connectWebSocket();
 
@@ -993,6 +1002,239 @@ function buildRigVisualization() {
 }
 
 // =========================================================================
+// Cloth
+// =========================================================================
+async function loadClothUI() {
+    try {
+        const resp = await fetch('/api/character/cloth/regions/');
+        const data = await resp.json();
+        const select = document.getElementById('cloth-region-select');
+        if (!select) return;
+
+        (data.regions || []).forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.key;
+            opt.textContent = r.label;
+            select.appendChild(opt);
+        });
+
+        const loosenessSlider = document.getElementById('cloth-looseness');
+        const loosenessVal = document.getElementById('cloth-looseness-val');
+        if (loosenessSlider) {
+            loosenessSlider.addEventListener('input', () => {
+                loosenessVal.textContent = (parseInt(loosenessSlider.value) / 100).toFixed(1);
+            });
+        }
+
+        // Generate button — adds cloth for selected region (multiple can coexist)
+        const genBtn = document.getElementById('cloth-refresh');
+        if (genBtn) {
+            genBtn.addEventListener('click', () => {
+                const region = select.value;
+                if (!region) return;
+                const looseness = parseInt(loosenessSlider.value) / 100;
+                loadCloth(region, looseness);
+            });
+        }
+
+        // "No Cloth" removes all
+        select.addEventListener('change', () => {
+            if (!select.value) removeAllCloth();
+        });
+
+        // Remove All button
+        const removeBtn = document.getElementById('cloth-remove-all');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                removeAllCloth();
+                select.value = '';
+            });
+        }
+    } catch (e) {
+        console.warn('Cloth UI not available:', e);
+    }
+}
+
+async function loadCloth(region, looseness, color) {
+    const genBtn = document.getElementById('cloth-refresh');
+    if (genBtn) genBtn.textContent = 'Generating...';
+
+    try {
+        const url = `/api/character/cloth/?region=${region}&looseness=${looseness}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.error) {
+            console.error('Cloth error:', data.error);
+            if (genBtn) genBtn.textContent = 'Generate Cloth';
+            return;
+        }
+
+        // Remove only this region's previous mesh
+        removeClothRegion(region);
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+        const positions = new THREE.BufferAttribute(vertBuf, 3);
+
+        const faceBuf = base64ToUint32(data.faces);
+        const index = new THREE.BufferAttribute(faceBuf, 1);
+
+        const normalBuf = base64ToFloat32(data.normals);
+        blenderToThreeCoords(normalBuf);
+        const normals = new THREE.BufferAttribute(normalBuf, 3);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', positions);
+        geo.setIndex(index);
+        geo.setAttribute('normal', normals);
+
+        // Color priority: explicit param > picker > server default
+        let matColor;
+        if (color) {
+            matColor = new THREE.Color(color);
+        } else {
+            const colorPicker = document.getElementById('cloth-color');
+            matColor = colorPicker
+                ? new THREE.Color(colorPicker.value)
+                : new THREE.Color(data.color[0], data.color[1], data.color[2]);
+        }
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: matColor,
+            roughness: 0.8,
+            metalness: 0.0,
+            side: THREE.DoubleSide,
+        });
+
+        const mesh = new THREE.Mesh(geo, mat);
+        clothMeshes[region] = mesh;
+        scene.add(mesh);
+
+        console.log(`Cloth ${region}: ${data.vertex_count} verts, ${data.face_count} tris`);
+    } catch (e) {
+        console.error('Failed to load cloth:', e);
+    }
+    if (genBtn) genBtn.textContent = 'Generate Cloth';
+}
+
+function removeClothRegion(region) {
+    const m = clothMeshes[region];
+    if (m) {
+        scene.remove(m);
+        m.geometry.dispose();
+        m.material.dispose();
+        delete clothMeshes[region];
+    }
+}
+
+function removeAllCloth() {
+    for (const region of Object.keys(clothMeshes)) {
+        removeClothRegion(region);
+    }
+}
+
+// =========================================================================
+// Hair
+// =========================================================================
+async function loadHairUI() {
+    try {
+        const resp = await fetch('/api/character/hairstyles/');
+        const data = await resp.json();
+        const select = document.getElementById('hair-style-select');
+        const colorSelect = document.getElementById('hair-color-select');
+        if (!select) return;
+
+        hairColorData = data.colors || {};
+
+        // Populate hairstyle dropdown
+        (data.hairstyles || []).forEach(h => {
+            const opt = document.createElement('option');
+            opt.value = h.url;
+            opt.textContent = h.label;
+            opt.dataset.name = h.name;
+            select.appendChild(opt);
+        });
+
+        // Populate hair color dropdown
+        if (colorSelect) {
+            Object.keys(hairColorData).forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                colorSelect.appendChild(opt);
+            });
+        }
+
+        select.addEventListener('change', () => {
+            if (!select.value) {
+                removeHair();
+                return;
+            }
+            loadHair(select.value);
+        });
+
+        if (colorSelect) {
+            colorSelect.addEventListener('change', () => {
+                applyHairColor(colorSelect.value);
+            });
+        }
+    } catch (e) {
+        console.warn('Hair UI not available:', e);
+    }
+}
+
+function loadHair(url) {
+    removeHair();
+    gltfLoader.load(url, (gltf) => {
+        hairMesh = gltf.scene;
+        // Apply current hair color
+        const colorSelect = document.getElementById('hair-color-select');
+        if (colorSelect && colorSelect.value) {
+            applyHairColorToObject(hairMesh, colorSelect.value);
+        }
+        scene.add(hairMesh);
+        console.log('Hair loaded:', url);
+    }, undefined, (err) => {
+        console.error('Failed to load hair:', err);
+    });
+}
+
+function removeHair() {
+    if (hairMesh) {
+        scene.remove(hairMesh);
+        hairMesh.traverse(child => {
+            if (child.isMesh) {
+                child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(m => m.dispose());
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            }
+        });
+        hairMesh = null;
+    }
+}
+
+function applyHairColor(colorName) {
+    if (hairMesh) applyHairColorToObject(hairMesh, colorName);
+}
+
+function applyHairColorToObject(obj, colorName) {
+    const rgb = hairColorData[colorName];
+    if (!rgb) return;
+    const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
+    obj.traverse(child => {
+        if (child.isMesh && child.material) {
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            mats.forEach(m => { m.color.copy(color); });
+        }
+    });
+}
+
+// =========================================================================
 // Scene settings from /humanbody/scene/ page (localStorage)
 // =========================================================================
 const VIEWER_TONE_MAPPINGS = {
@@ -1120,6 +1362,34 @@ function initLoadPreset() {
         reader.readAsText(file);
         fileInput.value = '';  // allow re-selecting same file
     });
+
+    // Auto-load default preset after mesh is ready
+    loadDefaultPreset();
+}
+
+async function loadDefaultPreset() {
+    // Wait until mesh is loaded
+    const maxWait = 15000;
+    const start = Date.now();
+    while (!bodyMesh && Date.now() - start < maxWait) {
+        await new Promise(r => setTimeout(r, 200));
+    }
+    if (!bodyMesh) {
+        console.warn('Default preset: mesh not ready, skipping');
+        return;
+    }
+    // Small extra delay to ensure UI (cloth/hair dropdowns) is populated
+    await new Promise(r => setTimeout(r, 500));
+
+    try {
+        const resp = await fetch('/api/character/model/femaleWithClothes/');
+        if (!resp.ok) return;
+        const preset = await resp.json();
+        applyModelPreset(preset);
+        console.log('Default preset loaded: femaleWithClothes');
+    } catch (e) {
+        console.warn('Failed to load default preset:', e);
+    }
 }
 
 function applyModelPreset(preset) {
@@ -1180,6 +1450,54 @@ function applyModelPreset(preset) {
                     btn.click();
                 }
             });
+        }
+    }
+
+    // 5. Cloth — generate one or more cloth pieces
+    if (preset.cloth) {
+        removeAllCloth();
+        // Support both single object and array
+        const clothList = Array.isArray(preset.cloth) ? preset.cloth : [preset.cloth];
+        // Generate each piece with staggered delay so mesh is loaded
+        clothList.forEach((c, i) => {
+            if (!c.region) return;
+            setTimeout(() => {
+                loadCloth(c.region, c.looseness !== undefined ? c.looseness : 0.5, c.color || null);
+            }, 500 + i * 200);
+        });
+        // Update UI to show last piece's settings
+        const last = clothList[clothList.length - 1];
+        const regionSelect = document.getElementById('cloth-region-select');
+        const loosenessSlider = document.getElementById('cloth-looseness');
+        const loosenessVal = document.getElementById('cloth-looseness-val');
+        const colorPicker = document.getElementById('cloth-color');
+        if (regionSelect && last.region) regionSelect.value = last.region;
+        if (loosenessSlider && last.looseness !== undefined) {
+            loosenessSlider.value = Math.round(last.looseness * 100);
+            if (loosenessVal) loosenessVal.textContent = last.looseness.toFixed(1);
+        }
+        if (colorPicker && last.color) colorPicker.value = last.color;
+    }
+
+    // 6. Hair — select style and color
+    if (preset.hair_style) {
+        const hairSelect = document.getElementById('hair-style-select');
+        const hairColorSelect = document.getElementById('hair-color-select');
+
+        if (hairSelect && preset.hair_style.url) {
+            // Find matching option by url
+            for (const opt of hairSelect.options) {
+                if (opt.value === preset.hair_style.url) {
+                    hairSelect.value = opt.value;
+                    break;
+                }
+            }
+            loadHair(preset.hair_style.url);
+        }
+        if (hairColorSelect && preset.hair_style.color) {
+            hairColorSelect.value = preset.hair_style.color;
+            // Apply color after hair loads
+            setTimeout(() => applyHairColor(preset.hair_style.color), 1000);
         }
     }
 

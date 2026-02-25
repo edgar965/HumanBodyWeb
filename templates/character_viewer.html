@@ -262,6 +262,43 @@
             <div class="panel-body" id="morphs-panel"></div>
         </div>
 
+        <!-- Cloth -->
+        <div class="panel-section collapsed">
+            <h3>Cloth <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body" id="cloth-panel">
+                <select id="cloth-region-select" class="viewer-select">
+                    <option value="">— No Cloth —</option>
+                </select>
+                <div class="slider-row">
+                    <label>Looseness</label>
+                    <input type="range" id="cloth-looseness" min="0" max="100" value="50" step="5">
+                    <span class="slider-val" id="cloth-looseness-val">0.5</span>
+                </div>
+                <div class="slider-row">
+                    <label>Color</label>
+                    <input type="color" id="cloth-color" value="#404870" style="width:40px;height:24px;border:none;cursor:pointer;">
+                </div>
+                <div style="display:flex;gap:6px;margin-top:6px;">
+                    <button id="cloth-refresh" class="btn-toggle" style="flex:1;">Generate Cloth</button>
+                    <button id="cloth-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Remove all cloth"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hair -->
+        <div class="panel-section collapsed">
+            <h3>Hair <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body" id="hair-panel">
+                <select id="hair-style-select" class="viewer-select">
+                    <option value="">— No Hair —</option>
+                </select>
+                <div class="slider-row">
+                    <label>Color</label>
+                    <select id="hair-color-select" class="viewer-select" style="margin-bottom:0;"></select>
+                </div>
+            </div>
+        </div>
+
         <!-- Wardrobe -->
         <div class="panel-section collapsed">
             <h3>Wardrobe <span class="chevron">&#9660;</span></h3>
@@ -294,5 +331,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=3"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?v=8"></script>
 {% endblock %}
