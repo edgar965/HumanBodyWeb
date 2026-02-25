@@ -395,6 +395,45 @@ def character_bvh_file(request, name):
     )
 
 
+@require_GET
+def character_models(request):
+    """Return list of available model presets."""
+    models_dir = str(settings.HUMANBODY_MODELS_DIR)
+    presets = []
+    if os.path.isdir(models_dir):
+        for fname in sorted(os.listdir(models_dir)):
+            if fname.endswith('.json'):
+                name = fname[:-5]
+                fpath = os.path.join(models_dir, fname)
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    presets.append({
+                        'name': name,
+                        'label': data.get('name', name),
+                    })
+                except (json.JSONDecodeError, IOError):
+                    presets.append({'name': name, 'label': name})
+    return JsonResponse({'presets': presets})
+
+
+@require_GET
+def character_model_detail(request, name):
+    """Return contents of a model preset JSON file."""
+    # Guard against path traversal
+    if '/' in name or '\\' in name or '..' in name:
+        return JsonResponse({'error': 'Invalid name'}, status=400)
+    models_dir = str(settings.HUMANBODY_MODELS_DIR)
+    fpath = os.path.normpath(os.path.join(models_dir, f"{name}.json"))
+    if not fpath.startswith(os.path.normpath(models_dir)):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+    if not os.path.isfile(fpath):
+        return HttpResponseNotFound(f'Preset not found: {name}')
+    with open(fpath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return JsonResponse(data)
+
+
 def character_bvh_file_cat(request, category, name):
     """Serve a BVH animation file from a category subdirectory."""
     bvh_root = os.path.dirname(str(settings.HUMANBODY_BVH_DIR))

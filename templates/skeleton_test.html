@@ -52,6 +52,7 @@
     .skeleton-label.def { background: rgba(255,68,68,0.25); color: #ff6666; border: 1px solid rgba(255,68,68,0.4); }
     .skeleton-label.cmu { background: rgba(68,255,68,0.25); color: #66ff66; border: 1px solid rgba(68,255,68,0.4); }
     .skeleton-label.mocapnet { background: rgba(68,136,255,0.25); color: #6699ff; border: 1px solid rgba(68,136,255,0.4); }
+    .skeleton-label.mixamo { background: rgba(255,170,68,0.25); color: #ffaa66; border: 1px solid rgba(255,170,68,0.4); }
 
     .viewer-panel {
         width: 320px;
@@ -227,7 +228,8 @@
         <div id="label-renderer"></div>
         <div class="skeleton-labels">
             <div class="skeleton-label def">AutoRig (DEF)</div>
-            <div class="skeleton-label cmu">CMU / Mixamo</div>
+            <div class="skeleton-label cmu">CMU</div>
+            <div class="skeleton-label mixamo">Mixamo</div>
             <div class="skeleton-label mocapnet">MocapNET v4</div>
         </div>
     </div>
@@ -250,6 +252,11 @@
                     <input type="checkbox" id="toggle-cmu" checked>
                     <span class="color-dot" style="background:#44ff44;"></span>
                     <label for="toggle-cmu">CMU Skeleton</label>
+                </div>
+                <div class="toggle-row">
+                    <input type="checkbox" id="toggle-mixamo" checked>
+                    <span class="color-dot" style="background:#ffaa44;"></span>
+                    <label for="toggle-mixamo">Mixamo Skeleton</label>
                 </div>
                 <div class="toggle-row">
                     <input type="checkbox" id="toggle-mocapnet" checked>

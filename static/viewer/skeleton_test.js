@@ -1,15 +1,16 @@
 /**
- * Skeleton Test — 3 skeletons side-by-side for bone-mapping debugging.
+ * Skeleton Test — 4 skeletons side-by-side for bone-mapping debugging.
  *
- * Left (red):   AutoRig DEF skeleton (176 bones)
- * Center (green): CMU/Mixamo BVH skeleton (~31 bones)
+ * Left (red):    AutoRig DEF skeleton (176 bones)
+ * Center-L (green): CMU BVH skeleton (~31 bones)
+ * Center-R (orange): Mixamo BVH skeleton (~52 bones, with fingers)
  * Right (blue):  MocapNET v4 BVH skeleton (~150+ bones)
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MOCAPNET } from './retarget_hybrid.js';
+import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET } from './retarget_hybrid.js?v=7';
 
 // =========================================================================
 // Global state
@@ -38,7 +39,8 @@ let allAnimations = {};
 // Three skeleton groups
 const skeletons = {
     def:      { group: null, bones: null, labels: [], vizMeshes: [], color: 0xff4444, xOffset: -2.0, rootBone: null, boneByName: null, skeleton: null },
-    cmu:      { group: null, bones: null, labels: [], vizMeshes: [], color: 0x44ff44, xOffset:  0.0, rootBone: null, bvhResult: null, wrapper: null },
+    cmu:      { group: null, bones: null, labels: [], vizMeshes: [], color: 0x44ff44, xOffset: -0.7, rootBone: null, bvhResult: null, wrapper: null },
+    mixamo:   { group: null, bones: null, labels: [], vizMeshes: [], color: 0xffaa44, xOffset:  0.7, rootBone: null, bvhResult: null, wrapper: null },
     mocapnet: { group: null, bones: null, labels: [], vizMeshes: [], color: 0x4488ff, xOffset:  2.0, rootBone: null, bvhResult: null, wrapper: null },
 };
 
@@ -134,7 +136,7 @@ function init() {
 
     // Camera — farther back to see all 3 skeletons
     camera = new THREE.PerspectiveCamera(35, w / h, 0.01, 100);
-    camera.position.set(0, 1.2, 6.0);
+    camera.position.set(0, 1.2, 7.5);
 
     // Controls
     controls = new OrbitControls(camera, canvas);
@@ -153,7 +155,7 @@ function init() {
     scene.add(dirLight);
 
     // Ground grid (wider)
-    const grid = new THREE.GridHelper(8, 40, 0x333355, 0x222244);
+    const grid = new THREE.GridHelper(10, 50, 0x333355, 0x222244);
     scene.add(grid);
 
     // Create skeleton groups
@@ -235,6 +237,9 @@ function bindToggles() {
     document.getElementById('toggle-cmu').addEventListener('change', (e) => {
         skeletons.cmu.group.visible = e.target.checked;
     });
+    document.getElementById('toggle-mixamo').addEventListener('change', (e) => {
+        skeletons.mixamo.group.visible = e.target.checked;
+    });
     document.getElementById('toggle-mocapnet').addEventListener('change', (e) => {
         skeletons.mocapnet.group.visible = e.target.checked;
     });
@@ -298,7 +303,7 @@ function createBoneLabels(bones, skelKey) {
     skel.labels.forEach(lbl => lbl.parent && lbl.parent.remove(lbl));
     skel.labels = [];
 
-    const colorMap = { def: '#ff6666', cmu: '#66ff66', mocapnet: '#6699ff' };
+    const colorMap = { def: '#ff6666', cmu: '#66ff66', mixamo: '#ffaa66', mocapnet: '#6699ff' };
     const color = colorMap[skelKey] || '#ffffff';
     const showLabels = document.getElementById('toggle-labels').checked;
 
@@ -471,22 +476,23 @@ async function loadAnimationTree() {
 // Auto-load first BVH of each type for rest-pose display
 // =========================================================================
 function autoLoadRestPoseSkeletons() {
-    // Find first CMU-type animation (Walk category or any non-MocapNET)
     let cmuAnim = null;
+    let mixamoAnim = null;
     let mocapnetAnim = null;
 
     for (const cat of Object.keys(allAnimations)) {
         for (const anim of allAnimations[cat]) {
             if (cat === 'MocapNET') {
                 if (!mocapnetAnim) mocapnetAnim = anim;
+            } else if (cat === 'Mixamo') {
+                if (!mixamoAnim) mixamoAnim = anim;
             } else {
                 if (!cmuAnim) cmuAnim = anim;
             }
         }
-        if (cmuAnim && mocapnetAnim) break;
     }
 
-    // Load CMU rest-pose skeleton (center, green)
+    // Load CMU rest-pose skeleton (green)
     if (cmuAnim) {
         bvhLoader.load(cmuAnim.url, (result) => {
             const format = detectBVHFormat(result.skeleton.bones);
@@ -497,7 +503,18 @@ function autoLoadRestPoseSkeletons() {
         });
     }
 
-    // Load MocapNET rest-pose skeleton (right, blue)
+    // Load Mixamo rest-pose skeleton (orange)
+    if (mixamoAnim) {
+        bvhLoader.load(mixamoAnim.url, (result) => {
+            const format = detectBVHFormat(result.skeleton.bones);
+            if (format === 'MIXAMO') {
+                placeBvhSkeleton(result, 'mixamo');
+                skeletons.mixamo.bvhResult = result;
+            }
+        });
+    }
+
+    // Load MocapNET rest-pose skeleton (blue)
     if (mocapnetAnim) {
         bvhLoader.load(mocapnetAnim.url, (result) => {
             const format = detectBVHFormat(result.skeleton.bones);
@@ -529,8 +546,10 @@ function loadAndPlayAnimation(url, name, fc, category) {
 
         const mixers = [];
 
-        // --- BVH skeleton (center or right depending on format) ---
-        const bvhKey = format === 'CMU' ? 'cmu' : 'mocapnet';
+        // --- BVH skeleton (position depends on format) ---
+        const bvhKey = format === 'CMU' ? 'cmu'
+                     : format === 'MIXAMO' ? 'mixamo'
+                     : 'mocapnet';
         const bvhSkel = skeletons[bvhKey];
 
         // Remove old BVH skeleton

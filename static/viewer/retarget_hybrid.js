@@ -18,7 +18,10 @@ import * as THREE from 'three';
 
 export function detectBVHFormat(bones) {
     const names = new Set(bones.map(b => b.name));
-    if (names.has('Hips') && names.has('LeftArm')) return 'CMU';
+    if (names.has('Hips') && names.has('LeftArm')) {
+        // Mixamo has Spine2, CMU does not (CMU uses LowerBack instead)
+        return names.has('Spine2') ? 'MIXAMO' : 'CMU';
+    }
     if (names.has('hip') || names.has('rshoulder')) return 'MOCAPNET';
     return 'UNKNOWN';
 }
@@ -57,6 +60,79 @@ export const BVH_TO_DEF_CMU = {
     'RightFingerBase': null,
     'LThumb':         null,
     'RThumb':         null,
+};
+
+export const BVH_TO_DEF_MIXAMO = {
+    // Spine chain: Mixamo has Spine/Spine1/Spine2, CMU skips .002
+    'Hips':           'DEF-spine',
+    'Spine':          'DEF-spine.001',
+    'Spine1':         'DEF-spine.002',
+    'Spine2':         'DEF-spine.003',
+    'Neck':           null,
+    'Neck1':          'DEF-spine.004',
+    'Head':           'DEF-spine.006',
+
+    // Arms
+    'LeftShoulder':   'DEF-shoulder.L',
+    'LeftArm':        'DEF-upper_arm.L',
+    'LeftForeArm':    'DEF-forearm.L',
+    'LeftHand':       'DEF-hand.L',
+    'RightShoulder':  'DEF-shoulder.R',
+    'RightArm':       'DEF-upper_arm.R',
+    'RightForeArm':   'DEF-forearm.R',
+    'RightHand':      'DEF-hand.R',
+
+    // Legs
+    'LeftUpLeg':      'DEF-thigh.L',
+    'LeftLeg':        'DEF-shin.L',
+    'LeftFoot':       'DEF-foot.L',
+    'LeftToeBase':    'DEF-toe.L',
+    'RightUpLeg':     'DEF-thigh.R',
+    'RightLeg':       'DEF-shin.R',
+    'RightFoot':      'DEF-foot.R',
+    'RightToeBase':   'DEF-toe.R',
+
+    // Fingers left — Thumb
+    'LeftHandThumb1':  'DEF-thumb.01.L',
+    'LeftHandThumb2':  'DEF-thumb.02.L',
+    'LeftHandThumb3':  'DEF-thumb.03.L',
+    // Fingers left — Index
+    'LeftHandIndex1':  'DEF-f_index.01.L',
+    'LeftHandIndex2':  'DEF-f_index.02.L',
+    'LeftHandIndex3':  'DEF-f_index.03.L',
+    // Fingers left — Middle
+    'LeftHandMiddle1': 'DEF-f_middle.01.L',
+    'LeftHandMiddle2': 'DEF-f_middle.02.L',
+    'LeftHandMiddle3': 'DEF-f_middle.03.L',
+    // Fingers left — Ring
+    'LeftHandRing1':   'DEF-f_ring.01.L',
+    'LeftHandRing2':   'DEF-f_ring.02.L',
+    'LeftHandRing3':   'DEF-f_ring.03.L',
+    // Fingers left — Pinky
+    'LeftHandPinky1':  'DEF-f_pinky.01.L',
+    'LeftHandPinky2':  'DEF-f_pinky.02.L',
+    'LeftHandPinky3':  'DEF-f_pinky.03.L',
+
+    // Fingers right — Thumb
+    'RightHandThumb1': 'DEF-thumb.01.R',
+    'RightHandThumb2': 'DEF-thumb.02.R',
+    'RightHandThumb3': 'DEF-thumb.03.R',
+    // Fingers right — Index
+    'RightHandIndex1': 'DEF-f_index.01.R',
+    'RightHandIndex2': 'DEF-f_index.02.R',
+    'RightHandIndex3': 'DEF-f_index.03.R',
+    // Fingers right — Middle
+    'RightHandMiddle1':'DEF-f_middle.01.R',
+    'RightHandMiddle2':'DEF-f_middle.02.R',
+    'RightHandMiddle3':'DEF-f_middle.03.R',
+    // Fingers right — Ring
+    'RightHandRing1':  'DEF-f_ring.01.R',
+    'RightHandRing2':  'DEF-f_ring.02.R',
+    'RightHandRing3':  'DEF-f_ring.03.R',
+    // Fingers right — Pinky
+    'RightHandPinky1': 'DEF-f_pinky.01.R',
+    'RightHandPinky2': 'DEF-f_pinky.02.R',
+    'RightHandPinky3': 'DEF-f_pinky.03.R',
 };
 
 export const BVH_TO_DEF_MOCAPNET = {
@@ -187,14 +263,16 @@ export const BVH_TO_DEF_MOCAPNET = {
  *
  * @param {Object} bvhResult - { skeleton, clip } from BVHLoader
  * @param {Object} defSkel - { rootBone, boneByName } from buildDefSkeleton()
- * @param {string} format - 'CMU' or 'MOCAPNET'
+ * @param {string} format - 'CMU', 'MIXAMO', or 'MOCAPNET'
  * @param {Object} [opts] - { bodyMesh } for height measurement
  * @returns {THREE.AnimationClip}
  */
 export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const bvhBones = bvhResult.skeleton.bones;
     const bvhClip = bvhResult.clip;
-    const mapping = format === 'CMU' ? BVH_TO_DEF_CMU : BVH_TO_DEF_MOCAPNET;
+    const mapping = format === 'CMU' ? BVH_TO_DEF_CMU
+                  : format === 'MIXAMO' ? BVH_TO_DEF_MIXAMO
+                  : BVH_TO_DEF_MOCAPNET;
 
     // --- DEF rest-pose world quaternions ---
     defSkel.rootBone.updateWorldMatrix(true, true);
@@ -287,44 +365,49 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         }
     }
 
-    // --- Direction correction per mapped bone ---
-    // DEF bones have local direction -Z (Blender +Y → Three.js -Z after coord swap).
-    // BVH bones have bone direction = normalize(largestChild.position).
-    // The correction rotates the DEF rest direction to match BVH rest direction,
-    // eliminating the static offset between different skeleton rest poses.
+    // --- Offset Q per mapped bone (with direction correction) ---
+    // Direction correction aligns BVH bone directions with DEF bone directions.
+    // This is needed because BVH and DEF may have different rest poses (T vs A).
     const _NEG_Z = new THREE.Vector3(0, 0, -1);
-    const offsetQ = {};   // pre-computed: dirCorrection × defWorldRestQ
+    const offsetQ = {};
+
+    // Identify root DEF bone (no mapped parent → skip direction correction)
+    const rootDefName = Object.values(mapping).find(d => d && defSkel.boneByName[d]);
 
     for (const [defName, bvhName] of Object.entries(defToBvhName)) {
-        // DEF rest direction in world space
-        const defRestDir = _NEG_Z.clone().applyQuaternion(defWorldRestQ[defName]).normalize();
+        // Skip direction correction for root bone — root has multiple children
+        // with divergent directions, causing erroneous correction
+        if (defName === rootDefName) {
+            offsetQ[defName] = defWorldRestQ[defName].clone();
+            continue;
+        }
 
-        // BVH rest direction: largest child offset (identity rest Q → local = world)
+        const defRestDir = _NEG_Z.clone().applyQuaternion(defWorldRestQ[defName]).normalize();
         const bvhBone = bvhBoneByName[bvhName];
+
+        // Find BVH bone direction from best-aligned child offset
         let bvhDir = null;
-        let bestLen = 0;
+        let bestDot = -Infinity;
         for (const child of bvhBone.children) {
-            if (child.isBone) {
-                const len = child.position.lengthSq();
-                if (len > bestLen) {
-                    bestLen = len;
-                    bvhDir = child.position.clone().normalize();
-                }
+            if (child.isBone && child.position.lengthSq() > 1e-10) {
+                const dir = child.position.clone().normalize();
+                const dot = dir.dot(defRestDir);
+                if (dot > bestDot) { bestDot = dot; bvhDir = dir; }
             }
         }
-        // Fallback: own offset from parent
-        if (!bvhDir || bestLen < 1e-10) {
+        // Fallback to own position offset
+        if (!bvhDir && bvhBone.position.lengthSq() > 1e-10) {
             bvhDir = bvhBone.position.clone().normalize();
         }
 
         if (!bvhDir || bvhDir.lengthSq() < 1e-10) {
-            // No direction info: use DEF rest Q as-is
             offsetQ[defName] = defWorldRestQ[defName].clone();
         } else {
             const dirCorr = new THREE.Quaternion().setFromUnitVectors(defRestDir, bvhDir);
             offsetQ[defName] = dirCorr.multiply(defWorldRestQ[defName]);
         }
     }
+
 
     // --- Sort ALL DEF bones by depth (parent before child) ---
     const allDefBonesSorted = Object.keys(defSkel.boneByName).sort((a, b) => {
@@ -415,10 +498,10 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
 
     // Root position track
     const rootBvhName = bvhBones[0].name;
-    const rootDefName = mapping[rootBvhName];
+    const rootPosDef = mapping[rootBvhName];
     const rootPosTrack = bvhPosTracks[rootBvhName];
-    if (rootDefName && rootPosTrack) {
-        const defBone = defSkel.boneByName[rootDefName];
+    if (rootPosDef && rootPosTrack) {
+        const defBone = defSkel.boneByName[rootPosDef];
         if (defBone) {
             const bvhRef = new THREE.Vector3(
                 rootPosTrack.values[0], rootPosTrack.values[1], rootPosTrack.values[2]);

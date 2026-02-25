@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget.js';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=7';
 
 // =========================================================================
 // Tone mapping lookup (for scene settings)
@@ -654,9 +654,12 @@ function bindPlaybackControls() {
 
     timeline.addEventListener('input', () => {
         if (currentAction && mixer) {
+            const wasPaused = currentAction.paused;
+            currentAction.paused = false;
             const clip = currentAction.getClip();
             const time = (parseInt(timeline.value) / 100) * clip.duration;
             mixer.setTime(time);
+            currentAction.paused = wasPaused;
         }
     });
 }

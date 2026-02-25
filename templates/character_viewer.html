@@ -52,6 +52,14 @@
     }
     .viewer-btn:hover { border-color: var(--accent); color: var(--text); }
     .viewer-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .viewer-buttons-left {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 10;
+        display: flex;
+        gap: 6px;
+    }
 
     .viewer-panel {
         width: 320px;
@@ -224,6 +232,10 @@
 <div class="viewer-container">
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
+        <div class="viewer-buttons-left">
+            <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i class="fas fa-folder-open"></i> Laden</button>
+            <input type="file" id="load-preset-file" accept=".json" style="display:none">
+        </div>
         <div class="viewer-buttons">
             <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i> Model</button>
             <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i> Rig</button>
@@ -282,5 +294,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?v=3"></script>
 {% endblock %}

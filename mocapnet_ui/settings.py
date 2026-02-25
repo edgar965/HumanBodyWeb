@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = '0.61'
+VERSION = '0.63'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
@@ -100,6 +100,7 @@ MOCAPNET_V4_SCRIPT = MOCAPNET_V4_ROOT / 'run_v4_pipeline.py'
 
 # HumanBody paths (HUMANBODY_ROOT defined above with sys.path)
 HUMANBODY_DATA_DIR = HUMANBODY_ROOT / 'data' / 'humanBody'
+HUMANBODY_MODELS_DIR = HUMANBODY_ROOT / 'data' / 'models'
 HUMANBODY_ASSETS_DIR = HUMANBODY_ROOT / 'data' / 'assets'
 HUMANBODY_ASSETS_GLB_DIR = HUMANBODY_ROOT / 'data' / 'assets_glb'
 HUMANBODY_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'

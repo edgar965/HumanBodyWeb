@@ -1,10 +1,12 @@
 /**
  * Shared BVH → DEF retarget module.
  *
- * Hybrid approach (mirrors Blender's retarget_rokoko):
- *   CONJUGATION: spine, legs — local delta via M·q·M⁻¹
- *   WORLD_COPY:  arms, hands, fingers, face — direct world quaternion copy
- *   SKIP:        head, shoulders — stay at rest pose
+ * Uses CONJUGATION for all mapped bones:
+ *   localQ = defLocalRestQ * M * bvhLocalQ * M⁻¹
+ *   where M = defWorldRestQ⁻¹
+ *
+ * This correctly transfers local rotation deltas between skeletons
+ * with different rest poses and axis orientations.
  */
 import * as THREE from 'three';
 
@@ -149,32 +151,20 @@ export const BVH_TO_DEF_MOCAPNET = {
 };
 
 // =========================================================================
-// Per-bone retarget mode classification
-// =========================================================================
-
-// CONJUGATION: localQ = defLocalRestQ * M * bvhLocalQ * M⁻¹
-//   where M = defWorldRestQ⁻¹
-// These bones need local delta transfer (spine chain, legs).
-const CONJUGATION_BONES = new Set([
-    'DEF-spine', 'DEF-spine.001', 'DEF-spine.003', 'DEF-spine.004',
-    'DEF-thigh.L', 'DEF-thigh.R', 'DEF-shin.L', 'DEF-shin.R',
-    'DEF-foot.L', 'DEF-foot.R', 'DEF-toe.L', 'DEF-toe.R',
-]);
-
-// SKIP: keep at rest pose (head gets motion from neck chain, shoulders are identity).
-const SKIP_BONES = new Set([
-    'DEF-spine.006',   // head
-    'DEF-shoulder.L', 'DEF-shoulder.R',
-]);
-
-// Everything else mapped → WORLD_COPY: worldQ = bvhWorldQ
-
-// =========================================================================
 // Main retarget function
 // =========================================================================
 
 /**
  * Retarget a BVH animation clip to the DEF skeleton.
+ *
+ * All mapped bones use CONJUGATION:
+ *   M = defWorldRestQ⁻¹
+ *   delta = M * bvhLocalQ * M⁻¹
+ *   localQ = defLocalRestQ * delta
+ *
+ * This works because BVH rest pose has identity world quaternions for all bones,
+ * so bvhLocalQ IS the rotation delta. The conjugation transforms this delta
+ * from BVH world frame into the DEF bone's local frame.
  *
  * @param {Object} bvhResult - { skeleton, clip } from BVHLoader
  * @param {Object} defSkel - { rootBone, boneByName } from buildDefSkeleton()
@@ -183,7 +173,7 @@ const SKIP_BONES = new Set([
  * @returns {THREE.AnimationClip}
  */
 export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
-    console.log('%c[RETARGET] Hybrid: CONJUGATION spine/legs + WORLD_COPY arms',
+    console.log('%c[RETARGET] All-CONJUGATION retarget',
                 'color: lime; font-weight: bold');
 
     const bvhBones = bvhResult.skeleton.bones;
@@ -251,9 +241,9 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     }
     const heightScale = bodyH / bvhHeight;
 
-    // --- Pre-compute conjugation matrices (M = defWorldRestQ⁻¹) ---
+    // --- Pre-compute conjugation matrices for ALL mapped bones ---
     const conjM = {};
-    for (const defName of CONJUGATION_BONES) {
+    for (const defName of Object.keys(defToBvhName)) {
         if (defWorldRestQ[defName]) {
             conjM[defName] = defWorldRestQ[defName].clone().invert();
         }
@@ -268,9 +258,7 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const mappedDefNames = new Set(Object.keys(defToBvhName));
     const outputQuats = {};
     for (const defName of mappedDefNames) {
-        if (!SKIP_BONES.has(defName)) {
-            outputQuats[defName] = new Float32Array(fc * 4);
-        }
+        outputQuats[defName] = new Float32Array(fc * 4);
     }
 
     // Animated world quaternion per DEF bone (reused each frame)
@@ -281,8 +269,6 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const tmpQ2 = new THREE.Quaternion();
 
     // --- Per-frame retarget ---
-    const _worldCopyNames = [];
-    let _worldCopyLogged = false;
     for (let f = 0; f < fc; f++) {
         // 1. Set BVH bones to this frame
         for (const bvhBone of bvhBones) {
@@ -304,20 +290,21 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
             const parentWorldQ = (parentName && animWorldQ[parentName])
                 ? animWorldQ[parentName] : null;
 
-            if (!bvhName || SKIP_BONES.has(defName)) {
-                // SKIP or unmapped: localQ = defLocalRestQ
+            if (!bvhName || !conjM[defName]) {
+                // Unmapped: keep at rest pose
                 if (parentWorldQ) {
                     animWorldQ[defName].copy(parentWorldQ).multiply(defLocalRestQ[defName]);
                 } else {
                     animWorldQ[defName].copy(defWorldRestQ[defName]);
                 }
 
-            } else if (CONJUGATION_BONES.has(defName)) {
-                // CONJUGATION: delta = M * bvhLocalQ * M⁻¹
-                //              localQ = defLocalRestQ * delta
-                //              worldQ = parentWorldQ * localQ
+            } else {
+                // CONJUGATION for all mapped bones:
+                //   M = defWorldRestQ⁻¹
+                //   delta = M * bvhLocalQ * M⁻¹
+                //   localQ = defLocalRestQ * delta
+                //   worldQ = parentWorldQ * localQ
                 const bvhBone = bvhBoneByName[bvhName];
-                // bvhLocalQ = bvhBone.quaternion (already set from track)
                 const M = conjM[defName];
                 // delta = M * bvhLocalQ * M⁻¹
                 tmpQ.copy(M).multiply(bvhBone.quaternion).multiply(tmpQ2.copy(M).invert());
@@ -329,18 +316,10 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
                 } else {
                     animWorldQ[defName].copy(tmpQ2);
                 }
-
-            } else {
-                // WORLD_COPY: worldQ = bvhWorldQ
-                bvhBoneByName[bvhName].getWorldQuaternion(animWorldQ[defName]);
-                // DEBUG: force identity to verify code path
-                if (f === 0 && !_worldCopyLogged) {
-                    _worldCopyNames.push(defName);
-                }
             }
 
             // 3. Convert world Q to local Q for output track
-            if (!mappedDefNames.has(defName) || SKIP_BONES.has(defName)) continue;
+            if (!mappedDefNames.has(defName)) continue;
 
             if (parentWorldQ) {
                 tmpQ.copy(parentWorldQ).invert().multiply(animWorldQ[defName]).normalize();
@@ -354,13 +333,6 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         }
     }
 
-    if (_worldCopyNames.length > 0) {
-        const el = document.getElementById('anim-info');
-        if (el) el.textContent = `WORLD_COPY: ${_worldCopyNames.join(', ')}`;
-        console.log('[RETARGET] WORLD_COPY bones:', _worldCopyNames);
-    }
-    _worldCopyLogged = true;
-
     // Reset BVH bones to rest pose
     for (const bvhBone of bvhBones) bvhBone.quaternion.set(0, 0, 0, 1);
     bvhRoot.updateWorldMatrix(true, true);
@@ -368,7 +340,6 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     // --- Build output tracks ---
     const newTracks = [];
     for (const defName of mappedDefNames) {
-        if (SKIP_BONES.has(defName)) continue;
         const bone = defSkel.boneByName[defName];
         newTracks.push(new THREE.QuaternionKeyframeTrack(
             `${bone.name}.quaternion`, times, outputQuats[defName]));
@@ -395,10 +366,7 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         }
     }
 
-    const nConj = [...mappedDefNames].filter(n => CONJUGATION_BONES.has(n)).length;
-    const nWorld = [...mappedDefNames].filter(n => !CONJUGATION_BONES.has(n) && !SKIP_BONES.has(n)).length;
-    const nSkip = [...mappedDefNames].filter(n => SKIP_BONES.has(n)).length;
-    console.log(`Retargeted: ${mappedDefNames.size} bones (${nConj} conj, ${nWorld} world, ${nSkip} skip), ${fc} frames`);
+    console.log(`[RETARGET] ${mappedDefNames.size} bones (all CONJUGATION), ${fc} frames`);
 
     return new THREE.AnimationClip('retargeted', bvhClip.duration, newTracks);
 }

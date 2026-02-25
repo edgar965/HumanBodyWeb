@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget.js';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=7';
 
 // =========================================================================
 // Global state
@@ -124,6 +124,7 @@ function init() {
     loadWardrobe();
     loadAnimations();
     loadRig();
+    initLoadPreset();
     connectWebSocket();
 
     // Rig toggle (floating button)
@@ -1092,6 +1093,97 @@ function blenderToThreeCoords(buf) {
         buf[i + 1] = z;
         buf[i + 2] = -y;
     }
+}
+
+// =========================================================================
+// Model Presets (Laden — File Dialog)
+// =========================================================================
+function initLoadPreset() {
+    const btn = document.getElementById('load-preset-btn');
+    const fileInput = document.getElementById('load-preset-file');
+    if (!btn || !fileInput) return;
+
+    btn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const preset = JSON.parse(e.target.result);
+                applyModelPreset(preset);
+            } catch (err) {
+                console.error('Invalid preset JSON:', err);
+            }
+        };
+        reader.readAsText(file);
+        fileInput.value = '';  // allow re-selecting same file
+    });
+}
+
+function applyModelPreset(preset) {
+    // 1. Body Type
+    const bodySelect = document.getElementById('body-type-select');
+    if (bodySelect && preset.body_type) {
+        bodySelect.value = preset.body_type;
+        bodySelect.dispatchEvent(new Event('change'));
+    }
+
+    // 2. Gender
+    const genderSlider = document.getElementById('gender-slider');
+    const genderVal = document.getElementById('gender-val');
+    if (genderSlider && preset.gender !== undefined) {
+        genderSlider.value = preset.gender;
+        if (genderVal) genderVal.textContent = preset.gender;
+        genderSlider.dispatchEvent(new Event('input'));
+    }
+
+    // 3. Morphs — set slider values and send via WebSocket
+    if (preset.morphs) {
+        const morphBatch = {};
+        const panel = document.getElementById('morphs-panel');
+        if (panel) {
+            panel.querySelectorAll('input[type="range"][data-morph]').forEach(slider => {
+                const morphName = slider.dataset.morph;
+                const val = preset.morphs[morphName];
+                if (val !== undefined) {
+                    const intVal = Math.round(val * 100);
+                    slider.value = intVal;
+                    slider.nextElementSibling.textContent = intVal;
+                    morphBatch[morphName] = val;
+                } else {
+                    slider.value = 0;
+                    slider.nextElementSibling.textContent = '0';
+                }
+            });
+        }
+        if (Object.keys(morphBatch).length > 0) {
+            wsSend({ type: 'morph_batch', morphs: morphBatch });
+        }
+    }
+
+    // 4. Wardrobe — toggle asset buttons matching preset
+    if (preset.wardrobe && preset.wardrobe.length > 0) {
+        const wardrobePanel = document.getElementById('wardrobe-panel');
+        if (wardrobePanel) {
+            // First remove any currently active assets not in preset
+            wardrobePanel.querySelectorAll('.asset-btn.active').forEach(btn => {
+                if (!preset.wardrobe.includes(btn.dataset.asset)) {
+                    btn.click();
+                }
+            });
+            // Then activate preset assets
+            preset.wardrobe.forEach(assetName => {
+                const btn = wardrobePanel.querySelector(`.asset-btn[data-asset="${assetName}"]`);
+                if (btn && !btn.classList.contains('active') && !btn.classList.contains('disabled')) {
+                    btn.click();
+                }
+            });
+        }
+    }
+
+    console.log(`Preset "${preset.name || 'unknown'}" applied`);
 }
 
 // =========================================================================
