@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-console.log('[bvh_player] v0.77.1 loaded');
+console.log('[bvh_player] v0.78 loaded');
 
 export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null, detectionUrl = null, keypointsUrl = null }) {
     console.log('[bvh_player] initBVHPlayer called', { videoId, canvasId });
