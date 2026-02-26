@@ -45,13 +45,13 @@
                 </a>
                 <div class="sidebar-sub">
                     <a href="{% url 'upload' %}" class="{% if request.path == '/process/' %}active{% endif %}">
-                        <i class="fas fa-upload"></i> <span>Process v2.1</span>
+                        <i class="fas fa-upload"></i> <span>2D</span>
                     </a>
                     <a href="{% url 'upload_v4' %}" class="{% if request.path == '/process/v4/' %}active{% endif %}">
-                        <i class="fas fa-hand-sparkles"></i> <span>Process v4</span>
+                        <i class="fas fa-hand-sparkles"></i> <span>3D</span>
                     </a>
                     <a href="{% url 'processed' %}" class="{% if 'process/list' in request.path %}active{% endif %}">
-                        <i class="fas fa-list"></i> <span>Processed</span>
+                        <i class="fas fa-list"></i> <span>Verarbeitet</span>
                     </a>
                 </div>
             </div>
@@ -70,8 +70,11 @@
                     <a href="{% url 'settings_model' %}" class="{% if request.path == '/settings/model/' %}active{% endif %}">
                         <i class="fas fa-user"></i> <span>Modell</span>
                     </a>
-                    <a href="{% url 'settings_videobvh' %}" class="{% if request.path == '/settings/video-to-bvh/' %}active{% endif %}">
-                        <i class="fas fa-film"></i> <span>Video to BVH</span>
+                    <a href="{% url 'settings_videobvh_2d' %}" class="{% if request.path == '/settings/video-to-bvh-2d/' %}active{% endif %}">
+                        <i class="fas fa-film"></i> <span>Video to BVH: 2D</span>
+                    </a>
+                    <a href="{% url 'settings_videobvh_3d' %}" class="{% if request.path == '/settings/video-to-bvh-3d/' %}active{% endif %}">
+                        <i class="fas fa-cube"></i> <span>Video to BVH: 3D</span>
                     </a>
                 </div>
             </div>

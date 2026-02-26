@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Video to BVH: 2D - Einstellungen{% endblock %}
+
+{% block content %}
+<h1>Einstellungen &mdash; Video to BVH: 2D</h1>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="settings-card">
+        <h2><i class="fas fa-check-circle"></i> Standard-Detektor</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Default 2D Detector</strong>
+                <small>Welcher Detektor auf der 2D-Seite standardm&auml;&szlig;ig ausgew&auml;hlt ist.<br>
+                Alle Detektoren geben Body25 (OpenPose-Format, 25 Joints) aus &rarr; MocapNET v2.1 hebt auf 3D.</small>
+            </div>
+            <div class="settings-input">
+                <select name="detector_2d_default" class="settings-select">
+                    <option value="mediapipe" {% if settings.detector_2d_default == 'mediapipe' %}selected{% endif %}>MediaPipe (CPU, ~50 AP)</option>
+                    <option value="openpose" {% if settings.detector_2d_default == 'openpose' %}selected{% endif %}>OpenPose (CUDA, 61 AP)</option>
+                    <option value="yolo11" {% if settings.detector_2d_default == 'yolo11' %}selected{% endif %}>YOLO11-Pose (GPU, 66 AP)</option>
+                    <option value="rtmpose" {% if settings.detector_2d_default == 'rtmpose' %}selected{% endif %}>RTMPose (GPU, 77 AP, empfohlen)</option>
+                    <option value="vitpose" {% if settings.detector_2d_default == 'vitpose' %}selected{% endif %}>ViTPose (GPU, 79 AP, beste Qualit&auml;t)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-eye"></i> MediaPipe <small style="color:#888;">~50 AP, CPU</small></h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Detection Confidence</strong>
+                <small>Mindest-Konfidenz damit ein Pose-Ergebnis als erkannt gilt.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="mp_min_detection_confidence"
+                       value="{{ settings.mp_min_detection_confidence }}"
+                       min="0.0" max="1.0" step="0.05">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Tracking Confidence</strong>
+                <small>Mindest-Konfidenz f&uuml;r Pose-Tracking zwischen Frames.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="mp_min_tracking_confidence"
+                       value="{{ settings.mp_min_tracking_confidence }}"
+                       min="0.0" max="1.0" step="0.05">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Model Complexity</strong>
+                <small>0 = Lite (schnell), 1 = Full (genauer).</small>
+            </div>
+            <div class="settings-input">
+                <select name="mp_model_complexity" class="settings-select">
+                    <option value="0" {% if settings.mp_model_complexity == 0 %}selected{% endif %}>0 &mdash; Lite (schnell)</option>
+                    <option value="1" {% if settings.mp_model_complexity == 1 %}selected{% endif %}>1 &mdash; Full (genauer)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-walking"></i> OpenPose <small style="color:#888;">61 AP, CUDA</small></h2>
+        <p style="color:#888; padding:0.5rem 1rem;">Keine zus&auml;tzlichen Einstellungen. OpenPose verwendet BODY_25 Standardkonfiguration.</p>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-bullseye"></i> YOLO11-Pose <small style="color:#888;">66 AP, GPU</small></h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Model Size</strong>
+                <small>n=Nano, s=Small, m=Medium, l=Large, x=Extra Large.</small>
+            </div>
+            <div class="settings-input">
+                <select name="yolo_model_size" class="settings-select">
+                    <option value="n" {% if settings.yolo_model_size == 'n' %}selected{% endif %}>n &mdash; Nano (schnellstes)</option>
+                    <option value="s" {% if settings.yolo_model_size == 's' %}selected{% endif %}>s &mdash; Small</option>
+                    <option value="m" {% if settings.yolo_model_size == 'm' %}selected{% endif %}>m &mdash; Medium</option>
+                    <option value="l" {% if settings.yolo_model_size == 'l' %}selected{% endif %}>l &mdash; Large (empfohlen)</option>
+                    <option value="x" {% if settings.yolo_model_size == 'x' %}selected{% endif %}>x &mdash; Extra Large</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-crosshairs"></i> RTMPose <small style="color:#888;">77 AP, GPU &mdash; Empfohlen</small></h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Model Size</strong>
+                <small>Gr&ouml;&szlig;eres Modell = genauer aber langsamer.</small>
+            </div>
+            <div class="settings-input">
+                <select name="rtmpose_model_size" class="settings-select">
+                    <option value="m" {% if settings.rtmpose_model_size == 'm' %}selected{% endif %}>m &mdash; Medium</option>
+                    <option value="l" {% if settings.rtmpose_model_size == 'l' %}selected{% endif %}>l &mdash; Large (empfohlen)</option>
+                    <option value="x" {% if settings.rtmpose_model_size == 'x' %}selected{% endif %}>x &mdash; Extra Large</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-brain"></i> ViTPose <small style="color:#888;">79 AP, GPU &mdash; Beste Qualit&auml;t</small></h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Model Size</strong>
+                <small>Gr&ouml;&szlig;eres Modell = h&ouml;chste Genauigkeit.</small>
+            </div>
+            <div class="settings-input">
+                <select name="vitpose_model_size" class="settings-select">
+                    <option value="b" {% if settings.vitpose_model_size == 'b' %}selected{% endif %}>b &mdash; Base</option>
+                    <option value="l" {% if settings.vitpose_model_size == 'l' %}selected{% endif %}>l &mdash; Large</option>
+                    <option value="h" {% if settings.vitpose_model_size == 'h' %}selected{% endif %}>h &mdash; Huge (empfohlen)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Speichern
+        </button>
+    </div>
+</form>
+{% endblock %}

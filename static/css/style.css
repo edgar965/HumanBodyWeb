@@ -225,6 +225,13 @@ td a { color: var(--accent); text-decoration: none; }
 .badge-failed { background: var(--danger); }
 .badge-mocapnet-source { background: var(--accent); }
 .badge-imported { background: #8e44ad; }
+.badge-v4 { background: #e67e22; }
+.badge-rtmpose { background: #1abc9c; }
+.badge-vitpose { background: #2980b9; }
+.badge-yolo11 { background: #f1c40f; color: #000; }
+.badge-gvhmr { background: #27ae60; }
+.badge-wham { background: #8e44ad; }
+.badge-prompthmr { background: #e74c3c; }
 
 /* Progress Bar */
 .progress-bar {
@@ -350,6 +357,32 @@ td a { color: var(--accent); text-decoration: none; }
 .info-box h3 { margin-bottom: 0.5rem; }
 .info-box p, .info-box ol { color: var(--text-muted); margin-bottom: 0.5rem; }
 .info-box ol { padding-left: 1.5rem; }
+
+/* Compare Table (inside info-box) */
+.compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+}
+
+.compare-table th {
+    background: var(--bg-primary);
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+}
+
+.compare-table td {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table tbody tr:hover { background: rgba(255,255,255,0.03); }
 
 /* Job Detail */
 .job-detail {

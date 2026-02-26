@@ -85,7 +85,8 @@ def _annotate_file_sizes(jobs):
 
 
 def upload_video(request):
-    """Upload a video file for processing (v2.1 pipeline)."""
+    """Upload a video file for processing (2D pipeline)."""
+    VALID_2D = ('mediapipe', 'openpose', 'rtmpose', 'vitpose', 'yolo11')
     if request.method == 'POST':
         video = request.FILES.get('video')
         if not video:
@@ -94,7 +95,7 @@ def upload_video(request):
 
         fps = float(request.POST.get('fps', 30.0))
         pipeline = request.POST.get('pipeline', 'mediapipe')
-        if pipeline not in ('mediapipe', 'openpose'):
+        if pipeline not in VALID_2D:
             pipeline = 'mediapipe'
 
         job = BVHJob.objects.create(
@@ -107,13 +108,32 @@ def upload_video(request):
         return redirect('upload')
 
     status = _check_system_status()
-    v21_jobs = BVHJob.objects.filter(pipeline__in=['mediapipe', 'openpose']).order_by('-created_at')
+    # Check availability of new detectors
+    try:
+        import rtmlib
+        status['rtmpose'] = True
+    except ImportError:
+        status['rtmpose'] = False
+    try:
+        import ultralytics
+        status['yolo11'] = True
+    except ImportError:
+        status['yolo11'] = False
+    status['vitpose'] = status.get('rtmpose', False)  # ViTPose via rtmlib
+
+    s = AppSettings.load()
+    default_2d = s.detector_2d_default if s.detector_2d_default in VALID_2D else 'mediapipe'
+
+    v21_jobs = BVHJob.objects.filter(pipeline__in=list(VALID_2D)).order_by('-created_at')
     _annotate_file_sizes(v21_jobs)
-    return render(request, 'upload.html', {'status': status, 'v21_jobs': v21_jobs})
+    return render(request, 'upload.html', {
+        'status': status, 'v21_jobs': v21_jobs, 'default_2d': default_2d,
+    })
 
 
 def upload_video_v4(request):
-    """Upload a video file for processing (v4 pipeline)."""
+    """Upload a video file for processing (3D pipeline)."""
+    VALID_3D = ('v4', 'gvhmr', 'wham', 'prompthmr')
     if request.method == 'POST':
         video = request.FILES.get('video')
         if not video:
@@ -121,19 +141,35 @@ def upload_video_v4(request):
             return redirect('upload_v4')
 
         fps = float(request.POST.get('fps', 30.0))
+        pipeline = request.POST.get('pipeline', 'v4')
+        if pipeline not in VALID_3D:
+            pipeline = 'v4'
 
         job = BVHJob.objects.create(
             name=video.name,
             video_file=video,
             fps=fps,
-            pipeline='v4',
+            pipeline=pipeline,
         )
         messages.success(request, f'Uploaded {video.name}.')
         return redirect('upload_v4')
 
-    v4_jobs = BVHJob.objects.filter(pipeline='v4').order_by('-created_at')
+    # Check availability of 3D pipelines
+    status_3d = {
+        'v4': Path(settings.MOCAPNET_V4_SCRIPT).exists(),
+        'gvhmr': Path(settings.GVHMR_ROOT).is_dir(),
+        'wham': Path(settings.WHAM_ROOT).is_dir(),
+        'prompthmr': Path(settings.PROMPTHMR_ROOT).is_dir(),
+    }
+
+    s = AppSettings.load()
+    default_3d = s.lifter_3d_default if s.lifter_3d_default in VALID_3D else 'v4'
+
+    v4_jobs = BVHJob.objects.filter(pipeline__in=list(VALID_3D)).order_by('-created_at')
     _annotate_file_sizes(v4_jobs)
-    return render(request, 'upload_v4.html', {'v4_jobs': v4_jobs})
+    return render(request, 'upload_v4.html', {
+        'v4_jobs': v4_jobs, 'status_3d': status_3d, 'default_3d': default_3d,
+    })
 
 
 def job_status(request, job_id):
@@ -246,7 +282,7 @@ def _run_mediapipe_to_csv(job, video_path, output_dir):
 
     if proc.returncode != 0 and not stopped:
         stderr = ''.join(stderr_lines)
-        raise RuntimeError(f"MediaPipe failed: {stderr[:500]}")
+        raise RuntimeError(f"MediaPipe failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
 
     csv_dir = str(csv_output) + '-mpdata'
     csv_file = os.path.join(csv_dir, '2dJoints_mediapipe.csv')
@@ -330,7 +366,7 @@ def _run_openpose_to_csv(job, video_path, output_dir):
 
     if proc.returncode != 0 and not stopped:
         stderr = proc.stderr.read() if proc.stderr else ''
-        raise RuntimeError(f"OpenPose failed: {stderr[:500]}")
+        raise RuntimeError(f"OpenPose failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
 
     # Count JSON files to determine label
     json_files = sorted([f for f in os.listdir(json_dir) if f.endswith('_keypoints.json')])
@@ -372,7 +408,7 @@ def _run_openpose_to_csv(job, video_path, output_dir):
     )
 
     if result.returncode != 0:
-        raise RuntimeError(f"JSON to CSV conversion failed: {result.stderr[:500]}")
+        raise RuntimeError(f"JSON to CSV conversion failed (exit code {result.returncode}):\n{result.stderr[-2000:]}")
 
     if not os.path.exists(csv_file):
         raise RuntimeError(f"CSV file not created at {csv_file}")
@@ -491,8 +527,11 @@ def _run_v4_pipeline(job, video_path, output_dir):
             pass
 
     if proc.returncode != 0:
+        # Check for partial BVH (cancelled / killed)
+        if os.path.exists(bvh_output) and os.path.getsize(bvh_output) > 100:
+            return bvh_output
         stderr = ''.join(stderr_lines).strip()
-        raise RuntimeError(f"MocapNET v4 failed:\n{stderr}")
+        raise RuntimeError(f"MocapNET v4 failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
 
     if not os.path.exists(bvh_output):
         raise RuntimeError(f"BVH file not found at {bvh_output}")
@@ -500,8 +539,153 @@ def _run_v4_pipeline(job, video_path, output_dir):
     return bvh_output
 
 
+def _run_new_2d_detector(job, video_path, output_dir):
+    """Run RTMPose / ViTPose / YOLO11 2D detection via wrapper scripts."""
+    import sys as _sys
+    import time as _time
+    import threading
+
+    csv_output = str(output_dir / f'{job.pipeline}_2d.csv')
+    wrapper_script = str(settings.WRAPPERS_DIR / 'detect_2d.py')
+
+    s = AppSettings.load()
+    model_size_map = {
+        'rtmpose': s.rtmpose_model_size,
+        'vitpose': s.vitpose_model_size,
+        'yolo11': s.yolo_model_size,
+    }
+    model_size = model_size_map.get(job.pipeline, 'l')
+
+    total_frames = _get_video_frame_count(video_path)
+    pipeline_name = job.get_pipeline_display()
+
+    job.status = 'detecting_2d'
+    job.progress = 0
+    job.progress_detail = f'0 / {total_frames} frames' if total_frames else f'Starting {pipeline_name}...'
+    job.save()
+
+    cmd = [
+        _sys.executable, wrapper_script,
+        '--detector', job.pipeline,
+        '--video', str(video_path),
+        '--output', csv_output,
+        '--model-size', model_size,
+    ]
+
+    # Capture stderr in a thread to prevent pipe deadlock
+    stderr_lines = []
+    def _drain_stderr(pipe):
+        for line in pipe:
+            stderr_lines.append(line)
+
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, bufsize=1, cwd=str(settings.WRAPPERS_DIR.parent),
+    )
+    _active_procs[str(job.id)] = proc
+
+    stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
+    stderr_thread.start()
+
+    det_start = _time.time()
+    last_update = 0
+
+    for line in proc.stdout:
+        line = line.strip()
+        if line.startswith('STATUS:'):
+            msg = line[7:]
+            job.progress_detail = f'{pipeline_name}: {msg}'
+            job.save()
+        elif line.startswith('TOTAL:'):
+            try:
+                total_frames = int(line[6:])
+                job.progress_detail = f'0 / {total_frames} frames — starting...'
+                job.save()
+                det_start = _time.time()
+            except ValueError:
+                pass
+        elif line.startswith('PROGRESS:'):
+            now = _time.time()
+            if now - last_update < 1.0:
+                continue
+            last_update = now
+            try:
+                parts = line[9:].split('/')
+                current = int(parts[0])
+                total = int(parts[1]) if len(parts) > 1 else total_frames
+                if total > 0 and current > 0:
+                    pct = int((current / total) * 45)
+                    elapsed = now - det_start
+                    fps = current / max(elapsed, 0.1)
+                    remaining = int((total - current) / max(fps, 0.01))
+                    job.progress = pct
+                    job.progress_detail = (
+                        f'{pipeline_name}: {current} / {total} frames — '
+                        f'{fps:.1f} fps, ~{remaining}s left'
+                    )
+                    job.save()
+            except (ValueError, IndexError):
+                pass
+
+    proc.wait(timeout=3600)
+    stderr_thread.join(timeout=5)
+
+    if proc.returncode != 0:
+        stderr = ''.join(stderr_lines)
+        raise RuntimeError(f"2D detector '{job.pipeline}' failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
+
+    return csv_output
+
+
+def _run_smpl_pipeline(job, video_path, output_dir):
+    """Run GVHMR / WHAM / PromptHMR 3D pipeline via wrapper scripts."""
+    import sys as _sys
+
+    bvh_output = str(output_dir / f'{job.pipeline}_{job.name.rsplit(".", 1)[0]}.bvh')
+    wrapper_script = str(settings.WRAPPERS_DIR / 'lift_3d.py')
+
+    job.status = 'processing'
+    job.progress = 10
+    job.progress_detail = f'Running {job.get_pipeline_display()}...'
+    job.save()
+
+    cmd = [
+        _sys.executable, wrapper_script,
+        '--pipeline', job.pipeline,
+        '--video', str(video_path),
+        '--output', bvh_output,
+    ]
+
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, cwd=str(settings.WRAPPERS_DIR.parent),
+    )
+    _active_procs[str(job.id)] = proc
+
+    for line in proc.stdout:
+        line = line.strip()
+        if line:
+            job.progress_detail = line[:100]
+            job.save()
+
+    proc.wait(timeout=3600)
+    if proc.returncode != 0:
+        # Check if BVH was partially written before kill
+        if os.path.exists(bvh_output) and os.path.getsize(bvh_output) > 100:
+            return bvh_output
+        # Check for any BVH in output dir
+        import glob as _glob
+        bvh_files = _glob.glob(str(output_dir / '*.bvh'))
+        if bvh_files:
+            return bvh_files[0]
+        stderr = proc.stderr.read()
+        raise RuntimeError(f"3D pipeline '{job.pipeline}' failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
+
+    return bvh_output
+
+
 def _run_processing(job_id):
-    """Background thread: run pipeline (MediaPipe/OpenPose + MocapNET v2.1, or v4)."""
+    """Background thread: run pipeline (2D detector + MocapNET, v4, or SMPL-based)."""
     from django.apps import apps
     BVHJob = apps.get_model('core', 'BVHJob')
     job = BVHJob.objects.get(id=job_id)
@@ -511,9 +695,9 @@ def _run_processing(job_id):
         output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        if job.pipeline == 'v4':
-            # v4 does everything in one step: MediaPipe 2D -> NN 3D -> BVH
-            bvh_output = _run_v4_pipeline(job, video_path, output_dir)
+        if job.pipeline in ('gvhmr', 'wham', 'prompthmr'):
+            # SMPL-based 3D pipeline: Video → SMPL → BVH
+            bvh_output = _run_smpl_pipeline(job, video_path, output_dir)
 
             job.bvh_file = bvh_output
             job.status = 'complete'
@@ -526,18 +710,57 @@ def _run_processing(job_id):
                 path=bvh_output,
                 defaults={
                     'name': job.name.rsplit('.', 1)[0] + '.bvh',
+                    'source': job.pipeline,
+                }
+            )
+            return
+
+        if job.pipeline == 'v4':
+            # v4 does everything in one step: MediaPipe 2D -> NN 3D -> BVH
+            stop_flag_v4 = output_dir / 'STOP_FLAG'
+            bvh_output = _run_v4_pipeline(job, video_path, output_dir)
+
+            was_stopped = stop_flag_v4.exists() or not os.path.exists(str(stop_flag_v4))
+            # Determine if this was a partial result (cancelled)
+            partial_v4 = False
+            total_v4 = _get_video_frame_count(video_path)
+            if total_v4 and os.path.exists(bvh_output):
+                # Quick check: BVH should have ~total_v4 frames
+                try:
+                    with open(bvh_output) as _f:
+                        frame_line = [l for l in _f if l.strip().startswith('Frames:')]
+                        if frame_line:
+                            bvh_frames = int(frame_line[0].split(':')[1])
+                            if bvh_frames < total_v4 * 0.95:
+                                partial_v4 = True
+                except Exception:
+                    pass
+
+            job.bvh_file = bvh_output
+            job.status = 'complete'
+            job.progress = 100
+            job.progress_detail = 'Done (partial — stopped early)' if partial_v4 else 'Done'
+            job.save()
+
+            BVHFile = apps.get_model('core', 'BVHFile')
+            BVHFile.objects.get_or_create(
+                path=bvh_output,
+                defaults={
+                    'name': job.name.rsplit('.', 1)[0] + '.bvh',
                     'source': 'mocapnet_v4',
                 }
             )
             return
 
-        # v2.1 flow: 2D detection -> CSV -> MocapNET C++
+        # 2D flow: 2D detection -> CSV -> MocapNET C++
         stop_flag = output_dir / 'STOP_FLAG'
         partial = False
 
         try:
             if job.pipeline == 'openpose':
                 csv_file = _run_openpose_to_csv(job, video_path, output_dir)
+            elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
+                csv_file = _run_new_2d_detector(job, video_path, output_dir)
             else:
                 csv_file = _run_mediapipe_to_csv(job, video_path, output_dir)
         except RuntimeError:
@@ -548,10 +771,14 @@ def _run_processing(job_id):
                 mp_csv = str(output_dir / 'frames-mpdata' / '2dJoints_mediapipe.csv')
                 # OpenPose CSV path
                 op_csv = str(output_dir / 'openpose_2d.csv')
+                # New detector CSV path
+                new_csv = str(output_dir / f'{job.pipeline}_2d.csv')
                 if os.path.exists(mp_csv):
                     csv_file = mp_csv
                 elif os.path.exists(op_csv):
                     csv_file = op_csv
+                elif os.path.exists(new_csv):
+                    csv_file = new_csv
                 if not csv_file:
                     raise  # No partial data — re-raise original error
                 partial = True
@@ -637,18 +864,25 @@ def _run_processing(job_id):
         proc.wait(timeout=1200)
         stderr_thread.join(timeout=5)
 
-        if proc.returncode != 0:
-            stderr = ''.join(stderr_lines)
-            raise RuntimeError(f"MocapNET failed: {stderr[:500]}")
-
         # MocapNET writes to exact -o path without extension
         bvh_output = bvh_stem
         if not os.path.exists(bvh_output) and os.path.exists(bvh_stem + '.bvh'):
             bvh_output = bvh_stem + '.bvh'
 
+        if proc.returncode != 0:
+            # MocapNET was killed (cancelled) — check for partial BVH
+            if os.path.exists(bvh_output) and os.path.getsize(bvh_output) > 100:
+                partial = True
+            elif os.path.exists(bvh_stem + '.bvh') and os.path.getsize(bvh_stem + '.bvh') > 100:
+                bvh_output = bvh_stem + '.bvh'
+                partial = True
+            else:
+                stderr = ''.join(stderr_lines)
+                raise RuntimeError(f"MocapNET failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
+
         # Rename to .bvh for clarity
         final_bvh = bvh_stem + '.bvh'
-        if bvh_output != final_bvh:
+        if bvh_output != final_bvh and os.path.exists(bvh_output):
             os.rename(bvh_output, final_bvh)
         bvh_output = final_bvh
 
@@ -670,9 +904,37 @@ def _run_processing(job_id):
         )
 
     except Exception as e:
-        job.status = 'failed'
-        job.error_message = str(e)[:4000]
-        job.save()
+        import traceback as _tb
+        # Before marking as failed, check if a partial BVH was produced
+        import glob as _glob
+        bvh_files = _glob.glob(str(output_dir / '*.bvh'))
+        partial_bvh = None
+        for bf in bvh_files:
+            if os.path.getsize(bf) > 100:
+                partial_bvh = bf
+                break
+
+        if partial_bvh:
+            job.bvh_file = partial_bvh
+            job.status = 'complete'
+            job.progress = 100
+            job.progress_detail = 'Done (partial — stopped early)'
+            job.save()
+
+            from django.apps import apps as _apps
+            BVHFile = _apps.get_model('core', 'BVHFile')
+            BVHFile.objects.get_or_create(
+                path=partial_bvh,
+                defaults={
+                    'name': job.name.rsplit('.', 1)[0] + '.bvh',
+                    'source': job.pipeline,
+                }
+            )
+        else:
+            job.status = 'failed'
+            tb_str = _tb.format_exc()
+            job.error_message = f"{tb_str}\n\n--- Original error ---\n{e}"[:4000]
+            job.save()
     finally:
         _active_procs.pop(str(job_id), None)
 
@@ -683,7 +945,15 @@ def start_processing(request, job_id):
     # Allow re-processing from pending, complete, or failed states
     if job.status in ('pending', 'complete', 'failed'):
         # Reset job state for fresh processing
-        job.status = 'v4_processing' if job.pipeline == 'v4' else job.pipeline
+        if job.pipeline == 'v4':
+            init_status = 'v4_processing'
+        elif job.pipeline in ('gvhmr', 'wham', 'prompthmr'):
+            init_status = 'processing'
+        elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
+            init_status = 'detecting_2d'
+        else:
+            init_status = job.pipeline
+        job.status = init_status
         job.progress = 0
         job.error_message = ''
         job.bvh_file = ''
@@ -724,17 +994,18 @@ def stop_processing(request, job_id):
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait(timeout=5)
-                job.status = 'failed'
-                job.error_message = 'Cancelled by user (force kill)'
-                job.save()
+                # Background thread will check for partial BVH
         else:
-            # v2.1: kill subprocess immediately — background thread will
-            # detect STOP_FLAG and continue to MocapNET with partial CSV
+            # All others: kill subprocess immediately
+            # - 2D pipelines: background thread detects STOP_FLAG and
+            #   continues to MocapNET with partial CSV
+            # - SMPL pipelines: background thread exception handler
+            #   checks for partial BVH output
             proc.kill()
             proc.wait(timeout=5)
 
         _active_procs.pop(jid, None)
-        # Background thread handles final job status
+        # Background thread handles final job status (partial BVH or failed)
     else:
         _active_procs.pop(jid, None)
         job.status = 'failed'
@@ -753,12 +1024,14 @@ def _launch_processing_thread(job_id):
         except Exception as e:
             # Catch any unhandled error to prevent crashing the server
             try:
+                import traceback as _tb
                 from django.apps import apps
                 BVHJob = apps.get_model('core', 'BVHJob')
                 job = BVHJob.objects.get(id=jid)
                 if job.status != 'failed':
                     job.status = 'failed'
-                    job.error_message = f"Unexpected crash: {e}"[:500]
+                    tb_str = _tb.format_exc()
+                    job.error_message = f"Unexpected crash:\n{tb_str}"[:4000]
                     job.save()
             except Exception:
                 pass
@@ -1082,13 +1355,16 @@ def _get_2d_keypoints(job):
                         kp[name] = (pts[idx], pts[idx+1], pts[idx+2])
             frames.append(kp)
     else:
-        # v4 or MediaPipe CSV
+        # v4 or MediaPipe CSV or new detector CSV
         if job.pipeline == 'v4':
             # 2dJoints_v4.csv has aspect-ratio-corrected values for MocapNET
             # input — not suitable for video overlay. Use raw MediaPipe coords.
             csv_path = output_dir / '2dJoints_v4_raw.csv'
             if not csv_path.exists():
                 csv_path = _extract_v4_keypoints(job)
+        elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
+            # New 2D detectors write MocapNET-compatible CSV
+            csv_path = output_dir / f'{job.pipeline}_2d.csv'
         else:
             csv_path = output_dir / 'frames-mpdata' / '2dJoints_mediapipe.csv'
 
@@ -1102,7 +1378,8 @@ def _get_2d_keypoints(job):
                 # Body joints from CSV header (2DX_name, 2DY_name, visible_name)
                 body_joints = ['head', 'neck', 'rshoulder', 'relbow', 'rhand',
                                'lshoulder', 'lelbow', 'lhand', 'hip',
-                               'rhip', 'rknee', 'rfoot', 'lhip', 'lknee', 'lfoot']
+                               'rhip', 'rknee', 'rfoot', 'lhip', 'lknee', 'lfoot',
+                               'endsite_eye.r', 'endsite_eye.l', 'rear', 'lear']
                 for jname in body_joints:
                     xk, yk, vk = f'2DX_{jname}', f'2DY_{jname}', f'visible_{jname}'
                     if xk in row and row[xk]:
@@ -1215,14 +1492,17 @@ def _extract_v4_keypoints(job):
 _BODY_CONNECTIONS = [
     ('neck', 'rshoulder'), ('rshoulder', 'relbow'), ('relbow', 'rhand'),
     ('neck', 'lshoulder'), ('lshoulder', 'lelbow'), ('lelbow', 'lhand'),
-    ('neck', 'midhip'), ('neck', 'hip'),  # OpenPose uses midhip, MediaPipe uses hip
+    ('neck', 'midhip'), ('neck', 'hip'),  # OpenPose uses midhip, MediaPipe/MocapNET uses hip
     ('midhip', 'rhip'), ('hip', 'rhip'),
     ('rhip', 'rknee'), ('rknee', 'rfoot'),
     ('midhip', 'lhip'), ('hip', 'lhip'),
     ('lhip', 'lknee'), ('lknee', 'lfoot'),
-    ('nose', 'neck'), ('head', 'neck'),  # OpenPose: nose, MediaPipe: head
+    ('nose', 'neck'), ('head', 'neck'),  # OpenPose: nose, MocapNET: head
     ('nose', 'reye'), ('nose', 'leye'),
     ('reye', 'rear'), ('leye', 'lear'),
+    # MocapNET eye/ear names (for RTMPose/ViTPose/YOLO CSV)
+    ('head', 'endsite_eye.r'), ('head', 'endsite_eye.l'),
+    ('endsite_eye.r', 'rear'), ('endsite_eye.l', 'lear'),
 ]
 
 
@@ -1604,7 +1884,12 @@ def app_settings_model(request):
 
 
 def app_settings_videobvh(request):
-    """Video to BVH settings page (MediaPipe + MocapNET v4)."""
+    """Redirect old URL to 2D settings."""
+    return redirect('settings_videobvh_2d')
+
+
+def app_settings_videobvh_2d(request):
+    """Video to BVH: 2D detector settings page."""
     s = AppSettings.load()
     if request.method == 'POST':
         try:
@@ -1614,6 +1899,31 @@ def app_settings_videobvh(request):
                 float(request.POST.get('mp_min_tracking_confidence', 0.2))))
             s.mp_model_complexity = max(0, min(1,
                 int(request.POST.get('mp_model_complexity', 1))))
+            s.rtmpose_model_size = request.POST.get('rtmpose_model_size', 'l')
+            if s.rtmpose_model_size not in ('m', 'l', 'x'):
+                s.rtmpose_model_size = 'l'
+            s.vitpose_model_size = request.POST.get('vitpose_model_size', 'h')
+            if s.vitpose_model_size not in ('b', 'l', 'h'):
+                s.vitpose_model_size = 'h'
+            s.yolo_model_size = request.POST.get('yolo_model_size', 'l')
+            if s.yolo_model_size not in ('n', 's', 'm', 'l', 'x'):
+                s.yolo_model_size = 'l'
+            s.detector_2d_default = request.POST.get('detector_2d_default', 'mediapipe')
+            if s.detector_2d_default not in ('mediapipe', 'openpose', 'rtmpose', 'vitpose', 'yolo11'):
+                s.detector_2d_default = 'mediapipe'
+            s.save()
+            messages.success(request, 'Settings saved.')
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid value.')
+        return redirect('settings_videobvh_2d')
+    return render(request, 'settings_videobvh_2d.html', {'settings': s})
+
+
+def app_settings_videobvh_3d(request):
+    """Video to BVH: 3D pipeline settings page."""
+    s = AppSettings.load()
+    if request.method == 'POST':
+        try:
             s.v4_hcd_iterations = max(1, min(100,
                 int(request.POST.get('v4_hcd_iterations', 10))))
             s.v4_hcd_epochs = max(1, min(200,
@@ -1624,9 +1934,12 @@ def app_settings_videobvh(request):
                 float(request.POST.get('v4_smoothing_cutoff', 5.0))))
             s.v4_smoothing_sampling = max(10.0, min(120.0,
                 float(request.POST.get('v4_smoothing_sampling', 30.0))))
+            s.lifter_3d_default = request.POST.get('lifter_3d_default', 'v4')
+            if s.lifter_3d_default not in ('v4', 'gvhmr', 'wham', 'prompthmr'):
+                s.lifter_3d_default = 'v4'
             s.save()
             messages.success(request, 'Settings saved.')
         except (ValueError, TypeError):
             messages.error(request, 'Invalid value.')
-        return redirect('settings_videobvh')
-    return render(request, 'settings_videobvh.html', {'settings': s})
+        return redirect('settings_videobvh_3d')
+    return render(request, 'settings_videobvh_3d.html', {'settings': s})

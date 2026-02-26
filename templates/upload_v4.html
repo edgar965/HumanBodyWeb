@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Process v4 - MocapNET{% endblock %}
+{% block title %}3D Pipeline - HumanBody{% endblock %}
 
 {% block content %}
-<h1>Process v4 <small style="color:#888;">(Full Body + Face + Hands)</small></h1>
+<h1>3D Pipeline <small style="color:#888;">(Video &rarr; BVH)</small></h1>
 
 <div class="upload-area" id="dropZone">
     <form method="post" enctype="multipart/form-data" id="uploadForm">
@@ -15,7 +15,49 @@
         </div>
 
         <div class="form-group">
-            <label>Body Parts:</label>
+            <label>3D Pipeline:</label>
+            <div class="pipeline-options">
+                <label class="pipeline-option {% if not status_3d.v4 %}disabled{% endif %}">
+                    <input type="radio" name="pipeline" value="v4"
+                        {% if default_3d == 'v4' %}checked{% endif %}
+                        {% if not status_3d.v4 %}disabled{% endif %}>
+                    <span class="pipeline-label">MocapNET v4</span>
+                    <span class="pipeline-desc">
+                        {% if status_3d.v4 %}ONNX, CPU, 165 Bones, ~75 mm{% else %}nicht verf&uuml;gbar{% endif %}
+                    </span>
+                </label>
+                <label class="pipeline-option {% if not status_3d.wham %}disabled{% endif %}">
+                    <input type="radio" name="pipeline" value="wham"
+                        {% if default_3d == 'wham' %}checked{% endif %}
+                        {% if not status_3d.wham %}disabled{% endif %}>
+                    <span class="pipeline-label">WHAM</span>
+                    <span class="pipeline-desc">
+                        {% if status_3d.wham %}SMPL, GPU, World-Koordinaten, 37 mm{% else %}nicht installiert{% endif %}
+                    </span>
+                </label>
+                <label class="pipeline-option {% if not status_3d.prompthmr %}disabled{% endif %}">
+                    <input type="radio" name="pipeline" value="prompthmr"
+                        {% if default_3d == 'prompthmr' %}checked{% endif %}
+                        {% if not status_3d.prompthmr %}disabled{% endif %}>
+                    <span class="pipeline-label">PromptHMR</span>
+                    <span class="pipeline-desc">
+                        {% if status_3d.prompthmr %}SMPL, GPU, CVPR 2025, 37 mm{% else %}nicht installiert{% endif %}
+                    </span>
+                </label>
+                <label class="pipeline-option {% if not status_3d.gvhmr %}disabled{% endif %}">
+                    <input type="radio" name="pipeline" value="gvhmr"
+                        {% if default_3d == 'gvhmr' %}checked{% endif %}
+                        {% if not status_3d.gvhmr %}disabled{% endif %}>
+                    <span class="pipeline-label">GVHMR &star;</span>
+                    <span class="pipeline-desc">
+                        {% if status_3d.gvhmr %}SMPL, GPU, beste Qualit&auml;t, 36 mm{% else %}nicht installiert{% endif %}
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group" id="v4Parts">
+            <label>Body Parts (nur MocapNET v4):</label>
             <div class="pipeline-options" style="flex-wrap:wrap;">
                 <label class="pipeline-option" style="flex:0 0 auto;">
                     <input type="checkbox" name="parts" value="body" checked>
@@ -77,7 +119,7 @@
             <tr id="row-{{ job.id }}" data-name="{{ job.name|lower }}" data-size="{{ job.video_size }}" data-date="{{ job.created_at|date:'Y-m-d H:i:s' }}">
                 <td><input type="checkbox" class="job-check" value="{{ job.id }}" onchange="updateBulkBtn()"></td>
                 <td>{{ job.name }}</td>
-                <td><span class="badge badge-v4">v4</span></td>
+                <td><span class="badge badge-{{ job.pipeline }}">{{ job.get_pipeline_display }}</span></td>
                 <td>
                     {% if job.status == 'complete' %}
                         <span style="color:#2ecc71;"><i class="fas fa-check-circle"></i> Complete</span>
@@ -118,17 +160,61 @@
 {% endif %}
 
 <div class="info-box">
-    <h3>MocapNET v4</h3>
-    <p>Full-body motion capture with <strong>165 bones</strong> including fingers, face, mouth, and eyes.</p>
-    <p>Uses integrated MediaPipe detection &mdash; no separate pipeline selection needed.</p>
-    <h3>Processing Steps</h3>
-    <ol>
-        <li>Video &rarr; MediaPipe 2D detection (integrated)</li>
-        <li>2D Joints &rarr; MocapNET v4 Neural Networks (ONNX)</li>
-        <li>MocapNET v4 &rarr; BVH file (165 bones, full body)</li>
-    </ol>
-    <h3>Body Parts</h3>
-    <p>Uncheck parts you don't need to speed up processing. "Body" is always recommended.</p>
+    <h3>Vergleich 3D Pipelines</h3>
+    <table class="compare-table">
+        <thead>
+            <tr>
+                <th>Pipeline</th>
+                <th>Genauigkeit</th>
+                <th>Geschwindigkeit</th>
+                <th>GPU VRAM</th>
+                <th>RAM</th>
+                <th>Empfehlung</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>MocapNET v4</strong></td>
+                <td>~75 mm MPJPE*</td>
+                <td>~30 FPS (CPU!)</td>
+                <td>0&ndash;2 GB</td>
+                <td>~2&ndash;4 GB</td>
+                <td>Kein GPU n&ouml;tig, 165 Bones</td>
+            </tr>
+            <tr>
+                <td><strong>WHAM</strong></td>
+                <td>37 mm PA-MPJPE</td>
+                <td>~5&ndash;8 FPS</td>
+                <td>6&ndash;8 GB</td>
+                <td>~8&ndash;16 GB</td>
+                <td>World-Koordinaten</td>
+            </tr>
+            <tr>
+                <td><strong>PromptHMR</strong></td>
+                <td>37 mm PA-MPJPE</td>
+                <td>~10&ndash;20 FPS</td>
+                <td>6&ndash;8 GB</td>
+                <td>~8&ndash;12 GB</td>
+                <td><span style="color:#e67e22;">&starf; Beste Qualit&auml;t (per-frame)</span></td>
+            </tr>
+            <tr style="background:#1a2a1a;">
+                <td><strong>GVHMR</strong></td>
+                <td>36 mm PA-MPJPE</td>
+                <td>~5&ndash;10 FPS</td>
+                <td>6&ndash;8 GB</td>
+                <td>~8&ndash;16 GB</td>
+                <td><span style="color:#2ecc71;">&starf; Empfohlen</span></td>
+            </tr>
+        </tbody>
+    </table>
+    <p style="margin-top:8px; color:#888;">
+        <small>PA-MPJPE = Procrustes-Aligned Mean Per Joint Position Error auf 3DPW (niedriger = besser).<br>
+        *MocapNET v4 nutzt H3.6M und ein eigenes Skelett &mdash; nicht direkt vergleichbar mit SMPL-Methoden.<br>
+        Geschwindigkeit gesch&auml;tzt f&uuml;r RTX 3060. GVHMR/WHAM/PromptHMR ben&ouml;tigen mindestens 6 GB VRAM.</small>
+    </p>
+
+    <h3 style="margin-top:1.5rem;">SMPL-Lizenz</h3>
+    <p>GVHMR, WHAM und PromptHMR ben&ouml;tigen SMPL Modell-Dateien. Kostenlos beantragen: <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
 </div>
 {% endblock %}
 
@@ -165,6 +251,13 @@ videoInput.addEventListener('change', () => {
     if (videoInput.files.length) {
         dropTarget.querySelector('p').textContent = videoInput.files[0].name;
     }
+});
+
+// Toggle v4 body parts visibility
+document.querySelectorAll('input[name="pipeline"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.getElementById('v4Parts').style.display = this.value === 'v4' ? '' : 'none';
+    });
 });
 
 function getCsrf() {

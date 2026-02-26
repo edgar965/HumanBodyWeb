@@ -2,11 +2,12 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = '0.76'
+VERSION = '0.77'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
-MOCAPNET_ROOT = TOOLS_ROOT / 'MocapNET'   # A:\3DTools\MocapNET
+VIDEOTOBVH_ROOT = TOOLS_ROOT / 'VideoToBVH'
+MOCAPNET_ROOT = VIDEOTOBVH_ROOT / 'MocapNET'
 
 # Add humanbody_core to Python path (lives inside HumanBody/)
 HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody'
@@ -89,14 +90,20 @@ BVH_OUTPUT_DIR = MOCAPNET_ROOT / 'output'
 BLENDER_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'
 
 # OpenPose paths
-OPENPOSE_ROOT = Path(r'A:\3DTools\OpenPose')
+OPENPOSE_ROOT = VIDEOTOBVH_ROOT / 'OpenPose'
 OPENPOSE_EXE = OPENPOSE_ROOT / 'build' / 'bin' / 'OpenPoseDemo.exe'
 OPENPOSE_MODEL_DIR = OPENPOSE_ROOT / 'models'
 OPENPOSE_JSON2CSV_EXE = MOCAPNET_ROOT / 'convertOpenPoseJSONToCSV.exe'
 
 # MocapNET v4 paths
-MOCAPNET_V4_ROOT = Path(r'A:\3DTools\MocapNET_v4')
+MOCAPNET_V4_ROOT = VIDEOTOBVH_ROOT / 'MocapNET_v4'
 MOCAPNET_V4_SCRIPT = MOCAPNET_V4_ROOT / 'run_v4_pipeline.py'
+
+# New pipeline paths
+GVHMR_ROOT = VIDEOTOBVH_ROOT / 'GVHMR'
+WHAM_ROOT = VIDEOTOBVH_ROOT / 'WHAM'
+PROMPTHMR_ROOT = VIDEOTOBVH_ROOT / 'PromptHMR'
+WRAPPERS_DIR = VIDEOTOBVH_ROOT / 'wrappers'
 
 # HumanBody paths (HUMANBODY_ROOT defined above with sys.path)
 HUMANBODY_DATA_DIR = HUMANBODY_ROOT / 'data' / 'humanBody'

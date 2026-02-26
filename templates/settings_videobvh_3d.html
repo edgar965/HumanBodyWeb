@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Video to BVH: 3D - Einstellungen{% endblock %}
+
+{% block content %}
+<h1>Einstellungen &mdash; Video to BVH: 3D</h1>
+
+<form method="post">
+    {% csrf_token %}
+
+    <div class="settings-card">
+        <h2><i class="fas fa-check-circle"></i> Standard-Pipeline</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Default 3D Pipeline</strong>
+                <small>Welche Pipeline auf der 3D-Seite standardm&auml;&szlig;ig ausgew&auml;hlt ist.</small>
+            </div>
+            <div class="settings-input">
+                <select name="lifter_3d_default" class="settings-select">
+                    <option value="v4" {% if settings.lifter_3d_default == 'v4' %}selected{% endif %}>MocapNET v4 (CPU, ~75 mm)</option>
+                    <option value="wham" {% if settings.lifter_3d_default == 'wham' %}selected{% endif %}>WHAM (SMPL, GPU, 37 mm)</option>
+                    <option value="prompthmr" {% if settings.lifter_3d_default == 'prompthmr' %}selected{% endif %}>PromptHMR (SMPL, GPU, 37 mm, beste per-frame)</option>
+                    <option value="gvhmr" {% if settings.lifter_3d_default == 'gvhmr' %}selected{% endif %}>GVHMR (SMPL, GPU, 36 mm, empfohlen)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-brain"></i> MocapNET v4 <small style="color:#888;">~75 mm, CPU, 165 Bones</small></h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>HCD Iterations</strong>
+                <small>IK Gradient-Descent Iterationen pro Frame. Mehr = genauer aber langsamer.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_hcd_iterations"
+                       value="{{ settings.v4_hcd_iterations }}"
+                       min="1" max="100" step="1">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>HCD Epochs</strong>
+                <small>IK Epochen pro Frame. Mehr Epochen verbessern die Pose-Qualit&auml;t.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_hcd_epochs"
+                       value="{{ settings.v4_hcd_epochs }}"
+                       min="1" max="200" step="1">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>HCD Learning Rate</strong>
+                <small>Lernrate f&uuml;r den IK Gradient-Descent Solver.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_hcd_learning_rate"
+                       value="{{ settings.v4_hcd_learning_rate }}"
+                       min="0.0001" max="0.1" step="0.0001">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Smoothing Cutoff (Hz)</strong>
+                <small>Butterworth Tiefpass-Grenzfrequenz. Niedrigere Werte = gl&auml;ttere Animation.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_smoothing_cutoff"
+                       value="{{ settings.v4_smoothing_cutoff }}"
+                       min="0.5" max="15.0" step="0.5">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Smoothing Sampling (Hz)</strong>
+                <small>Abtastfrequenz f&uuml;r den Butterworth-Filter. Sollte zur Video-FPS passen.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_smoothing_sampling"
+                       value="{{ settings.v4_smoothing_sampling }}"
+                       min="10.0" max="120.0" step="1.0">
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-globe"></i> WHAM <small style="color:#888;">37 mm, GPU, World-Koordinaten</small></h2>
+        <p style="color:#888; padding:0.5rem 1rem;">SMPL-basierte Pipeline mit World-Koordinaten. Einstellungen werden nach Installation verf&uuml;gbar.</p>
+        <p style="color:#888; padding:0 1rem 0.5rem;">Ben&ouml;tigt SMPL-Lizenz: <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-comment-dots"></i> PromptHMR <small style="color:#888;">37 mm, GPU &mdash; Beste per-frame</small></h2>
+        <p style="color:#888; padding:0.5rem 1rem;">SMPL-basierte Pipeline (CVPR 2025). Einstellungen werden nach Installation verf&uuml;gbar.</p>
+        <p style="color:#888; padding:0 1rem 0.5rem;">Ben&ouml;tigt SMPL-Lizenz: <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-walking"></i> GVHMR <small style="color:#888;">36 mm, GPU &mdash; Empfohlen</small></h2>
+        <p style="color:#888; padding:0.5rem 1rem;">SMPL-basierte Pipeline. Einstellungen werden nach Installation verf&uuml;gbar.</p>
+        <p style="color:#888; padding:0 1rem 0.5rem;">Ben&ouml;tigt SMPL-Lizenz: <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
+    </div>
+
+    <div class="settings-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Speichern
+        </button>
+    </div>
+</form>
+{% endblock %}

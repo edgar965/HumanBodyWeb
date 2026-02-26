@@ -7,19 +7,30 @@ class BVHJob(models.Model):
 
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('detecting_2d', '2D Detection'),
         ('openpose', 'Running OpenPose'),
         ('openpose_csv', 'Converting OpenPose JSON'),
         ('mediapipe', 'Running MediaPipe'),
+        ('lifting_3d', '3D Lifting'),
         ('mocapnet', 'Running MocapNET'),
         ('v4_processing', 'Running MocapNET v4'),
+        ('processing', 'Processing'),
         ('complete', 'Complete'),
         ('failed', 'Failed'),
     ]
 
     PIPELINE_CHOICES = [
-        ('mediapipe', 'MediaPipe (CPU, fast)'),
-        ('openpose', 'OpenPose (GPU/CUDA, accurate)'),
-        ('v4', 'MocapNET v4 (Full Body)'),
+        # 2D Pipelines (2D Detector + MocapNET v2.1 Lifter)
+        ('mediapipe', 'MediaPipe'),
+        ('openpose', 'OpenPose'),
+        ('rtmpose', 'RTMPose'),
+        ('vitpose', 'ViTPose'),
+        ('yolo11', 'YOLO11-Pose'),
+        # 3D Pipelines (complete Video → BVH)
+        ('v4', 'MocapNET v4'),
+        ('gvhmr', 'GVHMR'),
+        ('wham', 'WHAM'),
+        ('prompthmr', 'PromptHMR'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -145,6 +156,30 @@ class AppSettings(models.Model):
     )
     mp_model_complexity = models.IntegerField(
         default=1, help_text="0=Lite (fast), 1=Full (accurate)",
+    )
+
+    # --- Video to BVH: 2D Detector defaults ---
+    detector_2d_default = models.CharField(
+        max_length=20, default='mediapipe',
+        help_text="Default 2D detector (mediapipe/openpose/rtmpose/vitpose/yolo11)",
+    )
+    rtmpose_model_size = models.CharField(
+        max_length=5, default='l',
+        help_text="RTMPose model size: m, l, x",
+    )
+    vitpose_model_size = models.CharField(
+        max_length=5, default='h',
+        help_text="ViTPose model size: b, l, h",
+    )
+    yolo_model_size = models.CharField(
+        max_length=5, default='l',
+        help_text="YOLO11-Pose model size: n, s, m, l, x",
+    )
+
+    # --- Video to BVH: 3D Pipeline defaults ---
+    lifter_3d_default = models.CharField(
+        max_length=20, default='v4',
+        help_text="Default 3D pipeline (v4/gvhmr/wham/prompthmr)",
     )
 
     # --- Video to BVH: MocapNET v4 settings ---
