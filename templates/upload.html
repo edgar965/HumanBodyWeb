@@ -43,10 +43,74 @@
         </div>
 
         <button type="submit" class="btn btn-primary">
-            <i class="fas fa-play"></i> Upload & Process
+            <i class="fas fa-upload"></i> Upload
         </button>
     </form>
 </div>
+
+{% if v21_jobs %}
+<div class="job-list-section">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+        <h3 style="margin:0;">Uploaded Videos</h3>
+        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" style="display:none;" onclick="bulkDelete()">
+            <i class="fas fa-trash"></i> Delete Selected
+        </button>
+    </div>
+    <table class="processed-table" id="jobTable">
+        <thead>
+            <tr>
+                <th style="width:30px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
+                <th class="sortable" onclick="sortTable('name')">Name <i class="fas fa-sort"></i></th>
+                <th>Pipeline</th>
+                <th>Status</th>
+                <th class="sortable" onclick="sortTable('size')">Size <i class="fas fa-sort"></i></th>
+                <th class="sortable" onclick="sortTable('date')">Created <i class="fas fa-sort"></i></th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="jobTableBody">
+            {% for job in v21_jobs %}
+            <tr id="row-{{ job.id }}" data-name="{{ job.name|lower }}" data-size="{{ job.video_size }}" data-date="{{ job.created_at|date:'Y-m-d H:i:s' }}">
+                <td><input type="checkbox" class="job-check" value="{{ job.id }}" onchange="updateBulkBtn()"></td>
+                <td>{{ job.name }}</td>
+                <td><span class="badge badge-{{ job.pipeline }}">{{ job.get_pipeline_display }}</span></td>
+                <td>
+                    {% if job.status == 'complete' %}
+                        <span style="color:#2ecc71;"><i class="fas fa-check-circle"></i> Complete</span>
+                    {% elif job.status == 'failed' %}
+                        <span style="color:#e74c3c;"><i class="fas fa-times-circle"></i> Failed</span>
+                    {% elif job.status == 'pending' %}
+                        <span style="color:#f39c12;"><i class="fas fa-clock"></i> Pending</span>
+                    {% else %}
+                        <span style="color:#3498db;"><i class="fas fa-spinner fa-spin"></i> {{ job.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ job.video_size_display }}</td>
+                <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
+                <td style="display:flex; gap:5px;">
+                    {% if job.status == 'pending' %}
+                    <a class="btn btn-sm btn-primary" href="{% url 'start_processing' job.id %}">
+                        <i class="fas fa-play"></i> Process
+                    </a>
+                    {% elif job.status == 'complete' %}
+                    <a class="btn btn-sm btn-primary" href="{% url 'job_result' job.id %}">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                    {% else %}
+                    <a class="btn btn-sm btn-secondary" href="{% url 'job_status' job.id %}">
+                        <i class="fas fa-info-circle"></i> Status
+                    </a>
+                    {% endif %}
+                    <button class="btn btn-sm btn-danger" onclick="deleteJob('{{ job.id }}', this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
 
 <div class="info-box">
     <h3>Supported Formats</h3>
@@ -64,6 +128,10 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+.sortable { cursor: pointer; user-select: none; }
+.sortable:hover { color: #3498db; }
+</style>
 <script>
 const dropTarget = document.getElementById('dropTarget');
 const videoInput = document.getElementById('videoInput');
@@ -93,5 +161,83 @@ videoInput.addEventListener('change', () => {
         dropTarget.querySelector('p').textContent = videoInput.files[0].name;
     }
 });
+
+function getCsrf() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function deleteJob(jobId, btn) {
+    if (!confirm('Delete this job?')) return;
+    fetch('/api/job/' + jobId + '/delete/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            var row = document.getElementById('row-' + jobId);
+            if (row) row.remove();
+            updateBulkBtn();
+            var tbody = document.getElementById('jobTableBody');
+            if (tbody && tbody.children.length === 0) {
+                var section = tbody.closest('.job-list-section');
+                if (section) section.style.display = 'none';
+            }
+        }
+    });
+}
+
+function toggleSelectAll(el) {
+    document.querySelectorAll('.job-check').forEach(c => c.checked = el.checked);
+    updateBulkBtn();
+}
+
+function updateBulkBtn() {
+    var checked = document.querySelectorAll('.job-check:checked').length;
+    var btn = document.getElementById('bulkDeleteBtn');
+    if (btn) btn.style.display = checked > 0 ? '' : 'none';
+}
+
+function bulkDelete() {
+    var ids = Array.from(document.querySelectorAll('.job-check:checked')).map(c => c.value);
+    if (!ids.length) return;
+    if (!confirm('Delete ' + ids.length + ' job(s)?')) return;
+    fetch('/api/jobs/bulk-delete/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
+        body: JSON.stringify({ids: ids})
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            data.deleted.forEach(id => {
+                var row = document.getElementById('row-' + id);
+                if (row) row.remove();
+            });
+            document.getElementById('selectAll').checked = false;
+            updateBulkBtn();
+            var tbody = document.getElementById('jobTableBody');
+            if (tbody && tbody.children.length === 0) {
+                var section = tbody.closest('.job-list-section');
+                if (section) section.style.display = 'none';
+            }
+        }
+    });
+}
+
+// Sortable table
+var sortDir = {};
+function sortTable(key) {
+    var tbody = document.getElementById('jobTableBody');
+    if (!tbody) return;
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    sortDir[key] = !sortDir[key]; // toggle asc/desc
+    var asc = sortDir[key];
+    rows.sort(function(a, b) {
+        var va = a.dataset[key] || '';
+        var vb = b.dataset[key] || '';
+        if (key === 'size') {
+            return asc ? (Number(va) - Number(vb)) : (Number(vb) - Number(va));
+        }
+        return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+    rows.forEach(function(row) { tbody.appendChild(row); });
+}
 </script>
 {% endblock %}

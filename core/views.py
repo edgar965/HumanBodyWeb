@@ -65,6 +65,25 @@ def dashboard(request):
     })
 
 
+def _annotate_file_sizes(jobs):
+    """Add video_size (bytes) and video_size_display (human-readable) to each job."""
+    for job in jobs:
+        try:
+            video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
+            size = video_path.stat().st_size if video_path.exists() else 0
+        except OSError:
+            size = 0
+        job.video_size = size
+        if size < 1024:
+            job.video_size_display = f'{size} B'
+        elif size < 1024 * 1024:
+            job.video_size_display = f'{size / 1024:.1f} KB'
+        elif size < 1024 * 1024 * 1024:
+            job.video_size_display = f'{size / (1024*1024):.1f} MB'
+        else:
+            job.video_size_display = f'{size / (1024*1024*1024):.1f} GB'
+
+
 def upload_video(request):
     """Upload a video file for processing (v2.1 pipeline)."""
     if request.method == 'POST':
@@ -84,10 +103,13 @@ def upload_video(request):
             fps=fps,
             pipeline=pipeline,
         )
-        return redirect('job_status', job_id=job.id)
+        messages.success(request, f'Uploaded {video.name}.')
+        return redirect('upload')
 
     status = _check_system_status()
-    return render(request, 'upload.html', {'status': status})
+    v21_jobs = BVHJob.objects.filter(pipeline__in=['mediapipe', 'openpose']).order_by('-created_at')
+    _annotate_file_sizes(v21_jobs)
+    return render(request, 'upload.html', {'status': status, 'v21_jobs': v21_jobs})
 
 
 def upload_video_v4(request):
@@ -106,9 +128,12 @@ def upload_video_v4(request):
             fps=fps,
             pipeline='v4',
         )
-        return redirect('job_status', job_id=job.id)
+        messages.success(request, f'Uploaded {video.name}.')
+        return redirect('upload_v4')
 
-    return render(request, 'upload_v4.html')
+    v4_jobs = BVHJob.objects.filter(pipeline='v4').order_by('-created_at')
+    _annotate_file_sizes(v4_jobs)
+    return render(request, 'upload_v4.html', {'v4_jobs': v4_jobs})
 
 
 def job_status(request, job_id):
@@ -214,13 +239,20 @@ def _run_mediapipe_to_csv(job, video_path, output_dir):
 
     proc.wait(timeout=600)
     stderr_thread.join(timeout=5)
-    if proc.returncode != 0:
+
+    # Check if stopped via STOP_FLAG
+    stop_flag = output_dir / 'STOP_FLAG'
+    stopped = stop_flag.exists()
+
+    if proc.returncode != 0 and not stopped:
         stderr = ''.join(stderr_lines)
         raise RuntimeError(f"MediaPipe failed: {stderr[:500]}")
 
     csv_dir = str(csv_output) + '-mpdata'
     csv_file = os.path.join(csv_dir, '2dJoints_mediapipe.csv')
     if not os.path.exists(csv_file):
+        if stopped:
+            raise RuntimeError("Stopped early — no CSV data was written yet")
         raise RuntimeError(f"CSV file not found at {csv_file}")
 
     return csv_file
@@ -292,13 +324,19 @@ def _run_openpose_to_csv(job, video_path, output_dir):
                 job.progress_detail = f'{current} frames processed'
             job.save()
 
-    if proc.returncode != 0:
+    # Check if stopped via STOP_FLAG
+    stop_flag = output_dir / 'STOP_FLAG'
+    stopped = stop_flag.exists()
+
+    if proc.returncode != 0 and not stopped:
         stderr = proc.stderr.read() if proc.stderr else ''
         raise RuntimeError(f"OpenPose failed: {stderr[:500]}")
 
     # Count JSON files to determine label
     json_files = sorted([f for f in os.listdir(json_dir) if f.endswith('_keypoints.json')])
     if not json_files:
+        if stopped:
+            raise RuntimeError("Stopped early — no OpenPose frames were written yet")
         raise RuntimeError(f"No keypoint JSON files found in {json_dir}")
 
     job.progress = 38
@@ -481,14 +519,39 @@ def _run_processing(job_id):
             return
 
         # v2.1 flow: 2D detection -> CSV -> MocapNET C++
-        if job.pipeline == 'openpose':
-            csv_file = _run_openpose_to_csv(job, video_path, output_dir)
-        else:
-            csv_file = _run_mediapipe_to_csv(job, video_path, output_dir)
+        stop_flag = output_dir / 'STOP_FLAG'
+        partial = False
+
+        try:
+            if job.pipeline == 'openpose':
+                csv_file = _run_openpose_to_csv(job, video_path, output_dir)
+            else:
+                csv_file = _run_mediapipe_to_csv(job, video_path, output_dir)
+        except RuntimeError:
+            # If stopped via STOP_FLAG, check for partial CSV and continue
+            if stop_flag.exists():
+                csv_file = None
+                # MediaPipe CSV path
+                mp_csv = str(output_dir / 'frames-mpdata' / '2dJoints_mediapipe.csv')
+                # OpenPose CSV path
+                op_csv = str(output_dir / 'openpose_2d.csv')
+                if os.path.exists(mp_csv):
+                    csv_file = mp_csv
+                elif os.path.exists(op_csv):
+                    csv_file = op_csv
+                if not csv_file:
+                    raise  # No partial data — re-raise original error
+                partial = True
+            else:
+                raise
+
+        if stop_flag.exists() and not partial:
+            partial = True
 
         job.csv_file = csv_file
         job.progress = 50
-        job.progress_detail = 'CSV ready, starting MocapNET...'
+        detail = 'Partial CSV ready, starting MocapNET...' if partial else 'CSV ready, starting MocapNET...'
+        job.progress_detail = detail
         job.save()
 
         # Step 2: MocapNET -> BVH
@@ -496,6 +559,13 @@ def _run_processing(job_id):
         job.progress = 50
         job.progress_detail = 'Loading neural network...'
         job.save()
+
+        # Clean stop flag before MocapNET step so it won't interfere
+        if stop_flag.exists():
+            try:
+                stop_flag.unlink()
+            except OSError:
+                pass
 
         total_frames = _get_video_frame_count(video_path)
         video_stem = job.name.rsplit('.', 1)[0]
@@ -572,7 +642,7 @@ def _run_processing(job_id):
         job.bvh_file = bvh_output
         job.status = 'complete'
         job.progress = 100
-        job.progress_detail = 'Done'
+        job.progress_detail = 'Done (partial — stopped early)' if partial else 'Done'
         job.save()
 
         # Register in library
@@ -611,13 +681,18 @@ def start_processing(request, job_id):
 
 
 def stop_processing(request, job_id):
-    """Stop a running processing job (graceful stop via flag file for v4)."""
+    """Stop a running processing job.
+
+    Writes STOP_FLAG for all pipelines.  v4's Python script checks it per-frame
+    and exits gracefully.  For v2.1 (mediapipe/openpose), the subprocess doesn't
+    know about the flag, so we kill it immediately — the background thread sees
+    STOP_FLAG and continues to MocapNET with partial CSV data.
+    """
     job = get_object_or_404(BVHJob, id=job_id)
     jid = str(job.id)
     proc = _active_procs.get(jid)
 
     if proc and proc.poll() is None:
-        # Try graceful stop via flag file (v4 pipeline checks this after each frame)
         output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
         stop_flag = output_dir / 'STOP_FLAG'
         try:
@@ -626,19 +701,24 @@ def stop_processing(request, job_id):
         except OSError:
             pass
 
-        # Wait for process to exit gracefully (it will write partial BVH)
-        try:
-            proc.wait(timeout=30)
-        except subprocess.TimeoutExpired:
-            # Process didn't respond to flag — force kill
+        if job.pipeline == 'v4':
+            # v4: wait for graceful exit (script checks flag each frame)
+            try:
+                proc.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+                job.status = 'failed'
+                job.error_message = 'Cancelled by user (force kill)'
+                job.save()
+        else:
+            # v2.1: kill subprocess immediately — background thread will
+            # detect STOP_FLAG and continue to MocapNET with partial CSV
             proc.kill()
             proc.wait(timeout=5)
-            job.status = 'failed'
-            job.error_message = 'Cancelled by user (force kill)'
-            job.save()
 
         _active_procs.pop(jid, None)
-        # If process exited gracefully, the background thread handles job status
+        # Background thread handles final job status
     else:
         _active_procs.pop(jid, None)
         job.status = 'failed'
@@ -787,28 +867,62 @@ def video_thumbnail(request, job_id):
         return HttpResponseNotFound('Thumbnail generation failed')
 
 
-def delete_job(request, job_id):
-    """Delete a processed job and its files."""
-    job = get_object_or_404(BVHJob, id=job_id)
-    name = job.name
-    # Delete video file
+def _cleanup_job_files(job):
+    """Delete files associated with a job (video, output dir, BVH)."""
+    import shutil
     if job.video_file:
         video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
         if video_path.exists():
             video_path.unlink()
-    # Delete output directory
     output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
     if output_dir.exists():
-        import shutil
         shutil.rmtree(output_dir, ignore_errors=True)
-    # Delete BVH file if outside output dir
     if job.bvh_file and os.path.exists(job.bvh_file):
         bvh_path = Path(job.bvh_file)
         if not str(bvh_path).startswith(str(output_dir)):
             bvh_path.unlink(missing_ok=True)
+
+
+def delete_job(request, job_id):
+    """Delete a processed job and its files."""
+    job = get_object_or_404(BVHJob, id=job_id)
+    name = job.name
+    _cleanup_job_files(job)
     job.delete()
     messages.success(request, f'Deleted {name}.')
     return redirect('processed')
+
+
+def delete_job_api(request, job_id):
+    """AJAX: Delete a single job and its files, return JSON."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    job = get_object_or_404(BVHJob, id=job_id)
+    name = job.name
+    _cleanup_job_files(job)
+    job.delete()
+    return JsonResponse({'ok': True, 'name': name})
+
+
+def bulk_delete_jobs(request):
+    """AJAX: Delete multiple jobs by ID list, return JSON."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    deleted = []
+    for jid in ids:
+        try:
+            job = BVHJob.objects.get(id=jid)
+            _cleanup_job_files(job)
+            job.delete()
+            deleted.append(str(jid))
+        except BVHJob.DoesNotExist:
+            pass
+    return JsonResponse({'ok': True, 'deleted': deleted})
 
 
 def _get_2d_keypoints(job):

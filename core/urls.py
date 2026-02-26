@@ -23,6 +23,8 @@ urlpatterns = [
     path('webcam/', views.webcam, name='webcam'),
     path('settings/', views.app_settings, name='settings'),
     path('api/job/<uuid:job_id>/status/', views.job_status_api, name='job_status_api'),
+    path('api/job/<uuid:job_id>/delete/', views.delete_job_api, name='delete_job_api'),
+    path('api/jobs/bulk-delete/', views.bulk_delete_jobs, name='bulk_delete_jobs'),
 
     # HumanBody
     path('humanbody/config/', character_api.character_viewer, name='humanbody_config'),
