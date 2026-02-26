@@ -506,12 +506,21 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
             if (bvhWorldQ_f0) bvhDir.applyQuaternion(bvhWorldQ_f0);
         }
 
+        // For delta-retarget: skip direction correction for spine chain bones.
+        // The spine chain has unmapped intermediate bones (DEF-spine.002, DEF-spine.005)
+        // whose rest rotations shift bone POSITIONS backward. Direction correction
+        // on surrounding mapped bones creates cumulative interference through these
+        // unmapped bones, doubling the backward lean. Since both skeletons' spines
+        // are roughly vertical, direction correction is unnecessary for spine bones.
+        const isSpineChain = /^DEF-spine/i.test(defName);
         // For delta-retarget foot/toe bones: if the BVH child offset is Y-dominant,
         // it represents physical joint position (ankle→toe goes downward) rather
         // than bone direction (foot points forward). Skip direction correction
         // to preserve DEF rest orientation (forward-pointing foot).
         const isFootToe = /foot|toe/i.test(defName);
-        if (useDeltaRetarget && isFootToe && rawChildYDominant) {
+        if (useDeltaRetarget && isSpineChain) {
+            offsetQ[defName] = defWorldRestQ[defName].clone();
+        } else if (useDeltaRetarget && isFootToe && rawChildYDominant) {
             offsetQ[defName] = defWorldRestQ[defName].clone();
         } else if (!bvhDir || bvhDir.lengthSq() < 1e-10) {
             offsetQ[defName] = defWorldRestQ[defName].clone();

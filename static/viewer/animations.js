@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=7';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=13';
 
 // =========================================================================
 // Tone mapping lookup (for scene settings)
