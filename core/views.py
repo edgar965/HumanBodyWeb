@@ -669,12 +669,15 @@ def _run_processing(job_id):
 
 
 def start_processing(request, job_id):
-    """Start processing a job in the background."""
+    """Start (or re-start) processing a job in the background."""
     job = get_object_or_404(BVHJob, id=job_id)
-    if job.status == 'pending':
-        # Set status immediately so UI updates before thread runs
+    # Allow re-processing from pending, complete, or failed states
+    if job.status in ('pending', 'complete', 'failed'):
+        # Reset job state for fresh processing
         job.status = 'v4_processing' if job.pipeline == 'v4' else job.pipeline
         job.progress = 0
+        job.error_message = ''
+        job.bvh_file = ''
         total_frames = _get_video_frame_count(
             Path(settings.MEDIA_ROOT) / str(job.video_file))
         job.progress_detail = f'0 / {total_frames} frames' if total_frames else 'Starting...'
