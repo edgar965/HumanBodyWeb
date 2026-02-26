@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null }) {
+export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null, detectionUrl = null }) {
     const video = document.getElementById(videoId);
     const container = document.getElementById(canvasId);
     if (!video || !container) return;
@@ -62,9 +62,19 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     let mixer = null;
     let action = null;
     let skeletonHelper = null;
+    let rootBone = null;
     let clipDuration = 0;
     let currentSpeed = 1;
     let isPlaying = false;
+
+    // Detection flags (per-frame: true = person detected, false = not)
+    let detectionFlags = null;
+    if (detectionUrl) {
+        fetch(detectionUrl)
+            .then(r => r.json())
+            .then(d => { if (d && d.length > 0) detectionFlags = d; })
+            .catch(() => {});
+    }
 
     // --- UI elements ---
     const btnPlayPause = document.getElementById('btnPlayPause');
@@ -77,7 +87,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     // --- Load BVH ---
     const loader = new BVHLoader();
     loader.load(bvhUrl, (result) => {
-        const rootBone = result.skeleton.bones[0];
+        rootBone = result.skeleton.bones[0];
         scene.add(rootBone);
 
         skeletonHelper = new THREE.SkeletonHelper(rootBone);
@@ -190,6 +200,17 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
                 clipDuration - 0.0001
             );
             mixer.setTime(t);
+
+            // Hide skeleton on frames where no person was detected
+            if (detectionFlags) {
+                const frameIdx = Math.min(
+                    Math.floor((video.currentTime / video.duration) * detectionFlags.length),
+                    detectionFlags.length - 1
+                );
+                const visible = detectionFlags[frameIdx];
+                if (skeletonHelper) skeletonHelper.visible = visible;
+                if (rootBone) rootBone.visible = visible;
+            }
         }
 
         controls.update();

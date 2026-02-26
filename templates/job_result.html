@@ -80,6 +80,7 @@ initBVHPlayer({
     bvhUrl: '{% url "serve_bvh" job.id %}',
     fps: {{ job.fps|default:"30" }},
     overlayId: 'skeletonOverlay',
+    detectionUrl: '{% url "serve_detection" job.id %}',
 });
 </script>
 {% endblock %}
