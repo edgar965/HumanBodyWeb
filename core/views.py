@@ -1134,6 +1134,8 @@ def serve_keypoints_2d(request, job_id):
                 frames.append(kp)
         return JsonResponse({'joints': body_joints, 'connections': connections,
                              'frames': frames})
+    elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
+        csv_path = output_dir / f'{job.pipeline}_2d.csv'
     else:
         csv_path = output_dir / 'frames-mpdata' / '2dJoints_mediapipe.csv'
 
