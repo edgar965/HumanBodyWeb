@@ -1109,7 +1109,7 @@ def _extract_v4_keypoints(job):
     return csv_path
 
 
-# Skeleton connections for drawing
+# Skeleton connections for drawing (MediaPipe / OpenPose 2D keypoints)
 _BODY_CONNECTIONS = [
     ('neck', 'rshoulder'), ('rshoulder', 'relbow'), ('relbow', 'rhand'),
     ('neck', 'lshoulder'), ('lshoulder', 'lelbow'), ('lelbow', 'lhand'),
@@ -1124,14 +1124,192 @@ _BODY_CONNECTIONS = [
 ]
 
 
-def _draw_skeleton(frame, keypoints, color=(0, 255, 0), thickness=2):
+def _parse_bvh_to_2d(bvh_path, video_w, video_h):
+    """Parse BVH file, compute forward kinematics, project to 2D.
+
+    Returns (keypoints_list, connections) where:
+    - keypoints_list: [{joint_name: (x_px, y_px, 1.0), ...}, ...] per frame
+    - connections: [(parent, child), ...] from BVH hierarchy
+    """
+    import numpy as np
+
+    with open(bvh_path) as f:
+        lines = [l.rstrip() for l in f.readlines()]
+
+    # --- Parse HIERARCHY ---
+    joints = []
+    parent_map = {}
+    offset_map = {}
+    channels_map = {}
+    channel_list = []  # flat ordered (joint, channel_type) for MOTION parsing
+
+    parent_stack = []
+    current_joint = None
+    in_end_site = False
+    i = 0
+
+    while i < len(lines):
+        line = lines[i].strip()
+        if line == 'MOTION':
+            i += 1
+            break
+
+        tokens = line.split()
+        if not tokens:
+            i += 1
+            continue
+
+        if tokens[0] in ('ROOT', 'JOINT'):
+            name = tokens[1]
+            joints.append(name)
+            parent_map[name] = parent_stack[-1] if parent_stack else None
+            current_joint = name
+            in_end_site = False
+        elif tokens[0] == 'End' and len(tokens) > 1 and tokens[1] == 'Site':
+            in_end_site = True
+            current_joint = None
+        elif tokens[0] == '{':
+            if in_end_site:
+                parent_stack.append('__endsite__')
+            elif current_joint:
+                parent_stack.append(current_joint)
+                current_joint = None
+        elif tokens[0] == '}':
+            if parent_stack:
+                parent_stack.pop()
+            in_end_site = False
+        elif tokens[0] == 'OFFSET' and not in_end_site and joints:
+            offset_map[joints[-1]] = np.array([
+                float(tokens[1]), float(tokens[2]), float(tokens[3])])
+        elif tokens[0] == 'CHANNELS' and not in_end_site and joints:
+            n = int(tokens[1])
+            chs = tokens[2:2 + n]
+            channels_map[joints[-1]] = chs
+            for ch in chs:
+                channel_list.append((joints[-1], ch))
+
+        i += 1
+
+    # --- Parse MOTION ---
+    while i < len(lines) and not lines[i].strip().startswith('Frames:'):
+        i += 1
+    i += 1  # skip "Frames: N"
+    i += 1  # skip "Frame Time: ..."
+
+    frame_data = []
+    while i < len(lines):
+        line = lines[i].strip()
+        if line:
+            frame_data.append([float(v) for v in line.split()])
+        i += 1
+
+    if not frame_data or not joints:
+        return [], []
+
+    # --- Rotation helper ---
+    def rot_mat(axis, angle_deg):
+        a = np.radians(angle_deg)
+        c, s = np.cos(a), np.sin(a)
+        if axis == 'X':
+            return np.array([[1, 0, 0], [0, c, -s], [0, s, c]])
+        elif axis == 'Y':
+            return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+        else:
+            return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+
+    # --- Forward Kinematics per frame ---
+    all_positions = []
+
+    for values in frame_data:
+        # Map channel values
+        val_idx = 0
+        ch_values = {}
+        for jnt, ch in channel_list:
+            ch_values[(jnt, ch)] = values[val_idx] if val_idx < len(values) else 0
+            val_idx += 1
+
+        world_matrices = {}
+        world_pos = {}
+
+        for jnt in joints:
+            parent = parent_map.get(jnt)
+            parent_mat = world_matrices.get(parent, np.eye(4))
+
+            offset = offset_map.get(jnt, np.zeros(3))
+            chs = channels_map.get(jnt, [])
+
+            # Translation: offset for children, position channels for root
+            tx, ty, tz = offset[0], offset[1], offset[2]
+            for ch in chs:
+                if ch == 'Xposition':
+                    tx = ch_values.get((jnt, ch), 0)
+                elif ch == 'Yposition':
+                    ty = ch_values.get((jnt, ch), 0)
+                elif ch == 'Zposition':
+                    tz = ch_values.get((jnt, ch), 0)
+
+            # Rotation: apply in BVH channel order
+            R = np.eye(3)
+            for ch in chs:
+                if ch.endswith('rotation'):
+                    angle = ch_values.get((jnt, ch), 0)
+                    R = R @ rot_mat(ch[0], angle)
+
+            local = np.eye(4)
+            local[:3, :3] = R
+            local[:3, 3] = [tx, ty, tz]
+
+            world = parent_mat @ local
+            world_matrices[jnt] = world
+            world_pos[jnt] = world[:3, 3].copy()
+
+        all_positions.append(world_pos)
+
+    # --- Connections from hierarchy ---
+    connections = [(parent_map[j], j) for j in joints if parent_map.get(j)]
+
+    # --- Project to 2D (orthographic front view) ---
+    all_x = [p[0] for fp in all_positions for p in fp.values()]
+    all_y = [p[1] for fp in all_positions for p in fp.values()]
+
+    min_x, max_x = min(all_x), max(all_x)
+    min_y, max_y = min(all_y), max(all_y)
+    range_x = max_x - min_x or 1
+    range_y = max_y - min_y or 1
+
+    # Scale to fit video with padding, maintain aspect ratio
+    padding = 0.1
+    usable_w = video_w * (1 - 2 * padding)
+    usable_h = video_h * (1 - 2 * padding)
+    scale = min(usable_w / range_x, usable_h / range_y)
+
+    cx = (min_x + max_x) / 2
+    cy = (min_y + max_y) / 2
+
+    keypoints_list = []
+    for frame_pos in all_positions:
+        kp = {}
+        for jnt, pos in frame_pos.items():
+            sx = (pos[0] - cx) * scale + video_w / 2
+            sy = -(pos[1] - cy) * scale + video_h / 2  # flip Y for screen
+            kp[jnt] = (sx, sy, 1.0)
+        keypoints_list.append(kp)
+
+    return keypoints_list, connections
+
+
+def _draw_skeleton(frame, keypoints, connections=None, color=(0, 255, 0),
+                   thickness=2):
     """Draw skeleton on a frame using 2D keypoints."""
     import cv2
     h, w = frame.shape[:2]
     min_conf = 0.3
 
+    if connections is None:
+        connections = _BODY_CONNECTIONS
+
     # Draw connections
-    for j1, j2 in _BODY_CONNECTIONS:
+    for j1, j2 in connections:
         p1 = keypoints.get(j1)
         p2 = keypoints.get(j2)
         if p1 and p2 and p1[2] > min_conf and p2[2] > min_conf:
@@ -1143,7 +1321,7 @@ def _draw_skeleton(frame, keypoints, color=(0, 255, 0), thickness=2):
     # Draw joints
     for name, (x, y, conf) in keypoints.items():
         if conf > min_conf and 0 <= x < w and 0 <= y < h:
-            cv2.circle(frame, (int(x), int(y)), 4, (0, 200, 255), -1, cv2.LINE_AA)
+            cv2.circle(frame, (int(x), int(y)), 3, (0, 200, 255), -1, cv2.LINE_AA)
 
     return frame
 
@@ -1151,12 +1329,20 @@ def _draw_skeleton(frame, keypoints, color=(0, 255, 0), thickness=2):
 def _render_video_with_skeleton(job, overlay=True):
     """Render a video with skeleton overlay (or skeleton-only on black bg).
 
+    For v4: uses BVH 3D skeleton projected to 2D (full MocapNET v4 rig).
+    For v2.1: uses 2D MediaPipe/OpenPose keypoints.
+
     Returns path to the rendered mp4 file (cached in output dir).
     """
     import cv2
     import numpy as np
 
+    # Use different cache filename for v4 BVH vs 2D keypoints
+    use_bvh = (job.pipeline == 'v4' and job.bvh_file
+               and os.path.exists(job.bvh_file))
     suffix = '_overlay' if overlay else '_rig_only'
+    if use_bvh:
+        suffix += '_bvh'
     stem = Path(job.name).stem
     prefix = job.pipeline
     output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
@@ -1166,11 +1352,34 @@ def _render_video_with_skeleton(job, overlay=True):
     if out_path.exists():
         return out_path
 
-    keypoints_list, (w, h) = _get_2d_keypoints(job)
+    # Get video dimensions
+    video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
+    cap_probe = cv2.VideoCapture(str(video_path))
+    w = int(cap_probe.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap_probe.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cap_probe.release()
+
+    connections = _BODY_CONNECTIONS
+    keypoints_list = None
+
+    # v4: parse BVH and project 3D skeleton to 2D
+    if use_bvh:
+        try:
+            keypoints_list, bvh_conns = _parse_bvh_to_2d(job.bvh_file, w, h)
+            if keypoints_list and bvh_conns:
+                connections = bvh_conns
+        except Exception:
+            keypoints_list = None
+
+    # Fallback to 2D keypoints (always used for v2.1)
+    if not keypoints_list:
+        result = _get_2d_keypoints(job)
+        keypoints_list, (w, h) = result
+        connections = _BODY_CONNECTIONS
+
     if not keypoints_list:
         return None
 
-    video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
     cap = cv2.VideoCapture(str(video_path)) if overlay else None
     fps = job.fps or 30
 
@@ -1186,7 +1395,8 @@ def _render_video_with_skeleton(job, overlay=True):
             frame = np.zeros((h, w, 3), dtype=np.uint8)
 
         color = (0, 255, 0) if overlay else (255, 255, 255)
-        _draw_skeleton(frame, kp, color=color, thickness=3)
+        _draw_skeleton(frame, kp, connections=connections, color=color,
+                       thickness=3)
         writer.write(frame)
 
     writer.release()
