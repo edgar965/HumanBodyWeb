@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/bvh/<uuid:job_id>/', views.serve_bvh_file, name='serve_bvh'),
     path('api/thumbnail/<uuid:job_id>/', views.video_thumbnail, name='video_thumbnail'),
     path('api/detection/<uuid:job_id>/', views.serve_detection_data, name='serve_detection'),
+    path('api/keypoints/<uuid:job_id>/', views.serve_keypoints_2d, name='serve_keypoints'),
     path('api/rig-video/<uuid:job_id>/', views.save_rig_video, name='save_rig_video'),
     path('api/overlay-video/<uuid:job_id>/', views.save_overlay_video, name='save_overlay_video'),
     path('library/', views.bvh_library, name='library'),

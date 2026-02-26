@@ -799,6 +799,93 @@ def serve_detection_data(request, job_id):
     return JsonResponse([], safe=False)
 
 
+def serve_keypoints_2d(request, job_id):
+    """Serve per-frame 2D keypoints as JSON for the Canvas2D overlay.
+
+    Returns {joints: [...], connections: [...], frames: [{name: [x,y,conf]}, ...]}
+    with normalized (0-1) coordinates.
+    """
+    import csv as _csv
+
+    job = get_object_or_404(BVHJob, id=job_id)
+    output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
+
+    body_joints = ['head', 'neck', 'rshoulder', 'relbow', 'rhand',
+                   'lshoulder', 'lelbow', 'lhand', 'hip',
+                   'rhip', 'rknee', 'rfoot', 'lhip', 'lknee', 'lfoot']
+
+    connections = [
+        ['head', 'neck'],
+        ['neck', 'rshoulder'], ['rshoulder', 'relbow'], ['relbow', 'rhand'],
+        ['neck', 'lshoulder'], ['lshoulder', 'lelbow'], ['lelbow', 'lhand'],
+        ['neck', 'hip'],
+        ['hip', 'rhip'], ['rhip', 'rknee'], ['rknee', 'rfoot'],
+        ['hip', 'lhip'], ['lhip', 'lknee'], ['lknee', 'lfoot'],
+    ]
+
+    frames = []
+
+    if job.pipeline == 'v4':
+        csv_path = output_dir / '2dJoints_v4_raw.csv'
+        if not csv_path.exists():
+            csv_path = _extract_v4_keypoints(job)
+    elif job.pipeline == 'openpose':
+        # OpenPose: read JSON files, normalize to 0-1
+        import cv2
+        video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
+        cap = cv2.VideoCapture(str(video_path))
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 1
+        cap.release()
+
+        json_dir = output_dir / 'openpose_json'
+        if json_dir.exists():
+            op_names = ['nose', 'neck', 'rshoulder', 'relbow', 'rhand',
+                        'lshoulder', 'lelbow', 'lhand', 'midhip',
+                        'rhip', 'rknee', 'rfoot', 'lhip', 'lknee', 'lfoot']
+            for jf in sorted(json_dir.glob('*_keypoints.json')):
+                with open(jf) as f:
+                    data = json.load(f)
+                kp = {}
+                if data.get('people'):
+                    pts = data['people'][0].get('pose_keypoints_2d', [])
+                    for i, name in enumerate(op_names):
+                        idx = i * 3
+                        if idx + 2 < len(pts):
+                            kp[name] = [pts[idx] / w, pts[idx+1] / h, pts[idx+2]]
+                    # Map OpenPose names to our joint names
+                    if 'nose' in kp:
+                        kp['head'] = kp.pop('nose')
+                    if 'midhip' in kp:
+                        kp['hip'] = kp.pop('midhip')
+                frames.append(kp)
+        return JsonResponse({'joints': body_joints, 'connections': connections,
+                             'frames': frames})
+    else:
+        csv_path = output_dir / 'frames-mpdata' / '2dJoints_mediapipe.csv'
+
+    if not csv_path or not csv_path.exists():
+        return JsonResponse({'joints': body_joints, 'connections': connections,
+                             'frames': []})
+
+    with open(csv_path) as f:
+        reader = _csv.DictReader(f)
+        for row in reader:
+            kp = {}
+            for jname in body_joints:
+                xk, yk, vk = f'2DX_{jname}', f'2DY_{jname}', f'visible_{jname}'
+                if xk in row and row[xk]:
+                    try:
+                        kp[jname] = [float(row[xk]), float(row[yk]),
+                                     float(row[vk]) if row.get(vk) else 0]
+                    except (ValueError, KeyError):
+                        pass
+            frames.append(kp)
+
+    return JsonResponse({'joints': body_joints, 'connections': connections,
+                         'frames': frames})
+
+
 def bvh_library(request):
     """Browse all BVH files."""
     files = BVHFile.objects.all()

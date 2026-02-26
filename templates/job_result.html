@@ -78,15 +78,23 @@
 
 {% block extra_scripts %}
 <script type="module">
-import { initBVHPlayer } from '{% static "js/bvh_player.js" %}';
-
-initBVHPlayer({
-    videoId: 'resultVideo',
-    canvasId: 'skeletonCanvas',
-    bvhUrl: '{% url "serve_bvh" job.id %}',
-    fps: {{ job.fps|default:"30" }},
-    overlayId: 'skeletonOverlay',
-    detectionUrl: '{% url "serve_detection" job.id %}',
-});
+try {
+    const { initBVHPlayer } = await import('{% static "js/bvh_player.js" %}?v=075c');
+    initBVHPlayer({
+        videoId: 'resultVideo',
+        canvasId: 'skeletonCanvas',
+        bvhUrl: '{% url "serve_bvh" job.id %}',
+        fps: {{ job.fps|default:"30" }},
+        overlayId: 'skeletonOverlay',
+        detectionUrl: '{% url "serve_detection" job.id %}',
+        keypointsUrl: '{% url "serve_keypoints" job.id %}',
+    });
+} catch(e) {
+    document.title = 'JS ERROR: ' + e.message;
+    const err = document.createElement('div');
+    err.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;padding:1rem;z-index:99999;font-size:16px;';
+    err.textContent = 'JS Error: ' + e.message + ' | ' + e.stack;
+    document.body.appendChild(err);
+}
 </script>
 {% endblock %}

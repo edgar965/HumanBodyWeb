@@ -2,12 +2,15 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null, detectionUrl = null }) {
+console.log('[bvh_player] v0.75 loaded');
+
+export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null, detectionUrl = null, keypointsUrl = null }) {
+    console.log('[bvh_player] initBVHPlayer called');
     const video = document.getElementById(videoId);
     const container = document.getElementById(canvasId);
     if (!video || !container) return;
 
-    // --- Three.js setup ---
+    // --- Three.js setup (3D panel) ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a1a2e);
 
@@ -16,8 +19,6 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
     camera.position.set(0, 100, 300);
-    camera.layers.enable(0);
-    camera.layers.enable(1);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
@@ -30,27 +31,39 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     controls.target.set(0, 80, 0);
     controls.update();
 
-    // Grid on layer 1 so overlay doesn't see it
     const grid = new THREE.GridHelper(400, 20, 0x2a2a4a, 0x1f1f3a);
-    grid.layers.set(1);
     scene.add(grid);
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
     dirLight.position.set(50, 200, 100);
     scene.add(dirLight);
 
-    // --- Overlay setup (same camera, transparent bg, no grid) ---
-    let overlayRenderer = null;
+    // --- 2D Canvas overlay (skeleton on top of video) ---
+    let overlayCanvas = null;
+    let overlayCtx = null;
     const overlayContainer = overlayId ? document.getElementById(overlayId) : null;
 
     if (overlayContainer) {
-        overlayRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        overlayRenderer.setClearColor(0x000000, 0);
-        const ow = overlayContainer.clientWidth || 640;
-        const oh = overlayContainer.clientHeight || 360;
-        overlayRenderer.setSize(ow, oh);
-        overlayRenderer.setPixelRatio(window.devicePixelRatio);
-        overlayContainer.appendChild(overlayRenderer.domElement);
+        overlayCanvas = document.createElement('canvas');
+        overlayCanvas.style.width = '100%';
+        overlayCanvas.style.height = '100%';
+        overlayCanvas.style.position = 'absolute';
+        overlayCanvas.style.top = '0';
+        overlayCanvas.style.left = '0';
+        overlayContainer.appendChild(overlayCanvas);
+        overlayCtx = overlayCanvas.getContext('2d');
+        _resizeOverlayCanvas();
+    }
+
+    function _resizeOverlayCanvas() {
+        if (!overlayCanvas || !overlayContainer) return;
+        const ow = overlayContainer.clientWidth;
+        const oh = overlayContainer.clientHeight;
+        if (ow > 0 && oh > 0) {
+            overlayCanvas.width = ow * window.devicePixelRatio;
+            overlayCanvas.height = oh * window.devicePixelRatio;
+            overlayCtx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+        }
     }
 
     // State
@@ -62,12 +75,21 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     let currentSpeed = 1;
     let isPlaying = false;
 
-    // Detection flags (per-frame: true = person detected, false = not)
+    // Detection flags (per-frame boolean)
     let detectionFlags = null;
     if (detectionUrl) {
         fetch(detectionUrl)
             .then(r => r.json())
             .then(d => { if (d && d.length > 0) detectionFlags = d; })
+            .catch(() => {});
+    }
+
+    // 2D keypoints for overlay
+    let keypointsData = null;
+    if (keypointsUrl) {
+        fetch(keypointsUrl)
+            .then(r => r.json())
+            .then(d => { if (d && d.frames && d.frames.length > 0) keypointsData = d; })
             .catch(() => {});
     }
 
@@ -79,9 +101,8 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     const timeDuration = document.getElementById('timeDuration');
     const speedBtns = document.querySelectorAll('.speed-btn');
 
-    // --- Load BVH ---
+    // --- Load BVH (3D panel only) ---
     const loader = new BVHLoader();
-    // Body-only bone names for joint sphere filtering
     const BODY_BONE_NAMES = new Set([
         'hip', 'abdomen', 'chest', 'neck', 'neck1', 'head',
         'rCollar', 'rShldr', 'rForeArm', 'rHand',
@@ -115,7 +136,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         action.play();
         clipDuration = result.clip.duration;
 
-        // Auto-center camera on skeleton
+        // Auto-center camera — fit skeleton to fill viewport
         centerCamera(rootBone);
 
         // Timeline
@@ -132,10 +153,10 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         container.innerHTML = '<div style="color:#e94560;padding:2rem;text-align:center;">Failed to load BVH file</div>';
     });
 
-    function centerCamera(rootBone) {
+    function centerCamera(root) {
         const box = new THREE.Box3();
-        rootBone.traverse((child) => {
-            if (child.isBone) {
+        root.traverse((child) => {
+            if (child.isBone && BODY_BONE_NAMES.has(child.name)) {
                 const pos = new THREE.Vector3();
                 child.getWorldPosition(pos);
                 box.expandByPoint(pos);
@@ -147,9 +168,68 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         box.getSize(size);
 
         controls.target.copy(center);
+        // Position camera so skeleton fills ~70% of viewport
         const maxDim = Math.max(size.x, size.y, size.z);
-        camera.position.set(center.x, center.y, center.z + maxDim * 2);
+        const fovRad = camera.fov * Math.PI / 180;
+        const dist = maxDim / (2 * Math.tan(fovRad / 2)) * 1.3;
+        camera.position.set(center.x, center.y, center.z + dist);
         controls.update();
+    }
+
+    // --- Draw 2D skeleton on canvas overlay ---
+    function drawOverlay() {
+        if (!overlayCtx || !overlayCanvas) return;
+        const cw = overlayContainer.clientWidth;
+        const ch = overlayContainer.clientHeight;
+        overlayCtx.clearRect(0, 0, cw, ch);
+
+        if (!keypointsData || !video.duration) return;
+
+        // Map video time to keypoints frame
+        const nFrames = keypointsData.frames.length;
+        const frameIdx = Math.min(
+            Math.floor((video.currentTime / video.duration) * nFrames),
+            nFrames - 1
+        );
+
+        // Check detection flags — hide if no person detected
+        if (detectionFlags) {
+            const detIdx = Math.min(
+                Math.floor((video.currentTime / video.duration) * detectionFlags.length),
+                detectionFlags.length - 1
+            );
+            if (!detectionFlags[detIdx]) return;
+        }
+
+        const kp = keypointsData.frames[frameIdx];
+        if (!kp) return;
+
+        const minConf = 0.3;
+
+        // Draw connections
+        overlayCtx.strokeStyle = '#00ff00';
+        overlayCtx.lineWidth = 2.5;
+        overlayCtx.lineCap = 'round';
+        for (const [j1, j2] of keypointsData.connections) {
+            const p1 = kp[j1], p2 = kp[j2];
+            if (p1 && p2 && p1[2] > minConf && p2[2] > minConf) {
+                overlayCtx.beginPath();
+                overlayCtx.moveTo(p1[0] * cw, p1[1] * ch);
+                overlayCtx.lineTo(p2[0] * cw, p2[1] * ch);
+                overlayCtx.stroke();
+            }
+        }
+
+        // Draw joints
+        overlayCtx.fillStyle = '#e94560';
+        for (const name of keypointsData.joints) {
+            const p = kp[name];
+            if (p && p[2] > minConf) {
+                overlayCtx.beginPath();
+                overlayCtx.arc(p[0] * cw, p[1] * ch, 4, 0, Math.PI * 2);
+                overlayCtx.fill();
+            }
+        }
     }
 
     // --- Sync loop ---
@@ -164,7 +244,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
             );
             mixer.setTime(t);
 
-            // Hide skeleton on frames where no person was detected
+            // Hide 3D skeleton on frames where no person was detected
             if (detectionFlags) {
                 const frameIdx = Math.min(
                     Math.floor((video.currentTime / video.duration) * detectionFlags.length),
@@ -179,27 +259,8 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         controls.update();
         renderer.render(scene, camera);
 
-        // Overlay: same scene, same camera, but transparent bg + no grid
-        if (overlayRenderer && overlayContainer) {
-            const savedBg = scene.background;
-            const savedAspect = camera.aspect;
-            scene.background = null;
-            camera.layers.disable(1); // hide grid
-
-            const ow = overlayContainer.clientWidth;
-            const oh = overlayContainer.clientHeight;
-            if (ow > 0 && oh > 0) {
-                camera.aspect = ow / oh;
-                camera.updateProjectionMatrix();
-                overlayRenderer.render(scene, camera);
-            }
-
-            // Restore
-            camera.layers.enable(1);
-            camera.aspect = savedAspect;
-            camera.updateProjectionMatrix();
-            scene.background = savedBg;
-        }
+        // Draw 2D overlay
+        drawOverlay();
 
         // Update timeline
         if (video.duration) {
@@ -264,24 +325,18 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT') return;
-        switch (e.key) {
-            case ' ':
-                e.preventDefault();
-                togglePlayPause();
-                break;
-            case 'ArrowLeft':
-                e.preventDefault();
-                if (e.shiftKey) skip(-10);
-                else if (e.ctrlKey) frameStep(-1);
-                else skip(-1);
-                break;
-            case 'ArrowRight':
-                e.preventDefault();
-                if (e.shiftKey) skip(10);
-                else if (e.ctrlKey) frameStep(1);
-                else skip(1);
-                break;
+        if (e.target.tagName === 'TEXTAREA') return;
+        if (e.key === ' ') {
+            e.preventDefault();
+            togglePlayPause();
+        } else if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            if (e.ctrlKey) frameStep(-10);
+            else frameStep(-1);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            if (e.ctrlKey) frameStep(10);
+            else frameStep(1);
         }
     });
 
@@ -307,13 +362,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         camera.updateProjectionMatrix();
         renderer.setSize(w, h);
 
-        if (overlayRenderer && overlayContainer) {
-            const ow = overlayContainer.clientWidth;
-            const oh = overlayContainer.clientHeight;
-            if (ow > 0 && oh > 0) {
-                overlayRenderer.setSize(ow, oh);
-            }
-        }
+        _resizeOverlayCanvas();
     }
     window.addEventListener('resize', onResize);
 
