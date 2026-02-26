@@ -136,6 +136,34 @@ class AppSettings(models.Model):
         help_text="JSON list of expanded panel keys for Szene page",
     )
 
+    # --- Video to BVH: MediaPipe settings ---
+    mp_min_detection_confidence = models.FloatField(
+        default=0.5, help_text="Pose detection confidence threshold (0.0–1.0)",
+    )
+    mp_min_tracking_confidence = models.FloatField(
+        default=0.2, help_text="Pose tracking confidence (0.0–1.0)",
+    )
+    mp_model_complexity = models.IntegerField(
+        default=1, help_text="0=Lite (fast), 1=Full (accurate)",
+    )
+
+    # --- Video to BVH: MocapNET v4 settings ---
+    v4_hcd_iterations = models.IntegerField(
+        default=10, help_text="IK gradient descent iterations per frame (1–100)",
+    )
+    v4_hcd_epochs = models.IntegerField(
+        default=30, help_text="IK epochs per frame (1–200)",
+    )
+    v4_hcd_learning_rate = models.FloatField(
+        default=0.001, help_text="IK learning rate (0.0001–0.1)",
+    )
+    v4_smoothing_cutoff = models.FloatField(
+        default=5.0, help_text="Butterworth low-pass cutoff Hz (0.5–15.0)",
+    )
+    v4_smoothing_sampling = models.FloatField(
+        default=30.0, help_text="Butterworth sampling Hz (10.0–120.0)",
+    )
+
     class Meta:
         verbose_name = "Settings"
         verbose_name_plural = "Settings"

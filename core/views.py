@@ -397,12 +397,21 @@ def _run_v4_pipeline(job, video_path, output_dir):
     stop_flag = str(output_dir / 'STOP_FLAG')
 
     v4_script = str(settings.MOCAPNET_V4_SCRIPT)
+    s = AppSettings.load()
     cmd = [
         'python', v4_script,
         '--from', str(video_path),
         '--output', bvh_output,
         '--all', '--headless',
         '--stop-flag', stop_flag,
+        '--hcd-iterations', str(s.v4_hcd_iterations),
+        '--hcd-epochs', str(s.v4_hcd_epochs),
+        '--hcd-lr', str(s.v4_hcd_learning_rate),
+        '--smooth-sampling', str(s.v4_smoothing_sampling),
+        '--smooth-cutoff', str(s.v4_smoothing_cutoff),
+        '--mp-detection-conf', str(s.mp_min_detection_confidence),
+        '--mp-tracking-conf', str(s.mp_min_tracking_confidence),
+        '--mp-model-complexity', str(s.mp_model_complexity),
     ]
 
     stderr_lines = []
@@ -986,11 +995,12 @@ def _get_2d_keypoints(job):
                         kp[name] = (pts[idx], pts[idx+1], pts[idx+2])
             frames.append(kp)
     else:
-        # v4 or MediaPipe CSV — try v4 CSV first, then mediapipe CSV
+        # v4 or MediaPipe CSV
         if job.pipeline == 'v4':
-            csv_path = output_dir / '2dJoints_v4.csv'
+            # 2dJoints_v4.csv has aspect-ratio-corrected values for MocapNET
+            # input — not suitable for video overlay. Use raw MediaPipe coords.
+            csv_path = output_dir / '2dJoints_v4_raw.csv'
             if not csv_path.exists():
-                # Fallback: re-extract from video using MediaPipe
                 csv_path = _extract_v4_keypoints(job)
         else:
             csv_path = output_dir / 'frames-mpdata' / '2dJoints_mediapipe.csv'
@@ -1022,7 +1032,12 @@ def _get_2d_keypoints(job):
 
 
 def _extract_v4_keypoints(job):
-    """Re-extract 2D keypoints from video for v4 jobs that lack them."""
+    """Re-extract raw 2D keypoints from video for v4 overlay rendering.
+
+    Saves normalized (0-1) MediaPipe coordinates to 2dJoints_v4_raw.csv.
+    (The pipeline's 2dJoints_v4.csv has aspect-ratio-corrected values for
+    MocapNET input and cannot be used for direct video overlay.)
+    """
     import cv2
     try:
         from mediapipe_compat import PoseCompat
@@ -1032,7 +1047,7 @@ def _extract_v4_keypoints(job):
 
     video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
     output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
-    csv_path = output_dir / '2dJoints_v4.csv'
+    csv_path = output_dir / '2dJoints_v4_raw.csv'
 
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -1345,8 +1360,9 @@ def _render_video_with_skeleton(job, overlay=True):
     import cv2
     import numpy as np
 
-    # Use different cache filename for v4 BVH vs 2D keypoints
-    use_bvh = (job.pipeline == 'v4' and job.bvh_file
+    # BVH reprojection only for rig-only mode (black bg) — for overlay
+    # we need the original 2D keypoints so they match the video camera
+    use_bvh = (not overlay and job.pipeline == 'v4' and job.bvh_file
                and os.path.exists(job.bvh_file))
     suffix = '_overlay' if overlay else '_rig_only'
     if use_bvh:
@@ -1370,7 +1386,7 @@ def _render_video_with_skeleton(job, overlay=True):
     connections = _BODY_CONNECTIONS
     keypoints_list = None
 
-    # v4: parse BVH and project 3D skeleton to 2D
+    # Rig-only for v4: parse BVH and project 3D skeleton to 2D
     if use_bvh:
         try:
             keypoints_list, bvh_conns = _parse_bvh_to_2d(job.bvh_file, w, h)
@@ -1379,7 +1395,7 @@ def _render_video_with_skeleton(job, overlay=True):
         except Exception:
             keypoints_list = None
 
-    # Fallback to 2D keypoints (always used for v2.1)
+    # 2D keypoints: always for overlay, fallback for rig-only
     if not keypoints_list:
         result = _get_2d_keypoints(job)
         keypoints_list, (w, h) = result
@@ -1463,7 +1479,12 @@ def webcam(request):
 
 
 def app_settings(request):
-    """Application settings page."""
+    """Redirect /settings/ to /settings/model/."""
+    return redirect('settings_model')
+
+
+def app_settings_model(request):
+    """Model settings page (Processing + HumanBody)."""
     s = AppSettings.load()
     if request.method == 'POST':
         try:
@@ -1490,6 +1511,35 @@ def app_settings(request):
             messages.success(request, 'Settings saved.')
         except (ValueError, TypeError):
             messages.error(request, 'Invalid value.')
-        return redirect('settings')
+        return redirect('settings_model')
     models_dir = str(settings.HUMANBODY_MODELS_DIR)
-    return render(request, 'settings.html', {'settings': s, 'models_dir': models_dir})
+    return render(request, 'settings_model.html', {'settings': s, 'models_dir': models_dir})
+
+
+def app_settings_videobvh(request):
+    """Video to BVH settings page (MediaPipe + MocapNET v4)."""
+    s = AppSettings.load()
+    if request.method == 'POST':
+        try:
+            s.mp_min_detection_confidence = max(0.0, min(1.0,
+                float(request.POST.get('mp_min_detection_confidence', 0.5))))
+            s.mp_min_tracking_confidence = max(0.0, min(1.0,
+                float(request.POST.get('mp_min_tracking_confidence', 0.2))))
+            s.mp_model_complexity = max(0, min(1,
+                int(request.POST.get('mp_model_complexity', 1))))
+            s.v4_hcd_iterations = max(1, min(100,
+                int(request.POST.get('v4_hcd_iterations', 10))))
+            s.v4_hcd_epochs = max(1, min(200,
+                int(request.POST.get('v4_hcd_epochs', 30))))
+            s.v4_hcd_learning_rate = max(0.0001, min(0.1,
+                float(request.POST.get('v4_hcd_learning_rate', 0.001))))
+            s.v4_smoothing_cutoff = max(0.5, min(15.0,
+                float(request.POST.get('v4_smoothing_cutoff', 5.0))))
+            s.v4_smoothing_sampling = max(10.0, min(120.0,
+                float(request.POST.get('v4_smoothing_sampling', 30.0))))
+            s.save()
+            messages.success(request, 'Settings saved.')
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid value.')
+        return redirect('settings_videobvh')
+    return render(request, 'settings_videobvh.html', {'settings': s})

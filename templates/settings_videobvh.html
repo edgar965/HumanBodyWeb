@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Video to BVH - Einstellungen{% endblock %}
+
+{% block content %}
+<h1>Einstellungen — Video to BVH</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="settings-card">
+        <h2><i class="fas fa-eye"></i> MediaPipe (2D Detection)</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Detection Confidence</strong>
+                <small>Mindest-Konfidenz damit ein Pose-Ergebnis als erkannt gilt. Niedrigere Werte erkennen mehr Posen, aber mit mehr Fehlern.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="mp_min_detection_confidence"
+                       value="{{ settings.mp_min_detection_confidence }}"
+                       min="0.0" max="1.0" step="0.05">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Tracking Confidence</strong>
+                <small>Mindest-Konfidenz f&uuml;r Pose-Tracking zwischen Frames. Niedrigere Werte = fl&uuml;ssiger, aber evtl. weniger pr&auml;zise.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="mp_min_tracking_confidence"
+                       value="{{ settings.mp_min_tracking_confidence }}"
+                       min="0.0" max="1.0" step="0.05">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Model Complexity</strong>
+                <small>0 = Lite (schnell, weniger genau), 1 = Full (langsamer, genauer).</small>
+            </div>
+            <div class="settings-input">
+                <select name="mp_model_complexity" class="settings-select">
+                    <option value="0" {% if settings.mp_model_complexity == 0 %}selected{% endif %}>0 — Lite (schnell)</option>
+                    <option value="1" {% if settings.mp_model_complexity == 1 %}selected{% endif %}>1 — Full (genauer)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-brain"></i> MocapNET v4 (3D Rekonstruktion)</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>HCD Iterations</strong>
+                <small>IK Gradient-Descent Iterationen pro Frame. Mehr = genauer aber langsamer.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_hcd_iterations"
+                       value="{{ settings.v4_hcd_iterations }}"
+                       min="1" max="100" step="1">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>HCD Epochs</strong>
+                <small>IK Epochen pro Frame. Mehr Epochen verbessern die Pose-Qualit&auml;t.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_hcd_epochs"
+                       value="{{ settings.v4_hcd_epochs }}"
+                       min="1" max="200" step="1">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>HCD Learning Rate</strong>
+                <small>Lernrate f&uuml;r den IK Gradient-Descent Solver.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_hcd_learning_rate"
+                       value="{{ settings.v4_hcd_learning_rate }}"
+                       min="0.0001" max="0.1" step="0.0001">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Smoothing Cutoff (Hz)</strong>
+                <small>Butterworth Tiefpass-Grenzfrequenz. Niedrigere Werte = gl&auml;ttere Animation.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_smoothing_cutoff"
+                       value="{{ settings.v4_smoothing_cutoff }}"
+                       min="0.5" max="15.0" step="0.5">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Smoothing Sampling (Hz)</strong>
+                <small>Abtastfrequenz f&uuml;r den Butterworth-Filter. Sollte zur Video-FPS passen.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="v4_smoothing_sampling"
+                       value="{{ settings.v4_smoothing_sampling }}"
+                       min="10.0" max="120.0" step="1.0">
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Speichern
+        </button>
+    </div>
+</form>
+{% endblock %}

@@ -30,7 +30,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     controls.target.set(0, 80, 0);
     controls.update();
 
-    // Grid on layer 1 so overlay camera doesn't see it
+    // Grid on layer 1 so overlay doesn't see it
     const grid = new THREE.GridHelper(400, 20, 0x2a2a4a, 0x1f1f3a);
     grid.layers.set(1);
     scene.add(grid);
@@ -39,9 +39,8 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     dirLight.position.set(50, 200, 100);
     scene.add(dirLight);
 
-    // --- Overlay setup (skeleton on top of video) ---
+    // --- Overlay setup (same camera, transparent bg, no grid) ---
     let overlayRenderer = null;
-    let overlayCamera = null;
     const overlayContainer = overlayId ? document.getElementById(overlayId) : null;
 
     if (overlayContainer) {
@@ -52,10 +51,6 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         overlayRenderer.setSize(ow, oh);
         overlayRenderer.setPixelRatio(window.devicePixelRatio);
         overlayContainer.appendChild(overlayRenderer.domElement);
-
-        // Orthographic front-facing camera (only layer 0 = skeleton)
-        overlayCamera = new THREE.OrthographicCamera(-100, 100, 100, -100, 0.1, 2000);
-        overlayCamera.layers.set(0);
     }
 
     // State
@@ -86,6 +81,15 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
     // --- Load BVH ---
     const loader = new BVHLoader();
+    // Body-only bone names for joint sphere filtering
+    const BODY_BONE_NAMES = new Set([
+        'hip', 'abdomen', 'chest', 'neck', 'neck1', 'head',
+        'rCollar', 'rShldr', 'rForeArm', 'rHand',
+        'lCollar', 'lShldr', 'lForeArm', 'lHand',
+        'rButtock', 'rThigh', 'rShin', 'rFoot',
+        'lButtock', 'lThigh', 'lShin', 'lFoot',
+    ]);
+
     loader.load(bvhUrl, (result) => {
         rootBone = result.skeleton.bones[0];
         scene.add(rootBone);
@@ -94,9 +98,10 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         skeletonHelper.material.linewidth = 2;
         scene.add(skeletonHelper);
 
-        // Joint spheres
+        // Joint spheres — only on body bones
         const jointMat = new THREE.MeshBasicMaterial({ color: 0xe94560 });
         result.skeleton.bones.forEach((bone) => {
+            if (!BODY_BONE_NAMES.has(bone.name)) return;
             const sphere = new THREE.Mesh(
                 new THREE.SphereGeometry(1.5, 8, 8),
                 jointMat,
@@ -104,19 +109,14 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
             bone.add(sphere);
         });
 
-        // Animation mixer - LoopRepeat so action never auto-pauses
+        // Animation mixer
         mixer = new THREE.AnimationMixer(rootBone);
         action = mixer.clipAction(result.clip);
         action.play();
         clipDuration = result.clip.duration;
 
-        // Auto-center main camera
+        // Auto-center camera on skeleton
         centerCamera(rootBone);
-
-        // Fit overlay camera to skeleton bounds
-        if (overlayCamera && overlayContainer) {
-            fitOverlayCamera(rootBone);
-        }
 
         // Timeline
         video.addEventListener('loadedmetadata', () => {
@@ -152,49 +152,12 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         controls.update();
     }
 
-    function fitOverlayCamera(rootBone) {
-        const box = new THREE.Box3();
-        rootBone.traverse((child) => {
-            if (child.isBone) {
-                const pos = new THREE.Vector3();
-                child.getWorldPosition(pos);
-                box.expandByPoint(pos);
-            }
-        });
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-
-        const padding = 1.5;
-        let halfH = (size.y * padding) / 2;
-        let halfW = (size.x * padding) / 2;
-
-        // Match container aspect ratio
-        const cw = overlayContainer.clientWidth || 1;
-        const ch = overlayContainer.clientHeight || 1;
-        const containerAspect = cw / ch;
-        const skeletonAspect = halfW / Math.max(halfH, 0.001);
-
-        if (containerAspect > skeletonAspect) {
-            halfW = halfH * containerAspect;
-        } else {
-            halfH = halfW / containerAspect;
-        }
-
-        overlayCamera.left = center.x - halfW;
-        overlayCamera.right = center.x + halfW;
-        overlayCamera.top = center.y + halfH;
-        overlayCamera.bottom = center.y - halfH;
-        overlayCamera.position.set(center.x, center.y, 500);
-        overlayCamera.lookAt(center.x, center.y, 0);
-        overlayCamera.updateProjectionMatrix();
-    }
-
     // --- Sync loop ---
     function animate() {
         requestAnimationFrame(animate);
 
         if (mixer && video.duration) {
-            // Map video time to BVH clip time (clamp to avoid LoopRepeat wrap)
+            // Map video time to BVH clip time
             const t = Math.min(
                 (video.currentTime / video.duration) * clipDuration,
                 clipDuration - 0.0001
@@ -216,11 +179,25 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         controls.update();
         renderer.render(scene, camera);
 
-        // Overlay: render skeleton with transparent background
-        if (overlayRenderer && overlayCamera) {
+        // Overlay: same scene, same camera, but transparent bg + no grid
+        if (overlayRenderer && overlayContainer) {
             const savedBg = scene.background;
+            const savedAspect = camera.aspect;
             scene.background = null;
-            overlayRenderer.render(scene, overlayCamera);
+            camera.layers.disable(1); // hide grid
+
+            const ow = overlayContainer.clientWidth;
+            const oh = overlayContainer.clientHeight;
+            if (ow > 0 && oh > 0) {
+                camera.aspect = ow / oh;
+                camera.updateProjectionMatrix();
+                overlayRenderer.render(scene, camera);
+            }
+
+            // Restore
+            camera.layers.enable(1);
+            camera.aspect = savedAspect;
+            camera.updateProjectionMatrix();
             scene.background = savedBg;
         }
 
@@ -330,7 +307,6 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         camera.updateProjectionMatrix();
         renderer.setSize(w, h);
 
-        // Resize overlay to match video element
         if (overlayRenderer && overlayContainer) {
             const ow = overlayContainer.clientWidth;
             const oh = overlayContainer.clientHeight;

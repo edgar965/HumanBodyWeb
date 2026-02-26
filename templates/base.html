@@ -61,9 +61,20 @@
             <a href="{% url 'webcam' %}" class="{% if 'webcam' in request.path %}active{% endif %}">
                 <i class="fas fa-camera"></i> <span>Webcam</span>
             </a>
-            <a href="{% url 'settings' %}" class="{% if 'settings' in request.path %}active{% endif %}">
-                <i class="fas fa-cog"></i> <span>Einstellungen</span>
-            </a>
+            <div class="sidebar-group {% if 'settings' in request.path %}open{% endif %}">
+                <a href="#" class="sidebar-group-toggle">
+                    <i class="fas fa-cog"></i> <span>Einstellungen</span>
+                    <i class="fas fa-chevron-down sidebar-chevron"></i>
+                </a>
+                <div class="sidebar-sub">
+                    <a href="{% url 'settings_model' %}" class="{% if request.path == '/settings/model/' %}active{% endif %}">
+                        <i class="fas fa-user"></i> <span>Modell</span>
+                    </a>
+                    <a href="{% url 'settings_videobvh' %}" class="{% if request.path == '/settings/video-to-bvh/' %}active{% endif %}">
+                        <i class="fas fa-film"></i> <span>Video to BVH</span>
+                    </a>
+                </div>
+            </div>
         </div>
     </nav>
 
