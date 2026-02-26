@@ -1268,30 +1268,38 @@ def _parse_bvh_to_2d(bvh_path, video_w, video_h):
     # --- Connections from hierarchy ---
     connections = [(parent_map[j], j) for j in joints if parent_map.get(j)]
 
-    # --- Project to 2D (orthographic front view) ---
-    all_x = [p[0] for fp in all_positions for p in fp.values()]
-    all_y = [p[1] for fp in all_positions for p in fp.values()]
+    # --- Project to 2D (match Three.js fitOverlayCamera exactly) ---
+    # Use first frame bounds, same as Three.js which calls fitOverlayCamera once
+    first = all_positions[0]
+    fx = [p[0] for p in first.values()]
+    fy = [p[1] for p in first.values()]
 
-    min_x, max_x = min(all_x), max(all_x)
-    min_y, max_y = min(all_y), max(all_y)
-    range_x = max_x - min_x or 1
-    range_y = max_y - min_y or 1
+    cx = (min(fx) + max(fx)) / 2
+    cy = (min(fy) + max(fy)) / 2
+    size_x = max(fx) - min(fx) or 1
+    size_y = max(fy) - min(fy) or 1
 
-    # Scale to fit video with padding, maintain aspect ratio
-    padding = 0.1
-    usable_w = video_w * (1 - 2 * padding)
-    usable_h = video_h * (1 - 2 * padding)
-    scale = min(usable_w / range_x, usable_h / range_y)
+    # Three.js uses padding multiplier of 1.5 on skeleton size
+    skel_pad = 1.5
+    half_w = (size_x * skel_pad) / 2
+    half_h = (size_y * skel_pad) / 2
 
-    cx = (min_x + max_x) / 2
-    cy = (min_y + max_y) / 2
+    # Adjust for video aspect ratio (same logic as Three.js fitOverlayCamera)
+    video_aspect = video_w / video_h
+    skel_aspect = half_w / max(half_h, 0.001)
+    if video_aspect > skel_aspect:
+        half_w = half_h * video_aspect
+    else:
+        half_h = half_w / video_aspect
 
+    # Map from camera space [cx-half_w..cx+half_w] x [cy-half_h..cy+half_h]
+    # to video pixels [0..video_w] x [0..video_h]
     keypoints_list = []
     for frame_pos in all_positions:
         kp = {}
         for jnt, pos in frame_pos.items():
-            sx = (pos[0] - cx) * scale + video_w / 2
-            sy = -(pos[1] - cy) * scale + video_h / 2  # flip Y for screen
+            sx = (pos[0] - cx + half_w) / (2 * half_w) * video_w
+            sy = (cy + half_h - pos[1]) / (2 * half_h) * video_h  # flip Y
             kp[jnt] = (sx, sy, 1.0)
         keypoints_list.append(kp)
 
