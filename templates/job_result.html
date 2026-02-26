@@ -24,6 +24,9 @@
         <a href="{% url 'serve_bvh' job.id %}" class="btn btn-primary btn-sm" download>
             <i class="fas fa-download"></i> Download BVH
         </a>
+        <a href="{% url 'save_overlay_video' job.id %}" class="btn btn-secondary btn-sm" download>
+            <i class="fas fa-download"></i> Download Skeleton Video
+        </a>
         {% endif %}
     </div>
 </div>
