@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-console.log('[bvh_player] v0.76 loaded');
+console.log('[bvh_player] v0.77.1 loaded');
 
 export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null, detectionUrl = null, keypointsUrl = null }) {
     console.log('[bvh_player] initBVHPlayer called', { videoId, canvasId });
@@ -193,10 +193,10 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
         // Map video time to keypoints frame
         const nFrames = keypointsData.frames.length;
-        const frameIdx = Math.min(
-            Math.floor((video.currentTime / video.duration) * nFrames),
-            nFrames - 1
-        );
+        const rawFrameIdx = Math.floor((video.currentTime / video.duration) * nFrames);
+        // Hide overlay when video time exceeds available keypoint data
+        if (rawFrameIdx >= nFrames) return;
+        const frameIdx = rawFrameIdx;
 
         // Check detection flags — hide if no person detected
         if (detectionFlags) {
@@ -244,22 +244,25 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
         if (mixer && video.duration) {
             // Map video time to BVH clip time
-            const t = Math.min(
-                (video.currentTime / video.duration) * clipDuration,
-                clipDuration - 0.0001
-            );
-            mixer.setTime(t);
+            const rawT = (video.currentTime / video.duration) * clipDuration;
 
-            // Hide 3D skeleton on frames where no person was detected
-            if (detectionFlags) {
+            // Hide 3D skeleton when video time exceeds BVH data
+            const beyondBVH = rawT >= clipDuration;
+            if (!beyondBVH) {
+                mixer.setTime(rawT);
+            }
+
+            // Determine visibility: beyond data OR detection flags say no person
+            let visible = !beyondBVH;
+            if (visible && detectionFlags) {
                 const frameIdx = Math.min(
                     Math.floor((video.currentTime / video.duration) * detectionFlags.length),
                     detectionFlags.length - 1
                 );
-                const visible = detectionFlags[frameIdx];
-                if (skeletonHelper) skeletonHelper.visible = visible;
-                if (rootBone) rootBone.visible = visible;
+                visible = detectionFlags[frameIdx];
             }
+            if (skeletonHelper) skeletonHelper.visible = visible;
+            if (rootBone) rootBone.visible = visible;
         }
 
         controls.update();

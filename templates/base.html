@@ -55,10 +55,10 @@
                     </a>
                 </div>
             </div>
-            <a href="{% url 'library' %}" class="{% if 'library' in request.path %}active{% endif %}">
+            <a href="{% url 'library' %}" class="{% if request.path|slice:':9' == '/library/' %}active{% endif %}">
                 <i class="fas fa-folder-open"></i> <span>BVH Library</span>
             </a>
-            <a href="{% url 'webcam' %}" class="{% if 'webcam' in request.path %}active{% endif %}">
+            <a href="{% url 'webcam' %}" class="{% if request.path == '/webcam/' %}active{% endif %}">
                 <i class="fas fa-camera"></i> <span>Webcam</span>
             </a>
             <div class="sidebar-group {% if 'settings' in request.path %}open{% endif %}">

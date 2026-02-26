@@ -2,6 +2,7 @@ import os
 import json
 import subprocess
 import threading
+import time as _time_mod
 from pathlib import Path
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -13,10 +14,40 @@ from .models import BVHJob, BVHFile, AppSettings
 
 # Track active subprocesses per job for stop functionality
 _active_procs = {}  # job_id (str) -> subprocess.Popen
+_active_procs_lock = threading.Lock()
 
+# --- Shared constants ---
+MAX_ERROR_CHARS = 2000  # max stderr chars to include in error messages
+
+BODY_JOINT_NAMES = [
+    'head', 'neck', 'rshoulder', 'relbow', 'rhand',
+    'lshoulder', 'lelbow', 'lhand', 'hip',
+    'rhip', 'rknee', 'rfoot', 'lhip', 'lknee', 'lfoot',
+    'endsite_eye.r', 'endsite_eye.l', 'rear', 'lear',
+]
+
+
+def _get_video_props(video_path):
+    """Get video dimensions and frame count. Returns (w, h, frame_count, fps)."""
+    import cv2
+    cap = cv2.VideoCapture(str(video_path))
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fc = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    cap.release()
+    return w, h, fc, fps
+
+
+_system_status_cache = {'data': None, 'time': 0}
+_SYSTEM_STATUS_TTL = 60  # seconds
 
 def _check_system_status():
-    """Check if all required tools are available."""
+    """Check if all required tools are available (cached for 60s)."""
+    now = _time_mod.monotonic()
+    if _system_status_cache['data'] is not None and (now - _system_status_cache['time']) < _SYSTEM_STATUS_TTL:
+        return _system_status_cache['data']
+
     status = {}
     status['mocapnet_exe'] = Path(settings.MOCAPNET_EXE).exists()
     status['mediapipe_script'] = Path(settings.MEDIAPIPE_SCRIPT).exists()
@@ -49,6 +80,8 @@ def _check_system_status():
     openpose_model = settings.OPENPOSE_MODEL_DIR / 'pose' / 'body_25' / 'pose_iter_584000.caffemodel'
     status['openpose_models'] = openpose_model.exists()
 
+    _system_status_cache['data'] = status
+    _system_status_cache['time'] = _time_mod.monotonic()
     return status
 
 
@@ -232,7 +265,8 @@ def _run_mediapipe_to_csv(job, video_path, output_dir):
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         text=True, bufsize=1, cwd=str(settings.MOCAPNET_ROOT),
     )
-    _active_procs[str(job.id)] = proc
+    with _active_procs_lock:
+        _active_procs[str(job.id)] = proc
 
     stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
     stderr_thread.start()
@@ -282,7 +316,7 @@ def _run_mediapipe_to_csv(job, video_path, output_dir):
 
     if proc.returncode != 0 and not stopped:
         stderr = ''.join(stderr_lines)
-        raise RuntimeError(f"MediaPipe failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
+        raise RuntimeError(f"MediaPipe failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
 
     csv_dir = str(csv_output) + '-mpdata'
     csv_file = os.path.join(csv_dir, '2dJoints_mediapipe.csv')
@@ -322,7 +356,8 @@ def _run_openpose_to_csv(job, video_path, output_dir):
         text=True, bufsize=1,
         cwd=str(settings.OPENPOSE_ROOT),
     )
-    _active_procs[str(job.id)] = proc
+    with _active_procs_lock:
+        _active_procs[str(job.id)] = proc
 
     # Monitor JSON output files for progress
     last_count = 0
@@ -366,7 +401,7 @@ def _run_openpose_to_csv(job, video_path, output_dir):
 
     if proc.returncode != 0 and not stopped:
         stderr = proc.stderr.read() if proc.stderr else ''
-        raise RuntimeError(f"OpenPose failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
+        raise RuntimeError(f"OpenPose failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
 
     # Count JSON files to determine label
     json_files = sorted([f for f in os.listdir(json_dir) if f.endswith('_keypoints.json')])
@@ -408,7 +443,7 @@ def _run_openpose_to_csv(job, video_path, output_dir):
     )
 
     if result.returncode != 0:
-        raise RuntimeError(f"JSON to CSV conversion failed (exit code {result.returncode}):\n{result.stderr[-2000:]}")
+        raise RuntimeError(f"JSON to CSV conversion failed (exit code {result.returncode}):\n{result.stderr[-MAX_ERROR_CHARS:]}")
 
     if not os.path.exists(csv_file):
         raise RuntimeError(f"CSV file not created at {csv_file}")
@@ -462,7 +497,8 @@ def _run_v4_pipeline(job, video_path, output_dir):
         text=True, bufsize=1, cwd=str(settings.MOCAPNET_V4_ROOT),
         env=env, encoding='utf-8', errors='replace',
     )
-    _active_procs[str(job.id)] = proc
+    with _active_procs_lock:
+        _active_procs[str(job.id)] = proc
 
     stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
     stderr_thread.start()
@@ -531,7 +567,7 @@ def _run_v4_pipeline(job, video_path, output_dir):
         if os.path.exists(bvh_output) and os.path.getsize(bvh_output) > 100:
             return bvh_output
         stderr = ''.join(stderr_lines).strip()
-        raise RuntimeError(f"MocapNET v4 failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
+        raise RuntimeError(f"MocapNET v4 failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
 
     if not os.path.exists(bvh_output):
         raise RuntimeError(f"BVH file not found at {bvh_output}")
@@ -582,7 +618,8 @@ def _run_new_2d_detector(job, video_path, output_dir):
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         text=True, bufsize=1, cwd=str(settings.WRAPPERS_DIR.parent),
     )
-    _active_procs[str(job.id)] = proc
+    with _active_procs_lock:
+        _active_procs[str(job.id)] = proc
 
     stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
     stderr_thread.start()
@@ -632,7 +669,7 @@ def _run_new_2d_detector(job, video_path, output_dir):
 
     if proc.returncode != 0:
         stderr = ''.join(stderr_lines)
-        raise RuntimeError(f"2D detector '{job.pipeline}' failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
+        raise RuntimeError(f"2D detector '{job.pipeline}' failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
 
     return csv_output
 
@@ -660,7 +697,8 @@ def _run_smpl_pipeline(job, video_path, output_dir):
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         text=True, cwd=str(settings.WRAPPERS_DIR.parent),
     )
-    _active_procs[str(job.id)] = proc
+    with _active_procs_lock:
+        _active_procs[str(job.id)] = proc
 
     for line in proc.stdout:
         line = line.strip()
@@ -679,7 +717,7 @@ def _run_smpl_pipeline(job, video_path, output_dir):
         if bvh_files:
             return bvh_files[0]
         stderr = proc.stderr.read()
-        raise RuntimeError(f"3D pipeline '{job.pipeline}' failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
+        raise RuntimeError(f"3D pipeline '{job.pipeline}' failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
 
     return bvh_output
 
@@ -826,7 +864,8 @@ def _run_processing(job_id):
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, cwd=str(settings.MOCAPNET_ROOT),
         )
-        _active_procs[str(job.id)] = proc
+        with _active_procs_lock:
+            _active_procs[str(job.id)] = proc
 
         stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
         stderr_thread.start()
@@ -878,7 +917,7 @@ def _run_processing(job_id):
                 partial = True
             else:
                 stderr = ''.join(stderr_lines)
-                raise RuntimeError(f"MocapNET failed (exit code {proc.returncode}):\n{stderr[-2000:]}")
+                raise RuntimeError(f"MocapNET failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
 
         # Rename to .bvh for clarity
         final_bvh = bvh_stem + '.bvh'
@@ -936,7 +975,8 @@ def _run_processing(job_id):
             job.error_message = f"{tb_str}\n\n--- Original error ---\n{e}"[:4000]
             job.save()
     finally:
-        _active_procs.pop(str(job_id), None)
+        with _active_procs_lock:
+            _active_procs.pop(str(job_id), None)
 
 
 def start_processing(request, job_id):
@@ -976,7 +1016,8 @@ def stop_processing(request, job_id):
     """
     job = get_object_or_404(BVHJob, id=job_id)
     jid = str(job.id)
-    proc = _active_procs.get(jid)
+    with _active_procs_lock:
+        proc = _active_procs.get(jid)
 
     if proc and proc.poll() is None:
         output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
@@ -1004,10 +1045,12 @@ def stop_processing(request, job_id):
             proc.kill()
             proc.wait(timeout=5)
 
-        _active_procs.pop(jid, None)
+        with _active_procs_lock:
+            _active_procs.pop(jid, None)
         # Background thread handles final job status (partial BVH or failed)
     else:
-        _active_procs.pop(jid, None)
+        with _active_procs_lock:
+            _active_procs.pop(jid, None)
         job.status = 'failed'
         job.error_message = 'Cancelled by user'
         job.save()
@@ -1083,9 +1126,7 @@ def serve_keypoints_2d(request, job_id):
     job = get_object_or_404(BVHJob, id=job_id)
     output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
 
-    body_joints = ['head', 'neck', 'rshoulder', 'relbow', 'rhand',
-                   'lshoulder', 'lelbow', 'lhand', 'hip',
-                   'rhip', 'rknee', 'rfoot', 'lhip', 'lknee', 'lfoot']
+    body_joints = BODY_JOINT_NAMES
 
     connections = [
         ['head', 'neck'],
@@ -1211,13 +1252,16 @@ def open_in_blender(request, pk):
     blender_exe = r'C:\Program Files\Blender Foundation\Blender 5.0\blender.exe'
 
     # Create a temporary Python script for Blender
+    # Sanitize path: use repr() to prevent injection via special chars
     import tempfile
+    safe_path = repr(str(bvh.path))
+    safe_name = repr(str(bvh.name))
     script_content = f'''
 import bpy
 
 # Import BVH
-bpy.ops.import_anim.bvh(filepath=r"{bvh.path}")
-print("BVH loaded: {bvh.name}")
+bpy.ops.import_anim.bvh(filepath={safe_path})
+print("BVH loaded:", {safe_name})
 '''
     script_path = os.path.join(tempfile.gettempdir(), 'mocapnet_load_bvh.py')
     with open(script_path, 'w') as f:
@@ -1378,10 +1422,7 @@ def _get_2d_keypoints(job):
             for row in reader:
                 kp = {}
                 # Body joints from CSV header (2DX_name, 2DY_name, visible_name)
-                body_joints = ['head', 'neck', 'rshoulder', 'relbow', 'rhand',
-                               'lshoulder', 'lelbow', 'lhand', 'hip',
-                               'rhip', 'rknee', 'rfoot', 'lhip', 'lknee', 'lfoot',
-                               'endsite_eye.r', 'endsite_eye.l', 'rear', 'lear']
+                body_joints = BODY_JOINT_NAMES
                 for jname in body_joints:
                     xk, yk, vk = f'2DX_{jname}', f'2DY_{jname}', f'visible_{jname}'
                     if xk in row and row[xk]:

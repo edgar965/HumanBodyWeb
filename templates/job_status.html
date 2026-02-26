@@ -76,29 +76,37 @@
 {% block extra_scripts %}
 {% if job.status != 'complete' and job.status != 'failed' %}
 <script>
-// Poll for status updates
+// Poll for status updates (with max retries + backoff)
 const jobId = '{{ job.id }}';
+let pollErrors = 0;
+const MAX_POLL_ERRORS = 60;  // stop after 60 consecutive errors (~5 min)
+
 function pollStatus() {
     fetch(`/api/job/${jobId}/status/`)
         .then(r => r.json())
         .then(data => {
+            pollErrors = 0;  // reset on success
             document.getElementById('progressFill').style.width = data.progress + '%';
             document.getElementById('progressText').textContent = data.progress + '%';
             document.getElementById('progressDetail').textContent = data.progress_detail || '';
             var labels = {
                 'pending': 'Pending',
+                'detecting_2d': '2D Detection',
                 'openpose': 'OpenPose',
                 'openpose_csv': 'CSV Convert',
                 'mediapipe': 'MediaPipe',
+                'lifting_3d': '3D Lifting',
                 'mocapnet': 'MocapNET',
                 'v4_processing': 'MocapNET v4',
                 'complete': 'Complete',
                 'failed': 'Failed'
             };
             var phases = {
+                'detecting_2d': '2D Pose Detection',
                 'openpose': '2D Pose Detection (GPU)',
                 'openpose_csv': 'Converting to CSV',
                 'mediapipe': '2D Pose Detection (CPU)',
+                'lifting_3d': '3D Pose Estimation',
                 'mocapnet': '3D Pose Estimation',
                 'v4_processing': 'MocapNET v4 (2D + 3D + IK)',
             };
@@ -112,7 +120,16 @@ function pollStatus() {
                 setTimeout(pollStatus, 2000);
             }
         })
-        .catch(() => setTimeout(pollStatus, 5000));
+        .catch(() => {
+            pollErrors++;
+            if (pollErrors >= MAX_POLL_ERRORS) {
+                document.getElementById('jobPhase').textContent = 'Connection lost — please reload the page';
+                return;
+            }
+            // Exponential backoff: 5s, 10s, 15s... capped at 30s
+            var delay = Math.min(5000 * pollErrors, 30000);
+            setTimeout(pollStatus, delay);
+        });
 }
 setTimeout(pollStatus, 2000);
 </script>

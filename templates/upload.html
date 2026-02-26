@@ -71,7 +71,7 @@
             <input type="number" name="fps" id="fps" value="30" min="1" max="120" step="0.1">
         </div>
 
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-primary" id="uploadBtn">
             <i class="fas fa-upload"></i> Upload
         </button>
     </form>
@@ -223,6 +223,14 @@ const videoInput = document.getElementById('videoInput');
 
 dropTarget.addEventListener('click', () => videoInput.click());
 
+// Double-submit guard
+document.getElementById('uploadForm').addEventListener('submit', function() {
+    var btn = document.getElementById('uploadBtn');
+    if (btn.disabled) { event.preventDefault(); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+});
+
 dropTarget.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropTarget.classList.add('drag-over');
@@ -285,6 +293,9 @@ function bulkDelete() {
     var ids = Array.from(document.querySelectorAll('.job-check:checked')).map(c => c.value);
     if (!ids.length) return;
     if (!confirm('Delete ' + ids.length + ' job(s)?')) return;
+    var btn = document.getElementById('bulkDeleteBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
     fetch('/api/jobs/bulk-delete/', {
         method: 'POST',
         headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
@@ -303,6 +314,9 @@ function bulkDelete() {
                 if (section) section.style.display = 'none';
             }
         }
+    }).finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-trash"></i> Delete Selected';
     });
 }
 
