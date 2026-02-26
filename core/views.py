@@ -1388,19 +1388,36 @@ def _render_video_with_skeleton(job, overlay=True):
     if not keypoints_list:
         return None
 
-    cap = cv2.VideoCapture(str(video_path)) if overlay else None
+    cap = cv2.VideoCapture(str(video_path))
+    video_fps = cap.get(cv2.CAP_PROP_FPS) or (job.fps or 30)
+    total_video_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if not overlay:
+        cap.release()
+        cap = None
+
     fps = job.fps or 30
+    n_bvh = len(keypoints_list)
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    writer = cv2.VideoWriter(str(out_path), fourcc, fps, (w, h))
+    writer = cv2.VideoWriter(str(out_path), fourcc, video_fps, (w, h))
 
-    for kp in keypoints_list:
+    # Proportional mapping: video frame i → BVH frame
+    # Matches Three.js: (currentTime / duration) * clipDuration
+    for vi in range(total_video_frames):
         if overlay and cap:
             ret, frame = cap.read()
             if not ret:
                 frame = np.zeros((h, w, 3), dtype=np.uint8)
         else:
             frame = np.zeros((h, w, 3), dtype=np.uint8)
+
+        # Map video frame to BVH frame proportionally
+        if total_video_frames > 1:
+            bvh_idx = int(vi / (total_video_frames - 1) * (n_bvh - 1))
+        else:
+            bvh_idx = 0
+        bvh_idx = max(0, min(bvh_idx, n_bvh - 1))
+        kp = keypoints_list[bvh_idx]
 
         color = (0, 255, 0) if overlay else (255, 255, 255)
         _draw_skeleton(frame, kp, connections=connections, color=color,

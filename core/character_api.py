@@ -57,7 +57,12 @@ def _get_mesh_data():
 
 
 def _get_cc_subdivider():
-    """Get or create Catmull-Clark subdivider (cached singleton)."""
+    """Get or create Catmull-Clark subdivider (cached singleton).
+
+    Also initialises reference face normals from the Female_Caucasian mesh
+    so that subsequent body types get correct normal orientation even when
+    their geometry has degenerate (collapsed) vertices.
+    """
     global _cc_subdivider
     if _cc_subdivider is None:
         mesh = _get_mesh_data()
@@ -71,6 +76,18 @@ def _get_cc_subdivider():
             logger.info("CC subdivider: %d base -> %d sub vertices, %d triangles",
                         mesh.faces.max() + 1, _cc_subdivider.sub_vertex_count,
                         len(_cc_subdivider.triangles))
+
+            # Eagerly compute reference normals from Female_Caucasian
+            # (known-good mesh with 0 degenerate faces).
+            md = _get_morph_data()
+            cd = _get_char_defaults()
+            ref_state = CharacterState(md, cd)
+            ref_state.set_body_type('Female_Caucasian')
+            ref_verts = ref_state.compute()
+            if ref_verts is not None:
+                ref_sub = _cc_subdivider.subdivide(ref_verts)
+                _cc_subdivider.compute_quad_normals(ref_sub)
+                logger.info("CC subdivider: reference normals initialised from Female_Caucasian")
     return _cc_subdivider
 
 
