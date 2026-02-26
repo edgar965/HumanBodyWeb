@@ -2,13 +2,16 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-console.log('[bvh_player] v0.75 loaded');
+console.log('[bvh_player] v0.76 loaded');
 
 export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null, detectionUrl = null, keypointsUrl = null }) {
-    console.log('[bvh_player] initBVHPlayer called');
+    console.log('[bvh_player] initBVHPlayer called', { videoId, canvasId });
     const video = document.getElementById(videoId);
     const container = document.getElementById(canvasId);
-    if (!video || !container) return;
+    if (!video || !container) {
+        console.error('[bvh_player] Missing elements:', { video: !!video, container: !!container });
+        return;
+    }
 
     // --- Three.js setup (3D panel) ---
     const scene = new THREE.Scene();
@@ -101,6 +104,18 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     const timeDuration = document.getElementById('timeDuration');
     const speedBtns = document.querySelectorAll('.speed-btn');
 
+    // --- Video metadata (must be registered BEFORE BVH load, not inside callback) ---
+    function onVideoMetadata() {
+        console.log('[bvh_player] Video metadata loaded, duration:', video.duration);
+        if (timelineSlider) timelineSlider.max = video.duration;
+        if (timeDuration) timeDuration.textContent = formatTime(video.duration);
+    }
+    video.addEventListener('loadedmetadata', onVideoMetadata);
+    // If already loaded (cached), apply immediately
+    if (video.duration && !isNaN(video.duration)) {
+        onVideoMetadata();
+    }
+
     // --- Load BVH (3D panel only) ---
     const loader = new BVHLoader();
     const BODY_BONE_NAMES = new Set([
@@ -112,6 +127,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     ]);
 
     loader.load(bvhUrl, (result) => {
+        console.log('[bvh_player] BVH loaded, bones:', result.skeleton.bones.length);
         rootBone = result.skeleton.bones[0];
         scene.add(rootBone);
 
@@ -138,18 +154,8 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
         // Auto-center camera — fit skeleton to fill viewport
         centerCamera(rootBone);
-
-        // Timeline
-        video.addEventListener('loadedmetadata', () => {
-            timelineSlider.max = video.duration;
-            timeDuration.textContent = formatTime(video.duration);
-        });
-        if (video.duration) {
-            timelineSlider.max = video.duration;
-            timeDuration.textContent = formatTime(video.duration);
-        }
     }, undefined, (err) => {
-        console.error('BVH load error:', err);
+        console.error('[bvh_player] BVH load error:', err);
         container.innerHTML = '<div style="color:#e94560;padding:2rem;text-align:center;">Failed to load BVH file</div>';
     });
 
@@ -272,27 +278,29 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
     // --- Controls ---
     function togglePlayPause() {
+        console.log('[bvh_player] togglePlayPause, paused=', video.paused);
         if (video.paused) {
-            video.play();
-            isPlaying = true;
-            playIcon.className = 'fas fa-pause';
+            video.play().catch(err => console.warn('[bvh_player] play() rejected:', err.message));
         } else {
             video.pause();
-            isPlaying = false;
-            playIcon.className = 'fas fa-play';
         }
+        // State is updated by video 'play'/'pause' event listeners below
     }
 
     function skip(delta) {
-        video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + delta));
+        const dur = video.duration;
+        if (!dur || isNaN(dur)) { console.warn('[bvh_player] skip: no duration'); return; }
+        video.currentTime = Math.max(0, Math.min(dur, video.currentTime + delta));
+        console.log('[bvh_player] skip', delta, '→', video.currentTime);
     }
 
     function frameStep(direction) {
+        const dur = video.duration;
+        if (!dur || isNaN(dur)) { console.warn('[bvh_player] frameStep: no duration'); return; }
         video.pause();
-        isPlaying = false;
-        playIcon.className = 'fas fa-play';
         const frameDuration = 1 / fps;
-        video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + direction * frameDuration));
+        video.currentTime = Math.max(0, Math.min(dur, video.currentTime + direction * frameDuration));
+        console.log('[bvh_player] frameStep', direction, '→', video.currentTime.toFixed(3));
     }
 
     function setSpeed(speed) {
@@ -305,18 +313,22 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     }
 
     // Button handlers
-    btnPlayPause.addEventListener('click', togglePlayPause);
-    document.getElementById('btnSkipBack10').addEventListener('click', () => skip(-10));
-    document.getElementById('btnSkipBack1').addEventListener('click', () => skip(-1));
-    document.getElementById('btnSkipFwd1').addEventListener('click', () => skip(1));
-    document.getElementById('btnSkipFwd10').addEventListener('click', () => skip(10));
-    document.getElementById('btnFrameBack').addEventListener('click', () => frameStep(-1));
-    document.getElementById('btnFrameFwd').addEventListener('click', () => frameStep(1));
+    console.log('[bvh_player] Attaching button handlers...');
+    if (btnPlayPause) btnPlayPause.addEventListener('click', togglePlayPause);
+    const _btn = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); else console.warn('[bvh_player] Missing button:', id); };
+    _btn('btnSkipBack10', () => skip(-10));
+    _btn('btnSkipBack1', () => skip(-1));
+    _btn('btnSkipFwd1', () => skip(1));
+    _btn('btnSkipFwd10', () => skip(10));
+    _btn('btnFrameBack', () => frameStep(-1));
+    _btn('btnFrameFwd', () => frameStep(1));
 
     // Timeline slider
-    timelineSlider.addEventListener('input', () => {
-        video.currentTime = parseFloat(timelineSlider.value);
-    });
+    if (timelineSlider) {
+        timelineSlider.addEventListener('input', () => {
+            video.currentTime = parseFloat(timelineSlider.value);
+        });
+    }
 
     // Speed buttons
     speedBtns.forEach(btn => {
@@ -325,7 +337,8 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'TEXTAREA') return;
+        const tag = e.target.tagName;
+        if (tag === 'TEXTAREA' || tag === 'INPUT') return;
         if (e.key === ' ') {
             e.preventDefault();
             togglePlayPause();
@@ -339,6 +352,8 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
             else frameStep(1);
         }
     });
+
+    console.log('[bvh_player] All handlers attached. Video duration:', video.duration);
 
     // Video events
     video.addEventListener('play', () => {
