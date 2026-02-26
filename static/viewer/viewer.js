@@ -231,6 +231,23 @@ function init() {
             modelToggle.classList.toggle('active', bodyMesh && bodyMesh.visible);
         });
     }
+
+    // Clothes toggle — hide/show all assets (cloth, wardrobe, hair)
+    const clothesToggle = document.getElementById('clothes-toggle');
+    if (clothesToggle) {
+        let clothesVisible = true;
+        clothesToggle.addEventListener('click', () => {
+            clothesVisible = !clothesVisible;
+            for (const m of Object.values(clothMeshes)) {
+                if (m) m.visible = clothesVisible;
+            }
+            for (const m of Object.values(loadedAssets)) {
+                if (m) m.visible = clothesVisible;
+            }
+            if (hairMesh) hairMesh.visible = clothesVisible;
+            clothesToggle.classList.toggle('active', clothesVisible);
+        });
+    }
 }
 
 function onResize() {

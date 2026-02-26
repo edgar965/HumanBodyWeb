@@ -18,6 +18,8 @@ import * as THREE from 'three';
 
 export function detectBVHFormat(bones) {
     const names = new Set(bones.map(b => b.name));
+    // AIST: Pelvis + Left_hip (underscore naming, no Chest)
+    if (names.has('Pelvis') && names.has('Left_hip')) return 'AIST';
     // Bandai: uses Chest + UpperArm_L (underscore naming)
     if (names.has('Chest') && names.has('UpperArm_L')) return 'BANDAI';
     if (names.has('Hips') && names.has('LeftArm')) {
@@ -250,6 +252,34 @@ export const BVH_TO_DEF_MOCAPNET = {
     'orbicularis04.r': 'DEF-lid.B.R',
 };
 
+export const BVH_TO_DEF_AIST = {
+    // AIST skeleton (Pelvis → Spine1/2/3 → Neck → Head, Left_hip/knee/ankle/foot)
+    'Pelvis':          'DEF-spine',
+    'Spine1':          'DEF-spine.001',
+    'Spine2':          'DEF-spine.002',
+    'Spine3':          'DEF-spine.003',
+    'Neck':            'DEF-spine.004',
+    'Head':            'DEF-spine.006',
+    'Left_collar':     'DEF-shoulder.L',
+    'Left_shoulder':   'DEF-upper_arm.L',
+    'Left_elbow':      'DEF-forearm.L',
+    'Left_wrist':      'DEF-hand.L',
+    'Left_palm':       null,
+    'Right_collar':    'DEF-shoulder.R',
+    'Right_shoulder':  'DEF-upper_arm.R',
+    'Right_elbow':     'DEF-forearm.R',
+    'Right_wrist':     'DEF-hand.R',
+    'Right_palm':      null,
+    'Left_hip':        'DEF-thigh.L',
+    'Left_knee':       'DEF-shin.L',
+    'Left_ankle':      'DEF-foot.L',
+    'Left_foot':       'DEF-toe.L',
+    'Right_hip':       'DEF-thigh.R',
+    'Right_knee':      'DEF-shin.R',
+    'Right_ankle':     'DEF-foot.R',
+    'Right_foot':      'DEF-toe.R',
+};
+
 export const BVH_TO_DEF_BANDAI = {
     // Bandai Namco skeleton (joint_Root → Hips → Spine → Chest → ...)
     'Hips':        'DEF-spine',
@@ -301,6 +331,7 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const mapping = format === 'CMU' ? BVH_TO_DEF_CMU
                   : format === 'MIXAMO' ? BVH_TO_DEF_MIXAMO
                   : format === 'BANDAI' ? BVH_TO_DEF_BANDAI
+                  : format === 'AIST' ? BVH_TO_DEF_AIST
                   : BVH_TO_DEF_MOCAPNET;
 
     // --- DEF rest-pose world quaternions ---
@@ -403,9 +434,34 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         }
     }
 
+    // --- For Bandai/AIST: compute frame-0 BVH world Qs BEFORE direction correction ---
+    // These formats encode the standing pose in frame-0 rotations (not identity rest).
+    // We need frame-0 world Qs to compute correct bone directions for direction correction.
+    const bvhRestWorldQ = {};
+    const useDeltaRetarget = (format === 'BANDAI' || format === 'AIST');
+    if (useDeltaRetarget) {
+        const _tq = new THREE.Quaternion();
+        for (const bvhName of bvhBonesSorted) {
+            const track = bvhQuatTracks[bvhName];
+            if (track) {
+                _tq.set(track.values[0], track.values[1],
+                        track.values[2], track.values[3]);
+            } else {
+                _tq.set(0, 0, 0, 1);
+            }
+            const parentName = bvhBoneParentName[bvhName];
+            if (parentName && bvhRestWorldQ[parentName]) {
+                bvhRestWorldQ[bvhName] = bvhRestWorldQ[parentName].clone().multiply(_tq);
+            } else {
+                bvhRestWorldQ[bvhName] = _tq.clone();
+            }
+        }
+    }
+
     // --- Offset Q per mapped bone (with direction correction) ---
     // Direction correction aligns BVH bone directions with DEF bone directions.
-    // This is needed because BVH and DEF may have different rest poses (T vs A).
+    // For standard formats (CMU/Mixamo/MocapNET): use raw offset directions.
+    // For delta-retarget (Bandai/AIST): use frame-0 posed directions (rotated by bvhRestWorldQ).
     const _NEG_Z = new THREE.Vector3(0, 0, -1);
     const offsetQ = {};
 
@@ -423,12 +479,20 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         const defRestDir = _NEG_Z.clone().applyQuaternion(defWorldRestQ[defName]).normalize();
         const bvhBone = bvhBoneByName[bvhName];
 
-        // Find BVH bone direction from best-aligned child offset
+        // Find BVH bone direction from best-aligned child
+        // For delta-retarget: rotate offset by bone's frame-0 world Q to get actual direction
+        const bvhWorldQ_f0 = useDeltaRetarget ? bvhRestWorldQ[bvhName] : null;
         let bvhDir = null;
         let bestDot = -Infinity;
+        let rawChildYDominant = false;
         for (const child of bvhBone.children) {
             if (child.isBone && child.position.lengthSq() > 1e-10) {
-                const dir = child.position.clone().normalize();
+                let dir = child.position.clone().normalize();
+                // Check if raw offset is Y-dominant (physical position, not bone direction)
+                const p = child.position;
+                if (Math.abs(p.y) > Math.abs(p.x) && Math.abs(p.y) > Math.abs(p.z))
+                    rawChildYDominant = true;
+                if (bvhWorldQ_f0) dir.applyQuaternion(bvhWorldQ_f0);
                 const dot = dir.dot(defRestDir);
                 if (dot > bestDot) { bestDot = dot; bvhDir = dir; }
             }
@@ -436,9 +500,20 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         // Fallback to own position offset
         if (!bvhDir && bvhBone.position.lengthSq() > 1e-10) {
             bvhDir = bvhBone.position.clone().normalize();
+            const p = bvhBone.position;
+            if (Math.abs(p.y) > Math.abs(p.x) && Math.abs(p.y) > Math.abs(p.z))
+                rawChildYDominant = true;
+            if (bvhWorldQ_f0) bvhDir.applyQuaternion(bvhWorldQ_f0);
         }
 
-        if (!bvhDir || bvhDir.lengthSq() < 1e-10) {
+        // For delta-retarget foot/toe bones: if the BVH child offset is Y-dominant,
+        // it represents physical joint position (ankle→toe goes downward) rather
+        // than bone direction (foot points forward). Skip direction correction
+        // to preserve DEF rest orientation (forward-pointing foot).
+        const isFootToe = /foot|toe/i.test(defName);
+        if (useDeltaRetarget && isFootToe && rawChildYDominant) {
+            offsetQ[defName] = defWorldRestQ[defName].clone();
+        } else if (!bvhDir || bvhDir.lengthSq() < 1e-10) {
             offsetQ[defName] = defWorldRestQ[defName].clone();
         } else {
             const dirCorr = new THREE.Quaternion().setFromUnitVectors(defRestDir, bvhDir);
@@ -472,30 +547,6 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const defAnimWorldQ = {};   // per-frame animated world Q cache
     const bvhWorldAnimQ = {};   // per-frame BVH world Q cache
 
-    // --- For Bandai: compute frame-0 BVH world Qs as "BVH rest world Q" ---
-    // Bandai's rest offsets don't represent standing pose; frame-0 rotations
-    // encode the actual standing pose. We need to extract the animation DELTA
-    // relative to frame-0, then apply that delta to DEF rest Qs.
-    const bvhRestWorldQ = {};
-    const isBandai = (format === 'BANDAI');
-    if (isBandai) {
-        for (const bvhName of bvhBonesSorted) {
-            const track = bvhQuatTracks[bvhName];
-            if (track) {
-                tmpQ.set(track.values[0], track.values[1],
-                         track.values[2], track.values[3]);
-            } else {
-                tmpQ.set(0, 0, 0, 1);
-            }
-            const parentName = bvhBoneParentName[bvhName];
-            if (parentName && bvhRestWorldQ[parentName]) {
-                bvhRestWorldQ[bvhName] = bvhRestWorldQ[parentName].clone().multiply(tmpQ);
-            } else {
-                bvhRestWorldQ[bvhName] = tmpQ.clone();
-            }
-        }
-    }
-
     // --- Per-frame retarget ---
     for (let f = 0; f < fc; f++) {
         const ti = f * 4;
@@ -527,24 +578,35 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
 
             if (mappedDefNames.has(defName)) {
                 const bvhName = defToBvhName[defName];
-                const bvhWAQ = bvhWorldAnimQ[bvhName];
-                if (bvhWAQ) {
-                    if (isBandai) {
-                        // Bandai: delta = bvhWorldAnimQ × bvhRestWorldQ⁻¹
-                        // desiredWorldQ = delta × defWorldRestQ
-                        const restQ = bvhRestWorldQ[bvhName];
+
+                if (useDeltaRetarget) {
+                    // Delta + direction correction:
+                    // desiredWorldQ = (bvhWAQ × bvhRWQ⁻¹) × offsetQ
+                    // where offsetQ uses frame-0 posed bone directions for correction.
+                    // At frame 0: delta=identity → desiredWorldQ = offsetQ (direction-aligned rest)
+                    // At frame N: delta rotates from frame-0 to frame-N applied to aligned DEF
+                    const bvhWAQ = bvhWorldAnimQ[bvhName];
+                    const bvhRWQ = bvhRestWorldQ[bvhName];
+                    if (bvhWAQ && bvhRWQ) {
                         desiredWorldQ.copy(bvhWAQ)
-                            .multiply(restQ.clone().invert())
-                            .multiply(defWorldRestQ[defName])
+                            .multiply(bvhRWQ.clone().invert())
+                            .multiply(offsetQ[defName])
                             .normalize();
+                        // defLocalQ = parentAnimWQ⁻¹ × desiredWorldQ
+                        tmpQ.copy(parentAnimWQ).invert().multiply(desiredWorldQ).normalize();
                     } else {
-                        // Standard: defWorldQ = bvhWorldAnimQ × offsetQ
-                        desiredWorldQ.copy(bvhWAQ).multiply(offsetQ[defName]).normalize();
+                        tmpQ.copy(defRestLocalQ[defName] || new THREE.Quaternion());
                     }
-                    // defLocalQ = parentAnimWQ⁻¹ × defWorldQ
-                    tmpQ.copy(parentAnimWQ).invert().multiply(desiredWorldQ).normalize();
                 } else {
-                    tmpQ.copy(defRestLocalQ[defName] || new THREE.Quaternion());
+                    // Standard: desiredWorldQ = bvhWorldAnimQ × offsetQ
+                    const bvhWAQ = bvhWorldAnimQ[bvhName];
+                    if (bvhWAQ) {
+                        desiredWorldQ.copy(bvhWAQ).multiply(offsetQ[defName]).normalize();
+                        // defLocalQ = parentAnimWQ⁻¹ × desiredWorldQ
+                        tmpQ.copy(parentAnimWQ).invert().multiply(desiredWorldQ).normalize();
+                    } else {
+                        tmpQ.copy(defRestLocalQ[defName] || new THREE.Quaternion());
+                    }
                 }
 
                 const out = outputQuats[defName];
