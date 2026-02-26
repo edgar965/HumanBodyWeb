@@ -22,10 +22,13 @@
         </a>
         {% if job.bvh_file %}
         <a href="{% url 'serve_bvh' job.id %}" class="btn btn-primary btn-sm" download>
-            <i class="fas fa-download"></i> Download BVH
+            <i class="fas fa-download"></i> BVH
         </a>
         <a href="{% url 'save_overlay_video' job.id %}" class="btn btn-secondary btn-sm" download>
-            <i class="fas fa-download"></i> Download Skeleton Video
+            <i class="fas fa-download"></i> Video + Skeleton
+        </a>
+        <a href="{% url 'save_rig_video' job.id %}" class="btn btn-secondary btn-sm" download>
+            <i class="fas fa-download"></i> Nur Skeleton
         </a>
         {% endif %}
     </div>
