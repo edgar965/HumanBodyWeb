@@ -305,6 +305,11 @@
 {% endblock %}
 
 {% block content %}
+<div id="test-version-banner" style="
+    display:none; position:fixed; top:0; left:var(--sidebar-width,220px); right:0;
+    z-index:100; padding:6px 16px; background:#e67e22; color:#fff;
+    font-size:0.82rem; text-align:center; font-weight:600;
+">Test Charakter — Version wird geladen...</div>
 <div class="viewer-container">
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
@@ -521,6 +526,13 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+window.VIEWER_CONFIG = {
+    apiPrefix: '/api/character-test',
+    wsPath: '/ws/character-test/',
+    defaultBodyType: 'Male_Caucasian',
+};
+</script>
 <script type="importmap">
 {
     "imports": {
@@ -530,5 +542,21 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=23"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?v=24"></script>
+<script>
+(function() {
+    const banner = document.getElementById('test-version-banner');
+    if (!banner) return;
+    fetch('/api/character-test/version/')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+            if (d && d.short_hash) {
+                banner.textContent = 'Test Charakter \u2014 Version: ' + d.short_hash +
+                    ' \u2014 ' + d.message + ' (' + d.date.split(' ')[0] + ')';
+                banner.style.display = 'block';
+            }
+        })
+        .catch(() => {});
+})();
+</script>
 {% endblock %}

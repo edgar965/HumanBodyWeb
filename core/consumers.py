@@ -122,3 +122,25 @@ class CharacterConsumer(AsyncWebsocketConsumer):
             self._char_state._meta_values.clear()
             vertices = self._char_state.compute()
             await self._send_vertices(vertices)
+
+
+class TestCharacterConsumer(CharacterConsumer):
+    """WebSocket consumer for test character morphing (isolated version)."""
+
+    def _init_state(self):
+        """Initialize CharacterState from TestCharakter/ directory."""
+        try:
+            from core.test_character_api import (
+                _load_test_module, _get_test_morph_data,
+                _get_test_char_defaults, _get_test_cc_subdivider,
+            )
+            mod = _load_test_module()
+            md = _get_test_morph_data()
+            cd = _get_test_char_defaults()
+
+            self._char_state = mod.CharacterState(md, cd)
+            self._char_state.set_body_type('Male_Caucasian')
+
+            self._cc_sub = _get_test_cc_subdivider()
+        except Exception as e:
+            logger.error("Failed to init test CharacterState: %s", e)

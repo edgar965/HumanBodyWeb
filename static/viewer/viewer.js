@@ -11,6 +11,14 @@ import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=18';
 
 // =========================================================================
+// Viewer config — overridable via window.VIEWER_CONFIG (set in template)
+// =========================================================================
+const CFG = window.VIEWER_CONFIG || {};
+const API = CFG.apiPrefix || '/api/character';
+const WS_PATH = CFG.wsPath || '/ws/character/';
+const DEFAULT_BODY = CFG.defaultBodyType || null;  // null = use preset
+
+// =========================================================================
 // Global state
 // =========================================================================
 let scene, camera, renderer, controls;
@@ -316,7 +324,7 @@ function getSkinMat() {
 
 async function loadMesh() {
     try {
-        const resp = await fetch('/api/character/mesh/');
+        const resp = await fetch(`${API}/mesh/`);
         const data = await resp.json();
         if (data.error) { console.error(data.error); return; }
 
@@ -406,7 +414,7 @@ function updateMeshVertices(float32Buffer) {
 
 async function loadSkinWeights() {
     try {
-        const resp = await fetch('/api/character/skin-weights/');
+        const resp = await fetch(`${API}/skin-weights/`);
         if (resp.ok) skinWeightData = await resp.json();
     } catch (e) {
         console.warn('Skin weights not available:', e);
@@ -415,7 +423,7 @@ async function loadSkinWeights() {
 
 async function loadDefSkeleton() {
     try {
-        const resp = await fetch('/api/character/def-skeleton/');
+        const resp = await fetch(`${API}/def-skeleton/`);
         if (resp.ok) {
             defSkeletonData = await resp.json();
             console.log(`DEF skeleton loaded: ${defSkeletonData.bone_count} bones`);
@@ -567,7 +575,7 @@ function ensureSkinned() {
 // =========================================================================
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${protocol}://${window.location.host}/ws/character/`;
+    const url = `${protocol}://${window.location.host}${WS_PATH}`;
 
     ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
@@ -646,7 +654,7 @@ let morphCategories = {};
 
 async function loadMorphs() {
     try {
-        const resp = await fetch('/api/character/morphs/');
+        const resp = await fetch(`${API}/morphs/`);
         const data = await resp.json();
 
         // Body type dropdown
@@ -1890,6 +1898,22 @@ async function loadDefaultPreset() {
     }
     // Small extra delay to ensure UI (cloth/hair dropdowns) is populated
     await new Promise(r => setTimeout(r, 500));
+
+    // If VIEWER_CONFIG specifies a default body type, use that directly
+    // (test page — skip settings API / preset loading)
+    if (DEFAULT_BODY) {
+        try {
+            const bodySelect = document.getElementById('body-type-select');
+            if (bodySelect) {
+                bodySelect.value = DEFAULT_BODY;
+                bodySelect.dispatchEvent(new Event('change'));
+            }
+            console.log(`Default body type applied: ${DEFAULT_BODY}`);
+        } catch (e) {
+            console.warn('Failed to apply default body type:', e);
+        }
+        return;
+    }
 
     try {
         // Determine default settings from settings API

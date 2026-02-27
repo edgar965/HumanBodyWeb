@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import character_api
+from . import test_character_api
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
@@ -65,4 +66,12 @@ urlpatterns = [
     # Hair
     path('api/character/hairstyles/', character_api.character_hairstyles, name='character_hairstyles'),
     path('api/character/hairstyle/<str:name>/', character_api.character_hairstyle_glb, name='character_hairstyle_glb'),
+
+    # Test Character API (isolated version from TestCharakter/)
+    path('api/character-test/mesh/', test_character_api.test_character_mesh, name='test_character_mesh'),
+    path('api/character-test/morphs/', test_character_api.test_character_morphs, name='test_character_morphs'),
+    path('api/character-test/skin-weights/', test_character_api.test_character_skin_weights, name='test_character_skin_weights'),
+    path('api/character-test/def-skeleton/', test_character_api.test_character_def_skeleton, name='test_character_def_skeleton'),
+    path('api/character-test/version/', test_character_api.test_version_info, name='test_version_info'),
+    path('api/character-test/reload/', test_character_api.test_reload, name='test_reload'),
 ]
