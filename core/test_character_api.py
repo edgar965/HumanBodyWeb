@@ -176,7 +176,6 @@ def test_character_mesh(request):
     """Return mesh data from the test version."""
     default_bt = _get_default_body_type()
     body_type = request.GET.get('body_type', default_bt)
-    gender = float(request.GET.get('gender', 0))
 
     mod = _load_test_module()
     md = _get_test_morph_data()
@@ -185,7 +184,6 @@ def test_character_mesh(request):
 
     state = mod.CharacterState(md, cd)
     state.set_body_type(body_type)
-    state.set_gender(gender)
 
     for key, val in request.GET.items():
         if key.startswith('morph_'):

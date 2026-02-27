@@ -84,7 +84,7 @@ export function createViewer(config) {
 
     // DOM refs (created dynamically)
     let statusSpan, vertexSpan, fpsSpan;
-    let bodyTypeSelect, genderSlider, genderVal;
+    let bodyTypeSelect;
     let metaSliderEls = {};
     let morphsPanel;
     let skinColorInput, skinRoughSlider, skinRoughVal, skinMetalSlider, skinMetalVal;
@@ -194,6 +194,74 @@ export function createViewer(config) {
         }
     }
 
+    async function reloadMesh(bodyType) {
+        console.log(`[${label}] Reloading mesh for`, bodyType);
+        if (bodyMesh) {
+            scene.remove(bodyMesh);
+            bodyMesh.geometry?.dispose();
+            bodyMesh = null;
+            bodyGeometry = null;
+        }
+        try {
+            const resp = await fetch(`${apiPrefix}/mesh/?body_type=${encodeURIComponent(bodyType)}`);
+            const data = await resp.json();
+            if (data.error) { console.error(`[${label}] mesh error:`, data.error); return; }
+
+            vertexCount = data.vertex_count;
+            if (vertexSpan) vertexSpan.textContent = vertexCount.toLocaleString();
+
+            const vertBuf = base64ToFloat32(data.vertices);
+            blenderToThreeCoords(vertBuf);
+            const positions = new THREE.BufferAttribute(vertBuf, 3);
+
+            let index = null;
+            if (data.faces) {
+                const faceBuf = base64ToUint32(data.faces);
+                index = new THREE.BufferAttribute(faceBuf, 1);
+            }
+
+            let uvAttr = null;
+            if (data.uvs) {
+                const uvBuf = base64ToFloat32(data.uvs);
+                uvAttr = new THREE.BufferAttribute(uvBuf, 2);
+            }
+
+            const materials = BODY_MATERIALS.map(d => new THREE.MeshStandardMaterial({
+                color: d.color, roughness: d.roughness, metalness: d.metalness,
+                side: THREE.DoubleSide,
+                transparent: d.transparent || false,
+                opacity: d.opacity !== undefined ? d.opacity : 1.0,
+            }));
+
+            let geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', positions);
+            if (index) geo.setIndex(index);
+            if (uvAttr) geo.setAttribute('uv', uvAttr);
+
+            if (data.normals) {
+                const normalBuf = base64ToFloat32(data.normals);
+                blenderToThreeCoords(normalBuf);
+                geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+            } else {
+                geo.computeVertexNormals();
+            }
+
+            const groups = data.groups || [];
+            if (index && groups.length > 0) {
+                for (const g of groups) geo.addGroup(g.start, g.count, g.materialIndex);
+                bodyMesh = new THREE.Mesh(geo, materials);
+            } else {
+                bodyMesh = new THREE.Mesh(geo, materials[0]);
+            }
+
+            bodyGeometry = geo;
+            scene.add(bodyMesh);
+            if (vertexSpan) vertexSpan.textContent = geo.attributes.position.count.toLocaleString();
+        } catch (e) {
+            console.error(`[${label}] Failed to reload mesh:`, e);
+        }
+    }
+
     // ----- Morphs UI -----
     async function loadMorphs() {
         try {
@@ -213,20 +281,8 @@ export function createViewer(config) {
             if (defaultBodyType && data.body_types.includes(defaultBodyType)) {
                 bodyTypeSelect.value = defaultBodyType;
             }
-            // Set initial gender slider based on selected body type
-            const initMale = bodyTypeSelect.value.startsWith('Male_');
-            if (initMale) {
-                genderSlider.value = 100;
-                genderVal.textContent = '100';
-            }
-
             bodyTypeSelect.addEventListener('change', () => {
                 wsSend({ type: 'body_type', value: bodyTypeSelect.value });
-                // Set gender slider based on body type (Male → 100, Female → 0)
-                const isMale = bodyTypeSelect.value.startsWith('Male_');
-                genderSlider.value = isMale ? 100 : 0;
-                genderVal.textContent = isMale ? '100' : '0';
-                wsSend({ type: 'gender', value: isMale ? 1.0 : 0 });
                 // Update skin color based on ethnicity
                 const parts = bodyTypeSelect.value.split('_');
                 const ethnicity = parts[1] || parts[0];
@@ -240,13 +296,6 @@ export function createViewer(config) {
                     );
                     syncSkinUI(mat);
                 }
-            });
-
-            // Gender slider
-            genderSlider.addEventListener('input', () => {
-                const v = parseInt(genderSlider.value);
-                genderVal.textContent = v;
-                wsSend({ type: 'gender', value: v / 100.0 });
             });
 
             // Meta sliders
@@ -372,10 +421,9 @@ export function createViewer(config) {
         ws.onopen = () => {
             wsReady = true;
             if (statusSpan) { statusSpan.textContent = 'Connected'; statusSpan.className = 'connected'; }
-            // Sync body type + gender to server
+            // Sync body type to server
             if (bodyTypeSelect && bodyTypeSelect.value) {
                 wsSend({ type: 'body_type', value: bodyTypeSelect.value });
-                wsSend({ type: 'gender', value: parseInt(genderSlider.value) / 100.0 });
             }
         };
 
@@ -394,6 +442,7 @@ export function createViewer(config) {
                 try {
                     const msg = JSON.parse(event.data);
                     if (msg.type === 'error') console.error(`[${label}] Server:`, msg.message);
+                    else if (msg.type === 'reload_mesh') reloadMesh(msg.body_type);
                 } catch (e) { /* ignore */ }
             }
         };
@@ -424,12 +473,6 @@ export function createViewer(config) {
         bodyTypeSelect = document.createElement('select');
         bodyTypeSelect.className = 'viewer-select';
         btBody.appendChild(bodyTypeSelect);
-
-        // Gender
-        const gRow = mkSliderRow('Gender', 0, 100, 0, 1);
-        genderSlider = gRow.slider;
-        genderVal = gRow.val;
-        btBody.appendChild(gRow.row);
 
         // Meta sliders
         ['age', 'mass', 'tone', 'height'].forEach(name => {
@@ -548,8 +591,6 @@ export function createViewer(config) {
                 s.nextElementSibling.textContent = '0';
             });
         }
-        // Reset gender
-        if (genderSlider) { genderSlider.value = 0; genderVal.textContent = '0'; }
         // Reset meta sliders
         ['age', 'mass', 'tone', 'height'].forEach(name => {
             const els = metaSliderEls[name];

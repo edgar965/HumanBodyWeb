@@ -36,7 +36,8 @@ class CharacterConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
         self._char_state = None
-        self._cc_sub = None
+        self._cc_subs = {}  # {'female': CC, 'male': CC}
+        self._current_gender = 'female'
         self._init_state()
 
     def _init_state(self):
@@ -53,21 +54,48 @@ class CharacterConsumer(AsyncWebsocketConsumer):
             self._char_state = CharacterState(md, cd)
             self._char_state.set_body_type('Female_Caucasian')
 
-            # Reuse the CC subdivider singleton from character_api
+            # Preload female CC subdivider
             from core.character_api import _get_cc_subdivider
-            self._cc_sub = _get_cc_subdivider()
+            self._cc_subs['female'] = _get_cc_subdivider('female')
         except Exception as e:
             logger.error("Failed to init CharacterState: %s", e)
 
+    def _get_cc(self):
+        """Get CC subdivider for current gender, lazy-loading if needed."""
+        if self._current_gender not in self._cc_subs:
+            from core.character_api import _get_cc_subdivider
+            self._cc_subs[self._current_gender] = _get_cc_subdivider(self._current_gender)
+        return self._cc_subs.get(self._current_gender)
+
     async def disconnect(self, close_code):
         self._char_state = None
-        self._cc_sub = None
+        self._cc_subs = {}
 
     async def _send_vertices(self, vertices):
         """Send vertices, applying CC subdivision if available."""
-        if self._cc_sub is not None:
-            vertices = self._cc_sub.subdivide(vertices)
+        cc = self._get_cc()
+        if cc is not None:
+            vertices = cc.subdivide(vertices)
         await self.send(bytes_data=vertices.astype(np.float32).tobytes())
+
+    async def _handle_body_type(self, body_type):
+        """Handle body type change, detecting gender switch."""
+        gender_changed = self._char_state.set_body_type(body_type)
+        new_gender = self._char_state.current_gender
+        self._current_gender = new_gender
+
+        if gender_changed:
+            # Gender changed — client needs to reload mesh (different topology)
+            await self.send(text_data=json.dumps({
+                'type': 'reload_mesh',
+                'body_type': body_type,
+                'gender': new_gender,
+            }))
+            return
+
+        # Same gender — just send updated vertices
+        vertices = self._char_state.compute()
+        await self._send_vertices(vertices)
 
     async def receive(self, text_data=None, bytes_data=None):
         if text_data is None:
@@ -88,14 +116,7 @@ class CharacterConsumer(AsyncWebsocketConsumer):
         msg_type = msg.get('type')
 
         if msg_type == 'body_type':
-            self._char_state.set_body_type(msg['value'])
-            vertices = self._char_state.compute()
-            await self._send_vertices(vertices)
-
-        elif msg_type == 'gender':
-            self._char_state.set_gender(float(msg['value']))
-            vertices = self._char_state.compute()
-            await self._send_vertices(vertices)
+            await self._handle_body_type(msg['value'])
 
         elif msg_type == 'morph':
             self._char_state.set_morph(msg['key'], float(msg['value']))
@@ -116,8 +137,7 @@ class CharacterConsumer(AsyncWebsocketConsumer):
 
         elif msg_type == 'reset':
             body_type = msg.get('body_type', 'Female_Caucasian')
-            self._char_state.set_body_type(body_type)
-            self._char_state.set_gender(0.0)
+            await self._handle_body_type(body_type)
             self._char_state._morph_values.clear()
             self._char_state._meta_values.clear()
             vertices = self._char_state.compute()

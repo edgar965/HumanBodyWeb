@@ -28,8 +28,13 @@ logger = logging.getLogger(__name__)
 # Lazy-loaded singletons
 _morph_data = None
 _char_defaults = None
-_mesh_data = None
-_cc_subdivider = None
+_mesh_data = {}        # {'female': MeshData, 'male': MeshData}
+_cc_subdivider = {}    # {'female': CC, 'male': CC}
+
+
+def _gender_from_body_type(bt):
+    """Return 'male' or 'female' from body type prefix."""
+    return 'male' if bt.startswith('Male_') else 'female'
 
 
 def _get_morph_data():
@@ -48,47 +53,55 @@ def _get_char_defaults():
     return _char_defaults
 
 
-def _get_mesh_data():
+def _get_mesh_data(gender='female'):
+    """Get MeshData for a gender ('female' or 'male')."""
     global _mesh_data
-    if _mesh_data is None:
-        _mesh_data = MeshData(data_dir=str(settings.HUMANBODY_DATA_DIR))
-        _mesh_data.load()
-    return _mesh_data
+    if gender not in _mesh_data:
+        if gender == 'male':
+            data_dir = str(settings.HUMANBODY_DATA_DIR) + '_male'
+        else:
+            data_dir = str(settings.HUMANBODY_DATA_DIR)
+        md = MeshData(data_dir=data_dir)
+        md.load()
+        _mesh_data[gender] = md
+    return _mesh_data[gender]
 
 
-def _get_cc_subdivider():
-    """Get or create Catmull-Clark subdivider (cached singleton).
+def _get_cc_subdivider(gender='female'):
+    """Get or create Catmull-Clark subdivider (cached per gender).
 
-    Also initialises reference face normals from the Female_Caucasian mesh
+    Also initialises reference face normals from the basis mesh
     so that subsequent body types get correct normal orientation even when
     their geometry has degenerate (collapsed) vertices.
     """
     global _cc_subdivider
-    if _cc_subdivider is None:
-        mesh = _get_mesh_data()
+    if gender not in _cc_subdivider:
+        mesh = _get_mesh_data(gender)
         if mesh.faces is not None and mesh.faces.ndim == 2 and mesh.faces.shape[1] == 4:
-            _cc_subdivider = CatmullClarkSubdivider(
+            cc = CatmullClarkSubdivider(
                 mesh.faces,
                 face_materials=mesh.face_materials,
                 uvs=mesh.uvs,
                 levels=1,
             )
-            logger.info("CC subdivider: %d base -> %d sub vertices, %d triangles",
-                        mesh.faces.max() + 1, _cc_subdivider.sub_vertex_count,
-                        len(_cc_subdivider.triangles))
+            logger.info("CC subdivider (%s): %d base -> %d sub vertices, %d triangles",
+                        gender, mesh.faces.max() + 1, cc.sub_vertex_count,
+                        len(cc.triangles))
 
-            # Eagerly compute reference normals from Female_Caucasian
-            # (known-good mesh with 0 degenerate faces).
+            # Eagerly compute reference normals from basis mesh
+            basis_type = 'Male_Caucasian' if gender == 'male' else 'Female_Caucasian'
             md = _get_morph_data()
             cd = _get_char_defaults()
             ref_state = CharacterState(md, cd)
-            ref_state.set_body_type('Female_Caucasian')
+            ref_state.set_body_type(basis_type)
             ref_verts = ref_state.compute()
             if ref_verts is not None:
-                ref_sub = _cc_subdivider.subdivide(ref_verts)
-                _cc_subdivider.compute_quad_normals(ref_sub)
-                logger.info("CC subdivider: reference normals initialised from Female_Caucasian")
-    return _cc_subdivider
+                ref_sub = cc.subdivide(ref_verts)
+                cc.compute_quad_normals(ref_sub)
+                logger.info("CC subdivider (%s): reference normals initialised from %s",
+                            gender, basis_type)
+            _cc_subdivider[gender] = cc
+    return _cc_subdivider.get(gender)
 
 
 def character_viewer(request):
@@ -120,15 +133,14 @@ def test_character_page(request):
 def character_mesh(request):
     """Return base mesh data (vertices, faces, UVs) as JSON with base64 binary."""
     body_type = request.GET.get('body_type', 'Female_Caucasian')
-    gender = float(request.GET.get('gender', 0))
+    gender = _gender_from_body_type(body_type)
 
     md = _get_morph_data()
     cd = _get_char_defaults()
-    mesh = _get_mesh_data()
+    mesh = _get_mesh_data(gender)
 
     state = CharacterState(md, cd)
     state.set_body_type(body_type)
-    state.set_gender(gender)
 
     # Apply any morph values from query params
     morph_prefix = 'morph_'
@@ -144,7 +156,7 @@ def character_mesh(request):
     if vertices is None:
         return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
 
-    cc = _get_cc_subdivider()
+    cc = _get_cc_subdivider(gender)
 
     if cc is not None:
         # Catmull-Clark subdivision: smooth geometry matching Blender's output
@@ -235,11 +247,12 @@ def character_mesh(request):
 @require_GET
 def character_morphs(request):
     """Return list of available morphs and body types."""
+    body_type = request.GET.get('body_type', 'Female_Caucasian')
     md = _get_morph_data()
     cd = _get_char_defaults()
 
     state = CharacterState(md, cd)
-    state.set_body_type('Female_Caucasian')
+    state.set_body_type(body_type)
 
     morphs = state.get_morph_list()
 
@@ -297,31 +310,34 @@ def character_def_skeleton(request):
     return JsonResponse(data)
 
 
-_propagated_skin_weights = None
-_base_skin_weights = None
-_base_skin_arrays = None   # (indices(N,4), weights(N,4)) float32
+_propagated_skin_weights = {}  # {'female': data, 'male': data}
+_base_skin_weights = {}        # {'female': data, 'male': data}
+_base_skin_arrays = {}         # {'female': (indices, weights), 'male': ...}
 
 
-def _get_base_skin_weights():
-    """Load and cache base mesh skin weights (18K vertices)."""
+def _get_base_skin_weights(gender='female'):
+    """Load and cache base mesh skin weights."""
     global _base_skin_weights
-    if _base_skin_weights is not None:
-        return _base_skin_weights
-    base_path = os.path.join(str(settings.HUMANBODY_DATA_DIR),
-                             'skin_weights_base.json')
+    if gender in _base_skin_weights:
+        return _base_skin_weights[gender]
+    if gender == 'male':
+        data_dir = str(settings.HUMANBODY_DATA_DIR) + '_male'
+    else:
+        data_dir = str(settings.HUMANBODY_DATA_DIR)
+    base_path = os.path.join(data_dir, 'skin_weights_base.json')
     if os.path.isfile(base_path):
         with open(base_path, 'r', encoding='utf-8') as f:
-            _base_skin_weights = json.load(f)
-    return _base_skin_weights
+            _base_skin_weights[gender] = json.load(f)
+    return _base_skin_weights.get(gender)
 
 
-def _get_base_skin_arrays():
+def _get_base_skin_arrays(gender='female'):
     """Precompute compact (N,4) index/weight arrays for fast nearest-vertex
     skin weight lookup.  Cached after first call."""
     global _base_skin_arrays
-    if _base_skin_arrays is not None:
-        return _base_skin_arrays
-    sw = _get_base_skin_weights()
+    if gender in _base_skin_arrays:
+        return _base_skin_arrays[gender]
+    sw = _get_base_skin_weights(gender)
     if sw is None:
         return None
     n = sw['vertex_count']
@@ -336,9 +352,9 @@ def _get_base_skin_arrays():
         for j, (bi, bw) in enumerate(infs_sorted):
             indices[v, j] = bi
             weights[v, j] = bw / total
-    _base_skin_arrays = (indices, weights)
-    logger.info("Base skin arrays precomputed: %d vertices, 4 influences", n)
-    return _base_skin_arrays
+    _base_skin_arrays[gender] = (indices, weights)
+    logger.info("Base skin arrays (%s) precomputed: %d vertices, 4 influences", gender, n)
+    return _base_skin_arrays[gender]
 
 
 @require_GET
@@ -349,24 +365,30 @@ def character_skin_weights(request):
     to match the viewer's subdivided vertex ordering.
     """
     global _propagated_skin_weights
-    if _propagated_skin_weights is not None:
-        return JsonResponse(_propagated_skin_weights)
+    body_type = request.GET.get('body_type', 'Female_Caucasian')
+    gender = _gender_from_body_type(body_type)
 
-    # Try base weights first (correct approach: propagate through CC)
-    base_path = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'skin_weights_base.json')
+    if gender in _propagated_skin_weights:
+        return JsonResponse(_propagated_skin_weights[gender])
+
+    if gender == 'male':
+        data_dir = str(settings.HUMANBODY_DATA_DIR) + '_male'
+    else:
+        data_dir = str(settings.HUMANBODY_DATA_DIR)
+    base_path = os.path.join(data_dir, 'skin_weights_base.json')
     if os.path.isfile(base_path):
-        cc = _get_cc_subdivider()
+        cc = _get_cc_subdivider(gender)
         if cc is not None:
             with open(base_path, 'r', encoding='utf-8') as f:
                 base_data = json.load(f)
-            logger.info("Propagating skin weights through CC subdivision: %d base -> %d sub",
-                        base_data['vertex_count'], cc.sub_vertex_count)
-            _propagated_skin_weights = cc.propagate_skin_weights(
+            logger.info("Propagating skin weights (%s) through CC subdivision: %d base -> %d sub",
+                        gender, base_data['vertex_count'], cc.sub_vertex_count)
+            _propagated_skin_weights[gender] = cc.propagate_skin_weights(
                 base_data['weights'], base_data['bone_names'])
-            return JsonResponse(_propagated_skin_weights)
+            return JsonResponse(_propagated_skin_weights[gender])
 
     # Fallback: serve raw skin_weights.json (may have wrong vertex ordering!)
-    sw_path = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'skin_weights.json')
+    sw_path = os.path.join(data_dir, 'skin_weights.json')
     if not os.path.isfile(sw_path):
         return JsonResponse({'error': 'Skin weights not found'}, status=404)
     with open(sw_path, 'r', encoding='utf-8') as f:
@@ -617,12 +639,14 @@ def character_cloth(request):
     """
     method = request.GET.get('method', 'template')
 
+    body_type = request.GET.get('body_type', 'Female_Caucasian')
+    gender = _gender_from_body_type(body_type)
+
     md = _get_morph_data()
     cd = _get_char_defaults()
 
     state = CharacterState(md, cd)
-    state.set_body_type(request.GET.get('body_type', 'Female_Caucasian'))
-    state.set_gender(float(request.GET.get('gender', 0)))
+    state.set_body_type(body_type)
 
     for key, val in request.GET.items():
         if key.startswith('morph_'):
@@ -655,7 +679,7 @@ def character_cloth(request):
     # Builder needs face topology
     faces = None
     if method == 'builder':
-        mesh = _get_mesh_data()
+        mesh = _get_mesh_data(gender)
         if mesh.faces is not None and mesh.faces.ndim == 2:
             faces = mesh.faces
 
@@ -680,7 +704,7 @@ def character_cloth(request):
     }
 
     # Compute skin weights for cloth vertices (nearest body vertex)
-    skin_arrays = _get_base_skin_arrays()
+    skin_arrays = _get_base_skin_arrays(gender)
     if skin_arrays is not None:
         from scipy.spatial import cKDTree
         body_si, body_sw = skin_arrays

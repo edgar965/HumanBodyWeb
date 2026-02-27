@@ -403,6 +403,92 @@ function updateMeshVertices(float32Buffer) {
     bodyGeometry.computeBoundingSphere();
 }
 
+async function reloadMeshForBodyType(bodyType, gender) {
+    console.log('Reloading mesh for', bodyType, '(gender:', gender, ')');
+    // Remove old mesh
+    if (bodyMesh) {
+        scene.remove(bodyMesh);
+        bodyMesh.geometry?.dispose();
+        bodyMesh = null;
+        bodyGeometry = null;
+    }
+    isSkinned = false;
+    defSkeleton = null;
+    skinWeightData = null;
+
+    // Fetch new mesh with body_type param
+    try {
+        const resp = await fetch(`${API}/mesh/?body_type=${encodeURIComponent(bodyType)}`);
+        const data = await resp.json();
+        if (data.error) { console.error(data.error); return; }
+
+        vertexCount = data.vertex_count;
+        document.getElementById('vertex-count').textContent = vertexCount.toLocaleString();
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+        const positions = new THREE.BufferAttribute(vertBuf, 3);
+
+        let index = null;
+        if (data.faces) {
+            const faceBuf = base64ToUint32(data.faces);
+            index = new THREE.BufferAttribute(faceBuf, 1);
+        }
+
+        let uvAttr = null;
+        if (data.uvs) {
+            const uvBuf = base64ToFloat32(data.uvs);
+            uvAttr = new THREE.BufferAttribute(uvBuf, 2);
+        }
+
+        const materials = BODY_MATERIALS.map(d => new THREE.MeshStandardMaterial({
+            color: d.color, roughness: d.roughness, metalness: d.metalness,
+            side: THREE.DoubleSide,
+            transparent: d.transparent || false,
+            opacity: d.opacity !== undefined ? d.opacity : 1.0,
+        }));
+
+        let geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', positions);
+        if (index) geo.setIndex(index);
+        if (uvAttr) geo.setAttribute('uv', uvAttr);
+
+        if (data.normals) {
+            const normalBuf = base64ToFloat32(data.normals);
+            blenderToThreeCoords(normalBuf);
+            geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+        } else {
+            geo.computeVertexNormals();
+        }
+
+        const groups = data.groups || [];
+        if (index && groups.length > 0) {
+            for (const g of groups) {
+                geo.addGroup(g.start, g.count, g.materialIndex);
+            }
+            bodyMesh = new THREE.Mesh(geo, materials);
+        } else {
+            bodyMesh = new THREE.Mesh(geo, materials[0]);
+        }
+
+        bodyGeometry = geo;
+        scene.add(bodyMesh);
+        document.getElementById('vertex-count').textContent =
+            geo.attributes.position.count.toLocaleString();
+
+        applySceneSkinSettings();
+
+        // Reload skin weights for new gender
+        const swResp = await fetch(`${API}/skin-weights/?body_type=${encodeURIComponent(bodyType)}`);
+        skinWeightData = await swResp.json();
+
+        // Remove clothing (topology mismatch)
+        if (typeof removeAllCloth === 'function') removeAllCloth();
+    } catch (e) {
+        console.error('Failed to reload mesh:', e);
+    }
+}
+
 // =========================================================================
 // GPU Skinning — 176-bone DEF skeleton + BVH retargeting
 // =========================================================================
@@ -579,12 +665,10 @@ function connectWebSocket() {
         wsReady = true;
         document.getElementById('ws-status').textContent = 'Connected';
         document.getElementById('ws-status').className = 'connected';
-        // Sync current body type + gender to WebSocket on connect
+        // Sync current body type to WebSocket on connect
         const btSelect = document.getElementById('body-type-select');
         if (btSelect && btSelect.value) {
             wsSend({ type: 'body_type', value: btSelect.value });
-            const gs = document.getElementById('gender-slider');
-            if (gs) wsSend({ type: 'gender', value: parseInt(gs.value) / 100.0 });
         }
     };
 
@@ -610,6 +694,8 @@ function connectWebSocket() {
                 const msg = JSON.parse(event.data);
                 if (msg.type === 'error') {
                     console.error('Server error:', msg.message);
+                } else if (msg.type === 'reload_mesh') {
+                    reloadMeshForBodyType(msg.body_type, msg.gender);
                 }
             } catch (e) {
                 // ignore
@@ -664,11 +750,6 @@ async function loadMorphs() {
         });
         select.addEventListener('change', () => {
             wsSend({ type: 'body_type', value: select.value });
-            // Set gender slider based on body type (Male → 100, Female → 0)
-            const isMale = select.value.startsWith('Male_');
-            genderSlider.value = isMale ? 100 : 0;
-            genderVal.textContent = isMale ? '100' : '0';
-            wsSend({ type: 'gender', value: isMale ? 1.0 : 0 });
             // Update skin color
             const parts = select.value.split('_');
             const ethnicity = parts[1] || parts[0];
@@ -686,15 +767,6 @@ async function loadMorphs() {
             if (select.value.startsWith('Male_')) {
                 removeAllCloth();
             }
-        });
-
-        // Gender slider
-        const genderSlider = document.getElementById('gender-slider');
-        const genderVal = document.getElementById('gender-val');
-        genderSlider.addEventListener('input', () => {
-            const v = parseInt(genderSlider.value);
-            genderVal.textContent = v;
-            wsSend({ type: 'gender', value: v / 100.0 });
         });
 
         // Meta sliders (Age, Mass, Tone, Height)
@@ -819,8 +891,6 @@ async function loadMorphs() {
                 s.value = 0;
                 s.nextElementSibling.textContent = '0';
             });
-            genderSlider.value = 0;
-            genderVal.textContent = '0';
             // Reset meta sliders to defaults
             metaSliders.forEach(name => {
                 const slider = document.getElementById(`meta-${name}`);
@@ -1967,16 +2037,7 @@ function applyModelPreset(preset) {
         bodySelect.dispatchEvent(new Event('change'));
     }
 
-    // 2. Gender
-    const genderSlider = document.getElementById('gender-slider');
-    const genderVal = document.getElementById('gender-val');
-    if (genderSlider && preset.gender !== undefined) {
-        genderSlider.value = preset.gender;
-        if (genderVal) genderVal.textContent = preset.gender;
-        genderSlider.dispatchEvent(new Event('input'));
-    }
-
-    // 3. Morphs — set slider values and send via WebSocket
+    // 2. Morphs — set slider values and send via WebSocket
     if (preset.morphs) {
         const morphBatch = {};
         const panel = document.getElementById('morphs-panel');
@@ -2103,10 +2164,6 @@ function gatherModelState() {
     // Body type
     const bodySelect = document.getElementById('body-type-select');
     if (bodySelect) state.body_type = bodySelect.value;
-
-    // Gender
-    const genderSlider = document.getElementById('gender-slider');
-    if (genderSlider) state.gender = parseInt(genderSlider.value);
 
     // Morphs
     const morphs = {};
