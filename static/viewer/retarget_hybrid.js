@@ -434,11 +434,13 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         }
     }
 
-    // --- For Bandai/AIST: compute frame-0 BVH world Qs BEFORE direction correction ---
-    // These formats encode the standing pose in frame-0 rotations (not identity rest).
+    // --- For Bandai: compute frame-0 BVH world Qs BEFORE direction correction ---
+    // Bandai encodes the standing pose in frame-0 rotations (not identity rest).
     // We need frame-0 world Qs to compute correct bone directions for direction correction.
+    // AIST uses standard retarget (like CMU) — frame-0 world directions give 45-114°
+    // corrections with L/R asymmetry, which is wrong. Standard formula handles it correctly.
     const bvhRestWorldQ = {};
-    const useDeltaRetarget = (format === 'BANDAI' || format === 'AIST');
+    const useDeltaRetarget = (format === 'BANDAI');
     if (useDeltaRetarget) {
         const _tq = new THREE.Quaternion();
         for (const bvhName of bvhBonesSorted) {
@@ -460,69 +462,79 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
 
     // --- Offset Q per mapped bone (with direction correction) ---
     // Direction correction aligns BVH bone directions with DEF bone directions.
-    // For standard formats (CMU/Mixamo/MocapNET): use raw offset directions.
-    // For delta-retarget (Bandai/AIST): use frame-0 posed directions (rotated by bvhRestWorldQ).
+    // Standard (CMU/Mixamo/MocapNET): BVH rest is identity, use local offsets.
+    // Delta (Bandai/AIST): use frame-0 WORLD directions (local offsets rotated
+    // by frame-0 world Q) since frame-0 has non-identity rotations.
     const _NEG_Z = new THREE.Vector3(0, 0, -1);
     const offsetQ = {};
 
     // Identify root DEF bone (no mapped parent → skip direction correction)
     const rootDefName = Object.values(mapping).find(d => d && defSkel.boneByName[d]);
 
+    // Bones where direction correction should be skipped.
+    // AIST: ankle→foot offset points downward (-Y,-Z) while DEF-foot points forward.
+    // Direction correction maps forward→down causing "ballerina feet".
+    const skipDirCorrectionBones = new Set();
+    if (format === 'AIST') {
+        skipDirCorrectionBones.add('DEF-foot.L');
+        skipDirCorrectionBones.add('DEF-foot.R');
+        skipDirCorrectionBones.add('DEF-toe.L');
+        skipDirCorrectionBones.add('DEF-toe.R');
+        // AIST has 2-bone neck (Neck→Head) but DEF has 3-bone chain
+        // (spine.004→spine.005→spine.006). Topology mismatch causes
+        // direction correction to bend the head at unnatural angles.
+        skipDirCorrectionBones.add('DEF-spine.004');
+        skipDirCorrectionBones.add('DEF-spine.006');
+    }
+
     for (const [defName, bvhName] of Object.entries(defToBvhName)) {
         // Skip direction correction for root bone — root has multiple children
         // with divergent directions, causing erroneous correction
-        if (defName === rootDefName) {
+        if (defName === rootDefName || skipDirCorrectionBones.has(defName)) {
             offsetQ[defName] = defWorldRestQ[defName].clone();
             continue;
         }
 
+        // DEF bone direction at rest (world space)
         const defRestDir = _NEG_Z.clone().applyQuaternion(defWorldRestQ[defName]).normalize();
+
         const bvhBone = bvhBoneByName[bvhName];
 
         // Find BVH bone direction from best-aligned child
-        // For delta-retarget: rotate offset by bone's frame-0 world Q to get actual direction
-        const bvhWorldQ_f0 = useDeltaRetarget ? bvhRestWorldQ[bvhName] : null;
         let bvhDir = null;
         let bestDot = -Infinity;
-        let rawChildYDominant = false;
         for (const child of bvhBone.children) {
             if (child.isBone && child.position.lengthSq() > 1e-10) {
-                let dir = child.position.clone().normalize();
-                // Check if raw offset is Y-dominant (physical position, not bone direction)
-                const p = child.position;
-                if (Math.abs(p.y) > Math.abs(p.x) && Math.abs(p.y) > Math.abs(p.z))
-                    rawChildYDominant = true;
-                if (bvhWorldQ_f0) dir.applyQuaternion(bvhWorldQ_f0);
+                let dir;
+                if (useDeltaRetarget && bvhRestWorldQ[bvhName]) {
+                    // Delta retarget: rotate local offset by frame-0 world Q
+                    // to get the actual world-space direction at frame 0
+                    dir = child.position.clone()
+                        .applyQuaternion(bvhRestWorldQ[bvhName]).normalize();
+                } else {
+                    // Standard retarget: BVH rest is identity, local = world
+                    dir = child.position.clone().normalize();
+                }
                 const dot = dir.dot(defRestDir);
                 if (dot > bestDot) { bestDot = dot; bvhDir = dir; }
             }
         }
         // Fallback to own position offset
         if (!bvhDir && bvhBone.position.lengthSq() > 1e-10) {
-            bvhDir = bvhBone.position.clone().normalize();
-            const p = bvhBone.position;
-            if (Math.abs(p.y) > Math.abs(p.x) && Math.abs(p.y) > Math.abs(p.z))
-                rawChildYDominant = true;
-            if (bvhWorldQ_f0) bvhDir.applyQuaternion(bvhWorldQ_f0);
+            if (useDeltaRetarget) {
+                const parentName = bvhBoneParentName[bvhName];
+                if (parentName && bvhRestWorldQ[parentName]) {
+                    bvhDir = bvhBone.position.clone()
+                        .applyQuaternion(bvhRestWorldQ[parentName]).normalize();
+                } else {
+                    bvhDir = bvhBone.position.clone().normalize();
+                }
+            } else {
+                bvhDir = bvhBone.position.clone().normalize();
+            }
         }
 
-        // For delta-retarget: skip direction correction for spine chain bones.
-        // The spine chain has unmapped intermediate bones (DEF-spine.002, DEF-spine.005)
-        // whose rest rotations shift bone POSITIONS backward. Direction correction
-        // on surrounding mapped bones creates cumulative interference through these
-        // unmapped bones, doubling the backward lean. Since both skeletons' spines
-        // are roughly vertical, direction correction is unnecessary for spine bones.
-        const isSpineChain = /^DEF-spine/i.test(defName);
-        // For delta-retarget foot/toe bones: if the BVH child offset is Y-dominant,
-        // it represents physical joint position (ankle→toe goes downward) rather
-        // than bone direction (foot points forward). Skip direction correction
-        // to preserve DEF rest orientation (forward-pointing foot).
-        const isFootToe = /foot|toe/i.test(defName);
-        if (useDeltaRetarget && isSpineChain) {
-            offsetQ[defName] = defWorldRestQ[defName].clone();
-        } else if (useDeltaRetarget && isFootToe && rawChildYDominant) {
-            offsetQ[defName] = defWorldRestQ[defName].clone();
-        } else if (!bvhDir || bvhDir.lengthSq() < 1e-10) {
+        if (!bvhDir || bvhDir.lengthSq() < 1e-10) {
             offsetQ[defName] = defWorldRestQ[defName].clone();
         } else {
             const dirCorr = new THREE.Quaternion().setFromUnitVectors(defRestDir, bvhDir);

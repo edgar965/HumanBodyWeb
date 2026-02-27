@@ -182,7 +182,7 @@
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
         <div class="viewer-buttons-left" style="position:absolute;top:12px;left:12px;z-index:10;display:flex;gap:6px;">
-            <button id="play-demo-anim" class="viewer-btn" title="Catwalk Idle Animation abspielen"><i class="fas fa-walking"></i> Catwalk</button>
+            <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
             <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
             <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i class="fas fa-file-export"></i> Speichern unter</button>
         </div>
@@ -352,27 +352,6 @@
             </div>
         </div>
 
-        <!-- Material (Skin) -->
-        <div class="panel-section" data-panel-key="material_skin">
-            <h3>Material (Skin) <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body">
-                <div class="slider-row">
-                    <label>Skin-Farbe</label>
-                    <input type="color" id="skin-color" value="#d4a574">
-                </div>
-                <div class="slider-row">
-                    <label>Roughness</label>
-                    <input type="range" id="skin-roughness" min="0" max="100" value="55" step="1">
-                    <span class="slider-val" id="skin-roughness-val">0.55</span>
-                </div>
-                <div class="slider-row">
-                    <label>Metalness</label>
-                    <input type="range" id="skin-metalness" min="0" max="100" value="0" step="1">
-                    <span class="slider-val" id="skin-metalness-val">0.00</span>
-                </div>
-            </div>
-        </div>
-
         <!-- Actions -->
         <div class="panel-section" data-panel-key="aktionen">
             <h3>Aktionen <span class="chevron">&#9660;</span></h3>
@@ -402,5 +381,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/scene_config.js' %}?v=2"></script>
+<script type="module" src="{% static 'viewer/scene_config.js' %}?v=3"></script>
 {% endblock %}

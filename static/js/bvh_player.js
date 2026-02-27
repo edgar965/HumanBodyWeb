@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-console.log('[bvh_player] v0.78 loaded');
+console.log('[bvh_player] v0.80 loaded');
 
 export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null, detectionUrl = null, keypointsUrl = null }) {
     console.log('[bvh_player] initBVHPlayer called', { videoId, canvasId });
@@ -72,7 +72,6 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     // State
     let mixer = null;
     let action = null;
-    let skeletonHelper = null;
     let rootBone = null;
     let clipDuration = 0;
     let currentSpeed = 1;
@@ -126,14 +125,56 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         'lButtock', 'lThigh', 'lShin', 'lFoot',
     ]);
 
+    // Explicit connections between body bones (parent → child)
+    const BODY_CONNECTIONS = [
+        ['hip', 'abdomen'], ['abdomen', 'chest'], ['chest', 'neck'], ['neck', 'neck1'], ['neck1', 'head'],
+        ['chest', 'rCollar'], ['rCollar', 'rShldr'], ['rShldr', 'rForeArm'], ['rForeArm', 'rHand'],
+        ['chest', 'lCollar'], ['lCollar', 'lShldr'], ['lShldr', 'lForeArm'], ['lForeArm', 'lHand'],
+        ['hip', 'rButtock'], ['rButtock', 'rThigh'], ['rThigh', 'rShin'], ['rShin', 'rFoot'],
+        ['hip', 'lButtock'], ['lButtock', 'lThigh'], ['lThigh', 'lShin'], ['lShin', 'lFoot'],
+    ];
+
+    // Custom body-only skeleton lines (replaces SkeletonHelper which draws ALL 164+ bones)
+    let bodyLineSegments = null;
+    let bodyBoneMap = {};  // name → bone
+
+    function updateBodyLines() {
+        if (!bodyLineSegments || !rootBone) return;
+        const positions = bodyLineSegments.geometry.attributes.position;
+        let idx = 0;
+        for (const [parentName, childName] of BODY_CONNECTIONS) {
+            const pBone = bodyBoneMap[parentName];
+            const cBone = bodyBoneMap[childName];
+            if (pBone && cBone) {
+                const p1 = new THREE.Vector3();
+                const p2 = new THREE.Vector3();
+                pBone.getWorldPosition(p1);
+                cBone.getWorldPosition(p2);
+                positions.setXYZ(idx, p1.x, p1.y, p1.z);
+                positions.setXYZ(idx + 1, p2.x, p2.y, p2.z);
+            }
+            idx += 2;
+        }
+        positions.needsUpdate = true;
+    }
+
     loader.load(bvhUrl, (result) => {
         console.log('[bvh_player] BVH loaded, bones:', result.skeleton.bones.length);
         rootBone = result.skeleton.bones[0];
         scene.add(rootBone);
 
-        skeletonHelper = new THREE.SkeletonHelper(rootBone);
-        skeletonHelper.material.linewidth = 2;
-        scene.add(skeletonHelper);
+        // Build bone name → bone lookup
+        result.skeleton.bones.forEach((bone) => {
+            bodyBoneMap[bone.name] = bone;
+        });
+
+        // Custom body-only line segments (instead of SkeletonHelper)
+        const lineGeo = new THREE.BufferGeometry();
+        const linePositions = new Float32Array(BODY_CONNECTIONS.length * 2 * 3);
+        lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x16c784, linewidth: 2 });
+        bodyLineSegments = new THREE.LineSegments(lineGeo, lineMat);
+        scene.add(bodyLineSegments);
 
         // Joint spheres — only on body bones
         const jointMat = new THREE.MeshBasicMaterial({ color: 0xe94560 });
@@ -146,11 +187,16 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
             bone.add(sphere);
         });
 
-        // Animation mixer
+        // Animation mixer — LoopOnce + clamp to prevent wrapping artifacts
         mixer = new THREE.AnimationMixer(rootBone);
         action = mixer.clipAction(result.clip);
+        action.setLoop(THREE.LoopOnce);
+        action.clampWhenFinished = true;
         action.play();
         clipDuration = result.clip.duration;
+
+        // Initial line positions
+        updateBodyLines();
 
         // Auto-center camera — fit skeleton to fill viewport
         centerCamera(rootBone);
@@ -243,8 +289,12 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         requestAnimationFrame(animate);
 
         if (mixer && video.duration) {
-            // Map video time to BVH clip time
-            const rawT = (video.currentTime / video.duration) * clipDuration;
+            // Direct time mapping: BVH time = video time.
+            // MocapNET outputs one BVH frame per video frame with matching
+            // Frame Time, so BVH seconds correspond to real video seconds.
+            // Using proportional mapping (currentTime/duration * clipDuration)
+            // would desync when BVH has fewer frames than the video.
+            const rawT = video.currentTime;
 
             // Hide 3D skeleton when video time exceeds BVH data
             const beyondBVH = rawT >= clipDuration;
@@ -261,8 +311,11 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
                 );
                 visible = detectionFlags[frameIdx];
             }
-            if (skeletonHelper) skeletonHelper.visible = visible;
+            if (bodyLineSegments) bodyLineSegments.visible = visible;
             if (rootBone) rootBone.visible = visible;
+
+            // Update custom body line positions after animation
+            if (visible) updateBodyLines();
         }
 
         controls.update();

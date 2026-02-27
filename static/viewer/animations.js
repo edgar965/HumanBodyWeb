@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=13';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=17';
 
 // =========================================================================
 // Tone mapping lookup (for scene settings)
@@ -120,12 +120,12 @@ function init() {
         demoBtn.addEventListener('click', () => {
             if (!currentAction) {
                 loadBVHAnimation('/api/character/bvh/Mixamo/Catwalk_Idle_02/', 'Catwalk Idle 02', 0);
-                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i>';
                 demoBtn.classList.add('active');
             } else if (playing) {
                 currentAction.paused = true;
                 playing = false;
-                demoBtn.innerHTML = '<i class="fas fa-play"></i> Catwalk';
+                demoBtn.innerHTML = '<i class="fas fa-play"></i>';
                 demoBtn.classList.remove('active');
                 const playBtn = document.getElementById('anim-play');
                 if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
@@ -133,7 +133,7 @@ function init() {
                 if (!currentAction.isRunning()) currentAction.play();
                 currentAction.paused = false;
                 playing = true;
-                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i>';
                 demoBtn.classList.add('active');
                 const playBtn = document.getElementById('anim-play');
                 if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';

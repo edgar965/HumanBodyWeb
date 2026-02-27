@@ -246,11 +246,23 @@ def character_morphs(request):
             categories[cat] = []
         categories[cat].append(m)
 
+    # Build meta slider definitions from CharacterDefaults
+    meta_sliders = {}
+    meta_labels = {'age': 'Age', 'mass': 'Mass (kg)', 'tone': 'Tone', 'height': 'Height (cm)'}
+    for name in ('age', 'mass', 'tone', 'height'):
+        sdef = getattr(cd, name, None)
+        if sdef:
+            meta_sliders[name] = {
+                'min': sdef.min, 'max': sdef.max,
+                'default': sdef.default, 'label': meta_labels[name],
+            }
+
     return JsonResponse({
         'body_types': MorphData.BODY_TYPES,
         'morphs': morphs,
         'categories': sorted(categories.keys()),
         'skin_colors': MorphData.SKIN_COLORS,
+        'meta_sliders': meta_sliders,
     })
 
 
@@ -404,11 +416,18 @@ def character_animations(request):
     if os.path.isdir(bvh_root):
         for cat_name in sorted(os.listdir(bvh_root)):
             cat_path = os.path.join(bvh_root, cat_name)
-            if not os.path.isdir(cat_path):
-                continue
+            try:
+                if not os.path.isdir(cat_path):
+                    continue
+            except OSError:
+                continue  # skip broken entries like 'nul' on Windows
 
             anims = []
-            for fname in sorted(os.listdir(cat_path)):
+            try:
+                entries = sorted(os.listdir(cat_path))
+            except OSError:
+                continue
+            for fname in entries:
                 if fname.lower().endswith('.bvh'):
                     bvh_path = os.path.join(cat_path, fname)
                     name = fname[:-4]

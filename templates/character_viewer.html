@@ -309,7 +309,7 @@
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
         <div class="viewer-buttons-left">
-            <button id="play-demo-anim" class="viewer-btn" title="Catwalk Idle Animation abspielen"><i class="fas fa-walking"></i> Catwalk</button>
+            <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
             <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i class="fas fa-folder-open"></i> Laden</button>
             <input type="file" id="load-preset-file" accept=".json" style="display:none">
             <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
@@ -332,6 +332,42 @@
                     <label>Gender</label>
                     <input type="range" id="gender-slider" min="0" max="100" value="0" step="1">
                     <span class="slider-val" id="gender-val">0</span>
+                </div>
+                <div class="slider-row">
+                    <label>Age</label>
+                    <input type="range" id="meta-age" min="18" max="100" value="59" step="1">
+                    <span class="slider-val" id="meta-age-val">59</span>
+                </div>
+                <div class="slider-row">
+                    <label>Mass</label>
+                    <input type="range" id="meta-mass" min="45" max="200" value="123" step="1">
+                    <span class="slider-val" id="meta-mass-val">123</span>
+                </div>
+                <div class="slider-row">
+                    <label>Tone</label>
+                    <input type="range" id="meta-tone" min="0" max="100" value="50" step="1">
+                    <span class="slider-val" id="meta-tone-val">50</span>
+                </div>
+                <div class="slider-row">
+                    <label>Height</label>
+                    <input type="range" id="meta-height" min="150" max="200" value="175" step="1">
+                    <span class="slider-val" id="meta-height-val">175</span>
+                </div>
+                <div style="margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+                    <div class="slider-row">
+                        <label>Skin</label>
+                        <input type="color" id="skin-color-viewer" value="#d4a574" style="width:40px;height:24px;border:none;cursor:pointer;">
+                    </div>
+                    <div class="slider-row">
+                        <label>Roughness</label>
+                        <input type="range" id="skin-roughness-viewer" min="0" max="100" value="55" step="1">
+                        <span class="slider-val" id="skin-roughness-viewer-val">0.55</span>
+                    </div>
+                    <div class="slider-row">
+                        <label>Metalness</label>
+                        <input type="range" id="skin-metalness-viewer" min="0" max="100" value="0" step="1">
+                        <span class="slider-val" id="skin-metalness-viewer-val">0.00</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -494,5 +530,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=21"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?v=23"></script>
 {% endblock %}

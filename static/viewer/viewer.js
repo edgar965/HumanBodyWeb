@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=13';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=18';
 
 // =========================================================================
 // Global state
@@ -149,12 +149,11 @@ function init() {
     // Apply expanded panels from settings
     applyExpandedPanels();
 
-    // Start render loop
-    animate();
-
-    // Load data
+    // Load mesh first, then start render loop (avoids blank screen on first visit)
     loadMorphs();
-    loadMesh();
+    loadMesh().then(() => {
+        animate();
+    });
     loadSkinWeights();
     loadDefSkeleton();
     loadWardrobe();
@@ -176,13 +175,13 @@ function init() {
                     animSection.classList.remove('collapsed');
                 }
                 loadBVHAnimation('/api/character/bvh/Mixamo/Catwalk_Idle_02/', 'Catwalk Idle 02', 0);
-                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i>';
                 demoBtn.classList.add('active');
             } else if (playing) {
                 // Pause
                 currentAction.paused = true;
                 playing = false;
-                demoBtn.innerHTML = '<i class="fas fa-play"></i> Catwalk';
+                demoBtn.innerHTML = '<i class="fas fa-play"></i>';
                 demoBtn.classList.remove('active');
                 const playBtn = document.getElementById('anim-play');
                 if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
@@ -191,7 +190,7 @@ function init() {
                 if (!currentAction.isRunning()) currentAction.play();
                 currentAction.paused = false;
                 playing = true;
-                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i>';
                 demoBtn.classList.add('active');
                 const playBtn = document.getElementById('anim-play');
                 if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
@@ -364,6 +363,10 @@ async function loadMesh() {
 
         const groups = data.groups || [];
 
+        // Censor (slot 1) uses the same material as Skin (slot 0) so
+        // skin color changes automatically apply to underwear-covered areas.
+        materials[1] = materials[0];
+
         if (index && groups.length > 0) {
             for (const g of groups) {
                 geo.addGroup(g.start, g.count, g.materialIndex);
@@ -393,6 +396,7 @@ function updateMeshVertices(float32Buffer) {
     blenderToThreeCoords(newData);
     positions.array.set(newData);
     positions.needsUpdate = true;
+    bodyGeometry.computeVertexNormals();
     bodyGeometry.computeBoundingSphere();
 }
 
@@ -572,6 +576,11 @@ function connectWebSocket() {
         wsReady = true;
         document.getElementById('ws-status').textContent = 'Connected';
         document.getElementById('ws-status').className = 'connected';
+        // Sync current body type to WebSocket on connect
+        const btSelect = document.getElementById('body-type-select');
+        if (btSelect && btSelect.value) {
+            wsSend({ type: 'body_type', value: btSelect.value });
+        }
     };
 
     ws.onclose = () => {
@@ -650,6 +659,10 @@ async function loadMorphs() {
         });
         select.addEventListener('change', () => {
             wsSend({ type: 'body_type', value: select.value });
+            // Reset gender slider to 0 on body type change
+            genderSlider.value = 0;
+            genderVal.textContent = '0';
+            wsSend({ type: 'gender', value: 0 });
             // Update skin color
             const parts = select.value.split('_');
             const ethnicity = parts[1] || parts[0];
@@ -661,6 +674,11 @@ async function loadMorphs() {
                     Math.pow(colors[1], 1/2.2),
                     Math.pow(colors[2], 1/2.2)
                 );
+                syncSkinUI(skinMat);
+            }
+            // Remove clothing for male body types (no bra/pants on male characters)
+            if (select.value.startsWith('Male_')) {
+                removeAllCloth();
             }
         });
 
@@ -672,6 +690,59 @@ async function loadMorphs() {
             genderVal.textContent = v;
             wsSend({ type: 'gender', value: v / 100.0 });
         });
+
+        // Meta sliders (Age, Mass, Tone, Height)
+        const metaSliders = ['age', 'mass', 'tone', 'height'];
+        metaSliders.forEach(name => {
+            const slider = document.getElementById(`meta-${name}`);
+            const valSpan = document.getElementById(`meta-${name}-val`);
+            if (!slider) return;
+            const meta = data.meta_sliders?.[name];
+            if (meta) {
+                slider.min = meta.min;
+                slider.max = meta.max;
+                slider.value = meta.default;
+                valSpan.textContent = meta.default;
+            }
+            slider.addEventListener('input', () => {
+                const displayVal = parseInt(slider.value);
+                valSpan.textContent = displayVal;
+                const min = parseInt(slider.min), max = parseInt(slider.max);
+                const neutral = (min + max) / 2;
+                const half = (max - min) / 2;
+                const internal = half ? (displayVal - neutral) / half : 0;
+                wsSend({ type: 'meta', name: name, value: internal });
+            });
+        });
+
+        // Skin color + material controls (in Body Type panel)
+        const skinColorInput = document.getElementById('skin-color-viewer');
+        if (skinColorInput) {
+            skinColorInput.addEventListener('input', e => {
+                const mat = getSkinMat();
+                if (mat) mat.color.set(e.target.value);
+            });
+        }
+        const skinRoughSlider = document.getElementById('skin-roughness-viewer');
+        const skinRoughVal = document.getElementById('skin-roughness-viewer-val');
+        if (skinRoughSlider) {
+            skinRoughSlider.addEventListener('input', () => {
+                const v = parseFloat(skinRoughSlider.value) / 100;
+                skinRoughVal.textContent = v.toFixed(2);
+                const mat = getSkinMat();
+                if (mat) mat.roughness = v;
+            });
+        }
+        const skinMetalSlider = document.getElementById('skin-metalness-viewer');
+        const skinMetalVal = document.getElementById('skin-metalness-viewer-val');
+        if (skinMetalSlider) {
+            skinMetalSlider.addEventListener('input', () => {
+                const v = parseFloat(skinMetalSlider.value) / 100;
+                skinMetalVal.textContent = v.toFixed(2);
+                const mat = getSkinMat();
+                if (mat) mat.metalness = v;
+            });
+        }
 
         // Group morphs by category
         morphCategories = {};
@@ -737,13 +808,45 @@ async function loadMorphs() {
 
         // Reset button
         document.getElementById('reset-morphs').addEventListener('click', () => {
-            // Reset all sliders to 0
+            // Reset all morph sliders to 0
             panel.querySelectorAll('input[type="range"]').forEach(s => {
                 s.value = 0;
                 s.nextElementSibling.textContent = '0';
             });
             genderSlider.value = 0;
             genderVal.textContent = '0';
+            // Reset meta sliders to defaults
+            metaSliders.forEach(name => {
+                const slider = document.getElementById(`meta-${name}`);
+                const valSpan = document.getElementById(`meta-${name}-val`);
+                if (!slider) return;
+                const meta = data.meta_sliders?.[name];
+                if (meta) {
+                    slider.value = meta.default;
+                    valSpan.textContent = meta.default;
+                }
+            });
+            // Reset skin material to current body-type ethnicity color
+            const skinMat = getSkinMat();
+            if (skinMat) {
+                const parts = select.value.split('_');
+                const ethnicity = parts[1] || parts[0];
+                const colors = data.skin_colors[ethnicity];
+                if (colors) {
+                    skinMat.color.setRGB(
+                        Math.pow(colors[0], 1/2.2),
+                        Math.pow(colors[1], 1/2.2),
+                        Math.pow(colors[2], 1/2.2)
+                    );
+                } else {
+                    skinMat.color.setHex(0xd4a574);
+                }
+                skinMat.roughness = 0.55;
+                skinMat.metalness = 0.0;
+                syncSkinUI(skinMat);
+            }
+            if (skinRoughSlider) { skinRoughSlider.value = 55; skinRoughVal.textContent = '0.55'; }
+            if (skinMetalSlider) { skinMetalSlider.value = 0; skinMetalVal.textContent = '0.00'; }
             wsSend({ type: 'reset', body_type: select.value });
         });
 
@@ -1694,8 +1797,22 @@ function applySceneSkinSettings() {
             if (s.skin.color) mat.color.set(s.skin.color);
             if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
             if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
+            // Sync viewer panel skin controls
+            syncSkinUI(mat);
         }
     } catch (e) { /* ignore */ }
+}
+
+function syncSkinUI(mat) {
+    if (!mat) return;
+    const colorInput = document.getElementById('skin-color-viewer');
+    if (colorInput) colorInput.value = '#' + mat.color.getHexString();
+    const roughSlider = document.getElementById('skin-roughness-viewer');
+    const roughVal = document.getElementById('skin-roughness-viewer-val');
+    if (roughSlider) { roughSlider.value = Math.round(mat.roughness * 100); roughVal.textContent = mat.roughness.toFixed(2); }
+    const metalSlider = document.getElementById('skin-metalness-viewer');
+    const metalVal = document.getElementById('skin-metalness-viewer-val');
+    if (metalSlider) { metalSlider.value = Math.round(mat.metalness * 100); metalVal.textContent = mat.metalness.toFixed(2); }
 }
 
 // =========================================================================
@@ -1800,6 +1917,8 @@ async function loadDefaultPreset() {
         if (!resp.ok) return;
         const preset = await resp.json();
         applyModelPreset(preset);
+        // Re-apply scene skin settings after preset (preset body type overrides skin color)
+        setTimeout(() => applySceneSkinSettings(), 200);
         console.log(`Default preset loaded: ${presetName}`);
 
         // Auto-play default animation after preset is applied
@@ -1808,7 +1927,7 @@ async function loadDefaultPreset() {
                 loadBVHAnimation(defaultAnim, 'Default', 0);
                 const demoBtn = document.getElementById('play-demo-anim');
                 if (demoBtn) {
-                    demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                    demoBtn.innerHTML = '<i class="fas fa-pause"></i>';
                     demoBtn.classList.add('active');
                 }
             }, 1500);
@@ -1879,8 +1998,9 @@ function applyModelPreset(preset) {
         }
     }
 
-    // 5. Cloth — generate one or more cloth pieces
-    if (preset.cloth) {
+    // 5. Cloth — generate one or more cloth pieces (skip for male body types)
+    const isMalePreset = preset.body_type && preset.body_type.startsWith('Male_');
+    if (preset.cloth && !isMalePreset) {
         removeAllCloth();
         const clothList = Array.isArray(preset.cloth) ? preset.cloth : [preset.cloth];
         clothList.forEach((c, i) => {

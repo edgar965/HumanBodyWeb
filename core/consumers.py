@@ -109,10 +109,16 @@ class CharacterConsumer(AsyncWebsocketConsumer):
             vertices = self._char_state.compute()
             await self._send_vertices(vertices)
 
+        elif msg_type == 'meta':
+            self._char_state.set_meta(msg['name'], float(msg['value']))
+            vertices = self._char_state.compute()
+            await self._send_vertices(vertices)
+
         elif msg_type == 'reset':
             body_type = msg.get('body_type', 'Female_Caucasian')
             self._char_state.set_body_type(body_type)
             self._char_state.set_gender(0.0)
             self._char_state._morph_values.clear()
+            self._char_state._meta_values.clear()
             vertices = self._char_state.compute()
             await self._send_vertices(vertices)

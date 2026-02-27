@@ -39,6 +39,19 @@ def _get_video_props(video_path):
     return w, h, fc, fps
 
 
+def _copy_bvh_to_results(bvh_path, video_name, pipeline):
+    """Copy BVH file to the shared Results directory.
+    Filename: {video_stem}_{pipeline}.bvh, overwrites if exists.
+    Returns the destination path."""
+    import shutil
+    results_dir = Path(settings.BVH_RESULTS_DIR)
+    results_dir.mkdir(parents=True, exist_ok=True)
+    video_stem = video_name.rsplit('.', 1)[0]
+    dest = results_dir / f'{video_stem}_{pipeline}.bvh'
+    shutil.copy2(str(bvh_path), str(dest))
+    return str(dest)
+
+
 _system_status_cache = {'data': None, 'time': 0}
 _SYSTEM_STATUS_TTL = 60  # seconds
 
@@ -737,6 +750,9 @@ def _run_processing(job_id):
             # SMPL-based 3D pipeline: Video → SMPL → BVH
             bvh_output = _run_smpl_pipeline(job, video_path, output_dir)
 
+            # Copy to shared Results directory
+            results_path = _copy_bvh_to_results(bvh_output, job.name, job.pipeline)
+
             job.bvh_file = bvh_output
             job.status = 'complete'
             job.progress = 100
@@ -745,7 +761,7 @@ def _run_processing(job_id):
 
             BVHFile = apps.get_model('core', 'BVHFile')
             BVHFile.objects.get_or_create(
-                path=bvh_output,
+                path=results_path,
                 defaults={
                     'name': job.name.rsplit('.', 1)[0] + '.bvh',
                     'source': job.pipeline,
@@ -774,6 +790,9 @@ def _run_processing(job_id):
                 except Exception:
                     pass
 
+            # Copy to shared Results directory
+            results_path = _copy_bvh_to_results(bvh_output, job.name, 'v4')
+
             job.bvh_file = bvh_output
             job.status = 'complete'
             job.progress = 100
@@ -782,7 +801,7 @@ def _run_processing(job_id):
 
             BVHFile = apps.get_model('core', 'BVHFile')
             BVHFile.objects.get_or_create(
-                path=bvh_output,
+                path=results_path,
                 defaults={
                     'name': job.name.rsplit('.', 1)[0] + '.bvh',
                     'source': 'mocapnet_v4',
@@ -903,27 +922,39 @@ def _run_processing(job_id):
         proc.wait(timeout=1200)
         stderr_thread.join(timeout=5)
 
-        # MocapNET writes to exact -o path without extension
-        bvh_output = bvh_stem
-        if not os.path.exists(bvh_output) and os.path.exists(bvh_stem + '.bvh'):
+        # MocapNET may write BOTH: extensionless file (full) AND .bvh (partial).
+        # Pick the LARGER file as the correct output.
+        stem_exists = os.path.exists(bvh_stem)
+        bvh_exists = os.path.exists(bvh_stem + '.bvh')
+        if stem_exists and bvh_exists:
+            # Both exist — use the larger one (extensionless is usually the full output)
+            if os.path.getsize(bvh_stem) >= os.path.getsize(bvh_stem + '.bvh'):
+                bvh_output = bvh_stem
+            else:
+                bvh_output = bvh_stem + '.bvh'
+        elif stem_exists:
+            bvh_output = bvh_stem
+        elif bvh_exists:
             bvh_output = bvh_stem + '.bvh'
+        else:
+            bvh_output = bvh_stem  # will fail below
 
         if proc.returncode != 0:
             # MocapNET was killed (cancelled) — check for partial BVH
             if os.path.exists(bvh_output) and os.path.getsize(bvh_output) > 100:
                 partial = True
-            elif os.path.exists(bvh_stem + '.bvh') and os.path.getsize(bvh_stem + '.bvh') > 100:
-                bvh_output = bvh_stem + '.bvh'
-                partial = True
             else:
                 stderr = ''.join(stderr_lines)
                 raise RuntimeError(f"MocapNET failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
 
-        # Rename to .bvh for clarity
+        # Consolidate to .bvh extension (os.replace overwrites on Windows)
         final_bvh = bvh_stem + '.bvh'
         if bvh_output != final_bvh and os.path.exists(bvh_output):
-            os.rename(bvh_output, final_bvh)
+            os.replace(bvh_output, final_bvh)
         bvh_output = final_bvh
+
+        # Copy to shared Results directory
+        results_path = _copy_bvh_to_results(bvh_output, job.name, job.pipeline)
 
         job.bvh_file = bvh_output
         job.status = 'complete'
@@ -935,7 +966,7 @@ def _run_processing(job_id):
         BVHFile = apps.get_model('core', 'BVHFile')
         source = 'openpose' if job.pipeline == 'openpose' else 'mocapnet'
         BVHFile.objects.get_or_create(
-            path=bvh_output,
+            path=results_path,
             defaults={
                 'name': job.name.rsplit('.', 1)[0] + '.bvh',
                 'source': source,
@@ -954,6 +985,12 @@ def _run_processing(job_id):
                 break
 
         if partial_bvh:
+            # Copy partial result to Results directory too
+            try:
+                results_path = _copy_bvh_to_results(partial_bvh, job.name, job.pipeline)
+            except Exception:
+                results_path = partial_bvh
+
             job.bvh_file = partial_bvh
             job.status = 'complete'
             job.progress = 100
@@ -963,7 +1000,7 @@ def _run_processing(job_id):
             from django.apps import apps as _apps
             BVHFile = _apps.get_model('core', 'BVHFile')
             BVHFile.objects.get_or_create(
-                path=partial_bvh,
+                path=results_path,
                 defaults={
                     'name': job.name.rsplit('.', 1)[0] + '.bvh',
                     'source': job.pipeline,
@@ -984,26 +1021,41 @@ def start_processing(request, job_id):
     job = get_object_or_404(BVHJob, id=job_id)
     # Allow re-processing from pending, complete, or failed states
     if job.status in ('pending', 'complete', 'failed'):
-        # Reset job state for fresh processing
-        if job.pipeline == 'v4':
-            init_status = 'v4_processing'
-        elif job.pipeline in ('gvhmr', 'wham', 'prompthmr'):
-            init_status = 'processing'
-        elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
-            init_status = 'detecting_2d'
-        else:
-            init_status = job.pipeline
-        job.status = init_status
-        job.progress = 0
-        job.error_message = ''
-        job.bvh_file = ''
-        total_frames = _get_video_frame_count(
-            Path(settings.MEDIA_ROOT) / str(job.video_file))
-        job.progress_detail = f'0 / {total_frames} frames' if total_frames else 'Starting...'
-        job.save()
-        _launch_processing_thread(str(job.id))
+        _init_and_launch_job(job)
         messages.info(request, 'Processing started.')
     return redirect('job_status', job_id=job.id)
+
+
+def api_start_processing(request, job_id):
+    """Start processing via AJAX — returns JSON instead of redirect."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    job = get_object_or_404(BVHJob, id=job_id)
+    if job.status in ('pending', 'complete', 'failed'):
+        _init_and_launch_job(job)
+        return JsonResponse({'ok': True, 'status': job.status})
+    return JsonResponse({'ok': False, 'error': 'Job not startable'}, status=400)
+
+
+def _init_and_launch_job(job):
+    """Reset job state and launch processing thread."""
+    if job.pipeline == 'v4':
+        init_status = 'v4_processing'
+    elif job.pipeline in ('gvhmr', 'wham', 'prompthmr'):
+        init_status = 'processing'
+    elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
+        init_status = 'detecting_2d'
+    else:
+        init_status = job.pipeline
+    job.status = init_status
+    job.progress = 0
+    job.error_message = ''
+    job.bvh_file = ''
+    total_frames = _get_video_frame_count(
+        Path(settings.MEDIA_ROOT) / str(job.video_file))
+    job.progress_detail = f'0 / {total_frames} frames' if total_frames else 'Starting...'
+    job.save()
+    _launch_processing_thread(str(job.id))
 
 
 def stop_processing(request, job_id):
@@ -1059,6 +1111,46 @@ def stop_processing(request, job_id):
     return redirect('job_status', job_id=job.id)
 
 
+def api_stop_processing(request, job_id):
+    """Stop processing via AJAX — returns JSON instead of redirect."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    job = get_object_or_404(BVHJob, id=job_id)
+    jid = str(job.id)
+    with _active_procs_lock:
+        proc = _active_procs.get(jid)
+
+    if proc and proc.poll() is None:
+        output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
+        stop_flag = output_dir / 'STOP_FLAG'
+        try:
+            stop_flag.parent.mkdir(parents=True, exist_ok=True)
+            stop_flag.write_text('stop')
+        except OSError:
+            pass
+
+        if job.pipeline == 'v4':
+            try:
+                proc.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+        else:
+            proc.kill()
+            proc.wait(timeout=5)
+
+        with _active_procs_lock:
+            _active_procs.pop(jid, None)
+    else:
+        with _active_procs_lock:
+            _active_procs.pop(jid, None)
+        job.status = 'failed'
+        job.error_message = 'Cancelled by user'
+        job.save()
+
+    return JsonResponse({'ok': True})
+
+
 def _launch_processing_thread(job_id):
     """Launch processing in a background thread with crash protection."""
     def _safe_run(jid):
@@ -1094,11 +1186,13 @@ def serve_bvh_file(request, job_id):
     job = get_object_or_404(BVHJob, id=job_id)
     if not job.bvh_file or not os.path.exists(job.bvh_file):
         return HttpResponseNotFound('BVH file not found')
-    return FileResponse(
+    resp = FileResponse(
         open(job.bvh_file, 'rb'),
         content_type='text/plain',
         filename=os.path.basename(job.bvh_file),
     )
+    resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
 
 
 def serve_detection_data(request, job_id):
@@ -1107,10 +1201,12 @@ def serve_detection_data(request, job_id):
     output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
     detection_file = output_dir / 'detection.json'
     if detection_file.exists():
-        return FileResponse(
+        resp = FileResponse(
             open(detection_file, 'rb'),
             content_type='application/json',
         )
+        resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return resp
     # Backwards compat: old jobs without detection data → empty array
     return JsonResponse([], safe=False)
 

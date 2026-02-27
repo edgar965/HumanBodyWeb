@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = '0.78'
+VERSION = '0.80'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
@@ -112,6 +112,7 @@ HUMANBODY_ASSETS_DIR = HUMANBODY_ROOT / 'data' / 'assets'
 HUMANBODY_ASSETS_GLB_DIR = HUMANBODY_ROOT / 'data' / 'assets_glb'
 HUMANBODY_ASSETS_INSTANCE_DIR = HUMANBODY_ROOT / 'data' / 'assetsInstance'
 HUMANBODY_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'
+BVH_RESULTS_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'Results'
 
 # Channel layers (in-memory for dev)
 CHANNEL_LAYERS = {

@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=13';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=17';
 
 // =========================================================================
 // Light Presets
@@ -165,7 +165,6 @@ function init() {
     bindLightingUI();
     bindRendererUI();
     bindCameraUI();
-    bindMaterialUI();
     bindActions();
     initSaveButtons();
 
@@ -207,18 +206,18 @@ function init() {
         demoBtn.addEventListener('click', () => {
             if (!currentAction) {
                 loadBVHAnimation('/api/character/bvh/Mixamo/Catwalk_Idle_02/', 'Catwalk Idle 02', 0);
-                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i>';
                 demoBtn.classList.add('active');
             } else if (playing) {
                 currentAction.paused = true;
                 playing = false;
-                demoBtn.innerHTML = '<i class="fas fa-play"></i> Catwalk';
+                demoBtn.innerHTML = '<i class="fas fa-play"></i>';
                 demoBtn.classList.remove('active');
             } else {
                 if (!currentAction.isRunning()) currentAction.play();
                 currentAction.paused = false;
                 playing = true;
-                demoBtn.innerHTML = '<i class="fas fa-pause"></i> Catwalk';
+                demoBtn.innerHTML = '<i class="fas fa-pause"></i>';
                 demoBtn.classList.add('active');
             }
         });
@@ -370,7 +369,6 @@ async function loadMesh() {
         document.getElementById('vertex-count').textContent =
             geo.attributes.position.count.toLocaleString();
 
-        applySavedMaterial();
         onResize();
     } catch (e) {
         console.error('Failed to load mesh:', e);
@@ -514,13 +512,6 @@ function syncUIFromState() {
 
     setColor('bg-color', scene.background);
     setSlider('camera-fov', camera.fov, 'camera-fov-val', v => Math.round(v).toString());
-
-    const skin = getSkinMat();
-    if (skin) {
-        setColor('skin-color', skin.color);
-        setSlider('skin-roughness', skin.roughness * 100, 'skin-roughness-val', v => (v / 100).toFixed(2));
-        setSlider('skin-metalness', skin.metalness * 100, 'skin-metalness-val', v => (v / 100).toFixed(2));
-    }
 }
 
 function setSlider(id, value, displayId, toDisplay) {
@@ -572,51 +563,7 @@ function bindCameraUI() {
     });
 }
 
-// =========================================================================
-// UI Bindings: Material
-// =========================================================================
-function bindMaterialUI() {
-    document.getElementById('skin-color').addEventListener('input', e => {
-        const mat = getSkinMat();
-        if (mat) mat.color.set(e.target.value);
-        autoSave();
-    });
-
-    const roughSlider = document.getElementById('skin-roughness');
-    const roughVal = document.getElementById('skin-roughness-val');
-    roughSlider.addEventListener('input', () => {
-        const v = parseFloat(roughSlider.value) / 100;
-        roughVal.textContent = v.toFixed(2);
-        const mat = getSkinMat();
-        if (mat) mat.roughness = v;
-        autoSave();
-    });
-
-    const metalSlider = document.getElementById('skin-metalness');
-    const metalVal = document.getElementById('skin-metalness-val');
-    metalSlider.addEventListener('input', () => {
-        const v = parseFloat(metalSlider.value) / 100;
-        metalVal.textContent = v.toFixed(2);
-        const mat = getSkinMat();
-        if (mat) mat.metalness = v;
-        autoSave();
-    });
-}
-
-function applySavedMaterial() {
-    const saved = localStorage.getItem('humanbody_scene_settings');
-    const mat = getSkinMat();
-    if (!saved || !mat) return;
-    try {
-        const s = JSON.parse(saved);
-        if (s.skin) {
-            if (s.skin.color) mat.color.set(s.skin.color);
-            if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
-            if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
-            syncUIFromState();
-        }
-    } catch (e) { /* ignore */ }
-}
+// (Material/Skin UI removed — now lives in Konfiguration/Body Type panel)
 
 // =========================================================================
 // Actions
@@ -639,12 +586,6 @@ function bindActions() {
         scene.background.set(0x1a1a2e);
         camera.fov = 35;
         camera.updateProjectionMatrix();
-        const skinMat = getSkinMat();
-        if (skinMat) {
-            skinMat.color.setHex(0xd4a574);
-            skinMat.roughness = 0.55;
-            skinMat.metalness = 0.0;
-        }
         document.getElementById('light-preset').value = 'studio';
         syncUIFromState();
         autoSave();
@@ -694,14 +635,6 @@ function gatherSettings() {
         camera: {
             fov: camera.fov
         },
-        skin: (() => {
-            const mat = getSkinMat();
-            return {
-                color: mat ? '#' + mat.color.getHexString() : '#d4a574',
-                roughness: mat ? mat.roughness : 0.55,
-                metalness: mat ? mat.metalness : 0.0
-            };
-        })()
     };
 }
 

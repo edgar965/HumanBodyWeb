@@ -104,7 +104,7 @@
                 <td><input type="checkbox" class="job-check" value="{{ job.id }}" onchange="updateBulkBtn()"></td>
                 <td>{{ job.name }}</td>
                 <td><span class="badge badge-{{ job.pipeline }}">{{ job.get_pipeline_display }}</span></td>
-                <td>
+                <td id="status-{{ job.id }}">
                     {% if job.status == 'complete' %}
                         <span style="color:#2ecc71;"><i class="fas fa-check-circle"></i> Complete</span>
                     {% elif job.status == 'failed' %}
@@ -112,15 +112,21 @@
                     {% elif job.status == 'pending' %}
                         <span style="color:#f39c12;"><i class="fas fa-clock"></i> Pending</span>
                     {% else %}
-                        <span style="color:#3498db;"><i class="fas fa-spinner fa-spin"></i> {{ job.get_status_display }}</span>
+                        <div class="inline-progress">
+                            <span class="status-text"><i class="fas fa-spinner fa-spin"></i> {{ job.get_status_display }}</span>
+                            <div class="progress-bar-mini">
+                                <div class="progress-fill-mini" style="width:{{ job.progress }}%"></div>
+                            </div>
+                            <span class="progress-pct">{{ job.progress }}%</span>
+                        </div>
                     {% endif %}
                 </td>
                 <td>{{ job.video_size_display }}</td>
                 <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
                 <td>
-                    <a class="btn btn-sm btn-primary" href="{% url 'start_processing' job.id %}">
+                    <button class="btn btn-sm btn-primary" onclick="startProcessing('{{ job.id }}', this)">
                         <i class="fas fa-play"></i> Process
-                    </a>
+                    </button>
                 </td>
                 <td style="display:flex; gap:5px;">
                     {% if job.status == 'complete' %}
@@ -216,6 +222,44 @@
 <style>
 .sortable { cursor: pointer; user-select: none; }
 .sortable:hover { color: #3498db; }
+.inline-progress { display: flex; align-items: center; gap: 6px; min-width: 180px; }
+.inline-progress .status-text { font-size: 0.82rem; white-space: nowrap; color: #3498db; }
+.progress-bar-mini { flex: 1; height: 6px; background: #2a2a3e; border-radius: 3px; overflow: hidden; min-width: 60px; }
+.progress-fill-mini { height: 100%; background: linear-gradient(90deg, #3498db, #2ecc71); border-radius: 3px; transition: width 0.5s; }
+.inline-progress .progress-pct { font-size: 0.75rem; color: #888; min-width: 30px; text-align: right; }
+/* Detail row */
+.detail-row td { padding: 0 !important; border-top: none !important; }
+.detail-panel {
+    margin: 0 16px 12px 40px;
+    padding: 14px 18px;
+    background: var(--bg-card, #1e1e2e);
+    border: 1px solid var(--border, #333);
+    border-radius: 8px;
+}
+.detail-panel .progress-bar {
+    height: 10px; background: #2a2a3e; border-radius: 5px; overflow: hidden; margin: 8px 0;
+}
+.detail-panel .progress-fill {
+    height: 100%; background: linear-gradient(90deg, #3498db, #2ecc71); border-radius: 5px; transition: width 0.5s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: #fff; min-width: 24px;
+}
+.detail-panel .detail-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 6px;
+}
+.detail-panel .detail-phase { color: var(--text-muted, #888); font-size: 0.85rem; }
+.detail-panel .detail-progress-text { color: var(--text-muted, #888); font-size: 0.82rem; margin-bottom: 8px; }
+.detail-panel .detail-actions { display: flex; gap: 8px; margin-top: 10px; }
+.detail-panel .detail-error {
+    margin-top: 8px; padding: 8px 12px; background: rgba(231,76,60,0.15);
+    border: 1px solid rgba(231,76,60,0.3); border-radius: 6px; color: #e74c3c; font-size: 0.85rem;
+}
+.detail-panel .detail-thumb {
+    margin-top: 10px; display: flex; gap: 12px; align-items: flex-start;
+}
+.detail-panel .detail-thumb img {
+    max-width: 200px; border-radius: 6px; border: 1px solid var(--border, #333);
+}
 </style>
 <script>
 const dropTarget = document.getElementById('dropTarget');
@@ -266,11 +310,13 @@ function deleteJob(jobId, btn) {
         headers: {'X-CSRFToken': getCsrf()}
     }).then(r => r.json()).then(data => {
         if (data.ok) {
+            var detail = document.getElementById('detail-' + jobId);
+            if (detail) detail.remove();
             var row = document.getElementById('row-' + jobId);
             if (row) row.remove();
             updateBulkBtn();
             var tbody = document.getElementById('jobTableBody');
-            if (tbody && tbody.children.length === 0) {
+            if (tbody && tbody.querySelectorAll('tr:not(.detail-row)').length === 0) {
                 var section = tbody.closest('.job-list-section');
                 if (section) section.style.display = 'none';
             }
@@ -303,13 +349,15 @@ function bulkDelete() {
     }).then(r => r.json()).then(data => {
         if (data.ok) {
             data.deleted.forEach(id => {
+                var detail = document.getElementById('detail-' + id);
+                if (detail) detail.remove();
                 var row = document.getElementById('row-' + id);
                 if (row) row.remove();
             });
             document.getElementById('selectAll').checked = false;
             updateBulkBtn();
             var tbody = document.getElementById('jobTableBody');
-            if (tbody && tbody.children.length === 0) {
+            if (tbody && tbody.querySelectorAll('tr:not(.detail-row)').length === 0) {
                 var section = tbody.closest('.job-list-section');
                 if (section) section.style.display = 'none';
             }
@@ -320,23 +368,198 @@ function bulkDelete() {
     });
 }
 
-// Sortable table
+// --- Phase labels ---
+var PHASE_LABELS = {
+    'pending': 'Pending', 'detecting_2d': '2D Pose Detection',
+    'openpose': '2D Detection (GPU)', 'openpose_csv': 'CSV Convert',
+    'mediapipe': '2D Detection (CPU)', 'lifting_3d': '3D Pose Estimation',
+    'mocapnet': '3D Pose Estimation', 'v4_processing': 'MocapNET v4',
+    'processing': 'Processing', 'complete': 'Complete', 'failed': 'Failed'
+};
+
+// --- Detail row management ---
+function getOrCreateDetailRow(jobId) {
+    var existing = document.getElementById('detail-' + jobId);
+    if (existing) return existing;
+    var mainRow = document.getElementById('row-' + jobId);
+    if (!mainRow) return null;
+    var colSpan = mainRow.children.length;
+    var tr = document.createElement('tr');
+    tr.id = 'detail-' + jobId;
+    tr.className = 'detail-row';
+    tr.innerHTML = '<td colspan="' + colSpan + '">' +
+        '<div class="detail-panel">' +
+            '<div class="detail-header">' +
+                '<span class="badge" id="detail-badge-' + jobId + '">Starting</span>' +
+                '<span class="detail-phase" id="detail-phase-' + jobId + '"></span>' +
+            '</div>' +
+            '<div class="progress-bar"><div class="progress-fill" id="detail-fill-' + jobId + '" style="width:0%"><span id="detail-pct-' + jobId + '">0%</span></div></div>' +
+            '<div class="detail-progress-text" id="detail-text-' + jobId + '">Starting...</div>' +
+            '<div class="detail-thumb" id="detail-thumb-' + jobId + '">' +
+                '<img src="/api/thumbnail/' + jobId + '/" alt="Video" onerror="this.style.display=\'none\'">' +
+            '</div>' +
+            '<div class="detail-error" id="detail-error-' + jobId + '" style="display:none;"></div>' +
+            '<div class="detail-actions" id="detail-actions-' + jobId + '">' +
+                '<button class="btn btn-sm btn-danger" onclick="stopProcessing(\'' + jobId + '\', this)"><i class="fas fa-stop"></i> Stop</button>' +
+            '</div>' +
+        '</div></td>';
+    mainRow.after(tr);
+    return tr;
+}
+
+function stopProcessing(jobId, btn) {
+    if (!confirm('Stop processing?')) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Stopping...';
+    fetch('/api/job/' + jobId + '/stop/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(function() {
+        btn.innerHTML = '<i class="fas fa-stop"></i> Stopped';
+    }).catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-stop"></i> Stop';
+    });
+}
+
+// --- Inline processing start + detail row + polling ---
+function startProcessing(jobId, btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch('/api/job/' + jobId + '/start/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrf()}
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            getOrCreateDetailRow(jobId);
+            updateJobUI(jobId, {status: data.status, progress: 0, progress_detail: 'Starting...'});
+            startJobPolling(jobId);
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play"></i> Process';
+            alert('Error: ' + (data.error || 'Unknown'));
+        }
+    }).catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play"></i> Process';
+    });
+}
+
+function updateJobUI(jobId, data) {
+    // --- Update inline status cell ---
+    var cell = document.getElementById('status-' + jobId);
+    if (cell) {
+        if (data.status === 'complete') {
+            cell.innerHTML = '<span style="color:#2ecc71;"><i class="fas fa-check-circle"></i> Complete</span>';
+        } else if (data.status === 'failed') {
+            cell.innerHTML = '<span style="color:#e74c3c;"><i class="fas fa-times-circle"></i> Failed</span>';
+        } else {
+            var pct = data.progress || 0;
+            var detail = data.progress_detail || data.status || '';
+            cell.innerHTML =
+                '<div class="inline-progress">' +
+                '<span class="status-text"><i class="fas fa-spinner fa-spin"></i> ' + detail.substring(0, 30) + '</span>' +
+                '<div class="progress-bar-mini"><div class="progress-fill-mini" style="width:' + pct + '%"></div></div>' +
+                '<span class="progress-pct">' + pct + '%</span></div>';
+        }
+    }
+
+    // --- Update detail row ---
+    var detailRow = document.getElementById('detail-' + jobId);
+    if (!detailRow) return;
+
+    var badge = document.getElementById('detail-badge-' + jobId);
+    var phase = document.getElementById('detail-phase-' + jobId);
+    var fill = document.getElementById('detail-fill-' + jobId);
+    var pctEl = document.getElementById('detail-pct-' + jobId);
+    var textEl = document.getElementById('detail-text-' + jobId);
+    var errorEl = document.getElementById('detail-error-' + jobId);
+    var actionsEl = document.getElementById('detail-actions-' + jobId);
+
+    var p = data.progress || 0;
+    if (badge) {
+        badge.textContent = PHASE_LABELS[data.status] || data.status;
+        badge.className = 'badge badge-' + data.status;
+    }
+    if (phase) phase.textContent = PHASE_LABELS[data.status] || '';
+    if (fill) fill.style.width = p + '%';
+    if (pctEl) pctEl.textContent = p + '%';
+    if (textEl) textEl.textContent = data.progress_detail || '';
+
+    if (data.status === 'complete') {
+        if (errorEl) errorEl.style.display = 'none';
+        if (actionsEl) {
+            actionsEl.innerHTML =
+                '<a class="btn btn-sm btn-primary" href="/process/' + jobId + '/result/"><i class="fas fa-eye"></i> View Result</a>' +
+                (data.bvh_file ? ' <a class="btn btn-sm btn-secondary" href="/api/bvh/' + jobId + '/" download><i class="fas fa-download"></i> Download BVH</a>' : '');
+        }
+        // Update main row actions too
+        var mainRow = document.getElementById('row-' + jobId);
+        if (mainRow) {
+            var actionsTd = mainRow.querySelector('td:last-child');
+            if (actionsTd && !actionsTd.querySelector('a[href*="result"]')) {
+                var a = document.createElement('a');
+                a.className = 'btn btn-sm btn-primary';
+                a.href = '/process/' + jobId + '/result/';
+                a.innerHTML = '<i class="fas fa-eye"></i> View';
+                actionsTd.insertBefore(a, actionsTd.firstChild);
+            }
+        }
+    } else if (data.status === 'failed') {
+        if (errorEl && data.error) {
+            errorEl.style.display = '';
+            errorEl.innerHTML = '<strong>Error:</strong> ' + data.error;
+        }
+        if (actionsEl) actionsEl.innerHTML = '';
+    }
+}
+
+function startJobPolling(jobId) {
+    function poll() {
+        fetch('/api/job/' + jobId + '/status/')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                updateJobUI(jobId, data);
+                if (data.status !== 'complete' && data.status !== 'failed') {
+                    setTimeout(poll, 2000);
+                }
+            })
+            .catch(function() { setTimeout(poll, 5000); });
+    }
+    setTimeout(poll, 1500);
+}
+
+// Auto-expand + poll for jobs that are currently processing
+(function() {
+    document.querySelectorAll('tr[id^="row-"]').forEach(function(row) {
+        var statusCell = row.querySelector('td[id^="status-"]');
+        if (statusCell && statusCell.querySelector('.inline-progress')) {
+            var jobId = statusCell.id.replace('status-', '');
+            getOrCreateDetailRow(jobId);
+            startJobPolling(jobId);
+        }
+    });
+})();
+
+// Sortable table (skip detail rows)
 var sortDir = {};
 function sortTable(key) {
     var tbody = document.getElementById('jobTableBody');
     if (!tbody) return;
-    var rows = Array.from(tbody.querySelectorAll('tr'));
-    sortDir[key] = !sortDir[key]; // toggle asc/desc
+    var rows = Array.from(tbody.querySelectorAll('tr:not(.detail-row)'));
+    sortDir[key] = !sortDir[key];
     var asc = sortDir[key];
     rows.sort(function(a, b) {
         var va = a.dataset[key] || '';
         var vb = b.dataset[key] || '';
-        if (key === 'size') {
-            return asc ? (Number(va) - Number(vb)) : (Number(vb) - Number(va));
-        }
+        if (key === 'size') return asc ? (Number(va) - Number(vb)) : (Number(vb) - Number(va));
         return asc ? va.localeCompare(vb) : vb.localeCompare(va);
     });
-    rows.forEach(function(row) { tbody.appendChild(row); });
+    rows.forEach(function(row) {
+        tbody.appendChild(row);
+        var detail = document.getElementById('detail-' + row.id.replace('row-', ''));
+        if (detail) tbody.appendChild(detail);
+    });
 }
 </script>
 {% endblock %}
