@@ -469,3 +469,78 @@ def test_reload(request):
 
     logger.info("Test character singletons reset")
     return JsonResponse({'ok': True, 'message': 'Test singletons reloaded'})
+
+
+@require_GET
+def test_switch_character(request):
+    """Switch active CharMorphPlugin character and reload singletons.
+
+    Copies data from charmorph_data/{name}/ to data/humanBody/ and resets
+    all cached singletons so the next API call uses the new character.
+    """
+    import shutil
+
+    name = request.GET.get('name', '')
+    cache_dir = os.path.join(TEST_DIR, 'charmorph_data')
+    char_dir = os.path.join(cache_dir, name)
+    active_dir = os.path.join(TEST_DIR, 'data', 'humanBody')
+
+    if not name or not os.path.isdir(char_dir):
+        # List available characters
+        available = []
+        if os.path.isdir(cache_dir):
+            available = sorted(
+                d for d in os.listdir(cache_dir)
+                if os.path.isdir(os.path.join(cache_dir, d))
+                and os.path.isfile(os.path.join(cache_dir, d, 'faces.npy'))
+            )
+        return JsonResponse({
+            'error': f'Character "{name}" not found',
+            'available': available,
+        }, status=400)
+
+    # Clear active directory
+    if os.path.isdir(active_dir):
+        shutil.rmtree(active_dir)
+    os.makedirs(active_dir, exist_ok=True)
+
+    # Copy character data
+    for root, dirs, files in os.walk(char_dir):
+        for fname in files:
+            src = os.path.join(root, fname)
+            rel = os.path.relpath(src, char_dir)
+            dst = os.path.join(active_dir, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+
+    # Update commit_info.json
+    info_path = os.path.join(TEST_DIR, 'commit_info.json')
+    if os.path.isfile(info_path):
+        with open(info_path, 'r', encoding='utf-8') as f:
+            info = json.load(f)
+        info['character'] = name
+        info['message'] = f'CharMorphPlugin {name} character'
+        with open(info_path, 'w', encoding='utf-8') as f:
+            json.dump(info, f, indent=2, ensure_ascii=False)
+
+    # Reset all singletons (same as test_reload)
+    global _test_module, _test_morph_data, _test_char_defaults
+    global _test_mesh_data, _test_cc_subdivider, _test_propagated_skin_weights
+
+    to_remove = [k for k in sys.modules if k.startswith('humanbody_core_test')]
+    for k in to_remove:
+        del sys.modules[k]
+
+    _test_module = None
+    _test_morph_data = None
+    _test_char_defaults = None
+    _test_mesh_data = None
+    _test_cc_subdivider = None
+    _test_propagated_skin_weights = None
+
+    logger.info("Switched test character to %s", name)
+    return JsonResponse({
+        'ok': True,
+        'character': name,
+        'message': f'Switched to {name}',
+    })

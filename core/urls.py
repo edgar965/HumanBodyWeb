@@ -75,4 +75,5 @@ urlpatterns = [
     path('api/character-test/version/', test_character_api.test_version_info, name='test_version_info'),
     path('api/character-test/source/', test_character_api.test_character_source, name='test_character_source'),
     path('api/character-test/reload/', test_character_api.test_reload, name='test_reload'),
+    path('api/character-test/switch/', test_character_api.test_switch_character, name='test_switch_character'),
 ]

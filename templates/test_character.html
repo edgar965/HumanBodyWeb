@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Test Charakter — MocapNET{% endblock %}
+{% block title %}Test Charakter — Vergleich{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -18,23 +18,47 @@
         gap: 0;
         position: relative;
     }
+
+    /* Panels on left & right edges */
+    .viewer-panel {
+        width: 280px;
+        background: var(--bg-secondary);
+        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+        overflow-y: auto;
+        padding: 0;
+        flex-shrink: 0;
+    }
+    .viewer-panel.panel-left { border-left: none; }
+    .viewer-panel.panel-right { border-right: none; }
+
+    /* Canvas columns */
     .canvas-wrap {
         flex: 1;
         min-width: 0;
         position: relative;
     }
-    #viewer-canvas {
+    .canvas-wrap canvas {
         width: 100%;
         height: 100%;
         display: block;
         background: #111;
         cursor: grab;
     }
-    #viewer-canvas:active { cursor: grabbing; }
-    .viewer-buttons {
+    .canvas-wrap canvas:active { cursor: grabbing; }
+
+    /* Divider line between canvases */
+    .canvas-divider {
+        width: 2px;
+        background: var(--border);
+        flex-shrink: 0;
+    }
+
+    /* Buttons overlay on canvas */
+    .viewer-buttons-left {
         position: absolute;
         top: 12px;
-        right: 12px;
+        left: 12px;
         z-index: 10;
         display: flex;
         gap: 6px;
@@ -52,23 +76,8 @@
     }
     .viewer-btn:hover { border-color: var(--accent); color: var(--text); }
     .viewer-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .viewer-buttons-left {
-        position: absolute;
-        top: 12px;
-        left: 12px;
-        z-index: 10;
-        display: flex;
-        gap: 6px;
-    }
 
-    .viewer-panel {
-        width: 320px;
-        background: var(--bg-secondary);
-        border-left: 1px solid var(--border);
-        overflow-y: auto;
-        padding: 0;
-        flex-shrink: 0;
-    }
+    /* Panel sections (shared by viewer_compare.js generated DOM) */
     .panel-section {
         border-bottom: 1px solid var(--border);
         padding: 12px 16px;
@@ -101,7 +110,7 @@
     .slider-row label {
         font-size: 0.8rem;
         color: var(--text-muted);
-        min-width: 100px;
+        min-width: 80px;
         flex-shrink: 0;
     }
     .slider-row input[type="range"] {
@@ -127,126 +136,29 @@
         margin-bottom: 8px;
     }
 
-    .asset-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-    }
-    .asset-btn {
-        padding: 6px 8px;
+    .morph-category { margin-bottom: 4px; }
+    .morph-category-header {
         font-size: 0.78rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        color: var(--text-muted);
-        cursor: pointer;
-        text-align: center;
-        transition: all 0.2s;
-    }
-    .asset-btn:hover { border-color: var(--accent); color: var(--text); }
-    .asset-btn.active {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
-    }
-    .asset-btn.disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-    }
-
-    .anim-tree {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        margin-bottom: 8px;
-    }
-    .anim-category {
-        border-bottom: 1px solid var(--border);
-    }
-    .anim-category:last-child { border-bottom: none; }
-    .anim-category-header {
-        font-size: 0.82rem;
         color: var(--text);
         cursor: pointer;
-        padding: 8px 12px;
+        padding: 4px 0;
         user-select: none;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: background 0.15s;
     }
-    .anim-category-header:hover { background: var(--bg-card); }
-    .anim-category-header .cat-chevron {
-        font-size: 0.65rem;
-        transition: transform 0.2s;
-        color: var(--text-muted);
-    }
-    .anim-category.open .cat-chevron { transform: rotate(90deg); }
-    .anim-category-header .cat-count {
-        font-size: 0.72rem;
-        color: var(--text-muted);
-        margin-left: auto;
-    }
-    .anim-category-body {
-        display: none;
-    }
-    .anim-category.open .anim-category-body { display: block; }
-    .anim-item {
-        font-size: 0.78rem;
-        color: var(--text-muted);
-        padding: 5px 12px 5px 28px;
-        cursor: pointer;
-        transition: all 0.15s;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .anim-item:hover { background: var(--bg-card); color: var(--text); }
-    .anim-item.active {
-        background: var(--accent);
-        color: #fff;
-    }
-    .anim-item .frames {
-        font-size: 0.7rem;
-        opacity: 0.7;
-    }
+    .morph-category-header:hover { color: var(--accent); }
+    .morph-category-body { display: none; }
+    .morph-category.open .morph-category-body { display: block; }
 
-    .anim-speed {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-    .anim-speed label {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        white-space: nowrap;
-        min-width: 80px;
-    }
-    .anim-speed input[type="range"] { flex: 1; accent-color: var(--accent); }
-    .anim-controls {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-        margin-bottom: 4px;
-    }
-    .anim-controls button {
-        padding: 6px 12px;
+    .btn-reset {
+        padding: 4px 12px;
+        font-size: 0.78rem;
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: 4px;
-        color: var(--text);
-        cursor: pointer;
-        font-size: 0.85rem;
-    }
-    .anim-controls button:hover { border-color: var(--accent); }
-    .anim-controls input[type="range"] { flex: 1; accent-color: var(--accent); }
-    .anim-info {
-        font-size: 0.75rem;
         color: var(--text-muted);
-        margin-top: 4px;
+        cursor: pointer;
+        float: right;
     }
+    .btn-reset:hover { border-color: var(--accent); color: var(--text); }
 
     .status-bar {
         padding: 8px 16px;
@@ -257,6 +169,24 @@
     }
     .status-bar .connected { color: var(--success); }
     .status-bar .disconnected { color: var(--danger); }
+
+    /* Canvas label overlay */
+    .canvas-label {
+        position: absolute;
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 4px 14px;
+        background: rgba(26, 26, 46, 0.8);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        pointer-events: none;
+        backdrop-filter: blur(4px);
+        white-space: nowrap;
+        z-index: 5;
+    }
 
     /* Code Viewer Overlay */
     #code-overlay {
@@ -331,88 +261,43 @@
     .code-content code {
         font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
     }
-    /* Data diagnostics panel */
-    .diag-section {
-        padding: 16px;
-        border-bottom: 1px solid var(--border);
-    }
-    .diag-section h3 {
-        font-size: 0.85rem;
-        color: var(--accent);
-        margin-bottom: 8px;
-    }
-    .diag-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.78rem;
-    }
-    .diag-table th {
-        text-align: left;
-        color: var(--text-muted);
-        padding: 4px 12px 4px 0;
-        border-bottom: 1px solid var(--border);
-    }
-    .diag-table td {
-        padding: 4px 12px 4px 0;
-        color: var(--text);
-    }
-    .diag-table tr.highlight td {
-        background: rgba(230, 126, 34, 0.15);
-        font-weight: 600;
-    }
-    .diag-tag {
-        display: inline-block;
-        padding: 1px 6px;
-        border-radius: 3px;
-        font-size: 0.72rem;
-        margin: 0 2px;
-    }
+    /* Data diagnostics */
+    .diag-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .diag-section h3 { font-size: 0.85rem; color: var(--accent); margin-bottom: 8px; }
+    .diag-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    .diag-table th { text-align: left; color: var(--text-muted); padding: 4px 12px 4px 0; border-bottom: 1px solid var(--border); }
+    .diag-table td { padding: 4px 12px 4px 0; color: var(--text); }
+    .diag-table tr.highlight td { background: rgba(230, 126, 34, 0.15); font-weight: 600; }
+    .diag-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.72rem; margin: 0 2px; }
     .diag-tag.female { background: #e74c8b33; color: #e74c8b; }
     .diag-tag.male { background: #3498db33; color: #3498db; }
     .diag-tag.warn { background: #e67e2233; color: #e67e22; }
 
-    .morph-category {
+    /* CharMorphPlugin character selector in left panel header */
+    .charmorph-selector {
+        padding: 8px 16px;
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border);
+    }
+    .charmorph-selector label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        display: block;
         margin-bottom: 4px;
     }
-    .morph-category-header {
-        font-size: 0.78rem;
-        color: var(--text);
-        cursor: pointer;
-        padding: 4px 0;
-        user-select: none;
-    }
-    .morph-category-header:hover { color: var(--accent); }
-    .morph-category-body { display: none; }
-    .morph-category.open .morph-category-body { display: block; }
-
-    .btn-reset {
-        padding: 4px 12px;
-        font-size: 0.78rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        color: var(--text-muted);
-        cursor: pointer;
-        float: right;
-    }
-    .btn-reset:hover { border-color: var(--accent); color: var(--text); }
-
-    .btn-toggle {
-        padding: 6px 14px;
-        font-size: 0.82rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        color: var(--text-muted);
-        cursor: pointer;
+    .charmorph-selector select {
         width: 100%;
-        transition: all 0.2s;
+        padding: 4px 6px;
+        background: var(--bg-secondary);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 0.82rem;
     }
-    .btn-toggle:hover { border-color: var(--accent); color: var(--text); }
-    .btn-toggle.active {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
+    .charmorph-selector .charmorph-status {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-top: 2px;
     }
 </style>
 {% endblock %}
@@ -423,219 +308,31 @@
     z-index:100; padding:6px 16px; background:#e67e22; color:#fff;
     font-size:0.82rem; text-align:center; font-weight:600;
 ">Test Charakter — Version wird geladen...</div>
+
 <div class="viewer-container">
+    <!-- Left Panel: CharMorphPlugin controls (generated by viewer_compare.js) -->
+    <div id="panel-left" class="viewer-panel panel-left"></div>
+
+    <!-- Left Canvas: CharMorphPlugin character -->
     <div class="canvas-wrap">
-        <canvas id="viewer-canvas"></canvas>
+        <canvas id="canvas-left"></canvas>
         <div class="viewer-buttons-left">
             <button id="show-code-btn" class="viewer-btn" title="Source Code anzeigen"><i class="fas fa-code"></i> Code</button>
-            <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
-            <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i class="fas fa-folder-open"></i> Laden</button>
-            <input type="file" id="load-preset-file" accept=".json" style="display:none">
-            <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
-            <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i class="fas fa-file-export"></i> Speichern unter</button>
         </div>
-        <div class="viewer-buttons">
-            <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i> Model</button>
-            <button id="clothes-toggle" class="viewer-btn active" title="Kleider ein/ausblenden"><i class="fas fa-tshirt"></i> Kleider</button>
-            <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i> Rig</button>
-        </div>
+        <div class="canvas-label">CharMorphPlugin (Test)</div>
     </div>
 
-    <div class="viewer-panel">
-        <!-- Body Type -->
-        <div class="panel-section" data-panel-key="body_type">
-            <h3>Body Type <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body">
-                <select id="body-type-select" class="viewer-select"></select>
-                <div class="slider-row">
-                    <label>Gender</label>
-                    <input type="range" id="gender-slider" min="0" max="100" value="0" step="1">
-                    <span class="slider-val" id="gender-val">0</span>
-                </div>
-                <div class="slider-row">
-                    <label>Age</label>
-                    <input type="range" id="meta-age" min="18" max="100" value="59" step="1">
-                    <span class="slider-val" id="meta-age-val">59</span>
-                </div>
-                <div class="slider-row">
-                    <label>Mass</label>
-                    <input type="range" id="meta-mass" min="45" max="200" value="123" step="1">
-                    <span class="slider-val" id="meta-mass-val">123</span>
-                </div>
-                <div class="slider-row">
-                    <label>Tone</label>
-                    <input type="range" id="meta-tone" min="0" max="100" value="50" step="1">
-                    <span class="slider-val" id="meta-tone-val">50</span>
-                </div>
-                <div class="slider-row">
-                    <label>Height</label>
-                    <input type="range" id="meta-height" min="150" max="200" value="175" step="1">
-                    <span class="slider-val" id="meta-height-val">175</span>
-                </div>
-                <div style="margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
-                    <div class="slider-row">
-                        <label>Skin</label>
-                        <input type="color" id="skin-color-viewer" value="#d4a574" style="width:40px;height:24px;border:none;cursor:pointer;">
-                    </div>
-                    <div class="slider-row">
-                        <label>Roughness</label>
-                        <input type="range" id="skin-roughness-viewer" min="0" max="100" value="55" step="1">
-                        <span class="slider-val" id="skin-roughness-viewer-val">0.55</span>
-                    </div>
-                    <div class="slider-row">
-                        <label>Metalness</label>
-                        <input type="range" id="skin-metalness-viewer" min="0" max="100" value="0" step="1">
-                        <span class="slider-val" id="skin-metalness-viewer-val">0.00</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Divider -->
+    <div class="canvas-divider"></div>
 
-        <!-- Morphs -->
-        <div class="panel-section" data-panel-key="morphs">
-            <h3>Morphs <button class="btn-reset" id="reset-morphs">Reset</button> <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="morphs-panel"></div>
-        </div>
-
-        <!-- Cloth - from Template -->
-        <div class="panel-section" data-panel-key="cloth_template">
-            <h3>Cloth - from Template <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="cloth-template-panel">
-                <div class="slider-row"><label>Template</label>
-                    <select id="cloth-tpl-type" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
-                </div>
-                <div class="slider-row" style="gap:4px;">
-                    <label>Preset</label>
-                    <select id="cloth-tpl-preset" class="viewer-select" style="margin-bottom:0;flex:1;">
-                        <option value="">-- none --</option>
-                    </select>
-                    <button id="cloth-tpl-preset-load" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;width:auto;" title="Preset laden">
-                        <i class="fas fa-folder-open"></i>
-                    </button>
-                    <button id="cloth-tpl-preset-save" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;width:auto;" title="Preset speichern">
-                        <i class="fas fa-save"></i>
-                    </button>
-                    <button id="cloth-tpl-preset-saveas" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;width:auto;" title="Preset speichern unter...">
-                        <i class="fas fa-file-export"></i>
-                    </button>
-                </div>
-                <div class="slider-row"><label>Segments</label>
-                    <input type="range" id="cloth-tpl-segments" min="16" max="64" value="32" step="2">
-                    <span class="slider-val" id="cloth-tpl-segments-val">32</span>
-                </div>
-                <div class="slider-row"><label>Tightness</label>
-                    <input type="range" id="cloth-tpl-tightness" min="0" max="100" value="50" step="1">
-                    <span class="slider-val" id="cloth-tpl-tightness-val">0.50</span>
-                </div>
-                <div class="slider-row"><label>Top</label>
-                    <input type="range" id="cloth-tpl-top-ext" min="-30" max="30" value="0" step="1">
-                    <span class="slider-val" id="cloth-tpl-top-ext-val">0 m</span>
-                </div>
-                <div class="slider-row"><label>Bottom</label>
-                    <input type="range" id="cloth-tpl-bot-ext" min="-30" max="50" value="0" step="1">
-                    <span class="slider-val" id="cloth-tpl-bot-ext-val">0 m</span>
-                </div>
-                <div class="slider-row"><label>Color</label>
-                    <input type="color" id="cloth-color" value="#404870" style="width:40px;height:24px;border:none;cursor:pointer;">
-                </div>
-                <div style="display:flex;gap:6px;margin-top:6px;">
-                    <button id="cloth-tpl-create" class="btn-toggle" style="flex:1;"><i class="fas fa-plus"></i> Create</button>
-                    <button id="cloth-tpl-update" class="btn-toggle" style="flex:1;"><i class="fas fa-sync-alt"></i> Update</button>
-                    <button id="cloth-tpl-delete" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Aktuelles Template löschen"><i class="fas fa-times"></i></button>
-                    <button id="cloth-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Cloth löschen"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cloth Builder -->
-        <div class="panel-section collapsed" data-panel-key="cloth_builder">
-            <h3>Cloth Builder <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="cloth-builder-panel">
-                <div class="slider-row"><label>Region</label>
-                    <select id="cloth-bld-region" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
-                </div>
-                <div class="slider-row"><label>Looseness</label>
-                    <input type="range" id="cloth-bld-looseness" min="0" max="200" value="30" step="5">
-                    <span class="slider-val" id="cloth-bld-looseness-val">0.30</span>
-                </div>
-                <div style="margin-top:6px;">
-                    <button id="cloth-bld-create" class="btn-toggle" style="width:100%;"><i class="fas fa-plus"></i> Create Garment</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cloth Primitive -->
-        <div class="panel-section collapsed" data-panel-key="cloth_primitive">
-            <h3>Cloth - Primitive <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="cloth-prim-panel">
-                <div class="slider-row"><label>Primitive</label>
-                    <select id="cloth-prim-type" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
-                </div>
-                <div class="slider-row"><label>Segments</label>
-                    <input type="range" id="cloth-prim-segments" min="12" max="64" value="32" step="2">
-                    <span class="slider-val" id="cloth-prim-segments-val">32</span>
-                </div>
-                <div class="slider-row"><label>Length</label>
-                    <input type="range" id="cloth-prim-length" min="10" max="150" value="50" step="5">
-                    <span class="slider-val" id="cloth-prim-length-val">0.50</span>
-                </div>
-                <div class="slider-row" id="cloth-prim-flare-row"><label>Flare</label>
-                    <input type="range" id="cloth-prim-flare" min="0" max="200" value="30" step="5">
-                    <span class="slider-val" id="cloth-prim-flare-val">0.30</span>
-                </div>
-                <div style="margin-top:6px;">
-                    <button id="cloth-prim-create" class="btn-toggle" style="width:100%;"><i class="fas fa-plus"></i> Create Primitive</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Hair -->
-        <div class="panel-section collapsed" data-panel-key="hair">
-            <h3>Hair <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="hair-panel">
-                <select id="hair-style-select" class="viewer-select">
-                    <option value="">— No Hair —</option>
-                </select>
-                <div class="slider-row">
-                    <label>Color</label>
-                    <select id="hair-color-select" class="viewer-select" style="margin-bottom:0;"></select>
-                </div>
-            </div>
-        </div>
-
-        <!-- Wardrobe -->
-        <div class="panel-section collapsed" data-panel-key="wardrobe">
-            <h3>Wardrobe <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="wardrobe-panel"></div>
-        </div>
-
-        <!-- Animations -->
-        <div class="panel-section collapsed" data-panel-key="animations">
-            <h3>Animations <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="animation-panel">
-                <div class="anim-tree" id="anim-tree">
-                    <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Animationen...</div>
-                </div>
-                <div class="anim-speed">
-                    <label id="speed-label">Speed: 1.0x</label>
-                    <input type="range" id="anim-speed" min="10" max="300" value="100" step="10">
-                </div>
-                <div class="anim-controls">
-                    <button id="anim-play" title="Play / Pause"><i class="fas fa-play"></i></button>
-                    <button id="anim-stop" title="Stop"><i class="fas fa-stop"></i></button>
-                    <input type="range" id="anim-timeline" min="0" max="100" value="0" step="1">
-                </div>
-                <div class="anim-info" id="anim-info">&mdash;</div>
-            </div>
-        </div>
-
-        <!-- Status -->
-        <div class="status-bar">
-            WebSocket: <span id="ws-status" class="disconnected">Disconnected</span>
-            &nbsp;|&nbsp; <span id="vertex-count">—</span> vertices
-            &nbsp;|&nbsp; <span id="fps-display">—</span> fps
-        </div>
+    <!-- Right Canvas: humanbody_core production character -->
+    <div class="canvas-wrap">
+        <canvas id="canvas-right"></canvas>
+        <div class="canvas-label">humanbody_core (Produktion)</div>
     </div>
+
+    <!-- Right Panel: humanbody_core controls (generated by viewer_compare.js) -->
+    <div id="panel-right" class="viewer-panel panel-right"></div>
 </div>
 
 <!-- Code Viewer Overlay -->
@@ -655,41 +352,123 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/languages/python.min.js"></script>
-<script>
-window.VIEWER_CONFIG = {
-    apiPrefix: '/api/character-test',
-    wsPath: '/ws/character-test/',
-    defaultBodyType: 'Caucasian',  // CharMorphPlugin: 'Caucasian', humanbody_core: 'Male_Caucasian'
-};
-</script>
 <script type="importmap">
 {
     "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
-        "three-subdivide": "https://cdn.jsdelivr.net/npm/three-subdivide@1.1.5/build/index.module.js"
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=24"></script>
+<script type="module">
+import { createViewer } from '{% static "viewer/viewer_compare.js" %}';
+
+const left = createViewer({
+    canvasId: 'canvas-left',
+    panelId: 'panel-left',
+    apiPrefix: '/api/character-test',
+    wsPath: '/ws/character-test/',
+    defaultBodyType: 'Caucasian',
+    label: 'CharMorphPlugin (Test)',
+});
+
+const right = createViewer({
+    canvasId: 'canvas-right',
+    panelId: 'panel-right',
+    apiPrefix: '/api/character',
+    wsPath: '/ws/character/',
+    defaultBodyType: 'Male_Caucasian',
+    label: 'humanbody_core (Produktion)',
+});
+
+left.init();
+right.init();
+</script>
 <script>
+// --- Version banner + CharMorphPlugin character selector ---
 (function() {
     const banner = document.getElementById('test-version-banner');
-    if (!banner) return;
-    fetch('/api/character-test/version/')
-        .then(r => r.ok ? r.json() : null)
-        .then(d => {
-            if (d && d.short_hash) {
-                const ver = d.version ? ' (v' + d.version + ')' : '';
-                banner.textContent = 'Test Charakter \u2014 ' + d.short_hash + ver +
-                    ' \u2014 ' + d.message + ' (' + d.date.split(' ')[0] + ')';
-                banner.style.display = 'block';
-            }
-        })
-        .catch(() => {});
+
+    function loadVersionInfo() {
+        return fetch('/api/character-test/version/')
+            .then(r => r.ok ? r.json() : null)
+            .then(d => {
+                if (!d || !d.short_hash) return;
+
+                // Banner
+                if (banner) {
+                    const ver = d.version ? ' (v' + d.version + ')' : '';
+                    banner.textContent = 'Test Charakter \u2014 ' + d.short_hash + ver +
+                        ' \u2014 ' + d.message + ' (' + d.date.split(' ')[0] + ')';
+                    banner.style.display = 'block';
+                }
+
+                // Inject character selector into left panel (after label header)
+                const leftPanel = document.getElementById('panel-left');
+                if (leftPanel && d.available_characters && d.available_characters.length) {
+                    const selectorDiv = document.createElement('div');
+                    selectorDiv.className = 'charmorph-selector';
+
+                    const lbl = document.createElement('label');
+                    lbl.textContent = 'CharMorphPlugin Character';
+                    selectorDiv.appendChild(lbl);
+
+                    const sel = document.createElement('select');
+                    d.available_characters.forEach(name => {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        if (name === d.character) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                    selectorDiv.appendChild(sel);
+
+                    const status = document.createElement('div');
+                    status.className = 'charmorph-status';
+                    status.textContent = d.character + ' aktiv';
+                    selectorDiv.appendChild(status);
+
+                    // Insert after the first child (label header)
+                    const firstSection = leftPanel.querySelector('.panel-section');
+                    if (firstSection && firstSection.nextSibling) {
+                        leftPanel.insertBefore(selectorDiv, firstSection.nextSibling);
+                    } else {
+                        leftPanel.appendChild(selectorDiv);
+                    }
+
+                    sel.addEventListener('change', function() {
+                        const name = this.value;
+                        if (!name) return;
+                        status.textContent = 'Wechsle zu ' + name + '...';
+                        sel.disabled = true;
+
+                        fetch('/api/character-test/switch/?name=' + encodeURIComponent(name))
+                            .then(r => r.json())
+                            .then(d => {
+                                if (d.ok) {
+                                    status.textContent = name + ' geladen, lade Seite neu...';
+                                    window.location.reload();
+                                } else {
+                                    status.textContent = 'Fehler: ' + (d.error || 'Unbekannt');
+                                    sel.disabled = false;
+                                }
+                            })
+                            .catch(err => {
+                                status.textContent = 'Fehler: ' + err;
+                                sel.disabled = false;
+                            });
+                    });
+                }
+            })
+            .catch(() => {});
+    }
+
+    // Wait a tick for viewer_compare.js to build panels before injecting selector
+    setTimeout(loadVersionInfo, 100);
 })();
 </script>
 <script>
+// --- Code Viewer Overlay (unchanged) ---
 (function() {
     const overlay = document.getElementById('code-overlay');
     const showBtn = document.getElementById('show-code-btn');
@@ -727,14 +506,12 @@ window.VIEWER_CONFIG = {
 
     function renderTabs(data) {
         tabsEl.innerHTML = '';
-        // Diagnostics tab first
         const diagTab = document.createElement('div');
         diagTab.className = 'code-tab active';
         diagTab.textContent = 'Data Diagnostics';
         diagTab.onclick = () => selectTab(diagTab, () => renderDiagnostics(data.data_diagnostics));
         tabsEl.appendChild(diagTab);
 
-        // CharMorphPlugin tabs (reference implementation)
         if (data.charmorph_files && data.charmorph_files.length) {
             const cmOrder = ['morpher_cores.py', 'morphs.py', 'charlib.py'];
             const sorted = data.charmorph_files.sort((a, b) => {
@@ -752,7 +529,6 @@ window.VIEWER_CONFIG = {
             });
         }
 
-        // humanbody_core tabs (separator)
         const sep = document.createElement('div');
         sep.style.cssText = 'border-left:1px solid var(--border);margin:0 4px;';
         tabsEl.appendChild(sep);
@@ -771,7 +547,6 @@ window.VIEWER_CONFIG = {
             tabsEl.appendChild(tab);
         });
 
-        // Show diagnostics by default
         renderDiagnostics(data.data_diagnostics);
     }
 
@@ -783,7 +558,6 @@ window.VIEWER_CONFIG = {
 
     function renderFile(f, source) {
         contentEl.innerHTML = '';
-        // Header bar
         const hdr = document.createElement('div');
         hdr.style.cssText = 'padding:8px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border);font-size:0.82rem;';
         if (source === 'CharMorphPlugin') {
@@ -804,7 +578,6 @@ window.VIEWER_CONFIG = {
     function renderDiagnostics(diag) {
         let html = '';
 
-        // L1 Body Types
         html += '<div class="diag-section"><h3>L1 Body Types (Basis-Meshes)</h3>';
         if (diag.l1 && diag.l1.length) {
             html += '<table class="diag-table"><tr><th>Name</th><th>Vertices</th><th>Shape</th><th>Size</th><th>Dtype</th></tr>';
@@ -827,8 +600,6 @@ window.VIEWER_CONFIG = {
                 html += '</tr>';
             });
             html += '</table>';
-
-            // Check for vertex count mismatch
             const counts = new Set(diag.l1.filter(l => !l.error).map(l => l.vertex_count));
             if (counts.size > 1) {
                 html += '<p style="margin-top:8px;"><span class="diag-tag warn">WARNUNG</span> '
@@ -840,7 +611,6 @@ window.VIEWER_CONFIG = {
         }
         html += '</div>';
 
-        // Gender Delta
         html += '<div class="diag-section"><h3>Gender Delta</h3>';
         if (diag.gender_delta) {
             const gd = diag.gender_delta;
@@ -849,8 +619,6 @@ window.VIEWER_CONFIG = {
             html += '<td>' + gd.vertex_count.toLocaleString() + '</td>';
             html += '<td>[' + gd.shape.join(', ') + ']</td>';
             html += '<td>' + formatBytes(gd.size_bytes) + '</td></tr></table>';
-
-            // Check if gender delta matches L1 counts
             if (diag.l1 && diag.l1.length) {
                 const maleCounts = diag.l1.filter(l => l.name.startsWith('Male_') && !l.error).map(l => l.vertex_count);
                 const femaleCounts = diag.l1.filter(l => l.name.startsWith('Female_') && !l.error).map(l => l.vertex_count);
@@ -871,7 +639,6 @@ window.VIEWER_CONFIG = {
         }
         html += '</div>';
 
-        // L2 Packed Morphs
         html += '<div class="diag-section"><h3>L2 Packed Morphs</h3>';
         if (diag.l2_packed && diag.l2_packed.length) {
             diag.l2_packed.forEach(p => {
@@ -893,7 +660,6 @@ window.VIEWER_CONFIG = {
         }
         html += '</div>';
 
-        // Data Files
         html += '<div class="diag-section"><h3>Data Files</h3>';
         if (diag.data_files && diag.data_files.length) {
             html += '<table class="diag-table"><tr><th>File</th><th>Size</th></tr>';
@@ -904,7 +670,6 @@ window.VIEWER_CONFIG = {
         }
         html += '</div>';
 
-        // Code Flow Explanation
         html += '<div class="diag-section"><h3>Code-Flow: Male_Caucasian</h3>';
         html += '<div style="font-size:0.82rem;line-height:1.6;color:var(--text);">';
         html += '<ol style="padding-left:20px;">';
