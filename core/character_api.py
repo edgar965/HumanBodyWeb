@@ -106,9 +106,14 @@ def animations_page(request):
     return render(request, 'animations.html')
 
 
-def skeleton_test_page(request):
-    """Render the Skeleton Test page (3 skeletons side-by-side)."""
+def test_animation_page(request):
+    """Render the Test Animation page (6 skeletons side-by-side)."""
     return render(request, 'skeleton_test.html')
+
+
+def test_character_page(request):
+    """Render the Test Character page (copy of Konfiguration)."""
+    return render(request, 'test_character.html')
 
 
 @require_GET

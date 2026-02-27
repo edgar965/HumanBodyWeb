@@ -33,8 +33,11 @@
                     <a href="{% url 'humanbody_animations' %}" class="{% if request.path == '/humanbody/animations/' %}active{% endif %}">
                         <i class="fas fa-running"></i> <span>Animationen</span>
                     </a>
-                    <a href="{% url 'humanbody_test' %}" class="{% if request.path == '/humanbody/test/' %}active{% endif %}">
-                        <i class="fas fa-vial"></i> <span>Test</span>
+                    <a href="{% url 'test_animation' %}" class="{% if request.path == '/humanbody/test-animation/' %}active{% endif %}">
+                        <i class="fas fa-vial"></i> <span>Test Animation</span>
+                    </a>
+                    <a href="{% url 'test_character' %}" class="{% if request.path == '/humanbody/test-character/' %}active{% endif %}">
+                        <i class="fas fa-user-check"></i> <span>Test Charakter</span>
                     </a>
                 </div>
             </div>
