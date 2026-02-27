@@ -258,6 +258,119 @@
     .status-bar .connected { color: var(--success); }
     .status-bar .disconnected { color: var(--danger); }
 
+    /* Code Viewer Overlay */
+    #code-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: var(--sidebar-width, 220px); right: 0; bottom: 0;
+        z-index: 200;
+        background: var(--bg-primary);
+        flex-direction: column;
+    }
+    #code-overlay.open { display: flex; }
+    #code-overlay-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    #code-overlay-header h2 {
+        font-size: 0.95rem;
+        margin: 0;
+        color: var(--accent);
+    }
+    #code-overlay-close {
+        margin-left: auto;
+        padding: 6px 14px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+    #code-overlay-close:hover { border-color: var(--accent); }
+    .code-tabs {
+        display: flex;
+        gap: 0;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        overflow-x: auto;
+    }
+    .code-tab {
+        padding: 8px 16px;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        transition: all 0.15s;
+    }
+    .code-tab:hover { color: var(--text); background: var(--bg-card); }
+    .code-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+        background: var(--bg-card);
+    }
+    .code-content {
+        flex: 1;
+        overflow: auto;
+        padding: 0;
+    }
+    .code-content pre {
+        margin: 0;
+        padding: 16px;
+        font-size: 0.78rem;
+        line-height: 1.5;
+        tab-size: 4;
+    }
+    .code-content code {
+        font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+    }
+    /* Data diagnostics panel */
+    .diag-section {
+        padding: 16px;
+        border-bottom: 1px solid var(--border);
+    }
+    .diag-section h3 {
+        font-size: 0.85rem;
+        color: var(--accent);
+        margin-bottom: 8px;
+    }
+    .diag-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+    }
+    .diag-table th {
+        text-align: left;
+        color: var(--text-muted);
+        padding: 4px 12px 4px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .diag-table td {
+        padding: 4px 12px 4px 0;
+        color: var(--text);
+    }
+    .diag-table tr.highlight td {
+        background: rgba(230, 126, 34, 0.15);
+        font-weight: 600;
+    }
+    .diag-tag {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 0.72rem;
+        margin: 0 2px;
+    }
+    .diag-tag.female { background: #e74c8b33; color: #e74c8b; }
+    .diag-tag.male { background: #3498db33; color: #3498db; }
+    .diag-tag.warn { background: #e67e2233; color: #e67e22; }
+
     .morph-category {
         margin-bottom: 4px;
     }
@@ -314,6 +427,7 @@
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
         <div class="viewer-buttons-left">
+            <button id="show-code-btn" class="viewer-btn" title="Source Code anzeigen"><i class="fas fa-code"></i> Code</button>
             <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
             <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i class="fas fa-folder-open"></i> Laden</button>
             <input type="file" id="load-preset-file" accept=".json" style="display:none">
@@ -523,14 +637,29 @@
         </div>
     </div>
 </div>
+
+<!-- Code Viewer Overlay -->
+<div id="code-overlay">
+    <div id="code-overlay-header">
+        <h2><i class="fas fa-code"></i> Source Code — humanbody_core</h2>
+        <button id="code-overlay-close"><i class="fas fa-times"></i> Schliessen</button>
+    </div>
+    <div class="code-tabs" id="code-tabs"></div>
+    <div class="code-content" id="code-content">
+        <div style="padding:24px;color:var(--text-muted);">Lade Source Code...</div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/languages/python.min.js"></script>
 <script>
 window.VIEWER_CONFIG = {
     apiPrefix: '/api/character-test',
     wsPath: '/ws/character-test/',
-    defaultBodyType: 'Male_Caucasian',
+    defaultBodyType: 'Caucasian',  // CharMorphPlugin: 'Caucasian', humanbody_core: 'Male_Caucasian'
 };
 </script>
 <script type="importmap">
@@ -551,12 +680,246 @@ window.VIEWER_CONFIG = {
         .then(r => r.ok ? r.json() : null)
         .then(d => {
             if (d && d.short_hash) {
-                banner.textContent = 'Test Charakter \u2014 Version: ' + d.short_hash +
+                const ver = d.version ? ' (v' + d.version + ')' : '';
+                banner.textContent = 'Test Charakter \u2014 ' + d.short_hash + ver +
                     ' \u2014 ' + d.message + ' (' + d.date.split(' ')[0] + ')';
                 banner.style.display = 'block';
             }
         })
         .catch(() => {});
+})();
+</script>
+<script>
+(function() {
+    const overlay = document.getElementById('code-overlay');
+    const showBtn = document.getElementById('show-code-btn');
+    const closeBtn = document.getElementById('code-overlay-close');
+    const tabsEl = document.getElementById('code-tabs');
+    const contentEl = document.getElementById('code-content');
+    let sourceData = null;
+
+    showBtn.addEventListener('click', () => {
+        overlay.classList.add('open');
+        if (!sourceData) loadSource();
+    });
+    closeBtn.addEventListener('click', () => overlay.classList.remove('open'));
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') overlay.classList.remove('open');
+    });
+
+    function formatBytes(b) {
+        if (b < 1024) return b + ' B';
+        return (b / 1024).toFixed(1) + ' KB';
+    }
+
+    function loadSource() {
+        contentEl.innerHTML = '<div style="padding:24px;color:var(--text-muted);">Lade Source Code...</div>';
+        fetch('/api/character-test/source/')
+            .then(r => r.ok ? r.json() : Promise.reject('Not found'))
+            .then(data => {
+                sourceData = data;
+                renderTabs(data);
+            })
+            .catch(err => {
+                contentEl.innerHTML = '<div style="padding:24px;color:#e74c3c;">Fehler: ' + err + '</div>';
+            });
+    }
+
+    function renderTabs(data) {
+        tabsEl.innerHTML = '';
+        // Diagnostics tab first
+        const diagTab = document.createElement('div');
+        diagTab.className = 'code-tab active';
+        diagTab.textContent = 'Data Diagnostics';
+        diagTab.onclick = () => selectTab(diagTab, () => renderDiagnostics(data.data_diagnostics));
+        tabsEl.appendChild(diagTab);
+
+        // CharMorphPlugin tabs (reference implementation)
+        if (data.charmorph_files && data.charmorph_files.length) {
+            const cmOrder = ['morpher_cores.py', 'morphs.py', 'charlib.py'];
+            const sorted = data.charmorph_files.sort((a, b) => {
+                const ia = cmOrder.indexOf(a.name);
+                const ib = cmOrder.indexOf(b.name);
+                return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+            });
+            sorted.forEach(f => {
+                const tab = document.createElement('div');
+                tab.className = 'code-tab';
+                tab.textContent = 'CM: ' + f.name;
+                tab.style.color = '#e67e22';
+                tab.onclick = () => selectTab(tab, () => renderFile(f, 'CharMorphPlugin'));
+                tabsEl.appendChild(tab);
+            });
+        }
+
+        // humanbody_core tabs (separator)
+        const sep = document.createElement('div');
+        sep.style.cssText = 'border-left:1px solid var(--border);margin:0 4px;';
+        tabsEl.appendChild(sep);
+
+        const fileOrder = ['character.py', 'morphing.py', '__init__.py', 'config.py', 'mesh.py'];
+        const sortedFiles = data.files.sort((a, b) => {
+            const ia = fileOrder.indexOf(a.name);
+            const ib = fileOrder.indexOf(b.name);
+            return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        });
+        sortedFiles.forEach(f => {
+            const tab = document.createElement('div');
+            tab.className = 'code-tab';
+            tab.textContent = f.name;
+            tab.onclick = () => selectTab(tab, () => renderFile(f, 'humanbody_core'));
+            tabsEl.appendChild(tab);
+        });
+
+        // Show diagnostics by default
+        renderDiagnostics(data.data_diagnostics);
+    }
+
+    function selectTab(tab, renderFn) {
+        tabsEl.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        renderFn();
+    }
+
+    function renderFile(f, source) {
+        contentEl.innerHTML = '';
+        // Header bar
+        const hdr = document.createElement('div');
+        hdr.style.cssText = 'padding:8px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border);font-size:0.82rem;';
+        if (source === 'CharMorphPlugin') {
+            hdr.innerHTML = '<span style="color:#e67e22;font-weight:600;">CharMorphPlugin</span> (Original, git 69e914e) &mdash; <code>' + f.name + '</code>';
+        } else {
+            hdr.innerHTML = '<span style="color:var(--accent);font-weight:600;">humanbody_core</span> (TestCharakter) &mdash; <code>' + f.name + '</code>';
+        }
+        contentEl.appendChild(hdr);
+        const pre = document.createElement('pre');
+        const code = document.createElement('code');
+        code.className = 'language-python';
+        code.textContent = f.content;
+        pre.appendChild(code);
+        contentEl.appendChild(pre);
+        if (window.hljs) hljs.highlightElement(code);
+    }
+
+    function renderDiagnostics(diag) {
+        let html = '';
+
+        // L1 Body Types
+        html += '<div class="diag-section"><h3>L1 Body Types (Basis-Meshes)</h3>';
+        if (diag.l1 && diag.l1.length) {
+            html += '<table class="diag-table"><tr><th>Name</th><th>Vertices</th><th>Shape</th><th>Size</th><th>Dtype</th></tr>';
+            diag.l1.forEach(l => {
+                const isMale = l.name.startsWith('Male_');
+                const isCauc = l.name === 'Male_Caucasian';
+                const cls = isCauc ? ' class="highlight"' : '';
+                const tag = isMale
+                    ? '<span class="diag-tag male">Male</span>'
+                    : '<span class="diag-tag female">Female</span>';
+                html += '<tr' + cls + '><td>' + tag + ' ' + l.name + '</td>';
+                if (l.error) {
+                    html += '<td colspan="4" style="color:#e74c3c;">' + l.error + '</td>';
+                } else {
+                    html += '<td>' + l.vertex_count.toLocaleString() + '</td>';
+                    html += '<td>[' + l.shape.join(', ') + ']</td>';
+                    html += '<td>' + formatBytes(l.size_bytes) + '</td>';
+                    html += '<td>' + l.dtype + '</td>';
+                }
+                html += '</tr>';
+            });
+            html += '</table>';
+
+            // Check for vertex count mismatch
+            const counts = new Set(diag.l1.filter(l => !l.error).map(l => l.vertex_count));
+            if (counts.size > 1) {
+                html += '<p style="margin-top:8px;"><span class="diag-tag warn">WARNUNG</span> '
+                    + 'Unterschiedliche Vertex-Counts: ' + [...counts].join(' vs ') + '. '
+                    + 'Male und Female haben verschiedene Topologien!</p>';
+            }
+        } else {
+            html += '<p style="color:var(--text-muted);">Keine L1 Dateien gefunden.</p>';
+        }
+        html += '</div>';
+
+        // Gender Delta
+        html += '<div class="diag-section"><h3>Gender Delta</h3>';
+        if (diag.gender_delta) {
+            const gd = diag.gender_delta;
+            html += '<table class="diag-table"><tr><th>File</th><th>Vertices</th><th>Shape</th><th>Size</th></tr>';
+            html += '<tr><td>' + gd.file + '</td>';
+            html += '<td>' + gd.vertex_count.toLocaleString() + '</td>';
+            html += '<td>[' + gd.shape.join(', ') + ']</td>';
+            html += '<td>' + formatBytes(gd.size_bytes) + '</td></tr></table>';
+
+            // Check if gender delta matches L1 counts
+            if (diag.l1 && diag.l1.length) {
+                const maleCounts = diag.l1.filter(l => l.name.startsWith('Male_') && !l.error).map(l => l.vertex_count);
+                const femaleCounts = diag.l1.filter(l => l.name.startsWith('Female_') && !l.error).map(l => l.vertex_count);
+                if (maleCounts.length && maleCounts[0] !== gd.vertex_count) {
+                    html += '<p><span class="diag-tag warn">PROBLEM</span> '
+                        + 'gender_male.npy hat ' + gd.vertex_count.toLocaleString() + ' vertices, '
+                        + 'aber Male L1 hat ' + maleCounts[0].toLocaleString() + '. '
+                        + 'Das Gender-Delta kann nicht auf Male-Meshes angewendet werden!</p>';
+                }
+                if (femaleCounts.length && femaleCounts[0] === gd.vertex_count) {
+                    html += '<p><span class="diag-tag female">INFO</span> '
+                        + 'gender_male.npy passt zu Female-Topologie (' + gd.vertex_count.toLocaleString() + ' verts). '
+                        + 'Es ist als Delta auf Female gedacht, nicht auf Male.</p>';
+                }
+            }
+        } else {
+            html += '<p style="color:var(--text-muted);">Kein gender_male.npy vorhanden.</p>';
+        }
+        html += '</div>';
+
+        // L2 Packed Morphs
+        html += '<div class="diag-section"><h3>L2 Packed Morphs</h3>';
+        if (diag.l2_packed && diag.l2_packed.length) {
+            diag.l2_packed.forEach(p => {
+                html += '<div style="margin-bottom:8px;">';
+                html += '<strong>' + p.file + '</strong>';
+                if (p.error) {
+                    html += ' <span style="color:#e74c3c;">' + p.error + '</span>';
+                } else {
+                    html += ' — ' + p.morph_count + ' Morphs, ' + formatBytes(p.size_bytes);
+                    html += '<br><span style="font-size:0.72rem;color:var(--text-muted);">'
+                        + p.morph_names.join(', ')
+                        + (p.morph_count > 20 ? ', ...' : '')
+                        + '</span>';
+                }
+                html += '</div>';
+            });
+        } else {
+            html += '<p style="color:var(--text-muted);">Keine L2 Packs gefunden.</p>';
+        }
+        html += '</div>';
+
+        // Data Files
+        html += '<div class="diag-section"><h3>Data Files</h3>';
+        if (diag.data_files && diag.data_files.length) {
+            html += '<table class="diag-table"><tr><th>File</th><th>Size</th></tr>';
+            diag.data_files.forEach(f => {
+                html += '<tr><td>' + f.name + '</td><td>' + formatBytes(f.size_bytes) + '</td></tr>';
+            });
+            html += '</table>';
+        }
+        html += '</div>';
+
+        // Code Flow Explanation
+        html += '<div class="diag-section"><h3>Code-Flow: Male_Caucasian</h3>';
+        html += '<div style="font-size:0.82rem;line-height:1.6;color:var(--text);">';
+        html += '<ol style="padding-left:20px;">';
+        html += '<li><code>MorphData.load()</code> — Liest alle L1/*.npy Dateien. Male_Caucasian.npy wird als Basis geladen.</li>';
+        html += '<li><code>CharacterState.set_body_type("Male_Caucasian")</code> — Setzt <code>self._basis = l1["Male_Caucasian"]</code></li>';
+        html += '<li><code>get_l2_for_type("Male_Caucasian")</code> — Lädt L2_packed/__main__.npz + L2_packed/Caucasian.npz</li>';
+        html += '<li><code>compute()</code> — Startet mit <code>self._basis.copy()</code> (Male_Caucasian L1)</li>';
+        html += '<li><strong>Gender Delta</strong> — <code>gender_male.npy</code> wird addiert wenn <code>self.gender > 0</code>.<br>';
+        html += '<span class="diag-tag warn">PROBLEM</span> Wenn gender_male.npy eine andere Vertex-Anzahl hat als Male L1, crasht es oder erzeugt Mist!</li>';
+        html += '<li><strong>L2 Morphs</strong> — Alle Slider-Deltas werden auf die Vertices addiert.</li>';
+        html += '</ol>';
+        html += '</div></div>';
+
+        contentEl.innerHTML = html;
+    }
 })();
 </script>
 {% endblock %}

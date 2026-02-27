@@ -18,6 +18,7 @@ from django.views.decorators.http import require_GET
 logger = logging.getLogger(__name__)
 
 TEST_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'TestCharakter')
+CHARMORPH_REF_DIR = os.path.join(TEST_DIR, 'charmorph_ref')
 
 # Isolated singletons — completely separate from character_api.py
 _test_module = None        # humanbody_core loaded from TestCharakter/
@@ -139,16 +140,18 @@ def _get_test_cc_subdivider():
         logger.info("Test CC subdivider: %d base -> %d sub vertices",
                      mesh.faces.max() + 1, _test_cc_subdivider.sub_vertex_count)
 
-        # Reference normals from Male_Caucasian
+        # Reference normals from default body type
         md = _get_test_morph_data()
         cd = _get_test_char_defaults()
-        ref_state = mod.CharacterState(md, cd)
-        ref_state.set_body_type('Male_Caucasian')
-        ref_verts = ref_state.compute()
-        if ref_verts is not None:
-            ref_sub = _test_cc_subdivider.subdivide(ref_verts)
-            _test_cc_subdivider.compute_quad_normals(ref_sub)
-            logger.info("Test CC subdivider: reference normals from Male_Caucasian")
+        ref_bt = next(iter(md.l1), None)
+        if ref_bt:
+            ref_state = mod.CharacterState(md, cd)
+            ref_state.set_body_type(ref_bt)
+            ref_verts = ref_state.compute()
+            if ref_verts is not None:
+                ref_sub = _test_cc_subdivider.subdivide(ref_verts)
+                _test_cc_subdivider.compute_quad_normals(ref_sub)
+                logger.info("Test CC subdivider: reference normals from %s", ref_bt)
 
     return _test_cc_subdivider
 
@@ -157,10 +160,22 @@ def _get_test_cc_subdivider():
 # REST endpoints
 # =========================================================================
 
+def _get_default_body_type():
+    """Return the first available body type from the loaded morph data."""
+    md = _get_test_morph_data()
+    if md.l1:
+        for name in ('Caucasian', 'Male_Caucasian', 'Female_Caucasian'):
+            if name in md.l1:
+                return name
+        return next(iter(md.l1))
+    return 'Caucasian'
+
+
 @require_GET
 def test_character_mesh(request):
-    """Return mesh data from the test version. Default: Male_Caucasian."""
-    body_type = request.GET.get('body_type', 'Male_Caucasian')
+    """Return mesh data from the test version."""
+    default_bt = _get_default_body_type()
+    body_type = request.GET.get('body_type', default_bt)
     gender = float(request.GET.get('gender', 0))
 
     mod = _load_test_module()
@@ -236,8 +251,9 @@ def test_character_morphs(request):
     md = _get_test_morph_data()
     cd = _get_test_char_defaults()
 
+    default_bt = _get_default_body_type()
     state = mod.CharacterState(md, cd)
-    state.set_body_type('Male_Caucasian')
+    state.set_body_type(default_bt)
 
     morphs = state.get_morph_list()
     categories = {}
@@ -257,8 +273,11 @@ def test_character_morphs(request):
                 'default': sdef.default, 'label': meta_labels[name],
             }
 
+    # Use actual L1 keys (CharMorphPlugin has 'Caucasian', humanbody_core has 'Male_Caucasian')
+    body_types = sorted(md.l1.keys())
+
     return JsonResponse({
-        'body_types': mod.MorphData.BODY_TYPES,
+        'body_types': body_types,
         'morphs': morphs,
         'categories': sorted(categories.keys()),
         'skin_colors': mod.MorphData.SKIN_COLORS,
@@ -314,6 +333,120 @@ def test_version_info(request):
     with open(info_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return JsonResponse(data)
+
+
+@require_GET
+def test_character_source(request):
+    """Return source files from TestCharakter/humanbody_core/ and data diagnostics."""
+    core_dir = os.path.join(TEST_DIR, 'humanbody_core')
+    if not os.path.isdir(core_dir):
+        return JsonResponse({'error': 'No test version downloaded'}, status=404)
+
+    # Read all .py files
+    files = []
+    for fname in sorted(os.listdir(core_dir)):
+        if fname.endswith('.py'):
+            fpath = os.path.join(core_dir, fname)
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    files.append({'name': fname, 'content': f.read()})
+            except Exception as e:
+                files.append({'name': fname, 'content': f'# Error reading: {e}'})
+
+    # Data diagnostics: L1 files, sizes, vertex counts
+    data_dir = _get_test_data_dir()
+    l1_dir = os.path.join(data_dir, 'morphs', 'L1')
+    l1_info = []
+    if os.path.isdir(l1_dir):
+        for fname in sorted(os.listdir(l1_dir)):
+            if fname.endswith('.npy'):
+                fpath = os.path.join(l1_dir, fname)
+                size = os.path.getsize(fpath)
+                try:
+                    arr = np.load(fpath)
+                    l1_info.append({
+                        'name': fname[:-4],
+                        'file': fname,
+                        'size_bytes': size,
+                        'shape': list(arr.shape),
+                        'vertex_count': arr.shape[0],
+                        'dtype': str(arr.dtype),
+                    })
+                except Exception as e:
+                    l1_info.append({
+                        'name': fname[:-4],
+                        'file': fname,
+                        'size_bytes': size,
+                        'error': str(e),
+                    })
+
+    # Gender delta
+    gender_info = None
+    gpath = os.path.join(data_dir, 'morphs', 'gender_male.npy')
+    if os.path.isfile(gpath):
+        try:
+            arr = np.load(gpath)
+            gender_info = {
+                'file': 'gender_male.npy',
+                'size_bytes': os.path.getsize(gpath),
+                'shape': list(arr.shape),
+                'vertex_count': arr.shape[0],
+            }
+        except Exception:
+            gender_info = {'file': 'gender_male.npy', 'error': 'Failed to load'}
+
+    # L2 packed morphs
+    l2_dir = os.path.join(data_dir, 'morphs', 'L2_packed')
+    l2_info = []
+    if os.path.isdir(l2_dir):
+        for fname in sorted(os.listdir(l2_dir)):
+            if fname.endswith('.npz'):
+                fpath = os.path.join(l2_dir, fname)
+                try:
+                    z = np.load(fpath)
+                    names = [n.decode('utf-8') for n in bytes(z['names']).split(b'\0')]
+                    l2_info.append({
+                        'file': fname,
+                        'morph_count': len(names),
+                        'morph_names': names[:20],  # First 20
+                        'size_bytes': os.path.getsize(fpath),
+                    })
+                except Exception as e:
+                    l2_info.append({'file': fname, 'error': str(e)})
+
+    # Other data files
+    data_files = []
+    if os.path.isdir(data_dir):
+        for fname in sorted(os.listdir(data_dir)):
+            fpath = os.path.join(data_dir, fname)
+            if os.path.isfile(fpath):
+                data_files.append({
+                    'name': fname,
+                    'size_bytes': os.path.getsize(fpath),
+                })
+
+    # CharMorphPlugin reference files (extracted to charmorph_ref/)
+    charmorph_files = []
+    if os.path.isdir(CHARMORPH_REF_DIR):
+        for fname in sorted(os.listdir(CHARMORPH_REF_DIR)):
+            if fname.endswith('.py'):
+                fpath = os.path.join(CHARMORPH_REF_DIR, fname)
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        charmorph_files.append({'name': fname, 'content': f.read()})
+                except Exception as e:
+                    charmorph_files.append({'name': fname, 'content': f'# Error: {e}'})
+
+    return JsonResponse({
+        'files': files,
+        'charmorph_files': charmorph_files,
+        'data_diagnostics': {
+            'l1': l1_info,
+            'gender_delta': gender_info,
+            'l2_packed': l2_info,
+            'data_files': data_files,
+        },
+    })
 
 
 @require_GET

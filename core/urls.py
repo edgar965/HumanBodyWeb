@@ -73,5 +73,6 @@ urlpatterns = [
     path('api/character-test/skin-weights/', test_character_api.test_character_skin_weights, name='test_character_skin_weights'),
     path('api/character-test/def-skeleton/', test_character_api.test_character_def_skeleton, name='test_character_def_skeleton'),
     path('api/character-test/version/', test_character_api.test_version_info, name='test_version_info'),
+    path('api/character-test/source/', test_character_api.test_character_source, name='test_character_source'),
     path('api/character-test/reload/', test_character_api.test_reload, name='test_reload'),
 ]

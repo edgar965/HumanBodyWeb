@@ -133,13 +133,14 @@ class TestCharacterConsumer(CharacterConsumer):
             from core.test_character_api import (
                 _load_test_module, _get_test_morph_data,
                 _get_test_char_defaults, _get_test_cc_subdivider,
+                _get_default_body_type,
             )
             mod = _load_test_module()
             md = _get_test_morph_data()
             cd = _get_test_char_defaults()
 
             self._char_state = mod.CharacterState(md, cd)
-            self._char_state.set_body_type('Male_Caucasian')
+            self._char_state.set_body_type(_get_default_body_type())
 
             self._cc_sub = _get_test_cc_subdivider()
         except Exception as e:
