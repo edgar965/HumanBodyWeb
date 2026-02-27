@@ -213,12 +213,20 @@ export function createViewer(config) {
             if (defaultBodyType && data.body_types.includes(defaultBodyType)) {
                 bodyTypeSelect.value = defaultBodyType;
             }
+            // Set initial gender slider based on selected body type
+            const initMale = bodyTypeSelect.value.startsWith('Male_');
+            if (initMale) {
+                genderSlider.value = 100;
+                genderVal.textContent = '100';
+            }
 
             bodyTypeSelect.addEventListener('change', () => {
                 wsSend({ type: 'body_type', value: bodyTypeSelect.value });
-                genderSlider.value = 0;
-                genderVal.textContent = '0';
-                wsSend({ type: 'gender', value: 0 });
+                // Set gender slider based on body type (Male → 100, Female → 0)
+                const isMale = bodyTypeSelect.value.startsWith('Male_');
+                genderSlider.value = isMale ? 100 : 0;
+                genderVal.textContent = isMale ? '100' : '0';
+                wsSend({ type: 'gender', value: isMale ? 1.0 : 0 });
                 // Update skin color based on ethnicity
                 const parts = bodyTypeSelect.value.split('_');
                 const ethnicity = parts[1] || parts[0];
@@ -364,9 +372,10 @@ export function createViewer(config) {
         ws.onopen = () => {
             wsReady = true;
             if (statusSpan) { statusSpan.textContent = 'Connected'; statusSpan.className = 'connected'; }
-            // Sync body type
+            // Sync body type + gender to server
             if (bodyTypeSelect && bodyTypeSelect.value) {
                 wsSend({ type: 'body_type', value: bodyTypeSelect.value });
+                wsSend({ type: 'gender', value: parseInt(genderSlider.value) / 100.0 });
             }
         };
 

@@ -579,10 +579,12 @@ function connectWebSocket() {
         wsReady = true;
         document.getElementById('ws-status').textContent = 'Connected';
         document.getElementById('ws-status').className = 'connected';
-        // Sync current body type to WebSocket on connect
+        // Sync current body type + gender to WebSocket on connect
         const btSelect = document.getElementById('body-type-select');
         if (btSelect && btSelect.value) {
             wsSend({ type: 'body_type', value: btSelect.value });
+            const gs = document.getElementById('gender-slider');
+            if (gs) wsSend({ type: 'gender', value: parseInt(gs.value) / 100.0 });
         }
     };
 
@@ -662,10 +664,11 @@ async function loadMorphs() {
         });
         select.addEventListener('change', () => {
             wsSend({ type: 'body_type', value: select.value });
-            // Reset gender slider to 0 on body type change
-            genderSlider.value = 0;
-            genderVal.textContent = '0';
-            wsSend({ type: 'gender', value: 0 });
+            // Set gender slider based on body type (Male → 100, Female → 0)
+            const isMale = select.value.startsWith('Male_');
+            genderSlider.value = isMale ? 100 : 0;
+            genderVal.textContent = isMale ? '100' : '0';
+            wsSend({ type: 'gender', value: isMale ? 1.0 : 0 });
             // Update skin color
             const parts = select.value.split('_');
             const ethnicity = parts[1] || parts[0];
