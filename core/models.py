@@ -203,6 +203,19 @@ class AppSettings(models.Model):
         default=30.0, help_text="Butterworth sampling Hz (10.0–120.0)",
     )
 
+    # --- Video to BVH: MocapNET v4 component flags ---
+    v4_enable_body = models.BooleanField(default=True, help_text="Enable body tracking")
+    v4_enable_face = models.BooleanField(default=True, help_text="Enable face tracking")
+    v4_enable_hands = models.BooleanField(default=True, help_text="Enable hand tracking")
+    v4_enable_mouth = models.BooleanField(default=True, help_text="Enable mouth tracking")
+    v4_enable_eyes = models.BooleanField(default=False, help_text="Enable eye tracking")
+
+    # --- Video to BVH: SMPL pipeline settings ---
+    smpl_device = models.CharField(
+        max_length=10, default='cuda',
+        help_text="Device for SMPL pipelines (cuda/cpu)",
+    )
+
     class Meta:
         verbose_name = "Settings"
         verbose_name_plural = "Settings"

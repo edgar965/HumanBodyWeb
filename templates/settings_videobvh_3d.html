@@ -7,6 +7,7 @@
 <form method="post">
     {% csrf_token %}
 
+    {# ── Default Pipeline ── #}
     <div class="settings-card">
         <h2><i class="fas fa-check-circle"></i> Standard-Pipeline</h2>
 
@@ -19,16 +20,48 @@
                 <select name="lifter_3d_default" class="settings-select">
                     <option value="v4" {% if settings.lifter_3d_default == 'v4' %}selected{% endif %}>MocapNET v4 (CPU, ~75 mm)</option>
                     <option value="wham" {% if settings.lifter_3d_default == 'wham' %}selected{% endif %}>WHAM (SMPL, GPU, 37 mm)</option>
-                    <option value="prompthmr" {% if settings.lifter_3d_default == 'prompthmr' %}selected{% endif %}>PromptHMR (SMPL, GPU, 37 mm, beste per-frame)</option>
+                    <option value="prompthmr" {% if settings.lifter_3d_default == 'prompthmr' %}selected{% endif %}>PromptHMR (SMPL, GPU, 37 mm)</option>
                     <option value="gvhmr" {% if settings.lifter_3d_default == 'gvhmr' %}selected{% endif %}>GVHMR (SMPL, GPU, 36 mm, empfohlen)</option>
                 </select>
             </div>
         </div>
     </div>
 
+    {# ── MocapNET v4 ── #}
     <div class="settings-card" style="margin-top:1.5rem;">
-        <h2><i class="fas fa-brain"></i> MocapNET v4 <small style="color:#888;">~75 mm, CPU, 165 Bones</small></h2>
+        <h2>
+            <i class="fas fa-brain"></i> MocapNET v4
+            <small style="color:#888;">~75 mm, CPU, 165 Bones</small>
+            {% if v4_installed %}<span style="color:#27ae60;margin-left:0.5rem;" title="Installiert"><i class="fas fa-check-circle"></i></span>
+            {% else %}<span style="color:#e74c3c;margin-left:0.5rem;" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+        </h2>
 
+        {# Components #}
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Komponenten</strong>
+                <small>Welche Tracking-Komponenten aktiv sind. Body sollte immer aktiviert sein.</small>
+            </div>
+            <div class="settings-input" style="display:flex;flex-wrap:wrap;gap:1rem;">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="v4_enable_body" {% if settings.v4_enable_body %}checked{% endif %}> Body
+                </label>
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="v4_enable_face" {% if settings.v4_enable_face %}checked{% endif %}> Face
+                </label>
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="v4_enable_hands" {% if settings.v4_enable_hands %}checked{% endif %}> Hands
+                </label>
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="v4_enable_mouth" {% if settings.v4_enable_mouth %}checked{% endif %}> Mouth
+                </label>
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="v4_enable_eyes" {% if settings.v4_enable_eyes %}checked{% endif %}> Eyes
+                </label>
+            </div>
+        </div>
+
+        {# IK Solver #}
         <div class="settings-row">
             <div class="settings-label">
                 <strong>HCD Iterations</strong>
@@ -65,6 +98,7 @@
             </div>
         </div>
 
+        {# Smoothing #}
         <div class="settings-row">
             <div class="settings-label">
                 <strong>Smoothing Cutoff (Hz)</strong>
@@ -88,24 +122,117 @@
                        min="10.0" max="120.0" step="1.0">
             </div>
         </div>
+
+        {# MediaPipe Detection #}
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>MediaPipe Detection Confidence</strong>
+                <small>Mindest-Konfidenz f&uuml;r die Pose-Erkennung (0.0&ndash;1.0).</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="mp_min_detection_confidence"
+                       value="{{ settings.mp_min_detection_confidence }}"
+                       min="0.0" max="1.0" step="0.05">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>MediaPipe Tracking Confidence</strong>
+                <small>Mindest-Konfidenz f&uuml;r das Pose-Tracking (0.0&ndash;1.0). Niedrig = weniger Redetections.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="mp_min_tracking_confidence"
+                       value="{{ settings.mp_min_tracking_confidence }}"
+                       min="0.0" max="1.0" step="0.05">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>MediaPipe Model Complexity</strong>
+                <small>0 = Lite (schneller), 1 = Full (genauer).</small>
+            </div>
+            <div class="settings-input">
+                <select name="mp_model_complexity" class="settings-select">
+                    <option value="0" {% if settings.mp_model_complexity == 0 %}selected{% endif %}>0 &ndash; Lite (schnell)</option>
+                    <option value="1" {% if settings.mp_model_complexity == 1 %}selected{% endif %}>1 &ndash; Full (genau)</option>
+                </select>
+            </div>
+        </div>
     </div>
 
+    {# ── SMPL Pipelines ── #}
     <div class="settings-card" style="margin-top:1.5rem;">
-        <h2><i class="fas fa-globe"></i> WHAM <small style="color:#888;">37 mm, GPU, World-Koordinaten</small></h2>
-        <p style="color:#888; padding:0.5rem 1rem;">SMPL-basierte Pipeline mit World-Koordinaten. Einstellungen werden nach Installation verf&uuml;gbar.</p>
-        <p style="color:#888; padding:0 1rem 0.5rem;">Ben&ouml;tigt SMPL-Lizenz: <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
+        <h2><i class="fas fa-microchip"></i> SMPL Pipelines <small style="color:#888;">Gemeinsame Einstellungen</small></h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Device</strong>
+                <small>GPU (CUDA) oder CPU f&uuml;r GVHMR, WHAM und PromptHMR.</small>
+            </div>
+            <div class="settings-input">
+                <select name="smpl_device" class="settings-select">
+                    <option value="cuda" {% if settings.smpl_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                    <option value="cpu" {% if settings.smpl_device == 'cpu' %}selected{% endif %}>CPU</option>
+                </select>
+            </div>
+        </div>
+
+        {% if not smpl_models_ok %}
+        <div style="background:rgba(231,76,60,0.1); border:1px solid rgba(231,76,60,0.3); border-radius:6px; padding:0.75rem 1rem; margin:0.5rem 0.75rem;">
+            <i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i>
+            <strong style="color:#e74c3c;">SMPL-Modelle fehlen</strong>
+            <small style="display:block;color:#888;margin-top:0.25rem;">
+                Die SMPL .pkl Dateien werden ben&ouml;tigt. Lizenz registrieren unter
+                <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a>,
+                dann die Dateien nach <code>VideoToBVH/models/smpl/</code> kopieren.
+            </small>
+        </div>
+        {% endif %}
     </div>
 
+    {# ── GVHMR ── #}
     <div class="settings-card" style="margin-top:1.5rem;">
-        <h2><i class="fas fa-comment-dots"></i> PromptHMR <small style="color:#888;">37 mm, GPU &mdash; Beste per-frame</small></h2>
-        <p style="color:#888; padding:0.5rem 1rem;">SMPL-basierte Pipeline (CVPR 2025). Einstellungen werden nach Installation verf&uuml;gbar.</p>
-        <p style="color:#888; padding:0 1rem 0.5rem;">Ben&ouml;tigt SMPL-Lizenz: <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
+        <h2>
+            <i class="fas fa-walking"></i> GVHMR
+            <small style="color:#888;">36 mm, GPU &mdash; Empfohlen</small>
+            {% if gvhmr_installed %}<span style="color:#27ae60;margin-left:0.5rem;" title="Installiert"><i class="fas fa-check-circle"></i></span>
+            {% else %}<span style="color:#e74c3c;margin-left:0.5rem;" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+        </h2>
+        <p style="color:#888; padding:0.5rem 1rem; margin:0;">
+            SMPL-basierte Pipeline mit Global-Velocity und Human Motion Recovery.
+            Beste Kombination aus Genauigkeit und temporaler Koh&auml;renz.
+            {% if gvhmr_installed %}<span style="color:#27ae60;">Bereit.</span>{% endif %}
+        </p>
     </div>
 
+    {# ── WHAM ── #}
     <div class="settings-card" style="margin-top:1.5rem;">
-        <h2><i class="fas fa-walking"></i> GVHMR <small style="color:#888;">36 mm, GPU &mdash; Empfohlen</small></h2>
-        <p style="color:#888; padding:0.5rem 1rem;">SMPL-basierte Pipeline. Einstellungen werden nach Installation verf&uuml;gbar.</p>
-        <p style="color:#888; padding:0 1rem 0.5rem;">Ben&ouml;tigt SMPL-Lizenz: <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
+        <h2>
+            <i class="fas fa-globe"></i> WHAM
+            <small style="color:#888;">37 mm, GPU, World-Koordinaten</small>
+            {% if wham_installed %}<span style="color:#27ae60;margin-left:0.5rem;" title="Installiert"><i class="fas fa-check-circle"></i></span>
+            {% else %}<span style="color:#e74c3c;margin-left:0.5rem;" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+        </h2>
+        <p style="color:#888; padding:0.5rem 1rem; margin:0;">
+            SMPL-basierte Pipeline mit World-Koordinaten und IMU-Integration.
+            {% if wham_installed %}<span style="color:#27ae60;">Bereit.</span>{% endif %}
+        </p>
+    </div>
+
+    {# ── PromptHMR ── #}
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2>
+            <i class="fas fa-comment-dots"></i> PromptHMR
+            <small style="color:#888;">37 mm, GPU &mdash; Beste per-frame</small>
+            {% if prompthmr_installed %}<span style="color:#27ae60;margin-left:0.5rem;" title="Installiert"><i class="fas fa-check-circle"></i></span>
+            {% else %}<span style="color:#e74c3c;margin-left:0.5rem;" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+        </h2>
+        <p style="color:#888; padding:0.5rem 1rem; margin:0;">
+            SMPL-basierte Pipeline (CVPR 2025). Beste single-frame Genauigkeit.
+            {% if prompthmr_installed %}<span style="color:#27ae60;">Bereit.</span>{% endif %}
+        </p>
     </div>
 
     <div class="settings-actions">

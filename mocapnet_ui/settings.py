@@ -83,6 +83,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Pipeline Python (venv with CUDA PyTorch, ONNX Runtime GPU, etc.)
+PIPELINE_PYTHON = str(TOOLS_ROOT / 'pythonENV' / 'Scripts' / 'python.exe')
+
 # MocapNET paths
 MOCAPNET_EXE = MOCAPNET_ROOT / 'MocapNET2CSV.exe'
 MEDIAPIPE_SCRIPT = MOCAPNET_ROOT / 'src' / 'python' / 'mediapipe' / 'mediapipeHolistic2CSV.py'

@@ -262,7 +262,7 @@ def _run_mediapipe_to_csv(job, video_path, output_dir):
     mediapipe_script = str(settings.MEDIAPIPE_SCRIPT)
 
     # Use interval=1 so we get every frame for smooth progress
-    cmd = ['python', mediapipe_script, '--from', str(video_path),
+    cmd = [settings.PIPELINE_PYTHON, mediapipe_script, '--from', str(video_path),
            '-o', str(csv_output), '--headless',
            '--progress-interval', '1']
 
@@ -483,10 +483,10 @@ def _run_v4_pipeline(job, video_path, output_dir):
     v4_script = str(settings.MOCAPNET_V4_SCRIPT)
     s = AppSettings.load()
     cmd = [
-        'python', v4_script,
+        settings.PIPELINE_PYTHON, v4_script,
         '--from', str(video_path),
         '--output', bvh_output,
-        '--all', '--headless',
+        '--headless',
         '--stop-flag', stop_flag,
         '--hcd-iterations', str(s.v4_hcd_iterations),
         '--hcd-epochs', str(s.v4_hcd_epochs),
@@ -497,6 +497,12 @@ def _run_v4_pipeline(job, video_path, output_dir):
         '--mp-tracking-conf', str(s.mp_min_tracking_confidence),
         '--mp-model-complexity', str(s.mp_model_complexity),
     ]
+    # Component flags
+    if s.v4_enable_body: cmd.append('--body')
+    if s.v4_enable_face: cmd.append('--face')
+    if s.v4_enable_hands: cmd.append('--hands')
+    if s.v4_enable_mouth: cmd.append('--mouth')
+    if s.v4_enable_eyes: cmd.append('--eyes')
 
     stderr_lines = []
     def _drain_stderr(pipe):
@@ -614,7 +620,7 @@ def _run_new_2d_detector(job, video_path, output_dir):
     job.save()
 
     cmd = [
-        _sys.executable, wrapper_script,
+        settings.PIPELINE_PYTHON, wrapper_script,
         '--detector', job.pipeline,
         '--video', str(video_path),
         '--output', csv_output,
@@ -694,16 +700,18 @@ def _run_smpl_pipeline(job, video_path, output_dir):
     bvh_output = str(output_dir / f'{job.pipeline}_{job.name.rsplit(".", 1)[0]}.bvh')
     wrapper_script = str(settings.WRAPPERS_DIR / 'lift_3d.py')
 
+    s = AppSettings.load()
     job.status = 'processing'
     job.progress = 10
     job.progress_detail = f'Running {job.get_pipeline_display()}...'
     job.save()
 
     cmd = [
-        _sys.executable, wrapper_script,
+        settings.PIPELINE_PYTHON, wrapper_script,
         '--pipeline', job.pipeline,
         '--video', str(video_path),
         '--output', bvh_output,
+        '--device', s.smpl_device,
     ]
 
     proc = subprocess.Popen(
@@ -2063,22 +2071,60 @@ def app_settings_videobvh_3d(request):
     s = AppSettings.load()
     if request.method == 'POST':
         try:
+            # Default pipeline
+            s.lifter_3d_default = request.POST.get('lifter_3d_default', 'v4')
+            if s.lifter_3d_default not in ('v4', 'gvhmr', 'wham', 'prompthmr'):
+                s.lifter_3d_default = 'v4'
+
+            # v4 component flags
+            s.v4_enable_body = request.POST.get('v4_enable_body') == 'on'
+            s.v4_enable_face = request.POST.get('v4_enable_face') == 'on'
+            s.v4_enable_hands = request.POST.get('v4_enable_hands') == 'on'
+            s.v4_enable_mouth = request.POST.get('v4_enable_mouth') == 'on'
+            s.v4_enable_eyes = request.POST.get('v4_enable_eyes') == 'on'
+
+            # v4 IK params
             s.v4_hcd_iterations = max(1, min(100,
                 int(request.POST.get('v4_hcd_iterations', 10))))
             s.v4_hcd_epochs = max(1, min(200,
                 int(request.POST.get('v4_hcd_epochs', 30))))
             s.v4_hcd_learning_rate = max(0.0001, min(0.1,
                 float(request.POST.get('v4_hcd_learning_rate', 0.001))))
+
+            # v4 smoothing params
             s.v4_smoothing_cutoff = max(0.5, min(15.0,
                 float(request.POST.get('v4_smoothing_cutoff', 5.0))))
             s.v4_smoothing_sampling = max(10.0, min(120.0,
                 float(request.POST.get('v4_smoothing_sampling', 30.0))))
-            s.lifter_3d_default = request.POST.get('lifter_3d_default', 'v4')
-            if s.lifter_3d_default not in ('v4', 'gvhmr', 'wham', 'prompthmr'):
-                s.lifter_3d_default = 'v4'
+
+            # v4 MediaPipe detection
+            s.mp_min_detection_confidence = max(0.0, min(1.0,
+                float(request.POST.get('mp_min_detection_confidence', 0.5))))
+            s.mp_min_tracking_confidence = max(0.0, min(1.0,
+                float(request.POST.get('mp_min_tracking_confidence', 0.2))))
+            s.mp_model_complexity = max(0, min(1,
+                int(request.POST.get('mp_model_complexity', 1))))
+
+            # SMPL device
+            s.smpl_device = request.POST.get('smpl_device', 'cuda')
+            if s.smpl_device not in ('cuda', 'cpu'):
+                s.smpl_device = 'cuda'
+
             s.save()
             messages.success(request, 'Settings saved.')
         except (ValueError, TypeError):
             messages.error(request, 'Invalid value.')
         return redirect('settings_videobvh_3d')
-    return render(request, 'settings_videobvh_3d.html', {'settings': s})
+
+    # Pipeline status for template
+    smpl_models_dir = Path(settings.TOOLS_ROOT) / 'VideoToBVH' / 'models' / 'smpl'
+    smpl_models_ok = any(smpl_models_dir.glob('*.pkl')) if smpl_models_dir.is_dir() else False
+    ctx = {
+        'settings': s,
+        'v4_installed': Path(settings.MOCAPNET_V4_SCRIPT).exists(),
+        'gvhmr_installed': Path(settings.GVHMR_ROOT).is_dir(),
+        'wham_installed': Path(settings.WHAM_ROOT).is_dir(),
+        'prompthmr_installed': Path(settings.PROMPTHMR_ROOT).is_dir(),
+        'smpl_models_ok': smpl_models_ok,
+    }
+    return render(request, 'settings_videobvh_3d.html', ctx)

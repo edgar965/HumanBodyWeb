@@ -6,8 +6,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
   }
 }
 </script>
@@ -79,6 +79,25 @@
         </span>
     </div>
 </div>
+
+{% if job.bvh_file %}
+<div class="result-character">
+    <div class="panel-label"><i class="fas fa-user"></i> 3D Character</div>
+    <div class="result-character-controls">
+        <label>Body Type:</label>
+        <select id="resultBodyType" class="result-body-select"></select>
+    </div>
+    <div class="result-character-body">
+        <div class="result-character-viewport">
+            <canvas id="characterCanvas"></canvas>
+            <div id="characterLoading" class="character-loading">
+                <i class="fas fa-spinner fa-spin"></i> Lade 3D Character...
+            </div>
+        </div>
+        <div class="result-character-panel" id="characterPanel"></div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
@@ -102,4 +121,20 @@ try {
     document.body.appendChild(err);
 }
 </script>
+{% if job.bvh_file %}
+<script type="module">
+try {
+    const { initResultCharacter } = await import('{% static "viewer/result_character.js" %}?v=6');
+    initResultCharacter({
+        canvasId: 'characterCanvas',
+        videoId: 'resultVideo',
+        bvhUrl: '{% url "serve_bvh" job.id %}',
+        panelId: 'characterPanel',
+        bodyTypeSelectId: 'resultBodyType',
+    });
+} catch(e) {
+    console.error('[result_character] Init error:', e);
+}
+</script>
+{% endif %}
 {% endblock %}

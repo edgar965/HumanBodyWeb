@@ -486,6 +486,15 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         skipDirCorrectionBones.add('DEF-spine.004');
         skipDirCorrectionBones.add('DEF-spine.006');
     }
+    if (format === 'MOCAPNET') {
+        skipDirCorrectionBones.add('DEF-foot.L');
+        skipDirCorrectionBones.add('DEF-foot.R');
+        skipDirCorrectionBones.add('DEF-toe.L');
+        skipDirCorrectionBones.add('DEF-toe.R');
+        skipDirCorrectionBones.add('DEF-jaw');
+        skipDirCorrectionBones.add('DEF-spine.004');
+        skipDirCorrectionBones.add('DEF-spine.006');
+    }
 
     for (const [defName, bvhName] of Object.entries(defToBvhName)) {
         // Skip direction correction for root bone — root has multiple children
