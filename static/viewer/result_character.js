@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=20';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=25';
 
 // =========================================================================
 // Tone mapping lookup
@@ -150,6 +150,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     let currentBodyType = 'Female_Caucasian';
     let cachedBvhResult = null;
     let cachedBvhFormat = null;
+    let bvhClipDuration = 0;
     let skinColors = {};
     let skeletonHelper = null;
     let rigVisible = false;
@@ -181,13 +182,15 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         requestAnimationFrame(animate);
         controls.update();
 
-        if (mixer && video.duration) {
+        if (mixer && video.duration && bvhClipDuration > 0) {
             // Reset action if clamped/paused (e.g. video replayed after ending)
             if (currentAction && currentAction.paused) {
                 currentAction.reset();
                 currentAction.play();
             }
-            mixer.setTime(video.currentTime);
+            // Proportional mapping: BVH may have different FPS than video
+            const progress = video.currentTime / video.duration;
+            mixer.setTime(progress * bvhClipDuration);
         }
 
         renderer.render(scene, camera);
@@ -314,11 +317,12 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         }
     }
 
-    // --- Ignore Face Bones checkbox ---
-    const faceChk = document.getElementById('ignoreFaceBones');
-    if (faceChk) {
-        faceChk.addEventListener('change', () => {
-            ignoreFaceBones = faceChk.checked;
+
+    // --- Foot correction checkbox ---
+    const footChk = document.getElementById('footCorrection');
+    if (footChk) {
+        footChk.addEventListener('change', () => {
+            enableFootCorrection = footChk.checked;
             if (cachedBvhResult && cachedBvhFormat) {
                 applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
             }
@@ -1064,53 +1068,74 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     // BVH loading + retarget
     // =====================================================================
 
-    const FACE_BONES = new Set([
-        'DEF-jaw', 'DEF-tongue', 'DEF-tongue.001', 'DEF-tongue.002',
-        'DEF-lip.T.L', 'DEF-lip.T.R', 'DEF-lip.T.L.001', 'DEF-lip.T.R.001',
-        'DEF-lip.B.L', 'DEF-lip.B.R', 'DEF-lip.B.L.001', 'DEF-lip.B.R.001',
-        'DEF-lid.T.L', 'DEF-lid.T.R', 'DEF-lid.B.L', 'DEF-lid.B.R',
-        'DEF-nose', 'DEF-nose.001', 'DEF-nose.L', 'DEF-nose.R',
-        'DEF-nose.L.001', 'DEF-nose.R.001',
-        'DEF-cheek.T.L', 'DEF-cheek.T.R', 'DEF-cheek.B.L', 'DEF-cheek.B.R',
-        'DEF-brow.B.L', 'DEF-brow.B.R', 'DEF-brow.B.L.001', 'DEF-brow.B.R.001',
-        'DEF-brow.B.L.002', 'DEF-brow.B.R.002', 'DEF-brow.B.L.003', 'DEF-brow.B.R.003',
-        'DEF-forehead.L', 'DEF-forehead.R', 'DEF-forehead.L.001', 'DEF-forehead.R.001',
-        'DEF-forehead.L.002', 'DEF-forehead.R.002',
-        'DEF-temple.L', 'DEF-temple.R',
-        'DEF-ear.L', 'DEF-ear.L.001', 'DEF-ear.L.002', 'DEF-ear.L.003', 'DEF-ear.L.004',
-        'DEF-ear.R', 'DEF-ear.R.001', 'DEF-ear.R.002', 'DEF-ear.R.003', 'DEF-ear.R.004',
-    ]);
-    let ignoreFaceBones = false;
+    let enableFootCorrection = false;
 
     function applyBvhRetarget(bvhResult, format) {
         // Stop old mixer first
         if (mixer) { mixer.stopAllAction(); mixer = null; currentAction = null; }
 
         const retargetOpts = { bodyMesh };
-        if (ignoreFaceBones) retargetOpts.skipDefBones = FACE_BONES;
+        if (enableFootCorrection) retargetOpts.footCorrection = true;
         const clip = retargetBVHToDefClip(bvhResult, defSkeleton, format, retargetOpts);
-
-        // Reset skipped bones to rest pose so they don't stay in the last animated pose
-        if (ignoreFaceBones && defSkeleton && defSkeletonData) {
-            const skelByName = {};
-            for (const b of defSkeletonData.bones) skelByName[b.name] = b;
-            for (const boneName of FACE_BONES) {
-                const bone = defSkeleton.boneByName[boneName];
-                const data = skelByName[boneName];
-                if (bone && data) {
-                    const p = data.local_position;
-                    bone.position.set(p[0], p[2], -p[1]);
-                    const q = data.local_quaternion;
-                    bone.quaternion.set(q[1], q[3], -q[2], q[0]);
-                }
-            }
-        }
 
         mixer = new THREE.AnimationMixer(bodyMesh);
         currentAction = mixer.clipAction(clip);
         currentAction.setLoop(THREE.LoopOnce);
         currentAction.clampWhenFinished = true;
         currentAction.play();
+        bvhClipDuration = clip.duration;
+    }
+
+    /**
+     * Position camera in front of the character based on actual retargeted bone positions.
+     * Uses DEF-thigh.L/R to determine the lateral axis, then cross(up, right) = forward.
+     */
+    function positionCameraAfterRetarget() {
+        if (!defSkeleton || !mixer || !bodyMesh) return;
+
+        // Apply frame 0 so bones have their actual animated positions
+        mixer.setTime(0);
+        bodyMesh.updateWorldMatrix(true, true);
+        defSkeleton.rootBone.updateWorldMatrix(true, true);
+
+        const thighL = defSkeleton.boneByName['DEF-thigh.L'];
+        const thighR = defSkeleton.boneByName['DEF-thigh.R'];
+        if (!thighL || !thighR) return;
+
+        const posL = new THREE.Vector3();
+        const posR = new THREE.Vector3();
+        thighL.getWorldPosition(posL);
+        thighR.getWorldPosition(posR);
+
+        // Character's right direction: from left thigh to right thigh
+        const right = new THREE.Vector3().subVectors(posR, posL);
+        right.y = 0;
+        if (right.lengthSq() < 0.0001) return;
+        right.normalize();
+
+        // Forward = up × right (character's facing direction)
+        const up = new THREE.Vector3(0, 1, 0);
+        const forward = new THREE.Vector3().crossVectors(up, right).normalize();
+
+        // Compute character center from spine
+        const spine = defSkeleton.boneByName['DEF-spine.003']
+                   || defSkeleton.boneByName['DEF-spine.001']
+                   || defSkeleton.boneByName['DEF-spine'];
+        const center = new THREE.Vector3();
+        if (spine) {
+            spine.getWorldPosition(center);
+        } else {
+            center.addVectors(posL, posR).multiplyScalar(0.5);
+        }
+
+        const dist = 3.5;
+        camera.position.set(
+            center.x + forward.x * dist,
+            center.y + 0.1,
+            center.z + forward.z * dist
+        );
+        controls.target.copy(center);
+        controls.update();
     }
 
     function loadBVH(url) {
@@ -1124,6 +1149,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             cachedBvhFormat = format;
 
             applyBvhRetarget(result, format);
+            positionCameraAfterRetarget();
 
             console.log(`[result_character] BVH loaded: ${format}, ${result.clip.duration.toFixed(1)}s`);
         }, undefined, (err) => {
@@ -1190,7 +1216,8 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         try {
             const s = JSON.parse(saved);
             if (s.skin) {
-                if (s.skin.color) mat.color.set(s.skin.color);
+                // NOTE: skin COLOR is NOT applied from scene settings —
+                // it comes from SKIN_COLORS per ethnicity (body type).
                 if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
                 if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
             }

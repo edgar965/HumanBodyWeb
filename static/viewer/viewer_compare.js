@@ -132,6 +132,23 @@ export function createViewer(config) {
         if (skinMetalSlider) { skinMetalSlider.value = Math.round(mat.metalness * 100); skinMetalVal.textContent = mat.metalness.toFixed(2); }
     }
 
+    function applySkinColor() {
+        const bodyType = bodyTypeSelect?.value || defaultBodyType || '';
+        if (!bodyType || !Object.keys(skinColorMap).length) return;
+        const parts = bodyType.split('_');
+        const ethnicity = parts[1] || parts[0];
+        const colors = skinColorMap[ethnicity];
+        const mat = getSkinMat();
+        if (colors && mat) {
+            mat.color.setRGB(
+                Math.pow(colors[0], 1/2.2),
+                Math.pow(colors[1], 1/2.2),
+                Math.pow(colors[2], 1/2.2)
+            );
+            syncSkinUI(mat);
+        }
+    }
+
     async function loadMesh() {
         try {
             const resp = await fetch(`${apiPrefix}/mesh/`);
@@ -189,6 +206,7 @@ export function createViewer(config) {
             scene.add(bodyMesh);
 
             if (vertexSpan) vertexSpan.textContent = geo.attributes.position.count.toLocaleString();
+            applySkinColor();
         } catch (e) {
             console.error(`[${label}] Failed to load mesh:`, e);
         }
@@ -405,6 +423,9 @@ export function createViewer(config) {
                 div.appendChild(body);
                 morphsPanel.appendChild(div);
             });
+
+            // Apply initial skin color (mesh may already be loaded)
+            applySkinColor();
 
         } catch (e) {
             console.error(`[${label}] Failed to load morphs:`, e);

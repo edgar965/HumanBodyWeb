@@ -548,6 +548,18 @@ function updateJobUI(jobId, data) {
     if (pctEl) pctEl.textContent = p + '%';
     if (textEl) textEl.textContent = data.progress_detail || '';
 
+    // Reset the process button (spinner → play) when job is done
+    if (data.status === 'complete' || data.status === 'failed') {
+        var mainRow = document.getElementById('row-' + jobId);
+        if (mainRow) {
+            var procBtn = mainRow.querySelector('button[onclick*="startProcessing"]');
+            if (procBtn) {
+                procBtn.disabled = false;
+                procBtn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+        }
+    }
+
     if (data.status === 'complete') {
         if (errorEl) errorEl.style.display = 'none';
         if (actionsEl) {
@@ -556,9 +568,9 @@ function updateJobUI(jobId, data) {
                 (data.bvh_file ? ' <a class="btn btn-sm btn-secondary" href="/api/bvh/' + jobId + '/" download><i class="fas fa-download"></i> Download BVH</a>' : '');
         }
         // Update main row actions too
-        var mainRow = document.getElementById('row-' + jobId);
-        if (mainRow) {
-            var actionsTd = mainRow.querySelector('td:last-child');
+        var mainRow2 = document.getElementById('row-' + jobId);
+        if (mainRow2) {
+            var actionsTd = mainRow2.querySelector('td:last-child');
             if (actionsTd && !actionsTd.querySelector('a[href*="result"]')) {
                 var a = document.createElement('a');
                 a.className = 'btn btn-sm btn-primary';

@@ -44,6 +44,9 @@ let isSkinned = false;
 // Rig
 let rigVisible = false;
 
+// Skin colors per ethnicity (from API)
+let skinColors = {};
+
 // =========================================================================
 // Initialization
 // =========================================================================
@@ -183,6 +186,7 @@ function init() {
     loadMesh();
     loadDefSkeleton();
     loadSkinWeights();
+    loadSkinColors();
     loadAnimationTree();
 }
 
@@ -270,7 +274,8 @@ function applySceneSkinSettings() {
     try {
         const s = JSON.parse(saved);
         if (s.skin) {
-            if (s.skin.color) mat.color.set(s.skin.color);
+            // NOTE: skin COLOR is NOT applied from scene settings —
+            // it comes from SKIN_COLORS per ethnicity (body type).
             if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
             if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
         }
@@ -297,6 +302,28 @@ const BODY_MATERIALS = [
 function getSkinMat() {
     if (!bodyMesh || !bodyMesh.material) return null;
     return Array.isArray(bodyMesh.material) ? bodyMesh.material[0] : bodyMesh.material;
+}
+
+function applySkinColor() {
+    if (!Object.keys(skinColors).length) return;
+    const colors = skinColors['Caucasian'];  // default body type is Female_Caucasian
+    const mat = getSkinMat();
+    if (colors && mat) {
+        mat.color.setRGB(
+            Math.pow(colors[0], 1/2.2),
+            Math.pow(colors[1], 1/2.2),
+            Math.pow(colors[2], 1/2.2)
+        );
+    }
+}
+
+async function loadSkinColors() {
+    try {
+        const resp = await fetch('/api/character/morphs/');
+        const data = await resp.json();
+        skinColors = data.skin_colors || {};
+        applySkinColor();
+    } catch (e) { /* optional */ }
 }
 
 async function loadMesh() {
@@ -363,6 +390,7 @@ async function loadMesh() {
             geo.attributes.position.count.toLocaleString();
 
         applySceneSkinSettings();
+        applySkinColor();
         onResize();
     } catch (e) {
         console.error('Failed to load mesh:', e);

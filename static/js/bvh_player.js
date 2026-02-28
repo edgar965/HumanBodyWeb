@@ -227,11 +227,20 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         action.play();
         clipDuration = result.clip.duration;
 
+        // Apply frame 0 so bones have their actual animated positions
+        // (without this, bones are at BVH OFFSET positions which differ from frame data)
+        mixer.setTime(0);
+        rootBone.updateWorldMatrix(true, true);
+
         // Initial line positions
         updateBodyLines();
 
         // Auto-center camera — fit skeleton to fill viewport
         centerCamera(rootBone);
+
+        // Hide until user starts playback
+        rootBone.visible = false;
+        bodyLineSegments.visible = false;
     }, undefined, (err) => {
         console.error('[bvh_player] BVH load error:', err);
         container.innerHTML = '<div style="color:#e94560;padding:2rem;text-align:center;">Failed to load BVH file</div>';
@@ -261,13 +270,15 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     }
 
     // --- Draw 2D skeleton on canvas overlay ---
+    let overlayActive = false;  // true after first play or user seek
+
     function drawOverlay() {
         if (!overlayCtx || !overlayCanvas) return;
         const cw = overlayContainer.clientWidth;
         const ch = overlayContainer.clientHeight;
         overlayCtx.clearRect(0, 0, cw, ch);
 
-        if (!keypointsData || !video.duration) return;
+        if (!overlayActive || !keypointsData || !video.duration) return;
 
         // Map video time to keypoints frame
         const nFrames = keypointsData.frames.length;
@@ -321,14 +332,12 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         requestAnimationFrame(animate);
 
         if (mixer && video.duration) {
-            // Direct time mapping: BVH time = video time.
-            // MocapNET outputs one BVH frame per video frame with matching
-            // Frame Time, so BVH seconds correspond to real video seconds.
-            // Using proportional mapping (currentTime/duration * clipDuration)
-            // would desync when BVH has fewer frames than the video.
-            const rawT = video.currentTime;
+            // Proportional time mapping: BVH may have different FPS than video.
+            // Map video progress (0-1) to BVH clip duration.
+            const progress = video.currentTime / video.duration;
+            const rawT = progress * clipDuration;
 
-            // Hide 3D skeleton when video time exceeds BVH data
+            // Hide 3D skeleton when beyond data
             const beyondBVH = rawT >= clipDuration;
             if (!beyondBVH) {
                 // Reset action if clamped/paused (e.g. video replayed after ending)
@@ -339,8 +348,8 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
                 mixer.setTime(rawT);
             }
 
-            // Determine visibility: beyond data OR detection flags say no person
-            let visible = !beyondBVH;
+            // Determine visibility: hidden before first play, beyond data, or no person
+            let visible = overlayActive && !beyondBVH;
             if (visible && detectionFlags) {
                 const frameIdx = Math.min(
                     Math.floor((video.currentTime / video.duration) * detectionFlags.length),
@@ -405,10 +414,17 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         });
     }
 
+    function stopPlayback() {
+        video.pause();
+        video.currentTime = 0;
+        overlayActive = false;
+    }
+
     // Button handlers
     console.log('[bvh_player] Attaching button handlers...');
     if (btnPlayPause) btnPlayPause.addEventListener('click', togglePlayPause);
     const _btn = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); else console.warn('[bvh_player] Missing button:', id); };
+    _btn('btnStop', stopPlayback);
     _btn('btnSkipBack10', () => skip(-10));
     _btn('btnSkipBack1', () => skip(-1));
     _btn('btnSkipFwd1', () => skip(1));
@@ -451,6 +467,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     // Video events
     video.addEventListener('play', () => {
         isPlaying = true;
+        overlayActive = true;
         playIcon.className = 'fas fa-pause';
     });
     video.addEventListener('pause', () => {
@@ -460,6 +477,9 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     video.addEventListener('ended', () => {
         isPlaying = false;
         playIcon.className = 'fas fa-play';
+    });
+    video.addEventListener('seeked', () => {
+        overlayActive = true;
     });
 
     // Resize handling

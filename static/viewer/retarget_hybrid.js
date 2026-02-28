@@ -26,6 +26,8 @@ export function detectBVHFormat(bones) {
         // Mixamo has Spine2, CMU does not (CMU uses LowerBack instead)
         return names.has('Spine2') ? 'MIXAMO' : 'CMU';
     }
+    // OpenPose: hip + rShldr (capitalized, distinct from MocapNET's rshoulder)
+    if (names.has('hip') && names.has('rShldr')) return 'OPENPOSE';
     if (names.has('hip') || names.has('rshoulder')) return 'MOCAPNET';
     return 'UNKNOWN';
 }
@@ -280,6 +282,102 @@ export const BVH_TO_DEF_AIST = {
     'Right_foot':      'DEF-toe.R',
 };
 
+export const BVH_TO_DEF_OPENPOSE = {
+    // Body — OpenPose BVH (hip→abdomen→chest, rCollar→rShldr, rButtock→rThigh)
+    'hip':        'DEF-spine',
+    'abdomen':    'DEF-spine.001',
+    'chest':      'DEF-spine.003',
+    'neck':       null,
+    'neck1':      'DEF-spine.004',
+    'head':       'DEF-spine.006',
+    'lCollar':    'DEF-shoulder.L',
+    'rCollar':    'DEF-shoulder.R',
+    'lShldr':     'DEF-upper_arm.L',
+    'rShldr':     'DEF-upper_arm.R',
+    'lForeArm':   'DEF-forearm.L',
+    'rForeArm':   'DEF-forearm.R',
+    'lHand':      'DEF-hand.L',
+    'rHand':      'DEF-hand.R',
+    'lButtock':   null,
+    'rButtock':   null,
+    'lThigh':     'DEF-thigh.L',
+    'rThigh':     'DEF-thigh.R',
+    'lShin':      'DEF-shin.L',
+    'rShin':      'DEF-shin.R',
+    'lFoot':      'DEF-foot.L',
+    'rFoot':      'DEF-foot.R',
+    'toe1-1.L':   'DEF-toe.L',
+    'toe1-1.R':   'DEF-toe.R',
+
+    // Fingers left
+    'lthumb':       'DEF-thumb.01.L',
+    'finger1-2.l':  'DEF-thumb.02.L',
+    'finger1-3.l':  'DEF-thumb.03.L',
+    'finger2-1.l':  'DEF-f_index.01.L',
+    'finger2-2.l':  'DEF-f_index.02.L',
+    'finger2-3.l':  'DEF-f_index.03.L',
+    'finger3-1.l':  'DEF-f_middle.01.L',
+    'finger3-2.l':  'DEF-f_middle.02.L',
+    'finger3-3.l':  'DEF-f_middle.03.L',
+    'finger4-1.l':  'DEF-f_ring.01.L',
+    'finger4-2.l':  'DEF-f_ring.02.L',
+    'finger4-3.l':  'DEF-f_ring.03.L',
+    'finger5-1.l':  'DEF-f_pinky.01.L',
+    'finger5-2.l':  'DEF-f_pinky.02.L',
+    'finger5-3.l':  'DEF-f_pinky.03.L',
+
+    // Fingers right
+    'rthumb':       'DEF-thumb.01.R',
+    'finger1-2.r':  'DEF-thumb.02.R',
+    'finger1-3.r':  'DEF-thumb.03.R',
+    'finger2-1.r':  'DEF-f_index.01.R',
+    'finger2-2.r':  'DEF-f_index.02.R',
+    'finger2-3.r':  'DEF-f_index.03.R',
+    'finger3-1.r':  'DEF-f_middle.01.R',
+    'finger3-2.r':  'DEF-f_middle.02.R',
+    'finger3-3.r':  'DEF-f_middle.03.R',
+    'finger4-1.r':  'DEF-f_ring.01.R',
+    'finger4-2.r':  'DEF-f_ring.02.R',
+    'finger4-3.r':  'DEF-f_ring.03.R',
+    'finger5-1.r':  'DEF-f_pinky.01.R',
+    'finger5-2.r':  'DEF-f_pinky.02.R',
+    'finger5-3.r':  'DEF-f_pinky.03.R',
+
+    // Palms
+    'metacarpal1.l': 'DEF-palm.01.L',
+    'metacarpal2.l': 'DEF-palm.02.L',
+    'metacarpal3.l': 'DEF-palm.03.L',
+    'metacarpal4.l': 'DEF-palm.04.L',
+    'metacarpal1.r': 'DEF-palm.01.R',
+    'metacarpal2.r': 'DEF-palm.02.R',
+    'metacarpal3.r': 'DEF-palm.03.R',
+    'metacarpal4.r': 'DEF-palm.04.R',
+
+    // Face
+    'jaw':       'DEF-jaw',
+    'tongue01':  'DEF-tongue',
+    'tongue02':  'DEF-tongue.001',
+    'tongue03':  'DEF-tongue.002',
+    'eye.l':     'MCH-eye.L',
+    'eye.r':     'MCH-eye.R',
+
+    // Lips
+    'oris04.l':  'DEF-lip.T.L',
+    'oris04.r':  'DEF-lip.T.R',
+    'oris03.l':  'DEF-lip.T.L.001',
+    'oris03.r':  'DEF-lip.T.R.001',
+    'oris06.l':  'DEF-lip.B.L',
+    'oris06.r':  'DEF-lip.B.R',
+    'oris07.l':  'DEF-lip.B.L.001',
+    'oris07.r':  'DEF-lip.B.R.001',
+
+    // Eyelids
+    'orbicularis03.l': 'DEF-lid.T.L',
+    'orbicularis03.r': 'DEF-lid.T.R',
+    'orbicularis04.l': 'DEF-lid.B.L',
+    'orbicularis04.r': 'DEF-lid.B.R',
+};
+
 export const BVH_TO_DEF_BANDAI = {
     // Bandai Namco skeleton (joint_Root → Hips → Spine → Chest → ...)
     'Hips':        'DEF-spine',
@@ -322,7 +420,7 @@ export const BVH_TO_DEF_BANDAI = {
  * @param {Object} bvhResult - { skeleton, clip } from BVHLoader
  * @param {Object} defSkel - { rootBone, boneByName } from buildDefSkeleton()
  * @param {string} format - 'CMU', 'MIXAMO', or 'MOCAPNET'
- * @param {Object} [opts] - { bodyMesh } for height measurement
+ * @param {Object} [opts] - { bodyMesh, footCorrection, skipDefBones }
  * @returns {THREE.AnimationClip}
  */
 export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
@@ -332,6 +430,7 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
                   : format === 'MIXAMO' ? BVH_TO_DEF_MIXAMO
                   : format === 'BANDAI' ? BVH_TO_DEF_BANDAI
                   : format === 'AIST' ? BVH_TO_DEF_AIST
+                  : format === 'OPENPOSE' ? BVH_TO_DEF_OPENPOSE
                   : BVH_TO_DEF_MOCAPNET;
 
     // --- DEF rest-pose world quaternions ---
@@ -378,11 +477,9 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     collectBvhHierarchy(bvhRoot);
 
     // --- Mapping ---
-    const skipDefBones = opts.skipDefBones || new Set();
     const defToBvhName = {};
     for (const [bvhName, defName] of Object.entries(mapping)) {
-        if (defName && bvhBoneByName[bvhName] && defSkel.boneByName[defName]
-            && !skipDefBones.has(defName))
+        if (defName && bvhBoneByName[bvhName] && defSkel.boneByName[defName])
             defToBvhName[defName] = bvhName;
     }
     const mappedDefNames = new Set(Object.keys(defToBvhName));
@@ -497,6 +594,19 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         skipDirCorrectionBones.add('DEF-spine.004');
         skipDirCorrectionBones.add('DEF-spine.006');
     }
+    if (format === 'OPENPOSE') {
+        skipDirCorrectionBones.add('DEF-foot.L');
+        skipDirCorrectionBones.add('DEF-foot.R');
+        skipDirCorrectionBones.add('DEF-toe.L');
+        skipDirCorrectionBones.add('DEF-toe.R');
+        skipDirCorrectionBones.add('DEF-jaw');
+        skipDirCorrectionBones.add('DEF-spine.004');
+        skipDirCorrectionBones.add('DEF-spine.006');
+        // OpenPose collar→shoulder offset points upward; direction correction
+        // rotates shoulders too high. Skip to use pure rotation transfer.
+        skipDirCorrectionBones.add('DEF-shoulder.L');
+        skipDirCorrectionBones.add('DEF-shoulder.R');
+    }
 
     for (const [defName, bvhName] of Object.entries(defToBvhName)) {
         // Skip direction correction for root bone — root has multiple children
@@ -579,6 +689,71 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const defAnimWorldQ = {};   // per-frame animated world Q cache
     const bvhWorldAnimQ = {};   // per-frame BVH world Q cache
 
+    // --- Foot correction pre-pass ---
+    // Detects plantar flexion from the BVH foot bone's world orientation per frame.
+    // If the foot already points downward (> threshold), amplify toward en pointe.
+    // Stores per-frame slerp amount toward the "foot straight down" target.
+    let footCorrection = null;
+    if (opts.footCorrection) {
+        footCorrection = {};
+        const _fq2 = new THREE.Quaternion();
+        const _fwd = new THREE.Vector3();
+        const DEG = 180 / Math.PI;
+
+        // Only enhance when foot is already pitched down by > threshold
+        const THRESHOLD_DEG = 15;
+        // Additive boost: targetAngle = downAngle + (downAngle - threshold) × BOOST
+        const BOOST = 1.5;
+
+        for (const defFootName of ['DEF-foot.L', 'DEF-foot.R']) {
+            const bvhFootName = defToBvhName[defFootName];
+            if (!bvhFootName) continue;
+
+            // FK chain to compute foot bone's world Q per frame
+            const chain = [];
+            let cur = bvhFootName;
+            while (cur) { chain.unshift(cur); cur = bvhBoneParentName[cur]; }
+
+            const correction = new Float32Array(fc);
+            let maxCorr = 0, maxAngle = 0;
+            for (let f = 0; f < fc; f++) {
+                const ti = f * 4;
+                let worldQ = new THREE.Quaternion();
+                for (const bn of chain) {
+                    const track = bvhQuatTracks[bn];
+                    if (track) {
+                        _fq2.set(track.values[ti], track.values[ti+1],
+                                 track.values[ti+2], track.values[ti+3]);
+                    } else { _fq2.set(0, 0, 0, 1); }
+                    worldQ.multiply(_fq2);
+                }
+
+                // Foot forward direction in world space (bone -Z)
+                _fwd.set(0, 0, -1).applyQuaternion(worldQ);
+                // Angle below horizontal: positive = points down
+                const downAngle = Math.asin(Math.max(-1, Math.min(1, -_fwd.y))) * DEG;
+                if (downAngle > maxAngle) maxAngle = downAngle;
+
+                if (downAngle > THRESHOLD_DEG) {
+                    // Target angle: amplify beyond current
+                    const targetAngle = Math.min(90, downAngle + (downAngle - THRESHOLD_DEG) * BOOST);
+                    // Slerp amount: how far from current toward 90° do we need to go?
+                    // (targetAngle - downAngle) is the extra rotation needed.
+                    // (90 - downAngle) is the full distance to 90°.
+                    const distTo90 = 90 - downAngle;
+                    correction[f] = distTo90 > 0.1
+                        ? Math.min((targetAngle - downAngle) / distTo90, 1.0)
+                        : 0;  // already at ~90°, no correction needed
+                }
+                if (correction[f] > maxCorr) maxCorr = correction[f];
+            }
+            footCorrection[defFootName] = correction;
+            console.log(`[FOOT-CORRECTION] ${defFootName}: maxAngle=${maxAngle.toFixed(1)}, ` +
+                `thresh=${THRESHOLD_DEG}, boost=${BOOST}x, maxCorr=${maxCorr.toFixed(2)}`);
+        }
+        if (Object.keys(footCorrection).length === 0) footCorrection = null;
+    }
+
     // --- Per-frame retarget ---
     for (let f = 0; f < fc; f++) {
         const ti = f * 4;
@@ -638,6 +813,28 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
                         tmpQ.copy(parentAnimWQ).invert().multiply(desiredWorldQ).normalize();
                     } else {
                         tmpQ.copy(defRestLocalQ[defName] || new THREE.Quaternion());
+                    }
+                }
+
+                // Foot correction: slerp toward "foot pointing straight down"
+                // Uses setFromUnitVectors to naturally rotate from current foot
+                // direction to -Y, preserving lateral orientation (no twist).
+                if (footCorrection && footCorrection[defName]) {
+                    const amount = footCorrection[defName][f];
+                    if (amount > 0.01) {
+                        // Current foot world Q
+                        const footWorldQ = parentAnimWQ.clone().multiply(tmpQ);
+                        // Current foot forward in world space
+                        const curFwd = new THREE.Vector3(0, 0, -1).applyQuaternion(footWorldQ).normalize();
+                        // Target: foot points straight down
+                        const tgtFwd = new THREE.Vector3(0, -1, 0);
+                        // Rotation from current forward to target forward
+                        const rotQ = new THREE.Quaternion().setFromUnitVectors(curFwd, tgtFwd);
+                        // Target world Q = rotation applied to current
+                        const tgtWorldQ = rotQ.multiply(footWorldQ);
+                        // Convert to local
+                        const tgtLocalQ = parentAnimWQ.clone().invert().multiply(tgtWorldQ).normalize();
+                        tmpQ.slerp(tgtLocalQ, amount);
                     }
                 }
 

@@ -64,6 +64,9 @@ let hairColorData = {};  // name -> [r,g,b] (linear sRGB)
 // Current preset name (set on load/save)
 let currentPresetName = '';
 
+// Skin colors per ethnicity (from API)
+let skinColors = {};
+
 // =========================================================================
 // Expanded panels from settings
 // =========================================================================
@@ -322,6 +325,24 @@ function getSkinMat() {
     return Array.isArray(bodyMesh.material) ? bodyMesh.material[0] : bodyMesh.material;
 }
 
+function applySkinColor() {
+    const select = document.getElementById('body-type-select');
+    const bodyType = select?.value || '';
+    if (!bodyType || !Object.keys(skinColors).length) return;
+    const parts = bodyType.split('_');
+    const ethnicity = parts[1] || parts[0];
+    const colors = skinColors[ethnicity];
+    const mat = getSkinMat();
+    if (colors && mat) {
+        mat.color.setRGB(
+            Math.pow(colors[0], 1/2.2),
+            Math.pow(colors[1], 1/2.2),
+            Math.pow(colors[2], 1/2.2)
+        );
+        syncSkinUI(mat);
+    }
+}
+
 async function loadMesh() {
     try {
         const resp = await fetch(`${API}/mesh/`);
@@ -387,6 +408,7 @@ async function loadMesh() {
             geo.attributes.position.count.toLocaleString();
 
         applySceneSkinSettings();
+        applySkinColor();
         onResize();
     } catch (e) {
         console.error('Failed to load mesh:', e);
@@ -477,6 +499,7 @@ async function reloadMeshForBodyType(bodyType, gender) {
             geo.attributes.position.count.toLocaleString();
 
         applySceneSkinSettings();
+        applySkinColor();
 
         // Reload skin weights for new gender
         const swResp = await fetch(`${API}/skin-weights/?body_type=${encodeURIComponent(bodyType)}`);
@@ -739,6 +762,7 @@ async function loadMorphs() {
     try {
         const resp = await fetch(`${API}/morphs/`);
         const data = await resp.json();
+        skinColors = data.skin_colors || {};
 
         // Body type dropdown
         const select = document.getElementById('body-type-select');
@@ -925,6 +949,9 @@ async function loadMorphs() {
             if (skinMetalSlider) { skinMetalSlider.value = 0; skinMetalVal.textContent = '0.00'; }
             wsSend({ type: 'reset', body_type: select.value });
         });
+
+        // Apply initial skin color (mesh may already be loaded)
+        applySkinColor();
 
     } catch (e) {
         console.error('Failed to load morphs:', e);
@@ -1870,10 +1897,10 @@ function applySceneSkinSettings() {
     try {
         const s = JSON.parse(saved);
         if (s.skin) {
-            if (s.skin.color) mat.color.set(s.skin.color);
+            // NOTE: skin COLOR is NOT applied from scene settings —
+            // it comes from SKIN_COLORS per ethnicity (body type).
             if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
             if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
-            // Sync viewer panel skin controls
             syncSkinUI(mat);
         }
     } catch (e) { /* ignore */ }
@@ -2009,7 +2036,7 @@ async function loadDefaultPreset() {
         if (!resp.ok) return;
         const preset = await resp.json();
         applyModelPreset(preset);
-        // Re-apply scene skin settings after preset (preset body type overrides skin color)
+        // Re-apply scene skin settings after preset (roughness/metalness only)
         setTimeout(() => applySceneSkinSettings(), 200);
         console.log(`Default preset loaded: ${presetName}`);
 

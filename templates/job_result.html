@@ -63,6 +63,7 @@
         <button class="ctrl-btn" id="btnSkipBack1" title="Back 1s"><i class="fas fa-backward-step"></i> 1s</button>
         <button class="ctrl-btn" id="btnFrameBack" title="Previous frame"><i class="fas fa-caret-left"></i> F</button>
         <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause"><i class="fas fa-play" id="playIcon"></i></button>
+        <button class="ctrl-btn" id="btnStop" title="Stop (reset to start)"><i class="fas fa-stop"></i></button>
         <button class="ctrl-btn" id="btnFrameFwd" title="Next frame">F <i class="fas fa-caret-right"></i></button>
         <button class="ctrl-btn" id="btnSkipFwd1" title="Forward 1s">1s <i class="fas fa-forward-step"></i></button>
         <button class="ctrl-btn" id="btnSkipFwd10" title="Forward 10s">10s <i class="fas fa-forward"></i></button>
@@ -95,7 +96,7 @@
             <i class="fas fa-hat-wizard"></i> Hair
         </button>
         <label class="result-checkbox">
-            <input type="checkbox" id="ignoreFaceBones"> Ignore Face Bones
+            <input type="checkbox" id="footCorrection"> Foot Fix
         </label>
     </div>
     <div class="result-character-body">
@@ -135,7 +136,7 @@ try {
 {% if job.bvh_file %}
 <script type="module">
 try {
-    const { initResultCharacter } = await import('{% static "viewer/result_character.js" %}?v=8');
+    const { initResultCharacter } = await import('{% static "viewer/result_character.js" %}?v=25');
     initResultCharacter({
         canvasId: 'characterCanvas',
         videoId: 'resultVideo',

@@ -1422,6 +1422,44 @@ def serve_detection_data(request, job_id):
     return JsonResponse([], safe=False)
 
 
+def _try_generate_smpl_2d_keypoints(job, output_dir):
+    """Try to retroactively generate 2D keypoints from GVHMR hmr4d_results.pt.
+
+    Returns the keypoints dict if successful, None otherwise.
+    Caches the result as _keypoints2d.json for future requests.
+    """
+    try:
+        import sys as _sys
+        video_stem = Path(job.video_file.name).stem
+        pt_path = output_dir / video_stem / 'hmr4d_results.pt'
+        if not pt_path.exists():
+            return None
+
+        import torch
+        pred = torch.load(str(pt_path), map_location='cpu', weights_only=False)
+        if 'smpl_params_incam' not in pred or 'K_fullimg' not in pred:
+            return None
+
+        video_path = str(Path(settings.MEDIA_ROOT) / str(job.video_file))
+        bvh_stem = Path(job.bvh_file).stem
+        kp2d_path = str(output_dir / f'{bvh_stem}_keypoints2d.json')
+
+        # Import _save_2d_keypoints from gvhmr_lift wrapper
+        wrapper_dir = str(Path(settings.BASE_DIR).parent / 'VideoToBVH' / 'wrappers')
+        if wrapper_dir not in _sys.path:
+            _sys.path.insert(0, wrapper_dir)
+        from gvhmr_lift import _save_2d_keypoints
+        _save_2d_keypoints(pred, kp2d_path, video_path)
+
+        with open(kp2d_path) as f:
+            return json.load(f)
+    except Exception as e:
+        import traceback
+        print(f'[serve_keypoints_2d] Retroactive SMPL 2D keypoints failed: {e}')
+        traceback.print_exc()
+        return None
+
+
 def serve_keypoints_2d(request, job_id):
     """Serve per-frame 2D keypoints as JSON for the Canvas2D overlay.
 
@@ -1485,28 +1523,20 @@ def serve_keypoints_2d(request, job_id):
     elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
         csv_path = output_dir / f'{job.pipeline}_2d.csv'
     elif job.pipeline in ('gvhmr', 'wham', 'prompthmr'):
-        # SMPL pipelines: extract 2D keypoints from BVH via FK + projection
-        if job.bvh_file and Path(job.bvh_file).exists():
-            import cv2
-            video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
-            cap = cv2.VideoCapture(str(video_path))
-            vw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
-            vh = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
-            cap.release()
+        # SMPL pipelines: prefer pre-computed 2D keypoints from camera projection
+        if job.bvh_file:
+            bvh_stem = Path(job.bvh_file).stem
+            kp2d_json = output_dir / f'{bvh_stem}_keypoints2d.json'
+            if kp2d_json.exists():
+                with open(kp2d_json) as f:
+                    return JsonResponse(json.load(f))
 
-            bvh_kps, bvh_conns = _parse_bvh_to_2d(Path(job.bvh_file), vw, vh)
-            # Convert to normalized (0-1) format + mirror X for SMPL
-            # (SMPL: anatomical left = +X, but in video person faces camera → flip)
-            bvh_joints = list(bvh_kps[0].keys()) if bvh_kps else []
-            norm_frames = []
-            for kp in bvh_kps:
-                nf = {}
-                for jname, (x, y, conf) in kp.items():
-                    nf[jname] = [1.0 - x / vw, y / vh, conf]
-                norm_frames.append(nf)
-            norm_conns = [[p, c] for p, c in bvh_conns]
-            return JsonResponse({'joints': bvh_joints, 'connections': norm_conns,
-                                 'frames': norm_frames})
+            # Try retroactive generation from hmr4d_results.pt
+            data = _try_generate_smpl_2d_keypoints(job, output_dir)
+            if data:
+                return JsonResponse(data)
+
+        # No proper 2D keypoints available for SMPL pipeline
         return JsonResponse({'joints': body_joints, 'connections': connections,
                              'frames': []})
     else:

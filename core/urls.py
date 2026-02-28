@@ -37,6 +37,10 @@ urlpatterns = [
     path('api/jobs/bulk-delete/', views.bulk_delete_jobs, name='bulk_delete_jobs'),
 
     # HumanBody
+    path('humanbody/photo-to-3d/', character_api.photo_to_3d_page, name='photo_to_3d'),
+    path('api/character/analyze-photo/', character_api.analyze_photo, name='analyze_photo'),
+    path('api/character/analyze-photo/status/', character_api.analyze_photo_status, name='analyze_photo_status'),
+    path('api/character/smplx-mesh/', character_api.smplx_mesh, name='smplx_mesh'),
     path('humanbody/config/', character_api.character_viewer, name='humanbody_config'),
     path('humanbody/scene/', character_api.scene_config, name='humanbody_scene'),
     path('humanbody/animations/', character_api.animations_page, name='humanbody_animations'),

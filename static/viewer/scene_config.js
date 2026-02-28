@@ -78,6 +78,9 @@ let skelWrapper = null;
 // Rig
 let rigVisible = false;
 
+// Skin colors per ethnicity (from API)
+let skinColors = {};
+
 // Auto-save debounce
 let saveTimer = null;
 
@@ -233,6 +236,7 @@ function init() {
     loadMesh();
     loadDefSkeleton();
     loadSkinWeights();
+    loadSkinColors();
 }
 
 function onResize() {
@@ -306,6 +310,28 @@ function getSkinMat() {
     return Array.isArray(bodyMesh.material) ? bodyMesh.material[0] : bodyMesh.material;
 }
 
+function applySkinColor() {
+    if (!Object.keys(skinColors).length) return;
+    const colors = skinColors['Caucasian'];  // default body type is Female_Caucasian
+    const mat = getSkinMat();
+    if (colors && mat) {
+        mat.color.setRGB(
+            Math.pow(colors[0], 1/2.2),
+            Math.pow(colors[1], 1/2.2),
+            Math.pow(colors[2], 1/2.2)
+        );
+    }
+}
+
+async function loadSkinColors() {
+    try {
+        const resp = await fetch('/api/character/morphs/');
+        const data = await resp.json();
+        skinColors = data.skin_colors || {};
+        applySkinColor();
+    } catch (e) { /* optional */ }
+}
+
 async function loadMesh() {
     try {
         const resp = await fetch('/api/character/mesh/');
@@ -369,6 +395,7 @@ async function loadMesh() {
         document.getElementById('vertex-count').textContent =
             geo.attributes.position.count.toLocaleString();
 
+        applySkinColor();
         onResize();
     } catch (e) {
         console.error('Failed to load mesh:', e);

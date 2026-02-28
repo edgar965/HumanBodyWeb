@@ -5,6 +5,7 @@ Uses humanbody_core for morphing computations.
 import os
 import re
 import json
+import uuid
 import base64
 import logging
 
@@ -882,3 +883,144 @@ def character_hairstyle_glb(request, name):
         content_type='model/gltf-binary',
         filename=f'{name}.glb',
     )
+
+
+# =========================================================================
+# Photo To 3D — page + SMPLest-X analysis API
+# =========================================================================
+
+def photo_to_3d_page(request):
+    """Render the Photo To 3D page."""
+    return render(request, 'photo_to_3d.html')
+
+
+@csrf_exempt
+@require_POST
+def analyze_photo(request):
+    """Analyze an uploaded photo for body proportions.
+
+    Expects multipart form with 'photo' file.
+    Returns JSON with detected body type, meta sliders, and morph values.
+    """
+    import sys
+    wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
+    sys.path.insert(0, wrappers_dir)
+    try:
+        from smplest_x_wrapper import is_available, analyze_photo as smplx_analyze, betas_to_morph_sliders
+    except ImportError:
+        return JsonResponse({'ok': False, 'error': 'SMPLest-X wrapper not found'})
+    finally:
+        if wrappers_dir in sys.path:
+            sys.path.remove(wrappers_dir)
+
+    photo = request.FILES.get('photo')
+    if not photo:
+        return JsonResponse({'ok': False, 'error': 'No photo uploaded'}, status=400)
+
+    # Save to media/photo_analysis/
+    upload_dir = os.path.join(str(settings.BASE_DIR), 'media', 'photo_analysis')
+    os.makedirs(upload_dir, exist_ok=True)
+
+    ext = os.path.splitext(photo.name)[1] or '.jpg'
+    filename = f"{uuid.uuid4().hex}{ext}"
+    filepath = os.path.join(upload_dir, filename)
+
+    with open(filepath, 'wb') as f:
+        for chunk in photo.chunks():
+            f.write(chunk)
+
+    # Analyze
+    result = smplx_analyze(filepath)
+    if result is None:
+        return JsonResponse({'ok': False, 'error': 'Analysis failed'})
+
+    # Map betas to morphs
+    mapping = betas_to_morph_sliders(result['betas'], result['gender'])
+
+    resp = {
+        'ok': True,
+        'gender': result['gender'],
+        'betas': result['betas'],
+        'body_type': mapping['body_type'],
+        'meta_sliders': mapping['meta_sliders'],
+        'morphs': mapping['morphs'],
+        'confidence': result['confidence'],
+        'mock': result.get('mock', False),
+        'photo_url': f'/media/photo_analysis/{filename}',
+    }
+    # Forward SMPL-X measurements if available
+    meas = result.get('measurements') or mapping.get('measurements')
+    if meas:
+        resp['measurements'] = meas
+    # Forward skin color if detected
+    if result.get('skin_color'):
+        resp['skin_color'] = result['skin_color']
+    return JsonResponse(resp)
+
+
+@require_GET
+def analyze_photo_status(request):
+    """Return SMPLest-X availability status."""
+    import sys
+    wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
+    sys.path.insert(0, wrappers_dir)
+    try:
+        from smplest_x_wrapper import is_available, get_model_info
+        available = is_available()
+        model_info = get_model_info()
+    except ImportError:
+        available = False
+        model_info = 'Wrapper not found'
+    finally:
+        if wrappers_dir in sys.path:
+            sys.path.remove(wrappers_dir)
+
+    return JsonResponse({
+        'available': available,
+        'model_info': model_info,
+    })
+
+
+@csrf_exempt
+@require_POST
+def smplx_mesh(request):
+    """Generate SMPL-X mesh from betas.
+
+    Expects JSON: {"betas": [...], "gender": "female"|"male"|"neutral"}
+    Returns base64-encoded vertices (float32) and faces (uint32).
+    """
+    import sys
+    wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
+    sys.path.insert(0, wrappers_dir)
+    try:
+        from smplest_x_wrapper import generate_mesh
+    except ImportError:
+        return JsonResponse({'ok': False, 'error': 'Wrapper not found'})
+    finally:
+        if wrappers_dir in sys.path:
+            sys.path.remove(wrappers_dir)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    betas = body.get('betas', [0.0] * 10)
+    gender = body.get('gender', 'neutral')
+
+    result = generate_mesh(betas, gender)
+    if result is None:
+        return JsonResponse({'ok': False, 'error': 'SMPL-X model not available'})
+
+    return JsonResponse({
+        'ok': True,
+        'vertices': base64.b64encode(result['vertices'].tobytes()).decode(),
+        'faces': base64.b64encode(result['faces'].tobytes()).decode(),
+        'joints': base64.b64encode(result['joints'].tobytes()).decode(),
+        'parents': result['parents'],
+        'skin_indices': base64.b64encode(result['skin_indices'].tobytes()).decode(),
+        'skin_weights': base64.b64encode(result['skin_weights'].tobytes()).decode(),
+        'n_verts': result['n_verts'],
+        'n_faces': result['n_faces'],
+        'n_joints': result['n_joints'],
+    })
