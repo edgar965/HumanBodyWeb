@@ -221,7 +221,7 @@ class AppSettings(models.Model):
         default=True, help_text="Skip DPVO dynamic camera estimation (static camera)",
     )
     gvhmr_focal_length_mm = models.FloatField(
-        default=26.0, help_text="Camera focal length in mm (default 26)",
+        default=0, help_text="Camera focal length in mm (0 = auto-detect)",
     )
 
     # --- Video to BVH: WHAM settings ---

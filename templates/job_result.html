@@ -114,7 +114,7 @@
 {% block extra_scripts %}
 <script type="module">
 try {
-    const { initBVHPlayer } = await import('{% static "js/bvh_player.js" %}?v=076');
+    const { initBVHPlayer } = await import('{% static "js/bvh_player.js" %}?v=077');
     initBVHPlayer({
         videoId: 'resultVideo',
         canvasId: 'skeletonCanvas',
@@ -135,7 +135,7 @@ try {
 {% if job.bvh_file %}
 <script type="module">
 try {
-    const { initResultCharacter } = await import('{% static "viewer/result_character.js" %}?v=7');
+    const { initResultCharacter } = await import('{% static "viewer/result_character.js" %}?v=8');
     initResultCharacter({
         canvasId: 'characterCanvas',
         videoId: 'resultVideo',

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-console.log('[bvh_player] v0.80 loaded');
+console.log('[bvh_player] v0.81 loaded');
 
 export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null, detectionUrl = null, keypointsUrl = null }) {
     console.log('[bvh_player] initBVHPlayer called', { videoId, canvasId });
@@ -117,22 +117,42 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
     // --- Load BVH (3D panel only) ---
     const loader = new BVHLoader();
-    const BODY_BONE_NAMES = new Set([
+
+    // MocapNET body bones + connections
+    const MOCAPNET_BONES = new Set([
         'hip', 'abdomen', 'chest', 'neck', 'neck1', 'head',
         'rCollar', 'rShldr', 'rForeArm', 'rHand',
         'lCollar', 'lShldr', 'lForeArm', 'lHand',
         'rButtock', 'rThigh', 'rShin', 'rFoot',
         'lButtock', 'lThigh', 'lShin', 'lFoot',
     ]);
-
-    // Explicit connections between body bones (parent → child)
-    const BODY_CONNECTIONS = [
+    const MOCAPNET_CONNECTIONS = [
         ['hip', 'abdomen'], ['abdomen', 'chest'], ['chest', 'neck'], ['neck', 'neck1'], ['neck1', 'head'],
         ['chest', 'rCollar'], ['rCollar', 'rShldr'], ['rShldr', 'rForeArm'], ['rForeArm', 'rHand'],
         ['chest', 'lCollar'], ['lCollar', 'lShldr'], ['lShldr', 'lForeArm'], ['lForeArm', 'lHand'],
         ['hip', 'rButtock'], ['rButtock', 'rThigh'], ['rThigh', 'rShin'], ['rShin', 'rFoot'],
         ['hip', 'lButtock'], ['lButtock', 'lThigh'], ['lThigh', 'lShin'], ['lShin', 'lFoot'],
     ];
+
+    // SMPL body bones + connections
+    const SMPL_BONES = new Set([
+        'Pelvis', 'Spine1', 'Spine2', 'Spine3', 'Neck', 'Head',
+        'Left_hip', 'Left_knee', 'Left_ankle', 'Left_foot',
+        'Right_hip', 'Right_knee', 'Right_ankle', 'Right_foot',
+        'Left_collar', 'Left_shoulder', 'Left_elbow', 'Left_wrist',
+        'Right_collar', 'Right_shoulder', 'Right_elbow', 'Right_wrist',
+    ]);
+    const SMPL_CONNECTIONS = [
+        ['Pelvis', 'Spine1'], ['Spine1', 'Spine2'], ['Spine2', 'Spine3'], ['Spine3', 'Neck'], ['Neck', 'Head'],
+        ['Spine3', 'Left_collar'], ['Left_collar', 'Left_shoulder'], ['Left_shoulder', 'Left_elbow'], ['Left_elbow', 'Left_wrist'],
+        ['Spine3', 'Right_collar'], ['Right_collar', 'Right_shoulder'], ['Right_shoulder', 'Right_elbow'], ['Right_elbow', 'Right_wrist'],
+        ['Pelvis', 'Left_hip'], ['Left_hip', 'Left_knee'], ['Left_knee', 'Left_ankle'], ['Left_ankle', 'Left_foot'],
+        ['Pelvis', 'Right_hip'], ['Right_hip', 'Right_knee'], ['Right_knee', 'Right_ankle'], ['Right_ankle', 'Right_foot'],
+    ];
+
+    // Active set — chosen at BVH load time
+    let BODY_BONE_NAMES = MOCAPNET_BONES;
+    let BODY_CONNECTIONS = MOCAPNET_CONNECTIONS;
 
     // Custom body-only skeleton lines (replaces SkeletonHelper which draws ALL 164+ bones)
     let bodyLineSegments = null;
@@ -167,6 +187,18 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         result.skeleton.bones.forEach((bone) => {
             bodyBoneMap[bone.name] = bone;
         });
+
+        // Detect BVH format: SMPL vs MocapNET
+        const boneNames = new Set(Object.keys(bodyBoneMap));
+        if (boneNames.has('Pelvis') && boneNames.has('Left_hip')) {
+            BODY_BONE_NAMES = SMPL_BONES;
+            BODY_CONNECTIONS = SMPL_CONNECTIONS;
+            console.log('[bvh_player] Detected SMPL format');
+        } else {
+            BODY_BONE_NAMES = MOCAPNET_BONES;
+            BODY_CONNECTIONS = MOCAPNET_CONNECTIONS;
+            console.log('[bvh_player] Detected MocapNET format');
+        }
 
         // Custom body-only line segments (instead of SkeletonHelper)
         const lineGeo = new THREE.BufferGeometry();
@@ -299,6 +331,11 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
             // Hide 3D skeleton when video time exceeds BVH data
             const beyondBVH = rawT >= clipDuration;
             if (!beyondBVH) {
+                // Reset action if clamped/paused (e.g. video replayed after ending)
+                if (action && action.paused) {
+                    action.reset();
+                    action.play();
+                }
                 mixer.setTime(rawT);
             }
 

@@ -248,6 +248,148 @@ def _get_video_frame_count(video_path):
         return 0
 
 
+def _is_pid_alive(pid):
+    """Check if a process with the given PID is still running (Windows)."""
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        SYNCHRONIZE = 0x00100000
+        handle = kernel32.OpenProcess(SYNCHRONIZE, False, pid)
+        if handle:
+            kernel32.CloseHandle(handle)
+            return True
+        return False
+    except Exception:
+        return False
+
+
+def _monitor_pipeline_log(job, log_file, total_frames, *, proc=None, pid=None):
+    """Monitor a pipeline subprocess by tailing its log file.
+
+    Pass *proc* (Popen) for normal monitoring or *pid* (int) for re-monitoring
+    after server restart.
+    """
+    import time as _time
+    import re as _re
+
+    def _alive():
+        if proc is not None:
+            return proc.poll() is None
+        return _is_pid_alive(pid)
+
+    pct_re = _re.compile(r'(\d+)%\|')
+    frac_re = _re.compile(r'(\d+)\s*/\s*(\d+)')
+
+    last_pos = 0
+    last_update = 0
+
+    while _alive():
+        _time.sleep(1)
+        try:
+            with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
+                f.seek(last_pos)
+                new_data = f.read()
+                last_pos = f.tell()
+        except (FileNotFoundError, OSError):
+            continue
+
+        if not new_data:
+            continue
+
+        now = _time.time()
+        if now - last_update < 0.5:
+            continue
+        last_update = now
+
+        lines = [l.strip() for l in new_data.splitlines() if l.strip()]
+        if not lines:
+            continue
+
+        line = lines[-1]
+        pct_match = pct_re.search(line)
+        frac_match = frac_re.search(line)
+
+        if pct_match:
+            job.progress = min(int(pct_match.group(1)), 95)
+        elif frac_match:
+            cur, tot = int(frac_match.group(1)), int(frac_match.group(2))
+            if tot > 0:
+                job.progress = min(int(cur / tot * 95), 95)
+
+        detail = line[:80]
+        if total_frames:
+            detail = f'{detail} — {total_frames} frames'
+        job.progress_detail = detail[:100]
+        job.save()
+
+
+def remonitor_smpl_job(job_id, pid):
+    """Re-monitor a still-running SMPL pipeline after server restart.
+
+    Called from CoreConfig.ready() in apps.py.
+    """
+    import time as _time
+    import glob as _glob
+    from core.models import BVHJob
+
+    try:
+        job = BVHJob.objects.get(id=job_id)
+    except BVHJob.DoesNotExist:
+        return
+
+    output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job_id)
+    log_file = output_dir / 'pipeline.log'
+    video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
+    total_frames = _get_video_frame_count(video_path) if video_path.exists() else 0
+
+    # Monitor until process finishes
+    _monitor_pipeline_log(job, log_file, total_frames, pid=pid)
+
+    # Give a moment for final writes
+    _time.sleep(1)
+
+    # Refresh from DB — may have been updated elsewhere (cancel, etc.)
+    job.refresh_from_db()
+    if job.status not in ('processing', 'v4_processing'):
+        return
+
+    # Check for BVH output
+    bvh_files = _glob.glob(str(output_dir / '*.bvh'))
+    valid_bvh = [f for f in bvh_files if os.path.getsize(f) > 100]
+
+    if valid_bvh:
+        job.bvh_file = valid_bvh[0]
+        job.status = 'complete'
+        job.progress = 100
+        job.progress_detail = 'Complete'
+        job.error_message = ''
+        try:
+            import cv2
+            cap = cv2.VideoCapture(str(video_path))
+            job.fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            cap.release()
+        except Exception:
+            job.fps = 30.0
+        job.save()
+        print(f'[remonitor] Job {job_id}: BVH found, marked complete.')
+    else:
+        # Try to read error from log
+        try:
+            log_text = log_file.read_text(encoding='utf-8', errors='replace')
+            job.error_message = f'Pipeline finished but no BVH output found.\n{log_text[-500:]}'
+        except Exception:
+            job.error_message = 'Pipeline finished but no BVH output was found.'
+        job.status = 'failed'
+        job.save()
+        print(f'[remonitor] Job {job_id}: no BVH found, marked failed.')
+
+    # Clean up PID file
+    try:
+        (output_dir / 'pipeline.pid').unlink()
+    except (FileNotFoundError, OSError):
+        pass
+
+
 def _run_mediapipe_to_csv(job, video_path, output_dir):
     """Step 1a: MediaPipe -> CSV with real-time progress updates."""
     import time as _time
@@ -695,15 +837,17 @@ def _run_new_2d_detector(job, video_path, output_dir):
 
 def _run_smpl_pipeline(job, video_path, output_dir):
     """Run GVHMR / WHAM / PromptHMR 3D pipeline via wrapper scripts."""
-    import sys as _sys
+    import time as _time
+    import re as _re
 
+    total_frames = _get_video_frame_count(video_path)
     bvh_output = str(output_dir / f'{job.pipeline}_{job.name.rsplit(".", 1)[0]}.bvh')
     wrapper_script = str(settings.WRAPPERS_DIR / 'lift_3d.py')
 
     s = AppSettings.load()
     job.status = 'processing'
-    job.progress = 10
-    job.progress_detail = f'Running {job.get_pipeline_display()}...'
+    job.progress = 0
+    job.progress_detail = f'0 / {total_frames} frames' if total_frames else f'Starting {job.get_pipeline_display()}...'
     job.save()
 
     cmd = [
@@ -728,20 +872,35 @@ def _run_smpl_pipeline(job, video_path, output_dir):
         if s.prompthmr_static_camera:
             cmd.append('--static_camera')
 
+    # Write output to log file so subprocess survives server restart
+    log_file = output_dir / 'pipeline.log'
+    pid_file = output_dir / 'pipeline.pid'
+
+    env = os.environ.copy()
+    env['PYTHONUNBUFFERED'] = '1'
+
+    log_fh = open(log_file, 'w', encoding='utf-8')
     proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, cwd=str(settings.WRAPPERS_DIR.parent),
+        cmd, stdout=log_fh, stderr=subprocess.STDOUT,
+        cwd=str(settings.WRAPPERS_DIR.parent), env=env,
     )
+    pid_file.write_text(str(proc.pid))
+
     with _active_procs_lock:
         _active_procs[str(job.id)] = proc
 
-    for line in proc.stdout:
-        line = line.strip()
-        if line:
-            job.progress_detail = line[:100]
-            job.save()
+    # Monitor by tailing the log file (survives Django auto-reload)
+    _monitor_pipeline_log(job, log_file, total_frames, proc=proc)
 
-    proc.wait(timeout=3600)
+    log_fh.close()
+    proc.wait(timeout=60)  # Should already be done
+
+    # Clean up PID file
+    try:
+        pid_file.unlink()
+    except (FileNotFoundError, OSError):
+        pass
+
     if proc.returncode != 0:
         # Check if BVH was partially written before kill
         if os.path.exists(bvh_output) and os.path.getsize(bvh_output) > 100:
@@ -751,8 +910,11 @@ def _run_smpl_pipeline(job, video_path, output_dir):
         bvh_files = _glob.glob(str(output_dir / '*.bvh'))
         if bvh_files:
             return bvh_files[0]
-        stderr = proc.stderr.read()
-        raise RuntimeError(f"3D pipeline '{job.pipeline}' failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
+        try:
+            error_text = log_file.read_text(encoding='utf-8', errors='replace')
+        except Exception:
+            error_text = ''
+        raise RuntimeError(f"3D pipeline '{job.pipeline}' failed (exit code {proc.returncode}):\n{error_text[-MAX_ERROR_CHARS:]}")
 
     return bvh_output
 
@@ -1322,6 +1484,31 @@ def serve_keypoints_2d(request, job_id):
                              'frames': frames})
     elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
         csv_path = output_dir / f'{job.pipeline}_2d.csv'
+    elif job.pipeline in ('gvhmr', 'wham', 'prompthmr'):
+        # SMPL pipelines: extract 2D keypoints from BVH via FK + projection
+        if job.bvh_file and Path(job.bvh_file).exists():
+            import cv2
+            video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
+            cap = cv2.VideoCapture(str(video_path))
+            vw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
+            vh = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
+            cap.release()
+
+            bvh_kps, bvh_conns = _parse_bvh_to_2d(Path(job.bvh_file), vw, vh)
+            # Convert to normalized (0-1) format + mirror X for SMPL
+            # (SMPL: anatomical left = +X, but in video person faces camera → flip)
+            bvh_joints = list(bvh_kps[0].keys()) if bvh_kps else []
+            norm_frames = []
+            for kp in bvh_kps:
+                nf = {}
+                for jname, (x, y, conf) in kp.items():
+                    nf[jname] = [1.0 - x / vw, y / vh, conf]
+                norm_frames.append(nf)
+            norm_conns = [[p, c] for p, c in bvh_conns]
+            return JsonResponse({'joints': bvh_joints, 'connections': norm_conns,
+                                 'frames': norm_frames})
+        return JsonResponse({'joints': body_joints, 'connections': connections,
+                             'frames': []})
     else:
         csv_path = output_dir / 'frames-mpdata' / '2dJoints_mediapipe.csv'
 
@@ -2188,8 +2375,8 @@ def app_settings_videobvh_3d(request):
 
             # GVHMR params
             s.gvhmr_static_cam = request.POST.get('gvhmr_static_cam') == 'on'
-            s.gvhmr_focal_length_mm = max(1.0, min(200.0,
-                float(request.POST.get('gvhmr_focal_length_mm', 26.0))))
+            s.gvhmr_focal_length_mm = max(0.0, min(200.0,
+                float(request.POST.get('gvhmr_focal_length_mm', 0))))
 
             # WHAM params
             s.wham_estimate_local_only = request.POST.get('wham_estimate_local_only') == 'on'

@@ -146,6 +146,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     let defSkeleton = null;
     let isSkinned = false;
     let mixer = null;
+    let currentAction = null;
     let currentBodyType = 'Female_Caucasian';
     let cachedBvhResult = null;
     let cachedBvhFormat = null;
@@ -181,6 +182,11 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         controls.update();
 
         if (mixer && video.duration) {
+            // Reset action if clamped/paused (e.g. video replayed after ending)
+            if (currentAction && currentAction.paused) {
+                currentAction.reset();
+                currentAction.play();
+            }
             mixer.setTime(video.currentTime);
         }
 
@@ -616,7 +622,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         }
 
         // Stop animation
-        if (mixer) { mixer.stopAllAction(); mixer = null; }
+        if (mixer) { mixer.stopAllAction(); mixer = null; currentAction = null; }
 
         // Remove old mesh
         if (bodyMesh) {
@@ -1078,7 +1084,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
 
     function applyBvhRetarget(bvhResult, format) {
         // Stop old mixer first
-        if (mixer) { mixer.stopAllAction(); mixer = null; }
+        if (mixer) { mixer.stopAllAction(); mixer = null; currentAction = null; }
 
         const retargetOpts = { bodyMesh };
         if (ignoreFaceBones) retargetOpts.skipDefBones = FACE_BONES;
@@ -1101,10 +1107,10 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         }
 
         mixer = new THREE.AnimationMixer(bodyMesh);
-        const action = mixer.clipAction(clip);
-        action.setLoop(THREE.LoopOnce);
-        action.clampWhenFinished = true;
-        action.play();
+        currentAction = mixer.clipAction(clip);
+        currentAction.setLoop(THREE.LoopOnce);
+        currentAction.clampWhenFinished = true;
+        currentAction.play();
     }
 
     function loadBVH(url) {
