@@ -335,6 +335,17 @@ td a { color: var(--accent); text-decoration: none; }
     cursor: not-allowed;
 }
 
+.pipeline-select {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.2rem 0.3rem;
+    font-size: 0.78rem;
+    max-width: 90px;
+    cursor: pointer;
+}
+
 .pipeline-label {
     font-weight: 700;
     font-size: 1.1rem;
@@ -680,6 +691,15 @@ td a { color: var(--accent); text-decoration: none; }
     padding: 0.2rem 0.4rem;
     font-size: 0.8rem;
 }
+.result-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+.result-checkbox input { cursor: pointer; }
 
 .result-character-body {
     display: flex;

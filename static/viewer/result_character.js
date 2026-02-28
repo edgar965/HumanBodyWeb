@@ -158,6 +158,10 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     const clothMeshes = {};
     const gltfLoader = new GLTFLoader();
 
+    // Hair
+    let hairMesh = null;
+    let hairColorData = {};
+
     // --- Resize ---
     function onResize() {
         const cw = viewport.clientWidth;
@@ -251,15 +255,19 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
 
     // --- Load all data ---
     let morphData = null;
+    let hairData = null;
     try {
-        const [, , , morphResp] = await Promise.all([
+        const [, , , morphResp, hairResp] = await Promise.all([
             loadMesh(currentBodyType),
             loadDefSkeleton(),
             loadSkinWeights(currentBodyType),
             fetch('/api/character/morphs/').then(r => r.json()),
+            fetch('/api/character/hairstyles/').then(r => r.json()).catch(() => null),
         ]);
         morphData = morphResp;
+        hairData = hairResp;
         if (morphData.skin_colors) skinColors = morphData.skin_colors;
+        if (hairData && hairData.colors) hairColorData = hairData.colors;
     } catch (e) {
         console.error('[result_character] Data load failed:', e);
         if (loadingEl) loadingEl.textContent = 'Fehler beim Laden';
@@ -300,12 +308,34 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         }
     }
 
+    // --- Ignore Face Bones checkbox ---
+    const faceChk = document.getElementById('ignoreFaceBones');
+    if (faceChk) {
+        faceChk.addEventListener('change', () => {
+            ignoreFaceBones = faceChk.checked;
+            if (cachedBvhResult && cachedBvhFormat) {
+                applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
+            }
+        });
+    }
+
+    // --- Hair toggle button (header) ---
+    const btnHair = document.getElementById('btnToggleHair');
+    if (btnHair) {
+        btnHair.addEventListener('click', () => {
+            if (hairMesh) {
+                hairMesh.visible = !hairMesh.visible;
+                btnHair.classList.toggle('active', hairMesh.visible);
+            }
+        });
+    }
+
     // --- Build UI panel ---
     if (panel && morphData) {
         buildControlPanel(panel, morphData);
     }
 
-    // Load default clothes after skinning
+    // Load default clothes + hair after skinning
     if (isSkinned) {
         loadCloth('tpl_TPL_TSHIRT', {
             method: 'template', template: 'TPL_TSHIRT',
@@ -315,6 +345,12 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             method: 'template', template: 'TPL_PANTS',
             segments: 32, tightness: 0.5, top_extend: 0, bottom_extend: 0,
         });
+        // Load default hairstyle (ballerina, matching ModelWithClothes.py)
+        if (hairData && hairData.hairstyles) {
+            const defaultHair = hairData.hairstyles.find(h => h.name === 'ballerina')
+                             || hairData.hairstyles[0];
+            if (defaultHair) loadHair(defaultHair.url);
+        }
     }
 
     // =====================================================================
@@ -367,6 +403,16 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             clothBtn.classList.toggle('active', clothesVisible);
         });
         toggleBar.appendChild(clothBtn);
+
+        const hairBtn = el('button', 'rc-toggle-btn active');
+        hairBtn.innerHTML = '<i class="fas fa-hat-wizard"></i> Haar';
+        hairBtn.addEventListener('click', () => {
+            if (hairMesh) {
+                hairMesh.visible = !hairMesh.visible;
+                hairBtn.classList.toggle('active', hairMesh.visible);
+            }
+        });
+        toggleBar.appendChild(hairBtn);
 
         container.appendChild(toggleBar);
 
@@ -585,8 +631,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         isSkinned = false;
         if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
 
-        // Remove clothes (topology mismatch)
+        // Remove clothes + hair (topology mismatch)
         removeAllCloth();
+        removeHair();
 
         if (loadingEl) {
             loadingEl.style.display = '';
@@ -611,16 +658,24 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
                 applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
             }
 
-            // Recreate default clothes for female
-            if (isSkinned && !newType.startsWith('Male_')) {
-                loadCloth('tpl_TPL_TSHIRT', {
-                    method: 'template', template: 'TPL_TSHIRT',
-                    segments: 32, tightness: 0.5, top_extend: 0, bottom_extend: 0,
-                });
-                loadCloth('tpl_TPL_PANTS', {
-                    method: 'template', template: 'TPL_PANTS',
-                    segments: 32, tightness: 0.5, top_extend: 0, bottom_extend: 0,
-                });
+            // Recreate default clothes + hair
+            if (isSkinned) {
+                if (!newType.startsWith('Male_')) {
+                    loadCloth('tpl_TPL_TSHIRT', {
+                        method: 'template', template: 'TPL_TSHIRT',
+                        segments: 32, tightness: 0.5, top_extend: 0, bottom_extend: 0,
+                    });
+                    loadCloth('tpl_TPL_PANTS', {
+                        method: 'template', template: 'TPL_PANTS',
+                        segments: 32, tightness: 0.5, top_extend: 0, bottom_extend: 0,
+                    });
+                }
+                // Reload hair
+                if (hairData && hairData.hairstyles) {
+                    const defaultHair = hairData.hairstyles.find(h => h.name === 'ballerina')
+                                     || hairData.hairstyles[0];
+                    if (defaultHair) loadHair(defaultHair.url);
+                }
             }
         } catch (e) {
             console.error('[result_character] Body type switch failed:', e);
@@ -904,11 +959,146 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     }
 
     // =====================================================================
+    // Hair
+    // =====================================================================
+
+    function _findHeadBoneIndex() {
+        if (!skinWeightData) return -1;
+        const names = skinWeightData.bone_names;
+        for (const tryName of ['DEF-spine.006', 'DEF-spine.005', 'DEF-head']) {
+            const idx = names.indexOf(tryName);
+            if (idx >= 0) return idx;
+        }
+        return -1;
+    }
+
+    function _skinifyHairGroup(gltfScene, headBoneIdx) {
+        const meshChildren = [];
+        gltfScene.traverse(child => {
+            if (child.isMesh) meshChildren.push(child);
+        });
+        const group = new THREE.Group();
+        for (const child of meshChildren) {
+            const geo = child.geometry.clone();
+            const vCount = geo.attributes.position.count;
+            const si = new Float32Array(vCount * 4);
+            const sw = new Float32Array(vCount * 4);
+            for (let v = 0; v < vCount; v++) {
+                si[v * 4] = headBoneIdx;
+                sw[v * 4] = 1.0;
+            }
+            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(si, 4));
+            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+
+            const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
+            child.updateWorldMatrix(true, false);
+            skinnedChild.applyMatrix4(child.matrixWorld);
+            skinnedChild.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            group.add(skinnedChild);
+        }
+        return group;
+    }
+
+    function loadHair(url) {
+        removeHair();
+        if (!isSkinned || !defSkeleton || !skinWeightData) return;
+
+        gltfLoader.load(url, (gltf) => {
+            let hairGroup = gltf.scene;
+            const headBoneIdx = _findHeadBoneIndex();
+            if (headBoneIdx >= 0) {
+                hairGroup = _skinifyHairGroup(hairGroup, headBoneIdx);
+            }
+            hairMesh = hairGroup;
+
+            // Apply stored hair color
+            if (Object.keys(hairColorData).length > 0) {
+                const firstName = Object.keys(hairColorData)[0];
+                applyHairColorToMesh(hairMesh, firstName);
+            }
+            scene.add(hairMesh);
+            console.log('[result_character] Hair loaded:', url);
+        }, undefined, (err) => {
+            console.error('[result_character] Failed to load hair:', err);
+        });
+    }
+
+    function removeHair() {
+        if (hairMesh) {
+            scene.remove(hairMesh);
+            hairMesh.traverse(child => {
+                if (child.isMesh) {
+                    child.geometry.dispose();
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(m => m.dispose());
+                        } else {
+                            child.material.dispose();
+                        }
+                    }
+                }
+            });
+            hairMesh = null;
+        }
+    }
+
+    function applyHairColorToMesh(obj, colorName) {
+        const rgb = hairColorData[colorName];
+        if (!rgb) return;
+        const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
+        obj.traverse(child => {
+            if (child.isMesh && child.material) {
+                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                mats.forEach(m => { m.color.copy(color); });
+            }
+        });
+    }
+
+    // =====================================================================
     // BVH loading + retarget
     // =====================================================================
 
+    const FACE_BONES = new Set([
+        'DEF-jaw', 'DEF-tongue', 'DEF-tongue.001', 'DEF-tongue.002',
+        'DEF-lip.T.L', 'DEF-lip.T.R', 'DEF-lip.T.L.001', 'DEF-lip.T.R.001',
+        'DEF-lip.B.L', 'DEF-lip.B.R', 'DEF-lip.B.L.001', 'DEF-lip.B.R.001',
+        'DEF-lid.T.L', 'DEF-lid.T.R', 'DEF-lid.B.L', 'DEF-lid.B.R',
+        'DEF-nose', 'DEF-nose.001', 'DEF-nose.L', 'DEF-nose.R',
+        'DEF-nose.L.001', 'DEF-nose.R.001',
+        'DEF-cheek.T.L', 'DEF-cheek.T.R', 'DEF-cheek.B.L', 'DEF-cheek.B.R',
+        'DEF-brow.B.L', 'DEF-brow.B.R', 'DEF-brow.B.L.001', 'DEF-brow.B.R.001',
+        'DEF-brow.B.L.002', 'DEF-brow.B.R.002', 'DEF-brow.B.L.003', 'DEF-brow.B.R.003',
+        'DEF-forehead.L', 'DEF-forehead.R', 'DEF-forehead.L.001', 'DEF-forehead.R.001',
+        'DEF-forehead.L.002', 'DEF-forehead.R.002',
+        'DEF-temple.L', 'DEF-temple.R',
+        'DEF-ear.L', 'DEF-ear.L.001', 'DEF-ear.L.002', 'DEF-ear.L.003', 'DEF-ear.L.004',
+        'DEF-ear.R', 'DEF-ear.R.001', 'DEF-ear.R.002', 'DEF-ear.R.003', 'DEF-ear.R.004',
+    ]);
+    let ignoreFaceBones = false;
+
     function applyBvhRetarget(bvhResult, format) {
-        const clip = retargetBVHToDefClip(bvhResult, defSkeleton, format, { bodyMesh });
+        // Stop old mixer first
+        if (mixer) { mixer.stopAllAction(); mixer = null; }
+
+        const retargetOpts = { bodyMesh };
+        if (ignoreFaceBones) retargetOpts.skipDefBones = FACE_BONES;
+        const clip = retargetBVHToDefClip(bvhResult, defSkeleton, format, retargetOpts);
+
+        // Reset skipped bones to rest pose so they don't stay in the last animated pose
+        if (ignoreFaceBones && defSkeleton && defSkeletonData) {
+            const skelByName = {};
+            for (const b of defSkeletonData.bones) skelByName[b.name] = b;
+            for (const boneName of FACE_BONES) {
+                const bone = defSkeleton.boneByName[boneName];
+                const data = skelByName[boneName];
+                if (bone && data) {
+                    const p = data.local_position;
+                    bone.position.set(p[0], p[2], -p[1]);
+                    const q = data.local_quaternion;
+                    bone.quaternion.set(q[1], q[3], -q[2], q[0]);
+                }
+            }
+        }
 
         mixer = new THREE.AnimationMixer(bodyMesh);
         const action = mixer.clipAction(clip);

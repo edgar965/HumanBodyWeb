@@ -216,6 +216,33 @@ class AppSettings(models.Model):
         help_text="Device for SMPL pipelines (cuda/cpu)",
     )
 
+    # --- Video to BVH: GVHMR settings ---
+    gvhmr_static_cam = models.BooleanField(
+        default=True, help_text="Skip DPVO dynamic camera estimation (static camera)",
+    )
+    gvhmr_focal_length_mm = models.FloatField(
+        default=26.0, help_text="Camera focal length in mm (default 26)",
+    )
+
+    # --- Video to BVH: WHAM settings ---
+    wham_estimate_local_only = models.BooleanField(
+        default=False, help_text="Only estimate local body motion (no global trajectory)",
+    )
+    wham_run_smplify = models.BooleanField(
+        default=False, help_text="Run SMPLify refinement (slower but more accurate)",
+    )
+
+    # --- Video to BVH: PromptHMR settings ---
+    prompthmr_static_camera = models.BooleanField(
+        default=True, help_text="Assume static camera (recommended for most videos)",
+    )
+
+    # --- 3D Video Output ---
+    video_output_dir = models.CharField(
+        max_length=500, default=r'A:\3DTools\HumanBodyWeb\media\output', blank=True,
+        help_text="Directory for saving 3D video exports from the Process result page",
+    )
+
     class Meta:
         verbose_name = "Settings"
         verbose_name_plural = "Settings"

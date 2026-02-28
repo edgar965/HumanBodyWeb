@@ -124,9 +124,18 @@
                 <td>{{ job.video_size_display }}</td>
                 <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
                 <td>
-                    <button class="btn btn-sm btn-primary" onclick="startProcessing('{{ job.id }}', this)">
-                        <i class="fas fa-play"></i> Process
-                    </button>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <select class="pipeline-select" id="pl-{{ job.id }}" data-current="{{ job.pipeline }}">
+                            <option value="mediapipe" {% if job.pipeline == 'mediapipe' %}selected{% endif %}>MediaPipe</option>
+                            <option value="openpose" {% if job.pipeline == 'openpose' %}selected{% endif %}>OpenPose</option>
+                            <option value="rtmpose" {% if job.pipeline == 'rtmpose' %}selected{% endif %}>RTMPose</option>
+                            <option value="vitpose" {% if job.pipeline == 'vitpose' %}selected{% endif %}>ViTPose</option>
+                            <option value="yolo11" {% if job.pipeline == 'yolo11' %}selected{% endif %}>YOLO11</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" onclick="startProcessing('{{ job.id }}', this)">
+                            <i class="fas fa-play"></i>
+                        </button>
+                    </div>
                 </td>
                 <td style="display:flex; gap:5px;">
                     {% if job.status == 'complete' %}
@@ -426,23 +435,73 @@ function stopProcessing(jobId, btn) {
 function startProcessing(jobId, btn) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    var sel = document.getElementById('pl-' + jobId);
+    var body = '';
+    if (sel) body = 'pipeline=' + encodeURIComponent(sel.value);
     fetch('/api/job/' + jobId + '/start/', {
         method: 'POST',
-        headers: {'X-CSRFToken': getCsrf()}
+        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: body
     }).then(r => r.json()).then(data => {
         if (data.ok) {
-            getOrCreateDetailRow(jobId);
-            updateJobUI(jobId, {status: data.status, progress: 0, progress_detail: 'Starting...'});
-            startJobPolling(jobId);
+            var activeId = jobId;
+            if (data.new_job_id) {
+                // New job created with different pipeline — add row to table
+                activeId = data.new_job_id;
+                addNewJobRow(data.new_job_id, data.new_pipeline, data.new_pipeline_display, jobId);
+                // Reset original dropdown back to its actual pipeline
+                if (sel) sel.value = sel.dataset.current;
+                // Re-enable original button
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+            getOrCreateDetailRow(activeId);
+            updateJobUI(activeId, {status: data.status, progress: 0, progress_detail: 'Starting...'});
+            startJobPolling(activeId);
         } else {
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-play"></i> Process';
+            btn.innerHTML = '<i class="fas fa-play"></i>';
             alert('Error: ' + (data.error || 'Unknown'));
         }
     }).catch(() => {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-play"></i> Process';
+        btn.innerHTML = '<i class="fas fa-play"></i>';
     });
+}
+
+function addNewJobRow(newJobId, pipeline, pipelineDisplay, sourceJobId) {
+    var srcRow = document.getElementById('row-' + sourceJobId);
+    if (!srcRow) return;
+    var name = srcRow.querySelector('td:nth-child(2)').textContent;
+    var sizeText = srcRow.querySelector('td:nth-child(5)').textContent;
+    var now = new Date();
+    var dateStr = now.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    var tr = document.createElement('tr');
+    tr.id = 'row-' + newJobId;
+    tr.innerHTML =
+        '<td></td>' +
+        '<td>' + name + '</td>' +
+        '<td><span class="badge badge-' + pipeline + '">' + pipelineDisplay + '</span></td>' +
+        '<td id="status-' + newJobId + '"><span style="color:#f39c12;"><i class="fas fa-spinner fa-spin"></i> Starting...</span></td>' +
+        '<td>' + sizeText + '</td>' +
+        '<td>' + dateStr + '</td>' +
+        '<td><div style="display:flex;gap:4px;align-items:center;">' +
+            '<select class="pipeline-select" id="pl-' + newJobId + '" data-current="' + pipeline + '">' +
+            '<option value="mediapipe"' + (pipeline==='mediapipe'?' selected':'') + '>MediaPipe</option>' +
+            '<option value="openpose"' + (pipeline==='openpose'?' selected':'') + '>OpenPose</option>' +
+            '<option value="rtmpose"' + (pipeline==='rtmpose'?' selected':'') + '>RTMPose</option>' +
+            '<option value="vitpose"' + (pipeline==='vitpose'?' selected':'') + '>ViTPose</option>' +
+            '<option value="yolo11"' + (pipeline==='yolo11'?' selected':'') + '>YOLO11</option>' +
+            '</select>' +
+            '<button class="btn btn-sm btn-primary" onclick="startProcessing(\'' + newJobId + '\', this)">' +
+            '<i class="fas fa-play"></i></button></div></td>' +
+        '<td style="display:flex;gap:5px;">' +
+            '<button class="btn btn-sm btn-danger" onclick="deleteJob(\'' + newJobId + '\', this)"><i class="fas fa-trash"></i></button>' +
+        '</td>';
+    // Insert at top of table body
+    var tbody = document.getElementById('jobTableBody');
+    if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
+    else tbody.appendChild(tr);
 }
 
 function updateJobUI(jobId, data) {

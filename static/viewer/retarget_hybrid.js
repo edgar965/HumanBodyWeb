@@ -378,9 +378,11 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     collectBvhHierarchy(bvhRoot);
 
     // --- Mapping ---
+    const skipDefBones = opts.skipDefBones || new Set();
     const defToBvhName = {};
     for (const [bvhName, defName] of Object.entries(mapping)) {
-        if (defName && bvhBoneByName[bvhName] && defSkel.boneByName[defName])
+        if (defName && bvhBoneByName[bvhName] && defSkel.boneByName[defName]
+            && !skipDefBones.has(defName))
             defToBvhName[defName] = bvhName;
     }
     const mappedDefNames = new Set(Object.keys(defToBvhName));

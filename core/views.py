@@ -714,6 +714,20 @@ def _run_smpl_pipeline(job, video_path, output_dir):
         '--device', s.smpl_device,
     ]
 
+    # Pipeline-specific params
+    if job.pipeline == 'gvhmr':
+        if s.gvhmr_static_cam:
+            cmd.append('--static_cam')
+        cmd.extend(['--focal_length_mm', str(s.gvhmr_focal_length_mm)])
+    elif job.pipeline == 'wham':
+        if s.wham_estimate_local_only:
+            cmd.append('--estimate_local_only')
+        if s.wham_run_smplify:
+            cmd.append('--run_smplify')
+    elif job.pipeline == 'prompthmr':
+        if s.prompthmr_static_camera:
+            cmd.append('--static_camera')
+
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         text=True, cwd=str(settings.WRAPPERS_DIR.parent),
@@ -1035,10 +1049,37 @@ def start_processing(request, job_id):
 
 
 def api_start_processing(request, job_id):
-    """Start processing via AJAX — returns JSON instead of redirect."""
+    """Start processing via AJAX — returns JSON instead of redirect.
+
+    If POST includes a ``pipeline`` parameter that differs from the job's
+    current pipeline, a **new** BVHJob is created (same video, new pipeline)
+    so the original result is preserved.
+    """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     job = get_object_or_404(BVHJob, id=job_id)
+
+    VALID_PIPELINES = {c[0] for c in BVHJob.PIPELINE_CHOICES}
+    new_pipeline = request.POST.get('pipeline', '').strip()
+
+    if new_pipeline and new_pipeline in VALID_PIPELINES and new_pipeline != job.pipeline:
+        # Clone job with different pipeline — never overwrite the original
+        new_job = BVHJob(
+            name=job.name,
+            fps=job.fps,
+            pipeline=new_pipeline,
+        )
+        new_job.video_file.name = job.video_file.name  # share uploaded file
+        new_job.save()
+        _init_and_launch_job(new_job)
+        return JsonResponse({
+            'ok': True,
+            'status': new_job.status,
+            'new_job_id': str(new_job.id),
+            'new_pipeline': new_pipeline,
+            'new_pipeline_display': new_job.get_pipeline_display(),
+        })
+
     if job.status in ('pending', 'complete', 'failed'):
         _init_and_launch_job(job)
         return JsonResponse({'ok': True, 'status': job.status})
@@ -1961,16 +2002,29 @@ def _render_video_with_skeleton(job, overlay=True):
     return out_path
 
 
+def _copy_to_output_dir(src_path, filename):
+    """Copy a video file to the configured video_output_dir."""
+    s = AppSettings.load()
+    out_dir = Path(s.video_output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    import shutil
+    dest = out_dir / filename
+    shutil.copy2(str(src_path), str(dest))
+    return dest
+
+
 def save_rig_video(request, job_id):
     """Render and download skeleton-only video (white skeleton on black)."""
     job = get_object_or_404(BVHJob, id=job_id)
     out_path = _render_video_with_skeleton(job, overlay=False)
     if not out_path or not out_path.exists():
         return HttpResponseNotFound('Could not render rig video')
+    filename = f'{job.pipeline}_{Path(job.name).stem}_rig_only.mp4'
+    _copy_to_output_dir(out_path, filename)
     return FileResponse(
         open(out_path, 'rb'),
         content_type='video/mp4',
-        filename=f'{job.pipeline}_{Path(job.name).stem}_rig_only.mp4',
+        filename=filename,
     )
 
 
@@ -1980,11 +2034,33 @@ def save_overlay_video(request, job_id):
     out_path = _render_video_with_skeleton(job, overlay=True)
     if not out_path or not out_path.exists():
         return HttpResponseNotFound('Could not render overlay video')
+    filename = f'{Path(job.name).stem}_skeleton.mp4'
+    _copy_to_output_dir(out_path, filename)
     return FileResponse(
         open(out_path, 'rb'),
         content_type='video/mp4',
-        filename=f'{Path(job.name).stem}_skeleton.mp4',
+        filename=filename,
     )
+
+
+def save_video3d(request, job_id):
+    """Save uploaded 3D character video to the configured video_output_dir."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    job = get_object_or_404(BVHJob, id=job_id)
+    video_blob = request.FILES.get('video')
+    if not video_blob:
+        return JsonResponse({'error': 'No video file'}, status=400)
+    s = AppSettings.load()
+    out_dir = Path(s.video_output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stem = Path(job.name).stem
+    filename = f'{stem}_3d_character.webm'
+    dest = out_dir / filename
+    with open(dest, 'wb') as f:
+        for chunk in video_blob.chunks():
+            f.write(chunk)
+    return JsonResponse({'ok': True, 'path': str(dest)})
 
 
 def webcam(request):
@@ -2109,6 +2185,23 @@ def app_settings_videobvh_3d(request):
             s.smpl_device = request.POST.get('smpl_device', 'cuda')
             if s.smpl_device not in ('cuda', 'cpu'):
                 s.smpl_device = 'cuda'
+
+            # GVHMR params
+            s.gvhmr_static_cam = request.POST.get('gvhmr_static_cam') == 'on'
+            s.gvhmr_focal_length_mm = max(1.0, min(200.0,
+                float(request.POST.get('gvhmr_focal_length_mm', 26.0))))
+
+            # WHAM params
+            s.wham_estimate_local_only = request.POST.get('wham_estimate_local_only') == 'on'
+            s.wham_run_smplify = request.POST.get('wham_run_smplify') == 'on'
+
+            # PromptHMR params
+            s.prompthmr_static_camera = request.POST.get('prompthmr_static_camera') == 'on'
+
+            # Video output directory
+            s.video_output_dir = request.POST.get('video_output_dir', '').strip()
+            if not s.video_output_dir:
+                s.video_output_dir = r'A:\3DTools\HumanBodyWeb\media\output'
 
             s.save()
             messages.success(request, 'Settings saved.')

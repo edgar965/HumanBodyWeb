@@ -32,6 +32,11 @@
         <a href="{% url 'save_rig_video' job.id %}" class="btn btn-secondary btn-sm" download title="Download Nur Skeleton">
             <i class="fas fa-download"></i> Nur Skeleton
         </a>
+        {% if job.bvh_file %}
+        <button class="btn btn-secondary btn-sm" id="btnVideo3D" title="Record 3D Character Animation as Video">
+            <i class="fas fa-cube"></i> Video3D
+        </button>
+        {% endif %}
         {% endif %}
     </div>
 </div>
@@ -86,6 +91,12 @@
     <div class="result-character-controls">
         <label>Body Type:</label>
         <select id="resultBodyType" class="result-body-select"></select>
+        <button class="btn btn-sm btn-secondary" id="btnToggleHair" style="margin-left:auto;padding:0.15rem 0.5rem;font-size:0.75rem;">
+            <i class="fas fa-hat-wizard"></i> Hair
+        </button>
+        <label class="result-checkbox">
+            <input type="checkbox" id="ignoreFaceBones"> Ignore Face Bones
+        </label>
     </div>
     <div class="result-character-body">
         <div class="result-character-viewport">
@@ -124,7 +135,7 @@ try {
 {% if job.bvh_file %}
 <script type="module">
 try {
-    const { initResultCharacter } = await import('{% static "viewer/result_character.js" %}?v=6');
+    const { initResultCharacter } = await import('{% static "viewer/result_character.js" %}?v=7');
     initResultCharacter({
         canvasId: 'characterCanvas',
         videoId: 'resultVideo',
@@ -134,6 +145,148 @@ try {
     });
 } catch(e) {
     console.error('[result_character] Init error:', e);
+}
+
+// --- Video3D recording ---
+const btn3d = document.getElementById('btnVideo3D');
+if (btn3d) {
+    btn3d.addEventListener('click', () => recordVideo3D());
+}
+
+async function recordVideo3D() {
+    const canvas = document.getElementById('characterCanvas');
+    const video = document.getElementById('resultVideo');
+    const btn = document.getElementById('btnVideo3D');
+    if (!canvas || !video) return;
+
+    const fps = {{ job.fps|default:"30" }};
+    const origText = btn.innerHTML;
+
+    // Create progress bar overlay on the character viewport
+    const viewport = canvas.parentElement;
+    const progressBar = document.createElement('div');
+    progressBar.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:32px;background:rgba(0,0,0,0.7);display:flex;align-items:center;padding:0 10px;gap:8px;z-index:10;font-size:0.8rem;color:#fff;';
+    const progressTrack = document.createElement('div');
+    progressTrack.style.cssText = 'flex:1;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden;';
+    const progressFill = document.createElement('div');
+    progressFill.style.cssText = 'height:100%;width:0%;background:#e74c3c;border-radius:3px;transition:width 0.1s;';
+    progressTrack.appendChild(progressFill);
+    const progressLabel = document.createElement('span');
+    progressLabel.textContent = '0%';
+    progressLabel.style.cssText = 'min-width:36px;text-align:right;';
+    const recDot = document.createElement('span');
+    recDot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:#e74c3c;animation:recPulse 1s infinite;';
+    // Add pulse animation
+    if (!document.getElementById('recPulseStyle')) {
+        const style = document.createElement('style');
+        style.id = 'recPulseStyle';
+        style.textContent = '@keyframes recPulse{0%,100%{opacity:1}50%{opacity:0.3}}';
+        document.head.appendChild(style);
+    }
+    progressBar.append(recDot, progressTrack, progressLabel);
+    viewport.style.position = 'relative';
+    viewport.appendChild(progressBar);
+
+    // Disable button, show recording state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle" style="color:#e74c3c"></i> Aufnahme...';
+
+    // Pause and seek to start
+    video.pause();
+    video.currentTime = 0;
+    await new Promise(r => { video.onseeked = r; });
+
+    // Wait for the 3D scene to update
+    await new Promise(r => requestAnimationFrame(r));
+    await new Promise(r => requestAnimationFrame(r));
+
+    // Start recording the canvas
+    const stream = canvas.captureStream(fps);
+    const chunks = [];
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+    const recordingDone = new Promise(resolve => {
+        recorder.onstop = resolve;
+    });
+
+    // Update progress bar during playback
+    let progressRAF;
+    function updateProgress() {
+        if (video.duration > 0) {
+            const pct = Math.min(100, (video.currentTime / video.duration) * 100);
+            progressFill.style.width = pct + '%';
+            progressLabel.textContent = Math.round(pct) + '%';
+        }
+        progressRAF = requestAnimationFrame(updateProgress);
+    }
+
+    recorder.start();
+    video.play();
+    updateProgress();
+
+    await new Promise(resolve => {
+        video.onended = resolve;
+        video.onpause = () => {
+            if (video.currentTime < video.duration - 0.5) {
+                recorder.stop();
+                resolve();
+            }
+        };
+    });
+
+    cancelAnimationFrame(progressRAF);
+    progressFill.style.width = '100%';
+    progressLabel.textContent = '100%';
+
+    // Stop recording if still active
+    if (recorder.state === 'recording') {
+        recorder.stop();
+    }
+
+    await recordingDone;
+
+    // Create blob and save to server + download
+    const blob = new Blob(chunks, { type: mimeType });
+
+    // Upload to server (save to video_output_dir)
+    const formData = new FormData();
+    formData.append('video', blob, '{{ job.name }}_3d_character.webm');
+    try {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+            || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+        const resp = await fetch('{% url "save_video3d" job.id %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken },
+            body: formData,
+        });
+        const data = await resp.json();
+        if (data.ok) {
+            progressLabel.textContent = 'Saved!';
+        }
+    } catch(err) {
+        console.warn('Video3D upload failed:', err);
+    }
+
+    // Also trigger browser download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '{{ job.name }}_3d_character.webm';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Cleanup
+    await new Promise(r => setTimeout(r, 1500));
+    progressBar.remove();
+    btn.disabled = false;
+    btn.innerHTML = origText;
+    video.pause();
 }
 </script>
 {% endif %}

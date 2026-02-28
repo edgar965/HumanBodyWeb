@@ -200,11 +200,30 @@
             {% if gvhmr_installed %}<span style="color:#27ae60;margin-left:0.5rem;" title="Installiert"><i class="fas fa-check-circle"></i></span>
             {% else %}<span style="color:#e74c3c;margin-left:0.5rem;" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
-        <p style="color:#888; padding:0.5rem 1rem; margin:0;">
-            SMPL-basierte Pipeline mit Global-Velocity und Human Motion Recovery.
-            Beste Kombination aus Genauigkeit und temporaler Koh&auml;renz.
-            {% if gvhmr_installed %}<span style="color:#27ae60;">Bereit.</span>{% endif %}
-        </p>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Static Camera</strong>
+                <small>Statische Kamera annehmen (kein DPVO). Empfohlen f&uuml;r feste Kameraperspektive.</small>
+            </div>
+            <div class="settings-input">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="gvhmr_static_cam" {% if settings.gvhmr_static_cam %}checked{% endif %}> Aktiviert
+                </label>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Focal Length (mm)</strong>
+                <small>Brennweite der Kamera in mm. Standard: 26 mm.</small>
+            </div>
+            <div class="settings-input">
+                <input type="number" name="gvhmr_focal_length_mm"
+                       value="{{ settings.gvhmr_focal_length_mm }}"
+                       min="1" max="200" step="0.5">
+            </div>
+        </div>
     </div>
 
     {# ── WHAM ── #}
@@ -215,10 +234,30 @@
             {% if wham_installed %}<span style="color:#27ae60;margin-left:0.5rem;" title="Installiert"><i class="fas fa-check-circle"></i></span>
             {% else %}<span style="color:#e74c3c;margin-left:0.5rem;" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
-        <p style="color:#888; padding:0.5rem 1rem; margin:0;">
-            SMPL-basierte Pipeline mit World-Koordinaten und IMU-Integration.
-            {% if wham_installed %}<span style="color:#27ae60;">Bereit.</span>{% endif %}
-        </p>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Estimate Local Only</strong>
+                <small>Nur lokale K&ouml;rperbewegung sch&auml;tzen (keine globale Trajektorie).</small>
+            </div>
+            <div class="settings-input">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="wham_estimate_local_only" {% if settings.wham_estimate_local_only %}checked{% endif %}> Aktiviert
+                </label>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Run SMPLify</strong>
+                <small>SMPLify-Verfeinerung ausf&uuml;hren. Langsamer aber genauer.</small>
+            </div>
+            <div class="settings-input">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="wham_run_smplify" {% if settings.wham_run_smplify %}checked{% endif %}> Aktiviert
+                </label>
+            </div>
+        </div>
     </div>
 
     {# ── PromptHMR ── #}
@@ -229,10 +268,36 @@
             {% if prompthmr_installed %}<span style="color:#27ae60;margin-left:0.5rem;" title="Installiert"><i class="fas fa-check-circle"></i></span>
             {% else %}<span style="color:#e74c3c;margin-left:0.5rem;" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
-        <p style="color:#888; padding:0.5rem 1rem; margin:0;">
-            SMPL-basierte Pipeline (CVPR 2025). Beste single-frame Genauigkeit.
-            {% if prompthmr_installed %}<span style="color:#27ae60;">Bereit.</span>{% endif %}
-        </p>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Static Camera</strong>
+                <small>Statische Kamera annehmen. Empfohlen f&uuml;r die meisten Videos.</small>
+            </div>
+            <div class="settings-input">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="prompthmr_static_camera" {% if settings.prompthmr_static_camera %}checked{% endif %}> Aktiviert
+                </label>
+            </div>
+        </div>
+    </div>
+
+    {# ── 3D Video Output ── #}
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-film"></i> 3D Video Output</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Output-Verzeichnis</strong>
+                <small>Verzeichnis f&uuml;r gespeicherte Videos (Skeleton Overlay, Rig Only, 3D Character) von der Process-Seite.</small>
+            </div>
+            <div class="settings-input">
+                <input type="text" name="video_output_dir"
+                       value="{{ settings.video_output_dir }}"
+                       style="width:100%;font-family:monospace;font-size:0.85rem;"
+                       placeholder="A:\3DTools\HumanBodyWeb\media\output">
+            </div>
+        </div>
     </div>
 
     <div class="settings-actions">
