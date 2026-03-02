@@ -543,7 +543,7 @@ function applyFacialExpression(expr) {
     // Scale: SMPL-X expression → bone rotation (radians).
     // Keep small: DEF-jaw has a long lever arm, even 5-8° is very visible.
     // jawOpen=1.5 should produce ~6° (0.10 rad) — reduced to avoid beak.
-    const S = 0.02;  // Reduced: expression now primarily via vertex morphs
+    const S = 0.03;  // Subtle bone rotation on top of vertex morphs
     const browNet = (browUp - browDown) * S;
 
     // Accumulate [rx, ry, rz] per bone (Blender local space)
