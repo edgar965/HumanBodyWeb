@@ -415,9 +415,20 @@ async function loadMesh(bodyType) {
             // For pure world -Z (backward) shift of CORR meters:
             //   bone.y -= CORR * 0.9152,  bone.z += CORR * 0.4030
             if (headBone) {
-                const CORR = 0.030;  // 3cm backward
+                const CORR = 0.030;  // 3cm backward (whole head)
                 headBone.position.y = headBone._origY - CORR * 0.9152;
                 headBone.position.z = headBone._origZ + CORR * 0.4030;
+
+                // Jaw bone: push lower face (lips, chin, tongue) further back.
+                // DEF-jaw is child of head bone; head localY ≈ world +Z.
+                // Reducing jaw.position.y moves it backward in world.
+                const jawBone = defSkeleton.boneByName['DEF-jaw'];
+                if (jawBone) {
+                    if (jawBone._origY === undefined) jawBone._origY = jawBone.position.y;
+                    const JAW_CORR = 0.018;  // 1.8cm extra backward
+                    jawBone.position.y = jawBone._origY - JAW_CORR;
+                }
+
                 defSkeleton.rootBone.updateWorldMatrix(true, true);
                 bodyMesh.skeleton.update();
                 if (bodyMesh.skeleton.boneTexture) bodyMesh.skeleton.boneTexture.needsUpdate = true;
