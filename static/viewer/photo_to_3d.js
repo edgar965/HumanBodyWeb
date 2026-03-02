@@ -38,92 +38,105 @@ function blenderToThreeCoords(buf) {
 }
 
 /**
- * Align HB body Z-position to match SMPL-X.
+ * Align HB face/head profile to match SMPL-X proportions.
  *
  * Coordinate system after blenderToThreeCoords:
- *   Three.Z = -Blender.Y  →  face direction = NEGATIVE Z
- *   back of head / back = POSITIVE Z
+ *   Three.Z = -Blender.Y  →  face direction = POSITIVE Z (+Z = forward)
+ *   back of head / back = NEGATIVE Z
  *
- * Two corrections:
- * 1) Base shift: HB center ~5cm further forward (-Z) than SMPL-X
- * 2) Jaw profile: HB jaw/neck (cm 18-27) doesn't recede enough
- *    compared to SX → push front-face vertices backward
+ * Problem: HB head protrudes 3-5cm more (relative to body axis) than SX.
+ * Fix: push face-forward vertices backward (-Z) in head region,
+ *      proportional to how far they are from the body axis.
  */
 function alignBodyToSMPLX(buf) {
     const n = buf.length / 3;
 
-    // --- Pass 1: height bounds ---
+    // --- Pass 1: height bounds + center X ---
     let minY = Infinity, maxY = -Infinity;
     for (let i = 0; i < n; i++) {
         const y = buf[i * 3 + 1];
         if (y < minY) minY = y;
         if (y > maxY) maxY = y;
     }
-    const height = maxY - minY;
-    if (height < 0.5) return;
+    const totalH = maxY - minY;
+    if (totalH < 0.5) return;
     const headTop = maxY;
 
-    // --- Pass 2: compute Z-center per 1cm slice for jaw region ---
-    // center = (minZ + maxZ) / 2 → defines the head axis at each height
-    const JAW_START = 17, JAW_END = 28;
-    const sliceZmin = new Float64Array(JAW_END - JAW_START + 1).fill(1e9);
-    const sliceZmax = new Float64Array(JAW_END - JAW_START + 1).fill(-1e9);
+    // Center X from head verts (top 30cm)
+    let sumCX = 0, cntCX = 0;
+    for (let i = 0; i < n; i++) {
+        if (buf[i * 3 + 1] > headTop - 0.30) { sumCX += buf[i * 3]; cntCX++; }
+    }
+    const cx = cntCX > 0 ? sumCX / cntCX : 0;
+
+    // --- Pass 2: body axis Z = average Z of torso center verts (40-70% height) ---
+    const torsoLow  = minY + totalH * 0.40;
+    const torsoHigh = minY + totalH * 0.70;
+    let sumAZ = 0, cntAZ = 0;
+    for (let i = 0; i < n; i++) {
+        const y = buf[i * 3 + 1];
+        if (y >= torsoLow && y <= torsoHigh && Math.abs(buf[i * 3] - cx) < 0.15) {
+            sumAZ += buf[i * 3 + 2]; cntAZ++;
+        }
+    }
+    const axisZ = cntAZ > 0 ? sumAZ / cntAZ : 0;
+
+    // --- Pass 3: compute max face Z per cm slice (head region) ---
+    // For each 1cm height slice from top, find the most forward (+Z) vertex
+    // Include ALL vertices (not just center) — jaw/ear are part of the silhouette
+    const HEAD_START = 1, HEAD_END = 50;
+    const maxFaceZ = new Float64Array(HEAD_END + 1).fill(-1e9);
     for (let i = 0; i < n; i++) {
         const y = buf[i * 3 + 1];
         const cm = Math.round((headTop - y) * 100);
-        if (cm < JAW_START || cm > JAW_END) continue;
+        if (cm < HEAD_START || cm > HEAD_END) continue;
         const z = buf[i * 3 + 2];
-        const idx = cm - JAW_START;
-        if (z < sliceZmin[idx]) sliceZmin[idx] = z;
-        if (z > sliceZmax[idx]) sliceZmax[idx] = z;
-    }
-    const sliceCenter = new Float64Array(JAW_END - JAW_START + 1);
-    for (let j = 0; j < sliceCenter.length; j++) {
-        sliceCenter[j] = (sliceZmin[j] + sliceZmax[j]) / 2;
+        if (z > maxFaceZ[cm]) maxFaceZ[cm] = z;
     }
 
-    // --- Pass 3: apply shifts ---
+    // Per-cm correction LUT (meters): how much to push face back at each height
+    // Calibrated from pixel-scan measurements (HB silhouette vs SX silhouette)
+    // Remaining diffs after previous iteration added to base values
+    //                     cm:  1     3     5     7     9    11    13    15    17    19    21    23    25    27    29    31    33    35    37    39    41    43    45    47    49
+    const CORR_CM =            [1,    3,    5,    7,    9,   11,   13,   15,   17,   19,   21,   23,   25,   27,   29,   31,   33,   35,   37,   39,   41,   43,   45,   47,   49];
+    const CORR_VAL =           [.051, .046, .044, .041, .038, .037, .025, .024, .035, .052, .067, .057, .062, .023, .016, .017, .020, .023, .030, .033, .037, .039, .040, .036, .056];
+
+    function getCorrAtCm(cm) {
+        if (cm <= CORR_CM[0]) return CORR_VAL[0];
+        if (cm >= CORR_CM[CORR_CM.length - 1]) return CORR_VAL[CORR_VAL.length - 1];
+        for (let j = 0; j < CORR_CM.length - 1; j++) {
+            if (cm >= CORR_CM[j] && cm <= CORR_CM[j + 1]) {
+                const t = (cm - CORR_CM[j]) / (CORR_CM[j + 1] - CORR_CM[j]);
+                return CORR_VAL[j] + (CORR_VAL[j + 1] - CORR_VAL[j]) * t;
+            }
+        }
+        return 0;
+    }
+
+    // --- Pass 4: apply face protrusion correction ---
     for (let i = 0; i < n; i++) {
         const y = buf[i * 3 + 1];
         const z = buf[i * 3 + 2];
-        const x = buf[i * 3];
         const cmFromTop = (headTop - y) * 100;
 
-        // Base shift (height-dependent)
-        let shift;
-        if (cmFromTop <= 65) {
-            shift = 0.050;                                         // head+torso: uniform 5cm
-        } else if (cmFromTop <= 80) {
-            shift = 0.050 - ((cmFromTop - 65) / 15) * 0.015;     // hips: 5→3.5cm
-        } else {
-            const legFrac = Math.min(1, (cmFromTop - 80) / 20);
-            shift = 0.035 + legFrac * 0.005;                      // legs: 3.5→4cm
-        }
+        // Only correct head region (cm 0-50 from top)
+        if (cmFromTop < 0 || cmFromTop > 50) continue;
 
-        // Jaw profile correction: push front-face vertices backward
-        // Calibrated per-cm LUT from axis measurements (efficiency ~42%)
-        // Values = original_diff / 0.42, so diff → ~0 after correction
-        if (cmFromTop >= 17 && cmFromTop <= 27 && Math.abs(x) < 0.08) {
-            const cm = Math.min(JAW_END, Math.max(JAW_START, Math.round(cmFromTop)));
-            const center = sliceCenter[cm - JAW_START];
-            if (z < center) {
-                // forwardFrac: fixed 10cm normalization (avoids internal geometry skew)
-                const forwardFrac = Math.min(1, (center - z) / 0.10);
+        // Only correct vertices that are in front of the body axis (+Z)
+        if (z <= axisZ) continue;
 
-                // Per-cm correction (meters), interpolated for smooth transitions
-                //          17    18    19    20    21    22    23    24    25    26    27
-                const LUT = [0, .010, .021, .015, .012, .014, .004, .008, .010, .014, 0];
-                const idx = cmFromTop - JAW_START;
-                const lo = Math.max(0, Math.min(LUT.length - 1, Math.floor(idx)));
-                const hi = Math.min(LUT.length - 1, lo + 1);
-                const frac = idx - lo;
-                const corr = LUT[lo] + (LUT[hi] - LUT[lo]) * frac;
+        // How far forward from axis (0 = at axis, 1 = at face surface)
+        const cm = Math.min(HEAD_END, Math.max(HEAD_START, Math.round(cmFromTop)));
+        const faceMax = maxFaceZ[cm];
+        if (faceMax <= axisZ) continue;
 
-                shift += corr * forwardFrac;
-            }
-        }
+        const protrusion = z - axisZ;
+        const maxProt = faceMax - axisZ;
+        const faceFrac = Math.min(1, protrusion / maxProt);
 
-        buf[i * 3 + 2] += shift;
+        // Correction: push backward (-Z), scaled by how far forward the vertex is
+        const corr = getCorrAtCm(cmFromTop);
+        buf[i * 3 + 2] -= corr * faceFrac;
     }
 }
 
