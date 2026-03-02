@@ -334,7 +334,11 @@ _base_skin_arrays = {}         # {'female': (indices, weights), 'male': ...}
 
 
 def _get_base_skin_weights(gender='female'):
-    """Load and cache base mesh skin weights."""
+    """Load and cache base mesh skin weights.
+
+    Applies the same non-DEF bone filter as character_skin_weights so that
+    bone indices match the DEF skeleton sent to the browser.
+    """
     global _base_skin_weights
     if gender in _base_skin_weights:
         return _base_skin_weights[gender]
@@ -345,7 +349,38 @@ def _get_base_skin_weights(gender='female'):
     base_path = os.path.join(data_dir, 'skin_weights_base.json')
     if os.path.isfile(base_path):
         with open(base_path, 'r', encoding='utf-8') as f:
-            _base_skin_weights[gender] = json.load(f)
+            data = json.load(f)
+
+        # Filter non-DEF bones (same logic as character_skin_weights)
+        skel_path = os.path.join(data_dir, 'def_skeleton.json')
+        if os.path.isfile(skel_path):
+            with open(skel_path, 'r', encoding='utf-8') as sf:
+                skel_data = json.load(sf)
+            skel_names = {b['name'] for b in skel_data['bones']}
+            old_names = data['bone_names']
+            remove_indices = {i for i, n in enumerate(old_names) if n not in skel_names}
+            if remove_indices:
+                idx_map = {}
+                new_idx = 0
+                for old_idx in range(len(old_names)):
+                    if old_idx not in remove_indices:
+                        idx_map[old_idx] = new_idx
+                        new_idx += 1
+                new_names = [n for i, n in enumerate(old_names) if i not in remove_indices]
+                new_weights = []
+                for pairs in data['weights']:
+                    filtered = [(idx_map[bi], w) for bi, w in pairs
+                                if bi not in remove_indices and bi in idx_map]
+                    total = sum(w for _, w in filtered)
+                    if total > 0 and abs(total - 1.0) > 1e-6:
+                        filtered = [(bi, w / total) for bi, w in filtered]
+                    new_weights.append(filtered)
+                data['bone_names'] = new_names
+                data['weights'] = new_weights
+                logger.info("Base skin weights (%s): filtered %d non-DEF bones",
+                            gender, len(remove_indices))
+
+        _base_skin_weights[gender] = data
     return _base_skin_weights.get(gender)
 
 
@@ -1357,3 +1392,287 @@ def smplx_mesh(request):
         'n_faces': result['n_faces'],
         'n_joints': result['n_joints'],
     })
+
+
+# =========================================================================
+# Garment Fitter API
+# =========================================================================
+
+_garment_library = None
+
+
+def _get_garment_library():
+    global _garment_library
+    if _garment_library is None:
+        from GarmentFitter import GarmentLibrary
+        _garment_library = GarmentLibrary(str(settings.HUMANBODY_GARMENT_LIBRARY_DIR))
+        _garment_library.scan()
+    return _garment_library
+
+
+@require_GET
+def garment_library(request):
+    """Return list of available garments, grouped by category."""
+    lib = _get_garment_library()
+    category = request.GET.get('category', '')
+
+    catalog = lib.catalog
+    if category:
+        catalog = [g for g in catalog if g['category'] == category]
+
+    by_cat = {}
+    for g in catalog:
+        cat = g['category']
+        if cat not in by_cat:
+            by_cat[cat] = []
+        by_cat[cat].append(g)
+
+    return JsonResponse({
+        'categories': sorted(by_cat.keys()),
+        'garments': by_cat,
+        'total': len(catalog),
+    })
+
+
+@require_GET
+def garment_library_rescan(request):
+    """Force rescan of garment library directory."""
+    global _garment_library
+    _garment_library = None
+    lib = _get_garment_library()
+    return JsonResponse({'ok': True, 'count': len(lib.catalog)})
+
+
+@require_GET
+def garment_fit(request):
+    """Fit a garment template to the current body and return as base64 binary.
+
+    Query params:
+        garment_id  — e.g. 'tops/male_casualsuit01'
+        body_type   — e.g. 'Female_Caucasian'
+        offset      — surface offset in meters (default 0.006)
+        stiffness   — fabric stiffness 0-1 (affects smoothing)
+        color_r/g/b — garment color (0-1 float)
+        morph_*     — body morph overrides
+    """
+    garment_id = request.GET.get('garment_id', '')
+    if not garment_id:
+        return JsonResponse({'error': 'garment_id required'}, status=400)
+
+    lib = _get_garment_library()
+    template = lib.get_template(garment_id)
+    if template is None or template.vertices is None:
+        return JsonResponse({'error': f'Garment not found: {garment_id}'}, status=404)
+
+    body_type = request.GET.get('body_type', 'Female_Caucasian')
+    gender = _gender_from_body_type(body_type)
+
+    # Compute morphed body vertices (same pattern as character_cloth)
+    md = _get_morph_data()
+    cd = _get_char_defaults()
+    state = CharacterState(md, cd)
+    state.set_body_type(body_type)
+
+    for key, val in request.GET.items():
+        if key.startswith('morph_'):
+            try:
+                state.set_morph(key[6:], float(val))
+            except ValueError:
+                pass
+    for key, val in request.GET.items():
+        if key.startswith('meta_'):
+            try:
+                state.set_meta(key[5:], float(val))
+            except (ValueError, AttributeError):
+                pass
+
+    body_verts = state.compute()
+    if body_verts is None:
+        return JsonResponse({'error': 'Failed to compute body mesh'}, status=500)
+
+    mesh = _get_mesh_data(gender)
+    body_faces = mesh.faces
+
+    offset = float(request.GET.get('offset', template.offset))
+    stiffness = float(request.GET.get('stiffness', template.stiffness))
+    smooth_iters = max(1, int((1.0 - stiffness) * 8))
+
+    color = (
+        float(request.GET.get('color_r', template.color[0])),
+        float(request.GET.get('color_g', template.color[1])),
+        float(request.GET.get('color_b', template.color[2])),
+    )
+
+    # Determine coordinate system from source metadata
+    coord_sys = 'makehuman' if template.source == 'makehuman-assets' else 'auto'
+
+    from GarmentFitter import fit_garment
+    result = fit_garment(
+        template.vertices, template.faces, body_verts,
+        body_faces=body_faces,
+        offset=offset,
+        smooth_iterations=smooth_iters,
+        color=color,
+        coordinate_system=coord_sys,
+    )
+
+    if result is None:
+        return JsonResponse({'error': 'Fitting failed'}, status=500)
+
+    response_data = {
+        'vertex_count': int(result['vertices'].shape[0]),
+        'vertices': base64.b64encode(
+            result['vertices'].tobytes()).decode('ascii'),
+        'face_count': int(result['faces'].shape[0]),
+        'faces': base64.b64encode(
+            result['faces'].ravel().astype(np.uint32).tobytes()).decode('ascii'),
+        'normals': base64.b64encode(
+            result['normals'].tobytes()).decode('ascii'),
+        'color': list(color),
+        'garment_id': garment_id,
+        'garment_name': template.name,
+    }
+
+    # Skin weights (same pattern as character_cloth)
+    skin_arrays = _get_base_skin_arrays(gender)
+    if skin_arrays is not None:
+        from scipy.spatial import cKDTree
+        body_si, body_sw = skin_arrays
+        tree = cKDTree(body_verts)
+        _, nearest = tree.query(result['vertices'])
+        cloth_si = body_si[nearest]
+        cloth_sw = body_sw[nearest]
+        response_data['skin_indices'] = base64.b64encode(
+            cloth_si.tobytes()).decode('ascii')
+        response_data['skin_weights'] = base64.b64encode(
+            cloth_sw.tobytes()).decode('ascii')
+
+    return JsonResponse(response_data)
+
+
+@require_GET
+def garment_download_available(request):
+    """Return available MakeHuman asset packs for download."""
+    from GarmentFitter import MakeHumanDownloader
+    dl = MakeHumanDownloader(str(settings.HUMANBODY_GARMENT_LIBRARY_DIR))
+
+    packs = dl.list_available_packs()
+    builtin = []
+    try:
+        builtin = dl.list_builtin_assets()
+    except Exception:
+        pass
+
+    return JsonResponse({
+        'packs': packs,
+        'builtin_assets': builtin,
+    })
+
+
+@csrf_exempt
+@require_POST
+def garment_download(request):
+    """Download MakeHuman assets (pack or individual).
+
+    JSON body:
+        pack_name — download a ZIP asset pack (e.g. 'shirts01')
+        asset_name — download a single built-in asset
+    """
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    from GarmentFitter import MakeHumanDownloader
+    dl = MakeHumanDownloader(str(settings.HUMANBODY_GARMENT_LIBRARY_DIR))
+
+    pack_name = body.get('pack_name', '')
+    asset_name = body.get('asset_name', '')
+
+    if pack_name:
+        installed = dl.download_pack(pack_name)
+        # Force rescan
+        global _garment_library
+        _garment_library = None
+        return JsonResponse({
+            'ok': True,
+            'installed': installed,
+            'count': len(installed),
+        })
+    elif asset_name:
+        garment_id = dl.download_builtin_asset(asset_name)
+        _garment_library = None
+        return JsonResponse({
+            'ok': garment_id is not None,
+            'garment_id': garment_id,
+        })
+    else:
+        return JsonResponse({'error': 'pack_name or asset_name required'}, status=400)
+
+
+@csrf_exempt
+@require_POST
+def garment_export(request):
+    """Export a fitted garment to OBJ + weights files."""
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    garment_id = body.get('garment_id', '')
+    name = body.get('name', 'garment').strip()
+    if not garment_id or not name:
+        return JsonResponse({'error': 'garment_id and name required'}, status=400)
+
+    # Sanitize name
+    safe_name = re.sub(r'[^\w\s\-]', '', name).strip()
+    if not safe_name:
+        return JsonResponse({'error': 'Invalid name'}, status=400)
+
+    export_dir = str(settings.HUMANBODY_GARMENT_EXPORT_DIR)
+    os.makedirs(export_dir, exist_ok=True)
+
+    # Path traversal check
+    target = os.path.normpath(os.path.join(export_dir, safe_name))
+    if not target.startswith(os.path.normpath(export_dir)):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+
+    return JsonResponse({
+        'ok': True,
+        'export_dir': target,
+        'message': f'Export directory prepared: {safe_name}',
+    })
+
+
+@require_GET
+def garment_thumbnail(request, garment_path):
+    """Serve garment thumbnail image (.thumb or _diffuse.png)."""
+    lib_dir = str(settings.HUMANBODY_GARMENT_LIBRARY_DIR)
+    # Sanitize path to prevent traversal
+    safe_path = os.path.normpath(garment_path).replace('\\', '/')
+    if '..' in safe_path:
+        return HttpResponseNotFound('Invalid path')
+
+    garment_dir = os.path.join(lib_dir, safe_path)
+    if not os.path.normpath(garment_dir).startswith(os.path.normpath(lib_dir)):
+        return HttpResponseNotFound('Invalid path')
+
+    if not os.path.isdir(garment_dir):
+        return HttpResponseNotFound('Garment not found')
+
+    # Try .thumb first, then _diffuse.png
+    for f in sorted(os.listdir(garment_dir)):
+        if f.endswith('.thumb'):
+            return FileResponse(
+                open(os.path.join(garment_dir, f), 'rb'),
+                content_type='image/png',
+            )
+
+    for f in sorted(os.listdir(garment_dir)):
+        if f.endswith('_diffuse.png'):
+            return FileResponse(
+                open(os.path.join(garment_dir, f), 'rb'),
+                content_type='image/png',
+            )
+
+    return HttpResponseNotFound('No thumbnail')

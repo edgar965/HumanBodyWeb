@@ -465,6 +465,88 @@
             </div>
         </div>
 
+        <!-- Garment Fit -->
+        <div class="panel-section collapsed" data-panel-key="garment_fit">
+            <h3>Garment Fit <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body" id="garment-panel">
+                <div class="slider-row"><label>Category</label>
+                    <select id="garment-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div id="garment-list" class="anim-tree" style="max-height:200px;margin-bottom:8px;">
+                    <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Garment-Library...</div>
+                </div>
+                <!-- Fit -->
+                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Fit</div>
+                <div class="slider-row"><label>Offset</label>
+                    <input type="range" id="garment-offset" min="0" max="30" value="6" step="1">
+                    <span class="slider-val" id="garment-offset-val">0.006</span>
+                </div>
+                <div class="slider-row"><label>Stiffness</label>
+                    <input type="range" id="garment-stiffness" min="0" max="100" value="80" step="1">
+                    <span class="slider-val" id="garment-stiffness-val">0.80</span>
+                </div>
+                <!-- Farbe / Material -->
+                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
+                <div class="slider-row"><label>Color</label>
+                    <input type="color" id="garment-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                </div>
+                <div class="slider-row"><label>Roughness</label>
+                    <input type="range" id="garment-roughness" min="0" max="100" value="80" step="1">
+                    <span class="slider-val" id="garment-roughness-val">0.80</span>
+                </div>
+                <div class="slider-row"><label>Metalness</label>
+                    <input type="range" id="garment-metalness" min="0" max="100" value="0" step="1">
+                    <span class="slider-val" id="garment-metalness-val">0.00</span>
+                </div>
+                <!-- Position -->
+                <div id="garment-adjustments">
+                    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Position</div>
+                    <div class="slider-row"><label>Pos X</label>
+                        <input type="range" id="garment-pos-x" min="-50" max="50" value="0" step="1">
+                        <span class="slider-val" id="garment-pos-x-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Pos Y</label>
+                        <input type="range" id="garment-pos-y" min="-50" max="50" value="0" step="1">
+                        <span class="slider-val" id="garment-pos-y-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Pos Z</label>
+                        <input type="range" id="garment-pos-z" min="-50" max="50" value="0" step="1">
+                        <span class="slider-val" id="garment-pos-z-val">0.00 m</span>
+                    </div>
+                    <!-- Scale -->
+                    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Scale</div>
+                    <div class="slider-row"><label>Scale X</label>
+                        <input type="range" id="garment-scale-x" min="50" max="200" value="100" step="1">
+                        <span class="slider-val" id="garment-scale-x-val">1.00</span>
+                    </div>
+                    <div class="slider-row"><label>Scale Y</label>
+                        <input type="range" id="garment-scale-y" min="50" max="200" value="100" step="1">
+                        <span class="slider-val" id="garment-scale-y-val">1.00</span>
+                    </div>
+                    <div class="slider-row"><label>Scale Z</label>
+                        <input type="range" id="garment-scale-z" min="50" max="200" value="100" step="1">
+                        <span class="slider-val" id="garment-scale-z-val">1.00</span>
+                    </div>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:6px;">
+                    <button id="garment-create" class="btn-toggle" style="flex:1;"><i class="fas fa-tshirt"></i> Erzeuge</button>
+                    <button id="garment-update" class="btn-toggle" style="flex:1;"><i class="fas fa-sync-alt"></i> Update</button>
+                    <button id="garment-remove" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Garment entfernen"><i class="fas fa-times"></i></button>
+                    <button id="garment-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
+                </div>
+                <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
+                    <button id="garment-download-btn" class="btn-toggle" style="width:100%;"><i class="fas fa-cloud-download-alt"></i> MakeHuman Assets herunterladen</button>
+                    <div id="garment-download-panel" style="display:none;margin-top:8px;">
+                        <select id="garment-pack-select" class="viewer-select"></select>
+                        <button id="garment-pack-download" class="btn-toggle" style="width:100%;"><i class="fas fa-download"></i> Pack herunterladen</button>
+                        <div id="garment-download-status" style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Hair -->
         <div class="panel-section collapsed" data-panel-key="hair">
             <h3>Hair <span class="chevron">&#9660;</span></h3>
@@ -525,5 +607,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=24"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?v=35"></script>
 {% endblock %}

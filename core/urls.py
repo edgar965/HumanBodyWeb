@@ -78,6 +78,15 @@ urlpatterns = [
     path('api/character/hairstyles/', character_api.character_hairstyles, name='character_hairstyles'),
     path('api/character/hairstyle/<str:name>/', character_api.character_hairstyle_glb, name='character_hairstyle_glb'),
 
+    # Garment Fitter
+    path('api/character/garment/library/', character_api.garment_library, name='garment_library'),
+    path('api/character/garment/library/rescan/', character_api.garment_library_rescan, name='garment_library_rescan'),
+    path('api/character/garment/fit/', character_api.garment_fit, name='garment_fit'),
+    path('api/character/garment/export/', character_api.garment_export, name='garment_export'),
+    path('api/character/garment/download/available/', character_api.garment_download_available, name='garment_download_available'),
+    path('api/character/garment/download/', character_api.garment_download, name='garment_download'),
+    path('api/character/garment/thumb/<path:garment_path>/', character_api.garment_thumbnail, name='garment_thumbnail'),
+
     # Test Character API (isolated version from TestCharakter/)
     path('api/character-test/mesh/', test_character_api.test_character_mesh, name='test_character_mesh'),
     path('api/character-test/morphs/', test_character_api.test_character_morphs, name='test_character_morphs'),

@@ -57,6 +57,12 @@ let rigVisible = false;
 const clothMeshes = {};  // region -> THREE.Mesh
 const clothParams = {};  // region -> { params, color }
 
+// Garments — fitted external garments keyed by garment_id
+const garmentMeshes = {};  // garment_id -> THREE.Mesh
+const garmentState = {};   // garment_id -> {posX,posY,posZ,scaleX,scaleY,scaleZ,color,roughness,metalness}
+const garmentOrigPositions = {};  // garment_id -> Float32Array (original vertex positions for buffer transforms)
+let selectedGarmentId = '';
+
 // Hair
 let hairMesh = null;
 let hairColorData = {};  // name -> [r,g,b] (linear sRGB)
@@ -171,6 +177,7 @@ function init() {
     loadAnimations();
     loadClothUI();
     loadHairUI();
+    loadGarmentUI();
     initLoadPreset();
     initSaveButtons();
     connectWebSocket();
@@ -252,6 +259,9 @@ function init() {
                 if (m) m.visible = clothesVisible;
             }
             for (const m of Object.values(loadedAssets)) {
+                if (m) m.visible = clothesVisible;
+            }
+            for (const m of Object.values(garmentMeshes)) {
                 if (m) m.visible = clothesVisible;
             }
             if (hairMesh) hairMesh.visible = clothesVisible;
@@ -1834,6 +1844,552 @@ function applyHairColorToObject(obj, colorName) {
 }
 
 // =========================================================================
+// Garment Fitter
+// =========================================================================
+
+let _garmentCatalog = [];  // full catalog from API
+
+async function loadGarmentUI() {
+    // --- DOM setup (always runs, independent of API) ---
+
+    // Slider display bindings
+    _bindSlider('garment-offset', 'garment-offset-val', v => (v / 1000).toFixed(3));
+    _bindSlider('garment-stiffness', 'garment-stiffness-val', v => (v / 100).toFixed(2));
+    _bindSlider('garment-roughness', 'garment-roughness-val', v => (v / 100).toFixed(2));
+    _bindSlider('garment-metalness', 'garment-metalness-val', v => (v / 100).toFixed(2));
+    _bindSlider('garment-pos-x', 'garment-pos-x-val', v => (v / 100).toFixed(2) + ' m');
+    _bindSlider('garment-pos-y', 'garment-pos-y-val', v => (v / 100).toFixed(2) + ' m');
+    _bindSlider('garment-pos-z', 'garment-pos-z-val', v => (v / 100).toFixed(2) + ' m');
+    _bindSlider('garment-scale-x', 'garment-scale-x-val', v => (v / 100).toFixed(2));
+    _bindSlider('garment-scale-y', 'garment-scale-y-val', v => (v / 100).toFixed(2));
+    _bindSlider('garment-scale-z', 'garment-scale-z-val', v => (v / 100).toFixed(2));
+
+    // Live garment adjustment handlers (client-side, no server call)
+    // Position/Scale: modify vertex buffer via _applyGarmentState (mesh.position/scale ignored for shared-skeleton SkinnedMesh)
+    _garmentLiveSlider('garment-pos-x');
+    _garmentLiveSlider('garment-pos-y');
+    _garmentLiveSlider('garment-pos-z');
+    _garmentLiveSlider('garment-scale-x');
+    _garmentLiveSlider('garment-scale-y');
+    _garmentLiveSlider('garment-scale-z');
+    _garmentLiveSlider('garment-roughness');
+    _garmentLiveSlider('garment-metalness');
+
+    // Debounced server re-fit for Offset / Stiffness sliders
+    _garmentRefitSlider('garment-offset');
+    _garmentRefitSlider('garment-stiffness');
+
+    // Live color picker
+    const garmentColorEl = document.getElementById('garment-color');
+    if (garmentColorEl) {
+        garmentColorEl.addEventListener('input', () => {
+            if (!selectedGarmentId || !garmentMeshes[selectedGarmentId]) return;
+            garmentMeshes[selectedGarmentId].material.color.set(garmentColorEl.value);
+            _saveGarmentState(selectedGarmentId);
+        });
+    }
+
+    // Create button
+    const createBtn = document.getElementById('garment-create');
+    if (createBtn) {
+        createBtn.addEventListener('click', () => {
+            if (!selectedGarmentId) {
+                console.warn('No garment selected');
+                return;
+            }
+            loadGarment(selectedGarmentId);
+        });
+    }
+
+    // Update button — re-fit on server, preserve client transforms
+    const updateBtn = document.getElementById('garment-update');
+    if (updateBtn) {
+        updateBtn.addEventListener('click', () => {
+            if (!selectedGarmentId || !garmentMeshes[selectedGarmentId]) {
+                console.warn('No active garment to update');
+                return;
+            }
+            _saveGarmentState(selectedGarmentId);
+            loadGarment(selectedGarmentId);
+        });
+    }
+
+    // Remove single garment
+    const removeBtn = document.getElementById('garment-remove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+            if (selectedGarmentId && garmentMeshes[selectedGarmentId]) {
+                removeGarment(selectedGarmentId);
+                _updateGarmentAdjustmentsVisibility();
+            }
+        });
+    }
+
+    // Remove all garments
+    const removeAllBtn = document.getElementById('garment-remove-all');
+    if (removeAllBtn) {
+        removeAllBtn.addEventListener('click', () => {
+            removeAllGarments();
+            _updateGarmentAdjustmentsVisibility();
+        });
+    }
+
+    // Category filter
+    const catSelect = document.getElementById('garment-category');
+    if (catSelect) {
+        catSelect.addEventListener('change', () => _renderGarmentList());
+    }
+
+    // Download panel toggle
+    const dlBtn = document.getElementById('garment-download-btn');
+    const dlPanel = document.getElementById('garment-download-panel');
+    if (dlBtn && dlPanel) {
+        dlBtn.addEventListener('click', async () => {
+            const isOpen = dlPanel.style.display !== 'none';
+            dlPanel.style.display = isOpen ? 'none' : 'block';
+            if (!isOpen) await _loadDownloadPacks();
+        });
+    }
+
+    // Pack download button
+    const packDlBtn = document.getElementById('garment-pack-download');
+    if (packDlBtn) {
+        packDlBtn.addEventListener('click', () => _downloadPack());
+    }
+
+    // --- API-dependent catalog loading ---
+    try {
+        const resp = await fetch('/api/character/garment/library/');
+        const data = await resp.json();
+        _garmentCatalog = [];
+
+        const listEl = document.getElementById('garment-list');
+
+        // Populate categories
+        if (catSelect && data.categories) {
+            data.categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                catSelect.appendChild(opt);
+            });
+        }
+
+        // Flatten catalog
+        if (data.garments) {
+            for (const cat of Object.keys(data.garments)) {
+                for (const g of data.garments[cat]) {
+                    _garmentCatalog.push(g);
+                }
+            }
+        }
+
+        _renderGarmentList();
+    } catch (e) {
+        console.warn('Garment UI not available:', e);
+        const listEl = document.getElementById('garment-list');
+        if (listEl) listEl.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Garment-Library</div>';
+    }
+}
+
+function _renderGarmentList() {
+    const listEl = document.getElementById('garment-list');
+    const catSelect = document.getElementById('garment-category');
+    if (!listEl) return;
+
+    const filterCat = catSelect ? catSelect.value : '';
+    const filtered = filterCat
+        ? _garmentCatalog.filter(g => g.category === filterCat)
+        : _garmentCatalog;
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Garments gefunden</div>';
+        return;
+    }
+
+    // Group by category
+    const byCat = {};
+    for (const g of filtered) {
+        if (!byCat[g.category]) byCat[g.category] = [];
+        byCat[g.category].push(g);
+    }
+
+    listEl.innerHTML = '';
+    for (const cat of Object.keys(byCat).sort()) {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'anim-category open';
+        const header = document.createElement('div');
+        header.className = 'anim-category-header';
+        header.innerHTML = `<span class="cat-chevron">&#9654;</span> ${cat.toUpperCase()} <span class="cat-count">${byCat[cat].length}</span>`;
+        header.addEventListener('click', () => catDiv.classList.toggle('open'));
+        catDiv.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'anim-category-body';
+        for (const g of byCat[cat]) {
+            const item = document.createElement('div');
+            item.className = 'anim-item garment-item';
+            if (g.id === selectedGarmentId) item.classList.add('active');
+            // Thumbnail + name
+            if (g.has_thumb) {
+                const img = document.createElement('img');
+                img.src = `/api/character/garment/thumb/${g.id}/`;
+                img.alt = g.name;
+                img.className = 'garment-thumb';
+                img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;margin-right:6px;';
+                item.appendChild(img);
+            }
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = g.name;
+            nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            item.appendChild(nameSpan);
+            item.style.cssText += 'display:flex;align-items:center;padding:4px 12px 4px 28px;';
+            item.dataset.garmentId = g.id;
+            item.addEventListener('click', () => {
+                selectedGarmentId = g.id;
+                // Update selection highlight
+                listEl.querySelectorAll('.anim-item').forEach(el => el.classList.remove('active'));
+                item.classList.add('active');
+
+                // If garment is in scene and has saved state, load that; otherwise use catalog defaults
+                const st = garmentState[g.id];
+                if (st && garmentMeshes[g.id]) {
+                    _setSlider('garment-color', st.color);
+                    _setSlider('garment-offset', Math.round(st.offset * 1000), v => (v / 1000).toFixed(3));
+                    _setSlider('garment-stiffness', Math.round(st.stiffness * 100), v => (v / 100).toFixed(2));
+                    _setSlider('garment-roughness', Math.round(st.roughness * 100), v => (v / 100).toFixed(2));
+                    _setSlider('garment-metalness', Math.round(st.metalness * 100), v => (v / 100).toFixed(2));
+                    _setSlider('garment-pos-x', Math.round(st.posX * 100), v => (v / 100).toFixed(2) + ' m');
+                    _setSlider('garment-pos-y', Math.round(st.posY * 100), v => (v / 100).toFixed(2) + ' m');
+                    _setSlider('garment-pos-z', Math.round(st.posZ * 100), v => (v / 100).toFixed(2) + ' m');
+                    _setSlider('garment-scale-x', Math.round(st.scaleX * 100), v => (v / 100).toFixed(2));
+                    _setSlider('garment-scale-y', Math.round(st.scaleY * 100), v => (v / 100).toFixed(2));
+                    _setSlider('garment-scale-z', Math.round(st.scaleZ * 100), v => (v / 100).toFixed(2));
+                } else {
+                    // Catalog defaults
+                    const colorPicker = document.getElementById('garment-color');
+                    if (colorPicker && g.color) {
+                        const hex = '#' + g.color.map(c =>
+                            Math.round(c * 255).toString(16).padStart(2, '0')
+                        ).join('');
+                        colorPicker.value = hex;
+                    }
+                    const offSlider = document.getElementById('garment-offset');
+                    const stiffSlider = document.getElementById('garment-stiffness');
+                    if (offSlider && g.offset !== undefined) {
+                        offSlider.value = Math.round(g.offset * 1000);
+                        const v = document.getElementById('garment-offset-val');
+                        if (v) v.textContent = g.offset.toFixed(3);
+                    }
+                    if (stiffSlider && g.stiffness !== undefined) {
+                        stiffSlider.value = Math.round(g.stiffness * 100);
+                        const v = document.getElementById('garment-stiffness-val');
+                        if (v) v.textContent = g.stiffness.toFixed(2);
+                    }
+                    // Reset material/position/scale to defaults
+                    _setSlider('garment-roughness', 80, v => (v / 100).toFixed(2));
+                    _setSlider('garment-metalness', 0, v => (v / 100).toFixed(2));
+                    _setSlider('garment-pos-x', 0, v => (v / 100).toFixed(2) + ' m');
+                    _setSlider('garment-pos-y', 0, v => (v / 100).toFixed(2) + ' m');
+                    _setSlider('garment-pos-z', 0, v => (v / 100).toFixed(2) + ' m');
+                    _setSlider('garment-scale-x', 100, v => (v / 100).toFixed(2));
+                    _setSlider('garment-scale-y', 100, v => (v / 100).toFixed(2));
+                    _setSlider('garment-scale-z', 100, v => (v / 100).toFixed(2));
+                }
+                _updateGarmentAdjustmentsVisibility();
+            });
+            body.appendChild(item);
+        }
+        catDiv.appendChild(body);
+        listEl.appendChild(catDiv);
+    }
+}
+
+// --- Garment adjustment helpers ---
+
+/** Bind a slider for live garment transforms (client-side only, vertex buffer) */
+function _garmentLiveSlider(sliderId) {
+    const el = document.getElementById(sliderId);
+    if (!el) { console.warn(`[Garment] slider not found: ${sliderId}`); return; }
+    el.addEventListener('input', () => {
+        if (!selectedGarmentId || !garmentMeshes[selectedGarmentId]) return;
+        _saveGarmentState(selectedGarmentId);
+        _applyGarmentState(selectedGarmentId);
+    });
+}
+
+/** Server re-fit on slider release (change event) */
+function _garmentRefitSlider(sliderId) {
+    const el = document.getElementById(sliderId);
+    if (!el) return;
+    el.addEventListener('change', () => {
+        if (!selectedGarmentId || !garmentMeshes[selectedGarmentId]) return;
+        console.log(`[Garment] refit on ${sliderId} change, gid=${selectedGarmentId}`);
+        _saveGarmentState(selectedGarmentId);
+        loadGarment(selectedGarmentId);
+    });
+}
+
+/** Set a slider value + update its display label */
+function _setSlider(sliderId, value, fmt) {
+    const el = document.getElementById(sliderId);
+    if (!el) return;
+    if (el.type === 'color') {
+        el.value = value;
+        return;
+    }
+    el.value = value;
+    const valEl = document.getElementById(sliderId + '-val');
+    if (valEl && fmt) valEl.textContent = fmt(parseInt(value));
+}
+
+/** Save current slider state for a garment */
+function _saveGarmentState(gid) {
+    const colorPicker = document.getElementById('garment-color');
+    garmentState[gid] = {
+        posX: _sliderVal('garment-pos-x') / 100,
+        posY: _sliderVal('garment-pos-y') / 100,
+        posZ: _sliderVal('garment-pos-z') / 100,
+        scaleX: _sliderVal('garment-scale-x') / 100,
+        scaleY: _sliderVal('garment-scale-y') / 100,
+        scaleZ: _sliderVal('garment-scale-z') / 100,
+        color: colorPicker ? colorPicker.value : '#4d5980',
+        roughness: _sliderVal('garment-roughness') / 100,
+        metalness: _sliderVal('garment-metalness') / 100,
+        offset: _sliderVal('garment-offset') / 1000,
+        stiffness: _sliderVal('garment-stiffness') / 100,
+    };
+}
+
+/** Apply saved state to a garment mesh (after creation / re-fit).
+ *  Position/Scale are applied as vertex buffer transforms (mesh.position/scale
+ *  are ignored by Three.js for SkinnedMesh sharing another mesh's skeleton). */
+function _applyGarmentState(gid) {
+    const mesh = garmentMeshes[gid];
+    const st = garmentState[gid];
+    const orig = garmentOrigPositions[gid];
+    if (!mesh || !st || !orig) return;
+
+    // Material properties (work fine on SkinnedMesh)
+    mesh.material.color.set(st.color);
+    mesh.material.roughness = st.roughness;
+    mesh.material.metalness = st.metalness;
+
+    // Position/Scale: modify vertex buffer directly
+    const positions = mesh.geometry.attributes.position.array;
+    const n = orig.length / 3;
+
+    // Compute center of original mesh for scaling pivot
+    let cx = 0, cy = 0, cz = 0;
+    for (let i = 0; i < orig.length; i += 3) {
+        cx += orig[i]; cy += orig[i + 1]; cz += orig[i + 2];
+    }
+    cx /= n; cy /= n; cz /= n;
+
+    // Apply scale around center, then position offset
+    for (let i = 0; i < orig.length; i += 3) {
+        positions[i]     = (orig[i]     - cx) * st.scaleX + cx + st.posX;
+        positions[i + 1] = (orig[i + 1] - cy) * st.scaleY + cy + st.posY;
+        positions[i + 2] = (orig[i + 2] - cz) * st.scaleZ + cz + st.posZ;
+    }
+    mesh.geometry.attributes.position.needsUpdate = true;
+    mesh.geometry.computeBoundingSphere();
+}
+
+/** No-op — Position/Scale section is always visible now */
+function _updateGarmentAdjustmentsVisibility() {}
+
+async function loadGarment(garmentId) {
+    const createBtn = document.getElementById('garment-create');
+    if (createBtn) createBtn.disabled = true;
+
+    ensureSkinned();
+
+    try {
+        // Build query from current body state
+        const bodySelect = document.getElementById('body-type-select');
+        const bodyType = bodySelect ? bodySelect.value : 'Female_Caucasian';
+
+        const offset = (_sliderVal('garment-offset') / 1000);
+        const stiffness = (_sliderVal('garment-stiffness') / 100);
+        const colorPicker = document.getElementById('garment-color');
+        const colorHex = colorPicker ? colorPicker.value : '#4d5980';
+        const cr = parseInt(colorHex.slice(1, 3), 16) / 255;
+        const cg = parseInt(colorHex.slice(3, 5), 16) / 255;
+        const cb = parseInt(colorHex.slice(5, 7), 16) / 255;
+
+        let qs = `garment_id=${encodeURIComponent(garmentId)}&body_type=${encodeURIComponent(bodyType)}`;
+        qs += `&offset=${offset}&stiffness=${stiffness}`;
+        qs += `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
+
+        // Append current morph values
+        document.querySelectorAll('#morphs-panel input[type="range"]').forEach(slider => {
+            const mName = slider.dataset.morphName || slider.id.replace('morph-', '');
+            if (mName && slider.value !== undefined) {
+                qs += `&morph_${mName}=${slider.value / 100}`;
+            }
+        });
+        // Append meta sliders (convert display value → internal -1..1)
+        ['age', 'mass', 'tone', 'height'].forEach(m => {
+            const el = document.getElementById(`meta-${m}`);
+            if (el) {
+                const dv = parseInt(el.value);
+                const mn = parseInt(el.min), mx = parseInt(el.max);
+                const neutral = (mn + mx) / 2;
+                const half = (mx - mn) / 2;
+                const internal = half ? (dv - neutral) / half : 0;
+                qs += `&meta_${m}=${internal}`;
+            }
+        });
+
+        const resp = await fetch(`/api/character/garment/fit/?${qs}`);
+        const data = await resp.json();
+        if (data.error) {
+            console.error('Garment fit error:', data.error);
+            return;
+        }
+
+        // Remove previous mesh but keep saved state for re-apply
+        removeGarment(garmentId, true);
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+
+        const faceBuf = base64ToUint32(data.faces);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+        // Let Three.js compute smooth vertex normals — visually hides
+        // small geometric bumps from the fitting pipeline
+        geo.computeVertexNormals();
+
+        const matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
+        const mat = new THREE.MeshStandardMaterial({
+            color: matColor, roughness: 0.8, metalness: 0.0,
+            side: THREE.DoubleSide,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnit: -1,
+        });
+
+        let mesh;
+        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+            const siBuf = base64ToFloat32(data.skin_indices);
+            const swBuf = base64ToFloat32(data.skin_weights);
+            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
+            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
+            mesh = new THREE.SkinnedMesh(geo, mat);
+            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+        } else {
+            mesh = new THREE.Mesh(geo, mat);
+        }
+
+        garmentMeshes[garmentId] = mesh;
+        scene.add(mesh);
+
+        // Store original vertex positions for buffer-level transforms
+        garmentOrigPositions[garmentId] = new Float32Array(vertBuf);
+
+        // Save current slider state and apply client-side transforms
+        _saveGarmentState(garmentId);
+        _applyGarmentState(garmentId);
+
+        console.log(`Garment ${garmentId}: ${data.vertex_count} verts, skinned=${mesh.isSkinnedMesh || false}`);
+    } catch (e) {
+        console.error('Failed to load garment:', e);
+    }
+    if (createBtn) createBtn.disabled = false;
+}
+
+function removeGarment(garmentId, keepState) {
+    const m = garmentMeshes[garmentId];
+    if (m) {
+        scene.remove(m);
+        m.geometry.dispose();
+        m.material.dispose();
+        delete garmentMeshes[garmentId];
+        if (!keepState) {
+            delete garmentState[garmentId];
+            delete garmentOrigPositions[garmentId];
+        }
+    }
+}
+
+function removeAllGarments() {
+    for (const id of Object.keys(garmentMeshes)) {
+        removeGarment(id);
+    }
+}
+
+async function _loadDownloadPacks() {
+    const packSelect = document.getElementById('garment-pack-select');
+    if (!packSelect) return;
+    try {
+        const resp = await fetch('/api/character/garment/download/available/');
+        const data = await resp.json();
+        packSelect.innerHTML = '';
+        (data.packs || []).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.name;
+            opt.textContent = `${p.label} (${p.category})`;
+            packSelect.appendChild(opt);
+        });
+    } catch (e) {
+        console.warn('Failed to load download packs:', e);
+    }
+}
+
+async function _downloadPack() {
+    const packSelect = document.getElementById('garment-pack-select');
+    const statusEl = document.getElementById('garment-download-status');
+    const dlBtn = document.getElementById('garment-pack-download');
+    if (!packSelect || !packSelect.value) return;
+
+    const packName = packSelect.value;
+    if (dlBtn) dlBtn.disabled = true;
+    if (statusEl) statusEl.textContent = `Lade ${packName}...`;
+
+    try {
+        const resp = await fetch('/api/character/garment/download/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pack_name: packName }),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+            if (statusEl) statusEl.textContent = `${data.count} Garments installiert!`;
+            // Refresh library
+            const resp2 = await fetch('/api/character/garment/library/');
+            const lib = await resp2.json();
+            _garmentCatalog = [];
+            if (lib.garments) {
+                for (const cat of Object.keys(lib.garments)) {
+                    for (const g of lib.garments[cat]) _garmentCatalog.push(g);
+                }
+            }
+            // Refresh category dropdown
+            const catSelect = document.getElementById('garment-category');
+            if (catSelect && lib.categories) {
+                while (catSelect.options.length > 1) catSelect.remove(1);
+                lib.categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                    catSelect.appendChild(opt);
+                });
+            }
+            _renderGarmentList();
+        } else {
+            if (statusEl) statusEl.textContent = `Fehler: ${data.error || 'Unbekannt'}`;
+        }
+    } catch (e) {
+        if (statusEl) statusEl.textContent = `Fehler: ${e.message}`;
+    }
+    if (dlBtn) dlBtn.disabled = false;
+}
+
+// =========================================================================
 // Scene settings from /humanbody/scene/ page (localStorage)
 // =========================================================================
 const VIEWER_TONE_MAPPINGS = {
@@ -2473,6 +3029,22 @@ function initSaveButtons() {
         });
     }
 }
+
+// =========================================================================
+// Debug access for Playwright tests
+// =========================================================================
+window.__viewer = {
+    get scene() { return scene; },
+    get bodyMesh() { return bodyMesh; },
+    get garmentMeshes() { return garmentMeshes; },
+    get garmentState() { return garmentState; },
+    get selectedGarmentId() { return selectedGarmentId; },
+    get clothMeshes() { return clothMeshes; },
+    get camera() { return camera; },
+    get controls() { return controls; },
+    get defSkeleton() { return defSkeleton; },
+    get isSkinned() { return isSkinned; },
+};
 
 // =========================================================================
 // Boot
