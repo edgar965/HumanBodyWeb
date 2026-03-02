@@ -38,8 +38,14 @@ urlpatterns = [
 
     # HumanBody
     path('humanbody/photo-to-3d/', character_api.photo_to_3d_page, name='photo_to_3d'),
+    path('humanbody/photo-to-3d/jobs/', character_api.photo_analysis_jobs_page, name='photo_analysis_jobs'),
     path('api/character/analyze-photo/', character_api.analyze_photo, name='analyze_photo'),
     path('api/character/analyze-photo/status/', character_api.analyze_photo_status, name='analyze_photo_status'),
+    path('api/character/photo-job/<uuid:job_id>/', character_api.photo_analysis_job_data, name='photo_analysis_job_data'),
+    path('api/character/photo-job/<uuid:job_id>/screenshot/', character_api.photo_analysis_save_screenshot, name='photo_analysis_save_screenshot'),
+    path('api/character/photo-job/<uuid:job_id>/reprocess/', character_api.photo_analysis_reprocess, name='photo_analysis_reprocess'),
+    path('api/character/photo-job/<uuid:job_id>/delete/', character_api.photo_analysis_delete, name='photo_analysis_delete'),
+    path('api/character/photo-jobs/bulk-delete/', character_api.photo_analysis_bulk_delete, name='photo_analysis_bulk_delete'),
     path('api/character/smplx-mesh/', character_api.smplx_mesh, name='smplx_mesh'),
     path('humanbody/config/', character_api.character_viewer, name='humanbody_config'),
     path('humanbody/scene/', character_api.scene_config, name='humanbody_scene'),

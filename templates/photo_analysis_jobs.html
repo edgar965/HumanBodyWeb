@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block title %}Photo-to-3D Jobs{% endblock %}
+
+{% block extra_styles %}
+<style>
+.photo-thumb { width: 80px; height: 80px; object-fit: contain; border-radius: 4px; cursor: pointer; }
+.result-thumb { width: 120px; height: 80px; object-fit: contain; border-radius: 4px; cursor: pointer; background: #1a1a2e; }
+.no-thumb { width: 120px; height: 80px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 0.7rem; }
+.photo-jobs-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+.photo-jobs-table th,
+.photo-jobs-table td { padding: 0.4rem 0.6rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.photo-jobs-table th { font-weight: 600; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
+.photo-jobs-table tr:hover { background: var(--bg-hover, rgba(255,255,255,0.03)); }
+.badge-backend { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; font-weight: 600; }
+.badge-smplest_x { background: #2563eb; color: #fff; }
+.badge-pymafx { background: #7c3aed; color: #fff; }
+.badge-hmr2 { background: #059669; color: #fff; }
+.badge-mediapipe { background: #d97706; color: #fff; }
+.gender-m { color: #60a5fa; }
+.gender-f { color: #f472b6; }
+.duration-badge { font-size: 0.8rem; color: var(--text-muted); }
+.btn-actions { display: flex; gap: 0.4rem; flex-wrap: nowrap; }
+.header-row { display: flex; justify-content: space-between; align-items: center; }
+.bulk-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
+.bulk-actions .btn { display: none; }
+.bulk-actions.has-selection .btn { display: inline-flex; }
+.bulk-actions .selection-count { font-size: 0.85rem; color: var(--text-muted); display: none; }
+.bulk-actions.has-selection .selection-count { display: inline; }
+.cb-cell { width: 30px; text-align: center; }
+.cb-cell input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: var(--accent, #e94560); }
+/* Detail modal */
+.job-modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.7); justify-content: center; align-items: center;
+}
+.job-modal {
+    background: var(--bg-card, #1e1e2e); border-radius: 8px;
+    display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.job-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);
+}
+.job-modal-header h3 { margin: 0; font-size: 1rem; }
+.job-modal-body { flex: 1; overflow: auto; padding: 1rem; }
+.job-detail-images { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.job-detail-images .img-box { text-align: center; }
+.job-detail-images .img-box img { max-width: 100%; max-height: 200px; border-radius: 6px; }
+.job-detail-images .img-box .img-label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
+.job-detail-meta { display: flex; gap: 2rem; flex-wrap: wrap; font-size: 0.9rem; }
+.job-detail-meta .meta-item { margin-bottom: 0.3rem; }
+.job-detail-meta .meta-item b { color: var(--text-muted); font-weight: 600; margin-right: 0.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="header-row">
+    <h1>Photo-to-3D Jobs</h1>
+    <a class="btn btn-sm btn-primary" href="{% url 'photo_to_3d' %}">
+        <i class="fas fa-camera"></i> Neues Foto analysieren
+    </a>
+</div>
+
+{% if jobs %}
+<div class="bulk-actions" id="bulk-actions">
+    <span class="selection-count" id="selection-count">0 ausgewählt</span>
+    <button class="btn btn-sm btn-danger" onclick="bulkDelete()">
+        <i class="fas fa-trash"></i> Ausgewählte löschen
+    </button>
+</div>
+<table class="photo-jobs-table">
+    <thead>
+        <tr>
+            <th class="cb-cell"><input type="checkbox" id="select-all" title="Alle auswählen" onclick="toggleAll(this)"></th>
+            <th>Foto</th>
+            <th>3D Ergebnis</th>
+            <th>Dateiname</th>
+            <th>Pipeline</th>
+            <th>Geschlecht</th>
+            <th>Body Type</th>
+            <th>Dauer</th>
+            <th>Datum</th>
+            <th>Aktionen</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for job in jobs %}
+        <tr>
+            <td class="cb-cell"><input type="checkbox" class="job-cb" data-job-id="{{ job.id }}" onclick="updateSelection()"></td>
+            <td>
+                <img src="/{{ job.photo_file }}" alt="photo"
+                     style="width:80px;height:80px;max-width:80px;max-height:80px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;"
+                     onclick="showDetail('{{ job.id }}', '{{ job.original_filename }}', '/{{ job.photo_file }}', '{% if job.result_image %}/{{ job.result_image }}{% endif %}', '{{ job.get_backend_display }}', '{{ job.gender }}', '{{ job.body_type }}', '{{ job.created_at|date:"d.m.Y H:i" }}', '{{ job.duration_seconds }}')">
+            </td>
+            <td>
+                {% if job.result_image %}
+                <img src="/{{ job.result_image }}" alt="3D"
+                     style="width:140px;height:80px;max-width:140px;max-height:80px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
+                     onclick="showDetail('{{ job.id }}', '{{ job.original_filename }}', '/{{ job.photo_file }}', '/{{ job.result_image }}', '{{ job.get_backend_display }}', '{{ job.gender }}', '{{ job.body_type }}', '{{ job.created_at|date:"d.m.Y H:i" }}', '{{ job.duration_seconds }}')">
+                {% else %}
+                <span class="no-thumb"><i class="fas fa-cube"></i>&nbsp;Kein Bild</span>
+                {% endif %}
+            </td>
+            <td>{{ job.original_filename }}</td>
+            <td><span class="badge-backend badge-{{ job.backend }}">{{ job.get_backend_display }}</span></td>
+            <td>
+                {% if job.gender == 'male' %}
+                    <span class="gender-m"><i class="fas fa-mars"></i> M</span>
+                {% else %}
+                    <span class="gender-f"><i class="fas fa-venus"></i> W</span>
+                {% endif %}
+            </td>
+            <td>{{ job.body_type }}</td>
+            <td>
+                {% if job.duration_seconds %}
+                <span class="duration-badge">{{ job.duration_seconds|floatformat:1 }}s</span>
+                {% else %}
+                <span class="duration-badge">—</span>
+                {% endif %}
+            </td>
+            <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
+            <td>
+                <div class="btn-actions">
+                    <a class="btn btn-sm btn-primary" title="Ansicht"
+                       href="{% url 'photo_to_3d' %}?job={{ job.id }}"
+                       style="padding:4px 12px;">
+                        <i class="fas fa-eye"></i> Ansicht
+                    </a>
+                    <a class="btn btn-sm btn-danger" title="Löschen"
+                       href="{% url 'photo_analysis_delete' job.id %}"
+                       onclick="return confirm('Job löschen: {{ job.original_filename }}?')">
+                        <i class="fas fa-trash"></i>
+                    </a>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state" style="text-align:center; padding:3rem; color:var(--text-muted);">
+    <i class="fas fa-camera fa-3x" style="margin-bottom:1rem;display:block;"></i>
+    <p>Noch keine Photo-Analysen vorhanden.</p>
+    <p><a href="{% url 'photo_to_3d' %}">Foto hochladen</a> um zu starten.</p>
+</div>
+{% endif %}
+
+<!-- Detail popup -->
+<div id="detailModal" class="job-modal-overlay" style="display:none" onclick="if(event.target===this)closeDetail()">
+    <div class="job-modal" style="width:90vw;max-width:1200px;max-height:90vh;">
+        <div class="job-modal-header">
+            <h3 id="detailTitle"></h3>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <a id="detailOpenBtn" class="btn btn-sm btn-primary" href="#" target="_blank">
+                    <i class="fas fa-external-link-alt"></i> In Foto-to-3D öffnen
+                </a>
+                <button class="btn btn-sm btn-secondary" onclick="closeDetail()"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="job-modal-body">
+            <div class="job-detail-images">
+                <div class="img-box">
+                    <img id="detailPhoto" src="" alt="Foto" style="max-width:400px;max-height:300px;border-radius:6px;">
+                    <span class="img-label">Originalfoto</span>
+                </div>
+                <div class="img-box" id="detailResultBox">
+                    <img id="detailResult" src="" alt="3D Ergebnis" style="max-width:500px;max-height:300px;border-radius:6px;">
+                    <span class="img-label">3D Ergebnis (HumanBody + SMPL-X)</span>
+                </div>
+            </div>
+            <div class="job-detail-meta">
+                <div>
+                    <div class="meta-item"><b>Pipeline:</b> <span id="detailBackend"></span></div>
+                    <div class="meta-item"><b>Geschlecht:</b> <span id="detailGender"></span></div>
+                </div>
+                <div>
+                    <div class="meta-item"><b>Body Type:</b> <span id="detailBodyType"></span></div>
+                    <div class="meta-item"><b>Dauer:</b> <span id="detailDuration"></span></div>
+                </div>
+                <div>
+                    <div class="meta-item"><b>Datum:</b> <span id="detailDate"></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function showDetail(jobId, name, photoUrl, resultUrl, backend, gender, bodyType, date, duration) {
+    document.getElementById('detailTitle').textContent = name;
+    document.getElementById('detailPhoto').src = photoUrl;
+    document.getElementById('detailOpenBtn').href = '{% url "photo_to_3d" %}?job=' + jobId;
+
+    var resultBox = document.getElementById('detailResultBox');
+    var resultImg = document.getElementById('detailResult');
+    if (resultUrl) {
+        resultImg.src = resultUrl;
+        resultBox.style.display = '';
+    } else {
+        resultBox.style.display = 'none';
+    }
+
+    document.getElementById('detailBackend').textContent = backend;
+    document.getElementById('detailGender').textContent = gender === 'male' ? 'Männlich' : 'Weiblich';
+    document.getElementById('detailBodyType').textContent = bodyType;
+    document.getElementById('detailDuration').textContent = duration && parseFloat(duration) > 0 ? parseFloat(duration).toFixed(1) + 's' : '—';
+    document.getElementById('detailDate').textContent = date;
+
+    document.getElementById('detailModal').style.display = 'flex';
+}
+function closeDetail() {
+    document.getElementById('detailModal').style.display = 'none';
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDetail();
+});
+
+function toggleAll(master) {
+    document.querySelectorAll('.job-cb').forEach(function(cb) { cb.checked = master.checked; });
+    updateSelection();
+}
+function updateSelection() {
+    var cbs = document.querySelectorAll('.job-cb');
+    var checked = document.querySelectorAll('.job-cb:checked');
+    var bar = document.getElementById('bulk-actions');
+    var count = document.getElementById('selection-count');
+    if (checked.length > 0) {
+        bar.classList.add('has-selection');
+        count.textContent = checked.length + ' von ' + cbs.length + ' ausgewählt';
+    } else {
+        bar.classList.remove('has-selection');
+    }
+    var master = document.getElementById('select-all');
+    master.checked = checked.length === cbs.length && cbs.length > 0;
+    master.indeterminate = checked.length > 0 && checked.length < cbs.length;
+}
+function bulkDelete() {
+    var ids = [];
+    document.querySelectorAll('.job-cb:checked').forEach(function(cb) { ids.push(cb.dataset.jobId); });
+    if (ids.length === 0) return;
+    if (!confirm(ids.length + ' Job(s) endgültig löschen?')) return;
+    fetch('{% url "photo_analysis_bulk_delete" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ ids: ids })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) location.reload();
+        else alert('Fehler: ' + (data.error || 'Unbekannt'));
+    }).catch(function(e) { alert('Fehler: ' + e.message); });
+}
+</script>
+{% endblock %}
