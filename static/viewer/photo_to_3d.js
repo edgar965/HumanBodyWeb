@@ -49,95 +49,9 @@ function blenderToThreeCoords(buf) {
  *      proportional to how far they are from the body axis.
  */
 function alignBodyToSMPLX(buf) {
-    const n = buf.length / 3;
-
-    // --- Pass 1: height bounds + center X ---
-    let minY = Infinity, maxY = -Infinity;
-    for (let i = 0; i < n; i++) {
-        const y = buf[i * 3 + 1];
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-    }
-    const totalH = maxY - minY;
-    if (totalH < 0.5) return;
-    const headTop = maxY;
-
-    // Center X from head verts (top 30cm)
-    let sumCX = 0, cntCX = 0;
-    for (let i = 0; i < n; i++) {
-        if (buf[i * 3 + 1] > headTop - 0.30) { sumCX += buf[i * 3]; cntCX++; }
-    }
-    const cx = cntCX > 0 ? sumCX / cntCX : 0;
-
-    // --- Pass 2: body axis Z = average Z of torso center verts (40-70% height) ---
-    const torsoLow  = minY + totalH * 0.40;
-    const torsoHigh = minY + totalH * 0.70;
-    let sumAZ = 0, cntAZ = 0;
-    for (let i = 0; i < n; i++) {
-        const y = buf[i * 3 + 1];
-        if (y >= torsoLow && y <= torsoHigh && Math.abs(buf[i * 3] - cx) < 0.15) {
-            sumAZ += buf[i * 3 + 2]; cntAZ++;
-        }
-    }
-    const axisZ = cntAZ > 0 ? sumAZ / cntAZ : 0;
-
-    // --- Pass 3: compute max face Z per cm slice (head region) ---
-    // For each 1cm height slice from top, find the most forward (+Z) vertex
-    // Include ALL vertices (not just center) — jaw/ear are part of the silhouette
-    const HEAD_START = 1, HEAD_END = 50;
-    const maxFaceZ = new Float64Array(HEAD_END + 1).fill(-1e9);
-    for (let i = 0; i < n; i++) {
-        const y = buf[i * 3 + 1];
-        const cm = Math.round((headTop - y) * 100);
-        if (cm < HEAD_START || cm > HEAD_END) continue;
-        const z = buf[i * 3 + 2];
-        if (z > maxFaceZ[cm]) maxFaceZ[cm] = z;
-    }
-
-    // Per-cm correction LUT (meters): how much to push face back at each height
-    // Calibrated from pixel-scan measurements (HB silhouette vs SX silhouette)
-    // Remaining diffs after previous iteration added to base values
-    //                     cm:  1     3     5     7     9    11    13    15    17    19    21    23    25    27    29    31    33    35    37    39    41    43    45    47    49
-    const CORR_CM =            [1,    3,    5,    7,    9,   11,   13,   15,   17,   19,   21,   23,   25,   27,   29,   31,   33,   35,   37,   39,   41,   43,   45,   47,   49];
-    const CORR_VAL =           [.051, .046, .044, .041, .038, .037, .025, .024, .035, .052, .067, .057, .062, .023, .016, .017, .020, .023, .030, .033, .037, .039, .040, .036, .056];
-
-    function getCorrAtCm(cm) {
-        if (cm <= CORR_CM[0]) return CORR_VAL[0];
-        if (cm >= CORR_CM[CORR_CM.length - 1]) return CORR_VAL[CORR_VAL.length - 1];
-        for (let j = 0; j < CORR_CM.length - 1; j++) {
-            if (cm >= CORR_CM[j] && cm <= CORR_CM[j + 1]) {
-                const t = (cm - CORR_CM[j]) / (CORR_CM[j + 1] - CORR_CM[j]);
-                return CORR_VAL[j] + (CORR_VAL[j + 1] - CORR_VAL[j]) * t;
-            }
-        }
-        return 0;
-    }
-
-    // --- Pass 4: apply face protrusion correction ---
-    for (let i = 0; i < n; i++) {
-        const y = buf[i * 3 + 1];
-        const z = buf[i * 3 + 2];
-        const cmFromTop = (headTop - y) * 100;
-
-        // Only correct head region (cm 0-50 from top)
-        if (cmFromTop < 0 || cmFromTop > 50) continue;
-
-        // Only correct vertices that are in front of the body axis (+Z)
-        if (z <= axisZ) continue;
-
-        // How far forward from axis (0 = at axis, 1 = at face surface)
-        const cm = Math.min(HEAD_END, Math.max(HEAD_START, Math.round(cmFromTop)));
-        const faceMax = maxFaceZ[cm];
-        if (faceMax <= axisZ) continue;
-
-        const protrusion = z - axisZ;
-        const maxProt = faceMax - axisZ;
-        const faceFrac = Math.min(1, protrusion / maxProt);
-
-        // Correction: push backward (-Z), scaled by how far forward the vertex is
-        const corr = getCorrAtCm(cmFromTop);
-        buf[i * 3 + 2] -= corr * faceFrac;
-    }
+    /* removed: face profile correction now handled by Z-axis morphs
+       (Jaw_Prominence, Chin_Prominence, Mouth_PosZ, etc.) which correctly
+       move internal geometry (teeth, tongue, gums) along with the surface. */
 }
 
 // =========================================================================
@@ -475,13 +389,39 @@ async function loadMesh(bodyType) {
                     skinWeights[vi * 4 + j] = boneIdx !== undefined ? pairs[j][1] : 0;
                 }
             }
-            geo.setAttribute('skinIndex', new THREE.BufferAttribute(skinIndices, 4));
-            geo.setAttribute('skinWeight', new THREE.BufferAttribute(skinWeights, 4));
+            geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4));
+            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
 
             bodyMesh = new THREE.SkinnedMesh(geo, mat);
             const skeleton = new THREE.Skeleton(defSkeleton.bones);
             bodyMesh.add(defSkeleton.rootBone);
+
+            // Restore head bone to original position for clean bind
+            const headBone = defSkeleton.boneByName['DEF-spine.006'];
+            if (headBone) {
+                if (headBone._origY === undefined) headBone._origY = headBone.position.y;
+                if (headBone._origZ === undefined) headBone._origZ = headBone.position.z;
+                headBone.position.y = headBone._origY;
+                headBone.position.z = headBone._origZ;
+                defSkeleton.rootBone.updateWorldMatrix(true, true);
+            }
+
             bodyMesh.bind(skeleton);
+
+            // Shift head bone AFTER bind → face profile correction.
+            // Bone-local axes (from parent DEF-spine.005):
+            //   local Y → world (0, -0.403, +0.915)  (mostly forward)
+            //   local Z → world (0, -0.915, -0.403)  (mostly down)
+            // For pure world -Z (backward) shift of CORR meters:
+            //   bone.y -= CORR * 0.9152,  bone.z += CORR * 0.4030
+            if (headBone) {
+                const CORR = 0.030;  // 3cm backward
+                headBone.position.y = headBone._origY - CORR * 0.9152;
+                headBone.position.z = headBone._origZ + CORR * 0.4030;
+                defSkeleton.rootBone.updateWorldMatrix(true, true);
+                bodyMesh.skeleton.update();
+                if (bodyMesh.skeleton.boneTexture) bodyMesh.skeleton.boneTexture.needsUpdate = true;
+            }
         } else {
             bodyMesh = new THREE.Mesh(geo, mat);
         }
@@ -603,7 +543,7 @@ function applyFacialExpression(expr) {
     // Scale: SMPL-X expression → bone rotation (radians).
     // Keep small: DEF-jaw has a long lever arm, even 5-8° is very visible.
     // jawOpen=1.5 should produce ~6° (0.10 rad) — reduced to avoid beak.
-    const S = 0.06;
+    const S = 0.02;  // Reduced: expression now primarily via vertex morphs
     const browNet = (browUp - browDown) * S;
 
     // Accumulate [rx, ry, rz] per bone (Blender local space)
