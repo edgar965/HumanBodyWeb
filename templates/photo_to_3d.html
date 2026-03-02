@@ -161,22 +161,85 @@
     .detection-param .param-name { color: var(--text); }
     .detection-param .param-val { font-variant-numeric: tabular-nums; }
 
-    .smplx-status {
-        padding: 10px 12px;
-        font-size: 0.8rem;
-        background: var(--bg-primary);
-        border-top: 1px solid var(--border);
-        margin-top: auto;
+    /* --- Backend Selector --- */
+    .backend-selector {
+        padding: 8px 12px;
+        flex-shrink: 0;
+    }
+    .backend-selector-header {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
         color: var(--text-muted);
+        margin-bottom: 6px;
+        font-weight: 600;
+    }
+    .backend-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .backend-item {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+        background: var(--bg-primary);
     }
-    .smplx-status .status-dot {
-        width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    .backend-item:hover:not(.disabled) {
+        border-color: var(--accent);
+        background: rgba(233, 69, 96, 0.04);
     }
-    .smplx-status .status-dot.available { background: var(--success); }
-    .smplx-status .status-dot.unavailable { background: var(--warning); }
+    .backend-item.selected {
+        border-color: var(--accent);
+        background: rgba(233, 69, 96, 0.08);
+    }
+    .backend-item.disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+    .backend-item input[type="radio"] { display: none; }
+    .backend-radio {
+        width: 14px; height: 14px; border-radius: 50%;
+        border: 2px solid var(--text-muted);
+        flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .backend-item.selected .backend-radio {
+        border-color: var(--accent);
+    }
+    .backend-item.selected .backend-radio::after {
+        content: '';
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--accent);
+    }
+    .backend-status-dot {
+        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .backend-status-dot.ok { background: var(--success); }
+    .backend-status-dot.no { background: var(--danger); }
+    .backend-info {
+        flex: 1; min-width: 0;
+    }
+    .backend-label {
+        font-size: 0.82rem; font-weight: 600; color: var(--text);
+        display: flex; align-items: center; gap: 5px;
+    }
+    .backend-desc {
+        font-size: 0.72rem; color: var(--text-muted);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .backend-badge {
+        font-size: 0.65rem; padding: 1px 5px; border-radius: 3px;
+        font-weight: 600; flex-shrink: 0;
+    }
+    .backend-badge.cpu { background: #2ecc71; color: #000; }
+    .backend-badge.gpu { background: #e67e22; color: #fff; }
+    .backend-badge.best { background: #9b59b6; color: #fff; }
 
     /* --- Canvas + Viewer Panel (right) --- */
     .viewer-right {
@@ -355,6 +418,13 @@
             <button class="photo-remove" id="photo-remove" title="Foto entfernen"><i class="fas fa-times"></i></button>
         </div>
 
+        <div class="backend-selector" id="backend-selector">
+            <div class="backend-selector-header"><i class="fas fa-cogs"></i> Analyse-Backend</div>
+            <div class="backend-list" id="backend-list">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
         <div class="photo-actions" id="photo-actions">
             <button class="btn-analyze" id="btn-analyze">
                 <span><i class="fas fa-magic"></i> Analysieren</span>
@@ -365,11 +435,7 @@
         <div class="detection-results" id="detection-results">
             <h4>Erkannte Parameter</h4>
             <div id="detection-params"></div>
-        </div>
-
-        <div class="smplx-status" id="smplx-status">
-            <div class="status-dot unavailable"></div>
-            <span>SMPL-X: Status wird geprüft...</span>
+            <div id="detection-json" style="display:none;margin-top:8px;max-height:400px;overflow-y:auto;font-family:monospace;font-size:0.72rem;background:rgba(0,0,0,0.3);padding:8px;border-radius:4px;white-space:pre-wrap;color:#ccc;line-height:1.4;"></div>
         </div>
     </div>
 
@@ -455,5 +521,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/photo_to_3d.js' %}?v=4"></script>
+<script type="module" src="{% static 'viewer/photo_to_3d.js' %}?v=65"></script>
 {% endblock %}

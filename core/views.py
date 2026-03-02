@@ -638,6 +638,7 @@ def _run_v4_pipeline(job, video_path, output_dir):
         '--mp-detection-conf', str(s.mp_min_detection_confidence),
         '--mp-tracking-conf', str(s.mp_min_tracking_confidence),
         '--mp-model-complexity', str(s.mp_model_complexity),
+        '--flipHorizontal',
     ]
     # Component flags
     if s.v4_enable_body: cmd.append('--body')

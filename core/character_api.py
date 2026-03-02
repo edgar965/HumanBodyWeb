@@ -15,6 +15,7 @@ from django.http import JsonResponse, FileResponse, HttpResponseNotFound
 from django.conf import settings
 from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from .models import AppSettings
 
@@ -151,6 +152,16 @@ def character_mesh(request):
             try:
                 state.set_morph(morph_name, float(val))
             except ValueError:
+                pass
+
+    # Apply meta values from query params (age, mass, tone, height)
+    meta_prefix = 'meta_'
+    for key, val in request.GET.items():
+        if key.startswith(meta_prefix):
+            meta_name = key[len(meta_prefix):]
+            try:
+                state.set_meta(meta_name, float(val))
+            except (ValueError, AttributeError):
                 pass
 
     vertices = state.compute()
@@ -303,7 +314,13 @@ def character_rig(request):
 @require_GET
 def character_def_skeleton(request):
     """Return DEF skeleton hierarchy with local transforms for Three.js skinning."""
-    skel_path = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'def_skeleton.json')
+    body_type = request.GET.get('body_type', 'Female_Caucasian')
+    gender = _gender_from_body_type(body_type)
+    if gender == 'male':
+        data_dir = str(settings.HUMANBODY_DATA_DIR) + '_male'
+    else:
+        data_dir = str(settings.HUMANBODY_DATA_DIR)
+    skel_path = os.path.join(data_dir, 'def_skeleton.json')
     if not os.path.isfile(skel_path):
         return JsonResponse({'error': 'DEF skeleton not exported yet'}, status=404)
     with open(skel_path, 'r', encoding='utf-8') as f:
@@ -382,6 +399,40 @@ def character_skin_weights(request):
         if cc is not None:
             with open(base_path, 'r', encoding='utf-8') as f:
                 base_data = json.load(f)
+
+            # Filter out non-deforming bones (e.g. corrective_smooth_inv)
+            # that don't exist in the DEF skeleton and cause SkinnedMesh artifacts.
+            skel_path = os.path.join(data_dir, 'def_skeleton.json')
+            if os.path.isfile(skel_path):
+                with open(skel_path, 'r', encoding='utf-8') as sf:
+                    skel_data = json.load(sf)
+                skel_names = {b['name'] for b in skel_data['bones']}
+                old_names = base_data['bone_names']
+                remove_indices = {i for i, n in enumerate(old_names) if n not in skel_names}
+                if remove_indices:
+                    logger.info("Filtering %d non-DEF bones from skin weights: %s",
+                                len(remove_indices),
+                                [old_names[i] for i in remove_indices])
+                    new_names = [n for i, n in enumerate(old_names) if i not in remove_indices]
+                    # Remap bone indices and renormalize weights
+                    idx_map = {}
+                    new_idx = 0
+                    for old_idx in range(len(old_names)):
+                        if old_idx not in remove_indices:
+                            idx_map[old_idx] = new_idx
+                            new_idx += 1
+                    new_weights = []
+                    for pairs in base_data['weights']:
+                        filtered = [(idx_map[bi], w) for bi, w in pairs
+                                    if bi not in remove_indices and bi in idx_map]
+                        # Renormalize
+                        total = sum(w for _, w in filtered)
+                        if total > 0 and abs(total - 1.0) > 1e-6:
+                            filtered = [(bi, w / total) for bi, w in filtered]
+                        new_weights.append(filtered)
+                    base_data['bone_names'] = new_names
+                    base_data['weights'] = new_weights
+
             logger.info("Propagating skin weights (%s) through CC subdivision: %d base -> %d sub",
                         gender, base_data['vertex_count'], cc.sub_vertex_count)
             _propagated_skin_weights[gender] = cc.propagate_skin_weights(
@@ -889,9 +940,204 @@ def character_hairstyle_glb(request, name):
 # Photo To 3D — page + SMPLest-X analysis API
 # =========================================================================
 
+def _detect_skin_color(image_path):
+    """Detect dominant skin color from a photo using HSV filtering.
+
+    Samples the center region, filters for skin-like HSV values,
+    returns median RGB as hex string or None.
+    """
+    try:
+        import cv2
+        img = cv2.imread(image_path)
+        if img is None:
+            return None
+        h, w = img.shape[:2]
+        # Sample center region (chest area: 20-60% height, 30-70% width)
+        y1, y2 = int(h * 0.2), int(h * 0.6)
+        x1, x2 = int(w * 0.3), int(w * 0.7)
+        crop = img[y1:y2, x1:x2]
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        # Skin HSV range (broad: covers light to dark skin)
+        mask = ((hsv[:, :, 0] <= 25) | (hsv[:, :, 0] >= 170)) & \
+               (hsv[:, :, 1] >= 20) & (hsv[:, :, 1] <= 180) & \
+               (hsv[:, :, 2] >= 50) & (hsv[:, :, 2] <= 245)
+        skin_pixels = crop[mask]
+        if len(skin_pixels) < 50:
+            return None
+        # Median color (BGR → RGB)
+        median = np.median(skin_pixels, axis=0).astype(int)
+        r, g, b = int(median[2]), int(median[1]), int(median[0])
+        return f'#{r:02x}{g:02x}{b:02x}'
+    except Exception:
+        return None
+
+
+@xframe_options_sameorigin
 def photo_to_3d_page(request):
     """Render the Photo To 3D page."""
     return render(request, 'photo_to_3d.html')
+
+
+def photo_analysis_jobs_page(request):
+    """Render the Photo Analysis Jobs list page."""
+    from .models import PhotoAnalysisJob
+    jobs = PhotoAnalysisJob.objects.all()
+    return render(request, 'photo_analysis_jobs.html', {'jobs': jobs})
+
+
+@require_GET
+def photo_analysis_job_data(request, job_id):
+    """Return saved analysis result JSON for a specific job.
+
+    Re-computes morph mapping from stored betas for latest mapping quality.
+    """
+    from .models import PhotoAnalysisJob
+    try:
+        job = PhotoAnalysisJob.objects.get(id=job_id)
+    except PhotoAnalysisJob.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
+    try:
+        data = json.loads(job.result_json)
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Invalid result data'}, status=500)
+
+    # Re-compute morph mapping from stored betas for latest mapping quality
+    if data.get('betas'):
+        import sys
+        wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
+        sys.path.insert(0, wrappers_dir)
+        try:
+            from smplest_x_wrapper import betas_to_morph_sliders
+            mapping = betas_to_morph_sliders(
+                data['betas'], data.get('gender', 'female'),
+                expression=data.get('expression'))
+            data['morphs'] = mapping['morphs']
+            data['meta_sliders'] = mapping['meta_sliders']
+            data['body_type'] = mapping['body_type']
+        except Exception:
+            pass  # Fall back to cached data
+        finally:
+            if wrappers_dir in sys.path:
+                sys.path.remove(wrappers_dir)
+
+    return JsonResponse(data)
+
+
+@csrf_exempt
+@require_POST
+def photo_analysis_save_screenshot(request, job_id):
+    """Save a rendered 3D screenshot for a photo analysis job."""
+    from .models import PhotoAnalysisJob
+    try:
+        job = PhotoAnalysisJob.objects.get(id=job_id)
+    except PhotoAnalysisJob.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
+
+    import base64
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    img_data = body.get('image', '')
+    if not img_data:
+        return JsonResponse({'ok': False, 'error': 'No image data'}, status=400)
+
+    # Strip data URL prefix (e.g. "data:image/jpeg;base64,...")
+    if ',' in img_data:
+        img_data = img_data.split(',', 1)[1]
+
+    try:
+        raw = base64.b64decode(img_data)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Invalid base64'}, status=400)
+
+    # Save as JPEG
+    screenshot_dir = os.path.join(str(settings.BASE_DIR), 'media', 'photo_analysis', 'screenshots')
+    os.makedirs(screenshot_dir, exist_ok=True)
+    fname = f'{job_id}.jpg'
+    fpath = os.path.join(screenshot_dir, fname)
+    with open(fpath, 'wb') as f:
+        f.write(raw)
+
+    rel_path = f'media/photo_analysis/screenshots/{fname}'
+    job.result_image = rel_path
+    job.save(update_fields=['result_image'])
+    return JsonResponse({'ok': True, 'path': f'/{rel_path}'})
+
+
+def photo_analysis_reprocess(request, job_id):
+    """Redirect to photo-to-3d page with the job's photo pre-loaded for re-analysis."""
+    from django.shortcuts import redirect
+    return redirect(f'/humanbody/photo-to-3d/?job={job_id}')
+
+
+@csrf_exempt
+def photo_analysis_delete(request, job_id):
+    """Delete a photo analysis job."""
+    from .models import PhotoAnalysisJob
+    try:
+        job = PhotoAnalysisJob.objects.get(id=job_id)
+    except PhotoAnalysisJob.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
+    # Delete photo file
+    photo_path = os.path.join(str(settings.BASE_DIR), job.photo_file)
+    if os.path.isfile(photo_path):
+        os.remove(photo_path)
+    # Delete result screenshot
+    if job.result_image:
+        img_path = os.path.join(str(settings.BASE_DIR), job.result_image)
+        if os.path.isfile(img_path):
+            os.remove(img_path)
+    # Delete SMPL-X output files
+    smplx_dir = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody',
+                             'data', 'photoTo3D', 'SMPLX')
+    for ext in ('.json', '.npz'):
+        p = os.path.join(smplx_dir, f'{job.id}{ext}')
+        if os.path.isfile(p):
+            os.remove(p)
+    job.delete()
+    from django.shortcuts import redirect
+    return redirect('photo_analysis_jobs')
+
+
+@csrf_exempt
+@require_POST
+def photo_analysis_bulk_delete(request):
+    """Delete multiple photo analysis jobs at once."""
+    from .models import PhotoAnalysisJob
+    try:
+        data = json.loads(request.body)
+        job_ids = data.get('ids', [])
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    if not job_ids:
+        return JsonResponse({'ok': False, 'error': 'No job IDs provided'}, status=400)
+
+    deleted = 0
+    for jid in job_ids:
+        try:
+            job = PhotoAnalysisJob.objects.get(id=jid)
+            photo_path = os.path.join(str(settings.BASE_DIR), job.photo_file)
+            if os.path.isfile(photo_path):
+                os.remove(photo_path)
+            if job.result_image:
+                img_path = os.path.join(str(settings.BASE_DIR), job.result_image)
+                if os.path.isfile(img_path):
+                    os.remove(img_path)
+            # Delete SMPL-X output files
+            smplx_dir = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody',
+                                     'data', 'photoTo3D', 'SMPLX')
+            for ext in ('.json', '.npz'):
+                p = os.path.join(smplx_dir, f'{job.id}{ext}')
+                if os.path.isfile(p):
+                    os.remove(p)
+            job.delete()
+            deleted += 1
+        except PhotoAnalysisJob.DoesNotExist:
+            continue
+    return JsonResponse({'ok': True, 'deleted': deleted})
 
 
 @csrf_exempt
@@ -899,16 +1145,17 @@ def photo_to_3d_page(request):
 def analyze_photo(request):
     """Analyze an uploaded photo for body proportions.
 
-    Expects multipart form with 'photo' file.
+    Expects multipart form with 'photo' file and optional 'backend' field.
     Returns JSON with detected body type, meta sliders, and morph values.
     """
     import sys
     wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
     sys.path.insert(0, wrappers_dir)
     try:
-        from smplest_x_wrapper import is_available, analyze_photo as smplx_analyze, betas_to_morph_sliders
+        from photo_analyzer import analyze as pa_analyze
+        from smplest_x_wrapper import betas_to_morph_sliders
     except ImportError:
-        return JsonResponse({'ok': False, 'error': 'SMPLest-X wrapper not found'})
+        return JsonResponse({'ok': False, 'error': 'Photo analyzer not found'})
     finally:
         if wrappers_dir in sys.path:
             sys.path.remove(wrappers_dir)
@@ -916,6 +1163,8 @@ def analyze_photo(request):
     photo = request.FILES.get('photo')
     if not photo:
         return JsonResponse({'ok': False, 'error': 'No photo uploaded'}, status=400)
+
+    backend = request.POST.get('backend', 'mediapipe')
 
     # Save to media/photo_analysis/
     upload_dir = os.path.join(str(settings.BASE_DIR), 'media', 'photo_analysis')
@@ -929,56 +1178,140 @@ def analyze_photo(request):
         for chunk in photo.chunks():
             f.write(chunk)
 
-    # Analyze
-    result = smplx_analyze(filepath)
+    # Analyze with selected backend
+    import time as _time
+    t0 = _time.monotonic()
+    result = pa_analyze(filepath, backend=backend)
     if result is None:
-        return JsonResponse({'ok': False, 'error': 'Analysis failed'})
+        return JsonResponse({'ok': False, 'error': f'Analysis failed (backend: {backend})'})
 
     # Map betas to morphs
-    mapping = betas_to_morph_sliders(result['betas'], result['gender'])
+    mapping = betas_to_morph_sliders(result['betas'], result['gender'],
+                                     expression=result.get('expression'))
+    duration = _time.monotonic() - t0
+
+    # Use estimated gender if available (auto-detected from betas)
+    effective_gender = mapping.get('estimated_gender') or result['gender']
 
     resp = {
         'ok': True,
-        'gender': result['gender'],
+        'gender': effective_gender,
         'betas': result['betas'],
         'body_type': mapping['body_type'],
         'meta_sliders': mapping['meta_sliders'],
         'morphs': mapping['morphs'],
         'confidence': result['confidence'],
         'mock': result.get('mock', False),
+        'backend': result.get('backend', backend),
         'photo_url': f'/media/photo_analysis/{filename}',
+        'duration': round(duration, 2),
     }
+    # Forward estimated gender info
+    if mapping.get('estimated_gender'):
+        resp['estimated_gender'] = mapping['estimated_gender']
     # Forward SMPL-X measurements if available
     meas = result.get('measurements') or mapping.get('measurements')
     if meas:
         resp['measurements'] = meas
-    # Forward skin color if detected
-    if result.get('skin_color'):
-        resp['skin_color'] = result['skin_color']
+    # Forward skin color — detect from photo if backend didn't provide it
+    skin_color = result.get('skin_color')
+    if not skin_color:
+        skin_color = _detect_skin_color(filepath)
+    if skin_color:
+        resp['skin_color'] = skin_color
+    # Forward expression data if available
+    if result.get('expression'):
+        resp['expression'] = result['expression']
+
+    # Persist analysis result for the jobs list
+    job_obj = None
+    try:
+        from .models import PhotoAnalysisJob
+        job_obj = PhotoAnalysisJob.objects.create(
+            original_filename=photo.name,
+            photo_file=f'media/photo_analysis/{filename}',
+            backend=result.get('backend', backend),
+            gender=effective_gender,
+            body_type=mapping['body_type'],
+            result_json=json.dumps(resp, default=str),
+            duration_seconds=round(duration, 2),
+        )
+        resp['job_id'] = str(job_obj.id)
+    except Exception:
+        pass  # Don't fail the response if DB write fails
+
+    # Save SMPL-X raw output for archival
+    if job_obj is not None:
+        try:
+            smplx_dir = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody',
+                                     'data', 'photoTo3D', 'SMPLX')
+            os.makedirs(smplx_dir, exist_ok=True)
+
+            # JSON with parameters
+            smplx_params = {
+                'job_id': str(job_obj.id),
+                'betas': result['betas'],
+                'expression': result.get('expression', []),
+                'gender': effective_gender,
+                'backend': result.get('backend', backend),
+                'confidence': result['confidence'],
+                'body_type': mapping['body_type'],
+                'meta_sliders': mapping['meta_sliders'],
+                'morphs': mapping['morphs'],
+                'measurements': meas,
+                'skin_color': skin_color,
+                'original_filename': photo.name,
+                'created_at': str(job_obj.created_at),
+            }
+            json_path = os.path.join(smplx_dir, f'{job_obj.id}.json')
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(smplx_params, f, indent=2, ensure_ascii=False)
+
+            # NPZ with generated mesh + rig
+            import sys as _sys
+            _wd = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
+            _sys.path.insert(0, _wd)
+            try:
+                from smplest_x_wrapper import generate_mesh
+                mesh = generate_mesh(result['betas'], effective_gender)
+                if mesh is not None:
+                    npz_path = os.path.join(smplx_dir, f'{job_obj.id}.npz')
+                    np.savez_compressed(npz_path,
+                        vertices=mesh['vertices'],
+                        faces=mesh['faces'],
+                        joints=mesh['joints'],
+                        parents=np.array(mesh['parents'], dtype=np.int32),
+                        skin_indices=mesh['skin_indices'],
+                        skin_weights=mesh['skin_weights'],
+                        betas=np.array(result['betas'], dtype=np.float32),
+                        expression=np.array(result.get('expression', []),
+                                            dtype=np.float32),
+                    )
+            finally:
+                if _wd in _sys.path:
+                    _sys.path.remove(_wd)
+        except Exception as exc:
+            logger.warning('Failed to save SMPL-X output: %s', exc)
+
     return JsonResponse(resp)
 
 
 @require_GET
 def analyze_photo_status(request):
-    """Return SMPLest-X availability status."""
+    """Return status of all photo analysis backends."""
     import sys
     wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
     sys.path.insert(0, wrappers_dir)
     try:
-        from smplest_x_wrapper import is_available, get_model_info
-        available = is_available()
-        model_info = get_model_info()
+        from photo_analyzer import get_all_status
+        backends = get_all_status()
     except ImportError:
-        available = False
-        model_info = 'Wrapper not found'
+        backends = {}
     finally:
         if wrappers_dir in sys.path:
             sys.path.remove(wrappers_dir)
 
-    return JsonResponse({
-        'available': available,
-        'model_info': model_info,
-    })
+    return JsonResponse({'backends': backends})
 
 
 @csrf_exempt

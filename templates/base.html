@@ -30,6 +30,9 @@
                     <a href="{% url 'photo_to_3d' %}" class="{% if request.path == '/humanbody/photo-to-3d/' %}active{% endif %}">
                         <i class="fas fa-camera"></i> <span>Foto To 3D</span>
                     </a>
+                    <a href="{% url 'photo_analysis_jobs' %}" class="{% if request.path == '/humanbody/photo-to-3d/jobs/' %}active{% endif %}" style="padding-left:2.5rem;font-size:0.9em;">
+                        <i class="fas fa-list"></i> <span>Jobs</span>
+                    </a>
                     <a href="{% url 'humanbody_scene' %}" class="{% if request.path == '/humanbody/scene/' %}active{% endif %}">
                         <i class="fas fa-lightbulb"></i> <span>Szene</span>
                     </a>
