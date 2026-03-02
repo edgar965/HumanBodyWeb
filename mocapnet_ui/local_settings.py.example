@@ -1,0 +1,13 @@
+# Local settings — copy to local_settings.py and adjust for your setup.
+# This file is NOT tracked in git.
+#
+# Usage: cp local_settings.py.example local_settings.py
+#
+# Start server on your preferred port:
+#   python manage.py runserver 5020
+
+# DEBUG = True
+# ALLOWED_HOSTS = ['localhost', '127.0.0.1', '192.168.1.100']
+
+# Override paths if your directory layout differs:
+# HUMANBODY_ROOT = Path('D:/MyProjects/HumanBody')

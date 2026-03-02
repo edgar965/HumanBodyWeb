@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = '0.91'
+VERSION = '0.92'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
@@ -116,6 +116,13 @@ HUMANBODY_ASSETS_GLB_DIR = HUMANBODY_ROOT / 'data' / 'assets_glb'
 HUMANBODY_ASSETS_INSTANCE_DIR = HUMANBODY_ROOT / 'data' / 'assetsInstance'
 HUMANBODY_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'
 BVH_RESULTS_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'Results'
+HUMANBODY_GARMENT_LIBRARY_DIR = HUMANBODY_ROOT / 'data' / 'garment_library'
+HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
+
+# Add assetCreator to Python path for GarmentFitter
+_asset_creator_parent = str(HUMANBODY_ROOT / 'assetCreator')
+if _asset_creator_parent not in sys.path:
+    sys.path.insert(0, _asset_creator_parent)
 
 # Channel layers (in-memory for dev)
 CHANNEL_LAYERS = {
@@ -123,3 +130,9 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels.layers.InMemoryChannelLayer"
     }
 }
+
+# Local overrides (not tracked in git — each team member has their own)
+try:
+    from .local_settings import *  # noqa: F401,F403
+except ImportError:
+    pass

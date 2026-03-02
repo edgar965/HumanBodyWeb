@@ -21,6 +21,12 @@ node_modules/
 test_*.png
 test_*.js
 
+# Local settings (per-user, not synced)
+local_settings.py
+
+# Test screenshots
+test_screenshots/
+
 # Misc
 nul
 ~$*
