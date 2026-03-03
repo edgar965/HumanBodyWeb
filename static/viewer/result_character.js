@@ -627,17 +627,21 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
                 });
             }
 
-            // Resize handle
+            // Resize handle (corner drag — width + height)
             const resizeHandle = document.getElementById('floatingVideoResize');
             if (resizeHandle) {
                 resizeHandle.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     const startW = floatingEl.offsetWidth;
+                    const startH = floatingEl.offsetHeight;
                     const startMX = e.clientX;
+                    const startMY = e.clientY;
                     const onMove = (ev) => {
                         const newW = Math.max(200, startW + (ev.clientX - startMX));
+                        const newH = Math.max(120, startH + (ev.clientY - startMY));
                         floatingEl.style.width = newW + 'px';
+                        floatingEl.style.height = newH + 'px';
                     };
                     const onUp = () => {
                         document.removeEventListener('mousemove', onMove);

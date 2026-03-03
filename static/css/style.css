@@ -671,13 +671,13 @@ td a { color: var(--accent); text-decoration: none; }
     overflow: hidden;
     border: 1px solid var(--border);
     margin-top: 0;
-    margin-left: -2rem;
-    margin-right: -2rem;
     position: relative;
+    width: calc(100vw - var(--sidebar-width));
+    margin-left: -2rem;
 }
 .result-character + .player-controls {
+    width: calc(100vw - var(--sidebar-width));
     margin-left: -2rem;
-    margin-right: -2rem;
 }
 .result-character-fullscreen .result-character-viewport {
     height: calc(100vh - 160px);
@@ -887,9 +887,13 @@ td a { color: var(--accent); text-decoration: none; }
 .floating-video .video-overlay-wrapper {
     position: relative;
     width: 100%;
+    height: calc(100% - 28px);
+    overflow: hidden;
 }
 .floating-video .video-overlay-wrapper video {
     width: 100%;
+    height: 100%;
+    object-fit: contain;
     display: block;
 }
 .floating-video-resize {
