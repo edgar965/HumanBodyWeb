@@ -600,7 +600,7 @@ td a { color: var(--accent); text-decoration: none; }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 .result-header h1 { margin-bottom: 0; }
@@ -671,13 +671,19 @@ td a { color: var(--accent); text-decoration: none; }
     overflow: hidden;
     border: 1px solid var(--border);
     margin-top: 0;
+    margin-left: -2rem;
+    margin-right: -2rem;
     position: relative;
+}
+.result-character + .player-controls {
+    margin-left: -2rem;
+    margin-right: -2rem;
 }
 .result-character-fullscreen .result-character-viewport {
     height: calc(100vh - 160px);
 }
 .result-character-fullscreen .result-character-panel {
-    max-height: calc(100vh - 160px);
+    height: calc(100vh - 160px);
 }
 .viewport-controls {
     position: absolute;
@@ -751,14 +757,13 @@ td a { color: var(--accent); text-decoration: none; }
 .result-checkbox input { cursor: pointer; }
 
 .result-character-body {
-    display: flex;
-    gap: 0;
+    position: relative;
+    width: 100%;
 }
 
 .result-character-viewport {
     position: relative;
-    flex: 1;
-    min-width: 0;
+    width: 100%;
     height: 500px;
 }
 
@@ -768,15 +773,19 @@ td a { color: var(--accent); text-decoration: none; }
     height: 100%;
 }
 
-/* --- Side panel --- */
+/* --- Side panel (overlay) --- */
 .result-character-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
     width: 280px;
-    flex-shrink: 0;
+    height: 100%;
     overflow-y: auto;
-    max-height: 500px;
-    background: var(--bg-secondary);
+    background: rgba(20, 22, 34, 0.92);
     border-left: 1px solid var(--border);
     font-size: 0.8rem;
+    z-index: 5;
+    backdrop-filter: blur(6px);
 }
 
 /* Toggle bar */
