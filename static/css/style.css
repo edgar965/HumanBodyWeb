@@ -667,11 +667,60 @@ td a { color: var(--accent); text-decoration: none; }
 
 .result-character {
     background: var(--bg-card);
-    border-radius: 8px;
+    border-radius: 0;
     overflow: hidden;
     border: 1px solid var(--border);
-    margin-top: 1rem;
+    margin-top: 0;
+    position: relative;
 }
+.result-character-fullscreen .result-character-viewport {
+    height: calc(100vh - 160px);
+}
+.result-character-fullscreen .result-character-panel {
+    max-height: calc(100vh - 160px);
+}
+.viewport-controls {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 10;
+    display: flex;
+    gap: 4px;
+}
+.viewport-ctrl-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: rgba(30,30,40,0.7);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.viewport-ctrl-btn:hover { color: var(--text); border-color: var(--accent); }
+.viewport-resize-handle {
+    height: 6px;
+    cursor: ns-resize;
+    background: transparent;
+    position: relative;
+}
+.viewport-resize-handle::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.15s;
+}
+.viewport-resize-handle:hover::after { background: var(--accent); }
 
 .result-character-controls {
     display: flex;
@@ -750,6 +799,102 @@ td a { color: var(--accent); text-decoration: none; }
 }
 .rc-toggle-btn:hover { border-color: var(--accent); color: var(--text); }
 .rc-toggle-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Tab bar */
+.rc-tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.rc-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    user-select: none;
+    transition: color 0.15s;
+}
+.rc-tab:hover { color: var(--text); }
+.rc-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+.rc-tab-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+.rc-tab-pane { display: none; }
+.rc-tab-pane.active { display: block; }
+.rc-tab-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* Floating video window */
+.floating-video {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    width: 400px;
+    z-index: 1000;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+.floating-video.hidden { display: none; }
+.floating-video-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background: var(--bg-sidebar);
+    cursor: grab;
+    user-select: none;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+.floating-video-titlebar:active { cursor: grabbing; }
+.floating-video-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+}
+.floating-video-close:hover { color: #e74c3c; background: rgba(255,255,255,0.05); }
+.floating-video .video-overlay-wrapper {
+    position: relative;
+    width: 100%;
+}
+.floating-video .video-overlay-wrapper video {
+    width: 100%;
+    display: block;
+}
+.floating-video-resize {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 14px;
+    height: 14px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--text-muted) 50%);
+    opacity: 0.4;
+    border-radius: 0 0 6px 0;
+}
+.floating-video-resize:hover { opacity: 0.8; }
 
 /* Sections */
 .rc-section {

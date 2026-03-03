@@ -1393,6 +1393,21 @@ def job_result(request, job_id):
     return render(request, 'job_result.html', {'job': job})
 
 
+def standalone_result(request):
+    """Standalone result page with job dropdown selector."""
+    completed_jobs = BVHJob.objects.filter(status='complete').order_by('-created_at')
+    job = None
+    job_id = request.GET.get('job')
+    if job_id:
+        job = get_object_or_404(BVHJob, id=job_id, status='complete')
+    elif completed_jobs.exists():
+        job = completed_jobs.first()
+    return render(request, 'standalone_result.html', {
+        'job': job,
+        'jobs': completed_jobs,
+    })
+
+
 def serve_bvh_file(request, job_id):
     """Serve BVH file as HTTP response (file may be outside MEDIA_ROOT)."""
     job = get_object_or_404(BVHJob, id=job_id)
@@ -2300,21 +2315,15 @@ def app_settings_model(request):
             if s.progress_update_interval < 1:
                 s.progress_update_interval = 1
             s.default_model_config = request.POST.get('default_model_config', '').strip() or 'femaleWithClothes'
-            s.default_model_scene = request.POST.get('default_model_scene', '').strip() or 'femaleWithClothes'
             s.default_model_animations = request.POST.get('default_model_animations', '').strip() or 'femaleWithClothes'
             s.show_rig_config = request.POST.get('show_rig_config') == 'on'
-            s.show_rig_scene = request.POST.get('show_rig_scene') == 'on'
             s.show_rig_animations = request.POST.get('show_rig_animations') == 'on'
             s.default_anim_config = request.POST.get('default_anim_config', '').strip()
-            s.default_anim_scene = request.POST.get('default_anim_scene', '').strip()
             s.default_anim_animations = request.POST.get('default_anim_animations', '').strip()
             # Expanded panels — collect checked checkboxes per page
             config_panels = [k.replace('panel_config_', '') for k in request.POST
                              if k.startswith('panel_config_') and request.POST[k] == 'on']
-            scene_panels = [k.replace('panel_scene_', '') for k in request.POST
-                            if k.startswith('panel_scene_') and request.POST[k] == 'on']
             s.expanded_panels_config = json.dumps(config_panels)
-            s.expanded_panels_scene = json.dumps(scene_panels)
             s.save()
             messages.success(request, 'Settings saved.')
         except (ValueError, TypeError):
@@ -2322,6 +2331,30 @@ def app_settings_model(request):
         return redirect('settings_model')
     models_dir = str(settings.HUMANBODY_MODELS_DIR)
     return render(request, 'settings_model.html', {'settings': s, 'models_dir': models_dir})
+
+
+def app_settings_scene(request):
+    """Scene settings page (Szene defaults + selection opacity)."""
+    s = AppSettings.load()
+    if request.method == 'POST':
+        try:
+            s.default_model_scene = request.POST.get('default_model_scene', '').strip() or 'femaleWithClothes'
+            s.show_rig_scene = request.POST.get('show_rig_scene') == 'on'
+            s.default_anim_scene = request.POST.get('default_anim_scene', '').strip()
+            scene_panels = [k.replace('panel_scene_', '') for k in request.POST
+                            if k.startswith('panel_scene_') and request.POST[k] == 'on']
+            s.expanded_panels_scene = json.dumps(scene_panels)
+            opacity = float(request.POST.get('selection_opacity', 0.3))
+            s.selection_opacity = max(0.0, min(1.0, opacity))
+            s.save()
+            messages.success(request, 'Settings saved.')
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid value.')
+        return redirect('settings_scene')
+    return render(request, 'settings_scene.html', {
+        'settings': s,
+        'selection_opacity_pct': int(round(s.selection_opacity * 100)),
+    })
 
 
 def app_settings_videobvh(request):
@@ -2415,6 +2448,9 @@ def app_settings_videobvh_3d(request):
 
             # PromptHMR params
             s.prompthmr_static_camera = request.POST.get('prompthmr_static_camera') == 'on'
+
+            # Default model preset for result page
+            s.default_model_result = request.POST.get('default_model_result', 'femaleWithClothes').strip()
 
             # Video output directory
             s.video_output_dir = request.POST.get('video_output_dir', '').strip()

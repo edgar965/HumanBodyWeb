@@ -62,6 +62,9 @@
                     <a href="{% url 'processed' %}" class="{% if 'process/list' in request.path %}active{% endif %}">
                         <i class="fas fa-list"></i> <span>Verarbeitet</span>
                     </a>
+                    <a href="{% url 'standalone_result' %}" class="{% if request.path == '/process/result/' %}active{% endif %}">
+                        <i class="fas fa-play-circle"></i> <span>Result</span>
+                    </a>
                 </div>
             </div>
             <a href="{% url 'library' %}" class="{% if request.path|slice:':9' == '/library/' %}active{% endif %}">
@@ -78,6 +81,9 @@
                 <div class="sidebar-sub">
                     <a href="{% url 'settings_model' %}" class="{% if request.path == '/settings/model/' %}active{% endif %}">
                         <i class="fas fa-user"></i> <span>Modell</span>
+                    </a>
+                    <a href="{% url 'settings_scene' %}" class="{% if request.path == '/settings/scene/' %}active{% endif %}">
+                        <i class="fas fa-lightbulb"></i> <span>Szene</span>
                     </a>
                     <a href="{% url 'settings_videobvh_2d' %}" class="{% if request.path == '/settings/video-to-bvh-2d/' %}active{% endif %}">
                         <i class="fas fa-film"></i> <span>Video to BVH: 2D</span>
