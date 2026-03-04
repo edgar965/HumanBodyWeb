@@ -136,7 +136,7 @@ setTimeout(pollStatus, 2000);
 {% endif %}
 
 {% if job.bvh_file %}
-<script src="{% static 'js/bvh_viewer.js' %}"></script>
+<script src="{% static 'js/bvh_viewer.js' %}?t={% now "U" %}"></script>
 <script>
     initBVHViewer('bvhViewer', '{{ job.bvh_file }}');
 </script>

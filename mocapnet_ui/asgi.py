@@ -8,6 +8,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mocapnet_ui.settings')
 django_asgi_app = get_asgi_application()
 
 from core import routing
+from mocapnet_ui.no_cache import patch_static_handler
+patch_static_handler()
 
 
 # ---------------------------------------------------------------------------

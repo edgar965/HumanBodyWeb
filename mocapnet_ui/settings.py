@@ -115,6 +115,13 @@ HUMANBODY_ASSETS_GLB_DIR = HUMANBODY_ROOT / 'data' / 'assets_glb'
 HUMANBODY_ASSETS_INSTANCE_DIR = HUMANBODY_ROOT / 'data' / 'assetsInstance'
 HUMANBODY_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'
 BVH_RESULTS_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'Results'
+HUMANBODY_GARMENT_LIBRARY_DIR = HUMANBODY_ROOT / 'data' / 'garment_library'
+HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
+
+# Add assetCreator to Python path for GarmentFitter
+_asset_creator_parent = str(HUMANBODY_ROOT / 'assetCreator')
+if _asset_creator_parent not in sys.path:
+    sys.path.insert(0, _asset_creator_parent)
 
 # Logging — write to file so we can debug hidden-window server
 LOG_DIR = BASE_DIR / 'logs'
@@ -166,3 +173,28 @@ CHANNEL_LAYERS = {
         "BACKEND": "channels.layers.InMemoryChannelLayer"
     }
 }
+
+# Logging — show GarmentFitter INFO messages in console
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {'format': '%(asctime)s %(levelname)-8s %(name)s: %(message)s'},
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'GarmentFitter': {'handlers': ['console'], 'level': 'INFO'},
+        'core': {'handlers': ['console'], 'level': 'INFO'},
+    },
+}
+
+# Local overrides (not tracked in git — each team member has their own)
+try:
+    from .local_settings import *  # noqa: F401,F403
+except ImportError:
+    pass

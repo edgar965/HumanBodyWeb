@@ -158,6 +158,10 @@ class AppSettings(models.Model):
         max_length=200, default='femaleWithClothes', blank=True,
         help_text="Default model preset for Animationen page",
     )
+    default_model_result = models.CharField(
+        max_length=200, default='femaleWithClothes', blank=True,
+        help_text="Default model preset for Process result page",
+    )
     show_rig_config = models.BooleanField(default=False, help_text="Show rig by default on Konfiguration page")
     show_rig_scene = models.BooleanField(default=False, help_text="Show rig by default on Szene page")
     show_rig_animations = models.BooleanField(default=False, help_text="Show rig by default on Animationen page")
@@ -180,6 +184,10 @@ class AppSettings(models.Model):
     expanded_panels_scene = models.CharField(
         max_length=500, default='["beleuchtung","renderer","kamera","material_skin","aktionen"]', blank=True,
         help_text="JSON list of expanded panel keys for Szene page",
+    )
+    selection_opacity = models.FloatField(
+        default=0.3,
+        help_text="Selection highlight opacity (0.0–1.0)",
     )
 
     # --- Video to BVH: MediaPipe settings ---

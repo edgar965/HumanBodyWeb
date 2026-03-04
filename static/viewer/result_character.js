@@ -1,9 +1,9 @@
 /**
  * Result-page 3D Character viewer — syncs to video.currentTime.
  *
- * Full controls: body type, morphs (via WebSocket), cloth template/builder/primitive,
+ * Full controls: model preset, morphs (via WebSocket), cloth template/builder/primitive,
  * model/rig/clothes toggles, face bones checkbox.
- * Default: Female_Caucasian with clothes.
+ * Default: loaded from settings API (default_model_result preset).
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -75,8 +75,9 @@ function blenderToThreeCoords(buf) {
  * @param {string} opts.videoId   - id of the <video> element (master clock)
  * @param {string} opts.bvhUrl    - URL to the job-specific BVH file
  * @param {string} opts.panelId   - id of the side panel container
+ * @param {string} opts.modelSelectId - id of the header model preset <select>
  */
-export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, bodyTypeSelectId }) {
+export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, modelSelectId }) {
     const canvas = document.getElementById(canvasId);
     const video  = document.getElementById(videoId);
     const loadingEl = document.getElementById('characterLoading');
@@ -148,6 +149,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     let mixer = null;
     let currentAction = null;
     let currentBodyType = 'Female_Caucasian';
+    let currentPresetName = '';
     let cachedBvhResult = null;
     let cachedBvhFormat = null;
     let bvhClipDuration = 0;
@@ -163,6 +165,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     // Hair
     let hairMesh = null;
     let hairColorData = {};
+
+    // Garment meshes (MH garments, separate from cloth templates)
+    const garmentMeshes = {};
 
     // --- Resize ---
     function onResize() {
@@ -225,7 +230,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
                 try {
                     const msg = JSON.parse(event.data);
                     if (msg.type === 'reload_mesh') {
-                        reloadForBodyType(msg.body_type);
+                        _reloadBodyMesh(msg.body_type);
                     }
                 } catch (e) { /* ignore */ }
             }
@@ -260,6 +265,29 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         positions.array.set(newData);
         positions.needsUpdate = true;
         bodyGeometry.computeBoundingSphere();
+    }
+
+    // --- Fetch default preset name from settings ---
+    let defaultPresetName = 'femaleWithClothes';
+    try {
+        const settingsResp = await fetch('/api/settings/humanbody/');
+        const settingsData = await settingsResp.json();
+        if (settingsData.result) defaultPresetName = settingsData.result;
+    } catch (e) {
+        console.warn('[result_character] Failed to fetch settings, using default preset');
+    }
+
+    // --- Fetch preset data ---
+    let presetData = null;
+    try {
+        const presetResp = await fetch(`/api/character/model/${encodeURIComponent(defaultPresetName)}/`);
+        if (presetResp.ok) {
+            presetData = await presetResp.json();
+            if (presetData.body_type) currentBodyType = presetData.body_type;
+            currentPresetName = defaultPresetName;
+        }
+    } catch (e) {
+        console.warn('[result_character] Failed to fetch preset:', defaultPresetName);
     }
 
     // --- Load all data ---
@@ -302,18 +330,25 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     // Hide loading indicator
     if (loadingEl) loadingEl.style.display = 'none';
 
-    // --- Populate external body type dropdown ---
-    if (bodyTypeSelectId && morphData) {
-        const extSelect = document.getElementById(bodyTypeSelectId);
+    // --- Populate model preset dropdown (header) ---
+    if (modelSelectId) {
+        const extSelect = document.getElementById(modelSelectId);
         if (extSelect) {
-            (morphData.body_types || []).forEach(bt => {
-                const opt = document.createElement('option');
-                opt.value = bt;
-                opt.textContent = bt.replace(/_/g, ' ');
-                if (bt === currentBodyType) opt.selected = true;
-                extSelect.appendChild(opt);
-            });
-            extSelect.addEventListener('change', () => reloadForBodyType(extSelect.value));
+            try {
+                const modelsResp = await fetch('/api/character/models/');
+                const modelsData = await modelsResp.json();
+                extSelect.innerHTML = '';
+                (modelsData.presets || []).forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.name;
+                    opt.textContent = p.label || p.name;
+                    if (p.name === currentPresetName) opt.selected = true;
+                    extSelect.appendChild(opt);
+                });
+                extSelect.addEventListener('change', () => reloadForPreset(extSelect.value));
+            } catch (e) {
+                console.warn('[result_character] Failed to load model presets list');
+            }
         }
     }
 
@@ -345,8 +380,11 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         buildControlPanel(panel, morphData);
     }
 
-    // Load default clothes + hair after skinning
-    if (isSkinned) {
+    // Load preset's clothes + hair + garments after skinning
+    if (isSkinned && presetData) {
+        loadPresetClothAndHair(presetData);
+    } else if (isSkinned) {
+        // Fallback: hardcoded defaults if preset fetch failed
         loadCloth('tpl_TPL_TSHIRT', {
             method: 'template', template: 'TPL_TSHIRT',
             segments: 32, tightness: 0.5, top_extend: 0, bottom_extend: 0,
@@ -355,12 +393,129 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             method: 'template', template: 'TPL_PANTS',
             segments: 32, tightness: 0.5, top_extend: 0, bottom_extend: 0,
         });
-        // Load default hairstyle (ballerina, matching ModelWithClothes.py)
         if (hairData && hairData.hairstyles) {
             const defaultHair = hairData.hairstyles.find(h => h.name === 'ballerina')
                              || hairData.hairstyles[0];
             if (defaultHair) loadHair(defaultHair.url);
         }
+    }
+
+    // =====================================================================
+    // Preset loading
+    // =====================================================================
+
+    /**
+     * Load cloth, hair, and garments from a preset data object.
+     * Removes all existing cloth/hair/garments first.
+     */
+    function loadPresetClothAndHair(preset) {
+        removeAllCloth();
+        removeAllGarments();
+        removeHair();
+
+        // 1. Load cloth templates
+        if (preset.cloth && preset.cloth.length > 0) {
+            for (const c of preset.cloth) {
+                const tpl = c.template || 'TPL_TSHIRT';
+                const params = {
+                    method: 'template',
+                    template: tpl,
+                    segments: c.segments || 32,
+                    tightness: c.tightness !== undefined ? c.tightness : 0.5,
+                    top_extend: c.top_extend || 0,
+                    bottom_extend: c.bottom_extend || 0,
+                };
+                if (c.color) params.color = c.color;
+                loadCloth(`tpl_${tpl}`, params, c.color);
+            }
+        }
+
+        // 2. Load hairstyle
+        if (preset.hair_style && preset.hair_style.url) {
+            loadHair(preset.hair_style.url);
+            // Apply hair color after a short delay for the GLTF to load
+            if (preset.hair_style.color && hairColorData[preset.hair_style.color]) {
+                setTimeout(() => {
+                    if (hairMesh) applyHairColorToMesh(hairMesh, preset.hair_style.color);
+                }, 1000);
+            }
+        } else if (hairData && hairData.hairstyles) {
+            // Fallback: load first available hairstyle
+            const defaultHair = hairData.hairstyles.find(h => h.name === 'ballerina')
+                             || hairData.hairstyles[0];
+            if (defaultHair) loadHair(defaultHair.url);
+        }
+
+        // 3. Load MH garments
+        if (preset.garments && preset.garments.length > 0) {
+            const loadGarments = async () => {
+                for (const g of preset.garments) {
+                    await loadGarment(g.id, {
+                        offset: g.offset || 0.006,
+                        stiffness: g.stiffness || 0.8,
+                        color: g.color,
+                        roughness: g.roughness,
+                        metalness: g.metalness,
+                    });
+                }
+            };
+            // Delay slightly to let body mesh settle
+            setTimeout(() => loadGarments(), 800);
+        }
+    }
+
+    /**
+     * Switch to a different model preset.
+     * Fetches preset data, reloads body if type changed, then loads cloth/hair/garments.
+     */
+    async function reloadForPreset(presetName) {
+        if (presetName === currentPresetName) return;
+
+        if (loadingEl) {
+            loadingEl.style.display = '';
+            loadingEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Lade Modell...';
+        }
+
+        try {
+            const resp = await fetch(`/api/character/model/${encodeURIComponent(presetName)}/`);
+            if (!resp.ok) {
+                console.error('[result_character] Failed to load preset:', presetName);
+                if (loadingEl) loadingEl.style.display = 'none';
+                return;
+            }
+            const preset = await resp.json();
+            currentPresetName = presetName;
+
+            // Update header dropdown
+            if (modelSelectId) {
+                const extSelect = document.getElementById(modelSelectId);
+                if (extSelect && extSelect.value !== presetName) extSelect.value = presetName;
+            }
+            // Update side panel dropdown
+            const panelSelect = document.getElementById('rc-model-preset');
+            if (panelSelect && panelSelect.value !== presetName) panelSelect.value = presetName;
+
+            const newBodyType = preset.body_type || 'Female_Caucasian';
+
+            if (newBodyType !== currentBodyType) {
+                // Body type changed — full mesh reload
+                await _reloadBodyMesh(newBodyType);
+            } else {
+                // Same body type — just remove old cloth/hair/garments
+                removeAllCloth();
+                removeAllGarments();
+                removeHair();
+            }
+
+            // Load preset's cloth/hair/garments
+            if (isSkinned) {
+                loadPresetClothAndHair(preset);
+            }
+        } catch (e) {
+            console.error('[result_character] Preset switch failed:', e);
+        }
+
+        if (loadingEl) loadingEl.style.display = 'none';
     }
 
     // =====================================================================
@@ -410,6 +565,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             for (const m of Object.values(clothMeshes)) {
                 if (m) m.visible = clothesVisible;
             }
+            for (const m of Object.values(garmentMeshes)) {
+                if (m) m.visible = clothesVisible;
+            }
             clothBtn.classList.toggle('active', clothesVisible);
         });
         toggleBar.appendChild(clothBtn);
@@ -424,24 +582,176 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         });
         toggleBar.appendChild(hairBtn);
 
+        // Video floating window toggle
+        const floatingEl = document.getElementById('floatingVideo');
+        if (floatingEl) {
+            const videoBtn = el('button', 'rc-toggle-btn active');
+            videoBtn.innerHTML = '<i class="fas fa-video"></i> Original';
+            videoBtn.addEventListener('click', () => {
+                floatingEl.classList.toggle('hidden');
+                videoBtn.classList.toggle('active', !floatingEl.classList.contains('hidden'));
+            });
+            toggleBar.appendChild(videoBtn);
+
+            // Close button hides + deactivates toggle
+            const closeBtn = document.getElementById('floatingVideoClose');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    floatingEl.classList.add('hidden');
+                    videoBtn.classList.remove('active');
+                });
+            }
+
+            // Drag by titlebar
+            const titlebar = document.getElementById('floatingVideoTitlebar');
+            if (titlebar) {
+                let dragX = 0, dragY = 0, startX = 0, startY = 0;
+                titlebar.addEventListener('mousedown', (e) => {
+                    if (e.target.closest('.floating-video-close')) return;
+                    e.preventDefault();
+                    startX = e.clientX; startY = e.clientY;
+                    const onMove = (ev) => {
+                        dragX = ev.clientX - startX; dragY = ev.clientY - startY;
+                        startX = ev.clientX; startY = ev.clientY;
+                        const rect = floatingEl.getBoundingClientRect();
+                        floatingEl.style.left = rect.left + dragX + 'px';
+                        floatingEl.style.top = rect.top + dragY + 'px';
+                        floatingEl.style.bottom = 'auto';
+                    };
+                    const onUp = () => {
+                        document.removeEventListener('mousemove', onMove);
+                        document.removeEventListener('mouseup', onUp);
+                    };
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                });
+            }
+
+            // Resize handle (corner drag — width + height)
+            const resizeHandle = document.getElementById('floatingVideoResize');
+            if (resizeHandle) {
+                resizeHandle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const startW = floatingEl.offsetWidth;
+                    const startH = floatingEl.offsetHeight;
+                    const startMX = e.clientX;
+                    const startMY = e.clientY;
+                    const onMove = (ev) => {
+                        const newW = Math.max(200, startW + (ev.clientX - startMX));
+                        const newH = Math.max(120, startH + (ev.clientY - startMY));
+                        floatingEl.style.width = newW + 'px';
+                        floatingEl.style.height = newH + 'px';
+                    };
+                    const onUp = () => {
+                        document.removeEventListener('mousemove', onMove);
+                        document.removeEventListener('mouseup', onUp);
+                    };
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                });
+            }
+
+            // Start visible
+        }
+
+        // 3D viewport fullscreen toggle + resize
+        const charContainer = document.getElementById('resultCharacter');
+        const charViewport = document.getElementById('characterViewport');
+        const fsBtn = document.getElementById('btnViewportFullscreen');
+        const resizeHandle = document.getElementById('viewportResizeHandle');
+
+        if (fsBtn && charContainer && charViewport) {
+            let isFullscreen = true; // starts fullscreen
+            let customHeight = null;
+
+            fsBtn.addEventListener('click', () => {
+                isFullscreen = !isFullscreen;
+                if (isFullscreen) {
+                    charContainer.classList.add('result-character-fullscreen');
+                    charViewport.style.height = '';
+                    customHeight = null;
+                    fsBtn.innerHTML = '<i class="fas fa-expand"></i>';
+                } else {
+                    charContainer.classList.remove('result-character-fullscreen');
+                    charViewport.style.height = (customHeight || 500) + 'px';
+                    fsBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                }
+                // Trigger Three.js resize
+                window.dispatchEvent(new Event('resize'));
+            });
+
+            if (resizeHandle) {
+                resizeHandle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    const startY = e.clientY;
+                    const startH = charViewport.offsetHeight;
+                    // Switch to manual mode on drag
+                    if (isFullscreen) {
+                        isFullscreen = false;
+                        charContainer.classList.remove('result-character-fullscreen');
+                        fsBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                    }
+                    const onMove = (ev) => {
+                        const newH = Math.max(250, startH + (ev.clientY - startY));
+                        charViewport.style.height = newH + 'px';
+                        customHeight = newH;
+                        window.dispatchEvent(new Event('resize'));
+                    };
+                    const onUp = () => {
+                        document.removeEventListener('mousemove', onMove);
+                        document.removeEventListener('mouseup', onUp);
+                    };
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                });
+            }
+        }
+
         container.appendChild(toggleBar);
 
-        // --- Body Type ---
-        const btSection = makeSection('Body Type', true);
-        const btSelect = el('select', 'rc-select');
-        btSelect.id = 'rc-body-type';
-        (data.body_types || []).forEach(bt => {
-            const opt = document.createElement('option');
-            opt.value = bt;
-            opt.textContent = bt.replace(/_/g, ' ');
-            if (bt === currentBodyType) opt.selected = true;
-            btSelect.appendChild(opt);
-        });
-        btSelect.addEventListener('change', () => reloadForBodyType(btSelect.value));
-        btSection.body.appendChild(btSelect);
-        container.appendChild(btSection.el);
+        // --- Tab bar ---
+        const tabBar = el('div', 'rc-tab-bar');
+        const tabEigen = el('div', 'rc-tab active');
+        tabEigen.textContent = 'Eigenschaften';
+        tabEigen.dataset.tab = 'eigenschaften';
+        const tabAssets = el('div', 'rc-tab');
+        tabAssets.textContent = 'Assets';
+        tabAssets.dataset.tab = 'assets';
+        const tabAnim = el('div', 'rc-tab');
+        tabAnim.textContent = 'Animation';
+        tabAnim.dataset.tab = 'animation';
+        const tabScene = el('div', 'rc-tab');
+        tabScene.textContent = 'Szene';
+        tabScene.dataset.tab = 'szene';
+        tabBar.append(tabEigen, tabAssets, tabAnim, tabScene);
+        container.appendChild(tabBar);
 
-        // --- Morphs ---
+        // --- Tab content ---
+        const tabContent = el('div', 'rc-tab-content');
+
+        // === Eigenschaften tab ===
+        const eigenPane = el('div', 'rc-tab-pane active');
+        eigenPane.id = 'rc-tab-eigenschaften';
+
+        // Model Preset
+        const presetSection = makeSection('Modell', true);
+        const presetSelect = el('select', 'rc-select');
+        presetSelect.id = 'rc-model-preset';
+        fetch('/api/character/models/').then(r => r.json()).then(modelsData => {
+            (modelsData.presets || []).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.textContent = p.label || p.name;
+                if (p.name === currentPresetName) opt.selected = true;
+                presetSelect.appendChild(opt);
+            });
+        }).catch(() => {});
+        presetSelect.addEventListener('change', () => reloadForPreset(presetSelect.value));
+        presetSection.body.appendChild(presetSelect);
+        eigenPane.appendChild(presetSection.el);
+
+        // Morphs
         const morphSection = makeSection('Morphs', false);
         const resetBtn = el('button', 'rc-btn-sm');
         resetBtn.textContent = 'Reset';
@@ -496,12 +806,16 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             catDiv.appendChild(catBody);
             morphSection.body.appendChild(catDiv);
         });
-        container.appendChild(morphSection.el);
+        eigenPane.appendChild(morphSection.el);
+        tabContent.appendChild(eigenPane);
 
-        // --- Cloth Template ---
+        // === Assets tab ===
+        const assetsPane = el('div', 'rc-tab-pane');
+        assetsPane.id = 'rc-tab-assets';
+
+        // Cloth Template
         const clothSection = makeSection('Cloth - Template', true);
 
-        // Template type select
         const tplRow = el('div', 'rc-slider-row');
         const tplLabel = el('label', ''); tplLabel.textContent = 'Template';
         const tplSelect = el('select', 'rc-select');
@@ -509,7 +823,6 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         tplRow.append(tplLabel, tplSelect);
         clothSection.body.appendChild(tplRow);
 
-        // Sliders
         const segSlider = makeSliderRow('Segments', 'rc-cloth-segments', 16, 64, 32, 2, v => v);
         const tightSlider = makeSliderRow('Tightness', 'rc-cloth-tightness', 0, 100, 50, 1, v => (v/100).toFixed(2));
         const topSlider = makeSliderRow('Top', 'rc-cloth-top', -30, 30, 0, 1, v => (v/100).toFixed(2) + ' m');
@@ -517,7 +830,6 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
 
         clothSection.body.append(segSlider.row, tightSlider.row, topSlider.row, botSlider.row);
 
-        // Color
         const colorRow = el('div', 'rc-slider-row');
         const colorLabel = el('label', ''); colorLabel.textContent = 'Color';
         const colorInput = document.createElement('input');
@@ -526,7 +838,6 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         colorRow.append(colorLabel, colorInput);
         clothSection.body.appendChild(colorRow);
 
-        // Buttons
         const clothBtns = el('div', 'rc-btn-row');
         const createBtn = el('button', 'rc-btn'); createBtn.innerHTML = '<i class="fas fa-plus"></i> Create';
         const updateBtn = el('button', 'rc-btn'); updateBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Update';
@@ -561,9 +872,8 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
 
         clothBtns.append(createBtn, updateBtn, deleteBtn, removeAllBtn);
         clothSection.body.appendChild(clothBtns);
-        container.appendChild(clothSection.el);
+        assetsPane.appendChild(clothSection.el);
 
-        // Load cloth regions data to populate template select
         fetch('/api/character/cloth/regions/').then(r => r.json()).then(d => {
             (d.templates || []).forEach(t => {
                 const opt = document.createElement('option');
@@ -571,6 +881,37 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
                 tplSelect.appendChild(opt);
             });
         }).catch(() => {});
+
+        tabContent.appendChild(assetsPane);
+
+        // === Animation tab ===
+        const animPane = el('div', 'rc-tab-pane');
+        animPane.id = 'rc-tab-animation';
+        const animEmpty = el('div', 'rc-tab-empty');
+        animEmpty.innerHTML = '<i class="fas fa-running" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>Animation wird vom Video gesteuert';
+        animPane.appendChild(animEmpty);
+        tabContent.appendChild(animPane);
+
+        // === Szene tab ===
+        const scenePane = el('div', 'rc-tab-pane');
+        scenePane.id = 'rc-tab-szene';
+        const sceneEmpty = el('div', 'rc-tab-empty');
+        sceneEmpty.innerHTML = '<i class="fas fa-lightbulb" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>Szene-Einstellungen';
+        scenePane.appendChild(sceneEmpty);
+        tabContent.appendChild(scenePane);
+
+        container.appendChild(tabContent);
+
+        // --- Tab switching ---
+        tabBar.querySelectorAll('.rc-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabBar.querySelectorAll('.rc-tab').forEach(t => t.classList.remove('active'));
+                tabContent.querySelectorAll('.rc-tab-pane').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                const pane = document.getElementById('rc-tab-' + tab.dataset.tab);
+                if (pane) pane.classList.add('active');
+            });
+        });
     }
 
     // =====================================================================
@@ -610,20 +951,12 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     }
 
     // =====================================================================
-    // Body type switching
+    // Body mesh reload (internal — used by preset switching)
     // =====================================================================
 
-    async function reloadForBodyType(newType) {
+    async function _reloadBodyMesh(newType) {
         if (newType === currentBodyType) return;
         currentBodyType = newType;
-
-        // Update dropdowns if they exist
-        const btSelect = document.getElementById('rc-body-type');
-        if (btSelect && btSelect.value !== newType) btSelect.value = newType;
-        if (bodyTypeSelectId) {
-            const extSelect = document.getElementById(bodyTypeSelectId);
-            if (extSelect && extSelect.value !== newType) extSelect.value = newType;
-        }
 
         // Stop animation
         if (mixer) { mixer.stopAllAction(); mixer = null; currentAction = null; }
@@ -641,14 +974,10 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         isSkinned = false;
         if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
 
-        // Remove clothes + hair (topology mismatch)
+        // Remove clothes + hair + garments (topology mismatch)
         removeAllCloth();
+        removeAllGarments();
         removeHair();
-
-        if (loadingEl) {
-            loadingEl.style.display = '';
-            loadingEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Lade ' + newType.replace(/_/g, ' ') + '...';
-        }
 
         try {
             await Promise.all([
@@ -667,31 +996,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             if (isSkinned && cachedBvhResult) {
                 applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
             }
-
-            // Recreate default clothes + hair
-            if (isSkinned) {
-                if (!newType.startsWith('Male_')) {
-                    loadCloth('tpl_TPL_TSHIRT', {
-                        method: 'template', template: 'TPL_TSHIRT',
-                        segments: 32, tightness: 0.5, top_extend: 0, bottom_extend: 0,
-                    });
-                    loadCloth('tpl_TPL_PANTS', {
-                        method: 'template', template: 'TPL_PANTS',
-                        segments: 32, tightness: 0.5, top_extend: 0, bottom_extend: 0,
-                    });
-                }
-                // Reload hair
-                if (hairData && hairData.hairstyles) {
-                    const defaultHair = hairData.hairstyles.find(h => h.name === 'ballerina')
-                                     || hairData.hairstyles[0];
-                    if (defaultHair) loadHair(defaultHair.url);
-                }
-            }
         } catch (e) {
             console.error('[result_character] Body type switch failed:', e);
         }
-
-        if (loadingEl) loadingEl.style.display = 'none';
     }
 
     // =====================================================================
@@ -896,10 +1203,10 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     }
 
     // =====================================================================
-    // Cloth
+    // Cloth (templates)
     // =====================================================================
 
-    async function loadCloth(key, params) {
+    async function loadCloth(key, params, presetColor) {
         if (!isSkinned || !defSkeleton) return;
 
         try {
@@ -922,10 +1229,16 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
             geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
 
-            const colorPicker = document.getElementById('rc-cloth-color');
-            const matColor = colorPicker
-                ? new THREE.Color(colorPicker.value)
-                : new THREE.Color(data.color[0], data.color[1], data.color[2]);
+            // Use preset color if provided, else color picker, else API color
+            let matColor;
+            if (presetColor) {
+                matColor = new THREE.Color(presetColor);
+            } else {
+                const colorPicker = document.getElementById('rc-cloth-color');
+                matColor = colorPicker
+                    ? new THREE.Color(colorPicker.value)
+                    : new THREE.Color(data.color[0], data.color[1], data.color[2]);
+            }
 
             const mat = new THREE.MeshStandardMaterial({
                 color: matColor, roughness: 0.8, metalness: 0.0,
@@ -965,6 +1278,96 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     function removeAllCloth() {
         for (const key of Object.keys(clothMeshes)) {
             removeClothRegion(key);
+        }
+    }
+
+    // =====================================================================
+    // MH Garments
+    // =====================================================================
+
+    async function loadGarment(garmentId, opts = {}) {
+        if (!isSkinned || !defSkeleton) return;
+
+        try {
+            const offset = opts.offset !== undefined ? opts.offset : 0.006;
+            const stiffness = opts.stiffness !== undefined ? opts.stiffness : 0.8;
+
+            // Build color params
+            let cr = 0.3, cg = 0.35, cb = 0.5;
+            if (Array.isArray(opts.color)) {
+                cr = opts.color[0]; cg = opts.color[1]; cb = opts.color[2];
+            } else if (typeof opts.color === 'string') {
+                const c = new THREE.Color(opts.color);
+                cr = c.r; cg = c.g; cb = c.b;
+            }
+
+            let qs = `garment_id=${encodeURIComponent(garmentId)}&body_type=${encodeURIComponent(currentBodyType)}`;
+            qs += `&offset=${offset}&stiffness=${stiffness}`;
+            qs += `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
+
+            const resp = await fetch(`/api/character/garment/fit/?${qs}`);
+            const data = await resp.json();
+            if (data.error) {
+                console.error('Garment fit error:', data.error);
+                return;
+            }
+
+            removeGarment(garmentId);
+
+            const vertBuf = base64ToFloat32(data.vertices);
+            blenderToThreeCoords(vertBuf);
+            const faceBuf = base64ToUint32(data.faces);
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+            geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+            geo.computeVertexNormals();
+
+            const matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
+            const roughness = opts.roughness !== undefined ? opts.roughness : 0.8;
+            const metalness = opts.metalness !== undefined ? opts.metalness : 0.0;
+            const mat = new THREE.MeshStandardMaterial({
+                color: matColor, roughness, metalness,
+                side: THREE.DoubleSide,
+                polygonOffset: true,
+                polygonOffsetFactor: -1,
+                polygonOffsetUnit: -1,
+            });
+
+            let mesh;
+            if (data.skin_indices && data.skin_weights) {
+                const siBuf = base64ToFloat32(data.skin_indices);
+                const swBuf = base64ToFloat32(data.skin_weights);
+                geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
+                geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
+                mesh = new THREE.SkinnedMesh(geo, mat);
+                mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            } else {
+                mesh = new THREE.Mesh(geo, mat);
+            }
+
+            mesh.visible = clothesVisible;
+            garmentMeshes[garmentId] = mesh;
+            scene.add(mesh);
+            console.log('[result_character] Garment loaded:', garmentId);
+        } catch (e) {
+            console.error('Failed to load garment:', e);
+        }
+    }
+
+    function removeGarment(garmentId) {
+        const m = garmentMeshes[garmentId];
+        if (m) {
+            scene.remove(m);
+            m.geometry.dispose();
+            m.material.dispose();
+            delete garmentMeshes[garmentId];
+        }
+    }
+
+    function removeAllGarments() {
+        for (const key of Object.keys(garmentMeshes)) {
+            removeGarment(key);
         }
     }
 

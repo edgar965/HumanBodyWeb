@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{{ job.name }} - Result{% endblock %}
+{% block title %}Result{% endblock %}
 
 {% block extra_head %}
+<style>.main-content { max-width: none !important; padding: 1rem 2rem; }</style>
 <script type="importmap">
 {
   "imports": {
@@ -15,11 +16,21 @@
 
 {% block content %}
 <div class="result-header">
-    <h1>{{ job.name }}</h1>
+    <h1>Result</h1>
     <div class="result-header-actions">
-        <a href="{% url 'job_status' job.id %}" class="btn btn-secondary btn-sm">
-            <i class="fas fa-arrow-left"></i> Back
+        <select id="jobSelector" class="result-body-select" style="min-width:250px;margin-right:0.5rem;" onchange="if(this.value) window.location.href='?job='+this.value">
+            {% for j in jobs %}
+            <option value="{{ j.id }}" {% if job and j.id == job.id %}selected{% endif %}>
+                {{ j.name }} ({{ j.created_at|date:"d.m.Y H:i" }})
+            </option>
+            {% empty %}
+            <option value="">Keine abgeschlossenen Jobs</option>
+            {% endfor %}
+        </select>
+        <a href="{% url 'processed' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-list"></i> Alle Jobs
         </a>
+        {% if job %}
         {% if job.bvh_file %}
         <a href="{% url 'serve_bvh' job.id %}" class="btn btn-primary btn-sm" download title="Download BVH">
             <i class="fas fa-download"></i> BVH
@@ -38,23 +49,28 @@
         </button>
         {% endif %}
         {% endif %}
+        {% endif %}
     </div>
 </div>
 
-<div class="result-layout">
-    <div class="result-panel">
-        <div class="panel-label"><i class="fas fa-video"></i> Video + Skeleton Overlay</div>
-        <div class="video-overlay-wrapper">
-            <video id="resultVideo" preload="auto" muted>
-                <source src="{{ job.video_file.url }}" type="video/mp4">
-            </video>
-            <div id="skeletonOverlay" class="skeleton-overlay"></div>
+{% if job %}
+{% if job.bvh_file %}
+<div class="result-character result-character-fullscreen" id="resultCharacter">
+    <div class="result-character-body">
+        <div class="result-character-viewport" id="characterViewport">
+            <canvas id="characterCanvas"></canvas>
+            <div id="characterLoading" class="character-loading">
+                <i class="fas fa-spinner fa-spin"></i> Lade 3D Character...
+            </div>
+            <div class="viewport-controls">
+                <button class="viewport-ctrl-btn" id="btnViewportFullscreen" title="Fullscreen umschalten">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
         </div>
+        <div class="result-character-panel" id="characterPanel"></div>
     </div>
-    <div class="result-panel">
-        <div class="panel-label"><i class="fas fa-bone"></i> 3D Skeleton</div>
-        <div id="skeletonCanvas"></div>
-    </div>
+    <div class="viewport-resize-handle" id="viewportResizeHandle"></div>
 </div>
 
 <div class="player-controls">
@@ -85,34 +101,34 @@
         </span>
     </div>
 </div>
+{% endif %}
 
-{% if job.bvh_file %}
-<div class="result-character">
-    <div class="panel-label"><i class="fas fa-user"></i> 3D Character</div>
-    <div class="result-character-controls">
-        <label>Modell:</label>
-        <select id="resultModelPreset" class="result-body-select"></select>
-        <button class="btn btn-sm btn-secondary" id="btnToggleHair" style="margin-left:auto;padding:0.15rem 0.5rem;font-size:0.75rem;">
-            <i class="fas fa-hat-wizard"></i> Hair
-        </button>
-        <label class="result-checkbox">
-            <input type="checkbox" id="footCorrection"> Foot Fix
-        </label>
+<div id="floatingVideo" class="floating-video">
+    <div class="floating-video-titlebar" id="floatingVideoTitlebar">
+        <span><i class="fas fa-video"></i> Video + Skeleton</span>
+        <button class="floating-video-close" id="floatingVideoClose" title="Schließen"><i class="fas fa-times"></i></button>
     </div>
-    <div class="result-character-body">
-        <div class="result-character-viewport">
-            <canvas id="characterCanvas"></canvas>
-            <div id="characterLoading" class="character-loading">
-                <i class="fas fa-spinner fa-spin"></i> Lade 3D Character...
-            </div>
-        </div>
-        <div class="result-character-panel" id="characterPanel"></div>
+    <div class="video-overlay-wrapper">
+        <video id="resultVideo" preload="auto" muted>
+            <source src="{{ job.video_file.url }}" type="video/mp4">
+        </video>
+        <div id="skeletonOverlay" class="skeleton-overlay"></div>
     </div>
+    <div class="floating-video-resize" id="floatingVideoResize"></div>
+</div>
+<div id="skeletonCanvas" style="display:none;"></div>
+
+{% else %}
+<div style="text-align:center;padding:4rem 2rem;color:#888;">
+    <i class="fas fa-inbox" style="font-size:3rem;margin-bottom:1rem;display:block;"></i>
+    <p style="font-size:1.1rem;">Keine abgeschlossenen Jobs vorhanden.</p>
+    <p>Verarbeite zuerst ein Video unter <a href="{% url 'upload' %}">Process Videos</a>.</p>
 </div>
 {% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
+{% if job %}
 <script type="module">
 try {
     const { initBVHPlayer } = await import('{% static "js/bvh_player.js" %}?t={% now "U" %}');
@@ -177,7 +193,6 @@ async function recordVideo3D() {
     progressLabel.style.cssText = 'min-width:36px;text-align:right;';
     const recDot = document.createElement('span');
     recDot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:#e74c3c;animation:recPulse 1s infinite;';
-    // Add pulse animation
     if (!document.getElementById('recPulseStyle')) {
         const style = document.createElement('style');
         style.id = 'recPulseStyle';
@@ -188,20 +203,16 @@ async function recordVideo3D() {
     viewport.style.position = 'relative';
     viewport.appendChild(progressBar);
 
-    // Disable button, show recording state
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-circle" style="color:#e74c3c"></i> Aufnahme...';
 
-    // Pause and seek to start
     video.pause();
     video.currentTime = 0;
     await new Promise(r => { video.onseeked = r; });
 
-    // Wait for the 3D scene to update
     await new Promise(r => requestAnimationFrame(r));
     await new Promise(r => requestAnimationFrame(r));
 
-    // Start recording the canvas
     const stream = canvas.captureStream(fps);
     const chunks = [];
     const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
@@ -214,7 +225,6 @@ async function recordVideo3D() {
         recorder.onstop = resolve;
     });
 
-    // Update progress bar during playback
     let progressRAF;
     function updateProgress() {
         if (video.duration > 0) {
@@ -243,17 +253,14 @@ async function recordVideo3D() {
     progressFill.style.width = '100%';
     progressLabel.textContent = '100%';
 
-    // Stop recording if still active
     if (recorder.state === 'recording') {
         recorder.stop();
     }
 
     await recordingDone;
 
-    // Create blob and save to server + download
     const blob = new Blob(chunks, { type: mimeType });
 
-    // Upload to server (save to video_output_dir)
     const formData = new FormData();
     formData.append('video', blob, '{{ job.name }}_3d_character.webm');
     try {
@@ -272,7 +279,6 @@ async function recordVideo3D() {
         console.warn('Video3D upload failed:', err);
     }
 
-    // Also trigger browser download
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -282,7 +288,6 @@ async function recordVideo3D() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    // Cleanup
     await new Promise(r => setTimeout(r, 1500));
     progressBar.remove();
     btn.disabled = false;
@@ -290,5 +295,6 @@ async function recordVideo3D() {
     video.pause();
 }
 </script>
+{% endif %}
 {% endif %}
 {% endblock %}

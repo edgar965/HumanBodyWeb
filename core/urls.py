@@ -8,6 +8,7 @@ urlpatterns = [
     path('process/', views.upload_video, name='upload'),
     path('process/v4/', views.upload_video_v4, name='upload_v4'),
     path('process/list/', views.processed_list, name='processed'),
+    path('process/result/', views.standalone_result, name='standalone_result'),
     path('process/<uuid:job_id>/', views.job_status, name='job_status'),
     path('process/<uuid:job_id>/start/', views.start_processing, name='start_processing'),
     path('process/<uuid:job_id>/stop/', views.stop_processing, name='stop_processing'),
@@ -27,6 +28,7 @@ urlpatterns = [
     path('webcam/', views.webcam, name='webcam'),
     path('settings/', views.app_settings, name='settings'),
     path('settings/model/', views.app_settings_model, name='settings_model'),
+    path('settings/scene/', views.app_settings_scene, name='settings_scene'),
     path('settings/video-to-bvh/', views.app_settings_videobvh, name='settings_videobvh'),
     path('settings/video-to-bvh-2d/', views.app_settings_videobvh_2d, name='settings_videobvh_2d'),
     path('settings/video-to-bvh-3d/', views.app_settings_videobvh_3d, name='settings_videobvh_3d'),
@@ -63,6 +65,10 @@ urlpatterns = [
     path('api/character/skin-weights/', character_api.character_skin_weights, name='character_skin_weights'),
     path('api/character/wardrobe/', character_api.character_wardrobe, name='character_wardrobe'),
     path('api/character/animations/', character_api.character_animations, name='character_animations'),
+    path('api/character/model-files/', character_api.model_files, name='model_files'),
+    path('api/character/scenes/', character_api.scene_list, name='scene_list'),
+    path('api/character/scene/save/', character_api.scene_save, name='scene_save'),
+    path('api/character/scene/<str:name>/', character_api.scene_detail, name='scene_detail'),
     path('api/character/models/', character_api.character_models, name='character_models'),
     path('api/character/model/save/', character_api.character_model_save, name='character_model_save'),
     path('api/character/model/<str:name>/', character_api.character_model_detail, name='character_model_detail'),
@@ -81,6 +87,15 @@ urlpatterns = [
     # Hair
     path('api/character/hairstyles/', character_api.character_hairstyles, name='character_hairstyles'),
     path('api/character/hairstyle/<str:name>/', character_api.character_hairstyle_glb, name='character_hairstyle_glb'),
+
+    # Garment Fitter
+    path('api/character/garment/library/', character_api.garment_library, name='garment_library'),
+    path('api/character/garment/library/rescan/', character_api.garment_library_rescan, name='garment_library_rescan'),
+    path('api/character/garment/fit/', character_api.garment_fit, name='garment_fit'),
+    path('api/character/garment/export/', character_api.garment_export, name='garment_export'),
+    path('api/character/garment/download/available/', character_api.garment_download_available, name='garment_download_available'),
+    path('api/character/garment/download/', character_api.garment_download, name='garment_download'),
+    path('api/character/garment/thumb/<path:garment_path>/', character_api.garment_thumbnail, name='garment_thumbnail'),
 
     # Test Character API (isolated version from TestCharakter/)
     path('api/character-test/mesh/', test_character_api.test_character_mesh, name='test_character_mesh'),

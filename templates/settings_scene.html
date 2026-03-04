@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Szene - Einstellungen{% endblock %}
+
+{% block content %}
+<h1>Einstellungen — Szene</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="settings-card">
+        <h2><i class="fas fa-lightbulb"></i> Szene</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Standard-Modell</strong>
+                <small>Modell das beim Öffnen der Szene-Seite geladen wird.</small>
+            </div>
+            <div class="settings-input">
+                <select name="default_model_scene" id="default-model-scene" class="settings-select">
+                    <option value="">— wird geladen —</option>
+                </select>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Anzeige mit Rig</small>
+            </div>
+            <div class="settings-input">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="show_rig_scene" {% if settings.show_rig_scene %}checked{% endif %}>
+                    Rig beim Start anzeigen
+                </label>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Default Animation</small>
+            </div>
+            <div class="settings-input" style="display:flex;gap:8px;align-items:center;">
+                <select name="default_anim_scene" id="default-anim-scene" class="settings-select" style="flex:1;">
+                    <option value="">— keine —</option>
+                </select>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Ausgeklappte Tabs</small>
+            </div>
+            <div class="settings-input" id="panels-scene-wrap">
+                <!-- populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-eye"></i> Selektion</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Selection Opacity</strong>
+                <small>Stärke der Hervorhebung beim Auswählen/Hovern von Modellen und Assets (0–100%).</small>
+            </div>
+            <div class="settings-input" style="display:flex;gap:12px;align-items:center;">
+                <input type="range" name="selection_opacity_pct" id="selection-opacity-range"
+                       min="0" max="100" step="1"
+                       value="{{ selection_opacity_pct }}"
+                       style="flex:1;">
+                <span id="selection-opacity-val" style="min-width:3em;text-align:right;">{{ selection_opacity_pct }}%</span>
+                <input type="hidden" name="selection_opacity" id="selection-opacity-hidden"
+                       value="{{ settings.selection_opacity }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Speichern
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    const currentScene = "{{ settings.default_model_scene|escapejs }}";
+    const currentAnimScene = "{{ settings.default_anim_scene|escapejs }}";
+
+    // Populate model presets
+    fetch('/api/character/models/')
+        .then(r => r.json())
+        .then(data => {
+            const presets = data.presets || [];
+            const sel = document.getElementById('default-model-scene');
+            if (!sel) return;
+            sel.innerHTML = '';
+            presets.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.textContent = p.label || p.name;
+                if (p.name === currentScene) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        })
+        .catch(e => console.warn('Failed to load model presets:', e));
+
+    // Expanded panels checkboxes
+    const SCENE_PANELS = [
+        ['beleuchtung', 'Beleuchtung'], ['renderer', 'Renderer'],
+        ['kamera', 'Kamera'], ['material_skin', 'Material (Skin)'],
+        ['aktionen', 'Aktionen'],
+    ];
+    function buildPanelCheckboxes(wrapId, panels, prefix, expandedJson) {
+        const wrap = document.getElementById(wrapId);
+        if (!wrap) return;
+        let expanded = [];
+        try { expanded = JSON.parse(expandedJson || '[]'); } catch(e) {}
+        wrap.innerHTML = '';
+        panels.forEach(([key, label]) => {
+            const lbl = document.createElement('label');
+            lbl.className = 'settings-checkbox';
+            lbl.style.display = 'block';
+            lbl.style.marginBottom = '4px';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.name = prefix + key;
+            cb.checked = expanded.includes(key);
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode(' ' + label));
+            wrap.appendChild(lbl);
+        });
+    }
+    buildPanelCheckboxes('panels-scene-wrap', SCENE_PANELS, 'panel_scene_',
+        "{{ settings.expanded_panels_scene|escapejs }}");
+
+    // Populate animation list
+    fetch('/api/character/animations/')
+        .then(r => r.json())
+        .then(data => {
+            const cats = data.categories || {};
+            const sel = document.getElementById('default-anim-scene');
+            if (!sel) return;
+            for (const [catName, anims] of Object.entries(cats).sort()) {
+                const grp = document.createElement('optgroup');
+                grp.label = catName;
+                anims.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a.url;
+                    opt.textContent = a.name + (a.frames ? ` (${a.frames}f)` : '');
+                    if (a.url === currentAnimScene) opt.selected = true;
+                    grp.appendChild(opt);
+                });
+                sel.appendChild(grp);
+            }
+        })
+        .catch(e => console.warn('Failed to load animations:', e));
+
+    // Selection opacity slider
+    const range = document.getElementById('selection-opacity-range');
+    const valSpan = document.getElementById('selection-opacity-val');
+    const hidden = document.getElementById('selection-opacity-hidden');
+    if (range) {
+        range.addEventListener('input', () => {
+            valSpan.textContent = range.value + '%';
+            hidden.value = (parseInt(range.value, 10) / 100).toFixed(2);
+        });
+    }
+})();
+</script>
+{% endblock %}
