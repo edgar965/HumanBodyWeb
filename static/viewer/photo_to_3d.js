@@ -99,6 +99,7 @@ let smplxExpr = new Array(10).fill(0);
 let smplxGender = 'female';
 const SMPLX_OFFSET_X = 0.7;    // SMPL-X shifted right
 let smplxUpdateTimer = null;
+let currentJobId = null;        // photo analysis job ID (for texture loading)
 
 // --- Backend selection ---
 let selectedBackend = 'smplest_x';
@@ -211,6 +212,8 @@ function init() {
     initSmplxToggle();
     initSmplxRigToggle();
     initPhotoUpload();
+    initPhotoTabs();
+    initTextureButtons();
     initSaveButton();
     loadBackendStatus();
     buildSmplxPanel();
@@ -407,32 +410,6 @@ async function loadMesh(bodyType) {
             }
 
             bodyMesh.bind(skeleton);
-
-            // Shift head bone AFTER bind → face profile correction.
-            // Bone-local axes (from parent DEF-spine.005):
-            //   local Y → world (0, -0.403, +0.915)  (mostly forward)
-            //   local Z → world (0, -0.915, -0.403)  (mostly down)
-            // For pure world -Z (backward) shift of CORR meters:
-            //   bone.y -= CORR * 0.9152,  bone.z += CORR * 0.4030
-            if (headBone) {
-                const CORR = 0.030;  // 3cm backward (whole head)
-                headBone.position.y = headBone._origY - CORR * 0.9152;
-                headBone.position.z = headBone._origZ + CORR * 0.4030;
-
-                // Jaw bone: push lower face (lips, chin, tongue) further back.
-                // DEF-jaw is child of head bone; head localY ≈ world +Z.
-                // Reducing jaw.position.y moves it backward in world.
-                const jawBone = defSkeleton.boneByName['DEF-jaw'];
-                if (jawBone) {
-                    if (jawBone._origY === undefined) jawBone._origY = jawBone.position.y;
-                    const JAW_CORR = 0.018;  // 1.8cm extra backward
-                    jawBone.position.y = jawBone._origY - JAW_CORR;
-                }
-
-                defSkeleton.rootBone.updateWorldMatrix(true, true);
-                bodyMesh.skeleton.update();
-                if (bodyMesh.skeleton.boneTexture) bodyMesh.skeleton.boneTexture.needsUpdate = true;
-            }
         } else {
             bodyMesh = new THREE.Mesh(geo, mat);
         }
@@ -713,14 +690,24 @@ async function loadSmplxModel() {
         const skeleton = new THREE.Skeleton(bones);
 
         // --- Build geometry ---
-        const verts = base64ToFloat32(data.vertices);
-        const faces = base64ToUint32(data.faces);
-        const skinIdx = base64ToUint16(data.skin_indices);
-        const skinWgt = base64ToFloat32(data.skin_weights);
+        // Use UV-remapped arrays if available (seam-duplicated vertices with UV coords)
+        const hasUV = !!data.uv_coords;
+        const verts   = hasUV ? base64ToFloat32(data.uv_vertices) : base64ToFloat32(data.vertices);
+        const faces   = hasUV ? base64ToUint32(data.uv_faces)     : base64ToUint32(data.faces);
+        const skinIdx = hasUV ? base64ToUint16(data.uv_skin_indices) : base64ToUint16(data.skin_indices);
+        const skinWgt = hasUV ? base64ToFloat32(data.uv_skin_weights) : base64ToFloat32(data.skin_weights);
 
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
         geo.setIndex(new THREE.BufferAttribute(faces, 1));
+
+        // Add UV coordinates if available
+        if (hasUV) {
+            const uvCoords = base64ToFloat32(data.uv_coords);
+            geo.setAttribute('uv', new THREE.BufferAttribute(uvCoords, 2));
+            console.log(`[SMPL-X] UV data: ${data.n_uv_verts} uv verts`);
+        }
+
         geo.computeVertexNormals();
 
         // Skin attributes (4 bones per vertex)
@@ -753,6 +740,61 @@ async function loadSmplxModel() {
         console.log(`SMPL-X model: ${data.n_verts} verts, ${data.n_faces} faces, ${data.n_joints} joints`);
     } catch (e) {
         console.error('Failed to load SMPL-X model:', e);
+    }
+}
+
+/**
+ * Load baked photo texture for SMPL-X mesh from the backend.
+ * Requires: loadSmplxModel() already called (geometry has UV attribute).
+ */
+async function loadSmplxTexture(jobId, backend = 'orthographic', region = 'all') {
+    if (!jobId || !smplxSkinnedMesh) {
+        console.warn('[SMPL-X Tex] No jobId or mesh');
+        return;
+    }
+    if (!smplxSkinnedMesh.geometry.getAttribute('uv')) {
+        console.warn('[SMPL-X Tex] No UV attribute on SMPL-X mesh');
+        return;
+    }
+
+    console.log('[SMPL-X Tex] Loading texture for job', jobId, 'backend', backend, 'region', region);
+    try {
+        let url = `${API}/smplx-texture/${jobId}/?backend=${encodeURIComponent(backend)}`;
+        if (region && region !== 'all') url += `&region=${encodeURIComponent(region)}`;
+        const resp = await fetch(url);
+        if (!resp.ok) {
+            let errMsg = `Server ${resp.status}`;
+            try {
+                const errData = await resp.json();
+                errMsg = errData.error || errMsg;
+            } catch (_) {
+                errMsg = await resp.text() || errMsg;
+            }
+            console.warn('[SMPL-X Tex] Server error:', errMsg);
+            throw new Error(errMsg);
+        }
+
+        const blob = await resp.blob();
+        const imgUrl = URL.createObjectURL(blob);
+
+        const loader = new THREE.TextureLoader();
+        const texture = await new Promise((resolve, reject) => {
+            loader.load(imgUrl, resolve, undefined, reject);
+        });
+
+        texture.flipY = true;   // bake uses (1-v)*ts, so image top = high V
+        texture.colorSpace = THREE.SRGBColorSpace;
+
+        // Apply texture to SMPL-X material.
+        // Texture background is filled with skin color by the backend.
+        smplxSkinnedMesh.material.map = texture;
+        smplxSkinnedMesh.material.color.set(0xffffff);  // don't tint
+        smplxSkinnedMesh.material.needsUpdate = true;
+
+        console.log('[SMPL-X Tex] Texture applied successfully');
+    } catch (e) {
+        console.error('[SMPL-X Tex] Failed:', e);
+        throw e;  // propagate to caller for UI error display
     }
 }
 
@@ -1163,8 +1205,9 @@ async function analyzePhoto() {
 
     let file = input.files[0];
     if (!file) {
-        const imgSrc = document.getElementById('photo-img').src;
-        if (imgSrc && imgSrc.startsWith('data:')) {
+        // Also works for server URLs (e.g. from loaded job) and data URLs
+        const imgSrc = document.getElementById('photo-img')?.src;
+        if (imgSrc && (imgSrc.startsWith('data:') || imgSrc.includes('/media/'))) {
             const resp = await fetch(imgSrc);
             const blob = await resp.blob();
             file = new File([blob], 'photo.jpg', { type: blob.type });
@@ -1433,6 +1476,13 @@ async function analyzePhoto() {
                 smplxSkinnedMesh.material.color.set(detectedSkinColor);
             }
 
+            // Enable texture button (user triggers manually via Textur tab)
+            if (data.job_id) {
+                currentJobId = data.job_id;
+                _previewDataCache = null;  // clear preview cache for new job
+                enableTextureButtons();
+            }
+
             // Capture screenshot for job thumbnail (with small delay for rendering)
             if (data.job_id) {
                 setTimeout(() => captureAndSaveScreenshot(data.job_id), 800);
@@ -1624,6 +1674,11 @@ async function loadJobResult(jobId) {
         const data = await resp.json();
         if (!data.ok) { console.error('Job load failed:', data.error); return; }
 
+        // Enable texture button early (before model loads that might fail)
+        currentJobId = jobId;
+        _previewDataCache = null;  // clear preview cache for new job
+        enableTextureButtons();
+
         // Display photo
         if (data.photo_url) {
             const img = document.getElementById('photo-img');
@@ -1749,6 +1804,1026 @@ async function loadJobResult(jobId) {
 }
 
 // =========================================================================
+// Photo Tabs (3D / Textur)
+// =========================================================================
+function initPhotoTabs() {
+    const tabs = document.querySelectorAll('.photo-tab');
+    const contents = document.querySelectorAll('.photo-tab-content');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            // When switching to Textur tab, render alignment preview
+            if (tab.dataset.tab === 'textur' && currentJobId) {
+                renderAlignmentPreview();
+            }
+        });
+    });
+}
+
+// =========================================================================
+// Texture baking (Textur tab)
+// =========================================================================
+function initTextureButtons() {
+    document.querySelectorAll('.btn-texture[data-backend]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const backend = btn.dataset.backend;
+            if (!currentJobId) return;
+
+            // Disable all texture buttons during processing
+            document.querySelectorAll('.btn-texture').forEach(b => { b.disabled = true; });
+            btn.classList.add('loading');
+            showTextureProgress(true, `${backend}: Textur wird erstellt...`, 10);
+            const t0 = performance.now();
+            try {
+                await loadSmplxTexture(currentJobId, backend);
+                const dur = ((performance.now() - t0) / 1000).toFixed(1);
+                showTextureProgress(true, `${backend}: Fertig (${dur}s)`, 100);
+                const info = document.getElementById('texture-info');
+                if (info) {
+                    info.style.display = 'block';
+                    info.textContent = `${backend} Textur auf SMPL-X Mesh angewendet`;
+                }
+                // Update job thumbnail with new texture
+                setTimeout(() => captureAndSaveScreenshot(currentJobId), 500);
+            } catch (e) {
+                showTextureProgress(true, `${backend}: Fehler — ${e.message}`, 0);
+            } finally {
+                btn.classList.remove('loading');
+                enableTextureButtons();
+            }
+        });
+    });
+
+    // Anpassen button (opens alignment wizard for manual fine-tuning)
+    const wizBtn = document.getElementById('btn-start-wizard');
+    if (wizBtn) {
+        wizBtn.addEventListener('click', () => startWizard());
+    }
+}
+
+function enableTextureButtons() {
+    document.querySelectorAll('.btn-texture').forEach(btn => {
+        btn.disabled = !currentJobId;
+    });
+}
+
+function showTextureProgress(visible, status, percent) {
+    const el = document.getElementById('texture-progress');
+    const fill = document.getElementById('texture-progress-fill');
+    const statusEl = document.getElementById('texture-status');
+    if (!el) return;
+    el.style.display = visible ? 'block' : 'none';
+    if (fill) fill.style.width = (percent || 0) + '%';
+    if (statusEl) statusEl.textContent = status || '';
+}
+
+// =========================================================================
+// Alignment Preview (Textur tab — auto-alignment visualization)
+// =========================================================================
+let _previewDataCache = null;
+
+/** Draw a smooth closed contour using quadratic curves through midpoints */
+function drawSmoothContour(ctx, pts) {
+    if (pts.length < 3) return;
+    const n = pts.length;
+    ctx.beginPath();
+    ctx.moveTo((pts[n-1][0] + pts[0][0]) / 2, (pts[n-1][1] + pts[0][1]) / 2);
+    for (let i = 0; i < n; i++) {
+        const next = (i + 1) % n;
+        const mx = (pts[i][0] + pts[next][0]) / 2;
+        const my = (pts[i][1] + pts[next][1]) / 2;
+        ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    }
+    ctx.closePath();
+}
+
+/** Draw a smooth closed contour with a per-point transform function */
+function drawSmoothContourTransformed(ctx, pts, transformFn) {
+    if (pts.length < 3) return;
+    const n = pts.length;
+    const tpts = pts.map(([px, py]) => transformFn(px, py));
+    ctx.beginPath();
+    ctx.moveTo((tpts[n-1][0] + tpts[0][0]) / 2, (tpts[n-1][1] + tpts[0][1]) / 2);
+    for (let i = 0; i < n; i++) {
+        const next = (i + 1) % n;
+        const mx = (tpts[i][0] + tpts[next][0]) / 2;
+        const my = (tpts[i][1] + tpts[next][1]) / 2;
+        ctx.quadraticCurveTo(tpts[i][0], tpts[i][1], mx, my);
+    }
+    ctx.closePath();
+}
+
+async function renderAlignmentPreview() {
+    const previewDiv = document.getElementById('alignment-preview');
+    const origImg = document.getElementById('preview-original');
+    const projCanvas = document.getElementById('preview-projection');
+    if (!previewDiv || !projCanvas || !currentJobId) return;
+
+    // Show original photo
+    const photoSrc = document.getElementById('photo-img')?.src;
+    if (!photoSrc) return;
+    origImg.src = photoSrc;
+    previewDiv.style.display = 'block';
+
+    // Fetch silhouette data (server already applies alignment_data to projection)
+    try {
+        if (!_previewDataCache || _previewDataCache._jobId !== currentJobId) {
+            const sResp = await fetch(`${API}/photo-job/${currentJobId}/silhouette/`);
+            const sData = await sResp.json();
+            _previewDataCache = { ...sData, _jobId: currentJobId };
+        }
+        const sData = _previewDataCache;
+        if (!sData.ok) return;
+
+        // Wait for photo to load
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = photoSrc;
+        });
+
+        // Render at full photo resolution
+        const cw = sData.photo_width;
+        const ch = sData.photo_height;
+        projCanvas.width = cw;
+        projCanvas.height = ch;
+        const ctx = projCanvas.getContext('2d');
+
+        ctx.drawImage(img, 0, 0, cw, ch);
+
+        const lw = Math.max(3, cw * 0.006);
+
+        // Body contour (semi-transparent red fill + outline)
+        if (sData.body_contour && sData.body_contour.length > 2) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(233, 69, 96, 0.2)';
+            ctx.strokeStyle = 'rgba(233, 69, 96, 0.7)';
+            ctx.lineWidth = lw;
+            drawSmoothContour(ctx, sData.body_contour);
+            ctx.fill(); ctx.stroke();
+            ctx.restore();
+        }
+
+        // Face contour (semi-transparent purple)
+        if (sData.face_contour && sData.face_contour.length > 2) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(155, 89, 182, 0.15)';
+            ctx.strokeStyle = 'rgba(155, 89, 182, 0.6)';
+            ctx.lineWidth = lw * 0.8;
+            drawSmoothContour(ctx, sData.face_contour);
+            ctx.fill(); ctx.stroke();
+            ctx.restore();
+        }
+
+        // Draw mesh projection area — dashed blue rectangle (dezent)
+        const mb = sData.mesh_bbox;
+        if (mb) {
+            ctx.save();
+            ctx.setLineDash([lw * 3, lw * 2]);
+            ctx.strokeStyle = 'rgba(0, 102, 255, 0.5)';
+            ctx.lineWidth = lw * 0.7;
+            ctx.strokeRect(mb.x, mb.y, mb.w, mb.h);
+            ctx.setLineDash([]);
+            ctx.font = `bold ${Math.max(14, cw * 0.025)}px sans-serif`;
+            ctx.fillStyle = 'rgba(0, 102, 255, 0.6)';
+            ctx.fillText('SMPL-X Mesh', mb.x + 4, mb.y - 6);
+            ctx.restore();
+        }
+
+        // Draw face bbox from mesh projection — dashed red rectangle (dezent)
+        const fbm = sData.face_bbox_mesh;
+        if (fbm) {
+            ctx.save();
+            ctx.setLineDash([lw * 2, lw * 2]);
+            ctx.strokeStyle = 'rgba(204, 0, 0, 0.4)';
+            ctx.lineWidth = lw * 0.6;
+            ctx.strokeRect(fbm.x, fbm.y, fbm.w, fbm.h);
+            ctx.setLineDash([]);
+            ctx.font = `bold ${Math.max(11, cw * 0.018)}px sans-serif`;
+            ctx.fillStyle = 'rgba(204, 0, 0, 0.5)';
+            ctx.fillText('Gesicht (Mesh)', fbm.x + 3, fbm.y - 4);
+            ctx.restore();
+        }
+
+        // Draw MediaPipe face detection — magenta dashed rectangle (dezent)
+        const fbd = sData.face_bbox_detected;
+        if (fbd && fbd !== fbm) {
+            ctx.save();
+            ctx.setLineDash([lw * 3, lw * 2]);
+            ctx.strokeStyle = 'rgba(204, 0, 204, 0.4)';
+            ctx.lineWidth = lw * 0.6;
+            ctx.strokeRect(fbd.x, fbd.y, fbd.w, fbd.h);
+            ctx.setLineDash([]);
+            ctx.font = `bold ${Math.max(11, cw * 0.018)}px sans-serif`;
+            ctx.fillStyle = 'rgba(204, 0, 204, 0.5)';
+            ctx.fillText('Gesicht (Foto)', fbd.x + 3, fbd.y - 4);
+            ctx.restore();
+        }
+
+        // Draw YOLO person bbox — dashed green (dezent)
+        if (sData.yolo_bbox) {
+            const [x1, y1, x2, y2] = sData.yolo_bbox;
+            ctx.save();
+            ctx.setLineDash([lw * 3, lw * 2]);
+            ctx.strokeStyle = 'rgba(0, 204, 68, 0.4)';
+            ctx.lineWidth = lw * 0.7;
+            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            ctx.setLineDash([]);
+            ctx.font = `bold ${Math.max(11, cw * 0.018)}px sans-serif`;
+            ctx.fillStyle = 'rgba(0, 204, 68, 0.5)';
+            ctx.fillText('YOLO Person', x1 + 3, y1 - 4);
+            ctx.restore();
+        }
+
+        // Status text
+        const infoEl = previewDiv.querySelector('.alignment-status');
+        if (infoEl) {
+            if (sData.has_alignment) {
+                const method = sData.alignment_method || 'pipeline';
+                infoEl.textContent = `Auto-Alignment aktiv (${method})`;
+            } else {
+                infoEl.textContent = 'Standard-Projektion (Bild-Mitte)';
+            }
+        }
+
+        // Click handler for zoom dialog
+        projCanvas.style.cursor = 'zoom-in';
+        projCanvas.onclick = () => openPreviewDialog(projCanvas);
+
+        // Save projection preview to server
+        try {
+            const dataUrl = projCanvas.toDataURL('image/jpeg', 0.85);
+            await fetch(`${API}/photo-job/${currentJobId}/save-projection/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataUrl }),
+            });
+            console.log('[Photo→3D] Projection preview saved');
+        } catch (saveErr) {
+            console.warn('Failed to save projection preview:', saveErr);
+        }
+
+    } catch (e) {
+        console.warn('Alignment preview failed:', e);
+    }
+}
+
+/** Open a fullscreen dialog showing the projection canvas with mouse-wheel zoom. */
+function openPreviewDialog(srcCanvas) {
+    // Remove old dialog if exists
+    let old = document.getElementById('preview-zoom-dialog');
+    if (old) old.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'preview-zoom-dialog';
+    Object.assign(overlay.style, {
+        position: 'fixed', inset: '0', zIndex: '11000',
+        background: 'rgba(0,0,0,0.85)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        backdropFilter: 'blur(4px)', cursor: 'zoom-out',
+    });
+
+    const wrap = document.createElement('div');
+    Object.assign(wrap.style, {
+        position: 'relative', overflow: 'hidden',
+        maxWidth: '92vw', maxHeight: '90vh',
+        borderRadius: '8px', border: '1px solid #444',
+    });
+
+    const c = document.createElement('canvas');
+    c.width = srcCanvas.width;
+    c.height = srcCanvas.height;
+    const cCtx = c.getContext('2d');
+    cCtx.drawImage(srcCanvas, 0, 0);
+
+    let scale = 1;
+    let tx = 0, ty = 0;
+    let dragging = false, lastX = 0, lastY = 0;
+
+    // Fit canvas into viewport
+    const vw = window.innerWidth * 0.92;
+    const vh = window.innerHeight * 0.90;
+    const fitScale = Math.min(vw / c.width, vh / c.height, 1);
+    const dispW = Math.round(c.width * fitScale);
+    const dispH = Math.round(c.height * fitScale);
+    Object.assign(c.style, {
+        width: dispW + 'px', height: dispH + 'px',
+        transformOrigin: '0 0', display: 'block',
+    });
+
+    function applyTransform() {
+        c.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    }
+
+    c.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const rect = c.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const oldScale = scale;
+        scale *= e.deltaY < 0 ? 1.15 : 0.87;
+        scale = Math.max(0.5, Math.min(scale, 10));
+        // Zoom toward mouse position
+        tx -= mx * (scale - oldScale);
+        ty -= my * (scale - oldScale);
+        applyTransform();
+    }, { passive: false });
+
+    c.addEventListener('mousedown', (e) => {
+        if (e.button === 0) { dragging = true; lastX = e.clientX; lastY = e.clientY; c.style.cursor = 'grabbing'; }
+    });
+    window.addEventListener('mousemove', function _move(e) {
+        if (!dragging) return;
+        tx += e.clientX - lastX;
+        ty += e.clientY - lastY;
+        lastX = e.clientX; lastY = e.clientY;
+        applyTransform();
+    });
+    window.addEventListener('mouseup', function _up() {
+        dragging = false; c.style.cursor = 'grab';
+    });
+    c.style.cursor = 'grab';
+
+    // Close on overlay click (not canvas)
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.remove();
+    });
+    // Close on Escape
+    function _esc(e) { if (e.key === 'Escape') { overlay.remove(); window.removeEventListener('keydown', _esc); } }
+    window.addEventListener('keydown', _esc);
+
+    // Close button
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    Object.assign(closeBtn.style, {
+        position: 'absolute', top: '8px', right: '8px', zIndex: '1',
+        background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff',
+        width: '32px', height: '32px', borderRadius: '50%', fontSize: '1.2rem',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    });
+    closeBtn.onclick = () => overlay.remove();
+
+    wrap.appendChild(c);
+    wrap.appendChild(closeBtn);
+    overlay.appendChild(wrap);
+    document.body.appendChild(overlay);
+    applyTransform();
+}
+
+// =========================================================================
+// Alignment Wizard
+// =========================================================================
+let wizardState = {
+    step: 0,                    // 0=body, 1=face
+    data: null,                 // Silhouette API response
+    bodyTransform: null,        // {center_x, center_y, scale}
+    bodyTransformInit: null,    // initial values for reset
+    faceTransform: null,
+    faceTransformInit: null,
+    photoImg: null,             // Image element
+    isDragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    dragStartCx: 0,
+    dragStartCy: 0,
+    canvasScale: 1,             // photo→canvas scaling factor
+    editMode: false,            // true = per-point editing active
+    editPointIdx: -1,           // index of currently dragged point (-1 = none)
+    pointsEdited: false,        // true = individual contour points were moved
+};
+
+async function startWizard() {
+    if (!currentJobId) return;
+
+    const wizBtn = document.getElementById('btn-start-wizard');
+    if (wizBtn) { wizBtn.classList.add('loading'); wizBtn.disabled = true; }
+
+    try {
+        // Fetch silhouette data
+        const resp = await fetch(`${API}/photo-job/${currentJobId}/silhouette/`);
+        const sData = await resp.json();
+        if (!sData.ok) { alert('Silhouette-Daten konnten nicht geladen werden: ' + (sData.error || '')); return; }
+
+        wizardState.data = sData;
+
+        // Load photo image
+        const photoSrc = document.getElementById('photo-img')?.src;
+        if (!photoSrc) { alert('Kein Foto geladen'); return; }
+
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = photoSrc;
+        });
+        wizardState.photoImg = img;
+
+        // Compute initial body transform
+        const mb = sData.mesh_bbox;
+        const meshCx = mb.x + mb.w / 2;
+        const meshCy = mb.y + mb.h / 2;
+
+        if (sData.use_posed) {
+            // Posed mode: contours are absolute photo-pixel coords from pipeline camera.
+            // Transform is a simple offset (center_x=dx, center_y=dy) + scale.
+            wizardState.bodyTransform = { center_x: 0, center_y: 0, scale: 1.0 };
+        } else if (sData.yolo_bbox) {
+            const [x1, y1, x2, y2] = sData.yolo_bbox;
+            const yoloCx = (x1 + x2) / 2;
+            const yoloCy = (y1 + y2) / 2;
+            const yoloW = x2 - x1;
+            const yoloH = y2 - y1;
+            // Scale so mesh bbox fits inside YOLO bbox
+            const scaleW = mb.w > 0 ? yoloW / mb.w : 1;
+            const scaleH = mb.h > 0 ? yoloH / mb.h : 1;
+            const fitScale = Math.min(scaleW, scaleH) * 0.95;
+            wizardState.bodyTransform = { center_x: yoloCx, center_y: yoloCy, scale: fitScale };
+        } else {
+            wizardState.bodyTransform = { center_x: meshCx, center_y: meshCy, scale: 1.0 };
+        }
+        wizardState.bodyTransformInit = { ...wizardState.bodyTransform };
+
+        // Compute initial face transform
+        if (sData.use_posed) {
+            wizardState.faceTransform = { center_x: 0, center_y: 0, scale: 1.0 };
+        } else {
+            const fb = sData.face_bbox_detected || sData.face_bbox_mesh;
+            const fmb = sData.face_bbox_mesh;
+            if (fb && fmb) {
+                const fbCx = fb.x + fb.w / 2;
+                const fbCy = fb.y + fb.h / 2;
+                const fScaleW = fmb.w > 0 ? fb.w / fmb.w : 1;
+                const fScaleH = fmb.h > 0 ? fb.h / fmb.h : 1;
+                const fFitScale = Math.min(fScaleW, fScaleH);
+                const fmOffX = (fmb.x + fmb.w / 2) - meshCx;
+                const fmOffY = (fmb.y + fmb.h / 2) - meshCy;
+                wizardState.faceTransform = {
+                    center_x: fbCx - fmOffX * fFitScale,
+                    center_y: fbCy - fmOffY * fFitScale,
+                    scale: fFitScale,
+                };
+            } else {
+                wizardState.faceTransform = { ...wizardState.bodyTransform };
+            }
+        }
+        wizardState.faceTransformInit = { ...wizardState.faceTransform };
+
+        // Override with saved alignment if available
+        const saved = sData.saved_alignment;
+        if (saved) {
+            if (sData.use_posed && saved.proj_2d_offset) {
+                const off = saved.proj_2d_offset;
+                wizardState.bodyTransform = { center_x: off.dx || 0, center_y: off.dy || 0, scale: off.scale || 1 };
+            } else if (saved.body_transform) {
+                wizardState.bodyTransform = { ...saved.body_transform };
+            }
+            if (saved.face_transform && !(saved.face_transform.center_x === 0 && saved.face_transform.center_y === 0 && saved.face_transform.scale === 1)) {
+                wizardState.faceTransform = { ...saved.face_transform };
+            }
+            if (saved.body_contour_edited) {
+                wizardState.data.body_contour = saved.body_contour_edited;
+                wizardState.pointsEdited = true;
+            }
+            if (saved.face_contour_edited) {
+                wizardState.data.face_contour = saved.face_contour_edited;
+                wizardState.pointsEdited = true;
+            }
+            console.log('[Wizard] Loaded saved alignment');
+        }
+
+        // Open wizard at step 0
+        wizardState.step = 0;
+        showWizardModal();
+        renderWizardCanvas();
+
+    } catch (e) {
+        console.error('Wizard start failed:', e);
+        alert('Wizard konnte nicht gestartet werden: ' + e.message);
+    } finally {
+        if (wizBtn) { wizBtn.classList.remove('loading'); wizBtn.disabled = false; }
+        enableTextureButtons();
+    }
+}
+
+function showWizardModal() {
+    const modal = document.getElementById('alignment-wizard');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    updateWizardUI();
+    initWizardEvents();
+}
+
+function hideWizardModal() {
+    const modal = document.getElementById('alignment-wizard');
+    if (modal) modal.style.display = 'none';
+    wizardState.isDragging = false;
+    wizardState.editMode = false;
+    wizardState.editPointIdx = -1;
+    const btn = document.getElementById('wizard-edit-points');
+    if (btn) btn.classList.remove('active');
+}
+
+function updateWizardUI() {
+    const title = document.getElementById('wizard-title');
+    const info = document.getElementById('wizard-info');
+    const backBtn = document.getElementById('wizard-back');
+    const nextBtn = document.getElementById('wizard-next');
+
+    if (wizardState.step === 0) {
+        if (wizardState.data?.use_posed) {
+            if (title) title.textContent = 'Posed Mesh ausrichten';
+            if (info) info.textContent = 'Ziehen = Verschieben | Mausrad = Skalieren | Rote Kontur auf die Person legen';
+            if (backBtn) backBtn.style.display = 'none';
+            if (nextBtn) nextBtn.textContent = 'Textur erstellen';
+        } else {
+            if (title) title.textContent = 'Schritt 1: Koerper ausrichten';
+            if (info) info.textContent = 'Ziehen = Verschieben | Mausrad = Skalieren | Rote Silhouette auf die Person legen';
+            if (backBtn) backBtn.style.display = 'none';
+            if (nextBtn) nextBtn.textContent = 'Weiter';
+        }
+    } else {
+        if (title) title.textContent = 'Schritt 2: Gesicht ausrichten';
+        if (info) info.textContent = 'Ziehen = Verschieben | Mausrad = Skalieren | Lila Kontur auf das Gesicht legen';
+        if (backBtn) backBtn.style.display = '';
+        if (nextBtn) nextBtn.textContent = 'Textur erstellen';
+    }
+}
+
+function initWizardEvents() {
+    const canvas = document.getElementById('wizard-canvas');
+    if (!canvas || canvas._wizardBound) return;
+    canvas._wizardBound = true;
+
+    canvas.addEventListener('mousedown', wizardMouseDown);
+    canvas.addEventListener('mousemove', wizardMouseMove);
+    canvas.addEventListener('mouseup', wizardMouseUp);
+    canvas.addEventListener('mouseleave', wizardMouseUp);
+    canvas.addEventListener('wheel', wizardWheel, { passive: false });
+
+    // Touch support
+    canvas.addEventListener('touchstart', wizardTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', wizardTouchMove, { passive: false });
+    canvas.addEventListener('touchend', wizardMouseUp);
+
+    // Re-render canvas when panel is resized
+    const wrapEl = document.querySelector('.wizard-canvas-wrap');
+    if (wrapEl && !wrapEl._wizardResizeObserver) {
+        const ro = new ResizeObserver(() => renderWizardCanvas());
+        ro.observe(wrapEl);
+        wrapEl._wizardResizeObserver = ro;
+    }
+
+    document.getElementById('wizard-close')?.addEventListener('click', hideWizardModal);
+    document.getElementById('wizard-reset')?.addEventListener('click', wizardReset);
+    document.getElementById('wizard-back')?.addEventListener('click', () => {
+        wizardState.step = 0;
+        updateWizardUI();
+        renderWizardCanvas();
+    });
+    document.getElementById('wizard-next')?.addEventListener('click', wizardNext);
+    document.getElementById('wizard-bake-body')?.addEventListener('click', () => {
+        if (wizardState.step !== 0) {
+            wizardState.step = 0;
+            updateWizardUI();
+            renderWizardCanvas();
+        }
+        saveAlignmentAndBake('body');
+    });
+    document.getElementById('wizard-bake-face')?.addEventListener('click', () => {
+        if (wizardState.step !== 1) {
+            wizardState.step = 1;
+            updateWizardUI();
+            renderWizardCanvas();
+        }
+        saveAlignmentAndBake('face');
+    });
+    document.getElementById('wizard-edit-points')?.addEventListener('click', () => {
+        wizardState.editMode = !wizardState.editMode;
+        wizardState.editPointIdx = -1;
+        const btn = document.getElementById('wizard-edit-points');
+        if (wizardState.editMode) {
+            btn.classList.add('active');
+            canvas.style.cursor = 'crosshair';
+        } else {
+            btn.classList.remove('active');
+            canvas.style.cursor = 'grab';
+        }
+        renderWizardCanvas();
+    });
+}
+
+// Helper: get active contour and transform params for current wizard step
+function _wizardEditParams() {
+    const sd = wizardState.data;
+    if (!sd) return null;
+    const mb = sd.mesh_bbox;
+    const meshCx = mb.x + mb.w / 2;
+    const meshCy = mb.y + mb.h / 2;
+    const usePosed = !!sd.use_posed;
+    const isBody = wizardState.step === 0;
+    const contour = isBody ? sd.body_contour : sd.face_contour;
+    const bt = isBody ? wizardState.bodyTransform : wizardState.faceTransform;
+    if (!contour || contour.length < 3 || !bt) return null;
+    // Contour center for posed mode
+    let ccx = 0, ccy = 0;
+    if (usePosed) {
+        for (const [px, py] of contour) { ccx += px; ccy += py; }
+        ccx /= contour.length; ccy /= contour.length;
+    }
+    return { contour, bt, meshCx, meshCy, usePosed, ccx, ccy };
+}
+
+// Forward transform: photo/contour coords → canvas coords (standalone version)
+function transformPtGlobal(px, py, bt, meshCx, meshCy, usePosed, ccx, ccy, canvasScale) {
+    if (usePosed) {
+        const nx = (px - ccx) * bt.scale + ccx + bt.center_x;
+        const ny = (py - ccy) * bt.scale + ccy + bt.center_y;
+        return [nx * canvasScale, ny * canvasScale];
+    } else {
+        const dx = px - meshCx;
+        const dy = py - meshCy;
+        const nx = dx * bt.scale + bt.center_x;
+        const ny = dy * bt.scale + bt.center_y;
+        return [nx * canvasScale, ny * canvasScale];
+    }
+}
+
+// Inverse of transformPt: canvas coords → photo/contour coords
+function inverseTransformPt(canvasX, canvasY, bt, meshCx, meshCy, usePosed, ccx, ccy, canvasScale) {
+    const nx = canvasX / canvasScale;
+    const ny = canvasY / canvasScale;
+    if (usePosed) {
+        return [(nx - ccx - bt.center_x) / bt.scale + ccx,
+                (ny - ccy - bt.center_y) / bt.scale + ccy];
+    } else {
+        return [(nx - bt.center_x) / bt.scale + meshCx,
+                (ny - bt.center_y) / bt.scale + meshCy];
+    }
+}
+
+function wizardMouseDown(e) {
+    const canvas = e.target;
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+
+    // Edit mode: hit-test contour points
+    if (wizardState.editMode) {
+        const ep = _wizardEditParams();
+        if (ep) {
+            const cs = wizardState.canvasScale;
+            let bestIdx = -1, bestDist = 10; // 10px hit radius
+            for (let i = 0; i < ep.contour.length; i++) {
+                const [tx, ty] = transformPtGlobal(ep.contour[i][0], ep.contour[i][1],
+                    ep.bt, ep.meshCx, ep.meshCy, ep.usePosed, ep.ccx, ep.ccy, cs);
+                const dist = Math.hypot(tx - cx, ty - cy);
+                if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+            }
+            wizardState.editPointIdx = bestIdx;
+            if (bestIdx >= 0) return; // consumed – don't start whole-contour drag
+        }
+    }
+
+    wizardState.isDragging = true;
+    const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
+    wizardState.dragStartX = e.clientX;
+    wizardState.dragStartY = e.clientY;
+    wizardState.dragStartCx = t.center_x;
+    wizardState.dragStartCy = t.center_y;
+}
+
+function wizardMouseMove(e) {
+    // Edit mode: drag individual point
+    if (wizardState.editMode && wizardState.editPointIdx >= 0) {
+        const ep = _wizardEditParams();
+        if (ep) {
+            const canvas = e.target;
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.clientX - rect.left;
+            const cy = e.clientY - rect.top;
+            const cs = wizardState.canvasScale;
+            const [px, py] = inverseTransformPt(cx, cy,
+                ep.bt, ep.meshCx, ep.meshCy, ep.usePosed, ep.ccx, ep.ccy, cs);
+            ep.contour[wizardState.editPointIdx] = [px, py];
+            wizardState.pointsEdited = true;
+            renderWizardCanvas();
+        }
+        return;
+    }
+
+    if (!wizardState.isDragging) return;
+    const cs = wizardState.canvasScale;
+    const dx = (e.clientX - wizardState.dragStartX) / cs;
+    const dy = (e.clientY - wizardState.dragStartY) / cs;
+    const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
+    t.center_x = wizardState.dragStartCx + dx;
+    t.center_y = wizardState.dragStartCy + dy;
+    renderWizardCanvas();
+}
+
+function wizardMouseUp() {
+    if (wizardState.editMode && wizardState.editPointIdx >= 0) {
+        wizardState.editPointIdx = -1;
+        return;
+    }
+    wizardState.isDragging = false;
+}
+
+function wizardTouchStart(e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        wizardState.isDragging = true;
+        const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
+        wizardState.dragStartX = touch.clientX;
+        wizardState.dragStartY = touch.clientY;
+        wizardState.dragStartCx = t.center_x;
+        wizardState.dragStartCy = t.center_y;
+    }
+}
+
+function wizardTouchMove(e) {
+    e.preventDefault();
+    if (!wizardState.isDragging || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const cs = wizardState.canvasScale;
+    const dx = (touch.clientX - wizardState.dragStartX) / cs;
+    const dy = (touch.clientY - wizardState.dragStartY) / cs;
+    const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
+    t.center_x = wizardState.dragStartCx + dx;
+    t.center_y = wizardState.dragStartCy + dy;
+    renderWizardCanvas();
+}
+
+function wizardWheel(e) {
+    e.preventDefault();
+    const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
+    const factor = e.deltaY > 0 ? 0.95 : 1.05;
+    t.scale = Math.max(0.3, Math.min(3.0, t.scale * factor));
+    renderWizardCanvas();
+}
+
+function wizardReset() {
+    if (wizardState.step === 0) {
+        wizardState.bodyTransform = { ...wizardState.bodyTransformInit };
+    } else {
+        wizardState.faceTransform = { ...wizardState.faceTransformInit };
+    }
+    renderWizardCanvas();
+}
+
+async function wizardNext() {
+    if (wizardState.step === 0) {
+        if (wizardState.data?.use_posed) {
+            // Posed mode: skip face step, save directly
+            await saveAlignmentAndBake();
+        } else {
+            wizardState.step = 1;
+            updateWizardUI();
+            renderWizardCanvas();
+        }
+    } else {
+        // Step 1 → Save and bake
+        await saveAlignmentAndBake();
+    }
+}
+
+async function saveAlignmentAndBake(region = 'all') {
+    const nextBtn = document.getElementById('wizard-next');
+    const isRegion = region === 'body' || region === 'face';
+    const activeBtn = isRegion
+        ? document.getElementById(region === 'body' ? 'wizard-bake-body' : 'wizard-bake-face')
+        : nextBtn;
+    const origText = activeBtn?.textContent;
+    if (activeBtn) { activeBtn.disabled = true; activeBtn.textContent = 'Speichern...'; }
+
+    try {
+        // Save alignment
+        const alignPayload = wizardState.data?.use_posed ? {
+            proj_2d_offset: {
+                dx: wizardState.bodyTransform.center_x,
+                dy: wizardState.bodyTransform.center_y,
+                scale: wizardState.bodyTransform.scale,
+            },
+            face_transform: wizardState.faceTransform,
+        } : {
+            body_transform: wizardState.bodyTransform,
+            face_transform: wizardState.faceTransform,
+        };
+        // Include edited contours only if individual points were moved (Punkte mode)
+        if (wizardState.pointsEdited) {
+            if (wizardState.data?.body_contour) {
+                alignPayload.body_contour_edited = wizardState.data.body_contour;
+            }
+            if (wizardState.data?.face_contour) {
+                alignPayload.face_contour_edited = wizardState.data.face_contour;
+            }
+        }
+        const resp = await fetch(`${API}/photo-job/${currentJobId}/save-alignment/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(alignPayload),
+        });
+        const result = await resp.json();
+        if (!result.ok) {
+            alert('Alignment konnte nicht gespeichert werden: ' + (result.error || ''));
+            return;
+        }
+
+        _previewDataCache = null;
+        const regionLabel = region === 'body' ? 'Koerper' : region === 'face' ? 'Gesicht' : 'Wizard';
+
+        if (!isRegion) {
+            // Full bake: close modal first
+            hideWizardModal();
+        }
+
+        // Bake texture
+        if (activeBtn) activeBtn.textContent = 'Textur wird erstellt...';
+        showTextureProgress(true, `${regionLabel}: Textur wird erstellt...`, 10);
+        const t0 = performance.now();
+        try {
+            await loadSmplxTexture(currentJobId, 'orthographic', region);
+            const dur = ((performance.now() - t0) / 1000).toFixed(1);
+            showTextureProgress(true, `${regionLabel}: Fertig (${dur}s)`, 100);
+            const info = document.getElementById('texture-info');
+            if (info) {
+                info.style.display = 'block';
+                info.textContent = `${regionLabel}-Textur auf SMPL-X Mesh angewendet`;
+            }
+            renderAlignmentPreview();
+            // Update job thumbnail with new texture
+            setTimeout(() => captureAndSaveScreenshot(currentJobId), 500);
+        } catch (e) {
+            showTextureProgress(true, `${regionLabel}: Fehler — ${e.message}`, 0);
+        }
+    } finally {
+        if (activeBtn) { activeBtn.disabled = false; activeBtn.textContent = origText; }
+    }
+}
+
+function renderWizardCanvas() {
+    const canvas = document.getElementById('wizard-canvas');
+    if (!canvas || !wizardState.data || !wizardState.photoImg) return;
+
+    const ctx = canvas.getContext('2d');
+    const img = wizardState.photoImg;
+    const sd = wizardState.data;
+
+    // Fit photo into available canvas-wrap size
+    const wrap = canvas.parentElement;
+    const maxW = Math.max(wrap.clientWidth - 24, 300);   // minus padding
+    const maxH = Math.max(wrap.clientHeight - 24, 200);
+    const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+    const cw = Math.round(img.naturalWidth * scale);
+    const ch = Math.round(img.naturalHeight * scale);
+    canvas.width = cw;
+    canvas.height = ch;
+    wizardState.canvasScale = scale;
+
+    // Draw photo
+    ctx.drawImage(img, 0, 0, cw, ch);
+
+    const mb = sd.mesh_bbox;
+    const meshCx = mb.x + mb.w / 2;
+    const meshCy = mb.y + mb.h / 2;
+
+    // Helper: compute contour centroid for posed-mode scale pivot
+    function contourCenter(contour) {
+        let sx = 0, sy = 0;
+        for (const [px, py] of contour) { sx += px; sy += py; }
+        return [sx / contour.length, sy / contour.length];
+    }
+
+    // Helper: transform a contour point
+    function transformPt(px, py, bt, meshCx, meshCy, usePosed, ccx, ccy) {
+        if (usePosed) {
+            // Posed: absolute pixel coords, apply dx/dy/scale around contour center
+            const nx = (px - ccx) * bt.scale + ccx + bt.center_x;
+            const ny = (py - ccy) * bt.scale + ccy + bt.center_y;
+            return [nx * scale, ny * scale];
+        } else {
+            // Ortho: pivot around mesh_bbox center
+            const dx = px - meshCx;
+            const dy = py - meshCy;
+            const nx = dx * bt.scale + bt.center_x;
+            const ny = dy * bt.scale + bt.center_y;
+            return [nx * scale, ny * scale];
+        }
+    }
+
+    const usePosed = !!sd.use_posed;
+    // Precompute contour center for posed mode
+    const bodyCC = (usePosed && sd.body_contour && sd.body_contour.length > 2)
+        ? contourCenter(sd.body_contour) : [0, 0];
+
+    if (wizardState.step === 0) {
+        // === BODY STEP ===
+        // Draw YOLO bbox as reference (dashed white)
+        if (sd.yolo_bbox) {
+            const [x1, y1, x2, y2] = sd.yolo_bbox;
+            ctx.save();
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x1 * scale, y1 * scale, (x2 - x1) * scale, (y2 - y1) * scale);
+            ctx.restore();
+        }
+
+        // Draw body contour transformed (smooth)
+        if (sd.body_contour && sd.body_contour.length > 2) {
+            const bt = wizardState.bodyTransform;
+            ctx.save();
+            ctx.fillStyle = 'rgba(233, 69, 96, 0.25)';
+            ctx.strokeStyle = 'rgba(233, 69, 96, 0.8)';
+            ctx.lineWidth = 2;
+            drawSmoothContourTransformed(ctx, sd.body_contour,
+                (px, py) => transformPt(px, py, bt, meshCx, meshCy, usePosed, bodyCC[0], bodyCC[1]));
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+    } else {
+        // === FACE STEP ===
+        // Draw body contour faded (reference, smooth)
+        if (sd.body_contour && sd.body_contour.length > 2) {
+            const bt = wizardState.bodyTransform;
+            ctx.save();
+            ctx.fillStyle = 'rgba(150, 150, 150, 0.15)';
+            ctx.strokeStyle = 'rgba(150, 150, 150, 0.3)';
+            ctx.lineWidth = 1;
+            drawSmoothContourTransformed(ctx, sd.body_contour,
+                (px, py) => transformPt(px, py, bt, meshCx, meshCy, usePosed, bodyCC[0], bodyCC[1]));
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // Draw detected face bbox as reference (dashed green)
+        if (sd.face_bbox_detected) {
+            const fb = sd.face_bbox_detected;
+            ctx.save();
+            ctx.setLineDash([5, 3]);
+            ctx.strokeStyle = 'rgba(46, 204, 113, 0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(fb.x * scale, fb.y * scale, fb.w * scale, fb.h * scale);
+            ctx.restore();
+        }
+
+        // Draw face contour transformed (smooth)
+        // Use overall mesh center as pivot (same as baker: vertices relative to cx/cy)
+        if (sd.face_contour && sd.face_contour.length > 2) {
+            const ft = wizardState.faceTransform;
+            const faceCC = usePosed ? contourCenter(sd.face_contour) : [0, 0];
+            ctx.save();
+            ctx.fillStyle = 'rgba(155, 89, 182, 0.25)';
+            ctx.strokeStyle = 'rgba(155, 89, 182, 0.8)';
+            ctx.lineWidth = 2;
+            drawSmoothContourTransformed(ctx, sd.face_contour,
+                (px, py) => transformPt(px, py, ft, meshCx, meshCy, usePosed, faceCC[0], faceCC[1]));
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    // Draw point handles when edit mode is active
+    if (wizardState.editMode) {
+        const isBody = wizardState.step === 0;
+        const contour = isBody ? sd.body_contour : sd.face_contour;
+        const bt = isBody ? wizardState.bodyTransform : wizardState.faceTransform;
+        if (contour && contour.length > 2 && bt) {
+            const cc = isBody ? bodyCC : (usePosed ? contourCenter(sd.face_contour) : [0, 0]);
+            ctx.save();
+            for (let i = 0; i < contour.length; i++) {
+                const [tx, ty] = transformPt(contour[i][0], contour[i][1],
+                    bt, meshCx, meshCy, usePosed, cc[0], cc[1]);
+                ctx.beginPath();
+                ctx.arc(tx, ty, 5, 0, Math.PI * 2);
+                if (i === wizardState.editPointIdx) {
+                    ctx.fillStyle = '#fff';
+                    ctx.strokeStyle = '#e94560';
+                    ctx.lineWidth = 2.5;
+                } else {
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                    ctx.strokeStyle = isBody ? 'rgba(233,69,96,0.9)' : 'rgba(155,89,182,0.9)';
+                    ctx.lineWidth = 1.5;
+                }
+                ctx.fill();
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+    }
+}
+
+// =========================================================================
 // Boot
 // =========================================================================
 init();
@@ -1759,6 +2834,18 @@ init();
     const jobId = params.get('job');
     if (jobId) {
         // Wait for initial mesh load, then overlay with job data
-        setTimeout(() => loadJobResult(jobId), 1500);
+        setTimeout(async () => {
+            await loadJobResult(jobId);
+            // Switch to specific tab if requested
+            const tab = params.get('tab');
+            if (tab) {
+                const tabEl = document.querySelector(`.photo-tab[data-tab="${tab}"]`);
+                if (tabEl) tabEl.click();
+            }
+            // Re-trigger analysis if requested (uses the already-loaded photo)
+            if (params.get('reanalyze') === '1') {
+                setTimeout(() => analyzePhoto(), 500);
+            }
+        }, 1500);
     }
 }

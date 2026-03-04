@@ -981,7 +981,14 @@ def photo_to_3d_page(request):
 def photo_analysis_jobs_page(request):
     """Render the Photo Analysis Jobs list page."""
     from .models import PhotoAnalysisJob
-    jobs = PhotoAnalysisJob.objects.all()
+    jobs = list(PhotoAnalysisJob.objects.all())
+    for job in jobs:
+        try:
+            rd = json.loads(job.result_json) if job.result_json else {}
+        except (json.JSONDecodeError, TypeError):
+            rd = {}
+        job.texture_path = rd.get('texture_path', '')
+        job.silhouette_path = rd.get('silhouette_path', '')
     return render(request, 'photo_analysis_jobs.html', {'jobs': jobs})
 
 
@@ -1019,6 +1026,16 @@ def photo_analysis_job_data(request, job_id):
         finally:
             if wrappers_dir in sys.path:
                 sys.path.remove(wrappers_dir)
+
+    # Add convenient URLs for frontend
+    data['ok'] = True
+    data['photo_url'] = f'/{job.photo_file}' if job.photo_file else None
+    if data.get('texture_path'):
+        data['texture_url'] = f'/{data["texture_path"]}'
+    if data.get('silhouette_path'):
+        data['silhouette_url'] = f'/{data["silhouette_path"]}'
+    if job.result_image:
+        data['result_image_url'] = f'/{job.result_image}'
 
     return JsonResponse(data)
 
@@ -1063,6 +1080,53 @@ def photo_analysis_save_screenshot(request, job_id):
     rel_path = f'media/photo_analysis/screenshots/{fname}'
     job.result_image = rel_path
     job.save(update_fields=['result_image'])
+    return JsonResponse({'ok': True, 'path': f'/{rel_path}'})
+
+
+@csrf_exempt
+@require_POST
+def photo_save_projection(request, job_id):
+    """Save the client-rendered projection preview as silhouette image."""
+    from .models import PhotoAnalysisJob
+    try:
+        job = PhotoAnalysisJob.objects.get(id=job_id)
+    except PhotoAnalysisJob.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
+
+    import base64
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    img_data = body.get('image', '')
+    if not img_data:
+        return JsonResponse({'ok': False, 'error': 'No image data'}, status=400)
+
+    if ',' in img_data:
+        img_data = img_data.split(',', 1)[1]
+
+    try:
+        raw = base64.b64decode(img_data)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Invalid base64'}, status=400)
+
+    sil_dir = os.path.join(str(settings.BASE_DIR), 'media', 'photo_analysis', 'silhouettes')
+    os.makedirs(sil_dir, exist_ok=True)
+    fname = f'{job_id}.jpg'
+    fpath = os.path.join(sil_dir, fname)
+    with open(fpath, 'wb') as f:
+        f.write(raw)
+
+    rel_path = f'media/photo_analysis/silhouettes/{fname}'
+    try:
+        data = json.loads(job.result_json)
+        data['silhouette_path'] = rel_path
+        job.result_json = json.dumps(data, default=str)
+        job.save(update_fields=['result_json'])
+    except Exception:
+        pass
+
     return JsonResponse({'ok': True, 'path': f'/{rel_path}'})
 
 
@@ -1140,6 +1204,195 @@ def photo_analysis_bulk_delete(request):
     return JsonResponse({'ok': True, 'deleted': deleted})
 
 
+def _compute_auto_alignment(cam_data, betas, gender, photo_path=None):
+    """Compute automatic body alignment from pipeline camera parameters.
+
+    Supports two formats:
+    - SMPLest-X: cam_trans [tx,ty,tz] + focal/princpt/processed_bbox
+    - PyMAF-X:   pred_cam [s,tx,ty] + bbox_cxcywh + bbox_scale + focal_length
+
+    Both are converted to a body_transform dict compatible with the baker.
+    After computing, the result is validated: if the projected head/feet
+    are too far from the visible person in the photo, we fall back to a
+    simple fit-to-image approach.
+
+    Returns dict with 'body_transform' key, or None if cam_data is incomplete.
+    """
+    import sys
+    import numpy as np
+
+    # Generate SMPL-X mesh to get mesh center (cx, cy) and base_scale
+    wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
+    sys.path.insert(0, wrappers_dir)
+    try:
+        from smplest_x_wrapper import generate_mesh
+        mesh = generate_mesh(betas, gender)
+    except ImportError:
+        return None
+    finally:
+        if wrappers_dir in sys.path:
+            sys.path.remove(wrappers_dir)
+
+    if mesh is None:
+        return None
+
+    n_verts = mesh['n_verts']
+    vertices = mesh['vertices'].reshape(n_verts, 3)
+
+    cx = (vertices[:, 0].min() + vertices[:, 0].max()) / 2
+    cy = (vertices[:, 1].min() + vertices[:, 1].max()) / 2
+
+    img_w = cam_data.get('image_width', 1920)
+    img_h = cam_data.get('image_height', 1080)
+
+    margin = 0.05
+    mesh_w = vertices[:, 0].max() - vertices[:, 0].min()
+    mesh_h = vertices[:, 1].max() - vertices[:, 1].min()
+    scale_x = img_w * (1 - 2 * margin) / max(mesh_w, 1e-6)
+    scale_y = img_h * (1 - 2 * margin) / max(mesh_h, 1e-6)
+    base_scale = min(scale_x, scale_y)
+
+    y_max = vertices[:, 1].max()  # head
+    y_min = vertices[:, 1].min()  # feet
+
+    candidate = None
+
+    # --- PyMAF-X format: pred_cam [s, tx, ty] in crop space ---
+    pred_cam = cam_data.get('pred_cam')
+    bbox_cxcywh = cam_data.get('bbox_cxcywh')
+    bbox_scale_val = cam_data.get('bbox_scale')
+
+    if pred_cam and bbox_cxcywh and bbox_scale_val:
+        s_crop, tx_crop, ty_crop = pred_cam
+        bbox_cx, bbox_cy, bbox_w_px, bbox_h_px = bbox_cxcywh
+
+        h = max(bbox_w_px, bbox_h_px)
+        s_pixels = s_crop * h / 2.0
+
+        orig_tx = 2.0 * (bbox_cx - img_w / 2.0) / (s_crop * h) + tx_crop
+        orig_ty = 2.0 * (bbox_cy - img_h / 2.0) / (s_crop * h) + ty_crop
+
+        bt_scale = s_pixels / base_scale
+        bt_center_x = orig_tx * (img_w / 2.0) + img_w / 2.0
+        bt_center_y = orig_ty * (img_h / 2.0) + img_h / 2.0
+
+        candidate = {
+            'body_transform': {
+                'center_x': float(bt_center_x),
+                'center_y': float(bt_center_y),
+                'scale': float(bt_scale),
+            },
+            'auto': True,
+            'method': 'pymafx',
+        }
+
+    # --- SMPLest-X format: cam_trans [tx,ty,tz] + focal/princpt ---
+    if candidate is None:
+        cam_trans = cam_data.get('cam_trans')
+        processed_bbox = cam_data.get('processed_bbox')
+        focal_arr = cam_data.get('cam_focal')
+        princpt = cam_data.get('cam_princpt')
+        input_body_shape = cam_data.get('input_body_shape')
+
+        if cam_trans and processed_bbox and focal_arr and princpt and input_body_shape:
+            tx, ty, tz = cam_trans
+            if abs(tz) > 1e-6:
+                bbox_x, bbox_y, bbox_w, bbox_h = processed_bbox
+                body_h, body_w = input_body_shape
+
+                focal_orig_x = focal_arr[0] / body_w * bbox_w
+                princpt_orig_x = princpt[0] / body_w * bbox_w + bbox_x
+                princpt_orig_y = princpt[1] / body_h * bbox_h + bbox_y
+
+                wp_scale = focal_orig_x / tz
+                bt_scale = wp_scale / base_scale
+                bt_center_x = wp_scale * (cx + tx) + princpt_orig_x
+                bt_center_y = princpt_orig_y - wp_scale * (ty + cy)
+
+                candidate = {
+                    'body_transform': {
+                        'center_x': float(bt_center_x),
+                        'center_y': float(bt_center_y),
+                        'scale': float(bt_scale),
+                    },
+                    'auto': True,
+                    'method': 'smplest_x',
+                }
+
+    if candidate is None:
+        return None
+
+    # --- Detect person bounds from photo for validation ---
+    person_top, person_bottom, person_cx = 0.0, float(img_h), img_w / 2.0
+    person_detected = False
+
+    if photo_path:
+        try:
+            import cv2
+            photo = cv2.imread(photo_path)
+            if photo is not None:
+                gray = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY)
+                _, mask = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
+                ys, xs = np.where(mask > 0)
+                if len(ys) > 100:
+                    person_top = float(np.percentile(ys, 1))
+                    person_bottom = float(np.percentile(ys, 99))
+                    person_cx = float(np.median(xs))
+                    person_detected = True
+        except Exception:
+            pass
+
+    # --- Validate: projected head/feet vs detected person ---
+    bt = candidate['body_transform']
+    s = base_scale * bt['scale']
+    head_proj_y = (cy - y_max) * s + bt['center_y']
+    feet_proj_y = (cy - y_min) * s + bt['center_y']
+
+    valid = True
+    if person_detected:
+        person_h = person_bottom - person_top
+        # Head should be within 15% of image height from actual person top
+        head_off = abs(head_proj_y - person_top) / max(person_h, 1)
+        feet_off = abs(feet_proj_y - person_bottom) / max(person_h, 1)
+        if head_off > 0.15 or feet_off > 0.15:
+            logger.info('Pipeline alignment off: head_off=%.1f%%, feet_off=%.1f%%',
+                        head_off * 100, feet_off * 100)
+            valid = False
+    else:
+        # No person detection: use loose check
+        head_ok = head_proj_y < img_h * 0.20
+        feet_ok = feet_proj_y > img_h * 0.80
+        overlap_top = max(0, min(feet_proj_y, img_h) - max(head_proj_y, 0))
+        mesh_proj_h = feet_proj_y - head_proj_y
+        overlap_ratio = overlap_top / max(mesh_proj_h, 1) if mesh_proj_h > 0 else 0
+        if not (head_ok and feet_ok and overlap_ratio > 0.7):
+            valid = False
+
+    if valid:
+        return candidate
+
+    # --- Fallback: fit mesh to detected person bbox ---
+    logger.info('Pipeline alignment rejected (head=%.0f vs person_top=%.0f, '
+                'feet=%.0f vs person_bottom=%.0f), using image-fit fallback',
+                head_proj_y, person_top, feet_proj_y, person_bottom)
+
+    person_h = person_bottom - person_top
+    person_cy_val = (person_top + person_bottom) / 2.0
+
+    fit_scale = person_h * 0.95 / max(mesh_h, 1e-6)
+    bt_scale_fit = fit_scale / base_scale
+
+    return {
+        'body_transform': {
+            'center_x': float(person_cx),
+            'center_y': float(person_cy_val),
+            'scale': float(bt_scale_fit),
+        },
+        'auto': True,
+        'method': candidate['method'] + '_fallback',
+    }
+
+
 @csrf_exempt
 @require_POST
 def analyze_photo(request):
@@ -1150,15 +1403,13 @@ def analyze_photo(request):
     """
     import sys
     wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
-    sys.path.insert(0, wrappers_dir)
+    if wrappers_dir not in sys.path:
+        sys.path.insert(0, wrappers_dir)
     try:
         from photo_analyzer import analyze as pa_analyze
         from smplest_x_wrapper import betas_to_morph_sliders
     except ImportError:
         return JsonResponse({'ok': False, 'error': 'Photo analyzer not found'})
-    finally:
-        if wrappers_dir in sys.path:
-            sys.path.remove(wrappers_dir)
 
     photo = request.FILES.get('photo')
     if not photo:
@@ -1205,7 +1456,19 @@ def analyze_photo(request):
         'backend': result.get('backend', backend),
         'photo_url': f'/media/photo_analysis/{filename}',
         'duration': round(duration, 2),
+        'bbox_xyxy': result.get('bbox_xyxy'),
     }
+    # Forward camera data for auto-alignment (SMPLest-X + PyMAF-X keys)
+    cam_data = {}
+    for key in ('cam_trans', 'processed_bbox', 'cam_focal', 'cam_princpt',
+                'input_body_shape', 'image_width', 'image_height',
+                'pred_cam', 'bbox_cxcywh', 'bbox_scale',
+                'focal_length', 'crop_res'):
+        if result.get(key) is not None:
+            cam_data[key] = result[key]
+    if cam_data:
+        resp['cam_data'] = cam_data
+
     # Forward estimated gender info
     if mapping.get('estimated_gender'):
         resp['estimated_gender'] = mapping['estimated_gender']
@@ -1262,10 +1525,24 @@ def analyze_photo(request):
                 'skin_color': skin_color,
                 'original_filename': photo.name,
                 'created_at': str(job_obj.created_at),
+                'bbox_xyxy': result.get('bbox_xyxy'),
+                'image_width': result.get('image_width'),
+                'image_height': result.get('image_height'),
+                'cam_data': cam_data if cam_data else None,
             }
             json_path = os.path.join(smplx_dir, f'{job_obj.id}.json')
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(smplx_params, f, indent=2, ensure_ascii=False)
+
+            # Load posed vertices from subprocess temp file
+            posed_vertices = None
+            posed_path = result.get('posed_vertices_path')
+            if posed_path and os.path.isfile(posed_path):
+                try:
+                    posed_vertices = np.load(posed_path)
+                    os.remove(posed_path)
+                except Exception:
+                    logger.warning('Failed to load posed vertices from %s', posed_path)
 
             # NPZ with generated mesh + rig
             import sys as _sys
@@ -1276,7 +1553,7 @@ def analyze_photo(request):
                 mesh = generate_mesh(result['betas'], effective_gender)
                 if mesh is not None:
                     npz_path = os.path.join(smplx_dir, f'{job_obj.id}.npz')
-                    np.savez_compressed(npz_path,
+                    npz_data = dict(
                         vertices=mesh['vertices'],
                         faces=mesh['faces'],
                         joints=mesh['joints'],
@@ -1287,11 +1564,41 @@ def analyze_photo(request):
                         expression=np.array(result.get('expression', []),
                                             dtype=np.float32),
                     )
+                    if posed_vertices is not None:
+                        npz_data['posed_vertices'] = posed_vertices.astype(np.float32)
+                    np.savez_compressed(npz_path, **npz_data)
             finally:
                 if _wd in _sys.path:
                     _sys.path.remove(_wd)
         except Exception as exc:
             logger.warning('Failed to save SMPL-X output: %s', exc)
+
+    # Auto-compute alignment from camera params (SMPLest-X or PyMAF-X)
+    has_cam = cam_data and (cam_data.get('cam_trans') or cam_data.get('pred_cam'))
+    if job_obj is not None and has_cam:
+        try:
+            alignment = _compute_auto_alignment(
+                cam_data, result['betas'], effective_gender,
+                photo_path=filepath)
+            if alignment:
+                # Save auto-alignment into job result_json
+                try:
+                    data = json.loads(job_obj.result_json)
+                except (json.JSONDecodeError, TypeError):
+                    data = dict(resp)
+                data['alignment_data'] = alignment
+                data['cam_data'] = cam_data
+                job_obj.result_json = json.dumps(data, default=str)
+                job_obj.save(update_fields=['result_json'])
+                resp['alignment_data'] = alignment
+                logger.info('Auto-alignment computed for job %s: scale=%.3f, '
+                            'center=(%.1f, %.1f)',
+                            job_obj.id,
+                            alignment['body_transform']['scale'],
+                            alignment['body_transform']['center_x'],
+                            alignment['body_transform']['center_y'])
+        except Exception as exc:
+            logger.warning('Auto-alignment failed: %s', exc)
 
     return JsonResponse(resp)
 
@@ -1345,7 +1652,7 @@ def smplx_mesh(request):
     if result is None:
         return JsonResponse({'ok': False, 'error': 'SMPL-X model not available'})
 
-    return JsonResponse({
+    resp = {
         'ok': True,
         'vertices': base64.b64encode(result['vertices'].tobytes()).decode(),
         'faces': base64.b64encode(result['faces'].tobytes()).decode(),
@@ -1356,4 +1663,655 @@ def smplx_mesh(request):
         'n_verts': result['n_verts'],
         'n_faces': result['n_faces'],
         'n_joints': result['n_joints'],
+    }
+
+    # Include UV data if available (seam-duplicated vertex arrays)
+    if 'uv_coords' in result:
+        resp['uv_vertices']     = base64.b64encode(result['uv_vertices'].tobytes()).decode()
+        resp['uv_coords']       = base64.b64encode(result['uv_coords'].tobytes()).decode()
+        resp['uv_faces']        = base64.b64encode(result['uv_faces'].tobytes()).decode()
+        resp['uv_skin_indices'] = base64.b64encode(result['uv_skin_indices'].tobytes()).decode()
+        resp['uv_skin_weights'] = base64.b64encode(result['uv_skin_weights'].tobytes()).decode()
+        resp['n_uv_verts']      = result['n_uv_verts']
+
+    return JsonResponse(resp)
+
+
+def _auto_body_transform(vertices, posed_proj, w_img, h_img, margin=0.05):
+    """Compute a body_transform that aligns ortho T-pose with posed projection.
+
+    Uses the posed 2D bounding box to derive center/scale for the ortho bake,
+    so the T-pose mesh maps onto where the person is in the photo.
+    """
+    # Ortho projection parameters — MUST match bake_texture.py body_transform branch
+    x_min, y_min = vertices[:, 0].min(), vertices[:, 1].min()
+    x_max, y_max = vertices[:, 0].max(), vertices[:, 1].max()
+    mesh_w, mesh_h = x_max - x_min, y_max - y_min
+    scale_x = w_img * (1 - 2 * margin) / max(mesh_w, 1e-6)
+    scale_y = h_img * (1 - 2 * margin) / max(mesh_h, 1e-6)
+    base_scale = min(scale_x, scale_y)
+
+    # Posed projection bounding box (where the person actually is)
+    valid = ~np.isnan(posed_proj).any(axis=1)
+    if valid.sum() < 10:
+        return None
+    px_min = posed_proj[valid, 0].min()
+    px_max = posed_proj[valid, 0].max()
+    py_min = posed_proj[valid, 1].min()
+    py_max = posed_proj[valid, 1].max()
+    posed_cx = (px_min + px_max) / 2
+    posed_cy = (py_min + py_max) / 2
+    posed_h = py_max - py_min
+
+    # Scale: match the vertical extent of the posed projection
+    scale = posed_h / (mesh_h * base_scale) if mesh_h * base_scale > 1 else 1.0
+
+    return {
+        'center_x': float(posed_cx),
+        'center_y': float(posed_cy),
+        'scale': float(scale),
+    }
+
+
+def _project_posed_vertices(posed_verts, cam_data, img_w, img_h):
+    """Project posed vertices to 2D image coords using pipeline camera.
+
+    Supports both SMPLest-X (perspective) and PyMAF-X (weak-perspective).
+    Returns (N, 2) float32 array of pixel coordinates.
+    """
+    n = len(posed_verts)
+    proj = np.zeros((n, 2), dtype=np.float32)
+
+    if cam_data.get('cam_trans'):
+        # SMPLest-X: perspective projection in camera space
+        focal_cfg = cam_data['cam_focal']           # [fx, fy] in crop space
+        princpt_cfg = cam_data['cam_princpt']       # [cx, cy] in crop space
+        bbox = cam_data['processed_bbox']           # [x, y, w, h]
+        input_shape = cam_data['input_body_shape']  # [H, W]
+
+        fx = focal_cfg[0] / input_shape[1] * bbox[2]
+        fy = focal_cfg[1] / input_shape[0] * bbox[3]
+        cx = princpt_cfg[0] / input_shape[1] * bbox[2] + bbox[0]
+        cy = princpt_cfg[1] / input_shape[0] * bbox[3] + bbox[1]
+
+        z = posed_verts[:, 2].copy()
+        z[np.abs(z) < 1e-6] = 1e-6
+        proj[:, 0] = fx * posed_verts[:, 0] / z + cx
+        proj[:, 1] = fy * posed_verts[:, 1] / z + cy
+
+    elif cam_data.get('pred_cam'):
+        # PyMAF-X: weak-perspective in crop → original image
+        s, tx, ty = cam_data['pred_cam']
+        bbox_cx, bbox_cy, bbox_w, bbox_h = cam_data['bbox_cxcywh']
+        crop_size = max(bbox_w, bbox_h)
+
+        proj[:, 0] = s * posed_verts[:, 0] + tx
+        proj[:, 1] = s * posed_verts[:, 1] + ty
+        proj[:, 0] = (proj[:, 0] + 1) * crop_size / 2 + (bbox_cx - crop_size / 2)
+        proj[:, 1] = (proj[:, 1] + 1) * crop_size / 2 + (bbox_cy - crop_size / 2)
+
+    return proj
+
+
+@require_GET
+def smplx_texture(request, job_id):
+    """Bake photo onto SMPL-X UV texture map.
+
+    Returns a 1024x1024 PNG (RGBA) where front-facing triangles are
+    filled with photo pixels projected via orthographic projection.
+    """
+    import sys
+    import cv2
+
+    from .models import PhotoAnalysisJob
+    try:
+        job = PhotoAnalysisJob.objects.get(id=job_id)
+    except PhotoAnalysisJob.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
+
+    # Load photo
+    photo_path = os.path.join(str(settings.BASE_DIR), job.photo_file)
+    if not os.path.isfile(photo_path):
+        return JsonResponse({'ok': False, 'error': 'Photo not found'}, status=404)
+    photo = cv2.imread(photo_path)
+    if photo is None:
+        return JsonResponse({'ok': False, 'error': 'Could not read photo'}, status=500)
+
+    # Load betas from stored result
+    try:
+        data = json.loads(job.result_json)
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Invalid result data'}, status=500)
+
+    betas = data.get('betas', [0.0] * 10)
+    gender = data.get('gender', 'neutral')
+
+    # Generate SMPL-X mesh
+    wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
+    sys.path.insert(0, wrappers_dir)
+    try:
+        from smplest_x_wrapper import generate_mesh
+        mesh = generate_mesh(betas, gender)
+    except ImportError:
+        return JsonResponse({'ok': False, 'error': 'Wrapper not found'}, status=500)
+    finally:
+        if wrappers_dir in sys.path:
+            sys.path.remove(wrappers_dir)
+
+    if mesh is None:
+        return JsonResponse({'ok': False, 'error': 'SMPL-X model not available'}, status=500)
+
+    n_verts = mesh['n_verts']
+    vertices = mesh['vertices'].reshape(n_verts, 3)
+    faces = mesh['faces'].reshape(mesh['n_faces'], 3)
+
+    # Parse skin color for texture background
+    skin_hex = data.get('skin_color', '#ccaa88')
+    try:
+        r = int(skin_hex[1:3], 16)
+        g = int(skin_hex[3:5], 16)
+        b = int(skin_hex[5:7], 16)
+        bg_color = (b, g, r)  # BGR for OpenCV
+    except (ValueError, IndexError):
+        bg_color = (136, 170, 204)  # default BGR
+
+    # Load posed vertices from NPZ (saved during analyze_photo)
+    h_img, w_img = photo.shape[:2]
+    proj_2d = None
+    smplx_dir = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody', 'data', 'photoTo3D', 'SMPLX')
+    npz_path = os.path.join(smplx_dir, f'{job_id}.npz')
+    cam_data = data.get('cam_data')
+    posed_proj_for_align = None  # 2D projection from posed mesh (for auto-alignment)
+    if os.path.isfile(npz_path) and cam_data:
+        try:
+            npz = np.load(npz_path)
+            if 'posed_vertices' in npz:
+                posed_verts = npz['posed_vertices']
+                partial_proj = _project_posed_vertices(posed_verts, cam_data, w_img, h_img)
+                if len(posed_verts) >= n_verts:
+                    # Full SMPL-X posed mesh — topology matches, use directly
+                    proj_2d = partial_proj
+                else:
+                    # Body-only posed verts (6890 SMPL) < full SMPL-X (10475)
+                    # SMPL and SMPL-X have incompatible face topologies (only 268
+                    # of ~13K body faces are shared).  Using SMPL vertices with
+                    # SMPL-X faces produces broken textures.
+                    # Fall back to orthographic + auto-align from pose projection.
+                    logger.info('SMPL body-only (%d < %d): falling back to ortho bake '
+                                'with pose-derived alignment', len(posed_verts), n_verts)
+                    posed_proj_for_align = partial_proj
+        except Exception:
+            logger.warning('Failed to load posed vertices for job %s', job_id)
+
+    # Bake texture (with backend selection + region filtering)
+    backend = request.GET.get('backend', 'orthographic')
+    region = request.GET.get('region', 'all')  # 'all', 'body', 'face'
+    if region not in ('all', 'body', 'face'):
+        region = 'all'
+    photo_tex_dir = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody', 'PhotoToTexture')
+    sys.path.insert(0, photo_tex_dir)
+    try:
+        from bake_texture import bake_with_backend
+        # Priority: posed mesh projection > alignment > default
+        alignment = data.get('alignment_data')
+        bake_kwargs = dict(job_data=data, texture_size=1024, bg_color=bg_color, region=region)
+        if proj_2d is not None:
+            # Full SMPL-X posed projection
+            if alignment and alignment.get('proj_2d_offset'):
+                off = alignment['proj_2d_offset']
+                valid_mask = ~np.isnan(proj_2d).any(axis=1)
+                pcx = proj_2d[valid_mask, 0].mean()
+                pcy = proj_2d[valid_mask, 1].mean()
+                proj_2d[valid_mask, 0] = (proj_2d[valid_mask, 0] - pcx) * off['scale'] + pcx + off['dx']
+                proj_2d[valid_mask, 1] = (proj_2d[valid_mask, 1] - pcy) * off['scale'] + pcy + off['dy']
+            bake_kwargs['proj_2d'] = proj_2d
+        else:
+            # Orthographic T-pose bake.
+            # Auto-align from posed projection if available.
+            bt = None
+            if alignment and alignment.get('body_transform'):
+                bt = alignment['body_transform']
+            elif posed_proj_for_align is not None:
+                # Auto body_transform from posed projection for all backends.
+                bt = _auto_body_transform(vertices, posed_proj_for_align,
+                                          w_img, h_img, margin=0.05)
+                # Merge wizard proj_2d_offset adjustments into the auto transform
+                if bt and alignment and alignment.get('proj_2d_offset'):
+                    off = alignment['proj_2d_offset']
+                    bt['center_x'] += off.get('dx', 0)
+                    bt['center_y'] += off.get('dy', 0)
+                    bt['scale'] *= off.get('scale', 1.0)
+            if bt:
+                bake_kwargs['body_transform'] = bt
+            if alignment and alignment.get('face_transform'):
+                bake_kwargs['face_transform'] = alignment['face_transform']
+        texture = bake_with_backend(backend, vertices, faces, photo, **bake_kwargs)
+    except Exception as exc:
+        logger.exception('Texture baking failed (backend=%s, region=%s)', backend, region)
+        return JsonResponse({'ok': False, 'error': str(exc)}, status=500)
+    finally:
+        if photo_tex_dir in sys.path:
+            sys.path.remove(photo_tex_dir)
+
+    # Save texture to disk — per-region files + composite
+    tex_dir = os.path.join(str(settings.BASE_DIR), 'media', 'photo_analysis', 'textures')
+    os.makedirs(tex_dir, exist_ok=True)
+
+    if region in ('body', 'face'):
+        # Save region-specific texture
+        region_fname = f'{job_id}_{region}.png'
+        cv2.imwrite(os.path.join(tex_dir, region_fname), texture)
+
+        # Composite: load both partial textures if available, overlay face on body
+        body_path = os.path.join(tex_dir, f'{job_id}_body.png')
+        face_path = os.path.join(tex_dir, f'{job_id}_face.png')
+        if os.path.isfile(body_path) and os.path.isfile(face_path):
+            body_tex = cv2.imread(body_path, cv2.IMREAD_UNCHANGED)
+            face_tex = cv2.imread(face_path, cv2.IMREAD_UNCHANGED)
+            # Composite: face pixels (non-bg) overwrite body pixels
+            if face_tex.shape[2] == 4:
+                face_alpha = face_tex[:, :, 3] > 0
+            else:
+                # RGB with bg_color: detect non-background pixels
+                face_alpha = np.any(face_tex != np.array(bg_color, dtype=np.uint8), axis=2)
+            composite = body_tex.copy()
+            composite[face_alpha] = face_tex[face_alpha]
+            texture = composite
+        # else: just return the single region texture as-is
+
+    tex_fname = f'{job_id}.png'
+    tex_fpath = os.path.join(tex_dir, tex_fname)
+    cv2.imwrite(tex_fpath, texture)
+    tex_rel = f'media/photo_analysis/textures/{tex_fname}'
+    try:
+        data['texture_path'] = tex_rel
+        job.result_json = json.dumps(data, default=str)
+        job.save(update_fields=['result_json'])
+    except Exception:
+        logger.warning('Failed to save texture path for job %s', job_id)
+
+    # Encode as PNG and return
+    _, png_buf = cv2.imencode('.png', texture)
+    from django.http import HttpResponse
+    return HttpResponse(png_buf.tobytes(), content_type='image/png')
+
+
+@require_GET
+def photo_silhouette_data(request, job_id):
+    """Return mesh silhouette contour + face contour for the alignment wizard.
+
+    Generates SMPL-X mesh from stored betas, projects orthographically onto
+    photo dimensions, rasterises front-facing triangles to extract body contour,
+    and computes face contour from face vertex indices.
+    """
+    import sys
+    import cv2
+
+    from .models import PhotoAnalysisJob
+    try:
+        job = PhotoAnalysisJob.objects.get(id=job_id)
+    except PhotoAnalysisJob.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
+
+    try:
+        data = json.loads(job.result_json)
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Invalid result data'}, status=500)
+
+    betas = data.get('betas', [0.0] * 10)
+    gender = data.get('gender', 'neutral')
+
+    # Load photo dimensions
+    photo_path = os.path.join(str(settings.BASE_DIR), job.photo_file)
+    if not os.path.isfile(photo_path):
+        return JsonResponse({'ok': False, 'error': 'Photo not found'}, status=404)
+    photo = cv2.imread(photo_path)
+    if photo is None:
+        return JsonResponse({'ok': False, 'error': 'Could not read photo'}, status=500)
+    h_img, w_img = photo.shape[:2]
+
+    # Generate SMPL-X mesh
+    wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
+    sys.path.insert(0, wrappers_dir)
+    try:
+        from smplest_x_wrapper import generate_mesh
+        mesh = generate_mesh(betas, gender)
+    except ImportError:
+        return JsonResponse({'ok': False, 'error': 'Wrapper not found'}, status=500)
+    finally:
+        if wrappers_dir in sys.path:
+            sys.path.remove(wrappers_dir)
+
+    if mesh is None:
+        return JsonResponse({'ok': False, 'error': 'SMPL-X model not available'}, status=500)
+
+    n_verts = mesh['n_verts']
+    vertices = mesh['vertices'].reshape(n_verts, 3)
+    faces = mesh['faces'].reshape(mesh['n_faces'], 3)
+
+    # --- Try posed mesh projection first (matches texture bake) ---
+    alignment = data.get('alignment_data')
+    use_posed = False
+    bt = None
+    proj_2d = None
+    smplx_dir = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody', 'data', 'photoTo3D', 'SMPLX')
+    npz_path = os.path.join(smplx_dir, f'{job_id}.npz')
+    cam_data = data.get('cam_data')
+    n_posed = n_verts  # number of actual posed vertices (may differ from SMPL-X n_verts)
+    if os.path.isfile(npz_path) and cam_data:
+        try:
+            npz = np.load(npz_path)
+            if 'posed_vertices' in npz:
+                posed_verts = npz['posed_vertices']
+                n_posed = len(posed_verts)
+                partial_proj = _project_posed_vertices(posed_verts, cam_data, w_img, h_img)
+                if n_posed >= n_verts:
+                    proj_2d = partial_proj
+                else:
+                    proj_2d = np.full((n_verts, 2), np.nan, dtype=np.float32)
+                    proj_2d[:n_posed] = partial_proj
+        except Exception:
+            logger.warning('Failed to load posed vertices for silhouette job %s', job_id)
+
+    if proj_2d is not None:
+        proj = proj_2d.copy()
+        use_posed = True
+        # Apply saved proj_2d_offset (wizard alignment for posed mode)
+        if alignment and alignment.get('proj_2d_offset'):
+            off = alignment['proj_2d_offset']
+            valid_mask = ~np.isnan(proj).any(axis=1)
+            pcx = proj[valid_mask, 0].mean()
+            pcy = proj[valid_mask, 1].mean()
+            proj[valid_mask, 0] = (proj[valid_mask, 0] - pcx) * off.get('scale', 1) + pcx + off.get('dx', 0)
+            proj[valid_mask, 1] = (proj[valid_mask, 1] - pcy) * off.get('scale', 1) + pcy + off.get('dy', 0)
+        # Screen-space front-face test (Y-down pixel coords → CW = front → cross_z < 0)
+        p0 = proj[faces[:, 0]]; p1 = proj[faces[:, 1]]; p2 = proj[faces[:, 2]]
+        has_nan = np.isnan(p0).any(axis=1) | np.isnan(p1).any(axis=1) | np.isnan(p2).any(axis=1)
+        e1 = p1 - p0; e2 = p2 - p0
+        cross_z = e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]
+        front_ids = np.where((cross_z < 0) & ~has_nan)[0]
+    else:
+        # Orthographic projection — apply alignment_data if available
+        margin = 0.05
+        x_min, y_min = vertices[:, 0].min(), vertices[:, 1].min()
+        x_max, y_max = vertices[:, 0].max(), vertices[:, 1].max()
+        mesh_w, mesh_h = x_max - x_min, y_max - y_min
+        scale_x = w_img * (1 - 2 * margin) / max(mesh_w, 1e-6)
+        scale_y = h_img * (1 - 2 * margin) / max(mesh_h, 1e-6)
+        base_scale = min(scale_x, scale_y)
+        cx = (x_min + x_max) / 2
+        cy = (y_min + y_max) / 2
+
+        bt = alignment.get('body_transform') if alignment else None
+
+        proj = np.zeros((n_verts, 2), dtype=np.float32)
+        if bt:
+            # Use alignment transform (same formula as bake_texture.py)
+            s = base_scale * bt['scale']
+            proj[:, 0] = (vertices[:, 0] - cx) * s + bt['center_x']
+            proj[:, 1] = (cy - vertices[:, 1]) * s + bt['center_y']
+        else:
+            # Default: fit mesh HEIGHT to photo (same as baker default).
+            # T-pose arms make the mesh wide; fitting width would make
+            # the body tiny on portrait photos.
+            proj[:, 0] = (vertices[:, 0] - cx) * scale_y + w_img / 2
+            proj[:, 1] = (cy - vertices[:, 1]) * scale_y + h_img / 2
+
+        # Front-face test (3D XY cross product)
+        v0 = vertices[faces[:, 0]]
+        v1 = vertices[faces[:, 1]]
+        v2 = vertices[faces[:, 2]]
+        e1 = v1 - v0
+        e2 = v2 - v0
+        cross_z = e1[:, 0] * e2[:, 1] - e1[:, 1] * e2[:, 0]
+        front_ids = np.where(cross_z > 0)[0]
+
+    # Rasterise body silhouette onto a binary mask
+    mask_size = 512
+    sx = mask_size / w_img
+    sy = mask_size / h_img
+    mask = np.zeros((mask_size, mask_size), dtype=np.uint8)
+
+    if use_posed and n_posed < n_verts:
+        # SMPL mesh with SMPL-X faces: topology mismatch causes artifacts.
+        # Use vertex scatter + morphological closing instead of triangle raster.
+        valid_proj = proj[:n_posed]
+        valid_mask = ~np.isnan(valid_proj).any(axis=1)
+        pts_2d = valid_proj[valid_mask]
+        px = (pts_2d[:, 0] * sx).astype(np.int32)
+        py = (pts_2d[:, 1] * sy).astype(np.int32)
+        in_bounds = (px >= 0) & (px < mask_size) & (py >= 0) & (py < mask_size)
+        mask[py[in_bounds], px[in_bounds]] = 255
+        # Connect nearby vertices with morphological closing
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        # Smooth edges
+        mask = cv2.GaussianBlur(mask, (7, 7), 0)
+        _, mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
+    else:
+        # Correct topology: rasterise front-facing triangles
+        for fi in front_ids:
+            i0, i1, i2 = faces[fi]
+            pts = np.array([
+                [proj[i0, 0] * sx, proj[i0, 1] * sy],
+                [proj[i1, 0] * sx, proj[i1, 1] * sy],
+                [proj[i2, 0] * sx, proj[i2, 1] * sy],
+            ], dtype=np.int32).reshape((-1, 1, 2))
+            cv2.fillConvexPoly(mask, pts, 255)
+
+    # Extract contour and simplify
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    body_contour = []
+    if contours:
+        # Take largest contour
+        largest = max(contours, key=cv2.contourArea)
+        epsilon = 0.001 * cv2.arcLength(largest, True)
+        approx = cv2.approxPolyDP(largest, epsilon, True)
+        # Scale back to photo pixel coordinates
+        body_contour = [[float(p[0][0] / sx), float(p[0][1] / sy)] for p in approx]
+
+    # Mesh bounding box in photo coords (nanmin/nanmax for posed proj with NaN padding)
+    proj_x_min = float(np.nanmin(proj[:, 0]))
+    proj_y_min = float(np.nanmin(proj[:, 1]))
+    proj_x_max = float(np.nanmax(proj[:, 0]))
+    proj_y_max = float(np.nanmax(proj[:, 1]))
+    mesh_bbox = {
+        'x': proj_x_min, 'y': proj_y_min,
+        'w': proj_x_max - proj_x_min, 'h': proj_y_max - proj_y_min,
+    }
+
+    # --- Face contour ---
+    # face_vids are for SMPL-X topology — only use when vertex count matches
+    face_contour = []
+    face_bbox_mesh = None
+    _smplx_face_ok = False
+    face_vids_path = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH',
+                                  'PyMAF-X', 'data', 'partial_mesh', 'smplx_face_vids.npz')
+    if os.path.isfile(face_vids_path) and n_posed >= 10000:
+        # SMPL-X mesh — face_vids are valid
+        face_vids = np.load(face_vids_path)['vids']
+        valid_vids = face_vids[face_vids < n_verts]
+        face_pts = proj[valid_vids]
+        face_valid = ~np.isnan(face_pts).any(axis=1)
+        face_pts = face_pts[face_valid]
+        if len(face_pts) >= 3:
+            try:
+                from scipy.spatial import ConvexHull
+                hull = ConvexHull(face_pts)
+                hull_pts = face_pts[hull.vertices]
+                face_contour = [[float(p[0]), float(p[1])] for p in hull_pts]
+                _smplx_face_ok = True
+            except Exception:
+                pass
+            fx_min, fy_min = face_pts[:, 0].min(), face_pts[:, 1].min()
+            fx_max, fy_max = face_pts[:, 0].max(), face_pts[:, 1].max()
+            face_bbox_mesh = {
+                'x': float(fx_min), 'y': float(fy_min),
+                'w': float(fx_max - fx_min), 'h': float(fy_max - fy_min),
+            }
+
+    # MediaPipe face landmarks — always run for face_bbox_detected,
+    # and also use for face contour when SMPL-X face_vids don't apply
+    face_bbox_detected = None
+    # MediaPipe face oval landmark indices (ordered outline of the face)
+    _FACE_OVAL_IDS = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323,
+                      361, 288, 397, 365, 379, 378, 400, 377, 152, 148,
+                      176, 149, 150, 136, 172, 58, 132, 93, 234, 127,
+                      162, 21, 54, 103, 67, 109]
+    try:
+        import mediapipe as mp
+        from mediapipe.tasks import python as mp_python
+        from mediapipe.tasks.python import vision as mp_vision
+
+        model_path = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH',
+                                  'MocapNET_v4', 'src', 'python', 'mnet4',
+                                  'models', 'face_landmarker.task')
+        if os.path.isfile(model_path):
+            options = mp_vision.FaceLandmarkerOptions(
+                base_options=mp_python.BaseOptions(model_asset_path=model_path),
+                num_faces=1,
+            )
+            with mp_vision.FaceLandmarker.create_from_options(options) as landmarker:
+                mp_img = mp.Image(image_format=mp.ImageFormat.SRGB,
+                                  data=cv2.cvtColor(photo, cv2.COLOR_BGR2RGB))
+                result = landmarker.detect(mp_img)
+                if result.face_landmarks:
+                    lm = result.face_landmarks[0]
+                    xs = [l.x * w_img for l in lm]
+                    ys = [l.y * h_img for l in lm]
+                    face_bbox_detected = {
+                        'x': float(min(xs)), 'y': float(min(ys)),
+                        'w': float(max(xs) - min(xs)), 'h': float(max(ys) - min(ys)),
+                    }
+                    # Always use MediaPipe face oval for face_contour —
+                    # gives a much better face outline than SMPL-X ConvexHull
+                    face_contour = [
+                        [float(lm[i].x * w_img), float(lm[i].y * h_img)]
+                        for i in _FACE_OVAL_IDS if i < len(lm)
+                    ]
+                    if not _smplx_face_ok:
+                        face_bbox_mesh = face_bbox_detected
+    except Exception as exc:
+        logger.debug('MediaPipe face detection skipped: %s', exc)
+
+    # Fallback: face contour from 2D projection (top ~12% of vertices)
+    # Works for SMPL meshes where face_vids don't apply and MediaPipe fails
+    if not face_contour and use_posed and n_posed < 10000:
+        try:
+            from scipy.spatial import ConvexHull
+            valid_proj = proj[~np.isnan(proj).any(axis=1)]
+            y_min_p, y_max_p = valid_proj[:, 1].min(), valid_proj[:, 1].max()
+            y_thresh = y_min_p + (y_max_p - y_min_p) * 0.12
+            head_mask = valid_proj[:, 1] < y_thresh
+            head_pts = valid_proj[head_mask]
+            if len(head_pts) >= 3:
+                hull = ConvexHull(head_pts)
+                hull_pts = head_pts[hull.vertices]
+                face_contour = [[float(p[0]), float(p[1])] for p in hull_pts]
+                fx_min, fy_min = head_pts[:, 0].min(), head_pts[:, 1].min()
+                fx_max, fy_max = head_pts[:, 0].max(), head_pts[:, 1].max()
+                face_bbox_mesh = {
+                    'x': float(fx_min), 'y': float(fy_min),
+                    'w': float(fx_max - fx_min), 'h': float(fy_max - fy_min),
+                }
+        except Exception:
+            pass
+
+    # Fallback: use mesh face bbox if MediaPipe failed
+    if face_bbox_detected is None and face_bbox_mesh is not None:
+        face_bbox_detected = face_bbox_mesh
+
+    # YOLO bbox from job data
+    yolo_bbox = data.get('bbox_xyxy')
+
+    # Save silhouette preview image (photo + body contour overlay)
+    try:
+        preview_h = 400
+        preview_scale = preview_h / h_img
+        preview_w = int(w_img * preview_scale)
+        preview = cv2.resize(photo, (preview_w, preview_h))
+        # Draw body contour
+        if body_contour and len(body_contour) > 2:
+            pts = np.array([[int(p[0] * preview_scale), int(p[1] * preview_scale)]
+                            for p in body_contour], dtype=np.int32)
+            overlay = preview.copy()
+            cv2.fillPoly(overlay, [pts], (96, 69, 233))  # BGR red-pink fill
+            cv2.addWeighted(overlay, 0.25, preview, 0.75, 0, preview)
+            cv2.polylines(preview, [pts], True, (96, 69, 233), 2, cv2.LINE_AA)
+        # Draw face contour
+        if face_contour and len(face_contour) > 2:
+            fpts = np.array([[int(p[0] * preview_scale), int(p[1] * preview_scale)]
+                             for p in face_contour], dtype=np.int32)
+            cv2.polylines(preview, [fpts], True, (182, 89, 155), 2, cv2.LINE_AA)  # BGR purple
+        sil_dir = os.path.join(str(settings.BASE_DIR), 'media', 'photo_analysis', 'silhouettes')
+        os.makedirs(sil_dir, exist_ok=True)
+        sil_fname = f'{job_id}.jpg'
+        cv2.imwrite(os.path.join(sil_dir, sil_fname), preview, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        sil_rel = f'media/photo_analysis/silhouettes/{sil_fname}'
+        data['silhouette_path'] = sil_rel
+        job.result_json = json.dumps(data, default=str)
+        job.save(update_fields=['result_json'])
+    except Exception:
+        logger.warning('Failed to save silhouette preview for job %s', job_id)
+
+    # Use edited contours from alignment if available
+    if alignment:
+        if alignment.get('body_contour_edited'):
+            body_contour = alignment['body_contour_edited']
+        if alignment.get('face_contour_edited'):
+            face_contour = alignment['face_contour_edited']
+
+    return JsonResponse({
+        'ok': True,
+        'body_contour': body_contour,
+        'face_contour': face_contour,
+        'mesh_bbox': mesh_bbox,
+        'face_bbox_detected': face_bbox_detected,
+        'face_bbox_mesh': face_bbox_mesh,
+        'yolo_bbox': yolo_bbox,
+        'photo_width': w_img,
+        'photo_height': h_img,
+        'use_posed': use_posed,
+        'has_alignment': bool(alignment and (bt or alignment.get('proj_2d_offset'))),
+        'alignment_method': alignment.get('method', '') if alignment else '',
+        'saved_alignment': alignment if alignment else None,
     })
+
+
+@csrf_exempt
+@require_POST
+def photo_save_alignment(request, job_id):
+    """Save user-confirmed alignment transforms into the job's result_json."""
+    from .models import PhotoAnalysisJob
+    try:
+        job = PhotoAnalysisJob.objects.get(id=job_id)
+    except PhotoAnalysisJob.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    body_transform = body.get('body_transform')
+    face_transform = body.get('face_transform')
+    proj_2d_offset = body.get('proj_2d_offset')
+    if not body_transform and not proj_2d_offset:
+        return JsonResponse({'ok': False, 'error': 'body_transform or proj_2d_offset required'}, status=400)
+
+    try:
+        data = json.loads(job.result_json)
+    except (json.JSONDecodeError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Invalid result data'}, status=500)
+
+    data['alignment_data'] = {
+        'body_transform': body_transform,
+        'face_transform': face_transform,
+        'proj_2d_offset': proj_2d_offset,
+        'body_contour_edited': body.get('body_contour_edited'),
+        'face_contour_edited': body.get('face_contour_edited'),
+    }
+    job.result_json = json.dumps(data, default=str)
+    job.save(update_fields=['result_json'])
+
+    return JsonResponse({'ok': True})

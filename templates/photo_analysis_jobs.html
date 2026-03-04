@@ -5,7 +5,7 @@
 <style>
 .photo-thumb { width: 80px; height: 80px; object-fit: contain; border-radius: 4px; cursor: pointer; }
 .result-thumb { width: 120px; height: 80px; object-fit: contain; border-radius: 4px; cursor: pointer; background: #1a1a2e; }
-.no-thumb { width: 120px; height: 80px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 0.7rem; }
+.no-thumb { width: 80px; height: 60px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 0.65rem; }
 .photo-jobs-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
 .photo-jobs-table th,
 .photo-jobs-table td { padding: 0.4rem 0.6rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
@@ -19,7 +19,7 @@
 .gender-m { color: #60a5fa; }
 .gender-f { color: #f472b6; }
 .duration-badge { font-size: 0.8rem; color: var(--text-muted); }
-.btn-actions { display: flex; gap: 0.4rem; flex-wrap: nowrap; }
+.btn-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .header-row { display: flex; justify-content: space-between; align-items: center; }
 .bulk-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; }
 .bulk-actions .btn { display: none; }
@@ -43,13 +43,15 @@
 }
 .job-modal-header h3 { margin: 0; font-size: 1rem; }
 .job-modal-body { flex: 1; overflow: auto; padding: 1rem; }
-.job-detail-images { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.job-detail-images { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .job-detail-images .img-box { text-align: center; }
-.job-detail-images .img-box img { max-width: 100%; max-height: 200px; border-radius: 6px; }
+.job-detail-images .img-box img { max-width: 100%; max-height: 220px; border-radius: 6px; }
 .job-detail-images .img-box .img-label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
+.job-detail-images .img-box .no-img { display:inline-flex; align-items:center; justify-content:center; width:180px; height:120px; border-radius:6px; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:0.8rem; }
 .job-detail-meta { display: flex; gap: 2rem; flex-wrap: wrap; font-size: 0.9rem; }
 .job-detail-meta .meta-item { margin-bottom: 0.3rem; }
 .job-detail-meta .meta-item b { color: var(--text-muted); font-weight: 600; margin-right: 0.5rem; }
+.job-detail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
 </style>
 {% endblock %}
 
@@ -74,10 +76,11 @@
             <th class="cb-cell"><input type="checkbox" id="select-all" title="Alle auswählen" onclick="toggleAll(this)"></th>
             <th>Foto</th>
             <th>3D Ergebnis</th>
+            <th>Silhouette</th>
+            <th>Textur</th>
             <th>Dateiname</th>
             <th>Pipeline</th>
             <th>Geschlecht</th>
-            <th>Body Type</th>
             <th>Dauer</th>
             <th>Datum</th>
             <th>Aktionen</th>
@@ -85,50 +88,83 @@
     </thead>
     <tbody>
         {% for job in jobs %}
-        <tr>
+        <tr data-job-id="{{ job.id }}"
+            data-name="{{ job.original_filename }}"
+            data-photo="/{{ job.photo_file }}"
+            data-result="{% if job.result_image %}/{{ job.result_image }}{% endif %}"
+            data-silhouette="{% if job.silhouette_path %}/{{ job.silhouette_path }}{% endif %}"
+            data-texture="{% if job.texture_path %}/{{ job.texture_path }}{% endif %}"
+            data-backend="{{ job.get_backend_display }}"
+            data-gender="{{ job.gender }}"
+            data-bodytype="{{ job.body_type }}"
+            data-date="{{ job.created_at|date:'d.m.Y H:i' }}"
+            data-duration="{{ job.duration_seconds }}">
             <td class="cb-cell"><input type="checkbox" class="job-cb" data-job-id="{{ job.id }}" onclick="updateSelection()"></td>
             <td>
                 <img src="/{{ job.photo_file }}" alt="photo"
-                     style="width:80px;height:80px;max-width:80px;max-height:80px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;"
-                     onclick="showDetail('{{ job.id }}', '{{ job.original_filename }}', '/{{ job.photo_file }}', '{% if job.result_image %}/{{ job.result_image }}{% endif %}', '{{ job.get_backend_display }}', '{{ job.gender }}', '{{ job.body_type }}', '{{ job.created_at|date:"d.m.Y H:i" }}', '{{ job.duration_seconds }}')">
+                     style="width:60px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;"
+                     onclick="showDetailFromRow(this)">
             </td>
             <td>
                 {% if job.result_image %}
                 <img src="/{{ job.result_image }}" alt="3D"
-                     style="width:140px;height:80px;max-width:140px;max-height:80px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
-                     onclick="showDetail('{{ job.id }}', '{{ job.original_filename }}', '/{{ job.photo_file }}', '/{{ job.result_image }}', '{{ job.get_backend_display }}', '{{ job.gender }}', '{{ job.body_type }}', '{{ job.created_at|date:"d.m.Y H:i" }}', '{{ job.duration_seconds }}')">
+                     style="width:100px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
+                     onclick="showDetailFromRow(this)">
                 {% else %}
-                <span class="no-thumb"><i class="fas fa-cube"></i>&nbsp;Kein Bild</span>
+                <span class="no-thumb"><i class="fas fa-cube"></i></span>
                 {% endif %}
             </td>
-            <td>{{ job.original_filename }}</td>
+            <td>
+                {% if job.silhouette_path %}
+                <img src="/{{ job.silhouette_path }}" alt="Silhouette"
+                     style="width:60px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;"
+                     onclick="showDetailFromRow(this)">
+                {% else %}
+                <span class="no-thumb"><i class="fas fa-running"></i></span>
+                {% endif %}
+            </td>
+            <td>
+                {% if job.texture_path %}
+                <img src="/{{ job.texture_path }}" alt="Textur"
+                     style="width:60px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
+                     onclick="showDetailFromRow(this)">
+                {% else %}
+                <span class="no-thumb"><i class="fas fa-palette"></i></span>
+                {% endif %}
+            </td>
+            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ job.original_filename }}">{{ job.original_filename }}</td>
             <td><span class="badge-backend badge-{{ job.backend }}">{{ job.get_backend_display }}</span></td>
             <td>
                 {% if job.gender == 'male' %}
-                    <span class="gender-m"><i class="fas fa-mars"></i> M</span>
+                    <span class="gender-m"><i class="fas fa-mars"></i></span>
                 {% else %}
-                    <span class="gender-f"><i class="fas fa-venus"></i> W</span>
+                    <span class="gender-f"><i class="fas fa-venus"></i></span>
                 {% endif %}
             </td>
-            <td>{{ job.body_type }}</td>
             <td>
                 {% if job.duration_seconds %}
                 <span class="duration-badge">{{ job.duration_seconds|floatformat:1 }}s</span>
                 {% else %}
-                <span class="duration-badge">—</span>
+                <span class="duration-badge">&mdash;</span>
                 {% endif %}
             </td>
-            <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
+            <td style="white-space:nowrap;">{{ job.created_at|date:"d.m.Y H:i" }}</td>
             <td>
                 <div class="btn-actions">
-                    <a class="btn btn-sm btn-primary" title="Ansicht"
+                    <a class="btn btn-sm btn-primary" title="3D Ansicht"
                        href="{% url 'photo_to_3d' %}?job={{ job.id }}"
-                       style="padding:4px 12px;">
-                        <i class="fas fa-eye"></i> Ansicht
+                       style="padding:4px 8px;font-size:0.75rem;">
+                        <i class="fas fa-cube"></i> 3D
+                    </a>
+                    <a class="btn btn-sm btn-secondary" title="Textur bearbeiten"
+                       href="{% url 'photo_to_3d' %}?job={{ job.id }}&tab=textur"
+                       style="padding:4px 8px;font-size:0.75rem;">
+                        <i class="fas fa-palette"></i> Textur
                     </a>
                     <a class="btn btn-sm btn-danger" title="Löschen"
                        href="{% url 'photo_analysis_delete' job.id %}"
-                       onclick="return confirm('Job löschen: {{ job.original_filename }}?')">
+                       onclick="return confirm('Job löschen: {{ job.original_filename }}?')"
+                       style="padding:4px 8px;font-size:0.75rem;">
                         <i class="fas fa-trash"></i>
                     </a>
                 </div>
@@ -147,25 +183,28 @@
 
 <!-- Detail popup -->
 <div id="detailModal" class="job-modal-overlay" style="display:none" onclick="if(event.target===this)closeDetail()">
-    <div class="job-modal" style="width:90vw;max-width:1200px;max-height:90vh;">
+    <div class="job-modal" style="width:90vw;max-width:1400px;max-height:90vh;">
         <div class="job-modal-header">
             <h3 id="detailTitle"></h3>
-            <div style="display:flex;gap:0.5rem;align-items:center;">
-                <a id="detailOpenBtn" class="btn btn-sm btn-primary" href="#" target="_blank">
-                    <i class="fas fa-external-link-alt"></i> In Foto-to-3D öffnen
-                </a>
-                <button class="btn btn-sm btn-secondary" onclick="closeDetail()"><i class="fas fa-times"></i></button>
-            </div>
+            <button class="btn btn-sm btn-secondary" onclick="closeDetail()"><i class="fas fa-times"></i></button>
         </div>
         <div class="job-modal-body">
             <div class="job-detail-images">
                 <div class="img-box">
-                    <img id="detailPhoto" src="" alt="Foto" style="max-width:400px;max-height:300px;border-radius:6px;">
+                    <img id="detailPhoto" src="" alt="Foto" style="max-height:250px;border-radius:6px;">
                     <span class="img-label">Originalfoto</span>
                 </div>
                 <div class="img-box" id="detailResultBox">
-                    <img id="detailResult" src="" alt="3D Ergebnis" style="max-width:500px;max-height:300px;border-radius:6px;">
-                    <span class="img-label">3D Ergebnis (HumanBody + SMPL-X)</span>
+                    <img id="detailResult" src="" alt="3D" style="max-height:250px;border-radius:6px;">
+                    <span class="img-label">3D Ergebnis</span>
+                </div>
+                <div class="img-box" id="detailSilhouetteBox">
+                    <img id="detailSilhouette" src="" alt="Silhouette" style="max-height:250px;border-radius:6px;">
+                    <span class="img-label">Silhouette / Alignment</span>
+                </div>
+                <div class="img-box" id="detailTextureBox">
+                    <img id="detailTexture" src="" alt="Textur" style="max-height:250px;border-radius:6px;background:#1a1a2e;">
+                    <span class="img-label">Textur (UV Map)</span>
                 </div>
             </div>
             <div class="job-detail-meta">
@@ -181,6 +220,17 @@
                     <div class="meta-item"><b>Datum:</b> <span id="detailDate"></span></div>
                 </div>
             </div>
+            <div class="job-detail-actions" id="detailActions">
+                <a id="detailBtn3D" class="btn btn-sm btn-primary" href="#">
+                    <i class="fas fa-cube"></i> 3D Ansicht
+                </a>
+                <a id="detailBtnTextur" class="btn btn-sm btn-secondary" href="#">
+                    <i class="fas fa-palette"></i> Textur bearbeiten
+                </a>
+                <a id="detailBtnReanalyze" class="btn btn-sm btn-warning" href="#" style="color:#000;">
+                    <i class="fas fa-redo"></i> Neu analysieren
+                </a>
+            </div>
         </div>
     </div>
 </div>
@@ -188,28 +238,46 @@
 
 {% block extra_scripts %}
 <script>
-function showDetail(jobId, name, photoUrl, resultUrl, backend, gender, bodyType, date, duration) {
-    document.getElementById('detailTitle').textContent = name;
-    document.getElementById('detailPhoto').src = photoUrl;
-    document.getElementById('detailOpenBtn').href = '{% url "photo_to_3d" %}?job=' + jobId;
+var _currentDetailJobId = null;
 
-    var resultBox = document.getElementById('detailResultBox');
-    var resultImg = document.getElementById('detailResult');
-    if (resultUrl) {
-        resultImg.src = resultUrl;
-        resultBox.style.display = '';
-    } else {
-        resultBox.style.display = 'none';
-    }
+function showDetailFromRow(el) {
+    var tr = el.closest('tr');
+    if (!tr) return;
+    var d = tr.dataset;
+    _currentDetailJobId = d.jobId;
 
-    document.getElementById('detailBackend').textContent = backend;
-    document.getElementById('detailGender').textContent = gender === 'male' ? 'Männlich' : 'Weiblich';
-    document.getElementById('detailBodyType').textContent = bodyType;
-    document.getElementById('detailDuration').textContent = duration && parseFloat(duration) > 0 ? parseFloat(duration).toFixed(1) + 's' : '—';
-    document.getElementById('detailDate').textContent = date;
+    document.getElementById('detailTitle').textContent = d.name;
+    document.getElementById('detailPhoto').src = d.photo;
+
+    setImgBox('detailResultBox', 'detailResult', d.result);
+    setImgBox('detailSilhouetteBox', 'detailSilhouette', d.silhouette);
+    setImgBox('detailTextureBox', 'detailTexture', d.texture);
+
+    document.getElementById('detailBackend').textContent = d.backend;
+    document.getElementById('detailGender').textContent = d.gender === 'male' ? 'Männlich' : 'Weiblich';
+    document.getElementById('detailBodyType').textContent = d.bodytype;
+    document.getElementById('detailDuration').textContent = d.duration && parseFloat(d.duration) > 0 ? parseFloat(d.duration).toFixed(1) + 's' : '\u2014';
+    document.getElementById('detailDate').textContent = d.date;
+
+    var base = '{% url "photo_to_3d" %}';
+    document.getElementById('detailBtn3D').href = base + '?job=' + d.jobId;
+    document.getElementById('detailBtnTextur').href = base + '?job=' + d.jobId + '&tab=textur';
+    document.getElementById('detailBtnReanalyze').href = base + '?job=' + d.jobId + '&reanalyze=1';
 
     document.getElementById('detailModal').style.display = 'flex';
 }
+
+function setImgBox(boxId, imgId, url) {
+    var box = document.getElementById(boxId);
+    var img = document.getElementById(imgId);
+    if (url) {
+        img.src = url;
+        box.style.display = '';
+    } else {
+        box.style.display = 'none';
+    }
+}
+
 function closeDetail() {
     document.getElementById('detailModal').style.display = 'none';
 }

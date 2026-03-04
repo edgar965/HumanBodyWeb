@@ -97,7 +97,7 @@
         display: none;
         flex-shrink: 0;
     }
-    .photo-actions .btn-analyze {
+    .btn-analyze {
         width: 100%;
         padding: 10px;
         background: var(--accent);
@@ -112,9 +112,9 @@
         gap: 8px;
         transition: background 0.2s;
     }
-    .photo-actions .btn-analyze:hover { background: var(--accent-hover); }
-    .photo-actions .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
-    .photo-actions .btn-analyze .spinner {
+    .btn-analyze:hover { background: var(--accent-hover); }
+    .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-analyze .spinner {
         display: none;
         width: 16px;
         height: 16px;
@@ -123,8 +123,8 @@
         border-radius: 50%;
         animation: spin 0.6s linear infinite;
     }
-    .photo-actions .btn-analyze.loading .spinner { display: inline-block; }
-    .photo-actions .btn-analyze.loading span { display: none; }
+    .btn-analyze.loading .spinner { display: inline-block; }
+    .btn-analyze.loading span { display: none; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .detection-results {
@@ -395,6 +395,215 @@
         border-top: 1px solid var(--border);
         background: var(--bg-primary);
     }
+
+    /* --- Photo Tabs (3D / Textur) --- */
+    .photo-tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .photo-tab {
+        padding: 8px 16px;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+        transition: all 0.15s;
+        flex: 1;
+        text-align: center;
+    }
+    .photo-tab:hover { color: var(--text); background: var(--bg-card); }
+    .photo-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+        background: var(--bg-card);
+    }
+    .photo-tab-content { display: none; }
+    .photo-tab-content.active { display: block; }
+
+    /* Textur-Tab */
+    .texture-controls { padding: 12px; }
+    .texture-backend-label {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+    .btn-texture {
+        width: 100%;
+        padding: 9px 10px;
+        background: var(--bg-card);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 0.82rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+        margin-bottom: 6px;
+    }
+    .btn-texture:hover:not(:disabled) { border-color: var(--accent); background: rgba(233, 69, 96, 0.06); }
+    .btn-texture:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-texture .spinner {
+        display: none;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+    .btn-texture.loading { border-color: var(--accent); background: rgba(233, 69, 96, 0.1); }
+    .btn-texture.loading .spinner { display: inline-block; }
+    .btn-texture.loading span { display: none; }
+    .texture-progress { margin-top: 10px; }
+    .texture-progress-bar {
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .texture-progress-fill {
+        height: 100%;
+        background: var(--accent);
+        width: 0%;
+        transition: width 0.3s;
+    }
+    .texture-status {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+    .texture-info {
+        margin-top: 10px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        padding: 8px;
+        background: var(--bg-card);
+        border-radius: 4px;
+    }
+
+    /* --- Wizard Button --- */
+    .btn-wizard {
+        background: linear-gradient(135deg, rgba(155, 89, 182, 0.15), rgba(233, 69, 96, 0.15));
+        border: 1px solid rgba(155, 89, 182, 0.4);
+        color: #c9a0dc;
+    }
+    .btn-wizard:hover:not(:disabled) {
+        border-color: #9b59b6;
+        background: linear-gradient(135deg, rgba(155, 89, 182, 0.25), rgba(233, 69, 96, 0.25));
+        color: #e0c0f0;
+    }
+
+    /* --- Wizard Overlay --- */
+    .wizard-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: rgba(0, 0, 0, 0.75);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+    .wizard-panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        max-width: 95vw;
+        max-height: 95vh;
+        width: 960px;
+        height: 760px;
+        min-width: 480px;
+        min-height: 400px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        resize: both;
+        overflow: hidden;
+    }
+    .wizard-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+    }
+    .wizard-header h3 {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--text);
+    }
+    .wizard-header button {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.4rem;
+        cursor: pointer;
+        padding: 0 4px;
+        line-height: 1;
+    }
+    .wizard-header button:hover { color: var(--danger); }
+    .wizard-canvas-wrap {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+        min-height: 300px;
+    }
+    #wizard-canvas {
+        cursor: grab;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+    }
+    #wizard-canvas:active { cursor: grabbing; }
+    .wizard-info {
+        text-align: center;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        padding: 0 20px 8px;
+    }
+    .wizard-footer {
+        display: flex;
+        align-items: center;
+        padding: 12px 20px;
+        border-top: 1px solid var(--border);
+        gap: 8px;
+    }
+    .wizard-footer button {
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text);
+        transition: all 0.15s;
+    }
+    .wizard-footer button:hover { border-color: var(--text-muted); }
+    .wizard-footer .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+    .wizard-footer .btn-primary:hover { background: var(--accent-hover); }
+    .wizard-panel::-webkit-resizer {
+        background: linear-gradient(135deg, transparent 60%, var(--text-muted) 60%, var(--text-muted) 65%, transparent 65%, transparent 75%, var(--text-muted) 75%, var(--text-muted) 80%, transparent 80%);
+    }
+    #wizard-edit-points.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
 </style>
 {% endblock %}
 
@@ -418,24 +627,92 @@
             <button class="photo-remove" id="photo-remove" title="Foto entfernen"><i class="fas fa-times"></i></button>
         </div>
 
-        <div class="backend-selector" id="backend-selector">
-            <div class="backend-selector-header"><i class="fas fa-cogs"></i> Analyse-Backend</div>
-            <div class="backend-list" id="backend-list">
-                <!-- Populated by JS -->
+        <!-- Tab Control -->
+        <div class="photo-tabs" id="photo-tabs">
+            <div class="photo-tab active" data-tab="3d">3D</div>
+            <div class="photo-tab" data-tab="textur">Textur</div>
+        </div>
+
+        <!-- Tab: 3D (bestehender Content) -->
+        <div class="photo-tab-content active" id="tab-3d">
+            <div class="backend-selector" id="backend-selector">
+                <div class="backend-selector-header"><i class="fas fa-cogs"></i> Analyse-Backend</div>
+                <div class="backend-list" id="backend-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <div class="photo-actions" id="photo-actions">
+                <button class="btn-analyze" id="btn-analyze">
+                    <span><i class="fas fa-magic"></i> Analysieren</span>
+                    <div class="spinner"></div>
+                </button>
+            </div>
+
+            <div class="detection-results" id="detection-results">
+                <h4>Erkannte Parameter</h4>
+                <div id="detection-params"></div>
+                <div id="detection-json" style="display:none;margin-top:8px;max-height:400px;overflow-y:auto;font-family:monospace;font-size:0.72rem;background:rgba(0,0,0,0.3);padding:8px;border-radius:4px;white-space:pre-wrap;color:#ccc;line-height:1.4;"></div>
             </div>
         </div>
 
-        <div class="photo-actions" id="photo-actions">
-            <button class="btn-analyze" id="btn-analyze">
-                <span><i class="fas fa-magic"></i> Analysieren</span>
-                <div class="spinner"></div>
-            </button>
-        </div>
+        <!-- Tab: Textur -->
+        <div class="photo-tab-content" id="tab-textur">
+            <div class="texture-controls">
+                <!-- Alignment Preview -->
+                <div id="alignment-preview" style="display:none;margin:0 0 12px;">
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px;">
+                        <i class="fas fa-crosshairs"></i> Auto-Ausrichtung (Pipeline Kameradaten)
+                    </div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;">
+                        <div style="flex:1;text-align:center;">
+                            <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:3px;">Original</div>
+                            <img id="preview-original" style="max-width:100%;max-height:220px;border-radius:4px;border:1px solid var(--border);" alt="">
+                        </div>
+                        <div style="flex:1;text-align:center;">
+                            <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:3px;">Projektion</div>
+                            <canvas id="preview-projection" style="max-width:100%;max-height:220px;border-radius:4px;border:1px solid var(--border);"></canvas>
+                        </div>
+                    </div>
+                    <div class="alignment-status" style="font-size:0.66rem;color:var(--text-muted);margin-top:4px;text-align:center;"></div>
+                </div>
 
-        <div class="detection-results" id="detection-results">
-            <h4>Erkannte Parameter</h4>
-            <div id="detection-params"></div>
-            <div id="detection-json" style="display:none;margin-top:8px;max-height:400px;overflow-y:auto;font-family:monospace;font-size:0.72rem;background:rgba(0,0,0,0.3);padding:8px;border-radius:4px;white-space:pre-wrap;color:#ccc;line-height:1.4;"></div>
+                <button class="btn-texture" id="btn-bake-aligned" data-backend="orthographic" disabled>
+                    <span><i class="fas fa-drafting-compass"></i> Textur erstellen</span>
+                    <div class="spinner"></div>
+                </button>
+
+                <div style="display:flex;gap:6px;margin:6px 0 12px;">
+                    <button class="btn-texture btn-wizard" id="btn-start-wizard" disabled style="flex:1;">
+                        <span><i class="fas fa-sliders-h"></i> Anpassen</span>
+                        <div class="spinner"></div>
+                    </button>
+                </div>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin:0 0 12px;">
+                    Automatische Ausrichtung durch Pipeline-Kameradaten. Mit "Anpassen" manuell korrigieren.
+                </div>
+
+                <div class="texture-backend-label"><i class="fas fa-palette"></i> Weitere Backends</div>
+
+                <button class="btn-texture" data-backend="textured_smplx" disabled>
+                    <span><i class="fas fa-cube"></i> textured_smplx</span>
+                    <div class="spinner"></div>
+                </button>
+                <button class="btn-texture" data-backend="sith" disabled>
+                    <span><i class="fas fa-brain"></i> SiTH (CVPR 2024)</span>
+                    <div class="spinner"></div>
+                </button>
+                <button class="btn-texture" data-backend="idol" disabled>
+                    <span><i class="fas fa-star"></i> IDOL (CVPR 2025)</span>
+                    <div class="spinner"></div>
+                </button>
+
+                <div class="texture-progress" id="texture-progress" style="display:none;">
+                    <div class="texture-progress-bar"><div class="texture-progress-fill" id="texture-progress-fill"></div></div>
+                    <div class="texture-status" id="texture-status">Starte...</div>
+                </div>
+                <div class="texture-info" id="texture-info" style="display:none;"></div>
+            </div>
         </div>
     </div>
 
@@ -510,6 +787,30 @@
         </div>
     </div>
 </div>
+<!-- Alignment Wizard Modal -->
+<div id="alignment-wizard" style="display:none;" class="wizard-overlay">
+    <div class="wizard-panel">
+        <div class="wizard-header">
+            <h3 id="wizard-title">Schritt 1: Koerper ausrichten</h3>
+            <button id="wizard-close">&times;</button>
+        </div>
+        <div class="wizard-canvas-wrap">
+            <canvas id="wizard-canvas"></canvas>
+        </div>
+        <div class="wizard-info" id="wizard-info">
+            Ziehen = Verschieben &nbsp;|&nbsp; Mausrad = Skalieren
+        </div>
+        <div class="wizard-footer">
+            <button id="wizard-reset">Reset</button>
+            <button id="wizard-edit-points" title="Einzelne Punkte verschieben">Punkte</button>
+            <span style="flex:1"></span>
+            <button id="wizard-bake-body" class="btn-primary">Koerper-Textur</button>
+            <button id="wizard-bake-face" class="btn-primary">Gesicht-Textur</button>
+            <button id="wizard-back" style="display:none;">Zurueck</button>
+            <button id="wizard-next" class="btn-primary">Weiter</button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -521,5 +822,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/photo_to_3d.js' %}?v=79"></script>
+<script type="module" src="{% static 'viewer/photo_to_3d.js' %}?v=106"></script>
 {% endblock %}
