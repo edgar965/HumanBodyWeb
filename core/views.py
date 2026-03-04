@@ -99,12 +99,18 @@ def _check_system_status():
 
 
 def dashboard(request):
-    """Dashboard with system status and recent jobs."""
+    """Redirect to Result page."""
+    from django.shortcuts import redirect
+    return redirect('standalone_result')
+
+
+def test_mocapnet(request):
+    """MocapNET system status and recent jobs."""
     status = _check_system_status()
     recent_jobs = BVHJob.objects.all()[:10]
     bvh_count = BVHFile.objects.count()
 
-    return render(request, 'dashboard.html', {
+    return render(request, 'test_mocapnet.html', {
         'status': status,
         'recent_jobs': recent_jobs,
         'bvh_count': bvh_count,

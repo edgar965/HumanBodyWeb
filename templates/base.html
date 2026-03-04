@@ -15,9 +15,20 @@
             <i class="fas fa-walking"></i> HumanBody <small>v{{ APP_VERSION }}</small>
         </div>
         <div class="sidebar-links">
-            <a href="{% url 'dashboard' %}" class="{% if request.path == '/' %}active{% endif %}">
-                <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
-            </a>
+            <div class="sidebar-group {% if request.path == '/humanbody/scene/' or request.path == '/process/result/' %}open{% endif %}">
+                <a href="#" class="sidebar-group-toggle">
+                    <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
+                    <i class="fas fa-chevron-down sidebar-chevron"></i>
+                </a>
+                <div class="sidebar-sub">
+                    <a href="{% url 'humanbody_scene' %}" class="{% if request.path == '/humanbody/scene/' %}active{% endif %}">
+                        <i class="fas fa-lightbulb"></i> <span>Szene</span>
+                    </a>
+                    <a href="{% url 'standalone_result' %}" class="{% if request.path == '/process/result/' %}active{% endif %}">
+                        <i class="fas fa-play-circle"></i> <span>Result</span>
+                    </a>
+                </div>
+            </div>
             <div class="sidebar-group {% if 'humanbody' in request.path %}open{% endif %}">
                 <a href="#" class="sidebar-group-toggle">
                     <i class="fas fa-user"></i> <span>HumanBody</span>
@@ -33,17 +44,8 @@
                     <a href="{% url 'photo_analysis_jobs' %}" class="{% if request.path == '/humanbody/photo-to-3d/jobs/' %}active{% endif %}" style="padding-left:2.5rem;font-size:0.9em;">
                         <i class="fas fa-list"></i> <span>Jobs</span>
                     </a>
-                    <a href="{% url 'humanbody_scene' %}" class="{% if request.path == '/humanbody/scene/' %}active{% endif %}">
-                        <i class="fas fa-lightbulb"></i> <span>Szene</span>
-                    </a>
                     <a href="{% url 'humanbody_animations' %}" class="{% if request.path == '/humanbody/animations/' %}active{% endif %}">
                         <i class="fas fa-running"></i> <span>Animationen</span>
-                    </a>
-                    <a href="{% url 'test_animation' %}" class="{% if request.path == '/humanbody/test-animation/' %}active{% endif %}">
-                        <i class="fas fa-vial"></i> <span>Test Animation</span>
-                    </a>
-                    <a href="{% url 'test_character' %}" class="{% if request.path == '/humanbody/test-character/' %}active{% endif %}">
-                        <i class="fas fa-user-check"></i> <span>Test Charakter</span>
                     </a>
                 </div>
             </div>
@@ -62,17 +64,31 @@
                     <a href="{% url 'processed' %}" class="{% if 'process/list' in request.path %}active{% endif %}">
                         <i class="fas fa-list"></i> <span>Verarbeitet</span>
                     </a>
-                    <a href="{% url 'standalone_result' %}" class="{% if request.path == '/process/result/' %}active{% endif %}">
-                        <i class="fas fa-play-circle"></i> <span>Result</span>
+                </div>
+            </div>
+            <div class="sidebar-group {% if '/library/' in request.path or request.path == '/webcam/' or '/test/' in request.path or request.path == '/humanbody/test-animation/' or request.path == '/humanbody/test-character/' %}open{% endif %}">
+                <a href="#" class="sidebar-group-toggle">
+                    <i class="fas fa-flask"></i> <span>Test</span>
+                    <i class="fas fa-chevron-down sidebar-chevron"></i>
+                </a>
+                <div class="sidebar-sub">
+                    <a href="{% url 'test_mocapnet' %}" class="{% if request.path == '/test/mocapnet/' %}active{% endif %}">
+                        <i class="fas fa-cog"></i> <span>MocapNET</span>
+                    </a>
+                    <a href="{% url 'test_animation' %}" class="{% if request.path == '/humanbody/test-animation/' %}active{% endif %}">
+                        <i class="fas fa-vial"></i> <span>Test Animation</span>
+                    </a>
+                    <a href="{% url 'test_character' %}" class="{% if request.path == '/humanbody/test-character/' %}active{% endif %}">
+                        <i class="fas fa-user-check"></i> <span>Test Charakter</span>
+                    </a>
+                    <a href="{% url 'library' %}" class="{% if request.path|slice:':9' == '/library/' %}active{% endif %}">
+                        <i class="fas fa-folder-open"></i> <span>BVH Library</span>
+                    </a>
+                    <a href="{% url 'webcam' %}" class="{% if request.path == '/webcam/' %}active{% endif %}">
+                        <i class="fas fa-camera"></i> <span>Webcam</span>
                     </a>
                 </div>
             </div>
-            <a href="{% url 'library' %}" class="{% if request.path|slice:':9' == '/library/' %}active{% endif %}">
-                <i class="fas fa-folder-open"></i> <span>BVH Library</span>
-            </a>
-            <a href="{% url 'webcam' %}" class="{% if request.path == '/webcam/' %}active{% endif %}">
-                <i class="fas fa-camera"></i> <span>Webcam</span>
-            </a>
             <div class="sidebar-group {% if 'settings' in request.path %}open{% endif %}">
                 <a href="#" class="sidebar-group-toggle">
                     <i class="fas fa-cog"></i> <span>Einstellungen</span>
