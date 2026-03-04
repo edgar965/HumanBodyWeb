@@ -293,15 +293,31 @@ class CharacterInstance {
 
         for (const c of this.cloth) {
             try {
-                const tpl = c.template || 'TPL_TSHIRT';
+                const method = c.method || 'template';
                 const params = new URLSearchParams();
-                params.set('method', 'template');
-                params.set('template', tpl);
+                params.set('method', method);
                 params.set('body_type', this.bodyType);
-                params.set('tightness', c.tightness !== undefined ? c.tightness : 0.5);
-                params.set('segments', c.segments || 32);
-                if (c.top_extend) params.set('top_extend', c.top_extend);
-                if (c.bottom_extend) params.set('bottom_extend', c.bottom_extend);
+
+                let key;
+                if (method === 'builder') {
+                    params.set('region', c.region || 'TOP');
+                    params.set('looseness', c.looseness !== undefined ? c.looseness : 0.5);
+                    key = `bld_${c.region || 'TOP'}`;
+                } else if (method === 'primitive') {
+                    params.set('prim_type', c.prim_type || 'PRIM_SKIRT');
+                    params.set('segments', c.segments || 32);
+                    params.set('length', c.length !== undefined ? c.length : 0.5);
+                    params.set('flare', c.flare !== undefined ? c.flare : 0.5);
+                    key = `prim_${c.prim_type || 'PRIM_SKIRT'}`;
+                } else {
+                    const tpl = c.template || 'TPL_TSHIRT';
+                    params.set('template', tpl);
+                    params.set('tightness', c.tightness !== undefined ? c.tightness : 0.5);
+                    params.set('segments', c.segments || 32);
+                    if (c.top_extend) params.set('top_extend', c.top_extend);
+                    if (c.bottom_extend) params.set('bottom_extend', c.bottom_extend);
+                    key = `tpl_${tpl}`;
+                }
 
                 // Include morphs
                 for (const [k, v] of Object.entries(this.morphs)) {
@@ -334,7 +350,6 @@ class CharacterInstance {
                 });
 
                 const mesh = _skinifyMesh(geo, mat, this, data);
-                const key = `tpl_${tpl}`;
                 this.clothMeshes[key] = mesh;
                 this.group.add(mesh);
             } catch (e) {
@@ -497,6 +512,24 @@ class CharacterInstance {
     }
 
     toJSON() {
+        // Sync garmentState back into garments array so UI changes are saved
+        const garments = (this.garments || []).map(g => {
+            const key = `gar_${g.id}`;
+            const st = this.garmentState[key];
+            if (!st) return g;
+            return {
+                id: g.id,
+                offset: st.offset,
+                stiffness: st.stiffness,
+                minDist: st.minDist,
+                crotchFloor: st.crotchFloor,
+                lift: st.lift,
+                crotchDepth: st.crotchDepth,
+                color: st.color,
+                roughness: st.roughness,
+                metalness: st.metalness,
+            };
+        });
         return {
             id: this.id,
             presetName: this.presetName,
@@ -505,7 +538,7 @@ class CharacterInstance {
             meta: this.meta,
             cloth: this.cloth,
             hair_style: this.hairStyle,
-            garments: this.garments,
+            garments,
             transform: {
                 position: this.group.position.toArray(),
                 rotation: [this.group.rotation.x, this.group.rotation.y, this.group.rotation.z],
@@ -3291,8 +3324,15 @@ function _removeSubMesh(target) {
                     delete inst.garmentOrigPositions[target.key];
                     delete inst.garmentRegionWeights[target.key];
                 } else {
-                    const tplName = target.key.replace('tpl_', '');
-                    inst.cloth = (inst.cloth || []).filter(c => (c.template || '') !== tplName);
+                    // Remove cloth entry matching this key
+                    inst.cloth = (inst.cloth || []).filter(c => {
+                        const m = c.method || 'template';
+                        let ck;
+                        if (m === 'builder') ck = `bld_${c.region || 'TOP'}`;
+                        else if (m === 'primitive') ck = `prim_${c.prim_type || 'PRIM_SKIRT'}`;
+                        else ck = `tpl_${c.template || 'TPL_TSHIRT'}`;
+                        return ck !== target.key;
+                    });
                 }
             }
             break;
@@ -4576,6 +4616,24 @@ async function _loadClothForCharacter(inst, key, clothParams) {
         const mesh = new THREE.Mesh(geo, mat);
         inst.clothMeshes[key] = mesh;
         inst.group.add(mesh);
+
+        // Sync to inst.cloth for scene persistence
+        const clothEntry = { ...clothParams, color: colorHex };
+        if (!inst.cloth) inst.cloth = [];
+        const idx = inst.cloth.findIndex(c => {
+            const m = c.method || 'template';
+            let ck;
+            if (m === 'builder') ck = `bld_${c.region || 'TOP'}`;
+            else if (m === 'primitive') ck = `prim_${c.prim_type || 'PRIM_SKIRT'}`;
+            else ck = `tpl_${c.template || 'TPL_TSHIRT'}`;
+            return ck === key;
+        });
+        if (idx >= 0) {
+            inst.cloth[idx] = clothEntry;
+        } else {
+            inst.cloth.push(clothEntry);
+        }
+
         updateEquippedList(inst);
         updateVertexCount();
         markDirty();
