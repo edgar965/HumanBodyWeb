@@ -76,6 +76,7 @@ const REGION_RADIUS = 0.20;  // half-width of each band (20% → overlaps with n
 
 // Hair
 let hairMesh = null;
+let initialBodyTop = null;  // max Y of body at first morph (for hair refit scaling)
 let hairColorData = {};  // name -> [r,g,b] (linear sRGB)
 
 // Current preset name (set on load/save)
@@ -297,6 +298,23 @@ function init() {
         });
     }
 
+    // Global refit — refit all garments + reposition hair to current morphs
+    const refitAllGlobal = document.getElementById('refit-all-btn');
+    if (refitAllGlobal) {
+        refitAllGlobal.addEventListener('click', async () => {
+            refitAllGlobal.disabled = true;
+            refitAllGlobal.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refit...';
+            // Refit garments
+            const gids = Object.keys(garmentMeshes);
+            for (const gid of gids) _saveGarmentState(gid);
+            for (const gid of gids) await loadGarment(gid);
+            // Refit hair — scale to match body size change
+            refitHairToBody();
+            refitAllGlobal.disabled = false;
+            refitAllGlobal.innerHTML = '<i class="fas fa-sync"></i> Refit';
+        });
+    }
+
     // 3D hover + click interaction
     _initInteraction();
 }
@@ -444,6 +462,8 @@ async function loadMesh() {
 
         bodyGeometry = geo;
         scene.add(bodyMesh);
+        // Record initial body top for hair refit
+        if (initialBodyTop === null) initialBodyTop = _getBodyTop();
 
         document.getElementById('vertex-count').textContent =
             geo.attributes.position.count.toLocaleString();
@@ -456,6 +476,16 @@ async function loadMesh() {
     }
 }
 
+function _getBodyTop() {
+    if (!bodyGeometry) return null;
+    const pos = bodyGeometry.attributes.position.array;
+    let maxY = -Infinity;
+    for (let i = 1; i < pos.length; i += 3) {
+        if (pos[i] > maxY) maxY = pos[i];
+    }
+    return maxY;
+}
+
 function updateMeshVertices(float32Buffer) {
     if (!bodyGeometry) return;
     const positions = bodyGeometry.attributes.position;
@@ -464,6 +494,10 @@ function updateMeshVertices(float32Buffer) {
     positions.array.set(newData);
     positions.needsUpdate = true;
     bodyGeometry.computeBoundingSphere();
+    // Record initial body height for hair refit
+    if (initialBodyTop === null) {
+        initialBodyTop = _getBodyTop();
+    }
 }
 
 async function reloadMeshForBodyType(bodyType, gender) {
@@ -478,6 +512,7 @@ async function reloadMeshForBodyType(bodyType, gender) {
     isSkinned = false;
     defSkeleton = null;
     skinWeightData = null;
+    initialBodyTop = null;  // reset for new body type
 
     // Fetch new mesh with body_type param
     try {
@@ -536,6 +571,8 @@ async function reloadMeshForBodyType(bodyType, gender) {
 
         bodyGeometry = geo;
         scene.add(bodyMesh);
+        initialBodyTop = _getBodyTop();
+
         document.getElementById('vertex-count').textContent =
             geo.attributes.position.count.toLocaleString();
 
@@ -1864,6 +1901,36 @@ function removeHair() {
     }
 }
 
+function refitHairToBody() {
+    if (!bodyGeometry || initialBodyTop === null) return;
+    const hairSelect = document.getElementById('hair-style-select');
+    if (!hairSelect || !hairSelect.value) return;
+    if (!hairMesh) return;
+
+    const currentTop = _getBodyTop();
+    if (currentTop === null || Math.abs(currentTop - initialBodyTop) < 0.001) return;
+    const scale = currentTop / initialBodyTop;
+
+    // Reload hair WITHOUT skinning — scale to match morphed body
+    const hairUrl = hairSelect.value;
+    const colorSelect = document.getElementById('hair-color-select');
+    const colorName = colorSelect ? colorSelect.value : '';
+    removeHair();
+
+    gltfLoader.load(hairUrl, (gltf) => {
+        // Use raw GLB scene (no SkinnedMesh conversion) so scale works directly
+        hairMesh = gltf.scene;
+        hairMesh.scale.set(scale, scale, scale);
+
+        if (colorName) applyHairColorToObject(hairMesh, colorName);
+        scene.add(hairMesh);
+        updateEquippedList();
+        console.log(`[Hair refit] scale=${scale.toFixed(4)} (initial=${initialBodyTop.toFixed(4)}, current=${currentTop.toFixed(4)})`);
+    }, undefined, (err) => {
+        console.error('[Hair refit] failed to reload:', err);
+    });
+}
+
 function applyHairColor(colorName) {
     if (hairMesh) applyHairColorToObject(hairMesh, colorName);
 }
@@ -1962,6 +2029,25 @@ async function loadGarmentUI() {
             }
             _saveGarmentState(selectedGarmentId);
             loadGarment(selectedGarmentId);
+        });
+    }
+
+    // Refit all garments — re-fit every equipped garment with current morphs
+    const refitAllBtn = document.getElementById('garment-refit-all');
+    if (refitAllBtn) {
+        refitAllBtn.addEventListener('click', async () => {
+            const ids = Object.keys(garmentMeshes);
+            if (ids.length === 0) { console.warn('No garments to refit'); return; }
+            refitAllBtn.disabled = true;
+            refitAllBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refit...';
+            for (const gid of ids) {
+                _saveGarmentState(gid);
+            }
+            for (const gid of ids) {
+                await loadGarment(gid);
+            }
+            refitAllBtn.disabled = false;
+            refitAllBtn.innerHTML = '<i class="fas fa-sync"></i> Refit';
         });
     }
 
