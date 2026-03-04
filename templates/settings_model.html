@@ -78,48 +78,6 @@
             </div>
         </div>
 
-        <!-- Szene -->
-        <div class="settings-row" style="margin-top:1rem;">
-            <div class="settings-label">
-                <strong>Szene</strong>
-                <small>Standard-Modell das beim Öffnen der Szene-Seite geladen wird.</small>
-            </div>
-            <div class="settings-input">
-                <select name="default_model_scene" id="default-model-scene" class="settings-select">
-                    <option value="">— wird geladen —</option>
-                </select>
-            </div>
-        </div>
-        <div class="settings-row">
-            <div class="settings-label">
-                <small>Anzeige mit Rig</small>
-            </div>
-            <div class="settings-input">
-                <label class="settings-checkbox">
-                    <input type="checkbox" name="show_rig_scene" {% if settings.show_rig_scene %}checked{% endif %}>
-                    Rig beim Start anzeigen
-                </label>
-            </div>
-        </div>
-        <div class="settings-row">
-            <div class="settings-label">
-                <small>Default Animation</small>
-            </div>
-            <div class="settings-input" style="display:flex;gap:8px;align-items:center;">
-                <select name="default_anim_scene" id="default-anim-scene" class="settings-select" style="flex:1;">
-                    <option value="">— keine —</option>
-                </select>
-            </div>
-        </div>
-        <div class="settings-row">
-            <div class="settings-label">
-                <small>Ausgeklappte Tabs</small>
-            </div>
-            <div class="settings-input" id="panels-scene-wrap">
-                <!-- populated by JS -->
-            </div>
-        </div>
-
         <!-- Animationen -->
         <div class="settings-row" style="margin-top:1rem;">
             <div class="settings-label">
@@ -167,10 +125,8 @@
 <script>
 (function() {
     const currentConfig = "{{ settings.default_model_config|escapejs }}";
-    const currentScene = "{{ settings.default_model_scene|escapejs }}";
     const currentAnims = "{{ settings.default_model_animations|escapejs }}";
     const currentAnimConfig = "{{ settings.default_anim_config|escapejs }}";
-    const currentAnimScene = "{{ settings.default_anim_scene|escapejs }}";
     const currentAnimAnims = "{{ settings.default_anim_animations|escapejs }}";
 
     // Populate model presets
@@ -178,10 +134,10 @@
         .then(r => r.json())
         .then(data => {
             const presets = data.presets || [];
-            ['default-model-config', 'default-model-scene', 'default-model-animations'].forEach((id, idx) => {
+            ['default-model-config', 'default-model-animations'].forEach((id, idx) => {
                 const sel = document.getElementById(id);
                 if (!sel) return;
-                const current = [currentConfig, currentScene, currentAnims][idx];
+                const current = [currentConfig, currentAnims][idx];
                 sel.innerHTML = '';
                 presets.forEach(p => {
                     const opt = document.createElement('option');
@@ -200,11 +156,6 @@
         ['cloth_template', 'Cloth - from Template'], ['cloth_builder', 'Cloth Builder'],
         ['cloth_primitive', 'Cloth - Primitive'], ['hair', 'Hair'],
         ['wardrobe', 'Wardrobe'], ['animations', 'Animations'],
-    ];
-    const SCENE_PANELS = [
-        ['beleuchtung', 'Beleuchtung'], ['renderer', 'Renderer'],
-        ['kamera', 'Kamera'], ['material_skin', 'Material (Skin)'],
-        ['aktionen', 'Aktionen'],
     ];
     function buildPanelCheckboxes(wrapId, panels, prefix, expandedJson) {
         const wrap = document.getElementById(wrapId);
@@ -228,18 +179,16 @@
     }
     buildPanelCheckboxes('panels-config-wrap', CONFIG_PANELS, 'panel_config_',
         "{{ settings.expanded_panels_config|escapejs }}");
-    buildPanelCheckboxes('panels-scene-wrap', SCENE_PANELS, 'panel_scene_',
-        "{{ settings.expanded_panels_scene|escapejs }}");
 
     // Populate animation lists
     fetch('/api/character/animations/')
         .then(r => r.json())
         .then(data => {
             const cats = data.categories || {};
-            ['default-anim-config', 'default-anim-scene', 'default-anim-animations'].forEach((id, idx) => {
+            ['default-anim-config', 'default-anim-animations'].forEach((id, idx) => {
                 const sel = document.getElementById(id);
                 if (!sel) return;
-                const current = [currentAnimConfig, currentAnimScene, currentAnimAnims][idx];
+                const current = [currentAnimConfig, currentAnimAnims][idx];
                 // Keep "— keine —" as first option
                 for (const [catName, anims] of Object.entries(cats).sort()) {
                     const grp = document.createElement('optgroup');

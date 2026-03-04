@@ -593,6 +593,116 @@ def character_bvh_file(request, name):
     )
 
 
+# =========================================================================
+# Scene Editor API
+# =========================================================================
+
+@require_GET
+def model_files(request):
+    """Return list of ALL model files (.json and .scene.json) from models dir."""
+    models_dir = str(settings.HUMANBODY_MODELS_DIR)
+    files = []
+    if os.path.isdir(models_dir):
+        for fname in sorted(os.listdir(models_dir)):
+            if not fname.endswith('.json'):
+                continue
+            fpath = os.path.join(models_dir, fname)
+            if not os.path.isfile(fpath):
+                continue
+            is_scene = fname.endswith('.scene.json')
+            name = fname[:-len('.scene.json')] if is_scene else fname[:-5]
+            ftype = 'scene' if is_scene else 'model'
+            stat = os.stat(fpath)
+            entry = {
+                'name': name,
+                'filename': fname,
+                'type': ftype,
+                'size': stat.st_size,
+                'modified': int(stat.st_mtime),
+            }
+            try:
+                with open(fpath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                entry['label'] = data.get('name', name)
+                if is_scene:
+                    entry['character_count'] = len(data.get('characters', []))
+            except (json.JSONDecodeError, IOError):
+                entry['label'] = name
+            files.append(entry)
+    return JsonResponse({'files': files})
+
+
+@require_GET
+def scene_list(request):
+    """Return list of available scene files (.scene.json)."""
+    models_dir = str(settings.HUMANBODY_MODELS_DIR)
+    scenes = []
+    if os.path.isdir(models_dir):
+        for fname in sorted(os.listdir(models_dir)):
+            if fname.endswith('.scene.json'):
+                name = fname[:-len('.scene.json')]
+                fpath = os.path.join(models_dir, fname)
+                try:
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                    scenes.append({
+                        'name': name,
+                        'label': data.get('name', name),
+                        'character_count': len(data.get('characters', [])),
+                    })
+                except (json.JSONDecodeError, IOError):
+                    scenes.append({'name': name, 'label': name, 'character_count': 0})
+    return JsonResponse({'scenes': scenes})
+
+
+@require_GET
+def scene_detail(request, name):
+    """Return contents of a scene JSON file."""
+    if '/' in name or '\\' in name or '..' in name:
+        return JsonResponse({'error': 'Invalid name'}, status=400)
+    models_dir = str(settings.HUMANBODY_MODELS_DIR)
+    fpath = os.path.normpath(os.path.join(models_dir, f"{name}.scene.json"))
+    if not fpath.startswith(os.path.normpath(models_dir)):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+    if not os.path.isfile(fpath):
+        return HttpResponseNotFound(f'Scene not found: {name}')
+    with open(fpath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return JsonResponse(data)
+
+
+@csrf_exempt
+@require_POST
+def scene_save(request):
+    """Save a scene JSON file."""
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    name = body.get('name', '').strip()
+    data = body.get('data')
+    if not name or not data:
+        return JsonResponse({'error': 'name and data required'}, status=400)
+
+    safe_name = re.sub(r'[^\w\s\-]', '', name).strip()
+    if not safe_name:
+        return JsonResponse({'error': 'Invalid name'}, status=400)
+
+    models_dir = str(settings.HUMANBODY_MODELS_DIR)
+    fpath = os.path.normpath(os.path.join(models_dir, f"{safe_name}.scene.json"))
+    if not fpath.startswith(os.path.normpath(models_dir)):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+
+    os.makedirs(models_dir, exist_ok=True)
+    data['name'] = name
+
+    with open(fpath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+    return JsonResponse({'ok': True, 'filename': f"{safe_name}.scene.json"})
+
+
 @require_GET
 def character_models(request):
     """Return list of available model presets."""
@@ -600,7 +710,7 @@ def character_models(request):
     presets = []
     if os.path.isdir(models_dir):
         for fname in sorted(os.listdir(models_dir)):
-            if fname.endswith('.json'):
+            if fname.endswith('.json') and not fname.endswith('.scene.json'):
                 name = fname[:-5]
                 fpath = os.path.join(models_dir, fname)
                 try:
@@ -608,7 +718,7 @@ def character_models(request):
                         data = json.load(f)
                     presets.append({
                         'name': name,
-                        'label': data.get('name', name),
+                        'label': name,
                     })
                 except (json.JSONDecodeError, IOError):
                     presets.append({'name': name, 'label': name})
@@ -660,8 +770,8 @@ def character_model_save(request):
     # Ensure directory exists
     os.makedirs(models_dir, exist_ok=True)
 
-    # Ensure 'name' field in data matches
-    data['name'] = name
+    # Ensure 'name' field in data matches the filename
+    data['name'] = safe_name
 
     with open(fpath, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
@@ -686,6 +796,8 @@ def humanbody_settings_api(request):
         'default_anim_animations': s.default_anim_animations,
         'expanded_panels_config': json.loads(s.expanded_panels_config or '[]'),
         'expanded_panels_scene': json.loads(s.expanded_panels_scene or '[]'),
+        'selection_opacity': s.selection_opacity,
+        'result': s.default_model_result,
     })
 
 
@@ -1495,7 +1607,10 @@ def garment_fit(request):
 
     offset = float(request.GET.get('offset', template.offset))
     stiffness = float(request.GET.get('stiffness', template.stiffness))
-    smooth_iters = max(1, int((1.0 - stiffness) * 8))
+    min_dist_mm = float(request.GET.get('min_dist', 3))
+    crotch_floor_mm = float(request.GET.get('crotch_floor', 0))
+    lift_mm = float(request.GET.get('lift', 0))
+    crotch_depth_mm = float(request.GET.get('crotch_depth', 0))
 
     color = (
         float(request.GET.get('color_r', template.color[0])),
@@ -1511,9 +1626,13 @@ def garment_fit(request):
         template.vertices, template.faces, body_verts,
         body_faces=body_faces,
         offset=offset,
-        smooth_iterations=smooth_iters,
+        stiffness=stiffness,
         color=color,
         coordinate_system=coord_sys,
+        min_dist_mm=min_dist_mm,
+        crotch_floor_mm=crotch_floor_mm,
+        lift_mm=lift_mm,
+        crotch_depth_mm=crotch_depth_mm,
     )
 
     if result is None:

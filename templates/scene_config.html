@@ -12,10 +12,16 @@
     }
     .viewer-container {
         display: flex;
+        flex-direction: column;
         width: 100%;
         height: 100vh;
         gap: 0;
         position: relative;
+    }
+    .viewer-row {
+        display: flex;
+        flex: 1;
+        min-height: 0;
     }
     .canvas-wrap {
         flex: 1;
@@ -30,14 +36,6 @@
         cursor: grab;
     }
     #viewer-canvas:active { cursor: grabbing; }
-    .viewer-buttons {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        z-index: 10;
-        display: flex;
-        gap: 6px;
-    }
     .viewer-btn {
         padding: 8px 14px;
         background: rgba(26, 26, 46, 0.85);
@@ -56,9 +54,11 @@
         width: 320px;
         background: var(--bg-secondary);
         border-left: 1px solid var(--border);
-        overflow-y: auto;
+        overflow: hidden;
         padding: 0;
         flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
     }
     .panel-section {
         border-bottom: 1px solid var(--border);
@@ -174,29 +174,944 @@
         border-top: 1px solid var(--border);
         background: var(--bg-primary);
     }
+
+    /* Transform mode buttons */
+    .transform-btn-group {
+        display: flex;
+        gap: 2px;
+        background: rgba(26, 26, 46, 0.85);
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        backdrop-filter: blur(4px);
+    }
+    .transform-btn {
+        padding: 8px 10px;
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.82rem;
+        transition: all 0.2s;
+    }
+    .transform-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .transform-btn.active { background: var(--accent); color: #fff; }
+    .toggle-btn-group {
+        display: flex;
+        gap: 2px;
+    }
+
+    /* Character list */
+    #character-list {
+        list-style: none;
+        padding: 0;
+        margin: 8px 0 0 0;
+    }
+    .character-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        margin-bottom: 6px;
+        cursor: pointer;
+        transition: all 0.15s;
+        background: var(--bg-card);
+    }
+    .character-item:hover { border-color: var(--accent); }
+    .character-item.selected {
+        border-color: var(--accent);
+        background: rgba(99, 102, 241, 0.12);
+        box-shadow: 0 0 0 1px var(--accent);
+    }
+    .character-item-icon {
+        font-size: 1.1rem;
+        color: var(--accent);
+        flex-shrink: 0;
+    }
+    .character-item-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .character-item-name {
+        font-size: 0.82rem;
+        color: var(--text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .character-item-detail {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .character-item-actions {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+    .character-item-actions button {
+        background: none;
+        border: 1px solid transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 3px 6px;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        transition: all 0.15s;
+    }
+    .character-item-actions button:hover {
+        color: var(--text);
+        border-color: var(--border);
+        background: rgba(255,255,255,0.05);
+    }
+    .character-item-actions .btn-delete:hover { color: #ef4444; border-color: #ef4444; }
+
+    /* Modal dialog */
+    .scene-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(2px);
+    }
+    .scene-modal-overlay.visible { display: flex; }
+    .scene-modal {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        width: 420px;
+        max-height: 70vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .scene-modal-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .scene-modal-header h4 {
+        font-size: 0.9rem;
+        color: var(--text);
+        margin: 0;
+    }
+    .scene-modal-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 2px 6px;
+    }
+    .scene-modal-close:hover { color: var(--text); }
+    .scene-modal-body {
+        padding: 14px 18px;
+        overflow-y: auto;
+        flex: 1;
+    }
+    .scene-modal-footer {
+        padding: 12px 18px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+    .scene-modal-footer button {
+        padding: 7px 16px;
+        font-size: 0.82rem;
+        border-radius: 5px;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text);
+        transition: all 0.15s;
+    }
+    .scene-modal-footer button:hover { border-color: var(--accent); }
+    .scene-modal-footer button.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+    .scene-modal-footer button.primary:hover { opacity: 0.9; }
+
+    /* Preset / Scene list inside modal */
+    .preset-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .preset-list li {
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        margin-bottom: 4px;
+        cursor: pointer;
+        font-size: 0.84rem;
+        color: var(--text);
+        transition: all 0.12s;
+    }
+    .preset-list li:hover { border-color: var(--accent); background: rgba(99,102,241,0.06); }
+    .preset-list li.selected { border-color: var(--accent); background: rgba(99,102,241,0.12); }
+    .preset-list li .preset-sub {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+    }
+
+    /* Scene name input in save dialog */
+    .scene-name-input {
+        width: 100%;
+        padding: 8px 10px;
+        background: var(--bg-card);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        font-size: 0.85rem;
+        margin-bottom: 10px;
+    }
+    .scene-name-input:focus { outline: none; border-color: var(--accent); }
+
+    /* Keyboard hint */
+    .kbd-hint {
+        font-size: 0.65rem;
+        color: var(--text-muted);
+        margin-top: 8px;
+        line-height: 1.6;
+    }
+    .kbd-hint kbd {
+        display: inline-block;
+        padding: 1px 5px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        font-size: 0.65rem;
+        font-family: inherit;
+    }
+
+    /* ===== Outliner ===== */
+    .panel-outliner {
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .outliner-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .outliner-add-btn {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 2px 8px;
+        font-size: 0.75rem;
+    }
+    .outliner-add-btn:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ===== Tab bar ===== */
+    .panel-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .panel-tab {
+        flex: 1;
+        text-align: center;
+        padding: 8px 0;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        user-select: none;
+        transition: color 0.15s;
+    }
+    .panel-tab:hover { color: var(--text); }
+    .panel-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+    }
+
+    /* ===== Tab content ===== */
+    .panel-tab-content {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ===== Properties (Eigenschaften tab) ===== */
+    .prop-empty {
+        text-align: center;
+        padding: 40px 12px;
+        color: var(--text-muted);
+        font-size: 0.82rem;
+    }
+    .prop-section {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+    }
+    .prop-section-title {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+    .prop-grid {
+        display: grid;
+        grid-template-columns: 50px 1fr 1fr 1fr;
+        gap: 3px 4px;
+        font-size: 0.78rem;
+    }
+    .prop-grid label {
+        color: var(--text-muted);
+        line-height: 24px;
+    }
+    .prop-grid input[type="number"] {
+        width: 100%;
+        background: var(--bg-card);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        padding: 2px 4px;
+        font-size: 0.78rem;
+        text-align: right;
+    }
+    .prop-grid input[type="number"]:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+    .btn-reset-morphs {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 3px;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 1px 8px;
+        font-size: 0.7rem;
+    }
+    .btn-reset-morphs:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ===== Morph categories ===== */
+    .morph-category { margin-bottom: 2px; }
+    .morph-category-header {
+        font-size: 0.78rem;
+        color: var(--text);
+        cursor: pointer;
+        padding: 4px 0;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .morph-category-header:hover { color: var(--accent); }
+    .morph-category-header .cat-chevron {
+        font-size: 0.55rem;
+        transition: transform 0.15s;
+    }
+    .morph-category.open .cat-chevron { transform: rotate(90deg); }
+    .morph-category-body { display: none; padding-left: 4px; }
+    .morph-category.open .morph-category-body { display: block; }
+
+    /* ===== Equipped items list ===== */
+    .equipped-item { display:flex; align-items:center; justify-content:space-between; padding:3px 0; }
+    .equipped-item-name { font-size:0.78rem; color:var(--text); cursor:pointer; }
+    .equipped-item-name:hover { color:var(--accent); }
+    .equipped-item-name.selected { color:var(--accent); font-weight:600; }
+    .equipped-item-remove { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.8rem; padding:2px 4px; }
+    .equipped-item-remove:hover { color:#ef4444; }
+    .equipped-empty { font-size:0.78rem; color:var(--text-muted); padding:4px 0; list-style:none; }
+    #prop-equipped-list { list-style:none; padding:0; margin:0; }
+    #mesh-tooltip { position:absolute; display:none; pointer-events:none; background:rgba(0,0,0,0.8); color:#fff; padding:4px 8px; border-radius:4px; font-size:0.72rem; z-index:15; }
+    .file-browser-table tbody tr { cursor:pointer; }
+    .file-browser-table tbody tr:hover { background:rgba(99,102,241,0.1); }
+    .file-browser-table tbody tr.selected { background:rgba(99,102,241,0.25); }
+    .file-browser-table td { padding:5px 12px; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .file-browser-table .file-type-badge { display:inline-block; padding:1px 6px; border-radius:3px; font-size:0.65rem; font-weight:600; text-transform:uppercase; }
+    .file-type-scene { background:rgba(99,102,241,0.25); color:var(--accent); }
+    .file-type-model { background:rgba(52,211,153,0.2); color:#34d399; }
+
+    /* ===== Asset/Anim panel buttons ===== */
+    .btn-toggle {
+        padding: 6px 14px;
+        font-size: 0.82rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.2s;
+    }
+    .btn-toggle:hover { border-color: var(--accent); color: var(--text); }
+    .btn-toggle.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ===== Animation tree ===== */
+    .anim-tree { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 8px; }
+    .anim-category { border-bottom: 1px solid var(--border); }
+    .anim-category:last-child { border-bottom: none; }
+    .anim-category-header {
+        font-size: 0.82rem; color: var(--text); cursor: pointer; padding: 8px 12px;
+        user-select: none; display: flex; align-items: center; gap: 8px; transition: background 0.15s;
+    }
+    .anim-category-header:hover { background: var(--bg-card); }
+    .anim-category-header .cat-chevron { font-size: 0.65rem; transition: transform 0.2s; color: var(--text-muted); }
+    .anim-category.open .cat-chevron { transform: rotate(90deg); }
+    .anim-category-header .cat-count { font-size: 0.72rem; color: var(--text-muted); margin-left: auto; }
+    .anim-category-body { display: none; }
+    .anim-category.open .anim-category-body { display: block; }
+    .anim-item {
+        font-size: 0.78rem; color: var(--text-muted); padding: 5px 12px 5px 28px;
+        cursor: pointer; transition: all 0.15s; display: flex; justify-content: space-between; align-items: center;
+    }
+    .anim-item:hover { background: var(--bg-card); color: var(--text); }
+    .anim-item.active { background: var(--accent); color: #fff; }
+    .anim-item .frames { font-size: 0.7rem; opacity: 0.7; }
+
+    .anim-speed { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .anim-speed label { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; min-width: 80px; }
+    .anim-speed input[type="range"] { flex: 1; accent-color: var(--accent); }
+    .anim-controls { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+    .anim-controls button {
+        padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: 4px; color: var(--text); cursor: pointer; font-size: 0.85rem;
+    }
+    .anim-controls button:hover { border-color: var(--accent); }
+    .anim-controls input[type="range"] { flex: 1; accent-color: var(--accent); }
+    .anim-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+
+    /* ===== Menubar ===== */
+    .menubar {
+        display: flex;
+        align-items: center;
+        height: 32px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        z-index: 20;
+        padding: 0 4px;
+        flex-shrink: 0;
+    }
+    .menu { position: relative; }
+    .menu-title {
+        padding: 6px 12px;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        user-select: none;
+        line-height: 20px;
+    }
+    .menu-title:hover, .menu.open .menu-title {
+        background: rgba(255,255,255,0.08);
+        color: var(--text);
+    }
+    .menu-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 220px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 0 0 6px 6px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        padding: 4px 0;
+        z-index: 100;
+    }
+    .menu.open .menu-dropdown { display: block; }
+    .menu-item {
+        padding: 6px 30px 6px 28px;
+        font-size: 0.82rem;
+        color: var(--text);
+        cursor: pointer;
+        position: relative;
+        white-space: nowrap;
+    }
+    .menu-item:hover { background: var(--accent); color: #fff; }
+    .menu-item.disabled { color: var(--text-muted); pointer-events: none; opacity: 0.5; }
+    .menu-item .shortcut { float: right; color: var(--text-muted); margin-left: 24px; font-size: 0.75rem; }
+    .menu-item:hover .shortcut { color: rgba(255,255,255,0.7); }
+    .menu-item.checkable.checked::before { content: "\2713"; position: absolute; left: 10px; }
+    .menu-item.radio.checked::before { content: "\25CF"; position: absolute; left: 10px; font-size: 0.5em; top: 50%; transform: translateY(-50%); }
+    .menu-sep { height: 1px; background: var(--border); margin: 4px 8px; }
+    .menu-submenu-wrap {
+        position: relative;
+    }
+    .menu-submenu-wrap > .menu-item::after {
+        content: "\25B6";
+        position: absolute;
+        right: 10px;
+        font-size: 0.6em;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    .menu-submenu {
+        display: none;
+        position: absolute;
+        left: 100%;
+        top: -4px;
+        min-width: 180px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        padding: 4px 0;
+        z-index: 101;
+    }
+    .menu-submenu-wrap:hover > .menu-submenu { display: block; }
+    .menubar-right {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding-right: 8px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="viewer-container">
-    <div class="canvas-wrap">
-        <canvas id="viewer-canvas"></canvas>
-        <div class="viewer-buttons-left" style="position:absolute;top:12px;left:12px;z-index:10;display:flex;gap:6px;">
-            <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
-            <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
-            <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i class="fas fa-file-export"></i> Speichern unter</button>
-        </div>
-        <div class="viewer-buttons">
-            <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i> Model</button>
-            <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i> Rig</button>
-        </div>
+    <div class="menubar">
+            <div class="menu">
+                <div class="menu-title">Datei</div>
+                <div class="menu-dropdown">
+                    <div class="menu-item" data-action="new">Neu <span class="shortcut">Ctrl+N</span></div>
+                    <div class="menu-item" data-action="load">Laden... <span class="shortcut">Ctrl+O</span></div>
+                    <div class="menu-item" data-action="save">Speichern <span class="shortcut">Ctrl+S</span></div>
+                    <div class="menu-item" data-action="save-as">Speichern unter... <span class="shortcut">Ctrl+Shift+S</span></div>
+                    <div class="menu-sep"></div>
+                    <div class="menu-item" data-action="import-model">Modell importieren...</div>
+                    <div class="menu-sep"></div>
+                    <div class="menu-submenu-wrap">
+                        <div class="menu-item">Exportieren</div>
+                        <div class="menu-submenu">
+                            <div class="menu-item" data-action="export-scene-json">Szene &ndash; JSON</div>
+                            <div class="menu-item" data-action="export-model-json">Modell &ndash; JSON</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="menu">
+                <div class="menu-title">Bearbeiten</div>
+                <div class="menu-dropdown">
+                    <div class="menu-item" data-action="deselect">Auswahl aufheben <span class="shortcut">Esc</span></div>
+                    <div class="menu-item" data-action="delete">L&ouml;schen <span class="shortcut">Del</span></div>
+                    <div class="menu-sep"></div>
+                    <div class="menu-item" data-action="clear-all">Alles l&ouml;schen</div>
+                </div>
+            </div>
+            <div class="menu">
+                <div class="menu-title">Hinzuf&uuml;gen</div>
+                <div class="menu-dropdown">
+                    <div class="menu-item" data-action="add-character">Charakter aus Preset...</div>
+                    <div class="menu-sep"></div>
+                    <div class="menu-item disabled">Licht</div>
+                    <div class="menu-item disabled">Kamera</div>
+                </div>
+            </div>
+            <div class="menu">
+                <div class="menu-title">Ansicht</div>
+                <div class="menu-dropdown">
+                    <div class="menu-item checkable checked" data-action="toggle-model">Modell</div>
+                    <div class="menu-item checkable" data-action="toggle-rig">Rig</div>
+                    <div class="menu-sep"></div>
+                    <div class="menu-item radio checked" data-action="mode-translate">Translate <span class="shortcut">G</span></div>
+                    <div class="menu-item radio" data-action="mode-rotate">Rotate <span class="shortcut">R</span></div>
+                    <div class="menu-item radio" data-action="mode-scale">Scale <span class="shortcut">S</span></div>
+                    <div class="menu-sep"></div>
+                    <div class="menu-item" data-action="focus-char">Zum Charakter springen</div>
+                </div>
+            </div>
+            <div class="menu">
+                <div class="menu-title">Werkzeuge</div>
+                <div class="menu-dropdown">
+                    <div class="menu-item" data-action="reset-scene">Szene zur&uuml;cksetzen</div>
+                    <div class="menu-item" data-action="reset-lighting">Beleuchtung zur&uuml;cksetzen</div>
+                    <div class="menu-item" data-action="reset-camera">Kamera zur&uuml;cksetzen</div>
+                </div>
+            </div>
+            <div class="menubar-right">
+                <div class="transform-btn-group">
+                    <button class="transform-btn active" data-mode="translate" title="Translate (G)"><i class="fas fa-arrows-alt"></i></button>
+                    <button class="transform-btn" data-mode="rotate" title="Rotate (R)"><i class="fas fa-sync-alt"></i></button>
+                    <button class="transform-btn" data-mode="scale" title="Scale (S)"><i class="fas fa-expand-arrows-alt"></i></button>
+                </div>
+                <div class="toggle-btn-group">
+                    <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i></button>
+                    <button id="clothes-toggle" class="viewer-btn active" title="Kleider ein/ausblenden"><i class="fas fa-tshirt"></i></button>
+                    <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i></button>
+                </div>
+                <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
+            </div>
     </div>
+    <div class="viewer-row">
+        <div class="canvas-wrap">
+            <canvas id="viewer-canvas"></canvas>
+            <div id="mesh-tooltip"></div>
+        </div>
 
-    <div class="viewer-panel">
-        <!-- Lighting -->
-        <div class="panel-section" data-panel-key="beleuchtung">
-            <h3>Beleuchtung <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body">
+        <div class="viewer-panel">
+        <!-- Outliner: always visible character list -->
+        <div class="panel-outliner">
+            <div class="outliner-header">
+                <span>Charaktere</span>
+                <button class="outliner-add-btn" id="add-character-btn" title="Charakter hinzufügen">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <ul id="character-list"></ul>
+            <div class="kbd-hint" style="padding:0 12px 6px;">
+                <kbd>G</kbd> Translate <kbd>R</kbd> Rotate <kbd>S</kbd> Scale <kbd>Del</kbd> Delete
+            </div>
+        </div>
+
+        <!-- Tab bar -->
+        <div class="panel-tabs">
+            <div class="panel-tab active" data-tab="eigenschaften">Eigenschaften</div>
+            <div class="panel-tab" data-tab="assets">Assets</div>
+            <div class="panel-tab" data-tab="animation">Animation</div>
+            <div class="panel-tab" data-tab="szene">Szene</div>
+        </div>
+
+        <!-- Tab content (scrollable) -->
+        <div class="panel-tab-content">
+            <!-- Eigenschaften Tab -->
+            <div class="tab-pane active" id="tab-eigenschaften">
+                <div class="prop-empty" id="prop-empty">
+                    <i class="fas fa-mouse-pointer" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>
+                    Charakter auswählen
+                </div>
+                <div id="prop-content" style="display:none;">
+                    <!-- Transform (body context) -->
+                    <div class="prop-section" id="prop-transform-section">
+                        <div class="prop-section-title">Transform</div>
+                        <div class="prop-grid" id="prop-transform"></div>
+                    </div>
+                    <!-- Equipped Items (body context) -->
+                    <div class="prop-section" id="prop-equipped-section">
+                        <div class="prop-section-title">Ausstattung</div>
+                        <ul id="prop-equipped-list">
+                            <li class="equipped-empty">Keine Objekte</li>
+                        </ul>
+                    </div>
+                    <!-- Garment Properties (garment context) -->
+                    <div class="prop-section" id="prop-garment-section" style="display:none;">
+                        <div class="prop-section-title">Garment Eigenschaften</div>
+                        <div class="slider-row"><label>Offset</label>
+                            <input type="range" id="prop-garment-offset" min="0" max="15" value="6" step="1">
+                            <span class="slider-val" id="prop-garment-offset-val">0.006</span>
+                        </div>
+                        <div class="slider-row"><label>Stiffness</label>
+                            <input type="range" id="prop-garment-stiffness" min="0" max="100" value="80" step="1">
+                            <span class="slider-val" id="prop-garment-stiffness-val">0.80</span>
+                        </div>
+                        <div class="slider-row"><label>Min. Abstand</label>
+                            <input type="range" id="prop-garment-min-dist" min="0" max="15" value="3" step="1">
+                            <span class="slider-val" id="prop-garment-min-dist-val">3 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Schritt-Boden</label>
+                            <input type="range" id="prop-garment-crotch-floor" min="-40" max="40" value="0" step="1">
+                            <span class="slider-val" id="prop-garment-crotch-floor-val">0 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Anheben</label>
+                            <input type="range" id="prop-garment-lift" min="-20" max="40" value="0" step="1">
+                            <span class="slider-val" id="prop-garment-lift-val">0 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Schritt-Tiefe</label>
+                            <input type="range" id="prop-garment-crotch-depth" min="0" max="40" value="0" step="1">
+                            <span class="slider-val" id="prop-garment-crotch-depth-val">0 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Color</label>
+                            <input type="color" id="prop-garment-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                        </div>
+                        <div class="slider-row"><label>Roughness</label>
+                            <input type="range" id="prop-garment-roughness" min="0" max="100" value="80" step="1">
+                            <span class="slider-val" id="prop-garment-roughness-val">0.80</span>
+                        </div>
+                        <div class="slider-row"><label>Metalness</label>
+                            <input type="range" id="prop-garment-metalness" min="0" max="100" value="0" step="1">
+                            <span class="slider-val" id="prop-garment-metalness-val">0.00</span>
+                        </div>
+                        <!-- Region -->
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Region</div>
+                        <div class="slider-row"><label>Top</label>
+                            <input type="range" id="prop-garment-region-top" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="prop-garment-region-top-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Upper</label>
+                            <input type="range" id="prop-garment-region-upper" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="prop-garment-region-upper-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Mid</label>
+                            <input type="range" id="prop-garment-region-mid" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="prop-garment-region-mid-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Lower</label>
+                            <input type="range" id="prop-garment-region-lower" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="prop-garment-region-lower-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Bottom</label>
+                            <input type="range" id="prop-garment-region-bottom" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="prop-garment-region-bottom-val">0.00 m</span>
+                        </div>
+                    </div>
+                    <!-- Hair Properties (hair context) -->
+                    <div class="prop-section" id="prop-hair-section" style="display:none;">
+                        <div class="prop-section-title">Haar Eigenschaften</div>
+                        <div class="slider-row"><label>Frisur</label>
+                            <select id="prop-hair-style" class="viewer-select" style="margin-bottom:0;flex:1;">
+                                <option value="">— Kein Haar —</option>
+                            </select>
+                        </div>
+                        <div class="slider-row"><label>Farbe</label>
+                            <select id="prop-hair-color" class="viewer-select" style="margin-bottom:0;flex:1;">
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Body Type + Meta (body context) -->
+                    <div class="prop-section" id="prop-bodytype-section">
+                        <div class="prop-section-title">Body Type</div>
+                        <select id="prop-body-type" class="viewer-select"></select>
+                        <div id="prop-meta-sliders"></div>
+                    </div>
+                    <!-- Morphs (body context) -->
+                    <div class="prop-section" id="prop-morphs-section">
+                        <div class="prop-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                            Morphs
+                            <button class="btn-reset-morphs" id="prop-reset-morphs">Reset</button>
+                        </div>
+                        <div id="prop-morphs-panel"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assets Tab -->
+            <div class="tab-pane" id="tab-assets">
+                <div class="prop-empty" id="assets-empty">
+                    <i class="fas fa-mouse-pointer" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>
+                    Charakter auswählen
+                </div>
+                <div id="assets-content" style="display:none;">
+                <!-- Garment Fit -->
+                <div class="panel-section" data-panel-key="garment_fit">
+                    <h3>Garment Fit <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" id="garment-panel">
+                        <div class="slider-row"><label>Category</label>
+                            <select id="garment-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                        <div id="garment-list" class="anim-tree" style="max-height:300px;margin-bottom:0;overflow-y:auto;resize:vertical;min-height:80px;">
+                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Garment-Library...</div>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Fit</div>
+                        <div class="slider-row"><label>Offset</label>
+                            <input type="range" id="garment-offset" min="0" max="15" value="6" step="1">
+                            <span class="slider-val" id="garment-offset-val">0.006</span>
+                        </div>
+                        <div class="slider-row"><label>Stiffness</label>
+                            <input type="range" id="garment-stiffness" min="0" max="100" value="80" step="1">
+                            <span class="slider-val" id="garment-stiffness-val">0.80</span>
+                        </div>
+                        <div class="slider-row"><label>Min. Abstand</label>
+                            <input type="range" id="garment-min-dist" min="0" max="15" value="3" step="1">
+                            <span class="slider-val" id="garment-min-dist-val">3 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Schritt-Boden</label>
+                            <input type="range" id="garment-crotch-floor" min="-40" max="40" value="0" step="1">
+                            <span class="slider-val" id="garment-crotch-floor-val">0 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Anheben</label>
+                            <input type="range" id="garment-lift" min="-20" max="40" value="0" step="1">
+                            <span class="slider-val" id="garment-lift-val">0 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Schritt-Tiefe</label>
+                            <input type="range" id="garment-crotch-depth" min="0" max="40" value="0" step="1">
+                            <span class="slider-val" id="garment-crotch-depth-val">0 mm</span>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
+                        <div class="slider-row"><label>Color</label>
+                            <input type="color" id="garment-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                        </div>
+                        <div class="slider-row"><label>Roughness</label>
+                            <input type="range" id="garment-roughness" min="0" max="100" value="80" step="1">
+                            <span class="slider-val" id="garment-roughness-val">0.80</span>
+                        </div>
+                        <div class="slider-row"><label>Metalness</label>
+                            <input type="range" id="garment-metalness" min="0" max="100" value="0" step="1">
+                            <span class="slider-val" id="garment-metalness-val">0.00</span>
+                        </div>
+                        <!-- Region -->
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Region</div>
+                        <div class="slider-row"><label>Top</label>
+                            <input type="range" id="garment-region-top" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="garment-region-top-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Upper</label>
+                            <input type="range" id="garment-region-upper" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="garment-region-upper-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Mid</label>
+                            <input type="range" id="garment-region-mid" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="garment-region-mid-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Lower</label>
+                            <input type="range" id="garment-region-lower" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="garment-region-lower-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Bottom</label>
+                            <input type="range" id="garment-region-bottom" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="garment-region-bottom-val">0.00 m</span>
+                        </div>
+                        <div style="display:flex;gap:6px;margin-top:6px;">
+                            <button id="garment-create" class="btn-toggle" style="flex:1;"><i class="fas fa-tshirt"></i> Erzeuge</button>
+                            <button id="garment-remove" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Garment entfernen"><i class="fas fa-times"></i></button>
+                            <button id="garment-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hair -->
+                <div class="panel-section collapsed" data-panel-key="hair">
+                    <h3>Hair <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" id="hair-panel">
+                        <select id="hair-style-select" class="viewer-select">
+                            <option value="">— No Hair —</option>
+                        </select>
+                        <div class="slider-row">
+                            <label>Color</label>
+                            <select id="hair-color-select" class="viewer-select" style="margin-bottom:0;"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cloth - from Template -->
+                <div class="panel-section collapsed" data-panel-key="cloth_template">
+                    <h3>Cloth - from Template <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" id="cloth-template-panel">
+                        <div class="slider-row"><label>Template</label>
+                            <select id="cloth-tpl-type" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
+                        </div>
+                        <div class="slider-row"><label>Segments</label>
+                            <input type="range" id="cloth-tpl-segments" min="16" max="64" value="32" step="2">
+                            <span class="slider-val" id="cloth-tpl-segments-val">32</span>
+                        </div>
+                        <div class="slider-row"><label>Tightness</label>
+                            <input type="range" id="cloth-tpl-tightness" min="0" max="100" value="50" step="1">
+                            <span class="slider-val" id="cloth-tpl-tightness-val">0.50</span>
+                        </div>
+                        <div class="slider-row"><label>Top</label>
+                            <input type="range" id="cloth-tpl-top-ext" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="cloth-tpl-top-ext-val">0 m</span>
+                        </div>
+                        <div class="slider-row"><label>Bottom</label>
+                            <input type="range" id="cloth-tpl-bot-ext" min="-30" max="50" value="0" step="1">
+                            <span class="slider-val" id="cloth-tpl-bot-ext-val">0 m</span>
+                        </div>
+                        <div class="slider-row"><label>Color</label>
+                            <input type="color" id="cloth-color" value="#404870" style="width:40px;height:24px;border:none;cursor:pointer;">
+                        </div>
+                        <div style="display:flex;gap:6px;margin-top:6px;">
+                            <button id="cloth-tpl-create" class="btn-toggle" style="flex:1;"><i class="fas fa-plus"></i> Create</button>
+                            <button id="cloth-tpl-update" class="btn-toggle" style="flex:1;"><i class="fas fa-sync-alt"></i> Update</button>
+                            <button id="cloth-tpl-delete" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Aktuelles Template löschen"><i class="fas fa-times"></i></button>
+                            <button id="cloth-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Cloth löschen"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cloth Builder -->
+                <div class="panel-section collapsed" data-panel-key="cloth_builder">
+                    <h3>Cloth Builder <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" id="cloth-builder-panel">
+                        <div class="slider-row"><label>Region</label>
+                            <select id="cloth-bld-region" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
+                        </div>
+                        <div class="slider-row"><label>Looseness</label>
+                            <input type="range" id="cloth-bld-looseness" min="0" max="200" value="30" step="5">
+                            <span class="slider-val" id="cloth-bld-looseness-val">0.30</span>
+                        </div>
+                        <div style="margin-top:6px;">
+                            <button id="cloth-bld-create" class="btn-toggle" style="width:100%;"><i class="fas fa-plus"></i> Create Garment</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cloth - Primitive -->
+                <div class="panel-section collapsed" data-panel-key="cloth_primitive">
+                    <h3>Cloth - Primitive <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" id="cloth-prim-panel">
+                        <div class="slider-row"><label>Primitive</label>
+                            <select id="cloth-prim-type" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
+                        </div>
+                        <div class="slider-row"><label>Segments</label>
+                            <input type="range" id="cloth-prim-segments" min="12" max="64" value="32" step="2">
+                            <span class="slider-val" id="cloth-prim-segments-val">32</span>
+                        </div>
+                        <div class="slider-row"><label>Length</label>
+                            <input type="range" id="cloth-prim-length" min="10" max="150" value="50" step="5">
+                            <span class="slider-val" id="cloth-prim-length-val">0.50</span>
+                        </div>
+                        <div class="slider-row" id="cloth-prim-flare-row"><label>Flare</label>
+                            <input type="range" id="cloth-prim-flare" min="0" max="200" value="30" step="5">
+                            <span class="slider-val" id="cloth-prim-flare-val">0.30</span>
+                        </div>
+                        <div style="margin-top:6px;">
+                            <button id="cloth-prim-create" class="btn-toggle" style="width:100%;"><i class="fas fa-plus"></i> Create Primitive</button>
+                        </div>
+                    </div>
+                </div>
+                </div><!-- /assets-content -->
+            </div><!-- /tab-assets -->
+
+            <!-- Animation Tab -->
+            <div class="tab-pane" id="tab-animation">
+                <div class="panel-section" data-panel-key="animations">
+                    <h3>Animations <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" id="animation-panel">
+                        <div class="anim-tree" id="anim-tree">
+                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Animationen...</div>
+                        </div>
+                        <div class="anim-speed">
+                            <label id="speed-label">Speed: 1.0x</label>
+                            <input type="range" id="anim-speed" min="10" max="300" value="100" step="10">
+                        </div>
+                        <div class="anim-controls">
+                            <button id="anim-play" title="Play / Pause"><i class="fas fa-play"></i></button>
+                            <button id="anim-stop" title="Stop"><i class="fas fa-stop"></i></button>
+                            <input type="range" id="anim-timeline" min="0" max="100" value="0" step="1">
+                        </div>
+                        <div class="anim-info" id="anim-info">&mdash;</div>
+                    </div>
+                </div>
+            </div><!-- /tab-animation -->
+
+            <!-- Szene Tab -->
+            <div class="tab-pane" id="tab-szene">
+                <!-- Lighting -->
+                <div class="panel-section" data-panel-key="beleuchtung">
+                    <h3>Beleuchtung <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body">
                 <select id="light-preset" class="viewer-select">
                     <option value="">— Preset —</option>
                     <option value="studio" selected>Studio</option>
@@ -305,67 +1220,140 @@
                         <input type="color" id="ambient-color" value="#ffffff">
                     </div>
                 </div>
-            </div>
-        </div>
+                    </div>
+                </div>
 
-        <!-- Renderer -->
-        <div class="panel-section" data-panel-key="renderer">
-            <h3>Renderer <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body">
-                <div class="slider-row">
-                    <label>Tone Mapping</label>
+                <!-- Renderer -->
+                <div class="panel-section" data-panel-key="renderer">
+                    <h3>Renderer <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body">
+                        <div class="slider-row">
+                            <label>Tone Mapping</label>
+                        </div>
+                        <select id="tone-mapping" class="viewer-select">
+                            <option value="ACESFilmic" selected>ACES Filmic</option>
+                            <option value="Linear">Linear</option>
+                            <option value="Reinhard">Reinhard</option>
+                            <option value="Cineon">Cineon</option>
+                            <option value="None">None</option>
+                        </select>
+                        <div class="slider-row">
+                            <label>Exposure</label>
+                            <input type="range" id="exposure" min="50" max="300" value="160" step="5">
+                            <span class="slider-val" id="exposure-val">1.6</span>
+                        </div>
+                        <div class="slider-row">
+                            <label>Hintergrund</label>
+                            <input type="color" id="bg-color" value="#1a1a2e">
+                        </div>
+                    </div>
                 </div>
-                <select id="tone-mapping" class="viewer-select">
-                    <option value="ACESFilmic" selected>ACES Filmic</option>
-                    <option value="Linear">Linear</option>
-                    <option value="Reinhard">Reinhard</option>
-                    <option value="Cineon">Cineon</option>
-                    <option value="None">None</option>
-                </select>
-                <div class="slider-row">
-                    <label>Exposure</label>
-                    <input type="range" id="exposure" min="50" max="300" value="160" step="5">
-                    <span class="slider-val" id="exposure-val">1.6</span>
-                </div>
-                <div class="slider-row">
-                    <label>Hintergrund</label>
-                    <input type="color" id="bg-color" value="#1a1a2e">
-                </div>
-            </div>
-        </div>
 
-        <!-- Camera -->
-        <div class="panel-section" data-panel-key="kamera">
-            <h3>Kamera <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body">
-                <div class="slider-row">
-                    <label>FOV</label>
-                    <input type="range" id="camera-fov" min="20" max="80" value="35" step="1">
-                    <span class="slider-val" id="camera-fov-val">35</span>
+                <!-- Camera -->
+                <div class="panel-section" data-panel-key="kamera">
+                    <h3>Kamera <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body">
+                        <div class="slider-row">
+                            <label>FOV</label>
+                            <input type="range" id="camera-fov" min="20" max="80" value="35" step="1">
+                            <span class="slider-val" id="camera-fov-val">35</span>
+                        </div>
+                        <div class="camera-info">
+                            Position: <span id="cam-pos">0.00, 1.00, 3.50</span>
+                        </div>
+                        <div class="camera-info">
+                            Target: <span id="cam-target">0.00, 0.90, 0.00</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="camera-info">
-                    Position: <span id="cam-pos">0.00, 1.00, 3.50</span>
-                </div>
-                <div class="camera-info">
-                    Target: <span id="cam-target">0.00, 0.90, 0.00</span>
-                </div>
-            </div>
-        </div>
 
-        <!-- Actions -->
-        <div class="panel-section" data-panel-key="aktionen">
-            <h3>Aktionen <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body">
-                <button class="action-btn primary" id="btn-apply">Auf Konfiguration anwenden</button>
-                <button class="action-btn" id="btn-reset">Reset</button>
-                <button class="action-btn" id="btn-export">Export Settings</button>
-            </div>
-        </div>
+                <!-- Actions -->
+                <div class="panel-section" data-panel-key="aktionen">
+                    <h3>Aktionen <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body">
+                        <button class="action-btn primary" id="btn-apply">Auf Konfiguration anwenden</button>
+                        <button class="action-btn" id="btn-reset">Reset</button>
+                        <button class="action-btn" id="btn-export">Export Settings</button>
+                    </div>
+                </div>
+            </div><!-- /tab-szene -->
+        </div><!-- /panel-tab-content -->
 
         <!-- Status -->
         <div class="status-bar">
             <span id="vertex-count">—</span> vertices
             &nbsp;|&nbsp; <span id="fps-display">—</span> fps
+            &nbsp;|&nbsp; <span id="char-count">0</span> Charaktere
+        </div>
+    </div>
+    </div>
+</div>
+
+<!-- Add Character Dialog -->
+<div class="scene-modal-overlay" id="add-char-dialog">
+    <div class="scene-modal">
+        <div class="scene-modal-header">
+            <h4><i class="fas fa-user-plus"></i> Charakter hinzufügen</h4>
+            <button class="scene-modal-close" data-close>&times;</button>
+        </div>
+        <div class="scene-modal-body">
+            <ul class="preset-list" id="preset-list">
+                <li style="color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Lade Presets...</li>
+            </ul>
+        </div>
+        <div class="scene-modal-footer">
+            <button data-close>Abbrechen</button>
+            <button class="primary" id="add-char-confirm" disabled>Hinzufügen</button>
+        </div>
+    </div>
+</div>
+
+<!-- Save Scene Dialog -->
+<div class="scene-modal-overlay" id="save-scene-dialog">
+    <div class="scene-modal">
+        <div class="scene-modal-header">
+            <h4><i class="fas fa-save"></i> Szene speichern</h4>
+            <button class="scene-modal-close" data-close>&times;</button>
+        </div>
+        <div class="scene-modal-body">
+            <input class="scene-name-input" id="save-scene-name" type="text" placeholder="Szene-Name..." autocomplete="off">
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">Vorhandene Szenen:</div>
+            <ul class="preset-list" id="save-scene-list"></ul>
+        </div>
+        <div class="scene-modal-footer">
+            <button data-close>Abbrechen</button>
+            <button class="primary" id="save-scene-confirm">Speichern</button>
+        </div>
+    </div>
+</div>
+
+<!-- Load File Dialog -->
+<div class="scene-modal-overlay" id="load-scene-dialog">
+    <div class="scene-modal" style="max-width:520px;">
+        <div class="scene-modal-header">
+            <h4><i class="fas fa-folder-open"></i> Modell / Szene laden</h4>
+            <button class="scene-modal-close" data-close>&times;</button>
+        </div>
+        <div class="scene-modal-body" style="padding:0;">
+            <div style="padding:8px 12px 4px;font-size:0.7rem;color:var(--text-muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                <i class="fas fa-folder" style="margin-right:4px;"></i> data/models/
+            </div>
+            <table class="file-browser-table" id="load-file-table" style="width:100%;font-size:0.78rem;border-collapse:collapse;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);font-size:0.7rem;">
+                        <th style="text-align:left;padding:4px 12px;">Name</th>
+                        <th style="text-align:left;padding:4px 8px;width:60px;">Typ</th>
+                        <th style="text-align:right;padding:4px 12px;width:80px;">Geändert</th>
+                    </tr>
+                </thead>
+                <tbody id="load-file-tbody">
+                    <tr><td colspan="3" style="padding:12px;color:var(--text-muted);text-align:center;"><i class="fas fa-spinner fa-spin"></i> Lade...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="scene-modal-footer">
+            <button data-close>Abbrechen</button>
+            <button class="primary" id="load-scene-confirm" disabled>Laden</button>
         </div>
     </div>
 </div>
@@ -381,5 +1369,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/scene_config.js' %}?v=3"></script>
+<script type="module" src="{% static 'viewer/scene_config.js' %}?t={% now "U" %}"></script>
 {% endblock %}

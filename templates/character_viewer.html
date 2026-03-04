@@ -31,6 +31,69 @@
         cursor: grab;
     }
     #viewer-canvas:active { cursor: grabbing; }
+
+    /* Garment tooltip */
+    #garment-tooltip {
+        position: absolute;
+        display: none;
+        background: rgba(26, 26, 46, 0.92);
+        color: #eee;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        pointer-events: none;
+        z-index: 20;
+        white-space: nowrap;
+        border: 1px solid var(--border);
+        backdrop-filter: blur(4px);
+    }
+    /* Floating remove button for selected item */
+    #selection-remove-btn {
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 15;
+    }
+    /* Equipped items list */
+    #equipped-items-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .equipped-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.8rem;
+    }
+    .equipped-item:last-child { border-bottom: none; }
+    .equipped-item-name {
+        color: var(--text-muted);
+        cursor: pointer;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .equipped-item-name:hover { color: var(--text); }
+    .equipped-item-remove {
+        background: none;
+        border: 1px solid transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.75rem;
+        padding: 2px 6px;
+        border-radius: 3px;
+        flex-shrink: 0;
+        margin-left: 4px;
+    }
+    .equipped-item-remove:hover {
+        color: var(--danger);
+        border-color: var(--danger);
+    }
     .viewer-buttons {
         position: absolute;
         top: 12px;
@@ -308,10 +371,11 @@
 <div class="viewer-container">
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
+        <div id="garment-tooltip"></div>
+        <button id="selection-remove-btn" class="viewer-btn" style="display:none;"><i class="fas fa-trash-alt"></i> Remove</button>
         <div class="viewer-buttons-left">
             <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
             <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i class="fas fa-folder-open"></i> Laden</button>
-            <input type="file" id="load-preset-file" accept=".json" style="display:none">
             <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
             <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i class="fas fa-file-export"></i> Speichern unter</button>
         </div>
@@ -487,6 +551,22 @@
                     <input type="range" id="garment-stiffness" min="0" max="100" value="80" step="1">
                     <span class="slider-val" id="garment-stiffness-val">0.80</span>
                 </div>
+                <div class="slider-row"><label>Min. Abstand</label>
+                    <input type="range" id="garment-min-dist" min="0" max="15" value="3" step="1">
+                    <span class="slider-val" id="garment-min-dist-val">3 mm</span>
+                </div>
+                <div class="slider-row"><label>Schritt-Boden</label>
+                    <input type="range" id="garment-crotch-floor" min="-40" max="40" value="0" step="1">
+                    <span class="slider-val" id="garment-crotch-floor-val">0 mm</span>
+                </div>
+                <div class="slider-row"><label>Anheben</label>
+                    <input type="range" id="garment-lift" min="-20" max="40" value="0" step="1">
+                    <span class="slider-val" id="garment-lift-val">0 mm</span>
+                </div>
+                <div class="slider-row"><label>Schritt-Tiefe</label>
+                    <input type="range" id="garment-crotch-depth" min="0" max="40" value="0" step="1">
+                    <span class="slider-val" id="garment-crotch-depth-val">0 mm</span>
+                </div>
                 <!-- Farbe / Material -->
                 <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
                 <div class="slider-row"><label>Color</label>
@@ -529,6 +609,28 @@
                         <input type="range" id="garment-scale-z" min="50" max="200" value="100" step="1">
                         <span class="slider-val" id="garment-scale-z-val">1.00</span>
                     </div>
+                    <!-- Region -->
+                    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Region</div>
+                    <div class="slider-row"><label>Top</label>
+                        <input type="range" id="garment-region-top" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-top-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Upper</label>
+                        <input type="range" id="garment-region-upper" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-upper-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Mid</label>
+                        <input type="range" id="garment-region-mid" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-mid-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Lower</label>
+                        <input type="range" id="garment-region-lower" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-lower-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Bottom</label>
+                        <input type="range" id="garment-region-bottom" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-bottom-val">0.00 m</span>
+                    </div>
                 </div>
                 <div style="display:flex;gap:6px;margin-top:6px;">
                     <button id="garment-create" class="btn-toggle" style="flex:1;"><i class="fas fa-tshirt"></i> Erzeuge</button>
@@ -565,6 +667,16 @@
         <div class="panel-section collapsed" data-panel-key="wardrobe">
             <h3>Wardrobe <span class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="wardrobe-panel"></div>
+        </div>
+
+        <!-- Equipped Items -->
+        <div class="panel-section" data-panel-key="equipped_items">
+            <h3>Equipped Items <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body">
+                <ul id="equipped-items-list">
+                    <li style="color:var(--text-muted);font-size:0.78rem;padding:4px 0;">No items equipped</li>
+                </ul>
+            </div>
         </div>
 
         <!-- Animations -->
@@ -607,5 +719,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?v=35"></script>
+<script type="module" src="{% static 'viewer/viewer.js' %}?t={% now "U" %}"></script>
 {% endblock %}

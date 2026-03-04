@@ -247,5 +247,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/animations.js' %}"></script>
+<script type="module" src="{% static 'viewer/animations.js' %}?t={% now "U" %}"></script>
 {% endblock %}

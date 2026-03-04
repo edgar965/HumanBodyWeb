@@ -131,6 +131,25 @@ CHANNEL_LAYERS = {
     }
 }
 
+# Logging — show GarmentFitter INFO messages in console
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {'format': '%(asctime)s %(levelname)-8s %(name)s: %(message)s'},
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'GarmentFitter': {'handlers': ['console'], 'level': 'INFO'},
+        'core': {'handlers': ['console'], 'level': 'INFO'},
+    },
+}
+
 # Local overrides (not tracked in git — each team member has their own)
 try:
     from .local_settings import *  # noqa: F401,F403
