@@ -386,9 +386,16 @@ class CharacterInstance {
                 p.set('lift', g.lift !== undefined ? g.lift : 0);
                 p.set('crotch_depth', g.crotchDepth !== undefined ? g.crotchDepth : 0);
                 if (g.color) {
-                    p.set('color_r', g.color[0].toFixed(3));
-                    p.set('color_g', g.color[1].toFixed(3));
-                    p.set('color_b', g.color[2].toFixed(3));
+                    let cr, cg, cb;
+                    if (Array.isArray(g.color)) {
+                        [cr, cg, cb] = g.color;
+                    } else {
+                        const tc = new THREE.Color(g.color);
+                        cr = tc.r; cg = tc.g; cb = tc.b;
+                    }
+                    p.set('color_r', cr.toFixed(3));
+                    p.set('color_g', cg.toFixed(3));
+                    p.set('color_b', cb.toFixed(3));
                 }
 
                 const resp = await fetch(`/api/character/garment/fit/?${p}`);

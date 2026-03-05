@@ -2002,10 +2002,24 @@ function refitHairToBody() {
     removeHair();
 
     gltfLoader.load(hairUrl, (gltf) => {
-        // Use raw GLB scene (no SkinnedMesh conversion) so scale works directly
-        hairMesh = gltf.scene;
-        hairMesh.scale.set(scale, scale, scale);
+        let hairGroup = gltf.scene;
 
+        // Scale geometry vertices before skinning so bone binding stays correct
+        hairGroup.traverse(child => {
+            if (child.isMesh) {
+                child.geometry.scale(scale, scale, scale);
+            }
+        });
+
+        // Re-bind to skeleton (same as loadHair)
+        if (isSkinned && defSkeleton && skinWeightData) {
+            const headBoneIdx = _findHeadBoneIndex();
+            if (headBoneIdx >= 0) {
+                hairGroup = _skinifyHairGroup(hairGroup, headBoneIdx);
+            }
+        }
+
+        hairMesh = hairGroup;
         if (colorName) applyHairColorToObject(hairMesh, colorName);
         scene.add(hairMesh);
         updateEquippedList();
