@@ -121,6 +121,11 @@ def scene_model(request):
     return render(request, 'scene_model.html')
 
 
+def theatre_page(request):
+    """Render the Theatre.js animation editor page."""
+    return render(request, 'theatre.html')
+
+
 def animations_page(request):
     """Render the Animations page."""
     return render(request, 'animations.html')

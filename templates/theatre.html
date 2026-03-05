@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Theatre — MocapNET{% endblock %}
+
+{% block extra_head %}
+<style>
+    .main-content {
+        padding: 0 !important;
+        max-width: none !important;
+        width: calc(100vw - var(--sidebar-width));
+    }
+    .theatre-container {
+        width: 100%;
+        height: 100vh;
+        position: relative;
+    }
+    #theatre-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #080812;
+        cursor: grab;
+    }
+    #theatre-canvas:active { cursor: grabbing; }
+
+    /* ── Menubar ── */
+    .theatre-menubar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 32px;
+        background: rgba(18, 18, 30, 0.95);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex;
+        align-items: center;
+        padding: 0 8px;
+        z-index: 600;
+        backdrop-filter: blur(6px);
+    }
+    .menu-item {
+        position: relative;
+        padding: 4px 12px;
+        color: #aaa;
+        font-size: 0.8rem;
+        cursor: pointer;
+        user-select: none;
+        border-radius: 4px;
+    }
+    .menu-item:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .menu-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 200px;
+        background: rgba(24, 24, 40, 0.97);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+        padding: 4px 0;
+        z-index: 700;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .menu-item:hover .menu-dropdown,
+    .menu-item.active .menu-dropdown { display: block; }
+    .menu-action {
+        padding: 7px 16px;
+        color: #ccc;
+        font-size: 0.8rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .menu-action:hover { background: rgba(124, 92, 191, 0.3); color: #fff; }
+    .menu-action i { width: 16px; text-align: center; opacity: 0.7; }
+    .menu-separator { height: 1px; background: rgba(255,255,255,0.08); margin: 4px 0; }
+
+    /* ── Toolbar — top-right ── */
+    .theatre-toolbar {
+        position: absolute;
+        top: 40px;
+        right: 12px;
+        display: flex;
+        gap: 8px;
+        z-index: 500;
+    }
+    .theatre-toolbar button {
+        padding: 8px 14px;
+        background: rgba(26, 26, 46, 0.9);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 6px;
+        color: #ccc;
+        cursor: pointer;
+        font-size: 0.82rem;
+        backdrop-filter: blur(4px);
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .theatre-toolbar button:hover {
+        border-color: #7c5cbf;
+        color: #fff;
+    }
+    .theatre-toolbar button.recording {
+        background: rgba(220, 40, 40, 0.85);
+        border-color: #e44;
+        color: #fff;
+    }
+    .theatre-toolbar button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    #glb-file-input { display: none; }
+
+    /* Push Theatre.js Studio overlay to the right of our sidebar (220px) */
+    #theatrejs-studio-root {
+        inset: 0 0 0 220px !important;
+    }
+
+    /* ── Modal overlay ── */
+    .theatre-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .theatre-modal-overlay.open { display: flex; }
+    .theatre-modal {
+        background: #1e1e32;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        width: 480px;
+        max-height: 70vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+    }
+    .theatre-modal-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .theatre-modal-header h3 {
+        margin: 0;
+        font-size: 0.95rem;
+        color: #ddd;
+        font-weight: 500;
+    }
+    .theatre-modal-close {
+        background: none;
+        border: none;
+        color: #888;
+        font-size: 1.1rem;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+    .theatre-modal-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .theatre-modal-body {
+        padding: 12px 18px;
+        overflow-y: auto;
+        flex: 1;
+    }
+    .theatre-modal-body .loading-msg {
+        color: #888;
+        font-size: 0.85rem;
+        text-align: center;
+        padding: 20px 0;
+    }
+
+    /* ── Modal list items ── */
+    .modal-list-item {
+        padding: 10px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #ccc;
+        font-size: 0.85rem;
+        transition: background 0.15s;
+    }
+    .modal-list-item:hover { background: rgba(124, 92, 191, 0.2); color: #fff; }
+    .modal-list-item .item-meta {
+        color: #777;
+        font-size: 0.75rem;
+    }
+
+    /* ── Animation category tree ── */
+    .anim-category {
+        margin-bottom: 4px;
+    }
+    .anim-category-header {
+        padding: 8px 14px;
+        cursor: pointer;
+        color: #bbb;
+        font-size: 0.85rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 6px;
+    }
+    .anim-category-header:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .anim-category-header i { font-size: 0.7rem; transition: transform 0.2s; }
+    .anim-category.open .anim-category-header i { transform: rotate(90deg); }
+    .anim-category-items {
+        display: none;
+        padding-left: 24px;
+    }
+    .anim-category.open .anim-category-items { display: block; }
+    .anim-item {
+        padding: 6px 14px;
+        cursor: pointer;
+        color: #aaa;
+        font-size: 0.82rem;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+    }
+    .anim-item:hover { background: rgba(124, 92, 191, 0.2); color: #fff; }
+    .anim-item .frame-count { color: #666; font-size: 0.75rem; }
+
+    /* ── Save modal input ── */
+    .save-modal-input {
+        width: 100%;
+        padding: 10px 14px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 6px;
+        color: #ddd;
+        font-size: 0.9rem;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .save-modal-input:focus { border-color: #7c5cbf; }
+    .save-modal-btn {
+        margin-top: 12px;
+        padding: 10px 20px;
+        background: #7c5cbf;
+        border: none;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 0.85rem;
+        cursor: pointer;
+        width: 100%;
+    }
+    .save-modal-btn:hover { background: #6a4daa; }
+    .save-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="theatre-container">
+    <canvas id="theatre-canvas"></canvas>
+
+    <!-- Menubar -->
+    <div class="theatre-menubar">
+        <div class="menu-item" id="menu-file">
+            File
+            <div class="menu-dropdown">
+                <div class="menu-action" id="menu-scene-load">
+                    <i class="fas fa-folder-open"></i> Scene laden
+                </div>
+                <div class="menu-action" id="menu-scene-save">
+                    <i class="fas fa-save"></i> Scene speichern
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-action" id="menu-model-load">
+                    <i class="fas fa-user"></i> Modell laden
+                </div>
+                <div class="menu-action" id="menu-anim-load">
+                    <i class="fas fa-running"></i> Animation laden
+                </div>
+                <div class="menu-separator"></div>
+                <div class="menu-action" id="menu-add-glb">
+                    <i class="fas fa-cube"></i> GLB importieren
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar — top-right -->
+    <div class="theatre-toolbar">
+        <button id="btn-add-light" title="Neues Licht hinzufügen">
+            <i class="fas fa-lightbulb"></i> Add Light
+        </button>
+        <button id="btn-export-video" title="Video aufnehmen">
+            <i class="fas fa-file-video"></i> Export Video
+        </button>
+    </div>
+
+    <input type="file" id="glb-file-input" accept=".glb,.gltf">
+
+    <!-- ── Scene Load Modal ── -->
+    <div class="theatre-modal-overlay" id="modal-scene-load">
+        <div class="theatre-modal">
+            <div class="theatre-modal-header">
+                <h3>Scene laden</h3>
+                <button class="theatre-modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="theatre-modal-body" id="scene-list-body">
+                <div class="loading-msg">Lade Scenes...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Scene Save Modal ── -->
+    <div class="theatre-modal-overlay" id="modal-scene-save">
+        <div class="theatre-modal">
+            <div class="theatre-modal-header">
+                <h3>Scene speichern</h3>
+                <button class="theatre-modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="theatre-modal-body">
+                <input type="text" class="save-modal-input" id="scene-save-name"
+                       placeholder="Scene-Name eingeben...">
+                <button class="save-modal-btn" id="scene-save-btn">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Model Load Modal ── -->
+    <div class="theatre-modal-overlay" id="modal-model-load">
+        <div class="theatre-modal">
+            <div class="theatre-modal-header">
+                <h3>Modell laden</h3>
+                <button class="theatre-modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="theatre-modal-body" id="model-list-body">
+                <div class="loading-msg">Lade Modelle...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Animation Load Modal ── -->
+    <div class="theatre-modal-overlay" id="modal-anim-load">
+        <div class="theatre-modal">
+            <div class="theatre-modal-header">
+                <h3>Animation laden</h3>
+                <button class="theatre-modal-close" data-close-modal>&times;</button>
+            </div>
+            <div class="theatre-modal-body" id="anim-list-body">
+                <div class="loading-msg">Lade Animationen...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script type="module" src="{% static 'theatre/theatre-app.js' %}"></script>
+{% endblock %}

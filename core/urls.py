@@ -57,6 +57,7 @@ urlpatterns = [
     path('humanbody/config/', character_api.character_viewer, name='humanbody_config'),
     path('humanbody/scene/', character_api.scene_config, name='humanbody_scene'),
     path('humanbody/scene-model/', character_api.scene_model, name='humanbody_scene_model'),
+    path('humanbody/theatre/', character_api.theatre_page, name='humanbody_theatre'),
     path('humanbody/animations/', character_api.animations_page, name='humanbody_animations'),
     path('humanbody/test-animation/', character_api.test_animation_page, name='test_animation'),
     path('humanbody/test-character/', character_api.test_character_page, name='test_character'),
