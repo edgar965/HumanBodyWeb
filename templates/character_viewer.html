@@ -13,10 +13,16 @@
     }
     .viewer-container {
         display: flex;
+        flex-direction: column;
         width: 100%;
         height: 100vh;
         gap: 0;
         position: relative;
+    }
+    .viewer-main {
+        display: flex;
+        flex: 1;
+        min-height: 0;
     }
     .canvas-wrap {
         flex: 1;
@@ -95,26 +101,30 @@
         border-color: var(--danger);
     }
     .viewer-buttons {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        z-index: 10;
         display: flex;
-        gap: 6px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-secondary);
     }
     .viewer-btn {
         padding: 8px 14px;
-        background: rgba(26, 26, 46, 0.85);
+        background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: 6px;
         color: var(--text-muted);
         cursor: pointer;
         font-size: 0.82rem;
-        backdrop-filter: blur(4px);
         transition: all 0.2s;
     }
     .viewer-btn:hover { border-color: var(--accent); color: var(--text); }
     .viewer-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .toggle-btn-group {
+        display: flex;
+        gap: 2px;
+    }
     .viewer-buttons-left {
         position: absolute;
         top: 12px;
@@ -369,25 +379,33 @@
 
 {% block content %}
 <div class="viewer-container">
+    {% block viewer_menubar %}{% endblock %}
+    <div class="viewer-main">
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
         <div id="garment-tooltip"></div>
         <button id="selection-remove-btn" class="viewer-btn" style="display:none;"><i class="fas fa-trash-alt"></i> Remove</button>
         <div class="viewer-buttons-left">
-            <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
+            {% block viewer_buttons_left %}
             <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i class="fas fa-folder-open"></i> Laden</button>
             <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
             <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i class="fas fa-file-export"></i> Speichern unter</button>
-        </div>
-        <div class="viewer-buttons">
-            <button id="refit-all-btn" class="viewer-btn" title="Garments & Haare an aktuelle Morphs anpassen"><i class="fas fa-sync"></i> Refit</button>
-            <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i> Model</button>
-            <button id="clothes-toggle" class="viewer-btn active" title="Kleider ein/ausblenden"><i class="fas fa-tshirt"></i> Kleider</button>
-            <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i> Rig</button>
+            {% endblock %}
         </div>
     </div>
 
     <div class="viewer-panel">
+        <div class="viewer-buttons">
+            {% block viewer_buttons_right %}
+            <div class="toggle-btn-group">
+                <button id="refit-all-btn" class="viewer-btn" title="Garments &amp; Haare an aktuelle Morphs anpassen"><i class="fas fa-sync"></i></button>
+                <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i></button>
+                <button id="clothes-toggle" class="viewer-btn active" title="Kleider ein/ausblenden"><i class="fas fa-tshirt"></i></button>
+                <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i></button>
+            </div>
+            <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
+            {% endblock %}
+        </div>
         <!-- Body Type -->
         <div class="panel-section" data-panel-key="body_type">
             <h3>Body Type <span class="chevron">&#9660;</span></h3>
@@ -702,11 +720,14 @@
         </div>
 
         <!-- Status -->
+        {% block viewer_status_bar %}
         <div class="status-bar">
             WebSocket: <span id="ws-status" class="disconnected">Disconnected</span>
             &nbsp;|&nbsp; <span id="vertex-count">—</span> vertices
             &nbsp;|&nbsp; <span id="fps-display">—</span> fps
         </div>
+        {% endblock %}
+    </div>
     </div>
 </div>
 {% endblock %}

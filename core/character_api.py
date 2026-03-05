@@ -116,6 +116,11 @@ def scene_config(request):
     return render(request, 'scene_config.html')
 
 
+def scene_model(request):
+    """Render the Scene-Model page (inherits Konfiguration with menubar)."""
+    return render(request, 'scene_model.html')
+
+
 def animations_page(request):
     """Render the Animations page."""
     return render(request, 'animations.html')

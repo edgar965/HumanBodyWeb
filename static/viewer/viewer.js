@@ -356,7 +356,8 @@ function animate() {
     frameCount++;
     fpsAccum += dt;
     if (fpsAccum >= 1.0) {
-        document.getElementById('fps-display').textContent = frameCount;
+        const fpsEl = document.getElementById('fps-display');
+        if (fpsEl) fpsEl.textContent = frameCount;
         frameCount = 0;
         fpsAccum = 0;
     }
@@ -409,7 +410,7 @@ async function loadMesh() {
         if (data.error) { console.error(data.error); return; }
 
         vertexCount = data.vertex_count;
-        document.getElementById('vertex-count').textContent = vertexCount.toLocaleString();
+        { const el = document.getElementById('vertex-count'); if (el) el.textContent = vertexCount.toLocaleString(); }
 
         const vertBuf = base64ToFloat32(data.vertices);
         blenderToThreeCoords(vertBuf);
@@ -465,8 +466,7 @@ async function loadMesh() {
         // Record initial body top for hair refit
         if (initialBodyTop === null) initialBodyTop = _getBodyTop();
 
-        document.getElementById('vertex-count').textContent =
-            geo.attributes.position.count.toLocaleString();
+        { const el = document.getElementById('vertex-count'); if (el) el.textContent = geo.attributes.position.count.toLocaleString(); }
 
         applySceneSkinSettings();
         applySkinColor();
@@ -521,7 +521,7 @@ async function reloadMeshForBodyType(bodyType, gender) {
         if (data.error) { console.error(data.error); return; }
 
         vertexCount = data.vertex_count;
-        document.getElementById('vertex-count').textContent = vertexCount.toLocaleString();
+        { const el = document.getElementById('vertex-count'); if (el) el.textContent = vertexCount.toLocaleString(); }
 
         const vertBuf = base64ToFloat32(data.vertices);
         blenderToThreeCoords(vertBuf);
@@ -573,8 +573,7 @@ async function reloadMeshForBodyType(bodyType, gender) {
         scene.add(bodyMesh);
         initialBodyTop = _getBodyTop();
 
-        document.getElementById('vertex-count').textContent =
-            geo.attributes.position.count.toLocaleString();
+        { const el = document.getElementById('vertex-count'); if (el) el.textContent = geo.attributes.position.count.toLocaleString(); }
 
         applySceneSkinSettings();
         applySkinColor();
@@ -764,8 +763,8 @@ function connectWebSocket() {
 
     ws.onopen = () => {
         wsReady = true;
-        document.getElementById('ws-status').textContent = 'Connected';
-        document.getElementById('ws-status').className = 'connected';
+        const wsEl = document.getElementById('ws-status');
+        if (wsEl) { wsEl.textContent = 'Connected'; wsEl.className = 'connected'; }
         // Sync current body type to WebSocket on connect
         const btSelect = document.getElementById('body-type-select');
         if (btSelect && btSelect.value) {
@@ -775,8 +774,8 @@ function connectWebSocket() {
 
     ws.onclose = () => {
         wsReady = false;
-        document.getElementById('ws-status').textContent = 'Disconnected';
-        document.getElementById('ws-status').className = 'disconnected';
+        const wsEl = document.getElementById('ws-status');
+        if (wsEl) { wsEl.textContent = 'Disconnected'; wsEl.className = 'disconnected'; }
         // Reconnect after delay
         setTimeout(connectWebSocket, 2000);
     };
@@ -3120,7 +3119,26 @@ function applyModelPreset(preset) {
         bodySelect.dispatchEvent(new Event('change'));
     }
 
-    // 2. Morphs — set slider values and send via WebSocket
+    // 2. Meta sliders — restore age, mass, tone, height (stored as internal -1..1)
+    if (preset.meta) {
+        ['age', 'mass', 'tone', 'height'].forEach(name => {
+            const el = document.getElementById(`meta-${name}`);
+            const valSpan = document.getElementById(`meta-${name}-val`);
+            if (el && preset.meta[name] !== undefined) {
+                const internal = preset.meta[name];
+                // Convert internal -1..1 back to display value
+                const min = parseInt(el.min), max = parseInt(el.max);
+                const neutral = (min + max) / 2;
+                const half = (max - min) / 2;
+                const displayVal = Math.round(internal * half + neutral);
+                el.value = displayVal;
+                if (valSpan) valSpan.textContent = displayVal;
+                wsSend({ type: 'meta', name: name, value: internal });
+            }
+        });
+    }
+
+    // 3. Morphs — set slider values and send via WebSocket
     if (preset.morphs) {
         const morphBatch = {};
         const panel = document.getElementById('morphs-panel');
@@ -3278,6 +3296,20 @@ function gatherModelState() {
     // Body type
     const bodySelect = document.getElementById('body-type-select');
     if (bodySelect) state.body_type = bodySelect.value;
+
+    // Meta sliders (age, mass, tone, height) — save as internal -1..1 values
+    const meta = {};
+    ['age', 'mass', 'tone', 'height'].forEach(name => {
+        const el = document.getElementById(`meta-${name}`);
+        if (el) {
+            const displayVal = parseInt(el.value);
+            const min = parseInt(el.min), max = parseInt(el.max);
+            const neutral = (min + max) / 2;
+            const half = (max - min) / 2;
+            meta[name] = half ? (displayVal - neutral) / half : 0;
+        }
+    });
+    state.meta = meta;
 
     // Morphs
     const morphs = {};

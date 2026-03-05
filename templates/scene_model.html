@@ -1,0 +1,143 @@
+{% extends "character_viewer.html" %}
+
+{% block title %}HumanBody Szene - Modell{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    /* ===== Menubar ===== */
+    .menubar {
+        display: flex;
+        align-items: center;
+        height: 32px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        z-index: 20;
+        padding: 0 4px;
+        flex-shrink: 0;
+    }
+    .menu { position: relative; }
+    .menu-title {
+        padding: 6px 12px;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        user-select: none;
+        line-height: 20px;
+    }
+    .menu-title:hover, .menu.open .menu-title {
+        background: rgba(255,255,255,0.08);
+        color: var(--text);
+    }
+    .menu-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 220px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 0 0 6px 6px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        padding: 4px 0;
+        z-index: 100;
+    }
+    .menu.open .menu-dropdown { display: block; }
+    .menu-item {
+        padding: 6px 30px 6px 28px;
+        font-size: 0.82rem;
+        color: var(--text);
+        cursor: pointer;
+        position: relative;
+        white-space: nowrap;
+    }
+    .menu-item:hover { background: var(--accent); color: #fff; }
+    .menu-item .shortcut { float: right; color: var(--text-muted); margin-left: 24px; font-size: 0.75rem; }
+    .menu-item:hover .shortcut { color: rgba(255,255,255,0.7); }
+    .menu-item.checkable.checked::before { content: "\2713"; position: absolute; left: 10px; }
+    .menu-sep { height: 1px; background: var(--border); margin: 4px 8px; }
+    .menubar-right {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding-right: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block viewer_menubar %}
+<div class="menubar">
+    <div class="menu">
+        <div class="menu-title">Datei</div>
+        <div class="menu-dropdown">
+            <div class="menu-item" data-action="load">Laden...</div>
+            <div class="menu-item" data-action="save">Speichern</div>
+            <div class="menu-item" data-action="save-as">Speichern unter...</div>
+        </div>
+    </div>
+    <div class="menu">
+        <div class="menu-title">Ansicht</div>
+        <div class="menu-dropdown">
+            <div class="menu-item checkable checked" data-action="toggle-model">Modell</div>
+            <div class="menu-item checkable checked" data-action="toggle-clothes">Kleider</div>
+            <div class="menu-item checkable" data-action="toggle-rig">Rig</div>
+        </div>
+    </div>
+    <div class="menubar-right">
+        <span style="font-size:0.75rem;color:var(--text-muted);">
+            <span id="ws-status" class="disconnected">Disconnected</span>
+            &nbsp;|&nbsp; <span id="vertex-count">&mdash;</span> vertices
+            &nbsp;|&nbsp; <span id="fps-display">&mdash;</span> fps
+        </span>
+    </div>
+</div>
+{% endblock %}
+
+{% block viewer_buttons_left %}
+<button id="load-preset-btn" class="viewer-btn" style="display:none;"></button>
+<button id="save-model-btn" class="viewer-btn" style="display:none;"></button>
+<button id="save-model-as-btn" class="viewer-btn" style="display:none;"></button>
+{% endblock %}
+
+{% block viewer_status_bar %}
+<!-- Status is shown in the menubar instead -->
+{% endblock %}
+
+{% block extra_scripts %}
+{{ block.super }}
+<script type="module">
+// Menubar actions: delegate to hidden viewer.js buttons
+document.querySelectorAll('.menu-item[data-action]').forEach(item => {
+    item.addEventListener('click', () => {
+        const a = item.dataset.action;
+        if (a === 'load') document.getElementById('load-preset-btn')?.click();
+        if (a === 'save') document.getElementById('save-model-btn')?.click();
+        if (a === 'save-as') document.getElementById('save-model-as-btn')?.click();
+        if (a === 'toggle-model') document.getElementById('model-toggle')?.click();
+        if (a === 'toggle-clothes') document.getElementById('clothes-toggle')?.click();
+        if (a === 'toggle-rig') document.getElementById('rig-toggle')?.click();
+        // Sync checkable state
+        if (item.classList.contains('checkable')) item.classList.toggle('checked');
+        // Close menu
+        item.closest('.menu')?.classList.remove('open');
+    });
+});
+// Menubar open/close
+document.querySelectorAll('.menu-title').forEach(title => {
+    title.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = title.closest('.menu');
+        const wasOpen = menu.classList.contains('open');
+        document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
+        if (!wasOpen) menu.classList.add('open');
+    });
+});
+document.addEventListener('click', e => {
+    if (!e.target.closest('.menu')) {
+        document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
+    }
+});
+</script>
+{% endblock %}
