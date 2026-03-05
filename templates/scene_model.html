@@ -57,6 +57,29 @@
     .menu-item:hover .shortcut { color: rgba(255,255,255,0.7); }
     .menu-item.checkable.checked::before { content: "\2713"; position: absolute; left: 10px; }
     .menu-sep { height: 1px; background: var(--border); margin: 4px 8px; }
+    .menu-submenu-wrap { position: relative; }
+    .menu-submenu-wrap > .menu-item::after {
+        content: "\25B6";
+        position: absolute;
+        right: 10px;
+        font-size: 0.6em;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    .menu-submenu {
+        display: none;
+        position: absolute;
+        left: 100%;
+        top: -4px;
+        min-width: 180px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        padding: 4px 0;
+        z-index: 101;
+    }
+    .menu-submenu-wrap:hover > .menu-submenu { display: block; }
     .menubar-right {
         margin-left: auto;
         display: flex;
@@ -69,20 +92,49 @@
 
 {% block viewer_menubar %}
 <div class="menubar">
+    <!-- Datei -->
     <div class="menu">
         <div class="menu-title">Datei</div>
         <div class="menu-dropdown">
-            <div class="menu-item" data-action="load">Laden...</div>
-            <div class="menu-item" data-action="save">Speichern</div>
-            <div class="menu-item" data-action="save-as">Speichern unter...</div>
+            <div class="menu-item" data-action="new">Neu<span class="shortcut">Ctrl+N</span></div>
+            <div class="menu-item" data-action="load">Laden...<span class="shortcut">Ctrl+O</span></div>
+            <div class="menu-item" data-action="save">Speichern<span class="shortcut">Ctrl+S</span></div>
+            <div class="menu-item" data-action="save-as">Speichern unter...<span class="shortcut">Ctrl+Shift+S</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-submenu-wrap">
+                <div class="menu-item">Exportieren</div>
+                <div class="menu-submenu">
+                    <div class="menu-item" data-action="export-model-json">Modell &ndash; JSON</div>
+                </div>
+            </div>
         </div>
     </div>
+    <!-- Bearbeiten -->
+    <div class="menu">
+        <div class="menu-title">Bearbeiten</div>
+        <div class="menu-dropdown">
+            <div class="menu-item" data-action="deselect">Auswahl aufheben<span class="shortcut">Esc</span></div>
+            <div class="menu-item" data-action="delete">L&ouml;schen<span class="shortcut">Entf</span></div>
+            <div class="menu-sep"></div>
+            <div class="menu-item" data-action="clear-all">Alles l&ouml;schen</div>
+        </div>
+    </div>
+    <!-- Ansicht -->
     <div class="menu">
         <div class="menu-title">Ansicht</div>
         <div class="menu-dropdown">
             <div class="menu-item checkable checked" data-action="toggle-model">Modell</div>
             <div class="menu-item checkable checked" data-action="toggle-clothes">Kleider</div>
             <div class="menu-item checkable" data-action="toggle-rig">Rig</div>
+        </div>
+    </div>
+    <!-- Werkzeuge -->
+    <div class="menu">
+        <div class="menu-title">Werkzeuge</div>
+        <div class="menu-dropdown">
+            <div class="menu-item" data-action="reset-scene">Szene zur&uuml;cksetzen</div>
+            <div class="menu-item" data-action="reset-lighting">Beleuchtung zur&uuml;cksetzen</div>
+            <div class="menu-item" data-action="reset-camera">Kamera zur&uuml;cksetzen</div>
         </div>
     </div>
     <div class="menubar-right">
@@ -108,22 +160,38 @@
 {% block extra_scripts %}
 {{ block.super }}
 <script type="module">
-// Menubar actions: delegate to hidden viewer.js buttons
+// Dispatch a viewer-action custom event
+function dispatchViewerAction(action) {
+    document.dispatchEvent(new CustomEvent('viewer-action', { detail: { action } }));
+}
+
+// Menubar actions: delegate to hidden viewer.js buttons or dispatch custom events
+const buttonActions = {
+    'load': 'load-preset-btn',
+    'save': 'save-model-btn',
+    'save-as': 'save-model-as-btn',
+    'toggle-model': 'model-toggle',
+    'toggle-clothes': 'clothes-toggle',
+    'toggle-rig': 'rig-toggle',
+};
+const customActions = ['new', 'deselect', 'delete', 'clear-all', 'export-model-json',
+                       'reset-scene', 'reset-lighting', 'reset-camera'];
+
 document.querySelectorAll('.menu-item[data-action]').forEach(item => {
     item.addEventListener('click', () => {
         const a = item.dataset.action;
-        if (a === 'load') document.getElementById('load-preset-btn')?.click();
-        if (a === 'save') document.getElementById('save-model-btn')?.click();
-        if (a === 'save-as') document.getElementById('save-model-as-btn')?.click();
-        if (a === 'toggle-model') document.getElementById('model-toggle')?.click();
-        if (a === 'toggle-clothes') document.getElementById('clothes-toggle')?.click();
-        if (a === 'toggle-rig') document.getElementById('rig-toggle')?.click();
+        if (buttonActions[a]) {
+            document.getElementById(buttonActions[a])?.click();
+        } else if (customActions.includes(a)) {
+            dispatchViewerAction(a);
+        }
         // Sync checkable state
         if (item.classList.contains('checkable')) item.classList.toggle('checked');
         // Close menu
         item.closest('.menu')?.classList.remove('open');
     });
 });
+
 // Menubar open/close
 document.querySelectorAll('.menu-title').forEach(title => {
     title.addEventListener('click', (e) => {
@@ -137,6 +205,36 @@ document.querySelectorAll('.menu-title').forEach(title => {
 document.addEventListener('click', e => {
     if (!e.target.closest('.menu')) {
         document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
+    }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Skip when typing in inputs
+    if (e.target.matches('input, textarea, select')) return;
+
+    if (e.ctrlKey && !e.shiftKey && e.key === 'n') {
+        e.preventDefault();
+        dispatchViewerAction('new');
+    } else if (e.ctrlKey && !e.shiftKey && e.key === 'o') {
+        e.preventDefault();
+        document.getElementById('load-preset-btn')?.click();
+    } else if (e.ctrlKey && !e.shiftKey && e.key === 's') {
+        e.preventDefault();
+        document.getElementById('save-model-btn')?.click();
+    } else if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+        e.preventDefault();
+        document.getElementById('save-model-as-btn')?.click();
+    } else if (e.key === 'Escape') {
+        // Close open menus first, then deselect
+        const openMenus = document.querySelectorAll('.menu.open');
+        if (openMenus.length > 0) {
+            openMenus.forEach(m => m.classList.remove('open'));
+        } else {
+            dispatchViewerAction('deselect');
+        }
+    } else if (e.key === 'Delete') {
+        dispatchViewerAction('delete');
     }
 });
 </script>

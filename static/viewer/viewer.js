@@ -315,6 +315,91 @@ function init() {
         });
     }
 
+    // ---- Custom viewer-action events (dispatched from scene_model.html menus) ----
+    document.addEventListener('viewer-action', (e) => {
+        const action = e.detail?.action;
+        switch (action) {
+            case 'new': {
+                // Reset morphs via hidden button
+                document.getElementById('reset-morphs')?.click();
+                // Remove all garments, cloth, hair
+                removeAllGarments();
+                removeAllCloth();
+                removeHair();
+                const hs = document.getElementById('hair-style-select');
+                if (hs) hs.value = '';
+                // Clear selection
+                if (_selectedItem) _setEmissiveOnItem(_selectedItem, _ZERO_EMISSIVE);
+                _selectedItem = null;
+                _hoveredItem = null;
+                const rb = document.getElementById('selection-remove-btn');
+                if (rb) rb.style.display = 'none';
+                updateEquippedList();
+                currentPresetName = '';
+                // Stop animation if playing
+                if (currentAction) { currentAction.stop(); currentAction = null; }
+                break;
+            }
+            case 'deselect': {
+                if (_selectedItem) _setEmissiveOnItem(_selectedItem, _ZERO_EMISSIVE);
+                _selectedItem = null;
+                _hoveredItem = null;
+                const rb2 = document.getElementById('selection-remove-btn');
+                if (rb2) rb2.style.display = 'none';
+                break;
+            }
+            case 'delete':
+                _removeSelectedItem();
+                break;
+            case 'clear-all': {
+                if (!confirm('Alle Kleidung, Haare und Garments entfernen?')) break;
+                removeAllGarments();
+                removeAllCloth();
+                removeHair();
+                const hs2 = document.getElementById('hair-style-select');
+                if (hs2) hs2.value = '';
+                if (_selectedItem) _setEmissiveOnItem(_selectedItem, _ZERO_EMISSIVE);
+                _selectedItem = null;
+                _hoveredItem = null;
+                const rb3 = document.getElementById('selection-remove-btn');
+                if (rb3) rb3.style.display = 'none';
+                updateEquippedList();
+                break;
+            }
+            case 'export-model-json': {
+                const state = gatherModelState();
+                const json = JSON.stringify(state, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = (currentPresetName || 'model') + '.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                break;
+            }
+            case 'reset-camera':
+                camera.fov = 35;
+                camera.updateProjectionMatrix();
+                camera.position.set(0, 1.0, 3.5);
+                controls.target.set(0, 0.9, 0);
+                controls.update();
+                break;
+            case 'reset-lighting':
+                keyLight.color.setHex(0xffffff);  keyLight.intensity = 3.0;  keyLight.position.set(2, 4, -5);
+                fillLight.color.setHex(0xeeeeff); fillLight.intensity = 2.0; fillLight.position.set(-3, 3, -4);
+                backLight.color.setHex(0xffeedd); backLight.intensity = 2.5; backLight.position.set(0, 4, 5);
+                ambient.color.setHex(0xffffff);   ambient.intensity = 0.8;
+                break;
+            case 'reset-scene':
+                if (!confirm('Szene komplett zurücksetzen? (Modell, Beleuchtung, Kamera)')) break;
+                document.dispatchEvent(new CustomEvent('viewer-action', { detail: { action: 'new' } }));
+                document.dispatchEvent(new CustomEvent('viewer-action', { detail: { action: 'reset-lighting' } }));
+                document.dispatchEvent(new CustomEvent('viewer-action', { detail: { action: 'reset-camera' } }));
+                break;
+        }
+    });
+
     // 3D hover + click interaction
     _initInteraction();
 }
