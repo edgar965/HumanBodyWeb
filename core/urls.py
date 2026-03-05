@@ -33,6 +33,7 @@ urlpatterns = [
     path('settings/video-to-bvh/', views.app_settings_videobvh, name='settings_videobvh'),
     path('settings/video-to-bvh-2d/', views.app_settings_videobvh_2d, name='settings_videobvh_2d'),
     path('settings/video-to-bvh-3d/', views.app_settings_videobvh_3d, name='settings_videobvh_3d'),
+    path('settings/smpl/', views.app_settings_smpl, name='settings_smpl'),
     path('api/job/<uuid:job_id>/start/', views.api_start_processing, name='api_start_processing'),
     path('api/job/<uuid:job_id>/stop/', views.api_stop_processing, name='api_stop_processing'),
     path('api/job/<uuid:job_id>/status/', views.job_status_api, name='job_status_api'),
@@ -75,6 +76,8 @@ urlpatterns = [
     path('api/character/model/save/', character_api.character_model_save, name='character_model_save'),
     path('api/character/model/<str:name>/', character_api.character_model_detail, name='character_model_detail'),
     path('api/settings/humanbody/', character_api.humanbody_settings_api, name='humanbody_settings_api'),
+    path('api/settings/smpl/', character_api.smpl_settings_api, name='smpl_settings_api'),
+    path('api/settings/smpl/save/', character_api.smpl_settings_save, name='smpl_settings_save'),
     path('api/character/asset/<str:name>/', character_api.character_asset_glb, name='character_asset_glb'),
     path('api/character/bvh/<str:category>/<str:name>/', character_api.character_bvh_file_cat, name='character_bvh_file_cat'),
     path('api/character/bvh/<str:name>/', character_api.character_bvh_file, name='character_bvh_file'),
@@ -98,6 +101,14 @@ urlpatterns = [
     path('api/character/garment/download/available/', character_api.garment_download_available, name='garment_download_available'),
     path('api/character/garment/download/', character_api.garment_download, name='garment_download'),
     path('api/character/garment/thumb/<path:garment_path>/', character_api.garment_thumbnail, name='garment_thumbnail'),
+
+    # SMPL Garments
+    path('humanbody/test-smpl/', character_api.smpl_test_page, name='test_smpl'),
+    path('api/smpl/body/', character_api.smpl_body_mesh, name='smpl_body_mesh'),
+    path('api/smpl/garment/library/', character_api.smpl_garment_library, name='smpl_garment_library'),
+    path('api/smpl/garment/mesh/', character_api.smpl_garment_mesh, name='smpl_garment_mesh'),
+    path('api/smpl/garment/fit/', character_api.smpl_garment_fit, name='smpl_garment_fit'),
+    path('api/smpl/garment/thumb/<path:garment_path>/', character_api.smpl_garment_thumbnail, name='smpl_garment_thumbnail'),
 
     # Test Character API (isolated version from TestCharakter/)
     path('api/character-test/mesh/', test_character_api.test_character_mesh, name='test_character_mesh'),

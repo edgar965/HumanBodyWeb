@@ -1,0 +1,297 @@
+{% extends "scene_model.html" %}
+
+{% block title %}SMPL Test — MocapNET{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+    /* Scene tab light groups */
+    .light-group { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+    .light-group:last-child { border-bottom: none; }
+    .light-group-title { font-size: 0.78rem; color: var(--text); font-weight: 600; margin-bottom: 6px; }
+    .camera-info { font-size: 0.78rem; color: var(--text-muted); padding: 4px 0; }
+    .camera-info span { color: var(--text); }
+
+    /* SMPL garment thumbnail in list */
+    .smpl-garment-thumb {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 3px;
+        margin-right: 8px;
+        flex-shrink: 0;
+        background: var(--bg-card);
+    }
+    .smpl-garment-item {
+        display: flex;
+        align-items: center;
+    }
+</style>
+{% endblock %}
+
+{% block panel_tabs_extra %}
+<div class="panel-tab" data-tab="tab-smpl">SMPL</div>
+{% endblock %}
+
+{% block tab_eigenschaften_extra %}
+<!-- SMPL Body Info (readonly) -->
+<div class="panel-section" data-panel-key="smpl_body_info" id="smpl-body-info-section" style="display:none;">
+    <h3>SMPL Body <span class="chevron">&#9660;</span></h3>
+    <div class="panel-body">
+        <div id="smpl-body-info" style="font-size:0.78rem;color:var(--text-muted);line-height:1.6;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block tab_panes_extra %}
+<!-- === Tab: SMPL === -->
+<div class="tab-pane" id="tab-smpl">
+<!-- SMPL Body Config -->
+<div class="panel-section" data-panel-key="smpl_body">
+    <h3>SMPL Body <span class="chevron">&#9660;</span></h3>
+    <div class="panel-body" id="smpl-body-panel">
+        <div class="slider-row"><label>Gender</label>
+            <select id="smpl-body-gender" class="viewer-select" style="margin-bottom:0;flex:1;">
+                <option value="female" selected>Female</option>
+                <option value="male">Male</option>
+                <option value="neutral">Neutral</option>
+            </select>
+        </div>
+        <!-- Shape Parameters -->
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">
+            Shape Parameters
+            <button class="btn-reset" id="smpl-beta-reset" style="float:right;">Reset</button>
+        </div>
+        <div class="slider-row"><label title="&#946;0: Height / overall size">Height</label>
+            <input type="range" class="smpl-beta-slider" data-index="0" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <div class="slider-row"><label title="&#946;1: Weight / body mass">Weight</label>
+            <input type="range" class="smpl-beta-slider" data-index="1" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <div class="slider-row"><label title="&#946;2: Proportions">Proportions</label>
+            <input type="range" class="smpl-beta-slider" data-index="2" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <div class="slider-row"><label title="&#946;3: Torso shape">Torso</label>
+            <input type="range" class="smpl-beta-slider" data-index="3" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <div class="slider-row"><label title="&#946;4: Chest / shoulders">Chest</label>
+            <input type="range" class="smpl-beta-slider" data-index="4" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <div class="slider-row"><label title="&#946;5: Hips / pelvis">Hips</label>
+            <input type="range" class="smpl-beta-slider" data-index="5" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <div class="slider-row"><label title="&#946;6: Waist">Waist</label>
+            <input type="range" class="smpl-beta-slider" data-index="6" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <div class="slider-row"><label title="&#946;7: Limbs">Limbs</label>
+            <input type="range" class="smpl-beta-slider" data-index="7" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <div class="slider-row"><label title="&#946;8: Arms width">Arms</label>
+            <input type="range" class="smpl-beta-slider" data-index="8" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <div class="slider-row"><label title="&#946;9: Legs shape">Legs</label>
+            <input type="range" class="smpl-beta-slider" data-index="9" min="-300" max="300" value="0" step="1">
+            <span class="slider-val smpl-beta-val">0.00</span>
+        </div>
+        <!-- Display -->
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Display</div>
+        <div class="slider-row"><label>Opacity</label>
+            <input type="range" id="smpl-body-opacity" min="5" max="100" value="50" step="5">
+            <span class="slider-val" id="smpl-body-opacity-val">0.50</span>
+        </div>
+        <div class="slider-row"><label>Color</label>
+            <input type="color" id="smpl-body-color" value="#88aaff" style="width:40px;height:24px;border:none;cursor:pointer;">
+        </div>
+        <div class="slider-row"><label>Wireframe</label>
+            <input type="checkbox" id="smpl-body-wireframe" style="accent-color:var(--accent);">
+        </div>
+        <div class="slider-row"><label>X Offset</label>
+            <input type="range" id="smpl-body-xoffset" min="-200" max="200" value="100" step="5">
+            <span class="slider-val" id="smpl-body-xoffset-val">1.00 m</span>
+        </div>
+        <div style="margin-top:6px;">
+            <button id="smpl-body-toggle" class="btn-toggle active" style="width:100%;"><i class="fas fa-people-arrows"></i> SMPL Body ein/aus</button>
+        </div>
+        <button id="smpl-save-settings" class="btn-toggle" style="width:100%;margin-top:6px;">
+            <i class="fas fa-save"></i> Einstellungen speichern
+        </button>
+    </div>
+</div>
+
+<!-- Garment SMPL -->
+<div class="panel-section" data-panel-key="garment_smpl">
+    <h3>Garment SMPL <span class="chevron">&#9660;</span></h3>
+    <div class="panel-body" id="garment-smpl-panel">
+        <div class="slider-row"><label>Category</label>
+            <select id="smpl-garment-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div id="smpl-garment-list" class="anim-tree" style="max-height:250px;margin-bottom:8px;">
+            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade SMPL-Garments...</div>
+        </div>
+        <!-- Farbe / Material -->
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
+        <div class="slider-row"><label>Color</label>
+            <input type="color" id="smpl-garment-color" value="#4d8066" style="width:40px;height:24px;border:none;cursor:pointer;">
+        </div>
+        <div class="slider-row"><label>Roughness</label>
+            <input type="range" id="smpl-garment-roughness" min="0" max="100" value="80" step="1">
+            <span class="slider-val" id="smpl-garment-roughness-val">0.80</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+            <button id="smpl-garment-load" class="btn-toggle" style="flex:1;"><i class="fas fa-tshirt"></i> Laden</button>
+            <button id="smpl-garment-remove" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Ausgewähltes SMPL Garment entfernen"><i class="fas fa-times"></i></button>
+            <button id="smpl-garment-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle SMPL Garments entfernen"><i class="fas fa-trash"></i></button>
+        </div>
+    </div>
+</div>
+</div><!-- /tab-smpl -->
+{% endblock %}
+
+{% block tab_szene_content %}
+<!-- Beleuchtung -->
+<div class="panel-section" data-panel-key="beleuchtung">
+    <h3>Beleuchtung <span class="chevron">&#9660;</span></h3>
+    <div class="panel-body">
+        <div class="slider-row"><label>Preset</label>
+            <select id="scene-light-preset" class="viewer-select" style="margin-bottom:0;flex:1;">
+                <option value="studio" selected>Studio</option>
+                <option value="outdoor">Outdoor</option>
+                <option value="dramatic">Dramatic</option>
+                <option value="neutral">Neutral</option>
+            </select>
+        </div>
+
+        <!-- Key Light -->
+        <div class="light-group">
+            <div class="light-group-title">Key Light</div>
+            <div class="slider-row"><label>Intensit&auml;t</label>
+                <input type="range" id="scene-key-intensity" min="0" max="800" value="300" step="10">
+                <span class="slider-val" id="scene-key-intensity-val">3.00</span>
+            </div>
+            <div class="slider-row"><label>Farbe</label>
+                <input type="color" id="scene-key-color" value="#ffffff" style="width:40px;height:24px;border:none;cursor:pointer;">
+            </div>
+            <div class="slider-row"><label>Pos X</label>
+                <input type="range" id="scene-key-pos-x" min="-10" max="10" value="2" step="0.5">
+                <span class="slider-val" id="scene-key-pos-x-val">2.0</span>
+            </div>
+            <div class="slider-row"><label>Pos Y</label>
+                <input type="range" id="scene-key-pos-y" min="-10" max="10" value="4" step="0.5">
+                <span class="slider-val" id="scene-key-pos-y-val">4.0</span>
+            </div>
+            <div class="slider-row"><label>Pos Z</label>
+                <input type="range" id="scene-key-pos-z" min="-10" max="10" value="-5" step="0.5">
+                <span class="slider-val" id="scene-key-pos-z-val">-5.0</span>
+            </div>
+        </div>
+
+        <!-- Fill Light -->
+        <div class="light-group">
+            <div class="light-group-title">Fill Light</div>
+            <div class="slider-row"><label>Intensit&auml;t</label>
+                <input type="range" id="scene-fill-intensity" min="0" max="800" value="200" step="10">
+                <span class="slider-val" id="scene-fill-intensity-val">2.00</span>
+            </div>
+            <div class="slider-row"><label>Farbe</label>
+                <input type="color" id="scene-fill-color" value="#eeeeff" style="width:40px;height:24px;border:none;cursor:pointer;">
+            </div>
+            <div class="slider-row"><label>Pos X</label>
+                <input type="range" id="scene-fill-pos-x" min="-10" max="10" value="-3" step="0.5">
+                <span class="slider-val" id="scene-fill-pos-x-val">-3.0</span>
+            </div>
+            <div class="slider-row"><label>Pos Y</label>
+                <input type="range" id="scene-fill-pos-y" min="-10" max="10" value="3" step="0.5">
+                <span class="slider-val" id="scene-fill-pos-y-val">3.0</span>
+            </div>
+            <div class="slider-row"><label>Pos Z</label>
+                <input type="range" id="scene-fill-pos-z" min="-10" max="10" value="-4" step="0.5">
+                <span class="slider-val" id="scene-fill-pos-z-val">-4.0</span>
+            </div>
+        </div>
+
+        <!-- Back Light -->
+        <div class="light-group">
+            <div class="light-group-title">Back Light</div>
+            <div class="slider-row"><label>Intensit&auml;t</label>
+                <input type="range" id="scene-back-intensity" min="0" max="800" value="250" step="10">
+                <span class="slider-val" id="scene-back-intensity-val">2.50</span>
+            </div>
+            <div class="slider-row"><label>Farbe</label>
+                <input type="color" id="scene-back-color" value="#ffeedd" style="width:40px;height:24px;border:none;cursor:pointer;">
+            </div>
+            <div class="slider-row"><label>Pos X</label>
+                <input type="range" id="scene-back-pos-x" min="-10" max="10" value="0" step="0.5">
+                <span class="slider-val" id="scene-back-pos-x-val">0.0</span>
+            </div>
+            <div class="slider-row"><label>Pos Y</label>
+                <input type="range" id="scene-back-pos-y" min="-10" max="10" value="4" step="0.5">
+                <span class="slider-val" id="scene-back-pos-y-val">4.0</span>
+            </div>
+            <div class="slider-row"><label>Pos Z</label>
+                <input type="range" id="scene-back-pos-z" min="-10" max="10" value="5" step="0.5">
+                <span class="slider-val" id="scene-back-pos-z-val">5.0</span>
+            </div>
+        </div>
+
+        <!-- Ambient Light -->
+        <div class="light-group">
+            <div class="light-group-title">Ambient Light</div>
+            <div class="slider-row"><label>Intensit&auml;t</label>
+                <input type="range" id="scene-ambient-intensity" min="0" max="300" value="80" step="10">
+                <span class="slider-val" id="scene-ambient-intensity-val">0.80</span>
+            </div>
+            <div class="slider-row"><label>Farbe</label>
+                <input type="color" id="scene-ambient-color" value="#ffffff" style="width:40px;height:24px;border:none;cursor:pointer;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Renderer -->
+<div class="panel-section" data-panel-key="renderer_settings">
+    <h3>Renderer <span class="chevron">&#9660;</span></h3>
+    <div class="panel-body">
+        <div class="slider-row"><label>Tone Mapping</label>
+            <select id="scene-tonemapping" class="viewer-select" style="margin-bottom:0;flex:1;">
+                <option value="ACESFilmic" selected>ACES Filmic</option>
+                <option value="Linear">Linear</option>
+                <option value="Reinhard">Reinhard</option>
+                <option value="Cineon">Cineon</option>
+                <option value="None">None</option>
+            </select>
+        </div>
+        <div class="slider-row"><label>Exposure</label>
+            <input type="range" id="scene-exposure" min="20" max="400" value="160" step="5">
+            <span class="slider-val" id="scene-exposure-val">1.60</span>
+        </div>
+        <div class="slider-row"><label>Hintergrund</label>
+            <input type="color" id="scene-background" value="#1a1a2e" style="width:40px;height:24px;border:none;cursor:pointer;">
+        </div>
+    </div>
+</div>
+
+<!-- Kamera -->
+<div class="panel-section" data-panel-key="kamera_settings">
+    <h3>Kamera <span class="chevron">&#9660;</span></h3>
+    <div class="panel-body">
+        <div class="slider-row"><label>FOV</label>
+            <input type="range" id="scene-fov" min="10" max="120" value="35" step="1">
+            <span class="slider-val" id="scene-fov-val">35&deg;</span>
+        </div>
+        <div style="margin-top:8px;">
+            <button id="scene-reset-lighting" class="btn-toggle" style="width:100%;"><i class="fas fa-undo"></i> Alles zur&uuml;cksetzen</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

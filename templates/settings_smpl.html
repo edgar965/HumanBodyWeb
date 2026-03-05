@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}SMPL Body - Einstellungen{% endblock %}
+
+{% block content %}
+<h1>Einstellungen — SMPL Body</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="settings-card">
+        <h2><i class="fas fa-child"></i> SMPL Body Defaults</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+            Diese Werte werden beim Laden der SMPL Test-Seite als Standardwerte verwendet.
+        </p>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Gender</strong>
+                <small>Standard-Geschlecht des SMPL Body.</small>
+            </div>
+            <div class="settings-input">
+                <select name="smpl_default_gender" class="settings-select">
+                    <option value="female" {% if settings.smpl_default_gender == 'female' %}selected{% endif %}>Female</option>
+                    <option value="male" {% if settings.smpl_default_gender == 'male' %}selected{% endif %}>Male</option>
+                    <option value="neutral" {% if settings.smpl_default_gender == 'neutral' %}selected{% endif %}>Neutral</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Shape Parameters</strong>
+                <small>Standard-Betas (PCA Shape-Koeffizienten).</small>
+            </div>
+            <div class="settings-input" id="smpl-betas-wrap">
+                <input type="hidden" name="smpl_default_betas" id="smpl-betas-hidden"
+                       value="{{ settings.smpl_default_betas }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-eye"></i> Display</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Opacity</strong>
+                <small>Transparenz des SMPL Body (0-100%).</small>
+            </div>
+            <div class="settings-input" style="display:flex;gap:12px;align-items:center;">
+                <input type="range" id="smpl-opacity-range" min="5" max="100" step="5"
+                       value="{{ opacity_pct }}" style="flex:1;">
+                <span id="smpl-opacity-val" style="min-width:3em;text-align:right;">{{ opacity_pct }}%</span>
+                <input type="hidden" name="smpl_default_opacity" id="smpl-opacity-hidden"
+                       value="{{ settings.smpl_default_opacity }}">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Color</strong>
+                <small>Standardfarbe des SMPL Body.</small>
+            </div>
+            <div class="settings-input">
+                <input type="color" name="smpl_default_color" value="{{ settings.smpl_default_color }}"
+                       style="width:60px;height:30px;border:none;cursor:pointer;">
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Wireframe</strong>
+                <small>Body als Drahtgitter anzeigen.</small>
+            </div>
+            <div class="settings-input">
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="smpl_default_wireframe"
+                           {% if settings.smpl_default_wireframe %}checked{% endif %}>
+                    Wireframe aktivieren
+                </label>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>X Offset</strong>
+                <small>Horizontaler Abstand zum HumanBody (Meter).</small>
+            </div>
+            <div class="settings-input" style="display:flex;gap:12px;align-items:center;">
+                <input type="range" id="smpl-xoffset-range" min="-200" max="200" step="5"
+                       value="{{ xoffset_pct }}" style="flex:1;">
+                <span id="smpl-xoffset-val" style="min-width:4em;text-align:right;">{{ settings.smpl_default_xoffset }} m</span>
+                <input type="hidden" name="smpl_default_xoffset" id="smpl-xoffset-hidden"
+                       value="{{ settings.smpl_default_xoffset }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-user"></i> Human Body Modell</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+            Welches HumanBody-Preset auf der SMPL Test-Seite geladen wird.
+        </p>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Preset</strong>
+                <small>Standard-Modell f&uuml;r den HumanBody auf der SMPL-Seite.</small>
+            </div>
+            <div class="settings-input">
+                <select name="smpl_default_humanbody_preset" class="settings-select">
+                    {% for preset in available_presets %}
+                    <option value="{{ preset }}" {% if settings.smpl_default_humanbody_preset == preset %}selected{% endif %}>{{ preset }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Speichern
+        </button>
+    </div>
+</form>
+
+<div class="settings-card" style="margin-top:1.5rem;">
+    <h2><i class="fas fa-lightbulb"></i> Szene Einstellungen</h2>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+        Diese Werte werden auf der SMPL Test-Seite &uuml;ber den &bdquo;Einstellungen speichern&ldquo;-Button gesetzt.
+    </p>
+    <div id="scene-settings-display">
+        {% if scene_settings %}
+        <table style="width:100%;font-size:0.85rem;border-collapse:collapse;">
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 0;color:var(--text-muted);width:140px;">Key Light</td>
+                <td style="padding:6px 0;">Int: {{ scene_settings.lighting.key.intensity }} &mdash; {{ scene_settings.lighting.key.color }}</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 0;color:var(--text-muted);">Fill Light</td>
+                <td style="padding:6px 0;">Int: {{ scene_settings.lighting.fill.intensity }} &mdash; {{ scene_settings.lighting.fill.color }}</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 0;color:var(--text-muted);">Back Light</td>
+                <td style="padding:6px 0;">Int: {{ scene_settings.lighting.back.intensity }} &mdash; {{ scene_settings.lighting.back.color }}</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 0;color:var(--text-muted);">Ambient</td>
+                <td style="padding:6px 0;">Int: {{ scene_settings.lighting.ambient.intensity }} &mdash; {{ scene_settings.lighting.ambient.color }}</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 0;color:var(--text-muted);">Exposure</td>
+                <td style="padding:6px 0;">{{ scene_settings.renderer.exposure }}</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 0;color:var(--text-muted);">Tone Mapping</td>
+                <td style="padding:6px 0;">{{ scene_settings.renderer.toneMapping }}</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0;color:var(--text-muted);">FOV</td>
+                <td style="padding:6px 0;">{{ scene_settings.camera.fov }}&deg;</td>
+            </tr>
+        </table>
+        {% else %}
+        <p style="color:var(--text-muted);font-size:0.85rem;">Keine Szene-Einstellungen gespeichert. Verwende die SMPL Test-Seite um Einstellungen zu speichern.</p>
+        {% endif %}
+    </div>
+    {% if scene_settings %}
+    <form method="post" style="margin-top:12px;">
+        {% csrf_token %}
+        <input type="hidden" name="reset_scene" value="1">
+        <button type="submit" class="btn" style="font-size:0.85rem;">
+            <i class="fas fa-undo"></i> Szene zur&uuml;cksetzen
+        </button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    const BETA_NAMES = ['Height','Weight','Proportions','Torso','Chest','Hips','Waist','Limbs','Arms','Legs'];
+    const betas = {{ betas|safe }};
+    const wrap = document.getElementById('smpl-betas-wrap');
+    const hidden = document.getElementById('smpl-betas-hidden');
+
+    function updateHidden() {
+        const vals = [];
+        wrap.querySelectorAll('.smpl-settings-beta').forEach(s => {
+            vals.push((s.value / 100).toFixed(2));
+        });
+        hidden.value = vals.join(',');
+    }
+
+    BETA_NAMES.forEach((name, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+        const lbl = document.createElement('label');
+        lbl.style.cssText = 'font-size:0.82rem;color:var(--text-muted);min-width:90px;';
+        lbl.textContent = name;
+        lbl.title = '\u03B2' + i;
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.className = 'smpl-settings-beta';
+        slider.min = -300; slider.max = 300; slider.step = 1;
+        slider.value = Math.round(betas[i] * 100);
+        slider.style.cssText = 'flex:1;accent-color:var(--accent);';
+        const val = document.createElement('span');
+        val.style.cssText = 'font-size:0.8rem;color:var(--text-muted);min-width:3em;text-align:right;';
+        val.textContent = betas[i].toFixed(2);
+        slider.addEventListener('input', () => {
+            val.textContent = (slider.value / 100).toFixed(2);
+            updateHidden();
+        });
+        row.appendChild(lbl);
+        row.appendChild(slider);
+        row.appendChild(val);
+        wrap.insertBefore(row, hidden);
+    });
+
+    // Opacity slider
+    const opRange = document.getElementById('smpl-opacity-range');
+    const opVal = document.getElementById('smpl-opacity-val');
+    const opHidden = document.getElementById('smpl-opacity-hidden');
+    if (opRange) {
+        opRange.addEventListener('input', () => {
+            opVal.textContent = opRange.value + '%';
+            opHidden.value = (parseInt(opRange.value, 10) / 100).toFixed(2);
+        });
+    }
+
+    // X Offset slider
+    const xRange = document.getElementById('smpl-xoffset-range');
+    const xVal = document.getElementById('smpl-xoffset-val');
+    const xHidden = document.getElementById('smpl-xoffset-hidden');
+    if (xRange) {
+        xRange.addEventListener('input', () => {
+            const m = (parseInt(xRange.value, 10) / 100).toFixed(2);
+            xVal.textContent = m + ' m';
+            xHidden.value = m;
+        });
+    }
+})();
+</script>
+{% endblock %}
