@@ -175,10 +175,13 @@ export async function loadCharacterFromPreset(scene, preset, presetName) {
     }
 
     // Meta sliders: meta_<name>=<value>
+    // Presets store meta as nested object: { meta: { age: 0, mass: 0, ... } }
     const metaKeys = ['age', 'mass', 'tone', 'height'];
+    const metaObj = preset.meta || {};
     for (const mk of metaKeys) {
-        if (preset[`meta_${mk}`] !== undefined) {
-            params.set(`meta_${mk}`, String(preset[`meta_${mk}`]));
+        const val = metaObj[mk] ?? preset[`meta_${mk}`];
+        if (val !== undefined && val !== null) {
+            params.set(`meta_${mk}`, String(val));
         }
     }
 
