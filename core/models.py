@@ -276,6 +276,37 @@ class AppSettings(models.Model):
         default=True, help_text="Assume static camera (recommended for most videos)",
     )
 
+    # --- SMPL Body defaults (test-smpl page) ---
+    smpl_default_gender = models.CharField(
+        max_length=10, default='female',
+        help_text="Default SMPL gender (female/male/neutral)",
+    )
+    smpl_default_betas = models.CharField(
+        max_length=200, default='0,0,0,0,0,0,0,0,0,0', blank=True,
+        help_text="Default shape betas as comma-separated floats",
+    )
+    smpl_default_opacity = models.FloatField(
+        default=1.0, help_text="Default SMPL body opacity (0.0-1.0)",
+    )
+    smpl_default_color = models.CharField(
+        max_length=10, default='#88aaff', blank=True,
+        help_text="Default SMPL body color (hex)",
+    )
+    smpl_default_wireframe = models.BooleanField(
+        default=False, help_text="Default SMPL wireframe mode",
+    )
+    smpl_default_xoffset = models.FloatField(
+        default=1.0, help_text="Default SMPL body X offset in meters",
+    )
+    smpl_default_scene = models.TextField(
+        default='', blank=True,
+        help_text="Default SMPL scene settings JSON (lighting, renderer, camera)",
+    )
+    smpl_default_humanbody_preset = models.CharField(
+        max_length=100, default='FemaleNew', blank=True,
+        help_text="Default HumanBody model preset for SMPL test page",
+    )
+
     # --- 3D Video Output ---
     video_output_dir = models.CharField(
         max_length=500, default=r'A:\3DTools\HumanBodyWeb\media\output', blank=True,

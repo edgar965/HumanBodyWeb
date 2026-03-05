@@ -22,6 +22,7 @@ const DEFAULT_BODY = CFG.defaultBodyType || null;  // null = use preset
 // Global state
 // =========================================================================
 let scene, camera, renderer, controls;
+let keyLight, fillLight, backLight, ambient;
 let bodyMesh = null;
 let bodyGeometry = null;
 let vertexCount = 0;
@@ -160,23 +161,23 @@ function init() {
     controls.update();
 
     // Lighting — bright, even illumination from front + back
-    const keyLight = new THREE.DirectionalLight(0xffffff, 3.0);
+    keyLight = new THREE.DirectionalLight(0xffffff, 3.0);
     keyLight.position.set(2, 4, -5);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xeeeeff, 2.0);
+    fillLight = new THREE.DirectionalLight(0xeeeeff, 2.0);
     fillLight.position.set(-3, 3, -4);
     scene.add(fillLight);
 
-    const backLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+    backLight = new THREE.DirectionalLight(0xffeedd, 2.5);
     backLight.position.set(0, 4, 5);
     scene.add(backLight);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+    ambient = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambient);
 
     // Apply scene settings from localStorage (configured on /humanbody/scene/)
-    applySceneSettings(keyLight, fillLight, backLight, ambient);
+    applySceneSettings();
 
     // Ground grid
     const grid = new THREE.GridHelper(4, 20, 0x333355, 0x222244);
@@ -207,6 +208,8 @@ function init() {
     loadClothUI();
     loadHairUI();
     loadGarmentUI();
+    loadSmplGarmentUI();
+    initSmplBodyUI();
     initLoadPreset();
     initSaveButtons();
     connectWebSocket();
@@ -2503,6 +2506,52 @@ function _applyGarmentState(gid) {
 /** No-op — Position/Scale section is always visible now */
 function _updateGarmentAdjustmentsVisibility() {}
 
+/**
+ * Build query string with body state (body_type, morphs, meta, offset, stiffness, color).
+ * Shared by loadGarment() and loadSmplGarment() for the fit endpoint.
+ */
+function _buildBodyFitQueryString() {
+    const bodySelect = document.getElementById('body-type-select');
+    const bodyType = bodySelect ? bodySelect.value : 'Female_Caucasian';
+
+    const offset = (_sliderVal('garment-offset') / 1000);
+    const stiffness = (_sliderVal('garment-stiffness') / 100);
+    const colorPicker = document.getElementById('garment-color');
+    const colorHex = colorPicker ? colorPicker.value : '#4d5980';
+    const cr = parseInt(colorHex.slice(1, 3), 16) / 255;
+    const cg = parseInt(colorHex.slice(3, 5), 16) / 255;
+    const cb = parseInt(colorHex.slice(5, 7), 16) / 255;
+
+    let qs = `body_type=${encodeURIComponent(bodyType)}`;
+    const minDist = _sliderVal('garment-min-dist');
+    const crotchFloor = _sliderVal('garment-crotch-floor');
+    const lift = _sliderVal('garment-lift');
+    const crotchDepth = _sliderVal('garment-crotch-depth');
+    qs += `&offset=${offset}&stiffness=${stiffness}&min_dist=${minDist}&crotch_floor=${crotchFloor}&lift=${lift}&crotch_depth=${crotchDepth}`;
+    qs += `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
+
+    // Append current morph values
+    document.querySelectorAll('#morphs-panel input[type="range"]').forEach(slider => {
+        const mName = slider.dataset.morphName || slider.id.replace('morph-', '');
+        if (mName && slider.value !== undefined) {
+            qs += `&morph_${mName}=${slider.value / 100}`;
+        }
+    });
+    // Append meta sliders (convert display value → internal -1..1)
+    ['age', 'mass', 'tone', 'height'].forEach(m => {
+        const el = document.getElementById(`meta-${m}`);
+        if (el) {
+            const dv = parseInt(el.value);
+            const mn = parseInt(el.min), mx = parseInt(el.max);
+            const neutral = (mn + mx) / 2;
+            const half = (mx - mn) / 2;
+            const internal = half ? (dv - neutral) / half : 0;
+            qs += `&meta_${m}=${internal}`;
+        }
+    });
+    return qs;
+}
+
 async function loadGarment(garmentId) {
     const createBtn = document.getElementById('garment-create');
     if (createBtn) createBtn.disabled = true;
@@ -2510,45 +2559,8 @@ async function loadGarment(garmentId) {
     ensureSkinned();
 
     try {
-        // Build query from current body state
-        const bodySelect = document.getElementById('body-type-select');
-        const bodyType = bodySelect ? bodySelect.value : 'Female_Caucasian';
-
-        const offset = (_sliderVal('garment-offset') / 1000);
-        const stiffness = (_sliderVal('garment-stiffness') / 100);
-        const colorPicker = document.getElementById('garment-color');
-        const colorHex = colorPicker ? colorPicker.value : '#4d5980';
-        const cr = parseInt(colorHex.slice(1, 3), 16) / 255;
-        const cg = parseInt(colorHex.slice(3, 5), 16) / 255;
-        const cb = parseInt(colorHex.slice(5, 7), 16) / 255;
-
-        let qs = `garment_id=${encodeURIComponent(garmentId)}&body_type=${encodeURIComponent(bodyType)}`;
-        const minDist = _sliderVal('garment-min-dist');
-        const crotchFloor = _sliderVal('garment-crotch-floor');
-        const lift = _sliderVal('garment-lift');
-        const crotchDepth = _sliderVal('garment-crotch-depth');
-        qs += `&offset=${offset}&stiffness=${stiffness}&min_dist=${minDist}&crotch_floor=${crotchFloor}&lift=${lift}&crotch_depth=${crotchDepth}`;
-        qs += `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
-
-        // Append current morph values
-        document.querySelectorAll('#morphs-panel input[type="range"]').forEach(slider => {
-            const mName = slider.dataset.morphName || slider.id.replace('morph-', '');
-            if (mName && slider.value !== undefined) {
-                qs += `&morph_${mName}=${slider.value / 100}`;
-            }
-        });
-        // Append meta sliders (convert display value → internal -1..1)
-        ['age', 'mass', 'tone', 'height'].forEach(m => {
-            const el = document.getElementById(`meta-${m}`);
-            if (el) {
-                const dv = parseInt(el.value);
-                const mn = parseInt(el.min), mx = parseInt(el.max);
-                const neutral = (mn + mx) / 2;
-                const half = (mx - mn) / 2;
-                const internal = half ? (dv - neutral) / half : 0;
-                qs += `&meta_${m}=${internal}`;
-            }
-        });
+        const bodyQs = _buildBodyFitQueryString();
+        let qs = `garment_id=${encodeURIComponent(garmentId)}&${bodyQs}`;
 
         const resp = await fetch(`/api/character/garment/fit/?${qs}`);
         const data = await resp.json();
@@ -2998,7 +3010,7 @@ const VIEWER_TONE_MAPPINGS = {
     None:       THREE.NoToneMapping
 };
 
-function applySceneSettings(keyLight, fillLight, backLight, ambient) {
+function applySceneSettings() {
     const saved = localStorage.getItem('humanbody_scene_settings');
     if (!saved) return;
     try {
@@ -3169,15 +3181,30 @@ async function loadDefaultPreset() {
         let presetName = 'femaleWithClothes';
         let showRig = false;
         let defaultAnim = '';
-        try {
-            const settingsResp = await fetch('/api/settings/humanbody/');
-            if (settingsResp.ok) {
-                const s = await settingsResp.json();
-                if (s.config) presetName = s.config;
-                showRig = !!s.show_rig_config;
-                defaultAnim = s.default_anim_config || '';
-            }
-        } catch (e) { /* fallback to default */ }
+
+        // On SMPL test page, use SMPL-specific humanbody preset
+        const isSmplPage = !!document.getElementById('smpl-body-panel');
+        if (isSmplPage) {
+            try {
+                const smplResp = await fetch('/api/settings/smpl/');
+                if (smplResp.ok) {
+                    const smplCfg = await smplResp.json();
+                    if (smplCfg.humanbody_preset) {
+                        presetName = smplCfg.humanbody_preset;
+                    }
+                }
+            } catch (e) { /* fallback to default */ }
+        } else {
+            try {
+                const settingsResp = await fetch('/api/settings/humanbody/');
+                if (settingsResp.ok) {
+                    const s = await settingsResp.json();
+                    if (s.config) presetName = s.config;
+                    showRig = !!s.show_rig_config;
+                    defaultAnim = s.default_anim_config || '';
+                }
+            } catch (e) { /* fallback to default */ }
+        }
 
         // Apply rig visibility from settings
         if (showRig) {
@@ -3798,6 +3825,1013 @@ function initSaveButtons() {
 }
 
 // =========================================================================
+// SMPL Garment Library
+// =========================================================================
+const smplGarmentMeshes = {};   // garment_id -> THREE.Mesh
+let smplBodyMesh = null;        // THREE.Mesh (semi-transparent wireframe)
+let smplBodyVisible = false;
+let _smplCatalog = [];          // flat list of {id, name, category, has_thumb}
+let _smplSelectedId = '';       // currently selected in the list
+
+async function loadSmplGarmentUI() {
+    // Guard: only init if the panel exists in the DOM
+    const panel = document.getElementById('garment-smpl-panel');
+    if (!panel) return;
+
+    // Slider bindings
+    _bindSlider('smpl-garment-roughness', 'smpl-garment-roughness-val', v => (v / 100).toFixed(2));
+
+    // Color picker
+    const colorEl = document.getElementById('smpl-garment-color');
+    if (colorEl) {
+        colorEl.addEventListener('input', () => {
+            if (!_smplSelectedId || !smplGarmentMeshes[_smplSelectedId]) return;
+            smplGarmentMeshes[_smplSelectedId].material.color.set(colorEl.value);
+        });
+    }
+
+    // Roughness slider live update
+    const roughEl = document.getElementById('smpl-garment-roughness');
+    if (roughEl) {
+        roughEl.addEventListener('input', () => {
+            if (!_smplSelectedId || !smplGarmentMeshes[_smplSelectedId]) return;
+            smplGarmentMeshes[_smplSelectedId].material.roughness = roughEl.value / 100;
+        });
+    }
+
+    // Load button
+    const loadBtn = document.getElementById('smpl-garment-load');
+    if (loadBtn) {
+        loadBtn.addEventListener('click', () => {
+            if (!_smplSelectedId) return;
+            loadSmplGarment(_smplSelectedId);
+        });
+    }
+
+    // Remove button
+    const removeBtn = document.getElementById('smpl-garment-remove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+            if (_smplSelectedId && smplGarmentMeshes[_smplSelectedId]) {
+                removeSmplGarment(_smplSelectedId);
+            }
+        });
+    }
+
+    // Remove all button
+    const removeAllBtn = document.getElementById('smpl-garment-remove-all');
+    if (removeAllBtn) {
+        removeAllBtn.addEventListener('click', removeAllSmplGarments);
+    }
+
+    // Category filter
+    const catSelect = document.getElementById('smpl-garment-category');
+    if (catSelect) {
+        catSelect.addEventListener('change', () => _renderSmplGarmentList());
+    }
+
+    // Fetch library catalog
+    try {
+        const resp = await fetch('/api/smpl/garment/library/');
+        const data = await resp.json();
+        _smplCatalog = [];
+
+        // Populate category dropdown
+        if (catSelect && data.categories) {
+            data.categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                catSelect.appendChild(opt);
+            });
+        }
+
+        // Flatten catalog
+        if (data.garments) {
+            for (const cat of Object.keys(data.garments)) {
+                for (const g of data.garments[cat]) {
+                    _smplCatalog.push(g);
+                }
+            }
+        }
+
+        _renderSmplGarmentList();
+    } catch (e) {
+        console.error('[SMPL] Error loading library:', e);
+        const listEl = document.getElementById('smpl-garment-list');
+        if (listEl) listEl.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine SMPL-Library</div>';
+    }
+}
+
+function _renderSmplGarmentList() {
+    const listEl = document.getElementById('smpl-garment-list');
+    const catSelect = document.getElementById('smpl-garment-category');
+    if (!listEl) return;
+
+    const filterCat = catSelect ? catSelect.value : '';
+    const filtered = filterCat
+        ? _smplCatalog.filter(g => g.category === filterCat)
+        : _smplCatalog;
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine SMPL-Garments gefunden</div>';
+        return;
+    }
+
+    // Group by category
+    const byCat = {};
+    for (const g of filtered) {
+        if (!byCat[g.category]) byCat[g.category] = [];
+        byCat[g.category].push(g);
+    }
+
+    listEl.innerHTML = '';
+    for (const cat of Object.keys(byCat).sort()) {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'anim-category';  // collapsed by default
+        const header = document.createElement('div');
+        header.className = 'anim-category-header';
+        header.innerHTML = `<span class="cat-chevron">&#9654;</span> ${cat.toUpperCase()} <span class="cat-count">${byCat[cat].length}</span>`;
+        header.addEventListener('click', () => catDiv.classList.toggle('open'));
+        catDiv.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'anim-category-body';
+        for (const g of byCat[cat]) {
+            const item = document.createElement('div');
+            item.className = 'anim-item';
+            if (g.id === _smplSelectedId) item.classList.add('active');
+            // Thumbnail + name
+            if (g.has_thumb) {
+                const img = document.createElement('img');
+                img.src = `/api/smpl/garment/thumb/${g.id}/`;
+                img.alt = g.name;
+                img.loading = 'lazy';
+                img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;margin-right:6px;';
+                item.appendChild(img);
+            }
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = g.name;
+            nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            item.appendChild(nameSpan);
+            // Show loaded indicator
+            if (smplGarmentMeshes[g.id]) {
+                const badge = document.createElement('span');
+                badge.textContent = '\u2713';
+                badge.style.cssText = 'color:var(--success);margin-left:4px;';
+                item.appendChild(badge);
+            }
+            item.style.cssText += 'display:flex;align-items:center;padding:4px 12px 4px 28px;';
+            item.addEventListener('click', () => {
+                _smplSelectedId = g.id;
+                listEl.querySelectorAll('.anim-item').forEach(el => el.classList.remove('active'));
+                item.classList.add('active');
+                // Update color/roughness to match existing mesh if loaded
+                if (smplGarmentMeshes[g.id]) {
+                    const mat = smplGarmentMeshes[g.id].material;
+                    const c = '#' + mat.color.getHexString();
+                    const cp = document.getElementById('smpl-garment-color');
+                    if (cp) cp.value = c;
+                    _setSlider('smpl-garment-roughness', Math.round(mat.roughness * 100), v => (v / 100).toFixed(2));
+                }
+            });
+            // Double-click to load immediately
+            item.addEventListener('dblclick', () => {
+                _smplSelectedId = g.id;
+                loadSmplGarment(g.id);
+            });
+            body.appendChild(item);
+        }
+        catDiv.appendChild(body);
+        listEl.appendChild(catDiv);
+    }
+}
+
+async function loadSmplGarment(garmentId) {
+    const loadBtn = document.getElementById('smpl-garment-load');
+    if (loadBtn) {
+        loadBtn.disabled = true;
+        loadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Laden...';
+    }
+
+    try {
+        const resp = await fetch(`/api/smpl/garment/mesh/?garment_id=${encodeURIComponent(garmentId)}`);
+        const data = await resp.json();
+        if (data.error) {
+            console.error('SMPL garment load error:', data.error);
+            return;
+        }
+
+        // Remove previous if exists
+        removeSmplGarment(garmentId);
+
+        // Decode binary arrays (already in Three.js coords from server)
+        const vertBuf = base64ToFloat32(data.vertices);
+        const faceBuf = base64ToUint32(data.faces);
+        const normBuf = base64ToFloat32(data.normals);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+        geo.setAttribute('normal', new THREE.BufferAttribute(normBuf, 3));
+
+        const colorEl = document.getElementById('smpl-garment-color');
+        const roughEl = document.getElementById('smpl-garment-roughness');
+        const color = colorEl ? colorEl.value : '#4d8066';
+        const roughness = roughEl ? roughEl.value / 100 : 0.8;
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: color,
+            roughness: roughness,
+            metalness: 0.0,
+            side: THREE.DoubleSide,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnit: -1,
+        });
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.name = `smpl_garment_${garmentId}`;
+        // Match SMPL body position (X offset + Y shift + 180° rotation).
+        // The SMPL body generator shifts feet to Y=0 (subtracts ~0.86m),
+        // but the garment OBJ is in the original SMPL frame. Apply same shift.
+        if (smplBodyMesh) {
+            mesh.position.copy(smplBodyMesh.position);
+            mesh.rotation.copy(smplBodyMesh.rotation);
+            // Compute Y shift: average Y of body verts ≈ pelvis position ≈ shift amount
+            const posAttr = smplBodyMesh.geometry.getAttribute('position');
+            let sumY = 0;
+            for (let i = 0; i < posAttr.count; i++) sumY += posAttr.getY(i);
+            mesh.position.y = sumY / posAttr.count;
+        } else {
+            const xOffsetEl = document.getElementById('smpl-body-xoffset');
+            mesh.position.x = xOffsetEl ? xOffsetEl.value / 100 : 1.0;
+            mesh.position.y = 0.86;
+            mesh.rotation.y = Math.PI;
+        }
+        smplGarmentMeshes[garmentId] = mesh;
+        scene.add(mesh);
+
+        console.log(`SMPL garment loaded: ${garmentId} (${data.vertex_count} verts, ${data.face_count} faces)`);
+        _renderSmplGarmentList();  // update checkmarks
+
+        // Also fit to project body as SkinnedMesh (if body is loaded)
+        console.log(`SMPL fit check: bodyMesh=${!!bodyMesh}, defSkeleton=${!!defSkeleton}, isSkinned=${isSkinned}`);
+        if (bodyMesh && defSkeleton) {
+            _fitSmplGarmentToBody(garmentId);
+        } else {
+            console.warn('SMPL fit skipped: bodyMesh or defSkeleton not ready');
+        }
+    } catch (e) {
+        console.error('Failed to load SMPL garment:', e);
+    } finally {
+        if (loadBtn) {
+            loadBtn.disabled = false;
+            loadBtn.innerHTML = '<i class="fas fa-plus"></i> Laden';
+        }
+    }
+}
+
+async function _fitSmplGarmentToBody(garmentId) {
+    const fitKey = 'smpl:' + garmentId;
+    console.log(`_fitSmplGarmentToBody: start (${garmentId}), bodyMesh=${!!bodyMesh}, defSkeleton=${!!defSkeleton}, isSkinned=${isSkinned}`);
+    try {
+        ensureSkinned();
+
+        // Build body state query — use _buildBodyFitQueryString if available
+        // sliders exist (character_viewer page), else build minimal query
+        const bodySelect = document.getElementById('body-type-select');
+        const bodyType = bodySelect ? bodySelect.value : 'Female_Caucasian';
+        let bodyQs;
+
+        // Check if garment sliders exist (character_viewer page)
+        if (document.getElementById('garment-offset')) {
+            bodyQs = _buildBodyFitQueryString();
+        } else {
+            // SMPL test page: build minimal query with body type + morphs + meta
+            bodyQs = `body_type=${encodeURIComponent(bodyType)}`;
+            document.querySelectorAll('#morphs-panel input[type="range"]').forEach(slider => {
+                const mName = slider.dataset.morphName || slider.id.replace('morph-', '');
+                if (mName && slider.value !== undefined) {
+                    bodyQs += `&morph_${mName}=${slider.value / 100}`;
+                }
+            });
+            ['age', 'mass', 'tone', 'height'].forEach(m => {
+                const el = document.getElementById(`meta-${m}`);
+                if (el) {
+                    const dv = parseInt(el.value);
+                    const mn = parseInt(el.min), mx = parseInt(el.max);
+                    const neutral = (mn + mx) / 2;
+                    const half = (mx - mn) / 2;
+                    const internal = half ? (dv - neutral) / half : 0;
+                    bodyQs += `&meta_${m}=${internal}`;
+                }
+            });
+        }
+
+        const colorEl = document.getElementById('smpl-garment-color');
+        const colorHex = colorEl ? colorEl.value : '#4d8066';
+        const cr = parseInt(colorHex.slice(1, 3), 16) / 255;
+        const cg = parseInt(colorHex.slice(3, 5), 16) / 255;
+        const cb = parseInt(colorHex.slice(5, 7), 16) / 255;
+
+        const qs = `garment_id=${encodeURIComponent(garmentId)}&${bodyQs}&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
+        const resp = await fetch(`/api/smpl/garment/fit/?${qs}`);
+        const data = await resp.json();
+        if (data.error) {
+            console.error('SMPL garment fit error:', data.error);
+            return;
+        }
+
+        // Remove previous fitted mesh if exists
+        const prev = garmentMeshes[fitKey];
+        if (prev) {
+            scene.remove(prev);
+            prev.geometry.dispose();
+            prev.material.dispose();
+            delete garmentMeshes[fitKey];
+        }
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+        const faceBuf = base64ToUint32(data.faces);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+        geo.computeVertexNormals();
+
+        const matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
+        const mat = new THREE.MeshStandardMaterial({
+            color: matColor, roughness: 0.8, metalness: 0.0,
+            side: THREE.DoubleSide,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnit: -1,
+        });
+
+        let mesh;
+        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+            const siBuf = base64ToFloat32(data.skin_indices);
+            const swBuf = base64ToFloat32(data.skin_weights);
+            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
+            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
+            mesh = new THREE.SkinnedMesh(geo, mat);
+            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+        } else {
+            mesh = new THREE.Mesh(geo, mat);
+        }
+
+        mesh.name = `smpl_garment_fit_${garmentId}`;
+        garmentMeshes[fitKey] = mesh;
+        scene.add(mesh);
+
+        console.log(`SMPL garment fitted to body: ${garmentId} (${data.vertex_count} verts, skinned=${mesh.isSkinnedMesh || false})`);
+    } catch (e) {
+        console.error('Failed to fit SMPL garment to body:', e);
+    }
+}
+
+let _smplBodyUpdateTimer = null;
+
+function _getSmplBetas() {
+    const sliders = document.querySelectorAll('.smpl-beta-slider');
+    const betas = [];
+    sliders.forEach(s => { betas[parseInt(s.dataset.index)] = s.value / 100; });
+    return betas;
+}
+
+function _getSmplGender() {
+    const sel = document.getElementById('smpl-body-gender');
+    return sel ? sel.value : 'female';
+}
+
+function _scheduleSmplBodyUpdate() {
+    if (_smplBodyUpdateTimer) clearTimeout(_smplBodyUpdateTimer);
+    _smplBodyUpdateTimer = setTimeout(() => {
+        _smplBodyUpdateTimer = null;
+        loadSmplBody();
+    }, 100);
+}
+
+function _updateSmplBodyInfo() {
+    const infoSection = document.getElementById('smpl-body-info-section');
+    const infoDiv = document.getElementById('smpl-body-info');
+    if (!infoSection || !infoDiv) return;
+
+    if (!smplBodyMesh) {
+        infoSection.style.display = 'none';
+        return;
+    }
+
+    infoSection.style.display = '';
+    const gender = _getSmplGender();
+    const betas = _getSmplBetas();
+    const geo = smplBodyMesh.geometry;
+    const vCount = geo.getAttribute('position').count;
+    const fCount = geo.index ? geo.index.count / 3 : 0;
+
+    const betaNames = ['Height','Weight','Proportions','Torso','Chest','Hips','Waist','Limbs','Arms','Legs'];
+    const nonZero = betas.filter(b => Math.abs(b) > 0.005);
+    const betaStr = nonZero.length > 0
+        ? betas.map((b, i) => Math.abs(b) > 0.005 ? `${betaNames[i]}=${b.toFixed(2)}` : null).filter(Boolean).join(', ')
+        : 'Default shape';
+
+    infoDiv.innerHTML = `Gender: <b>${gender}</b> | Vertices: <b>${vCount.toLocaleString()}</b> | Faces: <b>${fCount.toLocaleString()}</b><br>${betaStr}`;
+}
+
+async function initSmplBodyUI() {
+    const panel = document.getElementById('smpl-body-panel');
+    if (!panel) return;
+
+    // Beta sliders
+    const betaSliders = document.querySelectorAll('.smpl-beta-slider');
+    const betaVals = document.querySelectorAll('.smpl-beta-val');
+    betaSliders.forEach((slider, i) => {
+        slider.addEventListener('input', () => {
+            betaVals[i].textContent = (slider.value / 100).toFixed(2);
+            _scheduleSmplBodyUpdate();
+        });
+    });
+
+    // Gender select
+    const genderSel = document.getElementById('smpl-body-gender');
+    if (genderSel) {
+        genderSel.addEventListener('change', () => loadSmplBody());
+    }
+
+    // Reset button
+    const resetBtn = document.getElementById('smpl-beta-reset');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            betaSliders.forEach((s, i) => {
+                s.value = 0;
+                betaVals[i].textContent = '0.00';
+            });
+            _scheduleSmplBodyUpdate();
+        });
+    }
+
+    // Opacity slider
+    const opacityEl = document.getElementById('smpl-body-opacity');
+    const opacityVal = document.getElementById('smpl-body-opacity-val');
+    if (opacityEl) {
+        opacityEl.addEventListener('input', () => {
+            const v = opacityEl.value / 100;
+            if (opacityVal) opacityVal.textContent = v.toFixed(2);
+            if (smplBodyMesh) smplBodyMesh.material.opacity = v;
+        });
+    }
+
+    // Color picker
+    const colorEl = document.getElementById('smpl-body-color');
+    if (colorEl) {
+        colorEl.addEventListener('input', () => {
+            if (smplBodyMesh) smplBodyMesh.material.color.set(colorEl.value);
+        });
+    }
+
+    // Wireframe checkbox
+    const wireEl = document.getElementById('smpl-body-wireframe');
+    if (wireEl) {
+        wireEl.addEventListener('change', () => {
+            if (smplBodyMesh) {
+                smplBodyMesh.material.wireframe = wireEl.checked;
+                smplBodyMesh.material.depthWrite = !wireEl.checked;
+            }
+        });
+    }
+
+    // X Offset slider
+    const xOffsetEl = document.getElementById('smpl-body-xoffset');
+    const xOffsetVal = document.getElementById('smpl-body-xoffset-val');
+    if (xOffsetEl) {
+        xOffsetEl.addEventListener('input', () => {
+            const v = xOffsetEl.value / 100;
+            if (xOffsetVal) xOffsetVal.textContent = v.toFixed(2) + ' m';
+            if (smplBodyMesh) smplBodyMesh.position.x = v;
+            // Move SMPL garments with the body
+            for (const m of Object.values(smplGarmentMeshes)) {
+                m.position.x = v;
+            }
+        });
+    }
+
+    // Toggle visibility
+    const toggle = document.getElementById('smpl-body-toggle');
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            if (!smplBodyMesh) return;
+            smplBodyVisible = !smplBodyVisible;
+            smplBodyMesh.visible = smplBodyVisible;
+            toggle.classList.toggle('active', smplBodyVisible);
+        });
+    }
+
+    // Load saved defaults from settings API, then auto-load
+    try {
+        const resp = await fetch('/api/settings/smpl/');
+        const cfg = await resp.json();
+
+        // Apply gender
+        if (genderSel && cfg.gender) genderSel.value = cfg.gender;
+
+        // Apply betas
+        if (cfg.betas && cfg.betas.length === 10) {
+            betaSliders.forEach((s, i) => {
+                s.value = Math.round(cfg.betas[i] * 100);
+                betaVals[i].textContent = cfg.betas[i].toFixed(2);
+            });
+        }
+
+        // Apply display settings
+        if (opacityEl && cfg.opacity != null) {
+            opacityEl.value = Math.round(cfg.opacity * 100);
+            if (opacityVal) opacityVal.textContent = cfg.opacity.toFixed(2);
+        }
+        if (colorEl && cfg.color) colorEl.value = cfg.color;
+        if (wireEl && cfg.wireframe != null) wireEl.checked = cfg.wireframe;
+        if (xOffsetEl && cfg.xoffset != null) {
+            xOffsetEl.value = Math.round(cfg.xoffset * 100);
+            if (xOffsetVal) xOffsetVal.textContent = cfg.xoffset.toFixed(2) + ' m';
+        }
+
+        // Apply saved scene settings
+        if (cfg.scene) {
+            _applySmplSceneSettings(cfg.scene);
+        }
+    } catch (e) {
+        console.warn('Could not load SMPL defaults:', e);
+    }
+
+    // Init scene UI (Szene tab)
+    initSceneUI();
+
+    // Save button
+    const saveBtn = document.getElementById('smpl-save-settings');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => _saveSmplSettings());
+    }
+
+    // Auto-load SMPL body
+    loadSmplBody();
+}
+
+async function loadSmplBody() {
+    const gender = _getSmplGender();
+    const betas = _getSmplBetas();
+    const betaStr = betas.join(',');
+
+    try {
+        const resp = await fetch(`/api/smpl/body/?gender=${gender}&betas=${betaStr}`);
+        const data = await resp.json();
+        if (data.error) {
+            console.warn('SMPL body error:', data.error);
+            return;
+        }
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        const normBuf = base64ToFloat32(data.normals);
+
+        if (smplBodyMesh) {
+            // Update existing mesh — just swap vertex + normal buffers
+            const posAttr = smplBodyMesh.geometry.getAttribute('position');
+            posAttr.array.set(vertBuf);
+            posAttr.needsUpdate = true;
+            const normAttr = smplBodyMesh.geometry.getAttribute('normal');
+            normAttr.array.set(normBuf);
+            normAttr.needsUpdate = true;
+            smplBodyMesh.geometry.computeBoundingSphere();
+        } else {
+            // First load — create mesh
+            const faceBuf = base64ToUint32(data.faces);
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+            geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+            geo.setAttribute('normal', new THREE.BufferAttribute(normBuf, 3));
+
+            const opacityEl = document.getElementById('smpl-body-opacity');
+            const colorEl = document.getElementById('smpl-body-color');
+            const wireEl = document.getElementById('smpl-body-wireframe');
+            const xOffsetEl = document.getElementById('smpl-body-xoffset');
+
+            const isWire = wireEl ? wireEl.checked : false;
+            const mat = new THREE.MeshStandardMaterial({
+                color: colorEl ? colorEl.value : 0x88aaff,
+                transparent: true,
+                opacity: opacityEl ? opacityEl.value / 100 : 1.0,
+                wireframe: isWire,
+                side: THREE.DoubleSide,
+                depthWrite: !isWire,
+            });
+
+            smplBodyMesh = new THREE.Mesh(geo, mat);
+            smplBodyMesh.name = 'smpl_body';
+            smplBodyMesh.rotation.y = Math.PI;  // SMPL faces +Z, Three.js camera looks -Z
+            smplBodyMesh.position.x = xOffsetEl ? xOffsetEl.value / 100 : 1.0;
+            smplBodyVisible = true;
+            scene.add(smplBodyMesh);
+
+            const toggle = document.getElementById('smpl-body-toggle');
+            if (toggle) toggle.classList.add('active');
+        }
+
+        _updateSmplBodyInfo();
+    } catch (e) {
+        console.error('Failed to load SMPL body:', e);
+    }
+}
+
+function removeSmplGarment(garmentId) {
+    const mesh = smplGarmentMeshes[garmentId];
+    if (mesh) {
+        scene.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+        delete smplGarmentMeshes[garmentId];
+    }
+    // Also remove fitted project-body mesh
+    const fitKey = 'smpl:' + garmentId;
+    const fitMesh = garmentMeshes[fitKey];
+    if (fitMesh) {
+        scene.remove(fitMesh);
+        fitMesh.geometry.dispose();
+        fitMesh.material.dispose();
+        delete garmentMeshes[fitKey];
+    }
+}
+
+function removeAllSmplGarments() {
+    for (const id of Object.keys(smplGarmentMeshes)) {
+        removeSmplGarment(id);
+    }
+    _renderSmplGarmentList();
+}
+
+// =========================================================================
+// Scene UI (Szene tab on SMPL test page)
+// =========================================================================
+const SMPL_LIGHT_PRESETS = {
+    studio: {
+        key:     { intensity: 3.0, color: '#ffffff', pos: [2, 4, -5] },
+        fill:    { intensity: 2.0, color: '#eeeeff', pos: [-3, 3, -4] },
+        back:    { intensity: 2.5, color: '#ffeedd', pos: [0, 4, 5] },
+        ambient: { intensity: 0.8, color: '#ffffff' },
+        exposure: 1.6
+    },
+    outdoor: {
+        key:     { intensity: 4.0, color: '#fff5e0', pos: [5, 8, -2] },
+        fill:    { intensity: 1.5, color: '#8899cc', pos: [-4, 2, -3] },
+        back:    { intensity: 1.0, color: '#ffeedd', pos: [-2, 3, 4] },
+        ambient: { intensity: 1.2, color: '#ddeeff' },
+        exposure: 1.8
+    },
+    dramatic: {
+        key:     { intensity: 4.5, color: '#ffddaa', pos: [4, 3, -3] },
+        fill:    { intensity: 0.5, color: '#4444aa', pos: [-3, 1, -2] },
+        back:    { intensity: 3.0, color: '#ff8844', pos: [0, 3, 5] },
+        ambient: { intensity: 0.3, color: '#222244' },
+        exposure: 1.4
+    },
+    neutral: {
+        key:     { intensity: 2.5, color: '#ffffff', pos: [3, 5, -4] },
+        fill:    { intensity: 2.5, color: '#ffffff', pos: [-3, 5, -4] },
+        back:    { intensity: 2.0, color: '#ffffff', pos: [0, 4, 5] },
+        ambient: { intensity: 1.0, color: '#ffffff' },
+        exposure: 1.6
+    }
+};
+
+function initSceneUI() {
+    const pane = document.getElementById('tab-szene');
+    if (!pane) return;
+
+    // Light preset select
+    const presetSel = document.getElementById('scene-light-preset');
+    if (presetSel) {
+        presetSel.addEventListener('change', () => {
+            const preset = SMPL_LIGHT_PRESETS[presetSel.value];
+            if (preset) {
+                _applyLightPreset(preset);
+                _syncSceneUI();
+            }
+        });
+    }
+
+    // Bind individual light controls
+    _bindLightGroup('key', keyLight);
+    _bindLightGroup('fill', fillLight);
+    _bindLightGroup('back', backLight);
+
+    // Ambient — intensity + color only (no position)
+    const ambIntEl = document.getElementById('scene-ambient-intensity');
+    const ambColEl = document.getElementById('scene-ambient-color');
+    if (ambIntEl) {
+        ambIntEl.addEventListener('input', () => {
+            const v = ambIntEl.value / 100;
+            ambient.intensity = v;
+            const valEl = document.getElementById('scene-ambient-intensity-val');
+            if (valEl) valEl.textContent = v.toFixed(2);
+        });
+    }
+    if (ambColEl) {
+        ambColEl.addEventListener('input', () => {
+            ambient.color.set(ambColEl.value);
+        });
+    }
+
+    // Renderer controls
+    const tmSel = document.getElementById('scene-tonemapping');
+    if (tmSel) {
+        tmSel.addEventListener('change', () => {
+            if (VIEWER_TONE_MAPPINGS[tmSel.value] !== undefined) {
+                renderer.toneMapping = VIEWER_TONE_MAPPINGS[tmSel.value];
+            }
+        });
+    }
+
+    const expEl = document.getElementById('scene-exposure');
+    if (expEl) {
+        expEl.addEventListener('input', () => {
+            const v = expEl.value / 100;
+            renderer.toneMappingExposure = v;
+            const valEl = document.getElementById('scene-exposure-val');
+            if (valEl) valEl.textContent = v.toFixed(2);
+        });
+    }
+
+    const bgEl = document.getElementById('scene-background');
+    if (bgEl) {
+        bgEl.addEventListener('input', () => {
+            scene.background.set(bgEl.value);
+        });
+    }
+
+    // Camera FOV
+    const fovEl = document.getElementById('scene-fov');
+    if (fovEl) {
+        fovEl.addEventListener('input', () => {
+            camera.fov = parseFloat(fovEl.value);
+            camera.updateProjectionMatrix();
+            const valEl = document.getElementById('scene-fov-val');
+            if (valEl) valEl.textContent = fovEl.value + '\u00B0';
+        });
+    }
+
+    // Reset lighting button
+    const resetBtn = document.getElementById('scene-reset-lighting');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            _applyLightPreset(SMPL_LIGHT_PRESETS.studio);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.6;
+            scene.background.set(0x1a1a2e);
+            camera.fov = 35;
+            camera.updateProjectionMatrix();
+            _syncSceneUI();
+            if (presetSel) presetSel.value = 'studio';
+        });
+    }
+
+    // Sync UI from current light state
+    _syncSceneUI();
+}
+
+function _bindLightGroup(name, light) {
+    const intEl = document.getElementById(`scene-${name}-intensity`);
+    const colEl = document.getElementById(`scene-${name}-color`);
+    const posXEl = document.getElementById(`scene-${name}-pos-x`);
+    const posYEl = document.getElementById(`scene-${name}-pos-y`);
+    const posZEl = document.getElementById(`scene-${name}-pos-z`);
+
+    if (intEl) {
+        intEl.addEventListener('input', () => {
+            const v = intEl.value / 100;
+            light.intensity = v;
+            const valEl = document.getElementById(`scene-${name}-intensity-val`);
+            if (valEl) valEl.textContent = v.toFixed(2);
+        });
+    }
+    if (colEl) {
+        colEl.addEventListener('input', () => light.color.set(colEl.value));
+    }
+    [['x', posXEl], ['y', posYEl], ['z', posZEl]].forEach(([axis, el]) => {
+        if (el) {
+            el.addEventListener('input', () => {
+                const v = parseFloat(el.value);
+                light.position[axis] = v;
+                const valEl = document.getElementById(`scene-${name}-pos-${axis}-val`);
+                if (valEl) valEl.textContent = v.toFixed(1);
+            });
+        }
+    });
+}
+
+function _applyLightPreset(preset) {
+    if (preset.key) {
+        keyLight.intensity = preset.key.intensity;
+        keyLight.color.set(preset.key.color);
+        keyLight.position.set(...preset.key.pos);
+    }
+    if (preset.fill) {
+        fillLight.intensity = preset.fill.intensity;
+        fillLight.color.set(preset.fill.color);
+        fillLight.position.set(...preset.fill.pos);
+    }
+    if (preset.back) {
+        backLight.intensity = preset.back.intensity;
+        backLight.color.set(preset.back.color);
+        backLight.position.set(...preset.back.pos);
+    }
+    if (preset.ambient) {
+        ambient.intensity = preset.ambient.intensity;
+        ambient.color.set(preset.ambient.color);
+    }
+    if (preset.exposure !== undefined) {
+        renderer.toneMappingExposure = preset.exposure;
+    }
+}
+
+function _syncSceneUI() {
+    // Sync light controls from current light state
+    _syncLightGroupUI('key', keyLight);
+    _syncLightGroupUI('fill', fillLight);
+    _syncLightGroupUI('back', backLight);
+
+    // Ambient
+    const ambInt = document.getElementById('scene-ambient-intensity');
+    const ambCol = document.getElementById('scene-ambient-color');
+    if (ambInt) {
+        ambInt.value = Math.round(ambient.intensity * 100);
+        const v = document.getElementById('scene-ambient-intensity-val');
+        if (v) v.textContent = ambient.intensity.toFixed(2);
+    }
+    if (ambCol) ambCol.value = '#' + ambient.color.getHexString();
+
+    // Renderer
+    const tmSel = document.getElementById('scene-tonemapping');
+    if (tmSel) {
+        for (const [name, val] of Object.entries(VIEWER_TONE_MAPPINGS)) {
+            if (renderer.toneMapping === val) { tmSel.value = name; break; }
+        }
+    }
+    const expEl = document.getElementById('scene-exposure');
+    if (expEl) {
+        expEl.value = Math.round(renderer.toneMappingExposure * 100);
+        const v = document.getElementById('scene-exposure-val');
+        if (v) v.textContent = renderer.toneMappingExposure.toFixed(2);
+    }
+    const bgEl = document.getElementById('scene-background');
+    if (bgEl && scene.background) bgEl.value = '#' + scene.background.getHexString();
+
+    // Camera
+    const fovEl = document.getElementById('scene-fov');
+    if (fovEl) {
+        fovEl.value = camera.fov;
+        const v = document.getElementById('scene-fov-val');
+        if (v) v.textContent = Math.round(camera.fov) + '\u00B0';
+    }
+}
+
+function _syncLightGroupUI(name, light) {
+    const intEl = document.getElementById(`scene-${name}-intensity`);
+    const colEl = document.getElementById(`scene-${name}-color`);
+    const posXEl = document.getElementById(`scene-${name}-pos-x`);
+    const posYEl = document.getElementById(`scene-${name}-pos-y`);
+    const posZEl = document.getElementById(`scene-${name}-pos-z`);
+
+    if (intEl) {
+        intEl.value = Math.round(light.intensity * 100);
+        const v = document.getElementById(`scene-${name}-intensity-val`);
+        if (v) v.textContent = light.intensity.toFixed(2);
+    }
+    if (colEl) colEl.value = '#' + light.color.getHexString();
+    if (posXEl) {
+        posXEl.value = light.position.x;
+        const v = document.getElementById(`scene-${name}-pos-x-val`);
+        if (v) v.textContent = light.position.x.toFixed(1);
+    }
+    if (posYEl) {
+        posYEl.value = light.position.y;
+        const v = document.getElementById(`scene-${name}-pos-y-val`);
+        if (v) v.textContent = light.position.y.toFixed(1);
+    }
+    if (posZEl) {
+        posZEl.value = light.position.z;
+        const v = document.getElementById(`scene-${name}-pos-z-val`);
+        if (v) v.textContent = light.position.z.toFixed(1);
+    }
+}
+
+function _gatherSceneSettings() {
+    return {
+        lighting: {
+            key:     { intensity: keyLight.intensity, color: '#' + keyLight.color.getHexString(), pos: [keyLight.position.x, keyLight.position.y, keyLight.position.z] },
+            fill:    { intensity: fillLight.intensity, color: '#' + fillLight.color.getHexString(), pos: [fillLight.position.x, fillLight.position.y, fillLight.position.z] },
+            back:    { intensity: backLight.intensity, color: '#' + backLight.color.getHexString(), pos: [backLight.position.x, backLight.position.y, backLight.position.z] },
+            ambient: { intensity: ambient.intensity, color: '#' + ambient.color.getHexString() },
+        },
+        renderer: {
+            toneMapping: (() => {
+                for (const [name, val] of Object.entries(VIEWER_TONE_MAPPINGS)) {
+                    if (renderer.toneMapping === val) return name;
+                }
+                return 'ACESFilmic';
+            })(),
+            exposure: renderer.toneMappingExposure,
+            background: '#' + (scene.background ? scene.background.getHexString() : '1a1a2e'),
+        },
+        camera: {
+            fov: camera.fov,
+        }
+    };
+}
+
+function _applySmplSceneSettings(s) {
+    if (!s || typeof s !== 'object') return;
+    if (s.lighting) {
+        if (s.lighting.key) {
+            keyLight.intensity = s.lighting.key.intensity;
+            keyLight.color.set(s.lighting.key.color);
+            keyLight.position.set(...s.lighting.key.pos);
+        }
+        if (s.lighting.fill) {
+            fillLight.intensity = s.lighting.fill.intensity;
+            fillLight.color.set(s.lighting.fill.color);
+            fillLight.position.set(...s.lighting.fill.pos);
+        }
+        if (s.lighting.back) {
+            backLight.intensity = s.lighting.back.intensity;
+            backLight.color.set(s.lighting.back.color);
+            backLight.position.set(...s.lighting.back.pos);
+        }
+        if (s.lighting.ambient) {
+            ambient.intensity = s.lighting.ambient.intensity;
+            ambient.color.set(s.lighting.ambient.color);
+        }
+    }
+    if (s.renderer) {
+        if (s.renderer.toneMapping && VIEWER_TONE_MAPPINGS[s.renderer.toneMapping] !== undefined) {
+            renderer.toneMapping = VIEWER_TONE_MAPPINGS[s.renderer.toneMapping];
+        }
+        if (s.renderer.exposure !== undefined) {
+            renderer.toneMappingExposure = s.renderer.exposure;
+        }
+        if (s.renderer.background) {
+            scene.background.set(s.renderer.background);
+        }
+    }
+    if (s.camera && s.camera.fov) {
+        camera.fov = s.camera.fov;
+        camera.updateProjectionMatrix();
+    }
+    _syncSceneUI();
+}
+
+async function _saveSmplSettings() {
+    const btn = document.getElementById('smpl-save-settings');
+    const genderSel = document.getElementById('smpl-body-gender');
+    const opacityEl = document.getElementById('smpl-body-opacity');
+    const colorEl = document.getElementById('smpl-body-color');
+    const wireEl = document.getElementById('smpl-body-wireframe');
+    const xOffsetEl = document.getElementById('smpl-body-xoffset');
+
+    const body = {
+        gender: genderSel ? genderSel.value : 'female',
+        betas: _getSmplBetas(),
+        opacity: opacityEl ? opacityEl.value / 100 : 1.0,
+        color: colorEl ? colorEl.value : '#88aaff',
+        wireframe: wireEl ? wireEl.checked : false,
+        xoffset: xOffsetEl ? xOffsetEl.value / 100 : 1.0,
+        scene: _gatherSceneSettings(),
+    };
+
+    try {
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Speichern...'; }
+        const resp = await fetch('/api/settings/smpl/save/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+            if (btn) { btn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!'; btn.style.borderColor = 'var(--success)'; }
+            setTimeout(() => {
+                if (btn) { btn.innerHTML = '<i class="fas fa-save"></i> Einstellungen speichern'; btn.style.borderColor = ''; btn.disabled = false; }
+            }, 2000);
+        } else {
+            throw new Error(data.error || 'Save failed');
+        }
+    } catch (e) {
+        console.error('Failed to save SMPL settings:', e);
+        if (btn) { btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Fehler!'; btn.disabled = false; }
+        setTimeout(() => {
+            if (btn) btn.innerHTML = '<i class="fas fa-save"></i> Einstellungen speichern';
+        }, 2000);
+    }
+}
+
+// =========================================================================
 // Debug access for Playwright tests
 // =========================================================================
 window.__viewer = {
@@ -3807,6 +4841,8 @@ window.__viewer = {
     get garmentState() { return garmentState; },
     get selectedGarmentId() { return selectedGarmentId; },
     get clothMeshes() { return clothMeshes; },
+    get smplGarmentMeshes() { return smplGarmentMeshes; },
+    get smplBodyMesh() { return smplBodyMesh; },
     get camera() { return camera; },
     get controls() { return controls; },
     get defSkeleton() { return defSkeleton; },

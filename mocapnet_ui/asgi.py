@@ -39,7 +39,7 @@ async def _nocache_static_call(self, scope, receive, send):
 ASGIStaticFilesHandler.__call__ = _nocache_static_call
 
 
-application = ProtocolTypeRouter({
+application = ASGIStaticFilesHandler(ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": URLRouter(routing.websocket_urlpatterns),
-})
+}))

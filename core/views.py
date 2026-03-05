@@ -2481,3 +2481,70 @@ def app_settings_videobvh_3d(request):
         'smpl_models_ok': smpl_models_ok,
     }
     return render(request, 'settings_videobvh_3d.html', ctx)
+
+
+def app_settings_smpl(request):
+    """SMPL Body settings page (defaults for test-smpl page)."""
+    s = AppSettings.load()
+    if request.method == 'POST':
+        # Check if this is a scene reset
+        if request.POST.get('reset_scene') == '1':
+            s.smpl_default_scene = ''
+            s.save()
+            messages.success(request, 'Scene settings reset.')
+            return redirect('settings_smpl')
+
+        try:
+            gender = request.POST.get('smpl_default_gender', 'female')
+            if gender not in ('female', 'male', 'neutral'):
+                gender = 'female'
+            s.smpl_default_gender = gender
+            s.smpl_default_betas = request.POST.get('smpl_default_betas', '0,0,0,0,0,0,0,0,0,0').strip()
+            opacity = float(request.POST.get('smpl_default_opacity', 1.0))
+            s.smpl_default_opacity = max(0.0, min(1.0, opacity))
+            s.smpl_default_color = request.POST.get('smpl_default_color', '#88aaff').strip()
+            s.smpl_default_wireframe = request.POST.get('smpl_default_wireframe') == 'on'
+            xoffset = float(request.POST.get('smpl_default_xoffset', 1.0))
+            s.smpl_default_xoffset = max(-2.0, min(2.0, xoffset))
+            s.smpl_default_humanbody_preset = request.POST.get(
+                'smpl_default_humanbody_preset', 'FemaleNew').strip() or 'FemaleNew'
+            s.save()
+            messages.success(request, 'SMPL settings saved.')
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid value.')
+        return redirect('settings_smpl')
+
+    # Parse betas for template
+    betas = [0.0] * 10
+    try:
+        parts = s.smpl_default_betas.split(',')
+        for i, v in enumerate(parts[:10]):
+            betas[i] = float(v.strip())
+    except (ValueError, IndexError):
+        pass
+
+    # Parse scene settings for display
+    scene_settings = None
+    if s.smpl_default_scene:
+        try:
+            scene_settings = json.loads(s.smpl_default_scene)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Gather available HumanBody presets (JSON files, exclude .scene.json)
+    available_presets = []
+    models_dir = Path(settings.HUMANBODY_MODELS_DIR)
+    if models_dir.is_dir():
+        for f in sorted(models_dir.glob('*.json')):
+            if f.name.endswith('.scene.json'):
+                continue
+            available_presets.append(f.stem)
+
+    return render(request, 'settings_smpl.html', {
+        'settings': s,
+        'betas': betas,
+        'opacity_pct': int(round(s.smpl_default_opacity * 100)),
+        'xoffset_pct': int(round(s.smpl_default_xoffset * 100)),
+        'scene_settings': scene_settings,
+        'available_presets': available_presets,
+    })

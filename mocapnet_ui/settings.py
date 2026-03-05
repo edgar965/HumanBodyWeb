@@ -117,6 +117,8 @@ HUMANBODY_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'
 BVH_RESULTS_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'Results'
 HUMANBODY_GARMENT_LIBRARY_DIR = HUMANBODY_ROOT / 'data' / 'garment_library'
 HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
+HUMANBODY_SMPL_GARMENT_DIR = HUMANBODY_ROOT / 'data' / 'garment_pattern_gen'
+SMPL_MODELS_DIR = VIDEOTOBVH_ROOT / 'models' / 'smpl'
 
 # Add assetCreator to Python path for GarmentFitter
 _asset_creator_parent = str(HUMANBODY_ROOT / 'assetCreator')

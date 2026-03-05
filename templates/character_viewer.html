@@ -448,6 +448,7 @@
             <div class="panel-tab" data-tab="tab-assets">Assets</div>
             <div class="panel-tab" data-tab="tab-animation">Animation</div>
             <div class="panel-tab" data-tab="tab-szene">Szene</div>
+            {% block panel_tabs_extra %}{% endblock %}
         </div>
         <div class="panel-tab-content">
         <!-- === Tab: Eigenschaften === -->
@@ -502,6 +503,7 @@
             <div class="panel-body" id="morphs-panel"></div>
         </div>
 
+        {% block tab_eigenschaften_extra %}{% endblock %}
         </div><!-- /tab-eigenschaften -->
 
         <!-- === Tab: Assets === -->
@@ -775,11 +777,15 @@
 
         </div><!-- /tab-animation -->
 
+        {% block tab_panes_extra %}{% endblock %}
+
         <!-- === Tab: Szene === -->
         <div class="tab-pane" id="tab-szene">
+            {% block tab_szene_content %}
             <div class="panel-section">
                 <div style="padding:20px 0;color:var(--text-muted);font-size:0.82rem;text-align:center;">Szene-Einstellungen folgen...</div>
             </div>
+            {% endblock %}
         </div><!-- /tab-szene -->
         </div><!-- /panel-tab-content -->
 

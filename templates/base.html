@@ -72,7 +72,7 @@
                     </a>
                 </div>
             </div>
-            <div class="sidebar-group {% if '/library/' in request.path or request.path == '/webcam/' or '/test/' in request.path or request.path == '/humanbody/test-animation/' or request.path == '/humanbody/test-character/' %}open{% endif %}">
+            <div class="sidebar-group {% if '/library/' in request.path or request.path == '/webcam/' or '/test/' in request.path or request.path == '/humanbody/test-animation/' or request.path == '/humanbody/test-character/' or request.path == '/humanbody/test-smpl/' %}open{% endif %}">
                 <a href="#" class="sidebar-group-toggle">
                     <i class="fas fa-flask"></i> <span>Test</span>
                     <i class="fas fa-chevron-down sidebar-chevron"></i>
@@ -86,6 +86,9 @@
                     </a>
                     <a href="{% url 'test_character' %}" class="{% if request.path == '/humanbody/test-character/' %}active{% endif %}">
                         <i class="fas fa-user-check"></i> <span>Test Charakter</span>
+                    </a>
+                    <a href="{% url 'test_smpl' %}" class="{% if request.path == '/humanbody/test-smpl/' %}active{% endif %}">
+                        <i class="fas fa-people-arrows"></i> <span>SMPL</span>
                     </a>
                     <a href="{% url 'library' %}" class="{% if request.path|slice:':9' == '/library/' %}active{% endif %}">
                         <i class="fas fa-folder-open"></i> <span>BVH Library</span>
@@ -112,6 +115,9 @@
                     </a>
                     <a href="{% url 'settings_videobvh_3d' %}" class="{% if request.path == '/settings/video-to-bvh-3d/' %}active{% endif %}">
                         <i class="fas fa-cube"></i> <span>Video to BVH: 3D</span>
+                    </a>
+                    <a href="{% url 'settings_smpl' %}" class="{% if request.path == '/settings/smpl/' %}active{% endif %}">
+                        <i class="fas fa-child"></i> <span>SMPL Body</span>
                     </a>
                 </div>
             </div>
