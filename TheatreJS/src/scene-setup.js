@@ -15,7 +15,8 @@ export function createScene(canvas) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.9;
+    renderer.toneMappingExposure = 1.2; // Increased from 0.9 for brighter scene
+    renderer.outputColorSpace = THREE.SRGBColorSpace; // CRITICAL for PBR materials!
 
     // Scene — dark blue-black theatre backdrop
     const scene = new THREE.Scene();
