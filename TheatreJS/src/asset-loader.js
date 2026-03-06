@@ -113,6 +113,10 @@ function buildCharacterMesh(data) {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
 
+    // Blender uses Z-up, Three.js uses Y-up
+    // Rotate -90° around X to convert Z-up to Y-up
+    mesh.rotation.x = -Math.PI / 2;
+
     const group = new THREE.Group();
     group.add(mesh);
     return group;
