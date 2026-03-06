@@ -1,5 +1,13 @@
-Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-    Where-Object { $_.CommandLine -match 'manage\.py.*runserver.*5020' } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+# Restart Django development server
+# Stops and starts the server on port 8081
+
+Write-Host "Restarting Django server..." -ForegroundColor Cyan
+
+# Stop server
+& "$PSScriptRoot\stop_server.ps1"
+
+# Wait a moment
 Start-Sleep -Seconds 1
-Start-Process python -ArgumentList 'A:/HumanBodyTest/HumanBodyWeb/manage.py','runserver','5020' -WorkingDirectory 'A:/HumanBodyTest/HumanBodyWeb' -WindowStyle Hidden
+
+# Start server
+& "$PSScriptRoot\start_server.ps1"

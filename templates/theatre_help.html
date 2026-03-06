@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Theatre Help — MocapNET{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto; padding: 20px;">
+    <h1>🎭 Theatre.js — Quick Start Guide</h1>
+
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h2>Was ist Theatre.js?</h2>
+        <p>Ein professionelles Tool für 3D-Animation und Motion Design. Perfekt für:</p>
+        <ul>
+            <li>Kamera-Bewegungen (Dolly, Pan, Zoom)</li>
+            <li>Licht-Animation (Spotlights, Farbwechsel)</li>
+            <li>Character-Positionierung</li>
+            <li>Synchronisierte Animationen</li>
+        </ul>
+    </div>
+
+    <h2>🎬 Die Benutzeroberfläche</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 6px;">
+            <h3>📋 Outline (links)</h3>
+            <p>Liste aller animierbaren Objekte:</p>
+            <ul style="font-family: monospace; font-size: 0.9em;">
+                <li>Camera</li>
+                <li>Spot Left</li>
+                <li>Spot Right</li>
+                <li>Back Light</li>
+                <li>Character (nach Import)</li>
+            </ul>
+            <p><strong>Tipp:</strong> Klick auf ein Objekt um es auszuwählen</p>
+        </div>
+
+        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 6px;">
+            <h3>⚙️ Details Panel (rechts)</h3>
+            <p>Properties des ausgewählten Objekts:</p>
+            <ul>
+                <li><strong>Position</strong> (x, y, z)</li>
+                <li><strong>Intensity</strong> (Lichter)</li>
+                <li><strong>Color</strong> (RGBA)</li>
+                <li><strong>FOV</strong> (Kamera)</li>
+            </ul>
+            <p><strong>Tipp:</strong> Werte mit Maus ziehen</p>
+        </div>
+    </div>
+
+    <div style="border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin: 20px 0;">
+        <h3>🎞️ Timeline (unten)</h3>
+        <p>Zeitleiste für Keyframe-Animation:</p>
+        <ul>
+            <li><strong>Playhead</strong> (roter Balken): Aktuelle Zeit</li>
+            <li><strong>Play-Button</strong> (Leertaste): Animation abspielen</li>
+            <li><strong>Keyframes</strong>: Automatisch erstellt beim Wert ändern</li>
+            <li><strong>Sequenz-Länge</strong>: 10 Sekunden default (einstellbar)</li>
+        </ul>
+    </div>
+
+    <h2>🚀 Schnellstart: 30-Sekunden-Tutorial</h2>
+    <ol style="font-size: 1.1em; line-height: 1.8;">
+        <li>Öffne <a href="{% url 'theatre' %}" target="_blank" style="color: #7c5cbf; font-weight: bold;">Theatre Seite</a></li>
+        <li><strong>File → Modell Laden</strong> → "FemaleWithHair" auswählen</li>
+        <li>Im <strong>Outline</strong> links: "Camera" anklicken</li>
+        <li>Im <strong>Details Panel</strong> rechts: FOV-Slider auf 20 ziehen (Zoom)</li>
+        <li><strong>Playhead</strong> in Timeline auf 5 Sekunden schieben</li>
+        <li>FOV-Slider auf 50 ziehen (Zoom out) → Keyframe entsteht automatisch</li>
+        <li><strong>Leertaste drücken</strong> → Animation startet!</li>
+    </ol>
+
+    <h2>💡 Warum sehe ich keine Lichter?</h2>
+    <p>Die Lichter sind <strong>unsichtbare Objekte</strong> (wie in echten 3D-Apps). Du siehst nur ihre Wirkung auf den Character.</p>
+    <div style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0;">
+        <strong>Tipp:</strong> Wähle "Spot Left" im Outline → ändere "intensity" auf 15 → siehst du mehr Licht?
+    </div>
+
+    <h2>📚 Wichtige Shortcuts</h2>
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f8f9fa;">
+            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Taste</th>
+            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Aktion</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;"><code>Leertaste</code></td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">Play/Pause Animation</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;"><code>Mausrad</code></td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">Canvas: Zoom in/out</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;"><code>Linke Maustaste + Ziehen</code></td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">Canvas: Kamera drehen (OrbitControls)</td>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;"><code>Rechte Maustaste + Ziehen</code></td>
+            <td style="padding: 10px; border-bottom: 1px solid #eee;">Canvas: Kamera verschieben</td>
+        </tr>
+    </table>
+
+    <h2>🎯 Typische Workflows</h2>
+
+    <h3>🎥 Kamera-Fahrt erstellen</h3>
+    <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto;">
+1. Camera auswählen
+2. Playhead auf 0:00
+3. Position.z = 8 (weit weg)
+4. Playhead auf 5:00
+5. Position.z = 3 (nah ran)
+→ Kamera fährt langsam auf Character zu
+    </pre>
+
+    <h3>💡 Licht-Farbwechsel</h3>
+    <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto;">
+1. "Spot Left" auswählen
+2. Playhead auf 0:00
+3. Color = Warmes Weiß (r:1, g:0.9, b:0.8)
+4. Playhead auf 5:00
+5. Color = Kaltes Blau (r:0.6, g:0.7, b:1)
+→ Licht wechselt langsam die Farbe
+    </pre>
+
+    <h3>🎭 Character + Animation</h3>
+    <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto;">
+1. File → Modell Laden → FemaleWithHair
+2. File → Animation Laden → Mixamo → Ballet
+→ Character tanzt automatisch
+3. Character im Outline auswählen
+4. Position/Rotation animieren (wie Kamera)
+→ Character bewegt sich WÄHREND er tanzt
+    </pre>
+
+    <h2>⚠️ Häufige Probleme</h2>
+
+    <div style="background: #f8d7da; padding: 15px; border-left: 4px solid #dc3545; margin: 15px 0;">
+        <strong>Character liegt auf dem Boden!</strong><br>
+        → Hard Refresh im Browser (Ctrl+Shift+R) — Bug ist bereits gefixt
+    </div>
+
+    <div style="background: #f8d7da; padding: 15px; border-left: 4px solid #dc3545; margin: 15px 0;">
+        <strong>Modell laden funktioniert nicht!</strong><br>
+        → Hard Refresh im Browser (Ctrl+Shift+R) — Meta-Slider-Bug ist gefixt
+    </div>
+
+    <div style="background: #f8d7da; padding: 15px; border-left: 4px solid #dc3545; margin: 15px 0;">
+        <strong>Ich sehe nur Schwarz!</strong><br>
+        → Lichter sind zu dunkel. Wähle "Spot Left" → Intensity auf 15 hochdrehen
+    </div>
+
+    <h2>🎬 Video Export</h2>
+    <p>Wenn du mit deiner Animation zufrieden bist:</p>
+    <ol>
+        <li>Playhead auf 0:00 zurücksetzen</li>
+        <li><strong>Export Video</strong> Button klicken (oben rechts)</li>
+        <li>Leertaste drücken → Animation läuft ab</li>
+        <li>Wenn fertig: Nochmal <strong>Stop Recording</strong> klicken</li>
+        <li>Browser lädt <code>theatre-export.webm</code> herunter</li>
+    </ol>
+
+    <h2>📖 Weiterführende Ressourcen</h2>
+    <ul>
+        <li><a href="https://www.theatrejs.com/docs/" target="_blank">Theatre.js Official Docs</a></li>
+        <li><a href="https://www.youtube.com/results?search_query=theatre.js+tutorial" target="_blank">YouTube Tutorials</a></li>
+    </ul>
+
+    <div style="margin-top: 40px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
+        <h2 style="margin-top: 0; color: white;">Bereit? Los geht's! 🚀</h2>
+        <a href="{% url 'theatre' %}" style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px;">
+            Zur Theatre Seite →
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -126,6 +126,11 @@ def theatre_page(request):
     return render(request, 'theatre.html')
 
 
+def theatre_help_page(request):
+    """Render the Theatre.js help/tutorial page."""
+    return render(request, 'theatre_help.html')
+
+
 def animations_page(request):
     """Render the Animations page."""
     return render(request, 'animations.html')
