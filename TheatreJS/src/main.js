@@ -66,6 +66,22 @@ window.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
     });
 
+    // ── Settings (Presets) - IMPORTANT: Must be after dropdown setup! ──
+    document.querySelectorAll('[data-preset]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const presetName = btn.getAttribute('data-preset');
+            const preset = PRESETS[presetName];
+            if (preset) {
+                applyPreset(preset, camera, lights, controls);
+                console.log('✓ Applied preset:', preset.name);
+                // Close dropdown after selecting
+                document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            } else {
+                console.error('Preset not found:', presetName);
+            }
+        });
+    });
+
     // ── Tab Switching ──
     document.querySelectorAll('.panel-tab').forEach((tab) => {
         tab.addEventListener('click', () => {

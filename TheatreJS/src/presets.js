@@ -18,17 +18,17 @@ export const PRESETS = {
         },
         lights: {
             spotLeft: {
-                intensity: 8,
+                intensity: 25, // Increased from 8
                 color: { r: 1, g: 0.933, b: 0.867 }, // Warm white
                 position: { x: -3, y: 6, z: 3 }
             },
             spotRight: {
-                intensity: 8,
+                intensity: 25, // Increased from 8
                 color: { r: 1, g: 0.933, b: 0.867 },
                 position: { x: 3, y: 6, z: 3 }
             },
             backLight: {
-                intensity: 6,
+                intensity: 15, // Increased from 6
                 color: { r: 0.4, g: 0.267, b: 0.667 }, // Blue-violet
                 position: { x: 0, y: 5, z: -4 }
             }
@@ -47,17 +47,17 @@ export const PRESETS = {
         },
         lights: {
             spotLeft: {
-                intensity: 12,
+                intensity: 30, // Much brighter!
                 color: { r: 1, g: 1, b: 1 }, // Pure white
                 position: { x: -2, y: 5, z: 4 }
             },
             spotRight: {
-                intensity: 12,
+                intensity: 30, // Much brighter!
                 color: { r: 1, g: 1, b: 1 },
                 position: { x: 2, y: 5, z: 4 }
             },
             backLight: {
-                intensity: 3,
+                intensity: 10, // Increased from 3
                 color: { r: 0.9, g: 0.95, b: 1 }, // Soft white
                 position: { x: 0, y: 4, z: -3 }
             }

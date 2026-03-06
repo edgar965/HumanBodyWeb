@@ -70,7 +70,7 @@ export function createScene(canvas) {
     scene.add(ambient);
 
     // Spot 1 — warm key from front-left above
-    const spotLeft = new THREE.SpotLight(0xffeedd, 8);
+    const spotLeft = new THREE.SpotLight(0xffeedd, 25); // Increased from 8
     spotLeft.position.set(-3, 6, 3);
     spotLeft.target.position.set(0, 0, 0);
     spotLeft.angle = Math.PI / 6;
@@ -84,7 +84,7 @@ export function createScene(canvas) {
     scene.add(spotLeft.target);
 
     // Spot 2 — warm key from front-right above
-    const spotRight = new THREE.SpotLight(0xffeedd, 8);
+    const spotRight = new THREE.SpotLight(0xffeedd, 25); // Increased from 8
     spotRight.position.set(3, 6, 3);
     spotRight.target.position.set(0, 0, 0);
     spotRight.angle = Math.PI / 6;
@@ -98,7 +98,7 @@ export function createScene(canvas) {
     scene.add(spotRight.target);
 
     // Spot 3 — blue-violet backlight (rim light from behind)
-    const backLight = new THREE.SpotLight(0x6644aa, 6);
+    const backLight = new THREE.SpotLight(0x6644aa, 15); // Increased from 6
     backLight.position.set(0, 5, -4);
     backLight.target.position.set(0, 0.5, 0);
     backLight.angle = Math.PI / 5;
