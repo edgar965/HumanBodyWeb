@@ -99,6 +99,47 @@
         flex-direction: column;
     }
 
+    /* Toolbar above tabs */
+    .panel-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-secondary);
+        flex-shrink: 0;
+    }
+
+    .toolbar-btn {
+        padding: 6px 12px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.78rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .toolbar-btn:hover {
+        border-color: var(--accent);
+        color: var(--text);
+    }
+
+    .toolbar-btn.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+
+    .toolbar-btn i {
+        font-size: 0.9em;
+    }
+
     .panel-tabs {
         display: flex;
         border-bottom: 1px solid var(--border);
@@ -489,9 +530,35 @@
 
     <!-- Right Panel (Tabs) -->
     <div class="theatre-right-panel">
+        <!-- Toolbar -->
+        <div class="panel-toolbar">
+            <button class="toolbar-btn active" id="btn-translate-mode" title="Bewegen-Modus">
+                <i class="fas fa-arrows-alt"></i>
+            </button>
+            <button class="toolbar-btn" id="btn-rotate-mode" title="Drehen-Modus">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="toolbar-btn active" id="btn-toggle-lights" title="Lichter ein/ausblenden">
+                <i class="fas fa-lightbulb"></i>
+            </button>
+            <button class="toolbar-btn active" id="btn-toggle-model" title="Modell ein/ausblenden">
+                <i class="fas fa-user"></i>
+            </button>
+            <button class="toolbar-btn active" id="btn-toggle-clothes" title="Kleider ein/ausblenden">
+                <i class="fas fa-tshirt"></i>
+            </button>
+            <button class="toolbar-btn" id="btn-toggle-rig" title="Rig ein/ausblenden">
+                <i class="fas fa-bone"></i>
+            </button>
+            <button class="toolbar-btn" id="btn-play-animation" title="Animation abspielen/pausieren">
+                <i class="fas fa-play"></i>
+            </button>
+        </div>
+
         <div class="panel-tabs">
             <div class="panel-tab active" data-tab="tab-animations">Animationen</div>
             <div class="panel-tab" data-tab="tab-models">Modelle</div>
+            <div class="panel-tab" data-tab="tab-properties">Eigenschaften</div>
         </div>
 
         <div class="panel-tab-content">
@@ -508,6 +575,16 @@
                 <h3 style="font-size:0.9rem;margin-bottom:10px;color:var(--text-muted);">Character Presets</h3>
                 <div class="anim-tree" id="model-list">
                     <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Modelle...</div>
+                </div>
+            </div>
+
+            <!-- Tab: Eigenschaften (Selected Object Properties) -->
+            <div class="tab-pane" id="tab-properties">
+                <div id="properties-content">
+                    <div style="padding:20px;color:var(--text-muted);font-size:0.85rem;text-align:center;">
+                        <i class="fas fa-hand-pointer" style="font-size:2rem;margin-bottom:10px;opacity:0.3;"></i>
+                        <p>Klicke auf ein Licht-Icon in der Szene<br>um seine Eigenschaften zu bearbeiten.</p>
+                    </div>
                 </div>
             </div>
         </div>

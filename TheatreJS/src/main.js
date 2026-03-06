@@ -19,11 +19,63 @@ window.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // 1. Theatre Studio overlay
-    studio.initialize();
+    // 1. Theatre Studio overlay - DEAKTIVIERT (kein UI-Panel oben rechts!)
+    // studio.initialize();
 
     // 2. Three.js scene (ballet stage)
-    const { scene, camera, renderer, controls, lights } = createScene(canvas);
+    const { scene, camera, renderer, controls, lights, lightIcons, transformControls } = createScene(canvas);
+
+    // DEBUG: Expose for console debugging
+    window.scene = scene;
+    window.lights = lights;
+    window.lightIcons = lightIcons;
+    window.transformControls = transformControls;
+
+    // Expose animation variables for debugging (will be set later)
+    window.activeMixer = null;
+    window.isPlaying = false;
+    window.currentTime = 0;
+    window.animDuration = 1;
+
+    // ── Raycaster für Licht-Icon Clicks ──
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let selectedLightIcon = null;
+
+    canvas.addEventListener('click', (event) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const clickableObjects = [
+            lightIcons.spotLeftIcon,
+            lightIcons.spotRightIcon,
+            lightIcons.backLightIcon
+        ];
+
+        const intersects = raycaster.intersectObjects(clickableObjects, true);
+
+        if (intersects.length > 0) {
+            // Find the light icon group
+            let clickedIcon = intersects[0].object;
+            while (clickedIcon.parent && !clickedIcon.userData.light) {
+                clickedIcon = clickedIcon.parent;
+            }
+
+            if (clickedIcon.userData.light) {
+                selectedLightIcon = clickedIcon;
+                transformControls.attach(clickedIcon);
+                console.log('✓ Licht ausgewählt:', clickedIcon.userData.light);
+                showLightPanel(clickedIcon.userData.light);
+            }
+        } else {
+            // Deselect
+            transformControls.detach();
+            selectedLightIcon = null;
+            hideLightPanel();
+        }
+    });
 
     // 3. Theatre project + sheet
     const { project, sheet } = setupTheatre();
@@ -93,6 +145,112 @@ window.addEventListener('DOMContentLoaded', () => {
             if (targetPane) targetPane.classList.add('active');
         });
     });
+
+    // ── Toolbar Buttons ──
+    const btnTranslate = document.getElementById('btn-translate-mode');
+    const btnRotate = document.getElementById('btn-rotate-mode');
+    const btnToggleLights = document.getElementById('btn-toggle-lights');
+
+    // Translate/Rotate mode switcher
+    if (btnTranslate) {
+        btnTranslate.addEventListener('click', () => {
+            transformControls.setMode('translate');
+            btnTranslate.classList.add('active');
+            btnRotate.classList.remove('active');
+        });
+    }
+
+    if (btnRotate) {
+        btnRotate.addEventListener('click', () => {
+            transformControls.setMode('rotate');
+            btnRotate.classList.add('active');
+            btnTranslate.classList.remove('active');
+        });
+    }
+
+    // Toggle lights visibility
+    let lightsVisible = true;
+    if (btnToggleLights) {
+        btnToggleLights.addEventListener('click', () => {
+            lightsVisible = !lightsVisible;
+
+            // Toggle all light icons
+            Object.values(lightIcons).forEach(icon => {
+                icon.visible = lightsVisible;
+            });
+
+            // Toggle button state
+            if (lightsVisible) {
+                btnToggleLights.classList.add('active');
+            } else {
+                btnToggleLights.classList.remove('active');
+            }
+        });
+    }
+
+    // Toggle model visibility (body mesh)
+    const btnToggleModel = document.getElementById('btn-toggle-model');
+    let modelVisible = true;
+    if (btnToggleModel) {
+        btnToggleModel.addEventListener('click', () => {
+            modelVisible = !modelVisible;
+
+            scene.traverse((obj) => {
+                // Hide meshes that are part of character body (not garments, not lights)
+                if (obj.isMesh && !obj.userData.isGarment && !obj.userData.isHair && !obj.userData.isRig) {
+                    obj.visible = modelVisible;
+                }
+            });
+
+            btnToggleModel.classList.toggle('active', modelVisible);
+        });
+    }
+
+    // Toggle clothes/garments visibility
+    const btnToggleClothes = document.getElementById('btn-toggle-clothes');
+    let clothesVisible = true;
+    if (btnToggleClothes) {
+        btnToggleClothes.addEventListener('click', () => {
+            clothesVisible = !clothesVisible;
+
+            scene.traverse((obj) => {
+                if (obj.isMesh && (obj.userData.isGarment || obj.userData.isHair)) {
+                    obj.visible = clothesVisible;
+                }
+            });
+
+            btnToggleClothes.classList.toggle('active', clothesVisible);
+        });
+    }
+
+    // Toggle rig visibility (skeleton)
+    const btnToggleRig = document.getElementById('btn-toggle-rig');
+    let rigVisible = false;
+    if (btnToggleRig) {
+        btnToggleRig.addEventListener('click', () => {
+            rigVisible = !rigVisible;
+
+            scene.traverse((obj) => {
+                if (obj.isSkeletonHelper || obj.userData.isRig) {
+                    obj.visible = rigVisible;
+                }
+            });
+
+            btnToggleRig.classList.toggle('active', rigVisible);
+        });
+    }
+
+    // Play/pause animation (delegates to main play button)
+    const btnPlayAnimation = document.getElementById('btn-play-animation');
+    if (btnPlayAnimation) {
+        btnPlayAnimation.addEventListener('click', () => {
+            // Trigger the main play/pause button
+            const mainPlayBtn = document.getElementById('btnPlayPause');
+            if (mainPlayBtn) {
+                mainPlayBtn.click();
+            }
+        });
+    }
 
     // ── Modal helpers ──
     function openModal(id) {
@@ -341,10 +499,20 @@ window.addEventListener('DOMContentLoaded', () => {
             activeMixer = mixer;
             currentAction = action;
 
+            // Expose to window for debugging
+            window.activeMixer = activeMixer;
+
             // Update player UI
             updatePlayerDuration(duration);
             isPlaying = false;
             currentTime = 0;
+            animDuration = duration;
+
+            // Expose to window
+            window.isPlaying = false;
+            window.currentTime = 0;
+            window.animDuration = duration;
+
             updatePlayerUI();
 
             console.log('Animation loaded:', category, name, duration);
@@ -475,6 +643,7 @@ window.addEventListener('DOMContentLoaded', () => {
         btnPlayPause.addEventListener('click', () => {
             if (!activeMixer) return;
             isPlaying = !isPlaying;
+            window.isPlaying = isPlaying; // Expose to window
             if (isPlaying && currentAction) {
                 currentAction.paused = false;
                 currentAction.play();
@@ -595,6 +764,180 @@ window.addEventListener('DOMContentLoaded', () => {
     // Load defaults after a short delay
     setTimeout(loadDefaults, 500);
 
+    // ── Light Properties Panel (in Eigenschaften Tab) ──
+    function showLightPanel(light) {
+        // Switch to Eigenschaften tab
+        document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const propsTab = document.querySelector('[data-tab="tab-properties"]');
+        const propsPane = document.getElementById('tab-properties');
+        if (propsTab) propsTab.classList.add('active');
+        if (propsPane) propsPane.classList.add('active');
+
+        // Fill properties panel
+        const content = document.getElementById('properties-content');
+        if (!content) return;
+
+        const lightName = light === lights.spotLeft ? 'Spot Left' :
+                         light === lights.spotRight ? 'Spot Right' :
+                         light === lights.backLight ? 'Back Light' : 'Light';
+
+        const colorHex = '#' + light.color.getHexString();
+
+        content.innerHTML = `
+            <div style="padding:16px;">
+                <h3 style="font-size:0.9rem;margin-bottom:16px;color:var(--accent-purple);border-bottom:1px solid var(--border);padding-bottom:8px;">
+                    <i class="fas fa-lightbulb"></i> ${lightName}
+                </h3>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                        Intensität: <span id="light-intensity-value">${light.intensity.toFixed(1)}</span>
+                    </label>
+                    <input type="range" id="light-intensity" min="0" max="100" step="1" value="${light.intensity}"
+                           style="width:100%;" />
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                        Farbe
+                    </label>
+                    <input type="color" id="light-color" value="${colorHex}"
+                           style="width:100%;height:32px;border-radius:4px;border:1px solid var(--border);background:var(--bg-primary);cursor:pointer;" />
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                        Position
+                    </label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:0.75rem;">
+                        <div>
+                            <span style="color:var(--text-muted);">X:</span>
+                            <input type="number" id="light-pos-x" value="${light.position.x.toFixed(2)}" step="0.1"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Y:</span>
+                            <input type="number" id="light-pos-y" value="${light.position.y.toFixed(2)}" step="0.1"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Z:</span>
+                            <input type="number" id="light-pos-z" value="${light.position.z.toFixed(2)}" step="0.1"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                        Rotation (Grad)
+                    </label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:0.75rem;">
+                        <div>
+                            <span style="color:var(--text-muted);">X:</span>
+                            <input type="number" id="light-rot-x" value="${(light.rotation.x * 180 / Math.PI).toFixed(1)}" step="5"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Y:</span>
+                            <input type="number" id="light-rot-y" value="${(light.rotation.y * 180 / Math.PI).toFixed(1)}" step="5"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Z:</span>
+                            <input type="number" id="light-rot-z" value="${(light.rotation.z * 180 / Math.PI).toFixed(1)}" step="5"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                    </div>
+                </div>
+
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:20px;padding-top:12px;border-top:1px solid var(--border);">
+                    <i class="fas fa-info-circle"></i> Ziehe das Licht-Icon in der Szene um Position/Rotation zu ändern
+                </div>
+            </div>
+        `;
+
+        // Wire up event listeners
+        const intensitySlider = document.getElementById('light-intensity');
+        const intensityValue = document.getElementById('light-intensity-value');
+        const colorPicker = document.getElementById('light-color');
+        const posX = document.getElementById('light-pos-x');
+        const posY = document.getElementById('light-pos-y');
+        const posZ = document.getElementById('light-pos-z');
+
+        if (intensitySlider) {
+            intensitySlider.oninput = (e) => {
+                light.intensity = parseFloat(e.target.value);
+                intensityValue.textContent = light.intensity.toFixed(1);
+            };
+        }
+
+        if (colorPicker) {
+            colorPicker.oninput = (e) => {
+                light.color.setHex(parseInt(e.target.value.substring(1), 16));
+                // Update icon color
+                if (selectedLightIcon) {
+                    selectedLightIcon.children.forEach(child => {
+                        if (child.material) {
+                            child.material.color.copy(light.color);
+                            if (child.material.emissive) child.material.emissive.copy(light.color);
+                        }
+                    });
+                }
+            };
+        }
+
+        if (posX && posY && posZ) {
+            const updatePos = () => {
+                light.position.set(
+                    parseFloat(posX.value),
+                    parseFloat(posY.value),
+                    parseFloat(posZ.value)
+                );
+                if (selectedLightIcon) {
+                    selectedLightIcon.position.copy(light.position);
+                    selectedLightIcon.lookAt(light.target.position);
+                }
+            };
+            posX.oninput = updatePos;
+            posY.oninput = updatePos;
+            posZ.oninput = updatePos;
+        }
+
+        // Rotation inputs
+        const rotX = document.getElementById('light-rot-x');
+        const rotY = document.getElementById('light-rot-y');
+        const rotZ = document.getElementById('light-rot-z');
+
+        if (rotX && rotY && rotZ) {
+            const updateRot = () => {
+                light.rotation.set(
+                    parseFloat(rotX.value) * Math.PI / 180,
+                    parseFloat(rotY.value) * Math.PI / 180,
+                    parseFloat(rotZ.value) * Math.PI / 180
+                );
+                if (selectedLightIcon) {
+                    selectedLightIcon.rotation.copy(light.rotation);
+                }
+            };
+            rotX.oninput = updateRot;
+            rotY.oninput = updateRot;
+            rotZ.oninput = updateRot;
+        }
+    }
+
+    function hideLightPanel() {
+        const content = document.getElementById('properties-content');
+        if (!content) return;
+        content.innerHTML = `
+            <div style="padding:20px;color:var(--text-muted);font-size:0.85rem;text-align:center;">
+                <i class="fas fa-hand-pointer" style="font-size:2rem;margin-bottom:10px;opacity:0.3;"></i>
+                <p>Klicke auf ein Licht-Icon in der Szene<br>um seine Eigenschaften zu bearbeiten.</p>
+            </div>
+        `;
+    }
+
     // ── Render loop ──
     function animate() {
         requestAnimationFrame(animate);
@@ -612,6 +955,13 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             updatePlayerUI();
+        }
+
+        // Sync light icons with lights (wenn bewegt via TransformControls)
+        if (selectedLightIcon && selectedLightIcon.userData.light) {
+            const light = selectedLightIcon.userData.light;
+            light.position.copy(selectedLightIcon.position);
+            selectedLightIcon.lookAt(light.target.position);
         }
 
         controls.update();

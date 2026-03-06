@@ -18,17 +18,17 @@ export const PRESETS = {
         },
         lights: {
             spotLeft: {
-                intensity: 25, // Increased from 8
+                intensity: 60, // MUCH BRIGHTER for PBR visibility
                 color: { r: 1, g: 0.933, b: 0.867 }, // Warm white
                 position: { x: -3, y: 6, z: 3 }
             },
             spotRight: {
-                intensity: 25, // Increased from 8
+                intensity: 60, // MUCH BRIGHTER for PBR visibility
                 color: { r: 1, g: 0.933, b: 0.867 },
                 position: { x: 3, y: 6, z: 3 }
             },
             backLight: {
-                intensity: 15, // Increased from 6
+                intensity: 25, // MUCH BRIGHTER for rim light visibility
                 color: { r: 0.4, g: 0.267, b: 0.667 }, // Blue-violet
                 position: { x: 0, y: 5, z: -4 }
             }
@@ -47,17 +47,17 @@ export const PRESETS = {
         },
         lights: {
             spotLeft: {
-                intensity: 30, // Much brighter!
+                intensity: 80, // VERY BRIGHT for rough PBR material!
                 color: { r: 1, g: 1, b: 1 }, // Pure white
                 position: { x: -2, y: 5, z: 4 }
             },
             spotRight: {
-                intensity: 30, // Much brighter!
+                intensity: 80, // VERY BRIGHT for rough PBR material!
                 color: { r: 1, g: 1, b: 1 },
                 position: { x: 2, y: 5, z: 4 }
             },
             backLight: {
-                intensity: 10, // Increased from 3
+                intensity: 30, // Much brighter backlight
                 color: { r: 0.9, g: 0.95, b: 1 }, // Soft white
                 position: { x: 0, y: 4, z: -3 }
             }
@@ -162,19 +162,14 @@ export const PRESETS = {
 export function applyPreset(preset, camera, lights, controls) {
     console.log(`[Preset] Applying: ${preset.name}`);
 
-    // Get Theatre objects
-    const cameraObj = getTheatreObject('Camera');
-    const spotLeftObj = getTheatreObject('Spot Left');
-    const spotRightObj = getTheatreObject('Spot Right');
-    const backLightObj = getTheatreObject('Back Light');
-
-    // Apply via Theatre API (this ensures Theatre UI updates)
-    if (cameraObj) {
-        cameraObj.props.position.x = preset.camera.position.x;
-        cameraObj.props.position.y = preset.camera.position.y;
-        cameraObj.props.position.z = preset.camera.position.z;
-        cameraObj.props.fov = preset.camera.fov;
-    }
+    // Apply camera position directly (Theatre props are read-only, can't be set programmatically)
+    camera.position.set(
+        preset.camera.position.x,
+        preset.camera.position.y,
+        preset.camera.position.z
+    );
+    camera.fov = preset.camera.fov;
+    camera.updateProjectionMatrix();
 
     // Reset orbit controls target
     if (controls) {
@@ -182,21 +177,18 @@ export function applyPreset(preset, camera, lights, controls) {
         controls.update();
     }
 
-    // Apply light settings via Theatre
-    applyLightViaTheatre(spotLeftObj, preset.lights.spotLeft);
-    applyLightViaTheatre(spotRightObj, preset.lights.spotRight);
-    applyLightViaTheatre(backLightObj, preset.lights.backLight);
+    // Apply light settings DIRECTLY to Three.js lights (bypassing Theatre)
+    // Theatre.js props are READ-ONLY - you can't set them programmatically!
+    applyLightDirect(lights.spotLeft, preset.lights.spotLeft);
+    applyLightDirect(lights.spotRight, preset.lights.spotRight);
+    applyLightDirect(lights.backLight, preset.lights.backLight);
 
-    console.log(`✓ Preset "${preset.name}" applied via Theatre API`);
+    console.log(`✓ Preset "${preset.name}" applied (direct Three.js)`);
 }
 
-function applyLightViaTheatre(theatreObj, settings) {
-    if (!theatreObj) return;
-    theatreObj.props.intensity = settings.intensity;
-    theatreObj.props.color.r = settings.color.r;
-    theatreObj.props.color.g = settings.color.g;
-    theatreObj.props.color.b = settings.color.b;
-    theatreObj.props.position.x = settings.position.x;
-    theatreObj.props.position.y = settings.position.y;
-    theatreObj.props.position.z = settings.position.z;
+function applyLightDirect(light, settings) {
+    if (!light) return;
+    light.intensity = settings.intensity;
+    light.color.setRGB(settings.color.r, settings.color.g, settings.color.b);
+    light.position.set(settings.position.x, settings.position.y, settings.position.z);
 }

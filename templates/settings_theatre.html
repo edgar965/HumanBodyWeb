@@ -35,8 +35,12 @@
             <div class="settings-input">
                 <select name="theatre_default_animation" class="settings-select">
                     <option value="" {% if not settings.theatre_default_animation %}selected{% endif %}>(Keine Auto-Load)</option>
-                    {% for anim in available_animations %}
-                    <option value="{{ anim.value }}" {% if settings.theatre_default_animation == anim.value %}selected{% endif %}>{{ anim.label }}</option>
+                    {% for category in available_animations %}
+                    <optgroup label="{{ category.name }}">
+                        {% for anim in category.animations %}
+                        <option value="{{ anim.value }}" {% if settings.theatre_default_animation == anim.value %}selected{% endif %}>{{ anim.label }}</option>
+                        {% endfor %}
+                    </optgroup>
                     {% endfor %}
                 </select>
             </div>

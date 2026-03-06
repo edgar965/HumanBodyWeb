@@ -59,7 +59,7 @@ export function createLightSheet(sheet, name, light) {
             y: types.number(light.position.y, { range: [0, 20] }),
             z: types.number(light.position.z, { range: [-20, 20] }),
         }),
-        intensity: types.number(light.intensity, { range: [0, 30] }), // Extended for presets
+        intensity: types.number(light.intensity, { range: [0, 100] }), // Extended for very bright PBR lighting
         color: types.rgba({
             r: light.color.r,
             g: light.color.g,

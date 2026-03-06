@@ -159,18 +159,26 @@ def theatre_settings_page(request):
                 continue
             available_presets.append(f.stem)
 
-    # Gather available animations (BVH files from data/bvh/)
+    # Gather available animations (BVH files from data/animations/bvh/)
+    # Structured as list of categories: [{'name': 'Mixamo', 'animations': [...]}, ...]
     available_animations = []
-    bvh_root = Path(settings.HUMANBODY_DATA_DIR) / 'bvh'
+    bvh_root = Path(settings.HUMANBODY_ROOT) / 'data' / 'animations' / 'bvh'
     if bvh_root.is_dir():
         for cat_dir in sorted(bvh_root.iterdir()):
             if not cat_dir.is_dir():
                 continue
+            cat_name = cat_dir.name
+            cat_anims = []
             for bvh_file in sorted(cat_dir.glob('*.bvh')):
-                anim_path = f"{cat_dir.name}/{bvh_file.stem}"
-                available_animations.append({
+                anim_path = f"{cat_name}/{bvh_file.stem}"
+                cat_anims.append({
                     'value': anim_path,
-                    'label': f"{cat_dir.name} → {bvh_file.stem}",
+                    'label': bvh_file.stem,
+                })
+            if cat_anims:  # Only add category if it has animations
+                available_animations.append({
+                    'name': cat_name,
+                    'animations': cat_anims
                 })
 
     # Available lighting presets (from presets.js)
