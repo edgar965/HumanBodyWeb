@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Template-Hierarchie</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    display: flex;
+    justify-content: center;
+    padding: 60px 20px;
+    min-height: 100vh;
+  }
+  svg { overflow: visible; }
+  .box { rx: 10; ry: 10; stroke-width: 2; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4)); }
+  .label { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; font-weight: 600; fill: #f0f6fc; }
+  .sublabel { font-family: 'Segoe UI', system-ui, sans-serif; font-size: 10.5px; fill: #8b949e; }
+  .url { font-family: 'Cascadia Code', monospace; font-size: 9.5px; fill: #58a6ff; }
+  .line { stroke: #30363d; stroke-width: 2; fill: none; }
+  .arrow { fill: #30363d; }
+  .js-label { font-family: 'Cascadia Code', monospace; font-size: 9px; }
+  .menu-label { font-family: 'Segoe UI', sans-serif; font-size: 9px; fill: #c9d1d9; }
+</style>
+</head>
+<body>
+
+<svg width="720" height="600" viewBox="0 0 720 600">
+
+  <!-- ===== base.html ===== -->
+  <rect class="box" x="260" y="20" width="200" height="56" fill="#161b22" stroke="#58a6ff"/>
+  <text class="label" x="360" y="48" text-anchor="middle">base.html</text>
+  <text class="sublabel" x="360" y="63" text-anchor="middle">Sidebar, CSS-Variablen, Layout</text>
+
+  <!-- Lines from base -->
+  <path class="line" d="M 310 76 L 310 120 L 200 120 L 200 155"/>
+  <path class="line" d="M 410 76 L 410 120 L 520 120 L 520 155"/>
+  <polygon class="arrow" points="200,155 195,145 205,145"/>
+  <polygon class="arrow" points="520,155 515,145 525,145"/>
+  <text class="sublabel" x="245" y="112" text-anchor="middle" font-style="italic">extends</text>
+  <text class="sublabel" x="475" y="112" text-anchor="middle" font-style="italic">extends</text>
+
+  <!-- ===== character_viewer.html ===== -->
+  <rect class="box" x="60" y="155" width="280" height="76" fill="#161b22" stroke="#3fb950"/>
+  <text class="label" x="200" y="180" text-anchor="middle">character_viewer.html</text>
+  <text class="sublabel" x="200" y="196" text-anchor="middle">Viewer-Basis + eigenst&auml;ndige Seite</text>
+  <text class="url" x="200" y="218" text-anchor="middle">/humanbody/config/</text>
+  <!-- JS badge -->
+  <rect x="284" y="161" width="52" height="16" rx="8" fill="rgba(63,185,80,0.15)" stroke="rgba(63,185,80,0.3)"/>
+  <text class="js-label" x="310" y="172" text-anchor="middle" fill="#3fb950">viewer.js</text>
+
+  <!-- Menus: Toolbar (no menubar) -->
+  <rect x="68" y="236" width="264" height="22" rx="4" fill="#1a1a2e" stroke="#30363d" stroke-width="1"/>
+  <text class="menu-label" x="78" y="250" fill="#8b949e">Toolbar:</text>
+  <text class="menu-label" x="118" y="250" fill="#c9d1d9">Laden</text>
+  <text class="menu-label" x="145" y="250" fill="#484848">|</text>
+  <text class="menu-label" x="153" y="250" fill="#c9d1d9">Speichern</text>
+  <text class="menu-label" x="198" y="250" fill="#484848">|</text>
+  <text class="menu-label" x="206" y="250" fill="#c9d1d9">Speichern unter</text>
+  <text class="menu-label" x="272" y="250" fill="#484848">|</text>
+  <text class="menu-label" x="282" y="250" fill="#c9d1d9">Model / Clothes / Rig</text>
+
+  <!-- Line to scene_model -->
+  <path class="line" d="M 200 258 L 200 310"/>
+  <polygon class="arrow" points="200,310 195,300 205,300"/>
+  <text class="sublabel" x="175" y="290" text-anchor="middle" font-style="italic">extends</text>
+
+  <!-- ===== scene_model.html ===== -->
+  <rect class="box" x="60" y="310" width="280" height="76" fill="#161b22" stroke="#bc8cff"/>
+  <text class="label" x="200" y="335" text-anchor="middle">scene_model.html</text>
+  <text class="sublabel" x="200" y="351" text-anchor="middle">Erbt Viewer, eigene Men&uuml;leiste</text>
+  <text class="url" x="200" y="373" text-anchor="middle">/humanbody/scene-model/</text>
+  <!-- JS badge -->
+  <rect x="284" y="316" width="52" height="16" rx="8" fill="rgba(63,185,80,0.15)" stroke="rgba(63,185,80,0.3)"/>
+  <text class="js-label" x="310" y="327" text-anchor="middle" fill="#3fb950">viewer.js</text>
+
+  <!-- Menus: 4 menus -->
+  <rect x="68" y="391" width="264" height="22" rx="4" fill="#1a1a2e" stroke="#30363d" stroke-width="1"/>
+  <text class="menu-label" x="78" y="405" fill="#8b949e">Men&uuml;s:</text>
+  <rect x="112" y="395" width="36" height="14" rx="3" fill="rgba(188,140,255,0.12)" stroke="rgba(188,140,255,0.25)"/>
+  <text class="menu-label" x="130" y="405" text-anchor="middle" fill="#bc8cff">Datei</text>
+  <rect x="153" y="395" width="55" height="14" rx="3" fill="rgba(188,140,255,0.12)" stroke="rgba(188,140,255,0.25)"/>
+  <text class="menu-label" x="180" y="405" text-anchor="middle" fill="#bc8cff">Bearbeiten</text>
+  <rect x="213" y="395" width="44" height="14" rx="3" fill="rgba(188,140,255,0.12)" stroke="rgba(188,140,255,0.25)"/>
+  <text class="menu-label" x="235" y="405" text-anchor="middle" fill="#bc8cff">Ansicht</text>
+  <rect x="262" y="395" width="60" height="14" rx="3" fill="rgba(188,140,255,0.12)" stroke="rgba(188,140,255,0.25)"/>
+  <text class="menu-label" x="292" y="405" text-anchor="middle" fill="#bc8cff">Werkzeuge</text>
+
+  <!-- ===== scene_config.html ===== -->
+  <rect class="box" x="380" y="155" width="280" height="76" fill="#161b22" stroke="#d29922"/>
+  <text class="label" x="520" y="180" text-anchor="middle">scene_config.html</text>
+  <text class="sublabel" x="520" y="196" text-anchor="middle">Eigenst&auml;ndig (eigener Viewer)</text>
+  <text class="url" x="520" y="218" text-anchor="middle">/humanbody/scene/</text>
+  <!-- JS badge -->
+  <rect x="596" y="161" width="62" height="16" rx="8" fill="rgba(210,153,34,0.15)" stroke="rgba(210,153,34,0.3)"/>
+  <text class="js-label" x="627" y="172" text-anchor="middle" fill="#d29922">scene_cfg.js</text>
+
+  <!-- Menus: 5 menus -->
+  <rect x="388" y="236" width="264" height="22" rx="4" fill="#1a1a2e" stroke="#30363d" stroke-width="1"/>
+  <text class="menu-label" x="398" y="250" fill="#8b949e">Men&uuml;s:</text>
+  <rect x="432" y="240" width="36" height="14" rx="3" fill="rgba(210,153,34,0.12)" stroke="rgba(210,153,34,0.25)"/>
+  <text class="menu-label" x="450" y="250" text-anchor="middle" fill="#d29922">Datei</text>
+  <rect x="473" y="240" width="55" height="14" rx="3" fill="rgba(210,153,34,0.12)" stroke="rgba(210,153,34,0.25)"/>
+  <text class="menu-label" x="500" y="250" text-anchor="middle" fill="#d29922">Bearbeiten</text>
+  <rect x="533" y="240" width="52" height="14" rx="3" fill="rgba(210,153,34,0.12)" stroke="rgba(210,153,34,0.25)"/>
+  <text class="menu-label" x="559" y="250" text-anchor="middle" fill="#d29922">Hinzuf&uuml;gen</text>
+  <rect x="590" y="240" width="30" height="14" rx="3" fill="rgba(210,153,34,0.12)" stroke="rgba(210,153,34,0.25)"/>
+  <text class="menu-label" x="605" y="250" text-anchor="middle" fill="#d29922">...</text>
+
+  <!-- ===== Sidebar Dashboard ===== -->
+  <rect x="60" y="460" width="600" height="90" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text class="sublabel" x="80" y="482" font-size="11" fill="#58a6ff" font-weight="600">SIDEBAR &mdash; Dashboard</text>
+
+  <rect x="80" y="494" width="120" height="28" rx="6" fill="rgba(210,153,34,0.1)" stroke="rgba(210,153,34,0.3)"/>
+  <text class="sublabel" x="140" y="512" text-anchor="middle" fill="#d29922">Szene</text>
+
+  <rect x="215" y="494" width="130" height="28" rx="6" fill="rgba(188,140,255,0.1)" stroke="rgba(188,140,255,0.3)"/>
+  <text class="sublabel" x="280" y="512" text-anchor="middle" fill="#bc8cff">Szene - Modell</text>
+
+  <rect x="360" y="494" width="170" height="28" rx="6" fill="rgba(63,185,80,0.1)" stroke="rgba(63,185,80,0.3)"/>
+  <text class="sublabel" x="445" y="512" text-anchor="middle" fill="#3fb950">Charakter Konfiguration</text>
+
+  <rect x="545" y="494" width="90" height="28" rx="6" fill="rgba(255,255,255,0.05)" stroke="#30363d"/>
+  <text class="sublabel" x="590" y="512" text-anchor="middle" fill="#8b949e">Result</text>
+
+  <!-- Dashed connectors from templates to sidebar items -->
+  <line x1="520" y1="231" x2="520" y2="440" stroke="#d29922" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <line x1="520" y1="440" x2="140" y2="440" stroke="#d29922" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <line x1="140" y1="440" x2="140" y2="494" stroke="#d29922" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+
+  <line x1="200" y1="413" x2="200" y2="435" stroke="#bc8cff" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <line x1="200" y1="435" x2="280" y2="435" stroke="#bc8cff" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <line x1="280" y1="435" x2="280" y2="494" stroke="#bc8cff" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+
+  <line x1="100" y1="231" x2="100" y2="430" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <line x1="100" y1="430" x2="445" y2="430" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+  <line x1="445" y1="430" x2="445" y2="494" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+
+  <!-- Title -->
+  <text x="360" y="575" text-anchor="middle" font-size="11" fill="#8b949e" font-family="'Segoe UI', sans-serif">
+    HumanBodyWeb Template-Hierarchie &middot; v0.98
+  </text>
+
+</svg>
+
+</body>
+</html>

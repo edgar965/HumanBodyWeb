@@ -9,6 +9,7 @@ import {
     fetchModelList, fetchModel,
     fetchAnimationList, fetchBVH,
 } from './scene-manager.js';
+import { PRESETS, applyPreset } from './presets.js';
 
 // Wait for DOM before initialising
 window.addEventListener('DOMContentLoaded', () => {
@@ -311,6 +312,20 @@ window.addEventListener('DOMContentLoaded', () => {
             fileInput.value = '';
         });
     }
+
+    // ── Menu: Settings (Presets) ──
+
+    const presetButtons = document.querySelectorAll('[data-preset]');
+    presetButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const presetName = btn.getAttribute('data-preset');
+            const preset = PRESETS[presetName];
+            if (preset) {
+                applyPreset(preset, camera, lights);
+                console.log('Applied preset:', preset.name);
+            }
+        });
+    });
 
     // ── Toolbar: Add Light ──
 

@@ -1,0 +1,70 @@
+{
+  "sheetsById": {
+    "Main": {
+      "staticOverrides": {
+        "byObject": {
+          "Camera": {
+            "position": {
+              "x": 0,
+              "y": 1.6,
+              "z": 5
+            },
+            "fov": 35
+          },
+          "Spot Left": {
+            "position": {
+              "x": -3,
+              "y": 6,
+              "z": 3
+            },
+            "intensity": 8,
+            "color": {
+              "r": 1,
+              "g": 0.933,
+              "b": 0.867,
+              "a": 1
+            }
+          },
+          "Spot Right": {
+            "position": {
+              "x": 3,
+              "y": 6,
+              "z": 3
+            },
+            "intensity": 8,
+            "color": {
+              "r": 1,
+              "g": 0.933,
+              "b": 0.867,
+              "a": 1
+            }
+          },
+          "Back Light": {
+            "position": {
+              "x": 0,
+              "y": 5,
+              "z": -4
+            },
+            "intensity": 6,
+            "color": {
+              "r": 0.4,
+              "g": 0.267,
+              "b": 0.667,
+              "a": 1
+            }
+          }
+        }
+      },
+      "sequence": {
+        "tracksByObject": {},
+        "type": "PositionalSequence",
+        "length": 10,
+        "subUnitsPerUnit": 30
+      }
+    }
+  },
+  "definitionVersion": "0.4.0",
+  "revisionHistory": [
+    "Initial ballet stage preset"
+  ]
+}
