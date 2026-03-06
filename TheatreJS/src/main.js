@@ -37,10 +37,12 @@ window.addEventListener('DOMContentLoaded', () => {
     window.currentTime = 0;
     window.animDuration = 1;
 
-    // ── Raycaster für Licht-Icon Clicks ──
+    // ── Raycaster für Licht-Icon Clicks + Character Selection ──
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     let selectedLightIcon = null;
+    let selectedCharacter = null;  // Currently selected character group
+    const loadedCharacters = [];   // Track all loaded character groups
 
     canvas.addEventListener('click', (event) => {
         const rect = canvas.getBoundingClientRect();
@@ -48,33 +50,56 @@ window.addEventListener('DOMContentLoaded', () => {
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
         raycaster.setFromCamera(mouse, camera);
+
+        // Try light icons first (higher priority)
         const clickableObjects = [
             lightIcons.spotLeftIcon,
             lightIcons.spotRightIcon,
             lightIcons.backLightIcon
         ];
+        const lightIntersects = raycaster.intersectObjects(clickableObjects, true);
 
-        const intersects = raycaster.intersectObjects(clickableObjects, true);
-
-        if (intersects.length > 0) {
-            // Find the light icon group
-            let clickedIcon = intersects[0].object;
+        if (lightIntersects.length > 0) {
+            // Light icon clicked
+            let clickedIcon = lightIntersects[0].object;
             while (clickedIcon.parent && !clickedIcon.userData.light) {
                 clickedIcon = clickedIcon.parent;
             }
 
             if (clickedIcon.userData.light) {
                 selectedLightIcon = clickedIcon;
+                selectedCharacter = null;
                 transformControls.attach(clickedIcon);
                 console.log('✓ Licht ausgewählt:', clickedIcon.userData.light);
                 showLightPanel(clickedIcon.userData.light);
+                return;
             }
-        } else {
-            // Deselect
-            transformControls.detach();
-            selectedLightIcon = null;
-            hideLightPanel();
         }
+
+        // Try character meshes (all loaded characters)
+        const charIntersects = raycaster.intersectObjects(loadedCharacters, true);
+        if (charIntersects.length > 0) {
+            // Find the character group (walk up the hierarchy)
+            let clickedChar = charIntersects[0].object;
+            while (clickedChar.parent && !clickedChar.userData.isCharacter) {
+                clickedChar = clickedChar.parent;
+            }
+
+            if (clickedChar.userData.isCharacter) {
+                selectedCharacter = clickedChar;
+                selectedLightIcon = null;
+                transformControls.attach(clickedChar);
+                console.log('✓ Character ausgewählt:', clickedChar.userData.presetName);
+                showCharacterPanel(clickedChar);
+                return;
+            }
+        }
+
+        // Nothing clicked - deselect
+        transformControls.detach();
+        selectedLightIcon = null;
+        selectedCharacter = null;
+        hideLightPanel();
     });
 
     // 3. Theatre project + sheet
@@ -312,7 +337,11 @@ window.addEventListener('DOMContentLoaded', () => {
             console.log('Scene loaded:', name, sceneData);
             if (sceneData.characters && Array.isArray(sceneData.characters)) {
                 for (const charDef of sceneData.characters) {
-                    await loadCharacterFromPreset(scene, charDef, charDef.name || name);
+                    const charGroup = await loadCharacterFromPreset(scene, charDef, charDef.name || name);
+                    charGroup.userData.isCharacter = true;
+                    charGroup.userData.presetName = charDef.name || name;
+                    charGroup.userData.bodyType = charDef.body_type || 'Unknown';
+                    loadedCharacters.push(charGroup);
                 }
             }
         } catch (err) {
@@ -407,7 +436,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 item.addEventListener('click', async () => {
                     try {
                         const preset = await fetchModel(m.name);
-                        await loadCharacterFromPreset(scene, preset, m.name);
+                        const charGroup = await loadCharacterFromPreset(scene, preset, m.name);
+                        charGroup.userData.isCharacter = true;
+                        charGroup.userData.presetName = m.name;
+                        charGroup.userData.bodyType = preset.body_type || 'Unknown';
+                        loadedCharacters.push(charGroup);
                         console.log('Model loaded:', m.name);
                         // Highlight active
                         document.querySelectorAll('#model-list .anim-item').forEach(i => i.classList.remove('active'));
@@ -741,7 +774,11 @@ window.addEventListener('DOMContentLoaded', () => {
             if (cfg.model) {
                 try {
                     const modelData = await fetchModel(cfg.model);
-                    await loadCharacterFromPreset(scene, modelData, cfg.model);
+                    const charGroup = await loadCharacterFromPreset(scene, modelData, cfg.model);
+                    charGroup.userData.isCharacter = true;
+                    charGroup.userData.presetName = cfg.model;
+                    charGroup.userData.bodyType = modelData.body_type || 'Unknown';
+                    loadedCharacters.push(charGroup);
                     console.log('✓ Auto-loaded model:', cfg.model);
 
                     // Load animation if model loaded successfully
@@ -927,13 +964,131 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function showCharacterPanel(characterGroup) {
+        // Switch to Eigenschaften tab
+        document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const propsTab = document.querySelector('[data-tab="tab-properties"]');
+        const propsPane = document.getElementById('tab-properties');
+        if (propsTab) propsTab.classList.add('active');
+        if (propsPane) propsPane.classList.add('active');
+
+        // Fill properties panel
+        const content = document.getElementById('properties-content');
+        if (!content) return;
+
+        const charName = characterGroup.userData.presetName || 'Character';
+        const bodyType = characterGroup.userData.bodyType || 'Unknown';
+        const pos = characterGroup.position;
+        const rot = characterGroup.rotation;
+
+        content.innerHTML = `
+            <div style="padding:16px;">
+                <h3 style="font-size:0.9rem;margin-bottom:16px;color:var(--accent-purple);border-bottom:1px solid var(--border);padding-bottom:8px;">
+                    <i class="fas fa-user"></i> ${charName}
+                </h3>
+
+                <div style="margin-bottom:16px;font-size:0.8rem;">
+                    <span style="color:var(--text-muted);">Body Type:</span>
+                    <span style="color:var(--text);margin-left:8px;">${bodyType}</span>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                        Position
+                    </label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:0.75rem;">
+                        <div>
+                            <span style="color:var(--text-muted);">X:</span>
+                            <input type="number" id="char-pos-x" value="${pos.x.toFixed(2)}" step="0.1"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Y:</span>
+                            <input type="number" id="char-pos-y" value="${pos.y.toFixed(2)}" step="0.1"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Z:</span>
+                            <input type="number" id="char-pos-z" value="${pos.z.toFixed(2)}" step="0.1"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                        Rotation (Grad)
+                    </label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:0.75rem;">
+                        <div>
+                            <span style="color:var(--text-muted);">X:</span>
+                            <input type="number" id="char-rot-x" value="${(rot.x * 180 / Math.PI).toFixed(1)}" step="5"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Y:</span>
+                            <input type="number" id="char-rot-y" value="${(rot.y * 180 / Math.PI).toFixed(1)}" step="5"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Z:</span>
+                            <input type="number" id="char-rot-z" value="${(rot.z * 180 / Math.PI).toFixed(1)}" step="5"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                    </div>
+                </div>
+
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:20px;padding-top:12px;border-top:1px solid var(--border);">
+                    <i class="fas fa-info-circle"></i> Nutze die Transform-Controls in der Szene um Position/Rotation zu ändern
+                </div>
+            </div>
+        `;
+
+        // Wire up event listeners for position
+        const posX = document.getElementById('char-pos-x');
+        const posY = document.getElementById('char-pos-y');
+        const posZ = document.getElementById('char-pos-z');
+
+        if (posX && posY && posZ) {
+            const updatePos = () => {
+                characterGroup.position.set(
+                    parseFloat(posX.value),
+                    parseFloat(posY.value),
+                    parseFloat(posZ.value)
+                );
+            };
+            posX.oninput = updatePos;
+            posY.oninput = updatePos;
+            posZ.oninput = updatePos;
+        }
+
+        // Wire up event listeners for rotation
+        const rotX = document.getElementById('char-rot-x');
+        const rotY = document.getElementById('char-rot-y');
+        const rotZ = document.getElementById('char-rot-z');
+
+        if (rotX && rotY && rotZ) {
+            const updateRot = () => {
+                characterGroup.rotation.set(
+                    parseFloat(rotX.value) * Math.PI / 180,
+                    parseFloat(rotY.value) * Math.PI / 180,
+                    parseFloat(rotZ.value) * Math.PI / 180
+                );
+            };
+            rotX.oninput = updateRot;
+            rotY.oninput = updateRot;
+            rotZ.oninput = updateRot;
+        }
+    }
+
     function hideLightPanel() {
         const content = document.getElementById('properties-content');
         if (!content) return;
         content.innerHTML = `
             <div style="padding:20px;color:var(--text-muted);font-size:0.85rem;text-align:center;">
                 <i class="fas fa-hand-pointer" style="font-size:2rem;margin-bottom:10px;opacity:0.3;"></i>
-                <p>Klicke auf ein Licht-Icon in der Szene<br>um seine Eigenschaften zu bearbeiten.</p>
+                <p>Klicke auf ein Licht-Icon oder Character in der Szene<br>um Eigenschaften zu bearbeiten.</p>
             </div>
         `;
     }
