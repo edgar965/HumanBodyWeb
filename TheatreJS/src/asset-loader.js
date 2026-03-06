@@ -387,6 +387,13 @@ export function loadBVHFromText(bvhText, scene, animName) {
     skeletonHelper.skeleton = result.skeleton;
     skeletonHelper.visible = true; // Make visible initially
     skeletonHelper.userData.isRig = true; // Mark as rig for toggle button
+    skeletonHelper.renderOrder = 999; // Render AFTER character mesh (on top)
+
+    // Make skeleton always visible (render over character mesh)
+    if (skeletonHelper.material) {
+        skeletonHelper.material.depthTest = false; // Ignore depth (always visible)
+        skeletonHelper.material.depthWrite = false; // Don't write to depth buffer
+    }
 
     // Position bones
     const rootBone = result.skeleton.bones[0];
