@@ -9,374 +9,556 @@
         padding: 0 !important;
         max-width: none !important;
         width: calc(100vw - var(--sidebar-width));
-    }
-    .theatre-container {
-        width: 100%;
         height: 100vh;
-        position: relative;
-    }
-    #theatre-canvas {
-        width: 100%;
-        height: 100%;
-        display: block;
-        background: #080812;
-        cursor: grab;
-    }
-    #theatre-canvas:active { cursor: grabbing; }
-
-    /* ── Menubar ── */
-    .theatre-menubar {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 32px;
-        background: rgba(18, 18, 30, 0.95);
-        border-bottom: 1px solid rgba(255,255,255,0.08);
         display: flex;
-        align-items: center;
-        padding: 0 8px;
-        z-index: 600;
-        backdrop-filter: blur(6px);
+        flex-direction: column;
     }
-    .menu-item {
-        position: relative;
-        padding: 4px 12px;
-        color: #aaa;
-        font-size: 0.8rem;
-        cursor: pointer;
-        user-select: none;
-        border-radius: 4px;
+
+    /* ── Theatre Layout ── */
+    .theatre-layout {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
     }
-    .menu-item:hover { color: #fff; background: rgba(255,255,255,0.08); }
-    .menu-dropdown {
-        display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        min-width: 200px;
-        background: rgba(24, 24, 40, 0.97);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 6px;
-        padding: 4px 0;
-        z-index: 700;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+
+    /* ── Left Control Panel ── */
+    .theatre-left-panel {
+        width: 220px;
+        background: var(--bg-secondary);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
     }
-    .menu-item:hover .menu-dropdown,
-    .menu-item.active .menu-dropdown { display: block; }
-    .menu-action {
-        padding: 7px 16px;
-        color: #ccc;
-        font-size: 0.8rem;
+
+    .theatre-group {
+        border-bottom: 1px solid var(--border);
+    }
+
+    .theatre-group-header {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
         cursor: pointer;
         display: flex;
         align-items: center;
         gap: 8px;
+        user-select: none;
     }
-    .menu-action:hover { background: rgba(124, 92, 191, 0.3); color: #fff; }
-    .menu-action i { width: 16px; text-align: center; opacity: 0.7; }
-    .menu-separator { height: 1px; background: rgba(255,255,255,0.08); margin: 4px 0; }
 
-    /* ── Toolbar — inside menubar, right-aligned ── */
-    .theatre-toolbar {
-        position: absolute;
-        top: 0;
-        right: 12px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        z-index: 600;
+    .theatre-group-header:hover {
+        background: rgba(255,255,255,0.03);
     }
-    .theatre-toolbar button {
-        padding: 4px 10px;
-        background: transparent;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 4px;
-        color: #aaa;
+
+    .theatre-group-header i.chevron {
+        margin-left: auto;
+        font-size: 0.7em;
+        transition: transform 0.2s;
+    }
+
+    .theatre-group.collapsed .chevron {
+        transform: rotate(-90deg);
+    }
+
+    .theatre-group-body {
+        padding: 8px;
+    }
+
+    .theatre-group.collapsed .theatre-group-body {
+        display: none;
+    }
+
+    .theatre-btn {
+        width: 100%;
+        padding: 10px 14px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
         cursor: pointer;
-        font-size: 0.8rem;
-        transition: all 0.2s;
+        font-size: 0.85rem;
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 8px;
+        transition: all 0.2s;
+        margin-bottom: 6px;
     }
-    .theatre-toolbar button:hover {
-        border-color: #7c5cbf;
+
+    .theatre-btn:hover {
+        background: var(--accent);
         color: #fff;
+        border-color: var(--accent);
     }
-    .theatre-toolbar button.recording {
+
+    .theatre-btn.recording {
         background: rgba(220, 40, 40, 0.85);
         border-color: #e44;
         color: #fff;
     }
-    .theatre-toolbar button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    #glb-file-input { display: none; }
 
-    /* Push Theatre.js Studio overlay to the right of our sidebar (220px) */
+    .preset-item {
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.82rem;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+
+    .preset-item:hover {
+        background: rgba(124, 92, 191, 0.2);
+    }
+
+    /* ── Viewport ── */
+    .theatre-viewport {
+        flex: 1;
+        position: relative;
+        background: #080812;
+    }
+
+    #theatre-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: grab;
+    }
+
+    #theatre-canvas:active {
+        cursor: grabbing;
+    }
+
+    /* ── Right Panel (Tabs) ── */
+    .theatre-right-panel {
+        width: 300px;
+        background: var(--bg-secondary);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .panel-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-secondary);
+        flex-shrink: 0;
+    }
+
+    .panel-tab {
+        padding: 10px 18px;
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        user-select: none;
+    }
+
+    .panel-tab:hover {
+        color: var(--text);
+        background: rgba(255,255,255,0.03);
+    }
+
+    .panel-tab.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+    }
+
+    .panel-tab-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+    }
+
+    .tab-pane {
+        display: none;
+    }
+
+    .tab-pane.active {
+        display: block;
+    }
+
+    /* ── Animation Tree (reuse from character_viewer) ── */
+    .anim-tree {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px;
+        background: rgba(0,0,0,0.2);
+    }
+
+    .anim-cat {
+        margin-bottom: 2px;
+    }
+
+    .anim-cat-header {
+        padding: 6px 10px;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .anim-cat-header:hover {
+        background: rgba(255,255,255,0.05);
+    }
+
+    .anim-cat-header i {
+        font-size: 0.7em;
+        transition: transform 0.2s;
+    }
+
+    .anim-cat.open .anim-cat-header i {
+        transform: rotate(90deg);
+    }
+
+    .anim-cat-body {
+        display: none;
+        padding-left: 20px;
+    }
+
+    .anim-cat.open .anim-cat-body {
+        display: block;
+    }
+
+    .anim-item {
+        padding: 5px 10px;
+        font-size: 0.8rem;
+        color: var(--text);
+        cursor: pointer;
+        border-radius: 4px;
+        margin-bottom: 2px;
+    }
+
+    .anim-item:hover {
+        background: rgba(124, 92, 191, 0.2);
+    }
+
+    .anim-item.active {
+        background: var(--accent);
+        color: #fff;
+    }
+
+    /* ── Bottom Player Controls ── */
+    .player-controls {
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+
+    .controls-row {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
+    .controls-row + .controls-row {
+        border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .controls-buttons {
+        justify-content: center;
+    }
+
+    .ctrl-btn {
+        padding: 6px 12px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.15s;
+    }
+
+    .ctrl-btn:hover {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+
+    .ctrl-btn-play {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+
+    .controls-timeline {
+        padding: 4px 12px;
+    }
+
+    .timeline-slider {
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(255,255,255,0.1);
+        outline: none;
+        -webkit-appearance: none;
+        cursor: pointer;
+    }
+
+    .timeline-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+    }
+
+    .timeline-slider::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: none;
+        cursor: pointer;
+    }
+
+    .time-display {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+        min-width: 45px;
+    }
+
+    .controls-speed {
+        justify-content: center;
+    }
+
+    .speed-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-right: 8px;
+    }
+
+    .speed-btn {
+        padding: 4px 10px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition: all 0.15s;
+    }
+
+    .speed-btn:hover {
+        color: var(--text);
+        border-color: var(--accent);
+    }
+
+    .speed-btn.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+
+    /* Push Theatre.js Studio overlay to the right of main sidebar */
     #theatrejs-studio-root {
         inset: 0 0 0 220px !important;
     }
 
-    /* ── Modal overlay ── */
-    .theatre-modal-overlay {
+    /* Hide file input */
+    #glb-file-input {
         display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.6);
-        z-index: 1000;
-        align-items: center;
-        justify-content: center;
     }
-    .theatre-modal-overlay.open { display: flex; }
-    .theatre-modal {
-        background: #1e1e32;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 10px;
-        width: 480px;
-        max-height: 70vh;
-        display: flex;
-        flex-direction: column;
-        box-shadow: 0 16px 48px rgba(0,0,0,0.6);
-    }
-    .theatre-modal-header {
-        padding: 14px 18px;
-        border-bottom: 1px solid rgba(255,255,255,0.08);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .theatre-modal-header h3 {
-        margin: 0;
-        font-size: 0.95rem;
-        color: #ddd;
-        font-weight: 500;
-    }
-    .theatre-modal-close {
-        background: none;
-        border: none;
-        color: #888;
-        font-size: 1.1rem;
-        cursor: pointer;
-        padding: 4px 8px;
-        border-radius: 4px;
-    }
-    .theatre-modal-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
-    .theatre-modal-body {
-        padding: 12px 18px;
-        overflow-y: auto;
-        flex: 1;
-    }
-    .theatre-modal-body .loading-msg {
-        color: #888;
-        font-size: 0.85rem;
-        text-align: center;
-        padding: 20px 0;
-    }
-
-    /* ── Modal list items ── */
-    .modal-list-item {
-        padding: 10px 14px;
-        border-radius: 6px;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        color: #ccc;
-        font-size: 0.85rem;
-        transition: background 0.15s;
-    }
-    .modal-list-item:hover { background: rgba(124, 92, 191, 0.2); color: #fff; }
-    .modal-list-item .item-meta {
-        color: #777;
-        font-size: 0.75rem;
-    }
-
-    /* ── Animation category tree ── */
-    .anim-category {
-        margin-bottom: 4px;
-    }
-    .anim-category-header {
-        padding: 8px 14px;
-        cursor: pointer;
-        color: #bbb;
-        font-size: 0.85rem;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border-radius: 6px;
-    }
-    .anim-category-header:hover { background: rgba(255,255,255,0.05); color: #fff; }
-    .anim-category-header i { font-size: 0.7rem; transition: transform 0.2s; }
-    .anim-category.open .anim-category-header i { transform: rotate(90deg); }
-    .anim-category-items {
-        display: none;
-        padding-left: 24px;
-    }
-    .anim-category.open .anim-category-items { display: block; }
-    .anim-item {
-        padding: 6px 14px;
-        cursor: pointer;
-        color: #aaa;
-        font-size: 0.82rem;
-        border-radius: 4px;
-        display: flex;
-        justify-content: space-between;
-    }
-    .anim-item:hover { background: rgba(124, 92, 191, 0.2); color: #fff; }
-    .anim-item .frame-count { color: #666; font-size: 0.75rem; }
-
-    /* ── Save modal input ── */
-    .save-modal-input {
-        width: 100%;
-        padding: 10px 14px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 6px;
-        color: #ddd;
-        font-size: 0.9rem;
-        outline: none;
-        box-sizing: border-box;
-    }
-    .save-modal-input:focus { border-color: #7c5cbf; }
-    .save-modal-btn {
-        margin-top: 12px;
-        padding: 10px 20px;
-        background: #7c5cbf;
-        border: none;
-        border-radius: 6px;
-        color: #fff;
-        font-size: 0.85rem;
-        cursor: pointer;
-        width: 100%;
-    }
-    .save-modal-btn:hover { background: #6a4daa; }
-    .save-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="theatre-container">
-    <canvas id="theatre-canvas"></canvas>
-
-    <!-- Menubar -->
-    <div class="theatre-menubar">
-        <div class="menu-item" id="menu-file">
-            File
-            <div class="menu-dropdown">
-                <div class="menu-action" id="menu-scene-load">
-                    <i class="fas fa-folder-open"></i> Scene laden
-                </div>
-                <div class="menu-action" id="menu-scene-save">
-                    <i class="fas fa-save"></i> Scene speichern
-                </div>
-                <div class="menu-separator"></div>
-                <div class="menu-action" id="menu-model-load">
-                    <i class="fas fa-user"></i> Modell laden
-                </div>
-                <div class="menu-action" id="menu-anim-load">
-                    <i class="fas fa-running"></i> Animation laden
-                </div>
-                <div class="menu-separator"></div>
-                <div class="menu-action" id="menu-add-glb">
-                    <i class="fas fa-cube"></i> GLB importieren
-                </div>
+<div class="theatre-layout">
+    <!-- Left Control Panel -->
+    <div class="theatre-left-panel">
+        <!-- Licht -->
+        <div class="theatre-group">
+            <div class="theatre-group-header">
+                <i class="fas fa-lightbulb"></i> Licht
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="theatre-group-body">
+                <button class="theatre-btn" id="btn-add-light" title="Neues Licht hinzufügen">
+                    <i class="fas fa-plus"></i> Add Light
+                </button>
             </div>
         </div>
-        <div class="menu-item" id="menu-settings">
-            Settings
-            <div class="menu-dropdown">
-                <div class="menu-action" data-preset="ballet_stage">
+
+        <!-- Video -->
+        <div class="theatre-group">
+            <div class="theatre-group-header">
+                <i class="fas fa-file-video"></i> Video
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="theatre-group-body">
+                <button class="theatre-btn" id="btn-export-video" title="Video aufnehmen">
+                    <i class="fas fa-circle"></i> Export Video
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="theatre-group">
+            <div class="theatre-group-header">
+                <i class="fas fa-cog"></i> Settings
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="theatre-group-body">
+                <div class="preset-item" data-preset="ballet_stage">
                     <i class="fas fa-theater-masks"></i> Ballet Stage
                 </div>
-                <div class="menu-action" data-preset="studio_bright">
+                <div class="preset-item" data-preset="studio_bright">
                     <i class="fas fa-sun"></i> Studio Bright
                 </div>
-                <div class="menu-action" data-preset="cinematic_moody">
+                <div class="preset-item" data-preset="cinematic_moody">
                     <i class="fas fa-film"></i> Cinematic Moody
                 </div>
-                <div class="menu-action" data-preset="fashion_show">
+                <div class="preset-item" data-preset="fashion_show">
                     <i class="fas fa-walking"></i> Fashion Show
                 </div>
-                <div class="menu-action" data-preset="sunset_warm">
+                <div class="preset-item" data-preset="sunset_warm">
                     <i class="fas fa-cloud-sun"></i> Sunset Warm
                 </div>
             </div>
         </div>
-        <div class="menu-item">
-            <a href="{% url 'theatre_help' %}" target="_blank" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+
+        <!-- Datei -->
+        <div class="theatre-group">
+            <div class="theatre-group-header">
+                <i class="fas fa-folder-open"></i> Datei
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="theatre-group-body">
+                <button class="theatre-btn" id="menu-scene-load">
+                    <i class="fas fa-folder-open"></i> Scene laden
+                </button>
+                <button class="theatre-btn" id="menu-scene-save">
+                    <i class="fas fa-save"></i> Scene speichern
+                </button>
+                <button class="theatre-btn" id="menu-model-load">
+                    <i class="fas fa-user"></i> Modell laden
+                </button>
+                <button class="theatre-btn" id="menu-add-glb">
+                    <i class="fas fa-cube"></i> GLB importieren
+                </button>
+            </div>
+        </div>
+
+        <!-- Hilfe -->
+        <div class="theatre-group">
+            <div class="theatre-group-header">
                 <i class="fas fa-question-circle"></i> Hilfe
-            </a>
+            </div>
+            <div class="theatre-group-body">
+                <a href="{% url 'theatre_help' %}" target="_blank" class="theatre-btn" style="text-decoration: none;">
+                    <i class="fas fa-book"></i> Dokumentation
+                </a>
+                <a href="{% url 'settings_theatre' %}" class="theatre-btn" style="text-decoration: none;">
+                    <i class="fas fa-cog"></i> Einstellungen
+                </a>
+            </div>
         </div>
     </div>
 
-    <!-- Toolbar — top-right -->
-    <div class="theatre-toolbar">
-        <button id="btn-add-light" title="Neues Licht hinzufügen">
-            <i class="fas fa-lightbulb"></i> Add Light
+    <!-- Viewport -->
+    <div class="theatre-viewport">
+        <canvas id="theatre-canvas"></canvas>
+    </div>
+
+    <!-- Right Panel (Tabs) -->
+    <div class="theatre-right-panel">
+        <div class="panel-tabs">
+            <div class="panel-tab active" data-tab="tab-animations">Animationen</div>
+            <div class="panel-tab" data-tab="tab-models">Modelle</div>
+        </div>
+
+        <div class="panel-tab-content">
+            <!-- Tab: Animationen -->
+            <div class="tab-pane active" id="tab-animations">
+                <h3 style="font-size:0.9rem;margin-bottom:10px;color:var(--text-muted);">BVH Bibliothek</h3>
+                <div class="anim-tree" id="anim-tree">
+                    <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Animationen...</div>
+                </div>
+            </div>
+
+            <!-- Tab: Modelle -->
+            <div class="tab-pane" id="tab-models">
+                <h3 style="font-size:0.9rem;margin-bottom:10px;color:var(--text-muted);">Character Presets</h3>
+                <div class="anim-tree" id="model-list">
+                    <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Modelle...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom Player Controls -->
+<div class="player-controls">
+    <div class="controls-row controls-buttons">
+        <button class="ctrl-btn" id="btnFrameBack" title="Previous frame">
+            <i class="fas fa-caret-left"></i> Frame
         </button>
-        <button id="btn-export-video" title="Video aufnehmen">
-            <i class="fas fa-file-video"></i> Export Video
+        <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause">
+            <i class="fas fa-play" id="playIcon"></i>
+        </button>
+        <button class="ctrl-btn" id="btnStop" title="Stop (reset)">
+            <i class="fas fa-stop"></i>
+        </button>
+        <button class="ctrl-btn" id="btnFrameFwd" title="Next frame">
+            Frame <i class="fas fa-caret-right"></i>
         </button>
     </div>
+    <div class="controls-row controls-timeline">
+        <span class="time-display" id="timeCurrent">00:00</span>
+        <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="100" step="0.1" value="0">
+        <span class="time-display" id="timeDuration">00:00</span>
+    </div>
+    <div class="controls-row controls-speed">
+        <span class="speed-label">Speed:</span>
+        <button class="speed-btn" data-speed="0.25">0.25x</button>
+        <button class="speed-btn" data-speed="0.5">0.5x</button>
+        <button class="speed-btn active" data-speed="1">1x</button>
+        <button class="speed-btn" data-speed="2">2x</button>
+        <span style="margin-left:auto;color:#666;font-size:0.75rem;">
+            <kbd style="background:#333;padding:2px 6px;border-radius:3px;">Space</kbd> Play/Pause
+        </span>
+    </div>
+</div>
 
-    <input type="file" id="glb-file-input" accept=".glb,.gltf">
+<!-- Hidden file input -->
+<input type="file" id="glb-file-input" accept=".glb,.gltf">
 
-    <!-- ── Scene Load Modal ── -->
-    <div class="theatre-modal-overlay" id="modal-scene-load">
-        <div class="theatre-modal">
-            <div class="theatre-modal-header">
-                <h3>Scene laden</h3>
-                <button class="theatre-modal-close" data-close-modal>&times;</button>
-            </div>
-            <div class="theatre-modal-body" id="scene-list-body">
-                <div class="loading-msg">Lade Scenes...</div>
-            </div>
+<!-- Modals (Scene Load/Save) -->
+<div class="theatre-modal-overlay" id="modal-scene-load" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
+    <div class="theatre-modal" style="background:#1e1e32;border:1px solid rgba(255,255,255,0.1);border-radius:10px;width:480px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
+        <div class="theatre-modal-header" style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;font-size:0.95rem;color:#ddd;font-weight:500;">Scene laden</h3>
+            <button class="theatre-modal-close" data-close-modal style="background:none;border:none;color:#888;font-size:1.1rem;cursor:pointer;padding:4px 8px;border-radius:4px;">&times;</button>
+        </div>
+        <div class="theatre-modal-body" id="scene-list-body" style="padding:12px 18px;overflow-y:auto;flex:1;">
+            <div class="loading-msg">Lade Scenes...</div>
         </div>
     </div>
+</div>
 
-    <!-- ── Scene Save Modal ── -->
-    <div class="theatre-modal-overlay" id="modal-scene-save">
-        <div class="theatre-modal">
-            <div class="theatre-modal-header">
-                <h3>Scene speichern</h3>
-                <button class="theatre-modal-close" data-close-modal>&times;</button>
-            </div>
-            <div class="theatre-modal-body">
-                <input type="text" class="save-modal-input" id="scene-save-name"
-                       placeholder="Scene-Name eingeben...">
-                <button class="save-modal-btn" id="scene-save-btn">Speichern</button>
-            </div>
+<div class="theatre-modal-overlay" id="modal-scene-save" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
+    <div class="theatre-modal" style="background:#1e1e32;border:1px solid rgba(255,255,255,0.1);border-radius:10px;width:480px;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
+        <div class="theatre-modal-header" style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;font-size:0.95rem;color:#ddd;font-weight:500;">Scene speichern</h3>
+            <button class="theatre-modal-close" data-close-modal style="background:none;border:none;color:#888;font-size:1.1rem;cursor:pointer;padding:4px 8px;border-radius:4px;">&times;</button>
         </div>
-    </div>
-
-    <!-- ── Model Load Modal ── -->
-    <div class="theatre-modal-overlay" id="modal-model-load">
-        <div class="theatre-modal">
-            <div class="theatre-modal-header">
-                <h3>Modell laden</h3>
-                <button class="theatre-modal-close" data-close-modal>&times;</button>
-            </div>
-            <div class="theatre-modal-body" id="model-list-body">
-                <div class="loading-msg">Lade Modelle...</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── Animation Load Modal ── -->
-    <div class="theatre-modal-overlay" id="modal-anim-load">
-        <div class="theatre-modal">
-            <div class="theatre-modal-header">
-                <h3>Animation laden</h3>
-                <button class="theatre-modal-close" data-close-modal>&times;</button>
-            </div>
-            <div class="theatre-modal-body" id="anim-list-body">
-                <div class="loading-msg">Lade Animationen...</div>
-            </div>
+        <div class="theatre-modal-body" style="padding:12px 18px;">
+            <input type="text" class="save-modal-input" id="scene-save-name" placeholder="Scene-Name eingeben..." style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#ddd;font-size:0.9rem;outline:none;box-sizing:border-box;">
+            <button class="save-modal-btn" id="scene-save-btn" style="margin-top:12px;padding:10px 20px;background:#7c5cbf;border:none;border-radius:6px;color:#fff;font-size:0.85rem;cursor:pointer;width:100%;">Speichern</button>
         </div>
     </div>
 </div>

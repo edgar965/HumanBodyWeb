@@ -230,7 +230,9 @@ export function loadBVHFromText(bvhText, scene, animName) {
     // AnimationMixer on the root bone
     const mixer = new THREE.AnimationMixer(rootBone);
     const action = mixer.clipAction(result.clip);
+    action.setLoop(THREE.LoopRepeat);
     action.play();
+    action.paused = true; // Start paused for player control
 
     // Register root bone in Theatre
     _assetCounter++;
@@ -239,5 +241,6 @@ export function loadBVHFromText(bvhText, scene, animName) {
         createMeshSheet(sheet, animName || `BVH ${_assetCounter}`, rootBone);
     }
 
-    return { mixer, skeleton: skeletonHelper, clip: result.clip, rootBone };
+    const duration = result.clip.duration || 1;
+    return { mixer, action, skeleton: skeletonHelper, clip: result.clip, rootBone, duration };
 }

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import studio from '@theatre/studio';
 import { createScene } from './scene-setup.js';
 import { setupTheatre, createCameraSheet, createLightSheet } from './theatre-bridge.js';
-import { loadGLBFromFile, loadCharacterModel, loadCharacterFromPreset, loadBVHFromText } from './asset-loader.js';
+import { loadGLBFromFile, loadCharacterFromPreset, loadBVHFromText } from './asset-loader.js';
 import { VideoExporter } from './video-export.js';
 import {
     fetchSceneList, fetchScene, saveScene,
@@ -38,37 +38,55 @@ window.addEventListener('DOMContentLoaded', () => {
     const exporter = new VideoExporter(renderer.domElement);
 
     // 6. Track active mixers for BVH animation playback
-    const activeMixers = [];
+    let activeMixer = null; // Only one animation at a time
+    let currentAction = null;
     const clock = new THREE.Clock();
 
-    // ── Modal helpers ──
+    // ── Collapsible Groups ──
+    document.querySelectorAll('.theatre-group-header').forEach((header) => {
+        header.addEventListener('click', () => {
+            const group = header.closest('.theatre-group');
+            if (!group) return;
+            group.classList.toggle('collapsed');
+        });
+    });
 
+    // ── Tab Switching ──
+    document.querySelectorAll('.panel-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+            const targetId = tab.getAttribute('data-tab');
+            document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            tab.classList.add('active');
+            const targetPane = document.getElementById(targetId);
+            if (targetPane) targetPane.classList.add('active');
+        });
+    });
+
+    // ── Modal helpers ──
     function openModal(id) {
         const el = document.getElementById(id);
-        if (el) el.classList.add('open');
+        if (el) el.style.display = 'flex';
     }
 
     function closeModal(id) {
         const el = document.getElementById(id);
-        if (el) el.classList.remove('open');
+        if (el) el.style.display = 'none';
     }
 
-    // Close modals via X button
     document.querySelectorAll('[data-close-modal]').forEach((btn) => {
         btn.addEventListener('click', () => {
-            btn.closest('.theatre-modal-overlay')?.classList.remove('open');
+            btn.closest('.theatre-modal-overlay')?.style.removeProperty('display');
         });
     });
 
-    // Close modals via backdrop click
     document.querySelectorAll('.theatre-modal-overlay').forEach((overlay) => {
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) overlay.classList.remove('open');
+            if (e.target === overlay) overlay.style.removeProperty('display');
         });
     });
 
-    // ── Menu: Scene Load ──
-
+    // ── Scene Load ──
     const menuSceneLoad = document.getElementById('menu-scene-load');
     if (menuSceneLoad) {
         menuSceneLoad.addEventListener('click', async () => {
@@ -85,12 +103,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 body.innerHTML = '';
                 for (const s of scenes) {
                     const item = document.createElement('div');
-                    item.className = 'modal-list-item';
-                    item.innerHTML = `
-                        <span>${s.label || s.name}</span>
-                        <span class="item-meta">${s.character_count || 0} Character(s)</span>
-                    `;
+                    item.style.cssText = 'padding:10px 14px;border-radius:6px;cursor:pointer;color:#ccc;font-size:0.85rem;';
+                    item.innerHTML = `<span>${s.label || s.name}</span>`;
                     item.addEventListener('click', () => handleSceneLoad(s.name));
+                    item.addEventListener('mouseenter', () => item.style.background = 'rgba(124, 92, 191, 0.2)');
+                    item.addEventListener('mouseleave', () => item.style.background = '');
                     body.appendChild(item);
                 }
             } catch (err) {
@@ -104,8 +121,6 @@ window.addEventListener('DOMContentLoaded', () => {
         try {
             const sceneData = await fetchScene(name);
             console.log('Scene loaded:', name, sceneData);
-
-            // Load characters from scene
             if (sceneData.characters && Array.isArray(sceneData.characters)) {
                 for (const charDef of sceneData.characters) {
                     await loadCharacterFromPreset(scene, charDef, charDef.name || name);
@@ -117,8 +132,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ── Menu: Scene Save ──
-
+    // ── Scene Save ──
     const menuSceneSave = document.getElementById('menu-scene-save');
     const sceneSaveBtn = document.getElementById('scene-save-btn');
     const sceneSaveInput = document.getElementById('scene-save-name');
@@ -142,7 +156,6 @@ window.addEventListener('DOMContentLoaded', () => {
             sceneSaveBtn.textContent = 'Speichere...';
 
             try {
-                // Collect scene state
                 const sceneState = {
                     camera: {
                         position: camera.position.toArray(),
@@ -181,121 +194,139 @@ window.addEventListener('DOMContentLoaded', () => {
             sceneSaveBtn.textContent = 'Speichern';
         });
 
-        // Enter key to save
         sceneSaveInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') sceneSaveBtn.click();
         });
     }
 
-    // ── Menu: Model Load ──
-
+    // ── Model Load (from right panel Modelle tab) ──
+    const modelListEl = document.getElementById('model-list');
     const menuModelLoad = document.getElementById('menu-model-load');
-    if (menuModelLoad) {
-        menuModelLoad.addEventListener('click', async () => {
-            const body = document.getElementById('model-list-body');
-            body.innerHTML = '<div class="loading-msg">Lade Modelle...</div>';
-            openModal('modal-model-load');
 
-            try {
-                const models = await fetchModelList();
-                if (models.length === 0) {
-                    body.innerHTML = '<div class="loading-msg">Keine Modelle gefunden.</div>';
-                    return;
-                }
-                body.innerHTML = '';
-                for (const m of models) {
-                    const item = document.createElement('div');
-                    item.className = 'modal-list-item';
-                    item.innerHTML = `<span>${m.label || m.name}</span>`;
-                    item.addEventListener('click', () => handleModelLoad(m.name));
-                    body.appendChild(item);
-                }
-            } catch (err) {
-                body.innerHTML = `<div class="loading-msg">Fehler: ${err.message}</div>`;
-            }
-        });
-    }
-
-    async function handleModelLoad(name) {
-        closeModal('modal-model-load');
+    async function loadModelListIntoPanel() {
         try {
-            const preset = await fetchModel(name);
-            await loadCharacterFromPreset(scene, preset, name);
-            console.log('Model loaded:', name);
+            const models = await fetchModelList();
+            if (models.length === 0) {
+                modelListEl.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Modelle gefunden.</div>';
+                return;
+            }
+            modelListEl.innerHTML = '';
+            for (const m of models) {
+                const item = document.createElement('div');
+                item.className = 'anim-item';
+                item.textContent = m.label || m.name;
+                item.addEventListener('click', async () => {
+                    try {
+                        const preset = await fetchModel(m.name);
+                        await loadCharacterFromPreset(scene, preset, m.name);
+                        console.log('Model loaded:', m.name);
+                        // Highlight active
+                        document.querySelectorAll('#model-list .anim-item').forEach(i => i.classList.remove('active'));
+                        item.classList.add('active');
+                    } catch (err) {
+                        console.error('Model load error:', err);
+                        alert('Modell laden fehlgeschlagen: ' + err.message);
+                    }
+                });
+                modelListEl.appendChild(item);
+            }
         } catch (err) {
-            console.error('Model load error:', err);
-            alert('Modell laden fehlgeschlagen: ' + err.message);
+            modelListEl.innerHTML = `<div style="padding:12px;color:#e74c3c;font-size:0.8rem;">Fehler: ${err.message}</div>`;
         }
     }
 
-    // ── Menu: Animation Load ──
+    // Auto-load model list into right panel
+    loadModelListIntoPanel();
 
-    const menuAnimLoad = document.getElementById('menu-anim-load');
-    if (menuAnimLoad) {
-        menuAnimLoad.addEventListener('click', async () => {
-            const body = document.getElementById('anim-list-body');
-            body.innerHTML = '<div class="loading-msg">Lade Animationen...</div>';
-            openModal('modal-anim-load');
-
-            try {
-                const categories = await fetchAnimationList();
-                const catNames = Object.keys(categories);
-                if (catNames.length === 0) {
-                    body.innerHTML = '<div class="loading-msg">Keine Animationen gefunden.</div>';
-                    return;
-                }
-                body.innerHTML = '';
-                for (const catName of catNames) {
-                    const anims = categories[catName];
-                    const catDiv = document.createElement('div');
-                    catDiv.className = 'anim-category';
-
-                    const header = document.createElement('div');
-                    header.className = 'anim-category-header';
-                    header.innerHTML = `<i class="fas fa-chevron-right"></i> ${catName} (${anims.length})`;
-                    header.addEventListener('click', () => {
-                        catDiv.classList.toggle('open');
-                    });
-                    catDiv.appendChild(header);
-
-                    const itemsDiv = document.createElement('div');
-                    itemsDiv.className = 'anim-category-items';
-
-                    for (const anim of anims) {
-                        const item = document.createElement('div');
-                        item.className = 'anim-item';
-                        item.innerHTML = `
-                            <span>${anim.name}</span>
-                            <span class="frame-count">${anim.frames || '?'} frames</span>
-                        `;
-                        item.addEventListener('click', () => handleAnimLoad(anim.category, anim.name));
-                        itemsDiv.appendChild(item);
-                    }
-
-                    catDiv.appendChild(itemsDiv);
-                    body.appendChild(catDiv);
-                }
-            } catch (err) {
-                body.innerHTML = `<div class="loading-msg">Fehler: ${err.message}</div>`;
-            }
+    // Also allow loading via left panel button (opens Modelle tab)
+    if (menuModelLoad) {
+        menuModelLoad.addEventListener('click', () => {
+            // Switch to Modelle tab
+            document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            const modelTab = document.querySelector('[data-tab="tab-models"]');
+            const modelPane = document.getElementById('tab-models');
+            if (modelTab) modelTab.classList.add('active');
+            if (modelPane) modelPane.classList.add('active');
         });
     }
 
+    // ── Animation Load (right panel) ──
+    const animTreeEl = document.getElementById('anim-tree');
+
+    async function loadAnimationTreeIntoPanel() {
+        try {
+            const categories = await fetchAnimationList();
+            const catNames = Object.keys(categories);
+            if (catNames.length === 0) {
+                animTreeEl.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Animationen gefunden.</div>';
+                return;
+            }
+            animTreeEl.innerHTML = '';
+            for (const catName of catNames) {
+                const anims = categories[catName];
+                const catDiv = document.createElement('div');
+                catDiv.className = 'anim-cat';
+
+                const header = document.createElement('div');
+                header.className = 'anim-cat-header';
+                header.innerHTML = `<i class="fas fa-chevron-right"></i> ${catName} (${anims.length})`;
+                header.addEventListener('click', () => {
+                    catDiv.classList.toggle('open');
+                });
+                catDiv.appendChild(header);
+
+                const body = document.createElement('div');
+                body.className = 'anim-cat-body';
+
+                for (const anim of anims) {
+                    const item = document.createElement('div');
+                    item.className = 'anim-item';
+                    item.textContent = anim.name;
+                    item.addEventListener('click', async () => {
+                        await handleAnimLoad(anim.category, anim.name);
+                        // Highlight active
+                        document.querySelectorAll('#anim-tree .anim-item').forEach(i => i.classList.remove('active'));
+                        item.classList.add('active');
+                    });
+                    body.appendChild(item);
+                }
+
+                catDiv.appendChild(body);
+                animTreeEl.appendChild(catDiv);
+            }
+        } catch (err) {
+            animTreeEl.innerHTML = `<div style="padding:12px;color:#e74c3c;font-size:0.8rem;">Fehler: ${err.message}</div>`;
+        }
+    }
+
     async function handleAnimLoad(category, name) {
-        closeModal('modal-anim-load');
         try {
             const bvhText = await fetchBVH(category, name);
-            const { mixer } = loadBVHFromText(bvhText, scene, `${category}/${name}`);
-            activeMixers.push(mixer);
-            console.log('Animation loaded:', category, name);
+            const { mixer, action, duration } = loadBVHFromText(bvhText, scene, `${category}/${name}`);
+
+            // Replace current mixer
+            if (activeMixer) activeMixer.stopAllAction();
+            activeMixer = mixer;
+            currentAction = action;
+
+            // Update player UI
+            updatePlayerDuration(duration);
+            isPlaying = false;
+            currentTime = 0;
+            updatePlayerUI();
+
+            console.log('Animation loaded:', category, name, duration);
         } catch (err) {
             console.error('Animation load error:', err);
             alert('Animation laden fehlgeschlagen: ' + err.message);
         }
     }
 
-    // ── Menu: GLB Import ──
+    // Auto-load animation tree
+    loadAnimationTreeIntoPanel();
 
+    // ── GLB Import ──
     const menuAddGLB = document.getElementById('menu-add-glb');
     const fileInput = document.getElementById('glb-file-input');
     if (menuAddGLB && fileInput) {
@@ -313,10 +344,8 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Menu: Settings (Presets) ──
-
-    const presetButtons = document.querySelectorAll('[data-preset]');
-    presetButtons.forEach((btn) => {
+    // ── Settings (Presets) ──
+    document.querySelectorAll('[data-preset]').forEach((btn) => {
         btn.addEventListener('click', () => {
             const presetName = btn.getAttribute('data-preset');
             const preset = PRESETS[presetName];
@@ -329,8 +358,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Toolbar: Add Light ──
-
+    // ── Add Light ──
     const btnAddLight = document.getElementById('btn-add-light');
     let extraLightCount = 0;
 
@@ -355,13 +383,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Toolbar: Export Video ──
-
+    // ── Export Video ──
     const btnExport = document.getElementById('btn-export-video');
     if (btnExport) {
         btnExport.addEventListener('click', async () => {
             if (exporter.isRecording) {
-                btnExport.innerHTML = '<i class="fas fa-file-video"></i> Export Video';
+                btnExport.innerHTML = '<i class="fas fa-circle"></i> Export Video';
                 btnExport.classList.remove('recording');
                 await exporter.stopAndDownload();
             } else {
@@ -372,8 +399,131 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Auto-load defaults from settings ──
+    // ── Animation Player Controls ──
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const btnStop = document.getElementById('btnStop');
+    const btnFrameBack = document.getElementById('btnFrameBack');
+    const btnFrameFwd = document.getElementById('btnFrameFwd');
+    const timelineSlider = document.getElementById('timelineSlider');
+    const timeCurrent = document.getElementById('timeCurrent');
+    const timeDuration = document.getElementById('timeDuration');
+    const playIcon = document.getElementById('playIcon');
 
+    let isPlaying = false;
+    let currentTime = 0;
+    let animDuration = 1;
+    let playbackSpeed = 1.0;
+
+    function updatePlayerDuration(duration) {
+        animDuration = duration || 1;
+        timeDuration.textContent = formatTime(animDuration);
+        timelineSlider.max = animDuration;
+    }
+
+    function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function updatePlayerUI() {
+        timeCurrent.textContent = formatTime(currentTime);
+        timelineSlider.value = currentTime;
+        if (playIcon) {
+            playIcon.className = isPlaying ? 'fas fa-pause' : 'fas fa-play';
+        }
+    }
+
+    function setAnimationTime(time) {
+        if (!activeMixer || !currentAction) return;
+        currentTime = Math.max(0, Math.min(time, animDuration));
+        currentAction.time = currentTime;
+        activeMixer.update(0); // Force update without advancing time
+        updatePlayerUI();
+    }
+
+    if (btnPlayPause) {
+        btnPlayPause.addEventListener('click', () => {
+            if (!activeMixer) return;
+            isPlaying = !isPlaying;
+            if (isPlaying && currentAction) {
+                currentAction.paused = false;
+                currentAction.play();
+            } else if (currentAction) {
+                currentAction.paused = true;
+            }
+            updatePlayerUI();
+        });
+    }
+
+    if (btnStop) {
+        btnStop.addEventListener('click', () => {
+            if (!activeMixer) return;
+            isPlaying = false;
+            currentTime = 0;
+            setAnimationTime(0);
+            if (currentAction) {
+                currentAction.stop();
+                currentAction.paused = true;
+            }
+            updatePlayerUI();
+        });
+    }
+
+    if (btnFrameBack) {
+        btnFrameBack.addEventListener('click', () => {
+            const fps = 30;
+            setAnimationTime(currentTime - 1 / fps);
+        });
+    }
+
+    if (btnFrameFwd) {
+        btnFrameFwd.addEventListener('click', () => {
+            const fps = 30;
+            setAnimationTime(currentTime + 1 / fps);
+        });
+    }
+
+    if (timelineSlider) {
+        let isSliding = false;
+        timelineSlider.addEventListener('mousedown', () => { isSliding = true; });
+        timelineSlider.addEventListener('mouseup', () => { isSliding = false; });
+        timelineSlider.addEventListener('input', () => {
+            const time = parseFloat(timelineSlider.value);
+            setAnimationTime(time);
+        });
+    }
+
+    // Speed buttons
+    document.querySelectorAll('.speed-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const speed = parseFloat(btn.getAttribute('data-speed'));
+            playbackSpeed = speed;
+            if (activeMixer) {
+                activeMixer.timeScale = speed;
+            }
+            document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return; // Don't trigger when typing
+
+        if (e.code === 'Space') {
+            e.preventDefault();
+            if (btnPlayPause) btnPlayPause.click();
+        } else if (e.code === 'ArrowLeft') {
+            e.preventDefault();
+            if (btnFrameBack) btnFrameBack.click();
+        } else if (e.code === 'ArrowRight') {
+            e.preventDefault();
+            if (btnFrameFwd) btnFrameFwd.click();
+        }
+    });
+
+    // ── Auto-load defaults from settings ──
     async function loadDefaults() {
         try {
             const resp = await fetch('/api/settings/theatre/');
@@ -400,9 +550,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (cfg.animation) {
                         const [category, name] = cfg.animation.split('/');
                         if (category && name) {
-                            const bvhText = await fetchBVH(category, name);
-                            const { mixer } = loadBVHFromText(bvhText, scene, cfg.animation);
-                            activeMixers.push(mixer);
+                            await handleAnimLoad(category, name);
                             console.log('✓ Auto-loaded animation:', cfg.animation);
                         }
                     }
@@ -415,18 +563,26 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Load defaults after a short delay to ensure everything is initialized
+    // Load defaults after a short delay
     setTimeout(loadDefaults, 500);
 
     // ── Render loop ──
-
     function animate() {
         requestAnimationFrame(animate);
         const delta = clock.getDelta();
 
-        // Update all active BVH animation mixers
-        for (const mixer of activeMixers) {
-            mixer.update(delta);
+        // Update active BVH animation mixer
+        if (activeMixer && isPlaying) {
+            activeMixer.update(delta * playbackSpeed);
+            currentTime = currentAction ? currentAction.time : 0;
+
+            // Loop animation
+            if (currentTime >= animDuration) {
+                currentTime = 0;
+                if (currentAction) currentAction.time = 0;
+            }
+
+            updatePlayerUI();
         }
 
         controls.update();
