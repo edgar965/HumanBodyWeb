@@ -128,13 +128,9 @@ function buildCharacterMesh(data) {
         geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     }
 
-    if (data.normals) {
-        const normals = base64ToFloat32(data.normals);
-        blenderToThreeCoords(normals);
-        geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-    } else {
-        geometry.computeVertexNormals();
-    }
+    // Always compute smooth vertex normals (fixes herringbone pattern from flat shading)
+    // Even if server provides normals, recompute to ensure smooth interpolation
+    geometry.computeVertexNormals();
 
     // Create material array (11 materials for different body parts)
     const materials = BODY_MATERIALS.map(d => new THREE.MeshStandardMaterial({
@@ -144,6 +140,7 @@ function buildCharacterMesh(data) {
         side: THREE.DoubleSide,
         transparent: d.transparent || false,
         opacity: d.opacity !== undefined ? d.opacity : 1.0,
+        flatShading: false, // Ensure smooth shading (fixes herringbone pattern)
     }));
 
     // Add material groups (assigns material indices to face ranges)
