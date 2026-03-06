@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Theatre - Einstellungen{% endblock %}
+
+{% block content %}
+<h1>Einstellungen — Theatre</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="settings-card">
+        <h2><i class="fas fa-film"></i> Theatre Defaults</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+            Diese Werte werden beim Laden der Theatre-Seite als Standardwerte verwendet.
+        </p>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Standard-Modell</strong>
+                <small>Welches Modell automatisch beim Laden der Theatre-Seite angezeigt wird.</small>
+            </div>
+            <div class="settings-input">
+                <select name="theatre_default_model" class="settings-select">
+                    <option value="" {% if not settings.theatre_default_model %}selected{% endif %}>(Kein Auto-Load)</option>
+                    {% for preset in available_presets %}
+                    <option value="{{ preset }}" {% if settings.theatre_default_model == preset %}selected{% endif %}>{{ preset }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Standard-Animation</strong>
+                <small>Welche Animation automatisch beim Laden der Theatre-Seite abgespielt wird.</small>
+            </div>
+            <div class="settings-input">
+                <select name="theatre_default_animation" class="settings-select">
+                    <option value="" {% if not settings.theatre_default_animation %}selected{% endif %}>(Keine Auto-Load)</option>
+                    {% for anim in available_animations %}
+                    <option value="{{ anim.value }}" {% if settings.theatre_default_animation == anim.value %}selected{% endif %}>{{ anim.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Standard-Licht-Preset</strong>
+                <small>Welche Licht-/Kamera-Konfiguration beim Laden der Theatre-Seite verwendet wird.</small>
+            </div>
+            <div class="settings-input">
+                <select name="theatre_default_preset" class="settings-select">
+                    {% for preset in available_lighting_presets %}
+                    <option value="{{ preset.value }}" {% if settings.theatre_default_preset == preset.value %}selected{% endif %}>{{ preset.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Speichern
+        </button>
+        <a href="{% url 'theatre' %}" class="btn">
+            <i class="fas fa-film"></i> Zur Theatre-Seite
+        </a>
+    </div>
+</form>
+
+<div class="settings-card" style="margin-top:1.5rem;">
+    <h2><i class="fas fa-question-circle"></i> Hinweise</h2>
+    <ul style="color:var(--text-muted);font-size:0.85rem;line-height:1.6;">
+        <li>Die <strong>Standard-Animation</strong> wird nur geladen, wenn ein Standard-Modell ausgewählt ist.</li>
+        <li>Du kannst auf der Theatre-Seite jederzeit manuell andere Modelle und Animationen laden.</li>
+        <li>Die Licht-Presets können auch über das <strong>Settings</strong>-Menü in der Theatre-Seite gewechselt werden.</li>
+        <li>Siehe <a href="{% url 'theatre_help' %}" target="_blank" style="color:var(--accent);">Theatre Hilfe</a> für eine detaillierte Anleitung.</li>
+    </ul>
+</div>
+{% endblock %}

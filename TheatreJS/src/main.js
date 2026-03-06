@@ -372,6 +372,52 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Auto-load defaults from settings ──
+
+    async function loadDefaults() {
+        try {
+            const resp = await fetch('/api/settings/theatre/');
+            if (!resp.ok) return;
+            const cfg = await resp.json();
+
+            // Apply lighting preset first
+            if (cfg.preset) {
+                const preset = PRESETS[cfg.preset];
+                if (preset) {
+                    applyPreset(preset, camera, lights, controls);
+                    console.log('✓ Auto-applied preset:', preset.name);
+                }
+            }
+
+            // Load model
+            if (cfg.model) {
+                try {
+                    const modelData = await fetchModel(cfg.model);
+                    await loadCharacterFromPreset(scene, modelData, cfg.model);
+                    console.log('✓ Auto-loaded model:', cfg.model);
+
+                    // Load animation if model loaded successfully
+                    if (cfg.animation) {
+                        const [category, name] = cfg.animation.split('/');
+                        if (category && name) {
+                            const bvhText = await fetchBVH(category, name);
+                            const { mixer } = loadBVHFromText(bvhText, scene, cfg.animation);
+                            activeMixers.push(mixer);
+                            console.log('✓ Auto-loaded animation:', cfg.animation);
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Auto-load model/animation failed:', err);
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to load Theatre defaults:', err);
+        }
+    }
+
+    // Load defaults after a short delay to ensure everything is initialized
+    setTimeout(loadDefaults, 500);
+
     // ── Render loop ──
 
     function animate() {

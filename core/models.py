@@ -307,6 +307,20 @@ class AppSettings(models.Model):
         help_text="Default HumanBody model preset for SMPL test page",
     )
 
+    # --- Theatre.js defaults ---
+    theatre_default_model = models.CharField(
+        max_length=200, default='FemaleWithHair', blank=True,
+        help_text="Default model preset for Theatre page",
+    )
+    theatre_default_animation = models.CharField(
+        max_length=300, default='', blank=True,
+        help_text="Default animation for Theatre page (format: category/name)",
+    )
+    theatre_default_preset = models.CharField(
+        max_length=50, default='ballet_stage', blank=True,
+        help_text="Default lighting/camera preset for Theatre page",
+    )
+
     # --- 3D Video Output ---
     video_output_dir = models.CharField(
         max_length=500, default=r'A:\3DTools\HumanBodyWeb\media\output', blank=True,

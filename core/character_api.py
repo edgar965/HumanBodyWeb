@@ -131,6 +131,76 @@ def theatre_help_page(request):
     return render(request, 'theatre_help.html')
 
 
+def theatre_settings_page(request):
+    """Theatre.js settings page (default model, animation, preset)."""
+    from core.models import AppSettings
+    from pathlib import Path
+    from django.conf import settings
+    from django.contrib import messages
+    from django.shortcuts import redirect
+    import json
+
+    s = AppSettings.load()
+
+    if request.method == 'POST':
+        s.theatre_default_model = request.POST.get('theatre_default_model', 'FemaleWithHair').strip()
+        s.theatre_default_animation = request.POST.get('theatre_default_animation', '').strip()
+        s.theatre_default_preset = request.POST.get('theatre_default_preset', 'ballet_stage').strip()
+        s.save()
+        messages.success(request, 'Theatre settings saved.')
+        return redirect('settings_theatre')
+
+    # Gather available model presets (JSON files, exclude .scene.json)
+    available_presets = []
+    models_dir = Path(settings.HUMANBODY_MODELS_DIR)
+    if models_dir.is_dir():
+        for f in sorted(models_dir.glob('*.json')):
+            if f.name.endswith('.scene.json'):
+                continue
+            available_presets.append(f.stem)
+
+    # Gather available animations (BVH files from data/bvh/)
+    available_animations = []
+    bvh_root = Path(settings.HUMANBODY_DATA_DIR) / 'bvh'
+    if bvh_root.is_dir():
+        for cat_dir in sorted(bvh_root.iterdir()):
+            if not cat_dir.is_dir():
+                continue
+            for bvh_file in sorted(cat_dir.glob('*.bvh')):
+                anim_path = f"{cat_dir.name}/{bvh_file.stem}"
+                available_animations.append({
+                    'value': anim_path,
+                    'label': f"{cat_dir.name} → {bvh_file.stem}",
+                })
+
+    # Available lighting presets (from presets.js)
+    available_lighting_presets = [
+        {'value': 'ballet_stage', 'label': 'Ballet Stage'},
+        {'value': 'studio_bright', 'label': 'Studio Bright'},
+        {'value': 'cinematic_moody', 'label': 'Cinematic Moody'},
+        {'value': 'fashion_show', 'label': 'Fashion Show'},
+        {'value': 'sunset_warm', 'label': 'Sunset Warm'},
+    ]
+
+    return render(request, 'settings_theatre.html', {
+        'settings': s,
+        'available_presets': available_presets,
+        'available_animations': available_animations,
+        'available_lighting_presets': available_lighting_presets,
+    })
+
+
+def theatre_settings_api(request):
+    """API: Get Theatre default settings (for auto-load)."""
+    from core.models import AppSettings
+    s = AppSettings.load()
+    return JsonResponse({
+        'model': s.theatre_default_model or '',
+        'animation': s.theatre_default_animation or '',
+        'preset': s.theatre_default_preset or 'ballet_stage',
+    })
+
+
 def animations_page(request):
     """Render the Animations page."""
     return render(request, 'animations.html')
