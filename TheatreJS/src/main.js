@@ -42,15 +42,6 @@ window.addEventListener('DOMContentLoaded', () => {
     let currentAction = null;
     const clock = new THREE.Clock();
 
-    // ── Collapsible Groups ──
-    document.querySelectorAll('.theatre-group-header').forEach((header) => {
-        header.addEventListener('click', () => {
-            const group = header.closest('.theatre-group');
-            if (!group) return;
-            group.classList.toggle('collapsed');
-        });
-    });
-
     // ── Tab Switching ──
     document.querySelectorAll('.panel-tab').forEach((tab) => {
         tab.addEventListener('click', () => {
@@ -359,11 +350,11 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── Add Light ──
-    const btnAddLight = document.getElementById('btn-add-light');
+    const menuAddLight = document.getElementById('menu-add-light');
     let extraLightCount = 0;
 
-    if (btnAddLight) {
-        btnAddLight.addEventListener('click', () => {
+    if (menuAddLight) {
+        menuAddLight.addEventListener('click', () => {
             extraLightCount++;
             const light = new THREE.PointLight(0xffffff, 1.0, 15);
             light.position.set(
@@ -384,17 +375,15 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── Export Video ──
-    const btnExport = document.getElementById('btn-export-video');
-    if (btnExport) {
-        btnExport.addEventListener('click', async () => {
+    const menuExportVideo = document.getElementById('menu-export-video');
+    if (menuExportVideo) {
+        menuExportVideo.addEventListener('click', async () => {
             if (exporter.isRecording) {
-                btnExport.innerHTML = '<i class="fas fa-circle"></i> Export Video';
-                btnExport.classList.remove('recording');
+                menuExportVideo.innerHTML = '<i class="fas fa-file-video"></i> Export Video';
                 await exporter.stopAndDownload();
             } else {
                 exporter.start(30);
-                btnExport.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
-                btnExport.classList.add('recording');
+                menuExportVideo.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
             }
         });
     }

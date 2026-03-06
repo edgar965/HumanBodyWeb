@@ -3,6 +3,8 @@
  * Vordefinierte Einstellungen für Lichter, Kameras, Szenen
  */
 
+import { getTheatreObject } from './theatre-bridge.js';
+
 export const PRESETS = {
     // ────────────────────────────────────────────────────────────
     // 1. Ballet Stage (Default) — Warm theatrical lighting
@@ -159,17 +161,20 @@ export const PRESETS = {
  */
 export function applyPreset(preset, camera, lights, controls) {
     console.log(`[Preset] Applying: ${preset.name}`);
-    console.log('[Preset] Before - Camera pos:', camera.position.toArray());
-    console.log('[Preset] Before - Spot Left intensity:', lights.spotLeft.intensity);
 
-    // Camera
-    camera.position.set(
-        preset.camera.position.x,
-        preset.camera.position.y,
-        preset.camera.position.z
-    );
-    camera.fov = preset.camera.fov;
-    camera.updateProjectionMatrix();
+    // Get Theatre objects
+    const cameraObj = getTheatreObject('Camera');
+    const spotLeftObj = getTheatreObject('Spot Left');
+    const spotRightObj = getTheatreObject('Spot Right');
+    const backLightObj = getTheatreObject('Back Light');
+
+    // Apply via Theatre API (this ensures Theatre UI updates)
+    if (cameraObj) {
+        cameraObj.props.position.x = preset.camera.position.x;
+        cameraObj.props.position.y = preset.camera.position.y;
+        cameraObj.props.position.z = preset.camera.position.z;
+        cameraObj.props.fov = preset.camera.fov;
+    }
 
     // Reset orbit controls target
     if (controls) {
@@ -177,18 +182,21 @@ export function applyPreset(preset, camera, lights, controls) {
         controls.update();
     }
 
-    // Lights
-    applyLightSettings(lights.spotLeft, preset.lights.spotLeft);
-    applyLightSettings(lights.spotRight, preset.lights.spotRight);
-    applyLightSettings(lights.backLight, preset.lights.backLight);
+    // Apply light settings via Theatre
+    applyLightViaTheatre(spotLeftObj, preset.lights.spotLeft);
+    applyLightViaTheatre(spotRightObj, preset.lights.spotRight);
+    applyLightViaTheatre(backLightObj, preset.lights.backLight);
 
-    console.log('[Preset] After - Camera pos:', camera.position.toArray());
-    console.log('[Preset] After - Spot Left intensity:', lights.spotLeft.intensity);
-    console.log('[Preset] After - Spot Left color:', lights.spotLeft.color);
+    console.log(`✓ Preset "${preset.name}" applied via Theatre API`);
 }
 
-function applyLightSettings(light, settings) {
-    light.intensity = settings.intensity;
-    light.color.setRGB(settings.color.r, settings.color.g, settings.color.b);
-    light.position.set(settings.position.x, settings.position.y, settings.position.z);
+function applyLightViaTheatre(theatreObj, settings) {
+    if (!theatreObj) return;
+    theatreObj.props.intensity = settings.intensity;
+    theatreObj.props.color.r = settings.color.r;
+    theatreObj.props.color.g = settings.color.g;
+    theatreObj.props.color.b = settings.color.b;
+    theatreObj.props.position.x = settings.position.x;
+    theatreObj.props.position.y = settings.position.y;
+    theatreObj.props.position.z = settings.position.z;
 }

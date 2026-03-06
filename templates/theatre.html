@@ -14,105 +14,62 @@
         flex-direction: column;
     }
 
+    /* ── Menubar ── */
+    .theatre-menubar {
+        position: relative;
+        height: 32px;
+        background: rgba(18, 18, 30, 0.95);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex;
+        align-items: center;
+        padding: 0 8px;
+        z-index: 600;
+        backdrop-filter: blur(6px);
+        flex-shrink: 0;
+    }
+    .menu-item {
+        position: relative;
+        padding: 4px 12px;
+        color: #aaa;
+        font-size: 0.8rem;
+        cursor: pointer;
+        user-select: none;
+        border-radius: 4px;
+    }
+    .menu-item:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .menu-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 200px;
+        background: rgba(24, 24, 40, 0.97);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 6px;
+        padding: 4px 0;
+        z-index: 700;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .menu-item:hover .menu-dropdown,
+    .menu-item.active .menu-dropdown { display: block; }
+    .menu-action {
+        padding: 7px 16px;
+        color: #ccc;
+        font-size: 0.8rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .menu-action:hover { background: rgba(124, 92, 191, 0.3); color: #fff; }
+    .menu-action i { width: 16px; text-align: center; opacity: 0.7; }
+    .menu-separator { height: 1px; background: rgba(255,255,255,0.08); margin: 4px 0; }
+
     /* ── Theatre Layout ── */
     .theatre-layout {
         display: flex;
         flex: 1;
         overflow: hidden;
-    }
-
-    /* ── Left Control Panel ── */
-    .theatre-left-panel {
-        width: 220px;
-        background: var(--bg-secondary);
-        border-right: 1px solid var(--border);
-        display: flex;
-        flex-direction: column;
-        overflow-y: auto;
-    }
-
-    .theatre-group {
-        border-bottom: 1px solid var(--border);
-    }
-
-    .theatre-group-header {
-        padding: 10px 14px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        user-select: none;
-    }
-
-    .theatre-group-header:hover {
-        background: rgba(255,255,255,0.03);
-    }
-
-    .theatre-group-header i.chevron {
-        margin-left: auto;
-        font-size: 0.7em;
-        transition: transform 0.2s;
-    }
-
-    .theatre-group.collapsed .chevron {
-        transform: rotate(-90deg);
-    }
-
-    .theatre-group-body {
-        padding: 8px;
-    }
-
-    .theatre-group.collapsed .theatre-group-body {
-        display: none;
-    }
-
-    .theatre-btn {
-        width: 100%;
-        padding: 10px 14px;
-        background: var(--bg-tertiary);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        color: var(--text);
-        cursor: pointer;
-        font-size: 0.85rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.2s;
-        margin-bottom: 6px;
-    }
-
-    .theatre-btn:hover {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
-    }
-
-    .theatre-btn.recording {
-        background: rgba(220, 40, 40, 0.85);
-        border-color: #e44;
-        color: #fff;
-    }
-
-    .preset-item {
-        padding: 8px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.82rem;
-        color: var(--text);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 4px;
-    }
-
-    .preset-item:hover {
-        background: rgba(124, 92, 191, 0.2);
     }
 
     /* ── Viewport ── */
@@ -183,7 +140,7 @@
         display: block;
     }
 
-    /* ── Animation Tree (reuse from character_viewer) ── */
+    /* ── Animation Tree ── */
     .anim-tree {
         max-height: 400px;
         overflow-y: auto;
@@ -369,106 +326,162 @@
         inset: 0 0 0 220px !important;
     }
 
-    /* Hide file input */
     #glb-file-input {
         display: none;
     }
+
+    /* Modal styling */
+    .theatre-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .theatre-modal-overlay.open { display: flex; }
+    .theatre-modal {
+        background: #1e1e32;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        width: 480px;
+        max-height: 70vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+    }
+    .theatre-modal-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .theatre-modal-header h3 {
+        margin: 0;
+        font-size: 0.95rem;
+        color: #ddd;
+        font-weight: 500;
+    }
+    .theatre-modal-close {
+        background: none;
+        border: none;
+        color: #888;
+        font-size: 1.1rem;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+    .theatre-modal-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
+    .theatre-modal-body {
+        padding: 12px 18px;
+        overflow-y: auto;
+        flex: 1;
+    }
+    .modal-list-item {
+        padding: 10px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #ccc;
+        font-size: 0.85rem;
+    }
+    .modal-list-item:hover { background: rgba(124, 92, 191, 0.2); color: #fff; }
+    .save-modal-input {
+        width: 100%;
+        padding: 10px 14px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 6px;
+        color: #ddd;
+        font-size: 0.9rem;
+        outline: none;
+        box-sizing: border-box;
+    }
+    .save-modal-input:focus { border-color: #7c5cbf; }
+    .save-modal-btn {
+        margin-top: 12px;
+        padding: 10px 20px;
+        background: #7c5cbf;
+        border: none;
+        border-radius: 6px;
+        color: #fff;
+        font-size: 0.85rem;
+        cursor: pointer;
+        width: 100%;
+    }
+    .save-modal-btn:hover { background: #6a4daa; }
+    .save-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="theatre-layout">
-    <!-- Left Control Panel -->
-    <div class="theatre-left-panel">
-        <!-- Licht -->
-        <div class="theatre-group">
-            <div class="theatre-group-header">
-                <i class="fas fa-lightbulb"></i> Licht
-                <i class="fas fa-chevron-down chevron"></i>
-            </div>
-            <div class="theatre-group-body">
-                <button class="theatre-btn" id="btn-add-light" title="Neues Licht hinzufügen">
-                    <i class="fas fa-plus"></i> Add Light
-                </button>
-            </div>
-        </div>
-
-        <!-- Video -->
-        <div class="theatre-group">
-            <div class="theatre-group-header">
-                <i class="fas fa-file-video"></i> Video
-                <i class="fas fa-chevron-down chevron"></i>
-            </div>
-            <div class="theatre-group-body">
-                <button class="theatre-btn" id="btn-export-video" title="Video aufnehmen">
-                    <i class="fas fa-circle"></i> Export Video
-                </button>
-            </div>
-        </div>
-
-        <!-- Settings -->
-        <div class="theatre-group">
-            <div class="theatre-group-header">
-                <i class="fas fa-cog"></i> Settings
-                <i class="fas fa-chevron-down chevron"></i>
-            </div>
-            <div class="theatre-group-body">
-                <div class="preset-item" data-preset="ballet_stage">
-                    <i class="fas fa-theater-masks"></i> Ballet Stage
-                </div>
-                <div class="preset-item" data-preset="studio_bright">
-                    <i class="fas fa-sun"></i> Studio Bright
-                </div>
-                <div class="preset-item" data-preset="cinematic_moody">
-                    <i class="fas fa-film"></i> Cinematic Moody
-                </div>
-                <div class="preset-item" data-preset="fashion_show">
-                    <i class="fas fa-walking"></i> Fashion Show
-                </div>
-                <div class="preset-item" data-preset="sunset_warm">
-                    <i class="fas fa-cloud-sun"></i> Sunset Warm
-                </div>
-            </div>
-        </div>
-
-        <!-- Datei -->
-        <div class="theatre-group">
-            <div class="theatre-group-header">
-                <i class="fas fa-folder-open"></i> Datei
-                <i class="fas fa-chevron-down chevron"></i>
-            </div>
-            <div class="theatre-group-body">
-                <button class="theatre-btn" id="menu-scene-load">
-                    <i class="fas fa-folder-open"></i> Scene laden
-                </button>
-                <button class="theatre-btn" id="menu-scene-save">
-                    <i class="fas fa-save"></i> Scene speichern
-                </button>
-                <button class="theatre-btn" id="menu-model-load">
-                    <i class="fas fa-user"></i> Modell laden
-                </button>
-                <button class="theatre-btn" id="menu-add-glb">
-                    <i class="fas fa-cube"></i> GLB importieren
-                </button>
-            </div>
-        </div>
-
-        <!-- Hilfe -->
-        <div class="theatre-group">
-            <div class="theatre-group-header">
-                <i class="fas fa-question-circle"></i> Hilfe
-            </div>
-            <div class="theatre-group-body">
-                <a href="{% url 'theatre_help' %}" target="_blank" class="theatre-btn" style="text-decoration: none;">
-                    <i class="fas fa-book"></i> Dokumentation
-                </a>
-                <a href="{% url 'settings_theatre' %}" class="theatre-btn" style="text-decoration: none;">
-                    <i class="fas fa-cog"></i> Einstellungen
-                </a>
+<!-- Menubar -->
+<div class="theatre-menubar">
+    <div class="menu-item">
+        Licht
+        <div class="menu-dropdown">
+            <div class="menu-action" id="menu-add-light">
+                <i class="fas fa-plus"></i> Add Light
             </div>
         </div>
     </div>
+    <div class="menu-item">
+        Video
+        <div class="menu-dropdown">
+            <div class="menu-action" id="menu-export-video">
+                <i class="fas fa-file-video"></i> Export Video
+            </div>
+        </div>
+    </div>
+    <div class="menu-item">
+        Settings
+        <div class="menu-dropdown">
+            <div class="menu-action" data-preset="ballet_stage">
+                <i class="fas fa-theater-masks"></i> Ballet Stage
+            </div>
+            <div class="menu-action" data-preset="studio_bright">
+                <i class="fas fa-sun"></i> Studio Bright
+            </div>
+            <div class="menu-action" data-preset="cinematic_moody">
+                <i class="fas fa-film"></i> Cinematic Moody
+            </div>
+            <div class="menu-action" data-preset="fashion_show">
+                <i class="fas fa-walking"></i> Fashion Show
+            </div>
+            <div class="menu-action" data-preset="sunset_warm">
+                <i class="fas fa-cloud-sun"></i> Sunset Warm
+            </div>
+        </div>
+    </div>
+    <div class="menu-item">
+        Datei
+        <div class="menu-dropdown">
+            <div class="menu-action" id="menu-scene-load">
+                <i class="fas fa-folder-open"></i> Scene laden
+            </div>
+            <div class="menu-action" id="menu-scene-save">
+                <i class="fas fa-save"></i> Scene speichern
+            </div>
+            <div class="menu-separator"></div>
+            <div class="menu-action" id="menu-model-load">
+                <i class="fas fa-user"></i> Modell laden
+            </div>
+            <div class="menu-separator"></div>
+            <div class="menu-action" id="menu-add-glb">
+                <i class="fas fa-cube"></i> GLB importieren
+            </div>
+        </div>
+    </div>
+    <div class="menu-item">
+        <a href="{% url 'theatre_help' %}" target="_blank" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+            <i class="fas fa-question-circle"></i> Hilfe
+        </a>
+    </div>
+</div>
 
+<!-- Main Layout -->
+<div class="theatre-layout">
     <!-- Viewport -->
     <div class="theatre-viewport">
         <canvas id="theatre-canvas"></canvas>
@@ -537,28 +550,29 @@
 <!-- Hidden file input -->
 <input type="file" id="glb-file-input" accept=".glb,.gltf">
 
-<!-- Modals (Scene Load/Save) -->
-<div class="theatre-modal-overlay" id="modal-scene-load" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
-    <div class="theatre-modal" style="background:#1e1e32;border:1px solid rgba(255,255,255,0.1);border-radius:10px;width:480px;max-height:70vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
-        <div class="theatre-modal-header" style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="margin:0;font-size:0.95rem;color:#ddd;font-weight:500;">Scene laden</h3>
-            <button class="theatre-modal-close" data-close-modal style="background:none;border:none;color:#888;font-size:1.1rem;cursor:pointer;padding:4px 8px;border-radius:4px;">&times;</button>
+<!-- Scene Load Modal -->
+<div class="theatre-modal-overlay" id="modal-scene-load">
+    <div class="theatre-modal">
+        <div class="theatre-modal-header">
+            <h3>Scene laden</h3>
+            <button class="theatre-modal-close" data-close-modal>&times;</button>
         </div>
-        <div class="theatre-modal-body" id="scene-list-body" style="padding:12px 18px;overflow-y:auto;flex:1;">
-            <div class="loading-msg">Lade Scenes...</div>
+        <div class="theatre-modal-body" id="scene-list-body">
+            <div>Lade Scenes...</div>
         </div>
     </div>
 </div>
 
-<div class="theatre-modal-overlay" id="modal-scene-save" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
-    <div class="theatre-modal" style="background:#1e1e32;border:1px solid rgba(255,255,255,0.1);border-radius:10px;width:480px;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,0.6);">
-        <div class="theatre-modal-header" style="padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="margin:0;font-size:0.95rem;color:#ddd;font-weight:500;">Scene speichern</h3>
-            <button class="theatre-modal-close" data-close-modal style="background:none;border:none;color:#888;font-size:1.1rem;cursor:pointer;padding:4px 8px;border-radius:4px;">&times;</button>
+<!-- Scene Save Modal -->
+<div class="theatre-modal-overlay" id="modal-scene-save">
+    <div class="theatre-modal">
+        <div class="theatre-modal-header">
+            <h3>Scene speichern</h3>
+            <button class="theatre-modal-close" data-close-modal>&times;</button>
         </div>
-        <div class="theatre-modal-body" style="padding:12px 18px;">
-            <input type="text" class="save-modal-input" id="scene-save-name" placeholder="Scene-Name eingeben..." style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#ddd;font-size:0.9rem;outline:none;box-sizing:border-box;">
-            <button class="save-modal-btn" id="scene-save-btn" style="margin-top:12px;padding:10px 20px;background:#7c5cbf;border:none;border-radius:6px;color:#fff;font-size:0.85rem;cursor:pointer;width:100%;">Speichern</button>
+        <div class="theatre-modal-body">
+            <input type="text" class="save-modal-input" id="scene-save-name" placeholder="Scene-Name eingeben...">
+            <button class="save-modal-btn" id="scene-save-btn">Speichern</button>
         </div>
     </div>
 </div>

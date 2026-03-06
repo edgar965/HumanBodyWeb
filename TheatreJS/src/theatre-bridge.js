@@ -2,6 +2,7 @@ import { getProject, types } from '@theatre/core';
 
 let _project = null;
 let _sheet = null;
+const _theatreObjects = new Map(); // Store Theatre objects for external access
 
 /**
  * Initialise Theatre project and main sheet.
@@ -21,6 +22,13 @@ export function getSheet() {
 }
 
 /**
+ * Get a Theatre object by name (for external control like presets).
+ */
+export function getTheatreObject(name) {
+    return _theatreObjects.get(name);
+}
+
+/**
  * Register a Three.js camera as an animatable Theatre object.
  */
 export function createCameraSheet(sheet, camera) {
@@ -37,6 +45,7 @@ export function createCameraSheet(sheet, camera) {
         camera.fov = values.fov;
         camera.updateProjectionMatrix();
     });
+    _theatreObjects.set('Camera', obj);
     return obj;
 }
 
@@ -50,7 +59,7 @@ export function createLightSheet(sheet, name, light) {
             y: types.number(light.position.y, { range: [0, 20] }),
             z: types.number(light.position.z, { range: [-20, 20] }),
         }),
-        intensity: types.number(light.intensity, { range: [0, 5] }),
+        intensity: types.number(light.intensity, { range: [0, 30] }), // Extended for presets
         color: types.rgba({
             r: light.color.r,
             g: light.color.g,
@@ -64,6 +73,7 @@ export function createLightSheet(sheet, name, light) {
         light.intensity = values.intensity;
         light.color.setRGB(values.color.r, values.color.g, values.color.b);
     });
+    _theatreObjects.set(name, obj);
     return obj;
 }
 
