@@ -42,6 +42,30 @@ window.addEventListener('DOMContentLoaded', () => {
     let currentAction = null;
     const clock = new THREE.Clock();
 
+    // ── Menubar Dropdown (Click to open/close) ──
+    document.querySelectorAll('.menu-item').forEach((menuItem) => {
+        const dropdown = menuItem.querySelector('.menu-dropdown');
+        if (!dropdown) return; // Skip menu items without dropdown (like Hilfe)
+
+        menuItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Close all other dropdowns
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            // Toggle this dropdown
+            menuItem.classList.toggle('active');
+        });
+
+        // Prevent dropdown from closing when clicking inside it
+        dropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+    });
+
     // ── Tab Switching ──
     document.querySelectorAll('.panel-tab').forEach((tab) => {
         tab.addEventListener('click', () => {
