@@ -155,8 +155,13 @@ export const PRESETS = {
  * @param {Object} preset Preset object from PRESETS
  * @param {THREE.Camera} camera Three.js camera
  * @param {Object} lights { spotLeft, spotRight, backLight }
+ * @param {OrbitControls} controls OrbitControls instance
  */
-export function applyPreset(preset, camera, lights) {
+export function applyPreset(preset, camera, lights, controls) {
+    console.log(`[Preset] Applying: ${preset.name}`);
+    console.log('[Preset] Before - Camera pos:', camera.position.toArray());
+    console.log('[Preset] Before - Spot Left intensity:', lights.spotLeft.intensity);
+
     // Camera
     camera.position.set(
         preset.camera.position.x,
@@ -166,10 +171,20 @@ export function applyPreset(preset, camera, lights) {
     camera.fov = preset.camera.fov;
     camera.updateProjectionMatrix();
 
+    // Reset orbit controls target
+    if (controls) {
+        controls.target.set(0, 0.9, 0);
+        controls.update();
+    }
+
     // Lights
     applyLightSettings(lights.spotLeft, preset.lights.spotLeft);
     applyLightSettings(lights.spotRight, preset.lights.spotRight);
     applyLightSettings(lights.backLight, preset.lights.backLight);
+
+    console.log('[Preset] After - Camera pos:', camera.position.toArray());
+    console.log('[Preset] After - Spot Left intensity:', lights.spotLeft.intensity);
+    console.log('[Preset] After - Spot Left color:', lights.spotLeft.color);
 }
 
 function applyLightSettings(light, settings) {

@@ -321,8 +321,10 @@ window.addEventListener('DOMContentLoaded', () => {
             const presetName = btn.getAttribute('data-preset');
             const preset = PRESETS[presetName];
             if (preset) {
-                applyPreset(preset, camera, lights);
-                console.log('Applied preset:', preset.name);
+                applyPreset(preset, camera, lights, controls);
+                console.log('✓ Applied preset:', preset.name);
+            } else {
+                console.error('Preset not found:', presetName);
             }
         });
     });
