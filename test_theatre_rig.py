@@ -113,8 +113,8 @@ async def main():
         await asyncio.sleep(0.5)
 
         # Click first animation
-        await page.evaluate("() => document.querySelector('.anim-cat-body .anim-item')?.click()")
-        await asyncio.sleep(3)
+        await page.evaluate("() => document.querySelector('.anim-cat-body .anim-item:nth-child(1)')?.click()")
+        await asyncio.sleep(2)
 
         # Check animation state
         anim_state = await page.evaluate("""
@@ -213,6 +213,41 @@ async def main():
 
         await page.screenshot(path='test_theatre_anim.png', full_page=True)
         print("\nScreenshot: test_theatre_anim.png")
+
+        # Test loading 2nd animation
+        print("\n=== Loading 2nd Animation ===")
+        await page.click('#btnPlayPause')  # Pause current
+        await asyncio.sleep(0.5)
+        await page.evaluate("() => document.querySelector('.anim-cat-body .anim-item:nth-child(2)')?.click()")
+        await asyncio.sleep(2)
+
+        anim2_state = await page.evaluate("() => ({ hasActiveMixer: !!window.activeMixer, duration: window.animDuration })")
+        print(f"2nd animation state: {anim2_state}")
+
+        # Test loading 3rd animation
+        print("\n=== Loading 3rd Animation ===")
+        await page.evaluate("() => document.querySelector('.anim-cat-body .anim-item:nth-child(3)')?.click()")
+        await asyncio.sleep(2)
+
+        anim3_state = await page.evaluate("() => ({ hasActiveMixer: !!window.activeMixer, duration: window.animDuration })")
+        print(f"3rd animation state: {anim3_state}")
+
+        # Check for console errors
+        print("\n=== Checking for errors ===")
+        errors = await page.evaluate("""
+            () => {
+                const logs = [];
+                // Intercept future console.error calls
+                const oldError = console.error;
+                console.error = function(...args) {
+                    logs.push(args.join(' '));
+                    oldError.apply(console, args);
+                };
+                return logs;
+            }
+        """)
+        if errors:
+            print(f"Console errors: {errors}")
 
         print("\nBrowser stays open for 20 seconds...")
         await asyncio.sleep(20)

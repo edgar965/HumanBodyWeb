@@ -933,6 +933,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
     async function handleAnimLoad(category, name) {
         try {
+            // Remember if animation was playing before switch
+            const wasPlaying = isPlaying;
+
             const bvhText = await fetchBVH(category, name);
 
             // If we have a selected character, convert it to SkinnedMesh first
@@ -963,22 +966,29 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Update player UI
             updatePlayerDuration(duration);
-            isPlaying = false;
             currentTime = 0;
             animDuration = duration;
 
+            // Auto-play if previous animation was playing
+            if (wasPlaying) {
+                isPlaying = true;
+                if (currentAction) currentAction.paused = false;
+                window.isPlaying = true;
+                const btnPlayPause = document.getElementById('btnPlayPause');
+                if (btnPlayPause) btnPlayPause.classList.add('playing');
+                console.log('✓ Auto-playing new animation');
+            } else {
+                isPlaying = false;
+                window.isPlaying = false;
+                const btnPlayPause = document.getElementById('btnPlayPause');
+                if (btnPlayPause) btnPlayPause.classList.remove('playing');
+            }
+
             // Expose to window
-            window.isPlaying = false;
             window.currentTime = 0;
             window.animDuration = duration;
 
             updatePlayerUI();
-
-            // Reset play button state
-            const btnPlayPause = document.getElementById('btnPlayPause');
-            if (btnPlayPause) {
-                btnPlayPause.classList.remove('playing');
-            }
 
             console.log('Animation loaded:', category, name, duration);
         } catch (err) {
