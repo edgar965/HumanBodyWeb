@@ -374,7 +374,18 @@ async function loadGarmentMesh(garmentData, bodyType) {
         polygonOffsetUnit: -1,
     });
 
-    const mesh = new THREE.Mesh(geometry, material);
+    // Create SkinnedMesh if skin weights available (like Dashboard viewer.js)
+    let mesh;
+    if (data.skin_indices && data.skin_weights) {
+        const skinIndices = base64ToFloat32(data.skin_indices);
+        const skinWeights = base64ToFloat32(data.skin_weights);
+        geometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
+        geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+        mesh = new THREE.SkinnedMesh(geometry, material);
+        mesh.userData.needsBinding = true; // Mark for skeleton binding
+    } else {
+        mesh = new THREE.Mesh(geometry, material);
+    }
     mesh.castShadow = true;
     mesh.receiveShadow = true;
 

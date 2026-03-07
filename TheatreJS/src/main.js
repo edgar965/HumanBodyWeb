@@ -343,6 +343,16 @@ window.addEventListener('DOMContentLoaded', () => {
             window.loadedCharacters.push(characterGroup);
         }
 
+        // Bind garments to skeleton (like Dashboard viewer.js)
+        characterGroup.traverse((child) => {
+            if (child.isSkinnedMesh && child !== skinnedMesh && child.userData.needsBinding) {
+                child.add(defSkeleton.rootBone);
+                child.bind(defSkeleton.skeleton, skinnedMesh.bindMatrix);
+                delete child.userData.needsBinding;
+                console.log('✓ Garment bound to skeleton:', child.name || child.userData.garmentId);
+            }
+        });
+
         return skinnedMesh;
     }
 
