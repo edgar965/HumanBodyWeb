@@ -50,24 +50,56 @@ window.addEventListener('DOMContentLoaded', () => {
     // Skeleton and skin weights data (loaded once at startup)
     let defSkeletonData = null;
     let skinWeightData = null;
+    let skeletonLoadingPromise = null;
 
     // Load skeleton and skin weights data
     async function loadSkeletonAndWeights() {
-        try {
-            const [skelResp, weightsResp] = await Promise.all([
-                fetch('/api/character/def-skeleton/'),
-                fetch('/api/character/skin-weights/')
-            ]);
-            if (skelResp.ok) defSkeletonData = await skelResp.json();
-            if (weightsResp.ok) skinWeightData = await weightsResp.json();
-            console.log('✓ Loaded skeleton and skin weights');
-        } catch (err) {
-            console.warn('Failed to load skeleton/weights:', err);
-        }
+        if (skeletonLoadingPromise) return skeletonLoadingPromise;
+
+        skeletonLoadingPromise = (async () => {
+            try {
+                const [skelResp, weightsResp] = await Promise.all([
+                    fetch('/api/character/def-skeleton/'),
+                    fetch('/api/character/skin-weights/')
+                ]);
+                if (skelResp.ok) defSkeletonData = await skelResp.json();
+                if (weightsResp.ok) skinWeightData = await weightsResp.json();
+                console.log('✓ Loaded skeleton and skin weights:', defSkeletonData?.bones?.length || 0, 'bones');
+
+                // Auto-convert any characters that were loaded before skeleton was ready
+                for (const char of loadedCharacters) {
+                    if (!char.userData.isSkinnedMesh) {
+                        autoConvertToSkinnedMesh(char);
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to load skeleton/weights:', err);
+            }
+        })();
+
+        return skeletonLoadingPromise;
     }
 
     // Load at startup
     loadSkeletonAndWeights();
+
+    /**
+     * Helper: Auto-convert character to SkinnedMesh if skeleton data is loaded.
+     * Creates SkeletonHelper for visualization.
+     */
+    function autoConvertToSkinnedMesh(characterGroup) {
+        // Only convert if skeleton data is ready
+        if (defSkeletonData && skinWeightData && !characterGroup.userData.isSkinnedMesh) {
+            setTimeout(() => {
+                try {
+                    convertCharacterToSkinnedMesh(characterGroup, scene);
+                    console.log('✓ Auto-converted to SkinnedMesh:', characterGroup.userData.presetName);
+                } catch (err) {
+                    console.warn('Auto-convert failed:', err);
+                }
+            }, 100); // Small delay to ensure character is fully added to scene
+        }
+    }
 
     /**
      * Load BVH animation on a SkinnedMesh (character with skeleton).
@@ -556,6 +588,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     charGroup.userData.presetName = charDef.name || name;
                     charGroup.userData.bodyType = charDef.body_type || 'Unknown';
                     loadedCharacters.push(charGroup);
+                    autoConvertToSkinnedMesh(charGroup);
                 }
             }
         } catch (err) {
@@ -655,6 +688,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         charGroup.userData.presetName = m.name;
                         charGroup.userData.bodyType = preset.body_type || 'Unknown';
                         loadedCharacters.push(charGroup);
+                        autoConvertToSkinnedMesh(charGroup);
                         console.log('Model loaded:', m.name);
                         // Highlight active
                         document.querySelectorAll('#model-list .anim-item').forEach(i => i.classList.remove('active'));
@@ -1003,6 +1037,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     charGroup.userData.presetName = cfg.model;
                     charGroup.userData.bodyType = modelData.body_type || 'Unknown';
                     loadedCharacters.push(charGroup);
+                    autoConvertToSkinnedMesh(charGroup);
                     console.log('✓ Auto-loaded model:', cfg.model);
 
                     // Load animation if model loaded successfully
