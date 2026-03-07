@@ -55,8 +55,7 @@ export function createScene(canvas) {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = false; // No shadows (like Dashboard)
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.6; // Match result_character.js exposure
     renderer.outputColorSpace = THREE.SRGBColorSpace; // CRITICAL for PBR materials!
@@ -109,68 +108,42 @@ export function createScene(canvas) {
     // ── Lighting — theatrical 3-point + spotlights ──
 
     // BRIGHTER ambient for better base visibility
-    const ambient = new THREE.AmbientLight(0x2a2a3e, 0.5); // Much brighter!
+    const ambient = new THREE.AmbientLight(0xffffff, 0.8); // Like Dashboard
     scene.add(ambient);
 
-    // Spot 1 — warm key from front-left above
-    const spotLeft = new THREE.SpotLight(0xffeedd, 60); // VERY BRIGHT for PBR!
-    spotLeft.position.set(-3, 3, 3); // Niedriger positioniert für bessere Sichtbarkeit
-    spotLeft.target.position.set(0, 0, 0);
-    spotLeft.angle = Math.PI / 6;
-    spotLeft.penumbra = 0.5;
-    spotLeft.decay = 1.5;
-    spotLeft.castShadow = true;
-    spotLeft.shadow.mapSize.set(4096, 4096); // Higher resolution to reduce shadow acne
-    spotLeft.shadow.camera.near = 1;
-    spotLeft.shadow.camera.far = 15;
-    spotLeft.shadow.bias = -0.0001; // Reduce shadow acne
+    // Key Light — Main directional light (like Dashboard)
+    const spotLeft = new THREE.DirectionalLight(0xffffff, 3.0);
+    spotLeft.position.set(2, 4, -5);
     scene.add(spotLeft);
-    scene.add(spotLeft.target);
 
     // Kleines Licht-Icon (anklickbar, zeigt Richtung)
-    const spotLeftIcon = createLightIcon(new THREE.Color(0xffeedd));
+    const spotLeftIcon = createLightIcon(new THREE.Color(0xffffff));
     spotLeftIcon.position.copy(spotLeft.position);
-    spotLeftIcon.lookAt(spotLeft.target.position);
+    spotLeftIcon.lookAt(new THREE.Vector3(0, 0, 0)); // Look at origin
     spotLeftIcon.userData.light = spotLeft; // Referenz zum Licht
     scene.add(spotLeftIcon);
 
-    // Spot 2 — warm key from front-right above
-    const spotRight = new THREE.SpotLight(0xffeedd, 60); // VERY BRIGHT for PBR!
-    spotRight.position.set(3, 3, 3); // Niedriger positioniert
-    spotRight.target.position.set(0, 0, 0);
-    spotRight.angle = Math.PI / 6;
-    spotRight.penumbra = 0.5;
-    spotRight.decay = 1.5;
-    spotRight.castShadow = true;
-    spotRight.shadow.mapSize.set(4096, 4096); // Higher resolution to reduce shadow acne
-    spotRight.shadow.camera.near = 1;
-    spotRight.shadow.camera.far = 15;
-    spotRight.shadow.bias = -0.0001; // Reduce shadow acne
+    // Fill Light — Soft fill from side (like Dashboard)
+    const spotRight = new THREE.DirectionalLight(0xeeeeff, 2.0);
+    spotRight.position.set(-3, 3, -4);
     scene.add(spotRight);
-    scene.add(spotRight.target);
 
     // Kleines Licht-Icon für rechtes Licht
-    const spotRightIcon = createLightIcon(new THREE.Color(0xffeedd));
+    const spotRightIcon = createLightIcon(new THREE.Color(0xeeeeff));
     spotRightIcon.position.copy(spotRight.position);
-    spotRightIcon.lookAt(spotRight.target.position);
+    spotRightIcon.lookAt(new THREE.Vector3(0, 0, 0));
     spotRightIcon.userData.light = spotRight;
     scene.add(spotRightIcon);
 
-    // Spot 3 — blue-violet backlight (rim light from behind)
-    const backLight = new THREE.SpotLight(0x6644aa, 25); // BRIGHTER for rim light visibility
-    backLight.position.set(0, 2.5, -4); // Niedriger positioniert
-    backLight.target.position.set(0, 0.5, 0);
-    backLight.angle = Math.PI / 5;
-    backLight.penumbra = 0.7;
-    backLight.decay = 1.5;
-    backLight.castShadow = false;
+    // Back Light — Warm backlight (like Dashboard)
+    const backLight = new THREE.DirectionalLight(0xffeedd, 2.5);
+    backLight.position.set(0, 4, 5);
     scene.add(backLight);
-    scene.add(backLight.target);
 
     // Kleines Licht-Icon für Backlicht
-    const backLightIcon = createLightIcon(new THREE.Color(0x6644aa));
+    const backLightIcon = createLightIcon(new THREE.Color(0xffeedd));
     backLightIcon.position.copy(backLight.position);
-    backLightIcon.lookAt(backLight.target.position);
+    backLightIcon.lookAt(new THREE.Vector3(0, 0, 0));
     backLightIcon.userData.light = backLight;
     scene.add(backLightIcon);
 
