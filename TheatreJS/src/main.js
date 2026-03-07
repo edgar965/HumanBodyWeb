@@ -664,6 +664,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     charGroup.userData.presetName = charDef.name || name;
                     charGroup.userData.bodyType = charDef.body_type || 'Unknown';
                     loadedCharacters.push(charGroup);
+                    selectedCharacter = charGroup;  // Auto-select loaded character
                     autoConvertToSkinnedMesh(charGroup);
                 }
             }
@@ -764,6 +765,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         charGroup.userData.presetName = m.name;
                         charGroup.userData.bodyType = preset.body_type || 'Unknown';
                         loadedCharacters.push(charGroup);
+                        selectedCharacter = charGroup;  // Auto-select loaded character
                         autoConvertToSkinnedMesh(charGroup);
                         console.log('Model loaded:', m.name);
                         // Highlight active
@@ -853,7 +855,11 @@ window.addEventListener('DOMContentLoaded', () => {
             // If we have a selected character, convert it to SkinnedMesh first
             let targetMesh = null;
             if (selectedCharacter) {
+                console.log('Selected character found, converting to SkinnedMesh...');
                 targetMesh = convertCharacterToSkinnedMesh(selectedCharacter, scene);
+                console.log('targetMesh:', !!targetMesh, 'isSkinnedMesh:', targetMesh?.isSkinnedMesh);
+            } else {
+                console.log('No selected character - using BVH bones only');
             }
 
             // If we have a SkinnedMesh, use it for animation; otherwise fall back to BVH bones
@@ -1113,6 +1119,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     charGroup.userData.presetName = cfg.model;
                     charGroup.userData.bodyType = modelData.body_type || 'Unknown';
                     loadedCharacters.push(charGroup);
+                    selectedCharacter = charGroup;  // Auto-select loaded character
                     autoConvertToSkinnedMesh(charGroup);
                     console.log('✓ Auto-loaded model:', cfg.model);
 

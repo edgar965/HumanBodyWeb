@@ -129,7 +129,7 @@ async def main():
         # Click play button (timeline play/pause button)
         print("\n=== Clicking Play Button ===")
         await page.click('#btnPlayPause')
-        await asyncio.sleep(2)
+        await asyncio.sleep(0.5)
 
         # Check if animation is now playing
         anim_state_after = await page.evaluate("""
@@ -142,8 +142,77 @@ async def main():
         """)
         print(f"Animation state (after play): {anim_state_after}")
 
+        # CRITICAL TEST: Check if bones actually MOVE
+        print("\n=== Testing if character MOVES ===")
+
+        # Get initial bone position (spine bone)
+        bone_pos_t0 = await page.evaluate("""
+            () => {
+                if (!window.loadedCharacters || !window.loadedCharacters[0]) return null;
+                const char = window.loadedCharacters[0];
+                if (!char.userData.skinnedMesh || !char.userData.skinnedMesh.skeleton) return null;
+
+                const skeleton = char.userData.skinnedMesh.skeleton;
+                const spineBone = skeleton.bones.find(b => b.name.includes('spine') || b.name.includes('Spine'));
+                if (!spineBone) return null;
+
+                return {
+                    name: spineBone.name,
+                    x: spineBone.position.x,
+                    y: spineBone.position.y,
+                    z: spineBone.position.z,
+                    rx: spineBone.rotation.x,
+                    ry: spineBone.rotation.y,
+                    rz: spineBone.rotation.z
+                };
+            }
+        """)
+        print(f"Bone position at t=0: {bone_pos_t0}")
+
+        # Wait for animation to progress
+        await asyncio.sleep(2)
+
+        # Get bone position after 2 seconds
+        bone_pos_t2 = await page.evaluate("""
+            () => {
+                if (!window.loadedCharacters || !window.loadedCharacters[0]) return null;
+                const char = window.loadedCharacters[0];
+                if (!char.userData.skinnedMesh || !char.userData.skinnedMesh.skeleton) return null;
+
+                const skeleton = char.userData.skinnedMesh.skeleton;
+                const spineBone = skeleton.bones.find(b => b.name.includes('spine') || b.name.includes('Spine'));
+                if (!spineBone) return null;
+
+                return {
+                    name: spineBone.name,
+                    x: spineBone.position.x,
+                    y: spineBone.position.y,
+                    z: spineBone.position.z,
+                    rx: spineBone.rotation.x,
+                    ry: spineBone.rotation.y,
+                    rz: spineBone.rotation.z
+                };
+            }
+        """)
+        print(f"Bone position at t=2: {bone_pos_t2}")
+
+        # Check if bone moved
+        if bone_pos_t0 and bone_pos_t2:
+            moved = (
+                abs(bone_pos_t2['rx'] - bone_pos_t0['rx']) > 0.01 or
+                abs(bone_pos_t2['ry'] - bone_pos_t0['ry']) > 0.01 or
+                abs(bone_pos_t2['rz'] - bone_pos_t0['rz']) > 0.01
+            )
+            status = "ANIMATION WORKS - Bone moved!" if moved else "ANIMATION FAILED - Bone did NOT move!"
+            print(f"\n{status}")
+            print(f"Rotation delta: rx={bone_pos_t2['rx'] - bone_pos_t0['rx']:.4f}, "
+                  f"ry={bone_pos_t2['ry'] - bone_pos_t0['ry']:.4f}, "
+                  f"rz={bone_pos_t2['rz'] - bone_pos_t0['rz']:.4f}")
+        else:
+            print("\n✗ Could not test bone movement - bone not found!")
+
         await page.screenshot(path='test_theatre_anim.png', full_page=True)
-        print("Screenshot: test_theatre_anim.png")
+        print("\nScreenshot: test_theatre_anim.png")
 
         print("\nBrowser stays open for 20 seconds...")
         await asyncio.sleep(20)
