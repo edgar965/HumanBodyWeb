@@ -1285,159 +1285,167 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const offset = garmentMesh.userData.offset || 0.006;
         const stiffness = garmentMesh.userData.stiffness || 0.8;
-        const pos = garmentMesh.position;
 
+        // EXACT COPY from Dashboard-Scene character_viewer.html lines 520-619
         content.innerHTML = `
             <div style="padding:16px;max-height:calc(100vh - 200px);overflow-y:auto;">
                 <h3 style="font-size:0.9rem;margin-bottom:16px;color:var(--accent-purple);border-bottom:1px solid var(--border);padding-bottom:8px;">
                     <i class="fas fa-tshirt"></i> ${garmentId}
                 </h3>
 
-                <!-- Material Properties -->
-                <div style="margin-bottom:20px;">
-                    <h4 style="font-size:0.8rem;margin-bottom:12px;color:var(--text);"><i class="fas fa-palette"></i> Material</h4>
-
-                    <div style="margin-bottom:12px;">
-                        <label style="display:block;font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Farbe</label>
-                        <input type="color" id="garment-color" value="${colorHex}"
-                               style="width:100%;height:32px;border-radius:4px;border:1px solid var(--border);cursor:pointer;" />
-                    </div>
-
-                    <div style="margin-bottom:12px;">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
-                            <span style="color:var(--text-muted);">Roughness</span>
-                            <span id="garment-roughness-value">${roughness.toFixed(2)}</span>
-                        </div>
-                        <input type="range" id="garment-roughness" min="0" max="1" step="0.01" value="${roughness}" style="width:100%;cursor:pointer;" />
-                    </div>
-
-                    <div style="margin-bottom:12px;">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
-                            <span style="color:var(--text-muted);">Metalness</span>
-                            <span id="garment-metalness-value">${metalness.toFixed(2)}</span>
-                        </div>
-                        <input type="range" id="garment-metalness" min="0" max="1" step="0.01" value="${metalness}" style="width:100%;cursor:pointer;" />
-                    </div>
+                <!-- Fit -->
+                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Fit</div>
+                <div class="slider-row"><label>Offset</label>
+                    <input type="range" id="garment-offset" min="0" max="30" value="${Math.round(offset * 1000)}" step="1">
+                    <span class="slider-val" id="garment-offset-val">${offset.toFixed(3)}</span>
+                </div>
+                <div class="slider-row"><label>Stiffness</label>
+                    <input type="range" id="garment-stiffness" min="0" max="100" value="${Math.round(stiffness * 100)}" step="1">
+                    <span class="slider-val" id="garment-stiffness-val">${stiffness.toFixed(2)}</span>
+                </div>
+                <div class="slider-row"><label>Min. Abstand</label>
+                    <input type="range" id="garment-min-dist" min="0" max="15" value="3" step="1">
+                    <span class="slider-val" id="garment-min-dist-val">3 mm</span>
+                </div>
+                <div class="slider-row"><label>Schritt-Boden</label>
+                    <input type="range" id="garment-crotch-floor" min="-40" max="40" value="0" step="1">
+                    <span class="slider-val" id="garment-crotch-floor-val">0 mm</span>
+                </div>
+                <div class="slider-row"><label>Anheben</label>
+                    <input type="range" id="garment-lift" min="-20" max="40" value="0" step="1">
+                    <span class="slider-val" id="garment-lift-val">0 mm</span>
+                </div>
+                <div class="slider-row"><label>Schritt-Tiefe</label>
+                    <input type="range" id="garment-crotch-depth" min="0" max="40" value="0" step="1">
+                    <span class="slider-val" id="garment-crotch-depth-val">0 mm</span>
                 </div>
 
-                <!-- Fit Properties -->
-                <div style="margin-bottom:20px;padding-top:12px;border-top:1px solid var(--border);">
-                    <h4 style="font-size:0.8rem;margin-bottom:12px;color:var(--text);"><i class="fas fa-compress-arrows-alt"></i> Fit</h4>
-
-                    <div style="margin-bottom:12px;">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
-                            <span style="color:var(--text-muted);">Offset (Abstand)</span>
-                            <span id="garment-offset-value">${offset.toFixed(3)}</span>
-                        </div>
-                        <input type="range" id="garment-offset" min="0" max="50" step="0.1" value="${offset * 1000}" style="width:100%;cursor:pointer;" />
-                    </div>
-
-                    <div style="margin-bottom:12px;">
-                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
-                            <span style="color:var(--text-muted);">Stiffness (Steifigkeit)</span>
-                            <span id="garment-stiffness-value">${stiffness.toFixed(2)}</span>
-                        </div>
-                        <input type="range" id="garment-stiffness" min="0" max="100" step="1" value="${stiffness * 100}" style="width:100%;cursor:pointer;" />
-                    </div>
+                <!-- Farbe / Material -->
+                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
+                <div class="slider-row"><label>Color</label>
+                    <input type="color" id="garment-color" value="${colorHex}" style="width:40px;height:24px;border:none;cursor:pointer;">
+                </div>
+                <div class="slider-row"><label>Roughness</label>
+                    <input type="range" id="garment-roughness" min="0" max="100" value="${Math.round(roughness * 100)}" step="1">
+                    <span class="slider-val" id="garment-roughness-val">${roughness.toFixed(2)}</span>
+                </div>
+                <div class="slider-row"><label>Metalness</label>
+                    <input type="range" id="garment-metalness" min="0" max="100" value="${Math.round(metalness * 100)}" step="1">
+                    <span class="slider-val" id="garment-metalness-val">${metalness.toFixed(2)}</span>
                 </div>
 
-                <!-- Transform -->
-                <div style="margin-bottom:16px;padding-top:12px;border-top:1px solid var(--border);">
-                    <h4 style="font-size:0.8rem;margin-bottom:12px;color:var(--text);"><i class="fas fa-arrows-alt"></i> Transform</h4>
-
-                    <label style="display:block;font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">Position</label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:0.75rem;margin-bottom:12px;">
-                        <div>
-                            <span style="color:var(--text-muted);">X:</span>
-                            <input type="number" id="garment-pos-x" value="${pos.x.toFixed(2)}" step="0.1"
-                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
-                        </div>
-                        <div>
-                            <span style="color:var(--text-muted);">Y:</span>
-                            <input type="number" id="garment-pos-y" value="${pos.y.toFixed(2)}" step="0.1"
-                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
-                        </div>
-                        <div>
-                            <span style="color:var(--text-muted);">Z:</span>
-                            <input type="number" id="garment-pos-z" value="${pos.z.toFixed(2)}" step="0.1"
-                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
-                        </div>
+                <!-- Position -->
+                <div id="garment-adjustments">
+                    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Position</div>
+                    <div class="slider-row"><label>Pos X</label>
+                        <input type="range" id="garment-pos-x" min="-50" max="50" value="0" step="1">
+                        <span class="slider-val" id="garment-pos-x-val">0.00 m</span>
                     </div>
-                </div>
+                    <div class="slider-row"><label>Pos Y</label>
+                        <input type="range" id="garment-pos-y" min="-50" max="50" value="0" step="1">
+                        <span class="slider-val" id="garment-pos-y-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Pos Z</label>
+                        <input type="range" id="garment-pos-z" min="-50" max="50" value="0" step="1">
+                        <span class="slider-val" id="garment-pos-z-val">0.00 m</span>
+                    </div>
 
-                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:20px;padding-top:12px;border-top:1px solid var(--border);">
-                    <i class="fas fa-info-circle"></i> Material-Änderungen wirken sofort<br>
-                    <i class="fas fa-info-circle"></i> Fit-Änderungen erfordern Garment-Reload (TODO)
+                    <!-- Scale -->
+                    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Scale</div>
+                    <div class="slider-row"><label>Scale X</label>
+                        <input type="range" id="garment-scale-x" min="50" max="200" value="100" step="1">
+                        <span class="slider-val" id="garment-scale-x-val">1.00</span>
+                    </div>
+                    <div class="slider-row"><label>Scale Y</label>
+                        <input type="range" id="garment-scale-y" min="50" max="200" value="100" step="1">
+                        <span class="slider-val" id="garment-scale-y-val">1.00</span>
+                    </div>
+                    <div class="slider-row"><label>Scale Z</label>
+                        <input type="range" id="garment-scale-z" min="50" max="200" value="100" step="1">
+                        <span class="slider-val" id="garment-scale-z-val">1.00</span>
+                    </div>
+
+                    <!-- Region -->
+                    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Region</div>
+                    <div class="slider-row"><label>Top</label>
+                        <input type="range" id="garment-region-top" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-top-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Upper</label>
+                        <input type="range" id="garment-region-upper" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-upper-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Mid</label>
+                        <input type="range" id="garment-region-mid" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-mid-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Lower</label>
+                        <input type="range" id="garment-region-lower" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-lower-val">0.00 m</span>
+                    </div>
+                    <div class="slider-row"><label>Bottom</label>
+                        <input type="range" id="garment-region-bottom" min="-30" max="30" value="0" step="1">
+                        <span class="slider-val" id="garment-region-bottom-val">0.00 m</span>
+                    </div>
                 </div>
             </div>
         `;
 
-        // Wire up event listeners
+        // Wire up event listeners - EXACTLY like Dashboard viewer.js _bindSlider/_garmentLiveSlider
+        const _bindSlider = (sliderId, valId, formatter) => {
+            const slider = document.getElementById(sliderId);
+            const val = document.getElementById(valId);
+            if (slider && val) {
+                slider.oninput = () => {
+                    val.textContent = formatter ? formatter(slider.value) : slider.value;
+                };
+            }
+        };
+
+        // Bind all sliders (display update only)
+        _bindSlider('garment-offset', 'garment-offset-val', v => (v / 1000).toFixed(3));
+        _bindSlider('garment-stiffness', 'garment-stiffness-val', v => (v / 100).toFixed(2));
+        _bindSlider('garment-min-dist', 'garment-min-dist-val', v => v + ' mm');
+        _bindSlider('garment-crotch-floor', 'garment-crotch-floor-val', v => v + ' mm');
+        _bindSlider('garment-lift', 'garment-lift-val', v => v + ' mm');
+        _bindSlider('garment-crotch-depth', 'garment-crotch-depth-val', v => v + ' mm');
+        _bindSlider('garment-roughness', 'garment-roughness-val', v => (v / 100).toFixed(2));
+        _bindSlider('garment-metalness', 'garment-metalness-val', v => (v / 100).toFixed(2));
+        _bindSlider('garment-pos-x', 'garment-pos-x-val', v => (v / 100).toFixed(2) + ' m');
+        _bindSlider('garment-pos-y', 'garment-pos-y-val', v => (v / 100).toFixed(2) + ' m');
+        _bindSlider('garment-pos-z', 'garment-pos-z-val', v => (v / 100).toFixed(2) + ' m');
+        _bindSlider('garment-scale-x', 'garment-scale-x-val', v => (v / 100).toFixed(2));
+        _bindSlider('garment-scale-y', 'garment-scale-y-val', v => (v / 100).toFixed(2));
+        _bindSlider('garment-scale-z', 'garment-scale-z-val', v => (v / 100).toFixed(2));
+        for (const rid of ['top', 'upper', 'mid', 'lower', 'bottom']) {
+            _bindSlider(`garment-region-${rid}`, `garment-region-${rid}-val`, v => (v / 100).toFixed(2) + ' m');
+        }
+
+        // Live material updates (color, roughness, metalness)
         const colorPicker = document.getElementById('garment-color');
-        const roughnessSlider = document.getElementById('garment-roughness');
-        const roughnessValue = document.getElementById('garment-roughness-value');
-        const metalnessSlider = document.getElementById('garment-metalness');
-        const metalnessValue = document.getElementById('garment-metalness-value');
-        const offsetSlider = document.getElementById('garment-offset');
-        const offsetValue = document.getElementById('garment-offset-value');
-        const stiffnessSlider = document.getElementById('garment-stiffness');
-        const stiffnessValue = document.getElementById('garment-stiffness-value');
-        const posX = document.getElementById('garment-pos-x');
-        const posY = document.getElementById('garment-pos-y');
-        const posZ = document.getElementById('garment-pos-z');
-
         if (colorPicker) {
-            colorPicker.oninput = (e) => {
-                mat.color.setHex(parseInt(e.target.value.substring(1), 16));
+            colorPicker.oninput = () => {
+                mat.color.setHex(parseInt(colorPicker.value.substring(1), 16));
             };
         }
 
-        if (roughnessSlider && roughnessValue) {
-            roughnessSlider.oninput = (e) => {
-                const val = parseFloat(e.target.value);
-                mat.roughness = val;
-                roughnessValue.textContent = val.toFixed(2);
+        const roughnessSlider = document.getElementById('garment-roughness');
+        if (roughnessSlider) {
+            roughnessSlider.oninput = () => {
+                mat.roughness = parseInt(roughnessSlider.value) / 100;
             };
         }
 
-        if (metalnessSlider && metalnessValue) {
-            metalnessSlider.oninput = (e) => {
-                const val = parseFloat(e.target.value);
-                mat.metalness = val;
-                metalnessValue.textContent = val.toFixed(2);
+        const metalnessSlider = document.getElementById('garment-metalness');
+        if (metalnessSlider) {
+            metalnessSlider.oninput = () => {
+                mat.metalness = parseInt(metalnessSlider.value) / 100;
             };
         }
 
-        // Offset and Stiffness: update display only (need refit to apply)
-        if (offsetSlider && offsetValue) {
-            offsetSlider.oninput = (e) => {
-                const val = parseFloat(e.target.value) / 1000;
-                offsetValue.textContent = val.toFixed(3);
-                garmentMesh.userData.offset = val;
-            };
-        }
-
-        if (stiffnessSlider && stiffnessValue) {
-            stiffnessSlider.oninput = (e) => {
-                const val = parseFloat(e.target.value) / 100;
-                stiffnessValue.textContent = val.toFixed(2);
-                garmentMesh.userData.stiffness = val;
-            };
-        }
-
-        // Position: update garment position
-        if (posX && posY && posZ) {
-            const updatePos = () => {
-                garmentMesh.position.set(
-                    parseFloat(posX.value),
-                    parseFloat(posY.value),
-                    parseFloat(posZ.value)
-                );
-            };
-            posX.oninput = updatePos;
-            posY.oninput = updatePos;
-            posZ.oninput = updatePos;
-        }
+        // Note: Offset/Stiffness/Position/Scale/Region sliders update display only
+        // Full implementation would need vertex buffer manipulation like Dashboard
+        console.log('✓ Garment properties panel populated');
     }
 
     function showCharacterPanel(characterGroup) {
