@@ -11,7 +11,7 @@ import {
     fetchAnimationList, fetchBVH,
 } from './scene-manager.js';
 import { PRESETS, applyPreset } from './presets.js';
-import { retargetBVHToDefClip } from './retarget_hybrid.js';
+import { retargetBVHToDefClip, detectBVHFormat } from './retarget_hybrid.js';
 
 // Wait for DOM before initialising
 window.addEventListener('DOMContentLoaded', () => {
@@ -211,24 +211,27 @@ window.addEventListener('DOMContentLoaded', () => {
             throw new Error('Skeleton has no bones');
         }
 
-        // Build defSkeleton object (same structure as viewer.js expects)
-        const defSkeleton = {
-            skeleton: skinnedMesh.skeleton,
-            rootBone: skinnedMesh.skeleton.bones[0],
-            bones: skinnedMesh.skeleton.bones,
-            boneByName: {}
-        };
-        for (const bone of skinnedMesh.skeleton.bones) {
-            defSkeleton.boneByName[bone.name] = bone;
+        // Use GLOBAL defSkeleton (not local build - bones must match skin weights)
+        if (!defSkeleton || !defSkeleton.boneByName) {
+            console.error('Global defSkeleton not loaded - cannot retarget');
+            throw new Error('Skeleton not ready');
         }
 
-        // Retarget BVH clip to DEF skeleton
-        const retargetedClip = retargetBVHToDefClip(result, defSkeleton, animName || result.clip.name);
+        // Detect BVH format (MIXAMO, CMU, AIST, etc.) - CRITICAL for correct retargeting!
+        const bvhBones = result.skeleton.bones;
+        const format = detectBVHFormat(bvhBones);
+        console.log(`BVH format detected: ${format}, retargeting to DEF skeleton...`);
+
+        // Retarget BVH to DEF skeleton using CORRECT parameters (like Dashboard)
+        // retargetBVHToDefClip(bvhResult, defSkel, FORMAT, opts)
+        const retargetedClip = retargetBVHToDefClip(result, defSkeleton, format, { bodyMesh: skinnedMesh });
 
         if (!retargetedClip || retargetedClip.tracks.length === 0) {
             console.error('Retargeting failed - no tracks generated');
             throw new Error('Retargeting failed');
         }
+
+        console.log(`✓ Retargeted clip: ${retargetedClip.tracks.length} tracks, ${retargetedClip.duration.toFixed(2)}s`);
 
         // Create AnimationMixer on the SkinnedMesh with retargeted clip
         const mixer = new THREE.AnimationMixer(skinnedMesh);
@@ -239,7 +242,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const duration = retargetedClip.duration || 1;
 
-        console.log('✓ BVH animation retargeted and loaded on SkinnedMesh:', animName, duration + 's', retargetedClip.tracks.length, 'tracks');
+        console.log('✓ BVH animation loaded on SkinnedMesh:', animName, duration + 's');
 
         return { mixer, action, duration };
     }
