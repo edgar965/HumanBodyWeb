@@ -83,6 +83,17 @@ window.addEventListener('DOMContentLoaded', () => {
             throw new Error('Skeleton data not loaded');
         }
 
+        // Validate SkinnedMesh has proper skeleton
+        if (!skinnedMesh || !skinnedMesh.skeleton) {
+            console.error('SkinnedMesh has no skeleton');
+            throw new Error('SkinnedMesh not properly initialized');
+        }
+
+        if (!skinnedMesh.skeleton.bones || skinnedMesh.skeleton.bones.length === 0) {
+            console.error('SkinnedMesh skeleton has no bones');
+            throw new Error('Skeleton has no bones');
+        }
+
         // Build defSkeleton object (same structure as viewer.js expects)
         const defSkeleton = {
             skeleton: skinnedMesh.skeleton,
