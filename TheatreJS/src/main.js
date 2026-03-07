@@ -43,6 +43,162 @@ window.addEventListener('DOMContentLoaded', () => {
     let selectedLightIcon = null;
     let selectedCharacter = null;  // Currently selected character group
     const loadedCharacters = [];   // Track all loaded character groups
+    let reloadDebounceTimer = null; // Debounce for character reload
+
+    // Skeleton and skin weights data (loaded once at startup)
+    let defSkeletonData = null;
+    let skinWeightData = null;
+
+    // Load skeleton and skin weights data
+    async function loadSkeletonAndWeights() {
+        try {
+            const [skelResp, weightsResp] = await Promise.all([
+                fetch('/api/character/skeleton/'),
+                fetch('/api/character/skin-weights/')
+            ]);
+            if (skelResp.ok) defSkeletonData = await skelResp.json();
+            if (weightsResp.ok) skinWeightData = await weightsResp.json();
+            console.log('✓ Loaded skeleton and skin weights');
+        } catch (err) {
+            console.warn('Failed to load skeleton/weights:', err);
+        }
+    }
+
+    // Load at startup
+    loadSkeletonAndWeights();
+
+    /**
+     * Load BVH animation on a SkinnedMesh (character with skeleton).
+     * Maps BVH bone animations to the character's skeleton bones.
+     */
+    function loadBVHOnSkinnedMesh(bvhText, skinnedMesh, scene, animName) {
+        const bvhLoader = new THREE.BVHLoader();
+        const result = bvhLoader.parse(bvhText);
+
+        // Create AnimationMixer on the SkinnedMesh (not on BVH bones!)
+        const mixer = new THREE.AnimationMixer(skinnedMesh);
+        const action = mixer.clipAction(result.clip);
+        action.setLoop(THREE.LoopRepeat);
+        action.play();
+        action.paused = true; // Start paused for player control
+
+        const duration = result.clip.duration || 1;
+
+        console.log('✓ BVH animation loaded on SkinnedMesh:', animName, duration + 's');
+
+        return { mixer, action, duration };
+    }
+
+    /**
+     * Convert a character mesh to SkinnedMesh with skeleton binding.
+     * This enables BVH animations to deform the character mesh (not just bones).
+     * Similar to Dashboard-Scene's convertToDefSkinnedMesh().
+     */
+    function convertCharacterToSkinnedMesh(characterGroup) {
+        if (!defSkeletonData || !skinWeightData) {
+            console.warn('Cannot convert to SkinnedMesh: skeleton/weights not loaded');
+            return null;
+        }
+
+        if (characterGroup.userData.isSkinnedMesh) {
+            console.log('Already a SkinnedMesh');
+            return characterGroup.userData.skinnedMesh;
+        }
+
+        // Find the body mesh (first child)
+        const bodyMesh = characterGroup.children.find(c => c.isMesh);
+        if (!bodyMesh) {
+            console.warn('No mesh found in character group');
+            return null;
+        }
+
+        console.log('Converting to SkinnedMesh...');
+
+        // Clone geometry
+        const geo = bodyMesh.geometry.clone();
+        const vCount = geo.attributes.position.count;
+
+        // Build skinIndices and skinWeights buffers
+        const skinIndices = new Float32Array(vCount * 4);
+        const skinWeights = new Float32Array(vCount * 4);
+
+        for (let i = 0; i < vCount; i++) {
+            const wi = skinWeightData.indices[i] || [0, 0, 0, 0];
+            const ww = skinWeightData.weights[i] || [1, 0, 0, 0];
+            skinIndices[i * 4 + 0] = wi[0];
+            skinIndices[i * 4 + 1] = wi[1];
+            skinIndices[i * 4 + 2] = wi[2];
+            skinIndices[i * 4 + 3] = wi[3];
+            skinWeights[i * 4 + 0] = ww[0];
+            skinWeights[i * 4 + 1] = ww[1];
+            skinWeights[i * 4 + 2] = ww[2];
+            skinWeights[i * 4 + 3] = ww[3];
+        }
+
+        geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
+        geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+
+        // Create skeleton from defSkeletonData
+        const bones = [];
+        const boneInverses = [];
+
+        for (const boneData of defSkeletonData.bones) {
+            const bone = new THREE.Bone();
+            bone.name = boneData.name;
+            bone.position.fromArray(boneData.position);
+            bone.quaternion.fromArray(boneData.quaternion);
+            bone.scale.fromArray(boneData.scale);
+            bones.push(bone);
+
+            // Bone inverse matrix
+            const invMatrix = new THREE.Matrix4();
+            if (boneData.inverse) {
+                invMatrix.fromArray(boneData.inverse);
+            }
+            boneInverses.push(invMatrix);
+        }
+
+        // Build bone hierarchy
+        for (let i = 0; i < defSkeletonData.bones.length; i++) {
+            const parentIdx = defSkeletonData.bones[i].parent;
+            if (parentIdx >= 0) {
+                bones[parentIdx].add(bones[i]);
+            }
+        }
+
+        const skeleton = new THREE.Skeleton(bones, boneInverses);
+        const rootBone = bones[0];
+
+        // Create SkinnedMesh
+        const material = bodyMesh.material; // Reuse existing material
+        const skinnedMesh = new THREE.SkinnedMesh(geo, material);
+        skinnedMesh.castShadow = true;
+        skinnedMesh.receiveShadow = true;
+
+        // Add root bone to skinned mesh and bind
+        skinnedMesh.add(rootBone);
+        skinnedMesh.bind(skeleton);
+
+        // Replace old mesh
+        const pos = bodyMesh.position.clone();
+        const rot = bodyMesh.rotation.clone();
+        const scale = bodyMesh.scale.clone();
+
+        characterGroup.remove(bodyMesh);
+        skinnedMesh.position.copy(pos);
+        skinnedMesh.rotation.copy(rot);
+        skinnedMesh.scale.copy(scale);
+        characterGroup.add(skinnedMesh);
+
+        // Store references
+        characterGroup.userData.isSkinnedMesh = true;
+        characterGroup.userData.skinnedMesh = skinnedMesh;
+        characterGroup.userData.skeleton = skeleton;
+        characterGroup.userData.rootBone = rootBone;
+
+        console.log('✓ Converted to SkinnedMesh with', bones.length, 'bones');
+        return skinnedMesh;
+    }
 
     canvas.addEventListener('click', (event) => {
         const rect = canvas.getBoundingClientRect();
@@ -525,7 +681,17 @@ window.addEventListener('DOMContentLoaded', () => {
     async function handleAnimLoad(category, name) {
         try {
             const bvhText = await fetchBVH(category, name);
-            const { mixer, action, duration } = loadBVHFromText(bvhText, scene, `${category}/${name}`);
+
+            // If we have a selected character, convert it to SkinnedMesh first
+            let targetMesh = null;
+            if (selectedCharacter) {
+                targetMesh = convertCharacterToSkinnedMesh(selectedCharacter);
+            }
+
+            // If we have a SkinnedMesh, use it for animation; otherwise fall back to BVH bones
+            const { mixer, action, duration } = targetMesh
+                ? loadBVHOnSkinnedMesh(bvhText, targetMesh, scene, `${category}/${name}`)
+                : loadBVHFromText(bvhText, scene, `${category}/${name}`);
 
             // Replace current mixer
             if (activeMixer) activeMixer.stopAllAction();
