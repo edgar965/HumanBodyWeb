@@ -51,6 +51,9 @@ window.addEventListener('DOMContentLoaded', () => {
     let defSkeletonData = null;
     let skinWeightData = null;
     let skeletonLoadingPromise = null;
+    let defSkeleton = null;  // { skeleton, rootBone, bones, boneByName } - like Dashboard
+    let skeletonHelper = null;  // Single global SkeletonHelper - like Dashboard
+    let rigVisible = false;  // Rig visibility state - like Dashboard
 
     // Load skeleton and skin weights data
     async function loadSkeletonAndWeights() {
@@ -65,6 +68,43 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (skelResp.ok) defSkeletonData = await skelResp.json();
                 if (weightsResp.ok) skinWeightData = await weightsResp.json();
                 console.log('✓ Loaded skeleton and skin weights:', defSkeletonData?.bones?.length || 0, 'bones');
+
+                // Build defSkeleton object (like Dashboard-Scene viewer.js)
+                if (defSkeletonData) {
+                    const bones = [];
+                    const boneInverses = [];
+
+                    for (const boneData of defSkeletonData.bones) {
+                        const bone = new THREE.Bone();
+                        bone.name = boneData.name;
+                        bone.position.fromArray(boneData.position);
+                        bone.quaternion.fromArray(boneData.quaternion);
+                        bone.scale.fromArray(boneData.scale);
+                        bones.push(bone);
+
+                        const invMatrix = new THREE.Matrix4();
+                        if (boneData.inverse) invMatrix.fromArray(boneData.inverse);
+                        boneInverses.push(invMatrix);
+                    }
+
+                    // Build bone hierarchy
+                    for (let i = 0; i < defSkeletonData.bones.length; i++) {
+                        const parentIdx = defSkeletonData.bones[i].parent;
+                        if (parentIdx >= 0) {
+                            bones[parentIdx].add(bones[i]);
+                        }
+                    }
+
+                    const skeleton = new THREE.Skeleton(bones, boneInverses);
+                    const rootBone = bones[0];
+                    const boneByName = {};
+                    for (const bone of bones) {
+                        boneByName[bone.name] = bone;
+                    }
+
+                    defSkeleton = { skeleton, rootBone, bones, boneByName };
+                    console.log('✓ Built defSkeleton:', bones.length, 'bones');
+                }
 
                 // Auto-convert any characters that were loaded before skeleton was ready
                 for (const char of loadedCharacters) {
@@ -260,19 +300,11 @@ window.addEventListener('DOMContentLoaded', () => {
         skinnedMesh.scale.copy(scale);
         characterGroup.add(skinnedMesh);
 
-        // Create SkeletonHelper for visualization
-        const skeletonHelper = new THREE.SkeletonHelper(rootBone);
-        skeletonHelper.visible = false; // Hidden by default
-        skeletonHelper.material.linewidth = 2;
-        skeletonHelper.userData.isRig = true; // Mark for toggle button
-        scene.add(skeletonHelper);
-
         // Store references
         characterGroup.userData.isSkinnedMesh = true;
         characterGroup.userData.skinnedMesh = skinnedMesh;
         characterGroup.userData.skeleton = skeleton;
         characterGroup.userData.rootBone = rootBone;
-        characterGroup.userData.skeletonHelper = skeletonHelper;
 
         console.log('✓ Converted to SkinnedMesh with', bones.length, 'bones');
         return skinnedMesh;
@@ -494,19 +526,27 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Toggle rig visibility (skeleton)
+    // Toggle rig visibility (skeleton) - EXACTLY like Dashboard-Scene
     const btnToggleRig = document.getElementById('btn-toggle-rig');
-    let rigVisible = false;
     if (btnToggleRig) {
         btnToggleRig.addEventListener('click', () => {
             rigVisible = !rigVisible;
-
-            scene.traverse((obj) => {
-                if (obj.isSkeletonHelper || obj.userData.isRig) {
-                    obj.visible = rigVisible;
+            if (rigVisible) {
+                // Create helper if needed (from DEF skeleton when available)
+                if (!skeletonHelper && defSkeleton) {
+                    skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                    skeletonHelper.material.depthTest = false;
+                    skeletonHelper.material.depthWrite = false;
+                    skeletonHelper.material.color.set(0x00ffaa);
+                    skeletonHelper.material.linewidth = 2;
+                    skeletonHelper.renderOrder = 999;
+                    scene.add(skeletonHelper);
+                    console.log('✓ SkeletonHelper created');
                 }
-            });
-
+                if (skeletonHelper) skeletonHelper.visible = true;
+            } else {
+                if (skeletonHelper) skeletonHelper.visible = false;
+            }
             btnToggleRig.classList.toggle('active', rigVisible);
         });
     }
