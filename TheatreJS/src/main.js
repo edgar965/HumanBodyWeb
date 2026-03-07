@@ -354,23 +354,24 @@ window.addEventListener('DOMContentLoaded', () => {
         });
 
         // Convert hair to SkinnedMesh (like Dashboard viewer.js _skinifyHairGroup)
-        const hairGroups = [];
-        characterGroup.traverse((child) => {
-            if (child.userData.isHair && child.isGroup) {
-                hairGroups.push(child);
-            }
-        });
+        const headBoneIdx = _findHeadBoneIndex();
+        if (headBoneIdx >= 0) {
+            const hairChildren = characterGroup.children.filter(c => c.userData.isHair);
+            for (const hairGroup of hairChildren) {
+                // Skip if already skinned
+                let hasRegularMesh = false;
+                hairGroup.traverse((child) => {
+                    if (child.isMesh && !child.isSkinnedMesh) {
+                        hasRegularMesh = true;
+                    }
+                });
 
-        for (const hairGroup of hairGroups) {
-            const headBoneIdx = _findHeadBoneIndex();
-            if (headBoneIdx >= 0) {
-                const skinnedHairGroup = _skinifyHairGroup(hairGroup, headBoneIdx, skinnedMesh);
-                // Replace original hair group with skinned version
-                const parent = hairGroup.parent;
-                if (parent) {
-                    parent.remove(hairGroup);
-                    parent.add(skinnedHairGroup);
-                    console.log('✓ Hair converted to SkinnedMesh');
+                if (hasRegularMesh) {
+                    const skinnedHairGroup = _skinifyHairGroup(hairGroup, headBoneIdx, skinnedMesh);
+                    // Replace original hair group with skinned version
+                    characterGroup.remove(hairGroup);
+                    characterGroup.add(skinnedHairGroup);
+                    console.log('✓ Hair converted to SkinnedMesh:', hairGroup.name || 'hair');
                 }
             }
         }
@@ -949,8 +950,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 ? loadBVHOnSkinnedMesh(bvhText, targetMesh, scene, `${category}/${name}`)
                 : loadBVHFromText(bvhText, scene, `${category}/${name}`);
 
-            // Replace current mixer
-            if (activeMixer) activeMixer.stopAllAction();
+            // Replace current mixer - PROPERLY dispose old one
+            if (activeMixer) {
+                activeMixer.stopAllAction();
+                activeMixer.uncacheRoot(activeMixer.getRoot());
+            }
             activeMixer = mixer;
             currentAction = action;
 
@@ -969,6 +973,12 @@ window.addEventListener('DOMContentLoaded', () => {
             window.animDuration = duration;
 
             updatePlayerUI();
+
+            // Reset play button state
+            const btnPlayPause = document.getElementById('btnPlayPause');
+            if (btnPlayPause) {
+                btnPlayPause.classList.remove('playing');
+            }
 
             console.log('Animation loaded:', category, name, duration);
         } catch (err) {
