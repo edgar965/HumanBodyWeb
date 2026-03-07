@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import studio from '@theatre/studio';
 import { createScene } from './scene-setup.js';
 import { setupTheatre, createCameraSheet, createLightSheet } from './theatre-bridge.js';
@@ -72,7 +73,7 @@ window.addEventListener('DOMContentLoaded', () => {
      * Maps BVH bone animations to the character's skeleton bones.
      */
     function loadBVHOnSkinnedMesh(bvhText, skinnedMesh, scene, animName) {
-        const bvhLoader = new THREE.BVHLoader();
+        const bvhLoader = new BVHLoader();
         const result = bvhLoader.parse(bvhText);
 
         // Create AnimationMixer on the SkinnedMesh (not on BVH bones!)
@@ -235,8 +236,20 @@ window.addEventListener('DOMContentLoaded', () => {
         // Try character meshes (all loaded characters)
         const charIntersects = raycaster.intersectObjects(loadedCharacters, true);
         if (charIntersects.length > 0) {
-            // Find the character group (walk up the hierarchy)
-            let clickedChar = charIntersects[0].object;
+            const clickedMesh = charIntersects[0].object;
+
+            // Check if it's a garment (higher priority than character)
+            if (clickedMesh.userData.isGarment) {
+                selectedCharacter = null;
+                selectedLightIcon = null;
+                transformControls.attach(clickedMesh);
+                console.log('✓ Garment ausgewählt:', clickedMesh.name);
+                showGarmentPanel(clickedMesh);
+                return;
+            }
+
+            // Otherwise find the character group (walk up the hierarchy)
+            let clickedChar = clickedMesh;
             while (clickedChar.parent && !clickedChar.userData.isCharacter) {
                 clickedChar = clickedChar.parent;
             }
@@ -1130,6 +1143,92 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function showGarmentPanel(garmentMesh) {
+        // Switch to Eigenschaften tab
+        document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const propsTab = document.querySelector('[data-tab="tab-properties"]');
+        const propsPane = document.getElementById('tab-properties');
+        if (propsTab) propsTab.classList.add('active');
+        if (propsPane) propsPane.classList.add('active');
+
+        // Fill properties panel
+        const content = document.getElementById('properties-content');
+        if (!content) return;
+
+        const garmentId = garmentMesh.userData.garmentId || garmentMesh.name || 'Garment';
+        const mat = garmentMesh.material;
+        const currentColor = mat.color;
+        const colorHex = '#' + currentColor.getHexString();
+        const roughness = mat.roughness ?? 0.8;
+        const metalness = mat.metalness ?? 0;
+
+        content.innerHTML = `
+            <div style="padding:16px;">
+                <h3 style="font-size:0.9rem;margin-bottom:16px;color:var(--accent-purple);border-bottom:1px solid var(--border);padding-bottom:8px;">
+                    <i class="fas fa-tshirt"></i> ${garmentId}
+                </h3>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                        Farbe
+                    </label>
+                    <input type="color" id="garment-color" value="${colorHex}"
+                           style="width:100%;height:32px;border-radius:4px;border:1px solid var(--border);background:var(--bg-primary);cursor:pointer;" />
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                        Roughness: <span id="garment-roughness-value">${roughness.toFixed(2)}</span>
+                    </label>
+                    <input type="range" id="garment-roughness" min="0" max="1" step="0.01" value="${roughness}"
+                           style="width:100%;cursor:pointer;" />
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
+                        Metalness: <span id="garment-metalness-value">${metalness.toFixed(2)}</span>
+                    </label>
+                    <input type="range" id="garment-metalness" min="0" max="1" step="0.01" value="${metalness}"
+                           style="width:100%;cursor:pointer;" />
+                </div>
+
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:20px;padding-top:12px;border-top:1px solid var(--border);">
+                    <i class="fas fa-info-circle"></i> Änderungen wirken sofort
+                </div>
+            </div>
+        `;
+
+        // Wire up event listeners
+        const colorPicker = document.getElementById('garment-color');
+        const roughnessSlider = document.getElementById('garment-roughness');
+        const roughnessValue = document.getElementById('garment-roughness-value');
+        const metalnessSlider = document.getElementById('garment-metalness');
+        const metalnessValue = document.getElementById('garment-metalness-value');
+
+        if (colorPicker) {
+            colorPicker.oninput = (e) => {
+                mat.color.setHex(parseInt(e.target.value.substring(1), 16));
+            };
+        }
+
+        if (roughnessSlider && roughnessValue) {
+            roughnessSlider.oninput = (e) => {
+                const val = parseFloat(e.target.value);
+                mat.roughness = val;
+                roughnessValue.textContent = val.toFixed(2);
+            };
+        }
+
+        if (metalnessSlider && metalnessValue) {
+            metalnessSlider.oninput = (e) => {
+                const val = parseFloat(e.target.value);
+                mat.metalness = val;
+                metalnessValue.textContent = val.toFixed(2);
+            };
+        }
+    }
+
     function showCharacterPanel(characterGroup) {
         // Switch to Eigenschaften tab
         document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
@@ -1165,6 +1264,14 @@ window.addEventListener('DOMContentLoaded', () => {
                         <i class="fas fa-sliders-h"></i> Meta-Parameter
                     </h4>
                     <div id="meta-sliders-container"></div>
+                </div>
+
+                <!-- Morph Sliders -->
+                <div style="margin-bottom:20px;padding-top:12px;border-top:1px solid var(--border);">
+                    <h4 style="font-size:0.8rem;margin-bottom:12px;color:var(--text);">
+                        <i class="fas fa-palette"></i> Morphs
+                    </h4>
+                    <div id="morph-sliders-container"></div>
                 </div>
 
                 <div style="margin-bottom:16px;">
@@ -1257,6 +1364,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // Populate Meta-Sliders (age, mass, tone, height)
         populateMetaSliders(characterGroup);
+
+        // Populate Morph-Sliders (from preset morphs)
+        populateMorphSliders(characterGroup);
     }
 
     function populateMetaSliders(characterGroup) {
@@ -1299,13 +1409,141 @@ window.addEventListener('DOMContentLoaded', () => {
             const slider = document.getElementById(`meta-${name}`);
             const valueDisplay = document.getElementById(`meta-${name}-value`);
             if (slider && valueDisplay) {
-                slider.oninput = () => {
+                slider.oninput = async () => {
                     const val = parseFloat(slider.value);
                     valueDisplay.textContent = val.toFixed(2);
                     currentMeta[name] = val;
                     characterGroup.userData.meta = currentMeta;
-                    // TODO: Reload character with new meta values
-                    console.log('Meta changed:', name, val);
+
+                    // Reload character with new meta values
+                    await reloadCharacterMesh(characterGroup);
+                };
+            }
+        }
+    }
+
+    async function reloadCharacterMesh(characterGroup) {
+        try {
+            // Build query string from current userData
+            const params = new URLSearchParams();
+            params.set('body_type', characterGroup.userData.bodyType || 'Female_Caucasian');
+
+            // Add all morphs
+            const morphs = characterGroup.userData.morphs || {};
+            for (const [key, val] of Object.entries(morphs)) {
+                if (val !== undefined && val !== null) {
+                    params.set(`morph_${key}`, String(val));
+                }
+            }
+
+            // Add all meta values
+            const meta = characterGroup.userData.meta || {};
+            for (const [key, val] of Object.entries(meta)) {
+                if (val !== undefined && val !== null) {
+                    params.set(`meta_${key}`, String(val));
+                }
+            }
+
+            const url = `/api/character/mesh/?${params.toString()}`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error(`Character mesh API error: ${resp.status}`);
+            const data = await resp.json();
+
+            // Find the body mesh in the character group
+            const oldBodyMesh = characterGroup.children.find(c => c.isMesh && !c.userData.isHair && !c.userData.isGarment);
+            if (!oldBodyMesh) {
+                console.warn('Could not find body mesh to update');
+                return;
+            }
+
+            // Decode new mesh data
+            function base64ToFloat32(b64) {
+                const binary = atob(b64);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                return new Float32Array(bytes.buffer);
+            }
+
+            const verts = base64ToFloat32(data.vertices);
+
+            // Convert from Blender Z-up to Three.js Y-up
+            for (let i = 0; i < verts.length; i += 3) {
+                const y = verts[i + 1];
+                const z = verts[i + 2];
+                verts[i + 1] = z;
+                verts[i + 2] = -y;
+            }
+
+            // Update geometry positions
+            oldBodyMesh.geometry.attributes.position.array.set(verts);
+            oldBodyMesh.geometry.attributes.position.needsUpdate = true;
+
+            // Recompute normals if not provided
+            if (data.normals) {
+                const normals = base64ToFloat32(data.normals);
+                for (let i = 0; i < normals.length; i += 3) {
+                    const y = normals[i + 1];
+                    const z = normals[i + 2];
+                    normals[i + 1] = z;
+                    normals[i + 2] = -y;
+                }
+                oldBodyMesh.geometry.attributes.normal.array.set(normals);
+                oldBodyMesh.geometry.attributes.normal.needsUpdate = true;
+            } else {
+                oldBodyMesh.geometry.computeVertexNormals();
+            }
+
+            console.log('✓ Character mesh reloaded');
+        } catch (err) {
+            console.error('Failed to reload character mesh:', err);
+        }
+    }
+
+    function populateMorphSliders(characterGroup) {
+        const container = document.getElementById('morph-sliders-container');
+        if (!container) return;
+
+        // Get current morph values from character userData
+        const currentMorphs = characterGroup.userData.morphs || {};
+
+        // If no morphs, show a message
+        if (Object.keys(currentMorphs).length === 0) {
+            container.innerHTML = '<div style="font-size:0.75rem;color:var(--text-muted);text-align:center;padding:10px;">Keine Morphs</div>';
+            return;
+        }
+
+        // Build HTML for morph sliders
+        let slidersHTML = '<div style="max-height:300px;overflow-y:auto;padding-right:4px;">';
+        for (const [name, value] of Object.entries(currentMorphs)) {
+            const displayValue = value || 0;
+            slidersHTML += `
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
+                        <span style="color:var(--text-muted);">${name}</span>
+                        <span id="morph-${name}-value" style="color:var(--text);">${displayValue.toFixed(2)}</span>
+                    </div>
+                    <input type="range" id="morph-${name}" min="0" max="1" step="0.01" value="${displayValue}"
+                           style="width:100%;cursor:pointer;" />
+                </div>
+            `;
+        }
+        slidersHTML += '</div>';
+
+        container.innerHTML = slidersHTML;
+
+        // Wire up event listeners
+        for (const name of Object.keys(currentMorphs)) {
+            const slider = document.getElementById(`morph-${name}`);
+            const valueDisplay = document.getElementById(`morph-${name}-value`);
+            if (slider && valueDisplay) {
+                slider.oninput = async () => {
+                    const val = parseFloat(slider.value);
+                    valueDisplay.textContent = val.toFixed(2);
+                    currentMorphs[name] = val;
+                    characterGroup.userData.morphs = currentMorphs;
+
+                    // Reload character with new morph values
+                    await reloadCharacterMesh(characterGroup);
                 };
             }
         }

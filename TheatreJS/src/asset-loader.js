@@ -245,6 +245,12 @@ export async function loadCharacterFromPreset(scene, preset, presetName) {
     const group = buildCharacterMesh(data);
     scene.add(group);
 
+    // Store preset data in userData for later reload
+    group.userData.bodyType = preset.body_type || 'Female_Caucasian';
+    group.userData.morphs = { ...(preset.morphs || {}), ...(preset.user_morphs || {}) };
+    group.userData.meta = { ...(preset.meta || {}) };
+    group.userData.presetName = presetName;
+
     // Load hair if present
     if (preset.hair_style && preset.hair_style.url) {
         try {
@@ -371,6 +377,15 @@ async function loadGarmentMesh(garmentData, bodyType) {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+
+    // Store garment data in userData for editing
+    mesh.userData.garmentId = id;
+    mesh.userData.offset = offset;
+    mesh.userData.stiffness = stiffness;
+    mesh.userData.originalColor = [cr, cg, cb];
+    mesh.userData.roughness = roughness;
+    mesh.userData.metalness = metalness;
+    mesh.name = id; // Set mesh name to garment ID
 
     return mesh;
 }
