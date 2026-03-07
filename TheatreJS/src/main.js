@@ -132,7 +132,7 @@ window.addEventListener('DOMContentLoaded', () => {
      * This enables BVH animations to deform the character mesh (not just bones).
      * Similar to Dashboard-Scene's convertToDefSkinnedMesh().
      */
-    function convertCharacterToSkinnedMesh(characterGroup) {
+    function convertCharacterToSkinnedMesh(characterGroup, scene) {
         if (!defSkeletonData || !skinWeightData) {
             console.warn('Cannot convert to SkinnedMesh: skeleton/weights not loaded');
             return null;
@@ -228,11 +228,19 @@ window.addEventListener('DOMContentLoaded', () => {
         skinnedMesh.scale.copy(scale);
         characterGroup.add(skinnedMesh);
 
+        // Create SkeletonHelper for visualization
+        const skeletonHelper = new THREE.SkeletonHelper(rootBone);
+        skeletonHelper.visible = false; // Hidden by default
+        skeletonHelper.material.linewidth = 2;
+        skeletonHelper.userData.isRig = true; // Mark for toggle button
+        scene.add(skeletonHelper);
+
         // Store references
         characterGroup.userData.isSkinnedMesh = true;
         characterGroup.userData.skinnedMesh = skinnedMesh;
         characterGroup.userData.skeleton = skeleton;
         characterGroup.userData.rootBone = rootBone;
+        characterGroup.userData.skeletonHelper = skeletonHelper;
 
         console.log('✓ Converted to SkinnedMesh with', bones.length, 'bones');
         return skinnedMesh;
@@ -735,7 +743,7 @@ window.addEventListener('DOMContentLoaded', () => {
             // If we have a selected character, convert it to SkinnedMesh first
             let targetMesh = null;
             if (selectedCharacter) {
-                targetMesh = convertCharacterToSkinnedMesh(selectedCharacter);
+                targetMesh = convertCharacterToSkinnedMesh(selectedCharacter, scene);
             }
 
             // If we have a SkinnedMesh, use it for animation; otherwise fall back to BVH bones
