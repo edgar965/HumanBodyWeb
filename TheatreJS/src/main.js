@@ -11,6 +11,7 @@ import {
     fetchAnimationList, fetchBVH,
 } from './scene-manager.js';
 import { PRESETS, applyPreset } from './presets.js';
+import { retargetBVHToDefClip } from './retarget_hybrid.js';
 
 // Wait for DOM before initialising
 window.addEventListener('DOMContentLoaded', () => {
@@ -54,7 +55,7 @@ window.addEventListener('DOMContentLoaded', () => {
     async function loadSkeletonAndWeights() {
         try {
             const [skelResp, weightsResp] = await Promise.all([
-                fetch('/api/character/skeleton/'),
+                fetch('/api/character/def-skeleton/'),
                 fetch('/api/character/skin-weights/')
             ]);
             if (skelResp.ok) defSkeletonData = await skelResp.json();
@@ -70,22 +71,47 @@ window.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Load BVH animation on a SkinnedMesh (character with skeleton).
-     * Maps BVH bone animations to the character's skeleton bones.
+     * Uses retargeting to map BVH bone names to DEF skeleton bone names.
      */
     function loadBVHOnSkinnedMesh(bvhText, skinnedMesh, scene, animName) {
         const bvhLoader = new BVHLoader();
         const result = bvhLoader.parse(bvhText);
 
-        // Create AnimationMixer on the SkinnedMesh (not on BVH bones!)
+        // Retarget BVH clip to DEF skeleton bone names
+        if (!defSkeletonData) {
+            console.error('DEF skeleton data not loaded - cannot retarget animation');
+            throw new Error('Skeleton data not loaded');
+        }
+
+        // Build defSkeleton object (same structure as viewer.js expects)
+        const defSkeleton = {
+            skeleton: skinnedMesh.skeleton,
+            rootBone: skinnedMesh.skeleton.bones[0],
+            bones: skinnedMesh.skeleton.bones,
+            boneByName: {}
+        };
+        for (const bone of skinnedMesh.skeleton.bones) {
+            defSkeleton.boneByName[bone.name] = bone;
+        }
+
+        // Retarget BVH clip to DEF skeleton
+        const retargetedClip = retargetBVHToDefClip(result, defSkeleton, animName || result.clip.name);
+
+        if (!retargetedClip || retargetedClip.tracks.length === 0) {
+            console.error('Retargeting failed - no tracks generated');
+            throw new Error('Retargeting failed');
+        }
+
+        // Create AnimationMixer on the SkinnedMesh with retargeted clip
         const mixer = new THREE.AnimationMixer(skinnedMesh);
-        const action = mixer.clipAction(result.clip);
+        const action = mixer.clipAction(retargetedClip);
         action.setLoop(THREE.LoopRepeat);
         action.play();
         action.paused = true; // Start paused for player control
 
-        const duration = result.clip.duration || 1;
+        const duration = retargetedClip.duration || 1;
 
-        console.log('✓ BVH animation loaded on SkinnedMesh:', animName, duration + 's');
+        console.log('✓ BVH animation retargeted and loaded on SkinnedMesh:', animName, duration + 's', retargetedClip.tracks.length, 'tracks');
 
         return { mixer, action, duration };
     }
