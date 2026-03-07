@@ -55,6 +55,78 @@ window.addEventListener('DOMContentLoaded', () => {
     let skeletonHelper = null;  // Single global SkeletonHelper - like Dashboard
     let rigVisible = false;  // Rig visibility state - like Dashboard
 
+    /**
+     * Build 176-bone THREE.Skeleton from DEF skeleton data + skin weight bone order.
+     * Bone indices match skinWeightData.bone_names (authoritative for skinIndex).
+     * COPIED FROM Dashboard-Scene viewer.js (lines 709-774)
+     */
+    function buildDefSkeleton(skelData, swData) {
+        // Build lookup: bone name -> skeleton data entry
+        const skelByName = {};
+        for (const b of skelData.bones) {
+            skelByName[b.name] = b;
+        }
+
+        const bones = [];
+        const boneByName = {};
+        let rootBone = null;
+
+        // Create bones in skin weight order (= authoritative index order)
+        // Sanitize names: Three.js PropertyBinding uses dots as separators,
+        // so bone names like "DEF-upper_arm.L" break track name parsing.
+        for (const name of swData.bone_names) {
+            const bone = new THREE.Bone();
+            bone.name = name.replace(/\./g, '_');  // DEF-upper_arm.L -> DEF-upper_arm_L
+            bones.push(bone);
+            boneByName[name] = bone;  // Original name as key for mapping lookups
+        }
+
+        // Set local transforms and build parent-child hierarchy
+        for (let i = 0; i < swData.bone_names.length; i++) {
+            const name = swData.bone_names[i];
+            const bone = bones[i];
+            const data = skelByName[name];
+
+            if (!data) continue;
+
+            // Convert Blender local position (x,y,z) -> Three.js (x,z,-y)
+            const p = data.local_position;
+            bone.position.set(p[0], p[2], -p[1]);
+
+            // Convert Blender quaternion [w,x,y,z] -> Three.js Quaternion(x,z,-y,w)
+            const q = data.local_quaternion;
+            bone.quaternion.set(q[1], q[3], -q[2], q[0]);
+
+            // Parent-child (lookup by original name)
+            if (data.parent && boneByName[data.parent]) {
+                boneByName[data.parent].add(bone);
+            } else {
+                // Root bone (no skinning parent)
+                if (!rootBone) rootBone = bone;
+            }
+        }
+
+        // Collect orphan roots (bones without skinning parent that aren't the main root)
+        for (let i = 0; i < bones.length; i++) {
+            const name = swData.bone_names[i];
+            const data = skelByName[name];
+            if (!data) continue;
+            if (!data.parent && bones[i] !== rootBone) {
+                // Attach to main root
+                if (rootBone) rootBone.add(bones[i]);
+            }
+        }
+
+        if (!rootBone && bones.length > 0) rootBone = bones[0];
+
+        // Update world matrices before creating skeleton
+        rootBone.updateWorldMatrix(true, true);
+
+        const skeleton = new THREE.Skeleton(bones);
+
+        return { skeleton, rootBone, bones, boneByName };
+    }
+
     // Load skeleton and skin weights data
     async function loadSkeletonAndWeights() {
         if (skeletonLoadingPromise) return skeletonLoadingPromise;
@@ -69,41 +141,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (weightsResp.ok) skinWeightData = await weightsResp.json();
                 console.log('✓ Loaded skeleton and skin weights:', defSkeletonData?.bones?.length || 0, 'bones');
 
-                // Build defSkeleton object (like Dashboard-Scene viewer.js)
-                if (defSkeletonData) {
-                    const bones = [];
-                    const boneInverses = [];
+                // Build defSkeleton object using Dashboard's buildDefSkeleton function
+                if (defSkeletonData && skinWeightData) {
+                    defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
+                    console.log('✓ Built defSkeleton:', defSkeleton.bones.length, 'bones');
 
-                    for (const boneData of defSkeletonData.bones) {
-                        const bone = new THREE.Bone();
-                        bone.name = boneData.name;
-                        bone.position.fromArray(boneData.position);
-                        bone.quaternion.fromArray(boneData.quaternion);
-                        bone.scale.fromArray(boneData.scale);
-                        bones.push(bone);
-
-                        const invMatrix = new THREE.Matrix4();
-                        if (boneData.inverse) invMatrix.fromArray(boneData.inverse);
-                        boneInverses.push(invMatrix);
-                    }
-
-                    // Build bone hierarchy
-                    for (let i = 0; i < defSkeletonData.bones.length; i++) {
-                        const parentIdx = defSkeletonData.bones[i].parent;
-                        if (parentIdx >= 0) {
-                            bones[parentIdx].add(bones[i]);
-                        }
-                    }
-
-                    const skeleton = new THREE.Skeleton(bones, boneInverses);
-                    const rootBone = bones[0];
-                    const boneByName = {};
-                    for (const bone of bones) {
-                        boneByName[bone.name] = bone;
-                    }
-
-                    defSkeleton = { skeleton, rootBone, bones, boneByName };
-                    console.log('✓ Built defSkeleton:', bones.length, 'bones');
+                    // Make defSkeletonData available globally for test
+                    window.defSkeletonData = defSkeletonData;
+                    window.defSkeleton = defSkeleton;
                 }
 
                 // Auto-convert any characters that were loaded before skeleton was ready
@@ -204,6 +249,10 @@ window.addEventListener('DOMContentLoaded', () => {
      * This enables BVH animations to deform the character mesh (not just bones).
      * Similar to Dashboard-Scene's convertToDefSkinnedMesh().
      */
+    /**
+     * Convert character to SkinnedMesh using DEF skeleton.
+     * COPIED FROM Dashboard-Scene viewer.js convertToDefSkinnedMesh (lines 780-828)
+     */
     function convertCharacterToSkinnedMesh(characterGroup, scene) {
         if (!defSkeletonData || !skinWeightData) {
             console.warn('Cannot convert to SkinnedMesh: skeleton/weights not loaded');
@@ -216,97 +265,81 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         // Find the body mesh (first child)
-        const bodyMesh = characterGroup.children.find(c => c.isMesh);
+        const bodyMesh = characterGroup.children.find(c => c.isMesh && !c.userData.isHair && !c.userData.isGarment);
         if (!bodyMesh) {
-            console.warn('No mesh found in character group');
+            console.warn('No body mesh found in character group');
             return null;
         }
 
         console.log('Converting to SkinnedMesh...');
 
-        // Clone geometry
+        // Clone geometry — the original has stale WebGL VAO state from non-skinned rendering
         const geo = bodyMesh.geometry.clone();
         const vCount = geo.attributes.position.count;
 
-        // Build skinIndices and skinWeights buffers
+        // Build skinIndices and skinWeights buffers (Dashboard format)
         const skinIndices = new Float32Array(vCount * 4);
         const skinWeights = new Float32Array(vCount * 4);
 
-        for (let i = 0; i < vCount; i++) {
-            const wi = skinWeightData.indices[i] || [0, 0, 0, 0];
-            const ww = skinWeightData.weights[i] || [1, 0, 0, 0];
-            skinIndices[i * 4 + 0] = wi[0];
-            skinIndices[i * 4 + 1] = wi[1];
-            skinIndices[i * 4 + 2] = wi[2];
-            skinIndices[i * 4 + 3] = wi[3];
-            skinWeights[i * 4 + 0] = ww[0];
-            skinWeights[i * 4 + 1] = ww[1];
-            skinWeights[i * 4 + 2] = ww[2];
-            skinWeights[i * 4 + 3] = ww[3];
+        for (let v = 0; v < vCount; v++) {
+            const infs = skinWeightData.weights[v] || [];
+            const sorted = infs.slice().sort((a, b) => b[1] - a[1]).slice(0, 4);
+            let sum = sorted.reduce((s, e) => s + e[1], 0);
+            if (sum < 1e-6) sum = 1;
+            for (let i = 0; i < 4; i++) {
+                skinIndices[v * 4 + i] = i < sorted.length ? sorted[i][0] : 0;
+                skinWeights[v * 4 + i] = i < sorted.length ? sorted[i][1] / sum : 0;
+            }
         }
 
         geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
         geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
 
-        // Create skeleton from defSkeletonData
-        const bones = [];
-        const boneInverses = [];
-
-        for (const boneData of defSkeletonData.bones) {
-            const bone = new THREE.Bone();
-            bone.name = boneData.name;
-            bone.position.fromArray(boneData.position);
-            bone.quaternion.fromArray(boneData.quaternion);
-            bone.scale.fromArray(boneData.scale);
-            bones.push(bone);
-
-            // Bone inverse matrix
-            const invMatrix = new THREE.Matrix4();
-            if (boneData.inverse) {
-                invMatrix.fromArray(boneData.inverse);
-            }
-            boneInverses.push(invMatrix);
+        // Rebuild skeleton — reusing a Skeleton whose bones were created before
+        // parenting to SkinnedMesh causes stale boneTexture/boneMatrices state.
+        // Use global defSkeleton built by loadSkeletonAndWeights
+        if (!defSkeleton) {
+            defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
         }
-
-        // Build bone hierarchy
-        for (let i = 0; i < defSkeletonData.bones.length; i++) {
-            const parentIdx = defSkeletonData.bones[i].parent;
-            if (parentIdx >= 0) {
-                bones[parentIdx].add(bones[i]);
-            }
-        }
-
-        const skeleton = new THREE.Skeleton(bones, boneInverses);
-        const rootBone = bones[0];
 
         // Create SkinnedMesh
-        const material = bodyMesh.material; // Reuse existing material
-        const skinnedMesh = new THREE.SkinnedMesh(geo, material);
-        skinnedMesh.castShadow = true;
-        skinnedMesh.receiveShadow = true;
-
-        // Add root bone to skinned mesh and bind
-        skinnedMesh.add(rootBone);
-        skinnedMesh.bind(skeleton);
-
-        // Replace old mesh
+        const material = bodyMesh.material; // Reuse existing material (array of materials)
         const pos = bodyMesh.position.clone();
         const rot = bodyMesh.rotation.clone();
         const scale = bodyMesh.scale.clone();
 
-        characterGroup.remove(bodyMesh);
+        const skinnedMesh = new THREE.SkinnedMesh(geo, material);
         skinnedMesh.position.copy(pos);
         skinnedMesh.rotation.copy(rot);
         skinnedMesh.scale.copy(scale);
+        skinnedMesh.castShadow = true;
+        skinnedMesh.receiveShadow = true;
+
+        // Add root bone and bind skeleton
+        skinnedMesh.add(defSkeleton.rootBone);
+        skinnedMesh.bind(defSkeleton.skeleton);
+
+        // Replace old mesh in character group
+        characterGroup.remove(bodyMesh);
         characterGroup.add(skinnedMesh);
 
         // Store references
         characterGroup.userData.isSkinnedMesh = true;
         characterGroup.userData.skinnedMesh = skinnedMesh;
-        characterGroup.userData.skeleton = skeleton;
-        characterGroup.userData.rootBone = rootBone;
+        characterGroup.userData.skeleton = defSkeleton.skeleton;
+        characterGroup.userData.rootBone = defSkeleton.rootBone;
 
-        console.log('✓ Converted to SkinnedMesh with', bones.length, 'bones');
+        console.log('✓ SkinnedMesh created:',
+            'bones:', defSkeleton.skeleton.bones.length,
+            'skinIndex:', !!geo.attributes.skinIndex,
+            'skinWeight:', !!geo.attributes.skinWeight);
+
+        // Make skinnedMesh globally accessible for animation
+        window.loadedCharacters = window.loadedCharacters || [];
+        if (!window.loadedCharacters.includes(characterGroup)) {
+            window.loadedCharacters.push(characterGroup);
+        }
+
         return skinnedMesh;
     }
 

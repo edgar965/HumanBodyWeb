@@ -9,8 +9,15 @@ async def main():
         browser = await p.chromium.launch(headless=False, slow_mo=500)
         page = await browser.new_page()
 
-        # Open console to see errors
-        page.on('console', lambda msg: print(f'CONSOLE: {msg.text}'))
+        # Open console to see errors (handle Unicode properly)
+        def handle_console(msg):
+            try:
+                text = msg.text.encode('ascii', 'replace').decode('ascii')
+                print(f'CONSOLE: {text}')
+            except Exception as e:
+                print(f'CONSOLE: [encoding error: {e}]')
+
+        page.on('console', handle_console)
         page.on('pageerror', lambda err: print(f'PAGE ERROR: {err}'))
 
         print("=== Loading Theatre ===")
@@ -117,7 +124,23 @@ async def main():
                 isPlaying: window.isPlaying
             })
         """)
-        print(f"Animation state: {anim_state}")
+        print(f"Animation state (before play): {anim_state}")
+
+        # Click play button (timeline play/pause button)
+        print("\n=== Clicking Play Button ===")
+        await page.click('#btnPlayPause')
+        await asyncio.sleep(2)
+
+        # Check if animation is now playing
+        anim_state_after = await page.evaluate("""
+            () => ({
+                hasActiveMixer: !!window.activeMixer,
+                animDuration: window.animDuration,
+                isPlaying: window.isPlaying,
+                currentTime: window.currentAnimTime || 0
+            })
+        """)
+        print(f"Animation state (after play): {anim_state_after}")
 
         await page.screenshot(path='test_theatre_anim.png', full_page=True)
         print("Screenshot: test_theatre_anim.png")
