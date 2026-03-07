@@ -353,7 +353,79 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Convert hair to SkinnedMesh (like Dashboard viewer.js _skinifyHairGroup)
+        const hairGroups = [];
+        characterGroup.traverse((child) => {
+            if (child.userData.isHair && child.isGroup) {
+                hairGroups.push(child);
+            }
+        });
+
+        for (const hairGroup of hairGroups) {
+            const headBoneIdx = _findHeadBoneIndex();
+            if (headBoneIdx >= 0) {
+                const skinnedHairGroup = _skinifyHairGroup(hairGroup, headBoneIdx, skinnedMesh);
+                // Replace original hair group with skinned version
+                const parent = hairGroup.parent;
+                if (parent) {
+                    parent.remove(hairGroup);
+                    parent.add(skinnedHairGroup);
+                    console.log('✓ Hair converted to SkinnedMesh');
+                }
+            }
+        }
+
         return skinnedMesh;
+    }
+
+    /**
+     * Find head bone index for hair skinning (Dashboard viewer.js _findHeadBoneIndex)
+     */
+    function _findHeadBoneIndex() {
+        if (!skinWeightData) return -1;
+        const names = skinWeightData.bone_names;
+        for (const tryName of ['DEF-spine.006', 'DEF-spine.005', 'DEF-head']) {
+            const idx = names.indexOf(tryName);
+            if (idx >= 0) return idx;
+        }
+        return -1;
+    }
+
+    /**
+     * Convert hair meshes to SkinnedMesh bound to head bone.
+     * COPIED FROM Dashboard viewer.js _skinifyHairGroup (lines 1941-1969)
+     */
+    function _skinifyHairGroup(gltfScene, headBoneIdx, bodyMesh) {
+        // Collect all meshes from the GLB scene
+        const meshChildren = [];
+        gltfScene.traverse(child => {
+            if (child.isMesh) meshChildren.push(child);
+        });
+
+        const group = new THREE.Group();
+        group.userData.isHair = true;
+
+        for (const child of meshChildren) {
+            const geo = child.geometry.clone();
+            const vCount = geo.attributes.position.count;
+            const si = new Float32Array(vCount * 4);
+            const sw = new Float32Array(vCount * 4);
+            for (let v = 0; v < vCount; v++) {
+                si[v * 4] = headBoneIdx;
+                sw[v * 4] = 1.0;
+            }
+            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(si, 4));
+            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+
+            const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
+            // Apply the child's world transform so position is correct
+            child.updateWorldMatrix(true, false);
+            skinnedChild.applyMatrix4(child.matrixWorld);
+            skinnedChild.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            skinnedChild.userData.isHair = true;
+            group.add(skinnedChild);
+        }
+        return group;
     }
 
     canvas.addEventListener('click', (event) => {
