@@ -1200,38 +1200,91 @@ window.addEventListener('DOMContentLoaded', () => {
         const roughness = mat.roughness ?? 0.8;
         const metalness = mat.metalness ?? 0;
 
+        const offset = garmentMesh.userData.offset || 0.006;
+        const stiffness = garmentMesh.userData.stiffness || 0.8;
+        const pos = garmentMesh.position;
+
         content.innerHTML = `
-            <div style="padding:16px;">
+            <div style="padding:16px;max-height:calc(100vh - 200px);overflow-y:auto;">
                 <h3 style="font-size:0.9rem;margin-bottom:16px;color:var(--accent-purple);border-bottom:1px solid var(--border);padding-bottom:8px;">
                     <i class="fas fa-tshirt"></i> ${garmentId}
                 </h3>
 
-                <div style="margin-bottom:16px;">
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
-                        Farbe
-                    </label>
-                    <input type="color" id="garment-color" value="${colorHex}"
-                           style="width:100%;height:32px;border-radius:4px;border:1px solid var(--border);background:var(--bg-primary);cursor:pointer;" />
+                <!-- Material Properties -->
+                <div style="margin-bottom:20px;">
+                    <h4 style="font-size:0.8rem;margin-bottom:12px;color:var(--text);"><i class="fas fa-palette"></i> Material</h4>
+
+                    <div style="margin-bottom:12px;">
+                        <label style="display:block;font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Farbe</label>
+                        <input type="color" id="garment-color" value="${colorHex}"
+                               style="width:100%;height:32px;border-radius:4px;border:1px solid var(--border);cursor:pointer;" />
+                    </div>
+
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
+                            <span style="color:var(--text-muted);">Roughness</span>
+                            <span id="garment-roughness-value">${roughness.toFixed(2)}</span>
+                        </div>
+                        <input type="range" id="garment-roughness" min="0" max="1" step="0.01" value="${roughness}" style="width:100%;cursor:pointer;" />
+                    </div>
+
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
+                            <span style="color:var(--text-muted);">Metalness</span>
+                            <span id="garment-metalness-value">${metalness.toFixed(2)}</span>
+                        </div>
+                        <input type="range" id="garment-metalness" min="0" max="1" step="0.01" value="${metalness}" style="width:100%;cursor:pointer;" />
+                    </div>
                 </div>
 
-                <div style="margin-bottom:16px;">
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
-                        Roughness: <span id="garment-roughness-value">${roughness.toFixed(2)}</span>
-                    </label>
-                    <input type="range" id="garment-roughness" min="0" max="1" step="0.01" value="${roughness}"
-                           style="width:100%;cursor:pointer;" />
+                <!-- Fit Properties -->
+                <div style="margin-bottom:20px;padding-top:12px;border-top:1px solid var(--border);">
+                    <h4 style="font-size:0.8rem;margin-bottom:12px;color:var(--text);"><i class="fas fa-compress-arrows-alt"></i> Fit</h4>
+
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
+                            <span style="color:var(--text-muted);">Offset (Abstand)</span>
+                            <span id="garment-offset-value">${offset.toFixed(3)}</span>
+                        </div>
+                        <input type="range" id="garment-offset" min="0" max="50" step="0.1" value="${offset * 1000}" style="width:100%;cursor:pointer;" />
+                    </div>
+
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
+                            <span style="color:var(--text-muted);">Stiffness (Steifigkeit)</span>
+                            <span id="garment-stiffness-value">${stiffness.toFixed(2)}</span>
+                        </div>
+                        <input type="range" id="garment-stiffness" min="0" max="100" step="1" value="${stiffness * 100}" style="width:100%;cursor:pointer;" />
+                    </div>
                 </div>
 
-                <div style="margin-bottom:16px;">
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
-                        Metalness: <span id="garment-metalness-value">${metalness.toFixed(2)}</span>
-                    </label>
-                    <input type="range" id="garment-metalness" min="0" max="1" step="0.01" value="${metalness}"
-                           style="width:100%;cursor:pointer;" />
+                <!-- Transform -->
+                <div style="margin-bottom:16px;padding-top:12px;border-top:1px solid var(--border);">
+                    <h4 style="font-size:0.8rem;margin-bottom:12px;color:var(--text);"><i class="fas fa-arrows-alt"></i> Transform</h4>
+
+                    <label style="display:block;font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">Position</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:0.75rem;margin-bottom:12px;">
+                        <div>
+                            <span style="color:var(--text-muted);">X:</span>
+                            <input type="number" id="garment-pos-x" value="${pos.x.toFixed(2)}" step="0.1"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Y:</span>
+                            <input type="number" id="garment-pos-y" value="${pos.y.toFixed(2)}" step="0.1"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                        <div>
+                            <span style="color:var(--text-muted);">Z:</span>
+                            <input type="number" id="garment-pos-z" value="${pos.z.toFixed(2)}" step="0.1"
+                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
+                        </div>
+                    </div>
                 </div>
 
                 <div style="font-size:0.75rem;color:var(--text-muted);margin-top:20px;padding-top:12px;border-top:1px solid var(--border);">
-                    <i class="fas fa-info-circle"></i> Änderungen wirken sofort
+                    <i class="fas fa-info-circle"></i> Material-Änderungen wirken sofort<br>
+                    <i class="fas fa-info-circle"></i> Fit-Änderungen erfordern Garment-Reload (TODO)
                 </div>
             </div>
         `;
@@ -1242,6 +1295,13 @@ window.addEventListener('DOMContentLoaded', () => {
         const roughnessValue = document.getElementById('garment-roughness-value');
         const metalnessSlider = document.getElementById('garment-metalness');
         const metalnessValue = document.getElementById('garment-metalness-value');
+        const offsetSlider = document.getElementById('garment-offset');
+        const offsetValue = document.getElementById('garment-offset-value');
+        const stiffnessSlider = document.getElementById('garment-stiffness');
+        const stiffnessValue = document.getElementById('garment-stiffness-value');
+        const posX = document.getElementById('garment-pos-x');
+        const posY = document.getElementById('garment-pos-y');
+        const posZ = document.getElementById('garment-pos-z');
 
         if (colorPicker) {
             colorPicker.oninput = (e) => {
@@ -1263,6 +1323,37 @@ window.addEventListener('DOMContentLoaded', () => {
                 mat.metalness = val;
                 metalnessValue.textContent = val.toFixed(2);
             };
+        }
+
+        // Offset and Stiffness: update display only (need refit to apply)
+        if (offsetSlider && offsetValue) {
+            offsetSlider.oninput = (e) => {
+                const val = parseFloat(e.target.value) / 1000;
+                offsetValue.textContent = val.toFixed(3);
+                garmentMesh.userData.offset = val;
+            };
+        }
+
+        if (stiffnessSlider && stiffnessValue) {
+            stiffnessSlider.oninput = (e) => {
+                const val = parseFloat(e.target.value) / 100;
+                stiffnessValue.textContent = val.toFixed(2);
+                garmentMesh.userData.stiffness = val;
+            };
+        }
+
+        // Position: update garment position
+        if (posX && posY && posZ) {
+            const updatePos = () => {
+                garmentMesh.position.set(
+                    parseFloat(posX.value),
+                    parseFloat(posY.value),
+                    parseFloat(posZ.value)
+                );
+            };
+            posX.oninput = updatePos;
+            posY.oninput = updatePos;
+            posZ.oninput = updatePos;
         }
     }
 
