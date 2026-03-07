@@ -993,6 +993,14 @@ window.addEventListener('DOMContentLoaded', () => {
                     <span style="color:var(--text);margin-left:8px;">${bodyType}</span>
                 </div>
 
+                <!-- Meta Sliders (Age, Mass, Tone, Height) -->
+                <div style="margin-bottom:20px;padding-top:12px;border-top:1px solid var(--border);">
+                    <h4 style="font-size:0.8rem;margin-bottom:12px;color:var(--text);">
+                        <i class="fas fa-sliders-h"></i> Meta-Parameter
+                    </h4>
+                    <div id="meta-sliders-container"></div>
+                </div>
+
                 <div style="margin-bottom:16px;">
                     <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
                         Position
@@ -1079,6 +1087,61 @@ window.addEventListener('DOMContentLoaded', () => {
             rotX.oninput = updateRot;
             rotY.oninput = updateRot;
             rotZ.oninput = updateRot;
+        }
+
+        // Populate Meta-Sliders (age, mass, tone, height)
+        populateMetaSliders(characterGroup);
+    }
+
+    function populateMetaSliders(characterGroup) {
+        const container = document.getElementById('meta-sliders-container');
+        if (!container) return;
+
+        // Default meta definitions (like Dashboard-Scene)
+        const metaDefs = {
+            age: { min: -1.0, max: 1.0, label: 'Alter', step: 0.01 },
+            mass: { min: -1.0, max: 1.0, label: 'Gewicht', step: 0.01 },
+            tone: { min: -1.0, max: 1.0, label: 'Muskeltonus', step: 0.01 },
+            height: { min: -1.0, max: 1.0, label: 'Höhe', step: 0.01 },
+        };
+
+        // Get current meta values from character (or default to 0)
+        const currentMeta = characterGroup.userData.meta || { age: 0, mass: 0, tone: 0, height: 0 };
+
+        let slidersHTML = '';
+        for (const [name, def] of Object.entries(metaDefs)) {
+            const value = currentMeta[name] || 0;
+            const displayMin = def.min;
+            const displayMax = def.max;
+
+            slidersHTML += `
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:0.75rem;">
+                        <span style="color:var(--text-muted);">${def.label}</span>
+                        <span id="meta-${name}-value" style="color:var(--text);">${value.toFixed(2)}</span>
+                    </div>
+                    <input type="range" id="meta-${name}" min="${displayMin}" max="${displayMax}" step="${def.step}" value="${value}"
+                           style="width:100%;cursor:pointer;" />
+                </div>
+            `;
+        }
+
+        container.innerHTML = slidersHTML;
+
+        // Wire up event listeners
+        for (const name of Object.keys(metaDefs)) {
+            const slider = document.getElementById(`meta-${name}`);
+            const valueDisplay = document.getElementById(`meta-${name}-value`);
+            if (slider && valueDisplay) {
+                slider.oninput = () => {
+                    const val = parseFloat(slider.value);
+                    valueDisplay.textContent = val.toFixed(2);
+                    currentMeta[name] = val;
+                    characterGroup.userData.meta = currentMeta;
+                    // TODO: Reload character with new meta values
+                    console.log('Meta changed:', name, val);
+                };
+            }
         }
     }
 
