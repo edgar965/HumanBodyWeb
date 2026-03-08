@@ -24,7 +24,15 @@ studio.initialize().then(() => {
         const root = document.getElementById('theatrejs-studio-root');
         if (root) {
             root.style.setProperty('z-index', '900', 'important');
-            console.log('[Theatre Studio] UI visible, z-index set');
+            // Fix pointer-events: the root has 'none' (so canvas gets clicks),
+            // but shadow DOM children need 'auto' to be interactive.
+            // CSS can't pierce shadow boundary, so we inject a style.
+            if (root.shadowRoot) {
+                const style = document.createElement('style');
+                style.textContent = ':host > * { pointer-events: auto !important; }';
+                root.shadowRoot.prepend(style);
+            }
+            console.log('[Theatre Studio] UI visible, z-index + pointer-events set');
         }
     }, 100);
 }).catch(err => {
