@@ -547,76 +547,79 @@ window.addEventListener('DOMContentLoaded', () => {
     const keyframeUI = new KeyframeUI(project, sheet, theatreObjects);
     window.keyframeUI = keyframeUI; // Expose for debugging
 
-    // 5b. Auto-open Sequence Editor by sequencing all objects
-    // We select each object, right-click to get context menu, click "Sequence all"
-    // This makes all props animatable in the timeline
-    setTimeout(() => {
-        try {
-            // Helper: sequence all props of an object via Studio Shadow DOM
-            function sequenceObjectProps(objectName) {
-                const root = document.getElementById('theatrejs-studio-root');
-                if (!root || !root.shadowRoot) return false;
-                const sr = root.shadowRoot;
+    // 5b. Auto-open Sequence Editor by sequencing all props via Studio Shadow DOM.
+    // We click each object in the outline, right-click a prop, click "Sequence all".
+    // This is done sequentially with retries to handle timing issues.
+    (async function autoSequenceAllObjects() {
+        const wait = (ms) => new Promise(r => setTimeout(r, ms));
+        const getSR = () => {
+            const root = document.getElementById('theatrejs-studio-root');
+            return root && root.shadowRoot ? root.shadowRoot : null;
+        };
 
-                // Click on the object name in outline
-                const spans = sr.querySelectorAll('span');
-                let clicked = false;
-                for (const s of spans) {
-                    if (s.textContent.trim() === objectName) {
-                        s.click();
-                        clicked = true;
-                        break;
-                    }
-                }
-                if (!clicked) return false;
-
-                // Right-click on "Props" or the first compound prop in detail panel
-                setTimeout(() => {
-                    const allSpans = sr.querySelectorAll('span');
-                    for (const s of allSpans) {
-                        const text = s.textContent.trim();
-                        if (text === 'position' || text === 'Props') {
-                            const rect = s.getBoundingClientRect();
-                            if (rect.x > 300) {
-                                s.dispatchEvent(new MouseEvent('contextmenu', {
-                                    bubbles: true, cancelable: true, button: 2,
-                                    clientX: rect.x + rect.width / 2,
-                                    clientY: rect.y + rect.height / 2
-                                }));
-                                // Click "Sequence all" in context menu
-                                setTimeout(() => {
-                                    const menuSpans = sr.querySelectorAll('span');
-                                    for (const ms of menuSpans) {
-                                        if (ms.textContent.trim() === 'Sequence all') {
-                                            ms.click();
-                                            console.log(`[Theatre Studio] Sequenced all props for: ${objectName}`);
-                                            return;
-                                        }
-                                    }
-                                }, 200);
-                                return;
-                            }
-                        }
-                    }
-                }, 200);
-                return true;
-            }
-
-            // Sequence Camera first, then lights with delays
-            const objects = ['Camera', 'Spot Left', 'Spot Right', 'Back Light'];
-            objects.forEach((name, i) => {
-                setTimeout(() => sequenceObjectProps(name), i * 800);
-            });
-
-            // After all objects are sequenced, select the sheet to show full timeline
-            setTimeout(() => {
-                studio.setSelection([sheet]);
-                console.log('[Theatre Studio] Sequence Editor fully opened');
-            }, objects.length * 800 + 500);
-        } catch (e) {
-            console.warn('[Theatre Studio] Could not auto-open Sequence Editor:', e);
+        // Wait for Studio shadow DOM to be ready
+        for (let i = 0; i < 20; i++) {
+            if (getSR()) break;
+            await wait(200);
         }
-    }, 1000);
+        const sr = getSR();
+        if (!sr) { console.warn('[Theatre Studio] Shadow DOM not ready, skipping auto-sequence'); return; }
+        await wait(500); // Let Studio render fully
+
+        const objectNames = ['Camera', 'Spot Left', 'Spot Right', 'Back Light'];
+
+        for (const name of objectNames) {
+            // Step 1: Click object in outline
+            let clicked = false;
+            for (const s of sr.querySelectorAll('span')) {
+                if (s.textContent.trim() === name) {
+                    s.click();
+                    clicked = true;
+                    break;
+                }
+            }
+            if (!clicked) { console.warn(`[Theatre Studio] Object not found in outline: ${name}`); continue; }
+            await wait(300);
+
+            // Step 2: Right-click on "position" or "fov" in detail panel (x > 300 = detail area)
+            let rightClicked = false;
+            for (const s of sr.querySelectorAll('span')) {
+                const t = s.textContent.trim();
+                if ((t === 'position' || t === 'Props' || t === 'fov' || t === 'intensity') &&
+                    s.getBoundingClientRect().x > 300) {
+                    const r = s.getBoundingClientRect();
+                    s.dispatchEvent(new MouseEvent('contextmenu', {
+                        bubbles: true, cancelable: true, button: 2,
+                        clientX: r.x + r.width / 2, clientY: r.y + r.height / 2
+                    }));
+                    rightClicked = true;
+                    break;
+                }
+            }
+            if (!rightClicked) { console.warn(`[Theatre Studio] No prop found for right-click: ${name}`); continue; }
+            await wait(300);
+
+            // Step 3: Click "Sequence all" in context menu
+            let sequenced = false;
+            for (const s of sr.querySelectorAll('span')) {
+                if (s.textContent.trim() === 'Sequence all') {
+                    s.click();
+                    sequenced = true;
+                    break;
+                }
+            }
+            if (sequenced) {
+                console.log(`[Theatre Studio] Sequenced: ${name}`);
+            } else {
+                console.warn(`[Theatre Studio] "Sequence all" not found for: ${name}`);
+            }
+            await wait(300);
+        }
+
+        // Select the sheet to show the full Sequence Editor
+        studio.setSelection([sheet]);
+        console.log('[Theatre Studio] Sequence Editor opened');
+    })();
 
     // 6. Video exporter
     const exporter = new VideoExporter(renderer.domElement);
