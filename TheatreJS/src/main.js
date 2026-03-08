@@ -539,6 +539,77 @@ window.addEventListener('DOMContentLoaded', () => {
     const keyframeUI = new KeyframeUI(project, sheet, theatreObjects);
     window.keyframeUI = keyframeUI; // Expose for debugging
 
+    // 5b. Auto-open Sequence Editor by sequencing all objects
+    // We select each object, right-click to get context menu, click "Sequence all"
+    // This makes all props animatable in the timeline
+    setTimeout(() => {
+        try {
+            // Helper: sequence all props of an object via Studio Shadow DOM
+            function sequenceObjectProps(objectName) {
+                const root = document.getElementById('theatrejs-studio-root');
+                if (!root || !root.shadowRoot) return false;
+                const sr = root.shadowRoot;
+
+                // Click on the object name in outline
+                const spans = sr.querySelectorAll('span');
+                let clicked = false;
+                for (const s of spans) {
+                    if (s.textContent.trim() === objectName) {
+                        s.click();
+                        clicked = true;
+                        break;
+                    }
+                }
+                if (!clicked) return false;
+
+                // Right-click on "Props" or the first compound prop in detail panel
+                setTimeout(() => {
+                    const allSpans = sr.querySelectorAll('span');
+                    for (const s of allSpans) {
+                        const text = s.textContent.trim();
+                        if (text === 'position' || text === 'Props') {
+                            const rect = s.getBoundingClientRect();
+                            if (rect.x > 300) {
+                                s.dispatchEvent(new MouseEvent('contextmenu', {
+                                    bubbles: true, cancelable: true, button: 2,
+                                    clientX: rect.x + rect.width / 2,
+                                    clientY: rect.y + rect.height / 2
+                                }));
+                                // Click "Sequence all" in context menu
+                                setTimeout(() => {
+                                    const menuSpans = sr.querySelectorAll('span');
+                                    for (const ms of menuSpans) {
+                                        if (ms.textContent.trim() === 'Sequence all') {
+                                            ms.click();
+                                            console.log(`[Theatre Studio] Sequenced all props for: ${objectName}`);
+                                            return;
+                                        }
+                                    }
+                                }, 200);
+                                return;
+                            }
+                        }
+                    }
+                }, 200);
+                return true;
+            }
+
+            // Sequence Camera first, then lights with delays
+            const objects = ['Camera', 'Spot Left', 'Spot Right', 'Back Light'];
+            objects.forEach((name, i) => {
+                setTimeout(() => sequenceObjectProps(name), i * 800);
+            });
+
+            // After all objects are sequenced, select the sheet to show full timeline
+            setTimeout(() => {
+                studio.setSelection([sheet]);
+                console.log('[Theatre Studio] Sequence Editor fully opened');
+            }, objects.length * 800 + 500);
+        } catch (e) {
+            console.warn('[Theatre Studio] Could not auto-open Sequence Editor:', e);
+        }
+    }, 1000);
+
     // 6. Video exporter
     const exporter = new VideoExporter(renderer.domElement);
 
@@ -2012,15 +2083,18 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         controls.update();
-        try {
-            renderer.render(scene, camera);
-        } catch (e) {
-            // SkinnedMesh with unbound skeleton — remove it from scene to stop errors
-            scene.traverse((child) => {
-                if (child.isSkinnedMesh && !child.skeleton) {
-                    child.visible = false;
-                }
-            });
+        // Temporarily hide SkinnedMeshes without skeleton to prevent render errors
+        const hiddenMeshes = [];
+        scene.traverse((child) => {
+            if (child.isSkinnedMesh && !child.skeleton) {
+                child.visible = false;
+                hiddenMeshes.push(child);
+            }
+        });
+        renderer.render(scene, camera);
+        // Restore visibility so garments/meshes become visible once skeleton is bound
+        for (const mesh of hiddenMeshes) {
+            mesh.visible = true;
         }
     }
     animate();
