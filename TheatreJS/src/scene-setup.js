@@ -90,7 +90,7 @@ export function createScene(canvas) {
     });
     const stageFloor = new THREE.Mesh(stageGeo, stageMat);
     stageFloor.rotation.x = -Math.PI / 2;
-    stageFloor.position.y = -0.01;
+    stageFloor.position.y = 0.0;
     stageFloor.receiveShadow = true;
     scene.add(stageFloor);
 
