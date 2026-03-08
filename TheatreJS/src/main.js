@@ -17,15 +17,16 @@ import { KeyframeUI } from './keyframe-ui.js';
 // Theatre Studio MUST be initialized at module level (before DOMContentLoaded)
 studio.initialize().then(() => {
     console.log('[Theatre Studio] initialized successfully');
-    // Verify the DOM element exists
-    const root = document.getElementById('theatrejs-studio-root');
-    if (root) {
-        console.log('[Theatre Studio] #theatrejs-studio-root found, children:', root.childNodes.length);
-        // Force z-index above page elements
-        root.style.setProperty('z-index', '900', 'important');
-    } else {
-        console.warn('[Theatre Studio] #theatrejs-studio-root NOT found in DOM');
-    }
+    // Force Studio visible (it remembers hide state in localStorage)
+    studio.ui.restore();
+    // Wait for render() setTimeout to create DOM element
+    setTimeout(() => {
+        const root = document.getElementById('theatrejs-studio-root');
+        if (root) {
+            root.style.setProperty('z-index', '900', 'important');
+            console.log('[Theatre Studio] UI visible, z-index set');
+        }
+    }, 100);
 }).catch(err => {
     console.error('[Theatre Studio] initialize() FAILED:', err);
 });
