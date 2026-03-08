@@ -182,19 +182,32 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         new ResizeObserver(onResize).observe(viewport);
     }
 
-    // --- Render loop (sync to video) ---
+    // --- Render loop (sync to video or bvh_player fallback clock) ---
+    function _videoOK() {
+        return video.duration > 0 && isFinite(video.duration) && !isNaN(video.duration);
+    }
+
     function animate() {
         requestAnimationFrame(animate);
         controls.update();
 
-        if (mixer && video.duration && bvhClipDuration > 0) {
+        if (mixer && bvhClipDuration > 0) {
+            // Get progress from video or bvh_player's fallback clock
+            let progress;
+            if (_videoOK()) {
+                progress = video.currentTime / video.duration;
+            } else if (typeof window.bvhPlayerProgress === 'number') {
+                progress = window.bvhPlayerProgress;
+            } else {
+                progress = 0;
+            }
+
             // Reset action if clamped/paused (e.g. video replayed after ending)
             if (currentAction && currentAction.paused) {
                 currentAction.reset();
                 currentAction.play();
             }
             // Proportional mapping: BVH may have different FPS than video
-            const progress = video.currentTime / video.duration;
             mixer.setTime(progress * bvhClipDuration);
         }
 

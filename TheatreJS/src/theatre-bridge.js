@@ -29,6 +29,17 @@ export function getTheatreObject(name) {
 }
 
 /**
+ * Get all registered Theatre objects (for Keyframe UI).
+ */
+export function getAllTheatreObjects() {
+    const objects = {};
+    for (const [name, obj] of _theatreObjects.entries()) {
+        objects[name] = obj;
+    }
+    return objects;
+}
+
+/**
  * Register a Three.js camera as an animatable Theatre object.
  */
 export function createCameraSheet(sheet, camera) {

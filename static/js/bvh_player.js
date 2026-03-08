@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-console.log('[bvh_player] v0.81 loaded');
+console.log('[bvh_player] v0.82 loaded (fallback clock)');
 
 export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId = null, detectionUrl = null, keypointsUrl = null }) {
     console.log('[bvh_player] initBVHPlayer called', { videoId, canvasId });
@@ -77,6 +77,13 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     let currentSpeed = 1;
     let isPlaying = false;
 
+    // Fallback clock when video is missing/broken (duration NaN or Infinity)
+    let manualTime = 0;
+    let lastTimestamp = 0;
+    function videoOK() {
+        return video.duration > 0 && isFinite(video.duration) && !isNaN(video.duration);
+    }
+
     // Detection flags (per-frame boolean)
     let detectionFlags = null;
     if (detectionUrl) {
@@ -106,14 +113,20 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     // --- Video metadata (must be registered BEFORE BVH load, not inside callback) ---
     function onVideoMetadata() {
         console.log('[bvh_player] Video metadata loaded, duration:', video.duration);
-        if (timelineSlider) timelineSlider.max = video.duration;
-        if (timeDuration) timeDuration.textContent = formatTime(video.duration);
+        if (videoOK()) {
+            if (timelineSlider) timelineSlider.max = video.duration;
+            if (timeDuration) timeDuration.textContent = formatTime(video.duration);
+        }
     }
     video.addEventListener('loadedmetadata', onVideoMetadata);
     // If already loaded (cached), apply immediately
     if (video.duration && !isNaN(video.duration)) {
         onVideoMetadata();
     }
+    // Detect broken video (404, no source, etc.)
+    video.addEventListener('error', () => {
+        console.warn('[bvh_player] Video error — using BVH clock fallback');
+    });
 
     // --- Load BVH (3D panel only) ---
     const loader = new BVHLoader();
@@ -238,6 +251,13 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         // Auto-center camera — fit skeleton to fill viewport
         centerCamera(rootBone);
 
+        // If video is broken, use BVH clip duration for timeline
+        if (!videoOK() && clipDuration > 0) {
+            console.log('[bvh_player] Video broken — using BVH clock, duration:', clipDuration.toFixed(1) + 's');
+            if (timelineSlider) timelineSlider.max = clipDuration;
+            if (timeDuration) timeDuration.textContent = formatTime(clipDuration);
+        }
+
         // Hide until user starts playback
         rootBone.visible = false;
         bodyLineSegments.visible = false;
@@ -328,13 +348,27 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     }
 
     // --- Sync loop ---
-    function animate() {
+    function animate(timestamp) {
         requestAnimationFrame(animate);
 
-        if (mixer && video.duration) {
-            // Proportional time mapping: BVH may have different FPS than video.
-            // Map video progress (0-1) to BVH clip duration.
-            const progress = video.currentTime / video.duration;
+        // Advance manual clock when video is broken and playing
+        if (!videoOK() && isPlaying && clipDuration > 0) {
+            const dt = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0;
+            manualTime = Math.min(manualTime + dt * currentSpeed, clipDuration);
+            if (manualTime >= clipDuration) {
+                manualTime = 0; // loop
+            }
+        }
+        lastTimestamp = timestamp;
+
+        // Expose progress for result_character.js
+        const totalDur = videoOK() ? video.duration : clipDuration;
+        const curTime = videoOK() ? video.currentTime : manualTime;
+        const progress = totalDur > 0 ? curTime / totalDur : 0;
+        window.bvhPlayerProgress = progress;
+        window.bvhPlayerDuration = totalDur;
+
+        if (mixer && clipDuration > 0) {
             const rawT = progress * clipDuration;
 
             // Hide 3D skeleton when beyond data
@@ -350,9 +384,9 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
 
             // Determine visibility: hidden before first play, beyond data, or no person
             let visible = overlayActive && !beyondBVH;
-            if (visible && detectionFlags) {
+            if (visible && detectionFlags && videoOK()) {
                 const frameIdx = Math.min(
-                    Math.floor((video.currentTime / video.duration) * detectionFlags.length),
+                    Math.floor(progress * detectionFlags.length),
                     detectionFlags.length - 1
                 );
                 visible = detectionFlags[frameIdx];
@@ -371,43 +405,57 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         drawOverlay();
 
         // Update timeline
-        if (video.duration) {
-            timelineSlider.value = video.currentTime;
-            timeCurrent.textContent = formatTime(video.currentTime);
+        if (totalDur > 0) {
+            if (timelineSlider) timelineSlider.value = curTime;
+            if (timeCurrent) timeCurrent.textContent = formatTime(curTime);
         }
     }
     animate();
 
     // --- Controls ---
     function togglePlayPause() {
-        console.log('[bvh_player] togglePlayPause, paused=', video.paused);
-        if (video.paused) {
-            video.play().catch(err => console.warn('[bvh_player] play() rejected:', err.message));
+        console.log('[bvh_player] togglePlayPause, paused=', video.paused, 'videoOK=', videoOK());
+        if (videoOK()) {
+            if (video.paused) {
+                video.play().catch(err => console.warn('[bvh_player] play() rejected:', err.message));
+            } else {
+                video.pause();
+            }
+            // State is updated by video 'play'/'pause' event listeners below
         } else {
-            video.pause();
+            // Fallback: toggle internal clock
+            isPlaying = !isPlaying;
+            overlayActive = true;
+            lastTimestamp = 0; // reset delta timer
+            if (playIcon) playIcon.className = isPlaying ? 'fas fa-pause' : 'fas fa-play';
         }
-        // State is updated by video 'play'/'pause' event listeners below
     }
 
     function skip(delta) {
-        const dur = video.duration;
-        if (!dur || isNaN(dur)) { console.warn('[bvh_player] skip: no duration'); return; }
-        video.currentTime = Math.max(0, Math.min(dur, video.currentTime + delta));
-        console.log('[bvh_player] skip', delta, '→', video.currentTime);
+        if (videoOK()) {
+            video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
+        } else if (clipDuration > 0) {
+            manualTime = Math.max(0, Math.min(clipDuration, manualTime + delta));
+            overlayActive = true;
+        }
     }
 
     function frameStep(direction) {
-        const dur = video.duration;
-        if (!dur || isNaN(dur)) { console.warn('[bvh_player] frameStep: no duration'); return; }
-        video.pause();
         const frameDuration = 1 / fps;
-        video.currentTime = Math.max(0, Math.min(dur, video.currentTime + direction * frameDuration));
-        console.log('[bvh_player] frameStep', direction, '→', video.currentTime.toFixed(3));
+        if (videoOK()) {
+            video.pause();
+            video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + direction * frameDuration));
+        } else {
+            isPlaying = false;
+            if (playIcon) playIcon.className = 'fas fa-play';
+            manualTime = Math.max(0, Math.min(clipDuration, manualTime + direction * frameDuration));
+            overlayActive = true;
+        }
     }
 
     function setSpeed(speed) {
         currentSpeed = speed;
-        video.playbackRate = speed;
+        if (videoOK()) video.playbackRate = speed;
         if (action) action.timeScale = speed;
         speedBtns.forEach(btn => {
             btn.classList.toggle('active', parseFloat(btn.dataset.speed) === speed);
@@ -415,9 +463,14 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     }
 
     function stopPlayback() {
-        video.pause();
-        video.currentTime = 0;
+        if (videoOK()) {
+            video.pause();
+            video.currentTime = 0;
+        }
+        isPlaying = false;
+        manualTime = 0;
         overlayActive = false;
+        if (playIcon) playIcon.className = 'fas fa-play';
     }
 
     // Button handlers
@@ -435,7 +488,13 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     // Timeline slider
     if (timelineSlider) {
         timelineSlider.addEventListener('input', () => {
-            video.currentTime = parseFloat(timelineSlider.value);
+            const t = parseFloat(timelineSlider.value);
+            if (videoOK()) {
+                video.currentTime = t;
+            } else {
+                manualTime = t;
+                overlayActive = true;
+            }
         });
     }
 

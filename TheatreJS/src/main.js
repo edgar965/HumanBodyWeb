@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import studio from '@theatre/studio';
 import { createScene } from './scene-setup.js';
-import { setupTheatre, createCameraSheet, createLightSheet } from './theatre-bridge.js';
+import { setupTheatre, createCameraSheet, createLightSheet, getAllTheatreObjects } from './theatre-bridge.js';
 import { loadGLBFromFile, loadCharacterFromPreset, loadBVHFromText } from './asset-loader.js';
 import { VideoExporter } from './video-export.js';
 import {
@@ -12,6 +12,24 @@ import {
 } from './scene-manager.js';
 import { PRESETS, applyPreset } from './presets.js';
 import { retargetBVHToDefClip, detectBVHFormat } from './retarget_hybrid.js';
+import { KeyframeUI } from './keyframe-ui.js';
+
+// Theatre Studio MUST be initialized at module level (before DOMContentLoaded)
+studio.initialize().then(() => {
+    console.log('[Theatre Studio] initialized successfully');
+    // Verify the DOM element exists
+    const root = document.getElementById('theatrejs-studio-root');
+    if (root) {
+        console.log('[Theatre Studio] #theatrejs-studio-root found, children:', root.childNodes.length);
+        // Force z-index above page elements
+        root.style.setProperty('z-index', '900', 'important');
+    } else {
+        console.warn('[Theatre Studio] #theatrejs-studio-root NOT found in DOM');
+    }
+}).catch(err => {
+    console.error('[Theatre Studio] initialize() FAILED:', err);
+});
+window.studio = studio;
 
 // Wait for DOM before initialising
 window.addEventListener('DOMContentLoaded', () => {
@@ -20,9 +38,6 @@ window.addEventListener('DOMContentLoaded', () => {
         console.error('theatre-canvas not found');
         return;
     }
-
-    // 1. Theatre Studio overlay - DEAKTIVIERT (kein UI-Panel oben rechts!)
-    // studio.initialize();
 
     // 2. Three.js scene (ballet stage)
     const { scene, camera, renderer, controls, lights, lightIcons, transformControls } = createScene(canvas);
@@ -502,13 +517,22 @@ window.addEventListener('DOMContentLoaded', () => {
     // 3. Theatre project + sheet
     const { project, sheet } = setupTheatre();
 
+    // Expose to window for Studio UI
+    window.theatreProject = project;
+    window.theatreSheet = sheet;
+
     // 4. Register camera & spotlights as animatable Theatre objects
     createCameraSheet(sheet, camera);
     createLightSheet(sheet, 'Spot Left', lights.spotLeft);
     createLightSheet(sheet, 'Spot Right', lights.spotRight);
     createLightSheet(sheet, 'Back Light', lights.backLight);
 
-    // 5. Video exporter
+    // 5. Initialize Keyframe UI for Camera/Light animation
+    const theatreObjects = getAllTheatreObjects();
+    const keyframeUI = new KeyframeUI(project, sheet, theatreObjects);
+    window.keyframeUI = keyframeUI; // Expose for debugging
+
+    // 6. Video exporter
     const exporter = new VideoExporter(renderer.domElement);
 
     // 6. Track active mixers for BVH animation playback
@@ -679,6 +703,21 @@ window.addEventListener('DOMContentLoaded', () => {
             if (mainPlayBtn) {
                 mainPlayBtn.click();
             }
+        });
+    }
+
+    // Toggle Theatre.js Studio panel
+    const btnToggleStudio = document.getElementById('btn-toggle-studio');
+    let studioVisible = true;
+    if (btnToggleStudio) {
+        btnToggleStudio.addEventListener('click', () => {
+            studioVisible = !studioVisible;
+            if (studioVisible) {
+                studio.ui.restore();
+            } else {
+                studio.ui.hide();
+            }
+            btnToggleStudio.classList.toggle('active', studioVisible);
         });
     }
 
@@ -931,10 +970,35 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // COPIED FROM Dashboard viewer.js stopAnimation (lines 1432-1466)
+    function stopAnimation(destroy = false) {
+        if (currentAction) {
+            currentAction.stop();
+            currentAction.reset();
+            if (destroy) currentAction = null;
+        }
+        if (activeMixer && destroy) {
+            activeMixer.stopAllAction();
+            activeMixer = null;
+        }
+        // Reset skinned mesh back to bind pose — EXACTLY like Dashboard
+        if (selectedCharacter && selectedCharacter.userData.isSkinnedMesh) {
+            const skinnedMesh = selectedCharacter.userData.skinnedMesh;
+            if (skinnedMesh && skinnedMesh.isSkinnedMesh) {
+                skinnedMesh.skeleton.pose();
+            }
+        }
+        isPlaying = false;
+        window.isPlaying = false;
+    }
+
     async function handleAnimLoad(category, name) {
         try {
             // Remember if animation was playing before switch
             const wasPlaying = isPlaying;
+
+            // FIRST: Stop and reset old animation (Dashboard pattern)
+            stopAnimation(true);
 
             const bvhText = await fetchBVH(category, name);
 
@@ -948,16 +1012,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 console.log('No selected character - using BVH bones only');
             }
 
-            // If we have a SkinnedMesh, use it for animation; otherwise fall back to BVH bones
+            // Load new animation
             const { mixer, action, duration } = targetMesh
                 ? loadBVHOnSkinnedMesh(bvhText, targetMesh, scene, `${category}/${name}`)
                 : loadBVHFromText(bvhText, scene, `${category}/${name}`);
-
-            // Replace current mixer - PROPERLY dispose old one
-            if (activeMixer) {
-                activeMixer.stopAllAction();
-                activeMixer.uncacheRoot(activeMixer.getRoot());
-            }
             activeMixer = mixer;
             currentAction = action;
 
@@ -1131,14 +1189,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
     if (btnStop) {
         btnStop.addEventListener('click', () => {
-            if (!activeMixer) return;
-            isPlaying = false;
+            // EXACTLY like Dashboard viewer.js stopBtn (line 1297-1306)
+            stopAnimation();
             currentTime = 0;
-            setAnimationTime(0);
-            if (currentAction) {
-                currentAction.stop();
-                currentAction.paused = true;
-            }
+            animDuration = 1;
             updatePlayerUI();
         });
     }

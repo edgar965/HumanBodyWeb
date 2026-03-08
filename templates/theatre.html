@@ -362,9 +362,14 @@
         border-color: var(--accent);
     }
 
-    /* Push Theatre.js Studio overlay to the right of main sidebar */
+    /* Push Theatre.js Studio overlay to fit between sidebar, menubar, and right panel */
     #theatrejs-studio-root {
-        inset: 0 0 0 220px !important;
+        top: 40px !important;
+        right: 320px !important;
+        bottom: 0 !important;
+        left: 220px !important;
+        z-index: 900 !important;
+        pointer-events: none !important;
     }
 
     #glb-file-input {
@@ -553,11 +558,15 @@
             <button class="toolbar-btn" id="btn-play-animation" title="Animation abspielen/pausieren">
                 <i class="fas fa-play"></i>
             </button>
+            <button class="toolbar-btn active" id="btn-toggle-studio" title="Theatre.js Studio ein/ausblenden">
+                <i class="fas fa-sliders-h"></i>
+            </button>
         </div>
 
         <div class="panel-tabs">
             <div class="panel-tab active" data-tab="tab-animations">Animationen</div>
             <div class="panel-tab" data-tab="tab-models">Modelle</div>
+            <div class="panel-tab" data-tab="tab-keyframes">Keyframes</div>
             <div class="panel-tab" data-tab="tab-properties">Eigenschaften</div>
         </div>
 
@@ -576,6 +585,11 @@
                 <div class="anim-tree" id="model-list">
                     <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Modelle...</div>
                 </div>
+            </div>
+
+            <!-- Tab: Keyframes (Camera/Light Animation) -->
+            <div class="tab-pane" id="tab-keyframes">
+                <!-- Content will be populated by keyframe-ui.js -->
             </div>
 
             <!-- Tab: Eigenschaften (Selected Object Properties) -->
