@@ -478,7 +478,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         // Try character meshes (all loaded characters)
-        const charIntersects = raycaster.intersectObjects(loadedCharacters, true);
+        // Filter out SkinnedMeshes without bound skeleton (causes bones error)
+        let charIntersects;
+        try {
+            charIntersects = raycaster.intersectObjects(loadedCharacters, true);
+        } catch (e) {
+            return; // SkinnedMesh without skeleton, skip
+        }
         if (charIntersects.length > 0) {
             const clickedMesh = charIntersects[0].object;
 
@@ -2006,7 +2012,16 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         controls.update();
-        renderer.render(scene, camera);
+        try {
+            renderer.render(scene, camera);
+        } catch (e) {
+            // SkinnedMesh with unbound skeleton — remove it from scene to stop errors
+            scene.traverse((child) => {
+                if (child.isSkinnedMesh && !child.skeleton) {
+                    child.visible = false;
+                }
+            });
+        }
     }
     animate();
 });
