@@ -172,6 +172,7 @@ class CharacterInstance {
         this.garmentOrigPositions = {};  // key -> Float32Array
         this.garmentRegionWeights = {};  // key -> { top: Float32Array, ... }
         this.hairMesh = null;   // THREE.Group from GLB
+        this.initialBodyTop = 0; // max Y at first load, for hair scaling
         this.selected = false;
         this.isSkinned = false;
         this.defSkeleton = null;
@@ -241,6 +242,9 @@ class CharacterInstance {
 
         this.group.add(this.bodyMesh);
 
+        // Record initial body top for hair scaling
+        this.initialBodyTop = _getBodyTop(this);
+
         // Load cloth pieces
         await this._loadCloth();
 
@@ -251,6 +255,57 @@ class CharacterInstance {
         await this._loadGarments();
 
         return this;
+    }
+
+    async reloadBody() {
+        // Fast path: update body mesh geometry in-place (positions + normals)
+        // without replacing the mesh or reloading cloth/hair/garments.
+        const params = new URLSearchParams();
+        params.set('body_type', this.bodyType);
+        for (const [k, v] of Object.entries(this.morphs)) {
+            if (v !== 0) params.set(`morph_${k}`, v);
+        }
+        for (const [k, v] of Object.entries(this.meta)) {
+            if (v !== 0) params.set(`meta_${k}`, v);
+        }
+
+        const resp = await fetch(`/api/character/mesh/?${params}`);
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+
+        if (this.bodyMesh && this.bodyMesh.geometry.attributes.position.count === vertBuf.length / 3) {
+            // Same vertex count — update geometry in place
+            this.bodyMesh.geometry.attributes.position.array.set(vertBuf);
+            this.bodyMesh.geometry.attributes.position.needsUpdate = true;
+
+            if (data.normals) {
+                const normalBuf = base64ToFloat32(data.normals);
+                blenderToThreeCoords(normalBuf);
+                if (this.bodyMesh.geometry.attributes.normal) {
+                    this.bodyMesh.geometry.attributes.normal.array.set(normalBuf);
+                    this.bodyMesh.geometry.attributes.normal.needsUpdate = true;
+                }
+            } else {
+                this.bodyMesh.geometry.computeVertexNormals();
+            }
+
+            this.bodyMesh.geometry.computeBoundingSphere();
+            this.bodyMesh.geometry.computeBoundingBox();
+        } else {
+            // Vertex count changed (body type switch) — full mesh replacement
+            if (this.bodyMesh) {
+                this.group.remove(this.bodyMesh);
+                this.bodyMesh.geometry.dispose();
+                const mats = Array.isArray(this.bodyMesh.material)
+                    ? this.bodyMesh.material : [this.bodyMesh.material];
+                mats.forEach(m => m.dispose());
+                this.bodyMesh = null;
+            }
+            await this.load();
+        }
     }
 
     _applySkinColor(materials) {
@@ -405,19 +460,20 @@ class CharacterInstance {
                 const vertBuf = base64ToFloat32(data.vertices);
                 blenderToThreeCoords(vertBuf);
                 const faceBuf = base64ToUint32(data.faces);
-                const normalBuf = base64ToFloat32(data.normals);
-                blenderToThreeCoords(normalBuf);
 
                 const geo = new THREE.BufferGeometry();
                 geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
                 geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-                geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+                geo.computeVertexNormals();
 
                 const color = g.color ? new THREE.Color(g.color[0], g.color[1], g.color[2])
                                       : new THREE.Color(0.3, 0.35, 0.5);
                 const mat = new THREE.MeshStandardMaterial({
                     color, roughness: g.roughness ?? 0.8, metalness: g.metalness ?? 0.0,
                     side: THREE.DoubleSide,
+                    polygonOffset: true,
+                    polygonOffsetFactor: -1,
+                    polygonOffsetUnit: -1,
                 });
 
                 const mesh = _skinifyMesh(geo, mat, this, data);
@@ -2828,6 +2884,12 @@ function initTabs() {
             reloadCharacterMesh(inst);
         });
     }
+
+    // Refit garments & hair button
+    const refitBtn = document.getElementById('prop-refit-btn');
+    if (refitBtn) {
+        refitBtn.addEventListener('click', () => _refitAllForCurrentChar());
+    }
 }
 
 function switchTab(tabName) {
@@ -2840,7 +2902,10 @@ function switchTab(tabName) {
 }
 
 async function fetchMorphDefs() {
-    if (morphDefs) return morphDefs;
+    // Re-fetch if not yet loaded or if previous fetch returned empty morphs
+    if (morphDefs && morphDefs.morphs && morphDefs.morphs.length > 0) {
+        return morphDefs;
+    }
     const resp = await fetch('/api/character/morphs/');
     morphDefs = await resp.json();
     return morphDefs;
@@ -3115,18 +3180,7 @@ async function reloadCharacterMesh(inst) {
     clearTimeout(reloadTimer);
     reloadTimer = setTimeout(async () => {
         try {
-            // Remove old mesh
-            if (inst.bodyMesh) {
-                inst.group.remove(inst.bodyMesh);
-                inst.bodyMesh.geometry.dispose();
-                const mats = Array.isArray(inst.bodyMesh.material)
-                    ? inst.bodyMesh.material : [inst.bodyMesh.material];
-                mats.forEach(m => m.dispose());
-                inst.bodyMesh = null;
-            }
-
-            // Reload
-            await inst.load();
+            await inst.reloadBody();
             updateVertexCount();
             updateCharacterListUI();
             if (currentPropsCharId === inst.id) updateEquippedList(inst);
@@ -3135,6 +3189,197 @@ async function reloadCharacterMesh(inst) {
             console.error('Failed to reload character mesh:', e);
         }
     }, 300);
+}
+
+// =========================================================================
+// Refit all garments & hair for current character
+// =========================================================================
+
+/** Returns the max Y coordinate from a character's body mesh positions. */
+function _getBodyTop(inst) {
+    if (!inst.bodyMesh || !inst.bodyMesh.geometry.attributes.position) return 1.0;
+    const pos = inst.bodyMesh.geometry.attributes.position.array;
+    let maxY = -Infinity;
+    for (let i = 1; i < pos.length; i += 3) {
+        if (pos[i] > maxY) maxY = pos[i];
+    }
+    return maxY > 0 ? maxY : 1.0;
+}
+
+async function _refitAllForCurrentChar() {
+    const inst = characters.get(currentPropsCharId);
+    if (!inst) return;
+
+    const btn = document.getElementById('prop-refit-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refit...';
+    }
+
+    _refitting = true;
+
+    try {
+        // --- Refit garments (gar_*) ---
+        const garKeys = Object.keys(inst.clothMeshes).filter(k => k.startsWith('gar_'));
+        for (const key of garKeys) {
+            const garId = key.substring(4); // strip 'gar_'
+            const gState = inst.garmentState[key] || {};
+            const params = _charQueryParams(inst);
+            params.set('garment_id', garId);
+            params.set('offset', (gState.offset || 0.006).toFixed(4));
+            params.set('stiffness', (gState.stiffness || 0.5).toFixed(2));
+            if (gState.minDist != null) params.set('min_dist', gState.minDist);
+            if (gState.crotchFloor != null) params.set('crotch_floor', gState.crotchFloor);
+            if (gState.lift != null) params.set('lift', gState.lift);
+            if (gState.crotchDepth != null) params.set('crotch_depth', gState.crotchDepth);
+
+            let color = gState.color;
+            // Normalize color to [r, g, b] floats
+            if (!color || !Array.isArray(color)) {
+                const c = new THREE.Color(color || 0x4d5980);
+                color = [c.r, c.g, c.b];
+            }
+            params.set('color_r', Number(color[0]).toFixed(3));
+            params.set('color_g', Number(color[1]).toFixed(3));
+            params.set('color_b', Number(color[2]).toFixed(3));
+
+            try {
+                const resp = await fetch(`/api/character/garment/fit/?${params}`);
+                const data = await resp.json();
+                if (data.error) { console.log(`[Refit] ${key}: ${data.error}`); continue; }
+
+                // Remove old mesh — copied from viewer.js loadGarment()
+                if (inst.clothMeshes[key]) {
+                    inst.group.remove(inst.clothMeshes[key]);
+                    inst.clothMeshes[key].geometry.dispose();
+                    inst.clothMeshes[key].material.dispose();
+                }
+
+                const vertBuf = base64ToFloat32(data.vertices);
+                blenderToThreeCoords(vertBuf);
+                const faceBuf = base64ToUint32(data.faces);
+
+                const geo = new THREE.BufferGeometry();
+                geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+                geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+                // Let Three.js compute smooth vertex normals — same as viewer.js
+                geo.computeVertexNormals();
+
+                const matColor = new THREE.Color(color[0], color[1], color[2]);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: matColor,
+                    roughness: gState.roughness ?? 0.8,
+                    metalness: gState.metalness ?? 0.0,
+                    side: THREE.DoubleSide,
+                    polygonOffset: true,
+                    polygonOffsetFactor: -1,
+                    polygonOffsetUnit: -1,
+                });
+
+                const mesh = _skinifyMesh(geo, mat, inst, data);
+                inst.clothMeshes[key] = mesh;
+                inst.group.add(mesh);
+
+                // Recompute region weights + re-apply offsets
+                inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
+                _computeGarmentRegionWeights(inst, key);
+                _applyGarmentRegionOffsets(inst, key);
+
+                console.log(`[Refit] ${key}: ${data.vertex_count} verts, skinned=${mesh.isSkinnedMesh || false}`);
+            } catch (e) {
+                console.log(`[Refit] ${key} failed: ${e.message}`);
+            }
+        }
+
+        // --- Refit cloth pieces (tpl_*, bld_*, prim_*) ---
+        const clothKeys = Object.keys(inst.clothMeshes).filter(k =>
+            k.startsWith('tpl_') || k.startsWith('bld_') || k.startsWith('prim_'));
+        for (const key of clothKeys) {
+            try {
+                const clothDef = inst.cloth.find(c => c.key === key);
+                if (clothDef) {
+                    await _loadClothForCharacter(inst, key, clothDef);
+                }
+            } catch (e) {
+                console.error(`Refit cloth ${key} failed:`, e);
+            }
+        }
+
+        // --- Refit hair — copied from viewer.js refitHairToBody() ---
+        if (inst.bodyMesh && inst.initialBodyTop > 0 && inst.hairMesh && inst.hairStyle && inst.hairStyle.url) {
+            const currentTop = _getBodyTop(inst);
+            if (currentTop !== null && Math.abs(currentTop - inst.initialBodyTop) > 0.001) {
+                const scale = currentTop / inst.initialBodyTop;
+                const hairUrl = inst.hairStyle.url;
+                const colorName = inst.hairStyle.color || '';
+
+                // Remove old hair
+                inst.group.remove(inst.hairMesh);
+                inst.hairMesh.traverse(child => {
+                    if (child.isMesh) {
+                        child.geometry.dispose();
+                        const mats = Array.isArray(child.material) ? child.material : [child.material];
+                        mats.forEach(m => m.dispose());
+                    }
+                });
+                inst.hairMesh = null;
+
+                // Auto-skin if needed
+                if (!inst.isSkinned && defSkeletonData && skinWeightData) {
+                    convertInstToSkinned(inst);
+                }
+
+                gltfLoader.load(hairUrl, (gltf) => {
+                    let hairGroup = gltf.scene;
+
+                    // Scale geometry vertices before skinning so bone binding stays correct
+                    hairGroup.traverse(child => {
+                        if (child.isMesh) {
+                            child.geometry.scale(scale, scale, scale);
+                        }
+                    });
+
+                    // Re-bind to skeleton
+                    if (inst.isSkinned && inst.defSkeleton) {
+                        hairGroup = _skinifyHairGroup(hairGroup, inst);
+                    }
+
+                    inst.hairMesh = hairGroup;
+                    inst.hairStyle = { url: hairUrl, name: hairUrl.split('/').pop(), color: colorName };
+
+                    if (colorName && hairColorData[colorName]) {
+                        const rgb = hairColorData[colorName];
+                        const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
+                        inst.hairMesh.traverse(child => {
+                            if (child.isMesh && child.material) {
+                                const mats = Array.isArray(child.material) ? child.material : [child.material];
+                                mats.forEach(m => { m.color.copy(color); });
+                            }
+                        });
+                    }
+
+                    inst.group.add(inst.hairMesh);
+                    updateEquippedList(inst);
+                    updateVertexCount();
+                    console.log(`[Hair refit] scale=${scale.toFixed(4)} (initial=${inst.initialBodyTop.toFixed(4)}, current=${currentTop.toFixed(4)})`);
+                }, undefined, (err) => {
+                    console.error('[Hair refit] failed to reload:', err);
+                });
+            }
+        }
+
+        updateEquippedList(inst);
+        updateVertexCount();
+        markDirty();
+    } catch (e) {
+        console.error('Refit all failed:', e);
+    } finally {
+        _refitting = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync"></i> Garments &amp; Haare anpassen';
+        }
+    }
 }
 
 // =========================================================================
