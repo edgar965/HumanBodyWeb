@@ -686,6 +686,64 @@
         gap: 6px;
         padding-right: 8px;
     }
+
+    /* ===== Model Generator Bone Tree ===== */
+    .mg-bone-tree {
+        max-height: 300px;
+        overflow-y: auto;
+        font-size: 0.78rem;
+    }
+    .mg-category {
+        border-bottom: 1px solid var(--border);
+    }
+    .mg-category-header {
+        display: flex;
+        align-items: center;
+        padding: 5px 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        user-select: none;
+        gap: 4px;
+    }
+    .mg-category-header:hover { color: var(--text); }
+    .mg-category-header .mg-chevron {
+        font-size: 0.6rem;
+        transition: transform 0.15s;
+    }
+    .mg-category-header.collapsed .mg-chevron { transform: rotate(-90deg); }
+    .mg-category-body { padding: 0 4px 4px 4px; }
+    .mg-category-body.hidden { display: none; }
+    .mg-bone-item {
+        display: flex;
+        align-items: center;
+        padding: 2px 4px 2px 12px;
+        gap: 4px;
+        cursor: pointer;
+        border-radius: 3px;
+    }
+    .mg-bone-item:hover { background: rgba(255,255,255,0.05); }
+    .mg-bone-item.selected { background: rgba(100,160,255,0.15); }
+    .mg-bone-item input[type="checkbox"] {
+        margin: 0;
+        cursor: pointer;
+    }
+    .mg-bone-item .mg-bone-label {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.75rem;
+    }
+    .mg-bone-item .mg-bone-swatch {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        border: 1px solid rgba(255,255,255,0.2);
+        flex-shrink: 0;
+    }
 </style>
 {% endblock %}
 
@@ -745,6 +803,8 @@
             <div class="menu">
                 <div class="menu-title">Werkzeuge</div>
                 <div class="menu-dropdown">
+                    <div class="menu-item" data-action="model-generator">Modell Erzeugen...</div>
+                    <div class="menu-sep"></div>
                     <div class="menu-item" data-action="reset-scene">Szene zur&uuml;cksetzen</div>
                     <div class="menu-item" data-action="reset-lighting">Beleuchtung zur&uuml;cksetzen</div>
                     <div class="menu-item" data-action="reset-camera">Kamera zur&uuml;cksetzen</div>
@@ -791,6 +851,7 @@
             <div class="panel-tab" data-tab="assets">Assets</div>
             <div class="panel-tab" data-tab="animation">Animation</div>
             <div class="panel-tab" data-tab="szene">Szene</div>
+            <div class="panel-tab" data-tab="modell">Modell</div>
         </div>
 
         <!-- Tab content (scrollable) -->
@@ -1280,6 +1341,92 @@
                     </div>
                 </div>
             </div><!-- /tab-szene -->
+
+            <!-- Modell Tab (Model Generator) -->
+            <div class="tab-pane" id="tab-modell">
+                <!-- Global Controls -->
+                <div class="panel-section" data-panel-key="modell-global">
+                    <h3>Modell Generator <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body">
+                        <div class="slider-row">
+                            <label>Name</label>
+                            <input type="text" id="mg-model-name" value="Neues Modell" class="viewer-select" style="width:100%;">
+                        </div>
+                        <div class="slider-row">
+                            <label>Skeleton</label>
+                            <select id="mg-skeleton-type" class="viewer-select" style="width:100%;margin-bottom:0;">
+                                <option value="def">DEF Skeleton</option>
+                                <option value="rig">Rig Bones</option>
+                            </select>
+                        </div>
+                        <div class="slider-row">
+                            <label>Standard-Farbe</label>
+                            <input type="color" id="mg-default-color" value="#4488cc" style="width:40px;height:24px;border:none;background:none;cursor:pointer;">
+                        </div>
+                        <div class="slider-row">
+                            <label>Standard-Radius</label>
+                            <input type="range" id="mg-default-radius" min="0.005" max="0.08" step="0.001" value="0.03">
+                            <span id="mg-default-radius-val" class="slider-val">0.030</span>
+                        </div>
+                        <div class="slider-row">
+                            <label>Segmente</label>
+                            <input type="range" id="mg-segments" min="3" max="24" step="1" value="8">
+                            <span id="mg-segments-val" class="slider-val">8</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bone Tree -->
+                <div class="panel-section" data-panel-key="modell-bones">
+                    <h3>Knochen <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" style="padding:0;">
+                        <div id="mg-bone-tree" class="mg-bone-tree">
+                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">
+                                Erst "Erzeugen" klicken um Knochen zu laden...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Bone Properties -->
+                <div class="panel-section" data-panel-key="modell-bone-props" id="mg-bone-props-section" style="display:none;">
+                    <h3>Knochen-Eigenschaften <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body">
+                        <div id="mg-bone-name" style="font-size:0.8rem;color:var(--accent);margin-bottom:6px;font-weight:600;"></div>
+                        <div class="slider-row">
+                            <label>Form</label>
+                            <select id="mg-bone-shape" class="viewer-select" style="width:100%;">
+                                <option value="cylinder">Zylinder</option>
+                                <option value="box">Box</option>
+                                <option value="sphere">Kugel</option>
+                                <option value="cone">Kegel/Pyramide</option>
+                                <option value="capsule">Kapsel</option>
+                                <option value="oval">Oval</option>
+                                <option value="diamond">Diamant</option>
+                            </select>
+                        </div>
+                        <div class="slider-row">
+                            <label>Radius</label>
+                            <input type="range" id="mg-bone-radius" min="0.005" max="0.08" step="0.001" value="0.03">
+                            <span id="mg-bone-radius-val" class="slider-val">0.030</span>
+                        </div>
+                        <div class="slider-row">
+                            <label>Farbe</label>
+                            <input type="color" id="mg-bone-color" value="#4488cc" style="width:40px;height:24px;border:none;background:none;cursor:pointer;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="panel-section" data-panel-key="modell-actions">
+                    <h3>Aktionen <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" style="display:flex;flex-direction:column;gap:6px;">
+                        <button class="action-btn primary" id="mg-generate">Erzeugen</button>
+                        <button class="action-btn" id="mg-save">Speichern</button>
+                    </div>
+                </div>
+            </div><!-- /tab-modell -->
+
         </div><!-- /panel-tab-content -->
 
         <!-- Status -->

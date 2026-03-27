@@ -9,6 +9,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=17';
+import { classifyBones, getDefaultModelConfig, computeBoneWorldTransforms, generateModelMesh, classifyRigBones, getDefaultRigConfig, generateRigBoneMesh, BODY_BONES, FINGER_BONES } from './model_generator.js';
 
 const gltfLoader = new GLTFLoader();
 
@@ -176,9 +177,15 @@ class CharacterInstance {
         this.selected = false;
         this.isSkinned = false;
         this.defSkeleton = null;
+        this.generatedConfig = presetData.type === 'generated_model' ? presetData : null;
     }
 
     async load() {
+        // Generated model: build mesh client-side from config
+        if (this.generatedConfig) {
+            return this._loadGeneratedModel();
+        }
+
         // Build query string
         const params = new URLSearchParams();
         params.set('body_type', this.bodyType);
@@ -306,6 +313,34 @@ class CharacterInstance {
             }
             await this.load();
         }
+    }
+
+    _loadGeneratedModel() {
+        const skelType = this.generatedConfig.skeleton_type || 'def';
+        let result;
+
+        if (skelType === 'rig') {
+            if (!_mgRigBonesData) {
+                throw new Error('Rig bones data not loaded — cannot build generated model');
+            }
+            result = generateRigBoneMesh(_mgRigBonesData, this.generatedConfig);
+        } else {
+            if (!defSkeletonData || !skinWeightData) {
+                throw new Error('Skeleton data not loaded — cannot build generated model');
+            }
+            result = generateModelMesh(defSkeletonData, skinWeightData, this.generatedConfig);
+        }
+
+        if (!result) throw new Error('No visible bones in generated model config');
+
+        this.bodyMesh = result.mesh;
+        if (result.skeleton) {
+            this.defSkeleton = result.skeleton;
+            this.isSkinned = true;
+        }
+        this.group.add(this.bodyMesh);
+
+        return this;
     }
 
     _applySkinColor(materials) {
@@ -575,6 +610,21 @@ class CharacterInstance {
     }
 
     toJSON() {
+        // Generated model: save config directly
+        if (this.generatedConfig) {
+            return {
+                id: this.id,
+                presetName: this.presetName,
+                bodyType: 'generated',
+                generatedConfig: this.generatedConfig,
+                transform: {
+                    position: this.group.position.toArray(),
+                    rotation: [this.group.rotation.x, this.group.rotation.y, this.group.rotation.z],
+                    scale: this.group.scale.toArray()
+                }
+            };
+        }
+
         // Sync garmentState back into garments array so UI changes are saved
         const garments = (this.garments || []).map(g => {
             const key = `gar_${g.id}`;
@@ -611,15 +661,26 @@ class CharacterInstance {
     }
 
     static async fromJSON(data) {
-        const inst = new CharacterInstance(data.id, {
-            name: data.presetName,
-            body_type: data.bodyType,
-            morphs: data.morphs || {},
-            meta: data.meta || {},
-            cloth: data.cloth || [],
-            hair_style: data.hair_style || null,
-            garments: data.garments || [],
-        });
+        let presetPayload;
+        if (data.bodyType === 'generated' && data.generatedConfig) {
+            // Rebuild from generated model config
+            presetPayload = {
+                ...data.generatedConfig,
+                name: data.presetName,
+                type: 'generated_model',
+            };
+        } else {
+            presetPayload = {
+                name: data.presetName,
+                body_type: data.bodyType,
+                morphs: data.morphs || {},
+                meta: data.meta || {},
+                cloth: data.cloth || [],
+                hair_style: data.hair_style || null,
+                garments: data.garments || [],
+            };
+        }
+        const inst = new CharacterInstance(data.id, presetPayload);
         await inst.load();
         if (data.transform) {
             if (data.transform.position) inst.group.position.fromArray(data.transform.position);
@@ -722,6 +783,8 @@ function init() {
             const expanded = s.expanded_panels_scene;
             if (Array.isArray(expanded)) {
                 document.querySelectorAll('.panel-section[data-panel-key]').forEach(panel => {
+                    // Skip Modell tab panels — they manage their own state
+                    if (panel.closest('#tab-modell')) return;
                     if (expanded.includes(panel.dataset.panelKey)) {
                         panel.classList.remove('collapsed');
                     } else {
@@ -954,6 +1017,9 @@ function deleteCharacter(id) {
         deselectCharacter();
     }
 
+    // Clear model generator reference if this was the generated character
+    if (_mgCharacterId === id) _mgCharacterId = null;
+
     inst.dispose();
     characters.delete(id);
     updateCharacterListUI();
@@ -995,8 +1061,9 @@ function updateCharacterListUI() {
         const pos = inst.group.position;
         const posStr = `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
 
+        const icon = inst.generatedConfig ? 'fa-robot' : 'fa-user';
         li.innerHTML = `
-            <span class="character-item-icon"><i class="fas fa-user"></i></span>
+            <span class="character-item-icon"><i class="fas ${icon}"></i></span>
             <div class="character-item-info">
                 <div class="character-item-name">${escapeHtml(inst.presetName)}</div>
                 <div class="character-item-detail">${escapeHtml(inst.bodyType)} &bull; (${posStr})</div>
@@ -1251,6 +1318,10 @@ function handleMenuAction(action) {
             break;
 
         // Werkzeuge
+        case 'model-generator':
+            switchTab('modell');
+            initModelGenerator();
+            break;
         case 'reset-scene':
             resetScene();
             break;
@@ -5015,6 +5086,392 @@ async function loadAnimationUI() {
                 if (mixer) mixer.update(0);
             }
         });
+    }
+}
+
+// =========================================================================
+// Model Generator UI
+// =========================================================================
+let _mgConfig = null;      // Current model config
+let _mgSelectedBone = null; // Currently selected bone name
+let _mgInitialized = false;
+let _mgSkeletonType = 'def';  // 'def' or 'rig'
+let _mgRigBonesData = null;   // Cached rig bones data
+let _mgCharacterId = null;    // ID of generated character in characters map
+
+function initModelGenerator() {
+    if (!defSkeletonData || !skinWeightData) {
+        console.warn('Model Generator: skeleton data not loaded yet');
+        return;
+    }
+
+    if (!_mgConfig) {
+        _mgConfig = getDefaultModelConfig(defSkeletonData, skinWeightData);
+    }
+
+    if (!_mgInitialized) {
+        _bindModelGeneratorUI();
+        _mgInitialized = true;
+    }
+
+    // Sync skeleton type dropdown
+    const skelSelect = document.getElementById('mg-skeleton-type');
+    if (skelSelect) skelSelect.value = _mgSkeletonType;
+
+    _populateBoneTree();
+    _syncMGGlobalUI();
+
+    // Expand Modell tab panel sections
+    document.querySelectorAll('#tab-modell .panel-section').forEach(p => {
+        p.classList.remove('collapsed');
+    });
+}
+
+function _bindModelGeneratorUI() {
+    // Skeleton type selector
+    const skelSelect = document.getElementById('mg-skeleton-type');
+    if (skelSelect) skelSelect.addEventListener('change', async () => {
+        const newType = skelSelect.value;
+        if (newType === _mgSkeletonType) return;
+        _mgSkeletonType = newType;
+
+        if (newType === 'rig') {
+            // Fetch rig bones data if not cached
+            if (!_mgRigBonesData) {
+                try {
+                    const resp = await fetch('/api/character/rig/');
+                    if (resp.ok) _mgRigBonesData = await resp.json();
+                } catch (e) {
+                    console.warn('Failed to load rig bones:', e);
+                }
+            }
+            if (_mgRigBonesData && _mgRigBonesData.bones && _mgRigBonesData.bones.length > 0) {
+                _mgConfig = getDefaultRigConfig(_mgRigBonesData);
+            } else {
+                console.warn('Rig bones data not available');
+                _mgSkeletonType = 'def';
+                skelSelect.value = 'def';
+                return;
+            }
+        } else {
+            _mgConfig = getDefaultModelConfig(defSkeletonData, skinWeightData);
+        }
+
+        _mgSelectedBone = null;
+        const propsSection = document.getElementById('mg-bone-props-section');
+        if (propsSection) propsSection.style.display = 'none';
+
+        _populateBoneTree();
+        _syncMGGlobalUI();
+    });
+
+    // Global controls
+    const nameInput = document.getElementById('mg-model-name');
+    if (nameInput) nameInput.addEventListener('input', () => { _mgConfig.name = nameInput.value; });
+
+    const colorInput = document.getElementById('mg-default-color');
+    if (colorInput) colorInput.addEventListener('input', () => {
+        _mgConfig.default_color = colorInput.value;
+    });
+
+    const radiusSlider = document.getElementById('mg-default-radius');
+    const radiusVal = document.getElementById('mg-default-radius-val');
+    if (radiusSlider) radiusSlider.addEventListener('input', () => {
+        const v = parseFloat(radiusSlider.value);
+        _mgConfig.default_radius = v;
+        if (radiusVal) radiusVal.textContent = v.toFixed(3);
+    });
+
+    const segSlider = document.getElementById('mg-segments');
+    const segVal = document.getElementById('mg-segments-val');
+    if (segSlider) segSlider.addEventListener('input', () => {
+        const v = parseInt(segSlider.value);
+        _mgConfig.segments = v;
+        if (segVal) segVal.textContent = v;
+    });
+
+    // Bone properties
+    const boneShape = document.getElementById('mg-bone-shape');
+    if (boneShape) boneShape.addEventListener('change', () => {
+        if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+        _mgConfig.bone_parts[_mgSelectedBone].shape = boneShape.value;
+        _mgAutoRegenerate();
+    });
+
+    const boneRadius = document.getElementById('mg-bone-radius');
+    const boneRadiusVal = document.getElementById('mg-bone-radius-val');
+    if (boneRadius) boneRadius.addEventListener('input', () => {
+        const v = parseFloat(boneRadius.value);
+        if (boneRadiusVal) boneRadiusVal.textContent = v.toFixed(3);
+        if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+        _mgConfig.bone_parts[_mgSelectedBone].radius = v;
+        // Update swatch in tree
+        _updateBoneTreeItem(_mgSelectedBone);
+    });
+    if (boneRadius) boneRadius.addEventListener('change', () => { _mgAutoRegenerate(); });
+
+    const boneColor = document.getElementById('mg-bone-color');
+    if (boneColor) boneColor.addEventListener('input', () => {
+        if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+        _mgConfig.bone_parts[_mgSelectedBone].color = boneColor.value;
+        _updateBoneTreeItem(_mgSelectedBone);
+        _mgAutoRegenerate();
+    });
+
+    // Action buttons
+    const genBtn = document.getElementById('mg-generate');
+    if (genBtn) genBtn.addEventListener('click', () => {
+        _mgGenerateCharacter();
+    });
+
+    const saveBtn = document.getElementById('mg-save');
+    if (saveBtn) saveBtn.addEventListener('click', () => {
+        _mgSaveModel();
+    });
+}
+
+function _syncMGGlobalUI() {
+    if (!_mgConfig) return;
+    const nameInput = document.getElementById('mg-model-name');
+    if (nameInput) nameInput.value = _mgConfig.name || 'Neues Modell';
+    const colorInput = document.getElementById('mg-default-color');
+    if (colorInput) colorInput.value = _mgConfig.default_color || '#4488cc';
+    const radiusSlider = document.getElementById('mg-default-radius');
+    const radiusVal = document.getElementById('mg-default-radius-val');
+    if (radiusSlider) radiusSlider.value = _mgConfig.default_radius || 0.03;
+    if (radiusVal) radiusVal.textContent = (_mgConfig.default_radius || 0.03).toFixed(3);
+    const segSlider = document.getElementById('mg-segments');
+    const segVal = document.getElementById('mg-segments-val');
+    if (segSlider) segSlider.value = _mgConfig.segments || 8;
+    if (segVal) segVal.textContent = _mgConfig.segments || 8;
+}
+
+function _populateBoneTree() {
+    const container = document.getElementById('mg-bone-tree');
+    if (!container || !_mgConfig) return;
+
+    let categories;
+    if (_mgSkeletonType === 'rig' && _mgRigBonesData) {
+        const classified = classifyRigBones(_mgRigBonesData);
+        categories = [
+            { label: `DEF (${classified.def.length})`, bones: classified.def, collapsed: false },
+            { label: `MCH (${classified.mch.length})`, bones: classified.mch, collapsed: true },
+            { label: `ORG (${classified.org.length})`, bones: classified.org, collapsed: true },
+            { label: `Control (${classified.control.length})`, bones: classified.control, collapsed: true },
+        ];
+    } else {
+        const classified = classifyBones(defSkeletonData);
+        categories = [
+            { label: 'K\u00f6rper', bones: classified.body, collapsed: false },
+            { label: 'Finger', bones: classified.finger, collapsed: true },
+            { label: 'Gesicht', bones: classified.face, collapsed: true },
+        ];
+    }
+
+    container.innerHTML = '';
+
+    for (const cat of categories) {
+        if (cat.bones.length === 0) continue;
+        const catDiv = document.createElement('div');
+        catDiv.className = 'mg-category';
+
+        const header = document.createElement('div');
+        header.className = 'mg-category-header' + (cat.collapsed ? ' collapsed' : '');
+        header.innerHTML = `<span class="mg-chevron">&#9660;</span> ${cat.label} (${cat.bones.length})`;
+        catDiv.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'mg-category-body' + (cat.collapsed ? ' hidden' : '');
+
+        for (const boneName of cat.bones) {
+            const part = _mgConfig.bone_parts[boneName];
+            if (!part) continue;
+
+            const item = document.createElement('div');
+            item.className = 'mg-bone-item';
+            item.dataset.bone = boneName;
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = part.visible;
+            cb.addEventListener('change', (e) => {
+                e.stopPropagation();
+                part.visible = cb.checked;
+            });
+
+            const label = document.createElement('span');
+            label.className = 'mg-bone-label';
+            label.textContent = boneName.replace(/^(DEF|MCH|ORG)-/, '');
+            label.title = boneName;
+
+            const swatch = document.createElement('span');
+            swatch.className = 'mg-bone-swatch';
+            swatch.style.backgroundColor = part.color || _mgConfig.default_color;
+
+            item.appendChild(cb);
+            item.appendChild(label);
+            item.appendChild(swatch);
+
+            item.addEventListener('click', (e) => {
+                if (e.target === cb) return; // checkbox handles itself
+                _mgSelectBone(boneName);
+            });
+
+            body.appendChild(item);
+        }
+
+        catDiv.appendChild(body);
+        container.appendChild(catDiv);
+
+        // Toggle collapse
+        header.addEventListener('click', () => {
+            header.classList.toggle('collapsed');
+            body.classList.toggle('hidden');
+        });
+    }
+}
+
+function _mgSelectBone(boneName) {
+    _mgSelectedBone = boneName;
+    // Highlight in tree
+    document.querySelectorAll('.mg-bone-item').forEach(el => {
+        el.classList.toggle('selected', el.dataset.bone === boneName);
+    });
+    // Show bone properties
+    const propsSection = document.getElementById('mg-bone-props-section');
+    if (propsSection) propsSection.style.display = '';
+    const nameEl = document.getElementById('mg-bone-name');
+    if (nameEl) nameEl.textContent = boneName;
+
+    const part = _mgConfig.bone_parts[boneName];
+    if (!part) return;
+
+    const shapeSelect = document.getElementById('mg-bone-shape');
+    if (shapeSelect) shapeSelect.value = part.shape || 'cylinder';
+    const radiusSlider = document.getElementById('mg-bone-radius');
+    const radiusVal = document.getElementById('mg-bone-radius-val');
+    if (radiusSlider) radiusSlider.value = part.radius || 0.03;
+    if (radiusVal) radiusVal.textContent = (part.radius || 0.03).toFixed(3);
+    const colorInput = document.getElementById('mg-bone-color');
+    if (colorInput) colorInput.value = part.color || _mgConfig.default_color;
+}
+
+function _updateBoneTreeItem(boneName) {
+    const item = document.querySelector(`.mg-bone-item[data-bone="${boneName}"]`);
+    if (!item) return;
+    const part = _mgConfig.bone_parts[boneName];
+    if (!part) return;
+    const swatch = item.querySelector('.mg-bone-swatch');
+    if (swatch) swatch.style.backgroundColor = part.color;
+}
+
+let _mgRegenTimer = null;
+function _mgAutoRegenerate() {
+    if (!_mgCharacterId) return; // Only auto-regen if character exists
+    clearTimeout(_mgRegenTimer);
+    _mgRegenTimer = setTimeout(() => _mgGenerateCharacter(), 150);
+}
+
+function _mgGeneratePreview() {
+    if (!_mgConfig) {
+        console.warn('Model Generator: missing config');
+        return;
+    }
+
+    let result;
+    if (_mgSkeletonType === 'rig' && _mgRigBonesData) {
+        result = generateRigBoneMesh(_mgRigBonesData, _mgConfig);
+    } else {
+        if (!defSkeletonData || !skinWeightData) {
+            console.warn('Model Generator: missing skeleton data');
+            return;
+        }
+        result = generateModelMesh(defSkeletonData, skinWeightData, _mgConfig);
+    }
+
+    if (!result) {
+        console.warn('Model Generator: no visible bones');
+        return;
+    }
+
+    return result;
+}
+
+function _mgGenerateCharacter() {
+    const result = _mgGeneratePreview();
+    if (!result) return;
+
+    // Remember position of old character before removing
+    let oldPos = null;
+    if (_mgCharacterId && characters.has(_mgCharacterId)) {
+        oldPos = characters.get(_mgCharacterId).group.position.clone();
+        deleteCharacter(_mgCharacterId);
+        _mgCharacterId = null;
+    }
+
+    // Create CharacterInstance
+    const id = generateCharacterId();
+    const configCopy = JSON.parse(JSON.stringify(_mgConfig));
+    configCopy.skeleton_type = _mgSkeletonType;
+    const inst = new CharacterInstance(id, configCopy);
+    inst.presetName = _mgConfig.name || 'Generiertes Modell';
+    inst.bodyType = _mgSkeletonType === 'rig' ? 'Rig Bones' : 'DEF Skeleton';
+
+    // Set the mesh directly
+    inst.bodyMesh = result.mesh;
+    if (result.skeleton) {
+        inst.defSkeleton = result.skeleton;
+        inst.isSkinned = true;
+    }
+    inst.group.add(result.mesh);
+
+    // Restore position or offset
+    if (oldPos) {
+        inst.group.position.copy(oldPos);
+    }
+
+    characters.set(id, inst);
+    scene.add(inst.group);
+    _mgCharacterId = id;
+
+    updateCharacterListUI();
+    updateVertexCount();
+    selectCharacter(id);
+
+    const vc = result.mesh.geometry.attributes.position.count;
+    console.log(`Model Generator: created ${_mgSkeletonType === 'rig' ? 'Mesh' : 'SkinnedMesh'} with ${vc} vertices as character "${inst.presetName}"`);
+}
+
+async function _mgSaveModel() {
+    if (!_mgConfig) return;
+
+    const name = (_mgConfig.name || 'Neues Modell').trim();
+    if (!name) { alert('Bitte einen Namen eingeben.'); return; }
+
+    const data = { ..._mgConfig };
+    data.name = name;
+
+    try {
+        const resp = await fetch('/api/character/model/save/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+            body: JSON.stringify({ name, data }),
+        });
+        const result = await resp.json();
+        if (result.ok) {
+            const werkzeugeTitle = document.querySelector('.menu:nth-child(5) .menu-title');
+            if (werkzeugeTitle) {
+                const orig = werkzeugeTitle.textContent;
+                werkzeugeTitle.textContent = 'Gespeichert!';
+                werkzeugeTitle.style.color = 'var(--accent)';
+                setTimeout(() => { werkzeugeTitle.textContent = orig; werkzeugeTitle.style.color = ''; }, 1500);
+            }
+            console.log(`Model saved: ${name}`);
+        } else {
+            alert('Fehler: ' + (result.error || 'Unbekannt'));
+        }
+    } catch (e) {
+        alert('Fehler beim Speichern: ' + e.message);
     }
 }
 
