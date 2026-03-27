@@ -323,7 +323,7 @@ class CharacterInstance {
             if (!_mgRigBonesData) {
                 throw new Error('Rig bones data not loaded — cannot build generated model');
             }
-            result = generateRigBoneMesh(_mgRigBonesData, this.generatedConfig);
+            result = generateRigBoneMesh(_mgRigBonesData, this.generatedConfig, defSkeletonData, skinWeightData);
         } else {
             if (!defSkeletonData || !skinWeightData) {
                 throw new Error('Skeleton data not loaded — cannot build generated model');
@@ -5408,7 +5408,7 @@ function _mgGeneratePreview() {
 
     let result;
     if (_mgSkeletonType === 'rig' && _mgRigBonesData) {
-        result = generateRigBoneMesh(_mgRigBonesData, _mgConfig);
+        result = generateRigBoneMesh(_mgRigBonesData, _mgConfig, defSkeletonData, skinWeightData);
     } else {
         if (!defSkeletonData || !skinWeightData) {
             console.warn('Model Generator: missing skeleton data');
