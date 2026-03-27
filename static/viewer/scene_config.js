@@ -5099,18 +5099,37 @@ async function loadAnimationUI() {
 let _mgConfig = null;      // Current model config
 let _mgSelectedBone = null; // Currently selected bone name
 let _mgInitialized = false;
-let _mgSkeletonType = 'def';  // 'def' or 'rig'
+let _mgSkeletonType = 'rig';  // 'def' or 'rig'
 let _mgRigBonesData = null;   // Cached rig bones data
 let _mgCharacterId = null;    // ID of generated character in characters map
 
-function initModelGenerator() {
+async function initModelGenerator() {
     if (!defSkeletonData || !skinWeightData) {
         console.warn('Model Generator: skeleton data not loaded yet');
         return;
     }
 
     if (!_mgConfig) {
-        _mgConfig = getDefaultModelConfig(defSkeletonData, skinWeightData);
+        if (_mgSkeletonType === 'rig') {
+            // Load rig bones data for default rig mode
+            if (!_mgRigBonesData) {
+                try {
+                    const resp = await fetch('/api/character/rig/');
+                    if (resp.ok) _mgRigBonesData = await resp.json();
+                } catch (e) {
+                    console.warn('Failed to load rig bones:', e);
+                }
+            }
+            if (_mgRigBonesData && _mgRigBonesData.bones && _mgRigBonesData.bones.length > 0) {
+                _mgConfig = getDefaultRigConfig(_mgRigBonesData);
+            } else {
+                // Fallback to DEF if rig data unavailable
+                _mgSkeletonType = 'def';
+                _mgConfig = getDefaultModelConfig(defSkeletonData, skinWeightData);
+            }
+        } else {
+            _mgConfig = getDefaultModelConfig(defSkeletonData, skinWeightData);
+        }
     }
 
     if (!_mgInitialized) {
