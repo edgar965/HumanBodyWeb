@@ -2707,6 +2707,8 @@ function convertToDefSkinnedMesh() {
 /** Convert a CharacterInstance body to SkinnedMesh for animation. */
 function convertInstToSkinned(inst) {
     if (inst.isSkinned || !inst.bodyMesh || !skinWeightData || !defSkeletonData) return;
+    // Generated models have their own skinning (DEF) or none (Rig) — never apply body skin weights
+    if (inst.generatedConfig) return;
     const geo = inst.bodyMesh.geometry.clone();
     const vCount = geo.attributes.position.count;
     const skinIndices = new Float32Array(vCount * 4);
