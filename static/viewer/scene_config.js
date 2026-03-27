@@ -2606,6 +2606,13 @@ function convertInstToSkinned(inst) {
     inst.bodyMesh.bind(inst.defSkeleton.skeleton);
     inst.group.add(inst.bodyMesh);
     inst.isSkinned = true;
+
+    // Re-skin hair if already loaded (hair was added as plain mesh before skinning)
+    if (inst.hairMesh) {
+        inst.group.remove(inst.hairMesh);
+        // Re-load hair to get fresh geometry for skinning
+        inst._loadHair();
+    }
 }
 
 /**

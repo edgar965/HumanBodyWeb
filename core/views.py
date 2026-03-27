@@ -6,7 +6,10 @@ import time as _time_mod
 from pathlib import Path
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse, FileResponse, HttpResponse, HttpResponseNotFound
+from django.http import (
+    JsonResponse, FileResponse, HttpResponse, HttpResponseNotFound,
+    StreamingHttpResponse,
+)
 from django.conf import settings
 from django.contrib import messages
 
@@ -1426,6 +1429,78 @@ def serve_bvh_file(request, job_id):
     )
     resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
+
+
+def _serve_video_with_range(request, file_path):
+    """Serve a video file with HTTP Range request support for seeking."""
+    import mimetypes
+    ct = mimetypes.guess_type(str(file_path))[0] or 'video/mp4'
+    file_size = os.path.getsize(file_path)
+
+    range_header = request.META.get('HTTP_RANGE', '')
+    if range_header:
+        # Parse "bytes=START-END"
+        try:
+            ranges = range_header.replace('bytes=', '').split('-')
+            start = int(ranges[0]) if ranges[0] else 0
+            end = int(ranges[1]) if ranges[1] else file_size - 1
+        except (ValueError, IndexError):
+            start, end = 0, file_size - 1
+        end = min(end, file_size - 1)
+        length = end - start + 1
+
+        def file_iterator():
+            with open(file_path, 'rb') as f:
+                f.seek(start)
+                remaining = length
+                while remaining > 0:
+                    chunk = f.read(min(8192, remaining))
+                    if not chunk:
+                        break
+                    remaining -= len(chunk)
+                    yield chunk
+
+        resp = StreamingHttpResponse(file_iterator(), status=206, content_type=ct)
+        resp['Content-Length'] = length
+        resp['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+        resp['Accept-Ranges'] = 'bytes'
+        return resp
+
+    # No Range header — serve full file with Accept-Ranges
+    resp = FileResponse(open(file_path, 'rb'), content_type=ct)
+    resp['Accept-Ranges'] = 'bytes'
+    resp['Content-Length'] = file_size
+    return resp
+
+
+def serve_video_file(request, job_id):
+    """Serve the original uploaded video, with fallback to output directory."""
+    job = get_object_or_404(BVHJob, id=job_id)
+
+    # Try the original upload location first
+    if job.video_file:
+        primary = Path(settings.MEDIA_ROOT) / str(job.video_file)
+        if primary.exists():
+            return _serve_video_with_range(request, str(primary))
+
+    # Fallback: look in output directory for 0_input_video.mp4
+    output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
+    if output_dir.exists():
+        stem = Path(job.video_file.name).stem if job.video_file else job.name
+        for candidate in [
+            output_dir / stem / '0_input_video.mp4',
+            output_dir / f'{stem}.mp4',
+            output_dir / f'{stem}.webm',
+        ]:
+            if candidate.exists():
+                return _serve_video_with_range(request, str(candidate))
+        # Try any video file in the output subdirectory
+        sub = output_dir / stem if (output_dir / stem).is_dir() else output_dir
+        for f in sub.iterdir():
+            if f.suffix.lower() in ('.mp4', '.webm', '.avi', '.mov') and f.name.startswith('0_'):
+                return _serve_video_with_range(request, str(f))
+
+    return HttpResponseNotFound('Video file not found')
 
 
 def serve_detection_data(request, job_id):

@@ -1,4 +1,5 @@
 import { getProject, types } from '@theatre/core';
+import theatreState from './theatre-state.json';
 
 let _project = null;
 let _sheet = null;
@@ -6,10 +7,12 @@ const _theatreObjects = new Map(); // Store Theatre objects for external access
 
 /**
  * Initialise Theatre project and main sheet.
+ * The state JSON pre-defines sequenced tracks for Camera + 3 Lights,
+ * so the Sequence Editor appears immediately without manual setup.
  * @returns {{ project, sheet }}
  */
 export function setupTheatre() {
-    _project = getProject('HumanBody Theatre');
+    _project = getProject('HumanBody Theatre', { state: theatreState });
     _sheet = _project.sheet('Main');
     return { project: _project, sheet: _sheet };
 }
@@ -41,6 +44,8 @@ export function getAllTheatreObjects() {
 
 /**
  * Register a Three.js camera as an animatable Theatre object.
+ * During sequence playback, Theatre.js controls position + fov.
+ * When idle, only fov changes are applied (OrbitControls owns position).
  */
 export function createCameraSheet(sheet, camera) {
     const obj = sheet.object('Camera', {
@@ -52,7 +57,11 @@ export function createCameraSheet(sheet, camera) {
         fov: types.number(camera.fov, { range: [10, 120] }),
     });
     obj.onValuesChange((values) => {
-        camera.position.set(values.position.x, values.position.y, values.position.z);
+        // During sequence playback: Theatre.js drives position + fov
+        if (window.isPlaying) {
+            camera.position.set(values.position.x, values.position.y, values.position.z);
+        }
+        // FOV always applies (doesn't conflict with OrbitControls)
         camera.fov = values.fov;
         camera.updateProjectionMatrix();
     });

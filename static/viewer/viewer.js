@@ -858,6 +858,8 @@ function connectWebSocket() {
         if (btSelect && btSelect.value) {
             wsSend({ type: 'body_type', value: btSelect.value });
         }
+        // Re-sync all morph + meta values (server state is fresh after reconnect)
+        _resyncMorphsOnReconnect();
     };
 
     ws.onclose = () => {
@@ -896,6 +898,35 @@ function wsSend(msg) {
     if (ws && wsReady) {
         ws.send(JSON.stringify(msg));
     }
+}
+
+/**
+ * Re-send all current morph + meta slider values after WebSocket reconnect.
+ * The server creates a fresh CharacterState on reconnect, so all state is lost.
+ */
+function _resyncMorphsOnReconnect() {
+    // Batch all morph slider values
+    const morphBatch = {};
+    document.querySelectorAll('#morphs-panel input[type="range"][data-morph]').forEach(s => {
+        const v = parseInt(s.value) / 100.0;
+        if (Math.abs(v) > 0.001) morphBatch[s.dataset.morph] = v;
+    });
+    if (Object.keys(morphBatch).length > 0) {
+        wsSend({ type: 'morph_batch', morphs: morphBatch });
+    }
+    // Re-send meta values
+    ['age', 'mass', 'tone', 'height'].forEach(name => {
+        const el = document.getElementById(`meta-${name}`);
+        if (!el) return;
+        const dv = parseInt(el.value);
+        const mn = parseInt(el.min), mx = parseInt(el.max);
+        const neutral = (mn + mx) / 2;
+        const half = (mx - mn) / 2;
+        const internal = half ? (dv - neutral) / half : 0;
+        if (Math.abs(internal) > 0.001) {
+            wsSend({ type: 'meta', name, value: internal });
+        }
+    });
 }
 
 // Throttle morph sends (max ~30 per second)
@@ -2531,9 +2562,9 @@ function _buildBodyFitQueryString() {
     qs += `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
 
     // Append current morph values
-    document.querySelectorAll('#morphs-panel input[type="range"]').forEach(slider => {
-        const mName = slider.dataset.morphName || slider.id.replace('morph-', '');
-        if (mName && slider.value !== undefined) {
+    document.querySelectorAll('#morphs-panel input[type="range"][data-morph]').forEach(slider => {
+        const mName = slider.dataset.morph;
+        if (mName) {
             qs += `&morph_${mName}=${slider.value / 100}`;
         }
     });

@@ -362,18 +362,14 @@
         border-color: var(--accent);
     }
 
-    /* Push Theatre.js Studio overlay to fit between sidebar, menubar, and right panel */
+    /* Push Theatre.js Studio overlay to fit between sidebar, menubar, right panel,
+       and playback controls bar at the bottom. */
     #theatrejs-studio-root {
         top: 40px !important;
         right: 320px !important;
-        bottom: 0 !important;
+        bottom: 160px !important;
         left: 220px !important;
         z-index: 900 !important;
-        pointer-events: none !important;
-    }
-    /* Allow clicks on Studio panels (outline, detail, sequence editor) */
-    #theatrejs-studio-root > * {
-        pointer-events: auto !important;
     }
 
     #glb-file-input {
@@ -476,14 +472,7 @@
             </div>
         </div>
     </div>
-    <div class="menu-item">
-        Video
-        <div class="menu-dropdown">
-            <div class="menu-action" id="menu-export-video">
-                <i class="fas fa-file-video"></i> Export Video
-            </div>
-        </div>
-    </div>
+    <!-- Video menu removed — Export MP4 is now in Datei -->
     <div class="menu-item">
         Settings
         <div class="menu-dropdown">
@@ -520,6 +509,10 @@
             <div class="menu-separator"></div>
             <div class="menu-action" id="menu-add-glb">
                 <i class="fas fa-cube"></i> GLB importieren
+            </div>
+            <div class="menu-separator"></div>
+            <div class="menu-action" id="menu-export-mp4">
+                <i class="fas fa-file-video"></i> Export MP4
             </div>
         </div>
     </div>
@@ -671,8 +664,64 @@
         </div>
     </div>
 </div>
+
+<!-- Export MP4 Modal -->
+<div class="theatre-modal-overlay" id="modal-export-mp4">
+    <div class="theatre-modal" style="max-width:500px;">
+        <div class="theatre-modal-header">
+            <h3><i class="fas fa-file-video"></i> Export MP4</h3>
+            <button class="theatre-modal-close" data-close-modal>&times;</button>
+        </div>
+        <div class="theatre-modal-body">
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:6px;">Dateiname</label>
+                <input type="text" class="save-modal-input" id="export-mp4-filename" value="theatre-export.mp4" style="width:100%;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div>
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:4px;">Auflösung</label>
+                    <select id="export-mp4-resolution" class="save-modal-input" style="width:100%;padding:6px 8px;">
+                        <option value="720p">720p (1280x720)</option>
+                        <option value="1080p" selected>1080p (1920x1080)</option>
+                        <option value="1440p">1440p (2560x1440)</option>
+                        <option value="4k">4K (3840x2160)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:4px;">FPS</label>
+                    <select id="export-mp4-fps" class="save-modal-input" style="width:100%;padding:6px 8px;">
+                        <option value="24">24 fps</option>
+                        <option value="30" selected>30 fps</option>
+                        <option value="60">60 fps</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:4px;">Qualität</label>
+                    <select id="export-mp4-quality" class="save-modal-input" style="width:100%;padding:6px 8px;">
+                        <option value="low">Niedrig (2 Mbps)</option>
+                        <option value="medium">Mittel (5 Mbps)</option>
+                        <option value="high" selected>Hoch (8 Mbps)</option>
+                        <option value="ultra">Ultra (15 Mbps)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:4px;">Format</label>
+                    <select id="export-mp4-format" class="save-modal-input" style="width:100%;padding:6px 8px;">
+                        <option value="mp4" selected>MP4 (H.264)</option>
+                        <option value="webm">WebM (VP9)</option>
+                    </select>
+                </div>
+            </div>
+            <div id="export-mp4-status" style="display:none;padding:8px 12px;margin-bottom:10px;border-radius:6px;font-size:0.85rem;background:rgba(124,92,191,0.15);color:#b39ddb;">
+            </div>
+            <button class="save-modal-btn" id="export-mp4-start" style="width:100%;">
+                <i class="fas fa-circle" style="color:#e74c3c;"></i> Aufnahme starten
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script type="module" src="{% static 'theatre/theatre-app.js' %}?v=20260308b"></script>
+<script type="module" src="{% static 'theatre/theatre-app.js' %}?t={% now "U" %}"></script>
 {% endblock %}

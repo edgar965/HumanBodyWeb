@@ -14,6 +14,20 @@ import { PRESETS, applyPreset } from './presets.js';
 import { retargetBVHToDefClip, detectBVHFormat } from './retarget_hybrid.js';
 import { KeyframeUI } from './keyframe-ui.js';
 
+// Theatre.js ignores the getProject({ state }) param if localStorage exists.
+// Clear stale localStorage so our state.json (with correct sequence length) takes effect.
+// Force-clear if the stored state has an outdated sequence length (e.g. 300).
+try {
+    const stored = localStorage.getItem('theatre-0.4.persistent');
+    if (stored) {
+        const hasUserKeyframes = stored.includes('"keyframes":[{');
+        if (!hasUserKeyframes) {
+            localStorage.removeItem('theatre-0.4.persistent');
+            console.log('[Theatre Studio] Cleared stale localStorage (no user keyframes)');
+        }
+    }
+} catch (_) { /* ignore */ }
+
 // Theatre Studio MUST be initialized at module level (before DOMContentLoaded)
 studio.initialize().then(() => {
     console.log('[Theatre Studio] initialized successfully');
@@ -24,15 +38,19 @@ studio.initialize().then(() => {
         const root = document.getElementById('theatrejs-studio-root');
         if (root) {
             root.style.setProperty('z-index', '900', 'important');
-            // Fix pointer-events: the root has 'none' (so canvas gets clicks),
-            // but shadow DOM children need 'auto' to be interactive.
-            // CSS can't pierce shadow boundary, so we inject a style.
+            // Scale up the Studio UI for better readability/clickability
             if (root.shadowRoot) {
                 const style = document.createElement('style');
-                style.textContent = ':host > * { pointer-events: auto !important; }';
+                style.textContent = `
+                    :host { font-size: 13px !important; }
+                    /* Larger keyframe diamonds and buttons */
+                    svg { transform: scale(1.3); }
+                    /* Bigger row height in sequence editor */
+                    [data-testid] { min-height: 28px; }
+                `;
                 root.shadowRoot.prepend(style);
             }
-            console.log('[Theatre Studio] UI visible, z-index + pointer-events set');
+            console.log('[Theatre Studio] UI visible, z-index set, scaled up');
         }
     }, 100);
 }).catch(err => {
@@ -53,6 +71,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // DEBUG: Expose for console debugging
     window.scene = scene;
+    window.camera = camera;
     window.lights = lights;
     window.lightIcons = lightIcons;
     window.transformControls = transformControls;
@@ -537,89 +556,33 @@ window.addEventListener('DOMContentLoaded', () => {
     window.theatreSheet = sheet;
 
     // 4. Register camera & spotlights as animatable Theatre objects
-    createCameraSheet(sheet, camera);
+    const cameraObj = createCameraSheet(sheet, camera);
     createLightSheet(sheet, 'Spot Left', lights.spotLeft);
     createLightSheet(sheet, 'Spot Right', lights.spotRight);
     createLightSheet(sheet, 'Back Light', lights.backLight);
 
+    // Sync OrbitControls camera position back to Theatre.js
+    // so the Detail Panel shows the actual camera position.
+    controls.addEventListener('change', () => {
+        if (window.isPlaying) return; // sequence drives camera during playback
+        studio.transaction(({ set }) => {
+            set(cameraObj.props.position.x, camera.position.x);
+            set(cameraObj.props.position.y, camera.position.y);
+            set(cameraObj.props.position.z, camera.position.z);
+        });
+    });
+
     // 5. Initialize Keyframe UI for Camera/Light animation
     const theatreObjects = getAllTheatreObjects();
+    window.theatreObjects = theatreObjects; // Expose for Playwright tests & debugging
     const keyframeUI = new KeyframeUI(project, sheet, theatreObjects);
     window.keyframeUI = keyframeUI; // Expose for debugging
 
-    // 5b. Auto-open Sequence Editor by sequencing all props via Studio Shadow DOM.
-    // We click each object in the outline, right-click a prop, click "Sequence all".
-    // This is done sequentially with retries to handle timing issues.
-    (async function autoSequenceAllObjects() {
-        const wait = (ms) => new Promise(r => setTimeout(r, ms));
-        const getSR = () => {
-            const root = document.getElementById('theatrejs-studio-root');
-            return root && root.shadowRoot ? root.shadowRoot : null;
-        };
-
-        // Wait for Studio shadow DOM to be ready
-        for (let i = 0; i < 20; i++) {
-            if (getSR()) break;
-            await wait(200);
-        }
-        const sr = getSR();
-        if (!sr) { console.warn('[Theatre Studio] Shadow DOM not ready, skipping auto-sequence'); return; }
-        await wait(500); // Let Studio render fully
-
-        const objectNames = ['Camera', 'Spot Left', 'Spot Right', 'Back Light'];
-
-        for (const name of objectNames) {
-            // Step 1: Click object in outline
-            let clicked = false;
-            for (const s of sr.querySelectorAll('span')) {
-                if (s.textContent.trim() === name) {
-                    s.click();
-                    clicked = true;
-                    break;
-                }
-            }
-            if (!clicked) { console.warn(`[Theatre Studio] Object not found in outline: ${name}`); continue; }
-            await wait(300);
-
-            // Step 2: Right-click on "position" or "fov" in detail panel (x > 300 = detail area)
-            let rightClicked = false;
-            for (const s of sr.querySelectorAll('span')) {
-                const t = s.textContent.trim();
-                if ((t === 'position' || t === 'Props' || t === 'fov' || t === 'intensity') &&
-                    s.getBoundingClientRect().x > 300) {
-                    const r = s.getBoundingClientRect();
-                    s.dispatchEvent(new MouseEvent('contextmenu', {
-                        bubbles: true, cancelable: true, button: 2,
-                        clientX: r.x + r.width / 2, clientY: r.y + r.height / 2
-                    }));
-                    rightClicked = true;
-                    break;
-                }
-            }
-            if (!rightClicked) { console.warn(`[Theatre Studio] No prop found for right-click: ${name}`); continue; }
-            await wait(300);
-
-            // Step 3: Click "Sequence all" in context menu
-            let sequenced = false;
-            for (const s of sr.querySelectorAll('span')) {
-                if (s.textContent.trim() === 'Sequence all') {
-                    s.click();
-                    sequenced = true;
-                    break;
-                }
-            }
-            if (sequenced) {
-                console.log(`[Theatre Studio] Sequenced: ${name}`);
-            } else {
-                console.warn(`[Theatre Studio] "Sequence all" not found for: ${name}`);
-            }
-            await wait(300);
-        }
-
-        // Select the sheet to show the full Sequence Editor
+    // Open the Sequence Editor panel by selecting the sheet.
+    // Tracks are pre-defined in theatre-state.json (Camera + 3 Lights).
+    project.ready.then(() => {
         studio.setSelection([sheet]);
-        console.log('[Theatre Studio] Sequence Editor opened');
-    })();
+    });
 
     // 6. Video exporter
     const exporter = new VideoExporter(renderer.domElement);
@@ -1111,10 +1074,20 @@ window.addEventListener('DOMContentLoaded', () => {
             // Expose to window for debugging
             window.activeMixer = activeMixer;
 
-            // Update player UI
+            // Update player UI + Theatre.js sequence length
             updatePlayerDuration(duration);
             currentTime = 0;
             animDuration = duration;
+
+            // Dynamically set Theatre.js sequence length to match BVH duration
+            try {
+                studio.transaction(({ set }) => {
+                    set(sheet.sequence.pointer.length, Math.ceil(duration));
+                });
+                console.log(`✓ Theatre.js sequence length set to ${Math.ceil(duration)}s`);
+            } catch (e) {
+                console.warn('Could not set Theatre.js sequence length:', e);
+            }
 
             // Auto-play if previous animation was playing
             if (wasPlaying) {
@@ -1204,16 +1177,87 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Export Video ──
-    const menuExportVideo = document.getElementById('menu-export-video');
-    if (menuExportVideo) {
-        menuExportVideo.addEventListener('click', async () => {
+    // ── Export MP4 ──
+    const QUALITY_BITRATES = { low: 2_000_000, medium: 5_000_000, high: 8_000_000, ultra: 15_000_000 };
+    const RESOLUTION_MAP = { '720p': [1280, 720], '1080p': [1920, 1080], '1440p': [2560, 1440], '4k': [3840, 2160] };
+
+    const menuExportMp4 = document.getElementById('menu-export-mp4');
+    const modalExportMp4 = document.getElementById('modal-export-mp4');
+    const exportStartBtn = document.getElementById('export-mp4-start');
+    const exportStatus = document.getElementById('export-mp4-status');
+
+    if (menuExportMp4 && modalExportMp4) {
+        // Open modal
+        menuExportMp4.addEventListener('click', () => {
+            // Pre-fill settings from server if available
+            const vs = window._theatreVideoSettings || {};
+            const resEl = document.getElementById('export-mp4-resolution');
+            const fpsEl = document.getElementById('export-mp4-fps');
+            const qualEl = document.getElementById('export-mp4-quality');
+            const fmtEl = document.getElementById('export-mp4-format');
+            if (resEl && vs.resolution) resEl.value = vs.resolution;
+            if (fpsEl && vs.fps) fpsEl.value = String(vs.fps);
+            if (qualEl && vs.quality) qualEl.value = vs.quality;
+            if (fmtEl && vs.format) fmtEl.value = vs.format;
+
+            modalExportMp4.classList.add('open');
+            exportStatus.style.display = 'none';
+
             if (exporter.isRecording) {
-                menuExportVideo.innerHTML = '<i class="fas fa-file-video"></i> Export Video';
-                await exporter.stopAndDownload();
+                exportStartBtn.innerHTML = '<i class="fas fa-stop" style="color:#e74c3c;"></i> Aufnahme stoppen & exportieren';
             } else {
-                exporter.start(30);
-                menuExportVideo.innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
+                exportStartBtn.innerHTML = '<i class="fas fa-circle" style="color:#e74c3c;"></i> Aufnahme starten';
+            }
+        });
+
+        // Start/Stop recording
+        exportStartBtn.addEventListener('click', async () => {
+            if (exporter.isRecording) {
+                // Stop and export
+                exportStartBtn.disabled = true;
+                exportStatus.style.display = 'block';
+                exportStatus.textContent = 'Aufnahme gestoppt. Verarbeite...';
+
+                const fmt = document.getElementById('export-mp4-format').value;
+                const filename = document.getElementById('export-mp4-filename').value || 'theatre-export';
+                const ext = fmt === 'webm' ? '.webm' : '.mp4';
+                const outName = filename.endsWith(ext) ? filename : filename.replace(/\.\w+$/, '') + ext;
+
+                try {
+                    if (fmt === 'mp4') {
+                        exportStatus.textContent = 'Konvertiere zu MP4 (ffmpeg)...';
+                        await exporter.stopAndUpload('/api/theatre/convert-video/', outName);
+                    } else {
+                        await exporter.stopAndDownload(outName);
+                    }
+                    exportStatus.style.background = 'rgba(46,204,113,0.15)';
+                    exportStatus.style.color = '#2ecc71';
+                    exportStatus.textContent = 'Export erfolgreich: ' + outName;
+                } catch (err) {
+                    exportStatus.style.background = 'rgba(231,76,60,0.15)';
+                    exportStatus.style.color = '#e74c3c';
+                    exportStatus.textContent = 'Fehler: ' + err.message;
+                }
+                exportStartBtn.disabled = false;
+                exportStartBtn.innerHTML = '<i class="fas fa-circle" style="color:#e74c3c;"></i> Aufnahme starten';
+            } else {
+                // Start recording
+                const fps = parseInt(document.getElementById('export-mp4-fps').value) || 30;
+                const quality = document.getElementById('export-mp4-quality').value || 'high';
+                const resolution = document.getElementById('export-mp4-resolution').value || '1080p';
+                const bitrate = QUALITY_BITRATES[quality] || 8_000_000;
+                const [w, h] = RESOLUTION_MAP[resolution] || [1920, 1080];
+
+                exporter.start({ fps, bitrate, width: w, height: h, renderer, camera });
+
+                exportStatus.style.display = 'block';
+                exportStatus.style.background = 'rgba(231,76,60,0.15)';
+                exportStatus.style.color = '#e74c3c';
+                exportStatus.textContent = `Aufnahme läuft (${resolution}, ${fps}fps)... Spiele die Animation ab und klicke dann "Stoppen".`;
+                exportStartBtn.innerHTML = '<i class="fas fa-stop" style="color:#e74c3c;"></i> Aufnahme stoppen & exportieren';
+
+                // Close modal so user can interact with the scene
+                modalExportMp4.classList.remove('open');
             }
         });
     }
@@ -1263,14 +1307,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
     if (btnPlayPause) {
         btnPlayPause.addEventListener('click', () => {
-            if (!activeMixer) return;
             isPlaying = !isPlaying;
-            window.isPlaying = isPlaying; // Expose to window
-            if (isPlaying && currentAction) {
-                currentAction.paused = false;
-                currentAction.play();
-            } else if (currentAction) {
-                currentAction.paused = true;
+            window.isPlaying = isPlaying;
+            if (isPlaying) {
+                // Play BVH animation (if loaded)
+                if (activeMixer && currentAction) {
+                    currentAction.paused = false;
+                    currentAction.play();
+                }
+                // Play Theatre.js sequence (Camera/Lights timeline) — range matches BVH
+                sheet.sequence.play({ iterationCount: Infinity, rate: playbackSpeed, range: [0, animDuration] });
+            } else {
+                if (currentAction) currentAction.paused = true;
+                sheet.sequence.pause();
             }
             updatePlayerUI();
         });
@@ -1278,10 +1327,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
     if (btnStop) {
         btnStop.addEventListener('click', () => {
-            // EXACTLY like Dashboard viewer.js stopBtn (line 1297-1306)
             stopAnimation();
             currentTime = 0;
             animDuration = 1;
+            // Reset Theatre.js sequence to start
+            sheet.sequence.pause();
+            sheet.sequence.position = 0;
             updatePlayerUI();
         });
     }
@@ -1307,6 +1358,8 @@ window.addEventListener('DOMContentLoaded', () => {
         timelineSlider.addEventListener('input', () => {
             const time = parseFloat(timelineSlider.value);
             setAnimationTime(time);
+            // Sync Theatre.js sequence position
+            sheet.sequence.position = time;
         });
     }
 
@@ -1317,6 +1370,10 @@ window.addEventListener('DOMContentLoaded', () => {
             playbackSpeed = speed;
             if (activeMixer) {
                 activeMixer.timeScale = speed;
+            }
+            // Update Theatre.js sequence playback rate if playing
+            if (isPlaying) {
+                sheet.sequence.play({ iterationCount: Infinity, rate: speed, range: [0, animDuration] });
             }
             document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
@@ -1345,6 +1402,14 @@ window.addEventListener('DOMContentLoaded', () => {
             const resp = await fetch('/api/settings/theatre/');
             if (!resp.ok) return;
             const cfg = await resp.json();
+
+            // Store video export settings for exporter
+            window._theatreVideoSettings = {
+                format: cfg.video_format || 'mp4',
+                resolution: cfg.video_resolution || '1080p',
+                fps: cfg.video_fps || 30,
+                quality: cfg.video_quality || 'high',
+            };
 
             // Apply lighting preset first
             if (cfg.preset) {
@@ -2084,6 +2149,12 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             updatePlayerUI();
+        }
+
+        // Sync Theatre.js sequence playhead with our timeline slider
+        if (isPlaying && timelineSlider) {
+            const seqPos = sheet.sequence.position;
+            timeCurrent.textContent = formatTime(seqPos);
         }
 
         // Sync light icons with lights (wenn bewegt via TransformControls)
