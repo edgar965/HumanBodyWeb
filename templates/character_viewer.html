@@ -419,6 +419,7 @@
     <div class="viewer-main">
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
+        <div id="ve-box-select" style="display:none;position:absolute;border:1.5px dashed #f1c40f;background:rgba(241,196,15,0.08);pointer-events:none;z-index:25;"></div>
         <div id="garment-tooltip"></div>
         <button id="selection-remove-btn" class="viewer-btn" style="display:none;"><i class="fas fa-trash-alt"></i> Remove</button>
         <div class="viewer-buttons-left">
@@ -448,6 +449,7 @@
             <div class="panel-tab" data-tab="tab-assets">Assets</div>
             <div class="panel-tab" data-tab="tab-animation">Animation</div>
             <div class="panel-tab" data-tab="tab-szene">Szene</div>
+            <div class="panel-tab" data-tab="tab-creator">Pattern</div>
             {% block panel_tabs_extra %}{% endblock %}
         </div>
         <div class="panel-tab-content">
@@ -618,6 +620,7 @@
                     <button id="garment-remove" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Garment entfernen"><i class="fas fa-times"></i></button>
                     <button id="garment-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
                 </div>
+                <button id="garment-edit-pattern" class="btn-toggle" style="width:100%;margin-top:6px;display:none;" title="Pattern im Pattern Editor bearbeiten"><i class="fas fa-drafting-compass"></i> Edit Pattern</button>
                 <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
                     <button id="garment-download-btn" class="btn-toggle" style="width:100%;"><i class="fas fa-cloud-download-alt"></i> MakeHuman Assets herunterladen</button>
                     <div id="garment-download-panel" style="display:none;margin-top:8px;">
@@ -779,6 +782,178 @@
 
         {% block tab_panes_extra %}{% endblock %}
 
+        <!-- === Tab: Pattern Editor === -->
+        <div class="tab-pane" id="tab-creator">
+            <div class="panel-section">
+                <h3>Pattern Editor <span class="chevron">&#9660;</span></h3>
+                <div class="panel-body" id="pe-panel">
+                    <!-- Mode Buttons -->
+                    <div id="pe-mode-btns" style="display:flex;gap:3px;margin-bottom:6px;">
+                        <button class="btn-toggle active" data-mode="select" title="Select / Move" style="flex:1;min-width:0;font-size:0.72rem;padding:6px 2px;"><i class="fas fa-mouse-pointer"></i> Select</button>
+                        <button class="btn-toggle" data-mode="draw" title="Draw vertices" style="flex:1;min-width:0;font-size:0.72rem;padding:6px 2px;"><i class="fas fa-pen"></i> Draw</button>
+                        <button class="btn-toggle" data-mode="stitch" title="Link edges" style="flex:1;min-width:0;font-size:0.72rem;padding:6px 2px;"><i class="fas fa-link"></i> Stitch</button>
+                        <button class="btn-toggle" data-mode="region" title="Body Region" style="flex:1;min-width:0;font-size:0.72rem;padding:6px 2px;"><i class="fas fa-crop-alt"></i> Region</button>
+                        <button class="btn-toggle" data-mode="edit" title="Edit Vertices in 3D" style="flex:1;min-width:0;font-size:0.72rem;padding:6px 2px;"><i class="fas fa-vector-square"></i> Edit</button>
+                    </div>
+                    <!-- Pattern drawing controls (hidden in Region mode) -->
+                    <div id="pe-pattern-controls">
+                        <!-- Canvas -->
+                        <canvas id="pe-canvas" width="288" height="240" style="width:100%;background:#1a1a2e;border:1px solid var(--border);border-radius:4px;cursor:crosshair;"></canvas>
+                        <div id="pe-status" style="font-size:0.72rem;color:var(--text-muted);margin:2px 0 6px;display:flex;justify-content:space-between;">0, 0 cm &nbsp; 100%</div>
+
+                        <!-- Panels -->
+                        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:4px 0 3px;">Panels</div>
+                        <div id="pe-panel-list" style="max-height:100px;overflow-y:auto;margin-bottom:4px;"></div>
+                        <div style="display:flex;gap:4px;">
+                            <button id="pe-add-panel" class="btn-toggle" style="flex:1;font-size:0.78rem;"><i class="fas fa-plus"></i> Add Panel</button>
+                            <button id="pe-del-panel" class="btn-toggle" style="flex:0 0 auto;padding:4px 8px;font-size:0.78rem;" title="Delete active panel"><i class="fas fa-trash"></i></button>
+                        </div>
+
+                        <!-- Panel Placement -->
+                        <div id="pe-placement-row" class="slider-row" style="margin-top:4px;">
+                            <label>Placement</label>
+                            <select id="pe-placement" class="viewer-select" style="margin-bottom:0;flex:1;">
+                                <option value="flat">Flat (default)</option>
+                                <option value="front">Front</option>
+                                <option value="back">Back</option>
+                                <option value="left">Left</option>
+                                <option value="right">Right</option>
+                                <option value="sleeve_L">Sleeve L</option>
+                                <option value="sleeve_R">Sleeve R</option>
+                            </select>
+                        </div>
+
+                        <!-- Stitches -->
+                        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:8px 0 3px;">Stitches <span id="pe-stitch-count">(0)</span></div>
+                        <div id="pe-stitch-list" style="max-height:80px;overflow-y:auto;margin-bottom:4px;"></div>
+                    </div>
+
+                    <!-- Region Controls (hidden unless Region mode) -->
+                    <div id="pe-region-controls" style="display:none;margin-bottom:8px;">
+                        <div class="slider-row"><label>Category</label>
+                            <select id="pe-region-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                                <option value="custom">Custom</option>
+                                <option value="top">Top</option>
+                                <option value="pants">Pants</option>
+                                <option value="skirt">Skirt</option>
+                                <option value="full">Full</option>
+                                <option value="underwear">Underwear</option>
+                                <option value="shoes">Shoes</option>
+                            </select>
+                        </div>
+                        <div class="slider-row"><label>Z-Min</label>
+                            <input type="range" id="pe-region-zmin" min="0" max="180" value="60" step="1">
+                            <span class="slider-val" id="pe-region-zmin-val">0.60</span>
+                        </div>
+                        <div class="slider-row"><label>Z-Max</label>
+                            <input type="range" id="pe-region-zmax" min="0" max="180" value="140" step="1">
+                            <span class="slider-val" id="pe-region-zmax-val">1.40</span>
+                        </div>
+                        <div class="slider-row">
+                            <label><input type="checkbox" id="pe-region-arms"> Include Arms</label>
+                        </div>
+                        <div class="slider-row"><label>Grow</label>
+                            <input type="range" id="pe-region-grow" min="0" max="5" value="2" step="1">
+                            <span class="slider-val" id="pe-region-grow-val">2</span>
+                        </div>
+                        <div class="slider-row"><label>Looseness</label>
+                            <input type="range" id="pe-region-looseness" min="0" max="100" value="30" step="1">
+                            <span class="slider-val" id="pe-region-looseness-val">0.30</span>
+                        </div>
+                    </div>
+
+                    <!-- Vertex Edit Controls (hidden unless Edit mode) -->
+                    <div id="pe-edit-controls" style="display:none;margin-bottom:8px;">
+                        <div id="ve-selection-info" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">No vertices selected</div>
+                        <div id="ve-pos-fields" style="display:none;margin-bottom:6px;">
+                            <div class="slider-row"><label>X</label>
+                                <input type="number" id="ve-pos-x" step="0.001" style="flex:1;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-size:0.8rem;width:60px;">
+                            </div>
+                            <div class="slider-row"><label>Y</label>
+                                <input type="number" id="ve-pos-y" step="0.001" style="flex:1;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-size:0.8rem;width:60px;">
+                            </div>
+                            <div class="slider-row"><label>Z</label>
+                                <input type="number" id="ve-pos-z" step="0.001" style="flex:1;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:3px 6px;color:var(--text);font-size:0.8rem;width:60px;">
+                            </div>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:4px 0 3px;">Vertex Size</div>
+                        <div class="slider-row">
+                            <input type="range" id="ve-point-size" min="2" max="12" value="5" step="1" style="flex:1;">
+                            <span class="slider-val" id="ve-point-size-val">5</span>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 3px;">Tools</div>
+                        <div style="display:flex;gap:4px;margin-bottom:4px;">
+                            <button id="ve-select-all" class="btn-toggle" style="flex:1;font-size:0.78rem;"><i class="fas fa-object-group"></i> All</button>
+                            <button id="ve-deselect-all" class="btn-toggle" style="flex:1;font-size:0.78rem;"><i class="fas fa-object-ungroup"></i> None</button>
+                        </div>
+                        <div style="display:flex;gap:4px;margin-bottom:4px;">
+                            <button id="ve-smooth" class="btn-toggle" style="flex:1;font-size:0.78rem;"><i class="fas fa-water"></i> Smooth</button>
+                            <button id="ve-push-outside" class="btn-toggle" style="flex:1;font-size:0.78rem;"><i class="fas fa-expand-arrows-alt"></i> Push Out</button>
+                        </div>
+                        <button id="ve-reset" class="btn-toggle" style="width:100%;font-size:0.78rem;"><i class="fas fa-undo"></i> Reset to Original</button>
+                    </div>
+
+                    <!-- Material -->
+                    <div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;">
+                        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:3px;">Material</div>
+                        <div class="slider-row"><label>Color</label>
+                            <input type="color" id="pe-color" value="#404870" style="width:40px;height:24px;border:none;cursor:pointer;">
+                        </div>
+                        <div class="slider-row"><label>Roughness</label>
+                            <input type="range" id="pe-roughness" min="0" max="100" value="80" step="1">
+                            <span class="slider-val" id="pe-roughness-val">0.80</span>
+                        </div>
+                        <div class="slider-row"><label>Metalness</label>
+                            <input type="range" id="pe-metalness" min="0" max="100" value="0" step="1">
+                            <span class="slider-val" id="pe-metalness-val">0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Generate + Save -->
+                    <div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
+                        <div style="display:flex;gap:6px;">
+                            <button id="pe-generate" class="btn-toggle" style="flex:1;" title="Generate 3D mesh from pattern"><i class="fas fa-cube"></i> Generate 3D</button>
+                            <button id="pe-delete" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Remove preview"><i class="fas fa-times"></i></button>
+                        </div>
+                        <!-- Wrap to Body -->
+                        <div id="pe-wrap-section" style="margin-top:6px;">
+                            <div class="slider-row">
+                                <label><input type="checkbox" id="pe-wrap"> Wrap to Body</label>
+                            </div>
+                            <div id="pe-wrap-sliders" style="display:none;">
+                                <div class="slider-row"><label>Offset (mm)</label>
+                                    <input type="range" id="pe-wrap-offset" min="1" max="20" value="6" step="1">
+                                    <span class="slider-val" id="pe-wrap-offset-val">6</span>
+                                </div>
+                                <div class="slider-row"><label>Stiffness</label>
+                                    <input type="range" id="pe-wrap-stiffness" min="0" max="100" value="50" step="1">
+                                    <span class="slider-val" id="pe-wrap-stiffness-val">0.50</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top:8px;">
+                            <div style="font-size:0.8rem;color:var(--text);margin-bottom:6px;font-weight:600;">Save to Library</div>
+                            <div class="slider-row"><label>Name</label>
+                                <input type="text" id="pe-save-name" placeholder="My Pattern" style="flex:1;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:0.82rem;">
+                            </div>
+                            <div class="slider-row"><label>Category</label>
+                                <select id="pe-save-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                                    <option value="tops">Tops</option>
+                                    <option value="bottoms">Bottoms</option>
+                                    <option value="full">Full</option>
+                                    <option value="underwear">Underwear</option>
+                                    <option value="shoes">Shoes</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                            <button id="pe-save" class="btn-toggle" style="width:100%;margin-top:6px;"><i class="fas fa-save"></i> Save to Library</button>
+                            <div id="pe-save-status" style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /tab-creator -->
+
         <!-- === Tab: Szene === -->
         <div class="tab-pane" id="tab-szene">
             {% block tab_szene_content %}
@@ -808,7 +983,8 @@
     "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
         "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
-        "three-subdivide": "https://cdn.jsdelivr.net/npm/three-subdivide@1.1.5/build/index.module.js"
+        "three-subdivide": "https://cdn.jsdelivr.net/npm/three-subdivide@1.1.5/build/index.module.js",
+        "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.9/+esm"
     }
 }
 </script>
@@ -824,5 +1000,11 @@ document.querySelectorAll('.panel-tabs .panel-tab').forEach(tab => {
         if (pane) pane.classList.add('active');
     });
 });
+// Hash-based tab activation (e.g. #tab-creator from sidebar link)
+if (location.hash) {
+    const hashTab = location.hash.slice(1);
+    const tabBtn = document.querySelector(`.panel-tab[data-tab="${hashTab}"]`);
+    if (tabBtn) tabBtn.click();
+}
 </script>
 {% endblock %}

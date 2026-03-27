@@ -2,7 +2,7 @@
 import time, json, os
 from playwright.sync_api import sync_playwright
 
-BASE = "http://localhost:5020"
+BASE = "http://localhost:4040"
 SHOTS = "A:/HumanBodyTest/HumanBodyWeb/test_screenshots"
 
 

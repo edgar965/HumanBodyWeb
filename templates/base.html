@@ -53,6 +53,9 @@
                     <a href="{% url 'humanbody_animations' %}" class="{% if request.path == '/humanbody/animations/' %}active{% endif %}">
                         <i class="fas fa-running"></i> <span>Animationen</span>
                     </a>
+                    <a href="{% url 'humanbody_config' %}#tab-creator" class="{% if request.path == '/humanbody/config/' and 'tab-creator' in request.get_full_path %}active{% endif %}">
+                        <i class="fas fa-drafting-compass"></i> <span>Pattern Editor</span>
+                    </a>
                 </div>
             </div>
             <div class="sidebar-group {% if 'process' in request.path %}open{% endif %}">

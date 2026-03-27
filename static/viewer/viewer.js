@@ -6,9 +6,15 @@
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=18';
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
+
+// Register BVH helpers on BufferGeometry (but NOT global raycast override)
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 
 // =========================================================================
 // Viewer config — overridable via window.VIEWER_CONFIG (set in template)
@@ -207,6 +213,7 @@ function init() {
     loadAnimations();
     loadClothUI();
     loadHairUI();
+    initPatternEditor();
     loadGarmentUI();
     loadSmplGarmentUI();
     initSmplBodyUI();
@@ -1790,6 +1797,32 @@ function _sliderVal(sliderId) {
     return el ? parseInt(el.value) : 0;
 }
 
+function _buildBodyQueryString() {
+    const bodySelect = document.getElementById('body-type-select');
+    const bodyType = bodySelect ? bodySelect.value : 'Female_Caucasian';
+    let qs = `body_type=${encodeURIComponent(bodyType)}`;
+    // Morph sliders
+    document.querySelectorAll('#morphs-panel input[type="range"]').forEach(slider => {
+        const mName = slider.dataset.morph || slider.dataset.morphName || slider.id.replace('morph-', '');
+        if (mName && slider.value !== undefined) {
+            qs += `&morph_${mName}=${slider.value / 100}`;
+        }
+    });
+    // Meta sliders (display → internal)
+    ['age', 'mass', 'tone', 'height'].forEach(m => {
+        const el = document.getElementById(`meta-${m}`);
+        if (el) {
+            const dv = parseInt(el.value);
+            const mn = parseInt(el.min), mx = parseInt(el.max);
+            const neutral = (mn + mx) / 2;
+            const half = (mx - mn) / 2;
+            const internal = half ? (dv - neutral) / half : 0;
+            qs += `&meta_${m}=${internal}`;
+        }
+    });
+    return qs;
+}
+
 async function loadCloth(key, params, color) {
     const createBtns = document.querySelectorAll('#cloth-tpl-create, #cloth-bld-create, #cloth-prim-create');
     createBtns.forEach(b => b.disabled = true);
@@ -1879,6 +1912,1489 @@ function removeAllCloth() {
         removeClothRegion(key);
     }
 }
+
+// =========================================================================
+// Pattern Editor
+// =========================================================================
+
+let pePattern = { panels: {}, stitches: [] };
+let peActivePanel = null;
+let peMode = 'select';       // 'select' | 'draw' | 'stitch' | 'region'
+let peSelectedVertex = null;  // {panel, index}
+let peSelectedEdge = null;    // {panel, index}
+let peStitchFirst = null;     // first edge in stitch mode
+let pePan = {x: 144, y: 200};
+let peZoom = 2.0;             // pixels per cm
+let pePreviewKey = 'pe_preview';
+let peDragging = null;        // vertex being dragged
+let pePanning = false;
+let pePanStart = null;
+const PE_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c'];
+
+// =========================================================================
+// Vertex Editor (3D) — BVH raycast + TransformControls gizmo
+// =========================================================================
+let veActive = false;
+let veTargetMesh = null;       // The cloth/garment mesh being edited
+let veTargetKey = null;        // Key in clothMeshes or garmentMeshes
+let vePointsOverlay = null;    // THREE.Points overlay
+let veSelectedIndices = new Set();
+let veOrigPositions = null;    // Float32Array — original positions backup
+let veGizmo = null;            // TransformControls
+let veGizmoHelper = null;      // Object3D — gizmo target
+let veGizmoLastPos = new THREE.Vector3();
+let veBoxSelecting = false;    // Alt+drag box select
+let veBoxStart = { x: 0, y: 0 };
+let veBoxEnd = { x: 0, y: 0 };
+let veOrigRaycast = null;      // Original raycast to restore on exit
+const VE_COLOR_DEFAULT  = new THREE.Color(0.35, 0.45, 0.65);
+const VE_COLOR_SELECTED = new THREE.Color(1.0, 0.9, 0.2);
+
+function veEnterEditMode() {
+    // Find target mesh
+    let mesh = null;
+    let key = null;
+    if (_selectedItem && (_selectedItem.type === 'cloth' || _selectedItem.type === 'garment')) {
+        mesh = clothMeshes[_selectedItem.id] || garmentMeshes[_selectedItem.id];
+        key = _selectedItem.id;
+    }
+    if (!mesh) {
+        mesh = clothMeshes[pePreviewKey];
+        key = pePreviewKey;
+    }
+    if (!mesh) {
+        console.warn('Vertex Edit: no cloth/garment mesh found');
+        peMode = 'select';
+        _peSetModeButtons();
+        return;
+    }
+
+    veActive = true;
+    veTargetMesh = mesh;
+    veTargetKey = key;
+    veSelectedIndices.clear();
+
+    // Get position attribute & save original
+    const posAttr = mesh.geometry.getAttribute('position');
+    posAttr.setUsage(THREE.DynamicDrawUsage);
+    veOrigPositions = new Float32Array(posAttr.array);
+
+    // Build BVH for accelerated raycasting (only on this mesh)
+    mesh.geometry.computeBoundsTree();
+    veOrigRaycast = mesh.raycast;
+    mesh.raycast = acceleratedRaycast;
+
+    // Create Points overlay for visualization
+    const pointsGeo = new THREE.BufferGeometry();
+    const count = posAttr.count;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        positions[i * 3]     = posAttr.getX(i);
+        positions[i * 3 + 1] = posAttr.getY(i);
+        positions[i * 3 + 2] = posAttr.getZ(i);
+        colors[i * 3]     = VE_COLOR_DEFAULT.r;
+        colors[i * 3 + 1] = VE_COLOR_DEFAULT.g;
+        colors[i * 3 + 2] = VE_COLOR_DEFAULT.b;
+    }
+    pointsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    pointsGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const pointSize = parseFloat(document.getElementById('ve-point-size')?.value || '5');
+    const pointsMat = new THREE.PointsMaterial({
+        size: pointSize,
+        sizeAttenuation: false,
+        vertexColors: true,
+        depthTest: true,
+        depthWrite: false,
+    });
+    vePointsOverlay = new THREE.Points(pointsGeo, pointsMat);
+    vePointsOverlay.matrixAutoUpdate = false;
+    vePointsOverlay.matrix.copy(mesh.matrixWorld);
+    vePointsOverlay.matrixWorld.copy(mesh.matrixWorld);
+    vePointsOverlay.renderOrder = 999;
+    scene.add(vePointsOverlay);
+
+    // Create TransformControls gizmo
+    veGizmoHelper = new THREE.Object3D();
+    scene.add(veGizmoHelper);
+    veGizmo = new TransformControls(camera, renderer.domElement);
+    veGizmo.attach(veGizmoHelper);
+    veGizmo.setMode('translate');
+    veGizmo.setSize(0.6);
+    veGizmo.visible = false;
+    veGizmo.enabled = false;
+    scene.add(veGizmo.getHelper());
+
+    // Gizmo events
+    veGizmo.addEventListener('dragging-changed', (ev) => {
+        controls.enabled = !ev.value;
+    });
+    veGizmo.addEventListener('objectChange', () => {
+        _veApplyGizmoDelta();
+    });
+
+    // Show edit controls, hide pattern/region
+    const editCtrl = document.getElementById('pe-edit-controls');
+    if (editCtrl) editCtrl.style.display = '';
+    const patternCtrl = document.getElementById('pe-pattern-controls');
+    if (patternCtrl) patternCtrl.style.display = 'none';
+    const regionCtrl = document.getElementById('pe-region-controls');
+    if (regionCtrl) regionCtrl.style.display = 'none';
+    const wrapSection = document.getElementById('pe-wrap-section');
+    if (wrapSection) wrapSection.style.display = 'none';
+
+    _veUpdateSelectionInfo();
+}
+
+function veExitEditMode() {
+    // Restore original raycast + dispose BVH
+    if (veTargetMesh && veOrigRaycast) {
+        veTargetMesh.raycast = veOrigRaycast;
+        veOrigRaycast = null;
+    }
+    if (veTargetMesh?.geometry?.disposeBoundsTree) {
+        veTargetMesh.geometry.disposeBoundsTree();
+    }
+    // Remove gizmo
+    if (veGizmo) {
+        scene.remove(veGizmo.getHelper());
+        veGizmo.detach();
+        veGizmo.dispose();
+        veGizmo = null;
+    }
+    if (veGizmoHelper) {
+        scene.remove(veGizmoHelper);
+        veGizmoHelper = null;
+    }
+    // Remove Points overlay
+    if (vePointsOverlay) {
+        scene.remove(vePointsOverlay);
+        vePointsOverlay.geometry.dispose();
+        vePointsOverlay.material.dispose();
+        vePointsOverlay = null;
+    }
+    veActive = false;
+    veTargetMesh = null;
+    veTargetKey = null;
+    veSelectedIndices.clear();
+    veOrigPositions = null;
+    veBoxSelecting = false;
+
+    // Hide box select overlay
+    const boxEl = document.getElementById('ve-box-select');
+    if (boxEl) boxEl.style.display = 'none';
+
+    const editCtrl = document.getElementById('pe-edit-controls');
+    if (editCtrl) editCtrl.style.display = 'none';
+}
+
+function _veSyncOverlayTransform() {
+    if (!vePointsOverlay || !veTargetMesh) return;
+    vePointsOverlay.matrix.copy(veTargetMesh.matrixWorld);
+    vePointsOverlay.matrixWorld.copy(veTargetMesh.matrixWorld);
+}
+
+function _veUpdateVertexColor(idx) {
+    if (!vePointsOverlay) return;
+    const colorAttr = vePointsOverlay.geometry.getAttribute('color');
+    const c = veSelectedIndices.has(idx) ? VE_COLOR_SELECTED : VE_COLOR_DEFAULT;
+    colorAttr.setXYZ(idx, c.r, c.g, c.b);
+    colorAttr.needsUpdate = true;
+}
+
+function _veUpdateAllColors() {
+    if (!vePointsOverlay) return;
+    const colorAttr = vePointsOverlay.geometry.getAttribute('color');
+    const count = colorAttr.count;
+    for (let i = 0; i < count; i++) {
+        const c = veSelectedIndices.has(i) ? VE_COLOR_SELECTED : VE_COLOR_DEFAULT;
+        colorAttr.setXYZ(i, c.r, c.g, c.b);
+    }
+    colorAttr.needsUpdate = true;
+}
+
+function _veUpdateSelectionInfo() {
+    const info = document.getElementById('ve-selection-info');
+    const posFields = document.getElementById('ve-pos-fields');
+    if (!info) return;
+    const n = veSelectedIndices.size;
+    if (n === 0) {
+        info.textContent = 'No vertices selected';
+        if (posFields) posFields.style.display = 'none';
+    } else {
+        info.textContent = `${n} ${n === 1 ? 'vertex' : 'vertices'} selected`;
+        if (posFields) {
+            posFields.style.display = '';
+            _veUpdatePosInputs();
+        }
+    }
+}
+
+function _veUpdatePosInputs() {
+    if (!veTargetMesh || veSelectedIndices.size === 0) return;
+    const posAttr = veTargetMesh.geometry.getAttribute('position');
+    let cx = 0, cy = 0, cz = 0;
+    for (const idx of veSelectedIndices) {
+        cx += posAttr.getX(idx);
+        cy += posAttr.getY(idx);
+        cz += posAttr.getZ(idx);
+    }
+    const n = veSelectedIndices.size;
+    const px = document.getElementById('ve-pos-x');
+    const py = document.getElementById('ve-pos-y');
+    const pz = document.getElementById('ve-pos-z');
+    if (px) px.value = (cx / n).toFixed(4);
+    if (py) py.value = (cy / n).toFixed(4);
+    if (pz) pz.value = (cz / n).toFixed(4);
+}
+
+function _veMoveSelectedByDelta(dx, dy, dz) {
+    if (!veTargetMesh || !vePointsOverlay) return;
+    const meshPos = veTargetMesh.geometry.getAttribute('position');
+    const overlayPos = vePointsOverlay.geometry.getAttribute('position');
+    for (const idx of veSelectedIndices) {
+        meshPos.setXYZ(idx, meshPos.getX(idx) + dx, meshPos.getY(idx) + dy, meshPos.getZ(idx) + dz);
+        overlayPos.setXYZ(idx, overlayPos.getX(idx) + dx, overlayPos.getY(idx) + dy, overlayPos.getZ(idx) + dz);
+    }
+    meshPos.needsUpdate = true;
+    overlayPos.needsUpdate = true;
+    veTargetMesh.geometry.computeVertexNormals();
+    veTargetMesh.geometry.computeBoundingSphere();
+}
+
+// --- Gizmo delta application ---
+function _veApplyGizmoDelta() {
+    if (!veGizmoHelper || !veTargetMesh || veSelectedIndices.size === 0) return;
+    const newPos = veGizmoHelper.position.clone();
+    const worldDelta = newPos.clone().sub(veGizmoLastPos);
+    veGizmoLastPos.copy(newPos);
+
+    // Convert world delta to mesh local space
+    const invMat = new THREE.Matrix4().copy(veTargetMesh.matrixWorld).invert();
+    const localDelta = worldDelta.applyMatrix4(new THREE.Matrix4().extractRotation(invMat));
+
+    _veMoveSelectedByDelta(localDelta.x, localDelta.y, localDelta.z);
+    _veUpdatePosInputs();
+}
+
+// --- Update gizmo position to centroid of selection ---
+function _veUpdateGizmo() {
+    if (!veGizmo || !veGizmoHelper || !veTargetMesh) return;
+    if (veSelectedIndices.size === 0) {
+        veGizmo.visible = false;
+        veGizmo.enabled = false;
+        return;
+    }
+    // Compute centroid in local space, then transform to world
+    const posAttr = veTargetMesh.geometry.getAttribute('position');
+    let cx = 0, cy = 0, cz = 0;
+    for (const idx of veSelectedIndices) {
+        cx += posAttr.getX(idx);
+        cy += posAttr.getY(idx);
+        cz += posAttr.getZ(idx);
+    }
+    const n = veSelectedIndices.size;
+    const localCentroid = new THREE.Vector3(cx / n, cy / n, cz / n);
+    const worldCentroid = localCentroid.applyMatrix4(veTargetMesh.matrixWorld);
+
+    veGizmoHelper.position.copy(worldCentroid);
+    veGizmoLastPos.copy(worldCentroid);
+    veGizmo.visible = true;
+    veGizmo.enabled = true;
+}
+
+// --- BVH surface click → nearest vertex ---
+function _veHandleClick(e) {
+    if (!veActive || !veTargetMesh) return;
+    const canvas = renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    _mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    _mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    _raycaster.setFromCamera(_mouseNDC, camera);
+
+    // BVH-accelerated raycast on the cloth mesh surface
+    const intersects = _raycaster.intersectObject(veTargetMesh);
+    if (intersects.length > 0) {
+        const hit = intersects[0];
+        const face = hit.face;
+        // Find the closest vertex of the hit face to the hit point
+        const posAttr = veTargetMesh.geometry.getAttribute('position');
+        const hitLocal = hit.point.clone().applyMatrix4(
+            new THREE.Matrix4().copy(veTargetMesh.matrixWorld).invert()
+        );
+        let bestIdx = face.a;
+        let bestDist = Infinity;
+        for (const vi of [face.a, face.b, face.c]) {
+            const vp = new THREE.Vector3(posAttr.getX(vi), posAttr.getY(vi), posAttr.getZ(vi));
+            const d = vp.distanceTo(hitLocal);
+            if (d < bestDist) { bestDist = d; bestIdx = vi; }
+        }
+
+        if (e.shiftKey) {
+            if (veSelectedIndices.has(bestIdx)) veSelectedIndices.delete(bestIdx);
+            else veSelectedIndices.add(bestIdx);
+        } else {
+            veSelectedIndices.clear();
+            veSelectedIndices.add(bestIdx);
+        }
+    } else if (!e.shiftKey) {
+        veSelectedIndices.clear();
+    }
+    _veUpdateAllColors();
+    _veUpdateGizmo();
+    _veUpdateSelectionInfo();
+}
+
+// --- Box selection (Alt+drag) ---
+function _veBoxSelectStart(e) {
+    if (!veActive) return;
+    const canvas = renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    veBoxSelecting = true;
+    veBoxStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    veBoxEnd = { ...veBoxStart };
+    const boxEl = document.getElementById('ve-box-select');
+    if (boxEl) {
+        boxEl.style.display = 'block';
+        boxEl.style.left = veBoxStart.x + 'px';
+        boxEl.style.top = veBoxStart.y + 'px';
+        boxEl.style.width = '0px';
+        boxEl.style.height = '0px';
+    }
+    controls.enabled = false;
+}
+
+function _veBoxSelectMove(e) {
+    if (!veBoxSelecting) return;
+    const canvas = renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    veBoxEnd = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const boxEl = document.getElementById('ve-box-select');
+    if (boxEl) {
+        const x = Math.min(veBoxStart.x, veBoxEnd.x);
+        const y = Math.min(veBoxStart.y, veBoxEnd.y);
+        const w = Math.abs(veBoxEnd.x - veBoxStart.x);
+        const h = Math.abs(veBoxEnd.y - veBoxStart.y);
+        boxEl.style.left = x + 'px';
+        boxEl.style.top = y + 'px';
+        boxEl.style.width = w + 'px';
+        boxEl.style.height = h + 'px';
+    }
+}
+
+function _veBoxSelectEnd(e) {
+    if (!veBoxSelecting) return;
+    veBoxSelecting = false;
+    controls.enabled = true;
+    const boxEl = document.getElementById('ve-box-select');
+    if (boxEl) boxEl.style.display = 'none';
+
+    if (!veTargetMesh || !vePointsOverlay) return;
+    const canvas = renderer.domElement;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+
+    // Screen-space bounding box (in pixels, relative to canvas)
+    const minX = Math.min(veBoxStart.x, veBoxEnd.x);
+    const maxX = Math.max(veBoxStart.x, veBoxEnd.x);
+    const minY = Math.min(veBoxStart.y, veBoxEnd.y);
+    const maxY = Math.max(veBoxStart.y, veBoxEnd.y);
+
+    // Ignore tiny boxes (accidental clicks)
+    if ((maxX - minX) < 3 && (maxY - minY) < 3) return;
+
+    if (!e.shiftKey) veSelectedIndices.clear();
+
+    // Project all vertices to screen and select those inside rectangle
+    const posAttr = veTargetMesh.geometry.getAttribute('position');
+    const count = posAttr.count;
+    const v = new THREE.Vector3();
+    for (let i = 0; i < count; i++) {
+        v.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+        v.applyMatrix4(veTargetMesh.matrixWorld);
+        v.project(camera);
+        const sx = (v.x * 0.5 + 0.5) * w;
+        const sy = (-v.y * 0.5 + 0.5) * h;
+        if (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY && v.z > 0 && v.z < 1) {
+            veSelectedIndices.add(i);
+        }
+    }
+
+    _veUpdateAllColors();
+    _veUpdateGizmo();
+    _veUpdateSelectionInfo();
+}
+
+// --- Base64 helpers for sending buffers to server ---
+function _float32ToBase64(f32) {
+    const bytes = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+}
+
+function _uint32ToBase64(u32) {
+    const bytes = new Uint8Array(u32.buffer, u32.byteOffset, u32.byteLength);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+}
+
+// Three.js→Blender: (x, y, z) → (x, -z, y)
+function _threeToBlenderCoords(buf) {
+    const out = new Float32Array(buf.length);
+    for (let i = 0; i < buf.length; i += 3) {
+        out[i]     = buf[i];
+        out[i + 1] = -buf[i + 2];
+        out[i + 2] = buf[i + 1];
+    }
+    return out;
+}
+
+// --- Server tool calls ---
+async function _veSmooth() {
+    if (!veActive || !veTargetMesh || veSelectedIndices.size === 0) return;
+    const meshPos = veTargetMesh.geometry.getAttribute('position');
+    const posArr = new Float32Array(meshPos.array);
+    const blenderVerts = _threeToBlenderCoords(posArr);
+
+    // Build faces array
+    const indexAttr = veTargetMesh.geometry.getIndex();
+    if (!indexAttr) { console.warn('No index buffer for smooth'); return; }
+    const facesArr = new Uint32Array(indexAttr.array);
+
+    const selected = Array.from(veSelectedIndices);
+
+    const statusEl = document.getElementById('ve-selection-info');
+    if (statusEl) statusEl.textContent = 'Smoothing...';
+
+    try {
+        const resp = await fetch('/api/character/vertex-edit/smooth/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                vertices: _float32ToBase64(blenderVerts),
+                faces: _uint32ToBase64(facesArr),
+                selected: selected,
+                iterations: 3,
+                factor: 0.3,
+            })
+        });
+        const data = await resp.json();
+        if (data.error) { console.error(data.error); return; }
+
+        const updatedBlender = base64ToFloat32(data.vertices);
+        const updatedThree = new Float32Array(updatedBlender.length);
+        blenderToThreeCoords(updatedBlender);
+        // Apply only selected vertices back
+        const overlayPos = vePointsOverlay.geometry.getAttribute('position');
+        for (const idx of selected) {
+            const x = updatedBlender[idx * 3];
+            const y = updatedBlender[idx * 3 + 1];
+            const z = updatedBlender[idx * 3 + 2];
+            meshPos.setXYZ(idx, x, y, z);
+            overlayPos.setXYZ(idx, x, y, z);
+        }
+        meshPos.needsUpdate = true;
+        overlayPos.needsUpdate = true;
+        veTargetMesh.geometry.computeVertexNormals();
+        veTargetMesh.geometry.computeBoundingSphere();
+    } catch (err) {
+        console.error('Smooth failed:', err);
+    }
+    _veUpdateGizmo();
+    _veUpdateSelectionInfo();
+}
+
+async function _vePushOutside() {
+    if (!veActive || !veTargetMesh || veSelectedIndices.size === 0) return;
+    const meshPos = veTargetMesh.geometry.getAttribute('position');
+    const posArr = new Float32Array(meshPos.array);
+    const blenderVerts = _threeToBlenderCoords(posArr);
+    const selected = Array.from(veSelectedIndices);
+
+    const bodyQs = _buildBodyQueryString();
+    const statusEl = document.getElementById('ve-selection-info');
+    if (statusEl) statusEl.textContent = 'Pushing outside...';
+
+    try {
+        const resp = await fetch(`/api/character/vertex-edit/push-outside/?${bodyQs}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                vertices: _float32ToBase64(blenderVerts),
+                selected: selected,
+                min_dist: 0.006,
+            })
+        });
+        const data = await resp.json();
+        if (data.error) { console.error(data.error); return; }
+
+        const updatedBlender = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(updatedBlender);
+        const overlayPos = vePointsOverlay.geometry.getAttribute('position');
+        for (const idx of selected) {
+            const x = updatedBlender[idx * 3];
+            const y = updatedBlender[idx * 3 + 1];
+            const z = updatedBlender[idx * 3 + 2];
+            meshPos.setXYZ(idx, x, y, z);
+            overlayPos.setXYZ(idx, x, y, z);
+        }
+        meshPos.needsUpdate = true;
+        overlayPos.needsUpdate = true;
+        veTargetMesh.geometry.computeVertexNormals();
+        veTargetMesh.geometry.computeBoundingSphere();
+    } catch (err) {
+        console.error('Push outside failed:', err);
+    }
+    _veUpdateGizmo();
+    _veUpdateSelectionInfo();
+}
+
+function _veReset() {
+    if (!veActive || !veTargetMesh || !veOrigPositions) return;
+    const meshPos = veTargetMesh.geometry.getAttribute('position');
+    const overlayPos = vePointsOverlay.geometry.getAttribute('position');
+    const indices = veSelectedIndices.size > 0 ? veSelectedIndices : null;
+
+    if (indices) {
+        for (const idx of indices) {
+            const x = veOrigPositions[idx * 3];
+            const y = veOrigPositions[idx * 3 + 1];
+            const z = veOrigPositions[idx * 3 + 2];
+            meshPos.setXYZ(idx, x, y, z);
+            overlayPos.setXYZ(idx, x, y, z);
+        }
+    } else {
+        // Reset all
+        meshPos.array.set(veOrigPositions);
+        overlayPos.array.set(veOrigPositions);
+    }
+    meshPos.needsUpdate = true;
+    overlayPos.needsUpdate = true;
+    veTargetMesh.geometry.computeVertexNormals();
+    veTargetMesh.geometry.computeBoundingSphere();
+    _veUpdateGizmo();
+    _veUpdatePosInputs();
+}
+
+// --- Coordinate transforms ---
+function peWorldToCanvas(wx, wy) { return [pePan.x + wx * peZoom, pePan.y - wy * peZoom]; }
+function peCanvasToWorld(cx, cy) { return [(cx - pePan.x) / peZoom, (pePan.y - cy) / peZoom]; }
+
+// --- Canvas rendering ---
+function peRender() {
+    const canvas = document.getElementById('pe-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 0.5;
+    const step = peZoom;  // 1cm grid
+    const ox = pePan.x % step, oy = pePan.y % step;
+    for (let x = ox; x < W; x += step) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = oy; y < H; y += step) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    // Major grid (10cm)
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
+    const step10 = peZoom * 10;
+    const ox10 = pePan.x % step10, oy10 = pePan.y % step10;
+    for (let x = ox10; x < W; x += step10) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = oy10; y < H; y += step10) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+    // Origin crosshair
+    const [zx, zy] = peWorldToCanvas(0, 0);
+    ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(zx - 8, zy); ctx.lineTo(zx + 8, zy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(zx, zy - 8); ctx.lineTo(zx, zy + 8); ctx.stroke();
+
+    // Draw panels
+    const panelNames = Object.keys(pePattern.panels);
+    panelNames.forEach((name, pi) => {
+        const panel = pePattern.panels[name];
+        const color = PE_COLORS[pi % PE_COLORS.length];
+        const isActive = (name === peActivePanel);
+
+        // Edges
+        panel.edges.forEach((edge, ei) => {
+            const p0 = peWorldToCanvas(...panel.vertices[edge.endpoints[0]]);
+            const p1 = peWorldToCanvas(...panel.vertices[edge.endpoints[1]]);
+            ctx.strokeStyle = (isActive && peSelectedEdge && peSelectedEdge.panel === name && peSelectedEdge.index === ei)
+                ? '#fff' : color;
+            ctx.lineWidth = isActive ? 2.5 : 1.5;
+            ctx.beginPath();
+            if (edge.curvature) {
+                const cp = peWorldToCanvas(...edge.curvature);
+                ctx.moveTo(p0[0], p0[1]);
+                ctx.quadraticCurveTo(cp[0], cp[1], p1[0], p1[1]);
+            } else {
+                ctx.moveTo(p0[0], p0[1]);
+                ctx.lineTo(p1[0], p1[1]);
+            }
+            ctx.stroke();
+        });
+
+        // Vertices
+        panel.vertices.forEach((v, vi) => {
+            const [cx, cy] = peWorldToCanvas(v[0], v[1]);
+            const isSel = isActive && peSelectedVertex && peSelectedVertex.panel === name && peSelectedVertex.index === vi;
+            ctx.fillStyle = isSel ? '#fff' : color;
+            ctx.beginPath();
+            ctx.arc(cx, cy, isSel ? 5 : 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Control points for curvature
+        panel.edges.forEach((edge, ei) => {
+            if (!edge.curvature) return;
+            const cp = peWorldToCanvas(...edge.curvature);
+            ctx.fillStyle = '#888';
+            ctx.beginPath();
+            ctx.arc(cp[0], cp[1], 3, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    });
+
+    // Stitch indicators
+    pePattern.stitches.forEach((st, si) => {
+        const pA = pePattern.panels[st.panelA];
+        const pB = pePattern.panels[st.panelB];
+        if (!pA || !pB) return;
+        const eA = pA.edges[st.edgeA];
+        const eB = pB.edges[st.edgeB];
+        if (!eA || !eB) return;
+        const midA = _peMidpoint(pA, eA);
+        const midB = _peMidpoint(pB, eB);
+        const cA = peWorldToCanvas(...midA);
+        const cB = peWorldToCanvas(...midB);
+        ctx.strokeStyle = '#f1c40f';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(cA[0], cA[1]); ctx.lineTo(cB[0], cB[1]); ctx.stroke();
+        ctx.setLineDash([]);
+    });
+
+    // Status
+    const statusEl = document.getElementById('pe-status');
+    if (statusEl) {
+        const [wx, wy] = peCanvasToWorld(peLastMouse.x, peLastMouse.y);
+        statusEl.textContent = `${wx.toFixed(1)}, ${wy.toFixed(1)} cm    ${Math.round(peZoom / 2 * 100)}%`;
+    }
+}
+
+let peLastMouse = {x: 0, y: 0};
+
+function _peMidpoint(panel, edge) {
+    const v0 = panel.vertices[edge.endpoints[0]];
+    const v1 = panel.vertices[edge.endpoints[1]];
+    return [(v0[0] + v1[0]) / 2, (v0[1] + v1[1]) / 2];
+}
+
+// --- Hit testing ---
+function _peHitVertex(cx, cy, threshold) {
+    const thr = threshold || 8;
+    for (const name of Object.keys(pePattern.panels)) {
+        const panel = pePattern.panels[name];
+        for (let i = 0; i < panel.vertices.length; i++) {
+            const [vx, vy] = peWorldToCanvas(...panel.vertices[i]);
+            if (Math.hypot(cx - vx, cy - vy) < thr) return {panel: name, index: i};
+        }
+    }
+    return null;
+}
+
+function _peHitEdge(cx, cy, threshold) {
+    const thr = threshold || 6;
+    for (const name of Object.keys(pePattern.panels)) {
+        const panel = pePattern.panels[name];
+        for (let i = 0; i < panel.edges.length; i++) {
+            const edge = panel.edges[i];
+            const p0 = peWorldToCanvas(...panel.vertices[edge.endpoints[0]]);
+            const p1 = peWorldToCanvas(...panel.vertices[edge.endpoints[1]]);
+            const dist = _pePointToSegDist(cx, cy, p0[0], p0[1], p1[0], p1[1]);
+            if (dist < thr) return {panel: name, index: i};
+        }
+    }
+    return null;
+}
+
+function _pePointToSegDist(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq < 1e-6) return Math.hypot(px - x1, py - y1);
+    let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function _peHitControlPoint(cx, cy, threshold) {
+    const thr = threshold || 8;
+    for (const name of Object.keys(pePattern.panels)) {
+        const panel = pePattern.panels[name];
+        for (let i = 0; i < panel.edges.length; i++) {
+            const edge = panel.edges[i];
+            if (!edge.curvature) continue;
+            const cp = peWorldToCanvas(...edge.curvature);
+            if (Math.hypot(cx - cp[0], cy - cp[1]) < thr) return {panel: name, edgeIndex: i};
+        }
+    }
+    return null;
+}
+
+// --- Mouse/Input handling ---
+function _peInitCanvas() {
+    const canvas = document.getElementById('pe-canvas');
+    if (!canvas) return;
+
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const cx = e.offsetX, cy = e.offsetY;
+
+        // Pan: middle mouse or ctrl+left
+        if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+            pePanning = true;
+            pePanStart = {x: e.clientX, y: e.clientY, px: pePan.x, py: pePan.y};
+            e.preventDefault();
+            return;
+        }
+
+        if (e.button !== 0) return;
+
+        if (peMode === 'select') {
+            // Check control point first
+            const cpHit = _peHitControlPoint(cx, cy);
+            if (cpHit) {
+                peDragging = {type: 'cp', panel: cpHit.panel, edgeIndex: cpHit.edgeIndex};
+                return;
+            }
+            const vHit = _peHitVertex(cx, cy);
+            if (vHit) {
+                peSelectedVertex = vHit;
+                peSelectedEdge = null;
+                peActivePanel = vHit.panel;
+                peDragging = {type: 'vertex', panel: vHit.panel, index: vHit.index};
+                peRender();
+                peUpdatePanelList();
+                return;
+            }
+            const eHit = _peHitEdge(cx, cy);
+            if (eHit) {
+                peSelectedEdge = eHit;
+                peSelectedVertex = null;
+                peActivePanel = eHit.panel;
+                peRender();
+                peUpdatePanelList();
+                return;
+            }
+            peSelectedVertex = null;
+            peSelectedEdge = null;
+            peRender();
+        } else if (peMode === 'draw') {
+            if (!peActivePanel || !pePattern.panels[peActivePanel]) return;
+            const panel = pePattern.panels[peActivePanel];
+            const [wx, wy] = peCanvasToWorld(cx, cy);
+
+            // Check if clicking near first vertex to close
+            if (panel.vertices.length >= 3) {
+                const [fx, fy] = peWorldToCanvas(...panel.vertices[0]);
+                if (Math.hypot(cx - fx, cy - fy) < 10) {
+                    // Close the panel
+                    panel.edges.push({endpoints: [panel.vertices.length - 1, 0], curvature: null});
+                    panel.closed = true;
+                    peMode = 'select';
+                    _peSetModeButtons();
+                    peRender();
+                    peUpdatePanelList();
+                    return;
+                }
+            }
+
+            const vi = panel.vertices.length;
+            panel.vertices.push([wx, wy]);
+            if (vi > 0) {
+                panel.edges.push({endpoints: [vi - 1, vi], curvature: null});
+            }
+            peRender();
+        } else if (peMode === 'stitch') {
+            const eHit = _peHitEdge(cx, cy);
+            if (!eHit) return;
+            if (!peStitchFirst) {
+                peStitchFirst = eHit;
+                peSelectedEdge = eHit;
+                peActivePanel = eHit.panel;
+                peRender();
+            } else {
+                // Second edge — create stitch (must be different panels)
+                if (eHit.panel !== peStitchFirst.panel) {
+                    pePattern.stitches.push({
+                        panelA: peStitchFirst.panel, edgeA: peStitchFirst.index,
+                        panelB: eHit.panel, edgeB: eHit.index,
+                    });
+                    peUpdateStitchList();
+                }
+                peStitchFirst = null;
+                peSelectedEdge = null;
+                peRender();
+            }
+        }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        const cx = e.offsetX, cy = e.offsetY;
+        peLastMouse = {x: cx, y: cy};
+
+        if (pePanning && pePanStart) {
+            pePan.x = pePanStart.px + (e.clientX - pePanStart.x);
+            pePan.y = pePanStart.py + (e.clientY - pePanStart.y);
+            peRender();
+            return;
+        }
+
+        if (peDragging) {
+            const [wx, wy] = peCanvasToWorld(cx, cy);
+            if (peDragging.type === 'vertex') {
+                pePattern.panels[peDragging.panel].vertices[peDragging.index] = [wx, wy];
+            } else if (peDragging.type === 'cp') {
+                pePattern.panels[peDragging.panel].edges[peDragging.edgeIndex].curvature = [wx, wy];
+            }
+            peRender();
+        }
+
+        // Update status
+        const statusEl = document.getElementById('pe-status');
+        if (statusEl) {
+            const [wx, wy] = peCanvasToWorld(cx, cy);
+            statusEl.textContent = `${wx.toFixed(1)}, ${wy.toFixed(1)} cm    ${Math.round(peZoom / 2 * 100)}%`;
+        }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+        peDragging = null;
+        pePanning = false;
+        pePanStart = null;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+        peDragging = null;
+        pePanning = false;
+        pePanStart = null;
+    });
+
+    canvas.addEventListener('dblclick', (e) => {
+        if (peMode !== 'select') return;
+        const cx = e.offsetX, cy = e.offsetY;
+        const eHit = _peHitEdge(cx, cy);
+        if (eHit) {
+            const edge = pePattern.panels[eHit.panel].edges[eHit.index];
+            if (edge.curvature) {
+                edge.curvature = null;  // Remove curvature
+            } else {
+                // Add curvature control point at edge midpoint
+                const panel = pePattern.panels[eHit.panel];
+                const v0 = panel.vertices[edge.endpoints[0]];
+                const v1 = panel.vertices[edge.endpoints[1]];
+                const mx = (v0[0] + v1[0]) / 2, my = (v0[1] + v1[1]) / 2;
+                // Offset perpendicular
+                const dx = v1[0] - v0[0], dy = v1[1] - v0[1];
+                const len = Math.hypot(dx, dy) || 1;
+                edge.curvature = [mx + (-dy / len) * 5, my + (dx / len) * 5];
+            }
+            peRender();
+        }
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const cx = e.offsetX, cy = e.offsetY;
+        const [wx, wy] = peCanvasToWorld(cx, cy);
+        const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        peZoom = Math.max(0.5, Math.min(20, peZoom * factor));
+        // Adjust pan so world point under cursor stays fixed
+        pePan.x = cx - wx * peZoom;
+        pePan.y = cy + wy * peZoom;
+        peRender();
+    }, {passive: false});
+
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+}
+
+const PE_REGION_PRESETS = {
+    custom:    {z_min: 60, z_max: 140, arms: false, grow: 2, looseness: 30},
+    top:       {z_min: 80, z_max: 155, arms: true,  grow: 2, looseness: 30},
+    pants:     {z_min: 0,  z_max: 105, arms: false, grow: 2, looseness: 30},
+    skirt:     {z_min: 55, z_max: 100, arms: false, grow: 3, looseness: 40},
+    full:      {z_min: 0,  z_max: 155, arms: true,  grow: 2, looseness: 30},
+    underwear: {z_min: 55, z_max: 100, arms: false, grow: 1, looseness: 20},
+    shoes:     {z_min: 0,  z_max: 15,  arms: false, grow: 2, looseness: 20},
+};
+
+function _peSetRegionMode(active) {
+    const patternControls = document.getElementById('pe-pattern-controls');
+    const regionControls = document.getElementById('pe-region-controls');
+    const wrapSection = document.getElementById('pe-wrap-section');
+
+    if (active) {
+        if (patternControls) patternControls.style.display = 'none';
+        if (wrapSection) wrapSection.style.display = 'none';
+        if (regionControls) regionControls.style.display = '';
+    } else {
+        if (patternControls) patternControls.style.display = '';
+        if (wrapSection) wrapSection.style.display = '';
+        if (regionControls) regionControls.style.display = 'none';
+    }
+}
+
+function _peSetModeButtons() {
+    document.querySelectorAll('#pe-mode-btns .btn-toggle').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === peMode);
+    });
+    // Exit vertex edit when switching away
+    if (peMode !== 'edit' && veActive) veExitEditMode();
+    // Enter/exit modes
+    if (peMode === 'edit') {
+        veEnterEditMode();
+    } else {
+        _peSetRegionMode(peMode === 'region');
+    }
+}
+
+// --- Panel/Stitch list ---
+function peUpdatePanelList() {
+    const list = document.getElementById('pe-panel-list');
+    if (!list) return;
+    const names = Object.keys(pePattern.panels);
+    const PLACEMENT_BADGES = {flat:'',front:'[F]',back:'[B]',left:'[L]',right:'[R]',sleeve_L:'[SL]',sleeve_R:'[SR]'};
+    list.innerHTML = names.map((name, i) => {
+        const color = PE_COLORS[i % PE_COLORS.length];
+        const active = name === peActivePanel;
+        const p = pePattern.panels[name];
+        const nv = p.vertices.length;
+        const closed = p.closed ? 'closed' : 'open';
+        const badge = PLACEMENT_BADGES[p.placement || 'flat'] || '';
+        return `<div class="pe-panel-item${active ? ' active' : ''}" data-name="${name}" style="cursor:pointer;padding:3px 6px;border-left:3px solid ${color};margin-bottom:2px;background:${active ? 'var(--bg-highlight)' : 'transparent'};border-radius:2px;font-size:0.8rem;">
+            <span style="color:${color};">&#9679;</span> ${name} ${badge ? `<span style="color:#f39c12;font-size:0.7rem;">${badge}</span> ` : ''}<span style="color:var(--text-muted);font-size:0.72rem;">(${nv}v, ${closed})</span>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('.pe-panel-item').forEach(el => {
+        el.addEventListener('click', () => {
+            peActivePanel = el.dataset.name;
+            peSelectedVertex = null;
+            peSelectedEdge = null;
+            peUpdatePanelList();
+            _peSyncPlacementDropdown();
+            peRender();
+        });
+    });
+}
+
+function peUpdateStitchList() {
+    const list = document.getElementById('pe-stitch-list');
+    const countEl = document.getElementById('pe-stitch-count');
+    if (!list) return;
+    if (countEl) countEl.textContent = `(${pePattern.stitches.length})`;
+    list.innerHTML = pePattern.stitches.map((st, i) =>
+        `<div style="font-size:0.78rem;padding:2px 4px;color:var(--text-muted);">${st.panelA}.e${st.edgeA} ↔ ${st.panelB}.e${st.edgeB}
+            <span class="pe-stitch-del" data-idx="${i}" style="cursor:pointer;color:#e74c3c;margin-left:4px;" title="Remove">✕</span>
+        </div>`
+    ).join('');
+    list.querySelectorAll('.pe-stitch-del').forEach(el => {
+        el.addEventListener('click', () => {
+            pePattern.stitches.splice(parseInt(el.dataset.idx), 1);
+            peUpdateStitchList();
+            peRender();
+        });
+    });
+}
+
+function _peSyncPlacementDropdown() {
+    const dd = document.getElementById('pe-placement');
+    if (!dd || !peActivePanel) return;
+    const p = pePattern.panels[peActivePanel];
+    dd.value = (p && p.placement) || 'flat';
+}
+
+// --- Region Generate ---
+async function peRegionGenerate() {
+    const genBtn = document.getElementById('pe-generate');
+    if (genBtn) genBtn.disabled = true;
+    const statusEl = document.getElementById('pe-save-status');
+    if (statusEl) statusEl.textContent = 'Generating region...';
+
+    ensureSkinned();
+
+    const bodyQs = _buildBodyQueryString();
+    const zMin = (_sliderVal('pe-region-zmin') / 100).toFixed(3);
+    const zMax = (_sliderVal('pe-region-zmax') / 100).toFixed(3);
+    const arms = document.getElementById('pe-region-arms')?.checked ? '1' : '0';
+    const grow = _sliderVal('pe-region-grow');
+    const looseness = (_sliderVal('pe-region-looseness') / 100).toFixed(3);
+    const category = document.getElementById('pe-region-category')?.value || 'custom';
+
+    const regionQs = `z_min=${zMin}&z_max=${zMax}&include_arms=${arms}&grow=${grow}&looseness=${looseness}&category=${category}`;
+
+    try {
+        const resp = await fetch(`/api/character/pattern/region/generate/?${bodyQs}&${regionQs}`);
+        const data = await resp.json();
+        if (data.error) {
+            if (statusEl) statusEl.textContent = `Error: ${data.error}`;
+            if (genBtn) genBtn.disabled = false;
+            return;
+        }
+
+        removeClothRegion(pePreviewKey);
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+        const faceBuf = base64ToUint32(data.faces);
+        const normalBuf = base64ToFloat32(data.normals);
+        blenderToThreeCoords(normalBuf);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+
+        const colorPicker = document.getElementById('pe-color');
+        const matColor = colorPicker ? new THREE.Color(colorPicker.value) : new THREE.Color(0.3, 0.35, 0.5);
+        const roughness = (_sliderVal('pe-roughness') / 100);
+        const metalness = (_sliderVal('pe-metalness') / 100);
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: matColor, roughness, metalness,
+            side: THREE.DoubleSide,
+            polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+        });
+
+        let mesh;
+        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+            const siBuf = base64ToFloat32(data.skin_indices);
+            const swBuf = base64ToFloat32(data.skin_weights);
+            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
+            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
+            mesh = new THREE.SkinnedMesh(geo, mat);
+            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+        } else {
+            mesh = new THREE.Mesh(geo, mat);
+        }
+
+        clothMeshes[pePreviewKey] = mesh;
+        clothParams[pePreviewKey] = {params: {}, color: '#' + mesh.material.color.getHexString()};
+        scene.add(mesh);
+        updateEquippedList();
+
+        if (statusEl) statusEl.textContent = `Region: ${data.vertex_count} verts, ${data.face_count} tris`;
+    } catch (e) {
+        if (statusEl) statusEl.textContent = `Error: ${e.message}`;
+    }
+    if (genBtn) genBtn.disabled = false;
+}
+
+// --- Generate 3D + Save ---
+async function peGenerate3D() {
+    const genBtn = document.getElementById('pe-generate');
+    if (genBtn) genBtn.disabled = true;
+    const statusEl = document.getElementById('pe-save-status');
+    if (statusEl) statusEl.textContent = 'Generating...';
+
+    ensureSkinned();
+
+    const bodyQs = _buildBodyQueryString();
+    try {
+        const wrapCb = document.getElementById('pe-wrap');
+        const wrap = wrapCb ? wrapCb.checked : false;
+        const wrapOffset = (_sliderVal('pe-wrap-offset') || 6) / 1000;  // mm → m
+        const wrapStiffness = (_sliderVal('pe-wrap-stiffness') ?? 50) / 100;
+
+        const resp = await fetch(`/api/character/pattern/generate/?${bodyQs}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({pattern: pePattern, wrap, offset: wrapOffset, stiffness: wrapStiffness}),
+        });
+        const data = await resp.json();
+        if (data.error) {
+            if (statusEl) statusEl.textContent = `Error: ${data.error}`;
+            if (genBtn) genBtn.disabled = false;
+            return;
+        }
+
+        // Remove previous preview
+        removeClothRegion(pePreviewKey);
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+        const faceBuf = base64ToUint32(data.faces);
+        const normalBuf = base64ToFloat32(data.normals);
+        blenderToThreeCoords(normalBuf);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+
+        const colorPicker = document.getElementById('pe-color');
+        const matColor = colorPicker ? new THREE.Color(colorPicker.value) : new THREE.Color(0.3, 0.35, 0.5);
+        const roughness = (_sliderVal('pe-roughness') / 100);
+        const metalness = (_sliderVal('pe-metalness') / 100);
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: matColor, roughness, metalness,
+            side: THREE.DoubleSide,
+            polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+        });
+
+        let mesh;
+        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+            const siBuf = base64ToFloat32(data.skin_indices);
+            const swBuf = base64ToFloat32(data.skin_weights);
+            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
+            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
+            mesh = new THREE.SkinnedMesh(geo, mat);
+            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+        } else {
+            mesh = new THREE.Mesh(geo, mat);
+        }
+
+        clothMeshes[pePreviewKey] = mesh;
+        clothParams[pePreviewKey] = {params: {}, color: '#' + mesh.material.color.getHexString()};
+        scene.add(mesh);
+        updateEquippedList();
+
+        if (statusEl) statusEl.textContent = `Generated: ${data.vertex_count} verts, ${data.face_count} tris`;
+    } catch (e) {
+        if (statusEl) statusEl.textContent = `Error: ${e.message}`;
+    }
+    if (genBtn) genBtn.disabled = false;
+}
+
+async function peSaveToLibrary() {
+    const name = document.getElementById('pe-save-name')?.value?.trim();
+    const category = document.getElementById('pe-save-category')?.value || 'custom';
+    const statusEl = document.getElementById('pe-save-status');
+
+    if (!name) { if (statusEl) statusEl.textContent = 'Name is required'; return; }
+
+    if (statusEl) statusEl.textContent = 'Saving...';
+
+    const colorPicker = document.getElementById('pe-color');
+    const colorHex = colorPicker ? colorPicker.value : '#404870';
+    const cr = parseInt(colorHex.slice(1, 3), 16) / 255;
+    const cg = parseInt(colorHex.slice(3, 5), 16) / 255;
+    const cb = parseInt(colorHex.slice(5, 7), 16) / 255;
+
+    const bodyQs = _buildBodyQueryString();
+    try {
+        const resp = await fetch(`/api/character/pattern/save/?${bodyQs}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                pattern: pePattern,
+                name, category,
+                color: [cr, cg, cb],
+                roughness: _sliderVal('pe-roughness') / 100,
+                metalness: _sliderVal('pe-metalness') / 100,
+                wrap: document.getElementById('pe-wrap')?.checked || false,
+                offset: (_sliderVal('pe-wrap-offset') || 6) / 1000,
+                stiffness: (_sliderVal('pe-wrap-stiffness') ?? 50) / 100,
+            }),
+        });
+        const data = await resp.json();
+        if (data.ok) {
+            if (statusEl) statusEl.textContent = `Saved: ${data.garment_id}`;
+        } else {
+            if (statusEl) statusEl.textContent = `Error: ${data.error || 'Unknown'}`;
+        }
+    } catch (e) {
+        if (statusEl) statusEl.textContent = `Error: ${e.message}`;
+    }
+}
+
+// --- Load pattern from garment library ---
+async function peLoadFromGarment(garmentId) {
+    try {
+        const resp = await fetch(`/api/character/pattern/specification/?garment_id=${encodeURIComponent(garmentId)}`);
+        const data = await resp.json();
+        if (!data.ok || !data.pattern) {
+            console.warn('No specification found for', garmentId, data.error);
+            return false;
+        }
+        // Load pattern data into editor
+        pePattern = data.pattern;
+        // Ensure stitches array exists
+        if (!pePattern.stitches) pePattern.stitches = [];
+
+        // Set active panel to first
+        const names = Object.keys(pePattern.panels || {});
+        peActivePanel = names.length > 0 ? names[0] : null;
+        peSelectedVertex = null;
+        peSelectedEdge = null;
+        peStitchFirst = null;
+        peMode = 'select';
+        _peSetModeButtons();
+
+        // Auto-fit zoom/pan to show all vertices
+        _peAutoFit();
+
+        peUpdatePanelList();
+        peUpdateStitchList();
+        peRender();
+
+        // Switch to Pattern tab
+        const tabBtn = document.querySelector('.panel-tab[data-tab="tab-creator"]');
+        if (tabBtn) tabBtn.click();
+
+        // Pre-fill save name from garment id
+        const nameEl = document.getElementById('pe-save-name');
+        if (nameEl) {
+            const parts = garmentId.split('/');
+            nameEl.value = parts[parts.length - 1];
+        }
+        const catEl = document.getElementById('pe-save-category');
+        if (catEl) {
+            const parts = garmentId.split('/');
+            if (parts.length > 1) {
+                const cat = parts[0];
+                for (const opt of catEl.options) {
+                    if (opt.value === cat) { catEl.value = cat; break; }
+                }
+            }
+        }
+
+        console.log(`Pattern loaded from ${garmentId}: ${names.length} panels`);
+        return true;
+    } catch (e) {
+        console.error('Failed to load pattern:', e);
+        return false;
+    }
+}
+
+function _peAutoFit() {
+    const canvas = document.getElementById('pe-canvas');
+    if (!canvas) return;
+    const W = canvas.width, H = canvas.height;
+
+    // Collect all vertices
+    const allVerts = [];
+    for (const panel of Object.values(pePattern.panels || {})) {
+        for (const v of (panel.vertices || [])) {
+            allVerts.push(v);
+        }
+    }
+    if (allVerts.length === 0) { pePan = {x: W/2, y: H/2}; peZoom = 2.0; return; }
+
+    const xs = allVerts.map(v => v[0]), ys = allVerts.map(v => v[1]);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const yMin = Math.min(...ys), yMax = Math.max(...ys);
+    const pw = xMax - xMin || 20, ph = yMax - yMin || 20;
+
+    // Fit with 15% margin
+    const margin = 0.15;
+    const zoomX = W * (1 - 2 * margin) / pw;
+    const zoomY = H * (1 - 2 * margin) / ph;
+    peZoom = Math.min(zoomX, zoomY);
+    peZoom = Math.max(0.5, Math.min(20, peZoom));
+
+    // Center on pattern
+    const cx = (xMin + xMax) / 2;
+    const cy = (yMin + yMax) / 2;
+    pePan.x = W / 2 - cx * peZoom;
+    pePan.y = H / 2 + cy * peZoom;
+}
+
+// --- Init ---
+function initPatternEditor() {
+    const canvas = document.getElementById('pe-canvas');
+    if (!canvas) return;
+
+    _peInitCanvas();
+
+    // Mode buttons
+    document.querySelectorAll('#pe-mode-btns .btn-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            peMode = btn.dataset.mode;
+            peStitchFirst = null;
+            _peSetModeButtons();
+        });
+    });
+
+    // Add panel
+    document.getElementById('pe-add-panel')?.addEventListener('click', () => {
+        const names = Object.keys(pePattern.panels);
+        const defaultName = `Panel${names.length + 1}`;
+        const name = prompt('Panel name:', defaultName);
+        if (!name || !name.trim()) return;
+        const trimmed = name.trim();
+        if (pePattern.panels[trimmed]) { alert('Panel already exists'); return; }
+        pePattern.panels[trimmed] = {vertices: [], edges: [], closed: false};
+        peActivePanel = trimmed;
+        peMode = 'draw';
+        _peSetModeButtons();
+        peUpdatePanelList();
+        peRender();
+    });
+
+    // Delete panel
+    document.getElementById('pe-del-panel')?.addEventListener('click', () => {
+        if (!peActivePanel) return;
+        // Remove stitches referencing this panel
+        pePattern.stitches = pePattern.stitches.filter(
+            s => s.panelA !== peActivePanel && s.panelB !== peActivePanel);
+        delete pePattern.panels[peActivePanel];
+        const names = Object.keys(pePattern.panels);
+        peActivePanel = names.length > 0 ? names[0] : null;
+        peSelectedVertex = null;
+        peSelectedEdge = null;
+        peUpdatePanelList();
+        peUpdateStitchList();
+        peRender();
+    });
+
+    // Placement dropdown
+    document.getElementById('pe-placement')?.addEventListener('change', (e) => {
+        if (peActivePanel && pePattern.panels[peActivePanel]) {
+            pePattern.panels[peActivePanel].placement = e.target.value;
+            peUpdatePanelList();
+        }
+    });
+
+    // Wrap checkbox → show/hide offset+stiffness sliders
+    document.getElementById('pe-wrap')?.addEventListener('change', (e) => {
+        const sliders = document.getElementById('pe-wrap-sliders');
+        if (sliders) sliders.style.display = e.target.checked ? '' : 'none';
+    });
+    _bindSlider('pe-wrap-offset', 'pe-wrap-offset-val', v => v);
+    _bindSlider('pe-wrap-stiffness', 'pe-wrap-stiffness-val', v => (v / 100).toFixed(2));
+
+    // Region controls
+    _bindSlider('pe-region-zmin', 'pe-region-zmin-val', v => (v / 100).toFixed(2));
+    _bindSlider('pe-region-zmax', 'pe-region-zmax-val', v => (v / 100).toFixed(2));
+    _bindSlider('pe-region-grow', 'pe-region-grow-val', v => v);
+    _bindSlider('pe-region-looseness', 'pe-region-looseness-val', v => (v / 100).toFixed(2));
+
+    // Region category preset auto-fill
+    document.getElementById('pe-region-category')?.addEventListener('change', (e) => {
+        const preset = PE_REGION_PRESETS[e.target.value];
+        if (!preset) return;
+        const setSlider = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) { el.value = val; el.dispatchEvent(new Event('input')); }
+        };
+        setSlider('pe-region-zmin', preset.z_min);
+        setSlider('pe-region-zmax', preset.z_max);
+        setSlider('pe-region-grow', preset.grow);
+        setSlider('pe-region-looseness', preset.looseness);
+        const armsEl = document.getElementById('pe-region-arms');
+        if (armsEl) armsEl.checked = preset.arms;
+        // Auto-regenerate when preset changes
+        if (peMode === 'region') peRegionGenerate();
+    });
+
+    // Auto-regenerate on region slider release (change event)
+    ['pe-region-zmin', 'pe-region-zmax', 'pe-region-grow', 'pe-region-looseness'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', () => {
+            if (peMode === 'region') peRegionGenerate();
+        });
+    });
+    document.getElementById('pe-region-arms')?.addEventListener('change', () => {
+        if (peMode === 'region') peRegionGenerate();
+    });
+
+    // Material sliders
+    _bindSlider('pe-roughness', 'pe-roughness-val', v => (v / 100).toFixed(2));
+    _bindSlider('pe-metalness', 'pe-metalness-val', v => (v / 100).toFixed(2));
+
+    // Live material update on preview mesh
+    ['pe-color', 'pe-roughness', 'pe-metalness'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', () => {
+            let mesh = null;
+            if (_selectedItem && (_selectedItem.type === 'cloth' || _selectedItem.type === 'garment')) {
+                mesh = clothMeshes[_selectedItem.id] || garmentMeshes[_selectedItem.id];
+            }
+            if (!mesh) mesh = clothMeshes[pePreviewKey];
+            if (!mesh) return;
+            if (id === 'pe-color') mesh.material.color.set(el.value);
+            else if (id === 'pe-roughness') mesh.material.roughness = parseInt(el.value) / 100;
+            else if (id === 'pe-metalness') mesh.material.metalness = parseInt(el.value) / 100;
+        });
+    });
+
+    // Generate 3D — route to region or pattern based on mode
+    document.getElementById('pe-generate')?.addEventListener('click', () => {
+        if (peMode === 'region') peRegionGenerate();
+        else peGenerate3D();
+    });
+
+    // Delete preview
+    document.getElementById('pe-delete')?.addEventListener('click', () => {
+        removeClothRegion(pePreviewKey);
+    });
+
+    // Save to library
+    document.getElementById('pe-save')?.addEventListener('click', () => peSaveToLibrary());
+
+    // Edit Pattern button (in Garment Fit panel)
+    document.getElementById('garment-edit-pattern')?.addEventListener('click', () => {
+        if (selectedGarmentId) peLoadFromGarment(selectedGarmentId);
+    });
+
+    // --- Vertex Editor sidebar bindings ---
+    document.getElementById('ve-select-all')?.addEventListener('click', () => {
+        if (!veActive || !vePointsOverlay) return;
+        const count = vePointsOverlay.geometry.getAttribute('position').count;
+        for (let i = 0; i < count; i++) veSelectedIndices.add(i);
+        _veUpdateAllColors();
+        _veUpdateGizmo();
+        _veUpdateSelectionInfo();
+    });
+    document.getElementById('ve-deselect-all')?.addEventListener('click', () => {
+        if (!veActive) return;
+        veSelectedIndices.clear();
+        _veUpdateAllColors();
+        _veUpdateGizmo();
+        _veUpdateSelectionInfo();
+    });
+    document.getElementById('ve-smooth')?.addEventListener('click', () => _veSmooth());
+    document.getElementById('ve-push-outside')?.addEventListener('click', () => _vePushOutside());
+    document.getElementById('ve-reset')?.addEventListener('click', () => _veReset());
+
+    // Point size slider
+    const veSizeSlider = document.getElementById('ve-point-size');
+    const veSizeVal = document.getElementById('ve-point-size-val');
+    if (veSizeSlider) {
+        veSizeSlider.addEventListener('input', () => {
+            const sz = parseInt(veSizeSlider.value);
+            if (veSizeVal) veSizeVal.textContent = sz;
+            if (vePointsOverlay) vePointsOverlay.material.size = sz;
+        });
+    }
+
+    // Position inputs
+    ['ve-pos-x', 've-pos-y', 've-pos-z'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', () => {
+            if (!veActive || !veTargetMesh || veSelectedIndices.size === 0) return;
+            const posAttr = veTargetMesh.geometry.getAttribute('position');
+            let cx = 0, cy = 0, cz = 0;
+            for (const idx of veSelectedIndices) {
+                cx += posAttr.getX(idx);
+                cy += posAttr.getY(idx);
+                cz += posAttr.getZ(idx);
+            }
+            const n = veSelectedIndices.size;
+            const newX = parseFloat(document.getElementById('ve-pos-x')?.value || 0);
+            const newY = parseFloat(document.getElementById('ve-pos-y')?.value || 0);
+            const newZ = parseFloat(document.getElementById('ve-pos-z')?.value || 0);
+            _veMoveSelectedByDelta(newX - cx / n, newY - cy / n, newZ - cz / n);
+            _veUpdateGizmo();
+        });
+    });
+
+    peRender();
+    console.log('Pattern Editor initialized');
+}
+
 
 // =========================================================================
 // Hair
@@ -2381,6 +3897,12 @@ function _renderGarmentList() {
                     }
                 }
                 _updateGarmentAdjustmentsVisibility();
+
+                // Show/hide "Edit Pattern" button based on source
+                const editBtn = document.getElementById('garment-edit-pattern');
+                if (editBtn) {
+                    editBtn.style.display = (g.source === 'pattern-editor') ? '' : 'none';
+                }
             });
             body.appendChild(item);
         }
@@ -2690,7 +4212,7 @@ function removeAllGarments() {
 // 3D Interaction — hover highlight, click-to-select, equipped list
 // =========================================================================
 
-/** Collect all selectable 3D targets (garments, cloth, wardrobe, hair) */
+/** Collect all selectable 3D targets (garments, cloth, wardrobe, hair, SMPL garments) */
 function getSelectableTargets() {
     const targets = [];
     for (const [id, m] of Object.entries(garmentMeshes)) {
@@ -2706,6 +4228,12 @@ function getSelectableTargets() {
         const hs = document.getElementById('hair-style-select');
         const label = hs ? (hs.options[hs.selectedIndex]?.textContent || 'Hair') : 'Hair';
         targets.push({ root: hairMesh, type: 'hair', id: 'hair', label });
+    }
+    // Add SMPL garments (standalone meshes at SMPL body position)
+    if (typeof smplGarmentMeshes !== 'undefined') {
+        for (const [id, m] of Object.entries(smplGarmentMeshes)) {
+            if (m) targets.push({ root: m, type: 'smpl_garment', id, label: 'SMPL: ' + id });
+        }
     }
     return targets;
 }
@@ -2744,6 +4272,23 @@ function _sameItem(a, b) {
     return a.type === b.type && a.id === b.id;
 }
 
+/** Called when selection changes — sync Pattern Editor sliders to selected mesh */
+function _onSelectionChanged(item) {
+    if (!item) return;
+    // Sync Pattern Editor material sliders to selected cloth mesh
+    if (item.type === 'cloth' || item.type === 'garment') {
+        const mesh = clothMeshes[item.id] || garmentMeshes[item.id];
+        if (!mesh || !mesh.material) return;
+        const mat = mesh.material;
+        const peColor = document.getElementById('pe-color');
+        const peRough = document.getElementById('pe-roughness');
+        const peMetal = document.getElementById('pe-metalness');
+        if (peColor) peColor.value = '#' + mat.color.getHexString();
+        if (peRough) { peRough.value = Math.round(mat.roughness * 100); peRough.dispatchEvent(new Event('input')); }
+        if (peMetal) { peMetal.value = Math.round(mat.metalness * 100); peMetal.dispatchEvent(new Event('input')); }
+    }
+}
+
 /** Initialize hover/click/selection handlers on the canvas */
 function _initInteraction() {
     const canvas = renderer.domElement;
@@ -2755,12 +4300,29 @@ function _initInteraction() {
     let _lastMouseEvent = null;
 
     canvas.addEventListener('mousemove', (e) => {
+        // Box select drag
+        if (veActive && veBoxSelecting) {
+            _veBoxSelectMove(e);
+            return;
+        }
         _lastMouseEvent = e;
         if (!_hoverPending) {
             _hoverPending = true;
             requestAnimationFrame(() => {
                 _hoverPending = false;
-                if (_lastMouseEvent) _doHover(_lastMouseEvent);
+                if (_lastMouseEvent) {
+                    if (veActive) {
+                        // In VE mode, cursor hint for cloth surface
+                        const rect = canvas.getBoundingClientRect();
+                        _mouseNDC.x = ((_lastMouseEvent.clientX - rect.left) / rect.width) * 2 - 1;
+                        _mouseNDC.y = -((_lastMouseEvent.clientY - rect.top) / rect.height) * 2 + 1;
+                        _raycaster.setFromCamera(_mouseNDC, camera);
+                        const hits = _raycaster.intersectObject(veTargetMesh);
+                        canvas.style.cursor = hits.length > 0 ? 'pointer' : '';
+                    } else {
+                        _doHover(_lastMouseEvent);
+                    }
+                }
             });
         }
     });
@@ -2775,22 +4337,57 @@ function _initInteraction() {
 
     // Click detection (distinguish from drag for OrbitControls compatibility)
     canvas.addEventListener('mousedown', (e) => {
-        if (e.button === 0) _mouseDownPos = { x: e.clientX, y: e.clientY };
+        if (e.button === 0) {
+            _mouseDownPos = { x: e.clientX, y: e.clientY };
+            // Alt+click starts box select
+            if (veActive && e.altKey) {
+                _veBoxSelectStart(e);
+            }
+        }
     });
 
     canvas.addEventListener('mouseup', (e) => {
+        if (veActive && veBoxSelecting) {
+            _veBoxSelectEnd(e);
+            _mouseDownPos = null;
+            return;
+        }
         if (e.button !== 0 || !_mouseDownPos) return;
         const dx = e.clientX - _mouseDownPos.x;
         const dy = e.clientY - _mouseDownPos.y;
         _mouseDownPos = null;
         if (Math.sqrt(dx * dx + dy * dy) > 3) return; // was a drag
+        if (veActive) {
+            _veHandleClick(e);
+            return;
+        }
         _doClick();
     });
 
-    // Delete key removes selected item
+    // Keyboard shortcuts
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'Delete' && _selectedItem && !e.target.closest('input, select, textarea')) {
+        if (e.target.closest('input, select, textarea')) return;
+        if (e.key === 'Delete' && _selectedItem) {
             _removeSelectedItem();
+            return;
+        }
+        if (veActive) {
+            if (e.key === 'Escape') {
+                peMode = 'select'; _peSetModeButtons();
+                return;
+            }
+            if (e.key === 'a' || e.key === 'A') {
+                if (veSelectedIndices.size > 0 && vePointsOverlay) {
+                    veSelectedIndices.clear();
+                } else if (vePointsOverlay) {
+                    const count = vePointsOverlay.geometry.getAttribute('position').count;
+                    for (let i = 0; i < count; i++) veSelectedIndices.add(i);
+                }
+                _veUpdateAllColors();
+                _veUpdateGizmo();
+                _veUpdateSelectionInfo();
+                return;
+            }
         }
     });
 
@@ -2839,6 +4436,7 @@ function _initInteraction() {
     }
 
     function _doClick() {
+        const prev = _selectedItem;
         if (_hoveredItem) {
             if (_sameItem(_selectedItem, _hoveredItem)) {
                 // Deselect
@@ -2858,6 +4456,7 @@ function _initInteraction() {
             _selectedItem = null;
             if (removeBtn) removeBtn.style.display = 'none';
         }
+        if (!_sameItem(prev, _selectedItem)) _onSelectionChanged(_selectedItem);
     }
 }
 
@@ -2883,6 +4482,11 @@ function _removeSelectedItem() {
             if (btn) btn.click();
             break;
         }
+        case 'smpl_garment':
+            if (typeof removeSmplGarment === 'function') {
+                removeSmplGarment(id);
+            }
+            break;
     }
     _selectedItem = null;
     _hoveredItem = null;
@@ -2948,6 +4552,11 @@ function _buildEquippedList() {
                     if (btn) btn.click();
                     break;
                 }
+                case 'smpl_garment':
+                    if (typeof removeSmplGarment === 'function') {
+                        removeSmplGarment(t.id);
+                    }
+                    break;
             }
             if (_sameItem(_selectedItem, t)) {
                 _selectedItem = null;
@@ -4142,7 +5751,7 @@ async function _fitSmplGarmentToBody(garmentId) {
             // SMPL test page: build minimal query with body type + morphs + meta
             bodyQs = `body_type=${encodeURIComponent(bodyType)}`;
             document.querySelectorAll('#morphs-panel input[type="range"]').forEach(slider => {
-                const mName = slider.dataset.morphName || slider.id.replace('morph-', '');
+                const mName = slider.dataset.morph || slider.dataset.morphName || slider.id.replace('morph-', '');
                 if (mName && slider.value !== undefined) {
                     bodyQs += `&morph_${mName}=${slider.value / 100}`;
                 }
@@ -4881,6 +6490,18 @@ window.__viewer = {
     get selectedItem() { return _selectedItem; },
     getSelectableTargets,
     updateEquippedList,
+    // Pattern Editor debug
+    _buildBodyQueryString,
+    peRegionGenerate,
+    peGenerate3D,
+    get peMode() { return peMode; },
+    set peMode(v) { peMode = v; _peSetModeButtons(); },
+    // Vertex Editor debug
+    get veActive() { return veActive; },
+    get veSelectedIndices() { return veSelectedIndices; },
+    get veTargetMesh() { return veTargetMesh; },
+    veEnterEditMode,
+    veExitEditMode,
 };
 
 // =========================================================================
