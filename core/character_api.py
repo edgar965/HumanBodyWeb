@@ -156,6 +156,11 @@ def theatre_settings_page(request):
         s.theatre_default_model = request.POST.get('theatre_default_model', 'FemaleWithHair').strip()
         s.theatre_default_animation = request.POST.get('theatre_default_animation', '').strip()
         s.theatre_default_preset = request.POST.get('theatre_default_preset', 'ballet_stage').strip()
+        # Video export settings
+        s.theatre_video_format = request.POST.get('theatre_video_format', 'mp4').strip()
+        s.theatre_video_resolution = request.POST.get('theatre_video_resolution', '1080p').strip()
+        s.theatre_video_fps = int(request.POST.get('theatre_video_fps', 30))
+        s.theatre_video_quality = request.POST.get('theatre_video_quality', 'high').strip()
         s.save()
         messages.success(request, 'Theatre settings saved.')
         return redirect('settings_theatre')
@@ -216,7 +221,67 @@ def theatre_settings_api(request):
         'model': s.theatre_default_model or '',
         'animation': s.theatre_default_animation or '',
         'preset': s.theatre_default_preset or 'ballet_stage',
+        'video_format': s.theatre_video_format or 'mp4',
+        'video_resolution': s.theatre_video_resolution or '1080p',
+        'video_fps': s.theatre_video_fps or 30,
+        'video_quality': s.theatre_video_quality or 'high',
     })
+
+
+@csrf_exempt
+@require_POST
+def theatre_convert_video(request):
+    """POST: Receive WebM blob, convert to MP4 via ffmpeg, return MP4."""
+    import subprocess
+    import tempfile
+
+    video_file = request.FILES.get('video')
+    if not video_file:
+        return JsonResponse({'error': 'No video file uploaded'}, status=400)
+
+    webm_tmp = None
+    mp4_tmp = None
+    try:
+        # Write uploaded WebM to temp file
+        webm_tmp = tempfile.NamedTemporaryFile(suffix='.webm', delete=False)
+        for chunk in video_file.chunks():
+            webm_tmp.write(chunk)
+        webm_tmp.close()
+
+        # Output MP4 temp file
+        mp4_tmp = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
+        mp4_tmp.close()
+
+        # Run ffmpeg
+        cmd = [
+            'ffmpeg', '-y', '-i', webm_tmp.name,
+            '-c:v', 'libx264', '-preset', 'fast', '-crf', '18',
+            '-pix_fmt', 'yuv420p',
+            mp4_tmp.name,
+        ]
+        result = subprocess.run(cmd, capture_output=True, timeout=300)
+        if result.returncode != 0:
+            stderr = result.stderr.decode('utf-8', errors='replace')[:500]
+            return JsonResponse({'error': f'ffmpeg failed: {stderr}'}, status=500)
+
+        response = FileResponse(
+            open(mp4_tmp.name, 'rb'),
+            content_type='video/mp4',
+            as_attachment=True,
+            filename='theatre-export.mp4',
+        )
+        # Clean up temp files after response is sent
+        response._resource_closers.append(lambda: os.unlink(webm_tmp.name))
+        response._resource_closers.append(lambda: os.unlink(mp4_tmp.name))
+        return response
+
+    except subprocess.TimeoutExpired:
+        return JsonResponse({'error': 'ffmpeg timed out (>5min)'}, status=500)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    finally:
+        # Clean up on error (if response wasn't created)
+        pass
 
 
 def animations_page(request):

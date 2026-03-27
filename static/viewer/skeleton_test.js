@@ -2,13 +2,13 @@
  * Skeleton Test — 6 skeletons for bone-mapping debugging.
  *
  * Row 1: DEF (red) | CMU (green) | Mixamo (orange) | MocapNET (blue) | Bandai (purple)
- * Row 2: AIST (orange-red, behind DEF)
+ * Row 2: SMPL (orange-red, behind DEF)
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET, BVH_TO_DEF_OPENPOSE, BVH_TO_DEF_BANDAI, BVH_TO_DEF_AIST } from './retarget_hybrid.js?v=18';
+import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET, BVH_TO_DEF_OPENPOSE, BVH_TO_DEF_BANDAI, BVH_TO_DEF_SMPL } from './retarget_hybrid.js?v=18';
 
 // =========================================================================
 // Global state
@@ -41,7 +41,7 @@ const skeletons = {
     mixamo:   { group: null, bones: null, labels: [], vizMeshes: [], color: 0xffaa44, xOffset:  0.0, rootBone: null, bvhResult: null, wrapper: null },
     mocapnet: { group: null, bones: null, labels: [], vizMeshes: [], color: 0x4488ff, xOffset:  1.5, rootBone: null, bvhResult: null, wrapper: null },
     bandai:   { group: null, bones: null, labels: [], vizMeshes: [], color: 0xbb44ff, xOffset:  3.0, rootBone: null, bvhResult: null, wrapper: null },
-    aist:     { group: null, bones: null, labels: [], vizMeshes: [], color: 0xff8844, xOffset: -3.0, zOffset: -2.0, rootBone: null, bvhResult: null, wrapper: null },
+    smpl:     { group: null, bones: null, labels: [], vizMeshes: [], color: 0xffff00, xOffset: -3.0, zOffset: -2.0, rootBone: null, bvhResult: null, wrapper: null },
     openpose: { group: null, bones: null, labels: [], vizMeshes: [], color: 0x44dddd, xOffset:  4.5, rootBone: null, bvhResult: null, wrapper: null },
 };
 
@@ -254,8 +254,8 @@ function bindToggles() {
     document.getElementById('toggle-bandai').addEventListener('change', (e) => {
         skeletons.bandai.group.visible = e.target.checked;
     });
-    document.getElementById('toggle-aist').addEventListener('change', (e) => {
-        skeletons.aist.group.visible = e.target.checked;
+    document.getElementById('toggle-smpl').addEventListener('change', (e) => {
+        skeletons.smpl.group.visible = e.target.checked;
     });
     document.getElementById('toggle-openpose').addEventListener('change', (e) => {
         skeletons.openpose.group.visible = e.target.checked;
@@ -320,7 +320,7 @@ function createBoneLabels(bones, skelKey) {
     skel.labels.forEach(lbl => lbl.parent && lbl.parent.remove(lbl));
     skel.labels = [];
 
-    const colorMap = { def: '#ff6666', cmu: '#66ff66', mixamo: '#ffaa66', mocapnet: '#6699ff', bandai: '#cc66ff', aist: '#ff9944', openpose: '#44dddd' };
+    const colorMap = { def: '#ff6666', cmu: '#66ff66', mixamo: '#ffaa66', mocapnet: '#6699ff', bandai: '#cc66ff', smpl: '#ffff00', openpose: '#44dddd' };
     const color = colorMap[skelKey] || '#ffffff';
     const showLabels = document.getElementById('toggle-labels').checked;
 
@@ -404,7 +404,7 @@ function placeBvhSkeleton(result, skelKey) {
 
     // Apply frame-0 of the clip to bones for correct centering.
     // This is essential for ALL formats: Bandai needs frame-0 rotations for
-    // standing pose, MocapNET/AIST need frame-0 positions to avoid Z/Y offset.
+    // standing pose, MocapNET/SMPL need frame-0 positions to avoid Z/Y offset.
     if (result.clip && result.clip.tracks.length > 0) {
         const boneMap = {};
         for (const b of bones) boneMap[b.name] = b;
@@ -547,7 +547,7 @@ async function loadAnimationTree() {
 // Auto-load first BVH of each type for rest-pose display
 // =========================================================================
 function autoLoadRestPoseSkeletons() {
-    const FORMAT_TO_SKEL = { CMU: 'cmu', MIXAMO: 'mixamo', MOCAPNET: 'mocapnet', OPENPOSE: 'openpose', BANDAI: 'bandai', AIST: 'aist' };
+    const FORMAT_TO_SKEL = { CMU: 'cmu', MIXAMO: 'mixamo', MOCAPNET: 'mocapnet', OPENPOSE: 'openpose', BANDAI: 'bandai', SMPL: 'smpl' };
     const loaded = new Set();
 
     // Load first animation from each category, detect format, place skeleton
@@ -591,7 +591,7 @@ function loadAndPlayAnimation(url, name, fc, category) {
         const bvhKey = format === 'CMU' ? 'cmu'
                      : format === 'MIXAMO' ? 'mixamo'
                      : format === 'BANDAI' ? 'bandai'
-                     : format === 'AIST' ? 'aist'
+                     : format === 'SMPL' ? 'smpl'
                      : format === 'OPENPOSE' ? 'openpose'
                      : 'mocapnet';
         const bvhSkel = skeletons[bvhKey];

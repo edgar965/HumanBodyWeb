@@ -169,6 +169,10 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     // Garment meshes (MH garments, separate from cloth templates)
     const garmentMeshes = {};
 
+    // Current morph/meta state (from preset) — used for garment fit + WS resync
+    let currentMorphs = {};
+    let currentMeta = {};
+
     // --- Resize ---
     function onResize() {
         const cw = viewport.clientWidth;
@@ -230,6 +234,15 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         ws.onopen = () => {
             wsReady = true;
             wsSend({ type: 'body_type', value: currentBodyType });
+            // Re-sync morphs + meta from current preset
+            if (Object.keys(currentMorphs).length > 0) {
+                wsSend({ type: 'morph_batch', morphs: currentMorphs });
+            }
+            for (const [name, val] of Object.entries(currentMeta)) {
+                if (Math.abs(val) > 0.001) {
+                    wsSend({ type: 'meta', name, value: val });
+                }
+            }
         };
         ws.onclose = () => {
             wsReady = false;
@@ -298,6 +311,8 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             presetData = await presetResp.json();
             if (presetData.body_type) currentBodyType = presetData.body_type;
             currentPresetName = defaultPresetName;
+            currentMorphs = presetData.morphs || {};
+            currentMeta = presetData.meta || {};
         }
     } catch (e) {
         console.warn('[result_character] Failed to fetch preset:', defaultPresetName);
@@ -510,6 +525,10 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
 
             const newBodyType = preset.body_type || 'Female_Caucasian';
 
+            // Update morph/meta state from new preset
+            currentMorphs = preset.morphs || {};
+            currentMeta = preset.meta || {};
+
             if (newBodyType !== currentBodyType) {
                 // Body type changed — full mesh reload
                 await _reloadBodyMesh(newBodyType);
@@ -519,6 +538,23 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
                 removeAllGarments();
                 removeHair();
             }
+
+            // Send morphs + meta to server for the new preset
+            if (Object.keys(currentMorphs).length > 0) {
+                wsSend({ type: 'morph_batch', morphs: currentMorphs });
+            }
+            for (const [name, val] of Object.entries(currentMeta)) {
+                if (Math.abs(val) > 0.001) {
+                    wsSend({ type: 'meta', name, value: val });
+                }
+            }
+
+            // Update morph sliders in UI
+            document.querySelectorAll('#rc-panel input[type="range"][data-morph]').forEach(s => {
+                const v = currentMorphs[s.dataset.morph] || 0;
+                s.value = Math.round(v * 100);
+                if (s.nextElementSibling) s.nextElementSibling.textContent = String(Math.round(v * 100));
+            });
 
             // Load preset's cloth/hair/garments
             if (isSkinned) {
@@ -802,14 +838,20 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
 
                 const slider = document.createElement('input');
                 slider.type = 'range';
-                slider.min = -100; slider.max = 100; slider.value = 0; slider.step = 1;
+                slider.min = -100; slider.max = 100; slider.step = 1;
+                slider.dataset.morph = m.name;
+                // Initialize from current preset morphs
+                const presetVal = currentMorphs[m.name] || 0;
+                slider.value = Math.round(presetVal * 100);
 
                 const valSpan = el('span', 'rc-slider-val');
-                valSpan.textContent = '0';
+                valSpan.textContent = slider.value;
 
                 slider.addEventListener('input', () => {
                     valSpan.textContent = slider.value;
-                    sendMorphThrottled(m.name, parseInt(slider.value) / 100.0);
+                    const v = parseInt(slider.value) / 100.0;
+                    currentMorphs[m.name] = v;
+                    sendMorphThrottled(m.name, v);
                 });
 
                 row.append(label, slider, valSpan);
@@ -1317,6 +1359,13 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
             let qs = `garment_id=${encodeURIComponent(garmentId)}&body_type=${encodeURIComponent(currentBodyType)}`;
             qs += `&offset=${offset}&stiffness=${stiffness}`;
             qs += `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
+            // Include current morph + meta values for correct body-shape fitting
+            for (const [k, v] of Object.entries(currentMorphs)) {
+                if (Math.abs(v) > 0.001) qs += `&morph_${k}=${v}`;
+            }
+            for (const [k, v] of Object.entries(currentMeta)) {
+                if (Math.abs(v) > 0.001) qs += `&meta_${k}=${v}`;
+            }
 
             const resp = await fetch(`/api/character/garment/fit/?${qs}`);
             const data = await resp.json();

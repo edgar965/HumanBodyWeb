@@ -46,7 +46,7 @@
         <div class="panel-label"><i class="fas fa-video"></i> Video + Skeleton Overlay</div>
         <div class="video-overlay-wrapper">
             <video id="resultVideo" preload="auto" muted>
-                <source src="{{ job.video_file.url }}" type="video/mp4">
+                <source src="{% url 'serve_video' job.id %}" type="video/mp4">
             </video>
             <div id="skeletonOverlay" class="skeleton-overlay"></div>
         </div>

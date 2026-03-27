@@ -270,7 +270,7 @@ export async function loadCharacterFromPreset(scene, preset, presetName) {
     if (preset.garments && Array.isArray(preset.garments)) {
         for (const garmentData of preset.garments) {
             try {
-                const garmentMesh = await loadGarmentMesh(garmentData, preset.body_type);
+                const garmentMesh = await loadGarmentMesh(garmentData, preset.body_type, preset);
                 garmentMesh.userData.isGarment = true; // Mark for visibility toggle
                 group.add(garmentMesh); // Add as child of character group
                 console.log('✓ Garment loaded:', garmentData.id);
@@ -338,18 +338,53 @@ async function loadHairFromURL(url) {
  * @param {string} bodyType  Current body type
  * @returns {Promise<THREE.Mesh>}
  */
-async function loadGarmentMesh(garmentData, bodyType) {
+async function loadGarmentMesh(garmentData, bodyType, preset = {}) {
     const { id, offset = 0.006, stiffness = 0.8, color = [0.3, 0.35, 0.5], roughness = 0.8, metalness = 0 } = garmentData;
 
-    const cr = color[0] ?? 0.3;
-    const cg = color[1] ?? 0.35;
-    const cb = color[2] ?? 0.5;
+    let cr = 0.3, cg = 0.35, cb = 0.5;
+    if (Array.isArray(color)) {
+        cr = color[0] ?? 0.3;
+        cg = color[1] ?? 0.35;
+        cb = color[2] ?? 0.5;
+    } else if (typeof color === 'string') {
+        const c = new THREE.Color(color);
+        cr = c.r; cg = c.g; cb = c.b;
+    }
 
-    const qs = `garment_id=${encodeURIComponent(id)}&body_type=${encodeURIComponent(bodyType)}` +
-               `&offset=${offset}&stiffness=${stiffness}` +
-               `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
+    const params = new URLSearchParams();
+    params.set('garment_id', id);
+    params.set('body_type', bodyType || 'Female_Caucasian');
+    params.set('offset', String(offset));
+    params.set('stiffness', String(stiffness));
+    params.set('color_r', cr.toFixed(3));
+    params.set('color_g', cg.toFixed(3));
+    params.set('color_b', cb.toFixed(3));
 
-    const resp = await fetch(`/api/character/garment/fit/?${qs}`);
+    // Pass morph values so garment fits the actual morphed body
+    if (preset.morphs && typeof preset.morphs === 'object') {
+        for (const [key, val] of Object.entries(preset.morphs)) {
+            if (val !== undefined && val !== null) {
+                params.set(`morph_${key}`, String(val));
+            }
+        }
+    }
+    if (preset.user_morphs && typeof preset.user_morphs === 'object') {
+        for (const [key, val] of Object.entries(preset.user_morphs)) {
+            if (val !== undefined && val !== null) {
+                params.set(`morph_${key}`, String(val));
+            }
+        }
+    }
+    // Meta sliders (age, mass, tone, height)
+    const metaObj = preset.meta || {};
+    for (const mk of ['age', 'mass', 'tone', 'height']) {
+        const val = metaObj[mk] ?? preset[`meta_${mk}`];
+        if (val !== undefined && val !== null) {
+            params.set(`meta_${mk}`, String(val));
+        }
+    }
+
+    const resp = await fetch(`/api/character/garment/fit/?${params.toString()}`);
     if (!resp.ok) throw new Error(`Garment fit API error: ${resp.status}`);
     const data = await resp.json();
     if (data.error) throw new Error(data.error);

@@ -321,6 +321,24 @@ class AppSettings(models.Model):
         help_text="Default lighting/camera preset for Theatre page",
     )
 
+    # --- Theatre Video Export ---
+    theatre_video_format = models.CharField(
+        max_length=10, default='mp4',
+        help_text="Video export format: mp4 or webm",
+    )
+    theatre_video_resolution = models.CharField(
+        max_length=10, default='1080p',
+        help_text="Video export resolution: 720p, 1080p, 1440p, 4k",
+    )
+    theatre_video_fps = models.IntegerField(
+        default=30,
+        help_text="Video export frames per second: 24, 30, 60",
+    )
+    theatre_video_quality = models.CharField(
+        max_length=10, default='high',
+        help_text="Video export quality: low, medium, high, ultra",
+    )
+
     # --- 3D Video Output ---
     video_output_dir = models.CharField(
         max_length=500, default=r'A:\3DTools\HumanBodyWeb\media\output', blank=True,

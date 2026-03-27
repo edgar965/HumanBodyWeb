@@ -89,6 +89,70 @@
         </div>
     </div>
 
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-file-video"></i> Video Export</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+            Einstellungen für den Video-Export aus der Theatre-Seite.
+        </p>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Format</strong>
+                <small>MP4 benötigt serverseitige Konvertierung (ffmpeg).</small>
+            </div>
+            <div class="settings-input">
+                <select name="theatre_video_format" class="settings-select">
+                    <option value="mp4" {% if settings.theatre_video_format == 'mp4' %}selected{% endif %}>MP4 (H.264)</option>
+                    <option value="webm" {% if settings.theatre_video_format == 'webm' %}selected{% endif %}>WebM (VP9)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Auflösung</strong>
+                <small>Höhere Auflösungen benötigen mehr GPU-Speicher.</small>
+            </div>
+            <div class="settings-input">
+                <select name="theatre_video_resolution" class="settings-select">
+                    <option value="720p" {% if settings.theatre_video_resolution == '720p' %}selected{% endif %}>720p (1280 x 720)</option>
+                    <option value="1080p" {% if settings.theatre_video_resolution == '1080p' %}selected{% endif %}>1080p (1920 x 1080)</option>
+                    <option value="1440p" {% if settings.theatre_video_resolution == '1440p' %}selected{% endif %}>1440p (2560 x 1440)</option>
+                    <option value="4k" {% if settings.theatre_video_resolution == '4k' %}selected{% endif %}>4K (3840 x 2160)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>FPS</strong>
+                <small>Bilder pro Sekunde.</small>
+            </div>
+            <div class="settings-input">
+                <select name="theatre_video_fps" class="settings-select">
+                    <option value="24" {% if settings.theatre_video_fps == 24 %}selected{% endif %}>24 fps (Film)</option>
+                    <option value="30" {% if settings.theatre_video_fps == 30 %}selected{% endif %}>30 fps (Standard)</option>
+                    <option value="60" {% if settings.theatre_video_fps == 60 %}selected{% endif %}>60 fps (Smooth)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Qualität</strong>
+                <small>Bitrate für das aufgenommene Video.</small>
+            </div>
+            <div class="settings-input">
+                <select name="theatre_video_quality" class="settings-select">
+                    <option value="low" {% if settings.theatre_video_quality == 'low' %}selected{% endif %}>Niedrig (2 Mbps)</option>
+                    <option value="medium" {% if settings.theatre_video_quality == 'medium' %}selected{% endif %}>Mittel (5 Mbps)</option>
+                    <option value="high" {% if settings.theatre_video_quality == 'high' %}selected{% endif %}>Hoch (8 Mbps)</option>
+                    <option value="ultra" {% if settings.theatre_video_quality == 'ultra' %}selected{% endif %}>Ultra (15 Mbps)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
     <div class="settings-actions">
         <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Speichern

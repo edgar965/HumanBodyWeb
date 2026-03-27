@@ -29,7 +29,7 @@
             <td>{{ job.updated_at|date:"d.m.Y H:i" }}</td>
             <td>
                 <button class="btn btn-sm btn-secondary btn-video"
-                        onclick="showVideo('{{ job.video_file.url }}', '{{ job.name }}')">
+                        onclick="showVideo('{% url 'serve_video' job.id %}', '{{ job.name }}')">
                     <i class="fas fa-play"></i> Video
                 </button>
             </td>
