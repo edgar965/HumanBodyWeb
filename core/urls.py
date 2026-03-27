@@ -94,6 +94,16 @@ urlpatterns = [
     path('api/character/cloth/presets/save/', character_api.cloth_preset_save, name='cloth_preset_save'),
     path('api/character/cloth/presets/<str:category>/<str:name>/', character_api.cloth_preset_detail, name='cloth_preset_detail'),
 
+    # Vertex Editor
+    path('api/character/vertex-edit/smooth/', character_api.vertex_edit_smooth, name='vertex_edit_smooth'),
+    path('api/character/vertex-edit/push-outside/', character_api.vertex_edit_push_outside, name='vertex_edit_push_outside'),
+
+    # Pattern Editor
+    path('api/character/pattern/generate/', character_api.pattern_generate, name='pattern_generate'),
+    path('api/character/pattern/save/', character_api.pattern_save, name='pattern_save'),
+    path('api/character/pattern/specification/', character_api.pattern_specification, name='pattern_specification'),
+    path('api/character/pattern/region/generate/', character_api.pattern_region_generate, name='pattern_region_generate'),
+
     # Hair
     path('api/character/hairstyles/', character_api.character_hairstyles, name='character_hairstyles'),
     path('api/character/hairstyle/<str:name>/', character_api.character_hairstyle_glb, name='character_hairstyle_glb'),

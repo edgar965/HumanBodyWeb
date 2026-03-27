@@ -23,7 +23,12 @@ from humanbody_core import MorphData, CharacterState, CharacterDefaults, MeshDat
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
 from humanbody_core.cloth import (generate_cloth, TEMPLATE_TYPES,
                                   PRIMITIVE_TYPES, BUILDER_REGIONS,
-                                  CLOTH_REGIONS, CLOTH_COLORS)
+                                  CLOTH_REGIONS, CLOTH_COLORS,
+                                  generate_builder_custom,
+                                  select_builder_faces,
+                                  generate_from_pattern,
+                                  _push_outside_body,
+                                  _laplacian_smooth)
 
 logger = logging.getLogger(__name__)
 
@@ -1216,6 +1221,346 @@ def cloth_preset_detail(request, category, name):
     with open(fpath, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return JsonResponse(data)
+
+
+# =========================================================================
+# Body State Builder (shared by Pattern Editor, Cloth Builder, etc.)
+# =========================================================================
+
+def _build_body_state(request):
+    """Build CharacterState from query params, return (state, gender, vertices, faces)."""
+    body_type = request.GET.get('body_type', 'Female_Caucasian')
+    gender = _gender_from_body_type(body_type)
+
+    md = _get_morph_data()
+    cd = _get_char_defaults()
+
+    state = CharacterState(md, cd)
+    state.set_body_type(body_type)
+
+    for key, val in request.GET.items():
+        if key.startswith('morph_'):
+            morph_name = key[len('morph_'):]
+            try:
+                state.set_morph(morph_name, float(val))
+            except ValueError:
+                pass
+        elif key.startswith('meta_'):
+            meta_name = key[len('meta_'):]
+            try:
+                state.set_meta(meta_name, float(val))
+            except (ValueError, AttributeError):
+                pass
+
+    vertices = state.compute()
+    mesh = _get_mesh_data(gender)
+    faces = mesh.faces if (mesh.faces is not None and mesh.faces.ndim == 2) else None
+    return state, gender, vertices, faces
+
+
+# =========================================================================
+# Pattern Editor API
+# =========================================================================
+
+@csrf_exempt
+@require_POST
+def pattern_generate(request):
+    """Generate 3D cloth mesh from a 2D Bezier pattern.
+
+    POST body (JSON): {pattern: {panels, stitches}}
+    Query params: body_type, morph_* for body state.
+    """
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+
+    pattern = body.get('pattern')
+    if not pattern or not pattern.get('panels'):
+        return JsonResponse({'error': 'Pattern with panels is required'}, status=400)
+
+    wrap = body.get('wrap', False)
+    offset = float(body.get('offset', 0.006))
+    stiffness = float(body.get('stiffness', 0.5))
+
+    state, gender, vertices, faces = _build_body_state(request)
+    if vertices is None:
+        return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
+
+    body_verts = np.asarray(vertices, dtype=np.float64)
+    body_faces = faces
+
+    result = generate_from_pattern(pattern, body_verts, body_faces=body_faces,
+                                   wrap=wrap, offset=offset, stiffness=stiffness)
+    if result is None:
+        return JsonResponse({'error': 'Could not generate mesh from pattern'}, status=400)
+
+    # Push cloth outside subdivided body to prevent skin-through
+    cc = _get_cc_subdivider(gender)
+    if cc is not None:
+        sub_verts = cc.subdivide(body_verts)
+        cloth_v = _push_outside_body(
+            result['vertices'].astype(np.float64),
+            sub_verts,
+            min_dist=offset,
+        )
+        result['vertices'] = cloth_v.astype(np.float32)
+
+    response_data = {
+        'vertex_count': int(result['vertices'].shape[0]),
+        'vertices': base64.b64encode(
+            result['vertices'].tobytes()).decode('ascii'),
+        'face_count': int(result['faces'].shape[0]),
+        'faces': base64.b64encode(
+            result['faces'].ravel().astype(np.uint32).tobytes()).decode('ascii'),
+        'normals': base64.b64encode(
+            result['normals'].tobytes()).decode('ascii'),
+        'color': list(result['color']),
+    }
+
+    # Add skin weights
+    skin_arrays = _get_base_skin_arrays(gender)
+    if skin_arrays is not None:
+        from scipy.spatial import cKDTree
+        body_si, body_sw = skin_arrays
+        tree = cKDTree(vertices)
+        cloth_verts = result['vertices']
+        _, nearest = tree.query(cloth_verts)
+        cloth_si = body_si[nearest]
+        cloth_sw = body_sw[nearest]
+        response_data['skin_indices'] = base64.b64encode(
+            cloth_si.tobytes()).decode('ascii')
+        response_data['skin_weights'] = base64.b64encode(
+            cloth_sw.tobytes()).decode('ascii')
+
+    return JsonResponse(response_data)
+
+
+@csrf_exempt
+@require_POST
+def pattern_save(request):
+    """Generate mesh from pattern and save to garment library.
+
+    POST body (JSON): {pattern, name, category, color, roughness, metalness}
+    Query params: body_type, morph_* for body state.
+    """
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+
+    name = body.get('name', '').strip()
+    if not name:
+        return JsonResponse({'error': 'Name is required'}, status=400)
+    if '/' in name or '\\' in name or '..' in name:
+        return JsonResponse({'error': 'Invalid name'}, status=400)
+
+    pattern = body.get('pattern')
+    if not pattern or not pattern.get('panels'):
+        return JsonResponse({'error': 'Pattern with panels is required'}, status=400)
+
+    category = body.get('category', 'custom').lower()
+    color = body.get('color', [0.25, 0.30, 0.45])
+    roughness = float(body.get('roughness', 0.8))
+    metalness = float(body.get('metalness', 0.0))
+    wrap = body.get('wrap', False)
+    wrap_offset = float(body.get('offset', 0.006))
+    wrap_stiffness = float(body.get('stiffness', 0.5))
+
+    state, gender, vertices, faces = _build_body_state(request)
+    if vertices is None:
+        return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
+
+    body_verts = np.asarray(vertices, dtype=np.float64)
+    body_faces = faces
+
+    result = generate_from_pattern(pattern, body_verts, body_faces=body_faces,
+                                   wrap=wrap, offset=wrap_offset,
+                                   stiffness=wrap_stiffness)
+    if result is None:
+        return JsonResponse({'error': 'Could not generate mesh from pattern'}, status=400)
+
+    # Push cloth outside subdivided body to prevent skin-through
+    cc = _get_cc_subdivider(gender)
+    if cc is not None:
+        sub_verts = cc.subdivide(body_verts)
+        cloth_v = _push_outside_body(
+            result['vertices'].astype(np.float64),
+            sub_verts,
+            min_dist=wrap_offset,
+        )
+        result['vertices'] = cloth_v.astype(np.float32)
+
+    # Save to library directory
+    lib_dir = str(settings.HUMANBODY_GARMENT_LIBRARY_DIR)
+    garment_dir = os.path.join(lib_dir, category, name)
+    os.makedirs(garment_dir, exist_ok=True)
+
+    # Write OBJ
+    obj_path = os.path.join(garment_dir, 'garment.obj')
+    verts = result['vertices']
+    tris = result['faces']
+    with open(obj_path, 'w', encoding='utf-8') as f:
+        f.write(f"# Pattern Editor export: {name}\n")
+        for v in verts:
+            f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
+        for tri in tris:
+            f.write(f"f {tri[0]+1} {tri[1]+1} {tri[2]+1}\n")
+
+    # Write specification.json (pattern data for re-editing)
+    spec_path = os.path.join(garment_dir, 'specification.json')
+    with open(spec_path, 'w', encoding='utf-8') as f:
+        json.dump(pattern, f, indent=2, ensure_ascii=False)
+
+    # Write garment.json metadata
+    meta = {
+        'name': name,
+        'category': category,
+        'tags': [],
+        'author': 'Pattern Editor',
+        'source': 'pattern-editor',
+        'mesh_file': 'garment.obj',
+        'default_params': {
+            'offset': 0.006,
+            'stiffness': 0.5,
+        },
+        'color': list(color),
+        'roughness': roughness,
+        'metalness': metalness,
+    }
+    json_path = os.path.join(garment_dir, 'garment.json')
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, indent=2, ensure_ascii=False)
+
+    garment_id = f"{category}/{name}"
+    logger.info("Saved pattern garment to library: %s (%d verts, %d tris)",
+                garment_id, len(verts), len(tris))
+
+    return JsonResponse({'ok': True, 'garment_id': garment_id})
+
+
+@require_GET
+def pattern_specification(request):
+    """Return the specification.json (2D pattern data) for a garment.
+
+    Query params: garment_id (e.g. 'custom/my_pattern')
+    Returns the pattern JSON or 404 if not found.
+    """
+    garment_id = request.GET.get('garment_id', '')
+    if not garment_id:
+        return JsonResponse({'error': 'garment_id required'}, status=400)
+
+    # Sanitize path
+    if '..' in garment_id:
+        return JsonResponse({'error': 'Invalid garment_id'}, status=400)
+
+    lib_dir = str(settings.HUMANBODY_GARMENT_LIBRARY_DIR)
+    spec_path = os.path.join(lib_dir, garment_id, 'specification.json')
+
+    if not os.path.isfile(spec_path):
+        return JsonResponse({'error': 'No specification found'}, status=404)
+
+    try:
+        with open(spec_path, 'r', encoding='utf-8') as f:
+            spec = json.load(f)
+        return JsonResponse({'ok': True, 'pattern': spec})
+    except (json.JSONDecodeError, IOError) as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_GET
+def pattern_region_generate(request):
+    """Generate a cloth mesh from body Z-range region selection.
+
+    Query params:
+        body_type, morph_*, meta_* — body state
+        z_min, z_max — height range in meters (0-1.80)
+        include_arms — '1' or '0'
+        grow — integer grow iterations (0-5)
+        looseness — 0.0-1.0
+        category — optional category hint
+    """
+    z_min = float(request.GET.get('z_min', 0.0))
+    z_max = float(request.GET.get('z_max', 1.0))
+    include_arms = request.GET.get('include_arms', '0') == '1'
+    grow = int(request.GET.get('grow', 2))
+    looseness = float(request.GET.get('looseness', 0.3))
+    category = request.GET.get('category', None)
+
+    state, gender, vertices, faces = _build_body_state(request)
+    if vertices is None:
+        return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
+
+    body_verts = np.asarray(vertices, dtype=np.float64)
+
+    # Need face topology for builder
+    if faces is None:
+        mesh = _get_mesh_data(gender)
+        if mesh.faces is not None and mesh.faces.ndim == 2:
+            faces = mesh.faces
+    if faces is None:
+        return JsonResponse({'error': 'No face topology available'}, status=500)
+
+    # Use CC-subdivided body for cloth generation so cloth resolution
+    # matches the displayed mesh (70k verts), preventing skin-through.
+    cc = _get_cc_subdivider(gender)
+    if cc is not None:
+        sub_verts = cc.subdivide(body_verts).astype(np.float64)
+        sub_faces = cc._sub_quads  # subdivided quad faces
+        result = generate_builder_custom(
+            sub_verts, sub_faces, z_min, z_max,
+            include_arms=include_arms, looseness=looseness,
+            grow=grow, category=category,
+        )
+    else:
+        sub_verts = body_verts
+        result = generate_builder_custom(
+            body_verts, faces, z_min, z_max,
+            include_arms=include_arms, looseness=looseness,
+            grow=grow, category=category,
+        )
+    if result is None:
+        return JsonResponse({'error': 'No body faces in region'}, status=400)
+
+    # Extra push_outside to fix remaining skin-through in convex areas.
+    # Use a slightly larger min_dist than the normal offset to catch
+    # vertices pulled inside by laplacian smoothing on convex peaks.
+    push_body = sub_verts if cc is not None else body_verts
+    offset_dist = 0.006 + looseness * 0.010
+    cloth_v = _push_outside_body(
+        result['vertices'].astype(np.float64),
+        push_body,
+        min_dist=offset_dist,
+    )
+    result['vertices'] = cloth_v.astype(np.float32)
+
+    response_data = {
+        'vertex_count': int(result['vertices'].shape[0]),
+        'vertices': base64.b64encode(
+            result['vertices'].tobytes()).decode('ascii'),
+        'face_count': int(result['faces'].shape[0]),
+        'faces': base64.b64encode(
+            result['faces'].ravel().astype(np.uint32).tobytes()).decode('ascii'),
+        'normals': base64.b64encode(
+            result['normals'].tobytes()).decode('ascii'),
+        'color': list(result['color']),
+    }
+
+    skin_arrays = _get_base_skin_arrays(gender)
+    if skin_arrays is not None:
+        from scipy.spatial import cKDTree
+        body_si, body_sw = skin_arrays
+        tree = cKDTree(vertices)
+        cloth_verts = result['vertices']
+        _, nearest = tree.query(cloth_verts)
+        cloth_si = body_si[nearest]
+        cloth_sw = body_sw[nearest]
+        response_data['skin_indices'] = base64.b64encode(
+            cloth_si.tobytes()).decode('ascii')
+        response_data['skin_weights'] = base64.b64encode(
+            cloth_sw.tobytes()).decode('ascii')
+
+    return JsonResponse(response_data)
 
 
 @require_GET
@@ -3147,3 +3492,101 @@ def smpl_garment_thumbnail(request, garment_path):
 
     from django.http import HttpResponse
     return HttpResponse(thumb_data, content_type='image/png')
+
+
+# =========================================================================
+# Vertex Editor API
+# =========================================================================
+
+@csrf_exempt
+@require_POST
+def vertex_edit_smooth(request):
+    """Laplacian smooth on selected vertices.
+
+    POST body (JSON): {vertices (base64 Float32), faces (base64 Uint32),
+                       selected (list of int), iterations, factor}
+    Returns: {vertices (base64 Float32)} with only selected verts updated.
+    """
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+
+    verts_b64 = body.get('vertices')
+    faces_b64 = body.get('faces')
+    selected = body.get('selected', [])
+    iterations = int(body.get('iterations', 3))
+    factor = float(body.get('factor', 0.3))
+
+    if not verts_b64 or not faces_b64:
+        return JsonResponse({'error': 'vertices and faces are required'}, status=400)
+
+    verts = np.frombuffer(base64.b64decode(verts_b64), dtype=np.float32).copy()
+    verts = verts.reshape(-1, 3).astype(np.float64)
+    faces_flat = np.frombuffer(base64.b64decode(faces_b64), dtype=np.uint32)
+    faces = faces_flat.reshape(-1, 3)
+
+    selected_set = set(selected)
+
+    # Smooth all vertices, then only apply changes for selected
+    smoothed = _laplacian_smooth(verts, faces, iterations=iterations, factor=factor)
+
+    result = verts.copy()
+    for idx in selected_set:
+        if 0 <= idx < len(result):
+            result[idx] = smoothed[idx]
+
+    result_f32 = result.astype(np.float32)
+    return JsonResponse({
+        'vertices': base64.b64encode(result_f32.tobytes()).decode('ascii'),
+    })
+
+
+@csrf_exempt
+@require_POST
+def vertex_edit_push_outside(request):
+    """Push selected cloth vertices outside the body.
+
+    POST body (JSON): {vertices (base64 Float32), selected (list of int), min_dist}
+    Query params: body_type, morph_* for body state.
+    Returns: {vertices (base64 Float32)} with only selected verts updated.
+    """
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+
+    verts_b64 = body.get('vertices')
+    selected = body.get('selected', [])
+    min_dist = float(body.get('min_dist', 0.006))
+
+    if not verts_b64:
+        return JsonResponse({'error': 'vertices is required'}, status=400)
+
+    cloth_verts = np.frombuffer(base64.b64decode(verts_b64), dtype=np.float32).copy()
+    cloth_verts = cloth_verts.reshape(-1, 3).astype(np.float64)
+
+    state, gender, vertices, faces = _build_body_state(request)
+    if vertices is None:
+        return JsonResponse({'error': 'Failed to compute body mesh'}, status=500)
+
+    body_verts = np.asarray(vertices, dtype=np.float64)
+
+    # Use subdivided body for higher resolution collision
+    cc = _get_cc_subdivider(gender)
+    if cc is not None:
+        body_verts = cc.subdivide(body_verts)
+
+    pushed = _push_outside_body(cloth_verts, body_verts, min_dist=min_dist)
+
+    # Only apply changes for selected vertices
+    selected_set = set(selected)
+    result = cloth_verts.copy()
+    for idx in selected_set:
+        if 0 <= idx < len(result):
+            result[idx] = pushed[idx]
+
+    result_f32 = result.astype(np.float32)
+    return JsonResponse({
+        'vertices': base64.b64encode(result_f32.tobytes()).decode('ascii'),
+    })
