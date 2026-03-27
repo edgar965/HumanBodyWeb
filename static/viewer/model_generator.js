@@ -232,6 +232,15 @@ export function generateModelMesh(skelData, swData, config) {
         boneIndexMap[swData.bone_names[i]] = i;
     }
 
+    // Build children map to find each bone's TAIL position
+    const childrenMap = {};  // boneName -> [childNames]
+    for (const b of skelData.bones) {
+        if (b.parent) {
+            if (!childrenMap[b.parent]) childrenMap[b.parent] = [];
+            childrenMap[b.parent].push(b.name);
+        }
+    }
+
     // Collect all geometry pieces
     const geoChunks = [];   // { geometry, boneIndex, color }
     const skelByName = {};
@@ -251,9 +260,22 @@ export function generateModelMesh(skelData, swData, config) {
         const radius = part.radius || config.default_radius || 0.03;
         const color = part.color || config.default_color || '#4488cc';
 
-        // Bone length for the shape
-        let boneLen = wt.length;
-        if (boneLen < 0.001) boneLen = LEAF_LENGTHS[boneName] || 0.03;
+        // Bone HEAD = wt.worldPos
+        // Bone TAIL = first child's worldPos, or HEAD + direction * leaf_length
+        const headPos = wt.worldPos;
+        let tailPos;
+        const children = childrenMap[boneName];
+        if (children && children.length > 0 && worldTransforms.has(children[0])) {
+            tailPos = worldTransforms.get(children[0]).worldPos;
+        } else {
+            // Leaf bone: extend along bone's local Y axis (converted to world)
+            const leafLen = LEAF_LENGTHS[boneName] || 0.03;
+            const dir = new THREE.Vector3(0, 1, 0).applyQuaternion(wt.worldQuat);
+            tailPos = headPos.clone().add(dir.multiplyScalar(leafLen));
+        }
+
+        const boneLen = headPos.distanceTo(tailPos);
+        if (boneLen < 0.001) continue;
 
         // Create shape geometry (centered at origin, along Y axis)
         let shapeGeo;
@@ -283,33 +305,18 @@ export function generateModelMesh(skelData, swData, config) {
                 break;
         }
 
-        // Position the shape: The bone's world position is the TAIL (end) of the bone.
-        // The shape should span from parent to bone. We place it at the midpoint
-        // of the bone vector (parent→bone), oriented along that vector.
-        //
-        // For the cylinder, we need to:
-        // 1. Find the parent world position
-        // 2. Compute midpoint between parent and bone
-        // 3. Orient cylinder to point from parent to bone
+        // Position shape from bone HEAD to bone TAIL (midpoint, oriented along direction)
+        const midpoint = new THREE.Vector3().lerpVectors(headPos, tailPos, 0.5);
+        const direction = new THREE.Vector3().subVectors(tailPos, headPos).normalize();
 
-        // Skip root bones with no parent (would create cylinder from origin)
-        if (!data.parent || !worldTransforms.has(data.parent)) continue;
-        const parentWorldPos = worldTransforms.get(data.parent).worldPos;
-
-        const midpoint = new THREE.Vector3().lerpVectors(parentWorldPos, wt.worldPos, 0.5);
-        const direction = new THREE.Vector3().subVectors(wt.worldPos, parentWorldPos).normalize();
-
-        // CylinderGeometry is Y-aligned by default. Compute rotation from Y-up to direction.
         const yAxis = new THREE.Vector3(0, 1, 0);
         const shapeQuat = new THREE.Quaternion();
         if (Math.abs(direction.dot(yAxis)) < 0.9999) {
             shapeQuat.setFromUnitVectors(yAxis, direction);
         } else if (direction.y < 0) {
-            // Flip 180 degrees
             shapeQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
         }
 
-        // Apply transform to geometry
         const mat4 = new THREE.Matrix4();
         mat4.compose(midpoint, shapeQuat, new THREE.Vector3(1, 1, 1));
         shapeGeo.applyMatrix4(mat4);

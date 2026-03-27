@@ -2823,15 +2823,18 @@ function loadBVHAnimation(url, name, fc) {
         const bvhBones = result.skeleton.bones;
         if (bvhBones.length === 0) return;
 
+        // Try to set up skinned animation
+        let skel = null;
         if (defSkeletonData && skinWeightData) {
-            // Convert to SkinnedMesh if needed
             if (inst) {
                 if (!inst.isSkinned) convertInstToSkinned(inst);
             } else {
                 if (!isSkinned) convertToDefSkinnedMesh();
             }
+            skel = inst ? inst.defSkeleton : defSkeleton;
+        }
 
-            const skel = inst ? inst.defSkeleton : defSkeleton;
+        if (skel) {
             const bMesh = inst ? inst.bodyMesh : bodyMesh;
             _animatedCharId = inst ? inst.id : null;
 
@@ -2851,7 +2854,7 @@ function loadBVHAnimation(url, name, fc) {
             currentAction.play();
             playing = true;
         } else {
-            // Fallback: skeleton-only preview (no skin weights)
+            // Fallback: skeleton-only preview (no skin weights or un-skinnable model)
             const rootBone = bvhBones[0];
             rootBone.updateWorldMatrix(true, true);
             const skelBox = new THREE.Box3();
