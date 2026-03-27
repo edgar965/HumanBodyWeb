@@ -3010,7 +3010,11 @@ async function populateProperties(charId) {
     syncHairSelect(inst);
 
     _updatePropContext();
-    switchTab('eigenschaften');
+    // Don't switch away from Modell tab (model generator needs to stay visible)
+    const activeTab = document.querySelector('.panel-tab.active');
+    if (!activeTab || activeTab.dataset.tab !== 'modell') {
+        switchTab('eigenschaften');
+    }
 }
 
 function clearProperties() {
