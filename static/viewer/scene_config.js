@@ -3861,6 +3861,27 @@ function _clearBoneHighlightCache() {
 
 /** Handle Ctrl+Click on a generated model bone. */
 function _doBoneClick(boneName, inst) {
+    // Ensure model generator is initialized from this instance's config
+    if (!_mgConfig && inst.generatedConfig) {
+        _mgConfig = JSON.parse(JSON.stringify(inst.generatedConfig));
+        _mgSkeletonType = inst.generatedConfig.skeleton_type || 'rig';
+        _mgCharacterId = inst.id;
+        if (!_mgInitialized) {
+            _bindModelGeneratorUI();
+            _mgInitialized = true;
+        }
+        const skelSelect = document.getElementById('mg-skeleton-type');
+        if (skelSelect) skelSelect.value = _mgSkeletonType;
+        _populateBoneTree();
+        _syncMGGlobalUI();
+    }
+    // Link model generator to this character if not linked
+    if (!_mgCharacterId && inst.generatedConfig) {
+        _mgConfig = JSON.parse(JSON.stringify(inst.generatedConfig));
+        _mgCharacterId = inst.id;
+        _populateBoneTree();
+    }
+
     if (_selectedBoneName === boneName) {
         // Toggle off
         _clearBoneSelection();
@@ -5695,6 +5716,7 @@ function _mgGenerateCharacter() {
     // Create CharacterInstance
     const id = generateCharacterId();
     const configCopy = JSON.parse(JSON.stringify(_mgConfig));
+    configCopy.type = 'generated_model';
     configCopy.skeleton_type = _mgSkeletonType;
     const inst = new CharacterInstance(id, configCopy);
     inst.presetName = _mgConfig.name || 'Generiertes Modell';
