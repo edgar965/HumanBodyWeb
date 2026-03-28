@@ -1060,6 +1060,43 @@ def character_bvh_file_cat(request, category, name):
     )
 
 
+@csrf_exempt
+@require_POST
+def animation_save(request):
+    """Save a BVH animation file to its category directory."""
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    category = body.get('category', '').strip()
+    name = body.get('name', '').strip()
+    bvh_content = body.get('bvh_content', '')
+
+    if not category or not name or not bvh_content:
+        return JsonResponse({'error': 'category, name, and bvh_content required'}, status=400)
+
+    # Sanitize name — allow word chars, spaces, hyphens, dots
+    name = re.sub(r'[^\w\s\-.]', '', name).strip()
+    category = re.sub(r'[^\w\s\-.]', '', category).strip()
+    if not name or not category:
+        return JsonResponse({'error': 'Invalid name or category'}, status=400)
+
+    bvh_root = os.path.dirname(str(settings.HUMANBODY_BVH_DIR))
+    target_dir = os.path.normpath(os.path.join(bvh_root, category))
+    target_path = os.path.normpath(os.path.join(target_dir, f"{name}.bvh"))
+
+    # Path traversal check
+    if not target_path.startswith(os.path.normpath(bvh_root)):
+        return JsonResponse({'error': 'Invalid path'}, status=400)
+
+    os.makedirs(target_dir, exist_ok=True)
+    with open(target_path, 'w', encoding='utf-8') as f:
+        f.write(bvh_content)
+
+    return JsonResponse({'ok': True, 'path': f'{category}/{name}.bvh'})
+
+
 # =========================================================================
 # Cloth API
 # =========================================================================

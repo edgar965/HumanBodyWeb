@@ -801,6 +801,14 @@
                 </div>
             </div>
             <div class="menu">
+                <div class="menu-title">Animation</div>
+                <div class="menu-dropdown">
+                    <div class="menu-item" data-action="anim-ground-fix">Animation immer auf Bodenniveau</div>
+                    <div class="menu-sep"></div>
+                    <div class="menu-item" data-action="anim-save">Speichern...</div>
+                </div>
+            </div>
+            <div class="menu">
                 <div class="menu-title">Werkzeuge</div>
                 <div class="menu-dropdown">
                     <div class="menu-item" data-action="model-generator">Modell Erzeugen...</div>
@@ -1403,8 +1411,14 @@
                                 <option value="cone">Kegel/Pyramide</option>
                                 <option value="capsule">Kapsel</option>
                                 <option value="oval">Oval</option>
+                                <option value="double_oval">Doppel-Oval</option>
                                 <option value="diamond">Diamant</option>
                             </select>
+                        </div>
+                        <div class="slider-row" id="mg-overlap-row" style="display:none;">
+                            <label>Überlappung</label>
+                            <input type="range" id="mg-bone-overlap" min="0" max="1" step="0.05" value="0.5">
+                            <span id="mg-bone-overlap-val" class="slider-val">0.50</span>
                         </div>
                         <div class="slider-row">
                             <label>Radius</label>
@@ -1414,6 +1428,55 @@
                         <div class="slider-row">
                             <label>Farbe</label>
                             <input type="color" id="mg-bone-color" value="#4488cc" style="width:40px;height:24px;border:none;background:none;cursor:pointer;">
+                        </div>
+                        <div style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);font-weight:600;">Enden-Versatz</div>
+                        <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:2px;">Kopf (Head)</div>
+                        <div class="slider-row">
+                            <label>X</label>
+                            <input type="range" id="mg-head-off-x" min="-0.15" max="0.15" step="0.001" value="0">
+                            <span id="mg-head-off-x-val" class="slider-val">0.000</span>
+                        </div>
+                        <div class="slider-row">
+                            <label>Y</label>
+                            <input type="range" id="mg-head-off-y" min="-0.15" max="0.15" step="0.001" value="0">
+                            <span id="mg-head-off-y-val" class="slider-val">0.000</span>
+                        </div>
+                        <div class="slider-row">
+                            <label>Z</label>
+                            <input type="range" id="mg-head-off-z" min="-0.15" max="0.15" step="0.001" value="0">
+                            <span id="mg-head-off-z-val" class="slider-val">0.000</span>
+                        </div>
+                        <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:2px;">Ende (Tail)</div>
+                        <div class="slider-row">
+                            <label>X</label>
+                            <input type="range" id="mg-tail-off-x" min="-0.15" max="0.15" step="0.001" value="0">
+                            <span id="mg-tail-off-x-val" class="slider-val">0.000</span>
+                        </div>
+                        <div class="slider-row">
+                            <label>Y</label>
+                            <input type="range" id="mg-tail-off-y" min="-0.15" max="0.15" step="0.001" value="0">
+                            <span id="mg-tail-off-y-val" class="slider-val">0.000</span>
+                        </div>
+                        <div class="slider-row">
+                            <label>Z</label>
+                            <input type="range" id="mg-tail-off-z" min="-0.15" max="0.15" step="0.001" value="0">
+                            <span id="mg-tail-off-z-val" class="slider-val">0.000</span>
+                        </div>
+                        <div style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);font-weight:600;">Form-Rotation (°)</div>
+                        <div class="slider-row">
+                            <label>X</label>
+                            <input type="range" id="mg-shape-rot-x" min="-180" max="180" step="1" value="0">
+                            <span id="mg-shape-rot-x-val" class="slider-val">0</span>
+                        </div>
+                        <div class="slider-row">
+                            <label>Y</label>
+                            <input type="range" id="mg-shape-rot-y" min="-180" max="180" step="1" value="0">
+                            <span id="mg-shape-rot-y-val" class="slider-val">0</span>
+                        </div>
+                        <div class="slider-row">
+                            <label>Z</label>
+                            <input type="range" id="mg-shape-rot-z" min="-180" max="180" step="1" value="0">
+                            <span id="mg-shape-rot-z-val" class="slider-val">0</span>
                         </div>
                     </div>
                 </div>
@@ -1505,6 +1568,26 @@
         <div class="scene-modal-footer">
             <button data-close>Abbrechen</button>
             <button class="primary" id="load-scene-confirm" disabled>Laden</button>
+        </div>
+    </div>
+</div>
+
+<!-- Save Animation Dialog -->
+<div class="scene-modal-overlay" id="save-anim-dialog">
+    <div class="scene-modal">
+        <div class="scene-modal-header">
+            <h4><i class="fas fa-save"></i> Animation speichern</h4>
+            <button class="scene-modal-close" data-close>&times;</button>
+        </div>
+        <div class="scene-modal-body">
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Kategorie</div>
+            <input class="scene-name-input" id="save-anim-category" type="text" readonly style="opacity:0.6;margin-bottom:8px;">
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Dateiname</div>
+            <input class="scene-name-input" id="save-anim-name" type="text" placeholder="Dateiname..." autocomplete="off">
+        </div>
+        <div class="scene-modal-footer">
+            <button data-close>Abbrechen</button>
+            <button class="primary" id="save-anim-confirm">Speichern</button>
         </div>
     </div>
 </div>

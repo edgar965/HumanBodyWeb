@@ -122,6 +122,9 @@ let _hairStylesData = [];       // Array of { url, label, name }
 let _clothRegionsData = null;   // { templates, builder_regions, primitives }
 let currentAnimName = '';
 let currentAnimDuration = 0;
+let currentAnimUrl = '';              // URL der geladenen BVH
+let currentAnimBvhText = '';          // Roher BVH-Text (original oder modifiziert)
+let currentAnimGroundFixed = false;   // Ob Bodenniveau-Fix angewendet
 
 // =========================================================================
 // Scene Editor State
@@ -836,6 +839,7 @@ function init() {
     bindMenubar();
     initCharacterDialog();
     initSceneDialogs();
+    _initSaveAnimDialog();
     bindKeyboardShortcuts();
     bindCanvasClick();
     initSubMeshInteraction();
@@ -911,7 +915,7 @@ function onResize() {
 
 function animate() {
     requestAnimationFrame(animate);
-    const dt = clock.getDelta();
+    const dt = Math.min(clock.getDelta(), 0.1);
     controls.update();
     if (mixer && playing) mixer.update(dt);
     renderer.render(scene, camera);
@@ -1373,6 +1377,14 @@ function handleMenuAction(action) {
             break;
         case 'reset-camera':
             resetCamera();
+            break;
+
+        // Animation
+        case 'anim-ground-fix':
+            applyGroundLevelFix();
+            break;
+        case 'anim-save':
+            openSaveAnimDialog();
             break;
     }
 }
@@ -2853,15 +2865,18 @@ function _skinifyHairGroup(gltfScene, inst) {
 // Flag to suppress hover handler during garment refit
 let _refitting = false;
 
-function loadBVHAnimation(url, name, fc) {
+function loadBVHAnimation(url, name, fc, rawBvhText = null) {
     stopAnimation(true);
+    currentAnimUrl = url;
+    currentAnimGroundFixed = false;
 
     // Determine target: selected character instance, or legacy bodyMesh
     const inst = _selectedInst();
     const targetMesh = inst ? inst.bodyMesh : bodyMesh;
     if (!targetMesh) return;
 
-    bvhLoader.load(url, (result) => {
+    const handleBvhResult = (result, text) => {
+        currentAnimBvhText = text;
         const bvhBones = result.skeleton.bones;
         if (bvhBones.length === 0) return;
 
@@ -2881,7 +2896,9 @@ function loadBVHAnimation(url, name, fc) {
             _animatedCharId = inst ? inst.id : null;
 
             const format = detectBVHFormat(bvhBones);
+            console.log(`[ANIM] BVH format: ${format}, source clip: ${result.clip.duration.toFixed(2)}s, ${result.clip.tracks.length} tracks`);
             const clip = retargetBVHToDefClip(result, skel, format, { bodyMesh: bMesh });
+            console.log(`[ANIM] Retargeted clip: ${clip.duration.toFixed(2)}s, ${clip.tracks.length} tracks`);
             if (!skeletonHelper) {
                 skeletonHelper = new THREE.SkeletonHelper(skel.rootBone);
                 skeletonHelper.material.depthTest = false;
@@ -2925,7 +2942,24 @@ function loadBVHAnimation(url, name, fc) {
             playing = true;
             _animatedCharId = inst ? inst.id : null;
         }
-    }, undefined, (err) => { console.error('Failed to load BVH:', err); });
+    };
+
+    if (rawBvhText) {
+        const result = bvhLoader.parse(rawBvhText);
+        handleBvhResult(result, rawBvhText);
+    } else {
+        // Use FileLoader (XHR) for reliable large-file loading
+        const fileLoader = new THREE.FileLoader(bvhLoader.manager);
+        fileLoader.setRequestHeader(bvhLoader.requestHeader);
+        fileLoader.setWithCredentials(bvhLoader.withCredentials);
+        // Cache-bust to avoid stale browser cache from previous fetch calls
+        const bustUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+        fileLoader.load(bustUrl, (text) => {
+            console.log(`[ANIM] FileLoader received ${text.length} chars (${(text.length/1024/1024).toFixed(2)} MB)`);
+            const result = bvhLoader.parse(text);
+            handleBvhResult(result, text);
+        }, undefined, (err) => { console.error('Failed to load BVH:', err); });
+    }
 }
 
 function stopAnimation(destroy = false) {
@@ -2954,6 +2988,167 @@ function stopAnimation(destroy = false) {
     }
     _animatedCharId = null;
     playing = false;
+    currentAnimUrl = '';
+    currentAnimBvhText = '';
+    currentAnimGroundFixed = false;
+}
+
+// =========================================================================
+// Animation Ground-Fix & Save
+// =========================================================================
+
+function applyGroundLevelFix() {
+    if (!currentAnimBvhText) {
+        alert('Keine Animation geladen.');
+        return;
+    }
+    if (currentAnimGroundFixed) {
+        alert('Bodenniveau-Fix ist bereits angewendet.');
+        return;
+    }
+
+    const lines = currentAnimBvhText.split('\n');
+
+    // --- Find root bone CHANNELS order to locate Yposition index ---
+    let yPosChannel = -1;
+    let rootChannelCount = 0;
+    let foundRoot = false;
+    for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+        if (trimmed.startsWith('ROOT ')) { foundRoot = true; continue; }
+        if (foundRoot && trimmed.startsWith('CHANNELS')) {
+            const parts = trimmed.split(/\s+/);
+            rootChannelCount = parseInt(parts[1], 10);
+            for (let c = 2; c < parts.length; c++) {
+                if (parts[c] === 'Yposition') { yPosChannel = c - 2; break; }
+            }
+            break;
+        }
+    }
+    if (yPosChannel < 0) {
+        alert('Konnte Yposition-Kanal nicht finden.');
+        return;
+    }
+
+    // --- Find MOTION section ---
+    let motionIdx = -1;
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim() === 'MOTION') { motionIdx = i; break; }
+    }
+    if (motionIdx < 0) return;
+
+    // Skip "Frames:" and "Frame Time:" lines
+    let dataStart = motionIdx + 1;
+    while (dataStart < lines.length && !lines[dataStart].trim().match(/^[\d\-\.]/)) dataStart++;
+
+    // --- Collect all Y values and find minimum ---
+    const frameIndices = [];
+    let minY = Infinity;
+    for (let i = dataStart; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+        if (!trimmed) continue;
+        const vals = trimmed.split(/\s+/);
+        if (vals.length < rootChannelCount) continue;
+        const y = parseFloat(vals[yPosChannel]);
+        if (!isNaN(y)) {
+            frameIndices.push(i);
+            if (y < minY) minY = y;
+        }
+    }
+
+    if (minY >= 0) {
+        alert('Animation ist bereits auf Bodenniveau (min Y = ' + minY.toFixed(2) + ').');
+        return;
+    }
+
+    // --- Apply offset: shift all Y values up by -minY ---
+    const offset = -minY;
+    for (const fi of frameIndices) {
+        const vals = lines[fi].trim().split(/\s+/);
+        vals[yPosChannel] = (parseFloat(vals[yPosChannel]) + offset).toFixed(6);
+        lines[fi] = vals.join(' ');
+    }
+
+    const modifiedBvh = lines.join('\n');
+    currentAnimBvhText = modifiedBvh;
+    currentAnimGroundFixed = true;
+
+    // Reload animation from modified BVH text
+    const blob = new Blob([modifiedBvh], { type: 'text/plain' });
+    const blobUrl = URL.createObjectURL(blob);
+    loadBVHAnimation(blobUrl, currentAnimName, 0, modifiedBvh);
+}
+
+function openSaveAnimDialog() {
+    if (!currentAnimBvhText) {
+        alert('Keine Animation geladen.');
+        return;
+    }
+
+    // Parse category + name from currentAnimUrl
+    // URL format: /api/character/bvh/{category}/{name}/
+    let category = '', baseName = '';
+    const m = currentAnimUrl.match(/\/api\/character\/bvh\/([^/]+)\/([^/]+)\/?/);
+    if (m) {
+        category = decodeURIComponent(m[1]);
+        baseName = decodeURIComponent(m[2]);
+    } else {
+        category = 'Custom';
+        baseName = currentAnimName || 'animation';
+    }
+
+    // Suggest name with _ground suffix if ground-fixed
+    let suggestedName = baseName;
+    if (currentAnimGroundFixed && !baseName.endsWith('_ground')) {
+        suggestedName = baseName + '_ground';
+    }
+
+    document.getElementById('save-anim-category').value = category;
+    document.getElementById('save-anim-name').value = suggestedName;
+
+    const dlg = document.getElementById('save-anim-dialog');
+    dlg.classList.add('visible');
+}
+
+function _initSaveAnimDialog() {
+    const dlg = document.getElementById('save-anim-dialog');
+    if (!dlg) return;
+
+    // Close buttons
+    dlg.querySelectorAll('[data-close]').forEach(btn => {
+        btn.addEventListener('click', () => dlg.classList.remove('visible'));
+    });
+    dlg.addEventListener('click', (e) => {
+        if (e.target === dlg) dlg.classList.remove('visible');
+    });
+
+    // Save confirm
+    document.getElementById('save-anim-confirm')?.addEventListener('click', async () => {
+        const category = document.getElementById('save-anim-category').value.trim();
+        const name = document.getElementById('save-anim-name').value.trim();
+        if (!name) { alert('Bitte Dateiname eingeben.'); return; }
+
+        try {
+            const resp = await fetch('/api/character/animation/save/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+                body: JSON.stringify({ category, name, bvh_content: currentAnimBvhText })
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                dlg.classList.remove('visible');
+                // Update currentAnimUrl to saved location
+                currentAnimUrl = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`;
+                currentAnimName = name;
+                // Refresh animation list
+                loadAnimationUI();
+            } else {
+                alert('Fehler: ' + (data.error || 'Unbekannt'));
+            }
+        } catch (e) {
+            alert('Speichern fehlgeschlagen: ' + e.message);
+        }
+    });
 }
 
 // =========================================================================
@@ -5483,6 +5678,8 @@ function _bindModelGeneratorUI() {
     if (boneShape) boneShape.addEventListener('change', () => {
         if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
         _mgConfig.bone_parts[_mgSelectedBone].shape = boneShape.value;
+        const overlapRow = document.getElementById('mg-overlap-row');
+        if (overlapRow) overlapRow.style.display = boneShape.value === 'double_oval' ? '' : 'none';
         _mgAutoRegenerate();
     });
 
@@ -5504,6 +5701,52 @@ function _bindModelGeneratorUI() {
         _updateBoneTreeItem(_mgSelectedBone);
         _mgAutoRegenerate();
     });
+
+    // Overlap slider (double_oval)
+    const boneOverlap = document.getElementById('mg-bone-overlap');
+    const boneOverlapVal = document.getElementById('mg-bone-overlap-val');
+    if (boneOverlap) boneOverlap.addEventListener('input', () => {
+        const v = parseFloat(boneOverlap.value);
+        if (boneOverlapVal) boneOverlapVal.textContent = v.toFixed(2);
+        if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+        _mgConfig.bone_parts[_mgSelectedBone].overlap = v;
+        _mgAutoRegenerate();
+    });
+
+    // Head/Tail offset sliders
+    for (const end of ['head', 'tail']) {
+        for (const axis of ['x', 'y', 'z']) {
+            const slider = document.getElementById(`mg-${end}-off-${axis}`);
+            const valSpan = document.getElementById(`mg-${end}-off-${axis}-val`);
+            if (!slider) continue;
+            slider.addEventListener('input', () => {
+                const v = parseFloat(slider.value);
+                if (valSpan) valSpan.textContent = v.toFixed(3);
+                if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+                const part = _mgConfig.bone_parts[_mgSelectedBone];
+                const key = end + 'Offset'; // headOffset or tailOffset
+                if (!part[key]) part[key] = { x: 0, y: 0, z: 0 };
+                part[key][axis] = v;
+                _mgAutoRegenerate();
+            });
+        }
+    }
+
+    // Shape rotation sliders (degrees)
+    for (const axis of ['x', 'y', 'z']) {
+        const slider = document.getElementById(`mg-shape-rot-${axis}`);
+        const valSpan = document.getElementById(`mg-shape-rot-${axis}-val`);
+        if (!slider) continue;
+        slider.addEventListener('input', () => {
+            const v = parseFloat(slider.value);
+            if (valSpan) valSpan.textContent = v;
+            if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+            const part = _mgConfig.bone_parts[_mgSelectedBone];
+            if (!part.shapeRotation) part.shapeRotation = { x: 0, y: 0, z: 0 };
+            part.shapeRotation[axis] = v;
+            _mgAutoRegenerate();
+        });
+    }
 
     // Action buttons
     const genBtn = document.getElementById('mg-generate');
@@ -5643,6 +5886,34 @@ function _mgSelectBone(boneName) {
     const colorInput = document.getElementById('mg-bone-color');
     if (colorInput) colorInput.value = part.color || _mgConfig.default_color;
 
+    // Overlap slider — show only for double_oval
+    const overlapRow = document.getElementById('mg-overlap-row');
+    if (overlapRow) overlapRow.style.display = (part.shape === 'double_oval') ? '' : 'none';
+    const overlapSlider = document.getElementById('mg-bone-overlap');
+    const overlapVal = document.getElementById('mg-bone-overlap-val');
+    if (overlapSlider) overlapSlider.value = part.overlap ?? 0.5;
+    if (overlapVal) overlapVal.textContent = (part.overlap ?? 0.5).toFixed(2);
+
+    // Head/Tail offset sliders
+    for (const end of ['head', 'tail']) {
+        const off = part[end + 'Offset'] || { x: 0, y: 0, z: 0 };
+        for (const axis of ['x', 'y', 'z']) {
+            const sl = document.getElementById(`mg-${end}-off-${axis}`);
+            const sp = document.getElementById(`mg-${end}-off-${axis}-val`);
+            if (sl) sl.value = off[axis] || 0;
+            if (sp) sp.textContent = (off[axis] || 0).toFixed(3);
+        }
+    }
+
+    // Shape rotation sliders
+    const rot = part.shapeRotation || { x: 0, y: 0, z: 0 };
+    for (const axis of ['x', 'y', 'z']) {
+        const sl = document.getElementById(`mg-shape-rot-${axis}`);
+        const sp = document.getElementById(`mg-shape-rot-${axis}-val`);
+        if (sl) sl.value = rot[axis] || 0;
+        if (sp) sp.textContent = rot[axis] || 0;
+    }
+
     // Bidirectional sync: show 3D selection overlay
     if (_boneSelectOverlay) {
         _removeBoneOverlay(_boneSelectOverlay);
@@ -5667,10 +5938,23 @@ function _updateBoneTreeItem(boneName) {
 }
 
 let _mgRegenTimer = null;
+let _mgRegenBusy = false;
 function _mgAutoRegenerate() {
     if (!_mgCharacterId) return; // Only auto-regen if character exists
-    clearTimeout(_mgRegenTimer);
-    _mgRegenTimer = setTimeout(() => _mgGenerateCharacter(), 150);
+    if (_mgRegenBusy) {
+        // Already generating — schedule one more after current finishes
+        _mgRegenTimer = true;
+        return;
+    }
+    _mgRegenBusy = true;
+    requestAnimationFrame(() => {
+        _mgGenerateCharacter();
+        _mgRegenBusy = false;
+        if (_mgRegenTimer) {
+            _mgRegenTimer = false;
+            _mgAutoRegenerate();
+        }
+    });
 }
 
 function _mgGeneratePreview() {

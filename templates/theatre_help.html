@@ -4,169 +4,492 @@
 {% block title %}Theatre Help — MocapNET{% endblock %}
 
 {% block content %}
-<div style="max-width: 900px; margin: 0 auto; padding: 20px;">
-    <h1>🎭 Theatre.js — Quick Start Guide</h1>
+<style>
+    .theatre-help { max-width: 960px; margin: 0 auto; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #e0e0e0; background: #0f0f1a; }
+    .theatre-help * { color: inherit; }
+    .theatre-help h1, .theatre-help h2, .theatre-help h3, .theatre-help h4 { color: inherit; }
+    .theatre-help pre { background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto; }
+    .theatre-help pre strong { color: #58a6ff; }
+    .theatre-help code { background: #333; padding: 3px 8px; border-radius: 3px; color: #e0e0e0; }
+    .theatre-help table { background: transparent; border: none; }
+    .theatre-help th { background: #252535 !important; color: #bbb !important; }
+    .theatre-help td { color: #e0e0e0; }
+    .theatre-help a { color: #7c5cbf; }
+    .theatre-help ol, .theatre-help ul, .theatre-help li, .theatre-help p { color: #e0e0e0; }
+</style>
+<div class="theatre-help">
 
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h2>Was ist Theatre.js?</h2>
-        <p>Ein professionelles Tool für 3D-Animation und Motion Design. Perfekt für:</p>
-        <ul>
-            <li>Kamera-Bewegungen (Dolly, Pan, Zoom)</li>
-            <li>Licht-Animation (Spotlights, Farbwechsel)</li>
-            <li>Character-Positionierung</li>
-            <li>Synchronisierte Animationen</li>
-        </ul>
+    <h1 style="border-bottom: 2px solid #7c5cbf; padding-bottom: 10px;">Theatre.js — Vollständige Anleitung</h1>
+
+    <!-- ============================================================ -->
+    <!-- KAMERA -->
+    <!-- ============================================================ -->
+    <h2 id="kamera" style="color: #7c5cbf; margin-top: 40px;">Kamera</h2>
+
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #7c5cbf;">
+        <h3 style="margin-top: 0; color: #bb9af7;">Kamera bewegen (Maus)</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333; width: 45%;"><strong>Rechtsklick + Ziehen</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Kamera verschieben (Pan)</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Linksklick + Ziehen</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Kamera drehen (Orbit)</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Scroll-Rad</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Zoom rein / raus</td>
+            </tr>
+        </table>
     </div>
 
-    <h2>🎬 Die Benutzeroberfläche</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
-        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 6px;">
-            <h3>📋 Outline (links)</h3>
-            <p>Liste aller animierbaren Objekte:</p>
-            <ul style="font-family: monospace; font-size: 0.9em;">
-                <li>Camera</li>
-                <li>Spot Left</li>
-                <li>Spot Right</li>
-                <li>Back Light</li>
-                <li>Character (nach Import)</li>
-            </ul>
-            <p><strong>Tipp:</strong> Klick auf ein Objekt um es auszuwählen</p>
-        </div>
-
-        <div style="border: 1px solid #ddd; padding: 15px; border-radius: 6px;">
-            <h3>⚙️ Details Panel (rechts)</h3>
-            <p>Properties des ausgewählten Objekts:</p>
-            <ul>
-                <li><strong>Position</strong> (x, y, z)</li>
-                <li><strong>Intensity</strong> (Lichter)</li>
-                <li><strong>Color</strong> (RGBA)</li>
-                <li><strong>FOV</strong> (Kamera)</li>
-            </ul>
-            <p><strong>Tipp:</strong> Werte mit Maus ziehen</p>
-        </div>
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #7c5cbf;">
+        <h3 style="margin-top: 0; color: #bb9af7;">Kamera-Presets (Schnellwechsel)</h3>
+        <p>Menü <strong>"Settings"</strong> oben &rarr; Preset auswählen:</p>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="background: #252535;">
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Preset</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Kamera</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">FOV</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Stil</th>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Ballet Stage</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Mittel (z=5)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">35</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Theatral, warm</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Studio Bright</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Nah (z=4)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">40</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Hell, gleichmäßig</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Cinematic Moody</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Seitlich (x=2)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">28</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Film noir, Tele-Objektiv</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Fashion Show</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Weit (z=6)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">50</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Runway, Weitwinkel</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Sunset Warm</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Seitlich (x=-1)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">42</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Goldene Stunde</td>
+            </tr>
+        </table>
     </div>
 
-    <div style="border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin: 20px 0;">
-        <h3>🎞️ Timeline (unten)</h3>
-        <p>Zeitleiste für Keyframe-Animation:</p>
-        <ul>
-            <li><strong>Playhead</strong> (roter Balken): Aktuelle Zeit</li>
-            <li><strong>Play-Button</strong> (Leertaste): Animation abspielen</li>
-            <li><strong>Keyframes</strong>: Automatisch erstellt beim Wert ändern</li>
-            <li><strong>Sequenz-Länge</strong>: 10 Sekunden default (einstellbar)</li>
-        </ul>
+    <!-- Kamera-Animation -->
+    <div style="background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #4fc1ff;">
+        <h3 style="margin-top: 0; color: #4fc1ff;">Kamera-Bewegung animieren (Keyframes)</h3>
+        <ol style="line-height: 2;">
+            <li>Rechtes Panel &rarr; Tab <strong>"Keyframes"</strong></li>
+            <li>Objekt-Dropdown: <strong>"Camera"</strong> auswählen</li>
+            <li>Kamera mit Maus an die <strong>Startposition</strong> bringen</li>
+            <li>Timeline-Slider auf <strong>0 Sekunden</strong></li>
+            <li><strong>"Add Keyframe"</strong> klicken &rarr; Position wird gespeichert</li>
+            <li>Kamera an die <strong>Zielposition</strong> bewegen</li>
+            <li>Timeline-Slider auf z.B. <strong>3 Sekunden</strong></li>
+            <li><strong>"Add Keyframe"</strong> klicken</li>
+            <li><strong>"Play"</strong> drücken &rarr; Kamera gleitet sanft von A nach B</li>
+        </ol>
     </div>
 
-    <h2>🚀 Schnellstart: 30-Sekunden-Tutorial</h2>
-    <ol style="font-size: 1.1em; line-height: 1.8;">
-        <li>Öffne <a href="{% url 'theatre' %}" target="_blank" style="color: #7c5cbf; font-weight: bold;">Theatre Seite</a></li>
-        <li><strong>File → Modell Laden</strong> → "FemaleWithHair" auswählen</li>
-        <li>Im <strong>Outline</strong> links: "Camera" anklicken</li>
-        <li>Im <strong>Details Panel</strong> rechts: FOV-Slider auf 20 ziehen (Zoom)</li>
-        <li><strong>Playhead</strong> in Timeline auf 5 Sekunden schieben</li>
-        <li>FOV-Slider auf 50 ziehen (Zoom out) → Keyframe entsteht automatisch</li>
-        <li><strong>Leertaste drücken</strong> → Animation startet!</li>
-    </ol>
+    <!-- Nahaufnahme -->
+    <div style="background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ff9940;">
+        <h3 style="margin-top: 0; color: #ff9940;">Kamerawechsel: Totale &rarr; Nahaufnahme</h3>
 
-    <h2>💡 Warum sehe ich keine Lichter?</h2>
-    <p>Die Lichter sind <strong>unsichtbare Objekte</strong> (wie in echten 3D-Apps). Du siehst nur ihre Wirkung auf den Character.</p>
-    <div style="background: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0;">
-        <strong>Tipp:</strong> Wähle "Spot Left" im Outline → ändere "intensity" auf 15 → siehst du mehr Licht?
+        <h4 style="color: #ffc080;">Harter Schnitt (Cut)</h4>
+        <p>Zwei Keyframes direkt nebeneinander setzen:</p>
+        <pre style="background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto;">
+Keyframe 1:  Zeit = 5.00s  |  Position z = 6   |  FOV = 50  (Totale)
+Keyframe 2:  Zeit = 5.01s  |  Position z = 1.5 |  FOV = 28  (Nahaufnahme Gesicht)
+
+&rarr; Sofortiger Sprung zur Nahaufnahme (wie Filmschnitt)</pre>
+
+        <h4 style="color: #ffc080; margin-top: 20px;">Sanfte Kamerafahrt (Dolly)</h4>
+        <p>Zwei Keyframes mit Zeitabstand:</p>
+        <pre style="background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto;">
+Keyframe 1:  Zeit = 3.0s  |  Position z = 6   |  FOV = 50  (Totale)
+Keyframe 2:  Zeit = 6.0s  |  Position z = 1.5 |  FOV = 28  (Nahaufnahme)
+
+&rarr; Kamera fährt 3 Sekunden lang sanft zum Gesicht</pre>
+
+        <h4 style="color: #ffc080; margin-top: 20px;">Mehrere Kameraperspektiven hintereinander</h4>
+        <pre style="background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto;">
+0.0s  Totale von vorne       (z=5, y=1.6,  FOV=50)
+3.0s  Seitenansicht           (x=4, z=0,    FOV=40)
+3.01s Nahaufnahme Gesicht     (z=1.5, y=1.7, FOV=28)
+6.0s  Halbtotale von hinten   (z=-4, y=1.5, FOV=35)
+9.0s  Zurück zur Totale       (z=5, y=1.6,  FOV=50)</pre>
     </div>
 
-    <h2>📚 Wichtige Shortcuts</h2>
-    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-        <tr style="background: #f8f9fa;">
-            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Taste</th>
-            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Aktion</th>
-        </tr>
-        <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;"><code>Leertaste</code></td>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;">Play/Pause Animation</td>
-        </tr>
-        <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;"><code>Mausrad</code></td>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;">Canvas: Zoom in/out</td>
-        </tr>
-        <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;"><code>Linke Maustaste + Ziehen</code></td>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;">Canvas: Kamera drehen (OrbitControls)</td>
-        </tr>
-        <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;"><code>Rechte Maustaste + Ziehen</code></td>
-            <td style="padding: 10px; border-bottom: 1px solid #eee;">Canvas: Kamera verschieben</td>
-        </tr>
-    </table>
+    <!-- ============================================================ -->
+    <!-- LICHTER -->
+    <!-- ============================================================ -->
+    <h2 id="lichter" style="color: #f7c948; margin-top: 50px;">Lichter</h2>
 
-    <h2>🎯 Typische Workflows</h2>
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f7c948;">
+        <h3 style="margin-top: 0; color: #f7c948;">Verfügbare Lichter</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="background: #252535;">
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Name</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Standard-Position</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Funktion</th>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Spot Left</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Links oben (-3, 6, 3)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Hauptlicht links</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Spot Right</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Rechts oben (3, 6, 3)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Hauptlicht rechts</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Back Light</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Hinten oben (0, 5, -4)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Gegenlicht / Rim Light</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Ambient</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">&mdash;</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Grundhelligkeit (immer an)</td>
+            </tr>
+        </table>
+    </div>
 
-    <h3>🎥 Kamera-Fahrt erstellen</h3>
-    <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto;">
-1. Camera auswählen
+    <!-- Lichter verschieben -->
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f7c948;">
+        <h3 style="margin-top: 0; color: #f7c948;">Lichter verschieben</h3>
+        <ol style="line-height: 2;">
+            <li>Toolbar: <strong>"Translate"</strong>-Modus muss aktiv sein (Standard)</li>
+            <li>Ein <strong>Licht-Icon</strong> (Kegel-Symbol) im Viewport anklicken</li>
+            <li>Achsen-Pfeile (rot/grün/blau) erscheinen</li>
+            <li>Pfeil <strong>ziehen</strong> um das Licht zu verschieben</li>
+        </ol>
+        <p style="margin-top: 10px;"><strong>Alternativ:</strong> Rechtes Panel &rarr; Tab "Eigenschaften" &rarr; Position X/Y/Z direkt eingeben.</p>
+        <p><strong>Toolbar-Button "Licht-Icons"</strong> schaltet die Kegel-Anzeige ein/aus.</p>
+    </div>
+
+    <!-- Licht-Einstellungen -->
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f7c948;">
+        <h3 style="margin-top: 0; color: #f7c948;">Licht-Einstellungen ändern</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333; width: 30%;"><strong>Intensität</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Properties-Tab &rarr; Intensity-Slider (0 = aus, 100 = max)</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Farbe</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Properties-Tab &rarr; R/G/B Werte (0.0 &ndash; 1.0)</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Ein/Aus</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Intensity = 0 (aus) oder hochdrehen (an)</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Licht-Animation -->
+    <div style="background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #4fc1ff;">
+        <h3 style="margin-top: 0; color: #4fc1ff;">Licht-Bewegung animieren</h3>
+        <p>Funktioniert genau wie bei der Kamera:</p>
+        <ol style="line-height: 2;">
+            <li>Tab <strong>"Keyframes"</strong> &rarr; Objekt z.B. <strong>"Spot Left"</strong> auswählen</li>
+            <li>Licht an <strong>Startposition</strong> ziehen, Intensity einstellen</li>
+            <li>Timeline auf <strong>0s</strong> &rarr; "Add Keyframe"</li>
+            <li>Licht an <strong>neue Position</strong> ziehen, Intensity ändern</li>
+            <li>Timeline auf <strong>4s</strong> &rarr; "Add Keyframe"</li>
+            <li><strong>Play</strong> &rarr; Licht gleitet interpoliert zwischen den Positionen</li>
+        </ol>
+    </div>
+
+    <!-- Licht ein/ausblenden -->
+    <div style="background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ff9940;">
+        <h3 style="margin-top: 0; color: #ff9940;">Licht ein-/ausblenden (Fade)</h3>
+        <pre style="background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto;">
+<strong>Einblenden:</strong>
+Keyframe 1:  Zeit = 2.0s  |  Intensity = 0   (aus)
+Keyframe 2:  Zeit = 3.0s  |  Intensity = 60  (an)
+&rarr; Licht blendet in 1 Sekunde sanft ein
+
+<strong>Ausblenden:</strong>
+Keyframe 1:  Zeit = 7.0s  |  Intensity = 60  (an)
+Keyframe 2:  Zeit = 8.0s  |  Intensity = 0   (aus)
+&rarr; Licht blendet in 1 Sekunde sanft aus</pre>
+    </div>
+
+    <!-- Licht-Farbe animieren -->
+    <div style="background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ff9940;">
+        <h3 style="margin-top: 0; color: #ff9940;">Licht-Farbwechsel animieren</h3>
+        <p>Im Theatre.js Studio (Profi-Timeline):</p>
+        <pre style="background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto;">
+1. "Spot Left" im Studio-Outline auswählen
 2. Playhead auf 0:00
-3. Position.z = 8 (weit weg)
+3. Color &rarr; r=1.0, g=0.9, b=0.8  (warmes Weiß)
 4. Playhead auf 5:00
-5. Position.z = 3 (nah ran)
-→ Kamera fährt langsam auf Character zu
-    </pre>
+5. Color &rarr; r=0.6, g=0.7, b=1.0  (kaltes Blau)
+&rarr; Licht wechselt langsam die Farbe von warm nach kalt</pre>
+    </div>
 
-    <h3>💡 Licht-Farbwechsel</h3>
-    <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto;">
-1. "Spot Left" auswählen
-2. Playhead auf 0:00
-3. Color = Warmes Weiß (r:1, g:0.9, b:0.8)
-4. Playhead auf 5:00
-5. Color = Kaltes Blau (r:0.6, g:0.7, b:1)
-→ Licht wechselt langsam die Farbe
-    </pre>
+    <!-- Licht-Bewegung interpolieren -->
+    <div style="background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #4fc1ff;">
+        <h3 style="margin-top: 0; color: #4fc1ff;">Licht-Bewegung zwischen 2 Punkten interpolieren</h3>
+        <pre style="background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto;">
+<strong>Beispiel: Spot Left wandert von links nach rechts</strong>
 
-    <h3>🎭 Character + Animation</h3>
-    <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 6px; overflow-x: auto;">
-1. File → Modell Laden → FemaleWithHair
-2. File → Animation Laden → Mixamo → Ballet
-→ Character tanzt automatisch
-3. Character im Outline auswählen
-4. Position/Rotation animieren (wie Kamera)
-→ Character bewegt sich WÄHREND er tanzt
-    </pre>
+Keyframe 1:  Zeit = 0s  |  Position x=-5, y=4, z=3   (links)
+Keyframe 2:  Zeit = 5s  |  Position x=+5, y=4, z=3   (rechts)
 
-    <h2>⚠️ Häufige Probleme</h2>
+&rarr; Licht gleitet in 5 Sekunden von links nach rechts
 
-    <div style="background: #f8d7da; padding: 15px; border-left: 4px solid #dc3545; margin: 15px 0;">
+<strong>Beispiel: Back Light kreist (4 Keyframes)</strong>
+
+0s:  Position x=0,  z=-4  (hinten)
+2s:  Position x=4,  z=0   (rechts)
+4s:  Position x=0,  z=4   (vorne)
+6s:  Position x=-4, z=0   (links)
+8s:  Position x=0,  z=-4  (zurück hinten)
+
+&rarr; Licht kreist um den Character</pre>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- KOMPLETTE SZENE -->
+    <!-- ============================================================ -->
+    <h2 id="szene" style="color: #73daca; margin-top: 50px;">Komplette Szene aufbauen</h2>
+
+    <div style="background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #73daca;">
+        <h3 style="margin-top: 0; color: #73daca;">Beispiel: Dramatische Tanzszene</h3>
+        <pre style="background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto; line-height: 1.8;">
+<strong>1. Setup</strong>
+   Settings &rarr; "Cinematic Moody" (dunkle Stimmung)
+   Modelle-Tab &rarr; "FemaleWithHair" laden
+   Animationen-Tab &rarr; Tanz-BVH laden
+
+<strong>2. Kamera-Keyframes</strong>
+   0.0s   Totale von vorne        (z=5,  FOV=50)
+   3.0s   Seitenansicht            (x=3, z=2, FOV=40)
+   3.01s  Gesicht Nahaufnahme      (z=1.5, y=1.7, FOV=25)
+   6.0s   Halbtotale schräg        (x=-2, z=3, FOV=35)
+   9.0s   Zurück zur Totale        (z=5, FOV=50)
+
+<strong>3. Licht-Keyframes (Spot Left)</strong>
+   0.0s   Intensity=15, Position links  (x=-4)
+   3.0s   Intensity=60, Position Mitte  (x=0)    &larr; Licht folgt Kamera-Cut
+   6.0s   Intensity=15, Position rechts (x=4)
+   9.0s   Intensity=15, zurück links    (x=-4)
+
+<strong>4. Licht-Keyframes (Back Light)</strong>
+   0.0s   Intensity=0   (aus)
+   3.0s   Intensity=40  (einblenden für Nahaufnahme)
+   6.0s   Intensity=0   (wieder aus)
+
+<strong>5. Play &rarr; Kontrolle &rarr; Export MP4</strong></pre>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- THEATRE STUDIO -->
+    <!-- ============================================================ -->
+    <h2 id="studio" style="color: #bb9af7; margin-top: 50px;">Theatre.js Studio (Profi-Timeline)</h2>
+
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #bb9af7;">
+        <h3 style="margin-top: 0; color: #bb9af7;">Studio ein-/ausschalten</h3>
+        <p>Toolbar-Button <strong>"Studio"</strong> &rarr; Theatre.js Studio-Overlay erscheint am unteren Rand.</p>
+        <p>Das Studio bietet feinere Kontrolle als das Keyframes-Panel:</p>
+        <ul style="line-height: 2;">
+            <li>Keyframe-Diamonds direkt auf der Timeline verschieben</li>
+            <li>Einzelne Tracks (Position X, Y, Z, Intensity, Color) separat bearbeiten</li>
+            <li>Easing/Interpolation zwischen Keyframes visuell sehen</li>
+            <li>Werte per Maus-Drag anpassen (im Detail Panel rechts)</li>
+        </ul>
+        <div style="background: #332244; padding: 12px; border-radius: 6px; margin-top: 10px;">
+            <strong>Tipp:</strong> Im Studio entstehen Keyframes automatisch wenn du einen Wert änderst während der Playhead an einer bestimmten Zeitposition steht.
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- KEYBOARD SHORTCUTS -->
+    <!-- ============================================================ -->
+    <h2 id="shortcuts" style="color: #c0caf5; margin-top: 50px;">Tastenkürzel</h2>
+
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="background: #252535;">
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444; width: 40%;">Taste</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Aktion</th>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #333;"><code style="background:#333; padding:3px 8px; border-radius:3px;">Leertaste</code></td>
+                <td style="padding: 10px; border-bottom: 1px solid #333;">Play / Pause</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #333;"><code style="background:#333; padding:3px 8px; border-radius:3px;">Linksklick + Ziehen</code></td>
+                <td style="padding: 10px; border-bottom: 1px solid #333;">Kamera drehen (Orbit)</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #333;"><code style="background:#333; padding:3px 8px; border-radius:3px;">Rechtsklick + Ziehen</code></td>
+                <td style="padding: 10px; border-bottom: 1px solid #333;">Kamera verschieben (Pan)</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #333;"><code style="background:#333; padding:3px 8px; border-radius:3px;">Mausrad</code></td>
+                <td style="padding: 10px; border-bottom: 1px solid #333;">Zoom rein / raus</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #333;"><code style="background:#333; padding:3px 8px; border-radius:3px;">Klick auf Licht-Icon</code></td>
+                <td style="padding: 10px; border-bottom: 1px solid #333;">Licht auswählen + Transform-Pfeile</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TOOLBAR -->
+    <!-- ============================================================ -->
+    <h2 id="toolbar" style="color: #c0caf5; margin-top: 50px;">Toolbar-Buttons</h2>
+
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="background: #252535;">
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Button</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Funktion</th>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Translate</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Verschiebe-Modus für Lichter/Modelle</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Rotate</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Dreh-Modus für Lichter/Modelle</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Licht-Icons</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Kegel-Symbole ein/ausblenden</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Model</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Character-Body ein/ausblenden</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Clothes</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Kleidung/Haare ein/ausblenden</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Rig</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Skelett-Linien ein/ausblenden</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Play Anim</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">BVH-Animation abspielen</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;"><strong>Studio</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Theatre.js Studio-Overlay ein/aus</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- LICHT-PRESETS -->
+    <!-- ============================================================ -->
+    <h2 id="presets" style="color: #f7c948; margin-top: 50px;">Licht-Presets im Detail</h2>
+
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f7c948;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="background: #252535;">
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Preset</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Spot L / R</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Back</th>
+                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444;">Beschreibung</th>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Ballet Stage</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">60 / 60</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">25 (blau-violett)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Bühne, warm, hell</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Studio Bright</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">80 / 80</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">30 (weiß)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Foto-Studio, Details</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Cinematic Moody</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">15 / 2</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">10 (blau)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Film noir, Schatten</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Fashion Show</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">10 / 10</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">5 (weiß)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Runway, von oben</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Sunset Warm</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">14 / 6</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">8 (lila-pink)</td>
+                <td style="padding: 8px; border-bottom: 1px solid #333;">Goldene Stunde</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- VIDEO EXPORT -->
+    <!-- ============================================================ -->
+    <h2 id="export" style="color: #73daca; margin-top: 50px;">Video Export</h2>
+
+    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #73daca;">
+        <ol style="line-height: 2;">
+            <li>Animation fertig aufgebaut (Kamera + Lichter + BVH)</li>
+            <li>Menü <strong>"Datei"</strong> &rarr; <strong>"Export MP4"</strong></li>
+            <li>Einstellungen: Auflösung (720p&ndash;4K), FPS (24/30/60), Qualität</li>
+            <li>Recording starten &rarr; Animation spielt ab</li>
+            <li>Browser lädt die fertige Datei herunter</li>
+        </ol>
+        <p><strong>Formate:</strong> MP4 (via Server/ffmpeg) oder WebM (direkt im Browser)</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TROUBLESHOOTING -->
+    <!-- ============================================================ -->
+    <h2 id="probleme" style="color: #f7768e; margin-top: 50px;">Häufige Probleme</h2>
+
+    <div style="background: #2d1b1b; padding: 15px; border-left: 4px solid #f7768e; margin: 15px 0; border-radius: 0 8px 8px 0;">
         <strong>Character liegt auf dem Boden!</strong><br>
-        → Hard Refresh im Browser (Ctrl+Shift+R) — Bug ist bereits gefixt
+        &rarr; Hard Refresh: <code>Ctrl+Shift+R</code>
     </div>
 
-    <div style="background: #f8d7da; padding: 15px; border-left: 4px solid #dc3545; margin: 15px 0;">
-        <strong>Modell laden funktioniert nicht!</strong><br>
-        → Hard Refresh im Browser (Ctrl+Shift+R) — Meta-Slider-Bug ist gefixt
+    <div style="background: #2d1b1b; padding: 15px; border-left: 4px solid #f7768e; margin: 15px 0; border-radius: 0 8px 8px 0;">
+        <strong>Alles ist schwarz!</strong><br>
+        &rarr; Lichter zu dunkel. "Spot Left" auswählen &rarr; Intensity auf 60 hochdrehen.
     </div>
 
-    <div style="background: #f8d7da; padding: 15px; border-left: 4px solid #dc3545; margin: 15px 0;">
-        <strong>Ich sehe nur Schwarz!</strong><br>
-        → Lichter sind zu dunkel. Wähle "Spot Left" → Intensity auf 15 hochdrehen
+    <div style="background: #2d1b1b; padding: 15px; border-left: 4px solid #f7768e; margin: 15px 0; border-radius: 0 8px 8px 0;">
+        <strong>Keyframes tun nichts!</strong><br>
+        &rarr; Prüfe ob das richtige Objekt (Camera/Spot Left/etc.) im Dropdown ausgewählt ist.
     </div>
 
-    <h2>🎬 Video Export</h2>
-    <p>Wenn du mit deiner Animation zufrieden bist:</p>
-    <ol>
-        <li>Playhead auf 0:00 zurücksetzen</li>
-        <li><strong>Export Video</strong> Button klicken (oben rechts)</li>
-        <li>Leertaste drücken → Animation läuft ab</li>
-        <li>Wenn fertig: Nochmal <strong>Stop Recording</strong> klicken</li>
-        <li>Browser lädt <code>theatre-export.webm</code> herunter</li>
-    </ol>
+    <div style="background: #2d1b1b; padding: 15px; border-left: 4px solid #f7768e; margin: 15px 0; border-radius: 0 8px 8px 0;">
+        <strong>Kamera springt beim Play!</strong><br>
+        &rarr; Theatre.js übernimmt die Kamera während der Wiedergabe. Orbit-Steuerung geht nur im Pause-Modus.
+    </div>
 
-    <h2>📖 Weiterführende Ressourcen</h2>
-    <ul>
-        <li><a href="https://www.theatrejs.com/docs/" target="_blank">Theatre.js Official Docs</a></li>
-        <li><a href="https://www.youtube.com/results?search_query=theatre.js+tutorial" target="_blank">YouTube Tutorials</a></li>
-    </ul>
-
-    <div style="margin-top: 40px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
-        <h2 style="margin-top: 0; color: white;">Bereit? Los geht's! 🚀</h2>
+    <!-- Footer -->
+    <div style="margin-top: 50px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
+        <h2 style="margin-top: 0; color: white;">Bereit?</h2>
         <a href="{% url 'theatre' %}" style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px;">
-            Zur Theatre Seite →
+            Zur Theatre Seite &rarr;
         </a>
     </div>
 </div>

@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET, BVH_TO_DEF_OPENPOSE, BVH_TO_DEF_BANDAI, BVH_TO_DEF_SMPL } from './retarget_hybrid.js?v=20';
+import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET, BVH_TO_DEF_OPENPOSE, BVH_TO_DEF_BANDAI, BVH_TO_DEF_AIST } from './retarget_hybrid.js?v=21';
 
 // =========================================================================
 // Global state
@@ -591,7 +591,7 @@ function loadAndPlayAnimation(url, name, fc, category) {
         const bvhKey = format === 'CMU' ? 'cmu'
                      : format === 'MIXAMO' ? 'mixamo'
                      : format === 'BANDAI' ? 'bandai'
-                     : format === 'SMPL' ? 'smpl'
+                     : format === 'AIST' ? 'smpl'
                      : format === 'OPENPOSE' ? 'openpose'
                      : 'mocapnet';
         const bvhSkel = skeletons[bvhKey];

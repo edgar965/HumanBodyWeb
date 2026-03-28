@@ -18,8 +18,8 @@ import * as THREE from 'three';
 
 export function detectBVHFormat(bones) {
     const names = new Set(bones.map(b => b.name));
-    // SMPL: Pelvis + Left_hip (underscore naming, no Chest)
-    if (names.has('Pelvis') && names.has('Left_hip')) return 'SMPL';
+    // AIST: Pelvis + Left_hip (underscore naming, no Chest)
+    if (names.has('Pelvis') && names.has('Left_hip')) return 'AIST';
     // Bandai: uses Chest + UpperArm_L (underscore naming)
     if (names.has('Chest') && names.has('UpperArm_L')) return 'BANDAI';
     if (names.has('Hips') && names.has('LeftArm')) {
@@ -254,8 +254,8 @@ export const BVH_TO_DEF_MOCAPNET = {
     'orbicularis04.r': 'DEF-lid.B.R',
 };
 
-export const BVH_TO_DEF_SMPL = {
-    // SMPL skeleton (Pelvis → Spine1/2/3 → Neck → Head, Left_hip/knee/ankle/foot)
+export const BVH_TO_DEF_AIST = {
+    // AIST skeleton (Pelvis → Spine1/2/3 → Neck → Head, Left_hip/knee/ankle/foot)
     'Pelvis':          'DEF-spine',
     'Spine1':          'DEF-spine.001',
     'Spine2':          'DEF-spine.002',
@@ -429,7 +429,7 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const mapping = format === 'CMU' ? BVH_TO_DEF_CMU
                   : format === 'MIXAMO' ? BVH_TO_DEF_MIXAMO
                   : format === 'BANDAI' ? BVH_TO_DEF_BANDAI
-                  : format === 'SMPL' ? BVH_TO_DEF_SMPL
+                  : format === 'AIST' ? BVH_TO_DEF_AIST
                   : format === 'OPENPOSE' ? BVH_TO_DEF_OPENPOSE
                   : BVH_TO_DEF_MOCAPNET;
 
@@ -535,16 +535,10 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
 
     // --- Compute frame-0 BVH world Qs for delta retarget ---
     // Bandai encodes the standing pose in frame-0 rotations (not identity rest).
-    // SMPL/AIST BVH files have absolute (non-normalized) motion capture data where
-    // frame 0 can be any dance pose. Delta retarget subtracts frame-0 to start from
-    // rest pose, matching the behavior of GVHMR (which pre-normalizes in Python).
-    // For already-normalized BVH (like GVHMR), frame-0 Qs are identity so delta=standard.
+    // Delta retarget subtracts frame-0 to start from rest pose.
+    // AIST/GVHMR BVH files are pre-normalized (frame-0 = identity) and use standard retarget.
     const bvhRestWorldQ = {};
-    const useDeltaRetarget = (format === 'BANDAI' || format === 'SMPL');
-    // Direction correction bone directions: Bandai uses frame-0 world directions
-    // (standing pose baked into frame-0 rotations). SMPL uses REST bone positions
-    // (identity rest) because AIST frame-0 can be any pose → world directions
-    // would give 45-114° corrections with L/R asymmetry.
+    const useDeltaRetarget = (format === 'BANDAI');
     const useDeltaDirCorrection = (format === 'BANDAI');
     if (useDeltaRetarget) {
         const _tq = new THREE.Quaternion();
@@ -567,7 +561,7 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
 
     // --- Offset Q per mapped bone (with direction correction) ---
     // Direction correction aligns BVH bone directions with DEF bone directions.
-    // Standard (CMU/Mixamo/MocapNET/SMPL): BVH rest is identity, use local offsets.
+    // Standard (CMU/Mixamo/MocapNET/AIST): BVH rest is identity, use local offsets.
     // Delta dir correction (Bandai only): use frame-0 WORLD directions (local offsets
     // rotated by frame-0 world Q) since frame-0 has non-identity standing pose.
     const _NEG_Z = new THREE.Vector3(0, 0, -1);
@@ -577,15 +571,15 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const rootDefName = Object.values(mapping).find(d => d && defSkel.boneByName[d]);
 
     // Bones where direction correction should be skipped.
-    // SMPL: ankle→foot offset points downward (-Y,-Z) while DEF-foot points forward.
+    // AIST: ankle→foot offset points downward (-Y,-Z) while DEF-foot points forward.
     // Direction correction maps forward→down causing "ballerina feet".
     const skipDirCorrectionBones = new Set();
-    if (format === 'SMPL') {
+    if (format === 'AIST') {
         skipDirCorrectionBones.add('DEF-foot.L');
         skipDirCorrectionBones.add('DEF-foot.R');
         skipDirCorrectionBones.add('DEF-toe.L');
         skipDirCorrectionBones.add('DEF-toe.R');
-        // SMPL has 2-bone neck (Neck→Head) but DEF has 3-bone chain
+        // AIST has 2-bone neck (Neck→Head) but DEF has 3-bone chain
         // (spine.004→spine.005→spine.006). Topology mismatch causes
         // direction correction to bend the head at unnatural angles.
         skipDirCorrectionBones.add('DEF-spine.004');
@@ -673,7 +667,7 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
                     dir = child.position.clone()
                         .applyQuaternion(bvhRestWorldQ[bvhName]).normalize();
                 } else {
-                    // Standard/SMPL: BVH rest is identity, local = world
+                    // Standard/AIST: BVH rest is identity, local = world
                     dir = child.position.clone().normalize();
                 }
                 const dot = dir.dot(defRestDir);

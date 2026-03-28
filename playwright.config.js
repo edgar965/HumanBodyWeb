@@ -1,6 +1,6 @@
 module.exports = {
     testDir: '.',
-    testMatch: ['test_theatre_debug.js'],
+    testMatch: ['test_anim_debug.js'],
     timeout: 120000,
     use: {
         headless: false,

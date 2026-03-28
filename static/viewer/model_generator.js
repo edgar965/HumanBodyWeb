@@ -5,6 +5,37 @@
 import * as THREE from 'three';
 
 // =========================================================================
+// Helpers
+// =========================================================================
+
+/** Merge two indexed BufferGeometries into one, then dispose both inputs. */
+function _mergeSimpleGeos(a, b) {
+    const pA = a.attributes.position.array, pB = b.attributes.position.array;
+    const nA = a.attributes.normal.array,   nB = b.attributes.normal.array;
+    const pos = new Float32Array(pA.length + pB.length);
+    pos.set(pA); pos.set(pB, pA.length);
+    const nor = new Float32Array(nA.length + nB.length);
+    nor.set(nA); nor.set(nB, nA.length);
+
+    const iA = a.index ? a.index.array : null;
+    const iB = b.index ? b.index.array : null;
+    const vertCountA = a.attributes.position.count;
+    const lenA = iA ? iA.length : vertCountA;
+    const lenB = iB ? iB.length : b.attributes.position.count;
+    const idx = new Uint32Array(lenA + lenB);
+    for (let i = 0; i < lenA; i++) idx[i] = iA ? iA[i] : i;
+    for (let i = 0; i < lenB; i++) idx[lenA + i] = (iB ? iB[i] : i) + vertCountA;
+
+    a.dispose(); b.dispose();
+
+    const merged = new THREE.BufferGeometry();
+    merged.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    merged.setAttribute('normal',   new THREE.BufferAttribute(nor, 3));
+    merged.setIndex(new THREE.BufferAttribute(idx, 1));
+    return merged;
+}
+
+// =========================================================================
 // Bone Classification
 // =========================================================================
 
@@ -281,6 +312,22 @@ export function generateModelMesh(skelData, swData, config) {
 
         const tailPos = headPos.clone().add(boneDir.clone().multiplyScalar(boneLen));
 
+        // Apply head/tail offsets in bone-local space
+        let effectiveHead = headPos.clone();
+        let effectiveTail = tailPos.clone();
+        if (part.headOffset) {
+            effectiveHead.add(new THREE.Vector3(
+                part.headOffset.x || 0, part.headOffset.y || 0, part.headOffset.z || 0
+            ).applyQuaternion(wt.worldQuat));
+        }
+        if (part.tailOffset) {
+            effectiveTail.add(new THREE.Vector3(
+                part.tailOffset.x || 0, part.tailOffset.y || 0, part.tailOffset.z || 0
+            ).applyQuaternion(wt.worldQuat));
+        }
+        const effectiveLen = effectiveHead.distanceTo(effectiveTail);
+        if (effectiveLen > 0.001) boneLen = effectiveLen;
+
         // Create shape geometry (centered at origin, along Y axis)
         let shapeGeo;
         switch (part.shape) {
@@ -303,6 +350,20 @@ export function generateModelMesh(skelData, swData, config) {
                 shapeGeo = new THREE.SphereGeometry(radius, segments, Math.max(4, segments >> 1));
                 shapeGeo.scale(1, boneLen / (radius * 2), 1);
                 break;
+            case 'double_oval': {
+                const ov = part.overlap ?? 0.5;
+                const halfLen = boneLen * 0.5;
+                const ovalLen = halfLen + halfLen * ov;
+                const scY = ovalLen / (radius * 2);
+                const sep = halfLen * (1 - ov);
+                const hSegs = Math.max(4, segments >> 1);
+                const g1 = new THREE.SphereGeometry(radius, segments, hSegs);
+                g1.scale(1, scY, 1); g1.translate(0, -sep, 0);
+                const g2 = new THREE.SphereGeometry(radius, segments, hSegs);
+                g2.scale(1, scY, 1); g2.translate(0, sep, 0);
+                shapeGeo = _mergeSimpleGeos(g1, g2);
+                break;
+            }
             case 'diamond':
                 shapeGeo = new THREE.OctahedronGeometry(radius);
                 shapeGeo.scale(1, boneLen / (radius * 2), 1);
@@ -312,9 +373,11 @@ export function generateModelMesh(skelData, swData, config) {
                 break;
         }
 
-        // Position shape from bone HEAD to bone TAIL (midpoint, oriented along bone direction)
-        const midpoint = new THREE.Vector3().lerpVectors(headPos, tailPos, 0.5);
-        const direction = boneDir;
+        // Position shape from effective head to effective tail
+        const midpoint = new THREE.Vector3().lerpVectors(effectiveHead, effectiveTail, 0.5);
+        const direction = new THREE.Vector3().subVectors(effectiveTail, effectiveHead);
+        if (direction.length() > 0.0001) direction.normalize();
+        else direction.copy(boneDir);
 
         const yAxis = new THREE.Vector3(0, 1, 0);
         const shapeQuat = new THREE.Quaternion();
@@ -322,6 +385,18 @@ export function generateModelMesh(skelData, swData, config) {
             shapeQuat.setFromUnitVectors(yAxis, direction);
         } else if (direction.y < 0) {
             shapeQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+        }
+
+        // World-space rotation around shape center (premultiply = applied after bone alignment)
+        if (part.shapeRotation) {
+            const sr = part.shapeRotation;
+            const rx = sr.x || 0, ry = sr.y || 0, rz = sr.z || 0;
+            if (rx || ry || rz) {
+                const deg = Math.PI / 180;
+                const userRot = new THREE.Quaternion().setFromEuler(
+                    new THREE.Euler(rx * deg, ry * deg, rz * deg));
+                shapeQuat.premultiply(userRot);
+            }
         }
 
         const mat4 = new THREE.Matrix4();
@@ -604,6 +679,31 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
         let boneLen = wt.length;
         if (boneLen < 0.001) boneLen = 0.02;
 
+        // Apply head/tail offsets in bone-local space
+        let effectiveHead = wt.worldPos.clone();
+        let effectiveTail = wt.tailPos.clone();
+        if (part.headOffset || part.tailOffset) {
+            // Derive bone orientation quaternion from head→tail direction
+            const rawDir = new THREE.Vector3().subVectors(wt.tailPos, wt.worldPos);
+            if (rawDir.length() > 0.0001) rawDir.normalize(); else rawDir.set(0, 1, 0);
+            const boneQuat = new THREE.Quaternion();
+            const yUp = new THREE.Vector3(0, 1, 0);
+            if (Math.abs(rawDir.dot(yUp)) < 0.9999) boneQuat.setFromUnitVectors(yUp, rawDir);
+            else if (rawDir.y < 0) boneQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+            if (part.headOffset) {
+                effectiveHead.add(new THREE.Vector3(
+                    part.headOffset.x || 0, part.headOffset.y || 0, part.headOffset.z || 0
+                ).applyQuaternion(boneQuat));
+            }
+            if (part.tailOffset) {
+                effectiveTail.add(new THREE.Vector3(
+                    part.tailOffset.x || 0, part.tailOffset.y || 0, part.tailOffset.z || 0
+                ).applyQuaternion(boneQuat));
+            }
+            const effLen = effectiveHead.distanceTo(effectiveTail);
+            if (effLen > 0.001) boneLen = effLen;
+        }
+
         // Create shape geometry
         let shapeGeo;
         switch (part.shape) {
@@ -626,6 +726,20 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
                 shapeGeo = new THREE.SphereGeometry(radius, segments, Math.max(4, segments >> 1));
                 shapeGeo.scale(1, boneLen / (radius * 2), 1);
                 break;
+            case 'double_oval': {
+                const ov = part.overlap ?? 0.5;
+                const halfLen = boneLen * 0.5;
+                const ovalLen = halfLen + halfLen * ov;
+                const scY = ovalLen / (radius * 2);
+                const sep = halfLen * (1 - ov);
+                const hSegs = Math.max(4, segments >> 1);
+                const g1 = new THREE.SphereGeometry(radius, segments, hSegs);
+                g1.scale(1, scY, 1); g1.translate(0, -sep, 0);
+                const g2 = new THREE.SphereGeometry(radius, segments, hSegs);
+                g2.scale(1, scY, 1); g2.translate(0, sep, 0);
+                shapeGeo = _mergeSimpleGeos(g1, g2);
+                break;
+            }
             case 'diamond':
                 shapeGeo = new THREE.OctahedronGeometry(radius);
                 shapeGeo.scale(1, boneLen / (radius * 2), 1);
@@ -635,9 +749,9 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
                 break;
         }
 
-        // Position between head and tail
-        const midpoint = new THREE.Vector3().lerpVectors(wt.worldPos, wt.tailPos, 0.5);
-        const direction = new THREE.Vector3().subVectors(wt.tailPos, wt.worldPos);
+        // Position between effective head and tail
+        const midpoint = new THREE.Vector3().lerpVectors(effectiveHead, effectiveTail, 0.5);
+        const direction = new THREE.Vector3().subVectors(effectiveTail, effectiveHead);
         if (direction.length() > 0.0001) direction.normalize();
         else direction.set(0, 1, 0);
 
@@ -647,6 +761,18 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
             shapeQuat.setFromUnitVectors(yAxis, direction);
         } else if (direction.y < 0) {
             shapeQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
+        }
+
+        // World-space rotation around shape center (premultiply = applied after bone alignment)
+        if (part.shapeRotation) {
+            const sr = part.shapeRotation;
+            const rx = sr.x || 0, ry = sr.y || 0, rz = sr.z || 0;
+            if (rx || ry || rz) {
+                const deg = Math.PI / 180;
+                const userRot = new THREE.Quaternion().setFromEuler(
+                    new THREE.Euler(rx * deg, ry * deg, rz * deg));
+                shapeQuat.premultiply(userRot);
+            }
         }
 
         const mat4 = new THREE.Matrix4();
