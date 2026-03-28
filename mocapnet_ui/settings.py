@@ -9,8 +9,8 @@ TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
 VIDEOTOBVH_ROOT = TOOLS_ROOT / 'VideoToBVH'
 MOCAPNET_ROOT = VIDEOTOBVH_ROOT / 'MocapNET'
 
-# Add humanbody_core to Python path (lives inside HumanBody/)
-HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody'
+# Add humanbody_core to Python path (lives inside HumanBody/HumanBody/)
+HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody' / 'HumanBody'
 _core_parent = str(HUMANBODY_ROOT)
 if _core_parent not in sys.path:
     sys.path.insert(0, _core_parent)
