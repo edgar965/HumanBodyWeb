@@ -5484,11 +5484,6 @@ function _bindModelGeneratorUI() {
         _mgGenerateCharacter();
     });
 
-    const saveLibBtn = document.getElementById('mg-save-lib');
-    if (saveLibBtn) saveLibBtn.addEventListener('click', () => {
-        _mgSaveToLibrary();
-    });
-
     const saveBtn = document.getElementById('mg-save');
     if (saveBtn) saveBtn.addEventListener('click', () => {
         _mgSaveModel();
@@ -5722,36 +5717,6 @@ function _mgGenerateCharacter() {
 
     const vc = result.mesh.geometry.attributes.position.count;
     console.log(`Model Generator: created ${_mgSkeletonType === 'rig' ? 'Mesh' : 'SkinnedMesh'} with ${vc} vertices as character "${inst.presetName}"`);
-}
-
-async function _mgSaveToLibrary() {
-    if (!_mgConfig) return;
-
-    const name = (_mgConfig.name || 'Neues Modell').trim();
-    if (!name) { alert('Bitte einen Namen eingeben.'); return; }
-
-    const data = {
-        ..._mgConfig,
-        type: 'generated_model',
-        skeleton_type: _mgSkeletonType
-    };
-
-    try {
-        const resp = await fetch('/api/character/model/save/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
-            body: JSON.stringify({ name, data }),
-        });
-        const result = await resp.json();
-        if (result.ok) {
-            alert(`Modell "${name}" in Bibliothek gespeichert!`);
-            console.log(`Model saved to library: ${name}`);
-        } else {
-            alert('Fehler: ' + (result.error || 'Unbekannt'));
-        }
-    } catch (e) {
-        alert('Fehler beim Speichern: ' + e.message);
-    }
 }
 
 async function _mgSaveModel() {
