@@ -232,6 +232,15 @@ export function generateModelMesh(skelData, swData, config) {
         boneIndexMap[swData.bone_names[i]] = i;
     }
 
+    // Build children map to find each bone's TAIL position
+    const childrenMap = {};  // boneName -> [childNames]
+    for (const b of skelData.bones) {
+        if (b.parent) {
+            if (!childrenMap[b.parent]) childrenMap[b.parent] = [];
+            childrenMap[b.parent].push(b.name);
+        }
+    }
+
     // Collect all geometry pieces
     const geoChunks = [];   // { geometry, boneIndex, color }
     const skelByName = {};
@@ -251,9 +260,26 @@ export function generateModelMesh(skelData, swData, config) {
         const radius = part.radius || config.default_radius || 0.03;
         const color = part.color || config.default_color || '#4488cc';
 
-        // Bone length for the shape
-        let boneLen = wt.length;
+        // Compute bone HEAD→TAIL using the bone's own direction (local Y axis)
+        // and determining length from the continuation child projected onto that direction.
+        const headPos = wt.worldPos;
+        const boneDir = new THREE.Vector3(0, 1, 0).applyQuaternion(wt.worldQuat);
+
+        let boneLen = 0;
+        const children = childrenMap[boneName];
+        if (children && children.length > 0) {
+            // Find length by projecting children onto bone direction — pick the best match
+            for (const childName of children) {
+                const childWt = worldTransforms.get(childName);
+                if (!childWt) continue;
+                const offset = new THREE.Vector3().subVectors(childWt.worldPos, headPos);
+                const proj = offset.dot(boneDir);
+                if (proj > boneLen) boneLen = proj;
+            }
+        }
         if (boneLen < 0.001) boneLen = LEAF_LENGTHS[boneName] || 0.03;
+
+        const tailPos = headPos.clone().add(boneDir.clone().multiplyScalar(boneLen));
 
         // Create shape geometry (centered at origin, along Y axis)
         let shapeGeo;
@@ -283,33 +309,18 @@ export function generateModelMesh(skelData, swData, config) {
                 break;
         }
 
-        // Position the shape: The bone's world position is the TAIL (end) of the bone.
-        // The shape should span from parent to bone. We place it at the midpoint
-        // of the bone vector (parent→bone), oriented along that vector.
-        //
-        // For the cylinder, we need to:
-        // 1. Find the parent world position
-        // 2. Compute midpoint between parent and bone
-        // 3. Orient cylinder to point from parent to bone
+        // Position shape from bone HEAD to bone TAIL (midpoint, oriented along bone direction)
+        const midpoint = new THREE.Vector3().lerpVectors(headPos, tailPos, 0.5);
+        const direction = boneDir;
 
-        // Skip root bones with no parent (would create cylinder from origin)
-        if (!data.parent || !worldTransforms.has(data.parent)) continue;
-        const parentWorldPos = worldTransforms.get(data.parent).worldPos;
-
-        const midpoint = new THREE.Vector3().lerpVectors(parentWorldPos, wt.worldPos, 0.5);
-        const direction = new THREE.Vector3().subVectors(wt.worldPos, parentWorldPos).normalize();
-
-        // CylinderGeometry is Y-aligned by default. Compute rotation from Y-up to direction.
         const yAxis = new THREE.Vector3(0, 1, 0);
         const shapeQuat = new THREE.Quaternion();
         if (Math.abs(direction.dot(yAxis)) < 0.9999) {
             shapeQuat.setFromUnitVectors(yAxis, direction);
         } else if (direction.y < 0) {
-            // Flip 180 degrees
             shapeQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
         }
 
-        // Apply transform to geometry
         const mat4 = new THREE.Matrix4();
         mat4.compose(midpoint, shapeQuat, new THREE.Vector3(1, 1, 1));
         shapeGeo.applyMatrix4(mat4);
@@ -558,11 +569,20 @@ export function getDefaultRigConfig(rigData) {
  * @param {Object} config  - Model config {bone_parts, segments, ...}
  * @returns {{ mesh: THREE.Mesh }} | null
  */
-export function generateRigBoneMesh(rigData, config) {
+export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swData = null) {
     const segments = config.segments || 8;
     const worldTransforms = computeRigBoneWorldTransforms(rigData);
 
-    const geoChunks = [];  // { geometry, color }
+    // Build bone index map for skinning (DEF bones only)
+    const canSkin = !!(defSkeletonData && swData);
+    const boneIndexMap = {};
+    if (canSkin) {
+        for (let i = 0; i < swData.bone_names.length; i++) {
+            boneIndexMap[swData.bone_names[i]] = i;
+        }
+    }
+
+    const geoChunks = [];  // { geometry, color, boneIndex }
 
     for (const [boneName, part] of Object.entries(config.bone_parts)) {
         if (!part.visible) continue;
@@ -620,7 +640,9 @@ export function generateRigBoneMesh(rigData, config) {
         mat4.compose(midpoint, shapeQuat, new THREE.Vector3(1, 1, 1));
         shapeGeo.applyMatrix4(mat4);
 
-        geoChunks.push({ geometry: shapeGeo, color });
+        // Determine skin bone index: DEF bones map to their skeleton index, others to root (0)
+        const boneIdx = canSkin ? (boneIndexMap[boneName] !== undefined ? boneIndexMap[boneName] : 0) : 0;
+        geoChunks.push({ geometry: shapeGeo, color, boneIndex: boneIdx });
     }
 
     if (geoChunks.length === 0) return null;
@@ -640,6 +662,8 @@ export function generateRigBoneMesh(rigData, config) {
 
     const mergedPositions = new Float32Array(totalVerts * 3);
     const mergedNormals = new Float32Array(totalVerts * 3);
+    const mergedSkinIndices = canSkin ? new Float32Array(totalVerts * 4) : null;
+    const mergedSkinWeights = canSkin ? new Float32Array(totalVerts * 4) : null;
     const mergedIndices = [];
     const materials = [];
     const groups = [];
@@ -657,6 +681,15 @@ export function generateRigBoneMesh(rigData, config) {
 
             mergedPositions.set(posArr, vertOffset * 3);
             mergedNormals.set(normArr, vertOffset * 3);
+
+            // Assign skin weights: 100% on the bone
+            if (canSkin) {
+                for (let v = 0; v < vCount; v++) {
+                    const base = (vertOffset + v) * 4;
+                    mergedSkinIndices[base] = chunk.boneIndex;
+                    mergedSkinWeights[base] = 1;
+                }
+            }
 
             if (geo.index) {
                 const idxArr = geo.index.array;
@@ -680,6 +713,59 @@ export function generateRigBoneMesh(rigData, config) {
     mergedGeo.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3));
     mergedGeo.setIndex(mergedIndices);
     for (const g of groups) mergedGeo.addGroup(g.start, g.count, g.materialIndex);
+
+    // Build SkinnedMesh with DEF skeleton if skin data is available
+    if (canSkin) {
+        mergedGeo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(mergedSkinIndices, 4));
+        mergedGeo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(mergedSkinWeights, 4));
+
+        const skelByName = {};
+        for (const b of defSkeletonData.bones) skelByName[b.name] = b;
+
+        const bones = [];
+        const boneByName = {};
+        let rootBone = null;
+
+        for (const name of swData.bone_names) {
+            const bone = new THREE.Bone();
+            bone.name = name.replace(/\./g, '_');
+            bones.push(bone);
+            boneByName[name] = bone;
+        }
+        for (let i = 0; i < swData.bone_names.length; i++) {
+            const name = swData.bone_names[i];
+            const bone = bones[i];
+            const bdata = skelByName[name];
+            if (!bdata) continue;
+            const p = bdata.local_position;
+            bone.position.set(p[0], p[2], -p[1]);
+            const q = bdata.local_quaternion;
+            bone.quaternion.set(q[1], q[3], -q[2], q[0]);
+            if (bdata.parent && boneByName[bdata.parent]) {
+                boneByName[bdata.parent].add(bone);
+            } else if (!rootBone) {
+                rootBone = bone;
+            }
+        }
+        for (let i = 0; i < bones.length; i++) {
+            const name = swData.bone_names[i];
+            const bdata = skelByName[name];
+            if (!bdata) continue;
+            if (!bdata.parent && bones[i] !== rootBone && rootBone) rootBone.add(bones[i]);
+        }
+        if (!rootBone && bones.length > 0) rootBone = bones[0];
+        rootBone.updateWorldMatrix(true, true);
+
+        const skeleton = new THREE.Skeleton(bones);
+        const skinnedMesh = new THREE.SkinnedMesh(mergedGeo, materials);
+        skinnedMesh.add(rootBone);
+        skinnedMesh.bind(skeleton);
+
+        return {
+            mesh: skinnedMesh,
+            skeleton: { skeleton, rootBone, bones, boneByName },
+        };
+    }
 
     return { mesh: new THREE.Mesh(mergedGeo, materials) };
 }

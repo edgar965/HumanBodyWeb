@@ -323,7 +323,7 @@ class CharacterInstance {
             if (!_mgRigBonesData) {
                 throw new Error('Rig bones data not loaded — cannot build generated model');
             }
-            result = generateRigBoneMesh(_mgRigBonesData, this.generatedConfig);
+            result = generateRigBoneMesh(_mgRigBonesData, this.generatedConfig, defSkeletonData, skinWeightData);
         } else {
             if (!defSkeletonData || !skinWeightData) {
                 throw new Error('Skeleton data not loaded — cannot build generated model');
@@ -2707,6 +2707,8 @@ function convertToDefSkinnedMesh() {
 /** Convert a CharacterInstance body to SkinnedMesh for animation. */
 function convertInstToSkinned(inst) {
     if (inst.isSkinned || !inst.bodyMesh || !skinWeightData || !defSkeletonData) return;
+    // Generated models have their own skinning (DEF) or none (Rig) — never apply body skin weights
+    if (inst.generatedConfig) return;
     const geo = inst.bodyMesh.geometry.clone();
     const vCount = geo.attributes.position.count;
     const skinIndices = new Float32Array(vCount * 4);
@@ -2821,15 +2823,18 @@ function loadBVHAnimation(url, name, fc) {
         const bvhBones = result.skeleton.bones;
         if (bvhBones.length === 0) return;
 
+        // Try to set up skinned animation
+        let skel = null;
         if (defSkeletonData && skinWeightData) {
-            // Convert to SkinnedMesh if needed
             if (inst) {
                 if (!inst.isSkinned) convertInstToSkinned(inst);
             } else {
                 if (!isSkinned) convertToDefSkinnedMesh();
             }
+            skel = inst ? inst.defSkeleton : defSkeleton;
+        }
 
-            const skel = inst ? inst.defSkeleton : defSkeleton;
+        if (skel) {
             const bMesh = inst ? inst.bodyMesh : bodyMesh;
             _animatedCharId = inst ? inst.id : null;
 
@@ -2849,7 +2854,7 @@ function loadBVHAnimation(url, name, fc) {
             currentAction.play();
             playing = true;
         } else {
-            // Fallback: skeleton-only preview (no skin weights)
+            // Fallback: skeleton-only preview (no skin weights or un-skinnable model)
             const rootBone = bvhBones[0];
             rootBone.updateWorldMatrix(true, true);
             const skelBox = new THREE.Box3();
@@ -5099,18 +5104,37 @@ async function loadAnimationUI() {
 let _mgConfig = null;      // Current model config
 let _mgSelectedBone = null; // Currently selected bone name
 let _mgInitialized = false;
-let _mgSkeletonType = 'def';  // 'def' or 'rig'
+let _mgSkeletonType = 'rig';  // 'def' or 'rig'
 let _mgRigBonesData = null;   // Cached rig bones data
 let _mgCharacterId = null;    // ID of generated character in characters map
 
-function initModelGenerator() {
+async function initModelGenerator() {
     if (!defSkeletonData || !skinWeightData) {
         console.warn('Model Generator: skeleton data not loaded yet');
         return;
     }
 
     if (!_mgConfig) {
-        _mgConfig = getDefaultModelConfig(defSkeletonData, skinWeightData);
+        if (_mgSkeletonType === 'rig') {
+            // Load rig bones data for default rig mode
+            if (!_mgRigBonesData) {
+                try {
+                    const resp = await fetch('/api/character/rig/');
+                    if (resp.ok) _mgRigBonesData = await resp.json();
+                } catch (e) {
+                    console.warn('Failed to load rig bones:', e);
+                }
+            }
+            if (_mgRigBonesData && _mgRigBonesData.bones && _mgRigBonesData.bones.length > 0) {
+                _mgConfig = getDefaultRigConfig(_mgRigBonesData);
+            } else {
+                // Fallback to DEF if rig data unavailable
+                _mgSkeletonType = 'def';
+                _mgConfig = getDefaultModelConfig(defSkeletonData, skinWeightData);
+            }
+        } else {
+            _mgConfig = getDefaultModelConfig(defSkeletonData, skinWeightData);
+        }
     }
 
     if (!_mgInitialized) {
@@ -5384,7 +5408,7 @@ function _mgGeneratePreview() {
 
     let result;
     if (_mgSkeletonType === 'rig' && _mgRigBonesData) {
-        result = generateRigBoneMesh(_mgRigBonesData, _mgConfig);
+        result = generateRigBoneMesh(_mgRigBonesData, _mgConfig, defSkeletonData, skinWeightData);
     } else {
         if (!defSkeletonData || !skinWeightData) {
             console.warn('Model Generator: missing skeleton data');
