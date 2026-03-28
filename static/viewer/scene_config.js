@@ -152,6 +152,21 @@ const _ZERO_EMISSIVE = new THREE.Color(0x000000);
 let _hoverPending = false;
 let _lastMouseEvent = null;
 
+// Bone selection (3D overlay) for generated models
+let _hoveredBoneName = null;
+let _selectedBoneName = null;
+let _boneHighlightCache = new Map();  // boneName -> BufferGeometry
+let _boneHoverOverlay = null;         // current hover overlay mesh
+let _boneSelectOverlay = null;        // current selection overlay mesh
+const _BONE_HOVER_MAT = new THREE.MeshBasicMaterial({
+    color: 0xaaccff, transparent: true, opacity: 0.55,
+    depthTest: true, depthWrite: false, side: THREE.DoubleSide,
+});
+const _BONE_SELECT_MAT = new THREE.MeshBasicMaterial({
+    color: 0x4466ff, transparent: true, opacity: 0.35,
+    depthTest: true, depthWrite: false, side: THREE.DoubleSide,
+});
+
 // =========================================================================
 // CharacterInstance
 // =========================================================================
@@ -324,20 +339,27 @@ class CharacterInstance {
                 throw new Error('Rig bones data not loaded — cannot build generated model');
             }
             result = generateRigBoneMesh(_mgRigBonesData, this.generatedConfig, defSkeletonData, skinWeightData);
+
+            // For animation: always build full DEF skeleton (even if mesh uses subset)
+            if (defSkeletonData && skinWeightData) {
+                this.defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
+                this.isSkinned = true;
+            }
         } else {
             if (!defSkeletonData || !skinWeightData) {
                 throw new Error('Skeleton data not loaded — cannot build generated model');
             }
             result = generateModelMesh(defSkeletonData, skinWeightData, this.generatedConfig);
+
+            if (result.skeleton) {
+                this.defSkeleton = result.skeleton;
+                this.isSkinned = true;
+            }
         }
 
         if (!result) throw new Error('No visible bones in generated model config');
 
         this.bodyMesh = result.mesh;
-        if (result.skeleton) {
-            this.defSkeleton = result.skeleton;
-            this.isSkinned = true;
-        }
         this.group.add(this.bodyMesh);
 
         return this;
@@ -854,13 +876,9 @@ function init() {
     // Load saved settings from localStorage
     loadSettings();
 
-    // beforeunload — save session state + warn about unsaved changes
+    // beforeunload — save session state
     window.addEventListener('beforeunload', (e) => {
         saveSessionState();
-        if (_sceneDirty) {
-            e.preventDefault();
-            e.returnValue = '';
-        }
     });
 
     // Start render loop
@@ -1018,7 +1036,10 @@ function deleteCharacter(id) {
     }
 
     // Clear model generator reference if this was the generated character
-    if (_mgCharacterId === id) _mgCharacterId = null;
+    if (_mgCharacterId === id) {
+        _clearBoneHighlightCache();
+        _mgCharacterId = null;
+    }
 
     inst.dispose();
     characters.delete(id);
@@ -1090,9 +1111,7 @@ function updateCharacterListUI() {
         // Delete button
         li.querySelector('.btn-delete').addEventListener('click', (e) => {
             e.stopPropagation();
-            if (confirm(`"${inst.presetName}" löschen?`)) {
-                deleteCharacter(id);
-            }
+            deleteCharacter(id);
         });
 
         list.appendChild(li);
@@ -1156,7 +1175,7 @@ function bindCanvasClick() {
         const meshes = [];
         characters.forEach((inst, id) => {
             inst.group.traverse(child => {
-                if (child.isMesh) {
+                if (child.isMesh && !child.userData._boneOverlay) {
                     child.userData._parentCharId = id;
                     meshes.push(child);
                 }
@@ -1177,11 +1196,29 @@ function bindCanvasClick() {
                         clearSubMeshSelection();
                         selectCharacter(charId);
                     }
+                    _clearBoneSelection();
                     _doSubMeshClick(hitTarget);
                     return;
                 }
-                // Hit the body mesh — select character, clear sub-mesh
+
+                // Check Ctrl+Click on generated model body for bone selection
+                const inst = characters.get(charId);
+                if (e.ctrlKey && inst && inst.generatedConfig &&
+                    hitObj === inst.bodyMesh && inst.bodyMesh.userData.boneVertexRanges) {
+                    const boneName = _getBoneFromIntersection(hits[0], inst.bodyMesh);
+                    if (boneName) {
+                        if (selectedCharacterId !== charId) {
+                            clearSubMeshSelection();
+                            selectCharacter(charId);
+                        }
+                        _doBoneClick(boneName, inst);
+                        return;
+                    }
+                }
+
+                // Hit the body mesh — select character, clear sub-mesh and bone
                 clearSubMeshSelection();
+                _clearBoneSelection();
                 selectCharacter(charId);
                 switchTab('eigenschaften');
                 _updatePropContext();
@@ -1190,6 +1227,7 @@ function bindCanvasClick() {
         }
 
         // Clicked empty space — deselect
+        _clearBoneSelection();
         deselectCharacter();
     });
 }
@@ -1738,9 +1776,7 @@ function toggleRigVisibility() {
 function deleteSelectedCharacter() {
     if (!selectedCharacterId) return;
     const inst = characters.get(selectedCharacterId);
-    if (inst && confirm(`"${inst.presetName}" löschen?`)) {
-        deleteCharacter(selectedCharacterId);
-    }
+    if (inst) deleteCharacter(selectedCharacterId);
 }
 
 // =========================================================================
@@ -3702,6 +3738,162 @@ function _removeSubMesh(target) {
     markDirty();
 }
 
+// =========================================================================
+// Bone Selection — 3D overlay for generated models
+// =========================================================================
+
+/** Determine which bone was hit by a raycast intersection on a generated model. */
+function _getBoneFromIntersection(intersection, bodyMesh) {
+    if (!bodyMesh || !bodyMesh.userData.boneVertexRanges) return null;
+    const vertIdx = intersection.face.a;
+    const ranges = bodyMesh.userData.boneVertexRanges;
+    for (const [boneName, range] of Object.entries(ranges)) {
+        if (vertIdx >= range.start && vertIdx < range.start + range.count) {
+            return boneName;
+        }
+    }
+    return null;
+}
+
+/** Get or create a sub-geometry for a specific bone (cached). */
+function _getOrCreateBoneHighlightGeo(bodyMesh, boneName) {
+    if (_boneHighlightCache.has(boneName)) return _boneHighlightCache.get(boneName);
+
+    const geo = bodyMesh.geometry;
+    const ranges = bodyMesh.userData.boneVertexRanges;
+    if (!ranges || !ranges[boneName]) return null;
+
+    const { start, count } = ranges[boneName];
+    const end = start + count;
+
+    // Extract faces whose vertices all lie within this bone's vertex range
+    const indexArr = geo.index.array;
+    const newIndices = [];
+    for (let i = 0; i < indexArr.length; i += 3) {
+        const a = indexArr[i], b = indexArr[i + 1], c = indexArr[i + 2];
+        if (a >= start && a < end && b >= start && b < end && c >= start && c < end) {
+            newIndices.push(a - start, b - start, c - start);
+        }
+    }
+    if (newIndices.length === 0) return null;
+
+    // Copy vertex data for this range
+    const posArr = geo.attributes.position.array;
+    const subGeo = new THREE.BufferGeometry();
+    subGeo.setAttribute('position', new THREE.Float32BufferAttribute(
+        posArr.slice(start * 3, end * 3), 3));
+    subGeo.setIndex(newIndices);
+    subGeo.computeVertexNormals();
+
+    // Copy skin data if present (needed for SkinnedMesh overlay)
+    if (geo.attributes.skinIndex && geo.attributes.skinWeight) {
+        subGeo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(
+            geo.attributes.skinIndex.array.slice(start * 4, end * 4), 4));
+        subGeo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(
+            geo.attributes.skinWeight.array.slice(start * 4, end * 4), 4));
+    }
+
+    _boneHighlightCache.set(boneName, subGeo);
+    return subGeo;
+}
+
+/** Create and add an overlay mesh for a bone highlight. */
+function _createBoneOverlay(bodyMesh, boneName, material) {
+    const subGeo = _getOrCreateBoneHighlightGeo(bodyMesh, boneName);
+    if (!subGeo) return null;
+
+    let overlay;
+    if (bodyMesh.isSkinnedMesh && subGeo.attributes.skinIndex) {
+        overlay = new THREE.SkinnedMesh(subGeo, material);
+        overlay.bind(bodyMesh.skeleton, bodyMesh.bindMatrix);
+    } else {
+        overlay = new THREE.Mesh(subGeo, material);
+    }
+    overlay.renderOrder = 1;
+    overlay.raycast = function() {};  // non-raycastable
+    overlay.userData._boneOverlay = true;
+
+    // Add to same parent as bodyMesh so transforms match
+    if (bodyMesh.parent) bodyMesh.parent.add(overlay);
+    return overlay;
+}
+
+/** Remove an overlay mesh from the scene. */
+function _removeBoneOverlay(overlay) {
+    if (overlay && overlay.parent) {
+        overlay.parent.remove(overlay);
+    }
+}
+
+/** Clear bone hover state. */
+function _clearBoneHover() {
+    if (_boneHoverOverlay) {
+        _removeBoneOverlay(_boneHoverOverlay);
+        _boneHoverOverlay = null;
+    }
+    _hoveredBoneName = null;
+}
+
+/** Clear bone selection state. */
+function _clearBoneSelection() {
+    if (_boneSelectOverlay) {
+        _removeBoneOverlay(_boneSelectOverlay);
+        _boneSelectOverlay = null;
+    }
+    _selectedBoneName = null;
+}
+
+/** Invalidate all bone highlight caches (call on model regeneration). */
+function _clearBoneHighlightCache() {
+    for (const geo of _boneHighlightCache.values()) {
+        geo.dispose();
+    }
+    _boneHighlightCache.clear();
+    _clearBoneHover();
+    _clearBoneSelection();
+}
+
+/** Handle Ctrl+Click on a generated model bone. */
+function _doBoneClick(boneName, inst) {
+    if (_selectedBoneName === boneName) {
+        // Toggle off
+        _clearBoneSelection();
+        _mgSelectedBone = null;
+        const propsSection = document.getElementById('mg-bone-props-section');
+        if (propsSection) propsSection.style.display = 'none';
+        document.querySelectorAll('.mg-bone-item.selected').forEach(el => el.classList.remove('selected'));
+        return;
+    }
+
+    // Select new bone
+    _clearBoneSelection();
+    _selectedBoneName = boneName;
+    if (inst.bodyMesh) {
+        _boneSelectOverlay = _createBoneOverlay(inst.bodyMesh, boneName, _BONE_SELECT_MAT);
+    }
+
+    // Sync with Model Generator UI
+    _mgSelectBone(boneName);
+    switchTab('modell');
+
+    // Ensure bone properties section is expanded
+    const propsSection = document.getElementById('mg-bone-props-section');
+    if (propsSection) propsSection.classList.remove('collapsed');
+
+    // Scroll bone into view in tree
+    const treeItem = document.querySelector(`.mg-bone-item[data-bone="${boneName}"]`);
+    if (treeItem) {
+        // Expand parent category if collapsed
+        const catBody = treeItem.closest('.mg-category-body');
+        if (catBody && catBody.classList.contains('hidden')) {
+            catBody.classList.remove('hidden');
+            const header = catBody.previousElementSibling;
+            if (header) header.classList.remove('collapsed');
+        }
+        treeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
 /** Bind mousemove hover + tooltip for sub-meshes. Called once from init(). */
 function initSubMeshInteraction() {
     const tooltip = document.getElementById('mesh-tooltip');
@@ -3722,6 +3914,7 @@ function initSubMeshInteraction() {
             _setSubMeshEmissive(_hoveredSubMesh, _ZERO_EMISSIVE);
         }
         _hoveredSubMesh = null;
+        _clearBoneHover();
         if (tooltip) tooltip.style.display = 'none';
         canvas.style.cursor = '';
     });
@@ -3733,18 +3926,45 @@ function initSubMeshInteraction() {
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
 
+        // Collect sub-mesh targets (garments, hair)
         const targets = getAllSubMeshTargets();
         const roots = targets.map(t => t.meshObj);
+
+        // Also include generated model body meshes for bone hover
+        const boneTargets = [];  // { bodyMesh, charId }
+        characters.forEach((inst, id) => {
+            if (inst.generatedConfig && inst.bodyMesh && inst.bodyMesh.userData.boneVertexRanges) {
+                boneTargets.push({ bodyMesh: inst.bodyMesh, charId: id });
+                roots.push(inst.bodyMesh);
+            }
+        });
+
         const intersects = raycaster.intersectObjects(roots, true);
 
         let newItem = null;
+        let newBoneName = null;
+        let hitBodyMesh = null;
+
         if (intersects.length > 0) {
+            // Check if closest hit is a sub-mesh (garment/hair)
             newItem = _findSubMeshForObject(intersects[0].object, targets);
+
+            // If not a sub-mesh, check if it's a generated model body mesh
+            if (!newItem) {
+                for (const bt of boneTargets) {
+                    if (intersects[0].object === bt.bodyMesh) {
+                        newBoneName = _getBoneFromIntersection(intersects[0], bt.bodyMesh);
+                        hitBodyMesh = bt.bodyMesh;
+                        break;
+                    }
+                }
+            }
         }
 
         // Update tooltip
-        if (newItem && tooltip) {
-            tooltip.textContent = newItem.label;
+        const label = newItem ? newItem.label : newBoneName;
+        if (label && tooltip) {
+            tooltip.textContent = label;
             tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
             tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
             tooltip.style.display = 'block';
@@ -3754,7 +3974,7 @@ function initSubMeshInteraction() {
             canvas.style.cursor = '';
         }
 
-        // Update emissive highlight
+        // Update sub-mesh emissive highlight
         if (!_sameSubMesh(_hoveredSubMesh, newItem)) {
             if (_hoveredSubMesh && !_sameSubMesh(_hoveredSubMesh, _selectedSubMesh)) {
                 _setSubMeshEmissive(_hoveredSubMesh, _ZERO_EMISSIVE);
@@ -3762,6 +3982,18 @@ function initSubMeshInteraction() {
             _hoveredSubMesh = newItem;
             if (_hoveredSubMesh && !_sameSubMesh(_hoveredSubMesh, _selectedSubMesh)) {
                 _setSubMeshEmissive(_hoveredSubMesh, _HOVER_EMISSIVE);
+            }
+        }
+
+        // Update bone hover overlay
+        if (_hoveredBoneName !== newBoneName) {
+            if (_boneHoverOverlay) {
+                _removeBoneOverlay(_boneHoverOverlay);
+                _boneHoverOverlay = null;
+            }
+            _hoveredBoneName = newBoneName;
+            if (newBoneName && hitBodyMesh && newBoneName !== _selectedBoneName) {
+                _boneHoverOverlay = _createBoneOverlay(hitBodyMesh, newBoneName, _BONE_HOVER_MAT);
             }
         }
     }
@@ -5186,6 +5418,7 @@ function _bindModelGeneratorUI() {
         }
 
         _mgSelectedBone = null;
+        _clearBoneHighlightCache();
         const propsSection = document.getElementById('mg-bone-props-section');
         if (propsSection) propsSection.style.display = 'none';
 
@@ -5233,10 +5466,9 @@ function _bindModelGeneratorUI() {
         if (boneRadiusVal) boneRadiusVal.textContent = v.toFixed(3);
         if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
         _mgConfig.bone_parts[_mgSelectedBone].radius = v;
-        // Update swatch in tree
         _updateBoneTreeItem(_mgSelectedBone);
+        _mgAutoRegenerate();
     });
-    if (boneRadius) boneRadius.addEventListener('change', () => { _mgAutoRegenerate(); });
 
     const boneColor = document.getElementById('mg-bone-color');
     if (boneColor) boneColor.addEventListener('input', () => {
@@ -5250,6 +5482,11 @@ function _bindModelGeneratorUI() {
     const genBtn = document.getElementById('mg-generate');
     if (genBtn) genBtn.addEventListener('click', () => {
         _mgGenerateCharacter();
+    });
+
+    const saveLibBtn = document.getElementById('mg-save-lib');
+    if (saveLibBtn) saveLibBtn.addEventListener('click', () => {
+        _mgSaveToLibrary();
     });
 
     const saveBtn = document.getElementById('mg-save');
@@ -5325,6 +5562,7 @@ function _populateBoneTree() {
             cb.addEventListener('change', (e) => {
                 e.stopPropagation();
                 part.visible = cb.checked;
+                _mgAutoRegenerate();
             });
 
             const label = document.createElement('span');
@@ -5382,6 +5620,19 @@ function _mgSelectBone(boneName) {
     if (radiusVal) radiusVal.textContent = (part.radius || 0.03).toFixed(3);
     const colorInput = document.getElementById('mg-bone-color');
     if (colorInput) colorInput.value = part.color || _mgConfig.default_color;
+
+    // Bidirectional sync: show 3D selection overlay
+    if (_boneSelectOverlay) {
+        _removeBoneOverlay(_boneSelectOverlay);
+        _boneSelectOverlay = null;
+    }
+    _selectedBoneName = boneName;
+    if (_mgCharacterId) {
+        const inst = characters.get(_mgCharacterId);
+        if (inst && inst.bodyMesh && inst.bodyMesh.userData.boneVertexRanges) {
+            _boneSelectOverlay = _createBoneOverlay(inst.bodyMesh, boneName, _BONE_SELECT_MAT);
+        }
+    }
 }
 
 function _updateBoneTreeItem(boneName) {
@@ -5429,6 +5680,9 @@ function _mgGenerateCharacter() {
     const result = _mgGeneratePreview();
     if (!result) return;
 
+    // Clear bone highlight cache and overlays (references become invalid)
+    _clearBoneHighlightCache();
+
     // Remember position of old character before removing
     let oldPos = null;
     if (_mgCharacterId && characters.has(_mgCharacterId)) {
@@ -5470,14 +5724,17 @@ function _mgGenerateCharacter() {
     console.log(`Model Generator: created ${_mgSkeletonType === 'rig' ? 'Mesh' : 'SkinnedMesh'} with ${vc} vertices as character "${inst.presetName}"`);
 }
 
-async function _mgSaveModel() {
+async function _mgSaveToLibrary() {
     if (!_mgConfig) return;
 
     const name = (_mgConfig.name || 'Neues Modell').trim();
     if (!name) { alert('Bitte einen Namen eingeben.'); return; }
 
-    const data = { ..._mgConfig };
-    data.name = name;
+    const data = {
+        ..._mgConfig,
+        type: 'generated_model',
+        skeleton_type: _mgSkeletonType
+    };
 
     try {
         const resp = await fetch('/api/character/model/save/', {
@@ -5487,19 +5744,50 @@ async function _mgSaveModel() {
         });
         const result = await resp.json();
         if (result.ok) {
-            const werkzeugeTitle = document.querySelector('.menu:nth-child(5) .menu-title');
-            if (werkzeugeTitle) {
-                const orig = werkzeugeTitle.textContent;
-                werkzeugeTitle.textContent = 'Gespeichert!';
-                werkzeugeTitle.style.color = 'var(--accent)';
-                setTimeout(() => { werkzeugeTitle.textContent = orig; werkzeugeTitle.style.color = ''; }, 1500);
-            }
-            console.log(`Model saved: ${name}`);
+            alert(`Modell "${name}" in Bibliothek gespeichert!`);
+            console.log(`Model saved to library: ${name}`);
         } else {
             alert('Fehler: ' + (result.error || 'Unbekannt'));
         }
     } catch (e) {
         alert('Fehler beim Speichern: ' + e.message);
+    }
+}
+
+async function _mgSaveModel() {
+    if (!_mgConfig) return;
+
+    const defaultName = (_mgConfig.name || 'Neues Modell').trim().replace(/[^a-zA-Z0-9_\-äöüÄÖÜß ]/g, '_') + '.json';
+
+    // Use File System Access API for Save As dialog
+    try {
+        const handle = await window.showSaveFilePicker({
+            suggestedName: defaultName,
+            types: [{
+                description: 'JSON Model',
+                accept: { 'application/json': ['.json'] }
+            }]
+        });
+
+        // Format as importable character preset
+        const data = {
+            ..._mgConfig,
+            type: 'generated_model',
+            name: _mgConfig.name || 'Generiertes Modell',
+            body_type: _mgSkeletonType === 'rig' ? 'Rig Bones' : 'DEF Skeleton',
+            skeleton_type: _mgSkeletonType
+        };
+        const json = JSON.stringify(data, null, 2);
+        const writable = await handle.createWritable();
+        await writable.write(json);
+        await writable.close();
+
+        console.log('Model exported to:', handle.name);
+    } catch (e) {
+        if (e.name !== 'AbortError') {
+            console.error('Export failed:', e);
+            alert('Fehler beim Exportieren: ' + e.message);
+        }
     }
 }
 

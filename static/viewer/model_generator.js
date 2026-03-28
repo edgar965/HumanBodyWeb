@@ -287,8 +287,11 @@ export function generateModelMesh(skelData, swData, config) {
             case 'box':
                 shapeGeo = new THREE.BoxGeometry(radius * 2, boneLen, radius * 2, 1, 1, 1);
                 break;
-            case 'sphere':
+            case 'sphere_low':
                 shapeGeo = new THREE.SphereGeometry(radius, segments, Math.max(4, segments >> 1));
+                break;
+            case 'sphere':
+                shapeGeo = new THREE.SphereGeometry(radius, 24, 16);
                 break;
             case 'cone':
                 shapeGeo = new THREE.ConeGeometry(radius, boneLen, segments);
@@ -325,7 +328,7 @@ export function generateModelMesh(skelData, swData, config) {
         mat4.compose(midpoint, shapeQuat, new THREE.Vector3(1, 1, 1));
         shapeGeo.applyMatrix4(mat4);
 
-        geoChunks.push({ geometry: shapeGeo, boneIndex: boneIdx, color });
+        geoChunks.push({ geometry: shapeGeo, boneIndex: boneIdx, color, boneName });
     }
 
     if (geoChunks.length === 0) return null;
@@ -356,6 +359,7 @@ export function generateModelMesh(skelData, swData, config) {
 
     let vertOffset = 0;
     let indexOffset = 0;
+    const boneVertexRanges = {};  // boneName -> { start, count }
 
     // Process chunks grouped by color
     for (const [color, chunkIndices] of colorGroups) {
@@ -367,6 +371,9 @@ export function generateModelMesh(skelData, swData, config) {
             const posArr = geo.attributes.position.array;
             const normArr = geo.attributes.normal.array;
             const vCount = geo.attributes.position.count;
+
+            // Track bone vertex range for 3D selection
+            if (chunk.boneName) boneVertexRanges[chunk.boneName] = { start: vertOffset, count: vCount };
 
             // Copy positions and normals
             mergedPositions.set(posArr, vertOffset * 3);
@@ -471,6 +478,9 @@ export function generateModelMesh(skelData, swData, config) {
     const skinnedMesh = new THREE.SkinnedMesh(mergedGeo, materials);
     skinnedMesh.add(rootBone);
     skinnedMesh.bind(skeleton);
+
+    skinnedMesh.userData.boneVertexRanges = boneVertexRanges;
+    skinnedMesh.userData.isGeneratedModel = true;
 
     return {
         mesh: skinnedMesh,
@@ -600,8 +610,11 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
             case 'box':
                 shapeGeo = new THREE.BoxGeometry(radius * 2, boneLen, radius * 2, 1, 1, 1);
                 break;
-            case 'sphere':
+            case 'sphere_low':
                 shapeGeo = new THREE.SphereGeometry(radius, segments, Math.max(4, segments >> 1));
+                break;
+            case 'sphere':
+                shapeGeo = new THREE.SphereGeometry(radius, 24, 16);
                 break;
             case 'cone':
                 shapeGeo = new THREE.ConeGeometry(radius, boneLen, segments);
@@ -642,7 +655,7 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
 
         // Determine skin bone index: DEF bones map to their skeleton index, others to root (0)
         const boneIdx = canSkin ? (boneIndexMap[boneName] !== undefined ? boneIndexMap[boneName] : 0) : 0;
-        geoChunks.push({ geometry: shapeGeo, color, boneIndex: boneIdx });
+        geoChunks.push({ geometry: shapeGeo, color, boneIndex: boneIdx, boneName });
     }
 
     if (geoChunks.length === 0) return null;
@@ -669,6 +682,7 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
     const groups = [];
 
     let vertOffset = 0, indexOffset = 0;
+    const boneVertexRanges = {};  // boneName -> { start, count }
 
     for (const [color, chunkIndices] of colorGroups) {
         const groupStart = indexOffset;
@@ -678,6 +692,9 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
             const posArr = geo.attributes.position.array;
             const normArr = geo.attributes.normal.array;
             const vCount = geo.attributes.position.count;
+
+            // Track bone vertex range for 3D selection
+            if (chunk.boneName) boneVertexRanges[chunk.boneName] = { start: vertOffset, count: vCount };
 
             mergedPositions.set(posArr, vertOffset * 3);
             mergedNormals.set(normArr, vertOffset * 3);
@@ -761,11 +778,17 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
         skinnedMesh.add(rootBone);
         skinnedMesh.bind(skeleton);
 
+        skinnedMesh.userData.boneVertexRanges = boneVertexRanges;
+        skinnedMesh.userData.isGeneratedModel = true;
+
         return {
             mesh: skinnedMesh,
             skeleton: { skeleton, rootBone, bones, boneByName },
         };
     }
 
-    return { mesh: new THREE.Mesh(mergedGeo, materials) };
+    const plainMesh = new THREE.Mesh(mergedGeo, materials);
+    plainMesh.userData.boneVertexRanges = boneVertexRanges;
+    plainMesh.userData.isGeneratedModel = true;
+    return { mesh: plainMesh };
 }

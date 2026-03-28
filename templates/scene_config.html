@@ -1365,7 +1365,7 @@
                         </div>
                         <div class="slider-row">
                             <label>Standard-Radius</label>
-                            <input type="range" id="mg-default-radius" min="0.005" max="0.08" step="0.001" value="0.03">
+                            <input type="range" id="mg-default-radius" min="0.005" max="0.24" step="0.001" value="0.03">
                             <span id="mg-default-radius-val" class="slider-val">0.030</span>
                         </div>
                         <div class="slider-row">
@@ -1399,6 +1399,7 @@
                                 <option value="cylinder">Zylinder</option>
                                 <option value="box">Box</option>
                                 <option value="sphere">Kugel</option>
+                                <option value="sphere_low">Kugel eckig</option>
                                 <option value="cone">Kegel/Pyramide</option>
                                 <option value="capsule">Kapsel</option>
                                 <option value="oval">Oval</option>
@@ -1407,7 +1408,7 @@
                         </div>
                         <div class="slider-row">
                             <label>Radius</label>
-                            <input type="range" id="mg-bone-radius" min="0.005" max="0.08" step="0.001" value="0.03">
+                            <input type="range" id="mg-bone-radius" min="0.005" max="0.24" step="0.001" value="0.03">
                             <span id="mg-bone-radius-val" class="slider-val">0.030</span>
                         </div>
                         <div class="slider-row">
@@ -1422,7 +1423,8 @@
                     <h3>Aktionen <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" style="display:flex;flex-direction:column;gap:6px;">
                         <button class="action-btn primary" id="mg-generate">Erzeugen</button>
-                        <button class="action-btn" id="mg-save">Speichern</button>
+                        <button class="action-btn" id="mg-save-lib">In Bibliothek speichern</button>
+                        <button class="action-btn" id="mg-save">Exportieren...</button>
                     </div>
                 </div>
             </div><!-- /tab-modell -->
