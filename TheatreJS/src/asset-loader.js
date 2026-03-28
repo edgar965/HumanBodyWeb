@@ -2,10 +2,40 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { getSheet, createMeshSheet } from './theatre-bridge.js';
+import { generateRigBoneMesh, generateModelMesh } from '../../static/viewer/model_generator.js';
 
 const gltfLoader = new GLTFLoader();
 const bvhLoader = new BVHLoader();
 let _assetCounter = 0;
+
+// Cached skeleton data for generated models (lazy-fetched)
+let _cachedDefSkeleton = null;
+let _cachedSkinWeights = null;
+let _cachedRigBones = null;
+
+async function _ensureDefSkeleton() {
+    if (!_cachedDefSkeleton) {
+        const r = await fetch('/api/character/def-skeleton/');
+        if (r.ok) _cachedDefSkeleton = await r.json();
+    }
+    return _cachedDefSkeleton;
+}
+
+async function _ensureSkinWeights() {
+    if (!_cachedSkinWeights) {
+        const r = await fetch('/api/character/skin-weights/');
+        if (r.ok) _cachedSkinWeights = await r.json();
+    }
+    return _cachedSkinWeights;
+}
+
+async function _ensureRigBones() {
+    if (!_cachedRigBones) {
+        const r = await fetch('/api/character/rig/');
+        if (r.ok) _cachedRigBones = await r.json();
+    }
+    return _cachedRigBones;
+}
 
 /**
  * Load a GLB file from a URL and add it to the scene.
@@ -193,6 +223,45 @@ export async function loadCharacterModel(scene) {
 }
 
 /**
+ * Build a generated model mesh client-side (no server mesh API needed).
+ * Uses model_generator.js functions to create geometry from bone config.
+ * @param {Object} config  Generated model config (type: 'generated_model')
+ * @returns {Promise<THREE.Group>}
+ */
+async function buildGeneratedModel(config) {
+    const skelType = config.skeleton_type || 'def';
+    let result;
+
+    const defSkel = await _ensureDefSkeleton();
+    const swData = await _ensureSkinWeights();
+
+    if (skelType === 'rig') {
+        const rigData = await _ensureRigBones();
+        if (!rigData) throw new Error('Rig bones data not loaded');
+        result = generateRigBoneMesh(rigData, config, defSkel, swData);
+    } else {
+        if (!defSkel || !swData) throw new Error('Skeleton data not loaded');
+        result = generateModelMesh(defSkel, swData, config);
+    }
+
+    if (!result) throw new Error('No visible bones in generated model config');
+
+    const group = new THREE.Group();
+    group.add(result.mesh);
+    group.userData.isGeneratedModel = true;
+
+    // If the mesh is a SkinnedMesh, store references for animation system
+    if (result.skeleton && result.mesh.isSkinnedMesh) {
+        group.userData.isSkinnedMesh = true;
+        group.userData.skinnedMesh = result.mesh;
+        group.userData.skeleton = result.skeleton.skeleton;
+        group.userData.rootBone = result.skeleton.rootBone;
+    }
+
+    return group;
+}
+
+/**
  * Load a character from a model preset (body_type + morphs + meta sliders).
  * Also loads hair and garments if present in the preset.
  * @param {THREE.Scene} scene
@@ -201,6 +270,22 @@ export async function loadCharacterModel(scene) {
  * @returns {Promise<THREE.Group>}
  */
 export async function loadCharacterFromPreset(scene, preset, presetName) {
+    // Handle generated models (built client-side, no server mesh API)
+    if (preset.type === 'generated_model') {
+        const group = await buildGeneratedModel(preset);
+        scene.add(group);
+        group.userData.presetName = presetName;
+        group.userData.bodyType = 'generated';
+
+        // Register in Theatre
+        _assetCounter++;
+        const name = presetName || `Character ${_assetCounter}`;
+        const sheet = getSheet();
+        if (sheet) createMeshSheet(sheet, name, group);
+
+        return group;
+    }
+
     // Build query string from preset data
     const params = new URLSearchParams();
 
