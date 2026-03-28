@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=25';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=27';
 
 // =========================================================================
 // Tone mapping lookup

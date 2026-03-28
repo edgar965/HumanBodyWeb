@@ -9,7 +9,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=18';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=20';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 
 // Register BVH helpers on BufferGeometry (but NOT global raycast override)

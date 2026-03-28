@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET, BVH_TO_DEF_OPENPOSE, BVH_TO_DEF_BANDAI, BVH_TO_DEF_SMPL } from './retarget_hybrid.js?v=18';
+import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET, BVH_TO_DEF_OPENPOSE, BVH_TO_DEF_BANDAI, BVH_TO_DEF_SMPL } from './retarget_hybrid.js?v=20';
 
 // =========================================================================
 // Global state

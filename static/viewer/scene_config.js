@@ -8,7 +8,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=17';
+import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=20';
 import { classifyBones, getDefaultModelConfig, computeBoneWorldTransforms, generateModelMesh, classifyRigBones, getDefaultRigConfig, generateRigBoneMesh, BODY_BONES, FINGER_BONES } from './model_generator.js';
 
 const gltfLoader = new GLTFLoader();

@@ -533,13 +533,19 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         }
     }
 
-    // --- For Bandai: compute frame-0 BVH world Qs BEFORE direction correction ---
+    // --- Compute frame-0 BVH world Qs for delta retarget ---
     // Bandai encodes the standing pose in frame-0 rotations (not identity rest).
-    // We need frame-0 world Qs to compute correct bone directions for direction correction.
-    // SMPL uses standard retarget (like CMU) — frame-0 world directions give 45-114°
-    // corrections with L/R asymmetry, which is wrong. Standard formula handles it correctly.
+    // SMPL/AIST BVH files have absolute (non-normalized) motion capture data where
+    // frame 0 can be any dance pose. Delta retarget subtracts frame-0 to start from
+    // rest pose, matching the behavior of GVHMR (which pre-normalizes in Python).
+    // For already-normalized BVH (like GVHMR), frame-0 Qs are identity so delta=standard.
     const bvhRestWorldQ = {};
-    const useDeltaRetarget = (format === 'BANDAI');
+    const useDeltaRetarget = (format === 'BANDAI' || format === 'SMPL');
+    // Direction correction bone directions: Bandai uses frame-0 world directions
+    // (standing pose baked into frame-0 rotations). SMPL uses REST bone positions
+    // (identity rest) because AIST frame-0 can be any pose → world directions
+    // would give 45-114° corrections with L/R asymmetry.
+    const useDeltaDirCorrection = (format === 'BANDAI');
     if (useDeltaRetarget) {
         const _tq = new THREE.Quaternion();
         for (const bvhName of bvhBonesSorted) {
@@ -561,9 +567,9 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
 
     // --- Offset Q per mapped bone (with direction correction) ---
     // Direction correction aligns BVH bone directions with DEF bone directions.
-    // Standard (CMU/Mixamo/MocapNET): BVH rest is identity, use local offsets.
-    // Delta (Bandai/SMPL): use frame-0 WORLD directions (local offsets rotated
-    // by frame-0 world Q) since frame-0 has non-identity rotations.
+    // Standard (CMU/Mixamo/MocapNET/SMPL): BVH rest is identity, use local offsets.
+    // Delta dir correction (Bandai only): use frame-0 WORLD directions (local offsets
+    // rotated by frame-0 world Q) since frame-0 has non-identity standing pose.
     const _NEG_Z = new THREE.Vector3(0, 0, -1);
     const offsetQ = {};
 
@@ -608,11 +614,45 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         skipDirCorrectionBones.add('DEF-shoulder.R');
     }
 
-    for (const [defName, bvhName] of Object.entries(defToBvhName)) {
+    // Sort mapped DEF bones by hierarchy depth (parents first) so that
+    // direction corrections can be propagated down to skip bones.
+    const mappedDefSorted = Object.keys(defToBvhName).sort((a, b) => {
+        let da = 0, ca = defSkel.boneByName[a];
+        while (ca && ca.parent) { da++; ca = ca.parent; }
+        let db = 0, cb = defSkel.boneByName[b];
+        while (cb && cb.parent) { db++; cb = cb.parent; }
+        return da - db;
+    });
+
+    // Track dirCorr per mapped bone for propagation to skip bones.
+    // When a parent has direction correction but a child skips it, the
+    // parent's corrected world Q no longer matches defWorldRestQ. Without
+    // propagation, the mismatch "leaks" as an extra rotation into the
+    // child's local Q (causing e.g. ape-like forward head tilt).
+    const dirCorrMap = {};
+
+    for (const defName of mappedDefSorted) {
+        const bvhName = defToBvhName[defName];
+
+        // Find nearest mapped ancestor's dirCorr
+        let inheritedDirCorr = new THREE.Quaternion(); // identity
+        let pBone = defSkel.boneByName[defName]?.parent;
+        while (pBone) {
+            const pName = origNameByBone.get(pBone);
+            if (pName && dirCorrMap[pName] !== undefined) {
+                inheritedDirCorr = dirCorrMap[pName].clone();
+                break;
+            }
+            pBone = pBone.parent;
+        }
+
         // Skip direction correction for root bone — root has multiple children
         // with divergent directions, causing erroneous correction
         if (defName === rootDefName || skipDirCorrectionBones.has(defName)) {
-            offsetQ[defName] = defWorldRestQ[defName].clone();
+            dirCorrMap[defName] = inheritedDirCorr.clone();
+            // Propagate parent's dirCorr so that the corrected→skipped
+            // boundary stays consistent at rest pose
+            offsetQ[defName] = inheritedDirCorr.clone().multiply(defWorldRestQ[defName]);
             continue;
         }
 
@@ -627,13 +667,13 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         for (const child of bvhBone.children) {
             if (child.isBone && child.position.lengthSq() > 1e-10) {
                 let dir;
-                if (useDeltaRetarget && bvhRestWorldQ[bvhName]) {
-                    // Delta retarget: rotate local offset by frame-0 world Q
+                if (useDeltaDirCorrection && bvhRestWorldQ[bvhName]) {
+                    // Bandai: rotate local offset by frame-0 world Q
                     // to get the actual world-space direction at frame 0
                     dir = child.position.clone()
                         .applyQuaternion(bvhRestWorldQ[bvhName]).normalize();
                 } else {
-                    // Standard retarget: BVH rest is identity, local = world
+                    // Standard/SMPL: BVH rest is identity, local = world
                     dir = child.position.clone().normalize();
                 }
                 const dot = dir.dot(defRestDir);
@@ -642,7 +682,7 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         }
         // Fallback to own position offset
         if (!bvhDir && bvhBone.position.lengthSq() > 1e-10) {
-            if (useDeltaRetarget) {
+            if (useDeltaDirCorrection) {
                 const parentName = bvhBoneParentName[bvhName];
                 if (parentName && bvhRestWorldQ[parentName]) {
                     bvhDir = bvhBone.position.clone()
@@ -656,9 +696,11 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
         }
 
         if (!bvhDir || bvhDir.lengthSq() < 1e-10) {
+            dirCorrMap[defName] = new THREE.Quaternion(); // identity
             offsetQ[defName] = defWorldRestQ[defName].clone();
         } else {
             const dirCorr = new THREE.Quaternion().setFromUnitVectors(defRestDir, bvhDir);
+            dirCorrMap[defName] = dirCorr.clone();
             offsetQ[defName] = dirCorr.multiply(defWorldRestQ[defName]);
         }
     }
@@ -787,11 +829,10 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
                 const bvhName = defToBvhName[defName];
 
                 if (useDeltaRetarget) {
-                    // Delta + direction correction:
-                    // desiredWorldQ = (bvhWAQ × bvhRWQ⁻¹) × offsetQ
-                    // where offsetQ uses frame-0 posed bone directions for correction.
-                    // At frame 0: delta=identity → desiredWorldQ = offsetQ (direction-aligned rest)
-                    // At frame N: delta rotates from frame-0 to frame-N applied to aligned DEF
+                    // Delta retarget: desiredWorldQ = (bvhWAQ × bvhRWQ⁻¹) × offsetQ
+                    // Subtracts frame-0 world Q to get relative motion from initial pose.
+                    // At frame 0: delta=identity → desiredWorldQ = offsetQ (rest pose)
+                    // At frame N: delta rotates from frame-0 to frame-N applied to DEF rest
                     const bvhWAQ = bvhWorldAnimQ[bvhName];
                     const bvhRWQ = bvhRestWorldQ[bvhName];
                     if (bvhWAQ && bvhRWQ) {
