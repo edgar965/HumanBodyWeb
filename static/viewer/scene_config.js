@@ -702,6 +702,17 @@ class CharacterInstance {
                 garments: data.garments || [],
             };
         }
+
+        // If loading a Rig model, ensure rig bones data is loaded
+        if (presetPayload.skeleton_type === 'rig' && !_mgRigBonesData) {
+            try {
+                const resp = await fetch('/api/character/rig-bones/');
+                if (resp.ok) _mgRigBonesData = await resp.json();
+            } catch (e) {
+                console.warn('Failed to load rig bones:', e);
+            }
+        }
+
         const inst = new CharacterInstance(data.id, presetPayload);
         await inst.load();
         if (data.transform) {
@@ -1660,6 +1671,19 @@ async function importModelFromFilePicker() {
             alert('Ungültiges Modell-JSON. Feld "body_type" fehlt.');
             return;
         }
+
+        // If importing a Rig model, ensure rig bones data is loaded
+        if (data.skeleton_type === 'rig' && !_mgRigBonesData) {
+            try {
+                const resp = await fetch('/api/character/rig-bones/');
+                if (resp.ok) _mgRigBonesData = await resp.json();
+            } catch (e) {
+                console.warn('Failed to load rig bones:', e);
+                alert('Rig-Knochen konnten nicht geladen werden.');
+                return;
+            }
+        }
+
         const id = generateCharacterId();
         const inst = new CharacterInstance(id, data);
         const xOffset = characters.size * 0.8;
