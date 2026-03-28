@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Theatre Studio — MocapNET{% endblock %}
+
+{% block extra_head %}
+<style>
+    .main-content {
+        padding: 0 !important;
+        max-width: none !important;
+        width: calc(100vw - var(--sidebar-width));
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: #111;
+    }
+
+    #studio-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    .studio-info {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(0,0,0,0.8);
+        padding: 16px;
+        border-radius: 8px;
+        color: #fff;
+        font-family: monospace;
+        font-size: 0.85rem;
+        max-width: 400px;
+        z-index: 10;
+    }
+
+    .studio-info h2 {
+        margin: 0 0 12px 0;
+        font-size: 1rem;
+        color: #7c5cbf;
+    }
+
+    .studio-info p {
+        margin: 4px 0;
+        color: #aaa;
+    }
+
+    .studio-info code {
+        background: rgba(255,255,255,0.1);
+        padding: 2px 6px;
+        border-radius: 3px;
+        color: #6cf;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="main-content">
+    <div class="studio-info">
+        <h2><i class="fas fa-theater-masks"></i> Theatre.js Studio Debugger</h2>
+        <p>This is a minimal setup to debug Theatre.js Studio.</p>
+        <p><strong>Status:</strong> <span id="studio-status">Loading...</span></p>
+        <p><strong>Project:</strong> <code id="project-name">-</code></p>
+        <p><strong>Sheet:</strong> <code id="sheet-name">-</code></p>
+        <p><strong>Objects:</strong> <span id="object-count">0</span></p>
+        <hr style="border-color: rgba(255,255,255,0.1); margin: 12px 0;">
+        <p style="font-size: 0.75rem;">Open browser console (F12) for debugging</p>
+    </div>
+
+    <canvas id="studio-canvas"></canvas>
+</main>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "@theatre/studio": "https://cdn.jsdelivr.net/npm/@theatre/studio@0.7.2/dist/studio.esm.js",
+    "@theatre/core": "https://cdn.jsdelivr.net/npm/@theatre/core@0.7.2/dist/core.esm.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import studio from '@theatre/studio';
+import { getProject } from '@theatre/core';
+
+console.log('%c=== Theatre.js Studio Debugger ===', 'color: #7c5cbf; font-size: 16px; font-weight: bold');
+
+const updateStatus = (status, color = '#6cf') => {
+    const el = document.getElementById('studio-status');
+    if (el) {
+        el.textContent = status;
+        el.style.color = color;
+    }
+    console.log(`[STATUS] ${status}`);
+};
+
+updateStatus('Initializing Studio...', '#ff0');
+
+// 1. Initialize Studio
+try {
+    studio.initialize();
+    window.studio = studio;
+    updateStatus('Studio Initialized', '#0f0');
+    console.log('✓ studio.initialize() called');
+} catch (err) {
+    updateStatus('Failed: ' + err.message, '#f00');
+    console.error('✗ Studio init failed:', err);
+}
+
+// 2. Create Project/Sheet
+const project = getProject('Studio Debug');
+const sheet = project.sheet('Main');
+window.project = project;
+window.sheet = sheet;
+
+document.getElementById('project-name').textContent = 'Studio Debug';
+document.getElementById('sheet-name').textContent = 'Main';
+
+// 3. Setup Three.js
+const canvas = document.getElementById('studio-canvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x222222);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 2, 10);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+const gridHelper = new THREE.GridHelper(20, 20);
+scene.add(gridHelper);
+
+const geometry = new THREE.BoxGeometry(2, 2, 2);
+const material = new THREE.MeshStandardMaterial({ color: 0x7c5cbf });
+const cube = new THREE.Mesh(geometry, material);
+cube.position.y = 1;
+scene.add(cube);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+
+const pointLight = new THREE.PointLight(0xffffff, 1, 100);
+pointLight.position.set(5, 5, 5);
+scene.add(pointLight);
+
+// 4. Register Theatre objects
+const cameraObj = sheet.object('Camera', {
+    position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+    fov: camera.fov
+});
+
+const lightObj = sheet.object('Light', {
+    position: { x: pointLight.position.x, y: pointLight.position.y, z: pointLight.position.z },
+    intensity: pointLight.intensity
+});
+
+const cubeObj = sheet.object('Cube', {
+    position: { x: 0, y: 1, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    color: { r: 0.48, g: 0.36, b: 0.75 }
+});
+
+document.getElementById('object-count').textContent = '3';
+
+cameraObj.onValuesChange(v => {
+    camera.position.set(v.position.x, v.position.y, v.position.z);
+    camera.fov = v.fov;
+    camera.updateProjectionMatrix();
+});
+
+lightObj.onValuesChange(v => {
+    pointLight.position.set(v.position.x, v.position.y, v.position.z);
+    pointLight.intensity = v.intensity;
+});
+
+cubeObj.onValuesChange(v => {
+    cube.position.set(v.position.x, v.position.y, v.position.z);
+    cube.rotation.set(v.rotation.x, v.rotation.y, v.rotation.z);
+    cube.material.color.setRGB(v.color.r, v.color.g, v.color.b);
+});
+
+// 5. Render loop
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// 6. Debug after delay
+setTimeout(() => {
+    const root = document.getElementById('theatrejs-studio-root');
+    console.log('\n=== Studio UI Check ===');
+    console.log('  Root exists:', !!root);
+    console.log('  Root children:', root ? root.children.length : 'N/A');
+    console.log('  Root HTML length:', root ? root.innerHTML.length : 'N/A');
+
+    if (root && root.children.length === 0) {
+        updateStatus('Studio UI not rendering', '#f80');
+        console.warn('⚠ Studio root empty!');
+
+        // Try to show UI
+        if (window.studio && window.studio.ui) {
+            console.log('Calling studio.ui.restore()...');
+            window.studio.ui.restore();
+        }
+    } else if (root && root.children.length > 0) {
+        updateStatus('Studio UI Active!', '#0f0');
+        console.log('✓ Studio UI rendering!');
+    }
+}, 2000);
+
+console.log('\n✓ Setup complete');
+</script>
+{% endblock %}

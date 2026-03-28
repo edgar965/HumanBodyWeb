@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Theatre.js Studio Minimal Test</title>
+    <style>
+        body { margin: 0; background: #111; color: #fff; font-family: sans-serif; }
+        #canvas { width: 100vw; height: 100vh; background: #222; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <script type="module">
+        // Import from CDN to test exact version
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+        import studio from 'https://cdn.jsdelivr.net/npm/@theatre/studio@0.7.2/dist/studio.esm.js';
+        import { getProject } from 'https://cdn.jsdelivr.net/npm/@theatre/core@0.7.2/dist/core.esm.js';
+
+        console.log('1. Initializing Studio...');
+        studio.initialize();
+        window.studio = studio;
+
+        console.log('2. Creating Project and Sheet...');
+        const project = getProject('Test Project');
+        const sheet = project.sheet('Main Scene');
+        window.project = project;
+        window.sheet = sheet;
+
+        console.log('3. Creating Theatre Objects...');
+        const cameraObj = sheet.object('Camera', {
+            position: {
+                x: 0,
+                y: 0,
+                z: 5
+            }
+        });
+
+        const lightObj = sheet.object('Light', {
+            intensity: 1,
+            color: { r: 1, g: 1, b: 1 }
+        });
+
+        console.log('4. Setting up Three.js scene...');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas') });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Simple cube
+        const geometry = new THREE.BoxGeometry();
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        const light = new THREE.PointLight(0xffffff, 1, 100);
+        light.position.set(10, 10, 10);
+        scene.add(light);
+
+        camera.position.z = 5;
+
+        // Listen to Theatre.js values
+        cameraObj.onValuesChange((values) => {
+            camera.position.set(values.position.x, values.position.y, values.position.z);
+        });
+
+        lightObj.onValuesChange((values) => {
+            light.intensity = values.intensity;
+            light.color.setRGB(values.color.r, values.color.g, values.color.b);
+        });
+
+        console.log('5. Starting render loop...');
+        function animate() {
+            requestAnimationFrame(animate);
+            cube.rotation.x += 0.01;
+            cube.rotation.y += 0.01;
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        console.log('6. Studio UI should appear now!');
+        console.log('   Check for Studio panel in top-right corner');
+        console.log('   Studio methods:', studio.ui);
+
+        // Log DOM state after a delay
+        setTimeout(() => {
+            const root = document.getElementById('theatrejs-studio-root');
+            console.log('Studio root exists:', !!root);
+            console.log('Studio root children:', root ? root.children.length : 'N/A');
+            console.log('Studio root HTML:', root ? root.innerHTML.substring(0, 200) : 'N/A');
+        }, 2000);
+    </script>
+</body>
+</html>
