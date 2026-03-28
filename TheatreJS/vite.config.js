@@ -2,6 +2,10 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
+    resolve: {
+        // Allow model_generator.js (outside TheatreJS/) to resolve 'three'
+        dedupe: ['three'],
+    },
     build: {
         outDir: path.resolve(__dirname, '../static/theatre'),
         emptyOutDir: true,
