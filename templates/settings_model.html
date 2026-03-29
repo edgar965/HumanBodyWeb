@@ -63,10 +63,8 @@
             <div class="settings-label">
                 <small>Default Animation</small>
             </div>
-            <div class="settings-input" style="display:flex;gap:8px;align-items:center;">
-                <select name="default_anim_config" id="default-anim-config" class="settings-select" style="flex:1;">
-                    <option value="">— keine —</option>
-                </select>
+            <div class="settings-input">
+                {% include "_anim_selector.html" with field_name="default_anim_config" current_value=settings.default_anim_config selector_id="anim-sel-config" %}
             </div>
         </div>
         <div class="settings-row">
@@ -105,10 +103,8 @@
             <div class="settings-label">
                 <small>Default Animation</small>
             </div>
-            <div class="settings-input" style="display:flex;gap:8px;align-items:center;">
-                <select name="default_anim_animations" id="default-anim-animations" class="settings-select" style="flex:1;">
-                    <option value="">— keine —</option>
-                </select>
+            <div class="settings-input">
+                {% include "_anim_selector.html" with field_name="default_anim_animations" current_value=settings.default_anim_animations selector_id="anim-sel-anims" %}
             </div>
         </div>
     </div>
@@ -126,8 +122,6 @@
 (function() {
     const currentConfig = "{{ settings.default_model_config|escapejs }}";
     const currentAnims = "{{ settings.default_model_animations|escapejs }}";
-    const currentAnimConfig = "{{ settings.default_anim_config|escapejs }}";
-    const currentAnimAnims = "{{ settings.default_anim_animations|escapejs }}";
 
     // Populate model presets
     fetch('/api/character/models/')
@@ -180,31 +174,34 @@
     buildPanelCheckboxes('panels-config-wrap', CONFIG_PANELS, 'panel_config_',
         "{{ settings.expanded_panels_config|escapejs }}");
 
-    // Populate animation lists
-    fetch('/api/character/animations/')
-        .then(r => r.json())
-        .then(data => {
-            const cats = data.categories || {};
-            ['default-anim-config', 'default-anim-animations'].forEach((id, idx) => {
-                const sel = document.getElementById(id);
-                if (!sel) return;
-                const current = [currentAnimConfig, currentAnimAnims][idx];
-                // Keep "— keine —" as first option
-                for (const [catName, anims] of Object.entries(cats).sort()) {
-                    const grp = document.createElement('optgroup');
-                    grp.label = catName;
-                    anims.forEach(a => {
-                        const opt = document.createElement('option');
-                        opt.value = a.url;
-                        opt.textContent = a.name + (a.frames ? ` (${a.frames}f)` : '');
-                        if (a.url === current) opt.selected = true;
-                        grp.appendChild(opt);
-                    });
-                    sel.appendChild(grp);
-                }
+    // Animation selector expand/collapse + click (shared widget)
+    document.querySelectorAll('.anim-cat-header-settings').forEach(header => {
+        header.addEventListener('click', () => {
+            const body = header.nextElementSibling;
+            const icon = header.querySelector('.fa-chevron-down');
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                body.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+            }
+        });
+    });
+    document.querySelectorAll('.anim-selection-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const selectorId = item.getAttribute('data-selector');
+            const value = item.getAttribute('data-value');
+            document.getElementById(selectorId + '-hidden').value = value;
+            document.getElementById(selectorId + '-display').textContent = value || '(Keine Auto-Load)';
+            document.querySelectorAll(`.anim-selection-item[data-selector="${selectorId}"]`).forEach(i => {
+                i.style.background = '';
+                i.style.color = '';
             });
-        })
-        .catch(e => console.warn('Failed to load animations:', e));
+            item.style.background = 'var(--accent)';
+            item.style.color = 'white';
+        });
+    });
 })();
 </script>
 {% endblock %}

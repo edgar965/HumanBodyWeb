@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { detectBVHFormat, retargetBVHToDefClip, loadRetargetConfig, getMappingForFormat } from './retarget_hybrid.js?v=31';
+import { detectBVHFormat, fetchRetargetedClipFromUrl, loadRetargetConfig, getMappingForFormat } from './retarget_hybrid.js?v=32';
 import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
 
 // =========================================================================
@@ -55,7 +55,7 @@ const JOINT_RADIUS = 0.008;
 const CYL_RADIUS_TOP = 0.003;
 const CYL_RADIUS_BOT = 0.004;
 
-// Retarget imports from shared module (retarget.js)
+// Retarget via server-side API (retarget_hybrid.js)
 
 // =========================================================================
 // buildDefSkeleton() imported from def_skeleton_builder.js
@@ -528,7 +528,7 @@ function loadAndPlayAnimation(url, name, fc, category) {
     stopAnimation();
     document.getElementById('anim-info').textContent = `Lade ${name}...`;
 
-    bvhLoader.load(url, (result) => {
+    bvhLoader.load(url, async (result) => {
         const bones = result.skeleton.bones;
         if (bones.length === 0) return;
 
@@ -574,12 +574,11 @@ function loadAndPlayAnimation(url, name, fc, category) {
         if (skeletons.def.skeleton && defSkeletonData && skinWeightData) {
             try {
                 skeletons.def.skeleton.skeleton.pose();
-                const clip = retargetBVHToDefClip(result, skeletons.def.skeleton, format);
+                const clip = await fetchRetargetedClipFromUrl(url, skeletons.def.skeleton, {});
                 const defMixer = new THREE.AnimationMixer(skeletons.def.rootBone);
                 const defAction = defMixer.clipAction(clip);
                 defAction.play();
                 mixers.push(defMixer);
-                // Debug exports for Playwright testing
                 window._defMixer = defMixer;
                 window._defRootBone = skeletons.def.rootBone;
                 window._defClip = clip;

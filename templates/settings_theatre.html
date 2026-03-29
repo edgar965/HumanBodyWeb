@@ -33,44 +33,7 @@
                 <small>Welche Animation automatisch beim Laden der Theatre-Seite abgespielt wird.</small>
             </div>
             <div class="settings-input">
-                <!-- Hidden input to store selected animation -->
-                <input type="hidden" name="theatre_default_animation" id="selected-animation" value="{{ settings.theatre_default_animation }}">
-
-                <!-- Current selection display -->
-                <div style="margin-bottom:0.5rem;padding:0.5rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
-                    <strong>Aktuell:</strong>
-                    <span id="current-anim-display">
-                        {% if settings.theatre_default_animation %}
-                            {{ settings.theatre_default_animation }}
-                        {% else %}
-                            (Keine Auto-Load)
-                        {% endif %}
-                    </span>
-                </div>
-
-                <!-- Collapsible category list -->
-                <div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;">
-                    <!-- "None" option -->
-                    <div class="anim-selection-item" data-value="" style="padding:0.5rem;cursor:pointer;border-bottom:1px solid var(--border);{% if not settings.theatre_default_animation %}background:var(--accent);color:white;{% endif %}">
-                        <i class="fas fa-times-circle"></i> (Keine Auto-Load)
-                    </div>
-
-                    {% for category in available_animations %}
-                    <div class="anim-category">
-                        <div class="anim-cat-header-settings" style="padding:0.5rem;background:var(--bg-secondary);cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-                            <span><i class="fas fa-folder"></i> {{ category.name }} ({{ category.animations|length }})</span>
-                            <i class="fas fa-chevron-down" style="font-size:0.8rem;transition:transform 0.2s;"></i>
-                        </div>
-                        <div class="anim-cat-body-settings" style="display:none;">
-                            {% for anim in category.animations %}
-                            <div class="anim-selection-item" data-value="{{ anim.value }}" style="padding:0.4rem 0.5rem 0.4rem 1.5rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem;{% if settings.theatre_default_animation == anim.value %}background:var(--accent);color:white;{% endif %}">
-                                {{ anim.label }}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
+                {% include "_anim_selector.html" with field_name="theatre_default_animation" current_value=settings.theatre_default_animation selector_id="anim-sel-theatre" %}
             </div>
         </div>
 
@@ -175,7 +138,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // Category expand/collapse
+    // Category expand/collapse (shared across all anim selectors)
     document.querySelectorAll('.anim-cat-header-settings').forEach(header => {
         header.addEventListener('click', () => {
             const body = header.nextElementSibling;
@@ -190,20 +153,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Animation selection
+    // Animation selection (scoped per selector via data-selector attribute)
     document.querySelectorAll('.anim-selection-item').forEach(item => {
         item.addEventListener('click', () => {
+            const selectorId = item.getAttribute('data-selector');
             const value = item.getAttribute('data-value');
             const displayText = value || '(Keine Auto-Load)';
 
-            // Update hidden input
-            document.getElementById('selected-animation').value = value;
+            document.getElementById(selectorId + '-hidden').value = value;
+            document.getElementById(selectorId + '-display').textContent = displayText;
 
-            // Update display
-            document.getElementById('current-anim-display').textContent = displayText;
-
-            // Update visual selection (highlight)
-            document.querySelectorAll('.anim-selection-item').forEach(i => {
+            // Highlight only within same selector group
+            document.querySelectorAll(`.anim-selection-item[data-selector="${selectorId}"]`).forEach(i => {
                 i.style.background = '';
                 i.style.color = '';
             });

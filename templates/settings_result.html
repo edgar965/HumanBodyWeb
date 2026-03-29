@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Result - Einstellungen{% endblock %}
+
+{% block content %}
+<h1>Einstellungen — Result</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="settings-card">
+        <h2><i class="fas fa-video"></i> Result-Seite</h2>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Standard-Modell</strong>
+                <small>Modell das beim Öffnen der Result-Seite geladen wird.</small>
+            </div>
+            <div class="settings-input">
+                <select name="default_model_result" id="default-model-result" class="settings-select">
+                    <option value="">— wird geladen —</option>
+                </select>
+            </div>
+        </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <small>Default Animation</small>
+            </div>
+            <div class="settings-input">
+                {% include "_anim_selector.html" with field_name="default_anim_result" current_value=settings.default_anim_result selector_id="anim-sel-result" %}
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Speichern
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    const currentResult = "{{ settings.default_model_result|escapejs }}";
+
+    // Populate model presets
+    fetch('/api/character/models/')
+        .then(r => r.json())
+        .then(data => {
+            const presets = data.presets || [];
+            const sel = document.getElementById('default-model-result');
+            if (!sel) return;
+            sel.innerHTML = '';
+            presets.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.textContent = p.label || p.name;
+                if (p.name === currentResult) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        })
+        .catch(e => console.warn('Failed to load model presets:', e));
+
+    // Animation selector expand/collapse + click (shared widget)
+    document.querySelectorAll('.anim-cat-header-settings').forEach(header => {
+        header.addEventListener('click', () => {
+            const body = header.nextElementSibling;
+            const icon = header.querySelector('.fa-chevron-down');
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                body.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+            }
+        });
+    });
+    document.querySelectorAll('.anim-selection-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const selectorId = item.getAttribute('data-selector');
+            const value = item.getAttribute('data-value');
+            document.getElementById(selectorId + '-hidden').value = value;
+            document.getElementById(selectorId + '-display').textContent = value || '(Keine Auto-Load)';
+            document.querySelectorAll(`.anim-selection-item[data-selector="${selectorId}"]`).forEach(i => {
+                i.style.background = '';
+                i.style.color = '';
+            });
+            item.style.background = 'var(--accent)';
+            item.style.color = 'white';
+        });
+    });
+})();
+</script>
+{% endblock %}

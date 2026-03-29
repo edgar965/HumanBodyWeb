@@ -2751,6 +2751,33 @@ def app_settings(request):
     return redirect('settings_model')
 
 
+def _get_available_animations(url_format=False):
+    """Gather available BVH animations grouped by category folder.
+    If url_format=True, values are /api/character/bvh/{cat}/{name}/ (for viewer pages).
+    Otherwise, values are {cat}/{name} (for Theatre page).
+    """
+    from pathlib import Path
+    available = []
+    bvh_root = Path(settings.HUMANBODY_ROOT) / 'data' / 'animations' / 'bvh'
+    if bvh_root.is_dir():
+        for cat_dir in sorted(bvh_root.iterdir()):
+            if not cat_dir.is_dir():
+                continue
+            cat_anims = []
+            for bvh_file in sorted(cat_dir.glob('*.bvh')):
+                if url_format:
+                    val = f"/api/character/bvh/{cat_dir.name}/{bvh_file.stem}/"
+                else:
+                    val = f"{cat_dir.name}/{bvh_file.stem}"
+                cat_anims.append({
+                    'value': val,
+                    'label': bvh_file.stem,
+                })
+            if cat_anims:
+                available.append({'name': cat_dir.name, 'animations': cat_anims})
+    return available
+
+
 def app_settings_model(request):
     """Model settings page (Processing + HumanBody)."""
     s = AppSettings.load()
@@ -2775,7 +2802,29 @@ def app_settings_model(request):
             messages.error(request, 'Invalid value.')
         return redirect('settings_model')
     models_dir = str(settings.HUMANBODY_MODELS_DIR)
-    return render(request, 'settings_model.html', {'settings': s, 'models_dir': models_dir})
+    return render(request, 'settings_model.html', {
+        'settings': s,
+        'models_dir': models_dir,
+        'available_animations': _get_available_animations(url_format=True),
+    })
+
+
+def app_settings_result(request):
+    """Result settings page (default model for result pages)."""
+    s = AppSettings.load()
+    if request.method == 'POST':
+        try:
+            s.default_model_result = request.POST.get('default_model_result', '').strip() or 'femaleWithClothes'
+            s.default_anim_result = request.POST.get('default_anim_result', '').strip()
+            s.save()
+            messages.success(request, 'Settings saved.')
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid value.')
+        return redirect('settings_result')
+    return render(request, 'settings_result.html', {
+        'settings': s,
+        'available_animations': _get_available_animations(url_format=True),
+    })
 
 
 def app_settings_scene(request):
@@ -2799,6 +2848,7 @@ def app_settings_scene(request):
     return render(request, 'settings_scene.html', {
         'settings': s,
         'selection_opacity_pct': int(round(s.selection_opacity * 100)),
+        'available_animations': _get_available_animations(url_format=True),
     })
 
 

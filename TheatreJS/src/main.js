@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
+// BVHLoader only needed for non-skinned fallback (asset-loader.js has its own)
 import studio from '@theatre/studio';
 import { createScene } from './scene-setup.js';
 import { setupTheatre, createCameraSheet, createLightSheet, getAllTheatreObjects } from './theatre-bridge.js';
@@ -11,7 +11,8 @@ import {
     fetchAnimationList, fetchBVH,
 } from './scene-manager.js';
 import { PRESETS, applyPreset } from './presets.js';
-import { retargetBVHToDefClip, detectBVHFormat } from './retarget_hybrid.js';
+import { fetchRetargetedClip, fetchRetargetedClipFromText, detectBVHFormat } from './retarget_hybrid.js';
+import { buildDefSkeleton } from './def_skeleton_builder.js';
 import { KeyframeUI } from './keyframe-ui.js';
 
 // Theatre.js ignores the getProject({ state }) param if localStorage exists.
@@ -99,78 +100,6 @@ window.addEventListener('DOMContentLoaded', () => {
     let skeletonHelper = null;  // Single global SkeletonHelper - like Dashboard
     let rigVisible = false;  // Rig visibility state - like Dashboard
 
-    /**
-     * Build 176-bone THREE.Skeleton from DEF skeleton data + skin weight bone order.
-     * Bone indices match skinWeightData.bone_names (authoritative for skinIndex).
-     * COPIED FROM Dashboard-Scene viewer.js (lines 709-774)
-     */
-    function buildDefSkeleton(skelData, swData) {
-        // Build lookup: bone name -> skeleton data entry
-        const skelByName = {};
-        for (const b of skelData.bones) {
-            skelByName[b.name] = b;
-        }
-
-        const bones = [];
-        const boneByName = {};
-        let rootBone = null;
-
-        // Create bones in skin weight order (= authoritative index order)
-        // Sanitize names: Three.js PropertyBinding uses dots as separators,
-        // so bone names like "DEF-upper_arm.L" break track name parsing.
-        for (const name of swData.bone_names) {
-            const bone = new THREE.Bone();
-            bone.name = name.replace(/\./g, '_');  // DEF-upper_arm.L -> DEF-upper_arm_L
-            bones.push(bone);
-            boneByName[name] = bone;  // Original name as key for mapping lookups
-        }
-
-        // Set local transforms and build parent-child hierarchy
-        for (let i = 0; i < swData.bone_names.length; i++) {
-            const name = swData.bone_names[i];
-            const bone = bones[i];
-            const data = skelByName[name];
-
-            if (!data) continue;
-
-            // Convert Blender local position (x,y,z) -> Three.js (x,z,-y)
-            const p = data.local_position;
-            bone.position.set(p[0], p[2], -p[1]);
-
-            // Convert Blender quaternion [w,x,y,z] -> Three.js Quaternion(x,z,-y,w)
-            const q = data.local_quaternion;
-            bone.quaternion.set(q[1], q[3], -q[2], q[0]);
-
-            // Parent-child (lookup by original name)
-            if (data.parent && boneByName[data.parent]) {
-                boneByName[data.parent].add(bone);
-            } else {
-                // Root bone (no skinning parent)
-                if (!rootBone) rootBone = bone;
-            }
-        }
-
-        // Collect orphan roots (bones without skinning parent that aren't the main root)
-        for (let i = 0; i < bones.length; i++) {
-            const name = swData.bone_names[i];
-            const data = skelByName[name];
-            if (!data) continue;
-            if (!data.parent && bones[i] !== rootBone) {
-                // Attach to main root
-                if (rootBone) rootBone.add(bones[i]);
-            }
-        }
-
-        if (!rootBone && bones.length > 0) rootBone = bones[0];
-
-        // Update world matrices before creating skeleton
-        rootBone.updateWorldMatrix(true, true);
-
-        const skeleton = new THREE.Skeleton(bones);
-
-        return { skeleton, rootBone, bones, boneByName };
-    }
-
     // Load skeleton and skin weights data
     async function loadSkeletonAndWeights() {
         if (skeletonLoadingPromise) return skeletonLoadingPromise;
@@ -231,62 +160,29 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Load BVH animation on a SkinnedMesh (character with skeleton).
-     * Uses retargeting to map BVH bone names to DEF skeleton bone names.
+     * Load BVH animation on a SkinnedMesh via server-side retarget API.
      */
-    function loadBVHOnSkinnedMesh(bvhText, skinnedMesh, scene, animName) {
-        const bvhLoader = new BVHLoader();
-        const result = bvhLoader.parse(bvhText);
-
-        // Retarget BVH clip to DEF skeleton bone names
-        if (!defSkeletonData) {
-            console.error('DEF skeleton data not loaded - cannot retarget animation');
-            throw new Error('Skeleton data not loaded');
-        }
-
-        // Validate SkinnedMesh has proper skeleton
-        if (!skinnedMesh || !skinnedMesh.skeleton) {
-            console.error('SkinnedMesh has no skeleton');
-            throw new Error('SkinnedMesh not properly initialized');
-        }
-
-        if (!skinnedMesh.skeleton.bones || skinnedMesh.skeleton.bones.length === 0) {
-            console.error('SkinnedMesh skeleton has no bones');
-            throw new Error('Skeleton has no bones');
-        }
-
-        // Use GLOBAL defSkeleton (not local build - bones must match skin weights)
+    async function loadBVHOnSkinnedMesh(bvhText, skinnedMesh, scene, animName) {
         if (!defSkeleton || !defSkeleton.boneByName) {
-            console.error('Global defSkeleton not loaded - cannot retarget');
             throw new Error('Skeleton not ready');
         }
 
-        // Detect BVH format (MIXAMO, CMU, AIST, etc.) - CRITICAL for correct retargeting!
-        const bvhBones = result.skeleton.bones;
-        const format = detectBVHFormat(bvhBones);
-        console.log(`BVH format detected: ${format}, retargeting to DEF skeleton...`);
-
-        // Retarget BVH to DEF skeleton using CORRECT parameters (like Dashboard)
-        // retargetBVHToDefClip(bvhResult, defSkel, FORMAT, opts)
-        const retargetedClip = retargetBVHToDefClip(result, defSkeleton, format, { bodyMesh: skinnedMesh });
-
-        if (!retargetedClip || retargetedClip.tracks.length === 0) {
-            console.error('Retargeting failed - no tracks generated');
-            throw new Error('Retargeting failed');
+        let bodyH = 1.68;
+        if (skinnedMesh) {
+            const bb = new THREE.Box3().setFromObject(skinnedMesh);
+            if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
         }
 
-        console.log(`✓ Retargeted clip: ${retargetedClip.tracks.length} tracks, ${retargetedClip.duration.toFixed(2)}s`);
+        const clip = await fetchRetargetedClipFromText(bvhText, defSkeleton, { bodyHeight: bodyH });
 
-        // Create AnimationMixer on the SkinnedMesh with retargeted clip
         const mixer = new THREE.AnimationMixer(skinnedMesh);
-        const action = mixer.clipAction(retargetedClip);
+        const action = mixer.clipAction(clip);
         action.setLoop(THREE.LoopRepeat);
         action.play();
-        action.paused = true; // Start paused for player control
+        action.paused = true;
 
-        const duration = retargetedClip.duration || 1;
-
-        console.log('✓ BVH animation loaded on SkinnedMesh:', animName, duration + 's');
+        const duration = clip.duration || 1;
+        console.log(`✓ Retargeted clip (API): ${clip.tracks.length} tracks, ${duration.toFixed(2)}s`);
 
         return { mixer, action, duration };
     }
@@ -1075,34 +971,23 @@ window.addEventListener('DOMContentLoaded', () => {
             // FIRST: Stop and reset old animation (Dashboard pattern)
             stopAnimation(true);
 
-            const bvhText = await fetchBVH(category, name);
-
             let targetMesh = null;
             let duration = 0;
 
             if (selectedCharacter) {
-                // Ensure SkinnedMesh exists
+                // Ensure SkinnedMesh exists (builds skeleton ONCE, binds garments+hair)
                 targetMesh = convertCharacterToSkinnedMesh(selectedCharacter, scene);
 
-                if (targetMesh) {
-                    // 1. Fresh skeleton (like result_character.js:1234)
-                    defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
-                    // 2. Remove old rootBone from mesh
-                    const oldRoots = targetMesh.children.filter(c => c.isBone);
-                    for (const r of oldRoots) targetMesh.remove(r);
-                    // 3. Add fresh rootBone + rebind (result_character.js:1242-1243)
-                    targetMesh.add(defSkeleton.rootBone);
-                    targetMesh.bind(defSkeleton.skeleton);
+                if (targetMesh && defSkeleton) {
+                    // Body height for scaling
+                    let bodyH = 1.68;
+                    const bb = new THREE.Box3().setFromObject(targetMesh);
+                    if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
 
-                    // 4. Retarget (result_character.js:1550-1552)
-                    const bvhLoader = new BVHLoader();
-                    const bvhResult = bvhLoader.parse(bvhText);
-                    const format = detectBVHFormat(bvhResult.skeleton.bones);
-                    console.log(`BVH format: ${format}`);
+                    // Server-side retarget via API (like result_character.js applyBvhRetarget)
+                    const clip = await fetchRetargetedClip(category, name, defSkeleton, { bodyHeight: bodyH });
 
-                    const clip = retargetBVHToDefClip(bvhResult, defSkeleton, format, { bodyMesh: targetMesh });
-
-                    // 5. Mixer on mesh (result_character.js:1554-1558)
+                    // Mixer on mesh (like result_character.js:1502-1507)
                     activeMixer = new THREE.AnimationMixer(targetMesh);
                     currentAction = activeMixer.clipAction(clip);
                     currentAction.setLoop(THREE.LoopRepeat);
@@ -1110,40 +995,18 @@ window.addEventListener('DOMContentLoaded', () => {
                     currentAction.paused = true;
                     duration = clip.duration || 1;
 
-                    // Apply frame 0 immediately (like result_character.js positionCameraAfterRetarget)
+                    // Apply frame 0 immediately
                     activeMixer.setTime(0);
                     targetMesh.updateWorldMatrix(true, true);
                     defSkeleton.rootBone.updateWorldMatrix(true, true);
 
-                    // Recreate SkeletonHelper if needed (rootBone changed)
-                    if (skeletonHelper) {
-                        const wasVisible = skeletonHelper.visible;
-                        scene.remove(skeletonHelper);
-                        skeletonHelper.dispose();
-                        skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
-                        skeletonHelper.material.depthTest = false;
-                        skeletonHelper.material.depthWrite = false;
-                        skeletonHelper.material.color.set(0x00ffaa);
-                        skeletonHelper.material.linewidth = 2;
-                        skeletonHelper.renderOrder = 999;
-                        scene.add(skeletonHelper);
-                        skeletonHelper.visible = wasVisible;
-                    }
-
-                    // Rebind garments to the new skeleton (they still reference the old one)
-                    if (selectedCharacter) {
-                        selectedCharacter.traverse((child) => {
-                            if (child.isSkinnedMesh && child !== targetMesh) {
-                                child.bind(defSkeleton.skeleton, targetMesh.bindMatrix);
-                            }
-                        });
-                    }
-
-                    console.log(`✓ BVH loaded: ${format}, ${duration.toFixed(1)}s, ${clip.tracks.length} tracks`);
+                    console.log(`✓ BVH loaded (API): ${duration.toFixed(1)}s, ${clip.tracks.length} tracks`);
                 }
             }
 
             if (!targetMesh) {
+                // Fallback: non-skinned BVH skeleton helper
+                const bvhText = await fetchBVH(category, name);
                 const { mixer, action, duration: d } = loadBVHFromText(bvhText, scene, `${category}/${name}`);
                 activeMixer = mixer;
                 currentAction = action;

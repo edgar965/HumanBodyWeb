@@ -8,7 +8,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip, loadRetargetConfig } from './retarget_hybrid.js?v=31';
+import { detectBVHFormat, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText } from './retarget_hybrid.js?v=32';
 import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
 import { classifyBones, getDefaultModelConfig, computeBoneWorldTransforms, generateModelMesh, classifyRigBones, getDefaultRigConfig, generateRigBoneMesh, BODY_BONES, FINGER_BONES } from './model_generator.js';
 
@@ -732,7 +732,6 @@ class CharacterInstance {
 // Initialization
 // =========================================================================
 async function init() {
-    await loadRetargetConfig();
     canvas = document.getElementById('viewer-canvas');
     const container = canvas.parentElement;
     const w = container.clientWidth;
@@ -2856,7 +2855,7 @@ function _skinifyHairGroup(gltfScene, inst) {
 // Flag to suppress hover handler during garment refit
 let _refitting = false;
 
-function loadBVHAnimation(url, name, fc, rawBvhText = null) {
+async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
     stopAnimation(true);
     currentAnimUrl = url;
     currentAnimGroundFixed = false;
@@ -2866,29 +2865,39 @@ function loadBVHAnimation(url, name, fc, rawBvhText = null) {
     const targetMesh = inst ? inst.bodyMesh : bodyMesh;
     if (!targetMesh) return;
 
-    const handleBvhResult = (result, text) => {
-        currentAnimBvhText = text;
-        const bvhBones = result.skeleton.bones;
-        if (bvhBones.length === 0) return;
-
-        // Try to set up skinned animation
-        let skel = null;
-        if (defSkeletonData && skinWeightData) {
-            if (inst) {
-                if (!inst.isSkinned) convertInstToSkinned(inst);
-            } else {
-                if (!isSkinned) convertToDefSkinnedMesh();
-            }
-            skel = inst ? inst.defSkeleton : defSkeleton;
+    // Set up skinned mesh if needed
+    let skel = null;
+    if (defSkeletonData && skinWeightData) {
+        if (inst) {
+            if (!inst.isSkinned) convertInstToSkinned(inst);
+        } else {
+            if (!isSkinned) convertToDefSkinnedMesh();
         }
+        skel = inst ? inst.defSkeleton : defSkeleton;
+    }
 
-        if (skel) {
-            const bMesh = inst ? inst.bodyMesh : bodyMesh;
-            _animatedCharId = inst ? inst.id : null;
+    if (skel) {
+        const bMesh = inst ? inst.bodyMesh : bodyMesh;
+        _animatedCharId = inst ? inst.id : null;
 
-            const format = detectBVHFormat(bvhBones);
-            console.log(`[ANIM] BVH format: ${format}, source clip: ${result.clip.duration.toFixed(2)}s, ${result.clip.tracks.length} tracks`);
-            const clip = retargetBVHToDefClip(result, skel, format, { bodyMesh: bMesh });
+        let bodyH = 1.68;
+        const bb = new THREE.Box3().setFromObject(bMesh);
+        if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
+
+        try {
+            let clip;
+            if (rawBvhText) {
+                clip = await fetchRetargetedClipFromText(rawBvhText, skel, { bodyHeight: bodyH });
+                currentAnimBvhText = rawBvhText;
+            } else {
+                clip = await fetchRetargetedClipFromUrl(url, skel, { bodyHeight: bodyH });
+                // Also fetch the raw text for BVH editing features
+                try {
+                    const bustUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                    const textResp = await fetch(bustUrl);
+                    currentAnimBvhText = await textResp.text();
+                } catch { currentAnimBvhText = ''; }
+            }
             console.log(`[ANIM] Retargeted clip: ${clip.duration.toFixed(2)}s, ${clip.tracks.length} tracks`);
             if (!skeletonHelper) {
                 skeletonHelper = new THREE.SkeletonHelper(skel.rootBone);
@@ -2903,8 +2912,16 @@ function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             currentAction = mixer.clipAction(clip);
             currentAction.play();
             playing = true;
-        } else {
-            // Fallback: skeleton-only preview (no skin weights or un-skinnable model)
+        } catch (e) {
+            console.error('[ANIM] Server retarget failed:', e);
+        }
+    } else {
+        // Fallback: skeleton-only preview (no skin weights or un-skinnable model)
+        const handleBvhFallback = (result, text) => {
+            currentAnimBvhText = text;
+            const bvhBones = result.skeleton.bones;
+            if (bvhBones.length === 0) return;
+
             const rootBone = bvhBones[0];
             rootBone.updateWorldMatrix(true, true);
             const skelBox = new THREE.Box3();
@@ -2932,28 +2949,28 @@ function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             currentAction.play();
             playing = true;
             _animatedCharId = inst ? inst.id : null;
-        }
-        // Sync play button icon
-        const _pb = document.getElementById('anim-play');
-        if (_pb) _pb.innerHTML = playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
-    };
+        };
 
-    if (rawBvhText) {
-        const result = bvhLoader.parse(rawBvhText);
-        handleBvhResult(result, rawBvhText);
-    } else {
-        // Use FileLoader (XHR) for reliable large-file loading
-        const fileLoader = new THREE.FileLoader(bvhLoader.manager);
-        fileLoader.setRequestHeader(bvhLoader.requestHeader);
-        fileLoader.setWithCredentials(bvhLoader.withCredentials);
-        // Cache-bust to avoid stale browser cache from previous fetch calls
-        const bustUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
-        fileLoader.load(bustUrl, (text) => {
-            console.log(`[ANIM] FileLoader received ${text.length} chars (${(text.length/1024/1024).toFixed(2)} MB)`);
-            const result = bvhLoader.parse(text);
-            handleBvhResult(result, text);
-        }, undefined, (err) => { console.error('Failed to load BVH:', err); });
+        if (rawBvhText) {
+            const result = bvhLoader.parse(rawBvhText);
+            handleBvhFallback(result, rawBvhText);
+        } else {
+            // Use FileLoader (XHR) for reliable large-file loading
+            const fileLoader = new THREE.FileLoader(bvhLoader.manager);
+            fileLoader.setRequestHeader(bvhLoader.requestHeader);
+            fileLoader.setWithCredentials(bvhLoader.withCredentials);
+            // Cache-bust to avoid stale browser cache from previous fetch calls
+            const bustUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+            fileLoader.load(bustUrl, (text) => {
+                console.log(`[ANIM] FileLoader received ${text.length} chars (${(text.length/1024/1024).toFixed(2)} MB)`);
+                const result = bvhLoader.parse(text);
+                handleBvhFallback(result, text);
+            }, undefined, (err) => { console.error('Failed to load BVH:', err); });
+        }
     }
+    // Sync play button icon
+    const _pb = document.getElementById('anim-play');
+    if (_pb) _pb.innerHTML = playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
 }
 
 function stopAnimation(destroy = false) {

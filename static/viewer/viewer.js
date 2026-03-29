@@ -9,7 +9,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip, loadRetargetConfig } from './retarget_hybrid.js?v=31';
+import { detectBVHFormat, fetchRetargetedClipFromUrl } from './retarget_hybrid.js?v=32';
 import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 
@@ -135,7 +135,6 @@ function applyExpandedPanels() {
 // Initialization
 // =========================================================================
 async function init() {
-    await loadRetargetConfig();
     const canvas = document.getElementById('viewer-canvas');
     const container = canvas.parentElement;
 
@@ -777,7 +776,7 @@ function ensureSkinned() {
     convertToDefSkinnedMesh(null, skinWeightData);
 }
 
-// Retarget imports from shared module (retarget.js)
+// Retarget via server-side API (retarget_hybrid.js)
 
 // =========================================================================
 // WebSocket for live morphing
@@ -1301,26 +1300,23 @@ function bindPlaybackControls() {
 
 let skelWrapper = null;
 
-function loadBVHAnimation(url, name, fc) {
+async function loadBVHAnimation(url, name, fc) {
     stopAnimation(true);
 
     const info = document.getElementById('anim-info');
     if (info) info.textContent = `Lade ${name || 'Animation'}...`;
 
-    bvhLoader.load(url, (result) => {
-        const bvhBones = result.skeleton.bones;
-        if (bvhBones.length === 0) return;
+    // DEF skeleton path: server-side retarget
+    if (defSkeletonData && skinWeightData && bodyMesh) {
+        if (!isSkinned) {
+            convertToDefSkinnedMesh(null, skinWeightData);
+        }
+        let bodyH = 1.68;
+        const bb = new THREE.Box3().setFromObject(bodyMesh);
+        if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
 
-        // DEF skeleton path: retarget BVH to 176-bone DEF skeleton
-        if (defSkeletonData && skinWeightData && bodyMesh) {
-            // Convert mesh to SkinnedMesh first (builds defSkeleton internally)
-            if (!isSkinned) {
-                convertToDefSkinnedMesh(null, skinWeightData);
-            }
-
-            const format = detectBVHFormat(bvhBones);
-            console.log(`BVH format: ${format}, retargeting to DEF skeleton...`);
-            const clip = retargetBVHToDefClip(result, defSkeleton, format, { bodyMesh });
+        try {
+            const clip = await fetchRetargetedClipFromUrl(url, defSkeleton, { bodyHeight: bodyH });
             console.log(`Retargeted clip: ${clip.tracks.length} tracks, ${clip.duration.toFixed(2)}s`);
 
             // Ensure SkeletonHelper exists for DEF skeleton
@@ -1342,49 +1338,67 @@ function loadBVHAnimation(url, name, fc) {
             currentAction = mixer.clipAction(clip);
             currentAction.play();
             playing = true;
-        } else {
-            // Fallback: separate BVH skeleton visualization (no mesh deformation)
-            const rootBone = bvhBones[0];
 
-            // Measure and scale
-            rootBone.updateWorldMatrix(true, true);
-            const skelBox = new THREE.Box3();
-            const tmpVec = new THREE.Vector3();
-            bvhBones.forEach(b => {
-                b.updateWorldMatrix(true, false);
-                b.getWorldPosition(tmpVec);
-                skelBox.expandByPoint(tmpVec);
-            });
-            const skelHeight = skelBox.max.y - skelBox.min.y;
-            let bodyHeight = 1.75;
-            if (bodyMesh) {
-                const bodyBox = new THREE.Box3().setFromObject(bodyMesh);
-                if (!bodyBox.isEmpty()) bodyHeight = bodyBox.max.y - bodyBox.min.y;
-            }
-            const scale = bodyHeight / Math.max(skelHeight, 0.01);
+            // Store clip info for live timeline updates
+            currentAnimName = name || 'Animation';
+            currentAnimFrames = fc || 0;
+            currentAnimDuration = currentAction ? currentAction.getClip().duration : clip.duration;
 
-            skelWrapper = new THREE.Group();
-            skelWrapper.scale.set(scale, scale, scale);
-            skelWrapper.add(rootBone);
-            scene.add(skelWrapper);
-
-            if (skeletonHelper) scene.remove(skeletonHelper);
-            skeletonHelper = new THREE.SkeletonHelper(rootBone);
-            skeletonHelper.material.depthTest = false;
-            skeletonHelper.material.depthWrite = false;
-            skeletonHelper.material.color.set(0x00ffaa);
-            skeletonHelper.material.linewidth = 2;
-            skeletonHelper.renderOrder = 999;
-            skeletonHelper.visible = rigVisible;
-            scene.add(skeletonHelper);
-
-            mixer = new THREE.AnimationMixer(rootBone);
-            const ss2 = document.getElementById('anim-speed');
-            if (ss2) mixer.timeScale = parseInt(ss2.value) / 100;
-            currentAction = mixer.clipAction(result.clip);
-            currentAction.play();
-            playing = true;
+            const playBtn = document.getElementById('anim-play');
+            if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            if (info) info.textContent = `${currentAnimName} \u2014 0/${Math.floor(currentAnimDuration)}s  0/${currentAnimFrames}f`;
+            return;
+        } catch (e) {
+            console.error('Server retarget failed:', e);
+            // Fall through to BVH skeleton fallback
         }
+    }
+
+    // Fallback: separate BVH skeleton visualization (no mesh deformation)
+    bvhLoader.load(url, (result) => {
+        const bvhBones = result.skeleton.bones;
+        if (bvhBones.length === 0) return;
+
+        const rootBone = bvhBones[0];
+
+        // Measure and scale
+        rootBone.updateWorldMatrix(true, true);
+        const skelBox = new THREE.Box3();
+        const tmpVec = new THREE.Vector3();
+        bvhBones.forEach(b => {
+            b.updateWorldMatrix(true, false);
+            b.getWorldPosition(tmpVec);
+            skelBox.expandByPoint(tmpVec);
+        });
+        const skelHeight = skelBox.max.y - skelBox.min.y;
+        let bodyHeight = 1.75;
+        if (bodyMesh) {
+            const bodyBox = new THREE.Box3().setFromObject(bodyMesh);
+            if (!bodyBox.isEmpty()) bodyHeight = bodyBox.max.y - bodyBox.min.y;
+        }
+        const scale = bodyHeight / Math.max(skelHeight, 0.01);
+
+        skelWrapper = new THREE.Group();
+        skelWrapper.scale.set(scale, scale, scale);
+        skelWrapper.add(rootBone);
+        scene.add(skelWrapper);
+
+        if (skeletonHelper) scene.remove(skeletonHelper);
+        skeletonHelper = new THREE.SkeletonHelper(rootBone);
+        skeletonHelper.material.depthTest = false;
+        skeletonHelper.material.depthWrite = false;
+        skeletonHelper.material.color.set(0x00ffaa);
+        skeletonHelper.material.linewidth = 2;
+        skeletonHelper.renderOrder = 999;
+        skeletonHelper.visible = rigVisible;
+        scene.add(skeletonHelper);
+
+        mixer = new THREE.AnimationMixer(rootBone);
+        const ss2 = document.getElementById('anim-speed');
+        if (ss2) mixer.timeScale = parseInt(ss2.value) / 100;
+        currentAction = mixer.clipAction(result.clip);
+        currentAction.play();
+        playing = true;
 
         // Store clip info for live timeline updates
         currentAnimName = name || 'Animation';

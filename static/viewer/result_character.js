@@ -7,9 +7,8 @@
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip, mergeRetargetedClips, loadRetargetConfig } from './retarget_hybrid.js?v=31';
+import { fetchRetargetedClipForJob, fetchMergedClipForJob } from './retarget_hybrid.js?v=32';
 import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
 
 // =========================================================================
@@ -78,8 +77,7 @@ function blenderToThreeCoords(buf) {
  * @param {string} opts.panelId   - id of the side panel container
  * @param {string} opts.modelSelectId - id of the header model preset <select>
  */
-export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUrl, panelId, modelSelectId }) {
-    await loadRetargetConfig();
+export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUrl, jobId, panelId, modelSelectId }) {
     const canvas = document.getElementById(canvasId);
     const video  = document.getElementById(videoId);
     const loadingEl = document.getElementById('characterLoading');
@@ -153,13 +151,12 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     let currentAction = null;
     let currentBodyType = 'Female_Caucasian';
     let currentPresetName = '';
-    let cachedBvhResult = null;
-    let cachedBvhFormat = null;
     let bvhClipDuration = 0;
     let skinColors = {};
     let skeletonHelper = null;
     let rigVisible = false;
     let clothesVisible = true;
+    let enableFootCorrection = false;
 
     // Cloth
     const clothMeshes = {};
@@ -352,7 +349,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
 
     // Load BVH (hybrid mode loads two BVHs and merges them)
     if (isSkinned) {
-        loadBVH(bvhUrl, bvhFaceUrl || null);
+        loadBVH();
     }
 
     // Connect WebSocket for morphs
@@ -389,13 +386,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     if (footChk) {
         footChk.addEventListener('change', () => {
             enableFootCorrection = footChk.checked;
-            if (cachedBvhResult && cachedBvhFormat) {
-                if (cachedBvhFaceResult && cachedBvhFaceFormat) {
-                    applyHybridRetarget(cachedBvhResult, cachedBvhFormat, cachedBvhFaceResult, cachedBvhFaceFormat);
-                } else {
-                    applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
-                }
-            }
+            if (isSkinned) loadBVH();
         });
     }
 
@@ -1054,13 +1045,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
             applySkinColor(newType);
             wsSend({ type: 'body_type', value: newType });
 
-            // Re-apply BVH from cache
-            if (isSkinned && cachedBvhResult) {
-                if (cachedBvhFaceResult && cachedBvhFaceFormat) {
-                    applyHybridRetarget(cachedBvhResult, cachedBvhFormat, cachedBvhFaceResult, cachedBvhFaceFormat);
-                } else {
-                    applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
-                }
+            // Re-apply BVH via server retarget
+            if (isSkinned) {
+                await loadBVH();
             }
         } catch (e) {
             console.error('[result_character] Body type switch failed:', e);
@@ -1494,15 +1481,23 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     // BVH loading + retarget
     // =====================================================================
 
-    let enableFootCorrection = false;
-
-    function applyBvhRetarget(bvhResult, format) {
-        // Stop old mixer first
+    async function applyBvhRetarget() {
+        console.log('[result_character] applyBvhRetarget called, jobId=', jobId, 'defSkeleton=', !!defSkeleton, 'bodyMesh=', !!bodyMesh);
         if (mixer) { mixer.stopAllAction(); mixer = null; currentAction = null; }
 
-        const retargetOpts = { bodyMesh };
-        if (enableFootCorrection) retargetOpts.footCorrection = true;
-        const clip = retargetBVHToDefClip(bvhResult, defSkeleton, format, retargetOpts);
+        let bodyH = 1.68;
+        if (bodyMesh) {
+            const bb = new THREE.Box3().setFromObject(bodyMesh);
+            if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
+        }
+        console.log('[result_character] bodyHeight=', bodyH);
+
+        const clip = await fetchRetargetedClipForJob(jobId, defSkeleton, {
+            bodyHeight: bodyH,
+            footCorrection: enableFootCorrection,
+        });
+
+        console.log('[result_character] clip:', clip.duration, 'sec,', clip.tracks.length, 'tracks');
 
         mixer = new THREE.AnimationMixer(bodyMesh);
         currentAction = mixer.clipAction(clip);
@@ -1510,6 +1505,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         currentAction.clampWhenFinished = true;
         currentAction.play();
         bvhClipDuration = clip.duration;
+        console.log('[result_character] Animation playing, bvhClipDuration=', bvhClipDuration);
     }
 
     /**
@@ -1564,70 +1560,39 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         controls.update();
     }
 
-    let cachedBvhFaceResult = null;
-    let cachedBvhFaceFormat = null;
-
-    function loadBVH(url, faceUrl) {
-        const loader = new BVHLoader();
-
-        if (faceUrl) {
-            // Hybrid mode: load both BVHs in parallel, merge after retarget
-            const p1 = new Promise((resolve, reject) => {
-                loader.load(url, resolve, undefined, reject);
-            });
-            const p2 = new Promise((resolve, reject) => {
-                const loader2 = new BVHLoader();
-                loader2.load(faceUrl, resolve, undefined, reject);
-            });
-            Promise.all([p1, p2]).then(([bodyResult, faceResult]) => {
-                if (bodyResult.skeleton.bones.length === 0) return;
-
-                const bodyFormat = detectBVHFormat(bodyResult.skeleton.bones);
-                const faceFormat = detectBVHFormat(faceResult.skeleton.bones);
-
-                cachedBvhResult = bodyResult;
-                cachedBvhFormat = bodyFormat;
-                cachedBvhFaceResult = faceResult;
-                cachedBvhFaceFormat = faceFormat;
-
-                applyHybridRetarget(bodyResult, bodyFormat, faceResult, faceFormat);
-                positionCameraAfterRetarget();
-
-                console.log(`[result_character] Hybrid BVH: body=${bodyFormat} ${bodyResult.clip.duration.toFixed(1)}s, face=${faceFormat} ${faceResult.clip.duration.toFixed(1)}s`);
-            }).catch(err => {
-                console.error('[result_character] Hybrid BVH load error:', err);
-            });
-        } else {
-            // Single BVH mode
-            loader.load(url, (result) => {
-                const bones = result.skeleton.bones;
-                if (bones.length === 0) return;
-
-                const format = detectBVHFormat(bones);
-                cachedBvhResult = result;
-                cachedBvhFormat = format;
-                cachedBvhFaceResult = null;
-                cachedBvhFaceFormat = null;
-
-                applyBvhRetarget(result, format);
-                positionCameraAfterRetarget();
-
-                console.log(`[result_character] BVH loaded: ${format}, ${result.clip.duration.toFixed(1)}s`);
-            }, undefined, (err) => {
-                console.error('[result_character] BVH load error:', err);
-            });
+    async function loadBVH() {
+        try {
+            if (bvhFaceUrl) {
+                // Hybrid mode: body + face merged on server
+                await applyHybridRetarget();
+            } else {
+                // Single BVH mode
+                await applyBvhRetarget();
+            }
+            positionCameraAfterRetarget();
+        } catch (err) {
+            console.error('[result_character] BVH retarget error:', err);
+            // Show error visually
+            if (loadingEl) {
+                loadingEl.style.display = '';
+                loadingEl.innerHTML = '<span style="color:#e74c3c"><i class="fas fa-exclamation-triangle"></i> Retarget: ' + (err.message || err) + '</span>';
+            }
         }
     }
 
-    function applyHybridRetarget(bodyResult, bodyFormat, faceResult, faceFormat) {
+    async function applyHybridRetarget() {
         if (mixer) { mixer.stopAllAction(); mixer = null; currentAction = null; }
 
-        const retargetOpts = { bodyMesh };
-        if (enableFootCorrection) retargetOpts.footCorrection = true;
+        let bodyH = 1.68;
+        if (bodyMesh) {
+            const bb = new THREE.Box3().setFromObject(bodyMesh);
+            if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
+        }
 
-        const bodyClip = retargetBVHToDefClip(bodyResult, defSkeleton, bodyFormat, retargetOpts);
-        const faceClip = retargetBVHToDefClip(faceResult, defSkeleton, faceFormat, retargetOpts);
-        const clip = mergeRetargetedClips(bodyClip, faceClip);
+        const clip = await fetchMergedClipForJob(jobId, defSkeleton, {
+            bodyHeight: bodyH,
+            footCorrection: enableFootCorrection,
+        });
 
         mixer = new THREE.AnimationMixer(bodyMesh);
         currentAction = mixer.clipAction(clip);

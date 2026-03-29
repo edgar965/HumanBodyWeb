@@ -113,6 +113,9 @@
                     <a href="{% url 'settings_scene' %}" class="{% if request.path == '/settings/scene/' %}active{% endif %}">
                         <i class="fas fa-lightbulb"></i> <span>Szene</span>
                     </a>
+                    <a href="{% url 'settings_result' %}" class="{% if request.path == '/settings/result/' %}active{% endif %}">
+                        <i class="fas fa-video"></i> <span>Result</span>
+                    </a>
                     <a href="{% url 'settings_videobvh_2d' %}" class="{% if request.path == '/settings/video-to-bvh-2d/' %}active{% endif %}">
                         <i class="fas fa-film"></i> <span>Video to BVH: 2D</span>
                     </a>

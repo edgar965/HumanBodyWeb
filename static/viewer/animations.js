@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip, loadRetargetConfig } from './retarget_hybrid.js?v=31';
+import { detectBVHFormat, fetchRetargetedClipFromUrl } from './retarget_hybrid.js?v=32';
 import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
 
 // =========================================================================
@@ -52,7 +52,6 @@ let skinColors = {};
 // Initialization
 // =========================================================================
 async function init() {
-    await loadRetargetConfig();
     const canvas = document.getElementById('viewer-canvas');
     const container = canvas.parentElement;
     const w = container.clientWidth;
@@ -522,7 +521,7 @@ function convertToDefSkinnedMesh(defSkel, swData) {
     console.log('SkinnedMesh created:', bodyMesh.isSkinnedMesh, 'bones:', defSkeleton.skeleton.bones.length);
 }
 
-// Retarget imports from shared module (retarget.js)
+// Retarget via server-side API (retarget_hybrid.js)
 
 // =========================================================================
 // BVH animation playback
@@ -530,21 +529,21 @@ function convertToDefSkinnedMesh(defSkel, swData) {
 // Skeleton wrapper for scaling
 let skelWrapper = null;
 
-function loadBVHAnimation(url, name, fc) {
+async function loadBVHAnimation(url, name, fc) {
     stopAnimation(true);
 
     document.getElementById('anim-info').textContent = `Lade ${name}...`;
 
-    bvhLoader.load(url, (result) => {
-        const bones = result.skeleton.bones;
-        if (bones.length === 0) return;
+    if (defSkeletonData && skinWeightData && bodyMesh) {
+        // Server-side retarget path: skin mesh + retarget BVH via API
+        if (!isSkinned) convertToDefSkinnedMesh(null, skinWeightData);
 
-        // DEF retarget path: skin mesh + retarget BVH to DEF bones
-        if (defSkeletonData && skinWeightData && bodyMesh) {
-            if (!isSkinned) convertToDefSkinnedMesh(null, skinWeightData);
+        let bodyH = 1.68;
+        const bb = new THREE.Box3().setFromObject(bodyMesh);
+        if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
 
-            const format = detectBVHFormat(bones);
-            const clip = retargetBVHToDefClip(result, defSkeleton, format, { bodyMesh });
+        try {
+            const clip = await fetchRetargetedClipFromUrl(url, defSkeleton, { bodyHeight: bodyH });
 
             // Ensure SkeletonHelper exists for DEF skeleton
             if (!skeletonHelper) {
@@ -565,8 +564,20 @@ function loadBVHAnimation(url, name, fc) {
             currentAction = mixer.clipAction(clip);
             currentAction.play();
             playing = true;
-        } else {
-            // Fallback: BVH skeleton overlay (no skinning data available)
+
+            document.getElementById('anim-play').innerHTML = '<i class="fas fa-pause"></i>';
+            document.getElementById('anim-info').textContent =
+                `${name} — ${fc}f — ${clip.duration.toFixed(1)}s`;
+        } catch (e) {
+            console.error('Server retarget failed:', e);
+            document.getElementById('anim-info').textContent = `Fehler: ${name}`;
+        }
+    } else {
+        // Fallback: BVH skeleton overlay (no skinning data available)
+        bvhLoader.load(url, (result) => {
+            const bones = result.skeleton.bones;
+            if (bones.length === 0) return;
+
             const rootBone = bones[0];
             rootBone.updateWorldMatrix(true, true);
             const skelBox = new THREE.Box3();
@@ -606,15 +617,15 @@ function loadBVHAnimation(url, name, fc) {
             currentAction = mixer.clipAction(result.clip);
             currentAction.play();
             playing = true;
-        }
 
-        document.getElementById('anim-play').innerHTML = '<i class="fas fa-pause"></i>';
-        document.getElementById('anim-info').textContent =
-            `${name} — ${fc}f — ${result.clip.duration.toFixed(1)}s`;
-    }, undefined, (err) => {
-        console.error('Failed to load BVH:', err);
-        document.getElementById('anim-info').textContent = `Fehler: ${name}`;
-    });
+            document.getElementById('anim-play').innerHTML = '<i class="fas fa-pause"></i>';
+            document.getElementById('anim-info').textContent =
+                `${name} — ${fc}f — ${result.clip.duration.toFixed(1)}s`;
+        }, undefined, (err) => {
+            console.error('Failed to load BVH:', err);
+            document.getElementById('anim-info').textContent = `Fehler: ${name}`;
+        });
+    }
 }
 
 function stopAnimation(destroy = false) {

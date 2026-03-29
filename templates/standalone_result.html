@@ -158,6 +158,7 @@ try {
         videoId: 'resultVideo',
         bvhUrl: '{% url "serve_bvh" job.id %}',
         {% if job.bvh_file_face %}bvhFaceUrl: '{% url "serve_bvh_face" job.id %}',{% endif %}
+        jobId: '{{ job.id }}',
         panelId: 'characterPanel',
         modelSelectId: 'resultModelPreset',
     });

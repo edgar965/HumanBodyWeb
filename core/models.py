@@ -185,6 +185,10 @@ class AppSettings(models.Model):
         max_length=300, default='', blank=True,
         help_text="Default animation URL for Animationen page",
     )
+    default_anim_result = models.CharField(
+        max_length=300, default='', blank=True,
+        help_text="Default animation URL for Result page",
+    )
     expanded_panels_config = models.CharField(
         max_length=500, default='["body_type","morphs","cloth_template"]', blank=True,
         help_text="JSON list of expanded panel keys for Konfiguration page",

@@ -35,10 +35,8 @@
             <div class="settings-label">
                 <small>Default Animation</small>
             </div>
-            <div class="settings-input" style="display:flex;gap:8px;align-items:center;">
-                <select name="default_anim_scene" id="default-anim-scene" class="settings-select" style="flex:1;">
-                    <option value="">— keine —</option>
-                </select>
+            <div class="settings-input">
+                {% include "_anim_selector.html" with field_name="default_anim_scene" current_value=settings.default_anim_scene selector_id="anim-sel-scene" %}
             </div>
         </div>
         <div class="settings-row">
@@ -83,8 +81,6 @@
 <script>
 (function() {
     const currentScene = "{{ settings.default_model_scene|escapejs }}";
-    const currentAnimScene = "{{ settings.default_anim_scene|escapejs }}";
-
     // Populate model presets
     fetch('/api/character/models/')
         .then(r => r.json())
@@ -132,27 +128,34 @@
     buildPanelCheckboxes('panels-scene-wrap', SCENE_PANELS, 'panel_scene_',
         "{{ settings.expanded_panels_scene|escapejs }}");
 
-    // Populate animation list
-    fetch('/api/character/animations/')
-        .then(r => r.json())
-        .then(data => {
-            const cats = data.categories || {};
-            const sel = document.getElementById('default-anim-scene');
-            if (!sel) return;
-            for (const [catName, anims] of Object.entries(cats).sort()) {
-                const grp = document.createElement('optgroup');
-                grp.label = catName;
-                anims.forEach(a => {
-                    const opt = document.createElement('option');
-                    opt.value = a.url;
-                    opt.textContent = a.name + (a.frames ? ` (${a.frames}f)` : '');
-                    if (a.url === currentAnimScene) opt.selected = true;
-                    grp.appendChild(opt);
-                });
-                sel.appendChild(grp);
+    // Animation selector expand/collapse + click (shared widget)
+    document.querySelectorAll('.anim-cat-header-settings').forEach(header => {
+        header.addEventListener('click', () => {
+            const body = header.nextElementSibling;
+            const icon = header.querySelector('.fa-chevron-down');
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                body.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
             }
-        })
-        .catch(e => console.warn('Failed to load animations:', e));
+        });
+    });
+    document.querySelectorAll('.anim-selection-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const selectorId = item.getAttribute('data-selector');
+            const value = item.getAttribute('data-value');
+            document.getElementById(selectorId + '-hidden').value = value;
+            document.getElementById(selectorId + '-display').textContent = value || '(Keine Auto-Load)';
+            document.querySelectorAll(`.anim-selection-item[data-selector="${selectorId}"]`).forEach(i => {
+                i.style.background = '';
+                i.style.color = '';
+            });
+            item.style.background = 'var(--accent)';
+            item.style.color = 'white';
+        });
+    });
 
     // Selection opacity slider
     const range = document.getElementById('selection-opacity-range');
