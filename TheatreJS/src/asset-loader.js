@@ -256,6 +256,8 @@ async function buildGeneratedModel(config) {
         group.userData.skinnedMesh = result.mesh;
         group.userData.skeleton = result.skeleton.skeleton;
         group.userData.rootBone = result.skeleton.rootBone;
+        // Store full defSkeleton-compatible object for retarget (boneByName, rootBone, etc.)
+        group.userData.defSkelObj = result.skeleton;
     }
 
     return group;

@@ -3692,3 +3692,61 @@ def vertex_edit_push_outside(request):
     return JsonResponse({
         'vertices': base64.b64encode(result_f32.tobytes()).decode('ascii'),
     })
+
+
+# =========================================================================
+# Retarget configuration (BVH-to-DEF mapping tables)
+# =========================================================================
+
+@require_GET
+def retarget_config(request):
+    """Serve BVH-to-DEF mapping tables, skip-dir-correction lists, and face/hand bone list."""
+    from humanbody_core.skeleton import SkeletonRigify
+    return JsonResponse({
+        'mappings': SkeletonRigify.BVH_TO_DEF,
+        'skip_dir_correction': SkeletonRigify.SKIP_DIR_CORRECTION,
+        'face_hand_bones': SkeletonRigify.FACE_HAND_BONES,
+    })
+
+
+# Cached DEF skeleton (loaded once, reused across requests)
+_def_skeleton_cache = None
+
+def _get_def_skeleton():
+    global _def_skeleton_cache
+    if _def_skeleton_cache is None:
+        from humanbody_core.skeleton import SkeletonRigify
+        skel_json = str(settings.HUMANBODY_DATA_DIR / 'def_skeleton.json')
+        sw_json = str(settings.HUMANBODY_DATA_DIR / 'skin_weights_base.json')
+        _def_skeleton_cache = SkeletonRigify.load_def_skeleton(skel_json, sw_json)
+    return _def_skeleton_cache
+
+
+@require_GET
+def retarget_bvh(request, category, name):
+    """Server-side BVH retarget. Returns pre-computed keyframe data for Three.js.
+
+    GET /api/character/retarget-bvh/<category>/<name>/
+    Optional query params:
+        body_height: float (default 1.68)
+        format: str (auto-detected if omitted)
+
+    Returns JSON: {duration, times, tracks: {bone: [x,y,z,w,...]}, position_track, ...}
+    """
+    from humanbody_core.skeleton import SkeletonRigify
+
+    # Resolve BVH path (same logic as character_bvh_file_cat)
+    bvh_root = os.path.dirname(str(settings.HUMANBODY_BVH_DIR))
+    bvh_path = os.path.normpath(os.path.join(bvh_root, category, f"{name}.bvh"))
+    if not bvh_path.startswith(os.path.normpath(bvh_root)):
+        return HttpResponseNotFound('Invalid path')
+    if not os.path.isfile(bvh_path):
+        return HttpResponseNotFound(f'BVH not found: {category}/{name}')
+
+    body_height = float(request.GET.get('body_height', 1.68))
+    fmt = request.GET.get('format', None)
+
+    def_skel = _get_def_skeleton()
+    result = SkeletonRigify.retarget_bvh(bvh_path, def_skel, fmt=fmt,
+                                          body_height=body_height)
+    return JsonResponse(result)

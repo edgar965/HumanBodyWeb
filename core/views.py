@@ -186,9 +186,63 @@ def upload_video(request):
     })
 
 
+def _read_pipeline_params(post, pipeline):
+    """Extract per-pipeline settings from POST data into a dict."""
+    params = {}
+    if pipeline == 'v4':
+        params['hcd_iterations'] = int(post.get('v4_hcd_iterations', 10))
+        params['hcd_epochs'] = int(post.get('v4_hcd_epochs', 30))
+        params['hcd_learning_rate'] = float(post.get('v4_hcd_learning_rate', 0.001))
+        params['smoothing_cutoff'] = float(post.get('v4_smoothing_cutoff', 5.0))
+        params['smoothing_sampling'] = float(post.get('v4_smoothing_sampling', 30.0))  # from template
+        params['mp_detection'] = float(post.get('v4_mp_detection', 0.5))
+        params['mp_tracking'] = float(post.get('v4_mp_tracking', 0.2))
+        parts = post.getlist('v4_parts')
+        params['body'] = 'body' in parts
+        params['face'] = 'face' in parts
+        params['hands'] = 'hands' in parts
+        params['mouth'] = 'mouth' in parts
+        params['eyes'] = 'eyes' in parts
+    elif pipeline == 'gvhmr':
+        params['static_cam'] = post.get('gvhmr_static_cam') == 'on'
+        params['focal_length_mm'] = float(post.get('gvhmr_focal_length_mm', 0))
+        params['device'] = post.get('gvhmr_device', 'cuda')
+        vid_dir = post.get('gvhmr_video_output_dir', '').strip()
+        if vid_dir:
+            params['video_output_dir'] = vid_dir
+    elif pipeline == 'wham':
+        params['local_only'] = post.get('wham_local_only') == 'on'
+        params['smplify'] = post.get('wham_smplify') == 'on'
+        params['device'] = post.get('wham_device', 'cuda')
+    elif pipeline == 'prompthmr':
+        params['static_cam'] = post.get('prompthmr_static_cam') == 'on'
+        params['device'] = post.get('prompthmr_device', 'cuda')
+    elif pipeline.startswith('hybrid_'):
+        body_backend = post.get('hybrid_body_backend', 'gvhmr')
+        params['body_backend'] = body_backend
+        # Body settings (GVHMR or PromptHMR)
+        if body_backend == 'gvhmr':
+            params['static_cam'] = post.get('hybrid_gvhmr_static_cam') == 'on'
+            params['focal_length_mm'] = float(post.get('hybrid_gvhmr_focal_length_mm', 0))
+        else:
+            params['static_cam'] = post.get('hybrid_prompthmr_static_cam') == 'on'
+        params['body_device'] = post.get('hybrid_body_device', 'cuda')
+        # V4 Face+Hands settings
+        parts = post.getlist('hybrid_v4_parts')
+        params['v4_face'] = 'face' in parts
+        params['v4_hands'] = 'hands' in parts
+        params['v4_mouth'] = 'mouth' in parts
+        params['v4_eyes'] = 'eyes' in parts
+        params['v4_hcd_iterations'] = int(post.get('hybrid_v4_hcd_iterations', 10))
+        params['v4_hcd_epochs'] = int(post.get('hybrid_v4_hcd_epochs', 30))
+        params['v4_mp_detection'] = float(post.get('hybrid_v4_mp_detection', 0.5))
+        params['v4_mp_tracking'] = float(post.get('hybrid_v4_mp_tracking', 0.2))
+    return params
+
+
 def upload_video_v4(request):
     """Upload a video file for processing (3D pipeline)."""
-    VALID_3D = ('v4', 'gvhmr', 'wham', 'prompthmr')
+    VALID_3D = ('v4', 'gvhmr', 'wham', 'prompthmr', 'hybrid_gvhmr', 'hybrid_prompthmr')
     if request.method == 'POST':
         video = request.FILES.get('video')
         if not video:
@@ -200,30 +254,77 @@ def upload_video_v4(request):
         if pipeline not in VALID_3D:
             pipeline = 'v4'
 
+        pp = _read_pipeline_params(request.POST, pipeline)
+
         job = BVHJob.objects.create(
             name=video.name,
             video_file=video,
             fps=fps,
             pipeline=pipeline,
+            pipeline_params=pp,
         )
         messages.success(request, f'Uploaded {video.name}.')
         return redirect('upload_v4')
 
     # Check availability of 3D pipelines
+    v4_avail = Path(settings.MOCAPNET_V4_SCRIPT).exists()
+    gvhmr_avail = Path(settings.GVHMR_ROOT).is_dir()
+    prompthmr_avail = Path(settings.PROMPTHMR_ROOT).is_dir()
     status_3d = {
-        'v4': Path(settings.MOCAPNET_V4_SCRIPT).exists(),
-        'gvhmr': Path(settings.GVHMR_ROOT).is_dir(),
+        'v4': v4_avail,
+        'gvhmr': gvhmr_avail,
         'wham': Path(settings.WHAM_ROOT).is_dir(),
-        'prompthmr': Path(settings.PROMPTHMR_ROOT).is_dir(),
+        'prompthmr': prompthmr_avail,
+        'hybrid_gvhmr': gvhmr_avail and v4_avail,
+        'hybrid_prompthmr': prompthmr_avail and v4_avail,
     }
 
     s = AppSettings.load()
     default_3d = s.lifter_3d_default if s.lifter_3d_default in VALID_3D else 'v4'
 
+    # Per-pipeline defaults from AppSettings (for template form values)
+    defaults = {
+        'v4_hcd_iterations': s.v4_hcd_iterations,
+        'v4_hcd_epochs': s.v4_hcd_epochs,
+        'v4_hcd_learning_rate': s.v4_hcd_learning_rate,
+        'v4_smoothing_cutoff': s.v4_smoothing_cutoff,
+        'v4_smoothing_sampling': s.v4_smoothing_sampling,
+        'v4_mp_detection': s.mp_min_detection_confidence,
+        'v4_mp_tracking': s.mp_min_tracking_confidence,
+        'v4_body': s.v4_enable_body,
+        'v4_face': s.v4_enable_face,
+        'v4_hands': s.v4_enable_hands,
+        'v4_mouth': s.v4_enable_mouth,
+        'v4_eyes': s.v4_enable_eyes,
+        'gvhmr_static_cam': s.gvhmr_static_cam,
+        'gvhmr_focal_length_mm': s.gvhmr_focal_length_mm,
+        'gvhmr_device': s.smpl_device,
+        'gvhmr_video_output_dir': s.video_output_dir,
+        'wham_local_only': s.wham_estimate_local_only,
+        'wham_smplify': s.wham_run_smplify,
+        'wham_device': s.smpl_device,
+        'prompthmr_static_cam': s.prompthmr_static_camera,
+        'prompthmr_device': s.smpl_device,
+        # Hybrid defaults (reuse existing settings)
+        'hybrid_body_device': s.smpl_device,
+        'hybrid_gvhmr_static_cam': s.gvhmr_static_cam,
+        'hybrid_gvhmr_focal_length_mm': s.gvhmr_focal_length_mm,
+        'hybrid_prompthmr_static_cam': s.prompthmr_static_camera,
+        'hybrid_v4_face': s.v4_enable_face,
+        'hybrid_v4_hands': s.v4_enable_hands,
+        'hybrid_v4_mouth': s.v4_enable_mouth,
+        'hybrid_v4_eyes': s.v4_enable_eyes,
+        'hybrid_v4_hcd_iterations': s.v4_hcd_iterations,
+        'hybrid_v4_hcd_epochs': s.v4_hcd_epochs,
+        'hybrid_v4_mp_detection': s.mp_min_detection_confidence,
+        'hybrid_v4_mp_tracking': s.mp_min_tracking_confidence,
+    }
+
     v4_jobs = BVHJob.objects.filter(pipeline__in=list(VALID_3D)).order_by('-created_at')
     _annotate_file_sizes(v4_jobs)
     return render(request, 'upload_v4.html', {
         'v4_jobs': v4_jobs, 'status_3d': status_3d, 'default_3d': default_3d,
+        'defaults': defaults,
     })
 
 
@@ -236,13 +337,16 @@ def job_status(request, job_id):
 def job_status_api(request, job_id):
     """API endpoint for job status (polling)."""
     job = get_object_or_404(BVHJob, id=job_id)
-    return JsonResponse({
+    data = {
         'status': job.status,
         'progress': job.progress,
         'progress_detail': job.progress_detail,
         'error': job.error_message,
         'bvh_file': job.bvh_file,
-    })
+    }
+    if job.bvh_file_face:
+        data['bvh_file_face'] = job.bvh_file_face
+    return JsonResponse(data)
 
 
 def _get_video_frame_count(video_path):
@@ -633,28 +737,29 @@ def _run_v4_pipeline(job, video_path, output_dir):
 
     v4_script = str(settings.MOCAPNET_V4_SCRIPT)
     s = AppSettings.load()
+    p = job.pipeline_params or {}
     cmd = [
         settings.PIPELINE_PYTHON, v4_script,
         '--from', str(video_path),
         '--output', bvh_output,
         '--headless',
         '--stop-flag', stop_flag,
-        '--hcd-iterations', str(s.v4_hcd_iterations),
-        '--hcd-epochs', str(s.v4_hcd_epochs),
-        '--hcd-lr', str(s.v4_hcd_learning_rate),
-        '--smooth-sampling', str(s.v4_smoothing_sampling),
-        '--smooth-cutoff', str(s.v4_smoothing_cutoff),
-        '--mp-detection-conf', str(s.mp_min_detection_confidence),
-        '--mp-tracking-conf', str(s.mp_min_tracking_confidence),
+        '--hcd-iterations', str(p.get('hcd_iterations', s.v4_hcd_iterations)),
+        '--hcd-epochs', str(p.get('hcd_epochs', s.v4_hcd_epochs)),
+        '--hcd-lr', str(p.get('hcd_learning_rate', s.v4_hcd_learning_rate)),
+        '--smooth-sampling', str(p.get('smoothing_sampling', s.v4_smoothing_sampling)),
+        '--smooth-cutoff', str(p.get('smoothing_cutoff', s.v4_smoothing_cutoff)),
+        '--mp-detection-conf', str(p.get('mp_detection', s.mp_min_detection_confidence)),
+        '--mp-tracking-conf', str(p.get('mp_tracking', s.mp_min_tracking_confidence)),
         '--mp-model-complexity', str(s.mp_model_complexity),
         '--flipHorizontal',
     ]
-    # Component flags
-    if s.v4_enable_body: cmd.append('--body')
-    if s.v4_enable_face: cmd.append('--face')
-    if s.v4_enable_hands: cmd.append('--hands')
-    if s.v4_enable_mouth: cmd.append('--mouth')
-    if s.v4_enable_eyes: cmd.append('--eyes')
+    # Component flags (per-job override, fallback to AppSettings)
+    if p.get('body', s.v4_enable_body): cmd.append('--body')
+    if p.get('face', s.v4_enable_face): cmd.append('--face')
+    if p.get('hands', s.v4_enable_hands): cmd.append('--hands')
+    if p.get('mouth', s.v4_enable_mouth): cmd.append('--mouth')
+    if p.get('eyes', s.v4_enable_eyes): cmd.append('--eyes')
 
     stderr_lines = []
     def _drain_stderr(pipe):
@@ -860,26 +965,28 @@ def _run_smpl_pipeline(job, video_path, output_dir):
     job.progress_detail = f'0 / {total_frames} frames' if total_frames else f'Starting {job.get_pipeline_display()}...'
     job.save()
 
+    p = job.pipeline_params or {}
+    device = p.get('device', s.smpl_device)
     cmd = [
         settings.PIPELINE_PYTHON, wrapper_script,
         '--pipeline', job.pipeline,
         '--video', str(video_path),
         '--output', bvh_output,
-        '--device', s.smpl_device,
+        '--device', device,
     ]
 
-    # Pipeline-specific params
+    # Pipeline-specific params (per-job override, fallback to AppSettings)
     if job.pipeline == 'gvhmr':
-        if s.gvhmr_static_cam:
+        if p.get('static_cam', s.gvhmr_static_cam):
             cmd.append('--static_cam')
-        cmd.extend(['--focal_length_mm', str(s.gvhmr_focal_length_mm)])
+        cmd.extend(['--focal_length_mm', str(p.get('focal_length_mm', s.gvhmr_focal_length_mm))])
     elif job.pipeline == 'wham':
-        if s.wham_estimate_local_only:
+        if p.get('local_only', s.wham_estimate_local_only):
             cmd.append('--estimate_local_only')
-        if s.wham_run_smplify:
+        if p.get('smplify', s.wham_run_smplify):
             cmd.append('--run_smplify')
     elif job.pipeline == 'prompthmr':
-        if s.prompthmr_static_camera:
+        if p.get('static_cam', s.prompthmr_static_camera):
             cmd.append('--static_camera')
 
     # Write output to log file so subprocess survives server restart
@@ -929,6 +1036,171 @@ def _run_smpl_pipeline(job, video_path, output_dir):
     return bvh_output
 
 
+def _copy_gvhmr_render_videos(job, output_dir):
+    """Copy GVHMR render videos (incam, global, combined) to the user-configured output dir."""
+    import shutil
+    p = job.pipeline_params or {}
+    s = AppSettings.load()
+    dest_dir = Path(p.get('video_output_dir', s.video_output_dir))
+    if not dest_dir or not str(dest_dir).strip():
+        return
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    video_stem = job.name.rsplit('.', 1)[0]
+    gvhmr_dir = output_dir / video_stem
+    if not gvhmr_dir.is_dir():
+        return
+    suffixes = ['incam.mp4', 'global.mp4', 'incam_global_horiz.mp4']
+    for f in gvhmr_dir.iterdir():
+        if f.suffix == '.mp4':
+            dest = dest_dir / f'{video_stem}_{f.stem}.mp4'
+            try:
+                shutil.copy2(str(f), str(dest))
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f'GVHMR video copy failed: {e}')
+
+
+def _run_hybrid_pipeline(job, video_path, output_dir):
+    """Run hybrid pipeline: SMPL body (GPU) + MocapNET v4 face+hands (CPU) in parallel."""
+    import time as _time
+
+    p = job.pipeline_params or {}
+    s = AppSettings.load()
+    video_stem = job.name.rsplit('.', 1)[0]
+
+    # Determine body backend from pipeline name
+    body_backend = 'gvhmr' if job.pipeline == 'hybrid_gvhmr' else 'prompthmr'
+
+    # --- Prepare body sub-job (fake job-like object for _run_smpl_pipeline) ---
+    # We create a lightweight namespace that _run_smpl_pipeline can use.
+    # Each sub-job gets a unique id suffix so _active_procs doesn't collide.
+    import uuid as _uuid
+    class _SubJob:
+        """Minimal job-like object for sub-pipeline calls."""
+        def __init__(self, pipeline, params, name, id_suffix):
+            self.pipeline = pipeline
+            self.pipeline_params = params
+            self.name = name
+            self.id = f'{job.id}_{id_suffix}'
+            self.status = 'processing'
+            self.progress = 0
+            self.progress_detail = ''
+        def save(self, **kw):
+            pass  # Don't save sub-job progress directly
+        def get_pipeline_display(self):
+            return body_backend.upper()
+
+    body_params = dict(p)
+    body_params['device'] = p.get('body_device', s.smpl_device)
+    body_job = _SubJob(body_backend, body_params, job.name, 'body')
+
+    # --- Prepare v4 params ---
+    v4_params = {
+        'hcd_iterations': p.get('v4_hcd_iterations', s.v4_hcd_iterations),
+        'hcd_epochs': p.get('v4_hcd_epochs', s.v4_hcd_epochs),
+        'hcd_learning_rate': s.v4_hcd_learning_rate,
+        'smoothing_cutoff': s.v4_smoothing_cutoff,
+        'smoothing_sampling': s.v4_smoothing_sampling,
+        'mp_detection': p.get('v4_mp_detection', s.mp_min_detection_confidence),
+        'mp_tracking': p.get('v4_mp_tracking', s.mp_min_tracking_confidence),
+        # Always enable body (needed for MediaPipe base pose), plus face+hands
+        'body': True,
+        'face': p.get('v4_face', s.v4_enable_face),
+        'hands': p.get('v4_hands', s.v4_enable_hands),
+        'mouth': p.get('v4_mouth', s.v4_enable_mouth),
+        'eyes': p.get('v4_eyes', s.v4_enable_eyes),
+    }
+    v4_job = _SubJob('v4', v4_params, job.name, 'face')
+
+    # Output paths
+    body_output_dir = output_dir / 'body'
+    face_output_dir = output_dir / 'face'
+    body_output_dir.mkdir(parents=True, exist_ok=True)
+    face_output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Update job status
+    job.status = 'processing'
+    job.progress = 0
+    job.progress_detail = 'Starting hybrid pipeline...'
+    job.save()
+
+    # --- Run both pipelines in parallel threads ---
+    body_result = {'bvh': None, 'error': None}
+    face_result = {'bvh': None, 'error': None}
+    body_progress = [0]
+    face_progress = [0]
+
+    def run_body():
+        try:
+            bvh = _run_smpl_pipeline(body_job, video_path, body_output_dir)
+            body_result['bvh'] = bvh
+            body_progress[0] = 100
+        except Exception as e:
+            body_result['error'] = str(e)
+
+    def run_face():
+        try:
+            bvh = _run_v4_pipeline(v4_job, video_path, face_output_dir)
+            face_result['bvh'] = bvh
+            face_progress[0] = 100
+        except Exception as e:
+            face_result['error'] = str(e)
+
+    body_thread = threading.Thread(target=run_body, daemon=True)
+    face_thread = threading.Thread(target=run_face, daemon=True)
+
+    t_start = _time.time()
+    body_thread.start()
+    face_thread.start()
+
+    # Register the v4 subprocess for stop functionality
+    # (The body pipeline registers itself via _active_procs)
+
+    # --- Progress monitoring loop ---
+    while body_thread.is_alive() or face_thread.is_alive():
+        _time.sleep(2)
+        # Read sub-job progress (they write to their .progress fields)
+        bp = body_job.progress if hasattr(body_job, 'progress') else 0
+        fp = v4_job.progress if hasattr(v4_job, 'progress') else 0
+        body_progress[0] = max(body_progress[0], bp)
+        face_progress[0] = max(face_progress[0], fp)
+
+        overall = min(body_progress[0], face_progress[0])
+        elapsed = _time.time() - t_start
+        body_detail = body_job.progress_detail or f'{body_progress[0]}%'
+        face_detail = v4_job.progress_detail or f'{face_progress[0]}%'
+        job.progress = overall
+        job.progress_detail = f'Body: {body_detail} | Face+Hands: {face_detail}'
+        job.save()
+
+    body_thread.join(timeout=5)
+    face_thread.join(timeout=5)
+
+    # --- Check results ---
+    errors = []
+    if body_result['error']:
+        errors.append(f"Body ({body_backend}): {body_result['error']}")
+    if face_result['error']:
+        errors.append(f"Face+Hands (v4): {face_result['error']}")
+
+    if errors and not body_result['bvh'] and not face_result['bvh']:
+        raise RuntimeError('Hybrid pipeline failed:\n' + '\n'.join(errors))
+
+    # At least one pipeline succeeded — store results
+    if body_result['bvh']:
+        job.bvh_file = body_result['bvh']
+    if face_result['bvh']:
+        job.bvh_file_face = face_result['bvh']
+
+    if errors:
+        # Partial success — note which part failed
+        job.progress_detail = 'Done (partial: ' + '; '.join(errors)[:200] + ')'
+    else:
+        job.progress_detail = 'Done'
+
+    return body_result['bvh'], face_result['bvh']
+
+
 def _run_processing(job_id):
     """Background thread: run pipeline (2D detector + MocapNET, v4, or SMPL-based)."""
     from django.apps import apps
@@ -940,9 +1212,42 @@ def _run_processing(job_id):
         output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Route 0: Hybrid pipelines (SMPL body + v4 face+hands)
+        if job.pipeline.startswith('hybrid_'):
+            body_bvh, face_bvh = _run_hybrid_pipeline(job, video_path, output_dir)
+
+            # Copy body BVH to results
+            if body_bvh:
+                _copy_bvh_to_results(body_bvh, job.name, job.pipeline)
+            if face_bvh:
+                _copy_bvh_to_results(face_bvh, job.name, job.pipeline + '_face')
+
+            # GVHMR render videos
+            if job.pipeline == 'hybrid_gvhmr' and body_bvh:
+                _copy_gvhmr_render_videos(job, output_dir / 'body')
+
+            job.status = 'complete'
+            job.progress = 100
+            job.save()
+
+            BVHFile = apps.get_model('core', 'BVHFile')
+            if body_bvh:
+                BVHFile.objects.get_or_create(
+                    path=body_bvh,
+                    defaults={
+                        'name': job.name.rsplit('.', 1)[0] + '_body.bvh',
+                        'source': job.pipeline,
+                    }
+                )
+            return
+
         if job.pipeline in ('gvhmr', 'wham', 'prompthmr'):
             # SMPL-based 3D pipeline: Video → SMPL → BVH
             bvh_output = _run_smpl_pipeline(job, video_path, output_dir)
+
+            # GVHMR render videos: copy to user-specified output dir
+            if job.pipeline == 'gvhmr':
+                _copy_gvhmr_render_videos(job, output_dir)
 
             # Copy to shared Results directory
             results_path = _copy_bvh_to_results(bvh_output, job.name, job.pipeline)
@@ -1234,12 +1539,18 @@ def api_start_processing(request, job_id):
     VALID_PIPELINES = {c[0] for c in BVHJob.PIPELINE_CHOICES}
     new_pipeline = request.POST.get('pipeline', '').strip()
 
+    # Read pipeline_params from JSON body or form data
+    import json as _json
+    pp_raw = request.POST.get('pipeline_params', '')
+    pp = _json.loads(pp_raw) if pp_raw else {}
+
     if new_pipeline and new_pipeline in VALID_PIPELINES and new_pipeline != job.pipeline:
         # Clone job with different pipeline — never overwrite the original
         new_job = BVHJob(
             name=job.name,
             fps=job.fps,
             pipeline=new_pipeline,
+            pipeline_params=pp,
         )
         new_job.video_file.name = job.video_file.name  # share uploaded file
         new_job.save()
@@ -1253,6 +1564,9 @@ def api_start_processing(request, job_id):
         })
 
     if job.status in ('pending', 'complete', 'failed'):
+        if pp:
+            job.pipeline_params = pp
+            job.save(update_fields=['pipeline_params'])
         _init_and_launch_job(job)
         return JsonResponse({'ok': True, 'status': job.status})
     return JsonResponse({'ok': False, 'error': 'Job not startable'}, status=400)
@@ -1264,6 +1578,8 @@ def _init_and_launch_job(job):
         init_status = 'v4_processing'
     elif job.pipeline in ('gvhmr', 'wham', 'prompthmr'):
         init_status = 'processing'
+    elif job.pipeline.startswith('hybrid_'):
+        init_status = 'processing'
     elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
         init_status = 'detecting_2d'
     else:
@@ -1272,11 +1588,31 @@ def _init_and_launch_job(job):
     job.progress = 0
     job.error_message = ''
     job.bvh_file = ''
+    job.bvh_file_face = ''
     total_frames = _get_video_frame_count(
         Path(settings.MEDIA_ROOT) / str(job.video_file))
     job.progress_detail = f'0 / {total_frames} frames' if total_frames else 'Starting...'
     job.save()
     _launch_processing_thread(str(job.id))
+
+
+def _write_stop_flags(job, output_dir):
+    """Write STOP_FLAG file(s) for a job's output directory."""
+    stop_flag = output_dir / 'STOP_FLAG'
+    try:
+        stop_flag.parent.mkdir(parents=True, exist_ok=True)
+        stop_flag.write_text('stop')
+    except OSError:
+        pass
+    # Hybrid pipelines: also write stop flags in sub-directories
+    if job.pipeline.startswith('hybrid_'):
+        for subdir in ('body', 'face'):
+            sf = output_dir / subdir / 'STOP_FLAG'
+            try:
+                sf.parent.mkdir(parents=True, exist_ok=True)
+                sf.write_text('stop')
+            except OSError:
+                pass
 
 
 def stop_processing(request, job_id):
@@ -1289,18 +1625,26 @@ def stop_processing(request, job_id):
     """
     job = get_object_or_404(BVHJob, id=job_id)
     jid = str(job.id)
+    output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
+    _write_stop_flags(job, output_dir)
+
     with _active_procs_lock:
         proc = _active_procs.get(jid)
 
-    if proc and proc.poll() is None:
-        output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
-        stop_flag = output_dir / 'STOP_FLAG'
-        try:
-            stop_flag.parent.mkdir(parents=True, exist_ok=True)
-            stop_flag.write_text('stop')
-        except OSError:
-            pass
-
+    if job.pipeline.startswith('hybrid_'):
+        # Hybrid: kill both sub-procs by their suffixed IDs
+        for suffix in ('body', 'face'):
+            sub_key = f'{jid}_{suffix}'
+            with _active_procs_lock:
+                sub_proc = _active_procs.pop(sub_key, None)
+            if sub_proc and sub_proc.poll() is None:
+                sub_proc.kill()
+                try:
+                    sub_proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+        # Background thread handles final job status
+    elif proc and proc.poll() is None:
         if job.pipeline == 'v4':
             # v4: wait for graceful exit (script checks flag each frame)
             try:
@@ -1338,18 +1682,24 @@ def api_stop_processing(request, job_id):
         return JsonResponse({'error': 'POST required'}, status=405)
     job = get_object_or_404(BVHJob, id=job_id)
     jid = str(job.id)
+    output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
+    _write_stop_flags(job, output_dir)
+
     with _active_procs_lock:
         proc = _active_procs.get(jid)
 
-    if proc and proc.poll() is None:
-        output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
-        stop_flag = output_dir / 'STOP_FLAG'
-        try:
-            stop_flag.parent.mkdir(parents=True, exist_ok=True)
-            stop_flag.write_text('stop')
-        except OSError:
-            pass
-
+    if job.pipeline.startswith('hybrid_'):
+        for suffix in ('body', 'face'):
+            sub_key = f'{jid}_{suffix}'
+            with _active_procs_lock:
+                sub_proc = _active_procs.pop(sub_key, None)
+            if sub_proc and sub_proc.poll() is None:
+                sub_proc.kill()
+                try:
+                    sub_proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
+    elif proc and proc.poll() is None:
         if job.pipeline == 'v4':
             try:
                 proc.wait(timeout=30)
@@ -1426,6 +1776,20 @@ def serve_bvh_file(request, job_id):
         open(job.bvh_file, 'rb'),
         content_type='text/plain',
         filename=os.path.basename(job.bvh_file),
+    )
+    resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
+
+def serve_bvh_face(request, job_id):
+    """Serve the face+hands BVH file for hybrid pipeline jobs."""
+    job = get_object_or_404(BVHJob, id=job_id)
+    if not job.bvh_file_face or not os.path.exists(job.bvh_file_face):
+        return HttpResponseNotFound('Face BVH file not found')
+    resp = FileResponse(
+        open(job.bvh_file_face, 'rb'),
+        content_type='text/plain',
+        filename=os.path.basename(job.bvh_file_face),
     )
     resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp

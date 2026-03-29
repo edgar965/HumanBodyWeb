@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}3D Pipeline - HumanBody{% endblock %}
+{% block title %}Video To BVH - HumanBody{% endblock %}
 
 {% block content %}
-<h1>3D Pipeline <small style="color:#888;">(Video &rarr; BVH)</small></h1>
+<h1>Video To BVH <small style="color:#888;">(3D Pipeline)</small></h1>
 
 <div class="upload-area" id="dropZone">
     <form method="post" enctype="multipart/form-data" id="uploadForm">
@@ -16,69 +16,249 @@
 
         <div class="form-group">
             <label>3D Pipeline:</label>
-            <div class="pipeline-options">
-                <label class="pipeline-option {% if not status_3d.v4 %}disabled{% endif %}">
-                    <input type="radio" name="pipeline" value="v4"
-                        {% if default_3d == 'v4' %}checked{% endif %}
-                        {% if not status_3d.v4 %}disabled{% endif %}>
-                    <span class="pipeline-label">MocapNET v4</span>
-                    <span class="pipeline-desc">
-                        {% if status_3d.v4 %}ONNX, CPU, 165 Bones, ~75 mm{% else %}nicht verf&uuml;gbar{% endif %}
-                    </span>
-                </label>
-                <label class="pipeline-option {% if not status_3d.wham %}disabled{% endif %}">
-                    <input type="radio" name="pipeline" value="wham"
-                        {% if default_3d == 'wham' %}checked{% endif %}
-                        {% if not status_3d.wham %}disabled{% endif %}>
-                    <span class="pipeline-label">WHAM</span>
-                    <span class="pipeline-desc">
-                        {% if status_3d.wham %}SMPL, GPU, World-Koordinaten, 37 mm{% else %}nicht installiert{% endif %}
-                    </span>
-                </label>
-                <label class="pipeline-option {% if not status_3d.prompthmr %}disabled{% endif %}">
-                    <input type="radio" name="pipeline" value="prompthmr"
-                        {% if default_3d == 'prompthmr' %}checked{% endif %}
-                        {% if not status_3d.prompthmr %}disabled{% endif %}>
-                    <span class="pipeline-label">PromptHMR</span>
-                    <span class="pipeline-desc">
-                        {% if status_3d.prompthmr %}SMPL, GPU, CVPR 2025, 37 mm{% else %}nicht installiert{% endif %}
-                    </span>
-                </label>
-                <label class="pipeline-option {% if not status_3d.gvhmr %}disabled{% endif %}">
-                    <input type="radio" name="pipeline" value="gvhmr"
-                        {% if default_3d == 'gvhmr' %}checked{% endif %}
-                        {% if not status_3d.gvhmr %}disabled{% endif %}>
-                    <span class="pipeline-label">GVHMR &star;</span>
-                    <span class="pipeline-desc">
-                        {% if status_3d.gvhmr %}SMPL, GPU, beste Qualit&auml;t, 36 mm{% else %}nicht installiert{% endif %}
-                    </span>
-                </label>
-            </div>
-        </div>
+            <div class="pipeline-cards">
 
-        <div class="form-group" id="v4Parts">
-            <label>Body Parts (nur MocapNET v4):</label>
-            <div class="pipeline-options" style="flex-wrap:wrap;">
-                <label class="pipeline-option" style="flex:0 0 auto;">
-                    <input type="checkbox" name="parts" value="body" checked>
-                    <span class="pipeline-label">Body</span>
-                </label>
-                <label class="pipeline-option" style="flex:0 0 auto;">
-                    <input type="checkbox" name="parts" value="hands" checked>
-                    <span class="pipeline-label">Hands</span>
-                </label>
-                <label class="pipeline-option" style="flex:0 0 auto;">
-                    <input type="checkbox" name="parts" value="face" checked>
-                    <span class="pipeline-label">Face</span>
-                </label>
-                <label class="pipeline-option" style="flex:0 0 auto;">
-                    <input type="checkbox" name="parts" value="mouth" checked>
-                    <span class="pipeline-label">Mouth</span>
-                </label>
-                <label class="pipeline-option" style="flex:0 0 auto;">
-                    <input type="checkbox" name="parts" value="eyes" checked>
-                    <span class="pipeline-label">Eyes</span>
-                </label>
+                <!-- MocapNET v4 -->
+                <div class="pipeline-card {% if not status_3d.v4 %}disabled{% endif %}" data-pipeline="v4">
+                    <label class="pipeline-card-header">
+                        <input type="radio" name="pipeline" value="v4"
+                            {% if default_3d == 'v4' %}checked{% endif %}
+                            {% if not status_3d.v4 %}disabled{% endif %}>
+                        <span class="pipeline-card-title">MocapNET v4</span>
+                        <span class="pipeline-card-desc">
+                            {% if status_3d.v4 %}ONNX, CPU, 165 Bones, ~75 mm{% else %}nicht verf&uuml;gbar{% endif %}
+                        </span>
+                    </label>
+                    <div class="pipeline-settings" id="settings-v4">
+                        <div class="settings-row">
+                            <label>Body Parts:</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" name="v4_parts" value="body" {% if defaults.v4_body %}checked{% endif %}> Body</label>
+                                <label><input type="checkbox" name="v4_parts" value="hands" {% if defaults.v4_hands %}checked{% endif %}> Hands</label>
+                                <label><input type="checkbox" name="v4_parts" value="face" {% if defaults.v4_face %}checked{% endif %}> Face</label>
+                                <label><input type="checkbox" name="v4_parts" value="mouth" {% if defaults.v4_mouth %}checked{% endif %}> Mouth</label>
+                                <label><input type="checkbox" name="v4_parts" value="eyes" {% if defaults.v4_eyes %}checked{% endif %}> Eyes</label>
+                            </div>
+                        </div>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">IK Iterations <span class="setting-hint">Gradient-Descent Iterationen pro Frame (1&ndash;100)</span></div>
+                                <input type="number" name="v4_hcd_iterations" min="1" max="100" step="1" value="{{ defaults.v4_hcd_iterations }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">IK Epochs <span class="setting-hint">Epochen pro Frame &mdash; h&ouml;her = genauer, langsamer (1&ndash;200)</span></div>
+                                <input type="number" name="v4_hcd_epochs" min="1" max="200" step="1" value="{{ defaults.v4_hcd_epochs }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">IK Learning Rate <span class="setting-hint">Schrittweite f&uuml;r IK-Optimierung (0.0001&ndash;0.1)</span></div>
+                                <input type="number" name="v4_hcd_learning_rate" min="0.0001" max="0.1" step="0.0001" value="{{ defaults.v4_hcd_learning_rate }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Smoothing Cutoff <span class="setting-hint">Butterworth Tiefpass-Frequenz in Hz &mdash; niedriger = glatter (0.5&ndash;15.0)</span></div>
+                                <input type="number" name="v4_smoothing_cutoff" min="0.5" max="15" step="0.5" value="{{ defaults.v4_smoothing_cutoff }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Smoothing Sampling <span class="setting-hint">Abtastrate in Hz f&uuml;r Butterworth-Filter &mdash; sollte FPS entsprechen (10&ndash;120)</span></div>
+                                <input type="number" name="v4_smoothing_sampling" min="10" max="120" step="1" value="{{ defaults.v4_smoothing_sampling }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">MP Detection Confidence <span class="setting-hint">MediaPipe Pose-Erkennung Schwellwert (0.0&ndash;1.0)</span></div>
+                                <input type="number" name="v4_mp_detection" min="0" max="1" step="0.05" value="{{ defaults.v4_mp_detection }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">MP Tracking Confidence <span class="setting-hint">MediaPipe Tracking-Schwellwert &mdash; niedriger = stabileres Tracking (0.0&ndash;1.0)</span></div>
+                                <input type="number" name="v4_mp_tracking" min="0" max="1" step="0.05" value="{{ defaults.v4_mp_tracking }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GVHMR -->
+                <div class="pipeline-card {% if not status_3d.gvhmr %}disabled{% endif %}" data-pipeline="gvhmr">
+                    <label class="pipeline-card-header">
+                        <input type="radio" name="pipeline" value="gvhmr"
+                            {% if default_3d == 'gvhmr' %}checked{% endif %}
+                            {% if not status_3d.gvhmr %}disabled{% endif %}>
+                        <span class="pipeline-card-title">GVHMR <span style="color:#2ecc71;">&starf;</span></span>
+                        <span class="pipeline-card-desc">
+                            {% if status_3d.gvhmr %}SMPL, GPU, beste Qualit&auml;t, 36 mm{% else %}nicht installiert{% endif %}
+                        </span>
+                    </label>
+                    <div class="pipeline-settings" id="settings-gvhmr">
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Statische Kamera <span class="setting-hint">&Uuml;berspringt DPVO Kamera-Tracking &mdash; empfohlen f&uuml;r feste Kamera</span></div>
+                                <input type="checkbox" name="gvhmr_static_cam" {% if defaults.gvhmr_static_cam %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Brennweite (mm) <span class="setting-hint">Kamera-Brennweite in mm &mdash; 0 = automatische Sch&auml;tzung (Standard: 26mm)</span></div>
+                                <input type="number" name="gvhmr_focal_length_mm" min="0" max="200" step="1" value="{{ defaults.gvhmr_focal_length_mm }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Device <span class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB VRAM</span></div>
+                                <select name="gvhmr_device">
+                                    <option value="cuda" {% if defaults.gvhmr_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu" {% if defaults.gvhmr_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Video-Output Verzeichnis <span class="setting-hint">Ordner f&uuml;r SMPL-Render-Videos (In-Camera Overlay, Global 3D, Combined)</span></div>
+                                <input type="text" name="gvhmr_video_output_dir" value="{{ defaults.gvhmr_video_output_dir }}" style="flex:1;min-width:200px;">
+                            </div>
+                        </div>
+                        <p class="setting-note"><i class="fas fa-info-circle"></i> GVHMR erzeugt automatisch 3 Render-Videos: In-Camera SMPL Overlay, Global 3D Ansicht, und Combined.</p>
+                    </div>
+                </div>
+
+                <!-- WHAM -->
+                <div class="pipeline-card {% if not status_3d.wham %}disabled{% endif %}" data-pipeline="wham">
+                    <label class="pipeline-card-header">
+                        <input type="radio" name="pipeline" value="wham"
+                            {% if default_3d == 'wham' %}checked{% endif %}
+                            {% if not status_3d.wham %}disabled{% endif %}>
+                        <span class="pipeline-card-title">WHAM</span>
+                        <span class="pipeline-card-desc">
+                            {% if status_3d.wham %}SMPL, GPU, World-Koordinaten, 37 mm{% else %}nicht installiert{% endif %}
+                        </span>
+                    </label>
+                    <div class="pipeline-settings" id="settings-wham">
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Nur lokale Bewegung <span class="setting-hint">Keine globale Trajektorie sch&auml;tzen &mdash; nur K&ouml;rperbewegung relativ zur Kamera</span></div>
+                                <input type="checkbox" name="wham_local_only" {% if defaults.wham_local_only %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">SMPLify Refinement <span class="setting-hint">Zus&auml;tzliche Optimierung &mdash; langsamer aber genauer (2&ndash;3x l&auml;nger)</span></div>
+                                <input type="checkbox" name="wham_smplify" {% if defaults.wham_smplify %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Device <span class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB VRAM</span></div>
+                                <select name="wham_device">
+                                    <option value="cuda" {% if defaults.wham_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu" {% if defaults.wham_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PromptHMR -->
+                <div class="pipeline-card {% if not status_3d.prompthmr %}disabled{% endif %}" data-pipeline="prompthmr">
+                    <label class="pipeline-card-header">
+                        <input type="radio" name="pipeline" value="prompthmr"
+                            {% if default_3d == 'prompthmr' %}checked{% endif %}
+                            {% if not status_3d.prompthmr %}disabled{% endif %}>
+                        <span class="pipeline-card-title">PromptHMR</span>
+                        <span class="pipeline-card-desc">
+                            {% if status_3d.prompthmr %}SMPL, GPU, CVPR 2025, 37 mm{% else %}nicht installiert{% endif %}
+                        </span>
+                    </label>
+                    <div class="pipeline-settings" id="settings-prompthmr">
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Statische Kamera <span class="setting-hint">Empfohlen f&uuml;r feste Kamera &mdash; deaktivieren bei Handy-Videos mit Bewegung</span></div>
+                                <input type="checkbox" name="prompthmr_static_cam" {% if defaults.prompthmr_static_cam %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Device <span class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB VRAM</span></div>
+                                <select name="prompthmr_device">
+                                    <option value="cuda" {% if defaults.prompthmr_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu" {% if defaults.prompthmr_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hybrid (SMPL Body + MocapNET v4 Face+Hands) -->
+                <div class="pipeline-card {% if not status_3d.hybrid_gvhmr and not status_3d.hybrid_prompthmr %}disabled{% endif %}" data-pipeline="hybrid" id="hybridCard">
+                    <label class="pipeline-card-header">
+                        <input type="radio" name="pipeline" value="hybrid_gvhmr"
+                            id="hybridRadio"
+                            {% if default_3d == 'hybrid_gvhmr' or default_3d == 'hybrid_prompthmr' %}checked{% endif %}
+                            {% if not status_3d.hybrid_gvhmr and not status_3d.hybrid_prompthmr %}disabled{% endif %}>
+                        <span class="pipeline-card-title">Hybrid <span style="color:#e67e22;">&starf;</span></span>
+                        <span class="pipeline-card-desc">
+                            SMPL Body (GPU) + MocapNET v4 Face+H&auml;nde (CPU), parallel
+                        </span>
+                    </label>
+                    <div class="pipeline-settings" id="settings-hybrid">
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Body-Backend <span class="setting-hint">SMPL-Pipeline f&uuml;r K&ouml;rper-Tracking (GPU)</span></div>
+                                <select name="hybrid_body_backend" id="hybridBodyBackend" onchange="updateHybridBackend()">
+                                    <option value="gvhmr" {% if not status_3d.gvhmr %}disabled{% endif %}>GVHMR</option>
+                                    <option value="prompthmr" {% if not status_3d.prompthmr %}disabled{% endif %}>PromptHMR</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- GVHMR body settings -->
+                        <div id="hybrid-gvhmr-settings" class="hybrid-body-settings">
+                            <div class="settings-list" style="margin-top:8px; padding-left:12px; border-left:2px solid #3498db;">
+                                <div class="setting-item">
+                                    <div class="setting-label">Statische Kamera <span class="setting-hint">DPVO Kamera-Tracking &uuml;berspringen</span></div>
+                                    <input type="checkbox" name="hybrid_gvhmr_static_cam" {% if defaults.hybrid_gvhmr_static_cam %}checked{% endif %}>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">Brennweite (mm) <span class="setting-hint">0 = automatisch</span></div>
+                                    <input type="number" name="hybrid_gvhmr_focal_length_mm" min="0" max="200" step="1" value="{{ defaults.hybrid_gvhmr_focal_length_mm }}">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- PromptHMR body settings -->
+                        <div id="hybrid-prompthmr-settings" class="hybrid-body-settings" style="display:none;">
+                            <div class="settings-list" style="margin-top:8px; padding-left:12px; border-left:2px solid #e67e22;">
+                                <div class="setting-item">
+                                    <div class="setting-label">Statische Kamera <span class="setting-hint">Empfohlen f&uuml;r feste Kamera</span></div>
+                                    <input type="checkbox" name="hybrid_prompthmr_static_cam" {% if defaults.hybrid_prompthmr_static_cam %}checked{% endif %}>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Shared body device -->
+                        <div class="settings-list" style="margin-top:8px;">
+                            <div class="setting-item">
+                                <div class="setting-label">Body Device <span class="setting-hint">GPU (CUDA) f&uuml;r SMPL-Pipeline</span></div>
+                                <select name="hybrid_body_device">
+                                    <option value="cuda" {% if defaults.hybrid_body_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu" {% if defaults.hybrid_body_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- v4 Face+Hands settings -->
+                        <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border, #333);">
+                            <div style="font-size:0.85rem; color:#e67e22; margin-bottom:6px;">Face+Hands (MocapNET v4, CPU)</div>
+                            <div class="settings-row">
+                                <label>Parts:</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="face" {% if defaults.hybrid_v4_face %}checked{% endif %}> Face</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="hands" {% if defaults.hybrid_v4_hands %}checked{% endif %}> Hands</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="mouth" {% if defaults.hybrid_v4_mouth %}checked{% endif %}> Mouth</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="eyes" {% if defaults.hybrid_v4_eyes %}checked{% endif %}> Eyes</label>
+                                </div>
+                            </div>
+                            <div class="settings-list" style="margin-top:6px;">
+                                <div class="setting-item">
+                                    <div class="setting-label">IK Iterations <span class="setting-hint">Gradient-Descent Iterationen pro Frame</span></div>
+                                    <input type="number" name="hybrid_v4_hcd_iterations" min="1" max="100" step="1" value="{{ defaults.hybrid_v4_hcd_iterations }}">
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">IK Epochs <span class="setting-hint">Epochen pro Frame</span></div>
+                                    <input type="number" name="hybrid_v4_hcd_epochs" min="1" max="200" step="1" value="{{ defaults.hybrid_v4_hcd_epochs }}">
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">MP Detection <span class="setting-hint">MediaPipe Pose-Erkennung (0.0&ndash;1.0)</span></div>
+                                    <input type="number" name="hybrid_v4_mp_detection" min="0" max="1" step="0.05" value="{{ defaults.hybrid_v4_mp_detection }}">
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">MP Tracking <span class="setting-hint">MediaPipe Tracking (0.0&ndash;1.0)</span></div>
+                                    <input type="number" name="hybrid_v4_mp_tracking" min="0" max="1" step="0.05" value="{{ defaults.hybrid_v4_mp_tracking }}">
+                                </div>
+                            </div>
+                        </div>
+                        <p class="setting-note"><i class="fas fa-info-circle"></i> Body (GPU) und Face+Hands (CPU) laufen parallel &mdash; Gesamtdauer = l&auml;ngere der beiden Pipelines.</p>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -146,6 +326,8 @@
                             <option value="gvhmr" {% if job.pipeline == 'gvhmr' %}selected{% endif %}>GVHMR</option>
                             <option value="wham" {% if job.pipeline == 'wham' %}selected{% endif %}>WHAM</option>
                             <option value="prompthmr" {% if job.pipeline == 'prompthmr' %}selected{% endif %}>PromptHMR</option>
+                            <option value="hybrid_gvhmr" {% if job.pipeline == 'hybrid_gvhmr' %}selected{% endif %}>Hybrid (GVHMR)</option>
+                            <option value="hybrid_prompthmr" {% if job.pipeline == 'hybrid_prompthmr' %}selected{% endif %}>Hybrid (PromptHMR)</option>
                         </select>
                         <button class="btn btn-sm btn-primary" onclick="startProcessing('{{ job.id }}', this)">
                             <i class="fas fa-play"></i>
@@ -219,6 +401,14 @@
                 <td>~8&ndash;16 GB</td>
                 <td><span style="color:#2ecc71;">&starf; Empfohlen</span></td>
             </tr>
+            <tr style="background:#2a1a0a;">
+                <td><strong>Hybrid</strong></td>
+                <td>36 mm + Face+Hands</td>
+                <td>~60s (parallel)</td>
+                <td>6&ndash;8 GB</td>
+                <td>~10&ndash;16 GB</td>
+                <td><span style="color:#e67e22;">&starf; SMPL Body + v4 Gesicht+Finger</span></td>
+            </tr>
         </tbody>
     </table>
     <p style="margin-top:8px; color:#888;">
@@ -234,6 +424,48 @@
 
 {% block extra_scripts %}
 <style>
+/* Pipeline cards */
+.pipeline-cards { display: flex; flex-direction: column; gap: 8px; }
+.pipeline-card {
+    border: 2px solid var(--border, #333);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.pipeline-card.selected { border-color: #3498db; }
+.pipeline-card.disabled { opacity: 0.5; }
+.pipeline-card-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; cursor: pointer;
+    background: var(--bg-card, #1e1e2e);
+}
+.pipeline-card-header input[type="radio"] { margin: 0; flex-shrink: 0; }
+.pipeline-card-title { font-weight: 600; font-size: 1.05rem; white-space: nowrap; }
+.pipeline-card-desc { color: var(--text-muted, #888); font-size: 0.85rem; margin-left: auto; }
+
+/* Pipeline settings */
+.pipeline-settings {
+    display: none;
+    padding: 10px 16px 14px;
+    background: var(--bg-darker, #181825);
+    border-top: 1px solid var(--border, #333);
+}
+.pipeline-settings.visible { display: block; }
+.settings-list { display: flex; flex-direction: column; gap: 8px; }
+.setting-item { display: flex; align-items: center; gap: 12px; min-height: 34px; }
+.setting-label { flex: 1; font-size: 0.9rem; color: var(--text, #ddd); }
+.setting-hint { display: block; font-size: 0.75rem; color: var(--text-muted, #888); margin-top: 1px; }
+.setting-item input[type="number"] { width: 100px; text-align: right; }
+.setting-item input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; }
+.setting-item select { min-width: 120px; }
+.setting-item input[type="text"] { padding: 4px 8px; }
+.setting-note { margin: 8px 0 0; font-size: 0.8rem; color: var(--text-muted, #888); }
+.settings-row { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.settings-row label { font-size: 0.85rem; color: var(--text-muted, #aaa); min-width: 160px; white-space: nowrap; }
+.checkbox-group { display: flex; gap: 12px; flex-wrap: wrap; }
+.checkbox-group label { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--text-muted, #aaa); cursor: pointer; min-width: auto; }
+
+/* Existing styles */
 .sortable { cursor: pointer; user-select: none; }
 .sortable:hover { color: #3498db; }
 .inline-progress { display: flex; align-items: center; gap: 6px; min-width: 180px; }
@@ -276,6 +508,91 @@
 }
 </style>
 <script>
+// --- Pipeline card selection + settings toggle ---
+function updatePipelineCards() {
+    var selected = document.querySelector('input[name="pipeline"]:checked');
+    var selVal = selected ? selected.value : '';
+    // Hybrid radio has dynamic value — match by prefix
+    var isHybrid = selVal.startsWith('hybrid_');
+    document.querySelectorAll('.pipeline-card').forEach(function(card) {
+        var pl = card.dataset.pipeline;
+        var match = (isHybrid && pl === 'hybrid') || pl === selVal;
+        var settings = document.getElementById('settings-' + pl);
+        if (match) {
+            card.classList.add('selected');
+            if (settings) settings.classList.add('visible');
+        } else {
+            card.classList.remove('selected');
+            if (settings) settings.classList.remove('visible');
+        }
+    });
+}
+document.querySelectorAll('input[name="pipeline"]').forEach(function(radio) {
+    radio.addEventListener('change', updatePipelineCards);
+});
+updatePipelineCards();
+
+// --- Hybrid body backend toggle ---
+function updateHybridBackend() {
+    var sel = document.getElementById('hybridBodyBackend');
+    if (!sel) return;
+    var backend = sel.value;
+    var radio = document.getElementById('hybridRadio');
+    if (radio) radio.value = 'hybrid_' + backend;
+    document.getElementById('hybrid-gvhmr-settings').style.display = backend === 'gvhmr' ? '' : 'none';
+    document.getElementById('hybrid-prompthmr-settings').style.display = backend === 'prompthmr' ? '' : 'none';
+}
+updateHybridBackend();
+
+// --- Collect current pipeline settings from UI as a params object ---
+function collectPipelineParams(pipeline) {
+    var params = {};
+    if (pipeline === 'v4') {
+        params.hcd_iterations = parseInt(document.querySelector('[name="v4_hcd_iterations"]').value);
+        params.hcd_epochs = parseInt(document.querySelector('[name="v4_hcd_epochs"]').value);
+        params.hcd_learning_rate = parseFloat(document.querySelector('[name="v4_hcd_learning_rate"]').value);
+        params.smoothing_cutoff = parseFloat(document.querySelector('[name="v4_smoothing_cutoff"]').value);
+        params.smoothing_sampling = parseFloat(document.querySelector('[name="v4_smoothing_sampling"]').value);
+        params.mp_detection = parseFloat(document.querySelector('[name="v4_mp_detection"]').value);
+        params.mp_tracking = parseFloat(document.querySelector('[name="v4_mp_tracking"]').value);
+        var parts = document.querySelectorAll('[name="v4_parts"]');
+        parts.forEach(function(cb) { params[cb.value] = cb.checked; });
+    } else if (pipeline === 'gvhmr') {
+        params.static_cam = document.querySelector('[name="gvhmr_static_cam"]').checked;
+        params.focal_length_mm = parseFloat(document.querySelector('[name="gvhmr_focal_length_mm"]').value);
+        params.device = document.querySelector('[name="gvhmr_device"]').value;
+        var vidDir = document.querySelector('[name="gvhmr_video_output_dir"]');
+        if (vidDir && vidDir.value.trim()) params.video_output_dir = vidDir.value.trim();
+    } else if (pipeline === 'wham') {
+        params.local_only = document.querySelector('[name="wham_local_only"]').checked;
+        params.smplify = document.querySelector('[name="wham_smplify"]').checked;
+        params.device = document.querySelector('[name="wham_device"]').value;
+    } else if (pipeline === 'prompthmr') {
+        params.static_cam = document.querySelector('[name="prompthmr_static_cam"]').checked;
+        params.device = document.querySelector('[name="prompthmr_device"]').value;
+    } else if (pipeline.startsWith('hybrid_')) {
+        var bbSel = document.querySelector('[name="hybrid_body_backend"]');
+        params.body_backend = bbSel ? bbSel.value : 'gvhmr';
+        params.body_device = document.querySelector('[name="hybrid_body_device"]').value;
+        // Body-specific
+        if (params.body_backend === 'gvhmr') {
+            params.static_cam = document.querySelector('[name="hybrid_gvhmr_static_cam"]').checked;
+            params.focal_length_mm = parseFloat(document.querySelector('[name="hybrid_gvhmr_focal_length_mm"]').value);
+        } else {
+            params.static_cam = document.querySelector('[name="hybrid_prompthmr_static_cam"]').checked;
+        }
+        // V4 face+hands
+        var v4parts = document.querySelectorAll('[name="hybrid_v4_parts"]');
+        v4parts.forEach(function(cb) { params['v4_' + cb.value] = cb.checked; });
+        params.v4_hcd_iterations = parseInt(document.querySelector('[name="hybrid_v4_hcd_iterations"]').value);
+        params.v4_hcd_epochs = parseInt(document.querySelector('[name="hybrid_v4_hcd_epochs"]').value);
+        params.v4_mp_detection = parseFloat(document.querySelector('[name="hybrid_v4_mp_detection"]').value);
+        params.v4_mp_tracking = parseFloat(document.querySelector('[name="hybrid_v4_mp_tracking"]').value);
+    }
+    return params;
+}
+
+// --- Drag & drop ---
 const dropTarget = document.getElementById('dropTarget');
 const videoInput = document.getElementById('videoInput');
 
@@ -303,13 +620,6 @@ videoInput.addEventListener('change', () => {
     if (videoInput.files.length) {
         dropTarget.querySelector('p').textContent = videoInput.files[0].name;
     }
-});
-
-// Toggle v4 body parts visibility
-document.querySelectorAll('input[name="pipeline"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        document.getElementById('v4Parts').style.display = this.value === 'v4' ? '' : 'none';
-    });
 });
 
 function getCsrf() {
@@ -387,7 +697,8 @@ var PHASE_LABELS = {
     'openpose': '2D Detection (GPU)', 'openpose_csv': 'CSV Convert',
     'mediapipe': '2D Detection (CPU)', 'lifting_3d': '3D Pose Estimation',
     'mocapnet': '3D Pose Estimation', 'v4_processing': 'MocapNET v4',
-    'processing': 'Processing', 'complete': 'Complete', 'failed': 'Failed'
+    'processing': 'Processing', 'complete': 'Complete', 'failed': 'Failed',
+    'hybrid_processing': 'Hybrid (Body + Face)'
 };
 
 // --- Detail row management ---
@@ -436,12 +747,15 @@ function stopProcessing(jobId, btn) {
 }
 
 // --- Inline processing start + detail row + polling ---
+// Sends the current UI pipeline_params along with re-process requests
 function startProcessing(jobId, btn) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     var sel = document.getElementById('pl-' + jobId);
-    var body = '';
-    if (sel) body = 'pipeline=' + encodeURIComponent(sel.value);
+    var pipeline = sel ? sel.value : 'v4';
+    var pp = collectPipelineParams(pipeline);
+    var body = 'pipeline=' + encodeURIComponent(pipeline) +
+               '&pipeline_params=' + encodeURIComponent(JSON.stringify(pp));
     fetch('/api/job/' + jobId + '/start/', {
         method: 'POST',
         headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/x-www-form-urlencoded'},
@@ -450,12 +764,9 @@ function startProcessing(jobId, btn) {
         if (data.ok) {
             var activeId = jobId;
             if (data.new_job_id) {
-                // New job created with different pipeline — add row to table
                 activeId = data.new_job_id;
                 addNewJobRow(data.new_job_id, data.new_pipeline, data.new_pipeline_display, jobId);
-                // Reset original dropdown back to its actual pipeline
                 if (sel) sel.value = sel.dataset.current;
-                // Re-enable original button
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-play"></i>';
             }
@@ -495,20 +806,20 @@ function addNewJobRow(newJobId, pipeline, pipelineDisplay, sourceJobId) {
             '<option value="gvhmr"' + (pipeline==='gvhmr'?' selected':'') + '>GVHMR</option>' +
             '<option value="wham"' + (pipeline==='wham'?' selected':'') + '>WHAM</option>' +
             '<option value="prompthmr"' + (pipeline==='prompthmr'?' selected':'') + '>PromptHMR</option>' +
+            '<option value="hybrid_gvhmr"' + (pipeline==='hybrid_gvhmr'?' selected':'') + '>Hybrid (GVHMR)</option>' +
+            '<option value="hybrid_prompthmr"' + (pipeline==='hybrid_prompthmr'?' selected':'') + '>Hybrid (PromptHMR)</option>' +
             '</select>' +
             '<button class="btn btn-sm btn-primary" onclick="startProcessing(\'' + newJobId + '\', this)">' +
             '<i class="fas fa-play"></i></button></div></td>' +
         '<td style="display:flex;gap:5px;">' +
             '<button class="btn btn-sm btn-danger" onclick="deleteJob(\'' + newJobId + '\', this)"><i class="fas fa-trash"></i></button>' +
         '</td>';
-    // Insert at top of table body
     var tbody = document.getElementById('jobTableBody');
     if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
     else tbody.appendChild(tr);
 }
 
 function updateJobUI(jobId, data) {
-    // --- Update inline status cell ---
     var cell = document.getElementById('status-' + jobId);
     if (cell) {
         if (data.status === 'complete') {
@@ -526,7 +837,6 @@ function updateJobUI(jobId, data) {
         }
     }
 
-    // --- Update detail row ---
     var detailRow = document.getElementById('detail-' + jobId);
     if (!detailRow) return;
 
@@ -548,7 +858,6 @@ function updateJobUI(jobId, data) {
     if (pctEl) pctEl.textContent = p + '%';
     if (textEl) textEl.textContent = data.progress_detail || '';
 
-    // Reset the process button (spinner → play) when job is done
     if (data.status === 'complete' || data.status === 'failed') {
         var mainRow = document.getElementById('row-' + jobId);
         if (mainRow) {
@@ -567,7 +876,6 @@ function updateJobUI(jobId, data) {
                 '<a class="btn btn-sm btn-primary" href="/process/' + jobId + '/result/"><i class="fas fa-eye"></i> View Result</a>' +
                 (data.bvh_file ? ' <a class="btn btn-sm btn-secondary" href="/api/bvh/' + jobId + '/" download><i class="fas fa-download"></i> Download BVH</a>' : '');
         }
-        // Update main row actions too
         var mainRow2 = document.getElementById('row-' + jobId);
         if (mainRow2) {
             var actionsTd = mainRow2.querySelector('td:last-child');

@@ -8,7 +8,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=20';
+import { detectBVHFormat, retargetBVHToDefClip, loadRetargetConfig } from './retarget_hybrid.js?v=31';
+import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
 import { classifyBones, getDefaultModelConfig, computeBoneWorldTransforms, generateModelMesh, classifyRigBones, getDefaultRigConfig, generateRigBoneMesh, BODY_BONES, FINGER_BONES } from './model_generator.js';
 
 const gltfLoader = new GLTFLoader();
@@ -137,6 +138,7 @@ let transformHelper = null;       // TransformControls visual helper (Object3D)
 let transformDragging = false;    // Track whether gizmo is being dragged
 let currentSceneName = '';
 let defaultPresetName = 'femaleWithClothes';
+let _defaultAnimUrl = '';            // From settings: auto-load animation
 let _sceneDirty = false;  // Track unsaved changes
 const SESSION_KEY = 'humanbody_scene_session';
 
@@ -347,9 +349,10 @@ class CharacterInstance {
             }
             result = generateRigBoneMesh(_mgRigBonesData, this.generatedConfig, defSkeletonData, skinWeightData);
 
-            // For animation: always build full DEF skeleton (even if mesh uses subset)
-            if (defSkeletonData && skinWeightData) {
-                this.defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
+            // Use the mesh's own skeleton (same as 'def' path and _mgUpdateModelDisplay)
+            // so SkeletonHelper and retarget operate on the SAME bones the mixer animates
+            if (result.skeleton) {
+                this.defSkeleton = result.skeleton;
                 this.isSkinned = true;
             }
         } else {
@@ -644,6 +647,7 @@ class CharacterInstance {
             return {
                 id: this.id,
                 presetName: this.presetName,
+                presetKey: this.presetKey || null,
                 bodyType: 'generated',
                 generatedConfig: this.generatedConfig,
                 transform: {
@@ -711,6 +715,7 @@ class CharacterInstance {
         }
 
         const inst = new CharacterInstance(data.id, presetPayload);
+        if (data.presetKey) inst.presetKey = data.presetKey;
         await inst.load();
         if (data.transform) {
             if (data.transform.position) inst.group.position.fromArray(data.transform.position);
@@ -726,7 +731,8 @@ class CharacterInstance {
 // =========================================================================
 // Initialization
 // =========================================================================
-function init() {
+async function init() {
+    await loadRetargetConfig();
     canvas = document.getElementById('viewer-canvas');
     const container = canvas.parentElement;
     const w = container.clientWidth;
@@ -806,10 +812,11 @@ function init() {
     });
 
     // Apply expanded panels + default preset from settings
-    fetch('/api/settings/humanbody/')
+    const _settingsReady = fetch('/api/settings/humanbody/')
         .then(r => r.json())
         .then(s => {
             if (s.scene) defaultPresetName = s.scene;
+            if (s.default_anim_scene) _defaultAnimUrl = s.default_anim_scene;
             const expanded = s.expanded_panels_scene;
             if (Array.isArray(expanded)) {
                 document.querySelectorAll('.panel-section[data-panel-key]').forEach(panel => {
@@ -893,13 +900,19 @@ function init() {
     // Start render loop
     animate();
 
-    // Load skin colors + hair colors + skeleton/weights, then restore or load default
-    Promise.all([loadSkinColors(), loadHairColors(), loadDefSkeleton(), loadSkinWeights()]).then(async () => {
+    // Load skin colors + hair colors + skeleton/weights + settings, then restore or load default
+    Promise.all([loadSkinColors(), loadHairColors(), loadDefSkeleton(), loadSkinWeights(), _settingsReady]).then(async () => {
         if (sessionStorage.getItem(SESSION_KEY)) {
             await restoreSessionState();
         }
         if (characters.size === 0) {
             await loadDefaultCharacter();
+        }
+        // Auto-load default animation from settings (if set and no session restore)
+        if (_defaultAnimUrl && !sessionStorage.getItem(SESSION_KEY)) {
+            try {
+                loadBVHAnimation(_defaultAnimUrl, _defaultAnimUrl.split('/').filter(Boolean).pop() || 'default', 0);
+            } catch (e) { console.warn('[SCENE] Default animation load failed:', e); }
         }
     });
 }
@@ -972,6 +985,7 @@ async function addCharacterFromPreset(presetName) {
     const xOffset = characters.size * 0.8;
     inst.group.position.set(xOffset, 0, 0);
 
+    inst.presetKey = presetName;  // Store original filename for server save
     await inst.load();
     characters.set(id, inst);
     scene.add(inst.group);
@@ -1629,9 +1643,9 @@ async function _saveJsonWithPicker(jsonData, defaultName) {
             const writable = await handle.createWritable();
             await writable.write(content);
             await writable.close();
-            return;
+            return handle.name;              // actual filename chosen
         } catch (e) {
-            if (e.name === 'AbortError') return; // user cancelled
+            if (e.name === 'AbortError') return null; // user cancelled
         }
     }
     // Fallback for browsers without File System Access API
@@ -1642,6 +1656,7 @@ async function _saveJsonWithPicker(jsonData, defaultName) {
     a.download = defaultName;
     a.click();
     URL.revokeObjectURL(url);
+    return defaultName;
 }
 
 async function loadFromFilePicker() {
@@ -1707,15 +1722,27 @@ async function exportModelJSON() {
     const inst = characters.get(selectedCharacterId);
     if (!inst) return;
 
-    const data = {
-        name: inst.presetName,
-        body_type: inst.bodyType,
-        morphs: inst.morphs || {},
-        meta: inst.meta || {},
-        cloth: inst.cloth || [],
-        hair_style: inst.hairStyle || null,
-        garments: inst.garments || [],
-    };
+    let data;
+    if (inst.generatedConfig) {
+        // Generated model: export full generator config so it can be re-imported
+        data = {
+            ...inst.generatedConfig,
+            type: 'generated_model',
+            name: inst.presetName || inst.generatedConfig.name || 'Generiertes Modell',
+            body_type: inst.generatedConfig.skeleton_type === 'rig' ? 'Rig Bones' : 'DEF Skeleton',
+            skeleton_type: inst.generatedConfig.skeleton_type || 'def',
+        };
+    } else {
+        data = {
+            name: inst.presetName,
+            body_type: inst.bodyType,
+            morphs: inst.morphs || {},
+            meta: inst.meta || {},
+            cloth: inst.cloth || [],
+            hair_style: inst.hairStyle || null,
+            garments: inst.garments || [],
+        };
+    }
     await _saveJsonWithPicker(data, (inst.presetName || 'model') + '.json');
 }
 
@@ -2688,43 +2715,7 @@ async function loadSkinWeights() {
     } catch (e) { /* optional */ }
 }
 
-function buildDefSkeleton(skelData, swData) {
-    const skelByName = {};
-    for (const b of skelData.bones) skelByName[b.name] = b;
-    const bones = [];
-    const boneByName = {};
-    let rootBone = null;
-    for (const name of swData.bone_names) {
-        const bone = new THREE.Bone();
-        bone.name = name.replace(/\./g, '_');
-        bones.push(bone);
-        boneByName[name] = bone;
-    }
-    for (let i = 0; i < swData.bone_names.length; i++) {
-        const name = swData.bone_names[i];
-        const bone = bones[i];
-        const data = skelByName[name];
-        if (!data) continue;
-        const p = data.local_position;
-        bone.position.set(p[0], p[2], -p[1]);
-        const q = data.local_quaternion;
-        bone.quaternion.set(q[1], q[3], -q[2], q[0]);
-        if (data.parent && boneByName[data.parent]) {
-            boneByName[data.parent].add(bone);
-        } else if (!rootBone) {
-            rootBone = bone;
-        }
-    }
-    for (let i = 0; i < bones.length; i++) {
-        const name = swData.bone_names[i];
-        const data = skelByName[name];
-        if (!data) continue;
-        if (!data.parent && bones[i] !== rootBone && rootBone) rootBone.add(bones[i]);
-    }
-    if (!rootBone && bones.length > 0) rootBone = bones[0];
-    rootBone.updateWorldMatrix(true, true);
-    return { skeleton: new THREE.Skeleton(bones), rootBone, bones, boneByName };
-}
+// buildDefSkeleton() imported from def_skeleton_builder.js
 
 function convertToDefSkinnedMesh() {
     if (isSkinned || !bodyMesh || !bodyGeometry || !skinWeightData) return;
@@ -2942,6 +2933,9 @@ function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             playing = true;
             _animatedCharId = inst ? inst.id : null;
         }
+        // Sync play button icon
+        const _pb = document.getElementById('anim-play');
+        if (_pb) _pb.innerHTML = playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
     };
 
     if (rawBvhText) {
@@ -3002,23 +2996,17 @@ function applyGroundLevelFix() {
         alert('Keine Animation geladen.');
         return;
     }
-    if (currentAnimGroundFixed) {
-        alert('Bodenniveau-Fix ist bereits angewendet.');
-        return;
-    }
 
     const lines = currentAnimBvhText.split('\n');
 
-    // --- Find root bone CHANNELS order to locate Yposition index ---
+    // --- 1. Find root CHANNELS to locate Yposition index ---
     let yPosChannel = -1;
-    let rootChannelCount = 0;
     let foundRoot = false;
     for (let i = 0; i < lines.length; i++) {
         const trimmed = lines[i].trim();
         if (trimmed.startsWith('ROOT ')) { foundRoot = true; continue; }
         if (foundRoot && trimmed.startsWith('CHANNELS')) {
             const parts = trimmed.split(/\s+/);
-            rootChannelCount = parseInt(parts[1], 10);
             for (let c = 2; c < parts.length; c++) {
                 if (parts[c] === 'Yposition') { yPosChannel = c - 2; break; }
             }
@@ -3030,43 +3018,96 @@ function applyGroundLevelFix() {
         return;
     }
 
-    // --- Find MOTION section ---
+    // --- 2. Find MOTION section and frame data lines ---
     let motionIdx = -1;
     for (let i = 0; i < lines.length; i++) {
         if (lines[i].trim() === 'MOTION') { motionIdx = i; break; }
     }
     if (motionIdx < 0) return;
 
-    // Skip "Frames:" and "Frame Time:" lines
+    let frameTime = 1 / 30;
     let dataStart = motionIdx + 1;
-    while (dataStart < lines.length && !lines[dataStart].trim().match(/^[\d\-\.]/)) dataStart++;
-
-    // --- Collect all Y values and find minimum ---
-    const frameIndices = [];
-    let minY = Infinity;
-    for (let i = dataStart; i < lines.length; i++) {
-        const trimmed = lines[i].trim();
-        if (!trimmed) continue;
-        const vals = trimmed.split(/\s+/);
-        if (vals.length < rootChannelCount) continue;
-        const y = parseFloat(vals[yPosChannel]);
-        if (!isNaN(y)) {
-            frameIndices.push(i);
-            if (y < minY) minY = y;
-        }
+    while (dataStart < lines.length && !lines[dataStart].trim().match(/^[\d\-\.]/)) {
+        const t = lines[dataStart].trim();
+        if (t.startsWith('Frame Time:')) frameTime = parseFloat(t.split(':')[1].trim());
+        dataStart++;
     }
 
-    if (minY >= 0) {
-        alert('Animation ist bereits auf Bodenniveau (min Y = ' + minY.toFixed(2) + ').');
+    const frameLineIdx = [];
+    for (let i = dataStart; i < lines.length; i++) {
+        const t = lines[i].trim();
+        if (t && t.match(/^[\d\-\.]/)) frameLineIdx.push(i);
+    }
+    const totalFrames = frameLineIdx.length;
+    if (totalFrames === 0) { alert('Keine Frames gefunden.'); return; }
+
+    // --- 3. Parse BVH with Three.js for FK (skeleton + clip) ---
+    const parsed = bvhLoader.parse(currentAnimBvhText);
+    const bones = parsed.skeleton.bones;
+    const rootBone = bones[0];
+
+    // --- 4. Sample every frame for accurate ground correction ---
+    const sampleEvery = 1;
+    const samples = []; // [{frame, offset}]
+
+    const tmpMixer = new THREE.AnimationMixer(rootBone);
+    const tmpAction = tmpMixer.clipAction(parsed.clip);
+    tmpAction.play();
+    const tmpV = new THREE.Vector3();
+
+    for (let f = 0; f < totalFrames; f += sampleEvery) {
+        tmpMixer.setTime(f * frameTime);
+        rootBone.updateWorldMatrix(true, true);
+        let minY = Infinity;
+        for (const b of bones) {
+            b.getWorldPosition(tmpV);
+            if (tmpV.y < minY) minY = tmpV.y;
+        }
+        samples.push({ frame: f, offset: -minY });
+    }
+    // Ensure last frame is included
+    const lastFrame = totalFrames - 1;
+    if (samples[samples.length - 1].frame !== lastFrame) {
+        tmpMixer.setTime(lastFrame * frameTime);
+        rootBone.updateWorldMatrix(true, true);
+        let minY = Infinity;
+        for (const b of bones) {
+            b.getWorldPosition(tmpV);
+            if (tmpV.y < minY) minY = tmpV.y;
+        }
+        samples.push({ frame: lastFrame, offset: -minY });
+    }
+    tmpAction.stop();
+    tmpMixer.stopAllAction();
+
+    // --- 5. Check if any correction is needed ---
+    const maxAbs = Math.max(...samples.map(s => Math.abs(s.offset)));
+    console.log(`[GROUND] ${samples.length} Samples, max Abweichung: ${maxAbs.toFixed(2)}`);
+    if (maxAbs < 0.01) {
+        alert('Animation ist bereits auf Bodenniveau (max Abweichung: ' + maxAbs.toFixed(4) + ').');
         return;
     }
 
-    // --- Apply offset: shift all Y values up by -minY ---
-    const offset = -minY;
-    for (const fi of frameIndices) {
-        const vals = lines[fi].trim().split(/\s+/);
-        vals[yPosChannel] = (parseFloat(vals[yPosChannel]) + offset).toFixed(6);
-        lines[fi] = vals.join(' ');
+    // --- 6. Interpolate offsets for every frame ---
+    const perFrameOffset = new Float64Array(totalFrames);
+    if (samples.length === 1) {
+        perFrameOffset.fill(samples[0].offset);
+    } else {
+        for (let s = 0; s < samples.length - 1; s++) {
+            const s0 = samples[s], s1 = samples[s + 1];
+            for (let f = s0.frame; f <= s1.frame; f++) {
+                const t = (s1.frame > s0.frame) ? (f - s0.frame) / (s1.frame - s0.frame) : 0;
+                perFrameOffset[f] = s0.offset + (s1.offset - s0.offset) * t;
+            }
+        }
+    }
+
+    // --- 7. Apply per-frame offset to root Y channel in BVH text ---
+    for (let f = 0; f < totalFrames; f++) {
+        const li = frameLineIdx[f];
+        const vals = lines[li].trim().split(/\s+/);
+        vals[yPosChannel] = (parseFloat(vals[yPosChannel]) + perFrameOffset[f]).toFixed(6);
+        lines[li] = vals.join(' ');
     }
 
     const modifiedBvh = lines.join('\n');
@@ -3077,6 +3118,18 @@ function applyGroundLevelFix() {
     const blob = new Blob([modifiedBvh], { type: 'text/plain' });
     const blobUrl = URL.createObjectURL(blob);
     loadBVHAnimation(blobUrl, currentAnimName, 0, modifiedBvh);
+
+    // Summary alert for user
+    const summaryLines = [
+        `Bodenniveau-Fix angewendet:`,
+        `- ${totalFrames} Frames korrigiert`,
+        `- ${samples.length} Samples (alle ${sampleEvery} Frames)`,
+        `- Max Korrektur: ${maxAbs.toFixed(2)} Einheiten`,
+        `- Y-Kanal Index: ${yPosChannel}`,
+        `- Frame Time: ${frameTime.toFixed(4)}s`,
+    ];
+    alert(summaryLines.join('\n'));
+    console.log(`[GROUND] Fix angewendet: ${totalFrames} Frames, max Korrektur ${maxAbs.toFixed(2)}`);
 }
 
 function openSaveAnimDialog() {
@@ -3182,7 +3235,10 @@ function blenderToThreeCoords(buf) {
 // =========================================================================
 function initTabs() {
     document.querySelectorAll('.panel-tab').forEach(tab => {
-        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+        tab.addEventListener('click', () => {
+            switchTab(tab.dataset.tab);
+            if (tab.dataset.tab === 'modell') initModelGenerator();
+        });
     });
 
     // Reset morphs button
@@ -5569,7 +5625,23 @@ async function initModelGenerator() {
     }
 
     if (!_mgConfig) {
-        if (_mgSkeletonType === 'rig') {
+        // Check if a loaded character already has a generated config (e.g. Rig3)
+        const sel = _selectedInst();
+        const genInst = (sel && sel.generatedConfig) ? sel
+            : [...characters.values()].find(c => c.generatedConfig) || null;
+        if (genInst && genInst.generatedConfig) {
+            _mgConfig = JSON.parse(JSON.stringify(genInst.generatedConfig));
+            _mgSkeletonType = genInst.generatedConfig.skeleton_type || 'rig';
+            _mgCharacterId = genInst.id;
+            // Ensure rig bones data is loaded for rig-type models
+            if (_mgSkeletonType === 'rig' && !_mgRigBonesData) {
+                try {
+                    const resp = await fetch('/api/character/rig/');
+                    if (resp.ok) _mgRigBonesData = await resp.json();
+                } catch (e) { /* ignore */ }
+            }
+            console.log('[MG] Synced config from loaded character:', genInst.presetName);
+        } else if (_mgSkeletonType === 'rig') {
             // Load rig bones data for default rig mode
             if (!_mgRigBonesData) {
                 try {
@@ -5754,9 +5826,9 @@ function _bindModelGeneratorUI() {
         _mgGenerateCharacter();
     });
 
-    const saveBtn = document.getElementById('mg-save');
-    if (saveBtn) saveBtn.addEventListener('click', () => {
-        _mgSaveModel();
+    const saveServerBtn = document.getElementById('mg-save-server');
+    if (saveServerBtn) saveServerBtn.addEventListener('click', () => {
+        _mgSaveModelToServer();
     });
 }
 
@@ -5989,10 +6061,13 @@ function _mgGenerateCharacter() {
     // Clear bone highlight cache and overlays (references become invalid)
     _clearBoneHighlightCache();
 
-    // Remember position of old character before removing
+    // Remember position + presetKey of old character before removing
     let oldPos = null;
+    let oldPresetKey = null;
     if (_mgCharacterId && characters.has(_mgCharacterId)) {
-        oldPos = characters.get(_mgCharacterId).group.position.clone();
+        const old = characters.get(_mgCharacterId);
+        oldPos = old.group.position.clone();
+        oldPresetKey = old.presetKey || null;
         deleteCharacter(_mgCharacterId);
         _mgCharacterId = null;
     }
@@ -6004,6 +6079,7 @@ function _mgGenerateCharacter() {
     configCopy.skeleton_type = _mgSkeletonType;
     const inst = new CharacterInstance(id, configCopy);
     inst.presetName = _mgConfig.name || 'Generiertes Modell';
+    inst.presetKey = oldPresetKey;
     inst.bodyType = _mgSkeletonType === 'rig' ? 'Rig Bones' : 'DEF Skeleton';
 
     // Set the mesh directly
@@ -6031,41 +6107,89 @@ function _mgGenerateCharacter() {
     console.log(`Model Generator: created ${_mgSkeletonType === 'rig' ? 'Mesh' : 'SkinnedMesh'} with ${vc} vertices as character "${inst.presetName}"`);
 }
 
-async function _mgSaveModel() {
-    if (!_mgConfig) return;
-
-    const defaultName = (_mgConfig.name || 'Neues Modell').trim().replace(/[^a-zA-Z0-9_\-äöüÄÖÜß ]/g, '_') + '.json';
-
-    // Use File System Access API for Save As dialog
-    try {
-        const handle = await window.showSaveFilePicker({
-            suggestedName: defaultName,
-            types: [{
-                description: 'JSON Model',
-                accept: { 'application/json': ['.json'] }
-            }]
-        });
-
-        // Format as importable character preset
-        const data = {
-            ..._mgConfig,
-            type: 'generated_model',
-            name: _mgConfig.name || 'Generiertes Modell',
-            body_type: _mgSkeletonType === 'rig' ? 'Rig Bones' : 'DEF Skeleton',
-            skeleton_type: _mgSkeletonType
-        };
-        const json = JSON.stringify(data, null, 2);
-        const writable = await handle.createWritable();
-        await writable.write(json);
-        await writable.close();
-
-        console.log('Model exported to:', handle.name);
-    } catch (e) {
-        if (e.name !== 'AbortError') {
-            console.error('Export failed:', e);
-            alert('Fehler beim Exportieren: ' + e.message);
+async function _mgSaveModelToServer() {
+    // Sync config if needed
+    if (!_mgConfig) {
+        let inst = _selectedInst();
+        if (!inst || !inst.generatedConfig) {
+            for (const [, c] of characters) {
+                if (c.generatedConfig) { inst = c; break; }
+            }
+        }
+        if (inst && inst.generatedConfig) {
+            _mgConfig = JSON.parse(JSON.stringify(inst.generatedConfig));
+            _mgSkeletonType = inst.generatedConfig.skeleton_type || 'rig';
+            _mgCharacterId = inst.id;
         }
     }
+    if (!_mgConfig) {
+        alert('Kein Modell vorhanden.');
+        return;
+    }
+
+    const data = {
+        ..._mgConfig,
+        type: 'generated_model',
+        name: _mgConfig.name || 'Generiertes Modell',
+        body_type: _mgSkeletonType === 'rig' ? 'Rig Bones' : 'DEF Skeleton',
+        skeleton_type: _mgSkeletonType
+    };
+    const inst = _mgCharacterId ? characters.get(_mgCharacterId) : null;
+    const defaultName = ((inst && inst.presetKey) ? inst.presetKey : defaultPresetName || _mgConfig.name || 'Neues Modell') + '.json';
+    const chosenName = await _saveJsonWithPicker(data, defaultName);
+    if (!chosenName) return;                // user cancelled file dialog
+
+    // Also save to server models directory so Theatre and other pages see it
+    const saveName = chosenName.replace(/\.json$/i, '');
+    try {
+        await fetch('/api/character/model/save/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
+            body: JSON.stringify({ name: saveName, data })
+        });
+        if (_mgCharacterId) {
+            const ci = characters.get(_mgCharacterId);
+            if (ci) {
+                ci.generatedConfig = JSON.parse(JSON.stringify(data));
+                ci.presetKey = saveName;
+            }
+        }
+        console.log(`[MG] Model saved as "${saveName}" (file + server)`);
+    } catch (e) { console.warn('[MG] Server save failed:', e); }
+}
+
+async function _mgSaveModel() {
+    // Sync config from selected character if not yet linked
+    if (!_mgConfig) {
+        // Try selected character first, then any character with generatedConfig
+        let inst = _selectedInst();
+        if (!inst || !inst.generatedConfig) {
+            for (const [, c] of characters) {
+                if (c.generatedConfig) { inst = c; break; }
+            }
+        }
+        if (inst && inst.generatedConfig) {
+            _mgConfig = JSON.parse(JSON.stringify(inst.generatedConfig));
+            _mgSkeletonType = inst.generatedConfig.skeleton_type || 'rig';
+            _mgCharacterId = inst.id;
+            console.log('[MG] Synced config from character:', inst.presetName);
+        }
+    }
+    if (!_mgConfig) {
+        alert('Kein Modell vorhanden. Bitte zuerst ein Modell erzeugen.');
+        return;
+    }
+
+    // Format as importable character preset
+    const data = {
+        ..._mgConfig,
+        type: 'generated_model',
+        name: _mgConfig.name || 'Generiertes Modell',
+        body_type: _mgSkeletonType === 'rig' ? 'Rig Bones' : 'DEF Skeleton',
+        skeleton_type: _mgSkeletonType
+    };
+    const defaultName = (_mgConfig.name || 'Neues Modell').trim().replace(/[^a-zA-Z0-9_\-äöüÄÖÜß ]/g, '_') + '.json';
+    await _saveJsonWithPicker(data, defaultName);
 }
 
 // =========================================================================

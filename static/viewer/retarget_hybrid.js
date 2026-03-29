@@ -33,376 +33,51 @@ export function detectBVHFormat(bones) {
 }
 
 // =========================================================================
-// Mapping tables: BVH bone name → DEF bone name (null = skip)
+// API config loader — single source of truth for mapping data
 // =========================================================================
 
-export const BVH_TO_DEF_CMU = {
-    'Hips':           'DEF-spine',
-    'Spine':          'DEF-spine.001',
-    'Spine1':         'DEF-spine.003',
-    'Neck':           null,
-    'Neck1':          'DEF-spine.004',
-    'Head':           'DEF-spine.006',
-    'LeftShoulder':   'DEF-shoulder.L',
-    'LeftArm':        'DEF-upper_arm.L',
-    'LeftForeArm':    'DEF-forearm.L',
-    'LeftHand':       'DEF-hand.L',
-    'RightShoulder':  'DEF-shoulder.R',
-    'RightArm':       'DEF-upper_arm.R',
-    'RightForeArm':   'DEF-forearm.R',
-    'RightHand':      'DEF-hand.R',
-    'LeftUpLeg':      'DEF-thigh.L',
-    'LeftLeg':        'DEF-shin.L',
-    'LeftFoot':       'DEF-foot.L',
-    'LeftToeBase':    'DEF-toe.L',
-    'RightUpLeg':     'DEF-thigh.R',
-    'RightLeg':       'DEF-shin.R',
-    'RightFoot':      'DEF-foot.R',
-    'RightToeBase':   'DEF-toe.R',
-    'LHipJoint':      null,
-    'RHipJoint':      null,
-    'LowerBack':      null,
-    'LeftFingerBase':  null,
-    'RightFingerBase': null,
-    'LThumb':         null,
-    'RThumb':         null,
-};
+let _retargetConfig = null;
 
-export const BVH_TO_DEF_MIXAMO = {
-    // Spine chain: Mixamo has Spine/Spine1/Spine2, CMU skips .002
-    'Hips':           'DEF-spine',
-    'Spine':          'DEF-spine.001',
-    'Spine1':         'DEF-spine.002',
-    'Spine2':         'DEF-spine.003',
-    'Neck':           null,
-    'Neck1':          'DEF-spine.004',
-    'Head':           'DEF-spine.006',
+/**
+ * Load retarget configuration (mappings, skip lists, face/hand bones) from
+ * the Python backend.  Returns cached data on subsequent calls.
+ * Must be called before retargetBVHToDefClip / mergeRetargetedClips.
+ */
+export async function loadRetargetConfig() {
+    if (_retargetConfig) return _retargetConfig;
+    const resp = await fetch('/api/character/retarget-config/');
+    _retargetConfig = await resp.json();
+    return _retargetConfig;
+}
 
-    // Arms
-    'LeftShoulder':   'DEF-shoulder.L',
-    'LeftArm':        'DEF-upper_arm.L',
-    'LeftForeArm':    'DEF-forearm.L',
-    'LeftHand':       'DEF-hand.L',
-    'RightShoulder':  'DEF-shoulder.R',
-    'RightArm':       'DEF-upper_arm.R',
-    'RightForeArm':   'DEF-forearm.R',
-    'RightHand':      'DEF-hand.R',
+/**
+ * Get the BVH→DEF mapping for the given format.
+ * Requires loadRetargetConfig() to have been called first.
+ */
+export function getMappingForFormat(format) {
+    if (!_retargetConfig) throw new Error('loadRetargetConfig() must be called before getMappingForFormat()');
+    return _retargetConfig.mappings[format] || _retargetConfig.mappings['MOCAPNET'];
+}
 
-    // Legs
-    'LeftUpLeg':      'DEF-thigh.L',
-    'LeftLeg':        'DEF-shin.L',
-    'LeftFoot':       'DEF-foot.L',
-    'LeftToeBase':    'DEF-toe.L',
-    'RightUpLeg':     'DEF-thigh.R',
-    'RightLeg':       'DEF-shin.R',
-    'RightFoot':      'DEF-foot.R',
-    'RightToeBase':   'DEF-toe.R',
+/**
+ * Get the skip-dir-correction list for the given format.
+ */
+export function getSkipDirCorrection(format) {
+    if (!_retargetConfig) return [];
+    return _retargetConfig.skip_dir_correction[format] || [];
+}
 
-    // Fingers left — Thumb
-    'LeftHandThumb1':  'DEF-thumb.01.L',
-    'LeftHandThumb2':  'DEF-thumb.02.L',
-    'LeftHandThumb3':  'DEF-thumb.03.L',
-    // Fingers left — Index
-    'LeftHandIndex1':  'DEF-f_index.01.L',
-    'LeftHandIndex2':  'DEF-f_index.02.L',
-    'LeftHandIndex3':  'DEF-f_index.03.L',
-    // Fingers left — Middle
-    'LeftHandMiddle1': 'DEF-f_middle.01.L',
-    'LeftHandMiddle2': 'DEF-f_middle.02.L',
-    'LeftHandMiddle3': 'DEF-f_middle.03.L',
-    // Fingers left — Ring
-    'LeftHandRing1':   'DEF-f_ring.01.L',
-    'LeftHandRing2':   'DEF-f_ring.02.L',
-    'LeftHandRing3':   'DEF-f_ring.03.L',
-    // Fingers left — Pinky
-    'LeftHandPinky1':  'DEF-f_pinky.01.L',
-    'LeftHandPinky2':  'DEF-f_pinky.02.L',
-    'LeftHandPinky3':  'DEF-f_pinky.03.L',
+/**
+ * Get the face/hand bone set (Three.js underscore names).
+ */
+export function getFaceHandBones() {
+    if (!_retargetConfig) return new Set();
+    return new Set(_retargetConfig.face_hand_bones);
+}
 
-    // Fingers right — Thumb
-    'RightHandThumb1': 'DEF-thumb.01.R',
-    'RightHandThumb2': 'DEF-thumb.02.R',
-    'RightHandThumb3': 'DEF-thumb.03.R',
-    // Fingers right — Index
-    'RightHandIndex1': 'DEF-f_index.01.R',
-    'RightHandIndex2': 'DEF-f_index.02.R',
-    'RightHandIndex3': 'DEF-f_index.03.R',
-    // Fingers right — Middle
-    'RightHandMiddle1':'DEF-f_middle.01.R',
-    'RightHandMiddle2':'DEF-f_middle.02.R',
-    'RightHandMiddle3':'DEF-f_middle.03.R',
-    // Fingers right — Ring
-    'RightHandRing1':  'DEF-f_ring.01.R',
-    'RightHandRing2':  'DEF-f_ring.02.R',
-    'RightHandRing3':  'DEF-f_ring.03.R',
-    // Fingers right — Pinky
-    'RightHandPinky1': 'DEF-f_pinky.01.R',
-    'RightHandPinky2': 'DEF-f_pinky.02.R',
-    'RightHandPinky3': 'DEF-f_pinky.03.R',
-};
+// Mapping tables removed — canonical data served by /api/character/retarget-config/
+// Use loadRetargetConfig() + getMappingForFormat(format) instead.
 
-export const BVH_TO_DEF_MOCAPNET = {
-    // Body (normalized MocapNET names — lowercase)
-    'hip':        'DEF-spine',
-    'abdomen':    'DEF-spine.001',
-    'chest':      'DEF-spine.003',
-    'neck1':      'DEF-spine.004',
-    'head':       'DEF-spine.006',
-    'lcollar':    'DEF-shoulder.L',
-    'rcollar':    'DEF-shoulder.R',
-    'lshoulder':  'DEF-upper_arm.L',
-    'rshoulder':  'DEF-upper_arm.R',
-    'lelbow':     'DEF-forearm.L',
-    'relbow':     'DEF-forearm.R',
-    'lhand':      'DEF-hand.L',
-    'rhand':      'DEF-hand.R',
-    'lhip':       'DEF-thigh.L',
-    'rhip':       'DEF-thigh.R',
-    'lknee':      'DEF-shin.L',
-    'rknee':      'DEF-shin.R',
-    'lfoot':      'DEF-foot.L',
-    'rfoot':      'DEF-foot.R',
-    'toe1-1.l':   'DEF-toe.L',
-    'toe1-1.r':   'DEF-toe.R',
-
-    // Body (OpenPose-style names — capitalized, as in testOpenPose.bvh)
-    'lCollar':    'DEF-shoulder.L',
-    'rCollar':    'DEF-shoulder.R',
-    'lShldr':     'DEF-upper_arm.L',
-    'rShldr':     'DEF-upper_arm.R',
-    'lForeArm':   'DEF-forearm.L',
-    'rForeArm':   'DEF-forearm.R',
-    'lHand':      'DEF-hand.L',
-    'rHand':      'DEF-hand.R',
-    'lThigh':     'DEF-thigh.L',
-    'rThigh':     'DEF-thigh.R',
-    'lShin':      'DEF-shin.L',
-    'rShin':      'DEF-shin.R',
-    'lFoot':      'DEF-foot.L',
-    'rFoot':      'DEF-foot.R',
-    'lButtock':   null,
-    'rButtock':   null,
-    'toe1-1.L':   'DEF-toe.L',
-    'toe1-1.R':   'DEF-toe.R',
-
-    // Fingers left
-    'lthumb':       'DEF-thumb.01.L',
-    'finger1-2.l':  'DEF-thumb.02.L',
-    'finger1-3.l':  'DEF-thumb.03.L',
-    'finger2-1.l':  'DEF-f_index.01.L',
-    'finger2-2.l':  'DEF-f_index.02.L',
-    'finger2-3.l':  'DEF-f_index.03.L',
-    'finger3-1.l':  'DEF-f_middle.01.L',
-    'finger3-2.l':  'DEF-f_middle.02.L',
-    'finger3-3.l':  'DEF-f_middle.03.L',
-    'finger4-1.l':  'DEF-f_ring.01.L',
-    'finger4-2.l':  'DEF-f_ring.02.L',
-    'finger4-3.l':  'DEF-f_ring.03.L',
-    'finger5-1.l':  'DEF-f_pinky.01.L',
-    'finger5-2.l':  'DEF-f_pinky.02.L',
-    'finger5-3.l':  'DEF-f_pinky.03.L',
-
-    // Fingers right
-    'rthumb':       'DEF-thumb.01.R',
-    'finger1-2.r':  'DEF-thumb.02.R',
-    'finger1-3.r':  'DEF-thumb.03.R',
-    'finger2-1.r':  'DEF-f_index.01.R',
-    'finger2-2.r':  'DEF-f_index.02.R',
-    'finger2-3.r':  'DEF-f_index.03.R',
-    'finger3-1.r':  'DEF-f_middle.01.R',
-    'finger3-2.r':  'DEF-f_middle.02.R',
-    'finger3-3.r':  'DEF-f_middle.03.R',
-    'finger4-1.r':  'DEF-f_ring.01.R',
-    'finger4-2.r':  'DEF-f_ring.02.R',
-    'finger4-3.r':  'DEF-f_ring.03.R',
-    'finger5-1.r':  'DEF-f_pinky.01.R',
-    'finger5-2.r':  'DEF-f_pinky.02.R',
-    'finger5-3.r':  'DEF-f_pinky.03.R',
-
-    // Palms
-    'metacarpal1.l': 'DEF-palm.01.L',
-    'metacarpal2.l': 'DEF-palm.02.L',
-    'metacarpal3.l': 'DEF-palm.03.L',
-    'metacarpal4.l': 'DEF-palm.04.L',
-    'metacarpal1.r': 'DEF-palm.01.R',
-    'metacarpal2.r': 'DEF-palm.02.R',
-    'metacarpal3.r': 'DEF-palm.03.R',
-    'metacarpal4.r': 'DEF-palm.04.R',
-
-    // Face
-    'jaw':       'DEF-jaw',
-    'tongue01':  'DEF-tongue',
-    'tongue02':  'DEF-tongue.001',
-    'tongue03':  'DEF-tongue.002',
-    'eye.l':     'MCH-eye.L',
-    'eye.r':     'MCH-eye.R',
-
-    // Lips
-    'oris04.l':  'DEF-lip.T.L',
-    'oris04.r':  'DEF-lip.T.R',
-    'oris03.l':  'DEF-lip.T.L.001',
-    'oris03.r':  'DEF-lip.T.R.001',
-    'oris06.l':  'DEF-lip.B.L',
-    'oris06.r':  'DEF-lip.B.R',
-    'oris07.l':  'DEF-lip.B.L.001',
-    'oris07.r':  'DEF-lip.B.R.001',
-
-    // Eyelids
-    'orbicularis03.l': 'DEF-lid.T.L',
-    'orbicularis03.r': 'DEF-lid.T.R',
-    'orbicularis04.l': 'DEF-lid.B.L',
-    'orbicularis04.r': 'DEF-lid.B.R',
-};
-
-export const BVH_TO_DEF_AIST = {
-    // AIST skeleton (Pelvis → Spine1/2/3 → Neck → Head, Left_hip/knee/ankle/foot)
-    'Pelvis':          'DEF-spine',
-    'Spine1':          'DEF-spine.001',
-    'Spine2':          'DEF-spine.002',
-    'Spine3':          'DEF-spine.003',
-    'Neck':            'DEF-spine.004',
-    'Head':            'DEF-spine.006',
-    'Left_collar':     'DEF-shoulder.L',
-    'Left_shoulder':   'DEF-upper_arm.L',
-    'Left_elbow':      'DEF-forearm.L',
-    'Left_wrist':      'DEF-hand.L',
-    'Left_palm':       null,
-    'Right_collar':    'DEF-shoulder.R',
-    'Right_shoulder':  'DEF-upper_arm.R',
-    'Right_elbow':     'DEF-forearm.R',
-    'Right_wrist':     'DEF-hand.R',
-    'Right_palm':      null,
-    'Left_hip':        'DEF-thigh.L',
-    'Left_knee':       'DEF-shin.L',
-    'Left_ankle':      'DEF-foot.L',
-    'Left_foot':       'DEF-toe.L',
-    'Right_hip':       'DEF-thigh.R',
-    'Right_knee':      'DEF-shin.R',
-    'Right_ankle':     'DEF-foot.R',
-    'Right_foot':      'DEF-toe.R',
-};
-
-export const BVH_TO_DEF_OPENPOSE = {
-    // Body — OpenPose BVH (hip→abdomen→chest, rCollar→rShldr, rButtock→rThigh)
-    'hip':        'DEF-spine',
-    'abdomen':    'DEF-spine.001',
-    'chest':      'DEF-spine.003',
-    'neck':       null,
-    'neck1':      'DEF-spine.004',
-    'head':       'DEF-spine.006',
-    'lCollar':    'DEF-shoulder.L',
-    'rCollar':    'DEF-shoulder.R',
-    'lShldr':     'DEF-upper_arm.L',
-    'rShldr':     'DEF-upper_arm.R',
-    'lForeArm':   'DEF-forearm.L',
-    'rForeArm':   'DEF-forearm.R',
-    'lHand':      'DEF-hand.L',
-    'rHand':      'DEF-hand.R',
-    'lButtock':   null,
-    'rButtock':   null,
-    'lThigh':     'DEF-thigh.L',
-    'rThigh':     'DEF-thigh.R',
-    'lShin':      'DEF-shin.L',
-    'rShin':      'DEF-shin.R',
-    'lFoot':      'DEF-foot.L',
-    'rFoot':      'DEF-foot.R',
-    'toe1-1.L':   'DEF-toe.L',
-    'toe1-1.R':   'DEF-toe.R',
-
-    // Fingers left
-    'lthumb':       'DEF-thumb.01.L',
-    'finger1-2.l':  'DEF-thumb.02.L',
-    'finger1-3.l':  'DEF-thumb.03.L',
-    'finger2-1.l':  'DEF-f_index.01.L',
-    'finger2-2.l':  'DEF-f_index.02.L',
-    'finger2-3.l':  'DEF-f_index.03.L',
-    'finger3-1.l':  'DEF-f_middle.01.L',
-    'finger3-2.l':  'DEF-f_middle.02.L',
-    'finger3-3.l':  'DEF-f_middle.03.L',
-    'finger4-1.l':  'DEF-f_ring.01.L',
-    'finger4-2.l':  'DEF-f_ring.02.L',
-    'finger4-3.l':  'DEF-f_ring.03.L',
-    'finger5-1.l':  'DEF-f_pinky.01.L',
-    'finger5-2.l':  'DEF-f_pinky.02.L',
-    'finger5-3.l':  'DEF-f_pinky.03.L',
-
-    // Fingers right
-    'rthumb':       'DEF-thumb.01.R',
-    'finger1-2.r':  'DEF-thumb.02.R',
-    'finger1-3.r':  'DEF-thumb.03.R',
-    'finger2-1.r':  'DEF-f_index.01.R',
-    'finger2-2.r':  'DEF-f_index.02.R',
-    'finger2-3.r':  'DEF-f_index.03.R',
-    'finger3-1.r':  'DEF-f_middle.01.R',
-    'finger3-2.r':  'DEF-f_middle.02.R',
-    'finger3-3.r':  'DEF-f_middle.03.R',
-    'finger4-1.r':  'DEF-f_ring.01.R',
-    'finger4-2.r':  'DEF-f_ring.02.R',
-    'finger4-3.r':  'DEF-f_ring.03.R',
-    'finger5-1.r':  'DEF-f_pinky.01.R',
-    'finger5-2.r':  'DEF-f_pinky.02.R',
-    'finger5-3.r':  'DEF-f_pinky.03.R',
-
-    // Palms
-    'metacarpal1.l': 'DEF-palm.01.L',
-    'metacarpal2.l': 'DEF-palm.02.L',
-    'metacarpal3.l': 'DEF-palm.03.L',
-    'metacarpal4.l': 'DEF-palm.04.L',
-    'metacarpal1.r': 'DEF-palm.01.R',
-    'metacarpal2.r': 'DEF-palm.02.R',
-    'metacarpal3.r': 'DEF-palm.03.R',
-    'metacarpal4.r': 'DEF-palm.04.R',
-
-    // Face
-    'jaw':       'DEF-jaw',
-    'tongue01':  'DEF-tongue',
-    'tongue02':  'DEF-tongue.001',
-    'tongue03':  'DEF-tongue.002',
-    'eye.l':     'MCH-eye.L',
-    'eye.r':     'MCH-eye.R',
-
-    // Lips
-    'oris04.l':  'DEF-lip.T.L',
-    'oris04.r':  'DEF-lip.T.R',
-    'oris03.l':  'DEF-lip.T.L.001',
-    'oris03.r':  'DEF-lip.T.R.001',
-    'oris06.l':  'DEF-lip.B.L',
-    'oris06.r':  'DEF-lip.B.R',
-    'oris07.l':  'DEF-lip.B.L.001',
-    'oris07.r':  'DEF-lip.B.R.001',
-
-    // Eyelids
-    'orbicularis03.l': 'DEF-lid.T.L',
-    'orbicularis03.r': 'DEF-lid.T.R',
-    'orbicularis04.l': 'DEF-lid.B.L',
-    'orbicularis04.r': 'DEF-lid.B.R',
-};
-
-export const BVH_TO_DEF_BANDAI = {
-    // Bandai Namco skeleton (joint_Root → Hips → Spine → Chest → ...)
-    'Hips':        'DEF-spine',
-    'Spine':       'DEF-spine.001',
-    'Chest':       'DEF-spine.003',
-    'Neck':        'DEF-spine.004',
-    'Head':        'DEF-spine.006',
-    'Shoulder_L':  'DEF-shoulder.L',
-    'UpperArm_L':  'DEF-upper_arm.L',
-    'LowerArm_L':  'DEF-forearm.L',
-    'Hand_L':      'DEF-hand.L',
-    'Shoulder_R':  'DEF-shoulder.R',
-    'UpperArm_R':  'DEF-upper_arm.R',
-    'LowerArm_R':  'DEF-forearm.R',
-    'Hand_R':      'DEF-hand.R',
-    'UpperLeg_L':  'DEF-thigh.L',
-    'LowerLeg_L':  'DEF-shin.L',
-    'Foot_L':      'DEF-foot.L',
-    'Toes_L':      'DEF-toe.L',
-    'UpperLeg_R':  'DEF-thigh.R',
-    'LowerLeg_R':  'DEF-shin.R',
-    'Foot_R':      'DEF-foot.R',
-    'Toes_R':      'DEF-toe.R',
-    'joint_Root':  null,
-};
 
 // =========================================================================
 // Main retarget function
@@ -426,12 +101,7 @@ export const BVH_TO_DEF_BANDAI = {
 export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     const bvhBones = bvhResult.skeleton.bones;
     const bvhClip = bvhResult.clip;
-    const mapping = format === 'CMU' ? BVH_TO_DEF_CMU
-                  : format === 'MIXAMO' ? BVH_TO_DEF_MIXAMO
-                  : format === 'BANDAI' ? BVH_TO_DEF_BANDAI
-                  : format === 'AIST' ? BVH_TO_DEF_AIST
-                  : format === 'OPENPOSE' ? BVH_TO_DEF_OPENPOSE
-                  : BVH_TO_DEF_MOCAPNET;
+    const mapping = getMappingForFormat(format);
 
     // --- DEF rest-pose world quaternions ---
     defSkel.rootBone.updateWorldMatrix(true, true);
@@ -534,9 +204,10 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     }
 
     // --- Compute frame-0 BVH world Qs for delta retarget ---
-    // Bandai encodes the standing pose in frame-0 rotations (not identity rest).
-    // Delta retarget subtracts frame-0 to start from rest pose.
-    // AIST/GVHMR BVH files are pre-normalized (frame-0 = identity) and use standard retarget.
+    // Delta retarget subtracts frame-0 world Q to start from rest pose.
+    // Required for Bandai (standing pose in frame-0) AND AIST/GVHMR (some BVH files
+    // have non-identity frame-0 rotations despite normalization). Delta retarget is
+    // safe for identity frame-0 too (delta = identity → no change).
     const bvhRestWorldQ = {};
     const useDeltaRetarget = (format === 'BANDAI');
     const useDeltaDirCorrection = (format === 'BANDAI');
@@ -570,43 +241,8 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
     // Identify root DEF bone (no mapped parent → skip direction correction)
     const rootDefName = Object.values(mapping).find(d => d && defSkel.boneByName[d]);
 
-    // Bones where direction correction should be skipped.
-    // AIST: ankle→foot offset points downward (-Y,-Z) while DEF-foot points forward.
-    // Direction correction maps forward→down causing "ballerina feet".
-    const skipDirCorrectionBones = new Set();
-    if (format === 'AIST') {
-        skipDirCorrectionBones.add('DEF-foot.L');
-        skipDirCorrectionBones.add('DEF-foot.R');
-        skipDirCorrectionBones.add('DEF-toe.L');
-        skipDirCorrectionBones.add('DEF-toe.R');
-        // AIST has 2-bone neck (Neck→Head) but DEF has 3-bone chain
-        // (spine.004→spine.005→spine.006). Topology mismatch causes
-        // direction correction to bend the head at unnatural angles.
-        skipDirCorrectionBones.add('DEF-spine.004');
-        skipDirCorrectionBones.add('DEF-spine.006');
-    }
-    if (format === 'MOCAPNET') {
-        skipDirCorrectionBones.add('DEF-foot.L');
-        skipDirCorrectionBones.add('DEF-foot.R');
-        skipDirCorrectionBones.add('DEF-toe.L');
-        skipDirCorrectionBones.add('DEF-toe.R');
-        skipDirCorrectionBones.add('DEF-jaw');
-        skipDirCorrectionBones.add('DEF-spine.004');
-        skipDirCorrectionBones.add('DEF-spine.006');
-    }
-    if (format === 'OPENPOSE') {
-        skipDirCorrectionBones.add('DEF-foot.L');
-        skipDirCorrectionBones.add('DEF-foot.R');
-        skipDirCorrectionBones.add('DEF-toe.L');
-        skipDirCorrectionBones.add('DEF-toe.R');
-        skipDirCorrectionBones.add('DEF-jaw');
-        skipDirCorrectionBones.add('DEF-spine.004');
-        skipDirCorrectionBones.add('DEF-spine.006');
-        // OpenPose collar→shoulder offset points upward; direction correction
-        // rotates shoulders too high. Skip to use pure rotation transfer.
-        skipDirCorrectionBones.add('DEF-shoulder.L');
-        skipDirCorrectionBones.add('DEF-shoulder.R');
-    }
+    // Bones where direction correction should be skipped (loaded from API).
+    const skipDirCorrectionBones = new Set(getSkipDirCorrection(format));
 
     // Sort mapped DEF bones by hierarchy depth (parents first) so that
     // direction corrections can be propagated down to skip bones.
@@ -925,4 +561,64 @@ export function retargetBVHToDefClip(bvhResult, defSkel, format, opts = {}) {
 
     console.log(`[RETARGET] ${newTracks.length} tracks, ${fc} frames`);
     return new THREE.AnimationClip('retargeted', bvhClip.duration, newTracks);
+}
+
+
+// =========================================================================
+// Hybrid merge: combine body clip + face/hands clip
+// =========================================================================
+
+// FACE_HAND_BONES loaded from API via getFaceHandBones()
+
+/**
+ * Merge two retargeted AnimationClips on the DEF skeleton.
+ * Body bones come from bodyClip, face+hand bones from faceHandClip.
+ *
+ * Both clips must already be retargeted to DEF skeleton (via retargetBVHToDefClip).
+ *
+ * @param {THREE.AnimationClip} bodyClip - Retargeted SMPL body clip (AIST format)
+ * @param {THREE.AnimationClip} faceHandClip - Retargeted MocapNET v4 clip (MOCAPNET format)
+ * @returns {THREE.AnimationClip} Merged clip
+ */
+export function mergeRetargetedClips(bodyClip, faceHandClip) {
+    const faceHandBones = getFaceHandBones();
+
+    // Index tracks by bone name (track name format: "DEF-spine_006.quaternion")
+    const bodyMap = new Map();
+    for (const t of bodyClip.tracks) {
+        const boneName = t.name.split('.')[0];  // "DEF-spine_006"
+        bodyMap.set(boneName + '.' + t.name.split('.').slice(1).join('.'), t);
+    }
+    const faceMap = new Map();
+    for (const t of faceHandClip.tracks) {
+        const boneName = t.name.split('.')[0];
+        faceMap.set(boneName + '.' + t.name.split('.').slice(1).join('.'), t);
+    }
+
+    const merged = [];
+
+    // Body tracks: everything NOT in FACE_HAND_BONES
+    for (const [key, track] of bodyMap) {
+        const boneName = key.split('.')[0];
+        if (!faceHandBones.has(boneName)) {
+            merged.push(track);
+        }
+    }
+
+    // Face+Hand tracks: everything IN FACE_HAND_BONES
+    for (const [key, track] of faceMap) {
+        const boneName = key.split('.')[0];
+        if (faceHandBones.has(boneName)) {
+            merged.push(track);
+        }
+    }
+
+    // Use shorter duration to keep them in sync
+    const duration = Math.min(bodyClip.duration, faceHandClip.duration);
+    if (Math.abs(bodyClip.duration - faceHandClip.duration) > 0.5) {
+        console.warn(`[HYBRID] Frame mismatch: body=${bodyClip.duration.toFixed(1)}s, face=${faceHandClip.duration.toFixed(1)}s — using ${duration.toFixed(1)}s`);
+    }
+
+    console.log(`[HYBRID] Merged: ${merged.length} tracks (body: ${bodyMap.size}, face+hands: ${faceMap.size})`);
+    return new THREE.AnimationClip('hybrid', duration, merged);
 }

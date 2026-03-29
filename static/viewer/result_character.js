@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { detectBVHFormat, retargetBVHToDefClip } from './retarget_hybrid.js?v=27';
+import { detectBVHFormat, retargetBVHToDefClip, mergeRetargetedClips, loadRetargetConfig } from './retarget_hybrid.js?v=31';
+import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
 
 // =========================================================================
 // Tone mapping lookup
@@ -77,7 +78,8 @@ function blenderToThreeCoords(buf) {
  * @param {string} opts.panelId   - id of the side panel container
  * @param {string} opts.modelSelectId - id of the header model preset <select>
  */
-export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, modelSelectId }) {
+export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUrl, panelId, modelSelectId }) {
+    await loadRetargetConfig();
     const canvas = document.getElementById(canvasId);
     const video  = document.getElementById(videoId);
     const loadingEl = document.getElementById('characterLoading');
@@ -102,6 +104,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
 
     // --- Scene ---
     const scene = new THREE.Scene();
+    window._debugScene = scene;  // DEBUG: expose for Playwright comparison
     scene.background = new THREE.Color(0x1a1a2e);
 
     // --- Camera ---
@@ -347,9 +350,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
     // Apply initial skin color
     applySkinColor(currentBodyType);
 
-    // Load BVH
+    // Load BVH (hybrid mode loads two BVHs and merges them)
     if (isSkinned) {
-        loadBVH(bvhUrl);
+        loadBVH(bvhUrl, bvhFaceUrl || null);
     }
 
     // Connect WebSocket for morphs
@@ -387,7 +390,11 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         footChk.addEventListener('change', () => {
             enableFootCorrection = footChk.checked;
             if (cachedBvhResult && cachedBvhFormat) {
-                applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
+                if (cachedBvhFaceResult && cachedBvhFaceFormat) {
+                    applyHybridRetarget(cachedBvhResult, cachedBvhFormat, cachedBvhFaceResult, cachedBvhFaceFormat);
+                } else {
+                    applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
+                }
             }
         });
     }
@@ -1049,7 +1056,11 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
 
             // Re-apply BVH from cache
             if (isSkinned && cachedBvhResult) {
-                applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
+                if (cachedBvhFaceResult && cachedBvhFaceFormat) {
+                    applyHybridRetarget(cachedBvhResult, cachedBvhFormat, cachedBvhFaceResult, cachedBvhFaceFormat);
+                } else {
+                    applyBvhRetarget(cachedBvhResult, cachedBvhFormat);
+                }
             }
         } catch (e) {
             console.error('[result_character] Body type switch failed:', e);
@@ -1148,57 +1159,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         return false;
     }
 
-    // =====================================================================
-    // Skeleton building
-    // =====================================================================
-
-    function buildDefSkeleton(skelData, swData) {
-        const skelByName = {};
-        for (const b of skelData.bones) skelByName[b.name] = b;
-
-        const bones = [];
-        const boneByName = {};
-        let rootBone = null;
-
-        for (const name of swData.bone_names) {
-            const bone = new THREE.Bone();
-            bone.name = name.replace(/\./g, '_');
-            bones.push(bone);
-            boneByName[name] = bone;
-        }
-
-        for (let i = 0; i < swData.bone_names.length; i++) {
-            const name = swData.bone_names[i];
-            const bone = bones[i];
-            const data = skelByName[name];
-            if (!data) continue;
-
-            const p = data.local_position;
-            bone.position.set(p[0], p[2], -p[1]);
-            const q = data.local_quaternion;
-            bone.quaternion.set(q[1], q[3], -q[2], q[0]);
-
-            if (data.parent && boneByName[data.parent]) {
-                boneByName[data.parent].add(bone);
-            } else {
-                if (!rootBone) rootBone = bone;
-            }
-        }
-
-        for (let i = 0; i < bones.length; i++) {
-            const name = swData.bone_names[i];
-            const data = skelByName[name];
-            if (!data) continue;
-            if (!data.parent && bones[i] !== rootBone) {
-                if (rootBone) rootBone.add(bones[i]);
-            }
-        }
-
-        if (!rootBone && bones.length > 0) rootBone = bones[0];
-        rootBone.updateWorldMatrix(true, true);
-        const skeleton = new THREE.Skeleton(bones);
-        return { skeleton, rootBone, bones, boneByName };
-    }
+    // buildDefSkeleton() imported from def_skeleton_builder.js
 
     function convertToDefSkinnedMesh() {
         if (isSkinned || !bodyMesh || !bodyGeometry) return;
@@ -1603,23 +1564,77 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, panelId, 
         controls.update();
     }
 
-    function loadBVH(url) {
+    let cachedBvhFaceResult = null;
+    let cachedBvhFaceFormat = null;
+
+    function loadBVH(url, faceUrl) {
         const loader = new BVHLoader();
-        loader.load(url, (result) => {
-            const bones = result.skeleton.bones;
-            if (bones.length === 0) return;
 
-            const format = detectBVHFormat(bones);
-            cachedBvhResult = result;
-            cachedBvhFormat = format;
+        if (faceUrl) {
+            // Hybrid mode: load both BVHs in parallel, merge after retarget
+            const p1 = new Promise((resolve, reject) => {
+                loader.load(url, resolve, undefined, reject);
+            });
+            const p2 = new Promise((resolve, reject) => {
+                const loader2 = new BVHLoader();
+                loader2.load(faceUrl, resolve, undefined, reject);
+            });
+            Promise.all([p1, p2]).then(([bodyResult, faceResult]) => {
+                if (bodyResult.skeleton.bones.length === 0) return;
 
-            applyBvhRetarget(result, format);
-            positionCameraAfterRetarget();
+                const bodyFormat = detectBVHFormat(bodyResult.skeleton.bones);
+                const faceFormat = detectBVHFormat(faceResult.skeleton.bones);
 
-            console.log(`[result_character] BVH loaded: ${format}, ${result.clip.duration.toFixed(1)}s`);
-        }, undefined, (err) => {
-            console.error('[result_character] BVH load error:', err);
-        });
+                cachedBvhResult = bodyResult;
+                cachedBvhFormat = bodyFormat;
+                cachedBvhFaceResult = faceResult;
+                cachedBvhFaceFormat = faceFormat;
+
+                applyHybridRetarget(bodyResult, bodyFormat, faceResult, faceFormat);
+                positionCameraAfterRetarget();
+
+                console.log(`[result_character] Hybrid BVH: body=${bodyFormat} ${bodyResult.clip.duration.toFixed(1)}s, face=${faceFormat} ${faceResult.clip.duration.toFixed(1)}s`);
+            }).catch(err => {
+                console.error('[result_character] Hybrid BVH load error:', err);
+            });
+        } else {
+            // Single BVH mode
+            loader.load(url, (result) => {
+                const bones = result.skeleton.bones;
+                if (bones.length === 0) return;
+
+                const format = detectBVHFormat(bones);
+                cachedBvhResult = result;
+                cachedBvhFormat = format;
+                cachedBvhFaceResult = null;
+                cachedBvhFaceFormat = null;
+
+                applyBvhRetarget(result, format);
+                positionCameraAfterRetarget();
+
+                console.log(`[result_character] BVH loaded: ${format}, ${result.clip.duration.toFixed(1)}s`);
+            }, undefined, (err) => {
+                console.error('[result_character] BVH load error:', err);
+            });
+        }
+    }
+
+    function applyHybridRetarget(bodyResult, bodyFormat, faceResult, faceFormat) {
+        if (mixer) { mixer.stopAllAction(); mixer = null; currentAction = null; }
+
+        const retargetOpts = { bodyMesh };
+        if (enableFootCorrection) retargetOpts.footCorrection = true;
+
+        const bodyClip = retargetBVHToDefClip(bodyResult, defSkeleton, bodyFormat, retargetOpts);
+        const faceClip = retargetBVHToDefClip(faceResult, defSkeleton, faceFormat, retargetOpts);
+        const clip = mergeRetargetedClips(bodyClip, faceClip);
+
+        mixer = new THREE.AnimationMixer(bodyMesh);
+        currentAction = mixer.clipAction(clip);
+        currentAction.setLoop(THREE.LoopOnce);
+        currentAction.clampWhenFinished = true;
+        currentAction.play();
+        bvhClipDuration = clip.duration;
     }
 
     // =====================================================================

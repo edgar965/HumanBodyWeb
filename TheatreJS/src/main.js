@@ -82,6 +82,7 @@ window.addEventListener('DOMContentLoaded', () => {
     window.currentTime = 0;
     window.animDuration = 1;
 
+
     // ── Raycaster für Licht-Icon Clicks + Character Selection ──
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -327,6 +328,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const skinIndices = new Float32Array(vCount * 4);
         const skinWeights = new Float32Array(vCount * 4);
 
+        const swCount = skinWeightData.weights ? skinWeightData.weights.length : 0;
+        if (vCount !== swCount) {
+            console.error(`[SkinnedMesh] VERTEX COUNT MISMATCH! mesh=${vCount} weights=${swCount}`);
+        }
+
         for (let v = 0; v < vCount; v++) {
             const infs = skinWeightData.weights[v] || [];
             const sorted = infs.slice().sort((a, b) => b[1] - a[1]).slice(0, 4);
@@ -341,12 +347,12 @@ window.addEventListener('DOMContentLoaded', () => {
         geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
         geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
 
-        // Rebuild skeleton — reusing a Skeleton whose bones were created before
-        // parenting to SkinnedMesh causes stale boneTexture/boneMatrices state.
-        // Use global defSkeleton built by loadSkeletonAndWeights
-        if (!defSkeleton) {
-            defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
-        }
+        // ALWAYS rebuild skeleton fresh (like Dashboard's convertToDefSkinnedMesh).
+        // Reusing a skeleton whose bones were animated causes stale world matrices
+        // and boneInverses that don't match the current bind context.
+        defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
+
+        console.log(`[SkinnedMesh] verts=${vCount} weights=${swCount} bones=${defSkeleton.bones.length}`);
 
         // Create SkinnedMesh
         const material = bodyMesh.material; // Reuse existing material (array of materials)
@@ -375,6 +381,22 @@ window.addEventListener('DOMContentLoaded', () => {
         characterGroup.userData.skeleton = defSkeleton.skeleton;
         characterGroup.userData.rootBone = defSkeleton.rootBone;
 
+        // Recreate SkeletonHelper if it existed (rootBone changed)
+        if (skeletonHelper) {
+            const wasVisible = skeletonHelper.visible;
+            scene.remove(skeletonHelper);
+            skeletonHelper.dispose();
+            skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+            skeletonHelper.material.depthTest = false;
+            skeletonHelper.material.depthWrite = false;
+            skeletonHelper.material.color.set(0x00ffaa);
+            skeletonHelper.material.linewidth = 2;
+            skeletonHelper.renderOrder = 999;
+            scene.add(skeletonHelper);
+            skeletonHelper.visible = wasVisible;
+            console.log('✓ SkeletonHelper recreated for new skeleton');
+        }
+
         console.log('✓ SkinnedMesh created:',
             'bones:', defSkeleton.skeleton.bones.length,
             'skinIndex:', !!geo.attributes.skinIndex,
@@ -386,10 +408,11 @@ window.addEventListener('DOMContentLoaded', () => {
             window.loadedCharacters.push(characterGroup);
         }
 
-        // Bind garments to skeleton (like Dashboard viewer.js)
+        // Bind garments to skeleton (like Result page result_character.js:1319)
+        // Do NOT add rootBone to garment — rootBone must stay in bodyMesh.
+        // Garments share the same Skeleton object and use bodyMesh's bindMatrix.
         characterGroup.traverse((child) => {
             if (child.isSkinnedMesh && child !== skinnedMesh && child.userData.needsBinding) {
-                child.add(defSkeleton.rootBone);
                 child.bind(defSkeleton.skeleton, skinnedMesh.bindMatrix);
                 delete child.userData.needsBinding;
                 console.log('✓ Garment bound to skeleton:', child.name || child.userData.garmentId);
@@ -1054,23 +1077,78 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const bvhText = await fetchBVH(category, name);
 
-            // If we have a selected character, convert it to SkinnedMesh first
             let targetMesh = null;
+            let duration = 0;
+
             if (selectedCharacter) {
-                console.log('Selected character found, converting to SkinnedMesh...');
+                // Ensure SkinnedMesh exists
                 targetMesh = convertCharacterToSkinnedMesh(selectedCharacter, scene);
-                console.log('targetMesh:', !!targetMesh, 'isSkinnedMesh:', targetMesh?.isSkinnedMesh);
-            } else {
-                console.log('No selected character - using BVH bones only');
+
+                if (targetMesh) {
+                    // 1. Fresh skeleton (like result_character.js:1234)
+                    defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
+                    // 2. Remove old rootBone from mesh
+                    const oldRoots = targetMesh.children.filter(c => c.isBone);
+                    for (const r of oldRoots) targetMesh.remove(r);
+                    // 3. Add fresh rootBone + rebind (result_character.js:1242-1243)
+                    targetMesh.add(defSkeleton.rootBone);
+                    targetMesh.bind(defSkeleton.skeleton);
+
+                    // 4. Retarget (result_character.js:1550-1552)
+                    const bvhLoader = new BVHLoader();
+                    const bvhResult = bvhLoader.parse(bvhText);
+                    const format = detectBVHFormat(bvhResult.skeleton.bones);
+                    console.log(`BVH format: ${format}`);
+
+                    const clip = retargetBVHToDefClip(bvhResult, defSkeleton, format, { bodyMesh: targetMesh });
+
+                    // 5. Mixer on mesh (result_character.js:1554-1558)
+                    activeMixer = new THREE.AnimationMixer(targetMesh);
+                    currentAction = activeMixer.clipAction(clip);
+                    currentAction.setLoop(THREE.LoopRepeat);
+                    currentAction.play();
+                    currentAction.paused = true;
+                    duration = clip.duration || 1;
+
+                    // Apply frame 0 immediately (like result_character.js positionCameraAfterRetarget)
+                    activeMixer.setTime(0);
+                    targetMesh.updateWorldMatrix(true, true);
+                    defSkeleton.rootBone.updateWorldMatrix(true, true);
+
+                    // Recreate SkeletonHelper if needed (rootBone changed)
+                    if (skeletonHelper) {
+                        const wasVisible = skeletonHelper.visible;
+                        scene.remove(skeletonHelper);
+                        skeletonHelper.dispose();
+                        skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                        skeletonHelper.material.depthTest = false;
+                        skeletonHelper.material.depthWrite = false;
+                        skeletonHelper.material.color.set(0x00ffaa);
+                        skeletonHelper.material.linewidth = 2;
+                        skeletonHelper.renderOrder = 999;
+                        scene.add(skeletonHelper);
+                        skeletonHelper.visible = wasVisible;
+                    }
+
+                    // Rebind garments to the new skeleton (they still reference the old one)
+                    if (selectedCharacter) {
+                        selectedCharacter.traverse((child) => {
+                            if (child.isSkinnedMesh && child !== targetMesh) {
+                                child.bind(defSkeleton.skeleton, targetMesh.bindMatrix);
+                            }
+                        });
+                    }
+
+                    console.log(`✓ BVH loaded: ${format}, ${duration.toFixed(1)}s, ${clip.tracks.length} tracks`);
+                }
             }
 
-            // Load new animation
-            const { mixer, action, duration } = targetMesh
-                ? loadBVHOnSkinnedMesh(bvhText, targetMesh, scene, `${category}/${name}`)
-                : loadBVHFromText(bvhText, scene, `${category}/${name}`);
-            activeMixer = mixer;
-            currentAction = action;
-
+            if (!targetMesh) {
+                const { mixer, action, duration: d } = loadBVHFromText(bvhText, scene, `${category}/${name}`);
+                activeMixer = mixer;
+                currentAction = action;
+                duration = d;
+            }
             // Expose to window for debugging
             window.activeMixer = activeMixer;
 

@@ -31,7 +31,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'mocapnet_ui.no_cache.NoCacheStaticMiddleware',
+    'ui.no_cache.NoCacheStaticMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -41,7 +41,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'mocapnet_ui.urls'
+ROOT_URLCONF = 'ui.urls'
 
 TEMPLATES = [
     {
@@ -54,14 +54,14 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'mocapnet_ui.context_processors.version',
+                'ui.context_processors.version',
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'mocapnet_ui.wsgi.application'
-ASGI_APPLICATION = 'mocapnet_ui.asgi.application'
+WSGI_APPLICATION = 'ui.wsgi.application'
+ASGI_APPLICATION = 'ui.asgi.application'
 
 DATABASES = {
     'default': {

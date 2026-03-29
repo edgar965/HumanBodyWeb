@@ -6,7 +6,7 @@ from django.conf import settings
 import django
 import os
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mocapnet_ui.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ui.settings')
 django.setup()
 
 bvh_root = Path(settings.HUMANBODY_ROOT) / 'data' / 'animations' / 'bvh'

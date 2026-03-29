@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { detectBVHFormat, retargetBVHToDefClip, BVH_TO_DEF_CMU, BVH_TO_DEF_MIXAMO, BVH_TO_DEF_MOCAPNET, BVH_TO_DEF_OPENPOSE, BVH_TO_DEF_BANDAI, BVH_TO_DEF_AIST } from './retarget_hybrid.js?v=21';
+import { detectBVHFormat, retargetBVHToDefClip, loadRetargetConfig, getMappingForFormat } from './retarget_hybrid.js?v=31';
+import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
 
 // =========================================================================
 // Global state
@@ -57,60 +58,13 @@ const CYL_RADIUS_BOT = 0.004;
 // Retarget imports from shared module (retarget.js)
 
 // =========================================================================
-// Build DEF Skeleton (from def_skeleton.json + skin_weights bone_names)
-// =========================================================================
-function buildDefSkeleton(skelData, swData) {
-    const skelByName = {};
-    for (const b of skelData.bones) skelByName[b.name] = b;
-
-    const bones = [];
-    const boneByName = {};
-    let rootBone = null;
-
-    for (const name of swData.bone_names) {
-        const bone = new THREE.Bone();
-        bone.name = name.replace(/\./g, '_');
-        bones.push(bone);
-        boneByName[name] = bone;
-    }
-
-    for (let i = 0; i < swData.bone_names.length; i++) {
-        const name = swData.bone_names[i];
-        const bone = bones[i];
-        const data = skelByName[name];
-        if (!data) continue;
-
-        const p = data.local_position;
-        bone.position.set(p[0], p[2], -p[1]);
-        const q = data.local_quaternion;
-        bone.quaternion.set(q[1], q[3], -q[2], q[0]);
-
-        if (data.parent && boneByName[data.parent]) {
-            boneByName[data.parent].add(bone);
-        } else {
-            if (!rootBone) rootBone = bone;
-        }
-    }
-
-    for (let i = 0; i < bones.length; i++) {
-        const name = swData.bone_names[i];
-        const data = skelByName[name];
-        if (!data) continue;
-        if (!data.parent && bones[i] !== rootBone) {
-            if (rootBone) rootBone.add(bones[i]);
-        }
-    }
-
-    if (!rootBone && bones.length > 0) rootBone = bones[0];
-    rootBone.updateWorldMatrix(true, true);
-    const skeleton = new THREE.Skeleton(bones);
-    return { skeleton, rootBone, bones, boneByName };
-}
+// buildDefSkeleton() imported from def_skeleton_builder.js
 
 // =========================================================================
 // Initialization
 // =========================================================================
-function init() {
+async function init() {
+    await loadRetargetConfig();
     const canvas = document.getElementById('viewer-canvas');
     const container = canvas.parentElement;
     const w = container.clientWidth;

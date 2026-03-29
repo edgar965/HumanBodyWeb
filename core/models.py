@@ -31,6 +31,9 @@ class BVHJob(models.Model):
         ('gvhmr', 'GVHMR'),
         ('wham', 'WHAM'),
         ('prompthmr', 'PromptHMR'),
+        # Hybrid Pipelines (SMPL Body + MocapNET v4 Face+Hands)
+        ('hybrid_gvhmr', 'Hybrid (GVHMR + MocapNET v4)'),
+        ('hybrid_prompthmr', 'Hybrid (PromptHMR + MocapNET v4)'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -38,11 +41,16 @@ class BVHJob(models.Model):
     video_file = models.FileField(upload_to='uploads/')
     csv_file = models.CharField(max_length=512, blank=True)
     bvh_file = models.CharField(max_length=512, blank=True)
+    bvh_file_face = models.CharField(max_length=512, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    pipeline = models.CharField(max_length=20, choices=PIPELINE_CHOICES, default='mediapipe')
+    pipeline = models.CharField(max_length=30, choices=PIPELINE_CHOICES, default='mediapipe')
     progress = models.IntegerField(default=0)  # 0-100
     progress_detail = models.CharField(max_length=100, blank=True)  # e.g. "150 / 20000 frames"
     error_message = models.TextField(blank=True)
+    pipeline_params = models.JSONField(
+        default=dict, blank=True,
+        help_text="Per-job pipeline parameters (override AppSettings defaults)",
+    )
     fps = models.FloatField(default=30.0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
