@@ -84,8 +84,8 @@ let bodyMesh = null;
 let bodyGeometry = null;
 let skeletonHelper = null;
 let rigVisible = false;
-let defSkeletonData = null;
-let defSkeleton = null;
+let rigifySkeletonData = null;
+let rigifySkeleton = null;
 let skinWeightData = null;
 const MODEL_OFFSET_X = -0.7;   // HumanBody shifted left
 
@@ -199,7 +199,7 @@ function init() {
 
     // Load data — skeleton first, then mesh (so SkinnedMesh can be created)
     loadMorphs();
-    loadDefSkeleton().then(() => {
+    loadRigifySkeleton().then(() => {
         loadMesh().then(() => {
             animate();
             loadSmplxModel();
@@ -319,8 +319,8 @@ async function loadMesh(bodyType) {
 
         if (bodyMesh) {
             // Detach skeleton root from old SkinnedMesh before disposal
-            if (bodyMesh.isSkinnedMesh && defSkeleton && defSkeleton.rootBone) {
-                bodyMesh.remove(defSkeleton.rootBone);
+            if (bodyMesh.isSkinnedMesh && rigifySkeleton && rigifySkeleton.rootBone) {
+                bodyMesh.remove(rigifySkeleton.rootBone);
             }
             scene.remove(bodyMesh);
             bodyMesh.geometry?.dispose();
@@ -369,18 +369,18 @@ async function loadMesh(bodyType) {
         const mat = (index && groups.length > 0) ? materials : materials[0];
 
         // Create SkinnedMesh if skeleton + weights available, else regular Mesh
-        if (defSkeleton && skinWeightData && skinWeightData.weights) {
+        if (rigifySkeleton && skinWeightData && skinWeightData.weights) {
             const vertCount = geo.attributes.position.count;
-            const boneCount = defSkeleton.bones.length;
+            const boneCount = rigifySkeleton.bones.length;
             const skinIndices = new Uint16Array(vertCount * 4);
             const skinWeights = new Float32Array(vertCount * 4);
 
-            // Build bone name → index map (in defSkeleton.bones order)
+            // Build bone name → index map (in rigifySkeleton.bones order)
             const skelBoneNames = skinWeightData.bone_names;
-            // Map from skinWeightData bone index → defSkeleton bone index
+            // Map from skinWeightData bone index → rigifySkeleton bone index
             const swToBoneIdx = {};
             for (let si = 0; si < skelBoneNames.length; si++) {
-                const idx = defSkeleton.bones.indexOf(defSkeleton.boneByName[skelBoneNames[si]]);
+                const idx = rigifySkeleton.bones.indexOf(rigifySkeleton.boneByName[skelBoneNames[si]]);
                 if (idx >= 0) swToBoneIdx[si] = idx;
             }
 
@@ -396,17 +396,17 @@ async function loadMesh(bodyType) {
             geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
 
             bodyMesh = new THREE.SkinnedMesh(geo, mat);
-            const skeleton = new THREE.Skeleton(defSkeleton.bones);
-            bodyMesh.add(defSkeleton.rootBone);
+            const skeleton = new THREE.Skeleton(rigifySkeleton.bones);
+            bodyMesh.add(rigifySkeleton.rootBone);
 
             // Restore head bone to original position for clean bind
-            const headBone = defSkeleton.boneByName['DEF-spine.006'];
+            const headBone = rigifySkeleton.boneByName['DEF-spine.006'];
             if (headBone) {
                 if (headBone._origY === undefined) headBone._origY = headBone.position.y;
                 if (headBone._origZ === undefined) headBone._origZ = headBone.position.z;
                 headBone.position.y = headBone._origY;
                 headBone.position.z = headBone._origZ;
-                defSkeleton.rootBone.updateWorldMatrix(true, true);
+                rigifySkeleton.rootBone.updateWorldMatrix(true, true);
             }
 
             bodyMesh.bind(skeleton);
@@ -443,22 +443,22 @@ function requestMeshUpdate() {
 // =========================================================================
 // HumanBody DEF Skeleton
 // =========================================================================
-async function loadDefSkeleton(bodyType) {
+async function loadRigifySkeleton(bodyType) {
     bodyType = bodyType || currentBodyType;
     try {
-        const resp = await fetch(`${API}/def-skeleton/?body_type=${encodeURIComponent(bodyType)}`);
-        if (resp.ok) defSkeletonData = await resp.json();
+        const resp = await fetch(`${API}/rigify-skeleton/?body_type=${encodeURIComponent(bodyType)}`);
+        if (resp.ok) rigifySkeletonData = await resp.json();
     } catch (e) { console.warn('DEF skeleton not available:', e); }
     try {
         const resp = await fetch(`${API}/skin-weights/?body_type=${encodeURIComponent(bodyType)}`);
         if (resp.ok) skinWeightData = await resp.json();
     } catch (e) { console.warn('Skin weights not available:', e); }
-    if (defSkeletonData && skinWeightData) buildDefSkeleton();
+    if (rigifySkeletonData && skinWeightData) buildRigifySkeleton();
 }
 
-function buildDefSkeleton() {
+function buildRigifySkeleton() {
     const skelByName = {};
-    for (const b of defSkeletonData.bones) skelByName[b.name] = b;
+    for (const b of rigifySkeletonData.bones) skelByName[b.name] = b;
 
     const bones = [];
     const boneByName = {};
@@ -503,7 +503,7 @@ function buildDefSkeleton() {
 
     if (rootBone) {
         rootBone.updateWorldMatrix(true, true);
-        defSkeleton = { rootBone, bones, boneByName, restQuats };
+        rigifySkeleton = { rootBone, bones, boneByName, restQuats };
     }
 }
 
@@ -512,8 +512,8 @@ function buildDefSkeleton() {
 // =========================================================================
 // smplxExpr: [jawOpen, smile, browUp, browDown, lipUp, lipCorner, cheekPuff, squint, noseWrinkle, eyeWide]
 function applyFacialExpression(expr) {
-    if (!defSkeleton || !defSkeleton.restQuats) return;
-    const { boneByName, restQuats } = defSkeleton;
+    if (!rigifySkeleton || !rigifySkeleton.restQuats) return;
+    const { boneByName, restQuats } = rigifySkeleton;
 
     // Clamp SMPL-X expression values to reasonable range (-1.5..+1.5)
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -613,7 +613,7 @@ function applyFacialExpression(expr) {
     }
 
     // Force skeleton update
-    if (defSkeleton.rootBone) defSkeleton.rootBone.updateWorldMatrix(true, true);
+    if (rigifySkeleton.rootBone) rigifySkeleton.rootBone.updateWorldMatrix(true, true);
     if (bodyMesh && bodyMesh.skeleton) bodyMesh.skeleton.update();
 
     console.log('[FaceExpr] Applied:', {jawOpen, smile, browUp, browDown, lipUp, lipCorner, cheekPuff, squint, noseWrinkle, eyeWide});
@@ -1117,8 +1117,8 @@ function initRigToggle() {
     if (!btn) return;
     btn.addEventListener('click', () => {
         rigVisible = !rigVisible;
-        if (rigVisible && !skeletonHelper && defSkeleton) {
-            skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+        if (rigVisible && !skeletonHelper && rigifySkeleton) {
+            skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
             skeletonHelper.material.depthTest = false;
             skeletonHelper.material.depthWrite = false;
             skeletonHelper.material.color.set(0x00ffaa);
@@ -1454,10 +1454,10 @@ async function analyzePhoto() {
             try {
                 const swResp = await fetch(`${API}/skin-weights/?body_type=${encodeURIComponent(currentBodyType)}`);
                 skinWeightData = await swResp.json();
-                const dsResp = await fetch(`${API}/def-skeleton/?body_type=${encodeURIComponent(currentBodyType)}`);
-                defSkeletonData = await dsResp.json();
-                defSkeleton = null;
-                buildDefSkeleton();
+                const dsResp = await fetch(`${API}/rigify-skeleton/?body_type=${encodeURIComponent(currentBodyType)}`);
+                rigifySkeletonData = await dsResp.json();
+                rigifySkeleton = null;
+                buildRigifySkeleton();
                 console.log('[Photo→3D] Reloaded skin weights + skeleton for', currentBodyType);
             } catch (e) { console.warn('Failed to reload skin weights:', e); }
 
@@ -1773,10 +1773,10 @@ async function loadJobResult(jobId) {
         try {
             const swResp = await fetch(`${API}/skin-weights/?body_type=${encodeURIComponent(currentBodyType)}`);
             skinWeightData = await swResp.json();
-            const dsResp = await fetch(`${API}/def-skeleton/?body_type=${encodeURIComponent(currentBodyType)}`);
-            defSkeletonData = await dsResp.json();
-            defSkeleton = null;
-            buildDefSkeleton();
+            const dsResp = await fetch(`${API}/rigify-skeleton/?body_type=${encodeURIComponent(currentBodyType)}`);
+            rigifySkeletonData = await dsResp.json();
+            rigifySkeleton = null;
+            buildRigifySkeleton();
         } catch (e) { console.warn('Failed to reload skin weights:', e); }
 
         await loadMesh(currentBodyType);

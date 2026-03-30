@@ -33,14 +33,14 @@ export function detectBVHFormat(bones) {
  * Python SkeletonGeometry already works in Three.js coordinate space,
  * so no coordinate conversion is needed here.
  */
-function buildClipFromRetargetData(data, defSkel) {
+function buildClipFromRetargetData(data, rigifySkel) {
     const times = new Float32Array(data.times);
     const tracks = [];
     let matched = 0, missed = 0;
     const missedNames = [];
 
     for (const [boneName, values] of Object.entries(data.tracks)) {
-        const bone = defSkel.boneByName[boneName];
+        const bone = rigifySkel.boneByName[boneName];
         if (!bone) { missed++; missedNames.push(boneName); continue; }
         matched++;
         tracks.push(new THREE.QuaternionKeyframeTrack(
@@ -48,7 +48,7 @@ function buildClipFromRetargetData(data, defSkel) {
     }
 
     if (data.position_track) {
-        const bone = defSkel.boneByName[data.position_track.bone];
+        const bone = rigifySkel.boneByName[data.position_track.bone];
         if (bone) {
             tracks.push(new THREE.VectorKeyframeTrack(
                 `${bone.name}.position`, times, new Float32Array(data.position_track.values)));
@@ -66,7 +66,7 @@ function buildClipFromRetargetData(data, defSkel) {
 /**
  * Server-side retarget by category/name.
  */
-export async function fetchRetargetedClip(bvhCategory, bvhName, defSkel, opts = {}) {
+export async function fetchRetargetedClip(bvhCategory, bvhName, rigifySkel, opts = {}) {
     const params = new URLSearchParams();
     if (opts.bodyHeight) params.set('body_height', opts.bodyHeight);
     if (opts.footCorrection) params.set('foot_correction', '1');
@@ -77,13 +77,13 @@ export async function fetchRetargetedClip(bvhCategory, bvhName, defSkel, opts = 
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`Retarget API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
-    return buildClipFromRetargetData(data, defSkel);
+    return buildClipFromRetargetData(data, rigifySkel);
 }
 
 /**
  * Server-side retarget from raw BVH text.
  */
-export async function fetchRetargetedClipFromText(bvhText, defSkel, opts = {}) {
+export async function fetchRetargetedClipFromText(bvhText, rigifySkel, opts = {}) {
     const resp = await fetch('/api/character/retarget-bvh-text/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,5 +96,5 @@ export async function fetchRetargetedClipFromText(bvhText, defSkel, opts = {}) {
     });
     if (!resp.ok) throw new Error(`Text retarget API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
-    return buildClipFromRetargetData(data, defSkel);
+    return buildClipFromRetargetData(data, rigifySkel);
 }

@@ -312,8 +312,8 @@ def test_character_skin_weights(request):
 
 
 @require_GET
-def test_character_def_skeleton(request):
-    """Return DEF skeleton from the test version's data."""
+def test_character_rigify_skeleton(request):
+    """Return Rigify skeleton from the test version's data."""
     skel_path = os.path.join(_get_test_data_dir(), 'def_skeleton.json')
     if not os.path.isfile(skel_path):
         return JsonResponse({'error': 'DEF skeleton not exported yet'}, status=404)

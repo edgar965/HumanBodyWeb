@@ -12,7 +12,7 @@ import {
 } from './scene-manager.js';
 import { PRESETS, applyPreset } from './presets.js';
 import { fetchRetargetedClip, fetchRetargetedClipFromText, detectBVHFormat } from './retarget_hybrid.js';
-import { buildDefSkeleton } from './def_skeleton_builder.js';
+import { buildRigifySkeleton } from './rigify_skeleton_builder.js';
 import { KeyframeUI } from './keyframe-ui.js';
 
 // Theatre.js ignores the getProject({ state }) param if localStorage exists.
@@ -93,10 +93,10 @@ window.addEventListener('DOMContentLoaded', () => {
     let reloadDebounceTimer = null; // Debounce for character reload
 
     // Skeleton and skin weights data (loaded once at startup)
-    let defSkeletonData = null;
+    let rigifySkeletonData = null;
     let skinWeightData = null;
     let skeletonLoadingPromise = null;
-    let defSkeleton = null;  // { skeleton, rootBone, bones, boneByName } - like Dashboard
+    let rigifySkeleton = null;  // { skeleton, rootBone, bones, boneByName } - like Dashboard
     let skeletonHelper = null;  // Single global SkeletonHelper - like Dashboard
     let rigVisible = false;  // Rig visibility state - like Dashboard
 
@@ -107,21 +107,21 @@ window.addEventListener('DOMContentLoaded', () => {
         skeletonLoadingPromise = (async () => {
             try {
                 const [skelResp, weightsResp] = await Promise.all([
-                    fetch('/api/character/def-skeleton/'),
+                    fetch('/api/character/rigify-skeleton/'),
                     fetch('/api/character/skin-weights/')
                 ]);
-                if (skelResp.ok) defSkeletonData = await skelResp.json();
+                if (skelResp.ok) rigifySkeletonData = await skelResp.json();
                 if (weightsResp.ok) skinWeightData = await weightsResp.json();
-                console.log('✓ Loaded skeleton and skin weights:', defSkeletonData?.bones?.length || 0, 'bones');
+                console.log('✓ Loaded skeleton and skin weights:', rigifySkeletonData?.bones?.length || 0, 'bones');
 
-                // Build defSkeleton object using Dashboard's buildDefSkeleton function
-                if (defSkeletonData && skinWeightData) {
-                    defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
-                    console.log('✓ Built defSkeleton:', defSkeleton.bones.length, 'bones');
+                // Build rigifySkeleton object using Dashboard's buildRigifySkeleton function
+                if (rigifySkeletonData && skinWeightData) {
+                    rigifySkeleton = buildRigifySkeleton(rigifySkeletonData, skinWeightData);
+                    console.log('✓ Built rigifySkeleton:', rigifySkeleton.bones.length, 'bones');
 
-                    // Make defSkeletonData available globally for test
-                    window.defSkeletonData = defSkeletonData;
-                    window.defSkeleton = defSkeleton;
+                    // Make rigifySkeletonData available globally for test
+                    window.rigifySkeletonData = rigifySkeletonData;
+                    window.rigifySkeleton = rigifySkeleton;
                 }
 
                 // Auto-convert any characters that were loaded before skeleton was ready
@@ -147,7 +147,7 @@ window.addEventListener('DOMContentLoaded', () => {
      */
     function autoConvertToSkinnedMesh(characterGroup) {
         // Only convert if skeleton data is ready
-        if (defSkeletonData && skinWeightData && !characterGroup.userData.isSkinnedMesh) {
+        if (rigifySkeletonData && skinWeightData && !characterGroup.userData.isSkinnedMesh) {
             setTimeout(() => {
                 try {
                     convertCharacterToSkinnedMesh(characterGroup, scene);
@@ -163,7 +163,7 @@ window.addEventListener('DOMContentLoaded', () => {
      * Load BVH animation on a SkinnedMesh via server-side retarget API.
      */
     async function loadBVHOnSkinnedMesh(bvhText, skinnedMesh, scene, animName) {
-        if (!defSkeleton || !defSkeleton.boneByName) {
+        if (!rigifySkeleton || !rigifySkeleton.boneByName) {
             throw new Error('Skeleton not ready');
         }
 
@@ -173,7 +173,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
         }
 
-        const clip = await fetchRetargetedClipFromText(bvhText, defSkeleton, { bodyHeight: bodyH });
+        const clip = await fetchRetargetedClipFromText(bvhText, rigifySkeleton, { bodyHeight: bodyH });
 
         const mixer = new THREE.AnimationMixer(skinnedMesh);
         const action = mixer.clipAction(clip);
@@ -197,7 +197,7 @@ window.addEventListener('DOMContentLoaded', () => {
      * COPIED FROM Dashboard-Scene viewer.js convertToDefSkinnedMesh (lines 780-828)
      */
     function convertCharacterToSkinnedMesh(characterGroup, scene) {
-        if (!defSkeletonData || !skinWeightData) {
+        if (!rigifySkeletonData || !skinWeightData) {
             console.warn('Cannot convert to SkinnedMesh: skeleton/weights not loaded');
             return null;
         }
@@ -246,9 +246,9 @@ window.addEventListener('DOMContentLoaded', () => {
         // ALWAYS rebuild skeleton fresh (like Dashboard's convertToDefSkinnedMesh).
         // Reusing a skeleton whose bones were animated causes stale world matrices
         // and boneInverses that don't match the current bind context.
-        defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
+        rigifySkeleton = buildRigifySkeleton(rigifySkeletonData, skinWeightData);
 
-        console.log(`[SkinnedMesh] verts=${vCount} weights=${swCount} bones=${defSkeleton.bones.length}`);
+        console.log(`[SkinnedMesh] verts=${vCount} weights=${swCount} bones=${rigifySkeleton.bones.length}`);
 
         // Create SkinnedMesh
         const material = bodyMesh.material; // Reuse existing material (array of materials)
@@ -264,8 +264,8 @@ window.addEventListener('DOMContentLoaded', () => {
         skinnedMesh.receiveShadow = true;
 
         // Add root bone and bind skeleton
-        skinnedMesh.add(defSkeleton.rootBone);
-        skinnedMesh.bind(defSkeleton.skeleton);
+        skinnedMesh.add(rigifySkeleton.rootBone);
+        skinnedMesh.bind(rigifySkeleton.skeleton);
 
         // Replace old mesh in character group
         characterGroup.remove(bodyMesh);
@@ -274,15 +274,15 @@ window.addEventListener('DOMContentLoaded', () => {
         // Store references
         characterGroup.userData.isSkinnedMesh = true;
         characterGroup.userData.skinnedMesh = skinnedMesh;
-        characterGroup.userData.skeleton = defSkeleton.skeleton;
-        characterGroup.userData.rootBone = defSkeleton.rootBone;
+        characterGroup.userData.skeleton = rigifySkeleton.skeleton;
+        characterGroup.userData.rootBone = rigifySkeleton.rootBone;
 
         // Recreate SkeletonHelper if it existed (rootBone changed)
         if (skeletonHelper) {
             const wasVisible = skeletonHelper.visible;
             scene.remove(skeletonHelper);
             skeletonHelper.dispose();
-            skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+            skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
             skeletonHelper.material.depthTest = false;
             skeletonHelper.material.depthWrite = false;
             skeletonHelper.material.color.set(0x00ffaa);
@@ -294,7 +294,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         console.log('✓ SkinnedMesh created:',
-            'bones:', defSkeleton.skeleton.bones.length,
+            'bones:', rigifySkeleton.skeleton.bones.length,
             'skinIndex:', !!geo.attributes.skinIndex,
             'skinWeight:', !!geo.attributes.skinWeight);
 
@@ -309,7 +309,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // Garments share the same Skeleton object and use bodyMesh's bindMatrix.
         characterGroup.traverse((child) => {
             if (child.isSkinnedMesh && child !== skinnedMesh && child.userData.needsBinding) {
-                child.bind(defSkeleton.skeleton, skinnedMesh.bindMatrix);
+                child.bind(rigifySkeleton.skeleton, skinnedMesh.bindMatrix);
                 delete child.userData.needsBinding;
                 console.log('✓ Garment bound to skeleton:', child.name || child.userData.garmentId);
             }
@@ -384,7 +384,7 @@ window.addEventListener('DOMContentLoaded', () => {
             // Apply the child's world transform so position is correct
             child.updateWorldMatrix(true, false);
             skinnedChild.applyMatrix4(child.matrixWorld);
-            skinnedChild.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            skinnedChild.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
             skinnedChild.userData.isHair = true;
             group.add(skinnedChild);
         }
@@ -647,8 +647,8 @@ window.addEventListener('DOMContentLoaded', () => {
             rigVisible = !rigVisible;
             if (rigVisible) {
                 // Create helper if needed (from DEF skeleton when available)
-                if (!skeletonHelper && defSkeleton) {
-                    skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                if (!skeletonHelper && rigifySkeleton) {
+                    skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
                     skeletonHelper.material.depthTest = false;
                     skeletonHelper.material.depthWrite = false;
                     skeletonHelper.material.color.set(0x00ffaa);
@@ -978,14 +978,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 // Ensure SkinnedMesh exists (builds skeleton ONCE, binds garments+hair)
                 targetMesh = convertCharacterToSkinnedMesh(selectedCharacter, scene);
 
-                if (targetMesh && defSkeleton) {
+                if (targetMesh && rigifySkeleton) {
                     // Body height for scaling
                     let bodyH = 1.68;
                     const bb = new THREE.Box3().setFromObject(targetMesh);
                     if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
 
                     // Server-side retarget via API (like result_character.js applyBvhRetarget)
-                    const clip = await fetchRetargetedClip(category, name, defSkeleton, { bodyHeight: bodyH });
+                    const clip = await fetchRetargetedClip(category, name, rigifySkeleton, { bodyHeight: bodyH });
 
                     // Mixer on mesh (like result_character.js:1502-1507)
                     activeMixer = new THREE.AnimationMixer(targetMesh);
@@ -998,7 +998,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     // Apply frame 0 immediately
                     activeMixer.setTime(0);
                     targetMesh.updateWorldMatrix(true, true);
-                    defSkeleton.rootBone.updateWorldMatrix(true, true);
+                    rigifySkeleton.rootBone.updateWorldMatrix(true, true);
 
                     console.log(`✓ BVH loaded (API): ${duration.toFixed(1)}s, ${clip.tracks.length} tracks`);
                 }

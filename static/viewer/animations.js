@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { detectBVHFormat, fetchRetargetedClipFromUrl } from './retarget_hybrid.js?v=32';
-import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
+import { buildRigifySkeleton } from './rigify_skeleton_builder.js?v=2';
 
 // =========================================================================
 // Tone mapping lookup (for scene settings)
@@ -36,10 +36,10 @@ let skeletonHelper = null;
 let playing = false;
 const bvhLoader = new BVHLoader();
 
-// DEF Skeleton + Skinning
-let defSkeletonData = null;
+// Rigify Skeleton + Skinning
+let rigifySkeletonData = null;
 let skinWeightData = null;
-let defSkeleton = null;
+let rigifySkeleton = null;
 let isSkinned = false;
 
 // Rig
@@ -145,14 +145,14 @@ async function init() {
         });
     }
 
-    // Rig toggle — single SkeletonHelper from defSkeleton
+    // Rig toggle — single SkeletonHelper from rigifySkeleton
     const rigToggle = document.getElementById('rig-toggle');
     if (rigToggle) {
         rigToggle.addEventListener('click', () => {
             rigVisible = !rigVisible;
             if (rigVisible) {
-                if (!skeletonHelper && defSkeleton) {
-                    skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                if (!skeletonHelper && rigifySkeleton) {
+                    skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
                     skeletonHelper.material.depthTest = false;
                     skeletonHelper.material.depthWrite = false;
                     skeletonHelper.material.color.set(0x00ffaa);
@@ -185,7 +185,7 @@ async function init() {
 
     // Load data
     loadMesh();
-    loadDefSkeleton();
+    loadRigifySkeleton();
     loadSkinWeights();
     loadSkinColors();
     loadAnimationTree();
@@ -458,12 +458,12 @@ async function loadAnimationTree() {
 // DEF Skeleton + Skin Weights
 // =========================================================================
 
-async function loadDefSkeleton() {
+async function loadRigifySkeleton() {
     try {
-        const resp = await fetch('/api/character/def-skeleton/');
+        const resp = await fetch('/api/character/rigify-skeleton/');
         if (resp.ok) {
-            defSkeletonData = await resp.json();
-            console.log(`DEF skeleton loaded: ${defSkeletonData.bone_count} bones`);
+            rigifySkeletonData = await resp.json();
+            console.log(`DEF skeleton loaded: ${rigifySkeletonData.bone_count} bones`);
         }
     } catch (e) {
         console.warn('DEF skeleton not available:', e);
@@ -479,9 +479,9 @@ async function loadSkinWeights() {
     }
 }
 
-// buildDefSkeleton() imported from def_skeleton_builder.js
+// buildRigifySkeleton() imported from rigify_skeleton_builder.js
 
-function convertToDefSkinnedMesh(defSkel, swData) {
+function convertToRigifySkinnedMesh(rigifySkel, swData) {
     if (isSkinned || !bodyMesh || !bodyGeometry) return;
 
     bodyGeometry = bodyGeometry.clone();
@@ -504,7 +504,7 @@ function convertToDefSkinnedMesh(defSkel, swData) {
     bodyGeometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
     bodyGeometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
 
-    defSkeleton = buildDefSkeleton(defSkeletonData, swData);
+    rigifySkeleton = buildRigifySkeleton(rigifySkeletonData, swData);
 
     const mat = bodyMesh.material;
     const pos = bodyMesh.position.clone();
@@ -514,11 +514,11 @@ function convertToDefSkinnedMesh(defSkel, swData) {
     bodyMesh = new THREE.SkinnedMesh(bodyGeometry, mat);
     bodyMesh.position.copy(pos);
     bodyMesh.visible = vis;
-    bodyMesh.add(defSkeleton.rootBone);
-    bodyMesh.bind(defSkeleton.skeleton);
+    bodyMesh.add(rigifySkeleton.rootBone);
+    bodyMesh.bind(rigifySkeleton.skeleton);
     scene.add(bodyMesh);
     isSkinned = true;
-    console.log('SkinnedMesh created:', bodyMesh.isSkinnedMesh, 'bones:', defSkeleton.skeleton.bones.length);
+    console.log('SkinnedMesh created:', bodyMesh.isSkinnedMesh, 'bones:', rigifySkeleton.skeleton.bones.length);
 }
 
 // Retarget via server-side API (retarget_hybrid.js)
@@ -534,20 +534,20 @@ async function loadBVHAnimation(url, name, fc) {
 
     document.getElementById('anim-info').textContent = `Lade ${name}...`;
 
-    if (defSkeletonData && skinWeightData && bodyMesh) {
+    if (rigifySkeletonData && skinWeightData && bodyMesh) {
         // Server-side retarget path: skin mesh + retarget BVH via API
-        if (!isSkinned) convertToDefSkinnedMesh(null, skinWeightData);
+        if (!isSkinned) convertToRigifySkinnedMesh(null, skinWeightData);
 
         let bodyH = 1.68;
         const bb = new THREE.Box3().setFromObject(bodyMesh);
         if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
 
         try {
-            const clip = await fetchRetargetedClipFromUrl(url, defSkeleton, { bodyHeight: bodyH });
+            const clip = await fetchRetargetedClipFromUrl(url, rigifySkeleton, { bodyHeight: bodyH });
 
             // Ensure SkeletonHelper exists for DEF skeleton
             if (!skeletonHelper) {
-                skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
                 skeletonHelper.material.depthTest = false;
                 skeletonHelper.material.depthWrite = false;
                 skeletonHelper.material.color.set(0x00ffaa);
@@ -639,14 +639,14 @@ function stopAnimation(destroy = false) {
         mixer = null;
     }
     // Reset DEF skeleton to rest pose so mesh returns to T-pose
-    if (isSkinned && defSkeleton) {
-        defSkeleton.skeleton.pose();
+    if (isSkinned && rigifySkeleton) {
+        rigifySkeleton.skeleton.pose();
     }
     // Clean up animation skeleton; recreate from DEF skeleton if rig visible
     if (skelWrapper) { scene.remove(skelWrapper); skelWrapper = null; }
     if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
-    if (rigVisible && defSkeleton) {
-        skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+    if (rigVisible && rigifySkeleton) {
+        skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
         skeletonHelper.material.depthTest = false;
         skeletonHelper.material.depthWrite = false;
         skeletonHelper.material.color.set(0x00ffaa);
@@ -704,7 +704,7 @@ function bindPlaybackControls() {
     });
 }
 
-// (Rig visualization now uses SkeletonHelper from defSkeleton — no separate rigGroup)
+// (Rig visualization now uses SkeletonHelper from rigifySkeleton — no separate rigGroup)
 
 // =========================================================================
 // Utility

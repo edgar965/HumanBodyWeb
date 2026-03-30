@@ -93,14 +93,14 @@ function parseBvhUrl(url) {
  * Python SkeletonGeometry already works in Three.js coordinate space,
  * so no coordinate conversion is needed here.
  */
-function buildClipFromRetargetData(data, defSkel) {
+function buildClipFromRetargetData(data, rigifySkel) {
     const times = new Float32Array(data.times);
     const tracks = [];
     let matched = 0, missed = 0;
     const missedNames = [];
 
     for (const [boneName, values] of Object.entries(data.tracks)) {
-        const bone = defSkel.boneByName[boneName];
+        const bone = rigifySkel.boneByName[boneName];
         if (!bone) { missed++; missedNames.push(boneName); continue; }
         matched++;
         tracks.push(new THREE.QuaternionKeyframeTrack(
@@ -108,7 +108,7 @@ function buildClipFromRetargetData(data, defSkel) {
     }
 
     if (data.position_track) {
-        const bone = defSkel.boneByName[data.position_track.bone];
+        const bone = rigifySkel.boneByName[data.position_track.bone];
         if (bone) {
             tracks.push(new THREE.VectorKeyframeTrack(
                 `${bone.name}.position`, times, new Float32Array(data.position_track.values)));
@@ -132,11 +132,11 @@ function buildClipFromRetargetData(data, defSkel) {
  *
  * @param {string} bvhCategory - BVH category folder name
  * @param {string} bvhName - BVH filename (without .bvh)
- * @param {Object} defSkel - { rootBone, boneByName } from buildDefSkeleton()
+ * @param {Object} rigifySkel - { rootBone, boneByName } from buildRigifySkeleton()
  * @param {Object} [opts] - { bodyHeight, footCorrection, format }
  * @returns {Promise<THREE.AnimationClip>}
  */
-export async function fetchRetargetedClip(bvhCategory, bvhName, defSkel, opts = {}) {
+export async function fetchRetargetedClip(bvhCategory, bvhName, rigifySkel, opts = {}) {
     const params = new URLSearchParams();
     if (opts.bodyHeight) params.set('body_height', opts.bodyHeight);
     if (opts.footCorrection) params.set('foot_correction', '1');
@@ -148,7 +148,7 @@ export async function fetchRetargetedClip(bvhCategory, bvhName, defSkel, opts = 
     if (!resp.ok) throw new Error(`Retarget API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
     console.log(`[RETARGET] API returned ${data.mapped_bones?.length || 0} bones, ${data.frame_count} frames, ${data.duration?.toFixed(2)}s`);
-    return buildClipFromRetargetData(data, defSkel);
+    return buildClipFromRetargetData(data, rigifySkel);
 }
 
 /**
@@ -156,14 +156,14 @@ export async function fetchRetargetedClip(bvhCategory, bvhName, defSkel, opts = 
  * Falls back to fetchRetargetedClip after parsing the URL.
  *
  * @param {string} bvhUrl - Full BVH URL like /api/character/bvh/AIST/aist_gBR.../
- * @param {Object} defSkel - { rootBone, boneByName }
+ * @param {Object} rigifySkel - { rootBone, boneByName }
  * @param {Object} [opts] - { bodyHeight, footCorrection, format }
  * @returns {Promise<THREE.AnimationClip>}
  */
-export async function fetchRetargetedClipFromUrl(bvhUrl, defSkel, opts = {}) {
+export async function fetchRetargetedClipFromUrl(bvhUrl, rigifySkel, opts = {}) {
     const parsed = parseBvhUrl(bvhUrl);
     if (!parsed) throw new Error(`Cannot parse BVH URL: ${bvhUrl}`);
-    return fetchRetargetedClip(parsed.category, parsed.name, defSkel, opts);
+    return fetchRetargetedClip(parsed.category, parsed.name, rigifySkel, opts);
 }
 
 /**
@@ -171,11 +171,11 @@ export async function fetchRetargetedClipFromUrl(bvhUrl, defSkel, opts = {}) {
  *
  * @param {string} bodyBvhPath - "category/name" for body BVH
  * @param {string} faceBvhPath - "category/name" for face BVH
- * @param {Object} defSkel - { rootBone, boneByName }
+ * @param {Object} rigifySkel - { rootBone, boneByName }
  * @param {Object} [opts] - { bodyHeight, footCorrection }
  * @returns {Promise<THREE.AnimationClip>}
  */
-export async function fetchMergedClip(bodyBvhPath, faceBvhPath, defSkel, opts = {}) {
+export async function fetchMergedClip(bodyBvhPath, faceBvhPath, rigifySkel, opts = {}) {
     const resp = await fetch('/api/character/retarget-merge/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,7 +188,7 @@ export async function fetchMergedClip(bodyBvhPath, faceBvhPath, defSkel, opts = 
     });
     if (!resp.ok) throw new Error(`Merge API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
-    return buildClipFromRetargetData(data, defSkel);
+    return buildClipFromRetargetData(data, rigifySkel);
 }
 
 // =========================================================================
@@ -199,11 +199,11 @@ export async function fetchMergedClip(bodyBvhPath, faceBvhPath, defSkel, opts = 
  * Server-side retarget for a pipeline job's BVH output.
  *
  * @param {string} jobId - UUID of the BVHJob
- * @param {Object} defSkel - { rootBone, boneByName }
+ * @param {Object} rigifySkel - { rootBone, boneByName }
  * @param {Object} [opts] - { bodyHeight, footCorrection, format }
  * @returns {Promise<THREE.AnimationClip>}
  */
-export async function fetchRetargetedClipForJob(jobId, defSkel, opts = {}) {
+export async function fetchRetargetedClipForJob(jobId, rigifySkel, opts = {}) {
     const params = new URLSearchParams();
     if (opts.bodyHeight) params.set('body_height', opts.bodyHeight);
     if (opts.footCorrection) params.set('foot_correction', '1');
@@ -215,18 +215,18 @@ export async function fetchRetargetedClipForJob(jobId, defSkel, opts = {}) {
     if (!resp.ok) throw new Error(`Job retarget API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
     console.log(`[RETARGET] Job API returned ${data.mapped_bones?.length || 0} bones, ${data.frame_count} frames`);
-    return buildClipFromRetargetData(data, defSkel);
+    return buildClipFromRetargetData(data, rigifySkel);
 }
 
 /**
  * Server-side retarget + merge for a hybrid pipeline job (body + face BVH).
  *
  * @param {string} jobId - UUID of the BVHJob
- * @param {Object} defSkel - { rootBone, boneByName }
+ * @param {Object} rigifySkel - { rootBone, boneByName }
  * @param {Object} [opts] - { bodyHeight, footCorrection }
  * @returns {Promise<THREE.AnimationClip>}
  */
-export async function fetchMergedClipForJob(jobId, defSkel, opts = {}) {
+export async function fetchMergedClipForJob(jobId, rigifySkel, opts = {}) {
     const params = new URLSearchParams();
     if (opts.bodyHeight) params.set('body_height', opts.bodyHeight);
     if (opts.footCorrection) params.set('foot_correction', '1');
@@ -236,7 +236,7 @@ export async function fetchMergedClipForJob(jobId, defSkel, opts = {}) {
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`Job merge API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
-    return buildClipFromRetargetData(data, defSkel);
+    return buildClipFromRetargetData(data, rigifySkel);
 }
 
 // =========================================================================
@@ -247,11 +247,11 @@ export async function fetchMergedClipForJob(jobId, defSkel, opts = {}) {
  * Server-side retarget from raw BVH text content (e.g. after ground-fix editing).
  *
  * @param {string} bvhText - Raw BVH file content
- * @param {Object} defSkel - { rootBone, boneByName }
+ * @param {Object} rigifySkel - { rootBone, boneByName }
  * @param {Object} [opts] - { bodyHeight, footCorrection, format }
  * @returns {Promise<THREE.AnimationClip>}
  */
-export async function fetchRetargetedClipFromText(bvhText, defSkel, opts = {}) {
+export async function fetchRetargetedClipFromText(bvhText, rigifySkel, opts = {}) {
     const resp = await fetch('/api/character/retarget-bvh-text/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -264,5 +264,5 @@ export async function fetchRetargetedClipFromText(bvhText, defSkel, opts = {}) {
     });
     if (!resp.ok) throw new Error(`Text retarget API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
-    return buildClipFromRetargetData(data, defSkel);
+    return buildClipFromRetargetData(data, rigifySkel);
 }

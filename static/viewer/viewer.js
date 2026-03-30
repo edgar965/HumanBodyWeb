@@ -10,7 +10,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { detectBVHFormat, fetchRetargetedClipFromUrl } from './retarget_hybrid.js?v=32';
-import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
+import { buildRigifySkeleton } from './rigify_skeleton_builder.js?v=2';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 
 // Register BVH helpers on BufferGeometry (but NOT global raycast override)
@@ -52,10 +52,10 @@ const loadedAssets = {};  // name -> THREE.Object3D
 const gltfLoader = new GLTFLoader();
 const bvhLoader = new BVHLoader();
 
-// GPU Skinning — DEF skeleton
+// GPU Skinning — Rigify skeleton
 let skinWeightData = null;   // Raw data from /api/character/skin-weights/
-let defSkeletonData = null;  // Raw JSON from /api/character/def-skeleton/
-let defSkeleton = null;      // { skeleton, rootBone, bones, boneByName }
+let rigifySkeletonData = null;  // Raw JSON from /api/character/rigify-skeleton/
+let rigifySkeleton = null;      // { skeleton, rootBone, bones, boneByName }
 let isSkinned = false;       // Flag: Mesh is already SkinnedMesh
 
 // Rig skeleton visualization
@@ -209,7 +209,7 @@ async function init() {
         animate();
     });
     loadSkinWeights();
-    loadDefSkeleton();
+    loadRigifySkeleton();
     loadWardrobe();
     loadAnimations();
     loadClothUI();
@@ -256,15 +256,15 @@ async function init() {
         });
     }
 
-    // Rig toggle — single SkeletonHelper from defSkeleton (animates automatically)
+    // Rig toggle — single SkeletonHelper from rigifySkeleton (animates automatically)
     const rigToggle = document.getElementById('rig-toggle');
     if (rigToggle) {
         rigToggle.addEventListener('click', () => {
             rigVisible = !rigVisible;
             if (rigVisible) {
                 // Create helper if needed (from DEF skeleton when available)
-                if (!skeletonHelper && defSkeleton) {
-                    skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                if (!skeletonHelper && rigifySkeleton) {
+                    skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
                     skeletonHelper.material.depthTest = false;
                     skeletonHelper.material.depthWrite = false;
                     skeletonHelper.material.color.set(0x00ffaa);
@@ -606,7 +606,7 @@ async function reloadMeshForBodyType(bodyType, gender) {
         bodyGeometry = null;
     }
     isSkinned = false;
-    defSkeleton = null;
+    rigifySkeleton = null;
     skinWeightData = null;
     initialBodyTop = null;  // reset for new body type
 
@@ -698,25 +698,25 @@ async function loadSkinWeights() {
     }
 }
 
-async function loadDefSkeleton() {
+async function loadRigifySkeleton() {
     try {
-        const resp = await fetch(`${API}/def-skeleton/`);
+        const resp = await fetch(`${API}/rigify-skeleton/`);
         if (resp.ok) {
-            defSkeletonData = await resp.json();
-            console.log(`DEF skeleton loaded: ${defSkeletonData.bone_count} bones`);
+            rigifySkeletonData = await resp.json();
+            console.log(`DEF skeleton loaded: ${rigifySkeletonData.bone_count} bones`);
         }
     } catch (e) {
         console.warn('DEF skeleton not available:', e);
     }
 }
 
-// buildDefSkeleton() imported from def_skeleton_builder.js
+// buildRigifySkeleton() imported from rigify_skeleton_builder.js
 
 /**
  * Convert bodyMesh to SkinnedMesh using DEF skeleton.
  * Skin indices come directly from skin_weights.json (no remapping needed).
  */
-function convertToDefSkinnedMesh(defSkel, swData) {
+function convertToRigifySkinnedMesh(rigifySkel, swData) {
     if (isSkinned || !bodyMesh || !bodyGeometry) return;
 
     // Clone geometry — the original has stale WebGL VAO state from non-skinned rendering
@@ -744,7 +744,7 @@ function convertToDefSkinnedMesh(defSkel, swData) {
 
     // Rebuild skeleton — reusing a Skeleton whose bones were created before
     // parenting to SkinnedMesh causes stale boneTexture/boneMatrices state.
-    defSkeleton = buildDefSkeleton(defSkeletonData, swData);
+    rigifySkeleton = buildRigifySkeleton(rigifySkeletonData, swData);
 
     // Replace Mesh with SkinnedMesh
     const mat = bodyMesh.material;
@@ -755,13 +755,13 @@ function convertToDefSkinnedMesh(defSkel, swData) {
     bodyMesh = new THREE.SkinnedMesh(bodyGeometry, mat);
     bodyMesh.position.copy(pos);
     bodyMesh.visible = vis;
-    bodyMesh.add(defSkeleton.rootBone);
-    bodyMesh.bind(defSkeleton.skeleton);
+    bodyMesh.add(rigifySkeleton.rootBone);
+    bodyMesh.bind(rigifySkeleton.skeleton);
 
     scene.add(bodyMesh);
     isSkinned = true;
     console.log('SkinnedMesh created:', bodyMesh.isSkinnedMesh,
-                'bones:', defSkeleton.skeleton.bones.length,
+                'bones:', rigifySkeleton.skeleton.bones.length,
                 'skinIndex:', !!bodyGeometry.attributes.skinIndex,
                 'skinWeight:', !!bodyGeometry.attributes.skinWeight);
 }
@@ -772,8 +772,8 @@ function convertToDefSkinnedMesh(defSkel, swData) {
  */
 function ensureSkinned() {
     if (isSkinned) return;
-    if (!defSkeletonData || !skinWeightData || !bodyMesh) return;
-    convertToDefSkinnedMesh(null, skinWeightData);
+    if (!rigifySkeletonData || !skinWeightData || !bodyMesh) return;
+    convertToRigifySkinnedMesh(null, skinWeightData);
 }
 
 // Retarget via server-side API (retarget_hybrid.js)
@@ -1307,21 +1307,21 @@ async function loadBVHAnimation(url, name, fc) {
     if (info) info.textContent = `Lade ${name || 'Animation'}...`;
 
     // DEF skeleton path: server-side retarget
-    if (defSkeletonData && skinWeightData && bodyMesh) {
+    if (rigifySkeletonData && skinWeightData && bodyMesh) {
         if (!isSkinned) {
-            convertToDefSkinnedMesh(null, skinWeightData);
+            convertToRigifySkinnedMesh(null, skinWeightData);
         }
         let bodyH = 1.68;
         const bb = new THREE.Box3().setFromObject(bodyMesh);
         if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
 
         try {
-            const clip = await fetchRetargetedClipFromUrl(url, defSkeleton, { bodyHeight: bodyH });
+            const clip = await fetchRetargetedClipFromUrl(url, rigifySkeleton, { bodyHeight: bodyH });
             console.log(`Retargeted clip: ${clip.tracks.length} tracks, ${clip.duration.toFixed(2)}s`);
 
             // Ensure SkeletonHelper exists for DEF skeleton
             if (!skeletonHelper) {
-                skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
                 skeletonHelper.material.depthTest = false;
                 skeletonHelper.material.depthWrite = false;
                 skeletonHelper.material.color.set(0x00ffaa);
@@ -1438,8 +1438,8 @@ function stopAnimation(destroy = false) {
         scene.remove(skeletonHelper);
         skeletonHelper = null;
     }
-    if (rigVisible && defSkeleton) {
-        skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+    if (rigVisible && rigifySkeleton) {
+        skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
         skeletonHelper.material.depthTest = false;
         skeletonHelper.material.depthWrite = false;
         skeletonHelper.material.color.set(0x00ffaa);
@@ -1450,7 +1450,7 @@ function stopAnimation(destroy = false) {
     playing = false;
 }
 
-// (Rig visualization now uses SkeletonHelper from defSkeleton — no separate rigGroup)
+// (Rig visualization now uses SkeletonHelper from rigifySkeleton — no separate rigGroup)
 
 // =========================================================================
 // Cloth
@@ -1819,13 +1819,13 @@ async function loadCloth(key, params, color) {
 
         // Create as SkinnedMesh if skin data available + body is skinned
         let mesh;
-        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+        if (isSkinned && rigifySkeleton && data.skin_indices && data.skin_weights) {
             const siBuf = base64ToFloat32(data.skin_indices);
             const swBuf = base64ToFloat32(data.skin_weights);
             geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
             geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
             mesh = new THREE.SkinnedMesh(geo, mat);
-            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            mesh.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
         } else {
             mesh = new THREE.Mesh(geo, mat);
         }
@@ -2915,13 +2915,13 @@ async function peRegionGenerate() {
         });
 
         let mesh;
-        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+        if (isSkinned && rigifySkeleton && data.skin_indices && data.skin_weights) {
             const siBuf = base64ToFloat32(data.skin_indices);
             const swBuf = base64ToFloat32(data.skin_weights);
             geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
             geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
             mesh = new THREE.SkinnedMesh(geo, mat);
-            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            mesh.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
         } else {
             mesh = new THREE.Mesh(geo, mat);
         }
@@ -2992,13 +2992,13 @@ async function peGenerate3D() {
         });
 
         let mesh;
-        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+        if (isSkinned && rigifySkeleton && data.skin_indices && data.skin_weights) {
             const siBuf = base64ToFloat32(data.skin_indices);
             const swBuf = base64ToFloat32(data.skin_weights);
             geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
             geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
             mesh = new THREE.SkinnedMesh(geo, mat);
-            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            mesh.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
         } else {
             mesh = new THREE.Mesh(geo, mat);
         }
@@ -3401,7 +3401,7 @@ function loadHair(url) {
         let hairGroup = gltf.scene;
 
         // Convert hair meshes to SkinnedMesh bound to head bone
-        if (isSkinned && defSkeleton && skinWeightData) {
+        if (isSkinned && rigifySkeleton && skinWeightData) {
             const headBoneIdx = _findHeadBoneIndex();
             if (headBoneIdx >= 0) {
                 hairGroup = _skinifyHairGroup(hairGroup, headBoneIdx);
@@ -3415,7 +3415,7 @@ function loadHair(url) {
             applyHairColorToObject(hairMesh, colorSelect.value);
         }
         scene.add(hairMesh);
-        console.log('Hair loaded:', url, 'skinned=' + (isSkinned && defSkeleton ? 'yes' : 'no'));
+        console.log('Hair loaded:', url, 'skinned=' + (isSkinned && rigifySkeleton ? 'yes' : 'no'));
         updateEquippedList();
     }, undefined, (err) => {
         console.error('Failed to load hair:', err);
@@ -3456,7 +3456,7 @@ function _skinifyHairGroup(gltfScene, headBoneIdx) {
         // Apply the child's world transform so position is correct
         child.updateWorldMatrix(true, false);
         skinnedChild.applyMatrix4(child.matrixWorld);
-        skinnedChild.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+        skinnedChild.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
         group.add(skinnedChild);
     }
     return group;
@@ -3509,7 +3509,7 @@ function refitHairToBody() {
         });
 
         // Re-bind to skeleton (same as loadHair)
-        if (isSkinned && defSkeleton && skinWeightData) {
+        if (isSkinned && rigifySkeleton && skinWeightData) {
             const headBoneIdx = _findHeadBoneIndex();
             if (headBoneIdx >= 0) {
                 hairGroup = _skinifyHairGroup(hairGroup, headBoneIdx);
@@ -4094,13 +4094,13 @@ async function loadGarment(garmentId) {
         });
 
         let mesh;
-        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+        if (isSkinned && rigifySkeleton && data.skin_indices && data.skin_weights) {
             const siBuf = base64ToFloat32(data.skin_indices);
             const swBuf = base64ToFloat32(data.skin_weights);
             geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
             geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
             mesh = new THREE.SkinnedMesh(geo, mat);
-            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            mesh.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
         } else {
             mesh = new THREE.Mesh(geo, mat);
         }
@@ -5663,11 +5663,11 @@ async function loadSmplGarment(garmentId) {
         _renderSmplGarmentList();  // update checkmarks
 
         // Also fit to project body as SkinnedMesh (if body is loaded)
-        console.log(`SMPL fit check: bodyMesh=${!!bodyMesh}, defSkeleton=${!!defSkeleton}, isSkinned=${isSkinned}`);
-        if (bodyMesh && defSkeleton) {
+        console.log(`SMPL fit check: bodyMesh=${!!bodyMesh}, rigifySkeleton=${!!rigifySkeleton}, isSkinned=${isSkinned}`);
+        if (bodyMesh && rigifySkeleton) {
             _fitSmplGarmentToBody(garmentId);
         } else {
-            console.warn('SMPL fit skipped: bodyMesh or defSkeleton not ready');
+            console.warn('SMPL fit skipped: bodyMesh or rigifySkeleton not ready');
         }
     } catch (e) {
         console.error('Failed to load SMPL garment:', e);
@@ -5681,7 +5681,7 @@ async function loadSmplGarment(garmentId) {
 
 async function _fitSmplGarmentToBody(garmentId) {
     const fitKey = 'smpl:' + garmentId;
-    console.log(`_fitSmplGarmentToBody: start (${garmentId}), bodyMesh=${!!bodyMesh}, defSkeleton=${!!defSkeleton}, isSkinned=${isSkinned}`);
+    console.log(`_fitSmplGarmentToBody: start (${garmentId}), bodyMesh=${!!bodyMesh}, rigifySkeleton=${!!rigifySkeleton}, isSkinned=${isSkinned}`);
     try {
         ensureSkinned();
 
@@ -5758,13 +5758,13 @@ async function _fitSmplGarmentToBody(garmentId) {
         });
 
         let mesh;
-        if (isSkinned && defSkeleton && data.skin_indices && data.skin_weights) {
+        if (isSkinned && rigifySkeleton && data.skin_indices && data.skin_weights) {
             const siBuf = base64ToFloat32(data.skin_indices);
             const swBuf = base64ToFloat32(data.skin_weights);
             geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
             geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
             mesh = new THREE.SkinnedMesh(geo, mat);
-            mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            mesh.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
         } else {
             mesh = new THREE.Mesh(geo, mat);
         }
@@ -6432,7 +6432,7 @@ window.__viewer = {
     get smplBodyMesh() { return smplBodyMesh; },
     get camera() { return camera; },
     get controls() { return controls; },
-    get defSkeleton() { return defSkeleton; },
+    get rigifySkeleton() { return rigifySkeleton; },
     get isSkinned() { return isSkinned; },
     get selectedItem() { return _selectedItem; },
     getSelectableTargets,

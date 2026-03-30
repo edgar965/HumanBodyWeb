@@ -9,7 +9,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { detectBVHFormat, fetchRetargetedClipFromUrl, loadRetargetConfig, getMappingForFormat } from './retarget_hybrid.js?v=32';
-import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
+import { buildRigifySkeleton } from './rigify_skeleton_builder.js?v=2';
 
 // =========================================================================
 // Global state
@@ -29,7 +29,7 @@ let currentBvhResult = null;
 let currentFormat = null;
 
 // DEF skeleton data from API
-let defSkeletonData = null;
+let rigifySkeletonData = null;
 let skinWeightData = null;
 
 // All animations list (for auto-loading first of each type)
@@ -58,7 +58,7 @@ const CYL_RADIUS_BOT = 0.004;
 // Retarget via server-side API (retarget_hybrid.js)
 
 // =========================================================================
-// buildDefSkeleton() imported from def_skeleton_builder.js
+// buildRigifySkeleton() imported from rigify_skeleton_builder.js
 
 // =========================================================================
 // Initialization
@@ -147,7 +147,7 @@ async function init() {
     window.skeletons = skeletons;
 
     // Load data
-    loadDefSkeleton();
+    loadRigifySkeleton();
     loadAnimationTree();
 }
 
@@ -312,10 +312,10 @@ function createBoneLabels(bones, skelKey) {
 // =========================================================================
 // DEF Skeleton (left, red)
 // =========================================================================
-async function loadDefSkeleton() {
+async function loadRigifySkeleton() {
     try {
         const [skelResp, swResp] = await Promise.all([
-            fetch('/api/character/def-skeleton/'),
+            fetch('/api/character/rigify-skeleton/'),
             fetch('/api/character/skin-weights/')
         ]);
 
@@ -324,23 +324,23 @@ async function loadDefSkeleton() {
             return;
         }
 
-        defSkeletonData = await skelResp.json();
+        rigifySkeletonData = await skelResp.json();
         skinWeightData = await swResp.json();
 
-        const defSkel = buildDefSkeleton(defSkeletonData, skinWeightData);
-        skeletons.def.rootBone = defSkel.rootBone;
-        skeletons.def.boneByName = defSkel.boneByName;
-        skeletons.def.skeleton = defSkel;
-        skeletons.def.bones = defSkel.bones;
-        skeletons.def.group.add(defSkel.rootBone);
+        const rigifySkel = buildRigifySkeleton(rigifySkeletonData, skinWeightData);
+        skeletons.def.rootBone = rigifySkel.rootBone;
+        skeletons.def.boneByName = rigifySkel.boneByName;
+        skeletons.def.skeleton = rigifySkel;
+        skeletons.def.bones = rigifySkel.bones;
+        skeletons.def.group.add(rigifySkel.rootBone);
 
         // Bone cylinders + joints (white)
-        createBoneViz(defSkel.bones, 'def');
+        createBoneViz(rigifySkel.bones, 'def');
 
         // Bone number labels
-        createBoneLabels(defSkel.bones, 'def');
+        createBoneLabels(rigifySkel.bones, 'def');
 
-        console.log(`DEF skeleton loaded: ${defSkel.bones.length} bones`);
+        console.log(`DEF skeleton loaded: ${rigifySkel.bones.length} bones`);
     } catch (e) {
         console.error('Failed to load DEF skeleton:', e);
     }
@@ -571,7 +571,7 @@ function loadAndPlayAnimation(url, name, fc, category) {
         window._cmuRootBone = bvhSkel.rootBone;
 
         // --- DEF skeleton (left, red) — retargeted ---
-        if (skeletons.def.skeleton && defSkeletonData && skinWeightData) {
+        if (skeletons.def.skeleton && rigifySkeletonData && skinWeightData) {
             try {
                 skeletons.def.skeleton.skeleton.pose();
                 const clip = await fetchRetargetedClipFromUrl(url, skeletons.def.skeleton, {});

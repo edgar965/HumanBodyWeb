@@ -148,7 +148,6 @@ def upload_video(request):
             messages.error(request, 'No video file selected.')
             return redirect('upload')
 
-        fps = float(request.POST.get('fps', 30.0))
         pipeline = request.POST.get('pipeline', 'mediapipe')
         if pipeline not in VALID_2D:
             pipeline = 'mediapipe'
@@ -156,10 +155,27 @@ def upload_video(request):
         job = BVHJob.objects.create(
             name=video.name,
             video_file=video,
-            fps=fps,
+            fps=0,  # auto-detect below
             pipeline=pipeline,
         )
-        messages.success(request, f'Uploaded {video.name}.')
+
+        # Auto-detect FPS from video
+        try:
+            import cv2
+            video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
+            cap = cv2.VideoCapture(str(video_path))
+            detected_fps = cap.get(cv2.CAP_PROP_FPS)
+            cap.release()
+            if detected_fps and detected_fps > 0:
+                job.fps = detected_fps
+            else:
+                job.fps = 30.0
+            job.save(update_fields=['fps'])
+        except Exception:
+            job.fps = 30.0
+            job.save(update_fields=['fps'])
+
+        messages.success(request, f'Uploaded {video.name} ({job.fps:.1f} fps).')
         return redirect('upload')
 
     status = _check_system_status()
@@ -249,7 +265,6 @@ def upload_video_v4(request):
             messages.error(request, 'No video file selected.')
             return redirect('upload_v4')
 
-        fps = float(request.POST.get('fps', 30.0))
         pipeline = request.POST.get('pipeline', 'v4')
         if pipeline not in VALID_3D:
             pipeline = 'v4'
@@ -259,11 +274,28 @@ def upload_video_v4(request):
         job = BVHJob.objects.create(
             name=video.name,
             video_file=video,
-            fps=fps,
+            fps=0,  # auto-detect below
             pipeline=pipeline,
             pipeline_params=pp,
         )
-        messages.success(request, f'Uploaded {video.name}.')
+
+        # Auto-detect FPS from video
+        try:
+            import cv2
+            video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
+            cap = cv2.VideoCapture(str(video_path))
+            detected_fps = cap.get(cv2.CAP_PROP_FPS)
+            cap.release()
+            if detected_fps and detected_fps > 0:
+                job.fps = detected_fps
+            else:
+                job.fps = 30.0
+            job.save(update_fields=['fps'])
+        except Exception:
+            job.fps = 30.0
+            job.save(update_fields=['fps'])
+
+        messages.success(request, f'Uploaded {video.name} ({job.fps:.1f} fps).')
         return redirect('upload_v4')
 
     # Check availability of 3D pipelines
@@ -950,10 +982,34 @@ def _run_new_2d_detector(job, video_path, output_dir):
     return csv_output
 
 
+def _ensure_mp4(video_path, output_dir):
+    """Convert non-MP4 video to MP4 (GVHMR/WHAM need PyAV-compatible input).
+    Returns the MP4 path (may be the original if already MP4)."""
+    vp = Path(video_path)
+    if vp.suffix.lower() == '.mp4':
+        return video_path
+    mp4_path = output_dir / (vp.stem + '.mp4')
+    if mp4_path.exists():
+        return str(mp4_path)
+    print(f'[SMPL] Converting {vp.name} -> MP4 for SMPL pipeline...', flush=True)
+    proc = subprocess.run(
+        ['ffmpeg', '-y', '-i', str(video_path), '-c:v', 'libx264',
+         '-preset', 'fast', '-crf', '18', '-an', str(mp4_path)],
+        capture_output=True, text=True, timeout=600,
+    )
+    if proc.returncode != 0 or not mp4_path.exists():
+        raise RuntimeError(f'ffmpeg conversion failed: {proc.stderr[-500:]}')
+    print(f'[SMPL] Converted to {mp4_path}', flush=True)
+    return str(mp4_path)
+
+
 def _run_smpl_pipeline(job, video_path, output_dir):
     """Run GVHMR / WHAM / PromptHMR 3D pipeline via wrapper scripts."""
     import time as _time
     import re as _re
+
+    # GVHMR/WHAM use PyAV which doesn't support WebM — convert if needed
+    video_path = _ensure_mp4(video_path, output_dir)
 
     total_frames = _get_video_frame_count(video_path)
     bvh_output = str(output_dir / f'{job.pipeline}_{job.name.rsplit(".", 1)[0]}.bvh')
@@ -1095,8 +1151,11 @@ def _run_hybrid_pipeline(job, video_path, output_dir):
     body_job = _SubJob(body_backend, body_params, job.name, 'body')
 
     # --- Prepare v4 params ---
+    # NOTE: hcd_iterations forced to 0 in hybrid mode — BVHConverter.dll
+    # IK fine-tuning crashes with stack overflow on the face/hands sub-pipeline.
+    # The GVHMR body is already high quality; v4 only adds face/hand rotations.
     v4_params = {
-        'hcd_iterations': p.get('v4_hcd_iterations', s.v4_hcd_iterations),
+        'hcd_iterations': 0,
         'hcd_epochs': p.get('v4_hcd_epochs', s.v4_hcd_epochs),
         'hcd_learning_rate': s.v4_hcd_learning_rate,
         'smoothing_cutoff': s.v4_smoothing_cutoff,
@@ -2894,9 +2953,9 @@ def app_settings_videobvh_3d(request):
     if request.method == 'POST':
         try:
             # Default pipeline
-            s.lifter_3d_default = request.POST.get('lifter_3d_default', 'v4')
-            if s.lifter_3d_default not in ('v4', 'gvhmr', 'wham', 'prompthmr'):
-                s.lifter_3d_default = 'v4'
+            s.lifter_3d_default = request.POST.get('lifter_3d_default', 'hybrid_gvhmr')
+            if s.lifter_3d_default not in ('v4', 'gvhmr', 'wham', 'prompthmr', 'hybrid_gvhmr', 'hybrid_prompthmr'):
+                s.lifter_3d_default = 'hybrid_gvhmr'
 
             # v4 component flags
             s.v4_enable_body = request.POST.get('v4_enable_body') == 'on'

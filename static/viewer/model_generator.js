@@ -1,6 +1,6 @@
 /**
  * Model Generator — Generate geometric models around skeleton bones.
- * Supports DEF-Skeleton (SkinnedMesh) and Rig Bones (static Mesh).
+ * Supports Rigify Skeleton (SkinnedMesh) and Rig Bones (static Mesh).
  */
 import * as THREE from 'three';
 
@@ -508,7 +508,7 @@ export function generateModelMesh(skelData, swData, config) {
         mergedGeo.addGroup(g.start, g.count, g.materialIndex);
     }
 
-    // Build skeleton (same as buildDefSkeleton in scene_config.js)
+    // Build skeleton (same as buildRigifySkeleton in scene_config.js)
     const skelByNameMap = {};
     for (const b of skelData.bones) skelByNameMap[b.name] = b;
 
@@ -654,12 +654,12 @@ export function getDefaultRigConfig(rigData) {
  * @param {Object} config  - Model config {bone_parts, segments, ...}
  * @returns {{ mesh: THREE.Mesh }} | null
  */
-export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swData = null) {
+export function generateRigBoneMesh(rigData, config, rigifySkeletonData = null, swData = null) {
     const segments = config.segments || 8;
     const worldTransforms = computeRigBoneWorldTransforms(rigData);
 
-    // Build bone index map for skinning (DEF bones only)
-    const canSkin = !!(defSkeletonData && swData);
+    // Build bone index map for skinning (Rigify bones only)
+    const canSkin = !!(rigifySkeletonData && swData);
     const boneIndexMap = {};
     if (canSkin) {
         for (let i = 0; i < swData.bone_names.length; i++) {
@@ -857,13 +857,13 @@ export function generateRigBoneMesh(rigData, config, defSkeletonData = null, swD
     mergedGeo.setIndex(mergedIndices);
     for (const g of groups) mergedGeo.addGroup(g.start, g.count, g.materialIndex);
 
-    // Build SkinnedMesh with DEF skeleton if skin data is available
+    // Build SkinnedMesh with Rigify skeleton if skin data is available
     if (canSkin) {
         mergedGeo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(mergedSkinIndices, 4));
         mergedGeo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(mergedSkinWeights, 4));
 
         const skelByName = {};
-        for (const b of defSkeletonData.bones) skelByName[b.name] = b;
+        for (const b of rigifySkeletonData.bones) skelByName[b.name] = b;
 
         const bones = [];
         const boneByName = {};

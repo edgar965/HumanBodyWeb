@@ -1,12 +1,12 @@
 /**
- * Shared DEF skeleton builder — single source of truth.
+ * Shared Rigify skeleton builder — single source of truth.
  *
- * Build 176-bone THREE.Skeleton from DEF skeleton data + skin weight bone order.
+ * Build 176-bone THREE.Skeleton from Rigify skeleton data + skin weight bone order.
  * Bone indices match skinWeightData.bone_names (authoritative for skinIndex).
  */
 import * as THREE from 'three';
 
-export function buildDefSkeleton(skelData, swData) {
+export function buildRigifySkeleton(skelData, swData) {
     const skelByName = {};
     for (const b of skelData.bones) skelByName[b.name] = b;
 

@@ -462,8 +462,8 @@ def character_rig(request):
 
 
 @require_GET
-def character_def_skeleton(request):
-    """Return DEF skeleton hierarchy with local transforms for Three.js skinning."""
+def character_rigify_skeleton(request):
+    """Return Rigify skeleton hierarchy with local transforms for Three.js skinning."""
     body_type = request.GET.get('body_type', 'Female_Caucasian')
     gender = _gender_from_body_type(body_type)
     if gender == 'male':

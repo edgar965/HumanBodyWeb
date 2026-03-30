@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { fetchRetargetedClipForJob, fetchMergedClipForJob } from './retarget_hybrid.js?v=32';
-import { buildDefSkeleton } from './def_skeleton_builder.js?v=1';
+import { buildRigifySkeleton } from './rigify_skeleton_builder.js?v=2';
 
 // =========================================================================
 // Tone mapping lookup
@@ -143,9 +143,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     // --- State ---
     let bodyMesh = null;
     let bodyGeometry = null;
-    let defSkeletonData = null;
+    let rigifySkeletonData = null;
     let skinWeightData = null;
-    let defSkeleton = null;
+    let rigifySkeleton = null;
     let isSkinned = false;
     let mixer = null;
     let currentAction = null;
@@ -324,7 +324,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     try {
         const [, , , morphResp, hairResp] = await Promise.all([
             loadMesh(currentBodyType),
-            loadDefSkeleton(),
+            loadRigifySkeleton(),
             loadSkinWeights(currentBodyType),
             fetch('/api/character/morphs/').then(r => r.json()),
             fetch('/api/character/hairstyles/').then(r => r.json()).catch(() => null),
@@ -340,8 +340,8 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     }
 
     // Convert to skinned mesh
-    if (bodyMesh && defSkeletonData && skinWeightData) {
-        convertToDefSkinnedMesh();
+    if (bodyMesh && rigifySkeletonData && skinWeightData) {
+        convertToRigifySkinnedMesh();
     }
 
     // Apply initial skin color
@@ -588,8 +588,8 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         rigBtn.addEventListener('click', () => {
             rigVisible = !rigVisible;
             if (rigVisible) {
-                if (!skeletonHelper && defSkeleton) {
-                    skeletonHelper = new THREE.SkeletonHelper(defSkeleton.rootBone);
+                if (!skeletonHelper && rigifySkeleton) {
+                    skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
                     skeletonHelper.material.depthTest = false;
                     skeletonHelper.material.depthWrite = false;
                     skeletonHelper.material.color.set(0x00ffaa);
@@ -1023,7 +1023,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
             bodyMesh = null;
         }
         bodyGeometry = null;
-        defSkeleton = null;
+        rigifySkeleton = null;
         isSkinned = false;
         if (skeletonHelper) { scene.remove(skeletonHelper); skeletonHelper = null; }
 
@@ -1038,8 +1038,8 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
                 loadSkinWeights(newType),
             ]);
 
-            if (bodyMesh && defSkeletonData && skinWeightData) {
-                convertToDefSkinnedMesh();
+            if (bodyMesh && rigifySkeletonData && skinWeightData) {
+                convertToRigifySkinnedMesh();
             }
 
             applySkinColor(newType);
@@ -1120,11 +1120,11 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         }
     }
 
-    async function loadDefSkeleton() {
+    async function loadRigifySkeleton() {
         try {
-            const resp = await fetch('/api/character/def-skeleton/');
+            const resp = await fetch('/api/character/rigify-skeleton/');
             if (resp.ok) {
-                defSkeletonData = await resp.json();
+                rigifySkeletonData = await resp.json();
                 return true;
             }
         } catch (e) {
@@ -1146,9 +1146,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         return false;
     }
 
-    // buildDefSkeleton() imported from def_skeleton_builder.js
+    // buildRigifySkeleton() imported from rigify_skeleton_builder.js
 
-    function convertToDefSkinnedMesh() {
+    function convertToRigifySkinnedMesh() {
         if (isSkinned || !bodyMesh || !bodyGeometry) return;
 
         bodyGeometry = bodyGeometry.clone();
@@ -1171,7 +1171,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         bodyGeometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
         bodyGeometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
 
-        defSkeleton = buildDefSkeleton(defSkeletonData, skinWeightData);
+        rigifySkeleton = buildRigifySkeleton(rigifySkeletonData, skinWeightData);
 
         const mat = bodyMesh.material;
         const pos = bodyMesh.position.clone();
@@ -1179,8 +1179,8 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
 
         bodyMesh = new THREE.SkinnedMesh(bodyGeometry, mat);
         bodyMesh.position.copy(pos);
-        bodyMesh.add(defSkeleton.rootBone);
-        bodyMesh.bind(defSkeleton.skeleton);
+        bodyMesh.add(rigifySkeleton.rootBone);
+        bodyMesh.bind(rigifySkeleton.skeleton);
         scene.add(bodyMesh);
         isSkinned = true;
     }
@@ -1210,7 +1210,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     // =====================================================================
 
     async function loadCloth(key, params, presetColor) {
-        if (!isSkinned || !defSkeleton) return;
+        if (!isSkinned || !rigifySkeleton) return;
 
         try {
             const qs = Object.entries(params)
@@ -1255,7 +1255,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
                 geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
                 geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
                 mesh = new THREE.SkinnedMesh(geo, mat);
-                mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+                mesh.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
             } else {
                 mesh = new THREE.Mesh(geo, mat);
             }
@@ -1289,7 +1289,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     // =====================================================================
 
     async function loadGarment(garmentId, opts = {}) {
-        if (!isSkinned || !defSkeleton) return;
+        if (!isSkinned || !rigifySkeleton) return;
 
         try {
             const offset = opts.offset !== undefined ? opts.offset : 0.006;
@@ -1351,7 +1351,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
                 geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
                 geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
                 mesh = new THREE.SkinnedMesh(geo, mat);
-                mesh.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+                mesh.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
             } else {
                 mesh = new THREE.Mesh(geo, mat);
             }
@@ -1416,7 +1416,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
             const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
             child.updateWorldMatrix(true, false);
             skinnedChild.applyMatrix4(child.matrixWorld);
-            skinnedChild.bind(defSkeleton.skeleton, bodyMesh.bindMatrix);
+            skinnedChild.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
             group.add(skinnedChild);
         }
         return group;
@@ -1424,7 +1424,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
 
     function loadHair(url) {
         removeHair();
-        if (!isSkinned || !defSkeleton || !skinWeightData) return;
+        if (!isSkinned || !rigifySkeleton || !skinWeightData) return;
 
         gltfLoader.load(url, (gltf) => {
             let hairGroup = gltf.scene;
@@ -1482,7 +1482,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     // =====================================================================
 
     async function applyBvhRetarget() {
-        console.log('[result_character] applyBvhRetarget called, jobId=', jobId, 'defSkeleton=', !!defSkeleton, 'bodyMesh=', !!bodyMesh);
+        console.log('[result_character] applyBvhRetarget called, jobId=', jobId, 'rigifySkeleton=', !!rigifySkeleton, 'bodyMesh=', !!bodyMesh);
         if (mixer) { mixer.stopAllAction(); mixer = null; currentAction = null; }
 
         let bodyH = 1.68;
@@ -1492,7 +1492,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         }
         console.log('[result_character] bodyHeight=', bodyH);
 
-        const clip = await fetchRetargetedClipForJob(jobId, defSkeleton, {
+        const clip = await fetchRetargetedClipForJob(jobId, rigifySkeleton, {
             bodyHeight: bodyH,
             footCorrection: enableFootCorrection,
         });
@@ -1513,15 +1513,15 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
      * Uses DEF-thigh.L/R to determine the lateral axis, then cross(up, right) = forward.
      */
     function positionCameraAfterRetarget() {
-        if (!defSkeleton || !mixer || !bodyMesh) return;
+        if (!rigifySkeleton || !mixer || !bodyMesh) return;
 
         // Apply frame 0 so bones have their actual animated positions
         mixer.setTime(0);
         bodyMesh.updateWorldMatrix(true, true);
-        defSkeleton.rootBone.updateWorldMatrix(true, true);
+        rigifySkeleton.rootBone.updateWorldMatrix(true, true);
 
-        const thighL = defSkeleton.boneByName['DEF-thigh.L'];
-        const thighR = defSkeleton.boneByName['DEF-thigh.R'];
+        const thighL = rigifySkeleton.boneByName['DEF-thigh.L'];
+        const thighR = rigifySkeleton.boneByName['DEF-thigh.R'];
         if (!thighL || !thighR) return;
 
         const posL = new THREE.Vector3();
@@ -1540,9 +1540,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         const forward = new THREE.Vector3().crossVectors(up, right).normalize();
 
         // Compute character center from spine
-        const spine = defSkeleton.boneByName['DEF-spine.003']
-                   || defSkeleton.boneByName['DEF-spine.001']
-                   || defSkeleton.boneByName['DEF-spine'];
+        const spine = rigifySkeleton.boneByName['DEF-spine.003']
+                   || rigifySkeleton.boneByName['DEF-spine.001']
+                   || rigifySkeleton.boneByName['DEF-spine'];
         const center = new THREE.Vector3();
         if (spine) {
             spine.getWorldPosition(center);
@@ -1589,7 +1589,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
             if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
         }
 
-        const clip = await fetchMergedClipForJob(jobId, defSkeleton, {
+        const clip = await fetchMergedClipForJob(jobId, rigifySkeleton, {
             bodyHeight: bodyH,
             footCorrection: enableFootCorrection,
         });

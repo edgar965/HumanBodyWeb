@@ -26,11 +26,11 @@ async def main():
         await asyncio.sleep(3)
 
         # Check if skeleton data loaded
-        skel_loaded = await page.evaluate('() => window.defSkeletonData !== null && window.defSkeletonData !== undefined')
+        skel_loaded = await page.evaluate('() => window.rigifySkeletonData !== null && window.rigifySkeletonData !== undefined')
         print(f"Skeleton data loaded: {skel_loaded}")
 
         if skel_loaded:
-            bone_count = await page.evaluate('() => window.defSkeletonData?.bones?.length || 0')
+            bone_count = await page.evaluate('() => window.rigifySkeletonData?.bones?.length || 0')
             print(f"Bone count: {bone_count}")
 
         print("\n=== Loading Model (FemaleWithHair) ===")

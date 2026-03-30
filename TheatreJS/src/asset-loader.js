@@ -9,16 +9,16 @@ const bvhLoader = new BVHLoader();
 let _assetCounter = 0;
 
 // Cached skeleton data for generated models (lazy-fetched)
-let _cachedDefSkeleton = null;
+let _cachedRigifySkeleton = null;
 let _cachedSkinWeights = null;
 let _cachedRigBones = null;
 
-async function _ensureDefSkeleton() {
-    if (!_cachedDefSkeleton) {
-        const r = await fetch('/api/character/def-skeleton/');
-        if (r.ok) _cachedDefSkeleton = await r.json();
+async function _ensureRigifySkeleton() {
+    if (!_cachedRigifySkeleton) {
+        const r = await fetch('/api/character/rigify-skeleton/');
+        if (r.ok) _cachedRigifySkeleton = await r.json();
     }
-    return _cachedDefSkeleton;
+    return _cachedRigifySkeleton;
 }
 
 async function _ensureSkinWeights() {
@@ -232,16 +232,16 @@ async function buildGeneratedModel(config) {
     const skelType = config.skeleton_type || 'def';
     let result;
 
-    const defSkel = await _ensureDefSkeleton();
+    const rigifySkel = await _ensureRigifySkeleton();
     const swData = await _ensureSkinWeights();
 
     if (skelType === 'rig') {
         const rigData = await _ensureRigBones();
         if (!rigData) throw new Error('Rig bones data not loaded');
-        result = generateRigBoneMesh(rigData, config, defSkel, swData);
+        result = generateRigBoneMesh(rigData, config, rigifySkel, swData);
     } else {
-        if (!defSkel || !swData) throw new Error('Skeleton data not loaded');
-        result = generateModelMesh(defSkel, swData, config);
+        if (!rigifySkel || !swData) throw new Error('Skeleton data not loaded');
+        result = generateModelMesh(rigifySkel, swData, config);
     }
 
     if (!result) throw new Error('No visible bones in generated model config');
@@ -256,8 +256,8 @@ async function buildGeneratedModel(config) {
         group.userData.skinnedMesh = result.mesh;
         group.userData.skeleton = result.skeleton.skeleton;
         group.userData.rootBone = result.skeleton.rootBone;
-        // Store full defSkeleton-compatible object for retarget (boneByName, rootBone, etc.)
-        group.userData.defSkelObj = result.skeleton;
+        // Store full rigifySkeleton-compatible object for retarget (boneByName, rootBone, etc.)
+        group.userData.rigifySkelObj = result.skeleton;
     }
 
     return group;

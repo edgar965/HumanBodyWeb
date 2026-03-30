@@ -43,7 +43,7 @@ class BVHJob(models.Model):
     bvh_file = models.CharField(max_length=512, blank=True)
     bvh_file_face = models.CharField(max_length=512, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    pipeline = models.CharField(max_length=30, choices=PIPELINE_CHOICES, default='mediapipe')
+    pipeline = models.CharField(max_length=30, choices=PIPELINE_CHOICES, default='hybrid_gvhmr')
     progress = models.IntegerField(default=0)  # 0-100
     progress_detail = models.CharField(max_length=100, blank=True)  # e.g. "150 / 20000 frames"
     error_message = models.TextField(blank=True)
@@ -233,8 +233,8 @@ class AppSettings(models.Model):
 
     # --- Video to BVH: 3D Pipeline defaults ---
     lifter_3d_default = models.CharField(
-        max_length=20, default='v4',
-        help_text="Default 3D pipeline (v4/gvhmr/wham/prompthmr)",
+        max_length=20, default='hybrid_gvhmr',
+        help_text="Default 3D pipeline (v4/gvhmr/wham/prompthmr/hybrid_gvhmr/hybrid_prompthmr)",
     )
 
     # --- Video to BVH: MocapNET v4 settings ---
