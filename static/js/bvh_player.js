@@ -562,7 +562,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         const maxDim = Math.max(size.x, size.y, size.z);
         const fovRad = camera.fov * Math.PI / 180;
         const dist = maxDim / (2 * Math.tan(fovRad / 2)) * 1.3;
-        camera.position.set(center.x, center.y, center.z - dist);
+        camera.position.set(center.x, center.y, center.z + dist);
         controls.update();
     }
 
