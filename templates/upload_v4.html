@@ -11,8 +11,26 @@
         <div class="drop-zone" id="dropTarget">
             <i class="fas fa-cloud-upload-alt fa-3x"></i>
             <p>Drag & drop video here or click to browse</p>
-            <input type="file" name="video" id="videoInput" accept="video/*" required>
+            <input type="file" name="video" id="videoInput" accept="video/*" {% if not unique_videos %}required{% endif %}>
         </div>
+
+        <!-- Video file selector (from uploads/ directory) -->
+        {% if upload_files %}
+        <div class="form-group" id="videoSelector">
+            <label>Video ausw&auml;hlen:</label>
+            <div class="video-file-list">
+                {% for f in upload_files %}
+                <label class="video-file-item {% if f.path == selected_video_path %}selected{% endif %}">
+                    <input type="radio" name="selected_video" value="{{ f.path }}"
+                        data-name="{{ f.name }}"
+                        {% if f.path == selected_video_path %}checked{% endif %}>
+                    <span class="video-file-name">{{ f.name }}</span>
+                    <span class="video-file-meta">{{ f.size }} &bull; {{ f.date }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         <div class="form-group">
             <label>3D Pipeline:</label>
@@ -103,6 +121,22 @@
                             <div class="setting-item">
                                 <div class="setting-label">Brennweite (mm) <span class="setting-hint">Kamera-Brennweite in mm &mdash; 0 = automatische Sch&auml;tzung (Standard: 26mm)</span></div>
                                 <input type="number" name="gvhmr_focal_length_mm" min="0" max="200" step="1" value="{{ defaults.gvhmr_focal_length_mm }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Temporal Smoothing <span class="setting-hint">Gaussian-Gl&auml;ttung (0=aus, 2=Standard, 4+=stark)</span></div>
+                                <input type="number" name="gvhmr_smooth_sigma" min="0" max="10" step="0.5" value="2.0">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Joint Limits <span class="setting-hint">Anatomische Grenzen f&uuml;r Knie/Ellbogen/H&uuml;fte</span></div>
+                                <input type="checkbox" name="gvhmr_joint_limits" checked>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">DPVO <span class="setting-hint">DPVO statt SimpleVO (genauer, langsamer, braucht mehr VRAM)</span></div>
+                                <input type="checkbox" name="gvhmr_use_dpvo">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Verbose <span class="setting-hint">Debug-Visualisierungen ausgeben</span></div>
+                                <input type="checkbox" name="gvhmr_verbose">
                             </div>
                             <div class="setting-item">
                                 <div class="setting-label">Device <span class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB VRAM</span></div>
@@ -287,6 +321,15 @@
             </div>
         </div>
 
+        <!-- Start button for selected video + pipeline -->
+        {% if upload_files %}
+        <div class="form-group" style="margin-top:12px;">
+            <button type="button" class="btn btn-lg btn-primary" id="startSelectedBtn" onclick="startSelectedVideo()" style="width:100%;padding:12px;font-size:1.1rem;">
+                <i class="fas fa-play"></i> Pipeline starten
+            </button>
+        </div>
+        {% endif %}
+
     </form>
 </div>
 
@@ -294,8 +337,8 @@
 <div class="job-list-section">
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
         <h3 style="margin:0;">Uploaded Videos</h3>
-        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" style="display:none;" onclick="bulkDelete()">
-            <i class="fas fa-trash"></i> Delete Selected
+        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled onclick="bulkDelete()">
+            <i class="fas fa-trash"></i> Delete Selected (<span id="bulkCount">0</span>)
         </button>
     </div>
     <table class="processed-table" id="jobTable">
@@ -441,6 +484,24 @@
 
 {% block extra_scripts %}
 <style>
+/* Video file selector */
+.video-file-list {
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 200px; overflow-y: auto;
+    border: 1px solid var(--border, #333); border-radius: 8px;
+    padding: 6px; background: var(--bg-darker, #181825);
+}
+.video-file-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: 6px; cursor: pointer;
+    transition: background 0.15s;
+}
+.video-file-item:hover { background: rgba(52,152,219,0.1); }
+.video-file-item.selected { background: rgba(52,152,219,0.2); border: 1px solid #3498db; }
+.video-file-item input[type="radio"] { margin: 0; flex-shrink: 0; }
+.video-file-name { font-weight: 500; flex: 1; }
+.video-file-meta { color: var(--text-muted, #888); font-size: 0.8rem; white-space: nowrap; }
+
 /* Pipeline cards */
 .pipeline-cards { display: flex; flex-direction: column; gap: 8px; }
 .pipeline-card {
@@ -539,6 +600,71 @@
 }
 </style>
 <script>
+// --- Video file selection + persistence ---
+document.querySelectorAll('input[name="selected_video"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        // Visual highlight
+        document.querySelectorAll('.video-file-item').forEach(function(el) {
+            el.classList.toggle('selected', el.querySelector('input').checked);
+        });
+        // Persist to server
+        fetch('/api/ui-prefs/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
+            body: JSON.stringify({selected_video_path: this.value})
+        });
+    });
+});
+
+// --- Start pipeline on selected video ---
+function startSelectedVideo() {
+    var sel = document.querySelector('input[name="selected_video"]:checked');
+    if (!sel) {
+        alert('Bitte zuerst ein Video auswählen.');
+        return;
+    }
+    var videoPath = sel.value;  // e.g. 'uploads/Nuss.webm'
+    var videoName = sel.dataset.name;
+    var pipeline = document.querySelector('input[name="pipeline"]:checked');
+    if (!pipeline) {
+        alert('Bitte eine Pipeline auswählen.');
+        return;
+    }
+    var plValue = pipeline.value;
+    var pp = collectPipelineParams(plValue);
+
+    // Persist selections
+    fetch('/api/ui-prefs/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
+        body: JSON.stringify({last_pipeline: plValue, selected_video_path: videoPath})
+    });
+
+    var btn = document.getElementById('startSelectedBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starte...';
+
+    // Create new job from existing video file and start processing
+    fetch('/api/job/create-from-file/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
+        body: JSON.stringify({video_path: videoPath, pipeline: plValue, pipeline_params: pp})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.ok) {
+            // Go to status page to follow progress
+            window.location.href = '/process/' + data.job_id + '/status/';
+        } else {
+            alert('Error: ' + (data.error || 'Unknown'));
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play"></i> Pipeline starten';
+        }
+    }).catch(function(e) {
+        alert('Fehler: ' + e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play"></i> Pipeline starten';
+    });
+}
+
 // --- Pipeline card selection + settings toggle ---
 function updatePipelineCards() {
     var selected = document.querySelector('input[name="pipeline"]:checked');
@@ -598,9 +724,9 @@ var PRESETS = {
         }
     },
     gvhmr: {
-        fast:     {gvhmr_static_cam: true,  gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda'},
-        standard: {gvhmr_static_cam: true,  gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda'},
-        max:      {gvhmr_static_cam: false, gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda'}
+        fast:     {gvhmr_static_cam: true,  gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda', gvhmr_smooth_sigma: 4.0, gvhmr_joint_limits: true},
+        standard: {gvhmr_static_cam: true,  gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda', gvhmr_smooth_sigma: 2.0, gvhmr_joint_limits: true},
+        max:      {gvhmr_static_cam: false, gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda', gvhmr_smooth_sigma: 1.0, gvhmr_joint_limits: true}
     },
     wham: {
         fast:     {wham_local_only: true,  wham_smplify: false, wham_device: 'cuda'},
@@ -690,6 +816,10 @@ function collectPipelineParams(pipeline) {
     } else if (pipeline === 'gvhmr') {
         params.static_cam = document.querySelector('[name="gvhmr_static_cam"]').checked;
         params.focal_length_mm = parseFloat(document.querySelector('[name="gvhmr_focal_length_mm"]').value);
+        params.smooth_sigma = parseFloat(document.querySelector('[name="gvhmr_smooth_sigma"]').value);
+        params.joint_limits = document.querySelector('[name="gvhmr_joint_limits"]').checked;
+        params.use_dpvo = document.querySelector('[name="gvhmr_use_dpvo"]').checked;
+        params.verbose = document.querySelector('[name="gvhmr_verbose"]').checked;
         params.device = document.querySelector('[name="gvhmr_device"]').value;
         var vidDir = document.querySelector('[name="gvhmr_video_output_dir"]');
         if (vidDir && vidDir.value.trim()) params.video_output_dir = vidDir.value.trim();
@@ -787,7 +917,9 @@ function toggleSelectAll(el) {
 function updateBulkBtn() {
     var checked = document.querySelectorAll('.job-check:checked').length;
     var btn = document.getElementById('bulkDeleteBtn');
-    if (btn) btn.style.display = checked > 0 ? '' : 'none';
+    var cnt = document.getElementById('bulkCount');
+    if (btn) btn.disabled = checked === 0;
+    if (cnt) cnt.textContent = checked;
 }
 
 function bulkDelete() {
@@ -817,9 +949,11 @@ function bulkDelete() {
                 if (section) section.style.display = 'none';
             }
         }
+    }).catch(function(e) {
+        alert('Bulk delete failed: ' + e.message);
     }).finally(function() {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-trash"></i> Delete Selected';
+        updateBulkBtn();
+        btn.innerHTML = '<i class="fas fa-trash"></i> Delete Selected (<span id="bulkCount">0</span>)';
     });
 }
 

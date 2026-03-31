@@ -136,12 +136,14 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
     let debugDiv = document.getElementById('debugBonePanel');
     if (debugDiv) debugDiv.innerHTML = '<div style="padding:8px;color:#fbbf24">Warte auf BVH-Daten...</div>';
 
+    // DEBUG_BONES must match SMPL_BONES order so table indices = label indices
     const DEBUG_BONES = [
         'Pelvis','Spine1','Spine2','Spine3','Neck','Head',
-        'Left_collar','Left_shoulder','Left_elbow','Left_wrist','Left_palm',
-        'Right_collar','Right_shoulder','Right_elbow','Right_wrist','Right_palm',
         'Left_hip','Left_knee','Left_ankle','Left_foot',
-        'Right_hip','Right_knee','Right_ankle','Right_foot'];
+        'Right_hip','Right_knee','Right_ankle','Right_foot',
+        'Left_collar','Left_shoulder','Left_elbow','Left_wrist',
+        'Right_collar','Right_shoulder','Right_elbow','Right_wrist',
+        'Left_palm','Right_palm'];
 
     function updateDebugOverlay() {
         if (!debugDiv) return;
@@ -207,67 +209,110 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
             }
         }
 
-        // Compute raw 2D pixel distances from Pelvis (for Video column)
-        let raw2d = null;
-        if (kp2d && kp2d['Pelvis']) {
+        // Compute Video distances from Pelvis (same normalization as 2D: scaled by Pelvis→Neck)
+        // Video and 2D use the same keypoint source, so V↔2D should be 0.
+        let vidDist = null;
+        if (kp2d && kp2d['Pelvis'] && kp2d['Neck']) {
             const px = kp2d['Pelvis'][0], py = kp2d['Pelvis'][1];
-            raw2d = {};
-            for (const name of DEBUG_BONES) {
-                const p = kp2d[name];
-                if (p) raw2d[name] = Math.sqrt((p[0]-px)**2 + (p[1]-py)**2);
+            const nx = kp2d['Neck'][0],   ny = kp2d['Neck'][1];
+            const refLen = Math.sqrt((nx-px)**2 + (ny-py)**2);
+            if (refLen > 0.001) {
+                vidDist = {};
+                for (const name of DEBUG_BONES) {
+                    const p = kp2d[name];
+                    if (p) vidDist[name] = Math.sqrt((p[0]-px)**2 + (p[1]-py)**2) / refLen;
+                }
             }
         }
 
-        // Build HTML table: # | Bone | Video (dist) | 2D (dist) | 3D (dist) | Diff
+        // SMPL parent map for angle computation (bone → parent bone name)
+        const BONE_PARENT = {
+            'Pelvis': null,
+            'Spine1': 'Pelvis', 'Spine2': 'Spine1', 'Spine3': 'Spine2',
+            'Neck': 'Spine3', 'Head': 'Neck',
+            'Left_collar': 'Spine3', 'Left_shoulder': 'Left_collar',
+            'Left_elbow': 'Left_shoulder', 'Left_wrist': 'Left_elbow', 'Left_palm': 'Left_wrist',
+            'Right_collar': 'Spine3', 'Right_shoulder': 'Right_collar',
+            'Right_elbow': 'Right_shoulder', 'Right_wrist': 'Right_elbow', 'Right_palm': 'Right_wrist',
+            'Left_hip': 'Pelvis', 'Left_knee': 'Left_hip',
+            'Left_ankle': 'Left_knee', 'Left_foot': 'Left_ankle',
+            'Right_hip': 'Pelvis', 'Right_knee': 'Right_hip',
+            'Right_ankle': 'Right_knee', 'Right_foot': 'Right_ankle',
+        };
+
+        // Compute angle from parent→bone vs vertical (degrees, 0=up)
+        // For 2D: angle of vector (parent→bone) relative to Y-up
+        // norm2d uses Y-down (screen), norm3d uses Y-down (flipped for comparison)
+        function _angle2d(data, bone, parent) {
+            if (!data || !data[bone] || !data[parent]) return null;
+            const dx = data[bone][0] - data[parent][0];
+            const dy = data[bone][1] - data[parent][1];
+            return Math.atan2(dx, dy) * (180 / Math.PI); // 0=down, 90=right
+        }
+
+        // Build HTML table
         let h = `<div style="padding:8px;border-bottom:1px solid #334155;margin-bottom:4px">` +
             `<div style="color:#16c784;font-size:13px;font-weight:bold">Bone-Vergleich</div>` +
             `<div style="color:#ccc;font-size:10px">Frame ${Math.floor(curTime * fps)} | 2D:${frame2dIdx} 3D:${bvhFrame} (${curTime.toFixed(2)}s)</div></div>`;
         h += '<table style="width:100%;border-collapse:collapse;font-size:11px;padding:0 6px">';
         h += '<tr style="color:#f472b6;border-bottom:2px solid #475569">' +
-            '<th style="text-align:center;padding:3px 2px;width:16px">#</th>' +
-            '<th style="text-align:left;padding:3px 4px">Bone</th>' +
-            '<th style="text-align:center;padding:3px 4px;background:#1a0f2e">Video</th>' +
-            '<th style="text-align:center;padding:3px 4px;background:#0f2a1e">2D</th>' +
-            '<th style="text-align:center;padding:3px 4px;background:#1e1a2e">3D</th>' +
-            '<th style="text-align:center;padding:3px 4px">Diff</th></tr>';
+            '<th style="text-align:center;padding:3px 1px;width:14px">#</th>' +
+            '<th style="text-align:left;padding:3px 3px">Bone</th>' +
+            '<th style="text-align:center;padding:3px 2px;background:#1a0f2e" colspan="3">Video/2D</th>' +
+            '<th style="text-align:center;padding:3px 2px;background:#1e1a2e">3D</th>' +
+            '<th style="text-align:center;padding:3px 2px">Diff</th></tr>';
         h += '<tr style="color:#999;font-size:9px;border-bottom:1px solid #334155">' +
             '<td></td><td></td>' +
-            '<td style="text-align:right;padding:1px 4px;background:#1a0f2e">dist</td>' +
-            '<td style="text-align:right;padding:1px 4px;background:#0f2a1e">dist</td>' +
-            '<td style="text-align:right;padding:1px 4px;background:#1e1a2e">dist</td>' +
-            '<td style="text-align:right;padding:1px 4px">Δ</td></tr>';
+            '<td style="text-align:right;padding:1px 3px;background:#1a0f2e">dist</td>' +
+            '<td style="text-align:right;padding:1px 3px;background:#1a0f2e">ang°</td>' +
+            '<td style="text-align:right;padding:1px 3px;background:#1a0f2e">Δdist</td>' +
+            '<td style="text-align:right;padding:1px 3px;background:#1e1a2e">dist</td>' +
+            '<td style="text-align:right;padding:1px 3px">Δdist</td></tr>';
 
         for (let bi = 0; bi < DEBUG_BONES.length; bi++) {
             const name = DEBUG_BONES[bi];
             const n2 = norm2d ? norm2d[name] : null;
             const n3 = norm3d ? norm3d[name] : null;
+            const parent = BONE_PARENT[name];
 
-            // Video: raw pixel distance from Pelvis (normalized 0-1 coords)
-            const vDist = raw2d && raw2d[name] !== undefined ? raw2d[name].toFixed(3) : '—';
+            // Video/2D distance from Pelvis
+            const vd = vidDist && vidDist[name] !== undefined ? vidDist[name] : null;
+            const vDist = vd !== null ? vd.toFixed(2) : '—';
 
-            // 2D normalized: distance from Pelvis
-            const d2 = n2 ? Math.sqrt(n2[0]**2 + n2[1]**2) : null;
-            const c2 = d2 !== null ? d2.toFixed(3) : '—';
+            // 2D angle from parent
+            const aV = parent ? _angle2d(norm2d, name, parent) : null;
+            const angV = aV !== null ? `${aV.toFixed(0)}°` : '—';
 
-            // 3D normalized: distance from Pelvis
-            const d3 = n3 ? Math.sqrt(n3[0]**2 + n3[1]**2) : null;
-            const c3 = d3 !== null ? d3.toFixed(3) : '—';
-
-            // Diff between 2D and 3D distances
-            let diff = '—', diffColor = '#64748b';
-            if (d2 !== null && d3 !== null) {
-                const dd = d3 - d2;
-                diff = (dd >= 0 ? '+' : '') + dd.toFixed(3);
-                const absDiff = Math.abs(dd);
-                diffColor = absDiff < 0.15 ? '#16c784' : absDiff < 0.4 ? '#fbbf24' : '#ef4444';
+            // 2D parent→bone segment length (normalized)
+            let seg2d = '—', seg2dColor = '#64748b';
+            if (parent && norm2d && norm2d[name] && norm2d[parent]) {
+                const dx = norm2d[name][0] - norm2d[parent][0];
+                const dy = norm2d[name][1] - norm2d[parent][1];
+                const len = Math.sqrt(dx*dx + dy*dy);
+                seg2d = len.toFixed(2);
             }
+
+            // 3D distance from Pelvis
+            const d3 = n3 ? Math.sqrt(n3[0]**2 + n3[1]**2) : null;
+            const c3 = d3 !== null ? d3.toFixed(2) : '—';
+
+            // Diff distance (2D↔3D from Pelvis)
+            let diffDist = '—', ddColor = '#64748b';
+            if (vd !== null && d3 !== null) {
+                const dd = d3 - vd;
+                diffDist = (dd >= 0 ? '+' : '') + dd.toFixed(2);
+                const a = Math.abs(dd);
+                ddColor = a < 0.15 ? '#16c784' : a < 0.4 ? '#fbbf24' : '#ef4444';
+            }
+
             h += `<tr style="border-top:1px solid #1e293b">` +
-                `<td style="text-align:center;padding:2px 2px;color:#64748b;font-size:10px">${bi}</td>` +
-                `<td style="padding:2px 4px;color:#8cb4ff;white-space:nowrap;font-size:10px">${name}</td>` +
-                `<td style="text-align:right;padding:2px 4px;background:#1a0f2e;color:#c084fc">${vDist}</td>` +
-                `<td style="text-align:right;padding:2px 4px;background:#0f2a1e">${c2}</td>` +
-                `<td style="text-align:right;padding:2px 4px;background:#1e1a2e">${c3}</td>` +
-                `<td style="text-align:right;padding:2px 4px;color:${diffColor}">${diff}</td></tr>`;
+                `<td style="text-align:center;padding:2px 1px;color:#64748b;font-size:10px">${bi}</td>` +
+                `<td style="padding:2px 3px;color:#8cb4ff;white-space:nowrap;font-size:10px">${name}</td>` +
+                `<td style="text-align:right;padding:2px 3px;background:#1a0f2e;color:#c084fc">${vDist}</td>` +
+                `<td style="text-align:right;padding:2px 3px;background:#1a0f2e;color:#c084fc">${angV}</td>` +
+                `<td style="text-align:right;padding:2px 3px;background:#1a0f2e;color:#c084fc">${seg2d}</td>` +
+                `<td style="text-align:right;padding:2px 3px;background:#1e1a2e">${c3}</td>` +
+                `<td style="text-align:right;padding:2px 3px;color:${ddColor}">${diffDist}</td></tr>`;
         }
         h += '</table>';
 
@@ -517,7 +562,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         const maxDim = Math.max(size.x, size.y, size.z);
         const fovRad = camera.fov * Math.PI / 180;
         const dist = maxDim / (2 * Math.tan(fovRad / 2)) * 1.3;
-        camera.position.set(center.x, center.y, center.z + dist);
+        camera.position.set(center.x, center.y, center.z - dist);
         controls.update();
     }
 
@@ -535,7 +580,6 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         if (!overlayCtx || !overlayCanvas) return;
         const cw = overlayContainer.clientWidth;
         const ch = overlayContainer.clientHeight;
-        // Ensure canvas backing store matches container (fixes stale init sizing)
         const dpr = window.devicePixelRatio;
         const needW = Math.round(cw * dpr);
         const needH = Math.round(ch * dpr);
@@ -554,7 +598,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
         if (rawFrameIdx >= nFrames) return;
         const frameIdx = rawFrameIdx;
 
-        // Check detection flags — hide if no person detected
+        // Check detection flags
         if (detectionFlags) {
             const detIdx = Math.min(
                 Math.floor((video.currentTime / video.duration) * detectionFlags.length),
@@ -580,7 +624,7 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
             }
         }
 
-        // Draw connections
+        // Draw connections (from keypointsData — SMPL camera projection, matches video)
         overlayCtx.strokeStyle = '#00ff00';
         overlayCtx.lineWidth = 2.5;
         overlayCtx.lineCap = 'round';
@@ -594,12 +638,12 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
             }
         }
 
-        // Build name→index map from BODY_BONE_NAMES so 2D labels match 3D labels
+        // Build name→index map from BODY_BONE_NAMES so labels match 3D skeleton
         const boneIdx = {};
         let bi2 = 0;
         for (const n of BODY_BONE_NAMES) boneIdx[n] = bi2++;
 
-        // Draw joints + index labels (same numbering as 3D skeleton)
+        // Draw joints + index labels
         overlayCtx.fillStyle = '#e94560';
         overlayCtx.font = 'bold 11px monospace';
         overlayCtx.textAlign = 'center';
@@ -609,12 +653,10 @@ export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30, overlayId =
             if (p && p[2] > minConf) {
                 const sx = p[0] * rw + ox;
                 const sy = p[1] * rh + oy;
-                // Joint dot
                 overlayCtx.fillStyle = '#e94560';
                 overlayCtx.beginPath();
                 overlayCtx.arc(sx, sy, 4, 0, Math.PI * 2);
                 overlayCtx.fill();
-                // Index label (same numbering as 3D bone labels)
                 if (labelsVisible && boneIdx[name] !== undefined) {
                     const label = `${boneIdx[name]}`;
                     const tw = overlayCtx.measureText(label).width + 6;

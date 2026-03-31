@@ -3,6 +3,7 @@ import json
 import subprocess
 import threading
 import time as _time_mod
+from datetime import datetime as _datetime
 from pathlib import Path
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -354,9 +355,34 @@ def upload_video_v4(request):
 
     v4_jobs = BVHJob.objects.filter(pipeline__in=list(VALID_3D)).order_by('-created_at')
     _annotate_file_sizes(v4_jobs)
+
+    # List original video files from uploads/ directory (not from jobs)
+    uploads_dir = Path(settings.MEDIA_ROOT) / 'uploads'
+    video_exts = {'.mp4', '.webm', '.avi', '.mkv', '.mov', '.wmv'}
+    upload_files = []
+    if uploads_dir.is_dir():
+        for f in sorted(uploads_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+            if f.is_file() and f.suffix.lower() in video_exts:
+                stat = f.stat()
+                size_mb = stat.st_size / (1024 * 1024)
+                upload_files.append({
+                    'path': str(f.relative_to(Path(settings.MEDIA_ROOT))),  # e.g. 'uploads/Nuss.webm'
+                    'name': f.name,
+                    'size': f'{size_mb:.1f} MB',
+                    'date': _datetime.fromtimestamp(stat.st_mtime).strftime('%d.%m.%Y %H:%M'),
+                })
+
+    # Last-selected video and pipeline from ui_prefs
+    ui_prefs = s.ui_prefs or {}
+    selected_video_id = ui_prefs.get('selected_video_id', '')
+    last_pipeline = ui_prefs.get('last_pipeline', default_3d)
+    if last_pipeline in VALID_3D:
+        default_3d = last_pipeline
+
     return render(request, 'upload_v4.html', {
         'v4_jobs': v4_jobs, 'status_3d': status_3d, 'default_3d': default_3d,
-        'defaults': defaults,
+        'defaults': defaults, 'upload_files': upload_files,
+        'selected_video_path': ui_prefs.get('selected_video_path', ''),
     })
 
 
@@ -1068,6 +1094,13 @@ def _run_smpl_pipeline(job, video_path, output_dir):
         if p.get('static_cam', s.gvhmr_static_cam):
             cmd.append('--static_cam')
         cmd.extend(['--focal_length_mm', str(p.get('focal_length_mm', s.gvhmr_focal_length_mm))])
+        cmd.extend(['--smooth_sigma', str(p.get('smooth_sigma', 2.0))])
+        if not p.get('joint_limits', True):
+            cmd.append('--no_joint_limits')
+        if p.get('use_dpvo', False):
+            cmd.append('--use_dpvo')
+        if p.get('verbose', False):
+            cmd.append('--verbose')
     elif job.pipeline == 'wham':
         if p.get('local_only', s.wham_estimate_local_only):
             cmd.append('--estimate_local_only')
@@ -2339,6 +2372,53 @@ def delete_job_api(request, job_id):
     _cleanup_job_files(job)
     job.delete()
     return JsonResponse({'ok': True, 'name': name})
+
+
+def create_job_from_file(request):
+    """AJAX: Create a new job from an existing uploaded video file and start processing."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        data = json.loads(request.body)
+        video_path = data.get('video_path', '')  # e.g. 'uploads/Nuss.webm'
+        pipeline = data.get('pipeline', 'gvhmr')
+        pp = data.get('pipeline_params', {})
+
+        VALID_3D = ('v4', 'gvhmr', 'wham', 'prompthmr', 'hybrid_gvhmr', 'hybrid_prompthmr')
+        if pipeline not in VALID_3D:
+            return JsonResponse({'error': f'Invalid pipeline: {pipeline}'}, status=400)
+
+        full_path = Path(settings.MEDIA_ROOT) / video_path
+        if not full_path.is_file():
+            return JsonResponse({'error': f'Video file not found: {video_path}'}, status=404)
+
+        # Create job referencing the existing file (no copy)
+        job = BVHJob.objects.create(
+            name=full_path.name,
+            video_file=video_path,
+            fps=0,
+            pipeline=pipeline,
+            pipeline_params=pp,
+        )
+
+        # Auto-detect FPS
+        try:
+            import cv2
+            cap = cv2.VideoCapture(str(full_path))
+            detected_fps = cap.get(cv2.CAP_PROP_FPS)
+            cap.release()
+            job.fps = detected_fps if detected_fps and detected_fps > 0 else 30.0
+            job.save(update_fields=['fps'])
+        except Exception:
+            job.fps = 30.0
+            job.save(update_fields=['fps'])
+
+        # Initialize and start processing
+        _init_and_launch_job(job)
+
+        return JsonResponse({'ok': True, 'job_id': str(job.id), 'status': job.status})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 def bulk_delete_jobs(request):

@@ -43,6 +43,7 @@ urlpatterns = [
     path('api/job/<uuid:job_id>/status/', views.job_status_api, name='job_status_api'),
     path('api/job/<uuid:job_id>/delete/', views.delete_job_api, name='delete_job_api'),
     path('api/jobs/bulk-delete/', views.bulk_delete_jobs, name='bulk_delete_jobs'),
+    path('api/job/create-from-file/', views.create_job_from_file, name='create_job_from_file'),
 
     # HumanBody
     path('humanbody/photo-to-3d/', character_api.photo_to_3d_page, name='photo_to_3d'),
