@@ -3711,12 +3711,16 @@ def _get_skel_geometry():
     return _skel_geometry_cache
 
 
-def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=False):
+def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=False,
+                      delta_norm=None):
     """Core retarget: BVH file path → dict with Rigify/DEF quaternion tracks.
 
     This is the ONE retarget function used by all endpoints (job, static, merge, text).
     Input:  bvh_path (str) — path to a .bvh file
     Output: dict {duration, times, tracks: {bone: [x,y,z,w,...]}, position_track, ...}
+
+    delta_norm: None = auto (use format's NORMALIZE_BEFORE_RETARGET),
+                True = force on, False = force off
     """
     from humanbody_core.skeleton import Skeleton, SkeletonRigify
 
@@ -3729,7 +3733,8 @@ def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=Fals
         fmt_cls = Skeleton.detect_format(bvh.names)
     if fmt_cls and fmt_cls.BONE_MAP_TO_RIGIFY:
         return fmt_cls.retarget_to_rigify(bvh, skel_geom, body_height=body_height,
-                                          foot_correction=foot_correction)
+                                          foot_correction=foot_correction,
+                                          delta_norm=delta_norm)
     return SkeletonRigify.retarget_bvh(bvh, skel_geom, fmt=fmt,
                                         body_height=body_height,
                                         foot_correction=foot_correction)
@@ -3750,6 +3755,8 @@ def retarget(request):
     body_height = float(request.GET.get('body_height', 1.68))
     fmt = request.GET.get('format', None)
     foot_correction = request.GET.get('foot_correction', '').lower() in ('1', 'true')
+    delta_norm_str = request.GET.get('delta_norm', '').lower()
+    delta_norm = True if delta_norm_str == '1' else (False if delta_norm_str == '0' else None)
 
     if job_id:
         job = get_object_or_404(BVHJob, id=job_id)
@@ -3766,7 +3773,7 @@ def retarget(request):
     else:
         return JsonResponse({'error': 'Provide ?job=<uuid> or ?category=<cat>&name=<name>'}, status=400)
 
-    return JsonResponse(retarget_bvh_data(bvh_path, body_height, fmt, foot_correction))
+    return JsonResponse(retarget_bvh_data(bvh_path, body_height, fmt, foot_correction, delta_norm))
 
 
 @require_GET

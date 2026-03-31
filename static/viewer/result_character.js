@@ -77,6 +77,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     let rigVisible = false;
     let clothesVisible = true;
     let enableFootCorrection = false;
+    let deltaNormMode = undefined;  // undefined = auto, true = on, false = off
 
     // Cloth
     const clothMeshes = {};
@@ -308,6 +309,16 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     if (footChk) {
         footChk.addEventListener('change', () => {
             enableFootCorrection = footChk.checked;
+            if (isSkinned) loadBVH();
+        });
+    }
+
+    // --- Delta normalization select ---
+    const deltaNormSel = document.getElementById('deltaNormSelect');
+    if (deltaNormSel) {
+        deltaNormSel.addEventListener('change', () => {
+            const v = deltaNormSel.value;
+            deltaNormMode = v === 'auto' ? undefined : v === '1';
             if (isSkinned) loadBVH();
         });
     }
@@ -1309,6 +1320,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         const clip = await fetchRetargetedClipForJob(jobId, rigifySkeleton, {
             bodyHeight: bodyH,
             footCorrection: enableFootCorrection,
+            deltaNorm: deltaNormMode,
         });
 
         console.log('[result_character] clip:', clip.duration, 'sec,', clip.tracks.length, 'tracks');
@@ -1406,6 +1418,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         const clip = await fetchMergedClipForJob(jobId, rigifySkeleton, {
             bodyHeight: bodyH,
             footCorrection: enableFootCorrection,
+            deltaNorm: deltaNormMode,
         });
 
         mixer = new THREE.AnimationMixer(bodyMesh);
