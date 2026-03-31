@@ -1174,6 +1174,15 @@
                             <input type="range" id="anim-timeline" min="0" max="100" value="0" step="1">
                         </div>
                         <div class="anim-info" id="anim-info">&mdash;</div>
+                        <div style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+                            <label style="font-size:0.8rem;color:var(--text-muted);">Delta Norm:</label>
+                            <select id="scene-delta-norm" style="font-size:0.8rem;padding:2px 4px;background:var(--bg-darker);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+                                <option value="auto">Auto</option>
+                                <option value="1">An</option>
+                                <option value="0">Aus</option>
+                            </select>
+                            <label style="font-size:0.8rem;color:var(--text-muted);"><input type="checkbox" id="scene-ground-fix" style="margin-right:4px;">Bodenniveau</label>
+                        </div>
                     </div>
                 </div>
             </div><!-- /tab-animation -->

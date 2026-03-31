@@ -126,6 +126,7 @@ let currentAnimDuration = 0;
 let currentAnimUrl = '';              // URL der geladenen BVH
 let currentAnimBvhText = '';          // Roher BVH-Text (original oder modifiziert)
 let currentAnimGroundFixed = false;   // Ob Bodenniveau-Fix angewendet
+let _sceneDeltaNorm = undefined;       // undefined=auto
 
 // =========================================================================
 // Scene Editor State
@@ -929,7 +930,27 @@ function animate() {
     requestAnimationFrame(animate);
     const dt = Math.min(clock.getDelta(), 0.1);
     controls.update();
-    if (mixer && playing) mixer.update(dt);
+    if (mixer && playing) {
+        mixer.update(dt);
+        // Ground fix: after animation update, set group Y so lowest point = 0
+        if (currentAnimGroundFixed) {
+            const inst = _selectedInst ? _selectedInst() : null;
+            const grp = inst ? inst.group : null;
+            const bMesh = inst ? inst.bodyMesh : bodyMesh;
+            if (bMesh) {
+                // Reset Y before measuring to avoid drift
+                if (grp) grp.position.y = 0;
+                else if (bMesh) bMesh.position.y = 0;
+                bMesh.updateWorldMatrix(true, true);
+                const bb = new THREE.Box3().setFromObject(bMesh);
+                if (!bb.isEmpty()) {
+                    const offset = -bb.min.y;
+                    if (grp) grp.position.y = offset;
+                    else bMesh.position.y = offset;
+                }
+            }
+        }
+    }
     renderer.render(scene, camera);
 
     updateCameraInfo();
@@ -2887,10 +2908,10 @@ async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
         try {
             let clip;
             if (rawBvhText) {
-                clip = await fetchRetargetedClipFromText(rawBvhText, skel, { bodyHeight: bodyH });
+                clip = await fetchRetargetedClipFromText(rawBvhText, skel, { bodyHeight: bodyH, deltaNorm: _sceneDeltaNorm });
                 currentAnimBvhText = rawBvhText;
             } else {
-                clip = await fetchRetargetedClipFromUrl(url, skel, { bodyHeight: bodyH });
+                clip = await fetchRetargetedClipFromUrl(url, skel, { bodyHeight: bodyH, deltaNorm: _sceneDeltaNorm });
                 // Also fetch the raw text for BVH editing features
                 try {
                     const bustUrl = url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now();
@@ -3008,7 +3029,7 @@ function stopAnimation(destroy = false) {
 // Animation Ground-Fix & Save
 // =========================================================================
 
-function applyGroundLevelFix() {
+async function applyGroundLevelFix() {
     if (!currentAnimBvhText) {
         alert('Keine Animation geladen.');
         return;
@@ -3016,7 +3037,7 @@ function applyGroundLevelFix() {
 
     const lines = currentAnimBvhText.split('\n');
 
-    // --- 1. Find root CHANNELS to locate Yposition index ---
+    // 1. Find Yposition channel index
     let yPosChannel = -1;
     let foundRoot = false;
     for (let i = 0; i < lines.length; i++) {
@@ -3030,16 +3051,10 @@ function applyGroundLevelFix() {
             break;
         }
     }
-    if (yPosChannel < 0) {
-        alert('Konnte Yposition-Kanal nicht finden.');
-        return;
-    }
+    if (yPosChannel < 0) { alert('Yposition-Kanal nicht gefunden.'); return; }
 
-    // --- 2. Find MOTION section and frame data lines ---
-    let motionIdx = -1;
-    for (let i = 0; i < lines.length; i++) {
-        if (lines[i].trim() === 'MOTION') { motionIdx = i; break; }
-    }
+    // 2. Find frame data lines
+    let motionIdx = lines.findIndex(l => l.trim() === 'MOTION');
     if (motionIdx < 0) return;
 
     let frameTime = 1 / 30;
@@ -3052,101 +3067,68 @@ function applyGroundLevelFix() {
 
     const frameLineIdx = [];
     for (let i = dataStart; i < lines.length; i++) {
-        const t = lines[i].trim();
-        if (t && t.match(/^[\d\-\.]/)) frameLineIdx.push(i);
+        if (lines[i].trim().match(/^[\d\-\.]/)) frameLineIdx.push(i);
     }
     const totalFrames = frameLineIdx.length;
-    if (totalFrames === 0) { alert('Keine Frames gefunden.'); return; }
+    if (totalFrames === 0) { alert('Keine Frames.'); return; }
 
-    // --- 3. Parse BVH with Three.js for FK (skeleton + clip) ---
+    // 3. FK per frame — find lowest bone Y, correct if below 0
     const parsed = bvhLoader.parse(currentAnimBvhText);
     const bones = parsed.skeleton.bones;
     const rootBone = bones[0];
-
-    // --- 4. Sample every frame for accurate ground correction ---
-    const sampleEvery = 1;
-    const samples = []; // [{frame, offset}]
-
     const tmpMixer = new THREE.AnimationMixer(rootBone);
     const tmpAction = tmpMixer.clipAction(parsed.clip);
     tmpAction.play();
     const tmpV = new THREE.Vector3();
 
-    for (let f = 0; f < totalFrames; f += sampleEvery) {
+    let corrected = 0;
+    for (let f = 0; f < totalFrames; f++) {
         tmpMixer.setTime(f * frameTime);
         rootBone.updateWorldMatrix(true, true);
+
+        // Find lowest bone
         let minY = Infinity;
         for (const b of bones) {
             b.getWorldPosition(tmpV);
             if (tmpV.y < minY) minY = tmpV.y;
         }
-        samples.push({ frame: f, offset: -minY });
-    }
-    // Ensure last frame is included
-    const lastFrame = totalFrames - 1;
-    if (samples[samples.length - 1].frame !== lastFrame) {
-        tmpMixer.setTime(lastFrame * frameTime);
-        rootBone.updateWorldMatrix(true, true);
-        let minY = Infinity;
-        for (const b of bones) {
-            b.getWorldPosition(tmpV);
-            if (tmpV.y < minY) minY = tmpV.y;
+
+        // Correct every frame: push down if floating, push up if underground
+        // Target: lowest bone sits exactly at Y=0 (ground level)
+        if (Math.abs(minY) > 0.001) {
+            const li = frameLineIdx[f];
+            const vals = lines[li].trim().split(/\s+/);
+            vals[yPosChannel] = (parseFloat(vals[yPosChannel]) - minY).toFixed(6);
+            lines[li] = vals.join(' ');
+            corrected++;
         }
-        samples.push({ frame: lastFrame, offset: -minY });
     }
     tmpAction.stop();
     tmpMixer.stopAllAction();
 
-    // --- 5. Check if any correction is needed ---
-    const maxAbs = Math.max(...samples.map(s => Math.abs(s.offset)));
-    console.log(`[GROUND] ${samples.length} Samples, max Abweichung: ${maxAbs.toFixed(2)}`);
-    if (maxAbs < 0.01) {
-        alert('Animation ist bereits auf Bodenniveau (max Abweichung: ' + maxAbs.toFixed(4) + ').');
+    if (corrected === 0) {
+        alert('Animation ist bereits auf Bodenniveau.');
         return;
-    }
-
-    // --- 6. Interpolate offsets for every frame ---
-    const perFrameOffset = new Float64Array(totalFrames);
-    if (samples.length === 1) {
-        perFrameOffset.fill(samples[0].offset);
-    } else {
-        for (let s = 0; s < samples.length - 1; s++) {
-            const s0 = samples[s], s1 = samples[s + 1];
-            for (let f = s0.frame; f <= s1.frame; f++) {
-                const t = (s1.frame > s0.frame) ? (f - s0.frame) / (s1.frame - s0.frame) : 0;
-                perFrameOffset[f] = s0.offset + (s1.offset - s0.offset) * t;
-            }
-        }
-    }
-
-    // --- 7. Apply per-frame offset to root Y channel in BVH text ---
-    for (let f = 0; f < totalFrames; f++) {
-        const li = frameLineIdx[f];
-        const vals = lines[li].trim().split(/\s+/);
-        vals[yPosChannel] = (parseFloat(vals[yPosChannel]) + perFrameOffset[f]).toFixed(6);
-        lines[li] = vals.join(' ');
     }
 
     const modifiedBvh = lines.join('\n');
     currentAnimBvhText = modifiedBvh;
     currentAnimGroundFixed = true;
+    console.log(`[GROUND] ${corrected}/${totalFrames} Frames korrigiert`);
 
-    // Reload animation from modified BVH text
-    const blob = new Blob([modifiedBvh], { type: 'text/plain' });
-    const blobUrl = URL.createObjectURL(blob);
-    loadBVHAnimation(blobUrl, currentAnimName, 0, modifiedBvh);
-
-    // Summary alert for user
-    const summaryLines = [
-        `Bodenniveau-Fix angewendet:`,
-        `- ${totalFrames} Frames korrigiert`,
-        `- ${samples.length} Samples (alle ${sampleEvery} Frames)`,
-        `- Max Korrektur: ${maxAbs.toFixed(2)} Einheiten`,
-        `- Y-Kanal Index: ${yPosChannel}`,
-        `- Frame Time: ${frameTime.toFixed(4)}s`,
-    ];
-    alert(summaryLines.join('\n'));
-    console.log(`[GROUND] Fix angewendet: ${totalFrames} Frames, max Korrektur ${maxAbs.toFixed(2)}`);
+    // Save and reload
+    const savePath = currentAnimUrl.replace(/\?.*$/, '').replace(/\.bvh$/i, '_ground.bvh');
+    try {
+        await fetch('/api/character/save-bvh-text/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: savePath, bvh_text: modifiedBvh }),
+        });
+        loadBVHAnimation(savePath + '?t=' + Date.now(), currentAnimName + ' (ground)', 0);
+    } catch (e) {
+        console.warn('[GROUND] Save failed:', e);
+        loadBVHAnimation(currentAnimUrl, currentAnimName, 0, modifiedBvh);
+    }
 }
 
 function openSaveAnimDialog() {
@@ -5621,6 +5603,27 @@ async function loadAnimationUI() {
                 currentAction.time = time;
                 if (mixer) mixer.update(0);
             }
+        });
+    }
+
+    // Delta norm toggle
+    const deltaSel = document.getElementById('scene-delta-norm');
+    if (deltaSel) {
+        deltaSel.addEventListener('change', () => {
+            const v = deltaSel.value;
+            _sceneDeltaNorm = v === 'auto' ? undefined : v === '1';
+            // Reload current animation with new setting
+            if (currentAnimUrl) {
+                loadBVHAnimation(currentAnimUrl, currentAnimName, 0, currentAnimBvhText || null);
+            }
+        });
+    }
+
+    // Ground fix toggle
+    const groundChk = document.getElementById('scene-ground-fix');
+    if (groundChk) {
+        groundChk.addEventListener('change', () => {
+            currentAnimGroundFixed = groundChk.checked;
         });
     }
 }

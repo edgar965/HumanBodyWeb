@@ -77,7 +77,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     let rigVisible = false;
     let clothesVisible = true;
     let enableFootCorrection = false;
-    let deltaNormMode = undefined;  // undefined = auto, true = on, false = off
+    let deltaNormMode = undefined;  // undefined = auto
 
     // Cloth
     const clothMeshes = {};

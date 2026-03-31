@@ -81,6 +81,7 @@ urlpatterns = [
     path('api/character/retarget-job/<uuid:job_id>/', character_api.retarget_job_bvh, name='retarget_job_bvh'),  # legacy
     path('api/character/retarget-job-merge/<uuid:job_id>/', character_api.retarget_job_merge, name='retarget_job_merge'),
     path('api/character/retarget-bvh-text/', character_api.retarget_bvh_text, name='retarget_bvh_text'),
+    path('api/character/save-bvh-text/', character_api.save_bvh_text, name='save_bvh_text'),
     path('api/character/wardrobe/', character_api.character_wardrobe, name='character_wardrobe'),
     path('api/character/animations/', character_api.character_animations, name='character_animations'),
     path('api/character/model-files/', character_api.model_files, name='model_files'),

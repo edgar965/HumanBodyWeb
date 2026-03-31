@@ -2416,9 +2416,17 @@ def create_job_from_file(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     try:
-        # Block if another job is already running
+        # Auto-cancel stuck jobs older than 10 minutes
+        from django.utils import timezone as _tz
+        stuck_cutoff = _tz.now() - _tz.timedelta(minutes=10)
+        BVHJob.objects.filter(
+            status__in=['processing', 'v4_processing'],
+            updated_at__lt=stuck_cutoff
+        ).update(status='failed', error_message='Auto-cancelled: stuck > 10 min')
+
+        # Block if another job is actually running
         active = BVHJob.objects.filter(
-            status__in=['processing', 'v4_processing', 'pending']
+            status__in=['processing', 'v4_processing']
         ).first()
         if active:
             return JsonResponse({
