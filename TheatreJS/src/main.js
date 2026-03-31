@@ -692,6 +692,50 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Tools menu: Tracks neu aufbauen ──
+    const menuTracksRebuild = document.getElementById('menu-tracks-rebuild');
+    if (menuTracksRebuild) {
+        menuTracksRebuild.addEventListener('click', () => {
+            // Re-select the sheet so Studio rebuilds all track rows
+            studio.setSelection([sheet]);
+            // Force a value write on each object to ensure tracks appear
+            const objs = window.theatreObjects || {};
+            studio.transaction(({ set }) => {
+                for (const [name, obj] of Object.entries(objs)) {
+                    const vals = obj.value;
+                    if (!vals) continue;
+                    for (const [key, val] of Object.entries(vals)) {
+                        if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                            for (const [subKey, subVal] of Object.entries(val)) {
+                                try { set(obj.props[key][subKey], subVal); } catch(_) {}
+                            }
+                        } else {
+                            try { set(obj.props[key], val); } catch(_) {}
+                        }
+                    }
+                }
+            });
+            console.log('✓ Tracks rebuilt');
+        });
+    }
+
+    // ── Tools menu: Tracks löschen ──
+    const menuTracksClear = document.getElementById('menu-tracks-clear');
+    if (menuTracksClear) {
+        menuTracksClear.addEventListener('click', () => {
+            // Remove Theatre.js localStorage state completely and reload
+            for (const key of Object.keys(localStorage)) {
+                if (key.includes('theatre') || key.includes('Theatre') || key.includes('HumanBody Theatre')) {
+                    localStorage.removeItem(key);
+                }
+            }
+            if (window.keyframeUI) {
+                window.keyframeUI.keyframes = [];
+            }
+            window.location.reload();
+        });
+    }
+
     // ── Modal helpers ──
     function openModal(id) {
         const el = document.getElementById(id);

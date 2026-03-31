@@ -215,9 +215,11 @@ export class KeyframeUI {
     }
 
     clearKeyframes() {
-        if (!confirm('Clear all keyframes?')) return;
         this.keyframes = [];
         this.renderKeyframeList();
+        // Trigger the Tools > Timeline löschen menu action
+        const btn = document.getElementById('menu-tracks-clear');
+        if (btn) btn.click();
     }
 
     play() {
