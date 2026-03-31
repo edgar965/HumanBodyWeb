@@ -3711,13 +3711,31 @@ def _get_skel_geometry():
     return _skel_geometry_cache
 
 
-def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=False):
+def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=False,
+                      delta_norm=None):
     """Core retarget: BVH file path → dict with Rigify/DEF quaternion tracks.
 
-    This is the ONE retarget function used by all endpoints (job, static, merge, text).
-    Input:  bvh_path (str) — path to a .bvh file
-    Output: dict {duration, times, tracks: {bone: [x,y,z,w,...]}, position_track, ...}
+    Caches the result as a JSON file next to the BVH. Subsequent calls
+    with the same parameters return the cached result instantly.
     """
+    import hashlib
+
+    # Build cache key from parameters
+    cache_params = f'{body_height:.4f}_{fmt}_{foot_correction}_{delta_norm}'
+    cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:8]
+    cache_path = bvh_path.rsplit('.', 1)[0] + f'_retarget_{cache_hash}.json'
+
+    # Return cached result if BVH hasn't changed
+    if os.path.isfile(cache_path):
+        bvh_mtime = os.path.getmtime(bvh_path)
+        cache_mtime = os.path.getmtime(cache_path)
+        if cache_mtime > bvh_mtime:
+            try:
+                with open(cache_path, 'r') as f:
+                    return json.load(f)
+            except Exception:
+                pass  # cache corrupt, recompute
+
     from humanbody_core.skeleton import Skeleton, SkeletonRigify
 
     skel_geom = _get_skel_geometry()
@@ -3728,11 +3746,22 @@ def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=Fals
     else:
         fmt_cls = Skeleton.detect_format(bvh.names)
     if fmt_cls and fmt_cls.BONE_MAP_TO_RIGIFY:
-        return fmt_cls.retarget_to_rigify(bvh, skel_geom, body_height=body_height,
-                                          foot_correction=foot_correction)
-    return SkeletonRigify.retarget_bvh(bvh, skel_geom, fmt=fmt,
-                                        body_height=body_height,
-                                        foot_correction=foot_correction)
+        result = fmt_cls.retarget_to_rigify(bvh, skel_geom, body_height=body_height,
+                                            foot_correction=foot_correction,
+                                            delta_norm=delta_norm)
+    else:
+        result = SkeletonRigify.retarget_bvh(bvh, skel_geom, fmt=fmt,
+                                              body_height=body_height,
+                                              foot_correction=foot_correction)
+
+    # Save cache
+    try:
+        with open(cache_path, 'w') as f:
+            json.dump(result, f)
+    except Exception:
+        pass
+
+    return result
 
 
 @require_GET
@@ -3750,6 +3779,8 @@ def retarget(request):
     body_height = float(request.GET.get('body_height', 1.68))
     fmt = request.GET.get('format', None)
     foot_correction = request.GET.get('foot_correction', '').lower() in ('1', 'true')
+    delta_norm_str = request.GET.get('delta_norm', '').lower()
+    delta_norm = True if delta_norm_str == '1' else (False if delta_norm_str == '0' else None)
 
     if job_id:
         job = get_object_or_404(BVHJob, id=job_id)
@@ -3766,7 +3797,7 @@ def retarget(request):
     else:
         return JsonResponse({'error': 'Provide ?job=<uuid> or ?category=<cat>&name=<name>'}, status=400)
 
-    return JsonResponse(retarget_bvh_data(bvh_path, body_height, fmt, foot_correction))
+    return JsonResponse(retarget_bvh_data(bvh_path, body_height, fmt, foot_correction, delta_norm))
 
 
 @require_GET
@@ -3900,3 +3931,38 @@ def retarget_bvh_text(request):
         return JsonResponse(retarget_bvh_data(tmp_path, body_height, fmt, foot_correction))
     finally:
         os.unlink(tmp_path)
+
+
+@csrf_exempt
+@require_POST
+def save_bvh_text(request):
+    """Save modified BVH text to a file on disk.
+
+    POST /api/character/save-bvh-text/
+    Body JSON: { path: "/abs/path/to/file.bvh", bvh_text: "HIERARCHY\\n..." }
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    save_path = data.get('path', '')
+    bvh_text = data.get('bvh_text', '')
+    if not save_path or not bvh_text:
+        return JsonResponse({'error': 'path and bvh_text required'}, status=400)
+
+    # Security: only allow saving under MEDIA_ROOT or HUMANBODY_BVH_DIR
+    from pathlib import Path
+    sp = Path(save_path).resolve()
+    media = Path(settings.MEDIA_ROOT).resolve()
+    bvh_dir = Path(str(settings.HUMANBODY_BVH_DIR)).resolve().parent
+    if not (str(sp).startswith(str(media)) or str(sp).startswith(str(bvh_dir))):
+        return JsonResponse({'error': 'Path not allowed'}, status=403)
+
+    try:
+        sp.parent.mkdir(parents=True, exist_ok=True)
+        with open(str(sp), 'w', encoding='utf-8') as f:
+            f.write(bvh_text)
+        return JsonResponse({'ok': True, 'path': str(sp)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

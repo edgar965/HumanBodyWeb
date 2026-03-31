@@ -153,6 +153,7 @@ export async function fetchRetarget(source, rigifySkel, opts = {}) {
     }
     if (opts.bodyHeight) params.set('body_height', opts.bodyHeight);
     if (opts.footCorrection) params.set('foot_correction', '1');
+    if (opts.deltaNorm !== undefined) params.set('delta_norm', opts.deltaNorm ? '1' : '0');
     if (opts.format) params.set('format', opts.format);
 
     const url = `/api/retarget/?${params}`;
@@ -201,6 +202,7 @@ export async function fetchMergedClipForJob(jobId, rigifySkel, opts = {}) {
     const params = new URLSearchParams();
     if (opts.bodyHeight) params.set('body_height', opts.bodyHeight);
     if (opts.footCorrection) params.set('foot_correction', '1');
+    if (opts.deltaNorm !== undefined) params.set('delta_norm', opts.deltaNorm ? '1' : '0');
 
     const url = `/api/character/retarget-job-merge/${jobId}/?${params}`;
     console.log(`[RETARGET] Fetching job merge: ${url}`);

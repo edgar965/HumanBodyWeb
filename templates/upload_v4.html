@@ -26,6 +26,7 @@
                         {% if f.path == selected_video_path %}checked{% endif %}>
                     <span class="video-file-name">{{ f.name }}</span>
                     <span class="video-file-meta">{{ f.size }} &bull; {{ f.date }}</span>
+                    <span class="video-file-path">{{ f.path }}</span>
                 </label>
                 {% endfor %}
             </div>
@@ -501,6 +502,7 @@
 .video-file-item input[type="radio"] { margin: 0; flex-shrink: 0; }
 .video-file-name { font-weight: 500; flex: 1; }
 .video-file-meta { color: var(--text-muted, #888); font-size: 0.8rem; white-space: nowrap; }
+.video-file-path { display: block; color: var(--text-muted, #666); font-size: 0.7rem; font-family: monospace; word-break: break-all; }
 
 /* Pipeline cards */
 .pipeline-cards { display: flex; flex-direction: column; gap: 8px; }

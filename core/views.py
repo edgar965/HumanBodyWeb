@@ -356,39 +356,47 @@ def upload_video_v4(request):
     v4_jobs = BVHJob.objects.filter(pipeline__in=list(VALID_3D)).order_by('-created_at')
     _annotate_file_sizes(v4_jobs)
 
-    # List original video files from uploads/ directory (not from jobs)
-    uploads_dir = Path(settings.MEDIA_ROOT) / 'uploads'
+    # Collect ALL video files — always use absolute paths.
+    # Sources: 1) dedicated video directory, 2) uploads/, 3) existing jobs
     video_exts = {'.mp4', '.webm', '.avi', '.mkv', '.mov', '.wmv'}
     upload_files = []
+    seen_abs = set()
+
+    def _add_video(fp):
+        """Add a video file to the list if it exists and isn't a duplicate."""
+        if not fp.is_file() or fp.suffix.lower() not in video_exts:
+            return
+        abs_path = str(fp.resolve())
+        if abs_path in seen_abs:
+            return
+        seen_abs.add(abs_path)
+        stat = fp.stat()
+        size_mb = stat.st_size / (1024 * 1024)
+        upload_files.append({
+            'path': abs_path,
+            'name': fp.name,
+            'size': f'{size_mb:.1f} MB',
+            'date': _datetime.fromtimestamp(stat.st_mtime).strftime('%d.%m.%Y %H:%M'),
+            'dir': str(fp.parent),
+        })
+
+    # 1) Dedicated video directory (A:\3DTools\3DObjects\Video\)
+    video_dir = Path(settings.TOOLS_ROOT) / '3DObjects' / 'Video'
+    if video_dir.is_dir():
+        for f in sorted(video_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+            _add_video(f)
+
+    # 2) Uploads directory
+    uploads_dir = Path(settings.MEDIA_ROOT) / 'uploads'
     if uploads_dir.is_dir():
         for f in sorted(uploads_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
-            if f.is_file() and f.suffix.lower() in video_exts:
-                stat = f.stat()
-                size_mb = stat.st_size / (1024 * 1024)
-                upload_files.append({
-                    'path': str(f.relative_to(Path(settings.MEDIA_ROOT))),
-                    'name': f.name,
-                    'size': f'{size_mb:.1f} MB',
-                    'date': _datetime.fromtimestamp(stat.st_mtime).strftime('%d.%m.%Y %H:%M'),
-                })
+            _add_video(f)
 
-    # Also collect unique video files from existing jobs (may be absolute paths)
-    seen_paths = {uf['path'] for uf in upload_files}
+    # 3) Video files referenced by existing jobs
     for job in v4_jobs:
         vf = str(job.video_file)
-        if vf in seen_paths:
-            continue
         fp = Path(vf) if Path(vf).is_absolute() else Path(settings.MEDIA_ROOT) / vf
-        if fp.is_file():
-            seen_paths.add(vf)
-            stat = fp.stat()
-            size_mb = stat.st_size / (1024 * 1024)
-            upload_files.append({
-                'path': str(fp),  # absolute path
-                'name': fp.name,
-                'size': f'{size_mb:.1f} MB',
-                'date': _datetime.fromtimestamp(stat.st_mtime).strftime('%d.%m.%Y %H:%M'),
-            })
+        _add_video(fp)
 
     # Last-selected video and pipeline from ui_prefs
     ui_prefs = s.ui_prefs or {}
@@ -1676,6 +1684,17 @@ def api_start_processing(request, job_id):
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
+
+    # Block if another job is already running
+    active = BVHJob.objects.filter(
+        status__in=['processing', 'v4_processing']
+    ).exclude(id=job_id).first()
+    if active:
+        return JsonResponse({
+            'ok': False,
+            'error': f'Job "{active.name}" läuft bereits ({active.status}). Bitte warten oder abbrechen.'
+        }, status=409)
+
     job = get_object_or_404(BVHJob, id=job_id)
 
     VALID_PIPELINES = {c[0] for c in BVHJob.PIPELINE_CHOICES}
@@ -2397,8 +2416,25 @@ def create_job_from_file(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     try:
+        # Auto-cancel stuck jobs older than 10 minutes
+        from django.utils import timezone as _tz
+        stuck_cutoff = _tz.now() - _tz.timedelta(minutes=10)
+        BVHJob.objects.filter(
+            status__in=['processing', 'v4_processing'],
+            updated_at__lt=stuck_cutoff
+        ).update(status='failed', error_message='Auto-cancelled: stuck > 10 min')
+
+        # Block if another job is actually running
+        active = BVHJob.objects.filter(
+            status__in=['processing', 'v4_processing']
+        ).first()
+        if active:
+            return JsonResponse({
+                'error': f'Job "{active.name}" läuft bereits ({active.status}). Bitte warten oder abbrechen.'
+            }, status=409)
+
         data = json.loads(request.body)
-        video_path = data.get('video_path', '')  # e.g. 'uploads/Nuss.webm'
+        video_path = data.get('video_path', '')
         pipeline = data.get('pipeline', 'gvhmr')
         pp = data.get('pipeline_params', {})
 
