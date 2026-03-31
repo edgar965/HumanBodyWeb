@@ -3947,12 +3947,23 @@ def save_bvh_text(request):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
     save_path = data.get('path', '')
+    category = data.get('category', '')
+    name = data.get('name', '')
     bvh_text = data.get('bvh_text', '')
-    if not save_path or not bvh_text:
-        return JsonResponse({'error': 'path and bvh_text required'}, status=400)
+    if not bvh_text:
+        return JsonResponse({'error': 'bvh_text required'}, status=400)
+
+    from pathlib import Path
+
+    # Resolve path: either absolute path, or category/name from library
+    if not save_path and category and name:
+        bvh_root = Path(str(settings.HUMANBODY_BVH_DIR)).parent
+        save_path = str(bvh_root / category / f'{name}.bvh')
+
+    if not save_path:
+        return JsonResponse({'error': 'path or category+name required'}, status=400)
 
     # Security: only allow saving under MEDIA_ROOT or HUMANBODY_BVH_DIR
-    from pathlib import Path
     sp = Path(save_path).resolve()
     media = Path(settings.MEDIA_ROOT).resolve()
     bvh_dir = Path(str(settings.HUMANBODY_BVH_DIR)).resolve().parent

@@ -3049,15 +3049,111 @@ function stopAnimation(destroy = false) {
 // Animation Ground-Fix & Save
 // =========================================================================
 
-function applyGroundLevelFix() {
-    // Toggle the ground fix checkbox — actual correction happens in animate loop
-    const chk = document.getElementById('scene-ground-fix');
-    if (chk) {
-        chk.checked = !chk.checked;
-        currentAnimGroundFixed = chk.checked;
-        console.log('[GROUND] Bodenniveau:', chk.checked ? 'AN' : 'AUS');
+async function applyGroundLevelFix() {
+    if (!currentAnimBvhText) {
+        alert('Keine Animation geladen.');
+        return;
     }
-    return;
+
+    // Enable runtime ground fix while we process
+    const chk = document.getElementById('scene-ground-fix');
+    if (chk) chk.checked = true;
+    currentAnimGroundFixed = true;
+
+    // Modify BVH text: parse, FK per frame, correct Y, save
+    const lines = currentAnimBvhText.split('\n');
+
+    // Find Yposition channel
+    let yPosChannel = -1, foundRoot = false;
+    for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+        if (trimmed.startsWith('ROOT ')) { foundRoot = true; continue; }
+        if (foundRoot && trimmed.startsWith('CHANNELS')) {
+            const parts = trimmed.split(/\s+/);
+            for (let c = 2; c < parts.length; c++) {
+                if (parts[c] === 'Yposition') { yPosChannel = c - 2; break; }
+            }
+            break;
+        }
+    }
+    if (yPosChannel < 0) { alert('Yposition nicht gefunden.'); return; }
+
+    // Find frame data
+    let motionIdx = lines.findIndex(l => l.trim() === 'MOTION');
+    if (motionIdx < 0) return;
+    let frameTime = 1/30, dataStart = motionIdx + 1;
+    while (dataStart < lines.length && !lines[dataStart].trim().match(/^[\d\-\.]/)) {
+        const t = lines[dataStart].trim();
+        if (t.startsWith('Frame Time:')) frameTime = parseFloat(t.split(':')[1].trim());
+        dataStart++;
+    }
+    const frameLineIdx = [];
+    for (let i = dataStart; i < lines.length; i++) {
+        if (lines[i].trim().match(/^[\d\-\.]/)) frameLineIdx.push(i);
+    }
+    const totalFrames = frameLineIdx.length;
+    if (!totalFrames) return;
+
+    // FK per frame, correct
+    const parsed = bvhLoader.parse(currentAnimBvhText);
+    const bones = parsed.skeleton.bones;
+    const rootBone = bones[0];
+    const tmpMixer = new THREE.AnimationMixer(rootBone);
+    const tmpAction = tmpMixer.clipAction(parsed.clip);
+    tmpAction.play();
+    const tmpV = new THREE.Vector3();
+    let corrected = 0;
+
+    for (let f = 0; f < totalFrames; f++) {
+        tmpMixer.setTime(f * frameTime);
+        rootBone.updateWorldMatrix(true, true);
+        let minY = Infinity;
+        for (const b of bones) { b.getWorldPosition(tmpV); if (tmpV.y < minY) minY = tmpV.y; }
+        if (Math.abs(minY) > 0.001) {
+            const li = frameLineIdx[f];
+            const vals = lines[li].trim().split(/\s+/);
+            vals[yPosChannel] = (parseFloat(vals[yPosChannel]) - minY).toFixed(6);
+            lines[li] = vals.join(' ');
+            corrected++;
+        }
+    }
+    tmpAction.stop(); tmpMixer.stopAllAction();
+
+    if (corrected === 0) { alert('Bereits auf Bodenniveau.'); return; }
+
+    const modifiedBvh = lines.join('\n');
+    currentAnimBvhText = modifiedBvh;
+    console.log(`[GROUND] ${corrected}/${totalFrames} Frames korrigiert, speichere...`);
+
+    // Save BVH file via API
+    if (currentAnimUrl) {
+        // Parse category/name from URL like /api/character/bvh/Results/nussie1/
+        const urlPath = currentAnimUrl.replace(/\?.*$/, '');
+        const bvhMatch = urlPath.match(/\/api\/character\/bvh\/([^/]+)\/([^/]+)/);
+        const saveBody = bvhMatch
+            ? { category: bvhMatch[1], name: bvhMatch[2], bvh_text: modifiedBvh }
+            : { path: urlPath, bvh_text: modifiedBvh };
+        try {
+            const resp = await fetch('/api/character/save-bvh-text/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(saveBody),
+            });
+            if (resp.ok) {
+                console.log('[GROUND] BVH gespeichert:', urlPath);
+                // Invalidate retarget cache by reloading
+                loadBVHAnimation(currentAnimUrl + (currentAnimUrl.includes('?') ? '&' : '?') + '_ground=' + Date.now(), currentAnimName, 0);
+            } else {
+                console.warn('[GROUND] Save failed:', await resp.text());
+                // Fallback: reload from modified text
+                loadBVHAnimation(currentAnimUrl, currentAnimName, 0, modifiedBvh);
+            }
+        } catch (e) {
+            console.warn('[GROUND] Save error:', e);
+            loadBVHAnimation(currentAnimUrl, currentAnimName, 0, modifiedBvh);
+        }
+    }
+    alert(`Bodenniveau-Fix: ${corrected} von ${totalFrames} Frames korrigiert und gespeichert.`);
 }
 
 async function _applyGroundLevelFix_legacy() {
