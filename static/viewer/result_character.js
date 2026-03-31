@@ -6,10 +6,17 @@
  * Default: loaded from settings API (default_model_result preset).
  */
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { fetchRetargetedClipForJob, fetchMergedClipForJob } from './retarget_hybrid.js?v=32';
 import { buildRigifySkeleton } from './rigify_skeleton_builder.js?v=2';
+import {
+    base64ToFloat32, base64ToUint32, blenderToThreeCoords,
+    sharedState, BODY_MATERIALS,
+    loadRigifySkeleton, loadSkinWeights, loadSkinColors, loadHairColors,
+    computeSkinAttributes, applySkinColorToMaterials,
+    findHeadBoneIndex, skinifyHairGroup, applyHairColor,
+    skinifyMesh, createSceneSetup,
+} from './character_core.js?v=1';
 
 // =========================================================================
 // Tone mapping lookup
@@ -21,49 +28,6 @@ const TONE_MAPPINGS = {
     Cineon:     THREE.CineonToneMapping,
     None:       THREE.NoToneMapping
 };
-
-// =========================================================================
-// Material definitions (must match animations.js)
-// =========================================================================
-const BODY_MATERIALS = [
-    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 0 Skin
-    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 1 Censor
-    { color: 0x111111, roughness: 0.8,  metalness: 0.0 },  // 2 Eyelash
-    { color: 0x0a0a0a, roughness: 0.1,  metalness: 0.0 },  // 3 Pupil
-    { color: 0xf4f0e8, roughness: 0.2,  metalness: 0.0 },  // 4 Sclera
-    { color: 0xf4f0e8, roughness: 0.05, metalness: 0.0, opacity: 0.3, transparent: true },  // 5 Cornea
-    { color: 0x4a7a9b, roughness: 0.15, metalness: 0.0 },  // 6 Iris
-    { color: 0xb55a6a, roughness: 0.7,  metalness: 0.0 },  // 7 Tongue
-    { color: 0xf0ece0, roughness: 0.3,  metalness: 0.0 },  // 8 Teeth
-    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 9 Nails Hand
-    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 10 Nails Feet
-];
-
-// =========================================================================
-// Helpers
-// =========================================================================
-function base64ToFloat32(b64) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Float32Array(bytes.buffer);
-}
-
-function base64ToUint32(b64) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Uint32Array(bytes.buffer);
-}
-
-function blenderToThreeCoords(buf) {
-    for (let i = 0; i < buf.length; i += 3) {
-        const y = buf[i + 1];
-        const z = buf[i + 2];
-        buf[i + 1] = z;
-        buf[i + 2] = -y;
-    }
-}
 
 // =========================================================================
 // Main export
@@ -92,59 +56,16 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     const w = viewport.clientWidth;
     const h = viewport.clientHeight || 500;
 
-    // --- Renderer (false = don't override CSS width/height) ---
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(w, h, false);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.6;
-
-    // --- Scene ---
-    const scene = new THREE.Scene();
+    // --- Scene setup (shared with scene_config.js) ---
+    const { renderer, scene, camera, controls, keyLight, fillLight, backLight, ambient, grid }
+        = createSceneSetup(canvas);
     window._debugScene = scene;  // DEBUG: expose for Playwright comparison
-    scene.background = new THREE.Color(0x1a1a2e);
-
-    // --- Camera ---
-    const camera = new THREE.PerspectiveCamera(35, w / h, 0.01, 100);
-    camera.position.set(0, 1.0, 3.5);
-
-    // --- Controls ---
-    const controls = new OrbitControls(camera, canvas);
-    controls.target.set(0, 0.9, 0);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.minDistance = 0.5;
-    controls.maxDistance = 15;
-    controls.update();
-
-    // --- Lighting ---
-    const keyLight = new THREE.DirectionalLight(0xffffff, 3.0);
-    keyLight.position.set(2, 4, -5);
-    scene.add(keyLight);
-
-    const fillLight = new THREE.DirectionalLight(0xeeeeff, 2.0);
-    fillLight.position.set(-3, 3, -4);
-    scene.add(fillLight);
-
-    const backLight = new THREE.DirectionalLight(0xffeedd, 2.5);
-    backLight.position.set(0, 4, 5);
-    scene.add(backLight);
-
-    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambient);
 
     applySceneSettings(renderer, scene, camera, keyLight, fillLight, backLight, ambient);
 
-    // --- Grid ---
-    const grid = new THREE.GridHelper(4, 20, 0x333355, 0x222244);
-    scene.add(grid);
-
-    // --- State ---
+    // --- State (shared data from character_core.js, local rendering state here) ---
     let bodyMesh = null;
     let bodyGeometry = null;
-    let rigifySkeletonData = null;
-    let skinWeightData = null;
     let rigifySkeleton = null;
     let isSkinned = false;
     let mixer = null;
@@ -152,7 +73,6 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     let currentBodyType = 'Female_Caucasian';
     let currentPresetName = '';
     let bvhClipDuration = 0;
-    let skinColors = {};
     let skeletonHelper = null;
     let rigVisible = false;
     let clothesVisible = true;
@@ -164,7 +84,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
 
     // Hair
     let hairMesh = null;
-    let hairColorData = {};
+
+    // Convenience aliases for shared state (read via sharedState.*)
+    const ss = sharedState;
 
     // Garment meshes (MH garments, separate from cloth templates)
     const garmentMeshes = {};
@@ -331,8 +253,8 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         ]);
         morphData = morphResp;
         hairData = hairResp;
-        if (morphData.skin_colors) skinColors = morphData.skin_colors;
-        if (hairData && hairData.colors) hairColorData = hairData.colors;
+        if (morphData.skin_colors) ss.skinColors = morphData.skin_colors;
+        if (hairData && hairData.colors) ss.hairColorData = hairData.colors;
     } catch (e) {
         console.error('[result_character] Data load failed:', e);
         if (loadingEl) loadingEl.textContent = 'Fehler beim Laden';
@@ -340,7 +262,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     }
 
     // Convert to skinned mesh
-    if (bodyMesh && rigifySkeletonData && skinWeightData) {
+    if (bodyMesh && ss.rigifySkeletonData && ss.skinWeightData) {
         convertToRigifySkinnedMesh();
     }
 
@@ -452,7 +374,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
                     bottom_extend: c.bottom_extend || 0,
                 };
                 if (c.color) params.color = c.color;
-                loadCloth(`tpl_${tpl}`, params, c.color);
+                loadCloth(`tpl_${tpl}`, params, c.color, true);
             }
         }
 
@@ -460,9 +382,9 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         if (preset.hair_style && preset.hair_style.url) {
             loadHair(preset.hair_style.url);
             // Apply hair color after a short delay for the GLTF to load
-            if (preset.hair_style.color && hairColorData[preset.hair_style.color]) {
+            if (preset.hair_style.color && ss.hairColorData[preset.hair_style.color]) {
                 setTimeout(() => {
-                    if (hairMesh) applyHairColorToMesh(hairMesh, preset.hair_style.color);
+                    if (hairMesh) applyHairColor(hairMesh, preset.hair_style.color, ss.hairColorData);
                 }, 1000);
             }
         } else if (hairData && hairData.hairstyles) {
@@ -602,6 +524,10 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
                 if (skeletonHelper) skeletonHelper.visible = false;
             }
             rigBtn.classList.toggle('active', rigVisible);
+            // Also toggle 2D skeleton overlay on the video panel
+            if (typeof window.setBvhOverlayVisible === 'function') {
+                window.setBvhOverlayVisible(rigVisible);
+            }
         });
         toggleBar.appendChild(rigBtn);
 
@@ -1038,7 +964,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
                 loadSkinWeights(newType),
             ]);
 
-            if (bodyMesh && rigifySkeletonData && skinWeightData) {
+            if (bodyMesh && ss.rigifySkeletonData && ss.skinWeightData) {
                 convertToRigifySkinnedMesh();
             }
 
@@ -1120,63 +1046,18 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         }
     }
 
-    async function loadRigifySkeleton() {
-        try {
-            const resp = await fetch('/api/character/rigify-skeleton/');
-            if (resp.ok) {
-                rigifySkeletonData = await resp.json();
-                return true;
-            }
-        } catch (e) {
-            console.warn('[result_character] DEF skeleton not available:', e);
-        }
-        return false;
-    }
-
-    async function loadSkinWeights(bodyType) {
-        try {
-            const resp = await fetch('/api/character/skin-weights/?body_type=' + encodeURIComponent(bodyType));
-            if (resp.ok) {
-                skinWeightData = await resp.json();
-                return true;
-            }
-        } catch (e) {
-            console.warn('[result_character] Skin weights not available:', e);
-        }
-        return false;
-    }
-
-    // buildRigifySkeleton() imported from rigify_skeleton_builder.js
+    // loadRigifySkeleton(), loadSkinWeights() — imported from character_core.js
 
     function convertToRigifySkinnedMesh() {
         if (isSkinned || !bodyMesh || !bodyGeometry) return;
-
         bodyGeometry = bodyGeometry.clone();
-
-        const vCount = bodyGeometry.attributes.position.count;
-        const skinIndices = new Float32Array(vCount * 4);
-        const skinWeights = new Float32Array(vCount * 4);
-
-        for (let v = 0; v < vCount; v++) {
-            const infs = skinWeightData.weights[v] || [];
-            const sorted = infs.slice().sort((a, b) => b[1] - a[1]).slice(0, 4);
-            let sum = sorted.reduce((s, e) => s + e[1], 0);
-            if (sum < 1e-6) sum = 1;
-            for (let i = 0; i < 4; i++) {
-                skinIndices[v * 4 + i] = i < sorted.length ? sorted[i][0] : 0;
-                skinWeights[v * 4 + i] = i < sorted.length ? sorted[i][1] / sum : 0;
-            }
-        }
-
+        const { skinIndices, skinWeights } = computeSkinAttributes(bodyGeometry, ss.skinWeightData);
         bodyGeometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
         bodyGeometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
-
-        rigifySkeleton = buildRigifySkeleton(rigifySkeletonData, skinWeightData);
-
+        rigifySkeleton = buildRigifySkeleton(ss.rigifySkeletonData, ss.skinWeightData);
         const mat = bodyMesh.material;
         const pos = bodyMesh.position.clone();
         scene.remove(bodyMesh);
-
         bodyMesh = new THREE.SkinnedMesh(bodyGeometry, mat);
         bodyMesh.position.copy(pos);
         bodyMesh.add(rigifySkeleton.rootBone);
@@ -1185,31 +1066,17 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         isSkinned = true;
     }
 
-    // =====================================================================
-    // Skin color
-    // =====================================================================
-
     function applySkinColor(bodyType) {
         if (!bodyMesh) return;
-        const parts = bodyType.split('_');
-        const ethnicity = parts.length >= 2 ? parts.slice(1).join('_') : bodyType;
-        const rgb = skinColors[ethnicity];
-        if (!rgb) return;
         const mats = Array.isArray(bodyMesh.material) ? bodyMesh.material : [bodyMesh.material];
-        for (let i = 0; i < Math.min(2, mats.length); i++) {
-            mats[i].color.setRGB(
-                Math.pow(rgb[0], 1/2.2),
-                Math.pow(rgb[1], 1/2.2),
-                Math.pow(rgb[2], 1/2.2)
-            );
-        }
+        applySkinColorToMaterials(mats, bodyType, ss.skinColors);
     }
 
     // =====================================================================
     // Cloth (templates)
     // =====================================================================
 
-    async function loadCloth(key, params, presetColor) {
+    async function loadCloth(key, params, presetColor, useApiColor = false) {
         if (!isSkinned || !rigifySkeleton) return;
 
         try {
@@ -1232,10 +1099,12 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
             geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
             geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
 
-            // Use preset color if provided, else color picker, else API color
+            // Color priority: preset > API default > color picker (manual)
             let matColor;
             if (presetColor) {
                 matColor = new THREE.Color(presetColor);
+            } else if (useApiColor && data.color) {
+                matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
             } else {
                 const colorPicker = document.getElementById('rc-cloth-color');
                 matColor = colorPicker
@@ -1248,17 +1117,10 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
                 side: THREE.DoubleSide,
             });
 
-            let mesh;
-            if (data.skin_indices && data.skin_weights) {
-                const siBuf = base64ToFloat32(data.skin_indices);
-                const swBuf = base64ToFloat32(data.skin_weights);
-                geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
-                geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
-                mesh = new THREE.SkinnedMesh(geo, mat);
-                mesh.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
-            } else {
-                mesh = new THREE.Mesh(geo, mat);
-            }
+            const skInfo = (isSkinned && rigifySkeleton) ? {
+                skeleton: rigifySkeleton.skeleton, bindMatrix: bodyMesh.bindMatrix
+            } : null;
+            const mesh = skinifyMesh(geo, mat, skInfo, data);
 
             mesh.visible = clothesVisible;
             clothMeshes[key] = mesh;
@@ -1295,18 +1157,23 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
             const offset = opts.offset !== undefined ? opts.offset : 0.006;
             const stiffness = opts.stiffness !== undefined ? opts.stiffness : 0.8;
 
-            // Build color params
-            let cr = 0.3, cg = 0.35, cb = 0.5;
+            // Build color params — only send if explicitly provided, else server uses template default
+            let hasColor = false;
+            let cr = 0, cg = 0, cb = 0;
             if (Array.isArray(opts.color)) {
                 cr = opts.color[0]; cg = opts.color[1]; cb = opts.color[2];
+                hasColor = true;
             } else if (typeof opts.color === 'string') {
                 const c = new THREE.Color(opts.color);
                 cr = c.r; cg = c.g; cb = c.b;
+                hasColor = true;
             }
 
             let qs = `garment_id=${encodeURIComponent(garmentId)}&body_type=${encodeURIComponent(currentBodyType)}`;
             qs += `&offset=${offset}&stiffness=${stiffness}`;
-            qs += `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
+            if (hasColor) {
+                qs += `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
+            }
             // Include current morph + meta values for correct body-shape fitting
             for (const [k, v] of Object.entries(currentMorphs)) {
                 if (Math.abs(v) > 0.001) qs += `&morph_${k}=${v}`;
@@ -1344,17 +1211,10 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
                 polygonOffsetUnit: -1,
             });
 
-            let mesh;
-            if (data.skin_indices && data.skin_weights) {
-                const siBuf = base64ToFloat32(data.skin_indices);
-                const swBuf = base64ToFloat32(data.skin_weights);
-                geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
-                geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
-                mesh = new THREE.SkinnedMesh(geo, mat);
-                mesh.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
-            } else {
-                mesh = new THREE.Mesh(geo, mat);
-            }
+            const skInfo = (isSkinned && rigifySkeleton) ? {
+                skeleton: rigifySkeleton.skeleton, bindMatrix: bodyMesh.bindMatrix
+            } : null;
+            const mesh = skinifyMesh(geo, mat, skInfo, data);
 
             mesh.visible = clothesVisible;
             garmentMeshes[garmentId] = mesh;
@@ -1385,59 +1245,25 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     // Hair
     // =====================================================================
 
-    function _findHeadBoneIndex() {
-        if (!skinWeightData) return -1;
-        const names = skinWeightData.bone_names;
-        for (const tryName of ['DEF-spine.006', 'DEF-spine.005', 'DEF-head']) {
-            const idx = names.indexOf(tryName);
-            if (idx >= 0) return idx;
-        }
-        return -1;
-    }
-
-    function _skinifyHairGroup(gltfScene, headBoneIdx) {
-        const meshChildren = [];
-        gltfScene.traverse(child => {
-            if (child.isMesh) meshChildren.push(child);
-        });
-        const group = new THREE.Group();
-        for (const child of meshChildren) {
-            const geo = child.geometry.clone();
-            const vCount = geo.attributes.position.count;
-            const si = new Float32Array(vCount * 4);
-            const sw = new Float32Array(vCount * 4);
-            for (let v = 0; v < vCount; v++) {
-                si[v * 4] = headBoneIdx;
-                sw[v * 4] = 1.0;
-            }
-            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(si, 4));
-            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
-
-            const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
-            child.updateWorldMatrix(true, false);
-            skinnedChild.applyMatrix4(child.matrixWorld);
-            skinnedChild.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
-            group.add(skinnedChild);
-        }
-        return group;
-    }
+    // _findHeadBoneIndex, _skinifyHairGroup, applyHairColor — from character_core.js
 
     function loadHair(url) {
         removeHair();
-        if (!isSkinned || !rigifySkeleton || !skinWeightData) return;
+        if (!isSkinned || !rigifySkeleton || !ss.skinWeightData) return;
 
         gltfLoader.load(url, (gltf) => {
             let hairGroup = gltf.scene;
-            const headBoneIdx = _findHeadBoneIndex();
+            const headBoneIdx = findHeadBoneIndex(ss.skinWeightData);
             if (headBoneIdx >= 0) {
-                hairGroup = _skinifyHairGroup(hairGroup, headBoneIdx);
+                hairGroup = skinifyHairGroup(hairGroup, headBoneIdx,
+                    rigifySkeleton.skeleton, bodyMesh.bindMatrix);
             }
             hairMesh = hairGroup;
 
             // Apply stored hair color
-            if (Object.keys(hairColorData).length > 0) {
-                const firstName = Object.keys(hairColorData)[0];
-                applyHairColorToMesh(hairMesh, firstName);
+            if (Object.keys(ss.hairColorData).length > 0) {
+                const firstName = Object.keys(ss.hairColorData)[0];
+                applyHairColor(hairMesh, firstName, ss.hairColorData);
             }
             scene.add(hairMesh);
             console.log('[result_character] Hair loaded:', url);
@@ -1463,18 +1289,6 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
             });
             hairMesh = null;
         }
-    }
-
-    function applyHairColorToMesh(obj, colorName) {
-        const rgb = hairColorData[colorName];
-        if (!rgb) return;
-        const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
-        obj.traverse(child => {
-            if (child.isMesh && child.material) {
-                const mats = Array.isArray(child.material) ? child.material : [child.material];
-                mats.forEach(m => { m.color.copy(color); });
-            }
-        });
     }
 
     // =====================================================================

@@ -30,6 +30,11 @@
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-v4">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" onclick="applyPreset('v4','fast')">Schnell</button>
+                            <button type="button" class="preset-btn active" onclick="applyPreset('v4','standard')">Standard</button>
+                            <button type="button" class="preset-btn" onclick="applyPreset('v4','max')">Maximum</button>
+                        </div>
                         <div class="settings-row">
                             <label>Body Parts:</label>
                             <div class="checkbox-group">
@@ -85,6 +90,11 @@
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-gvhmr">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" onclick="applyPreset('gvhmr','fast')">Schnell</button>
+                            <button type="button" class="preset-btn active" onclick="applyPreset('gvhmr','standard')">Standard</button>
+                            <button type="button" class="preset-btn" onclick="applyPreset('gvhmr','max')">Maximum</button>
+                        </div>
                         <div class="settings-list">
                             <div class="setting-item">
                                 <div class="setting-label">Statische Kamera <span class="setting-hint">&Uuml;berspringt DPVO Kamera-Tracking &mdash; empfohlen f&uuml;r feste Kamera</span></div>
@@ -122,6 +132,11 @@
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-wham">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" onclick="applyPreset('wham','fast')">Schnell</button>
+                            <button type="button" class="preset-btn active" onclick="applyPreset('wham','standard')">Standard</button>
+                            <button type="button" class="preset-btn" onclick="applyPreset('wham','max')">Maximum</button>
+                        </div>
                         <div class="settings-list">
                             <div class="setting-item">
                                 <div class="setting-label">Nur lokale Bewegung <span class="setting-hint">Keine globale Trajektorie sch&auml;tzen &mdash; nur K&ouml;rperbewegung relativ zur Kamera</span></div>
@@ -154,6 +169,11 @@
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-prompthmr">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" onclick="applyPreset('prompthmr','fast')">Schnell</button>
+                            <button type="button" class="preset-btn active" onclick="applyPreset('prompthmr','standard')">Standard</button>
+                            <button type="button" class="preset-btn" onclick="applyPreset('prompthmr','max')">Maximum</button>
+                        </div>
                         <div class="settings-list">
                             <div class="setting-item">
                                 <div class="setting-label">Statische Kamera <span class="setting-hint">Empfohlen f&uuml;r feste Kamera &mdash; deaktivieren bei Handy-Videos mit Bewegung</span></div>
@@ -183,6 +203,11 @@
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-hybrid">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" onclick="applyPreset('hybrid','fast')">Schnell</button>
+                            <button type="button" class="preset-btn active" onclick="applyPreset('hybrid','standard')">Standard</button>
+                            <button type="button" class="preset-btn" onclick="applyPreset('hybrid','max')">Maximum</button>
+                        </div>
                         <div class="settings-list">
                             <div class="setting-item">
                                 <div class="setting-label">Body-Backend <span class="setting-hint">SMPL-Pipeline f&uuml;r K&ouml;rper-Tracking (GPU)</span></div>
@@ -457,6 +482,20 @@
 .checkbox-group { display: flex; gap: 12px; flex-wrap: wrap; }
 .checkbox-group label { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--text-muted, #aaa); cursor: pointer; min-width: auto; }
 
+/* Quality preset bar */
+.preset-bar {
+    display: flex; gap: 4px; margin-bottom: 10px;
+    background: var(--bg-card, #1e1e2e); border-radius: 8px; padding: 3px;
+    border: 1px solid var(--border, #333);
+}
+.preset-btn {
+    flex: 1; padding: 6px 12px; border: none; border-radius: 6px;
+    background: transparent; color: var(--text-muted, #888);
+    font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+.preset-btn:hover { background: rgba(52,152,219,0.15); color: var(--text, #ddd); }
+.preset-btn.active { background: #3498db; color: #fff; }
+
 /* Existing styles */
 .sortable { cursor: pointer; user-select: none; }
 .sortable:hover { color: #3498db; }
@@ -535,6 +574,105 @@ function updateHybridBackend() {
     document.getElementById('hybrid-prompthmr-settings').style.display = backend === 'prompthmr' ? '' : 'none';
 }
 updateHybridBackend();
+
+// --- Quality Presets ---
+var PRESETS = {
+    v4: {
+        fast: {
+            v4_hcd_iterations: 3, v4_hcd_epochs: 10, v4_hcd_learning_rate: 0.01,
+            v4_smoothing_cutoff: 10.0, v4_smoothing_sampling: 30,
+            v4_mp_detection: 0.3, v4_mp_tracking: 0.1,
+            v4_parts: {body: true, hands: false, face: false, mouth: false, eyes: false}
+        },
+        standard: {
+            v4_hcd_iterations: 10, v4_hcd_epochs: 30, v4_hcd_learning_rate: 0.001,
+            v4_smoothing_cutoff: 5.0, v4_smoothing_sampling: 30,
+            v4_mp_detection: 0.5, v4_mp_tracking: 0.2,
+            v4_parts: {body: true, hands: true, face: true, mouth: true, eyes: false}
+        },
+        max: {
+            v4_hcd_iterations: 50, v4_hcd_epochs: 100, v4_hcd_learning_rate: 0.0005,
+            v4_smoothing_cutoff: 2.5, v4_smoothing_sampling: 60,
+            v4_mp_detection: 0.7, v4_mp_tracking: 0.5,
+            v4_parts: {body: true, hands: true, face: true, mouth: true, eyes: true}
+        }
+    },
+    gvhmr: {
+        fast:     {gvhmr_static_cam: true,  gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda'},
+        standard: {gvhmr_static_cam: true,  gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda'},
+        max:      {gvhmr_static_cam: false, gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda'}
+    },
+    wham: {
+        fast:     {wham_local_only: true,  wham_smplify: false, wham_device: 'cuda'},
+        standard: {wham_local_only: false, wham_smplify: false, wham_device: 'cuda'},
+        max:      {wham_local_only: false, wham_smplify: true,  wham_device: 'cuda'}
+    },
+    prompthmr: {
+        fast:     {prompthmr_static_cam: true,  prompthmr_device: 'cuda'},
+        standard: {prompthmr_static_cam: true,  prompthmr_device: 'cuda'},
+        max:      {prompthmr_static_cam: false, prompthmr_device: 'cuda'}
+    },
+    hybrid: {
+        fast: {
+            hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true, hybrid_gvhmr_focal_length_mm: 0,
+            hybrid_prompthmr_static_cam: true,
+            hybrid_v4_hcd_iterations: 3, hybrid_v4_hcd_epochs: 10,
+            hybrid_v4_mp_detection: 0.3, hybrid_v4_mp_tracking: 0.1,
+            hybrid_v4_parts: {face: true, hands: true, mouth: false, eyes: false}
+        },
+        standard: {
+            hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true, hybrid_gvhmr_focal_length_mm: 0,
+            hybrid_prompthmr_static_cam: true,
+            hybrid_v4_hcd_iterations: 10, hybrid_v4_hcd_epochs: 30,
+            hybrid_v4_mp_detection: 0.5, hybrid_v4_mp_tracking: 0.2,
+            hybrid_v4_parts: {face: true, hands: true, mouth: true, eyes: false}
+        },
+        max: {
+            hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: false, hybrid_gvhmr_focal_length_mm: 0,
+            hybrid_prompthmr_static_cam: false,
+            hybrid_v4_hcd_iterations: 30, hybrid_v4_hcd_epochs: 80,
+            hybrid_v4_mp_detection: 0.7, hybrid_v4_mp_tracking: 0.5,
+            hybrid_v4_parts: {face: true, hands: true, mouth: true, eyes: true}
+        }
+    }
+};
+
+function applyPreset(pipeline, level) {
+    var preset = PRESETS[pipeline] && PRESETS[pipeline][level];
+    if (!preset) return;
+    // Update active button
+    var card = document.getElementById('settings-' + pipeline);
+    if (card) {
+        card.querySelectorAll('.preset-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.textContent.trim().toLowerCase() === {fast:'schnell',standard:'standard',max:'maximum'}[level]);
+        });
+    }
+    // Apply values
+    Object.keys(preset).forEach(function(key) {
+        if (key.endsWith('_parts')) {
+            // Checkbox group
+            var parts = preset[key];
+            var prefix = key.replace('_parts', '_');  // e.g. 'v4_' or 'hybrid_v4_'
+            // For v4_parts, the name attribute is 'v4_parts'; for hybrid, 'hybrid_v4_parts'
+            var name = key === 'v4_parts' ? 'v4_parts' : 'hybrid_v4_parts';
+            document.querySelectorAll('[name="' + name + '"]').forEach(function(cb) {
+                cb.checked = !!parts[cb.value];
+            });
+            return;
+        }
+        var el = document.querySelector('[name="' + key + '"]');
+        if (!el) return;
+        if (el.type === 'checkbox') {
+            el.checked = preset[key];
+        } else if (el.tagName === 'SELECT') {
+            el.value = preset[key];
+        } else {
+            el.value = preset[key];
+        }
+    });
+    // Trigger hybrid backend update if needed
+    if (pipeline === 'hybrid') updateHybridBackend();
+}
 
 // --- Collect current pipeline settings from UI as a params object ---
 function collectPipelineParams(pipeline) {

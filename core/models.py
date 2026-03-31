@@ -201,6 +201,10 @@ class AppSettings(models.Model):
         default=0.3,
         help_text="Selection highlight opacity (0.0–1.0)",
     )
+    ui_prefs = models.JSONField(
+        default=dict, blank=True,
+        help_text="User UI preferences (panel sizes, layout ratios, etc.)",
+    )
 
     # --- Video to BVH: MediaPipe settings ---
     mp_min_detection_confidence = models.FloatField(

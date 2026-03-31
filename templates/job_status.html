@@ -32,12 +32,9 @@
             </button>
         </form>
         {% elif job.status != 'complete' and job.status != 'failed' %}
-        <form method="post" action="{% url 'stop_processing' job.id %}" id="stopForm">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger" onclick="return confirm('Stop processing?')">
-                <i class="fas fa-stop"></i> Stop
-            </button>
-        </form>
+        <button type="button" class="btn btn-danger" id="stopBtn">
+            <i class="fas fa-stop"></i> Stop
+        </button>
         {% endif %}
 
         {% if job.error_message %}
@@ -132,6 +129,36 @@ function pollStatus() {
         });
 }
 setTimeout(pollStatus, 2000);
+
+// Stop button (AJAX)
+const stopBtn = document.getElementById('stopBtn');
+if (stopBtn) {
+    stopBtn.addEventListener('click', async () => {
+        if (!confirm('Stop processing?')) return;
+        stopBtn.disabled = true;
+        stopBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Stopping...';
+        try {
+            const resp = await fetch(`/api/job/${jobId}/stop/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (resp.ok) {
+                stopBtn.innerHTML = '<i class="fas fa-check"></i> Stopped';
+                stopBtn.className = 'btn btn-secondary';
+                // Polling will detect 'failed' status and reload
+            } else {
+                stopBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+                console.error('Stop failed:', resp.status);
+            }
+        } catch (e) {
+            stopBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+            console.error('Stop error:', e);
+        }
+    });
+}
 </script>
 {% endif %}
 

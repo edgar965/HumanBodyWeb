@@ -367,8 +367,40 @@ def job_status(request, job_id):
 
 
 def job_status_api(request, job_id):
-    """API endpoint for job status (polling)."""
+    """API endpoint for job status (polling).
+
+    Also detects stale jobs: if a job is 'processing' but hasn't been updated
+    in >5 minutes and no subprocess is alive, mark it as failed.
+    """
+    from django.utils import timezone
     job = get_object_or_404(BVHJob, id=job_id)
+
+    # Detect stale/orphaned jobs
+    running_statuses = ('detecting_2d', 'openpose', 'openpose_csv', 'mediapipe',
+                        'lifting_3d', 'mocapnet', 'v4_processing', 'processing')
+    if job.status in running_statuses:
+        stale_minutes = 5
+        age = (timezone.now() - job.updated_at).total_seconds()
+        if age > stale_minutes * 60:
+            jid = str(job.id)
+            # Check if subprocess is still tracked or alive by PID
+            with _active_procs_lock:
+                proc = _active_procs.get(jid)
+            proc_alive = proc and proc.poll() is None
+            if not proc_alive:
+                output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
+                pid_file = output_dir / 'pipeline.pid'
+                if pid_file.exists():
+                    try:
+                        pid = int(pid_file.read_text().strip())
+                        proc_alive = _is_pid_alive(pid)
+                    except (ValueError, OSError):
+                        pass
+            if not proc_alive:
+                job.status = 'failed'
+                job.error_message = f'Pipeline stalled (no progress for {int(age // 60)} min, no running process)'
+                job.save(update_fields=['status', 'error_message'])
+
     data = {
         'status': job.status,
         'progress': job.progress,
@@ -465,7 +497,7 @@ def _monitor_pipeline_log(job, log_file, total_frames, *, proc=None, pid=None):
         if total_frames:
             detail = f'{detail} — {total_frames} frames'
         job.progress_detail = detail[:100]
-        job.save()
+        job.save(update_fields=['progress', 'progress_detail', 'updated_at'])
 
 
 def remonitor_smpl_job(job_id, pid):
@@ -1674,6 +1706,26 @@ def _write_stop_flags(job, output_dir):
                 pass
 
 
+def _kill_by_pid_file(output_dir):
+    """Try to kill a pipeline process using its PID file (for orphaned processes)."""
+    pid_file = output_dir / 'pipeline.pid'
+    if not pid_file.exists():
+        return False
+    try:
+        pid = int(pid_file.read_text().strip())
+        if _is_pid_alive(pid):
+            os.kill(pid, 9)  # SIGKILL
+            return True
+    except (ValueError, OSError, ProcessLookupError):
+        pass
+    finally:
+        try:
+            pid_file.unlink()
+        except (FileNotFoundError, OSError):
+            pass
+    return False
+
+
 def stop_processing(request, job_id):
     """Stop a running processing job.
 
@@ -1702,6 +1754,9 @@ def stop_processing(request, job_id):
                     sub_proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     pass
+            else:
+                # Try PID file for orphaned sub-processes
+                _kill_by_pid_file(output_dir / suffix)
         # Background thread handles final job status
     elif proc and proc.poll() is None:
         if job.pipeline == 'v4':
@@ -1725,11 +1780,13 @@ def stop_processing(request, job_id):
             _active_procs.pop(jid, None)
         # Background thread handles final job status (partial BVH or failed)
     else:
+        # No tracked process — try to kill by PID file (orphaned after server restart)
+        _kill_by_pid_file(output_dir)
         with _active_procs_lock:
             _active_procs.pop(jid, None)
         job.status = 'failed'
         job.error_message = 'Cancelled by user'
-        job.save()
+        job.save(update_fields=['status', 'error_message'])
 
     messages.info(request, 'Processing stopped.')
     return redirect('job_status', job_id=job.id)
@@ -1758,6 +1815,8 @@ def api_stop_processing(request, job_id):
                     sub_proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     pass
+            else:
+                _kill_by_pid_file(output_dir / suffix)
     elif proc and proc.poll() is None:
         if job.pipeline == 'v4':
             try:
@@ -1772,11 +1831,12 @@ def api_stop_processing(request, job_id):
         with _active_procs_lock:
             _active_procs.pop(jid, None)
     else:
+        _kill_by_pid_file(output_dir)
         with _active_procs_lock:
             _active_procs.pop(jid, None)
         job.status = 'failed'
         job.error_message = 'Cancelled by user'
-        job.save()
+        job.save(update_fields=['status', 'error_message'])
 
     return JsonResponse({'ok': True})
 
@@ -1827,17 +1887,57 @@ def standalone_result(request):
 
 
 def serve_bvh_file(request, job_id):
-    """Serve BVH file as HTTP response (file may be outside MEDIA_ROOT)."""
+    """Unified animation data endpoint for pipeline jobs.
+
+    GET /api/bvh/<job_id>/                     → raw BVH file (default)
+    GET /api/bvh/<job_id>/?mode=retarget       → retargeted Rigify/DEF quaternion tracks
+    GET /api/bvh/<job_id>/?mode=keypoints2d    → 2D keypoint overlay data
+
+    Query params for retarget mode:
+        body_height: float (default 1.68)
+        format: str (auto-detected if omitted)
+        foot_correction: bool (default false)
+    """
+    mode = request.GET.get('mode', 'bvh')
     job = get_object_or_404(BVHJob, id=job_id)
-    if not job.bvh_file or not os.path.exists(job.bvh_file):
+
+    if mode == 'keypoints2d':
+        return _serve_keypoints_2d_impl(job)
+
+    if mode == 'retarget':
+        return _serve_retarget_job_impl(job, request)
+
+    # Default: raw BVH file
+    bvh_path = job.bvh_file
+    # Fallback: hybrid partial success — body failed, face succeeded
+    if (not bvh_path or not os.path.exists(bvh_path)) and job.bvh_file_face and os.path.exists(job.bvh_file_face):
+        bvh_path = job.bvh_file_face
+    if not bvh_path or not os.path.exists(bvh_path):
         return HttpResponseNotFound('BVH file not found')
     resp = FileResponse(
-        open(job.bvh_file, 'rb'),
+        open(bvh_path, 'rb'),
         content_type='text/plain',
-        filename=os.path.basename(job.bvh_file),
+        filename=os.path.basename(bvh_path),
     )
     resp['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
+
+
+def _serve_retarget_job_impl(job, request):
+    """Retarget a pipeline job's BVH to Rigify/DEF skeleton."""
+    from .character_api import retarget_bvh_data
+
+    if not job.bvh_file:
+        return HttpResponseNotFound('Job has no BVH file')
+    bvh_path = job.bvh_file
+    if not os.path.isfile(bvh_path):
+        return HttpResponseNotFound(f'BVH file not found: {bvh_path}')
+
+    body_height = float(request.GET.get('body_height', 1.68))
+    fmt = request.GET.get('format', None)
+    foot_correction = request.GET.get('foot_correction', '').lower() in ('1', 'true')
+
+    return JsonResponse(retarget_bvh_data(bvh_path, body_height, fmt, foot_correction))
 
 
 def serve_bvh_face(request, job_id):
@@ -1981,6 +2081,12 @@ def _try_generate_smpl_2d_keypoints(job, output_dir):
 
 
 def serve_keypoints_2d(request, job_id):
+    """Legacy endpoint — redirects to unified serve_bvh_file(?mode=keypoints2d)."""
+    job = get_object_or_404(BVHJob, id=job_id)
+    return _serve_keypoints_2d_impl(job)
+
+
+def _serve_keypoints_2d_impl(job):
     """Serve per-frame 2D keypoints as JSON for the Canvas2D overlay.
 
     Returns {joints: [...], connections: [...], frames: [{name: [x,y,conf]}, ...]}
@@ -1988,7 +2094,6 @@ def serve_keypoints_2d(request, job_id):
     """
     import csv as _csv
 
-    job = get_object_or_404(BVHJob, id=job_id)
     output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
 
     body_joints = BODY_JOINT_NAMES
@@ -2042,23 +2147,37 @@ def serve_keypoints_2d(request, job_id):
                              'frames': frames})
     elif job.pipeline in ('rtmpose', 'vitpose', 'yolo11'):
         csv_path = output_dir / f'{job.pipeline}_2d.csv'
-    elif job.pipeline in ('gvhmr', 'wham', 'prompthmr'):
-        # SMPL pipelines: prefer pre-computed 2D keypoints from camera projection
-        if job.bvh_file:
-            bvh_stem = Path(job.bvh_file).stem
-            kp2d_json = output_dir / f'{bvh_stem}_keypoints2d.json'
-            if kp2d_json.exists():
-                with open(kp2d_json) as f:
-                    return JsonResponse(json.load(f))
+    elif job.pipeline in ('gvhmr', 'wham', 'prompthmr', 'hybrid_gvhmr', 'hybrid_prompthmr'):
+        # SMPL pipelines: prefer MediaPipe 2D detection (accurate screen positions)
+        # over SMPL camera projection (which can have offset errors)
+        mp_csv = output_dir / '2dJoints_v4_raw.csv'
+        if not mp_csv.exists():
+            try:
+                mp_csv = _extract_v4_keypoints(job)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning('MediaPipe extraction failed: %s', e)
+                mp_csv = None
+        if mp_csv and mp_csv.exists():
+            csv_path = mp_csv
+        else:
+            # Fallback: pre-computed SMPL camera projection
+            if job.bvh_file:
+                bvh_path = Path(job.bvh_file)
+                bvh_stem = bvh_path.stem
+                kp2d_json = bvh_path.parent / f'{bvh_stem}_keypoints2d.json'
+                if not kp2d_json.exists():
+                    kp2d_json = output_dir / f'{bvh_stem}_keypoints2d.json'
+                if kp2d_json.exists():
+                    with open(kp2d_json) as f:
+                        return JsonResponse(json.load(f))
 
-            # Try retroactive generation from hmr4d_results.pt
-            data = _try_generate_smpl_2d_keypoints(job, output_dir)
-            if data:
-                return JsonResponse(data)
+                data = _try_generate_smpl_2d_keypoints(job, output_dir)
+                if data:
+                    return JsonResponse(data)
 
-        # No proper 2D keypoints available for SMPL pipeline
-        return JsonResponse({'joints': body_joints, 'connections': connections,
-                             'frames': []})
+            return JsonResponse({'joints': body_joints, 'connections': connections,
+                                 'frames': []})
     else:
         csv_path = output_dir / 'frames-mpdata' / '2dJoints_mediapipe.csv'
 
@@ -2803,6 +2922,20 @@ def save_video3d(request, job_id):
 def webcam(request):
     """Live webcam capture page."""
     return render(request, 'webcam.html')
+
+
+def ui_prefs_api(request):
+    """GET/POST UI preferences (panel sizes etc.)."""
+    from .models import AppSettings
+    settings_obj, _ = AppSettings.objects.get_or_create(pk=1)
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        prefs = settings_obj.ui_prefs or {}
+        prefs.update(data)
+        settings_obj.ui_prefs = prefs
+        settings_obj.save(update_fields=['ui_prefs'])
+        return JsonResponse({'ok': True})
+    return JsonResponse(settings_obj.ui_prefs or {})
 
 
 def app_settings(request):

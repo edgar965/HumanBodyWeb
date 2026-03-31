@@ -55,6 +55,10 @@
         <div class="panel-label"><i class="fas fa-bone"></i> 3D Skeleton</div>
         <div id="skeletonCanvas"></div>
     </div>
+    <div class="result-panel">
+        <div class="panel-label"><i class="fas fa-table"></i> Debug Bone Compare</div>
+        <div id="debugBonePanel" style="flex:1;overflow:auto;font-family:monospace;font-size:11px;padding:4px;"></div>
+    </div>
 </div>
 
 <div class="player-controls">
@@ -79,6 +83,7 @@
         <button class="speed-btn" data-speed="0.5">0.5x</button>
         <button class="speed-btn active" data-speed="1">1x</button>
         <button class="speed-btn" data-speed="2">2x</button>
+        <button class="speed-btn" id="btnToggleIdx" title="Toggle bone index numbers on 3D skeleton">Idx</button>
         <span style="margin-left:auto;color:#666;font-size:0.75rem;">
             <kbd style="background:#333;padding:2px 6px;border-radius:3px;">Space</kbd> Play/Pause
             <kbd style="background:#333;padding:2px 6px;border-radius:3px;margin-left:6px;">&larr;&rarr;</kbd> Frame
@@ -87,7 +92,8 @@
 </div>
 
 {% if job.bvh_file %}
-<div class="result-character">
+<div class="resize-handle-v" id="resizeHandleChar" title="Drag to resize 3D Character height"></div>
+<div class="result-character" id="resultCharacterSection">
     <div class="panel-label"><i class="fas fa-user"></i> 3D Character</div>
     <div class="result-character-controls">
         <label>Modell:</label>
@@ -119,11 +125,11 @@ try {
     initBVHPlayer({
         videoId: 'resultVideo',
         canvasId: 'skeletonCanvas',
-        bvhUrl: '{% url "serve_bvh" job.id %}',
+        bvhUrl: '{% url "serve_bvh" job.id %}?t={% now "U" %}',
         fps: {{ job.fps|default:"30" }},
         overlayId: 'skeletonOverlay',
-        detectionUrl: '{% url "serve_detection" job.id %}',
-        keypointsUrl: '{% url "serve_keypoints" job.id %}',
+        detectionUrl: '{% url "serve_detection" job.id %}?t={% now "U" %}',
+        keypointsUrl: '{% url "serve_keypoints" job.id %}?t={% now "U" %}',
     });
 } catch(e) {
     console.error('[bvh_player] Init error:', e);
@@ -133,6 +139,18 @@ try {
     document.body.appendChild(err);
 }
 </script>
+<script>
+// --- ResizeObserver for Three.js (layout only, not panels — avoids infinite loop) ---
+(function() {
+    const layout = document.querySelector('.result-layout');
+    if (!layout) return;
+    let resizeTimer;
+    new ResizeObserver(() => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+    }).observe(layout);
+})();
+</script>
 {% if job.bvh_file %}
 <script type="module">
 try {
@@ -140,8 +158,8 @@ try {
     initResultCharacter({
         canvasId: 'characterCanvas',
         videoId: 'resultVideo',
-        bvhUrl: '{% url "serve_bvh" job.id %}',
-        {% if job.bvh_file_face %}bvhFaceUrl: '{% url "serve_bvh_face" job.id %}',{% endif %}
+        bvhUrl: '{% url "serve_bvh" job.id %}?t={% now "U" %}',
+        {% if job.bvh_file_face %}bvhFaceUrl: '{% url "serve_bvh_face" job.id %}?t={% now "U" %}',{% endif %}
         jobId: '{{ job.id }}',
         panelId: 'characterPanel',
         modelSelectId: 'resultModelPreset',

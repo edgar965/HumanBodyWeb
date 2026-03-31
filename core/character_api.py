@@ -3711,30 +3711,14 @@ def _get_skel_geometry():
     return _skel_geometry_cache
 
 
-@require_GET
-def retarget_bvh(request, category, name):
-    """Server-side BVH retarget. Returns pre-computed keyframe data for Three.js.
+def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=False):
+    """Core retarget: BVH file path → dict with Rigify/DEF quaternion tracks.
 
-    GET /api/character/retarget-bvh/<category>/<name>/
-    Optional query params:
-        body_height: float (default 1.68)
-        format: str (auto-detected if omitted)
-
-    Returns JSON: {duration, times, tracks: {bone: [x,y,z,w,...]}, position_track, ...}
+    This is the ONE retarget function used by all endpoints (job, static, merge, text).
+    Input:  bvh_path (str) — path to a .bvh file
+    Output: dict {duration, times, tracks: {bone: [x,y,z,w,...]}, position_track, ...}
     """
     from humanbody_core.skeleton import Skeleton, SkeletonRigify
-
-    # Resolve BVH path
-    bvh_root = os.path.dirname(str(settings.HUMANBODY_BVH_DIR))
-    bvh_path = os.path.normpath(os.path.join(bvh_root, category, f"{name}.bvh"))
-    if not bvh_path.startswith(os.path.normpath(bvh_root)):
-        return HttpResponseNotFound('Invalid path')
-    if not os.path.isfile(bvh_path):
-        return HttpResponseNotFound(f'BVH not found: {category}/{name}')
-
-    body_height = float(request.GET.get('body_height', 1.68))
-    fmt = request.GET.get('format', None)
-    foot_correction = request.GET.get('foot_correction', '').lower() in ('1', 'true')
 
     skel_geom = _get_skel_geometry()
     bvh = SkeletonRigify.parse_bvh(bvh_path)
@@ -3744,13 +3728,54 @@ def retarget_bvh(request, category, name):
     else:
         fmt_cls = Skeleton.detect_format(bvh.names)
     if fmt_cls and fmt_cls.BONE_MAP_TO_RIGIFY:
-        result = fmt_cls.retarget_to_rigify(bvh, skel_geom, body_height=body_height,
-                                            foot_correction=foot_correction)
+        return fmt_cls.retarget_to_rigify(bvh, skel_geom, body_height=body_height,
+                                          foot_correction=foot_correction)
+    return SkeletonRigify.retarget_bvh(bvh, skel_geom, fmt=fmt,
+                                        body_height=body_height,
+                                        foot_correction=foot_correction)
+
+
+@require_GET
+def retarget(request):
+    """Unified retarget endpoint — ONE URL for both Job and Library BVH.
+
+    GET /api/retarget/?job=<uuid>                        → job's BVH file
+    GET /api/retarget/?category=<cat>&name=<name>        → library BVH file
+    Common query params: body_height, format, foot_correction
+    """
+    job_id = request.GET.get('job')
+    category = request.GET.get('category')
+    name = request.GET.get('name')
+
+    body_height = float(request.GET.get('body_height', 1.68))
+    fmt = request.GET.get('format', None)
+    foot_correction = request.GET.get('foot_correction', '').lower() in ('1', 'true')
+
+    if job_id:
+        job = get_object_or_404(BVHJob, id=job_id)
+        if not job.bvh_file or not os.path.isfile(job.bvh_file):
+            return HttpResponseNotFound('Job has no BVH file')
+        bvh_path = job.bvh_file
+    elif category and name:
+        bvh_root = os.path.dirname(str(settings.HUMANBODY_BVH_DIR))
+        bvh_path = os.path.normpath(os.path.join(bvh_root, category, f"{name}.bvh"))
+        if not bvh_path.startswith(os.path.normpath(bvh_root)):
+            return HttpResponseNotFound('Invalid path')
+        if not os.path.isfile(bvh_path):
+            return HttpResponseNotFound(f'BVH not found: {category}/{name}')
     else:
-        result = SkeletonRigify.retarget_bvh(bvh, skel_geom, fmt=fmt,
-                                              body_height=body_height,
-                                              foot_correction=foot_correction)
-    return JsonResponse(result)
+        return JsonResponse({'error': 'Provide ?job=<uuid> or ?category=<cat>&name=<name>'}, status=400)
+
+    return JsonResponse(retarget_bvh_data(bvh_path, body_height, fmt, foot_correction))
+
+
+@require_GET
+def retarget_bvh(request, category, name):
+    """Legacy — forwards to unified retarget()."""
+    request.GET = request.GET.copy()
+    request.GET['category'] = category
+    request.GET['name'] = name
+    return retarget(request)
 
 
 @csrf_exempt
@@ -3762,7 +3787,7 @@ def retarget_merge(request):
     Body JSON: { body_bvh: "category/name", face_bvh: "category/name",
                  body_height: 1.68, foot_correction: false }
     """
-    from humanbody_core.skeleton import Skeleton, SkeletonRigify
+    from humanbody_core.skeleton import SkeletonRigify
 
     try:
         data = json.loads(request.body)
@@ -3793,71 +3818,22 @@ def retarget_merge(request):
     if not os.path.isfile(face_path):
         return HttpResponseNotFound(f'Face BVH not found: {face_bvh_key}')
 
-    skel_geom = _get_skel_geometry()
+    body_result = retarget_bvh_data(body_path, body_height=body_height,
+                                     foot_correction=foot_correction)
+    face_result = retarget_bvh_data(face_path, body_height=body_height)
 
-    # Parse and retarget body
-    body_bvh = SkeletonRigify.parse_bvh(body_path)
-    body_fmt_cls = Skeleton.detect_format(body_bvh.names)
-    if body_fmt_cls and body_fmt_cls.BONE_MAP_TO_RIGIFY:
-        body_result = body_fmt_cls.retarget_to_rigify(body_bvh, skel_geom,
-                                                       body_height=body_height,
-                                                       foot_correction=foot_correction)
-    else:
-        body_result = SkeletonRigify.retarget_bvh(body_bvh, skel_geom,
-                                                    body_height=body_height,
-                                                    foot_correction=foot_correction)
-
-    # Parse and retarget face
-    face_bvh = SkeletonRigify.parse_bvh(face_path)
-    face_fmt_cls = Skeleton.detect_format(face_bvh.names)
-    if face_fmt_cls and face_fmt_cls.BONE_MAP_TO_RIGIFY:
-        face_result = face_fmt_cls.retarget_to_rigify(face_bvh, skel_geom,
-                                                       body_height=body_height)
-    else:
-        face_result = SkeletonRigify.retarget_bvh(face_bvh, skel_geom,
-                                                    body_height=body_height)
-
-    # Merge body + face
     merged = SkeletonRigify.merge_retargeted_clips(body_result, face_result)
     return JsonResponse(merged)
 
 
 @require_GET
 def retarget_job_bvh(request, job_id):
-    """Server-side retarget for a pipeline job's BVH output.
-
-    GET /api/character/retarget-job/<job_id>/
-    Optional query params: body_height, foot_correction, format
-    """
-    from humanbody_core.skeleton import Skeleton, SkeletonRigify
-
-    job = get_object_or_404(BVHJob, id=job_id)
-    if not job.bvh_file:
-        return HttpResponseNotFound('Job has no BVH file')
-
-    bvh_path = job.bvh_file
-    if not os.path.isfile(bvh_path):
-        return HttpResponseNotFound(f'BVH file not found: {bvh_path}')
-
-    body_height = float(request.GET.get('body_height', 1.68))
-    fmt = request.GET.get('format', None)
-    foot_correction = request.GET.get('foot_correction', '').lower() in ('1', 'true')
-
-    skel_geom = _get_skel_geometry()
-    bvh = SkeletonRigify.parse_bvh(bvh_path)
-
-    if fmt:
-        fmt_cls = Skeleton.get_format(fmt)
-    else:
-        fmt_cls = Skeleton.detect_format(bvh.names)
-    if fmt_cls and fmt_cls.BONE_MAP_TO_RIGIFY:
-        result = fmt_cls.retarget_to_rigify(bvh, skel_geom, body_height=body_height,
-                                            foot_correction=foot_correction)
-    else:
-        result = SkeletonRigify.retarget_bvh(bvh, skel_geom, fmt=fmt,
-                                              body_height=body_height,
-                                              foot_correction=foot_correction)
-    return JsonResponse(result)
+    """Legacy endpoint — now handled by serve_bvh_file(?mode=retarget) in views.py."""
+    from .views import serve_bvh_file
+    # Forward to unified handler with mode=retarget
+    request.GET = request.GET.copy()
+    request.GET['mode'] = 'retarget'
+    return serve_bvh_file(request, job_id)
 
 
 @require_GET
@@ -3867,7 +3843,7 @@ def retarget_job_merge(request, job_id):
     GET /api/character/retarget-job-merge/<job_id>/
     Optional query params: body_height, foot_correction
     """
-    from humanbody_core.skeleton import Skeleton, SkeletonRigify
+    from humanbody_core.skeleton import SkeletonRigify
 
     job = get_object_or_404(BVHJob, id=job_id)
     if not job.bvh_file:
@@ -3882,29 +3858,9 @@ def retarget_job_merge(request, job_id):
     body_height = float(request.GET.get('body_height', 1.68))
     foot_correction = request.GET.get('foot_correction', '').lower() in ('1', 'true')
 
-    skel_geom = _get_skel_geometry()
-
-    # Retarget body
-    body_bvh = SkeletonRigify.parse_bvh(job.bvh_file)
-    body_fmt = Skeleton.detect_format(body_bvh.names)
-    if body_fmt and body_fmt.BONE_MAP_TO_RIGIFY:
-        body_result = body_fmt.retarget_to_rigify(body_bvh, skel_geom,
-                                                   body_height=body_height,
-                                                   foot_correction=foot_correction)
-    else:
-        body_result = SkeletonRigify.retarget_bvh(body_bvh, skel_geom,
-                                                    body_height=body_height,
-                                                    foot_correction=foot_correction)
-
-    # Retarget face
-    face_bvh = SkeletonRigify.parse_bvh(job.bvh_file_face)
-    face_fmt = Skeleton.detect_format(face_bvh.names)
-    if face_fmt and face_fmt.BONE_MAP_TO_RIGIFY:
-        face_result = face_fmt.retarget_to_rigify(face_bvh, skel_geom,
-                                                   body_height=body_height)
-    else:
-        face_result = SkeletonRigify.retarget_bvh(face_bvh, skel_geom,
-                                                    body_height=body_height)
+    body_result = retarget_bvh_data(job.bvh_file, body_height=body_height,
+                                     foot_correction=foot_correction)
+    face_result = retarget_bvh_data(job.bvh_file_face, body_height=body_height)
 
     merged = SkeletonRigify.merge_retargeted_clips(body_result, face_result)
     return JsonResponse(merged)
@@ -3919,7 +3875,6 @@ def retarget_bvh_text(request):
     Body JSON: { bvh_text: "HIERARCHY\\nROOT ...", body_height: 1.68,
                  foot_correction: false, format: null }
     """
-    from humanbody_core.skeleton import Skeleton, SkeletonRigify
     import tempfile
 
     try:
@@ -3942,20 +3897,6 @@ def retarget_bvh_text(request):
         tmp_path = tmp.name
 
     try:
-        skel_geom = _get_skel_geometry()
-        bvh = SkeletonRigify.parse_bvh(tmp_path)
-
-        if fmt:
-            fmt_cls = Skeleton.get_format(fmt)
-        else:
-            fmt_cls = Skeleton.detect_format(bvh.names)
-        if fmt_cls and fmt_cls.BONE_MAP_TO_RIGIFY:
-            result = fmt_cls.retarget_to_rigify(bvh, skel_geom, body_height=body_height,
-                                                foot_correction=foot_correction)
-        else:
-            result = SkeletonRigify.retarget_bvh(bvh, skel_geom, fmt=fmt,
-                                                  body_height=body_height,
-                                                  foot_correction=foot_correction)
-        return JsonResponse(result)
+        return JsonResponse(retarget_bvh_data(tmp_path, body_height, fmt, foot_correction))
     finally:
         os.unlink(tmp_path)
