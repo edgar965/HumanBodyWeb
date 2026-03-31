@@ -932,21 +932,40 @@ function animate() {
     controls.update();
     if (mixer && playing) {
         mixer.update(dt);
-        // Ground fix: after animation update, set group Y so lowest point = 0
+        // Update frame/time display
+        if (currentAction) {
+            const clip = currentAction.getClip();
+            if (clip) {
+                const t = currentAction.time;
+                const dur = clip.duration;
+                const ft = clip.tracks[0]?.times?.[1] || (1/30);
+                const frame = Math.floor(t / ft);
+                const totalFrames = Math.round(dur / ft);
+                const el = document.getElementById('anim-time');
+                if (el) el.textContent = `Frame ${frame} / ${totalFrames} \u2022 ${t.toFixed(2)}s / ${dur.toFixed(2)}s`;
+                const tl = document.getElementById('anim-timeline');
+                if (tl) tl.value = Math.round((t / dur) * 100);
+            }
+        }
+        // Ground fix: after animation, ensure feet touch ground (Y=0)
+        if (currentAnimGroundFixed && frameCount % 300 === 0) {
+            console.log('[GROUND] active, checking bones...');
+        }
         if (currentAnimGroundFixed) {
             const inst = _selectedInst ? _selectedInst() : null;
-            const grp = inst ? inst.group : null;
-            const bMesh = inst ? inst.bodyMesh : bodyMesh;
-            if (bMesh) {
-                // Reset Y before measuring to avoid drift
-                if (grp) grp.position.y = 0;
-                else if (bMesh) bMesh.position.y = 0;
-                bMesh.updateWorldMatrix(true, true);
-                const bb = new THREE.Box3().setFromObject(bMesh);
-                if (!bb.isEmpty()) {
-                    const offset = -bb.min.y;
-                    if (grp) grp.position.y = offset;
-                    else bMesh.position.y = offset;
+            const skel = inst ? inst.rigifySkeleton : rigifySkeleton;
+            if (skel && skel.rootBone) {
+                // Find lowest bone Y position
+                const tmpV = new THREE.Vector3();
+                let minY = Infinity;
+                skel.rootBone.traverse(b => {
+                    if (b.isBone) {
+                        b.getWorldPosition(tmpV);
+                        if (tmpV.y < minY) minY = tmpV.y;
+                    }
+                });
+                if (isFinite(minY)) {
+                    skel.rootBone.position.y -= minY;
                 }
             }
         }
@@ -2879,7 +2898,8 @@ let _refitting = false;
 async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
     stopAnimation(true);
     currentAnimUrl = url;
-    currentAnimGroundFixed = false;
+    const groundChk = document.getElementById('scene-ground-fix');
+    currentAnimGroundFixed = groundChk ? groundChk.checked : false;
 
     // Determine target: selected character instance, or legacy bodyMesh
     const inst = _selectedInst();
@@ -3029,7 +3049,18 @@ function stopAnimation(destroy = false) {
 // Animation Ground-Fix & Save
 // =========================================================================
 
-async function applyGroundLevelFix() {
+function applyGroundLevelFix() {
+    // Toggle the ground fix checkbox — actual correction happens in animate loop
+    const chk = document.getElementById('scene-ground-fix');
+    if (chk) {
+        chk.checked = !chk.checked;
+        currentAnimGroundFixed = chk.checked;
+        console.log('[GROUND] Bodenniveau:', chk.checked ? 'AN' : 'AUS');
+    }
+    return;
+}
+
+async function _applyGroundLevelFix_legacy() {
     if (!currentAnimBvhText) {
         alert('Keine Animation geladen.');
         return;
@@ -5626,6 +5657,102 @@ async function loadAnimationUI() {
             currentAnimGroundFixed = groundChk.checked;
         });
     }
+
+    // Smooth sigma slider
+    const smoothSlider = document.getElementById('smooth-sigma');
+    const smoothVal = document.getElementById('smooth-sigma-val');
+    if (smoothSlider && smoothVal) {
+        smoothSlider.addEventListener('input', () => {
+            smoothVal.textContent = parseFloat(smoothSlider.value).toFixed(1);
+        });
+    }
+
+    // Smooth apply — Gaussian smooth on the retargeted AnimationClip tracks
+    let _unsmoothClipData = null;  // backup for reset
+    document.getElementById('smooth-apply')?.addEventListener('click', () => {
+        if (!currentAction) { alert('Keine Animation geladen.'); return; }
+        const clip = currentAction.getClip();
+        if (!clip) return;
+        const sigma = parseFloat(smoothSlider?.value || 2);
+        if (sigma <= 0) return;
+
+        // Backup original track values for reset
+        if (!_unsmoothClipData) {
+            _unsmoothClipData = clip.tracks.map(t => ({
+                name: t.name,
+                values: new Float32Array(t.values),
+            }));
+        }
+
+        // Gaussian kernel
+        const radius = Math.ceil(sigma * 3);
+        const kernel = [];
+        let ksum = 0;
+        for (let i = -radius; i <= radius; i++) {
+            const v = Math.exp(-0.5 * (i / sigma) ** 2);
+            kernel.push(v);
+            ksum += v;
+        }
+        for (let i = 0; i < kernel.length; i++) kernel[i] /= ksum;
+
+        // Apply to each track
+        for (const track of clip.tracks) {
+            const stride = track.getValueSize();
+            const nKeys = track.values.length / stride;
+            const orig = new Float32Array(track.values);
+
+            for (let c = 0; c < stride; c++) {
+                for (let k = 0; k < nKeys; k++) {
+                    let sum = 0;
+                    for (let j = 0; j < kernel.length; j++) {
+                        const idx = Math.max(0, Math.min(nKeys - 1, k + j - radius));
+                        sum += kernel[j] * orig[idx * stride + c];
+                    }
+                    track.values[k * stride + c] = sum;
+                }
+            }
+
+            // Re-normalize quaternion tracks
+            if (stride === 4) {
+                for (let k = 0; k < nKeys; k++) {
+                    const i = k * 4;
+                    const len = Math.sqrt(
+                        track.values[i] ** 2 + track.values[i+1] ** 2 +
+                        track.values[i+2] ** 2 + track.values[i+3] ** 2
+                    );
+                    if (len > 1e-8) {
+                        track.values[i] /= len;
+                        track.values[i+1] /= len;
+                        track.values[i+2] /= len;
+                        track.values[i+3] /= len;
+                    }
+                }
+            }
+        }
+
+        console.log(`[SMOOTH] Applied sigma=${sigma} to ${clip.tracks.length} tracks, ${radius * 2 + 1} kernel`);
+        // Reset mixer to apply changes
+        if (mixer) mixer.setTime(currentAction.time);
+    });
+
+    // Smooth reset
+    document.getElementById('smooth-reset')?.addEventListener('click', () => {
+        if (!_unsmoothClipData || !currentAction) return;
+        const clip = currentAction.getClip();
+        for (let i = 0; i < clip.tracks.length; i++) {
+            const backup = _unsmoothClipData.find(b => b.name === clip.tracks[i].name);
+            if (backup) clip.tracks[i].values.set(backup.values);
+        }
+        _unsmoothClipData = null;
+        if (mixer) mixer.setTime(currentAction.time);
+        console.log('[SMOOTH] Reset to original');
+    });
+
+    // Save animation
+    document.getElementById('anim-save-btn')?.addEventListener('click', () => {
+        if (!currentAnimBvhText && !currentAnimUrl) { alert('Keine Animation geladen.'); return; }
+        openSaveAnimDialog();
+    });
 }
 
 // =========================================================================
