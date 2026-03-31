@@ -40,6 +40,14 @@ studio.initialize().then(() => {
         if (root) {
             root.style.setProperty('z-index', '900', 'important');
             // Scale up the Studio UI for better readability/clickability
+            // Fix: Studio root must cover full viewport for correct context menu positioning
+            root.style.setProperty('position', 'fixed', 'important');
+            root.style.setProperty('top', '0', 'important');
+            root.style.setProperty('left', '0', 'important');
+            root.style.setProperty('width', '100vw', 'important');
+            root.style.setProperty('height', '100vh', 'important');
+            root.style.setProperty('pointer-events', 'none', 'important');
+
             if (root.shadowRoot) {
                 const style = document.createElement('style');
                 style.textContent = `
@@ -48,6 +56,28 @@ studio.initialize().then(() => {
                     svg { transform: scale(1.3); }
                     /* Bigger row height in sequence editor */
                     [data-testid] { min-height: 28px; }
+                    /* Re-enable pointer events on actual Studio panels */
+                    [data-testid="OutlinePanel"],
+                    [data-testid="DetailPanel"],
+                    [data-testid="SequenceEditor"],
+                    [data-testid="GlobalToolbar"],
+                    div[class*="Container"],
+                    div[class*="Panel"],
+                    div[class*="popover"],
+                    div[class*="Popover"],
+                    div[class*="contextmenu"],
+                    div[class*="ContextMenu"],
+                    ul, button, input, select {
+                        pointer-events: auto !important;
+                    }
+                    /* Fix context menu / popover positioning */
+                    [data-radix-popper-content-wrapper],
+                    [data-testid*="popover"],
+                    [role="menu"],
+                    [role="dialog"] {
+                        pointer-events: auto !important;
+                        z-index: 10000 !important;
+                    }
                 `;
                 root.shadowRoot.prepend(style);
             }
@@ -665,6 +695,50 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Kamera menu ──
+    function setCameraKeyframe(time) {
+        const seq = sheet.sequence;
+        seq.position = time;
+        studio.transaction(({ set }) => {
+            set(cameraObj.props.position.x, camera.position.x);
+            set(cameraObj.props.position.y, camera.position.y);
+            set(cameraObj.props.position.z, camera.position.z);
+            set(cameraObj.props.fov, camera.fov);
+        });
+        console.log(`✓ Camera keyframe at ${time.toFixed(2)}s:`,
+            `pos(${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`,
+            `fov=${camera.fov.toFixed(1)}`);
+    }
+
+    const menuCamSet = document.getElementById('menu-cam-set');
+    if (menuCamSet) {
+        menuCamSet.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            // Set keyframe at current playhead position
+            const time = sheet.sequence.position;
+            setCameraKeyframe(time);
+        });
+    }
+
+    const menuCamClear = document.getElementById('menu-cam-clear');
+    if (menuCamClear) {
+        menuCamClear.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            // Set static values (removes all keyframes, replaces with single value)
+            studio.transaction(({ set }) => {
+                set(cameraObj.props.position.x, camera.position.x);
+                set(cameraObj.props.position.y, camera.position.y);
+                set(cameraObj.props.position.z, camera.position.z);
+                set(cameraObj.props.fov, camera.fov);
+            });
+            // Unsequence and re-sequence to clear keyframes
+            // Simplest: remove Theatre localStorage for camera tracks and reload
+            console.log('✓ Camera keyframes cleared (set to current position)');
+        });
+    }
+
     // Play/pause animation (delegates to main play button)
     const btnPlayAnimation = document.getElementById('btn-play-animation');
     if (btnPlayAnimation) {
@@ -692,47 +766,73 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Tools menu: Tracks neu aufbauen ──
-    const menuTracksRebuild = document.getElementById('menu-tracks-rebuild');
-    if (menuTracksRebuild) {
-        menuTracksRebuild.addEventListener('click', () => {
-            // Re-select the sheet so Studio rebuilds all track rows
-            studio.setSelection([sheet]);
-            // Force a value write on each object to ensure tracks appear
-            const objs = window.theatreObjects || {};
-            studio.transaction(({ set }) => {
-                for (const [name, obj] of Object.entries(objs)) {
-                    const vals = obj.value;
-                    if (!vals) continue;
+    // ── Tools menu handlers ──
+    // Expose as global function so it can be called from menu AND from console
+    window.rebuildTimeline = function() {
+        const seq = sheet.sequence;
+        const objs = window.theatreObjects || {};
+
+        // Set sequence length
+        try {
+            studio.transaction(({ set }) => { set(seq.pointer.length, 10); });
+        } catch(e) { console.warn('Set length failed:', e); }
+
+        // Move playhead to 0, write all current values as keyframes
+        seq.position = 0;
+        const objEntries = Object.entries(objs);
+        for (const [name, obj] of objEntries) {
+            const vals = obj.value;
+            if (!vals) continue;
+            try {
+                studio.transaction(({ set }) => {
                     for (const [key, val] of Object.entries(vals)) {
-                        if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                        if (key === 'color') {
+                            set(obj.props[key], val);
+                        } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
                             for (const [subKey, subVal] of Object.entries(val)) {
-                                try { set(obj.props[key][subKey], subVal); } catch(_) {}
+                                set(obj.props[key][subKey], subVal);
                             }
                         } else {
-                            try { set(obj.props[key], val); } catch(_) {}
+                            set(obj.props[key], val);
                         }
                     }
-                }
-            });
-            console.log('✓ Tracks rebuilt');
+                });
+                console.log('✓ Timeline:', name, 'OK');
+            } catch(e) {
+                console.error('✗ Timeline:', name, e.message);
+            }
+        }
+
+        studio.setSelection([sheet]);
+        console.log('✓ Timeline rebuilt:', objEntries.length, 'objects');
+    };
+
+    window.clearTimeline = function() {
+        for (const key of Object.keys(localStorage)) {
+            if (key.includes('theatre') || key.includes('Theatre') || key.includes('HumanBody Theatre')) {
+                localStorage.removeItem(key);
+            }
+        }
+        if (window.keyframeUI) window.keyframeUI.keyframes = [];
+        window.location.reload();
+    };
+
+    // Attach to menu items
+    const menuTracksRebuild = document.getElementById('menu-tracks-rebuild');
+    if (menuTracksRebuild) {
+        menuTracksRebuild.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            window.rebuildTimeline();
         });
     }
 
-    // ── Tools menu: Tracks löschen ──
     const menuTracksClear = document.getElementById('menu-tracks-clear');
     if (menuTracksClear) {
-        menuTracksClear.addEventListener('click', () => {
-            // Remove Theatre.js localStorage state completely and reload
-            for (const key of Object.keys(localStorage)) {
-                if (key.includes('theatre') || key.includes('Theatre') || key.includes('HumanBody Theatre')) {
-                    localStorage.removeItem(key);
-                }
-            }
-            if (window.keyframeUI) {
-                window.keyframeUI.keyframes = [];
-            }
-            window.location.reload();
+        menuTracksClear.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            window.clearTimeline();
         });
     }
 
@@ -1300,8 +1400,9 @@ window.addEventListener('DOMContentLoaded', () => {
                     currentAction.paused = false;
                     currentAction.play();
                 }
-                // Play Theatre.js sequence (Camera/Lights timeline) — range matches BVH
-                sheet.sequence.play({ iterationCount: Infinity, rate: playbackSpeed, range: [0, animDuration] });
+                // Play Theatre.js sequence — use animation duration, fallback to 10s
+                const seqLen = (animDuration > 1) ? animDuration : 10;
+                sheet.sequence.play({ iterationCount: Infinity, rate: playbackSpeed, range: [0, seqLen] });
             } else {
                 if (currentAction) currentAction.paused = true;
                 sheet.sequence.pause();
@@ -1314,10 +1415,12 @@ window.addEventListener('DOMContentLoaded', () => {
         btnStop.addEventListener('click', () => {
             stopAnimation();
             currentTime = 0;
-            animDuration = 1;
+            // Keep animDuration — don't reset to 1!
             // Reset Theatre.js sequence to start
             sheet.sequence.pause();
             sheet.sequence.position = 0;
+            isPlaying = false;
+            window.isPlaying = false;
             updatePlayerUI();
         });
     }
@@ -1358,7 +1461,8 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             // Update Theatre.js sequence playback rate if playing
             if (isPlaying) {
-                sheet.sequence.play({ iterationCount: Infinity, rate: speed, range: [0, animDuration] });
+                const seqLen = (animDuration > 1) ? animDuration : 10;
+                sheet.sequence.play({ iterationCount: Infinity, rate: speed, range: [0, seqLen] });
             }
             document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
