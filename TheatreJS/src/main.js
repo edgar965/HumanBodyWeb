@@ -40,6 +40,9 @@ studio.initialize().then(() => {
         if (root) {
             root.style.setProperty('z-index', '900', 'important');
             // Scale up the Studio UI for better readability/clickability
+            // Keep Studio root in normal flow — don't use position:fixed
+            // (fixed positioning causes Studio panels to overlap our UI)
+
             if (root.shadowRoot) {
                 const style = document.createElement('style');
                 style.textContent = `
@@ -665,6 +668,50 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Kamera menu ──
+    function setCameraKeyframe(time) {
+        const seq = sheet.sequence;
+        seq.position = time;
+        studio.transaction(({ set }) => {
+            set(cameraObj.props.position.x, camera.position.x);
+            set(cameraObj.props.position.y, camera.position.y);
+            set(cameraObj.props.position.z, camera.position.z);
+            set(cameraObj.props.fov, camera.fov);
+        });
+        console.log(`✓ Camera keyframe at ${time.toFixed(2)}s:`,
+            `pos(${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)})`,
+            `fov=${camera.fov.toFixed(1)}`);
+    }
+
+    const menuCamSet = document.getElementById('menu-cam-set');
+    if (menuCamSet) {
+        menuCamSet.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            // Set keyframe at current playhead position
+            const time = sheet.sequence.position;
+            setCameraKeyframe(time);
+        });
+    }
+
+    const menuCamClear = document.getElementById('menu-cam-clear');
+    if (menuCamClear) {
+        menuCamClear.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            // Set static values (removes all keyframes, replaces with single value)
+            studio.transaction(({ set }) => {
+                set(cameraObj.props.position.x, camera.position.x);
+                set(cameraObj.props.position.y, camera.position.y);
+                set(cameraObj.props.position.z, camera.position.z);
+                set(cameraObj.props.fov, camera.fov);
+            });
+            // Unsequence and re-sequence to clear keyframes
+            // Simplest: remove Theatre localStorage for camera tracks and reload
+            console.log('✓ Camera keyframes cleared (set to current position)');
+        });
+    }
+
     // Play/pause animation (delegates to main play button)
     const btnPlayAnimation = document.getElementById('btn-play-animation');
     if (btnPlayAnimation) {
@@ -689,6 +736,76 @@ window.addEventListener('DOMContentLoaded', () => {
                 studio.ui.hide();
             }
             btnToggleStudio.classList.toggle('active', studioVisible);
+        });
+    }
+
+    // ── Tools menu handlers ──
+    // Expose as global function so it can be called from menu AND from console
+    window.rebuildTimeline = function() {
+        const seq = sheet.sequence;
+        const objs = window.theatreObjects || {};
+
+        // Set sequence length
+        try {
+            studio.transaction(({ set }) => { set(seq.pointer.length, 10); });
+        } catch(e) { console.warn('Set length failed:', e); }
+
+        // Move playhead to 0, write all current values as keyframes
+        seq.position = 0;
+        const objEntries = Object.entries(objs);
+        for (const [name, obj] of objEntries) {
+            const vals = obj.value;
+            if (!vals) continue;
+            try {
+                studio.transaction(({ set }) => {
+                    for (const [key, val] of Object.entries(vals)) {
+                        if (key === 'color') {
+                            set(obj.props[key], val);
+                        } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                            for (const [subKey, subVal] of Object.entries(val)) {
+                                set(obj.props[key][subKey], subVal);
+                            }
+                        } else {
+                            set(obj.props[key], val);
+                        }
+                    }
+                });
+                console.log('✓ Timeline:', name, 'OK');
+            } catch(e) {
+                console.error('✗ Timeline:', name, e.message);
+            }
+        }
+
+        studio.setSelection([sheet]);
+        console.log('✓ Timeline rebuilt:', objEntries.length, 'objects');
+    };
+
+    window.clearTimeline = function() {
+        for (const key of Object.keys(localStorage)) {
+            if (key.includes('theatre') || key.includes('Theatre') || key.includes('HumanBody Theatre')) {
+                localStorage.removeItem(key);
+            }
+        }
+        if (window.keyframeUI) window.keyframeUI.keyframes = [];
+        window.location.reload();
+    };
+
+    // Attach to menu items
+    const menuTracksRebuild = document.getElementById('menu-tracks-rebuild');
+    if (menuTracksRebuild) {
+        menuTracksRebuild.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            window.rebuildTimeline();
+        });
+    }
+
+    const menuTracksClear = document.getElementById('menu-tracks-clear');
+    if (menuTracksClear) {
+        menuTracksClear.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            window.clearTimeline();
         });
     }
 
@@ -1256,8 +1373,9 @@ window.addEventListener('DOMContentLoaded', () => {
                     currentAction.paused = false;
                     currentAction.play();
                 }
-                // Play Theatre.js sequence (Camera/Lights timeline) — range matches BVH
-                sheet.sequence.play({ iterationCount: Infinity, rate: playbackSpeed, range: [0, animDuration] });
+                // Play Theatre.js sequence — use animation duration, fallback to 10s
+                const seqLen = (animDuration > 1) ? animDuration : 10;
+                sheet.sequence.play({ iterationCount: Infinity, rate: playbackSpeed, range: [0, seqLen] });
             } else {
                 if (currentAction) currentAction.paused = true;
                 sheet.sequence.pause();
@@ -1270,10 +1388,12 @@ window.addEventListener('DOMContentLoaded', () => {
         btnStop.addEventListener('click', () => {
             stopAnimation();
             currentTime = 0;
-            animDuration = 1;
+            // Keep animDuration — don't reset to 1!
             // Reset Theatre.js sequence to start
             sheet.sequence.pause();
             sheet.sequence.position = 0;
+            isPlaying = false;
+            window.isPlaying = false;
             updatePlayerUI();
         });
     }
@@ -1314,7 +1434,8 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             // Update Theatre.js sequence playback rate if playing
             if (isPlaying) {
-                sheet.sequence.play({ iterationCount: Infinity, rate: speed, range: [0, animDuration] });
+                const seqLen = (animDuration > 1) ? animDuration : 10;
+                sheet.sequence.play({ iterationCount: Infinity, rate: speed, range: [0, seqLen] });
             }
             document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');

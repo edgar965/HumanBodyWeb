@@ -252,6 +252,8 @@
         background: var(--bg-secondary);
         border-top: 1px solid var(--border);
         flex-shrink: 0;
+        position: relative;
+        z-index: 950;
     }
 
     .controls-row {
@@ -517,6 +519,29 @@
         </div>
     </div>
     <div class="menu-item">
+        Kamera
+        <div class="menu-dropdown">
+            <div class="menu-action" id="menu-cam-set">
+                <i class="fas fa-camera"></i> Kamera setzen
+            </div>
+            <div class="menu-separator"></div>
+            <div class="menu-action" id="menu-cam-clear">
+                <i class="fas fa-trash" style="color: #e74c3c;"></i> Kamera-Keyframes löschen
+            </div>
+        </div>
+    </div>
+    <div class="menu-item">
+        Tools
+        <div class="menu-dropdown">
+            <div class="menu-action" id="menu-tracks-rebuild">
+                <i class="fas fa-sync"></i> Timeline neu aufbauen
+            </div>
+            <div class="menu-action" id="menu-tracks-clear">
+                <i class="fas fa-eraser" style="color: #e74c3c;"></i> Timeline löschen
+            </div>
+        </div>
+    </div>
+    <div class="menu-item">
         <a href="{% url 'theatre_help' %}" target="_blank" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 6px;">
             <i class="fas fa-question-circle"></i> Hilfe
         </a>
@@ -551,9 +576,6 @@
             </button>
             <button class="toolbar-btn" id="btn-toggle-rig" title="Rig ein/ausblenden">
                 <i class="fas fa-bone"></i>
-            </button>
-            <button class="toolbar-btn" id="btn-play-animation" title="Animation abspielen/pausieren">
-                <i class="fas fa-play"></i>
             </button>
             <button class="toolbar-btn active" id="btn-toggle-studio" title="Theatre.js Studio ein/ausblenden">
                 <i class="fas fa-sliders-h"></i>

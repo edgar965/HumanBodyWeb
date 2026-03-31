@@ -1,5 +1,99 @@
 {
-  "sheetsById": {},
+  "sheetsById": {
+    "Main": {
+      "staticOverrides": {
+        "byObject": {
+          "Camera": {
+            "position": { "x": 0, "y": 1.5, "z": 5 },
+            "fov": 50
+          },
+          "Spot Left": {
+            "position": { "x": -5, "y": 5, "z": 3 },
+            "intensity": 30,
+            "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+          },
+          "Spot Right": {
+            "position": { "x": 5, "y": 5, "z": 3 },
+            "intensity": 30,
+            "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+          },
+          "Back Light": {
+            "position": { "x": 0, "y": 5, "z": -3 },
+            "intensity": 15,
+            "color": { "r": 1, "g": 1, "b": 1, "a": 1 }
+          }
+        }
+      },
+      "sequence": {
+        "subUnitsPerUnit": 30,
+        "length": 10,
+        "tracksByObject": {
+          "Camera": {
+            "trackData": {
+              "cPosX": { "type": "BasicKeyframedTrack", "__debugName": "Camera:[\"position\",\"x\"]", "keyframes": [] },
+              "cPosY": { "type": "BasicKeyframedTrack", "__debugName": "Camera:[\"position\",\"y\"]", "keyframes": [] },
+              "cPosZ": { "type": "BasicKeyframedTrack", "__debugName": "Camera:[\"position\",\"z\"]", "keyframes": [] },
+              "cFov":  { "type": "BasicKeyframedTrack", "__debugName": "Camera:[\"fov\"]", "keyframes": [] }
+            },
+            "trackIdByPropPath": {
+              "[\"position\",\"x\"]": "cPosX",
+              "[\"position\",\"y\"]": "cPosY",
+              "[\"position\",\"z\"]": "cPosZ",
+              "[\"fov\"]": "cFov"
+            }
+          },
+          "Spot Left": {
+            "trackData": {
+              "slPosX": { "type": "BasicKeyframedTrack", "__debugName": "Spot Left:[\"position\",\"x\"]", "keyframes": [] },
+              "slPosY": { "type": "BasicKeyframedTrack", "__debugName": "Spot Left:[\"position\",\"y\"]", "keyframes": [] },
+              "slPosZ": { "type": "BasicKeyframedTrack", "__debugName": "Spot Left:[\"position\",\"z\"]", "keyframes": [] },
+              "slInt":  { "type": "BasicKeyframedTrack", "__debugName": "Spot Left:[\"intensity\"]", "keyframes": [] },
+              "slCol":  { "type": "BasicKeyframedTrack", "__debugName": "Spot Left:[\"color\"]", "keyframes": [] }
+            },
+            "trackIdByPropPath": {
+              "[\"position\",\"x\"]": "slPosX",
+              "[\"position\",\"y\"]": "slPosY",
+              "[\"position\",\"z\"]": "slPosZ",
+              "[\"intensity\"]": "slInt",
+              "[\"color\"]": "slCol"
+            }
+          },
+          "Spot Right": {
+            "trackData": {
+              "srPosX": { "type": "BasicKeyframedTrack", "__debugName": "Spot Right:[\"position\",\"x\"]", "keyframes": [] },
+              "srPosY": { "type": "BasicKeyframedTrack", "__debugName": "Spot Right:[\"position\",\"y\"]", "keyframes": [] },
+              "srPosZ": { "type": "BasicKeyframedTrack", "__debugName": "Spot Right:[\"position\",\"z\"]", "keyframes": [] },
+              "srInt":  { "type": "BasicKeyframedTrack", "__debugName": "Spot Right:[\"intensity\"]", "keyframes": [] },
+              "srCol":  { "type": "BasicKeyframedTrack", "__debugName": "Spot Right:[\"color\"]", "keyframes": [] }
+            },
+            "trackIdByPropPath": {
+              "[\"position\",\"x\"]": "srPosX",
+              "[\"position\",\"y\"]": "srPosY",
+              "[\"position\",\"z\"]": "srPosZ",
+              "[\"intensity\"]": "srInt",
+              "[\"color\"]": "srCol"
+            }
+          },
+          "Back Light": {
+            "trackData": {
+              "blPosX": { "type": "BasicKeyframedTrack", "__debugName": "Back Light:[\"position\",\"x\"]", "keyframes": [] },
+              "blPosY": { "type": "BasicKeyframedTrack", "__debugName": "Back Light:[\"position\",\"y\"]", "keyframes": [] },
+              "blPosZ": { "type": "BasicKeyframedTrack", "__debugName": "Back Light:[\"position\",\"z\"]", "keyframes": [] },
+              "blInt":  { "type": "BasicKeyframedTrack", "__debugName": "Back Light:[\"intensity\"]", "keyframes": [] },
+              "blCol":  { "type": "BasicKeyframedTrack", "__debugName": "Back Light:[\"color\"]", "keyframes": [] }
+            },
+            "trackIdByPropPath": {
+              "[\"position\",\"x\"]": "blPosX",
+              "[\"position\",\"y\"]": "blPosY",
+              "[\"position\",\"z\"]": "blPosZ",
+              "[\"intensity\"]": "blInt",
+              "[\"color\"]": "blCol"
+            }
+          }
+        }
+      }
+    }
+  },
   "definitionVersion": "0.4.0",
   "revisionHistory": ["initial"]
 }
