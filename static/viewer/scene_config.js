@@ -5613,7 +5613,7 @@ async function loadAnimationUI() {
 
     if (stopBtn) {
         stopBtn.addEventListener('click', () => {
-            stopAnimation(true);
+            stopAnimation(false);  // false = pause, don't destroy
             if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>';
             if (timeline) timeline.value = 0;
             currentAnimName = '';
