@@ -39,22 +39,47 @@ studio.initialize().then(() => {
         const root = document.getElementById('theatrejs-studio-root');
         if (root) {
             root.style.setProperty('z-index', '900', 'important');
-            // Scale up the Studio UI for better readability/clickability
-            // Keep Studio root in normal flow — don't use position:fixed
-            // (fixed positioning causes Studio panels to overlap our UI)
+
+            // Fix: position:fixed so context menus are positioned correctly
+            root.style.setProperty('position', 'fixed', 'important');
+            root.style.setProperty('top', '0', 'important');
+            root.style.setProperty('left', '0', 'important');
+            root.style.setProperty('width', '100vw', 'important');
+            root.style.setProperty('height', '100vh', 'important');
+            root.style.setProperty('pointer-events', 'none', 'important');
 
             if (root.shadowRoot) {
+                const sr = root.shadowRoot;
                 const style = document.createElement('style');
                 style.textContent = `
                     :host { font-size: 13px !important; }
-                    /* Larger keyframe diamonds and buttons */
                     svg { transform: scale(1.3); }
-                    /* Bigger row height in sequence editor */
                     [data-testid] { min-height: 28px; }
+
+                    /* Re-enable pointer events only on the Sequence Editor (bottom timeline) */
+                    [data-testid="SequenceEditor"],
+                    [data-testid="GlobalToolbar"] {
+                        pointer-events: auto !important;
+                    }
+
+                    /* Hide Outline + Detail panels (they overlap our sidebar/toolbar) */
+                    [data-testid="OutlinePanel"],
+                    [data-testid="DetailPanel"] {
+                        display: none !important;
+                    }
+
+                    /* Context menus + popovers must be clickable */
+                    [data-radix-popper-content-wrapper],
+                    [data-radix-menu-content],
+                    [role="menu"],
+                    [role="dialog"] {
+                        pointer-events: auto !important;
+                        z-index: 99999 !important;
+                    }
                 `;
-                root.shadowRoot.prepend(style);
+                sr.prepend(style);
             }
-            console.log('[Theatre Studio] UI visible, z-index set, scaled up');
+            console.log('[Theatre Studio] UI visible, position:fixed, context menu fix active');
         }
     }, 100);
 }).catch(err => {
@@ -694,21 +719,72 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Delete camera keyframe at current playhead position
+    const menuCamDeleteAt = document.getElementById('menu-cam-delete-at');
+    if (menuCamDeleteAt) {
+        menuCamDeleteAt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
+            const time = sheet.sequence.position;
+
+            // Read Theatre.js state from localStorage, find and remove keyframes near playhead
+            const stateKey = Object.keys(localStorage).find(k =>
+                k.includes('theatre') || k.includes('Theatre'));
+            if (!stateKey) { console.warn('No Theatre state in localStorage'); return; }
+
+            try {
+                const state = JSON.parse(localStorage.getItem(stateKey));
+                const camTracks = state?.sheetsById?.Main?.sequence?.tracksByObject?.Camera?.trackData;
+                if (!camTracks) { console.warn('No camera tracks found'); return; }
+
+                let removed = 0;
+                const tolerance = 0.05; // 50ms tolerance
+                for (const [trackId, track] of Object.entries(camTracks)) {
+                    if (!track.keyframes) continue;
+                    const before = track.keyframes.length;
+                    track.keyframes = track.keyframes.filter(kf =>
+                        Math.abs(kf.position - time) > tolerance
+                    );
+                    removed += before - track.keyframes.length;
+                }
+
+                if (removed > 0) {
+                    localStorage.setItem(stateKey, JSON.stringify(state));
+                    console.log(`✓ Deleted ${removed} camera keyframe(s) at ${time.toFixed(2)}s — reloading`);
+                    window.location.reload();
+                } else {
+                    console.log(`No camera keyframes found at ${time.toFixed(2)}s`);
+                }
+            } catch(err) {
+                console.error('Failed to delete keyframe:', err);
+            }
+        });
+    }
+
     const menuCamClear = document.getElementById('menu-cam-clear');
     if (menuCamClear) {
         menuCamClear.addEventListener('click', (e) => {
             e.stopPropagation();
             document.querySelectorAll('.menu-item').forEach(mi => mi.classList.remove('active'));
-            // Set static values (removes all keyframes, replaces with single value)
-            studio.transaction(({ set }) => {
-                set(cameraObj.props.position.x, camera.position.x);
-                set(cameraObj.props.position.y, camera.position.y);
-                set(cameraObj.props.position.z, camera.position.z);
-                set(cameraObj.props.fov, camera.fov);
-            });
-            // Unsequence and re-sequence to clear keyframes
-            // Simplest: remove Theatre localStorage for camera tracks and reload
-            console.log('✓ Camera keyframes cleared (set to current position)');
+
+            const stateKey = Object.keys(localStorage).find(k =>
+                k.includes('theatre') || k.includes('Theatre'));
+            if (!stateKey) return;
+
+            try {
+                const state = JSON.parse(localStorage.getItem(stateKey));
+                const camTracks = state?.sheetsById?.Main?.sequence?.tracksByObject?.Camera?.trackData;
+                if (camTracks) {
+                    for (const track of Object.values(camTracks)) {
+                        if (track.keyframes) track.keyframes = [];
+                    }
+                    localStorage.setItem(stateKey, JSON.stringify(state));
+                    console.log('✓ All camera keyframes cleared — reloading');
+                    window.location.reload();
+                }
+            } catch(err) {
+                console.error('Failed to clear camera keyframes:', err);
+            }
         });
     }
 
