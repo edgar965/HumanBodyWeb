@@ -40,13 +40,8 @@ studio.initialize().then(() => {
         if (root) {
             root.style.setProperty('z-index', '900', 'important');
             // Scale up the Studio UI for better readability/clickability
-            // Fix: Studio root must cover full viewport for correct context menu positioning
-            root.style.setProperty('position', 'fixed', 'important');
-            root.style.setProperty('top', '0', 'important');
-            root.style.setProperty('left', '0', 'important');
-            root.style.setProperty('width', '100vw', 'important');
-            root.style.setProperty('height', '100vh', 'important');
-            root.style.setProperty('pointer-events', 'none', 'important');
+            // Keep Studio root in normal flow — don't use position:fixed
+            // (fixed positioning causes Studio panels to overlap our UI)
 
             if (root.shadowRoot) {
                 const style = document.createElement('style');
@@ -56,28 +51,6 @@ studio.initialize().then(() => {
                     svg { transform: scale(1.3); }
                     /* Bigger row height in sequence editor */
                     [data-testid] { min-height: 28px; }
-                    /* Re-enable pointer events on actual Studio panels */
-                    [data-testid="OutlinePanel"],
-                    [data-testid="DetailPanel"],
-                    [data-testid="SequenceEditor"],
-                    [data-testid="GlobalToolbar"],
-                    div[class*="Container"],
-                    div[class*="Panel"],
-                    div[class*="popover"],
-                    div[class*="Popover"],
-                    div[class*="contextmenu"],
-                    div[class*="ContextMenu"],
-                    ul, button, input, select {
-                        pointer-events: auto !important;
-                    }
-                    /* Fix context menu / popover positioning */
-                    [data-radix-popper-content-wrapper],
-                    [data-testid*="popover"],
-                    [role="menu"],
-                    [role="dialog"] {
-                        pointer-events: auto !important;
-                        z-index: 10000 !important;
-                    }
                 `;
                 root.shadowRoot.prepend(style);
             }
