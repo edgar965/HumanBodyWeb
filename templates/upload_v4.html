@@ -652,7 +652,7 @@ function startSelectedVideo() {
     }).then(function(r) { return r.json(); }).then(function(data) {
         if (data.ok) {
             // Go to status page to follow progress
-            window.location.href = '/process/' + data.job_id + '/status/';
+            window.location.href = '/process/VideoToBVH/';
         } else {
             alert('Error: ' + (data.error || 'Unknown'));
             btn.disabled = false;

@@ -366,11 +366,29 @@ def upload_video_v4(request):
                 stat = f.stat()
                 size_mb = stat.st_size / (1024 * 1024)
                 upload_files.append({
-                    'path': str(f.relative_to(Path(settings.MEDIA_ROOT))),  # e.g. 'uploads/Nuss.webm'
+                    'path': str(f.relative_to(Path(settings.MEDIA_ROOT))),
                     'name': f.name,
                     'size': f'{size_mb:.1f} MB',
                     'date': _datetime.fromtimestamp(stat.st_mtime).strftime('%d.%m.%Y %H:%M'),
                 })
+
+    # Also collect unique video files from existing jobs (may be absolute paths)
+    seen_paths = {uf['path'] for uf in upload_files}
+    for job in v4_jobs:
+        vf = str(job.video_file)
+        if vf in seen_paths:
+            continue
+        fp = Path(vf) if Path(vf).is_absolute() else Path(settings.MEDIA_ROOT) / vf
+        if fp.is_file():
+            seen_paths.add(vf)
+            stat = fp.stat()
+            size_mb = stat.st_size / (1024 * 1024)
+            upload_files.append({
+                'path': str(fp),  # absolute path
+                'name': fp.name,
+                'size': f'{size_mb:.1f} MB',
+                'date': _datetime.fromtimestamp(stat.st_mtime).strftime('%d.%m.%Y %H:%M'),
+            })
 
     # Last-selected video and pipeline from ui_prefs
     ui_prefs = s.ui_prefs or {}
@@ -2388,14 +2406,17 @@ def create_job_from_file(request):
         if pipeline not in VALID_3D:
             return JsonResponse({'error': f'Invalid pipeline: {pipeline}'}, status=400)
 
-        full_path = Path(settings.MEDIA_ROOT) / video_path
+        # Support both relative (uploads/...) and absolute paths
+        full_path = Path(video_path)
+        if not full_path.is_absolute():
+            full_path = Path(settings.MEDIA_ROOT) / video_path
         if not full_path.is_file():
             return JsonResponse({'error': f'Video file not found: {video_path}'}, status=404)
 
-        # Create job referencing the existing file (no copy)
+        # Create job referencing the existing file (absolute path, no copy)
         job = BVHJob.objects.create(
             name=full_path.name,
-            video_file=video_path,
+            video_file=str(full_path),
             fps=0,
             pipeline=pipeline,
             pipeline_params=pp,
