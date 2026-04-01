@@ -143,14 +143,15 @@
 
     .panel-tabs {
         display: flex;
+        flex-wrap: wrap;
         border-bottom: 1px solid var(--border);
         background: var(--bg-secondary);
         flex-shrink: 0;
     }
 
     .panel-tab {
-        padding: 10px 18px;
-        font-size: 0.82rem;
+        padding: 8px 10px;
+        font-size: 0.75rem;
         color: var(--text-muted);
         cursor: pointer;
         border-bottom: 2px solid transparent;
@@ -591,6 +592,7 @@
             <div class="panel-tab" data-tab="tab-models">Modelle</div>
             <div class="panel-tab" data-tab="tab-keyframes">Keyframes</div>
             <div class="panel-tab" data-tab="tab-properties">Eigenschaften</div>
+            <div class="panel-tab" data-tab="tab-export">Export</div>
         </div>
 
         <div class="panel-tab-content">
@@ -622,6 +624,130 @@
                         <i class="fas fa-hand-pointer" style="font-size:2rem;margin-bottom:10px;opacity:0.3;"></i>
                         <p>Klicke auf ein Licht-Icon in der Szene<br>um seine Eigenschaften zu bearbeiten.</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Tab: Export -->
+            <div class="tab-pane" id="tab-export">
+                <h3 style="font-size:0.9rem;margin-bottom:10px;color:var(--text-muted);">Video Export</h3>
+
+                <!-- Export Method -->
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Methode:</label>
+                    <select id="export-method" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                        <option value="browser">Browser (MediaRecorder, Echtzeit)</option>
+                        <option value="server">Server (Playwright + ffmpeg, Offline)</option>
+                    </select>
+                </div>
+
+                <!-- Resolution -->
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Aufl&ouml;sung:</label>
+                    <select id="export-resolution" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                        <option value="viewport">Viewport (aktuell)</option>
+                        <option value="720">720p (1280&times;720)</option>
+                        <option value="1080" selected>1080p (1920&times;1080)</option>
+                        <option value="1440">1440p (2560&times;1440)</option>
+                        <option value="2160">4K (3840&times;2160)</option>
+                        <option value="custom">Benutzerdefiniert</option>
+                    </select>
+                    <div id="export-custom-res" style="display:none;margin-top:4px;display:flex;gap:4px;">
+                        <input type="number" id="export-width" value="1920" min="320" max="7680" style="width:50%;padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;" placeholder="Breite">
+                        <input type="number" id="export-height" value="1080" min="240" max="4320" style="width:50%;padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;" placeholder="H&ouml;he">
+                    </div>
+                </div>
+
+                <!-- FPS -->
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">FPS:</label>
+                    <select id="export-fps" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                        <option value="24">24 fps (Film)</option>
+                        <option value="25">25 fps (PAL)</option>
+                        <option value="30" selected>30 fps</option>
+                        <option value="60">60 fps</option>
+                    </select>
+                </div>
+
+                <!-- Format -->
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Format:</label>
+                    <select id="export-format" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                        <option value="mp4" selected>MP4 (H.264)</option>
+                        <option value="webm">WebM (VP9)</option>
+                        <option value="png">PNG Sequenz</option>
+                    </select>
+                </div>
+
+                <!-- Quality -->
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Qualit&auml;t (CRF):</label>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <input type="range" id="export-crf" min="0" max="51" value="18" style="flex:1;">
+                        <span id="export-crf-val" style="font-size:0.8rem;color:var(--text-muted);min-width:20px;">18</span>
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);display:flex;justify-content:space-between;">
+                        <span>Beste Qualit&auml;t</span><span>Kleinste Datei</span>
+                    </div>
+                </div>
+
+                <!-- Time Range -->
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Zeitbereich:</label>
+                    <div style="display:flex;gap:4px;align-items:center;">
+                        <input type="number" id="export-start" value="0" min="0" step="0.1" style="width:40%;padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;" placeholder="Start (s)">
+                        <span style="color:var(--text-muted);">&ndash;</span>
+                        <input type="number" id="export-end" value="0" min="0" step="0.1" style="width:40%;padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;" placeholder="Ende (s)">
+                        <span style="font-size:0.7rem;color:var(--text-muted);">s</span>
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">0 = gesamte Animation</div>
+                </div>
+
+                <!-- Background -->
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Hintergrund:</label>
+                    <select id="export-bg" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                        <option value="scene">Szene (wie angezeigt)</option>
+                        <option value="transparent">Transparent (PNG Seq. only)</option>
+                        <option value="green">Greenscreen</option>
+                        <option value="black">Schwarz</option>
+                        <option value="white">Wei&szlig;</option>
+                    </select>
+                </div>
+
+                <!-- Screen Region (Server only) -->
+                <div id="export-region-section" style="margin-bottom:10px;display:none;">
+                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Bildausschnitt (px):</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                        <input type="number" id="export-crop-x" value="0" min="0" placeholder="X" style="padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;">
+                        <input type="number" id="export-crop-y" value="0" min="0" placeholder="Y" style="padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;">
+                        <input type="number" id="export-crop-w" value="0" min="0" placeholder="Breite (0=voll)" style="padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;">
+                        <input type="number" id="export-crop-h" value="0" min="0" placeholder="H&ouml;he (0=voll)" style="padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;">
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">0 = gesamter Viewport</div>
+                </div>
+
+                <!-- Info: current animation -->
+                <div id="export-info" style="margin-bottom:10px;padding:6px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;font-size:0.75rem;color:var(--text-muted);">
+                    Animation: <span id="export-anim-name">—</span><br>
+                    Dauer: <span id="export-anim-dur">—</span>s
+                </div>
+
+                <!-- Export Buttons -->
+                <div style="display:flex;gap:6px;margin-top:12px;">
+                    <button id="export-start-btn" class="toolbar-btn" style="flex:1;justify-content:center;padding:8px;">
+                        <i class="fas fa-video"></i> Export starten
+                    </button>
+                    <button id="export-cancel-btn" class="toolbar-btn" style="display:none;flex:1;justify-content:center;padding:8px;background:#a33;">
+                        <i class="fas fa-stop"></i> Abbrechen
+                    </button>
+                </div>
+
+                <!-- Progress -->
+                <div id="export-progress" style="display:none;margin-top:8px;">
+                    <div style="height:6px;background:var(--bg-card);border-radius:3px;overflow:hidden;">
+                        <div id="export-progress-bar" style="height:100%;width:0%;background:var(--accent);transition:width 0.3s;"></div>
+                    </div>
+                    <div id="export-progress-text" style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">0%</div>
                 </div>
             </div>
         </div>

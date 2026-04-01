@@ -266,6 +266,226 @@ def theatre_convert_video(request):
         pass
 
 
+@csrf_exempt
+@require_POST
+def theatre_render_video(request):
+    """Server-side rendering: Playwright + ffmpeg.
+
+    POST /api/theatre/render-video/
+    Body JSON: { width, height, fps, format, crf, start_time, end_time, background, scene_url }
+    Returns: MP4/WebM binary or ZIP of PNGs
+    """
+    import subprocess
+    import tempfile
+    import shutil
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    width = data.get('width', 1920)
+    height = data.get('height', 1080)
+    fps = data.get('fps', 30)
+    fmt = data.get('format', 'mp4')
+    crf = data.get('crf', 18)
+    start_time = data.get('start_time', 0)
+    end_time = data.get('end_time', 0)
+    crop_x = data.get('crop_x', 0)
+    crop_y = data.get('crop_y', 0)
+    crop_w = data.get('crop_w', 0)
+    crop_h = data.get('crop_h', 0)
+    scene_url = data.get('scene_url', '')
+
+    if not scene_url:
+        return JsonResponse({'error': 'scene_url required'}, status=400)
+
+    # Make URL absolute for Playwright
+    if scene_url.startswith('/'):
+        scene_url = f'http://127.0.0.1:{request.META.get("SERVER_PORT", 8081)}{scene_url}'
+
+    # Add render mode param
+    sep = '&' if '?' in scene_url else '?'
+    scene_url += f'{sep}renderMode=server&autoplay=1'
+
+    tmp_dir = tempfile.mkdtemp(prefix='theatre_render_')
+    frames_dir = os.path.join(tmp_dir, 'frames')
+    os.makedirs(frames_dir)
+
+    try:
+        import subprocess as _sp
+
+        duration = end_time - start_time if end_time > start_time else 10
+        total_frames = int(duration * fps)
+
+        # Run Playwright in a completely separate Python process
+        # (ASGI's event loop doesn't support subprocess_exec)
+        script = f'''
+import os, sys
+from playwright.sync_api import sync_playwright
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page(viewport={{"width": {width}, "height": {height}}})
+    page.goto("{scene_url}", wait_until="networkidle", timeout=120000)
+
+    # Wait for Theatre.js to be ready (animation loaded)
+    print("Waiting for theatre ready...", flush=True)
+    for _ in range(60):
+        ready = page.evaluate("window.__theatreReady === true")
+        if ready:
+            break
+        page.wait_for_timeout(1000)
+
+    # Get actual duration from page if available
+    page_dur = page.evaluate("window.__theatreGetDuration ? window.__theatreGetDuration() : 0")
+    print(f"Animation duration from page: {{page_dur}}s", flush=True)
+
+    total = {total_frames}
+    print(f"Rendering {{total}} frames...", flush=True)
+    for f in range(total):
+        t = {start_time} + f / {fps}
+        page.evaluate(f"window.__theatreSetTime && window.__theatreSetTime({{t}})")
+        page.wait_for_timeout(30)
+        clip_arg = {{"x": {crop_x}, "y": {crop_y}, "width": {crop_w}, "height": {crop_h}}} if {crop_w} > 0 and {crop_h} > 0 else None
+        if clip_arg:
+            page.screenshot(path=os.path.join(r"{frames_dir}", f"{{f:06d}}.png"), clip=clip_arg)
+        else:
+            page.screenshot(path=os.path.join(r"{frames_dir}", f"{{f:06d}}.png"))
+        if f % 50 == 0:
+            print(f"Frame {{f}}/{{total}} ({{t:.1f}}s)", flush=True)
+    browser.close()
+    print("Done", flush=True)
+'''
+        # Use local pythonENV (has playwright + CUDA packages)
+        from pathlib import Path as _Path
+        python_exe = str(_Path(settings.TOOLS_ROOT) / 'pythonENV' / 'Scripts' / 'python.exe')
+        result = _sp.run(
+            [python_exe, '-c', script],
+            capture_output=True, text=True, timeout=600
+        )
+        if result.returncode != 0:
+            return JsonResponse({'error': f'Playwright failed: {result.stderr[-500:]}'}, status=500)
+
+        if fmt == 'png':
+            # ZIP the frames
+            zip_path = os.path.join(tmp_dir, 'frames.zip')
+            shutil.make_archive(zip_path.replace('.zip', ''), 'zip', frames_dir)
+            response = FileResponse(open(zip_path, 'rb'), content_type='application/zip',
+                                    as_attachment=True, filename='theatre_frames.zip')
+            response._resource_closers.append(lambda: shutil.rmtree(tmp_dir, ignore_errors=True))
+            return response
+
+        # Convert PNGs → MP4/WebM via ffmpeg
+        ffmpeg = r'A:\archiv2\_AI\tools\ffmpeg.exe'
+        if not os.path.isfile(ffmpeg):
+            ffmpeg = 'ffmpeg'
+
+        output_ext = 'mp4' if fmt == 'mp4' else 'webm'
+        output_path = os.path.join(tmp_dir, f'output.{output_ext}')
+
+        if fmt == 'mp4':
+            cmd = [ffmpeg, '-y', '-framerate', str(fps),
+                   '-i', os.path.join(frames_dir, '%06d.png'),
+                   '-c:v', 'libx264', '-preset', 'fast', '-crf', str(crf),
+                   '-pix_fmt', 'yuv420p', output_path]
+        else:
+            cmd = [ffmpeg, '-y', '-framerate', str(fps),
+                   '-i', os.path.join(frames_dir, '%06d.png'),
+                   '-c:v', 'libvpx-vp9', '-crf', str(crf), '-b:v', '0',
+                   output_path]
+
+        result = subprocess.run(cmd, capture_output=True, timeout=600)
+        if result.returncode != 0:
+            stderr = result.stderr.decode('utf-8', errors='replace')[:500]
+            return JsonResponse({'error': f'ffmpeg failed: {stderr}'}, status=500)
+
+        ct = 'video/mp4' if fmt == 'mp4' else 'video/webm'
+        response = FileResponse(open(output_path, 'rb'), content_type=ct,
+                                as_attachment=True, filename=f'theatre_export.{output_ext}')
+        response._resource_closers.append(lambda: shutil.rmtree(tmp_dir, ignore_errors=True))
+        return response
+
+    except ImportError:
+        return JsonResponse({'error': 'Playwright nicht installiert. pip install playwright && playwright install'}, status=500)
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        print(f'[RENDER] Error: {tb}', flush=True)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return JsonResponse({'error': str(e) or tb[-500:]}, status=500)
+
+
+@csrf_exempt
+@require_POST
+def theatre_encode_frames(request):
+    """Receive PNG frames, encode to MP4/WebM via ffmpeg.
+
+    POST /api/theatre/encode-frames/
+    Multipart: frames[] = PNG blobs, fps, format, crf, width, height
+    """
+    import subprocess
+    import tempfile
+    import shutil
+
+    frames = request.FILES.getlist('frames')
+    if not frames:
+        return JsonResponse({'error': 'No frames uploaded'}, status=400)
+
+    fps = int(request.POST.get('fps', 30))
+    fmt = request.POST.get('format', 'mp4')
+    crf = int(request.POST.get('crf', 18))
+    width = int(request.POST.get('width', 0))
+    height = int(request.POST.get('height', 0))
+
+    tmp_dir = tempfile.mkdtemp(prefix='theatre_frames_')
+    frames_dir = os.path.join(tmp_dir, 'frames')
+    os.makedirs(frames_dir)
+
+    try:
+        # Save uploaded frames
+        for i, f in enumerate(frames):
+            with open(os.path.join(frames_dir, f'{i:06d}.png'), 'wb') as out:
+                for chunk in f.chunks():
+                    out.write(chunk)
+
+        ffmpeg = r'A:\archiv2\_AI\tools\ffmpeg.exe'
+        if not os.path.isfile(ffmpeg):
+            ffmpeg = 'ffmpeg'
+
+        output_ext = 'mp4' if fmt == 'mp4' else 'webm'
+        output_path = os.path.join(tmp_dir, f'output.{output_ext}')
+
+        cmd = [ffmpeg, '-y', '-framerate', str(fps),
+               '-i', os.path.join(frames_dir, '%06d.png')]
+
+        # Scale if requested
+        if width > 0 and height > 0:
+            cmd.extend(['-vf', f'scale={width}:{height}'])
+
+        if fmt == 'mp4':
+            cmd.extend(['-c:v', 'libx264', '-preset', 'fast', '-crf', str(crf),
+                        '-pix_fmt', 'yuv420p', output_path])
+        else:
+            cmd.extend(['-c:v', 'libvpx-vp9', '-crf', str(crf), '-b:v', '0',
+                        output_path])
+
+        result = subprocess.run(cmd, capture_output=True, timeout=600)
+        if result.returncode != 0:
+            stderr = result.stderr.decode('utf-8', errors='replace')[:500]
+            return JsonResponse({'error': f'ffmpeg: {stderr}'}, status=500)
+
+        ct = 'video/mp4' if fmt == 'mp4' else 'video/webm'
+        response = FileResponse(open(output_path, 'rb'), content_type=ct,
+                                as_attachment=True, filename=f'theatre_export.{output_ext}')
+        response._resource_closers.append(lambda: shutil.rmtree(tmp_dir, ignore_errors=True))
+        return response
+
+    except Exception as e:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 def animations_page(request):
     """Render the Animations page."""
     return render(request, 'animations.html')

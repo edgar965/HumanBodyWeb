@@ -2322,4 +2322,319 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
     animate();
+
+    // ── Global API for server-side rendering (Playwright) ──
+    window.__theatreSetTime = (t) => {
+        if (activeMixer && currentAction) {
+            currentAction.time = t;
+            activeMixer.update(0);
+        }
+        renderer.render(scene, camera);
+    };
+    window.__theatreGetDuration = () => animDuration || 0;
+    window.__theatreReady = false;
+
+    // ── URL-Parameter Autoplay ──
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('autoplay') === '1') {
+        // Wait for scene to load, then start playing
+        setTimeout(() => {
+            const playBtn = document.getElementById('btnPlayPause');
+            if (playBtn && !isPlaying) playBtn.click();
+            window.__theatreReady = true;
+        }, 3000);
+    }
+
+    // ── Export Tab UI ──
+    const exportCrf = document.getElementById('export-crf');
+    const exportCrfVal = document.getElementById('export-crf-val');
+    if (exportCrf && exportCrfVal) {
+        exportCrf.addEventListener('input', () => { exportCrfVal.textContent = exportCrf.value; });
+    }
+
+    const exportRes = document.getElementById('export-resolution');
+    const exportCustom = document.getElementById('export-custom-res');
+    if (exportRes && exportCustom) {
+        exportRes.addEventListener('change', () => {
+            exportCustom.style.display = exportRes.value === 'custom' ? 'flex' : 'none';
+        });
+    }
+
+    // Show/hide server-only options based on method
+    const exportMethodSel = document.getElementById('export-method');
+    const exportRegionSection = document.getElementById('export-region-section');
+    if (exportMethodSel) {
+        exportMethodSel.addEventListener('change', () => {
+            if (exportRegionSection) exportRegionSection.style.display = exportMethodSel.value === 'server' ? '' : 'none';
+        });
+    }
+
+    // Update export info whenever Export tab is shown
+    document.querySelectorAll('.panel-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            if (tab.getAttribute('data-tab') === 'tab-export') {
+                const nameEl = document.getElementById('export-anim-name');
+                const durEl = document.getElementById('export-anim-dur');
+                if (nameEl) nameEl.textContent = currentAnimName || '—';
+                if (durEl) durEl.textContent = animDuration ? animDuration.toFixed(1) : '—';
+                // Auto-fill end time
+                const endInput = document.getElementById('export-end');
+                if (endInput && (!endInput.value || endInput.value === '0') && animDuration) {
+                    endInput.value = animDuration.toFixed(1);
+                }
+            }
+        });
+    });
+
+    // Export start button
+    const exportBtn = document.getElementById('export-start-btn');
+    const cancelBtn = document.getElementById('export-cancel-btn');
+    const progressDiv = document.getElementById('export-progress');
+    const progressBar = document.getElementById('export-progress-bar');
+    const progressText = document.getElementById('export-progress-text');
+    let exportAborted = false;
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', async () => {
+            const method = document.getElementById('export-method').value;
+            if (method === 'browser') {
+                await exportBrowser();
+            } else {
+                await exportServer();
+            }
+        });
+    }
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => { exportAborted = true; });
+    }
+
+    function getExportSettings() {
+        const resSelect = document.getElementById('export-resolution').value;
+        let w, h;
+        if (resSelect === 'viewport') {
+            const c = document.getElementById('theatre-canvas');
+            w = c.clientWidth; h = c.clientHeight;
+        } else if (resSelect === 'custom') {
+            w = parseInt(document.getElementById('export-width').value) || 1920;
+            h = parseInt(document.getElementById('export-height').value) || 1080;
+        } else {
+            const presets = { '720': [1280,720], '1080': [1920,1080], '1440': [2560,1440], '2160': [3840,2160] };
+            [w, h] = presets[resSelect] || [1920, 1080];
+        }
+        return {
+            width: w, height: h,
+            fps: parseInt(document.getElementById('export-fps').value) || 30,
+            format: document.getElementById('export-format').value || 'mp4',
+            crf: parseInt(document.getElementById('export-crf').value) || 18,
+            startTime: parseFloat(document.getElementById('export-start').value) || 0,
+            endTime: parseFloat(document.getElementById('export-end').value) || 0,
+            bg: document.getElementById('export-bg').value || 'scene',
+            cropX: parseInt(document.getElementById('export-crop-x')?.value) || 0,
+            cropY: parseInt(document.getElementById('export-crop-y')?.value) || 0,
+            cropW: parseInt(document.getElementById('export-crop-w')?.value) || 0,
+            cropH: parseInt(document.getElementById('export-crop-h')?.value) || 0,
+        };
+    }
+
+    function showProgress(pct, text) {
+        progressDiv.style.display = '';
+        progressBar.style.width = pct + '%';
+        progressText.textContent = text || (pct.toFixed(0) + '%');
+    }
+
+    // ── Browser Export (Frame-by-frame → PNG → Server ffmpeg) ──
+    async function exportBrowser() {
+        const s = getExportSettings();
+        const canvas = document.getElementById('theatre-canvas');
+
+        // Get actual animation duration from mixer
+        let animDuration = 10;
+        if (currentAction && currentAction.getClip()) {
+            animDuration = currentAction.getClip().duration;
+        }
+        const startTime = s.startTime || 0;
+        const endTime = (s.endTime > startTime) ? s.endTime : animDuration;
+        const duration = endTime - startTime;
+        const totalFrames = Math.ceil(duration * s.fps);
+
+        exportBtn.style.display = 'none';
+        cancelBtn.style.display = '';
+        exportAborted = false;
+        showProgress(0, `0 / ${totalFrames} Frames...`);
+
+        // Pause real-time playback
+        const wasPlaying = playing;
+        playing = false;
+        if (currentAction) currentAction.paused = true;
+
+        // Capture frames as PNGs
+        const frames = [];
+        for (let f = 0; f < totalFrames; f++) {
+            if (exportAborted) break;
+
+            const t = startTime + f / s.fps;
+
+            // Set animation time
+            if (mixer && currentAction) {
+                currentAction.time = t;
+                mixer.update(0);
+            }
+            renderer.render(scene, camera);
+
+            // Capture frame
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+            frames.push(blob);
+
+            if (f % 10 === 0 || f === totalFrames - 1) {
+                const pct = ((f + 1) / totalFrames) * 100;
+                showProgress(pct, `${f + 1} / ${totalFrames} Frames (${(t).toFixed(1)}s)`);
+            }
+
+            // Yield to UI
+            await new Promise(r => setTimeout(r, 0));
+        }
+
+        // Restore playback
+        if (wasPlaying && currentAction) {
+            currentAction.paused = false;
+            playing = true;
+        }
+
+        if (exportAborted || frames.length === 0) {
+            exportBtn.style.display = '';
+            cancelBtn.style.display = 'none';
+            progressDiv.style.display = 'none';
+            return;
+        }
+
+        showProgress(100, 'Sende an Server für ffmpeg...');
+
+        // Send frames to server for ffmpeg encoding
+        const formData = new FormData();
+        frames.forEach((blob, i) => {
+            formData.append('frames', blob, `${String(i).padStart(6, '0')}.png`);
+        });
+        formData.append('fps', s.fps);
+        formData.append('format', s.format);
+        formData.append('crf', s.crf);
+        formData.append('width', s.width);
+        formData.append('height', s.height);
+
+        try {
+            const resp = await fetch('/api/theatre/encode-frames/', {
+                method: 'POST',
+                body: formData,
+            });
+            if (resp.ok) {
+                const blob = await resp.blob();
+                const ext = s.format === 'png' ? 'zip' : s.format;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = `theatre_export.${ext}`;
+                a.click(); URL.revokeObjectURL(url);
+                showProgress(100, 'Export fertig!');
+            } else {
+                alert('Encoding fehlgeschlagen: ' + await resp.text());
+            }
+        } catch (e) {
+            alert('Export-Fehler: ' + e.message);
+        }
+
+        exportBtn.style.display = '';
+        cancelBtn.style.display = 'none';
+        setTimeout(() => { progressDiv.style.display = 'none'; }, 3000);
+
+        if (s.format === 'webm') {
+            // Direct download
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'theatre_export.webm';
+            a.click(); URL.revokeObjectURL(url);
+            progressDiv.style.display = 'none';
+        } else {
+            // Convert WebM → MP4 via server
+            const formData = new FormData();
+            formData.append('video', blob, 'export.webm');
+            formData.append('crf', s.crf);
+            formData.append('format', s.format);
+            try {
+                const resp = await fetch('/api/theatre/convert-video/', { method: 'POST', body: formData });
+                if (resp.ok) {
+                    const mpBlob = await resp.blob();
+                    const url = URL.createObjectURL(mpBlob);
+                    const a = document.createElement('a'); a.href = url; a.download = `theatre_export.${s.format}`;
+                    a.click(); URL.revokeObjectURL(url);
+                } else {
+                    alert('Konvertierung fehlgeschlagen: ' + await resp.text());
+                }
+            } catch (e) {
+                alert('Export-Fehler: ' + e.message);
+            }
+            progressDiv.style.display = 'none';
+        }
+    }
+
+    // ── Server Export (Playwright + ffmpeg) ──
+    async function exportServer() {
+        const s = getExportSettings();
+
+        // Get actual animation duration
+        const actualDuration = animDuration || 10;
+        const startTime = s.startTime || 0;
+        const endTime = (s.endTime > startTime) ? s.endTime : actualDuration;
+
+        exportBtn.style.display = 'none';
+        cancelBtn.style.display = '';
+        exportAborted = false;
+        const totalFrames = Math.ceil((endTime - startTime) * s.fps);
+        showProgress(0, `Server-Rendering: ${totalFrames} Frames (${(endTime-startTime).toFixed(1)}s @ ${s.fps}fps)...`);
+
+        // Save current session state so Playwright can load the same scene
+        try { sessionStorage.setItem('theatre-export-state', JSON.stringify({
+            sceneUrl: window.location.href,
+        })); } catch(e) {}
+
+        cancelBtn.onclick = () => {
+            exportAborted = true;
+            exportBtn.style.display = '';
+            cancelBtn.style.display = 'none';
+            progressDiv.style.display = 'none';
+        };
+
+        try {
+            const resp = await fetch('/api/theatre/render-video/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    width: s.width,
+                    height: s.height,
+                    fps: s.fps,
+                    format: s.format,
+                    crf: s.crf,
+                    start_time: startTime,
+                    end_time: endTime,
+                    background: s.bg,
+                    crop_x: s.cropX, crop_y: s.cropY,
+                    crop_w: s.cropW, crop_h: s.cropH,
+                    scene_url: window.location.href,
+                }),
+            });
+
+            if (resp.ok) {
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const ext = s.format === 'png' ? 'zip' : s.format;
+                const a = document.createElement('a'); a.href = url; a.download = `theatre_export.${ext}`;
+                a.click(); URL.revokeObjectURL(url);
+                showProgress(100, 'Export fertig!');
+            } else {
+                alert('Server-Export fehlgeschlagen: ' + await resp.text());
+            }
+        } catch (e) {
+            alert('Server-Export Fehler: ' + e.message);
+        }
+
+        exportBtn.style.display = '';
+        cancelBtn.style.display = 'none';
+        setTimeout(() => { progressDiv.style.display = 'none'; }, 3000);
+    }
 });
