@@ -83,6 +83,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Upload limits for video export (hundreds of PNG frames)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024   # 500 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024   # 500 MB
+DATA_UPLOAD_MAX_NUMBER_FILES = 10000               # up to 10k frames
+
 # Pipeline Python (venv with CUDA PyTorch, ONNX Runtime GPU, etc.)
 PIPELINE_PYTHON = str(TOOLS_ROOT / 'pythonENV' / 'Scripts' / 'python.exe')
 

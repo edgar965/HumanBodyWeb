@@ -463,13 +463,20 @@ def theatre_encode_frames(request):
 
     POST /api/theatre/encode-frames/
     Multipart: frames[] = PNG blobs, fps, format, crf, width, height
+    Optional: save_path — saves to disk instead of streaming back.
     """
     import subprocess
     import tempfile
     import shutil
+    import logging
+    log = logging.getLogger('core')
 
+    log.info(f'[encode-frames] Request: method={request.method}, content_type={request.content_type}, '
+             f'FILES keys={list(request.FILES.keys())}, POST keys={list(request.POST.keys())}, '
+             f'content_length={request.META.get("CONTENT_LENGTH", "?")}')
     frames = request.FILES.getlist('frames')
     if not frames:
+        log.warning('[encode-frames] No frames uploaded! FILES was empty.')
         return JsonResponse({'error': 'No frames uploaded'}, status=400)
 
     fps = int(request.POST.get('fps', 30))
@@ -477,6 +484,8 @@ def theatre_encode_frames(request):
     crf = int(request.POST.get('crf', 18))
     width = int(request.POST.get('width', 0))
     height = int(request.POST.get('height', 0))
+    save_path_param = request.POST.get('save_path', '').strip()
+    log.info(f'[encode-frames] {len(frames)} frames, fps={fps}, crf={crf}, save_path={save_path_param or "(stream)"}')
 
     tmp_dir = tempfile.mkdtemp(prefix='theatre_frames_')
     frames_dir = os.path.join(tmp_dir, 'frames')
@@ -510,10 +519,26 @@ def theatre_encode_frames(request):
             cmd.extend(['-c:v', 'libvpx-vp9', '-crf', str(crf), '-b:v', '0',
                         output_path])
 
+        log.info(f'[encode-frames] ffmpeg cmd: {" ".join(cmd)}')
         result = subprocess.run(cmd, capture_output=True, timeout=600)
         if result.returncode != 0:
             stderr = result.stderr.decode('utf-8', errors='replace')[:500]
+            log.error(f'[encode-frames] ffmpeg failed: {stderr}')
             return JsonResponse({'error': f'ffmpeg: {stderr}'}, status=500)
+
+        output_size = os.path.getsize(output_path)
+        log.info(f'[encode-frames] ffmpeg OK, output={output_path} ({output_size} bytes)')
+
+        # If save_path provided, save to that location on disk
+        if save_path_param:
+            save_dir = os.path.dirname(save_path_param)
+            if save_dir:
+                os.makedirs(save_dir, exist_ok=True)
+            shutil.copy2(output_path, save_path_param)
+            saved_size = os.path.getsize(save_path_param)
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            log.info(f'[encode-frames] SAVED to: {save_path_param} ({saved_size} bytes)')
+            return JsonResponse({'saved': save_path_param})
 
         ct = 'video/mp4' if fmt == 'mp4' else 'video/webm'
         response = FileResponse(open(output_path, 'rb'), content_type=ct,

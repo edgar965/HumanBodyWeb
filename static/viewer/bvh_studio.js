@@ -107,6 +107,8 @@ async function init() {
         project.defaultBodyType = prefs.studio_body_type || 'Female_Caucasian';
         project.fps = parseInt(prefs.studio_fps) || 30;
         timelineZoom = parseInt(prefs.studio_zoom) || 100;
+        project.videoOutputPath = prefs.studio_video_output || '';
+        project.bvhOutputPath = prefs.studio_bvh_output || '';
     } catch (e) { /* use defaults */ }
 
     // Load BVH library
@@ -438,79 +440,109 @@ function setupTimeline() {
         return null;
     }
 
-    // --- Mouse interactions: click to select/set playhead, drag to move clips ---
+    // --- Mouse interactions ---
+    // Modes: 'none' | 'clip-drag' | 'scrub' | 'pan'
+    let dragMode = 'none';
     let draggingClip = null;
     let dragStartX = 0;
     let dragOrigFrame = 0;
+    let panStartScrollX = 0;
+
+    function setPlayheadFromMouse(mx) {
+        const x = mx - HEADER_WIDTH + timelineScrollX;
+        playheadFrame = Math.max(0, Math.round((x / timelineZoom) * project.fps));
+        renderTimeline();
+        updatePlaybackUI();
+        applyPlayhead();
+    }
 
     tlCanvas.addEventListener('mousedown', (e) => {
         const rect = tlCanvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
 
-        // Hit test clips
-        const hit = hitTestClip(mx, my);
-        if (hit) {
-            selectedTrackIdx = hit.trackIdx;
-            selectedClipIdx = hit.clipIdx;
-            updateProperties();
-            renderTimeline();
-            // Start drag
-            draggingClip = hit;
-            dragStartX = mx;
-            dragOrigFrame = project.tracks[hit.trackIdx].clips[hit.clipIdx].startFrame;
+        // Middle mouse button or Alt+click → pan
+        if (e.button === 1 || (e.button === 0 && e.altKey)) {
+            dragMode = 'pan';
+            dragStartX = e.clientX;
+            panStartScrollX = timelineScrollX;
             e.preventDefault();
             return;
         }
 
-        // No clip hit — set playhead (only in timeline area, not ruler)
-        if (my > RULER_HEIGHT && mx > HEADER_WIDTH) {
-            const x = mx - HEADER_WIDTH + timelineScrollX;
-            const t = x / timelineZoom;
-            playheadFrame = Math.max(0, Math.round(t * project.fps));
-
-            // Select track by Y position
-            const ti = Math.floor((my - RULER_HEIGHT) / TRACK_HEIGHT);
-            if (ti >= 0 && ti < project.tracks.length) {
-                selectedTrackIdx = ti;
-                selectedClipIdx = -1;
+        // Hit test clips (left button only)
+        if (e.button === 0) {
+            const hit = hitTestClip(mx, my);
+            if (hit) {
+                selectedTrackIdx = hit.trackIdx;
+                selectedClipIdx = hit.clipIdx;
                 updateProperties();
+                renderTimeline();
+                dragMode = 'clip-drag';
+                draggingClip = hit;
+                dragStartX = mx;
+                dragOrigFrame = project.tracks[hit.trackIdx].clips[hit.clipIdx].startFrame;
+                e.preventDefault();
+                return;
             }
-            renderTimeline();
-            updatePlaybackUI();
-            applyPlayhead();
-        } else if (my <= RULER_HEIGHT && mx > HEADER_WIDTH) {
-            // Ruler click — just set playhead
-            const x = mx - HEADER_WIDTH + timelineScrollX;
-            playheadFrame = Math.max(0, Math.round((x / timelineZoom) * project.fps));
-            renderTimeline();
-            updatePlaybackUI();
-            applyPlayhead();
+
+            // No clip hit — start scrubbing (playhead follows mouse)
+            if (mx > HEADER_WIDTH) {
+                dragMode = 'scrub';
+                dragStartX = mx;
+
+                // Select track by Y position
+                if (my > RULER_HEIGHT) {
+                    const ti = Math.floor((my - RULER_HEIGHT) / TRACK_HEIGHT);
+                    if (ti >= 0 && ti < project.tracks.length) {
+                        selectedTrackIdx = ti;
+                        selectedClipIdx = -1;
+                        updateProperties();
+                    }
+                }
+
+                setPlayheadFromMouse(mx);
+                e.preventDefault();
+            }
         }
     });
 
     tlCanvas.addEventListener('mousemove', (e) => {
-        if (!draggingClip) return;
+        if (dragMode === 'none') return;
         const rect = tlCanvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
-        const dx = mx - dragStartX;
-        const frameDelta = Math.round((dx / timelineZoom) * project.fps);
-        const clip = project.tracks[draggingClip.trackIdx].clips[draggingClip.clipIdx];
-        clip.startFrame = Math.max(0, dragOrigFrame + frameDelta);
-        updateDuration();
-        renderTimeline();
-    });
 
-    tlCanvas.addEventListener('mouseup', () => {
-        if (draggingClip) {
-            draggingClip = null;
-            updateProperties();
+        if (dragMode === 'clip-drag' && draggingClip) {
+            const dx = mx - dragStartX;
+            const frameDelta = Math.round((dx / timelineZoom) * project.fps);
+            const clip = project.tracks[draggingClip.trackIdx].clips[draggingClip.clipIdx];
+            clip.startFrame = Math.max(0, dragOrigFrame + frameDelta);
+            updateDuration();
+            renderTimeline();
+        } else if (dragMode === 'scrub') {
+            if (mx > HEADER_WIDTH) setPlayheadFromMouse(mx);
+        } else if (dragMode === 'pan') {
+            const dx = e.clientX - dragStartX;
+            timelineScrollX = Math.max(0, panStartScrollX - dx);
+            renderTimeline();
         }
     });
 
-    tlCanvas.addEventListener('mouseleave', () => {
-        if (draggingClip) { draggingClip = null; }
+    tlCanvas.addEventListener('mouseup', () => {
+        if (dragMode === 'clip-drag') {
+            draggingClip = null;
+            updateProperties();
+        }
+        dragMode = 'none';
     });
+
+    tlCanvas.addEventListener('mouseleave', () => {
+        if (dragMode === 'clip-drag') draggingClip = null;
+        dragMode = 'none';
+    });
+
+    // Prevent default middle-click paste/autoscroll
+    tlCanvas.addEventListener('auxclick', (e) => { if (e.button === 1) e.preventDefault(); });
 
     // Context menu (right-click on clip)
     const ctxMenu = document.getElementById('clip-context-menu');
@@ -781,6 +813,8 @@ function applyPlayhead() {
                 // Only create action once per clip, reuse it
                 if (track._activeClip !== clip) {
                     track.mixer.stopAllAction();
+                    // Uncache previous clip to avoid stale data
+                    if (track._activeClip?.animClip) track.mixer.uncacheClip(track._activeClip.animClip);
                     track._activeAction = track.mixer.clipAction(clip.animClip);
                     track._activeAction.setLoop(THREE.LoopOnce);
                     track._activeAction.clampWhenFinished = true;
@@ -1010,13 +1044,39 @@ async function saveBvhAs() {
         const resp = await fetch(url);
         const text = await resp.text();
         const blob = new Blob([text], { type: 'text/plain' });
+        const defaultName = `${clip.name}.bvh`;
+
+        // Use File System Access API for native "Save As" dialog
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: defaultName,
+                    types: [{
+                        description: 'BVH Motion Capture',
+                        accept: { 'text/plain': ['.bvh'] },
+                    }],
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                console.log(`[BVH Studio] BVH saved via picker: ${handle.name}`);
+                return;
+            } catch (pickerErr) {
+                if (pickerErr.name === 'AbortError') return;  // user cancelled
+                console.warn('[BVH Studio] File picker failed, fallback to download:', pickerErr);
+            }
+        }
+
+        // Fallback: classic download
         const dlUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = dlUrl;
-        a.download = `${clip.name}.bvh`;
+        a.download = defaultName;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(dlUrl);
-        console.log(`[BVH Studio] BVH saved: ${clip.name}.bvh`);
+        console.log(`[BVH Studio] BVH downloaded: ${defaultName}`);
     } catch (e) {
         alert('BVH speichern fehlgeschlagen: ' + e.message);
     }
@@ -1026,17 +1086,25 @@ function deleteSelectedClip() {
     if (selectedTrackIdx < 0 || selectedClipIdx < 0) return;
     const track = project.tracks[selectedTrackIdx];
     if (!track || selectedClipIdx >= track.clips.length) return;
-    track.clips.splice(selectedClipIdx, 1);
-    // Clear active action if this was playing
-    if (track._activeClip) {
-        track.mixer?.stopAllAction();
-        track._activeClip = null;
-        track._activeAction = null;
+    const clip = track.clips[selectedClipIdx];
+
+    // Uncache the AnimationClip from the mixer so it doesn't linger
+    if (track.mixer) {
+        track.mixer.stopAllAction();
+        if (clip.animClip) track.mixer.uncacheClip(clip.animClip);
     }
+    track._activeClip = null;
+    track._activeAction = null;
+
+    track.clips.splice(selectedClipIdx, 1);
     selectedClipIdx = -1;
     updateDuration();
     renderTimeline();
     updateProperties();
+
+    // Reset skeleton to rest pose
+    if (track.skeleton) track.skeleton.skeleton.pose();
+
     console.log('[BVH Studio] Clip deleted');
 }
 
@@ -1134,11 +1202,14 @@ function smoothSelectedClip() {
 // =========================================================================
 // Ground Fix (Bodenniveau)
 // =========================================================================
-function groundFixSelectedClip() {
+async function groundFixSelectedClip() {
     if (selectedTrackIdx < 0 || selectedClipIdx < 0) { alert('Clip auswaehlen.'); return; }
     const track = project.tracks[selectedTrackIdx];
     const clip = track.clips[selectedClipIdx];
     if (!clip.animClip || !track.skeleton) { alert('Clip oder Skeleton nicht geladen.'); return; }
+
+    // Read desired ground offset from Tools panel (default 0.03m = 3cm)
+    const groundOffset = parseFloat(document.getElementById('tool-ground-offset')?.value) || 0.03;
 
     const skel = track.skeleton;
     const bones = skel.skeleton.bones;
@@ -1149,8 +1220,6 @@ function groundFixSelectedClip() {
     const tmpAction = tmpMixer.clipAction(clip.animClip);
     tmpAction.play();
 
-    const frameCount = clip.totalFrames - clip.trimIn - clip.trimOut;
-    const frameTime = 1 / clip.fps;
     const tmpV = new THREE.Vector3();
 
     // Find position track for root bone
@@ -1164,6 +1233,18 @@ function groundFixSelectedClip() {
         return;
     }
 
+    // Identify foot bones (left + right)
+    const footBones = bones.filter(b => {
+        const n = b.name.toLowerCase();
+        return n.includes('foot') || n.includes('toe') || n.includes('heel');
+    });
+    if (footBones.length === 0) {
+        alert('Keine Fuss-Knochen gefunden.');
+        tmpAction.stop(); tmpMixer.stopAllAction();
+        return;
+    }
+    console.log(`[BVH Studio] Ground fix: ${footBones.length} foot bones: ${footBones.map(b => b.name).join(', ')}`);
+
     const nKeys = posTrack.times.length;
     let corrected = 0;
 
@@ -1172,17 +1253,20 @@ function groundFixSelectedClip() {
         tmpMixer.setTime(t);
         rootBone.updateWorldMatrix(true, true);
 
-        // Find lowest bone Y
+        // Find lowest foot bone Y (considering both left and right)
         let minY = Infinity;
-        for (const b of bones) {
+        for (const b of footBones) {
             b.getWorldPosition(tmpV);
             if (tmpV.y < minY) minY = tmpV.y;
         }
 
-        if (Math.abs(minY) > 0.001) {
-            // Correct Y position in the track data
+        // If foot is below ground (minY < 0): correct to exactly 0
+        // If foot is above ground (minY >= 0): correct to groundOffset
+        const target = minY < 0 ? 0 : groundOffset;
+        const correction = minY - target;
+        if (Math.abs(correction) > 0.001) {
             const idx = f * 3 + 1;  // Y component (position is vec3: x,y,z)
-            posTrack.values[idx] -= minY;
+            posTrack.values[idx] -= correction;
             corrected++;
         }
     }
@@ -1195,12 +1279,73 @@ function groundFixSelectedClip() {
 
     if (corrected === 0) {
         console.log(`[BVH Studio] ${clip.name}: bereits auf Bodenniveau.`);
-    } else {
-        console.log(`[BVH Studio] Ground fix: ${corrected}/${nKeys} Frames korrigiert fuer ${clip.name}`);
+        applyPlayhead();
+        return;
     }
 
-    // Re-apply playhead to show updated animation
+    console.log(`[BVH Studio] Ground fix: ${corrected}/${nKeys} Frames korrigiert fuer ${clip.name}`);
     applyPlayhead();
+
+    // Save corrected BVH to disk
+    try {
+        // Fetch original BVH text
+        const bvhUrl = `/api/character/bvh/${encodeURIComponent(clip.category)}/${encodeURIComponent(clip.name)}/`;
+        const bvhResp = await fetch(bvhUrl);
+        const bvhText = await bvhResp.text();
+        const lines = bvhText.split('\n');
+
+        // Find Yposition channel index
+        let yPosChannel = -1, foundRoot = false;
+        for (let i = 0; i < lines.length; i++) {
+            const trimmed = lines[i].trim();
+            if (trimmed.startsWith('ROOT ')) { foundRoot = true; continue; }
+            if (foundRoot && trimmed.startsWith('CHANNELS')) {
+                const parts = trimmed.split(/\s+/);
+                for (let c = 2; c < parts.length; c++) {
+                    if (parts[c] === 'Yposition') { yPosChannel = c - 2; break; }
+                }
+                break;
+            }
+        }
+
+        if (yPosChannel < 0) {
+            console.warn('[BVH Studio] Yposition channel not found in BVH, skip save.');
+            return;
+        }
+
+        // Find motion data lines
+        const motionIdx = lines.findIndex(l => l.trim() === 'MOTION');
+        if (motionIdx < 0) return;
+        let dataStart = motionIdx + 1;
+        while (dataStart < lines.length && !lines[dataStart].trim().match(/^[\d\-\.]/)) dataStart++;
+
+        const frameLines = [];
+        for (let i = dataStart; i < lines.length; i++) {
+            if (lines[i].trim().match(/^[\d\-\.]/)) frameLines.push(i);
+        }
+
+        // Apply corrections from posTrack to BVH text
+        for (let f = 0; f < Math.min(nKeys, frameLines.length); f++) {
+            const li = frameLines[f];
+            const vals = lines[li].trim().split(/\s+/);
+            vals[yPosChannel] = posTrack.values[f * 3 + 1].toFixed(6);
+            lines[li] = vals.join(' ');
+        }
+
+        // Save via API
+        const saveResp = await fetch('/api/character/save-bvh-text/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category: clip.category, name: clip.name, bvh_text: lines.join('\n') }),
+        });
+        if (saveResp.ok) {
+            console.log(`[BVH Studio] BVH saved: ${clip.category}/${clip.name}`);
+        } else {
+            console.warn(`[BVH Studio] BVH save failed: ${await saveResp.text()}`);
+        }
+    } catch (e) {
+        console.error('[BVH Studio] BVH save error:', e);
+    }
 }
 
 // =========================================================================
@@ -1254,6 +1399,10 @@ async function exportBVH() {
 let exportCancelled = false;
 
 function setupExportPanel() {
+    // Pre-fill target dir from prefs
+    const dirEl = document.getElementById('export-target-dir');
+    if (dirEl && project.videoOutputPath) dirEl.value = project.videoOutputPath;
+
     // Set default range from project duration
     const updateRange = () => {
         const toEl = document.getElementById('export-to');
@@ -1272,10 +1421,14 @@ function setupExportPanel() {
         console.log(`[BVH Studio] Export engine: ${e.target.value}`);
     });
 
-    // Auto-update frame range when export tab opens
+    // Auto-update frame range + target dir when export tab opens
     document.querySelectorAll('.props-tab').forEach(tab => {
         tab.addEventListener('click', () => {
-            if (tab.dataset.tab === 'export') updateRange();
+            if (tab.dataset.tab === 'export') {
+                updateRange();
+                const dirEl = document.getElementById('export-target-dir');
+                if (dirEl && !dirEl.value) dirEl.value = project.videoOutputPath || '';
+            }
         });
     });
 }
@@ -1344,6 +1497,32 @@ async function startExport() {
     startBtn.style.opacity = '1';
 }
 
+/** Save blob with native "Save As" dialog, fallback to download */
+async function saveBlobAs(blob, suggestedName, mimeType) {
+    if (window.showSaveFilePicker) {
+        try {
+            const ext = '.' + suggestedName.split('.').pop();
+            const handle = await window.showSaveFilePicker({
+                suggestedName,
+                types: [{ description: 'Video', accept: { [mimeType]: [ext] } }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            console.log(`[BVH Studio] Saved via picker: ${handle.name}`);
+            return;
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            console.warn('[BVH Studio] Picker failed, fallback:', e);
+        }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = suggestedName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, crf, filename, statusText, progressBar) {
     const totalFrames = toFrame - fromFrame;
     const frames = [];
@@ -1379,16 +1558,28 @@ async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fp
     formData.append('format', 'mp4');
     formData.append('crf', crf);
 
+    // Build save path — always save to server disk
+    const outputDir = (document.getElementById('export-target-dir')?.value || '').trim()
+        || 'A:/3DTools/HumanBodyWeb/media/output';
+    const sep = outputDir.includes('\\') ? '\\' : '/';
+    const savePath = outputDir.replace(/[/\\]$/, '') + sep + filename;
+    formData.append('save_path', savePath);
+
     try {
         const resp = await fetch('/api/theatre/encode-frames/', { method: 'POST', body: formData });
         if (resp.ok) {
             progressBar.style.width = '100%';
-            statusText.textContent = 'Fertig! Download...';
-            const blob = await resp.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = filename;
-            a.click(); URL.revokeObjectURL(url);
+            const ct = resp.headers.get('content-type') || '';
+            if (ct.includes('application/json')) {
+                // Server saved to disk
+                const data = await resp.json();
+                statusText.textContent = `Gespeichert: ${data.saved}`;
+            } else {
+                // Server returned file blob (no save_path configured)
+                statusText.textContent = 'Fertig! Speichern...';
+                const blob = await resp.blob();
+                await saveBlobAs(blob, filename, 'video/mp4');
+            }
         } else {
             statusText.textContent = 'Encoding fehlgeschlagen: ' + await resp.text();
         }
@@ -1396,7 +1587,7 @@ async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fp
         statusText.textContent = 'Fehler: ' + e.message;
     }
 
-    console.log(`[BVH Studio] Server export: ${totalFrames} frames, crf=${crf}`);
+    console.log(`[BVH Studio] Server export done: ${totalFrames} frames, crf=${crf}, save_path=${formData.get('save_path')}`);
 }
 
 async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toFrame, fps, filename, statusText, progressBar) {
@@ -1434,13 +1625,8 @@ async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toF
     await done;
 
     const blob = new Blob(chunks, { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename.replace('.mp4', '.webm');
-    a.click();
-    URL.revokeObjectURL(url);
-
+    statusText.textContent = 'Fertig! Speichern...';
+    await saveBlobAs(blob, filename.replace('.mp4', '.webm'), mimeType);
     statusText.textContent = 'Fertig!';
     progressBar.style.width = '100%';
     console.log(`[BVH Studio] Browser export: ${totalFrames} frames`);
@@ -1553,6 +1739,76 @@ function animate() {
 
     controls.update();
     renderer.render(scene, camera);
+    updateDebugPanel();
+}
+
+const _dbgV = new THREE.Vector3();
+let _dbgThrottle = 0;
+
+function updateDebugPanel() {
+    // Throttle to ~10 fps
+    if (++_dbgThrottle % 6 !== 0) return;
+
+    const elDist = document.getElementById('debug-ground-dist');
+    const elBone = document.getElementById('debug-lowest-bone');
+    const elFootL = document.getElementById('debug-foot-l');
+    const elFootR = document.getElementById('debug-foot-r');
+    const elRoot = document.getElementById('debug-root-pos');
+    const elFrame = document.getElementById('debug-frame');
+    if (!elDist) return;
+
+    elFrame.textContent = `Frame: ${playheadFrame}`;
+
+    // Find active track with skeleton
+    let found = false;
+    for (const track of project.tracks) {
+        if (track.muted || !track.skeleton) continue;
+        const bones = track.skeleton.skeleton.bones;
+        if (!bones || bones.length === 0) continue;
+
+        let minY = Infinity;
+        let lowestName = '';
+        let minYL = Infinity, lowestL = '';
+        let minYR = Infinity, lowestR = '';
+
+        for (const b of bones) {
+            b.getWorldPosition(_dbgV);
+            const y = _dbgV.y;
+            const n = b.name.toLowerCase();
+
+            if (y < minY) { minY = y; lowestName = b.name; }
+
+            // Left foot bones (foot, toe, heel)
+            const isLeft = n.includes('_l') || n.includes('.l') || n.includes('left');
+            const isRight = n.includes('_r') || n.includes('.r') || n.includes('right');
+            const isFoot = n.includes('foot') || n.includes('toe') || n.includes('heel');
+
+            if (isFoot && isLeft && y < minYL) { minYL = y; lowestL = b.name; }
+            if (isFoot && isRight && y < minYR) { minYR = y; lowestR = b.name; }
+        }
+
+        // Root position
+        const root = track.skeleton.rootBone;
+        if (root) {
+            root.getWorldPosition(_dbgV);
+            elRoot.textContent = `Root: ${_dbgV.x.toFixed(3)}, ${_dbgV.y.toFixed(3)}, ${_dbgV.z.toFixed(3)} m`;
+        }
+
+        elDist.textContent = `Boden-Abstand: ${minY.toFixed(4)} m`;
+        elBone.textContent = `Tiefster: ${lowestName}`;
+        elFootL.textContent = minYL < Infinity ? `Fuss L: ${minYL.toFixed(4)} m (${lowestL})` : 'Fuss L: —';
+        elFootR.textContent = minYR < Infinity ? `Fuss R: ${minYR.toFixed(4)} m (${lowestR})` : 'Fuss R: —';
+        found = true;
+        break;  // first active track
+    }
+
+    if (!found) {
+        elDist.textContent = 'Boden-Abstand: —';
+        elBone.textContent = 'Tiefster Knochen: —';
+        elFootL.textContent = 'Fuss L: —';
+        elFootR.textContent = 'Fuss R: —';
+        elRoot.textContent = 'Root Position: —';
+    }
 }
 
 // =========================================================================
