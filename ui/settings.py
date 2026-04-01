@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = '1.27'
+VERSION = '0.1'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
@@ -126,7 +126,7 @@ _asset_creator_parent = str(HUMANBODY_ROOT / 'assetCreator')
 if _asset_creator_parent not in sys.path:
     sys.path.insert(0, _asset_creator_parent)
 
-# Logging — write to file so we can debug hidden-window server
+# Logging — rotating file + console
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
 LOGGING = {
@@ -136,13 +136,16 @@ LOGGING = {
         'verbose': {
             'format': '{asctime} {levelname} {name} {message}',
             'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
         },
     },
     'handlers': {
         'file': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOG_DIR / 'django.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5 MB
+            'backupCount': 3,
             'formatter': 'verbose',
             'encoding': 'utf-8',
         },
@@ -154,7 +157,7 @@ LOGGING = {
     },
     'root': {
         'handlers': ['file', 'console'],
-        'level': 'DEBUG',
+        'level': 'INFO',
     },
     'loggers': {
         'django': {
@@ -162,9 +165,24 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'django.channels.server': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'daphne': {
+            'handlers': ['file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
         'core': {
             'handlers': ['file', 'console'],
             'level': 'DEBUG',
+            'propagate': False,
+        },
+        'GarmentFitter': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },
@@ -175,25 +193,6 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer"
     }
-}
-
-# Logging — show GarmentFitter INFO messages in console
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'simple': {'format': '%(asctime)s %(levelname)-8s %(name)s: %(message)s'},
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-    },
-    'loggers': {
-        'GarmentFitter': {'handlers': ['console'], 'level': 'INFO'},
-        'core': {'handlers': ['console'], 'level': 'INFO'},
-    },
 }
 
 # Local overrides (not tracked in git — each team member has their own)
