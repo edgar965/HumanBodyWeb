@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Einstellungen — BVH Studio{% endblock %}
+
+{% block content %}
+<h1>BVH Studio Einstellungen</h1>
+
+<form method="post" id="studio-settings-form">
+{% csrf_token %}
+
+<div class="settings-section">
+    <h3>Standard-Modell</h3>
+    <div class="settings-row">
+        <label>Charakter-Preset:</label>
+        <select name="studio_default_model" id="studio_default_model">
+            {% for m in models %}
+            <option value="{{ m.key }}" {% if m.key == prefs.studio_default_model %}selected{% endif %}>{{ m.label }}</option>
+            {% endfor %}
+        </select>
+        <span class="hint">Wird beim Erstellen eines neuen Tracks geladen (Standard: Rig2)</span>
+    </div>
+</div>
+
+<div class="settings-section">
+    <h3>Pfade</h3>
+    <div class="settings-row">
+        <label>BVH Eingabepfad:</label>
+        <input type="text" name="studio_bvh_input" id="studio_bvh_input" value="{{ prefs.studio_bvh_input }}" style="flex:1;">
+        <span class="hint">Verzeichnis mit BVH-Dateien (Standard: HumanBody/data/animations/bvh/)</span>
+    </div>
+    <div class="settings-row">
+        <label>BVH Ausgabepfad:</label>
+        <input type="text" name="studio_bvh_output" id="studio_bvh_output" value="{{ prefs.studio_bvh_output }}" style="flex:1;">
+        <span class="hint">Verzeichnis f&uuml;r exportierte BVH-Dateien</span>
+    </div>
+    <div class="settings-row">
+        <label>Video Ausgabepfad:</label>
+        <input type="text" name="studio_video_output" id="studio_video_output" value="{{ prefs.studio_video_output }}" style="flex:1;">
+        <span class="hint">Verzeichnis f&uuml;r exportierte Videos (MP4)</span>
+    </div>
+    <div class="settings-row">
+        <label>Projekt-Pfad:</label>
+        <input type="text" name="studio_project_path" id="studio_project_path" value="{{ prefs.studio_project_path }}" style="flex:1;">
+        <span class="hint">Verzeichnis f&uuml;r Studio-Projektdateien (.studio.json)</span>
+    </div>
+</div>
+
+<div class="settings-section">
+    <h3>Timeline</h3>
+    <div class="settings-row">
+        <label>Standard FPS:</label>
+        <select name="studio_fps" id="studio_fps">
+            <option value="auto" {% if prefs.studio_fps == 'auto' %}selected{% endif %}>Aus BVH (automatisch)</option>
+            <option value="24" {% if prefs.studio_fps == '24' %}selected{% endif %}>24 fps (Film)</option>
+            <option value="25" {% if prefs.studio_fps == '25' %}selected{% endif %}>25 fps (PAL)</option>
+            <option value="30" {% if prefs.studio_fps|default:'30' == '30' %}selected{% endif %}>30 fps</option>
+            <option value="60" {% if prefs.studio_fps == '60' %}selected{% endif %}>60 fps</option>
+        </select>
+        <span class="hint">"Aus BVH" liest die FPS aus der geladenen BVH-Datei</span>
+    </div>
+    <div class="settings-row">
+        <label>Standard Zoom:</label>
+        <input type="number" name="studio_zoom" id="studio_zoom" value="{{ prefs.studio_zoom|default:'100' }}" min="10" max="500" step="10">
+        <span class="hint">Pixel pro Sekunde (10-500)</span>
+    </div>
+</div>
+
+<div class="settings-section">
+    <h3>Export</h3>
+    <div class="settings-row">
+        <label>Video-Aufl&ouml;sung:</label>
+        <select name="studio_export_resolution" id="studio_export_resolution">
+            <option value="720" {% if prefs.studio_export_resolution == '720' %}selected{% endif %}>720p</option>
+            <option value="1080" {% if prefs.studio_export_resolution|default:'1080' == '1080' %}selected{% endif %}>1080p</option>
+            <option value="1440" {% if prefs.studio_export_resolution == '1440' %}selected{% endif %}>1440p</option>
+            <option value="2160" {% if prefs.studio_export_resolution == '2160' %}selected{% endif %}>4K</option>
+        </select>
+    </div>
+    <div class="settings-row">
+        <label>Video-Qualit&auml;t (CRF):</label>
+        <input type="number" name="studio_export_crf" id="studio_export_crf" value="{{ prefs.studio_export_crf|default:'18' }}" min="0" max="51">
+        <span class="hint">0 = beste Qualit&auml;t, 51 = kleinste Datei</span>
+    </div>
+</div>
+
+<div class="settings-actions">
+    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Speichern</button>
+</div>
+
+</form>
+
+<style>
+.settings-section { margin-bottom: 24px; }
+.settings-section h3 { color: var(--accent); font-size: 1rem; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.settings-row label { min-width: 160px; font-size: 0.9rem; color: var(--text-muted); }
+.settings-row input, .settings-row select { padding: 6px 10px; background: var(--bg-card); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem; }
+.settings-row .hint { font-size: 0.75rem; color: var(--text-muted); }
+.settings-actions { margin-top: 20px; }
+</style>
+
+<script>
+document.getElementById('studio-settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = {};
+    for (const [key, val] of new FormData(form)) {
+        if (key !== 'csrfmiddlewaretoken') data[key] = val;
+    }
+    const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value
+        || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+    const resp = await fetch('/api/ui-prefs/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data),
+    });
+    if (resp.ok) {
+        alert('Einstellungen gespeichert.');
+    } else {
+        alert('Fehler beim Speichern.');
+    }
+});
+</script>
+{% endblock %}

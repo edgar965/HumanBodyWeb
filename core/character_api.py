@@ -131,6 +131,46 @@ def theatre_page(request):
     return render(request, 'theatre.html')
 
 
+def bvh_studio_page(request):
+    """Render the BVH Studio page."""
+    return render(request, 'bvh_studio.html')
+
+
+def bvh_studio_settings_page(request):
+    """BVH Studio settings page."""
+    from pathlib import Path
+    from .models import AppSettings
+    s = AppSettings.load()
+    prefs = s.ui_prefs or {}
+
+    # Default values
+    prefs.setdefault('studio_default_model', 'Rig2')
+    prefs.setdefault('studio_body_type', 'Female_Caucasian')
+    prefs.setdefault('studio_bvh_input', str(Path(settings.TOOLS_ROOT) / 'HumanBody' / 'data' / 'animations' / 'bvh'))
+    prefs.setdefault('studio_bvh_output', str(Path(settings.TOOLS_ROOT) / 'HumanBody' / 'data' / 'animations' / 'bvh' / 'Results'))
+    prefs.setdefault('studio_video_output', str(Path(settings.MEDIA_ROOT) / 'output'))
+    prefs.setdefault('studio_project_path', str(Path(settings.TOOLS_ROOT) / 'HumanBody' / 'data' / 'studio_projects'))
+    prefs.setdefault('studio_fps', '30')
+    prefs.setdefault('studio_zoom', '100')
+    prefs.setdefault('studio_export_resolution', '1080')
+    prefs.setdefault('studio_export_crf', '18')
+
+    # Get model list
+    models = []
+    try:
+        from humanbody_core import MorphData
+        for key, label in [
+            ('FemaleGarment', 'Female Garment'),
+            ('FemaleWithHair', 'Female With Hair'),
+            ('Rig1', 'Rig 1'), ('Rig2', 'Rig 2'), ('Rig3', 'Rig 3'), ('Rig4', 'Rig 4'),
+        ]:
+            models.append({'key': key, 'label': label})
+    except Exception:
+        models = [{'key': 'FemaleGarment', 'label': 'Female Garment'}, {'key': 'Rig2', 'label': 'Rig 2'}]
+
+    return render(request, 'settings_bvh_studio.html', {'prefs': prefs, 'models': models})
+
+
 def theatre_studio_page(request):
     """Render the Theatre.js Studio debugging page."""
     return render(request, 'theatre_studio.html')

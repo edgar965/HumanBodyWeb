@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}BVH Studio{% endblock %}
+
+{% block extra_head %}
+<style>
+    .main-content { padding: 0 !important; max-width: none !important; height: 100vh; display: flex; flex-direction: column; }
+
+    /* Top bar */
+    .studio-toolbar {
+        height: 36px; background: var(--bg-secondary); border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0;
+    }
+    .studio-toolbar button {
+        padding: 4px 10px; background: var(--bg-card); border: 1px solid var(--border);
+        border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 0.78rem;
+    }
+    .studio-toolbar button:hover { color: var(--text); border-color: var(--accent); }
+    .studio-toolbar .sep { width: 1px; height: 20px; background: var(--border); }
+
+    /* Main layout: sidebar | viewport+timeline | properties */
+    .studio-layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* Sidebar (BVH Library) */
+    .studio-sidebar {
+        width: 220px; background: var(--bg-secondary); border-right: 1px solid var(--border);
+        display: flex; flex-direction: column; flex-shrink: 0;
+    }
+    .studio-sidebar h3 { font-size: 0.85rem; padding: 10px 12px 6px; color: var(--text-muted); margin: 0; }
+    .lib-tree { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+    .lib-cat { margin-bottom: 2px; }
+    .lib-cat-header { padding: 5px 8px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+    .lib-cat-header:hover { background: rgba(255,255,255,0.05); }
+    .lib-cat-body { display: none; padding-left: 12px; }
+    .lib-cat.open .lib-cat-body { display: block; }
+    .lib-cat.open .lib-chevron { transform: rotate(90deg); }
+    .lib-chevron { transition: transform 0.15s; font-size: 0.7rem; }
+    .lib-item {
+        padding: 4px 8px; font-size: 0.78rem; color: var(--text); cursor: grab;
+        border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .lib-item:hover { background: rgba(124,92,191,0.2); }
+    .lib-item.dragging { opacity: 0.5; }
+
+    /* Center: viewport + timeline */
+    .studio-center { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* 3D Viewport */
+    .studio-viewport { flex: 1; position: relative; background: #080812; min-height: 200px; }
+    #studio-canvas { width: 100%; height: 100%; display: block; }
+
+    /* Timeline */
+    .studio-timeline-wrap {
+        height: 200px; min-height: 120px; max-height: 400px;
+        background: var(--bg-secondary); border-top: 1px solid var(--border);
+        display: flex; flex-direction: column; resize: vertical; overflow: hidden;
+    }
+    .timeline-header {
+        height: 24px; background: var(--bg-card); border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; padding: 0 8px; font-size: 0.75rem; color: var(--text-muted);
+        flex-shrink: 0; gap: 12px;
+    }
+    .timeline-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+    #timeline-canvas { width: 100%; height: 100%; display: block; cursor: default; }
+
+    /* Playback bar */
+    .studio-playback {
+        height: 32px; background: var(--bg-card); border-top: 1px solid var(--border);
+        display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0;
+    }
+    .studio-playback button {
+        padding: 4px 8px; background: transparent; border: 1px solid var(--border);
+        border-radius: 4px; color: var(--text); cursor: pointer; font-size: 0.8rem;
+    }
+    .studio-playback button:hover { background: var(--accent); color: #fff; }
+    .playback-time { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); }
+
+    /* Properties panel */
+    .studio-properties {
+        width: 250px; background: var(--bg-secondary); border-left: 1px solid var(--border);
+        overflow-y: auto; padding: 12px; flex-shrink: 0;
+    }
+    .studio-properties h3 { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 8px; }
+    .prop-group { margin-bottom: 12px; }
+    .prop-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 0.8rem; }
+    .prop-row label { color: var(--text-muted); min-width: 70px; }
+    .prop-row input, .prop-row select {
+        flex: 1; padding: 3px 6px; background: var(--bg-card); color: var(--text);
+        border: 1px solid var(--border); border-radius: 3px; font-size: 0.78rem;
+    }
+
+    /* Track headers (left side of timeline) */
+    .track-headers {
+        position: absolute; left: 0; top: 0; bottom: 0; width: 120px;
+        background: var(--bg-secondary); border-right: 1px solid var(--border); z-index: 2;
+    }
+    .track-header {
+        height: 40px; padding: 0 8px; display: flex; align-items: center;
+        border-bottom: 1px solid var(--border); font-size: 0.78rem; color: var(--text);
+        cursor: pointer;
+    }
+    .track-header.selected { background: rgba(124,92,191,0.2); }
+    .track-header:hover { background: rgba(255,255,255,0.03); }
+
+    /* Drop target highlight */
+    .drop-target { outline: 2px dashed var(--accent); outline-offset: -2px; }
+
+    /* Toolbar dropdown */
+    .toolbar-dropdown { position: relative; }
+    .toolbar-dropdown-menu {
+        display: none; position: absolute; top: 100%; left: 0; z-index: 100;
+        background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 6px;
+        padding: 4px 0; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .toolbar-dropdown.open .toolbar-dropdown-menu { display: block; }
+    .toolbar-dd-item {
+        padding: 7px 14px; font-size: 0.82rem; color: #ccc; cursor: pointer;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .toolbar-dd-item:hover { background: rgba(124,92,191,0.3); color: #fff; }
+
+    /* Properties panel tabs */
+    .props-tabs {
+        display: flex; border-bottom: 1px solid var(--border); margin: -12px -12px 12px;
+        padding: 0 8px;
+    }
+    .props-tab {
+        padding: 8px 14px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;
+        border-bottom: 2px solid transparent; transition: all 0.15s;
+    }
+    .props-tab:hover { color: var(--text); }
+    .props-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .props-tab-content { display: none; }
+    .props-tab-content.active { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Toolbar -->
+<div class="studio-toolbar">
+    <button id="btn-add-track" title="Track hinzufuegen"><i class="fas fa-plus"></i> Track</button>
+    <button id="btn-delete-track" title="Track loeschen"><i class="fas fa-trash"></i></button>
+    <div class="sep"></div>
+    <button id="btn-split" title="Clip splitten (S)"><i class="fas fa-cut"></i> Split</button>
+    <button id="btn-delete-clip" title="Clip loeschen (Del)"><i class="fas fa-times"></i></button>
+    <div class="sep"></div>
+    <!-- Tools dropdown -->
+    <div class="toolbar-dropdown" id="tools-dropdown">
+        <button id="btn-tools" title="Tools"><i class="fas fa-wrench"></i> Tools <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
+        <div class="toolbar-dropdown-menu">
+            <div class="toolbar-dd-item" id="dd-smooth"><i class="fas fa-wave-square" style="width:16px;"></i> Smooth (Glaetten)</div>
+            <div class="toolbar-dd-item" id="dd-ground"><i class="fas fa-shoe-prints" style="width:16px;"></i> Auf Bodenniveau</div>
+        </div>
+    </div>
+    <div class="sep"></div>
+    <button id="btn-export-bvh" title="BVH exportieren"><i class="fas fa-file-export"></i> BVH</button>
+    <button id="btn-export-video" title="Video exportieren"><i class="fas fa-video"></i> MP4</button>
+    <div class="sep"></div>
+    <button id="btn-save" title="Projekt speichern"><i class="fas fa-save"></i></button>
+    <button id="btn-load" title="Projekt laden"><i class="fas fa-folder-open"></i></button>
+    <div style="flex:1;"></div>
+    <span id="studio-info" style="font-size:0.75rem;color:var(--text-muted);">BVH Studio v1.0</span>
+</div>
+
+<!-- Main layout -->
+<div class="studio-layout">
+    <!-- BVH Library Sidebar -->
+    <div class="studio-sidebar">
+        <h3><i class="fas fa-music"></i> BVH Bibliothek</h3>
+        <div class="lib-tree" id="lib-tree">
+            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade...</div>
+        </div>
+    </div>
+
+    <!-- Center: Viewport + Timeline -->
+    <div class="studio-center">
+        <!-- 3D Preview -->
+        <div class="studio-viewport">
+            <canvas id="studio-canvas"></canvas>
+        </div>
+
+        <!-- Timeline -->
+        <div class="studio-timeline-wrap">
+            <div class="timeline-header">
+                <span>Timeline</span>
+                <span id="tl-zoom-label">Zoom: 100%</span>
+                <input type="range" id="tl-zoom" min="10" max="500" value="100" style="width:80px;">
+                <span id="tl-frame-info">Frame 0 / 0</span>
+            </div>
+            <div class="timeline-canvas-wrap">
+                <div class="track-headers" id="track-headers"></div>
+                <canvas id="timeline-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Playback -->
+        <div class="studio-playback">
+            <button id="pb-prev" title="Vorheriger Frame"><i class="fas fa-step-backward"></i></button>
+            <button id="pb-play" title="Play/Pause"><i class="fas fa-play" id="pb-play-icon"></i></button>
+            <button id="pb-stop" title="Stop"><i class="fas fa-stop"></i></button>
+            <button id="pb-next" title="Naechster Frame"><i class="fas fa-step-forward"></i></button>
+            <div class="sep" style="height:20px;width:1px;background:var(--border);"></div>
+            <span class="playback-time" id="pb-time">00:00.00</span>
+            <span class="playback-time" id="pb-frame">F: 0</span>
+            <span class="playback-time">/</span>
+            <span class="playback-time" id="pb-duration">00:00.00</span>
+            <div style="flex:1;"></div>
+            <label style="font-size:0.78rem;color:var(--text-muted);">Speed:</label>
+            <select id="pb-speed" style="padding:2px 4px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.78rem;">
+                <option value="0.25">0.25x</option>
+                <option value="0.5">0.5x</option>
+                <option value="1" selected>1x</option>
+                <option value="2">2x</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Properties Panel -->
+    <div class="studio-properties" id="props-panel">
+        <div class="props-tabs">
+            <div class="props-tab active" data-tab="props">Eigenschaften</div>
+            <div class="props-tab" data-tab="tools">Tools</div>
+            <div class="props-tab" data-tab="export">Export</div>
+        </div>
+        <div id="props-tab-props" class="props-tab-content active">
+            <div id="props-content">
+                <div style="color:var(--text-muted);font-size:0.8rem;">Track oder Clip auswaehlen</div>
+            </div>
+        </div>
+        <div id="props-tab-tools" class="props-tab-content">
+            <div id="tools-content">
+                <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:10px;"><i class="fas fa-wave-square"></i> Smooth</h3>
+                <div class="prop-group">
+                    <div class="prop-row"><label>Sigma:</label><input type="number" id="tool-smooth-sigma" value="2" min="0.5" max="20" step="0.5"></div>
+                    <div class="prop-row"><label>Radius:</label><span id="tool-smooth-radius" style="font-size:0.8rem;color:var(--text-muted);">6</span></div>
+                    <div class="prop-row"><label>Modus:</label>
+                        <select id="tool-smooth-mode">
+                            <option value="all">Alle Knochen</option>
+                            <option value="body">Nur Koerper</option>
+                            <option value="hands">Nur Haende</option>
+                        </select>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <button id="tool-smooth-apply" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;"><i class="fas fa-wave-square"></i> Smooth anwenden</button>
+                    </div>
+                    <div style="margin-top:4px;font-size:0.72rem;color:var(--text-muted);">Gauss-Filter auf die Rotations-Keyframes des selektierten Clips.</div>
+                </div>
+                <hr style="border-color:var(--border);margin:16px 0;">
+                <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:10px;"><i class="fas fa-shoe-prints"></i> Bodenniveau</h3>
+                <div class="prop-group">
+                    <div class="prop-row"><label>Methode:</label>
+                        <select id="tool-ground-method">
+                            <option value="bone">Knochen-basiert (FK)</option>
+                        </select>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <button id="tool-ground-apply" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;"><i class="fas fa-shoe-prints"></i> Bodenniveau anwenden</button>
+                    </div>
+                    <div style="margin-top:4px;font-size:0.72rem;color:var(--text-muted);">Korrigiert die Y-Position pro Frame so dass der tiefste Knochen auf Y=0 liegt.</div>
+                </div>
+            </div>
+        </div>
+        <div id="props-tab-export" class="props-tab-content">
+            <div id="export-content">
+                <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:10px;"><i class="fas fa-video"></i> Video Export</h3>
+                <div class="prop-group">
+                    <div class="prop-row"><label>Dateiname:</label><input type="text" id="export-filename" value="bvh_studio_export.mp4" style="flex:1;"></div>
+                    <div class="prop-row"><label>Von (Frame):</label><input type="number" id="export-from" value="0" min="0"></div>
+                    <div class="prop-row"><label>Bis (Frame):</label><input type="number" id="export-to" value="0" min="0"></div>
+                    <div class="prop-row"><label>FPS:</label>
+                        <select id="export-fps">
+                            <option value="24">24</option>
+                            <option value="30" selected>30</option>
+                            <option value="60">60</option>
+                        </select>
+                    </div>
+                    <div class="prop-row"><label>Aufloesung:</label>
+                        <select id="export-resolution">
+                            <option value="720">720p</option>
+                            <option value="1080" selected>1080p</option>
+                            <option value="1440">1440p</option>
+                            <option value="2160">4K</option>
+                        </select>
+                    </div>
+                    <div class="prop-row"><label>Qualitaet:</label>
+                        <select id="export-quality">
+                            <option value="28">Niedrig</option>
+                            <option value="18" selected>Hoch</option>
+                            <option value="12">Ultra</option>
+                        </select>
+                    </div>
+                    <div class="prop-row"><label>Engine:</label>
+                        <select id="export-engine">
+                            <option value="server" selected>Server (ffmpeg)</option>
+                            <option value="browser">Browser (MediaRecorder)</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="export-progress" style="display:none;margin-bottom:10px;">
+                    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;" id="export-status-text">Bereit</div>
+                    <div style="height:6px;background:var(--bg-card);border-radius:3px;overflow:hidden;">
+                        <div id="export-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width 0.2s;"></div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:10px;">
+                    <button id="export-start" style="flex:1;padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.82rem;"><i class="fas fa-circle" style="color:#e74c3c;"></i> Export starten</button>
+                    <button id="export-cancel" style="padding:6px 12px;background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:0.82rem;display:none;"><i class="fas fa-stop"></i> Abbrechen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Context Menu -->
+<div id="clip-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut" style="width:16px;"></i> Split an Playhead (S)</div>
+    <div class="ctx-item" data-action="ctx-duplicate"><i class="fas fa-copy" style="width:16px;"></i> Duplizieren</div>
+    <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen (Del)</div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+    <div class="ctx-item" data-action="ctx-save-bvh"><i class="fas fa-file-export" style="width:16px;"></i> BVH speichern unter...</div>
+    <div class="ctx-item" data-action="ctx-smooth"><i class="fas fa-wave-square" style="width:16px;"></i> Smooth</div>
+    <div class="ctx-item" data-action="ctx-ground"><i class="fas fa-shoe-prints" style="width:16px;"></i> Bodenniveau</div>
+</div>
+<style>
+.ctx-item { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; }
+.ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }
+</style>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+}
+</script>
+<script type="module" src="{% static 'viewer/bvh_studio.js' %}?t={% now 'U' %}"></script>
+{% endblock %}

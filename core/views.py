@@ -3061,6 +3061,9 @@ def webcam(request):
     return render(request, 'webcam.html')
 
 
+from django.views.decorators.csrf import csrf_exempt as _csrf_exempt
+
+@_csrf_exempt
 def ui_prefs_api(request):
     """GET/POST UI preferences (panel sizes etc.)."""
     from .models import AppSettings

@@ -33,6 +33,9 @@
                     <a href="{% url 'theatre' %}" class="{% if request.path == '/humanbody/theatre/' %}active{% endif %}">
                         <i class="fas fa-film"></i> <span>Theatre</span>
                     </a>
+                    <a href="{% url 'bvh_studio' %}" class="{% if request.path == '/humanbody/bvh-studio/' %}active{% endif %}">
+                        <i class="fas fa-cut"></i> <span>BVH Studio</span>
+                    </a>
                 </div>
             </div>
             <div class="sidebar-group {% if 'humanbody' in request.path %}open{% endif %}">
@@ -127,6 +130,9 @@
                     </a>
                     <a href="{% url 'settings_theatre' %}" class="{% if request.path == '/settings/theatre/' %}active{% endif %}">
                         <i class="fas fa-theater-masks"></i> <span>Theatre</span>
+                    </a>
+                    <a href="{% url 'settings_bvh_studio' %}" class="{% if request.path == '/settings/bvh-studio/' %}active{% endif %}">
+                        <i class="fas fa-cut"></i> <span>BVH Studio</span>
                     </a>
                 </div>
             </div>
