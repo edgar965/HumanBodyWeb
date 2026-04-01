@@ -7070,10 +7070,14 @@ Note that it **is okay** to import '@theatre/core' multiple times. But those imp
                         pointer-events: auto !important;
                     }
 
-                    /* Hide Outline + Detail panels (they overlap our sidebar/toolbar) */
-                    [data-testid="OutlinePanel"],
-                    [data-testid="DetailPanel"] {
-                        display: none !important;
+                    /* Outline panel: shift right to clear sidebar */
+                    div[class] > div[class]:nth-child(3) {
+                        left: 220px !important;
+                        pointer-events: auto !important;
+                    }
+                    /* Detail panel (properties): shift left to clear right panel */
+                    div[class] > div[class]:nth-child(4) {
+                        pointer-events: auto !important;
                     }
 
                     /* Context menus + popovers must be clickable */
