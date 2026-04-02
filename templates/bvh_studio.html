@@ -138,7 +138,16 @@
 {% block content %}
 <!-- Toolbar -->
 <div class="studio-toolbar">
-    <button id="btn-add-track" title="Track hinzufuegen"><i class="fas fa-plus"></i> Track</button>
+    <!-- Track dropdown -->
+    <div class="toolbar-dropdown" id="track-dropdown">
+        <button id="btn-add-track" title="Track hinzufuegen"><i class="fas fa-plus"></i> Track <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
+        <div class="toolbar-dropdown-menu">
+            <div class="toolbar-dd-item" id="dd-add-bvh"><i class="fas fa-running" style="width:16px;"></i> BVH Track</div>
+            <div class="toolbar-dd-item" id="dd-add-camera"><i class="fas fa-video" style="width:16px;color:#00bcd4;"></i> Kamera Track</div>
+            <div class="toolbar-dd-item" id="dd-add-light"><i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht Track</div>
+            <div class="toolbar-dd-item" id="dd-add-audio"><i class="fas fa-music" style="width:16px;color:#4caf50;"></i> Audio Track</div>
+        </div>
+    </div>
     <button id="btn-delete-track" title="Track loeschen"><i class="fas fa-trash"></i></button>
     <div class="sep"></div>
     <button id="btn-split" title="Clip splitten (S)"><i class="fas fa-cut"></i> Split</button>
@@ -158,8 +167,20 @@
     <div class="sep"></div>
     <button id="btn-save" title="Projekt speichern"><i class="fas fa-save"></i></button>
     <button id="btn-load" title="Projekt laden"><i class="fas fa-folder-open"></i></button>
+    <div class="sep"></div>
+    <!-- Help dropdown -->
+    <div class="toolbar-dropdown" id="help-dropdown">
+        <button id="btn-help" title="Hilfe"><i class="fas fa-question-circle"></i> Hilfe <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
+        <div class="toolbar-dropdown-menu" style="right:0;left:auto;min-width:160px;">
+            <div class="toolbar-dd-item" id="dd-help-tracks"><i class="fas fa-layer-group" style="width:16px;"></i> Tracks</div>
+            <div class="toolbar-dd-item" id="dd-help-camera"><i class="fas fa-video" style="width:16px;"></i> Kamera</div>
+            <div class="toolbar-dd-item" id="dd-help-light"><i class="fas fa-lightbulb" style="width:16px;"></i> Licht</div>
+            <div class="toolbar-dd-item" id="dd-help-audio"><i class="fas fa-music" style="width:16px;"></i> Audio</div>
+            <div class="toolbar-dd-item" id="dd-help-shortcuts"><i class="fas fa-keyboard" style="width:16px;"></i> Tastenkuerzel</div>
+        </div>
+    </div>
     <div style="flex:1;"></div>
-    <span id="studio-info" style="font-size:0.75rem;color:var(--text-muted);">BVH Studio v1.0</span>
+    <span id="studio-info" style="font-size:0.75rem;color:var(--text-muted);">BVH Studio v2.0</span>
 </div>
 
 <!-- Main layout -->
@@ -337,6 +358,17 @@
 .ctx-item { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; }
 .ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }
 </style>
+
+<!-- Help Modal -->
+<div id="help-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
+    <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;max-width:640px;width:90%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h2 id="help-modal-title" style="font-size:1.1rem;color:var(--accent);margin:0;"></h2>
+            <button id="help-modal-close" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;">&times;</button>
+        </div>
+        <div id="help-modal-body" style="font-size:0.85rem;color:var(--text);line-height:1.7;"></div>
+    </div>
+</div>
 
 <script type="importmap">
 {

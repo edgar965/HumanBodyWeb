@@ -1,5 +1,6 @@
 /**
  * BVH Studio — Multi-track BVH editor with timeline, trim, blend, export.
+ * Supports: BVH animation, Camera, Light, Audio tracks.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -13,7 +14,7 @@ import {
 } from './character_core.js?v=1';
 import { generateRigBoneMesh, getDefaultRigConfig } from './model_generator.js';
 
-console.log('[BVH Studio] v1.0 loaded');
+console.log('[BVH Studio] v2.0 loaded');
 
 // =========================================================================
 // State
@@ -44,25 +45,53 @@ const RULER_HEIGHT = 20;
 // =========================================================================
 // Track & Clip classes
 // =========================================================================
+// Track types: 'bvh' | 'camera' | 'light' | 'audio'
+const TRACK_COLORS = {
+    bvh: null,  // random
+    camera: '#00bcd4',
+    light: '#ffc107',
+    audio: '#4caf50',
+};
+const TRACK_ICONS = {
+    bvh: 'fa-running',
+    camera: 'fa-video',
+    light: 'fa-lightbulb',
+    audio: 'fa-music',
+};
+
 class Track {
     constructor(name, preset = 'FemaleGarment', bodyType = 'Female_Caucasian') {
         this.name = name;
+        this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio'
         this.preset = preset;
         this.bodyType = bodyType;
         this.clips = [];
         this.muted = false;
         this.color = `hsl(${Math.random() * 360}, 60%, 50%)`;
-        // 3D
+        // 3D (BVH only)
         this.mesh = null;
         this.skeleton = null;
         this.mixer = null;
         this.group = new THREE.Group();
         this.position = [0, 0, 0];
+        // Camera track
+        this.cameraActive = false;     // override viewport camera during playback
+        this._savedCamPos = null;
+        this._savedCamQuat = null;
+        // Light track
+        this.light = null;
+        this.lightHelper = null;
+        this.lightVisible = true;
+        // Audio track
+        this.audioCtx = null;
+        this.gainNode = null;
+        this.sourceNode = null;
     }
 }
 
 class Clip {
     constructor(category, name, totalFrames, fps) {
+        this.type = 'bvh';      // 'bvh' | 'camera_kf' | 'light_kf' | 'audio'
         this.category = category;
         this.name = name;
         this.totalFrames = totalFrames;
@@ -76,10 +105,22 @@ class Clip {
         this.blendIn = 0;
         this.blendOut = 0;
         this.animClip = null;    // Three.js AnimationClip (retargeted)
+        // Type-specific data
+        this.data = {};
     }
-    get duration() { return (this.totalFrames - this.trimIn - this.trimOut) / (this.fps * this.speed); }
-    get endFrame() { return this.startFrame + Math.ceil(this.duration * project.fps); }
+    get duration() {
+        if (this.type === 'camera_kf' || this.type === 'light_kf') return 0;
+        if (this.type === 'audio') return (this.data.audioDuration || 0) / this.speed;
+        return (this.totalFrames - this.trimIn - this.trimOut) / (this.fps * this.speed);
+    }
+    get endFrame() {
+        if (this.type === 'camera_kf' || this.type === 'light_kf') return this.startFrame;
+        return this.startFrame + Math.ceil(this.duration * project.fps);
+    }
 }
+
+// Camera edit mode state
+let cameraEditMode = false;
 
 // =========================================================================
 // Init
@@ -200,11 +241,125 @@ function addTrack(name) {
     return track;
 }
 
+function addSpecialTrack(type, name) {
+    const defaults = { camera: 'Kamera', light: 'Licht', audio: 'Audio' };
+    const track = new Track(name || defaults[type] || type);
+    track.type = type;
+    track.color = TRACK_COLORS[type] || track.color;
+
+    if (type === 'camera') {
+        track.cameraActive = true;
+    } else if (type === 'light') {
+        track.light = new THREE.PointLight(0xffffff, 2.0, 50);
+        track.light.position.set(2, 3, 2);
+        scene.add(track.light);
+        // Helper sphere
+        const helperGeo = new THREE.SphereGeometry(0.08, 8, 8);
+        const helperMat = new THREE.MeshBasicMaterial({ color: 0xffc107 });
+        track.lightHelper = new THREE.Mesh(helperGeo, helperMat);
+        track.lightHelper.position.copy(track.light.position);
+        scene.add(track.lightHelper);
+    } else if (type === 'audio') {
+        track.audioCtx = project._audioCtx || (project._audioCtx = new (window.AudioContext || window.webkitAudioContext)());
+        track.gainNode = track.audioCtx.createGain();
+        track.gainNode.connect(track.audioCtx.destination);
+    }
+
+    project.tracks.push(track);
+    updateTrackHeaders();
+    selectTrack(project.tracks.length - 1);
+    return track;
+}
+
+// Camera keyframe helpers
+function addCameraKeyframe(trackIdx) {
+    const track = project.tracks[trackIdx];
+    if (!track || track.type !== 'camera') return;
+    const kf = new Clip(null, `KF ${track.clips.length + 1}`, 0, project.fps);
+    kf.type = 'camera_kf';
+    kf.startFrame = playheadFrame;
+    kf.data = {
+        position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+        rotation: { x: camera.rotation.x, y: camera.rotation.y, z: camera.rotation.z },
+        fov: camera.fov,
+        interpolation: 'smooth',  // 'linear' | 'smooth' | 'step'
+    };
+    track.clips.push(kf);
+    track.clips.sort((a, b) => a.startFrame - b.startFrame);
+    updateDuration();
+    renderTimeline();
+    updateProperties();
+    console.log(`[BVH Studio] Camera keyframe added at frame ${playheadFrame}`);
+}
+
+// Light keyframe helpers
+function addLightKeyframe(trackIdx) {
+    const track = project.tracks[trackIdx];
+    if (!track || track.type !== 'light' || !track.light) return;
+    const kf = new Clip(null, `LKF ${track.clips.length + 1}`, 0, project.fps);
+    kf.type = 'light_kf';
+    kf.startFrame = playheadFrame;
+    kf.data = {
+        position: { x: track.light.position.x, y: track.light.position.y, z: track.light.position.z },
+        color: '#' + track.light.color.getHexString(),
+        intensity: track.light.intensity,
+    };
+    track.clips.push(kf);
+    track.clips.sort((a, b) => a.startFrame - b.startFrame);
+    updateDuration();
+    renderTimeline();
+    updateProperties();
+    console.log(`[BVH Studio] Light keyframe added at frame ${playheadFrame}`);
+}
+
+// Audio clip helpers
+async function loadAudioFile(trackIdx) {
+    const track = project.tracks[trackIdx];
+    if (!track || track.type !== 'audio') return;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'audio/*';
+    input.addEventListener('change', async () => {
+        const file = input.files[0];
+        if (!file) return;
+        try {
+            const arrayBuf = await file.arrayBuffer();
+            const audioBuffer = await track.audioCtx.decodeAudioData(arrayBuf);
+            const clip = new Clip(null, file.name, Math.round(audioBuffer.duration * project.fps), project.fps);
+            clip.type = 'audio';
+            clip.startFrame = playheadFrame;
+            clip.data = {
+                fileName: file.name,
+                audioBuffer: audioBuffer,
+                audioDuration: audioBuffer.duration,
+                volume: 1.0,
+                fadeIn: 0,
+                fadeOut: 0,
+                offset: 0,
+            };
+            track.clips.push(clip);
+            updateDuration();
+            renderTimeline();
+            updateProperties();
+            console.log(`[BVH Studio] Audio loaded: ${file.name} (${audioBuffer.duration.toFixed(1)}s)`);
+        } catch (e) {
+            console.error('[BVH Studio] Audio decode failed:', e);
+            alert('Audio laden fehlgeschlagen: ' + e.message);
+        }
+    });
+    input.click();
+}
+
 function removeTrack(idx) {
     if (idx < 0 || idx >= project.tracks.length) return;
     const track = project.tracks[idx];
     scene.remove(track.group);
     if (track.mesh) { track.mesh.geometry.dispose(); }
+    // Cleanup special tracks
+    if (track.light) { scene.remove(track.light); track.light.dispose(); }
+    if (track.lightHelper) { scene.remove(track.lightHelper); track.lightHelper.geometry.dispose(); }
+    if (track.type === 'audio') stopAudioTrack(track);
     project.tracks.splice(idx, 1);
     if (selectedTrackIdx >= project.tracks.length) selectedTrackIdx = project.tracks.length - 1;
     updateTrackHeaders();
@@ -429,11 +584,20 @@ function setupTimeline() {
             for (let ci = 0; ci < track.clips.length; ci++) {
                 const clip = track.clips[ci];
                 const cx = HEADER_WIDTH + (clip.startFrame / project.fps) * pps - timelineScrollX;
-                const cw = clip.duration * pps;
-                const cy = y + 4;
-                const ch = TRACK_HEIGHT - 8;
-                if (mx >= cx && mx <= cx + cw && my >= cy && my <= cy + ch) {
-                    return { trackIdx: ti, clipIdx: ci, clipX: cx, clipW: cw };
+
+                if (clip.type === 'camera_kf' || clip.type === 'light_kf') {
+                    // Keyframe marker: hit area 16x16 around point
+                    const my2 = y + TRACK_HEIGHT / 2;
+                    if (mx >= cx - 8 && mx <= cx + 8 && my >= my2 - 8 && my <= my2 + 8) {
+                        return { trackIdx: ti, clipIdx: ci, clipX: cx, clipW: 0 };
+                    }
+                } else {
+                    const cw = Math.max(clip.duration * pps, 4);
+                    const cy = y + 4;
+                    const ch = TRACK_HEIGHT - 8;
+                    if (mx >= cx && mx <= cx + cw && my >= cy && my <= cy + ch) {
+                        return { trackIdx: ti, clipIdx: ci, clipX: cx, clipW: cw };
+                    }
                 }
             }
         }
@@ -657,28 +821,87 @@ function renderTimeline() {
         tlCtx.stroke();
 
         // Clips
+        // Draw interpolation lines for camera/light keyframe tracks first
+        if ((track.type === 'camera' || track.type === 'light') && track.clips.length > 1) {
+            tlCtx.strokeStyle = track.color;
+            tlCtx.lineWidth = 1.5;
+            tlCtx.globalAlpha = 0.4;
+            tlCtx.beginPath();
+            for (let ci = 0; ci < track.clips.length; ci++) {
+                const cx = HEADER_WIDTH + (track.clips[ci].startFrame / project.fps) * pps - timelineScrollX;
+                if (ci === 0) tlCtx.moveTo(cx, y + TRACK_HEIGHT / 2);
+                else tlCtx.lineTo(cx, y + TRACK_HEIGHT / 2);
+            }
+            tlCtx.stroke();
+            tlCtx.globalAlpha = 1.0;
+        }
+
         for (let ci = 0; ci < track.clips.length; ci++) {
             const clip = track.clips[ci];
             const cx = HEADER_WIDTH + (clip.startFrame / project.fps) * pps - timelineScrollX;
-            const cw = clip.duration * pps;
-            const cy = y + 4;
-            const ch = TRACK_HEIGHT - 8;
+            const isSelected = (ti === selectedTrackIdx && ci === selectedClipIdx);
 
-            // Clip body
-            tlCtx.fillStyle = track.color;
-            tlCtx.globalAlpha = (ti === selectedTrackIdx && ci === selectedClipIdx) ? 1.0 : 0.7;
-            tlCtx.fillRect(cx, cy, cw, ch);
-            tlCtx.globalAlpha = 1.0;
+            if (clip.type === 'camera_kf' || clip.type === 'light_kf') {
+                // Keyframe marker: diamond (camera) or circle (light)
+                const my = y + TRACK_HEIGHT / 2;
+                const sz = isSelected ? 8 : 6;
+                tlCtx.fillStyle = track.color;
+                tlCtx.globalAlpha = isSelected ? 1.0 : 0.8;
+                if (clip.type === 'camera_kf') {
+                    // Diamond
+                    tlCtx.beginPath();
+                    tlCtx.moveTo(cx, my - sz);
+                    tlCtx.lineTo(cx + sz, my);
+                    tlCtx.lineTo(cx, my + sz);
+                    tlCtx.lineTo(cx - sz, my);
+                    tlCtx.closePath();
+                    tlCtx.fill();
+                } else {
+                    // Circle
+                    tlCtx.beginPath();
+                    tlCtx.arc(cx, my, sz, 0, Math.PI * 2);
+                    tlCtx.fill();
+                }
+                if (isSelected) {
+                    tlCtx.strokeStyle = '#fff';
+                    tlCtx.lineWidth = 2;
+                    tlCtx.stroke();
+                }
+                tlCtx.globalAlpha = 1.0;
+            } else {
+                // Rectangle clips (BVH, Audio)
+                const cw = Math.max(clip.duration * pps, 4);
+                const cy = y + 4;
+                const ch = TRACK_HEIGHT - 8;
 
-            // Clip border
-            tlCtx.strokeStyle = '#fff';
-            tlCtx.lineWidth = (ti === selectedTrackIdx && ci === selectedClipIdx) ? 2 : 0.5;
-            tlCtx.strokeRect(cx, cy, cw, ch);
+                tlCtx.fillStyle = track.color;
+                tlCtx.globalAlpha = isSelected ? 1.0 : 0.7;
+                tlCtx.fillRect(cx, cy, cw, ch);
+                tlCtx.globalAlpha = 1.0;
 
-            // Clip label
-            tlCtx.fillStyle = '#fff';
-            tlCtx.font = '10px sans-serif';
-            tlCtx.fillText(clip.name, cx + 4, cy + ch / 2 + 3, cw - 8);
+                // Audio waveform indicator
+                if (clip.type === 'audio') {
+                    tlCtx.strokeStyle = 'rgba(255,255,255,0.3)';
+                    tlCtx.lineWidth = 1;
+                    for (let wx = cx + 4; wx < cx + cw - 2; wx += 6) {
+                        const wh = 3 + Math.random() * (ch - 8);
+                        tlCtx.beginPath();
+                        tlCtx.moveTo(wx, cy + ch / 2 - wh / 2);
+                        tlCtx.lineTo(wx, cy + ch / 2 + wh / 2);
+                        tlCtx.stroke();
+                    }
+                }
+
+                // Clip border
+                tlCtx.strokeStyle = '#fff';
+                tlCtx.lineWidth = isSelected ? 2 : 0.5;
+                tlCtx.strokeRect(cx, cy, cw, ch);
+
+                // Clip label
+                tlCtx.fillStyle = '#fff';
+                tlCtx.font = '10px sans-serif';
+                tlCtx.fillText(clip.name, cx + 4, cy + ch / 2 + 3, cw - 8);
+            }
         }
     }
 
@@ -718,7 +941,8 @@ function updateTrackHeaders() {
         const track = project.tracks[i];
         const el = document.createElement('div');
         el.className = 'track-header' + (i === selectedTrackIdx ? ' selected' : '');
-        el.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${track.color};margin-right:6px;flex-shrink:0;"></span>${track.name}`;
+        const icon = TRACK_ICONS[track.type] || 'fa-running';
+        el.innerHTML = `<i class="fas ${icon}" style="color:${track.color};margin-right:6px;font-size:0.75rem;width:14px;text-align:center;"></i>${track.name}`;
         el.addEventListener('click', () => selectTrack(i));
         // Drop target
         el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop-target'); });
@@ -772,6 +996,15 @@ function setupPlayback() {
             e.preventDefault();
             splitClipAtPlayhead();
         }
+        if (e.code === 'KeyK') {
+            e.preventDefault();
+            // Add keyframe on selected camera or light track
+            if (selectedTrackIdx >= 0) {
+                const t = project.tracks[selectedTrackIdx];
+                if (t.type === 'camera') addCameraKeyframe(selectedTrackIdx);
+                else if (t.type === 'light') addLightKeyframe(selectedTrackIdx);
+            }
+        }
     });
 }
 
@@ -779,6 +1012,12 @@ function togglePlay() {
     playing = !playing;
     const icon = document.getElementById('pb-play-icon');
     if (icon) icon.className = playing ? 'fas fa-pause' : 'fas fa-play';
+    if (playing) {
+        startAudioPlayback();
+    } else {
+        stopAllAudio();
+        controls.enabled = true;  // re-enable OrbitControls when pausing camera playback
+    }
 }
 
 function stopPlayback() {
@@ -786,6 +1025,8 @@ function stopPlayback() {
     playheadFrame = 0;
     const icon = document.getElementById('pb-play-icon');
     if (icon) icon.className = 'fas fa-play';
+    stopAllAudio();
+    controls.enabled = true;  // re-enable OrbitControls
     applyPlayhead();
     renderTimeline();
     updatePlaybackUI();
@@ -801,39 +1042,162 @@ function stepFrame(delta) {
 function applyPlayhead() {
     const t = playheadFrame / project.fps;
     for (const track of project.tracks) {
-        if (track.muted || !track.mixer) continue;
-        // Find active clip at this time
-        let found = false;
+        if (track.muted) continue;
+        if (track.type === 'bvh') applyBvhTrack(track, t);
+        else if (track.type === 'camera') applyCameraTrack(track, t);
+        else if (track.type === 'light') applyLightTrack(track, t);
+        else if (track.type === 'audio') applyAudioTrack(track, t);
+    }
+}
+
+function applyBvhTrack(track, t) {
+    if (!track.mixer) return;
+    let found = false;
+    for (const clip of track.clips) {
+        if (!clip.animClip) continue;
+        const clipStart = clip.startFrame / project.fps;
+        const clipEnd = clipStart + clip.duration;
+        if (t >= clipStart && t < clipEnd) {
+            const localT = (t - clipStart) * clip.speed + clip.trimIn / clip.fps;
+            if (track._activeClip !== clip) {
+                track.mixer.stopAllAction();
+                if (track._activeClip?.animClip) track.mixer.uncacheClip(track._activeClip.animClip);
+                track._activeAction = track.mixer.clipAction(clip.animClip);
+                track._activeAction.setLoop(THREE.LoopOnce);
+                track._activeAction.clampWhenFinished = true;
+                track._activeAction.play();
+                track._activeClip = clip;
+            }
+            track._activeAction.time = localT;
+            track.mixer.setTime(localT);
+            found = true;
+            break;
+        }
+    }
+    if (!found && track._activeClip) {
+        track.mixer.stopAllAction();
+        track._activeClip = null;
+        track._activeAction = null;
+        if (track.skeleton) track.skeleton.skeleton.pose();
+    }
+}
+
+function applyCameraTrack(track, t) {
+    if (!track.cameraActive || !playing || track.clips.length === 0) return;
+    const frame = playheadFrame;
+    const kfs = track.clips;
+    // Find surrounding keyframes
+    let prev = null, next = null;
+    for (let i = 0; i < kfs.length; i++) {
+        if (kfs[i].startFrame <= frame) prev = kfs[i];
+        if (kfs[i].startFrame >= frame && !next) next = kfs[i];
+    }
+    if (!prev && !next) return;
+    if (!prev) prev = next;
+    if (!next) next = prev;
+
+    if (prev === next) {
+        // Exactly on or beyond last keyframe
+        camera.position.set(prev.data.position.x, prev.data.position.y, prev.data.position.z);
+        camera.rotation.set(prev.data.rotation.x, prev.data.rotation.y, prev.data.rotation.z);
+        camera.fov = prev.data.fov;
+    } else {
+        const alpha = (frame - prev.startFrame) / (next.startFrame - prev.startFrame);
+        const interp = prev.data.interpolation || 'linear';
+        const t = interp === 'smooth' ? alpha * alpha * (3 - 2 * alpha) : (interp === 'step' ? 0 : alpha);
+        camera.position.lerpVectors(
+            new THREE.Vector3(prev.data.position.x, prev.data.position.y, prev.data.position.z),
+            new THREE.Vector3(next.data.position.x, next.data.position.y, next.data.position.z), t);
+        // Slerp rotation via quaternions
+        const qPrev = new THREE.Quaternion().setFromEuler(new THREE.Euler(prev.data.rotation.x, prev.data.rotation.y, prev.data.rotation.z));
+        const qNext = new THREE.Quaternion().setFromEuler(new THREE.Euler(next.data.rotation.x, next.data.rotation.y, next.data.rotation.z));
+        const qResult = new THREE.Quaternion().slerpQuaternions(qPrev, qNext, t);
+        camera.quaternion.copy(qResult);
+        camera.fov = prev.data.fov + (next.data.fov - prev.data.fov) * t;
+    }
+    camera.updateProjectionMatrix();
+    controls.enabled = false;
+}
+
+function applyLightTrack(track, t) {
+    if (!track.light || track.clips.length === 0) return;
+    const frame = playheadFrame;
+    const kfs = track.clips;
+    let prev = null, next = null;
+    for (let i = 0; i < kfs.length; i++) {
+        if (kfs[i].startFrame <= frame) prev = kfs[i];
+        if (kfs[i].startFrame >= frame && !next) next = kfs[i];
+    }
+    if (!prev && !next) return;
+    if (!prev) prev = next;
+    if (!next) next = prev;
+
+    if (prev === next) {
+        track.light.position.set(prev.data.position.x, prev.data.position.y, prev.data.position.z);
+        track.light.color.set(prev.data.color);
+        track.light.intensity = prev.data.intensity;
+    } else {
+        const alpha = (frame - prev.startFrame) / (next.startFrame - prev.startFrame);
+        track.light.position.lerpVectors(
+            new THREE.Vector3(prev.data.position.x, prev.data.position.y, prev.data.position.z),
+            new THREE.Vector3(next.data.position.x, next.data.position.y, next.data.position.z), alpha);
+        const cPrev = new THREE.Color(prev.data.color);
+        const cNext = new THREE.Color(next.data.color);
+        track.light.color.lerpColors(cPrev, cNext, alpha);
+        track.light.intensity = prev.data.intensity + (next.data.intensity - prev.data.intensity) * alpha;
+    }
+    if (track.lightHelper) track.lightHelper.position.copy(track.light.position);
+}
+
+function applyAudioTrack(track, t) {
+    if (!track.audioCtx || !track.gainNode) return;
+    for (const clip of track.clips) {
+        if (clip.type !== 'audio' || !clip.data.audioBuffer) continue;
+        const clipStart = clip.startFrame / project.fps;
+        const clipEnd = clipStart + clip.duration;
+        if (t >= clipStart && t < clipEnd) {
+            track.gainNode.gain.value = clip.data.volume || 1;
+            // Audio playback is managed in togglePlay/stopPlayback
+            return;
+        }
+    }
+}
+
+// Audio play/stop helpers
+function startAudioPlayback() {
+    for (const track of project.tracks) {
+        if (track.type !== 'audio' || track.muted || !track.audioCtx) continue;
+        stopAudioTrack(track);
+        const t = playheadFrame / project.fps;
         for (const clip of track.clips) {
-            if (!clip.animClip) continue;
+            if (clip.type !== 'audio' || !clip.data.audioBuffer) continue;
             const clipStart = clip.startFrame / project.fps;
             const clipEnd = clipStart + clip.duration;
             if (t >= clipStart && t < clipEnd) {
-                const localT = (t - clipStart) * clip.speed + clip.trimIn / clip.fps;
-                // Only create action once per clip, reuse it
-                if (track._activeClip !== clip) {
-                    track.mixer.stopAllAction();
-                    // Uncache previous clip to avoid stale data
-                    if (track._activeClip?.animClip) track.mixer.uncacheClip(track._activeClip.animClip);
-                    track._activeAction = track.mixer.clipAction(clip.animClip);
-                    track._activeAction.setLoop(THREE.LoopOnce);
-                    track._activeAction.clampWhenFinished = true;
-                    track._activeAction.play();
-                    track._activeClip = clip;
-                }
-                track._activeAction.time = localT;
-                track.mixer.setTime(localT);
-                found = true;
-                break;
+                const source = track.audioCtx.createBufferSource();
+                source.buffer = clip.data.audioBuffer;
+                source.connect(track.gainNode);
+                track.gainNode.gain.value = clip.data.volume || 1;
+                const offset = (t - clipStart) + (clip.data.offset || 0);
+                source.start(0, offset);
+                track.sourceNode = source;
+                track._audioClip = clip;
             }
         }
-        if (!found && track._activeClip) {
-            // No clip at this time — reset to rest pose
-            track.mixer.stopAllAction();
-            track._activeClip = null;
-            track._activeAction = null;
-            if (track.skeleton) track.skeleton.skeleton.pose();
-        }
+    }
+}
+
+function stopAudioTrack(track) {
+    if (track.sourceNode) {
+        try { track.sourceNode.stop(); } catch(e) {}
+        track.sourceNode = null;
+        track._audioClip = null;
+    }
+}
+
+function stopAllAudio() {
+    for (const track of project.tracks) {
+        if (track.type === 'audio') stopAudioTrack(track);
     }
 }
 
@@ -860,96 +1224,220 @@ function updateProperties() {
     const content = document.getElementById('props-content');
     if (!content) return;
 
-    if (selectedTrackIdx >= 0 && selectedTrackIdx < project.tracks.length) {
-        const track = project.tracks[selectedTrackIdx];
-        content.innerHTML = `
-            <div class="prop-group">
-                <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:6px;">Track: ${track.name}</h3>
-                <div class="prop-row"><label>Name:</label><input type="text" value="${track.name}" id="prop-track-name"></div>
-                <div class="prop-row"><label>Modell:</label><span style="font-size:0.8rem;color:var(--accent);">${track.preset}</span></div>
-                <div class="prop-row"><label>Muted:</label><input type="checkbox" ${track.muted?'checked':''} id="prop-track-mute"></div>
-            </div>
-            <div class="prop-group">
-                <h3 style="font-size:0.85rem;color:var(--text-muted);">Position</h3>
-                <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${track.position[0]}" id="prop-pos-x"></div>
-                <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${track.position[2]}" id="prop-pos-z"></div>
-            </div>
-            <div class="prop-group">
-                <h3 style="font-size:0.85rem;color:var(--text-muted);">Clips (${track.clips.length})</h3>
-                ${track.clips.map((c, i) => `<div class="prop-clip-item" data-clip="${i}" style="font-size:0.78rem;padding:4px 6px;margin:2px 0;border-radius:3px;cursor:pointer;background:${i===selectedClipIdx?'rgba(124,92,191,0.3)':'transparent'};color:${i===selectedClipIdx?'var(--accent)':'var(--text)'};">${c.name} (${c.totalFrames}f, ${c.duration.toFixed(1)}s)</div>`).join('')}
-            </div>
-            ${selectedClipIdx >= 0 && track.clips[selectedClipIdx] ? (() => {
-                const c = track.clips[selectedClipIdx];
-                return `<div class="prop-group">
-                    <h3 style="font-size:0.85rem;color:var(--accent);">Clip: ${c.name}</h3>
-                    <div class="prop-row"><label>Start:</label><input type="number" value="${c.startFrame}" id="prop-clip-start" min="0"> <span style="font-size:0.7rem;color:var(--text-muted);">frames</span></div>
-                    <div class="prop-row"><label>Trim In:</label><input type="number" value="${c.trimIn}" id="prop-clip-trim-in" min="0"></div>
-                    <div class="prop-row"><label>Trim Out:</label><input type="number" value="${c.trimOut}" id="prop-clip-trim-out" min="0"></div>
-                    <div class="prop-row"><label>Speed:</label><input type="number" value="${c.speed}" id="prop-clip-speed" min="0.1" max="4" step="0.1"></div>
-                    <div class="prop-row"><label>Smooth:</label><input type="number" value="${c.smoothSigma}" id="prop-clip-smooth" min="0" max="10" step="0.5"></div>
-                    <div class="prop-row"><label>Boden:</label><input type="checkbox" ${c.groundFix?'checked':''} id="prop-clip-ground"></div>
-                    <div class="prop-row"><label>Blend In:</label><input type="number" value="${c.blendIn}" id="prop-clip-blend-in" min="0"> <span style="font-size:0.7rem;">f</span></div>
-                    <div class="prop-row"><label>Blend Out:</label><input type="number" value="${c.blendOut}" id="prop-clip-blend-out" min="0"> <span style="font-size:0.7rem;">f</span></div>
-                </div>`;
-            })() : ''}
-        `;
-        document.getElementById('prop-track-name')?.addEventListener('change', (e) => {
-            track.name = e.target.value;
-            updateTrackHeaders();
-        });
-        document.getElementById('prop-track-mute')?.addEventListener('change', (e) => {
-            track.muted = e.target.checked;
-        });
-        document.getElementById('prop-pos-x')?.addEventListener('change', (e) => {
-            track.position[0] = parseFloat(e.target.value) || 0;
-            track.group.position.x = track.position[0];
-        });
-        document.getElementById('prop-pos-z')?.addEventListener('change', (e) => {
-            track.position[2] = parseFloat(e.target.value) || 0;
-            track.group.position.z = track.position[2];
-        });
-        // Clip selection
-        document.querySelectorAll('.prop-clip-item').forEach(el => {
-            el.addEventListener('click', () => {
-                selectedClipIdx = parseInt(el.dataset.clip);
-                updateProperties();
-                renderTimeline();
-            });
-        });
-        // Clip property editors
-        const clip = selectedClipIdx >= 0 ? track.clips[selectedClipIdx] : null;
-        if (clip) {
-            document.getElementById('prop-clip-start')?.addEventListener('change', (e) => {
-                clip.startFrame = parseInt(e.target.value) || 0;
-                updateDuration(); renderTimeline();
-            });
-            document.getElementById('prop-clip-trim-in')?.addEventListener('change', (e) => {
-                clip.trimIn = Math.max(0, Math.min(clip.totalFrames - 1, parseInt(e.target.value) || 0));
-                updateDuration(); renderTimeline();
-            });
-            document.getElementById('prop-clip-trim-out')?.addEventListener('change', (e) => {
-                clip.trimOut = Math.max(0, parseInt(e.target.value) || 0);
-                updateDuration(); renderTimeline();
-            });
-            document.getElementById('prop-clip-speed')?.addEventListener('change', (e) => {
-                clip.speed = Math.max(0.1, parseFloat(e.target.value) || 1);
-                updateDuration(); renderTimeline();
-            });
-            document.getElementById('prop-clip-smooth')?.addEventListener('change', (e) => {
-                clip.smoothSigma = Math.max(0, parseFloat(e.target.value) || 0);
-            });
-            document.getElementById('prop-clip-ground')?.addEventListener('change', (e) => {
-                clip.groundFix = e.target.checked;
-            });
-            document.getElementById('prop-clip-blend-in')?.addEventListener('change', (e) => {
-                clip.blendIn = Math.max(0, parseInt(e.target.value) || 0);
-            });
-            document.getElementById('prop-clip-blend-out')?.addEventListener('change', (e) => {
-                clip.blendOut = Math.max(0, parseInt(e.target.value) || 0);
-            });
-        }
-    } else {
+    if (selectedTrackIdx < 0 || selectedTrackIdx >= project.tracks.length) {
         content.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">Track oder Clip auswaehlen</div>';
+        return;
+    }
+
+    const track = project.tracks[selectedTrackIdx];
+    const clip = selectedClipIdx >= 0 ? track.clips[selectedClipIdx] : null;
+    let html = '';
+
+    // --- Track header (common) ---
+    const icon = TRACK_ICONS[track.type] || 'fa-running';
+    html += `<div class="prop-group">
+        <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:6px;"><i class="fas ${icon}"></i> ${track.name}</h3>
+        <div class="prop-row"><label>Name:</label><input type="text" value="${track.name}" id="prop-track-name"></div>
+        <div class="prop-row"><label>Muted:</label><input type="checkbox" ${track.muted?'checked':''} id="prop-track-mute"></div>
+    </div>`;
+
+    // --- Type-specific track props ---
+    if (track.type === 'bvh') {
+        html += `<div class="prop-group">
+            <div class="prop-row"><label>Modell:</label><span style="font-size:0.8rem;color:var(--accent);">${track.preset}</span></div>
+            <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${track.position[0]}" id="prop-pos-x"></div>
+            <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${track.position[2]}" id="prop-pos-z"></div>
+        </div>`;
+    } else if (track.type === 'camera') {
+        html += `<div class="prop-group">
+            <div class="prop-row"><label>Aktiv:</label><input type="checkbox" ${track.cameraActive?'checked':''} id="prop-cam-active"></div>
+            <div style="margin-top:6px;">
+                <button id="prop-cam-add-kf" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-key"></i> Keyframe setzen (K)</button>
+            </div>
+            <div style="margin-top:4px;font-size:0.72rem;color:var(--text-muted);">Setzt aktuelle Kamera-Position als Keyframe am Playhead.</div>
+        </div>`;
+    } else if (track.type === 'light') {
+        const lp = track.light?.position || {x:0,y:0,z:0};
+        const lc = track.light ? '#' + track.light.color.getHexString() : '#ffffff';
+        html += `<div class="prop-group">
+            <div class="prop-row"><label>Farbe:</label><input type="color" value="${lc}" id="prop-light-color"></div>
+            <div class="prop-row"><label>Intensitaet:</label><input type="number" value="${track.light?.intensity||2}" id="prop-light-intensity" min="0" max="20" step="0.1"></div>
+            <div class="prop-row"><label>Sichtbar:</label><input type="checkbox" ${track.lightVisible?'checked':''} id="prop-light-visible"></div>
+            <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Position</h3>
+            <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${lp.x.toFixed(2)}" id="prop-light-x"></div>
+            <div class="prop-row"><label>Y:</label><input type="number" step="0.1" value="${lp.y.toFixed(2)}" id="prop-light-y"></div>
+            <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${lp.z.toFixed(2)}" id="prop-light-z"></div>
+            <div style="margin-top:6px;">
+                <button id="prop-light-add-kf" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-key"></i> Keyframe setzen</button>
+            </div>
+        </div>`;
+    } else if (track.type === 'audio') {
+        html += `<div class="prop-group">
+            <div style="margin-bottom:6px;">
+                <button id="prop-audio-load" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-folder-open"></i> Audio laden</button>
+            </div>
+        </div>`;
+    }
+
+    // --- Clips/Keyframes list ---
+    const clipLabel = (track.type === 'camera' || track.type === 'light') ? 'Keyframes' : 'Clips';
+    html += `<div class="prop-group">
+        <h3 style="font-size:0.85rem;color:var(--text-muted);">${clipLabel} (${track.clips.length})</h3>
+        ${track.clips.map((c, i) => {
+            const dur = c.type === 'camera_kf' || c.type === 'light_kf' ? `F${c.startFrame}` : `${c.duration.toFixed(1)}s`;
+            return `<div class="prop-clip-item" data-clip="${i}" style="font-size:0.78rem;padding:4px 6px;margin:2px 0;border-radius:3px;cursor:pointer;background:${i===selectedClipIdx?'rgba(124,92,191,0.3)':'transparent'};color:${i===selectedClipIdx?'var(--accent)':'var(--text)'};">${c.name} (${dur})</div>`;
+        }).join('')}
+    </div>`;
+
+    // --- Selected clip/keyframe details ---
+    if (clip) {
+        if (clip.type === 'camera_kf') {
+            const d = clip.data;
+            html += `<div class="prop-group">
+                <h3 style="font-size:0.85rem;color:var(--accent);">Kamera Keyframe</h3>
+                <div class="prop-row"><label>Frame:</label><input type="number" value="${clip.startFrame}" id="prop-kf-frame" min="0"></div>
+                <div class="prop-row"><label>Pos X:</label><input type="number" value="${d.position?.x?.toFixed(3)||0}" id="prop-kf-px" step="0.1"></div>
+                <div class="prop-row"><label>Pos Y:</label><input type="number" value="${d.position?.y?.toFixed(3)||0}" id="prop-kf-py" step="0.1"></div>
+                <div class="prop-row"><label>Pos Z:</label><input type="number" value="${d.position?.z?.toFixed(3)||0}" id="prop-kf-pz" step="0.1"></div>
+                <div class="prop-row"><label>Rot X:</label><input type="number" value="${((d.rotation?.x||0)*180/Math.PI).toFixed(1)}" id="prop-kf-rx" step="1"> °</div>
+                <div class="prop-row"><label>Rot Y:</label><input type="number" value="${((d.rotation?.y||0)*180/Math.PI).toFixed(1)}" id="prop-kf-ry" step="1"> °</div>
+                <div class="prop-row"><label>Rot Z:</label><input type="number" value="${((d.rotation?.z||0)*180/Math.PI).toFixed(1)}" id="prop-kf-rz" step="1"> °</div>
+                <div class="prop-row"><label>FOV:</label><input type="number" value="${d.fov||50}" id="prop-kf-fov" min="10" max="120"></div>
+                <div class="prop-row"><label>Interp.:</label>
+                    <select id="prop-kf-interp">
+                        <option value="linear" ${d.interpolation==='linear'?'selected':''}>Linear</option>
+                        <option value="smooth" ${d.interpolation==='smooth'?'selected':''}>Smooth</option>
+                        <option value="step" ${d.interpolation==='step'?'selected':''}>Step</option>
+                    </select>
+                </div>
+                <div style="margin-top:6px;">
+                    <button id="prop-kf-set-view" style="padding:3px 8px;font-size:0.75rem;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer;">Aktuelle Ansicht uebernehmen</button>
+                </div>
+            </div>`;
+        } else if (clip.type === 'light_kf') {
+            const d = clip.data;
+            html += `<div class="prop-group">
+                <h3 style="font-size:0.85rem;color:var(--accent);">Licht Keyframe</h3>
+                <div class="prop-row"><label>Frame:</label><input type="number" value="${clip.startFrame}" id="prop-lkf-frame" min="0"></div>
+                <div class="prop-row"><label>Pos X:</label><input type="number" value="${d.position?.x?.toFixed(2)||0}" id="prop-lkf-px" step="0.1"></div>
+                <div class="prop-row"><label>Pos Y:</label><input type="number" value="${d.position?.y?.toFixed(2)||0}" id="prop-lkf-py" step="0.1"></div>
+                <div class="prop-row"><label>Pos Z:</label><input type="number" value="${d.position?.z?.toFixed(2)||0}" id="prop-lkf-pz" step="0.1"></div>
+                <div class="prop-row"><label>Farbe:</label><input type="color" value="${d.color||'#ffffff'}" id="prop-lkf-color"></div>
+                <div class="prop-row"><label>Intensitaet:</label><input type="number" value="${d.intensity||2}" id="prop-lkf-intensity" min="0" max="20" step="0.1"></div>
+            </div>`;
+        } else if (clip.type === 'audio') {
+            const d = clip.data;
+            html += `<div class="prop-group">
+                <h3 style="font-size:0.85rem;color:var(--accent);">Audio: ${d.fileName||'?'}</h3>
+                <div class="prop-row"><label>Datei:</label><span style="font-size:0.75rem;color:var(--text-muted);">${d.fileName||'—'}</span></div>
+                <div class="prop-row"><label>Dauer:</label><span style="font-size:0.8rem;">${(d.audioDuration||0).toFixed(1)}s</span></div>
+                <div class="prop-row"><label>Start:</label><input type="number" value="${clip.startFrame}" id="prop-audio-start" min="0"> <span style="font-size:0.7rem;">f</span></div>
+                <div class="prop-row"><label>Lautstaerke:</label><input type="range" value="${(d.volume||1)*100}" id="prop-audio-vol" min="0" max="100"> <span id="prop-audio-vol-label" style="font-size:0.75rem;">${Math.round((d.volume||1)*100)}%</span></div>
+                <div class="prop-row"><label>Fade In:</label><input type="number" value="${d.fadeIn||0}" id="prop-audio-fadein" min="0"> <span style="font-size:0.7rem;">f</span></div>
+                <div class="prop-row"><label>Fade Out:</label><input type="number" value="${d.fadeOut||0}" id="prop-audio-fadeout" min="0"> <span style="font-size:0.7rem;">f</span></div>
+                <div class="prop-row"><label>Offset:</label><input type="number" value="${d.offset||0}" id="prop-audio-offset" min="0" step="0.1"> <span style="font-size:0.7rem;">s</span></div>
+            </div>`;
+        } else {
+            // BVH clip
+            html += `<div class="prop-group">
+                <h3 style="font-size:0.85rem;color:var(--accent);">Clip: ${clip.name}</h3>
+                <div class="prop-row"><label>Start:</label><input type="number" value="${clip.startFrame}" id="prop-clip-start" min="0"> <span style="font-size:0.7rem;color:var(--text-muted);">frames</span></div>
+                <div class="prop-row"><label>Trim In:</label><input type="number" value="${clip.trimIn}" id="prop-clip-trim-in" min="0"></div>
+                <div class="prop-row"><label>Trim Out:</label><input type="number" value="${clip.trimOut}" id="prop-clip-trim-out" min="0"></div>
+                <div class="prop-row"><label>Speed:</label><input type="number" value="${clip.speed}" id="prop-clip-speed" min="0.1" max="4" step="0.1"></div>
+                <div class="prop-row"><label>Smooth:</label><input type="number" value="${clip.smoothSigma}" id="prop-clip-smooth" min="0" max="10" step="0.5"></div>
+                <div class="prop-row"><label>Boden:</label><input type="checkbox" ${clip.groundFix?'checked':''} id="prop-clip-ground"></div>
+                <div class="prop-row"><label>Blend In:</label><input type="number" value="${clip.blendIn}" id="prop-clip-blend-in" min="0"> <span style="font-size:0.7rem;">f</span></div>
+                <div class="prop-row"><label>Blend Out:</label><input type="number" value="${clip.blendOut}" id="prop-clip-blend-out" min="0"> <span style="font-size:0.7rem;">f</span></div>
+            </div>`;
+        }
+    }
+
+    content.innerHTML = html;
+
+    // --- Wire up events ---
+    document.getElementById('prop-track-name')?.addEventListener('change', (e) => { track.name = e.target.value; updateTrackHeaders(); });
+    document.getElementById('prop-track-mute')?.addEventListener('change', (e) => { track.muted = e.target.checked; });
+    document.getElementById('prop-pos-x')?.addEventListener('change', (e) => { track.position[0] = parseFloat(e.target.value)||0; track.group.position.x = track.position[0]; });
+    document.getElementById('prop-pos-z')?.addEventListener('change', (e) => { track.position[2] = parseFloat(e.target.value)||0; track.group.position.z = track.position[2]; });
+
+    // Camera track
+    document.getElementById('prop-cam-active')?.addEventListener('change', (e) => { track.cameraActive = e.target.checked; });
+    document.getElementById('prop-cam-add-kf')?.addEventListener('click', () => addCameraKeyframe(selectedTrackIdx));
+
+    // Light track
+    document.getElementById('prop-light-color')?.addEventListener('input', (e) => { if (track.light) track.light.color.set(e.target.value); });
+    document.getElementById('prop-light-intensity')?.addEventListener('change', (e) => { if (track.light) track.light.intensity = parseFloat(e.target.value)||2; });
+    document.getElementById('prop-light-visible')?.addEventListener('change', (e) => { track.lightVisible = e.target.checked; if (track.lightHelper) track.lightHelper.visible = e.target.checked; });
+    ['x','y','z'].forEach(axis => {
+        document.getElementById(`prop-light-${axis}`)?.addEventListener('change', (e) => {
+            if (track.light) { track.light.position[axis] = parseFloat(e.target.value)||0; if (track.lightHelper) track.lightHelper.position.copy(track.light.position); }
+        });
+    });
+    document.getElementById('prop-light-add-kf')?.addEventListener('click', () => addLightKeyframe(selectedTrackIdx));
+
+    // Audio track
+    document.getElementById('prop-audio-load')?.addEventListener('click', () => loadAudioFile(selectedTrackIdx));
+
+    // Clip selection
+    document.querySelectorAll('.prop-clip-item').forEach(el => {
+        el.addEventListener('click', () => { selectedClipIdx = parseInt(el.dataset.clip); updateProperties(); renderTimeline(); });
+    });
+
+    // Camera keyframe editors
+    if (clip?.type === 'camera_kf') {
+        document.getElementById('prop-kf-frame')?.addEventListener('change', (e) => { clip.startFrame = parseInt(e.target.value)||0; track.clips.sort((a,b)=>a.startFrame-b.startFrame); renderTimeline(); });
+        ['px','py','pz'].forEach((id, i) => {
+            const axis = ['x','y','z'][i];
+            document.getElementById(`prop-kf-${id}`)?.addEventListener('change', (e) => { clip.data.position[axis] = parseFloat(e.target.value)||0; });
+        });
+        ['rx','ry','rz'].forEach((id, i) => {
+            const axis = ['x','y','z'][i];
+            document.getElementById(`prop-kf-${id}`)?.addEventListener('change', (e) => { clip.data.rotation[axis] = (parseFloat(e.target.value)||0)*Math.PI/180; });
+        });
+        document.getElementById('prop-kf-fov')?.addEventListener('change', (e) => { clip.data.fov = parseFloat(e.target.value)||50; });
+        document.getElementById('prop-kf-interp')?.addEventListener('change', (e) => { clip.data.interpolation = e.target.value; });
+        document.getElementById('prop-kf-set-view')?.addEventListener('click', () => {
+            clip.data.position = { x: camera.position.x, y: camera.position.y, z: camera.position.z };
+            clip.data.rotation = { x: camera.rotation.x, y: camera.rotation.y, z: camera.rotation.z };
+            clip.data.fov = camera.fov;
+            updateProperties();
+        });
+    }
+
+    // Light keyframe editors
+    if (clip?.type === 'light_kf') {
+        document.getElementById('prop-lkf-frame')?.addEventListener('change', (e) => { clip.startFrame = parseInt(e.target.value)||0; track.clips.sort((a,b)=>a.startFrame-b.startFrame); renderTimeline(); });
+        ['px','py','pz'].forEach((id, i) => {
+            const axis = ['x','y','z'][i];
+            document.getElementById(`prop-lkf-${id}`)?.addEventListener('change', (e) => { clip.data.position[axis] = parseFloat(e.target.value)||0; });
+        });
+        document.getElementById('prop-lkf-color')?.addEventListener('input', (e) => { clip.data.color = e.target.value; });
+        document.getElementById('prop-lkf-intensity')?.addEventListener('change', (e) => { clip.data.intensity = parseFloat(e.target.value)||2; });
+    }
+
+    // Audio clip editors
+    if (clip?.type === 'audio') {
+        document.getElementById('prop-audio-start')?.addEventListener('change', (e) => { clip.startFrame = parseInt(e.target.value)||0; updateDuration(); renderTimeline(); });
+        document.getElementById('prop-audio-vol')?.addEventListener('input', (e) => {
+            clip.data.volume = parseInt(e.target.value)/100;
+            document.getElementById('prop-audio-vol-label').textContent = e.target.value + '%';
+        });
+        document.getElementById('prop-audio-fadein')?.addEventListener('change', (e) => { clip.data.fadeIn = parseInt(e.target.value)||0; });
+        document.getElementById('prop-audio-fadeout')?.addEventListener('change', (e) => { clip.data.fadeOut = parseInt(e.target.value)||0; });
+        document.getElementById('prop-audio-offset')?.addEventListener('change', (e) => { clip.data.offset = parseFloat(e.target.value)||0; });
+    }
+
+    // BVH clip editors
+    if (clip && !clip.type || clip?.type === 'bvh') {
+        document.getElementById('prop-clip-start')?.addEventListener('change', (e) => { clip.startFrame = parseInt(e.target.value)||0; updateDuration(); renderTimeline(); });
+        document.getElementById('prop-clip-trim-in')?.addEventListener('change', (e) => { clip.trimIn = Math.max(0, Math.min(clip.totalFrames-1, parseInt(e.target.value)||0)); updateDuration(); renderTimeline(); });
+        document.getElementById('prop-clip-trim-out')?.addEventListener('change', (e) => { clip.trimOut = Math.max(0, parseInt(e.target.value)||0); updateDuration(); renderTimeline(); });
+        document.getElementById('prop-clip-speed')?.addEventListener('change', (e) => { clip.speed = Math.max(0.1, parseFloat(e.target.value)||1); updateDuration(); renderTimeline(); });
+        document.getElementById('prop-clip-smooth')?.addEventListener('change', (e) => { clip.smoothSigma = Math.max(0, parseFloat(e.target.value)||0); });
+        document.getElementById('prop-clip-ground')?.addEventListener('change', (e) => { clip.groundFix = e.target.checked; });
+        document.getElementById('prop-clip-blend-in')?.addEventListener('change', (e) => { clip.blendIn = Math.max(0, parseInt(e.target.value)||0); });
+        document.getElementById('prop-clip-blend-out')?.addEventListener('change', (e) => { clip.blendOut = Math.max(0, parseInt(e.target.value)||0); });
     }
 }
 
@@ -957,7 +1445,14 @@ function updateProperties() {
 // Toolbar
 // =========================================================================
 function setupToolbar() {
-    document.getElementById('btn-add-track')?.addEventListener('click', () => addTrack());
+    // Track dropdown
+    const trackDD = document.getElementById('track-dropdown');
+    document.getElementById('btn-add-track')?.addEventListener('click', (e) => { e.stopPropagation(); trackDD?.classList.toggle('open'); });
+    document.getElementById('dd-add-bvh')?.addEventListener('click', () => { trackDD?.classList.remove('open'); addTrack(); });
+    document.getElementById('dd-add-camera')?.addEventListener('click', () => { trackDD?.classList.remove('open'); addSpecialTrack('camera'); });
+    document.getElementById('dd-add-light')?.addEventListener('click', () => { trackDD?.classList.remove('open'); addSpecialTrack('light'); });
+    document.getElementById('dd-add-audio')?.addEventListener('click', () => { trackDD?.classList.remove('open'); addSpecialTrack('audio'); });
+
     document.getElementById('btn-delete-track')?.addEventListener('click', () => removeTrack(selectedTrackIdx));
     document.getElementById('btn-delete-clip')?.addEventListener('click', () => {
         if (selectedTrackIdx >= 0 && selectedClipIdx >= 0) {
@@ -985,7 +1480,11 @@ function setupToolbar() {
         e.stopPropagation();
         toolsDD.classList.toggle('open');
     });
-    document.addEventListener('click', () => toolsDD?.classList.remove('open'));
+    document.addEventListener('click', () => {
+        toolsDD?.classList.remove('open');
+        trackDD?.classList.remove('open');
+        document.getElementById('help-dropdown')?.classList.remove('open');
+    });
     document.getElementById('dd-smooth')?.addEventListener('click', () => {
         toolsDD.classList.remove('open');
         switchPropsTab('tools');
@@ -1010,6 +1509,161 @@ function setupToolbar() {
         const radiusEl = document.getElementById('tool-smooth-radius');
         if (radiusEl) radiusEl.textContent = Math.ceil(sigma * 3);
     });
+
+    // Help dropdown
+    const helpDD = document.getElementById('help-dropdown');
+    document.getElementById('btn-help')?.addEventListener('click', (e) => { e.stopPropagation(); helpDD?.classList.toggle('open'); });
+    document.getElementById('dd-help-tracks')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('tracks'); });
+    document.getElementById('dd-help-camera')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('camera'); });
+    document.getElementById('dd-help-light')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('light'); });
+    document.getElementById('dd-help-audio')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('audio'); });
+    document.getElementById('dd-help-shortcuts')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('shortcuts'); });
+    document.getElementById('help-modal-close')?.addEventListener('click', () => { document.getElementById('help-modal').style.display = 'none'; });
+    document.getElementById('help-modal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.style.display = 'none'; });
+}
+
+// =========================================================================
+// Help system
+// =========================================================================
+const HELP_CONTENT = {
+    tracks: {
+        title: 'Tracks',
+        body: `
+<p><b>BVH Studio</b> arbeitet mit verschiedenen Track-Typen in einer gemeinsamen Timeline:</p>
+<h4 style="color:var(--accent);margin:12px 0 6px;"><i class="fas fa-running"></i> BVH Track</h4>
+<ul>
+<li>Enthaelt Skelett-Animationen (BVH-Dateien)</li>
+<li>Clips aus der <b>BVH Bibliothek</b> per Doppelklick oder Drag & Drop hinzufuegen</li>
+<li>Clips koennen <b>verschoben</b> (Drag), <b>gesplittet</b> (S), <b>dupliziert</b> und <b>geloescht</b> (Del) werden</li>
+<li>Rechtsklick auf Clip fuer Kontextmenue</li>
+<li>Standard-Modell: Rig2 (konfigurierbar in Einstellungen)</li>
+</ul>
+<h4 style="color:#00bcd4;margin:12px 0 6px;"><i class="fas fa-video"></i> Kamera Track</h4>
+<ul>
+<li>Steuert die Kameraposition waehrend der Wiedergabe</li>
+<li>Keyframes setzen: <b>K</b> druecken oder Button im Eigenschaften-Tab</li>
+<li>Zwischen Keyframes wird interpoliert (Linear / Smooth / Step)</li>
+</ul>
+<h4 style="color:#ffc107;margin:12px 0 6px;"><i class="fas fa-lightbulb"></i> Licht Track</h4>
+<ul>
+<li>Erzeugt ein Punktlicht in der Szene</li>
+<li>Position, Farbe und Intensitaet ueber Eigenschaften-Panel aendern</li>
+<li>Keyframes fuer animiertes Licht</li>
+</ul>
+<h4 style="color:#4caf50;margin:12px 0 6px;"><i class="fas fa-music"></i> Audio Track</h4>
+<ul>
+<li>Audio-Datei (MP3/WAV/OGG) laden und zur Timeline synchronisieren</li>
+<li>Lautstaerke, Fade In/Out und Offset konfigurierbar</li>
+</ul>
+<p style="margin-top:12px;"><b>Track hinzufuegen:</b> Klick auf "+ Track" in der Toolbar, dann Typ waehlen.</p>
+<p><b>Track loeschen:</b> Track auswaehlen, dann Papierkorb-Button.</p>
+`},
+    camera: {
+        title: 'Kamera',
+        body: `
+<h4 style="color:var(--accent);margin:0 0 8px;">Kamera-Track Funktionen</h4>
+<p>Der Kamera-Track steuert die 3D-Kamera waehrend der Wiedergabe. Im Stopp-Modus bleibt die normale Maussteuerung (OrbitControls) aktiv.</p>
+
+<h4 style="margin:14px 0 6px;">Keyframe setzen</h4>
+<ol>
+<li>Kamera-Track in der Timeline auswaehlen</li>
+<li>Kamera mit Maus in die gewuenschte Position bewegen</li>
+<li><b>K</b> druecken oder "Keyframe setzen" Button klicken</li>
+<li>Die aktuelle Kameraposition, Rotation und FOV werden als Keyframe am Playhead gespeichert</li>
+</ol>
+
+<h4 style="margin:14px 0 6px;">Keyframe bearbeiten</h4>
+<p>Klick auf einen Keyframe (Raute ◇) in der Timeline. Im Eigenschaften-Panel erscheinen:</p>
+<ul>
+<li><b>Position X/Y/Z</b> — Kameraposition in Metern</li>
+<li><b>Rotation X/Y/Z</b> — Kamerarotation in Grad</li>
+<li><b>FOV</b> — Sichtfeld (10-120 Grad)</li>
+<li><b>Interpolation</b> — Linear / Smooth (weich) / Step (sprunghaft)</li>
+<li><b>"Aktuelle Ansicht uebernehmen"</b> — ueberschreibt den Keyframe mit der aktuellen Kameraansicht</li>
+</ul>
+
+<h4 style="margin:14px 0 6px;">Wiedergabe</h4>
+<p>Bei <b>Play</b> wird die Kamera automatisch zwischen den Keyframes interpoliert. Die Maussteuerung wird waehrend der Wiedergabe deaktiviert und beim Stopp wieder aktiviert.</p>
+<p><b>"Aktiv" Checkbox</b>: Deaktivieren um den Kamera-Track temporaer zu ignorieren.</p>
+`},
+    light: {
+        title: 'Licht',
+        body: `
+<h4 style="color:var(--accent);margin:0 0 8px;">Licht-Track Funktionen</h4>
+<p>Ein Licht-Track erzeugt ein <b>Punktlicht</b> in der 3D-Szene. Mehrere Licht-Tracks koennen gleichzeitig aktiv sein.</p>
+
+<h4 style="margin:14px 0 6px;">Licht konfigurieren</h4>
+<p>Im <b>Eigenschaften-Tab</b> (rechts) bei ausgewaehltem Licht-Track:</p>
+<ul>
+<li><b>Farbe</b> — Lichtfarbe (Color Picker)</li>
+<li><b>Intensitaet</b> — Helligkeit (0-20)</li>
+<li><b>Sichtbar</b> — Zeigt/versteckt die Lichtposition als gelbe Kugel in der Szene</li>
+<li><b>Position X/Y/Z</b> — Lichtposition in Metern</li>
+</ul>
+
+<h4 style="margin:14px 0 6px;">Licht-Keyframes</h4>
+<ol>
+<li>Licht-Track auswaehlen</li>
+<li>Position/Farbe/Intensitaet einstellen</li>
+<li><b>K</b> druecken oder "Keyframe setzen" Button klicken</li>
+<li>Bei Wiedergabe wird zwischen Keyframes interpoliert (Position, Farbe, Intensitaet)</li>
+</ol>
+
+<h4 style="margin:14px 0 6px;">Lichtposition-Helper</h4>
+<p>Die gelbe Kugel zeigt die aktuelle Lichtposition in der Szene. Ueber die Checkbox "Sichtbar" kann sie ein- und ausgeblendet werden.</p>
+`},
+    audio: {
+        title: 'Audio',
+        body: `
+<h4 style="color:var(--accent);margin:0 0 8px;">Audio-Track Funktionen</h4>
+<p>Audio-Tracks synchronisieren Audiodateien zur Timeline-Wiedergabe.</p>
+
+<h4 style="margin:14px 0 6px;">Audio laden</h4>
+<ol>
+<li>Audio-Track hinzufuegen (+ Track > Audio Track)</li>
+<li>Im Eigenschaften-Tab: "Audio laden" Button klicken</li>
+<li>MP3, WAV oder OGG Datei auswaehlen</li>
+<li>Der Audio-Clip erscheint als gruenes Rechteck in der Timeline</li>
+</ol>
+
+<h4 style="margin:14px 0 6px;">Audio bearbeiten</h4>
+<p>Klick auf den Audio-Clip in der Timeline. Im Eigenschaften-Panel:</p>
+<ul>
+<li><b>Lautstaerke</b> — Schieberegler 0-100%</li>
+<li><b>Fade In</b> — Einblende-Dauer in Frames</li>
+<li><b>Fade Out</b> — Ausblende-Dauer in Frames</li>
+<li><b>Offset</b> — Startpunkt innerhalb der Audiodatei (Sekunden)</li>
+<li><b>Start</b> — Position auf der Timeline (Frame)</li>
+</ul>
+
+<h4 style="margin:14px 0 6px;">Wiedergabe</h4>
+<p>Audio wird automatisch zur Timeline synchronisiert. Bei <b>Play</b> startet die Audiowiedergabe am aktuellen Playhead. Bei <b>Pause/Stop</b> wird die Audiowiedergabe gestoppt.</p>
+<p>Audio-Clips koennen wie BVH-Clips <b>verschoben</b> und <b>geloescht</b> werden.</p>
+`},
+    shortcuts: {
+        title: 'Tastenkuerzel',
+        body: `
+<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Space</kbd></td><td>Play / Pause</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">&#8592;</kbd> <kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">&#8594;</kbd></td><td>Frame vor / zurueck</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">S</kbd></td><td>Clip splitten am Playhead</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Del</kbd></td><td>Ausgewaehlten Clip loeschen</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">K</kbd></td><td>Kamera/Licht Keyframe setzen</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Mausrad</b></td><td>Timeline scrollen</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Ctrl + Mausrad</b></td><td>Timeline zoomen</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Mittlere Maustaste</b></td><td>Timeline pannen</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Alt + Klick</b></td><td>Timeline pannen</td></tr>
+<tr><td style="padding:6px 0;"><b>Rechtsklick auf Clip</b></td><td>Kontextmenue</td></tr>
+</table>
+`},
+};
+
+function showHelp(topic) {
+    const h = HELP_CONTENT[topic];
+    if (!h) return;
+    document.getElementById('help-modal-title').innerHTML = `<i class="fas fa-question-circle"></i> ${h.title}`;
+    document.getElementById('help-modal-body').innerHTML = h.body;
+    document.getElementById('help-modal').style.display = 'flex';
 }
 
 function switchPropsTab(tabName) {
@@ -1639,28 +2293,50 @@ function saveProject() {
     const data = {
         name: project.name,
         fps: project.fps,
-        tracks: project.tracks.map(t => ({
-            name: t.name,
-            preset: t.preset,
-            bodyType: t.bodyType,
-            color: t.color,
-            muted: t.muted,
-            position: t.position,
-            clips: t.clips.map(c => ({
-                category: c.category,
-                name: c.name,
-                totalFrames: c.totalFrames,
-                fps: c.fps,
-                startFrame: c.startFrame,
-                trimIn: c.trimIn,
-                trimOut: c.trimOut,
-                speed: c.speed,
-                smoothSigma: c.smoothSigma,
-                groundFix: c.groundFix,
-                blendIn: c.blendIn,
-                blendOut: c.blendOut,
-            })),
-        })),
+        tracks: project.tracks.map(t => {
+            const td = {
+                name: t.name,
+                type: t.type,
+                preset: t.preset,
+                bodyType: t.bodyType,
+                color: t.color,
+                muted: t.muted,
+                position: t.position,
+            };
+            // Type-specific track data
+            if (t.type === 'camera') td.cameraActive = t.cameraActive;
+            if (t.type === 'light' && t.light) {
+                td.lightColor = '#' + t.light.color.getHexString();
+                td.lightIntensity = t.light.intensity;
+                td.lightPosition = { x: t.light.position.x, y: t.light.position.y, z: t.light.position.z };
+                td.lightVisible = t.lightVisible;
+            }
+            td.clips = t.clips.map(c => {
+                const cd = {
+                    type: c.type,
+                    category: c.category,
+                    name: c.name,
+                    totalFrames: c.totalFrames,
+                    fps: c.fps,
+                    startFrame: c.startFrame,
+                    trimIn: c.trimIn,
+                    trimOut: c.trimOut,
+                    speed: c.speed,
+                    smoothSigma: c.smoothSigma,
+                    groundFix: c.groundFix,
+                    blendIn: c.blendIn,
+                    blendOut: c.blendOut,
+                };
+                // Save type-specific clip data (except audioBuffer which can't be serialized)
+                if (c.type === 'camera_kf' || c.type === 'light_kf') {
+                    cd.data = c.data;
+                } else if (c.type === 'audio') {
+                    cd.data = { fileName: c.data.fileName, audioDuration: c.data.audioDuration, volume: c.data.volume, fadeIn: c.data.fadeIn, fadeOut: c.data.fadeOut, offset: c.data.offset };
+                }
+                return cd;
+            });
+            return td;
+        }),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1687,16 +2363,33 @@ function loadProject() {
             project.fps = data.fps || 30;
 
             for (const td of (data.tracks || [])) {
-                const track = addTrack(td.name);
-                track.preset = td.preset || 'FemaleGarment';
-                track.bodyType = td.bodyType || 'Female_Caucasian';
+                const trackType = td.type || 'bvh';
+                let track;
+                if (trackType === 'bvh') {
+                    track = addTrack(td.name);
+                    track.preset = td.preset || 'FemaleGarment';
+                    track.bodyType = td.bodyType || 'Female_Caucasian';
+                } else {
+                    track = addSpecialTrack(trackType, td.name);
+                }
                 track.color = td.color || track.color;
                 track.muted = td.muted || false;
                 track.position = td.position || [0, 0, 0];
                 track.group.position.set(track.position[0], 0, track.position[2]);
 
+                // Restore type-specific track data
+                if (trackType === 'camera') track.cameraActive = td.cameraActive ?? true;
+                if (trackType === 'light' && track.light && td.lightPosition) {
+                    track.light.color.set(td.lightColor || '#ffffff');
+                    track.light.intensity = td.lightIntensity ?? 2;
+                    track.light.position.set(td.lightPosition.x, td.lightPosition.y, td.lightPosition.z);
+                    track.lightVisible = td.lightVisible ?? true;
+                    if (track.lightHelper) { track.lightHelper.position.copy(track.light.position); track.lightHelper.visible = track.lightVisible; }
+                }
+
                 for (const cd of (td.clips || [])) {
                     const clip = new Clip(cd.category, cd.name, cd.totalFrames || 100, cd.fps || 30);
+                    clip.type = cd.type || 'bvh';
                     clip.startFrame = cd.startFrame || 0;
                     clip.trimIn = cd.trimIn || 0;
                     clip.trimOut = cd.trimOut || 0;
@@ -1705,8 +2398,9 @@ function loadProject() {
                     clip.groundFix = cd.groundFix || false;
                     clip.blendIn = cd.blendIn || 0;
                     clip.blendOut = cd.blendOut || 0;
+                    if (cd.data) clip.data = cd.data;
                     track.clips.push(clip);
-                    loadClipAnimation(track, clip);
+                    if (clip.type === 'bvh') loadClipAnimation(track, clip);
                 }
             }
             updateDuration();

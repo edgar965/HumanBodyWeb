@@ -15,7 +15,7 @@
             <i class="fas fa-walking"></i> HumanBody <small>v{{ APP_VERSION }}</small>
         </div>
         <div class="sidebar-links">
-            <div class="sidebar-group {% if request.path == '/humanbody/scene/' or request.path == '/humanbody/scene-model/' or request.path == '/process/result/' or request.path == '/humanbody/theatre/' %}open{% endif %}">
+            <div class="sidebar-group {% if request.path == '/humanbody/scene/' or request.path == '/humanbody/scene-model/' or request.path == '/process/result/' or request.path == '/humanbody/theatre/' or request.path == '/humanbody/bvh-studio/' %}open{% endif %}">
                 <a href="#" class="sidebar-group-toggle">
                     <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
                     <i class="fas fa-chevron-down sidebar-chevron"></i>
@@ -38,7 +38,7 @@
                     </a>
                 </div>
             </div>
-            <div class="sidebar-group {% if 'humanbody' in request.path %}open{% endif %}">
+            <div class="sidebar-group {% if request.path == '/humanbody/config/' or request.path == '/humanbody/photo-to-3d/' or '/photo-to-3d/jobs' in request.path or request.path == '/humanbody/animations/' %}open{% endif %}">
                 <a href="#" class="sidebar-group-toggle">
                     <i class="fas fa-user"></i> <span>HumanBody</span>
                     <i class="fas fa-chevron-down sidebar-chevron"></i>
