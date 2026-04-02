@@ -6188,6 +6188,17 @@ function _bindModelGeneratorUI() {
         }
     }
 
+    // Axial scale slider
+    const axialSlider = document.getElementById('mg-axial-scale');
+    const axialVal = document.getElementById('mg-axial-scale-val');
+    if (axialSlider) axialSlider.addEventListener('input', () => {
+        const v = parseFloat(axialSlider.value);
+        if (axialVal) axialVal.textContent = v.toFixed(2);
+        if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+        _mgConfig.bone_parts[_mgSelectedBone].axialScale = v;
+        _mgAutoRegenerate();
+    });
+
     // Shape rotation sliders (degrees)
     for (const axis of ['x', 'y', 'z']) {
         const slider = document.getElementById(`mg-shape-rot-${axis}`);
@@ -6412,6 +6423,12 @@ function _mgSelectBone(boneName) {
             if (sp) sp.textContent = (off[axis] || 0).toFixed(3);
         }
     }
+
+    // Axial scale slider
+    const axSl = document.getElementById('mg-axial-scale');
+    const axVal = document.getElementById('mg-axial-scale-val');
+    if (axSl) axSl.value = part.axialScale ?? 1.0;
+    if (axVal) axVal.textContent = (part.axialScale ?? 1.0).toFixed(2);
 
     // Shape rotation sliders
     const rot = part.shapeRotation || { x: 0, y: 0, z: 0 };

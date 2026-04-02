@@ -526,18 +526,25 @@ export function generateModelMesh(skelData, swData, config) {
 
         const tailPos = headPos.clone().add(boneDir.clone().multiplyScalar(boneLen));
 
-        // Apply head/tail offsets in bone-local space
+        // Apply head/tail position offsets in WORLD space
         let effectiveHead = headPos.clone();
         let effectiveTail = tailPos.clone();
         if (part.headOffset) {
             effectiveHead.add(new THREE.Vector3(
                 part.headOffset.x || 0, part.headOffset.y || 0, part.headOffset.z || 0
-            ).applyQuaternion(wt.worldQuat));
+            ));
         }
         if (part.tailOffset) {
             effectiveTail.add(new THREE.Vector3(
                 part.tailOffset.x || 0, part.tailOffset.y || 0, part.tailOffset.z || 0
-            ).applyQuaternion(wt.worldQuat));
+            ));
+        }
+        // Apply axial scale (stretch/shrink along bone direction)
+        if (part.axialScale && part.axialScale !== 1) {
+            const mid = effectiveHead.clone().add(effectiveTail).multiplyScalar(0.5);
+            const halfDir = effectiveTail.clone().sub(effectiveHead).multiplyScalar(0.5 * part.axialScale);
+            effectiveHead = mid.clone().sub(halfDir);
+            effectiveTail = mid.clone().add(halfDir);
         }
         const effectiveLen = effectiveHead.distanceTo(effectiveTail);
         if (effectiveLen > 0.001) boneLen = effectiveLen;
