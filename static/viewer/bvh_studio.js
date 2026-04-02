@@ -429,14 +429,48 @@ function renameSelectedLibItem() {
     }
 }
 
+function removeClipsFromTracks(category, name) {
+    // Remove all clips referencing this BVH from all tracks
+    let removed = 0;
+    for (const track of project.tracks) {
+        if (track.type !== 'bvh') continue;
+        for (let i = track.clips.length - 1; i >= 0; i--) {
+            if (track.clips[i].category === category && track.clips[i].name === name) {
+                if (track.mixer) {
+                    track.mixer.stopAllAction();
+                    if (track.clips[i].animClip) track.mixer.uncacheClip(track.clips[i].animClip);
+                }
+                track.clips.splice(i, 1);
+                removed++;
+            }
+        }
+        // Hide mesh if no clips left
+        if (track.clips.length === 0 && track.mesh) track.mesh.visible = false;
+        track._activeClip = null;
+        track._activeAction = null;
+    }
+    if (removed > 0) {
+        selectedClipIdx = -1;
+        updateDuration();
+        renderTimeline();
+        updateProperties();
+        console.log(`[BVH Studio] Removed ${removed} clip(s) of ${category}/${name} from tracks`);
+    }
+}
+
 function deleteSelectedLibItem() {
     const sel = document.querySelector('.lib-item.selected');
     if (!sel) return;
     const cat = sel.dataset.category, name = sel.dataset.name;
     if (confirm(`"${name}" wirklich loeschen?`)) {
-        _libOpenCats.add(cat);  // keep folder open after delete
+        _libOpenCats.add(cat);
         _libSelectedItem = null;
-        libManage('delete', { category: cat, name }).then(r => { if (r) loadLibrary(); });
+        libManage('delete', { category: cat, name }).then(r => {
+            if (r) {
+                removeClipsFromTracks(cat, name);
+                loadLibrary();
+            }
+        });
     }
 }
 
@@ -469,7 +503,10 @@ function setupLibraryManagement() {
                 if (confirm(`"${t.name}" wirklich loeschen?`)) {
                     _libOpenCats.add(t.category);
                     _libSelectedItem = null;
-                    if (await libManage('delete', { category: t.category, name: t.name })) loadLibrary();
+                    if (await libManage('delete', { category: t.category, name: t.name })) {
+                        removeClipsFromTracks(t.category, t.name);
+                        loadLibrary();
+                    }
                 }
             }
         });
@@ -3114,6 +3151,13 @@ const SESSION_KEY = 'bvhStudio_sessionState';
 
 function saveSessionState() {
     try {
+        // Only save if there are tracks with actual content
+        const hasBvhWithClips = project.tracks.some(t => t.type === 'bvh' && t.clips.length > 0);
+        const hasSpecialTracks = project.tracks.some(t => t.type !== 'bvh');
+        if (!hasBvhWithClips && !hasSpecialTracks) {
+            sessionStorage.removeItem(SESSION_KEY);
+            return;
+        }
         const state = {
             project: buildProjectData(),
             playheadFrame,
@@ -3133,7 +3177,36 @@ async function restoreSessionState() {
         const state = JSON.parse(raw);
         if (!state.project || !state.project.tracks || state.project.tracks.length === 0) return false;
 
+        // Only restore BVH tracks that actually have clips
+        const validTracks = state.project.tracks.filter(t => t.type !== 'bvh' || (t.clips && t.clips.length > 0));
+        if (validTracks.length === 0) {
+            sessionStorage.removeItem(SESSION_KEY);
+            return false;
+        }
+        state.project.tracks = validTracks;
+
         await restoreProjectData(state.project);
+
+        // Verify restore succeeded: remove tracks that ended up with no working clips
+        const brokenTracks = [];
+        for (let i = project.tracks.length - 1; i >= 0; i--) {
+            const t = project.tracks[i];
+            if (t.type === 'bvh' && t.clips.length === 0 && !t.mesh) {
+                brokenTracks.push(i);
+            }
+        }
+        if (brokenTracks.length > 0) {
+            _undoSuppressed = true;
+            for (const idx of brokenTracks) removeTrack(idx);
+            _undoSuppressed = false;
+            console.warn(`[BVH Studio] Removed ${brokenTracks.length} broken tracks from session`);
+        }
+
+        if (project.tracks.length === 0) {
+            sessionStorage.removeItem(SESSION_KEY);
+            return false;
+        }
+
         playheadFrame = state.playheadFrame || 0;
         selectedTrackIdx = state.selectedTrackIdx ?? -1;
         selectedClipIdx = state.selectedClipIdx ?? -1;
@@ -3149,10 +3222,15 @@ async function restoreSessionState() {
         renderTimeline();
         updatePlaybackUI();
         updateProperties();
-        console.log('[BVH Studio] Session state restored');
+        console.log(`[BVH Studio] Session restored: ${project.tracks.length} tracks`);
         return true;
     } catch (e) {
-        console.warn('[BVH Studio] Session restore failed:', e);
+        console.warn('[BVH Studio] Session restore failed, clearing:', e);
+        sessionStorage.removeItem(SESSION_KEY);
+        // Clean up any half-loaded state
+        _undoSuppressed = true;
+        while (project.tracks.length > 0) removeTrack(0);
+        _undoSuppressed = false;
         return false;
     }
 }
