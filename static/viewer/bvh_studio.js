@@ -451,6 +451,13 @@ function removeClipsFromTracks(category, name) {
     }
     if (removed > 0) {
         selectedClipIdx = -1;
+        // Stop playback if no clips left
+        const anyClips = project.tracks.some(t => t.clips.length > 0);
+        if (!anyClips && playing) {
+            playing = false;
+            const icon = document.getElementById('pb-play-icon');
+            if (icon) icon.className = 'fas fa-play';
+        }
         updateDuration();
         renderTimeline();
         updateProperties();
@@ -725,12 +732,20 @@ function selectTrack(idx) {
 
 async function addClipToTrack(trackIdx, category, name, frames) {
     pushUndo('Clip hinzufuegen');
+    console.log(`[BVH Studio] addClipToTrack: trackIdx=${trackIdx}, ${category}/${name}, existingTracks=${project.tracks.length}`);
     if (trackIdx < 0 || !project.tracks[trackIdx]) {
         if (project.tracks.length === 0) addTrack();
         trackIdx = project.tracks.length - 1;
     }
     const track = project.tracks[trackIdx];
-    if (!track) return;
+    if (!track) { console.error('[BVH Studio] addClipToTrack: no track!'); return; }
+
+    // Reset mixer state so new clip plays cleanly
+    if (track.mixer) {
+        track.mixer.stopAllAction();
+        track._activeClip = null;
+        track._activeAction = null;
+    }
 
     const clip = new Clip(category, name, frames || 3000, project.fps);
 
@@ -745,6 +760,7 @@ async function addClipToTrack(trackIdx, category, name, frames) {
 
     // Load retargeted animation
     await loadClipAnimation(track, clip);
+    console.log(`[BVH Studio] addClipToTrack done: clips=${track.clips.length}, hasMixer=${!!track.mixer}, hasSkeleton=${!!track.skeleton}`);
     updateProperties();
 }
 
@@ -1471,11 +1487,12 @@ function applyPlayhead() {
     }
 }
 
+let _applyBvhLog = 0;
 function applyBvhTrack(track, t) {
-    if (!track.mixer) return;
+    if (!track.mixer) { if (_applyBvhLog++ < 3) console.warn('[applyBvh] no mixer'); return; }
     let found = false;
     for (const clip of track.clips) {
-        if (!clip.animClip) continue;
+        if (!clip.animClip) { if (_applyBvhLog++ < 3) console.warn(`[applyBvh] clip ${clip.name} has no animClip`); continue; }
         const clipStart = clip.startFrame / project.fps;
         const clipEnd = clipStart + clip.duration;
         if (t >= clipStart && t < clipEnd) {
@@ -2273,9 +2290,18 @@ function deleteSelectedClip() {
     renderTimeline();
     updateProperties();
 
-    // If no more clips on this BVH track, hide the model
-    if (track.type === 'bvh' && track.clips.length === 0 && track.mesh) {
-        track.mesh.visible = false;
+    // If no more clips on this BVH track, hide the model and stop playback
+    if (track.type === 'bvh' && track.clips.length === 0) {
+        if (track.mesh) track.mesh.visible = false;
+        if (track.skeleton) track.skeleton.skeleton.pose();
+    }
+
+    // Stop playback if no clips left anywhere
+    const anyClips = project.tracks.some(t => t.clips.length > 0);
+    if (!anyClips && playing) {
+        playing = false;
+        const icon = document.getElementById('pb-play-icon');
+        if (icon) icon.className = 'fas fa-play';
     }
     // Reset skeleton to rest pose
     if (track.skeleton) track.skeleton.skeleton.pose();
