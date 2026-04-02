@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = '0.14'
+VERSION = '0.15'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
