@@ -428,16 +428,17 @@
     /* ===== Tab bar ===== */
     .panel-tabs {
         display: flex;
+        flex-wrap: wrap;
         border-bottom: 1px solid var(--border);
         flex-shrink: 0;
     }
     .panel-tab {
-        flex: 1;
+        flex: 0 0 auto;
         text-align: center;
-        padding: 8px 0;
-        font-size: 0.75rem;
+        padding: 6px 10px;
+        font-size: 0.72rem;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.03em;
         color: var(--text-muted);
         cursor: pointer;
         border-bottom: 2px solid transparent;
@@ -758,6 +759,8 @@
                     <div class="menu-item" data-action="save">Speichern <span class="shortcut">Ctrl+S</span></div>
                     <div class="menu-item" data-action="save-as">Speichern unter... <span class="shortcut">Ctrl+Shift+S</span></div>
                     <div class="menu-sep"></div>
+                    <div class="menu-item" data-action="default-scene">Default Szene</div>
+                    <div class="menu-sep"></div>
                     <div class="menu-item" data-action="import-model">Modell importieren...</div>
                     <div class="menu-sep"></div>
                     <div class="menu-submenu-wrap">
@@ -821,6 +824,12 @@
                     <div class="menu-item" data-action="reset-camera">Kamera zur&uuml;cksetzen</div>
                 </div>
             </div>
+            <div class="menu">
+                <div class="menu-title">Hilfe</div>
+                <div class="menu-dropdown">
+                    <a class="menu-item" href="{% url 'rigging_help' %}" target="_blank" style="color:inherit;text-decoration:none;">Rigging</a>
+                </div>
+            </div>
             <div style="display:flex;align-items:center;gap:2px;margin-left:12px;">
                 <button onclick="window.__sceneUndo && window.__sceneUndo()" title="Undo (Ctrl+M)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-undo"></i></button>
                 <button onclick="window.__sceneRedo && window.__sceneRedo()" title="Redo (Ctrl+Shift+M)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-redo"></i></button>
@@ -863,6 +872,7 @@
         <!-- Tab bar -->
         <div class="panel-tabs">
             <div class="panel-tab active" data-tab="eigenschaften">Eigenschaften</div>
+            <div class="panel-tab" data-tab="kleider">Kleider</div>
             <div class="panel-tab" data-tab="assets">Assets</div>
             <div class="panel-tab" data-tab="animation">Animation</div>
             <div class="panel-tab" data-tab="szene">Szene</div>
@@ -981,6 +991,101 @@
                         </div>
                         <div id="prop-morphs-panel"></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Kleider Tab (2-stage fitting: Rig → Mesh) -->
+            <div class="tab-pane" id="tab-kleider">
+                <div class="prop-empty" id="kleider-empty">
+                    <i class="fas fa-mouse-pointer" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>
+                    Charakter ausw&auml;hlen
+                </div>
+                <div id="kleider-content" style="display:none;">
+                <div class="panel-section" data-panel-key="kleider_fit">
+                    <h3>Kleider (2-Stufen Fit) <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" id="kleider-panel">
+                        <div class="slider-row"><label>Kategorie</label>
+                            <select id="kleider-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                                <option value="">Alle</option>
+                            </select>
+                        </div>
+                        <div id="kleider-list" class="anim-tree" style="max-height:300px;margin-bottom:0;overflow-y:auto;resize:vertical;min-height:80px;">
+                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Kleider-Library...</div>
+                        </div>
+                        <div class="slider-row"><label>Knochen-Radius</label>
+                            <input type="range" id="kleider-bone-radius" min="0.5" max="3.0" step="0.1" value="1.3">
+                            <span class="slider-val" id="kleider-bone-radius-val">1.3x</span>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Fit-Parameter</div>
+                        <div class="slider-row"><label>Offset</label>
+                            <input type="range" id="kleider-offset" min="0" max="15" value="6" step="1">
+                            <span class="slider-val" id="kleider-offset-val">0.006</span>
+                        </div>
+                        <div class="slider-row"><label>Stiffness</label>
+                            <input type="range" id="kleider-stiffness" min="0" max="100" value="80" step="1">
+                            <span class="slider-val" id="kleider-stiffness-val">0.80</span>
+                        </div>
+                        <div class="slider-row"><label>Min. Abstand</label>
+                            <input type="range" id="kleider-min-dist" min="0" max="15" value="3" step="1">
+                            <span class="slider-val" id="kleider-min-dist-val">3 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Schritt-Boden</label>
+                            <input type="range" id="kleider-crotch-floor" min="-40" max="40" value="0" step="1">
+                            <span class="slider-val" id="kleider-crotch-floor-val">0 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Anheben</label>
+                            <input type="range" id="kleider-lift" min="-20" max="40" value="0" step="1">
+                            <span class="slider-val" id="kleider-lift-val">0 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Schritt-Tiefe</label>
+                            <input type="range" id="kleider-crotch-depth" min="0" max="40" value="0" step="1">
+                            <span class="slider-val" id="kleider-crotch-depth-val">0 mm</span>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
+                        <div class="slider-row"><label>Farbe</label>
+                            <input type="color" id="kleider-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                        </div>
+                        <div class="slider-row"><label>Roughness</label>
+                            <input type="range" id="kleider-roughness" min="0" max="100" value="80" step="1">
+                            <span class="slider-val" id="kleider-roughness-val">0.80</span>
+                        </div>
+                        <div class="slider-row"><label>Metalness</label>
+                            <input type="range" id="kleider-metalness" min="0" max="100" value="0" step="1">
+                            <span class="slider-val" id="kleider-metalness-val">0.00</span>
+                        </div>
+                        <!-- Region -->
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Region</div>
+                        <div class="slider-row"><label>Top</label>
+                            <input type="range" id="kleider-region-top" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="kleider-region-top-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Upper</label>
+                            <input type="range" id="kleider-region-upper" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="kleider-region-upper-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Mid</label>
+                            <input type="range" id="kleider-region-mid" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="kleider-region-mid-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Lower</label>
+                            <input type="range" id="kleider-region-lower" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="kleider-region-lower-val">0.00 m</span>
+                        </div>
+                        <div class="slider-row"><label>Bottom</label>
+                            <input type="range" id="kleider-region-bottom" min="-30" max="30" value="0" step="1">
+                            <span class="slider-val" id="kleider-region-bottom-val">0.00 m</span>
+                        </div>
+                        <div style="display:flex;gap:4px;margin-top:6px;">
+                            <button id="kleider-stage1" class="btn-toggle" style="flex:1;font-size:0.7rem;padding:6px 4px;" title="Stufe 1: Knochen-Modell erzeugen"><i class="fas fa-bone"></i> 1. Knochen</button>
+                            <button id="kleider-stage2" class="btn-toggle" style="flex:1;font-size:0.7rem;padding:6px 4px;" title="Stufe 2: Kleid um Knochen-Modell fitten"><i class="fas fa-tshirt"></i> 2. Fit Rig</button>
+                            <button id="kleider-stage3" class="btn-toggle" style="flex:1;font-size:0.7rem;padding:6px 4px;" title="Stufe 3: Verfeinerung am Body-Mesh"><i class="fas fa-user"></i> 3. Fit Body</button>
+                        </div>
+                        <div style="display:flex;gap:6px;margin-top:4px;">
+                            <button id="kleider-remove" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Kleid entfernen"><i class="fas fa-times"></i></button>
+                            <button id="kleider-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Kleider entfernen"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
 

@@ -69,6 +69,21 @@
         </div>
     </div>
 
+    <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-tshirt"></i> Kleider</h2>
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Knochen-Modell</strong>
+                <small>Welches Modell f&uuml;r Stufe 1 (Knochen-H&uuml;lle) beim Kleider-Fitting verwendet wird.</small>
+            </div>
+            <div class="settings-input">
+                <select name="kleider_bone_model" id="kleider-bone-model" style="width:100%;padding:8px;font-size:0.95rem;background:var(--bg-secondary,#1e1e2e);color:var(--text,#e0e0e0);border:1px solid var(--border,#333);border-radius:4px;">
+                    <option value="">Lade Modelle...</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
     <div class="settings-actions">
         <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Speichern
@@ -156,6 +171,27 @@
             item.style.color = 'white';
         });
     });
+
+    // Kleider bone model dropdown
+    const boneModelSelect = document.getElementById('kleider-bone-model');
+    if (boneModelSelect) {
+        const savedModel = "{{ settings.ui_prefs.kleider_bone_model|default:'Rig1'|escapejs }}";
+        fetch('/api/character/models/')
+            .then(r => r.json())
+            .then(data => {
+                boneModelSelect.innerHTML = '';
+                const presets = data.presets || [];
+                presets.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.name;
+                    opt.textContent = m.label || m.name;
+                    if (m.name === savedModel) opt.selected = true;
+                    boneModelSelect.appendChild(opt);
+                });
+                if (!boneModelSelect.value) boneModelSelect.value = savedModel;
+            })
+            .catch(() => { boneModelSelect.innerHTML = '<option>Fehler beim Laden</option>'; });
+    }
 
     // Selection opacity slider
     const range = document.getElementById('selection-opacity-range');
