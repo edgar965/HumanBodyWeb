@@ -4262,3 +4262,235 @@ def save_bvh_text(request):
         return JsonResponse({'ok': True, 'path': str(sp)})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+def _bvh_root():
+    """Return resolved BVH root directory (parent of all category folders)."""
+    from pathlib import Path
+    return Path(str(settings.HUMANBODY_BVH_DIR)).resolve().parent
+
+
+def _check_bvh_path(p):
+    """Ensure path is within BVH root. Returns resolved Path or None."""
+    from pathlib import Path
+    rp = Path(p).resolve()
+    root = _bvh_root()
+    if str(rp).startswith(str(root)):
+        return rp
+    return None
+
+
+@csrf_exempt
+def bvh_manage(request):
+    """Manage BVH files and folders.
+
+    POST /api/character/bvh-manage/
+    Body JSON with 'action' field:
+      - delete:        { action: "delete", category, name }
+      - rename:        { action: "rename", category, name, new_name }
+      - move:          { action: "move",   category, name, new_category }
+      - create_folder: { action: "create_folder", folder_name }
+      - rename_folder: { action: "rename_folder", category, new_name }
+      - delete_folder: { action: "delete_folder", category }
+    """
+    import logging
+    log = logging.getLogger('core')
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    action = data.get('action', '')
+    category = data.get('category', '')
+    name = data.get('name', '')
+    root = _bvh_root()
+
+    log.info(f'[bvh-manage] action={action}, category={category}, name={name}')
+
+    if action == 'delete':
+        if not category or not name:
+            return JsonResponse({'error': 'category + name required'}, status=400)
+        p = _check_bvh_path(root / category / f'{name}.bvh')
+        if not p or not p.is_file():
+            return JsonResponse({'error': 'File not found'}, status=404)
+        p.unlink()
+        # Also delete retarget cache JSON if exists
+        cache = p.with_suffix('.json')
+        if cache.is_file():
+            cache.unlink()
+        log.info(f'[bvh-manage] Deleted: {p}')
+        return JsonResponse({'ok': True})
+
+    elif action == 'rename':
+        new_name = data.get('new_name', '').strip()
+        if not category or not name or not new_name:
+            return JsonResponse({'error': 'category, name, new_name required'}, status=400)
+        old_p = _check_bvh_path(root / category / f'{name}.bvh')
+        new_p = _check_bvh_path(root / category / f'{new_name}.bvh')
+        if not old_p or not old_p.is_file():
+            return JsonResponse({'error': 'File not found'}, status=404)
+        if not new_p:
+            return JsonResponse({'error': 'Invalid new path'}, status=400)
+        if new_p.exists():
+            return JsonResponse({'error': f'{new_name}.bvh exists already'}, status=409)
+        old_p.rename(new_p)
+        # Rename cache too
+        old_cache = old_p.with_suffix('.json')
+        if old_cache.is_file():
+            old_cache.rename(new_p.with_suffix('.json'))
+        log.info(f'[bvh-manage] Renamed: {old_p} -> {new_p}')
+        return JsonResponse({'ok': True, 'new_name': new_name})
+
+    elif action == 'move':
+        new_category = data.get('new_category', '').strip()
+        if not category or not name or not new_category:
+            return JsonResponse({'error': 'category, name, new_category required'}, status=400)
+        old_p = _check_bvh_path(root / category / f'{name}.bvh')
+        new_dir = _check_bvh_path(root / new_category)
+        if not old_p or not old_p.is_file():
+            return JsonResponse({'error': 'File not found'}, status=404)
+        if not new_dir:
+            return JsonResponse({'error': 'Invalid target category'}, status=400)
+        new_dir.mkdir(parents=True, exist_ok=True)
+        new_p = new_dir / f'{name}.bvh'
+        if new_p.exists():
+            return JsonResponse({'error': f'{name}.bvh already in {new_category}'}, status=409)
+        import shutil
+        shutil.move(str(old_p), str(new_p))
+        # Move cache too
+        old_cache = old_p.with_suffix('.json')
+        if old_cache.is_file():
+            shutil.move(str(old_cache), str(new_p.with_suffix('.json')))
+        log.info(f'[bvh-manage] Moved: {old_p} -> {new_p}')
+        return JsonResponse({'ok': True})
+
+    elif action == 'create_folder':
+        folder_name = data.get('folder_name', '').strip()
+        if not folder_name:
+            return JsonResponse({'error': 'folder_name required'}, status=400)
+        fp = _check_bvh_path(root / folder_name)
+        if not fp:
+            return JsonResponse({'error': 'Invalid folder name'}, status=400)
+        if fp.exists():
+            return JsonResponse({'error': 'Folder already exists'}, status=409)
+        fp.mkdir(parents=True)
+        log.info(f'[bvh-manage] Created folder: {fp}')
+        return JsonResponse({'ok': True})
+
+    elif action == 'rename_folder':
+        new_name = data.get('new_name', '').strip()
+        if not category or not new_name:
+            return JsonResponse({'error': 'category + new_name required'}, status=400)
+        old_fp = _check_bvh_path(root / category)
+        new_fp = _check_bvh_path(root / new_name)
+        if not old_fp or not old_fp.is_dir():
+            return JsonResponse({'error': 'Folder not found'}, status=404)
+        if not new_fp:
+            return JsonResponse({'error': 'Invalid new name'}, status=400)
+        if new_fp.exists():
+            return JsonResponse({'error': f'Folder {new_name} already exists'}, status=409)
+        old_fp.rename(new_fp)
+        log.info(f'[bvh-manage] Renamed folder: {old_fp} -> {new_fp}')
+        return JsonResponse({'ok': True, 'new_name': new_name})
+
+    elif action == 'delete_folder':
+        if not category:
+            return JsonResponse({'error': 'category required'}, status=400)
+        fp = _check_bvh_path(root / category)
+        if not fp or not fp.is_dir():
+            return JsonResponse({'error': 'Folder not found'}, status=404)
+        # Only delete if empty
+        contents = list(fp.iterdir())
+        if contents:
+            return JsonResponse({'error': f'Folder not empty ({len(contents)} items)'}, status=409)
+        fp.rmdir()
+        log.info(f'[bvh-manage] Deleted folder: {fp}')
+        return JsonResponse({'ok': True})
+
+    else:
+        return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
+
+
+@csrf_exempt
+def studio_project_save(request):
+    """Save BVH Studio project JSON to a file on disk.
+
+    POST /api/studio/project-save/
+    Body JSON: { path: "full/path.studio.json", project: {...} }
+    """
+    import logging
+    log = logging.getLogger('core')
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    save_path = data.get('path', '').strip()
+    project_data = data.get('project')
+    if not save_path or not project_data:
+        return JsonResponse({'error': 'path + project required'}, status=400)
+
+    from pathlib import Path
+    sp = Path(save_path).resolve()
+    sp.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(str(sp), 'w', encoding='utf-8') as f:
+            json.dump(project_data, f, indent=2, ensure_ascii=False)
+        log.info(f'[studio] Project saved: {sp}')
+        return JsonResponse({'ok': True, 'path': str(sp)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def studio_project_load(request):
+    """Load BVH Studio project JSON from a file on disk.
+
+    GET /api/studio/project-load/?path=full/path.studio.json
+    """
+    import logging
+    log = logging.getLogger('core')
+
+    file_path = request.GET.get('path', '').strip()
+    if not file_path:
+        return JsonResponse({'error': 'path required'}, status=400)
+
+    from pathlib import Path
+    fp = Path(file_path).resolve()
+    if not fp.is_file():
+        return JsonResponse({'error': f'File not found: {fp}'}, status=404)
+
+    try:
+        with open(str(fp), 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        log.info(f'[studio] Project loaded: {fp}')
+        return JsonResponse({'ok': True, 'project': data, 'path': str(fp)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def studio_project_list(request):
+    """List project files in the configured project directory.
+
+    GET /api/studio/project-list/?dir=path
+    """
+    dir_path = request.GET.get('dir', '').strip()
+    if not dir_path:
+        return JsonResponse({'files': []})
+
+    from pathlib import Path
+    dp = Path(dir_path).resolve()
+    if not dp.is_dir():
+        return JsonResponse({'files': []})
+
+    files = []
+    for f in sorted(dp.glob('*.studio.json')):
+        files.append({
+            'name': f.stem.replace('.studio', ''),
+            'path': str(f),
+            'size': f.stat().st_size,
+            'modified': f.stat().st_mtime,
+        })
+    return JsonResponse({'files': files})

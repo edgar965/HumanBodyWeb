@@ -150,10 +150,12 @@ async function init() {
         timelineZoom = parseInt(prefs.studio_zoom) || 100;
         project.videoOutputPath = prefs.studio_video_output || '';
         project.bvhOutputPath = prefs.studio_bvh_output || '';
+        project.projectPath = prefs.studio_project_path || '';
     } catch (e) { /* use defaults */ }
 
     // Load BVH library
     await loadLibrary();
+    setupLibraryManagement();
 
     // Setup timeline canvas
     setupTimeline();
@@ -177,8 +179,16 @@ async function init() {
 // =========================================================================
 // BVH Library
 // =========================================================================
-async function loadLibrary() {
+// Track which category was open and which item selected so we can restore after reload
+let _libOpenCats = new Set();
+let _libSelectedItem = null;  // { category, name }
+
+async function loadLibrary(selectAfter) {
+    if (selectAfter) _libSelectedItem = selectAfter;
     try {
+        // Remember open categories before rebuild
+        document.querySelectorAll('.lib-cat.open').forEach(el => _libOpenCats.add(el.dataset.category));
+
         const resp = await fetch('/api/character/animations/');
         const data = await resp.json();
         const tree = document.getElementById('lib-tree');
@@ -190,11 +200,22 @@ async function loadLibrary() {
             const anims = categories[cat];
             const catDiv = document.createElement('div');
             catDiv.className = 'lib-cat';
+            catDiv.dataset.category = cat;
 
             const header = document.createElement('div');
             header.className = 'lib-cat-header';
             header.innerHTML = `<span class="lib-chevron"><i class="fas fa-chevron-right"></i></span> ${cat} <span style="color:var(--text-muted);font-size:0.7rem;">(${anims.length})</span>`;
-            header.addEventListener('click', () => catDiv.classList.toggle('open'));
+            header.addEventListener('click', () => { catDiv.classList.toggle('open'); if (catDiv.classList.contains('open')) _libOpenCats.add(cat); else _libOpenCats.delete(cat); });
+            // Restore open state
+            if (_libOpenCats.has(cat)) catDiv.classList.add('open');
+            // Also open if selected item is in this category
+            if (_libSelectedItem && _libSelectedItem.category === cat) catDiv.classList.add('open');
+            // Right-click on folder
+            header.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                _libCtxTarget = { type: 'folder', category: cat };
+                showLibCtx('lib-ctx-folder', e.clientX, e.clientY);
+            });
             catDiv.appendChild(header);
 
             const body = document.createElement('div');
@@ -202,6 +223,8 @@ async function loadLibrary() {
             for (const anim of anims) {
                 const item = document.createElement('div');
                 item.className = 'lib-item';
+                item.dataset.category = cat;
+                item.dataset.name = anim.name;
                 item.textContent = `${anim.name} (${anim.frames || '?'}f)`;
                 item.draggable = true;
                 item.addEventListener('dragstart', (e) => {
@@ -215,6 +238,25 @@ async function loadLibrary() {
                 item.addEventListener('dblclick', () => {
                     addClipToTrack(selectedTrackIdx >= 0 ? selectedTrackIdx : 0, cat, anim.name, anim.frames || 0);
                 });
+                // Click: select
+                item.addEventListener('click', () => {
+                    tree.querySelectorAll('.lib-item.selected').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+                    _libSelectedItem = { category: cat, name: anim.name };
+                });
+                // Restore selection
+                if (_libSelectedItem && _libSelectedItem.category === cat && _libSelectedItem.name === anim.name) {
+                    item.classList.add('selected');
+                }
+                // Right-click on file
+                item.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    tree.querySelectorAll('.lib-item.selected').forEach(el => el.classList.remove('selected'));
+                    item.classList.add('selected');
+                    _libCtxTarget = { type: 'file', category: cat, name: anim.name, frames: anim.frames || 0 };
+                    showLibCtx('lib-ctx-file', e.clientX, e.clientY);
+                });
                 body.appendChild(item);
             }
             catDiv.appendChild(body);
@@ -223,6 +265,124 @@ async function loadLibrary() {
     } catch (e) {
         console.error('[BVH Studio] Library load failed:', e);
     }
+}
+
+// =========================================================================
+// Library file management
+// =========================================================================
+let _libCtxTarget = null;
+
+function showLibCtx(menuId, x, y) {
+    document.querySelectorAll('.lib-ctx').forEach(m => m.style.display = 'none');
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    menu.style.display = 'block';
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+}
+
+async function libManage(action, data) {
+    try {
+        const resp = await fetch('/api/character/bvh-manage/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, ...data }),
+        });
+        const result = await resp.json();
+        if (!resp.ok) { alert(result.error || 'Fehler'); return null; }
+        return result;
+    } catch (e) {
+        alert('Fehler: ' + e.message);
+        return null;
+    }
+}
+
+function renameSelectedLibItem() {
+    const sel = document.querySelector('.lib-item.selected');
+    if (!sel) return;
+    const cat = sel.dataset.category, name = sel.dataset.name;
+    const newName = prompt('Neuer Name:', name);
+    if (newName && newName !== name) {
+        libManage('rename', { category: cat, name, new_name: newName }).then(r => {
+            if (r) loadLibrary({ category: cat, name: newName });
+        });
+    }
+}
+
+function deleteSelectedLibItem() {
+    const sel = document.querySelector('.lib-item.selected');
+    if (!sel) return;
+    const cat = sel.dataset.category, name = sel.dataset.name;
+    if (confirm(`"${name}" wirklich loeschen?`)) {
+        libManage('delete', { category: cat, name }).then(r => { if (r) loadLibrary(); });
+    }
+}
+
+function setupLibraryManagement() {
+    // Close context menus
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.lib-ctx').forEach(m => m.style.display = 'none');
+    });
+
+    // File context menu
+    document.querySelectorAll('#lib-ctx-file .lib-ctx-item').forEach(item => {
+        item.addEventListener('click', async () => {
+            const t = _libCtxTarget;
+            if (!t) return;
+            const action = item.dataset.action;
+            if (action === 'add') {
+                addClipToTrack(selectedTrackIdx >= 0 ? selectedTrackIdx : 0, t.category, t.name, t.frames);
+            } else if (action === 'rename') {
+                const newName = prompt('Neuer Name:', t.name);
+                if (newName && newName !== t.name) {
+                    if (await libManage('rename', { category: t.category, name: t.name, new_name: newName }))
+                        loadLibrary({ category: t.category, name: newName });
+                }
+            } else if (action === 'move') {
+                const newCat = prompt('In welchen Ordner verschieben?', t.category);
+                if (newCat && newCat !== t.category) {
+                    if (await libManage('move', { category: t.category, name: t.name, new_category: newCat })) loadLibrary();
+                }
+            } else if (action === 'delete') {
+                if (confirm(`"${t.name}" wirklich loeschen?`)) {
+                    if (await libManage('delete', { category: t.category, name: t.name })) loadLibrary();
+                }
+            }
+        });
+    });
+
+    // Folder context menu
+    document.querySelectorAll('#lib-ctx-folder .lib-ctx-item').forEach(item => {
+        item.addEventListener('click', async () => {
+            const t = _libCtxTarget;
+            if (!t) return;
+            const action = item.dataset.action;
+            if (action === 'rename-folder') {
+                const newName = prompt('Neuer Ordnername:', t.category);
+                if (newName && newName !== t.category) {
+                    if (await libManage('rename_folder', { category: t.category, new_name: newName })) loadLibrary();
+                }
+            } else if (action === 'new-folder') {
+                const name = prompt('Name des neuen Ordners:');
+                if (name) {
+                    if (await libManage('create_folder', { folder_name: name })) loadLibrary();
+                }
+            } else if (action === 'delete-folder') {
+                if (confirm(`Ordner "${t.category}" wirklich loeschen?\n(Nur wenn leer)`)) {
+                    if (await libManage('delete_folder', { category: t.category })) loadLibrary();
+                }
+            }
+        });
+    });
+
+    // Library toolbar buttons
+    document.getElementById('lib-new-folder')?.addEventListener('click', async () => {
+        const name = prompt('Name des neuen Ordners:');
+        if (name) { if (await libManage('create_folder', { folder_name: name })) loadLibrary(); }
+    });
+    document.getElementById('lib-rename')?.addEventListener('click', () => renameSelectedLibItem());
+    document.getElementById('lib-delete')?.addEventListener('click', () => deleteSelectedLibItem());
+    document.getElementById('lib-refresh')?.addEventListener('click', () => loadLibrary());
 }
 
 // =========================================================================
@@ -354,15 +514,41 @@ async function loadAudioFile(trackIdx) {
 function removeTrack(idx) {
     if (idx < 0 || idx >= project.tracks.length) return;
     const track = project.tracks[idx];
+
+    // Stop mixer
+    if (track.mixer) {
+        track.mixer.stopAllAction();
+        track.mixer = null;
+    }
+    track._activeClip = null;
+    track._activeAction = null;
+
+    // Dispose mesh + materials
+    if (track.mesh) {
+        track.group.remove(track.mesh);
+        if (track.mesh.geometry) track.mesh.geometry.dispose();
+        if (Array.isArray(track.mesh.material)) {
+            track.mesh.material.forEach(m => m.dispose());
+        } else if (track.mesh.material) {
+            track.mesh.material.dispose();
+        }
+        track.mesh = null;
+    }
+
+    // Remove group from scene (removes all children)
     scene.remove(track.group);
-    if (track.mesh) { track.mesh.geometry.dispose(); }
+    track.group = null;
+
     // Cleanup special tracks
     if (track.light) { scene.remove(track.light); track.light.dispose(); }
     if (track.lightHelper) { scene.remove(track.lightHelper); track.lightHelper.geometry.dispose(); }
     if (track.type === 'audio') stopAudioTrack(track);
+
     project.tracks.splice(idx, 1);
     if (selectedTrackIdx >= project.tracks.length) selectedTrackIdx = project.tracks.length - 1;
+    selectedClipIdx = -1;
     updateTrackHeaders();
+    updateProperties();
     renderTimeline();
 }
 
@@ -400,9 +586,19 @@ async function loadClipAnimation(track, clip) {
     try {
         const url = `/api/retarget/?category=${encodeURIComponent(clip.category)}&name=${encodeURIComponent(clip.name)}`;
         const resp = await fetch(url);
+        if (!resp.ok) {
+            const errText = await resp.text().catch(() => resp.statusText);
+            console.error(`[BVH Studio] Retarget failed for ${clip.category}/${clip.name}: ${resp.status}`);
+            clip.name = `${clip.name} (FEHLER)`;
+            renderTimeline();
+            return;
+        }
         const data = await resp.json();
 
-        if (!data.tracks || !data.frame_count) return;
+        if (!data.tracks || !data.frame_count) {
+            console.warn(`[BVH Studio] No animation data for ${clip.name}`);
+            return;
+        }
 
         clip.totalFrames = data.frame_count;
         clip.fps = data.frame_count / data.duration;
@@ -944,6 +1140,13 @@ function updateTrackHeaders() {
         const icon = TRACK_ICONS[track.type] || 'fa-running';
         el.innerHTML = `<i class="fas ${icon}" style="color:${track.color};margin-right:6px;font-size:0.75rem;width:14px;text-align:center;"></i>${track.name}`;
         el.addEventListener('click', () => selectTrack(i));
+        // Right-click: track context menu
+        el.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            selectTrack(i);
+            const ctx = document.getElementById('track-context-menu');
+            if (ctx) { ctx.style.display = ''; ctx.style.left = e.clientX + 'px'; ctx.style.top = e.clientY + 'px'; }
+        });
         // Drop target
         el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop-target'); });
         el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
@@ -990,7 +1193,8 @@ function setupPlayback() {
         if (e.code === 'ArrowRight') { e.preventDefault(); stepFrame(1); }
         if (e.code === 'Delete' || e.code === 'Backspace') {
             e.preventDefault();
-            deleteSelectedClip();
+            if (document.querySelector('.lib-item.selected')) deleteSelectedLibItem();
+            else deleteSelectedClip();
         }
         if (e.code === 'KeyS' && !e.ctrlKey) {
             e.preventDefault();
@@ -998,12 +1202,24 @@ function setupPlayback() {
         }
         if (e.code === 'KeyK') {
             e.preventDefault();
-            // Add keyframe on selected camera or light track
             if (selectedTrackIdx >= 0) {
                 const t = project.tracks[selectedTrackIdx];
                 if (t.type === 'camera') addCameraKeyframe(selectedTrackIdx);
                 else if (t.type === 'light') addLightKeyframe(selectedTrackIdx);
             }
+        }
+        if (e.code === 'KeyS' && e.ctrlKey) {
+            e.preventDefault();
+            saveProject();
+        }
+        if (e.code === 'KeyO' && e.ctrlKey) {
+            e.preventDefault();
+            loadProject();
+        }
+        if (e.key === 'F2') {
+            e.preventDefault();
+            const sel = document.querySelector('.lib-item.selected');
+            if (sel) renameSelectedLibItem();
         }
     });
 }
@@ -1470,8 +1686,12 @@ function setupToolbar() {
         const toEl = document.getElementById('export-to');
         if (toEl && (toEl.value === '0' || !toEl.value)) toEl.value = Math.round(project.duration * project.fps);
     });
-    document.getElementById('btn-save')?.addEventListener('click', saveProject);
-    document.getElementById('btn-load')?.addEventListener('click', loadProject);
+    // File dropdown
+    const fileDD = document.getElementById('file-dropdown');
+    document.getElementById('btn-file')?.addEventListener('click', (e) => { e.stopPropagation(); fileDD?.classList.toggle('open'); });
+    document.getElementById('dd-file-save')?.addEventListener('click', () => { fileDD?.classList.remove('open'); saveProject(); });
+    document.getElementById('dd-file-save-as')?.addEventListener('click', () => { fileDD?.classList.remove('open'); saveProjectAs(); });
+    document.getElementById('dd-file-load')?.addEventListener('click', () => { fileDD?.classList.remove('open'); loadProject(); });
 
     // Tools dropdown
     const toolsDD = document.getElementById('tools-dropdown');
@@ -1481,6 +1701,7 @@ function setupToolbar() {
         toolsDD.classList.toggle('open');
     });
     document.addEventListener('click', () => {
+        fileDD?.classList.remove('open');
         toolsDD?.classList.remove('open');
         trackDD?.classList.remove('open');
         document.getElementById('help-dropdown')?.classList.remove('open');
@@ -1510,6 +1731,30 @@ function setupToolbar() {
         if (radiusEl) radiusEl.textContent = Math.ceil(sigma * 3);
     });
 
+    // Track context menu
+    const trackCtx = document.getElementById('track-context-menu');
+    document.addEventListener('click', () => { if (trackCtx) trackCtx.style.display = 'none'; });
+    document.getElementById('track-ctx-delete')?.addEventListener('click', () => {
+        trackCtx.style.display = 'none';
+        if (selectedTrackIdx >= 0) removeTrack(selectedTrackIdx);
+    });
+    document.getElementById('track-ctx-rename')?.addEventListener('click', () => {
+        trackCtx.style.display = 'none';
+        if (selectedTrackIdx >= 0) {
+            const track = project.tracks[selectedTrackIdx];
+            const newName = prompt('Neuer Track-Name:', track.name);
+            if (newName && newName !== track.name) { track.name = newName; updateTrackHeaders(); updateProperties(); }
+        }
+    });
+    document.getElementById('track-ctx-mute')?.addEventListener('click', () => {
+        trackCtx.style.display = 'none';
+        if (selectedTrackIdx >= 0) {
+            const track = project.tracks[selectedTrackIdx];
+            track.muted = !track.muted;
+            updateProperties();
+        }
+    });
+
     // Help dropdown
     const helpDD = document.getElementById('help-dropdown');
     document.getElementById('btn-help')?.addEventListener('click', (e) => { e.stopPropagation(); helpDD?.classList.toggle('open'); });
@@ -1518,6 +1763,7 @@ function setupToolbar() {
     document.getElementById('dd-help-light')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('light'); });
     document.getElementById('dd-help-audio')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('audio'); });
     document.getElementById('dd-help-shortcuts')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('shortcuts'); });
+    document.getElementById('dd-help-animations')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('animations'); });
     document.getElementById('help-modal-close')?.addEventListener('click', () => { document.getElementById('help-modal').style.display = 'none'; });
     document.getElementById('help-modal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.style.display = 'none'; });
 }
@@ -1655,6 +1901,50 @@ const HELP_CONTENT = {
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Alt + Klick</b></td><td>Timeline pannen</td></tr>
 <tr><td style="padding:6px 0;"><b>Rechtsklick auf Clip</b></td><td>Kontextmenue</td></tr>
 </table>
+`},
+    animations: {
+        title: 'BVH Bibliothek verwalten',
+        body: `
+<h4 style="color:var(--accent);margin:0 0 8px;">BVH Bibliothek im Studio</h4>
+<p>Die BVH Bibliothek links zeigt alle BVH-Dateien gruppiert nach Ordnern. Animationen koennen per <b>Doppelklick</b> oder <b>Drag &amp; Drop</b> zum ausgewaehlten Track hinzugefuegt werden.</p>
+
+<h4 style="margin:14px 0 6px;">Bibliothek-Toolbar</h4>
+<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;width:40px;text-align:center;"><i class="fas fa-folder-plus"></i></td><td><b>Neuer Ordner</b> — Erstellt einen neuen Kategorie-Ordner</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;text-align:center;"><i class="fas fa-pen"></i></td><td><b>Umbenennen</b> — Benennt die ausgewaehlte Animation um</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;text-align:center;"><i class="fas fa-trash"></i></td><td><b>Loeschen</b> — Loescht die ausgewaehlte Animation</td></tr>
+<tr><td style="padding:5px 0;text-align:center;"><i class="fas fa-sync-alt"></i></td><td><b>Aktualisieren</b> — Laedt die Bibliothek neu</td></tr>
+</table>
+
+<h4 style="margin:14px 0 6px;">Kontextmenue (Rechtsklick)</h4>
+<p><b>Auf eine Animation:</b></p>
+<ul style="margin:4px 0;">
+<li><b>Zum Track hinzufuegen</b> — Fuegt die Animation als Clip zum ausgewaehlten Track hinzu</li>
+<li><b>Umbenennen</b> — Aendert den Dateinamen der BVH-Datei</li>
+<li><b>Verschieben nach...</b> — Verschiebt die Datei in einen anderen Ordner</li>
+<li><b>Loeschen</b> — Entfernt die BVH-Datei (mit Bestaetigung)</li>
+</ul>
+<p><b>Auf einen Ordner:</b></p>
+<ul style="margin:4px 0;">
+<li><b>Ordner umbenennen</b> — Aendert den Ordnernamen</li>
+<li><b>Neuer Ordner</b> — Erstellt einen neuen Ordner</li>
+<li><b>Ordner loeschen</b> — Entfernt einen leeren Ordner</li>
+</ul>
+
+<h4 style="margin:14px 0 6px;">Animation hinzufuegen</h4>
+<ul style="margin:4px 0;">
+<li><b>Doppelklick</b> auf eine Animation — fuegt sie zum ausgewaehlten Track hinzu</li>
+<li><b>Drag &amp; Drop</b> — ziehe eine Animation auf einen Track-Header oder in die Timeline</li>
+<li>Wird auf leere Stelle in der Timeline gezogen, wird automatisch ein neuer Track erstellt</li>
+</ul>
+
+<h4 style="margin:14px 0 6px;">Hinweise</h4>
+<ul style="margin:4px 0;">
+<li>Klick auf eine Animation markiert sie (lila) fuer Toolbar-Aktionen</li>
+<li>Ordner koennen nur geloescht werden wenn sie leer sind</li>
+<li>Beim Umbenennen/Verschieben wird auch die Retarget-Cache-Datei (.json) mitverschoben</li>
+<li>Alle Aenderungen werden sofort auf der Festplatte ausgefuehrt</li>
+</ul>
 `},
 };
 
@@ -2289,21 +2579,15 @@ async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toF
 // =========================================================================
 // Save / Load Project (Phase 4)
 // =========================================================================
-function saveProject() {
-    const data = {
+function buildProjectData() {
+    return {
         name: project.name,
         fps: project.fps,
         tracks: project.tracks.map(t => {
             const td = {
-                name: t.name,
-                type: t.type,
-                preset: t.preset,
-                bodyType: t.bodyType,
-                color: t.color,
-                muted: t.muted,
-                position: t.position,
+                name: t.name, type: t.type, preset: t.preset, bodyType: t.bodyType,
+                color: t.color, muted: t.muted, position: t.position,
             };
-            // Type-specific track data
             if (t.type === 'camera') td.cameraActive = t.cameraActive;
             if (t.type === 'light' && t.light) {
                 td.lightColor = '#' + t.light.color.getHexString();
@@ -2313,105 +2597,169 @@ function saveProject() {
             }
             td.clips = t.clips.map(c => {
                 const cd = {
-                    type: c.type,
-                    category: c.category,
-                    name: c.name,
-                    totalFrames: c.totalFrames,
-                    fps: c.fps,
-                    startFrame: c.startFrame,
-                    trimIn: c.trimIn,
-                    trimOut: c.trimOut,
-                    speed: c.speed,
-                    smoothSigma: c.smoothSigma,
-                    groundFix: c.groundFix,
-                    blendIn: c.blendIn,
-                    blendOut: c.blendOut,
+                    type: c.type, category: c.category, name: c.name,
+                    totalFrames: c.totalFrames, fps: c.fps, startFrame: c.startFrame,
+                    trimIn: c.trimIn, trimOut: c.trimOut, speed: c.speed,
+                    smoothSigma: c.smoothSigma, groundFix: c.groundFix,
+                    blendIn: c.blendIn, blendOut: c.blendOut,
                 };
-                // Save type-specific clip data (except audioBuffer which can't be serialized)
-                if (c.type === 'camera_kf' || c.type === 'light_kf') {
-                    cd.data = c.data;
-                } else if (c.type === 'audio') {
-                    cd.data = { fileName: c.data.fileName, audioDuration: c.data.audioDuration, volume: c.data.volume, fadeIn: c.data.fadeIn, fadeOut: c.data.fadeOut, offset: c.data.offset };
-                }
+                if (c.type === 'camera_kf' || c.type === 'light_kf') cd.data = c.data;
+                else if (c.type === 'audio') cd.data = { fileName: c.data.fileName, audioDuration: c.data.audioDuration, volume: c.data.volume, fadeIn: c.data.fadeIn, fadeOut: c.data.fadeOut, offset: c.data.offset };
                 return cd;
             });
             return td;
         }),
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url;
-    a.download = `${project.name || 'project'}.studio.json`;
-    a.click(); URL.revokeObjectURL(url);
-    console.log('[BVH Studio] Project saved');
 }
 
-function loadProject() {
+async function saveProject() {
+    // Save to configured project path on server
+    const dir = project.projectPath;
+    if (!dir) { saveProjectAs(); return; }
+    const filename = (project.name || 'project').replace(/[^a-zA-Z0-9_\-]/g, '_') + '.studio.json';
+    const sep = dir.includes('\\') ? '\\' : '/';
+    const fullPath = dir.replace(/[/\\]$/, '') + sep + filename;
+
+    try {
+        const resp = await fetch('/api/studio/project-save/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: fullPath, project: buildProjectData() }),
+        });
+        const result = await resp.json();
+        if (result.ok) {
+            project._lastSavePath = result.path;
+            console.log(`[BVH Studio] Project saved: ${result.path}`);
+            document.getElementById('studio-info').textContent = `Gespeichert: ${filename}`;
+        } else {
+            alert('Speichern fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
+        }
+    } catch (e) {
+        alert('Speichern fehlgeschlagen: ' + e.message);
+    }
+}
+
+async function saveProjectAs() {
+    // Use File System Access API for native "Save As" dialog
+    if (window.showSaveFilePicker) {
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: (project.name || 'project') + '.studio.json',
+                types: [{ description: 'BVH Studio Project', accept: { 'application/json': ['.studio.json', '.json'] } }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(JSON.stringify(buildProjectData(), null, 2));
+            await writable.close();
+            console.log(`[BVH Studio] Project saved via picker: ${handle.name}`);
+            document.getElementById('studio-info').textContent = `Gespeichert: ${handle.name}`;
+            return;
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+        }
+    }
+    // Fallback: prompt for name, save to server
+    const name = prompt('Projektname:', project.name || 'project');
+    if (!name) return;
+    project.name = name;
+    await saveProject();
+}
+
+async function loadProject() {
+    const dir = project.projectPath;
+    if (dir) {
+        // Show project list from configured directory
+        try {
+            const resp = await fetch(`/api/studio/project-list/?dir=${encodeURIComponent(dir)}`);
+            const result = await resp.json();
+            if (result.files && result.files.length > 0) {
+                const names = result.files.map(f => f.name);
+                const choice = prompt(`Projekte in ${dir}:\n\n${names.map((n, i) => `${i + 1}. ${n}`).join('\n')}\n\nNummer eingeben:`, '1');
+                if (!choice) return;
+                const idx = parseInt(choice) - 1;
+                if (idx < 0 || idx >= result.files.length) { alert('Ungueltige Auswahl.'); return; }
+                const loadResp = await fetch(`/api/studio/project-load/?path=${encodeURIComponent(result.files[idx].path)}`);
+                const loadResult = await loadResp.json();
+                if (loadResult.ok) {
+                    await restoreProjectData(loadResult.project);
+                    project._lastSavePath = loadResult.path;
+                    document.getElementById('studio-info').textContent = `Geladen: ${result.files[idx].name}`;
+                    return;
+                } else {
+                    alert('Laden fehlgeschlagen: ' + (loadResult.error || ''));
+                }
+            } else {
+                alert(`Keine Projekte in ${dir} gefunden.\nDatei manuell waehlen...`);
+            }
+        } catch (e) { /* fall through to file picker */ }
+    }
+
+    // Fallback: browser file picker
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.json,.studio.json';
     input.addEventListener('change', async () => {
         const file = input.files[0];
         if (!file) return;
         try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-
-            // Clear existing
-            while (project.tracks.length > 0) removeTrack(0);
-
-            project.name = data.name || 'Untitled';
-            project.fps = data.fps || 30;
-
-            for (const td of (data.tracks || [])) {
-                const trackType = td.type || 'bvh';
-                let track;
-                if (trackType === 'bvh') {
-                    track = addTrack(td.name);
-                    track.preset = td.preset || 'FemaleGarment';
-                    track.bodyType = td.bodyType || 'Female_Caucasian';
-                } else {
-                    track = addSpecialTrack(trackType, td.name);
-                }
-                track.color = td.color || track.color;
-                track.muted = td.muted || false;
-                track.position = td.position || [0, 0, 0];
-                track.group.position.set(track.position[0], 0, track.position[2]);
-
-                // Restore type-specific track data
-                if (trackType === 'camera') track.cameraActive = td.cameraActive ?? true;
-                if (trackType === 'light' && track.light && td.lightPosition) {
-                    track.light.color.set(td.lightColor || '#ffffff');
-                    track.light.intensity = td.lightIntensity ?? 2;
-                    track.light.position.set(td.lightPosition.x, td.lightPosition.y, td.lightPosition.z);
-                    track.lightVisible = td.lightVisible ?? true;
-                    if (track.lightHelper) { track.lightHelper.position.copy(track.light.position); track.lightHelper.visible = track.lightVisible; }
-                }
-
-                for (const cd of (td.clips || [])) {
-                    const clip = new Clip(cd.category, cd.name, cd.totalFrames || 100, cd.fps || 30);
-                    clip.type = cd.type || 'bvh';
-                    clip.startFrame = cd.startFrame || 0;
-                    clip.trimIn = cd.trimIn || 0;
-                    clip.trimOut = cd.trimOut || 0;
-                    clip.speed = cd.speed || 1;
-                    clip.smoothSigma = cd.smoothSigma || 0;
-                    clip.groundFix = cd.groundFix || false;
-                    clip.blendIn = cd.blendIn || 0;
-                    clip.blendOut = cd.blendOut || 0;
-                    if (cd.data) clip.data = cd.data;
-                    track.clips.push(clip);
-                    if (clip.type === 'bvh') loadClipAnimation(track, clip);
-                }
-            }
-            updateDuration();
-            renderTimeline();
-            updateTrackHeaders();
-            console.log(`[BVH Studio] Project loaded: ${project.name}`);
+            const data = JSON.parse(await file.text());
+            await restoreProjectData(data);
         } catch (e) {
             alert('Projekt laden fehlgeschlagen: ' + e.message);
         }
     });
     input.click();
+}
+
+async function restoreProjectData(data) {
+    // Clear existing
+    while (project.tracks.length > 0) removeTrack(0);
+
+    project.name = data.name || 'Untitled';
+    project.fps = data.fps || 30;
+
+    for (const td of (data.tracks || [])) {
+        const trackType = td.type || 'bvh';
+        let track;
+        if (trackType === 'bvh') {
+            track = addTrack(td.name);
+            track.preset = td.preset || 'FemaleGarment';
+            track.bodyType = td.bodyType || 'Female_Caucasian';
+        } else {
+            track = addSpecialTrack(trackType, td.name);
+        }
+        track.color = td.color || track.color;
+        track.muted = td.muted || false;
+        track.position = td.position || [0, 0, 0];
+        if (track.group) track.group.position.set(track.position[0], 0, track.position[2]);
+
+        if (trackType === 'camera') track.cameraActive = td.cameraActive ?? true;
+        if (trackType === 'light' && track.light && td.lightPosition) {
+            track.light.color.set(td.lightColor || '#ffffff');
+            track.light.intensity = td.lightIntensity ?? 2;
+            track.light.position.set(td.lightPosition.x, td.lightPosition.y, td.lightPosition.z);
+            track.lightVisible = td.lightVisible ?? true;
+            if (track.lightHelper) { track.lightHelper.position.copy(track.light.position); track.lightHelper.visible = track.lightVisible; }
+        }
+
+        for (const cd of (td.clips || [])) {
+            const clip = new Clip(cd.category, cd.name, cd.totalFrames || 100, cd.fps || 30);
+            clip.type = cd.type || 'bvh';
+            clip.startFrame = cd.startFrame || 0;
+            clip.trimIn = cd.trimIn || 0;
+            clip.trimOut = cd.trimOut || 0;
+            clip.speed = cd.speed || 1;
+            clip.smoothSigma = cd.smoothSigma || 0;
+            clip.groundFix = cd.groundFix || false;
+            clip.blendIn = cd.blendIn || 0;
+            clip.blendOut = cd.blendOut || 0;
+            if (cd.data) clip.data = cd.data;
+            track.clips.push(clip);
+            if (clip.type === 'bvh') loadClipAnimation(track, clip);
+        }
+    }
+    updateDuration();
+    renderTimeline();
+    updateTrackHeaders();
+    console.log(`[BVH Studio] Project loaded: ${project.name}`);
 }
 
 // =========================================================================
