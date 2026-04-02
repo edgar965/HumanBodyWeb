@@ -1436,6 +1436,10 @@
                                 <option value="oval">Oval</option>
                                 <option value="double_oval">Doppel-Oval</option>
                                 <option value="diamond">Diamant</option>
+                                <option value="tutu">Tutu</option>
+                                <option value="spiral_tutu">Spiral-Tutu</option>
+                                <option value="helix_ribbon">Spiral-Band</option>
+                                <option value="skirt">Rock</option>
                             </select>
                         </div>
                         <div class="slider-row" id="mg-overlap-row" style="display:none;">
@@ -1443,9 +1447,145 @@
                             <input type="range" id="mg-bone-overlap" min="0" max="1" step="0.05" value="0.5">
                             <span id="mg-bone-overlap-val" class="slider-val">0.50</span>
                         </div>
+                        <div id="mg-tutu-params" style="display:none;">
+                            <div class="slider-row">
+                                <label>Dicke</label>
+                                <input type="range" id="mg-tutu-thickness" min="0.002" max="0.05" step="0.001" value="0.01">
+                                <span id="mg-tutu-thickness-val" class="slider-val">0.010</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Rand-Absenkung</label>
+                                <input type="range" id="mg-tutu-droop" min="0" max="0.15" step="0.005" value="0.03">
+                                <span id="mg-tutu-droop-val" class="slider-val">0.030</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Absenkung ab</label>
+                                <input type="range" id="mg-tutu-droop-start" min="0.3" max="0.95" step="0.05" value="0.7">
+                                <span id="mg-tutu-droop-start-val" class="slider-val">0.70</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Position (hoch/runter)</label>
+                                <input type="range" id="mg-tutu-offset" min="-0.15" max="0.15" step="0.005" value="0">
+                                <span id="mg-tutu-offset-val" class="slider-val">0.000</span>
+                            </div>
+                        </div>
+                        <div id="mg-spiral-tutu-params" style="display:none;">
+                            <div class="slider-row">
+                                <label>Windungen</label>
+                                <input type="range" id="mg-spiral-winds" min="1" max="8" step="1" value="3">
+                                <span id="mg-spiral-winds-val" class="slider-val">3</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Radius oben</label>
+                                <input type="range" id="mg-spiral-start-r" min="0.05" max="0.8" step="0.01" value="0.15">
+                                <span id="mg-spiral-start-r-val" class="slider-val">0.150</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Radius unten</label>
+                                <input type="range" id="mg-spiral-end-r" min="0.05" max="0.8" step="0.01" value="0.35">
+                                <span id="mg-spiral-end-r-val" class="slider-val">0.350</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Position oben</label>
+                                <input type="range" id="mg-spiral-pos-top" min="-0.1" max="0.3" step="0.005" value="0.05">
+                                <span id="mg-spiral-pos-top-val" class="slider-val">0.050</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Position unten</label>
+                                <input type="range" id="mg-spiral-pos-bottom" min="-0.4" max="0.1" step="0.005" value="-0.15">
+                                <span id="mg-spiral-pos-bottom-val" class="slider-val">-0.150</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Dicke</label>
+                                <input type="range" id="mg-spiral-thickness" min="0.002" max="0.05" step="0.001" value="0.008">
+                                <span id="mg-spiral-thickness-val" class="slider-val">0.008</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Rand-Absenkung</label>
+                                <input type="range" id="mg-spiral-droop" min="0" max="0.15" step="0.005" value="0.02">
+                                <span id="mg-spiral-droop-val" class="slider-val">0.020</span>
+                            </div>
+                            <div class="slider-row" style="align-items:center;">
+                                <label>Innerer Rock</label>
+                                <input type="checkbox" id="mg-spiral-skirt" style="width:auto;margin-left:8px;">
+                            </div>
+                        </div>
+                        <div id="mg-helix-ribbon-params" style="display:none;">
+                            <div class="slider-row">
+                                <label>Windungen</label>
+                                <input type="range" id="mg-helix-winds" min="1" max="8" step="0.5" value="3">
+                                <span id="mg-helix-winds-val" class="slider-val">3.0</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Radius oben</label>
+                                <input type="range" id="mg-helix-start-r" min="0.05" max="0.8" step="0.01" value="0.15">
+                                <span id="mg-helix-start-r-val" class="slider-val">0.150</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Radius unten</label>
+                                <input type="range" id="mg-helix-end-r" min="0.05" max="0.8" step="0.01" value="0.35">
+                                <span id="mg-helix-end-r-val" class="slider-val">0.350</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Bandbreite</label>
+                                <input type="range" id="mg-helix-ribbon-w" min="0.01" max="0.15" step="0.005" value="0.04">
+                                <span id="mg-helix-ribbon-w-val" class="slider-val">0.040</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Position oben</label>
+                                <input type="range" id="mg-helix-pos-top" min="-0.1" max="0.3" step="0.005" value="0.05">
+                                <span id="mg-helix-pos-top-val" class="slider-val">0.050</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Position unten</label>
+                                <input type="range" id="mg-helix-pos-bottom" min="-0.4" max="0.1" step="0.005" value="-0.15">
+                                <span id="mg-helix-pos-bottom-val" class="slider-val">-0.150</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Dicke</label>
+                                <input type="range" id="mg-helix-thickness" min="0.001" max="0.03" step="0.001" value="0.005">
+                                <span id="mg-helix-thickness-val" class="slider-val">0.005</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Rand-Absenkung</label>
+                                <input type="range" id="mg-helix-droop" min="0" max="0.08" step="0.002" value="0.015">
+                                <span id="mg-helix-droop-val" class="slider-val">0.015</span>
+                            </div>
+                            <div class="slider-row" style="align-items:center;">
+                                <label>Innerer Rock</label>
+                                <input type="checkbox" id="mg-helix-skirt" style="width:auto;margin-left:8px;">
+                            </div>
+                        </div>
+                        <div id="mg-skirt-params" style="display:none;">
+                            <div class="slider-row">
+                                <label>Radius oben</label>
+                                <input type="range" id="mg-skirt-radius-top" min="0.01" max="0.5" step="0.005" value="0.08">
+                                <span id="mg-skirt-radius-top-val" class="slider-val">0.080</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Radius unten</label>
+                                <input type="range" id="mg-skirt-radius-bottom" min="0.01" max="0.8" step="0.005" value="0.25">
+                                <span id="mg-skirt-radius-bottom-val" class="slider-val">0.250</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Position oben</label>
+                                <input type="range" id="mg-skirt-pos-top" min="-0.1" max="0.3" step="0.005" value="0.02">
+                                <span id="mg-skirt-pos-top-val" class="slider-val">0.020</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Position unten</label>
+                                <input type="range" id="mg-skirt-pos-bottom" min="-0.5" max="0.1" step="0.005" value="-0.15">
+                                <span id="mg-skirt-pos-bottom-val" class="slider-val">-0.150</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Dicke</label>
+                                <input type="range" id="mg-skirt-thickness" min="0.001" max="0.03" step="0.001" value="0.005">
+                                <span id="mg-skirt-thickness-val" class="slider-val">0.005</span>
+                            </div>
+                        </div>
                         <div class="slider-row">
                             <label>Radius</label>
-                            <input type="range" id="mg-bone-radius" min="0.005" max="0.24" step="0.001" value="0.03">
+                            <input type="range" id="mg-bone-radius" min="0.005" max="0.72" step="0.001" value="0.03">
                             <span id="mg-bone-radius-val" class="slider-val">0.030</span>
                         </div>
                         <div class="slider-row">

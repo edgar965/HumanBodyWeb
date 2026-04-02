@@ -5995,8 +5995,72 @@ function _bindModelGeneratorUI() {
         _mgConfig.bone_parts[_mgSelectedBone].shape = boneShape.value;
         const overlapRow = document.getElementById('mg-overlap-row');
         if (overlapRow) overlapRow.style.display = boneShape.value === 'double_oval' ? '' : 'none';
+        const tutuParams = document.getElementById('mg-tutu-params');
+        if (tutuParams) tutuParams.style.display = boneShape.value === 'tutu' ? '' : 'none';
+        const spiralParams = document.getElementById('mg-spiral-tutu-params');
+        if (spiralParams) spiralParams.style.display = boneShape.value === 'spiral_tutu' ? '' : 'none';
+        const helixParams = document.getElementById('mg-helix-ribbon-params');
+        if (helixParams) helixParams.style.display = boneShape.value === 'helix_ribbon' ? '' : 'none';
+        const skirtParams = document.getElementById('mg-skirt-params');
+        if (skirtParams) skirtParams.style.display = boneShape.value === 'skirt' ? '' : 'none';
         _mgAutoRegenerate();
     });
+
+    // Tutu parameter sliders
+    function _tutuSlider(id, valId, prop, fmt) {
+        const el = document.getElementById(id);
+        const valEl = document.getElementById(valId);
+        if (!el) return;
+        el.addEventListener('input', () => {
+            const v = parseFloat(el.value);
+            if (valEl) valEl.textContent = v.toFixed(fmt || 3);
+            if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+            _mgConfig.bone_parts[_mgSelectedBone][prop] = v;
+            _mgAutoRegenerate();
+        });
+    }
+    _tutuSlider('mg-tutu-thickness', 'mg-tutu-thickness-val', 'tutuThickness', 3);
+    _tutuSlider('mg-tutu-droop', 'mg-tutu-droop-val', 'tutuDroop', 3);
+    _tutuSlider('mg-tutu-droop-start', 'mg-tutu-droop-start-val', 'tutuDroopStart', 2);
+    _tutuSlider('mg-tutu-offset', 'mg-tutu-offset-val', 'tutuOffset', 3);
+
+    // Spiral-Tutu sliders
+    _tutuSlider('mg-spiral-winds', 'mg-spiral-winds-val', 'spiralWinds', 0);
+    _tutuSlider('mg-spiral-start-r', 'mg-spiral-start-r-val', 'spiralStartR', 3);
+    _tutuSlider('mg-spiral-end-r', 'mg-spiral-end-r-val', 'spiralEndR', 3);
+    _tutuSlider('mg-spiral-pos-top', 'mg-spiral-pos-top-val', 'spiralPosTop', 3);
+    _tutuSlider('mg-spiral-pos-bottom', 'mg-spiral-pos-bottom-val', 'spiralPosBottom', 3);
+    _tutuSlider('mg-spiral-thickness', 'mg-spiral-thickness-val', 'tutuThickness', 3);
+    _tutuSlider('mg-spiral-droop', 'mg-spiral-droop-val', 'tutuDroop', 3);
+    const spiralSkirtCb = document.getElementById('mg-spiral-skirt');
+    if (spiralSkirtCb) spiralSkirtCb.addEventListener('change', () => {
+        if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+        _mgConfig.bone_parts[_mgSelectedBone].spiralSkirt = spiralSkirtCb.checked;
+        _mgAutoRegenerate();
+    });
+
+    // Helix ribbon sliders
+    _tutuSlider('mg-helix-winds', 'mg-helix-winds-val', 'spiralWinds', 1);
+    _tutuSlider('mg-helix-start-r', 'mg-helix-start-r-val', 'spiralStartR', 3);
+    _tutuSlider('mg-helix-end-r', 'mg-helix-end-r-val', 'spiralEndR', 3);
+    _tutuSlider('mg-helix-ribbon-w', 'mg-helix-ribbon-w-val', 'ribbonWidth', 3);
+    _tutuSlider('mg-helix-pos-top', 'mg-helix-pos-top-val', 'spiralPosTop', 3);
+    _tutuSlider('mg-helix-pos-bottom', 'mg-helix-pos-bottom-val', 'spiralPosBottom', 3);
+    _tutuSlider('mg-helix-thickness', 'mg-helix-thickness-val', 'tutuThickness', 3);
+    _tutuSlider('mg-helix-droop', 'mg-helix-droop-val', 'tutuDroop', 3);
+    const helixSkirtCb = document.getElementById('mg-helix-skirt');
+    if (helixSkirtCb) helixSkirtCb.addEventListener('change', () => {
+        if (!_mgSelectedBone || !_mgConfig.bone_parts[_mgSelectedBone]) return;
+        _mgConfig.bone_parts[_mgSelectedBone].spiralSkirt = helixSkirtCb.checked;
+        _mgAutoRegenerate();
+    });
+
+    // Skirt sliders
+    _tutuSlider('mg-skirt-radius-top', 'mg-skirt-radius-top-val', 'skirtRadiusTop', 3);
+    _tutuSlider('mg-skirt-radius-bottom', 'mg-skirt-radius-bottom-val', 'skirtRadiusBottom', 3);
+    _tutuSlider('mg-skirt-pos-top', 'mg-skirt-pos-top-val', 'skirtPosTop', 3);
+    _tutuSlider('mg-skirt-pos-bottom', 'mg-skirt-pos-bottom-val', 'skirtPosBottom', 3);
+    _tutuSlider('mg-skirt-thickness', 'mg-skirt-thickness-val', 'skirtThickness', 3);
 
     const boneRadius = document.getElementById('mg-bone-radius');
     const boneRadiusVal = document.getElementById('mg-bone-radius-val');
@@ -6208,6 +6272,58 @@ function _mgSelectBone(boneName) {
     const overlapVal = document.getElementById('mg-bone-overlap-val');
     if (overlapSlider) overlapSlider.value = part.overlap ?? 0.5;
     if (overlapVal) overlapVal.textContent = (part.overlap ?? 0.5).toFixed(2);
+
+    // Shape-specific params — show/hide based on shape
+    const tutuParams = document.getElementById('mg-tutu-params');
+    if (tutuParams) tutuParams.style.display = (part.shape === 'tutu') ? '' : 'none';
+    const spiralParams = document.getElementById('mg-spiral-tutu-params');
+    if (spiralParams) spiralParams.style.display = (part.shape === 'spiral_tutu') ? '' : 'none';
+    const spiralSkirtCb = document.getElementById('mg-spiral-skirt');
+    if (spiralSkirtCb) spiralSkirtCb.checked = !!part.spiralSkirt;
+    const helixParams = document.getElementById('mg-helix-ribbon-params');
+    if (helixParams) helixParams.style.display = (part.shape === 'helix_ribbon') ? '' : 'none';
+    const helixSkirtCb = document.getElementById('mg-helix-skirt');
+    if (helixSkirtCb) helixSkirtCb.checked = !!part.spiralSkirt;
+    const skirtParams = document.getElementById('mg-skirt-params');
+    if (skirtParams) skirtParams.style.display = (part.shape === 'skirt') ? '' : 'none';
+
+    const shapeSliders = [
+        // Tutu
+        ['mg-tutu-thickness', 'mg-tutu-thickness-val', 'tutuThickness', 0.01, 3],
+        ['mg-tutu-droop', 'mg-tutu-droop-val', 'tutuDroop', 0.03, 3],
+        ['mg-tutu-droop-start', 'mg-tutu-droop-start-val', 'tutuDroopStart', 0.7, 2],
+        ['mg-tutu-offset', 'mg-tutu-offset-val', 'tutuOffset', 0, 3],
+        // Spiral-Tutu
+        ['mg-spiral-winds', 'mg-spiral-winds-val', 'spiralWinds', 3, 0],
+        ['mg-spiral-start-r', 'mg-spiral-start-r-val', 'spiralStartR', 0.15, 3],
+        ['mg-spiral-end-r', 'mg-spiral-end-r-val', 'spiralEndR', 0.35, 3],
+        ['mg-spiral-pos-top', 'mg-spiral-pos-top-val', 'spiralPosTop', 0.05, 3],
+        ['mg-spiral-pos-bottom', 'mg-spiral-pos-bottom-val', 'spiralPosBottom', -0.15, 3],
+        ['mg-spiral-thickness', 'mg-spiral-thickness-val', 'tutuThickness', 0.008, 3],
+        ['mg-spiral-droop', 'mg-spiral-droop-val', 'tutuDroop', 0.02, 3],
+        // Helix ribbon
+        ['mg-helix-winds', 'mg-helix-winds-val', 'spiralWinds', 3, 1],
+        ['mg-helix-start-r', 'mg-helix-start-r-val', 'spiralStartR', 0.15, 3],
+        ['mg-helix-end-r', 'mg-helix-end-r-val', 'spiralEndR', 0.35, 3],
+        ['mg-helix-ribbon-w', 'mg-helix-ribbon-w-val', 'ribbonWidth', 0.04, 3],
+        ['mg-helix-pos-top', 'mg-helix-pos-top-val', 'spiralPosTop', 0.05, 3],
+        ['mg-helix-pos-bottom', 'mg-helix-pos-bottom-val', 'spiralPosBottom', -0.15, 3],
+        ['mg-helix-thickness', 'mg-helix-thickness-val', 'tutuThickness', 0.005, 3],
+        ['mg-helix-droop', 'mg-helix-droop-val', 'tutuDroop', 0.015, 3],
+        // Skirt
+        ['mg-skirt-radius-top', 'mg-skirt-radius-top-val', 'skirtRadiusTop', 0.08, 3],
+        ['mg-skirt-radius-bottom', 'mg-skirt-radius-bottom-val', 'skirtRadiusBottom', 0.25, 3],
+        ['mg-skirt-pos-top', 'mg-skirt-pos-top-val', 'skirtPosTop', 0.02, 3],
+        ['mg-skirt-pos-bottom', 'mg-skirt-pos-bottom-val', 'skirtPosBottom', -0.15, 3],
+        ['mg-skirt-thickness', 'mg-skirt-thickness-val', 'skirtThickness', 0.005, 3],
+    ];
+    for (const [slId, valId, prop, def, dec] of shapeSliders) {
+        const sl = document.getElementById(slId);
+        const sp = document.getElementById(valId);
+        const v = part[prop] ?? def;
+        if (sl) sl.value = v;
+        if (sp) sp.textContent = dec === 0 ? String(Math.round(v)) : v.toFixed(dec);
+    }
 
     // Head/Tail offset sliders
     for (const end of ['head', 'tail']) {
