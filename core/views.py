@@ -3172,6 +3172,12 @@ def app_settings_scene(request):
             s.expanded_panels_scene = json.dumps(scene_panels)
             opacity = float(request.POST.get('selection_opacity', 0.3))
             s.selection_opacity = max(0.0, min(1.0, opacity))
+            # Kleider settings
+            prefs = s.ui_prefs or {}
+            bone_model = request.POST.get('kleider_bone_model', '').strip()
+            if bone_model:
+                prefs['kleider_bone_model'] = bone_model
+            s.ui_prefs = prefs
             s.save()
             messages.success(request, 'Settings saved.')
         except (ValueError, TypeError):

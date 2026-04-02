@@ -830,8 +830,8 @@ async function init() {
             const expanded = s.expanded_panels_scene;
             if (Array.isArray(expanded)) {
                 document.querySelectorAll('.panel-section[data-panel-key]').forEach(panel => {
-                    // Skip Modell tab panels — they manage their own state
-                    if (panel.closest('#tab-modell')) return;
+                    // Skip Modell + Kleider tab panels — they manage their own state
+                    if (panel.closest('#tab-modell') || panel.closest('#tab-kleider')) return;
                     if (expanded.includes(panel.dataset.panelKey)) {
                         panel.classList.remove('collapsed');
                     } else {
@@ -869,6 +869,7 @@ async function init() {
 
     // Asset + Animation panels
     loadGarmentUI();
+    loadKleiderUI();
     loadHairUI();
     loadClothUI();
     loadAnimationUI();
@@ -918,6 +919,8 @@ async function init() {
         if (characters.size === 0) {
             await loadDefaultCharacter();
         }
+        // Update Kleider tab visibility now that character is loaded
+        if (typeof _updateKleiderVisibility === 'function') _updateKleiderVisibility();
         // Auto-load default animation from settings (if set and no session restore)
         if (_defaultAnimUrl && !sessionStorage.getItem(SESSION_KEY)) {
             try {
@@ -1371,6 +1374,11 @@ function handleMenuAction(action) {
             break;
         case 'save-as':
             openSaveDialog();
+            break;
+        case 'default-scene':
+            // Clear session state, reload page → loadDefaultCharacter() runs on fresh load
+            sessionStorage.removeItem(SESSION_KEY);
+            window.location.reload();
             break;
         case 'import-model':
             importModelFromFilePicker();
@@ -5335,6 +5343,460 @@ async function _doGarmentFit() {
     } catch (e) {
         _refitting = false;
         console.error('Garment fit failed:', e);
+    }
+}
+
+// =========================================================================
+// Kleider Tab (2-Stage Fitting: Rig → Mesh)
+// =========================================================================
+
+let _selectedKleiderId = null;
+
+async function loadKleiderUI() {
+    _bindSlider('kleider-bone-radius', 'kleider-bone-radius-val', v => parseFloat(v).toFixed(1) + 'x');
+    _bindSlider('kleider-offset', 'kleider-offset-val', v => (v / 1000).toFixed(3));
+    _bindSlider('kleider-stiffness', 'kleider-stiffness-val', v => (v / 100).toFixed(2));
+    _bindSlider('kleider-min-dist', 'kleider-min-dist-val', v => v + ' mm');
+    _bindSlider('kleider-crotch-floor', 'kleider-crotch-floor-val', v => v + ' mm');
+    _bindSlider('kleider-lift', 'kleider-lift-val', v => v + ' mm');
+    _bindSlider('kleider-crotch-depth', 'kleider-crotch-depth-val', v => v + ' mm');
+    _bindSlider('kleider-roughness', 'kleider-roughness-val', v => (v / 100).toFixed(2));
+    _bindSlider('kleider-metalness', 'kleider-metalness-val', v => (v / 100).toFixed(2));
+
+    // Material: real-time client-side updates
+    const kRough = document.getElementById('kleider-roughness');
+    if (kRough) kRough.addEventListener('input', () => {
+        if (_syncingSliders) return;
+        const sel = _selectedKleiderMesh();
+        if (sel) { sel.mesh.material.roughness = _sliderVal('kleider-roughness') / 100; }
+    });
+    const kMetal = document.getElementById('kleider-metalness');
+    if (kMetal) kMetal.addEventListener('input', () => {
+        if (_syncingSliders) return;
+        const sel = _selectedKleiderMesh();
+        if (sel) { sel.mesh.material.metalness = _sliderVal('kleider-metalness') / 100; }
+    });
+    const kColor = document.getElementById('kleider-color');
+    if (kColor) kColor.addEventListener('input', () => {
+        if (_syncingSliders) return;
+        const sel = _selectedKleiderMesh();
+        if (sel) { sel.mesh.material.color.set(kColor.value); }
+    });
+
+    // Fit sliders: debounced refit
+    let _kleiderRefitTimer = null;
+    function _debouncedKleiderRefit() {
+        if (_syncingSliders) return;
+        const sel = _selectedKleiderMesh();
+        if (!sel || !sel.key.startsWith('kld_')) return;
+        _selectedKleiderId = sel.key.slice(4);
+        clearTimeout(_kleiderRefitTimer);
+        _kleiderRefitTimer = setTimeout(() => _doKleiderFit(), 400);
+    }
+    for (const id of ['kleider-offset', 'kleider-stiffness', 'kleider-min-dist',
+                       'kleider-crotch-floor', 'kleider-lift', 'kleider-crotch-depth']) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', _debouncedKleiderRefit);
+    }
+
+    // Region sliders
+    for (const rid of REGION_IDS) {
+        _bindSlider(`kleider-region-${rid}`, `kleider-region-${rid}-val`, v => (v / 100).toFixed(2) + ' m');
+        const rEl = document.getElementById(`kleider-region-${rid}`);
+        if (rEl) rEl.addEventListener('input', () => {
+            if (_syncingSliders) return;
+            const sel = _selectedKleiderMesh();
+            if (!sel) return;
+            _applyGarmentRegionOffsets(sel.inst, sel.key);
+        });
+    }
+
+    const catSelect = document.getElementById('kleider-category');
+    if (catSelect) catSelect.addEventListener('change', () => _renderKleiderList());
+
+    const stage1Btn = document.getElementById('kleider-stage1');
+    if (stage1Btn) stage1Btn.addEventListener('click', () => _doKleiderStage1());
+    const stage2Btn = document.getElementById('kleider-stage2');
+    if (stage2Btn) stage2Btn.addEventListener('click', () => _doKleiderFit('rig_hull'));
+    const stage3Btn = document.getElementById('kleider-stage3');
+    if (stage3Btn) stage3Btn.addEventListener('click', () => _doKleiderFit('body_refine'));
+
+    const removeBtn = document.getElementById('kleider-remove');
+    if (removeBtn) removeBtn.addEventListener('click', () => {
+        if (_selectedKleiderId && _selectedSubMesh) _removeSubMesh(_selectedSubMesh);
+    });
+
+    const removeAllBtn = document.getElementById('kleider-remove-all');
+    if (removeAllBtn) removeAllBtn.addEventListener('click', () => {
+        const inst = _selectedInst();
+        if (!inst) return;
+        const keys = Object.keys(inst.clothMeshes).filter(k => k.startsWith('kld_'));
+        for (const key of keys) {
+            const t = { type: 'cloth', key, meshObj: inst.clothMeshes[key], charId: inst.id };
+            _removeSubMesh(t);
+        }
+    });
+
+    // Load garment catalog if not already loaded, then populate Kleider list
+    async function _ensureKleiderCatalog() {
+        if (_garmentCatalog.length === 0) {
+            try {
+                const resp = await fetch('/api/character/garment/library/');
+                const data = await resp.json();
+                if (data.garments) {
+                    for (const cat of Object.keys(data.garments)) {
+                        for (const g of data.garments[cat]) {
+                            g._category = cat;
+                            _garmentCatalog.push(g);
+                        }
+                    }
+                }
+            } catch(e) { console.warn('Kleider: failed to load catalog', e); }
+        }
+    }
+    const waitForCatalog = setInterval(async () => {
+        await _ensureKleiderCatalog();
+        if (_garmentCatalog.length > 0) {
+            clearInterval(waitForCatalog);
+            // Populate category select
+            if (catSelect) {
+                const cats = [...new Set(_garmentCatalog.map(g => g._category))];
+                cats.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                    catSelect.appendChild(opt);
+                });
+            }
+            _renderKleiderList();
+
+            // Restore last selected garment from settings
+            fetch('/api/settings/humanbody/').then(r => r.json()).then(s => {
+                const lastId = s.ui_prefs?.last_kleider_id;
+                if (lastId) {
+                    // Delay to ensure DOM is fully rendered after _renderKleiderList()
+                    setTimeout(() => _kleiderSelectById(lastId), 300);
+                }
+            }).catch(() => {});
+        }
+    }, 200);
+
+    // Show/hide content based on character selection — check immediately and on tab switch
+    function _updateKleiderVisibility() {
+        const emptyEl = document.getElementById('kleider-empty');
+        const contentEl = document.getElementById('kleider-content');
+        if (!emptyEl || !contentEl) return;
+        const inst = _selectedInst();
+        if (inst) { emptyEl.style.display = 'none'; contentEl.style.display = ''; }
+        else { emptyEl.style.display = ''; contentEl.style.display = 'none'; }
+    }
+    _updateKleiderVisibility();
+    window._updateKleiderVisibility = _updateKleiderVisibility;
+    // Also check when a character is selected or tab switches
+    document.querySelectorAll('.panel-tab').forEach(tab => {
+        tab.addEventListener('click', () => setTimeout(_updateKleiderVisibility, 50));
+    });
+    // Fallback interval for edge cases
+    setInterval(_updateKleiderVisibility, 1000);
+}
+
+function _kleiderSelectById(id) {
+    _selectedKleiderId = id;
+    const list = document.getElementById('kleider-list');
+    if (!list) return;
+    // Expand parent folder if collapsed, then click the item
+    list.querySelectorAll('.anim-item').forEach(el => {
+        if (el.dataset.kleiderId === id) {
+            // Expand parent folder
+            const folder = el.closest('.anim-folder');
+            if (folder) {
+                const body = folder.querySelector('.anim-folder-body');
+                if (body) body.style.display = '';
+                const chev = folder.querySelector('.chevron');
+                if (chev) chev.textContent = '\u25BC';
+            }
+            el.click();
+        }
+    });
+}
+
+function _selectedKleiderMesh() {
+    if (!_selectedSubMesh || !_selectedSubMesh.key.startsWith('kld_')) return null;
+    const inst = _characters.find(c => c.id === _selectedSubMesh.charId);
+    if (!inst) return null;
+    return { inst, key: _selectedSubMesh.key, mesh: inst.clothMeshes[_selectedSubMesh.key] };
+}
+
+function _renderKleiderList() {
+    const list = document.getElementById('kleider-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const catFilter = document.getElementById('kleider-category')?.value || '';
+    const filtered = catFilter
+        ? _garmentCatalog.filter(g => g._category === catFilter)
+        : _garmentCatalog;
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Kleider gefunden</div>';
+        return;
+    }
+
+    // Group by category
+    const groups = {};
+    for (const g of filtered) {
+        if (!groups[g._category]) groups[g._category] = [];
+        groups[g._category].push(g);
+    }
+
+    for (const [cat, items] of Object.entries(groups)) {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'anim-folder';
+        catDiv.innerHTML = `<div class="anim-folder-header"><span class="chevron">&#9660;</span> ${cat} (${items.length})</div>`;
+        const body = document.createElement('div');
+        body.className = 'anim-folder-body';
+        for (const g of items) {
+            const row = document.createElement('div');
+            row.className = 'anim-item';
+            row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;';
+            if (g.has_thumb) {
+                const img = document.createElement('img');
+                img.src = `/api/character/garment/thumb/${g.id}/`;
+                img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;';
+                row.appendChild(img);
+            }
+            const name = document.createElement('span');
+            name.textContent = g.name || g.id;
+            name.style.cssText = 'font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            row.appendChild(name);
+            row.dataset.kleiderId = g.id;
+            row.addEventListener('click', () => {
+                _selectedKleiderId = g.id;
+                list.querySelectorAll('.anim-item').forEach(el => el.classList.remove('selected'));
+                row.classList.add('selected');
+                // Apply garment defaults to sliders
+                const offEl = document.getElementById('kleider-offset');
+                if (offEl && g.offset != null) offEl.value = Math.round(g.offset * 1000);
+                const stEl = document.getElementById('kleider-stiffness');
+                if (stEl && g.stiffness != null) stEl.value = Math.round(g.stiffness * 100);
+                // Save to DB
+                fetch('/api/ui-pref/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'last_kleider_id', value: g.id }),
+                }).catch(() => {});
+            });
+            body.appendChild(row);
+        }
+        catDiv.appendChild(body);
+        const header = catDiv.querySelector('.anim-folder-header');
+        header.addEventListener('click', () => {
+            body.style.display = body.style.display === 'none' ? '' : 'none';
+            header.querySelector('.chevron').textContent = body.style.display === 'none' ? '\u25B6' : '\u25BC';
+        });
+        list.appendChild(catDiv);
+    }
+}
+
+// Cached stage1 hull vertices (Blender coords) for stage 2 fitting
+let _kleiderHullVertices = null;
+
+async function _doKleiderStage1() {
+    // Load the configured bone model (from Settings → Szene → Kleider)
+    // and display it as the "kld_hull" submesh
+    const inst = _selectedInst();
+    if (!inst) return;
+
+    if (!inst.isSkinned && rigifySkeletonData && skinWeightData) {
+        convertInstToSkinned(inst);
+    }
+
+    // Get bone model name from settings
+    let boneModelName = 'Rig1';
+    try {
+        const settingsResp = await fetch('/api/settings/humanbody/');
+        const settings = await settingsResp.json();
+        boneModelName = settings.ui_prefs?.kleider_bone_model || 'Rig1';
+    } catch(e) {}
+
+    // Load the model preset
+    let preset;
+    try {
+        const resp = await fetch(`/api/character/model/${encodeURIComponent(boneModelName)}/`);
+        preset = await resp.json();
+    } catch(e) {
+        console.error('Stage 1: Failed to load bone model preset:', boneModelName, e);
+        return;
+    }
+
+    // Generate the mesh using model_generator
+    const config = preset;
+    const radiusMul = parseFloat(document.getElementById('kleider-bone-radius')?.value || '1.3');
+    if (config.bone_parts) {
+        for (const part of Object.values(config.bone_parts)) {
+            if (part.visible) {
+                part.radius = (part.radius || 0.03) * radiusMul;
+            }
+        }
+    }
+
+    let result;
+    if (config.skeleton_type === 'rig' || preset.type === 'generated_model') {
+        const { generateRigBoneMesh } = await import('./model_generator.js');
+        let rigData = null;
+        try {
+            const r = await fetch('/api/character/rig/');
+            rigData = await r.json();
+        } catch(e) {}
+        result = generateRigBoneMesh(rigData, config, rigifySkeletonData, skinWeightData);
+    } else {
+        result = generateModelMesh(rigifySkeletonData, skinWeightData, config);
+    }
+
+    if (!result || !result.mesh) {
+        console.warn('Stage 1: Failed to generate bone model from preset:', boneModelName);
+        return;
+    }
+
+    const key = 'kld_hull';
+
+    // Remove old hull if exists
+    if (inst.clothMeshes[key]) {
+        inst.group.remove(inst.clothMeshes[key]);
+        inst.clothMeshes[key].geometry.dispose();
+        inst.clothMeshes[key].material.dispose();
+        delete inst.clothMeshes[key];
+    }
+
+    // Extract vertices in Three.js coords and convert to Blender for server
+    const posAttr = result.mesh.geometry.getAttribute('position');
+    const threeVerts = new Float32Array(posAttr.array);
+
+    // Store Blender-coords version for server (Three→Blender: x,y,z → x,-z,y)
+    _kleiderHullVertices = new Float32Array(threeVerts.length);
+    for (let i = 0; i < threeVerts.length; i += 3) {
+        _kleiderHullVertices[i]     = threeVerts[i];      // X
+        _kleiderHullVertices[i + 1] = -threeVerts[i + 2]; // -Z → Y
+        _kleiderHullVertices[i + 2] = threeVerts[i + 1];  // Y → Z
+    }
+
+    // Display the generated mesh (semi-transparent)
+    const mat = new THREE.MeshStandardMaterial({
+        color: 0x44aaff, roughness: 0.5, metalness: 0.1,
+        transparent: true, opacity: 0.5, side: THREE.DoubleSide,
+    });
+    const mesh = result.mesh;
+    mesh.material = mat;
+
+    inst.clothMeshes[key] = mesh;
+    inst.group.add(mesh);
+
+    console.log(`✓ Stage 1: Bone model '${boneModelName}' loaded (${posAttr.count} verts)`);
+    updateEquippedList(inst);
+    updateVertexCount();
+}
+
+async function _doKleiderFit(fitMode) {
+    if (!_selectedKleiderId) return;
+    const inst = _selectedInst();
+    if (!inst) return;
+
+    if (!inst.isSkinned && rigifySkeletonData && skinWeightData) {
+        convertInstToSkinned(inst);
+    }
+
+    _refitting = true;
+
+    const params = _charQueryParams(inst);
+    params.set('garment_id', _selectedKleiderId);
+    params.set('offset', (_sliderVal('kleider-offset') / 1000).toFixed(4));
+    params.set('stiffness', (_sliderVal('kleider-stiffness') / 100).toFixed(2));
+    params.set('min_dist', _sliderVal('kleider-min-dist'));
+    params.set('crotch_floor', _sliderVal('kleider-crotch-floor'));
+    params.set('lift', _sliderVal('kleider-lift'));
+    params.set('crotch_depth', _sliderVal('kleider-crotch-depth'));
+    params.set('fit_mode', fitMode || 'rig_hull');
+
+    const colorHex = document.getElementById('kleider-color')?.value || '#4d5980';
+    const c = new THREE.Color(colorHex);
+    params.set('color_r', c.r.toFixed(3));
+    params.set('color_g', c.g.toFixed(3));
+    params.set('color_b', c.b.toFixed(3));
+
+    try {
+        let resp;
+        if (fitMode === 'rig_hull' && _kleiderHullVertices) {
+            // Stage 2: Send hull vertices to server via POST
+            const hullB64 = btoa(String.fromCharCode(...new Uint8Array(_kleiderHullVertices.buffer)));
+            resp = await fetch(`/api/character/garment/fit/?${params}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hull_vertices: hullB64 }),
+            });
+        } else {
+            resp = await fetch(`/api/character/garment/fit/?${params}`);
+        }
+        const data = await resp.json();
+        if (data.error) { console.warn('Kleider fit error:', data.error); _refitting = false; return; }
+
+        const key = `kld_${_selectedKleiderId}`;
+
+        if (inst.clothMeshes[key]) {
+            inst.group.remove(inst.clothMeshes[key]);
+            inst.clothMeshes[key].geometry.dispose();
+            inst.clothMeshes[key].material.dispose();
+            delete inst.clothMeshes[key];
+        }
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+        const faceBuf = base64ToUint32(data.faces);
+        const normalBuf = base64ToFloat32(data.normals);
+        blenderToThreeCoords(normalBuf);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+
+        const roughness = _sliderVal('kleider-roughness') / 100;
+        const metalness = _sliderVal('kleider-metalness') / 100;
+        const mat = new THREE.MeshStandardMaterial({
+            color: c, roughness, metalness, side: THREE.DoubleSide,
+        });
+
+        const mesh = _skinifyMesh(geo, mat, inst, data);
+        inst.clothMeshes[key] = mesh;
+        inst.group.add(mesh);
+
+        inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
+        _computeGarmentRegionWeights(inst, key);
+
+        const prevSt = inst.garmentState[key];
+        inst.garmentState[key] = {
+            offset: _sliderVal('kleider-offset') / 1000,
+            stiffness: _sliderVal('kleider-stiffness') / 100,
+            minDist: _sliderVal('kleider-min-dist'),
+            crotchFloor: _sliderVal('kleider-crotch-floor'),
+            lift: _sliderVal('kleider-lift'),
+            crotchDepth: _sliderVal('kleider-crotch-depth'),
+            color: [c.r, c.g, c.b],
+            roughness, metalness,
+            regionTop: prevSt?.regionTop || 0,
+            regionUpper: prevSt?.regionUpper || 0,
+            regionMid: prevSt?.regionMid || 0,
+            regionLower: prevSt?.regionLower || 0,
+            regionBottom: prevSt?.regionBottom || 0,
+        };
+
+        _applyGarmentRegionOffsets(inst, key);
+
+        _refitting = false;
+        updateEquippedList(inst);
+        updateVertexCount();
+    } catch (e) {
+        _refitting = false;
+        console.error('Kleider fit failed:', e);
     }
 }
 

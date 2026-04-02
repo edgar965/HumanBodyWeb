@@ -74,6 +74,560 @@ def _get_mesh_data(gender='female'):
     return _mesh_data[gender]
 
 
+def _fit_to_cylinders_sequential(garment_verts, garment_faces, hull_verts,
+                                   offset=0.006, stiffness=0.5, color=(0.3, 0.35, 0.5),
+                                   coordinate_system='auto'):
+    """Sequential per-bone cylinder fitting.
+
+    Instead of projecting all garment vertices at once (which causes tearing),
+    this processes each bone's cylinder region separately:
+    1. Build a KDTree from the hull (bone cylinders)
+    2. For each garment vertex, find nearest hull vertex + distance
+    3. Sort garment vertices by distance to hull (closest first)
+    4. Process in order: project vertex to hull surface + offset
+    5. Mark as "done" — subsequent passes can't move it
+
+    This ensures each vertex is only projected once to its nearest bone.
+    """
+    from scipy.spatial import cKDTree
+    from GarmentFitter.fitter import (
+        mh_to_blender, _shrinkwrap, _laplacian_smooth,
+        _push_outside_body, _close_all_openings,
+    )
+
+    verts = garment_verts.copy().astype(np.float64)
+    faces = garment_faces
+
+    # --- Coordinate conversion (same as fit_garment) ---
+    if coordinate_system == 'makehuman':
+        verts = mh_to_blender(verts)
+        # Align feet
+        hull_min_z = hull_verts[:, 2].min()
+        garment_min_z = verts[:, 2].min()
+        verts[:, 2] += (hull_min_z - garment_min_z)
+
+    # Triangulate faces
+    tris = []
+    for f in faces:
+        f = [int(x) for x in f]
+        if len(f) >= 4:
+            tris.append([f[0], f[1], f[2]])
+            tris.append([f[0], f[2], f[3]])
+        elif len(f) == 3:
+            tris.append(f)
+    triangles = np.array(tris, dtype=np.int32)
+
+    # --- Sequential projection ---
+    hull_tree = cKDTree(hull_verts)
+
+    # For each garment vertex, find distance to nearest hull point
+    dists, indices = hull_tree.query(verts)
+
+    # Compute hull normals (radial from centroid per-vertex as approximation)
+    hull_centroid = hull_verts.mean(axis=0)
+    hull_normals = hull_verts - hull_centroid
+    hull_norms = np.linalg.norm(hull_normals, axis=1, keepdims=True)
+    hull_norms[hull_norms < 1e-8] = 1.0
+    hull_normals /= hull_norms
+
+    # Project each garment vertex to nearest hull surface + offset
+    # Process closest vertices first (they get "claimed" by their bone)
+    sort_order = np.argsort(dists)
+    projected = verts.copy()
+    done = np.zeros(len(verts), dtype=bool)
+
+    # Max distance threshold: vertices farther than this are not projected
+    max_dist = 0.15  # 15cm — garment vertices beyond this stay put
+
+    for idx in sort_order:
+        if done[idx]:
+            continue
+        d = dists[idx]
+        if d > max_dist:
+            continue  # too far from any bone — leave in place
+
+        # Project to hull surface + offset along hull normal
+        nearest_hull_idx = indices[idx]
+        target = hull_verts[nearest_hull_idx] + hull_normals[nearest_hull_idx] * offset
+        projected[idx] = target
+        done[idx] = True
+
+    verts = projected
+
+    # --- Smoothing pass to fix discontinuities ---
+    # Build adjacency from triangulated faces
+    smooth_factor = 0.3 + stiffness * 0.3  # 0.3–0.6
+    smooth_iters = max(2, int(5 * (1 - stiffness)))
+    verts = _laplacian_smooth(verts, triangles, iterations=smooth_iters, factor=smooth_factor)
+
+    # Push outside hull for any clipping (without normals — uses distance-based push)
+    verts = _push_outside_body(verts, hull_verts, min_dist=offset)
+
+    # Compute normals
+    v0 = verts[triangles[:, 0]]
+    v1 = verts[triangles[:, 1]]
+    v2 = verts[triangles[:, 2]]
+    face_normals = np.cross(v1 - v0, v2 - v0)
+    vert_normals = np.zeros_like(verts)
+    for i in range(3):
+        np.add.at(vert_normals, triangles[:, i], face_normals)
+    norms = np.linalg.norm(vert_normals, axis=1, keepdims=True)
+    norms[norms < 1e-8] = 1.0
+    vert_normals /= norms
+    # Negate for outward-facing (same as fitter convention)
+    vert_normals = -vert_normals
+
+    return {
+        'vertices': verts.astype(np.float32),
+        'faces': triangles,
+        'normals': vert_normals.astype(np.float32),
+        'color': color,
+    }
+
+
+def _generate_smooth_hull(body_verts, body_faces, inflate_mm=15, smooth_iterations=20):
+    """Create a smoothed, inflated version of the body mesh.
+
+    This fills in crotch/neck/armpit gaps by:
+    1. Computing vertex normals
+    2. Inflating outward along normals
+    3. Heavy Laplacian smoothing to create a blobby envelope
+    """
+    from scipy.sparse import lil_matrix, diags
+
+    verts = body_verts.copy().astype(np.float64)
+    faces = body_faces
+
+    # Compute vertex normals from faces
+    normals = np.zeros_like(verts)
+    if faces is not None and len(faces) > 0:
+        # Triangulate quads if needed
+        tris = []
+        for f in faces:
+            if len(f) == 4:
+                tris.append([f[0], f[1], f[2]])
+                tris.append([f[0], f[2], f[3]])
+            else:
+                tris.append(f[:3])
+        tris = np.array(tris, dtype=np.int32)
+
+        v0 = verts[tris[:, 0]]
+        v1 = verts[tris[:, 1]]
+        v2 = verts[tris[:, 2]]
+        face_normals = np.cross(v1 - v0, v2 - v0)
+        # Accumulate per-vertex
+        for i in range(3):
+            np.add.at(normals, tris[:, i], face_normals)
+        norms = np.linalg.norm(normals, axis=1, keepdims=True)
+        norms[norms < 1e-8] = 1.0
+        normals /= norms
+    else:
+        # Fallback: radial normals from centroid
+        centroid = verts.mean(axis=0)
+        normals = verts - centroid
+        norms = np.linalg.norm(normals, axis=1, keepdims=True)
+        norms[norms < 1e-8] = 1.0
+        normals /= norms
+
+    # Step 1: Inflate along normals
+    verts += normals * (inflate_mm / 1000.0)
+
+    # Step 2: Laplacian smooth (vectorized sparse matrix)
+    n_verts = len(verts)
+    if faces is not None and len(faces) > 0:
+        adj = lil_matrix((n_verts, n_verts), dtype=np.float64)
+        for f in faces:
+            for i in range(len(f)):
+                for j in range(i + 1, len(f)):
+                    adj[f[i], f[j]] = 1
+                    adj[f[j], f[i]] = 1
+        adj = adj.tocsr()
+        degrees = np.array(adj.sum(axis=1)).flatten()
+        degrees[degrees == 0] = 1
+        inv_deg = diags(1.0 / degrees)
+        L = inv_deg @ adj
+
+        factor = 0.5
+        for _ in range(smooth_iterations):
+            smoothed = L @ verts
+            verts = (1.0 - factor) * verts + factor * smoothed
+
+    return verts
+
+
+def _generate_cylinder_hull(body_verts, gender='female'):
+    """Generate a cylinder-per-bone hull using skeleton world transforms.
+
+    Same approach as model_generator.js computeBoneWorldTransforms():
+    - Compute world position per bone from hierarchy (local_position + parent quaternion)
+    - Head = worldPos, Tail = worldPos + bone_direction * bone_length
+    - Radius = from body vertices assigned to this bone
+    Returns (hull_verts, hull_faces) in Blender coords (Z-up).
+    """
+    import json
+    from scipy.spatial.transform import Rotation
+
+    data_dir = settings.HUMANBODY_DATA_DIR
+    skel_path = data_dir / 'def_skeleton.json'
+    sw_path = data_dir / 'skin_weights_base.json'
+
+    with open(skel_path) as f:
+        skel_data = json.load(f)
+    with open(sw_path) as f:
+        sw_data = json.load(f)
+
+    bones = skel_data['bones']
+    bone_names = sw_data['bone_names']
+    weights_list = sw_data['weights']
+    skel_by_name = {b['name']: b for b in bones}
+
+    # Compute world transforms (Blender coords: Z-up, Y-forward)
+    world_pos = {}   # name → np.array(3)
+    world_quat = {}  # name → Rotation
+
+    def _compute_world(name):
+        if name in world_pos:
+            return
+        b = skel_by_name.get(name)
+        if not b:
+            return
+        lp = np.array(b['local_position'])
+        lq = b['local_quaternion']  # [w, x, y, z] from Blender
+        local_rot = Rotation.from_quat([lq[1], lq[2], lq[3], lq[0]])  # scipy wants [x,y,z,w]
+
+        parent = b.get('parent')
+        if parent and parent in skel_by_name:
+            _compute_world(parent)
+            if parent in world_pos:
+                rotated = world_quat[parent].apply(lp)
+                world_pos[name] = world_pos[parent] + rotated
+                world_quat[name] = world_quat[parent] * local_rot
+                return
+        world_pos[name] = lp.copy()
+        world_quat[name] = local_rot
+
+    for b in bones:
+        _compute_world(b['name'])
+
+    # Collect body vertex indices per bone
+    bone_vert_map = {}
+    for vi, vert_weights in enumerate(weights_list):
+        for entry in vert_weights:
+            bi, w = int(entry[0]), float(entry[1])
+            if w > 0.3 and bi < len(bone_names):
+                bname = bone_names[bi]
+                if bname not in bone_vert_map:
+                    bone_vert_map[bname] = []
+                bone_vert_map[bname].append(vi)
+
+    # Skip face/finger bones
+    skip_parts = ('f_', 'brow', 'lid', 'lip', 'chin', 'cheek', 'nose',
+                  'jaw', 'ear', 'temple', 'forehead', 'tongue',
+                  'palm', 'thumb', 'f_index', 'f_middle', 'f_ring', 'f_pinky')
+
+    n_around = 12
+    n_along = 4
+    angles = np.linspace(0, 2 * np.pi, n_around, endpoint=False)
+    all_verts = []
+    all_faces = []
+    vert_offset = 0
+
+    for bname in bone_names:
+        if not bname.startswith('DEF-'):
+            continue
+        if any(part in bname.replace('DEF-', '') for part in skip_parts):
+            continue
+        if bname not in world_pos:
+            continue
+
+        b = skel_by_name.get(bname)
+        if not b:
+            continue
+
+        # Bone length from local_position magnitude
+        lp = np.array(b['local_position'])
+        bone_len = float(np.linalg.norm(lp))
+        if bone_len < 0.005:
+            bone_len = 0.03  # leaf bone fallback
+
+        head = world_pos[bname]
+        # Tail = head + bone_direction * bone_length
+        # Bone Y-axis in local space → world via quaternion
+        local_y = np.array([0.0, 1.0, 0.0])
+        bone_dir = world_quat[bname].apply(local_y) * bone_len
+        tail = head + bone_dir
+
+        # Compute radius from body vertices
+        radius = 0.02
+        if bname in bone_vert_map and len(bone_vert_map[bname]) > 3:
+            vis = bone_vert_map[bname]
+            if max(vis) < len(body_verts):
+                pts = body_verts[vis].astype(np.float64)
+                midpoint = (head + tail) * 0.5
+                axis = bone_dir / bone_len
+                vecs = pts - midpoint
+                along = np.dot(vecs, axis)[:, None] * axis
+                perp = vecs - along
+                dists = np.linalg.norm(perp, axis=1)
+                if len(dists) > 0:
+                    radius = max(0.008, float(np.percentile(dists, 85)))
+
+        # Build cylinder mesh
+        bone_axis = bone_dir / bone_len
+        if abs(bone_axis[2]) < 0.9:
+            up = np.array([0.0, 0.0, 1.0])
+        else:
+            up = np.array([1.0, 0.0, 0.0])
+        perp1 = np.cross(bone_axis, up)
+        pn = np.linalg.norm(perp1)
+        if pn < 1e-6:
+            continue
+        perp1 /= pn
+        perp2 = np.cross(bone_axis, perp1)
+
+        verts = []
+        for ai in range(n_along + 1):
+            t = ai / n_along
+            center = head + bone_dir * t
+            for angle in angles:
+                pt = center + radius * (np.cos(angle) * perp1 + np.sin(angle) * perp2)
+                verts.append(pt)
+        verts.append(head.copy())
+        verts.append(tail.copy())
+        verts = np.array(verts, dtype=np.float64)
+
+        n_cyl = (n_along + 1) * n_around
+        head_cap = n_cyl
+        tail_cap = n_cyl + 1
+
+        faces = []
+        for ai in range(n_along):
+            for ri in range(n_around):
+                rn = (ri + 1) % n_around
+                a0 = ai * n_around + ri
+                a1 = ai * n_around + rn
+                b0 = (ai + 1) * n_around + ri
+                b1 = (ai + 1) * n_around + rn
+                faces.append([a0, b0, b1])
+                faces.append([a0, b1, a1])
+        for ri in range(n_around):
+            faces.append([head_cap, (ri + 1) % n_around, ri])
+        lr = n_along * n_around
+        for ri in range(n_around):
+            faces.append([tail_cap, lr + ri, lr + (ri + 1) % n_around])
+
+        faces = np.array(faces, dtype=np.int32) + vert_offset
+        all_verts.append(verts)
+        all_faces.append(faces)
+        vert_offset += len(verts)
+
+    if not all_verts:
+        return body_verts, None
+
+    return np.vstack(all_verts).astype(np.float64), np.vstack(all_faces).astype(np.int32)
+
+
+_rig_hull_cache = {}
+
+def _generate_rig_hull(body_verts, gender='female'):
+    """Generate a simplified body hull from skeleton bones.
+
+    For each major bone, compute a capsule whose radius is derived from the
+    actual body mesh vertices assigned to that bone.
+    Returns (hull_verts, hull_faces) as numpy arrays in Blender coords (Z-up).
+    """
+    import json
+    from scipy.spatial.transform import Rotation
+
+    data_dir = settings.HUMANBODY_DATA_DIR
+    skel_path = data_dir / 'def_skeleton.json'
+    sw_path = data_dir / 'skin_weights_base.json'
+
+    with open(skel_path) as f:
+        skel_data = json.load(f)
+    with open(sw_path) as f:
+        sw_data = json.load(f)
+
+    bones = skel_data.get('bones', [])
+    bone_names = sw_data.get('bone_names', [])
+    weights_list = sw_data.get('weights', [])  # weights[vi] = [[bone_idx, weight], ...]
+
+    # Build bone name → index, index → name maps
+    bone_name_to_idx = {name: i for i, name in enumerate(bone_names)}
+    bone_idx_to_name = {i: name for i, name in enumerate(bone_names)}
+
+    # Compute world positions for each bone from hierarchy
+    bone_by_name = {b['name']: b for b in bones}
+    bone_world_pos = {}  # bone_name → world position (3,)
+
+    def _get_world_pos(bname):
+        if bname in bone_world_pos:
+            return bone_world_pos[bname]
+        b = bone_by_name.get(bname)
+        if not b:
+            bone_world_pos[bname] = np.zeros(3)
+            return bone_world_pos[bname]
+        local_pos = np.array(b['local_position'])
+        parent = b.get('parent')
+        if parent and parent in bone_by_name:
+            parent_pos = _get_world_pos(parent)
+            parent_bone = bone_by_name[parent]
+            parent_quat = parent_bone['local_quaternion']  # [x, y, z, w] or [w, x, y, z]?
+            # Try scipy Rotation (expects [x, y, z, w])
+            try:
+                rot = Rotation.from_quat(parent_quat)
+                rotated = rot.apply(local_pos)
+                bone_world_pos[bname] = parent_pos + rotated
+            except Exception:
+                bone_world_pos[bname] = parent_pos + local_pos
+        else:
+            bone_world_pos[bname] = local_pos.copy()
+        return bone_world_pos[bname]
+
+    # Pre-compute all world positions
+    for b in bones:
+        _get_world_pos(b['name'])
+
+    # Collect body vertices per bone (from weights)
+    bone_vert_indices = {}  # bone_name → [vertex_indices]
+    for vi, vert_weights in enumerate(weights_list):
+        for entry in vert_weights:
+            bi, w = int(entry[0]), float(entry[1])
+            if w > 0.3 and bi < len(bone_names):
+                bname = bone_names[bi]
+                if bname not in bone_vert_indices:
+                    bone_vert_indices[bname] = []
+                bone_vert_indices[bname].append(vi)
+
+    # Filter bones: skip face, fingers, palm
+    skip_prefixes = ('DEF-f_', 'DEF-brow', 'DEF-lid', 'DEF-lip', 'DEF-chin',
+                     'DEF-cheek', 'DEF-nose', 'DEF-jaw', 'DEF-ear',
+                     'DEF-temple', 'DEF-forehead', 'DEF-tongue')
+    skip_parts = ('palm', 'thumb', 'f_index', 'f_middle', 'f_ring', 'f_pinky')
+
+    hull_bone_names = []
+    for b in bones:
+        bname = b['name']
+        if not bname.startswith('DEF-'):
+            continue
+        if any(bname.startswith(p) for p in skip_prefixes):
+            continue
+        if any(part in bname for part in skip_parts):
+            continue
+        hull_bone_names.append(bname)
+
+    all_verts = []
+    all_faces = []
+    vert_offset = 0
+    n_around = 12
+    n_along = 4
+    angles = np.linspace(0, 2 * np.pi, n_around, endpoint=False)
+
+    for bname in hull_bone_names:
+        b = bone_by_name[bname]
+        head = bone_world_pos[bname]
+
+        # Find children to determine tail (or use parent direction)
+        children = [c['name'] for c in bones if c.get('parent') == bname]
+        if children:
+            # Tail = average of children positions
+            child_positions = [bone_world_pos[c] for c in children if c in bone_world_pos]
+            if child_positions:
+                tail = np.mean(child_positions, axis=0)
+            else:
+                tail = head + np.array([0, 0, 0.05])
+        else:
+            # Leaf bone: extend from parent direction
+            parent = b.get('parent')
+            if parent and parent in bone_world_pos:
+                direction = head - bone_world_pos[parent]
+                length = np.linalg.norm(direction)
+                if length > 0.001:
+                    tail = head + direction * 0.5  # half parent length
+                else:
+                    tail = head + np.array([0, 0, 0.03])
+            else:
+                tail = head + np.array([0, 0, 0.05])
+
+        bone_dir = tail - head
+        bone_len = np.linalg.norm(bone_dir)
+        if bone_len < 0.002:
+            continue
+
+        # Compute radius from body vertices
+        radius = 0.02
+        if bname in bone_vert_indices and len(bone_vert_indices[bname]) > 3:
+            vis = bone_vert_indices[bname]
+            if max(vis) < len(body_verts):
+                assigned = body_verts[vis]
+                midpoint = (head + tail) * 0.5
+                bone_axis = bone_dir / bone_len
+                vecs = assigned - midpoint
+                along = np.dot(vecs, bone_axis)[:, None] * bone_axis
+                perp = vecs - along
+                dists = np.linalg.norm(perp, axis=1)
+                if len(dists) > 0:
+                    radius = max(0.01, float(np.percentile(dists, 85)))
+
+        # Build cylinder + caps
+        bone_axis = bone_dir / bone_len
+        if abs(bone_axis[2]) < 0.9:
+            up = np.array([0, 0, 1.0])
+        else:
+            up = np.array([1.0, 0, 0])
+        perp1 = np.cross(bone_axis, up)
+        n = np.linalg.norm(perp1)
+        if n < 1e-6:
+            continue
+        perp1 /= n
+        perp2 = np.cross(bone_axis, perp1)
+
+        verts = []
+        for ai in range(n_along + 1):
+            t = ai / n_along
+            center = head + bone_dir * t
+            for angle in angles:
+                pt = center + radius * (np.cos(angle) * perp1 + np.sin(angle) * perp2)
+                verts.append(pt)
+        verts.append(head.copy())
+        verts.append(tail.copy())
+        verts = np.array(verts, dtype=np.float64)
+
+        n_cyl = (n_along + 1) * n_around
+        head_cap_idx = n_cyl
+        tail_cap_idx = n_cyl + 1
+
+        faces = []
+        for ai in range(n_along):
+            for ri in range(n_around):
+                r_next = (ri + 1) % n_around
+                a0 = ai * n_around + ri
+                a1 = ai * n_around + r_next
+                b0 = (ai + 1) * n_around + ri
+                b1 = (ai + 1) * n_around + r_next
+                faces.append([a0, b0, b1])
+                faces.append([a0, b1, a1])
+        for ri in range(n_around):
+            r_next = (ri + 1) % n_around
+            faces.append([head_cap_idx, r_next, ri])
+        last_ring = n_along * n_around
+        for ri in range(n_around):
+            r_next = (ri + 1) % n_around
+            faces.append([tail_cap_idx, last_ring + ri, last_ring + r_next])
+
+        faces = np.array(faces, dtype=np.int32) + vert_offset
+        all_verts.append(verts)
+        all_faces.append(faces)
+        vert_offset += len(verts)
+
+    if not all_verts:
+        return body_verts, None
+
+    hull_verts = np.vstack(all_verts).astype(np.float64)
+    hull_faces = np.vstack(all_faces).astype(np.int32)
+    return hull_verts, hull_faces
+
+
 def _get_cc_subdivider(gender='female'):
     """Get or create Catmull-Clark subdivider (cached per gender).
 
@@ -179,6 +733,10 @@ def theatre_studio_page(request):
 def theatre_help_page(request):
     """Render the Theatre.js help/tutorial page."""
     return render(request, 'theatre_help.html')
+
+def rigging_help_page(request):
+    """Render the rigging documentation page."""
+    return render(request, 'rigging_help.html')
 
 
 def theatre_settings_page(request):
@@ -1234,7 +1792,29 @@ def humanbody_settings_api(request):
         'selection_opacity': s.selection_opacity,
         'result': s.default_model_result,
         'default_anim_result': s.default_anim_result,
+        'ui_prefs': s.ui_prefs or {},
     })
+
+
+@csrf_exempt
+def ui_pref_save(request):
+    """Save a single UI preference key/value to AppSettings.ui_prefs."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    try:
+        data = json.loads(request.body)
+        key = data.get('key')
+        value = data.get('value')
+        if not key:
+            return JsonResponse({'error': 'key required'}, status=400)
+        s = AppSettings.load()
+        prefs = s.ui_prefs or {}
+        prefs[key] = value
+        s.ui_prefs = prefs
+        s.save()
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @require_GET
@@ -3401,7 +3981,7 @@ def garment_library_rescan(request):
     return JsonResponse({'ok': True, 'count': len(lib.catalog)})
 
 
-@require_GET
+@csrf_exempt
 def garment_fit(request):
     """Fit a garment template to the current body and return as base64 binary.
 
@@ -3467,19 +4047,69 @@ def garment_fit(request):
     # Determine coordinate system from source metadata
     coord_sys = 'makehuman' if template.source == 'makehuman-assets' else 'auto'
 
+    fit_mode = request.GET.get('fit_mode', '')
+
     from GarmentFitter import fit_garment
-    result = fit_garment(
-        template.vertices, template.faces, body_verts,
-        body_faces=body_faces,
-        offset=offset,
-        stiffness=stiffness,
-        color=color,
-        coordinate_system=coord_sys,
-        min_dist_mm=min_dist_mm,
-        crotch_floor_mm=crotch_floor_mm,
-        lift_mm=lift_mm,
-        crotch_depth_mm=crotch_depth_mm,
-    )
+
+    if fit_mode == 'rig_hull':
+        # Stage 2: Use normal fitter but with hull vertices as target
+        hull_verts = None
+        if request.method == 'POST':
+            try:
+                post_data = json.loads(request.body)
+                hull_b64 = post_data.get('hull_vertices')
+                if hull_b64:
+                    raw = base64.b64decode(hull_b64)
+                    hull_verts = np.frombuffer(raw, dtype=np.float32).reshape(-1, 3).astype(np.float64)
+            except Exception as e:
+                logger.warning('Failed to parse hull vertices: %s', e)
+
+        if hull_verts is None:
+            hull_verts = _generate_smooth_hull(body_verts, body_faces)
+
+        # Use the normal fit_garment pipeline but with hull as body target
+        # The fitter handles coordinate conversion, arm retarget, alignment, etc.
+        result = fit_garment(
+            template.vertices, template.faces, hull_verts,
+            body_faces=None,  # no faces for hull — fitter uses radial normals
+            offset=offset,
+            stiffness=stiffness,
+            color=color,
+            coordinate_system=coord_sys,
+            min_dist_mm=min_dist_mm,
+            crotch_floor_mm=crotch_floor_mm,
+            lift_mm=lift_mm,
+            crotch_depth_mm=crotch_depth_mm,
+        )
+    elif fit_mode == 'body_refine':
+        # Stage 2: Refine existing garment against body mesh
+        # Use garment template as-is but with body as target (gentle fit)
+        result = fit_garment(
+            template.vertices, template.faces, body_verts,
+            body_faces=body_faces,
+            offset=offset,
+            stiffness=stiffness,
+            color=color,
+            coordinate_system=coord_sys,
+            min_dist_mm=min_dist_mm,
+            crotch_floor_mm=crotch_floor_mm,
+            lift_mm=lift_mm,
+            crotch_depth_mm=crotch_depth_mm,
+        )
+    else:
+        # Default: original single-stage fit
+        result = fit_garment(
+            template.vertices, template.faces, body_verts,
+            body_faces=body_faces,
+            offset=offset,
+            stiffness=stiffness,
+            color=color,
+            coordinate_system=coord_sys,
+            min_dist_mm=min_dist_mm,
+            crotch_floor_mm=crotch_floor_mm,
+            lift_mm=lift_mm,
+            crotch_depth_mm=crotch_depth_mm,
+        )
 
     if result is None:
         return JsonResponse({'error': 'Fitting failed'}, status=500)
