@@ -123,44 +123,24 @@ class Clip {
 let cameraEditMode = false;
 
 // GLOBAL keyboard shortcuts — registered immediately at module load, capture phase
-// Note: Chrome on QWERTZ swallows Ctrl+Z/Y. Use Ctrl+M / Ctrl+Shift+M instead.
+// Note: Chrome on QWERTZ swallows Ctrl+Z/Y/M. Only Ctrl+Shift+U works reliably.
 window.addEventListener('keydown', (e) => {
     if (!e.ctrlKey) return;
-    // Ctrl+M = Undo
-    if (!e.shiftKey && e.code === 'KeyM') {
+    // Ctrl+Shift+U = Undo
+    if (e.shiftKey && e.code === 'KeyU') {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (typeof undo === 'function') undo();
-        return;
-    }
-    // Ctrl+Shift+M = Redo
-    if (e.shiftKey && e.code === 'KeyM') {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (typeof redo === 'function') redo();
-        return;
-    }
-    // Fallback: Ctrl+Z/Y for browsers that don't swallow it
-    if (!e.shiftKey && (e.code === 'KeyZ' || e.key === 'z')) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (typeof undo === 'function') undo();
-        return;
-    }
-    if (e.code === 'KeyY' || e.key === 'y') {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (typeof redo === 'function') redo();
         return;
     }
     // Ctrl+S = Save
-    if (e.ctrlKey && e.code === 'KeyS') {
+    if (e.code === 'KeyS') {
         e.preventDefault();
         if (typeof saveProject === 'function') saveProject();
         return;
     }
     // Ctrl+O = Load
-    if (e.ctrlKey && e.code === 'KeyO') {
+    if (e.code === 'KeyO') {
         e.preventDefault();
         if (typeof loadProject === 'function') loadProject();
         return;
@@ -2079,8 +2059,8 @@ const HELP_CONTENT = {
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">S</kbd></td><td>Clip splitten am Playhead</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Del</kbd></td><td>Ausgewaehlten Clip loeschen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">K</kbd></td><td>Kamera/Licht Keyframe setzen</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Ctrl+M</kbd></td><td>Undo (bis zu 20 Schritte)</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Ctrl+Shift+M</kbd></td><td>Redo</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Ctrl+Shift+U</kbd></td><td>Undo (bis zu 20 Schritte)</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Redo</kbd></td><td>Redo (nur per Button)</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Mausrad</b></td><td>Timeline scrollen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Ctrl + Mausrad</b></td><td>Timeline zoomen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Mittlere Maustaste</b></td><td>Timeline pannen</td></tr>

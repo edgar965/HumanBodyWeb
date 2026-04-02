@@ -14,18 +14,13 @@ import { classifyBones, getDefaultModelConfig, computeBoneWorldTransforms, gener
 
 const gltfLoader = new GLTFLoader();
 
-// GLOBAL Ctrl+M Undo handler — registered at module load, capture phase
-// Uses late-binding via window.__ because sceneUndo/Redo are defined later in the file
+// GLOBAL Undo handler — Ctrl+Shift+U (only combo Chrome doesn't swallow on QWERTZ)
 window.addEventListener('keydown', (e) => {
-    if (!e.ctrlKey) return;
-    if (e.code === 'KeyM' && !e.shiftKey) {
+    if (!e.ctrlKey || !e.shiftKey) return;
+    if (e.code === 'KeyU') {
         e.preventDefault();
         e.stopImmediatePropagation();
         if (typeof sceneUndo === 'function') sceneUndo();
-    } else if (e.code === 'KeyM' && e.shiftKey) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        if (typeof sceneRedo === 'function') sceneRedo();
     }
 }, true);
 
@@ -1959,11 +1954,7 @@ function bindKeyboardShortcuts() {
                     e.preventDefault();
                     newScene();
                     return;
-                case 'm':
-                    e.preventDefault();
-                    if (e.shiftKey) sceneRedo();
-                    else sceneUndo();
-                    return;
+                // Ctrl+Shift+U handled by global capture handler above
             }
         }
 
