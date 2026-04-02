@@ -3267,6 +3267,9 @@ window.addEventListener('beforeunload', saveSessionState);
 setInterval(saveSessionState, 30000);
 
 // =========================================================================
-// Start
+// Start (guard against double init)
 // =========================================================================
-init();
+if (!window.__bvhStudioInitialized) {
+    window.__bvhStudioInitialized = true;
+    init();
+}
