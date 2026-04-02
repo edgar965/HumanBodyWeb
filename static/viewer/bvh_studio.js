@@ -122,6 +122,110 @@ class Clip {
 // Camera edit mode state
 let cameraEditMode = false;
 
+// GLOBAL Ctrl+Z/Y handler — registered immediately at module load, capture phase
+window.addEventListener('keydown', (e) => {
+    if (!e.ctrlKey) return;
+    if (e.code === 'KeyZ' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (typeof undo === 'function') undo();
+    } else if (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (typeof redo === 'function') redo();
+    } else if (e.code === 'KeyS') {
+        e.preventDefault();
+        if (typeof saveProject === 'function') saveProject();
+    } else if (e.code === 'KeyO') {
+        e.preventDefault();
+        if (typeof loadProject === 'function') loadProject();
+    }
+}, true);
+console.log('[BVH Studio] Global Ctrl+Z handler registered');
+
+// =========================================================================
+// Undo system (snapshot-based, max 20 steps)
+// =========================================================================
+const undoStack = [];
+const redoStack = [];
+const UNDO_MAX = 20;
+let _undoSuppressed = false;
+
+function pushUndo(label) {
+    if (_undoSuppressed) { console.log(`[Undo] SUPPRESSED: ${label}`); return; }
+    try {
+        console.log(`[Undo] pushUndo('${label}') — tracks: ${project.tracks.length}, clips: ${project.tracks.map(t=>t.clips.length)}`);
+        const snapshot = {
+            label,
+            data: buildProjectData(),
+            playheadFrame,
+            selectedTrackIdx,
+            selectedClipIdx,
+        };
+        undoStack.push(snapshot);
+        if (undoStack.length > UNDO_MAX) undoStack.shift();
+        redoStack.length = 0;
+    } catch (e) {
+        console.warn('[Undo] Snapshot failed:', e);
+    }
+}
+
+let _undoInProgress = false;
+
+async function undo() {
+    if (_undoInProgress) { console.log('[Undo] Already in progress, skip.'); return; }
+    if (undoStack.length === 0) { console.log('[Undo] Nothing to undo. Stack empty.'); return; }
+    _undoInProgress = true;
+    console.log(`[Undo] Starting. Stack size: ${undoStack.length}, top label: ${undoStack[undoStack.length-1].label}, tracks in snapshot: ${undoStack[undoStack.length-1].data.tracks?.length}`);
+    // Save current state to redo
+    try {
+        redoStack.push({
+            label: 'redo',
+            data: buildProjectData(),
+            playheadFrame,
+            selectedTrackIdx,
+            selectedClipIdx,
+        });
+    } catch (e) { console.warn('[Undo] Redo snapshot failed:', e); }
+    const snap = undoStack.pop();
+    await restoreProjectData(snap.data);
+    playheadFrame = snap.playheadFrame || 0;
+    selectedTrackIdx = snap.selectedTrackIdx ?? -1;
+    selectedClipIdx = snap.selectedClipIdx ?? -1;
+    applyPlayhead();
+    renderTimeline();
+    updatePlaybackUI();
+    updateProperties();
+    document.getElementById('studio-info').textContent = `Undo: ${snap.label}`;
+    console.log(`[Undo] Restored: ${snap.label} (${undoStack.length} left)`);
+    _undoInProgress = false;
+}
+
+async function redo() {
+    if (_undoInProgress) return;
+    if (redoStack.length === 0) { console.log('[Redo] Nothing to redo'); return; }
+    _undoInProgress = true;
+    undoStack.push({
+        label: 'undo',
+        data: buildProjectData(),
+        playheadFrame,
+        selectedTrackIdx,
+        selectedClipIdx,
+    });
+    const snap = redoStack.pop();
+    await restoreProjectData(snap.data);
+    playheadFrame = snap.playheadFrame || 0;
+    selectedTrackIdx = snap.selectedTrackIdx ?? -1;
+    selectedClipIdx = snap.selectedClipIdx ?? -1;
+    applyPlayhead();
+    renderTimeline();
+    updatePlaybackUI();
+    updateProperties();
+    document.getElementById('studio-info').textContent = `Redo`;
+    console.log(`[Redo] Restored (${redoStack.length} left)`);
+    _undoInProgress = false;
+}
+
 // =========================================================================
 // Init
 // =========================================================================
@@ -169,11 +273,17 @@ async function init() {
     // Setup export panel
     setupExportPanel();
 
+    // Restore session state (if returning from another page)
+    const restored = await restoreSessionState();
+
     // Start render loop
     animate();
 
     window.__studioProject = project;
-    console.log('[BVH Studio] Initialized');
+    window.__studioUndo = undo;
+    window.__studioRedo = redo;
+    window.__undoStack = undoStack;
+    console.log(`[BVH Studio] Initialized${restored ? ' (session restored)' : ''}`);
 }
 
 // =========================================================================
@@ -187,7 +297,10 @@ async function loadLibrary(selectAfter) {
     if (selectAfter) _libSelectedItem = selectAfter;
     try {
         // Remember open categories before rebuild
-        document.querySelectorAll('.lib-cat.open').forEach(el => _libOpenCats.add(el.dataset.category));
+        const tree0 = document.getElementById('lib-tree');
+        if (tree0) tree0.querySelectorAll('.lib-cat.open').forEach(el => {
+            if (el.dataset.category) _libOpenCats.add(el.dataset.category);
+        });
 
         const resp = await fetch('/api/character/animations/');
         const data = await resp.json();
@@ -235,8 +348,10 @@ async function loadLibrary(selectAfter) {
                 });
                 item.addEventListener('dragend', () => item.classList.remove('dragging'));
                 // Double-click: add to selected track
-                item.addEventListener('dblclick', () => {
-                    addClipToTrack(selectedTrackIdx >= 0 ? selectedTrackIdx : 0, cat, anim.name, anim.frames || 0);
+                item.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addClipToTrack(selectedTrackIdx, cat, anim.name, anim.frames || 0);
                 });
                 // Click: select
                 item.addEventListener('click', () => {
@@ -314,6 +429,8 @@ function deleteSelectedLibItem() {
     if (!sel) return;
     const cat = sel.dataset.category, name = sel.dataset.name;
     if (confirm(`"${name}" wirklich loeschen?`)) {
+        _libOpenCats.add(cat);  // keep folder open after delete
+        _libSelectedItem = null;
         libManage('delete', { category: cat, name }).then(r => { if (r) loadLibrary(); });
     }
 }
@@ -345,6 +462,8 @@ function setupLibraryManagement() {
                 }
             } else if (action === 'delete') {
                 if (confirm(`"${t.name}" wirklich loeschen?`)) {
+                    _libOpenCats.add(t.category);
+                    _libSelectedItem = null;
                     if (await libManage('delete', { category: t.category, name: t.name })) loadLibrary();
                 }
             }
@@ -435,6 +554,7 @@ function addSpecialTrack(type, name) {
 function addCameraKeyframe(trackIdx) {
     const track = project.tracks[trackIdx];
     if (!track || track.type !== 'camera') return;
+    pushUndo('Kamera Keyframe');
     const kf = new Clip(null, `KF ${track.clips.length + 1}`, 0, project.fps);
     kf.type = 'camera_kf';
     kf.startFrame = playheadFrame;
@@ -456,6 +576,7 @@ function addCameraKeyframe(trackIdx) {
 function addLightKeyframe(trackIdx) {
     const track = project.tracks[trackIdx];
     if (!track || track.type !== 'light' || !track.light) return;
+    pushUndo('Licht Keyframe');
     const kf = new Clip(null, `LKF ${track.clips.length + 1}`, 0, project.fps);
     kf.type = 'light_kf';
     kf.startFrame = playheadFrame;
@@ -513,6 +634,7 @@ async function loadAudioFile(trackIdx) {
 
 function removeTrack(idx) {
     if (idx < 0 || idx >= project.tracks.length) return;
+    pushUndo('Track loeschen');
     const track = project.tracks[idx];
 
     // Stop mixer
@@ -560,9 +682,10 @@ function selectTrack(idx) {
 }
 
 async function addClipToTrack(trackIdx, category, name, frames) {
-    if (trackIdx < 0) {
+    pushUndo('Clip hinzufuegen');
+    if (trackIdx < 0 || !project.tracks[trackIdx]) {
         if (project.tracks.length === 0) addTrack();
-        trackIdx = 0;
+        trackIdx = project.tracks.length - 1;
     }
     const track = project.tracks[trackIdx];
     if (!track) return;
@@ -574,6 +697,7 @@ async function addClipToTrack(trackIdx, category, name, frames) {
     clip.startFrame = lastClip ? lastClip.endFrame : 0;
 
     track.clips.push(clip);
+    if (track.mesh) track.mesh.visible = true;  // re-show if was hidden
     updateDuration();
     renderTimeline();
 
@@ -587,9 +711,8 @@ async function loadClipAnimation(track, clip) {
         const url = `/api/retarget/?category=${encodeURIComponent(clip.category)}&name=${encodeURIComponent(clip.name)}`;
         const resp = await fetch(url);
         if (!resp.ok) {
-            const errText = await resp.text().catch(() => resp.statusText);
             console.error(`[BVH Studio] Retarget failed for ${clip.category}/${clip.name}: ${resp.status}`);
-            clip.name = `${clip.name} (FEHLER)`;
+            clip._loadError = true;
             renderTimeline();
             return;
         }
@@ -792,7 +915,11 @@ function setupTimeline() {
                     const cy = y + 4;
                     const ch = TRACK_HEIGHT - 8;
                     if (mx >= cx && mx <= cx + cw && my >= cy && my <= cy + ch) {
-                        return { trackIdx: ti, clipIdx: ci, clipX: cx, clipW: cw };
+                        // Detect edge: 6px grab zone at left/right edge
+                        let edge = null;
+                        if (mx - cx < 6 && cw > 16) edge = 'left';
+                        else if (cx + cw - mx < 6 && cw > 16) edge = 'right';
+                        return { trackIdx: ti, clipIdx: ci, clipX: cx, clipW: cw, edge };
                     }
                 }
             }
@@ -801,11 +928,13 @@ function setupTimeline() {
     }
 
     // --- Mouse interactions ---
-    // Modes: 'none' | 'clip-drag' | 'scrub' | 'pan'
+    // Modes: 'none' | 'clip-drag' | 'trim-left' | 'trim-right' | 'scrub' | 'pan'
     let dragMode = 'none';
     let draggingClip = null;
     let dragStartX = 0;
     let dragOrigFrame = 0;
+    let dragOrigTrimIn = 0;
+    let dragOrigTrimOut = 0;
     let panStartScrollX = 0;
 
     function setPlayheadFromMouse(mx) {
@@ -833,15 +962,24 @@ function setupTimeline() {
         // Hit test clips (left button only)
         if (e.button === 0) {
             const hit = hitTestClip(mx, my);
+            // Clear library selection when clicking in timeline
+            document.querySelectorAll('.lib-item.selected').forEach(el => el.classList.remove('selected'));
+            _libSelectedItem = null;
             if (hit) {
                 selectedTrackIdx = hit.trackIdx;
                 selectedClipIdx = hit.clipIdx;
                 updateProperties();
                 renderTimeline();
-                dragMode = 'clip-drag';
+                const clip = project.tracks[hit.trackIdx].clips[hit.clipIdx];
                 draggingClip = hit;
                 dragStartX = mx;
-                dragOrigFrame = project.tracks[hit.trackIdx].clips[hit.clipIdx].startFrame;
+                dragOrigFrame = clip.startFrame;
+                dragOrigTrimIn = clip.trimIn;
+                dragOrigTrimOut = clip.trimOut;
+                // Edge drag = trim, center drag = move
+                if (hit.edge === 'left') { pushUndo('Trim links'); dragMode = 'trim-left'; }
+                else if (hit.edge === 'right') { pushUndo('Trim rechts'); dragMode = 'trim-right'; }
+                else { pushUndo('Clip verschieben'); dragMode = 'clip-drag'; }
                 e.preventDefault();
                 return;
             }
@@ -868,6 +1006,14 @@ function setupTimeline() {
     });
 
     tlCanvas.addEventListener('mousemove', (e) => {
+        // Update cursor on hover
+        if (dragMode === 'none') {
+            const rect = tlCanvas.getBoundingClientRect();
+            const hit = hitTestClip(e.clientX - rect.left, e.clientY - rect.top);
+            if (hit?.edge) tlCanvas.style.cursor = 'ew-resize';
+            else if (hit) tlCanvas.style.cursor = 'grab';
+            else tlCanvas.style.cursor = 'default';
+        }
         if (dragMode === 'none') return;
         const rect = tlCanvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
@@ -877,6 +1023,23 @@ function setupTimeline() {
             const frameDelta = Math.round((dx / timelineZoom) * project.fps);
             const clip = project.tracks[draggingClip.trackIdx].clips[draggingClip.clipIdx];
             clip.startFrame = Math.max(0, dragOrigFrame + frameDelta);
+            updateDuration();
+            renderTimeline();
+        } else if (dragMode === 'trim-left' && draggingClip) {
+            const dx = mx - dragStartX;
+            const frameDelta = Math.round((dx / timelineZoom) * project.fps);
+            const clip = project.tracks[draggingClip.trackIdx].clips[draggingClip.clipIdx];
+            const newTrimIn = Math.max(0, Math.min(clip.totalFrames - clip.trimOut - 1, dragOrigTrimIn + frameDelta));
+            clip.trimIn = newTrimIn;
+            // Shift start so the visible clip stays aligned
+            clip.startFrame = Math.max(0, dragOrigFrame + (newTrimIn - dragOrigTrimIn));
+            updateDuration();
+            renderTimeline();
+        } else if (dragMode === 'trim-right' && draggingClip) {
+            const dx = mx - dragStartX;
+            const frameDelta = Math.round((dx / timelineZoom) * project.fps);
+            const clip = project.tracks[draggingClip.trackIdx].clips[draggingClip.clipIdx];
+            clip.trimOut = Math.max(0, Math.min(clip.totalFrames - clip.trimIn - 1, dragOrigTrimOut - frameDelta));
             updateDuration();
             renderTimeline();
         } else if (dragMode === 'scrub') {
@@ -889,11 +1052,12 @@ function setupTimeline() {
     });
 
     tlCanvas.addEventListener('mouseup', () => {
-        if (dragMode === 'clip-drag') {
+        if (dragMode === 'clip-drag' || dragMode === 'trim-left' || dragMode === 'trim-right') {
             draggingClip = null;
             updateProperties();
         }
         dragMode = 'none';
+        tlCanvas.style.cursor = 'default';
     });
 
     tlCanvas.addEventListener('mouseleave', () => {
@@ -934,6 +1098,9 @@ function setupTimeline() {
             else if (action === 'ctx-save-bvh') saveBvhAs();
             else if (action === 'ctx-smooth') smoothSelectedClip();
             else if (action === 'ctx-ground') groundFixSelectedClip();
+            else if (action === 'ctx-trim-start') trimSelectedClip('start', 10);
+            else if (action === 'ctx-trim-end') trimSelectedClip('end', 10);
+            else if (action === 'ctx-trim-reset') trimSelectedClip('reset');
         });
     });
 
@@ -1185,16 +1352,19 @@ function setupPlayback() {
         playbackSpeed = parseFloat(e.target.value);
     });
 
-    // Keyboard
+    // Ctrl shortcuts registered globally at module top level
+    // Other keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        const inInput = (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT');
+        if (inInput) return;
         if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
         if (e.code === 'ArrowLeft') { e.preventDefault(); stepFrame(-1); }
         if (e.code === 'ArrowRight') { e.preventDefault(); stepFrame(1); }
         if (e.code === 'Delete' || e.code === 'Backspace') {
             e.preventDefault();
-            if (document.querySelector('.lib-item.selected')) deleteSelectedLibItem();
-            else deleteSelectedClip();
+            // Timeline clip has priority over library selection
+            if (selectedClipIdx >= 0) deleteSelectedClip();
+            else if (document.querySelector('.lib-item.selected')) deleteSelectedLibItem();
         }
         if (e.code === 'KeyS' && !e.ctrlKey) {
             e.preventDefault();
@@ -1208,14 +1378,7 @@ function setupPlayback() {
                 else if (t.type === 'light') addLightKeyframe(selectedTrackIdx);
             }
         }
-        if (e.code === 'KeyS' && e.ctrlKey) {
-            e.preventDefault();
-            saveProject();
-        }
-        if (e.code === 'KeyO' && e.ctrlKey) {
-            e.preventDefault();
-            loadProject();
-        }
+        // Ctrl shortcuts handled in capture-phase handler above
         if (e.key === 'F2') {
             e.preventDefault();
             const sel = document.querySelector('.lib-item.selected');
@@ -1669,15 +1832,10 @@ function setupToolbar() {
     document.getElementById('dd-add-light')?.addEventListener('click', () => { trackDD?.classList.remove('open'); addSpecialTrack('light'); });
     document.getElementById('dd-add-audio')?.addEventListener('click', () => { trackDD?.classList.remove('open'); addSpecialTrack('audio'); });
 
+    document.getElementById('btn-undo')?.addEventListener('click', () => undo());
+    document.getElementById('btn-redo')?.addEventListener('click', () => redo());
     document.getElementById('btn-delete-track')?.addEventListener('click', () => removeTrack(selectedTrackIdx));
-    document.getElementById('btn-delete-clip')?.addEventListener('click', () => {
-        if (selectedTrackIdx >= 0 && selectedClipIdx >= 0) {
-            project.tracks[selectedTrackIdx].clips.splice(selectedClipIdx, 1);
-            selectedClipIdx = -1;
-            updateDuration();
-            renderTimeline();
-        }
-    });
+    document.getElementById('btn-delete-clip')?.addEventListener('click', () => deleteSelectedClip());
     document.getElementById('btn-split')?.addEventListener('click', splitClipAtPlayhead);
     document.getElementById('btn-export-bvh')?.addEventListener('click', exportBVH);
     document.getElementById('btn-export-video')?.addEventListener('click', () => {
@@ -1692,6 +1850,7 @@ function setupToolbar() {
     document.getElementById('dd-file-save')?.addEventListener('click', () => { fileDD?.classList.remove('open'); saveProject(); });
     document.getElementById('dd-file-save-as')?.addEventListener('click', () => { fileDD?.classList.remove('open'); saveProjectAs(); });
     document.getElementById('dd-file-load')?.addEventListener('click', () => { fileDD?.classList.remove('open'); loadProject(); });
+    document.getElementById('dd-file-load-last')?.addEventListener('click', () => { fileDD?.classList.remove('open'); loadLastProject(); });
 
     // Tools dropdown
     const toolsDD = document.getElementById('tools-dropdown');
@@ -1895,6 +2054,8 @@ const HELP_CONTENT = {
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">S</kbd></td><td>Clip splitten am Playhead</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Del</kbd></td><td>Ausgewaehlten Clip loeschen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">K</kbd></td><td>Kamera/Licht Keyframe setzen</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Ctrl+Z</kbd></td><td>Undo (bis zu 20 Schritte)</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Ctrl+Y</kbd></td><td>Redo</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Mausrad</b></td><td>Timeline scrollen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Ctrl + Mausrad</b></td><td>Timeline zoomen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Mittlere Maustaste</b></td><td>Timeline pannen</td></tr>
@@ -1938,12 +2099,33 @@ const HELP_CONTENT = {
 <li>Wird auf leere Stelle in der Timeline gezogen, wird automatisch ein neuer Track erstellt</li>
 </ul>
 
+<h4 style="margin:14px 0 6px;">Clips in der Timeline bearbeiten</h4>
+<p>Clips koennen direkt in der Timeline per Maus bearbeitet werden:</p>
+<ul style="margin:4px 0;">
+<li><b>Verschieben</b> — Clip in der Mitte greifen und nach links/rechts ziehen</li>
+<li><b>Trimmen (Anfang)</b> — Linken Rand des Clips greifen und ziehen → kuerzt die Animation von vorne</li>
+<li><b>Trimmen (Ende)</b> — Rechten Rand des Clips greifen und ziehen → kuerzt die Animation von hinten</li>
+<li>Der Cursor wechselt zu <b>↔</b> am Clip-Rand und zu <b>✋</b> in der Mitte</li>
+</ul>
+<p><b>Kontextmenue (Rechtsklick auf Clip):</b></p>
+<ul style="margin:4px 0;">
+<li><b>Split an Playhead (S)</b> — Teilt den Clip an der Playhead-Position</li>
+<li><b>Duplizieren</b> — Erstellt eine Kopie hinter dem Clip</li>
+<li><b>Loeschen (Del)</b> — Entfernt den Clip</li>
+<li><b>Anfang trimmen (+10f)</b> — Kuerzt den Clip um 10 Frames von vorne</li>
+<li><b>Ende trimmen (+10f)</b> — Kuerzt den Clip um 10 Frames von hinten</li>
+<li><b>Trim zuruecksetzen</b> — Stellt die volle Laenge wieder her</li>
+<li><b>BVH speichern unter...</b> — Speichert die BVH-Datei</li>
+<li><b>Smooth / Bodenniveau</b> — Tools auf den Clip anwenden</li>
+</ul>
+
 <h4 style="margin:14px 0 6px;">Hinweise</h4>
 <ul style="margin:4px 0;">
 <li>Klick auf eine Animation markiert sie (lila) fuer Toolbar-Aktionen</li>
 <li>Ordner koennen nur geloescht werden wenn sie leer sind</li>
 <li>Beim Umbenennen/Verschieben wird auch die Retarget-Cache-Datei (.json) mitverschoben</li>
 <li>Alle Aenderungen werden sofort auf der Festplatte ausgefuehrt</li>
+<li>Wird der letzte Clip eines Tracks geloescht, verschwindet das 3D-Modell automatisch</li>
 </ul>
 `},
 };
@@ -1963,6 +2145,7 @@ function switchPropsTab(tabName) {
 
 function duplicateSelectedClip() {
     if (selectedTrackIdx < 0 || selectedClipIdx < 0) return;
+    pushUndo('Duplizieren');
     const track = project.tracks[selectedTrackIdx];
     const orig = track.clips[selectedClipIdx];
     const copy = new Clip(orig.category, orig.name, orig.totalFrames, orig.fps);
@@ -2030,6 +2213,7 @@ function deleteSelectedClip() {
     if (selectedTrackIdx < 0 || selectedClipIdx < 0) return;
     const track = project.tracks[selectedTrackIdx];
     if (!track || selectedClipIdx >= track.clips.length) return;
+    pushUndo('Clip loeschen');
     const clip = track.clips[selectedClipIdx];
 
     // Uncache the AnimationClip from the mixer so it doesn't linger
@@ -2046,14 +2230,40 @@ function deleteSelectedClip() {
     renderTimeline();
     updateProperties();
 
+    // If no more clips on this BVH track, hide the model
+    if (track.type === 'bvh' && track.clips.length === 0 && track.mesh) {
+        track.mesh.visible = false;
+    }
     // Reset skeleton to rest pose
     if (track.skeleton) track.skeleton.skeleton.pose();
 
     console.log('[BVH Studio] Clip deleted');
 }
 
+function trimSelectedClip(mode, frames = 10) {
+    if (selectedTrackIdx < 0 || selectedClipIdx < 0) return;
+    pushUndo('Trim');
+    const clip = project.tracks[selectedTrackIdx].clips[selectedClipIdx];
+    if (!clip || clip.type !== 'bvh') return;
+    const maxTrim = clip.totalFrames - 1;
+
+    if (mode === 'start') {
+        clip.trimIn = Math.min(maxTrim - clip.trimOut, clip.trimIn + frames);
+    } else if (mode === 'end') {
+        clip.trimOut = Math.min(maxTrim - clip.trimIn, clip.trimOut + frames);
+    } else if (mode === 'reset') {
+        clip.trimIn = 0;
+        clip.trimOut = 0;
+    }
+    updateDuration();
+    renderTimeline();
+    updateProperties();
+    console.log(`[BVH Studio] Trim ${mode}: in=${clip.trimIn}, out=${clip.trimOut}`);
+}
+
 function splitClipAtPlayhead() {
     if (selectedTrackIdx < 0) return;
+    pushUndo('Split');
     const track = project.tracks[selectedTrackIdx];
     const t = playheadFrame / project.fps;
     for (let i = 0; i < track.clips.length; i++) {
@@ -2085,6 +2295,7 @@ function splitClipAtPlayhead() {
 // =========================================================================
 function smoothSelectedClip() {
     if (selectedTrackIdx < 0 || selectedClipIdx < 0) { alert('Clip auswaehlen.'); return; }
+    pushUndo('Smooth');
     const clip = project.tracks[selectedTrackIdx].clips[selectedClipIdx];
     if (!clip.animClip) { alert('Clip hat keine Animation.'); return; }
 
@@ -2148,6 +2359,7 @@ function smoothSelectedClip() {
 // =========================================================================
 async function groundFixSelectedClip() {
     if (selectedTrackIdx < 0 || selectedClipIdx < 0) { alert('Clip auswaehlen.'); return; }
+    pushUndo('Bodenniveau');
     const track = project.tracks[selectedTrackIdx];
     const clip = track.clips[selectedClipIdx];
     if (!clip.animClip || !track.skeleton) { alert('Clip oder Skeleton nicht geladen.'); return; }
@@ -2629,6 +2841,7 @@ async function saveProject() {
         const result = await resp.json();
         if (result.ok) {
             project._lastSavePath = result.path;
+            try { localStorage.setItem('bvhStudio_lastProject', result.path); } catch(e) {}
             console.log(`[BVH Studio] Project saved: ${result.path}`);
             document.getElementById('studio-info').textContent = `Gespeichert: ${filename}`;
         } else {
@@ -2640,25 +2853,8 @@ async function saveProject() {
 }
 
 async function saveProjectAs() {
-    // Use File System Access API for native "Save As" dialog
-    if (window.showSaveFilePicker) {
-        try {
-            const handle = await window.showSaveFilePicker({
-                suggestedName: (project.name || 'project') + '.studio.json',
-                types: [{ description: 'BVH Studio Project', accept: { 'application/json': ['.studio.json', '.json'] } }],
-            });
-            const writable = await handle.createWritable();
-            await writable.write(JSON.stringify(buildProjectData(), null, 2));
-            await writable.close();
-            console.log(`[BVH Studio] Project saved via picker: ${handle.name}`);
-            document.getElementById('studio-info').textContent = `Gespeichert: ${handle.name}`;
-            return;
-        } catch (e) {
-            if (e.name === 'AbortError') return;
-        }
-    }
-    // Fallback: prompt for name, save to server
-    const name = prompt('Projektname:', project.name || 'project');
+    const dir = project.projectPath || '';
+    const name = prompt(`Projektname speichern unter:\n(Ordner: ${dir || 'nicht konfiguriert'})`, project.name || 'project');
     if (!name) return;
     project.name = name;
     await saveProject();
@@ -2682,6 +2878,7 @@ async function loadProject() {
                 if (loadResult.ok) {
                     await restoreProjectData(loadResult.project);
                     project._lastSavePath = loadResult.path;
+                    try { localStorage.setItem('bvhStudio_lastProject', loadResult.path); } catch(e) {}
                     document.getElementById('studio-info').textContent = `Geladen: ${result.files[idx].name}`;
                     return;
                 } else {
@@ -2709,12 +2906,40 @@ async function loadProject() {
     input.click();
 }
 
+async function loadLastProject() {
+    let lastPath = '';
+    try { lastPath = localStorage.getItem('bvhStudio_lastProject') || ''; } catch(e) {}
+    if (!lastPath) { alert('Kein letztes Projekt gespeichert.'); return; }
+
+    try {
+        const resp = await fetch(`/api/studio/project-load/?path=${encodeURIComponent(lastPath)}`);
+        const result = await resp.json();
+        if (result.ok) {
+            await restoreProjectData(result.project);
+            project._lastSavePath = result.path;
+            const name = lastPath.split(/[/\\]/).pop().replace('.studio.json', '');
+            document.getElementById('studio-info').textContent = `Geladen: ${name}`;
+            console.log(`[BVH Studio] Last project loaded: ${lastPath}`);
+        } else {
+            alert('Laden fehlgeschlagen: ' + (result.error || lastPath));
+        }
+    } catch (e) {
+        alert('Laden fehlgeschlagen: ' + e.message);
+    }
+}
+
 async function restoreProjectData(data) {
+    console.log(`[Restore] Starting. Input tracks: ${data.tracks?.length}, clips: ${data.tracks?.map(t=>t.clips?.length)}`);
+    // Suppress undo for the ENTIRE restore operation
+    _undoSuppressed = true;
+
     // Clear existing
     while (project.tracks.length > 0) removeTrack(0);
 
     project.name = data.name || 'Untitled';
     project.fps = data.fps || 30;
+
+    const loadPromises = [];
 
     for (const td of (data.tracks || [])) {
         const trackType = td.type || 'bvh';
@@ -2753,13 +2978,19 @@ async function restoreProjectData(data) {
             clip.blendOut = cd.blendOut || 0;
             if (cd.data) clip.data = cd.data;
             track.clips.push(clip);
-            if (clip.type === 'bvh') loadClipAnimation(track, clip);
+            if (clip.type === 'bvh') loadPromises.push(loadClipAnimation(track, clip));
         }
     }
+
+    // Wait for ALL clip animations to load before continuing
+    await Promise.all(loadPromises);
+
+    _undoSuppressed = false;
+
     updateDuration();
     renderTimeline();
     updateTrackHeaders();
-    console.log(`[BVH Studio] Project loaded: ${project.name}`);
+    console.log(`[BVH Studio] Project restored: ${project.name} (${project.tracks.length} tracks)`);
 }
 
 // =========================================================================
@@ -2870,6 +3101,61 @@ if (typeof ResizeObserver !== 'undefined') {
     const vp = document.querySelector('.studio-viewport');
     if (vp) new ResizeObserver(onResize).observe(vp);
 }
+
+// =========================================================================
+// Session state: auto-save on leave, auto-restore on return
+// =========================================================================
+const SESSION_KEY = 'bvhStudio_sessionState';
+
+function saveSessionState() {
+    try {
+        const state = {
+            project: buildProjectData(),
+            playheadFrame,
+            selectedTrackIdx,
+            selectedClipIdx,
+            timelineZoom,
+            timelineScrollX,
+        };
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
+    } catch (e) { /* storage full or unavailable */ }
+}
+
+async function restoreSessionState() {
+    try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (!raw) return false;
+        const state = JSON.parse(raw);
+        if (!state.project || !state.project.tracks || state.project.tracks.length === 0) return false;
+
+        await restoreProjectData(state.project);
+        playheadFrame = state.playheadFrame || 0;
+        selectedTrackIdx = state.selectedTrackIdx ?? -1;
+        selectedClipIdx = state.selectedClipIdx ?? -1;
+        timelineZoom = state.timelineZoom || 100;
+        timelineScrollX = state.timelineScrollX || 0;
+
+        const zoomSlider = document.getElementById('tl-zoom');
+        if (zoomSlider) zoomSlider.value = timelineZoom;
+        const zoomLabel = document.getElementById('tl-zoom-label');
+        if (zoomLabel) zoomLabel.textContent = `Zoom: ${timelineZoom}%`;
+
+        applyPlayhead();
+        renderTimeline();
+        updatePlaybackUI();
+        updateProperties();
+        console.log('[BVH Studio] Session state restored');
+        return true;
+    } catch (e) {
+        console.warn('[BVH Studio] Session restore failed:', e);
+        return false;
+    }
+}
+
+// Auto-save on page leave
+window.addEventListener('beforeunload', saveSessionState);
+// Also save periodically (every 30s) in case of crash
+setInterval(saveSessionState, 30000);
 
 // =========================================================================
 // Start

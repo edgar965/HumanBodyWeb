@@ -107,10 +107,13 @@ export async function loadSkinWeights(bodyType) {
 
 export async function loadSkinColors() {
     try {
-        const resp = await fetch('/api/character/skin-colors/');
+        const resp = await fetch('/api/character/morphs/');
         if (resp.ok) {
-            sharedState.skinColors = await resp.json();
-            return true;
+            const data = await resp.json();
+            if (data.skin_colors) {
+                sharedState.skinColors = data.skin_colors;
+                return true;
+            }
         }
     } catch (e) { /* optional */ }
     return false;

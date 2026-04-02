@@ -38,6 +38,7 @@
     .lib-item {
         padding: 4px 8px; font-size: 0.78rem; color: var(--text); cursor: grab;
         border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        user-select: none; -webkit-user-select: none;
     }
     .lib-item:hover { background: rgba(124,92,191,0.2); }
     .lib-item.selected { background: rgba(124,92,191,0.35); color: var(--accent); }
@@ -148,6 +149,7 @@
             <div class="toolbar-dd-item" id="dd-file-save-as"><i class="fas fa-file-export" style="width:16px;"></i> Projekt speichern unter...</div>
             <div style="height:1px;background:var(--border);margin:4px 0;"></div>
             <div class="toolbar-dd-item" id="dd-file-load"><i class="fas fa-folder-open" style="width:16px;"></i> Projekt laden... <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">Ctrl+O</span></div>
+            <div class="toolbar-dd-item" id="dd-file-load-last"><i class="fas fa-history" style="width:16px;"></i> Letztes Projekt laden</div>
         </div>
     </div>
     <div class="sep"></div>
@@ -162,6 +164,9 @@
         </div>
     </div>
     <button id="btn-delete-track" title="Track loeschen"><i class="fas fa-trash"></i></button>
+    <div class="sep"></div>
+    <button id="btn-undo" title="Undo (Ctrl+Z)" onclick="window.__studioUndo && window.__studioUndo()"><i class="fas fa-undo"></i></button>
+    <button id="btn-redo" title="Redo (Ctrl+Y)" onclick="window.__studioRedo && window.__studioRedo()"><i class="fas fa-redo"></i></button>
     <div class="sep"></div>
     <button id="btn-split" title="Clip splitten (S)"><i class="fas fa-cut"></i> Split</button>
     <button id="btn-delete-clip" title="Clip loeschen (Del)"><i class="fas fa-times"></i></button>
@@ -383,6 +388,10 @@
     <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut" style="width:16px;"></i> Split an Playhead (S)</div>
     <div class="ctx-item" data-action="ctx-duplicate"><i class="fas fa-copy" style="width:16px;"></i> Duplizieren</div>
     <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen (Del)</div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+    <div class="ctx-item" data-action="ctx-trim-start"><i class="fas fa-step-forward" style="width:16px;"></i> Anfang trimmen (+10f)</div>
+    <div class="ctx-item" data-action="ctx-trim-end"><i class="fas fa-step-backward" style="width:16px;"></i> Ende trimmen (+10f)</div>
+    <div class="ctx-item" data-action="ctx-trim-reset"><i class="fas fa-undo" style="width:16px;"></i> Trim zuruecksetzen</div>
     <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div class="ctx-item" data-action="ctx-save-bvh"><i class="fas fa-file-export" style="width:16px;"></i> BVH speichern unter...</div>
     <div class="ctx-item" data-action="ctx-smooth"><i class="fas fa-wave-square" style="width:16px;"></i> Smooth</div>
