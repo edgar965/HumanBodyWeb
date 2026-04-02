@@ -14,6 +14,21 @@ import { classifyBones, getDefaultModelConfig, computeBoneWorldTransforms, gener
 
 const gltfLoader = new GLTFLoader();
 
+// GLOBAL Ctrl+M Undo handler — registered at module load, capture phase
+// Uses late-binding via window.__ because sceneUndo/Redo are defined later in the file
+window.addEventListener('keydown', (e) => {
+    if (!e.ctrlKey) return;
+    if (e.code === 'KeyM' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (typeof sceneUndo === 'function') sceneUndo();
+    } else if (e.code === 'KeyM' && e.shiftKey) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (typeof sceneRedo === 'function') sceneRedo();
+    }
+}, true);
+
 // =========================================================================
 // Light Presets
 // =========================================================================
@@ -1461,8 +1476,65 @@ function updateMenuChecks() {
 // =========================================================================
 // Dirty tracking — mark scene as having unsaved changes
 // =========================================================================
-function markDirty() { _sceneDirty = true; }
+function markDirty(label) { pushSceneUndo(label || 'Aenderung'); _sceneDirty = true; }
 function markClean() { _sceneDirty = false; }
+
+// =========================================================================
+// Undo/Redo system (snapshot-based)
+// =========================================================================
+const _undoStack = [];
+const _redoStack = [];
+const _UNDO_MAX = 20;
+let _undoSuppressed = false;
+let _undoInProgress = false;
+
+function pushSceneUndo(label) {
+    if (_undoSuppressed || _undoInProgress) return;
+    try {
+        const data = gatherSceneState();
+        _undoStack.push({ label, data, selectedCharacterId });
+        if (_undoStack.length > _UNDO_MAX) _undoStack.shift();
+        _redoStack.length = 0;
+        console.log(`[Scene Undo] push '${label}' (stack: ${_undoStack.length}, chars: ${data.characters?.length || 0})`);
+    } catch (e) { console.error('[Scene Undo] Snapshot failed:', e); }
+}
+
+async function sceneUndo() {
+    console.log(`[Scene Undo] called. stack: ${_undoStack.length}, inProgress: ${_undoInProgress}`);
+    if (_undoInProgress || _undoStack.length === 0) { console.log('[Scene Undo] nothing to undo'); return; }
+    _undoInProgress = true;
+    try {
+        _redoStack.push({ label: 'redo', data: gatherSceneState(), selectedCharacterId });
+    } catch (e) {}
+    const snap = _undoStack.pop();
+    _undoSuppressed = true;
+    await loadSceneFromData(snap.data, currentSceneName);
+    _undoSuppressed = false;
+    if (snap.selectedCharacterId && characters.has(snap.selectedCharacterId)) {
+        selectCharacter(snap.selectedCharacterId);
+    }
+    console.log(`[Scene Undo] Restored: ${snap.label} (${_undoStack.length} left)`);
+    _undoInProgress = false;
+}
+
+async function sceneRedo() {
+    if (_undoInProgress || _redoStack.length === 0) return;
+    _undoInProgress = true;
+    _undoStack.push({ label: 'undo', data: gatherSceneState(), selectedCharacterId });
+    const snap = _redoStack.pop();
+    _undoSuppressed = true;
+    await loadSceneFromData(snap.data, currentSceneName);
+    _undoSuppressed = false;
+    if (snap.selectedCharacterId && characters.has(snap.selectedCharacterId)) {
+        selectCharacter(snap.selectedCharacterId);
+    }
+    console.log(`[Scene Redo] Restored (${_redoStack.length} left)`);
+    _undoInProgress = false;
+}
+
+// Expose for onclick buttons
+window.__sceneUndo = sceneUndo;
+window.__sceneRedo = sceneRedo;
 
 // =========================================================================
 // sessionStorage persistence — survive page navigation
@@ -1886,6 +1958,11 @@ function bindKeyboardShortcuts() {
                 case 'n':
                     e.preventDefault();
                     newScene();
+                    return;
+                case 'm':
+                    e.preventDefault();
+                    if (e.shiftKey) sceneRedo();
+                    else sceneUndo();
                     return;
             }
         }
