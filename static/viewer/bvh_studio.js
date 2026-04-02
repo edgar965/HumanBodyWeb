@@ -1893,6 +1893,7 @@ function setupToolbar() {
     document.getElementById('dd-file-save-as')?.addEventListener('click', () => { fileDD?.classList.remove('open'); saveProjectAs(); });
     document.getElementById('dd-file-load')?.addEventListener('click', () => { fileDD?.classList.remove('open'); loadProject(); });
     document.getElementById('dd-file-load-last')?.addEventListener('click', () => { fileDD?.classList.remove('open'); loadLastProject(); });
+    document.getElementById('dd-file-default')?.addEventListener('click', () => { fileDD?.classList.remove('open'); resetToDefault(); });
 
     // Tools dropdown
     const toolsDD = document.getElementById('tools-dropdown');
@@ -2948,6 +2949,34 @@ async function loadProject() {
     input.click();
 }
 
+function resetToDefault() {
+    // Clear everything: tracks, session, undo
+    _undoSuppressed = true;
+    while (project.tracks.length > 0) removeTrack(0);
+    _undoSuppressed = false;
+
+    project.name = 'Untitled';
+    project.duration = 0;
+    selectedTrackIdx = -1;
+    selectedClipIdx = -1;
+    playheadFrame = 0;
+    playing = false;
+
+    undoStack.length = 0;
+    redoStack.length = 0;
+
+    sessionStorage.removeItem(SESSION_KEY);
+
+    updateDuration();
+    renderTimeline();
+    updateTrackHeaders();
+    updatePlaybackUI();
+    updateProperties();
+
+    document.getElementById('studio-info').textContent = 'BVH Studio v2.0';
+    console.log('[BVH Studio] Reset to default');
+}
+
 async function loadLastProject() {
     let lastPath = '';
     try { lastPath = localStorage.getItem('bvhStudio_lastProject') || ''; } catch(e) {}
@@ -3151,10 +3180,7 @@ const SESSION_KEY = 'bvhStudio_sessionState';
 
 function saveSessionState() {
     try {
-        // Only save if there are tracks with actual content
-        const hasBvhWithClips = project.tracks.some(t => t.type === 'bvh' && t.clips.length > 0);
-        const hasSpecialTracks = project.tracks.some(t => t.type !== 'bvh');
-        if (!hasBvhWithClips && !hasSpecialTracks) {
+        if (project.tracks.length === 0) {
             sessionStorage.removeItem(SESSION_KEY);
             return;
         }
