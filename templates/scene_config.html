@@ -821,9 +821,11 @@
                     <div class="menu-item" data-action="reset-camera">Kamera zur&uuml;cksetzen</div>
                 </div>
             </div>
+            <div style="display:flex;align-items:center;gap:2px;margin-left:12px;">
+                <button onclick="window.__sceneUndo && window.__sceneUndo()" title="Undo (Ctrl+M)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-undo"></i></button>
+                <button onclick="window.__sceneRedo && window.__sceneRedo()" title="Redo (Ctrl+Shift+M)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-redo"></i></button>
+            </div>
             <div class="menubar-right">
-                <button onclick="window.__sceneUndo && window.__sceneUndo()" title="Undo (Ctrl+M)" style="background:rgba(100,100,140,0.3);border:1px solid rgba(150,150,200,0.4);border-radius:4px;color:#ddd;cursor:pointer;padding:4px 8px;font-size:0.82rem;"><i class="fas fa-undo"></i></button>
-                <button onclick="window.__sceneRedo && window.__sceneRedo()" title="Redo (Ctrl+Shift+M)" style="background:rgba(100,100,140,0.3);border:1px solid rgba(150,150,200,0.4);border-radius:4px;color:#ddd;cursor:pointer;padding:4px 8px;font-size:0.82rem;margin-right:8px;"><i class="fas fa-redo"></i></button>
                 <div class="transform-btn-group">
                     <button class="transform-btn active" data-mode="translate" title="Translate (G)"><i class="fas fa-arrows-alt"></i></button>
                     <button class="transform-btn" data-mode="rotate" title="Rotate (R)"><i class="fas fa-sync-alt"></i></button>
