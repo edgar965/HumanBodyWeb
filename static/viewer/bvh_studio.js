@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { buildRigifySkeleton } from './rigify_skeleton_builder.js?v=2';
 import {
     base64ToFloat32, base64ToUint32, blenderToThreeCoords,
@@ -3079,46 +3080,41 @@ function previewAnimation(category, name) {
     // Load BVH via Three.js BVHLoader for quick preview (no retarget needed)
     const url = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`;
     fetch(url).then(r => r.text()).then(bvhText => {
-        const loader = new THREE.BVHLoader ? new THREE.BVHLoader() : null;
-        // BVHLoader might not be imported — use the one from Three.js addons
-        import('three/addons/loaders/BVHLoader.js').then(({ BVHLoader }) => {
-            const bvhLoader = new BVHLoader();
-            const result = bvhLoader.parse(bvhText);
+        const bvhLoader = new BVHLoader();
+        const result = bvhLoader.parse(bvhText);
 
-            // Create skeleton helper
-            const skeletonHelper = new THREE.SkeletonHelper(result.skeleton.bones[0]);
-            skeletonHelper.userData._preview = true;
-            _previewScene.add(skeletonHelper);
-            _previewScene.add(result.skeleton.bones[0]);
-            result.skeleton.bones[0].userData._preview = true;
+        // Create skeleton helper
+        const skeletonHelper = new THREE.SkeletonHelper(result.skeleton.bones[0]);
+        skeletonHelper.userData._preview = true;
+        _previewScene.add(skeletonHelper);
+        _previewScene.add(result.skeleton.bones[0]);
+        result.skeleton.bones[0].userData._preview = true;
 
-            // Animation
-            _previewMixer = new THREE.AnimationMixer(result.skeleton.bones[0]);
-            _previewAction = _previewMixer.clipAction(result.clip);
-            _previewAction.play();
+        // Animation
+        _previewMixer = new THREE.AnimationMixer(result.skeleton.bones[0]);
+        _previewAction = _previewMixer.clipAction(result.clip);
+        _previewAction.play();
 
-            const totalFrames = Math.round(result.clip.duration * 30);
-            document.getElementById('preview-frame').textContent = `0 / ${totalFrames}`;
+        const totalFrames = Math.round(result.clip.duration * 30);
+        document.getElementById('preview-frame').textContent = `0 / ${totalFrames}`;
 
-            // Start render loop
-            if (_previewAnimId) cancelAnimationFrame(_previewAnimId);
-            _previewClock.start();
+        // Start render loop
+        if (_previewAnimId) cancelAnimationFrame(_previewAnimId);
+        _previewClock.start();
 
-            function animatePreview() {
-                _previewAnimId = requestAnimationFrame(animatePreview);
-                if (!_previewModal || _previewModal.style.display === 'none') return;
-                const dt = _previewClock.getDelta();
-                if (_previewMixer) _previewMixer.update(dt);
-                _previewControls.update();
-                _previewRenderer.render(_previewScene, _previewCamera);
-                // Update frame counter
-                if (_previewAction) {
-                    const f = Math.round(_previewAction.time * 30);
-                    document.getElementById('preview-frame').textContent = `${f} / ${totalFrames}`;
-                }
+        function animatePreview() {
+            _previewAnimId = requestAnimationFrame(animatePreview);
+            if (!_previewModal || _previewModal.style.display === 'none') return;
+            const dt = _previewClock.getDelta();
+            if (_previewMixer) _previewMixer.update(dt);
+            _previewControls.update();
+            _previewRenderer.render(_previewScene, _previewCamera);
+            if (_previewAction) {
+                const f = Math.round(_previewAction.time * 30);
+                document.getElementById('preview-frame').textContent = `${f} / ${totalFrames}`;
             }
-            animatePreview();
-        });
+        }
+        animatePreview();
     }).catch(e => {
         console.error('[Preview] Load failed:', e);
         document.getElementById('preview-title').textContent = `Fehler: ${e.message}`;
