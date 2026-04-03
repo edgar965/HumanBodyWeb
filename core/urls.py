@@ -119,6 +119,10 @@ urlpatterns = [
     path('api/character/bvh/<str:name>/', character_api.character_bvh_file, name='character_bvh_file'),
     path('api/character/animation/save/', character_api.animation_save, name='animation_save'),
 
+    # CharMorph
+    path('api/character/charmorph-presets/', character_api.charmorph_presets, name='charmorph_presets'),
+    path('api/character/charmorph-assets/', character_api.charmorph_assets, name='charmorph_assets'),
+
     # Cloth
     path('api/character/cloth/', character_api.character_cloth, name='character_cloth'),
     path('api/character/cloth/regions/', character_api.character_cloth_regions, name='character_cloth_regions'),
