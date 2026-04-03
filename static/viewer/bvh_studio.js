@@ -3072,10 +3072,13 @@ function previewAnimation(category, name) {
 
     // Clean previous
     if (_previewMixer) { _previewMixer.stopAllAction(); _previewMixer = null; }
-    _previewScene.children.forEach(c => { if (c.userData._preview) _previewScene.remove(c); });
-    // Remove old skeleton meshes
+    _previewAction = null;
+    // Remove all preview objects
     const toRemove = _previewScene.children.filter(c => c.userData._preview);
-    toRemove.forEach(c => { _previewScene.remove(c); if (c.geometry) c.geometry.dispose(); });
+    for (const c of toRemove) {
+        _previewScene.remove(c);
+        if (c.geometry) c.geometry.dispose();
+    }
 
     // Load BVH via Three.js BVHLoader for quick preview (no retarget needed)
     const url = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`;
@@ -3085,31 +3088,50 @@ function previewAnimation(category, name) {
         const result = bvhLoader.parse(bvhText);
         console.log(`[Preview] Parsed: ${result.skeleton.bones.length} bones, clip duration: ${result.clip.duration.toFixed(1)}s`);
 
-        // Create skeleton helper
+        // Put root bone in a container group for scaling
         const rootBone = result.skeleton.bones[0];
+        const container = new THREE.Group();
+        container.userData._preview = true;
+        container.add(rootBone);
+        _previewScene.add(container);
+
+        // Detect scale: evaluate first frame to find height
+        const tmpMixer = new THREE.AnimationMixer(rootBone);
+        const tmpAction = tmpMixer.clipAction(result.clip);
+        tmpAction.play();
+        tmpMixer.setTime(0);
+        rootBone.updateWorldMatrix(true, true);
+
+        // Find bounding box height from all bones
+        let minY = Infinity, maxY = -Infinity;
+        const tmpV = new THREE.Vector3();
+        result.skeleton.bones.forEach(b => {
+            b.getWorldPosition(tmpV);
+            if (tmpV.y < minY) minY = tmpV.y;
+            if (tmpV.y > maxY) maxY = tmpV.y;
+        });
+        const bvhHeight = maxY - minY;
+        const bvhCenter = (maxY + minY) / 2;
+        console.log(`[Preview] BVH height: ${bvhHeight.toFixed(2)}, center: ${bvhCenter.toFixed(2)}`);
+
+        // Scale so skeleton is ~1.7m tall
+        if (bvhHeight > 0.01) {
+            const scale = 1.7 / bvhHeight;
+            container.scale.setScalar(scale);
+            console.log(`[Preview] Scale: ${scale.toFixed(4)}`);
+        }
+
+        tmpAction.stop();
+        tmpMixer.stopAllAction();
+
+        // Skeleton helper (must be added AFTER bones are in scene)
         const skeletonHelper = new THREE.SkeletonHelper(rootBone);
         skeletonHelper.userData._preview = true;
         _previewScene.add(skeletonHelper);
-        _previewScene.add(rootBone);
-        rootBone.userData._preview = true;
 
-        // Auto-scale: detect if BVH uses cm (AIST) or meters
-        rootBone.updateWorldMatrix(true, true);
-        const box = new THREE.Box3().setFromObject(rootBone);
-        const height = box.max.y - box.min.y;
-        if (height > 10) {
-            // Probably centimeters — scale down
-            rootBone.scale.setScalar(0.01);
-            console.log(`[Preview] Auto-scaled: height=${height.toFixed(0)}cm → 0.01x`);
-        }
-
-        // Center camera on skeleton
-        rootBone.updateWorldMatrix(true, true);
-        const box2 = new THREE.Box3().setFromObject(rootBone);
-        const center = box2.getCenter(new THREE.Vector3());
-        const size = box2.getSize(new THREE.Vector3());
-        _previewCamera.position.set(center.x, center.y + size.y * 0.3, center.z + Math.max(size.y * 2, 3));
-        _previewControls.target.copy(center);
+        // Camera
+        _previewCamera.position.set(0, 1.0, 4);
+        _previewControls.target.set(0, 0.85, 0);
         _previewControls.update();
 
         // Animation
