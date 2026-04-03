@@ -5502,58 +5502,72 @@ function _applyPose(pose) {
 
     // Direction: positive = toward T-pose (arms up), negative = toward A-pose (arms down)
     const direction = (pose === 't_pose') ? 1 : -1;
-    const angle = 30 * direction;  // degrees
-
     const poseLog = [];
 
     for (const [, inst] of characters) {
-        if (!inst.isSkinned) { poseLog.push('skip: not skinned'); continue; }
-
-        // Find skeleton — search all children for SkinnedMesh
+        if (!inst.isSkinned) continue;
         let skel = null;
         inst.group.traverse(child => {
-            if (!skel && child.isSkinnedMesh && child.skeleton) {
-                skel = child.skeleton;
-            }
+            if (!skel && child.isSkinnedMesh && child.skeleton) skel = child.skeleton;
         });
-        if (!skel) { poseLog.push('skip: no skeleton found'); continue; }
+        if (!skel) continue;
 
-        const allNames = skel.bones.map(b => b.name);
-        const armNames = allNames.filter(n => n.includes('arm'));
-        poseLog.push(`bones: ${skel.bones.length}, arm: ${armNames.join(',')}`);
-
-        // Arm bone rotation
-        // X-axis +angle lifts both arms (verified in Chrome)
-        const boneDefs = [
-            { names: ['DEF-upper_arm_L'], angle: angle, axis: [1, 0, 0] },
-            { names: ['DEF-upper_arm_L_001'], angle: angle * 0.3, axis: [1, 0, 0] },
-            { names: ['DEF-upper_arm_R'], angle: angle, axis: [1, 0, 0] },
-            { names: ['DEF-upper_arm_R_001'], angle: angle * 0.3, axis: [1, 0, 0] },
-            // Legs — bring together
-            { names: ['DEF-thigh_L'], angle: -angle * 0.12, axis: [1, 0, 0] },
-            { names: ['DEF-thigh_R'], angle: angle * 0.12, axis: [1, 0, 0] },
-        ];
-
-        let found = 0;
-        for (const def of boneDefs) {
-            let bone = null;
-            for (const name of def.names) {
-                bone = skel.getBoneByName(name);
-                if (bone) break;
-            }
-            if (bone) {
-                found++;
-                const q = new THREE.Quaternion().setFromAxisAngle(
-                    new THREE.Vector3(...def.axis), def.angle * Math.PI / 180
-                );
-                bone.quaternion.premultiply(q);
-                poseLog.push(`rotated: ${bone.name} by ${def.angle}deg axis=${def.axis}`);
+        // Save A-pose quaternions (first time only)
+        if (!inst._aPoseQuats) {
+            inst._aPoseQuats = {};
+            for (const bone of skel.bones) {
+                inst._aPoseQuats[bone.name] = bone.quaternion.clone();
             }
         }
-        poseLog.push(`applied ${pose}: ${found} bones`);
+
+        if (pose === 't_pose') {
+            // Arms: X-axis +30° lifts both arms to horizontal (verified in Chrome)
+            // Legs: Z-axis rotation brings legs together (verified: L=-20, R=+20)
+            //       ~20° spread angle calculated from BVH hip offset
+            const boneDefs = [
+                { name: 'DEF-upper_arm_L', angle: 30, axis: [1, 0, 0] },
+                { name: 'DEF-upper_arm_L_001', angle: 9, axis: [1, 0, 0] },
+                { name: 'DEF-upper_arm_R', angle: 30, axis: [1, 0, 0] },
+                { name: 'DEF-upper_arm_R_001', angle: 9, axis: [1, 0, 0] },
+                { name: 'DEF-thigh_L', angle: -10, axis: [0, 0, 1] },
+                { name: 'DEF-thigh_R', angle: 10, axis: [0, 0, 1] },
+                { name: 'DEF-thigh_L', posShift: [-0.03, 0, 0] },
+                { name: 'DEF-thigh_R', posShift: [0.03, 0, 0] },
+                { name: 'DEF-shin_L', posShift: [-0.04, 0, 0] },
+                { name: 'DEF-shin_R', posShift: [0.04, 0, 0] },
+                { name: 'DEF-foot_L', posShift: [-0.03, 0, 0] },
+                { name: 'DEF-foot_R', posShift: [0.03, 0, 0] },
+            ];
+            let count = 0;
+            for (const def of boneDefs) {
+                const bone = skel.getBoneByName(def.name);
+                if (bone) {
+                    if (def.angle && def.axis) {
+                        const Quat = bone.quaternion.constructor;
+                        const Vec3 = bone.position.constructor;
+                        const q = new Quat().setFromAxisAngle(new Vec3(...def.axis), def.angle * Math.PI / 180);
+                        bone.quaternion.premultiply(q);
+                    }
+                    if (def.posShift) {
+                        bone.position.x += def.posShift[0];
+                        bone.position.y += def.posShift[1];
+                        bone.position.z += def.posShift[2];
+                    }
+                    count++;
+                }
+            }
+            poseLog.push(`T-pose: rotated ${count} bones`);
+        } else {
+            // Restore A-pose
+            let count = 0;
+            for (const bone of skel.bones) {
+                const aq = inst._aPoseQuats[bone.name];
+                if (aq) { bone.quaternion.copy(aq); count++; }
+            }
+            poseLog.push(`A-pose: restored ${count} bones`);
+        }
     }
 
-    // Save log to server
     fetch('/api/ui-pref/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
