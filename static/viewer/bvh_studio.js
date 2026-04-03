@@ -805,7 +805,17 @@ async function loadClipAnimation(track, clip) {
 
         if (track.skeleton) {
             clip.animClip = buildClipFromData(data, track.skeleton);
-            console.log(`[BVH Studio] Clip loaded: ${clip.name} (${clip.totalFrames}f, ${clip.duration.toFixed(1)}s)`);
+            serverLog('clip_loaded', `${clip.name} (${clip.totalFrames}f, ${clip.duration.toFixed(1)}s)`);
+
+            // Auto-apply Gauss smooth if active
+            if (_gaussSmooth.active && clip.animClip) {
+                const key = `${clip.category}/${clip.name}`;
+                const backup = {};
+                for (const t of clip.animClip.tracks) backup[t.name] = new Float32Array(t.values);
+                _gaussSmooth.origClips.set(key, backup);
+                for (const t of clip.animClip.tracks) _gaussFilter(t.values, t.getValueSize(), _gaussSmooth.sigma);
+                serverLog('gauss_auto_applied', `${clip.name} sigma=${_gaussSmooth.sigma}`);
+            }
         }
 
         updateDuration();
