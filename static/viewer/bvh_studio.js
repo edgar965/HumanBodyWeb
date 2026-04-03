@@ -3038,7 +3038,7 @@ function previewAnimation(category, name) {
         _previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         _previewScene = new THREE.Scene();
         _previewScene.background = new THREE.Color(0x1a1a2e);
-        _previewCamera = new THREE.PerspectiveCamera(50, 700/440, 0.1, 100);
+        _previewCamera = new THREE.PerspectiveCamera(50, 700/440, 0.01, 500);
         _previewCamera.position.set(0, 1, 3);
         _previewControls = new OrbitControls(_previewCamera, canvas);
         _previewControls.target.set(0, 0.8, 0);
@@ -3061,13 +3061,13 @@ function previewAnimation(category, name) {
     document.getElementById('preview-title').textContent = `${category} / ${name}`;
     document.getElementById('preview-play-icon').className = 'fas fa-pause';
 
-    // Resize canvas
+    // Resize canvas (use fixed size since getBoundingClientRect may be 0 before layout)
     const canvas = document.getElementById('preview-canvas');
-    const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width || 700;
-    canvas.height = (rect.height - 45) || 440;
-    _previewRenderer.setSize(canvas.width, canvas.height, false);
-    _previewCamera.aspect = canvas.width / canvas.height;
+    const w = 698, h = 440;
+    canvas.width = w;
+    canvas.height = h;
+    _previewRenderer.setSize(w, h, false);
+    _previewCamera.aspect = w / h;
     _previewCamera.updateProjectionMatrix();
 
     // Clean previous
@@ -3080,18 +3080,40 @@ function previewAnimation(category, name) {
     // Load BVH via Three.js BVHLoader for quick preview (no retarget needed)
     const url = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`;
     fetch(url).then(r => r.text()).then(bvhText => {
+        console.log(`[Preview] BVH loaded: ${bvhText.length} chars`);
         const bvhLoader = new BVHLoader();
         const result = bvhLoader.parse(bvhText);
+        console.log(`[Preview] Parsed: ${result.skeleton.bones.length} bones, clip duration: ${result.clip.duration.toFixed(1)}s`);
 
         // Create skeleton helper
-        const skeletonHelper = new THREE.SkeletonHelper(result.skeleton.bones[0]);
+        const rootBone = result.skeleton.bones[0];
+        const skeletonHelper = new THREE.SkeletonHelper(rootBone);
         skeletonHelper.userData._preview = true;
         _previewScene.add(skeletonHelper);
-        _previewScene.add(result.skeleton.bones[0]);
-        result.skeleton.bones[0].userData._preview = true;
+        _previewScene.add(rootBone);
+        rootBone.userData._preview = true;
+
+        // Auto-scale: detect if BVH uses cm (AIST) or meters
+        rootBone.updateWorldMatrix(true, true);
+        const box = new THREE.Box3().setFromObject(rootBone);
+        const height = box.max.y - box.min.y;
+        if (height > 10) {
+            // Probably centimeters — scale down
+            rootBone.scale.setScalar(0.01);
+            console.log(`[Preview] Auto-scaled: height=${height.toFixed(0)}cm → 0.01x`);
+        }
+
+        // Center camera on skeleton
+        rootBone.updateWorldMatrix(true, true);
+        const box2 = new THREE.Box3().setFromObject(rootBone);
+        const center = box2.getCenter(new THREE.Vector3());
+        const size = box2.getSize(new THREE.Vector3());
+        _previewCamera.position.set(center.x, center.y + size.y * 0.3, center.z + Math.max(size.y * 2, 3));
+        _previewControls.target.copy(center);
+        _previewControls.update();
 
         // Animation
-        _previewMixer = new THREE.AnimationMixer(result.skeleton.bones[0]);
+        _previewMixer = new THREE.AnimationMixer(rootBone);
         _previewAction = _previewMixer.clipAction(result.clip);
         _previewAction.play();
 
