@@ -5450,47 +5450,95 @@ def smooth_bvh(request):
 
     try:
         from scipy.ndimage import gaussian_filter1d
+        from scipy.spatial.transform import Rotation
 
+        # Use humanbody_core parser for correct Euler→Quaternion handling
+        import sys
+        if str(settings.HUMANBODY_ROOT) not in sys.path:
+            sys.path.insert(0, str(settings.HUMANBODY_ROOT))
+        from humanbody_core.skeleton.retarget import parse_bvh
+
+        bvh = parse_bvh(str(bvh_path))
+
+        # Smooth quaternions (NOT Euler angles — Euler wrapping causes jumps)
+        fnum = bvh.frame_count
+        jnum = len(bvh.names)
+
+        # Flip correction first
+        for ji in range(jnum):
+            for f in range(1, fnum):
+                if np.dot(bvh.quats[f, ji], bvh.quats[f - 1, ji]) < 0:
+                    bvh.quats[f, ji] = -bvh.quats[f, ji]
+
+        # Gaussian smooth on quaternion components
+        for ji in range(jnum):
+            for c in range(4):
+                bvh.quats[:, ji, c] = gaussian_filter1d(bvh.quats[:, ji, c], sigma=sigma)
+            # Re-normalize
+            norms = np.linalg.norm(bvh.quats[:, ji], axis=1, keepdims=True)
+            norms[norms < 1e-8] = 1.0
+            bvh.quats[:, ji] /= norms
+
+        # Smooth positions (root translation) — safe for linear values
+        for ji in range(jnum):
+            for c in range(3):
+                if np.any(bvh.positions[:, ji, c] != 0):
+                    bvh.positions[:, ji, c] = gaussian_filter1d(bvh.positions[:, ji, c], sigma=sigma)
+
+        # Convert smoothed quaternions back to Euler and write BVH
         lines = bvh_path.read_text(encoding='utf-8').split('\n')
 
-        # Find MOTION section
-        motion_idx = None
-        for i, l in enumerate(lines):
-            if l.strip() == 'MOTION':
-                motion_idx = i
-                break
-        if motion_idx is None:
-            return JsonResponse({'error': 'No MOTION section'}, status=400)
+        # Find channel order from header
+        channel_orders = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('CHANNELS'):
+                parts = stripped.split()
+                nch = int(parts[1])
+                order = ''.join(p[0] for p in parts[2:2+3] if 'rotation' in p.lower())
+                if not order:
+                    order = ''.join(p[0] for p in parts[-3:] if 'rotation' in p.lower())
+                channel_orders.append((nch, order.upper() if order else 'ZYX'))
 
-        # Find frame data start
+        # Find MOTION data lines
+        motion_idx = next(i for i, l in enumerate(lines) if l.strip() == 'MOTION')
         data_start = motion_idx + 1
-        while data_start < len(lines) and not (lines[data_start].strip()[:1].lstrip('-').isdigit() if lines[data_start].strip() else False):
+        while data_start < len(lines):
+            s = lines[data_start].strip()
+            if s and (s[0].isdigit() or s[0] == '-'):
+                break
             data_start += 1
 
-        # Parse all frame values
         frame_lines = []
         for i in range(data_start, len(lines)):
-            stripped = lines[i].strip()
-            if stripped and (stripped[0].isdigit() or stripped[0] == '-'):
+            s = lines[i].strip()
+            if s and (s[0].isdigit() or s[0] == '-'):
                 frame_lines.append(i)
 
-        if len(frame_lines) < 3:
-            return JsonResponse({'error': 'Too few frames'}, status=400)
-
-        # Read all values into array
-        all_vals = []
-        for li in frame_lines:
-            vals = [float(v) for v in lines[li].strip().split()]
-            all_vals.append(vals)
-        all_vals = np.array(all_vals)  # (frames, channels)
-
-        # Apply Gaussian smooth to ALL channels
-        for c in range(all_vals.shape[1]):
-            all_vals[:, c] = gaussian_filter1d(all_vals[:, c], sigma=sigma)
-
-        # Write back
-        for fi, li in enumerate(frame_lines):
-            lines[li] = ' '.join(f'{v:.6f}' for v in all_vals[fi])
+        # Write smoothed values back
+        for fi in range(min(fnum, len(frame_lines))):
+            vals = lines[frame_lines[fi]].strip().split()
+            vi = 0
+            for ji in range(min(jnum, len(channel_orders))):
+                nch, order = channel_orders[ji]
+                if nch >= 6:
+                    # Position + rotation
+                    vals[vi] = f'{bvh.positions[fi, ji, 0]:.6f}'
+                    vals[vi+1] = f'{bvh.positions[fi, ji, 1]:.6f}'
+                    vals[vi+2] = f'{bvh.positions[fi, ji, 2]:.6f}'
+                    euler = Rotation.from_quat(bvh.quats[fi, ji]).as_euler(order.lower(), degrees=True)
+                    vals[vi+3] = f'{euler[0]:.6f}'
+                    vals[vi+4] = f'{euler[1]:.6f}'
+                    vals[vi+5] = f'{euler[2]:.6f}'
+                    vi += nch
+                else:
+                    # Rotation only
+                    euler = Rotation.from_quat(bvh.quats[fi, ji]).as_euler(order.lower(), degrees=True)
+                    vals[vi] = f'{euler[0]:.6f}'
+                    vals[vi+1] = f'{euler[1]:.6f}'
+                    vals[vi+2] = f'{euler[2]:.6f}'
+                    vi += 3
+            lines[frame_lines[fi]] = ' '.join(vals)
 
         bvh_path.write_text('\n'.join(lines), encoding='utf-8')
 
@@ -5498,9 +5546,11 @@ def smooth_bvh(request):
         for cache in bvh_path.parent.glob(f'{name}_retarget_*.json'):
             cache.unlink()
 
-        log.info(f'[smooth-bvh] {category}/{name} sigma={sigma} frames={len(frame_lines)}')
-        return JsonResponse({'ok': True, 'frames': len(frame_lines)})
+        log.info(f'[smooth-bvh] {category}/{name} sigma={sigma} frames={fnum} joints={jnum}')
+        return JsonResponse({'ok': True, 'frames': fnum})
 
     except Exception as e:
         log.error(f'[smooth-bvh] Error: {e}')
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
