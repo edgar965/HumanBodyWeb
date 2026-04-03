@@ -5419,3 +5419,88 @@ def client_log(request):
         log.info(msg)
 
     return JsonResponse({'ok': True})
+
+
+@csrf_exempt
+def smooth_bvh(request):
+    """Apply Gaussian smooth to a BVH file and save it.
+
+    POST /api/retarget/smooth-bvh/
+    Body JSON: { category, name, sigma }
+    """
+    log = logging.getLogger('core')
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    category = data.get('category', '')
+    name = data.get('name', '')
+    sigma = float(data.get('sigma', 2.0))
+
+    if not category or not name:
+        return JsonResponse({'error': 'category + name required'}, status=400)
+
+    from pathlib import Path
+    bvh_root = Path(str(settings.HUMANBODY_BVH_DIR)).resolve().parent
+    bvh_path = bvh_root / category / f'{name}.bvh'
+
+    if not bvh_path.is_file():
+        return JsonResponse({'error': f'BVH not found: {bvh_path}'}, status=404)
+
+    try:
+        from scipy.ndimage import gaussian_filter1d
+
+        lines = bvh_path.read_text(encoding='utf-8').split('\n')
+
+        # Find MOTION section
+        motion_idx = None
+        for i, l in enumerate(lines):
+            if l.strip() == 'MOTION':
+                motion_idx = i
+                break
+        if motion_idx is None:
+            return JsonResponse({'error': 'No MOTION section'}, status=400)
+
+        # Find frame data start
+        data_start = motion_idx + 1
+        while data_start < len(lines) and not (lines[data_start].strip()[:1].lstrip('-').isdigit() if lines[data_start].strip() else False):
+            data_start += 1
+
+        # Parse all frame values
+        frame_lines = []
+        for i in range(data_start, len(lines)):
+            stripped = lines[i].strip()
+            if stripped and (stripped[0].isdigit() or stripped[0] == '-'):
+                frame_lines.append(i)
+
+        if len(frame_lines) < 3:
+            return JsonResponse({'error': 'Too few frames'}, status=400)
+
+        # Read all values into array
+        all_vals = []
+        for li in frame_lines:
+            vals = [float(v) for v in lines[li].strip().split()]
+            all_vals.append(vals)
+        all_vals = np.array(all_vals)  # (frames, channels)
+
+        # Apply Gaussian smooth to ALL channels
+        for c in range(all_vals.shape[1]):
+            all_vals[:, c] = gaussian_filter1d(all_vals[:, c], sigma=sigma)
+
+        # Write back
+        for fi, li in enumerate(frame_lines):
+            lines[li] = ' '.join(f'{v:.6f}' for v in all_vals[fi])
+
+        bvh_path.write_text('\n'.join(lines), encoding='utf-8')
+
+        # Clear retarget cache
+        for cache in bvh_path.parent.glob(f'{name}_retarget_*.json'):
+            cache.unlink()
+
+        log.info(f'[smooth-bvh] {category}/{name} sigma={sigma} frames={len(frame_lines)}')
+        return JsonResponse({'ok': True, 'frames': len(frame_lines)})
+
+    except Exception as e:
+        log.error(f'[smooth-bvh] Error: {e}')
+        return JsonResponse({'error': str(e)}, status=500)

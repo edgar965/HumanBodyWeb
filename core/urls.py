@@ -88,6 +88,7 @@ urlpatterns = [
     path('api/character/retarget-job-merge/<uuid:job_id>/', character_api.retarget_job_merge, name='retarget_job_merge'),
     path('api/character/retarget-bvh-text/', character_api.retarget_bvh_text, name='retarget_bvh_text'),
     path('api/log/', character_api.client_log, name='client_log'),
+    path('api/retarget/smooth-bvh/', character_api.smooth_bvh, name='smooth_bvh'),
     path('api/character/save-bvh-text/', character_api.save_bvh_text, name='save_bvh_text'),
     path('api/character/bvh-manage/', character_api.bvh_manage, name='bvh_manage'),
     path('api/studio/project-save/', character_api.studio_project_save, name='studio_project_save'),

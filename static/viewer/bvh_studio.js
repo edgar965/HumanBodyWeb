@@ -2536,35 +2536,42 @@ function reloadAllClipAnimations() {
 }
 
 async function saveSmoothedBVH() {
-    if (!_gaussSmooth.active) { alert('Gaussian Smooth ist nicht aktiv.'); return; }
-    const sigma = _gaussSmooth.sigma;
-    let saved = 0;
+    if (!_gaussSmooth.active) { alert('Gaussian Smooth ist nicht aktiv.\nBitte erst EINSCHALTEN.'); return; }
+
+    // Collect all clips from tracks
+    const clips = [];
     for (const track of project.tracks) {
         if (track.type !== 'bvh') continue;
         for (const clip of track.clips) {
-            if (!clip.animClip) continue;
-            try {
-                // Fetch original BVH, smooth it, save back
-                const bvhUrl = `/api/character/bvh/${encodeURIComponent(clip.category)}/${encodeURIComponent(clip.name)}/`;
-                const resp = await fetch(bvhUrl);
-                const bvhText = await resp.text();
-                // Parse, smooth quaternion channels, rebuild
-                // For simplicity: save the current (smoothed) retarget state
-                // and mark as saved
-                const saveResp = await fetch('/api/character/save-bvh-text/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ category: clip.category, name: clip.name, bvh_text: bvhText }),
-                });
-                // Note: This saves the ORIGINAL BVH text — we'd need server-side smooth.
-                // For now just notify user
-                saved++;
-            } catch(e) { console.error(`Save failed for ${clip.name}:`, e); }
+            if (clip.category && clip.name) clips.push(clip);
         }
     }
-    // Actually we need to smooth the BVH on the server side. For now mark the originals as the new baseline.
+
+    if (clips.length === 0) {
+        alert('Keine Clips im Track geladen.\nBitte erst eine Animation per Doppelklick zum Track hinzufuegen,\ndann Smooth einschalten und speichern.');
+        return;
+    }
+
+    const sigma = _gaussSmooth.sigma;
+    let saved = 0;
+    for (const clip of clips) {
+        try {
+            const resp = await fetch(`/api/retarget/smooth-bvh/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category: clip.category, name: clip.name, sigma }),
+            });
+            const result = await resp.json();
+            if (result.ok) {
+                saved++;
+                serverLog('gauss_saved', `${clip.category}/${clip.name} sigma=${sigma}`);
+            } else {
+                console.error(`Save failed for ${clip.name}:`, result.error);
+            }
+        } catch(e) { console.error(`Save failed for ${clip.name}:`, e); }
+    }
     _gaussSmooth.origClips.clear();
-    alert(`Smooth (σ=${sigma}) ist jetzt permanent auf ${saved} Clip(s) angewandt.\nDie geglätteten Animationen werden beim nächsten Laden verwendet.`);
+    alert(`Smooth (σ=${sigma}) permanent gespeichert auf ${saved} von ${clips.length} Clip(s).`);
     console.log(`[BVH Studio] Smoothed clips saved: ${saved}`);
 }
 
