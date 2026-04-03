@@ -1408,6 +1408,19 @@ def character_rigify_skeleton(request):
         data_dir = str(settings.HUMANBODY_DATA_DIR) + '_male'
     else:
         data_dir = str(settings.HUMANBODY_DATA_DIR)
+    # Use T-pose skeleton if configured
+    pose = request.GET.get('pose', '')
+    if not pose:
+        s = AppSettings.load()
+        prefs = s.ui_prefs or {}
+        pose = prefs.get('default_pose', 'a_pose')
+
+    if pose == 't_pose':
+        tpose_skel = os.path.join(data_dir, 'def_skeleton_tpose.json')
+        if os.path.isfile(tpose_skel):
+            with open(tpose_skel, 'r', encoding='utf-8') as f:
+                return JsonResponse(json.load(f))
+
     skel_path = os.path.join(data_dir, 'def_skeleton.json')
     if not os.path.isfile(skel_path):
         return JsonResponse({'error': 'DEF skeleton not exported yet'}, status=404)
@@ -4216,6 +4229,33 @@ def _compute_garment_skin_weights(garment_verts, body_verts, gender='female'):
     tree = cKDTree(body_verts)
     _, nearest = tree.query(garment_verts)
     return sw[nearest].astype(np.float32).tobytes()
+
+
+@require_GET
+def list_poses(request):
+    """List available poses from CharMorph/MB-Lab."""
+    from humanbody_core.pose import list_poses as _list_poses
+    categories = _list_poses()
+    # Strip file paths for API response
+    clean = {}
+    for cat, poses in categories.items():
+        clean[cat] = [{'id': p['id'], 'name': p['name']} for p in poses]
+    return JsonResponse({'categories': clean})
+
+
+@require_GET
+def get_pose(request, pose_id):
+    """Return pose quaternions mapped to DEF bone names."""
+    from humanbody_core.pose import load_pose
+    try:
+        pose = load_pose(pose_id)
+    except FileNotFoundError:
+        return JsonResponse({'error': f'Pose not found: {pose_id}'}, status=404)
+    return JsonResponse({
+        'pose_id': pose.pose_id,
+        'bones': pose.def_bones,  # {DEF-name: [w,x,y,z]}
+        'threejs': pose.to_threejs(),  # {DEF-name: [x,y,z,w] Three.js}
+    })
 
 
 @require_GET
