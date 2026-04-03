@@ -2547,8 +2547,13 @@ async function saveSmoothedBVH() {
         }
     }
 
+    // If no track clips, try current preview animation
+    if (clips.length === 0 && _previewCategory && _previewName) {
+        clips.push({ category: _previewCategory, name: _previewName });
+    }
+
     if (clips.length === 0) {
-        alert('Keine Clips im Track geladen.\nBitte erst eine Animation per Doppelklick zum Track hinzufuegen,\ndann Smooth einschalten und speichern.');
+        alert('Keine Animation geladen.\nBitte erst eine Animation per Doppelklick zum Track hinzufuegen\noder per A-Taste in der Vorschau oeffnen.');
         return;
     }
 
@@ -3200,8 +3205,12 @@ let _previewMixer = null;
 let _previewAction = null;
 let _previewClock = null;
 let _previewAnimId = null;
+let _previewCategory = null;
+let _previewName = null;
 
 function previewAnimation(category, name) {
+    _previewCategory = category;
+    _previewName = name;
     // Create or reuse modal
     if (!_previewModal) {
         _previewModal = document.createElement('div');
@@ -3214,6 +3223,7 @@ function previewAnimation(category, name) {
                     <div style="display:flex;gap:8px;align-items:center;">
                         <button id="preview-play" style="background:none;border:1px solid var(--border,#334);border-radius:4px;color:#ccc;cursor:pointer;padding:4px 10px;font-size:0.8rem;"><i class="fas fa-play" id="preview-play-icon"></i></button>
                         <span id="preview-frame" style="font-size:0.75rem;color:#888;">0 / 0</span>
+                        <button id="preview-save-smooth" style="background:none;border:1px solid var(--border,#334);border-radius:4px;color:#4caf50;cursor:pointer;padding:4px 10px;font-size:0.75rem;" title="Smooth permanent auf BVH speichern"><i class="fas fa-save"></i> Smooth speichern</button>
                         <button id="preview-close" style="background:none;border:none;color:#888;cursor:pointer;font-size:1.2rem;">&times;</button>
                     </div>
                 </div>
@@ -3223,6 +3233,25 @@ function previewAnimation(category, name) {
 
         // Close handlers
         document.getElementById('preview-close').addEventListener('click', closePreview);
+        document.getElementById('preview-save-smooth').addEventListener('click', async () => {
+            if (!_gaussSmooth.active) { alert('Smooth ist nicht aktiv.\nBitte erst Tools > Smooth EINSCHALTEN.'); return; }
+            if (!_previewCategory || !_previewName) { alert('Keine Animation geladen.'); return; }
+            const sigma = _gaussSmooth.sigma;
+            try {
+                const resp = await fetch('/api/retarget/smooth-bvh/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: _previewCategory, name: _previewName, sigma }),
+                });
+                const result = await resp.json();
+                if (result.ok) {
+                    serverLog('gauss_saved_preview', `${_previewCategory}/${_previewName} sigma=${sigma} frames=${result.frames}`);
+                    alert(`Smooth (σ=${sigma}) gespeichert: ${_previewCategory}/${_previewName}\n${result.frames} Frames geglättet.`);
+                } else {
+                    alert('Fehler: ' + (result.error || 'Unbekannt'));
+                }
+            } catch(e) { alert('Fehler: ' + e.message); }
+        });
         _previewModal.addEventListener('click', (e) => { if (e.target === _previewModal) closePreview(); });
         document.getElementById('preview-play').addEventListener('click', () => {
             if (_previewAction) {
