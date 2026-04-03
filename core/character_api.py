@@ -5447,9 +5447,14 @@ def client_log(request):
 def smooth_bvh(request):
     """Apply Gaussian smooth to a BVH file and save it.
 
+    TEMPORARILY DISABLED — Euler conversion produces artifacts.
+    TODO: Fix quaternion-to-euler conversion with proper channel order handling.
+
     POST /api/retarget/smooth-bvh/
     Body JSON: { category, name, sigma }
     """
+    return JsonResponse({'error': 'Smooth-Speichern temporaer deaktiviert (Euler-Konvertierung fehlerhaft). Bitte nur Session-Smooth verwenden.'}, status=400)
+
     log = logging.getLogger('core')
     try:
         data = json.loads(request.body)
