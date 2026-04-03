@@ -3369,6 +3369,12 @@ function previewAnimation(category, name) {
         _previewControls.target.set(0, 0.85, 0);
         _previewControls.update();
 
+        // Apply Gauss smooth if active
+        if (_gaussSmooth.active) {
+            for (const t of animClip.tracks) _gaussFilter(t.values, t.getValueSize(), _gaussSmooth.sigma);
+            serverLog('gauss_preview', `${name} sigma=${_gaussSmooth.sigma}`);
+        }
+
         // Play animation
         _previewMixer = new THREE.AnimationMixer(previewMesh);
         _previewAction = _previewMixer.clipAction(animClip);
