@@ -2449,6 +2449,7 @@ function _gaussFilter(values, stride, sigma) {
 
 function applyGaussToAllClips() {
     const sigma = _gaussSmooth.sigma;
+    let smoothedCount = 0;
     for (const track of project.tracks) {
         if (track.type !== 'bvh') continue;
         for (const clip of track.clips) {
@@ -2464,18 +2465,23 @@ function applyGaussToAllClips() {
             }
             // Restore original then apply smooth
             const backup = _gaussSmooth.origClips.get(key);
+            let trackCount = 0;
             for (const t of clip.animClip.tracks) {
                 if (backup[t.name]) t.values.set(backup[t.name]);
                 _gaussFilter(t.values, t.getValueSize(), sigma);
+                trackCount++;
             }
+            // CRITICAL: uncache the clip so Three.js creates a fresh Action with new data
+            if (track.mixer) track.mixer.uncacheClip(clip.animClip);
+            smoothedCount++;
         }
-        // Reset active clip so mixer picks up changes
+        // Reset active clip reference
         if (track.mixer) track.mixer.stopAllAction();
         track._activeClip = null;
         track._activeAction = null;
     }
     applyPlayhead();
-    console.log(`[BVH Studio] Gauss smooth applied: σ=${sigma}`);
+    console.log(`[BVH Studio] Gauss smooth applied: σ=${sigma}, ${smoothedCount} clip(s)`);
 }
 
 function reloadAllClipAnimations() {
@@ -2491,6 +2497,8 @@ function reloadAllClipAnimations() {
                     if (backup[t.name]) t.values.set(backup[t.name]);
                 }
             }
+            // Uncache so mixer uses restored data
+            if (track.mixer) track.mixer.uncacheClip(clip.animClip);
         }
         if (track.mixer) track.mixer.stopAllAction();
         track._activeClip = null;
