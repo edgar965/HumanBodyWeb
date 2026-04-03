@@ -868,6 +868,7 @@ async function init() {
     initPropHairControls();
 
     // Asset + Animation panels
+    loadMHProxyUI();
     loadGarmentUI();
     loadKleiderUI();
     loadHairUI();
@@ -5014,6 +5015,219 @@ function _saveSelectedGarmentState() {
     }
 }
 
+// =========================================================================
+// MakeHuman Proxy Fit (uses .mhclo vertex mapping — no shrinkwrap)
+// =========================================================================
+
+let _selectedMHId = null;
+
+async function loadMHProxyUI() {
+    _bindSlider('mh-roughness', 'mh-roughness-val', v => (v / 100).toFixed(2));
+    _bindSlider('mh-metalness', 'mh-metalness-val', v => (v / 100).toFixed(2));
+
+    // Material: real-time updates
+    const mhRough = document.getElementById('mh-roughness');
+    if (mhRough) mhRough.addEventListener('input', () => {
+        if (_syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (sel) sel.mesh.material.roughness = _sliderVal('mh-roughness') / 100;
+    });
+    const mhMetal = document.getElementById('mh-metalness');
+    if (mhMetal) mhMetal.addEventListener('input', () => {
+        if (_syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (sel) sel.mesh.material.metalness = _sliderVal('mh-metalness') / 100;
+    });
+    const mhColor = document.getElementById('mh-color');
+    if (mhColor) mhColor.addEventListener('input', () => {
+        if (_syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (sel) sel.mesh.material.color.set(mhColor.value);
+    });
+
+    const catSelect = document.getElementById('mh-category');
+    if (catSelect) catSelect.addEventListener('change', () => _renderMHList());
+
+    const createBtn = document.getElementById('mh-create');
+    if (createBtn) createBtn.addEventListener('click', () => _doMHProxyFit());
+
+    const removeBtn = document.getElementById('mh-remove');
+    if (removeBtn) removeBtn.addEventListener('click', () => {
+        if (_selectedMHId && _selectedSubMesh) _removeSubMesh(_selectedSubMesh);
+    });
+
+    const removeAllBtn = document.getElementById('mh-remove-all');
+    if (removeAllBtn) removeAllBtn.addEventListener('click', () => {
+        const inst = _selectedInst();
+        if (!inst) return;
+        const keys = Object.keys(inst.clothMeshes).filter(k => k.startsWith('mh_'));
+        for (const key of keys) {
+            const t = { type: 'cloth', key, meshObj: inst.clothMeshes[key], charId: inst.id };
+            _removeSubMesh(t);
+        }
+    });
+
+    // Load garment catalog (shared)
+    const waitForCatalog = setInterval(async () => {
+        if (_garmentCatalog.length === 0) {
+            try {
+                const resp = await fetch('/api/character/garment/library/');
+                const data = await resp.json();
+                if (data.garments) {
+                    for (const cat of Object.keys(data.garments)) {
+                        for (const g of data.garments[cat]) {
+                            g._category = cat;
+                            if (!_garmentCatalog.find(x => x.id === g.id))
+                                _garmentCatalog.push(g);
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+        if (_garmentCatalog.length > 0) {
+            clearInterval(waitForCatalog);
+            if (catSelect) {
+                const cats = [...new Set(_garmentCatalog.map(g => g._category))];
+                cats.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                    catSelect.appendChild(opt);
+                });
+            }
+            _renderMHList();
+        }
+    }, 200);
+}
+
+function _selectedMHMesh() {
+    if (!_selectedSubMesh || !_selectedSubMesh.key.startsWith('mh_')) return null;
+    const inst = _characters.find(c => c.id === _selectedSubMesh.charId);
+    if (!inst) return null;
+    return { inst, key: _selectedSubMesh.key, mesh: inst.clothMeshes[_selectedSubMesh.key] };
+}
+
+function _renderMHList() {
+    const list = document.getElementById('mh-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const catFilter = document.getElementById('mh-category')?.value || '';
+    const filtered = catFilter
+        ? _garmentCatalog.filter(g => g._category === catFilter)
+        : _garmentCatalog;
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Garments</div>';
+        return;
+    }
+
+    const groups = {};
+    for (const g of filtered) {
+        if (!groups[g._category]) groups[g._category] = [];
+        groups[g._category].push(g);
+    }
+
+    for (const [cat, items] of Object.entries(groups)) {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'anim-folder';
+        catDiv.innerHTML = `<div class="anim-folder-header"><span class="chevron">&#9660;</span> ${cat} (${items.length})</div>`;
+        const body = document.createElement('div');
+        body.className = 'anim-folder-body';
+        for (const g of items) {
+            const row = document.createElement('div');
+            row.className = 'anim-item';
+            row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;';
+            if (g.has_thumb) {
+                const img = document.createElement('img');
+                img.src = `/api/character/garment/thumb/${g.id}/`;
+                img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;';
+                row.appendChild(img);
+            }
+            const name = document.createElement('span');
+            name.textContent = g.name || g.id;
+            name.style.cssText = 'font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            row.appendChild(name);
+            row.addEventListener('click', () => {
+                _selectedMHId = g.id;
+                list.querySelectorAll('.anim-item').forEach(el => el.classList.remove('selected'));
+                row.classList.add('selected');
+            });
+            body.appendChild(row);
+        }
+        catDiv.appendChild(body);
+        const header = catDiv.querySelector('.anim-folder-header');
+        header.addEventListener('click', () => {
+            body.style.display = body.style.display === 'none' ? '' : 'none';
+            header.querySelector('.chevron').textContent = body.style.display === 'none' ? '\u25B6' : '\u25BC';
+        });
+        list.appendChild(catDiv);
+    }
+}
+
+async function _doMHProxyFit() {
+    if (!_selectedMHId) return;
+    const inst = _selectedInst();
+    if (!inst) return;
+
+    if (!inst.isSkinned && rigifySkeletonData && skinWeightData) {
+        convertInstToSkinned(inst);
+    }
+
+    const params = _charQueryParams(inst);
+    params.set('garment_id', _selectedMHId);
+
+    const colorHex = document.getElementById('mh-color')?.value || '#4d5980';
+    const c = new THREE.Color(colorHex);
+    params.set('color_r', c.r.toFixed(3));
+    params.set('color_g', c.g.toFixed(3));
+    params.set('color_b', c.b.toFixed(3));
+
+    try {
+        const resp = await fetch(`/api/character/mh-proxy-fit/?${params}`);
+        const data = await resp.json();
+        if (data.error) { console.warn('MH proxy fit error:', data.error); return; }
+
+        const key = `mh_${_selectedMHId}`;
+
+        // Remove old if exists
+        if (inst.clothMeshes[key]) {
+            inst.group.remove(inst.clothMeshes[key]);
+            inst.clothMeshes[key].geometry.dispose();
+            inst.clothMeshes[key].material.dispose();
+            delete inst.clothMeshes[key];
+        }
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+        const faceBuf = base64ToUint32(data.faces);
+        const normalBuf = base64ToFloat32(data.normals);
+        blenderToThreeCoords(normalBuf);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+
+        const roughness = _sliderVal('mh-roughness') / 100;
+        const metalness = _sliderVal('mh-metalness') / 100;
+        const mat = new THREE.MeshStandardMaterial({
+            color: c, roughness, metalness, side: THREE.DoubleSide,
+            polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+        });
+
+        const mesh = _skinifyMesh(geo, mat, inst, data);
+        inst.clothMeshes[key] = mesh;
+        inst.group.add(mesh);
+
+        updateEquippedList(inst);
+        updateVertexCount();
+        console.log(`✓ MH proxy fit: ${_selectedMHId} (${data.vertex_count} verts)`);
+    } catch (e) {
+        console.error('MH proxy fit failed:', e);
+    }
+}
+
 async function loadGarmentUI() {
     _bindSlider('garment-offset', 'garment-offset-val', v => (v / 1000).toFixed(3));
     _bindSlider('garment-stiffness', 'garment-stiffness-val', v => (v / 100).toFixed(2));
@@ -5471,13 +5685,39 @@ async function loadKleiderUI() {
             _renderKleiderList();
 
             // Restore last selected garment from settings
+            const _klog = [];
             fetch('/api/settings/humanbody/').then(r => r.json()).then(s => {
                 const lastId = s.ui_prefs?.last_kleider_id;
-                if (lastId) {
-                    // Delay to ensure DOM is fully rendered after _renderKleiderList()
-                    setTimeout(() => _kleiderSelectById(lastId), 300);
+                _klog.push(`lastId=${lastId}`);
+                if (!lastId) { _klog.push('no lastId, skip'); _sendKlog(_klog); return; }
+
+                function _trySelect(attempt) {
+                    const list = document.getElementById('kleider-list');
+                    const items = list ? list.querySelectorAll('.anim-item') : [];
+                    const ids = [...items].map(el => el.dataset.kleiderId).filter(Boolean);
+                    const match = ids.includes(lastId);
+                    _klog.push(`attempt=${attempt} items=${items.length} ids=${ids.slice(0,5).join(',')} match=${match}`);
+                    if (match) {
+                        _kleiderSelectById(lastId);
+                        _klog.push('selected!');
+                        _sendKlog(_klog);
+                    } else if (attempt < 10) {
+                        setTimeout(() => _trySelect(attempt + 1), 300);
+                    } else {
+                        _klog.push('gave up after 10 attempts');
+                        _sendKlog(_klog);
+                    }
                 }
-            }).catch(() => {});
+                _trySelect(0);
+            }).catch(e => { _klog.push('fetch error: ' + e); _sendKlog(_klog); });
+
+            function _sendKlog(log) {
+                fetch('/api/ui-pref/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: '_kleider_debug_log', value: log }),
+                }).catch(() => {});
+            }
         }
     }, 200);
 
@@ -5494,7 +5734,18 @@ async function loadKleiderUI() {
     window._updateKleiderVisibility = _updateKleiderVisibility;
     // Also check when a character is selected or tab switches
     document.querySelectorAll('.panel-tab').forEach(tab => {
-        tab.addEventListener('click', () => setTimeout(_updateKleiderVisibility, 50));
+        tab.addEventListener('click', () => {
+            setTimeout(_updateKleiderVisibility, 50);
+            // When switching TO Kleider tab, scroll selected item into view
+            if (tab.dataset.tab === 'kleider' && _selectedKleiderId) {
+                setTimeout(() => {
+                    const list = document.getElementById('kleider-list');
+                    if (!list) return;
+                    const sel = list.querySelector('.anim-item.selected');
+                    if (sel) sel.scrollIntoView({ block: 'center' });
+                }, 100);
+            }
+        });
     });
     // Fallback interval for edge cases
     setInterval(_updateKleiderVisibility, 1000);
@@ -5504,7 +5755,16 @@ function _kleiderSelectById(id) {
     _selectedKleiderId = id;
     const list = document.getElementById('kleider-list');
     if (!list) return;
-    // Expand parent folder if collapsed, then click the item
+
+    // 1. Collapse ALL folders first
+    list.querySelectorAll('.anim-folder').forEach(folder => {
+        const body = folder.querySelector('.anim-folder-body');
+        if (body) body.style.display = 'none';
+        const chev = folder.querySelector('.chevron');
+        if (chev) chev.textContent = '\u25B6';
+    });
+
+    // 2. Find the item, expand its parent folder, select it
     list.querySelectorAll('.anim-item').forEach(el => {
         if (el.dataset.kleiderId === id) {
             // Expand parent folder
@@ -5515,7 +5775,18 @@ function _kleiderSelectById(id) {
                 const chev = folder.querySelector('.chevron');
                 if (chev) chev.textContent = '\u25BC';
             }
-            el.click();
+            // Select + highlight
+            list.querySelectorAll('.anim-item').forEach(e => e.classList.remove('selected'));
+            el.classList.add('selected');
+            _selectedKleiderId = id;
+
+            // 3. Set category dropdown to match
+            const catSelect = document.getElementById('kleider-category');
+            if (catSelect && folder) {
+                const catName = folder.querySelector('.anim-folder-header')?.textContent?.replace(/\s*\(\d+\).*/, '').trim();
+                const g = _garmentCatalog.find(g => g.id === id);
+                if (g && g._category) catSelect.value = g._category;
+            }
         }
     });
 }

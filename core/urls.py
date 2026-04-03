@@ -70,6 +70,7 @@ urlpatterns = [
     path('humanbody/theatre/help/', character_api.theatre_help_page, name='theatre_help'),
     path('humanbody/rigging/help/', character_api.rigging_help_page, name='rigging_help'),
     path('api/ui-pref/', character_api.ui_pref_save, name='ui_pref_save'),
+    path('api/character/mh-proxy-fit/', character_api.mh_proxy_fit, name='mh_proxy_fit'),
     path('humanbody/animations/', character_api.animations_page, name='humanbody_animations'),
     path('humanbody/test-animation/', character_api.test_animation_page, name='test_animation'),
     path('humanbody/test-character/', character_api.test_character_page, name='test_character'),

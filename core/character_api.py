@@ -185,6 +185,87 @@ def _fit_to_cylinders_sequential(garment_verts, garment_faces, hull_verts,
     }
 
 
+def _fit_generic(garment_verts, garment_faces, target_verts,
+                  offset=0.006, stiffness=0.5, color=(0.3, 0.35, 0.5),
+                  coordinate_system='auto'):
+    """Generic garment fit: wrap garment around ANY target mesh.
+
+    No arm-retarget, no crotch handling, no body-specific logic.
+    Just: convert coords → align bounding boxes → shrinkwrap → smooth → push outside.
+    """
+    from scipy.spatial import cKDTree
+    from GarmentFitter.fitter import (
+        mh_to_blender, _laplacian_smooth, _push_outside_body,
+        _shrinkwrap, _detect_coordinate_system, _triangulate,
+        _compute_vertex_normals,
+    )
+
+    verts = garment_verts.copy().astype(np.float64)
+    faces = garment_faces.copy()
+
+    # 1. Coordinate conversion
+    if coordinate_system == 'auto':
+        coordinate_system = _detect_coordinate_system(verts)
+    if coordinate_system == 'makehuman':
+        verts = mh_to_blender(verts)
+
+    # 2. Triangulate
+    triangles = _triangulate(faces)
+
+    # 3. Align to target: scale + translate to match bounding boxes
+    g_min, g_max = verts.min(axis=0), verts.max(axis=0)
+    t_min, t_max = target_verts.min(axis=0), target_verts.max(axis=0)
+    g_size = g_max - g_min
+    t_size = t_max - t_min
+    g_center = (g_min + g_max) * 0.5
+    t_center = (t_min + t_max) * 0.5
+
+    # Scale per-axis to match target proportions
+    scale = np.ones(3)
+    for i in range(3):
+        if g_size[i] > 0.001:
+            scale[i] = t_size[i] / g_size[i]
+
+    # Apply: center → scale → translate to target center
+    verts = (verts - g_center) * scale + t_center
+
+    # 4. Compute target normals (from vertices, radial from centroid)
+    target_centroid = target_verts.mean(axis=0)
+    target_normals = target_verts - target_centroid
+    tn = np.linalg.norm(target_normals, axis=1, keepdims=True)
+    tn[tn < 1e-8] = 1.0
+    target_normals /= tn
+
+    # 5. Shrinkwrap iterations
+    # Inflate target slightly for offset
+    inflated = target_verts + target_normals * (offset * 0.5)
+    n_iters = 5
+    for i in range(n_iters):
+        cl = 0.08 / (1 + i * 0.3)
+        verts = _shrinkwrap(verts, inflated, target_normals,
+                            offset=offset, soft=True, char_length=cl)
+        verts = _laplacian_smooth(verts, triangles, iterations=2, factor=0.15)
+        verts = _push_outside_body(verts, inflated, min_dist=offset * 0.8)
+
+    # 6. Stiffness-controlled refinement
+    s = max(0.0, min(1.0, stiffness))
+    smooth_factor = 0.5 - s * 0.4
+    cycles = max(2, round(5 - s * 3))
+    for _ in range(cycles):
+        verts = _laplacian_smooth(verts, triangles, iterations=3, factor=smooth_factor)
+        verts = _push_outside_body(verts, inflated, min_dist=offset * 0.8)
+
+    # 7. Compute output normals
+    normals = _compute_vertex_normals(verts, triangles)
+
+    return {
+        'vertices': verts.astype(np.float32),
+        'faces': triangles,
+        'normals': normals.astype(np.float32),
+        'color': color,
+    }
+
+
 def _generate_smooth_hull(body_verts, body_faces, inflate_mm=15, smooth_iterations=20):
     """Create a smoothed, inflated version of the body mesh.
 
@@ -3981,6 +4062,141 @@ def garment_library_rescan(request):
     return JsonResponse({'ok': True, 'count': len(lib.catalog)})
 
 
+@require_GET
+def mh_proxy_fit(request):
+    """Fit a MakeHuman garment using its .mhclo proxy mapping.
+
+    Instead of shrinkwrap, uses the pre-defined vertex mapping:
+    garment_vert_pos = w1*body[v1] + w2*body[v2] + w3*body[v3] + offset
+
+    Query params: garment_id, body_type, morph_*, meta_*, color_r/g/b
+    """
+    garment_id = request.GET.get('garment_id', '')
+    if not garment_id:
+        return JsonResponse({'error': 'garment_id required'}, status=400)
+
+    body_type = request.GET.get('body_type', 'Female_Caucasian')
+    gender = _gender_from_body_type(body_type)
+
+    # Get body vertices
+    md = _get_morph_data()
+    cd = _get_char_defaults()
+    state = CharacterState(md, cd)
+    state.set_body_type(body_type)
+    for key, val in request.GET.items():
+        if key.startswith('morph_'):
+            try: state.set_morph(key[6:], float(val))
+            except (ValueError, AttributeError): pass
+        if key.startswith('meta_'):
+            try: state.set_meta(key[5:], float(val))
+            except (ValueError, AttributeError): pass
+
+    body_verts = state.compute()
+    if body_verts is None:
+        return JsonResponse({'error': 'Failed to compute body mesh'}, status=500)
+
+    n_body = len(body_verts)
+
+    # Find garment directory with .mhclo
+    import glob
+    from tools.mhclo_proxy import MHCLOProxy
+
+    cache_dir = os.path.join(str(settings.HUMANBODY_DATA_DIR), '..', 'garment_library', '.cache')
+    garment_name = garment_id.split('/')[-1] if '/' in garment_id else garment_id
+    garment_dir = os.path.join(cache_dir, garment_name)
+
+    if not os.path.isdir(garment_dir):
+        return JsonResponse({'error': f'Garment directory not found: {garment_name}'}, status=404)
+
+    try:
+        proxy = MHCLOProxy.from_directory(garment_dir)
+    except FileNotFoundError as e:
+        return JsonResponse({'error': str(e)}, status=404)
+
+    if proxy.vertex_count == 0:
+        return JsonResponse({'error': 'No vertex mappings in .mhclo'}, status=400)
+
+    # Option A: Use MH body directly (perfect T-pose fit, no morphs)
+    # Option B: Use our body with mapping (adapts to morphs but imprecise)
+    use_mh_body = request.GET.get('use_mh_body', '1') == '1'
+
+    if use_mh_body:
+        # Load MH base mesh and use directly — perfect garment positioning
+        mh_base_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'base_vertices.npy')
+        if os.path.isfile(mh_base_path):
+            mh_raw = np.load(mh_base_path)
+            # MH (dm, Y-up) → Blender (m, Z-up)
+            mh_bl = np.column_stack([mh_raw[:, 0] * 0.1, -mh_raw[:, 2] * 0.1, mh_raw[:, 1] * 0.1])
+            mh_bl[:, 2] -= mh_bl[:, 2].min()  # feet at Z=0
+            # Align feet with our body
+            mh_bl[:, 2] += body_verts[:, 2].min()
+            fit_body = mh_bl
+        else:
+            fit_body = body_verts
+    else:
+        # Use our body with KDTree mapping
+        mh_map_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'mh_to_body_map.npy')
+        mh_to_body_map = None
+        if os.path.isfile(mh_map_path):
+            mh_to_body_map = np.load(mh_map_path)
+        fit_body = body_verts
+
+    garment_verts_raw = proxy.fit_vectorized(
+        fit_body,
+        mh_to_body_map=None if use_mh_body else mh_to_body_map,
+    )
+    result = {
+        'vertices': garment_verts_raw.astype(np.float32),
+        'faces': proxy.triangulate_faces(),
+        'normals': proxy.compute_normals(garment_verts_raw).astype(np.float32),
+    }
+    garment_verts = result['vertices']
+    triangles = result['faces']
+    vert_normals = result['normals']
+
+    color = (
+        float(request.GET.get('color_r', 0.3)),
+        float(request.GET.get('color_g', 0.35)),
+        float(request.GET.get('color_b', 0.5)),
+    )
+
+    # Encode response (same format as garment_fit)
+    verts_f32 = garment_verts.astype(np.float32)
+    normals_f32 = vert_normals.astype(np.float32)
+    tris_u32 = triangles.astype(np.uint32) if len(triangles) > 0 else np.zeros((0, 3), dtype=np.uint32)
+
+    return JsonResponse({
+        'vertex_count': int(len(garment_verts)),
+        'vertices': base64.b64encode(verts_f32.tobytes()).decode(),
+        'normals': base64.b64encode(normals_f32.tobytes()).decode(),
+        'faces': base64.b64encode(tris_u32.tobytes()).decode(),
+        'skin_indices': base64.b64encode(
+            _compute_garment_skin_indices(garment_verts, body_verts, gender)
+        ).decode() if hasattr(garment_verts, 'shape') else '',
+        'skin_weights': base64.b64encode(
+            _compute_garment_skin_weights(garment_verts, body_verts, gender)
+        ).decode() if hasattr(garment_verts, 'shape') else '',
+    })
+
+
+def _compute_garment_skin_indices(garment_verts, body_verts, gender='female'):
+    """Compute skin indices for garment by nearest-body-vertex transfer."""
+    from scipy.spatial import cKDTree
+    si, sw = _get_base_skin_arrays(gender)
+    tree = cKDTree(body_verts)
+    _, nearest = tree.query(garment_verts)
+    return si[nearest].astype(np.float32).tobytes()
+
+
+def _compute_garment_skin_weights(garment_verts, body_verts, gender='female'):
+    """Compute skin weights for garment by nearest-body-vertex transfer."""
+    from scipy.spatial import cKDTree
+    si, sw = _get_base_skin_arrays(gender)
+    tree = cKDTree(body_verts)
+    _, nearest = tree.query(garment_verts)
+    return sw[nearest].astype(np.float32).tobytes()
+
+
 @csrf_exempt
 def garment_fit(request):
     """Fit a garment template to the current body and return as base64 binary.
@@ -4052,7 +4268,7 @@ def garment_fit(request):
     from GarmentFitter import fit_garment
 
     if fit_mode == 'rig_hull':
-        # Stage 2: Use normal fitter but with hull vertices as target
+        # Stage 2: Generic fit — wrap garment around hull mesh
         hull_verts = None
         if request.method == 'POST':
             try:
@@ -4067,19 +4283,10 @@ def garment_fit(request):
         if hull_verts is None:
             hull_verts = _generate_smooth_hull(body_verts, body_faces)
 
-        # Use the normal fit_garment pipeline but with hull as body target
-        # The fitter handles coordinate conversion, arm retarget, alignment, etc.
-        result = fit_garment(
+        result = _fit_generic(
             template.vertices, template.faces, hull_verts,
-            body_faces=None,  # no faces for hull — fitter uses radial normals
-            offset=offset,
-            stiffness=stiffness,
-            color=color,
+            offset=offset, stiffness=stiffness, color=color,
             coordinate_system=coord_sys,
-            min_dist_mm=min_dist_mm,
-            crotch_floor_mm=crotch_floor_mm,
-            lift_mm=lift_mm,
-            crotch_depth_mm=crotch_depth_mm,
         )
     elif fit_mode == 'body_refine':
         # Stage 2: Refine existing garment against body mesh
