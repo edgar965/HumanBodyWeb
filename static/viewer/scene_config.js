@@ -3,27 +3,28 @@
  * Phase 1: Load characters from presets, position/rotate/scale with gizmos,
  * save/load scene files. Lighting/Renderer/Camera controls remain.
  */
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { detectBVHFormat, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText } from './retarget_hybrid.js?v=32';
-import { buildRigifySkeleton } from './rigify_skeleton_builder.js?v=2';
-import { classifyBones, getDefaultModelConfig, computeBoneWorldTransforms, generateModelMesh, classifyRigBones, getDefaultRigConfig, generateRigBoneMesh, BODY_BONES, FINGER_BONES } from './model_generator.js';
+import {
+    THREE, OrbitControls, TransformControls, BVHLoader, GLTFLoader,
+    detectBVHFormat, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText,
+    buildRigifySkeleton,
+    classifyBones, getDefaultModelConfig, computeBoneWorldTransforms,
+    generateModelMesh, classifyRigBones, getDefaultRigConfig,
+    generateRigBoneMesh, BODY_BONES, FINGER_BONES,
+    gltfLoader, serverLog,
+    LIGHT_PRESETS, TONE_MAPPINGS, BODY_MATERIALS,
+    state, SESSION_KEY,
+} from './scene_state.js?v=1';
+import {
+    markDirty, markClean,
+    pushSceneUndo, sceneUndo, sceneRedo,
+    setUndoCallbacks,
+    _undoStack, _redoStack, _undoSuppressed, _undoInProgress,
+} from './scene_undo.js?v=1';
+import { _defaultRigParams, initRiggingTab } from './scene_rigging.js?v=1';
+import { _charmorphAssets, loadCharmorphAssets, renderCharmorphList } from './scene_charmorph.js?v=1';
+import { saveSessionState, restoreSessionState } from './scene_session.js?v=1';
 
-const gltfLoader = new GLTFLoader();
-
-// Server-side logging
-function serverLog(action, detail, level) {
-    const msg = detail ? `${action} — ${detail}` : action;
-    console.log(`[Scene] ${msg}`);
-    fetch('/api/log/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ page: 'scene', action, detail: detail || '', level: level || 'info' }),
-    }).catch(() => {});
-}
+// gltfLoader, serverLog imported from scene_state.js
 
 // GLOBAL Undo handler — Ctrl+Shift+U (only combo Chrome doesn't swallow on QWERTZ)
 window.addEventListener('keydown', (e) => {
@@ -35,164 +36,80 @@ window.addEventListener('keydown', (e) => {
     }
 }, true);
 
-// =========================================================================
-// Light Presets
-// =========================================================================
-const LIGHT_PRESETS = {
-    studio: {
-        key:     { intensity: 3.0, color: 0xffffff, pos: [2, 4, -5] },
-        fill:    { intensity: 2.0, color: 0xeeeeff, pos: [-3, 3, -4] },
-        back:    { intensity: 2.5, color: 0xffeedd, pos: [0, 4, 5] },
-        ambient: { intensity: 0.8, color: 0xffffff },
-        exposure: 1.6
-    },
-    outdoor: {
-        key:     { intensity: 4.0, color: 0xfff5e0, pos: [5, 8, -2] },
-        fill:    { intensity: 1.5, color: 0x8899cc, pos: [-4, 2, -3] },
-        back:    { intensity: 1.0, color: 0xffeedd, pos: [-2, 3, 4] },
-        ambient: { intensity: 1.2, color: 0xddeeff },
-        exposure: 1.8
-    },
-    dramatic: {
-        key:     { intensity: 4.5, color: 0xffddaa, pos: [4, 3, -3] },
-        fill:    { intensity: 0.5, color: 0x4444aa, pos: [-3, 1, -2] },
-        back:    { intensity: 3.0, color: 0xff8844, pos: [0, 3, 5] },
-        ambient: { intensity: 0.3, color: 0x222244 },
-        exposure: 1.4
-    },
-    neutral: {
-        key:     { intensity: 2.5, color: 0xffffff, pos: [3, 5, -4] },
-        fill:    { intensity: 2.5, color: 0xffffff, pos: [-3, 5, -4] },
-        back:    { intensity: 2.0, color: 0xffffff, pos: [0, 4, 5] },
-        ambient: { intensity: 1.0, color: 0xffffff },
-        exposure: 1.6
-    }
-};
-
-const TONE_MAPPINGS = {
-    ACESFilmic: THREE.ACESFilmicToneMapping,
-    Linear:     THREE.LinearToneMapping,
-    Reinhard:   THREE.ReinhardToneMapping,
-    Cineon:     THREE.CineonToneMapping,
-    None:       THREE.NoToneMapping
-};
+// LIGHT_PRESETS, TONE_MAPPINGS, BODY_MATERIALS imported from scene_state.js
 
 // =========================================================================
-// Body materials (same as before)
-// =========================================================================
-const BODY_MATERIALS = [
-    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 0 Skin
-    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 1 Censor
-    { color: 0x111111, roughness: 0.8,  metalness: 0.0 },  // 2 Eyelash
-    { color: 0x0a0a0a, roughness: 0.1,  metalness: 0.0 },  // 3 Pupil
-    { color: 0xf4f0e8, roughness: 0.2,  metalness: 0.0 },  // 4 Sclera
-    { color: 0xf4f0e8, roughness: 0.05, metalness: 0.0, opacity: 0.3, transparent: true },  // 5 Cornea
-    { color: 0x4a7a9b, roughness: 0.15, metalness: 0.0 },  // 6 Iris
-    { color: 0xb55a6a, roughness: 0.7,  metalness: 0.0 },  // 7 Tongue
-    { color: 0xf0ece0, roughness: 0.3,  metalness: 0.0 },  // 8 Teeth
-    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 9 Nails Hand
-    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 10 Nails Feet
-];
-
-// =========================================================================
-// Global state
+// Global state — aliased from state object (scene_state.js)
+// Using property aliases so existing code continues to work with bare names.
+// Each `let` below is kept in sync with state.* via the init function.
+// For simplicity, we use direct state.* access in new code, but for the
+// thousands of existing lines we create local aliases here.
 // =========================================================================
 let scene, camera, renderer, controls, canvas;
-let clock = new THREE.Clock();
-let frameCount = 0;
-let fpsAccum = 0;
-
-// Lights
+let clock = state.clock;
+let frameCount = state.frameCount;
+let fpsAccum = state.fpsAccum;
 let keyLight, fillLight, backLight, ambientLight;
-
-// Legacy single mesh (kept for default preview, removed when using characters)
 let bodyMesh = null;
 let bodyGeometry = null;
-
-// Animation
 let mixer = null;
 let currentAction = null;
 let skeletonHelper = null;
 let playing = false;
-const bvhLoader = new BVHLoader();
+const bvhLoader = state.bvhLoader;
 let rigifySkeletonData = null;
 let skinWeightData = null;
 let rigifySkeleton = null;
 let isSkinned = false;
 let skelWrapper = null;
-let _animatedCharId = null;  // which character is currently animated
+let _animatedCharId = null;
 let rigVisible = false;
 let modelVisible = true;
 let clothesVisible = true;
-
-// Skin colors + hair colors
 let skinColors = {};
-let hairColorData = {};  // name -> [r, g, b] (linear sRGB)
-
-// Auto-save debounce
+let hairColorData = {};
 let saveTimer = null;
-
-// Properties panel state
-let morphDefs = null;           // Cached response from /api/character/morphs/
-let currentPropsCharId = null;  // Which character's properties are displayed
-let reloadTimer = null;         // Debounce for reloadCharacterMesh
-
-// Asset panel cached data
-let _garmentCatalog = [];       // Array of garment entries from library API
-let _selectedGarmentId = null;  // Currently selected garment in list
-let _hairStylesData = [];       // Array of { url, label, name }
-let _clothRegionsData = null;   // { templates, builder_regions, primitives }
+let morphDefs = null;
+let currentPropsCharId = null;
+let reloadTimer = null;
+let _garmentCatalog = [];
+let _selectedGarmentId = null;
+let _hairStylesData = [];
+let _clothRegionsData = null;
 let currentAnimName = '';
 let currentAnimDuration = 0;
-let currentAnimUrl = '';              // URL der geladenen BVH
-let currentAnimBvhText = '';          // Roher BVH-Text (original oder modifiziert)
-let currentAnimGroundFixed = false;   // Ob Bodenniveau-Fix angewendet
-let _sceneDeltaNorm = undefined;       // undefined=auto
-
-// =========================================================================
-// Scene Editor State
-// =========================================================================
-const characters = new Map();       // id -> CharacterInstance
+let currentAnimUrl = '';
+let currentAnimBvhText = '';
+let currentAnimGroundFixed = false;
+let _sceneDeltaNorm = undefined;
+const characters = state.characters;
 let selectedCharacterId = null;
 let transformControls = null;
 let currentTransformMode = 'translate';
-let transformHelper = null;       // TransformControls visual helper (Object3D)
-let transformDragging = false;    // Track whether gizmo is being dragged
+let transformHelper = null;
+let transformDragging = false;
 let currentSceneName = '';
 let defaultPresetName = 'femaleWithClothes';
-let _defaultAnimUrl = '';            // From settings: auto-load animation
-let _sceneDirty = false;  // Track unsaved changes
-const SESSION_KEY = 'humanbody_scene_session';
-
-// Raycasting
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
+let _defaultAnimUrl = '';
+let _sceneDirty = false;
+const raycaster = state.raycaster;
+const mouse = state.mouse;
 let mouseDownPos = null;
-const CLICK_THRESHOLD = 3; // px
-
-// Sub-mesh selection (cloth/hair hover + select)
-let _hoveredSubMesh = null;   // { type, key, label, meshObj, charId }
-let _selectedSubMesh = null;  // same shape
-let _HOVER_EMISSIVE = new THREE.Color(0x08081a);
-let _SELECT_EMISSIVE = new THREE.Color(0x12123a);
-const _ZERO_EMISSIVE = new THREE.Color(0x000000);
+const CLICK_THRESHOLD = 3;
+let _hoveredSubMesh = null;
+let _selectedSubMesh = null;
+let _HOVER_EMISSIVE = state._HOVER_EMISSIVE;
+let _SELECT_EMISSIVE = state._SELECT_EMISSIVE;
+const _ZERO_EMISSIVE = state._ZERO_EMISSIVE;
 let _hoverPending = false;
 let _lastMouseEvent = null;
-
-// Bone selection (3D overlay) for generated models
 let _hoveredBoneName = null;
 let _selectedBoneName = null;
-let _boneHighlightCache = new Map();  // boneName -> BufferGeometry
-let _boneHoverOverlay = null;         // current hover overlay mesh
-let _boneSelectOverlay = null;        // current selection overlay mesh
-const _BONE_HOVER_MAT = new THREE.MeshBasicMaterial({
-    color: 0xaaccff, transparent: true, opacity: 0.55,
-    depthTest: true, depthWrite: false, side: THREE.DoubleSide,
-});
-const _BONE_SELECT_MAT = new THREE.MeshBasicMaterial({
-    color: 0x4466ff, transparent: true, opacity: 0.35,
-    depthTest: true, depthWrite: false, side: THREE.DoubleSide,
-});
+let _boneHighlightCache = state._boneHighlightCache;
+let _boneHoverOverlay = null;
+let _boneSelectOverlay = null;
+const _BONE_HOVER_MAT = state._BONE_HOVER_MAT;
+const _BONE_SELECT_MAT = state._BONE_SELECT_MAT;
 
 // =========================================================================
 // CharacterInstance
@@ -890,7 +807,7 @@ async function init() {
     loadHairUI();
     loadClothUI();
     loadAnimationUI();
-    initRiggingTab();
+    initRiggingTab(toggleRigVisibility);
     loadCharmorphAssets();
 
     // Demo animation button
@@ -924,7 +841,7 @@ async function init() {
 
     // beforeunload — save session state
     window.addEventListener('beforeunload', (e) => {
-        saveSessionState();
+        saveSessionState(gatherSceneState);
     });
 
     // Start render loop
@@ -935,7 +852,15 @@ async function init() {
     Promise.all([loadSkinColors(), loadHairColors(), loadRigifySkeleton(), loadSkinWeights(), _settingsReady]).then(async () => {
         fetch('/api/ui-pref/', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key:'_scene_load_promise_ok', value: new Date().toISOString()}) }).catch(()=>{});
         if (sessionStorage.getItem(SESSION_KEY)) {
-            await restoreSessionState();
+            await restoreSessionState({
+                CharacterInstance,
+                clearAllCharacters,
+                syncUIFromState,
+                updateCharacterListUI,
+                updateVertexCount,
+                selectCharacter,
+                gatherSceneState,
+            });
         }
         if (characters.size === 0) {
             try { await loadDefaultCharacter(); } catch(e) { /* ignore */ }
@@ -1530,170 +1455,13 @@ function updateMenuChecks() {
     });
 }
 
-// =========================================================================
-// Dirty tracking — mark scene as having unsaved changes
-// =========================================================================
-function markDirty(label) { pushSceneUndo(label || 'Aenderung'); _sceneDirty = true; }
-function markClean() { _sceneDirty = false; }
-
-// =========================================================================
-// Undo/Redo system (snapshot-based)
-// =========================================================================
-const _undoStack = [];
-const _redoStack = [];
-const _UNDO_MAX = 20;
-let _undoSuppressed = false;
-let _undoInProgress = false;
-
-function pushSceneUndo(label) {
-    if (_undoSuppressed || _undoInProgress) return;
-    try {
-        const data = gatherSceneState();
-        _undoStack.push({ label, data, selectedCharacterId });
-        if (_undoStack.length > _UNDO_MAX) _undoStack.shift();
-        _redoStack.length = 0;
-        console.log(`[Scene Undo] push '${label}' (stack: ${_undoStack.length}, chars: ${data.characters?.length || 0})`);
-    } catch (e) { console.error('[Scene Undo] Snapshot failed:', e); }
-}
-
-async function sceneUndo() {
-    console.log(`[Scene Undo] called. stack: ${_undoStack.length}, inProgress: ${_undoInProgress}`);
-    if (_undoInProgress || _undoStack.length === 0) { console.log('[Scene Undo] nothing to undo'); return; }
-    _undoInProgress = true;
-    try {
-        _redoStack.push({ label: 'redo', data: gatherSceneState(), selectedCharacterId });
-    } catch (e) {}
-    const snap = _undoStack.pop();
-    _undoSuppressed = true;
-    await loadSceneFromData(snap.data, currentSceneName);
-    _undoSuppressed = false;
-    if (snap.selectedCharacterId && characters.has(snap.selectedCharacterId)) {
-        selectCharacter(snap.selectedCharacterId);
-    }
-    console.log(`[Scene Undo] Restored: ${snap.label} (${_undoStack.length} left)`);
-    _undoInProgress = false;
-}
-
-async function sceneRedo() {
-    if (_undoInProgress || _redoStack.length === 0) return;
-    _undoInProgress = true;
-    _undoStack.push({ label: 'undo', data: gatherSceneState(), selectedCharacterId });
-    const snap = _redoStack.pop();
-    _undoSuppressed = true;
-    await loadSceneFromData(snap.data, currentSceneName);
-    _undoSuppressed = false;
-    if (snap.selectedCharacterId && characters.has(snap.selectedCharacterId)) {
-        selectCharacter(snap.selectedCharacterId);
-    }
-    console.log(`[Scene Redo] Restored (${_redoStack.length} left)`);
-    _undoInProgress = false;
-}
-
-// Expose for onclick buttons
-window.__sceneUndo = sceneUndo;
+// markDirty, markClean, pushSceneUndo, sceneUndo, sceneRedo imported from scene_undo.js
+// window.__sceneUndo, window.__sceneRedo set by scene_undo.js
 window.__applyPose = _applyPose;
 window.__applyPoseRuntime = applyPoseFromServer;
 window.__characters = characters;
-window.__sceneRedo = sceneRedo;
 
-// =========================================================================
-// sessionStorage persistence — survive page navigation
-// =========================================================================
-function saveSessionState() {
-    try {
-        const state = gatherSceneState();
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
-    } catch (e) {
-        console.warn('Failed to save session state:', e);
-    }
-}
-
-async function restoreSessionState() {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    if (!raw) return false;
-    try {
-        const data = JSON.parse(raw);
-        sessionStorage.removeItem(SESSION_KEY);
-
-        // Restore characters
-        if (data.characters && data.characters.length > 0) {
-            clearAllCharacters();
-            for (const charData of data.characters) {
-                try {
-                    const inst = await CharacterInstance.fromJSON(charData);
-                    characters.set(inst.id, inst);
-                    scene.add(inst.group);
-                } catch (e) {
-                    console.error(`Failed to restore character ${charData.presetName}:`, e);
-                }
-            }
-        }
-
-        // Restore lighting
-        if (data.lighting) {
-            if (data.lighting.key) {
-                keyLight.intensity = data.lighting.key.intensity;
-                keyLight.color.set(data.lighting.key.color);
-                keyLight.position.set(...data.lighting.key.pos);
-            }
-            if (data.lighting.fill) {
-                fillLight.intensity = data.lighting.fill.intensity;
-                fillLight.color.set(data.lighting.fill.color);
-                fillLight.position.set(...data.lighting.fill.pos);
-            }
-            if (data.lighting.back) {
-                backLight.intensity = data.lighting.back.intensity;
-                backLight.color.set(data.lighting.back.color);
-                backLight.position.set(...data.lighting.back.pos);
-            }
-            if (data.lighting.ambient) {
-                ambientLight.intensity = data.lighting.ambient.intensity;
-                ambientLight.color.set(data.lighting.ambient.color);
-            }
-        }
-
-        // Restore renderer
-        if (data.renderer) {
-            if (data.renderer.toneMapping && TONE_MAPPINGS[data.renderer.toneMapping] !== undefined) {
-                renderer.toneMapping = TONE_MAPPINGS[data.renderer.toneMapping];
-            }
-            if (data.renderer.exposure !== undefined) {
-                renderer.toneMappingExposure = data.renderer.exposure;
-            }
-            if (data.renderer.background) {
-                scene.background.set(data.renderer.background);
-            }
-        }
-
-        // Restore camera
-        if (data.camera) {
-            if (data.camera.fov) {
-                camera.fov = data.camera.fov;
-                camera.updateProjectionMatrix();
-            }
-            if (data.camera.position) camera.position.fromArray(data.camera.position);
-            if (data.camera.target) controls.target.fromArray(data.camera.target);
-            controls.update();
-        }
-
-        currentSceneName = data.name || '';
-        syncUIFromState();
-        updateCharacterListUI();
-        updateVertexCount();
-
-        // Auto-select first character so Assets tab is immediately usable
-        if (characters.size > 0 && !selectedCharacterId) {
-            selectCharacter(characters.keys().next().value);
-        }
-
-        console.log('Session state restored');
-        return true;
-    } catch (e) {
-        console.warn('Failed to restore session state:', e);
-        sessionStorage.removeItem(SESSION_KEY);
-        return false;
-    }
-}
+// saveSessionState, restoreSessionState imported from scene_session.js
 
 // =========================================================================
 // Werkzeuge — Reset helpers
@@ -7940,153 +7708,8 @@ async function _mgSaveModel() {
     await _saveJsonWithPicker(data, defaultName);
 }
 
-// =========================================================================
-// Rigging Tab
-// =========================================================================
-const _defaultRigParams = {
-    ikNoStretch: true, ikLimit: true, ikMin: -10, ikMax: 160,
-    fingerIk: false, spinePivot: false,
-    slideElbow: 0.08, slideKnee: 0.05, rigVisible: false,
-};
-
-function initRiggingTab() {
-    const ids = {
-        'rig-ik-no-stretch': { key: 'ikNoStretch', type: 'check' },
-        'rig-ik-limit':      { key: 'ikLimit', type: 'check' },
-        'rig-ik-min':        { key: 'ikMin', type: 'number' },
-        'rig-ik-max':        { key: 'ikMax', type: 'number' },
-        'rig-finger-ik':     { key: 'fingerIk', type: 'check' },
-        'rig-spine-pivot':   { key: 'spinePivot', type: 'check' },
-        'rig-slide-elbow':   { key: 'slideElbow', type: 'range', valId: 'rig-slide-elbow-val' },
-        'rig-slide-knee':    { key: 'slideKnee', type: 'range', valId: 'rig-slide-knee-val' },
-        'rig-visible':       { key: 'rigVisible', type: 'check' },
-    };
-
-    // Get rig params from selected character or defaults
-    function getRigParams() {
-        const inst = selectedCharacterId ? characters.get(selectedCharacterId) : null;
-        if (inst && inst._rigParams) return inst._rigParams;
-        return { ..._defaultRigParams };
-    }
-
-    function setRigParam(key, val) {
-        const inst = selectedCharacterId ? characters.get(selectedCharacterId) : null;
-        if (inst) {
-            if (!inst._rigParams) inst._rigParams = { ..._defaultRigParams };
-            inst._rigParams[key] = val;
-            markDirty('Rigging');
-        }
-        // Special handling for rig visibility
-        if (key === 'rigVisible') {
-            const toggle = document.getElementById('rig-toggle');
-            if (toggle && rigVisible !== val) {
-                rigVisible = val;
-                toggleRigVisibility();
-            }
-        }
-    }
-
-    for (const [id, cfg] of Object.entries(ids)) {
-        const el = document.getElementById(id);
-        if (!el) continue;
-        const params = getRigParams();
-        // Set initial value
-        if (cfg.type === 'check') el.checked = params[cfg.key];
-        else el.value = params[cfg.key];
-        if (cfg.valId) {
-            const valEl = document.getElementById(cfg.valId);
-            if (valEl) valEl.textContent = params[cfg.key];
-        }
-        // Bind change
-        el.addEventListener(cfg.type === 'range' ? 'input' : 'change', () => {
-            const v = cfg.type === 'check' ? el.checked : parseFloat(el.value);
-            setRigParam(cfg.key, v);
-            if (cfg.valId) {
-                const valEl = document.getElementById(cfg.valId);
-                if (valEl) valEl.textContent = v;
-            }
-        });
-    }
-}
-
-// =========================================================================
-// CharMorph Assets
-// =========================================================================
-let _charmorphAssets = [];
-
-async function loadCharmorphAssets() {
-    try {
-        const resp = await fetch('/api/character/charmorph-assets/');
-        const data = await resp.json();
-        _charmorphAssets = data.assets || [];
-
-        // Populate category dropdown
-        const catSel = document.getElementById('cm-category');
-        if (catSel) {
-            const cats = [...new Set(_charmorphAssets.map(a => a.category))].sort();
-            catSel.innerHTML = '<option value="">Alle</option>';
-            for (const c of cats) {
-                catSel.innerHTML += `<option value="${c}">${c}</option>`;
-            }
-            catSel.addEventListener('change', renderCharmorphList);
-        }
-
-        renderCharmorphList();
-
-        // Bind sliders
-        const offsetSlider = document.getElementById('cm-offset');
-        const offsetVal = document.getElementById('cm-offset-val');
-        if (offsetSlider) offsetSlider.addEventListener('input', () => {
-            if (offsetVal) offsetVal.textContent = parseFloat(offsetSlider.value).toFixed(3);
-        });
-        const smoothSlider = document.getElementById('cm-smooth');
-        const smoothVal = document.getElementById('cm-smooth-val');
-        if (smoothSlider) smoothSlider.addEventListener('input', () => {
-            if (smoothVal) smoothVal.textContent = parseFloat(smoothSlider.value).toFixed(2);
-        });
-
-        console.log(`[Scene] CharMorph assets loaded: ${_charmorphAssets.length}`);
-    } catch (e) {
-        console.error('[Scene] CharMorph assets load failed:', e);
-    }
-}
-
-function renderCharmorphList() {
-    const list = document.getElementById('cm-asset-list');
-    const catSel = document.getElementById('cm-category');
-    if (!list) return;
-
-    const cat = catSel?.value || '';
-    const filtered = cat ? _charmorphAssets.filter(a => a.category === cat) : _charmorphAssets;
-
-    list.innerHTML = '';
-    for (const asset of filtered) {
-        const item = document.createElement('div');
-        item.style.cssText = 'padding:3px 6px;font-size:0.78rem;cursor:pointer;border-radius:3px;color:var(--text);';
-        item.textContent = asset.name.replace(/_/g, ' ');
-        item.dataset.name = asset.name;
-        item.addEventListener('click', () => {
-            list.querySelectorAll('div').forEach(d => d.style.background = '');
-            item.style.background = 'rgba(124,92,191,0.3)';
-            // Update material presets dropdown
-            const matSel = document.getElementById('cm-material');
-            if (matSel) {
-                matSel.innerHTML = '<option value="">Standard</option>';
-                for (const mp of (asset.material_presets || [])) {
-                    matSel.innerHTML += `<option value="${mp}">${mp}</option>`;
-                }
-            }
-        });
-        item.addEventListener('dblclick', () => {
-            serverLog('charmorph_asset_select', asset.name);
-            alert(`Asset "${asset.name}" ausgewaehlt.\n\nHinweis: .blend Assets muessen erst nach GLB exportiert werden.\nDiese Funktion ist noch in Entwicklung.`);
-        });
-        list.appendChild(item);
-    }
-    if (filtered.length === 0) {
-        list.innerHTML = '<div style="padding:6px;font-size:0.75rem;color:var(--text-muted);">Keine Assets gefunden</div>';
-    }
-}
+// _defaultRigParams, initRiggingTab imported from scene_rigging.js
+// _charmorphAssets, loadCharmorphAssets, renderCharmorphList imported from scene_charmorph.js
 
 // =========================================================================
 // Boot
