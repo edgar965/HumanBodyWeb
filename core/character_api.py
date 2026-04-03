@@ -5647,3 +5647,70 @@ def smooth_bvh(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_GET
+def charmorph_presets(request):
+    """List available CharMorph body type presets."""
+    import os as _os
+    preset_dir = _os.path.join(str(settings.TOOLS_ROOT), 'tools', 'CharMorphPlugin', 'data', 'characters', 'mb_female', 'presets')
+    presets = []
+    if _os.path.isdir(preset_dir):
+        for f in sorted(_os.listdir(preset_dir)):
+            if f.endswith('.json'):
+                name = f.replace('.json', '').replace('type_', '').replace('specialtype_', 'special_')
+                try:
+                    with open(_os.path.join(preset_dir, f)) as fh:
+                        data = json.load(fh)
+                    meta = data.get('metaproperties', {})
+                    structural = data.get('structural', {})
+                    presets.append({
+                        'name': name,
+                        'label': name.replace('_', ' ').title(),
+                        'meta': meta,
+                        'structural': structural,
+                    })
+                except Exception:
+                    pass
+    return JsonResponse({'presets': presets})
+
+
+@require_GET
+def charmorph_assets(request):
+    """List available CharMorph clothing assets."""
+    import os as _os
+    try:
+        import yaml
+    except ImportError:
+        return JsonResponse({'assets': [], 'error': 'pyyaml not installed'})
+    asset_dir = _os.path.join(str(settings.TOOLS_ROOT), 'tools', 'CharMorphPlugin', 'data', 'characters', 'mb_female', 'assets')
+    assets = []
+    if _os.path.isdir(asset_dir):
+        for entry in sorted(_os.listdir(asset_dir)):
+            ep = _os.path.join(asset_dir, entry)
+            if _os.path.isdir(ep):
+                config_path = _os.path.join(ep, 'config.yaml')
+                if _os.path.isfile(config_path):
+                    try:
+                        with open(config_path) as f:
+                            cfg = yaml.safe_load(f)
+                        assets.append({
+                            'name': entry,
+                            'category': cfg.get('category', 'Other'),
+                            'tags': cfg.get('tags', []),
+                            'fitting': cfg.get('fitting', 'soft'),
+                            'parameters': cfg.get('parameters', {}),
+                            'material_presets': list(cfg.get('material_presets', {}).keys()),
+                        })
+                    except Exception:
+                        pass
+            elif entry.endswith('.blend'):
+                assets.append({
+                    'name': entry.replace('.blend', ''),
+                    'category': 'Other',
+                    'tags': [],
+                    'fitting': 'soft',
+                    'parameters': {},
+                    'material_presets': [],
+                })
+    return JsonResponse({'assets': assets})

@@ -3558,6 +3558,7 @@ async function populateProperties(charId) {
     populateTransform(inst);
     updateEquippedList(inst);
     populateBodyType(inst);
+    populatePresets(inst);
     populateMetaSliders(inst);
     populateMorphSliders(inst);
     syncHairSelect(inst);
@@ -3673,6 +3674,43 @@ function populateBodyType(inst) {
     });
 }
 
+async function populatePresets(inst) {
+    const sel = document.getElementById('prop-preset');
+    if (!sel) return;
+    if (sel._loaded) return;  // only load once
+    try {
+        const resp = await fetch('/api/character/charmorph-presets/');
+        const data = await resp.json();
+        sel.innerHTML = '<option value="">-- Kein Preset --</option>';
+        for (const p of (data.presets || [])) {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify(p);
+            opt.textContent = p.label;
+            sel.appendChild(opt);
+        }
+        sel._loaded = true;
+        sel.addEventListener('change', () => {
+            if (!sel.value || !inst) return;
+            const p = JSON.parse(sel.value);
+            // Apply meta properties
+            if (p.meta) {
+                for (const [key, val] of Object.entries(p.meta)) {
+                    const slider = document.querySelector(`[data-meta="${key}"]`);
+                    if (slider) { slider.value = val; slider.dispatchEvent(new Event('input')); }
+                }
+            }
+            // Apply structural morphs
+            if (p.structural) {
+                for (const [name, val] of Object.entries(p.structural)) {
+                    const slider = document.querySelector(`[data-morph="${name}"]`);
+                    if (slider) { slider.value = val; slider.dispatchEvent(new Event('input')); }
+                }
+            }
+            serverLog('preset_applied', p.label);
+        });
+    } catch(e) { console.error('Failed to load presets:', e); }
+}
+
 function populateMetaSliders(inst) {
     const container = document.getElementById('prop-meta-sliders');
     container.innerHTML = '';
@@ -3698,6 +3736,7 @@ function populateMetaSliders(inst) {
         slider.max = meta.max;
         slider.step = 1;
         slider.value = Math.round(displayVal);
+        slider.dataset.meta = name;
 
         const valSpan = document.createElement('span');
         valSpan.className = 'slider-val';
