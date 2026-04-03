@@ -1450,6 +1450,10 @@ function setupPlayback() {
             const sel = document.querySelector('.lib-item.selected');
             if (sel) previewAnimation(sel.dataset.category, sel.dataset.name);
         }
+        if (e.code === 'KeyQ') {
+            e.preventDefault();
+            closePreview();
+        }
     });
 }
 
