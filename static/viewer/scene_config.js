@@ -5637,34 +5637,70 @@ async function applyPoseFromServer(poseId) {
         if (saved) bone.quaternion.copy(saved);
     }
 
-    // Leg bones: MB-Lab quaternions rotate around wrong local axes for Rigify.
-    // Instead, compute leg corrections from skeleton geometry (world direction → desired direction).
-    const legBoneSet = new Set([
-        'DEF-thigh.L', 'DEF-thigh.R', 'DEF-shin.L', 'DEF-shin.R',
-        'DEF-thigh.L.001', 'DEF-thigh.R.001', 'DEF-shin.L.001', 'DEF-shin.R.001',
-        'DEF-foot.L', 'DEF-foot.R', 'DEF-toe.L', 'DEF-toe.R',
+    // CharMorph sets fk_limb_follow=0 for arms and thighs: the pose quaternion
+    // is in world-space (no parent inheritance). Our DEF bones ARE hierarchical,
+    // so we must compensate by undoing the parent's pose contribution.
+    //
+    // With fk_limb_follow=0: world = parent_REST_world × rest_local × poseQ
+    // With hierarchy (Three.js): world = parent_POSED_world × bone.quaternion
+    // So: bone.quaternion = parent_POSED_world⁻¹ × parent_REST_world × rest_local × poseQ
+    const limbRoots = new Set([
+        'DEF-upper_arm.L', 'DEF-upper_arm.R',
+        'DEF-thigh.L', 'DEF-thigh.R',
     ]);
 
-    // Apply pose quaternions for non-leg bones
+    // Save REST world quaternions of limb root parents BEFORE any pose
+    skel.bones[0].updateWorldMatrix(true, true);
+    const restParentWorldQ = {};
+    const Quat = skel.bones[0].quaternion.constructor;
+    for (const defName of limbRoots) {
+        const threeName = defName.replace(/\./g, '_');
+        const bone = skel.getBoneByName(threeName);
+        if (bone?.parent) {
+            const wq = new Quat();
+            bone.parent.getWorldQuaternion(wq);
+            restParentWorldQ[defName] = wq;
+        }
+    }
+
+    // Apply pose quaternions to ALL bones
     let applied = 0;
     const threeData = data.threejs || {};
     for (const [defName, q] of Object.entries(threeData)) {
-        if (legBoneSet.has(defName)) continue;
         const threeName = defName.replace(/\./g, '_');
         const bone = skel.getBoneByName(threeName);
         if (bone) {
-            const Quat = bone.quaternion.constructor;
             const poseQ = new Quat(q[0], q[1], q[2], q[3]);
             bone.quaternion.multiply(poseQ);
             applied++;
         }
     }
 
-    // Correct thigh bones: compute world direction correction
-    // The thighs in A-pose are spread ~6.71° outward. For T-pose they should point straight down.
+    // Compensate limb roots: undo parent pose contribution
+    // bone.q currently = rest × poseQ (local, with parent cascade)
+    // We want world = restParentWorld × rest × poseQ (no parent pose cascade)
+    // Current world = posedParentWorld × rest × poseQ
+    // Fix: bone.q = posedParentWorld⁻¹ × restParentWorld × rest × poseQ
+    //            = posedParentWorld⁻¹ × restParentWorld × bone.q_current
+    skel.bones[0].updateWorldMatrix(true, true);
+    for (const defName of limbRoots) {
+        const restPWQ = restParentWorldQ[defName];
+        if (!restPWQ) continue;
+        const threeName = defName.replace(/\./g, '_');
+        const bone = skel.getBoneByName(threeName);
+        if (!bone?.parent) continue;
+
+        const posedPWQ = new Quat();
+        bone.parent.getWorldQuaternion(posedPWQ);
+
+        // correction = posedPWQ⁻¹ × restPWQ
+        const correction = posedPWQ.clone().invert().multiply(restPWQ);
+        bone.quaternion.premultiply(correction);
+    }
+
+    // T-pose only: additional thigh geometry correction (straight down)
     skel.bones[0].updateWorldMatrix(true, true);
     const _correctedLegs = _correctThighsToTPose(skel, poseId);
-    applied += _correctedLegs;
 
     console.log(`[Pose] Applied ${poseId}: ${applied} bones (${_correctedLegs} leg corrections)`);
 }
