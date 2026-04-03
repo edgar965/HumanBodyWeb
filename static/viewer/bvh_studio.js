@@ -3003,7 +3003,7 @@ function previewAnimation(category, name) {
         _previewModal.id = 'preview-modal';
         _previewModal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
         _previewModal.innerHTML = `
-            <div style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#334);border-radius:10px;width:700px;height:520px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+            <div id="preview-box" style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#334);border-radius:10px;width:1000px;height:700px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.5);resize:both;min-width:500px;min-height:400px;max-width:95vw;max-height:90vh;">
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border,#334);">
                     <span id="preview-title" style="font-size:0.9rem;color:#ccc;"></span>
                     <div style="display:flex;gap:8px;align-items:center;">
@@ -3061,14 +3061,28 @@ function previewAnimation(category, name) {
     document.getElementById('preview-title').textContent = `${category} / ${name}`;
     document.getElementById('preview-play-icon').className = 'fas fa-pause';
 
-    // Resize canvas (use fixed size since getBoundingClientRect may be 0 before layout)
+    // Restore saved size
+    const box = document.getElementById('preview-box');
+    try {
+        const saved = JSON.parse(localStorage.getItem('bvhStudio_previewSize'));
+        if (saved?.w && saved?.h) { box.style.width = saved.w + 'px'; box.style.height = saved.h + 'px'; }
+    } catch(e) {}
+
+    // Resize canvas after a frame so the box has been laid out
     const canvas = document.getElementById('preview-canvas');
-    const w = 698, h = 440;
-    canvas.width = w;
-    canvas.height = h;
-    _previewRenderer.setSize(w, h, false);
-    _previewCamera.aspect = w / h;
-    _previewCamera.updateProjectionMatrix();
+    requestAnimationFrame(() => {
+        _resizePreviewCanvas();
+    });
+
+    // Watch for resize (CSS resize: both)
+    if (!box._resizeObserver) {
+        box._resizeObserver = new ResizeObserver(() => {
+            _resizePreviewCanvas();
+            // Save size
+            try { localStorage.setItem('bvhStudio_previewSize', JSON.stringify({w: box.clientWidth, h: box.clientHeight})); } catch(e) {}
+        });
+        box._resizeObserver.observe(box);
+    }
 
     // Clean previous
     if (_previewMixer) { _previewMixer.stopAllAction(); _previewMixer = null; }
@@ -3163,6 +3177,21 @@ function previewAnimation(category, name) {
         console.error('[Preview] Load failed:', e);
         document.getElementById('preview-title').textContent = `Fehler: ${e.message}`;
     });
+}
+
+function _resizePreviewCanvas() {
+    const canvas = document.getElementById('preview-canvas');
+    const box = document.getElementById('preview-box');
+    if (!canvas || !box || !_previewRenderer) return;
+    const w = box.clientWidth - 2;
+    const h = box.clientHeight - 50;  // header height
+    if (w > 10 && h > 10) {
+        canvas.width = w;
+        canvas.height = h;
+        _previewRenderer.setSize(w, h, false);
+        _previewCamera.aspect = w / h;
+        _previewCamera.updateProjectionMatrix();
+    }
 }
 
 function closePreview() {
