@@ -880,7 +880,8 @@ async function init() {
     _initPropMHControls();
     initPropHairControls();
 
-    // Asset + Animation panels
+    // Pose + Asset + Animation panels
+    loadPoseUI();
     loadMHProxyUI();
     loadGarmentUI();
     loadKleiderUI();
@@ -935,15 +936,7 @@ async function init() {
         if (characters.size === 0) {
             try { await loadDefaultCharacter(); } catch(e) { /* ignore */ }
         }
-        // Apply pose setting (T-Pose / A-Pose)
-        if (window._defaultPose === 't_pose') {
-            for (const [, inst] of characters) {
-                if (!inst.isSkinned && rigifySkeletonData && skinWeightData) {
-                    convertInstToSkinned(inst);
-                }
-            }
-            setTimeout(() => _applyPose('t_pose'), 500);
-        }
+        // T-Pose is applied server-side (mesh + skeleton delivered in correct pose)
         // Log pose state for debugging
         fetch('/api/ui-pref/', {
             method: 'POST',
@@ -1445,11 +1438,25 @@ function handleMenuAction(action) {
 
         // Pose
         case 'pose-tpose':
-            _applyPose('t_pose');
+            applyPoseFromServer('rest_poses/t-pose');
             break;
-        case 'pose-apose':
-            _applyPose('a_pose');
+        case 'pose-apose': {
+            // Reset to A-pose
+            const inst = _selectedInst();
+            if (inst?.isSkinned && inst._aPoseBones) {
+                let skel = null;
+                inst.group.traverse(child => {
+                    if (!skel && child.isSkinnedMesh && child.skeleton) skel = child.skeleton;
+                });
+                if (skel) {
+                    for (const bone of skel.bones) {
+                        const saved = inst._aPoseBones[bone.name];
+                        if (saved) bone.quaternion.copy(saved);
+                    }
+                }
+            }
             break;
+        }
 
         // Hinzufügen
         case 'add-character':
@@ -1581,6 +1588,7 @@ async function sceneRedo() {
 // Expose for onclick buttons
 window.__sceneUndo = sceneUndo;
 window.__applyPose = _applyPose;
+window.__applyPoseRuntime = applyPoseFromServer;
 window.__characters = characters;
 window.__sceneRedo = sceneRedo;
 
@@ -5508,70 +5516,208 @@ function _initPropMHControls() {
  */
 let _currentPose = 'a_pose';
 
-function _applyPose(pose) {
+async function _applyPose(pose) {
     if (pose === _currentPose) return;
 
-    // Direction: positive = toward T-pose (arms up), negative = toward A-pose (arms down)
-    const direction = (pose === 't_pose') ? 1 : -1;
-    const angle = 30 * direction;  // degrees
-
-    const poseLog = [];
-
-    for (const [, inst] of characters) {
-        if (!inst.isSkinned) { poseLog.push('skip: not skinned'); continue; }
-
-        // Find skeleton — search all children for SkinnedMesh
-        let skel = null;
-        inst.group.traverse(child => {
-            if (!skel && child.isSkinnedMesh && child.skeleton) {
-                skel = child.skeleton;
-            }
-        });
-        if (!skel) { poseLog.push('skip: no skeleton found'); continue; }
-
-        const allNames = skel.bones.map(b => b.name);
-        const armNames = allNames.filter(n => n.includes('arm'));
-        poseLog.push(`bones: ${skel.bones.length}, arm: ${armNames.join(',')}`);
-
-        // Arm bone rotation
-        // X-axis +angle lifts both arms (verified in Chrome)
-        const boneDefs = [
-            { names: ['DEF-upper_arm_L'], angle: angle, axis: [1, 0, 0] },
-            { names: ['DEF-upper_arm_L_001'], angle: angle * 0.3, axis: [1, 0, 0] },
-            { names: ['DEF-upper_arm_R'], angle: angle, axis: [1, 0, 0] },
-            { names: ['DEF-upper_arm_R_001'], angle: angle * 0.3, axis: [1, 0, 0] },
-            // Legs — bring together
-            { names: ['DEF-thigh_L'], angle: -angle * 0.12, axis: [1, 0, 0] },
-            { names: ['DEF-thigh_R'], angle: angle * 0.12, axis: [1, 0, 0] },
-        ];
-
-        let found = 0;
-        for (const def of boneDefs) {
-            let bone = null;
-            for (const name of def.names) {
-                bone = skel.getBoneByName(name);
-                if (bone) break;
-            }
-            if (bone) {
-                found++;
-                const q = new THREE.Quaternion().setFromAxisAngle(
-                    new THREE.Vector3(...def.axis), def.angle * Math.PI / 180
-                );
-                bone.quaternion.premultiply(q);
-                poseLog.push(`rotated: ${bone.name} by ${def.angle}deg axis=${def.axis}`);
-            }
-        }
-        poseLog.push(`applied ${pose}: ${found} bones`);
-    }
-
-    // Save log to server
-    fetch('/api/ui-pref/', {
+    // Save pose setting to server, then reload page.
+    // The server delivers T-pose mesh + skeleton when setting is t_pose.
+    // This is the clean approach: no runtime bone manipulation needed.
+    await fetch('/api/ui-pref/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: '_pose_log', value: poseLog }),
-    }).catch(() => {});
+        body: JSON.stringify({ key: 'default_pose', value: pose }),
+    });
 
-    _currentPose = pose;
+    // Clear session and reload — server will return correct mesh + skeleton
+    sessionStorage.removeItem(SESSION_KEY);
+    window.location.reload();
+}
+
+// =========================================================================
+// Pose Browser (MB-Lab poses applied to DEF skeleton)
+// =========================================================================
+
+async function loadPoseUI() {
+    const list = document.getElementById('pose-list');
+    const resetBtn = document.getElementById('pose-reset');
+    if (!list) return;
+
+    // Load pose list from server
+    try {
+        const resp = await fetch('/api/character/poses/');
+        const data = await resp.json();
+        list.innerHTML = '';
+
+        for (const [cat, poses] of Object.entries(data.categories || {})) {
+            const folder = document.createElement('div');
+            folder.className = 'anim-folder';
+            const header = document.createElement('div');
+            header.className = 'anim-folder-header';
+            header.innerHTML = `<span class="chevron">&#9660;</span> ${cat} (${poses.length})`;
+            folder.appendChild(header);
+
+            const body = document.createElement('div');
+            body.className = 'anim-folder-body';
+            for (const pose of poses) {
+                const row = document.createElement('div');
+                row.className = 'anim-item';
+                row.style.cssText = 'padding:4px 8px;cursor:pointer;font-size:0.8rem;';
+                row.textContent = pose.name;
+                row.addEventListener('click', () => applyPoseFromServer(pose.id));
+                body.appendChild(row);
+            }
+            folder.appendChild(body);
+
+            header.addEventListener('click', () => {
+                body.style.display = body.style.display === 'none' ? '' : 'none';
+                header.querySelector('.chevron').textContent = body.style.display === 'none' ? '\u25B6' : '\u25BC';
+            });
+            // Collapse by default except rest_poses
+            if (cat !== 'rest_poses') {
+                body.style.display = 'none';
+                header.querySelector('.chevron').textContent = '\u25B6';
+            }
+            list.appendChild(folder);
+        }
+    } catch(e) {
+        list.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Poses nicht verfügbar</div>';
+    }
+
+    // Reset button — restore saved A-pose quaternions
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            const inst = _selectedInst();
+            if (!inst?.isSkinned) return;
+            let skel = null;
+            inst.group.traverse(child => {
+                if (!skel && child.isSkinnedMesh && child.skeleton) skel = child.skeleton;
+            });
+            if (!skel || !inst._aPoseBones) return;
+            for (const bone of skel.bones) {
+                const saved = inst._aPoseBones[bone.name];
+                if (saved) bone.quaternion.copy(saved);
+            }
+        });
+    }
+}
+
+async function applyPoseFromServer(poseId) {
+    const inst = _selectedInst();
+    if (!inst) return;
+
+    // Auto-skin if needed
+    if (!inst.isSkinned && rigifySkeletonData && skinWeightData) {
+        convertInstToSkinned(inst);
+    }
+    if (!inst.isSkinned) return;
+
+    // Fetch pose data
+    const resp = await fetch(`/api/character/pose/${poseId}/`);
+    const data = await resp.json();
+    if (!data.bones) return;
+
+    // Find skeleton
+    let skel = null;
+    inst.group.traverse(child => {
+        if (!skel && child.isSkinnedMesh && child.skeleton) skel = child.skeleton;
+    });
+    if (!skel) return;
+
+    // Save A-pose quaternions for reset (first time)
+    if (!inst._aPoseBones) {
+        inst._aPoseBones = {};
+        for (const bone of skel.bones) {
+            inst._aPoseBones[bone.name] = bone.quaternion.clone();
+        }
+    }
+
+    // Reset to A-pose first
+    for (const bone of skel.bones) {
+        const saved = inst._aPoseBones[bone.name];
+        if (saved) bone.quaternion.copy(saved);
+    }
+
+    // Leg bones: MB-Lab quaternions rotate around wrong local axes for Rigify.
+    // Instead, compute leg corrections from skeleton geometry (world direction → desired direction).
+    const legBoneSet = new Set([
+        'DEF-thigh.L', 'DEF-thigh.R', 'DEF-shin.L', 'DEF-shin.R',
+        'DEF-thigh.L.001', 'DEF-thigh.R.001', 'DEF-shin.L.001', 'DEF-shin.R.001',
+        'DEF-foot.L', 'DEF-foot.R', 'DEF-toe.L', 'DEF-toe.R',
+    ]);
+
+    // Apply pose quaternions for non-leg bones
+    let applied = 0;
+    const threeData = data.threejs || {};
+    for (const [defName, q] of Object.entries(threeData)) {
+        if (legBoneSet.has(defName)) continue;
+        const threeName = defName.replace(/\./g, '_');
+        const bone = skel.getBoneByName(threeName);
+        if (bone) {
+            const Quat = bone.quaternion.constructor;
+            const poseQ = new Quat(q[0], q[1], q[2], q[3]);
+            bone.quaternion.multiply(poseQ);
+            applied++;
+        }
+    }
+
+    // Correct thigh bones: compute world direction correction
+    // The thighs in A-pose are spread ~6.71° outward. For T-pose they should point straight down.
+    skel.bones[0].updateWorldMatrix(true, true);
+    const _correctedLegs = _correctThighsToTPose(skel, poseId);
+    applied += _correctedLegs;
+
+    console.log(`[Pose] Applied ${poseId}: ${applied} bones (${_correctedLegs} leg corrections)`);
+}
+
+/**
+ * Correct thigh bone rotations for T-pose using skeleton geometry.
+ * MB-Lab pose quaternions use different bone local axes than Rigify,
+ * so we compute the correction from actual world bone directions.
+ */
+function _correctThighsToTPose(skel, poseId) {
+    // Only correct for T-pose (legs straight down)
+    if (!poseId.includes('t-pose') && !poseId.includes('tpose')) return 0;
+
+    const thighPairs = [
+        ['DEF-thigh_L', 'DEF-thigh_L_001'],
+        ['DEF-thigh_R', 'DEF-thigh_R_001'],
+    ];
+
+    let corrected = 0;
+    for (const [thighName, childName] of thighPairs) {
+        const thigh = skel.getBoneByName(thighName);
+        const child = skel.getBoneByName(childName);
+        if (!thigh || !child) continue;
+
+        const Vec3 = thigh.position.constructor;
+        const Quat = thigh.quaternion.constructor;
+
+        // Get current world positions
+        const posHead = new Vec3();
+        const posTail = new Vec3();
+        thigh.getWorldPosition(posHead);
+        child.getWorldPosition(posTail);
+
+        const currentDir = posTail.clone().sub(posHead).normalize();
+        const desiredDir = new Vec3(0, -1, 0);
+
+        // Skip if already close enough
+        if (currentDir.dot(desiredDir) > 0.9999) continue;
+
+        // World-space correction rotation
+        const corrWorld = new Quat().setFromUnitVectors(currentDir, desiredDir);
+
+        // Convert to parent space: parentSpaceCorr = parentWQ⁻¹ × corrWorld × parentWQ
+        const parentWQ = new Quat();
+        if (thigh.parent) thigh.parent.getWorldQuaternion(parentWQ);
+        const parentWQ_inv = parentWQ.clone().invert();
+        const parentSpaceCorr = parentWQ_inv.clone().multiply(corrWorld).multiply(parentWQ);
+
+        thigh.quaternion.premultiply(parentSpaceCorr);
+        corrected++;
+    }
+
+    return corrected;
 }
 
 async function loadGarmentUI() {
