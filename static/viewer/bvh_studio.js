@@ -1971,13 +1971,9 @@ function setupToolbar() {
         reloadAllClipAnimations();
         toolsDD.classList.remove('open');
     });
-    document.getElementById('dd-gauss-sigma-up')?.addEventListener('click', () => {
-        _gaussSmooth.sigma = Math.min(10, _gaussSmooth.sigma + 0.5);
-        _updateGaussUI();
-        if (_gaussSmooth.active) applyGaussToAllClips();
-    });
-    document.getElementById('dd-gauss-sigma-down')?.addEventListener('click', () => {
-        _gaussSmooth.sigma = Math.max(0.5, _gaussSmooth.sigma - 0.5);
+    document.getElementById('dd-gauss-sigma-input')?.addEventListener('change', (e) => {
+        _gaussSmooth.sigma = Math.max(0.5, Math.min(20, parseFloat(e.target.value) || 2));
+        e.target.value = _gaussSmooth.sigma;
         _updateGaussUI();
         if (_gaussSmooth.active) applyGaussToAllClips();
     });
@@ -2423,16 +2419,15 @@ function splitClipAtPlayhead() {
 const _gaussSmooth = { active: false, sigma: 2.0, origClips: new Map() };
 
 function _updateGaussUI() {
-    const sigmaEl = document.getElementById('dd-gauss-sigma');
-    if (sigmaEl) sigmaEl.textContent = `σ=${_gaussSmooth.sigma.toFixed(1)}`;
+    const sigmaInput = document.getElementById('dd-gauss-sigma-input');
+    if (sigmaInput) sigmaInput.value = _gaussSmooth.sigma;
     const onEl = document.getElementById('dd-gauss-on');
     const offEl = document.getElementById('dd-gauss-off');
     if (onEl) onEl.style.color = _gaussSmooth.active ? '#888' : '#4caf50';
     if (offEl) offEl.style.color = _gaussSmooth.active ? '#ef4444' : '#888';
-    // Show status in toolbar
     const toolsBtn = document.getElementById('btn-tools');
     if (toolsBtn) toolsBtn.innerHTML = _gaussSmooth.active
-        ? `<i class="fas fa-wrench"></i> Tools <span style="font-size:0.65rem;color:#4caf50;">●σ=${_gaussSmooth.sigma.toFixed(1)}</span> <i class="fas fa-caret-down" style="font-size:0.65rem;"></i>`
+        ? `<i class="fas fa-wrench"></i> Tools <span style="font-size:0.65rem;color:#4caf50;">●σ=${_gaussSmooth.sigma}</span> <i class="fas fa-caret-down" style="font-size:0.65rem;"></i>`
         : `<i class="fas fa-wrench"></i> Tools <i class="fas fa-caret-down" style="font-size:0.65rem;"></i>`;
 }
 
