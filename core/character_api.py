@@ -5714,3 +5714,22 @@ def charmorph_assets(request):
                     'material_presets': [],
                 })
     return JsonResponse({'assets': assets})
+
+
+@require_GET
+def charmorph_hairstyles(request):
+    """List available CharMorph hairstyles."""
+    import os as _os
+    hair_dir = _os.path.join(str(settings.TOOLS_ROOT), 'tools', 'CharMorphPlugin',
+                             'data', 'characters', 'mb_female', 'hairstyles')
+    hairstyles = []
+    if _os.path.isdir(hair_dir):
+        for f in sorted(_os.listdir(hair_dir)):
+            if f.endswith('.npz'):
+                name = f.replace('.npz', '')
+                hairstyles.append({
+                    'name': name,
+                    'label': name.replace('_', ' ').replace('1', ' 1').strip().title(),
+                    'file': f,
+                })
+    return JsonResponse({'hairstyles': hairstyles})

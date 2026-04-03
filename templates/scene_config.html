@@ -886,6 +886,7 @@
             <div class="panel-tab" data-tab="szene">Szene</div>
             <div class="panel-tab" data-tab="modell">Modell</div>
             <div class="panel-tab" data-tab="rigging">Rigging</div>
+            <div class="panel-tab" data-tab="finalize">Finalize</div>
         </div>
 
         <!-- Tab content (scrollable) -->
@@ -1397,6 +1398,19 @@
                             <button id="cm-add" class="viewer-btn" style="flex:1;"><i class="fas fa-plus"></i> Hinzufuegen</button>
                             <button id="cm-remove" class="viewer-btn" style="flex:1;"><i class="fas fa-trash"></i> Entfernen</button>
                         </div>
+                    </div>
+                </div>
+                <div class="panel-section collapsed" id="charmorph-hair-panel">
+                    <h3 class="panel-title" onclick="this.parentElement.classList.toggle('collapsed')">Hair &mdash; CharMorph <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label>Hairstyle:</label>
+                            <select id="cm-hairstyle" class="viewer-select">
+                                <option value="">-- Kein Haar --</option>
+                            </select>
+                        </div>
+                        <div class="prop-row"><label>Farbe:</label><input type="color" id="cm-hair-color" value="#3d2b1f"></div>
+                        <div class="prop-row"><label><input type="checkbox" id="cm-hair-shrinkwrap"> Shrinkwrap</label></div>
+                        <div class="prop-row"><label>Offset:</label><input type="range" id="cm-hair-offset" min="0" max="0.01" step="0.0001" value="0.0002"><span id="cm-hair-offset-val">0.0002</span></div>
                     </div>
                 </div>
                 </div><!-- /assets-content -->
@@ -1951,6 +1965,55 @@
                     </div>
                 </div>
             </div><!-- /tab-rigging -->
+
+            <!-- Finalize Tab -->
+            <div class="tab-pane" id="tab-finalize">
+                <div class="panel-section">
+                    <h3 class="panel-title">Export</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label>Format:</label>
+                            <select id="fin-format" class="viewer-select">
+                                <option value="glb">GLB (Three.js)</option>
+                                <option value="obj">OBJ</option>
+                                <option value="fbx">FBX</option>
+                                <option value="json">JSON (Szene)</option>
+                            </select>
+                        </div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-apply-morphs" checked> Morphs anwenden</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-apply-pose" checked> Pose anwenden</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-include-rig" checked> Rig einschliessen</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-include-clothes"> Kleidung einschliessen</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-include-hair"> Haare einschliessen</label></div>
+                        <button id="fin-export" class="viewer-btn" style="width:100%;margin-top:8px;"><i class="fas fa-file-export"></i> Exportieren</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">Cleanup</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label><input type="checkbox" id="fin-collapse-morphs"> Shape Keys zusammenfassen</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-remove-unused"> Unbenutzte Morphs entfernen</label></div>
+                        <button id="fin-cleanup" class="viewer-btn" style="width:100%;margin-top:8px;"><i class="fas fa-broom"></i> Cleanup</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">Format-Konvertierung</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label>Von:</label>
+                            <select id="fin-conv-in" class="viewer-select">
+                                <option value="yaml">YAML</option>
+                                <option value="json">JSON (MB-Lab)</option>
+                            </select>
+                        </div>
+                        <div class="prop-row"><label>Nach:</label>
+                            <select id="fin-conv-out" class="viewer-select">
+                                <option value="json">JSON</option>
+                                <option value="yaml">YAML</option>
+                            </select>
+                        </div>
+                        <button id="fin-convert" class="viewer-btn" style="width:100%;margin-top:8px;"><i class="fas fa-exchange-alt"></i> Konvertieren</button>
+                    </div>
+                </div>
+            </div><!-- /tab-finalize -->
 
         </div><!-- /panel-tab-content -->
 

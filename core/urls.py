@@ -122,6 +122,7 @@ urlpatterns = [
     # CharMorph
     path('api/character/charmorph-presets/', character_api.charmorph_presets, name='charmorph_presets'),
     path('api/character/charmorph-assets/', character_api.charmorph_assets, name='charmorph_assets'),
+    path('api/character/charmorph-hairstyles/', character_api.charmorph_hairstyles, name='charmorph_hairstyles'),
 
     # Cloth
     path('api/character/cloth/', character_api.character_cloth, name='character_cloth'),

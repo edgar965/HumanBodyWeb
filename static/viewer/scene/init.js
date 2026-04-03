@@ -28,6 +28,8 @@ import './mh_proxy.js';
 import './model_generator.js';
 import './rigging.js';
 import './charmorph.js';
+import { loadCharmorphHairUI } from './charmorph_hair.js';
+import { initFinalizeTab } from './finalize.js';
 
 // Also register buildRigifySkeleton for menubar toggle-rig
 fn.buildRigifySkeleton = buildRigifySkeleton;
@@ -164,6 +166,8 @@ export async function init() {
     fn.loadAnimationUI();
     fn.initRiggingTab(fn.toggleRigVisibility);
     fn.loadCharmorphAssets();
+    loadCharmorphHairUI();
+    initFinalizeTab();
 
     const demoBtn = document.getElementById('play-demo-anim');
     if (demoBtn) {
