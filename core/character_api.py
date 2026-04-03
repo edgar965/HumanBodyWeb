@@ -5150,7 +5150,9 @@ def save_bvh_text(request):
 
     try:
         sp.parent.mkdir(parents=True, exist_ok=True)
-        with open(str(sp), 'w', encoding='utf-8') as f:
+        # Normalize line endings to \n (BVH files must not have \r\n)
+        bvh_text = bvh_text.replace('\r\n', '\n').replace('\r', '\n')
+        with open(str(sp), 'w', encoding='utf-8', newline='\n') as f:
             f.write(bvh_text)
         return JsonResponse({'ok': True, 'path': str(sp)})
     except Exception as e:
@@ -5256,6 +5258,26 @@ def bvh_manage(request):
         if old_cache.is_file():
             shutil.move(str(old_cache), str(new_p.with_suffix('.json')))
         log.info(f'[bvh-manage] Moved: {old_p} -> {new_p}')
+        return JsonResponse({'ok': True})
+
+    elif action == 'copy':
+        new_category = data.get('new_category', '').strip() or category
+        new_name = data.get('new_name', '').strip()
+        if not category or not name or not new_name:
+            return JsonResponse({'error': 'category, name, new_name required'}, status=400)
+        old_p = _check_bvh_path(root / category / f'{name}.bvh')
+        if not old_p or not old_p.is_file():
+            return JsonResponse({'error': 'File not found'}, status=404)
+        new_dir = root / new_category
+        new_dir.mkdir(parents=True, exist_ok=True)
+        new_p = _check_bvh_path(new_dir / f'{new_name}.bvh')
+        if not new_p:
+            return JsonResponse({'error': 'Invalid target path'}, status=400)
+        if new_p.exists():
+            return JsonResponse({'error': f'{new_name}.bvh already exists'}, status=409)
+        import shutil
+        shutil.copy2(str(old_p), str(new_p))
+        log.info(f'[bvh-manage] Copied: {old_p} -> {new_p}')
         return JsonResponse({'ok': True})
 
     elif action == 'create_folder':

@@ -548,24 +548,12 @@ function setupLibraryManagement() {
                 if (newName && newName !== t.name) {
                     const newCat = prompt('In welchen Ordner?', t.category);
                     if (newCat) {
-                        (async () => {
-                            try {
-                                const resp = await fetch(`/api/character/bvh/${encodeURIComponent(t.category)}/${encodeURIComponent(t.name)}/`);
-                                const bvhText = await resp.text();
-                                const saveResp = await fetch('/api/character/save-bvh-text/', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ category: newCat, name: newName, bvh_text: bvhText }),
-                                });
-                                const result = await saveResp.json();
-                                if (result.ok) {
-                                    serverLog('bvh_copied', `${t.category}/${t.name} -> ${newCat}/${newName}`);
-                                    loadLibrary({ category: newCat, name: newName });
-                                } else {
-                                    alert('Kopieren fehlgeschlagen: ' + (result.error || ''));
-                                }
-                            } catch(e) { alert('Fehler: ' + e.message); }
-                        })();
+                        libManage('copy', { category: t.category, name: t.name, new_category: newCat, new_name: newName }).then(r => {
+                            if (r) {
+                                serverLog('bvh_copied', `${t.category}/${t.name} -> ${newCat}/${newName}`);
+                                loadLibrary({ category: newCat, name: newName });
+                            }
+                        });
                     }
                 }
             } else if (action === 'rename') {
