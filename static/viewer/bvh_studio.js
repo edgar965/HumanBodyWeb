@@ -1937,12 +1937,18 @@ function setupToolbar() {
         trackDD?.classList.remove('open');
         document.getElementById('help-dropdown')?.classList.remove('open');
     });
-    // Gaussian Smooth (session toggle)
-    document.getElementById('dd-gauss-toggle')?.addEventListener('click', () => {
-        _gaussSmooth.active = !_gaussSmooth.active;
+    // Gaussian Smooth
+    document.getElementById('dd-gauss-on')?.addEventListener('click', () => {
+        _gaussSmooth.active = true;
         _updateGaussUI();
-        if (_gaussSmooth.active) applyGaussToAllClips();
-        else reloadAllClipAnimations();
+        applyGaussToAllClips();
+        toolsDD.classList.remove('open');
+    });
+    document.getElementById('dd-gauss-off')?.addEventListener('click', () => {
+        _gaussSmooth.active = false;
+        _updateGaussUI();
+        reloadAllClipAnimations();
+        toolsDD.classList.remove('open');
     });
     document.getElementById('dd-gauss-sigma-up')?.addEventListener('click', () => {
         _gaussSmooth.sigma = Math.min(10, _gaussSmooth.sigma + 0.5);
@@ -1957,11 +1963,6 @@ function setupToolbar() {
     document.getElementById('dd-gauss-save')?.addEventListener('click', () => {
         toolsDD.classList.remove('open');
         saveSmoothedBVH();
-    });
-    document.getElementById('dd-smooth')?.addEventListener('click', () => {
-        toolsDD.classList.remove('open');
-        switchPropsTab('tools');
-        smoothSelectedClip();
     });
     document.getElementById('dd-ground')?.addEventListener('click', () => {
         toolsDD.classList.remove('open');
@@ -2401,10 +2402,17 @@ function splitClipAtPlayhead() {
 const _gaussSmooth = { active: false, sigma: 2.0, origClips: new Map() };
 
 function _updateGaussUI() {
-    const icon = document.getElementById('dd-gauss-icon');
     const sigmaEl = document.getElementById('dd-gauss-sigma');
-    if (icon) icon.className = _gaussSmooth.active ? 'fas fa-check-square' : 'far fa-square';
     if (sigmaEl) sigmaEl.textContent = `σ=${_gaussSmooth.sigma.toFixed(1)}`;
+    const onEl = document.getElementById('dd-gauss-on');
+    const offEl = document.getElementById('dd-gauss-off');
+    if (onEl) onEl.style.color = _gaussSmooth.active ? '#888' : '#4caf50';
+    if (offEl) offEl.style.color = _gaussSmooth.active ? '#ef4444' : '#888';
+    // Show status in toolbar
+    const toolsBtn = document.getElementById('btn-tools');
+    if (toolsBtn) toolsBtn.innerHTML = _gaussSmooth.active
+        ? `<i class="fas fa-wrench"></i> Tools <span style="font-size:0.65rem;color:#4caf50;">●σ=${_gaussSmooth.sigma.toFixed(1)}</span> <i class="fas fa-caret-down" style="font-size:0.65rem;"></i>`
+        : `<i class="fas fa-wrench"></i> Tools <i class="fas fa-caret-down" style="font-size:0.65rem;"></i>`;
 }
 
 function _gaussFilter(values, stride, sigma) {
