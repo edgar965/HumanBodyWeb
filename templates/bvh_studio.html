@@ -176,8 +176,15 @@
     <!-- Tools dropdown -->
     <div class="toolbar-dropdown" id="tools-dropdown">
         <button id="btn-tools" title="Tools"><i class="fas fa-wrench"></i> Tools <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
-        <div class="toolbar-dropdown-menu">
-            <div class="toolbar-dd-item" id="dd-smooth"><i class="fas fa-wave-square" style="width:16px;"></i> Smooth (Glaetten)</div>
+        <div class="toolbar-dropdown-menu" style="min-width:240px;">
+            <div style="padding:4px 14px;font-size:0.72rem;color:var(--text-muted);font-weight:600;">Gaussian Smooth</div>
+            <div class="toolbar-dd-item" id="dd-gauss-toggle" style="gap:10px;"><i class="fas fa-check-square" id="dd-gauss-icon" style="width:16px;color:var(--text-muted);"></i> Aktiv (Session) <span id="dd-gauss-sigma" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">σ=2</span></div>
+            <div class="toolbar-dd-item" id="dd-gauss-sigma-up"><i class="fas fa-plus" style="width:16px;"></i> Sigma erh&ouml;hen</div>
+            <div class="toolbar-dd-item" id="dd-gauss-sigma-down"><i class="fas fa-minus" style="width:16px;"></i> Sigma verringern</div>
+            <div class="toolbar-dd-item" id="dd-gauss-save"><i class="fas fa-save" style="width:16px;"></i> Smooth anwenden &amp; BVH speichern</div>
+            <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+            <div style="padding:4px 14px;font-size:0.72rem;color:var(--text-muted);font-weight:600;">Clip-Tools</div>
+            <div class="toolbar-dd-item" id="dd-smooth"><i class="fas fa-wave-square" style="width:16px;"></i> Smooth auf Clip (einmalig)</div>
             <div class="toolbar-dd-item" id="dd-ground"><i class="fas fa-shoe-prints" style="width:16px;"></i> Auf Bodenniveau</div>
         </div>
     </div>
