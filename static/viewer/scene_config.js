@@ -5626,19 +5626,10 @@ async function applyPoseFromServer(poseId) {
         if (saved) bone.quaternion.copy(saved);
     }
 
-    // Leg bones: MB-Lab quaternions rotate around wrong local axes for Rigify.
-    // Instead, compute leg corrections from skeleton geometry (world direction → desired direction).
-    const legBoneSet = new Set([
-        'DEF-thigh.L', 'DEF-thigh.R', 'DEF-shin.L', 'DEF-shin.R',
-        'DEF-thigh.L.001', 'DEF-thigh.R.001', 'DEF-shin.L.001', 'DEF-shin.R.001',
-        'DEF-foot.L', 'DEF-foot.R', 'DEF-toe.L', 'DEF-toe.R',
-    ]);
-
-    // Apply pose quaternions for non-leg bones
+    // Apply pose quaternions to ALL bones (server applies CharMorph bone_map transforms)
     let applied = 0;
     const threeData = data.threejs || {};
     for (const [defName, q] of Object.entries(threeData)) {
-        if (legBoneSet.has(defName)) continue;
         const threeName = defName.replace(/\./g, '_');
         const bone = skel.getBoneByName(threeName);
         if (bone) {
@@ -5649,8 +5640,7 @@ async function applyPoseFromServer(poseId) {
         }
     }
 
-    // Correct thigh bones: compute world direction correction
-    // The thighs in A-pose are spread ~6.71° outward. For T-pose they should point straight down.
+    // T-pose only: additional thigh geometry correction (straight down)
     skel.bones[0].updateWorldMatrix(true, true);
     const _correctedLegs = _correctThighsToTPose(skel, poseId);
     applied += _correctedLegs;
