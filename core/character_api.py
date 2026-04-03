@@ -5387,3 +5387,35 @@ def studio_project_list(request):
             'modified': f.stat().st_mtime,
         })
     return JsonResponse({'files': files})
+
+
+@csrf_exempt
+def client_log(request):
+    """Receive log messages from the browser and write to server log.
+
+    POST /api/log/
+    Body JSON: { page: "bvh_studio", action: "gauss_smooth_on", detail: "sigma=2.0" }
+    """
+    log = logging.getLogger('core')
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    page = data.get('page', '?')
+    action = data.get('action', '?')
+    detail = data.get('detail', '')
+    level = data.get('level', 'info').lower()
+
+    msg = f'[CLIENT {page}] {action}'
+    if detail:
+        msg += f' — {detail}'
+
+    if level == 'error':
+        log.error(msg)
+    elif level == 'warning':
+        log.warning(msg)
+    else:
+        log.info(msg)
+
+    return JsonResponse({'ok': True})

@@ -14,6 +14,17 @@ import { classifyBones, getDefaultModelConfig, computeBoneWorldTransforms, gener
 
 const gltfLoader = new GLTFLoader();
 
+// Server-side logging
+function serverLog(action, detail, level) {
+    const msg = detail ? `${action} — ${detail}` : action;
+    console.log(`[Scene] ${msg}`);
+    fetch('/api/log/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: 'scene', action, detail: detail || '', level: level || 'info' }),
+    }).catch(() => {});
+}
+
 // GLOBAL Undo handler — Ctrl+Shift+U (only combo Chrome doesn't swallow on QWERTZ)
 window.addEventListener('keydown', (e) => {
     if (!e.ctrlKey || !e.shiftKey) return;

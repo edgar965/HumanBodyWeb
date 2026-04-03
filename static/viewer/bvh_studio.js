@@ -17,6 +17,17 @@ import { generateRigBoneMesh, getDefaultRigConfig } from './model_generator.js';
 
 console.log('[BVH Studio] v2.0 loaded');
 
+// Server-side logging for important actions
+function serverLog(action, detail, level) {
+    const msg = detail ? `${action} — ${detail}` : action;
+    console.log(`[BVH Studio] ${msg}`);
+    fetch('/api/log/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: 'bvh_studio', action, detail: detail || '', level: level || 'info' }),
+    }).catch(() => {});  // fire-and-forget
+}
+
 // =========================================================================
 // State
 // =========================================================================
@@ -2254,7 +2265,7 @@ function duplicateSelectedClip() {
     updateDuration();
     renderTimeline();
     updateProperties();
-    console.log('[BVH Studio] Clip duplicated');
+    serverLog('clip_duplicated');
 }
 
 async function saveBvhAs() {
@@ -2340,7 +2351,7 @@ function deleteSelectedClip() {
     // Reset skeleton to rest pose
     if (track.skeleton) track.skeleton.skeleton.pose();
 
-    console.log('[BVH Studio] Clip deleted');
+    serverLog('clip_deleted');
 }
 
 function trimSelectedClip(mode, frames = 10) {
@@ -2490,7 +2501,7 @@ function applyGaussToAllClips() {
         track._activeAction = null;
     }
     applyPlayhead();
-    console.log(`[BVH Studio] Gauss smooth applied: σ=${sigma}, ${smoothedCount} clip(s) of ${totalTracks} tracks`);
+    serverLog('gauss_smooth_on', `sigma=${sigma} clips=${smoothedCount}/${totalTracks}`);
     if (smoothedCount === 0) console.warn('[BVH Studio] WARNING: No clips were smoothed! Check track.type and clip.animClip.');
 }
 
@@ -2516,7 +2527,7 @@ function reloadAllClipAnimations() {
     }
     _gaussSmooth.origClips.clear();
     applyPlayhead();
-    console.log('[BVH Studio] Gauss smooth removed, originals restored');
+    serverLog('gauss_smooth_off');
 }
 
 async function saveSmoothedBVH() {
@@ -3428,7 +3439,7 @@ function resetToDefault() {
     updateProperties();
 
     document.getElementById('studio-info').textContent = 'BVH Studio v2.0';
-    console.log('[BVH Studio] Reset to default');
+    serverLog('reset_to_default');
 }
 
 async function loadLastProject() {
