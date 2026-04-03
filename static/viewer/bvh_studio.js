@@ -3087,76 +3087,95 @@ function previewAnimation(category, name) {
     // Clean previous
     if (_previewMixer) { _previewMixer.stopAllAction(); _previewMixer = null; }
     _previewAction = null;
-    // Remove all preview objects
     const toRemove = _previewScene.children.filter(c => c.userData._preview);
     for (const c of toRemove) {
         _previewScene.remove(c);
         if (c.geometry) c.geometry.dispose();
     }
 
-    // Load BVH via Three.js BVHLoader for quick preview (no retarget needed)
-    const url = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`;
-    fetch(url).then(r => r.text()).then(bvhText => {
-        console.log(`[Preview] BVH loaded: ${bvhText.length} chars`);
-        const bvhLoader = new BVHLoader();
-        const result = bvhLoader.parse(bvhText);
-        console.log(`[Preview] Parsed: ${result.skeleton.bones.length} bones, clip duration: ${result.clip.duration.toFixed(1)}s`);
+    // Load retargeted animation via API (same as track) + build Rig2 model
+    const retargetUrl = `/api/retarget/?category=${encodeURIComponent(category)}&name=${encodeURIComponent(name)}`;
+    fetch(retargetUrl).then(r => r.json()).then(async (data) => {
+        if (!data.tracks || !data.frame_count) {
+            document.getElementById('preview-title').textContent = `Fehler: Keine Animationsdaten`;
+            return;
+        }
+        console.log(`[Preview] Retarget loaded: ${data.frame_count} frames, ${Object.keys(data.tracks).length} bones`);
 
-        // Put root bone in a container group for scaling
-        const rootBone = result.skeleton.bones[0];
-        const container = new THREE.Group();
-        container.userData._preview = true;
-        container.add(rootBone);
-        _previewScene.add(container);
-
-        // Detect scale: evaluate first frame to find height
-        const tmpMixer = new THREE.AnimationMixer(rootBone);
-        const tmpAction = tmpMixer.clipAction(result.clip);
-        tmpAction.play();
-        tmpMixer.setTime(0);
-        rootBone.updateWorldMatrix(true, true);
-
-        // Find bounding box height from all bones
-        let minY = Infinity, maxY = -Infinity;
-        const tmpV = new THREE.Vector3();
-        result.skeleton.bones.forEach(b => {
-            b.getWorldPosition(tmpV);
-            if (tmpV.y < minY) minY = tmpV.y;
-            if (tmpV.y > maxY) maxY = tmpV.y;
-        });
-        const bvhHeight = maxY - minY;
-        const bvhCenter = (maxY + minY) / 2;
-        console.log(`[Preview] BVH height: ${bvhHeight.toFixed(2)}, center: ${bvhCenter.toFixed(2)}`);
-
-        // Scale so skeleton is ~1.7m tall
-        if (bvhHeight > 0.01) {
-            const scale = 1.7 / bvhHeight;
-            container.scale.setScalar(scale);
-            console.log(`[Preview] Scale: ${scale.toFixed(4)}`);
+        // Build Rig2 model (same as track character loading)
+        if (!ss.rigifySkeletonData || !ss.skinWeightData) {
+            document.getElementById('preview-title').textContent = `Fehler: Skeleton-Daten nicht geladen`;
+            return;
         }
 
-        tmpAction.stop();
-        tmpMixer.stopAllAction();
+        let rigBonesData = null;
+        try {
+            const rigResp = await fetch('/api/character/rig/');
+            if (rigResp.ok) rigBonesData = await rigResp.json();
+        } catch(e) {}
 
-        // Skeleton helper (must be added AFTER bones are in scene)
-        const skeletonHelper = new THREE.SkeletonHelper(rootBone);
-        skeletonHelper.userData._preview = true;
-        _previewScene.add(skeletonHelper);
+        const modelResp = await fetch('/api/character/model/Rig2/');
+        const modelData = await modelResp.json();
+
+        const container = new THREE.Group();
+        container.userData._preview = true;
+        _previewScene.add(container);
+
+        let previewSkel = null;
+        let previewMesh = null;
+
+        if (rigBonesData && modelData.type === 'generated_model') {
+            const result = generateRigBoneMesh(rigBonesData, modelData, ss.rigifySkeletonData, ss.skinWeightData);
+            if (result?.mesh && result?.skeleton) {
+                previewMesh = result.mesh;
+                previewSkel = result.skeleton;
+                // Rename bones: dots → underscores
+                if (previewSkel.skeleton) {
+                    for (const bone of previewSkel.skeleton.bones) bone.name = bone.name.replace(/\./g, '_');
+                }
+                const newMap = {};
+                for (const [k, v] of Object.entries(previewSkel.boneByName)) newMap[k.replace(/\./g, '_')] = v;
+                previewSkel.boneByName = newMap;
+                container.add(previewMesh);
+            }
+        }
+
+        if (!previewSkel) {
+            document.getElementById('preview-title').textContent = `Fehler: Modell konnte nicht geladen werden`;
+            return;
+        }
+
+        // Build AnimationClip from retarget data
+        const tracks = [];
+        const times = data.times;
+        for (const [boneName, values] of Object.entries(data.tracks)) {
+            const jsName = boneName.replace(/\./g, '_');
+            const bone = previewSkel.boneByName[jsName];
+            if (!bone) continue;
+            tracks.push(new THREE.QuaternionKeyframeTrack(bone.name + '.quaternion', times, values));
+        }
+        if (data.position_track) {
+            const jsName = data.position_track.bone.replace(/\./g, '_');
+            const bone = previewSkel.boneByName[jsName];
+            if (bone) tracks.push(new THREE.VectorKeyframeTrack(bone.name + '.position', times, data.position_track.values));
+        }
+        const animClip = new THREE.AnimationClip('preview', data.duration, tracks);
 
         // Camera
-        _previewCamera.position.set(0, 1.0, 4);
+        _previewCamera.position.set(0, 1.0, 3);
         _previewControls.target.set(0, 0.85, 0);
         _previewControls.update();
 
-        // Animation
-        _previewMixer = new THREE.AnimationMixer(rootBone);
-        _previewAction = _previewMixer.clipAction(result.clip);
+        // Play animation
+        _previewMixer = new THREE.AnimationMixer(previewMesh);
+        _previewAction = _previewMixer.clipAction(animClip);
         _previewAction.play();
 
-        const totalFrames = Math.round(result.clip.duration * 30);
+        const totalFrames = data.frame_count;
+        const fps = data.frame_count / data.duration;
         document.getElementById('preview-frame').textContent = `0 / ${totalFrames}`;
 
-        // Start render loop
+        // Render loop
         if (_previewAnimId) cancelAnimationFrame(_previewAnimId);
         _previewClock.start();
 
@@ -3168,11 +3187,12 @@ function previewAnimation(category, name) {
             _previewControls.update();
             _previewRenderer.render(_previewScene, _previewCamera);
             if (_previewAction) {
-                const f = Math.round(_previewAction.time * 30);
+                const f = Math.round(_previewAction.time * fps);
                 document.getElementById('preview-frame').textContent = `${f} / ${totalFrames}`;
             }
         }
         animatePreview();
+        console.log(`[Preview] Rig2 model + retargeted animation ready`);
     }).catch(e => {
         console.error('[Preview] Load failed:', e);
         document.getElementById('preview-title').textContent = `Fehler: ${e.message}`;
