@@ -2450,8 +2450,10 @@ function _gaussFilter(values, stride, sigma) {
 function applyGaussToAllClips() {
     const sigma = _gaussSmooth.sigma;
     let smoothedCount = 0;
+    let totalTracks = 0;
     for (const track of project.tracks) {
-        if (track.type !== 'bvh') continue;
+        totalTracks++;
+        if (track.type !== 'bvh') { console.log(`[Gauss] skip track type=${track.type}`); continue; }
         for (const clip of track.clips) {
             if (!clip.animClip) continue;
             const key = `${clip.category}/${clip.name}`;
@@ -2471,6 +2473,13 @@ function applyGaussToAllClips() {
                 _gaussFilter(t.values, t.getValueSize(), sigma);
                 trackCount++;
             }
+            // Log before/after for first track of first clip
+            if (smoothedCount === 0 && clip.animClip.tracks.length > 0) {
+                const t0 = clip.animClip.tracks[0];
+                console.log(`[Gauss] Track "${t0.name}" first 4 values AFTER smooth: [${t0.values[0].toFixed(4)}, ${t0.values[1].toFixed(4)}, ${t0.values[2].toFixed(4)}, ${t0.values[3].toFixed(4)}]`);
+                const bk = backup[t0.name];
+                if (bk) console.log(`[Gauss] Track "${t0.name}" first 4 values ORIGINAL: [${bk[0].toFixed(4)}, ${bk[1].toFixed(4)}, ${bk[2].toFixed(4)}, ${bk[3].toFixed(4)}]`);
+            }
             // CRITICAL: uncache the clip so Three.js creates a fresh Action with new data
             if (track.mixer) track.mixer.uncacheClip(clip.animClip);
             smoothedCount++;
@@ -2481,7 +2490,8 @@ function applyGaussToAllClips() {
         track._activeAction = null;
     }
     applyPlayhead();
-    console.log(`[BVH Studio] Gauss smooth applied: σ=${sigma}, ${smoothedCount} clip(s)`);
+    console.log(`[BVH Studio] Gauss smooth applied: σ=${sigma}, ${smoothedCount} clip(s) of ${totalTracks} tracks`);
+    if (smoothedCount === 0) console.warn('[BVH Studio] WARNING: No clips were smoothed! Check track.type and clip.animClip.');
 }
 
 function reloadAllClipAnimations() {
