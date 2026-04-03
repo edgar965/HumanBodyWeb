@@ -4251,13 +4251,10 @@ def get_pose(request, pose_id):
         pose = load_pose(pose_id)
     except FileNotFoundError:
         return JsonResponse({'error': f'Pose not found: {pose_id}'}, status=404)
-    # Only amplify leg rotation for T-pose (MB-Lab has less spread than Rigify)
-    is_tpose = 't-pose' in pose_id or 'tpose' in pose_id
-    leg_mult = 2.5 if is_tpose else 1.0
     return JsonResponse({
         'pose_id': pose.pose_id,
         'bones': pose.def_bones,  # {DEF-name: [w,x,y,z]}
-        'threejs': pose.to_threejs(leg_multiplier=leg_mult),  # {DEF-name: [x,y,z,w] Three.js}
+        'threejs': pose.to_threejs(),  # {DEF-name: [x,y,z,w] Three.js}
     })
 
 
