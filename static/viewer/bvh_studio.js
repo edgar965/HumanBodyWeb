@@ -277,6 +277,7 @@ async function init() {
     // Load BVH library
     await loadLibrary();
     setupLibraryManagement();
+    setupSidebarResize();
 
     // Setup timeline canvas
     setupTimeline();
@@ -491,6 +492,39 @@ function deleteSelectedLibItem() {
             }
         });
     }
+}
+
+function setupSidebarResize() {
+    const sidebar = document.getElementById('studio-sidebar');
+    const handle = document.getElementById('sidebar-resize');
+    if (!sidebar || !handle) return;
+
+    // Restore saved width
+    try {
+        const saved = localStorage.getItem('bvhStudio_sidebarWidth');
+        if (saved) sidebar.style.width = saved + 'px';
+    } catch(e) {}
+
+    let dragging = false;
+    handle.addEventListener('mousedown', (e) => {
+        dragging = true;
+        handle.classList.add('dragging');
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const newWidth = Math.max(150, Math.min(600, e.clientX - sidebar.getBoundingClientRect().left));
+        sidebar.style.width = newWidth + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+        if (dragging) {
+            dragging = false;
+            handle.classList.remove('dragging');
+            try { localStorage.setItem('bvhStudio_sidebarWidth', parseInt(sidebar.style.width)); } catch(e) {}
+            // Trigger resize for viewport/timeline
+            window.dispatchEvent(new Event('resize'));
+        }
+    });
 }
 
 function setupLibraryManagement() {

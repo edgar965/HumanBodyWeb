@@ -23,8 +23,17 @@
 
     /* Sidebar (BVH Library) */
     .studio-sidebar {
-        width: 220px; background: var(--bg-secondary); border-right: 1px solid var(--border);
-        display: flex; flex-direction: column; flex-shrink: 0;
+        width: 280px; min-width: 150px; max-width: 600px;
+        background: var(--bg-secondary); border-right: 1px solid var(--border);
+        display: flex; flex-direction: column; flex-shrink: 0; position: relative;
+    }
+    .sidebar-resize-handle {
+        position: absolute; top: 0; right: -3px; width: 6px; height: 100%;
+        cursor: ew-resize; z-index: 10;
+    }
+    .sidebar-resize-handle:hover, .sidebar-resize-handle.dragging {
+        background: var(--accent);
+        opacity: 0.5;
     }
     .studio-sidebar h3 { font-size: 0.85rem; padding: 10px 12px 6px; color: var(--text-muted); margin: 0; }
     .lib-tree { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
@@ -37,7 +46,7 @@
     .lib-chevron { transition: transform 0.15s; font-size: 0.7rem; }
     .lib-item {
         padding: 4px 8px; font-size: 0.78rem; color: var(--text); cursor: grab;
-        border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        border-radius: 3px; word-break: break-all;
         user-select: none; -webkit-user-select: none;
     }
     .lib-item:hover { background: rgba(124,92,191,0.2); }
@@ -210,7 +219,8 @@
 <!-- Main layout -->
 <div class="studio-layout">
     <!-- BVH Library Sidebar -->
-    <div class="studio-sidebar">
+    <div class="studio-sidebar" id="studio-sidebar">
+        <div class="sidebar-resize-handle" id="sidebar-resize"></div>
         <h3><i class="fas fa-music"></i> BVH Bibliothek</h3>
         <div style="display:flex;gap:3px;padding:4px 8px;border-bottom:1px solid var(--border);flex-shrink:0;">
             <button id="lib-new-folder" title="Neuer Ordner" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-folder-plus"></i></button>
