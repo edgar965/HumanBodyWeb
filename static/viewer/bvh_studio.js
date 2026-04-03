@@ -3388,7 +3388,10 @@ function previewAnimation(category, name) {
 
     // Load retargeted animation via API (same as track) + build Rig2 model
     const retargetUrl = `/api/retarget/?category=${encodeURIComponent(category)}&name=${encodeURIComponent(name)}`;
-    fetch(retargetUrl).then(r => r.json()).then(async (data) => {
+    fetch(retargetUrl).then(r => {
+        if (!r.ok) throw new Error(`Retarget API: ${r.status} ${r.statusText}`);
+        return r.json();
+    }).then(async (data) => {
         if (!data.tracks || !data.frame_count) {
             document.getElementById('preview-title').textContent = `Fehler: Keine Animationsdaten`;
             return;
