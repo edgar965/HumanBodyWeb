@@ -5497,7 +5497,7 @@ function _initPropMHControls() {
  */
 let _currentPose = 'a_pose';
 
-function _applyPose(pose) {
+async function _applyPose(pose) {
     if (pose === _currentPose) return;
 
     // Direction: positive = toward T-pose (arms up), negative = toward A-pose (arms down)
@@ -5512,57 +5512,52 @@ function _applyPose(pose) {
         });
         if (!skel) continue;
 
-        // Save A-pose quaternions (first time only)
-        if (!inst._aPoseQuats) {
-            inst._aPoseQuats = {};
+        // Save A-pose bone quaternions + positions (first time only)
+        if (!inst._aPoseBones) {
+            inst._aPoseBones = {};
             for (const bone of skel.bones) {
-                inst._aPoseQuats[bone.name] = bone.quaternion.clone();
+                inst._aPoseBones[bone.name] = {
+                    quat: bone.quaternion.clone(),
+                    pos: bone.position.clone(),
+                };
             }
         }
 
         if (pose === 't_pose') {
-            // Arms: X-axis +30° lifts both arms to horizontal (verified in Chrome)
-            // Legs: Z-axis rotation brings legs together (verified: L=-20, R=+20)
-            //       ~20° spread angle calculated from BVH hip offset
+            // Arms: X-axis +30° (verified in Chrome — works perfectly)
+            // Legs: Y-axis rotation in Blender = Z-axis -20° left, +20° right in Three.js
+            //       (verified: Z-20 on thigh_L brings leg inward)
+            //       Foot distance target: ~6cm (calculated from vertices_tpose.npy)
             const boneDefs = [
                 { name: 'DEF-upper_arm_L', angle: 30, axis: [1, 0, 0] },
                 { name: 'DEF-upper_arm_L_001', angle: 9, axis: [1, 0, 0] },
                 { name: 'DEF-upper_arm_R', angle: 30, axis: [1, 0, 0] },
                 { name: 'DEF-upper_arm_R_001', angle: 9, axis: [1, 0, 0] },
-                { name: 'DEF-thigh_L', angle: -10, axis: [0, 0, 1] },
-                { name: 'DEF-thigh_R', angle: 10, axis: [0, 0, 1] },
-                { name: 'DEF-thigh_L', posShift: [-0.03, 0, 0] },
-                { name: 'DEF-thigh_R', posShift: [0.03, 0, 0] },
-                { name: 'DEF-shin_L', posShift: [-0.04, 0, 0] },
-                { name: 'DEF-shin_R', posShift: [0.04, 0, 0] },
-                { name: 'DEF-foot_L', posShift: [-0.03, 0, 0] },
-                { name: 'DEF-foot_R', posShift: [0.03, 0, 0] },
+                { name: 'DEF-thigh_L', angle: -13, axis: [0, 0, 1] },
+                { name: 'DEF-thigh_R', angle: 13, axis: [0, 0, 1] },
             ];
             let count = 0;
             for (const def of boneDefs) {
                 const bone = skel.getBoneByName(def.name);
                 if (bone) {
-                    if (def.angle && def.axis) {
-                        const Quat = bone.quaternion.constructor;
-                        const Vec3 = bone.position.constructor;
-                        const q = new Quat().setFromAxisAngle(new Vec3(...def.axis), def.angle * Math.PI / 180);
-                        bone.quaternion.premultiply(q);
-                    }
-                    if (def.posShift) {
-                        bone.position.x += def.posShift[0];
-                        bone.position.y += def.posShift[1];
-                        bone.position.z += def.posShift[2];
-                    }
+                    const Quat = bone.quaternion.constructor;
+                    const Vec3 = bone.position.constructor;
+                    const q = new Quat().setFromAxisAngle(new Vec3(...def.axis), def.angle * Math.PI / 180);
+                    bone.quaternion.premultiply(q);
                     count++;
                 }
             }
-            poseLog.push(`T-pose: rotated ${count} bones`);
+            poseLog.push(`T-pose: rotated ${count} bones (arms X+30, legs Z±13)`);
         } else {
             // Restore A-pose
             let count = 0;
             for (const bone of skel.bones) {
-                const aq = inst._aPoseQuats[bone.name];
-                if (aq) { bone.quaternion.copy(aq); count++; }
+                const saved = inst._aPoseBones[bone.name];
+                if (saved) {
+                    bone.quaternion.copy(saved.quat);
+                    bone.position.copy(saved.pos);
+                    count++;
+                }
             }
             poseLog.push(`A-pose: restored ${count} bones`);
         }
