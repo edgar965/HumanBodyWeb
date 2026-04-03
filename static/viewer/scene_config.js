@@ -707,6 +707,7 @@ class CharacterInstance {
             cloth: this.cloth,
             hair_style: this.hairStyle,
             garments,
+            rigParams: this._rigParams || null,
             transform: {
                 position: this.group.position.toArray(),
                 rotation: [this.group.rotation.x, this.group.rotation.y, this.group.rotation.z],
@@ -746,6 +747,7 @@ class CharacterInstance {
             }
             if (data.transform.scale) inst.group.scale.fromArray(data.transform.scale);
         }
+        if (data.rigParams) inst._rigParams = data.rigParams;
         return inst;
     }
 }
@@ -888,6 +890,8 @@ async function init() {
     loadHairUI();
     loadClothUI();
     loadAnimationUI();
+    initRiggingTab();
+    loadCharmorphAssets();
 
     // Demo animation button
     const demoBtn = document.getElementById('play-demo-anim');
@@ -7934,6 +7938,154 @@ async function _mgSaveModel() {
     };
     const defaultName = (_mgConfig.name || 'Neues Modell').trim().replace(/[^a-zA-Z0-9_\-äöüÄÖÜß ]/g, '_') + '.json';
     await _saveJsonWithPicker(data, defaultName);
+}
+
+// =========================================================================
+// Rigging Tab
+// =========================================================================
+const _defaultRigParams = {
+    ikNoStretch: true, ikLimit: true, ikMin: -10, ikMax: 160,
+    fingerIk: false, spinePivot: false,
+    slideElbow: 0.08, slideKnee: 0.05, rigVisible: false,
+};
+
+function initRiggingTab() {
+    const ids = {
+        'rig-ik-no-stretch': { key: 'ikNoStretch', type: 'check' },
+        'rig-ik-limit':      { key: 'ikLimit', type: 'check' },
+        'rig-ik-min':        { key: 'ikMin', type: 'number' },
+        'rig-ik-max':        { key: 'ikMax', type: 'number' },
+        'rig-finger-ik':     { key: 'fingerIk', type: 'check' },
+        'rig-spine-pivot':   { key: 'spinePivot', type: 'check' },
+        'rig-slide-elbow':   { key: 'slideElbow', type: 'range', valId: 'rig-slide-elbow-val' },
+        'rig-slide-knee':    { key: 'slideKnee', type: 'range', valId: 'rig-slide-knee-val' },
+        'rig-visible':       { key: 'rigVisible', type: 'check' },
+    };
+
+    // Get rig params from selected character or defaults
+    function getRigParams() {
+        const inst = selectedCharacterId ? characters.get(selectedCharacterId) : null;
+        if (inst && inst._rigParams) return inst._rigParams;
+        return { ..._defaultRigParams };
+    }
+
+    function setRigParam(key, val) {
+        const inst = selectedCharacterId ? characters.get(selectedCharacterId) : null;
+        if (inst) {
+            if (!inst._rigParams) inst._rigParams = { ..._defaultRigParams };
+            inst._rigParams[key] = val;
+            markDirty('Rigging');
+        }
+        // Special handling for rig visibility
+        if (key === 'rigVisible') {
+            const toggle = document.getElementById('rig-toggle');
+            if (toggle && rigVisible !== val) {
+                rigVisible = val;
+                toggleRigVisibility();
+            }
+        }
+    }
+
+    for (const [id, cfg] of Object.entries(ids)) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const params = getRigParams();
+        // Set initial value
+        if (cfg.type === 'check') el.checked = params[cfg.key];
+        else el.value = params[cfg.key];
+        if (cfg.valId) {
+            const valEl = document.getElementById(cfg.valId);
+            if (valEl) valEl.textContent = params[cfg.key];
+        }
+        // Bind change
+        el.addEventListener(cfg.type === 'range' ? 'input' : 'change', () => {
+            const v = cfg.type === 'check' ? el.checked : parseFloat(el.value);
+            setRigParam(cfg.key, v);
+            if (cfg.valId) {
+                const valEl = document.getElementById(cfg.valId);
+                if (valEl) valEl.textContent = v;
+            }
+        });
+    }
+}
+
+// =========================================================================
+// CharMorph Assets
+// =========================================================================
+let _charmorphAssets = [];
+
+async function loadCharmorphAssets() {
+    try {
+        const resp = await fetch('/api/character/charmorph-assets/');
+        const data = await resp.json();
+        _charmorphAssets = data.assets || [];
+
+        // Populate category dropdown
+        const catSel = document.getElementById('cm-category');
+        if (catSel) {
+            const cats = [...new Set(_charmorphAssets.map(a => a.category))].sort();
+            catSel.innerHTML = '<option value="">Alle</option>';
+            for (const c of cats) {
+                catSel.innerHTML += `<option value="${c}">${c}</option>`;
+            }
+            catSel.addEventListener('change', renderCharmorphList);
+        }
+
+        renderCharmorphList();
+
+        // Bind sliders
+        const offsetSlider = document.getElementById('cm-offset');
+        const offsetVal = document.getElementById('cm-offset-val');
+        if (offsetSlider) offsetSlider.addEventListener('input', () => {
+            if (offsetVal) offsetVal.textContent = parseFloat(offsetSlider.value).toFixed(3);
+        });
+        const smoothSlider = document.getElementById('cm-smooth');
+        const smoothVal = document.getElementById('cm-smooth-val');
+        if (smoothSlider) smoothSlider.addEventListener('input', () => {
+            if (smoothVal) smoothVal.textContent = parseFloat(smoothSlider.value).toFixed(2);
+        });
+
+        console.log(`[Scene] CharMorph assets loaded: ${_charmorphAssets.length}`);
+    } catch (e) {
+        console.error('[Scene] CharMorph assets load failed:', e);
+    }
+}
+
+function renderCharmorphList() {
+    const list = document.getElementById('cm-asset-list');
+    const catSel = document.getElementById('cm-category');
+    if (!list) return;
+
+    const cat = catSel?.value || '';
+    const filtered = cat ? _charmorphAssets.filter(a => a.category === cat) : _charmorphAssets;
+
+    list.innerHTML = '';
+    for (const asset of filtered) {
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:3px 6px;font-size:0.78rem;cursor:pointer;border-radius:3px;color:var(--text);';
+        item.textContent = asset.name.replace(/_/g, ' ');
+        item.dataset.name = asset.name;
+        item.addEventListener('click', () => {
+            list.querySelectorAll('div').forEach(d => d.style.background = '');
+            item.style.background = 'rgba(124,92,191,0.3)';
+            // Update material presets dropdown
+            const matSel = document.getElementById('cm-material');
+            if (matSel) {
+                matSel.innerHTML = '<option value="">Standard</option>';
+                for (const mp of (asset.material_presets || [])) {
+                    matSel.innerHTML += `<option value="${mp}">${mp}</option>`;
+                }
+            }
+        });
+        item.addEventListener('dblclick', () => {
+            serverLog('charmorph_asset_select', asset.name);
+            alert(`Asset "${asset.name}" ausgewaehlt.\n\nHinweis: .blend Assets muessen erst nach GLB exportiert werden.\nDiese Funktion ist noch in Entwicklung.`);
+        });
+        list.appendChild(item);
+    }
+    if (filtered.length === 0) {
+        list.innerHTML = '<div style="padding:6px;font-size:0.75rem;color:var(--text-muted);">Keine Assets gefunden</div>';
+    }
 }
 
 // =========================================================================
