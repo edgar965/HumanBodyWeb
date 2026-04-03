@@ -494,7 +494,9 @@ function setupLibraryManagement() {
             if (!t) return;
             const action = item.dataset.action;
             if (action === 'add') {
-                addClipToTrack(selectedTrackIdx >= 0 ? selectedTrackIdx : 0, t.category, t.name, t.frames);
+                addClipToTrack(selectedTrackIdx, t.category, t.name, t.frames);
+            } else if (action === 'preview') {
+                previewAnimation(t.category, t.name);
             } else if (action === 'rename') {
                 const newName = prompt('Neuer Name:', t.name);
                 if (newName && newName !== t.name) {
@@ -1441,6 +1443,11 @@ function setupPlayback() {
             e.preventDefault();
             const sel = document.querySelector('.lib-item.selected');
             if (sel) renameSelectedLibItem();
+        }
+        if (e.code === 'KeyA' && !e.ctrlKey) {
+            e.preventDefault();
+            const sel = document.querySelector('.lib-item.selected');
+            if (sel) previewAnimation(sel.dataset.category, sel.dataset.name);
         }
     });
 }
@@ -2973,6 +2980,156 @@ async function loadProject() {
         }
     });
     input.click();
+}
+
+// =========================================================================
+// Animation Preview Popup (A key)
+// =========================================================================
+let _previewModal = null;
+let _previewRenderer = null;
+let _previewScene = null;
+let _previewCamera = null;
+let _previewControls = null;
+let _previewMixer = null;
+let _previewAction = null;
+let _previewClock = null;
+let _previewAnimId = null;
+
+function previewAnimation(category, name) {
+    // Create or reuse modal
+    if (!_previewModal) {
+        _previewModal = document.createElement('div');
+        _previewModal.id = 'preview-modal';
+        _previewModal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+        _previewModal.innerHTML = `
+            <div style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#334);border-radius:10px;width:700px;height:520px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.5);">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border,#334);">
+                    <span id="preview-title" style="font-size:0.9rem;color:#ccc;"></span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button id="preview-play" style="background:none;border:1px solid var(--border,#334);border-radius:4px;color:#ccc;cursor:pointer;padding:4px 10px;font-size:0.8rem;"><i class="fas fa-play" id="preview-play-icon"></i></button>
+                        <span id="preview-frame" style="font-size:0.75rem;color:#888;">0 / 0</span>
+                        <button id="preview-close" style="background:none;border:none;color:#888;cursor:pointer;font-size:1.2rem;">&times;</button>
+                    </div>
+                </div>
+                <canvas id="preview-canvas" style="flex:1;width:100%;"></canvas>
+            </div>`;
+        document.body.appendChild(_previewModal);
+
+        // Close handlers
+        document.getElementById('preview-close').addEventListener('click', closePreview);
+        _previewModal.addEventListener('click', (e) => { if (e.target === _previewModal) closePreview(); });
+        document.getElementById('preview-play').addEventListener('click', () => {
+            if (_previewAction) {
+                if (_previewAction.paused || !_previewAction.isRunning()) {
+                    _previewAction.paused = false;
+                    _previewAction.play();
+                    document.getElementById('preview-play-icon').className = 'fas fa-pause';
+                } else {
+                    _previewAction.paused = true;
+                    document.getElementById('preview-play-icon').className = 'fas fa-play';
+                }
+            }
+        });
+
+        // Setup Three.js
+        const canvas = document.getElementById('preview-canvas');
+        _previewRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        _previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        _previewScene = new THREE.Scene();
+        _previewScene.background = new THREE.Color(0x1a1a2e);
+        _previewCamera = new THREE.PerspectiveCamera(50, 700/440, 0.1, 100);
+        _previewCamera.position.set(0, 1, 3);
+        _previewControls = new OrbitControls(_previewCamera, canvas);
+        _previewControls.target.set(0, 0.8, 0);
+        _previewControls.update();
+
+        // Lights
+        const dl = new THREE.DirectionalLight(0xffffff, 2);
+        dl.position.set(2, 4, 3);
+        _previewScene.add(dl);
+        _previewScene.add(new THREE.AmbientLight(0x404060, 1.5));
+
+        // Grid
+        _previewScene.add(new THREE.GridHelper(4, 20, 0x333355, 0x222244));
+
+        _previewClock = new THREE.Clock();
+    }
+
+    // Show modal
+    _previewModal.style.display = 'flex';
+    document.getElementById('preview-title').textContent = `${category} / ${name}`;
+    document.getElementById('preview-play-icon').className = 'fas fa-pause';
+
+    // Resize canvas
+    const canvas = document.getElementById('preview-canvas');
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width || 700;
+    canvas.height = (rect.height - 45) || 440;
+    _previewRenderer.setSize(canvas.width, canvas.height, false);
+    _previewCamera.aspect = canvas.width / canvas.height;
+    _previewCamera.updateProjectionMatrix();
+
+    // Clean previous
+    if (_previewMixer) { _previewMixer.stopAllAction(); _previewMixer = null; }
+    _previewScene.children.forEach(c => { if (c.userData._preview) _previewScene.remove(c); });
+    // Remove old skeleton meshes
+    const toRemove = _previewScene.children.filter(c => c.userData._preview);
+    toRemove.forEach(c => { _previewScene.remove(c); if (c.geometry) c.geometry.dispose(); });
+
+    // Load BVH via Three.js BVHLoader for quick preview (no retarget needed)
+    const url = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`;
+    fetch(url).then(r => r.text()).then(bvhText => {
+        const loader = new THREE.BVHLoader ? new THREE.BVHLoader() : null;
+        // BVHLoader might not be imported — use the one from Three.js addons
+        import('three/addons/loaders/BVHLoader.js').then(({ BVHLoader }) => {
+            const bvhLoader = new BVHLoader();
+            const result = bvhLoader.parse(bvhText);
+
+            // Create skeleton helper
+            const skeletonHelper = new THREE.SkeletonHelper(result.skeleton.bones[0]);
+            skeletonHelper.userData._preview = true;
+            _previewScene.add(skeletonHelper);
+            _previewScene.add(result.skeleton.bones[0]);
+            result.skeleton.bones[0].userData._preview = true;
+
+            // Animation
+            _previewMixer = new THREE.AnimationMixer(result.skeleton.bones[0]);
+            _previewAction = _previewMixer.clipAction(result.clip);
+            _previewAction.play();
+
+            const totalFrames = Math.round(result.clip.duration * 30);
+            document.getElementById('preview-frame').textContent = `0 / ${totalFrames}`;
+
+            // Start render loop
+            if (_previewAnimId) cancelAnimationFrame(_previewAnimId);
+            _previewClock.start();
+
+            function animatePreview() {
+                _previewAnimId = requestAnimationFrame(animatePreview);
+                if (!_previewModal || _previewModal.style.display === 'none') return;
+                const dt = _previewClock.getDelta();
+                if (_previewMixer) _previewMixer.update(dt);
+                _previewControls.update();
+                _previewRenderer.render(_previewScene, _previewCamera);
+                // Update frame counter
+                if (_previewAction) {
+                    const f = Math.round(_previewAction.time * 30);
+                    document.getElementById('preview-frame').textContent = `${f} / ${totalFrames}`;
+                }
+            }
+            animatePreview();
+        });
+    }).catch(e => {
+        console.error('[Preview] Load failed:', e);
+        document.getElementById('preview-title').textContent = `Fehler: ${e.message}`;
+    });
+}
+
+function closePreview() {
+    if (_previewModal) _previewModal.style.display = 'none';
+    if (_previewAnimId) { cancelAnimationFrame(_previewAnimId); _previewAnimId = null; }
+    if (_previewMixer) { _previewMixer.stopAllAction(); }
+    if (_previewAction) { _previewAction = null; }
 }
 
 function resetToDefault() {
