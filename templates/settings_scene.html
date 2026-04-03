@@ -70,6 +70,22 @@
     </div>
 
     <div class="settings-card" style="margin-top:1.5rem;">
+        <h2><i class="fas fa-walking"></i> Pose</h2>
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Standard-Pose</strong>
+                <small>T-Pose: Arme horizontal (f&uuml;r MakeHuman Garments).<br>A-Pose: Arme leicht nach unten (Standard).</small>
+            </div>
+            <div class="settings-input">
+                <select name="default_pose" id="default-pose" style="width:100%;padding:8px;font-size:0.95rem;background:var(--bg-secondary,#1e1e2e);color:var(--text,#e0e0e0);border:1px solid var(--border,#333);border-radius:4px;">
+                    <option value="a_pose">A-Pose (Standard)</option>
+                    <option value="t_pose">T-Pose (MakeHuman)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card" style="margin-top:1.5rem;">
         <h2><i class="fas fa-tshirt"></i> Kleider</h2>
         <div class="settings-row">
             <div class="settings-label">
@@ -171,6 +187,13 @@
             item.style.color = 'white';
         });
     });
+
+    // Pose dropdown
+    const poseSelect = document.getElementById('default-pose');
+    if (poseSelect) {
+        const savedPose = "{{ settings.ui_prefs.default_pose|default:'a_pose'|escapejs }}";
+        poseSelect.value = savedPose;
+    }
 
     // Kleider bone model dropdown
     const boneModelSelect = document.getElementById('kleider-bone-model');

@@ -71,6 +71,7 @@ urlpatterns = [
     path('humanbody/rigging/help/', character_api.rigging_help_page, name='rigging_help'),
     path('api/ui-pref/', character_api.ui_pref_save, name='ui_pref_save'),
     path('api/character/mh-proxy-fit/', character_api.mh_proxy_fit, name='mh_proxy_fit'),
+    path('api/character/mh-push-outside/', character_api.mh_push_outside, name='mh_push_outside'),
     path('humanbody/animations/', character_api.animations_page, name='humanbody_animations'),
     path('humanbody/test-animation/', character_api.test_animation_page, name='test_animation'),
     path('humanbody/test-character/', character_api.test_character_page, name='test_character'),

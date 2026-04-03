@@ -4122,13 +4122,16 @@ def mh_proxy_fit(request):
 
     if use_mh_body:
         # Load MH base mesh and use directly — perfect garment positioning
+        # Use A-pose corrected version if available, else raw T-pose
+        mh_apose_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'mh_base_apose.npy')
         mh_base_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'base_vertices.npy')
-        if os.path.isfile(mh_base_path):
+        if os.path.isfile(mh_apose_path):
+            fit_body = np.load(mh_apose_path)
+            fit_body[:, 2] += body_verts[:, 2].min()  # align feet
+        elif os.path.isfile(mh_base_path):
             mh_raw = np.load(mh_base_path)
-            # MH (dm, Y-up) → Blender (m, Z-up)
             mh_bl = np.column_stack([mh_raw[:, 0] * 0.1, -mh_raw[:, 2] * 0.1, mh_raw[:, 1] * 0.1])
-            mh_bl[:, 2] -= mh_bl[:, 2].min()  # feet at Z=0
-            # Align feet with our body
+            mh_bl[:, 2] -= mh_bl[:, 2].min()
             mh_bl[:, 2] += body_verts[:, 2].min()
             fit_body = mh_bl
         else:
@@ -4145,6 +4148,10 @@ def mh_proxy_fit(request):
         fit_body,
         mh_to_body_map=None if use_mh_body else mh_to_body_map,
     )
+
+    logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s verts=%d',
+                garment_id, body_type, use_mh_body, len(garment_verts_raw))
+
     result = {
         'vertices': garment_verts_raw.astype(np.float32),
         'faces': proxy.triangulate_faces(),
@@ -4195,6 +4202,55 @@ def _compute_garment_skin_weights(garment_verts, body_verts, gender='female'):
     tree = cKDTree(body_verts)
     _, nearest = tree.query(garment_verts)
     return sw[nearest].astype(np.float32).tobytes()
+
+
+@csrf_exempt
+def mh_push_outside(request):
+    """Push garment vertices outside the body mesh. POST with vertices as base64."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    body_type = request.GET.get('body_type', 'Female_Caucasian')
+    gender = _gender_from_body_type(body_type)
+    push_dist_mm = float(request.GET.get('push_dist', 3))
+
+    # Get body
+    md = _get_morph_data()
+    cd = _get_char_defaults()
+    state = CharacterState(md, cd)
+    state.set_body_type(body_type)
+    for key, val in request.GET.items():
+        if key.startswith('morph_'):
+            try: state.set_morph(key[6:], float(val))
+            except: pass
+        if key.startswith('meta_'):
+            try: state.set_meta(key[5:], float(val))
+            except: pass
+    body_verts = state.compute()
+    if body_verts is None:
+        return JsonResponse({'error': 'Body compute failed'}, status=500)
+
+    # Parse garment vertices from POST
+    try:
+        post_data = json.loads(request.body)
+        raw = base64.b64decode(post_data['vertices'])
+        garment_verts = np.frombuffer(raw, dtype=np.float32).reshape(-1, 3).astype(np.float64)
+    except Exception as e:
+        return JsonResponse({'error': f'Parse failed: {e}'}, status=400)
+
+    # Push outside
+    from GarmentFitter.fitter import _push_outside_body, _compute_vertex_normals
+    mesh_data = _get_mesh_data(gender)
+    body_normals = _compute_vertex_normals(body_verts, mesh_data.faces)
+    result = _push_outside_body(
+        garment_verts, body_verts,
+        min_dist=push_dist_mm / 1000.0,
+        body_normals=body_normals,
+    )
+
+    return JsonResponse({
+        'vertices': base64.b64encode(result.astype(np.float32).tobytes()).decode(),
+    })
 
 
 @csrf_exempt

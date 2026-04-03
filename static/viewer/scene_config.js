@@ -826,6 +826,7 @@ async function init() {
         .then(r => r.json())
         .then(s => {
             if (s.scene) defaultPresetName = s.scene;
+            window._defaultPose = s.ui_prefs?.default_pose || 'a_pose';
             if (s.default_anim_scene) _defaultAnimUrl = s.default_anim_scene;
             const expanded = s.expanded_panels_scene;
             if (Array.isArray(expanded)) {
@@ -865,6 +866,7 @@ async function init() {
 
     // Garment + Hair props in Eigenschaften tab
     initPropGarmentControls();
+    _initPropMHControls();
     initPropHairControls();
 
     // Asset + Animation panels
@@ -913,13 +915,34 @@ async function init() {
     animate();
 
     // Load skin colors + hair colors + skeleton/weights + settings, then restore or load default
+    fetch('/api/ui-pref/', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key:'_scene_load_start', value: new Date().toISOString()}) }).catch(()=>{});
     Promise.all([loadSkinColors(), loadHairColors(), loadRigifySkeleton(), loadSkinWeights(), _settingsReady]).then(async () => {
+        fetch('/api/ui-pref/', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key:'_scene_load_promise_ok', value: new Date().toISOString()}) }).catch(()=>{});
         if (sessionStorage.getItem(SESSION_KEY)) {
             await restoreSessionState();
         }
         if (characters.size === 0) {
-            await loadDefaultCharacter();
+            try { await loadDefaultCharacter(); } catch(e) { /* ignore */ }
         }
+        // Apply pose setting (T-Pose / A-Pose)
+        if (window._defaultPose === 't_pose') {
+            for (const [, inst] of characters) {
+                if (!inst.isSkinned && rigifySkeletonData && skinWeightData) {
+                    convertInstToSkinned(inst);
+                }
+            }
+            setTimeout(() => _applyPose('t_pose'), 500);
+        }
+        // Log pose state for debugging
+        fetch('/api/ui-pref/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: '_pose_init_log', value: {
+                defaultPose: window._defaultPose,
+                charCount: characters.size,
+                time: new Date().toISOString(),
+            }}),
+        }).catch(() => {});
         // Update Kleider tab visibility now that character is loaded
         if (typeof _updateKleiderVisibility === 'function') _updateKleiderVisibility();
         // Auto-load default animation from settings (if set and no session restore)
@@ -1409,6 +1432,14 @@ function handleMenuAction(action) {
             }
             break;
 
+        // Pose
+        case 'pose-tpose':
+            _applyPose('t_pose');
+            break;
+        case 'pose-apose':
+            _applyPose('a_pose');
+            break;
+
         // Hinzufügen
         case 'add-character':
             openAddCharacterDialog();
@@ -1538,6 +1569,8 @@ async function sceneRedo() {
 
 // Expose for onclick buttons
 window.__sceneUndo = sceneUndo;
+window.__applyPose = _applyPose;
+window.__characters = characters;
 window.__sceneRedo = sceneRedo;
 
 // =========================================================================
@@ -4661,8 +4694,10 @@ function _updatePropContext() {
 
     const isGarment = _selectedSubMesh && _selectedSubMesh.type === 'cloth'
                       && _selectedSubMesh.key.startsWith('gar_');
+    const isMH = _selectedSubMesh && _selectedSubMesh.type === 'cloth'
+                 && _selectedSubMesh.key.startsWith('mh_');
     const isHair = _selectedSubMesh && _selectedSubMesh.type === 'hair';
-    const isAsset = isGarment || isHair;
+    const isAsset = isGarment || isMH || isHair;
 
     for (const id of bodySections) {
         const el = document.getElementById(id);
@@ -4670,8 +4705,11 @@ function _updatePropContext() {
     }
     const gEl = document.getElementById(garmentSection);
     if (gEl) gEl.style.display = isGarment ? '' : 'none';
+    const mhEl = document.getElementById('prop-mh-section');
+    if (mhEl) mhEl.style.display = isMH ? '' : 'none';
     const hEl = document.getElementById(hairSection);
     if (hEl) hEl.style.display = isHair ? '' : 'none';
+    if (isMH) _syncPropMHControls();
 }
 
 /** Sync the Eigenschaften-tab garment controls FROM garmentState. */
@@ -5022,8 +5060,13 @@ function _saveSelectedGarmentState() {
 let _selectedMHId = null;
 
 async function loadMHProxyUI() {
+    _bindSlider('mh-stiffness', 'mh-stiffness-val', v => (v / 100).toFixed(2));
+    _bindSlider('mh-offset', 'mh-offset-val', v => (v / 1000).toFixed(3));
+    _bindSlider('mh-scale', 'mh-scale-val', v => v + '%');
+    _bindSlider('mh-y-offset', 'mh-y-offset-val', v => v + ' mm');
     _bindSlider('mh-roughness', 'mh-roughness-val', v => (v / 100).toFixed(2));
     _bindSlider('mh-metalness', 'mh-metalness-val', v => (v / 100).toFixed(2));
+    _bindSlider('mh-opacity', 'mh-opacity-val', v => (v / 100).toFixed(2));
 
     // Material: real-time updates
     const mhRough = document.getElementById('mh-roughness');
@@ -5038,12 +5081,87 @@ async function loadMHProxyUI() {
         const sel = _selectedMHMesh();
         if (sel) sel.mesh.material.metalness = _sliderVal('mh-metalness') / 100;
     });
+    // Stiffness: debounced server refit
+    const mhStiffness = document.getElementById('mh-stiffness');
+    if (mhStiffness) {
+        let _mhStiffTimer = null;
+        mhStiffness.addEventListener('input', () => {
+            if (_syncingSliders) return;
+            const sel = _selectedMHMesh();
+            if (!sel || !sel.key.startsWith('mh_')) return;
+            _selectedMHId = sel.key.slice(3);
+            clearTimeout(_mhStiffTimer);
+            _mhStiffTimer = setTimeout(() => _doMHProxyFit(), 400);
+        });
+    }
+
     const mhColor = document.getElementById('mh-color');
     if (mhColor) mhColor.addEventListener('input', () => {
         if (_syncingSliders) return;
         const sel = _selectedMHMesh();
         if (sel) sel.mesh.material.color.set(mhColor.value);
     });
+    const mhOpacity = document.getElementById('mh-opacity');
+    if (mhOpacity) mhOpacity.addEventListener('input', () => {
+        if (_syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (sel) {
+            const v = _sliderVal('mh-opacity') / 100;
+            sel.mesh.material.opacity = v;
+            sel.mesh.material.transparent = v < 1;
+        }
+    });
+
+    // Offset/Scale/Y-Offset: real-time client-side vertex transform
+    function _applyMHTransform() {
+        if (_syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (!sel) return;
+        const inst = sel.inst;
+        const key = sel.key;
+        const orig = inst.garmentOrigPositions?.[key];
+        if (!orig) return;
+
+        const offset = _sliderVal('mh-offset') / 1000;
+        const scale = _sliderVal('mh-scale') / 100;
+        const yOff = _sliderVal('mh-y-offset') / 1000;
+
+        const pos = sel.mesh.geometry.getAttribute('position');
+        const arr = pos.array;
+        const n = orig.length / 3;
+
+        // Compute centroid from originals
+        let cx = 0, cy = 0, cz = 0;
+        for (let i = 0; i < n; i++) {
+            cx += orig[i * 3]; cy += orig[i * 3 + 1]; cz += orig[i * 3 + 2];
+        }
+        cx /= n; cy /= n; cz /= n;
+
+        for (let i = 0; i < n; i++) {
+            let x = orig[i * 3], y = orig[i * 3 + 1], z = orig[i * 3 + 2];
+            // Scale from centroid
+            x = (x - cx) * scale + cx;
+            y = (y - cy) * scale + cy;
+            z = (z - cz) * scale + cz;
+            // Offset (push outward from centroid)
+            if (offset > 0) {
+                const dx = x - cx, dy = y - cy, dz = z - cz;
+                const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+                x += (dx / d) * offset;
+                y += (dy / d) * offset;
+                z += (dz / d) * offset;
+            }
+            // Y offset (Three.js Y = up)
+            y += yOff;
+            arr[i * 3] = x; arr[i * 3 + 1] = y; arr[i * 3 + 2] = z;
+        }
+        pos.needsUpdate = true;
+        sel.mesh.geometry.computeBoundingSphere();
+    }
+    for (const id of ['mh-offset', 'mh-scale', 'mh-y-offset']) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', _applyMHTransform);
+    }
 
     const catSelect = document.getElementById('mh-category');
     if (catSelect) catSelect.addEventListener('change', () => _renderMHList());
@@ -5054,6 +5172,75 @@ async function loadMHProxyUI() {
     const removeBtn = document.getElementById('mh-remove');
     if (removeBtn) removeBtn.addEventListener('click', () => {
         if (_selectedMHId && _selectedSubMesh) _removeSubMesh(_selectedSubMesh);
+    });
+
+    _bindSlider('mh-push-dist', 'mh-push-dist-val', v => v + ' mm');
+
+    const pushBtn = document.getElementById('mh-push');
+    if (pushBtn) pushBtn.addEventListener('click', async () => {
+        const sel = _selectedMHMesh();
+        if (!sel) return;
+        const inst = sel.inst;
+        const key = sel.key;
+
+        // Save pre-push positions for undo (if not already saved)
+        if (!inst._mhPrePush) inst._mhPrePush = {};
+        if (!inst._mhPrePush[key]) {
+            const pos = sel.mesh.geometry.getAttribute('position');
+            inst._mhPrePush[key] = new Float32Array(pos.array);
+        }
+
+        // Get current garment positions in Blender coords
+        const pos = sel.mesh.geometry.getAttribute('position');
+        const threeVerts = new Float32Array(pos.array);
+        // Three→Blender: (x, y, z) → (x, -z, y)
+        const blenderVerts = new Float32Array(threeVerts.length);
+        for (let i = 0; i < threeVerts.length; i += 3) {
+            blenderVerts[i] = threeVerts[i];
+            blenderVerts[i+1] = -threeVerts[i+2];
+            blenderVerts[i+2] = threeVerts[i+1];
+        }
+
+        const pushDist = _sliderVal('mh-push-dist');
+        const params = _charQueryParams(inst);
+        params.set('push_dist', pushDist);
+
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(blenderVerts.buffer)));
+        try {
+            const resp = await fetch(`/api/character/mh-push-outside/?${params}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vertices: b64 }),
+            });
+            const data = await resp.json();
+            if (data.error) { console.warn('Push failed:', data.error); return; }
+
+            const newVerts = base64ToFloat32(data.vertices);
+            blenderToThreeCoords(newVerts);
+            pos.array.set(newVerts);
+            pos.needsUpdate = true;
+            sel.mesh.geometry.computeBoundingSphere();
+            // Update originals for slider transforms
+            inst.garmentOrigPositions[key] = new Float32Array(newVerts);
+            console.log('✓ Push outside done');
+        } catch(e) { console.error('Push failed:', e); }
+    });
+
+    const pushUndoBtn = document.getElementById('mh-push-undo');
+    if (pushUndoBtn) pushUndoBtn.addEventListener('click', () => {
+        const sel = _selectedMHMesh();
+        if (!sel) return;
+        const inst = sel.inst;
+        const key = sel.key;
+        if (inst._mhPrePush && inst._mhPrePush[key]) {
+            const pos = sel.mesh.geometry.getAttribute('position');
+            pos.array.set(inst._mhPrePush[key]);
+            pos.needsUpdate = true;
+            sel.mesh.geometry.computeBoundingSphere();
+            inst.garmentOrigPositions[key] = new Float32Array(inst._mhPrePush[key]);
+            delete inst._mhPrePush[key];
+            console.log('✓ Push undone');
+        }
     });
 
     const removeAllBtn = document.getElementById('mh-remove-all');
@@ -5182,6 +5369,10 @@ async function _doMHProxyFit() {
     params.set('color_r', c.r.toFixed(3));
     params.set('color_g', c.g.toFixed(3));
     params.set('color_b', c.b.toFixed(3));
+    params.set('offset', (_sliderVal('mh-offset') / 1000).toFixed(4));
+    params.set('stiffness', (_sliderVal('mh-stiffness') / 100).toFixed(2));
+    params.set('scale', (_sliderVal('mh-scale') / 100).toFixed(3));
+    params.set('y_offset', (_sliderVal('mh-y-offset') / 1000).toFixed(4));
 
     try {
         const resp = await fetch(`/api/character/mh-proxy-fit/?${params}`);
@@ -5211,14 +5402,19 @@ async function _doMHProxyFit() {
 
         const roughness = _sliderVal('mh-roughness') / 100;
         const metalness = _sliderVal('mh-metalness') / 100;
+        const opacity = _sliderVal('mh-opacity') / 100;
         const mat = new THREE.MeshStandardMaterial({
             color: c, roughness, metalness, side: THREE.DoubleSide,
             polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+            transparent: opacity < 1, opacity,
         });
 
         const mesh = _skinifyMesh(geo, mat, inst, data);
         inst.clothMeshes[key] = mesh;
         inst.group.add(mesh);
+
+        // Store original positions for real-time slider transforms
+        inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
 
         updateEquippedList(inst);
         updateVertexCount();
@@ -5226,6 +5422,145 @@ async function _doMHProxyFit() {
     } catch (e) {
         console.error('MH proxy fit failed:', e);
     }
+}
+
+function _syncPropMHControls() {
+    const sel = _selectedMHMesh();
+    if (!sel) return;
+    const mat = sel.mesh.material;
+    // Sync material sliders
+    const setV = (id, valId, v, fmt) => {
+        const el = document.getElementById(id);
+        const sp = document.getElementById(valId);
+        if (el) el.value = v;
+        if (sp) sp.textContent = fmt(v);
+    };
+    setV('prop-mh-roughness', 'prop-mh-roughness-val', Math.round(mat.roughness * 100), v => (v/100).toFixed(2));
+    setV('prop-mh-metalness', 'prop-mh-metalness-val', Math.round(mat.metalness * 100), v => (v/100).toFixed(2));
+    setV('prop-mh-opacity', 'prop-mh-opacity-val', Math.round(mat.opacity * 100), v => (v/100).toFixed(2));
+    const colorEl = document.getElementById('prop-mh-color');
+    if (colorEl) colorEl.value = '#' + mat.color.getHexString();
+    // Sync transform sliders from asset tab values
+    const syncFrom = (propId, srcId) => {
+        const s = document.getElementById(srcId);
+        const p = document.getElementById(propId);
+        if (s && p) p.value = s.value;
+    };
+    syncFrom('prop-mh-offset', 'mh-offset');
+    syncFrom('prop-mh-scale', 'mh-scale');
+    syncFrom('prop-mh-y-offset', 'mh-y-offset');
+    // Update value displays
+    _bindSlider('prop-mh-offset', 'prop-mh-offset-val', v => (v / 1000).toFixed(3));
+    _bindSlider('prop-mh-scale', 'prop-mh-scale-val', v => v + '%');
+    _bindSlider('prop-mh-y-offset', 'prop-mh-y-offset-val', v => v + ' mm');
+    _bindSlider('prop-mh-roughness', 'prop-mh-roughness-val', v => (v/100).toFixed(2));
+    _bindSlider('prop-mh-metalness', 'prop-mh-metalness-val', v => (v/100).toFixed(2));
+    _bindSlider('prop-mh-opacity', 'prop-mh-opacity-val', v => (v/100).toFixed(2));
+}
+
+function _initPropMHControls() {
+    // Real-time material changes from Eigenschaften tab
+    for (const [id, prop] of [['prop-mh-roughness', 'roughness'], ['prop-mh-metalness', 'metalness']]) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => {
+            const sel = _selectedMHMesh();
+            if (sel) sel.mesh.material[prop] = parseFloat(el.value) / 100;
+        });
+    }
+    const opEl = document.getElementById('prop-mh-opacity');
+    if (opEl) opEl.addEventListener('input', () => {
+        const sel = _selectedMHMesh();
+        if (sel) {
+            const v = parseFloat(opEl.value) / 100;
+            sel.mesh.material.opacity = v;
+            sel.mesh.material.transparent = v < 1;
+        }
+    });
+    const colEl = document.getElementById('prop-mh-color');
+    if (colEl) colEl.addEventListener('input', () => {
+        const sel = _selectedMHMesh();
+        if (sel) sel.mesh.material.color.set(colEl.value);
+    });
+    // Transform sliders — sync to asset tab + apply
+    for (const [propId, srcId] of [['prop-mh-offset','mh-offset'],['prop-mh-scale','mh-scale'],['prop-mh-y-offset','mh-y-offset']]) {
+        const el = document.getElementById(propId);
+        if (el) el.addEventListener('input', () => {
+            const src = document.getElementById(srcId);
+            if (src) { src.value = el.value; src.dispatchEvent(new Event('input')); }
+        });
+    }
+}
+
+/**
+ * Apply T-Pose or A-Pose by rotating arm bones.
+ * T-Pose: arms horizontal. A-Pose: arms ~15° below horizontal (rest pose).
+ */
+let _currentPose = 'a_pose';
+
+function _applyPose(pose) {
+    if (pose === _currentPose) return;
+
+    // Direction: positive = toward T-pose (arms up), negative = toward A-pose (arms down)
+    const direction = (pose === 't_pose') ? 1 : -1;
+    const angle = 30 * direction;  // degrees
+
+    const poseLog = [];
+
+    for (const [, inst] of characters) {
+        if (!inst.isSkinned) { poseLog.push('skip: not skinned'); continue; }
+
+        // Find skeleton — search all children for SkinnedMesh
+        let skel = null;
+        inst.group.traverse(child => {
+            if (!skel && child.isSkinnedMesh && child.skeleton) {
+                skel = child.skeleton;
+            }
+        });
+        if (!skel) { poseLog.push('skip: no skeleton found'); continue; }
+
+        const allNames = skel.bones.map(b => b.name);
+        const armNames = allNames.filter(n => n.includes('arm'));
+        poseLog.push(`bones: ${skel.bones.length}, arm: ${armNames.join(',')}`);
+
+        // Arm bone rotation
+        // X-axis +angle lifts both arms (verified in Chrome)
+        const boneDefs = [
+            { names: ['DEF-upper_arm_L'], angle: angle, axis: [1, 0, 0] },
+            { names: ['DEF-upper_arm_L_001'], angle: angle * 0.3, axis: [1, 0, 0] },
+            { names: ['DEF-upper_arm_R'], angle: angle, axis: [1, 0, 0] },
+            { names: ['DEF-upper_arm_R_001'], angle: angle * 0.3, axis: [1, 0, 0] },
+            // Legs — bring together
+            { names: ['DEF-thigh_L'], angle: -angle * 0.12, axis: [1, 0, 0] },
+            { names: ['DEF-thigh_R'], angle: angle * 0.12, axis: [1, 0, 0] },
+        ];
+
+        let found = 0;
+        for (const def of boneDefs) {
+            let bone = null;
+            for (const name of def.names) {
+                bone = skel.getBoneByName(name);
+                if (bone) break;
+            }
+            if (bone) {
+                found++;
+                const q = new THREE.Quaternion().setFromAxisAngle(
+                    new THREE.Vector3(...def.axis), def.angle * Math.PI / 180
+                );
+                bone.quaternion.premultiply(q);
+                poseLog.push(`rotated: ${bone.name} by ${def.angle}deg axis=${def.axis}`);
+            }
+        }
+        poseLog.push(`applied ${pose}: ${found} bones`);
+    }
+
+    // Save log to server
+    fetch('/api/ui-pref/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: '_pose_log', value: poseLog }),
+    }).catch(() => {});
+
+    _currentPose = pose;
 }
 
 async function loadGarmentUI() {
