@@ -5453,8 +5453,6 @@ def smooth_bvh(request):
     POST /api/retarget/smooth-bvh/
     Body JSON: { category, name, sigma }
     """
-    return JsonResponse({'error': 'Smooth-Speichern temporaer deaktiviert (Euler-Konvertierung fehlerhaft). Bitte nur Session-Smooth verwenden.'}, status=400)
-
     log = logging.getLogger('core')
     try:
         data = json.loads(request.body)
@@ -5515,17 +5513,17 @@ def smooth_bvh(request):
         # Convert smoothed quaternions back to Euler and write BVH
         lines = bvh_path.read_text(encoding='utf-8').split('\n')
 
-        # Find channel order from header
+        # Find channel order from header (must match parse_bvh convention: UPPERCASE = intrinsic)
         channel_orders = []
         for line in lines:
             stripped = line.strip()
             if stripped.startswith('CHANNELS'):
                 parts = stripped.split()
                 nch = int(parts[1])
-                order = ''.join(p[0] for p in parts[2:2+3] if 'rotation' in p.lower())
-                if not order:
-                    order = ''.join(p[0] for p in parts[-3:] if 'rotation' in p.lower())
-                channel_orders.append((nch, order.upper() if order else 'ZYX'))
+                cmap = {'Xrotation': 'X', 'Yrotation': 'Y', 'Zrotation': 'Z',
+                        'xrotation': 'X', 'yrotation': 'Y', 'zrotation': 'Z'}
+                rot_order = ''.join(cmap[p] for p in parts[2:] if p.lower() in [x.lower() for x in cmap])
+                channel_orders.append((nch, rot_order if rot_order else 'ZYX'))
 
         # Find MOTION data lines
         motion_idx = next(i for i, l in enumerate(lines) if l.strip() == 'MOTION')
@@ -5553,21 +5551,22 @@ def smooth_bvh(request):
                     vals[vi] = f'{bvh.positions[fi, ji, 0]:.6f}'
                     vals[vi+1] = f'{bvh.positions[fi, ji, 1]:.6f}'
                     vals[vi+2] = f'{bvh.positions[fi, ji, 2]:.6f}'
-                    euler = Rotation.from_quat(bvh.quats[fi, ji]).as_euler(order.lower(), degrees=True)
+                    euler = Rotation.from_quat(bvh.quats[fi, ji]).as_euler(order, degrees=True)
                     vals[vi+3] = f'{euler[0]:.6f}'
                     vals[vi+4] = f'{euler[1]:.6f}'
                     vals[vi+5] = f'{euler[2]:.6f}'
                     vi += nch
                 else:
                     # Rotation only
-                    euler = Rotation.from_quat(bvh.quats[fi, ji]).as_euler(order.lower(), degrees=True)
+                    euler = Rotation.from_quat(bvh.quats[fi, ji]).as_euler(order, degrees=True)
                     vals[vi] = f'{euler[0]:.6f}'
                     vals[vi+1] = f'{euler[1]:.6f}'
                     vals[vi+2] = f'{euler[2]:.6f}'
                     vi += 3
             lines[frame_lines[fi]] = ' '.join(vals)
 
-        bvh_path.write_text('\n'.join(lines), encoding='utf-8')
+        with open(str(bvh_path), 'w', encoding='utf-8', newline='\n') as f:
+            f.write('\n'.join(lines))
 
         # Clear retarget cache
         for cache in bvh_path.parent.glob(f'{name}_retarget_*.json'):
