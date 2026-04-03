@@ -782,6 +782,14 @@
                     <div class="menu-item" data-action="delete">L&ouml;schen <span class="shortcut">Del</span></div>
                     <div class="menu-sep"></div>
                     <div class="menu-item" data-action="clear-all">Alles l&ouml;schen</div>
+                    <div class="menu-sep"></div>
+                    <div class="menu-submenu-wrap">
+                        <div class="menu-item">Pose</div>
+                        <div class="menu-submenu">
+                            <div class="menu-item" data-action="pose-tpose">T-Pose (Arme horizontal)</div>
+                            <div class="menu-item" data-action="pose-apose">A-Pose (Standard)</div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="menu">
@@ -983,6 +991,37 @@
                             <i class="fas fa-sync"></i> Garments &amp; Haare anpassen
                         </button>
                     </div>
+                    <!-- MakeHuman Garment Properties -->
+                    <div class="prop-section" id="prop-mh-section" style="display:none;">
+                        <div class="prop-section-title">MakeHuman Eigenschaften</div>
+                        <div class="slider-row"><label>Offset</label>
+                            <input type="range" id="prop-mh-offset" min="0" max="30" value="6" step="1">
+                            <span class="slider-val" id="prop-mh-offset-val">0.006</span>
+                        </div>
+                        <div class="slider-row"><label>Skalierung</label>
+                            <input type="range" id="prop-mh-scale" min="80" max="120" value="100" step="1">
+                            <span class="slider-val" id="prop-mh-scale-val">100%</span>
+                        </div>
+                        <div class="slider-row"><label>Y-Versatz</label>
+                            <input type="range" id="prop-mh-y-offset" min="-50" max="50" value="0" step="1">
+                            <span class="slider-val" id="prop-mh-y-offset-val">0 mm</span>
+                        </div>
+                        <div class="slider-row"><label>Farbe</label>
+                            <input type="color" id="prop-mh-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                        </div>
+                        <div class="slider-row"><label>Roughness</label>
+                            <input type="range" id="prop-mh-roughness" min="0" max="100" value="80" step="1">
+                            <span class="slider-val" id="prop-mh-roughness-val">0.80</span>
+                        </div>
+                        <div class="slider-row"><label>Metalness</label>
+                            <input type="range" id="prop-mh-metalness" min="0" max="100" value="0" step="1">
+                            <span class="slider-val" id="prop-mh-metalness-val">0.00</span>
+                        </div>
+                        <div class="slider-row"><label>Opacity</label>
+                            <input type="range" id="prop-mh-opacity" min="10" max="100" value="100" step="1">
+                            <span class="slider-val" id="prop-mh-opacity-val">1.00</span>
+                        </div>
+                    </div>
                     <!-- Morphs (body context) -->
                     <div class="prop-section" id="prop-morphs-section">
                         <div class="prop-section-title" style="display:flex;justify-content:space-between;align-items:center;">
@@ -1096,6 +1135,67 @@
                     Charakter auswählen
                 </div>
                 <div id="assets-content" style="display:none;">
+                <!-- MakeHuman Proxy Fit -->
+                <div class="panel-section" data-panel-key="mh_proxy_fit">
+                    <h3>MakeHuman <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" id="mh-proxy-panel">
+                        <div class="slider-row"><label>Kategorie</label>
+                            <select id="mh-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                                <option value="">Alle</option>
+                            </select>
+                        </div>
+                        <div id="mh-list" class="anim-tree" style="max-height:300px;margin-bottom:0;overflow-y:auto;resize:vertical;min-height:80px;">
+                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade MakeHuman Library...</div>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Fit</div>
+                        <div class="slider-row"><label>Stiffness</label>
+                            <input type="range" id="mh-stiffness" min="0" max="100" value="50" step="5">
+                            <span class="slider-val" id="mh-stiffness-val">0.50</span>
+                        </div>
+                        <div class="slider-row"><label>Offset</label>
+                            <input type="range" id="mh-offset" min="0" max="30" value="6" step="1">
+                            <span class="slider-val" id="mh-offset-val">0.006</span>
+                        </div>
+                        <div class="slider-row"><label>Skalierung</label>
+                            <input type="range" id="mh-scale" min="80" max="120" value="100" step="1">
+                            <span class="slider-val" id="mh-scale-val">100%</span>
+                        </div>
+                        <div class="slider-row"><label>Y-Versatz</label>
+                            <input type="range" id="mh-y-offset" min="-50" max="50" value="0" step="1">
+                            <span class="slider-val" id="mh-y-offset-val">0 mm</span>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
+                        <div class="slider-row"><label>Farbe</label>
+                            <input type="color" id="mh-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                        </div>
+                        <div class="slider-row"><label>Roughness</label>
+                            <input type="range" id="mh-roughness" min="0" max="100" value="80" step="1">
+                            <span class="slider-val" id="mh-roughness-val">0.80</span>
+                        </div>
+                        <div class="slider-row"><label>Metalness</label>
+                            <input type="range" id="mh-metalness" min="0" max="100" value="0" step="1">
+                            <span class="slider-val" id="mh-metalness-val">0.00</span>
+                        </div>
+                        <div class="slider-row"><label>Opacity</label>
+                            <input type="range" id="mh-opacity" min="10" max="100" value="100" step="1">
+                            <span class="slider-val" id="mh-opacity-val">1.00</span>
+                        </div>
+                        <div style="display:flex;gap:6px;margin-top:6px;">
+                            <button id="mh-create" class="btn-toggle" style="flex:1;"><i class="fas fa-magic"></i> 1. Erzeuge (Proxy)</button>
+                            <button id="mh-remove" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Entfernen"><i class="fas fa-times"></i></button>
+                            <button id="mh-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle entfernen"><i class="fas fa-trash"></i></button>
+                        </div>
+                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:8px 0 4px;">Schritt 2: Push Outside</div>
+                        <div class="slider-row"><label>Max. Abstand</label>
+                            <input type="range" id="mh-push-dist" min="1" max="10" value="3" step="0.5">
+                            <span class="slider-val" id="mh-push-dist-val">3 mm</span>
+                        </div>
+                        <div style="display:flex;gap:6px;">
+                            <button id="mh-push" class="btn-toggle" style="flex:1;"><i class="fas fa-expand-arrows-alt"></i> 2. Push Outside</button>
+                            <button id="mh-push-undo" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Push r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i></button>
+                        </div>
+                    </div>
+                </div>
                 <!-- Garment Fit -->
                 <div class="panel-section" data-panel-key="garment_fit">
                     <h3>Garment Fit <span class="chevron">&#9660;</span></h3>
