@@ -885,6 +885,8 @@
             <div class="panel-tab" data-tab="animation">Animation</div>
             <div class="panel-tab" data-tab="szene">Szene</div>
             <div class="panel-tab" data-tab="modell">Modell</div>
+            <div class="panel-tab" data-tab="rigging">Rigging</div>
+            <div class="panel-tab" data-tab="finalize">Finalize</div>
         </div>
 
         <!-- Tab content (scrollable) -->
@@ -986,6 +988,10 @@
                     <div class="prop-section" id="prop-bodytype-section">
                         <div class="prop-section-title">Body Type</div>
                         <select id="prop-body-type" class="viewer-select"></select>
+                        <div class="prop-section-title" style="margin-top:8px;">Preset</div>
+                        <select id="prop-preset" class="viewer-select">
+                            <option value="">-- Kein Preset --</option>
+                        </select>
                         <div id="prop-meta-sliders"></div>
                         <button id="prop-refit-btn" class="btn-reset-morphs" style="width:100%;margin-top:6px;" title="Garments &amp; Haare an aktuelle Morphs anpassen">
                             <i class="fas fa-sync"></i> Garments &amp; Haare anpassen
@@ -994,6 +1000,11 @@
                     <!-- MakeHuman Garment Properties -->
                     <div class="prop-section" id="prop-mh-section" style="display:none;">
                         <div class="prop-section-title">MakeHuman Eigenschaften</div>
+                        <div class="prop-section-title" style="font-size:0.7rem;margin-top:4px;">Fit</div>
+                        <div class="slider-row"><label>Stiffness</label>
+                            <input type="range" id="prop-mh-stiffness" min="0" max="100" value="90" step="1">
+                            <span class="slider-val" id="prop-mh-stiffness-val">0.90</span>
+                        </div>
                         <div class="slider-row"><label>Offset</label>
                             <input type="range" id="prop-mh-offset" min="0" max="30" value="6" step="1">
                             <span class="slider-val" id="prop-mh-offset-val">0.006</span>
@@ -1363,6 +1374,56 @@
                         <div style="margin-top:6px;">
                             <button id="cloth-prim-create" class="btn-toggle" style="width:100%;"><i class="fas fa-plus"></i> Create Primitive</button>
                         </div>
+                    </div>
+                </div>
+                <div class="panel-section collapsed" id="charmorph-panel">
+                    <h3 class="panel-title" onclick="this.parentElement.classList.toggle('collapsed')">CharMorph Kleidung <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label>Kategorie:</label>
+                            <select id="cm-category" class="viewer-select">
+                                <option value="">Alle</option>
+                            </select>
+                        </div>
+                        <div id="cm-asset-list" style="max-height:200px;overflow-y:auto;margin:6px 0;border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
+                        <div class="prop-row"><label>Fitting:</label>
+                            <select id="cm-fitting" class="viewer-select">
+                                <option value="soft">Soft</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </div>
+                        <div class="prop-row"><label>Offset:</label><input type="range" id="cm-offset" min="-0.005" max="0.02" step="0.001" value="0.001"><span id="cm-offset-val">0.001</span></div>
+                        <div class="prop-row"><label>Smoothing:</label><input type="range" id="cm-smooth" min="0" max="1" step="0.05" value="0"><span id="cm-smooth-val">0.00</span></div>
+                        <div class="prop-row"><label>Material:</label>
+                            <select id="cm-material" class="viewer-select">
+                                <option value="">Standard</option>
+                            </select>
+                        </div>
+                        <div class="prop-row"><label>Farbe:</label><input type="color" id="cm-color" value="#cccccc"></div>
+                        <div style="margin-top:8px;display:flex;gap:6px;">
+                            <button id="cm-add" class="viewer-btn" style="flex:1;"><i class="fas fa-plus"></i> Hinzufuegen</button>
+                            <button id="cm-remove" class="viewer-btn" style="flex:1;"><i class="fas fa-trash"></i> Entfernen</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-section collapsed" id="charmorph-hair-panel">
+                    <h3 class="panel-title" onclick="this.parentElement.classList.toggle('collapsed')">Hair &mdash; CharMorph <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label>Hairstyle:</label>
+                            <select id="cm-hairstyle" class="viewer-select">
+                                <option value="">-- Kein Haar --</option>
+                            </select>
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);margin:2px 0 6px;">CharMorph NPZ Hairstyles (Blender-only Info)</div>
+                        <div class="prop-section-title" style="margin-top:4px;">Haarfarbe</div>
+                        <div class="prop-row"><label>Preset:</label>
+                            <select id="cm-hair-color-preset" class="viewer-select">
+                                <option value="">-- Manuelle Farbe --</option>
+                            </select>
+                        </div>
+                        <div class="prop-row"><label>Farbe:</label><input type="color" id="cm-hair-color" value="#3d2b1f"></div>
+                        <div class="prop-section-title" style="margin-top:6px;">Fitting</div>
+                        <div class="prop-row"><label><input type="checkbox" id="cm-hair-shrinkwrap"> Shrinkwrap</label></div>
+                        <div class="prop-row"><label>Offset:</label><input type="range" id="cm-hair-offset" min="0" max="0.01" step="0.0001" value="0.0002"><span id="cm-hair-offset-val">0.0002</span></div>
                     </div>
                 </div>
                 </div><!-- /assets-content -->
@@ -1871,7 +1932,101 @@
                         <button class="action-btn" id="mg-save-server">Speichern unter...</button>
                     </div>
                 </div>
+                <!-- Pose Browser -->
+                <div class="panel-section" data-panel-key="pose_browser">
+                    <h3>Pose <span class="chevron">&#9660;</span></h3>
+                    <div class="panel-body" id="pose-panel">
+                        <div id="pose-list" class="anim-tree" style="max-height:300px;overflow-y:auto;resize:vertical;min-height:60px;">
+                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Poses...</div>
+                        </div>
+                        <div style="display:flex;gap:6px;margin-top:6px;">
+                            <button id="pose-reset" class="btn-toggle" style="flex:1;"><i class="fas fa-undo"></i> A-Pose (Reset)</button>
+                        </div>
+                    </div>
+                </div>
             </div><!-- /tab-modell -->
+
+            <!-- Rigging Tab -->
+            <div class="tab-pane" id="tab-rigging">
+                <div class="panel-section">
+                    <h3 class="panel-title">IK Einstellungen</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label><input type="checkbox" id="rig-ik-no-stretch" checked> IK Stretch deaktivieren</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="rig-ik-limit" checked> IK Rotation begrenzen</label></div>
+                        <div class="prop-row"><label>Min:</label><input type="number" id="rig-ik-min" value="-10" min="-180" max="0" style="width:60px;"> &deg;</div>
+                        <div class="prop-row"><label>Max:</label><input type="number" id="rig-ik-max" value="160" min="0" max="180" style="width:60px;"> &deg;</div>
+                        <div class="prop-row"><label><input type="checkbox" id="rig-finger-ik"> Finger IK</label></div>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">Spine</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label><input type="checkbox" id="rig-spine-pivot"> Spine Pivot</label></div>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">Sliding Joints</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label>Ellbogen:</label><input type="range" id="rig-slide-elbow" min="0" max="0.5" step="0.01" value="0.08"><span id="rig-slide-elbow-val">0.08</span></div>
+                        <div class="prop-row"><label>Knie:</label><input type="range" id="rig-slide-knee" min="0" max="0.5" step="0.01" value="0.05"><span id="rig-slide-knee-val">0.05</span></div>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">Optionen</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label><input type="checkbox" id="rig-visible"> Rig sichtbar</label></div>
+                    </div>
+                </div>
+            </div><!-- /tab-rigging -->
+
+            <!-- Finalize Tab -->
+            <div class="tab-pane" id="tab-finalize">
+                <div class="panel-section">
+                    <h3 class="panel-title">Export</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label>Format:</label>
+                            <select id="fin-format" class="viewer-select">
+                                <option value="glb">GLB (Three.js)</option>
+                                <option value="obj">OBJ</option>
+                                <option value="fbx">FBX</option>
+                                <option value="json">JSON (Szene)</option>
+                            </select>
+                        </div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-apply-morphs" checked> Morphs anwenden</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-apply-pose" checked> Pose anwenden</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-include-rig" checked> Rig einschliessen</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-include-clothes"> Kleidung einschliessen</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-include-hair"> Haare einschliessen</label></div>
+                        <button id="fin-export" class="viewer-btn" style="width:100%;margin-top:8px;"><i class="fas fa-file-export"></i> Exportieren</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">Cleanup</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label><input type="checkbox" id="fin-collapse-morphs"> Shape Keys zusammenfassen</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-remove-unused"> Unbenutzte Morphs entfernen</label></div>
+                        <button id="fin-cleanup" class="viewer-btn" style="width:100%;margin-top:8px;"><i class="fas fa-broom"></i> Cleanup</button>
+                    </div>
+                </div>
+                <div class="panel-section">
+                    <h3 class="panel-title">Format-Konvertierung</h3>
+                    <div class="panel-body">
+                        <div class="prop-row"><label>Von:</label>
+                            <select id="fin-conv-in" class="viewer-select">
+                                <option value="yaml">YAML</option>
+                                <option value="json">JSON (MB-Lab)</option>
+                            </select>
+                        </div>
+                        <div class="prop-row"><label>Nach:</label>
+                            <select id="fin-conv-out" class="viewer-select">
+                                <option value="json">JSON</option>
+                                <option value="yaml">YAML</option>
+                            </select>
+                        </div>
+                        <button id="fin-convert" class="viewer-btn" style="width:100%;margin-top:8px;"><i class="fas fa-exchange-alt"></i> Konvertieren</button>
+                    </div>
+                </div>
+            </div><!-- /tab-finalize -->
 
         </div><!-- /panel-tab-content -->
 
@@ -1973,6 +2128,17 @@
         </div>
     </div>
 </div>
+
+<!-- Pose context menu -->
+<div id="pose-ctx-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="pose-ctx-item" data-action="apply" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-play" style="width:16px;"></i> Anwenden</div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+    <div class="pose-ctx-item" data-action="rename" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen (F2)</div>
+    <div class="pose-ctx-item" data-action="delete" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-trash" style="width:16px;"></i> Loeschen (Entf)</div>
+</div>
+<style>
+.pose-ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }
+</style>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -1985,5 +2151,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/scene_config.js' %}?t={% now "U" %}"></script>
+<script type="module" src="{% static 'viewer/scene/main.js' %}?t={% now 'U' %}"></script>
 {% endblock %}

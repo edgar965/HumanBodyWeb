@@ -1,0 +1,453 @@
+/**
+ * Scene Editor -- MakeHuman Proxy Fit UI.
+ * Extracted from scene_config.js lines 4886-5322.
+ */
+import { THREE } from './state.js';
+import { state } from './state.js';
+import { fn } from './registry.js';
+import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, _selectedInst, _charQueryParams, _bindSlider, _sliderVal } from './utils.js';
+import { _skinifyMesh, convertInstToSkinned } from './skeleton.js';
+
+async function loadMHProxyUI() {
+    _bindSlider('mh-stiffness', 'mh-stiffness-val', v => (v / 100).toFixed(2));
+    _bindSlider('mh-offset', 'mh-offset-val', v => (v / 1000).toFixed(3));
+    _bindSlider('mh-scale', 'mh-scale-val', v => v + '%');
+    _bindSlider('mh-y-offset', 'mh-y-offset-val', v => v + ' mm');
+    _bindSlider('mh-roughness', 'mh-roughness-val', v => (v / 100).toFixed(2));
+    _bindSlider('mh-metalness', 'mh-metalness-val', v => (v / 100).toFixed(2));
+    _bindSlider('mh-opacity', 'mh-opacity-val', v => (v / 100).toFixed(2));
+
+    // Material: real-time updates
+    const mhRough = document.getElementById('mh-roughness');
+    if (mhRough) mhRough.addEventListener('input', () => {
+        if (state._syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (sel) sel.mesh.material.roughness = _sliderVal('mh-roughness') / 100;
+    });
+    const mhMetal = document.getElementById('mh-metalness');
+    if (mhMetal) mhMetal.addEventListener('input', () => {
+        if (state._syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (sel) sel.mesh.material.metalness = _sliderVal('mh-metalness') / 100;
+    });
+    // Stiffness: debounced server refit
+    const mhStiffness = document.getElementById('mh-stiffness');
+    if (mhStiffness) {
+        let _mhStiffTimer = null;
+        mhStiffness.addEventListener('input', () => {
+            if (state._syncingSliders) return;
+            const sel = _selectedMHMesh();
+            if (!sel || !sel.key.startsWith('mh_')) return;
+            state._selectedMHId = sel.key.slice(3);
+            clearTimeout(_mhStiffTimer);
+            _mhStiffTimer = setTimeout(() => _doMHProxyFit(), 400);
+        });
+    }
+
+    const mhColor = document.getElementById('mh-color');
+    if (mhColor) mhColor.addEventListener('input', () => {
+        if (state._syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (sel) sel.mesh.material.color.set(mhColor.value);
+    });
+    const mhOpacity = document.getElementById('mh-opacity');
+    if (mhOpacity) mhOpacity.addEventListener('input', () => {
+        if (state._syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (sel) {
+            const v = _sliderVal('mh-opacity') / 100;
+            sel.mesh.material.opacity = v;
+            sel.mesh.material.transparent = v < 1;
+        }
+    });
+
+    // Offset/Scale/Y-Offset: real-time client-side vertex transform
+    function _applyMHTransform() {
+        if (state._syncingSliders) return;
+        const sel = _selectedMHMesh();
+        if (!sel) return;
+        const inst = sel.inst;
+        const key = sel.key;
+        const orig = inst.garmentOrigPositions?.[key];
+        if (!orig) return;
+
+        const offset = _sliderVal('mh-offset') / 1000;
+        const scale = _sliderVal('mh-scale') / 100;
+        const yOff = _sliderVal('mh-y-offset') / 1000;
+
+        const pos = sel.mesh.geometry.getAttribute('position');
+        const arr = pos.array;
+        const n = orig.length / 3;
+
+        // Compute centroid from originals
+        let cx = 0, cy = 0, cz = 0;
+        for (let i = 0; i < n; i++) {
+            cx += orig[i * 3]; cy += orig[i * 3 + 1]; cz += orig[i * 3 + 2];
+        }
+        cx /= n; cy /= n; cz /= n;
+
+        for (let i = 0; i < n; i++) {
+            let x = orig[i * 3], y = orig[i * 3 + 1], z = orig[i * 3 + 2];
+            // Scale from centroid
+            x = (x - cx) * scale + cx;
+            y = (y - cy) * scale + cy;
+            z = (z - cz) * scale + cz;
+            // Offset (push outward from centroid)
+            if (offset > 0) {
+                const dx = x - cx, dy = y - cy, dz = z - cz;
+                const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+                x += (dx / d) * offset;
+                y += (dy / d) * offset;
+                z += (dz / d) * offset;
+            }
+            // Y offset (Three.js Y = up)
+            y += yOff;
+            arr[i * 3] = x; arr[i * 3 + 1] = y; arr[i * 3 + 2] = z;
+        }
+        pos.needsUpdate = true;
+        sel.mesh.geometry.computeBoundingSphere();
+    }
+    for (const id of ['mh-offset', 'mh-scale', 'mh-y-offset']) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', _applyMHTransform);
+    }
+
+    const catSelect = document.getElementById('mh-category');
+    if (catSelect) catSelect.addEventListener('change', () => _renderMHList());
+
+    const createBtn = document.getElementById('mh-create');
+    if (createBtn) createBtn.addEventListener('click', () => _doMHProxyFit());
+
+    const removeBtn = document.getElementById('mh-remove');
+    if (removeBtn) removeBtn.addEventListener('click', () => {
+        if (state._selectedMHId && state._selectedSubMesh) fn._removeSubMesh(state._selectedSubMesh);
+    });
+
+    _bindSlider('mh-push-dist', 'mh-push-dist-val', v => v + ' mm');
+
+    const pushBtn = document.getElementById('mh-push');
+    if (pushBtn) pushBtn.addEventListener('click', async () => {
+        const sel = _selectedMHMesh();
+        if (!sel) return;
+        const inst = sel.inst;
+        const key = sel.key;
+
+        // Save pre-push positions for undo (if not already saved)
+        if (!inst._mhPrePush) inst._mhPrePush = {};
+        if (!inst._mhPrePush[key]) {
+            const pos = sel.mesh.geometry.getAttribute('position');
+            inst._mhPrePush[key] = new Float32Array(pos.array);
+        }
+
+        // Get current garment positions in Blender coords
+        const pos = sel.mesh.geometry.getAttribute('position');
+        const threeVerts = new Float32Array(pos.array);
+        // Three->Blender: (x, y, z) -> (x, -z, y)
+        const blenderVerts = new Float32Array(threeVerts.length);
+        for (let i = 0; i < threeVerts.length; i += 3) {
+            blenderVerts[i] = threeVerts[i];
+            blenderVerts[i+1] = -threeVerts[i+2];
+            blenderVerts[i+2] = threeVerts[i+1];
+        }
+
+        const pushDist = _sliderVal('mh-push-dist');
+        const params = _charQueryParams(inst);
+        params.set('push_dist', pushDist);
+
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(blenderVerts.buffer)));
+        try {
+            const resp = await fetch(`/api/character/mh-push-outside/?${params}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vertices: b64 }),
+            });
+            const data = await resp.json();
+            if (data.error) { console.warn('Push failed:', data.error); return; }
+
+            const newVerts = base64ToFloat32(data.vertices);
+            blenderToThreeCoords(newVerts);
+            pos.array.set(newVerts);
+            pos.needsUpdate = true;
+            sel.mesh.geometry.computeBoundingSphere();
+            // Update originals for slider transforms
+            inst.garmentOrigPositions[key] = new Float32Array(newVerts);
+            console.log('Push outside done');
+        } catch(e) { console.error('Push failed:', e); }
+    });
+
+    const pushUndoBtn = document.getElementById('mh-push-undo');
+    if (pushUndoBtn) pushUndoBtn.addEventListener('click', () => {
+        const sel = _selectedMHMesh();
+        if (!sel) return;
+        const inst = sel.inst;
+        const key = sel.key;
+        if (inst._mhPrePush && inst._mhPrePush[key]) {
+            const pos = sel.mesh.geometry.getAttribute('position');
+            pos.array.set(inst._mhPrePush[key]);
+            pos.needsUpdate = true;
+            sel.mesh.geometry.computeBoundingSphere();
+            inst.garmentOrigPositions[key] = new Float32Array(inst._mhPrePush[key]);
+            delete inst._mhPrePush[key];
+            console.log('Push undone');
+        }
+    });
+
+    const removeAllBtn = document.getElementById('mh-remove-all');
+    if (removeAllBtn) removeAllBtn.addEventListener('click', () => {
+        const inst = _selectedInst();
+        if (!inst) return;
+        const keys = Object.keys(inst.clothMeshes).filter(k => k.startsWith('mh_'));
+        for (const key of keys) {
+            const t = { type: 'cloth', key, meshObj: inst.clothMeshes[key], charId: inst.id };
+            fn._removeSubMesh(t);
+        }
+    });
+
+    // Load garment catalog (shared)
+    const waitForCatalog = setInterval(async () => {
+        if (state._garmentCatalog.length === 0) {
+            try {
+                const resp = await fetch('/api/character/garment/library/');
+                const data = await resp.json();
+                if (data.garments) {
+                    for (const cat of Object.keys(data.garments)) {
+                        for (const g of data.garments[cat]) {
+                            g._category = cat;
+                            if (!state._garmentCatalog.find(x => x.id === g.id))
+                                state._garmentCatalog.push(g);
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+        if (state._garmentCatalog.length > 0) {
+            clearInterval(waitForCatalog);
+            if (catSelect) {
+                const cats = [...new Set(state._garmentCatalog.map(g => g._category))];
+                cats.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+                    catSelect.appendChild(opt);
+                });
+            }
+            _renderMHList();
+        }
+    }, 200);
+}
+
+function _selectedMHMesh() {
+    if (!state._selectedSubMesh || !state._selectedSubMesh.key.startsWith('mh_')) return null;
+    const inst = state.characters.get(state._selectedSubMesh.charId);
+    if (!inst) return null;
+    return { inst, key: state._selectedSubMesh.key, mesh: inst.clothMeshes[state._selectedSubMesh.key] };
+}
+
+function _renderMHList() {
+    const list = document.getElementById('mh-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const catFilter = document.getElementById('mh-category')?.value || '';
+    const filtered = catFilter
+        ? state._garmentCatalog.filter(g => g._category === catFilter)
+        : state._garmentCatalog;
+
+    if (filtered.length === 0) {
+        list.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Garments</div>';
+        return;
+    }
+
+    const groups = {};
+    for (const g of filtered) {
+        if (!groups[g._category]) groups[g._category] = [];
+        groups[g._category].push(g);
+    }
+
+    for (const [cat, items] of Object.entries(groups)) {
+        const catDiv = document.createElement('div');
+        catDiv.className = 'anim-folder';
+        catDiv.innerHTML = `<div class="anim-folder-header"><span class="chevron">&#9660;</span> ${cat} (${items.length})</div>`;
+        const body = document.createElement('div');
+        body.className = 'anim-folder-body';
+        for (const g of items) {
+            const row = document.createElement('div');
+            row.className = 'anim-item';
+            row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;';
+            if (g.has_thumb) {
+                const img = document.createElement('img');
+                img.src = `/api/character/garment/thumb/${g.id}/`;
+                img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;';
+                row.appendChild(img);
+            }
+            const name = document.createElement('span');
+            name.textContent = g.name || g.id;
+            name.style.cssText = 'font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            row.appendChild(name);
+            row.addEventListener('click', () => {
+                state._selectedMHId = g.id;
+                list.querySelectorAll('.anim-item').forEach(el => el.classList.remove('selected'));
+                row.classList.add('selected');
+            });
+            body.appendChild(row);
+        }
+        catDiv.appendChild(body);
+        const header = catDiv.querySelector('.anim-folder-header');
+        header.addEventListener('click', () => {
+            body.style.display = body.style.display === 'none' ? '' : 'none';
+            header.querySelector('.chevron').textContent = body.style.display === 'none' ? '\u25B6' : '\u25BC';
+        });
+        list.appendChild(catDiv);
+    }
+}
+
+async function _doMHProxyFit() {
+    if (!state._selectedMHId) return;
+    const inst = _selectedInst();
+    if (!inst) return;
+
+    if (!inst.isSkinned && state.rigifySkeletonData && state.skinWeightData) {
+        convertInstToSkinned(inst);
+    }
+
+    const params = _charQueryParams(inst);
+    params.set('garment_id', state._selectedMHId);
+
+    const colorHex = document.getElementById('mh-color')?.value || '#4d5980';
+    const c = new THREE.Color(colorHex);
+    params.set('color_r', c.r.toFixed(3));
+    params.set('color_g', c.g.toFixed(3));
+    params.set('color_b', c.b.toFixed(3));
+    params.set('offset', (_sliderVal('mh-offset') / 1000).toFixed(4));
+    params.set('stiffness', (_sliderVal('mh-stiffness') / 100).toFixed(2));
+    params.set('scale', (_sliderVal('mh-scale') / 100).toFixed(3));
+    params.set('y_offset', (_sliderVal('mh-y-offset') / 1000).toFixed(4));
+
+    try {
+        const resp = await fetch(`/api/character/mh-proxy-fit/?${params}`);
+        const data = await resp.json();
+        if (data.error) { console.warn('MH proxy fit error:', data.error); return; }
+
+        const key = `mh_${state._selectedMHId}`;
+
+        // Remove old if exists
+        if (inst.clothMeshes[key]) {
+            inst.group.remove(inst.clothMeshes[key]);
+            inst.clothMeshes[key].geometry.dispose();
+            inst.clothMeshes[key].material.dispose();
+            delete inst.clothMeshes[key];
+        }
+
+        const vertBuf = base64ToFloat32(data.vertices);
+        blenderToThreeCoords(vertBuf);
+        const faceBuf = base64ToUint32(data.faces);
+        const normalBuf = base64ToFloat32(data.normals);
+        blenderToThreeCoords(normalBuf);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
+        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+
+        const roughness = _sliderVal('mh-roughness') / 100;
+        const metalness = _sliderVal('mh-metalness') / 100;
+        const opacity = _sliderVal('mh-opacity') / 100;
+        const mat = new THREE.MeshStandardMaterial({
+            color: c, roughness, metalness, side: THREE.DoubleSide,
+            polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+            transparent: opacity < 1, opacity,
+        });
+
+        const mesh = _skinifyMesh(geo, mat, inst, data);
+        console.log(`[MH] mesh type: ${mesh.type}, isSkinned: ${mesh.isSkinnedMesh}, hasSkeleton: ${!!mesh.skeleton}`);
+        inst.clothMeshes[key] = mesh;
+        inst.group.add(mesh);
+
+        // Store original positions for real-time slider transforms
+        inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
+
+        fn.updateEquippedList(inst);
+        fn.updateVertexCount();
+        console.log(`MH proxy fit: ${state._selectedMHId} (${data.vertex_count} verts)`);
+    } catch (e) {
+        console.error('MH proxy fit failed:', e);
+    }
+}
+
+function _syncPropMHControls() {
+    const sel = _selectedMHMesh();
+    if (!sel) return;
+    const mat = sel.mesh.material;
+    // Sync material sliders
+    const setV = (id, valId, v, fmt) => {
+        const el = document.getElementById(id);
+        const sp = document.getElementById(valId);
+        if (el) el.value = v;
+        if (sp) sp.textContent = fmt(v);
+    };
+    setV('prop-mh-roughness', 'prop-mh-roughness-val', Math.round(mat.roughness * 100), v => (v/100).toFixed(2));
+    setV('prop-mh-metalness', 'prop-mh-metalness-val', Math.round(mat.metalness * 100), v => (v/100).toFixed(2));
+    setV('prop-mh-opacity', 'prop-mh-opacity-val', Math.round(mat.opacity * 100), v => (v/100).toFixed(2));
+    const colorEl = document.getElementById('prop-mh-color');
+    if (colorEl) colorEl.value = '#' + mat.color.getHexString();
+    // Sync transform sliders from asset tab values
+    const syncFrom = (propId, srcId) => {
+        const s = document.getElementById(srcId);
+        const p = document.getElementById(propId);
+        if (s && p) p.value = s.value;
+    };
+    syncFrom('prop-mh-stiffness', 'mh-stiffness');
+    syncFrom('prop-mh-offset', 'mh-offset');
+    syncFrom('prop-mh-scale', 'mh-scale');
+    syncFrom('prop-mh-y-offset', 'mh-y-offset');
+    // Update value displays
+    _bindSlider('prop-mh-stiffness', 'prop-mh-stiffness-val', v => (v / 100).toFixed(2));
+    _bindSlider('prop-mh-offset', 'prop-mh-offset-val', v => (v / 1000).toFixed(3));
+    _bindSlider('prop-mh-scale', 'prop-mh-scale-val', v => v + '%');
+    _bindSlider('prop-mh-y-offset', 'prop-mh-y-offset-val', v => v + ' mm');
+    _bindSlider('prop-mh-roughness', 'prop-mh-roughness-val', v => (v/100).toFixed(2));
+    _bindSlider('prop-mh-metalness', 'prop-mh-metalness-val', v => (v/100).toFixed(2));
+    _bindSlider('prop-mh-opacity', 'prop-mh-opacity-val', v => (v/100).toFixed(2));
+}
+
+function _initPropMHControls() {
+    // Real-time material changes from Eigenschaften tab
+    for (const [id, prop] of [['prop-mh-roughness', 'roughness'], ['prop-mh-metalness', 'metalness']]) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => {
+            const sel = _selectedMHMesh();
+            if (sel) sel.mesh.material[prop] = parseFloat(el.value) / 100;
+        });
+    }
+    const opEl = document.getElementById('prop-mh-opacity');
+    if (opEl) opEl.addEventListener('input', () => {
+        const sel = _selectedMHMesh();
+        if (sel) {
+            const v = parseFloat(opEl.value) / 100;
+            sel.mesh.material.opacity = v;
+            sel.mesh.material.transparent = v < 1;
+        }
+    });
+    const colEl = document.getElementById('prop-mh-color');
+    if (colEl) colEl.addEventListener('input', () => {
+        const sel = _selectedMHMesh();
+        if (sel) sel.mesh.material.color.set(colEl.value);
+    });
+    // Transform sliders -- sync to asset tab + apply
+    for (const [propId, srcId] of [['prop-mh-stiffness','mh-stiffness'],['prop-mh-offset','mh-offset'],['prop-mh-scale','mh-scale'],['prop-mh-y-offset','mh-y-offset']]) {
+        const el = document.getElementById(propId);
+        if (el) el.addEventListener('input', () => {
+            const src = document.getElementById(srcId);
+            if (src) { src.value = el.value; src.dispatchEvent(new Event('input')); }
+        });
+    }
+}
+
+export { loadMHProxyUI, _selectedMHMesh, _renderMHList, _doMHProxyFit, _syncPropMHControls, _initPropMHControls };
+
+fn.loadMHProxyUI = loadMHProxyUI;
+fn._selectedMHMesh = _selectedMHMesh;
+fn._renderMHList = _renderMHList;
+fn._doMHProxyFit = _doMHProxyFit;
+fn._syncPropMHControls = _syncPropMHControls;
+fn._initPropMHControls = _initPropMHControls;

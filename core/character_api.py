@@ -1242,6 +1242,20 @@ def character_mesh(request):
     if vertices is None:
         return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
 
+    # Apply T-pose if configured in settings
+    pose = request.GET.get('pose', '')
+    if not pose:
+        s = AppSettings.load()
+        prefs = s.ui_prefs or {}
+        pose = prefs.get('default_pose', 'a_pose')
+    if pose == 't_pose':
+        tpose_path = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'vertices_tpose.npy')
+        if os.path.isfile(tpose_path):
+            tpose_verts = np.load(tpose_path)
+            if tpose_verts.shape == vertices.shape:
+                vertices = tpose_verts
+                logger.info('[Mesh] Using T-pose vertices')
+
     cc = _get_cc_subdivider(gender)
 
     if cc is not None:
@@ -1394,6 +1408,7 @@ def character_rigify_skeleton(request):
         data_dir = str(settings.HUMANBODY_DATA_DIR) + '_male'
     else:
         data_dir = str(settings.HUMANBODY_DATA_DIR)
+    # Always deliver A-pose skeleton; T-pose is applied client-side via applyPoseFromServer
     skel_path = os.path.join(data_dir, 'def_skeleton.json')
     if not os.path.isfile(skel_path):
         return JsonResponse({'error': 'DEF skeleton not exported yet'}, status=404)
@@ -4149,8 +4164,31 @@ def mh_proxy_fit(request):
         mh_to_body_map=None if use_mh_body else mh_to_body_map,
     )
 
-    logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s verts=%d',
-                garment_id, body_type, use_mh_body, len(garment_verts_raw))
+    # Stiffness: Laplacian smoothing on fitted garment mesh
+    # Low stiffness = more smoothing (soft fabric), high = less smoothing (rigid)
+    stiffness = float(request.GET.get('stiffness', 0.5))
+    if stiffness < 0.99:
+        triangles_raw = proxy.triangulate_faces()
+        smooth_iters = max(1, int(10 * (1 - stiffness)))
+        smooth_factor = 0.3 + (1 - stiffness) * 0.4  # 0.3–0.7
+        garment_verts_raw = _laplacian_smooth_garment(
+            garment_verts_raw, triangles_raw, smooth_iters, smooth_factor)
+
+    # Transform garment from MH-A-pose to Rigify-A-pose so skinning works correctly.
+    # Each garment vertex is shifted by (rigify_pos - mh_pos) of its nearest body vertex.
+    if use_mh_body and fit_body is not body_verts:
+        from scipy.spatial import cKDTree
+        mh_tree = cKDTree(fit_body)
+        _, nearest_mh = mh_tree.query(garment_verts_raw)
+        body_tree = cKDTree(body_verts)
+        _, mh_to_rigify = body_tree.query(fit_body)
+        # For each garment vert: shift = rigify_body[mapped] - mh_body[nearest]
+        mh_positions = fit_body[nearest_mh]
+        rigify_positions = body_verts[mh_to_rigify[nearest_mh]]
+        garment_verts_raw = garment_verts_raw + (rigify_positions - mh_positions)
+
+    logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s stiffness=%.2f verts=%d',
+                garment_id, body_type, use_mh_body, stiffness, len(garment_verts_raw))
 
     result = {
         'vertices': garment_verts_raw.astype(np.float32),
@@ -4178,30 +4216,180 @@ def mh_proxy_fit(request):
         'normals': base64.b64encode(normals_f32.tobytes()).decode(),
         'faces': base64.b64encode(tris_u32.tobytes()).decode(),
         'skin_indices': base64.b64encode(
-            _compute_garment_skin_indices(garment_verts, body_verts, gender)
+            _compute_garment_skin_indices(garment_verts, body_verts, gender,
+                                         ref_body=fit_body if use_mh_body else None)
         ).decode() if hasattr(garment_verts, 'shape') else '',
         'skin_weights': base64.b64encode(
-            _compute_garment_skin_weights(garment_verts, body_verts, gender)
+            _compute_garment_skin_weights(garment_verts, body_verts, gender,
+                                         ref_body=fit_body if use_mh_body else None)
         ).decode() if hasattr(garment_verts, 'shape') else '',
     })
 
 
-def _compute_garment_skin_indices(garment_verts, body_verts, gender='female'):
-    """Compute skin indices for garment by nearest-body-vertex transfer."""
+def _laplacian_smooth_garment(verts, faces, iterations=3, factor=0.5):
+    """Laplacian smooth on garment mesh. Preserves boundary vertices."""
+    from collections import defaultdict
+    n = len(verts)
+    # Build adjacency
+    adj = defaultdict(set)
+    for f in faces:
+        for i in range(len(f)):
+            for j in range(len(f)):
+                if i != j:
+                    adj[f[i]].add(f[j])
+    result = verts.copy().astype(np.float64)
+    for _ in range(iterations):
+        new_verts = result.copy()
+        for vi in range(n):
+            neighbors = adj.get(vi)
+            if not neighbors or len(neighbors) < 2:
+                continue
+            avg = np.mean(result[list(neighbors)], axis=0)
+            new_verts[vi] = result[vi] + factor * (avg - result[vi])
+        result = new_verts
+    return result.astype(np.float32)
+
+
+def _compute_garment_skin_indices(garment_verts, body_verts, gender='female', ref_body=None):
+    """Compute skin indices for garment by nearest-body-vertex transfer.
+
+    If ref_body is given (e.g. MH body), find nearest ref_body vertex for each
+    garment vertex, then map that to the nearest Rigify body vertex to get
+    the correct skin index. This handles arm angle differences between bodies.
+    """
     from scipy.spatial import cKDTree
     si, sw = _get_base_skin_arrays(gender)
-    tree = cKDTree(body_verts)
-    _, nearest = tree.query(garment_verts)
+    if ref_body is not None and len(ref_body) != len(body_verts):
+        # Garment fitted to ref_body → find nearest ref_body vertex → map to Rigify
+        ref_tree = cKDTree(ref_body)
+        _, nearest_ref = ref_tree.query(garment_verts)
+        # Map ref_body positions to nearest Rigify body positions
+        body_tree = cKDTree(body_verts)
+        _, ref_to_body = body_tree.query(ref_body)
+        nearest = ref_to_body[nearest_ref]
+    else:
+        tree = cKDTree(body_verts)
+        _, nearest = tree.query(garment_verts)
     return si[nearest].astype(np.float32).tobytes()
 
 
-def _compute_garment_skin_weights(garment_verts, body_verts, gender='female'):
+def _compute_garment_skin_weights(garment_verts, body_verts, gender='female', ref_body=None):
     """Compute skin weights for garment by nearest-body-vertex transfer."""
     from scipy.spatial import cKDTree
     si, sw = _get_base_skin_arrays(gender)
-    tree = cKDTree(body_verts)
-    _, nearest = tree.query(garment_verts)
+    if ref_body is not None and len(ref_body) != len(body_verts):
+        ref_tree = cKDTree(ref_body)
+        _, nearest_ref = ref_tree.query(garment_verts)
+        body_tree = cKDTree(body_verts)
+        _, ref_to_body = body_tree.query(ref_body)
+        nearest = ref_to_body[nearest_ref]
+    else:
+        tree = cKDTree(body_verts)
+        _, nearest = tree.query(garment_verts)
     return sw[nearest].astype(np.float32).tobytes()
+
+
+@require_GET
+def list_poses(request):
+    """List available poses from CharMorph/MB-Lab."""
+    from humanbody_core.pose import list_poses as _list_poses
+    categories = _list_poses()
+    # Strip file paths for API response
+    clean = {}
+    for cat, poses in categories.items():
+        clean[cat] = [{'id': p['id'], 'name': p['name']} for p in poses]
+    return JsonResponse({'categories': clean})
+
+
+@require_GET
+def get_pose(request, pose_id):
+    """Return pose quaternions mapped to DEF bone names."""
+    from humanbody_core.pose import load_pose
+    try:
+        pose = load_pose(pose_id)
+    except FileNotFoundError:
+        return JsonResponse({'error': f'Pose not found: {pose_id}'}, status=404)
+    return JsonResponse({
+        'pose_id': pose.pose_id,
+        'bones': pose.def_bones,  # {DEF-name: [w,x,y,z]}
+        'threejs': pose.to_threejs(),  # {DEF-name: [x,y,z,w] Three.js}
+    })
+
+
+@csrf_exempt
+def pose_manage(request):
+    """Manage pose files (rename/delete).
+
+    POST /api/character/pose-manage/
+    Body: {action: "rename"|"delete", category: "...", name: "...", new_name: "..."}
+    """
+    import logging
+    from pathlib import Path
+    log = logging.getLogger('core')
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    action = data.get('action', '')
+    category = data.get('category', '')
+    name = data.get('name', '')
+    pose_root = Path(str(settings.HUMANBODY_DATA_DIR)).parent / 'poseData'
+
+    log.info(f'[pose-manage] action={action}, category={category}, name={name}')
+
+    def _check_pose_path(p):
+        rp = Path(p).resolve()
+        root_resolved = pose_root.resolve()
+        if str(rp).startswith(str(root_resolved)):
+            return rp
+        return None
+
+    if action == 'delete':
+        if not category or not name:
+            return JsonResponse({'error': 'category + name required'}, status=400)
+        p = _check_pose_path(pose_root / category / f'{name}.json')
+        if not p or not p.is_file():
+            return JsonResponse({'error': 'Pose not found'}, status=404)
+        p.unlink()
+        log.info(f'[pose-manage] Deleted: {p}')
+        return JsonResponse({'ok': True})
+
+    elif action == 'rename':
+        new_name = data.get('new_name', '').strip()
+        if not category or not name or not new_name:
+            return JsonResponse({'error': 'category, name, new_name required'}, status=400)
+        old_p = _check_pose_path(pose_root / category / f'{name}.json')
+        new_p = _check_pose_path(pose_root / category / f'{new_name}.json')
+        if not old_p or not old_p.is_file():
+            return JsonResponse({'error': 'Pose not found'}, status=404)
+        if not new_p:
+            return JsonResponse({'error': 'Invalid new path'}, status=400)
+        if new_p.exists():
+            return JsonResponse({'error': f'{new_name}.json exists already'}, status=409)
+        old_p.rename(new_p)
+        log.info(f'[pose-manage] Renamed: {old_p} -> {new_p}')
+        return JsonResponse({'ok': True, 'new_name': new_name})
+
+    else:
+        return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
+
+
+@require_GET
+def tpose_vertices(request):
+    """Return pre-computed T-pose body vertices as base64."""
+    tpose_path = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'vertices_tpose.npy')
+    if not os.path.isfile(tpose_path):
+        return JsonResponse({'error': 'T-pose vertices not found'}, status=404)
+    verts = np.load(tpose_path).astype(np.float32)
+    return JsonResponse({
+        'vertices': base64.b64encode(verts.tobytes()).decode(),
+        'vertex_count': int(len(verts)),
+    })
 
 
 @csrf_exempt
@@ -5580,3 +5768,106 @@ def smooth_bvh(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@require_GET
+def charmorph_presets(request):
+    """List available CharMorph body type presets."""
+    import os as _os
+    preset_dir = _os.path.join(str(settings.TOOLS_ROOT), 'tools', 'CharMorphPlugin', 'data', 'characters', 'mb_female', 'presets')
+    presets = []
+    if _os.path.isdir(preset_dir):
+        for f in sorted(_os.listdir(preset_dir)):
+            if f.endswith('.json'):
+                name = f.replace('.json', '').replace('type_', '').replace('specialtype_', 'special_')
+                try:
+                    with open(_os.path.join(preset_dir, f)) as fh:
+                        data = json.load(fh)
+                    meta = data.get('metaproperties', {})
+                    structural = data.get('structural', {})
+                    presets.append({
+                        'name': name,
+                        'label': name.replace('_', ' ').title(),
+                        'meta': meta,
+                        'structural': structural,
+                    })
+                except Exception:
+                    pass
+    return JsonResponse({'presets': presets})
+
+
+@require_GET
+def charmorph_assets(request):
+    """List available CharMorph clothing assets."""
+    import os as _os
+    try:
+        import yaml
+    except ImportError:
+        return JsonResponse({'assets': [], 'error': 'pyyaml not installed'})
+    asset_dir = _os.path.join(str(settings.TOOLS_ROOT), 'tools', 'CharMorphPlugin', 'data', 'characters', 'mb_female', 'assets')
+    assets = []
+    if _os.path.isdir(asset_dir):
+        for entry in sorted(_os.listdir(asset_dir)):
+            ep = _os.path.join(asset_dir, entry)
+            if _os.path.isdir(ep):
+                config_path = _os.path.join(ep, 'config.yaml')
+                if _os.path.isfile(config_path):
+                    try:
+                        with open(config_path) as f:
+                            cfg = yaml.safe_load(f)
+                        assets.append({
+                            'name': entry,
+                            'category': cfg.get('category', 'Other'),
+                            'tags': cfg.get('tags', []),
+                            'fitting': cfg.get('fitting', 'soft'),
+                            'parameters': cfg.get('parameters', {}),
+                            'material_presets': list(cfg.get('material_presets', {}).keys()),
+                        })
+                    except Exception:
+                        pass
+            elif entry.endswith('.blend'):
+                assets.append({
+                    'name': entry.replace('.blend', ''),
+                    'category': 'Other',
+                    'tags': [],
+                    'fitting': 'soft',
+                    'parameters': {},
+                    'material_presets': [],
+                })
+    return JsonResponse({'assets': assets})
+
+
+@require_GET
+def charmorph_hairstyles(request):
+    """List available CharMorph hairstyles."""
+    import os as _os
+    hair_dir = _os.path.join(str(settings.TOOLS_ROOT), 'tools', 'CharMorphPlugin',
+                             'data', 'characters', 'mb_female', 'hairstyles')
+    hairstyles = []
+    if _os.path.isdir(hair_dir):
+        for f in sorted(_os.listdir(hair_dir)):
+            if f.endswith('.npz'):
+                name = f.replace('.npz', '')
+                hairstyles.append({
+                    'name': name,
+                    'label': name.replace('_', ' ').replace('1', ' 1').strip().title(),
+                    'file': f,
+                })
+    # Load hair colors from CharMorph
+    colors = {}
+    colors_file = _os.path.join(str(settings.TOOLS_ROOT), 'tools', 'CharMorphPlugin', 'data', 'hair_colors.yaml')
+    if _os.path.isfile(colors_file):
+        try:
+            import yaml
+            with open(colors_file) as f:
+                colors_raw = yaml.safe_load(f)
+            for name, props in (colors_raw or {}).items():
+                if isinstance(props, dict):
+                    colors[name] = {
+                        'viewport_color': props.get('viewport_color', [0.5, 0.3, 0.1]),
+                        'melanin': props.get('melanin', 0.5),
+                    }
+        except Exception:
+            pass
+
+    return JsonResponse({'hairstyles': hairstyles, 'colors': colors})
