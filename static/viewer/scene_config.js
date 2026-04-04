@@ -936,7 +936,12 @@ async function init() {
         if (characters.size === 0) {
             try { await loadDefaultCharacter(); } catch(e) { /* ignore */ }
         }
-        // T-Pose is applied server-side (mesh + skeleton delivered in correct pose)
+        // Apply default pose from settings (e.g. T-Pose)
+        if (window._defaultPose && window._defaultPose !== 'a_pose' && characters.size > 0) {
+            const poseMap = { 't_pose': 'rest_poses/t-pose' };
+            const poseId = poseMap[window._defaultPose] || window._defaultPose;
+            try { await applyPoseFromServer(poseId); } catch(e) { console.warn('[Pose] Default pose failed:', e); }
+        }
         // Log pose state for debugging
         fetch('/api/ui-pref/', {
             method: 'POST',
@@ -1405,6 +1410,8 @@ function handleMenuAction(action) {
             break;
         case 'default-scene':
             // Clear session state, reload page → loadDefaultCharacter() runs on fresh load
+            // Set flag to prevent beforeunload from re-saving the session
+            window._skipSessionSave = true;
             sessionStorage.removeItem(SESSION_KEY);
             window.location.reload();
             break;
@@ -1596,6 +1603,7 @@ window.__sceneRedo = sceneRedo;
 // sessionStorage persistence — survive page navigation
 // =========================================================================
 function saveSessionState() {
+    if (window._skipSessionSave) return;
     try {
         const state = gatherSceneState();
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(state));
