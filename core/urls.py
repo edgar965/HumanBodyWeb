@@ -71,6 +71,10 @@ urlpatterns = [
     path('humanbody/rigging/help/', character_api.rigging_help_page, name='rigging_help'),
     path('api/ui-pref/', character_api.ui_pref_save, name='ui_pref_save'),
     path('api/character/mh-proxy-fit/', character_api.mh_proxy_fit, name='mh_proxy_fit'),
+    path('api/character/tpose-vertices/', character_api.tpose_vertices, name='tpose_vertices'),
+    path('api/character/poses/', character_api.list_poses, name='list_poses'),
+    path('api/character/pose/<path:pose_id>/', character_api.get_pose, name='get_pose'),
+    path('api/character/pose-manage/', character_api.pose_manage, name='pose_manage'),
     path('api/character/mh-push-outside/', character_api.mh_push_outside, name='mh_push_outside'),
     path('humanbody/animations/', character_api.animations_page, name='humanbody_animations'),
     path('humanbody/test-animation/', character_api.test_animation_page, name='test_animation'),
@@ -115,6 +119,11 @@ urlpatterns = [
     path('api/character/bvh/<str:category>/<str:name>/', character_api.character_bvh_file_cat, name='character_bvh_file_cat'),
     path('api/character/bvh/<str:name>/', character_api.character_bvh_file, name='character_bvh_file'),
     path('api/character/animation/save/', character_api.animation_save, name='animation_save'),
+
+    # CharMorph
+    path('api/character/charmorph-presets/', character_api.charmorph_presets, name='charmorph_presets'),
+    path('api/character/charmorph-assets/', character_api.charmorph_assets, name='charmorph_assets'),
+    path('api/character/charmorph-hairstyles/', character_api.charmorph_hairstyles, name='charmorph_hairstyles'),
 
     # Cloth
     path('api/character/cloth/', character_api.character_cloth, name='character_cloth'),
