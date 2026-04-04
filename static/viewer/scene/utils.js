@@ -125,6 +125,7 @@ fn._getBodyTop = _getBodyTop;
 fn.openDialog = openDialog;
 fn.closeDialog = closeDialog;
 fn.closeAllDialogs = closeAllDialogs;
+fn.initDialogCloseHandlers = initDialogCloseHandlers;
 fn.base64ToFloat32 = base64ToFloat32;
 fn.base64ToUint32 = base64ToUint32;
 fn.blenderToThreeCoords = blenderToThreeCoords;
