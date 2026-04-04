@@ -152,7 +152,7 @@ try {
 {% if job.bvh_file %}
 <script type="module">
 try {
-    const { initResultCharacter } = await import('{% static "viewer/result_character.js" %}?t={% now "U" %}');
+    const { initResultCharacter } = await import('{% static "viewer/result_character/index.js" %}?t={% now "U" %}');
     initResultCharacter({
         canvasId: 'characterCanvas',
         videoId: 'resultVideo',

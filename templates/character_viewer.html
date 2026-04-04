@@ -988,7 +988,7 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/viewer.js' %}?t={% now "U" %}"></script>
+<script type="module" src="{% static 'viewer/viewer/index.js' %}?t={% now "U" %}"></script>
 <script>
 document.querySelectorAll('.panel-tabs .panel-tab').forEach(tab => {
     tab.addEventListener('click', () => {
