@@ -43,7 +43,7 @@ window.addEventListener('keydown', (e) => {
 }, true);
 
 // Init dialog close handlers at module load
-fn.initDialogCloseHandlers();
+if (fn.initDialogCloseHandlers) fn.initDialogCloseHandlers();
 
 // =========================================================================
 // Skin colors + hair colors (legacy)
@@ -192,14 +192,18 @@ export async function init() {
     animate();
 
     Promise.all([loadSkinColors(), loadHairColors(), fn.loadRigifySkeleton(), fn.loadSkinWeights(), _settingsReady]).then(async () => {
-        if (sessionStorage.getItem(SESSION_KEY)) {
+        const hadSession = !!sessionStorage.getItem(SESSION_KEY);
+        if (hadSession) {
             await fn.restoreSessionState();
         }
         if (state.characters.size === 0) {
             try { await fn.loadDefaultCharacter(); } catch(e) { /* ignore */ }
         }
-        if (state._defaultAnimUrl && !sessionStorage.getItem(SESSION_KEY)) {
-            try { fn.loadBVHAnimation(state._defaultAnimUrl, state._defaultAnimUrl.split('/').filter(Boolean).pop() || 'default', 0); } catch (e) { console.warn('[SCENE] Default animation load failed:', e); }
+        // Apply default pose from settings (e.g. T-Pose)
+        if (window._defaultPose && window._defaultPose !== 'a_pose' && state.characters.size > 0) {
+            const poseMap = { 't_pose': 'rest_poses/t-pose' };
+            const poseId = poseMap[window._defaultPose] || window._defaultPose;
+            try { await fn.applyPoseFromServer(poseId); } catch(e) { console.warn('[Pose] Default pose failed:', e); }
         }
     });
 }

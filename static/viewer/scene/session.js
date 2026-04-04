@@ -9,6 +9,7 @@ import { fn } from './registry.js';
 // Save session state to sessionStorage
 // =========================================================================
 export function saveSessionState() {
+    if (window._skipSessionSave) return;
     try {
         if (!fn.gatherSceneState) return;
         const sceneData = fn.gatherSceneState();
