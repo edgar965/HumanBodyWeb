@@ -5732,4 +5732,21 @@ def charmorph_hairstyles(request):
                     'label': name.replace('_', ' ').replace('1', ' 1').strip().title(),
                     'file': f,
                 })
-    return JsonResponse({'hairstyles': hairstyles})
+    # Load hair colors from CharMorph
+    colors = {}
+    colors_file = _os.path.join(str(settings.TOOLS_ROOT), 'tools', 'CharMorphPlugin', 'data', 'hair_colors.yaml')
+    if _os.path.isfile(colors_file):
+        try:
+            import yaml
+            with open(colors_file) as f:
+                colors_raw = yaml.safe_load(f)
+            for name, props in (colors_raw or {}).items():
+                if isinstance(props, dict):
+                    colors[name] = {
+                        'viewport_color': props.get('viewport_color', [0.5, 0.3, 0.1]),
+                        'melanin': props.get('melanin', 0.5),
+                    }
+        except Exception:
+            pass
+
+    return JsonResponse({'hairstyles': hairstyles, 'colors': colors})
