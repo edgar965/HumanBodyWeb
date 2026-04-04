@@ -5,6 +5,7 @@
  * For web we load our GLB hairstyles but add CharMorph hair colors.
  * Also provides the CharMorph hair color preset dropdown.
  */
+import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from './registry.js';
 
@@ -92,7 +93,7 @@ export async function loadCharmorphHairUI() {
 function _applyHairColor(hex) {
     const inst = state.selectedCharacterId ? state.characters.get(state.selectedCharacterId) : null;
     if (!inst || !inst.hairMesh) return;
-    const color = new state.THREE.Color(hex);
+    const color = new THREE.Color(hex);
     inst.hairMesh.traverse(c => {
         if (c.isMesh && c.material) {
             (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => m.color.copy(color));
