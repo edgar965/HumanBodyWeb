@@ -4164,8 +4164,31 @@ def mh_proxy_fit(request):
         mh_to_body_map=None if use_mh_body else mh_to_body_map,
     )
 
-    logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s verts=%d',
-                garment_id, body_type, use_mh_body, len(garment_verts_raw))
+    # Stiffness: Laplacian smoothing on fitted garment mesh
+    # Low stiffness = more smoothing (soft fabric), high = less smoothing (rigid)
+    stiffness = float(request.GET.get('stiffness', 0.5))
+    if stiffness < 0.99:
+        triangles_raw = proxy.triangulate_faces()
+        smooth_iters = max(1, int(10 * (1 - stiffness)))
+        smooth_factor = 0.3 + (1 - stiffness) * 0.4  # 0.3–0.7
+        garment_verts_raw = _laplacian_smooth_garment(
+            garment_verts_raw, triangles_raw, smooth_iters, smooth_factor)
+
+    # Transform garment from MH-A-pose to Rigify-A-pose so skinning works correctly.
+    # Each garment vertex is shifted by (rigify_pos - mh_pos) of its nearest body vertex.
+    if use_mh_body and fit_body is not body_verts:
+        from scipy.spatial import cKDTree
+        mh_tree = cKDTree(fit_body)
+        _, nearest_mh = mh_tree.query(garment_verts_raw)
+        body_tree = cKDTree(body_verts)
+        _, mh_to_rigify = body_tree.query(fit_body)
+        # For each garment vert: shift = rigify_body[mapped] - mh_body[nearest]
+        mh_positions = fit_body[nearest_mh]
+        rigify_positions = body_verts[mh_to_rigify[nearest_mh]]
+        garment_verts_raw = garment_verts_raw + (rigify_positions - mh_positions)
+
+    logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s stiffness=%.2f verts=%d',
+                garment_id, body_type, use_mh_body, stiffness, len(garment_verts_raw))
 
     result = {
         'vertices': garment_verts_raw.astype(np.float32),
@@ -4193,29 +4216,76 @@ def mh_proxy_fit(request):
         'normals': base64.b64encode(normals_f32.tobytes()).decode(),
         'faces': base64.b64encode(tris_u32.tobytes()).decode(),
         'skin_indices': base64.b64encode(
-            _compute_garment_skin_indices(garment_verts, body_verts, gender)
+            _compute_garment_skin_indices(garment_verts, body_verts, gender,
+                                         ref_body=fit_body if use_mh_body else None)
         ).decode() if hasattr(garment_verts, 'shape') else '',
         'skin_weights': base64.b64encode(
-            _compute_garment_skin_weights(garment_verts, body_verts, gender)
+            _compute_garment_skin_weights(garment_verts, body_verts, gender,
+                                         ref_body=fit_body if use_mh_body else None)
         ).decode() if hasattr(garment_verts, 'shape') else '',
     })
 
 
-def _compute_garment_skin_indices(garment_verts, body_verts, gender='female'):
-    """Compute skin indices for garment by nearest-body-vertex transfer."""
+def _laplacian_smooth_garment(verts, faces, iterations=3, factor=0.5):
+    """Laplacian smooth on garment mesh. Preserves boundary vertices."""
+    from collections import defaultdict
+    n = len(verts)
+    # Build adjacency
+    adj = defaultdict(set)
+    for f in faces:
+        for i in range(len(f)):
+            for j in range(len(f)):
+                if i != j:
+                    adj[f[i]].add(f[j])
+    result = verts.copy().astype(np.float64)
+    for _ in range(iterations):
+        new_verts = result.copy()
+        for vi in range(n):
+            neighbors = adj.get(vi)
+            if not neighbors or len(neighbors) < 2:
+                continue
+            avg = np.mean(result[list(neighbors)], axis=0)
+            new_verts[vi] = result[vi] + factor * (avg - result[vi])
+        result = new_verts
+    return result.astype(np.float32)
+
+
+def _compute_garment_skin_indices(garment_verts, body_verts, gender='female', ref_body=None):
+    """Compute skin indices for garment by nearest-body-vertex transfer.
+
+    If ref_body is given (e.g. MH body), find nearest ref_body vertex for each
+    garment vertex, then map that to the nearest Rigify body vertex to get
+    the correct skin index. This handles arm angle differences between bodies.
+    """
     from scipy.spatial import cKDTree
     si, sw = _get_base_skin_arrays(gender)
-    tree = cKDTree(body_verts)
-    _, nearest = tree.query(garment_verts)
+    if ref_body is not None and len(ref_body) != len(body_verts):
+        # Garment fitted to ref_body → find nearest ref_body vertex → map to Rigify
+        ref_tree = cKDTree(ref_body)
+        _, nearest_ref = ref_tree.query(garment_verts)
+        # Map ref_body positions to nearest Rigify body positions
+        body_tree = cKDTree(body_verts)
+        _, ref_to_body = body_tree.query(ref_body)
+        nearest = ref_to_body[nearest_ref]
+    else:
+        tree = cKDTree(body_verts)
+        _, nearest = tree.query(garment_verts)
     return si[nearest].astype(np.float32).tobytes()
 
 
-def _compute_garment_skin_weights(garment_verts, body_verts, gender='female'):
+def _compute_garment_skin_weights(garment_verts, body_verts, gender='female', ref_body=None):
     """Compute skin weights for garment by nearest-body-vertex transfer."""
     from scipy.spatial import cKDTree
     si, sw = _get_base_skin_arrays(gender)
-    tree = cKDTree(body_verts)
-    _, nearest = tree.query(garment_verts)
+    if ref_body is not None and len(ref_body) != len(body_verts):
+        ref_tree = cKDTree(ref_body)
+        _, nearest_ref = ref_tree.query(garment_verts)
+        body_tree = cKDTree(body_verts)
+        _, ref_to_body = body_tree.query(ref_body)
+        nearest = ref_to_body[nearest_ref]
+    else:
+        tree = cKDTree(body_verts)
+        _, nearest = tree.query(garment_verts)
     return sw[nearest].astype(np.float32).tobytes()
 
 

@@ -403,6 +403,23 @@ async function _doKleiderStage1() {
     const mesh = result.mesh;
     mesh.material = mat;
 
+    // Apply current pose (T-pose etc.) to hull's own skeleton
+    if (mesh.isSkinnedMesh && mesh.skeleton && inst.bodyMesh?.isSkinnedMesh && inst.bodyMesh.skeleton) {
+        const bodySkel = inst.bodyMesh.skeleton;
+        const hullSkel = mesh.skeleton;
+        let copied = 0;
+        for (const hullBone of hullSkel.bones) {
+            const bodyBone = bodySkel.getBoneByName(hullBone.name);
+            if (bodyBone) {
+                hullBone.quaternion.copy(bodyBone.quaternion);
+                copied++;
+            }
+        }
+        const hullRoot = hullSkel.bones.find(b => !b.parent || b.parent === mesh);
+        if (hullRoot) hullRoot.updateWorldMatrix(true, true);
+        console.log(`[Hull] Copied ${copied} bone quaternions from body pose`);
+    }
+
     inst.clothMeshes[key] = mesh;
     inst.group.add(mesh);
 

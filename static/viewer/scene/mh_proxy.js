@@ -359,6 +359,7 @@ async function _doMHProxyFit() {
         });
 
         const mesh = _skinifyMesh(geo, mat, inst, data);
+        console.log(`[MH] mesh type: ${mesh.type}, isSkinned: ${mesh.isSkinnedMesh}, hasSkeleton: ${!!mesh.skeleton}`);
         inst.clothMeshes[key] = mesh;
         inst.group.add(mesh);
 
@@ -395,10 +396,12 @@ function _syncPropMHControls() {
         const p = document.getElementById(propId);
         if (s && p) p.value = s.value;
     };
+    syncFrom('prop-mh-stiffness', 'mh-stiffness');
     syncFrom('prop-mh-offset', 'mh-offset');
     syncFrom('prop-mh-scale', 'mh-scale');
     syncFrom('prop-mh-y-offset', 'mh-y-offset');
     // Update value displays
+    _bindSlider('prop-mh-stiffness', 'prop-mh-stiffness-val', v => (v / 100).toFixed(2));
     _bindSlider('prop-mh-offset', 'prop-mh-offset-val', v => (v / 1000).toFixed(3));
     _bindSlider('prop-mh-scale', 'prop-mh-scale-val', v => v + '%');
     _bindSlider('prop-mh-y-offset', 'prop-mh-y-offset-val', v => v + ' mm');
@@ -431,7 +434,7 @@ function _initPropMHControls() {
         if (sel) sel.mesh.material.color.set(colEl.value);
     });
     // Transform sliders -- sync to asset tab + apply
-    for (const [propId, srcId] of [['prop-mh-offset','mh-offset'],['prop-mh-scale','mh-scale'],['prop-mh-y-offset','mh-y-offset']]) {
+    for (const [propId, srcId] of [['prop-mh-stiffness','mh-stiffness'],['prop-mh-offset','mh-offset'],['prop-mh-scale','mh-scale'],['prop-mh-y-offset','mh-y-offset']]) {
         const el = document.getElementById(propId);
         if (el) el.addEventListener('input', () => {
             const src = document.getElementById(srcId);
