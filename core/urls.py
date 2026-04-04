@@ -74,6 +74,7 @@ urlpatterns = [
     path('api/character/tpose-vertices/', character_api.tpose_vertices, name='tpose_vertices'),
     path('api/character/poses/', character_api.list_poses, name='list_poses'),
     path('api/character/pose/<path:pose_id>/', character_api.get_pose, name='get_pose'),
+    path('api/character/pose-manage/', character_api.pose_manage, name='pose_manage'),
     path('api/character/mh-push-outside/', character_api.mh_push_outside, name='mh_push_outside'),
     path('humanbody/animations/', character_api.animations_page, name='humanbody_animations'),
     path('humanbody/test-animation/', character_api.test_animation_page, name='test_animation'),

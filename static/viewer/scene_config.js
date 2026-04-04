@@ -930,8 +930,7 @@ async function init() {
     fetch('/api/ui-pref/', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key:'_scene_load_start', value: new Date().toISOString()}) }).catch(()=>{});
     Promise.all([loadSkinColors(), loadHairColors(), loadRigifySkeleton(), loadSkinWeights(), _settingsReady]).then(async () => {
         fetch('/api/ui-pref/', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({key:'_scene_load_promise_ok', value: new Date().toISOString()}) }).catch(()=>{});
-        const hadSession = !!sessionStorage.getItem(SESSION_KEY);
-        if (hadSession) {
+        if (sessionStorage.getItem(SESSION_KEY)) {
             await restoreSessionState();
         }
         if (characters.size === 0) {
@@ -955,6 +954,12 @@ async function init() {
         }).catch(() => {});
         // Update Kleider tab visibility now that character is loaded
         if (typeof _updateKleiderVisibility === 'function') _updateKleiderVisibility();
+        // Auto-load default animation from settings (if set and no session restore)
+        if (_defaultAnimUrl && !sessionStorage.getItem(SESSION_KEY)) {
+            try {
+                loadBVHAnimation(_defaultAnimUrl, _defaultAnimUrl.split('/').filter(Boolean).pop() || 'default', 0);
+            } catch (e) { console.warn('[SCENE] Default animation load failed:', e); }
+        }
     });
 }
 

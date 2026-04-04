@@ -2123,6 +2123,17 @@
         </div>
     </div>
 </div>
+
+<!-- Pose context menu -->
+<div id="pose-ctx-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="pose-ctx-item" data-action="apply" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-play" style="width:16px;"></i> Anwenden</div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+    <div class="pose-ctx-item" data-action="rename" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen (F2)</div>
+    <div class="pose-ctx-item" data-action="delete" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-trash" style="width:16px;"></i> Loeschen (Entf)</div>
+</div>
+<style>
+.pose-ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }
+</style>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -2135,5 +2146,5 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/scene/index.js' %}?t={% now 'U' %}"></script>
+<script type="module" src="{% static 'viewer/scene/main.js' %}?t={% now 'U' %}"></script>
 {% endblock %}

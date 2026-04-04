@@ -49,8 +49,6 @@ export function handleMenuAction(action) {
         case 'save': fn.quickSave(); break;
         case 'save-as': fn.openSaveDialog(); break;
         case 'default-scene':
-            // Set flag to prevent beforeunload from re-saving the session
-            window._skipSessionSave = true;
             sessionStorage.removeItem(SESSION_KEY);
             window.location.reload();
             break;

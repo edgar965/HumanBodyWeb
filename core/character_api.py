@@ -1408,19 +1408,7 @@ def character_rigify_skeleton(request):
         data_dir = str(settings.HUMANBODY_DATA_DIR) + '_male'
     else:
         data_dir = str(settings.HUMANBODY_DATA_DIR)
-    # Use T-pose skeleton if configured
-    pose = request.GET.get('pose', '')
-    if not pose:
-        s = AppSettings.load()
-        prefs = s.ui_prefs or {}
-        pose = prefs.get('default_pose', 'a_pose')
-
-    if pose == 't_pose':
-        tpose_skel = os.path.join(data_dir, 'def_skeleton_tpose.json')
-        if os.path.isfile(tpose_skel):
-            with open(tpose_skel, 'r', encoding='utf-8') as f:
-                return JsonResponse(json.load(f))
-
+    # Always deliver A-pose skeleton; T-pose is applied client-side via applyPoseFromServer
     skel_path = os.path.join(data_dir, 'def_skeleton.json')
     if not os.path.isfile(skel_path):
         return JsonResponse({'error': 'DEF skeleton not exported yet'}, status=404)
@@ -4256,6 +4244,69 @@ def get_pose(request, pose_id):
         'bones': pose.def_bones,  # {DEF-name: [w,x,y,z]}
         'threejs': pose.to_threejs(),  # {DEF-name: [x,y,z,w] Three.js}
     })
+
+
+@csrf_exempt
+def pose_manage(request):
+    """Manage pose files (rename/delete).
+
+    POST /api/character/pose-manage/
+    Body: {action: "rename"|"delete", category: "...", name: "...", new_name: "..."}
+    """
+    import logging
+    from pathlib import Path
+    log = logging.getLogger('core')
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    action = data.get('action', '')
+    category = data.get('category', '')
+    name = data.get('name', '')
+    pose_root = Path(str(settings.HUMANBODY_DATA_DIR)).parent / 'poseData'
+
+    log.info(f'[pose-manage] action={action}, category={category}, name={name}')
+
+    def _check_pose_path(p):
+        rp = Path(p).resolve()
+        root_resolved = pose_root.resolve()
+        if str(rp).startswith(str(root_resolved)):
+            return rp
+        return None
+
+    if action == 'delete':
+        if not category or not name:
+            return JsonResponse({'error': 'category + name required'}, status=400)
+        p = _check_pose_path(pose_root / category / f'{name}.json')
+        if not p or not p.is_file():
+            return JsonResponse({'error': 'Pose not found'}, status=404)
+        p.unlink()
+        log.info(f'[pose-manage] Deleted: {p}')
+        return JsonResponse({'ok': True})
+
+    elif action == 'rename':
+        new_name = data.get('new_name', '').strip()
+        if not category or not name or not new_name:
+            return JsonResponse({'error': 'category, name, new_name required'}, status=400)
+        old_p = _check_pose_path(pose_root / category / f'{name}.json')
+        new_p = _check_pose_path(pose_root / category / f'{new_name}.json')
+        if not old_p or not old_p.is_file():
+            return JsonResponse({'error': 'Pose not found'}, status=404)
+        if not new_p:
+            return JsonResponse({'error': 'Invalid new path'}, status=400)
+        if new_p.exists():
+            return JsonResponse({'error': f'{new_name}.json exists already'}, status=409)
+        old_p.rename(new_p)
+        log.info(f'[pose-manage] Renamed: {old_p} -> {new_p}')
+        return JsonResponse({'ok': True, 'new_name': new_name})
+
+    else:
+        return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
 
 
 @require_GET
