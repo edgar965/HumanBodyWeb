@@ -234,7 +234,7 @@
                             {% if not status_3d.hybrid_gvhmr and not status_3d.hybrid_prompthmr %}disabled{% endif %}>
                         <span class="pipeline-card-title">Hybrid <span style="color:#e67e22;">&starf;</span></span>
                         <span class="pipeline-card-desc">
-                            SMPL Body (GPU) + MocapNET v4 Face+H&auml;nde (CPU), parallel
+                            SMPL Body (GPU) + MocapNET v4 H&auml;nde (CPU) + SMPLest-X Gesicht
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-hybrid">
@@ -249,6 +249,22 @@
                                 <select name="hybrid_body_backend" id="hybridBodyBackend" onchange="updateHybridBackend()">
                                     <option value="gvhmr" {% if not status_3d.gvhmr %}disabled{% endif %}>GVHMR</option>
                                     <option value="prompthmr" {% if not status_3d.prompthmr %}disabled{% endif %}>PromptHMR</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">H&auml;nde-Quelle <span class="setting-hint">Finger-Tracking Methode</span></div>
+                                <select name="hybrid_hands_source" id="hybridHandsSource">
+                                    <option value="v4" selected>MocapNET v4 (Finger-Detail)</option>
+                                    <option value="smplest_x">SMPLest-X (konsistenter)</option>
+                                    <option value="none">Keine (neutral)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Gesicht-Quelle <span class="setting-hint">Gesichtsausdruck-Tracking</span></div>
+                                <select name="hybrid_face_source" id="hybridFaceSource">
+                                    <option value="smplest_x" selected>SMPLest-X Expression</option>
+                                    <option value="v4">MocapNET v4 (noisy)</option>
+                                    <option value="none">Keine (neutral)</option>
                                 </select>
                             </div>
                         </div>
@@ -744,6 +760,7 @@ var PRESETS = {
         fast: {
             hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true, hybrid_gvhmr_focal_length_mm: 0,
             hybrid_prompthmr_static_cam: true,
+            hybrid_hands_source: 'v4', hybrid_face_source: 'smplest_x',
             hybrid_v4_hcd_iterations: 3, hybrid_v4_hcd_epochs: 10,
             hybrid_v4_mp_detection: 0.3, hybrid_v4_mp_tracking: 0.1,
             hybrid_v4_parts: {face: true, hands: true, mouth: false, eyes: false}
@@ -751,6 +768,7 @@ var PRESETS = {
         standard: {
             hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true, hybrid_gvhmr_focal_length_mm: 0,
             hybrid_prompthmr_static_cam: true,
+            hybrid_hands_source: 'v4', hybrid_face_source: 'smplest_x',
             hybrid_v4_hcd_iterations: 10, hybrid_v4_hcd_epochs: 30,
             hybrid_v4_mp_detection: 0.5, hybrid_v4_mp_tracking: 0.2,
             hybrid_v4_parts: {face: true, hands: true, mouth: true, eyes: false}
@@ -758,6 +776,7 @@ var PRESETS = {
         max: {
             hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: false, hybrid_gvhmr_focal_length_mm: 0,
             hybrid_prompthmr_static_cam: false,
+            hybrid_hands_source: 'v4', hybrid_face_source: 'smplest_x',
             hybrid_v4_hcd_iterations: 30, hybrid_v4_hcd_epochs: 80,
             hybrid_v4_mp_detection: 0.7, hybrid_v4_mp_tracking: 0.5,
             hybrid_v4_parts: {face: true, hands: true, mouth: true, eyes: true}

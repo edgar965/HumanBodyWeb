@@ -193,6 +193,9 @@
             <div class="toolbar-dd-item" id="dd-gauss-save"><i class="fas fa-save" style="width:16px;"></i> Smooth permanent speichern (BVH)</div>
             <div style="height:1px;background:var(--border);margin:4px 0;"></div>
             <div class="toolbar-dd-item" id="dd-ground"><i class="fas fa-shoe-prints" style="width:16px;"></i> Auf Bodenniveau</div>
+            <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+            <div class="toolbar-dd-item" id="dd-fixed-pos"><i class="fas fa-map-pin" style="width:16px;"></i> Feste Position <span id="fixed-pos-status" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">Aus</span></div>
+            <div class="toolbar-dd-item" style="gap:8px;cursor:default;"><i class="fas fa-bullseye" style="width:16px;"></i> Max. Radius: <input type="range" id="fixed-pos-radius" min="10" max="200" value="50" step="10" style="width:80px;vertical-align:middle;" onclick="event.stopPropagation()"> <span id="fixed-pos-radius-val" style="font-size:0.75rem;min-width:32px;">50cm</span></div>
         </div>
     </div>
     <div class="sep"></div>

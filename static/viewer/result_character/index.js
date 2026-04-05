@@ -135,6 +135,7 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
     }
 
     // --- Load all data ---
+    const _t0 = performance.now();
     try {
         const [, , , morphResp, hairResp] = await Promise.all([
             loadMesh(state.currentBodyType),
@@ -152,16 +153,21 @@ export async function initResultCharacter({ canvasId, videoId, bvhUrl, bvhFaceUr
         if (loadingEl) loadingEl.textContent = 'Fehler beim Laden';
         return;
     }
+    console.log(`[PERF] Data loaded in ${(performance.now() - _t0).toFixed(0)}ms`);
 
     // Convert to skinned mesh
+    const _t1 = performance.now();
     if (state.bodyMesh && ss.rigifySkeletonData && ss.skinWeightData) {
         convertToRigifySkinnedMesh();
     }
+    console.log(`[PERF] Skinned mesh in ${(performance.now() - _t1).toFixed(0)}ms`);
 
     applySkinColor(state.currentBodyType);
 
     if (state.isSkinned) {
-        loadBVH();
+        const _t2 = performance.now();
+        await loadBVH();
+        console.log(`[PERF] BVH loaded in ${(performance.now() - _t2).toFixed(0)}ms`);
     }
 
     connectWebSocket();

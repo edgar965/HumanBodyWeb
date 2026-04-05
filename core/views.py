@@ -245,6 +245,9 @@ def _read_pipeline_params(post, pipeline):
         else:
             params['static_cam'] = post.get('hybrid_prompthmr_static_cam') == 'on'
         params['body_device'] = post.get('hybrid_body_device', 'cuda')
+        # Hands + Face source selection
+        params['hands_source'] = post.get('hybrid_hands_source', 'v4')
+        params['face_source'] = post.get('hybrid_face_source', 'smplest_x')
         # V4 Face+Hands settings
         parts = post.getlist('hybrid_v4_parts')
         params['v4_face'] = 'face' in parts
@@ -1346,7 +1349,8 @@ def _run_hybrid_pipeline(job, video_path, output_dir):
     # --- Extract SMPL-X face expressions (replaces noisy v4 face bones) ---
     # Uses batch-mode SMPLest-X: model loaded once, all frames processed in sequence.
     # Output is placed next to the face BVH so retarget_job_merge() finds it.
-    if face_result['bvh']:
+    face_source = p.get('face_source', 'smplest_x')
+    if face_result['bvh'] and face_source == 'smplest_x':
         try:
             face_expr_script = os.path.join(
                 str(settings.TOOLS_ROOT), 'VideoToBVH', 'wrappers',

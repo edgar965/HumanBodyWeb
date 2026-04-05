@@ -80,6 +80,22 @@ export function setupToolbar() {
         fn.switchPropsTab('tools');
         groundFixSelectedClip();
     });
+    // Fixed Position toggle
+    document.getElementById('dd-fixed-pos')?.addEventListener('click', () => {
+        _fixedPos.active = !_fixedPos.active;
+        document.getElementById('fixed-pos-status').textContent = _fixedPos.active ? 'An' : 'Aus';
+        document.getElementById('fixed-pos-status').style.color = _fixedPos.active ? '#4caf50' : 'var(--text-muted)';
+        if (_fixedPos.active) applyFixedPositionAll();
+        else restoreFixedPositionAll();
+        toolsDD.classList.remove('open');
+    });
+    document.getElementById('fixed-pos-radius')?.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const v = parseInt(e.target.value);
+        document.getElementById('fixed-pos-radius-val').textContent = v + 'cm';
+        _fixedPos.radius = v / 100;  // cm -> meters
+        if (_fixedPos.active) applyFixedPositionAll();
+    });
 
     // Properties panel tabs
     document.querySelectorAll('.props-tab').forEach(tab => {
@@ -433,6 +449,8 @@ export function applyGaussToAllClips() {
         track._activeClip = null;
         track._activeAction = null;
     }
+    // Re-apply fixed position if active (gauss changed track values)
+    if (_fixedPos.active) { _fixedPos.origData.clear(); applyFixedPositionAll(); }
     fn.applyPlayhead();
     fn.serverLog('gauss_smooth_on', `sigma=${sigma} clips=${smoothedCount}/${totalTracks}`);
     if (smoothedCount === 0) console.warn('[BVH Studio] WARNING: No clips were smoothed! Check track.type and clip.animClip.');
@@ -459,6 +477,8 @@ export function reloadAllClipAnimations() {
         track._activeAction = null;
     }
     _gaussSmooth.origClips.clear();
+    // Re-apply fixed position if active (originals were overwritten by gauss restore)
+    if (_fixedPos.active) { _fixedPos.origData.clear(); applyFixedPositionAll(); }
     fn.applyPlayhead();
     fn.serverLog('gauss_smooth_off');
 }
@@ -575,6 +595,62 @@ export function smoothSelectedClip() {
 // =========================================================================
 // Ground Fix (Bodenniveau)
 // =========================================================================
+// ── Fixed Position (clamp root XZ displacement) ──
+export const _fixedPos = { active: false, radius: 0.5, origData: new Map() };
+
+function _getClipKey(trackIdx, clipIdx) { return `${trackIdx}_${clipIdx}`; }
+
+function applyFixedPositionAll() {
+    const r = _fixedPos.radius;
+    for (let ti = 0; ti < state.project.tracks.length; ti++) {
+        const track = state.project.tracks[ti];
+        for (let ci = 0; ci < track.clips.length; ci++) {
+            const clip = track.clips[ci];
+            if (!clip.animClip) continue;
+            const posTrack = clip.animClip.tracks.find(t => t.name.includes('.position'));
+            if (!posTrack) continue;
+            const key = _getClipKey(ti, ci);
+            // Save original if not already saved
+            if (!_fixedPos.origData.has(key)) _fixedPos.origData.set(key, new Float32Array(posTrack.values));
+            const orig = _fixedPos.origData.get(key);
+            // Anchor = frame 0 position
+            const ax = orig[0], az = orig[2];
+            for (let f = 0; f < posTrack.times.length; f++) {
+                const i = f * 3;
+                const dx = orig[i] - ax, dz = orig[i + 2] - az;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist > r) {
+                    const scale = r / dist;
+                    posTrack.values[i] = ax + dx * scale;
+                    posTrack.values[i + 2] = az + dz * scale;
+                } else {
+                    posTrack.values[i] = orig[i];
+                    posTrack.values[i + 2] = orig[i + 2];
+                }
+                posTrack.values[i + 1] = orig[i + 1]; // keep Y
+            }
+        }
+    }
+    fn.applyPlayhead();
+    console.log(`[BVH Studio] Fixed position: radius=${r}m`);
+}
+
+function restoreFixedPositionAll() {
+    for (const [key, orig] of _fixedPos.origData) {
+        const [ti, ci] = key.split('_').map(Number);
+        const track = state.project.tracks[ti];
+        if (!track) continue;
+        const clip = track.clips[ci];
+        if (!clip?.animClip) continue;
+        const posTrack = clip.animClip.tracks.find(t => t.name.includes('.position'));
+        if (!posTrack) continue;
+        posTrack.values.set(orig);
+    }
+    _fixedPos.origData.clear();
+    fn.applyPlayhead();
+    console.log('[BVH Studio] Fixed position: restored originals');
+}
+
 export async function groundFixSelectedClip() {
     if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) { alert('Clip auswaehlen.'); return; }
     pushUndo('Bodenniveau');
@@ -731,3 +807,6 @@ fn.getGaussSmooth = () => _gaussSmooth;
 fn.gaussFilter = _gaussFilter;
 fn.applyGaussToAllClips = applyGaussToAllClips;
 fn.reloadAllClipAnimations = reloadAllClipAnimations;
+fn.getFixedPos = () => _fixedPos;
+fn.applyFixedPositionAll = applyFixedPositionAll;
+fn.restoreFixedPositionAll = restoreFixedPositionAll;

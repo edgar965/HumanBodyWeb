@@ -5258,18 +5258,12 @@ def retarget_job_merge(request, job_id):
     body_result = retarget_bvh_data(job.bvh_file, body_height=body_height,
                                      foot_correction=foot_correction)
 
-    # Prefer MediaPipe face blendshapes over v4 face BVH when available
-    face_bs_path = job.bvh_file_face.rsplit('.', 1)[0] + '_blendshapes.json'
-    if os.path.isfile(face_bs_path):
-        logger.info('Using face blendshape data: %s', face_bs_path)
-        from humanbody_core.skeleton.face_blendshapes import blendshapes_to_bone_tracks
-        with open(face_bs_path, 'r') as f:
-            bs_data = json.load(f)
-        face_result = blendshapes_to_bone_tracks(bs_data)
-    else:
-        face_result = retarget_bvh_data(job.bvh_file_face, body_height=body_height)
+    # Always retarget v4 BVH (has hand bones)
+    face_result = retarget_bvh_data(job.bvh_file_face, body_height=body_height)
 
-    merged = SkeletonRigify.merge_retargeted_clips(body_result, face_result)
+    # Merge body + v4 (hands), filter ALL noisy v4 face bones → neutral face
+    merged = SkeletonRigify.merge_retargeted_clips(
+        body_result, face_result, filter_noisy_face=True)
     return JsonResponse(merged)
 
 
