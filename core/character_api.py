@@ -4212,182 +4212,61 @@ def mh_proxy_fit(request):
 
 
 def _tpose_to_apose(garment_verts, body_verts, gender='female'):
-    """Transform garment vertices from T-pose to A-pose (bind pose).
+    """Transform garment vertices from MH T-pose to Rigify A-pose using vertex displacement.
 
-    Uses the T-pose bone rotations to compute the inverse transformation.
-    For each garment vertex, finds the nearest body vertex, determines its
-    primary bone, and applies the inverse of that bone's T-pose world rotation.
+    The garment was fitted to the MH body (T-pose, horizontal arms). We need it in
+    Rigify A-pose (arms ~45° down) to match the skeleton bind pose.
+
+    Uses MH T-pose body as source reference and Rigify A-pose body as target.
+    For each garment vertex → nearest MH T-pose body vertex → nearest Rigify A-pose vertex
+    → displacement = rigify_apose - mh_tpose.
     """
-    from scipy.spatial.transform import Rotation
     from scipy.spatial import cKDTree
 
-    # Load T-pose data (Blender quaternions [w,x,y,z])
-    try:
-        from humanbody_core.pose import load_pose
-        pose = load_pose('rest_poses/t-pose')
-        tpose_data = pose.def_bones  # {DEF-name: [w,x,y,z] Blender format}
-    except Exception as e:
-        logger.warning('[T→A] Failed to load T-pose data: %s', e)
+    # Load MH T-pose body (raw base vertices, first 18210)
+    mh_base_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'base_vertices.npy')
+    if not os.path.isfile(mh_base_path):
+        logger.warning('[T→A] No MH base_vertices.npy')
         return garment_verts
 
-    # Load skeleton for bone hierarchy
-    skel_path = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'def_skeleton.json')
-    if not os.path.isfile(skel_path):
-        logger.warning('[T→A] No skeleton file')
-        return garment_verts
+    mh_raw = np.load(mh_base_path)
+    n_body = body_verts.shape[0]
+    # Convert MH coords (dm, Y-up) to Blender coords (m, Z-up) and trim to body vertex count
+    mh_n = min(mh_raw.shape[0], n_body)
+    mh_tpose = np.column_stack([
+        mh_raw[:mh_n, 0] * 0.1,
+        -mh_raw[:mh_n, 2] * 0.1,
+        mh_raw[:mh_n, 1] * 0.1,
+    ])
+    # Align feet: MH feet at Z≈-0.84, Rigify feet at Z≈0
+    mh_tpose[:, 2] -= mh_tpose[:, 2].min()
+    mh_tpose[:, 2] += body_verts[:, 2].min()
 
-    with open(skel_path) as f:
-        skel_data = json.load(f)
+    # Build KDTree on MH T-pose body
+    mh_tree = cKDTree(mh_tpose)
 
-    # Build bone world transforms in Blender coords (Z-up)
-    bones_by_name = {b['name']: b for b in skel_data['bones']}
+    # For each MH T-pose vertex, find nearest Rigify A-pose vertex
+    rigify_tree = cKDTree(body_verts)
+    _, mh_to_rigify = rigify_tree.query(mh_tpose)
 
-    # Get skin indices to determine bone assignment per body vertex
-    si_raw, sw_raw = _get_base_skin_arrays(gender)
-    sw_data = _get_skin_weight_data(gender)
-    bone_names = sw_data['bone_names'] if isinstance(sw_data, dict) else []
-    if not bone_names:
-        logger.warning('[T→A] No bone names in skin data')
-        return garment_verts
-
-    # Compute T-pose world rotations for each bone (in Blender coords)
-    # tpose_data is {DEF-name: [w,x,y,z]} in Blender format with CharMorph transforms
-
-    bone_world_rot = {}  # bone_name → Rotation (scipy)
-
-    def _compute_bone_world(name):
-        if name in bone_world_rot:
-            return bone_world_rot[name]
-        b = bones_by_name.get(name)
-        if not b:
-            bone_world_rot[name] = Rotation.identity()
-            return bone_world_rot[name]
-
-        # Local rest rotation (Blender [w,x,y,z] → scipy [x,y,z,w])
-        lq = b['local_quaternion']
-        local_rest = Rotation.from_quat([lq[1], lq[2], lq[3], lq[0]])
-
-        # Pose delta for this bone (Blender [w,x,y,z])
-        pose_q = tpose_data.get(name)
-        if pose_q:
-            pose_delta = Rotation.from_quat([pose_q[1], pose_q[2], pose_q[3], pose_q[0]])
-        else:
-            pose_delta = Rotation.identity()
-
-        # Local posed = rest * delta
-        local_posed = local_rest * pose_delta
-
-        # World = parent_world * local_posed
-        if b.get('parent') and b['parent'] in bones_by_name:
-            parent_world = _compute_bone_world(b['parent'])
-            world = parent_world * local_posed
-        else:
-            world = local_posed
-
-        bone_world_rot[name] = world
-        return world
-
-    # Also compute rest (A-pose) world rotations
-    bone_rest_world = {}
-
-    def _compute_rest_world(name):
-        if name in bone_rest_world:
-            return bone_rest_world[name]
-        b = bones_by_name.get(name)
-        if not b:
-            bone_rest_world[name] = Rotation.identity()
-            return bone_rest_world[name]
-        lq = b['local_quaternion']
-        local_rest = Rotation.from_quat([lq[1], lq[2], lq[3], lq[0]])
-        if b.get('parent') and b['parent'] in bones_by_name:
-            parent_rest = _compute_rest_world(b['parent'])
-            world = parent_rest * local_rest
-        else:
-            world = local_rest
-        bone_rest_world[name] = world
-        return world
-
-    # Precompute all bone transforms
-    for name in bone_names:
-        _compute_bone_world(name)
-        _compute_rest_world(name)
-
-    # Also compute bone world positions (A-pose) for pivot points
-    bone_world_pos = {}
-
-    def _compute_bone_pos(name):
-        if name in bone_world_pos:
-            return bone_world_pos[name]
-        b = bones_by_name.get(name)
-        if not b:
-            bone_world_pos[name] = np.zeros(3)
-            return bone_world_pos[name]
-        lp = np.array(b['local_position'])
-        if b.get('parent') and b['parent'] in bones_by_name:
-            parent_pos = _compute_bone_pos(b['parent'])
-            parent_rot = bone_rest_world[b['parent']]
-            world_pos = parent_pos + parent_rot.apply(lp)
-        else:
-            world_pos = lp.copy()
-        bone_world_pos[name] = world_pos
-        return world_pos
-
-    for name in bone_names:
-        _compute_bone_pos(name)
-
-    # For each garment vertex: find nearest body vertex → blend inverse rotation
-    # using ALL bone weights (not just primary) to avoid tears at bone boundaries
-    body_tree = cKDTree(body_verts)
-    _, nearest_body = body_tree.query(garment_verts)
+    # For each garment vertex: find nearest MH body vertex → get corresponding Rigify vertex
+    dists, nearest_mh = mh_tree.query(garment_verts)
 
     result = garment_verts.copy().astype(np.float64)
     for vi in range(len(garment_verts)):
-        body_vi = nearest_body[vi]
+        mh_idx = nearest_mh[vi]
+        rigify_idx = mh_to_rigify[mh_idx]
 
-        # Get all 4 bone influences for this body vertex
-        bone_indices = si_raw[body_vi].astype(int)  # [4] bone indices
-        bone_weights = sw_raw[body_vi]               # [4] weights
+        # Displacement from MH T-pose position to Rigify A-pose position
+        disp = body_verts[rigify_idx] - mh_tpose[mh_idx]
 
-        # Weighted blend of rotated positions
-        blended = np.zeros(3)
-        total_w = 0.0
-        for bi in range(4):
-            w = bone_weights[bi]
-            if w < 1e-6:
-                continue
-            idx = bone_indices[bi]
-            if idx < 0 or idx >= len(bone_names):
-                continue
-            bone_name = bone_names[idx]
+        # Blend: close to body = full, far = less (preserve free-hanging parts)
+        dist = dists[vi]
+        blend = max(0.0, min(1.0, 1.0 - (dist / 0.12)))
+        result[vi] += disp * blend
 
-            tpose_world = bone_world_rot.get(bone_name)
-            rest_world = bone_rest_world.get(bone_name)
-            pivot = bone_world_pos.get(bone_name)
-            if tpose_world is None or rest_world is None or pivot is None:
-                continue
-
-            # Inverse T-pose: rest × tpose⁻¹
-            correction = rest_world * tpose_world.inv()
-            v = result[vi] - pivot
-            v = correction.apply(v)
-            blended += w * (v + pivot)
-            total_w += w
-
-        if total_w > 0.01:
-            result[vi] = blended / total_w
-
-    logger.info('[T→A] Transformed %d garment verts from T-pose to A-pose', len(result))
+    logger.info('[T→A] Displaced %d garment verts (MH T-pose → Rigify A-pose)', len(result))
     return result.astype(np.float32)
-
-
-def _get_skin_weight_data(gender='female'):
-    """Get raw skin weight data dict with bone_names."""
-    data_dir = os.path.join(str(settings.HUMANBODY_DATA_DIR))
-    sw_path = os.path.join(data_dir, 'skin_weights_base.json')
-    if os.path.isfile(sw_path):
-        with open(sw_path) as f:
-            return json.load(f)
-    return {}
 
 
 def _laplacian_smooth_garment(verts, faces, iterations=3, factor=0.5):
