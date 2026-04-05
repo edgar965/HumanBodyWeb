@@ -473,8 +473,8 @@ async function _doMHProxyFit() {
     params.set('stiffness', (_sliderVal('mh-stiffness') / 100).toFixed(2));
     params.set('scale', (_sliderVal('mh-scale') / 100).toFixed(3));
     params.set('y_offset', (_sliderVal('mh-y-offset') / 1000).toFixed(4));
-    // Fit to Rigify body (not MH body) so garment matches actual character mesh
-    params.set('use_mh_body', '0');
+    // Fit to MH body (best quality), server transforms T→A to match bind pose
+    params.set('use_mh_body', '1');
 
     try {
         const resp = await fetch(`/api/character/mh-proxy-fit/?${params}`);
