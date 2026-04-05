@@ -1,3 +1,4 @@
+import logging
 import os
 import json
 import subprocess
@@ -1341,6 +1342,26 @@ def _run_hybrid_pipeline(job, video_path, output_dir):
         job.bvh_file = body_result['bvh']
     if face_result['bvh']:
         job.bvh_file_face = face_result['bvh']
+
+    # --- Extract SMPL-X face expressions (replaces noisy v4 face bones) ---
+    # Uses batch-mode SMPLest-X: model loaded once, all frames processed in sequence.
+    # Output is placed next to the face BVH so retarget_job_merge() finds it.
+    if face_result['bvh']:
+        try:
+            face_expr_script = os.path.join(
+                str(settings.TOOLS_ROOT), 'VideoToBVH', 'wrappers',
+                '_run_smplest_x_video.py')
+            face_expr_output = face_result['bvh'].rsplit('.', 1)[0] + '_blendshapes.json'
+            job.progress_detail = 'Extracting face expressions (SMPLest-X batch)...'
+            job.save()
+            subprocess.run(
+                [settings.PIPELINE_PYTHON, face_expr_script,
+                 str(video_path), face_expr_output],
+                check=True, timeout=1200,
+            )
+            logging.getLogger(__name__).info('Face expressions extracted: %s', face_expr_output)
+        except Exception as e:
+            logging.getLogger(__name__).warning('Face expression extraction failed: %s', e)
 
     if errors:
         # Partial success — note which part failed
