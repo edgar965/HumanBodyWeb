@@ -4174,19 +4174,6 @@ def mh_proxy_fit(request):
         garment_verts_raw = _laplacian_smooth_garment(
             garment_verts_raw, triangles_raw, smooth_iters, smooth_factor)
 
-    # Transform garment from MH-A-pose to Rigify-A-pose so skinning works correctly.
-    # Each garment vertex is shifted by (rigify_pos - mh_pos) of its nearest body vertex.
-    if use_mh_body and fit_body is not body_verts:
-        from scipy.spatial import cKDTree
-        mh_tree = cKDTree(fit_body)
-        _, nearest_mh = mh_tree.query(garment_verts_raw)
-        body_tree = cKDTree(body_verts)
-        _, mh_to_rigify = body_tree.query(fit_body)
-        # For each garment vert: shift = rigify_body[mapped] - mh_body[nearest]
-        mh_positions = fit_body[nearest_mh]
-        rigify_positions = body_verts[mh_to_rigify[nearest_mh]]
-        garment_verts_raw = garment_verts_raw + (rigify_positions - mh_positions)
-
     logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s stiffness=%.2f verts=%d',
                 garment_id, body_type, use_mh_body, stiffness, len(garment_verts_raw))
 
@@ -4418,6 +4405,24 @@ def mh_push_outside(request):
     if body_verts is None:
         return JsonResponse({'error': 'Body compute failed'}, status=500)
 
+    # For MH garments: use MH body for push-outside (garment was fitted to MH body)
+    use_mh_body = request.GET.get('use_mh_body', '1') == '1'
+    if use_mh_body:
+        mh_apose_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'mh_base_apose.npy')
+        mh_base_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'base_vertices.npy')
+        if os.path.isfile(mh_apose_path):
+            push_body = np.load(mh_apose_path).copy()
+            push_body[:, 2] += body_verts[:, 2].min()
+        elif os.path.isfile(mh_base_path):
+            mh_raw = np.load(mh_base_path)
+            push_body = np.column_stack([mh_raw[:, 0] * 0.1, -mh_raw[:, 2] * 0.1, mh_raw[:, 1] * 0.1])
+            push_body[:, 2] -= push_body[:, 2].min()
+            push_body[:, 2] += body_verts[:, 2].min()
+        else:
+            push_body = body_verts
+    else:
+        push_body = body_verts
+
     # Parse garment vertices from POST
     try:
         post_data = json.loads(request.body)
@@ -4429,11 +4434,12 @@ def mh_push_outside(request):
     # Push outside
     from GarmentFitter.fitter import _push_outside_body, _compute_vertex_normals
     mesh_data = _get_mesh_data(gender)
-    body_normals = _compute_vertex_normals(body_verts, mesh_data.faces)
+    # Use MH body faces if available, otherwise Rigify body faces
+    push_normals = _compute_vertex_normals(push_body, mesh_data.faces) if len(push_body) == len(body_verts) else None
     result = _push_outside_body(
-        garment_verts, body_verts,
+        garment_verts, push_body,
         min_dist=push_dist_mm / 1000.0,
-        body_normals=body_normals,
+        body_normals=push_normals,
     )
 
     return JsonResponse({

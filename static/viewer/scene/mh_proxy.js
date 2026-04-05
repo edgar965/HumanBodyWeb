@@ -153,6 +153,7 @@ async function loadMHProxyUI() {
         const pushDist = _sliderVal('mh-push-dist');
         const params = _charQueryParams(inst);
         params.set('push_dist', pushDist);
+        params.set('use_mh_body', '0');
 
         const b64 = btoa(String.fromCharCode(...new Uint8Array(blenderVerts.buffer)));
         try {
@@ -472,6 +473,8 @@ async function _doMHProxyFit() {
     params.set('stiffness', (_sliderVal('mh-stiffness') / 100).toFixed(2));
     params.set('scale', (_sliderVal('mh-scale') / 100).toFixed(3));
     params.set('y_offset', (_sliderVal('mh-y-offset') / 1000).toFixed(4));
+    // Fit to Rigify body (not MH body) so garment matches actual character mesh
+    params.set('use_mh_body', '0');
 
     try {
         const resp = await fetch(`/api/character/mh-proxy-fit/?${params}`);
