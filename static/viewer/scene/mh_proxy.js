@@ -243,10 +243,132 @@ function _selectedMHMesh() {
     return { inst, key: state._selectedSubMesh.key, mesh: inst.clothMeshes[state._selectedSubMesh.key] };
 }
 
+// Persist last open category + selected garment
+const MH_STORAGE_KEY = 'mh_proxy_state';
+function _saveMHState() {
+    localStorage.setItem(MH_STORAGE_KEY, JSON.stringify({
+        openCat: _mhOpenCat,
+        selectedId: state._selectedMHId,
+    }));
+}
+function _loadMHState() {
+    try {
+        const s = JSON.parse(localStorage.getItem(MH_STORAGE_KEY));
+        if (s) { _mhOpenCat = s.openCat || ''; state._selectedMHId = s.selectedId || ''; }
+    } catch(e) {}
+}
+let _mhOpenCat = '';
+
+// Context menu for garment items
+let _mhCtxTarget = null;
+function _showMHCtx(x, y, garment) {
+    _mhCtxTarget = garment;
+    let menu = document.getElementById('mh-ctx-menu');
+    if (!menu) {
+        menu = document.createElement('div');
+        menu.id = 'mh-ctx-menu';
+        menu.className = 'ctx-menu';
+        menu.style.cssText = 'position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:4px 0;min-width:140px;font-size:0.8rem;box-shadow:0 4px 12px rgba(0,0,0,.4);';
+        menu.innerHTML = `
+            <div class="ctx-item" data-action="rename" style="padding:4px 12px;cursor:pointer;">Umbenennen</div>
+            <div class="ctx-item" data-action="move" style="padding:4px 12px;cursor:pointer;">Verschieben...</div>
+            <div class="ctx-item" data-action="copy" style="padding:4px 12px;cursor:pointer;">Kopieren...</div>
+            <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
+            <div class="ctx-item" data-action="delete" style="padding:4px 12px;cursor:pointer;color:#f44;">Löschen</div>
+        `;
+        menu.querySelectorAll('.ctx-item').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.background = 'var(--accent)');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('click', () => _handleMHCtx(item.dataset.action));
+        });
+        document.body.appendChild(menu);
+        document.addEventListener('click', () => { menu.style.display = 'none'; }, { capture: true });
+    }
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    menu.style.display = 'block';
+}
+
+async function _handleMHCtx(action) {
+    const g = _mhCtxTarget;
+    if (!g) return;
+    const menu = document.getElementById('mh-ctx-menu');
+    if (menu) menu.style.display = 'none';
+
+    if (action === 'rename') {
+        const newName = prompt('Neuer Name:', g.name || g.id);
+        if (newName && newName !== g.name) {
+            try {
+                await fetch('/api/character/garment/manage/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'rename', id: g.id, new_name: newName }),
+                });
+                g.name = newName;
+                _renderMHList();
+            } catch(e) { console.error('Rename failed:', e); }
+        }
+    } else if (action === 'move') {
+        const cats = [...new Set(state._garmentCatalog.map(x => x._category))];
+        const target = prompt('Verschieben nach Kategorie:\n' + cats.join(', '), g._category);
+        if (target && target !== g._category) {
+            try {
+                await fetch('/api/character/garment/manage/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'move', id: g.id, target_category: target }),
+                });
+                g._category = target;
+                _mhOpenCat = target;
+                _renderMHList();
+            } catch(e) { console.error('Move failed:', e); }
+        }
+    } else if (action === 'copy') {
+        const newName = prompt('Kopie-Name:', (g.name || g.id) + '_copy');
+        if (newName) {
+            try {
+                await fetch('/api/character/garment/manage/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'copy', id: g.id, new_name: newName }),
+                });
+                // Reload catalog
+                state._garmentCatalog.length = 0;
+                const resp = await fetch('/api/character/garment/library/');
+                const data = await resp.json();
+                if (data.garments) {
+                    for (const cat of Object.keys(data.garments)) {
+                        for (const gg of data.garments[cat]) {
+                            gg._category = cat;
+                            state._garmentCatalog.push(gg);
+                        }
+                    }
+                }
+                _renderMHList();
+            } catch(e) { console.error('Copy failed:', e); }
+        }
+    } else if (action === 'delete') {
+        if (!confirm(`"${g.name || g.id}" wirklich löschen?`)) return;
+        try {
+            await fetch('/api/character/garment/manage/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete', id: g.id }),
+            });
+            const idx = state._garmentCatalog.indexOf(g);
+            if (idx >= 0) state._garmentCatalog.splice(idx, 1);
+            if (state._selectedMHId === g.id) state._selectedMHId = '';
+            _renderMHList();
+        } catch(e) { console.error('Delete failed:', e); }
+    }
+}
+
 function _renderMHList() {
     const list = document.getElementById('mh-list');
     if (!list) return;
     list.innerHTML = '';
+
+    _loadMHState();
 
     const catFilter = document.getElementById('mh-category')?.value || '';
     const filtered = catFilter
@@ -270,10 +392,18 @@ function _renderMHList() {
         catDiv.innerHTML = `<div class="anim-folder-header"><span class="chevron">&#9660;</span> ${cat} (${items.length})</div>`;
         const body = document.createElement('div');
         body.className = 'anim-folder-body';
+
+        // Only open the last-used category, collapse all others
+        const isOpen = _mhOpenCat === cat;
+        body.style.display = isOpen ? '' : 'none';
+        catDiv.querySelector('.chevron').textContent = isOpen ? '\u25BC' : '\u25B6';
+
         for (const g of items) {
             const row = document.createElement('div');
             row.className = 'anim-item';
+            row.dataset.garmentId = g.id;
             row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;';
+            if (state._selectedMHId === g.id) row.classList.add('selected');
             if (g.has_thumb) {
                 const img = document.createElement('img');
                 img.src = `/api/character/garment/thumb/${g.id}/`;
@@ -286,18 +416,38 @@ function _renderMHList() {
             row.appendChild(name);
             row.addEventListener('click', () => {
                 state._selectedMHId = g.id;
+                _mhOpenCat = cat;
+                _saveMHState();
                 list.querySelectorAll('.anim-item').forEach(el => el.classList.remove('selected'));
                 row.classList.add('selected');
+            });
+            row.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                state._selectedMHId = g.id;
+                list.querySelectorAll('.anim-item').forEach(el => el.classList.remove('selected'));
+                row.classList.add('selected');
+                _showMHCtx(e.clientX, e.clientY, g);
             });
             body.appendChild(row);
         }
         catDiv.appendChild(body);
         const header = catDiv.querySelector('.anim-folder-header');
         header.addEventListener('click', () => {
-            body.style.display = body.style.display === 'none' ? '' : 'none';
-            header.querySelector('.chevron').textContent = body.style.display === 'none' ? '\u25B6' : '\u25BC';
+            const opening = body.style.display === 'none';
+            body.style.display = opening ? '' : 'none';
+            header.querySelector('.chevron').textContent = opening ? '\u25BC' : '\u25B6';
+            if (opening) {
+                _mhOpenCat = cat;
+                _saveMHState();
+            }
         });
         list.appendChild(catDiv);
+    }
+
+    // Scroll to selected item
+    if (state._selectedMHId) {
+        const sel = list.querySelector(`[data-garment-id="${state._selectedMHId}"]`);
+        if (sel) setTimeout(() => sel.scrollIntoView({ block: 'nearest' }), 50);
     }
 }
 

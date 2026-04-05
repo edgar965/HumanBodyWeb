@@ -52,13 +52,30 @@
 
     .viewer-panel {
         width: 320px;
+        min-width: 200px;
+        max-width: 600px;
         background: var(--bg-secondary);
-        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
         overflow: hidden;
         padding: 0;
         flex-shrink: 0;
         display: flex;
         flex-direction: column;
+        position: relative;
+    }
+    .panel-resize-handle {
+        position: absolute;
+        top: 0;
+        right: -3px;
+        width: 6px;
+        height: 100%;
+        cursor: col-resize;
+        z-index: 10;
+    }
+    .panel-resize-handle:hover,
+    .panel-resize-handle.active {
+        background: var(--accent);
+        opacity: 0.5;
     }
     .panel-section {
         border-bottom: 1px solid var(--border);
@@ -857,12 +874,8 @@
             </div>
     </div>
     <div class="viewer-row">
-        <div class="canvas-wrap">
-            <canvas id="viewer-canvas"></canvas>
-            <div id="mesh-tooltip"></div>
-        </div>
-
         <div class="viewer-panel">
+        <div class="panel-resize-handle" id="panel-resize-handle"></div>
         <!-- Outliner: always visible character list -->
         <div class="panel-outliner">
             <div class="outliner-header">
@@ -2036,8 +2049,12 @@
             &nbsp;|&nbsp; <span id="fps-display">—</span> fps
             &nbsp;|&nbsp; <span id="char-count">0</span> Charaktere
         </div>
-    </div>
-    </div>
+    </div><!-- /viewer-panel -->
+        <div class="canvas-wrap">
+            <canvas id="viewer-canvas"></canvas>
+            <div id="mesh-tooltip"></div>
+        </div>
+    </div><!-- /viewer-row -->
 </div>
 
 <!-- Add Character Dialog -->
@@ -2152,4 +2169,39 @@
 }
 </script>
 <script type="module" src="{% static 'viewer/scene/main.js' %}?t={% now 'U' %}"></script>
+<script>
+// Panel resize handle
+document.addEventListener('DOMContentLoaded', () => {
+    const handle = document.getElementById('panel-resize-handle');
+    const panel = document.querySelector('.viewer-panel');
+    if (!handle || !panel) return;
+    let dragging = false, startX, startW;
+    handle.addEventListener('mousedown', (e) => {
+        dragging = true;
+        startX = e.clientX;
+        startW = panel.offsetWidth;
+        handle.classList.add('active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const newW = Math.max(200, Math.min(600, startW + (e.clientX - startX)));
+        panel.style.width = newW + 'px';
+        window.dispatchEvent(new Event('resize'));
+    });
+    document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        localStorage.setItem('scene_panel_width', panel.style.width);
+    });
+    // Restore saved width
+    const saved = localStorage.getItem('scene_panel_width');
+    if (saved) panel.style.width = saved;
+});
+</script>
 {% endblock %}
