@@ -126,10 +126,13 @@ async function loadMHProxyUI() {
 
     const pushBtn = document.getElementById('mh-push');
     if (pushBtn) pushBtn.addEventListener('click', async () => {
-        const sel = _selectedMHMesh();
-        if (!sel) return;
-        const inst = sel.inst;
-        const key = sel.key;
+        // Find MH garment mesh directly from selected character
+        const inst = _selectedInst();
+        if (!inst) return;
+        const key = Object.keys(inst.clothMeshes || {}).find(k => k.startsWith('mh_'));
+        if (!key) return;
+        const sel = { inst, key, mesh: inst.clothMeshes[key] };
+        if (!sel.mesh) return;
 
         // Save pre-push positions for undo (if not already saved)
         if (!inst._mhPrePush) inst._mhPrePush = {};
