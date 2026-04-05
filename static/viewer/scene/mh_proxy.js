@@ -30,18 +30,17 @@ async function loadMHProxyUI() {
         const sel = _selectedMHMesh();
         if (sel) sel.mesh.material.metalness = _sliderVal('mh-metalness') / 100;
     });
-    // Stiffness: debounced server refit
-    const mhStiffness = document.getElementById('mh-stiffness');
-    if (mhStiffness) {
-        let _mhStiffTimer = null;
-        mhStiffness.addEventListener('input', () => {
-            if (state._syncingSliders) return;
-            const sel = _selectedMHMesh();
-            if (!sel || !sel.key.startsWith('mh_')) return;
-            state._selectedMHId = sel.key.slice(3);
-            clearTimeout(_mhStiffTimer);
-            _mhStiffTimer = setTimeout(() => _doMHProxyFit(), 400);
-        });
+    // All fit parameters: debounced server refit on slider release
+    let _mhRefitTimer = null;
+    function _debouncedMHRefit() {
+        if (state._syncingSliders) return;
+        if (!state._selectedMHId) return;
+        clearTimeout(_mhRefitTimer);
+        _mhRefitTimer = setTimeout(() => _doMHProxyFit(), 400);
+    }
+    for (const id of ['mh-stiffness', 'mh-offset', 'mh-scale', 'mh-y-offset']) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', _debouncedMHRefit);
     }
 
     const mhColor = document.getElementById('mh-color');

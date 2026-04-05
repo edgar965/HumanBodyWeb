@@ -4174,13 +4174,34 @@ def mh_proxy_fit(request):
         garment_verts_raw = _laplacian_smooth_garment(
             garment_verts_raw, triangles_raw, smooth_iters, smooth_factor)
 
+    # Apply offset (push outward from centroid)
+    offset = float(request.GET.get('offset', 0.006))
+    if offset > 0.0001:
+        centroid = garment_verts_raw.mean(axis=0)
+        dirs = garment_verts_raw - centroid
+        dists = np.linalg.norm(dirs, axis=1, keepdims=True)
+        dists[dists < 1e-6] = 1.0
+        garment_verts_raw = garment_verts_raw + (dirs / dists) * offset
+
+    # Apply scale from centroid
+    scale = float(request.GET.get('scale', 1.0))
+    if abs(scale - 1.0) > 0.001:
+        centroid = garment_verts_raw.mean(axis=0)
+        garment_verts_raw = (garment_verts_raw - centroid) * scale + centroid
+
+    # Apply Y offset (Blender Z = up)
+    y_offset = float(request.GET.get('y_offset', 0.0))
+    if abs(y_offset) > 0.0001:
+        garment_verts_raw[:, 2] += y_offset
+
     # Transform garment from T-pose (MH) to A-pose (Rigify bind pose)
     # by applying the inverse T-pose rotation per bone to each garment vertex.
     if use_mh_body:
         garment_verts_raw = _tpose_to_apose(garment_verts_raw, body_verts, gender)
+        # Note: T→A quality is limited by MH/Rigify body shape differences.
 
-    logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s stiffness=%.2f verts=%d',
-                garment_id, body_type, use_mh_body, stiffness, len(garment_verts_raw))
+    logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s stiffness=%.2f offset=%.3f scale=%.2f y_off=%.3f verts=%d',
+                garment_id, body_type, use_mh_body, stiffness, offset, scale, y_offset, len(garment_verts_raw))
 
     triangles = proxy.triangulate_faces()
     garment_verts = garment_verts_raw.astype(np.float32)
