@@ -4263,123 +4263,29 @@ def _tpose_to_apose(garment_verts, body_verts, gender='female'):
     mh_tpose[:, 2] -= mh_tpose[:, 2].min()
     mh_tpose[:, 2] += body_verts[:, 2].min()
 
-    from scipy.spatial.transform import Rotation
-
-    # Load skeleton for bone positions (pivot points)
-    skel_path = os.path.join(str(settings.HUMANBODY_DATA_DIR), 'def_skeleton.json')
-    arm_rotations = {}
-    if os.path.isfile(skel_path):
-        with open(skel_path) as f:
-            skel_data = json.load(f)
-        bones_by_name = {b['name']: b for b in skel_data['bones']}
-
-        # Compute bone world positions from skeleton hierarchy
-        bone_world_pos = {}
-        bone_rest_world = {}
-
-        def _rest_world(name):
-            if name in bone_rest_world:
-                return bone_rest_world[name]
-            b = bones_by_name.get(name)
-            if not b:
-                bone_rest_world[name] = Rotation.identity()
-                bone_world_pos[name] = np.zeros(3)
-                return bone_rest_world[name]
-            lq = b['local_quaternion']
-            lr = Rotation.from_quat([lq[1], lq[2], lq[3], lq[0]])
-            lp = np.array(b['local_position'])
-            if b.get('parent') and b['parent'] in bones_by_name:
-                pr = _rest_world(b['parent'])
-                pp = bone_world_pos[b['parent']]
-                bone_rest_world[name] = pr * lr
-                bone_world_pos[name] = pp + pr.apply(lp)
-            else:
-                bone_rest_world[name] = lr
-                bone_world_pos[name] = lp.copy()
-            return bone_rest_world[name]
-
-        for b in skel_data['bones']:
-            _rest_world(b['name'])
-
-        # Load T-pose deltas
-        try:
-            from humanbody_core.pose import load_pose
-            pose = load_pose('rest_poses/t-pose')
-            tpose_data = pose.def_bones
-        except:
-            tpose_data = {}
-
-        # For each arm: compute the T-pose world direction vs A-pose world direction
-        for side in ['L', 'R']:
-            ua_name = f'DEF-upper_arm.{side}'
-            ua_child = f'DEF-upper_arm.{side}.001'
-            if ua_name not in bone_world_pos or ua_child not in bone_world_pos:
-                continue
-
-            pivot = bone_world_pos[ua_name]
-            child_pos = bone_world_pos[ua_child]
-
-            # A-pose arm direction (from skeleton rest)
-            apose_dir = child_pos - pivot
-            apose_dir /= (np.linalg.norm(apose_dir) + 1e-8)
-
-            # T-pose arm direction: horizontal (MH T-pose has arms horizontal)
-            # Left arm: +X, Right arm: -X
-            tpose_dir = np.array([1.0 if side == 'L' else -1.0, 0.0, 0.0])
-
-            # Rotation from T-pose direction to A-pose direction
-            rot = Rotation.align_vectors([apose_dir], [tpose_dir])[0]
-            arm_rotations[side] = (pivot, rot)
-            logger.info('[T→A] Arm %s: T-dir=[%.3f,%.3f,%.3f] A-dir=[%.3f,%.3f,%.3f] pivot=[%.3f,%.3f,%.3f]',
-                        side, *tpose_dir, *apose_dir, *pivot)
-
-    # Precompute displacement field for torso (k-NN weighted)
+    # Precompute: for each MH vertex, the displacement to nearest Rigify vertex
     rigify_tree = cKDTree(body_verts)
     _, mh_to_rigify = rigify_tree.query(mh_tpose)
     mh_displacements = body_verts[mh_to_rigify] - mh_tpose
 
+    # For each garment vertex: use k nearest MH body vertices with distance weighting
+    # High K + post-smoothing for clean result
     mh_tree = cKDTree(mh_tpose)
-    K = 8
+    K = 16
     dists_k, indices_k = mh_tree.query(garment_verts, k=K)
 
     result = garment_verts.copy().astype(np.float64)
     for vi in range(len(garment_verts)):
-        v = garment_verts[vi]
-        x_abs = abs(v[0])
+        d = dists_k[vi]
+        idx = indices_k[vi]
+        w = 1.0 / (d + 1e-6)
+        w /= w.sum()
+        disp = np.zeros(3)
+        for ki in range(K):
+            disp += w[ki] * mh_displacements[idx[ki]]
+        result[vi] += disp
 
-        # Determine if this vertex is in the arm area (|X| > 0.15)
-        arm_side = None
-        if v[0] > 0.15 and 'L' in arm_rotations:
-            arm_side = 'L'
-        elif v[0] < -0.15 and 'R' in arm_rotations:
-            arm_side = 'R'
-
-        if arm_side:
-            # Arm: rotate around shoulder pivot
-            pivot, rot = arm_rotations[arm_side]
-            # Blend: more rotation further from torso
-            blend = min(1.0, (x_abs - 0.15) / 0.1)  # 0 at x=0.15, 1 at x=0.25+
-            rotated = rot.apply(v - pivot) + pivot
-            # Also add small displacement for position correction
-            d = dists_k[vi]
-            idx = indices_k[vi]
-            w = 1.0 / (d + 1e-6)
-            w /= w.sum()
-            disp = sum(w[ki] * mh_displacements[idx[ki]] for ki in range(K))
-            # Blend between displacement (torso) and rotation (arm)
-            result[vi] = v + disp * (1 - blend) + (rotated - v) * blend
-        else:
-            # Torso/legs: k-NN weighted displacement
-            d = dists_k[vi]
-            idx = indices_k[vi]
-            w = 1.0 / (d + 1e-6)
-            w /= w.sum()
-            disp = np.zeros(3)
-            for ki in range(K):
-                disp += w[ki] * mh_displacements[idx[ki]]
-            result[vi] += disp
-
-    logger.info('[T→A] Displaced %d garment verts (MH T-pose → Rigify A-pose)', len(result))
+    logger.info('[T→A] Displaced %d garment verts (MH T-pose → Rigify A-pose, K=%d)', len(result), K)
     return result.astype(np.float32)
 
 
