@@ -63,9 +63,22 @@
 
     /* Timeline */
     .studio-timeline-wrap {
-        height: 200px; min-height: 120px; max-height: 400px;
+        height: 200px; min-height: 120px; max-height: 60vh;
         background: var(--bg-secondary); border-top: 1px solid var(--border);
-        display: flex; flex-direction: column; resize: vertical; overflow: hidden;
+        display: flex; flex-direction: column; overflow: hidden;
+    }
+    .timeline-splitter {
+        height: 5px; cursor: ns-resize; background: var(--border);
+        flex-shrink: 0; position: relative;
+    }
+    .timeline-splitter:hover, .timeline-splitter.dragging {
+        background: #7c5cbf;
+    }
+    .timeline-splitter::after {
+        content: ''; position: absolute; left: 50%; top: 50%;
+        transform: translate(-50%, -50%);
+        width: 30px; height: 3px; border-radius: 2px;
+        background: rgba(255,255,255,0.3);
     }
     .timeline-header {
         height: 24px; background: var(--bg-card); border-bottom: 1px solid var(--border);
@@ -262,8 +275,10 @@
             <canvas id="studio-canvas"></canvas>
         </div>
 
+        <!-- Timeline Splitter -->
+        <div class="timeline-splitter" id="timeline-splitter"></div>
         <!-- Timeline -->
-        <div class="studio-timeline-wrap">
+        <div class="studio-timeline-wrap" id="studio-timeline-wrap">
             <div class="timeline-header">
                 <span>Timeline</span>
                 <span id="tl-zoom-label">Zoom: 100%</span>
@@ -455,4 +470,37 @@
 }
 </script>
 <script type="module" src="{% static 'viewer/bvh_studio/index.js' %}?t={% now 'U' %}"></script>
+<script>
+// Timeline splitter drag
+(function() {
+    const splitter = document.getElementById('timeline-splitter');
+    const tlWrap = document.getElementById('studio-timeline-wrap');
+    if (!splitter || !tlWrap) return;
+    let dragging = false, startY = 0, startH = 0;
+    splitter.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        startY = e.clientY;
+        startH = tlWrap.offsetHeight;
+        splitter.classList.add('dragging');
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const dy = startY - e.clientY;
+        const newH = Math.max(120, Math.min(window.innerHeight * 0.6, startH + dy));
+        tlWrap.style.height = newH + 'px';
+        window.dispatchEvent(new Event('resize'));
+    });
+    document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        splitter.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        window.dispatchEvent(new Event('resize'));
+    });
+})();
+</script>
 {% endblock %}

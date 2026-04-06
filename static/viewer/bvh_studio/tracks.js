@@ -128,6 +128,21 @@ export async function loadAudioFile(trackIdx) {
                 fadeOut: 0,
                 offset: 0,
             };
+            // Upload audio to server for persistence across refreshes
+            try {
+                const formData = new FormData();
+                formData.append('audio', file);
+                const uploadResp = await fetch('/api/studio/audio-upload/', { method: 'POST', body: formData });
+                const uploadData = await uploadResp.json();
+                if (uploadData.ok) {
+                    clip.data.audioUrl = uploadData.url;
+                    console.log(`[BVH Studio] Audio uploaded: ${uploadData.url}`);
+                } else {
+                    console.warn('[BVH Studio] Audio upload failed:', uploadData.error);
+                }
+            } catch (uploadErr) {
+                console.warn('[BVH Studio] Audio upload error:', uploadErr);
+            }
             track.clips.push(clip);
             fn.updateDuration();
             fn.renderTimeline();

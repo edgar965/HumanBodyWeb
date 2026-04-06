@@ -226,7 +226,14 @@ export function startAudioPlayback() {
         stopAudioTrack(track);
         const t = state.playheadFrame / state.project.fps;
         for (const clip of track.clips) {
-            if (clip.type !== 'audio' || !clip.data.audioBuffer) continue;
+            if (clip.type !== 'audio') continue;
+            if (!clip.data.audioBuffer) {
+                if (clip._needsReload && !clip._reloadWarned) {
+                    clip._reloadWarned = true;
+                    console.warn(`[Audio] "${clip.data?.fileName}" nicht geladen — bitte Audio-Datei erneut hinzufügen`);
+                }
+                continue;
+            }
             const clipStart = clip.startFrame / state.project.fps;
             const clipEnd = clipStart + clip.duration;
             if (t >= clipStart && t < clipEnd) {

@@ -51,7 +51,7 @@ export function buildProjectData() {
                     blendIn: c.blendIn, blendOut: c.blendOut,
                 };
                 if (c.type === 'camera_kf' || c.type === 'light_kf') cd.data = c.data;
-                else if (c.type === 'audio') cd.data = { fileName: c.data.fileName, audioDuration: c.data.audioDuration, volume: c.data.volume, fadeIn: c.data.fadeIn, fadeOut: c.data.fadeOut, offset: c.data.offset };
+                else if (c.type === 'audio') cd.data = { fileName: c.data.fileName, audioUrl: c.data.audioUrl, audioDuration: c.data.audioDuration, volume: c.data.volume, fadeIn: c.data.fadeIn, fadeOut: c.data.fadeOut, offset: c.data.offset };
                 return cd;
             });
             return td;
@@ -192,6 +192,29 @@ export async function restoreProjectData(data) {
             if (cd.data) clip.data = cd.data;
             track.clips.push(clip);
             if (clip.type === 'bvh') loadPromises.push(fn.loadClipAnimation(track, clip));
+            if (clip.type === 'audio' && clip.data?.audioUrl) {
+                loadPromises.push((async () => {
+                    try {
+                        if (!track.audioCtx) {
+                            track.audioCtx = state.project._audioCtx || (state.project._audioCtx = new (window.AudioContext || window.webkitAudioContext)());
+                            track.gainNode = track.audioCtx.createGain();
+                            track.gainNode.connect(track.audioCtx.destination);
+                        }
+                        const resp = await fetch(clip.data.audioUrl);
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const arrayBuf = await resp.arrayBuffer();
+                        clip.data.audioBuffer = await track.audioCtx.decodeAudioData(arrayBuf);
+                        clip._needsReload = false;
+                        console.log('[Restore] Audio reloaded:', clip.data.fileName);
+                    } catch (e) {
+                        console.warn('[Restore] Audio reload failed:', clip.data?.fileName, e);
+                        clip._needsReload = true;
+                    }
+                })());
+            } else if (clip.type === 'audio') {
+                clip._needsReload = true;
+                console.warn(`[Restore] Audio "${clip.data?.fileName}" has no server URL — needs manual reload`);
+            }
         }
     }
 

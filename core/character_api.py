@@ -5613,6 +5613,51 @@ def bvh_manage(request):
 
 
 @csrf_exempt
+@require_POST
+def studio_audio_upload(request):
+    """Upload audio file for BVH Studio project.
+
+    POST /api/studio/audio-upload/
+    Returns: { ok: true, url: '/media/studio_audio/xxx.mp3' }
+    """
+    log = logging.getLogger('core')
+
+    audio_file = request.FILES.get('audio')
+    if not audio_file:
+        return JsonResponse({'error': 'No audio file provided'}, status=400)
+
+    # Size check: 50 MB max
+    max_size = 50 * 1024 * 1024
+    if audio_file.size > max_size:
+        return JsonResponse({'error': f'File too large ({audio_file.size // (1024*1024)}MB). Max 50MB.'}, status=400)
+
+    # Extension whitelist
+    import pathlib
+    ext = pathlib.Path(audio_file.name).suffix.lower()
+    allowed = {'.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.webm'}
+    if ext not in allowed:
+        return JsonResponse({'error': f'Unsupported format: {ext}. Allowed: {", ".join(sorted(allowed))}'}, status=400)
+
+    # Save to media/studio_audio/ with unique name
+    dest_dir = os.path.join(settings.MEDIA_ROOT, 'studio_audio')
+    os.makedirs(dest_dir, exist_ok=True)
+
+    unique_name = f'{uuid.uuid4().hex}{ext}'
+    dest_path = os.path.join(dest_dir, unique_name)
+
+    try:
+        with open(dest_path, 'wb') as f:
+            for chunk in audio_file.chunks():
+                f.write(chunk)
+        url = f'/{settings.MEDIA_URL}studio_audio/{unique_name}'
+        log.info('[studio] Audio uploaded: %s (%d bytes) -> %s', audio_file.name, audio_file.size, unique_name)
+        return JsonResponse({'ok': True, 'url': url})
+    except Exception as e:
+        log.error('[studio] Audio upload failed: %s', e)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
 def studio_project_save(request):
     """Save BVH Studio project JSON to a file on disk.
 
