@@ -3210,6 +3210,8 @@ def app_settings_scene(request):
                 key = f'mh_default_{i}'
                 val = request.POST.get(key, '').strip()
                 prefs[key] = val
+            # T→A Displacement toggle
+            prefs['mh_tpose_displacement'] = '1' if request.POST.get('mh_tpose_displacement') else '0'
             s.ui_prefs = prefs
             s.save()
             messages.success(request, 'Settings saved.')

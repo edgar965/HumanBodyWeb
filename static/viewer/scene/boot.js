@@ -131,6 +131,7 @@ export async function init() {
                 const id = s.ui_prefs?.[`mh_default_${i}`];
                 if (id) window._mhDefaults.push(id);
             }
+            window._mhTposeDisplacement = s.ui_prefs?.mh_tpose_displacement ?? '1';
             if (s.default_anim_scene) state._defaultAnimUrl = s.default_anim_scene;
             const expanded = s.expanded_panels_scene;
             if (Array.isArray(expanded)) {
@@ -210,10 +211,9 @@ export async function init() {
             const poseId = poseMap[window._defaultPose] || window._defaultPose;
             try { await fn.applyPoseFromServer(poseId); } catch(e) { console.warn('[Pose] Default pose failed:', e); }
         }
-        // Auto-load MH default garments from settings
+        // Auto-load MH default garments AFTER animation has started (delay 3s)
         if (window._mhDefaults?.length > 0 && state.characters.size > 0 && !sessionStorage.getItem(SESSION_KEY)) {
-            const inst = state.characters.values().next().value;
-            if (inst) {
+            setTimeout(async () => {
                 for (const garmentId of window._mhDefaults) {
                     try {
                         state._selectedMHId = garmentId;
@@ -221,7 +221,7 @@ export async function init() {
                         console.log(`[MH Auto] Loaded: ${garmentId}`);
                     } catch(e) { console.warn(`[MH Auto] Failed: ${garmentId}`, e); }
                 }
-            }
+            }, 3000);
         }
     });
 }

@@ -491,6 +491,8 @@ async function _doMHProxyFit() {
     params.set('push_dist', _sliderVal('mh-push-dist') || '3');
     // Fit to MH body (best quality), server transforms T→A to match bind pose
     params.set('use_mh_body', '1');
+    // T→A displacement from settings (default: enabled)
+    params.set('tpose_displacement', window._mhTposeDisplacement ?? '1');
 
     try {
         const resp = await fetch(`/api/character/mh-proxy-fit/?${params}`);
@@ -522,15 +524,25 @@ async function _doMHProxyFit() {
         const metalness = _sliderVal('mh-metalness') / 100;
         const opacity = _sliderVal('mh-opacity') / 100;
 
-        // Use material color from .mhmat if available, otherwise UI color picker
+        // Use material color from .mhmat if available (skip if texture provides color)
         let matColor = c;
-        if (data.mat_color) {
+        if (data.mat_color && !data.has_texture) {
             matColor = new THREE.Color(data.mat_color[0], data.mat_color[1], data.mat_color[2]);
-            // Update color picker to show material color
             const colorEl = document.getElementById('mh-color');
             if (colorEl) colorEl.value = '#' + matColor.getHexString();
             const propColorEl = document.getElementById('prop-mh-color');
             if (propColorEl) propColorEl.value = '#' + matColor.getHexString();
+        } else if (data.has_texture) {
+            // With texture, use white as base color (texture provides the color)
+            matColor = new THREE.Color(1, 1, 1);
+            // Show dominant texture color in color picker
+            if (data.texture_color) {
+                const texHex = new THREE.Color(data.texture_color[0], data.texture_color[1], data.texture_color[2]);
+                const colorEl = document.getElementById('mh-color');
+                if (colorEl) colorEl.value = '#' + texHex.getHexString();
+                const propColorEl = document.getElementById('prop-mh-color');
+                if (propColorEl) propColorEl.value = '#' + texHex.getHexString();
+            }
         }
 
         const mat = new THREE.MeshStandardMaterial({
@@ -624,13 +636,21 @@ function _initPropMHControls() {
         const sel = _selectedMHMesh();
         if (sel) sel.mesh.material.color.set(colEl.value);
     });
-    // Transform sliders -- sync to asset tab + apply
+    // Transform sliders -- sync to asset tab + trigger refit on release
     for (const [propId, srcId] of [['prop-mh-stiffness','mh-stiffness'],['prop-mh-offset','mh-offset'],['prop-mh-scale','mh-scale'],['prop-mh-y-offset','mh-y-offset']]) {
         const el = document.getElementById(propId);
-        if (el) el.addEventListener('input', () => {
-            const src = document.getElementById(srcId);
-            if (src) { src.value = el.value; src.dispatchEvent(new Event('input')); }
-        });
+        if (el) {
+            // Sync value display while dragging
+            el.addEventListener('input', () => {
+                const src = document.getElementById(srcId);
+                if (src) src.value = el.value;
+            });
+            // Trigger refit on release
+            el.addEventListener('change', () => {
+                const src = document.getElementById(srcId);
+                if (src) { src.value = el.value; src.dispatchEvent(new Event('change')); }
+            });
+        }
     }
     // Push Outside from Eigenschaften tab
     _bindSlider('prop-mh-push-dist', 'prop-mh-push-dist-val', v => v + ' mm');
