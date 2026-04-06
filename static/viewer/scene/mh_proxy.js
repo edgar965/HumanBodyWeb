@@ -596,6 +596,72 @@ function _initPropMHControls() {
             if (src) { src.value = el.value; src.dispatchEvent(new Event('input')); }
         });
     }
+    // Push Outside from Eigenschaften tab
+    _bindSlider('prop-mh-push-dist', 'prop-mh-push-dist-val', v => v + ' mm');
+    const propPushBtn = document.getElementById('prop-mh-push');
+    if (propPushBtn) propPushBtn.addEventListener('click', async () => {
+        const inst = _selectedInst();
+        if (!inst) return;
+        const key = Object.keys(inst.clothMeshes || {}).find(k => k.startsWith('mh_'));
+        if (!key) return;
+        const mesh = inst.clothMeshes[key];
+        if (!mesh) return;
+
+        if (!inst._mhPrePush) inst._mhPrePush = {};
+        if (!inst._mhPrePush[key]) {
+            const pos = mesh.geometry.getAttribute('position');
+            inst._mhPrePush[key] = new Float32Array(pos.array);
+        }
+
+        const pos = mesh.geometry.getAttribute('position');
+        const threeVerts = new Float32Array(pos.array);
+        const blenderVerts = new Float32Array(threeVerts.length);
+        for (let i = 0; i < threeVerts.length; i += 3) {
+            blenderVerts[i] = threeVerts[i];
+            blenderVerts[i+1] = -threeVerts[i+2];
+            blenderVerts[i+2] = threeVerts[i+1];
+        }
+
+        const pushDist = parseFloat(document.getElementById('prop-mh-push-dist')?.value || '3');
+        const params = _charQueryParams(inst);
+        params.set('push_dist', pushDist);
+        params.set('use_mh_body', '0');
+
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(blenderVerts.buffer)));
+        try {
+            const resp = await fetch(`/api/character/mh-push-outside/?${params}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vertices: b64 }),
+            });
+            const data = await resp.json();
+            if (data.error) { console.warn('Push failed:', data.error); return; }
+
+            const newVerts = base64ToFloat32(data.vertices);
+            blenderToThreeCoords(newVerts);
+            pos.array.set(newVerts);
+            pos.needsUpdate = true;
+            mesh.geometry.computeBoundingSphere();
+            inst.garmentOrigPositions[key] = new Float32Array(newVerts);
+            console.log('[Prop] Push outside done');
+        } catch(e) { console.error('Push failed:', e); }
+    });
+    const propPushUndo = document.getElementById('prop-mh-push-undo');
+    if (propPushUndo) propPushUndo.addEventListener('click', () => {
+        const inst = _selectedInst();
+        if (!inst) return;
+        const key = Object.keys(inst.clothMeshes || {}).find(k => k.startsWith('mh_'));
+        if (!key || !inst._mhPrePush?.[key]) return;
+        const mesh = inst.clothMeshes[key];
+        if (!mesh) return;
+        const pos = mesh.geometry.getAttribute('position');
+        pos.array.set(inst._mhPrePush[key]);
+        pos.needsUpdate = true;
+        mesh.geometry.computeBoundingSphere();
+        inst.garmentOrigPositions[key] = new Float32Array(inst._mhPrePush[key]);
+        delete inst._mhPrePush[key];
+        console.log('[Prop] Push undone');
+    });
 }
 
 export { loadMHProxyUI, _selectedMHMesh, _renderMHList, _doMHProxyFit, _syncPropMHControls, _initPropMHControls };
