@@ -36,7 +36,12 @@ async function loadMHProxyUI() {
         if (state._syncingSliders) return;
         // Find selected MH ID from garment list or from existing cloth mesh
         if (!state._selectedMHId) {
-            const inst = _selectedInst();
+            // Try selected character first, then any character
+            let inst = _selectedInst();
+            if (!inst) {
+                const chars = state.characters;
+                if (chars?.size > 0) inst = chars.values().next().value;
+            }
             if (inst) {
                 const key = Object.keys(inst.clothMeshes || {}).find(k => k.startsWith('mh_'));
                 if (key) state._selectedMHId = key.slice(3);
@@ -516,14 +521,36 @@ async function _doMHProxyFit() {
         const roughness = _sliderVal('mh-roughness') / 100;
         const metalness = _sliderVal('mh-metalness') / 100;
         const opacity = _sliderVal('mh-opacity') / 100;
+
+        // Use material color from .mhmat if available, otherwise UI color picker
+        let matColor = c;
+        if (data.mat_color) {
+            matColor = new THREE.Color(data.mat_color[0], data.mat_color[1], data.mat_color[2]);
+            // Update color picker to show material color
+            const colorEl = document.getElementById('mh-color');
+            if (colorEl) colorEl.value = '#' + matColor.getHexString();
+            const propColorEl = document.getElementById('prop-mh-color');
+            if (propColorEl) propColorEl.value = '#' + matColor.getHexString();
+        }
+
         const mat = new THREE.MeshStandardMaterial({
-            color: c, roughness, metalness, side: THREE.DoubleSide,
+            color: matColor, roughness, metalness, side: THREE.DoubleSide,
             polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
             transparent: opacity < 1, opacity,
         });
 
+        // Load diffuse texture if available
+        if (data.has_texture && data.texture_name) {
+            const texUrl = `/api/character/garment/texture/${encodeURIComponent(state._selectedMHId)}/${encodeURIComponent(data.texture_name)}/`;
+            new THREE.TextureLoader().load(texUrl, (tex) => {
+                tex.colorSpace = THREE.SRGBColorSpace;
+                mat.map = tex;
+                mat.needsUpdate = true;
+            });
+        }
+
         const mesh = _skinifyMesh(geo, mat, inst, data);
-        console.log(`[MH] mesh type: ${mesh.type}, isSkinned: ${mesh.isSkinnedMesh}, hasSkeleton: ${!!mesh.skeleton}`);
+        console.log(`[MH] mesh type: ${mesh.type}, color: ${matColor.getHexString()}, texture: ${data.has_texture || false}`);
         inst.clothMeshes[key] = mesh;
         inst.group.add(mesh);
 

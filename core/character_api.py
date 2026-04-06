@@ -4218,18 +4218,31 @@ def mh_proxy_fit(request):
     garment_verts = garment_verts_raw.astype(np.float32)
     vert_normals = proxy.compute_normals(garment_verts_raw).astype(np.float32)
 
-    color = (
-        float(request.GET.get('color_r', 0.3)),
-        float(request.GET.get('color_g', 0.35)),
-        float(request.GET.get('color_b', 0.5)),
-    )
+    # Parse material color from .mhmat file if available
+    mat_color = None
+    import glob as _glob
+    mhmat_files = _glob.glob(os.path.join(garment_dir, '*.mhmat'))
+    if mhmat_files:
+        try:
+            with open(mhmat_files[0]) as mf:
+                for line in mf:
+                    if line.strip().startswith('diffuseColor'):
+                        parts = line.strip().split()
+                        if len(parts) >= 4:
+                            mat_color = [float(parts[1]), float(parts[2]), float(parts[3])]
+        except: pass
+
+    color_r = float(request.GET.get('color_r', ''))  if request.GET.get('color_r') else (mat_color[0] if mat_color else 0.3)
+    color_g = float(request.GET.get('color_g', ''))  if request.GET.get('color_g') else (mat_color[1] if mat_color else 0.35)
+    color_b = float(request.GET.get('color_b', ''))  if request.GET.get('color_b') else (mat_color[2] if mat_color else 0.5)
+    color = (color_r, color_g, color_b)
 
     # Encode response — skin weights use body_verts (A-pose, matches bind pose)
     verts_f32 = garment_verts.astype(np.float32)
     normals_f32 = vert_normals.astype(np.float32)
     tris_u32 = triangles.astype(np.uint32) if len(triangles) > 0 else np.zeros((0, 3), dtype=np.uint32)
 
-    return JsonResponse({
+    resp = {
         'vertex_count': int(len(garment_verts)),
         'vertices': base64.b64encode(verts_f32.tobytes()).decode(),
         'normals': base64.b64encode(normals_f32.tobytes()).decode(),
@@ -4240,7 +4253,23 @@ def mh_proxy_fit(request):
         'skin_weights': base64.b64encode(
             _compute_garment_skin_weights(garment_verts, body_verts, gender)
         ).decode() if hasattr(garment_verts, 'shape') else '',
-    })
+    }
+    if mat_color:
+        resp['mat_color'] = mat_color
+    # Check for diffuse texture
+    if mhmat_files:
+        try:
+            with open(mhmat_files[0]) as mf:
+                for line in mf:
+                    if line.strip().startswith('diffuseTexture'):
+                        tex_name = line.strip().split(None, 1)[1].strip()
+                        tex_path = os.path.join(garment_dir, tex_name)
+                        if os.path.isfile(tex_path):
+                            resp['has_texture'] = True
+                            resp['texture_name'] = tex_name
+                        break
+        except: pass
+    return JsonResponse(resp)
 
 
 def _tpose_to_apose(garment_verts, body_verts, gender='female'):
@@ -4285,6 +4314,9 @@ def _tpose_to_apose(garment_verts, body_verts, gender='female'):
     K = 16
     dists_k, indices_k = mh_tree.query(garment_verts, k=K)
 
+    # Also get single nearest distance for blend factor
+    dists_nearest, _ = mh_tree.query(garment_verts, k=1)
+
     result = garment_verts.copy().astype(np.float64)
     for vi in range(len(garment_verts)):
         d = dists_k[vi]
@@ -4294,7 +4326,12 @@ def _tpose_to_apose(garment_verts, body_verts, gender='female'):
         disp = np.zeros(3)
         for ki in range(K):
             disp += w[ki] * mh_displacements[idx[ki]]
-        result[vi] += disp
+
+        # Reduce displacement for vertices very far from MH body (free-hanging parts)
+        # Close to body (<8cm): full displacement. Far (>20cm): no displacement.
+        nearest_dist = dists_nearest[vi]
+        blend = max(0.0, min(1.0, 1.0 - (nearest_dist - 0.08) / 0.12))
+        result[vi] += disp * blend
 
     logger.info('[T→A] Displaced %d garment verts (MH T-pose → Rigify A-pose, K=%d)', len(result), K)
     return result.astype(np.float32)
@@ -4815,6 +4852,21 @@ def garment_thumbnail(request, garment_path):
             )
 
     return HttpResponseNotFound('No thumbnail')
+
+
+@require_GET
+def garment_texture(request, garment_id, filename):
+    """Serve garment texture file (PNG) from the garment cache directory."""
+    cache_dir = os.path.join(str(settings.HUMANBODY_DATA_DIR), '..', 'garment_library', '.cache')
+    garment_name = garment_id.split('/')[-1] if '/' in garment_id else garment_id
+    safe_name = os.path.basename(filename)
+    if '..' in safe_name or '..' in garment_name:
+        return HttpResponseNotFound('Invalid path')
+    tex_path = os.path.join(cache_dir, garment_name, safe_name)
+    if not os.path.isfile(tex_path):
+        return HttpResponseNotFound('Texture not found')
+    content_type = 'image/png' if safe_name.endswith('.png') else 'image/jpeg'
+    return FileResponse(open(tex_path, 'rb'), content_type=content_type)
 
 
 # =========================================================================

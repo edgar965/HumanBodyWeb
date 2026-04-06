@@ -155,6 +155,7 @@ urlpatterns = [
     path('api/character/garment/download/available/', character_api.garment_download_available, name='garment_download_available'),
     path('api/character/garment/download/', character_api.garment_download, name='garment_download'),
     path('api/character/garment/thumb/<path:garment_path>/', character_api.garment_thumbnail, name='garment_thumbnail'),
+    path('api/character/garment/texture/<path:garment_id>/<str:filename>/', character_api.garment_texture, name='garment_texture'),
 
     # SMPL Garments
     path('humanbody/test-smpl/', character_api.smpl_test_page, name='test_smpl'),
