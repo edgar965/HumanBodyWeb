@@ -4200,8 +4200,19 @@ def mh_proxy_fit(request):
         garment_verts_raw = _tpose_to_apose(garment_verts_raw, body_verts, gender)
         # Note: T→A quality is limited by MH/Rigify body shape differences.
 
-    logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s stiffness=%.2f offset=%.3f scale=%.2f y_off=%.3f verts=%d',
-                garment_id, body_type, use_mh_body, stiffness, offset, scale, y_offset, len(garment_verts_raw))
+    # Auto push-outside: push garment vertices outside the body surface
+    push_dist = float(request.GET.get('push_dist', 3)) / 1000.0  # mm → meters
+    if push_dist > 0.0001:
+        from GarmentFitter.fitter import _push_outside_body, _compute_vertex_normals
+        mesh_data = _get_mesh_data(gender)
+        body_normals = _compute_vertex_normals(body_verts, mesh_data.faces)
+        garment_verts_raw = _push_outside_body(
+            garment_verts_raw.astype(np.float64), body_verts,
+            min_dist=push_dist, body_normals=body_normals,
+        )
+
+    logger.info('[MH-Proxy] garment=%s body_type=%s use_mh_body=%s stiffness=%.2f push=%.1fmm verts=%d',
+                garment_id, body_type, use_mh_body, stiffness, push_dist*1000, len(garment_verts_raw))
 
     triangles = proxy.triangulate_faces()
     garment_verts = garment_verts_raw.astype(np.float32)

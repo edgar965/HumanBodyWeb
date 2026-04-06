@@ -45,6 +45,17 @@
 </div>
 
 <div class="settings-section">
+    <h3>Standard-Projekt</h3>
+    <div class="settings-row">
+        <label>Projekt beim Start laden:</label>
+        <select name="studio_default_project" id="studio_default_project">
+            <option value="">(Kein Projekt)</option>
+        </select>
+        <span class="hint">Wird automatisch beim &Ouml;ffnen von BVH Studio geladen</span>
+    </div>
+</div>
+
+<div class="settings-section">
     <h3>Timeline</h3>
     <div class="settings-row">
         <label>Standard FPS:</label>
@@ -122,5 +133,32 @@ document.getElementById('studio-settings-form').addEventListener('submit', async
         alert('Fehler beim Speichern.');
     }
 });
+
+// Populate project dropdown
+(async () => {
+    const sel = document.getElementById('studio_default_project');
+    if (!sel) return;
+    const saved = "{{ prefs.studio_default_project|default:'TechnoDance'|escapejs }}";
+    try {
+        const prefsResp = await fetch('/api/ui-prefs/');
+        const prefs = await prefsResp.json();
+        const dir = prefs.studio_project_path || '';
+        const resp = await fetch(`/api/studio/project-list/?dir=${encodeURIComponent(dir)}`);
+        const data = await resp.json();
+        if (data.files) {
+            for (const f of data.files) {
+                const name = f.name.replace(/\.studio\.json$/i, '');
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                if (name === saved) opt.selected = true;
+                sel.appendChild(opt);
+            }
+        }
+        if (!sel.value && saved) sel.value = saved;
+    } catch(e) {
+        console.warn('Failed to load project list:', e);
+    }
+})();
 </script>
 {% endblock %}

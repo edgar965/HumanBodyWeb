@@ -34,11 +34,19 @@ async function loadMHProxyUI() {
     let _mhRefitTimer = null;
     function _debouncedMHRefit() {
         if (state._syncingSliders) return;
+        // Find selected MH ID from garment list or from existing cloth mesh
+        if (!state._selectedMHId) {
+            const inst = _selectedInst();
+            if (inst) {
+                const key = Object.keys(inst.clothMeshes || {}).find(k => k.startsWith('mh_'));
+                if (key) state._selectedMHId = key.slice(3);
+            }
+        }
         if (!state._selectedMHId) return;
         clearTimeout(_mhRefitTimer);
         _mhRefitTimer = setTimeout(() => _doMHProxyFit(), 400);
     }
-    for (const id of ['mh-stiffness', 'mh-offset', 'mh-scale', 'mh-y-offset']) {
+    for (const id of ['mh-stiffness', 'mh-offset', 'mh-scale', 'mh-y-offset', 'mh-push-dist']) {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', _debouncedMHRefit);
     }
@@ -475,6 +483,7 @@ async function _doMHProxyFit() {
     params.set('stiffness', (_sliderVal('mh-stiffness') / 100).toFixed(2));
     params.set('scale', (_sliderVal('mh-scale') / 100).toFixed(3));
     params.set('y_offset', (_sliderVal('mh-y-offset') / 1000).toFixed(4));
+    params.set('push_dist', _sliderVal('mh-push-dist') || '3');
     // Fit to MH body (best quality), server transforms T→A to match bind pose
     params.set('use_mh_body', '1');
 

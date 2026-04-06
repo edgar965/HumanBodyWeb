@@ -120,6 +120,29 @@ async function init() {
     // Restore session state (if returning from another page)
     const restored = await restoreSessionState();
 
+    // Load default project from settings (if no session was restored)
+    if (!restored && state.project.tracks.length === 0) {
+        try {
+            const prefsResp = await fetch('/api/ui-prefs/');
+            const prefs = await prefsResp.json();
+            const defaultProject = prefs.studio_default_project;
+            const projectDir = prefs.studio_project_path || '';
+            if (defaultProject) {
+                const listResp = await fetch(`/api/studio/project-list/?dir=${encodeURIComponent(projectDir)}`);
+                const listData = await listResp.json();
+                const match = (listData.files || []).find(f => f.name.replace(/\.studio\.json$/i, '') === defaultProject);
+                if (match) {
+                    const loadResp = await fetch(`/api/studio/project-load/?path=${encodeURIComponent(match.path)}`);
+                    const projectData = await loadResp.json();
+                    if (projectData.name) {
+                        await restoreProjectData(projectData);
+                        console.log(`[BVH Studio] Default project loaded: ${defaultProject}`);
+                    }
+                }
+            }
+        } catch(e) { console.warn('[BVH Studio] Default project load failed:', e); }
+    }
+
     // Start render loop
     animate();
 
