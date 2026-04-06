@@ -211,31 +211,128 @@ export function setupTimeline() {
     // Store mouse X for "move playhead here" context menu action
     let _ctxMouseX = 0;
 
+    const modelCtxMenu = document.getElementById('model-context-menu');
+
+    function _setModelPreset(trackIdx, preset) {
+        const track = state.project.tracks[trackIdx];
+        if (!track || track.type !== 'model') return;
+        // Find the clip at the current playhead or the selected clip
+        const t = state.playheadFrame / state.project.fps;
+        let clip = null;
+        if (state.selectedClipIdx >= 0 && state.selectedTrackIdx === trackIdx) {
+            clip = track.clips[state.selectedClipIdx];
+        } else {
+            for (const c of track.clips) {
+                const cs = c.startFrame / state.project.fps;
+                const ce = cs + c.duration;
+                if (t >= cs && t < ce) { clip = c; break; }
+            }
+        }
+        if (!clip) {
+            // No clip at playhead — create one
+            const Clip = track.clips[0]?.constructor;
+            if (!Clip) return;
+            clip = new Clip(null, preset, Math.max(300, state.project.duration * state.project.fps), state.project.fps);
+            clip.type = 'model';
+            clip.startFrame = 0;
+            clip.data = { preset, bodyType: 'Female_Caucasian' };
+            track.clips.push(clip);
+        } else {
+            clip.data = clip.data || {};
+            clip.data.preset = preset;
+            clip.name = preset;
+        }
+        // Force model reload on next playhead
+        track._currentPreset = null;
+        fn.applyPlayhead();
+        fn.renderTimeline();
+        fn.updateProperties();
+        console.log(`[BVH Studio] Model preset changed to: ${preset}`);
+    }
+    let _modelPresetsFetched = false;
+
     tlCanvas.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         const rect = tlCanvas.getBoundingClientRect();
         _ctxMouseX = e.clientX - rect.left;
-        const hit = hitTestClip(_ctxMouseX, e.clientY - rect.top);
+        const my = e.clientY - rect.top;
+        const hit = hitTestClip(_ctxMouseX, my);
+
+        // Determine which track the mouse is on
+        const trackIdx = Math.floor((my - RULER_HEIGHT) / TRACK_HEIGHT);
+        const track = state.project.tracks[trackIdx];
+
         if (hit) {
             state.selectedTrackIdx = hit.trackIdx;
             state.selectedClipIdx = hit.clipIdx;
             fn.updateProperties();
             renderTimeline();
         }
-        // Show context menu (both for clip and empty area)
+
+        // Use model context menu for model tracks
+        if (track && track.type === 'model') {
+            ctxMenu.style.display = 'none';
+            // Populate preset list if not done
+            if (!_modelPresetsFetched) {
+                _modelPresetsFetched = true;
+                fetch('/api/character/models/').then(r => r.json()).then(data => {
+                    const list = document.getElementById('model-preset-list');
+                    list.innerHTML = '';
+                    for (const p of (data.presets || [])) {
+                        const item = document.createElement('div');
+                        item.className = 'ctx-item';
+                        item.dataset.action = 'ctx-model-preset';
+                        item.dataset.preset = p.name;
+                        item.innerHTML = `<i class="fas fa-user" style="width:16px;color:#e91e63;"></i> ${p.label || p.name}`;
+                        list.appendChild(item);
+                    }
+                    // Bind click handlers
+                    list.querySelectorAll('.ctx-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            modelCtxMenu.style.display = 'none';
+                            _setModelPreset(trackIdx, item.dataset.preset);
+                        });
+                    });
+                });
+            }
+            // Highlight current preset
+            const currentPreset = hit ? track.clips[hit.clipIdx]?.data?.preset : null;
+            modelCtxMenu.querySelectorAll('#model-preset-list .ctx-item').forEach(item => {
+                item.style.fontWeight = item.dataset.preset === currentPreset ? 'bold' : '';
+                item.style.color = item.dataset.preset === currentPreset ? '#e91e63' : '';
+            });
+            // Bind playhead/split/delete for model menu
+            modelCtxMenu.querySelectorAll('.ctx-item[data-action]').forEach(item => {
+                item.onclick = () => {
+                    modelCtxMenu.style.display = 'none';
+                    if (item.dataset.action === 'ctx-playhead') setPlayheadFromMouse(_ctxMouseX);
+                    else if (item.dataset.action === 'ctx-split') fn.splitClipAtPlayhead();
+                    else if (item.dataset.action === 'ctx-delete') fn.deleteSelectedClip();
+                };
+            });
+            modelCtxMenu.style.display = '';
+            modelCtxMenu.style.left = e.clientX + 'px';
+            const menuH = modelCtxMenu.offsetHeight || 300;
+            modelCtxMenu.style.top = Math.min(e.clientY, window.innerHeight - menuH - 10) + 'px';
+            return;
+        }
+
+        // Normal context menu for other tracks
+        modelCtxMenu.style.display = 'none';
         ctxMenu.style.display = '';
         ctxMenu.style.left = e.clientX + 'px';
-        // Prevent menu from going below viewport
         const menuH = ctxMenu.offsetHeight || 200;
         const maxY = window.innerHeight - menuH - 10;
         ctxMenu.style.top = Math.min(e.clientY, maxY) + 'px';
-        // Show/hide clip-specific items
         ctxMenu.querySelectorAll('.ctx-item[data-action^="ctx-"]').forEach(item => {
             if (item.dataset.action === 'ctx-playhead') item.style.display = '';
             else item.style.display = hit ? '' : 'none';
         });
     });
-    document.addEventListener('click', () => { if (ctxMenu) ctxMenu.style.display = 'none'; });
+    document.addEventListener('click', () => {
+        if (ctxMenu) ctxMenu.style.display = 'none';
+        if (modelCtxMenu) modelCtxMenu.style.display = 'none';
+    });
 
     ctxMenu?.querySelectorAll('.ctx-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -413,7 +510,20 @@ export function renderTimeline() {
                 // Clip label
                 tlCtx.fillStyle = '#fff';
                 tlCtx.font = '10px sans-serif';
-                tlCtx.fillText(clip.name, cx + 4, cy + ch / 2 + 3, cw - 8);
+                if (clip.type === 'model' && clip.data?.preset) {
+                    // Model clip: show person icon + preset name
+                    const presetName = clip.data.preset;
+                    const maxLen = Math.max(3, Math.floor((cw - 24) / 6));
+                    const label = presetName.length > maxLen ? presetName.substring(0, maxLen) + '…' : presetName;
+                    // Person icon (Unicode)
+                    tlCtx.font = '12px sans-serif';
+                    tlCtx.fillText('👤', cx + 3, cy + ch / 2 + 4);
+                    // Preset name
+                    tlCtx.font = 'bold 10px sans-serif';
+                    tlCtx.fillText(label, cx + 18, cy + ch / 2 + 3, cw - 22);
+                } else {
+                    tlCtx.fillText(clip.name, cx + 4, cy + ch / 2 + 3, cw - 8);
+                }
             }
         }
     }
@@ -462,7 +572,35 @@ export function updateTrackHeaders() {
             e.preventDefault();
             fn.selectTrack(i);
             const ctx = document.getElementById('track-context-menu');
-            if (ctx) { ctx.style.display = ''; ctx.style.left = e.clientX + 'px'; ctx.style.top = e.clientY + 'px'; }
+            if (!ctx) return;
+            // Show/hide link section for model tracks
+            const linkSection = document.getElementById('track-ctx-link-section');
+            const linkList = document.getElementById('track-ctx-link-list');
+            if (track.type === 'model' && linkSection && linkList) {
+                linkSection.style.display = '';
+                linkList.innerHTML = '';
+                state.project.tracks.forEach((t, ti) => {
+                    if (t.type !== 'bvh') return;
+                    const item = document.createElement('div');
+                    item.className = 'ctx-item';
+                    const isLinked = track._linkedAnimIdx === ti;
+                    item.innerHTML = `<i class="fas ${isLinked ? 'fa-check' : 'fa-running'}" style="width:16px;color:${isLinked ? '#4caf50' : '#666'};"></i> ${t.name}`;
+                    item.style.fontWeight = isLinked ? 'bold' : '';
+                    item.addEventListener('click', () => {
+                        track._linkedAnimIdx = ti;
+                        track._currentPreset = null;
+                        fn.applyPlayhead();
+                        ctx.style.display = 'none';
+                    });
+                    linkList.appendChild(item);
+                });
+            } else if (linkSection) {
+                linkSection.style.display = 'none';
+            }
+            ctx.style.display = '';
+            ctx.style.left = e.clientX + 'px';
+            const menuH = ctx.offsetHeight || 200;
+            ctx.style.top = Math.min(e.clientY, window.innerHeight - menuH - 10) + 'px';
         });
         // Drop target
         el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop-target'); });

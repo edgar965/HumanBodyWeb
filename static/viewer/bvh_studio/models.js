@@ -7,7 +7,7 @@ import { state } from './state.js';
 export class Track {
     constructor(name, preset = 'FemaleGarment', bodyType = 'Female_Caucasian') {
         this.name = name;
-        this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio'
+        this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio' | 'model'
         this.preset = preset;
         this.bodyType = bodyType;
         this.clips = [];

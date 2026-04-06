@@ -179,15 +179,16 @@
     <div class="sep"></div>
     <!-- Track dropdown -->
     <div class="toolbar-dropdown" id="track-dropdown">
-        <button id="btn-add-track" title="Track hinzufuegen"><i class="fas fa-plus"></i> Track <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
+        <button id="btn-add-track" title="Hinzufuegen"><i class="fas fa-plus"></i> Hinzufuegen <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
         <div class="toolbar-dropdown-menu">
-            <div class="toolbar-dd-item" id="dd-add-bvh"><i class="fas fa-running" style="width:16px;"></i> BVH Track</div>
-            <div class="toolbar-dd-item" id="dd-add-camera"><i class="fas fa-video" style="width:16px;color:#00bcd4;"></i> Kamera Track</div>
-            <div class="toolbar-dd-item" id="dd-add-light"><i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht Track</div>
-            <div class="toolbar-dd-item" id="dd-add-audio"><i class="fas fa-music" style="width:16px;color:#4caf50;"></i> Audio Track</div>
+            <div class="toolbar-dd-item" id="dd-add-bvh"><i class="fas fa-running" style="width:16px;"></i> Animation</div>
+            <div class="toolbar-dd-item" id="dd-add-model"><i class="fas fa-user" style="width:16px;color:#e91e63;"></i> Modell</div>
+            <div class="toolbar-dd-item" id="dd-add-camera"><i class="fas fa-video" style="width:16px;color:#00bcd4;"></i> Kamera</div>
+            <div class="toolbar-dd-item" id="dd-add-light"><i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht</div>
+            <div class="toolbar-dd-item" id="dd-add-audio"><i class="fas fa-music" style="width:16px;color:#4caf50;"></i> Audio</div>
         </div>
     </div>
-    <button id="btn-delete-track" title="Track loeschen"><i class="fas fa-trash"></i></button>
+    <button id="btn-delete-track" title="Loeschen"><i class="fas fa-trash"></i></button>
     <div class="sep"></div>
     <button id="btn-undo" title="Undo (Ctrl+Shift+U)" onclick="window.__studioUndo && window.__studioUndo()"><i class="fas fa-undo"></i></button>
     <button id="btn-redo" title="Redo" onclick="window.__studioRedo && window.__studioRedo()"><i class="fas fa-redo"></i></button>
@@ -253,7 +254,7 @@
 
     <!-- Library context menus -->
     <div class="lib-ctx" id="lib-ctx-file" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-        <div class="lib-ctx-item" data-action="add" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-plus" style="width:16px;"></i> Zum Track hinzufuegen</div>
+        <div class="lib-ctx-item" data-action="add" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-plus" style="width:16px;"></i> Zur Animation hinzufuegen</div>
         <div class="lib-ctx-item" data-action="preview" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-eye" style="width:16px;"></i> Vorschau (A)</div>
         <div class="lib-ctx-item" data-action="copy" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-copy" style="width:16px;"></i> Kopieren</div>
         <div style="height:1px;background:var(--border);margin:4px 0;"></div>
@@ -322,7 +323,7 @@
         </div>
         <div id="props-tab-props" class="props-tab-content active">
             <div id="props-content">
-                <div style="color:var(--text-muted);font-size:0.8rem;">Track oder Clip auswaehlen</div>
+                <div style="color:var(--text-muted);font-size:0.8rem;">Animation oder Clip auswaehlen</div>
             </div>
         </div>
         <div id="props-tab-tools" class="props-tab-content">
@@ -438,12 +439,30 @@
     <div class="ctx-item" data-action="ctx-ground"><i class="fas fa-shoe-prints" style="width:16px;"></i> Bodenniveau</div>
 </div>
 
-<!-- Track Context Menu -->
-<div id="track-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:160px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-    <div class="ctx-item" id="track-ctx-rename"><i class="fas fa-pen" style="width:16px;"></i> Track umbenennen</div>
-    <div class="ctx-item" id="track-ctx-mute"><i class="fas fa-volume-mute" style="width:16px;"></i> Mute/Unmute</div>
+<!-- Model Context Menu (for model track clips) -->
+<div id="model-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt" style="width:16px;"></i> Playhead hierher</div>
     <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" id="track-ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> Track l&ouml;schen</div>
+    <div style="padding:4px 12px;font-size:0.7rem;color:var(--text-muted);"><i class="fas fa-user" style="width:16px;color:#e91e63;"></i> Modell w&auml;hlen:</div>
+    <div id="model-preset-list" style="max-height:300px;overflow-y:auto;">
+        <!-- Populated dynamically -->
+    </div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+    <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut" style="width:16px;"></i> Split an Playhead</div>
+    <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen</div>
+</div>
+
+<!-- Track Context Menu -->
+<div id="track-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="ctx-item" id="track-ctx-rename"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen</div>
+    <div class="ctx-item" id="track-ctx-mute"><i class="fas fa-volume-mute" style="width:16px;"></i> Mute/Unmute</div>
+    <div id="track-ctx-link-section" style="display:none;">
+        <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+        <div style="padding:4px 12px;font-size:0.7rem;color:var(--text-muted);"><i class="fas fa-link" style="width:16px;"></i> Zuordnung:</div>
+        <div id="track-ctx-link-list"></div>
+    </div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+    <div class="ctx-item" id="track-ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen</div>
 </div>
 <style>
 .ctx-item { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; }
@@ -477,6 +496,9 @@
     const tlWrap = document.getElementById('studio-timeline-wrap');
     if (!splitter || !tlWrap) return;
     let dragging = false, startY = 0, startH = 0;
+    // Restore saved height
+    const savedH = localStorage.getItem('bvh_studio_timeline_height');
+    if (savedH) tlWrap.style.height = savedH + 'px';
     splitter.addEventListener('mousedown', (e) => {
         e.preventDefault();
         dragging = true;
@@ -499,6 +521,7 @@
         splitter.classList.remove('dragging');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
+        localStorage.setItem('bvh_studio_timeline_height', tlWrap.offsetHeight);
         window.dispatchEvent(new Event('resize'));
     });
 })();

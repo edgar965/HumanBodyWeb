@@ -13,6 +13,7 @@ export const TRACK_COLORS = {
     camera: '#00bcd4',
     light: '#ffc107',
     audio: '#4caf50',
+    model: '#e91e63',
 };
 
 export const TRACK_ICONS = {
@@ -20,6 +21,7 @@ export const TRACK_ICONS = {
     camera: 'fa-video',
     light: 'fa-lightbulb',
     audio: 'fa-music',
+    model: 'fa-user',
 };
 
 export const state = {

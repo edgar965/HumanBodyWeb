@@ -16,16 +16,49 @@ import { generateRigBoneMesh } from '../model_generator.js';
 
 const ss = sharedState;
 
-export function addTrack(name) {
+export function addTrack(name, _skipModelTrack) {
+    const bvhCount = state.project.tracks.filter(t => t.type === 'bvh').length;
     const track = new Track(
-        name || `Track ${state.project.tracks.length + 1}`,
+        name || `Animation ${bvhCount + 1}`,
         state.project.defaultModel || 'Rig2',
         state.project.defaultBodyType || 'Female_Caucasian'
     );
     state.project.tracks.push(track);
     state.scene.add(track.group);
+    const bvhTrackIdx = state.project.tracks.length - 1;
+
+    // Auto-create a linked model track below the BVH track (unless restoring)
+    if (!_skipModelTrack) {
+        const modelTrack = addModelTrack();
+        modelTrack._linkedAnimIdx = bvhTrackIdx;
+        // Add default model clip spanning entire duration
+        const presetName = 'Rig1';
+        const modelFrames = 60 * state.project.fps;  // 1 minute
+        const defaultClip = new Clip(null, presetName, modelFrames, state.project.fps);
+        defaultClip.type = 'model';
+        defaultClip.startFrame = 0;
+        defaultClip.data = { preset: presetName, bodyType: state.project.defaultBodyType || 'Female_Caucasian' };
+        modelTrack.clips.push(defaultClip);
+    }
+
     fn.updateTrackHeaders();
-    selectTrack(state.project.tracks.length - 1);
+    fn.renderTimeline();
+    selectTrack(bvhTrackIdx);
+    return track;
+}
+
+export function addModelTrack(name) {
+    const idx = state.project.tracks.length;
+    const track = new Track(name || `Modell ${state.project.tracks.filter(t => t.type === 'model').length + 1}`);
+    track.type = 'model';
+    track.color = TRACK_COLORS.model;
+    track.muted = false;
+    track._currentPreset = null;
+    track._linkedAnimIdx = -1;
+    state.project.tracks.push(track);
+    fn.updateTrackHeaders();
+    fn.renderTimeline();
+    selectTrack(idx);
     return track;
 }
 
@@ -161,6 +194,12 @@ export function removeTrack(idx) {
     pushUndo('Track loeschen');
     const track = state.project.tracks[idx];
 
+    // If removing a model track, hide linked animation track's mesh
+    if (track.type === 'model' && track._linkedAnimIdx >= 0) {
+        const animTrack = state.project.tracks[track._linkedAnimIdx];
+        if (animTrack && animTrack.mesh) animTrack.mesh.visible = false;
+    }
+
     // Stop mixer
     if (track.mixer) {
         track.mixer.stopAllAction();
@@ -191,6 +230,13 @@ export function removeTrack(idx) {
     if (track.type === 'audio') fn.stopAudioTrack(track);
 
     state.project.tracks.splice(idx, 1);
+    // Update _linkedAnimIdx on model tracks after removal
+    for (const t of state.project.tracks) {
+        if (t.type === 'model' && t._linkedAnimIdx >= 0) {
+            if (t._linkedAnimIdx === idx) t._linkedAnimIdx = -1;
+            else if (t._linkedAnimIdx > idx) t._linkedAnimIdx--;
+        }
+    }
     if (state.selectedTrackIdx >= state.project.tracks.length) state.selectedTrackIdx = state.project.tracks.length - 1;
     state.selectedClipIdx = -1;
     fn.updateTrackHeaders();
@@ -314,6 +360,21 @@ export function buildClipFromData(data, skel) {
         }
     }
     return new THREE.AnimationClip('clip', data.duration, tracks);
+}
+
+function _shouldTrackBeVisible(track) {
+    // Check if any model track at current playhead links to this track and has an active preset
+    const trackIdx = state.project.tracks.indexOf(track);
+    const t = state.playheadFrame / state.project.fps;
+    for (const mt of state.project.tracks) {
+        if (mt.type !== 'model' || mt._linkedAnimIdx !== trackIdx) continue;
+        for (const clip of mt.clips) {
+            const cs = clip.startFrame / state.project.fps;
+            const ce = cs + clip.duration;
+            if (t >= cs && t < ce && clip.data?.preset) return true;
+        }
+    }
+    return false;
 }
 
 export async function loadTrackCharacter(track) {
@@ -451,6 +512,17 @@ export function deleteSelectedClip() {
 
     track.clips.splice(state.selectedClipIdx, 1);
     state.selectedClipIdx = -1;
+
+    // If a model clip was deleted, hide the linked animation track's mesh
+    if (clip.type === 'model' && track.type === 'model') {
+        track._currentPreset = null;
+        const animIdx = track._linkedAnimIdx;
+        if (animIdx >= 0 && animIdx < state.project.tracks.length) {
+            const animTrack = state.project.tracks[animIdx];
+            if (animTrack.mesh) animTrack.mesh.visible = false;
+        }
+    }
+
     fn.updateDuration();
     fn.renderTimeline();
     fn.updateProperties();
@@ -526,6 +598,7 @@ export function splitClipAtPlayhead() {
 
 // Register functions in registry
 fn.addTrack = addTrack;
+fn.addModelTrack = addModelTrack;
 fn.addSpecialTrack = addSpecialTrack;
 fn.addClipToTrack = addClipToTrack;
 fn.addCameraKeyframe = addCameraKeyframe;

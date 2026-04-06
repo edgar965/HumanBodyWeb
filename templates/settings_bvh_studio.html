@@ -8,19 +8,6 @@
 {% csrf_token %}
 
 <div class="settings-section">
-    <h3>Standard-Modell</h3>
-    <div class="settings-row">
-        <label>Charakter-Preset:</label>
-        <select name="studio_default_model" id="studio_default_model">
-            {% for m in models %}
-            <option value="{{ m.key }}" {% if m.key == prefs.studio_default_model %}selected{% endif %}>{{ m.label }}</option>
-            {% endfor %}
-        </select>
-        <span class="hint">Wird beim Erstellen eines neuen Tracks geladen (Standard: Rig2)</span>
-    </div>
-</div>
-
-<div class="settings-section">
     <h3>Pfade</h3>
     <div class="settings-row">
         <label>BVH Eingabepfad:</label>

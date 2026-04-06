@@ -35,6 +35,7 @@ export function buildProjectData() {
                 name: t.name, type: t.type, preset: t.preset, bodyType: t.bodyType,
                 color: t.color, muted: t.muted, position: t.position,
             };
+            if (t.type === 'model') { td._linkedAnimIdx = t._linkedAnimIdx; td._currentPreset = t._currentPreset; }
             if (t.type === 'camera') td.cameraActive = t.cameraActive;
             if (t.type === 'light' && t.light) {
                 td.lightColor = '#' + t.light.color.getHexString();
@@ -51,6 +52,7 @@ export function buildProjectData() {
                     blendIn: c.blendIn, blendOut: c.blendOut,
                 };
                 if (c.type === 'camera_kf' || c.type === 'light_kf') cd.data = c.data;
+                else if (c.type === 'model') cd.data = { preset: c.data.preset, bodyType: c.data.bodyType };
                 else if (c.type === 'audio') cd.data = { fileName: c.data.fileName, audioUrl: c.data.audioUrl, audioDuration: c.data.audioDuration, volume: c.data.volume, fadeIn: c.data.fadeIn, fadeOut: c.data.fadeOut, offset: c.data.offset };
                 return cd;
             });
@@ -156,11 +158,20 @@ export async function restoreProjectData(data) {
 
     for (const td of (data.tracks || [])) {
         const trackType = td.type || 'bvh';
+        // Rename old "Track X" names to "Animation X"
+        let trackName = td.name;
+        if (trackType === 'bvh' && trackName && /^Track \d+$/.test(trackName)) {
+            trackName = trackName.replace('Track', 'Animation');
+        }
         let track;
         if (trackType === 'bvh') {
-            track = fn.addTrack(td.name);
+            track = fn.addTrack(trackName, true);  // skip auto model track during restore
             track.preset = td.preset || 'FemaleGarment';
             track.bodyType = td.bodyType || 'Female_Caucasian';
+        } else if (trackType === 'model') {
+            track = fn.addModelTrack(td.name);
+            track._linkedAnimIdx = td._linkedAnimIdx ?? -1;
+            track._currentPreset = td._currentPreset || null;
         } else {
             track = fn.addSpecialTrack(trackType, td.name);
         }
@@ -193,6 +204,8 @@ export async function restoreProjectData(data) {
             track.clips.push(clip);
             if (clip.type === 'bvh') loadPromises.push(fn.loadClipAnimation(track, clip));
             if (clip.type === 'audio' && clip.data?.audioUrl) {
+                // Fix double-slash from old saves
+                if (clip.data.audioUrl.startsWith('//')) clip.data.audioUrl = clip.data.audioUrl.substring(1);
                 loadPromises.push((async () => {
                     try {
                         if (!track.audioCtx) {
@@ -221,11 +234,38 @@ export async function restoreProjectData(data) {
     // Wait for ALL clip animations to load before continuing
     await Promise.all(loadPromises);
 
+    // Auto-create model tracks for BVH tracks that don't have one (old projects)
+    // Only if there are NO model tracks at all (avoid duplicates on re-restore)
+    const hasAnyModelTrack = state.project.tracks.some(t => t.type === 'model');
+    const bvhIndices = [];
+    const linkedBvhIndices = new Set();
+    state.project.tracks.forEach((t, i) => {
+        if (t.type === 'bvh') bvhIndices.push(i);
+        if (t.type === 'model' && t._linkedAnimIdx >= 0) linkedBvhIndices.add(t._linkedAnimIdx);
+    });
+    for (const bi of bvhIndices) {
+        if (hasAnyModelTrack) break;  // don't add if any model track exists
+        if (!linkedBvhIndices.has(bi)) {
+            const animTrack = state.project.tracks[bi];
+            const mt = fn.addModelTrack();
+            mt._linkedAnimIdx = bi;
+            const presetName = animTrack.preset || 'Rig1';
+            const modelFrames = 60 * state.project.fps;  // 1 minute
+            const mc = new Clip(null, presetName, modelFrames, state.project.fps);
+            mc.type = 'model';
+            mc.startFrame = 0;
+            mc.data = { preset: presetName, bodyType: animTrack.bodyType || 'Female_Caucasian' };
+            mt.clips.push(mc);
+            console.log(`[Restore] Auto-created model track for Animation ${bi}: ${presetName}`);
+        }
+    }
+
     state._undoSuppressed = false;
 
     fn.updateDuration();
     fn.renderTimeline();
     fn.updateTrackHeaders();
+    fn.applyPlayhead();  // Activate model tracks + show meshes
     console.log(`[BVH Studio] Project restored: ${state.project.name} (${state.project.tracks.length} tracks)`);
 }
 

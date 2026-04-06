@@ -5701,7 +5701,7 @@ def studio_audio_upload(request):
         with open(dest_path, 'wb') as f:
             for chunk in audio_file.chunks():
                 f.write(chunk)
-        url = f'/{settings.MEDIA_URL}studio_audio/{unique_name}'
+        url = f'{settings.MEDIA_URL}studio_audio/{unique_name}'
         log.info('[studio] Audio uploaded: %s (%d bytes) -> %s', audio_file.name, audio_file.size, unique_name)
         return JsonResponse({'ok': True, 'url': url})
     except Exception as e:

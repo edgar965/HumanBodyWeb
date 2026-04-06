@@ -97,6 +97,7 @@ export function applyPlayhead() {
         else if (track.type === 'camera') applyCameraTrack(track, t);
         else if (track.type === 'light') applyLightTrack(track, t);
         else if (track.type === 'audio') applyAudioTrack(track, t);
+        else if (track.type === 'model') applyModelTrack(track, t);
     }
 }
 
@@ -210,6 +211,49 @@ function applyAudioTrack(track, t) {
             track.gainNode.gain.value = clip.data.volume || 1;
             // Audio playback is managed in togglePlay/stopPlayback
             return;
+        }
+    }
+}
+
+function applyModelTrack(track, t) {
+    // Find active model clip at time t
+    let activeClip = null;
+    for (const clip of track.clips) {
+        const cs = clip.startFrame / state.project.fps;
+        const ce = cs + clip.duration;
+        if (t >= cs && t < ce) { activeClip = clip; break; }
+    }
+
+    const preset = activeClip?.data?.preset || null;
+
+    // Find linked animation track
+    const animIdx = track._linkedAnimIdx;
+    if (animIdx < 0 || animIdx >= state.project.tracks.length) return;
+    const animTrack = state.project.tracks[animIdx];
+    if (animTrack.type !== 'bvh') return;
+
+    if (preset !== track._currentPreset) {
+        track._currentPreset = preset;
+        if (preset) {
+            // Only reload if the animation track has a DIFFERENT preset
+            if (animTrack.preset !== preset) {
+                animTrack.preset = preset;
+                animTrack.bodyType = activeClip.data.bodyType || 'Female_Caucasian';
+                // Save current BVH clips before reload
+                const savedClips = animTrack.clips.map(c => c.animClip).filter(Boolean);
+                fn.loadTrackCharacter(animTrack).then(() => {
+                    if (animTrack.mesh) animTrack.mesh.visible = true;
+                    // Re-bind animation clips to the new mixer
+                    animTrack._activeClip = null;
+                    animTrack._activeAction = null;
+                    fn.applyPlayhead();
+                });
+            } else {
+                // Already has the right model — just show it
+                if (animTrack.mesh) animTrack.mesh.visible = true;
+            }
+        } else {
+            if (animTrack.mesh) animTrack.mesh.visible = false;
         }
     }
 }

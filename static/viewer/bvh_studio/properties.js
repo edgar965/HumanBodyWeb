@@ -9,7 +9,7 @@ export function updateProperties() {
     if (!content) return;
 
     if (state.selectedTrackIdx < 0 || state.selectedTrackIdx >= state.project.tracks.length) {
-        content.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">Track oder Clip auswaehlen</div>';
+        content.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">Animation oder Clip auswaehlen</div>';
         return;
     }
 
@@ -54,6 +54,12 @@ export function updateProperties() {
             <div style="margin-top:6px;">
                 <button id="prop-light-add-kf" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-key"></i> Keyframe setzen</button>
             </div>
+        </div>`;
+    } else if (track.type === 'model') {
+        const linkedIdx = track._linkedAnimIdx ?? -1;
+        const linkedName = (linkedIdx >= 0 && state.project.tracks[linkedIdx]) ? state.project.tracks[linkedIdx].name : '(keiner)';
+        html += `<div class="prop-group">
+            <div class="prop-row"><label>Verknuepft:</label><span style="font-size:0.8rem;color:var(--accent);">${linkedName}</span></div>
         </div>`;
     } else if (track.type === 'audio') {
         html += `<div class="prop-group">
@@ -120,6 +126,16 @@ export function updateProperties() {
                 <div class="prop-row"><label>Fade In:</label><input type="number" value="${d.fadeIn||0}" id="prop-audio-fadein" min="0"> <span style="font-size:0.7rem;">f</span></div>
                 <div class="prop-row"><label>Fade Out:</label><input type="number" value="${d.fadeOut||0}" id="prop-audio-fadeout" min="0"> <span style="font-size:0.7rem;">f</span></div>
                 <div class="prop-row"><label>Offset:</label><input type="number" value="${d.offset||0}" id="prop-audio-offset" min="0" step="0.1"> <span style="font-size:0.7rem;">s</span></div>
+            </div>`;
+        } else if (clip.type === 'model') {
+            const presetVal = clip.data?.preset || '';
+            const bodyVal = clip.data?.bodyType || 'Female_Caucasian';
+            html += `<div class="prop-group">
+                <h3 style="font-size:0.85rem;color:var(--accent);">Modell Clip</h3>
+                <div class="prop-row"><label>Preset:</label><input type="text" value="${presetVal}" id="prop-model-preset" placeholder="z.B. FemaleGarment"></div>
+                <div class="prop-row"><label>Body Type:</label><input type="text" value="${bodyVal}" id="prop-model-bodytype"></div>
+                <div class="prop-row"><label>Start:</label><input type="number" value="${clip.startFrame}" id="prop-model-start" min="0"> <span style="font-size:0.7rem;">f</span></div>
+                <div class="prop-row"><label>Dauer:</label><input type="number" value="${clip.totalFrames}" id="prop-model-frames" min="1"> <span style="font-size:0.7rem;">f</span></div>
             </div>`;
         } else {
             // BVH clip
@@ -210,6 +226,14 @@ export function updateProperties() {
         document.getElementById('prop-audio-fadein')?.addEventListener('change', (e) => { clip.data.fadeIn = parseInt(e.target.value)||0; });
         document.getElementById('prop-audio-fadeout')?.addEventListener('change', (e) => { clip.data.fadeOut = parseInt(e.target.value)||0; });
         document.getElementById('prop-audio-offset')?.addEventListener('change', (e) => { clip.data.offset = parseFloat(e.target.value)||0; });
+    }
+
+    // Model clip editors
+    if (clip?.type === 'model') {
+        document.getElementById('prop-model-preset')?.addEventListener('change', (e) => { clip.data.preset = e.target.value; clip.name = e.target.value; fn.renderTimeline(); });
+        document.getElementById('prop-model-bodytype')?.addEventListener('change', (e) => { clip.data.bodyType = e.target.value; });
+        document.getElementById('prop-model-start')?.addEventListener('change', (e) => { clip.startFrame = parseInt(e.target.value)||0; fn.updateDuration(); fn.renderTimeline(); });
+        document.getElementById('prop-model-frames')?.addEventListener('change', (e) => { clip.totalFrames = Math.max(1, parseInt(e.target.value)||300); fn.updateDuration(); fn.renderTimeline(); });
     }
 
     // BVH clip editors

@@ -17,6 +17,7 @@ export function setupToolbar() {
     document.getElementById('dd-add-camera')?.addEventListener('click', () => { trackDD?.classList.remove('open'); fn.addSpecialTrack('camera'); });
     document.getElementById('dd-add-light')?.addEventListener('click', () => { trackDD?.classList.remove('open'); fn.addSpecialTrack('light'); });
     document.getElementById('dd-add-audio')?.addEventListener('click', () => { trackDD?.classList.remove('open'); fn.addSpecialTrack('audio'); });
+    document.getElementById('dd-add-model')?.addEventListener('click', () => { trackDD?.classList.remove('open'); fn.addModelTrack(); });
 
     document.getElementById('btn-undo')?.addEventListener('click', () => undo());
     document.getElementById('btn-redo')?.addEventListener('click', () => redo());
@@ -161,7 +162,7 @@ const HELP_CONTENT = {
         title: 'Tracks',
         body: `
 <p><b>BVH Studio</b> arbeitet mit verschiedenen Track-Typen in einer gemeinsamen Timeline:</p>
-<h4 style="color:var(--accent);margin:12px 0 6px;"><i class="fas fa-running"></i> BVH Track</h4>
+<h4 style="color:var(--accent);margin:12px 0 6px;"><i class="fas fa-running"></i> Animation</h4>
 <ul>
 <li>Enthaelt Skelett-Animationen (BVH-Dateien)</li>
 <li>Clips aus der <b>BVH Bibliothek</b> per Doppelklick oder Drag & Drop hinzufuegen</li>
@@ -169,25 +170,31 @@ const HELP_CONTENT = {
 <li>Rechtsklick auf Clip fuer Kontextmenue</li>
 <li>Standard-Modell: Rig2 (konfigurierbar in Einstellungen)</li>
 </ul>
-<h4 style="color:#00bcd4;margin:12px 0 6px;"><i class="fas fa-video"></i> Kamera Track</h4>
+<h4 style="color:#e91e63;margin:12px 0 6px;"><i class="fas fa-user"></i> Modell</h4>
+<ul>
+<li>Wird automatisch mit einem Animations-Track erstellt</li>
+<li>Steuert welches 3D-Modell (Preset) fuer die Animation verwendet wird</li>
+<li>Modell-Clips koennen verschiedene Presets haben (z.B. FemaleGarment, Rig2)</li>
+</ul>
+<h4 style="color:#00bcd4;margin:12px 0 6px;"><i class="fas fa-video"></i> Kamera</h4>
 <ul>
 <li>Steuert die Kameraposition waehrend der Wiedergabe</li>
 <li>Keyframes setzen: <b>K</b> druecken oder Button im Eigenschaften-Tab</li>
 <li>Zwischen Keyframes wird interpoliert (Linear / Smooth / Step)</li>
 </ul>
-<h4 style="color:#ffc107;margin:12px 0 6px;"><i class="fas fa-lightbulb"></i> Licht Track</h4>
+<h4 style="color:#ffc107;margin:12px 0 6px;"><i class="fas fa-lightbulb"></i> Licht</h4>
 <ul>
 <li>Erzeugt ein Punktlicht in der Szene</li>
 <li>Position, Farbe und Intensitaet ueber Eigenschaften-Panel aendern</li>
 <li>Keyframes fuer animiertes Licht</li>
 </ul>
-<h4 style="color:#4caf50;margin:12px 0 6px;"><i class="fas fa-music"></i> Audio Track</h4>
+<h4 style="color:#4caf50;margin:12px 0 6px;"><i class="fas fa-music"></i> Audio</h4>
 <ul>
 <li>Audio-Datei (MP3/WAV/OGG) laden und zur Timeline synchronisieren</li>
 <li>Lautstaerke, Fade In/Out und Offset konfigurierbar</li>
 </ul>
-<p style="margin-top:12px;"><b>Track hinzufuegen:</b> Klick auf "+ Track" in der Toolbar, dann Typ waehlen.</p>
-<p><b>Track loeschen:</b> Track auswaehlen, dann Papierkorb-Button.</p>
+<p style="margin-top:12px;"><b>Hinzufuegen:</b> Klick auf "+ Hinzufuegen" in der Toolbar, dann Typ waehlen.</p>
+<p><b>Loeschen:</b> Track auswaehlen, dann Papierkorb-Button.</p>
 `},
     camera: {
         title: 'Kamera',
@@ -251,7 +258,7 @@ const HELP_CONTENT = {
 
 <h4 style="margin:14px 0 6px;">Audio laden</h4>
 <ol>
-<li>Audio-Track hinzufuegen (+ Track > Audio Track)</li>
+<li>Audio hinzufuegen (+ Hinzufuegen > Audio)</li>
 <li>Im Eigenschaften-Tab: "Audio laden" Button klicken</li>
 <li>MP3, WAV oder OGG Datei auswaehlen</li>
 <li>Der Audio-Clip erscheint als gruenes Rechteck in der Timeline</li>
@@ -306,7 +313,7 @@ const HELP_CONTENT = {
 <h4 style="margin:14px 0 6px;">Kontextmenue (Rechtsklick)</h4>
 <p><b>Auf eine Animation:</b></p>
 <ul style="margin:4px 0;">
-<li><b>Zum Track hinzufuegen</b> — Fuegt die Animation als Clip zum ausgewaehlten Track hinzu</li>
+<li><b>Zur Animation hinzufuegen</b> — Fuegt die Animation als Clip zur ausgewaehlten Animation hinzu</li>
 <li><b>Umbenennen</b> — Aendert den Dateinamen der BVH-Datei</li>
 <li><b>Verschieben nach...</b> — Verschiebt die Datei in einen anderen Ordner</li>
 <li><b>Loeschen</b> — Entfernt die BVH-Datei (mit Bestaetigung)</li>
