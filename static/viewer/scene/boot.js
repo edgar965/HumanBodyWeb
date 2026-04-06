@@ -125,6 +125,12 @@ export async function init() {
         .then(s => {
             if (s.scene) state.defaultPresetName = s.scene;
             window._defaultPose = s.ui_prefs?.default_pose || 'a_pose';
+            // Store MH default assets for auto-load after character init
+            window._mhDefaults = [];
+            for (let i = 1; i <= 4; i++) {
+                const id = s.ui_prefs?.[`mh_default_${i}`];
+                if (id) window._mhDefaults.push(id);
+            }
             if (s.default_anim_scene) state._defaultAnimUrl = s.default_anim_scene;
             const expanded = s.expanded_panels_scene;
             if (Array.isArray(expanded)) {
@@ -203,6 +209,19 @@ export async function init() {
             const poseMap = { 't_pose': 'rest_poses/t-pose' };
             const poseId = poseMap[window._defaultPose] || window._defaultPose;
             try { await fn.applyPoseFromServer(poseId); } catch(e) { console.warn('[Pose] Default pose failed:', e); }
+        }
+        // Auto-load MH default garments from settings
+        if (window._mhDefaults?.length > 0 && state.characters.size > 0 && !sessionStorage.getItem(SESSION_KEY)) {
+            const inst = state.characters.values().next().value;
+            if (inst) {
+                for (const garmentId of window._mhDefaults) {
+                    try {
+                        state._selectedMHId = garmentId;
+                        await fn._doMHProxyFit();
+                        console.log(`[MH Auto] Loaded: ${garmentId}`);
+                    } catch(e) { console.warn(`[MH Auto] Failed: ${garmentId}`, e); }
+                }
+            }
         }
     });
 }

@@ -3205,6 +3205,11 @@ def app_settings_scene(request):
             bone_model = request.POST.get('kleider_bone_model', '').strip()
             if bone_model:
                 prefs['kleider_bone_model'] = bone_model
+            # MakeHuman default assets (up to 4)
+            for i in range(1, 5):
+                key = f'mh_default_{i}'
+                val = request.POST.get(key, '').strip()
+                prefs[key] = val
             s.ui_prefs = prefs
             s.save()
             messages.success(request, 'Settings saved.')

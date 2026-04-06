@@ -98,6 +98,26 @@
                 </select>
             </div>
         </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Standard MakeHuman Assets</strong>
+                <small>Diese MakeHuman Garments werden automatisch beim Start der Szene geladen (bis zu 4).</small>
+            </div>
+            <div class="settings-input">
+                <select id="mh-default-1" name="mh_default_1" class="mh-default-select" style="width:100%;padding:6px;margin-bottom:4px;font-size:0.9rem;background:var(--bg-secondary,#1e1e2e);color:var(--text,#e0e0e0);border:1px solid var(--border,#333);border-radius:4px;">
+                    <option value="">(Kein Asset)</option>
+                </select>
+                <select id="mh-default-2" name="mh_default_2" class="mh-default-select" style="width:100%;padding:6px;margin-bottom:4px;font-size:0.9rem;background:var(--bg-secondary,#1e1e2e);color:var(--text,#e0e0e0);border:1px solid var(--border,#333);border-radius:4px;">
+                    <option value="">(Kein Asset)</option>
+                </select>
+                <select id="mh-default-3" name="mh_default_3" class="mh-default-select" style="width:100%;padding:6px;margin-bottom:4px;font-size:0.9rem;background:var(--bg-secondary,#1e1e2e);color:var(--text,#e0e0e0);border:1px solid var(--border,#333);border-radius:4px;">
+                    <option value="">(Kein Asset)</option>
+                </select>
+                <select id="mh-default-4" name="mh_default_4" class="mh-default-select" style="width:100%;padding:6px;margin-bottom:4px;font-size:0.9rem;background:var(--bg-secondary,#1e1e2e);color:var(--text,#e0e0e0);border:1px solid var(--border,#333);border-radius:4px;">
+                    <option value="">(Kein Asset)</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <div class="settings-actions">
@@ -215,6 +235,47 @@
             })
             .catch(() => { boneModelSelect.innerHTML = '<option>Fehler beim Laden</option>'; });
     }
+
+    // MakeHuman default assets dropdowns
+    const mhDefaults = [
+        "{{ settings.ui_prefs.mh_default_1|default:''|escapejs }}",
+        "{{ settings.ui_prefs.mh_default_2|default:''|escapejs }}",
+        "{{ settings.ui_prefs.mh_default_3|default:''|escapejs }}",
+        "{{ settings.ui_prefs.mh_default_4|default:''|escapejs }}",
+    ];
+    fetch('/api/character/garment/library/')
+        .then(r => r.json())
+        .then(data => {
+            const garments = [];
+            if (data.garments) {
+                for (const cat of Object.keys(data.garments).sort()) {
+                    for (const g of data.garments[cat]) {
+                        garments.push({ id: g.id, name: g.name || g.id, category: cat });
+                    }
+                }
+            }
+            for (let i = 0; i < 4; i++) {
+                const sel = document.getElementById('mh-default-' + (i + 1));
+                if (!sel) continue;
+                sel.innerHTML = '<option value="">(Kein Asset)</option>';
+                let lastCat = '';
+                let optgroup = null;
+                for (const g of garments) {
+                    if (g.category !== lastCat) {
+                        optgroup = document.createElement('optgroup');
+                        optgroup.label = g.category.charAt(0).toUpperCase() + g.category.slice(1);
+                        sel.appendChild(optgroup);
+                        lastCat = g.category;
+                    }
+                    const opt = document.createElement('option');
+                    opt.value = g.id;
+                    opt.textContent = g.name;
+                    if (mhDefaults[i] === g.id) opt.selected = true;
+                    (optgroup || sel).appendChild(opt);
+                }
+            }
+        })
+        .catch(e => console.warn('Failed to load MH garment library:', e));
 
     // Selection opacity slider
     const range = document.getElementById('selection-opacity-range');
