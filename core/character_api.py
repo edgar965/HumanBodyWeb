@@ -4136,16 +4136,14 @@ def mh_proxy_fit(request):
     use_mh_body = request.GET.get('use_mh_body', '1') == '1'
 
     if use_mh_body:
-        # Load MH base mesh and use directly — perfect garment positioning
-        # Use A-pose corrected version if available, else raw T-pose
-        mh_apose_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'mh_base_apose.npy')
+        # Load MH T-pose body for fitting (garments designed for T-pose)
+        # mh_base_apose.npy is only used by _tpose_to_apose for displacement, NOT for fitting
         mh_base_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'base_vertices.npy')
-        if os.path.isfile(mh_apose_path):
-            fit_body = np.load(mh_apose_path)
-            fit_body[:, 2] += body_verts[:, 2].min()  # align feet
-        elif os.path.isfile(mh_base_path):
+        if os.path.isfile(mh_base_path):
             mh_raw = np.load(mh_base_path)
-            mh_bl = np.column_stack([mh_raw[:, 0] * 0.1, -mh_raw[:, 2] * 0.1, mh_raw[:, 1] * 0.1])
+            n_body = body_verts.shape[0]
+            mh_n = min(mh_raw.shape[0], n_body)
+            mh_bl = np.column_stack([mh_raw[:mh_n, 0] * 0.1, -mh_raw[:mh_n, 2] * 0.1, mh_raw[:mh_n, 1] * 0.1])
             mh_bl[:, 2] -= mh_bl[:, 2].min()
             mh_bl[:, 2] += body_verts[:, 2].min()
             fit_body = mh_bl
@@ -4195,10 +4193,13 @@ def mh_proxy_fit(request):
         garment_verts_raw[:, 2] += y_offset
 
     # Transform garment from T-pose (MH) to A-pose (Rigify bind pose)
-    # by applying the inverse T-pose rotation per bone to each garment vertex.
-    if use_mh_body:
+    tpose_displacement = request.GET.get('tpose_displacement', '1') == '1'
+    if use_mh_body and tpose_displacement:
         garment_verts_raw = _tpose_to_apose(garment_verts_raw, body_verts, gender)
-        # Note: T→A quality is limited by MH/Rigify body shape differences.
+        # Smooth after displacement to fix bone-boundary discontinuities (shoulder gap)
+        triangles_smooth = proxy.triangulate_faces()
+        garment_verts_raw = _laplacian_smooth_garment(
+            garment_verts_raw, triangles_smooth, iterations=3, factor=0.5)
 
     # Auto push-outside: push garment vertices outside the body surface
     push_dist = float(request.GET.get('push_dist', 3)) / 1000.0  # mm → meters
@@ -4256,7 +4257,7 @@ def mh_proxy_fit(request):
     }
     if mat_color:
         resp['mat_color'] = mat_color
-    # Check for diffuse texture
+    # Check for diffuse texture + extract dominant color
     if mhmat_files:
         try:
             with open(mhmat_files[0]) as mf:
@@ -4267,20 +4268,26 @@ def mh_proxy_fit(request):
                         if os.path.isfile(tex_path):
                             resp['has_texture'] = True
                             resp['texture_name'] = tex_name
+                            # Extract dominant color from texture
+                            try:
+                                from PIL import Image
+                                img = Image.open(tex_path).convert('RGB').resize((16, 16))
+                                pixels = list(img.getdata())
+                                avg_r = sum(p[0] for p in pixels) / len(pixels) / 255.0
+                                avg_g = sum(p[1] for p in pixels) / len(pixels) / 255.0
+                                avg_b = sum(p[2] for p in pixels) / len(pixels) / 255.0
+                                resp['texture_color'] = [round(avg_r, 3), round(avg_g, 3), round(avg_b, 3)]
+                            except: pass
                         break
         except: pass
     return JsonResponse(resp)
 
 
 def _tpose_to_apose(garment_verts, body_verts, gender='female'):
-    """Transform garment vertices from MH T-pose to Rigify A-pose using vertex displacement.
+    """Transform garment vertices from MH T-pose to MH A-pose using direct index displacement.
 
-    The garment was fitted to the MH body (T-pose, horizontal arms). We need it in
-    Rigify A-pose (arms ~45° down) to match the skeleton bind pose.
-
-    Uses MH T-pose body as source reference and Rigify A-pose body as target.
-    For each garment vertex → nearest MH T-pose body vertex → nearest Rigify A-pose vertex
-    → displacement = rigify_apose - mh_tpose.
+    Uses mh_base_apose.npy (MH body with arms rotated to A-pose) and base_vertices.npy
+    (MH body in T-pose). Same vertex topology → direct index mapping, no nearest-neighbor.
     """
     from scipy.spatial import cKDTree
 
@@ -4299,23 +4306,27 @@ def _tpose_to_apose(garment_verts, body_verts, gender='female'):
         -mh_raw[:mh_n, 2] * 0.1,
         mh_raw[:mh_n, 1] * 0.1,
     ])
-    # Align feet: MH feet at Z≈-0.84, Rigify feet at Z≈0
+    # Align feet
     mh_tpose[:, 2] -= mh_tpose[:, 2].min()
     mh_tpose[:, 2] += body_verts[:, 2].min()
 
-    # Precompute: for each MH vertex, the displacement to nearest Rigify vertex
-    rigify_tree = cKDTree(body_verts)
-    _, mh_to_rigify = rigify_tree.query(mh_tpose)
-    mh_displacements = body_verts[mh_to_rigify] - mh_tpose
+    # Load MH A-pose body (same topology, arms rotated to A-pose)
+    mh_apose_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'mh_base_apose.npy')
+    if not os.path.isfile(mh_apose_path):
+        logger.warning('[T→A] No mh_base_apose.npy — skipping displacement')
+        return garment_verts
+    mh_apose = np.load(mh_apose_path)
+    if mh_apose.shape != mh_tpose.shape:
+        logger.warning('[T→A] Shape mismatch: tpose=%s apose=%s', mh_tpose.shape, mh_apose.shape)
+        return garment_verts
 
-    # For each garment vertex: use k nearest MH body vertices with distance weighting
-    # High K + post-smoothing for clean result
+    # Direct index displacement: same topology, no nearest-neighbor artifacts
+    mh_displacements = mh_apose - mh_tpose  # [18210, 3]
+
+    # For each garment vertex: find nearest MH T-pose vertex, use its displacement
     mh_tree = cKDTree(mh_tpose)
-    K = 16
+    K = 8
     dists_k, indices_k = mh_tree.query(garment_verts, k=K)
-
-    # Also get single nearest distance for blend factor
-    dists_nearest, _ = mh_tree.query(garment_verts, k=1)
 
     result = garment_verts.copy().astype(np.float64)
     for vi in range(len(garment_verts)):
@@ -4326,12 +4337,7 @@ def _tpose_to_apose(garment_verts, body_verts, gender='female'):
         disp = np.zeros(3)
         for ki in range(K):
             disp += w[ki] * mh_displacements[idx[ki]]
-
-        # Reduce displacement for vertices very far from MH body (free-hanging parts)
-        # Close to body (<8cm): full displacement. Far (>20cm): no displacement.
-        nearest_dist = dists_nearest[vi]
-        blend = max(0.0, min(1.0, 1.0 - (nearest_dist - 0.08) / 0.12))
-        result[vi] += disp * blend
+        result[vi] += disp
 
     logger.info('[T→A] Displaced %d garment verts (MH T-pose → Rigify A-pose, K=%d)', len(result), K)
     return result.astype(np.float32)

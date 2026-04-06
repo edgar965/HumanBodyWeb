@@ -118,6 +118,19 @@
                 </select>
             </div>
         </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>T→A Displacement</strong>
+                <small>Verschiebt MakeHuman Garment-Vertices von T-Pose auf A-Pose (Bind-Pose). Kann bei Ärmeln zu Artefakten führen.</small>
+            </div>
+            <div class="settings-input">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" name="mh_tpose_displacement" id="mh-tpose-displacement" value="1"
+                        {% if settings.ui_prefs.mh_tpose_displacement|default:"1" == "1" %}checked{% endif %}>
+                    Aktiviert
+                </label>
+            </div>
+        </div>
     </div>
 
     <div class="settings-actions">
