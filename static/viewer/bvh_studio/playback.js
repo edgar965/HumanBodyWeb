@@ -216,8 +216,13 @@ function applyAudioTrack(track, t) {
 
 // Audio play/stop helpers
 export function startAudioPlayback() {
+    // Resume AudioContext if suspended (Chrome auto-suspends after inactivity)
+    if (state.project._audioCtx && state.project._audioCtx.state === 'suspended') {
+        state.project._audioCtx.resume();
+    }
     for (const track of state.project.tracks) {
         if (track.type !== 'audio' || track.muted || !track.audioCtx) continue;
+        if (track.audioCtx.state === 'suspended') track.audioCtx.resume();
         stopAudioTrack(track);
         const t = state.playheadFrame / state.project.fps;
         for (const clip of track.clips) {

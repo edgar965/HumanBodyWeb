@@ -5856,6 +5856,148 @@ def smooth_bvh(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@csrf_exempt
+@require_POST
+def save_bvh_effects(request):
+    """Apply Smooth + Fixed Position to a BVH and save it.
+
+    POST /api/retarget/save-bvh-effects/
+    Body JSON: { category, name, sigma?: float, fixed_radius?: float (meters) }
+    """
+    log = logging.getLogger('core')
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    category = data.get('category', '')
+    name = data.get('name', '')
+    sigma = data.get('sigma')
+    fixed_radius = data.get('fixed_radius')
+
+    if not category or not name:
+        return JsonResponse({'error': 'category + name required'}, status=400)
+
+    from pathlib import Path
+    bvh_root = Path(str(settings.HUMANBODY_BVH_DIR)).resolve().parent
+    bvh_path = bvh_root / category / f'{name}.bvh'
+
+    if not bvh_path.is_file():
+        return JsonResponse({'error': f'BVH not found: {bvh_path}'}, status=404)
+
+    try:
+        from scipy.ndimage import gaussian_filter1d
+        from scipy.spatial.transform import Rotation
+        from humanbody_core.skeleton.retarget import parse_bvh
+
+        bvh = parse_bvh(str(bvh_path))
+        fnum = bvh.frame_count
+        jnum = len(bvh.names)
+        applied = []
+
+        # --- Gaussian Smooth ---
+        if sigma and float(sigma) > 0:
+            sigma = float(sigma)
+            for ji in range(jnum):
+                for f in range(1, fnum):
+                    if np.dot(bvh.quats[f, ji], bvh.quats[f - 1, ji]) < 0:
+                        bvh.quats[f, ji] = -bvh.quats[f, ji]
+            for ji in range(jnum):
+                for c in range(4):
+                    bvh.quats[:, ji, c] = gaussian_filter1d(bvh.quats[:, ji, c], sigma=sigma)
+                norms = np.linalg.norm(bvh.quats[:, ji], axis=1, keepdims=True)
+                norms[norms < 1e-8] = 1.0
+                bvh.quats[:, ji] /= norms
+            for ji in range(jnum):
+                for c in range(3):
+                    if np.any(bvh.positions[:, ji, c] != 0):
+                        bvh.positions[:, ji, c] = gaussian_filter1d(bvh.positions[:, ji, c], sigma=sigma)
+            applied.append(f'smooth σ={sigma}')
+
+        # --- Fixed Position (clamp root XZ within radius) ---
+        if fixed_radius and float(fixed_radius) > 0:
+            r = float(fixed_radius) * 100  # meters → cm (BVH positions are in cm)
+            # Root is joint 0, positions are in BVH space
+            anchor_x = bvh.positions[0, 0, 0]
+            anchor_z = bvh.positions[0, 0, 2]
+            for f in range(fnum):
+                dx = bvh.positions[f, 0, 0] - anchor_x
+                dz = bvh.positions[f, 0, 2] - anchor_z
+                dist = np.sqrt(dx * dx + dz * dz)
+                if dist > r:
+                    scale = r / dist
+                    bvh.positions[f, 0, 0] = anchor_x + dx * scale
+                    bvh.positions[f, 0, 2] = anchor_z + dz * scale
+            applied.append(f'fixed r={r:.2f}m')
+
+        if not applied:
+            return JsonResponse({'error': 'No effects to apply'}, status=400)
+
+        # --- Write back to BVH file ---
+        lines = bvh_path.read_text(encoding='utf-8').split('\n')
+        channel_orders = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('CHANNELS'):
+                parts = stripped.split()
+                nch = int(parts[1])
+                cmap = {'Xrotation': 'X', 'Yrotation': 'Y', 'Zrotation': 'Z',
+                        'xrotation': 'X', 'yrotation': 'Y', 'zrotation': 'Z'}
+                rot_order = ''.join(cmap[p] for p in parts[2:] if p.lower() in [x.lower() for x in cmap])
+                channel_orders.append((nch, rot_order if rot_order else 'ZYX'))
+
+        motion_idx = next(i for i, l in enumerate(lines) if l.strip() == 'MOTION')
+        data_start = motion_idx + 1
+        while data_start < len(lines):
+            s = lines[data_start].strip()
+            if s and (s[0].isdigit() or s[0] == '-'):
+                break
+            data_start += 1
+
+        frame_lines = []
+        for i in range(data_start, len(lines)):
+            s = lines[i].strip()
+            if s and (s[0].isdigit() or s[0] == '-'):
+                frame_lines.append(i)
+
+        for fi in range(min(fnum, len(frame_lines))):
+            vals = lines[frame_lines[fi]].strip().split()
+            vi = 0
+            for ji in range(min(jnum, len(channel_orders))):
+                nch, order = channel_orders[ji]
+                if nch >= 6:
+                    vals[vi] = f'{bvh.positions[fi, ji, 0]:.6f}'
+                    vals[vi+1] = f'{bvh.positions[fi, ji, 1]:.6f}'
+                    vals[vi+2] = f'{bvh.positions[fi, ji, 2]:.6f}'
+                    euler = Rotation.from_quat(bvh.quats[fi, ji]).as_euler(order, degrees=True)
+                    vals[vi+3] = f'{euler[0]:.6f}'
+                    vals[vi+4] = f'{euler[1]:.6f}'
+                    vals[vi+5] = f'{euler[2]:.6f}'
+                    vi += nch
+                else:
+                    euler = Rotation.from_quat(bvh.quats[fi, ji]).as_euler(order, degrees=True)
+                    vals[vi] = f'{euler[0]:.6f}'
+                    vals[vi+1] = f'{euler[1]:.6f}'
+                    vals[vi+2] = f'{euler[2]:.6f}'
+                    vi += 3
+            lines[frame_lines[fi]] = ' '.join(vals)
+
+        with open(str(bvh_path), 'w', encoding='utf-8', newline='\n') as f:
+            f.write('\n'.join(lines))
+
+        for cache in bvh_path.parent.glob(f'{name}_retarget_*.json'):
+            cache.unlink()
+
+        log.info(f'[save-bvh-effects] {category}/{name} {", ".join(applied)} frames={fnum}')
+        return JsonResponse({'ok': True, 'frames': fnum, 'applied': applied})
+
+    except Exception as e:
+        log.error(f'[save-bvh-effects] Error: {e}')
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 @require_GET
 def charmorph_presets(request):
     """List available CharMorph body type presets."""
