@@ -208,21 +208,32 @@ export function setupTimeline() {
 
     // Context menu (right-click on clip)
     const ctxMenu = document.getElementById('clip-context-menu');
+    // Store mouse X for "move playhead here" context menu action
+    let _ctxMouseX = 0;
+
     tlCanvas.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         const rect = tlCanvas.getBoundingClientRect();
-        const hit = hitTestClip(e.clientX - rect.left, e.clientY - rect.top);
+        _ctxMouseX = e.clientX - rect.left;
+        const hit = hitTestClip(_ctxMouseX, e.clientY - rect.top);
         if (hit) {
             state.selectedTrackIdx = hit.trackIdx;
             state.selectedClipIdx = hit.clipIdx;
             fn.updateProperties();
             renderTimeline();
-            ctxMenu.style.display = '';
-            ctxMenu.style.left = e.clientX + 'px';
-            ctxMenu.style.top = e.clientY + 'px';
-        } else {
-            ctxMenu.style.display = 'none';
         }
+        // Show context menu (both for clip and empty area)
+        ctxMenu.style.display = '';
+        ctxMenu.style.left = e.clientX + 'px';
+        // Prevent menu from going below viewport
+        const menuH = ctxMenu.offsetHeight || 200;
+        const maxY = window.innerHeight - menuH - 10;
+        ctxMenu.style.top = Math.min(e.clientY, maxY) + 'px';
+        // Show/hide clip-specific items
+        ctxMenu.querySelectorAll('.ctx-item[data-action^="ctx-"]').forEach(item => {
+            if (item.dataset.action === 'ctx-playhead') item.style.display = '';
+            else item.style.display = hit ? '' : 'none';
+        });
     });
     document.addEventListener('click', () => { if (ctxMenu) ctxMenu.style.display = 'none'; });
 
@@ -239,6 +250,7 @@ export function setupTimeline() {
             else if (action === 'ctx-trim-start') fn.trimSelectedClip('start', 10);
             else if (action === 'ctx-trim-end') fn.trimSelectedClip('end', 10);
             else if (action === 'ctx-trim-reset') fn.trimSelectedClip('reset');
+            else if (action === 'ctx-playhead') setPlayheadFromMouse(_ctxMouseX);
         });
     });
 

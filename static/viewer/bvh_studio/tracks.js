@@ -263,6 +263,11 @@ export async function loadClipAnimation(track, clip) {
                 for (const t of clip.animClip.tracks) fn.gaussFilter(t.values, t.getValueSize(), _gaussSmooth.sigma);
                 fn.serverLog('gauss_auto_applied', `${clip.name} sigma=${_gaussSmooth.sigma}`);
             }
+            // Auto-apply Fixed Position if active
+            const _fp = fn.getFixedPos ? fn.getFixedPos() : null;
+            if (_fp && _fp.active && clip.animClip) {
+                fn.applyFixedPositionAll();
+            }
         }
 
         fn.updateDuration();

@@ -190,12 +190,13 @@
             <div class="toolbar-dd-item" id="dd-gauss-on" style="color:#4caf50;"><i class="fas fa-play" style="width:16px;"></i> Smooth EINSCHALTEN</div>
             <div class="toolbar-dd-item" id="dd-gauss-off"><i class="fas fa-stop" style="width:16px;"></i> Smooth AUSSCHALTEN</div>
             <div class="toolbar-dd-item" style="gap:8px;cursor:default;"><i class="fas fa-sliders-h" style="width:16px;"></i> Sigma: <input type="number" id="dd-gauss-sigma-input" value="2" min="0.5" max="20" step="0.5" style="width:50px;background:var(--bg-card,#1a1a2e);border:1px solid var(--border,#334);border-radius:3px;color:#ccc;padding:2px 4px;font-size:0.8rem;text-align:center;" onclick="event.stopPropagation()"></div>
-            <div class="toolbar-dd-item" id="dd-gauss-save"><i class="fas fa-save" style="width:16px;"></i> Smooth permanent speichern (BVH)</div>
             <div style="height:1px;background:var(--border);margin:4px 0;"></div>
             <div class="toolbar-dd-item" id="dd-ground"><i class="fas fa-shoe-prints" style="width:16px;"></i> Auf Bodenniveau</div>
             <div style="height:1px;background:var(--border);margin:4px 0;"></div>
             <div class="toolbar-dd-item" id="dd-fixed-pos"><i class="fas fa-map-pin" style="width:16px;"></i> Feste Position <span id="fixed-pos-status" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">Aus</span></div>
             <div class="toolbar-dd-item" style="gap:8px;cursor:default;"><i class="fas fa-bullseye" style="width:16px;"></i> Max. Radius: <input type="range" id="fixed-pos-radius" min="10" max="200" value="50" step="10" style="width:80px;vertical-align:middle;" onclick="event.stopPropagation()"> <span id="fixed-pos-radius-val" style="font-size:0.75rem;min-width:32px;">50cm</span></div>
+            <div style="border-top:1px solid var(--border,#334);margin:4px 0;"></div>
+            <div class="toolbar-dd-item" id="dd-save-bvh"><i class="fas fa-save" style="width:16px;"></i> BVH Speichern (mit allen Effekten)</div>
         </div>
     </div>
     <div class="sep"></div>
@@ -407,6 +408,8 @@
 
 <!-- Context Menu -->
 <div id="clip-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt" style="width:16px;"></i> Playhead hierher</div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut" style="width:16px;"></i> Split an Playhead (S)</div>
     <div class="ctx-item" data-action="ctx-duplicate"><i class="fas fa-copy" style="width:16px;"></i> Duplizieren</div>
     <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen (Del)</div>

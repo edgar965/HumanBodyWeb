@@ -96,6 +96,11 @@ export function setupToolbar() {
         _fixedPos.radius = v / 100;  // cm -> meters
         if (_fixedPos.active) applyFixedPositionAll();
     });
+    // Save BVH with all current effects
+    document.getElementById('dd-save-bvh')?.addEventListener('click', () => {
+        toolsDD.classList.remove('open');
+        saveBvhWithEffects();
+    });
 
     // Properties panel tabs
     document.querySelectorAll('.props-tab').forEach(tab => {
@@ -529,6 +534,58 @@ async function saveSmoothedBVH() {
     _gaussSmooth.origClips.clear();
     alert(`Smooth (σ=${sigma}) permanent gespeichert auf ${saved} von ${clips.length} Clip(s).`);
     console.log(`[BVH Studio] Smoothed clips saved: ${saved}`);
+}
+
+async function saveBvhWithEffects() {
+    // Collect all clips
+    const clips = [];
+    for (const track of state.project.tracks) {
+        if (track.type !== 'bvh') continue;
+        for (const clip of track.clips) {
+            if (clip.category && clip.name) clips.push(clip);
+        }
+    }
+    if (clips.length === 0) {
+        const pi = fn.getPreviewInfo ? fn.getPreviewInfo() : null;
+        if (pi && pi.category && pi.name) clips.push({ category: pi.category, name: pi.name });
+    }
+    if (clips.length === 0) { alert('Keine Animation geladen.'); return; }
+
+    // Build effects list
+    const effects = {};
+    if (_gaussSmooth.active) effects.sigma = _gaussSmooth.sigma;
+    if (_fixedPos.active) effects.fixed_radius = _fixedPos.radius;
+
+    if (Object.keys(effects).length === 0) {
+        alert('Keine Effekte aktiv (Smooth oder Feste Position einschalten).');
+        return;
+    }
+
+    const desc = [];
+    if (effects.sigma) desc.push(`Smooth σ=${effects.sigma}`);
+    if (effects.fixed_radius) desc.push(`Feste Position r=${(effects.fixed_radius * 100).toFixed(0)}cm`);
+
+    if (!confirm(`BVH speichern mit: ${desc.join(', ')}\n\n${clips.length} Clip(s) werden überschrieben!`)) return;
+
+    let saved = 0;
+    for (const clip of clips) {
+        try {
+            const resp = await fetch('/api/retarget/save-bvh-effects/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category: clip.category, name: clip.name, ...effects }),
+            });
+            const result = await resp.json();
+            if (result.ok) saved++;
+            else console.error(`Save failed for ${clip.name}:`, result.error);
+        } catch (e) { console.error(`Save failed for ${clip.name}:`, e); }
+    }
+
+    // Clear caches so next load picks up saved version
+    _gaussSmooth.origClips.clear();
+    _fixedPos.origData.clear();
+    alert(`Gespeichert: ${saved}/${clips.length} Clip(s) mit ${desc.join(', ')}`);
+    console.log(`[BVH Studio] Saved with effects: ${saved} clips, ${desc.join(', ')}`);
 }
 
 export function smoothSelectedClip() {
