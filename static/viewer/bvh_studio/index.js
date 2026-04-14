@@ -10,7 +10,7 @@ import { state } from './state.js';
 import { fn } from './registry.js';
 import {
     sharedState,
-    loadRigifySkeleton, loadSkinWeights, loadSkinColors,
+    loadRigifySkeleton, loadSkinWeights, loadSkinColors, loadHairColors,
     createSceneSetup,
 } from '../character_core.js?v=1';
 
@@ -86,6 +86,7 @@ async function init() {
         loadRigifySkeleton(),
         loadSkinWeights(),
         loadSkinColors(),
+        loadHairColors(),
     ]);
     // Load studio preferences
     try {

@@ -3,6 +3,7 @@
  * All modules import state from here.
  */
 import * as THREE from 'three';
+import { Timeline } from './models.js';
 
 export const TRACK_HEIGHT = 40;
 export const HEADER_WIDTH = 120;
@@ -31,12 +32,7 @@ export const state = {
     controls: null,
     clock: new THREE.Clock(),
 
-    project: {
-        name: 'Untitled',
-        fps: 30,
-        tracks: [],      // Track[]
-        duration: 0,     // computed from clips
-    },
+    project: new Timeline(),   // Timeline instance with typed track lists
 
     selectedTrackIdx: -1,
     selectedClipIdx: -1,

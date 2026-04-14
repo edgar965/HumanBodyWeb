@@ -579,8 +579,8 @@ export function updateTrackHeaders() {
             if (track.type === 'model' && linkSection && linkList) {
                 linkSection.style.display = '';
                 linkList.innerHTML = '';
-                state.project.tracks.forEach((t, ti) => {
-                    if (t.type !== 'bvh') return;
+                state.project.animations.forEach(t => {
+                    const ti = state.project.indexOf(t);
                     const item = document.createElement('div');
                     item.className = 'ctx-item';
                     const isLinked = track._linkedAnimIdx === ti;
@@ -618,14 +618,8 @@ export function updateTrackHeaders() {
 }
 
 export function updateDuration() {
-    let maxEnd = 0;
-    for (const track of state.project.tracks) {
-        for (const clip of track.clips) {
-            const end = clip.endFrame / state.project.fps;
-            if (end > maxEnd) maxEnd = end;
-        }
-    }
-    state.project.duration = maxEnd;
+    // Duration is now auto-computed by Timeline.duration getter.
+    // This function is kept for backward compatibility (called from many places).
 }
 
 // Register functions in registry

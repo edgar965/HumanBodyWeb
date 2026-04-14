@@ -56,8 +56,8 @@ export function updateProperties() {
             </div>
         </div>`;
     } else if (track.type === 'model') {
-        const linkedIdx = track._linkedAnimIdx ?? -1;
-        const linkedName = (linkedIdx >= 0 && state.project.tracks[linkedIdx]) ? state.project.tracks[linkedIdx].name : '(keiner)';
+        const linkedAnim = state.project.getLinkedAnimation(track);
+        const linkedName = linkedAnim ? linkedAnim.name : '(keiner)';
         html += `<div class="prop-group">
             <div class="prop-row"><label>Verknuepft:</label><span style="font-size:0.8rem;color:var(--accent);">${linkedName}</span></div>
         </div>`;

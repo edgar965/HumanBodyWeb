@@ -17,29 +17,17 @@ import { generateRigBoneMesh } from '../model_generator.js';
 const ss = sharedState;
 
 export function addTrack(name, _skipModelTrack) {
-    const bvhCount = state.project.tracks.filter(t => t.type === 'bvh').length;
+    const bvhCount = state.project.animations.length;
     const track = new Track(
         name || `Animation ${bvhCount + 1}`,
         state.project.defaultModel || 'Rig2',
         state.project.defaultBodyType || 'Female_Caucasian'
     );
-    state.project.tracks.push(track);
+    state.project.addTrack(track);
     state.scene.add(track.group);
     const bvhTrackIdx = state.project.tracks.length - 1;
 
-    // Auto-create a linked model track below the BVH track (unless restoring)
-    if (!_skipModelTrack) {
-        const modelTrack = addModelTrack();
-        modelTrack._linkedAnimIdx = bvhTrackIdx;
-        // Add default model clip spanning entire duration
-        const presetName = 'Rig1';
-        const modelFrames = 60 * state.project.fps;  // 1 minute
-        const defaultClip = new Clip(null, presetName, modelFrames, state.project.fps);
-        defaultClip.type = 'model';
-        defaultClip.startFrame = 0;
-        defaultClip.data = { preset: presetName, bodyType: state.project.defaultBodyType || 'Female_Caucasian' };
-        modelTrack.clips.push(defaultClip);
-    }
+    // Mesh wird von loadClipAnimation geladen wenn der erste BVH-Clip kommt
 
     fn.updateTrackHeaders();
     fn.renderTimeline();
@@ -48,14 +36,14 @@ export function addTrack(name, _skipModelTrack) {
 }
 
 export function addModelTrack(name) {
-    const idx = state.project.tracks.length;
-    const track = new Track(name || `Modell ${state.project.tracks.filter(t => t.type === 'model').length + 1}`);
+    const track = new Track(name || `Modell ${state.project.modelTracks.length + 1}`);
     track.type = 'model';
     track.color = TRACK_COLORS.model;
     track.muted = false;
     track._currentPreset = null;
     track._linkedAnimIdx = -1;
-    state.project.tracks.push(track);
+    state.project.addTrack(track);
+    const idx = state.project.tracks.length - 1;
     fn.updateTrackHeaders();
     fn.renderTimeline();
     selectTrack(idx);
@@ -86,7 +74,7 @@ export function addSpecialTrack(type, name) {
         track.gainNode.connect(track.audioCtx.destination);
     }
 
-    state.project.tracks.push(track);
+    state.project.addTrack(track);
     fn.updateTrackHeaders();
     selectTrack(state.project.tracks.length - 1);
     return track;
@@ -195,9 +183,9 @@ export function removeTrack(idx) {
     const track = state.project.tracks[idx];
 
     // If removing a model track, hide linked animation track's mesh
-    if (track.type === 'model' && track._linkedAnimIdx >= 0) {
-        const animTrack = state.project.tracks[track._linkedAnimIdx];
-        if (animTrack && animTrack.mesh) animTrack.mesh.visible = false;
+    if (track.type === 'model') {
+        const animTrack = state.project.getLinkedAnimation(track);
+        if (animTrack?.mesh) animTrack.mesh.visible = false;
     }
 
     // Stop mixer
@@ -229,14 +217,7 @@ export function removeTrack(idx) {
     if (track.lightHelper) { state.scene.remove(track.lightHelper); track.lightHelper.geometry.dispose(); }
     if (track.type === 'audio') fn.stopAudioTrack(track);
 
-    state.project.tracks.splice(idx, 1);
-    // Update _linkedAnimIdx on model tracks after removal
-    for (const t of state.project.tracks) {
-        if (t.type === 'model' && t._linkedAnimIdx >= 0) {
-            if (t._linkedAnimIdx === idx) t._linkedAnimIdx = -1;
-            else if (t._linkedAnimIdx > idx) t._linkedAnimIdx--;
-        }
-    }
+    state.project.removeTrackAt(idx);  // handles _linkedAnimIdx fixup
     if (state.selectedTrackIdx >= state.project.tracks.length) state.selectedTrackIdx = state.project.tracks.length - 1;
     state.selectedClipIdx = -1;
     fn.updateTrackHeaders();
@@ -305,9 +286,10 @@ export async function loadClipAnimation(track, clip) {
         clip.totalFrames = data.frame_count;
         clip.fps = data.frame_count / data.duration;
 
-        // Build character if not yet loaded
-        if (!track.skeleton && ss.rigifySkeletonData && ss.skinWeightData) {
+        // Modell laden wenn noch nicht vorhanden
+        if (!track.mesh && ss.rigifySkeletonData && ss.skinWeightData) {
             await loadTrackCharacter(track);
+            if (track.mesh) track.mesh.visible = true;
         }
 
         if (track.skeleton) {
@@ -362,29 +344,147 @@ export function buildClipFromData(data, skel) {
     return new THREE.AnimationClip('clip', data.duration, tracks);
 }
 
-function _shouldTrackBeVisible(track) {
-    // Check if any model track at current playhead links to this track and has an active preset
-    const trackIdx = state.project.tracks.indexOf(track);
-    const t = state.playheadFrame / state.project.fps;
-    for (const mt of state.project.tracks) {
-        if (mt.type !== 'model' || mt._linkedAnimIdx !== trackIdx) continue;
-        for (const clip of mt.clips) {
-            const cs = clip.startFrame / state.project.fps;
-            const ce = cs + clip.duration;
-            if (t >= cs && t < ce && clip.data?.preset) return true;
+// Three.js PropertyBinding parst Dots als Separator:
+// "DEF-spine.001.quaternion" → Objekt "DEF-spine", Property "001" (FALSCH)
+// Daher Dots→Underscores in Bone-Namen, damit Track-Namen korrekt geparst werden.
+function _sanitizeBoneNames(skeleton) {
+    if (skeleton.skeleton) {
+        for (const bone of skeleton.skeleton.bones) {
+            bone.name = bone.name.replace(/\./g, '_');
         }
     }
-    return false;
+    if (skeleton.boneByName) {
+        const fixed = {};
+        for (const [k, v] of Object.entries(skeleton.boneByName)) {
+            fixed[k.replace(/\./g, '_')] = v;
+        }
+        skeleton.boneByName = fixed;
+    }
+}
+
+async function _loadPresetAccessories(track, modelData) {
+    // Garments laden
+    for (const g of (modelData.garments || [])) {
+        try {
+            const params = new URLSearchParams({
+                garment_id: g.id,
+                body_type: track.bodyType || 'Female_Caucasian',
+                offset: g.offset || 0,
+                stiffness: g.stiffness || 0.5,
+                min_dist: g.minDist || 0,
+                crotch_floor: g.crotchFloor || 0,
+                lift: g.lift || 0,
+                crotch_depth: g.crotchDepth || 0,
+            });
+            // Morphs aus dem Preset übergeben
+            if (modelData.morphs) {
+                for (const [k, v] of Object.entries(modelData.morphs)) {
+                    params.append(`morph_${k}`, v);
+                }
+            }
+            if (modelData.meta) {
+                for (const [k, v] of Object.entries(modelData.meta)) {
+                    params.append(`meta_${k}`, v);
+                }
+            }
+            const resp = await fetch(`/api/character/garment/fit/?${params}`);
+            const data = await resp.json();
+            if (data.error) { console.warn(`[BVH Studio] Garment ${g.id} failed:`, data.error); continue; }
+
+            const vertBuf = base64ToFloat32(data.vertices);
+            blenderToThreeCoords(vertBuf);
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+            if (data.faces) geo.setIndex(new THREE.BufferAttribute(base64ToUint32(data.faces), 1));
+            if (data.normals) {
+                const nb = base64ToFloat32(data.normals);
+                blenderToThreeCoords(nb);
+                geo.setAttribute('normal', new THREE.BufferAttribute(nb, 3));
+            } else {
+                geo.computeVertexNormals();
+            }
+
+            const color = g.color || [0.5, 0.5, 0.5];
+            const mat = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(color[0], color[1], color[2]),
+                roughness: g.roughness ?? 0.7,
+                metalness: g.metalness ?? 0.0,
+                side: THREE.DoubleSide,
+            });
+
+            // Skinning
+            if (data.skin_indices && data.skin_weights && track.skeleton) {
+                const siBuf = base64ToFloat32(data.skin_indices);
+                const swBuf = base64ToFloat32(data.skin_weights);
+                geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
+                geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
+                const skinnedGarment = new THREE.SkinnedMesh(geo, mat);
+                skinnedGarment.bind(track.skeleton.skeleton, track.mesh.bindMatrix);
+                track.group.add(skinnedGarment);
+            } else {
+                track.group.add(new THREE.Mesh(geo, mat));
+            }
+            console.log(`[BVH Studio] Garment loaded: ${g.id}`);
+        } catch (e) {
+            console.warn(`[BVH Studio] Garment ${g.id} error:`, e);
+        }
+    }
+
+    // Hair laden
+    if (modelData.hair_style?.url) {
+        try {
+            const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+            const loader = new GLTFLoader();
+            const hairUrl = modelData.hair_style.url;
+            const gltf = await new Promise((resolve, reject) => loader.load(hairUrl, resolve, undefined, reject));
+            const hairGroup = new THREE.Group();
+
+            // Alle Meshes im GLTF an Head-Bone binden
+            const headBoneIdx = track.skeleton?.skeleton?.bones.findIndex(b => b.name.includes('spine_006')) ?? -1;
+            gltf.scene.traverse(child => {
+                if (!child.isMesh) return;
+                const geo = child.geometry.clone();
+
+                // Hair-Farbe
+                const colorName = modelData.hair_style.color || 'Silken Black';
+                const hairColor = ss.hairColorData?.[colorName] || [0.02, 0.02, 0.02];
+                const mat = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(hairColor[0], hairColor[1], hairColor[2]),
+                    roughness: 0.6, metalness: 0.1, side: THREE.DoubleSide,
+                });
+
+                if (headBoneIdx >= 0 && track.skeleton) {
+                    // Alle Vertices an Head-Bone pinnen
+                    const vCount = geo.attributes.position.count;
+                    const si = new Float32Array(vCount * 4);
+                    const sw = new Float32Array(vCount * 4);
+                    for (let v = 0; v < vCount; v++) { si[v * 4] = headBoneIdx; sw[v * 4] = 1.0; }
+                    geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(si, 4));
+                    geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+                    const skinnedHair = new THREE.SkinnedMesh(geo, mat);
+                    skinnedHair.bind(track.skeleton.skeleton, track.mesh.bindMatrix);
+                    hairGroup.add(skinnedHair);
+                } else {
+                    hairGroup.add(new THREE.Mesh(geo, mat));
+                }
+            });
+            track.group.add(hairGroup);
+            console.log(`[BVH Studio] Hair loaded: ${modelData.hair_style.name || hairUrl}`);
+        } catch (e) {
+            console.warn('[BVH Studio] Hair load error:', e);
+        }
+    }
 }
 
 export async function loadTrackCharacter(track) {
     try {
-        // Check if preset is a generated model (Rig1-4)
         const modelResp = await fetch(`/api/character/model/${encodeURIComponent(track.preset)}/`);
         const modelData = await modelResp.json();
 
+        let newMesh = null;
+
+        // Generated model (Rig1-4): Bone-Mesh aus model_generator
         if (modelData.type === 'generated_model') {
-            // Generated model: use model_generator.js
             let rigBonesData = null;
             try {
                 const rigResp = await fetch('/api/character/rig/');
@@ -393,83 +493,78 @@ export async function loadTrackCharacter(track) {
 
             if (rigBonesData && ss.rigifySkeletonData && ss.skinWeightData) {
                 const result = generateRigBoneMesh(rigBonesData, modelData, ss.rigifySkeletonData, ss.skinWeightData);
-                if (result && result.mesh) {
-                    track.mesh = result.mesh;
-                    track.group.add(track.mesh);
+                if (result?.mesh) {
+                    newMesh = result.mesh;
                     if (result.skeleton) {
                         track.skeleton = result.skeleton;
-                        // Rename bones: dots -> underscores so Three.js AnimationMixer
-                        // can parse track names correctly (DEF-spine_001.quaternion)
-                        if (result.skeleton.skeleton) {
-                            for (const bone of result.skeleton.skeleton.bones) {
-                                bone.name = bone.name.replace(/\./g, '_');
-                            }
-                        }
-                        // Also update boneByName map
-                        const newMap = {};
-                        for (const [k, v] of Object.entries(result.skeleton.boneByName)) {
-                            newMap[k.replace(/\./g, '_')] = v;
-                        }
-                        result.skeleton.boneByName = newMap;
-                        track.mixer = new THREE.AnimationMixer(track.mesh);
-                    } else {
-                        track.mixer = new THREE.AnimationMixer(track.mesh);
+                        _sanitizeBoneNames(track.skeleton);
                     }
-                    console.log(`[BVH Studio] Generated model loaded: ${track.preset}`);
-                    return;
                 }
             }
         }
 
-        // Fallback: standard mesh API
-        const resp = await fetch(`/api/character/mesh/?body_type=${encodeURIComponent(track.bodyType)}`);
-        const data = await resp.json();
-        if (data.error) return;
+        // Standard-Mesh (FemaleGarment etc.): SkinnedMesh mit Skin-Weights
+        if (!newMesh) {
+            const resp = await fetch(`/api/character/mesh/?body_type=${encodeURIComponent(track.bodyType)}`);
+            const data = await resp.json();
+            if (data.error) return;
 
-        const vertBuf = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(vertBuf);
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-        if (data.faces) geo.setIndex(new THREE.BufferAttribute(base64ToUint32(data.faces), 1));
-        if (data.normals) {
-            const nb = base64ToFloat32(data.normals);
-            blenderToThreeCoords(nb);
-            geo.setAttribute('normal', new THREE.BufferAttribute(nb, 3));
-        } else {
-            geo.computeVertexNormals();
+            const vertBuf = base64ToFloat32(data.vertices);
+            blenderToThreeCoords(vertBuf);
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
+            if (data.faces) geo.setIndex(new THREE.BufferAttribute(base64ToUint32(data.faces), 1));
+            if (data.normals) {
+                const nb = base64ToFloat32(data.normals);
+                blenderToThreeCoords(nb);
+                geo.setAttribute('normal', new THREE.BufferAttribute(nb, 3));
+            } else {
+                geo.computeVertexNormals();
+            }
+
+            const materials = BODY_MATERIALS.map(d => new THREE.MeshStandardMaterial({
+                color: d.color, roughness: d.roughness, metalness: d.metalness,
+                side: THREE.DoubleSide, transparent: d.transparent || false,
+                opacity: d.opacity !== undefined ? d.opacity : 1.0,
+            }));
+            applySkinColorToMaterials(materials, track.bodyType, ss.skinColors);
+
+            const groups = data.groups || [];
+            if (groups.length > 0) {
+                for (const g of groups) geo.addGroup(g.start, g.count, g.materialIndex);
+                newMesh = new THREE.Mesh(geo, materials);
+            } else {
+                newMesh = new THREE.Mesh(geo, materials[0]);
+            }
+
+            const { skinIndices, skinWeights } = computeSkinAttributes(geo, ss.skinWeightData);
+            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
+            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+
+            track.skeleton = buildRigifySkeleton(ss.rigifySkeletonData, ss.skinWeightData);
+            _sanitizeBoneNames(track.skeleton);
+            const skinnedMesh = new THREE.SkinnedMesh(geo, newMesh.material);
+            skinnedMesh.add(track.skeleton.rootBone);
+            skinnedMesh.bind(track.skeleton.skeleton);
+            newMesh = skinnedMesh;
         }
 
-        const materials = BODY_MATERIALS.map(d => new THREE.MeshStandardMaterial({
-            color: d.color, roughness: d.roughness, metalness: d.metalness,
-            side: THREE.DoubleSide, transparent: d.transparent || false,
-            opacity: d.opacity !== undefined ? d.opacity : 1.0,
-        }));
-        applySkinColorToMaterials(materials, track.bodyType, ss.skinColors);
+        // Vorherige Meshes aus Group entfernen (nicht disposen — könnten gecacht sein)
+        while (track.group.children.length > 0) track.group.remove(track.group.children[0]);
+        track.mesh = newMesh;
+        track.mesh.visible = false;  // applyModelTrack/applyBvhTrack steuert Sichtbarkeit
+        track.group.add(newMesh);
+        track.mixer = new THREE.AnimationMixer(newMesh);
+        track._activeClip = null;
+        track._activeAction = null;
 
-        const groups = data.groups || [];
-        if (groups.length > 0) {
-            for (const g of groups) geo.addGroup(g.start, g.count, g.materialIndex);
-            track.mesh = new THREE.Mesh(geo, materials);
-        } else {
-            track.mesh = new THREE.Mesh(geo, materials[0]);
+        // Garments und Hair aus Preset laden (falls vorhanden)
+        if (modelData.garments || modelData.hair_style) {
+            await _loadPresetAccessories(track, modelData);
         }
 
-        // Skin
-        const { skinIndices, skinWeights } = computeSkinAttributes(geo, ss.skinWeightData);
-        geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
-        geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+        console.log(`[BVH Studio] Character loaded: ${track.preset} for ${track.name}`);
 
-        track.skeleton = buildRigifySkeleton(ss.rigifySkeletonData, ss.skinWeightData);
-        const mat = track.mesh.material;
-        const skinnedMesh = new THREE.SkinnedMesh(geo, mat);
-        skinnedMesh.add(track.skeleton.rootBone);
-        skinnedMesh.bind(track.skeleton.skeleton);
-
-        track.mesh = skinnedMesh;
-        track.group.add(skinnedMesh);
-        track.mixer = new THREE.AnimationMixer(skinnedMesh);
-
-        console.log(`[BVH Studio] Character loaded for track: ${track.name}`);
     } catch (e) {
         console.error('[BVH Studio] Character load failed:', e);
     }
@@ -516,11 +611,8 @@ export function deleteSelectedClip() {
     // If a model clip was deleted, hide the linked animation track's mesh
     if (clip.type === 'model' && track.type === 'model') {
         track._currentPreset = null;
-        const animIdx = track._linkedAnimIdx;
-        if (animIdx >= 0 && animIdx < state.project.tracks.length) {
-            const animTrack = state.project.tracks[animIdx];
-            if (animTrack.mesh) animTrack.mesh.visible = false;
-        }
+        const animTrack = state.project.getLinkedAnimation(track);
+        if (animTrack?.mesh) animTrack.mesh.visible = false;
     }
 
     fn.updateDuration();
@@ -580,11 +672,15 @@ export function splitClipAtPlayhead() {
             const splitFrame = Math.round((t - cs) * clip.fps * clip.speed) + clip.trimIn;
             // Clone clip
             const clip2 = new Clip(clip.category, clip.name, clip.totalFrames, clip.fps);
+            clip2.type = clip.type;
             clip2.startFrame = state.playheadFrame;
             clip2.trimIn = splitFrame;
             clip2.trimOut = clip.trimOut;
             clip2.speed = clip.speed;
+            clip2.smoothSigma = clip.smoothSigma;
+            clip2.groundFix = clip.groundFix;
             clip2.animClip = clip.animClip;
+            if (clip.data) clip2.data = { ...clip.data };
             // Trim original
             clip.trimOut = clip.totalFrames - splitFrame;
             track.clips.splice(i + 1, 0, clip2);

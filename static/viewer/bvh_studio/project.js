@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { state, SESSION_KEY } from './state.js';
 import { fn } from './registry.js';
-import { Clip } from './models.js';
+import { Timeline, Clip } from './models.js';
 import { undoStack, redoStack } from './undo.js';
 import { sharedState } from '../character_core.js?v=1';
 import { generateRigBoneMesh } from '../model_generator.js';
@@ -192,6 +192,11 @@ export async function restoreProjectData(data) {
         for (const cd of (td.clips || [])) {
             const clip = new Clip(cd.category, cd.name, cd.totalFrames || 100, cd.fps || 30);
             clip.type = cd.type || 'bvh';
+            // Fix broken clips from old splits: clips on model tracks must be type 'model'
+            if (trackType === 'model' && clip.type === 'bvh') {
+                clip.type = 'model';
+                if (!clip.data?.preset) clip.data = { preset: td.preset || 'Rig1', bodyType: td.bodyType || 'Female_Caucasian' };
+            }
             clip.startFrame = cd.startFrame || 0;
             clip.trimIn = cd.trimIn || 0;
             clip.trimOut = cd.trimOut || 0;
@@ -234,31 +239,7 @@ export async function restoreProjectData(data) {
     // Wait for ALL clip animations to load before continuing
     await Promise.all(loadPromises);
 
-    // Auto-create model tracks for BVH tracks that don't have one (old projects)
-    // Only if there are NO model tracks at all (avoid duplicates on re-restore)
-    const hasAnyModelTrack = state.project.tracks.some(t => t.type === 'model');
-    const bvhIndices = [];
-    const linkedBvhIndices = new Set();
-    state.project.tracks.forEach((t, i) => {
-        if (t.type === 'bvh') bvhIndices.push(i);
-        if (t.type === 'model' && t._linkedAnimIdx >= 0) linkedBvhIndices.add(t._linkedAnimIdx);
-    });
-    for (const bi of bvhIndices) {
-        if (hasAnyModelTrack) break;  // don't add if any model track exists
-        if (!linkedBvhIndices.has(bi)) {
-            const animTrack = state.project.tracks[bi];
-            const mt = fn.addModelTrack();
-            mt._linkedAnimIdx = bi;
-            const presetName = animTrack.preset || 'Rig1';
-            const modelFrames = 60 * state.project.fps;  // 1 minute
-            const mc = new Clip(null, presetName, modelFrames, state.project.fps);
-            mc.type = 'model';
-            mc.startFrame = 0;
-            mc.data = { preset: presetName, bodyType: animTrack.bodyType || 'Female_Caucasian' };
-            mt.clips.push(mc);
-            console.log(`[Restore] Auto-created model track for Animation ${bi}: ${presetName}`);
-        }
-    }
+    // Model tracks from old projects are ignored — mesh is loaded by loadClipAnimation
 
     state._undoSuppressed = false;
 
@@ -276,7 +257,6 @@ export function resetToDefault() {
     state._undoSuppressed = false;
 
     state.project.name = 'Untitled';
-    state.project.duration = 0;
     state.selectedTrackIdx = -1;
     state.selectedClipIdx = -1;
     state.playheadFrame = 0;

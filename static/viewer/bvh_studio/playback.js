@@ -94,10 +94,10 @@ export function applyPlayhead() {
     for (const track of state.project.tracks) {
         if (track.muted) continue;
         if (track.type === 'bvh') applyBvhTrack(track, t);
+        else if (track.type === 'model') applyModelTrack(track, t);
         else if (track.type === 'camera') applyCameraTrack(track, t);
         else if (track.type === 'light') applyLightTrack(track, t);
         else if (track.type === 'audio') applyAudioTrack(track, t);
-        else if (track.type === 'model') applyModelTrack(track, t);
     }
 }
 
@@ -106,7 +106,7 @@ function applyBvhTrack(track, t) {
     if (!track.mixer) { if (_applyBvhLog++ < 3) console.warn('[applyBvh] no mixer'); return; }
     let found = false;
     for (const clip of track.clips) {
-        if (!clip.animClip) { if (_applyBvhLog++ < 3) console.warn(`[applyBvh] clip ${clip.name} has no animClip`); continue; }
+        if (!clip.animClip) continue;
         const clipStart = clip.startFrame / state.project.fps;
         const clipEnd = clipStart + clip.duration;
         if (t >= clipStart && t < clipEnd) {
@@ -131,6 +131,10 @@ function applyBvhTrack(track, t) {
         track._activeClip = null;
         track._activeAction = null;
         if (track.skeleton) track.skeleton.skeleton.pose();
+    }
+    // Sichtbarkeit nur steuern wenn KEIN Model-Track die Kontrolle hat
+    if (!track.meshActive && track.mesh) {
+        track.mesh.visible = found;
     }
 }
 
@@ -216,45 +220,58 @@ function applyAudioTrack(track, t) {
 }
 
 function applyModelTrack(track, t) {
-    // Find active model clip at time t
-    let activeClip = null;
+    const animTrack = state.project.getLinkedAnimation(track);
+    if (!animTrack) return;
+
+    // Welches Preset ist gerade aktiv?
+    let activePreset = null;
     for (const clip of track.clips) {
+        if (clip.type !== 'model') continue;
         const cs = clip.startFrame / state.project.fps;
         const ce = cs + clip.duration;
-        if (t >= cs && t < ce) { activeClip = clip; break; }
+        if (t >= cs && t < ce) { activePreset = clip.data?.preset; break; }
     }
 
-    const preset = activeClip?.data?.preset || null;
+    // Nichts geändert → nichts tun
+    if (activePreset === animTrack.meshActive) return;
 
-    // Find linked animation track
-    const animIdx = track._linkedAnimIdx;
-    if (animIdx < 0 || animIdx >= state.project.tracks.length) return;
-    const animTrack = state.project.tracks[animIdx];
-    if (animTrack.type !== 'bvh') return;
+    // Aktuelles Mesh verstecken
+    if (animTrack.mesh) animTrack.mesh.visible = false;
 
-    if (preset !== track._currentPreset) {
-        track._currentPreset = preset;
-        if (preset) {
-            // Only reload if the animation track has a DIFFERENT preset
-            if (animTrack.preset !== preset) {
-                animTrack.preset = preset;
-                animTrack.bodyType = activeClip.data.bodyType || 'Female_Caucasian';
-                // Save current BVH clips before reload
-                const savedClips = animTrack.clips.map(c => c.animClip).filter(Boolean);
-                fn.loadTrackCharacter(animTrack).then(() => {
-                    if (animTrack.mesh) animTrack.mesh.visible = true;
-                    // Re-bind animation clips to the new mixer
-                    animTrack._activeClip = null;
-                    animTrack._activeAction = null;
-                    fn.applyPlayhead();
-                });
-            } else {
-                // Already has the right model — just show it
-                if (animTrack.mesh) animTrack.mesh.visible = true;
+    if (!activePreset) {
+        animTrack.meshActive = null;
+        return;
+    }
+
+    // Mesh aus Cache holen oder laden
+    if (!animTrack.meshCache) animTrack.meshCache = {};
+
+    if (animTrack.meshCache[activePreset]) {
+        // Sofort wechseln — kein async
+        const cached = animTrack.meshCache[activePreset];
+        animTrack.mesh = cached.mesh;
+        animTrack.skeleton = cached.skeleton;
+        animTrack.mixer = cached.mixer;
+        animTrack.mesh.visible = true;
+        animTrack._activeClip = null;
+        animTrack._activeAction = null;
+        animTrack.meshActive = activePreset;
+    } else {
+        // Erstes Mal: laden und cachen
+        animTrack.preset = activePreset;
+        animTrack.meshActive = activePreset;
+        fn.loadTrackCharacter(animTrack).then(() => {
+            if (animTrack.mesh) {
+                animTrack.meshCache[activePreset] = {
+                    mesh: animTrack.mesh,
+                    skeleton: animTrack.skeleton,
+                    mixer: animTrack.mixer
+                };
+                animTrack.mesh.visible = true;
+                animTrack._activeClip = null;
+                animTrack._activeAction = null;
             }
-        } else {
-            if (animTrack.mesh) animTrack.mesh.visible = false;
-        }
+        });
     }
 }
 
