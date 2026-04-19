@@ -101,24 +101,28 @@ function setupViewportContextMenu() {
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
-    // Alt+Click in 3D-Szene: wenn Licht-Track ausgewählt → Licht-Position dort setzen.
-    // click-Event feuert NUR wenn kein Drag erfolgt — Alt+Drag für OrbitControls-Rotate bleibt erhalten.
+    // Alt+Click in 3D-Szene: Licht oder Scene-Object an Klick-Position setzen
     canvas.addEventListener('click', (e) => {
         if (!e.altKey || e.button !== 0) return;
         const track = state.project.tracks[state.selectedTrackIdx];
-        if (!track || track.type !== 'light' || !track.light) return;
-        if (track.light.isAmbientLight) return;  // Ambient hat keine Position
+        if (!track) return;
+        const isLight = track.type === 'light' && track.light && !track.light.isAmbientLight;
+        const isSceneObj = track.type === 'scene_object' && track.subtype === 'custom' && track.mesh;
+        if (!isLight && !isSceneObj) return;
 
         const rect = canvas.getBoundingClientRect();
         mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, state.camera);
-        // Gegen Mesh-Szene raycasten (ohne Lichter/Helper/Grid)
+        // Gegen Mesh-Szene raycasten (ohne Lichter/Helper/Grid/selbst)
+        const selfMesh = isSceneObj ? track.mesh : null;
         const intersects = raycaster.intersectObjects(state.scene.children, true).filter(h => {
             const o = h.object;
             if (!o.visible || o.isLight) return false;
             if (o.type?.includes('Helper')) return false;
             if (o.type === 'GridHelper') return false;
+            // Bei Scene-Object: eigenes Mesh ignorieren (würde sich selbst treffen)
+            if (selfMesh && (o === selfMesh || selfMesh.getObjectById?.(o.id))) return false;
             return true;
         });
         let hitPoint = null;
@@ -130,13 +134,17 @@ function setupViewportContextMenu() {
         }
         if (!hitPoint) return;
 
-        track.light.position.copy(hitPoint);
-        // Bei Boden-Treffer Licht 2m hoch setzen
-        if (hitPoint.y < 0.5) track.light.position.y = Math.max(hitPoint.y + 2, 2);
-        track.light.target?.updateMatrixWorld();
-        track.lightHelper?.update?.();
+        if (isLight) {
+            track.light.position.copy(hitPoint);
+            if (hitPoint.y < 0.5) track.light.position.y = Math.max(hitPoint.y + 2, 2);
+            track.light.target?.updateMatrixWorld();
+            track.lightHelper?.update?.();
+            fn.serverLog?.('light_moved', `track=${track.name}`);
+        } else if (isSceneObj) {
+            track.mesh.position.copy(hitPoint);
+            fn.serverLog?.('object_moved', `track=${track.name}`);
+        }
         fn.updateProperties();
-        fn.serverLog?.('light_moved', `track=${track.name} → (${track.light.position.x.toFixed(2)}, ${track.light.position.y.toFixed(2)}, ${track.light.position.z.toFixed(2)})`);
     });
 
     // Links-Klick: Licht-Helper oder Scene-Object auswählen

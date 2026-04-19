@@ -53,22 +53,33 @@ export function addModelTrack(name) {
 }
 
 // Erzeugt Helper-Group für beliebigen Licht-Typ (Spot, Directional, Point, Ambient)
+// Die Group enthält ZWEI unabhängig schaltbare Kinder:
+//   - .spotHelper: Wireframe-Helfer (SpotLightHelper/Directional/Point) — "Helfer-Linien"
+//   - .originCone: solider Kegel am Ursprung — "Lichtkegel"
+// Default: Helfer-Linien AUS, Lichtkegel AN.
 export function createLightHelper(light) {
     if (!light) return null;
-    if (light.isAmbientLight) return null;  // Ambient hat keine Position → kein Helper
+    if (light.isAmbientLight) return null;
     const group = new THREE.Group();
     let typeHelper = null;
     if (light.isSpotLight) typeHelper = new THREE.SpotLightHelper(light, 0xffc107);
     else if (light.isDirectionalLight) typeHelper = new THREE.DirectionalLightHelper(light, 0.6, 0xffc107);
     else if (light.isPointLight) typeHelper = new THREE.PointLightHelper(light, 0.12, 0xffc107);
-    if (typeHelper) group.add(typeHelper);
+    if (typeHelper) {
+        typeHelper.visible = false;  // Default: Helfer-Linien aus
+        group.add(typeHelper);
+    }
 
-    // Solider kleiner Kegel am Licht-Ursprung, zeigt in Lichtrichtung
     const coneGeo = new THREE.ConeGeometry(0.08, 0.22, 16);
     coneGeo.translate(0, 0.11, 0);
     const coneMat = new THREE.MeshBasicMaterial({ color: light.color.clone() });
     const originCone = new THREE.Mesh(coneGeo, coneMat);
+    originCone.visible = true;  // Default: Lichtkegel an
     group.add(originCone);
+
+    // Exponierte Referenzen für unabhängiges Toggeln (track.lightVisible vs coneVisible)
+    group.spotHelper = typeHelper;
+    group.originCone = originCone;
 
     group.update = function() {
         typeHelper?.update?.();
@@ -160,14 +171,17 @@ export function applySceneLightOverrides(overrides) {
             track.lightHelper.visible = track.lightVisible && !track.muted;
             track.lightHelper.update?.();
         }
-        // Clips ersetzen (Keyframes aus Save)
-        track.clips = (o.clips || []).map(cd => {
-            const kf = new Clip(null, cd.name || 'Licht', 0, state.project.fps);
-            kf.type = 'light_kf';
-            kf.startFrame = cd.startFrame || 0;
-            kf.data = cd.data || {};
-            return kf;
-        }).sort((a, b) => a.startFrame - b.startFrame);
+        // Clips nur ersetzen wenn Overrides welche haben, sonst Standard-KFs behalten
+        // (Pre-0.40 Saves haben keine clips-Array → Standard Start+Ende bleibt intakt)
+        if (Array.isArray(o.clips) && o.clips.length > 0) {
+            track.clips = o.clips.map(cd => {
+                const kf = new Clip(null, cd.name || 'Licht', 0, state.project.fps);
+                kf.type = 'light_kf';
+                kf.startFrame = cd.startFrame || 0;
+                kf.data = cd.data || {};
+                return kf;
+            }).sort((a, b) => a.startFrame - b.startFrame);
+        }
     }
 }
 
@@ -175,14 +189,27 @@ export function applySceneLightOverrides(overrides) {
 // Wird NACH restoreProjectData() aufgerufen; wendet dann etwaige gestashte
 // Szenen-Licht-Overrides aus dem Save an.
 export function createSceneLightTracks() {
+    const overrides = state.project._pendingSceneOverrides?.sceneLights;
+    // Wenn ein Save geladen wurde (overrides ist definiert, auch wenn {}): nur
+    // Lichter anlegen, die im Save vorkommen. Wenn overrides === undefined (neues
+    // Projekt, kein Save): alle Default-Szenen-Lichter anlegen.
+    const hasSavedState = overrides !== undefined && overrides !== null;
     const sceneLights = [
-        { name: 'Key Light',  light: state.sceneKeyLight },
-        { name: 'Fill Light', light: state.sceneFillLight },
-        { name: 'Back Light', light: state.sceneBackLight },
-        { name: 'Ambient',    light: state.sceneAmbient },
+        { name: 'Key Light',  light: state.sceneKeyLight,  ref: 'sceneKeyLight' },
+        { name: 'Fill Light', light: state.sceneFillLight, ref: 'sceneFillLight' },
+        { name: 'Back Light', light: state.sceneBackLight, ref: 'sceneBackLight' },
+        { name: 'Ambient',    light: state.sceneAmbient,   ref: 'sceneAmbient' },
     ];
-    for (const { name, light } of sceneLights) {
+    for (const { name, light, ref } of sceneLights) {
         if (!light) continue;
+        // Saved project kennt dieses Licht nicht → User hat es gelöscht → aus Szene entfernen
+        if (hasSavedState && !(name in overrides)) {
+            if (light.target) state.scene.remove(light.target);
+            state.scene.remove(light);
+            light.dispose?.();
+            state[ref] = null;
+            continue;
+        }
         if (light.isDirectionalLight && light.target && !light.target.parent) {
             state.scene.add(light.target);
         }
@@ -191,19 +218,16 @@ export function createSceneLightTracks() {
         track.color = TRACK_COLORS.light || track.color;
         track.light = light;
         track.lightType = detectLightType(light);
-        track.lightVisible = true;
+        track.lightVisible = false;  // Helfer-Linien: default aus
+        track.coneVisible = true;    // Lichtkegel: default an
         track._sceneLight = true;
         track.lightHelper = createLightHelper(light);
         if (track.lightHelper) {
-            track.lightHelper.visible = track.lightVisible;
             state.scene.add(track.lightHelper);
         }
         state.project.addTrack(track);
-        // Standard-Keyframe an Frame 0 als Baseline für jedes Szenen-Licht
-        _addStandardKeyframe(track);
     }
-    // Pending overrides aus aktuellem Save anwenden (falls vorhanden; ersetzt den Standard-KF)
-    applySceneLightOverrides(state.project._pendingSceneOverrides?.sceneLights);
+    applySceneLightOverrides(overrides);
     fn.updateTrackHeaders?.();
     fn.renderTimeline?.();
 }
@@ -227,9 +251,8 @@ export function addSpecialTrack(type, name) {
         track.lightType = 'spot';
         track.lightHelper = createLightHelper(track.light);
         if (track.lightHelper) state.scene.add(track.lightHelper);
-        track.lightVisible = true;
-        // Standard Start + Ende Keyframes (ohne diese ist das Licht aus)
-        _addStandardKeyframe(track);
+        track.lightVisible = false;  // Helfer-Linien: default aus
+        track.coneVisible = true;    // Lichtkegel: default an
     } else if (type === 'audio') {
         track.audioCtx = state.project._audioCtx || (state.project._audioCtx = new (window.AudioContext || window.webkitAudioContext)());
         track.gainNode = track.audioCtx.createGain();
@@ -269,6 +292,45 @@ export function addCameraKeyframe(trackIdx, frame) {
     fn.renderTimeline();
     fn.updateProperties();
     console.log(`[BVH Studio] Kameraposition gespeichert bei Frame ${targetFrame}`);
+}
+
+// Pair-Variante: legt ZWEI Keyframes am gleichen Frame an — 'upper' (vor dem Cut)
+// und 'lower' (nach dem Cut). Erlaubt harten Zustandswechsel an einer Stelle.
+// Visuell werden sie in der Timeline oben/unten versetzt gerendert.
+export function addLightKeyframePair(trackIdx, frame) {
+    const track = state.project.tracks[trackIdx];
+    if (!track || track.type !== 'light' || !track.light) return;
+    pushUndo('Lichteigenschaft-Pair');
+    const targetFrame = (frame != null) ? frame : state.playheadFrame;
+    const makeKF = (position, nameSuffix) => {
+        const kf = new Clip(null, `Licht ${track.clips.length + 1} (${nameSuffix})`, 0, state.project.fps);
+        kf.type = 'light_kf';
+        kf.startFrame = targetFrame;
+        const tgt = track.light.target?.position || { x: 0, y: 0, z: 0 };
+        kf.data = {
+            position: { x: track.light.position.x, y: track.light.position.y, z: track.light.position.z },
+            target:   { x: tgt.x, y: tgt.y, z: tgt.z },
+            color: '#' + track.light.color.getHexString(),
+            intensity: track.light.intensity,
+            angle: track.light.angle ?? (Math.PI / 6),
+            penumbra: track.light.penumbra ?? 0.3,
+            distance: track.light.distance ?? 50,
+            fade: position === 'upper' ? false : true,  // vor-KF = harter Cut per default
+            visible: !track.muted,
+            trackPosition: position,  // 'upper' | 'lower' für Render-Offset
+        };
+        return kf;
+    };
+    track.clips.push(makeKF('upper', 'vor'));
+    track.clips.push(makeKF('lower', 'nach'));
+    track.clips.sort((a, b) => {
+        if (a.startFrame !== b.startFrame) return a.startFrame - b.startFrame;
+        return (a.data?.trackPosition === 'upper' ? 0 : 1) - (b.data?.trackPosition === 'upper' ? 0 : 1);
+    });
+    fn.updateDuration();
+    fn.renderTimeline();
+    fn.updateProperties();
+    fn.serverLog?.('light_kf_pair_added', `track=${track.name} frame=${targetFrame}`);
 }
 
 // Light keyframe helpers
@@ -389,9 +451,8 @@ export function removeTrack(idx) {
     state.scene.remove(track.group);
     track.group = null;
 
-    // Cleanup special tracks
-    if (track._sceneLight || track._sceneItem) {
-        // Szenen-Elemente (Lichter, Boden) dürfen nicht gelöscht werden.
+    // Cleanup special tracks — Boden ist geschützt, Lichter (auch Szenen-Lichter) dürfen weg
+    if (track._sceneItem) {
         console.warn(`[BVH Studio] Szenen-Element "${track.name}" kann nicht gelöscht werden.`);
         return;
     }
@@ -399,6 +460,13 @@ export function removeTrack(idx) {
         if (track.light.target) state.scene.remove(track.light.target);
         state.scene.remove(track.light);
         track.light.dispose();
+        // Szenen-Licht-Referenz nullen, damit createSceneLightTracks es nicht wieder anlegt
+        if (track._sceneLight) {
+            if (state.sceneKeyLight === track.light)  state.sceneKeyLight = null;
+            if (state.sceneFillLight === track.light) state.sceneFillLight = null;
+            if (state.sceneBackLight === track.light) state.sceneBackLight = null;
+            if (state.sceneAmbient === track.light)   state.sceneAmbient = null;
+        }
     }
     if (track.lightHelper) {
         state.scene.remove(track.lightHelper);
@@ -912,6 +980,7 @@ fn.addSpecialTrack = addSpecialTrack;
 fn.addClipToTrack = addClipToTrack;
 fn.addCameraKeyframe = addCameraKeyframe;
 fn.addLightKeyframe = addLightKeyframe;
+fn.addLightKeyframePair = addLightKeyframePair;
 fn.loadAudioFile = loadAudioFile;
 fn.removeTrack = removeTrack;
 fn.selectTrack = selectTrack;

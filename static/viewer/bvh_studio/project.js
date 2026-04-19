@@ -41,6 +41,7 @@ function _buildSceneLightOverrides() {
             penumbra: t.light.penumbra ?? null,
             distance: t.light.distance ?? null,
             visible: t.lightVisible,
+            coneVisible: t.coneVisible !== false,
             muted: t.muted,
             clips: t.clips.map(c => {
                 if (c.type !== 'light_kf') return null;
@@ -64,6 +65,7 @@ function _buildSceneFloorOverrides() {
                 metalness: t.floorMetalness ?? 0.05,
                 size: t.floorSize ?? 6,
                 muted: t.muted,
+                gridVisible: state.gridVisible !== false,
             };
         }
     }
@@ -96,6 +98,7 @@ export function buildProjectData() {
                 if (t.light.penumbra != null) td.lightPenumbra = t.light.penumbra;
                 if (t.light.distance != null) td.lightDistance = t.light.distance;
                 td.lightVisible = t.lightVisible;
+                td.coneVisible = t.coneVisible !== false;  // default true
                 td.lightType = t.lightType;
                 td._sceneLight = !!t._sceneLight;
             }
@@ -110,6 +113,7 @@ export function buildProjectData() {
                 if (c.type === 'camera_kf' || c.type === 'light_kf') cd.data = c.data;
                 else if (c.type === 'model') cd.data = { preset: c.data.preset, bodyType: c.data.bodyType };
                 else if (c.type === 'audio') cd.data = { fileName: c.data.fileName, audioUrl: c.data.audioUrl, audioDuration: c.data.audioDuration, volume: c.data.volume, fadeIn: c.data.fadeIn, fadeOut: c.data.fadeOut, offset: c.data.offset };
+                else if (c.type === 'object_clip') cd.data = { url: c.data?.url, ext: c.data?.ext, fileName: c.data?.fileName };
                 return cd;
             });
             return td;
@@ -216,9 +220,11 @@ export async function restoreProjectData(data) {
     state.project.name = data.name || 'Untitled';
     state.project.fps = data.fps || 30;
 
-    // Szenen-Overrides stashen — werden in createSceneLightTracks/createFloorTrack angewandt
+    // Szenen-Overrides stashen — werden in createSceneLightTracks/createFloorTrack angewandt.
+    // WICHTIG: undefined (Legacy-Save ohne sceneLights-Feld) → Defaults erzeugen.
+    //          {} (Save mit explizit leerem Licht-Dict) → ALLE Lichter gelöscht, nichts erzeugen.
     state.project._pendingSceneOverrides = {
-        sceneLights: data.sceneLights || {},
+        sceneLights: data.sceneLights,   // undefined bleibt undefined
         sceneFloor: data.sceneFloor || null,
     };
 
@@ -277,8 +283,9 @@ export async function restoreProjectData(data) {
             if (td.lightAngle != null) track.light.angle = td.lightAngle;
             if (td.lightPenumbra != null) track.light.penumbra = td.lightPenumbra;
             if (td.lightDistance != null) track.light.distance = td.lightDistance;
-            track.lightVisible = td.lightVisible ?? true;
-            if (track.lightHelper) { track.lightHelper.visible = track.lightVisible; if (track.lightHelper.update) track.lightHelper.update(); }
+            track.lightVisible = td.lightVisible ?? false;  // default aus (Helfer-Linien)
+            track.coneVisible = td.coneVisible ?? true;    // default an (Lichtkegel)
+            if (track.lightHelper?.update) track.lightHelper.update();
         }
 
         for (const cd of (td.clips || [])) {

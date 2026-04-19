@@ -303,6 +303,46 @@ def test_scene_light_overrides_roundtrip():
         _check(f'SceneFloor: Rauheit = 0.7 (got {sf.get("roughness")})', sf.get('roughness') == 0.7)
 
 
+def test_scene_light_deleted_kf_persists():
+    print('\n=== Deleted Standard-Start-KF bleibt nach Save+Load weg ===')
+    # Projekt simuliert: User hat Standard Start auf Key Light gelöscht,
+    # nur Standard Ende übrig.
+    project_data = {
+        'name': 'TestProject_DeletedKF',
+        'fps': 30,
+        'tracks': [],
+        'sceneLights': {
+            'Key Light': {
+                'color': '#ffffff', 'intensity': 3.0,
+                'position': {'x': 2, 'y': 4, 'z': -5},
+                'target': {'x': 0, 'y': 0, 'z': 0},
+                'visible': True, 'muted': False,
+                # Nur noch ein Clip: Standard Start wurde gelöscht
+                'clips': [
+                    {'type': 'light_kf', 'name': 'Standard Ende', 'startFrame': 300,
+                     'data': {'visible': True, 'fade': True, 'intensity': 3.0}}
+                ]
+            }
+        }
+    }
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir) / 'test_deleted_kf.studio.json'
+        code, _ = _req('/api/studio/project-save/', method='POST',
+                       data={'path': str(tmp_path), 'project': project_data})
+        _check('Save: HTTP 200', code == 200)
+        code, loaded = _req(f'/api/studio/project-load/?path={urllib.parse.quote(str(tmp_path))}')
+        restored = loaded.get('project', {})
+        sl = restored.get('sceneLights', {})
+        key = sl.get('Key Light', {})
+        clips = key.get('clips', [])
+        _check(f'Key Light: nur 1 Clip (Standard Start entfernt, got {len(clips)})', len(clips) == 1)
+        if clips:
+            _check('Key Light: verbleibender Clip ist "Standard Ende"',
+                   clips[0].get('name') == 'Standard Ende')
+            _check('Key Light: KEIN Standard Start mehr',
+                   not any(c.get('name') == 'Standard Start' for c in clips))
+
+
 def test_client_log():
     print('\n=== Client-Log Endpoint ===')
     code, data = _req('/api/log/', method='POST',
@@ -339,6 +379,7 @@ def main():
     test_scene_object_upload()
     test_project_save_load_roundtrip()
     test_scene_light_overrides_roundtrip()
+    test_scene_light_deleted_kf_persists()
     test_client_log()
     test_ui_prefs_preload()
 

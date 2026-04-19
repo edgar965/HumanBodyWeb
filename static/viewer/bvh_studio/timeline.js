@@ -243,14 +243,23 @@ async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame, subme
         sub.appendChild(item);
     } else if (track.type === 'light') {
         sub.innerHTML = '';
-        const item = document.createElement('div');
-        item.className = 'ctx-item';
-        item.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Lichteigenschaft`;
-        item.addEventListener('click', () => {
+        const pairItem = document.createElement('div');
+        pairItem.className = 'ctx-item';
+        pairItem.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Lichteigenschaft (Pair: vor/nach)`;
+        pairItem.title = 'Legt zwei Keyframes am gleichen Frame an — einer für das Segment davor, einer für danach';
+        pairItem.addEventListener('click', () => {
+            closeCtx();
+            fn.addLightKeyframePair(trackIdx, placeFrame);
+        });
+        sub.appendChild(pairItem);
+        const singleItem = document.createElement('div');
+        singleItem.className = 'ctx-item';
+        singleItem.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Lichteigenschaft (einzel)`;
+        singleItem.addEventListener('click', () => {
             closeCtx();
             fn.addLightKeyframe(trackIdx, placeFrame);
         });
-        sub.appendChild(item);
+        sub.appendChild(singleItem);
     } else {
         sub.innerHTML = '<div class="ctx-submenu-empty">Nicht verfügbar für diesen Spurtyp</div>';
     }
@@ -296,7 +305,11 @@ export function setupTimeline() {
 
                 if (clip.type === 'camera_kf' || clip.type === 'light_kf') {
                     // Keyframe marker: hit area 16x16 around point
-                    const my2 = y + TRACK_HEIGHT / 2;
+                    // Pair-KFs versetzt (upper/lower) damit jeder einzeln klickbar
+                    const pos = clip.data?.trackPosition;
+                    const my2 = pos === 'upper' ? y + TRACK_HEIGHT * 0.28
+                              : pos === 'lower' ? y + TRACK_HEIGHT * 0.72
+                              : y + TRACK_HEIGHT / 2;
                     if (mx >= cx - 8 && mx <= cx + 8 && my >= my2 - 8 && my <= my2 + 8) {
                         return { trackIdx: ti, clipIdx: ci, clipX: cx, clipW: 0 };
                     }
@@ -777,7 +790,11 @@ export function renderTimeline() {
 
             if (clip.type === 'camera_kf' || clip.type === 'light_kf') {
                 // Keyframe marker: Diamant (einheitlich für Kamera + Licht)
-                const my = y + TRACK_HEIGHT / 2;
+                // Pair-KFs versetzt: 'upper' oben, 'lower' unten; Standard zentriert
+                const pos = clip.data?.trackPosition;
+                const my = pos === 'upper' ? y + TRACK_HEIGHT * 0.28
+                         : pos === 'lower' ? y + TRACK_HEIGHT * 0.72
+                         : y + TRACK_HEIGHT / 2;
                 const sz = isSelected ? 8 : 6;
                 tlCtx.fillStyle = track.color;
                 tlCtx.globalAlpha = isSelected ? 1.0 : 0.8;

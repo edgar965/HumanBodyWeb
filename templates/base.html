@@ -87,6 +87,9 @@
                     <a href="{% url 'test_mocapnet' %}" class="{% if request.path == '/test/mocapnet/' %}active{% endif %}">
                         <i class="fas fa-cog"></i> <span>MocapNET</span>
                     </a>
+                    <a href="{% url 'testcases' %}" class="{% if request.path == '/tests/' %}active{% endif %}">
+                        <i class="fas fa-check-double"></i> <span>Testcases</span>
+                    </a>
                     <a href="{% url 'test_animation' %}" class="{% if request.path == '/humanbody/test-animation/' %}active{% endif %}">
                         <i class="fas fa-vial"></i> <span>Test Animation</span>
                     </a>

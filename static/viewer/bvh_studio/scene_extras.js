@@ -7,13 +7,14 @@
  */
 import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { state, TRACK_COLORS } from './state.js';
 import { fn } from './registry.js';
 import { Track, Clip } from './models.js';
 import { pushUndo } from './undo.js';
-import { createLightHelper, addStandardLightKeyframes } from './tracks.js';
+import { createLightHelper } from './tracks.js';
 
 let _cachedTheatrePresets = null;
 let _cachedFloorTextures = null;
@@ -56,6 +57,24 @@ export function createFloorTrack() {
     track.floorMetalness = metalness;
     track.muted = override?.muted || false;
     state.project.addTrack(track);
+    // Grid-Sichtbarkeit aus Save wiederherstellen
+    if (override?.gridVisible !== undefined) {
+        state.gridVisible = !!override.gridVisible;
+        state.scene?.traverse(o => {
+            if (o.type === 'GridHelper' || o.isGridHelper) o.visible = state.gridVisible;
+        });
+    }
+    // Textur aus Save anwenden
+    if (override?.texture && override.texture !== 'none') {
+        // Im Property-Panel wird ein Textur-Dropdown mit URLs geladen — hier haben wir nur den Namen,
+        // daher triggern wir eine Wiederanwendung wenn Texturen-Liste verfügbar ist.
+        setTimeout(() => {
+            fn.getFloorTextures?.().then(list => {
+                const found = list?.find(x => x.name === override.texture);
+                if (found?.url) applyFloorTexture(track, found.url);
+            });
+        }, 0);
+    }
     return track;
 }
 
@@ -116,13 +135,49 @@ async function _applyTheatrePreset(presetName) {
     const resp = await fetch(`/api/studio/theatre-preset/${encodeURIComponent(presetName)}/`);
     if (!resp.ok) { alert(`Preset "${presetName}" nicht gefunden`); return; }
     const preset = await resp.json();
+    const presetLights = preset.lights || [];
     pushUndo(`Theatre-Preset: ${preset.label || presetName}`);
-    for (const lightDef of (preset.lights || [])) {
-        _createLightTrackFromDef(lightDef, preset.label || presetName);
+
+    // 1) Alle vorhandenen Licht-Tracks entfernen (Szenen-Lichter + Preset-Lichter)
+    //    damit das neue Preset eine saubere Licht-Setup erzeugt.
+    const lightIndices = [];
+    for (let i = 0; i < state.project.tracks.length; i++) {
+        if (state.project.tracks[i].type === 'light') lightIndices.push(i);
+    }
+    // Von hinten entfernen (Indizes bleiben stabil)
+    for (let j = lightIndices.length - 1; j >= 0; j--) {
+        const idx = lightIndices[j];
+        const t = state.project.tracks[idx];
+        if (t.light) {
+            if (t.light.target) state.scene.remove(t.light.target);
+            state.scene.remove(t.light);
+            t.light.dispose?.();
+        }
+        if (t.lightHelper) {
+            state.scene.remove(t.lightHelper);
+            t.lightHelper.traverse?.(obj => {
+                if (obj.geometry) obj.geometry.dispose?.();
+                if (obj.material) obj.material.dispose?.();
+            });
+        }
+        state.project.tracks.splice(idx, 1);
+    }
+
+    // 2) Preset-Lichter als neue Tracks anlegen (mit nativen Typen)
+    let newTracks = 0;
+    for (const def of presetLights) {
+        if (_createLightTrackFromDef(def, preset.label || presetName)) newTracks++;
+    }
+
+    if (state.selectedTrackIdx >= state.project.tracks.length) {
+        state.selectedTrackIdx = state.project.tracks.length - 1;
     }
     fn.updateTrackHeaders?.();
     fn.renderTimeline?.();
-    fn.serverLog?.('theatre_preset_applied', `${presetName} — ${preset.lights?.length || 0} lights`);
+    fn.updateProperties?.();
+    fn.applyPlayhead?.();
+    fn.serverLog?.('theatre_preset_applied',
+        `${presetName}: alte Lichter entfernt, ${newTracks} Preset-Lichter`);
 }
 
 function _createLightTrackFromDef(def, presetLabel) {
@@ -160,13 +215,12 @@ function _createLightTrackFromDef(def, presetLabel) {
     track.color = TRACK_COLORS.light || track.color;
     track.light = light;
     track.lightType = type;
-    track.lightVisible = true;
+    track.lightVisible = false;  // Helfer-Linien: default aus
+    track.coneVisible = true;    // Lichtkegel: default an
     track._theatrePreset = presetLabel;
     track.lightHelper = createLightHelper(light);
     if (track.lightHelper) state.scene.add(track.lightHelper);
     state.project.addTrack(track);
-    // Start + Ende Keyframes damit das Licht auf der Timeline sichtbar läuft
-    addStandardLightKeyframes(track);
     return track;
 }
 
@@ -233,23 +287,42 @@ export function setupSceneObjectImport() {
     });
 }
 
-// Aufgerufen vom Context-Menu: lädt eine 3D-Datei in den Track an Click-Position
+// Aufgerufen vom Context-Menu: lädt eine oder mehrere 3D-Dateien (OBJ+MTL+Texturen)
+// in den Track an Click-Position. User kann mehrere Dateien auswählen.
 export async function addSceneObjectClip(trackIdx, startFrame) {
     const track = state.project.tracks[trackIdx];
     if (!track || track.type !== 'scene_object') return;
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.obj,.glb,.gltf,.fbx';
+    input.multiple = true;  // OBJ + MTL + Texturen
+    input.accept = '.obj,.mtl,.glb,.gltf,.fbx,.jpg,.jpeg,.png,.webp';
     input.addEventListener('change', async () => {
-        const file = input.files[0];
-        if (!file) return;
+        const files = Array.from(input.files || []);
+        if (files.length === 0) return;
         try {
-            const formData = new FormData();
-            formData.append('object', file);
-            const upResp = await fetch('/api/studio/scene-object-upload/', { method: 'POST', body: formData });
-            const upData = await upResp.json();
-            if (!upData.ok) throw new Error(upData.error || 'Upload fehlgeschlagen');
-            await _loadSceneObjectIntoTrack(track, upData.url, upData.name, upData.ext, startFrame);
+            // Alle Dateien in denselben Bundle-Ordner → MTL→Textur-Referenzen funktionieren
+            const bundleId = 'obj_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+            const uploaded = {};  // { filename: { url, ext } }
+            await Promise.all(files.map(async (file) => {
+                const fd = new FormData();
+                fd.append('object', file);
+                fd.append('bundleId', bundleId);
+                const resp = await fetch('/api/studio/scene-object-upload/', { method: 'POST', body: fd });
+                const data = await resp.json();
+                if (data.ok) uploaded[file.name.toLowerCase()] = { url: data.url, name: file.name, ext: data.ext };
+                else console.warn('[scene_extras] Upload fehlgeschlagen:', file.name, data.error);
+            }));
+            // Haupt-Datei: erste OBJ/GLB/GLTF/FBX
+            const mainKey = Object.keys(uploaded).find(k => /\.(obj|glb|gltf|fbx)$/i.test(k));
+            if (!mainKey) { alert('Keine OBJ/GLB/GLTF/FBX Datei gefunden.'); return; }
+            const main = uploaded[mainKey];
+            // MTL-Datei finden (falls OBJ)
+            let mtlUrl = null;
+            if (main.ext === 'obj') {
+                const mtlKey = Object.keys(uploaded).find(k => /\.mtl$/i.test(k));
+                if (mtlKey) mtlUrl = uploaded[mtlKey].url;
+            }
+            await _loadSceneObjectIntoTrack(track, main.url, main.name, main.ext, startFrame, mtlUrl);
             fn.updateTrackHeaders?.();
             fn.renderTimeline?.();
             fn.updateProperties?.();
@@ -261,12 +334,28 @@ export async function addSceneObjectClip(trackIdx, startFrame) {
     input.click();
 }
 
-async function _loadSceneObjectIntoTrack(track, url, displayName, ext, startFrame) {
+async function _loadSceneObjectIntoTrack(track, url, displayName, ext, startFrame, mtlUrl = null) {
     pushUndo('3D-Objekt Clip hinzufügen');
     let object3d = null;
     try {
         if (ext === 'obj') {
-            object3d = await new OBJLoader().loadAsync(url);
+            const loader = new OBJLoader();
+            // Wenn MTL mit hochgeladen wurde: Materialien laden + OBJLoader zuweisen
+            if (mtlUrl) {
+                try {
+                    const mtlLoader = new MTLLoader();
+                    // Base path aus URL ableiten (Texturen liegen im selben Dir)
+                    const basePath = mtlUrl.substring(0, mtlUrl.lastIndexOf('/') + 1);
+                    mtlLoader.setPath(basePath);
+                    const mtlName = mtlUrl.substring(mtlUrl.lastIndexOf('/') + 1);
+                    const materials = await mtlLoader.loadAsync(mtlName);
+                    materials.preload();
+                    loader.setMaterials(materials);
+                } catch (mtlErr) {
+                    console.warn('[scene_extras] MTL-Load fehlgeschlagen, nutze Standard-Material:', mtlErr);
+                }
+            }
+            object3d = await loader.loadAsync(url);
         } else if (ext === 'glb' || ext === 'gltf') {
             const gltf = await new GLTFLoader().loadAsync(url);
             object3d = gltf.scene;
@@ -279,7 +368,8 @@ async function _loadSceneObjectIntoTrack(track, url, displayName, ext, startFram
         return;
     }
 
-    if (ext === 'obj') {
+    // Fallback-Material nur wenn gar keins vorhanden
+    if (ext === 'obj' && !mtlUrl) {
         object3d.traverse(obj => {
             if (obj.isMesh && (!obj.material || !obj.material.color)) {
                 obj.material = new THREE.MeshStandardMaterial({ color: 0x888899, roughness: 0.7 });
@@ -315,7 +405,7 @@ async function _loadSceneObjectIntoTrack(track, url, displayName, ext, startFram
     track.objectExt = ext;
     if (track.objectTint) setObjectTint(track, track.objectTint);
     state.scene.add(object3d);
-    object3d.visible = false;  // Sichtbarkeit per Clip-Timing (applyPlayhead)
+    object3d.visible = true;  // applyPlayhead korrigiert ggf. (hasClips && !muted)
 
     // Clip auf der Timeline anlegen: 10s default
     const fps = state.project.fps;

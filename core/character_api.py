@@ -5895,21 +5895,32 @@ def studio_scene_object_upload(request):
 
     upload = request.FILES['object']
     ext = (upload.name.rsplit('.', 1)[-1] if '.' in upload.name else '').lower()
-    if ext not in ('obj', 'glb', 'gltf', 'fbx'):
-        return JsonResponse({'error': f'Format "{ext}" nicht unterstützt (obj/glb/gltf/fbx)'}, status=400)
+    allowed = {'obj', 'glb', 'gltf', 'fbx', 'mtl', 'jpg', 'jpeg', 'png', 'webp', 'bmp', 'tga'}
+    if ext not in allowed:
+        return JsonResponse({'error': f'Format "{ext}" nicht unterstützt'}, status=400)
 
-    _SCENE_OBJECTS_DIR.mkdir(parents=True, exist_ok=True)
-    stem = upload.name.rsplit('.', 1)[0].replace(' ', '_')
-    fname = f'{stem}_{uuid.uuid4().hex[:8]}.{ext}'
-    fp = _SCENE_OBJECTS_DIR / fname
+    # Optional bundleId — alle Dateien des gleichen Imports gehen in denselben Unterordner,
+    # damit MTL → Textur-Referenzen per Original-Dateinamen funktionieren.
+    bundle_id = request.POST.get('bundleId', '').strip()
+    safe_bundle = ''.join(c for c in bundle_id if c.isalnum() or c in '-_')[:32]
+    if safe_bundle:
+        target_dir = _SCENE_OBJECTS_DIR / safe_bundle
+        fname = upload.name.replace(' ', '_')  # Original behalten
+    else:
+        target_dir = _SCENE_OBJECTS_DIR
+        stem = upload.name.rsplit('.', 1)[0].replace(' ', '_')
+        fname = f'{stem}_{uuid.uuid4().hex[:8]}.{ext}'
+    target_dir.mkdir(parents=True, exist_ok=True)
+    fp = target_dir / fname
     try:
         with open(fp, 'wb') as out:
             for chunk in upload.chunks():
                 out.write(chunk)
         log.info(f'[scene-object] Uploaded: {fp} ({upload.size} bytes)')
+        url_path = f'{settings.MEDIA_URL}scene_objects/' + (f'{safe_bundle}/' if safe_bundle else '') + fname
         return JsonResponse({
             'ok': True,
-            'url': f'{settings.MEDIA_URL}scene_objects/{fname}',
+            'url': url_path,
             'name': upload.name,
             'ext': ext,
         })

@@ -122,6 +122,55 @@ def test_mocapnet(request):
     })
 
 
+def testcases_page(request):
+    """Testcases Übersicht — Kategorien, einzelne Tests, Run-All-Button."""
+    from tests import ALL_CATEGORIES
+    cats = []
+    for CatClass in ALL_CATEGORIES:
+        cats.append({
+            'id': CatClass.__name__,
+            'name': CatClass.name,
+            'description': CatClass.description,
+            'cases': [
+                {'name': c.name, 'description': c.description, 'id': c.fn.__name__}
+                for c in CatClass.cases()
+            ],
+        })
+    return render(request, 'testcases.html', {'categories': cats})
+
+
+def run_testcases_api(request):
+    """API: führt Tests aus. Query params: category (optional), case (optional).
+
+    GET /api/tests/run/                 → alle Kategorien
+    GET /api/tests/run/?category=X      → eine Kategorie
+    GET /api/tests/run/?category=X&case=Y → einzelner Test
+    Response: { results: [{category, name, ok, detail, error, durationMs}] }
+    """
+    import time
+    from tests import ALL_CATEGORIES
+    category = request.GET.get('category', '').strip()
+    case = request.GET.get('case', '').strip()
+    results = []
+    for CatClass in ALL_CATEGORIES:
+        if category and CatClass.__name__ != category:
+            continue
+        for c in CatClass.cases():
+            if case and c.fn.__name__ != case:
+                continue
+            t0 = time.time()
+            r = c.run()
+            r['category'] = CatClass.name
+            r['categoryId'] = CatClass.__name__
+            r['caseId'] = c.fn.__name__
+            r['durationMs'] = int((time.time() - t0) * 1000)
+            results.append(r)
+    from django.http import JsonResponse
+    return JsonResponse({'results': results, 'total': len(results),
+                         'passed': sum(1 for r in results if r['ok']),
+                         'failed': sum(1 for r in results if not r['ok'])})
+
+
 def _annotate_file_sizes(jobs):
     """Add video_size (bytes) and video_size_display (human-readable) to each job."""
     for job in jobs:

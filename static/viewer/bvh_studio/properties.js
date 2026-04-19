@@ -4,6 +4,52 @@
 import * as THREE from 'three';
 import { state, TRACK_ICONS } from './state.js';
 import { fn } from './registry.js';
+import { createLightHelper } from './tracks.js';
+
+// Tauscht den THREE.js Light-Typ eines Tracks und erzeugt den Helper neu.
+// Erhält Position, Farbe, Intensität, Winkel, Penumbra, Reichweite.
+function _changeLightType(track, newType) {
+    const oldLight = track.light;
+    if (!oldLight) return;
+    const pos = oldLight.position?.clone?.();
+    const tgt = oldLight.target?.position?.clone?.();
+    const color = oldLight.color.clone();
+    const intensity = oldLight.intensity ?? 3;
+    const angle = oldLight.angle ?? Math.PI / 6;
+    const penumbra = oldLight.penumbra ?? 0.3;
+    const distance = oldLight.distance ?? 50;
+
+    if (oldLight.target) state.scene.remove(oldLight.target);
+    state.scene.remove(oldLight);
+    oldLight.dispose?.();
+    if (track.lightHelper) {
+        state.scene.remove(track.lightHelper);
+        track.lightHelper.traverse?.(o => {
+            if (o.geometry) o.geometry.dispose?.();
+            if (o.material) o.material.dispose?.();
+        });
+        track.lightHelper = null;
+    }
+
+    let newLight;
+    if (newType === 'spot') newLight = new THREE.SpotLight(color, intensity, distance, angle, penumbra, 1);
+    else if (newType === 'directional') newLight = new THREE.DirectionalLight(color, intensity);
+    else if (newType === 'point') newLight = new THREE.PointLight(color, intensity, distance);
+    else if (newType === 'ambient') newLight = new THREE.AmbientLight(color, intensity);
+    else return;
+    if (pos && newLight.position) newLight.position.copy(pos);
+    if (tgt && newLight.target) {
+        newLight.target.position.copy(tgt);
+        state.scene.add(newLight.target);
+    }
+    state.scene.add(newLight);
+    track.light = newLight;
+    track.lightType = newType;
+    track.lightHelper = createLightHelper(newLight);
+    if (track.lightHelper) state.scene.add(track.lightHelper);
+    fn.syncLightVisibility?.();
+    updateProperties();
+}
 
 export function updateProperties() {
     const content = document.getElementById('props-content');
@@ -52,10 +98,9 @@ export function updateProperties() {
     } else if (track.type === 'light') {
         const L = track.light;
         const lt = track.lightType || 'spot';
-        const hasPosition = !!(L && !L.isAmbientLight);
+        const isAmbient   = lt === 'ambient';
+        const hasPosition = !isAmbient;
         const hasTarget   = !!(L && L.target);
-        const hasAngle    = !!(L && L.isSpotLight);
-        const hasDistance = !!(L && (L.isSpotLight || L.isPointLight));
         const lp = L?.position || {x:0,y:0,z:0};
         const tg = L?.target?.position || {x:0,y:0,z:0};
         const lc = L ? '#' + L.color.getHexString() : '#ffffff';
@@ -64,18 +109,32 @@ export function updateProperties() {
         const angleDeg = ((L?.angle ?? Math.PI/6) * 180 / Math.PI).toFixed(1);
         const penumbra = (L?.penumbra ?? 0.3).toFixed(2);
         const distance = (L?.distance ?? 50).toFixed(1);
-        const typeLabel = { spot: 'SpotLight', directional: 'Directional', point: 'PointLight', ambient: 'Ambient' }[lt] || lt;
+        const typeOpts = [
+            { v: 'spot',        label: 'SpotLight' },
+            { v: 'directional', label: 'Directional' },
+            { v: 'point',       label: 'PointLight' },
+            { v: 'ambient',     label: 'Ambient' },
+        ];
+        const typeSelect = `<select id="prop-light-type" style="flex:1;">${
+            typeOpts.map(o => `<option value="${o.v}" ${o.v===lt?'selected':''}>${o.label}</option>`).join('')
+        }</select>`;
         html += `<div class="prop-group">
-            <div class="prop-row"><label>Licht-Typ:</label><span style="font-size:0.8rem;color:var(--accent);">${typeLabel}${track._sceneLight ? ' (Szene)' : ''}</span></div>
+            <div class="prop-row"><label>Licht-Typ:</label>${typeSelect}${track._sceneLight ? '<span style="margin-left:6px;font-size:0.7rem;color:var(--text-muted);">(Szene)</span>' : ''}</div>
             <div class="prop-row"><label>Farbe:</label><input type="color" value="${lc}" id="prop-light-color"></div>
             <div class="prop-row"><label>R:</label><input type="range" min="0" max="255" value="${R}" id="prop-light-r" style="flex:1;"><span id="prop-light-r-val" style="width:30px;font-size:0.75rem;">${R}</span></div>
             <div class="prop-row"><label>G:</label><input type="range" min="0" max="255" value="${G}" id="prop-light-g" style="flex:1;"><span id="prop-light-g-val" style="width:30px;font-size:0.75rem;">${G}</span></div>
             <div class="prop-row"><label>B:</label><input type="range" min="0" max="255" value="${B}" id="prop-light-b" style="flex:1;"><span id="prop-light-b-val" style="width:30px;font-size:0.75rem;">${B}</span></div>
             <div class="prop-row"><label>Intensität:</label><input type="number" value="${L?.intensity||2}" id="prop-light-intensity" min="0" max="20" step="0.1"></div>
-            ${hasAngle ? `<div class="prop-row"><label>Winkel:</label><input type="number" value="${angleDeg}" id="prop-light-angle" min="1" max="170" step="1"> °</div>
-            <div class="prop-row"><label>Penumbra:</label><input type="number" value="${penumbra}" id="prop-light-penumbra" min="0" max="1" step="0.05"></div>` : ''}
-            ${hasDistance ? `<div class="prop-row"><label>Reichweite:</label><input type="number" value="${distance}" id="prop-light-distance" min="0" max="200" step="1"></div>` : ''}
-            <div class="prop-row"><label>Helper zeigen:</label><input type="checkbox" ${track.lightVisible?'checked':''} id="prop-light-visible"${track.lightHelper ? '' : ' disabled'}></div>
+            ${!isAmbient ? `<div class="prop-row"><label>Winkel:</label><input type="number" value="${angleDeg}" id="prop-light-angle" min="1" max="170" step="1"> °</div>
+            <div class="prop-row"><label>Penumbra:</label><input type="number" value="${penumbra}" id="prop-light-penumbra" min="0" max="1" step="0.05"></div>
+            <div class="prop-row"><label>Reichweite:</label><input type="number" value="${distance}" id="prop-light-distance" min="0" max="200" step="1"></div>` : ''}
+            ${track.lightHelper ? `
+            <div class="prop-row"><label>Lichtkegel:</label>
+                <button id="prop-light-cone-toggle" style="padding:5px 14px;background:${track.coneVisible !== false ? '#4caf50' : '#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:50px;">${track.coneVisible !== false ? 'An' : 'Aus'}</button>
+            </div>
+            <div class="prop-row"><label>Helfer-Linien:</label>
+                <button id="prop-light-lines-toggle" style="padding:5px 14px;background:${track.lightVisible ? '#4caf50' : '#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:50px;">${track.lightVisible ? 'An' : 'Aus'}</button>
+            </div>` : ''}
             ${hasPosition ? `<h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Position</h3>
             <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${lp.x.toFixed(2)}" id="prop-light-x"></div>
             <div class="prop-row"><label>Y:</label><input type="number" step="0.1" value="${lp.y.toFixed(2)}" id="prop-light-y"></div>
@@ -280,6 +339,9 @@ export function updateProperties() {
         const cp = document.getElementById('prop-light-color');
         if (cp) cp.value = '#' + c.getHexString();
     };
+    document.getElementById('prop-light-type')?.addEventListener('change', (e) => {
+        _changeLightType(track, e.target.value);
+    });
     document.getElementById('prop-light-color')?.addEventListener('input', (e) => {
         if (track.light) { track.light.color.set(e.target.value); _syncRgbInputs(); _updateHelper(); }
     });
@@ -310,7 +372,14 @@ export function updateProperties() {
     });
     document.getElementById('prop-light-visible')?.addEventListener('change', (e) => {
         track.lightVisible = e.target.checked;
-        if (track.lightHelper) track.lightHelper.visible = e.target.checked;
+    });
+    document.getElementById('prop-light-cone-toggle')?.addEventListener('click', () => {
+        track.coneVisible = !(track.coneVisible !== false);  // toggle; undefined→true→false
+        updateProperties();
+    });
+    document.getElementById('prop-light-lines-toggle')?.addEventListener('click', () => {
+        track.lightVisible = !track.lightVisible;
+        updateProperties();
     });
     ['x','y','z'].forEach(axis => {
         document.getElementById(`prop-light-${axis}`)?.addEventListener('change', (e) => {
@@ -341,8 +410,10 @@ export function updateProperties() {
         });
         document.getElementById('prop-floor-grid')?.addEventListener('click', () => {
             state.gridVisible = state.gridVisible === false ? true : false;
-            // Grid-Helper in der Szene ein-/ausblenden
-            state.scene?.traverse(o => { if (o.isGridHelper) o.visible = state.gridVisible; });
+            // Grid-Helper in der Szene ein-/ausblenden — THREE.GridHelper hat type='GridHelper'
+            state.scene?.traverse(o => {
+                if (o.type === 'GridHelper' || o.isGridHelper) o.visible = state.gridVisible;
+            });
             fn.updateProperties();
         });
         // Texturen-Dropdown asynchron befüllen

@@ -187,16 +187,22 @@ function _lightVisibleAtPlayhead(track) {
     if (track.muted) return false;
     const pf = state.playheadFrame;
     const kfs = track.clips.filter(c => c.type === 'light_kf');
-    // Ohne Keyframes: Licht aus (Design-Entscheidung — Keyframes sind Pflicht)
-    if (kfs.length === 0) return false;
-    // Letzter Keyframe vor/am Playhead mit definiertem visible-Feld
-    let lastVisible = true;
-    for (const c of kfs) {
-        if (c.startFrame <= pf && c.data?.visible != null) {
-            lastVisible = c.data.visible;
-        }
+    // Ohne Keyframes: Licht im Default-Zustand (an wenn nicht muted).
+    // Standard-Keyframes werden NICHT mehr automatisch angelegt — das Licht ist
+    // einfach immer aktiv bis der User Keyframes für Animation hinzufügt.
+    if (kfs.length === 0) return true;
+    // Mit Keyframes: zeitabhängige Animation. Vor erstem/nach letztem KF → Licht aus
+    // (sinnvoll nur wenn User explizit Anfang/Ende definiert).
+    const sorted = [...kfs].sort((a, b) => {
+        if (a.startFrame !== b.startFrame) return a.startFrame - b.startFrame;
+        return (a.data?.trackPosition === 'upper' ? 0 : 1) - (b.data?.trackPosition === 'upper' ? 0 : 1);
+    });
+    if (pf < sorted[0].startFrame || pf > sorted[sorted.length - 1].startFrame) return false;
+    let activeKf = sorted[0];
+    for (const c of sorted) {
+        if (c.startFrame <= pf) activeKf = c;
     }
-    return lastVisible;
+    return activeKf.data?.visible !== false;
 }
 
 // Synchronisiert visible state für alle Lichter — wird JEDEN Frame vom
@@ -207,7 +213,15 @@ export function syncLightVisibility() {
         if (track.type !== 'light' || !track.light) continue;
         const visible = _lightVisibleAtPlayhead(track);
         track.light.visible = visible;
-        if (track.lightHelper) track.lightHelper.visible = visible && track.lightVisible;
+        // Helper-Group: Lichtkegel (coneVisible) + Helfer-Linien (lightVisible)
+        // unabhängig voneinander steuerbar. Beide bleiben auch sichtbar wenn Licht aus
+        // (damit User weiß wo das Licht steht).
+        const lh = track.lightHelper;
+        if (lh) {
+            lh.visible = true;  // Group immer an, Kinder-Visibility entscheidet
+            if (lh.spotHelper) lh.spotHelper.visible = !!track.lightVisible;
+            if (lh.originCone) lh.originCone.visible = track.coneVisible !== false;
+        }
     }
 }
 
@@ -243,20 +257,15 @@ export function applyPlayhead() {
 
 function applySceneObjectTrack(track, t) {
     if (!track.mesh) return;
-    // Boden ist immer sichtbar (außer muted) — kein Clip-Timing
+    // Boden ist immer sichtbar (außer muted)
     if (track.subtype === 'floor') {
         track.mesh.visible = !track.muted;
         return;
     }
-    // Custom 3D-Objekte: visible nur wenn ein Clip am Playhead aktiv ist
-    let found = false;
-    for (const clip of track.clips) {
-        if (clip.type !== 'object_clip') continue;
-        const cs = clip.startFrame / state.project.fps;
-        const ce = cs + clip.duration;
-        if (t >= cs && t < ce) { found = true; break; }
-    }
-    track.mesh.visible = found && !track.muted;
+    // Custom 3D-Objekte: visible solange mindestens ein Clip existiert
+    // (ermöglicht Click-Selection + Alt+Klick-Positionierung auch ohne Play)
+    const hasClips = track.clips.some(c => c.type === 'object_clip');
+    track.mesh.visible = hasClips && !track.muted;
 }
 
 function applyBvhTrack(track, t) {
@@ -379,8 +388,10 @@ function applyLightTrack(track, t) {
 
     const lerp = (a, b, al) => a + (b - a) * al;
     // Fade-Effekt aus = Sprung (kein Interpolieren vom prev zu diesem KF)
+    // Gleicher Frame (Pair upper+lower) = keine Interpolation möglich → prev-Werte
     const noFade = prev.data.fade === false;
-    if (prev === next || noFade) {
+    const sameFrame = prev.startFrame === next.startFrame;
+    if (prev === next || noFade || sameFrame) {
         const d = prev.data;
         track.light.position.set(d.position.x, d.position.y, d.position.z);
         if (d.target && track.light.target) track.light.target.position.set(d.target.x, d.target.y, d.target.z);
