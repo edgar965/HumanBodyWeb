@@ -116,7 +116,7 @@
 
     /* Track headers (left side of timeline) */
     .track-headers {
-        position: absolute; left: 0; top: 0; bottom: 0; width: 120px;
+        position: absolute; left: 0; top: 0; bottom: 0; width: 200px;
         background: var(--bg-secondary); border-right: 1px solid var(--border); z-index: 2;
     }
     .track-header {
@@ -547,8 +547,8 @@
 <script type="importmap">
 {
     "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        "three": "{% static 'vendor/three/build/three.module.js' %}",
+        "three/addons/": "{% static 'vendor/three/examples/jsm/' %}"
     }
 }
 </script>

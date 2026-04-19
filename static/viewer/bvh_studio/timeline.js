@@ -260,6 +260,45 @@ async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame, subme
             fn.addLightKeyframe(trackIdx, placeFrame);
         });
         sub.appendChild(singleItem);
+        // Presets-Submenu: fügt Preset-Lichter HINZU (keine Löschung existierender)
+        const presetsItem = document.createElement('div');
+        presetsItem.className = 'ctx-item has-submenu';
+        presetsItem.innerHTML = `<i class="fas fa-star" style="width:16px;color:#ffc107;"></i> Presets <i class="fas fa-caret-right" style="margin-left:auto;"></i>`;
+        const nested = document.createElement('div');
+        nested.className = 'ctx-submenu ctx-submenu-fixed';
+        nested.innerHTML = '<div class="ctx-submenu-empty">Lade...</div>';
+        presetsItem.appendChild(nested);
+        sub.appendChild(presetsItem);
+        // Nested-Submenü positionieren (wie bei Animationen)
+        presetsItem.addEventListener('mouseenter', () => {
+            const rect = presetsItem.getBoundingClientRect();
+            nested.style.left = rect.right + 'px';
+            nested.style.top = rect.top + 'px';
+        });
+        // Presets async laden
+        (async () => {
+            try {
+                const presets = await (fn.fetchTheatrePresets?.() ?? fetch('/api/studio/theatre-presets/').then(r => r.json()).then(d => d.presets || []));
+                nested.innerHTML = '';
+                if (!presets || presets.length === 0) {
+                    nested.innerHTML = '<div class="ctx-submenu-empty">Keine Presets</div>';
+                    return;
+                }
+                for (const p of presets) {
+                    const item = document.createElement('div');
+                    item.className = 'ctx-item';
+                    item.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> <span>${p.label}</span> <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">${p.lightCount}x</span>`;
+                    item.title = (p.description || '') + '\n\nFügt Preset-Lichter HINZU (existierende bleiben erhalten).';
+                    item.addEventListener('click', () => {
+                        closeCtx();
+                        fn.applyTheatrePresetAdditive?.(p.name);
+                    });
+                    nested.appendChild(item);
+                }
+            } catch (e) {
+                nested.innerHTML = '<div class="ctx-submenu-empty">Fehler beim Laden</div>';
+            }
+        })();
     } else {
         sub.innerHTML = '<div class="ctx-submenu-empty">Nicht verfügbar für diesen Spurtyp</div>';
     }
@@ -767,12 +806,38 @@ export function renderTimeline() {
         tlCtx.lineTo(w, y + TRACK_HEIGHT);
         tlCtx.stroke();
 
-        // Clips
-        // Draw interpolation lines for camera/light keyframe tracks first
+        // Balken für Kamera/Licht-Tracks. Jedes Paar aufeinanderfolgender KFs an
+        // VERSCHIEDENEN Frames erzeugt einen Balken-Abschnitt. KF-Paare (zwei KFs am
+        // gleichen Frame mit upper/lower) erzeugen KEINEN Balken → Leiste ist dort
+        // geschnitten, es entstehen zwei separate Balken.
+        if ((track.type === 'camera' || track.type === 'light') && track.clips.length >= 2) {
+            const kfs = track.clips.filter(c => c.type === 'camera_kf' || c.type === 'light_kf');
+            if (kfs.length >= 2) {
+                // Stable sort: gleicher Frame → upper vor lower (für determistische Reihenfolge)
+                const sorted = [...kfs].sort((a, b) => {
+                    if (a.startFrame !== b.startFrame) return a.startFrame - b.startFrame;
+                    return (a.data?.trackPosition === 'upper' ? 0 : 1) - (b.data?.trackPosition === 'upper' ? 0 : 1);
+                });
+                tlCtx.fillStyle = track.color;
+                tlCtx.globalAlpha = 0.25;
+                for (let i = 0; i < sorted.length - 1; i++) {
+                    const a = sorted[i], b = sorted[i + 1];
+                    // Paar am selben Frame → Balken-Split (kein Segment zwischen a und b)
+                    if (a.startFrame === b.startFrame) continue;
+                    const ax = HEADER_WIDTH + (a.startFrame / state.project.fps) * pps - state.timelineScrollX;
+                    const bx = HEADER_WIDTH + (b.startFrame / state.project.fps) * pps - state.timelineScrollX;
+                    const segX = Math.max(ax, HEADER_WIDTH);
+                    const segW = Math.max(1, Math.min(bx, w) - segX);
+                    if (segW > 0) tlCtx.fillRect(segX, y + 4, segW, TRACK_HEIGHT - 8);
+                }
+                tlCtx.globalAlpha = 1.0;
+            }
+        }
+        // Draw interpolation lines for camera/light keyframe tracks (über Balken gelegt)
         if ((track.type === 'camera' || track.type === 'light') && track.clips.length > 1) {
             tlCtx.strokeStyle = track.color;
             tlCtx.lineWidth = 1.5;
-            tlCtx.globalAlpha = 0.4;
+            tlCtx.globalAlpha = 0.6;
             tlCtx.beginPath();
             for (let ci = 0; ci < track.clips.length; ci++) {
                 const cx = HEADER_WIDTH + (track.clips[ci].startFrame / state.project.fps) * pps - state.timelineScrollX;

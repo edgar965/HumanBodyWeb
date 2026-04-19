@@ -147,27 +147,30 @@ function setupViewportContextMenu() {
         fn.updateProperties();
     });
 
-    // Links-Klick: Licht-Helper oder Scene-Object auswählen
+    // Links-Klick: Licht-Helper oder Scene-Object auswählen. Wir sammeln ALLE Kandidaten
+    // und wählen den NÄCHSTEN Treffer — sonst "gewinnt" ein Licht-Cone weit hinten gegen
+    // den Boden direkt vor der Kamera.
     canvas.addEventListener('mousedown', (e) => {
         if (e.button !== 0 || e.altKey || e.shiftKey || e.ctrlKey) return;
         const rect = canvas.getBoundingClientRect();
         mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, state.camera);
-        // Licht-Helper
+
+        let best = null;  // { dist, trackIdx }
         for (let i = 0; i < state.project.tracks.length; i++) {
             const t = state.project.tracks[i];
-            if (t.type !== 'light' || !t.lightHelper || !t.lightHelper.visible) continue;
-            const hits = raycaster.intersectObject(t.lightHelper, true);
-            if (hits.length > 0) { fn.selectTrack?.(i); return; }
+            let hits = null;
+            if (t.type === 'light' && t.lightHelper?.visible) {
+                hits = raycaster.intersectObject(t.lightHelper, true);
+            } else if (t.type === 'scene_object' && t.mesh) {
+                hits = raycaster.intersectObject(t.mesh, true);
+            }
+            if (!hits || hits.length === 0) continue;
+            const d = hits[0].distance;
+            if (best === null || d < best.dist) best = { dist: d, trackIdx: i };
         }
-        // Scene-Objects (Boden + Custom 3D)
-        for (let i = 0; i < state.project.tracks.length; i++) {
-            const t = state.project.tracks[i];
-            if (t.type !== 'scene_object' || !t.mesh) continue;
-            const hits = raycaster.intersectObject(t.mesh, true);
-            if (hits.length > 0) { fn.selectTrack?.(i); return; }
-        }
+        if (best) fn.selectTrack?.(best.trackIdx);
     });
 }
 
@@ -182,11 +185,17 @@ async function init() {
     state.scene = setup.scene;
     state.camera = setup.camera;
     state.controls = setup.controls;
-    // Szenen-Lichter speichern für Auto-Track-Erstellung
-    state.sceneKeyLight = setup.keyLight;
-    state.sceneFillLight = setup.fillLight;
-    state.sceneBackLight = setup.backLight;
-    state.sceneAmbient = setup.ambient;
+    // BVH Studio: keine automatischen Licht-TRACKS. Die 3 Directional-Lichter werden
+    // entfernt (User soll per Theatre-Preset / Menü "Hinzufügen > Licht" eigenes Setup
+    // anlegen). Ambient-Licht bleibt ALS SZENEN-ELEMENT (nicht als Track) erhalten, damit
+    // importierte 3D-Objekte und Modelle nicht komplett schwarz erscheinen.
+    for (const l of [setup.keyLight, setup.fillLight, setup.backLight]) {
+        if (l) { setup.scene.remove(l); l.dispose?.(); }
+    }
+    state.sceneKeyLight = null;
+    state.sceneFillLight = null;
+    state.sceneBackLight = null;
+    state.sceneAmbient = null;  // kein Track, auch wenn setup.ambient in der Szene bleibt
 
     // Load shared data + studio settings
     await Promise.all([
@@ -209,10 +218,21 @@ async function init() {
         state.project.preloadSeconds = parseFloat(prefs.studio_preload_seconds ?? '3');
     } catch (e) { /* use defaults */ }
 
-    // Load BVH library
-    await loadLibrary();
+    // BVH-Library-Setup. Management + Resize sofort, eigentliches Scannen der 7000+
+    // Dateien im Hintergrund (lazy), damit Init nicht blockiert wird. Platzhalter "wird
+    // geladen" bleibt bis loadLibrary() fertig ist.
     setupLibraryManagement();
     setupSidebarResize();
+    const tree = document.getElementById('lib-tree');
+    if (tree) {
+        tree.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.78rem;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>BVH-Library wird geladen...</div>';
+    }
+    // Fire-and-forget: blockiert Init nicht
+    loadLibrary().catch(e => {
+        console.warn('[BVH Studio] Library load failed:', e);
+        if (tree) tree.innerHTML = '<div style="padding:12px;color:var(--danger);font-size:0.78rem;">Library-Load fehlgeschlagen. <a href="#" id="lib-retry" style="color:var(--accent);">Erneut versuchen</a></div>';
+        document.getElementById('lib-retry')?.addEventListener('click', (ev) => { ev.preventDefault(); loadLibrary(); });
+    });
 
     // Setup timeline canvas
     setupTimeline();

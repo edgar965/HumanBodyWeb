@@ -17,7 +17,7 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
-from .models import AppSettings, BVHJob
+from .models import AppSettings, BVHJob, BVHFile
 
 from humanbody_core import MorphData, CharacterState, CharacterDefaults, MeshData
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
@@ -1610,11 +1610,33 @@ def character_wardrobe(request):
     return JsonResponse({'assets': assets})
 
 
+def _read_bvh_frames_from_file(bvh_path):
+    """Liest den Frames-Zähler aus dem BVH-Header. 0 bei Fehler."""
+    try:
+        with open(bvh_path, 'r') as f:
+            for line in f:
+                if line.strip().startswith('Frames:'):
+                    return int(line.strip().split(':')[1])
+    except (IOError, ValueError):
+        pass
+    return 0
+
+
 @require_GET
 def character_animations(request):
-    """Return list of available BVH animations, grouped by category."""
+    """Liste aller BVH-Animationen, gruppiert nach Kategorie.
+
+    Performance: Frames-Zähler werden in der DB (BVHFile-Model) gecacht. Bei jedem
+    Aufruf werden nur neue/geänderte Dateien (mtime != Cache) tatsächlich eingelesen.
+    Das Initial-Scan kostet ~10s (7000 Dateien); danach instant bis Dateien geändert
+    werden.
+    """
     bvh_root = os.path.dirname(str(settings.HUMANBODY_BVH_DIR))
     categories = {}
+
+    # DB-Cache bulk laden: path → BVHFile
+    cache = {rec.path: rec for rec in BVHFile.objects.only('path', 'frame_count', 'mtime_ns').iterator()}
+    to_create, to_update = [], []
 
     if os.path.isdir(bvh_root):
         for cat_name in sorted(os.listdir(bvh_root)):
@@ -1631,29 +1653,43 @@ def character_animations(request):
             except OSError:
                 continue
             for fname in entries:
-                if fname.lower().endswith('.bvh'):
-                    bvh_path = os.path.join(cat_path, fname)
-                    name = fname[:-4]
-
-                    # Count frames (quick header scan)
-                    frames = 0
-                    try:
-                        with open(bvh_path, 'r') as f:
-                            for line in f:
-                                if line.strip().startswith('Frames:'):
-                                    frames = int(line.strip().split(':')[1])
-                                    break
-                    except (IOError, ValueError):
-                        pass
-
-                    anims.append({
-                        'name': name,
-                        'category': cat_name,
-                        'url': f"/api/character/bvh/{cat_name}/{name}/",
-                        'frames': frames,
-                    })
+                if not fname.lower().endswith('.bvh'):
+                    continue
+                bvh_path = os.path.join(cat_path, fname)
+                name = fname[:-4]
+                try:
+                    st = os.stat(bvh_path)
+                except OSError:
+                    continue
+                mtime = st.st_mtime_ns
+                rec = cache.get(bvh_path)
+                if rec is not None and rec.mtime_ns == mtime:
+                    frames = rec.frame_count
+                else:
+                    frames = _read_bvh_frames_from_file(bvh_path)
+                    if rec is not None:
+                        rec.mtime_ns = mtime
+                        rec.frame_count = frames
+                        to_update.append(rec)
+                    else:
+                        to_create.append(BVHFile(
+                            name=name, path=bvh_path, source='library',
+                            frame_count=frames, mtime_ns=mtime,
+                        ))
+                anims.append({
+                    'name': name,
+                    'category': cat_name,
+                    'url': f"/api/character/bvh/{cat_name}/{name}/",
+                    'frames': frames,
+                })
             if anims:
                 categories[cat_name] = anims
+
+    # Bulk-Persistenz — batch_size begrenzt SQL-Statement-Länge (SQLite hat Parameter-Limit)
+    if to_create:
+        BVHFile.objects.bulk_create(to_create, ignore_conflicts=True, batch_size=500)
+    if to_update:
+        BVHFile.objects.bulk_update(to_update, fields=['frame_count', 'mtime_ns'], batch_size=500)
 
     return JsonResponse({'categories': categories})
 

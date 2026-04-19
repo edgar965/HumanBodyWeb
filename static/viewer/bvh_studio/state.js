@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { Timeline } from './models.js';
 
 export const TRACK_HEIGHT = 40;
-export const HEADER_WIDTH = 120;
+export const HEADER_WIDTH = 200;
 export const RULER_HEIGHT = 20;
 
 export const TRACK_COLORS = {

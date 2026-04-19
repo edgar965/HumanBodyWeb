@@ -52,48 +52,103 @@ export function addModelTrack(name) {
     return track;
 }
 
-// Erzeugt Helper-Group für beliebigen Licht-Typ (Spot, Directional, Point, Ambient)
-// Die Group enthält ZWEI unabhängig schaltbare Kinder:
-//   - .spotHelper: Wireframe-Helfer (SpotLightHelper/Directional/Point) — "Helfer-Linien"
-//   - .originCone: solider Kegel am Ursprung — "Lichtkegel"
-// Default: Helfer-Linien AUS, Lichtkegel AN.
+// Erzeugt Helper-Group für beliebigen Licht-Typ. Enthält:
+//   - .spotHelper: Three.js-Wireframe-Helfer (Toggle "Helfer-Linien")
+//   - .originCone: solide Form, die den Licht-Typ visuell symbolisiert (Toggle "Lichtkegel")
+//
+// Formen pro Typ (immer: Spitze/Ursprung am Licht, Form zeigt IN die Szene):
+//   - Spot:        Kegel, Radius aus light.angle (breiter Angle = breiter Kegel)
+//   - Directional: Zylinder (parallele Strahlen)
+//   - Point:       Kugel (omnidirektional)
+//   - Ambient:     flaches Rechteck (ungerichtet)
+const _LIGHT_SHAPE_HEIGHT = 0.6;
+
+function _buildLightIndicator(light) {
+    const color = light.color.clone();
+    const mat = new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false,
+    });
+    const h = _LIGHT_SHAPE_HEIGHT;
+    let geo;
+    if (light.isSpotLight) {
+        const angle = light.angle ?? Math.PI / 6;
+        const radius = Math.min(Math.max(h * Math.tan(angle), 0.05), 1.0);
+        geo = new THREE.ConeGeometry(radius, h, 24, 1, true);  // offene Unterseite
+        geo.translate(0, -h / 2, 0);  // Spitze → Ursprung, Basis bei (0,-h,0)
+    } else if (light.isDirectionalLight) {
+        const r = 0.08;
+        geo = new THREE.CylinderGeometry(r, r, h, 16, 1, true);
+        geo.translate(0, -h / 2, 0);
+    } else if (light.isPointLight) {
+        geo = new THREE.SphereGeometry(0.12, 20, 14);
+    } else if (light.isAmbientLight) {
+        geo = new THREE.PlaneGeometry(0.5, 0.3);
+        geo.rotateX(-Math.PI / 2);  // horizontal
+    } else {
+        return null;
+    }
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh._lightShapeKind = light.isSpotLight ? 'spot'
+        : light.isDirectionalLight ? 'directional'
+        : light.isPointLight ? 'point'
+        : light.isAmbientLight ? 'ambient' : 'unknown';
+    mesh._lastAngle = light.angle ?? null;
+    return mesh;
+}
+
 export function createLightHelper(light) {
     if (!light) return null;
-    if (light.isAmbientLight) return null;
     const group = new THREE.Group();
     let typeHelper = null;
     if (light.isSpotLight) typeHelper = new THREE.SpotLightHelper(light, 0xffc107);
     else if (light.isDirectionalLight) typeHelper = new THREE.DirectionalLightHelper(light, 0.6, 0xffc107);
     else if (light.isPointLight) typeHelper = new THREE.PointLightHelper(light, 0.12, 0xffc107);
+    // Ambient: kein Wireframe-Helfer vorhanden (→ null)
     if (typeHelper) {
         typeHelper.visible = false;  // Default: Helfer-Linien aus
         group.add(typeHelper);
     }
 
-    const coneGeo = new THREE.ConeGeometry(0.08, 0.22, 16);
-    coneGeo.translate(0, 0.11, 0);
-    const coneMat = new THREE.MeshBasicMaterial({ color: light.color.clone() });
-    const originCone = new THREE.Mesh(coneGeo, coneMat);
-    originCone.visible = true;  // Default: Lichtkegel an
-    group.add(originCone);
+    const indicator = _buildLightIndicator(light);
+    if (indicator) {
+        indicator.visible = true;  // Default: an
+        group.add(indicator);
+    }
 
-    // Exponierte Referenzen für unabhängiges Toggeln (track.lightVisible vs coneVisible)
     group.spotHelper = typeHelper;
-    group.originCone = originCone;
+    group.originCone = indicator;  // Name bleibt für Abwärtskompatibilität
 
     group.update = function() {
         typeHelper?.update?.();
-        originCone.position.copy(light.position);
-        if (light.target) {
+        if (!indicator) return;
+        indicator.position.copy(light.position);
+        // Ausrichtung: lokale -Y-Achse zeigt in Richtung Target (für Spot/Directional).
+        // Point ist omnidirektional, Ambient ungerichtet → keine Rotation.
+        if (light.target && (light.isSpotLight || light.isDirectionalLight)) {
             const dir = new THREE.Vector3().subVectors(light.target.position, light.position);
             if (dir.lengthSq() > 1e-6) {
                 dir.normalize();
-                originCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+                indicator.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
             }
+        } else if (light.isAmbientLight) {
+            // Ambient: etwas erhöht platzieren damit vom Boden abhebt
+            indicator.position.set(light.position.x, (light.position.y || 0) + 0.05, light.position.z);
+            indicator.quaternion.identity();
         } else {
-            originCone.quaternion.identity();
+            indicator.quaternion.identity();
         }
-        originCone.material.color.copy(light.color);
+        // Spot-Winkel geändert → Geometrie neu bauen
+        if (light.isSpotLight && indicator._lastAngle !== light.angle) {
+            indicator._lastAngle = light.angle;
+            const h = _LIGHT_SHAPE_HEIGHT;
+            const angle = light.angle ?? Math.PI / 6;
+            const radius = Math.min(Math.max(h * Math.tan(angle), 0.05), 1.0);
+            indicator.geometry.dispose();
+            const geo = new THREE.ConeGeometry(radius, h, 24, 1, true);
+            geo.translate(0, -h / 2, 0);
+            indicator.geometry = geo;
+        }
+        indicator.material.color.copy(light.color);
     };
     group.update();
     return group;

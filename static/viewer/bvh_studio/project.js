@@ -58,12 +58,18 @@ function _buildSceneLightOverrides() {
 function _buildSceneFloorOverrides() {
     for (const t of state.project.tracks) {
         if (t.type === 'scene_object' && t.subtype === 'floor') {
+            const w = t.floorWidth ?? t.floorSize ?? 6;
+            const l = t.floorLength ?? t.floorSize ?? 6;
             return {
                 color: t.floorColor || '#3a3a4a',
                 texture: t.floorTexture || 'none',
                 roughness: t.floorRoughness ?? 0.9,
                 metalness: t.floorMetalness ?? 0.05,
-                size: t.floorSize ?? 6,
+                width: w,
+                length: l,
+                centerX: t.mesh?.position?.x ?? 0,
+                centerZ: t.mesh?.position?.z ?? 0,
+                size: Math.max(w, l),  // Legacy-Feld für Abwärtskompatibilität
                 muted: t.muted,
                 gridVisible: state.gridVisible !== false,
             };

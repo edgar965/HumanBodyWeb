@@ -14,7 +14,7 @@ import { state, TRACK_COLORS } from './state.js';
 import { fn } from './registry.js';
 import { Track, Clip } from './models.js';
 import { pushUndo } from './undo.js';
-import { createLightHelper } from './tracks.js';
+import { createLightHelper, addStandardLightKeyframes } from './tracks.js';
 
 let _cachedTheatrePresets = null;
 let _cachedFloorTextures = null;
@@ -28,18 +28,23 @@ let _textureLoader = new THREE.TextureLoader();
 export function createFloorTrack() {
     if (state.project.tracks.some(t => t._sceneItem === 'floor')) return;
     const override = state.project._pendingSceneOverrides?.sceneFloor;
-    const size = override?.size ?? 6;
+    // Legacy: quadratische "size" → in width+length konvertieren
+    const legacySize = override?.size;
+    const width = override?.width ?? legacySize ?? 6;
+    const length = override?.length ?? legacySize ?? 6;
+    const cx = override?.centerX ?? 0;
+    const cz = override?.centerZ ?? 0;
     const color = override?.color ?? '#3a3a4a';
     const roughness = override?.roughness ?? 0.9;
     const metalness = override?.metalness ?? 0.05;
 
-    const geo = new THREE.PlaneGeometry(size, size, 1, 1);
+    const geo = new THREE.PlaneGeometry(width, length, 1, 1);
     geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(color), roughness, metalness, side: THREE.DoubleSide,
     });
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.y = -0.001;
+    mesh.position.set(cx, -0.001, cz);
     mesh.receiveShadow = true;
     mesh.userData.isFloor = true;
     state.scene.add(mesh);
@@ -50,7 +55,9 @@ export function createFloorTrack() {
     track.color = '#795548';
     track._sceneItem = 'floor';
     track.mesh = mesh;
-    track.floorSize = size;
+    track.floorWidth = width;
+    track.floorLength = length;
+    track.floorSize = Math.max(width, length);  // Legacy-Feld für Abwärtskompatibilität
     track.floorTexture = override?.texture || 'none';
     track.floorColor = color;
     track.floorRoughness = roughness;
@@ -109,14 +116,26 @@ export async function applyFloorTexture(track, textureUrl) {
     }
 }
 
-export function setFloorSize(track, size) {
+// Boden-Geometrie neu erzeugen. centerX/centerZ sind optional — wenn nicht
+// angegeben, bleibt der bestehende Mittelpunkt erhalten (zentriertes Wachstum).
+export function setFloorGeometry(track, width, length, centerX, centerZ) {
     if (!track?.mesh) return;
-    const s = Math.max(0.5, Math.min(50, size || 6));
+    const w = Math.max(0.2, Math.min(200, width  || 6));
+    const l = Math.max(0.2, Math.min(200, length || 6));
     track.mesh.geometry.dispose();
-    const geo = new THREE.PlaneGeometry(s, s, 1, 1);
+    const geo = new THREE.PlaneGeometry(w, l, 1, 1);
     geo.rotateX(-Math.PI / 2);
     track.mesh.geometry = geo;
-    track.floorSize = s;
+    if (centerX != null) track.mesh.position.x = centerX;
+    if (centerZ != null) track.mesh.position.z = centerZ;
+    track.floorWidth = w;
+    track.floorLength = l;
+    track.floorSize = Math.max(w, l);
+}
+
+// Legacy-Wrapper (setFloorSize) — quadratisch, Mittelpunkt unverändert
+export function setFloorSize(track, size) {
+    setFloorGeometry(track, size, size);
 }
 
 // =========================================================================
@@ -129,6 +148,35 @@ async function _fetchTheatrePresets() {
     const data = await resp.json();
     _cachedTheatrePresets = data.presets || [];
     return _cachedTheatrePresets;
+}
+
+// Additive-Variante: lässt existierende Lichter unverändert und legt NUR die
+// Preset-Lichter an, deren Name noch nicht als Track existiert. Aufgerufen über
+// Kontextmenü "Hinzufügen > Presets" auf einem Licht-Track.
+async function _applyTheatrePresetAdditive(presetName) {
+    const resp = await fetch(`/api/studio/theatre-preset/${encodeURIComponent(presetName)}/`);
+    if (!resp.ok) { alert(`Preset "${presetName}" nicht gefunden`); return; }
+    const preset = await resp.json();
+    const presetLights = preset.lights || [];
+    pushUndo(`Preset hinzufügen: ${preset.label || presetName}`);
+    const existingLightNames = new Set(
+        state.project.tracks.filter(t => t.type === 'light').map(t => t.name)
+    );
+    let added = 0, skipped = 0;
+    for (const def of presetLights) {
+        const targetName = `${def.name || 'Licht'} (${preset.label || presetName})`;
+        if (existingLightNames.has(targetName) || existingLightNames.has(def.name)) {
+            skipped++;
+            continue;
+        }
+        if (_createLightTrackFromDef(def, preset.label || presetName)) added++;
+    }
+    fn.updateTrackHeaders?.();
+    fn.renderTimeline?.();
+    fn.updateProperties?.();
+    fn.applyPlayhead?.();
+    fn.serverLog?.('theatre_preset_added',
+        `${presetName}: +${added} Lichter (${skipped} übersprungen, existierten bereits)`);
 }
 
 async function _applyTheatrePreset(presetName) {
@@ -198,6 +246,8 @@ function _createLightTrackFromDef(def, presetLabel) {
         light = new THREE.DirectionalLight(new THREE.Color(def.color || '#ffffff'), def.intensity ?? 3);
     } else if (type === 'point') {
         light = new THREE.PointLight(new THREE.Color(def.color || '#ffffff'), def.intensity ?? 3, def.distance ?? 30);
+    } else if (type === 'ambient') {
+        light = new THREE.AmbientLight(new THREE.Color(def.color || '#ffffff'), def.intensity ?? 0.8);
     } else {
         return;
     }
@@ -215,12 +265,15 @@ function _createLightTrackFromDef(def, presetLabel) {
     track.color = TRACK_COLORS.light || track.color;
     track.light = light;
     track.lightType = type;
-    track.lightVisible = false;  // Helfer-Linien: default aus
+    track.lightVisible = true;   // Theatre-Preset: Helfer-Linien AN (User sieht wo Lichter sind)
     track.coneVisible = true;    // Lichtkegel: default an
     track._theatrePreset = presetLabel;
     track.lightHelper = createLightHelper(light);
     if (track.lightHelper) state.scene.add(track.lightHelper);
     state.project.addTrack(track);
+    // Theatre-Preset-Lichter bekommen Standard Start/Ende-Keyframes über die volle
+    // Projektdauer — damit die Timeline sichtbar ist und das Licht dauerhaft aktiv bleibt.
+    addStandardLightKeyframes(track);
     return track;
 }
 
@@ -489,6 +542,7 @@ fn.createFloorTrack = createFloorTrack;
 fn.updateFloorMaterial = updateFloorMaterial;
 fn.applyFloorTexture = applyFloorTexture;
 fn.setFloorSize = setFloorSize;
+fn.setFloorGeometry = setFloorGeometry;
 fn.setupTheatreMenu = setupTheatreMenu;
 fn.setupSceneObjectImport = setupSceneObjectImport;
 fn.setupTransformControls = setupTransformControls;
@@ -498,3 +552,5 @@ fn.setTransformMode = setTransformMode;
 fn.setObjectTint = setObjectTint;
 fn.getFloorTextures = getFloorTextures;
 fn.addSceneObjectClip = addSceneObjectClip;
+fn.applyTheatrePresetAdditive = _applyTheatrePresetAdditive;
+fn.fetchTheatrePresets = _fetchTheatrePresets;

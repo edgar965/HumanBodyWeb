@@ -167,17 +167,33 @@ export function updateProperties() {
         const scl = m?.scale || { x: 1, y: 1, z: 1 };
         if (track.subtype === 'floor') {
             const gridOn = state.gridVisible !== false;
+            // Legacy: floorSize (quadratisch) → als Default für width/length verwenden
+            const w = track.floorWidth ?? track.floorSize ?? 6;
+            const l = track.floorLength ?? track.floorSize ?? 6;
+            const cx = pos.x ?? 0;
+            const cz = pos.z ?? 0;
+            const sx = (cx - w / 2).toFixed(2);
+            const ex = (cx + w / 2).toFixed(2);
+            const sz = (cz - l / 2).toFixed(2);
+            const ez = (cz + l / 2).toFixed(2);
             html += `<div class="prop-group">
                 <div class="prop-row"><label>Typ:</label><span style="font-size:0.8rem;color:var(--accent);">Boden (Szene)</span></div>
                 <div class="prop-row"><label>Farbe:</label><input type="color" value="${track.floorColor||'#3a3a4a'}" id="prop-floor-color"></div>
                 <div class="prop-row"><label>Textur:</label><select id="prop-floor-texture" style="flex:1;"><option value="">(Lade...)</option></select></div>
                 <div class="prop-row"><label>Rauheit:</label><input type="number" value="${(track.floorRoughness??0.9).toFixed(2)}" id="prop-floor-roughness" min="0" max="1" step="0.05"></div>
                 <div class="prop-row"><label>Metall:</label><input type="number" value="${(track.floorMetalness??0.05).toFixed(2)}" id="prop-floor-metalness" min="0" max="1" step="0.05"></div>
-                <div class="prop-row"><label>Größe:</label><input type="number" value="${(track.floorSize??6).toFixed(1)}" id="prop-floor-size" min="0.5" max="50" step="0.5"> m</div>
+                <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Abmessungen (Mittelpunkt-bezogen)</h3>
+                <div class="prop-row"><label>Breite X:</label><input type="number" value="${w.toFixed(2)}" id="prop-floor-width" min="0.2" max="200" step="0.1"> m</div>
+                <div class="prop-row"><label>Länge Z:</label><input type="number" value="${l.toFixed(2)}" id="prop-floor-length" min="0.2" max="200" step="0.1"> m</div>
+                <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Kanten-Positionen</h3>
+                <div class="prop-row"><label>Start X:</label><input type="number" value="${sx}" id="prop-floor-sx" step="0.1"> m</div>
+                <div class="prop-row"><label>Ende X:</label><input type="number" value="${ex}" id="prop-floor-ex" step="0.1"> m</div>
+                <div class="prop-row"><label>Start Z:</label><input type="number" value="${sz}" id="prop-floor-sz" step="0.1"> m</div>
+                <div class="prop-row"><label>Ende Z:</label><input type="number" value="${ez}" id="prop-floor-ez" step="0.1"> m</div>
                 <div class="prop-row"><label>Raster:</label>
                     <button id="prop-floor-grid" style="padding:5px 16px;background:${gridOn?'#4caf50':'#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:60px;">${gridOn?'An':'Aus'}</button>
                 </div>
-                <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Boden — wird automatisch angelegt, kann nicht gelöscht werden.</div>
+                <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Breite/Länge wachsen um den aktuellen Mittelpunkt. Start/Ende-Kanten editieren verschiebt nur die jeweilige Kante (Gegen-Kante bleibt fix).</div>
             </div>`;
         } else {
             html += `<div class="prop-group">
@@ -405,9 +421,43 @@ export function updateProperties() {
             track.floorMetalness = parseFloat(e.target.value)||0.05;
             fn.updateFloorMaterial?.(track);
         });
-        document.getElementById('prop-floor-size')?.addEventListener('change', (e) => {
-            fn.setFloorSize?.(track, parseFloat(e.target.value)||6);
+        // Breite/Länge: wachsen zentriert um den aktuellen Mittelpunkt
+        document.getElementById('prop-floor-width')?.addEventListener('change', (e) => {
+            const w = Math.max(0.2, parseFloat(e.target.value) || 6);
+            const l = track.floorLength ?? track.floorSize ?? 6;
+            fn.setFloorGeometry?.(track, w, l);  // Mittelpunkt unverändert
+            updateProperties();
         });
+        document.getElementById('prop-floor-length')?.addEventListener('change', (e) => {
+            const l = Math.max(0.2, parseFloat(e.target.value) || 6);
+            const w = track.floorWidth ?? track.floorSize ?? 6;
+            fn.setFloorGeometry?.(track, w, l);
+            updateProperties();
+        });
+        // Start/Ende-Kanten: Gegen-Kante bleibt fix, neue Breite/Länge + neuer Mittelpunkt
+        const _editFloorEdge = (axis, side, newVal) => {
+            const center = track.mesh.position;
+            const curW = track.floorWidth ?? track.floorSize ?? 6;
+            const curL = track.floorLength ?? track.floorSize ?? 6;
+            let w = curW, l = curL, cx = center.x, cz = center.z;
+            if (axis === 'x') {
+                const other = side === 'start' ? (center.x + curW / 2) : (center.x - curW / 2);
+                const nw = Math.max(0.2, Math.abs(other - newVal));
+                cx = (newVal + other) / 2;
+                w = nw;
+            } else {
+                const other = side === 'start' ? (center.z + curL / 2) : (center.z - curL / 2);
+                const nl = Math.max(0.2, Math.abs(other - newVal));
+                cz = (newVal + other) / 2;
+                l = nl;
+            }
+            fn.setFloorGeometry?.(track, w, l, cx, cz);
+            updateProperties();
+        };
+        document.getElementById('prop-floor-sx')?.addEventListener('change', (e) => _editFloorEdge('x', 'start', parseFloat(e.target.value) || 0));
+        document.getElementById('prop-floor-ex')?.addEventListener('change', (e) => _editFloorEdge('x', 'end',   parseFloat(e.target.value) || 0));
+        document.getElementById('prop-floor-sz')?.addEventListener('change', (e) => _editFloorEdge('z', 'start', parseFloat(e.target.value) || 0));
+        document.getElementById('prop-floor-ez')?.addEventListener('change', (e) => _editFloorEdge('z', 'end',   parseFloat(e.target.value) || 0));
         document.getElementById('prop-floor-grid')?.addEventListener('click', () => {
             state.gridVisible = state.gridVisible === false ? true : false;
             // Grid-Helper in der Szene ein-/ausblenden — THREE.GridHelper hat type='GridHelper'
