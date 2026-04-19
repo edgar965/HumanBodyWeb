@@ -129,12 +129,18 @@ export function setupToolbar() {
         if (state.selectedTrackIdx >= 0) {
             const track = state.project.tracks[state.selectedTrackIdx];
             const newName = prompt('Neuer Track-Name:', track.name);
-            if (newName && newName !== track.name) { track.name = newName; fn.updateTrackHeaders(); fn.updateProperties(); }
+            if (newName && newName !== track.name) {
+                pushUndo('Spur umbenennen');
+                track.name = newName;
+                fn.updateTrackHeaders();
+                fn.updateProperties();
+            }
         }
     });
     document.getElementById('track-ctx-mute')?.addEventListener('click', () => {
         trackCtx.style.display = 'none';
         if (state.selectedTrackIdx >= 0) {
+            pushUndo('Mute/Unmute');
             const track = state.project.tracks[state.selectedTrackIdx];
             track.muted = !track.muted;
             fn.updateProperties();
@@ -164,49 +170,49 @@ const HELP_CONTENT = {
 <p><b>BVH Studio</b> arbeitet mit verschiedenen Track-Typen in einer gemeinsamen Timeline:</p>
 <h4 style="color:var(--accent);margin:12px 0 6px;"><i class="fas fa-running"></i> Animation</h4>
 <ul>
-<li>Enthaelt Skelett-Animationen (BVH-Dateien)</li>
-<li>Clips aus der <b>BVH Bibliothek</b> per Doppelklick oder Drag & Drop hinzufuegen</li>
-<li>Clips koennen <b>verschoben</b> (Drag), <b>gesplittet</b> (S), <b>dupliziert</b> und <b>geloescht</b> (Del) werden</li>
-<li>Rechtsklick auf Clip fuer Kontextmenue</li>
+<li>Enthält Skelett-Animationen (BVH-Dateien)</li>
+<li>Clips aus der <b>BVH Bibliothek</b> per Doppelklick oder Drag & Drop hinzufügen</li>
+<li>Clips können <b>verschoben</b> (Drag), <b>gesplittet</b> (S), <b>dupliziert</b> und <b>gelöscht</b> (Del) werden</li>
+<li>Rechtsklick auf Clip für Kontextmenü</li>
 <li>Standard-Modell: Rig2 (konfigurierbar in Einstellungen)</li>
 </ul>
 <h4 style="color:#e91e63;margin:12px 0 6px;"><i class="fas fa-user"></i> Modell</h4>
 <ul>
 <li>Wird automatisch mit einem Animations-Track erstellt</li>
-<li>Steuert welches 3D-Modell (Preset) fuer die Animation verwendet wird</li>
-<li>Modell-Clips koennen verschiedene Presets haben (z.B. FemaleGarment, Rig2)</li>
+<li>Steuert welches 3D-Modell (Preset) für die Animation verwendet wird</li>
+<li>Modell-Clips können verschiedene Presets haben (z.B. FemaleGarment, Rig2)</li>
 </ul>
 <h4 style="color:#00bcd4;margin:12px 0 6px;"><i class="fas fa-video"></i> Kamera</h4>
 <ul>
-<li>Steuert die Kameraposition waehrend der Wiedergabe</li>
-<li>Keyframes setzen: <b>K</b> druecken oder Button im Eigenschaften-Tab</li>
+<li>Steuert die Kameraposition während der Wiedergabe</li>
+<li>Keyframes setzen: <b>K</b> drücken oder Button im Eigenschaften-Tab</li>
 <li>Zwischen Keyframes wird interpoliert (Linear / Smooth / Step)</li>
 </ul>
 <h4 style="color:#ffc107;margin:12px 0 6px;"><i class="fas fa-lightbulb"></i> Licht</h4>
 <ul>
 <li>Erzeugt ein Punktlicht in der Szene</li>
-<li>Position, Farbe und Intensitaet ueber Eigenschaften-Panel aendern</li>
-<li>Keyframes fuer animiertes Licht</li>
+<li>Position, Farbe und Intensität über Eigenschaften-Panel ändern</li>
+<li>Keyframes für animiertes Licht</li>
 </ul>
 <h4 style="color:#4caf50;margin:12px 0 6px;"><i class="fas fa-music"></i> Audio</h4>
 <ul>
 <li>Audio-Datei (MP3/WAV/OGG) laden und zur Timeline synchronisieren</li>
-<li>Lautstaerke, Fade In/Out und Offset konfigurierbar</li>
+<li>Lautstärke, Fade In/Out und Offset konfigurierbar</li>
 </ul>
-<p style="margin-top:12px;"><b>Hinzufuegen:</b> Klick auf "+ Hinzufuegen" in der Toolbar, dann Typ waehlen.</p>
-<p><b>Loeschen:</b> Track auswaehlen, dann Papierkorb-Button.</p>
+<p style="margin-top:12px;"><b>Hinzufügen:</b> Klick auf "+ Hinzufügen" in der Toolbar, dann Typ wählen.</p>
+<p><b>Löschen:</b> Track auswählen, dann Papierkorb-Button.</p>
 `},
     camera: {
         title: 'Kamera',
         body: `
 <h4 style="color:var(--accent);margin:0 0 8px;">Kamera-Track Funktionen</h4>
-<p>Der Kamera-Track steuert die 3D-Kamera waehrend der Wiedergabe. Im Stopp-Modus bleibt die normale Maussteuerung (OrbitControls) aktiv.</p>
+<p>Der Kamera-Track steuert die 3D-Kamera während der Wiedergabe. Im Stopp-Modus bleibt die normale Maussteuerung (OrbitControls) aktiv.</p>
 
 <h4 style="margin:14px 0 6px;">Keyframe setzen</h4>
 <ol>
-<li>Kamera-Track in der Timeline auswaehlen</li>
-<li>Kamera mit Maus in die gewuenschte Position bewegen</li>
-<li><b>K</b> druecken oder "Keyframe setzen" Button klicken</li>
+<li>Kamera-Track in der Timeline auswählen</li>
+<li>Kamera mit Maus in die gewünschte Position bewegen</li>
+<li><b>K</b> drücken oder "Keyframe setzen" Button klicken</li>
 <li>Die aktuelle Kameraposition, Rotation und FOV werden als Keyframe am Playhead gespeichert</li>
 </ol>
 
@@ -217,38 +223,38 @@ const HELP_CONTENT = {
 <li><b>Rotation X/Y/Z</b> — Kamerarotation in Grad</li>
 <li><b>FOV</b> — Sichtfeld (10-120 Grad)</li>
 <li><b>Interpolation</b> — Linear / Smooth (weich) / Step (sprunghaft)</li>
-<li><b>"Aktuelle Ansicht uebernehmen"</b> — ueberschreibt den Keyframe mit der aktuellen Kameraansicht</li>
+<li><b>"Aktuelle Ansicht übernehmen"</b> — überschreibt den Keyframe mit der aktuellen Kameraansicht</li>
 </ul>
 
 <h4 style="margin:14px 0 6px;">Wiedergabe</h4>
-<p>Bei <b>Play</b> wird die Kamera automatisch zwischen den Keyframes interpoliert. Die Maussteuerung wird waehrend der Wiedergabe deaktiviert und beim Stopp wieder aktiviert.</p>
-<p><b>"Aktiv" Checkbox</b>: Deaktivieren um den Kamera-Track temporaer zu ignorieren.</p>
+<p>Bei <b>Play</b> wird die Kamera automatisch zwischen den Keyframes interpoliert. Die Maussteuerung wird während der Wiedergabe deaktiviert und beim Stopp wieder aktiviert.</p>
+<p><b>"Aktiv" Checkbox</b>: Deaktivieren um den Kamera-Track temporär zu ignorieren.</p>
 `},
     light: {
         title: 'Licht',
         body: `
 <h4 style="color:var(--accent);margin:0 0 8px;">Licht-Track Funktionen</h4>
-<p>Ein Licht-Track erzeugt ein <b>Punktlicht</b> in der 3D-Szene. Mehrere Licht-Tracks koennen gleichzeitig aktiv sein.</p>
+<p>Ein Licht-Track erzeugt ein <b>Punktlicht</b> in der 3D-Szene. Mehrere Licht-Tracks können gleichzeitig aktiv sein.</p>
 
 <h4 style="margin:14px 0 6px;">Licht konfigurieren</h4>
 <p>Im <b>Eigenschaften-Tab</b> (rechts) bei ausgewaehltem Licht-Track:</p>
 <ul>
 <li><b>Farbe</b> — Lichtfarbe (Color Picker)</li>
-<li><b>Intensitaet</b> — Helligkeit (0-20)</li>
+<li><b>Intensität</b> — Helligkeit (0-20)</li>
 <li><b>Sichtbar</b> — Zeigt/versteckt die Lichtposition als gelbe Kugel in der Szene</li>
 <li><b>Position X/Y/Z</b> — Lichtposition in Metern</li>
 </ul>
 
 <h4 style="margin:14px 0 6px;">Licht-Keyframes</h4>
 <ol>
-<li>Licht-Track auswaehlen</li>
-<li>Position/Farbe/Intensitaet einstellen</li>
-<li><b>K</b> druecken oder "Keyframe setzen" Button klicken</li>
-<li>Bei Wiedergabe wird zwischen Keyframes interpoliert (Position, Farbe, Intensitaet)</li>
+<li>Licht-Track auswählen</li>
+<li>Position/Farbe/Intensität einstellen</li>
+<li><b>K</b> drücken oder "Keyframe setzen" Button klicken</li>
+<li>Bei Wiedergabe wird zwischen Keyframes interpoliert (Position, Farbe, Intensität)</li>
 </ol>
 
 <h4 style="margin:14px 0 6px;">Lichtposition-Helper</h4>
-<p>Die gelbe Kugel zeigt die aktuelle Lichtposition in der Szene. Ueber die Checkbox "Sichtbar" kann sie ein- und ausgeblendet werden.</p>
+<p>Die gelbe Kugel zeigt die aktuelle Lichtposition in der Szene. Über die Checkbox "Sichtbar" kann sie ein- und ausgeblendet werden.</p>
 `},
     audio: {
         title: 'Audio',
@@ -258,16 +264,16 @@ const HELP_CONTENT = {
 
 <h4 style="margin:14px 0 6px;">Audio laden</h4>
 <ol>
-<li>Audio hinzufuegen (+ Hinzufuegen > Audio)</li>
+<li>Audio hinzufügen (+ Hinzufügen > Audio)</li>
 <li>Im Eigenschaften-Tab: "Audio laden" Button klicken</li>
-<li>MP3, WAV oder OGG Datei auswaehlen</li>
-<li>Der Audio-Clip erscheint als gruenes Rechteck in der Timeline</li>
+<li>MP3, WAV oder OGG Datei auswählen</li>
+<li>Der Audio-Clip erscheint als grünes Rechteck in der Timeline</li>
 </ol>
 
 <h4 style="margin:14px 0 6px;">Audio bearbeiten</h4>
 <p>Klick auf den Audio-Clip in der Timeline. Im Eigenschaften-Panel:</p>
 <ul>
-<li><b>Lautstaerke</b> — Schieberegler 0-100%</li>
+<li><b>Lautstärke</b> — Schieberegler 0-100%</li>
 <li><b>Fade In</b> — Einblende-Dauer in Frames</li>
 <li><b>Fade Out</b> — Ausblende-Dauer in Frames</li>
 <li><b>Offset</b> — Startpunkt innerhalb der Audiodatei (Sekunden)</li>
@@ -276,16 +282,16 @@ const HELP_CONTENT = {
 
 <h4 style="margin:14px 0 6px;">Wiedergabe</h4>
 <p>Audio wird automatisch zur Timeline synchronisiert. Bei <b>Play</b> startet die Audiowiedergabe am aktuellen Playhead. Bei <b>Pause/Stop</b> wird die Audiowiedergabe gestoppt.</p>
-<p>Audio-Clips koennen wie BVH-Clips <b>verschoben</b> und <b>geloescht</b> werden.</p>
+<p>Audio-Clips können wie BVH-Clips <b>verschoben</b> und <b>gelöscht</b> werden.</p>
 `},
     shortcuts: {
-        title: 'Tastenkuerzel',
+        title: 'Tastenkürzel',
         body: `
 <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Space</kbd></td><td>Play / Pause</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">&#8592;</kbd> <kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">&#8594;</kbd></td><td>Frame vor / zurueck</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">&#8592;</kbd> <kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">&#8594;</kbd></td><td>Frame vor / zurück</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">S</kbd></td><td>Clip splitten am Playhead</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Del</kbd></td><td>Ausgewaehlten Clip loeschen</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Del</kbd></td><td>Ausgewählten Clip löschen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">K</kbd></td><td>Kamera/Licht Keyframe setzen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Ctrl+Shift+U</kbd></td><td>Undo (bis zu 20 Schritte)</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Redo</kbd></td><td>Redo (nur per Button)</td></tr>
@@ -293,72 +299,72 @@ const HELP_CONTENT = {
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Ctrl + Mausrad</b></td><td>Timeline zoomen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Mittlere Maustaste</b></td><td>Timeline pannen</td></tr>
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;"><b>Alt + Klick</b></td><td>Timeline pannen</td></tr>
-<tr><td style="padding:6px 0;"><b>Rechtsklick auf Clip</b></td><td>Kontextmenue</td></tr>
+<tr><td style="padding:6px 0;"><b>Rechtsklick auf Clip</b></td><td>Kontextmenü</td></tr>
 </table>
 `},
     animations: {
         title: 'BVH Bibliothek verwalten',
         body: `
 <h4 style="color:var(--accent);margin:0 0 8px;">BVH Bibliothek im Studio</h4>
-<p>Die BVH Bibliothek links zeigt alle BVH-Dateien gruppiert nach Ordnern. Animationen koennen per <b>Doppelklick</b> oder <b>Drag &amp; Drop</b> zum ausgewaehlten Track hinzugefuegt werden.</p>
+<p>Die BVH Bibliothek links zeigt alle BVH-Dateien gruppiert nach Ordnern. Animationen können per <b>Doppelklick</b> oder <b>Drag &amp; Drop</b> zum ausgewählten Track hinzugefügt werden.</p>
 
 <h4 style="margin:14px 0 6px;">Bibliothek-Toolbar</h4>
 <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
 <tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;width:40px;text-align:center;"><i class="fas fa-folder-plus"></i></td><td><b>Neuer Ordner</b> — Erstellt einen neuen Kategorie-Ordner</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;text-align:center;"><i class="fas fa-pen"></i></td><td><b>Umbenennen</b> — Benennt die ausgewaehlte Animation um</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;text-align:center;"><i class="fas fa-trash"></i></td><td><b>Loeschen</b> — Loescht die ausgewaehlte Animation</td></tr>
-<tr><td style="padding:5px 0;text-align:center;"><i class="fas fa-sync-alt"></i></td><td><b>Aktualisieren</b> — Laedt die Bibliothek neu</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;text-align:center;"><i class="fas fa-pen"></i></td><td><b>Umbenennen</b> — Benennt die ausgewählte Animation um</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;text-align:center;"><i class="fas fa-trash"></i></td><td><b>Löschen</b> — Löscht die ausgewählte Animation</td></tr>
+<tr><td style="padding:5px 0;text-align:center;"><i class="fas fa-sync-alt"></i></td><td><b>Aktualisieren</b> — Lädt die Bibliothek neu</td></tr>
 </table>
 
-<h4 style="margin:14px 0 6px;">Kontextmenue (Rechtsklick)</h4>
+<h4 style="margin:14px 0 6px;">Kontextmenü (Rechtsklick)</h4>
 <p><b>Auf eine Animation:</b></p>
 <ul style="margin:4px 0;">
-<li><b>Zur Animation hinzufuegen</b> — Fuegt die Animation als Clip zur ausgewaehlten Animation hinzu</li>
-<li><b>Umbenennen</b> — Aendert den Dateinamen der BVH-Datei</li>
+<li><b>Zur Animation hinzufügen</b> — Fügt die Animation als Clip zur ausgewählten Animation hinzu</li>
+<li><b>Umbenennen</b> — Ändert den Dateinamen der BVH-Datei</li>
 <li><b>Verschieben nach...</b> — Verschiebt die Datei in einen anderen Ordner</li>
-<li><b>Loeschen</b> — Entfernt die BVH-Datei (mit Bestaetigung)</li>
+<li><b>Löschen</b> — Entfernt die BVH-Datei (mit Bestätigung)</li>
 </ul>
 <p><b>Auf einen Ordner:</b></p>
 <ul style="margin:4px 0;">
-<li><b>Ordner umbenennen</b> — Aendert den Ordnernamen</li>
+<li><b>Ordner umbenennen</b> — Ändert den Ordnernamen</li>
 <li><b>Neuer Ordner</b> — Erstellt einen neuen Ordner</li>
-<li><b>Ordner loeschen</b> — Entfernt einen leeren Ordner</li>
+<li><b>Ordner löschen</b> — Entfernt einen leeren Ordner</li>
 </ul>
 
-<h4 style="margin:14px 0 6px;">Animation hinzufuegen</h4>
+<h4 style="margin:14px 0 6px;">Animation hinzufügen</h4>
 <ul style="margin:4px 0;">
-<li><b>Doppelklick</b> auf eine Animation — fuegt sie zum ausgewaehlten Track hinzu</li>
+<li><b>Doppelklick</b> auf eine Animation — fügt sie zum ausgewählten Track hinzu</li>
 <li><b>Drag &amp; Drop</b> — ziehe eine Animation auf einen Track-Header oder in die Timeline</li>
 <li>Wird auf leere Stelle in der Timeline gezogen, wird automatisch ein neuer Track erstellt</li>
 </ul>
 
 <h4 style="margin:14px 0 6px;">Clips in der Timeline bearbeiten</h4>
-<p>Clips koennen direkt in der Timeline per Maus bearbeitet werden:</p>
+<p>Clips können direkt in der Timeline per Maus bearbeitet werden:</p>
 <ul style="margin:4px 0;">
 <li><b>Verschieben</b> — Clip in der Mitte greifen und nach links/rechts ziehen</li>
-<li><b>Trimmen (Anfang)</b> — Linken Rand des Clips greifen und ziehen → kuerzt die Animation von vorne</li>
-<li><b>Trimmen (Ende)</b> — Rechten Rand des Clips greifen und ziehen → kuerzt die Animation von hinten</li>
+<li><b>Trimmen (Anfang)</b> — Linken Rand des Clips greifen und ziehen → kürzt die Animation von vorne</li>
+<li><b>Trimmen (Ende)</b> — Rechten Rand des Clips greifen und ziehen → kürzt die Animation von hinten</li>
 <li>Der Cursor wechselt zu <b>↔</b> am Clip-Rand und zu <b>✋</b> in der Mitte</li>
 </ul>
-<p><b>Kontextmenue (Rechtsklick auf Clip):</b></p>
+<p><b>Kontextmenü (Rechtsklick auf Clip):</b></p>
 <ul style="margin:4px 0;">
 <li><b>Split an Playhead (S)</b> — Teilt den Clip an der Playhead-Position</li>
 <li><b>Duplizieren</b> — Erstellt eine Kopie hinter dem Clip</li>
-<li><b>Loeschen (Del)</b> — Entfernt den Clip</li>
-<li><b>Anfang trimmen (+10f)</b> — Kuerzt den Clip um 10 Frames von vorne</li>
-<li><b>Ende trimmen (+10f)</b> — Kuerzt den Clip um 10 Frames von hinten</li>
-<li><b>Trim zuruecksetzen</b> — Stellt die volle Laenge wieder her</li>
+<li><b>Löschen (Del)</b> — Entfernt den Clip</li>
+<li><b>Anfang trimmen (+10f)</b> — Kürzt den Clip um 10 Frames von vorne</li>
+<li><b>Ende trimmen (+10f)</b> — Kürzt den Clip um 10 Frames von hinten</li>
+<li><b>Trim zurücksetzen</b> — Stellt die volle Länge wieder her</li>
 <li><b>BVH speichern unter...</b> — Speichert die BVH-Datei</li>
 <li><b>Smooth / Bodenniveau</b> — Tools auf den Clip anwenden</li>
 </ul>
 
 <h4 style="margin:14px 0 6px;">Hinweise</h4>
 <ul style="margin:4px 0;">
-<li>Klick auf eine Animation markiert sie (lila) fuer Toolbar-Aktionen</li>
-<li>Ordner koennen nur geloescht werden wenn sie leer sind</li>
+<li>Klick auf eine Animation markiert sie (lila) für Toolbar-Aktionen</li>
+<li>Ordner können nur gelöscht werden wenn sie leer sind</li>
 <li>Beim Umbenennen/Verschieben wird auch die Retarget-Cache-Datei (.json) mitverschoben</li>
-<li>Alle Aenderungen werden sofort auf der Festplatte ausgefuehrt</li>
-<li>Wird der letzte Clip eines Tracks geloescht, verschwindet das 3D-Modell automatisch</li>
+<li>Alle Änderungen werden sofort auf der Festplatte ausgeführt</li>
+<li>Wird der letzte Clip eines Tracks gelöscht, verschwindet das 3D-Modell automatisch</li>
 </ul>
 `},
 };
@@ -516,7 +522,7 @@ async function saveSmoothedBVH() {
     }
 
     if (clips.length === 0) {
-        alert('Keine Animation geladen.\nBitte erst eine Animation per Doppelklick zum Track hinzufuegen\noder per A-Taste in der Vorschau oeffnen.');
+        alert('Keine Animation geladen.\nBitte erst eine Animation per Doppelklick zum Track hinzufügen\noder per A-Taste in der Vorschau öffnen.');
         return;
     }
 
@@ -596,7 +602,7 @@ async function saveBvhWithEffects() {
 }
 
 export function smoothSelectedClip() {
-    if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) { alert('Clip auswaehlen.'); return; }
+    if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) { alert('Clip auswählen.'); return; }
     pushUndo('Smooth');
     const clip = state.project.tracks[state.selectedTrackIdx].clips[state.selectedClipIdx];
     if (!clip.animClip) { alert('Clip hat keine Animation.'); return; }
@@ -716,7 +722,7 @@ function restoreFixedPositionAll() {
 }
 
 export async function groundFixSelectedClip() {
-    if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) { alert('Clip auswaehlen.'); return; }
+    if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) { alert('Clip auswählen.'); return; }
     pushUndo('Bodenniveau');
     const track = state.project.tracks[state.selectedTrackIdx];
     const clip = track.clips[state.selectedClipIdx];
@@ -753,7 +759,7 @@ export async function groundFixSelectedClip() {
         return n.includes('foot') || n.includes('toe') || n.includes('heel');
     });
     if (footBones.length === 0) {
-        alert('Keine Fuss-Knochen gefunden.');
+        alert('Keine Fuß-Knochen gefunden.');
         tmpAction.stop(); tmpMixer.stopAllAction();
         return;
     }
@@ -797,7 +803,7 @@ export async function groundFixSelectedClip() {
         return;
     }
 
-    console.log(`[BVH Studio] Ground fix: ${corrected}/${nKeys} Frames korrigiert fuer ${clip.name}`);
+    console.log(`[BVH Studio] Ground fix: ${corrected}/${nKeys} Frames korrigiert für ${clip.name}`);
     fn.applyPlayhead();
 
     // Save corrected BVH to disk

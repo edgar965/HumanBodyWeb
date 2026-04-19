@@ -8,7 +8,7 @@ import { fn } from './registry.js';
 let exportCancelled = false;
 
 export async function exportBVH() {
-    if (state.selectedTrackIdx < 0) { alert('Track auswaehlen.'); return; }
+    if (state.selectedTrackIdx < 0) { alert('Track auswählen.'); return; }
     const track = state.project.tracks[state.selectedTrackIdx];
     if (track.clips.length === 0) { alert('Track hat keine Clips.'); return; }
 
@@ -50,7 +50,7 @@ export async function exportBVH() {
 }
 
 export async function saveBvhAs() {
-    if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) { alert('Clip auswaehlen.'); return; }
+    if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) { alert('Clip auswählen.'); return; }
     const clip = state.project.tracks[state.selectedTrackIdx].clips[state.selectedClipIdx];
     try {
         const url = `/api/character/bvh/${encodeURIComponent(clip.category)}/${encodeURIComponent(clip.name)}/`;

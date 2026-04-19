@@ -5,8 +5,200 @@ import { state, TRACK_HEIGHT, HEADER_WIDTH, RULER_HEIGHT, TRACK_ICONS } from './
 import { fn } from './registry.js';
 import { pushUndo } from './undo.js';
 import { setLibSelectedItem } from './library.js';
+import { Clip } from './models.js';
 
 let tlCanvas, tlCtx;
+
+// Cached API responses for track-context "Hinzufügen" submenu
+let _cachedModelPresets = null;
+let _cachedAnimations = null;
+
+const DEFAULT_CLIP_SECONDS = 10;
+
+async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame, submenuId = 'track-ctx-add-submenu') {
+    const sub = document.getElementById(submenuId);
+    if (!sub) return;
+    sub.innerHTML = '<div class="ctx-submenu-empty">Lade...</div>';
+
+    const closeCtx = () => { ctx.style.display = 'none'; };
+    const fps = state.project.fps;
+    const defaultFrames = DEFAULT_CLIP_SECONDS * fps;
+    // Platziere Clip an übergebener Position, oder Playhead als Fallback
+    const placeFrame = (targetFrame != null) ? targetFrame : state.playheadFrame;
+
+    if (track.type === 'bvh') {
+        if (!_cachedAnimations) {
+            try {
+                const resp = await fetch('/api/character/animations/');
+                _cachedAnimations = await resp.json();
+            } catch (e) {
+                sub.innerHTML = '<div class="ctx-submenu-empty">Fehler beim Laden</div>';
+                return;
+            }
+        }
+        sub.innerHTML = '';
+        const cats = _cachedAnimations.categories || {};
+        const keys = Object.keys(cats).sort();
+        if (keys.length === 0) {
+            sub.innerHTML = '<div class="ctx-submenu-empty">Keine Animationen verfügbar</div>';
+            return;
+        }
+        // Zwei-stufiges Menü: Kategorie → Animation
+        for (const cat of keys) {
+            const anims = cats[cat] || [];
+            const catItem = document.createElement('div');
+            catItem.className = 'ctx-item has-submenu';
+            catItem.innerHTML = `
+                <i class="fas fa-folder" style="width:16px;color:var(--text-muted);"></i>
+                ${cat}
+                <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:0.7rem;color:var(--text-muted);">${anims.length}</span>
+                    <i class="fas fa-caret-right" style="font-size:0.7rem;color:var(--text-muted);"></i>
+                </span>
+            `;
+            const nested = document.createElement('div');
+            nested.className = 'ctx-submenu';
+            if (anims.length === 0) {
+                nested.innerHTML = '<div class="ctx-submenu-empty">Leer</div>';
+            } else {
+                for (const anim of anims) {
+                    const animItem = document.createElement('div');
+                    animItem.className = 'ctx-item';
+                    animItem.innerHTML = `<i class="fas fa-running" style="width:16px;"></i> ${anim.name} <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">${anim.frames || '?'}f</span>`;
+                    animItem.addEventListener('click', async () => {
+                        closeCtx();
+                        await fn.addClipToTrack(trackIdx, cat, anim.name, anim.frames || 0);
+                        const t2 = state.project.tracks[trackIdx];
+                        const c = t2.clips[t2.clips.length - 1];
+                        if (c) {
+                            // Default 10s — trim only if animation is longer than 10s in clip-fps.
+                            const targetClipFrames = Math.round(DEFAULT_CLIP_SECONDS * c.fps);
+                            if (c.totalFrames > targetClipFrames) c.trimOut = c.totalFrames - targetClipFrames;
+                            c.startFrame = placeFrame;
+                            fn.updateDuration();
+                            fn.renderTimeline();
+                        }
+                    });
+                    nested.appendChild(animItem);
+                }
+            }
+            // Position level-3 submenu with position:fixed on hover to break out
+            // of the level-1 submenu's overflow:auto clipping.
+            nested.classList.add('ctx-submenu-fixed');
+            catItem.addEventListener('mouseenter', () => {
+                const rect = catItem.getBoundingClientRect();
+                nested.style.left = rect.right + 'px';
+                nested.style.top = (rect.top - 5) + 'px';
+            });
+            catItem.appendChild(nested);
+            sub.appendChild(catItem);
+        }
+    } else if (track.type === 'model') {
+        if (!_cachedModelPresets) {
+            try {
+                const resp = await fetch('/api/character/models/');
+                const data = await resp.json();
+                _cachedModelPresets = data.presets || [];
+            } catch (e) {
+                sub.innerHTML = '<div class="ctx-submenu-empty">Fehler beim Laden</div>';
+                return;
+            }
+        }
+        sub.innerHTML = '';
+        if (_cachedModelPresets.length === 0) {
+            sub.innerHTML = '<div class="ctx-submenu-empty">Keine Modelle verfügbar</div>';
+            return;
+        }
+        for (const p of _cachedModelPresets) {
+            const item = document.createElement('div');
+            item.className = 'ctx-item';
+            item.innerHTML = `<i class="fas fa-user" style="width:16px;color:#e91e63;"></i> ${p.label || p.name}`;
+            item.addEventListener('click', () => {
+                closeCtx();
+                pushUndo('Modell-Clip hinzufügen');
+                const clip = new Clip(null, p.label || p.name, defaultFrames, fps);
+                clip.type = 'model';
+                clip.startFrame = placeFrame;
+                clip.data = { preset: p.name, bodyType: 'Female_Caucasian' };
+                track.clips.push(clip);
+                track._currentPreset = null;
+                fn.applyPlayhead();
+                fn.updateDuration();
+                fn.renderTimeline();
+                fn.updateProperties();
+            });
+            sub.appendChild(item);
+        }
+    } else if (track.type === 'audio') {
+        sub.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'ctx-item';
+        item.innerHTML = `<i class="fas fa-music" style="width:16px;color:#4caf50;"></i> Audio-Datei wählen...`;
+        item.addEventListener('click', () => {
+            closeCtx();
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'audio/*';
+            input.addEventListener('change', async () => {
+                const file = input.files[0];
+                if (!file) return;
+                try {
+                    const arrayBuf = await file.arrayBuffer();
+                    const audioBuffer = await track.audioCtx.decodeAudioData(arrayBuf);
+                    pushUndo('Audio-Clip hinzufügen');
+                    // Default 10s Clip — audioDuration bestimmt clip.duration für Audio-Tracks
+                    const clip = new Clip(null, file.name, defaultFrames, fps);
+                    clip.type = 'audio';
+                    clip.startFrame = placeFrame;
+                    clip.data = {
+                        fileName: file.name,
+                        audioBuffer: audioBuffer,
+                        audioDuration: Math.min(DEFAULT_CLIP_SECONDS, audioBuffer.duration),
+                        volume: 1.0, fadeIn: 0, fadeOut: 0, offset: 0,
+                    };
+                    try {
+                        const formData = new FormData();
+                        formData.append('audio', file);
+                        const upResp = await fetch('/api/studio/audio-upload/', { method: 'POST', body: formData });
+                        const upData = await upResp.json();
+                        if (upData.ok) clip.data.audioUrl = upData.url;
+                    } catch {}
+                    track.clips.push(clip);
+                    fn.updateDuration();
+                    fn.renderTimeline();
+                    fn.updateProperties();
+                } catch (err) {
+                    console.error('[BVH Studio] Audio decode failed:', err);
+                    alert('Audio laden fehlgeschlagen: ' + err.message);
+                }
+            });
+            input.click();
+        });
+        sub.appendChild(item);
+    } else if (track.type === 'camera') {
+        sub.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'ctx-item';
+        item.innerHTML = `<i class="fas fa-video" style="width:16px;color:#00bcd4;"></i> Kameraposition`;
+        item.addEventListener('click', () => {
+            closeCtx();
+            fn.addCameraKeyframe(trackIdx, placeFrame);
+        });
+        sub.appendChild(item);
+    } else if (track.type === 'light') {
+        sub.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'ctx-item';
+        item.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht`;
+        item.addEventListener('click', () => {
+            closeCtx();
+            fn.addLightKeyframe(trackIdx, placeFrame);
+        });
+        sub.appendChild(item);
+    } else {
+        sub.innerHTML = '<div class="ctx-submenu-empty">Nicht verfügbar für diesen Spurtyp</div>';
+    }
+}
 
 export function setupTimeline() {
     tlCanvas = document.getElementById('timeline-canvas');
@@ -122,22 +314,23 @@ export function setupTimeline() {
                 return;
             }
 
-            // No clip hit -- start scrubbing (playhead follows mouse)
+            // No clip hit
             if (mx > HEADER_WIDTH) {
-                dragMode = 'scrub';
-                dragStartX = mx;
-
-                // Select track by Y position
-                if (my > RULER_HEIGHT) {
+                if (my <= RULER_HEIGHT) {
+                    // Klick auf Ruler (über den Spuren) → Playhead scrubben
+                    dragMode = 'scrub';
+                    dragStartX = mx;
+                    setPlayheadFromMouse(mx);
+                } else {
+                    // Klick in Spur-Bereich → nur Spur auswählen, Playhead bleibt stehen
                     const ti = Math.floor((my - RULER_HEIGHT) / TRACK_HEIGHT);
                     if (ti >= 0 && ti < state.project.tracks.length) {
                         state.selectedTrackIdx = ti;
                         state.selectedClipIdx = -1;
                         fn.updateProperties();
+                        renderTimeline();
                     }
                 }
-
-                setPlayheadFromMouse(mx);
                 e.preventDefault();
             }
         }
@@ -216,6 +409,7 @@ export function setupTimeline() {
     function _setModelPreset(trackIdx, preset) {
         const track = state.project.tracks[trackIdx];
         if (!track || track.type !== 'model') return;
+        pushUndo('Preset ändern');
         // Find the clip at the current playhead or the selected clip
         const t = state.playheadFrame / state.project.fps;
         let clip = null;
@@ -269,9 +463,47 @@ export function setupTimeline() {
             renderTimeline();
         }
 
+        // Klick in Spur-Bereich ohne Clip-Hit → Track-Kontextmenü mit "Hinzufügen"
+        // (neue Clips werden an der Klick-Position platziert)
+        if (!hit && track && my > RULER_HEIGHT && _ctxMouseX > HEADER_WIDTH) {
+            state.selectedTrackIdx = trackIdx;
+            state.selectedClipIdx = -1;
+            fn.updateProperties();
+            renderTimeline();
+
+            const trackCtx = document.getElementById('track-context-menu');
+            if (trackCtx) {
+                ctxMenu.style.display = 'none';
+                modelCtxMenu.style.display = 'none';
+                const clickFrame = Math.max(0, Math.round(
+                    ((_ctxMouseX - HEADER_WIDTH + state.timelineScrollX) / state.timelineZoom) * state.project.fps
+                ));
+                _populateTrackAddSubmenu(track, trackIdx, trackCtx, clickFrame);
+                // Hide link section (only relevant on header right-click)
+                const linkSection = document.getElementById('track-ctx-link-section');
+                if (linkSection) linkSection.style.display = 'none';
+                trackCtx.style.display = '';
+                trackCtx.style.left = e.clientX + 'px';
+                const menuH = trackCtx.offsetHeight || 200;
+                trackCtx.style.top = Math.min(e.clientY, window.innerHeight - menuH - 10) + 'px';
+                return;
+            }
+        }
+
+        // Track-context-menu verstecken falls vorhin geöffnet
+        const _trackCtxEl = document.getElementById('track-context-menu');
+        if (_trackCtxEl) _trackCtxEl.style.display = 'none';
+
+        // Berechne Klick-Position als Frame für "Hinzufügen"-Submenu
+        const clickFrame = Math.max(0, Math.round(
+            ((_ctxMouseX - HEADER_WIDTH + state.timelineScrollX) / state.timelineZoom) * state.project.fps
+        ));
+
         // Use model context menu for model tracks
         if (track && track.type === 'model') {
             ctxMenu.style.display = 'none';
+            // Populate "Hinzufügen" submenu — new items placed at click position
+            _populateTrackAddSubmenu(track, trackIdx, modelCtxMenu, clickFrame, 'model-ctx-add-submenu');
             // Populate preset list if not done
             if (!_modelPresetsFetched) {
                 _modelPresetsFetched = true;
@@ -319,6 +551,10 @@ export function setupTimeline() {
 
         // Normal context menu for other tracks
         modelCtxMenu.style.display = 'none';
+        // Populate "Hinzufügen" submenu (nur wenn Track-Typ bekannt)
+        if (track) _populateTrackAddSubmenu(track, trackIdx, ctxMenu, clickFrame, 'clip-ctx-add-submenu');
+        const clipCtxAddItem = document.getElementById('clip-ctx-add');
+        if (clipCtxAddItem) clipCtxAddItem.style.display = track ? '' : 'none';
         ctxMenu.style.display = '';
         ctxMenu.style.left = e.clientX + 'px';
         const menuH = ctxMenu.offsetHeight || 200;
@@ -478,6 +714,13 @@ export function renderTimeline() {
                     tlCtx.stroke();
                 }
                 tlCtx.globalAlpha = 1.0;
+                // Label rechts neben dem Marker (Name z.B. "Kameraposition 1")
+                if (clip.name) {
+                    tlCtx.fillStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.75)';
+                    tlCtx.font = '10px sans-serif';
+                    tlCtx.textBaseline = 'middle';
+                    tlCtx.fillText(clip.name, cx + sz + 4, my);
+                }
             } else {
                 // Rectangle clips (BVH, Audio)
                 const cw = Math.max(clip.duration * pps, 4);
@@ -573,6 +816,8 @@ export function updateTrackHeaders() {
             fn.selectTrack(i);
             const ctx = document.getElementById('track-context-menu');
             if (!ctx) return;
+            // Populate "Hinzufügen" submenu based on track type
+            _populateTrackAddSubmenu(track, i, ctx);
             // Show/hide link section for model tracks
             const linkSection = document.getElementById('track-ctx-link-section');
             const linkList = document.getElementById('track-ctx-link-list');
@@ -587,6 +832,7 @@ export function updateTrackHeaders() {
                     item.innerHTML = `<i class="fas ${isLinked ? 'fa-check' : 'fa-running'}" style="width:16px;color:${isLinked ? '#4caf50' : '#666'};"></i> ${t.name}`;
                     item.style.fontWeight = isLinked ? 'bold' : '';
                     item.addEventListener('click', () => {
+                        pushUndo('Verknüpfung ändern');
                         track._linkedAnimIdx = ti;
                         track._currentPreset = null;
                         fn.applyPlayhead();

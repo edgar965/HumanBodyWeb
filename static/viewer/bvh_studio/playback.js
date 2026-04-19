@@ -91,6 +91,19 @@ export function stepFrame(delta) {
 
 export function applyPlayhead() {
     const t = state.playheadFrame / state.project.fps;
+
+    // Bestimme strukturell (nicht per aktivem Clip!), welche BVH-Tracks einen
+    // Model-Track verlinkt haben. Nur dort übergibt Model-Track die Visibility.
+    for (const track of state.project.tracks) {
+        if (track.type === 'bvh') track._modelControlled = false;
+    }
+    for (const track of state.project.tracks) {
+        if (track.type === 'model') {
+            const linked = state.project.getLinkedAnimation(track);
+            if (linked) linked._modelControlled = true;
+        }
+    }
+
     for (const track of state.project.tracks) {
         if (track.muted) continue;
         if (track.type === 'bvh') applyBvhTrack(track, t);
@@ -115,10 +128,14 @@ function applyBvhTrack(track, t) {
                 track.mixer.stopAllAction();
                 if (track._activeClip?.animClip) track.mixer.uncacheClip(track._activeClip.animClip);
                 track._activeAction = track.mixer.clipAction(clip.animClip);
-                track._activeAction.setLoop(THREE.LoopOnce);
-                track._activeAction.clampWhenFinished = true;
+                track._activeAction.setLoop(THREE.LoopRepeat, Infinity);
+                track._activeAction.clampWhenFinished = false;
                 track._activeAction.play();
                 track._activeClip = clip;
+            } else if (!track._activeAction.isRunning()) {
+                // Action was disabled (e.g. after finishing a LoopOnce) — re-enable
+                track._activeAction.reset();
+                track._activeAction.play();
             }
             track._activeAction.time = localT;
             track.mixer.setTime(localT);
@@ -132,9 +149,10 @@ function applyBvhTrack(track, t) {
         track._activeAction = null;
         if (track.skeleton) track.skeleton.skeleton.pose();
     }
-    // Sichtbarkeit nur steuern wenn KEIN Model-Track die Kontrolle hat
-    if (!track.meshActive && track.mesh) {
-        track.mesh.visible = found;
+    // Sichtbarkeit nur steuern wenn KEIN Model-Track die Kontrolle hat.
+    // Wir schalten die ganze Group (Mesh + Garments + Hair) gemeinsam.
+    if (!track._modelControlled && track.group) {
+        track.group.visible = found;
     }
 }
 
@@ -232,47 +250,47 @@ function applyModelTrack(track, t) {
         if (t >= cs && t < ce) { activePreset = clip.data?.preset; break; }
     }
 
-    // Nichts geändert → nichts tun
-    if (activePreset === animTrack.meshActive) return;
+    // Während eines asynchronen Ladevorgangs nichts tun — sonst setzen wir
+    // die alte Group fälschlich auf visible, bevor das neue Preset fertig ist.
+    if (animTrack._loadingPreset) {
+        if (animTrack.group) animTrack.group.visible = false;
+        return;
+    }
 
-    // Aktuelles Mesh verstecken
-    if (animTrack.mesh) animTrack.mesh.visible = false;
+    // Nichts geändert → Sichtbarkeit der Group an aktives Preset angleichen.
+    if (activePreset === animTrack.meshActive) {
+        if (animTrack.group) animTrack.group.visible = !!activePreset;
+        return;
+    }
+
+    // Preset hat gewechselt → Group verstecken
+    if (animTrack.group) animTrack.group.visible = false;
 
     if (!activePreset) {
         animTrack.meshActive = null;
         return;
     }
 
-    // Mesh aus Cache holen oder laden
-    if (!animTrack.meshCache) animTrack.meshCache = {};
-
-    if (animTrack.meshCache[activePreset]) {
-        // Sofort wechseln — kein async
-        const cached = animTrack.meshCache[activePreset];
-        animTrack.mesh = cached.mesh;
-        animTrack.skeleton = cached.skeleton;
-        animTrack.mixer = cached.mixer;
-        animTrack.mesh.visible = true;
-        animTrack._activeClip = null;
-        animTrack._activeAction = null;
-        animTrack.meshActive = activePreset;
-    } else {
-        // Erstes Mal: laden und cachen
-        animTrack.preset = activePreset;
-        animTrack.meshActive = activePreset;
-        fn.loadTrackCharacter(animTrack).then(() => {
-            if (animTrack.mesh) {
-                animTrack.meshCache[activePreset] = {
-                    mesh: animTrack.mesh,
-                    skeleton: animTrack.skeleton,
-                    mixer: animTrack.mixer
-                };
-                animTrack.mesh.visible = true;
-                animTrack._activeClip = null;
-                animTrack._activeAction = null;
-            }
-        });
-    }
+    // Immer frisch laden — Mesh + Garments + Hair müssen alle zum Preset passen.
+    // (Früherer Cache nur für Mesh führte zu sichtbarem falschem Preset, weil
+    // garments/hair der Group von loadTrackCharacter entfernt werden.)
+    animTrack._loadingPreset = activePreset;
+    animTrack.preset = activePreset;
+    if (animTrack.group) animTrack.group.visible = false;
+    fn.loadTrackCharacter(animTrack).then(() => {
+        if (animTrack._loadingPreset !== activePreset) return;  // neuer Wechsel überholt
+        animTrack._loadingPreset = null;
+        if (animTrack.mesh) {
+            if (animTrack.group) animTrack.group.visible = true;
+            animTrack._activeClip = null;
+            animTrack._activeAction = null;
+            animTrack.meshActive = activePreset;
+            console.log(`[BVH Studio] Preset ${activePreset} geladen für ${animTrack.name}`);
+        }
+    }).catch(e => {
+        animTrack._loadingPreset = null;
+        console.error(`[BVH Studio] Preset-Laden fehlgeschlagen (${activePreset}):`, e);
+    });
 }
 
 // Audio play/stop helpers

@@ -47,11 +47,26 @@ fn.serverLog = serverLog;
 // Note: Chrome on QWERTZ swallows Ctrl+Z/Y/M. Only Ctrl+Shift+U works reliably.
 window.addEventListener('keydown', (e) => {
     if (!e.ctrlKey) return;
-    // Ctrl+Shift+U = Undo
+    const inInput = (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
+    // Ctrl+Shift+U = Undo (fallback für QWERTZ/Chrome-Probleme)
     if (e.shiftKey && e.code === 'KeyU') {
         e.preventDefault();
         e.stopImmediatePropagation();
         undo();
+        return;
+    }
+    // Ctrl+Z = Undo, Ctrl+Shift+Z oder Ctrl+Y = Redo (nicht in Input-Feldern)
+    if (!inInput && e.code === 'KeyZ') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+    }
+    if (!inInput && e.code === 'KeyY') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        redo();
         return;
     }
     // Ctrl+S = Save
@@ -67,7 +82,7 @@ window.addEventListener('keydown', (e) => {
         return;
     }
 }, true);
-console.log('[BVH Studio] Global keyboard handler registered (Ctrl+Shift+U = Undo)');
+console.log('[BVH Studio] Global keyboard handler registered (Ctrl+Z/Y + Ctrl+Shift+U = Undo/Redo)');
 
 // =========================================================================
 // Init

@@ -122,7 +122,7 @@ export async function loadProject() {
                     alert('Laden fehlgeschlagen: ' + (loadResult.error || ''));
                 }
             } else {
-                alert(`Keine Projekte in ${dir} gefunden.\nDatei manuell waehlen...`);
+                alert(`Keine Projekte in ${dir} gefunden.\nDatei manuell wählen...`);
             }
         } catch (e) { /* fall through to file picker */ }
     }

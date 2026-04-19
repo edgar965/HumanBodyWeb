@@ -59,8 +59,8 @@ export function updateDebugPanel() {
 
         elDist.textContent = `Boden-Abstand: ${minY.toFixed(4)} m`;
         elBone.textContent = `Tiefster: ${lowestName}`;
-        elFootL.textContent = minYL < Infinity ? `Fuss L: ${minYL.toFixed(4)} m (${lowestL})` : 'Fuss L: —';
-        elFootR.textContent = minYR < Infinity ? `Fuss R: ${minYR.toFixed(4)} m (${lowestR})` : 'Fuss R: —';
+        elFootL.textContent = minYL < Infinity ? `Fuß L: ${minYL.toFixed(4)} m (${lowestL})` : 'Fuß L: —';
+        elFootR.textContent = minYR < Infinity ? `Fuß R: ${minYR.toFixed(4)} m (${lowestR})` : 'Fuß R: —';
         found = true;
         break;  // first active track
     }
@@ -68,8 +68,8 @@ export function updateDebugPanel() {
     if (!found) {
         elDist.textContent = 'Boden-Abstand: —';
         elBone.textContent = 'Tiefster Knochen: —';
-        elFootL.textContent = 'Fuss L: —';
-        elFootR.textContent = 'Fuss R: —';
+        elFootL.textContent = 'Fuß L: —';
+        elFootR.textContent = 'Fuß R: —';
         elRoot.textContent = 'Root Position: —';
     }
 }

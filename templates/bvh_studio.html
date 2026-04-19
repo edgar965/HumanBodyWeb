@@ -143,6 +143,12 @@
         display: flex; align-items: center; gap: 8px;
     }
     .toolbar-dd-item:hover { background: rgba(124,92,191,0.3); color: #fff; }
+    /* Nested submenu — appears to the right of parent on hover */
+    .toolbar-dd-item.has-submenu { position: relative; }
+    .toolbar-dd-item.has-submenu > .toolbar-dropdown-menu {
+        top: -5px; left: 100%; margin-left: -1px; display: none;
+    }
+    .toolbar-dd-item.has-submenu:hover > .toolbar-dropdown-menu { display: block; }
 
     /* Properties panel tabs */
     .props-tabs {
@@ -179,22 +185,28 @@
     <div class="sep"></div>
     <!-- Track dropdown -->
     <div class="toolbar-dropdown" id="track-dropdown">
-        <button id="btn-add-track" title="Hinzufuegen"><i class="fas fa-plus"></i> Hinzufuegen <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
+        <button id="btn-add-track" title="Hinzufügen"><i class="fas fa-plus"></i> Hinzufügen <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
         <div class="toolbar-dropdown-menu">
-            <div class="toolbar-dd-item" id="dd-add-bvh"><i class="fas fa-running" style="width:16px;"></i> Animation</div>
-            <div class="toolbar-dd-item" id="dd-add-model"><i class="fas fa-user" style="width:16px;color:#e91e63;"></i> Modell</div>
-            <div class="toolbar-dd-item" id="dd-add-camera"><i class="fas fa-video" style="width:16px;color:#00bcd4;"></i> Kamera</div>
-            <div class="toolbar-dd-item" id="dd-add-light"><i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht</div>
-            <div class="toolbar-dd-item" id="dd-add-audio"><i class="fas fa-music" style="width:16px;color:#4caf50;"></i> Audio</div>
+            <div class="toolbar-dd-item has-submenu">
+                <i class="fas fa-layer-group" style="width:16px;"></i> Spur
+                <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+                <div class="toolbar-dropdown-menu">
+                    <div class="toolbar-dd-item" id="dd-add-bvh"><i class="fas fa-running" style="width:16px;"></i> Animation</div>
+                    <div class="toolbar-dd-item" id="dd-add-model"><i class="fas fa-user" style="width:16px;color:#e91e63;"></i> Modell</div>
+                    <div class="toolbar-dd-item" id="dd-add-camera"><i class="fas fa-video" style="width:16px;color:#00bcd4;"></i> Kamera</div>
+                    <div class="toolbar-dd-item" id="dd-add-light"><i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht</div>
+                    <div class="toolbar-dd-item" id="dd-add-audio"><i class="fas fa-music" style="width:16px;color:#4caf50;"></i> Audio</div>
+                </div>
+            </div>
         </div>
     </div>
-    <button id="btn-delete-track" title="Loeschen"><i class="fas fa-trash"></i></button>
+    <button id="btn-delete-track" title="Löschen"><i class="fas fa-trash"></i></button>
     <div class="sep"></div>
     <button id="btn-undo" title="Undo (Ctrl+Shift+U)" onclick="window.__studioUndo && window.__studioUndo()"><i class="fas fa-undo"></i></button>
     <button id="btn-redo" title="Redo" onclick="window.__studioRedo && window.__studioRedo()"><i class="fas fa-redo"></i></button>
     <div class="sep"></div>
     <button id="btn-split" title="Clip splitten (S)"><i class="fas fa-cut"></i> Split</button>
-    <button id="btn-delete-clip" title="Clip loeschen (Del)"><i class="fas fa-times"></i></button>
+    <button id="btn-delete-clip" title="Clip löschen (Del)"><i class="fas fa-times"></i></button>
     <div class="sep"></div>
     <!-- Tools dropdown -->
     <div class="toolbar-dropdown" id="tools-dropdown">
@@ -225,7 +237,7 @@
             <div class="toolbar-dd-item" id="dd-help-camera"><i class="fas fa-video" style="width:16px;"></i> Kamera</div>
             <div class="toolbar-dd-item" id="dd-help-light"><i class="fas fa-lightbulb" style="width:16px;"></i> Licht</div>
             <div class="toolbar-dd-item" id="dd-help-audio"><i class="fas fa-music" style="width:16px;"></i> Audio</div>
-            <div class="toolbar-dd-item" id="dd-help-shortcuts"><i class="fas fa-keyboard" style="width:16px;"></i> Tastenkuerzel</div>
+            <div class="toolbar-dd-item" id="dd-help-shortcuts"><i class="fas fa-keyboard" style="width:16px;"></i> Tastenkürzel</div>
             <div style="height:1px;background:var(--border);margin:4px 0;"></div>
             <div class="toolbar-dd-item" id="dd-help-animations"><i class="fas fa-running" style="width:16px;"></i> Animationen</div>
         </div>
@@ -243,7 +255,7 @@
         <div style="display:flex;gap:3px;padding:4px 8px;border-bottom:1px solid var(--border);flex-shrink:0;">
             <button id="lib-new-folder" title="Neuer Ordner" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-folder-plus"></i></button>
             <button id="lib-rename" title="Umbenennen (F2)" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-pen"></i></button>
-            <button id="lib-delete" title="Loeschen (Del)" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-trash"></i></button>
+            <button id="lib-delete" title="Löschen (Del)" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-trash"></i></button>
             <div style="flex:1;"></div>
             <button id="lib-refresh" title="Aktualisieren" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-sync-alt"></i></button>
         </div>
@@ -254,19 +266,19 @@
 
     <!-- Library context menus -->
     <div class="lib-ctx" id="lib-ctx-file" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-        <div class="lib-ctx-item" data-action="add" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-plus" style="width:16px;"></i> Zur Animation hinzufuegen</div>
+        <div class="lib-ctx-item" data-action="add" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-plus" style="width:16px;"></i> Zur Animation hinzufügen</div>
         <div class="lib-ctx-item" data-action="preview" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-eye" style="width:16px;"></i> Vorschau (A)</div>
         <div class="lib-ctx-item" data-action="copy" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-copy" style="width:16px;"></i> Kopieren</div>
         <div style="height:1px;background:var(--border);margin:4px 0;"></div>
         <div class="lib-ctx-item" data-action="rename" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen</div>
         <div class="lib-ctx-item" data-action="move" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-arrows-alt" style="width:16px;"></i> Verschieben nach...</div>
-        <div class="lib-ctx-item" data-action="delete" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-trash" style="width:16px;"></i> Loeschen</div>
+        <div class="lib-ctx-item" data-action="delete" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-trash" style="width:16px;"></i> Löschen</div>
     </div>
     <div class="lib-ctx" id="lib-ctx-folder" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
         <div class="lib-ctx-item" data-action="rename-folder" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-pen" style="width:16px;"></i> Ordner umbenennen</div>
         <div class="lib-ctx-item" data-action="new-folder" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-folder-plus" style="width:16px;"></i> Neuer Ordner</div>
         <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-        <div class="lib-ctx-item" data-action="delete-folder" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-trash" style="width:16px;"></i> Ordner loeschen</div>
+        <div class="lib-ctx-item" data-action="delete-folder" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-trash" style="width:16px;"></i> Ordner löschen</div>
     </div>
 
     <!-- Center: Viewport + Timeline -->
@@ -297,7 +309,7 @@
             <button id="pb-prev" title="Vorheriger Frame"><i class="fas fa-step-backward"></i></button>
             <button id="pb-play" title="Play/Pause"><i class="fas fa-play" id="pb-play-icon"></i></button>
             <button id="pb-stop" title="Stop"><i class="fas fa-stop"></i></button>
-            <button id="pb-next" title="Naechster Frame"><i class="fas fa-step-forward"></i></button>
+            <button id="pb-next" title="Nächster Frame"><i class="fas fa-step-forward"></i></button>
             <div class="sep" style="height:20px;width:1px;background:var(--border);"></div>
             <span class="playback-time" id="pb-time">00:00.00</span>
             <span class="playback-time" id="pb-frame">F: 0</span>
@@ -323,7 +335,7 @@
         </div>
         <div id="props-tab-props" class="props-tab-content active">
             <div id="props-content">
-                <div style="color:var(--text-muted);font-size:0.8rem;">Animation oder Clip auswaehlen</div>
+                <div style="color:var(--text-muted);font-size:0.8rem;">Animation oder Clip auswählen</div>
             </div>
         </div>
         <div id="props-tab-tools" class="props-tab-content">
@@ -414,8 +426,8 @@
             <div style="font-size:0.78rem;color:var(--accent);margin-bottom:4px;"><i class="fas fa-bug"></i> Debug</div>
             <div id="debug-ground-dist">Boden-Abstand: —</div>
             <div id="debug-lowest-bone">Tiefster Knochen: —</div>
-            <div id="debug-foot-l">Fuss L: —</div>
-            <div id="debug-foot-r">Fuss R: —</div>
+            <div id="debug-foot-l">Fuß L: —</div>
+            <div id="debug-foot-r">Fuß R: —</div>
             <div id="debug-root-pos">Root Position: —</div>
             <div id="debug-frame">Frame: —</div>
         </div>
@@ -424,6 +436,12 @@
 
 <!-- Context Menu -->
 <div id="clip-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="ctx-item has-submenu" id="clip-ctx-add">
+        <i class="fas fa-plus" style="width:16px;"></i> Hinzufügen
+        <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+        <div id="clip-ctx-add-submenu" class="ctx-submenu"></div>
+    </div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt" style="width:16px;"></i> Playhead hierher</div>
     <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut" style="width:16px;"></i> Split an Playhead (S)</div>
@@ -432,7 +450,7 @@
     <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div class="ctx-item" data-action="ctx-trim-start"><i class="fas fa-step-forward" style="width:16px;"></i> Anfang trimmen (+10f)</div>
     <div class="ctx-item" data-action="ctx-trim-end"><i class="fas fa-step-backward" style="width:16px;"></i> Ende trimmen (+10f)</div>
-    <div class="ctx-item" data-action="ctx-trim-reset"><i class="fas fa-undo" style="width:16px;"></i> Trim zuruecksetzen</div>
+    <div class="ctx-item" data-action="ctx-trim-reset"><i class="fas fa-undo" style="width:16px;"></i> Trim zurücksetzen</div>
     <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div class="ctx-item" data-action="ctx-save-bvh"><i class="fas fa-file-export" style="width:16px;"></i> BVH speichern unter...</div>
     <div class="ctx-item" data-action="ctx-smooth"><i class="fas fa-wave-square" style="width:16px;"></i> Smooth</div>
@@ -441,6 +459,12 @@
 
 <!-- Model Context Menu (for model track clips) -->
 <div id="model-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="ctx-item has-submenu" id="model-ctx-add">
+        <i class="fas fa-plus" style="width:16px;"></i> Hinzufügen
+        <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+        <div id="model-ctx-add-submenu" class="ctx-submenu"></div>
+    </div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt" style="width:16px;"></i> Playhead hierher</div>
     <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div style="padding:4px 12px;font-size:0.7rem;color:var(--text-muted);"><i class="fas fa-user" style="width:16px;color:#e91e63;"></i> Modell w&auml;hlen:</div>
@@ -454,6 +478,12 @@
 
 <!-- Track Context Menu -->
 <div id="track-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="ctx-item has-submenu" id="track-ctx-add">
+        <i class="fas fa-plus" style="width:16px;"></i> Hinzufügen
+        <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+        <div id="track-ctx-add-submenu" class="ctx-submenu"></div>
+    </div>
+    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div class="ctx-item" id="track-ctx-rename"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen</div>
     <div class="ctx-item" id="track-ctx-mute"><i class="fas fa-volume-mute" style="width:16px;"></i> Mute/Unmute</div>
     <div id="track-ctx-link-section" style="display:none;">
@@ -462,11 +492,26 @@
         <div id="track-ctx-link-list"></div>
     </div>
     <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" id="track-ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen</div>
+    <div class="ctx-item" id="track-ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> Löschen</div>
 </div>
 <style>
-.ctx-item { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; }
+.ctx-item { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; position:relative; }
 .ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }
+/* Nested submenu — appears to the right of parent on hover */
+.ctx-item.has-submenu > .ctx-submenu {
+    display:none; position:absolute; top:-5px; left:100%; margin-left:-1px;
+    background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px;
+    padding:4px 0; min-width:200px; max-height:400px; overflow-y:auto;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10000;
+}
+.ctx-item.has-submenu:hover > .ctx-submenu { display:block; }
+/* Nested submenus inside a scrollable parent (z.B. Animation-Ordner > Animationen)
+   use position:fixed via JS so they aren't clipped by the parent's overflow. */
+.ctx-item.has-submenu > .ctx-submenu.ctx-submenu-fixed {
+    position:fixed; top:auto; left:auto; margin:0;
+}
+.ctx-submenu .ctx-item { min-width:200px; }
+.ctx-submenu-empty { padding:7px 14px; font-size:0.75rem; color:var(--text-muted); font-style:italic; }
 </style>
 
 <!-- Help Modal -->

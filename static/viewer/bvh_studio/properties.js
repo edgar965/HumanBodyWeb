@@ -9,7 +9,7 @@ export function updateProperties() {
     if (!content) return;
 
     if (state.selectedTrackIdx < 0 || state.selectedTrackIdx >= state.project.tracks.length) {
-        content.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">Animation oder Clip auswaehlen</div>';
+        content.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">Animation oder Clip auswählen</div>';
         return;
     }
 
@@ -45,7 +45,7 @@ export function updateProperties() {
         const lc = track.light ? '#' + track.light.color.getHexString() : '#ffffff';
         html += `<div class="prop-group">
             <div class="prop-row"><label>Farbe:</label><input type="color" value="${lc}" id="prop-light-color"></div>
-            <div class="prop-row"><label>Intensitaet:</label><input type="number" value="${track.light?.intensity||2}" id="prop-light-intensity" min="0" max="20" step="0.1"></div>
+            <div class="prop-row"><label>Intensität:</label><input type="number" value="${track.light?.intensity||2}" id="prop-light-intensity" min="0" max="20" step="0.1"></div>
             <div class="prop-row"><label>Sichtbar:</label><input type="checkbox" ${track.lightVisible?'checked':''} id="prop-light-visible"></div>
             <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Position</h3>
             <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${lp.x.toFixed(2)}" id="prop-light-x"></div>
@@ -59,7 +59,7 @@ export function updateProperties() {
         const linkedAnim = state.project.getLinkedAnimation(track);
         const linkedName = linkedAnim ? linkedAnim.name : '(keiner)';
         html += `<div class="prop-group">
-            <div class="prop-row"><label>Verknuepft:</label><span style="font-size:0.8rem;color:var(--accent);">${linkedName}</span></div>
+            <div class="prop-row"><label>Verknüpft:</label><span style="font-size:0.8rem;color:var(--accent);">${linkedName}</span></div>
         </div>`;
     } else if (track.type === 'audio') {
         html += `<div class="prop-group">
@@ -101,7 +101,7 @@ export function updateProperties() {
                     </select>
                 </div>
                 <div style="margin-top:6px;">
-                    <button id="prop-kf-set-view" style="padding:3px 8px;font-size:0.75rem;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer;">Aktuelle Ansicht uebernehmen</button>
+                    <button id="prop-kf-set-view" style="padding:3px 8px;font-size:0.75rem;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer;">Aktuelle Ansicht übernehmen</button>
                 </div>
             </div>`;
         } else if (clip.type === 'light_kf') {
@@ -113,7 +113,7 @@ export function updateProperties() {
                 <div class="prop-row"><label>Pos Y:</label><input type="number" value="${d.position?.y?.toFixed(2)||0}" id="prop-lkf-py" step="0.1"></div>
                 <div class="prop-row"><label>Pos Z:</label><input type="number" value="${d.position?.z?.toFixed(2)||0}" id="prop-lkf-pz" step="0.1"></div>
                 <div class="prop-row"><label>Farbe:</label><input type="color" value="${d.color||'#ffffff'}" id="prop-lkf-color"></div>
-                <div class="prop-row"><label>Intensitaet:</label><input type="number" value="${d.intensity||2}" id="prop-lkf-intensity" min="0" max="20" step="0.1"></div>
+                <div class="prop-row"><label>Intensität:</label><input type="number" value="${d.intensity||2}" id="prop-lkf-intensity" min="0" max="20" step="0.1"></div>
             </div>`;
         } else if (clip.type === 'audio') {
             const d = clip.data;
@@ -122,7 +122,7 @@ export function updateProperties() {
                 <div class="prop-row"><label>Datei:</label><span style="font-size:0.75rem;color:var(--text-muted);">${d.fileName||'—'}</span></div>
                 <div class="prop-row"><label>Dauer:</label><span style="font-size:0.8rem;">${(d.audioDuration||0).toFixed(1)}s</span></div>
                 <div class="prop-row"><label>Start:</label><input type="number" value="${clip.startFrame}" id="prop-audio-start" min="0"> <span style="font-size:0.7rem;">f</span></div>
-                <div class="prop-row"><label>Lautstaerke:</label><input type="range" value="${(d.volume||1)*100}" id="prop-audio-vol" min="0" max="100"> <span id="prop-audio-vol-label" style="font-size:0.75rem;">${Math.round((d.volume||1)*100)}%</span></div>
+                <div class="prop-row"><label>Lautstärke:</label><input type="range" value="${(d.volume||1)*100}" id="prop-audio-vol" min="0" max="100"> <span id="prop-audio-vol-label" style="font-size:0.75rem;">${Math.round((d.volume||1)*100)}%</span></div>
                 <div class="prop-row"><label>Fade In:</label><input type="number" value="${d.fadeIn||0}" id="prop-audio-fadein" min="0"> <span style="font-size:0.7rem;">f</span></div>
                 <div class="prop-row"><label>Fade Out:</label><input type="number" value="${d.fadeOut||0}" id="prop-audio-fadeout" min="0"> <span style="font-size:0.7rem;">f</span></div>
                 <div class="prop-row"><label>Offset:</label><input type="number" value="${d.offset||0}" id="prop-audio-offset" min="0" step="0.1"> <span style="font-size:0.7rem;">s</span></div>

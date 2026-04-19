@@ -65,8 +65,8 @@ function removeClipsFromTracks(category, name) {
                 removed++;
             }
         }
-        // Hide mesh if no clips left
-        if (track.clips.length === 0 && track.mesh) track.mesh.visible = false;
+        // Hide mesh + garments/hair if no clips left
+        if (track.clips.length === 0 && track.group) track.group.visible = false;
         track._activeClip = null;
         track._activeAction = null;
     }
@@ -90,7 +90,7 @@ function deleteSelectedLibItem() {
     const sel = document.querySelector('.lib-item.selected');
     if (!sel) return;
     const cat = sel.dataset.category, name = sel.dataset.name;
-    if (confirm(`"${name}" wirklich loeschen?`)) {
+    if (confirm(`"${name}" wirklich löschen?`)) {
         _libOpenCats.add(cat);
         _libSelectedItem = null;
         libManage('delete', { category: cat, name }).then(r => {
@@ -232,7 +232,7 @@ export function setupLibraryManagement() {
                     if (await libManage('move', { category: t.category, name: t.name, new_category: newCat })) loadLibrary();
                 }
             } else if (action === 'delete') {
-                if (confirm(`"${t.name}" wirklich loeschen?`)) {
+                if (confirm(`"${t.name}" wirklich löschen?`)) {
                     _libOpenCats.add(t.category);
                     _libSelectedItem = null;
                     if (await libManage('delete', { category: t.category, name: t.name })) {
@@ -261,7 +261,7 @@ export function setupLibraryManagement() {
                     if (await libManage('create_folder', { folder_name: name })) loadLibrary();
                 }
             } else if (action === 'delete-folder') {
-                if (confirm(`Ordner "${t.category}" wirklich loeschen?\n(Nur wenn leer)`)) {
+                if (confirm(`Ordner "${t.category}" wirklich löschen?\n(Nur wenn leer)`)) {
                     if (await libManage('delete_folder', { category: t.category })) loadLibrary();
                 }
             }

@@ -17,6 +17,7 @@ import { generateRigBoneMesh } from '../model_generator.js';
 const ss = sharedState;
 
 export function addTrack(name, _skipModelTrack) {
+    pushUndo('Spur hinzufügen');
     const bvhCount = state.project.animations.length;
     const track = new Track(
         name || `Animation ${bvhCount + 1}`,
@@ -36,6 +37,7 @@ export function addTrack(name, _skipModelTrack) {
 }
 
 export function addModelTrack(name) {
+    pushUndo('Modell-Spur hinzufügen');
     const track = new Track(name || `Modell ${state.project.modelTracks.length + 1}`);
     track.type = 'model';
     track.color = TRACK_COLORS.model;
@@ -51,6 +53,7 @@ export function addModelTrack(name) {
 }
 
 export function addSpecialTrack(type, name) {
+    pushUndo('Spur hinzufügen');
     const defaults = { camera: 'Kamera', light: 'Licht', audio: 'Audio' };
     const track = new Track(name || defaults[type] || type);
     track.type = type;
@@ -81,13 +84,14 @@ export function addSpecialTrack(type, name) {
 }
 
 // Camera keyframe helpers
-export function addCameraKeyframe(trackIdx) {
+export function addCameraKeyframe(trackIdx, frame) {
     const track = state.project.tracks[trackIdx];
     if (!track || track.type !== 'camera') return;
     pushUndo('Kamera Keyframe');
-    const kf = new Clip(null, `KF ${track.clips.length + 1}`, 0, state.project.fps);
+    const targetFrame = (frame != null) ? frame : state.playheadFrame;
+    const kf = new Clip(null, `Kameraposition ${track.clips.length + 1}`, 0, state.project.fps);
     kf.type = 'camera_kf';
-    kf.startFrame = state.playheadFrame;
+    kf.startFrame = targetFrame;
     kf.data = {
         position: { x: state.camera.position.x, y: state.camera.position.y, z: state.camera.position.z },
         rotation: { x: state.camera.rotation.x, y: state.camera.rotation.y, z: state.camera.rotation.z },
@@ -99,17 +103,18 @@ export function addCameraKeyframe(trackIdx) {
     fn.updateDuration();
     fn.renderTimeline();
     fn.updateProperties();
-    console.log(`[BVH Studio] Camera keyframe added at frame ${state.playheadFrame}`);
+    console.log(`[BVH Studio] Kameraposition gespeichert bei Frame ${targetFrame}`);
 }
 
 // Light keyframe helpers
-export function addLightKeyframe(trackIdx) {
+export function addLightKeyframe(trackIdx, frame) {
     const track = state.project.tracks[trackIdx];
     if (!track || track.type !== 'light' || !track.light) return;
     pushUndo('Licht Keyframe');
-    const kf = new Clip(null, `LKF ${track.clips.length + 1}`, 0, state.project.fps);
+    const targetFrame = (frame != null) ? frame : state.playheadFrame;
+    const kf = new Clip(null, `Licht ${track.clips.length + 1}`, 0, state.project.fps);
     kf.type = 'light_kf';
-    kf.startFrame = state.playheadFrame;
+    kf.startFrame = targetFrame;
     kf.data = {
         position: { x: track.light.position.x, y: track.light.position.y, z: track.light.position.z },
         color: '#' + track.light.color.getHexString(),
@@ -120,7 +125,7 @@ export function addLightKeyframe(trackIdx) {
     fn.updateDuration();
     fn.renderTimeline();
     fn.updateProperties();
-    console.log(`[BVH Studio] Light keyframe added at frame ${state.playheadFrame}`);
+    console.log(`[BVH Studio] Licht-Keyframe gespeichert bei Frame ${targetFrame}`);
 }
 
 // Audio clip helpers
@@ -179,13 +184,13 @@ export async function loadAudioFile(trackIdx) {
 
 export function removeTrack(idx) {
     if (idx < 0 || idx >= state.project.tracks.length) return;
-    pushUndo('Track loeschen');
+    pushUndo('Track löschen');
     const track = state.project.tracks[idx];
 
-    // If removing a model track, hide linked animation track's mesh
+    // If removing a model track, hide linked animation track's mesh + accessories
     if (track.type === 'model') {
         const animTrack = state.project.getLinkedAnimation(track);
-        if (animTrack?.mesh) animTrack.mesh.visible = false;
+        if (animTrack?.group) animTrack.group.visible = false;
     }
 
     // Stop mixer
@@ -233,7 +238,7 @@ export function selectTrack(idx) {
 }
 
 export async function addClipToTrack(trackIdx, category, name, frames) {
-    pushUndo('Clip hinzufuegen');
+    pushUndo('Clip hinzufügen');
     console.log(`[BVH Studio] addClipToTrack: trackIdx=${trackIdx}, ${category}/${name}, existingTracks=${state.project.tracks.length}`);
     if (trackIdx < 0 || !state.project.tracks[trackIdx]) {
         if (state.project.tracks.length === 0) addTrack();
@@ -256,7 +261,7 @@ export async function addClipToTrack(trackIdx, category, name, frames) {
     clip.startFrame = lastClip ? lastClip.endFrame : 0;
 
     track.clips.push(clip);
-    if (track.mesh) track.mesh.visible = true;  // re-show if was hidden
+    if (track.group) track.group.visible = true;  // re-show if was hidden
     fn.updateDuration();
     fn.renderTimeline();
 
@@ -289,7 +294,7 @@ export async function loadClipAnimation(track, clip) {
         // Modell laden wenn noch nicht vorhanden
         if (!track.mesh && ss.rigifySkeletonData && ss.skinWeightData) {
             await loadTrackCharacter(track);
-            if (track.mesh) track.mesh.visible = true;
+            if (track.group) track.group.visible = true;
         }
 
         if (track.skeleton) {
@@ -552,7 +557,9 @@ export async function loadTrackCharacter(track) {
         // Vorherige Meshes aus Group entfernen (nicht disposen — könnten gecacht sein)
         while (track.group.children.length > 0) track.group.remove(track.group.children[0]);
         track.mesh = newMesh;
-        track.mesh.visible = false;  // applyModelTrack/applyBvhTrack steuert Sichtbarkeit
+        // Mesh selbst immer visible — die track.group.visible wird von
+        // applyModelTrack/applyBvhTrack gesteuert (deckt Mesh + Garments + Hair ab).
+        track.mesh.visible = true;
         track.group.add(newMesh);
         track.mixer = new THREE.AnimationMixer(newMesh);
         track._activeClip = null;
@@ -594,7 +601,7 @@ export function deleteSelectedClip() {
     if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) return;
     const track = state.project.tracks[state.selectedTrackIdx];
     if (!track || state.selectedClipIdx >= track.clips.length) return;
-    pushUndo('Clip loeschen');
+    pushUndo('Clip löschen');
     const clip = track.clips[state.selectedClipIdx];
 
     // Uncache the AnimationClip from the mixer so it doesn't linger
@@ -608,11 +615,11 @@ export function deleteSelectedClip() {
     track.clips.splice(state.selectedClipIdx, 1);
     state.selectedClipIdx = -1;
 
-    // If a model clip was deleted, hide the linked animation track's mesh
+    // If a model clip was deleted, hide the linked animation track's mesh + accessories
     if (clip.type === 'model' && track.type === 'model') {
         track._currentPreset = null;
         const animTrack = state.project.getLinkedAnimation(track);
-        if (animTrack?.mesh) animTrack.mesh.visible = false;
+        if (animTrack?.group) animTrack.group.visible = false;
     }
 
     fn.updateDuration();
@@ -621,7 +628,7 @@ export function deleteSelectedClip() {
 
     // If no more clips on this BVH track, hide the model and stop playback
     if (track.type === 'bvh' && track.clips.length === 0) {
-        if (track.mesh) track.mesh.visible = false;
+        if (track.group) track.group.visible = false;
         if (track.skeleton) track.skeleton.skeleton.pose();
     }
 
