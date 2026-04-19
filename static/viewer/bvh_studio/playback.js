@@ -63,10 +63,24 @@ export function togglePlay() {
     const icon = document.getElementById('pb-play-icon');
     if (icon) icon.className = state.playing ? 'fas fa-pause' : 'fas fa-play';
     if (state.playing) {
+        // Diagnose-Snapshot: was ist der Zustand beim Play-Start?
+        const summary = state.project.tracks.map((tr, i) => {
+            const link = tr.type === 'model' ? `→${tr._linkedAnimIdx}` : '';
+            const ctrl = tr.type === 'bvh' ? (tr._modelControlled ? 'mctl' : 'free') : '';
+            const has = tr.type === 'bvh' ? `mesh=${!!tr.mesh} mix=${!!tr.mixer} skel=${!!tr.skeleton}` : '';
+            const clipsInfo = tr.clips.map(c => {
+                const cs = c.startFrame, ce = c.startFrame + Math.ceil(c.duration * state.project.fps);
+                const ac = (c.type === 'bvh') ? `ac=${!!c.animClip}` : '';
+                const preset = c.data?.preset ? ` p=${c.data.preset}` : '';
+                return `${c.name}[${cs}-${ce}${preset}${ac?' '+ac:''}]`;
+            }).join(',');
+            return `T${i}(${tr.type}/${tr.name}${link} ${ctrl} ${has}): [${clipsInfo}]`;
+        }).join(' | ');
+        fn.serverLog('play_start', `frame=${state.playheadFrame} fps=${state.project.fps} tracks=${state.project.tracks.length} ${summary}`);
         startAudioPlayback();
     } else {
         stopAllAudio();
-        state.controls.enabled = true;  // re-enable OrbitControls when pausing camera playback
+        state.controls.enabled = true;
     }
 }
 
@@ -89,8 +103,85 @@ export function stepFrame(delta) {
     updatePlaybackUI();
 }
 
+// Preload-Cache: lädt Preset-Assets im Hintergrund via Shadow-Track.
+// Resolved zu {group, mesh, skeleton, mixer}. Beim Switch wird die vorbereitete
+// Gruppe atomic in den echten Track übernommen.
+async function _preloadPreset(animTrack, preset) {
+    if (!animTrack._preloadCache) animTrack._preloadCache = {};
+    if (animTrack._preloadCache[preset]) return animTrack._preloadCache[preset];
+    const shadow = {
+        name: `${animTrack.name}_preload_${preset}`,
+        type: animTrack.type,
+        preset: preset,
+        bodyType: animTrack.bodyType,
+        group: new THREE.Group(),
+    };
+    shadow.group.visible = false;
+    state.scene.add(shadow.group);
+    const promise = fn.loadTrackCharacter(shadow).then(() => ({
+        group: shadow.group, mesh: shadow.mesh, skeleton: shadow.skeleton, mixer: shadow.mixer,
+    })).catch(e => {
+        state.scene.remove(shadow.group);
+        delete animTrack._preloadCache[preset];
+        throw e;
+    });
+    animTrack._preloadCache[preset] = promise;
+    return promise;
+}
+
+function _swapToPreloaded(animTrack, assets, activePreset) {
+    // Alte Group aus Szene entfernen (Meshes werden weiter unten disposed bei Bedarf)
+    if (animTrack.group) {
+        state.scene.remove(animTrack.group);
+        // Dispose alte Kinder (altes Preset wird nicht mehr gebraucht)
+        animTrack.group.traverse?.(obj => {
+            if (obj.geometry) obj.geometry.dispose?.();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose?.());
+                else obj.material.dispose?.();
+            }
+        });
+    }
+    animTrack.group = assets.group;
+    animTrack.group.visible = true;
+    animTrack.mesh = assets.mesh;
+    animTrack.skeleton = assets.skeleton;
+    animTrack.mixer = assets.mixer;
+    animTrack._activeClip = null;
+    animTrack._activeAction = null;
+    animTrack.meshActive = activePreset;
+    animTrack._loadingPreset = null;
+    if (animTrack._preloadCache) delete animTrack._preloadCache[activePreset];
+    fn.serverLog('preset_swap_preloaded', `track=${animTrack.name} preset=${activePreset}`);
+}
+
+// Prüft Model-Tracks: startet Preload für Presets die demnächst aktiv werden.
+function _schedulePreloads(t) {
+    const lookahead = state.project.preloadSeconds;
+    if (!lookahead || lookahead <= 0) return;
+    for (const track of state.project.tracks) {
+        if (track.type !== 'model') continue;
+        const animTrack = state.project.getLinkedAnimation(track);
+        if (!animTrack) continue;
+        for (const clip of track.clips) {
+            if (clip.type !== 'model' || !clip.data?.preset) continue;
+            const cs = clip.startFrame / state.project.fps;
+            // Clip beginnt innerhalb lookahead-Fensters — bereits geladen oder am Laden? Skip.
+            if (cs > t && cs - t <= lookahead) {
+                const preset = clip.data.preset;
+                if (animTrack.meshActive === preset) continue;
+                if (animTrack._loadingPreset === preset) continue;
+                if (animTrack._preloadCache?.[preset]) continue;
+                _preloadPreset(animTrack, preset).catch(() => {});
+            }
+        }
+    }
+}
+
 export function applyPlayhead() {
     const t = state.playheadFrame / state.project.fps;
+
+    _schedulePreloads(t);
 
     // Bestimme strukturell (nicht per aktivem Clip!), welche BVH-Tracks einen
     // Model-Track verlinkt haben. Nur dort übergibt Model-Track die Visibility.
@@ -114,12 +205,25 @@ export function applyPlayhead() {
     }
 }
 
-let _applyBvhLog = 0;
 function applyBvhTrack(track, t) {
-    if (!track.mixer) { if (_applyBvhLog++ < 3) console.warn('[applyBvh] no mixer'); return; }
+    if (!track.mixer) {
+        // Status-Log nur wenn sich Zustand geändert hat
+        if (track._lastLogState !== 'no-mixer') {
+            track._lastLogState = 'no-mixer';
+            fn.serverLog('bvh_no_mixer', `track=${track.name} mesh=${!!track.mesh} preset=${track.preset}`);
+        }
+        return;
+    }
     let found = false;
     for (const clip of track.clips) {
-        if (!clip.animClip) continue;
+        if (!clip.animClip) {
+            // Diagnose: clip ohne animClip = Retarget fehlgeschlagen oder noch nicht geladen
+            if (!clip._noAnimClipLogged) {
+                clip._noAnimClipLogged = true;
+                fn.serverLog('bvh_clip_no_animclip', `track=${track.name} clip=${clip.name} cat=${clip.category}`);
+            }
+            continue;
+        }
         const clipStart = clip.startFrame / state.project.fps;
         const clipEnd = clipStart + clip.duration;
         if (t >= clipStart && t < clipEnd) {
@@ -132,25 +236,36 @@ function applyBvhTrack(track, t) {
                 track._activeAction.clampWhenFinished = false;
                 track._activeAction.play();
                 track._activeClip = clip;
+                fn.serverLog('bvh_action_start',
+                    `track=${track.name} clip=${clip.name} t=${t.toFixed(2)}s localT=${localT.toFixed(2)}s ` +
+                    `trackCount=${clip.animClip.tracks.length} mixerRoot=${track.mixer.getRoot()?.name||'?'} ` +
+                    `meshSkel=${!!track.mesh?.skeleton}`);
             } else if (!track._activeAction.isRunning()) {
-                // Action was disabled (e.g. after finishing a LoopOnce) — re-enable
                 track._activeAction.reset();
                 track._activeAction.play();
+                fn.serverLog('bvh_action_resume', `track=${track.name} clip=${clip.name}`);
             }
             track._activeAction.time = localT;
             track.mixer.setTime(localT);
             found = true;
+            track._lastLogState = 'playing';
             break;
         }
     }
     if (!found && track._activeClip) {
         track.mixer.stopAllAction();
+        const stoppedClip = track._activeClip;
         track._activeClip = null;
         track._activeAction = null;
         if (track.skeleton) track.skeleton.skeleton.pose();
+        fn.serverLog('bvh_action_stop', `track=${track.name} clip=${stoppedClip.name} t=${t.toFixed(2)}s (out of range)`);
+        track._lastLogState = 'stopped';
+    } else if (!found && track._lastLogState !== 'no-clip-in-range') {
+        // Nichts in Range, kein active clip
+        const ranges = track.clips.map(c => `${c.name}@${(c.startFrame/state.project.fps).toFixed(1)}-${((c.startFrame/state.project.fps)+c.duration).toFixed(1)}s`).join(',');
+        fn.serverLog('bvh_no_clip_in_range', `track=${track.name} t=${t.toFixed(2)}s clips=[${ranges||'none'}]`);
+        track._lastLogState = 'no-clip-in-range';
     }
-    // Sichtbarkeit nur steuern wenn KEIN Model-Track die Kontrolle hat.
-    // Wir schalten die ganze Group (Mesh + Garments + Hair) gemeinsam.
     if (!track._modelControlled && track.group) {
         track.group.visible = found;
     }
@@ -190,7 +305,7 @@ function applyCameraTrack(track, t) {
         state.camera.fov = prev.data.fov + (next.data.fov - prev.data.fov) * t;
     }
     state.camera.updateProjectionMatrix();
-    state.controls.enabled = false;
+    // OrbitControls NICHT deaktivieren — User möchte während Play die Kamera manuell bewegen können.
 }
 
 function applyLightTrack(track, t) {
@@ -206,21 +321,35 @@ function applyLightTrack(track, t) {
     if (!prev) prev = next;
     if (!next) next = prev;
 
+    const lerp = (a, b, al) => a + (b - a) * al;
     if (prev === next) {
-        track.light.position.set(prev.data.position.x, prev.data.position.y, prev.data.position.z);
-        track.light.color.set(prev.data.color);
-        track.light.intensity = prev.data.intensity;
+        const d = prev.data;
+        track.light.position.set(d.position.x, d.position.y, d.position.z);
+        if (d.target && track.light.target) track.light.target.position.set(d.target.x, d.target.y, d.target.z);
+        track.light.color.set(d.color);
+        track.light.intensity = d.intensity;
+        if (d.angle != null) track.light.angle = d.angle;
+        if (d.penumbra != null) track.light.penumbra = d.penumbra;
+        if (d.distance != null) track.light.distance = d.distance;
     } else {
         const alpha = (frame - prev.startFrame) / (next.startFrame - prev.startFrame);
+        const pp = prev.data, nn = next.data;
         track.light.position.lerpVectors(
-            new THREE.Vector3(prev.data.position.x, prev.data.position.y, prev.data.position.z),
-            new THREE.Vector3(next.data.position.x, next.data.position.y, next.data.position.z), alpha);
-        const cPrev = new THREE.Color(prev.data.color);
-        const cNext = new THREE.Color(next.data.color);
-        track.light.color.lerpColors(cPrev, cNext, alpha);
-        track.light.intensity = prev.data.intensity + (next.data.intensity - prev.data.intensity) * alpha;
+            new THREE.Vector3(pp.position.x, pp.position.y, pp.position.z),
+            new THREE.Vector3(nn.position.x, nn.position.y, nn.position.z), alpha);
+        if (pp.target && nn.target && track.light.target) {
+            track.light.target.position.lerpVectors(
+                new THREE.Vector3(pp.target.x, pp.target.y, pp.target.z),
+                new THREE.Vector3(nn.target.x, nn.target.y, nn.target.z), alpha);
+        }
+        track.light.color.lerpColors(new THREE.Color(pp.color), new THREE.Color(nn.color), alpha);
+        track.light.intensity = lerp(pp.intensity, nn.intensity, alpha);
+        if (pp.angle != null && nn.angle != null) track.light.angle = lerp(pp.angle, nn.angle, alpha);
+        if (pp.penumbra != null && nn.penumbra != null) track.light.penumbra = lerp(pp.penumbra, nn.penumbra, alpha);
+        if (pp.distance != null && nn.distance != null) track.light.distance = lerp(pp.distance, nn.distance, alpha);
     }
-    if (track.lightHelper) track.lightHelper.position.copy(track.light.position);
+    if (track.light.target) track.light.target.updateMatrixWorld();
+    if (track.lightHelper && track.lightHelper.update) track.lightHelper.update();
 }
 
 function applyAudioTrack(track, t) {
@@ -271,25 +400,46 @@ function applyModelTrack(track, t) {
         return;
     }
 
-    // Immer frisch laden — Mesh + Garments + Hair müssen alle zum Preset passen.
-    // (Früherer Cache nur für Mesh führte zu sichtbarem falschem Preset, weil
-    // garments/hair der Group von loadTrackCharacter entfernt werden.)
+    // Preload-Cache prüfen: ist Preset bereits vorbereitet?
+    const cached = animTrack._preloadCache?.[activePreset];
+    if (cached) {
+        animTrack._loadingPreset = activePreset;
+        Promise.resolve(cached).then(assets => {
+            if (animTrack._loadingPreset !== activePreset) return;  // überholt
+            _swapToPreloaded(animTrack, assets, activePreset);
+        }).catch(e => {
+            animTrack._loadingPreset = null;
+            fn.serverLog('preset_load_failed', `track=${animTrack.name} preset=${activePreset} err=${e.message}`);
+        });
+        return;
+    }
+
+    // Kein Preload → normaler async Load in die echte Track-Group
     animTrack._loadingPreset = activePreset;
     animTrack.preset = activePreset;
     if (animTrack.group) animTrack.group.visible = false;
+    fn.serverLog('preset_load_start', `track=${animTrack.name} preset=${activePreset}`);
     fn.loadTrackCharacter(animTrack).then(() => {
-        if (animTrack._loadingPreset !== activePreset) return;  // neuer Wechsel überholt
+        if (animTrack._loadingPreset !== activePreset) {
+            fn.serverLog('preset_load_superseded', `track=${animTrack.name} preset=${activePreset} now=${animTrack._loadingPreset}`);
+            return;
+        }
         animTrack._loadingPreset = null;
         if (animTrack.mesh) {
             if (animTrack.group) animTrack.group.visible = true;
             animTrack._activeClip = null;
             animTrack._activeAction = null;
             animTrack.meshActive = activePreset;
-            console.log(`[BVH Studio] Preset ${activePreset} geladen für ${animTrack.name}`);
+            fn.serverLog('preset_load_done',
+                `track=${animTrack.name} preset=${activePreset} ` +
+                `mesh=${!!animTrack.mesh} skel=${!!animTrack.skeleton} mix=${!!animTrack.mixer} ` +
+                `meshSkel=${!!animTrack.mesh?.skeleton} bones=${animTrack.skeleton?.skeleton?.bones?.length||'?'}`);
+        } else {
+            fn.serverLog('preset_load_no_mesh', `track=${animTrack.name} preset=${activePreset}`);
         }
     }).catch(e => {
         animTrack._loadingPreset = null;
-        console.error(`[BVH Studio] Preset-Laden fehlgeschlagen (${activePreset}):`, e);
+        fn.serverLog('preset_load_failed', `track=${animTrack.name} preset=${activePreset} err=${e.message}`);
     });
 }
 

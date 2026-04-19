@@ -18,7 +18,7 @@ import {
 // Order matters: foundational modules first, then modules that depend on them.
 import { undo, redo, undoStack } from './undo.js';
 import { loadLibrary, setupLibraryManagement, setupSidebarResize } from './library.js';
-import { addTrack, addSpecialTrack, selectTrack, removeTrack, addClipToTrack } from './tracks.js';
+import { addTrack, addSpecialTrack, selectTrack, removeTrack, addClipToTrack, createSceneLightTracks } from './tracks.js';
 import { setupTimeline, renderTimeline, updateTrackHeaders, updateDuration } from './timeline.js';
 import { setupPlayback, togglePlay, stopPlayback, applyPlayhead, updatePlaybackUI } from './playback.js';
 import { updateProperties, switchPropsTab } from './properties.js';
@@ -85,6 +85,77 @@ window.addEventListener('keydown', (e) => {
 console.log('[BVH Studio] Global keyboard handler registered (Ctrl+Z/Y + Ctrl+Shift+U = Undo/Redo)');
 
 // =========================================================================
+// Viewport context menu — right-click in 3D scene to set light position
+// =========================================================================
+function setupViewportContextMenu() {
+    const menu = document.getElementById('viewport-context-menu');
+    if (menu) menu.style.display = 'none';
+
+    const canvas = state.renderer?.domElement || document.getElementById('studio-canvas');
+    if (!canvas) return;
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    // Alt+Click in 3D-Szene: wenn Licht-Track ausgewählt → Licht-Position dort setzen.
+    // click-Event feuert NUR wenn kein Drag erfolgt — Alt+Drag für OrbitControls-Rotate bleibt erhalten.
+    canvas.addEventListener('click', (e) => {
+        if (!e.altKey || e.button !== 0) return;
+        const track = state.project.tracks[state.selectedTrackIdx];
+        if (!track || track.type !== 'light' || !track.light) return;
+        if (track.light.isAmbientLight) return;  // Ambient hat keine Position
+
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, state.camera);
+        // Gegen Mesh-Szene raycasten (ohne Lichter/Helper/Grid)
+        const intersects = raycaster.intersectObjects(state.scene.children, true).filter(h => {
+            const o = h.object;
+            if (!o.visible || o.isLight) return false;
+            if (o.type?.includes('Helper')) return false;
+            if (o.type === 'GridHelper') return false;
+            return true;
+        });
+        let hitPoint = null;
+        if (intersects.length > 0) hitPoint = intersects[0].point.clone();
+        else {
+            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const hit = new THREE.Vector3();
+            if (raycaster.ray.intersectPlane(plane, hit)) hitPoint = hit;
+        }
+        if (!hitPoint) return;
+
+        track.light.position.copy(hitPoint);
+        // Bei Boden-Treffer Licht 2m hoch setzen
+        if (hitPoint.y < 0.5) track.light.position.y = Math.max(hitPoint.y + 2, 2);
+        track.light.target?.updateMatrixWorld();
+        track.lightHelper?.update?.();
+        fn.updateProperties();
+        fn.serverLog?.('light_moved', `track=${track.name} → (${track.light.position.x.toFixed(2)}, ${track.light.position.y.toFixed(2)}, ${track.light.position.z.toFixed(2)})`);
+    });
+
+    // Links-Klick auf Licht-Helper-Kegel → entsprechenden Licht-Track auswählen
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.button !== 0 || e.altKey || e.shiftKey || e.ctrlKey) return;
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, state.camera);
+        for (let i = 0; i < state.project.tracks.length; i++) {
+            const t = state.project.tracks[i];
+            if (t.type !== 'light' || !t.lightHelper || !t.lightHelper.visible) continue;
+            const hits = raycaster.intersectObject(t.lightHelper, true);
+            if (hits.length > 0) {
+                fn.selectTrack?.(i);
+                // stopImmediatePropagation NICHT — OrbitControls soll weiter funktionieren
+                return;
+            }
+        }
+    });
+}
+
+// =========================================================================
 // Init
 // =========================================================================
 async function init() {
@@ -95,6 +166,11 @@ async function init() {
     state.scene = setup.scene;
     state.camera = setup.camera;
     state.controls = setup.controls;
+    // Szenen-Lichter speichern für Auto-Track-Erstellung
+    state.sceneKeyLight = setup.keyLight;
+    state.sceneFillLight = setup.fillLight;
+    state.sceneBackLight = setup.backLight;
+    state.sceneAmbient = setup.ambient;
 
     // Load shared data + studio settings
     await Promise.all([
@@ -114,6 +190,7 @@ async function init() {
         state.project.videoOutputPath = prefs.studio_video_output || '';
         state.project.bvhOutputPath = prefs.studio_bvh_output || '';
         state.project.projectPath = prefs.studio_project_path || '';
+        state.project.preloadSeconds = parseFloat(prefs.studio_preload_seconds ?? '3');
     } catch (e) { /* use defaults */ }
 
     // Load BVH library
@@ -132,6 +209,12 @@ async function init() {
 
     // Setup export panel
     setupExportPanel();
+
+    // Viewport right-click → Licht-Position setzen (nur wenn Licht-Track ausgewählt)
+    setupViewportContextMenu();
+
+    // Szenen-Lichter als Tracks registrieren (Key/Fill/Back/Ambient)
+    createSceneLightTracks();
 
     // Restore session state (if returning from another page)
     const restored = await restoreSessionState();

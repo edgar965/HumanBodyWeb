@@ -769,6 +769,55 @@ export function renderTimeline() {
                 }
             }
         }
+
+        // Overlap-Zonen für Model-Tracks — Fade-Bereich mit Kreuz-Schraffur,
+        // gerendert NACH den Clips damit die Schraffur on-top liegt.
+        if (track.type === 'model' && track.clips.length > 1) {
+            const sorted = [...track.clips].sort((a, b) => a.startFrame - b.startFrame);
+            for (let i = 0; i < sorted.length - 1; i++) {
+                const a = sorted[i], b = sorted[i + 1];
+                const aEndFrame = a.startFrame + Math.ceil(a.duration * state.project.fps);
+                if (b.startFrame >= aEndFrame) continue;
+                const ox = HEADER_WIDTH + (b.startFrame / state.project.fps) * pps - state.timelineScrollX;
+                const oEnd = HEADER_WIDTH + (aEndFrame / state.project.fps) * pps - state.timelineScrollX;
+                const ow = Math.max(2, oEnd - ox);
+                const oy = y + 4, oh = TRACK_HEIGHT - 8;
+                if (ox + ow < HEADER_WIDTH || ox > w) continue;  // off-screen
+                // Basis (orange-transparent) + Kreuz-Schraffur
+                tlCtx.fillStyle = 'rgba(255, 152, 0, 0.45)';
+                tlCtx.fillRect(ox, oy, ow, oh);
+                tlCtx.save();
+                tlCtx.beginPath();
+                tlCtx.rect(ox, oy, ow, oh);
+                tlCtx.clip();
+                tlCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                tlCtx.lineWidth = 1;
+                const step = 7;
+                for (let hx = ox - oh; hx < ox + ow + oh; hx += step) {
+                    tlCtx.beginPath();
+                    tlCtx.moveTo(hx, oy);
+                    tlCtx.lineTo(hx + oh, oy + oh);
+                    tlCtx.stroke();
+                    tlCtx.beginPath();
+                    tlCtx.moveTo(hx + oh, oy);
+                    tlCtx.lineTo(hx, oy + oh);
+                    tlCtx.stroke();
+                }
+                tlCtx.restore();
+                tlCtx.strokeStyle = 'rgba(255, 120, 0, 1)';
+                tlCtx.lineWidth = 1.5;
+                tlCtx.strokeRect(ox, oy, ow, oh);
+                if (ow > 50) {
+                    tlCtx.fillStyle = '#fff';
+                    tlCtx.font = 'bold 10px sans-serif';
+                    tlCtx.textAlign = 'center';
+                    tlCtx.textBaseline = 'middle';
+                    tlCtx.fillText('✕ FADE', ox + ow / 2, oy + oh / 2);
+                    tlCtx.textAlign = 'start';
+                    tlCtx.textBaseline = 'alphabetic';
+                }
+            }
+        }
     }
 
     // Playhead
@@ -818,6 +867,9 @@ export function updateTrackHeaders() {
             if (!ctx) return;
             // Populate "Hinzufügen" submenu based on track type
             _populateTrackAddSubmenu(track, i, ctx);
+            // Update Ausschalten/Einschalten label based on mute state
+            const muteLabel = document.getElementById('track-ctx-mute-label');
+            if (muteLabel) muteLabel.textContent = track.muted ? 'Einschalten' : 'Ausschalten';
             // Show/hide link section for model tracks
             const linkSection = document.getElementById('track-ctx-link-section');
             const linkList = document.getElementById('track-ctx-link-list');

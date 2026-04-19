@@ -52,6 +52,85 @@ export function addModelTrack(name) {
     return track;
 }
 
+// Erzeugt Helper-Group für beliebigen Licht-Typ (Spot, Directional, Point, Ambient)
+export function createLightHelper(light) {
+    if (!light) return null;
+    if (light.isAmbientLight) return null;  // Ambient hat keine Position → kein Helper
+    const group = new THREE.Group();
+    let typeHelper = null;
+    if (light.isSpotLight) typeHelper = new THREE.SpotLightHelper(light, 0xffc107);
+    else if (light.isDirectionalLight) typeHelper = new THREE.DirectionalLightHelper(light, 0.6, 0xffc107);
+    else if (light.isPointLight) typeHelper = new THREE.PointLightHelper(light, 0.12, 0xffc107);
+    if (typeHelper) group.add(typeHelper);
+
+    // Solider kleiner Kegel am Licht-Ursprung, zeigt in Lichtrichtung
+    const coneGeo = new THREE.ConeGeometry(0.08, 0.22, 16);
+    coneGeo.translate(0, 0.11, 0);
+    const coneMat = new THREE.MeshBasicMaterial({ color: light.color.clone() });
+    const originCone = new THREE.Mesh(coneGeo, coneMat);
+    group.add(originCone);
+
+    group.update = function() {
+        typeHelper?.update?.();
+        originCone.position.copy(light.position);
+        if (light.target) {
+            const dir = new THREE.Vector3().subVectors(light.target.position, light.position);
+            if (dir.lengthSq() > 1e-6) {
+                dir.normalize();
+                originCone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+            }
+        } else {
+            originCone.quaternion.identity();
+        }
+        originCone.material.color.copy(light.color);
+    };
+    group.update();
+    return group;
+}
+
+// Bestimmt lightType-String aus einem THREE.Light-Objekt
+export function detectLightType(light) {
+    if (!light) return 'spot';
+    if (light.isSpotLight) return 'spot';
+    if (light.isDirectionalLight) return 'directional';
+    if (light.isPointLight) return 'point';
+    if (light.isAmbientLight) return 'ambient';
+    return 'spot';
+}
+
+// Erzeugt Light-Tracks für die von createSceneSetup() angelegten Szenen-Lichter.
+// Wird einmal nach init() aufgerufen, vor restoreProjectData().
+export function createSceneLightTracks() {
+    const sceneLights = [
+        { name: 'Key Light',  light: state.sceneKeyLight },
+        { name: 'Fill Light', light: state.sceneFillLight },
+        { name: 'Back Light', light: state.sceneBackLight },
+        { name: 'Ambient',    light: state.sceneAmbient },
+    ];
+    for (const { name, light } of sceneLights) {
+        if (!light) continue;
+        // DirectionalLight braucht sein target im Scene-Graph
+        if (light.isDirectionalLight && light.target && !light.target.parent) {
+            state.scene.add(light.target);
+        }
+        const track = new Track(name);
+        track.type = 'light';
+        track.color = TRACK_COLORS.light || track.color;
+        track.light = light;
+        track.lightType = detectLightType(light);
+        track.lightVisible = true;
+        track._sceneLight = true;  // markiert als Szenen-Licht (Licht wird NICHT beim removeTrack disposed)
+        track.lightHelper = createLightHelper(light);
+        if (track.lightHelper) {
+            track.lightHelper.visible = track.lightVisible;
+            state.scene.add(track.lightHelper);
+        }
+        state.project.addTrack(track);
+    }
+    fn.updateTrackHeaders?.();
+    fn.renderTimeline?.();
+}
+
 export function addSpecialTrack(type, name) {
     pushUndo('Spur hinzufügen');
     const defaults = { camera: 'Kamera', light: 'Licht', audio: 'Audio' };
@@ -62,15 +141,16 @@ export function addSpecialTrack(type, name) {
     if (type === 'camera') {
         track.cameraActive = true;
     } else if (type === 'light') {
-        track.light = new THREE.PointLight(0xffffff, 2.0, 50);
+        // User-erzeugte Licht-Spur = SpotLight (neu erstellt)
+        track.light = new THREE.SpotLight(0xffffff, 2.0, 50, Math.PI / 6, 0.3, 1);
         track.light.position.set(2, 3, 2);
+        track.light.target.position.set(0, 0, 0);
         state.scene.add(track.light);
-        // Helper sphere
-        const helperGeo = new THREE.SphereGeometry(0.08, 8, 8);
-        const helperMat = new THREE.MeshBasicMaterial({ color: 0xffc107 });
-        track.lightHelper = new THREE.Mesh(helperGeo, helperMat);
-        track.lightHelper.position.copy(track.light.position);
-        state.scene.add(track.lightHelper);
+        state.scene.add(track.light.target);
+        track.lightType = 'spot';
+        track.lightHelper = createLightHelper(track.light);
+        if (track.lightHelper) state.scene.add(track.lightHelper);
+        track.lightVisible = true;
     } else if (type === 'audio') {
         track.audioCtx = state.project._audioCtx || (state.project._audioCtx = new (window.AudioContext || window.webkitAudioContext)());
         track.gainNode = track.audioCtx.createGain();
@@ -115,10 +195,15 @@ export function addLightKeyframe(trackIdx, frame) {
     const kf = new Clip(null, `Licht ${track.clips.length + 1}`, 0, state.project.fps);
     kf.type = 'light_kf';
     kf.startFrame = targetFrame;
+    const tgt = track.light.target?.position || { x: 0, y: 0, z: 0 };
     kf.data = {
         position: { x: track.light.position.x, y: track.light.position.y, z: track.light.position.z },
+        target:   { x: tgt.x, y: tgt.y, z: tgt.z },
         color: '#' + track.light.color.getHexString(),
         intensity: track.light.intensity,
+        angle: track.light.angle ?? (Math.PI / 6),
+        penumbra: track.light.penumbra ?? 0.3,
+        distance: track.light.distance ?? 50,
     };
     track.clips.push(kf);
     track.clips.sort((a, b) => a.startFrame - b.startFrame);
@@ -218,8 +303,23 @@ export function removeTrack(idx) {
     track.group = null;
 
     // Cleanup special tracks
-    if (track.light) { state.scene.remove(track.light); track.light.dispose(); }
-    if (track.lightHelper) { state.scene.remove(track.lightHelper); track.lightHelper.geometry.dispose(); }
+    if (track._sceneLight) {
+        // Szenen-Lichter dürfen nicht gelöscht werden — sie sind Teil der Szene.
+        console.warn(`[BVH Studio] Szenen-Licht "${track.name}" kann nicht gelöscht werden.`);
+        return;
+    }
+    if (track.light) {
+        if (track.light.target) state.scene.remove(track.light.target);
+        state.scene.remove(track.light);
+        track.light.dispose();
+    }
+    if (track.lightHelper) {
+        state.scene.remove(track.lightHelper);
+        track.lightHelper.traverse?.(obj => {
+            if (obj.geometry) obj.geometry.dispose?.();
+            if (obj.material) obj.material.dispose?.();
+        });
+    }
     if (track.type === 'audio') fn.stopAudioTrack(track);
 
     state.project.removeTrackAt(idx);  // handles _linkedAnimIdx fixup

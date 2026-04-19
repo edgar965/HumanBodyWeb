@@ -476,6 +476,12 @@
     <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen</div>
 </div>
 
+<!-- Viewport Context Menu (right-click in 3D scene when Light track selected) -->
+<div id="viewport-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+    <div class="ctx-item" id="vp-ctx-light-here"><i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht hierher setzen</div>
+    <div class="ctx-item" id="vp-ctx-light-target"><i class="fas fa-crosshairs" style="width:16px;color:#ffc107;"></i> Licht-Ziel hierher</div>
+</div>
+
 <!-- Track Context Menu -->
 <div id="track-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
     <div class="ctx-item has-submenu" id="track-ctx-add">
@@ -485,7 +491,7 @@
     </div>
     <div style="height:1px;background:var(--border);margin:4px 0;"></div>
     <div class="ctx-item" id="track-ctx-rename"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen</div>
-    <div class="ctx-item" id="track-ctx-mute"><i class="fas fa-volume-mute" style="width:16px;"></i> Mute/Unmute</div>
+    <div class="ctx-item" id="track-ctx-mute"><i class="fas fa-power-off" style="width:16px;"></i> <span id="track-ctx-mute-label">Ausschalten</span></div>
     <div id="track-ctx-link-section" style="display:none;">
         <div style="height:1px;background:var(--border);margin:4px 0;"></div>
         <div style="padding:4px 12px;font-size:0.7rem;color:var(--text-muted);"><i class="fas fa-link" style="width:16px;"></i> Zuordnung:</div>

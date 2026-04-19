@@ -1,6 +1,7 @@
 /**
  * BVH Studio — Properties panel (track/clip/keyframe editors).
  */
+import * as THREE from 'three';
 import { state, TRACK_ICONS } from './state.js';
 import { fn } from './registry.js';
 
@@ -41,19 +42,44 @@ export function updateProperties() {
             <div style="margin-top:4px;font-size:0.72rem;color:var(--text-muted);">Setzt aktuelle Kamera-Position als Keyframe am Playhead.</div>
         </div>`;
     } else if (track.type === 'light') {
-        const lp = track.light?.position || {x:0,y:0,z:0};
-        const lc = track.light ? '#' + track.light.color.getHexString() : '#ffffff';
+        const L = track.light;
+        const lt = track.lightType || 'spot';
+        const hasPosition = !!(L && !L.isAmbientLight);
+        const hasTarget   = !!(L && L.target);
+        const hasAngle    = !!(L && L.isSpotLight);
+        const hasDistance = !!(L && (L.isSpotLight || L.isPointLight));
+        const lp = L?.position || {x:0,y:0,z:0};
+        const tg = L?.target?.position || {x:0,y:0,z:0};
+        const lc = L ? '#' + L.color.getHexString() : '#ffffff';
+        const rgb = L ? L.color : new THREE.Color(0xffffff);
+        const R = Math.round(rgb.r * 255), G = Math.round(rgb.g * 255), B = Math.round(rgb.b * 255);
+        const angleDeg = ((L?.angle ?? Math.PI/6) * 180 / Math.PI).toFixed(1);
+        const penumbra = (L?.penumbra ?? 0.3).toFixed(2);
+        const distance = (L?.distance ?? 50).toFixed(1);
+        const typeLabel = { spot: 'SpotLight', directional: 'Directional', point: 'PointLight', ambient: 'Ambient' }[lt] || lt;
         html += `<div class="prop-group">
+            <div class="prop-row"><label>Licht-Typ:</label><span style="font-size:0.8rem;color:var(--accent);">${typeLabel}${track._sceneLight ? ' (Szene)' : ''}</span></div>
             <div class="prop-row"><label>Farbe:</label><input type="color" value="${lc}" id="prop-light-color"></div>
-            <div class="prop-row"><label>Intensität:</label><input type="number" value="${track.light?.intensity||2}" id="prop-light-intensity" min="0" max="20" step="0.1"></div>
-            <div class="prop-row"><label>Sichtbar:</label><input type="checkbox" ${track.lightVisible?'checked':''} id="prop-light-visible"></div>
-            <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Position</h3>
+            <div class="prop-row"><label>R:</label><input type="range" min="0" max="255" value="${R}" id="prop-light-r" style="flex:1;"><span id="prop-light-r-val" style="width:30px;font-size:0.75rem;">${R}</span></div>
+            <div class="prop-row"><label>G:</label><input type="range" min="0" max="255" value="${G}" id="prop-light-g" style="flex:1;"><span id="prop-light-g-val" style="width:30px;font-size:0.75rem;">${G}</span></div>
+            <div class="prop-row"><label>B:</label><input type="range" min="0" max="255" value="${B}" id="prop-light-b" style="flex:1;"><span id="prop-light-b-val" style="width:30px;font-size:0.75rem;">${B}</span></div>
+            <div class="prop-row"><label>Intensität:</label><input type="number" value="${L?.intensity||2}" id="prop-light-intensity" min="0" max="20" step="0.1"></div>
+            ${hasAngle ? `<div class="prop-row"><label>Winkel:</label><input type="number" value="${angleDeg}" id="prop-light-angle" min="1" max="170" step="1"> °</div>
+            <div class="prop-row"><label>Penumbra:</label><input type="number" value="${penumbra}" id="prop-light-penumbra" min="0" max="1" step="0.05"></div>` : ''}
+            ${hasDistance ? `<div class="prop-row"><label>Reichweite:</label><input type="number" value="${distance}" id="prop-light-distance" min="0" max="200" step="1"></div>` : ''}
+            <div class="prop-row"><label>Helper zeigen:</label><input type="checkbox" ${track.lightVisible?'checked':''} id="prop-light-visible"${track.lightHelper ? '' : ' disabled'}></div>
+            ${hasPosition ? `<h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Position</h3>
             <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${lp.x.toFixed(2)}" id="prop-light-x"></div>
             <div class="prop-row"><label>Y:</label><input type="number" step="0.1" value="${lp.y.toFixed(2)}" id="prop-light-y"></div>
-            <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${lp.z.toFixed(2)}" id="prop-light-z"></div>
+            <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${lp.z.toFixed(2)}" id="prop-light-z"></div>` : ''}
+            ${hasTarget ? `<h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Ziel (Blickrichtung)</h3>
+            <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${tg.x.toFixed(2)}" id="prop-light-tx"></div>
+            <div class="prop-row"><label>Y:</label><input type="number" step="0.1" value="${tg.y.toFixed(2)}" id="prop-light-ty"></div>
+            <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${tg.z.toFixed(2)}" id="prop-light-tz"></div>` : ''}
             <div style="margin-top:6px;">
                 <button id="prop-light-add-kf" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-key"></i> Keyframe setzen</button>
             </div>
+            ${!track._sceneLight ? '' : `<div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Szenen-Licht — wird immer geladen, kann nicht gelöscht werden.</div>`}
         </div>`;
     } else if (track.type === 'model') {
         const linkedAnim = state.project.getLinkedAnimation(track);
@@ -166,12 +192,60 @@ export function updateProperties() {
     document.getElementById('prop-cam-add-kf')?.addEventListener('click', () => fn.addCameraKeyframe(state.selectedTrackIdx));
 
     // Light track
-    document.getElementById('prop-light-color')?.addEventListener('input', (e) => { if (track.light) track.light.color.set(e.target.value); });
-    document.getElementById('prop-light-intensity')?.addEventListener('change', (e) => { if (track.light) track.light.intensity = parseFloat(e.target.value)||2; });
-    document.getElementById('prop-light-visible')?.addEventListener('change', (e) => { track.lightVisible = e.target.checked; if (track.lightHelper) track.lightHelper.visible = e.target.checked; });
+    const _updateHelper = () => {
+        if (!track.light) return;
+        if (track.light.target) track.light.target.updateMatrixWorld();
+        if (track.lightHelper?.update) track.lightHelper.update();
+    };
+    const _syncRgbInputs = () => {
+        if (!track.light) return;
+        const c = track.light.color;
+        const r = Math.round(c.r*255), g = Math.round(c.g*255), b = Math.round(c.b*255);
+        const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+        setV('prop-light-r', r); setV('prop-light-g', g); setV('prop-light-b', b);
+        const setT = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        setT('prop-light-r-val', r); setT('prop-light-g-val', g); setT('prop-light-b-val', b);
+        const cp = document.getElementById('prop-light-color');
+        if (cp) cp.value = '#' + c.getHexString();
+    };
+    document.getElementById('prop-light-color')?.addEventListener('input', (e) => {
+        if (track.light) { track.light.color.set(e.target.value); _syncRgbInputs(); _updateHelper(); }
+    });
+    ['r','g','b'].forEach(ch => {
+        document.getElementById(`prop-light-${ch}`)?.addEventListener('input', (e) => {
+            if (!track.light) return;
+            const v = parseInt(e.target.value) / 255;
+            if (ch === 'r') track.light.color.r = v;
+            else if (ch === 'g') track.light.color.g = v;
+            else track.light.color.b = v;
+            document.getElementById(`prop-light-${ch}-val`).textContent = e.target.value;
+            const cp = document.getElementById('prop-light-color');
+            if (cp) cp.value = '#' + track.light.color.getHexString();
+            _updateHelper();
+        });
+    });
+    document.getElementById('prop-light-intensity')?.addEventListener('change', (e) => {
+        if (track.light) { track.light.intensity = parseFloat(e.target.value)||2; _updateHelper(); }
+    });
+    document.getElementById('prop-light-angle')?.addEventListener('change', (e) => {
+        if (track.light) { track.light.angle = (parseFloat(e.target.value)||30) * Math.PI / 180; _updateHelper(); }
+    });
+    document.getElementById('prop-light-penumbra')?.addEventListener('change', (e) => {
+        if (track.light) { track.light.penumbra = Math.max(0, Math.min(1, parseFloat(e.target.value)||0)); _updateHelper(); }
+    });
+    document.getElementById('prop-light-distance')?.addEventListener('change', (e) => {
+        if (track.light) { track.light.distance = parseFloat(e.target.value)||50; _updateHelper(); }
+    });
+    document.getElementById('prop-light-visible')?.addEventListener('change', (e) => {
+        track.lightVisible = e.target.checked;
+        if (track.lightHelper) track.lightHelper.visible = e.target.checked;
+    });
     ['x','y','z'].forEach(axis => {
         document.getElementById(`prop-light-${axis}`)?.addEventListener('change', (e) => {
-            if (track.light) { track.light.position[axis] = parseFloat(e.target.value)||0; if (track.lightHelper) track.lightHelper.position.copy(track.light.position); }
+            if (track.light) { track.light.position[axis] = parseFloat(e.target.value)||0; _updateHelper(); }
+        });
+        document.getElementById(`prop-light-t${axis}`)?.addEventListener('change', (e) => {
+            if (track.light?.target) { track.light.target.position[axis] = parseFloat(e.target.value)||0; _updateHelper(); }
         });
     });
     document.getElementById('prop-light-add-kf')?.addEventListener('click', () => fn.addLightKeyframe(state.selectedTrackIdx));

@@ -41,7 +41,15 @@ export function buildProjectData() {
                 td.lightColor = '#' + t.light.color.getHexString();
                 td.lightIntensity = t.light.intensity;
                 td.lightPosition = { x: t.light.position.x, y: t.light.position.y, z: t.light.position.z };
+                if (t.light.target) {
+                    td.lightTarget = { x: t.light.target.position.x, y: t.light.target.position.y, z: t.light.target.position.z };
+                }
+                if (t.light.angle != null) td.lightAngle = t.light.angle;
+                if (t.light.penumbra != null) td.lightPenumbra = t.light.penumbra;
+                if (t.light.distance != null) td.lightDistance = t.light.distance;
                 td.lightVisible = t.lightVisible;
+                td.lightType = t.lightType;
+                td._sceneLight = !!t._sceneLight;
             }
             td.clips = t.clips.map(c => {
                 const cd = {
@@ -148,8 +156,10 @@ export async function restoreProjectData(data) {
     // Suppress undo for the ENTIRE restore operation
     state._undoSuppressed = true;
 
-    // Clear existing
-    while (state.project.tracks.length > 0) fn.removeTrack(0);
+    // Clear existing — aber Szenen-Lichter (_sceneLight) erhalten bleiben
+    for (let i = state.project.tracks.length - 1; i >= 0; i--) {
+        if (!state.project.tracks[i]._sceneLight) fn.removeTrack(i);
+    }
 
     state.project.name = data.name || 'Untitled';
     state.project.fps = data.fps || 30;
@@ -164,7 +174,11 @@ export async function restoreProjectData(data) {
             trackName = trackName.replace('Track', 'Animation');
         }
         let track;
-        if (trackType === 'bvh') {
+        // Szenen-Licht-Track: existierenden wiederverwenden statt neu anlegen
+        if (trackType === 'light' && td._sceneLight) {
+            track = state.project.tracks.find(t => t._sceneLight && t.name === td.name);
+            if (!track) continue;  // Szenen-Licht dieses Namens nicht vorhanden → skip
+        } else if (trackType === 'bvh') {
             track = fn.addTrack(trackName, true);  // skip auto model track during restore
             track.preset = td.preset || 'FemaleGarment';
             track.bodyType = td.bodyType || 'Female_Caucasian';
@@ -185,8 +199,15 @@ export async function restoreProjectData(data) {
             track.light.color.set(td.lightColor || '#ffffff');
             track.light.intensity = td.lightIntensity ?? 2;
             track.light.position.set(td.lightPosition.x, td.lightPosition.y, td.lightPosition.z);
+            if (track.light.target && td.lightTarget) {
+                track.light.target.position.set(td.lightTarget.x, td.lightTarget.y, td.lightTarget.z);
+                track.light.target.updateMatrixWorld();
+            }
+            if (td.lightAngle != null) track.light.angle = td.lightAngle;
+            if (td.lightPenumbra != null) track.light.penumbra = td.lightPenumbra;
+            if (td.lightDistance != null) track.light.distance = td.lightDistance;
             track.lightVisible = td.lightVisible ?? true;
-            if (track.lightHelper) { track.lightHelper.position.copy(track.light.position); track.lightHelper.visible = track.lightVisible; }
+            if (track.lightHelper) { track.lightHelper.visible = track.lightVisible; if (track.lightHelper.update) track.lightHelper.update(); }
         }
 
         for (const cd of (td.clips || [])) {

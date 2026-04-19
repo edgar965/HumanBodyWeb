@@ -63,6 +63,15 @@
 </div>
 
 <div class="settings-section">
+    <h3>Playback</h3>
+    <div class="settings-row">
+        <label>Modell-Preload:</label>
+        <input type="number" name="studio_preload_seconds" id="studio_preload_seconds" value="{{ prefs.studio_preload_seconds|default:'3' }}" min="0" max="30" step="0.5"> s
+        <span class="hint">Wie viele Sekunden vor einem Model-Clip das nächste Preset im Hintergrund geladen wird (0 = aus)</span>
+    </div>
+</div>
+
+<div class="settings-section">
     <h3>Export</h3>
     <div class="settings-row">
         <label>Video-Aufl&ouml;sung:</label>
