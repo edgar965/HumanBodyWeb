@@ -20,12 +20,16 @@ import { undo, redo, undoStack } from './undo.js';
 import { loadLibrary, setupLibraryManagement, setupSidebarResize } from './library.js';
 import { addTrack, addSpecialTrack, selectTrack, removeTrack, addClipToTrack, createSceneLightTracks } from './tracks.js';
 import { setupTimeline, renderTimeline, updateTrackHeaders, updateDuration } from './timeline.js';
-import { setupPlayback, togglePlay, stopPlayback, applyPlayhead, updatePlaybackUI } from './playback.js';
+import { setupPlayback, togglePlay, stopPlayback, applyPlayhead, updatePlaybackUI, syncLightVisibility } from './playback.js';
 import { updateProperties, switchPropsTab } from './properties.js';
 import { setupToolbar } from './tools.js';
 import { setupExportPanel, exportBVH } from './export_video.js';
 import { buildProjectData, saveProject, saveProjectAs, loadProject, restoreProjectData, resetToDefault, loadLastProject, saveSessionState, restoreSessionState, previewAnimation, closePreview } from './project.js';
 import { updateDebugPanel } from './debug.js';
+import {
+    createFloorTrack, setupTheatreMenu, setupSceneObjectImport, setupTransformControls,
+    attachTransformControls, detachTransformControls,
+} from './scene_extras.js';
 
 console.log('[BVH Studio] v2.0 loaded (ES modules)');
 
@@ -135,22 +139,26 @@ function setupViewportContextMenu() {
         fn.serverLog?.('light_moved', `track=${track.name} → (${track.light.position.x.toFixed(2)}, ${track.light.position.y.toFixed(2)}, ${track.light.position.z.toFixed(2)})`);
     });
 
-    // Links-Klick auf Licht-Helper-Kegel → entsprechenden Licht-Track auswählen
+    // Links-Klick: Licht-Helper oder Scene-Object auswählen
     canvas.addEventListener('mousedown', (e) => {
         if (e.button !== 0 || e.altKey || e.shiftKey || e.ctrlKey) return;
         const rect = canvas.getBoundingClientRect();
         mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, state.camera);
+        // Licht-Helper
         for (let i = 0; i < state.project.tracks.length; i++) {
             const t = state.project.tracks[i];
             if (t.type !== 'light' || !t.lightHelper || !t.lightHelper.visible) continue;
             const hits = raycaster.intersectObject(t.lightHelper, true);
-            if (hits.length > 0) {
-                fn.selectTrack?.(i);
-                // stopImmediatePropagation NICHT — OrbitControls soll weiter funktionieren
-                return;
-            }
+            if (hits.length > 0) { fn.selectTrack?.(i); return; }
+        }
+        // Scene-Objects (Boden + Custom 3D)
+        for (let i = 0; i < state.project.tracks.length; i++) {
+            const t = state.project.tracks[i];
+            if (t.type !== 'scene_object' || !t.mesh) continue;
+            const hits = raycaster.intersectObject(t.mesh, true);
+            if (hits.length > 0) { fn.selectTrack?.(i); return; }
         }
     });
 }
@@ -213,8 +221,10 @@ async function init() {
     // Viewport right-click → Licht-Position setzen (nur wenn Licht-Track ausgewählt)
     setupViewportContextMenu();
 
-    // Szenen-Lichter als Tracks registrieren (Key/Fill/Back/Ambient)
-    createSceneLightTracks();
+    // Theatre-Presets Menü, 3D-Objekt-Import, TransformControls
+    setupTheatreMenu();
+    setupSceneObjectImport();
+    setupTransformControls();
 
     // Restore session state (if returning from another page)
     const restored = await restoreSessionState();
@@ -242,6 +252,16 @@ async function init() {
         } catch(e) { console.warn('[BVH Studio] Default project load failed:', e); }
     }
 
+    // Szenen-Elemente als Tracks registrieren (Boden, Licht) — NACH
+    // restore, damit user-track-Indizes stabil bleiben (_linkedAnimIdx bricht sonst).
+    createFloorTrack();
+    createSceneLightTracks();
+    // Pending overrides sind jetzt konsumiert
+    delete state.project._pendingSceneOverrides;
+    fn.updateTrackHeaders?.();
+    fn.renderTimeline?.();
+    fn.updateProperties?.();
+
     // Start render loop
     animate();
 
@@ -268,6 +288,9 @@ function animate() {
         applyPlayhead();
         renderTimeline();
         updatePlaybackUI();
+    } else {
+        // Auch ohne Play: An/Aus-Status der Lichter live synchronisieren
+        syncLightVisibility();
     }
 
     state.controls.update();

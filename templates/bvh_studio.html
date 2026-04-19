@@ -196,10 +196,23 @@
                     <div class="toolbar-dd-item" id="dd-add-camera"><i class="fas fa-video" style="width:16px;color:#00bcd4;"></i> Kamera</div>
                     <div class="toolbar-dd-item" id="dd-add-light"><i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht</div>
                     <div class="toolbar-dd-item" id="dd-add-audio"><i class="fas fa-music" style="width:16px;color:#4caf50;"></i> Audio</div>
+                    <div class="toolbar-dd-item" id="dd-add-3d-object"><i class="fas fa-cube" style="width:16px;color:#7c5cbf;"></i> 3D-Objekt...</div>
                 </div>
             </div>
         </div>
     </div>
+    <!-- Theatre dropdown -->
+    <div class="toolbar-dropdown" id="theatre-dropdown">
+        <button id="btn-theatre" title="Theatre-Presets"><i class="fas fa-theater-masks"></i> Theatre <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
+        <div class="toolbar-dropdown-menu" style="min-width:260px;">
+            <div class="toolbar-dd-item has-submenu" id="dd-theatre-lights">
+                <i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht-Presets
+                <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+                <div id="theatre-lights-submenu" class="ctx-submenu"></div>
+            </div>
+        </div>
+    </div>
+    <div class="sep"></div>
     <button id="btn-delete-track" title="Löschen"><i class="fas fa-trash"></i></button>
     <div class="sep"></div>
     <button id="btn-undo" title="Undo (Ctrl+Shift+U)" onclick="window.__studioUndo && window.__studioUndo()"><i class="fas fa-undo"></i></button>

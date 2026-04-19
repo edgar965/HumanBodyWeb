@@ -5799,6 +5799,124 @@ def studio_project_list(request):
     return JsonResponse({'files': files})
 
 
+# =========================================================================
+# Theatre Presets: vordefinierte Lichtkonfigurationen (Ballett, Jazz, Studio etc.)
+# =========================================================================
+
+_THEATRE_PRESETS_DIR = settings.HUMANBODY_ROOT / 'data' / 'theatre_presets'
+
+
+def studio_theatre_presets(request):
+    """Liste aller Theatre-Licht-Presets.
+
+    GET /api/studio/theatre-presets/
+    Response: { presets: [{ name, label, lightCount, description }] }
+    """
+    log = logging.getLogger('core')
+    presets = []
+    if _THEATRE_PRESETS_DIR.is_dir():
+        for f in sorted(_THEATRE_PRESETS_DIR.glob('*.json')):
+            try:
+                with open(f, 'r', encoding='utf-8') as fh:
+                    data = json.load(fh)
+                presets.append({
+                    'name': f.stem,
+                    'label': data.get('label', f.stem),
+                    'description': data.get('description', ''),
+                    'lightCount': len(data.get('lights', [])),
+                })
+            except Exception as e:
+                log.warning(f'[theatre-presets] Failed to read {f}: {e}')
+    return JsonResponse({'presets': presets})
+
+
+def studio_theatre_preset_detail(request, name):
+    """Liefert die JSON-Definition eines Theatre-Licht-Presets.
+
+    GET /api/studio/theatre-preset/<name>/
+    """
+    fp = _THEATRE_PRESETS_DIR / f'{name}.json'
+    if not fp.is_file():
+        return JsonResponse({'error': 'Preset nicht gefunden'}, status=404)
+    try:
+        with open(fp, 'r', encoding='utf-8') as fh:
+            data = json.load(fh)
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+# =========================================================================
+# Floor Textures: vordefinierte Boden-Texturen
+# =========================================================================
+
+_FLOOR_TEXTURES_DIR = settings.BASE_DIR / 'static' / 'assets' / 'floor_textures'
+
+
+def studio_floor_textures(request):
+    """Liste verfügbarer Boden-Texturen.
+
+    GET /api/studio/floor-textures/
+    Response: { textures: [{ name, label, url }] }
+    """
+    textures = [
+        {'name': 'none', 'label': 'Keine (Farbe)', 'url': ''},
+    ]
+    if _FLOOR_TEXTURES_DIR.is_dir():
+        for f in sorted(_FLOOR_TEXTURES_DIR.glob('*')):
+            if f.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp'):
+                textures.append({
+                    'name': f.stem,
+                    'label': f.stem.replace('_', ' ').title(),
+                    'url': f'/static/assets/floor_textures/{f.name}',
+                })
+    return JsonResponse({'textures': textures})
+
+
+# =========================================================================
+# Scene-Object Upload (OBJ, GLB, GLTF)
+# =========================================================================
+
+_SCENE_OBJECTS_DIR = settings.MEDIA_ROOT / 'scene_objects'
+
+
+@csrf_exempt
+def studio_scene_object_upload(request):
+    """Upload eines 3D-Objekts für den BVH Studio.
+
+    POST /api/studio/scene-object-upload/
+    Form: object=<file>
+    Returns: { ok: true, url: "/media/scene_objects/<uuid>.obj", name: "...", ext: "obj" }
+    """
+    import uuid
+    log = logging.getLogger('core')
+    if request.method != 'POST' or 'object' not in request.FILES:
+        return JsonResponse({'error': 'Kein object File'}, status=400)
+
+    upload = request.FILES['object']
+    ext = (upload.name.rsplit('.', 1)[-1] if '.' in upload.name else '').lower()
+    if ext not in ('obj', 'glb', 'gltf', 'fbx'):
+        return JsonResponse({'error': f'Format "{ext}" nicht unterstützt (obj/glb/gltf/fbx)'}, status=400)
+
+    _SCENE_OBJECTS_DIR.mkdir(parents=True, exist_ok=True)
+    stem = upload.name.rsplit('.', 1)[0].replace(' ', '_')
+    fname = f'{stem}_{uuid.uuid4().hex[:8]}.{ext}'
+    fp = _SCENE_OBJECTS_DIR / fname
+    try:
+        with open(fp, 'wb') as out:
+            for chunk in upload.chunks():
+                out.write(chunk)
+        log.info(f'[scene-object] Uploaded: {fp} ({upload.size} bytes)')
+        return JsonResponse({
+            'ok': True,
+            'url': f'{settings.MEDIA_URL}scene_objects/{fname}',
+            'name': upload.name,
+            'ext': ext,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
 @csrf_exempt
 def client_log(request):
     """Receive log messages from the browser and write to server log.

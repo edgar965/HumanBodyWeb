@@ -143,6 +143,10 @@ export function setupToolbar() {
             pushUndo('Mute/Unmute');
             const track = state.project.tracks[state.selectedTrackIdx];
             track.muted = !track.muted;
+            if (track.type === 'light' && track.light) {
+                track.light.visible = !track.muted;
+                if (track.lightHelper) track.lightHelper.visible = !track.muted && track.lightVisible;
+            }
             fn.updateProperties();
         }
     });
@@ -206,14 +210,22 @@ const HELP_CONTENT = {
         title: 'Kamera',
         body: `
 <h4 style="color:var(--accent);margin:0 0 8px;">Kamera-Track Funktionen</h4>
-<p>Der Kamera-Track steuert die 3D-Kamera während der Wiedergabe. Im Stopp-Modus bleibt die normale Maussteuerung (OrbitControls) aktiv.</p>
+<p>Der Kamera-Track steuert die 3D-Kamera über <b>Kamerapositionen</b> (Keyframes). Zwischen zwei Keyframes wird die Kamera interpoliert. Manuelle Bewegung ist auch während Play jederzeit möglich.</p>
 
-<h4 style="margin:14px 0 6px;">Keyframe setzen</h4>
+<h4 style="margin:14px 0 6px;">Maus-Steuerung in der 3D-Szene (OrbitControls)</h4>
+<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;width:35%;"><b>Links-Drag</b></td><td>Rotieren um Mittelpunkt</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;"><b>Rechts-Drag</b></td><td>Kamera verschieben (Pan)</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;"><b>Mausrad</b></td><td>Zoomen</td></tr>
+<tr><td style="padding:5px 0;"><b>Middle-Drag</b></td><td>Dolly (Zoom)</td></tr>
+</table>
+
+<h4 style="margin:14px 0 6px;">Kameraposition setzen (Keyframe)</h4>
 <ol>
 <li>Kamera-Track in der Timeline auswählen</li>
 <li>Kamera mit Maus in die gewünschte Position bewegen</li>
-<li><b>K</b> drücken oder "Keyframe setzen" Button klicken</li>
-<li>Die aktuelle Kameraposition, Rotation und FOV werden als Keyframe am Playhead gespeichert</li>
+<li><b>Rechtsklick</b> in Kamera-Spur auf Klick-Position → <b>Hinzufügen → Kameraposition</b></li>
+<li>Alternativ: <b>K</b> drücken (speichert am Playhead) oder "Keyframe setzen" Button im Eigenschaften-Panel</li>
 </ol>
 
 <h4 style="margin:14px 0 6px;">Keyframe bearbeiten</h4>
@@ -227,34 +239,69 @@ const HELP_CONTENT = {
 </ul>
 
 <h4 style="margin:14px 0 6px;">Wiedergabe</h4>
-<p>Bei <b>Play</b> wird die Kamera automatisch zwischen den Keyframes interpoliert. Die Maussteuerung wird während der Wiedergabe deaktiviert und beim Stopp wieder aktiviert.</p>
+<p>Bei <b>Play</b> interpoliert die Kamera zwischen den Keyframes. Die Maussteuerung bleibt aktiv — du kannst jederzeit manuell die Kamera bewegen (ab dem nächsten Keyframe nimmt die Interpolation wieder die Kontrolle).</p>
 <p><b>"Aktiv" Checkbox</b>: Deaktivieren um den Kamera-Track temporär zu ignorieren.</p>
 `},
     light: {
         title: 'Licht',
         body: `
-<h4 style="color:var(--accent);margin:0 0 8px;">Licht-Track Funktionen</h4>
-<p>Ein Licht-Track erzeugt ein <b>Punktlicht</b> in der 3D-Szene. Mehrere Licht-Tracks können gleichzeitig aktiv sein.</p>
+<div style="background:rgba(255,193,7,0.1);border-left:3px solid #ffc107;padding:10px 14px;margin-bottom:12px;border-radius:4px;">
+  <h4 style="color:#ffc107;margin:0 0 8px;font-size:0.95rem;"><i class="fas fa-hand-pointer"></i> Licht verschieben — Kurz-Anleitung</h4>
+  <ol style="margin:0;padding-left:20px;line-height:1.6;">
+    <li><b>Licht auswählen</b>: Klick auf den gelben Kegel im 3D-Viewport <i>oder</i> auf den Timeline-Header (z.B. "Key Light")</li>
+    <li><b>An neue Position setzen</b>: <kbd style="background:#333;padding:2px 6px;border-radius:3px;border:1px solid #555;">Alt</kbd> + <b>Links-Klick</b> irgendwo in die 3D-Szene — das Licht springt dorthin</li>
+    <li><b>Feinjustage</b>: X/Y/Z-Zahlen-Inputs im Properties-Panel rechts</li>
+    <li><b>Ausrichtung</b>: Ziel (Blickrichtung) X/Y/Z im Properties-Panel — Licht zeigt Richtung Target</li>
+  </ol>
+  <p style="margin:8px 0 0;font-size:0.72rem;color:var(--text-muted);"><i class="fas fa-info-circle"></i> Middle-Maus/Rechtsklick sind von OrbitControls (Zoom/Pan) belegt — daher <b>Alt+Klick</b>. <b>Alt+Drag</b> rotiert weiterhin die Szene (Drag ≠ Click).</p>
+</div>
 
-<h4 style="margin:14px 0 6px;">Licht konfigurieren</h4>
-<p>Im <b>Eigenschaften-Tab</b> (rechts) bei ausgewaehltem Licht-Track:</p>
+<h4 style="color:var(--accent);margin:0 0 8px;">Licht-System Übersicht</h4>
+<p>In der Timeline sind alle Lichter unter dem Gruppen-Header <b>"Licht"</b> zu sehen:</p>
 <ul>
-<li><b>Farbe</b> — Lichtfarbe (Color Picker)</li>
-<li><b>Intensität</b> — Helligkeit (0-20)</li>
-<li><b>Sichtbar</b> — Zeigt/versteckt die Lichtposition als gelbe Kugel in der Szene</li>
-<li><b>Position X/Y/Z</b> — Lichtposition in Metern</li>
+<li><b>Szenen-Lichter</b> (Key, Fill, Back, Ambient) — automatisch angelegt, nicht löschbar</li>
+<li><b>User-Lichter</b> — eigene SpotLights (via Toolbar Hinzufügen → Spur → Licht)</li>
+<li><b>Theatre-Presets</b> — via Toolbar-Dropdown "Theatre" (z.B. Ballett, Jazz, Club)</li>
+</ul>
+<p>Unterstützte Typen: <b>SpotLight</b>, <b>DirectionalLight</b>, <b>PointLight</b>, <b>AmbientLight</b>. Properties-Panel zeigt nur die relevanten Felder je Typ.</p>
+
+<h4 style="margin:14px 0 6px;">Alle Maus-Bindings für Lichter</h4>
+<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;width:40%;"><b>Links-Klick auf Licht-Kegel (3D)</b></td><td>Licht-Track auswählen</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;"><b>Klick auf Timeline-Header</b></td><td>Licht-Track auswählen</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;background:rgba(255,193,7,0.08);"><b>Alt + Links-Klick in 3D</b></td><td style="background:rgba(255,193,7,0.08);"><b>Licht hier platzieren</b> (Raycast gegen Mesh, Fallback Boden)</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;"><b>Properties X/Y/Z</b></td><td>Position exakt per Zahl</td></tr>
+<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;"><b>Properties Ziel X/Y/Z</b></td><td>Blickrichtung (wo das Licht hinzeigt)</td></tr>
+<tr><td style="padding:5px 0;"><b>Rechts-Drag im Viewport</b></td><td>Kamera pannen (nicht Licht — für Licht → Alt+Klick)</td></tr>
+</table>
+
+<h4 style="margin:14px 0 6px;">Licht konfigurieren (Properties-Panel)</h4>
+<ul>
+<li><b>Aus</b> (Checkbox) — schaltet das Licht in der Szene aus</li>
+<li><b>Farbe</b> — Color-Picker ODER RGB-Slider (bidirektional verknüpft)</li>
+<li><b>Intensität</b> — 0-20</li>
+<li><b>Winkel</b> (nur SpotLight) — Ausstrahlungswinkel in Grad (1-170)</li>
+<li><b>Penumbra</b> (nur SpotLight) — weicher Rand 0-1</li>
+<li><b>Reichweite</b> (Spot/Point) — Fall-off-Distanz</li>
+<li><b>Helper zeigen</b> — blendet den Wireframe-Kegel + soliden Ursprungs-Kegel ein/aus</li>
+<li><b>Ziel (Blickrichtung)</b> — X/Y/Z wohin das Licht zeigt</li>
 </ul>
 
 <h4 style="margin:14px 0 6px;">Licht-Keyframes</h4>
 <ol>
 <li>Licht-Track auswählen</li>
-<li>Position/Farbe/Intensität einstellen</li>
-<li><b>K</b> drücken oder "Keyframe setzen" Button klicken</li>
-<li>Bei Wiedergabe wird zwischen Keyframes interpoliert (Position, Farbe, Intensität)</li>
+<li>Playhead an gewünschte Frame bewegen, Licht konfigurieren (Position, Farbe, Intensität...)</li>
+<li><b>Rechtsklick</b> in Licht-Spur → <b>Hinzufügen → Licht</b> (an Klick-Position im Track)</li>
+<li>Alternativ: <b>K</b> drücken (am Playhead) oder Button "Keyframe setzen"</li>
+<li>Bei 2+ Keyframes: Wiedergabe interpoliert Position, Farbe, Intensität, Winkel, Penumbra, Reichweite</li>
 </ol>
 
-<h4 style="margin:14px 0 6px;">Lichtposition-Helper</h4>
-<p>Die gelbe Kugel zeigt die aktuelle Lichtposition in der Szene. Über die Checkbox "Sichtbar" kann sie ein- und ausgeblendet werden.</p>
+<h4 style="margin:14px 0 6px;">Helper-Visualisierung</h4>
+<p>Jedes Licht (außer Ambient) zeigt in der 3D-Szene:</p>
+<ul>
+<li><b>Kegel-Wireframe</b> (SpotLight) bzw. Pfeil (DirectionalLight) bzw. Kugel (PointLight) — Abstrahlung/Richtung</li>
+<li><b>Solider kleiner Kegel</b> am Licht-Ursprung, Farbe = Lichtfarbe, Spitze zeigt zum Target</li>
+</ul>
 `},
     audio: {
         title: 'Audio',

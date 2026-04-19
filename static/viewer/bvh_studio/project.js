@@ -26,11 +26,59 @@ let _previewAnimId = null;
 let _previewCategory = null;
 let _previewName = null;
 
+// Sammelt Licht-Properties der Szenen-Lichter (Key/Fill/Back/Ambient + Theatre-Presets)
+// als Dictionary {name: {props, clips}} für Save-Roundtrip.
+function _buildSceneLightOverrides() {
+    const out = {};
+    for (const t of state.project.tracks) {
+        if (t.type !== 'light' || !t._sceneLight || !t.light) continue;
+        out[t.name] = {
+            color: '#' + t.light.color.getHexString(),
+            intensity: t.light.intensity,
+            position: { x: t.light.position.x, y: t.light.position.y, z: t.light.position.z },
+            target: t.light.target ? { x: t.light.target.position.x, y: t.light.target.position.y, z: t.light.target.position.z } : null,
+            angle: t.light.angle ?? null,
+            penumbra: t.light.penumbra ?? null,
+            distance: t.light.distance ?? null,
+            visible: t.lightVisible,
+            muted: t.muted,
+            clips: t.clips.map(c => {
+                if (c.type !== 'light_kf') return null;
+                return {
+                    type: 'light_kf', name: c.name, startFrame: c.startFrame,
+                    data: c.data,
+                };
+            }).filter(Boolean),
+        };
+    }
+    return out;
+}
+
+function _buildSceneFloorOverrides() {
+    for (const t of state.project.tracks) {
+        if (t.type === 'scene_object' && t.subtype === 'floor') {
+            return {
+                color: t.floorColor || '#3a3a4a',
+                texture: t.floorTexture || 'none',
+                roughness: t.floorRoughness ?? 0.9,
+                metalness: t.floorMetalness ?? 0.05,
+                size: t.floorSize ?? 6,
+                muted: t.muted,
+            };
+        }
+    }
+    return null;
+}
+
 export function buildProjectData() {
     return {
         name: state.project.name,
         fps: state.project.fps,
-        tracks: state.project.tracks.map(t => {
+        // Szenen-Lichter + Boden werden SEPARAT (nicht in tracks[]) gespeichert
+        // damit User-Tracks keine Index-Drift erleiden (_linkedAnimIdx bleibt stabil).
+        sceneLights: _buildSceneLightOverrides(),
+        sceneFloor: _buildSceneFloorOverrides(),
+        tracks: state.project.tracks.filter(t => !t._sceneLight && !t._sceneItem).map(t => {
             const td = {
                 name: t.name, type: t.type, preset: t.preset, bodyType: t.bodyType,
                 color: t.color, muted: t.muted, position: t.position,
@@ -156,17 +204,40 @@ export async function restoreProjectData(data) {
     // Suppress undo for the ENTIRE restore operation
     state._undoSuppressed = true;
 
-    // Clear existing — aber Szenen-Lichter (_sceneLight) erhalten bleiben
+    // Alte Saves könnten _sceneLight-/_sceneItem-Tracks enthalten — filtern wir raus,
+    // damit createSceneLightTracks/createFloorTrack die Szenen-Elemente frisch anlegen.
+    const inputTracks = (data.tracks || []).filter(td => !(td._sceneLight || td._sceneItem));
+
+    // Clear existing tracks (including any old scene lights aus vorheriger Init-Reihenfolge)
     for (let i = state.project.tracks.length - 1; i >= 0; i--) {
-        if (!state.project.tracks[i]._sceneLight) fn.removeTrack(i);
+        fn.removeTrack(i);
     }
 
     state.project.name = data.name || 'Untitled';
     state.project.fps = data.fps || 30;
 
+    // Szenen-Overrides stashen — werden in createSceneLightTracks/createFloorTrack angewandt
+    state.project._pendingSceneOverrides = {
+        sceneLights: data.sceneLights || {},
+        sceneFloor: data.sceneFloor || null,
+    };
+
+    // Remap-Tabelle: alte Save-Indizes (inkl. ggf. Szenen-Lichtern) → neue Indizes
+    // nach Filtern. Wird später auf _linkedAnimIdx angewandt.
+    const oldIndexToNew = {};
+    let newIdx = 0;
+    for (let oldIdx = 0; oldIdx < (data.tracks || []).length; oldIdx++) {
+        const td = data.tracks[oldIdx];
+        if (td._sceneLight || td._sceneItem) {
+            oldIndexToNew[oldIdx] = -1;  // rausgefiltert
+        } else {
+            oldIndexToNew[oldIdx] = newIdx++;
+        }
+    }
+
     const loadPromises = [];
 
-    for (const td of (data.tracks || [])) {
+    for (const td of inputTracks) {
         const trackType = td.type || 'bvh';
         // Rename old "Track X" names to "Animation X"
         let trackName = td.name;
@@ -174,17 +245,17 @@ export async function restoreProjectData(data) {
             trackName = trackName.replace('Track', 'Animation');
         }
         let track;
-        // Szenen-Licht-Track: existierenden wiederverwenden statt neu anlegen
-        if (trackType === 'light' && td._sceneLight) {
-            track = state.project.tracks.find(t => t._sceneLight && t.name === td.name);
-            if (!track) continue;  // Szenen-Licht dieses Namens nicht vorhanden → skip
-        } else if (trackType === 'bvh') {
+        if (trackType === 'bvh') {
             track = fn.addTrack(trackName, true);  // skip auto model track during restore
             track.preset = td.preset || 'FemaleGarment';
             track.bodyType = td.bodyType || 'Female_Caucasian';
         } else if (trackType === 'model') {
             track = fn.addModelTrack(td.name);
-            track._linkedAnimIdx = td._linkedAnimIdx ?? -1;
+            // Remap saved index → new index (entfernt Scene-Light-Drift)
+            const savedLinkIdx = td._linkedAnimIdx ?? -1;
+            track._linkedAnimIdx = (savedLinkIdx >= 0 && oldIndexToNew[savedLinkIdx] != null)
+                ? oldIndexToNew[savedLinkIdx]
+                : -1;
             track._currentPreset = td._currentPreset || null;
         } else {
             track = fn.addSpecialTrack(trackType, td.name);
@@ -260,7 +331,19 @@ export async function restoreProjectData(data) {
     // Wait for ALL clip animations to load before continuing
     await Promise.all(loadPromises);
 
-    // Model tracks from old projects are ignored — mesh is loaded by loadClipAnimation
+    // Fallback: Model-Tracks mit ungültigem _linkedAnimIdx auf ersten BVH-Track linken
+    // (z.B. alte Saves wo der Link durch Szenen-Licht-Insertion kaputt ging)
+    const firstBvhIdx = state.project.tracks.findIndex(t => t.type === 'bvh');
+    if (firstBvhIdx >= 0) {
+        for (const t of state.project.tracks) {
+            if (t.type !== 'model') continue;
+            const linked = state.project.tracks[t._linkedAnimIdx];
+            if (!linked || linked.type !== 'bvh') {
+                console.log(`[Restore] Model-Track "${t.name}" neu verlinkt (war ${t._linkedAnimIdx}) → ${firstBvhIdx}`);
+                t._linkedAnimIdx = firstBvhIdx;
+            }
+        }
+    }
 
     state._undoSuppressed = false;
 

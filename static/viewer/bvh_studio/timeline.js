@@ -15,6 +15,52 @@ let _cachedAnimations = null;
 
 const DEFAULT_CLIP_SECONDS = 10;
 
+// Liefert Display-Reihen: zuerst alle Nicht-Licht-Tracks, dann "Licht"-Gruppenheader,
+// dann alle Licht-Tracks. Jede Row ist entweder { trackIdx } oder { header, label }.
+// Alle Render-/Hit-/Mouse-Funktionen nutzen diese Reihen statt direkt project.tracks.
+function _getDisplayRows() {
+    const rows = [];
+    const tracks = state.project.tracks;
+    // 1. Normale User-Tracks (keine Light, keine Scene-Objects)
+    for (let i = 0; i < tracks.length; i++) {
+        const t = tracks[i];
+        if (t.type !== 'light' && t.type !== 'scene_object') rows.push({ trackIdx: i });
+    }
+    // 2. Licht-Gruppen-Header + Licht-Tracks
+    const hasLights = tracks.some(t => t.type === 'light');
+    if (hasLights) rows.push({ header: 'light', label: 'Licht', collapsed: !!state.lightGroupCollapsed });
+    if (hasLights && !state.lightGroupCollapsed) {
+        for (let i = 0; i < tracks.length; i++) {
+            if (tracks[i].type === 'light') rows.push({ trackIdx: i, indent: true });
+        }
+    }
+    // 3. Szene-Gruppen-Header + Scene-Object-Tracks (Boden, 3D-Objekte)
+    const hasSceneObjects = tracks.some(t => t.type === 'scene_object');
+    if (hasSceneObjects) rows.push({ header: 'scene', label: 'Szene', collapsed: !!state.sceneGroupCollapsed });
+    if (hasSceneObjects && !state.sceneGroupCollapsed) {
+        for (let i = 0; i < tracks.length; i++) {
+            if (tracks[i].type === 'scene_object') rows.push({ trackIdx: i, indent: true });
+        }
+    }
+    return rows;
+}
+
+// Konvertiert Maus-Y in eine Row (oder null wenn außerhalb)
+function _rowAtY(my) {
+    const idx = Math.floor((my - RULER_HEIGHT) / TRACK_HEIGHT);
+    const rows = _getDisplayRows();
+    return (idx >= 0 && idx < rows.length) ? rows[idx] : null;
+}
+
+// Findet die Row-Y-Position für einen gegebenen track-Index (im project.tracks)
+function _rowYForTrackIdx(trackIdx) {
+    const rows = _getDisplayRows();
+    for (let i = 0; i < rows.length; i++) {
+        if (rows[i].trackIdx === trackIdx) return RULER_HEIGHT + i * TRACK_HEIGHT;
+    }
+    return -1;
+}
+
 async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame, submenuId = 'track-ctx-add-submenu') {
     const sub = document.getElementById(submenuId);
     if (!sub) return;
@@ -175,6 +221,16 @@ async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame, subme
             input.click();
         });
         sub.appendChild(item);
+    } else if (track.type === 'scene_object') {
+        sub.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'ctx-item';
+        item.innerHTML = `<i class="fas fa-cube" style="width:16px;color:#7c5cbf;"></i> 3D-Datei wählen...`;
+        item.addEventListener('click', () => {
+            closeCtx();
+            fn.addSceneObjectClip?.(trackIdx, placeFrame);
+        });
+        sub.appendChild(item);
     } else if (track.type === 'camera') {
         sub.innerHTML = '';
         const item = document.createElement('div');
@@ -189,7 +245,7 @@ async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame, subme
         sub.innerHTML = '';
         const item = document.createElement('div');
         item.className = 'ctx-item';
-        item.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht`;
+        item.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Lichteigenschaft`;
         item.addEventListener('click', () => {
             closeCtx();
             fn.addLightKeyframe(trackIdx, placeFrame);
@@ -224,12 +280,16 @@ export function setupTimeline() {
         });
     }
 
-    // --- Clip hit-testing ---
+    // --- Clip hit-testing (rows-based, wegen Gruppen-Header) ---
     function hitTestClip(mx, my) {
         const pps = state.timelineZoom;
-        for (let ti = 0; ti < state.project.tracks.length; ti++) {
+        const rows = _getDisplayRows();
+        for (let ri = 0; ri < rows.length; ri++) {
+            const row = rows[ri];
+            if (row.header) continue;
+            const ti = row.trackIdx;
             const track = state.project.tracks[ti];
-            const y = RULER_HEIGHT + ti * TRACK_HEIGHT;
+            const y = RULER_HEIGHT + ri * TRACK_HEIGHT;
             for (let ci = 0; ci < track.clips.length; ci++) {
                 const clip = track.clips[ci];
                 const cx = HEADER_WIDTH + (clip.startFrame / state.project.fps) * pps - state.timelineScrollX;
@@ -322,10 +382,15 @@ export function setupTimeline() {
                     dragStartX = mx;
                     setPlayheadFromMouse(mx);
                 } else {
-                    // Klick in Spur-Bereich → nur Spur auswählen, Playhead bleibt stehen
-                    const ti = Math.floor((my - RULER_HEIGHT) / TRACK_HEIGHT);
-                    if (ti >= 0 && ti < state.project.tracks.length) {
-                        state.selectedTrackIdx = ti;
+                    // Klick in Spur-Bereich — row-basiert (Gruppen-Header togglet Einklappen)
+                    const row = _rowAtY(my);
+                    if (row?.header) {
+                        if (row.header === 'light') state.lightGroupCollapsed = !state.lightGroupCollapsed;
+                        else state.sceneGroupCollapsed = !state.sceneGroupCollapsed;
+                        updateTrackHeaders();
+                        renderTimeline();
+                    } else if (row && row.trackIdx !== undefined) {
+                        state.selectedTrackIdx = row.trackIdx;
                         state.selectedClipIdx = -1;
                         fn.updateProperties();
                         renderTimeline();
@@ -452,9 +517,10 @@ export function setupTimeline() {
         const my = e.clientY - rect.top;
         const hit = hitTestClip(_ctxMouseX, my);
 
-        // Determine which track the mouse is on
-        const trackIdx = Math.floor((my - RULER_HEIGHT) / TRACK_HEIGHT);
-        const track = state.project.tracks[trackIdx];
+        // Determine which track the mouse is on (row-basiert)
+        const ctxRow = _rowAtY(my);
+        const trackIdx = ctxRow?.trackIdx ?? -1;
+        const track = trackIdx >= 0 ? state.project.tracks[trackIdx] : null;
 
         if (hit) {
             state.selectedTrackIdx = hit.trackIdx;
@@ -652,10 +718,32 @@ export function renderTimeline() {
         tlCtx.stroke();
     }
 
-    // Tracks + Clips
-    for (let ti = 0; ti < state.project.tracks.length; ti++) {
+    // Tracks + Clips (nach Display-Rows, damit Licht-Gruppen-Header richtig rendert)
+    const rows = _getDisplayRows();
+    for (let ri = 0; ri < rows.length; ri++) {
+        const row = rows[ri];
+        const y = RULER_HEIGHT + ri * TRACK_HEIGHT;
+        if (row.header) {
+            const isLight = row.header === 'light';
+            tlCtx.fillStyle = isLight ? 'rgba(255,193,7,0.12)' : 'rgba(124,92,191,0.12)';
+            tlCtx.fillRect(0, y, w, TRACK_HEIGHT);
+            tlCtx.strokeStyle = isLight ? 'rgba(255,193,7,0.4)' : 'rgba(124,92,191,0.4)';
+            tlCtx.beginPath();
+            tlCtx.moveTo(0, y);
+            tlCtx.lineTo(w, y);
+            tlCtx.moveTo(0, y + TRACK_HEIGHT);
+            tlCtx.lineTo(w, y + TRACK_HEIGHT);
+            tlCtx.stroke();
+            tlCtx.fillStyle = isLight ? '#ffc107' : '#b388ff';
+            tlCtx.font = 'bold 11px sans-serif';
+            tlCtx.textBaseline = 'middle';
+            const caret = row.collapsed ? '▶' : '▼';
+            tlCtx.fillText(`${caret} ${row.label}`, 8, y + TRACK_HEIGHT / 2 + 1);
+            tlCtx.textBaseline = 'alphabetic';
+            continue;
+        }
+        const ti = row.trackIdx;
         const track = state.project.tracks[ti];
-        const y = RULER_HEIGHT + ti * TRACK_HEIGHT;
 
         // Track background
         tlCtx.fillStyle = ti === state.selectedTrackIdx ? 'rgba(124,92,191,0.1)' : 'rgba(0,0,0,0.2)';
@@ -688,29 +776,39 @@ export function renderTimeline() {
             const isSelected = (ti === state.selectedTrackIdx && ci === state.selectedClipIdx);
 
             if (clip.type === 'camera_kf' || clip.type === 'light_kf') {
-                // Keyframe marker: diamond (camera) or circle (light)
+                // Keyframe marker: Diamant (einheitlich für Kamera + Licht)
                 const my = y + TRACK_HEIGHT / 2;
                 const sz = isSelected ? 8 : 6;
                 tlCtx.fillStyle = track.color;
                 tlCtx.globalAlpha = isSelected ? 1.0 : 0.8;
-                if (clip.type === 'camera_kf') {
-                    // Diamond
+                // Diamant
+                tlCtx.beginPath();
+                tlCtx.moveTo(cx, my - sz);
+                tlCtx.lineTo(cx + sz, my);
+                tlCtx.lineTo(cx, my + sz);
+                tlCtx.lineTo(cx - sz, my);
+                tlCtx.closePath();
+                tlCtx.fill();
+                // Wenn Fade aus → hollow (nur Umriss, weiß) für "Sprung"-Anzeige
+                if (clip.data?.fade === false) {
+                    tlCtx.fillStyle = '#1a1a2e';
+                    tlCtx.beginPath();
+                    tlCtx.moveTo(cx, my - sz + 2);
+                    tlCtx.lineTo(cx + sz - 2, my);
+                    tlCtx.lineTo(cx, my + sz - 2);
+                    tlCtx.lineTo(cx - sz + 2, my);
+                    tlCtx.closePath();
+                    tlCtx.fill();
+                }
+                if (isSelected) {
+                    tlCtx.strokeStyle = '#fff';
+                    tlCtx.lineWidth = 2;
                     tlCtx.beginPath();
                     tlCtx.moveTo(cx, my - sz);
                     tlCtx.lineTo(cx + sz, my);
                     tlCtx.lineTo(cx, my + sz);
                     tlCtx.lineTo(cx - sz, my);
                     tlCtx.closePath();
-                    tlCtx.fill();
-                } else {
-                    // Circle
-                    tlCtx.beginPath();
-                    tlCtx.arc(cx, my, sz, 0, Math.PI * 2);
-                    tlCtx.fill();
-                }
-                if (isSelected) {
-                    tlCtx.strokeStyle = '#fff';
-                    tlCtx.lineWidth = 2;
                     tlCtx.stroke();
                 }
                 tlCtx.globalAlpha = 1.0;
@@ -847,15 +945,38 @@ export function updateTrackHeaders() {
     const container = document.getElementById('track-headers');
     if (!container) return;
     container.innerHTML = '';
-    // Ruler space
     const ruler = document.createElement('div');
     ruler.style.cssText = `height:${RULER_HEIGHT}px;border-bottom:1px solid var(--border);`;
     container.appendChild(ruler);
 
-    for (let i = 0; i < state.project.tracks.length; i++) {
+    const rows = _getDisplayRows();
+    for (const row of rows) {
+        if (row.header) {
+            const isLight = row.header === 'light';
+            const bgColor = isLight ? 'rgba(255,193,7,0.12)' : 'rgba(124,92,191,0.12)';
+            const borderColor = isLight ? 'rgba(255,193,7,0.4)' : 'rgba(124,92,191,0.4)';
+            const textColor = isLight ? '#ffc107' : '#b388ff';
+            const icon = isLight ? 'fa-lightbulb' : 'fa-cube';
+            const headerEl = document.createElement('div');
+            headerEl.className = 'track-group-header';
+            headerEl.style.cssText = `height:${TRACK_HEIGHT}px;padding:0 12px;background:${bgColor};border-top:1px solid ${borderColor};border-bottom:1px solid ${borderColor};color:${textColor};font-weight:bold;font-size:0.78rem;display:flex;align-items:center;box-sizing:border-box;cursor:pointer;user-select:none;`;
+            const caretClass = row.collapsed ? 'fa-caret-right' : 'fa-caret-down';
+            headerEl.innerHTML = `<i class="fas ${caretClass}" style="margin-right:6px;width:10px;"></i><i class="fas ${icon}" style="margin-right:6px;"></i>${row.label}`;
+            headerEl.title = 'Klick zum Ein-/Ausklappen';
+            headerEl.addEventListener('click', () => {
+                if (isLight) state.lightGroupCollapsed = !state.lightGroupCollapsed;
+                else state.sceneGroupCollapsed = !state.sceneGroupCollapsed;
+                updateTrackHeaders();
+                renderTimeline();
+            });
+            container.appendChild(headerEl);
+            continue;
+        }
+        const i = row.trackIdx;
         const track = state.project.tracks[i];
         const el = document.createElement('div');
         el.className = 'track-header' + (i === state.selectedTrackIdx ? ' selected' : '');
+        if (row.indent) el.style.paddingLeft = '20px';
         const icon = TRACK_ICONS[track.type] || 'fa-running';
         el.innerHTML = `<i class="fas ${icon}" style="color:${track.color};margin-right:6px;font-size:0.75rem;width:14px;text-align:center;"></i>${track.name}`;
         el.addEventListener('click', () => fn.selectTrack(i));

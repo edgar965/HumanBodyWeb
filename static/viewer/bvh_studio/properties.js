@@ -22,9 +22,17 @@ export function updateProperties() {
     const icon = TRACK_ICONS[track.type] || 'fa-running';
     html += `<div class="prop-group">
         <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:6px;"><i class="fas ${icon}"></i> ${track.name}</h3>
-        <div class="prop-row"><label>Name:</label><input type="text" value="${track.name}" id="prop-track-name"></div>
-        <div class="prop-row"><label>Muted:</label><input type="checkbox" ${track.muted?'checked':''} id="prop-track-mute"></div>
-    </div>`;
+        <div class="prop-row"><label>Name:</label><input type="text" value="${track.name}" id="prop-track-name"></div>`;
+    if (track.type === 'light' || track.type === 'scene_object') {
+        // Toggle-Button für Licht + Scene-Object: An/Aus statt Muted
+        const on = !track.muted;
+        const toggleId = track.type === 'light' ? 'prop-light-toggle' : 'prop-obj-toggle';
+        html += `<div class="prop-row"><label>Sichtbar:</label>
+            <button id="${toggleId}" style="padding:5px 16px;background:${on?'#4caf50':'#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:60px;">${on?'An':'Aus'}</button>
+        </div></div>`;
+    } else {
+        html += `<div class="prop-row"><label>Muted:</label><input type="checkbox" ${track.muted?'checked':''} id="prop-track-mute"></div></div>`;
+    }
 
     // --- Type-specific track props ---
     if (track.type === 'bvh') {
@@ -93,6 +101,45 @@ export function updateProperties() {
                 <button id="prop-audio-load" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-folder-open"></i> Audio laden</button>
             </div>
         </div>`;
+    } else if (track.type === 'scene_object') {
+        const m = track.mesh;
+        const pos = m?.position || { x: 0, y: 0, z: 0 };
+        const rot = m?.rotation || { x: 0, y: 0, z: 0 };
+        const scl = m?.scale || { x: 1, y: 1, z: 1 };
+        if (track.subtype === 'floor') {
+            const gridOn = state.gridVisible !== false;
+            html += `<div class="prop-group">
+                <div class="prop-row"><label>Typ:</label><span style="font-size:0.8rem;color:var(--accent);">Boden (Szene)</span></div>
+                <div class="prop-row"><label>Farbe:</label><input type="color" value="${track.floorColor||'#3a3a4a'}" id="prop-floor-color"></div>
+                <div class="prop-row"><label>Textur:</label><select id="prop-floor-texture" style="flex:1;"><option value="">(Lade...)</option></select></div>
+                <div class="prop-row"><label>Rauheit:</label><input type="number" value="${(track.floorRoughness??0.9).toFixed(2)}" id="prop-floor-roughness" min="0" max="1" step="0.05"></div>
+                <div class="prop-row"><label>Metall:</label><input type="number" value="${(track.floorMetalness??0.05).toFixed(2)}" id="prop-floor-metalness" min="0" max="1" step="0.05"></div>
+                <div class="prop-row"><label>Größe:</label><input type="number" value="${(track.floorSize??6).toFixed(1)}" id="prop-floor-size" min="0.5" max="50" step="0.5"> m</div>
+                <div class="prop-row"><label>Raster:</label>
+                    <button id="prop-floor-grid" style="padding:5px 16px;background:${gridOn?'#4caf50':'#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:60px;">${gridOn?'An':'Aus'}</button>
+                </div>
+                <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Boden — wird automatisch angelegt, kann nicht gelöscht werden.</div>
+            </div>`;
+        } else {
+            html += `<div class="prop-group">
+                <div class="prop-row"><label>Typ:</label><span style="font-size:0.8rem;color:var(--accent);">3D-Objekt (${track.objectExt||'?'})</span></div>
+                <div class="prop-row"><label>Tönung:</label><input type="color" value="${track.objectTint||'#ffffff'}" id="prop-obj-tint"></div>
+                <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Position</h3>
+                <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${pos.x.toFixed(2)}" id="prop-obj-px"></div>
+                <div class="prop-row"><label>Y:</label><input type="number" step="0.1" value="${pos.y.toFixed(2)}" id="prop-obj-py"></div>
+                <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${pos.z.toFixed(2)}" id="prop-obj-pz"></div>
+                <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Rotation (Grad)</h3>
+                <div class="prop-row"><label>X:</label><input type="number" step="1" value="${(rot.x*180/Math.PI).toFixed(1)}" id="prop-obj-rx"></div>
+                <div class="prop-row"><label>Y:</label><input type="number" step="1" value="${(rot.y*180/Math.PI).toFixed(1)}" id="prop-obj-ry"></div>
+                <div class="prop-row"><label>Z:</label><input type="number" step="1" value="${(rot.z*180/Math.PI).toFixed(1)}" id="prop-obj-rz"></div>
+                <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Größe</h3>
+                <div class="prop-row"><label>Scale:</label><input type="number" step="0.05" min="0.01" max="100" value="${scl.x.toFixed(2)}" id="prop-obj-scale"></div>
+                <div class="prop-row"><label>Modus:</label>
+                    <select id="prop-obj-gizmo"><option value="translate" selected>Verschieben</option><option value="rotate">Rotieren</option><option value="scale">Skalieren</option></select>
+                </div>
+                <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Gizmo im 3D-Viewport nutzen oder Werte hier direkt editieren.</div>
+            </div>`;
+        }
     }
 
     // --- Clips/Keyframes list ---
@@ -119,8 +166,9 @@ export function updateProperties() {
                 <div class="prop-row"><label>Rot Y:</label><input type="number" value="${((d.rotation?.y||0)*180/Math.PI).toFixed(1)}" id="prop-kf-ry" step="1"> °</div>
                 <div class="prop-row"><label>Rot Z:</label><input type="number" value="${((d.rotation?.z||0)*180/Math.PI).toFixed(1)}" id="prop-kf-rz" step="1"> °</div>
                 <div class="prop-row"><label>FOV:</label><input type="number" value="${d.fov||50}" id="prop-kf-fov" min="10" max="120"></div>
+                <div class="prop-row"><label>Fade-Effekt:</label><input type="checkbox" ${d.fade !== false ? 'checked' : ''} id="prop-kf-fade"> <span style="font-size:0.72rem;color:var(--text-muted);margin-left:4px;">aus = Sprung</span></div>
                 <div class="prop-row"><label>Interp.:</label>
-                    <select id="prop-kf-interp">
+                    <select id="prop-kf-interp" ${d.fade === false ? 'disabled' : ''}>
                         <option value="linear" ${d.interpolation==='linear'?'selected':''}>Linear</option>
                         <option value="smooth" ${d.interpolation==='smooth'?'selected':''}>Smooth</option>
                         <option value="step" ${d.interpolation==='step'?'selected':''}>Step</option>
@@ -140,6 +188,13 @@ export function updateProperties() {
                 <div class="prop-row"><label>Pos Z:</label><input type="number" value="${d.position?.z?.toFixed(2)||0}" id="prop-lkf-pz" step="0.1"></div>
                 <div class="prop-row"><label>Farbe:</label><input type="color" value="${d.color||'#ffffff'}" id="prop-lkf-color"></div>
                 <div class="prop-row"><label>Intensität:</label><input type="number" value="${d.intensity||2}" id="prop-lkf-intensity" min="0" max="20" step="0.1"></div>
+                ${d.angle != null ? `<div class="prop-row"><label>Winkel:</label><input type="number" value="${(d.angle*180/Math.PI).toFixed(1)}" id="prop-lkf-angle" min="1" max="170" step="1"> °</div>` : ''}
+                ${d.penumbra != null ? `<div class="prop-row"><label>Penumbra:</label><input type="number" value="${d.penumbra.toFixed(2)}" id="prop-lkf-penumbra" min="0" max="1" step="0.05"></div>` : ''}
+                ${d.distance != null ? `<div class="prop-row"><label>Reichweite:</label><input type="number" value="${d.distance.toFixed(1)}" id="prop-lkf-distance" min="0" max="200" step="1"></div>` : ''}
+                <div class="prop-row"><label>Licht:</label>
+                    <button id="prop-lkf-visible" style="padding:4px 12px;background:${(d.visible !== false)?'#4caf50':'#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:50px;">${(d.visible !== false)?'An':'Aus'}</button>
+                </div>
+                <div class="prop-row"><label>Fade-Effekt:</label><input type="checkbox" ${d.fade !== false ? 'checked' : ''} id="prop-lkf-fade"> <span style="font-size:0.72rem;color:var(--text-muted);margin-left:4px;">aus = Sprung</span></div>
             </div>`;
         } else if (clip.type === 'audio') {
             const d = clip.data;
@@ -183,7 +238,24 @@ export function updateProperties() {
 
     // --- Wire up events ---
     document.getElementById('prop-track-name')?.addEventListener('change', (e) => { track.name = e.target.value; fn.updateTrackHeaders(); });
-    document.getElementById('prop-track-mute')?.addEventListener('change', (e) => { track.muted = e.target.checked; });
+    document.getElementById('prop-track-mute')?.addEventListener('change', (e) => {
+        track.muted = e.target.checked;
+    });
+    // Licht: Toggle-Button An/Aus
+    document.getElementById('prop-light-toggle')?.addEventListener('click', () => {
+        track.muted = !track.muted;
+        if (track.light) {
+            track.light.visible = !track.muted;
+            if (track.lightHelper) track.lightHelper.visible = !track.muted && track.lightVisible;
+        }
+        fn.updateProperties();  // Re-render damit Button-Text/Farbe sich updated
+    });
+    // Scene-Object: Toggle-Button An/Aus (Sichtbarkeit des Mesh)
+    document.getElementById('prop-obj-toggle')?.addEventListener('click', () => {
+        track.muted = !track.muted;
+        if (track.mesh) track.mesh.visible = !track.muted;
+        fn.updateProperties();
+    });
     document.getElementById('prop-pos-x')?.addEventListener('change', (e) => { track.position[0] = parseFloat(e.target.value)||0; track.group.position.x = track.position[0]; });
     document.getElementById('prop-pos-z')?.addEventListener('change', (e) => { track.position[2] = parseFloat(e.target.value)||0; track.group.position.z = track.position[2]; });
 
@@ -250,6 +322,74 @@ export function updateProperties() {
     });
     document.getElementById('prop-light-add-kf')?.addEventListener('click', () => fn.addLightKeyframe(state.selectedTrackIdx));
 
+    // Scene-Object: Boden
+    if (track.type === 'scene_object' && track.subtype === 'floor') {
+        document.getElementById('prop-floor-color')?.addEventListener('input', (e) => {
+            track.floorColor = e.target.value;
+            fn.updateFloorMaterial?.(track);
+        });
+        document.getElementById('prop-floor-roughness')?.addEventListener('change', (e) => {
+            track.floorRoughness = parseFloat(e.target.value)||0.9;
+            fn.updateFloorMaterial?.(track);
+        });
+        document.getElementById('prop-floor-metalness')?.addEventListener('change', (e) => {
+            track.floorMetalness = parseFloat(e.target.value)||0.05;
+            fn.updateFloorMaterial?.(track);
+        });
+        document.getElementById('prop-floor-size')?.addEventListener('change', (e) => {
+            fn.setFloorSize?.(track, parseFloat(e.target.value)||6);
+        });
+        document.getElementById('prop-floor-grid')?.addEventListener('click', () => {
+            state.gridVisible = state.gridVisible === false ? true : false;
+            // Grid-Helper in der Szene ein-/ausblenden
+            state.scene?.traverse(o => { if (o.isGridHelper) o.visible = state.gridVisible; });
+            fn.updateProperties();
+        });
+        // Texturen-Dropdown asynchron befüllen
+        const texSel = document.getElementById('prop-floor-texture');
+        if (texSel && fn.getFloorTextures) {
+            fn.getFloorTextures().then(textures => {
+                texSel.innerHTML = '';
+                for (const t of textures) {
+                    const opt = document.createElement('option');
+                    opt.value = t.url || '';
+                    opt.textContent = t.label;
+                    if ((track.floorTexture || 'none') === t.name) opt.selected = true;
+                    texSel.appendChild(opt);
+                }
+                texSel.addEventListener('change', (e) => {
+                    fn.applyFloorTexture?.(track, e.target.value);
+                });
+            });
+        }
+    }
+    // Scene-Object: Custom 3D
+    if (track.type === 'scene_object' && track.subtype === 'custom' && track.mesh) {
+        const applyUpdate = () => { /* mesh is directly mutated */ };
+        document.getElementById('prop-obj-tint')?.addEventListener('input', (e) => {
+            fn.setObjectTint?.(track, e.target.value);
+        });
+        ['px','py','pz'].forEach((id, i) => {
+            const axis = ['x','y','z'][i];
+            document.getElementById(`prop-obj-${id}`)?.addEventListener('change', (e) => {
+                track.mesh.position[axis] = parseFloat(e.target.value)||0;
+            });
+        });
+        ['rx','ry','rz'].forEach((id, i) => {
+            const axis = ['x','y','z'][i];
+            document.getElementById(`prop-obj-${id}`)?.addEventListener('change', (e) => {
+                track.mesh.rotation[axis] = (parseFloat(e.target.value)||0) * Math.PI / 180;
+            });
+        });
+        document.getElementById('prop-obj-scale')?.addEventListener('change', (e) => {
+            const s = Math.max(0.01, parseFloat(e.target.value)||1);
+            track.mesh.scale.setScalar(s);
+        });
+        document.getElementById('prop-obj-gizmo')?.addEventListener('change', (e) => {
+            fn.setTransformMode?.(e.target.value);
+        });
+    }
+
     // Audio track
     document.getElementById('prop-audio-load')?.addEventListener('click', () => fn.loadAudioFile(state.selectedTrackIdx));
 
@@ -271,6 +411,10 @@ export function updateProperties() {
         });
         document.getElementById('prop-kf-fov')?.addEventListener('change', (e) => { clip.data.fov = parseFloat(e.target.value)||50; });
         document.getElementById('prop-kf-interp')?.addEventListener('change', (e) => { clip.data.interpolation = e.target.value; });
+        document.getElementById('prop-kf-fade')?.addEventListener('change', (e) => {
+            clip.data.fade = e.target.checked;
+            updateProperties();  // Interp-Select aktivieren/deaktivieren
+        });
         document.getElementById('prop-kf-set-view')?.addEventListener('click', () => {
             clip.data.position = { x: state.camera.position.x, y: state.camera.position.y, z: state.camera.position.z };
             clip.data.rotation = { x: state.camera.rotation.x, y: state.camera.rotation.y, z: state.camera.rotation.z };
@@ -288,6 +432,15 @@ export function updateProperties() {
         });
         document.getElementById('prop-lkf-color')?.addEventListener('input', (e) => { clip.data.color = e.target.value; });
         document.getElementById('prop-lkf-intensity')?.addEventListener('change', (e) => { clip.data.intensity = parseFloat(e.target.value)||2; });
+        document.getElementById('prop-lkf-angle')?.addEventListener('change', (e) => { clip.data.angle = (parseFloat(e.target.value)||30)*Math.PI/180; });
+        document.getElementById('prop-lkf-penumbra')?.addEventListener('change', (e) => { clip.data.penumbra = Math.max(0,Math.min(1,parseFloat(e.target.value)||0)); });
+        document.getElementById('prop-lkf-distance')?.addEventListener('change', (e) => { clip.data.distance = parseFloat(e.target.value)||50; });
+        document.getElementById('prop-lkf-fade')?.addEventListener('change', (e) => { clip.data.fade = e.target.checked; });
+        document.getElementById('prop-lkf-visible')?.addEventListener('click', () => {
+            clip.data.visible = !(clip.data.visible !== false);  // toggle; undefined → true
+            updateProperties();
+            fn.renderTimeline?.();
+        });
     }
 
     // Audio clip editors

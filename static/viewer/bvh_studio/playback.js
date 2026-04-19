@@ -178,8 +178,43 @@ function _schedulePreloads(t) {
     }
 }
 
+// Bestimmt den Licht-An/Aus-State am aktuellen Playhead für einen Track.
+// Priorität:
+//  1. Wenn track.muted=true → immer aus (User-Override via Aus-Button)
+//  2. Letzter Keyframe vor/an Playhead mit .data.visible != null → dessen Wert
+//  3. Default: an (!track.muted)
+function _lightVisibleAtPlayhead(track) {
+    if (track.muted) return false;
+    const pf = state.playheadFrame;
+    const kfs = track.clips.filter(c => c.type === 'light_kf');
+    // Ohne Keyframes: Licht aus (Design-Entscheidung — Keyframes sind Pflicht)
+    if (kfs.length === 0) return false;
+    // Letzter Keyframe vor/am Playhead mit definiertem visible-Feld
+    let lastVisible = true;
+    for (const c of kfs) {
+        if (c.startFrame <= pf && c.data?.visible != null) {
+            lastVisible = c.data.visible;
+        }
+    }
+    return lastVisible;
+}
+
+// Synchronisiert visible state für alle Lichter — wird JEDEN Frame vom
+// Render-Loop aufgerufen, damit An/Aus auch ohne Play sofort wirkt.
+// Respektiert track.muted UND per-keyframe .data.visible.
+export function syncLightVisibility() {
+    for (const track of state.project.tracks) {
+        if (track.type !== 'light' || !track.light) continue;
+        const visible = _lightVisibleAtPlayhead(track);
+        track.light.visible = visible;
+        if (track.lightHelper) track.lightHelper.visible = visible && track.lightVisible;
+    }
+}
+
 export function applyPlayhead() {
     const t = state.playheadFrame / state.project.fps;
+
+    syncLightVisibility();
 
     _schedulePreloads(t);
 
@@ -202,7 +237,26 @@ export function applyPlayhead() {
         else if (track.type === 'camera') applyCameraTrack(track, t);
         else if (track.type === 'light') applyLightTrack(track, t);
         else if (track.type === 'audio') applyAudioTrack(track, t);
+        else if (track.type === 'scene_object') applySceneObjectTrack(track, t);
     }
+}
+
+function applySceneObjectTrack(track, t) {
+    if (!track.mesh) return;
+    // Boden ist immer sichtbar (außer muted) — kein Clip-Timing
+    if (track.subtype === 'floor') {
+        track.mesh.visible = !track.muted;
+        return;
+    }
+    // Custom 3D-Objekte: visible nur wenn ein Clip am Playhead aktiv ist
+    let found = false;
+    for (const clip of track.clips) {
+        if (clip.type !== 'object_clip') continue;
+        const cs = clip.startFrame / state.project.fps;
+        const ce = cs + clip.duration;
+        if (t >= cs && t < ce) { found = true; break; }
+    }
+    track.mesh.visible = found && !track.muted;
 }
 
 function applyBvhTrack(track, t) {
@@ -285,8 +339,10 @@ function applyCameraTrack(track, t) {
     if (!prev) prev = next;
     if (!next) next = prev;
 
-    if (prev === next) {
-        // Exactly on or beyond last keyframe
+    // Fade-Effekt aus = Sprung bei diesem KF (keine Interpolation vom prev zu diesem)
+    const noFade = prev.data.fade === false;
+    if (prev === next || noFade) {
+        // Exakt auf prev (kein Interpolieren)
         state.camera.position.set(prev.data.position.x, prev.data.position.y, prev.data.position.z);
         state.camera.rotation.set(prev.data.rotation.x, prev.data.rotation.y, prev.data.rotation.z);
         state.camera.fov = prev.data.fov;
@@ -322,7 +378,9 @@ function applyLightTrack(track, t) {
     if (!next) next = prev;
 
     const lerp = (a, b, al) => a + (b - a) * al;
-    if (prev === next) {
+    // Fade-Effekt aus = Sprung (kein Interpolieren vom prev zu diesem KF)
+    const noFade = prev.data.fade === false;
+    if (prev === next || noFade) {
         const d = prev.data;
         track.light.position.set(d.position.x, d.position.y, d.position.z);
         if (d.target && track.light.target) track.light.target.position.set(d.target.x, d.target.y, d.target.z);

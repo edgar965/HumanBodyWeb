@@ -98,8 +98,82 @@ export function detectLightType(light) {
     return 'spot';
 }
 
+// Legt Standard-Keyframes an Frame 0 UND am Ende der Timeline an, die die
+// aktuellen Licht-Properties einfrieren. Ohne Keyframe ist das Licht aus —
+// die Start+End-Paare halten das Licht per Default im gewünschten Zustand.
+export function addStandardLightKeyframes(track) {
+    _addStandardKeyframe(track);
+}
+function _addStandardKeyframe(track) {
+    if (!track.light) return;
+    const light = track.light;
+    const tgt = light.target?.position || { x: 0, y: 0, z: 0 };
+    const fps = state.project.fps;
+    // Ende der Timeline: project.duration * fps, Fallback 10s wenn leer
+    const endFrame = Math.max(Math.round((state.project.duration || 10) * fps), 10);
+
+    const makeKF = (name, startFrame) => {
+        const kf = new Clip(null, name, 0, fps);
+        kf.type = 'light_kf';
+        kf.startFrame = startFrame;
+        kf.data = {
+            position: { x: light.position.x, y: light.position.y, z: light.position.z },
+            target:   { x: tgt.x, y: tgt.y, z: tgt.z },
+            color: '#' + light.color.getHexString(),
+            intensity: light.intensity,
+            angle: light.angle ?? null,
+            penumbra: light.penumbra ?? null,
+            distance: light.distance ?? null,
+            fade: true,
+            visible: !track.muted,
+        };
+        return kf;
+    };
+    track.clips.push(makeKF('Standard Start', 0));
+    if (endFrame > 0) track.clips.push(makeKF('Standard Ende', endFrame));
+}
+
+// Wendet eine Szenen-Licht-Override-Map auf existierende _sceneLight-Tracks an
+// (inkl. Clips). Nutzbar direkt nach createSceneLightTracks() oder bei mid-session
+// Project-Load wo die Tracks bereits existieren.
+export function applySceneLightOverrides(overrides) {
+    if (!overrides) return;
+    for (const track of state.project.tracks) {
+        if (!track._sceneLight || !track.light) continue;
+        const o = overrides[track.name];
+        if (!o) continue;
+        const light = track.light;
+        if (o.color) light.color.set(o.color);
+        if (o.intensity != null) light.intensity = o.intensity;
+        if (o.position) light.position.set(o.position.x, o.position.y, o.position.z);
+        if (o.target && light.target) {
+            light.target.position.set(o.target.x, o.target.y, o.target.z);
+            light.target.updateMatrixWorld();
+        }
+        if (o.angle != null && 'angle' in light) light.angle = o.angle;
+        if (o.penumbra != null && 'penumbra' in light) light.penumbra = o.penumbra;
+        if (o.distance != null && 'distance' in light) light.distance = o.distance;
+        track.lightVisible = o.visible ?? true;
+        track.muted = o.muted ?? false;
+        light.visible = !track.muted;
+        if (track.lightHelper) {
+            track.lightHelper.visible = track.lightVisible && !track.muted;
+            track.lightHelper.update?.();
+        }
+        // Clips ersetzen (Keyframes aus Save)
+        track.clips = (o.clips || []).map(cd => {
+            const kf = new Clip(null, cd.name || 'Licht', 0, state.project.fps);
+            kf.type = 'light_kf';
+            kf.startFrame = cd.startFrame || 0;
+            kf.data = cd.data || {};
+            return kf;
+        }).sort((a, b) => a.startFrame - b.startFrame);
+    }
+}
+
 // Erzeugt Light-Tracks für die von createSceneSetup() angelegten Szenen-Lichter.
-// Wird einmal nach init() aufgerufen, vor restoreProjectData().
+// Wird NACH restoreProjectData() aufgerufen; wendet dann etwaige gestashte
+// Szenen-Licht-Overrides aus dem Save an.
 export function createSceneLightTracks() {
     const sceneLights = [
         { name: 'Key Light',  light: state.sceneKeyLight },
@@ -109,7 +183,6 @@ export function createSceneLightTracks() {
     ];
     for (const { name, light } of sceneLights) {
         if (!light) continue;
-        // DirectionalLight braucht sein target im Scene-Graph
         if (light.isDirectionalLight && light.target && !light.target.parent) {
             state.scene.add(light.target);
         }
@@ -119,14 +192,18 @@ export function createSceneLightTracks() {
         track.light = light;
         track.lightType = detectLightType(light);
         track.lightVisible = true;
-        track._sceneLight = true;  // markiert als Szenen-Licht (Licht wird NICHT beim removeTrack disposed)
+        track._sceneLight = true;
         track.lightHelper = createLightHelper(light);
         if (track.lightHelper) {
             track.lightHelper.visible = track.lightVisible;
             state.scene.add(track.lightHelper);
         }
         state.project.addTrack(track);
+        // Standard-Keyframe an Frame 0 als Baseline für jedes Szenen-Licht
+        _addStandardKeyframe(track);
     }
+    // Pending overrides aus aktuellem Save anwenden (falls vorhanden; ersetzt den Standard-KF)
+    applySceneLightOverrides(state.project._pendingSceneOverrides?.sceneLights);
     fn.updateTrackHeaders?.();
     fn.renderTimeline?.();
 }
@@ -151,10 +228,17 @@ export function addSpecialTrack(type, name) {
         track.lightHelper = createLightHelper(track.light);
         if (track.lightHelper) state.scene.add(track.lightHelper);
         track.lightVisible = true;
+        // Standard Start + Ende Keyframes (ohne diese ist das Licht aus)
+        _addStandardKeyframe(track);
     } else if (type === 'audio') {
         track.audioCtx = state.project._audioCtx || (state.project._audioCtx = new (window.AudioContext || window.webkitAudioContext)());
         track.gainNode = track.audioCtx.createGain();
         track.gainNode.connect(track.audioCtx.destination);
+    } else if (type === 'scene_object') {
+        track.subtype = 'custom';
+        track.color = '#7c5cbf';
+        track.mesh = null;  // Leerer Track — Mesh wird via Context-Menu "Hinzufügen" geladen
+        track.objectTint = '#ffffff';
     }
 
     state.project.addTrack(track);
@@ -177,6 +261,7 @@ export function addCameraKeyframe(trackIdx, frame) {
         rotation: { x: state.camera.rotation.x, y: state.camera.rotation.y, z: state.camera.rotation.z },
         fov: state.camera.fov,
         interpolation: 'smooth',  // 'linear' | 'smooth' | 'step'
+        fade: true,  // Fade-Effekt: true = interpolieren zum nächsten KF, false = Sprung
     };
     track.clips.push(kf);
     track.clips.sort((a, b) => a.startFrame - b.startFrame);
@@ -204,6 +289,8 @@ export function addLightKeyframe(trackIdx, frame) {
         angle: track.light.angle ?? (Math.PI / 6),
         penumbra: track.light.penumbra ?? 0.3,
         distance: track.light.distance ?? 50,
+        fade: true,  // Fade-Effekt: true = interpolieren zum nächsten KF, false = Sprung
+        visible: !track.muted,  // Licht An/Aus-State an diesem Keyframe
     };
     track.clips.push(kf);
     track.clips.sort((a, b) => a.startFrame - b.startFrame);
@@ -303,9 +390,9 @@ export function removeTrack(idx) {
     track.group = null;
 
     // Cleanup special tracks
-    if (track._sceneLight) {
-        // Szenen-Lichter dürfen nicht gelöscht werden — sie sind Teil der Szene.
-        console.warn(`[BVH Studio] Szenen-Licht "${track.name}" kann nicht gelöscht werden.`);
+    if (track._sceneLight || track._sceneItem) {
+        // Szenen-Elemente (Lichter, Boden) dürfen nicht gelöscht werden.
+        console.warn(`[BVH Studio] Szenen-Element "${track.name}" kann nicht gelöscht werden.`);
         return;
     }
     if (track.light) {
@@ -322,6 +409,18 @@ export function removeTrack(idx) {
     }
     if (track.type === 'audio') fn.stopAudioTrack(track);
 
+    // Scene-Objects (custom 3D): Mesh aus Szene entfernen + disposen
+    if (track.type === 'scene_object' && track.mesh) {
+        state.scene.remove(track.mesh);
+        track.mesh.traverse?.(obj => {
+            if (obj.geometry) obj.geometry.dispose?.();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose?.());
+                else obj.material.dispose?.();
+            }
+        });
+    }
+
     state.project.removeTrackAt(idx);  // handles _linkedAnimIdx fixup
     if (state.selectedTrackIdx >= state.project.tracks.length) state.selectedTrackIdx = state.project.tracks.length - 1;
     state.selectedClipIdx = -1;
@@ -333,6 +432,13 @@ export function removeTrack(idx) {
 export function selectTrack(idx) {
     state.selectedTrackIdx = idx;
     state.selectedClipIdx = -1;
+    const t = state.project.tracks[idx];
+    // TransformControls an Custom-3D-Objekt anhängen, sonst detachen
+    if (t?.type === 'scene_object' && t.subtype === 'custom' && t.mesh) {
+        fn.attachTransformControls?.(t);
+    } else {
+        fn.detachTransformControls?.();
+    }
     fn.updateTrackHeaders();
     fn.updateProperties();
 }
