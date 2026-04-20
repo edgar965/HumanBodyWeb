@@ -12,6 +12,7 @@ export function saveSessionState() {
     try {
         if (!fn.gatherSceneState) return;
         const sceneData = fn.gatherSceneState();
+        sceneData._defaultPresetSnapshot = state.defaultPresetName;
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(sceneData));
     } catch (e) {
         console.warn('Failed to save session state:', e);
@@ -27,6 +28,11 @@ export async function restoreSessionState() {
     try {
         const data = JSON.parse(raw);
         sessionStorage.removeItem(SESSION_KEY);
+
+        if (data._defaultPresetSnapshot && data._defaultPresetSnapshot !== state.defaultPresetName) {
+            console.log('[Scene] Default model changed from', data._defaultPresetSnapshot, 'to', state.defaultPresetName, '— discarding session.');
+            return false;
+        }
 
         // Restore characters
         if (data.characters && data.characters.length > 0) {

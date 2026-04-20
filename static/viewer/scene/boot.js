@@ -212,7 +212,8 @@ export async function init() {
             try { await fn.applyPoseFromServer(poseId); } catch(e) { console.warn('[Pose] Default pose failed:', e); }
         }
         // Auto-load MH default garments AFTER animation has started (delay 3s)
-        if (window._mhDefaults?.length > 0 && state.characters.size > 0 && !sessionStorage.getItem(SESSION_KEY)) {
+        const hasOwnMH = Array.from(state.characters.values()).some(c => Object.keys(c.mhProxies || {}).length > 0);
+        if (window._mhDefaults?.length > 0 && state.characters.size > 0 && !sessionStorage.getItem(SESSION_KEY) && !hasOwnMH) {
             setTimeout(async () => {
                 for (const garmentId of window._mhDefaults) {
                     try {

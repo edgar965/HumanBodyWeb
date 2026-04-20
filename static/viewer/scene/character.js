@@ -35,6 +35,8 @@ export class CharacterInstance {
         this.isSkinned = false;
         this.rigifySkeleton = null;
         this.generatedConfig = presetData.type === 'generated_model' ? presetData : null;
+        this.mhProxies = {};
+        this._pendingMHProxies = Array.isArray(presetData.mh_proxy) ? presetData.mh_proxy : [];
     }
 
     async load() {
@@ -106,8 +108,19 @@ export class CharacterInstance {
         await this._loadCloth();
         await this._loadHair();
         await this._loadGarments();
+        await this._loadMHProxies();
 
         return this;
+    }
+
+    async _loadMHProxies() {
+        const list = this._pendingMHProxies || [];
+        this._pendingMHProxies = [];
+        for (const entry of list) {
+            if (!entry || !entry.id) continue;
+            try { await fn._fitMHProxyOnInst(this, entry.id, entry); }
+            catch (e) { console.warn('MH proxy load failed:', entry.id, e); }
+        }
     }
 
     async reloadBody() {
@@ -481,12 +494,14 @@ export class CharacterInstance {
         return {
             id: this.id,
             presetName: this.presetName,
+            presetKey: this.presetKey || null,
             bodyType: this.bodyType,
             morphs: this.morphs,
             meta: this.meta,
             cloth: this.cloth,
             hair_style: this.hairStyle,
             garments,
+            mh_proxy: Object.values(this.mhProxies || {}),
             rigParams: this._rigParams || null,
             transform: {
                 position: this.group.position.toArray(),
@@ -513,11 +528,15 @@ export class CharacterInstance {
                 cloth: data.cloth || [],
                 hair_style: data.hair_style || null,
                 garments: data.garments || [],
+                mh_proxy: data.mh_proxy || [],
             };
         }
 
         const inst = new CharacterInstance(data.id, presetPayload);
-        if (data.presetKey) inst.presetKey = data.presetKey;
+        if (data.presetKey) {
+            inst.presetKey = data.presetKey;
+            inst.presetName = data.presetKey;
+        }
         await inst.load();
         if (data.transform) {
             if (data.transform.position) inst.group.position.fromArray(data.transform.position);
@@ -546,6 +565,7 @@ export async function addCharacterFromPreset(presetName) {
     inst.group.position.set(xOffset, 0, 0);
 
     inst.presetKey = presetName;
+    inst.presetName = presetName;
     await inst.load();
     state.characters.set(id, inst);
     state.scene.add(inst.group);

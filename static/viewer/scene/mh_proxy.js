@@ -471,37 +471,56 @@ async function _doMHProxyFit() {
     if (!state._selectedMHId) return;
     const inst = _selectedInst();
     if (!inst) return;
+    const p = {
+        color: document.getElementById('mh-color')?.value || '#4d5980',
+        offset: _sliderVal('mh-offset'),
+        stiffness: _sliderVal('mh-stiffness'),
+        scale: _sliderVal('mh-scale'),
+        y_offset: _sliderVal('mh-y-offset'),
+        push_dist: _sliderVal('mh-push-dist') || 3,
+        roughness: _sliderVal('mh-roughness'),
+        metalness: _sliderVal('mh-metalness'),
+        opacity: _sliderVal('mh-opacity'),
+    };
+    await _fitMHProxyOnInst(inst, state._selectedMHId, p);
+    const stored = inst.mhProxies?.[state._selectedMHId];
+    if (stored) {
+        const colorEl = document.getElementById('mh-color');
+        if (colorEl) colorEl.value = stored.color;
+        const propColorEl = document.getElementById('prop-mh-color');
+        if (propColorEl) propColorEl.value = stored.color;
+    }
+    fn.updateEquippedList?.(inst);
+    fn.updateVertexCount?.();
+}
 
+async function _fitMHProxyOnInst(inst, garmentId, p) {
     if (!inst.isSkinned && state.rigifySkeletonData && state.skinWeightData) {
         convertInstToSkinned(inst);
     }
 
     const params = _charQueryParams(inst);
-    params.set('garment_id', state._selectedMHId);
+    params.set('garment_id', garmentId);
 
-    const colorHex = document.getElementById('mh-color')?.value || '#4d5980';
-    const c = new THREE.Color(colorHex);
+    const c = new THREE.Color(p.color || '#4d5980');
     params.set('color_r', c.r.toFixed(3));
     params.set('color_g', c.g.toFixed(3));
     params.set('color_b', c.b.toFixed(3));
-    params.set('offset', (_sliderVal('mh-offset') / 1000).toFixed(4));
-    params.set('stiffness', (_sliderVal('mh-stiffness') / 100).toFixed(2));
-    params.set('scale', (_sliderVal('mh-scale') / 100).toFixed(3));
-    params.set('y_offset', (_sliderVal('mh-y-offset') / 1000).toFixed(4));
-    params.set('push_dist', _sliderVal('mh-push-dist') || '3');
-    // Fit to MH body (best quality), server transforms T→A to match bind pose
+    params.set('offset', ((p.offset ?? 0) / 1000).toFixed(4));
+    params.set('stiffness', ((p.stiffness ?? 50) / 100).toFixed(2));
+    params.set('scale', ((p.scale ?? 100) / 100).toFixed(3));
+    params.set('y_offset', ((p.y_offset ?? 0) / 1000).toFixed(4));
+    params.set('push_dist', String(p.push_dist ?? 3));
     params.set('use_mh_body', '1');
-    // T→A displacement from settings (default: enabled)
-    params.set('tpose_displacement', window._mhTposeDisplacement ?? '1');
+    params.set('tpose_displacement', p.tpose_disp ?? window._mhTposeDisplacement ?? '1');
 
     try {
         const resp = await fetch(`/api/character/mh-proxy-fit/?${params}`);
         const data = await resp.json();
         if (data.error) { console.warn('MH proxy fit error:', data.error); return; }
 
-        const key = `mh_${state._selectedMHId}`;
+        const key = `mh_${garmentId}`;
 
-        // Remove old if exists
         if (inst.clothMeshes[key]) {
             inst.group.remove(inst.clothMeshes[key]);
             inst.clothMeshes[key].geometry.dispose();
@@ -520,29 +539,15 @@ async function _doMHProxyFit() {
         geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
         geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
 
-        const roughness = _sliderVal('mh-roughness') / 100;
-        const metalness = _sliderVal('mh-metalness') / 100;
-        const opacity = _sliderVal('mh-opacity') / 100;
+        const roughness = (p.roughness ?? 50) / 100;
+        const metalness = (p.metalness ?? 0) / 100;
+        const opacity = (p.opacity ?? 100) / 100;
 
-        // Use material color from .mhmat if available (skip if texture provides color)
         let matColor = c;
         if (data.mat_color && !data.has_texture) {
             matColor = new THREE.Color(data.mat_color[0], data.mat_color[1], data.mat_color[2]);
-            const colorEl = document.getElementById('mh-color');
-            if (colorEl) colorEl.value = '#' + matColor.getHexString();
-            const propColorEl = document.getElementById('prop-mh-color');
-            if (propColorEl) propColorEl.value = '#' + matColor.getHexString();
         } else if (data.has_texture) {
-            // With texture, use white as base color (texture provides the color)
             matColor = new THREE.Color(1, 1, 1);
-            // Show dominant texture color in color picker
-            if (data.texture_color) {
-                const texHex = new THREE.Color(data.texture_color[0], data.texture_color[1], data.texture_color[2]);
-                const colorEl = document.getElementById('mh-color');
-                if (colorEl) colorEl.value = '#' + texHex.getHexString();
-                const propColorEl = document.getElementById('prop-mh-color');
-                if (propColorEl) propColorEl.value = '#' + texHex.getHexString();
-            }
         }
 
         const mat = new THREE.MeshStandardMaterial({
@@ -551,9 +556,8 @@ async function _doMHProxyFit() {
             transparent: opacity < 1, opacity,
         });
 
-        // Load diffuse texture if available
         if (data.has_texture && data.texture_name) {
-            const texUrl = `/api/character/garment/texture/${encodeURIComponent(state._selectedMHId)}/${encodeURIComponent(data.texture_name)}/`;
+            const texUrl = `/api/character/garment/texture/${encodeURIComponent(garmentId)}/${encodeURIComponent(data.texture_name)}/`;
             new THREE.TextureLoader().load(texUrl, (tex) => {
                 tex.colorSpace = THREE.SRGBColorSpace;
                 mat.map = tex;
@@ -562,16 +566,25 @@ async function _doMHProxyFit() {
         }
 
         const mesh = _skinifyMesh(geo, mat, inst, data);
-        console.log(`[MH] mesh type: ${mesh.type}, color: ${matColor.getHexString()}, texture: ${data.has_texture || false}`);
         inst.clothMeshes[key] = mesh;
         inst.group.add(mesh);
-
-        // Store original positions for real-time slider transforms
         inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
 
-        fn.updateEquippedList(inst);
-        fn.updateVertexCount();
-        console.log(`MH proxy fit: ${state._selectedMHId} (${data.vertex_count} verts)`);
+        inst.mhProxies = inst.mhProxies || {};
+        inst.mhProxies[garmentId] = {
+            id: garmentId,
+            color: '#' + matColor.getHexString(),
+            offset: p.offset ?? 0,
+            stiffness: p.stiffness ?? 50,
+            scale: p.scale ?? 100,
+            y_offset: p.y_offset ?? 0,
+            push_dist: p.push_dist ?? 3,
+            roughness: p.roughness ?? 50,
+            metalness: p.metalness ?? 0,
+            opacity: p.opacity ?? 100,
+        };
+
+        console.log(`[MH] fit: ${garmentId} (${data.vertex_count} verts)`);
     } catch (e) {
         console.error('MH proxy fit failed:', e);
     }
@@ -720,11 +733,12 @@ function _initPropMHControls() {
     });
 }
 
-export { loadMHProxyUI, _selectedMHMesh, _renderMHList, _doMHProxyFit, _syncPropMHControls, _initPropMHControls };
+export { loadMHProxyUI, _selectedMHMesh, _renderMHList, _doMHProxyFit, _fitMHProxyOnInst, _syncPropMHControls, _initPropMHControls };
 
 fn.loadMHProxyUI = loadMHProxyUI;
 fn._selectedMHMesh = _selectedMHMesh;
 fn._renderMHList = _renderMHList;
 fn._doMHProxyFit = _doMHProxyFit;
+fn._fitMHProxyOnInst = _fitMHProxyOnInst;
 fn._syncPropMHControls = _syncPropMHControls;
 fn._initPropMHControls = _initPropMHControls;

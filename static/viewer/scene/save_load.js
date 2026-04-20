@@ -217,9 +217,15 @@ export async function exportModelJSON() {
     if (inst.generatedConfig) {
         data = { ...inst.generatedConfig, type: 'generated_model', name: inst.presetName || 'Generiertes Modell', body_type: inst.generatedConfig.skeleton_type === 'rig' ? 'Rig Bones' : 'DEF Skeleton', skeleton_type: inst.generatedConfig.skeleton_type || 'def' };
     } else {
-        data = { name: inst.presetName, body_type: inst.bodyType, morphs: inst.morphs || {}, meta: inst.meta || {}, cloth: inst.cloth || [], hair_style: inst.hairStyle || null, garments: inst.garments || [] };
+        data = { name: inst.presetName, body_type: inst.bodyType, morphs: inst.morphs || {}, meta: inst.meta || {}, cloth: inst.cloth || [], hair_style: inst.hairStyle || null, garments: inst.garments || [], mh_proxy: Object.values(inst.mhProxies || {}) };
     }
-    await _saveJsonWithPicker(data, (inst.presetName || 'model') + '.json');
+    const savedName = await _saveJsonWithPicker(data, (inst.presetName || 'model') + '.json');
+    if (savedName) {
+        const newName = savedName.replace(/\.json$/i, '');
+        inst.presetName = newName;
+        inst.presetKey = newName;
+        fn.updateCharacterListUI?.();
+    }
 }
 
 // Scene dialogs
