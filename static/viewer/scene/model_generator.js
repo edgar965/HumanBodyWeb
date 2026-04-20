@@ -115,12 +115,16 @@ function _bindModelGeneratorUI() {
 
     // Global controls
     const nameInput = document.getElementById('mg-model-name');
-    if (nameInput) nameInput.addEventListener('input', () => { state._mgConfig.name = nameInput.value; });
+    if (nameInput) {
+        nameInput.addEventListener('input', () => { state._mgConfig.name = nameInput.value; });
+        nameInput.addEventListener('change', () => fn.markDirty?.('Modellname'));
+    }
 
     const colorInput = document.getElementById('mg-default-color');
-    if (colorInput) colorInput.addEventListener('input', () => {
-        state._mgConfig.default_color = colorInput.value;
-    });
+    if (colorInput) {
+        colorInput.addEventListener('input', () => { state._mgConfig.default_color = colorInput.value; });
+        colorInput.addEventListener('change', () => fn.markDirty?.('Standardfarbe'));
+    }
 
     const radiusSlider = document.getElementById('mg-default-radius');
     const radiusVal = document.getElementById('mg-default-radius-val');
@@ -168,6 +172,7 @@ function _bindModelGeneratorUI() {
             state._mgConfig.bone_parts[state._mgSelectedBone][prop] = v;
             _mgAutoRegenerate();
         });
+        el.addEventListener('change', () => { fn.markDirty?.(prop); });
     }
     _tutuSlider('mg-tutu-thickness', 'mg-tutu-thickness-val', 'tutuThickness', 3);
     _tutuSlider('mg-tutu-droop', 'mg-tutu-droop-val', 'tutuDroop', 3);
@@ -368,6 +373,7 @@ function _populateBoneTree() {
                 e.stopPropagation();
                 part.visible = cb.checked;
                 _mgAutoRegenerate();
+                fn.markDirty?.(cb.checked ? 'Knochen anzeigen' : 'Knochen ausblenden');
             });
 
             const label = document.createElement('span');
@@ -537,8 +543,12 @@ function _updateBoneTreeItem(boneName) {
 
 let _mgRegenTimer = null;
 let _mgRegenBusy = false;
+let _mgDirtyTimer = null;
 function _mgAutoRegenerate() {
     if (!state._mgCharacterId) return; // Only auto-regen if character exists
+    // Debounced markDirty: one snapshot after the user stops adjusting
+    if (_mgDirtyTimer) clearTimeout(_mgDirtyTimer);
+    _mgDirtyTimer = setTimeout(() => { _mgDirtyTimer = null; fn.markDirty?.('Modell-Aenderung'); }, 400);
     if (_mgRegenBusy) {
         // Already generating -- schedule one more after current finishes
         _mgRegenTimer = true;

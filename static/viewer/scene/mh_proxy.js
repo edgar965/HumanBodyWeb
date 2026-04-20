@@ -585,6 +585,7 @@ async function _fitMHProxyOnInst(inst, garmentId, p) {
         };
 
         console.log(`[MH] fit: ${garmentId} (${data.vertex_count} verts)`);
+        fn.markDirty?.(`MH ${garmentId}`);
     } catch (e) {
         console.error('MH proxy fit failed:', e);
     }

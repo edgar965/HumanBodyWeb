@@ -108,6 +108,8 @@ export function bindKeyboardShortcuts() {
                 case 's': e.preventDefault(); if (e.shiftKey) fn.openSaveDialog(); else fn.quickSave(); return;
                 case 'o': e.preventDefault(); fn.openLoadDialog(); return;
                 case 'n': e.preventDefault(); fn.newScene(); return;
+                case 'z': e.preventDefault(); if (e.shiftKey) fn.sceneRedo?.(); else fn.sceneUndo?.(); return;
+                case 'y': e.preventDefault(); fn.sceneRedo?.(); return;
             }
         }
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
