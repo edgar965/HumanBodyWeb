@@ -89,7 +89,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024   # 500 MB
 DATA_UPLOAD_MAX_NUMBER_FILES = 10000               # up to 10k frames
 
 # Pipeline Python (venv with CUDA PyTorch, ONNX Runtime GPU, etc.)
-PIPELINE_PYTHON = str(TOOLS_ROOT / 'pythonENV' / 'Scripts' / 'python.exe')
+PIPELINE_PYTHON = str(TOOLS_ROOT / 'python10' / 'Scripts' / 'python.exe')
 
 # MocapNET paths
 MOCAPNET_EXE = MOCAPNET_ROOT / 'MocapNET2CSV.exe'

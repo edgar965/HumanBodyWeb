@@ -1036,9 +1036,9 @@ with sync_playwright() as p:
     browser.close()
     print("Done", flush=True)
 '''
-        # Use local pythonENV (has playwright + CUDA packages)
+        # Use local python10 (has playwright + CUDA packages)
         from pathlib import Path as _Path
-        python_exe = str(_Path(settings.TOOLS_ROOT) / 'pythonENV' / 'Scripts' / 'python.exe')
+        python_exe = str(_Path(settings.TOOLS_ROOT) / 'python10' / 'Scripts' / 'python.exe')
         result = _sp.run(
             [python_exe, '-c', script],
             capture_output=True, text=True, timeout=600
