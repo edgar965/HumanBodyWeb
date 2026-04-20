@@ -30,6 +30,7 @@ import './rigging.js';
 import './charmorph.js';
 import { loadCharmorphHairUI } from './charmorph_hair.js';
 import { initFinalizeTab } from './finalize.js';
+import './cloth_export.js';
 
 // Also register buildRigifySkeleton for menubar toggle-rig
 fn.buildRigifySkeleton = buildRigifySkeleton;

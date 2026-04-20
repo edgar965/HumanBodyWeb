@@ -72,6 +72,38 @@
 </div>
 
 <div class="settings-section">
+    <h3>Cloth Simulation (beim MP4-Export)</h3>
+    <div class="settings-row">
+        <label>Engine:</label>
+        <select name="studio_cloth_engine" id="studio_cloth_engine">
+            <option value="none" {% if prefs.studio_cloth_engine|default:'none' == 'none' %}selected{% endif %}>Aus (nur Skinning)</option>
+            <option value="blender_eevee" {% if prefs.studio_cloth_engine == 'blender_eevee' %}selected{% endif %}>Blender Cloth + EEVEE (CPU Sim, GPU Render)</option>
+            <option value="warp_blender" {% if prefs.studio_cloth_engine == 'warp_blender' %}selected{% endif %}>NVIDIA Warp + Blender Render (GPU Sim, GPU Render)</option>
+            <option value="warp_only" {% if prefs.studio_cloth_engine == 'warp_only' %}selected{% endif %}>NVIDIA Warp (GPU Sim + GPU Render via Warp)</option>
+        </select>
+        <span class="hint">Verhindert Durchst&ouml;&szlig;e von K&ouml;rper durch Kleidung bei Animation (z.B. Bein durch Rock)</span>
+    </div>
+    <div class="settings-row">
+        <label>Cloth-Qualit&auml;t:</label>
+        <select name="studio_cloth_quality" id="studio_cloth_quality">
+            <option value="low" {% if prefs.studio_cloth_quality == 'low' %}selected{% endif %}>Niedrig (schnell)</option>
+            <option value="medium" {% if prefs.studio_cloth_quality|default:'medium' == 'medium' %}selected{% endif %}>Mittel</option>
+            <option value="high" {% if prefs.studio_cloth_quality == 'high' %}selected{% endif %}>Hoch (langsam)</option>
+        </select>
+        <span class="hint">Sim-Iterationen pro Frame. Hoch = stabiler, weniger Durchst&ouml;&szlig;e</span>
+    </div>
+    <div class="settings-row" style="margin-top:6px;">
+        <div style="flex:1;font-size:0.75rem;color:var(--text-muted);line-height:1.5;">
+            <strong>Richtwerte (5s @ 30fps, RTX 3060):</strong><br>
+            &bull; Aus: Render 15s (EEVEE)<br>
+            &bull; Blender Cloth + EEVEE: Sim 30&ndash;75s + Render 15s = <strong>~1 min</strong><br>
+            &bull; Warp + Blender Render: Sim 5&ndash;15s + Render 15s = <strong>~30s</strong><br>
+            &bull; Warp pur: Sim 5&ndash;15s + Render 5&ndash;10s = <strong>~20s</strong> (niedrigere Render-Qualit&auml;t)
+        </div>
+    </div>
+</div>
+
+<div class="settings-section">
     <h3>Export</h3>
     <div class="settings-row">
         <label>Video-Aufl&ouml;sung:</label>

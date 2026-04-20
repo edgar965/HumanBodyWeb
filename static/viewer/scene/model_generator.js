@@ -143,6 +143,13 @@ function _bindModelGeneratorUI() {
     });
 
     // Bone properties
+    const boneGarment = document.getElementById('mg-bone-garment');
+    if (boneGarment) boneGarment.addEventListener('change', () => {
+        if (!state._mgSelectedBone || !state._mgConfig.bone_parts[state._mgSelectedBone]) return;
+        state._mgConfig.bone_parts[state._mgSelectedBone].is_garment = boneGarment.checked;
+        fn.markDirty?.(boneGarment.checked ? 'Kleidungsstueck an' : 'Kleidungsstueck aus');
+    });
+
     const boneShape = document.getElementById('mg-bone-shape');
     if (boneShape) boneShape.addEventListener('change', () => {
         if (!state._mgSelectedBone || !state._mgConfig.bone_parts[state._mgSelectedBone]) return;
@@ -425,6 +432,11 @@ function _mgSelectBone(boneName) {
 
     const shapeSelect = document.getElementById('mg-bone-shape');
     if (shapeSelect) shapeSelect.value = part.shape || 'cylinder';
+    const garmentCb = document.getElementById('mg-bone-garment');
+    if (garmentCb) {
+        const defaultCloth = ['skirt', 'tutu', 'spiral_tutu', 'helix_ribbon'].includes(part.shape);
+        garmentCb.checked = (part.is_garment !== undefined) ? !!part.is_garment : defaultCloth;
+    }
     const radiusSlider = document.getElementById('mg-bone-radius');
     const radiusVal = document.getElementById('mg-bone-radius-val');
     if (radiusSlider) radiusSlider.value = part.radius || 0.03;
