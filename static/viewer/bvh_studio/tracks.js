@@ -971,9 +971,30 @@ export function deleteSelectedClip() {
         if (animTrack?.group) animTrack.group.visible = false;
     }
 
+    // 3D-Objekt-Clip gelöscht und keine weiteren object_clips übrig → Mesh aus Szene entfernen.
+    // applyPlayhead() würde nur visible=false setzen; wir wollen das Mesh komplett weg.
+    if (clip.type === 'object_clip' && track.type === 'scene_object') {
+        const remaining = track.clips.some(c => c.type === 'object_clip');
+        if (!remaining && track.mesh) {
+            state.scene.remove(track.mesh);
+            track.mesh.traverse?.(obj => {
+                if (obj.geometry) obj.geometry.dispose?.();
+                if (obj.material) {
+                    if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose?.());
+                    else obj.material.dispose?.();
+                }
+            });
+            track.mesh = null;
+            track.objectUrl = null;
+            track.objectMtlUrl = null;
+            fn.detachTransformControls?.();
+        }
+    }
+
     fn.updateDuration();
     fn.renderTimeline();
     fn.updateProperties();
+    fn.applyPlayhead?.();
 
     // If no more clips on this BVH track, hide the model and stop playback
     if (track.type === 'bvh' && track.clips.length === 0) {
