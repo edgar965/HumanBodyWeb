@@ -36,6 +36,29 @@
         cursor: grab;
     }
     #viewer-canvas:active { cursor: grabbing; }
+    #scene-hint {
+        position: absolute;
+        top: 10px;
+        right: 14px;
+        padding: 6px 10px;
+        background: rgba(26, 26, 46, 0.75);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        pointer-events: none;
+        user-select: none;
+        z-index: 5;
+    }
+    #scene-hint kbd {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 3px;
+        padding: 1px 5px;
+        font-family: ui-monospace, monospace;
+        font-size: 0.72rem;
+        color: var(--text);
+    }
     .viewer-btn {
         padding: 8px 14px;
         background: rgba(26, 26, 46, 0.85);
@@ -856,8 +879,8 @@
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:2px;margin-left:12px;">
-                <button onclick="window.__sceneUndo && window.__sceneUndo()" title="Undo (Ctrl+M)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-undo"></i></button>
-                <button onclick="window.__sceneRedo && window.__sceneRedo()" title="Redo (Ctrl+Shift+M)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-redo"></i></button>
+                <button onclick="window.__sceneUndo && window.__sceneUndo()" title="Undo (Ctrl+Z)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-undo"></i></button>
+                <button onclick="window.__sceneRedo && window.__sceneRedo()" title="Redo (Ctrl+Y oder Ctrl+Shift+Z)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-redo"></i></button>
             </div>
             <div class="menubar-right">
                 <div class="transform-btn-group">
@@ -2062,6 +2085,7 @@
         <div class="canvas-wrap">
             <canvas id="viewer-canvas"></canvas>
             <div id="mesh-tooltip"></div>
+            <div id="scene-hint"><kbd>Strg</kbd>+Klick zum Selektieren von Knochen</div>
         </div>
     </div><!-- /viewer-row -->
 </div>

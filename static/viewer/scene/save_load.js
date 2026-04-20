@@ -92,6 +92,7 @@ export async function loadSceneFromData(data, sceneName) {
     if (state.characters.size > 0 && !state.selectedCharacterId) {
         fn.selectCharacter(state.characters.keys().next().value);
     }
+    fn.captureInitial?.();
 }
 
 export async function loadSceneFromServer(name) {

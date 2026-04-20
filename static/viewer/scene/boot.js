@@ -205,6 +205,7 @@ export async function init() {
         if (state.characters.size === 0) {
             try { await fn.loadDefaultCharacter(); } catch(e) { /* ignore */ }
         }
+        fn.captureInitial?.();
         // Apply default pose from settings (e.g. T-Pose)
         if (window._defaultPose && window._defaultPose !== 'a_pose' && state.characters.size > 0) {
             const poseMap = { 't_pose': 'rest_poses/t-pose' };
