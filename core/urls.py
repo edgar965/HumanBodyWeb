@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import character_api
 from . import test_character_api
+from . import cloth_export_api
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
@@ -96,6 +97,7 @@ urlpatterns = [
     path('api/retarget/save-bvh-effects/', character_api.save_bvh_effects, name='save_bvh_effects'),
     path('api/character/save-bvh-text/', character_api.save_bvh_text, name='save_bvh_text'),
     path('api/character/bvh-manage/', character_api.bvh_manage, name='bvh_manage'),
+    path('api/cloth/export/', cloth_export_api.export_cloth, name='cloth_export'),
     path('api/studio/audio-upload/', character_api.studio_audio_upload, name='studio_audio_upload'),
     path('api/studio/project-save/', character_api.studio_project_save, name='studio_project_save'),
     path('api/studio/project-load/', character_api.studio_project_load, name='studio_project_load'),
