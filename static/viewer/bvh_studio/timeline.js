@@ -291,7 +291,7 @@ async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame, subme
                     item.title = (p.description || '') + '\n\nFügt Preset-Lichter HINZU (existierende bleiben erhalten).';
                     item.addEventListener('click', () => {
                         closeCtx();
-                        fn.applyTheatrePresetAdditive?.(p.name);
+                        fn.applyTheatrePresetAdditive?.(p.name, placeFrame);
                     });
                     nested.appendChild(item);
                 }
@@ -473,6 +473,7 @@ export function setupTimeline() {
             clip.startFrame = Math.max(0, dragOrigFrame + frameDelta);
             fn.updateDuration();
             renderTimeline();
+            fn.applyPlayhead?.();
         } else if (dragMode === 'trim-left' && draggingClip) {
             const dx = mx - dragStartX;
             const frameDelta = Math.round((dx / state.timelineZoom) * state.project.fps);
@@ -483,6 +484,7 @@ export function setupTimeline() {
             clip.startFrame = Math.max(0, dragOrigFrame + (newTrimIn - dragOrigTrimIn));
             fn.updateDuration();
             renderTimeline();
+            fn.applyPlayhead?.();
         } else if (dragMode === 'trim-right' && draggingClip) {
             const dx = mx - dragStartX;
             const frameDelta = Math.round((dx / state.timelineZoom) * state.project.fps);
@@ -490,6 +492,7 @@ export function setupTimeline() {
             clip.trimOut = Math.max(0, Math.min(clip.totalFrames - clip.trimIn - 1, dragOrigTrimOut - frameDelta));
             fn.updateDuration();
             renderTimeline();
+            fn.applyPlayhead?.();
         } else if (dragMode === 'scrub') {
             if (mx > HEADER_WIDTH) setPlayheadFromMouse(mx);
         } else if (dragMode === 'pan') {
@@ -806,29 +809,68 @@ export function renderTimeline() {
         tlCtx.lineTo(w, y + TRACK_HEIGHT);
         tlCtx.stroke();
 
-        // Balken für Kamera/Licht-Tracks. Jedes Paar aufeinanderfolgender KFs an
-        // VERSCHIEDENEN Frames erzeugt einen Balken-Abschnitt. KF-Paare (zwei KFs am
-        // gleichen Frame mit upper/lower) erzeugen KEINEN Balken → Leiste ist dort
-        // geschnitten, es entstehen zwei separate Balken.
+        // Balken für Kamera/Licht-Tracks. Semantik der KF-Arten:
+        //   - 'upper'  = Schluss-KF eines Balkens (Bar endet HIER)
+        //   - 'lower'  = Start-KF eines NEUEN Balkens (Offset wird getoggled)
+        //   - regular  = schließt aktuellen Balken UND startet direkt den nächsten (gleicher Offset)
+        // Dadurch bleibt auch nach Verschieben eines 'lower'-KFs die visuelle Trennung
+        // stabil (Gap zwischen 'upper' und 'lower' bleibt sichtbar).
         if ((track.type === 'camera' || track.type === 'light') && track.clips.length >= 2) {
             const kfs = track.clips.filter(c => c.type === 'camera_kf' || c.type === 'light_kf');
             if (kfs.length >= 2) {
-                // Stable sort: gleicher Frame → upper vor lower (für determistische Reihenfolge)
                 const sorted = [...kfs].sort((a, b) => {
                     if (a.startFrame !== b.startFrame) return a.startFrame - b.startFrame;
                     return (a.data?.trackPosition === 'upper' ? 0 : 1) - (b.data?.trackPosition === 'upper' ? 0 : 1);
                 });
+                const halfH = (TRACK_HEIGHT - 8) / 2;
+                const topY = y + 4;
+                const botY = y + 4 + halfH;
+                const segments = [];  // { from, to, offsetIdx }
+                let barStart = null;
+                let offsetIdx = 0;  // 0 = oben, 1 = unten
+                for (const kf of sorted) {
+                    const tp = kf.data?.trackPosition;
+                    if (tp === 'upper') {
+                        if (barStart != null && barStart !== kf.startFrame) {
+                            segments.push({ from: barStart, to: kf.startFrame, offsetIdx });
+                        }
+                        barStart = null;
+                    } else if (tp === 'lower') {
+                        offsetIdx = 1 - offsetIdx;  // toggle bei jedem Paar-Übergang
+                        barStart = kf.startFrame;
+                    } else {
+                        // Regular KF: beende laufenden Balken und starte direkt neuen mit gleichem Offset
+                        if (barStart != null && barStart !== kf.startFrame) {
+                            segments.push({ from: barStart, to: kf.startFrame, offsetIdx });
+                        }
+                        barStart = kf.startFrame;
+                    }
+                }
                 tlCtx.fillStyle = track.color;
-                tlCtx.globalAlpha = 0.25;
-                for (let i = 0; i < sorted.length - 1; i++) {
-                    const a = sorted[i], b = sorted[i + 1];
-                    // Paar am selben Frame → Balken-Split (kein Segment zwischen a und b)
-                    if (a.startFrame === b.startFrame) continue;
-                    const ax = HEADER_WIDTH + (a.startFrame / state.project.fps) * pps - state.timelineScrollX;
-                    const bx = HEADER_WIDTH + (b.startFrame / state.project.fps) * pps - state.timelineScrollX;
+                tlCtx.globalAlpha = 0.28;
+                for (const seg of segments) {
+                    const ax = HEADER_WIDTH + (seg.from / state.project.fps) * pps - state.timelineScrollX;
+                    const bx = HEADER_WIDTH + (seg.to   / state.project.fps) * pps - state.timelineScrollX;
                     const segX = Math.max(ax, HEADER_WIDTH);
                     const segW = Math.max(1, Math.min(bx, w) - segX);
-                    if (segW > 0) tlCtx.fillRect(segX, y + 4, segW, TRACK_HEIGHT - 8);
+                    const segY = seg.offsetIdx === 0 ? topY : botY;
+                    if (segW > 0) tlCtx.fillRect(segX, segY, segW, halfH);
+                }
+                tlCtx.globalAlpha = 1.0;
+                // Vertikale Trennstriche an jedem Pair-Frame (Same-Frame-Paare)
+                tlCtx.strokeStyle = '#fff';
+                tlCtx.lineWidth = 1;
+                tlCtx.globalAlpha = 0.5;
+                for (let i = 0; i < sorted.length - 1; i++) {
+                    const a = sorted[i], b = sorted[i + 1];
+                    if (a.startFrame !== b.startFrame) continue;
+                    if (a.data?.trackPosition !== 'upper' || b.data?.trackPosition !== 'lower') continue;
+                    const sx = HEADER_WIDTH + (a.startFrame / state.project.fps) * pps - state.timelineScrollX;
+                    if (sx < HEADER_WIDTH || sx > w) continue;
+                    tlCtx.beginPath();
+                    tlCtx.moveTo(sx, topY);
+                    tlCtx.lineTo(sx, botY + halfH);
+                    tlCtx.stroke();
                 }
                 tlCtx.globalAlpha = 1.0;
             }

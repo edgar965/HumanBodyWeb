@@ -157,14 +157,28 @@ function setupViewportContextMenu() {
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, state.camera);
 
+        // Filtert Raycast-Hits: Objekt und alle Vorfahren müssen visible sein.
+        // Three.js raycast matcht auch visible=false Objekte (by design).
+        const isVisibleInTree = (obj) => {
+            for (let o = obj; o; o = o.parent) if (o.visible === false) return false;
+            return true;
+        };
         let best = null;  // { dist, trackIdx }
         for (let i = 0; i < state.project.tracks.length; i++) {
             const t = state.project.tracks[i];
             let hits = null;
-            if (t.type === 'light' && t.lightHelper?.visible) {
-                hits = raycaster.intersectObject(t.lightHelper, true);
+            // Licht-Helper nur wenn User die Helfer-Linien eingeschaltet hat (track.lightVisible).
+            // Für den Kegel (indicator) reicht ein Hit — er ist immer da wenn coneVisible.
+            if (t.type === 'light' && t.lightHelper) {
+                const targets = [];
+                if (t.lightVisible && t.lightHelper.spotHelper) targets.push(t.lightHelper.spotHelper);
+                if (t.coneVisible !== false && t.lightHelper.originCone) targets.push(t.lightHelper.originCone);
+                for (const tgt of targets) {
+                    const h = raycaster.intersectObject(tgt, true).filter(x => isVisibleInTree(x.object) && x.distance > 0.01);
+                    if (h.length > 0 && (!hits || h[0].distance < hits[0].distance)) hits = h;
+                }
             } else if (t.type === 'scene_object' && t.mesh) {
-                hits = raycaster.intersectObject(t.mesh, true);
+                hits = raycaster.intersectObject(t.mesh, true).filter(x => isVisibleInTree(x.object) && x.distance > 0.01);
             }
             if (!hits || hits.length === 0) continue;
             const d = hits[0].distance;
@@ -270,10 +284,14 @@ async function init() {
                 const match = (listData.files || []).find(f => f.name.replace(/\.studio\.json$/i, '') === defaultProject);
                 if (match) {
                     const loadResp = await fetch(`/api/studio/project-load/?path=${encodeURIComponent(match.path)}`);
-                    const projectData = await loadResp.json();
-                    if (projectData.name) {
+                    const payload = await loadResp.json();
+                    // API liefert { ok, project, path } — Projekt ist verschachtelt
+                    const projectData = payload.project || payload;
+                    if (projectData?.name) {
                         await restoreProjectData(projectData);
                         console.log(`[BVH Studio] Default project loaded: ${defaultProject}`);
+                    } else {
+                        console.warn('[BVH Studio] project-load returned no project:', payload);
                     }
                 }
             }

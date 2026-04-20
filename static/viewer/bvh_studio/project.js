@@ -108,6 +108,12 @@ export function buildProjectData() {
                 td.lightType = t.lightType;
                 td._sceneLight = !!t._sceneLight;
             }
+            if (t.type === 'scene_object' && t.subtype === 'custom' && t.mesh) {
+                td.objectTint = t.objectTint || '#ffffff';
+                td.objectPosition = { x: t.mesh.position.x, y: t.mesh.position.y, z: t.mesh.position.z };
+                td.objectRotation = { x: t.mesh.rotation.x, y: t.mesh.rotation.y, z: t.mesh.rotation.z };
+                td.objectScale = t.mesh.scale.x;  // uniform scale
+            }
             td.clips = t.clips.map(c => {
                 const cd = {
                     type: c.type, category: c.category, name: c.name,
@@ -119,7 +125,7 @@ export function buildProjectData() {
                 if (c.type === 'camera_kf' || c.type === 'light_kf') cd.data = c.data;
                 else if (c.type === 'model') cd.data = { preset: c.data.preset, bodyType: c.data.bodyType };
                 else if (c.type === 'audio') cd.data = { fileName: c.data.fileName, audioUrl: c.data.audioUrl, audioDuration: c.data.audioDuration, volume: c.data.volume, fadeIn: c.data.fadeIn, fadeOut: c.data.fadeOut, offset: c.data.offset };
-                else if (c.type === 'object_clip') cd.data = { url: c.data?.url, ext: c.data?.ext, fileName: c.data?.fileName };
+                else if (c.type === 'object_clip') cd.data = { url: c.data?.url, ext: c.data?.ext, fileName: c.data?.fileName, mtlUrl: c.data?.mtlUrl || null };
                 return cd;
             });
             return td;
@@ -289,7 +295,9 @@ export async function restoreProjectData(data) {
             if (td.lightAngle != null) track.light.angle = td.lightAngle;
             if (td.lightPenumbra != null) track.light.penumbra = td.lightPenumbra;
             if (td.lightDistance != null) track.light.distance = td.lightDistance;
-            track.lightVisible = td.lightVisible ?? false;  // default aus (Helfer-Linien)
+            // Helfer-Linien IMMER aus beim Laden (ignoriert gespeicherten Wert —
+            // User will sie per Default off sehen, kann einzeln per Toggle einschalten)
+            track.lightVisible = false;
             track.coneVisible = td.coneVisible ?? true;    // default an (Lichtkegel)
             if (track.lightHelper?.update) track.lightHelper.update();
         }
@@ -313,6 +321,36 @@ export async function restoreProjectData(data) {
             if (cd.data) clip.data = cd.data;
             track.clips.push(clip);
             if (clip.type === 'bvh') loadPromises.push(fn.loadClipAnimation(track, clip));
+            if (clip.type === 'object_clip' && clip.data?.url && track.type === 'scene_object') {
+                // 3D-Objekt aus Save wieder laden — _loadSceneObjectIntoTrack erzeugt Mesh + Clip,
+                // aber wir HABEN schon einen Clip (gerade eben pushed). Darum: Mesh separat laden
+                // und gespeicherte Position/Rotation/Scale anwenden, dann overcounting-Clip entfernen.
+                loadPromises.push((async () => {
+                    try {
+                        const se = await import('./scene_extras.js');
+                        // _loadSceneObjectIntoTrack pusht einen NEUEN Clip — wir merken uns den bestehenden
+                        // und entfernen den neuen (Duplikat-Schutz).
+                        const clipsBefore = track.clips.length;
+                        await se._loadSceneObjectIntoTrack(
+                            track, clip.data.url, clip.data.fileName || 'object',
+                            clip.data.ext || 'obj', clip.startFrame, clip.data.mtlUrl || null
+                        );
+                        // _loadSceneObjectIntoTrack pushed einen neuen object_clip — entfernen
+                        if (track.clips.length > clipsBefore) {
+                            track.clips.pop();  // Duplikat weg
+                        }
+                        // Gespeicherte Transform anwenden (überschreibt Auto-Normalize)
+                        if (track.mesh) {
+                            if (td.objectPosition) track.mesh.position.set(td.objectPosition.x, td.objectPosition.y, td.objectPosition.z);
+                            if (td.objectRotation) track.mesh.rotation.set(td.objectRotation.x, td.objectRotation.y, td.objectRotation.z);
+                            if (td.objectScale != null) track.mesh.scale.setScalar(td.objectScale);
+                            if (td.objectTint) fn.setObjectTint?.(track, td.objectTint);
+                        }
+                    } catch (e) {
+                        console.warn('[Restore] 3D-Objekt reload failed:', clip.data?.fileName, e);
+                    }
+                })());
+            }
             if (clip.type === 'audio' && clip.data?.audioUrl) {
                 // Fix double-slash from old saves
                 if (clip.data.audioUrl.startsWith('//')) clip.data.audioUrl = clip.data.audioUrl.substring(1);

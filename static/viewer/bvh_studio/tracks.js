@@ -195,8 +195,9 @@ function _addStandardKeyframe(track) {
         };
         return kf;
     };
-    track.clips.push(makeKF('Standard Start', 0));
-    if (endFrame > 0) track.clips.push(makeKF('Standard Ende', endFrame));
+    // Nur durchnummerierte Namen — keine "Standard Start/Ende" mehr
+    track.clips.push(makeKF('1', 0));
+    if (endFrame > 0) track.clips.push(makeKF('2', endFrame));
 }
 
 // Wendet eine Szenen-Licht-Override-Map auf existierende _sceneLight-Tracks an
@@ -219,7 +220,7 @@ export function applySceneLightOverrides(overrides) {
         if (o.angle != null && 'angle' in light) light.angle = o.angle;
         if (o.penumbra != null && 'penumbra' in light) light.penumbra = o.penumbra;
         if (o.distance != null && 'distance' in light) light.distance = o.distance;
-        track.lightVisible = o.visible ?? true;
+        track.lightVisible = o.visible ?? false;  // Helfer-Linien: default aus
         track.muted = o.muted ?? false;
         light.visible = !track.muted;
         if (track.lightHelper) {
@@ -317,6 +318,8 @@ export function addSpecialTrack(type, name) {
         track.color = '#7c5cbf';
         track.mesh = null;  // Leerer Track — Mesh wird via Context-Menu "Hinzufügen" geladen
         track.objectTint = '#ffffff';
+        // Szene-Gruppe aufklappen damit der neue Track sofort sichtbar ist
+        state.sceneGroupCollapsed = false;
     }
 
     state.project.addTrack(track);

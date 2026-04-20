@@ -212,7 +212,43 @@ export function updateProperties() {
                 <div class="prop-row"><label>Modus:</label>
                     <select id="prop-obj-gizmo"><option value="translate" selected>Verschieben</option><option value="rotate">Rotieren</option><option value="scale">Skalieren</option></select>
                 </div>
-                <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Gizmo im 3D-Viewport nutzen oder Werte hier direkt editieren.</div>
+                <h3 style="font-size:0.8rem;color:var(--text-muted);margin:10px 0 4px;">Material</h3>
+                ${(() => {
+                    // Sammle aktuell auf dem Mesh anliegende Texturen (.map.image.src)
+                    const active = new Set();
+                    track.mesh?.traverse?.(o => {
+                        if (o.isMesh && o.material) {
+                            const mats = Array.isArray(o.material) ? o.material : [o.material];
+                            for (const m of mats) {
+                                const src = m.map?.image?.src || m.map?.source?.data?.src;
+                                if (src) active.add(src);
+                            }
+                        }
+                    });
+                    if (active.size === 0) return `<div class="prop-row" style="font-size:0.7rem;color:var(--danger);"><label>&nbsp;</label>Keine Textur geladen</div>`;
+                    return Array.from(active).slice(0, 4).map(src => `
+                        <div class="prop-row" style="align-items:flex-start;">
+                            <label>Aktiv:</label>
+                            <div style="flex:1;display:flex;flex-direction:column;gap:3px;">
+                                <img src="${src}" style="max-width:140px;max-height:90px;border:1px solid var(--border);border-radius:3px;background:#000;object-fit:contain;" />
+                                <span style="font-size:0.65rem;color:var(--text-muted);word-break:break-all;">${(src.split('/').pop() || '?').slice(0, 40)}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                })()}
+                <div class="prop-row"><label>Textur:</label>
+                    <button id="prop-obj-tex-replace" style="padding:4px 8px;font-size:0.72rem;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;"><i class="fas fa-image"></i> Ersetzen…</button>
+                    <button id="prop-obj-tex-remove" style="padding:4px 8px;font-size:0.72rem;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer;margin-left:4px;">Entfernen</button>
+                </div>
+                <div class="prop-row"><label>MTL:</label>
+                    <button id="prop-obj-mtl-replace" style="padding:4px 8px;font-size:0.72rem;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;"><i class="fas fa-file-code"></i> Ersetzen…</button>
+                    ${track.objectMtlUrl ? `<span style="margin-left:6px;font-size:0.65rem;color:var(--text-muted);">${track.objectMtlUrl.split('/').pop()}</span>` : `<span style="margin-left:6px;font-size:0.65rem;color:var(--danger);">fehlt</span>`}
+                </div>
+                <div class="prop-row"><label>Mesh:</label>
+                    <button id="prop-obj-mesh-replace" style="padding:4px 8px;font-size:0.72rem;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;"><i class="fas fa-cube"></i> Ersetzen…</button>
+                    ${track.objectUrl ? `<span style="margin-left:6px;font-size:0.65rem;color:var(--text-muted);">${track.objectUrl.split('/').pop()}</span>` : ''}
+                </div>
+                <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Tipp: Beim Import OBJ + MTL + alle Texturen gleichzeitig auswählen (Ctrl+Klick im Datei-Dialog). Sonst werden sie nicht im selben Bundle-Ordner abgelegt und MTL→Textur-Referenzen schlagen fehl.</div>
             </div>`;
         }
     }
@@ -282,6 +318,15 @@ export function updateProperties() {
                 <div class="prop-row"><label>Fade In:</label><input type="number" value="${d.fadeIn||0}" id="prop-audio-fadein" min="0"> <span style="font-size:0.7rem;">f</span></div>
                 <div class="prop-row"><label>Fade Out:</label><input type="number" value="${d.fadeOut||0}" id="prop-audio-fadeout" min="0"> <span style="font-size:0.7rem;">f</span></div>
                 <div class="prop-row"><label>Offset:</label><input type="number" value="${d.offset||0}" id="prop-audio-offset" min="0" step="0.1"> <span style="font-size:0.7rem;">s</span></div>
+            </div>`;
+        } else if (clip.type === 'object_clip') {
+            const d = clip.data || {};
+            html += `<div class="prop-group">
+                <h3 style="font-size:0.85rem;color:var(--accent);">3D-Objekt Clip</h3>
+                <div class="prop-row"><label>Datei:</label><span style="font-size:0.75rem;color:var(--text-muted);">${d.fileName || '—'}</span></div>
+                <div class="prop-row"><label>Start:</label><input type="number" value="${clip.startFrame}" id="prop-oc-start" min="0"> <span style="font-size:0.7rem;">f</span></div>
+                <div class="prop-row"><label>Dauer:</label><input type="number" value="${clip.totalFrames}" id="prop-oc-frames" min="1"> <span style="font-size:0.7rem;">f</span></div>
+                <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Objekt ist in der Szene sichtbar wenn der Playhead im Clip-Bereich ist. Position/Rotation/Größe über die Track-Eigenschaften oben.</div>
             </div>`;
         } else if (clip.type === 'model') {
             const presetVal = clip.data?.preset || '';
@@ -509,6 +554,140 @@ export function updateProperties() {
         document.getElementById('prop-obj-gizmo')?.addEventListener('change', (e) => {
             fn.setTransformMode?.(e.target.value);
         });
+
+        // Helper: Bundle-ID aus existierender OBJ-URL extrahieren (für Co-Location)
+        const extractBundleId = () => {
+            const m = (track.objectUrl || '').match(/\/scene_objects\/(obj_[^/]+)\//);
+            return m ? m[1] : null;
+        };
+        const uploadToBundle = async (file) => {
+            const fd = new FormData();
+            fd.append('object', file);
+            const bundleId = extractBundleId();
+            if (bundleId) fd.append('bundleId', bundleId);
+            const resp = await fetch('/api/studio/scene-object-upload/', { method: 'POST', body: fd });
+            const data = await resp.json();
+            if (!data.ok) throw new Error(data.error || 'Upload fehlgeschlagen');
+            return data;
+        };
+        const openFilePicker = (accept) => new Promise(res => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = accept;
+            input.addEventListener('change', () => res(input.files[0] || null));
+            input.click();
+        });
+
+        // Textur ersetzen
+        document.getElementById('prop-obj-tex-replace')?.addEventListener('click', async () => {
+            try {
+                const file = await openFilePicker('image/png,image/jpeg,image/jpg,image/webp');
+                if (!file) return;
+                const up = await uploadToBundle(file);
+                const texLoader = new THREE.TextureLoader();
+                const tex = await texLoader.loadAsync(up.url);
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                tex.colorSpace = THREE.SRGBColorSpace;
+                track.mesh.traverse(o => {
+                    if (o.isMesh && o.material) {
+                        const mats = Array.isArray(o.material) ? o.material : [o.material];
+                        for (const m of mats) {
+                            if (m.map) m.map.dispose();
+                            m.map = tex;
+                            m.needsUpdate = true;
+                        }
+                    }
+                });
+                track.objectTextureUrl = up.url;
+                fn.serverLog?.('obj_texture_replaced', `track=${track.name} file=${file.name}`);
+                updateProperties();
+            } catch (e) { alert('Textur-Upload fehlgeschlagen: ' + e.message); }
+        });
+
+        // Textur entfernen
+        document.getElementById('prop-obj-tex-remove')?.addEventListener('click', () => {
+            track.mesh.traverse(o => {
+                if (o.isMesh && o.material) {
+                    const mats = Array.isArray(o.material) ? o.material : [o.material];
+                    for (const m of mats) {
+                        if (m.map) { m.map.dispose(); m.map = null; m.needsUpdate = true; }
+                    }
+                }
+            });
+            track.objectTextureUrl = null;
+            updateProperties();
+        });
+
+        // MTL ersetzen: neue Materialien laden und alle Meshes neu materialisieren
+        document.getElementById('prop-obj-mtl-replace')?.addEventListener('click', async () => {
+            try {
+                const file = await openFilePicker('.mtl');
+                if (!file) return;
+                const up = await uploadToBundle(file);
+                const { MTLLoader } = await import('three/addons/loaders/MTLLoader.js');
+                const basePath = up.url.substring(0, up.url.lastIndexOf('/') + 1);
+                const mtlLoader = new MTLLoader();
+                mtlLoader.setPath(basePath);
+                const mtlName = up.url.substring(up.url.lastIndexOf('/') + 1);
+                const materials = await mtlLoader.loadAsync(mtlName);
+                materials.preload();
+                // Erstes Material aus dem MTL auf alle Child-Meshes anwenden
+                const matEntries = Object.entries(materials.materials || {});
+                if (matEntries.length === 0) { alert('MTL enthält keine Materialien'); return; }
+                const primary = matEntries[0][1];
+                track.mesh.traverse(o => {
+                    if (o.isMesh) {
+                        // Falls mehrere Materialien im MTL: versuche Match per Namen, sonst primary
+                        const byName = materials.materials[o.material?.name];
+                        if (o.material) {
+                            const mats = Array.isArray(o.material) ? o.material : [o.material];
+                            mats.forEach(m => m.dispose?.());
+                        }
+                        o.material = byName || primary;
+                    }
+                });
+                track.objectMtlUrl = up.url;
+                // Merke mtlUrl auch in clip.data damit Save/Restore die neue Referenz nutzt
+                const objClip = track.clips.find(c => c.type === 'object_clip');
+                if (objClip) objClip.data = { ...objClip.data, mtlUrl: up.url };
+                fn.serverLog?.('obj_mtl_replaced', `track=${track.name} file=${file.name}`);
+            } catch (e) { alert('MTL-Upload fehlgeschlagen: ' + e.message); }
+        });
+
+        // Mesh (OBJ/GLB) ersetzen — Position/Rotation/Scale übernehmen
+        document.getElementById('prop-obj-mesh-replace')?.addEventListener('click', async () => {
+            try {
+                const file = await openFilePicker('.obj,.glb,.gltf,.fbx');
+                if (!file) return;
+                const up = await uploadToBundle(file);
+                // Alte Transform merken
+                const oldPos = track.mesh.position.clone();
+                const oldRot = track.mesh.rotation.clone();
+                const oldScale = track.mesh.scale.x;
+                // Clip anpassen: URL ersetzen
+                const objClip = track.clips.find(c => c.type === 'object_clip');
+                if (objClip) objClip.data = { ...objClip.data, url: up.url, fileName: file.name, ext: up.ext };
+                const se = await import('./scene_extras.js');
+                await se._loadSceneObjectIntoTrack(track, up.url, file.name, up.ext, objClip?.startFrame || 0, null);
+                // Auto-Normalize überschreiben mit alter Transform
+                if (track.mesh) {
+                    track.mesh.position.copy(oldPos);
+                    track.mesh.rotation.copy(oldRot);
+                    track.mesh.scale.setScalar(oldScale);
+                }
+                // _loadSceneObjectIntoTrack pushte einen neuen Clip → Duplikat entfernen
+                // (wir haben den ursprünglichen Clip mit aktualisierter URL bereits)
+                const clips = track.clips.filter(c => c.type === 'object_clip');
+                if (clips.length > 1) {
+                    // Behalte den letzten (neu gepushten) und entferne die alten mit veralteter URL?
+                    // Einfacher: entferne den neuesten Duplikat-Clip
+                    const idx = track.clips.lastIndexOf(clips[clips.length - 1]);
+                    if (idx >= 0) track.clips.splice(idx, 1);
+                }
+                fn.serverLog?.('obj_mesh_replaced', `track=${track.name} file=${file.name}`);
+                updateProperties();
+            } catch (e) { alert('Mesh-Upload fehlgeschlagen: ' + e.message); }
+        });
     }
 
     // Audio track
@@ -574,6 +753,18 @@ export function updateProperties() {
         document.getElementById('prop-audio-fadein')?.addEventListener('change', (e) => { clip.data.fadeIn = parseInt(e.target.value)||0; });
         document.getElementById('prop-audio-fadeout')?.addEventListener('change', (e) => { clip.data.fadeOut = parseInt(e.target.value)||0; });
         document.getElementById('prop-audio-offset')?.addEventListener('change', (e) => { clip.data.offset = parseFloat(e.target.value)||0; });
+    }
+
+    // Object-Clip editors (3D-Objekt auf scene_object track)
+    if (clip?.type === 'object_clip') {
+        document.getElementById('prop-oc-start')?.addEventListener('change', (e) => {
+            clip.startFrame = Math.max(0, parseInt(e.target.value) || 0);
+            fn.updateDuration(); fn.renderTimeline(); fn.applyPlayhead();
+        });
+        document.getElementById('prop-oc-frames')?.addEventListener('change', (e) => {
+            clip.totalFrames = Math.max(1, parseInt(e.target.value) || 300);
+            fn.updateDuration(); fn.renderTimeline(); fn.applyPlayhead();
+        });
     }
 
     // Model clip editors

@@ -24,9 +24,14 @@ export function setupPlayback() {
         if (e.code === 'ArrowRight') { e.preventDefault(); stepFrame(1); }
         if (e.code === 'Delete' || e.code === 'Backspace') {
             e.preventDefault();
-            // Timeline clip has priority over library selection
-            if (state.selectedClipIdx >= 0) fn.deleteSelectedClip();
-            else if (document.querySelector('.lib-item.selected')) fn.deleteSelectedLibItem();
+            // Priorität: Clip-Selektion → Library-Selektion → Track-Selektion
+            if (state.selectedClipIdx >= 0) {
+                fn.deleteSelectedClip();
+            } else if (document.querySelector('.lib-item.selected')) {
+                fn.deleteSelectedLibItem();
+            } else if (state.selectedTrackIdx >= 0) {
+                fn.removeTrack(state.selectedTrackIdx);  // pushUndo intern
+            }
         }
         if (e.code === 'KeyS' && !e.ctrlKey) {
             e.preventDefault();

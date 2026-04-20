@@ -121,7 +121,8 @@ export class Track {
         // Light track
         this.light = null;
         this.lightHelper = null;
-        this.lightVisible = true;
+        this.lightVisible = false;  // Helfer-Linien: default aus (User schaltet bei Bedarf)
+        this.coneVisible = true;    // Lichtkegel (Formkörper): default an
         // Audio track
         this.audioCtx = null;
         this.gainNode = null;
