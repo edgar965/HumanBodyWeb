@@ -9,8 +9,8 @@ import { Clip } from './models.js';
 
 let tlCanvas, tlCtx;
 
-// Cached API responses for track-context "Hinzufügen" submenu
-let _cachedModelPresets = null;
+// Cached animations list — Modelle werden immer frisch vom Server geholt
+// damit neue Dateien in data/models/ sofort erscheinen.
 let _cachedAnimations = null;
 
 const DEFAULT_CLIP_SECONDS = 10;
@@ -140,22 +140,24 @@ async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame, subme
             sub.appendChild(catItem);
         }
     } else if (track.type === 'model') {
-        if (!_cachedModelPresets) {
-            try {
-                const resp = await fetch('/api/character/models/');
-                const data = await resp.json();
-                _cachedModelPresets = data.presets || [];
-            } catch (e) {
-                sub.innerHTML = '<div class="ctx-submenu-empty">Fehler beim Laden</div>';
-                return;
-            }
-        }
-        sub.innerHTML = '';
-        if (_cachedModelPresets.length === 0) {
-            sub.innerHTML = '<div class="ctx-submenu-empty">Keine Modelle verfügbar</div>';
+        // Immer frisch vom Server holen (kein Cache) — so werden neu hinzugefügte
+        // Modelle im data/models/-Verzeichnis sofort angezeigt.
+        let presets = [];
+        try {
+            const resp = await fetch('/api/character/models/');
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            presets = data.presets || [];
+        } catch (e) {
+            sub.innerHTML = `<div class="ctx-submenu-empty">Fehler beim Laden: ${e.message}</div>`;
             return;
         }
-        for (const p of _cachedModelPresets) {
+        sub.innerHTML = '';
+        if (presets.length === 0) {
+            sub.innerHTML = '<div class="ctx-submenu-empty">Keine Modelle in data/models/</div>';
+            return;
+        }
+        for (const p of presets) {
             const item = document.createElement('div');
             item.className = 'ctx-item';
             item.innerHTML = `<i class="fas fa-user" style="width:16px;color:#e91e63;"></i> ${p.label || p.name}`;

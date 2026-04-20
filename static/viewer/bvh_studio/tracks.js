@@ -840,9 +840,26 @@ export async function loadTrackCharacter(track) {
             }
         }
 
-        // Standard-Mesh (FemaleGarment etc.): SkinnedMesh mit Skin-Weights
+        // Standard-Mesh (FemaleGarment etc.): SkinnedMesh mit Skin-Weights.
+        // Morphs + Meta-Params aus dem Preset an die Mesh-API weiterreichen,
+        // sonst kommt immer das Standard-Mesh zurück (Bug: FrauHaarDünn sah aus
+        // wie das Default-Modell weil morphs nicht angewendet wurden).
         if (!newMesh) {
-            const resp = await fetch(`/api/character/mesh/?body_type=${encodeURIComponent(track.bodyType)}`);
+            // Preset kann einen abweichenden bodyType haben (z.B. Female_Asian) —
+            // dann überschreibt der Preset den Track-Default.
+            const effectiveBodyType = modelData.body_type || track.bodyType;
+            track.bodyType = effectiveBodyType;
+            const params = new URLSearchParams();
+            params.set('body_type', effectiveBodyType);
+            const morphs = modelData.morphs || {};
+            for (const [k, v] of Object.entries(morphs)) {
+                if (v !== 0) params.set(`morph_${k}`, v);
+            }
+            const meta = modelData.meta || {};
+            for (const [k, v] of Object.entries(meta)) {
+                if (v !== 0) params.set(`meta_${k}`, v);
+            }
+            const resp = await fetch(`/api/character/mesh/?${params}`);
             const data = await resp.json();
             if (data.error) return;
 
