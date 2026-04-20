@@ -134,6 +134,23 @@ if _asset_creator_parent not in sys.path:
 # Logging — rotating file + console
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
+
+# Patch stdlib RotatingFileHandler to swallow PermissionError on rotate
+# (Windows file-lock when Daphne holds django.log and a second manage.py process
+# tries to rotate it). In-place monkeypatch avoids a separate module that would
+# need to be importable at dictConfig time.
+import logging.handlers as _lh
+_orig_do_rollover = _lh.RotatingFileHandler.doRollover
+_orig_rotate = _lh.RotatingFileHandler.rotate
+def _safe_do_rollover(self):
+    try: _orig_do_rollover(self)
+    except (PermissionError, OSError): pass
+def _safe_rotate(self, source, dest):
+    try: _orig_rotate(self, source, dest)
+    except (PermissionError, OSError): pass
+_lh.RotatingFileHandler.doRollover = _safe_do_rollover
+_lh.RotatingFileHandler.rotate = _safe_rotate
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
