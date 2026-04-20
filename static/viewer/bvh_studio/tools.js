@@ -160,6 +160,7 @@ export function setupToolbar() {
     document.getElementById('dd-help-audio')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('audio'); });
     document.getElementById('dd-help-shortcuts')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('shortcuts'); });
     document.getElementById('dd-help-animations')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('animations'); });
+    document.getElementById('dd-help-export')?.addEventListener('click', () => { helpDD?.classList.remove('open'); showHelp('export'); });
     document.getElementById('help-modal-close')?.addEventListener('click', () => { document.getElementById('help-modal').style.display = 'none'; });
     document.getElementById('help-modal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.style.display = 'none'; });
 }
@@ -412,6 +413,82 @@ const HELP_CONTENT = {
 <li>Beim Umbenennen/Verschieben wird auch die Retarget-Cache-Datei (.json) mitverschoben</li>
 <li>Alle Änderungen werden sofort auf der Festplatte ausgeführt</li>
 <li>Wird der letzte Clip eines Tracks gelöscht, verschwindet das 3D-Modell automatisch</li>
+</ul>
+`},
+
+    export: {
+        title: 'Export mit Cloth-Simulation',
+        body: `
+<p>Das Studio kann Animationen als <b>MP4</b> exportieren. Beim Export
+kann zusätzlich eine <b>Cloth-Simulation</b> laufen, die Durchstöße
+verhindert (z.B. Bein durchs Rock-Modell). Die Sim läuft auf deiner
+RTX 3060 wenn möglich.</p>
+
+<h4 style="color:var(--accent);margin:12px 0 6px;"><i class="fas fa-cogs"></i> Bedienung</h4>
+<ol>
+<li><b>Szene vorbereiten:</b> Im Szenen-Editor ein generiertes Modell laden (z.B. <code>TriadischRock</code>) und eine BVH-Animation zuweisen (z.B. AIST <code>d01_mJS3_ch07</code>).</li>
+<li><b>Kleidungs-Bones markieren:</b> Im Tab <b>Modell</b> pro Bone die Checkbox <b>&bdquo;Kleidungsst&uuml;ck&ldquo;</b>. Standard-aktiv bei <code>skirt</code>, <code>tutu</code>, <code>spiral_tutu</code>, <code>helix_ribbon</code>. Nur diese werden simuliert, der Rest bleibt rigid und dient als Kollisions-K&ouml;rper.</li>
+<li><b>Engine w&auml;hlen:</b> <i>Einstellungen &rarr; BVH Studio &rarr; Cloth Simulation</i>. Drei Optionen (s.u.).</li>
+<li><b>Animation abspielen</b> und Dauer markieren.</li>
+<li><b>Browser-Konsole &ouml;ffnen</b> (F12) und aufrufen:<br>
+<pre style="background:#0d0d17;padding:8px;border-radius:4px;margin-top:4px;font-size:0.8rem;">fn.exportClothMP4({
+  engine:   'warp_blender',   // 'blender_eevee' | 'warp_blender' | 'warp_only'
+  quality:  'medium',         // 'low' | 'medium' | 'high'
+  duration: 3.0,              // Sekunden
+  fps:      30
+})</pre>
+</li>
+<li>Die MP4 landet in <code>media/cloth_exports/</code> und &ouml;ffnet automatisch im neuen Tab.</li>
+</ol>
+
+<h4 style="color:#4caf50;margin:14px 0 6px;"><i class="fas fa-video"></i> Engine 1 &mdash; <code>blender_eevee</code></h4>
+<p>Blender Cloth-Simulation (CPU) + EEVEE-Render (GPU). Stabilste Qualit&auml;t, keine CUDA n&ouml;tig f&uuml;r die Sim, nur f&uuml;r's Rendering.</p>
+<ul>
+<li><b>Sim:</b> CPU, Blender 5.0 Cloth-Modifier, Bake vor Render</li>
+<li><b>Render:</b> EEVEE-Next, GPU (RTX 3060 via OptiX)</li>
+<li><b>Zeit (5s @ 30fps):</b> Sim 30&ndash;75s + Render 15s &asymp; <b>1 min</b></li>
+<li><b>Qualit&auml;t:</b> ⭐⭐⭐⭐ (mature Cloth-Physik, sch&ouml;ne Falten)</li>
+<li><b>Vorteil:</b> Robust, deterministisch, Blender-Standard</li>
+<li><b>Nachteil:</b> Langsamste Sim</li>
+</ul>
+
+<h4 style="color:#00bcd4;margin:14px 0 6px;"><i class="fas fa-rocket"></i> Engine 2 &mdash; <code>warp_blender</code></h4>
+<p><b>Empfohlen f&uuml;r Produktion.</b> NVIDIA Warp auf CUDA f&uuml;r die Sim + Blender EEVEE f&uuml;rs Rendering.</p>
+<ul>
+<li><b>Sim:</b> NVIDIA Warp 1.4.2 auf RTX 3060 (CUDA Kernels, Spring-Cloth + SDF-Collider)</li>
+<li><b>Render:</b> Blender EEVEE-Next (liest den Sim-Bake und rendert Frame-f&uuml;r-Frame)</li>
+<li><b>Zeit (5s @ 30fps):</b> Sim 5&ndash;15s + Render 15s &asymp; <b>30s</b></li>
+<li><b>Qualit&auml;t:</b> ⭐⭐⭐⭐⭐ (Warp-Physik + Blender-Render-Qualit&auml;t)</li>
+<li><b>Vorteil:</b> 5-10&times; schneller als Engine 1 bei gleicher Qualit&auml;t</li>
+<li><b>Nachteil:</b> Zwei Subprocesses (Python3.10 f&uuml;r Warp, Blender f&uuml;r Render)</li>
+</ul>
+
+<h4 style="color:#e91e63;margin:14px 0 6px;"><i class="fas fa-bolt"></i> Engine 3 &mdash; <code>warp_only</code></h4>
+<p>Komplett auf Warp + pyrender, kein Blender. Schnellste end-to-end Pipeline.</p>
+<ul>
+<li><b>Sim:</b> NVIDIA Warp auf CUDA (wie Engine 2)</li>
+<li><b>Render:</b> pyrender Offscreen-OpenGL via verstecktes pyglet-Fenster (GPU)</li>
+<li><b>Zeit (5s @ 30fps):</b> Sim 5&ndash;15s + Render 5&ndash;10s &asymp; <b>20s</b></li>
+<li><b>Qualit&auml;t:</b> ⭐⭐⭐ (einfacheres Material/Shading als EEVEE)</li>
+<li><b>Vorteil:</b> Schnellste Pipeline, keine Blender-Dependency</li>
+<li><b>Nachteil:</b> Render ist Basic (flat lit, Vertex-Colors, keine Shadows)</li>
+</ul>
+
+<h4 style="color:var(--accent);margin:14px 0 6px;"><i class="fas fa-tools"></i> Technischer Unterbau</h4>
+<ul>
+<li><b>Splitter:</b> Der merged-Body wird anhand <code>boneVertexRanges</code> + <code>is_garment</code>-Flag in Cloth-Segmente + Rigid-Collider aufgeteilt. Pro Cloth-Segment werden die obersten ~12% der Verts als <b>Pin-Group</b> bestimmt (folgen dem Bone-Head beim Tanz, statt frei zu fliegen).</li>
+<li><b>Pipeline-Code:</b> <code>A:/HumanBodyTest/HumanBody/collision/</code></li>
+<li><b>Server-Endpoint:</b> POST <code>/api/cloth/export/</code></li>
+<li><b>Python-Envs:</b> Warp-Sim l&auml;uft in <code>A:/3DTools/python10</code> (braucht Python 3.10 + Warp 1.4.2 f&uuml;r <code>warp.sim</code>). Django + pyrender in <code>A:/3DTools/python14</code>.</li>
+<li><b>Qualit&auml;t-Stufen:</b> steuern Sim-Iterationen pro Frame sowie Render-Samples. <i>low</i> = 16 Substeps/32 Samples, <i>medium</i> = 32/64, <i>high</i> = 64/128.</li>
+</ul>
+
+<h4 style="margin:14px 0 6px;">Troubleshooting</h4>
+<ul>
+<li><b>&bdquo;warp_sim failed&ldquo;:</b> Warp braucht CUDA. Pr&uuml;fe <code>nvidia-smi</code>. Warp-Cache beim ersten Run &asymp; 20s Kompilierung normal.</li>
+<li><b>&bdquo;blender not found&ldquo;:</b> Blender 5.0 muss unter <code>C:/Program Files/Blender Foundation/Blender 5.0/</code> liegen.</li>
+<li><b>Cloth klebt am K&ouml;rper:</b> Erh&ouml;he <i>quality</i> auf <code>high</code> oder erh&ouml;he den Bone-Radius.</li>
+<li><b>Rock fliegt weg:</b> Pin-Group zu klein. Nur Bones mit genug Verts am Head funktionieren (Helix-Ribbon mit <code>spiralSkirt:true</code> ist ideal).</li>
 </ul>
 `},
 };
