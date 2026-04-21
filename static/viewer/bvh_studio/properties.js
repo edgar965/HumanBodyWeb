@@ -718,6 +718,10 @@ export function updateProperties() {
         document.getElementById('prop-kf-set-view')?.addEventListener('click', () => {
             clip.data.position = { x: state.camera.position.x, y: state.camera.position.y, z: state.camera.position.z };
             clip.data.rotation = { x: state.camera.rotation.x, y: state.camera.rotation.y, z: state.camera.rotation.z };
+            clip.data.quaternion = { x: state.camera.quaternion.x, y: state.camera.quaternion.y, z: state.camera.quaternion.z, w: state.camera.quaternion.w };
+            if (state.controls && state.controls.target) {
+                clip.data.lookAt = { x: state.controls.target.x, y: state.controls.target.y, z: state.controls.target.z };
+            }
             clip.data.fov = state.camera.fov;
             updateProperties();
         });

@@ -337,9 +337,25 @@ export function addCameraKeyframe(trackIdx, frame) {
     const kf = new Clip(null, `Kameraposition ${track.clips.length + 1}`, 0, state.project.fps);
     kf.type = 'camera_kf';
     kf.startFrame = targetFrame;
+    // LookAt-Target = OrbitControls.target beim Anlegen. So kann die
+    // Playback-Seite zwischen zwei Keyframes sauber interpolieren: Position
+    // linear, Target linear, dann camera.lookAt(target). Das hält das
+    // Motiv mittig, während die Kamera durch die Szene fliegt — auch wenn
+    // Start- und End-Orientierung stark unterschiedlich sind.
+    const lookAt = state.controls && state.controls.target
+        ? { x: state.controls.target.x, y: state.controls.target.y, z: state.controls.target.z }
+        : null;
     kf.data = {
         position: { x: state.camera.position.x, y: state.camera.position.y, z: state.camera.position.z },
         rotation: { x: state.camera.rotation.x, y: state.camera.rotation.y, z: state.camera.rotation.z },
+        // Store quaternion alongside Euler: quaternion is the canonical
+        // representation that slerp can safely interpolate between; Euler
+        // values can be equivalent-but-different for the same orientation
+        // (e.g. after successive OrbitControls moves) which makes a naive
+        // euler→quaternion round-trip pick the wrong hemisphere and drag
+        // the camera through the scene.
+        quaternion: { x: state.camera.quaternion.x, y: state.camera.quaternion.y, z: state.camera.quaternion.z, w: state.camera.quaternion.w },
+        lookAt,
         fov: state.camera.fov,
         interpolation: 'smooth',  // 'linear' | 'smooth' | 'step'
         fade: true,  // Fade-Effekt: true = interpolieren zum nächsten KF, false = Sprung

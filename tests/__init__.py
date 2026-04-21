@@ -9,6 +9,8 @@ from .ui_prefs_tests import UiPrefsTests
 from .client_log_tests import ClientLogTests
 from .retarget_tests import RetargetTests
 from .character_api_tests import CharacterApiTests
+from .cloth_export_tests import ClothExportTests
+from .camera_track_tests import CameraTrackTests
 
 ALL_CATEGORIES = [
     TheatreTests,
@@ -18,6 +20,8 @@ ALL_CATEGORIES = [
     ProjectTests,
     RetargetTests,
     CharacterApiTests,
+    ClothExportTests,
+    CameraTrackTests,
     UiPrefsTests,
     ClientLogTests,
 ]

@@ -69,14 +69,30 @@ def export_cloth(request):
         logger.exception('payload_to_scene_input failed')
         return JsonResponse({'ok': False, 'error': f'payload decode failed: {e}'}, status=400)
 
-    out_dir = _out_dir()
+    requested_dir = (payload.get('output_dir') or '').strip()
+    out_dir = requested_dir if requested_dir and os.path.isdir(requested_dir) else _out_dir()
     os.makedirs(out_dir, exist_ok=True)
-    out_name = f"{payload.get('scene_name', 'scene').replace('/', '_')}_{engine}_{int(time.time())}_{uuid.uuid4().hex[:6]}.mp4"
+    requested_name = (payload.get('filename') or '').strip()
+    if requested_name:
+        if not requested_name.lower().endswith('.mp4'):
+            requested_name += '.mp4'
+        base, ext = os.path.splitext(requested_name)
+        out_name = f"{base}_{engine}{ext}"
+    else:
+        out_name = f"{payload.get('scene_name', 'scene').replace('/', '_')}_{engine}_{int(time.time())}_{uuid.uuid4().hex[:6]}.mp4"
     out_path = os.path.join(out_dir, out_name)
+
+    # Optional resolution override from client
+    try:
+        w = int(payload.get('width') or 1920)
+        h = int(payload.get('height') or 1080)
+        resolution = (max(64, w), max(64, h))
+    except Exception:
+        resolution = (1920, 1080)
 
     t0 = time.time()
     try:
-        result = export_mp4(scene, engine, quality, out_path)
+        result = export_mp4(scene, engine, quality, out_path, resolution=resolution)
     except Exception as e:
         logger.exception('export_mp4 crashed')
         return JsonResponse({'ok': False, 'error': f'export crashed: {e}'}, status=500)

@@ -249,11 +249,19 @@ export function applyPlayhead() {
         }
     }
 
+    let cameraApplied = false;
     for (const track of state.project.tracks) {
         if (track.muted) continue;
         if (track.type === 'bvh') applyBvhTrack(track, t);
         else if (track.type === 'model') applyModelTrack(track, t);
-        else if (track.type === 'camera') applyCameraTrack(track, t);
+        else if (track.type === 'camera') {
+            // Only the first active camera track drives the camera; later ones
+            // would overwrite and make playback look chaotic.
+            if (!cameraApplied && track.cameraActive && track.clips?.length) {
+                applyCameraTrack(track, t);
+                cameraApplied = true;
+            }
+        }
         else if (track.type === 'light') applyLightTrack(track, t);
         else if (track.type === 'audio') applyAudioTrack(track, t);
         else if (track.type === 'scene_object') applySceneObjectTrack(track, t);
@@ -340,7 +348,7 @@ function applyBvhTrack(track, t) {
 }
 
 function applyCameraTrack(track, t) {
-    if (!track.cameraActive || !state.playing || track.clips.length === 0) return;
+    if (!track.cameraActive || track.clips.length === 0) return;
     const frame = state.playheadFrame;
     const kfs = track.clips;
     // Find surrounding keyframes
@@ -355,11 +363,31 @@ function applyCameraTrack(track, t) {
 
     // Fade-Effekt aus = Sprung bei diesem KF (keine Interpolation vom prev zu diesem)
     const noFade = prev.data.fade === false;
+    const getQuat = (d) => {
+        // Prefer the stored quaternion — it is unambiguous. Fall back to
+        // the Euler values for older projects that only wrote x/y/z.
+        if (d.quaternion) {
+            return new THREE.Quaternion(d.quaternion.x, d.quaternion.y, d.quaternion.z, d.quaternion.w);
+        }
+        return new THREE.Quaternion().setFromEuler(
+            new THREE.Euler(d.rotation.x, d.rotation.y, d.rotation.z),
+        );
+    };
+    // LookAt-Interpolation: wenn beide Keyframes ein lookAt-Target haben,
+    // fahren wir die Kamera so, dass sie während des Flugs auf den
+    // interpolierten Target-Punkt schaut (position + target linear lerp,
+    // dann camera.lookAt(target)). Das ist die "Maya-Cam"-Semantik und
+    // verhindert, dass die Kamera mitten im Flug am Motiv vorbeischaut —
+    // der Hauptgrund für "Kamera bewegt sich wirr durch die Szene".
+    const hasLookAt = prev.data.lookAt && next.data.lookAt;
     if (prev === next || noFade) {
         // Exakt auf prev (kein Interpolieren)
         state.camera.position.set(prev.data.position.x, prev.data.position.y, prev.data.position.z);
-        state.camera.quaternion.setFromEuler(new THREE.Euler(
-            prev.data.rotation.x, prev.data.rotation.y, prev.data.rotation.z));
+        if (prev.data.lookAt) {
+            state.camera.lookAt(prev.data.lookAt.x, prev.data.lookAt.y, prev.data.lookAt.z);
+        } else {
+            state.camera.quaternion.copy(getQuat(prev.data));
+        }
         state.camera.fov = prev.data.fov;
     } else {
         const alpha = (frame - prev.startFrame) / (next.startFrame - prev.startFrame);
@@ -368,14 +396,24 @@ function applyCameraTrack(track, t) {
         state.camera.position.lerpVectors(
             new THREE.Vector3(prev.data.position.x, prev.data.position.y, prev.data.position.z),
             new THREE.Vector3(next.data.position.x, next.data.position.y, next.data.position.z), t);
-        // Rotation: shortest-arc slerp. Force positive dot by flipping qNext if needed.
-        const qPrev = new THREE.Quaternion().setFromEuler(new THREE.Euler(prev.data.rotation.x, prev.data.rotation.y, prev.data.rotation.z));
-        const qNext = new THREE.Quaternion().setFromEuler(new THREE.Euler(next.data.rotation.x, next.data.rotation.y, next.data.rotation.z));
-        if (qPrev.dot(qNext) < 0) qNext.set(-qNext.x, -qNext.y, -qNext.z, -qNext.w);
-        state.camera.quaternion.copy(qPrev).slerp(qNext, t);
+        if (hasLookAt) {
+            const target = new THREE.Vector3().lerpVectors(
+                new THREE.Vector3(prev.data.lookAt.x, prev.data.lookAt.y, prev.data.lookAt.z),
+                new THREE.Vector3(next.data.lookAt.x, next.data.lookAt.y, next.data.lookAt.z), t,
+            );
+            state.camera.lookAt(target);
+        } else {
+            // Legacy-Fallback: Quaternion-Slerp mit Short-Arc-Korrektur
+            const qPrev = getQuat(prev.data);
+            const qNext = getQuat(next.data);
+            if (qPrev.dot(qNext) < 0) {
+                qNext.set(-qNext.x, -qNext.y, -qNext.z, -qNext.w);
+            }
+            const qResult = new THREE.Quaternion().slerpQuaternions(qPrev, qNext, t);
+            state.camera.quaternion.copy(qResult);
+        }
         state.camera.fov = prev.data.fov + (next.data.fov - prev.data.fov) * t;
     }
-    state.camera.updateMatrixWorld(true);
     state.camera.updateProjectionMatrix();
     // OrbitControls NICHT deaktivieren — User möchte während Play die Kamera manuell bewegen können.
 }

@@ -165,31 +165,64 @@ async function startExport() {
     offRenderer.setSize(expW, expH, false);
     offRenderer.setPixelRatio(1);
 
-    // Use same camera with adjusted aspect
-    const origAspect = state.camera.aspect;
+    // Snapshot and override camera so the export uses the SCENE camera
+    // (= first Kamera-Track with keyframes), not the user's OrbitControls
+    // pose. If there is no such track, we bail with a clear message instead
+    // of silently baking the current view.
+    const camTrack = state.project.tracks.find(
+        t => t.type === 'camera' && (t.clips?.length || 0) > 0
+    );
+    if (!camTrack) {
+        statusText.textContent = 'Fehler: Kein Kamera-Track mit Keyframes. '
+            + 'Lege im Timeline-Bereich einen Kamera-Track an und füge mind. einen Keyframe hinzu.';
+        progressBar.style.width = '0%';
+        startBtn.disabled = false;
+        startBtn.style.opacity = '1';
+        cancelBtn.style.display = 'none';
+        return;
+    }
+    // Remember user's live orbit pose so we can restore after export.
+    const camRestore = {
+        pos: state.camera.position.clone(),
+        quat: state.camera.quaternion.clone(),
+        fov: state.camera.fov,
+        aspect: state.camera.aspect,
+        cameraActive: camTrack.cameraActive,
+        controlsEnabled: state.controls ? state.controls.enabled : true,
+    };
+    // Disable OrbitControls so they cannot overwrite the timeline pose.
+    if (state.controls) state.controls.enabled = false;
+    // Force the chosen track to drive the camera, even if the user muted it.
+    camTrack.cameraActive = true;
     state.camera.aspect = expW / expH;
     state.camera.updateProjectionMatrix();
 
     const wasPlaying = state.playing;
     state.playing = false;
 
-    if (engine === 'server') {
-        await exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, crf, filename, statusText, progressBar);
-    } else {
-        await exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toFrame, fps, filename, statusText, progressBar);
+    try {
+        if (engine === 'server') {
+            await exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, crf, filename, statusText, progressBar);
+        } else {
+            await exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toFrame, fps, filename, statusText, progressBar);
+        }
+    } finally {
+        // Cleanup: restore camera + controls exactly as the user left them.
+        offRenderer.dispose();
+        camTrack.cameraActive = camRestore.cameraActive;
+        state.camera.position.copy(camRestore.pos);
+        state.camera.quaternion.copy(camRestore.quat);
+        state.camera.fov = camRestore.fov;
+        state.camera.aspect = camRestore.aspect;
+        state.camera.updateProjectionMatrix();
+        if (state.controls) state.controls.enabled = camRestore.controlsEnabled;
+        if (wasPlaying) state.playing = true;
+
+        progressDiv.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        startBtn.disabled = false;
+        startBtn.style.opacity = '1';
     }
-
-    // Cleanup
-    offRenderer.dispose();
-    state.camera.aspect = origAspect;
-    state.camera.updateProjectionMatrix();
-    if (wasPlaying) state.playing = true;
-
-    // Reset UI
-    progressDiv.style.display = 'none';
-    cancelBtn.style.display = 'none';
-    startBtn.disabled = false;
-    startBtn.style.opacity = '1';
 }
 
 /** Save blob with native "Save As" dialog, fallback to download */
