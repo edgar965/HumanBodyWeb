@@ -515,6 +515,33 @@ export async function restoreSessionState() {
         }
         sessionData.project.tracks = validTracks;
 
+        // Pre-Check: Alle Presets die von Model-Clips referenziert werden müssen existieren.
+        // Fehlt auch nur einer (z.B. nach Datei-Delete) → Session wegwerfen und Default-Projekt laden.
+        const referencedPresets = new Set();
+        for (const t of sessionData.project.tracks) {
+            if (t.type === 'model') {
+                if (t.preset) referencedPresets.add(t.preset);
+                for (const c of (t.clips || [])) {
+                    if (c.data?.preset) referencedPresets.add(c.data.preset);
+                }
+            } else if (t.type === 'bvh' && t.preset) {
+                referencedPresets.add(t.preset);
+            }
+        }
+        for (const p of referencedPresets) {
+            try {
+                const r = await fetch(`/api/character/model/${encodeURIComponent(p)}/`);
+                if (r.status === 404) {
+                    console.warn(`[BVH Studio] Session-Preset "${p}" nicht mehr vorhanden → Session verworfen, Default-Projekt wird geladen.`);
+                    sessionStorage.removeItem(SESSION_KEY);
+                    return false;
+                }
+            } catch (e) {
+                // Netzwerkfehler → Session behalten (könnte offline sein); echte 404s dürchgreifen oben
+                console.warn(`[BVH Studio] Session-Preset-Check "${p}" network error:`, e);
+            }
+        }
+
         await restoreProjectData(sessionData.project);
 
         // Verify restore succeeded: remove tracks that ended up with no working clips
@@ -522,6 +549,10 @@ export async function restoreSessionState() {
         for (let i = state.project.tracks.length - 1; i >= 0; i--) {
             const t = state.project.tracks[i];
             if (t.type === 'bvh' && t.clips.length === 0 && !t.mesh) {
+                brokenTracks.push(i);
+            }
+            // scene_object custom bundle mit kaputter URL (Upload nicht mehr da) → mesh fehlt
+            if (t.type === 'scene_object' && t.subtype === 'custom' && !t.mesh) {
                 brokenTracks.push(i);
             }
         }

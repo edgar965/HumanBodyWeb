@@ -640,12 +640,11 @@ export async function _loadSceneObjectIntoTrack(track, url, displayName, ext, st
             const gltf = await new GLTFLoader().loadAsync(url);
             object3d = gltf.scene;
         } else {
-            alert(`Format "${ext}" wird noch nicht unterstützt`);
-            return;
+            throw new Error(`Format "${ext}" wird noch nicht unterstützt`);
         }
     } catch (e) {
-        alert('Laden fehlgeschlagen: ' + e.message);
-        return;
+        console.warn('[scene_extras] 3D-Objekt Load fehlgeschlagen:', url, e);
+        throw e;  // Caller entscheidet über alert (Session-Restore schluckt, User-Upload zeigt)
     }
 
     // Fallback-Material nur wenn gar keins vorhanden
