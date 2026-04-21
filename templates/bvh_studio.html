@@ -543,6 +543,26 @@
                     </div>
                 </div>
 
+                <!-- Engine 4: Skinning-Only + Blender -->
+                <div class="prop-group" style="border:1px solid #4caf50;padding:8px;border-radius:4px;margin-top:8px;">
+                    <div style="font-weight:600;color:#4caf50;margin-bottom:6px;"><i class="fas fa-bone"></i> Engine 4: Skinning + Body-Push-Out + Blender</div>
+                    <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:8px;line-height:1.4;">
+                        Keine Physik-Simulation — Rock wird rigid am Hüftknochen befestigt und
+                        mechanisch aus dem Body herausgedrückt. <b>Schnell</b> (&lt;5 s zzgl. Render)
+                        und <b>garantiert keine Knochen-durch-Rock</b>-Artefakte. Kein Schwingen.
+                    </div>
+                    <button id="cloth-run-skinning-blender" class="cloth-export-btn" data-engine="skinning_blender"
+                            style="width:100%;padding:6px 10px;background:#4caf50;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">
+                        <i class="fas fa-play"></i> Export mit Skinning-Only
+                    </button>
+                    <div class="cloth-progress" data-engine="skinning_blender" style="display:none;margin-top:6px;">
+                        <div class="cloth-progress-bar" style="height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+                            <div class="cloth-progress-fill" style="height:100%;background:#4caf50;width:0%;transition:width 0.25s;"></div>
+                        </div>
+                        <div class="cloth-progress-text" style="font-size:0.7rem;color:var(--text-muted);margin-top:3px;">Bereit</div>
+                    </div>
+                </div>
+
                 <!-- Status + Cancel -->
                 <div id="cloth-export-status" style="display:none;margin-top:12px;padding:8px;background:var(--bg-card);border-radius:4px;font-size:0.75rem;color:var(--text-muted);">
                     <div id="cloth-export-status-text">Bereit</div>
