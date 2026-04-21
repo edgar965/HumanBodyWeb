@@ -283,9 +283,10 @@ async function _runClothExport(engine) {
     const duration = parseFloat(document.getElementById('cloth-duration')?.value || '3.0');
     const fps = parseInt(document.getElementById('cloth-fps')?.value || '30');
     const qualityIdMap = {
-        'blender_eevee': 'cloth-quality-blender-eevee',
-        'warp_blender':  'cloth-quality-warp-blender',
-        'warp_only':     'cloth-quality-warp-only',
+        'blender_eevee':    'cloth-quality-blender-eevee',
+        'warp_blender':     'cloth-quality-warp-blender',
+        'warp_only':        'cloth-quality-warp-only',
+        'skinning_blender': null,  // Skinning hat keine Quality-Stufe
     };
     const quality = document.getElementById(qualityIdMap[engine])?.value || 'medium';
     const resolutionHeight = parseInt(document.getElementById('cloth-resolution')?.value || '1080');
@@ -319,7 +320,7 @@ async function _runClothExport(engine) {
     _progress(engine, 25, `POST ${payload.anim_frames} Frames → Server`);
     _setStatus(`Läuft: ${engine}, ${payload.anim_frames} Frames…`, 'var(--accent)');
 
-    const expectedSec = { blender_eevee: 60, warp_blender: 30, warp_only: 20 }[engine] || 30;
+    const expectedSec = { blender_eevee: 60, warp_blender: 30, warp_only: 20, skinning_blender: 25 }[engine] || 30;
     const stopPulse = _startProgress(engine, expectedSec, `${engine}: Sim + Render`);
     const t0 = performance.now();
     // Cancel-Button sichtbar machen + AbortController verbinden

@@ -54,7 +54,7 @@ def export_cloth(request):
 
     engine = payload.get('engine', 'blender_eevee')
     quality = payload.get('quality', 'medium')
-    if engine not in ('blender_eevee', 'warp_blender', 'warp_only'):
+    if engine not in ('blender_eevee', 'warp_blender', 'warp_only', 'skinning_blender'):
         return JsonResponse({'ok': False, 'error': f'unknown engine {engine}'}, status=400)
 
     try:
