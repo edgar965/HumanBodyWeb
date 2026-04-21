@@ -12,6 +12,7 @@ fast and side-effect-free. They cover:
 """
 from __future__ import annotations
 
+import inspect
 import os
 import sys
 import tempfile
@@ -293,3 +294,38 @@ class ClothExportTests(TestCategory):
         Mz = R @ M
         fwd = -Mz[:3, 2]
         return bool(fwd[1] > 0.5), f'fwd={tuple(round(float(x), 3) for x in fwd)}'
+
+    # --- Blender Cloth Export: Cloth-Pin folgt der Armature-Bone ---
+    # Regression für den "Rock in Fetzen am Boden"-Bug: setup_cloth() fügte nur einen
+    # 'Pin' VG und einen ungenutzten '_pin_to_bone' VG hinzu, aber KEINEN Armature
+    # Modifier. Ergebnis: Pin-Vertices blieben bei T-Pose-Position stehen während der
+    # Körper sich wegbewegte → Rock riss, fiel auf den Boden.
+    @staticmethod
+    def test_blender_export_setup_cloth_has_armature_modifier():
+        """setup_cloth() muss einen Armature-Modifier hinzufügen — sonst folgen Pin-Vertices
+        dem Bone nicht."""
+        import collision.blender_script as bs  # type: ignore
+        src = inspect.getsource(bs.setup_cloth)
+        has_arm_new = "modifiers.new('Armature', 'ARMATURE')" in src
+        return has_arm_new, f'armature modifier {"OK" if has_arm_new else "FEHLT"}'
+
+    @staticmethod
+    def test_blender_export_setup_cloth_armature_before_cloth():
+        """Modifier-Reihenfolge: Armature MUSS vor Cloth stehen, sonst sieht der
+        Cloth-Solver die Pin-Vertices noch an der Rest-Position statt am Bone-Pose."""
+        import collision.blender_script as bs  # type: ignore
+        src = inspect.getsource(bs.setup_cloth)
+        arm_pos = src.find("'Armature', 'ARMATURE'")
+        cloth_pos = src.find("'Cloth', 'CLOTH'")
+        ok = arm_pos >= 0 and cloth_pos >= 0 and arm_pos < cloth_pos
+        return ok, f'arm@{arm_pos} cloth@{cloth_pos}'
+
+    @staticmethod
+    def test_blender_export_setup_cloth_bone_vgroup_uses_bone_name():
+        """Die Pin-Vertex-Group für die Armature-Deformation muss nach dem Bone benannt sein
+        (z.B. 'DEF-spine'), nicht ein willkürlicher Name wie '_pin_to_bone'. Blender's
+        Armature-Modifier matcht VGs über ihren Namen mit Bones."""
+        import collision.blender_script as bs  # type: ignore
+        src = inspect.getsource(bs.setup_cloth)
+        uses_bone_name = "obj.vertex_groups.new(name=bone_name)" in src or "vertex_groups.new(name=str(seg['bone_name']))" in src
+        return uses_bone_name, 'OK' if uses_bone_name else 'VG-Name nicht an bone_name gekoppelt'
