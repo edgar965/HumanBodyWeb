@@ -270,8 +270,11 @@ async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fp
         statusText.textContent = `Aufnahme: Frame ${f - fromFrame + 1}/${totalFrames} (${pct}%)`;
         progressBar.style.width = `${pct * 0.8}%`;  // 80% for capture, 20% for encoding
 
-        // Yield to keep UI responsive
-        if ((f - fromFrame) % 5 === 0) await new Promise(r => setTimeout(r, 0));
+        // Yield EVERY frame so Cancel-Button-Click zeitnah gegriffen wird.
+        // Vorher nur alle 5 Frames → bis zu 500ms Verzögerung bis der Click
+        // registriert wurde.
+        await new Promise(r => setTimeout(r, 0));
+        if (exportCancelled) { statusText.textContent = 'Abgebrochen.'; return; }
     }
 
     if (exportCancelled) { statusText.textContent = 'Abgebrochen.'; return; }

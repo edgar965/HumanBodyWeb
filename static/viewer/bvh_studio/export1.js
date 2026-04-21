@@ -275,6 +275,10 @@ async function _buildPayload({ duration, fps }) {
     };
 }
 
+// Module-level AbortController, damit _runClothExport einen cancel-Button
+// bedienen kann. Nur eines aktiv gleichzeitig.
+let _clothAbort = null;
+
 async function _runClothExport(engine) {
     const duration = parseFloat(document.getElementById('cloth-duration')?.value || '3.0');
     const fps = parseInt(document.getElementById('cloth-fps')?.value || '30');
@@ -318,12 +322,17 @@ async function _runClothExport(engine) {
     const expectedSec = { blender_eevee: 60, warp_blender: 30, warp_only: 20 }[engine] || 30;
     const stopPulse = _startProgress(engine, expectedSec, `${engine}: Sim + Render`);
     const t0 = performance.now();
+    // Cancel-Button sichtbar machen + AbortController verbinden
+    _clothAbort = new AbortController();
+    const cancelBtn = document.getElementById('cloth-export-cancel');
+    if (cancelBtn) cancelBtn.style.display = '';
     try {
         const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
         const resp = await fetch('/api/cloth/export/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
             body: JSON.stringify(payload),
+            signal: _clothAbort.signal,
         });
         stopPulse();
         const data = await resp.json();
@@ -341,10 +350,17 @@ async function _runClothExport(engine) {
         }
     } catch (e) {
         stopPulse();
-        _progress(engine, 100, `Netzwerkfehler: ${e.message}`, '#e74c3c');
-        _setStatus(`Netzwerkfehler: ${e.message}`, '#e74c3c');
+        if (e.name === 'AbortError') {
+            _progress(engine, 100, 'Abgebrochen', '#ff9800');
+            _setStatus('Export abgebrochen. Der Server-Prozess läuft ggf. noch im Hintergrund weiter.', '#ff9800');
+        } else {
+            _progress(engine, 100, `Netzwerkfehler: ${e.message}`, '#e74c3c');
+            _setStatus(`Netzwerkfehler: ${e.message}`, '#e74c3c');
+        }
     } finally {
         _setButtonsEnabled(true);
+        if (cancelBtn) cancelBtn.style.display = 'none';
+        _clothAbort = null;
         setTimeout(() => _progress(engine, null), 15000);
     }
 }
@@ -363,6 +379,9 @@ export function bindClothExportButtons() {
     _autofillTargetDir();
     document.querySelectorAll('.props-tab').forEach(tab => {
         if (tab.dataset.tab === 'export1') tab.addEventListener('click', _autofillTargetDir);
+    });
+    document.getElementById('cloth-export-cancel')?.addEventListener('click', () => {
+        if (_clothAbort) _clothAbort.abort();
     });
     document.querySelectorAll('.cloth-export-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
