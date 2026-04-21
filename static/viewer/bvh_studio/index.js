@@ -292,6 +292,22 @@ async function init() {
                     if (projectData?.name) {
                         await restoreProjectData(projectData);
                         console.log(`[BVH Studio] Default project loaded: ${defaultProject}`);
+                        // UI-State (Playhead/Zoom/Selection) aus verworfener Session übernehmen
+                        try {
+                            const uiStateRaw = sessionStorage.getItem('bvhStudio_sessionState__ui');
+                            if (uiStateRaw) {
+                                const ui = JSON.parse(uiStateRaw);
+                                state.playheadFrame = ui.playheadFrame ?? 0;
+                                state.timelineZoom = ui.timelineZoom ?? 100;
+                                state.timelineScrollX = ui.timelineScrollX ?? 0;
+                                state.selectedTrackIdx = ui.selectedTrackIdx ?? -1;
+                                state.selectedClipIdx = ui.selectedClipIdx ?? -1;
+                                sessionStorage.removeItem('bvhStudio_sessionState__ui');
+                                const zoomSlider = document.getElementById('tl-zoom');
+                                if (zoomSlider) zoomSlider.value = state.timelineZoom;
+                                fn.applyPlayhead?.();
+                            }
+                        } catch (e) { /* ignore */ }
                     } else {
                         console.warn('[BVH Studio] project-load returned no project:', payload);
                     }

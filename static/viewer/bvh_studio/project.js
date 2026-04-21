@@ -507,6 +507,39 @@ export async function restoreSessionState() {
         const sessionData = JSON.parse(raw);
         if (!sessionData.project || !sessionData.project.tracks || sessionData.project.tracks.length === 0) return false;
 
+        // Priorität Default-Projekt > Session:
+        // Wenn ein Default-Projekt konfiguriert ist UND es dieselbe Identität hat wie
+        // die Session (projectName + gleiche Track-Liste), lieber frisch aus der Datei
+        // laden — sonst rekonstruiert die Session stale Zustände (gelöschte Presets,
+        // kaputte _linkedAnimIdx, gemutete Tracks, fehlende Meshes nach API-Fehlern).
+        // Session wird nur zurückgespielt wenn der User ein ANDERES Projekt gebaut hat
+        // als das Default — dann ist die Session die einzige Wahrheit.
+        try {
+            const prefs = await (await fetch('/api/ui-prefs/')).json();
+            const defaultName = prefs.studio_default_project;
+            const defaultDir = prefs.studio_project_path || '';
+            const sessionName = sessionData.project.name || '';
+            if (defaultName && sessionName && defaultName === sessionName) {
+                console.log(`[BVH Studio] Session passt zum Default-Projekt "${defaultName}" → frisch aus Datei laden (Session verworfen, UI-State behalten).`);
+                // UI-State (Playhead, Zoom, Selection) via sessionStorage an das
+                // index.js Default-Load weiterreichen — wir entfernen nur die Track-Daten,
+                // damit der Default-Load-Pfad (tracks.length === 0) greift.
+                // Der State wird beim erstem save() frisch geschrieben.
+                sessionStorage.removeItem(SESSION_KEY);
+                // UI-State merken, damit index.js ihn nach dem Default-Load anwenden kann
+                sessionStorage.setItem(SESSION_KEY + '__ui', JSON.stringify({
+                    playheadFrame: sessionData.playheadFrame,
+                    timelineZoom: sessionData.timelineZoom,
+                    timelineScrollX: sessionData.timelineScrollX,
+                    selectedTrackIdx: sessionData.selectedTrackIdx,
+                    selectedClipIdx: sessionData.selectedClipIdx,
+                }));
+                return false;  // → Default-Projekt wird geladen
+            }
+        } catch (e) {
+            console.warn('[BVH Studio] UI-Prefs-Fetch fehlgeschlagen, fahre mit Session-Restore fort:', e);
+        }
+
         // Only restore BVH tracks that actually have clips
         const validTracks = sessionData.project.tracks.filter(t => t.type !== 'bvh' || (t.clips && t.clips.length > 0));
         if (validTracks.length === 0) {
@@ -514,33 +547,6 @@ export async function restoreSessionState() {
             return false;
         }
         sessionData.project.tracks = validTracks;
-
-        // Pre-Check: Alle Presets die von Model-Clips referenziert werden müssen existieren.
-        // Fehlt auch nur einer (z.B. nach Datei-Delete) → Session wegwerfen und Default-Projekt laden.
-        const referencedPresets = new Set();
-        for (const t of sessionData.project.tracks) {
-            if (t.type === 'model') {
-                if (t.preset) referencedPresets.add(t.preset);
-                for (const c of (t.clips || [])) {
-                    if (c.data?.preset) referencedPresets.add(c.data.preset);
-                }
-            } else if (t.type === 'bvh' && t.preset) {
-                referencedPresets.add(t.preset);
-            }
-        }
-        for (const p of referencedPresets) {
-            try {
-                const r = await fetch(`/api/character/model/${encodeURIComponent(p)}/`);
-                if (r.status === 404) {
-                    console.warn(`[BVH Studio] Session-Preset "${p}" nicht mehr vorhanden → Session verworfen, Default-Projekt wird geladen.`);
-                    sessionStorage.removeItem(SESSION_KEY);
-                    return false;
-                }
-            } catch (e) {
-                // Netzwerkfehler → Session behalten (könnte offline sein); echte 404s dürchgreifen oben
-                console.warn(`[BVH Studio] Session-Preset-Check "${p}" network error:`, e);
-            }
-        }
 
         await restoreProjectData(sessionData.project);
 
