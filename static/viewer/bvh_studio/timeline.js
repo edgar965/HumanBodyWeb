@@ -413,6 +413,7 @@ export function setupTimeline() {
                 state.selectedTrackIdx = hit.trackIdx;
                 state.selectedClipIdx = hit.clipIdx;
                 fn.updateProperties();
+                fn.switchPropsTab?.('props');
                 renderTimeline();
                 const clip = state.project.tracks[hit.trackIdx].clips[hit.clipIdx];
                 draggingClip = hit;
@@ -447,6 +448,7 @@ export function setupTimeline() {
                         state.selectedTrackIdx = row.trackIdx;
                         state.selectedClipIdx = -1;
                         fn.updateProperties();
+                        fn.switchPropsTab?.('props');
                         renderTimeline();
                     }
                 }

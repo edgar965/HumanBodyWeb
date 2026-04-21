@@ -129,11 +129,15 @@ export async function buildClothPayload({ duration = 3.0, fps = 30 } = {}) {
  * Export the selected character with the active animation as MP4 via the
  * chosen cloth engine. Returns the download URL.
  */
-export async function exportClothMP4({ engine = 'warp_only', quality = 'medium', duration = 3.0, fps = 30 } = {}) {
+export async function exportClothMP4({ engine = 'warp_only', quality = 'medium', duration = 3.0, fps = 30, outputDir = '', filename = '', width = 1920, height = 1080 } = {}) {
     const payload = await buildClothPayload({ duration, fps });
     payload.engine = engine;
     payload.quality = quality;
-    console.log(`[Cloth Export] engine=${engine} quality=${quality} frames=${payload.anim_frames}`);
+    payload.width = width;
+    payload.height = height;
+    if (outputDir) payload.output_dir = outputDir;
+    if (filename) payload.filename = filename;
+    console.log(`[Cloth Export] engine=${engine} quality=${quality} res=${width}x${height} frames=${payload.anim_frames} dir=${outputDir||'(default)'} file=${filename||'(auto)'}`);
     const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
     const resp = await fetch('/api/cloth/export/', {
         method: 'POST',

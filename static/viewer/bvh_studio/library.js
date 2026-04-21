@@ -278,36 +278,45 @@ export function setupLibraryManagement() {
     document.getElementById('lib-refresh')?.addEventListener('click', () => loadLibrary());
 }
 
-export function setupSidebarResize() {
-    const sidebar = document.getElementById('studio-sidebar');
-    const handle = document.getElementById('sidebar-resize');
-    if (!sidebar || !handle) return;
-
-    // Restore saved width
+function _makeResizable({ panelId, handleId, storageKey, edge, min, max }) {
+    const panel = document.getElementById(panelId);
+    const handle = document.getElementById(handleId);
+    if (!panel || !handle) return;
     try {
-        const saved = localStorage.getItem('bvhStudio_sidebarWidth');
-        if (saved) sidebar.style.width = saved + 'px';
+        const saved = parseInt(localStorage.getItem(storageKey) || '');
+        if (!isNaN(saved)) {
+            panel.style.width = Math.max(min, Math.min(max, saved)) + 'px';
+        }
     } catch(e) {}
-
     let dragging = false;
-    handle.addEventListener('mousedown', (e) => {
-        dragging = true;
-        handle.classList.add('dragging');
-        e.preventDefault();
-    });
+    handle.addEventListener('mousedown', (e) => { dragging = true; handle.classList.add('dragging'); e.preventDefault(); });
     document.addEventListener('mousemove', (e) => {
         if (!dragging) return;
-        const newWidth = Math.max(150, Math.min(600, e.clientX - sidebar.getBoundingClientRect().left));
-        sidebar.style.width = newWidth + 'px';
+        const rect = panel.getBoundingClientRect();
+        let w;
+        if (edge === 'left') w = rect.right - e.clientX;  // right-edge panel, drag from left edge
+        else w = e.clientX - rect.left;                    // left-edge panel, drag from right edge
+        panel.style.width = Math.max(min, Math.min(max, w)) + 'px';
     });
     document.addEventListener('mouseup', () => {
-        if (dragging) {
-            dragging = false;
-            handle.classList.remove('dragging');
-            try { localStorage.setItem('bvhStudio_sidebarWidth', parseInt(sidebar.style.width)); } catch(e) {}
-            // Trigger resize for viewport/timeline
-            window.dispatchEvent(new Event('resize'));
-        }
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('dragging');
+        try { localStorage.setItem(storageKey, parseInt(panel.style.width)); } catch(e) {}
+        window.dispatchEvent(new Event('resize'));
+    });
+}
+
+export function setupSidebarResize() {
+    _makeResizable({
+        panelId: 'studio-sidebar', handleId: 'sidebar-resize',
+        storageKey: 'bvhStudio_sidebarWidth',
+        edge: 'right', min: 150, max: 600,
+    });
+    _makeResizable({
+        panelId: 'props-panel', handleId: 'props-resize',
+        storageKey: 'bvhStudio_propsWidth',
+        edge: 'left', min: 260, max: 700,
     });
 }
 

@@ -51,7 +51,7 @@ export async function undo() {
     fn.renderTimeline();
     fn.updatePlaybackUI();
     fn.updateProperties();
-    document.getElementById('studio-info').textContent = `Undo: ${snap.label}`;
+    fn.flashStudioInfo?.(`Undo: ${snap.label}`);
     console.log(`[Undo] Restored: ${snap.label} (${undoStack.length} left)`);
     state._undoInProgress = false;
 }
@@ -76,7 +76,7 @@ export async function redo() {
     fn.renderTimeline();
     fn.updatePlaybackUI();
     fn.updateProperties();
-    document.getElementById('studio-info').textContent = `Redo`;
+    fn.flashStudioInfo?.(`Redo`);
     console.log(`[Redo] Restored (${redoStack.length} left)`);
     state._undoInProgress = false;
 }

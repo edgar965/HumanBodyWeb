@@ -13,6 +13,31 @@ import { _gaussSmooth, _gaussFilter } from './tools.js';
 
 const ss = sharedState;
 
+// =========================================================================
+// Studio-Info (top-right label): always shows the current project name;
+// transient messages (save/load/undo) flash briefly and revert.
+// =========================================================================
+let _studioInfoFlashTimer = null;
+export function updateStudioInfo() {
+    const el = document.getElementById('studio-info');
+    if (!el) return;
+    if (_studioInfoFlashTimer) return;  // a flash is active; respect it
+    const name = state.project?.name || 'Untitled';
+    el.textContent = `Projekt: ${name}`;
+}
+export function flashStudioInfo(text, ms = 2500) {
+    const el = document.getElementById('studio-info');
+    if (!el) return;
+    el.textContent = text;
+    if (_studioInfoFlashTimer) clearTimeout(_studioInfoFlashTimer);
+    _studioInfoFlashTimer = setTimeout(() => {
+        _studioInfoFlashTimer = null;
+        updateStudioInfo();
+    }, ms);
+}
+fn.updateStudioInfo = updateStudioInfo;
+fn.flashStudioInfo = flashStudioInfo;
+
 // Preview system variables
 let _previewModal = null;
 let _previewRenderer = null;
@@ -152,7 +177,7 @@ export async function saveProject() {
             state.project._lastSavePath = result.path;
             try { localStorage.setItem('bvhStudio_lastProject', result.path); } catch(e) {}
             console.log(`[BVH Studio] Project saved: ${result.path}`);
-            document.getElementById('studio-info').textContent = `Gespeichert: ${filename}`;
+            flashStudioInfo(`Gespeichert: ${filename}`);
         } else {
             alert('Speichern fehlgeschlagen: ' + (result.error || 'Unbekannter Fehler'));
         }
@@ -188,7 +213,8 @@ export async function loadProject() {
                     await restoreProjectData(loadResult.project);
                     state.project._lastSavePath = loadResult.path;
                     try { localStorage.setItem('bvhStudio_lastProject', loadResult.path); } catch(e) {}
-                    document.getElementById('studio-info').textContent = `Geladen: ${result.files[idx].name}`;
+                    flashStudioInfo(`Geladen: ${result.files[idx].name}`);
+                    updateStudioInfo();
                     return;
                 } else {
                     alert('Laden fehlgeschlagen: ' + (loadResult.error || ''));
@@ -403,6 +429,7 @@ export async function restoreProjectData(data) {
     fn.updateTrackHeaders();
     fn.applyPlayhead();  // Activate model tracks + show meshes
     console.log(`[BVH Studio] Project restored: ${state.project.name} (${state.project.tracks.length} tracks)`);
+    updateStudioInfo();
 }
 
 export function resetToDefault() {
@@ -428,7 +455,7 @@ export function resetToDefault() {
     fn.updatePlaybackUI();
     fn.updateProperties();
 
-    document.getElementById('studio-info').textContent = 'BVH Studio v2.0';
+    updateStudioInfo();
     fn.serverLog('reset_to_default');
 }
 
@@ -444,7 +471,8 @@ export async function loadLastProject() {
             await restoreProjectData(result.project);
             state.project._lastSavePath = result.path;
             const name = lastPath.split(/[/\\]/).pop().replace('.studio.json', '');
-            document.getElementById('studio-info').textContent = `Geladen: ${name}`;
+            flashStudioInfo(`Geladen: ${name}`);
+            updateStudioInfo();
             console.log(`[BVH Studio] Last project loaded: ${lastPath}`);
         } else {
             alert('Laden fehlgeschlagen: ' + (result.error || lastPath));

@@ -24,6 +24,7 @@ import { setupPlayback, togglePlay, stopPlayback, applyPlayhead, updatePlaybackU
 import { updateProperties, switchPropsTab } from './properties.js';
 import { setupToolbar } from './tools.js';
 import { setupExportPanel, exportBVH } from './export_video.js';
+import { bindClothExportButtons } from './export1.js';
 import { buildProjectData, saveProject, saveProjectAs, loadProject, restoreProjectData, resetToDefault, loadLastProject, saveSessionState, restoreSessionState, previewAnimation, closePreview } from './project.js';
 import { updateDebugPanel } from './debug.js';
 import {
@@ -259,6 +260,7 @@ async function init() {
 
     // Setup export panel
     setupExportPanel();
+    bindClothExportButtons();
 
     // Viewport right-click → Licht-Position setzen (nur wenn Licht-Track ausgewählt)
     setupViewportContextMenu();
@@ -316,6 +318,8 @@ async function init() {
     window.__studioRedo = redo;
     window.__undoStack = undoStack;
     window.__studioState = state;
+    window.__studioFn = fn;
+    fn.updateStudioInfo?.();
     console.log(`[BVH Studio] Initialized${restored ? ' (session restored)' : ''}`);
 }
 
@@ -339,7 +343,13 @@ function animate() {
         syncLightVisibility();
     }
 
-    state.controls.update();
+    // When a Kamera-Track drives the camera, OrbitControls would overwrite
+    // the interpolated pose on update(). Skip controls while playing + an
+    // active camera track exists.
+    const cameraTrackActive = state.playing && state.project.tracks.some(
+        t => t.type === 'camera' && t.cameraActive && (t.clips?.length || 0) > 0
+    );
+    if (!cameraTrackActive) state.controls.update();
     state.renderer.render(state.scene, state.camera);
     updateDebugPanel();
 }

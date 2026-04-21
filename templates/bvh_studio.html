@@ -102,8 +102,16 @@
 
     /* Properties panel */
     .studio-properties {
-        width: 250px; background: var(--bg-secondary); border-left: 1px solid var(--border);
-        overflow-y: auto; padding: 12px; flex-shrink: 0;
+        width: 350px; min-width: 260px; max-width: 700px;
+        background: var(--bg-secondary); border-left: 1px solid var(--border);
+        overflow-y: auto; padding: 12px; flex-shrink: 0; position: relative;
+    }
+    .props-resize-handle {
+        position: absolute; top: 0; left: -3px; width: 6px; height: 100%;
+        cursor: ew-resize; z-index: 10;
+    }
+    .props-resize-handle:hover, .props-resize-handle.dragging {
+        background: var(--accent); opacity: 0.5;
     }
     .studio-properties h3 { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 8px; }
     .prop-group { margin-bottom: 12px; }
@@ -152,12 +160,12 @@
 
     /* Properties panel tabs */
     .props-tabs {
-        display: flex; border-bottom: 1px solid var(--border); margin: -12px -12px 12px;
-        padding: 0 8px;
+        display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--border);
+        margin: -12px -12px 12px; padding: 0 6px;
     }
     .props-tab {
-        padding: 8px 14px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;
-        border-bottom: 2px solid transparent; transition: all 0.15s;
+        padding: 8px 10px; font-size: 0.78rem; color: var(--text-muted); cursor: pointer;
+        border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap;
     }
     .props-tab:hover { color: var(--text); }
     .props-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -257,7 +265,7 @@
         </div>
     </div>
     <div style="flex:1;"></div>
-    <span id="studio-info" style="font-size:0.75rem;color:var(--text-muted);">BVH Studio v2.0</span>
+    <span id="studio-info" style="font-size:0.75rem;color:var(--text-muted);" title="Aktuelles Projekt">Projekt: Untitled</span>
 </div>
 
 <!-- Main layout -->
@@ -342,10 +350,13 @@
 
     <!-- Properties Panel -->
     <div class="studio-properties" id="props-panel">
+        <div class="props-resize-handle" id="props-resize"></div>
         <div class="props-tabs">
             <div class="props-tab active" data-tab="props">Eigenschaften</div>
             <div class="props-tab" data-tab="tools">Tools</div>
             <div class="props-tab" data-tab="export">Export</div>
+            <div style="flex-basis:100%;height:0;"></div>
+            <div class="props-tab" data-tab="export1" style="flex:1;text-align:center;background:rgba(233,30,99,0.08);"><i class="fas fa-tshirt"></i> Export1 (Cloth)</div>
         </div>
         <div id="props-tab-props" class="props-tab-content active">
             <div id="props-content">
@@ -432,6 +443,116 @@
                 <div style="display:flex;gap:6px;margin-top:10px;">
                     <button id="export-start" style="flex:1;padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.82rem;"><i class="fas fa-circle" style="color:#e74c3c;"></i> Export starten</button>
                     <button id="export-cancel" style="padding:6px 12px;background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:0.82rem;display:none;"><i class="fas fa-stop"></i> Abbrechen</button>
+                </div>
+            </div>
+        </div>
+        <div id="props-tab-export1" class="props-tab-content">
+            <div id="export1-content">
+                <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:8px;"><i class="fas fa-tshirt"></i> Export mit Cloth-Simulation</h3>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5;">
+                    Verhindert Durchst&ouml;&szlig;e (z.B. Bein durchs Rock). Nur Bones mit Checkbox <b>&bdquo;Kleidungsst&uuml;ck&ldquo;</b> im Modell-Tab werden simuliert.
+                </div>
+
+                <div class="prop-group">
+                    <div class="prop-row"><label>Zielordner:</label><input type="text" id="cloth-target-dir" value="" style="flex:1;font-size:0.75rem;" placeholder="Einstellungen > BVH Studio"></div>
+                    <div class="prop-row"><label>Dateiname:</label><input type="text" id="cloth-filename" value="cloth_export.mp4" style="flex:1;"></div>
+                    <div class="prop-row"><label>Dauer (s):</label><input type="number" id="cloth-duration" value="3.0" min="0.2" max="120" step="0.1" style="width:70px;"></div>
+                    <div class="prop-row"><label>FPS:</label>
+                        <select id="cloth-fps">
+                            <option value="24">24 (Film)</option>
+                            <option value="30" selected>30 (Standard)</option>
+                            <option value="60">60 (Smooth)</option>
+                        </select>
+                    </div>
+                    <div class="prop-row"><label>Aufl&ouml;sung:</label>
+                        <select id="cloth-resolution">
+                            <option value="720">720p (1280&times;720)</option>
+                            <option value="1080" selected>1080p (1920&times;1080)</option>
+                            <option value="1440">1440p (2560&times;1440)</option>
+                            <option value="2160">4K (3840&times;2160)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Engine 1: Blender Cloth + EEVEE -->
+                <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:12px;">
+                    <div style="font-size:0.82rem;color:#4caf50;font-weight:600;margin-bottom:4px;"><i class="fas fa-cube"></i> Blender Cloth + EEVEE</div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;line-height:1.4;">CPU-Sim (Blender 5.0) + GPU-Render. Robust, stabile Physik. ~1 min f&uuml;r 5s @ 30fps.</div>
+                    <div class="prop-row" style="margin-bottom:6px;"><label style="font-size:0.72rem;">Qualit&auml;t:</label>
+                        <select id="cloth-quality-blender-eevee" style="flex:1;font-size:0.72rem;">
+                            <option value="low">Niedrig &mdash; Cloth-Steps 3, Bend 0.3, EEVEE 32 Samples</option>
+                            <option value="medium" selected>Mittel &mdash; Cloth-Steps 5, Bend 0.5, EEVEE 64 Samples</option>
+                            <option value="high">Hoch &mdash; Cloth-Steps 10, Bend 1.0, EEVEE 128 Samples, Subdiv 2</option>
+                        </select>
+                    </div>
+                    <button id="cloth-run-blender-eevee" class="cloth-export-btn" data-engine="blender_eevee"
+                            style="width:100%;padding:6px 10px;background:#4caf50;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">
+                        <i class="fas fa-play"></i> Export mit Blender Cloth
+                    </button>
+                    <div class="cloth-progress" data-engine="blender_eevee" style="display:none;margin-top:6px;">
+                        <div class="cloth-progress-bar" style="height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+                            <div class="cloth-progress-fill" style="height:100%;background:#4caf50;width:0%;transition:width 0.25s;"></div>
+                        </div>
+                        <div class="cloth-progress-text" style="font-size:0.7rem;color:var(--text-muted);margin-top:3px;">Bereit</div>
+                    </div>
+                </div>
+
+                <!-- Engine 2: Warp + Blender -->
+                <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:8px;">
+                    <div style="font-size:0.82rem;color:#00bcd4;font-weight:600;margin-bottom:4px;"><i class="fas fa-rocket"></i> NVIDIA Warp + Blender Render <span style="color:var(--accent);font-weight:400;font-size:0.7rem;">(empfohlen)</span></div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;line-height:1.4;">GPU-Sim (CUDA, RTX 3060) + GPU-Render (EEVEE). Beste Qualit&auml;t/Speed-Balance. ~30s f&uuml;r 5s @ 30fps.</div>
+                    <div class="prop-row" style="margin-bottom:6px;"><label style="font-size:0.72rem;">Qualit&auml;t:</label>
+                        <select id="cloth-quality-warp-blender" style="flex:1;font-size:0.72rem;">
+                            <option value="low">Niedrig &mdash; Warp 16 Substeps, Stretch 5e3, EEVEE 32</option>
+                            <option value="medium" selected>Mittel &mdash; Warp 32 Substeps, Stretch 1e4, EEVEE 64</option>
+                            <option value="high">Hoch &mdash; Warp 64 Substeps, Stretch 3e4, EEVEE 128</option>
+                        </select>
+                    </div>
+                    <button id="cloth-run-warp-blender" class="cloth-export-btn" data-engine="warp_blender"
+                            style="width:100%;padding:6px 10px;background:#00bcd4;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">
+                        <i class="fas fa-play"></i> Export mit Warp + Blender
+                    </button>
+                    <div class="cloth-progress" data-engine="warp_blender" style="display:none;margin-top:6px;">
+                        <div class="cloth-progress-bar" style="height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+                            <div class="cloth-progress-fill" style="height:100%;background:#00bcd4;width:0%;transition:width 0.25s;"></div>
+                        </div>
+                        <div class="cloth-progress-text" style="font-size:0.7rem;color:var(--text-muted);margin-top:3px;">Bereit</div>
+                    </div>
+                </div>
+
+                <!-- Engine 3: Warp pure -->
+                <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:8px;">
+                    <div style="font-size:0.82rem;color:#e91e63;font-weight:600;margin-bottom:4px;"><i class="fas fa-bolt"></i> NVIDIA Warp pur (Offscreen GL)</div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;line-height:1.4;">Komplett GPU, kein Blender. Schnellste Pipeline, einfacheres Rendering. ~20s f&uuml;r 5s @ 30fps.</div>
+                    <div class="prop-row" style="margin-bottom:6px;"><label style="font-size:0.72rem;">Qualit&auml;t:</label>
+                        <select id="cloth-quality-warp-only" style="flex:1;font-size:0.72rem;">
+                            <option value="low">Niedrig &mdash; Warp 16 Substeps, pyrender basic</option>
+                            <option value="medium" selected>Mittel &mdash; Warp 32 Substeps, pyrender Shading</option>
+                            <option value="high">Hoch &mdash; Warp 64 Substeps, pyrender + Lights</option>
+                        </select>
+                    </div>
+                    <button id="cloth-run-warp-only" class="cloth-export-btn" data-engine="warp_only"
+                            style="width:100%;padding:6px 10px;background:#e91e63;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">
+                        <i class="fas fa-play"></i> Export mit Warp
+                    </button>
+                    <div class="cloth-progress" data-engine="warp_only" style="display:none;margin-top:6px;">
+                        <div class="cloth-progress-bar" style="height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+                            <div class="cloth-progress-fill" style="height:100%;background:#e91e63;width:0%;transition:width 0.25s;"></div>
+                        </div>
+                        <div class="cloth-progress-text" style="font-size:0.7rem;color:var(--text-muted);margin-top:3px;">Bereit</div>
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div id="cloth-export-status" style="display:none;margin-top:12px;padding:8px;background:var(--bg-card);border-radius:4px;font-size:0.75rem;color:var(--text-muted);">
+                    <div id="cloth-export-status-text">Bereit</div>
+                </div>
+
+                <div style="margin-top:10px;font-size:0.7rem;color:var(--text-muted);line-height:1.4;">
+                    <i class="fas fa-info-circle"></i> Der Export nutzt die Szene im
+                    <a href="{% url 'humanbody_scene' %}" target="_blank" style="color:var(--accent);">Szenen-Editor</a> —
+                    dort Modell + Animation setzen, dann hier Export starten.
+                    Details unter <b>Hilfe &rarr; Export</b>.
                 </div>
             </div>
         </div>

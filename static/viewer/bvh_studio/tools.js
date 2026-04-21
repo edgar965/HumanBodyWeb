@@ -424,22 +424,18 @@ kann zusätzlich eine <b>Cloth-Simulation</b> laufen, die Durchstöße
 verhindert (z.B. Bein durchs Rock-Modell). Die Sim läuft auf deiner
 RTX 3060 wenn möglich.</p>
 
-<h4 style="color:var(--accent);margin:12px 0 6px;"><i class="fas fa-cogs"></i> Bedienung</h4>
+<h4 style="color:var(--accent);margin:12px 0 6px;"><i class="fas fa-cogs"></i> Bedienung (&uuml;ber das UI)</h4>
 <ol>
-<li><b>Szene vorbereiten:</b> Im Szenen-Editor ein generiertes Modell laden (z.B. <code>TriadischRock</code>) und eine BVH-Animation zuweisen (z.B. AIST <code>d01_mJS3_ch07</code>).</li>
-<li><b>Kleidungs-Bones markieren:</b> Im Tab <b>Modell</b> pro Bone die Checkbox <b>&bdquo;Kleidungsst&uuml;ck&ldquo;</b>. Standard-aktiv bei <code>skirt</code>, <code>tutu</code>, <code>spiral_tutu</code>, <code>helix_ribbon</code>. Nur diese werden simuliert, der Rest bleibt rigid und dient als Kollisions-K&ouml;rper.</li>
-<li><b>Engine w&auml;hlen:</b> <i>Einstellungen &rarr; BVH Studio &rarr; Cloth Simulation</i>. Drei Optionen (s.u.).</li>
-<li><b>Animation abspielen</b> und Dauer markieren.</li>
-<li><b>Browser-Konsole &ouml;ffnen</b> (F12) und aufrufen:<br>
-<pre style="background:#0d0d17;padding:8px;border-radius:4px;margin-top:4px;font-size:0.8rem;">fn.exportClothMP4({
-  engine:   'warp_blender',   // 'blender_eevee' | 'warp_blender' | 'warp_only'
-  quality:  'medium',         // 'low' | 'medium' | 'high'
-  duration: 3.0,              // Sekunden
-  fps:      30
-})</pre>
-</li>
-<li>Die MP4 landet in <code>media/cloth_exports/</code> und &ouml;ffnet automatisch im neuen Tab.</li>
+<li><b>Szene vorbereiten:</b> Im Szenen-Editor ein generiertes Modell laden (z.B. <code>TriadischRock</code>) und eine BVH-Animation zuweisen (z.B. AIST <code>d01_mJS3_ch07</code>). Setze das Modell + die Animation ggf. als Default in <i>Einstellungen &rarr; Szene</i>.</li>
+<li><b>Kleidungs-Bones markieren:</b> Im Szenen-Editor &rarr; Tab <b>Modell</b> pro Bone die Checkbox <b>&bdquo;Kleidungsst&uuml;ck&ldquo;</b>. Standard-aktiv bei <code>skirt</code>, <code>tutu</code>, <code>spiral_tutu</code>, <code>helix_ribbon</code>. Nur diese werden simuliert, der Rest bleibt rigid und dient als Kollisions-K&ouml;rper.</li>
+<li><b>Export-Tab &ouml;ffnen:</b> Im BVH Studio rechts oben &rarr; Tab <b>Export1</b>.</li>
+<li><b>Parameter setzen:</b> Dauer (Sekunden), FPS, Qualit&auml;t (low/medium/high).</li>
+<li><b>Engine-Button klicken:</b> einer der drei Buttons (Blender Cloth, Warp+Blender, Warp pur). Der Szenen-Editor wird automatisch in einem Popup ge&ouml;ffnet, die Sim + Render l&auml;uft, und die fertige MP4 wird nach Abschluss in einem neuen Tab ge&ouml;ffnet.</li>
+<li>Die MP4 landet zus&auml;tzlich unter <code>media/cloth_exports/</code>.</li>
 </ol>
+<p style="background:#1a1a2e;padding:8px;border-left:3px solid var(--accent);font-size:0.8rem;margin:8px 0;">
+<b>Tipp:</b> Die Szenen-Popup bleibt offen — so kannst du zwischen den drei Engines vergleichen, ohne jedes Mal neu laden zu m&uuml;ssen.
+</p>
 
 <h4 style="color:#4caf50;margin:14px 0 6px;"><i class="fas fa-video"></i> Engine 1 &mdash; <code>blender_eevee</code></h4>
 <p>Blender Cloth-Simulation (CPU) + EEVEE-Render (GPU). Stabilste Qualit&auml;t, keine CUDA n&ouml;tig f&uuml;r die Sim, nur f&uuml;r's Rendering.</p>

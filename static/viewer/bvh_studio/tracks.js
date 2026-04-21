@@ -567,6 +567,7 @@ export function selectTrack(idx) {
     }
     fn.updateTrackHeaders();
     fn.updateProperties();
+    fn.switchPropsTab?.('props');
 }
 
 export async function addClipToTrack(trackIdx, category, name, frames) {
@@ -817,6 +818,7 @@ export async function loadTrackCharacter(track) {
     try {
         const modelResp = await fetch(`/api/character/model/${encodeURIComponent(track.preset)}/`);
         const modelData = await modelResp.json();
+        track.modelData = modelData;  // cached so Export1 can read bone_parts
 
         let newMesh = null;
 

@@ -358,7 +358,8 @@ function applyCameraTrack(track, t) {
     if (prev === next || noFade) {
         // Exakt auf prev (kein Interpolieren)
         state.camera.position.set(prev.data.position.x, prev.data.position.y, prev.data.position.z);
-        state.camera.rotation.set(prev.data.rotation.x, prev.data.rotation.y, prev.data.rotation.z);
+        state.camera.quaternion.setFromEuler(new THREE.Euler(
+            prev.data.rotation.x, prev.data.rotation.y, prev.data.rotation.z));
         state.camera.fov = prev.data.fov;
     } else {
         const alpha = (frame - prev.startFrame) / (next.startFrame - prev.startFrame);
@@ -367,13 +368,14 @@ function applyCameraTrack(track, t) {
         state.camera.position.lerpVectors(
             new THREE.Vector3(prev.data.position.x, prev.data.position.y, prev.data.position.z),
             new THREE.Vector3(next.data.position.x, next.data.position.y, next.data.position.z), t);
-        // Slerp rotation via quaternions
+        // Rotation: shortest-arc slerp. Force positive dot by flipping qNext if needed.
         const qPrev = new THREE.Quaternion().setFromEuler(new THREE.Euler(prev.data.rotation.x, prev.data.rotation.y, prev.data.rotation.z));
         const qNext = new THREE.Quaternion().setFromEuler(new THREE.Euler(next.data.rotation.x, next.data.rotation.y, next.data.rotation.z));
-        const qResult = new THREE.Quaternion().slerpQuaternions(qPrev, qNext, t);
-        state.camera.quaternion.copy(qResult);
+        if (qPrev.dot(qNext) < 0) qNext.set(-qNext.x, -qNext.y, -qNext.z, -qNext.w);
+        state.camera.quaternion.copy(qPrev).slerp(qNext, t);
         state.camera.fov = prev.data.fov + (next.data.fov - prev.data.fov) * t;
     }
+    state.camera.updateMatrixWorld(true);
     state.camera.updateProjectionMatrix();
     // OrbitControls NICHT deaktivieren — User möchte während Play die Kamera manuell bewegen können.
 }
