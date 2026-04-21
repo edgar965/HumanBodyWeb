@@ -407,26 +407,110 @@ class ClothExportTests(TestCategory):
     # Im Scene-Editor kann der User Farben pro Body-Part setzen (bone_parts[bone].color).
     # =========================================================================
     @staticmethod
-    def test_warp_only_no_hardcoded_cloth_color():
-        """warp_render hardcodes (0.91, 0.35, 0.55) für Cloth — das ist Magenta und
-        ignoriert die User-Farbe aus bone_parts.color."""
+    def test_warp_only_reads_segment_color_from_bake():
+        """warp_render muss pro Segment die Farbe aus dem Bake lesen (seg.get('color')),
+        nicht stur Magenta zuweisen."""
         import collision.warp_render as wr
         src = inspect.getsource(wr)
-        # Wenn hardcoded Magenta drinsteht UND keine bone_parts-Referenz → Bug
-        hardcoded = '0.91' in src and '0.35' in src and '0.55' in src
-        reads_bone_parts = 'bone_parts' in src or 'segment_color' in src
-        ok = not hardcoded or reads_bone_parts
-        return ok, 'OK (Farben aus Payload)' if ok else 'Cloth-Farbe hardcoded (0.91, 0.35, 0.55), bone_parts ignoriert'
+        reads = ("seg.get('color')" in src) or ('seg[\'color\']' in src) or ('segment_color' in src)
+        return reads, 'OK (Farbe aus bake-seg)' if reads else 'Cloth-Farbe nicht aus Bake gelesen'
 
     @staticmethod
-    def test_warp_blender_no_hardcoded_cloth_color():
-        """blender_render_from_bake hardcodes (0.92, 0.35, 0.55) für Cloth."""
+    def test_warp_blender_reads_segment_color_from_bake():
+        """blender_render_from_bake muss pro Segment die Farbe aus dem Bake lesen."""
         import collision.blender_render_from_bake as brb
         src = inspect.getsource(brb)
-        hardcoded = '0.92, 0.35, 0.55' in src or '(0.92, 0.35, 0.55)' in src
-        reads_bone_parts = 'bone_parts' in src or 'segment_color' in src
-        ok = not hardcoded or reads_bone_parts
-        return ok, 'OK (Farben aus Payload)' if ok else 'Cloth-Farbe hardcoded, bone_parts ignoriert'
+        reads = ("seg.get('color')" in src) or ('seg[\'color\']' in src) or ('segment_color' in src)
+        return reads, 'OK (Farbe aus bake-seg)' if reads else 'Cloth-Farbe nicht aus Bake gelesen'
+
+    # =========================================================================
+    # Knochen-durch-Rock: geometrischer Radial-Test.
+    # Idee (User-Vorschlag): Oberbeinknochen unter dem Rock müssen bei jeder
+    # Kamera-Einstellung von der Cloth verdeckt sein. Proxy: bei jeder Z-Ebene
+    # unterhalb der Hip muss die Cloth in XY einen GRÖSSEREN Radius haben als
+    # die Body-Verts. Wenn irgendwo body_radius > cloth_radius → Knochen steht
+    # durch den Rock (Penetration).
+    # =========================================================================
+    @staticmethod
+    def test_recent_bake_no_thigh_through_skirt_radial():
+        """Pro sample-Frame: für alle Z-Ebenen innerhalb der Cloth-Z-Range den
+        max. Body-Radius und den min. Cloth-Radius zur Mitte vergleichen. Wenn
+        an irgendeiner Ebene body_r > cloth_r → Bein ragt durch den Rock."""
+        import glob
+        import os as _os
+        cands = glob.glob(r'C:\Users\e\AppData\Local\Temp\cloth_*\bake.npz')
+        cands = [c for c in cands if _os.path.exists(c)]
+        if not cands:
+            return True, 'Skip: kein bake.npz (Export nicht gelaufen)'
+        latest = max(cands, key=lambda p: _os.path.getmtime(p))
+        d = np.load(latest, allow_pickle=True)
+        n_seg = int(d['n_seg'][0])
+        if n_seg == 0:
+            return True, 'Skip: keine Cloth-Segmente'
+        rigid_pos = d['rigid_positions']
+        N = rigid_pos.shape[0]
+        sample_frames = [0, N // 2, N - 1] if N >= 3 else list(range(N))
+        violations = 0
+        total_checks = 0
+        worst = ('', 0.0, 0.0)  # (slice_label, body_r, cloth_r)
+        for fr in sample_frames:
+            body = rigid_pos[fr]  # (V, 3) — world Y-up
+            for i in range(n_seg):
+                cloth = d[f'seg{i}_positions'][fr]
+                if cloth.shape[0] < 10:
+                    continue
+                # Mitte = (X, Z)-Schwerpunkt der Cloth (kleine vertikale Achse Y)
+                cx = float(cloth[:, 0].mean())
+                cz = float(cloth[:, 2].mean())
+                # Cloth-Y-Range (Höhe)
+                y_min = float(cloth[:, 1].min())
+                y_max = float(cloth[:, 1].max())
+                if y_max - y_min < 0.05:
+                    continue  # zu flache Cloth (aggregierter Fetzen → anderer Test fängt das)
+                # 5 Z-Scheiben von y_min+10% bis y_max-10% (Hip+Saum ignorieren)
+                y_slices = np.linspace(y_min + 0.1 * (y_max - y_min),
+                                       y_max - 0.1 * (y_max - y_min), 5)
+                slab = 0.04  # ±4 cm Dicke
+                for yc in y_slices:
+                    # Body-Verts in dieser Höhe (und innerhalb des Cloth-XZ-Bounds*1.5)
+                    by_mask = np.abs(body[:, 1] - yc) < slab
+                    bx = body[by_mask]
+                    if bx.shape[0] < 3:
+                        continue
+                    body_r = np.sqrt((bx[:, 0] - cx) ** 2 + (bx[:, 2] - cz) ** 2).max()
+                    cy_mask = np.abs(cloth[:, 1] - yc) < slab
+                    cx_sub = cloth[cy_mask]
+                    if cx_sub.shape[0] < 3:
+                        # keine cloth in dieser Scheibe → kein test hier
+                        continue
+                    cloth_r = np.sqrt((cx_sub[:, 0] - cx) ** 2 + (cx_sub[:, 2] - cz) ** 2).min()
+                    total_checks += 1
+                    if body_r > cloth_r + 0.005:  # 5mm-Toleranz
+                        violations += 1
+                        if body_r - cloth_r > worst[1] - worst[2]:
+                            worst = (f'f={fr} seg{i} y={yc:.2f}', body_r, cloth_r)
+        if total_checks == 0:
+            return True, f'Skip: keine vergleichbaren Slices (cloth zu klein?) — latest={_os.path.basename(_os.path.dirname(latest))}'
+        rate = violations / total_checks
+        ok = rate < 0.1  # <10% Z-Slices zeigen Penetration
+        return ok, f'violations={violations}/{total_checks} ({rate*100:.0f}%) worst={worst[0]} body_r={worst[1]:.2f} cloth_r={worst[2]:.2f}'
+
+    # =========================================================================
+    # Licht-Positionen: Alle User-Lichter aus dem Payload müssen instantiiert werden.
+    # =========================================================================
+    @staticmethod
+    def test_warp_blender_lights_preserved_from_payload():
+        """setup_lights_from_payload muss pro Licht ein Blender-Light-Object erstellen
+        mit passendem Typ (SPOT/SUN/POINT) — matcht sowohl Payload-Typ-Strings als auch
+        Blender-Typ-Enum-Werte."""
+        import collision.blender_render_from_bake as brb
+        src = inspect.getsource(brb)
+        has_spot = "'SPOT'" in src or '"SPOT"' in src
+        has_sun = "'SUN'" in src or '"SUN"' in src
+        has_point = "'POINT'" in src or '"POINT"' in src
+        ok = has_spot and has_sun and has_point
+        return ok, 'OK' if ok else f'Licht-Typen unvollständig (SPOT={has_spot} SUN={has_sun} POINT={has_point})'
+
 
     # =========================================================================
     # Knochen-durch-Rock: Cloth-Simulation muss Body-Collision respektieren.
