@@ -329,3 +329,155 @@ class ClothExportTests(TestCategory):
         src = inspect.getsource(bs.setup_cloth)
         uses_bone_name = "obj.vertex_groups.new(name=bone_name)" in src or "vertex_groups.new(name=str(seg['bone_name']))" in src
         return uses_bone_name, 'OK' if uses_bone_name else 'VG-Name nicht an bone_name gekoppelt'
+
+    @staticmethod
+    def test_blender_export_setup_cloth_bone_vg_covers_all_verts():
+        """Die Bone-VG muss weight=1.0 auf ALLE Cloth-Verts haben (nicht nur Pins). Sonst
+        deformiert der Armature-Modifier nur die Pins während der Rest-Mesh in T-Pose
+        bleibt — Federn zerreißen, Rock fällt durch Boden."""
+        import collision.blender_script as bs  # type: ignore
+        src = inspect.getsource(bs.setup_cloth)
+        # Akzeptiere zwei Formen: list(range(n_verts)) oder all_verts Iteration
+        uses_all = ('list(range(n_verts))' in src) or ('range(len(obj.data.vertices))' in src)
+        return uses_all, 'OK' if uses_all else 'Bone-VG nur auf Pins (Rest-Verts bleiben in T-Pose)'
+
+    # =========================================================================
+    # Payload-Kamera: ALLE 3 Export-Pipelines müssen die Kamera aus dem Payload
+    # (scene_input.camera_matrices) übernehmen — NICHT eine eigene Auto-Fit-Kamera
+    # berechnen. Sonst rendert der User einen anderen Winkel als er im Browser sieht.
+    # =========================================================================
+    @staticmethod
+    def test_blender_eevee_uses_payload_camera():
+        """blender_script.main() muss setup_camera_from_payload() aufrufen."""
+        import collision.blender_script as bs
+        src = inspect.getsource(bs.main)
+        return 'setup_camera_from_payload' in src, 'setup_camera_from_payload aufgerufen' if 'setup_camera_from_payload' in src else 'FEHLT in main()'
+
+    @staticmethod
+    def test_warp_blender_uses_payload_camera():
+        """blender_render_from_bake muss die Kamera-Matrizen des Payloads verwenden
+        (pro-Frame keyframes), nicht eine Auto-Fit-Kamera aus Körper-Bounds."""
+        import collision.blender_render_from_bake as brb
+        src = inspect.getsource(brb)
+        # Stärkeres Kriterium: Kamera muss animiert werden mit Keyframe-Insert
+        # aus den Payload-Matrizen. Auto-Fit setup_camera_light() darf nicht der
+        # einzige Kamerapfad sein — entweder ist es durch setup_camera_from_payload()
+        # ersetzt oder durch explizite Keyframe-Insertion aus camera_matrices.
+        has_payload_loop = ("for f in range" in src or "for frame in range" in src) and (
+            "camera_matrices" in src and "matrix_world" in src
+        )
+        has_setup_from_payload = 'setup_camera_from_payload' in src
+        uses_payload = has_payload_loop or has_setup_from_payload
+        return uses_payload, 'OK' if uses_payload else 'Auto-Fit _fit_camera dominiert, Payload-camera_matrices ungenutzt'
+
+    @staticmethod
+    def test_warp_only_uses_payload_camera():
+        """warp_render.render_bake() muss das Payload-Kamera-Matrix nutzen."""
+        import collision.warp_render as wr
+        src = inspect.getsource(wr)
+        uses_payload = ('camera_matrices' in src) or ('setup_camera_from_payload' in src)
+        return uses_payload, 'OK' if uses_payload else 'HARDCODED _fit_camera — Payload-Kamera wird ignoriert'
+
+    # =========================================================================
+    # Payload-Lichter: Alle 3 Pipelines müssen die Szene-Lichter übernehmen.
+    # =========================================================================
+    @staticmethod
+    def test_blender_eevee_uses_payload_lights():
+        import collision.blender_script as bs
+        src = inspect.getsource(bs.main)
+        return 'setup_lights_from_payload' in src, 'OK' if 'setup_lights_from_payload' in src else 'Lichter-Setup fehlt'
+
+    @staticmethod
+    def test_warp_blender_uses_payload_lights():
+        import collision.blender_render_from_bake as brb
+        src = inspect.getsource(brb)
+        # Entweder scene['lights'] oder 'lights_json' lesen
+        uses_payload = ('lights_json' in src) or ("scene['lights']" in src) or ('scene_data[\'lights\']' in src)
+        return uses_payload, 'OK' if uses_payload else 'Payload-Lichter werden ignoriert, nur default Sun'
+
+    @staticmethod
+    def test_warp_only_uses_payload_lights():
+        import collision.warp_render as wr
+        src = inspect.getsource(wr)
+        uses_payload = ('lights_json' in src) or ("scene['lights']" in src) or ('bake[\'lights\']' in src)
+        return uses_payload, 'OK' if uses_payload else 'Payload-Lichter werden ignoriert'
+
+    # =========================================================================
+    # Payload-Farben: Body- und Cloth-Materialien dürfen nicht hardcoded sein.
+    # Im Scene-Editor kann der User Farben pro Body-Part setzen (bone_parts[bone].color).
+    # =========================================================================
+    @staticmethod
+    def test_warp_only_no_hardcoded_cloth_color():
+        """warp_render hardcodes (0.91, 0.35, 0.55) für Cloth — das ist Magenta und
+        ignoriert die User-Farbe aus bone_parts.color."""
+        import collision.warp_render as wr
+        src = inspect.getsource(wr)
+        # Wenn hardcoded Magenta drinsteht UND keine bone_parts-Referenz → Bug
+        hardcoded = '0.91' in src and '0.35' in src and '0.55' in src
+        reads_bone_parts = 'bone_parts' in src or 'segment_color' in src
+        ok = not hardcoded or reads_bone_parts
+        return ok, 'OK (Farben aus Payload)' if ok else 'Cloth-Farbe hardcoded (0.91, 0.35, 0.55), bone_parts ignoriert'
+
+    @staticmethod
+    def test_warp_blender_no_hardcoded_cloth_color():
+        """blender_render_from_bake hardcodes (0.92, 0.35, 0.55) für Cloth."""
+        import collision.blender_render_from_bake as brb
+        src = inspect.getsource(brb)
+        hardcoded = '0.92, 0.35, 0.55' in src or '(0.92, 0.35, 0.55)' in src
+        reads_bone_parts = 'bone_parts' in src or 'segment_color' in src
+        ok = not hardcoded or reads_bone_parts
+        return ok, 'OK (Farben aus Payload)' if ok else 'Cloth-Farbe hardcoded, bone_parts ignoriert'
+
+    # =========================================================================
+    # Knochen-durch-Rock: Cloth-Simulation muss Body-Collision respektieren.
+    # Das testen wir anhand eines existierenden bake.npz: für jeden Cloth-Vert prüfen
+    # ob er INNERHALB der Body-Mesh liegt (Penetration). Wenn >5% der Verts drin
+    # sind pro Frame → Fail.
+    # =========================================================================
+    @staticmethod
+    def test_recent_bake_cloth_not_penetrating_body():
+        """Analysiert das jüngste bake.npz aus den Temp-Verzeichnissen und zählt
+        Cloth-Vertex-Penetrationen (Cloth-Vert innerhalb Body-Mesh). Läuft nicht
+        wenn kein bake.npz existiert (= keine Regression-Daten)."""
+        import glob
+        import os as _os
+        # Temp-Verzeichnisse durchsuchen
+        cands = glob.glob(r'C:\Users\e\AppData\Local\Temp\cloth_*\bake.npz')
+        cands = [c for c in cands if _os.path.exists(c)]
+        if not cands:
+            return True, 'Skip: kein bake.npz vorhanden (Export muss mind. einmal gelaufen sein)'
+        latest = max(cands, key=lambda p: _os.path.getmtime(p))
+        d = np.load(latest, allow_pickle=True)
+        rigid_pos = d['rigid_positions']   # (N, NV_body, 3)
+        n_seg = int(d['n_seg'][0])
+        if n_seg == 0:
+            return True, 'Skip: keine Cloth-Segmente im bake'
+        # Für jeden sample-Frame (0, N/2, N-1) prüfe Penetrationen
+        N = rigid_pos.shape[0]
+        sample_frames = [0, N // 2, N - 1] if N >= 3 else list(range(N))
+        max_penetration_rate = 0.0
+        details = []
+        for fr in sample_frames:
+            body = rigid_pos[fr]
+            # Build bounding box around body → cheap penetration check: cloth vert
+            # in body's bounding box AND inside its convex-ish region (use distance to
+            # nearest body vert < 5cm as penetration proxy).
+            for i in range(n_seg):
+                cloth = d[f'seg{i}_positions'][fr]
+                # Count cloth verts whose nearest body vert is very close (< 1 cm) and
+                # the cloth vert is BELOW the nearest body surface (proxy for "inside").
+                # For a lightweight test we use: cloth vert is within 1 cm of body.
+                n_near = 0
+                # Brute force (slow but OK for sample frame); use chunks for memory
+                for start in range(0, cloth.shape[0], 256):
+                    chunk = cloth[start:start + 256]
+                    # (chunk, body) → squared distances
+                    d2 = ((chunk[:, None, :] - body[None, :, :]) ** 2).sum(axis=2)
+                    near = (d2.min(axis=1) < 0.0001)  # <1 cm
+                    n_near += int(near.sum())
+                rate = n_near / max(1, cloth.shape[0])
+                details.append(f'f={fr} seg{i} penetr={n_near}/{cloth.shape[0]} ({rate*100:.1f}%)')
+                max_penetration_rate = max(max_penetration_rate, rate)
+        # Akzeptabel: <5% Cloth-Verts sehr nah an Body. Mehr = Verdacht auf Penetration.
+        ok = max_penetration_rate < 0.05
+        return ok, f'max_rate={max_penetration_rate*100:.1f}% | {" | ".join(details[:3])}'
