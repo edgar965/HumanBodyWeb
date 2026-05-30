@@ -297,26 +297,9 @@ class GitHubReposService:
             else:
                 pending_post.append(c)
 
-        # Dangling Commits ohne Release-Marker als Abschluss-Gruppe
-        # (Vorab-Commits zwischen Repo-Start und erstem Tag).
-        if pending_post:
-            groups.append({
-                'version_label': None,
-                'is_current': False,
-                'release_commit': None,
-                'post_commits': pending_post,
-            })
-
-        # Wenn die juengste Gruppe pending_post hat aber kein release_commit
-        # (= aktuelle Arbeit nach letztem Tag), markieren wir sie als "current"
-        # damit die UI sie hervorhebt. Aber nur wenn die getaggte Version
-        # darunter NICHT bereits current ist.
-        if groups and not groups[0].get('release_commit') and groups[0]['post_commits']:
-            has_current_tagged = any(g['is_current'] for g in groups)
-            if not has_current_tagged:
-                groups[0]['is_current'] = True
-                groups[0]['version_label'] = f'v{current_version}' if current_version else None
-
+        # Dangling Pre-Tag-Commits (vor erstem Tag) bewusst NICHT als Gruppe
+        # rendern -- ist Repo-Vorgeschichte, kein "Release". Wer sie sehen
+        # will, oeffnet das Repo auf GitHub.
         return groups
 
     # --- gh CLI calls -----------------------------------------------------

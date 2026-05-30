@@ -251,46 +251,24 @@
             </a>
         </div>
 
-        {% if repo.tags %}
-        <p class="vw-meta vw-tags">
-            <strong>Git-Tags / Releases:</strong>
-            {% for t in repo.tags %}
-            <a class="vw-tag" href="{{ repo.gh_url }}/releases/tag/{{ t.name }}"
-               target="_blank" rel="noopener">{{ t.name }}</a>
-            {% endfor %}
-        </p>
-        {% endif %}
-
         {% if repo.groups %}
         <div class="vw-list">
             {% for g in repo.groups %}
             <article class="vw-group {% if g.is_current %}vw-group-current{% endif %}">
                 <aside class="vw-left">
-                    {% if g.version_label %}
-                        <div class="vw-version">{{ g.version_label }}</div>
-                    {% else %}
-                        <div class="vw-noversion">unreleased</div>
-                    {% endif %}
+                    <div class="vw-version">{{ g.version_label }}</div>
                     {% if g.is_current %}
                         <span class="vw-pill">aktuell</span>
                     {% endif %}
-                    {% if g.release_commit %}
-                        <a class="vw-sha" href="{{ g.release_commit.url }}"
-                           target="_blank" rel="noopener"
-                           title="{{ g.release_commit.author }}">{{ g.release_commit.sha }}</a>
-                        <div class="vw-date">{{ g.release_commit.date }}</div>
-                    {% endif %}
+                    <a class="vw-sha" href="{{ g.release_commit.url }}"
+                       target="_blank" rel="noopener"
+                       title="{{ g.release_commit.author }}">{{ g.release_commit.sha }}</a>
+                    <div class="vw-date">{{ g.release_commit.date }}</div>
                 </aside>
                 <div class="vw-right">
-                    {% if g.release_commit %}
-                        <h2>{{ g.release_commit.title }}</h2>
-                        {% if g.release_commit.body %}
-                        <div class="vw-body">{{ g.release_commit.body_html|safe }}</div>
-                        {% endif %}
-                    {% else %}
-                        <h2 class="vw-h2-muted">
-                          Noch nicht released &mdash; {{ g.post_commits|length }} Commit{{ g.post_commits|length|pluralize:"s" }} seit letztem Release
-                        </h2>
+                    <h2>{{ g.release_commit.title }}</h2>
+                    {% if g.release_commit.body %}
+                    <div class="vw-body">{{ g.release_commit.body_html|safe }}</div>
                     {% endif %}
 
                     {% if g.post_commits %}
