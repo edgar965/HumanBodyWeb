@@ -5,159 +5,326 @@
 
 {% block extra_head %}
 <style>
-.hv-page { max-width: 1200px; padding: 1.2rem 1.5rem; }
-.hv-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
-.hv-header h1 { margin: 0; font-size: 1.4rem; }
-.hv-header .hv-spacer { flex: 1; }
-.hv-meta {
-    color: #9ca3af; font-size: 0.9rem; margin-bottom: 1.5rem;
-    background: #0f172a; padding: 0.7rem 1rem; border-radius: 6px;
-    border: 1px solid #1f2937;
+/* Layout: Sidebar bleibt, Content nimmt 1500px. Layout-Idee + Farben
+ * portiert aus dem Assistant-Projekt (mail/templates/mail/help/versions.html). */
+.vw {
+    padding: 1.2rem 1.8rem 4rem;
+    color: #d8dee9;
+    background: #0c1421;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 1.0rem;
+    line-height: 1.65;
+    max-width: 1500px;
+    min-height: 100vh;
 }
-.hv-meta code { background: #1f2937; padding: 1px 6px; border-radius: 3px; color: #60a5fa; }
-.hv-btn {
-    background: #1f2937; border: 1px solid #374151; color: #e5e7eb;
-    padding: 0.35rem 0.7rem; border-radius: 4px; font-size: 0.85rem;
+.vw-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
+.vw-header h1 { margin: 0; font-size: 1.6rem; font-weight: 600; color: #d8dee9; }
+.vw-header h1 i { color: #4ad9c2; margin-right: 0.4rem; }
+.vw-header .vw-spacer { flex: 1; }
+.vw-btn {
+    background: #1a2433; border: 1px solid #2c3a52; color: #d8dee9;
+    padding: 0.35rem 0.8rem; border-radius: 4px; font-size: 0.85rem;
     cursor: pointer; text-decoration: none; display: inline-flex;
-    align-items: center; gap: 0.3rem;
+    align-items: center; gap: 0.4rem;
 }
-.hv-btn:hover { background: #2a3441; }
-.hv-btn.hv-loading { opacity: 0.7; }
-.hv-repo {
-    margin-bottom: 2rem; background: #0f172a;
-    border: 1px solid #1f2937; border-radius: 8px; overflow: hidden;
+.vw-btn:hover { background: #243246; color: #4ad9c2; }
+.vw-btn.vw-loading { opacity: 0.7; }
+
+.vw-meta {
+    color: #8b94a3; font-size: 0.95rem;
+    margin: 0 0 0.6rem; line-height: 1.5;
 }
-.hv-repo-head {
-    display: flex; align-items: center; gap: 0.6rem;
-    padding: 0.8rem 1.1rem; background: #111827;
-    border-bottom: 1px solid #1f2937;
+.vw-meta code {
+    background: #1a2433; padding: 0.1rem 0.5rem;
+    border-radius: 4px; color: #4ad9c2;
+    font-size: 0.92em;
 }
-.hv-repo-head::before {
+.vw-meta strong { color: #b0bac7; }
+.vw-tags { margin-bottom: 1.6rem; }
+.vw-tag {
+    display: inline-block; margin: 0 0.25rem;
+    background: rgba(74,217,194,0.12); color: #4ad9c2;
+    padding: 0.1rem 0.55rem; border-radius: 4px;
+    font-family: ui-monospace, monospace; font-size: 0.88rem;
+    text-decoration: none;
+    border: 1px solid rgba(74,217,194,0.25);
+}
+.vw-tag:hover { background: rgba(74,217,194,0.25); }
+
+/* Repo-Block + Collapse */
+.vw-repo { margin-top: 2rem; }
+.vw-repo-head {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #1a2433;
+    margin-bottom: 0.8rem;
+}
+.vw-repo-head::before {
     content: '\f078'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
-    color: #6b7280; font-size: 0.7rem; transition: transform 0.15s ease;
+    color: #6b7891; font-size: 0.7rem; transition: transform 0.15s ease;
 }
-.hv-repo.hv-collapsed .hv-repo-head::before { transform: rotate(-90deg); }
-.hv-repo-head h2 {
-    margin: 0; font-size: 1.05rem; color: #e5e7eb; font-weight: 600;
+.vw-repo.vw-collapsed .vw-repo-head::before { transform: rotate(-90deg); }
+.vw-repo.vw-collapsed .vw-list,
+.vw-repo.vw-collapsed .vw-empty { display: none; }
+.vw-repo-head h2 {
+    margin: 0; font-size: 1.15rem; color: #d8dee9; font-weight: 600;
 }
-.hv-repo-head .hv-head-sha {
+.vw-repo-head .vw-head-sha {
     font-family: ui-monospace, monospace; font-size: 0.78rem;
-    background: #1f2937; color: #60a5fa;
+    background: #1a2433; color: #4ad9c2;
     padding: 2px 7px; border-radius: 3px;
 }
-.hv-repo-head .hv-spacer { flex: 1; }
-.hv-tags-row {
-    padding: 0.5rem 1.1rem; border-bottom: 1px solid #1f2937;
-    font-size: 0.78rem; color: #9ca3af;
-    display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+
+/* === Release-Gruppe: Version-Spalte links, Inhalt rechts === */
+.vw-list { margin-top: 0.5rem; }
+.vw-group {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 1.8rem;
+    padding: 1.5rem 0;
+    border-top: 1px solid #1a2433;
 }
-.hv-tag {
-    display: inline-block; background: #1e3a8a; color: #bfdbfe;
-    padding: 1px 7px; border-radius: 3px;
+.vw-group:first-child { border-top: 0; padding-top: 0.5rem; }
+.vw-group-current {
+    background: linear-gradient(90deg, rgba(74,217,194,0.05) 0%, transparent 60%);
+    border-radius: 4px;
+}
+
+.vw-left {
+    text-align: left;
+    padding-top: 0.05rem;
+}
+.vw-version {
+    font-size: 2.0rem; font-weight: 700;
+    color: #4ad9c2;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+}
+.vw-noversion {
+    font-size: 0.85rem; font-weight: 500;
+    color: #8b94a3;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-top: 0.3rem;
+}
+.vw-pill {
+    display: inline-block; margin-top: 0.5rem;
+    font-size: 0.7rem; font-weight: 600;
+    padding: 0.18rem 0.7rem; border-radius: 999px;
+    background: rgba(74,217,194,0.2); color: #4ad9c2;
+    border: 1px solid rgba(74,217,194,0.5);
+    text-transform: uppercase; letter-spacing: 0.04em;
+}
+.vw-sha {
+    display: inline-block; margin-top: 0.55rem;
     font-family: ui-monospace, monospace; font-size: 0.78rem;
+    color: #6b7891; text-decoration: none;
+    background: #1a2433; padding: 0.12rem 0.5rem;
+    border-radius: 3px;
 }
-/* Collapse: alles unter dem Header verstecken */
-.hv-repo.hv-collapsed .hv-tags-row,
-.hv-repo.hv-collapsed .hv-commits,
-.hv-repo.hv-collapsed .hv-empty { display: none; }
-.hv-commits {
-    width: 100%; border-collapse: collapse; font-size: 0.83rem;
+.vw-sha:hover { color: #4ad9c2; }
+.vw-sha-small {
+    margin-top: 0; font-size: 0.75rem; padding: 0.08rem 0.4rem;
 }
-.hv-commits th, .hv-commits td {
-    text-align: left; padding: 0.45rem 1.1rem;
-    border-bottom: 1px solid #1f2937; vertical-align: top;
+.vw-date {
+    font-size: 0.82rem; color: #6b7891;
+    margin-top: 0.4rem;
+    font-family: ui-monospace, monospace;
 }
-.hv-commits th {
-    background: #0d1117; color: #9ca3af; font-weight: 500;
-    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
+
+.vw-right { min-width: 0; }
+.vw-right h2 {
+    margin: 0 0 0.6rem;
+    color: #d8dee9; font-weight: 600;
+    font-size: 1.2rem; line-height: 1.35;
 }
-.hv-commits td.hv-sha {
-    font-family: ui-monospace, monospace; color: #60a5fa;
-    white-space: nowrap; width: 75px;
+.vw-group-current .vw-right h2 { color: #4ad9c2; }
+.vw-h2-muted {
+    color: #8b94a3 !important;
+    font-weight: 500 !important;
+    font-style: italic;
+    font-size: 1.0rem !important;
 }
-.hv-commits td.hv-sha a { color: inherit; text-decoration: none; }
-.hv-commits td.hv-sha a:hover { text-decoration: underline; }
-.hv-commits td.hv-sha.hv-is-head { font-weight: 600; }
-.hv-commits td.hv-sha.hv-is-head::after {
-    content: 'HEAD'; display: inline-block;
-    background: #047857; color: #d1fae5; font-size: 0.65rem;
-    padding: 1px 5px; border-radius: 3px; margin-left: 0.4rem;
-    font-family: inherit; font-weight: 600;
+
+/* Markdown-Body Rendering */
+.vw-body { padding-left: 0; }
+.vw-body ul {
+    list-style: none; padding-left: 0; margin: 0.4rem 0;
 }
-.hv-commits td.hv-msg { color: #e5e7eb; }
-.hv-commits td.hv-meta-col {
-    color: #6b7280; white-space: nowrap; font-size: 0.78rem; width: 200px;
+.vw-body ul li {
+    position: relative;
+    padding-left: 1.4rem;
+    margin: 0.55rem 0;
+    color: #d8dee9;
 }
-.hv-empty {
-    padding: 1rem 1.2rem; color: #6b7280; font-style: italic; font-size: 0.85rem;
+.vw-body ul li::before {
+    content: '\2022';
+    position: absolute; left: 0.3rem; top: 0;
+    color: #4ad9c2; font-size: 1.2rem; line-height: 1.5;
+}
+.vw-body ul ul { margin: 0.25rem 0 0.25rem 0.5rem; }
+.vw-body ul ul li::before { content: '\25E6'; color: #6b7891; }
+.vw-body strong { color: #4ad9c2; font-weight: 600; }
+.vw-body code {
+    background: #1a2433; padding: 0.1rem 0.45rem;
+    border-radius: 3px; color: #9ec5d8;
+    font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+    font-size: 0.9em;
+}
+.vw-body p { margin: 0.5rem 0; }
+.vw-body h3 {
+    color: #b0bac7; font-size: 1rem;
+    margin: 1rem 0 0.3rem; font-weight: 600;
+}
+
+/* Post-Release-Commits */
+.vw-post {
+    margin-top: 1.3rem;
+    border-top: 1px dashed #1a2433;
+    padding-top: 0.8rem;
+}
+.vw-post summary {
+    cursor: pointer; color: #8b94a3; font-size: 0.88rem;
+    list-style: revert; margin-bottom: 0.4rem;
+}
+.vw-post summary:hover { color: #4ad9c2; }
+.vw-post-list { list-style: none; padding-left: 0; margin: 0; }
+.vw-post-list > li {
+    padding: 0.6rem 0 0.6rem 0.1rem;
+    border-top: 1px solid #131c2b;
+}
+.vw-post-list > li:first-child { border-top: 0; }
+.vw-post-date {
+    color: #6b7891; font-family: ui-monospace, monospace;
+    font-size: 0.78rem; margin: 0 0.5rem;
+}
+.vw-post-title { color: #c5d0db; font-weight: 500; }
+.vw-body-post {
+    margin-top: 0.45rem;
+    padding-left: 1.5rem;
+    font-size: 0.93rem;
+}
+
+.vw-empty {
+    color: #8b94a3; font-style: italic; padding: 1rem 0;
+}
+.vw-empty code {
+    background: #1a2433; padding: 0.1rem 0.4rem;
+    border-radius: 3px; color: #4ad9c2;
+}
+
+@media (max-width: 760px) {
+    .vw-group { grid-template-columns: 90px 1fr; gap: 1rem; }
+    .vw-version { font-size: 1.5rem; }
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="hv-page">
-    <div class="hv-header">
+<div class="vw">
+    <div class="vw-header">
         <h1><i class="fas fa-tag"></i> Versionen</h1>
-        <div class="hv-spacer"></div>
-        <a id="hvRefreshBtn" href="?refresh=1" class="hv-btn">
+        <div class="vw-spacer"></div>
+        <a id="hvRefreshBtn" href="?refresh=1" class="vw-btn">
             <i class="fas fa-sync"></i>
-            <span class="hv-btn-label">Aktualisieren</span>
+            <span class="hv-btn-label">Aus GitHub neu laden</span>
         </a>
     </div>
 
-    <div class="hv-meta">
-        Aktuelle App-Version: <code>v{{ current_version|default:"-" }}</code>
-        &middot; Single-Source-of-Truth: <code>HumanBodyWeb/ui/settings.py</code> (VERSION)
-        + <code>HumanBodyBlender/__init__.py</code> (bl_info version tuple)
-        &middot; Daten via GitHub-API (Cache 5 min). Klick auf Repo-Header = ein-/ausklappen.
-    </div>
+    <p class="vw-meta">
+        Aktuell installiert: <code>v{{ current_version|default:"-" }}</code>.
+        Single-Source-of-Truth ist <code>HumanBodyWeb/ui/settings.py</code> (VERSION)
+        + <code>HumanBodyBlender/__init__.py</code> (bl_info version tuple).
+        Gruppierung nach Git-Tags via <code>gh</code>-API (Cache 5 min).
+        Klick auf Repo-Header = ein-/ausklappen.
+    </p>
 
     {% for repo in repos %}
-    <div class="hv-repo">
-        <div class="hv-repo-head">
+    <section class="vw-repo">
+        <div class="vw-repo-head">
             <h2>{{ repo.spec.display }}</h2>
-            {% if repo.head_sha %}<span class="hv-head-sha">HEAD: {{ repo.head_sha }}</span>{% endif %}
-            <div class="hv-spacer"></div>
-            <a href="{{ repo.gh_url }}" target="_blank" class="hv-btn">
+            {% if repo.head_sha %}<span class="vw-head-sha">HEAD: {{ repo.head_sha }}</span>{% endif %}
+            <div class="vw-spacer" style="flex:1;"></div>
+            <a href="{{ repo.gh_url }}" target="_blank" class="vw-btn">
                 <i class="fab fa-github"></i> {{ repo.spec.gh_repo }}
             </a>
         </div>
 
         {% if repo.tags %}
-        <div class="hv-tags-row">
-            <strong>Tags:</strong>
-            {% for t in repo.tags %}<span class="hv-tag">{{ t.name }}</span>{% endfor %}
-        </div>
+        <p class="vw-meta vw-tags">
+            <strong>Git-Tags / Releases:</strong>
+            {% for t in repo.tags %}
+            <a class="vw-tag" href="{{ repo.gh_url }}/releases/tag/{{ t.name }}"
+               target="_blank" rel="noopener">{{ t.name }}</a>
+            {% endfor %}
+        </p>
         {% endif %}
 
-        {% if repo.commits %}
-        <table class="hv-commits">
-            <thead>
-                <tr>
-                    <th>SHA</th>
-                    <th>Message</th>
-                    <th>Autor / Datum</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for c in repo.commits %}
-                <tr>
-                    <td class="hv-sha {% if c.sha == repo.head_sha %}hv-is-head{% endif %}">
-                        <a href="{{ c.url }}" target="_blank">{{ c.sha }}</a>
-                    </td>
-                    <td class="hv-msg">{{ c.msg }}</td>
-                    <td class="hv-meta-col">{{ c.author }} &middot; {{ c.date }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div class="hv-empty">
-            Keine Commits geladen - GitHub-API nicht erreichbar oder Repo privat ohne <code>gh auth</code>.
-            Pruefe: <code>gh auth status</code>.
+        {% if repo.groups %}
+        <div class="vw-list">
+            {% for g in repo.groups %}
+            <article class="vw-group {% if g.is_current %}vw-group-current{% endif %}">
+                <aside class="vw-left">
+                    {% if g.version_label %}
+                        <div class="vw-version">{{ g.version_label }}</div>
+                    {% else %}
+                        <div class="vw-noversion">unreleased</div>
+                    {% endif %}
+                    {% if g.is_current %}
+                        <span class="vw-pill">aktuell</span>
+                    {% endif %}
+                    {% if g.release_commit %}
+                        <a class="vw-sha" href="{{ g.release_commit.url }}"
+                           target="_blank" rel="noopener"
+                           title="{{ g.release_commit.author }}">{{ g.release_commit.sha }}</a>
+                        <div class="vw-date">{{ g.release_commit.date }}</div>
+                    {% endif %}
+                </aside>
+                <div class="vw-right">
+                    {% if g.release_commit %}
+                        <h2>{{ g.release_commit.title }}</h2>
+                        {% if g.release_commit.body %}
+                        <div class="vw-body">{{ g.release_commit.body_html|safe }}</div>
+                        {% endif %}
+                    {% else %}
+                        <h2 class="vw-h2-muted">
+                          Noch nicht released &mdash; {{ g.post_commits|length }} Commit{{ g.post_commits|length|pluralize:"s" }} seit letztem Release
+                        </h2>
+                    {% endif %}
+
+                    {% if g.post_commits %}
+                    <details class="vw-post" open>
+                        <summary>
+                            {{ g.post_commits|length }} Commit{{ g.post_commits|length|pluralize:"s" }}
+                            nach diesem Release
+                        </summary>
+                        <ul class="vw-post-list">
+                            {% for pc in g.post_commits %}
+                            <li>
+                                <a class="vw-sha vw-sha-small" href="{{ pc.url }}"
+                                   target="_blank" rel="noopener">{{ pc.sha }}</a>
+                                <span class="vw-post-date">{{ pc.date }}</span>
+                                <span class="vw-post-title">{{ pc.subject }}</span>
+                                {% if pc.body %}
+                                <div class="vw-body vw-body-post">{{ pc.body_html|safe }}</div>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </details>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
         </div>
+        {% else %}
+        <p class="vw-empty">
+            Keine Commits geladen &mdash; GitHub-API nicht erreichbar oder Repo
+            privat ohne <code>gh auth</code>. Pruefe: <code>gh auth status</code>.
+        </p>
         {% endif %}
-    </div>
+    </section>
     {% endfor %}
 </div>
 

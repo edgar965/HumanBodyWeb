@@ -27,7 +27,11 @@ _REPO_SPECS = [
     RepoSpec('HumanBodyBlender', 'edgar965/HumanBodyBlender', 'HumanBodyBlender'),
     RepoSpec('VideoToBVH',       'edgar965/VideoToBVH',       'VideoToBVH'),
 ]
-_repos_service = GitHubReposService(_REPO_SPECS, Path(settings.TOOLS_ROOT))
+_repos_service = GitHubReposService(
+    _REPO_SPECS,
+    Path(settings.TOOLS_ROOT),
+    current_version=getattr(settings, 'VERSION', ''),
+)
 
 
 # --- Logs -----------------------------------------------------------------

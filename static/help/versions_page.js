@@ -28,14 +28,9 @@ class RefreshController {
     }
 
     _showSpinner() {
-        this.btnEl.classList.add('hv-loading');
-        // Original-Icon ersetzen durch Spinning-Icon. Fontawesome `fa-spin`
-        // dreht das gewaehlte Icon endlos.
+        this.btnEl.classList.add('vw-loading');
         const icon = this.btnEl.querySelector('i');
-        if (icon) {
-            icon.className = 'fas fa-circle-notch fa-spin';
-        }
-        // Text optional anpassen:
+        if (icon) icon.className = 'fas fa-circle-notch fa-spin';
         const span = this.btnEl.querySelector('.hv-btn-label');
         if (span) span.textContent = 'Lade...';
         this.btnEl.setAttribute('aria-busy', 'true');
@@ -45,7 +40,7 @@ class RefreshController {
 
 
 /** Verantwortung: Collapse-Toggle pro Repo-Block. Klick auf den Header
- *  schaltet `.hv-collapsed` auf dem Container -- CSS macht den Rest. */
+ *  schaltet `.vw-collapsed` auf dem Container -- CSS macht den Rest. */
 class CollapseController {
     constructor(repoBlocks) {
         this.repoBlocks = repoBlocks;
@@ -53,14 +48,14 @@ class CollapseController {
 
     bind() {
         for (const block of this.repoBlocks) {
-            const head = block.querySelector('.hv-repo-head');
+            const head = block.querySelector('.vw-repo-head');
             if (!head) continue;
             head.style.cursor = 'pointer';
             head.title = 'Klick: Repo ein-/ausklappen';
             head.addEventListener('click', (ev) => {
-                // Klicks auf den GitHub-Link selbst durchlassen.
+                // Klicks auf den GitHub-Link/Tag-Link selbst durchlassen.
                 if (ev.target.closest('a')) return;
-                block.classList.toggle('hv-collapsed');
+                block.classList.toggle('vw-collapsed');
             });
         }
     }
@@ -73,7 +68,7 @@ export class VersionsPage {
             document.getElementById('hvRefreshBtn'),
             refreshUrl,
         );
-        this.collapse = new CollapseController(document.querySelectorAll('.hv-repo'));
+        this.collapse = new CollapseController(document.querySelectorAll('.vw-repo'));
     }
 
     setup() {

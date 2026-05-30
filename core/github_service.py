@@ -14,8 +14,10 @@ die hier geloest werden:
 """
 from __future__ import annotations
 
+import html
 import json
 import logging
+import re
 import subprocess
 import threading
 import time
@@ -28,6 +30,99 @@ logger = logging.getLogger('core')
 T = TypeVar('T')
 
 
+# --- Mini-Markdown -> HTML ----------------------------------------------
+# Portiert aus dem Assistant-Projekt (mail/views/VersionsView.py).
+# Wir rendern Commit-Bodies als Bullet-Liste mit Bold-Prefix + Code,
+# damit die Versionen-Seite optisch aussieht wie ein Changelog.
+
+_MD_BOLD = re.compile(r'\*\*(.+?)\*\*')
+_MD_INLINE_CODE = re.compile(r'`([^`\n]+)`')
+_MD_BULLET = re.compile(r'^(\s*)[-*]\s+(.+)$')
+
+
+def _md_inline(text: str) -> str:
+    """text -> HTML mit <strong> + <code>. Escaped erstmal alles."""
+    out = html.escape(text)
+    out = _MD_INLINE_CODE.sub(r'<code>\1</code>', out)
+    out = _MD_BOLD.sub(r'<strong>\1</strong>', out)
+    return out
+
+
+def _render_body_html(body: str) -> str:
+    """Wandelt einen Commit-Body in HTML um.
+
+    Erwartete Struktur (Konvention der Commit-Messages):
+      Section-Header:    ohne Bullet, optional gefolgt von ':'
+      Bullet-Eintrag:    '- ' oder '* ' am Zeilenanfang
+      Sub-Bullet:        '  * ' / '  - ' (2+ Spaces Einrueckung)
+      Freitext-Absatz:   alles andere
+
+    Erste Zeile eines Bullets die mit 'Wort:' oder 'WortWort:' anfaengt
+    bekommt das Wort vor dem ':' als <strong> (Konvention: 'Foo-Bar: text').
+    """
+    if not body:
+        return ''
+    out: list[str] = []
+    cur_list_depth = 0   # 0 = ausserhalb, 1 = top-list, 2 = sub-list
+    para_buf: list[str] = []
+
+    def flush_para():
+        if para_buf:
+            txt = ' '.join(para_buf).strip()
+            if txt:
+                out.append(f'<p>{_md_inline(txt)}</p>')
+            para_buf.clear()
+
+    def close_lists(target_depth: int):
+        nonlocal cur_list_depth
+        while cur_list_depth > target_depth:
+            out.append('</ul>')
+            cur_list_depth -= 1
+
+    def open_lists(target_depth: int):
+        nonlocal cur_list_depth
+        while cur_list_depth < target_depth:
+            out.append('<ul>')
+            cur_list_depth += 1
+
+    for raw_line in body.splitlines():
+        line = raw_line.rstrip()
+        if not line.strip():
+            flush_para()
+            continue
+        m = _MD_BULLET.match(line)
+        if m:
+            flush_para()
+            indent = len(m.group(1).replace('\t', '    '))
+            text = m.group(2).rstrip()
+            depth = 1 if indent < 2 else 2
+            if depth > cur_list_depth:
+                open_lists(depth)
+            elif depth < cur_list_depth:
+                close_lists(depth)
+            colon_pos = text.find(':')
+            if 0 < colon_pos < 60 and ' ' not in text[:colon_pos]:
+                head = text[:colon_pos]
+                rest = text[colon_pos:]
+                rendered = f'<strong>{html.escape(head)}</strong>{_md_inline(rest)}'
+            else:
+                rendered = _md_inline(text)
+            out.append(f'<li>{rendered}</li>')
+        else:
+            stripped = line.strip()
+            if stripped.endswith(':') and len(stripped) < 60:
+                if cur_list_depth > 0:
+                    close_lists(0)
+                flush_para()
+                out.append(f'<h3>{_md_inline(stripped)}</h3>')
+            else:
+                para_buf.append(stripped)
+
+    flush_para()
+    close_lists(0)
+    return '\n'.join(out)
+
+
 @dataclass(frozen=True)
 class RepoSpec:
     """Statische Definition eines Repos."""
@@ -38,11 +133,18 @@ class RepoSpec:
 
 @dataclass(frozen=True)
 class RepoInfo:
-    """Snapshot mit allem was die UI braucht."""
+    """Snapshot mit allem was die UI braucht.
+
+    groups: List von Release-Gruppen (siehe `_group_by_tag`). Jede Gruppe
+    enthaelt einen Tag-Release-Commit + die Commits die nach diesem Release
+    folgten ("post_commits"). Die UI rendert das als Changelog mit
+    Version-Spalte links + Content rechts.
+    """
     spec: RepoSpec
     head_sha: str
     commits: list[dict]
     tags: list[dict]
+    groups: list[dict]
     local_exists: bool
     local_path: str
 
@@ -111,12 +213,14 @@ class GitHubReposService:
         self,
         specs: list[RepoSpec],
         tools_root: Path,
+        current_version: str = '',
         ttl_seconds: float = DEFAULT_TTL_SECONDS,
         gh_binary: str = 'gh',
         git_binary: str = 'git',
     ) -> None:
         self._specs = list(specs)
         self._tools_root = Path(tools_root)
+        self._current_version = current_version
         self._gh = gh_binary
         self._git = git_binary
         self._cache = _TTLCache(ttl_seconds)
@@ -136,14 +240,84 @@ class GitHubReposService:
         head = self._head_sha(local_path) if exists else ''
         commits = self._commits(spec.gh_repo)
         tags = self._tags(spec.gh_repo)
+        groups = self._group_by_tag(commits, tags, self._current_version)
         return RepoInfo(
             spec=spec,
             head_sha=head,
             commits=commits,
             tags=tags,
+            groups=groups,
             local_exists=exists,
             local_path=str(local_path),
         )
+
+    @staticmethod
+    def _group_by_tag(
+        commits: list[dict], tags: list[dict], current_version: str,
+    ) -> list[dict]:
+        """Walks Commits (newest first) und gruppiert nach Git-Tag-Marker.
+
+        Jeder Commit, dessen SHA von einem Tag referenziert wird, beendet
+        eine Gruppe. Commits NEUER als der juengste getaggte Commit landen
+        als 'post_commits' am Anfang der ersten Gruppe -- semantisch
+        "Arbeit nach dem letzten Release".
+
+        Ist current_version z.B. '0.49' wird die Gruppe mit Tag 'v0.49' (oder
+        '0.49') als is_current=True markiert.
+
+        Returns: Liste von Gruppen (neueste zuerst), jede mit:
+            version_label   = 'v0.49' oder None (= unreleased)
+            is_current      = matched current_version
+            release_commit  = der getaggte Commit (oder None bei unreleased)
+            post_commits    = neuere Commits vor dem Release-Marker
+        """
+        # SHA -> Tag-Name (1:1; mehrere Tags an einem SHA: letzter gewinnt)
+        sha_to_tag: dict[str, str] = {}
+        for t in tags:
+            sha_full = t.get('sha_full') or t.get('sha') or ''
+            name = t.get('name', '')
+            if sha_full and name:
+                sha_to_tag[sha_full] = name
+
+        norm_current = (current_version or '').lstrip('v').strip()
+        groups: list[dict] = []
+        pending_post: list = []
+
+        for c in commits:
+            sha_full = c.get('sha_full') or c.get('sha') or ''
+            tag_name = sha_to_tag.get(sha_full)
+            if tag_name:
+                groups.append({
+                    'version_label': tag_name,
+                    'is_current': tag_name.lstrip('v') == norm_current,
+                    'release_commit': c,
+                    'post_commits': pending_post,
+                })
+                pending_post = []
+            else:
+                pending_post.append(c)
+
+        # Dangling Commits ohne Release-Marker als Abschluss-Gruppe
+        # (Vorab-Commits zwischen Repo-Start und erstem Tag).
+        if pending_post:
+            groups.append({
+                'version_label': None,
+                'is_current': False,
+                'release_commit': None,
+                'post_commits': pending_post,
+            })
+
+        # Wenn die juengste Gruppe pending_post hat aber kein release_commit
+        # (= aktuelle Arbeit nach letztem Tag), markieren wir sie als "current"
+        # damit die UI sie hervorhebt. Aber nur wenn die getaggte Version
+        # darunter NICHT bereits current ist.
+        if groups and not groups[0].get('release_commit') and groups[0]['post_commits']:
+            has_current_tagged = any(g['is_current'] for g in groups)
+            if not has_current_tagged:
+                groups[0]['is_current'] = True
+                groups[0]['version_label'] = f'v{current_version}' if current_version else None
+
+        return groups
 
     # --- gh CLI calls -----------------------------------------------------
 
@@ -173,13 +347,33 @@ class GitHubReposService:
         for c in raw:
             commit = c.get('commit') or {}
             author = commit.get('author') or {}
-            msg = (commit.get('message') or '').splitlines()[0][:240]
+            full_msg = (commit.get('message') or '').strip()
+            if '\n\n' in full_msg:
+                subject, body = full_msg.split('\n\n', 1)
+            else:
+                subject, body = full_msg, ''
+            # Co-Authored-By / Signed-off-by-Trailer raus -- ist Rauschen
+            # im Changelog.
+            body_lines = []
+            for ln in body.splitlines():
+                if ln.startswith(('Co-Authored-By:', 'Co-authored-by:',
+                                  'Signed-off-by:')):
+                    continue
+                body_lines.append(ln)
+            body = '\n'.join(body_lines).strip()
+            sha_full = c.get('sha') or ''
             out.append({
-                'sha': (c.get('sha') or '')[:7],
-                'msg': msg,
+                'sha': sha_full[:7],
+                'sha_full': sha_full,
+                'subject': subject.strip()[:240],
+                'title': subject.strip()[:240],
+                'body': body,
+                'body_html': _render_body_html(body),
                 'author': author.get('name') or '?',
                 'date': (author.get('date') or '')[:10],
                 'url': c.get('html_url') or '',
+                # Backwards-compat fuer alte Templates die `msg` lesen:
+                'msg': subject.strip()[:240],
             })
         return out
 
@@ -191,6 +385,9 @@ class GitHubReposService:
             {
                 'name': t.get('name', ''),
                 'sha': ((t.get('commit') or {}).get('sha') or '')[:7],
+                # sha_full noetig fuer _group_by_tag SHA-Matching gegen
+                # commits[].sha_full.
+                'sha_full': (t.get('commit') or {}).get('sha') or '',
             }
             for t in raw
         ]
