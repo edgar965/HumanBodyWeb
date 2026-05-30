@@ -7,20 +7,27 @@
 <style>
 /* Override: .main-content hat sonst max-width 1264px -- fuer den Logviewer
  * und die Versionen-Seite wollen wir die volle Breite (Side-By-Side-Layout
- * mit Version links + langem Release-Body rechts braucht Platz). */
-.main-content { max-width: none !important; padding: 0 !important; }
+ * mit Version links + langem Release-Body rechts braucht Platz).
+ * width:100% zusaetzlich erzwingen, sonst sizing-context vom Grandparent. */
+.main-content {
+    max-width: none !important;
+    width: auto !important;
+    padding: 0 !important;
+}
 
 /* Layout-Idee + Farben portiert aus dem Assistant-Projekt
  * (mail/templates/mail/help/versions.html). */
 .vw {
-    padding: 1.2rem 1.8rem 4rem;
+    padding: 1.2rem 1.5rem 4rem;
     color: #d8dee9;
     background: #0c1421;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 1.0rem;
     line-height: 1.65;
-    /* kein max-width -- soll bis an den rechten Rand gehen */
     min-height: 100vh;
+    /* width: 100% relativ zu .main-content -- garantiert volle Breite */
+    width: 100%;
+    box-sizing: border-box;
 }
 .vw-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
 .vw-header h1 { margin: 0; font-size: 1.6rem; font-weight: 600; color: #d8dee9; }
@@ -138,7 +145,13 @@
     font-family: ui-monospace, monospace;
 }
 
-.vw-right { min-width: 0; }
+.vw-right {
+    min-width: 0;
+    width: 100%;
+}
+.vw-right p, .vw-right ul, .vw-right li, .vw-right h2 {
+    max-width: none;
+}
 .vw-right h2 {
     margin: 0 0 0.6rem;
     color: #d8dee9; font-weight: 600;
