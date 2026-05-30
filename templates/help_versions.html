@@ -90,12 +90,14 @@
 /* === Release-Gruppe: Version-Spalte links, Inhalt rechts === */
 .vw-list { margin-top: 0.5rem; }
 .vw-group {
-    display: grid;
-    grid-template-columns: 110px 1fr;
+    display: flex;
+    align-items: flex-start;
     gap: 0.8rem;
     padding: 1.5rem 0;
     border-top: 1px solid #1a2433;
 }
+.vw-group > .vw-left { flex: 0 0 110px; }
+.vw-group > .vw-right { flex: 1 1 0; min-width: 0; width: auto; }
 .vw-group:first-child { border-top: 0; padding-top: 0.5rem; }
 .vw-group-current {
     background: linear-gradient(90deg, rgba(74,217,194,0.05) 0%, transparent 60%);
