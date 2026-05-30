@@ -1115,7 +1115,7 @@ def theatre_encode_frames(request):
              f'content_length={request.META.get("CONTENT_LENGTH", "?")}')
     frames = request.FILES.getlist('frames')
     if not frames:
-        log.warning('[encode-frames] No frames uploaded! FILES was empty.')
+        log.error('[encode-frames] No frames uploaded! FILES was empty.')
         return JsonResponse({'error': 'No frames uploaded'}, status=400)
 
     fps = int(request.POST.get('fps', 30))
@@ -1569,7 +1569,7 @@ def character_skin_weights(request):
         return JsonResponse({'error': 'Skin weights not found'}, status=404)
     with open(sw_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    logger.warning("Using raw skin_weights.json — vertex ordering may not match CC subdivision!")
+    logger.error("Using raw skin_weights.json — vertex ordering may not match CC subdivision!")
     return JsonResponse(data)
 
 
@@ -3289,7 +3289,7 @@ def analyze_photo(request):
                     posed_vertices = np.load(posed_path)
                     os.remove(posed_path)
                 except Exception:
-                    logger.warning('Failed to load posed vertices from %s', posed_path)
+                    logger.error('Failed to load posed vertices from %s', posed_path)
 
             # NPZ with generated mesh + rig
             import sys as _sys
@@ -3318,7 +3318,7 @@ def analyze_photo(request):
                 if _wd in _sys.path:
                     _sys.path.remove(_wd)
         except Exception as exc:
-            logger.warning('Failed to save SMPL-X output: %s', exc)
+            logger.error('Failed to save SMPL-X output: %s', exc)
 
     # Auto-compute alignment from camera params (SMPLest-X or PyMAF-X)
     has_cam = cam_data and (cam_data.get('cam_trans') or cam_data.get('pred_cam'))
@@ -3345,7 +3345,7 @@ def analyze_photo(request):
                             alignment['body_transform']['center_x'],
                             alignment['body_transform']['center_y'])
         except Exception as exc:
-            logger.warning('Auto-alignment failed: %s', exc)
+            logger.error('Auto-alignment failed: %s', exc)
 
     return JsonResponse(resp)
 
@@ -3588,7 +3588,7 @@ def smplx_texture(request, job_id):
                                 'with pose-derived alignment', len(posed_verts), n_verts)
                     posed_proj_for_align = partial_proj
         except Exception:
-            logger.warning('Failed to load posed vertices for job %s', job_id)
+            logger.error('Failed to load posed vertices for job %s', job_id)
 
     # Bake texture (with backend selection + region filtering)
     backend = request.GET.get('backend', 'orthographic')
@@ -3675,7 +3675,7 @@ def smplx_texture(request, job_id):
         job.result_json = json.dumps(data, default=str)
         job.save(update_fields=['result_json'])
     except Exception:
-        logger.warning('Failed to save texture path for job %s', job_id)
+        logger.error('Failed to save texture path for job %s', job_id)
 
     # Encode as PNG and return
     _, png_buf = cv2.imencode('.png', texture)
@@ -3758,7 +3758,7 @@ def photo_silhouette_data(request, job_id):
                     proj_2d = np.full((n_verts, 2), np.nan, dtype=np.float32)
                     proj_2d[:n_posed] = partial_proj
         except Exception:
-            logger.warning('Failed to load posed vertices for silhouette job %s', job_id)
+            logger.error('Failed to load posed vertices for silhouette job %s', job_id)
 
     if proj_2d is not None:
         proj = proj_2d.copy()
@@ -3999,7 +3999,7 @@ def photo_silhouette_data(request, job_id):
         job.result_json = json.dumps(data, default=str)
         job.save(update_fields=['result_json'])
     except Exception:
-        logger.warning('Failed to save silhouette preview for job %s', job_id)
+        logger.error('Failed to save silhouette preview for job %s', job_id)
 
     # Use edited contours from alignment if available
     if alignment:
@@ -4330,7 +4330,7 @@ def _tpose_to_apose(garment_verts, body_verts, gender='female'):
     # Load MH T-pose body (raw base vertices, first 18210)
     mh_base_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'base_vertices.npy')
     if not os.path.isfile(mh_base_path):
-        logger.warning('[T→A] No MH base_vertices.npy')
+        logger.error('[T→A] No MH base_vertices.npy')
         return garment_verts
 
     mh_raw = np.load(mh_base_path)
@@ -4349,11 +4349,11 @@ def _tpose_to_apose(garment_verts, body_verts, gender='female'):
     # Load MH A-pose body (same topology, arms rotated to A-pose)
     mh_apose_path = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman', 'mh_base_apose.npy')
     if not os.path.isfile(mh_apose_path):
-        logger.warning('[T→A] No mh_base_apose.npy — skipping displacement')
+        logger.error('[T→A] No mh_base_apose.npy — skipping displacement')
         return garment_verts
     mh_apose = np.load(mh_apose_path)
     if mh_apose.shape != mh_tpose.shape:
-        logger.warning('[T→A] Shape mismatch: tpose=%s apose=%s', mh_tpose.shape, mh_apose.shape)
+        logger.error('[T→A] Shape mismatch: tpose=%s apose=%s', mh_tpose.shape, mh_apose.shape)
         return garment_verts
 
     # Direct index displacement: same topology, no nearest-neighbor artifacts
@@ -4694,7 +4694,7 @@ def garment_fit(request):
                     raw = base64.b64decode(hull_b64)
                     hull_verts = np.frombuffer(raw, dtype=np.float32).reshape(-1, 3).astype(np.float64)
             except Exception as e:
-                logger.warning('Failed to parse hull vertices: %s', e)
+                logger.error('Failed to parse hull vertices: %s', e)
 
         if hull_verts is None:
             hull_verts = _generate_smooth_hull(body_verts, body_faces)
@@ -5862,7 +5862,7 @@ def studio_theatre_presets(request):
                     'lightCount': len(data.get('lights', [])),
                 })
             except Exception as e:
-                log.warning(f'[theatre-presets] Failed to read {f}: {e}')
+                log.error(f'[theatre-presets] Failed to read {f}: {e}')
     return JsonResponse({'presets': presets})
 
 
@@ -5971,7 +5971,8 @@ def client_log(request):
     POST /api/log/
     Body JSON: { page: "bvh_studio", action: "gauss_smooth_on", detail: "sigma=2.0" }
     """
-    log = logging.getLogger('core')
+    # Routet auf core.client-Logger -> client.log
+    log = logging.getLogger('core.client')
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
@@ -5982,9 +5983,9 @@ def client_log(request):
     detail = data.get('detail', '')
     level = data.get('level', 'info').lower()
 
-    msg = f'[CLIENT {page}] {action}'
+    msg = f'[{page}] {action}'
     if detail:
-        msg += f' — {detail}'
+        msg += f' - {detail}'
 
     if level == 'error':
         log.error(msg)

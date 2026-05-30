@@ -1754,6 +1754,8 @@
                                 <option value="oval">Oval</option>
                                 <option value="double_oval">Doppel-Oval</option>
                                 <option value="diamond">Diamant</option>
+                                <option value="plane">Ebene (Karte)</option>
+                                <option value="rhombus">Rhombus / Frustum</option>
                                 <option value="tutu">Tutu</option>
                                 <option value="spiral_tutu">Spiral-Tutu</option>
                                 <option value="helix_ribbon">Spiral-Band</option>
@@ -1905,6 +1907,51 @@
                                 <span id="mg-skirt-thickness-val" class="slider-val">0.005</span>
                             </div>
                         </div>
+                        <div id="mg-plane-params" style="display:none;">
+                            <div class="slider-row">
+                                <label>Breite</label>
+                                <input type="range" id="mg-plane-width" min="0.01" max="1.0" step="0.005" value="0.15">
+                                <span id="mg-plane-width-val" class="slider-val">0.150</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>H&ouml;he</label>
+                                <input type="range" id="mg-plane-height" min="0.01" max="1.0" step="0.005" value="0.22">
+                                <span id="mg-plane-height-val" class="slider-val">0.220</span>
+                            </div>
+                            <div class="slider-row" style="align-items:center;">
+                                <label title="Rendert beide Seiten der Ebene (sonst nur Vorderseite sichtbar)">Doppelseitig</label>
+                                <input type="checkbox" id="mg-plane-doublesided" checked style="width:auto;margin-left:8px;">
+                            </div>
+                        </div>
+                        <div id="mg-rhombus-params" style="display:none;">
+                            <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:2px;">Obere Fl&auml;che</div>
+                            <div class="slider-row">
+                                <label>Breite</label>
+                                <input type="range" id="mg-rhombus-top-w" min="0.01" max="0.8" step="0.005" value="0.10">
+                                <span id="mg-rhombus-top-w-val" class="slider-val">0.100</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Tiefe</label>
+                                <input type="range" id="mg-rhombus-top-d" min="0.01" max="0.8" step="0.005" value="0.10">
+                                <span id="mg-rhombus-top-d-val" class="slider-val">0.100</span>
+                            </div>
+                            <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:6px;margin-bottom:2px;">Untere Fl&auml;che</div>
+                            <div class="slider-row">
+                                <label>Breite</label>
+                                <input type="range" id="mg-rhombus-bot-w" min="0.01" max="0.8" step="0.005" value="0.20">
+                                <span id="mg-rhombus-bot-w-val" class="slider-val">0.200</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>Tiefe</label>
+                                <input type="range" id="mg-rhombus-bot-d" min="0.01" max="0.8" step="0.005" value="0.20">
+                                <span id="mg-rhombus-bot-d-val" class="slider-val">0.200</span>
+                            </div>
+                            <div class="slider-row">
+                                <label>H&ouml;he</label>
+                                <input type="range" id="mg-rhombus-height" min="0.01" max="1.0" step="0.005" value="0.20">
+                                <span id="mg-rhombus-height-val" class="slider-val">0.200</span>
+                            </div>
+                        </div>
                         <div class="slider-row">
                             <label>Radius</label>
                             <input type="range" id="mg-bone-radius" min="0.005" max="0.72" step="0.001" value="0.03">
@@ -1913,6 +1960,15 @@
                         <div class="slider-row">
                             <label>Farbe</label>
                             <input type="color" id="mg-bone-color" value="#4488cc" style="width:40px;height:24px;border:none;background:none;cursor:pointer;">
+                        </div>
+                        <div style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);font-weight:600;">Textur</div>
+                        <div class="slider-row" style="align-items:center;">
+                            <label>Bild</label>
+                            <input type="file" id="mg-bone-texture-file" accept="image/*" style="font-size:0.7rem;flex:1;">
+                            <button type="button" id="mg-bone-texture-clear" class="action-btn" style="padding:2px 8px;font-size:0.7rem;" title="Textur entfernen">&#10005;</button>
+                        </div>
+                        <div id="mg-bone-texture-preview" style="display:none;margin-top:4px;text-align:center;">
+                            <img id="mg-bone-texture-thumb" src="" alt="Textur" style="max-width:120px;max-height:120px;border:1px solid var(--border);border-radius:3px;">
                         </div>
                         <div style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);font-weight:600;">Gr&ouml;sse entlang Achse</div>
                         <div class="slider-row">

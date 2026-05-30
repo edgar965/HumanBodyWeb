@@ -154,56 +154,118 @@ _lh.RotatingFileHandler.rotate = _safe_rotate
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'job_ctx': {
+            '()': 'core.logging_utils.JobContextFilter',
+        },
+    },
     'formatters': {
         'verbose': {
-            'format': '{asctime} {levelname} {name} {message}',
+            'format': '{asctime} [{levelname}] {name} {job_str}{message}',
             'style': '{',
             'datefmt': '%Y-%m-%d %H:%M:%S',
         },
     },
     'handlers': {
-        'file': {
+        # Aggregat: Django-Request-Pipeline + Errors
+        'django_file': {
             'level': 'DEBUG',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOG_DIR / 'django.log'),
-            'maxBytes': 5 * 1024 * 1024,  # 5 MB
+            'maxBytes': 5 * 1024 * 1024,
             'backupCount': 3,
             'formatter': 'verbose',
             'encoding': 'utf-8',
+            'filters': ['job_ctx'],
+        },
+        # Character / HumanBody API: Mesh, Morphs, Rig, Wardrobe, Retarget
+        'core_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOG_DIR / 'core.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+            'filters': ['job_ctx'],
+        },
+        # Video-to-BVH-Pipeline: MocapNET, GVHMR, OpenPose Subprocess-Output
+        'pipeline_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOG_DIR / 'pipeline.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+            'filters': ['job_ctx'],
+        },
+        # Client-seitige JS-Logs (per /api/log/ gepostet)
+        'client_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOG_DIR / 'client.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+            'filters': ['job_ctx'],
+        },
+        # Errors-Aggregat: alles WARNING+ landet zusaetzlich hier
+        'error_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOG_DIR / 'errors.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+            'filters': ['job_ctx'],
         },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+            'filters': ['job_ctx'],
         },
     },
     'root': {
-        'handlers': ['file', 'console'],
+        'handlers': ['django_file', 'error_file', 'console'],
         'level': 'INFO',
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'console'],
+            'handlers': ['django_file', 'error_file', 'console'],
             'level': 'INFO',
             'propagate': False,
         },
         'django.channels.server': {
-            'handlers': ['file', 'console'],
+            'handlers': ['django_file', 'error_file', 'console'],
             'level': 'INFO',
             'propagate': False,
         },
         'daphne': {
-            'handlers': ['file'],
+            'handlers': ['django_file', 'error_file'],
             'level': 'WARNING',
             'propagate': False,
         },
         'core': {
-            'handlers': ['file', 'console'],
+            'handlers': ['core_file', 'error_file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'core.pipeline': {
+            'handlers': ['pipeline_file', 'error_file', 'console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'core.client': {
+            'handlers': ['client_file', 'error_file'],
             'level': 'DEBUG',
             'propagate': False,
         },
         'GarmentFitter': {
-            'handlers': ['file', 'console'],
+            'handlers': ['core_file', 'error_file', 'console'],
             'level': 'INFO',
             'propagate': False,
         },

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Versionen - HumanBody{% endblock %}
+
+{% block extra_head %}
+<style>
+.hv-page { max-width: 1200px; padding: 1.2rem 1.5rem; }
+.hv-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; }
+.hv-header h1 { margin: 0; font-size: 1.4rem; }
+.hv-header .hv-spacer { flex: 1; }
+.hv-meta {
+    color: #9ca3af; font-size: 0.9rem; margin-bottom: 1.5rem;
+    background: #0f172a; padding: 0.7rem 1rem; border-radius: 6px;
+    border: 1px solid #1f2937;
+}
+.hv-meta code { background: #1f2937; padding: 1px 6px; border-radius: 3px; color: #60a5fa; }
+.hv-btn {
+    background: #1f2937; border: 1px solid #374151; color: #e5e7eb;
+    padding: 0.35rem 0.7rem; border-radius: 4px; font-size: 0.85rem;
+    cursor: pointer; text-decoration: none; display: inline-flex;
+    align-items: center; gap: 0.3rem;
+}
+.hv-btn:hover { background: #2a3441; }
+.hv-btn.hv-loading { opacity: 0.7; }
+.hv-repo {
+    margin-bottom: 2rem; background: #0f172a;
+    border: 1px solid #1f2937; border-radius: 8px; overflow: hidden;
+}
+.hv-repo-head {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.8rem 1.1rem; background: #111827;
+    border-bottom: 1px solid #1f2937;
+}
+.hv-repo-head::before {
+    content: '\f078'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+    color: #6b7280; font-size: 0.7rem; transition: transform 0.15s ease;
+}
+.hv-repo.hv-collapsed .hv-repo-head::before { transform: rotate(-90deg); }
+.hv-repo-head h2 {
+    margin: 0; font-size: 1.05rem; color: #e5e7eb; font-weight: 600;
+}
+.hv-repo-head .hv-head-sha {
+    font-family: ui-monospace, monospace; font-size: 0.78rem;
+    background: #1f2937; color: #60a5fa;
+    padding: 2px 7px; border-radius: 3px;
+}
+.hv-repo-head .hv-spacer { flex: 1; }
+.hv-tags-row {
+    padding: 0.5rem 1.1rem; border-bottom: 1px solid #1f2937;
+    font-size: 0.78rem; color: #9ca3af;
+    display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+}
+.hv-tag {
+    display: inline-block; background: #1e3a8a; color: #bfdbfe;
+    padding: 1px 7px; border-radius: 3px;
+    font-family: ui-monospace, monospace; font-size: 0.78rem;
+}
+/* Collapse: alles unter dem Header verstecken */
+.hv-repo.hv-collapsed .hv-tags-row,
+.hv-repo.hv-collapsed .hv-commits,
+.hv-repo.hv-collapsed .hv-empty { display: none; }
+.hv-commits {
+    width: 100%; border-collapse: collapse; font-size: 0.83rem;
+}
+.hv-commits th, .hv-commits td {
+    text-align: left; padding: 0.45rem 1.1rem;
+    border-bottom: 1px solid #1f2937; vertical-align: top;
+}
+.hv-commits th {
+    background: #0d1117; color: #9ca3af; font-weight: 500;
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.hv-commits td.hv-sha {
+    font-family: ui-monospace, monospace; color: #60a5fa;
+    white-space: nowrap; width: 75px;
+}
+.hv-commits td.hv-sha a { color: inherit; text-decoration: none; }
+.hv-commits td.hv-sha a:hover { text-decoration: underline; }
+.hv-commits td.hv-sha.hv-is-head { font-weight: 600; }
+.hv-commits td.hv-sha.hv-is-head::after {
+    content: 'HEAD'; display: inline-block;
+    background: #047857; color: #d1fae5; font-size: 0.65rem;
+    padding: 1px 5px; border-radius: 3px; margin-left: 0.4rem;
+    font-family: inherit; font-weight: 600;
+}
+.hv-commits td.hv-msg { color: #e5e7eb; }
+.hv-commits td.hv-meta-col {
+    color: #6b7280; white-space: nowrap; font-size: 0.78rem; width: 200px;
+}
+.hv-empty {
+    padding: 1rem 1.2rem; color: #6b7280; font-style: italic; font-size: 0.85rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hv-page">
+    <div class="hv-header">
+        <h1><i class="fas fa-tag"></i> Versionen</h1>
+        <div class="hv-spacer"></div>
+        <a id="hvRefreshBtn" href="?refresh=1" class="hv-btn">
+            <i class="fas fa-sync"></i>
+            <span class="hv-btn-label">Aktualisieren</span>
+        </a>
+    </div>
+
+    <div class="hv-meta">
+        Aktuelle App-Version: <code>v{{ current_version|default:"-" }}</code>
+        &middot; Single-Source-of-Truth: <code>HumanBodyWeb/ui/settings.py</code> (VERSION)
+        + <code>HumanBodyBlender/__init__.py</code> (bl_info version tuple)
+        &middot; Daten via GitHub-API (Cache 5 min). Klick auf Repo-Header = ein-/ausklappen.
+    </div>
+
+    {% for repo in repos %}
+    <div class="hv-repo">
+        <div class="hv-repo-head">
+            <h2>{{ repo.spec.display }}</h2>
+            {% if repo.head_sha %}<span class="hv-head-sha">HEAD: {{ repo.head_sha }}</span>{% endif %}
+            <div class="hv-spacer"></div>
+            <a href="{{ repo.gh_url }}" target="_blank" class="hv-btn">
+                <i class="fab fa-github"></i> {{ repo.spec.gh_repo }}
+            </a>
+        </div>
+
+        {% if repo.tags %}
+        <div class="hv-tags-row">
+            <strong>Tags:</strong>
+            {% for t in repo.tags %}<span class="hv-tag">{{ t.name }}</span>{% endfor %}
+        </div>
+        {% endif %}
+
+        {% if repo.commits %}
+        <table class="hv-commits">
+            <thead>
+                <tr>
+                    <th>SHA</th>
+                    <th>Message</th>
+                    <th>Autor / Datum</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in repo.commits %}
+                <tr>
+                    <td class="hv-sha {% if c.sha == repo.head_sha %}hv-is-head{% endif %}">
+                        <a href="{{ c.url }}" target="_blank">{{ c.sha }}</a>
+                    </td>
+                    <td class="hv-msg">{{ c.msg }}</td>
+                    <td class="hv-meta-col">{{ c.author }} &middot; {{ c.date }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="hv-empty">
+            Keine Commits geladen - GitHub-API nicht erreichbar oder Repo privat ohne <code>gh auth</code>.
+            Pruefe: <code>gh auth status</code>.
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<script type="module">
+import { setupVersionsPage } from "{% static 'help/versions_page.js' %}?t={% now 'U' %}";
+setupVersionsPage({ refreshUrl: '?refresh=1' });
+</script>
+{% endblock %}

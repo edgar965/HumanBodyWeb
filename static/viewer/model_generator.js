@@ -219,6 +219,91 @@ function _buildHelixRibbon(part, radius) {
     return result;
 }
 
+/**
+ * Build a flat plane (card-like quad). Lies in local XY (height along Y = bone axis),
+ * faces +Z. Built-in UVs (0,0..1,1) map the texture across the full plane.
+ * Optionally double-sided so the back face is visible too.
+ */
+function _buildPlane(part) {
+    const w = part.planeWidth ?? 0.15;
+    const h = part.planeHeight ?? 0.22;
+    const geo = new THREE.PlaneGeometry(w, h);
+    if (part.planeDoubleSided !== false) return _makeDoubleSided(geo);
+    return geo;
+}
+
+/**
+ * Build a frustum / rhombus: a 3D shape with top (Y=+H/2) and bottom (Y=-H/2)
+ * rectangles whose width × depth can differ. Different sizes give angled side
+ * walls. Each of the 6 faces gets full UV (0..1) mapping for textures.
+ *
+ * Local coords: bone direction = +Y, so height stretches along the bone.
+ */
+function _buildRhombus(part) {
+    const tw = (part.rhombusTopWidth ?? 0.10) * 0.5;
+    const td = (part.rhombusTopDepth ?? 0.10) * 0.5;
+    const bw = (part.rhombusBotWidth ?? 0.20) * 0.5;
+    const bd = (part.rhombusBotDepth ?? 0.20) * 0.5;
+    const h  = (part.rhombusHeight   ?? 0.20) * 0.5;
+
+    // 8 corners (top T0..T3, bottom B0..B3)
+    const T0 = [-tw, +h, -td], T1 = [+tw, +h, -td], T2 = [+tw, +h, +td], T3 = [-tw, +h, +td];
+    const B0 = [-bw, -h, -bd], B1 = [+bw, -h, -bd], B2 = [+bw, -h, +bd], B3 = [-bw, -h, +bd];
+
+    // Build 6 quads with their own vertices, so each face gets its own UVs.
+    // Each face: 4 verts + 4 UVs + 6 indices (two triangles).
+    const faces = [
+        // [v0, v1, v2, v3] CCW outwards
+        [T0, T1, T2, T3], // top    (+Y up)
+        [B3, B2, B1, B0], // bottom (-Y down, wound opposite to face outwards)
+        [B0, B1, T1, T0], // front  (-Z)
+        [B2, B3, T3, T2], // back   (+Z)
+        [B3, B0, T0, T3], // left   (-X)
+        [B1, B2, T2, T1], // right  (+X)
+    ];
+    const uvs2D = [[0, 0], [1, 0], [1, 1], [0, 1]];
+
+    const pos = new Float32Array(faces.length * 4 * 3);
+    const uv  = new Float32Array(faces.length * 4 * 2);
+    const idx = new Uint32Array(faces.length * 6);
+    let pi = 0, ui = 0, ii = 0, vBase = 0;
+    for (const f of faces) {
+        for (let k = 0; k < 4; k++) {
+            pos[pi++] = f[k][0]; pos[pi++] = f[k][1]; pos[pi++] = f[k][2];
+            uv[ui++]  = uvs2D[k][0]; uv[ui++] = uvs2D[k][1];
+        }
+        idx[ii++] = vBase; idx[ii++] = vBase + 1; idx[ii++] = vBase + 2;
+        idx[ii++] = vBase; idx[ii++] = vBase + 2; idx[ii++] = vBase + 3;
+        vBase += 4;
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    geo.computeVertexNormals();
+    return geo;
+}
+
+/**
+ * Cache of THREE.Texture instances keyed by data-URL / source string,
+ * so the same texture isn't re-uploaded to the GPU per frame regen.
+ */
+const _bonePartTextureCache = new Map();
+function _getOrLoadTexture(src) {
+    if (!src) return null;
+    let tex = _bonePartTextureCache.get(src);
+    if (tex) return tex;
+    tex = new THREE.TextureLoader().load(src);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    _bonePartTextureCache.set(src, tex);
+    return tex;
+}
+
 /** Make a geometry double-sided by duplicating verts with flipped normals and reversed faces. */
 function _makeDoubleSided(geo) {
     const pos = geo.attributes.position.array;
@@ -244,6 +329,13 @@ function _makeDoubleSided(geo) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(newPos, 3));
     g.setAttribute('normal', new THREE.BufferAttribute(newNrm, 3));
+    // Preserve UVs (required for textured shapes like the plane "card").
+    if (geo.attributes.uv) {
+        const uv = geo.attributes.uv.array;
+        const newUv = new Float32Array(uv.length * 2);
+        newUv.set(uv); newUv.set(uv, uv.length);
+        g.setAttribute('uv', new THREE.BufferAttribute(newUv, 2));
+    }
     g.setIndex(new THREE.BufferAttribute(newIdx, 1));
     geo.dispose();
     return g;
@@ -623,6 +715,12 @@ export function generateModelMesh(skelData, swData, config) {
             case 'skirt':
                 shapeGeo = _buildSkirt(part, radius);
                 break;
+            case 'plane':
+                shapeGeo = _buildPlane(part);
+                break;
+            case 'rhombus':
+                shapeGeo = _buildRhombus(part);
+                break;
             default: // cylinder
                 shapeGeo = new THREE.CylinderGeometry(radius, radius, boneLen, segments, 1);
                 break;
@@ -658,30 +756,35 @@ export function generateModelMesh(skelData, swData, config) {
         mat4.compose(midpoint, shapeQuat, new THREE.Vector3(1, 1, 1));
         shapeGeo.applyMatrix4(mat4);
 
-        geoChunks.push({ geometry: shapeGeo, boneIndex: boneIdx, color, boneName });
+        geoChunks.push({ geometry: shapeGeo, boneIndex: boneIdx, color, boneName, texture: part.texture || null });
     }
 
     if (geoChunks.length === 0) return null;
 
-    // Group by color for material groups
-    const colorGroups = new Map(); // color -> [chunkIndices]
+    // Group by (color + texture) so each unique material is one group.
+    const matGroups = new Map(); // groupKey -> { color, texture, indices: [chunkIndices] }
     geoChunks.forEach((chunk, i) => {
-        if (!colorGroups.has(chunk.color)) colorGroups.set(chunk.color, []);
-        colorGroups.get(chunk.color).push(i);
+        const key = chunk.texture ? `tex:${chunk.texture}` : `col:${chunk.color}`;
+        let g = matGroups.get(key);
+        if (!g) { g = { color: chunk.color, texture: chunk.texture, indices: [] }; matGroups.set(key, g); }
+        g.indices.push(i);
     });
 
     // Merge all geometries, tracking material group ranges
     let totalVerts = 0;
     let totalIndices = 0;
+    let needsUV = false;
     for (const chunk of geoChunks) {
         totalVerts += chunk.geometry.attributes.position.count;
         totalIndices += chunk.geometry.index ? chunk.geometry.index.count : chunk.geometry.attributes.position.count;
+        if (chunk.geometry.attributes.uv || chunk.texture) needsUV = true;
     }
 
     const mergedPositions = new Float32Array(totalVerts * 3);
     const mergedNormals   = new Float32Array(totalVerts * 3);
     const mergedSkinIndices = new Float32Array(totalVerts * 4);
     const mergedSkinWeights = new Float32Array(totalVerts * 4);
+    const mergedUVs = needsUV ? new Float32Array(totalVerts * 2) : null;
     const mergedIndices = [];
 
     const materials = [];
@@ -691,25 +794,27 @@ export function generateModelMesh(skelData, swData, config) {
     let indexOffset = 0;
     const boneVertexRanges = {};  // boneName -> { start, count }
 
-    // Process chunks grouped by color
-    for (const [color, chunkIndices] of colorGroups) {
+    // Process chunks grouped by material (color + optional texture)
+    for (const [, grp] of matGroups) {
         const groupStart = indexOffset;
 
-        for (const ci of chunkIndices) {
+        for (const ci of grp.indices) {
             const chunk = geoChunks[ci];
             const geo = chunk.geometry;
             const posArr = geo.attributes.position.array;
             const normArr = geo.attributes.normal.array;
+            const uvArr   = geo.attributes.uv ? geo.attributes.uv.array : null;
             const vCount = geo.attributes.position.count;
 
-            // Track bone vertex range for 3D selection
             if (chunk.boneName) boneVertexRanges[chunk.boneName] = { start: vertOffset, count: vCount };
 
-            // Copy positions and normals
             mergedPositions.set(posArr, vertOffset * 3);
             mergedNormals.set(normArr, vertOffset * 3);
+            if (mergedUVs) {
+                if (uvArr) mergedUVs.set(uvArr, vertOffset * 2);
+                // chunks without UVs get the default zero-fill (0, 0)
+            }
 
-            // Set skin weights: 100% on this bone
             for (let v = 0; v < vCount; v++) {
                 const base = (vertOffset + v) * 4;
                 mergedSkinIndices[base]     = chunk.boneIndex;
@@ -722,17 +827,12 @@ export function generateModelMesh(skelData, swData, config) {
                 mergedSkinWeights[base + 3] = 0;
             }
 
-            // Copy indices with offset
             if (geo.index) {
                 const idxArr = geo.index.array;
-                for (let i = 0; i < idxArr.length; i++) {
-                    mergedIndices.push(idxArr[i] + vertOffset);
-                }
+                for (let i = 0; i < idxArr.length; i++) mergedIndices.push(idxArr[i] + vertOffset);
                 indexOffset += idxArr.length;
             } else {
-                for (let i = 0; i < vCount; i++) {
-                    mergedIndices.push(vertOffset + i);
-                }
+                for (let i = 0; i < vCount; i++) mergedIndices.push(vertOffset + i);
                 indexOffset += vCount;
             }
 
@@ -743,18 +843,25 @@ export function generateModelMesh(skelData, swData, config) {
         const groupCount = indexOffset - groupStart;
         groups.push({ start: groupStart, count: groupCount, materialIndex: materials.length });
 
-        materials.push(new THREE.MeshStandardMaterial({
-            color: new THREE.Color(color),
+        const matOpts = {
+            color: new THREE.Color(grp.color),
             roughness: 0.6,
             metalness: 0.2,
             flatShading: false,
-        }));
+        };
+        if (grp.texture) {
+            matOpts.map = _getOrLoadTexture(grp.texture);
+            // Tint stays neutral so the texture's true colors show through.
+            matOpts.color = new THREE.Color(0xffffff);
+        }
+        materials.push(new THREE.MeshStandardMaterial(matOpts));
     }
 
     // Build merged BufferGeometry
     const mergedGeo = new THREE.BufferGeometry();
     mergedGeo.setAttribute('position', new THREE.Float32BufferAttribute(mergedPositions, 3));
     mergedGeo.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3));
+    if (mergedUVs) mergedGeo.setAttribute('uv', new THREE.Float32BufferAttribute(mergedUVs, 2));
     mergedGeo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(mergedSkinIndices, 4));
     mergedGeo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(mergedSkinWeights, 4));
     mergedGeo.setIndex(mergedIndices);
@@ -1030,6 +1137,12 @@ export function generateRigBoneMesh(rigData, config, rigifySkeletonData = null, 
             case 'skirt':
                 shapeGeo = _buildSkirt(part, radius);
                 break;
+            case 'plane':
+                shapeGeo = _buildPlane(part);
+                break;
+            case 'rhombus':
+                shapeGeo = _buildRhombus(part);
+                break;
             default:
                 shapeGeo = new THREE.CylinderGeometry(radius, radius, boneLen, segments, 1);
                 break;
@@ -1067,28 +1180,32 @@ export function generateRigBoneMesh(rigData, config, rigifySkeletonData = null, 
 
         // Determine skin bone index: DEF bones map to their skeleton index, others to root (0)
         const boneIdx = canSkin ? (boneIndexMap[boneName] !== undefined ? boneIndexMap[boneName] : 0) : 0;
-        geoChunks.push({ geometry: shapeGeo, color, boneIndex: boneIdx, boneName });
+        geoChunks.push({ geometry: shapeGeo, color, boneIndex: boneIdx, boneName, texture: part.texture || null });
     }
 
     if (geoChunks.length === 0) return null;
 
-    // Group by color
-    const colorGroups = new Map();
+    // Group by (color + texture)
+    const matGroups = new Map();
     geoChunks.forEach((chunk, i) => {
-        if (!colorGroups.has(chunk.color)) colorGroups.set(chunk.color, []);
-        colorGroups.get(chunk.color).push(i);
+        const key = chunk.texture ? `tex:${chunk.texture}` : `col:${chunk.color}`;
+        let g = matGroups.get(key);
+        if (!g) { g = { color: chunk.color, texture: chunk.texture, indices: [] }; matGroups.set(key, g); }
+        g.indices.push(i);
     });
 
-    let totalVerts = 0, totalIndices = 0;
+    let totalVerts = 0, totalIndices = 0, needsUV = false;
     for (const chunk of geoChunks) {
         totalVerts += chunk.geometry.attributes.position.count;
         totalIndices += chunk.geometry.index ? chunk.geometry.index.count : chunk.geometry.attributes.position.count;
+        if (chunk.geometry.attributes.uv || chunk.texture) needsUV = true;
     }
 
     const mergedPositions = new Float32Array(totalVerts * 3);
     const mergedNormals = new Float32Array(totalVerts * 3);
     const mergedSkinIndices = canSkin ? new Float32Array(totalVerts * 4) : null;
     const mergedSkinWeights = canSkin ? new Float32Array(totalVerts * 4) : null;
+    const mergedUVs = needsUV ? new Float32Array(totalVerts * 2) : null;
     const mergedIndices = [];
     const materials = [];
     const groups = [];
@@ -1096,22 +1213,22 @@ export function generateRigBoneMesh(rigData, config, rigifySkeletonData = null, 
     let vertOffset = 0, indexOffset = 0;
     const boneVertexRanges = {};  // boneName -> { start, count }
 
-    for (const [color, chunkIndices] of colorGroups) {
+    for (const [, grp] of matGroups) {
         const groupStart = indexOffset;
-        for (const ci of chunkIndices) {
+        for (const ci of grp.indices) {
             const chunk = geoChunks[ci];
             const geo = chunk.geometry;
             const posArr = geo.attributes.position.array;
             const normArr = geo.attributes.normal.array;
+            const uvArr   = geo.attributes.uv ? geo.attributes.uv.array : null;
             const vCount = geo.attributes.position.count;
 
-            // Track bone vertex range for 3D selection
             if (chunk.boneName) boneVertexRanges[chunk.boneName] = { start: vertOffset, count: vCount };
 
             mergedPositions.set(posArr, vertOffset * 3);
             mergedNormals.set(normArr, vertOffset * 3);
+            if (mergedUVs && uvArr) mergedUVs.set(uvArr, vertOffset * 2);
 
-            // Assign skin weights: 100% on the bone
             if (canSkin) {
                 for (let v = 0; v < vCount; v++) {
                     const base = (vertOffset + v) * 4;
@@ -1132,14 +1249,20 @@ export function generateRigBoneMesh(rigData, config, rigifySkeletonData = null, 
             geo.dispose();
         }
         groups.push({ start: groupStart, count: indexOffset - groupStart, materialIndex: materials.length });
-        materials.push(new THREE.MeshStandardMaterial({
-            color: new THREE.Color(color), roughness: 0.6, metalness: 0.2, flatShading: false,
-        }));
+        const matOpts = {
+            color: new THREE.Color(grp.color), roughness: 0.6, metalness: 0.2, flatShading: false,
+        };
+        if (grp.texture) {
+            matOpts.map = _getOrLoadTexture(grp.texture);
+            matOpts.color = new THREE.Color(0xffffff);
+        }
+        materials.push(new THREE.MeshStandardMaterial(matOpts));
     }
 
     const mergedGeo = new THREE.BufferGeometry();
     mergedGeo.setAttribute('position', new THREE.Float32BufferAttribute(mergedPositions, 3));
     mergedGeo.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3));
+    if (mergedUVs) mergedGeo.setAttribute('uv', new THREE.Float32BufferAttribute(mergedUVs, 2));
     mergedGeo.setIndex(mergedIndices);
     for (const g of groups) mergedGeo.addGroup(g.start, g.count, g.materialIndex);
 

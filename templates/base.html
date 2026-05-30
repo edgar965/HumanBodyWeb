@@ -108,6 +108,20 @@
                     </a>
                 </div>
             </div>
+            <div class="sidebar-group {% if '/help/' in request.path %}open{% endif %}">
+                <a href="#" class="sidebar-group-toggle">
+                    <i class="fas fa-question-circle"></i> <span>Hilfe</span>
+                    <i class="fas fa-chevron-down sidebar-chevron"></i>
+                </a>
+                <div class="sidebar-sub">
+                    <a href="{% url 'help_logs' %}" class="{% if request.path == '/help/logs/' %}active{% endif %}">
+                        <i class="fas fa-file-alt"></i> <span>Logs</span>
+                    </a>
+                    <a href="{% url 'help_versions' %}" class="{% if request.path == '/help/versions/' %}active{% endif %}">
+                        <i class="fas fa-tag"></i> <span>Versionen</span>
+                    </a>
+                </div>
+            </div>
             <div class="sidebar-group {% if 'settings' in request.path %}open{% endif %}">
                 <a href="#" class="sidebar-group-toggle">
                     <i class="fas fa-cog"></i> <span>Einstellungen</span>

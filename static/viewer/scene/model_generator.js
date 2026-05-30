@@ -74,6 +74,21 @@ async function initModelGenerator() {
     });
 }
 
+// Show/hide shape-specific param panels based on the selected shape.
+function _toggleShapeParamPanels(shape) {
+    const showHide = (id, visible) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = visible ? '' : 'none';
+    };
+    showHide('mg-overlap-row',         shape === 'double_oval');
+    showHide('mg-tutu-params',         shape === 'tutu');
+    showHide('mg-spiral-tutu-params',  shape === 'spiral_tutu');
+    showHide('mg-helix-ribbon-params', shape === 'helix_ribbon');
+    showHide('mg-skirt-params',        shape === 'skirt');
+    showHide('mg-plane-params',        shape === 'plane');
+    showHide('mg-rhombus-params',      shape === 'rhombus');
+}
+
 function _bindModelGeneratorUI() {
     // Skeleton type selector
     const skelSelect = document.getElementById('mg-skeleton-type');
@@ -154,17 +169,55 @@ function _bindModelGeneratorUI() {
     if (boneShape) boneShape.addEventListener('change', () => {
         if (!state._mgSelectedBone || !state._mgConfig.bone_parts[state._mgSelectedBone]) return;
         state._mgConfig.bone_parts[state._mgSelectedBone].shape = boneShape.value;
-        const overlapRow = document.getElementById('mg-overlap-row');
-        if (overlapRow) overlapRow.style.display = boneShape.value === 'double_oval' ? '' : 'none';
-        const tutuParams = document.getElementById('mg-tutu-params');
-        if (tutuParams) tutuParams.style.display = boneShape.value === 'tutu' ? '' : 'none';
-        const spiralParams = document.getElementById('mg-spiral-tutu-params');
-        if (spiralParams) spiralParams.style.display = boneShape.value === 'spiral_tutu' ? '' : 'none';
-        const helixParams = document.getElementById('mg-helix-ribbon-params');
-        if (helixParams) helixParams.style.display = boneShape.value === 'helix_ribbon' ? '' : 'none';
-        const skirtParams = document.getElementById('mg-skirt-params');
-        if (skirtParams) skirtParams.style.display = boneShape.value === 'skirt' ? '' : 'none';
+        _toggleShapeParamPanels(boneShape.value);
         _mgAutoRegenerate();
+    });
+
+    // Plane params
+    _tutuSlider('mg-plane-width', 'mg-plane-width-val', 'planeWidth', 3);
+    _tutuSlider('mg-plane-height', 'mg-plane-height-val', 'planeHeight', 3);
+    const planeDouble = document.getElementById('mg-plane-doublesided');
+    if (planeDouble) planeDouble.addEventListener('change', () => {
+        if (!state._mgSelectedBone || !state._mgConfig.bone_parts[state._mgSelectedBone]) return;
+        state._mgConfig.bone_parts[state._mgSelectedBone].planeDoubleSided = planeDouble.checked;
+        _mgAutoRegenerate();
+    });
+
+    // Rhombus / Frustum params
+    _tutuSlider('mg-rhombus-top-w', 'mg-rhombus-top-w-val', 'rhombusTopWidth', 3);
+    _tutuSlider('mg-rhombus-top-d', 'mg-rhombus-top-d-val', 'rhombusTopDepth', 3);
+    _tutuSlider('mg-rhombus-bot-w', 'mg-rhombus-bot-w-val', 'rhombusBotWidth', 3);
+    _tutuSlider('mg-rhombus-bot-d', 'mg-rhombus-bot-d-val', 'rhombusBotDepth', 3);
+    _tutuSlider('mg-rhombus-height', 'mg-rhombus-height-val', 'rhombusHeight', 3);
+
+    // Texture file picker (per bone, stored as data URL)
+    const texFile = document.getElementById('mg-bone-texture-file');
+    const texClear = document.getElementById('mg-bone-texture-clear');
+    const texPreview = document.getElementById('mg-bone-texture-preview');
+    const texThumb = document.getElementById('mg-bone-texture-thumb');
+    if (texFile) texFile.addEventListener('change', () => {
+        const file = texFile.files && texFile.files[0];
+        if (!file) return;
+        if (!state._mgSelectedBone || !state._mgConfig.bone_parts[state._mgSelectedBone]) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result;
+            state._mgConfig.bone_parts[state._mgSelectedBone].texture = dataUrl;
+            if (texThumb) texThumb.src = dataUrl;
+            if (texPreview) texPreview.style.display = '';
+            _mgAutoRegenerate();
+            fn.markDirty?.('Textur gesetzt');
+        };
+        reader.readAsDataURL(file);
+    });
+    if (texClear) texClear.addEventListener('click', () => {
+        if (!state._mgSelectedBone || !state._mgConfig.bone_parts[state._mgSelectedBone]) return;
+        delete state._mgConfig.bone_parts[state._mgSelectedBone].texture;
+        if (texThumb) texThumb.src = '';
+        if (texPreview) texPreview.style.display = 'none';
+        if (texFile) texFile.value = '';
+        _mgAutoRegenerate();
+        fn.markDirty?.('Textur entfernt');
     });
 
     // Tutu parameter sliders
@@ -444,27 +497,33 @@ function _mgSelectBone(boneName) {
     const colorInput = document.getElementById('mg-bone-color');
     if (colorInput) colorInput.value = part.color || state._mgConfig.default_color;
 
-    // Overlap slider -- show only for double_oval
-    const overlapRow = document.getElementById('mg-overlap-row');
-    if (overlapRow) overlapRow.style.display = (part.shape === 'double_oval') ? '' : 'none';
     const overlapSlider = document.getElementById('mg-bone-overlap');
     const overlapVal = document.getElementById('mg-bone-overlap-val');
     if (overlapSlider) overlapSlider.value = part.overlap ?? 0.5;
     if (overlapVal) overlapVal.textContent = (part.overlap ?? 0.5).toFixed(2);
 
-    // Shape-specific params -- show/hide based on shape
-    const tutuParams = document.getElementById('mg-tutu-params');
-    if (tutuParams) tutuParams.style.display = (part.shape === 'tutu') ? '' : 'none';
-    const spiralParams = document.getElementById('mg-spiral-tutu-params');
-    if (spiralParams) spiralParams.style.display = (part.shape === 'spiral_tutu') ? '' : 'none';
     const spiralSkirtCb = document.getElementById('mg-spiral-skirt');
     if (spiralSkirtCb) spiralSkirtCb.checked = !!part.spiralSkirt;
-    const helixParams = document.getElementById('mg-helix-ribbon-params');
-    if (helixParams) helixParams.style.display = (part.shape === 'helix_ribbon') ? '' : 'none';
     const helixSkirtCb = document.getElementById('mg-helix-skirt');
     if (helixSkirtCb) helixSkirtCb.checked = !!part.spiralSkirt;
-    const skirtParams = document.getElementById('mg-skirt-params');
-    if (skirtParams) skirtParams.style.display = (part.shape === 'skirt') ? '' : 'none';
+
+    // Plane / Rhombus checkbox + texture preview
+    const planeDouble = document.getElementById('mg-plane-doublesided');
+    if (planeDouble) planeDouble.checked = part.planeDoubleSided !== false;
+    const texThumb = document.getElementById('mg-bone-texture-thumb');
+    const texPreview = document.getElementById('mg-bone-texture-preview');
+    const texFile = document.getElementById('mg-bone-texture-file');
+    if (part.texture) {
+        if (texThumb) texThumb.src = part.texture;
+        if (texPreview) texPreview.style.display = '';
+    } else {
+        if (texThumb) texThumb.src = '';
+        if (texPreview) texPreview.style.display = 'none';
+    }
+    if (texFile) texFile.value = '';
+
+    // Visibility of all shape-specific param panels
+    _toggleShapeParamPanels(part.shape);
 
     const shapeSliders = [
         // Tutu
@@ -495,6 +554,15 @@ function _mgSelectBone(boneName) {
         ['mg-skirt-pos-top', 'mg-skirt-pos-top-val', 'skirtPosTop', 0.02, 3],
         ['mg-skirt-pos-bottom', 'mg-skirt-pos-bottom-val', 'skirtPosBottom', -0.15, 3],
         ['mg-skirt-thickness', 'mg-skirt-thickness-val', 'skirtThickness', 0.005, 3],
+        // Plane
+        ['mg-plane-width', 'mg-plane-width-val', 'planeWidth', 0.15, 3],
+        ['mg-plane-height', 'mg-plane-height-val', 'planeHeight', 0.22, 3],
+        // Rhombus / Frustum
+        ['mg-rhombus-top-w', 'mg-rhombus-top-w-val', 'rhombusTopWidth', 0.10, 3],
+        ['mg-rhombus-top-d', 'mg-rhombus-top-d-val', 'rhombusTopDepth', 0.10, 3],
+        ['mg-rhombus-bot-w', 'mg-rhombus-bot-w-val', 'rhombusBotWidth', 0.20, 3],
+        ['mg-rhombus-bot-d', 'mg-rhombus-bot-d-val', 'rhombusBotDepth', 0.20, 3],
+        ['mg-rhombus-height', 'mg-rhombus-height-val', 'rhombusHeight', 0.20, 3],
     ];
     for (const [slId, valId, prop, def, dec] of shapeSliders) {
         const sl = document.getElementById(slId);

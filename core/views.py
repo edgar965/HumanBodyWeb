@@ -16,6 +16,10 @@ from django.conf import settings
 from django.contrib import messages
 
 from .models import BVHJob, BVHFile, AppSettings
+from .logging_utils import with_job_id
+
+logger = logging.getLogger('core')
+pipeline_logger = logging.getLogger('core.pipeline')
 
 # Track active subprocesses per job for stop functionality
 _active_procs = {}  # job_id (str) -> subprocess.Popen
@@ -653,7 +657,7 @@ def remonitor_smpl_job(job_id, pid):
         except Exception:
             job.fps = 30.0
         job.save()
-        print(f'[remonitor] Job {job_id}: BVH found, marked complete.')
+        pipeline_logger.info('[remonitor] Job %s: BVH found, marked complete.', job_id)
     else:
         # Try to read error from log
         try:
@@ -663,7 +667,7 @@ def remonitor_smpl_job(job_id, pid):
             job.error_message = 'Pipeline finished but no BVH output was found.'
         job.status = 'failed'
         job.save()
-        print(f'[remonitor] Job {job_id}: no BVH found, marked failed.')
+        pipeline_logger.error('[remonitor] Job %s: no BVH found, marked failed.', job_id)
 
     # Clean up PID file
     try:
@@ -1128,7 +1132,7 @@ def _ensure_mp4(video_path, output_dir):
     mp4_path = output_dir / (vp.stem + '.mp4')
     if mp4_path.exists():
         return str(mp4_path)
-    print(f'[SMPL] Converting {vp.name} -> MP4 for SMPL pipeline...', flush=True)
+    pipeline_logger.info('[SMPL] Converting %s -> MP4 for SMPL pipeline...', vp.name)
     proc = subprocess.run(
         ['ffmpeg', '-y', '-i', str(video_path), '-c:v', 'libx264',
          '-preset', 'fast', '-crf', '18', '-an', str(mp4_path)],
@@ -1136,7 +1140,7 @@ def _ensure_mp4(video_path, output_dir):
     )
     if proc.returncode != 0 or not mp4_path.exists():
         raise RuntimeError(f'ffmpeg conversion failed: {proc.stderr[-500:]}')
-    print(f'[SMPL] Converted to {mp4_path}', flush=True)
+    pipeline_logger.info('[SMPL] Converted to %s', mp4_path)
     return str(mp4_path)
 
 
@@ -1744,7 +1748,9 @@ def start_processing(request, job_id):
     job = get_object_or_404(BVHJob, id=job_id)
     # Allow re-processing from pending, complete, or failed states
     if job.status in ('pending', 'complete', 'failed'):
-        _init_and_launch_job(job)
+        with with_job_id(str(job.id)):
+            pipeline_logger.info('start_processing pipeline=%s name=%s', job.pipeline, job.name)
+            _init_and_launch_job(job)
         messages.info(request, 'Processing started.')
     return redirect('job_status', job_id=job.id)
 
@@ -1880,6 +1886,7 @@ def stop_processing(request, job_id):
     """
     job = get_object_or_404(BVHJob, id=job_id)
     jid = str(job.id)
+    pipeline_logger.info('stop_processing (form) job=%s pipeline=%s', jid, job.pipeline)
     output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
     _write_stop_flags(job, output_dir)
 
@@ -1942,6 +1949,7 @@ def api_stop_processing(request, job_id):
         return JsonResponse({'error': 'POST required'}, status=405)
     job = get_object_or_404(BVHJob, id=job_id)
     jid = str(job.id)
+    pipeline_logger.info('api_stop_processing job=%s pipeline=%s', jid, job.pipeline)
     output_dir = Path(settings.MEDIA_ROOT) / 'output' / jid
     _write_stop_flags(job, output_dir)
 
@@ -2219,7 +2227,7 @@ def _try_generate_smpl_2d_keypoints(job, output_dir):
             return json.load(f)
     except Exception as e:
         import traceback
-        print(f'[serve_keypoints_2d] Retroactive SMPL 2D keypoints failed: {e}')
+        logger.error('[serve_keypoints_2d] Retroactive SMPL 2D keypoints failed: %s', e)
         traceback.print_exc()
         return None
 
@@ -2468,6 +2476,7 @@ def delete_job(request, job_id):
     """Delete a processed job and its files."""
     job = get_object_or_404(BVHJob, id=job_id)
     name = job.name
+    logger.info('delete_job id=%s name=%s pipeline=%s', job_id, name, job.pipeline)
     _cleanup_job_files(job)
     job.delete()
     messages.success(request, f'Deleted {name}.')

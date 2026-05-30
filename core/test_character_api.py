@@ -129,7 +129,7 @@ def _get_test_cc_subdivider():
                 spec.loader.exec_module(cc_mod)
                 CC = cc_mod.CatmullClarkSubdivider
             else:
-                logger.warning("CatmullClarkSubdivider not found in test module")
+                logger.error("CatmullClarkSubdivider not found in test module")
                 return None
         _test_cc_subdivider = CC(
             mesh.faces,
