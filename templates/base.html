@@ -1,184 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}MocapNET{% endblock %}</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%A7%8D%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?t={% now "U" %}">
-    {% block extra_head %}{% endblock %}
-</head>
-<body>
-    <nav class="sidebar">
-        <div class="sidebar-brand">
-            <i class="fas fa-walking"></i> HumanBody <small>v{{ APP_VERSION }}</small>
-        </div>
-        <div class="sidebar-links">
-            <div class="sidebar-group {% if request.path == '/humanbody/scene/' or request.path == '/humanbody/scene-model/' or request.path == '/process/result/' or request.path == '/humanbody/theatre/' or request.path == '/humanbody/bvh-studio/' %}open{% endif %}">
-                <a href="#" class="sidebar-group-toggle">
-                    <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
-                    <i class="fas fa-chevron-down sidebar-chevron"></i>
-                </a>
-                <div class="sidebar-sub">
-                    <a href="{% url 'bvh_studio' %}" class="{% if request.path == '/humanbody/bvh-studio/' %}active{% endif %}">
-                        <i class="fas fa-cut"></i> <span>BVH Studio</span>
-                    </a>
-                    <a href="{% url 'humanbody_scene' %}" class="{% if request.path == '/humanbody/scene/' %}active{% endif %}">
-                        <i class="fas fa-lightbulb"></i> <span>Szene</span>
-                    </a>
-                    <a href="{% url 'humanbody_scene_model' %}" class="{% if request.path == '/humanbody/scene-model/' %}active{% endif %}">
-                        <i class="fas fa-user-edit"></i> <span>Szene - Modell</span>
-                    </a>
-                    <a href="{% url 'standalone_result' %}" class="{% if request.path == '/process/result/' %}active{% endif %}">
-                        <i class="fas fa-play-circle"></i> <span>Result</span>
-                    </a>
-                    <a href="{% url 'theatre' %}" class="{% if request.path == '/humanbody/theatre/' %}active{% endif %}">
-                        <i class="fas fa-film"></i> <span>Theatre</span>
-                    </a>
-                </div>
-            </div>
-            <div class="sidebar-group {% if request.path == '/humanbody/config/' or request.path == '/humanbody/photo-to-3d/' or '/photo-to-3d/jobs' in request.path or request.path == '/humanbody/animations/' %}open{% endif %}">
-                <a href="#" class="sidebar-group-toggle">
-                    <i class="fas fa-user"></i> <span>HumanBody</span>
-                    <i class="fas fa-chevron-down sidebar-chevron"></i>
-                </a>
-                <div class="sidebar-sub">
-                    <a href="{% url 'humanbody_config' %}" class="{% if request.path == '/humanbody/config/' %}active{% endif %}">
-                        <i class="fas fa-sliders-h"></i> <span>Konfiguration</span>
-                    </a>
-                    <a href="{% url 'photo_to_3d' %}" class="{% if request.path == '/humanbody/photo-to-3d/' %}active{% endif %}">
-                        <i class="fas fa-camera"></i> <span>Foto To 3D</span>
-                    </a>
-                    <a href="{% url 'photo_analysis_jobs' %}" class="{% if request.path == '/humanbody/photo-to-3d/jobs/' %}active{% endif %}" style="padding-left:2.5rem;font-size:0.9em;">
-                        <i class="fas fa-list"></i> <span>Jobs</span>
-                    </a>
-                    <a href="{% url 'humanbody_animations' %}" class="{% if request.path == '/humanbody/animations/' %}active{% endif %}">
-                        <i class="fas fa-running"></i> <span>Animationen</span>
-                    </a>
-                    <a href="{% url 'humanbody_config' %}#tab-creator" class="{% if request.path == '/humanbody/config/' and 'tab-creator' in request.get_full_path %}active{% endif %}">
-                        <i class="fas fa-drafting-compass"></i> <span>Pattern Editor</span>
-                    </a>
-                </div>
-            </div>
-            <div class="sidebar-group {% if 'process' in request.path %}open{% endif %}">
-                <a href="#" class="sidebar-group-toggle">
-                    <i class="fas fa-video"></i> <span>Process Videos</span>
-                    <i class="fas fa-chevron-down sidebar-chevron"></i>
-                </a>
-                <div class="sidebar-sub">
-                    <a href="{% url 'upload' %}" class="{% if request.path == '/process/' %}active{% endif %}">
-                        <i class="fas fa-upload"></i> <span>2D</span>
-                    </a>
-                    <a href="{% url 'upload_v4' %}" class="{% if request.path == '/process/VideoToBVH/' %}active{% endif %}">
-                        <i class="fas fa-hand-sparkles"></i> <span>3D</span>
-                    </a>
-                    <a href="{% url 'processed' %}" class="{% if 'process/list' in request.path %}active{% endif %}">
-                        <i class="fas fa-list"></i> <span>Verarbeitet</span>
-                    </a>
-                </div>
-            </div>
-            <div class="sidebar-group {% if '/library/' in request.path or request.path == '/webcam/' or '/test/' in request.path or request.path == '/humanbody/test-animation/' or request.path == '/humanbody/test-character/' or request.path == '/humanbody/test-smpl/' %}open{% endif %}">
-                <a href="#" class="sidebar-group-toggle">
-                    <i class="fas fa-flask"></i> <span>Test</span>
-                    <i class="fas fa-chevron-down sidebar-chevron"></i>
-                </a>
-                <div class="sidebar-sub">
-                    <a href="{% url 'test_mocapnet' %}" class="{% if request.path == '/test/mocapnet/' %}active{% endif %}">
-                        <i class="fas fa-cog"></i> <span>MocapNET</span>
-                    </a>
-                    <a href="{% url 'testcases' %}" class="{% if request.path == '/tests/' %}active{% endif %}">
-                        <i class="fas fa-check-double"></i> <span>Testcases</span>
-                    </a>
-                    <a href="{% url 'test_animation' %}" class="{% if request.path == '/humanbody/test-animation/' %}active{% endif %}">
-                        <i class="fas fa-vial"></i> <span>Test Animation</span>
-                    </a>
-                    <a href="{% url 'test_character' %}" class="{% if request.path == '/humanbody/test-character/' %}active{% endif %}">
-                        <i class="fas fa-user-check"></i> <span>Test Charakter</span>
-                    </a>
-                    <a href="{% url 'test_smpl' %}" class="{% if request.path == '/humanbody/test-smpl/' %}active{% endif %}">
-                        <i class="fas fa-people-arrows"></i> <span>SMPL</span>
-                    </a>
-                    <a href="{% url 'library' %}" class="{% if request.path|slice:':9' == '/library/' %}active{% endif %}">
-                        <i class="fas fa-folder-open"></i> <span>BVH Library</span>
-                    </a>
-                    <a href="{% url 'webcam' %}" class="{% if request.path == '/webcam/' %}active{% endif %}">
-                        <i class="fas fa-camera"></i> <span>Webcam</span>
-                    </a>
-                </div>
-            </div>
-            <div class="sidebar-group {% if '/help/' in request.path %}open{% endif %}">
-                <a href="#" class="sidebar-group-toggle">
-                    <i class="fas fa-question-circle"></i> <span>Hilfe</span>
-                    <i class="fas fa-chevron-down sidebar-chevron"></i>
-                </a>
-                <div class="sidebar-sub">
-                    <a href="{% url 'help_logs' %}" class="{% if request.path == '/help/logs/' %}active{% endif %}">
-                        <i class="fas fa-file-alt"></i> <span>Logs</span>
-                    </a>
-                    <a href="{% url 'help_versions' %}" class="{% if request.path == '/help/versions/' %}active{% endif %}">
-                        <i class="fas fa-tag"></i> <span>Versionen</span>
-                    </a>
-                </div>
-            </div>
-            <div class="sidebar-group {% if 'settings' in request.path %}open{% endif %}">
-                <a href="#" class="sidebar-group-toggle">
-                    <i class="fas fa-cog"></i> <span>Einstellungen</span>
-                    <i class="fas fa-chevron-down sidebar-chevron"></i>
-                </a>
-                <div class="sidebar-sub">
-                    <a href="{% url 'settings_model' %}" class="{% if request.path == '/settings/model/' %}active{% endif %}">
-                        <i class="fas fa-user"></i> <span>Modell</span>
-                    </a>
-                    <a href="{% url 'settings_scene' %}" class="{% if request.path == '/settings/scene/' %}active{% endif %}">
-                        <i class="fas fa-lightbulb"></i> <span>Szene</span>
-                    </a>
-                    <a href="{% url 'settings_result' %}" class="{% if request.path == '/settings/result/' %}active{% endif %}">
-                        <i class="fas fa-video"></i> <span>Result</span>
-                    </a>
-                    <a href="{% url 'settings_videobvh_2d' %}" class="{% if request.path == '/settings/video-to-bvh-2d/' %}active{% endif %}">
-                        <i class="fas fa-film"></i> <span>Video to BVH: 2D</span>
-                    </a>
-                    <a href="{% url 'settings_videobvh_3d' %}" class="{% if request.path == '/settings/video-to-bvh-3d/' %}active{% endif %}">
-                        <i class="fas fa-cube"></i> <span>Video to BVH: 3D</span>
-                    </a>
-                    <a href="{% url 'settings_smpl' %}" class="{% if request.path == '/settings/smpl/' %}active{% endif %}">
-                        <i class="fas fa-child"></i> <span>SMPL Body</span>
-                    </a>
-                    <a href="{% url 'settings_theatre' %}" class="{% if request.path == '/settings/theatre/' %}active{% endif %}">
-                        <i class="fas fa-theater-masks"></i> <span>Theatre</span>
-                    </a>
-                    <a href="{% url 'settings_bvh_studio' %}" class="{% if request.path == '/settings/bvh-studio/' %}active{% endif %}">
-                        <i class="fas fa-cut"></i> <span>BVH Studio</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </nav>
+{% extends "djangobase/base.html" %}
+{% load static %}
+{% comment %}
+HumanBodyWeb-Shell auf djangoBase aufgesetzt: Sidebar, Topbar, Toasts und der
+Hilfe-/Einstellungen-Bereich kommen aus djangoBase und werden über DJANGOBASE in
+ui/settings.py gesteuert (Branding, Farben, Menü, Log-Quellen, Repos).
 
-    <main class="main-content">
-        {% if messages %}
-        <div class="messages">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
-                {{ message }}
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
+Seiten füllen wie bisher {% block content %}. Ihre eigenen Styles/Scripts laufen
+weiter über {% block extra_head %} / {% block extra_scripts %} — hier in die
+djangoBase-Blocks head_extra / body_scripts eingehängt. Font Awesome bleibt für
+die Seiten-Inhalte geladen (die Sidebar nutzt Bootstrap Icons); style.css lädt
+NACH dem djangoBase-CSS und überschreibt so dessen Variablen (z. B. --sidebar-width).
+{% endcomment %}
 
-        {% block content %}{% endblock %}
-    </main>
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/style.css' %}?t={% now 'U' %}">
+{% block extra_head %}{% endblock %}
+{% endblock %}
 
-    <script>
-    document.querySelectorAll('.sidebar-group-toggle').forEach(function(toggle) {
-        toggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            toggle.closest('.sidebar-group').classList.toggle('open');
-        });
-    });
-    </script>
-    {% block extra_scripts %}{% endblock %}
-</body>
-</html>
+{% block body_scripts %}{{ block.super }}{% block extra_scripts %}{% endblock %}{% endblock %}

@@ -3,7 +3,6 @@ from . import views
 from . import character_api
 from . import test_character_api
 from . import cloth_export_api
-from . import help_views
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
@@ -175,10 +174,7 @@ urlpatterns = [
     path('api/smpl/garment/fit/', character_api.smpl_garment_fit, name='smpl_garment_fit'),
     path('api/smpl/garment/thumb/<path:garment_path>/', character_api.smpl_garment_thumbnail, name='smpl_garment_thumbnail'),
 
-    # Help (Logs + Versionen)
-    path('help/logs/', help_views.help_logs, name='help_logs'),
-    path('help/logs/clear/', help_views.api_log_clear, name='api_log_clear'),
-    path('help/versions/', help_views.help_versions, name='help_versions'),
+    # Help (Logs/Versionen/Tests) jetzt aus djangoBase: /help/ -> djangobase.urls
 
     # Test Character API (isolated version from TestCharakter/)
     path('api/character-test/mesh/', test_character_api.test_character_mesh, name='test_character_mesh'),

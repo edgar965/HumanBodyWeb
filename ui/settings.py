@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = '0.50'
+VERSION = '0.51'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'djangobase',
     'core',
 ]
 
@@ -55,6 +56,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'ui.context_processors.version',
+                'djangobase.context_processors.djangobase',
             ],
         },
     },
@@ -277,6 +279,85 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer"
     }
+}
+
+# djangoBase — wiederverwendbare Infra (Sidebar-Layout, Hilfe: Logs/Versionen/
+# Tests, Einstellungen). Installiert als editable Package aus A:\shared\djangoBase.
+# Repos mit absolutem Pfad + leerem Slug ("") -> djangoBase leitet den GitHub-
+# Slug aus dem lokalen origin-Remote ab (keine Slugs hardcodiert).
+DJANGOBASE = {
+    'titel': 'HumanBody',
+    'logo_icon': 'bi-person-walking',
+    'farben': {
+        'sidebar_bg': '#1a1a2e',     # = --bg-secondary (style.css)
+        'sidebar_light': '#16213e',  # = --bg-card  (Hover/Active-Fill)
+        'sidebar_dark': '#0f0f1a',   # = --bg-primary (Topbar)
+    },
+    'log_verzeichnis': LOG_DIR,
+    'log_sources': [
+        ('all', 'Alle Quellen — chronologisch', None, None),
+        ('django', 'Django-Server', 'django.log', None),
+        ('core', 'Character / API', 'core.log', None),
+        ('pipeline', 'Video-to-BVH', 'pipeline.log', None),
+        ('client', 'Client (JS)', 'client.log', None),
+        ('errors', 'Fehler (aggregiert)', 'errors.log', None),
+    ],
+    'version_pakete': ['django', 'channels', 'daphne', 'numpy', 'scipy', 'trimesh'],
+    'repos': [
+        ('HumanBodyWeb', '', str(BASE_DIR)),
+        ('HumanBody', '', str(HUMANBODY_ROOT)),
+        ('HumanBodyBlender', '', str(TOOLS_ROOT / 'HumanBodyBlender')),
+        ('VideoToBVH', '', str(VIDEOTOBVH_ROOT)),
+    ],
+    'test_befehle': [
+        {'slug': 'core', 'name': 'Core-Tests',
+         'cmd': [str(BASE_DIR.parent / 'python14' / 'Scripts' / 'python.exe'),
+                 'manage.py', 'test', 'core']},
+    ],
+    'menu': [
+        {'label': 'Dashboard', 'icon': 'bi-speedometer2', 'untermenu': [
+            {'label': 'BVH Studio', 'icon': 'bi-scissors', 'url': '/humanbody/bvh-studio/'},
+            {'label': 'Szene', 'icon': 'bi-lightbulb', 'url': '/humanbody/scene/'},
+            {'label': 'Szene - Modell', 'icon': 'bi-person-gear', 'url': '/humanbody/scene-model/'},
+            {'label': 'Result', 'icon': 'bi-play-circle', 'url': '/process/result/'},
+            {'label': 'Theatre', 'icon': 'bi-film', 'url': '/humanbody/theatre/'},
+        ]},
+        {'label': 'HumanBody', 'icon': 'bi-person', 'untermenu': [
+            {'label': 'Konfiguration', 'icon': 'bi-sliders', 'url': '/humanbody/config/'},
+            {'label': 'Foto To 3D', 'icon': 'bi-camera', 'url': '/humanbody/photo-to-3d/'},
+            {'label': 'Jobs', 'icon': 'bi-list-ul', 'url': '/humanbody/photo-to-3d/jobs/'},
+            {'label': 'Animationen', 'icon': 'bi-person-walking', 'url': '/humanbody/animations/'},
+            {'label': 'Pattern Editor', 'icon': 'bi-compass', 'url': '/humanbody/config/#tab-creator'},
+        ]},
+        {'label': 'Process Videos', 'icon': 'bi-camera-video', 'untermenu': [
+            {'label': '2D', 'icon': 'bi-upload', 'url': '/process/'},
+            {'label': '3D', 'icon': 'bi-magic', 'url': '/process/VideoToBVH/'},
+            {'label': 'Verarbeitet', 'icon': 'bi-list-ul', 'url': '/process/list/'},
+        ]},
+        {'label': 'Test', 'icon': 'bi-eyedropper', 'untermenu': [
+            {'label': 'MocapNET', 'icon': 'bi-gear', 'url': '/test/mocapnet/'},
+            {'label': 'Testcases', 'icon': 'bi-check2-all', 'url': '/tests/'},
+            {'label': 'Test Animation', 'icon': 'bi-collection-play', 'url': '/humanbody/test-animation/'},
+            {'label': 'Test Charakter', 'icon': 'bi-person-check', 'url': '/humanbody/test-character/'},
+            {'label': 'SMPL', 'icon': 'bi-people', 'url': '/humanbody/test-smpl/'},
+            {'label': 'BVH Library', 'icon': 'bi-folder2-open', 'url': '/library/'},
+            {'label': 'Webcam', 'icon': 'bi-camera', 'url': '/webcam/'},
+        ]},
+    ],
+    'einstellungen_menu': True,
+    'hilfe_menu': True,
+    'benutzer_verwaltung': False,
+    'einstellungen_extra': [
+        {'label': 'Modell', 'url': '/settings/model/', 'icon': 'bi-person'},
+        {'label': 'Szene', 'url': '/settings/scene/', 'icon': 'bi-lightbulb'},
+        {'label': 'Result', 'url': '/settings/result/', 'icon': 'bi-camera-video'},
+        {'label': 'Video to BVH: 2D', 'url': '/settings/video-to-bvh-2d/', 'icon': 'bi-film'},
+        {'label': 'Video to BVH: 3D', 'url': '/settings/video-to-bvh-3d/', 'icon': 'bi-box'},
+        {'label': 'SMPL Body', 'url': '/settings/smpl/', 'icon': 'bi-person-standing'},
+        {'label': 'Theatre', 'url': '/settings/theatre/', 'icon': 'bi-mask'},
+        {'label': 'BVH Studio', 'url': '/settings/bvh-studio/', 'icon': 'bi-scissors'},
+    ],
+    'zugriff': 'none',   # HumanBodyWeb hat (noch) keine Auth -> Hilfe offen
 }
 
 # Local overrides (not tracked in git — each team member has their own)

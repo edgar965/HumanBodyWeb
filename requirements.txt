@@ -3,3 +3,7 @@ channels>=4.0
 daphne
 mediapipe
 opencv-python
+# Wiederverwendbare Django-Infra (Sidebar, Hilfe: Logs/Versionen/Tests,
+# Einstellungen). Dev: editable aus A:\shared\djangoBase installiert
+# (pip install -e A:\shared\djangoBase).
+djangobase @ git+https://github.com/edgar965/djangoBase.git
