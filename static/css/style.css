@@ -12,6 +12,16 @@
     --danger: #e74c3c;
     --border: #2a2a4a;
     --sidebar-width: 220px;
+    /* Theme-Fallbacks (Dark). Werden pro Modus von theme.css überschrieben;
+       hier nur, falls theme.css mal nicht lädt. --accent-rgb = --accent als
+       R,G,B für rgba()-Tints. */
+    --accent-rgb: 233, 69, 96;
+    --ov03: rgba(255,255,255,0.03);
+    --ov04: rgba(255,255,255,0.04);
+    --ov05: rgba(255,255,255,0.05);
+    --ov08: rgba(255,255,255,0.08);
+    --ov10: rgba(255,255,255,0.10);
+    --surface-2: rgba(0,0,0,0.25);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,7 +41,11 @@ body {
     left: 0;
     width: var(--sidebar-width);
     height: 100vh;
-    background: var(--bg-secondary);
+    /* djangoBases per-Modus-Sidebarfarbe folgen (in jedem Theme lesbar, da
+       djangoBase die Sidebar-Schrift dazu passend setzt). Fallback auf die
+       Content-Sekundärfläche, falls --sidebar-bg fehlt. Vorher hart
+       var(--bg-secondary) -> im Light-Modus weiß = unsichtbare Sidebar (§5.3). */
+    background: var(--sidebar-bg, var(--bg-secondary));
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -272,7 +286,7 @@ td a { color: var(--accent); text-decoration: none; }
 
 .drop-zone:hover, .drop-zone.drag-over {
     border-color: var(--accent);
-    background: rgba(233, 69, 96, 0.05);
+    background: rgba(var(--accent-rgb), 0.06);
 }
 
 .drop-zone i { color: var(--accent); margin-bottom: 1rem; }
@@ -327,7 +341,7 @@ td a { color: var(--accent); text-decoration: none; }
 
 .pipeline-option:has(input:checked) {
     border-color: var(--accent);
-    background: rgba(233, 69, 96, 0.1);
+    background: rgba(var(--accent-rgb), 0.12);
 }
 
 .pipeline-option.disabled {
@@ -393,7 +407,7 @@ td a { color: var(--accent); text-decoration: none; }
 }
 
 .compare-table tr:last-child td { border-bottom: none; }
-.compare-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+.compare-table tbody tr:hover { background: var(--ov03); }
 
 /* Job Detail */
 .job-detail {
@@ -717,7 +731,7 @@ td a { color: var(--accent); text-decoration: none; }
     height: 28px;
     border: 1px solid var(--border);
     border-radius: 4px;
-    background: rgba(30,30,40,0.7);
+    background: var(--ov08);
     color: var(--text-muted);
     cursor: pointer;
     font-size: 0.75rem;
@@ -800,7 +814,7 @@ td a { color: var(--accent); text-decoration: none; }
     width: 280px;
     height: 100%;
     overflow-y: auto;
-    background: rgba(20, 22, 34, 0.92);
+    background: var(--bg-card);
     border-left: 1px solid var(--border);
     font-size: 0.8rem;
     z-index: 5;
@@ -902,7 +916,7 @@ td a { color: var(--accent); text-decoration: none; }
     border-radius: 3px;
     font-size: 0.75rem;
 }
-.floating-video-close:hover { color: #e74c3c; background: rgba(255,255,255,0.05); }
+.floating-video-close:hover { color: var(--danger); background: var(--ov05); }
 .floating-video .video-overlay-wrapper {
     position: relative;
     width: 100%;
@@ -944,7 +958,7 @@ td a { color: var(--accent); text-decoration: none; }
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
-.rc-section-header:hover { background: rgba(255,255,255,0.03); }
+.rc-section-header:hover { background: var(--ov03); }
 .rc-chevron { font-size: 0.6rem; transition: transform 0.2s; }
 .rc-section.collapsed .rc-section-body { display: none; }
 .rc-section.collapsed .rc-chevron { transform: rotate(-90deg); }

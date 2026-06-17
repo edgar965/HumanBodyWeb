@@ -1,0 +1,195 @@
+/* =====================================================================
+   theme.css — Single Source of Truth für die Theme-Paletten (5 Modi).
+
+   Greift über body[data-theme="X"] und überschreibt die SELBEN Variablen-
+   namen, die style.css:root schon definiert (--bg-primary, --accent, --text,
+   --border …). Dadurch flippen alle bestehenden var(--)-Stellen automatisch
+   mit dem Modus — ohne dass style.css-Regeln angefasst werden müssen.
+
+   Wird geladen:
+     • App-Seiten   : <link> in templates/base.html (?v={{ JS_VERSION }})
+     • djangoBase   : DJANGOBASE["extra_css"] = ["css/theme.css"]
+
+   Den Theme-Wechsel selbst macht der Topbar-Switcher (djangoBase base_app.html):
+   er setzt body[data-theme] + localStorage['djangobase.theme'].
+
+   WICHTIG (HOWTO §5.3): die djangoBase-Sidebar NICHT von außen umfärben —
+   ihre --sidebar-*/--db-*-Variablen kommen aus djangoBase/themes.css und sind
+   in jedem Modus lesbar. Hier nur die Inhalts-Variablen setzen.
+   ===================================================================== */
+
+/* ---- Dark (Default — Werte = style.css:root, hier nur explizit für den
+        Switcher + Overlay-Helfer) ---------------------------------------- */
+body,
+body[data-theme="dark"] {
+    --bg-primary:   #0f0f1a;
+    --bg-secondary: #1a1a2e;
+    --bg-card:      #16213e;
+    --accent:       #e94560;
+    --accent-hover: #ff6b81;
+    --accent-rgb:   233, 69, 96;
+    --text:         #eee;
+    --text-muted:   #888;
+    --success:      #27ae60;
+    --warning:      #f39c12;
+    --danger:       #e74c3c;
+    --border:       #2a2a4a;
+    /* Overlays: helle Schleier auf dunklem Grund */
+    --ov03: rgba(255,255,255,0.03);
+    --ov04: rgba(255,255,255,0.04);
+    --ov05: rgba(255,255,255,0.05);
+    --ov08: rgba(255,255,255,0.08);
+    --ov10: rgba(255,255,255,0.10);
+    --surface-2: rgba(0,0,0,0.25);   /* dunkler Inset (Video-/Code-Flächen) */
+    /* Von Template-Inline-Styles referenziert (waren undefiniert -> dunkler
+       Fallback in JEDEM Theme). Dark-Werte = die bisher genutzten Fallbacks,
+       daher Dark unverändert. Über den `body`-Selektor erben auch
+       cyber/forest/sunset diese (dunklen) Werte. */
+    --bg-tertiary:    #2a2a3e;
+    --bg-darker:      #181825;
+    --bg-hover:       rgba(255,255,255,0.03);
+    --bg-highlight:   #2a2a45;
+    --text-secondary: #b9c2cf;
+}
+
+/* ---- Light (CleanOrga-Stil) ----------------------------------------- */
+body[data-theme="light"] {
+    --bg-primary:   #f5f7fa;
+    --bg-secondary: #ffffff;
+    --bg-card:      #ffffff;
+    --accent:       #1976d2;
+    --accent-hover: #1565c0;
+    --accent-rgb:   25, 118, 210;
+    --text:         #1a2533;
+    --text-muted:   #5b6675;
+    --success:      #2e7d32;
+    --warning:      #e69500;
+    --danger:       #c62828;
+    --border:       #e2e6ea;
+    /* Overlays GEKIPPT: dunkle Schleier auf hellem Grund */
+    --ov03: rgba(0,0,0,0.03);
+    --ov04: rgba(0,0,0,0.035);
+    --ov05: rgba(0,0,0,0.05);
+    --ov08: rgba(0,0,0,0.08);
+    --ov10: rgba(0,0,0,0.10);
+    --surface-2: rgba(0,0,0,0.06);
+    --bg-tertiary:    #eef1f6;
+    --bg-darker:      #e6eaf0;
+    --bg-hover:       rgba(0,0,0,0.04);
+    --bg-highlight:   #e3ecf7;
+    --text-secondary: #45566a;
+    background: var(--bg-primary);
+    color: var(--text);
+}
+
+/* ---- Cyber ----------------------------------------------------------- */
+body[data-theme="cyber"] {
+    --bg-primary:   #050818;
+    --bg-secondary: #06203a;
+    --bg-card:      #0a1228;
+    --accent:       #00f0ff;
+    --accent-hover: #6ff7ff;
+    --accent-rgb:   0, 240, 255;
+    --text:         #c8e6ff;
+    --text-muted:   #6a8aa5;
+    --success:      #00e0a0;
+    --warning:      #ffc857;
+    --danger:       #ff5d73;
+    --border:       rgba(0,240,255,0.18);
+    --ov03: rgba(255,255,255,0.03);
+    --ov04: rgba(255,255,255,0.04);
+    --ov05: rgba(255,255,255,0.05);
+    --ov08: rgba(0,240,255,0.08);
+    --ov10: rgba(0,240,255,0.12);
+    --surface-2: rgba(0,0,0,0.30);
+}
+
+/* ---- Forest ---------------------------------------------------------- */
+body[data-theme="forest"] {
+    --bg-primary:   #0e1d11;
+    --bg-secondary: #123d1c;
+    --bg-card:      #12301a;
+    --accent:       #4caf50;
+    --accent-hover: #6fd175;
+    --accent-rgb:   76, 175, 80;
+    --text:         #d8f0d8;
+    --text-muted:   #8ab38a;
+    --success:      #69d36e;
+    --warning:      #e0b341;
+    --danger:       #e86a5e;
+    --border:       rgba(76,175,80,0.20);
+    --ov03: rgba(255,255,255,0.03);
+    --ov04: rgba(255,255,255,0.04);
+    --ov05: rgba(255,255,255,0.05);
+    --ov08: rgba(76,175,80,0.10);
+    --ov10: rgba(76,175,80,0.14);
+    --surface-2: rgba(0,0,0,0.28);
+}
+
+/* ---- Sunset ---------------------------------------------------------- */
+body[data-theme="sunset"] {
+    --bg-primary:   #1f1416;
+    --bg-secondary: #4a1d12;
+    --bg-card:      #2a1a18;
+    --accent:       #ff7a45;
+    --accent-hover: #ff9a6f;
+    --accent-rgb:   255, 122, 69;
+    --text:         #ffe0d0;
+    --text-muted:   #c79a86;
+    --success:      #5fcf7a;
+    --warning:      #ffba5a;
+    --danger:       #ff5d56;
+    --border:       rgba(255,122,69,0.22);
+    --ov03: rgba(255,255,255,0.03);
+    --ov04: rgba(255,255,255,0.04);
+    --ov05: rgba(255,255,255,0.05);
+    --ov08: rgba(255,122,69,0.10);
+    --ov10: rgba(255,122,69,0.14);
+    --surface-2: rgba(0,0,0,0.30);
+}
+
+/* =====================================================================
+   Marken-Sidebar in den beiden Haupt-Themes (Dark + Light) wiederherstellen.
+   djangoBase/themes.css setzt --sidebar-bg pro data-theme (dark #003153 …);
+   diese Regeln haben mit `html body[...]` (0,1,2) höhere Spezifität und
+   gewinnen daher zuverlässig. Werte = DJANGOBASE["farben"]. Die Sidebar bleibt
+   so in Dark UND Light markenkonform dunkel; djangoBase setzt die Schrift hell
+   -> lesbar (§5.3). Cyber/Forest/Sunset behalten ihre themed Sidebars.
+   ===================================================================== */
+html body[data-theme="dark"],
+html body[data-theme="light"] {
+    --sidebar-bg:    #1a1a2e;
+    --sidebar-light: #16213e;
+    --sidebar-dark:  #0f0f1a;
+}
+
+/* =====================================================================
+   Light-Overrides für djangoBases EIGENE Einstellungs-/Hilfe-Seiten
+   (HOWTO §3.4). Deren inline-<style> bringt hartkodierte Dunkel-Farben mit,
+   die per Reihenfolge gewinnen → mit !important im Light-Modus zurückholen.
+   (Dark/Cyber/Forest/Sunset: djangoBases Defaults sind dort schon dunkel-OK.)
+   ===================================================================== */
+body[data-theme="light"] .set-card        { background:#fff !important; border-color:#e2e6ea !important; }
+body[data-theme="light"] .set-tabs        { border-bottom-color:#e2e6ea !important; }
+body[data-theme="light"] .set-tabs .nav-link        { color:#5b6675 !important; }
+body[data-theme="light"] .set-tabs .nav-link:hover  { color:#1a2533 !important; border-color:#e2e6ea #e2e6ea transparent !important; }
+body[data-theme="light"] .set-tabs .nav-link.active { color:#1a2533 !important; background:#fff !important; border-color:#e2e6ea #e2e6ea #fff !important; }
+body[data-theme="light"] .set-hint         { background:#f1f7ff !important; color:#45566a !important; border-color:#d8e6f5 !important; }
+body[data-theme="light"] .set-hint i       { color:#1976d2 !important; }
+body[data-theme="light"] .set-hint code,
+body[data-theme="light"] .set-key          { background:#eef2f7 !important; color:#0b5cad !important; }
+body[data-theme="light"] .set-label        { color:#1a2533 !important; }
+body[data-theme="light"] .set-switch       { color:#45566a !important; }
+body[data-theme="light"] .set-colorval     { background:#eef2f7 !important; color:#0b5cad !important; }
+body[data-theme="light"] .set-input input,
+body[data-theme="light"] .set-input select { background:#fff !important; color:#1a2533 !important; border-color:#cbd5e1 !important; }
+body[data-theme="light"] .set-input input[type=color] { background:#fff !important; border-color:#cbd5e1 !important; }
+body[data-theme="light"] .prof-bar label   { color:#1a2533 !important; }
+body[data-theme="light"] .prof-bar select,
+body[data-theme="light"] .prof-bar input,
+body[data-theme="light"] .prof-aktiv,
+body[data-theme="light"] .prof-neu,
+body[data-theme="light"] .prof-del         { background:#fff !important; color:#1a2533 !important; border-color:#cbd5e1 !important; }
+body[data-theme="light"] .prof-bar input::placeholder        { color:#8a97a5 !important; }
+body[data-theme="light"] .prof-bar .btn-outline-light        { color:#1a2533 !important; border-color:#cbd5e1 !important; }
+body[data-theme="light"] .prof-bar .btn-outline-light:hover  { background:#eef2f7 !important; color:#1a2533 !important; }

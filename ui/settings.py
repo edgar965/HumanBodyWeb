@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = '0.51'
+VERSION = '0.52'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
@@ -56,6 +56,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'ui.context_processors.version',
+                'ui.context_processors.active_theme',
                 'djangobase.context_processors.djangobase',
             ],
         },
@@ -293,6 +294,21 @@ DJANGOBASE = {
         'sidebar_light': '#16213e',  # = --bg-card  (Hover/Active-Fill)
         'sidebar_dark': '#0f0f1a',   # = --bg-primary (Topbar)
     },
+    # 5-Modi-Theme-Palette (slug, label, Akzent-Punkt im Dropdown). Aktiviert
+    # den Theme-Switcher im Topbar (base_app.html). Die Farben pro Modus liegen
+    # in static/css/theme.css (body[data-theme="X"]) — sie überschreiben die
+    # gleichnamigen Variablen aus style.css:root, sodass ALLE Seiten umfärben.
+    'theme_modes': [
+        ('dark',   'Dark',   '#e94560'),   # HumanBody-Akzent
+        ('light',  'Light',  '#1976d2'),
+        ('cyber',  'Cyber',  '#00f0ff'),
+        ('forest', 'Forest', '#4caf50'),
+        ('sunset', 'Sunset', '#ff7a45'),
+    ],
+    'theme_default': 'dark',
+    # theme.css auch auf die djangoBase-eigenen Seiten (Hilfe/Einstellungen)
+    # laden, damit der Theme-Switch dort genauso wirkt (?v={{ JS_VERSION }}).
+    'extra_css': ['css/theme.css'],
     'log_verzeichnis': LOG_DIR,
     'log_sources': [
         ('all', 'Alle Quellen — chronologisch', None, None),
