@@ -31,7 +31,11 @@ body {
     background: var(--bg-primary);
     color: var(--text);
     min-height: 100vh;
-    display: flex;
+    /* KEIN display:flex! Relikt des alten Eigen-Layouts (Sidebar als
+       Flex-Item). Die djangoBase-Shell arbeitet mit fixierter .sidebar +
+       .main-wrapper { margin-left: var(--sidebar-width) } — als Flex-Item
+       schrumpft der Wrapper auf Content-Breite (max-content) und die halbe
+       Seite bleibt leer. Das alte .main-content-Markup gibt es nicht mehr. */
 }
 
 /* Sidebar */
@@ -149,6 +153,12 @@ body {
     max-width: calc(1200px + 4rem);
     padding: 2rem;
 }
+
+/* Innerhalb der djangoBase-Shell rückt bereits .main-wrapper um die Sidebar
+   ein. Das margin-left oben stammt aus dem alten Eigen-Layout und würde ein
+   zweites Mal einrücken (Sidebar-Breite doppelt -> horizontaler Overflow,
+   z. B. theatre_studio.html mit width: calc(100vw - var(--sidebar-width))). */
+.main-wrapper .main-content { margin-left: 0; }
 
 h1 { margin-bottom: 1.5rem; font-size: 1.8rem; }
 h2 { margin-bottom: 1rem; font-size: 1.4rem; color: var(--text-muted); }

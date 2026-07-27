@@ -3,6 +3,9 @@ channels>=4.0
 daphne
 mediapipe
 opencv-python
+# CPU-/RAM-/Netz-Werte für die System-Stats-Leiste in der Topbar
+# (core/system_stats.py). GPU-Werte kommen von nvidia-smi, kein Paket nötig.
+psutil
 # Wiederverwendbare Django-Infra (Sidebar, Hilfe: Logs/Versionen/Tests,
 # Einstellungen). Dev: editable aus A:\shared\djangoBase installiert
 # (pip install -e A:\shared\djangoBase).

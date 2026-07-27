@@ -3,9 +3,12 @@ from . import views
 from . import character_api
 from . import test_character_api
 from . import cloth_export_api
+from . import system_stats
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
+    # Topbar-Leiste (GPU/VRAM/Temp/CPU/RAM/Net) — Polling alle 2 s
+    path('api/system-stats/', system_stats.api_system_stats, name='api_system_stats'),
     path('process/', views.upload_video, name='upload'),
     path('process/VideoToBVH/', views.upload_video_v4, name='upload_v4'),
     path('process/list/', views.processed_list, name='processed'),

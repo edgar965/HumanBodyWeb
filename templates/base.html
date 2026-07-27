@@ -19,7 +19,15 @@ Variablen), dann style.css (Struktur + nutzt die Variablen). JS_VERSION bricht
 den Cache bei jedem Versions-Bump.{% endcomment %}
 <link rel="stylesheet" href="{% static 'css/theme.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/style.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% static 'css/system_stats.css' %}?t={% now 'U' %}">
 {% block extra_head %}{% endblock %}
 {% endblock %}
 
-{% block body_scripts %}{{ block.super }}{% block extra_scripts %}{% endblock %}{% endblock %}
+{% comment %}System-Stats-Leiste rechts in der djangoBase-Topbar (topbar_extras
+ist der dafür vorgesehene Block in djangobase/_shell.html). Das ES-Modul startet
+sich selbst, sobald #systemStats im DOM ist.{% endcomment %}
+{% block topbar_extras %}{% include "_system_stats.html" %}{% endblock %}
+
+{% block body_scripts %}{{ block.super }}
+<script type="module" src="{% static 'js/modules/system_stats.js' %}?t={% now 'U' %}"></script>
+{% block extra_scripts %}{% endblock %}{% endblock %}

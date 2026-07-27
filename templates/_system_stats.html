@@ -1,0 +1,43 @@
+{% comment %}System-Stats-Leiste (GPU/VRAM/Temp/CPU/RAM/Net) für die Topbar.
+
+1:1 aus CamTrack übernommen (app/templates/app/_system_stats.html). Die
+ct-*-Klassennamen und die ss*-IDs bleiben unverändert, damit das ES-Modul
+static/js/modules/system_stats.js ohne Anpassung läuft und Updates aus
+CamTrack direkt übernommen werden können. Styling: static/css/system_stats.css
+(mappt die Farben auf die HumanBodyWeb-Theme-Variablen).{% endcomment %}
+<div id="systemStats" class="ct-system-stats" title="GPU- und CPU-Auslastung (Aktualisierung alle 2s)">
+    <div class="ct-stat-pill" data-key="gpu" title="GPU-Auslastung">
+        <span class="ct-stat-icon"><i class="bi bi-gpu-card"></i></span>
+        <span class="ct-stat-label">GPU</span>
+        <span class="ct-stat-bar"><span class="ct-stat-fill" id="ssGpuBar" style="width:0%;"></span></span>
+        <span class="ct-stat-num" id="ssGpu">-</span>
+    </div>
+    <div class="ct-stat-pill" data-key="vram" title="GPU-Speicher">
+        <span class="ct-stat-icon"><i class="bi bi-memory"></i></span>
+        <span class="ct-stat-label">VRAM</span>
+        <span class="ct-stat-bar"><span class="ct-stat-fill" id="ssVramBar" style="width:0%;"></span></span>
+        <span class="ct-stat-num" id="ssVram">-</span>
+    </div>
+    <div class="ct-stat-pill" data-key="temp" title="GPU-Temperatur">
+        <span class="ct-stat-icon"><i class="bi bi-thermometer-half"></i></span>
+        <span class="ct-stat-label">Temp</span>
+        <span class="ct-stat-num" id="ssTemp">-</span>
+    </div>
+    <div class="ct-stat-pill" data-key="cpu" title="CPU-Auslastung">
+        <span class="ct-stat-icon"><i class="bi bi-cpu-fill"></i></span>
+        <span class="ct-stat-label">CPU</span>
+        <span class="ct-stat-bar"><span class="ct-stat-fill" id="ssCpuBar" style="width:0%;"></span></span>
+        <span class="ct-stat-num" id="ssCpu">-</span>
+    </div>
+    <div class="ct-stat-pill" data-key="ram" title="RAM-Auslastung">
+        <span class="ct-stat-icon"><i class="bi bi-hdd-stack"></i></span>
+        <span class="ct-stat-label">RAM</span>
+        <span class="ct-stat-bar"><span class="ct-stat-fill" id="ssRamBar" style="width:0%;"></span></span>
+        <span class="ct-stat-num" id="ssRam">-</span>
+    </div>
+    <div class="ct-stat-pill" data-key="net" title="Netzwerk-Belastung (Mbit/s, Down/Up aller Interfaces)">
+        <span class="ct-stat-icon"><i class="bi bi-arrow-down-up"></i></span>
+        <span class="ct-stat-label">Net</span>
+        <span class="ct-stat-num" id="ssNet">-</span>
+    </div>
+</div>
