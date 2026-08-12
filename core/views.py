@@ -17,6 +17,7 @@ from django.contrib import messages
 
 from .models import BVHJob, BVHFile, AppSettings
 from .logging_utils import with_job_id
+from .pipeline_process import PipelineProzess
 
 logger = logging.getLogger('core')
 pipeline_logger = logging.getLogger('core.pipeline')
@@ -504,7 +505,7 @@ def job_status_api(request, job_id):
                         pid = int(pid_file.read_text().strip())
                         proc_alive = _is_pid_alive(pid)
                     except (ValueError, OSError):
-                        pass
+                        logger.debug('uebergangen', exc_info=True)
             if not proc_alive:
                 job.status = 'failed'
                 job.error_message = f'Pipeline stalled (no progress for {int(age // 60)} min, no running process)'
@@ -673,7 +674,7 @@ def remonitor_smpl_job(job_id, pid):
     try:
         (output_dir / 'pipeline.pid').unlink()
     except (FileNotFoundError, OSError):
-        pass
+        logger.debug('uebergangen', exc_info=True)
 
 
 def _run_mediapipe_to_csv(job, video_path, output_dir):
@@ -697,20 +698,13 @@ def _run_mediapipe_to_csv(job, video_path, output_dir):
     import threading
 
     # Capture stderr in a thread to prevent pipe deadlock
-    stderr_lines = []
-    def _drain_stderr(pipe):
-        for line in pipe:
-            stderr_lines.append(line)
-
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, bufsize=1, cwd=str(settings.MOCAPNET_ROOT),
-    )
+    # Start über PipelineProzess: setzt encoding='utf-8'/errors='replace' (hier
+    # fehlte es — Windows-Vorgabe ist cp1252) und räumt stderr in einem eigenen
+    # Faden ab. Leselogik und Erfolgsprüfung unten bleiben unverändert.
+    pp = PipelineProzess.starten(cmd, cwd=settings.MOCAPNET_ROOT)
+    proc, stderr_lines = pp.proc, pp.stderr_zeilen
     with _active_procs_lock:
         _active_procs[str(job.id)] = proc
-
-    stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
-    stderr_thread.start()
 
     mp_start = _time.time()
     last_update = 0
@@ -723,7 +717,7 @@ def _run_mediapipe_to_csv(job, video_path, output_dir):
                 job.progress_detail = f'0 / {total_frames} frames — starting...'
                 job.save()
             except ValueError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
         elif line.startswith('PROGRESS:'):
             now = _time.time()
             # Only save to DB once per second to avoid overhead
@@ -746,10 +740,9 @@ def _run_mediapipe_to_csv(job, video_path, output_dir):
                     )
                     job.save()
             except (ValueError, IndexError):
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
-    proc.wait(timeout=600)
-    stderr_thread.join(timeout=5)
+    pp.warten(timeout=600)
 
     # Check if stopped via STOP_FLAG
     stop_flag = output_dir / 'STOP_FLAG'
@@ -785,7 +778,12 @@ def _run_openpose_to_csv(job, video_path, output_dir):
     openpose_exe = str(settings.OPENPOSE_EXE)
     model_folder = str(settings.OPENPOSE_MODEL_DIR) + os.sep
 
-    proc = subprocess.Popen(
+    # HIER WAR DER HAENGER-KANDIDAT: stderr stand auf PIPE, aber niemand las es.
+    # OpenPose/Caffe schreibt dort viel; ist der Pipe-Puffer (~64 KB) voll,
+    # blockiert OpenPose beim Schreiben, während Django auf Fortschritt wartet —
+    # beide warten dann aufeinander. PipelineProzess liest stderr in einem
+    # eigenen Faden mit.
+    pp = PipelineProzess.starten(
         [openpose_exe,
          '--video', str(video_path),
          '--write_json', json_dir,
@@ -793,10 +791,9 @@ def _run_openpose_to_csv(job, video_path, output_dir):
          '--render_pose', '0',
          '--model_folder', model_folder,
          '--number_people_max', '1'],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, bufsize=1,
-        cwd=str(settings.OPENPOSE_ROOT),
+        cwd=settings.OPENPOSE_ROOT,
     )
+    proc = pp.proc
     with _active_procs_lock:
         _active_procs[str(job.id)] = proc
 
@@ -934,23 +931,13 @@ def _run_v4_pipeline(job, video_path, output_dir):
     if p.get('mouth', s.v4_enable_mouth): cmd.append('--mouth')
     if p.get('eyes', s.v4_enable_eyes): cmd.append('--eyes')
 
-    stderr_lines = []
-    def _drain_stderr(pipe):
-        for line in pipe:
-            stderr_lines.append(line)
-
-    env = os.environ.copy()
-    env['PYTHONIOENCODING'] = 'utf-8'
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, bufsize=1, cwd=str(settings.MOCAPNET_V4_ROOT),
-        env=env, encoding='utf-8', errors='replace',
-    )
+    # Diese Stelle war die einzige, die Zeichensatz und stderr schon richtig
+    # hatte — sie ist die Vorlage für PipelineProzess und nutzt ihn jetzt selbst,
+    # damit es nur noch eine Fassung gibt.
+    pp = PipelineProzess.starten(cmd, cwd=settings.MOCAPNET_V4_ROOT)
+    proc, stderr_lines = pp.proc, pp.stderr_zeilen
     with _active_procs_lock:
         _active_procs[str(job.id)] = proc
-
-    stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
-    stderr_thread.start()
 
     v4_start = _time.time()
     last_update = 0
@@ -963,7 +950,7 @@ def _run_v4_pipeline(job, video_path, output_dir):
                 job.progress_detail = f'0 / {total_frames} frames'
                 job.save()
             except ValueError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
         elif line.startswith('PROGRESS:'):
             now = _time.time()
             if now - last_update < 1.0:
@@ -985,7 +972,7 @@ def _run_v4_pipeline(job, video_path, output_dir):
                     )
                     job.save()
             except (ValueError, IndexError):
-                pass
+                logger.debug('uebergangen', exc_info=True)
         elif line.startswith('DETECTION:'):
             pass  # detection.json saved alongside BVH, no action needed
         elif line.startswith('KEYPOINTS:'):
@@ -1001,15 +988,14 @@ def _run_v4_pipeline(job, video_path, output_dir):
             if reported and os.path.exists(reported):
                 bvh_output = reported
 
-    proc.wait(timeout=1800)
-    stderr_thread.join(timeout=5)
+    pp.warten(timeout=1800)
 
     # Clean up stop flag if still present
     if os.path.exists(stop_flag):
         try:
             os.remove(stop_flag)
         except OSError:
-            pass
+            logger.debug('uebergangen', exc_info=True)
 
     if proc.returncode != 0:
         # Check for partial BVH (cancelled / killed)
@@ -1057,21 +1043,10 @@ def _run_new_2d_detector(job, video_path, output_dir):
         '--model-size', model_size,
     ]
 
-    # Capture stderr in a thread to prevent pipe deadlock
-    stderr_lines = []
-    def _drain_stderr(pipe):
-        for line in pipe:
-            stderr_lines.append(line)
-
-    proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True, bufsize=1, cwd=str(settings.WRAPPERS_DIR.parent),
-    )
+    pp = PipelineProzess.starten(cmd, cwd=settings.WRAPPERS_DIR.parent)
+    proc, stderr_lines = pp.proc, pp.stderr_zeilen
     with _active_procs_lock:
         _active_procs[str(job.id)] = proc
-
-    stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
-    stderr_thread.start()
 
     det_start = _time.time()
     last_update = 0
@@ -1089,7 +1064,7 @@ def _run_new_2d_detector(job, video_path, output_dir):
                 job.save()
                 det_start = _time.time()
             except ValueError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
         elif line.startswith('PROGRESS:'):
             now = _time.time()
             if now - last_update < 1.0:
@@ -1111,10 +1086,9 @@ def _run_new_2d_detector(job, video_path, output_dir):
                     )
                     job.save()
             except (ValueError, IndexError):
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
-    proc.wait(timeout=3600)
-    stderr_thread.join(timeout=5)
+    pp.warten(timeout=3600)
 
     if proc.returncode != 0:
         stderr = ''.join(stderr_lines)
@@ -1197,8 +1171,11 @@ def _run_smpl_pipeline(job, video_path, output_dir):
     log_file = output_dir / 'pipeline.log'
     pid_file = output_dir / 'pipeline.pid'
 
-    env = os.environ.copy()
-    env['PYTHONUNBUFFERED'] = '1'
+    # stdout geht hier in eine Logdatei (überlebt den Django-Autoreload), deshalb
+    # kein PipelineProzess — aber dieselbe Umgebung: PYTHONIOENCODING/PYTHONUTF8
+    # bringen den Kindprozess dazu, UTF-8 zu schreiben. Sonst landet cp1252 in
+    # einer Datei, die hier als UTF-8 geöffnet wird, und die Umlaute sind kaputt.
+    env = PipelineProzess.umgebung()
 
     log_fh = open(log_file, 'w', encoding='utf-8')
     proc = subprocess.Popen(
@@ -1220,7 +1197,7 @@ def _run_smpl_pipeline(job, video_path, output_dir):
     try:
         pid_file.unlink()
     except (FileNotFoundError, OSError):
-        pass
+        logger.debug('uebergangen', exc_info=True)
 
     if proc.returncode != 0:
         # Check if BVH was partially written before kill
@@ -1515,7 +1492,7 @@ def _run_processing(job_id):
                             if bvh_frames < total_v4 * 0.95:
                                 partial_v4 = True
                 except Exception:
-                    pass
+                    logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
 
             # Copy to shared Results directory
             results_path = _copy_bvh_to_results(bvh_output, job.name, 'v4')
@@ -1589,7 +1566,7 @@ def _run_processing(job_id):
             try:
                 stop_flag.unlink()
             except OSError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
         total_frames = _get_video_frame_count(video_path)
         video_stem = job.name.rsplit('.', 1)[0]
@@ -1599,22 +1576,13 @@ def _run_processing(job_id):
         import time as _time
         import threading
 
-        # Capture stderr in a thread to prevent pipe deadlock
-        stderr_lines = []
-        def _drain_stderr(pipe):
-            for line in pipe:
-                stderr_lines.append(line)
-
-        proc = subprocess.Popen(
+        pp = PipelineProzess.starten(
             [mocapnet_exe, '--from', csv_file, '-o', bvh_stem, '--hands', '--show', '0'],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, cwd=str(settings.MOCAPNET_ROOT),
+            cwd=settings.MOCAPNET_ROOT,
         )
+        proc, stderr_lines = pp.proc, pp.stderr_zeilen
         with _active_procs_lock:
             _active_procs[str(job.id)] = proc
-
-        stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
-        stderr_thread.start()
 
         # Monitor MocapNET progress via stdout
         mn_start = _time.time()
@@ -1644,10 +1612,9 @@ def _run_processing(job_id):
                                 job.save()
                             break
                 except (ValueError, IndexError):
-                    pass
+                    logger.debug('uebergangen', exc_info=True)
 
-        proc.wait(timeout=1200)
-        stderr_thread.join(timeout=5)
+        pp.warten(timeout=1200)
 
         # MocapNET may write BOTH: extensionless file (full) AND .bvh (partial).
         # Pick the LARGER file as the correct output.
@@ -1844,7 +1811,7 @@ def _write_stop_flags(job, output_dir):
         stop_flag.parent.mkdir(parents=True, exist_ok=True)
         stop_flag.write_text('stop')
     except OSError:
-        pass
+        logger.debug('uebergangen', exc_info=True)
     # Hybrid pipelines: also write stop flags in sub-directories
     if job.pipeline.startswith('hybrid_'):
         for subdir in ('body', 'face'):
@@ -1853,7 +1820,7 @@ def _write_stop_flags(job, output_dir):
                 sf.parent.mkdir(parents=True, exist_ok=True)
                 sf.write_text('stop')
             except OSError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
 
 def _kill_by_pid_file(output_dir):
@@ -1867,12 +1834,12 @@ def _kill_by_pid_file(output_dir):
             os.kill(pid, 9)  # SIGKILL
             return True
     except (ValueError, OSError, ProcessLookupError):
-        pass
+        logger.debug('uebergangen', exc_info=True)
     finally:
         try:
             pid_file.unlink()
         except (FileNotFoundError, OSError):
-            pass
+            logger.debug('uebergangen', exc_info=True)
     return False
 
 
@@ -1904,7 +1871,7 @@ def stop_processing(request, job_id):
                 try:
                     sub_proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
-                    pass
+                    logger.debug('uebergangen', exc_info=True)
             else:
                 # Try PID file for orphaned sub-processes
                 _kill_by_pid_file(output_dir / suffix)
@@ -1966,7 +1933,7 @@ def api_stop_processing(request, job_id):
                 try:
                     sub_proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
-                    pass
+                    logger.debug('uebergangen', exc_info=True)
             else:
                 _kill_by_pid_file(output_dir / suffix)
     elif proc and proc.poll() is None:
@@ -2011,7 +1978,7 @@ def _launch_processing_thread(job_id):
                     job.error_message = f"Unexpected crash:\n{tb_str}"[:4000]
                     job.save()
             except Exception:
-                pass
+                logger.warning('Fehlermeldung des Jobs konnte nicht gespeichert werden — Ursache nur im Protokoll', exc_info=True)
 
     thread = threading.Thread(target=_safe_run, args=(job_id,), daemon=True)
     thread.start()
@@ -2348,7 +2315,7 @@ def _serve_keypoints_2d_impl(job):
                         kp[jname] = [float(row[xk]), float(row[yk]),
                                      float(row[vk]) if row.get(vk) else 0]
                     except (ValueError, KeyError):
-                        pass
+                        logger.debug('uebergangen', exc_info=True)
             frames.append(kp)
 
     return JsonResponse({'joints': body_joints, 'connections': connections,
@@ -2402,7 +2369,7 @@ def open_in_blender(request, pk):
     bvh = get_object_or_404(BVHFile, pk=pk)
     bvh_path = bvh.path.replace('\\', '/')
 
-    blender_exe = r'C:\Program Files\Blender Foundation\Blender 5.0\blender.exe'
+    blender_exe = str(settings.BLENDER_EXE)
 
     # Create a temporary Python script for Blender
     # Sanitize path: use repr() to prevent injection via special chars
@@ -2578,7 +2545,7 @@ def bulk_delete_jobs(request):
             job.delete()
             deleted.append(str(jid))
         except BVHJob.DoesNotExist:
-            pass
+            logger.debug('uebergangen', exc_info=True)
     return JsonResponse({'ok': True, 'deleted': deleted})
 
 
@@ -2653,7 +2620,7 @@ def _get_2d_keypoints(job):
                             v = float(row[vk]) if row.get(vk) else 0
                             kp[jname] = (x, y, v)
                         except (ValueError, KeyError):
-                            pass
+                            logger.debug('uebergangen', exc_info=True)
                 frames.append(kp)
 
     return frames, (w, h)
@@ -3381,7 +3348,7 @@ def app_settings_videobvh_3d(request):
             # Video output directory
             s.video_output_dir = request.POST.get('video_output_dir', '').strip()
             if not s.video_output_dir:
-                s.video_output_dir = r'A:\3DTools\HumanBodyWeb\media\output'
+                s.video_output_dir = str(Path(settings.MEDIA_ROOT) / 'output')
 
             s.save()
             messages.success(request, 'Settings saved.')
@@ -3441,7 +3408,7 @@ def app_settings_smpl(request):
         for i, v in enumerate(parts[:10]):
             betas[i] = float(v.strip())
     except (ValueError, IndexError):
-        pass
+        logger.debug('uebergangen', exc_info=True)
 
     # Parse scene settings for display
     scene_settings = None
@@ -3449,7 +3416,7 @@ def app_settings_smpl(request):
         try:
             scene_settings = json.loads(s.smpl_default_scene)
         except (json.JSONDecodeError, TypeError):
-            pass
+            logger.debug('uebergangen', exc_info=True)
 
     # Gather available HumanBody presets (JSON files, exclude .scene.json)
     available_presets = []

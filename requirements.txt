@@ -1,12 +1,44 @@
-django>=5.0
-channels>=4.0
-daphne
+# Django-Seite (Python 3.14, A:\3DTools\python14)
+# ============================================================================
+# Diese Datei deckt NUR den Webserver ab. Die ML-Pipelines laufen in einer
+# zweiten Umgebung (Python 3.10) — dafür requirements-ml.txt.
+#
+# WARUM ZWEI DATEIEN (Review 12.08.2026): Hier standen sieben Pakete, während
+# der Code zusätzlich numpy, scipy, Pillow, pyrender, trimesh, playwright und
+# mehr importierte. Auf einem zweiten Rechner liess sich das Projekt damit nicht
+# aufsetzen — die Fehler kamen erst zur Laufzeit, einer nach dem anderen.
+#
+# Versionen sind die HIER LAUFENDEN Stände (pip list vom 12.08.2026), nicht
+# Wunschwerte. Django 6 braucht Python >= 3.12.
+#
+#   A:\3DTools\python14\Scripts\python.exe -m pip install -r requirements.txt
+
+# --- Web-Rahmen ---
+django==6.0.2
+channels==4.3.2                 # ASGI/WebSockets (Job-Fortschritt)
+daphne==4.2.1                   # ASGI-Server für runserver
+djangorestframework==3.16.1
+
+# --- Zahlen und Geometrie (Morphing, Mesh, Retarget im Web-Prozess) ---
+numpy==2.4.4
+scipy==1.17.1
+trimesh==4.11.5
+
+# --- Offscreen-Render für Vorschaubilder ---
+pyrender==0.1.45
+PyOpenGL==3.1.0
+pyglet==2.1.14
+pillow==12.2.0
+
+# --- 2D-Erkennung im Web-Prozess (Foto-Analyse) ---
 mediapipe
 opencv-python
-# CPU-/RAM-/Netz-Werte für die System-Stats-Leiste in der Topbar
-# (core/system_stats.py). GPU-Werte kommen von nvidia-smi, kein Paket nötig.
-psutil
-# Wiederverwendbare Django-Infra (Sidebar, Hilfe: Logs/Versionen/Tests,
-# Einstellungen). Dev: editable aus A:\shared\djangoBase installiert
-# (pip install -e A:\shared\djangoBase).
+
+# --- Auslastungs-Leiste in der Topbar: CPU/RAM/Netz ---
+# GPU-Werte kommen von nvidia-smi, dafür ist kein Paket nötig. Gelesen wird in
+# djangobase/system_stats.py (dort optional — fehlt psutil, bleiben die Felder leer).
+psutil==7.2.2
+
+# --- Wiederverwendbare Django-Infra (Sidebar, Hilfe: Logs/Versionen/Tests) ---
+# Dev: editable aus A:\shared\djangoBase (pip install -e A:\shared\djangoBase).
 djangobase @ git+https://github.com/edgar965/djangoBase.git

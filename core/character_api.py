@@ -18,6 +18,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from .models import AppSettings, BVHJob, BVHFile
+from .safe_paths import SafePath, PfadAbgelehnt
+from .atomic_write import AtomarSchreiber
 
 from humanbody_core import MorphData, CharacterState, CharacterDefaults, MeshData
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
@@ -1056,7 +1058,7 @@ with sync_playwright() as p:
             return response
 
         # Convert PNGs → MP4/WebM via ffmpeg
-        ffmpeg = r'A:\archiv2\_AI\tools\ffmpeg.exe'
+        ffmpeg = str(settings.FFMPEG_EXE)
         if not os.path.isfile(ffmpeg):
             ffmpeg = 'ffmpeg'
 
@@ -1137,7 +1139,7 @@ def theatre_encode_frames(request):
                 for chunk in f.chunks():
                     out.write(chunk)
 
-        ffmpeg = r'A:\archiv2\_AI\tools\ffmpeg.exe'
+        ffmpeg = str(settings.FFMPEG_EXE)
         if not os.path.isfile(ffmpeg):
             ffmpeg = 'ffmpeg'
 
@@ -1226,7 +1228,7 @@ def character_mesh(request):
             try:
                 state.set_morph(morph_name, float(val))
             except ValueError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
     # Apply meta values from query params (age, mass, tone, height)
     meta_prefix = 'meta_'
@@ -1236,7 +1238,7 @@ def character_mesh(request):
             try:
                 state.set_meta(meta_name, float(val))
             except (ValueError, AttributeError):
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
     vertices = state.compute()
     if vertices is None:
@@ -1618,7 +1620,7 @@ def _read_bvh_frames_from_file(bvh_path):
                 if line.strip().startswith('Frames:'):
                     return int(line.strip().split(':')[1])
     except (IOError, ValueError):
-        pass
+        logger.debug('uebergangen', exc_info=True)
     return 0
 
 
@@ -1959,7 +1961,7 @@ def smpl_settings_api(request):
         for i, v in enumerate(parts[:10]):
             betas[i] = float(v.strip())
     except (ValueError, IndexError):
-        pass
+        logger.debug('uebergangen', exc_info=True)
     result = {
         'gender': s.smpl_default_gender,
         'betas': betas,
@@ -1974,7 +1976,7 @@ def smpl_settings_api(request):
         try:
             result['scene'] = json.loads(s.smpl_default_scene)
         except (json.JSONDecodeError, TypeError):
-            pass
+            logger.debug('uebergangen', exc_info=True)
     return JsonResponse(result)
 
 
@@ -2113,7 +2115,7 @@ def character_cloth(request):
             try:
                 state.set_morph(morph_name, float(val))
             except ValueError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
     vertices = state.compute()
     if vertices is None:
@@ -2326,13 +2328,13 @@ def _build_body_state(request):
             try:
                 state.set_morph(morph_name, float(val))
             except ValueError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
         elif key.startswith('meta_'):
             meta_name = key[len('meta_'):]
             try:
                 state.set_meta(meta_name, float(val))
             except (ValueError, AttributeError):
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
     vertices = state.compute()
     mesh = _get_mesh_data(gender)
@@ -2872,7 +2874,7 @@ def photo_save_projection(request, job_id):
         job.result_json = json.dumps(data, default=str)
         job.save(update_fields=['result_json'])
     except Exception:
-        pass
+        logger.warning('Job-Ergebnis konnte nicht gespeichert werden — result_json fehlt jetzt', exc_info=True)
 
     return JsonResponse({'ok': True, 'path': f'/{rel_path}'})
 
@@ -3087,7 +3089,7 @@ def _compute_auto_alignment(cam_data, betas, gender, photo_path=None):
                     person_cx = float(np.median(xs))
                     person_detected = True
         except Exception:
-            pass
+            logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
 
     # --- Validate: projected head/feet vs detected person ---
     bt = candidate['body_transform']
@@ -3889,7 +3891,7 @@ def photo_silhouette_data(request, job_id):
                 face_contour = [[float(p[0]), float(p[1])] for p in hull_pts]
                 _smplx_face_ok = True
             except Exception:
-                pass
+                logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
             fx_min, fy_min = face_pts[:, 0].min(), face_pts[:, 1].min()
             fx_max, fy_max = face_pts[:, 0].max(), face_pts[:, 1].max()
             face_bbox_mesh = {
@@ -3962,7 +3964,7 @@ def photo_silhouette_data(request, job_id):
                     'w': float(fx_max - fx_min), 'h': float(fy_max - fy_min),
                 }
         except Exception:
-            pass
+            logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
 
     # Fallback: use mesh face bbox if MediaPipe failed
     if face_bbox_detected is None and face_bbox_mesh is not None:
@@ -4267,8 +4269,8 @@ def mh_proxy_fit(request):
                         parts = line.strip().split()
                         if len(parts) >= 4:
                             mat_color = [float(parts[1]), float(parts[2]), float(parts[3])]
-        except: pass
-
+        except Exception:  # nackt war: schluckte auch Strg+C
+            logger.debug('MTL-Farbe nicht lesbar — Vorgabefarbe wird benutzt', exc_info=True)
     color_r = float(request.GET.get('color_r', ''))  if request.GET.get('color_r') else (mat_color[0] if mat_color else 0.3)
     color_g = float(request.GET.get('color_g', ''))  if request.GET.get('color_g') else (mat_color[1] if mat_color else 0.35)
     color_b = float(request.GET.get('color_b', ''))  if request.GET.get('color_b') else (mat_color[2] if mat_color else 0.5)
@@ -4313,9 +4315,11 @@ def mh_proxy_fit(request):
                                 avg_g = sum(p[1] for p in pixels) / len(pixels) / 255.0
                                 avg_b = sum(p[2] for p in pixels) / len(pixels) / 255.0
                                 resp['texture_color'] = [round(avg_r, 3), round(avg_g, 3), round(avg_b, 3)]
-                            except: pass
+                            except Exception:  # nackt war: schluckte auch Strg+C
+                                logger.debug('Texturfarbe nicht berechenbar', exc_info=True)
                         break
-        except: pass
+        except Exception:  # nackt war: schluckte auch Strg+C
+            logger.debug('Texturdatei nicht auswertbar', exc_info=True)
     return JsonResponse(resp)
 
 
@@ -4563,10 +4567,12 @@ def mh_push_outside(request):
     for key, val in request.GET.items():
         if key.startswith('morph_'):
             try: state.set_morph(key[6:], float(val))
-            except: pass
+            except Exception:  # nackt war: schluckte auch Strg+C
+                logger.debug('Morph %s nicht gesetzt (unbekannter Name oder ungueltiger Wert)', key[6:], exc_info=True)
         if key.startswith('meta_'):
             try: state.set_meta(key[5:], float(val))
-            except: pass
+            except Exception:  # nackt war: schluckte auch Strg+C
+                logger.debug('Meta %s nicht gesetzt (unbekannter Name oder ungueltiger Wert)', key[5:], exc_info=True)
     body_verts = state.compute()
     if body_verts is None:
         return JsonResponse({'error': 'Body compute failed'}, status=500)
@@ -4648,13 +4654,13 @@ def garment_fit(request):
             try:
                 state.set_morph(key[6:], float(val))
             except ValueError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
     for key, val in request.GET.items():
         if key.startswith('meta_'):
             try:
                 state.set_meta(key[5:], float(val))
             except (ValueError, AttributeError):
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
     body_verts = state.compute()
     if body_verts is None:
@@ -4779,7 +4785,7 @@ def garment_download_available(request):
     try:
         builtin = dl.list_builtin_assets()
     except Exception:
-        pass
+        logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
 
     return JsonResponse({
         'packs': packs,
@@ -5047,13 +5053,13 @@ def smpl_garment_fit(request):
             try:
                 state.set_morph(key[6:], float(val))
             except ValueError:
-                pass
+                logger.debug('uebergangen', exc_info=True)
     for key, val in request.GET.items():
         if key.startswith('meta_'):
             try:
                 state.set_meta(key[5:], float(val))
             except (ValueError, AttributeError):
-                pass
+                logger.debug('uebergangen', exc_info=True)
 
     body_verts = state.compute()
     if body_verts is None:
@@ -5312,7 +5318,7 @@ def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=Fals
         with open(cache_path, 'w') as f:
             json.dump(result, f)
     except Exception:
-        pass
+        logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
 
     return result
 
@@ -5520,38 +5526,43 @@ def save_bvh_text(request):
     if not save_path:
         return JsonResponse({'error': 'path or category+name required'}, status=400)
 
-    # Security: only allow saving under MEDIA_ROOT or HUMANBODY_BVH_DIR
-    sp = Path(save_path).resolve()
-    media = Path(settings.MEDIA_ROOT).resolve()
-    bvh_dir = Path(str(settings.HUMANBODY_BVH_DIR)).resolve().parent
-    if not (str(sp).startswith(str(media)) or str(sp).startswith(str(bvh_dir))):
-        return JsonResponse({'error': 'Path not allowed'}, status=403)
+    # Pfadprüfung über SafePath. Vorher stand hier ein String-Präfix-Vergleich
+    # (`str(sp).startswith(str(media))`) — den besteht auch `<media>_evil\x.bvh`,
+    # weil "media_evil" mit "media" beginnt. SafePath vergleicht Pfade, nicht
+    # Zeichenketten (`is_relative_to`, case-normalisiert).
+    try:
+        sp = SafePath.fuer_bvh().pruefe(save_path)
+    except PfadAbgelehnt as e:
+        return JsonResponse({'error': str(e)}, status=403)
 
     try:
-        sp.parent.mkdir(parents=True, exist_ok=True)
-        # Normalize line endings to \n (BVH files must not have \r\n)
+        # Zeilenenden auf \n normalisieren (BVH-Dateien dürfen kein \r\n haben);
+        # AtomarSchreiber schreibt mit newline='\n' und ersetzt die Datei erst,
+        # wenn sie vollständig auf der Platte liegt.
         bvh_text = bvh_text.replace('\r\n', '\n').replace('\r', '\n')
-        with open(str(sp), 'w', encoding='utf-8', newline='\n') as f:
-            f.write(bvh_text)
+        AtomarSchreiber.text_schreiben(sp, bvh_text, zeilenende='\n')
         return JsonResponse({'ok': True, 'path': str(sp)})
-    except Exception as e:
+    except Exception as e:                                       # noqa: BLE001
+        logging.getLogger('core').exception('save_bvh_text fehlgeschlagen: %s', sp)
         return JsonResponse({'error': str(e)}, status=500)
 
 
 def _bvh_root():
     """Return resolved BVH root directory (parent of all category folders)."""
-    from pathlib import Path
-    return Path(str(settings.HUMANBODY_BVH_DIR)).resolve().parent
+    return SafePath.bvh_wurzel()
 
 
 def _check_bvh_path(p):
-    """Ensure path is within BVH root. Returns resolved Path or None."""
-    from pathlib import Path
-    rp = Path(p).resolve()
-    root = _bvh_root()
-    if str(rp).startswith(str(root)):
-        return rp
-    return None
+    """Ensure path is within BVH root. Returns resolved Path or None.
+
+    Prüft seit 12.08.2026 über SafePath. Vorher `str(rp).startswith(str(root))` —
+    ein Zeichenketten-Vergleich, den auch ein Nachbarverzeichnis mit gleichem
+    Namensanfang besteht. Der Rückgabewert bleibt `None` bei Ablehnung, damit die
+    Aufrufer unverändert weiterarbeiten."""
+    try:
+        return SafePath([SafePath.bvh_wurzel()]).pruefe(p)
+    except PfadAbgelehnt:
+        return None
 
 
 @csrf_exempt
@@ -5752,11 +5763,17 @@ def studio_audio_upload(request):
 
 
 @csrf_exempt
+@require_POST
 def studio_project_save(request):
     """Save BVH Studio project JSON to a file on disk.
 
     POST /api/studio/project-save/
     Body JSON: { path: "full/path.studio.json", project: {...} }
+
+    Pfad wird über SafePath geprüft (12.08.2026): vorher schrieb dieser Endpunkt
+    an JEDE Stelle der Platte, ohne CSRF-Token und damit auch von einer fremden
+    Webseite auslösbar. Geschrieben wird über AtomarSchreiber, damit zwei
+    gleichzeitige Speichervorgänge keine halbe Datei hinterlassen.
     """
     import logging
     log = logging.getLogger('core')
@@ -5766,24 +5783,25 @@ def studio_project_save(request):
     except (json.JSONDecodeError, ValueError):
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    save_path = data.get('path', '').strip()
     project_data = data.get('project')
-    if not save_path or not project_data:
+    if not project_data:
         return JsonResponse({'error': 'path + project required'}, status=400)
 
-    from pathlib import Path
-    sp = Path(save_path).resolve()
-    sp.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        sp = SafePath.fuer_studio_projekte().pruefe(data.get('path'))
+    except PfadAbgelehnt as e:
+        return JsonResponse({'error': str(e)}, status=403)
 
     try:
-        with open(str(sp), 'w', encoding='utf-8') as f:
-            json.dump(project_data, f, indent=2, ensure_ascii=False)
-        log.info(f'[studio] Project saved: {sp}')
+        AtomarSchreiber.json_schreiben(sp, project_data)
+        log.info('[studio] Project saved: %s', sp)
         return JsonResponse({'ok': True, 'path': str(sp)})
-    except Exception as e:
+    except Exception as e:                                       # noqa: BLE001
+        log.exception('[studio] Project save failed: %s', sp)
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@require_GET
 def studio_project_load(request):
     """Load BVH Studio project JSON from a file on disk.
 
@@ -5792,35 +5810,39 @@ def studio_project_load(request):
     import logging
     log = logging.getLogger('core')
 
-    file_path = request.GET.get('path', '').strip()
-    if not file_path:
-        return JsonResponse({'error': 'path required'}, status=400)
-
-    from pathlib import Path
-    fp = Path(file_path).resolve()
+    try:
+        fp = SafePath.fuer_studio_projekte().pruefe(request.GET.get('path'))
+    except PfadAbgelehnt as e:
+        return JsonResponse({'error': str(e)}, status=403)
     if not fp.is_file():
-        return JsonResponse({'error': f'File not found: {fp}'}, status=404)
+        # Kein voller Pfad in der Antwort: Das war eine Auskunft darüber, was auf
+        # der Platte liegt. Der Pfad steht im Protokoll.
+        log.info('[studio] Project not found: %s', fp)
+        return JsonResponse({'error': 'File not found'}, status=404)
 
     try:
         with open(str(fp), 'r', encoding='utf-8') as f:
             data = json.load(f)
-        log.info(f'[studio] Project loaded: {fp}')
+        log.info('[studio] Project loaded: %s', fp)
         return JsonResponse({'ok': True, 'project': data, 'path': str(fp)})
-    except Exception as e:
+    except Exception as e:                                       # noqa: BLE001
+        log.exception('[studio] Project load failed: %s', fp)
         return JsonResponse({'error': str(e)}, status=500)
 
 
+@require_GET
 def studio_project_list(request):
     """List project files in the configured project directory.
 
     GET /api/studio/project-list/?dir=path
     """
-    dir_path = request.GET.get('dir', '').strip()
-    if not dir_path:
+    roh = (request.GET.get('dir') or '').strip()
+    if not roh:
         return JsonResponse({'files': []})
-
-    from pathlib import Path
-    dp = Path(dir_path).resolve()
+    try:
+        dp = SafePath.fuer_studio_projekte().pruefe(roh)
+    except PfadAbgelehnt as e:
+        return JsonResponse({'error': str(e)}, status=403)
     if not dp.is_dir():
         return JsonResponse({'files': []})
 
@@ -6300,7 +6322,7 @@ def charmorph_presets(request):
                         'structural': structural,
                     })
                 except Exception:
-                    pass
+                    logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
     return JsonResponse({'presets': presets})
 
 
@@ -6332,7 +6354,7 @@ def charmorph_assets(request):
                             'material_presets': list(cfg.get('material_presets', {}).keys()),
                         })
                     except Exception:
-                        pass
+                        logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
             elif entry.endswith('.blend'):
                 assets.append({
                     'name': entry.replace('.blend', ''),
@@ -6376,6 +6398,6 @@ def charmorph_hairstyles(request):
                         'melanin': props.get('melanin', 0.5),
                     }
         except Exception:
-            pass
+            logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
 
     return JsonResponse({'hairstyles': hairstyles, 'colors': colors})

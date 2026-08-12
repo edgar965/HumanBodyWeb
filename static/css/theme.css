@@ -14,8 +14,18 @@
    er setzt body[data-theme] + localStorage['djangobase.theme'].
 
    WICHTIG (HOWTO §5.3): die djangoBase-Sidebar NICHT von außen umfärben —
-   ihre --sidebar-*/--db-*-Variablen kommen aus djangoBase/themes.css und sind
-   in jedem Modus lesbar. Hier nur die Inhalts-Variablen setzen.
+   ihre --sidebar-… und --db-…-Variablen kommen aus djangoBase/themes.css und
+   sind in jedem Modus lesbar. Hier nur die Inhalts-Variablen setzen.
+
+   ACHTUNG, hier stand ein Fehler (gefunden 12.08.2026): Die Variablen oben
+   waren als Sternchen-Platzhalter geschrieben, wodurch ein Stern unmittelbar
+   vor einem Schrägstrich stand. Diese Folge SCHLIESST einen
+   CSS-Kommentar — der Header endete also mitten im Satz, und der Parser
+   verwarf beim Aufräumen den KOMPLETTEN ersten Regelblock (body,
+   body[data-theme="dark"]). Aufgefallen ist das nie, weil style.css:root
+   dieselben Dark-Werte ein zweites Mal hält; erst --fg-rgb, das es nur hier
+   gibt, fehlte plötzlich. Deshalb in Kommentaren keine Sternchen-Platzhalter
+   direkt vor einem Schrägstrich schreiben.
    ===================================================================== */
 
 /* ---- Dark (Default — Werte = style.css:root, hier nur explizit für den
@@ -29,6 +39,13 @@ body[data-theme="dark"] {
     --accent-hover: #ff6b81;
     --accent-rgb:   233, 69, 96;
     --text:         #eee;
+    /* Vordergrund als RGB-Tripel. Braucht die Auslastungs-Leiste aus djangoBase
+       (static/djangobase/js/system_stats.js baut daraus rgba(var(--fg-rgb),.07)
+       für Pillen-Grund, Rahmen und Schrift). Ohne die Variable ist die
+       rgba()-Deklaration ungültig und die Leiste stünde als nackter Fließtext
+       da. Format wie --accent-rgb: KOMMA-getrennt — space-separated wäre mit
+       dem Komma vor dem Alpha keine gültige rgba()-Syntax. */
+    --fg-rgb:       238, 238, 238;
     --text-muted:   #888;
     --success:      #27ae60;
     --warning:      #f39c12;
@@ -61,6 +78,7 @@ body[data-theme="light"] {
     --accent-hover: #1565c0;
     --accent-rgb:   25, 118, 210;
     --text:         #1a2533;
+    --fg-rgb:       26, 37, 51;      /* dunkler Vordergrund -> Leiste bleibt lesbar */
     --text-muted:   #5b6675;
     --success:      #2e7d32;
     --warning:      #e69500;
@@ -91,6 +109,7 @@ body[data-theme="cyber"] {
     --accent-hover: #6ff7ff;
     --accent-rgb:   0, 240, 255;
     --text:         #c8e6ff;
+    --fg-rgb:       200, 230, 255;
     --text-muted:   #6a8aa5;
     --success:      #00e0a0;
     --warning:      #ffc857;
@@ -113,6 +132,7 @@ body[data-theme="forest"] {
     --accent-hover: #6fd175;
     --accent-rgb:   76, 175, 80;
     --text:         #d8f0d8;
+    --fg-rgb:       216, 240, 216;
     --text-muted:   #8ab38a;
     --success:      #69d36e;
     --warning:      #e0b341;
@@ -135,6 +155,7 @@ body[data-theme="sunset"] {
     --accent-hover: #ff9a6f;
     --accent-rgb:   255, 122, 69;
     --text:         #ffe0d0;
+    --fg-rgb:       255, 224, 208;
     --text-muted:   #c79a86;
     --success:      #5fcf7a;
     --warning:      #ffba5a;
@@ -147,6 +168,80 @@ body[data-theme="sunset"] {
     --ov10: rgba(255,122,69,0.14);
     --surface-2: rgba(0,0,0,0.30);
 }
+
+/* ---- Vordergrund IN DER TOPBAR ---------------------------------------------
+   Die djangoBase-Topbar ist in JEDEM Theme dunkel — gemessen am 12.08.2026 am
+   echten Element: dark und light beide rgb(15,15,26), cyber rgb(4,16,31),
+   forest rgb(10,38,19), sunset rgb(42,20,16). Auch im LIGHT-Theme, wo die
+   Seite selbst hell ist.
+
+   Deshalb darf dort nicht das --fg-rgb der Palette gelten: das ist aus --text
+   abgeleitet und im Light-Theme dunkelgrau (26,37,51). Die Auslastungs-Leiste
+   stand damit dunkel auf dunkel und war praktisch unlesbar — im Screenshot
+   sofort zu sehen, in der Kontrast-Rechnung NICHT, weil die gegen --bg-primary
+   (den hellen Seitengrund) rechnete statt gegen die Topbar (HOWTO §5.5:
+   Screenshot schlaegt getComputedStyle).
+
+   Die Palette-Variable bleibt unangetastet — sie ist fuer den Inhaltsbereich
+   richtig. Hier wird nur der Ort korrigiert, an dem sie nicht passt. Gilt fuer
+   alles, was in der Topbar landet, nicht nur fuer die Leiste. */
+.topbar { --fg-rgb: 255, 255, 255; }
+
+/* ---- Ampel-Farben fuer die Auslastungs-Leiste ------------------------------
+   Das djangoBase-Modul faerbt den Balken im NORMALZUSTAND mit var(--accent)
+   und im Gefahrenfall mit #f87171. In shortlongx ist --accent blau, dort
+   trennt das gut. HumanBodyWebs --accent ist rot-pink (#e94560) — Normal und
+   Gefahr waren beide rot und nicht auseinanderzuhalten (unabhaengig von zwei
+   Sparring-Modellen bestaetigt, 12.08.2026). Bei 96 % VRAM sah die Leiste aus
+   wie bei 13 % GPU.
+
+   Darum hier Ampel-Semantik aus den Theme-Farben: gruen = ok, gelb = Warnung,
+   rot = Gefahr. Die Schwellen bleiben die des Moduls (WARN 75, GEFAHR 90) —
+   nur die Farben werden ersetzt.
+
+   SPEZIFITAET, nicht !important: Das Modul haengt sein CSS zur Laufzeit als
+   <style id="sysstats-css"> in den <head> — also NACH dieser Datei. Bei
+   gleicher Spezifitaet gewinnt das Spaetere, der Override waere wirkungslos.
+   Das vorangestellte `body` hebt die Spezifitaet um ein Element an und schlaegt
+   das Modul, ohne die Kaskade mit !important zu sprengen. Absichtlich `body`
+   und nicht `.topbar`: so gilt es auch, wenn die Leiste irgendwann im
+   Inhaltsbereich statt in der Topbar sitzt. */
+body .ss-pill .ss-fill            { background: var(--success); }
+body .ss-pill.ss-warn .ss-fill    { background: var(--warning); }
+body .ss-pill.ss-danger .ss-fill  { background: var(--danger); }
+
+/* ---- Schmale Fenster: die Leiste darf die Topbar nicht sprengen ------------
+   Mit acht Pillen (djangoBase hat Festplatten-Zaehler nachgeliefert) ist die
+   Leiste 1206 px breit. Zwingt man die Topbar auf die Breite eines
+   1366er-Displays, bricht sie auf ZWEI Zeilen um - in eine Topbar von 50 px
+   Hoehe. Das Modul bringt dafuer nichts mit; die geloeschte Eigen-Kopie hatte
+   solche Stufen, also hier wieder.
+
+   GEMESSENER PLATZBEDARF je Stufe (12.08.2026, flex-wrap:nowrap + scrollWidth):
+       alle acht mit Beschriftung   1206 px
+       ohne Beschriftungen          1007 px
+       ohne Festplatten              641 px
+       ohne Netz und RAM             421 px
+       nur GPU und VRAM              231 px
+   Verfuegbar ist ungefaehr Fensterbreite minus 422 px (220 px Sidebar, ~200 px
+   Seitentitel und Topbar-Knoepfe). Daraus die Grenzen unten, jeweils mit etwas
+   Reserve.
+
+   DIE ERSTE FASSUNG WAR FALSCH GERECHNET und ist beim Nachmessen aufgefallen:
+   Grenzen 1600/1200/1000/820. Auf einem 1366er-Display griff damit nur die
+   erste Stufe, es blieben 1007 px Bedarf bei 944 px Platz - die Leiste brach
+   weiter um. Wer die Zahlen aendert, muss deshalb nachmessen, nicht schaetzen.
+
+   Die Reihenfolge ist Absicht: Beschriftungen stehen ohnehin im title-Tooltip,
+   Festplatten aendern sich langsam, Netz und RAM sind Beiwerk. GPU und VRAM
+   bleiben am laengsten - sie beantworten die Frage, um die es geht: rechnet die
+   Karte, oder haengt der Lauf? */
+@media (max-width: 1700px) { body .ss-pill .ss-label { display: none; } }
+@media (max-width: 1500px) { body .ss-pill[data-k^="disk-"] { display: none; } }
+@media (max-width: 1100px) { body .ss-pill[data-k="net"],
+                             body .ss-pill[data-k="ram"] { display: none; } }
+@media (max-width:  880px) { body .ss-pill[data-k="cpu"],
+                             body .ss-pill[data-k="temp"] { display: none; } }
 
 /* =====================================================================
    Marken-Sidebar in den beiden Haupt-Themes (Dark + Light) wiederherstellen.

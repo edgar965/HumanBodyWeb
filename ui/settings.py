@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-VERSION = '0.52'
+VERSION = '0.53'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TOOLS_ROOT = BASE_DIR.parent              # A:\3DTools
@@ -93,6 +93,14 @@ DATA_UPLOAD_MAX_NUMBER_FILES = 10000               # up to 10k frames
 
 # Pipeline Python (venv with CUDA PyTorch, ONNX Runtime GPU, etc.)
 PIPELINE_PYTHON = str(TOOLS_ROOT / 'python10' / 'Scripts' / 'python.exe')
+
+# Externe Werkzeuge. Standen bis 12.08.2026 fest im Quelltext (ffmpeg zweimal in
+# character_api.py, Blender in views.py) — auf einem zweiten Rechner mit anderer
+# Installation waren die Aufrufe damit reihum kaputt, und zwar erst zur Laufzeit.
+# Hier zentral, damit local_settings.py sie überschreiben kann.
+FFMPEG_EXE = os.environ.get('FFMPEG_EXE') or r'A:\archiv2\_AI\tools\ffmpeg.exe'
+BLENDER_EXE = (os.environ.get('BLENDER_EXE')
+               or r'C:\Program Files\Blender Foundation\Blender 5.0\blender.exe')
 
 # MocapNET paths
 MOCAPNET_EXE = MOCAPNET_ROOT / 'MocapNET2CSV.exe'

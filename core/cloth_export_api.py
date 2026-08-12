@@ -15,9 +15,16 @@ from django.conf import settings
 from django.http import JsonResponse, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
 
+from .safe_paths import SafePath, PfadAbgelehnt
+
 
 # Make the `collision` package importable (it lives in HumanBody, not HumanBodyWeb)
-_HB_ROOT = str(getattr(settings, 'HUMANBODY_ROOT', '')) or r'A:\HumanBodyTest\HumanBody'
+# KEIN Rueckfall auf das alte Projekt A:\HumanBodyTest mehr (Review
+# 12.08.2026): Es liegt noch auf der Platte. Fehlte HUMANBODY_ROOT, hat der
+# Export stillschweigend Daten von DORT geladen - ein Fehler, den man am
+# Ergebnis nicht erkennt. Jetzt bleibt der Pfad leer und der Import scheitert
+# sichtbar.
+_HB_ROOT = str(getattr(settings, 'HUMANBODY_ROOT', ''))
 _HB_PARENT = os.path.dirname(_HB_ROOT)
 if _HB_ROOT and _HB_ROOT not in sys.path:
     sys.path.insert(0, _HB_ROOT)
@@ -69,13 +76,24 @@ def export_cloth(request):
         logger.exception('payload_to_scene_input failed')
         return JsonResponse({'ok': False, 'error': f'payload decode failed: {e}'}, status=400)
 
+    # Ziel-Verzeichnis und Dateiname kommen aus dem Payload und werden seit
+    # 12.08.2026 über SafePath geprüft. Vorher wurde `output_dir` nur auf
+    # "existiert als Verzeichnis" geprüft und `filename` nur auf die Endung —
+    # ein Name wie `..\..\x.mp4` landete damit ausserhalb des Ausgabeordners.
     requested_dir = (payload.get('output_dir') or '').strip()
-    out_dir = requested_dir if requested_dir and os.path.isdir(requested_dir) else _out_dir()
+    out_dir = _out_dir()
+    if requested_dir:
+        try:
+            out_dir = str(SafePath.fuer_ausgabe().pruefe(requested_dir))
+        except PfadAbgelehnt as e:
+            return JsonResponse({'ok': False, 'error': f'output_dir abgelehnt: {e}'}, status=403)
     os.makedirs(out_dir, exist_ok=True)
     requested_name = (payload.get('filename') or '').strip()
     if requested_name:
-        if not requested_name.lower().endswith('.mp4'):
-            requested_name += '.mp4'
+        try:
+            requested_name = SafePath.dateiname(requested_name, '.mp4')
+        except PfadAbgelehnt as e:
+            return JsonResponse({'ok': False, 'error': f'filename abgelehnt: {e}'}, status=403)
         base, ext = os.path.splitext(requested_name)
         out_name = f"{base}_{engine}{ext}"
     else:

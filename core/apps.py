@@ -1,3 +1,5 @@
+import logging
+
 from django.apps import AppConfig
 
 
@@ -54,12 +56,12 @@ class CoreConfig(AppConfig):
                     job.fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
                     cap.release()
                 except Exception:
-                    pass
+                    logging.getLogger('core').debug('Video-FPS nicht lesbar — Vorgabe 30 wird benutzt', exc_info=True)
                 job.save()
                 try:
                     pid_file.unlink()
                 except (FileNotFoundError, OSError):
-                    pass
+                    logging.getLogger('core').debug('uebergangen', exc_info=True)
                 print(f'[CoreConfig] Job {job.id}: BVH found, marked complete.')
                 continue
 
@@ -76,7 +78,7 @@ class CoreConfig(AppConfig):
                         print(f'[CoreConfig] Job {job.id}: PID {pid} still running, re-monitoring.')
                         continue
                 except (ValueError, FileNotFoundError):
-                    pass
+                    logging.getLogger('core').debug('uebergangen', exc_info=True)
 
             # 3. No BVH and no running subprocess → mark failed
             job.status = 'failed'
