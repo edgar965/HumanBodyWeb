@@ -169,3 +169,12 @@ class SafePathTest(TestCase):
     def test_dateiname_geraet(self):
         with self.assertRaises(PfadAbgelehnt):
             SafePath.dateiname('NUL.mp4')
+
+    def test_dateiname_beginnt_nicht_mit_bindestrich(self):
+        """Ein Name wie `-i.mp4` würde in einer Kommandozeile als Option gelesen.
+
+        Der Video-Export übergibt den Pfad an ffmpeg. Heute steht das Verzeichnis
+        davor und schützt; die nächste Aufrufstelle tut das vielleicht nicht."""
+        for roh in ('-i.mp4', '--output.mp4', '-'):
+            with self.subTest(roh=roh), self.assertRaises(PfadAbgelehnt):
+                SafePath.dateiname(roh, '.mp4')

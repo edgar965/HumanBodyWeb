@@ -227,6 +227,14 @@ class SafePath:
             raise PfadAbgelehnt('Dateiname darf keinen Pfadanteil enthalten')
         if text.split('.')[0].upper() in GERAETE:
             raise PfadAbgelehnt('Gerätename ist kein gültiger Dateiname')
+        # Fuehrender Bindestrich: Der Name landet in Kommandozeilen (ffmpeg im
+        # Video-Export). Dort wuerde "-i.mp4" als OPTION gelesen, nicht als Datei.
+        # Praktisch schuetzt hier schon der vorangestellte Verzeichnispfad, aber
+        # ein Dateiname, der wie ein Schalter aussieht, ist nie gewollt — und die
+        # naechste Aufrufstelle stellt den Pfad vielleicht nicht davor
+        # (Einwand aus dem Sparring, 12.08.2026).
+        if text.startswith('-'):
+            raise PfadAbgelehnt('Dateiname darf nicht mit einem Bindestrich beginnen')
         # Windows schneidet Punkte und Leerzeichen am Ende ab — dann zeigt die
         # Oberfläche einen anderen Namen an als auf der Platte steht.
         if text != text.rstrip(' .'):
