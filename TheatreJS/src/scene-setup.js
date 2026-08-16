@@ -154,7 +154,14 @@ export function createScene(canvas) {
     const transformControls = new TransformControls(camera, canvas);
     transformControls.setMode('translate'); // Start mit Position-Modus
     transformControls.setSize(0.8); // Kleiner für bessere Sicht
-    scene.add(transformControls);
+    // getHelper() und nicht die Steuerung selbst (Fehlerbehebung 16.08.2026):
+    // Seit three.js r169 erbt TransformControls von Controls und ist KEIN
+    // Object3D mehr. `scene.add(transformControls)` meldete deshalb bei jedem
+    // Seitenaufruf zweimal
+    //     THREE.Object3D.add: object not an instance of THREE.Object3D
+    // in der Browserkonsole — und der Anfasser zum Verschieben von Lichtern und
+    // Figuren war unsichtbar, weil sein Hilfsobjekt nie in die Szene kam.
+    scene.add(transformControls.getHelper());
 
     // Wenn TransformControls aktiv, OrbitControls deaktivieren
     transformControls.addEventListener('dragging-changed', (event) => {

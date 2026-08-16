@@ -2,6 +2,12 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { getSheet, createMeshSheet } from './theatre-bridge.js';
+import { base64ToFloat32, base64ToUint32, blenderToThreeCoords }
+    from '../../static/viewer/gemeinsam/kodierung.js';
+// Figur, Haare und Kleidung: laden/vorgabefigur.js und laden/kleidungsnetz.js
+// (vorher 242 Zeilen hier). Kleidungsnetz wird von dort benutzt, nicht mehr
+// direkt aus dieser Datei.
+import { Vorgabefigur } from './laden/vorgabefigur.js';
 // model_generator.js wurde am 16.08.2026 in modellbau/ zerlegt. Dieser Import
 // zeigte danach ins Leere und der Vite-Build brach ab — unbemerkt, weil
 // static/theatre/theatre-app.js als altes Ergebnis weiter ausgeliefert wurde.
@@ -111,31 +117,9 @@ const BODY_MATERIALS = [
     { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 10 Nails Feet
 ];
 
-// Decode base64 to Float32Array
-function base64ToFloat32(b64) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Float32Array(bytes.buffer);
-}
-
-// Decode base64 to Uint32Array
-function base64ToUint32(b64) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Uint32Array(bytes.buffer);
-}
-
-// Blender to Three.js coordinate conversion (swap Y/Z, negate new Z)
-function blenderToThreeCoords(buf) {
-    for (let i = 0; i < buf.length; i += 3) {
-        const y = buf[i + 1];
-        const z = buf[i + 2];
-        buf[i + 1] = z;
-        buf[i + 2] = -y;
-    }
-}
+// Die drei Umsetzfunktionen (base64 -> Float32/Uint32, Blender-Achsen ->
+// Three.js) standen hier als ACHTE Kopie im Projekt. Sie liegen seit dem
+// 15.08.2026 in static/viewer/gemeinsam/kodierung.js — siehe dort, warum.
 
 /**
  * Build a character mesh from API response data.
@@ -268,160 +252,25 @@ async function buildGeneratedModel(config) {
 }
 
 /**
- * Load a character from a model preset (body_type + morphs + meta sliders).
- * Also loads hair and garments if present in the preset.
- * @param {THREE.Scene} scene
- * @param {Object} preset  Preset JSON from /api/character/model/<name>/
- * @param {string} presetName  Display name for the Theatre object
- * @returns {Promise<THREE.Group>}
+ * Figur samt Haaren und Kleidung aus einer Vorgabe laden.
+ *
+ * Der Rumpf steckt in laden/vorgabefigur.js (vorher 105 Zeilen hier, plus 40
+ * fuer das Haarladen). Diese Fassade bleibt, damit die rund zwanzig
+ * Aufrufstellen im Projekt unveraendert weiterlaufen.
  */
 export async function loadCharacterFromPreset(scene, preset, presetName) {
-    // Handle generated models (built client-side, no server mesh API)
-    if (preset.type === 'generated_model') {
-        const group = await buildGeneratedModel(preset);
-        scene.add(group);
-        group.userData.presetName = presetName;
-        group.userData.bodyType = 'generated';
-
-        // Register in Theatre
-        _assetCounter++;
-        const name = presetName || `Character ${_assetCounter}`;
-        const sheet = getSheet();
-        if (sheet) createMeshSheet(sheet, name, group);
-
-        return group;
-    }
-
-    // Build query string from preset data
-    const params = new URLSearchParams();
-
-    if (preset.body_type) {
-        params.set('body_type', preset.body_type);
-    }
-
-    // Morph values: morph_<name>=<value>
-    if (preset.morphs && typeof preset.morphs === 'object') {
-        for (const [key, val] of Object.entries(preset.morphs)) {
-            if (val !== undefined && val !== null) {
-                params.set(`morph_${key}`, String(val));
-            }
-        }
-    }
-
-    // User morphs override
-    if (preset.user_morphs && typeof preset.user_morphs === 'object') {
-        for (const [key, val] of Object.entries(preset.user_morphs)) {
-            if (val !== undefined && val !== null) {
-                params.set(`morph_${key}`, String(val));
-            }
-        }
-    }
-
-    // Meta sliders: meta_<name>=<value>
-    // Presets store meta as nested object: { meta: { age: 0, mass: 0, ... } }
-    const metaKeys = ['age', 'mass', 'tone', 'height'];
-    const metaObj = preset.meta || {};
-    for (const mk of metaKeys) {
-        const val = metaObj[mk] ?? preset[`meta_${mk}`];
-        if (val !== undefined && val !== null) {
-            params.set(`meta_${mk}`, String(val));
-        }
-    }
-
-    const url = `/api/character/mesh/?${params.toString()}`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`Character mesh API error: ${resp.status}`);
-    const data = await resp.json();
-
-    const group = buildCharacterMesh(data);
-    scene.add(group);
-
-    // Store preset data in userData for later reload
-    group.userData.bodyType = preset.body_type || 'Female_Caucasian';
-    group.userData.morphs = { ...(preset.morphs || {}), ...(preset.user_morphs || {}) };
-    group.userData.meta = { ...(preset.meta || {}) };
-    group.userData.presetName = presetName;
-
-    // Load hair if present
-    if (preset.hair_style && preset.hair_style.url) {
-        try {
-            const hairGroup = await loadHairFromURL(preset.hair_style.url);
-            hairGroup.userData.isHair = true; // Mark for visibility toggle
-            hairGroup.traverse((child) => {
-                if (child.isMesh) child.userData.isHair = true;
-            });
-            group.add(hairGroup); // Add as child of character group
-            console.log('✓ Hair loaded:', preset.hair_style.name);
-        } catch (err) {
-            console.error('Failed to load hair:', err);
-        }
-    }
-
-    // Load garments if present
-    if (preset.garments && Array.isArray(preset.garments)) {
-        for (const garmentData of preset.garments) {
-            try {
-                const garmentMesh = await loadGarmentMesh(garmentData, preset.body_type, preset);
-                garmentMesh.userData.isGarment = true; // Mark for visibility toggle
-                group.add(garmentMesh); // Add as child of character group
-                console.log('✓ Garment loaded:', garmentData.id);
-            } catch (err) {
-                console.error('Failed to load garment:', garmentData.id, err);
-            }
-        }
-    }
-
-    // Register in Theatre
-    _assetCounter++;
-    const name = presetName || `Character ${_assetCounter}`;
-    const sheet = getSheet();
-    if (sheet) {
-        createMeshSheet(sheet, name, group);
-    }
-
-    return group;
-}
-
-/**
- * Load hair from a URL (GLB file).
- * @param {string} url  Hair GLB URL
- * @returns {Promise<THREE.Group>}
- */
-async function loadHairFromURL(url) {
-    return new Promise((resolve, reject) => {
-        gltfLoader.load(
-            url,
-            (gltf) => {
-                const hairGroup = gltf.scene;
-                hairGroup.traverse((child) => {
-                    if (child.isMesh) {
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-
-                        // Fix white hair - ensure material has proper color
-                        if (child.material) {
-                            // If material exists but has wrong color, fix it
-                            if (child.material.color) {
-                                // Check if color is too bright (white)
-                                const color = child.material.color;
-                                if (color.r > 0.9 && color.g > 0.9 && color.b > 0.9) {
-                                    // Set to dark brown/black hair color
-                                    child.material.color.setRGB(0.1, 0.08, 0.06);
-                                }
-                            }
-                            // Ensure PBR properties are set
-                            if (child.material.roughness === undefined) child.material.roughness = 0.8;
-                            if (child.material.metalness === undefined) child.material.metalness = 0.0;
-                        }
-                    }
-                });
-                resolve(hairGroup);
-            },
-            undefined,
-            (err) => reject(err)
-        );
+    const figur = new Vorgabefigur({
+        netzBauen: buildCharacterMesh,
+        erzeugtesModell: buildGeneratedModel,
+        inTheatre: (gruppe, name) => {
+            _assetCounter++;
+            const sheet = getSheet();
+            if (sheet) createMeshSheet(sheet, name || `Character ${_assetCounter}`, gruppe);
+        },
     });
+    return figur.laden(scene, preset, presetName);
 }
+
 
 /**
  * Load a garment mesh from the garment fit API.
@@ -429,103 +278,6 @@ async function loadHairFromURL(url) {
  * @param {string} bodyType  Current body type
  * @returns {Promise<THREE.Mesh>}
  */
-async function loadGarmentMesh(garmentData, bodyType, preset = {}) {
-    const { id, offset = 0.006, stiffness = 0.8, color = [0.3, 0.35, 0.5], roughness = 0.8, metalness = 0 } = garmentData;
-
-    let cr = 0.3, cg = 0.35, cb = 0.5;
-    if (Array.isArray(color)) {
-        cr = color[0] ?? 0.3;
-        cg = color[1] ?? 0.35;
-        cb = color[2] ?? 0.5;
-    } else if (typeof color === 'string') {
-        const c = new THREE.Color(color);
-        cr = c.r; cg = c.g; cb = c.b;
-    }
-
-    const params = new URLSearchParams();
-    params.set('garment_id', id);
-    params.set('body_type', bodyType || 'Female_Caucasian');
-    params.set('offset', String(offset));
-    params.set('stiffness', String(stiffness));
-    params.set('color_r', cr.toFixed(3));
-    params.set('color_g', cg.toFixed(3));
-    params.set('color_b', cb.toFixed(3));
-
-    // Pass morph values so garment fits the actual morphed body
-    if (preset.morphs && typeof preset.morphs === 'object') {
-        for (const [key, val] of Object.entries(preset.morphs)) {
-            if (val !== undefined && val !== null) {
-                params.set(`morph_${key}`, String(val));
-            }
-        }
-    }
-    if (preset.user_morphs && typeof preset.user_morphs === 'object') {
-        for (const [key, val] of Object.entries(preset.user_morphs)) {
-            if (val !== undefined && val !== null) {
-                params.set(`morph_${key}`, String(val));
-            }
-        }
-    }
-    // Meta sliders (age, mass, tone, height)
-    const metaObj = preset.meta || {};
-    for (const mk of ['age', 'mass', 'tone', 'height']) {
-        const val = metaObj[mk] ?? preset[`meta_${mk}`];
-        if (val !== undefined && val !== null) {
-            params.set(`meta_${mk}`, String(val));
-        }
-    }
-
-    const resp = await fetch(`/api/character/garment/fit/?${params.toString()}`);
-    if (!resp.ok) throw new Error(`Garment fit API error: ${resp.status}`);
-    const data = await resp.json();
-    if (data.error) throw new Error(data.error);
-
-    const verts = base64ToFloat32(data.vertices);
-    blenderToThreeCoords(verts);
-    const faces = base64ToUint32(data.faces);
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(verts, 3));
-    geometry.setIndex(new THREE.BufferAttribute(faces, 1));
-    geometry.computeVertexNormals();
-
-    const matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
-    const material = new THREE.MeshStandardMaterial({
-        color: matColor,
-        roughness: roughness,
-        metalness: metalness,
-        side: THREE.DoubleSide,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnit: -1,
-    });
-
-    // Create SkinnedMesh if skin weights available (like Dashboard viewer.js)
-    let mesh;
-    if (data.skin_indices && data.skin_weights) {
-        const skinIndices = base64ToFloat32(data.skin_indices);
-        const skinWeights = base64ToFloat32(data.skin_weights);
-        geometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
-        geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
-        mesh = new THREE.SkinnedMesh(geometry, material);
-        mesh.userData.needsBinding = true; // Mark for skeleton binding
-    } else {
-        mesh = new THREE.Mesh(geometry, material);
-    }
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-
-    // Store garment data in userData for editing
-    mesh.userData.garmentId = id;
-    mesh.userData.offset = offset;
-    mesh.userData.stiffness = stiffness;
-    mesh.userData.originalColor = [cr, cg, cb];
-    mesh.userData.roughness = roughness;
-    mesh.userData.metalness = metalness;
-    mesh.name = id; // Set mesh name to garment ID
-
-    return mesh;
-}
 
 /**
  * Parse BVH text and create a SkeletonHelper + AnimationMixer.
