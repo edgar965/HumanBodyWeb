@@ -2,9 +2,18 @@
 {% load static %}
 {% block title %}BVH Library - MocapNET{% endblock %}
 
-{% block extra_head %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-{% endblock %}
+{% comment %}
+Umbau 16.08.2026 (Performance + Anforderung 5):
+
+* Seitenaufteilung. Vorher rendete die Seite alle 7.110 Bibliothekseintraege —
+  10,5 MB HTML, 2.082 ms Serverzeit, danach 7.110 Karten im Browser. Jetzt 60
+  je Seite, dazu Suche und Quellfilter; ohne die ist eine solche Liste nicht
+  benutzbar.
+* Das three.js vom CDN ist entfallen. Es sollte die `bvh-preview`-Container
+  fuellen, aber dieser Code wurde nie geschrieben — kein einziges Skript im
+  Projekt greift `preview-<pk>` auf. Geladen wurde die Bibliothek trotzdem, bei
+  jedem Seitenaufruf und von einem fremden Rechner.
+{% endcomment %}
 
 {% block content %}
 <h1>BVH Library</h1>
@@ -16,34 +25,84 @@
     <a href="{% url 'upload' %}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Create from Video
     </a>
+    <form method="get" class="bvh-suche">
+        <input type="search" name="q" value="{{ suche }}" placeholder="Name suchen …">
+        <select name="source">
+            <option value="">alle Quellen</option>
+            {% for q in quellen %}
+            <option value="{{ q }}" {% if q == quelle %}selected{% endif %}>{{ q }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm btn-secondary">
+            <i class="fas fa-search"></i> Suchen
+        </button>
+    </form>
 </div>
 
 {% if files %}
+<p class="bvh-anzahl">
+    {{ gesamt }} Datei{{ gesamt|pluralize:"en" }} —
+    Seite {{ seite.number }} von {{ seite.paginator.num_pages }}
+</p>
 <div class="bvh-grid">
     {% for file in files %}
     <div class="bvh-card" data-path="{{ file.path }}">
-        <div class="bvh-preview" id="preview-{{ file.pk }}"></div>
         <div class="bvh-info">
             <h3>{{ file.name }}</h3>
             <span class="badge badge-{{ file.source }}">{{ file.source }}</span>
             <p class="bvh-path" title="{{ file.path }}">{{ file.path|truncatechars:50 }}</p>
         </div>
         <div class="bvh-actions">
-            <a href="{% url 'open_in_blender' file.pk %}" class="btn btn-sm btn-primary" title="Open in Blender">
-                <i class="fas fa-cube"></i> Blender
-            </a>
-            <a href="{% url 'delete_bvh' file.pk %}" class="btn btn-sm btn-danger"
-               onclick="return confirm('Remove from library?')" title="Remove">
-                <i class="fas fa-trash"></i>
-            </a>
+            {% comment %}
+            Formulare statt Links (Review 15.08.2026): Beide Aktionen haben
+            Nebenwirkungen — die eine löscht einen Bibliothekseintrag, die andere
+            startet Blender. Als `<a href>` liessen sie sich von einer fremden
+            Seite mit einem eingebetteten Bild auslösen, denn die
+            Gleiche-Herkunft-Prüfung greift nur bei unsicheren Methoden.
+            {% endcomment %}
+            <form method="post" action="{% url 'open_in_blender' file.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-primary" title="Open in Blender">
+                    <i class="fas fa-cube"></i> Blender
+                </button>
+            </form>
+            <form method="post" action="{% url 'delete_bvh' file.pk %}" style="display:inline;"
+                  onsubmit="return confirm('Remove from library?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-danger" title="Remove">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </form>
         </div>
     </div>
     {% endfor %}
 </div>
+
+{% if seite.paginator.num_pages > 1 %}
+<div class="bvh-seiten">
+    {% if seite.has_previous %}
+    <a class="btn btn-sm btn-secondary" href="?page=1{{ zusatzfrage }}">&laquo; erste</a>
+    <a class="btn btn-sm btn-secondary"
+       href="?page={{ seite.previous_page_number }}{{ zusatzfrage }}">zurück</a>
+    {% endif %}
+    <span class="bvh-seitenstand">{{ seite.number }} / {{ seite.paginator.num_pages }}</span>
+    {% if seite.has_next %}
+    <a class="btn btn-sm btn-secondary"
+       href="?page={{ seite.next_page_number }}{{ zusatzfrage }}">weiter</a>
+    <a class="btn btn-sm btn-secondary"
+       href="?page={{ seite.paginator.num_pages }}{{ zusatzfrage }}">letzte &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
 {% else %}
 <div class="empty-state">
     <i class="fas fa-folder-open fa-3x"></i>
+    {% if suche or quelle %}
+    <p>Kein Treffer für diese Suche. <a href="{% url 'library' %}">Filter zurücksetzen</a></p>
+    {% else %}
     <p>No BVH files yet. <a href="{% url 'upload' %}">Upload a video</a> or <a href="{% url 'scan_bvh' %}">scan directories</a>.</p>
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}

@@ -3,7 +3,7 @@
  */
 import * as THREE from 'three';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 export const VIEWER_TONE_MAPPINGS = {
     ACESFilmic: THREE.ACESFilmicToneMapping,

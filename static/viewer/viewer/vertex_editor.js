@@ -4,25 +4,15 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { state, acceleratedRaycast } from './state.js';
-import { fn } from './registry.js';
-import { base64ToFloat32, blenderToThreeCoords, float32ToBase64, uint32ToBase64, threeToBlenderCoords, buildBodyQueryString } from './utils.js';
+import { fn } from '../gemeinsam/registrierung.js';
+import './utils.js';
+import { Vertexzustand } from './vertex_zustand.js';
+import { _veApplyGizmoDelta, _veMoveSelectedByDelta, _vePushOutside, _veReset, _veSmooth, _veUpdateGizmo } from './vertex_verschieben.js';
+import { _veUpdateAllColors, _veUpdateSelectionInfo, veBoxSelectEnd, veBoxSelectMove, veBoxSelectStart, veHandleClick } from './vertex_auswahl.js';
 
 // Vertex editor state
-let veActive = false;
-let veTargetMesh = null;
-let veTargetKey = null;
-let vePointsOverlay = null;
-let veSelectedIndices = new Set();
-let veOrigPositions = null;
-let veGizmo = null;
-let veGizmoHelper = null;
-let veGizmoLastPos = new THREE.Vector3();
-let veBoxSelecting = false;
-let veBoxStart = { x: 0, y: 0 };
-let veBoxEnd = { x: 0, y: 0 };
-let veOrigRaycast = null;
-const VE_COLOR_DEFAULT  = new THREE.Color(0.35, 0.45, 0.65);
-const VE_COLOR_SELECTED = new THREE.Color(1.0, 0.9, 0.2);
+export const VE_COLOR_DEFAULT  = new THREE.Color(0.35, 0.45, 0.65);
+export const VE_COLOR_SELECTED = new THREE.Color(1.0, 0.9, 0.2);
 
 export function veEnterEditMode() {
     let mesh = null;
@@ -34,17 +24,17 @@ export function veEnterEditMode() {
     if (!mesh) { mesh = state.clothMeshes['pe_preview']; key = 'pe_preview'; }
     if (!mesh) { console.warn('Vertex Edit: no cloth/garment mesh found'); return; }
 
-    veActive = true;
-    veTargetMesh = mesh;
-    veTargetKey = key;
-    veSelectedIndices.clear();
+    Vertexzustand.veActive = true;
+    Vertexzustand.veTargetMesh = mesh;
+    Vertexzustand.veTargetKey = key;
+    Vertexzustand.veSelectedIndices.clear();
 
     const posAttr = mesh.geometry.getAttribute('position');
     posAttr.setUsage(THREE.DynamicDrawUsage);
-    veOrigPositions = new Float32Array(posAttr.array);
+    Vertexzustand.veOrigPositions = new Float32Array(posAttr.array);
 
     mesh.geometry.computeBoundsTree();
-    veOrigRaycast = mesh.raycast;
+    Vertexzustand.veOrigRaycast = mesh.raycast;
     mesh.raycast = acceleratedRaycast;
 
     const pointsGeo = new THREE.BufferGeometry();
@@ -66,25 +56,25 @@ export function veEnterEditMode() {
     const pointsMat = new THREE.PointsMaterial({
         size: pointSize, sizeAttenuation: false, vertexColors: true, depthTest: true, depthWrite: false,
     });
-    vePointsOverlay = new THREE.Points(pointsGeo, pointsMat);
-    vePointsOverlay.matrixAutoUpdate = false;
-    vePointsOverlay.matrix.copy(mesh.matrixWorld);
-    vePointsOverlay.matrixWorld.copy(mesh.matrixWorld);
-    vePointsOverlay.renderOrder = 999;
-    state.scene.add(vePointsOverlay);
+    Vertexzustand.vePointsOverlay = new THREE.Points(pointsGeo, pointsMat);
+    Vertexzustand.vePointsOverlay.matrixAutoUpdate = false;
+    Vertexzustand.vePointsOverlay.matrix.copy(mesh.matrixWorld);
+    Vertexzustand.vePointsOverlay.matrixWorld.copy(mesh.matrixWorld);
+    Vertexzustand.vePointsOverlay.renderOrder = 999;
+    state.scene.add(Vertexzustand.vePointsOverlay);
 
-    veGizmoHelper = new THREE.Object3D();
-    state.scene.add(veGizmoHelper);
-    veGizmo = new TransformControls(state.camera, state.renderer.domElement);
-    veGizmo.attach(veGizmoHelper);
-    veGizmo.setMode('translate');
-    veGizmo.setSize(0.6);
-    veGizmo.visible = false;
-    veGizmo.enabled = false;
-    state.scene.add(veGizmo.getHelper());
+    Vertexzustand.veGizmoHelper = new THREE.Object3D();
+    state.scene.add(Vertexzustand.veGizmoHelper);
+    Vertexzustand.veGizmo = new TransformControls(state.camera, state.renderer.domElement);
+    Vertexzustand.veGizmo.attach(Vertexzustand.veGizmoHelper);
+    Vertexzustand.veGizmo.setMode('translate');
+    Vertexzustand.veGizmo.setSize(0.6);
+    Vertexzustand.veGizmo.visible = false;
+    Vertexzustand.veGizmo.enabled = false;
+    state.scene.add(Vertexzustand.veGizmo.getHelper());
 
-    veGizmo.addEventListener('dragging-changed', (ev) => { state.controls.enabled = !ev.value; });
-    veGizmo.addEventListener('objectChange', () => { _veApplyGizmoDelta(); });
+    Vertexzustand.veGizmo.addEventListener('dragging-changed', (ev) => { state.controls.enabled = !ev.value; });
+    Vertexzustand.veGizmo.addEventListener('objectChange', () => { _veApplyGizmoDelta(); });
 
     const editCtrl = document.getElementById('pe-edit-controls');
     if (editCtrl) editCtrl.style.display = '';
@@ -99,242 +89,49 @@ export function veEnterEditMode() {
 }
 
 export function veExitEditMode() {
-    if (veTargetMesh && veOrigRaycast) { veTargetMesh.raycast = veOrigRaycast; veOrigRaycast = null; }
-    if (veTargetMesh?.geometry?.disposeBoundsTree) veTargetMesh.geometry.disposeBoundsTree();
-    if (veGizmo) { state.scene.remove(veGizmo.getHelper()); veGizmo.detach(); veGizmo.dispose(); veGizmo = null; }
-    if (veGizmoHelper) { state.scene.remove(veGizmoHelper); veGizmoHelper = null; }
-    if (vePointsOverlay) { state.scene.remove(vePointsOverlay); vePointsOverlay.geometry.dispose(); vePointsOverlay.material.dispose(); vePointsOverlay = null; }
-    veActive = false; veTargetMesh = null; veTargetKey = null; veSelectedIndices.clear(); veOrigPositions = null; veBoxSelecting = false;
+    if (Vertexzustand.veTargetMesh && Vertexzustand.veOrigRaycast) { Vertexzustand.veTargetMesh.raycast = Vertexzustand.veOrigRaycast; Vertexzustand.veOrigRaycast = null; }
+    if (Vertexzustand.veTargetMesh?.geometry?.disposeBoundsTree) Vertexzustand.veTargetMesh.geometry.disposeBoundsTree();
+    if (Vertexzustand.veGizmo) { state.scene.remove(Vertexzustand.veGizmo.getHelper()); Vertexzustand.veGizmo.detach(); Vertexzustand.veGizmo.dispose(); Vertexzustand.veGizmo = null; }
+    if (Vertexzustand.veGizmoHelper) { state.scene.remove(Vertexzustand.veGizmoHelper); Vertexzustand.veGizmoHelper = null; }
+    if (Vertexzustand.vePointsOverlay) { state.scene.remove(Vertexzustand.vePointsOverlay); Vertexzustand.vePointsOverlay.geometry.dispose(); Vertexzustand.vePointsOverlay.material.dispose(); Vertexzustand.vePointsOverlay = null; }
+    Vertexzustand.veActive = false; Vertexzustand.veTargetMesh = null; Vertexzustand.veTargetKey = null; Vertexzustand.veSelectedIndices.clear(); Vertexzustand.veOrigPositions = null; Vertexzustand.veBoxSelecting = false;
     const boxEl = document.getElementById('ve-box-select');
     if (boxEl) boxEl.style.display = 'none';
     const editCtrl = document.getElementById('pe-edit-controls');
     if (editCtrl) editCtrl.style.display = 'none';
 }
 
-function _veUpdateAllColors() {
-    if (!vePointsOverlay) return;
-    const colorAttr = vePointsOverlay.geometry.getAttribute('color');
-    const count = colorAttr.count;
-    for (let i = 0; i < count; i++) {
-        const c = veSelectedIndices.has(i) ? VE_COLOR_SELECTED : VE_COLOR_DEFAULT;
-        colorAttr.setXYZ(i, c.r, c.g, c.b);
-    }
-    colorAttr.needsUpdate = true;
-}
 
-function _veUpdateSelectionInfo() {
-    const info = document.getElementById('ve-selection-info');
-    const posFields = document.getElementById('ve-pos-fields');
-    if (!info) return;
-    const n = veSelectedIndices.size;
-    if (n === 0) { info.textContent = 'No vertices selected'; if (posFields) posFields.style.display = 'none'; }
-    else { info.textContent = `${n} ${n === 1 ? 'vertex' : 'vertices'} selected`; if (posFields) { posFields.style.display = ''; _veUpdatePosInputs(); } }
-}
 
-function _veUpdatePosInputs() {
-    if (!veTargetMesh || veSelectedIndices.size === 0) return;
-    const posAttr = veTargetMesh.geometry.getAttribute('position');
-    let cx = 0, cy = 0, cz = 0;
-    for (const idx of veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx); cz += posAttr.getZ(idx); }
-    const n = veSelectedIndices.size;
-    const px = document.getElementById('ve-pos-x'); const py = document.getElementById('ve-pos-y'); const pz = document.getElementById('ve-pos-z');
-    if (px) px.value = (cx / n).toFixed(4); if (py) py.value = (cy / n).toFixed(4); if (pz) pz.value = (cz / n).toFixed(4);
-}
 
-function _veMoveSelectedByDelta(dx, dy, dz) {
-    if (!veTargetMesh || !vePointsOverlay) return;
-    const meshPos = veTargetMesh.geometry.getAttribute('position');
-    const overlayPos = vePointsOverlay.geometry.getAttribute('position');
-    for (const idx of veSelectedIndices) {
-        meshPos.setXYZ(idx, meshPos.getX(idx) + dx, meshPos.getY(idx) + dy, meshPos.getZ(idx) + dz);
-        overlayPos.setXYZ(idx, overlayPos.getX(idx) + dx, overlayPos.getY(idx) + dy, overlayPos.getZ(idx) + dz);
-    }
-    meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-    veTargetMesh.geometry.computeVertexNormals(); veTargetMesh.geometry.computeBoundingSphere();
-}
 
-function _veApplyGizmoDelta() {
-    if (!veGizmoHelper || !veTargetMesh || veSelectedIndices.size === 0) return;
-    const newPos = veGizmoHelper.position.clone();
-    const worldDelta = newPos.clone().sub(veGizmoLastPos);
-    veGizmoLastPos.copy(newPos);
-    const invMat = new THREE.Matrix4().copy(veTargetMesh.matrixWorld).invert();
-    const localDelta = worldDelta.applyMatrix4(new THREE.Matrix4().extractRotation(invMat));
-    _veMoveSelectedByDelta(localDelta.x, localDelta.y, localDelta.z);
-    _veUpdatePosInputs();
-}
 
-function _veUpdateGizmo() {
-    if (!veGizmo || !veGizmoHelper || !veTargetMesh) return;
-    if (veSelectedIndices.size === 0) { veGizmo.visible = false; veGizmo.enabled = false; return; }
-    const posAttr = veTargetMesh.geometry.getAttribute('position');
-    let cx = 0, cy = 0, cz = 0;
-    for (const idx of veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx); cz += posAttr.getZ(idx); }
-    const n = veSelectedIndices.size;
-    const localCentroid = new THREE.Vector3(cx / n, cy / n, cz / n);
-    const worldCentroid = localCentroid.applyMatrix4(veTargetMesh.matrixWorld);
-    veGizmoHelper.position.copy(worldCentroid); veGizmoLastPos.copy(worldCentroid);
-    veGizmo.visible = true; veGizmo.enabled = true;
-}
 
-export function veHandleClick(e) {
-    if (!veActive || !veTargetMesh) return;
-    const canvas = state.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    state._mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    state._mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    state._raycaster.setFromCamera(state._mouseNDC, state.camera);
-    const intersects = state._raycaster.intersectObject(veTargetMesh);
-    if (intersects.length > 0) {
-        const hit = intersects[0]; const face = hit.face;
-        const posAttr = veTargetMesh.geometry.getAttribute('position');
-        const hitLocal = hit.point.clone().applyMatrix4(new THREE.Matrix4().copy(veTargetMesh.matrixWorld).invert());
-        let bestIdx = face.a, bestDist = Infinity;
-        for (const vi of [face.a, face.b, face.c]) {
-            const vp = new THREE.Vector3(posAttr.getX(vi), posAttr.getY(vi), posAttr.getZ(vi));
-            const d = vp.distanceTo(hitLocal);
-            if (d < bestDist) { bestDist = d; bestIdx = vi; }
-        }
-        if (e.shiftKey) { if (veSelectedIndices.has(bestIdx)) veSelectedIndices.delete(bestIdx); else veSelectedIndices.add(bestIdx); }
-        else { veSelectedIndices.clear(); veSelectedIndices.add(bestIdx); }
-    } else if (!e.shiftKey) { veSelectedIndices.clear(); }
-    _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
-}
 
-export function veBoxSelectStart(e) {
-    if (!veActive) return;
-    const canvas = state.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    veBoxSelecting = true;
-    veBoxStart = { x: e.clientX - rect.left, y: e.clientY - rect.top }; veBoxEnd = { ...veBoxStart };
-    const boxEl = document.getElementById('ve-box-select');
-    if (boxEl) { boxEl.style.display = 'block'; boxEl.style.left = veBoxStart.x + 'px'; boxEl.style.top = veBoxStart.y + 'px'; boxEl.style.width = '0px'; boxEl.style.height = '0px'; }
-    state.controls.enabled = false;
-}
 
-export function veBoxSelectMove(e) {
-    if (!veBoxSelecting) return;
-    const canvas = state.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    veBoxEnd = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    const boxEl = document.getElementById('ve-box-select');
-    if (boxEl) {
-        const x = Math.min(veBoxStart.x, veBoxEnd.x), y = Math.min(veBoxStart.y, veBoxEnd.y);
-        const w = Math.abs(veBoxEnd.x - veBoxStart.x), h = Math.abs(veBoxEnd.y - veBoxStart.y);
-        boxEl.style.left = x + 'px'; boxEl.style.top = y + 'px'; boxEl.style.width = w + 'px'; boxEl.style.height = h + 'px';
-    }
-}
 
-export function veBoxSelectEnd(e) {
-    if (!veBoxSelecting) return;
-    veBoxSelecting = false; state.controls.enabled = true;
-    const boxEl = document.getElementById('ve-box-select');
-    if (boxEl) boxEl.style.display = 'none';
-    if (!veTargetMesh || !vePointsOverlay) return;
-    const canvas = state.renderer.domElement;
-    const rect = canvas.getBoundingClientRect();
-    const w = rect.width, h = rect.height;
-    const minX = Math.min(veBoxStart.x, veBoxEnd.x), maxX = Math.max(veBoxStart.x, veBoxEnd.x);
-    const minY = Math.min(veBoxStart.y, veBoxEnd.y), maxY = Math.max(veBoxStart.y, veBoxEnd.y);
-    if ((maxX - minX) < 3 && (maxY - minY) < 3) return;
-    if (!e.shiftKey) veSelectedIndices.clear();
-    const posAttr = veTargetMesh.geometry.getAttribute('position');
-    const count = posAttr.count;
-    const v = new THREE.Vector3();
-    for (let i = 0; i < count; i++) {
-        v.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
-        v.applyMatrix4(veTargetMesh.matrixWorld); v.project(state.camera);
-        const sx = (v.x * 0.5 + 0.5) * w, sy = (-v.y * 0.5 + 0.5) * h;
-        if (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY && v.z > 0 && v.z < 1) veSelectedIndices.add(i);
-    }
-    _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
-}
 
-async function _veSmooth() {
-    if (!veActive || !veTargetMesh || veSelectedIndices.size === 0) return;
-    const meshPos = veTargetMesh.geometry.getAttribute('position');
-    const posArr = new Float32Array(meshPos.array);
-    const blenderVerts = threeToBlenderCoords(posArr);
-    const indexAttr = veTargetMesh.geometry.getIndex();
-    if (!indexAttr) return;
-    const facesArr = new Uint32Array(indexAttr.array);
-    const selected = Array.from(veSelectedIndices);
-    const statusEl = document.getElementById('ve-selection-info');
-    if (statusEl) statusEl.textContent = 'Smoothing...';
-    try {
-        const resp = await fetch('/api/character/vertex-edit/smooth/', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ vertices: float32ToBase64(blenderVerts), faces: uint32ToBase64(facesArr), selected, iterations: 3, factor: 0.3 })
-        });
-        const data = await resp.json();
-        if (data.error) { console.error(data.error); return; }
-        const updatedBlender = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(updatedBlender);
-        const overlayPos = vePointsOverlay.geometry.getAttribute('position');
-        for (const idx of selected) { const x = updatedBlender[idx*3]; const y = updatedBlender[idx*3+1]; const z = updatedBlender[idx*3+2]; meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
-        meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-        veTargetMesh.geometry.computeVertexNormals(); veTargetMesh.geometry.computeBoundingSphere();
-    } catch (err) { console.error('Smooth failed:', err); }
-    _veUpdateGizmo(); _veUpdateSelectionInfo();
-}
 
-async function _vePushOutside() {
-    if (!veActive || !veTargetMesh || veSelectedIndices.size === 0) return;
-    const meshPos = veTargetMesh.geometry.getAttribute('position');
-    const posArr = new Float32Array(meshPos.array);
-    const blenderVerts = threeToBlenderCoords(posArr);
-    const selected = Array.from(veSelectedIndices);
-    const bodyQs = buildBodyQueryString();
-    const statusEl = document.getElementById('ve-selection-info');
-    if (statusEl) statusEl.textContent = 'Pushing outside...';
-    try {
-        const resp = await fetch(`/api/character/vertex-edit/push-outside/?${bodyQs}`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ vertices: float32ToBase64(blenderVerts), selected, min_dist: 0.006 })
-        });
-        const data = await resp.json();
-        if (data.error) { console.error(data.error); return; }
-        const updatedBlender = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(updatedBlender);
-        const overlayPos = vePointsOverlay.geometry.getAttribute('position');
-        for (const idx of selected) { const x = updatedBlender[idx*3]; const y = updatedBlender[idx*3+1]; const z = updatedBlender[idx*3+2]; meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
-        meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-        veTargetMesh.geometry.computeVertexNormals(); veTargetMesh.geometry.computeBoundingSphere();
-    } catch (err) { console.error('Push outside failed:', err); }
-    _veUpdateGizmo(); _veUpdateSelectionInfo();
-}
 
-function _veReset() {
-    if (!veActive || !veTargetMesh || !veOrigPositions) return;
-    const meshPos = veTargetMesh.geometry.getAttribute('position');
-    const overlayPos = vePointsOverlay.geometry.getAttribute('position');
-    const indices = veSelectedIndices.size > 0 ? veSelectedIndices : null;
-    if (indices) {
-        for (const idx of indices) { const x = veOrigPositions[idx*3]; const y = veOrigPositions[idx*3+1]; const z = veOrigPositions[idx*3+2]; meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
-    } else { meshPos.array.set(veOrigPositions); overlayPos.array.set(veOrigPositions); }
-    meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-    veTargetMesh.geometry.computeVertexNormals(); veTargetMesh.geometry.computeBoundingSphere();
-    _veUpdateGizmo(); _veUpdatePosInputs();
-}
 
 export function veHandleKeydown(e) {
     if (e.key === 'Escape') { fn.peSetMode('select'); return; }
     if (e.key === 'a' || e.key === 'A') {
-        if (veSelectedIndices.size > 0 && vePointsOverlay) veSelectedIndices.clear();
-        else if (vePointsOverlay) { const count = vePointsOverlay.geometry.getAttribute('position').count; for (let i = 0; i < count; i++) veSelectedIndices.add(i); }
+        if (Vertexzustand.veSelectedIndices.size > 0 && Vertexzustand.vePointsOverlay) Vertexzustand.veSelectedIndices.clear();
+        else if (Vertexzustand.vePointsOverlay) { const count = Vertexzustand.vePointsOverlay.geometry.getAttribute('position').count; for (let i = 0; i < count; i++) Vertexzustand.veSelectedIndices.add(i); }
         _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
     }
 }
 
 export function initVertexEditorBindings() {
     document.getElementById('ve-select-all')?.addEventListener('click', () => {
-        if (!veActive || !vePointsOverlay) return;
-        const count = vePointsOverlay.geometry.getAttribute('position').count;
-        for (let i = 0; i < count; i++) veSelectedIndices.add(i);
+        if (!Vertexzustand.veActive || !Vertexzustand.vePointsOverlay) return;
+        const count = Vertexzustand.vePointsOverlay.geometry.getAttribute('position').count;
+        for (let i = 0; i < count; i++) Vertexzustand.veSelectedIndices.add(i);
         _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
     });
     document.getElementById('ve-deselect-all')?.addEventListener('click', () => {
-        if (!veActive) return; veSelectedIndices.clear(); _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
+        if (!Vertexzustand.veActive) return; Vertexzustand.veSelectedIndices.clear(); _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
     });
     document.getElementById('ve-smooth')?.addEventListener('click', () => _veSmooth());
     document.getElementById('ve-push-outside')?.addEventListener('click', () => _vePushOutside());
@@ -345,17 +142,17 @@ export function initVertexEditorBindings() {
     if (veSizeSlider) {
         veSizeSlider.addEventListener('input', () => {
             const sz = parseInt(veSizeSlider.value); if (veSizeVal) veSizeVal.textContent = sz;
-            if (vePointsOverlay) vePointsOverlay.material.size = sz;
+            if (Vertexzustand.vePointsOverlay) Vertexzustand.vePointsOverlay.material.size = sz;
         });
     }
 
     ['ve-pos-x', 've-pos-y', 've-pos-z'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', () => {
-            if (!veActive || !veTargetMesh || veSelectedIndices.size === 0) return;
-            const posAttr = veTargetMesh.geometry.getAttribute('position');
+            if (!Vertexzustand.veActive || !Vertexzustand.veTargetMesh || Vertexzustand.veSelectedIndices.size === 0) return;
+            const posAttr = Vertexzustand.veTargetMesh.geometry.getAttribute('position');
             let cx = 0, cy = 0, cz = 0;
-            for (const idx of veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx); cz += posAttr.getZ(idx); }
-            const n = veSelectedIndices.size;
+            for (const idx of Vertexzustand.veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx); cz += posAttr.getZ(idx); }
+            const n = Vertexzustand.veSelectedIndices.size;
             const newX = parseFloat(document.getElementById('ve-pos-x')?.value || 0);
             const newY = parseFloat(document.getElementById('ve-pos-y')?.value || 0);
             const newZ = parseFloat(document.getElementById('ve-pos-z')?.value || 0);
@@ -366,10 +163,10 @@ export function initVertexEditorBindings() {
 }
 
 // Expose state getters
-export function isVeActive() { return veActive; }
-export function isVeBoxSelecting() { return veBoxSelecting; }
-export function getVeTargetMesh() { return veTargetMesh; }
-export function getVeSelectedIndices() { return veSelectedIndices; }
+export function isVeActive() { return Vertexzustand.veActive; }
+export function isVeBoxSelecting() { return Vertexzustand.veBoxSelecting; }
+export function getVeTargetMesh() { return Vertexzustand.veTargetMesh; }
+export function getVeSelectedIndices() { return Vertexzustand.veSelectedIndices; }
 
 // Register
 fn.veEnterEditMode = veEnterEditMode;

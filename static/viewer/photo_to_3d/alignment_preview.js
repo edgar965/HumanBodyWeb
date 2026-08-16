@@ -2,7 +2,7 @@
  * Photo To 3D — Alignment preview rendering (Textur tab visualization).
  */
 import { state, API } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 /** Draw a smooth closed contour using quadratic curves through midpoints */
 export function drawSmoothContour(ctx, pts) {

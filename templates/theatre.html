@@ -462,6 +462,88 @@
     }
     .save-modal-btn:hover { background: #6a4daa; }
     .save-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Eigenschaften-Panels (Licht, Kleidung, Figur).
+       Umbau 16.08.2026: Diese Regeln standen als Inline-Stil in den
+       HTML-Vorlagen der drei Panel-Funktionen in TheatreJS/src/main.js — die
+       Kette für ein Zahlenfeld teils sechsmal in einer Funktion. Jetzt einmal
+       hier; das JavaScript setzt nur noch Klassen (siehe studio/panels/). */
+    .pnl-inhalt { padding: 16px; }
+    .pnl-kopf {
+        font-size: 0.9rem;
+        margin-bottom: 16px;
+        color: var(--accent-purple);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 8px;
+    }
+    .pnl-feld { margin-bottom: 16px; }
+    .pnl-label {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+    }
+    .pnl-drei {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        font-size: 0.75rem;
+    }
+    .pnl-achse { color: var(--text-muted); }
+    .pnl-zahl {
+        width: 100%;
+        padding: 4px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text);
+    }
+    .pnl-schieber { width: 100%; }
+    .pnl-farbe {
+        width: 100%;
+        height: 32px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        background: var(--bg-primary);
+        cursor: pointer;
+    }
+    .pnl-hinweis {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 20px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+    }
+    .pnl-leer {
+        padding: 20px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-align: center;
+    }
+    .pnl-rollbar { max-height: calc(100vh - 200px); overflow-y: auto; }
+    .pnl-abschnitt {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        margin: 6px 0 4px;
+    }
+    .pnl-farbe-klein {
+        width: 40px;
+        height: 24px;
+        border: none;
+        cursor: pointer;
+    }
+    /* Zugeklappter Bereich für die Regler, die noch keine Wirkung haben —
+       siehe studio/panels/kleiderpanel.js. */
+    .pnl-ausbau { margin-top: 12px; }
+    .pnl-ausbau > summary {
+        cursor: pointer;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        padding: 6px 0;
+        border-top: 1px solid var(--border);
+    }
 </style>
 {% endblock %}
 

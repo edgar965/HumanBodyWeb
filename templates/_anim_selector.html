@@ -1,36 +1,48 @@
 {% comment %}
-Reusable animation selector widget (collapsible category tree).
-Usage: {% include "_anim_selector.html" with field_name="default_anim_config" current_value=settings.default_anim_config selector_id="anim-sel-config" %}
-Required context: available_animations (list of categories from _get_available_animations())
+Auswahlfeld fuer die Standard-Animation. Verwendung:
+
+  {% include "_anim_selector.html" with field_name="default_anim_config"
+     current_value=settings.default_anim_config selector_id="anim-sel-config" %}
+
+Erwartet im Zusammenhang: `anim_kategorien` (aus Animationsauswahl.kategorien()).
+Die Theatre-Seite gibt zusaetzlich `wertformat="pfad"` mit.
+
+Umbau 16.08.2026 (Performance): Der Baustein rendete alle 7.067 Animationen als
+je ein <div> mit rund 400 Byte Inline-Stil — bei /settings/model/ zweimal, macht
+4,7 MB HTML und 235-408 ms Serverzeit. Sichtbar war davon nichts, denn jede
+Kategorie startet zugeklappt. Jetzt kommen nur die 14 Koepfe aus der Vorlage;
+animationsauswahl.js holt die Eintraege beim ersten Aufklappen ueber
+/api/animationen/<kategorie>/. Die Inline-Stile sind dabei in style.css
+gewandert (.anim-*), was den Rest nochmal deutlich kuerzt.
 {% endcomment %}
 
-<input type="hidden" name="{{ field_name }}" id="{{ selector_id }}-hidden" value="{{ current_value }}">
+<div class="anim-auswahl" id="{{ selector_id }}"
+     data-wertformat="{{ wertformat|default:'url' }}">
+    <input type="hidden" name="{{ field_name }}" id="{{ selector_id }}-hidden"
+           value="{{ current_value }}">
 
-<div style="margin-bottom:0.5rem;padding:0.5rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
-    <strong>Aktuell:</strong>
-    <span id="{{ selector_id }}-display">
-        {% if current_value %}{{ current_value }}{% else %}(Keine Auto-Load){% endif %}
-    </span>
-</div>
-
-<div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;">
-    <div class="anim-selection-item" data-selector="{{ selector_id }}" data-value="" style="padding:0.5rem;cursor:pointer;border-bottom:1px solid var(--border);{% if not current_value %}background:var(--accent);color:white;{% endif %}">
-        <i class="fas fa-times-circle"></i> (Keine Auto-Load)
+    <div class="anim-aktuell">
+        <strong>Aktuell:</strong>
+        <span id="{{ selector_id }}-display">{% if current_value %}{{ current_value }}{% else %}(Keine Auto-Load){% endif %}</span>
+        {% if current_value in anim_fehlt %}
+        <span class="anim-fehlt" title="Die Datei liegt nicht mehr im Bestand — beim Laden gibt es einen Fehler 404.">
+            <i class="fas fa-triangle-exclamation"></i> Datei fehlt
+        </span>
+        {% endif %}
     </div>
 
-    {% for category in available_animations %}
-    <div class="anim-category">
-        <div class="anim-cat-header-settings" style="padding:0.5rem;background:var(--bg-secondary);cursor:pointer;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-            <span><i class="fas fa-folder"></i> {{ category.name }} ({{ category.animations|length }})</span>
-            <i class="fas fa-chevron-down" style="font-size:0.8rem;transition:transform 0.2s;"></i>
+    <div class="anim-liste">
+        <div class="anim-eintrag{% if not current_value %} gewaehlt{% endif %}" data-value="">
+            <i class="fas fa-times-circle"></i> (Keine Auto-Load)
         </div>
-        <div class="anim-cat-body-settings" style="display:none;">
-            {% for anim in category.animations %}
-            <div class="anim-selection-item" data-selector="{{ selector_id }}" data-value="{{ anim.value }}" style="padding:0.4rem 0.5rem 0.4rem 1.5rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem;{% if current_value == anim.value %}background:var(--accent);color:white;{% endif %}">
-                {{ anim.label }}
+        {% for kategorie in anim_kategorien %}
+        <div class="anim-kategorie" data-kategorie="{{ kategorie.name }}">
+            <div class="anim-kopf">
+                <span><i class="fas fa-folder"></i> {{ kategorie.name }} ({{ kategorie.anzahl }})</span>
+                <i class="fas fa-chevron-down anim-pfeil"></i>
             </div>
-            {% endfor %}
+            <div class="anim-koerper" hidden></div>
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 </div>

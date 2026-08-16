@@ -459,9 +459,114 @@ td a { color: var(--accent); text-decoration: none; }
 
 .bvh-card:hover { transform: translateY(-2px); }
 
-.bvh-preview {
-    height: 150px;
-    background: var(--bg-primary);
+/* Animationsauswahl der Einstellungsseiten (_anim_selector.html).
+   Umbau 16.08.2026: Die Vorlage trug diese Regeln als Inline-Stil an JEDEM der
+   7.067 Eintraege — rund 400 Byte pro Zeile, bei /settings/model/ zweimal im
+   Dokument. Die Eintraege kommen jetzt aus animationsauswahl.js nach; deren
+   Aussehen muss deshalb ohnehin hier stehen und nicht in der Vorlage. */
+.anim-aktuell {
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+/* Hinweis, wenn die gespeicherte Animation nicht mehr im Bestand liegt
+   (Befund 16.08.2026: die Einstellung zeigte auf Results/nussknacker, die
+   Datei gibt es nicht mehr — sichtbar war das nur als 404 in der Konsole). */
+.anim-fehlt {
+    margin-left: 0.5rem;
+    color: var(--danger, #e5534b);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.anim-liste {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.anim-kopf {
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.anim-pfeil {
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+}
+
+.anim-pfeil.offen { transform: rotate(180deg); }
+
+.anim-eintrag {
+    padding: 0.5rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+}
+
+.anim-eintrag.anim-tief {
+    padding: 0.4rem 0.5rem 0.4rem 1.5rem;
+    font-size: 0.85rem;
+}
+
+.anim-eintrag.gewaehlt {
+    background: var(--accent);
+    color: #fff;
+}
+
+.anim-koerper { font-size: 0.85rem; }
+
+.tab-feld {
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* Suche, Zaehler und Seitenlinks der BVH-Bibliothek (Umbau 16.08.2026 —
+   vorher rendete die Seite alle 7.110 Eintraege auf einmal, 10,5 MB HTML).
+   `.bvh-preview` ist entfallen: der Container wurde von keinem Skript gefuellt. */
+.bvh-suche {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.bvh-suche input[type="search"],
+.bvh-suche select {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+.bvh-anzahl {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+.bvh-seiten {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1.5rem 0;
+}
+
+.bvh-seitenstand {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 0 0.5rem;
 }
 
 .bvh-info {

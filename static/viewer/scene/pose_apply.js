@@ -1,9 +1,9 @@
 /**
  * Scene Editor -- Pose browser + apply + rename/delete.
  */
-import { THREE, SESSION_KEY } from './state.js';
+import { SESSION_KEY } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { _selectedInst, getCSRFToken } from './utils.js';
 import { convertInstToSkinned } from './skeleton.js';
 

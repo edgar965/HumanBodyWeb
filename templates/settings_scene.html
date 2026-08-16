@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Szene - Einstellungen{% endblock %}
 
 {% block content %}
@@ -142,164 +143,45 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-(function() {
-    const currentScene = "{{ settings.default_model_scene|escapejs }}";
-    // Populate model presets
-    fetch('/api/character/models/')
-        .then(r => r.json())
-        .then(data => {
-            const presets = data.presets || [];
-            const sel = document.getElementById('default-model-scene');
-            if (!sel) return;
-            sel.innerHTML = '';
-            presets.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.name;
-                opt.textContent = p.label || p.name;
-                if (p.name === currentScene) opt.selected = true;
-                sel.appendChild(opt);
-            });
-        })
-        .catch(e => console.warn('Failed to load model presets:', e));
+{% comment %}Umbau 16.08.2026: Modell-Felder, Tab-Ankreuzfelder, Animationsauswahl
+und die MakeHuman-Kleiderliste lagen hier inline — die ersten drei wortgleich auch
+in settings_model/result/theatre. Jetzt ES-Module unter static/js/einstellungen/.{% endcomment %}
+<script type="module">
+import { Modellfeld } from "{% static 'js/einstellungen/modellfeld.js' %}?t={% now 'U' %}";
+import { Tabfelder } from "{% static 'js/einstellungen/tabfelder.js' %}?t={% now 'U' %}";
+import { Animationsauswahl } from "{% static 'js/einstellungen/animationsauswahl.js' %}?t={% now 'U' %}";
+import { Kleiderfelder } from "{% static 'js/einstellungen/kleiderfelder.js' %}?t={% now 'U' %}";
 
-    // Expanded panels checkboxes
-    const SCENE_PANELS = [
-        ['beleuchtung', 'Beleuchtung'], ['renderer', 'Renderer'],
-        ['kamera', 'Kamera'], ['material_skin', 'Material (Skin)'],
-        ['aktionen', 'Aktionen'],
-    ];
-    function buildPanelCheckboxes(wrapId, panels, prefix, expandedJson) {
-        const wrap = document.getElementById(wrapId);
-        if (!wrap) return;
-        let expanded = [];
-        try { expanded = JSON.parse(expandedJson || '[]'); } catch(e) {}
-        wrap.innerHTML = '';
-        panels.forEach(([key, label]) => {
-            const lbl = document.createElement('label');
-            lbl.className = 'settings-checkbox';
-            lbl.style.display = 'block';
-            lbl.style.marginBottom = '4px';
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.name = prefix + key;
-            cb.checked = expanded.includes(key);
-            lbl.appendChild(cb);
-            lbl.appendChild(document.createTextNode(' ' + label));
-            wrap.appendChild(lbl);
-        });
-    }
-    buildPanelCheckboxes('panels-scene-wrap', SCENE_PANELS, 'panel_scene_',
-        "{{ settings.expanded_panels_scene|escapejs }}");
+Modellfeld.fuellen('default-model-scene', "{{ settings.default_model_scene|escapejs }}");
+Modellfeld.fuellen('kleider-bone-model',
+    "{{ settings.ui_prefs.kleider_bone_model|default:'Rig1'|escapejs }}");
 
-    // Animation selector expand/collapse + click (shared widget)
-    document.querySelectorAll('.anim-cat-header-settings').forEach(header => {
-        header.addEventListener('click', () => {
-            const body = header.nextElementSibling;
-            const icon = header.querySelector('.fa-chevron-down');
-            if (body.style.display === 'none') {
-                body.style.display = 'block';
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                body.style.display = 'none';
-                icon.style.transform = 'rotate(0deg)';
-            }
-        });
+Tabfelder.bauen('panels-scene-wrap', [
+    ['beleuchtung', 'Beleuchtung'], ['renderer', 'Renderer'],
+    ['kamera', 'Kamera'], ['material_skin', 'Material (Skin)'],
+    ['aktionen', 'Aktionen'],
+], 'panel_scene_', "{{ settings.expanded_panels_scene|escapejs }}");
+
+Animationsauswahl.alleStarten();
+
+Kleiderfelder.fuellen(
+    ['mh-default-1', 'mh-default-2', 'mh-default-3', 'mh-default-4'],
+    ["{{ settings.ui_prefs.mh_default_1|default:''|escapejs }}",
+     "{{ settings.ui_prefs.mh_default_2|default:''|escapejs }}",
+     "{{ settings.ui_prefs.mh_default_3|default:''|escapejs }}",
+     "{{ settings.ui_prefs.mh_default_4|default:''|escapejs }}"]);
+
+const posenfeld = document.getElementById('default-pose');
+if (posenfeld) posenfeld.value = "{{ settings.ui_prefs.default_pose|default:'a_pose'|escapejs }}";
+
+// Schieberegler Auswahl-Deckkraft: Anzeige in Prozent, gespeichert wird 0..1.
+const regler = document.getElementById('selection-opacity-range');
+if (regler) {
+    regler.addEventListener('input', () => {
+        document.getElementById('selection-opacity-val').textContent = regler.value + '%';
+        document.getElementById('selection-opacity-hidden').value =
+            (parseInt(regler.value, 10) / 100).toFixed(2);
     });
-    document.querySelectorAll('.anim-selection-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const selectorId = item.getAttribute('data-selector');
-            const value = item.getAttribute('data-value');
-            document.getElementById(selectorId + '-hidden').value = value;
-            document.getElementById(selectorId + '-display').textContent = value || '(Keine Auto-Load)';
-            document.querySelectorAll(`.anim-selection-item[data-selector="${selectorId}"]`).forEach(i => {
-                i.style.background = '';
-                i.style.color = '';
-            });
-            item.style.background = 'var(--accent)';
-            item.style.color = 'white';
-        });
-    });
-
-    // Pose dropdown
-    const poseSelect = document.getElementById('default-pose');
-    if (poseSelect) {
-        const savedPose = "{{ settings.ui_prefs.default_pose|default:'a_pose'|escapejs }}";
-        poseSelect.value = savedPose;
-    }
-
-    // Kleider bone model dropdown
-    const boneModelSelect = document.getElementById('kleider-bone-model');
-    if (boneModelSelect) {
-        const savedModel = "{{ settings.ui_prefs.kleider_bone_model|default:'Rig1'|escapejs }}";
-        fetch('/api/character/models/')
-            .then(r => r.json())
-            .then(data => {
-                boneModelSelect.innerHTML = '';
-                const presets = data.presets || [];
-                presets.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m.name;
-                    opt.textContent = m.label || m.name;
-                    if (m.name === savedModel) opt.selected = true;
-                    boneModelSelect.appendChild(opt);
-                });
-                if (!boneModelSelect.value) boneModelSelect.value = savedModel;
-            })
-            .catch(() => { boneModelSelect.innerHTML = '<option>Fehler beim Laden</option>'; });
-    }
-
-    // MakeHuman default assets dropdowns
-    const mhDefaults = [
-        "{{ settings.ui_prefs.mh_default_1|default:''|escapejs }}",
-        "{{ settings.ui_prefs.mh_default_2|default:''|escapejs }}",
-        "{{ settings.ui_prefs.mh_default_3|default:''|escapejs }}",
-        "{{ settings.ui_prefs.mh_default_4|default:''|escapejs }}",
-    ];
-    fetch('/api/character/garment/library/')
-        .then(r => r.json())
-        .then(data => {
-            const garments = [];
-            if (data.garments) {
-                for (const cat of Object.keys(data.garments).sort()) {
-                    for (const g of data.garments[cat]) {
-                        garments.push({ id: g.id, name: g.name || g.id, category: cat });
-                    }
-                }
-            }
-            for (let i = 0; i < 4; i++) {
-                const sel = document.getElementById('mh-default-' + (i + 1));
-                if (!sel) continue;
-                sel.innerHTML = '<option value="">(Kein Asset)</option>';
-                let lastCat = '';
-                let optgroup = null;
-                for (const g of garments) {
-                    if (g.category !== lastCat) {
-                        optgroup = document.createElement('optgroup');
-                        optgroup.label = g.category.charAt(0).toUpperCase() + g.category.slice(1);
-                        sel.appendChild(optgroup);
-                        lastCat = g.category;
-                    }
-                    const opt = document.createElement('option');
-                    opt.value = g.id;
-                    opt.textContent = g.name;
-                    if (mhDefaults[i] === g.id) opt.selected = true;
-                    (optgroup || sel).appendChild(opt);
-                }
-            }
-        })
-        .catch(e => console.warn('Failed to load MH garment library:', e));
-
-    // Selection opacity slider
-    const range = document.getElementById('selection-opacity-range');
-    const valSpan = document.getElementById('selection-opacity-val');
-    const hidden = document.getElementById('selection-opacity-hidden');
-    if (range) {
-        range.addEventListener('input', () => {
-            valSpan.textContent = range.value + '%';
-            hidden.value = (parseInt(range.value, 10) / 100).toFixed(2);
-        });
-    }
-})();
+}
 </script>
 {% endblock %}

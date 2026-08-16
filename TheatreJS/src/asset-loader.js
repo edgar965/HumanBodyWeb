@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { getSheet, createMeshSheet } from './theatre-bridge.js';
-import { generateRigBoneMesh, generateModelMesh } from '../../static/viewer/model_generator.js';
+// model_generator.js wurde am 16.08.2026 in modellbau/ zerlegt. Dieser Import
+// zeigte danach ins Leere und der Vite-Build brach ab — unbemerkt, weil
+// static/theatre/theatre-app.js als altes Ergebnis weiter ausgeliefert wurde.
+import { generateRigBoneMesh } from '../../static/viewer/modellbau/rignetz.js';
+import { generateModelMesh } from '../../static/viewer/modellbau/modellnetz.js';
 
 const gltfLoader = new GLTFLoader();
 const bvhLoader = new BVHLoader();

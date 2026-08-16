@@ -8,24 +8,17 @@
  * Photo analysis sets SMPL-X betas -> both models update.
  */
 
-import { state } from './state.js';
-import { fn } from './registry.js';
 
 // Import all modules so they register their functions in the registry.
 import { initScene, animate } from './scene.js';
-import { loadMesh, loadRigifySkeleton, requestMeshUpdate, applySkinColor, buildRigifySkeleton } from './humanbody_mesh.js';
-import { applyFacialExpression } from './facial_expression.js';
-import { loadSmplxModel, loadSmplxTexture, requestSmplxUpdate, showSmplxRig, buildSmplxPanel } from './smplx_model.js';
-import { loadMorphs, buildMorphPanel } from './humanbody_morphs.js';
+import { loadMesh, loadRigifySkeleton } from './humanbody_mesh.js';
+import { loadSmplxModel } from './smplx_model.js';
+import { buildSmplxPanel } from './smplx_panel.js';
+import { loadMorphs } from './humanbody_morphs.js';
 import { initModelToggle, initRigToggle, initSmplxToggle, initSmplxRigToggle } from './toggles.js';
 import { initPhotoUpload, analyzePhoto } from './photo_upload.js';
-import {
-    loadBackendStatus, initSaveButton,
-    initTextureButtons, enableTextureButtons, showTextureProgress,
-    initPhotoTabs, loadJobResult, captureAndSaveScreenshot,
-} from './job_management.js';
-import { renderAlignmentPreview } from './alignment_preview.js';
-import { startWizard } from './wizard.js';
+import { loadBackendStatus, initSaveButton, initTextureButtons, initPhotoTabs } from './job_management.js';
+import { loadJobResult } from './auftragsergebnis.js';
 
 console.log('[Photo To 3D] ES modules loaded');
 

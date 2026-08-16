@@ -69,6 +69,19 @@ GERAETE = {
     *(f'LPT{i}' for i in range(1, 10)),
 }
 
+#: Zeichen, die in einem Namensbestandteil nicht vorkommen dürfen (13.08.2026).
+#: Der Doppelpunkt ist der gefährliche davon: `video:1.mp4` ist unter NTFS kein
+#: Dateiname, sondern der Datenstrom `1.mp4` der Datei `video`. Gemessen:
+#: geschrieben wurde eine 0 Byte grosse Datei `video`, der Inhalt lag unsichtbar
+#: im Datenstrom — und der Export meldete Erfolg.
+#: `pruefe()` verbot Doppelpunkte von Anfang an, `dateiname()` nicht. Also
+#: wieder dasselbe Muster (an einer Stelle richtig, an der anderen nicht),
+#: diesmal im Wächter selbst. Deshalb steht die Liste HIER und wird von beiden
+#: Methoden benutzt; `test_safe_paths` hält fest, dass sie es tun.
+#: Die übrigen Zeichen kann Windows ohnehin nicht anlegen — sie früh abzulehnen
+#: erspart einen `OSError` an einer Stelle, die nichts mehr erklären kann.
+NAME_VERBOTEN = frozenset('<>:"|?*') | frozenset(chr(c) for c in range(32))
+
 
 class PfadAbgelehnt(ValueError):
     """Der übergebene Pfad liegt außerhalb der erlaubten Wurzeln oder ist unsicher."""
@@ -126,11 +139,19 @@ class SafePath:
         Sicherungen liegen. Darum wird hier festgehalten, dass der Ordnername
         `bvh` erwartet wird, und andernfalls gewarnt."""
         b = Path(str(settings.HUMANBODY_BVH_DIR)).resolve()
-        wurzel = b.parent
+        # Zeigt die Einstellung schon auf `…/bvh`, ist DAS die Wurzel — sonst
+        # gäbe `.parent` das Elternverzeichnis `data/animations` frei, in dem
+        # auch Sicherungen liegen (Einwand aus dem Sparring, 13.08.2026: vorher
+        # wurde hier nur gewarnt und die zu weite Wurzel trotzdem geliefert).
+        wurzel = b if b.name.lower() == 'bvh' else b.parent
         if wurzel.name.lower() != 'bvh':
-            logger.warning(
-                'SafePath: BVH-Wurzel heisst %r, erwartet wurde "bvh" — pruefen, '
-                'ob HUMANBODY_BVH_DIR noch auf eine Kategorie zeigt.', wurzel.name)
+            # Verschlossen scheitern: Lieber alle BVH-Endpunkte mit einer
+            # eindeutigen Meldung ablehnen als stillschweigend ein zu weites
+            # Verzeichnis zum Schreiben und Löschen freigeben.
+            logger.error(
+                'SafePath: BVH-Wurzel nicht bestimmbar — HUMANBODY_BVH_DIR=%r, '
+                'erwartet wurde ein Ordner "bvh" oder eine Kategorie darunter.', str(b))
+            raise PfadAbgelehnt('BVH-Wurzel nicht bestimmbar (HUMANBODY_BVH_DIR)')
         return wurzel
 
     # `TOOLS_ROOT` ist BEWUSST KEINE Wurzel. Der erste Wurf hatte sie drin — die
@@ -177,6 +198,17 @@ class SafePath:
         if ziel.name.split('.')[0].upper() in GERAETE:
             raise PfadAbgelehnt('Gerätename ist kein gültiges Ziel: %s' % ziel.name)
 
+        # Jeden Namensbestandteil prüfen — `parts[0]` ist der Anker (`A:\`) und
+        # enthält den einen erlaubten Doppelpunkt.
+        for teil in ziel.parts[1:]:
+            if NAME_VERBOTEN & set(teil):
+                raise PfadAbgelehnt('Unzulässiges Zeichen im Pfad')
+            # Windows schneidet Punkt und Leerzeichen am Ende ab. Gemessen
+            # (13.08.2026): `resolve()` behält sie, das Dateisystem nicht —
+            # die Antwort nennt dann einen Pfad, den es so nie gab.
+            if teil != teil.rstrip(' .'):
+                raise PfadAbgelehnt('Pfadteil darf nicht auf Punkt oder Leerzeichen enden')
+
         if not any(self._liegt_in(ziel, w) for w in self.wurzeln):
             # Der abgelehnte Pfad gehört ins Protokoll, nicht in die Antwort:
             # eine Fehlermeldung mit vollem Pfad ist eine Auskunft über das
@@ -192,10 +224,10 @@ class SafePath:
     @staticmethod
     def _grobpruefung(text):
         """UNC und Alternate Data Streams ablehnen, BEVOR das Dateisystem antwortet."""
+        # Deckt UNC und die Gerätepfade `\\?\` / `\\.\` in einem ab — die
+        # eigene Abfrage dafür stand hinter dieser hier und war unerreichbar.
         if text.startswith('\\\\') or text.startswith('//'):
-            raise PfadAbgelehnt('Netzwerkpfade (UNC) sind nicht erlaubt')
-        if text.startswith('\\\\?\\') or text.startswith('\\\\.\\'):
-            raise PfadAbgelehnt('Gerätepfade sind nicht erlaubt')
+            raise PfadAbgelehnt('Netzwerk- und Gerätepfade sind nicht erlaubt')
         # NTFS-Datenströme: "datei.json:versteckt" landet nicht als Datei.
         # Der Laufwerksbuchstabe (C:) ist der erlaubte Doppelpunkt.
         ohne_laufwerk = text[2:] if len(text) > 1 and text[1] == ':' else text
@@ -225,6 +257,10 @@ class SafePath:
             raise PfadAbgelehnt('Kein Dateiname angegeben')
         if Path(text).name != text or text in ('.', '..'):
             raise PfadAbgelehnt('Dateiname darf keinen Pfadanteil enthalten')
+        # Dieselbe Verbotsliste wie in `pruefe` — siehe NAME_VERBOTEN. Hier
+        # fehlte sie, und ein Name wie `video:1.mp4` kam durch.
+        if NAME_VERBOTEN & set(text):
+            raise PfadAbgelehnt('Unzulässiges Zeichen im Dateinamen')
         if text.split('.')[0].upper() in GERAETE:
             raise PfadAbgelehnt('Gerätename ist kein gültiger Dateiname')
         # Fuehrender Bindestrich: Der Name landet in Kommandozeilen (ffmpeg im

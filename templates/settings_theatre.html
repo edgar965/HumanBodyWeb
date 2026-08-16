@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Theatre - Einstellungen{% endblock %}
 
 {% block content %}
@@ -33,7 +34,9 @@
                 <small>Welche Animation automatisch beim Laden der Theatre-Seite abgespielt wird.</small>
             </div>
             <div class="settings-input">
-                {% include "_anim_selector.html" with field_name="theatre_default_animation" current_value=settings.theatre_default_animation selector_id="anim-sel-theatre" %}
+                {% comment %}wertformat="pfad": Theatre speichert <kat>/<name>,
+                nicht die Viewer-URL — siehe Animationsauswahl.{% endcomment %}
+                {% include "_anim_selector.html" with field_name="theatre_default_animation" current_value=settings.theatre_default_animation selector_id="anim-sel-theatre" wertformat="pfad" %}
             </div>
         </div>
 
@@ -136,42 +139,8 @@
     </ul>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Category expand/collapse (shared across all anim selectors)
-    document.querySelectorAll('.anim-cat-header-settings').forEach(header => {
-        header.addEventListener('click', () => {
-            const body = header.nextElementSibling;
-            const icon = header.querySelector('.fa-chevron-down');
-            if (body.style.display === 'none') {
-                body.style.display = 'block';
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                body.style.display = 'none';
-                icon.style.transform = 'rotate(0deg)';
-            }
-        });
-    });
-
-    // Animation selection (scoped per selector via data-selector attribute)
-    document.querySelectorAll('.anim-selection-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const selectorId = item.getAttribute('data-selector');
-            const value = item.getAttribute('data-value');
-            const displayText = value || '(Keine Auto-Load)';
-
-            document.getElementById(selectorId + '-hidden').value = value;
-            document.getElementById(selectorId + '-display').textContent = displayText;
-
-            // Highlight only within same selector group
-            document.querySelectorAll(`.anim-selection-item[data-selector="${selectorId}"]`).forEach(i => {
-                i.style.background = '';
-                i.style.color = '';
-            });
-            item.style.background = 'var(--accent)';
-            item.style.color = 'white';
-        });
-    });
-});
+<script type="module">
+import { Animationsauswahl } from "{% static 'js/einstellungen/animationsauswahl.js' %}?t={% now 'U' %}";
+Animationsauswahl.alleStarten();
 </script>
 {% endblock %}

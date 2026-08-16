@@ -3,9 +3,9 @@
  * NOTE: Full implementation migrated from scene_config.js lines 2799-6992.
  * Contains loadAnimationUI, loadBVHAnimation, stopAnimation, applyGroundLevelFix, etc.
  */
-import { THREE, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText, buildRigifySkeleton } from './state.js';
+import { THREE, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { escapeHtml, _selectedInst, getCSRFToken } from './utils.js';
 import { convertToRigifySkinnedMesh, convertInstToSkinned } from './skeleton.js';
 

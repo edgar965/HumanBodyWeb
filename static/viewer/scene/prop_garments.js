@@ -4,10 +4,11 @@
  */
 import { THREE } from './state.js';
 import { state, REGION_IDS } from './state.js';
-import { fn } from './registry.js';
-import { _bindSlider, _sliderVal, _selectedInst, _charQueryParams, _getBodyTop, base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './utils.js';
-import { _selectedGarmentMesh, _computeGarmentRegionWeights, _applyGarmentRegionOffsets, _syncGarmentSliders } from './garments.js';
-import { _skinifyMesh, convertInstToSkinned, _skinifyHairGroup } from './skeleton.js';
+import { fn } from '../gemeinsam/registrierung.js';
+import { _bindSlider, _sliderVal, _charQueryParams, base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './utils.js';
+import { _selectedGarmentMesh } from './garments.js';
+import { _computeGarmentRegionWeights, _applyGarmentRegionOffsets } from './kleidung_anpassen.js';
+import { _skinifyMesh } from './skeleton.js';
 import { markDirty } from './undo.js';
 
 export function _syncPropGarmentControls() {

@@ -2,8 +2,9 @@
  * Photo To 3D — Photo upload and analyze functionality.
  */
 import { state, API } from './state.js';
-import { fn } from './registry.js';
-import { enableTextureButtons, captureAndSaveScreenshot, showJobJson } from './job_management.js';
+import { fn } from '../gemeinsam/registrierung.js';
+import { enableTextureButtons, captureAndSaveScreenshot } from './job_management.js';
+import { showJobJson } from './auftragsergebnis.js';
 
 // =========================================================================
 // Photo Upload

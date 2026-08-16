@@ -15,6 +15,9 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// Aus gemeinsam/kodierung.js — die Kopien hier sind am 15.08.2026 entfallen (sechsfach vorhanden).
+import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './gemeinsam/kodierung.js';
+export { base64ToFloat32, base64ToUint32, blenderToThreeCoords };
 
 console.log('[character_core] v1.0 loaded');
 
@@ -49,28 +52,8 @@ export const BODY_MATERIALS = [
 // Base64 / Coordinate Utilities
 // =========================================================================
 
-export function base64ToFloat32(b64) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Float32Array(bytes.buffer);
-}
 
-export function base64ToUint32(b64) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Uint32Array(bytes.buffer);
-}
 
-export function blenderToThreeCoords(buf) {
-    for (let i = 0; i < buf.length; i += 3) {
-        const y = buf[i + 1];
-        const z = buf[i + 2];
-        buf[i + 1] = z;
-        buf[i + 2] = -y;
-    }
-}
 
 // =========================================================================
 // Data Loaders (populate sharedState)

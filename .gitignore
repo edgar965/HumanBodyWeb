@@ -33,3 +33,16 @@ nul
 ~WRL*
 .DS_Store
 Thumbs.db
+
+# Laufzeitdaten (Ergaenzung 16.08.2026): Diese Verzeichnisse fuellen sich im
+# Betrieb und gehoeren nicht in die Versionsverwaltung. Ohne die Eintraege
+# standen ueber 300 Analysebilder als "untracked" im Status und wanderten beim
+# naechsten `git add -A` mit ins Repo.
+logs/
+media/photo_analysis/
+ProjektTemp/
+
+# Zustand der Hilfe-Seiten (djangoBase): Ankreuzliste der Skills-Lehren und die
+# Referenz der Endpunktprobe — pro Rechner verschieden.
+.djangobase-skills.json
+.djangobase-endpunkte.json

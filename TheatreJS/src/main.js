@@ -14,6 +14,9 @@ import { PRESETS, applyPreset } from './presets.js';
 import { fetchRetargetedClip, fetchRetargetedClipFromText, detectBVHFormat } from './retarget_hybrid.js';
 import { buildRigifySkeleton } from './rigify_skeleton_builder.js';
 import { KeyframeUI } from './keyframe-ui.js';
+import { Skinner } from './studio/skinner.js';
+import { Lichtpanel } from './studio/panels/lichtpanel.js';
+import { Kleiderpanel } from './studio/panels/kleiderpanel.js';
 
 // Theatre.js ignores the getProject({ state }) param if localStorage exists.
 // Clear stale localStorage so our state.json (with correct sequence length) takes effect.
@@ -124,304 +127,25 @@ window.addEventListener('DOMContentLoaded', () => {
     const loadedCharacters = [];   // Track all loaded character groups
     let reloadDebounceTimer = null; // Debounce for character reload
 
-    // Skeleton and skin weights data (loaded once at startup)
-    let rigifySkeletonData = null;
-    let skinWeightData = null;
-    let skeletonLoadingPromise = null;
-    let rigifySkeleton = null;  // { skeleton, rootBone, bones, boneByName } - like Dashboard
-    let skeletonHelper = null;  // Single global SkeletonHelper - like Dashboard
-    let rigVisible = false;  // Rig visibility state - like Dashboard
+    // Skelett, Gewichte und die Umwandlung zu SkinnedMesh stecken in einer
+    // eigenen Klasse (studio/skinner.js). Vorher standen hier 290 Zeilen mit
+    // fuenf Closure-Variablen, an denen sechs Funktionen gemeinsam schrieben.
+    const skinner = new Skinner(scene, loadedCharacters);
+    skinner.laden();
+    window.skinner = skinner;
 
-    // Load skeleton and skin weights data
-    async function loadSkeletonAndWeights() {
-        if (skeletonLoadingPromise) return skeletonLoadingPromise;
+    // Licht-Eigenschaften: studio/panels/lichtpanel.js (vorher 162 Zeilen hier,
+    // davon rund 90 Inline-Stile — die stehen jetzt als .pnl-* in theatre.html).
+    // Die Deklaration gehoert VOR den Klick-Zuhoerer weiter unten: `const` in
+    // einem Block gilt erst ab seiner Zeile.
+    const lichtpanel = new Lichtpanel(lights);
+    window.lichtpanel = lichtpanel;   // wie window.scene/lights: fuer Konsole und UI-Tests
 
-        skeletonLoadingPromise = (async () => {
-            try {
-                const [skelResp, weightsResp] = await Promise.all([
-                    fetch('/api/character/rigify-skeleton/'),
-                    fetch('/api/character/skin-weights/')
-                ]);
-                if (skelResp.ok) rigifySkeletonData = await skelResp.json();
-                if (weightsResp.ok) skinWeightData = await weightsResp.json();
-                console.log('✓ Loaded skeleton and skin weights:', rigifySkeletonData?.bones?.length || 0, 'bones');
-
-                // Build rigifySkeleton object using Dashboard's buildRigifySkeleton function
-                if (rigifySkeletonData && skinWeightData) {
-                    rigifySkeleton = buildRigifySkeleton(rigifySkeletonData, skinWeightData);
-                    console.log('✓ Built rigifySkeleton:', rigifySkeleton.bones.length, 'bones');
-
-                    // Make rigifySkeletonData available globally for test
-                    window.rigifySkeletonData = rigifySkeletonData;
-                    window.rigifySkeleton = rigifySkeleton;
-                }
-
-                // Auto-convert any characters that were loaded before skeleton was ready
-                for (const char of loadedCharacters) {
-                    if (!char.userData.isSkinnedMesh) {
-                        autoConvertToSkinnedMesh(char);
-                    }
-                }
-            } catch (err) {
-                console.warn('Failed to load skeleton/weights:', err);
-            }
-        })();
-
-        return skeletonLoadingPromise;
-    }
-
-    // Load at startup
-    loadSkeletonAndWeights();
-
-    /**
-     * Helper: Auto-convert character to SkinnedMesh if skeleton data is loaded.
-     * Creates SkeletonHelper for visualization.
-     */
-    function autoConvertToSkinnedMesh(characterGroup) {
-        // Only convert if skeleton data is ready
-        if (rigifySkeletonData && skinWeightData && !characterGroup.userData.isSkinnedMesh) {
-            setTimeout(() => {
-                try {
-                    convertCharacterToSkinnedMesh(characterGroup, scene);
-                    console.log('✓ Auto-converted to SkinnedMesh:', characterGroup.userData.presetName);
-                } catch (err) {
-                    console.warn('Auto-convert failed:', err);
-                }
-            }, 100); // Small delay to ensure character is fully added to scene
-        }
-    }
-
-    /**
-     * Load BVH animation on a SkinnedMesh via server-side retarget API.
-     */
-    async function loadBVHOnSkinnedMesh(bvhText, skinnedMesh, scene, animName) {
-        if (!rigifySkeleton || !rigifySkeleton.boneByName) {
-            throw new Error('Skeleton not ready');
-        }
-
-        let bodyH = 1.68;
-        if (skinnedMesh) {
-            const bb = new THREE.Box3().setFromObject(skinnedMesh);
-            if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
-        }
-
-        const clip = await fetchRetargetedClipFromText(bvhText, rigifySkeleton, { bodyHeight: bodyH });
-
-        const mixer = new THREE.AnimationMixer(skinnedMesh);
-        const action = mixer.clipAction(clip);
-        action.setLoop(THREE.LoopRepeat);
-        action.play();
-        action.paused = true;
-
-        const duration = clip.duration || 1;
-        console.log(`✓ Retargeted clip (API): ${clip.tracks.length} tracks, ${duration.toFixed(2)}s`);
-
-        return { mixer, action, duration };
-    }
-
-    /**
-     * Convert a character mesh to SkinnedMesh with skeleton binding.
-     * This enables BVH animations to deform the character mesh (not just bones).
-     * Similar to Dashboard-Scene's convertToDefSkinnedMesh().
-     */
-    /**
-     * Convert character to SkinnedMesh using DEF skeleton.
-     * COPIED FROM Dashboard-Scene viewer.js convertToDefSkinnedMesh (lines 780-828)
-     */
-    function convertCharacterToSkinnedMesh(characterGroup, scene) {
-        if (!rigifySkeletonData || !skinWeightData) {
-            console.warn('Cannot convert to SkinnedMesh: skeleton/weights not loaded');
-            return null;
-        }
-
-        if (characterGroup.userData.isSkinnedMesh) {
-            console.log('Already a SkinnedMesh');
-            return characterGroup.userData.skinnedMesh;
-        }
-
-        // Find the body mesh (first child)
-        const bodyMesh = characterGroup.children.find(c => c.isMesh && !c.userData.isHair && !c.userData.isGarment);
-        if (!bodyMesh) {
-            console.warn('No body mesh found in character group');
-            return null;
-        }
-
-        console.log('Converting to SkinnedMesh...');
-
-        // Clone geometry — the original has stale WebGL VAO state from non-skinned rendering
-        const geo = bodyMesh.geometry.clone();
-        const vCount = geo.attributes.position.count;
-
-        // Build skinIndices and skinWeights buffers (Dashboard format)
-        const skinIndices = new Float32Array(vCount * 4);
-        const skinWeights = new Float32Array(vCount * 4);
-
-        const swCount = skinWeightData.weights ? skinWeightData.weights.length : 0;
-        if (vCount !== swCount) {
-            console.error(`[SkinnedMesh] VERTEX COUNT MISMATCH! mesh=${vCount} weights=${swCount}`);
-        }
-
-        for (let v = 0; v < vCount; v++) {
-            const infs = skinWeightData.weights[v] || [];
-            const sorted = infs.slice().sort((a, b) => b[1] - a[1]).slice(0, 4);
-            let sum = sorted.reduce((s, e) => s + e[1], 0);
-            if (sum < 1e-6) sum = 1;
-            for (let i = 0; i < 4; i++) {
-                skinIndices[v * 4 + i] = i < sorted.length ? sorted[i][0] : 0;
-                skinWeights[v * 4 + i] = i < sorted.length ? sorted[i][1] / sum : 0;
-            }
-        }
-
-        geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
-        geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
-
-        // ALWAYS rebuild skeleton fresh (like Dashboard's convertToDefSkinnedMesh).
-        // Reusing a skeleton whose bones were animated causes stale world matrices
-        // and boneInverses that don't match the current bind context.
-        rigifySkeleton = buildRigifySkeleton(rigifySkeletonData, skinWeightData);
-
-        console.log(`[SkinnedMesh] verts=${vCount} weights=${swCount} bones=${rigifySkeleton.bones.length}`);
-
-        // Create SkinnedMesh
-        const material = bodyMesh.material; // Reuse existing material (array of materials)
-        const pos = bodyMesh.position.clone();
-        const rot = bodyMesh.rotation.clone();
-        const scale = bodyMesh.scale.clone();
-
-        const skinnedMesh = new THREE.SkinnedMesh(geo, material);
-        skinnedMesh.position.copy(pos);
-        skinnedMesh.rotation.copy(rot);
-        skinnedMesh.scale.copy(scale);
-        skinnedMesh.castShadow = true;
-        skinnedMesh.receiveShadow = true;
-
-        // Add root bone and bind skeleton
-        skinnedMesh.add(rigifySkeleton.rootBone);
-        skinnedMesh.bind(rigifySkeleton.skeleton);
-
-        // Replace old mesh in character group
-        characterGroup.remove(bodyMesh);
-        characterGroup.add(skinnedMesh);
-
-        // Store references
-        characterGroup.userData.isSkinnedMesh = true;
-        characterGroup.userData.skinnedMesh = skinnedMesh;
-        characterGroup.userData.skeleton = rigifySkeleton.skeleton;
-        characterGroup.userData.rootBone = rigifySkeleton.rootBone;
-
-        // Recreate SkeletonHelper if it existed (rootBone changed)
-        if (skeletonHelper) {
-            const wasVisible = skeletonHelper.visible;
-            scene.remove(skeletonHelper);
-            skeletonHelper.dispose();
-            skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
-            skeletonHelper.material.depthTest = false;
-            skeletonHelper.material.depthWrite = false;
-            skeletonHelper.material.color.set(0x00ffaa);
-            skeletonHelper.material.linewidth = 2;
-            skeletonHelper.renderOrder = 999;
-            scene.add(skeletonHelper);
-            skeletonHelper.visible = wasVisible;
-            console.log('✓ SkeletonHelper recreated for new skeleton');
-        }
-
-        console.log('✓ SkinnedMesh created:',
-            'bones:', rigifySkeleton.skeleton.bones.length,
-            'skinIndex:', !!geo.attributes.skinIndex,
-            'skinWeight:', !!geo.attributes.skinWeight);
-
-        // Make skinnedMesh globally accessible for animation
-        window.loadedCharacters = window.loadedCharacters || [];
-        if (!window.loadedCharacters.includes(characterGroup)) {
-            window.loadedCharacters.push(characterGroup);
-        }
-
-        // Bind garments to skeleton (like Result page result_character.js:1319)
-        // Do NOT add rootBone to garment — rootBone must stay in bodyMesh.
-        // Garments share the same Skeleton object and use bodyMesh's bindMatrix.
-        characterGroup.traverse((child) => {
-            if (child.isSkinnedMesh && child !== skinnedMesh && child.userData.needsBinding) {
-                child.bind(rigifySkeleton.skeleton, skinnedMesh.bindMatrix);
-                delete child.userData.needsBinding;
-                console.log('✓ Garment bound to skeleton:', child.name || child.userData.garmentId);
-            }
-        });
-
-        // Convert hair to SkinnedMesh (like Dashboard viewer.js _skinifyHairGroup)
-        const headBoneIdx = _findHeadBoneIndex();
-        if (headBoneIdx >= 0) {
-            const hairChildren = characterGroup.children.filter(c => c.userData.isHair);
-            for (const hairGroup of hairChildren) {
-                // Skip if already skinned
-                let hasRegularMesh = false;
-                hairGroup.traverse((child) => {
-                    if (child.isMesh && !child.isSkinnedMesh) {
-                        hasRegularMesh = true;
-                    }
-                });
-
-                if (hasRegularMesh) {
-                    const skinnedHairGroup = _skinifyHairGroup(hairGroup, headBoneIdx, skinnedMesh);
-                    // Replace original hair group with skinned version
-                    characterGroup.remove(hairGroup);
-                    characterGroup.add(skinnedHairGroup);
-                    console.log('✓ Hair converted to SkinnedMesh:', hairGroup.name || 'hair');
-                }
-            }
-        }
-
-        return skinnedMesh;
-    }
-
-    /**
-     * Find head bone index for hair skinning (Dashboard viewer.js _findHeadBoneIndex)
-     */
-    function _findHeadBoneIndex() {
-        if (!skinWeightData) return -1;
-        const names = skinWeightData.bone_names;
-        for (const tryName of ['DEF-spine.006', 'DEF-spine.005', 'DEF-head']) {
-            const idx = names.indexOf(tryName);
-            if (idx >= 0) return idx;
-        }
-        return -1;
-    }
-
-    /**
-     * Convert hair meshes to SkinnedMesh bound to head bone.
-     * COPIED FROM Dashboard viewer.js _skinifyHairGroup (lines 1941-1969)
-     */
-    function _skinifyHairGroup(gltfScene, headBoneIdx, bodyMesh) {
-        // Collect all meshes from the GLB scene
-        const meshChildren = [];
-        gltfScene.traverse(child => {
-            if (child.isMesh) meshChildren.push(child);
-        });
-
-        const group = new THREE.Group();
-        group.userData.isHair = true;
-
-        for (const child of meshChildren) {
-            const geo = child.geometry.clone();
-            const vCount = geo.attributes.position.count;
-            const si = new Float32Array(vCount * 4);
-            const sw = new Float32Array(vCount * 4);
-            for (let v = 0; v < vCount; v++) {
-                si[v * 4] = headBoneIdx;
-                sw[v * 4] = 1.0;
-            }
-            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(si, 4));
-            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
-
-            const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
-            // Apply the child's world transform so position is correct
-            child.updateWorldMatrix(true, false);
-            skinnedChild.applyMatrix4(child.matrixWorld);
-            skinnedChild.bind(rigifySkeleton.skeleton, bodyMesh.bindMatrix);
-            skinnedChild.userData.isHair = true;
-            group.add(skinnedChild);
-        }
-        return group;
-    }
+    // Kleidungs-Eigenschaften: studio/panels/kleiderpanel.js (vorher 184
+    // Zeilen hier). Dort steht auch, warum elf Regler jetzt zugeklappt und
+    // als 'noch nicht angebunden' beschriftet sind.
+    const kleiderpanel = new Kleiderpanel();
+    window.kleiderpanel = kleiderpanel;
 
     canvas.addEventListener('click', (event) => {
         const rect = canvas.getBoundingClientRect();
@@ -450,7 +174,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 selectedCharacter = null;
                 transformControls.attach(clickedIcon);
                 console.log('✓ Licht ausgewählt:', clickedIcon.userData.light);
-                showLightPanel(clickedIcon.userData.light);
+                lichtpanel.zeigen(clickedIcon.userData.light, clickedIcon);
                 return;
             }
         }
@@ -472,7 +196,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 selectedLightIcon = null;
                 transformControls.attach(clickedMesh);
                 console.log('✓ Garment ausgewählt:', clickedMesh.name);
-                showGarmentPanel(clickedMesh);
+                kleiderpanel.zeigen(clickedMesh);
                 return;
             }
 
@@ -496,7 +220,7 @@ window.addEventListener('DOMContentLoaded', () => {
         transformControls.detach();
         selectedLightIcon = null;
         selectedCharacter = null;
-        hideLightPanel();
+        lichtpanel.verbergen();
     });
 
     // 3. Theatre project + sheet
@@ -672,28 +396,13 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Toggle rig visibility (skeleton) - EXACTLY like Dashboard-Scene
+    // Rig-Anzeige umschalten. Der Aufbau des SkeletonHelper stand hier ein
+    // zweites Mal, mit denselben fuenf Materialzeilen wie beim Umwandeln zu
+    // SkinnedMesh — beides liegt jetzt in Skinner.rigAufbauen().
     const btnToggleRig = document.getElementById('btn-toggle-rig');
     if (btnToggleRig) {
         btnToggleRig.addEventListener('click', () => {
-            rigVisible = !rigVisible;
-            if (rigVisible) {
-                // Create helper if needed (from DEF skeleton when available)
-                if (!skeletonHelper && rigifySkeleton) {
-                    skeletonHelper = new THREE.SkeletonHelper(rigifySkeleton.rootBone);
-                    skeletonHelper.material.depthTest = false;
-                    skeletonHelper.material.depthWrite = false;
-                    skeletonHelper.material.color.set(0x00ffaa);
-                    skeletonHelper.material.linewidth = 2;
-                    skeletonHelper.renderOrder = 999;
-                    scene.add(skeletonHelper);
-                    console.log('✓ SkeletonHelper created');
-                }
-                if (skeletonHelper) skeletonHelper.visible = true;
-            } else {
-                if (skeletonHelper) skeletonHelper.visible = false;
-            }
-            btnToggleRig.classList.toggle('active', rigVisible);
+            btnToggleRig.classList.toggle('active', skinner.rigUmschalten());
         });
     }
 
@@ -955,7 +664,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     charGroup.userData.bodyType = charDef.body_type || 'Unknown';
                     loadedCharacters.push(charGroup);
                     selectedCharacter = charGroup;  // Auto-select loaded character
-                    autoConvertToSkinnedMesh(charGroup);
+                    skinner.autoUmwandeln(charGroup);
                 }
             }
         } catch (err) {
@@ -1056,7 +765,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         charGroup.userData.bodyType = preset.body_type || 'Unknown';
                         loadedCharacters.push(charGroup);
                         selectedCharacter = charGroup;  // Auto-select loaded character
-                        autoConvertToSkinnedMesh(charGroup);
+                        skinner.autoUmwandeln(charGroup);
                         console.log('Model loaded:', m.name);
                         // Highlight active
                         document.querySelectorAll('#model-list .anim-item').forEach(i => i.classList.remove('active'));
@@ -1173,16 +882,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
             if (selectedCharacter) {
                 // Ensure SkinnedMesh exists (builds skeleton ONCE, binds garments+hair)
-                targetMesh = convertCharacterToSkinnedMesh(selectedCharacter, scene);
+                targetMesh = skinner.umwandeln(selectedCharacter);
 
-                if (targetMesh && rigifySkeleton) {
+                if (targetMesh && skinner.skelett) {
                     // Body height for scaling
                     let bodyH = 1.68;
                     const bb = new THREE.Box3().setFromObject(targetMesh);
                     if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
 
                     // Server-side retarget via API (like result_character.js applyBvhRetarget)
-                    const clip = await fetchRetargetedClip(category, name, rigifySkeleton, { bodyHeight: bodyH });
+                    const clip = await fetchRetargetedClip(category, name, skinner.skelett, { bodyHeight: bodyH });
 
                     // Mixer on mesh (like result_character.js:1502-1507)
                     activeMixer = new THREE.AnimationMixer(targetMesh);
@@ -1195,7 +904,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     // Apply frame 0 immediately
                     activeMixer.setTime(0);
                     targetMesh.updateWorldMatrix(true, true);
-                    rigifySkeleton.rootBone.updateWorldMatrix(true, true);
+                    skinner.skelett.rootBone.updateWorldMatrix(true, true);
 
                     console.log(`✓ BVH loaded (API): ${duration.toFixed(1)}s, ${clip.tracks.length} tracks`);
                 }
@@ -1572,7 +1281,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     charGroup.userData.bodyType = modelData.body_type || 'Unknown';
                     loadedCharacters.push(charGroup);
                     selectedCharacter = charGroup;  // Auto-select loaded character
-                    autoConvertToSkinnedMesh(charGroup);
+                    skinner.autoUmwandeln(charGroup);
                     console.log('✓ Auto-loaded model:', cfg.model);
 
                     // Load animation if model loaded successfully
@@ -1595,353 +1304,6 @@ window.addEventListener('DOMContentLoaded', () => {
     // Load defaults after a short delay
     setTimeout(loadDefaults, 500);
 
-    // ── Light Properties Panel (in Eigenschaften Tab) ──
-    function showLightPanel(light) {
-        // Switch to Eigenschaften tab
-        document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        const propsTab = document.querySelector('[data-tab="tab-properties"]');
-        const propsPane = document.getElementById('tab-properties');
-        if (propsTab) propsTab.classList.add('active');
-        if (propsPane) propsPane.classList.add('active');
-
-        // Fill properties panel
-        const content = document.getElementById('properties-content');
-        if (!content) return;
-
-        const lightName = light === lights.spotLeft ? 'Spot Left' :
-                         light === lights.spotRight ? 'Spot Right' :
-                         light === lights.backLight ? 'Back Light' : 'Light';
-
-        const colorHex = '#' + light.color.getHexString();
-
-        content.innerHTML = `
-            <div style="padding:16px;">
-                <h3 style="font-size:0.9rem;margin-bottom:16px;color:var(--accent-purple);border-bottom:1px solid var(--border);padding-bottom:8px;">
-                    <i class="fas fa-lightbulb"></i> ${lightName}
-                </h3>
-
-                <div style="margin-bottom:16px;">
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
-                        Intensität: <span id="light-intensity-value">${light.intensity.toFixed(1)}</span>
-                    </label>
-                    <input type="range" id="light-intensity" min="0" max="100" step="1" value="${light.intensity}"
-                           style="width:100%;" />
-                </div>
-
-                <div style="margin-bottom:16px;">
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
-                        Farbe
-                    </label>
-                    <input type="color" id="light-color" value="${colorHex}"
-                           style="width:100%;height:32px;border-radius:4px;border:1px solid var(--border);background:var(--bg-primary);cursor:pointer;" />
-                </div>
-
-                <div style="margin-bottom:16px;">
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
-                        Position
-                    </label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:0.75rem;">
-                        <div>
-                            <span style="color:var(--text-muted);">X:</span>
-                            <input type="number" id="light-pos-x" value="${light.position.x.toFixed(2)}" step="0.1"
-                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
-                        </div>
-                        <div>
-                            <span style="color:var(--text-muted);">Y:</span>
-                            <input type="number" id="light-pos-y" value="${light.position.y.toFixed(2)}" step="0.1"
-                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
-                        </div>
-                        <div>
-                            <span style="color:var(--text-muted);">Z:</span>
-                            <input type="number" id="light-pos-z" value="${light.position.z.toFixed(2)}" step="0.1"
-                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom:16px;">
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">
-                        Rotation (Grad)
-                    </label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:0.75rem;">
-                        <div>
-                            <span style="color:var(--text-muted);">X:</span>
-                            <input type="number" id="light-rot-x" value="${(light.rotation.x * 180 / Math.PI).toFixed(1)}" step="5"
-                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
-                        </div>
-                        <div>
-                            <span style="color:var(--text-muted);">Y:</span>
-                            <input type="number" id="light-rot-y" value="${(light.rotation.y * 180 / Math.PI).toFixed(1)}" step="5"
-                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
-                        </div>
-                        <div>
-                            <span style="color:var(--text-muted);">Z:</span>
-                            <input type="number" id="light-rot-z" value="${(light.rotation.z * 180 / Math.PI).toFixed(1)}" step="5"
-                                   style="width:100%;padding:4px;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;color:var(--text);" />
-                        </div>
-                    </div>
-                </div>
-
-                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:20px;padding-top:12px;border-top:1px solid var(--border);">
-                    <i class="fas fa-info-circle"></i> Ziehe das Licht-Icon in der Szene um Position/Rotation zu ändern
-                </div>
-            </div>
-        `;
-
-        // Wire up event listeners
-        const intensitySlider = document.getElementById('light-intensity');
-        const intensityValue = document.getElementById('light-intensity-value');
-        const colorPicker = document.getElementById('light-color');
-        const posX = document.getElementById('light-pos-x');
-        const posY = document.getElementById('light-pos-y');
-        const posZ = document.getElementById('light-pos-z');
-
-        if (intensitySlider) {
-            intensitySlider.oninput = (e) => {
-                light.intensity = parseFloat(e.target.value);
-                intensityValue.textContent = light.intensity.toFixed(1);
-            };
-        }
-
-        if (colorPicker) {
-            colorPicker.oninput = (e) => {
-                light.color.setHex(parseInt(e.target.value.substring(1), 16));
-                // Update icon color
-                if (selectedLightIcon) {
-                    selectedLightIcon.children.forEach(child => {
-                        if (child.material) {
-                            child.material.color.copy(light.color);
-                            if (child.material.emissive) child.material.emissive.copy(light.color);
-                        }
-                    });
-                }
-            };
-        }
-
-        if (posX && posY && posZ) {
-            const updatePos = () => {
-                light.position.set(
-                    parseFloat(posX.value),
-                    parseFloat(posY.value),
-                    parseFloat(posZ.value)
-                );
-                if (selectedLightIcon) {
-                    selectedLightIcon.position.copy(light.position);
-                    selectedLightIcon.lookAt(light.target.position);
-                }
-            };
-            posX.oninput = updatePos;
-            posY.oninput = updatePos;
-            posZ.oninput = updatePos;
-        }
-
-        // Rotation inputs
-        const rotX = document.getElementById('light-rot-x');
-        const rotY = document.getElementById('light-rot-y');
-        const rotZ = document.getElementById('light-rot-z');
-
-        if (rotX && rotY && rotZ) {
-            const updateRot = () => {
-                light.rotation.set(
-                    parseFloat(rotX.value) * Math.PI / 180,
-                    parseFloat(rotY.value) * Math.PI / 180,
-                    parseFloat(rotZ.value) * Math.PI / 180
-                );
-                if (selectedLightIcon) {
-                    selectedLightIcon.rotation.copy(light.rotation);
-                }
-            };
-            rotX.oninput = updateRot;
-            rotY.oninput = updateRot;
-            rotZ.oninput = updateRot;
-        }
-    }
-
-    function showGarmentPanel(garmentMesh) {
-        // Switch to Eigenschaften tab
-        document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-        const propsTab = document.querySelector('[data-tab="tab-properties"]');
-        const propsPane = document.getElementById('tab-properties');
-        if (propsTab) propsTab.classList.add('active');
-        if (propsPane) propsPane.classList.add('active');
-
-        // Fill properties panel
-        const content = document.getElementById('properties-content');
-        if (!content) return;
-
-        const garmentId = garmentMesh.userData.garmentId || garmentMesh.name || 'Garment';
-        const mat = garmentMesh.material;
-        const currentColor = mat.color;
-        const colorHex = '#' + currentColor.getHexString();
-        const roughness = mat.roughness ?? 0.8;
-        const metalness = mat.metalness ?? 0;
-
-        const offset = garmentMesh.userData.offset || 0.006;
-        const stiffness = garmentMesh.userData.stiffness || 0.8;
-
-        // EXACT COPY from Dashboard-Scene character_viewer.html lines 520-619
-        content.innerHTML = `
-            <div style="padding:16px;max-height:calc(100vh - 200px);overflow-y:auto;">
-                <h3 style="font-size:0.9rem;margin-bottom:16px;color:var(--accent-purple);border-bottom:1px solid var(--border);padding-bottom:8px;">
-                    <i class="fas fa-tshirt"></i> ${garmentId}
-                </h3>
-
-                <!-- Fit -->
-                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Fit</div>
-                <div class="slider-row"><label>Offset</label>
-                    <input type="range" id="garment-offset" min="0" max="30" value="${Math.round(offset * 1000)}" step="1">
-                    <span class="slider-val" id="garment-offset-val">${offset.toFixed(3)}</span>
-                </div>
-                <div class="slider-row"><label>Stiffness</label>
-                    <input type="range" id="garment-stiffness" min="0" max="100" value="${Math.round(stiffness * 100)}" step="1">
-                    <span class="slider-val" id="garment-stiffness-val">${stiffness.toFixed(2)}</span>
-                </div>
-                <div class="slider-row"><label>Min. Abstand</label>
-                    <input type="range" id="garment-min-dist" min="0" max="15" value="3" step="1">
-                    <span class="slider-val" id="garment-min-dist-val">3 mm</span>
-                </div>
-                <div class="slider-row"><label>Schritt-Boden</label>
-                    <input type="range" id="garment-crotch-floor" min="-40" max="40" value="0" step="1">
-                    <span class="slider-val" id="garment-crotch-floor-val">0 mm</span>
-                </div>
-                <div class="slider-row"><label>Anheben</label>
-                    <input type="range" id="garment-lift" min="-20" max="40" value="0" step="1">
-                    <span class="slider-val" id="garment-lift-val">0 mm</span>
-                </div>
-                <div class="slider-row"><label>Schritt-Tiefe</label>
-                    <input type="range" id="garment-crotch-depth" min="0" max="40" value="0" step="1">
-                    <span class="slider-val" id="garment-crotch-depth-val">0 mm</span>
-                </div>
-
-                <!-- Farbe / Material -->
-                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
-                <div class="slider-row"><label>Color</label>
-                    <input type="color" id="garment-color" value="${colorHex}" style="width:40px;height:24px;border:none;cursor:pointer;">
-                </div>
-                <div class="slider-row"><label>Roughness</label>
-                    <input type="range" id="garment-roughness" min="0" max="100" value="${Math.round(roughness * 100)}" step="1">
-                    <span class="slider-val" id="garment-roughness-val">${roughness.toFixed(2)}</span>
-                </div>
-                <div class="slider-row"><label>Metalness</label>
-                    <input type="range" id="garment-metalness" min="0" max="100" value="${Math.round(metalness * 100)}" step="1">
-                    <span class="slider-val" id="garment-metalness-val">${metalness.toFixed(2)}</span>
-                </div>
-
-                <!-- Position -->
-                <div id="garment-adjustments">
-                    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Position</div>
-                    <div class="slider-row"><label>Pos X</label>
-                        <input type="range" id="garment-pos-x" min="-50" max="50" value="0" step="1">
-                        <span class="slider-val" id="garment-pos-x-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Pos Y</label>
-                        <input type="range" id="garment-pos-y" min="-50" max="50" value="0" step="1">
-                        <span class="slider-val" id="garment-pos-y-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Pos Z</label>
-                        <input type="range" id="garment-pos-z" min="-50" max="50" value="0" step="1">
-                        <span class="slider-val" id="garment-pos-z-val">0.00 m</span>
-                    </div>
-
-                    <!-- Scale -->
-                    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Scale</div>
-                    <div class="slider-row"><label>Scale X</label>
-                        <input type="range" id="garment-scale-x" min="50" max="200" value="100" step="1">
-                        <span class="slider-val" id="garment-scale-x-val">1.00</span>
-                    </div>
-                    <div class="slider-row"><label>Scale Y</label>
-                        <input type="range" id="garment-scale-y" min="50" max="200" value="100" step="1">
-                        <span class="slider-val" id="garment-scale-y-val">1.00</span>
-                    </div>
-                    <div class="slider-row"><label>Scale Z</label>
-                        <input type="range" id="garment-scale-z" min="50" max="200" value="100" step="1">
-                        <span class="slider-val" id="garment-scale-z-val">1.00</span>
-                    </div>
-
-                    <!-- Region -->
-                    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Region</div>
-                    <div class="slider-row"><label>Top</label>
-                        <input type="range" id="garment-region-top" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-top-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Upper</label>
-                        <input type="range" id="garment-region-upper" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-upper-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Mid</label>
-                        <input type="range" id="garment-region-mid" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-mid-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Lower</label>
-                        <input type="range" id="garment-region-lower" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-lower-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Bottom</label>
-                        <input type="range" id="garment-region-bottom" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-bottom-val">0.00 m</span>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Wire up event listeners - EXACTLY like Dashboard viewer.js _bindSlider/_garmentLiveSlider
-        const _bindSlider = (sliderId, valId, formatter) => {
-            const slider = document.getElementById(sliderId);
-            const val = document.getElementById(valId);
-            if (slider && val) {
-                slider.oninput = () => {
-                    val.textContent = formatter ? formatter(slider.value) : slider.value;
-                };
-            }
-        };
-
-        // Bind all sliders (display update only)
-        _bindSlider('garment-offset', 'garment-offset-val', v => (v / 1000).toFixed(3));
-        _bindSlider('garment-stiffness', 'garment-stiffness-val', v => (v / 100).toFixed(2));
-        _bindSlider('garment-min-dist', 'garment-min-dist-val', v => v + ' mm');
-        _bindSlider('garment-crotch-floor', 'garment-crotch-floor-val', v => v + ' mm');
-        _bindSlider('garment-lift', 'garment-lift-val', v => v + ' mm');
-        _bindSlider('garment-crotch-depth', 'garment-crotch-depth-val', v => v + ' mm');
-        _bindSlider('garment-roughness', 'garment-roughness-val', v => (v / 100).toFixed(2));
-        _bindSlider('garment-metalness', 'garment-metalness-val', v => (v / 100).toFixed(2));
-        _bindSlider('garment-pos-x', 'garment-pos-x-val', v => (v / 100).toFixed(2) + ' m');
-        _bindSlider('garment-pos-y', 'garment-pos-y-val', v => (v / 100).toFixed(2) + ' m');
-        _bindSlider('garment-pos-z', 'garment-pos-z-val', v => (v / 100).toFixed(2) + ' m');
-        _bindSlider('garment-scale-x', 'garment-scale-x-val', v => (v / 100).toFixed(2));
-        _bindSlider('garment-scale-y', 'garment-scale-y-val', v => (v / 100).toFixed(2));
-        _bindSlider('garment-scale-z', 'garment-scale-z-val', v => (v / 100).toFixed(2));
-        for (const rid of ['top', 'upper', 'mid', 'lower', 'bottom']) {
-            _bindSlider(`garment-region-${rid}`, `garment-region-${rid}-val`, v => (v / 100).toFixed(2) + ' m');
-        }
-
-        // Live material updates (color, roughness, metalness)
-        const colorPicker = document.getElementById('garment-color');
-        if (colorPicker) {
-            colorPicker.oninput = () => {
-                mat.color.setHex(parseInt(colorPicker.value.substring(1), 16));
-            };
-        }
-
-        const roughnessSlider = document.getElementById('garment-roughness');
-        if (roughnessSlider) {
-            roughnessSlider.oninput = () => {
-                mat.roughness = parseInt(roughnessSlider.value) / 100;
-            };
-        }
-
-        const metalnessSlider = document.getElementById('garment-metalness');
-        if (metalnessSlider) {
-            metalnessSlider.oninput = () => {
-                mat.metalness = parseInt(metalnessSlider.value) / 100;
-            };
-        }
-
-        // Note: Offset/Stiffness/Position/Scale/Region sliders update display only
-        // Full implementation would need vertex buffer manipulation like Dashboard
-        console.log('✓ Garment properties panel populated');
-    }
 
     function showCharacterPanel(characterGroup) {
         // Switch to Eigenschaften tab
@@ -2263,16 +1625,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function hideLightPanel() {
-        const content = document.getElementById('properties-content');
-        if (!content) return;
-        content.innerHTML = `
-            <div style="padding:20px;color:var(--text-muted);font-size:0.85rem;text-align:center;">
-                <i class="fas fa-hand-pointer" style="font-size:2rem;margin-bottom:10px;opacity:0.3;"></i>
-                <p>Klicke auf ein Licht-Icon oder Character in der Szene<br>um Eigenschaften zu bearbeiten.</p>
-            </div>
-        `;
-    }
 
     // ── Render loop ──
     function animate() {

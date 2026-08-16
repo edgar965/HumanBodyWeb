@@ -3,10 +3,10 @@
  */
 import { THREE, serverLog } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
-import { escapeHtml, _selectedInst } from './utils.js';
+import { fn } from '../gemeinsam/registrierung.js';
+import { escapeHtml } from './utils.js';
 import { markDirty } from './undo.js';
-import { _sameSubMesh, getSelectableSubMeshes } from './interaction.js';
+import { _sameSubMesh, getSelectableSubMeshes } from './teilnetz_auswahl.js';
 
 export function initTabs() {
     document.querySelectorAll('.panel-tab').forEach(tab => {

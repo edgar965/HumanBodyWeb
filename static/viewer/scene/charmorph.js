@@ -3,7 +3,7 @@
  * Lists assets from CharMorphPlugin, shows configs, material presets.
  */
 import { serverLog } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 let _charmorphAssets = [];
 let _selectedAsset = null;

@@ -20,10 +20,11 @@ Die Tests laufen mit dem Django-Python und ohne Grafikkarte; sie brauchen wenige
 Sekunden.
 """
 import sys
+import time
 
 from django.test import SimpleTestCase
 
-from core.pipeline_process import PipelineProzess
+from core.pipeline_process import PipelineProzess, PipelineStille
 
 
 class PipelineProzessTest(SimpleTestCase):
@@ -37,7 +38,7 @@ class PipelineProzessTest(SimpleTestCase):
         p = PipelineProzess.starten(
             [sys.executable, '-c',
              'print("TOTAL:5"); print("Datei: 0030_BallettLänger.mp4 █ 50%")'])
-        zeilen = [z.strip() for z in p.proc.stdout]
+        zeilen = [z.strip() for z in p.stdout_zeilen()]
         p.warten(timeout=30)
         self.assertIn('TOTAL:5', zeilen)
         self.assertTrue(any('BallettLänger' in z for z in zeilen),
@@ -54,7 +55,7 @@ class PipelineProzessTest(SimpleTestCase):
             [sys.executable, '-c',
              'import sys; sys.stdout.buffer.write(b"STATUS:\\xff\\xfe kaputt\\n"); '
              'sys.stdout.buffer.write(b"TOTAL:7\\n")'])
-        zeilen = [z.strip() for z in p.proc.stdout]     # darf NICHT werfen
+        zeilen = [z.strip() for z in p.stdout_zeilen()]   # darf NICHT werfen
         p.warten(timeout=30)
         self.assertIn('TOTAL:7', zeilen)
 
@@ -77,7 +78,7 @@ class PipelineProzessTest(SimpleTestCase):
              'for i in range(2000): sys.stderr.write("W" * 100 + "\\n")\n'
              'sys.stderr.flush()\n'
              'print("TOTAL:9")\n'])
-        zeilen = [z.strip() for z in p.proc.stdout]
+        zeilen = [z.strip() for z in p.stdout_zeilen()]
         code = p.warten(timeout=60)
         self.assertIn('TOTAL:9', zeilen, 'stdout kam nicht an — Puffer-Hänger?')
         self.assertEqual(code, 0)
@@ -110,5 +111,66 @@ class PipelineProzessTest(SimpleTestCase):
     def test_beenden_raeumt_den_prozess_ab(self):
         p = PipelineProzess.starten([sys.executable, '-c', 'import time; time.sleep(60)'])
         p.beenden()
-        p.proc.wait(timeout=30)
-        self.assertIsNotNone(p.proc.poll(), 'Prozess laeuft noch')
+        # KEIN `wait()` mehr davor: `beenden()` wartet seit 13.08.2026 selbst.
+        # `taskkill` kehrt zurück, sobald es die Beendigung angestossen hat —
+        # wer danach sofort den nächsten Lauf startet, fand den Grafikspeicher
+        # noch belegt.
+        self.assertIsNotNone(p.proc.poll(),
+                             'beenden() kam zurueck, bevor der Prozess weg war')
+
+    # --------------------------------------------------- Stille = Haenger
+
+    def test_stille_beendet_den_prozess_und_meldet_sich(self):
+        """DER FUND DER ZWEITEN SPARRING-RUNDE (13.08.2026).
+
+        Vorher lief der Aufrufer mit `for zeile in proc.stdout:` bis zum
+        Dateiende — und wenn das Kind vor dem Dateiende hängt, wartet diese
+        Schleife unbegrenzt. Der Timeout darunter (`pp.warten(timeout=1800)`)
+        wurde nie erreicht: Er bewacht nur die Zeit NACH dem Dateiende. Ein
+        Auftrag blieb dann für immer auf „läuft" stehen, mit belegter
+        Grafikkarte.
+
+        Hier: ein Kind, das eine Zeile schreibt und dann schweigt."""
+        p = PipelineProzess.starten(
+            [sys.executable, '-c',
+             'import time, sys\nprint("TOTAL:5", flush=True)\ntime.sleep(120)\n'])
+        gelesen = []
+        start = time.time()
+        with self.assertRaises(PipelineStille):
+            for zeile in p.stdout_zeilen(stille_timeout=2):
+                gelesen.append(zeile.strip())
+        dauer = time.time() - start
+
+        self.assertIn('TOTAL:5', gelesen, 'die Zeile vor der Stille fehlt')
+        self.assertLess(dauer, 30, 'die Stille wurde erst nach %.0f s bemerkt' % dauer)
+        self.assertIsNotNone(p.proc.poll(),
+                             'Prozess laeuft nach dem Stille-Abbruch weiter — '
+                             'genau das ist das VRAM-Leck')
+
+    def test_stille_unterhalb_der_grenze_ist_kein_abbruch(self):
+        """Gegenprobe: Schweigen ist erlaubt, solange es kurz genug ist.
+
+        Ohne diesen Test wäre die Grenze beliebig scharf einstellbar, ohne dass
+        auffällt, dass sie legitime Pausen abschneidet — Modell-Download,
+        CUDA-Start, Stapelrechnung."""
+        p = PipelineProzess.starten(
+            [sys.executable, '-c',
+             'import time\nprint("START", flush=True)\ntime.sleep(3)\nprint("FERTIG", flush=True)\n'])
+        zeilen = [z.strip() for z in p.stdout_zeilen(stille_timeout=30)]
+        p.warten(timeout=30)
+        self.assertEqual(zeilen, ['START', 'FERTIG'])
+
+    def test_ohne_stdout_lesen_kein_haenger(self):
+        """`stdout_lesen=False` für Aufrufstellen, die stdout nie abholen.
+
+        Die OpenPose-Stelle verfolgt den Fortschritt an geschriebenen
+        JSON-Dateien und las stdout nie — es stand aber auf PIPE. Damit war dort
+        derselbe volle Puffer möglich wie bei stderr. Hier schreibt das Kind
+        deutlich mehr, als in einen Pipe-Puffer passt (~64 KB)."""
+        p = PipelineProzess.starten(
+            [sys.executable, '-c',
+             'import sys\nfor i in range(5000): print("X" * 100)\n'],
+            stdout_lesen=False)
+        self.assertEqual(p.warten(timeout=60), 0, 'Kindprozess kam nicht durch')
+        with self.assertRaises(RuntimeError):
+            next(iter(p.stdout_zeilen()))

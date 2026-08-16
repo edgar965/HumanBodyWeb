@@ -9,7 +9,7 @@
  * mutation has a valid pre-state to push.
  */
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 export const _undoStack = [];
 export const _redoStack = [];

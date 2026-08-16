@@ -16,6 +16,7 @@ import inspect
 import os
 import sys
 import tempfile
+from pathlib import Path
 
 import numpy as np
 
@@ -27,10 +28,16 @@ from .base import TestCategory, http_request
 # inside Django. We rely on character_api doing the same thing, but also set
 # it up defensively here in case this module is imported directly.
 # ---------------------------------------------------------------------------
-_HB_ROOT = r'A:\HumanBodyTest\HumanBody'
+# Pfade ABGELEITET, nicht eingetippt (Review 15.08.2026): Hier standen
+# `A:\HumanBodyTest\HumanBody` und `A:\HumanBodyTest` — das alte Projekt, das
+# noch auf der Platte liegt. Mit `sys.path.insert(0, ...)` hätte dieser Test das
+# `collision`-Paket VON DORT importiert und fremden Code geprüft, ohne dass es
+# jemandem auffällt. Denselben Rückfall hat cloth_export_api.py am 12.08.2026
+# verloren; hier blieb er stehen.
+_HB_ROOT = str(Path(__file__).resolve().parents[2] / 'HumanBody')
 if _HB_ROOT not in sys.path:
     sys.path.insert(0, _HB_ROOT)
-_HB_PARENT = r'A:\HumanBodyTest'
+_HB_PARENT = str(Path(__file__).resolve().parents[2])
 if _HB_PARENT not in sys.path:
     sys.path.insert(0, _HB_PARENT)
 

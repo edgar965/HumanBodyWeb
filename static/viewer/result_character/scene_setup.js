@@ -1,8 +1,8 @@
 /**
  * Result Character — Scene settings from localStorage + skin settings.
  */
-import { state, TONE_MAPPINGS } from './state.js';
-import { fn } from './registry.js';
+import { TONE_MAPPINGS } from './state.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 export function applySceneSettings(renderer, scene, camera, keyLight, fillLight, backLight, ambient) {
     const saved = localStorage.getItem('humanbody_scene_settings');

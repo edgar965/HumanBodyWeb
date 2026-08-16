@@ -1,11 +1,12 @@
 /**
  * Scene Editor -- Scene save/load, file dialogs, gather/restore.
  */
-import { THREE, TONE_MAPPINGS, SESSION_KEY } from './state.js';
+import { THREE, TONE_MAPPINGS } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
-import { escapeHtml, generateCharacterId, getCSRFToken, openDialog, closeDialog } from './utils.js';
-import { markDirty, markClean } from './undo.js';
+import { fn } from '../gemeinsam/registrierung.js';
+import { getCSRFToken } from './utils.js';
+import { markClean } from './undo.js';
+import { _saveJsonWithPicker, importModelFromFilePicker, initCharacterDialog, initSceneDialogs, loadFromFilePicker, openAddCharacterDialog, openLoadDialog, openSaveDialog } from './szene_dialoge.js';
 
 export function gatherSceneState() {
     const chars = [];
@@ -114,6 +115,12 @@ export function newScene() {
     fn.clearAllCharacters();
     state.currentSceneName = '';
     fn.loadDefaultCharacter();
+    // Eine neue Szene ist nicht „geändert" (Review 15.08.2026): `resetScene()`
+    // ruft `markClean()`, `newScene()` tat es nicht. Folge: Der Änderungsstatus
+    // und der Rückgängig-Stapel der VERWORFENEN Szene liefen weiter — die
+    // Abfrage „ungespeicherte Änderungen" kam sofort nach dem Anlegen, und ein
+    // Rückgängig griff in die alte Szene.
+    markClean();
 }
 
 export function quickSave() {
@@ -134,76 +141,9 @@ export function resetScene() {
     markClean();
 }
 
-// File picker helpers
-async function _openJsonFilePicker() {
-    if (window.showOpenFilePicker) {
-        try {
-            const [handle] = await window.showOpenFilePicker({ types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }], multiple: false });
-            const file = await handle.getFile();
-            return JSON.parse(await file.text());
-        } catch (e) { if (e.name === 'AbortError') return null; throw e; }
-    }
-    return new Promise((resolve) => {
-        const input = document.createElement('input');
-        input.type = 'file'; input.accept = '.json,application/json'; input.style.display = 'none';
-        input.addEventListener('change', async () => {
-            const file = input.files[0];
-            if (!file) { resolve(null); return; }
-            try { resolve(JSON.parse(await file.text())); } catch (e) { alert('Fehler: ' + e.message); resolve(null); }
-            input.remove();
-        });
-        input.addEventListener('cancel', () => { resolve(null); input.remove(); });
-        document.body.appendChild(input); input.click();
-    });
-}
 
-export async function _saveJsonWithPicker(jsonData, defaultName) {
-    const content = JSON.stringify(jsonData, null, 2);
-    if (window.showSaveFilePicker) {
-        try {
-            const handle = await window.showSaveFilePicker({ suggestedName: defaultName, types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }] });
-            const writable = await handle.createWritable();
-            await writable.write(content); await writable.close();
-            return handle.name;
-        } catch (e) { if (e.name === 'AbortError') return null; }
-    }
-    const blob = new Blob([content], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = defaultName; a.click();
-    URL.revokeObjectURL(url);
-    return defaultName;
-}
 
-export async function loadFromFilePicker() {
-    try {
-        const data = await _openJsonFilePicker();
-        if (!data) return;
-        if (data.characters || data.lighting || data.version) {
-            await loadSceneFromData(data, data.name || '');
-        } else if (data.body_type) {
-            fn.clearAllCharacters(); state.currentSceneName = '';
-            const id = generateCharacterId();
-            const inst = new fn.CharacterInstance(id, data);
-            await inst.load();
-            state.characters.set(id, inst); state.scene.add(inst.group);
-            fn.updateCharacterListUI(); fn.updateVertexCount(); fn.selectCharacter(id);
-        } else { alert('Unbekanntes JSON-Format.'); }
-    } catch (e) { alert(`Fehler beim Laden: ${e.message}`); }
-}
 
-export async function importModelFromFilePicker() {
-    try {
-        const data = await _openJsonFilePicker();
-        if (!data) return;
-        if (!data.body_type) { alert('Ung\u00fcltiges Modell-JSON.'); return; }
-        const id = generateCharacterId();
-        const inst = new fn.CharacterInstance(id, data);
-        inst.group.position.set(state.characters.size * 0.8, 0, 0);
-        await inst.load();
-        state.characters.set(id, inst); state.scene.add(inst.group);
-        fn.updateCharacterListUI(); fn.updateVertexCount(); fn.selectCharacter(id); markDirty();
-    } catch (e) { alert(`Fehler: ${e.message}`); }
-}
 
 export async function exportSceneJSON() {
     const data = gatherSceneState();
@@ -229,106 +169,11 @@ export async function exportModelJSON() {
     }
 }
 
-// Scene dialogs
-export function initCharacterDialog() {
-    const addBtn = document.getElementById('add-character-btn');
-    const dialog = document.getElementById('add-char-dialog');
-    const confirmBtn = document.getElementById('add-char-confirm');
-    addBtn.addEventListener('click', () => openAddCharacterDialog());
-    confirmBtn.addEventListener('click', async () => {
-        if (!state._addCharSelectedPreset) return;
-        closeDialog(dialog);
-        try { await fn.addCharacterFromPreset(state._addCharSelectedPreset); } catch (e) { alert(`Fehler: ${e.message}`); }
-    });
-}
 
-export async function openAddCharacterDialog() {
-    const dialog = document.getElementById('add-char-dialog');
-    const confirmBtn = document.getElementById('add-char-confirm');
-    const presetList = document.getElementById('preset-list');
-    openDialog(dialog);
-    state._addCharSelectedPreset = null;
-    confirmBtn.disabled = true;
-    presetList.innerHTML = '<li style="color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Lade Presets...</li>';
-    try {
-        const resp = await fetch('/api/character/models/');
-        const data = await resp.json();
-        presetList.innerHTML = '';
-        if (!data.presets || data.presets.length === 0) { presetList.innerHTML = '<li style="color:var(--text-muted)">Keine Presets vorhanden.</li>'; return; }
-        for (const p of data.presets) {
-            const li = document.createElement('li'); li.textContent = p.label || p.name; li.dataset.presetName = p.name;
-            li.addEventListener('click', () => { presetList.querySelectorAll('li').forEach(x => x.classList.remove('selected')); li.classList.add('selected'); state._addCharSelectedPreset = p.name; confirmBtn.disabled = false; });
-            li.addEventListener('dblclick', async () => { state._addCharSelectedPreset = p.name; closeDialog(dialog); try { await fn.addCharacterFromPreset(p.name); } catch (e) { alert(`Fehler: ${e.message}`); } });
-            presetList.appendChild(li);
-        }
-    } catch (e) { presetList.innerHTML = `<li style="color:#ef4444">Fehler: ${e.message}</li>`; }
-}
 
-export function initSceneDialogs() {
-    const saveDialog = document.getElementById('save-scene-dialog');
-    const saveNameInput = document.getElementById('save-scene-name');
-    const saveConfirm = document.getElementById('save-scene-confirm');
-    saveConfirm.addEventListener('click', async () => { const name = saveNameInput.value.trim(); if (!name) { saveNameInput.focus(); return; } closeDialog(saveDialog); await doSaveScene(name); });
-    saveNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveConfirm.click(); });
-    const loadDialog = document.getElementById('load-scene-dialog');
-    const loadConfirm = document.getElementById('load-scene-confirm');
-    loadConfirm.addEventListener('click', async () => { if (!state._selectedFileToLoad) return; closeDialog(loadDialog); try { await loadModelFile(state._selectedFileToLoad); } catch (e) { alert(`Fehler: ${e.message}`); } });
-}
 
-export async function openSaveDialog() {
-    const saveDialog = document.getElementById('save-scene-dialog');
-    const saveNameInput = document.getElementById('save-scene-name');
-    const saveList = document.getElementById('save-scene-list');
-    openDialog(saveDialog);
-    saveNameInput.value = state.currentSceneName || '';
-    saveNameInput.focus();
-    await loadSceneListInto(saveList, (name) => { saveNameInput.value = name; });
-}
 
-export async function openLoadDialog() {
-    const loadDialog = document.getElementById('load-scene-dialog');
-    const loadConfirm = document.getElementById('load-scene-confirm');
-    const tbody = document.getElementById('load-file-tbody');
-    openDialog(loadDialog);
-    state._selectedFileToLoad = null;
-    loadConfirm.disabled = true;
-    tbody.innerHTML = '<tr><td colspan="3" style="padding:12px;color:var(--text-muted);text-align:center;"><i class="fas fa-spinner fa-spin"></i> Lade...</td></tr>';
-    try {
-        const resp = await fetch('/api/character/model-files/');
-        const data = await resp.json();
-        tbody.innerHTML = '';
-        const files = data.files || [];
-        if (files.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="padding:12px;color:var(--text-muted);text-align:center;">Keine Dateien.</td></tr>'; return; }
-        for (const f of files) {
-            const tr = document.createElement('tr');
-            const isScene = f.type === 'scene';
-            const icon = isScene ? 'fa-film' : 'fa-user';
-            const typeBadge = isScene ? '<span class="file-type-scene">Szene</span>' : '<span class="file-type-model">Modell</span>';
-            const dateStr = f.modified ? new Date(f.modified * 1000).toLocaleDateString('de-DE') : '';
-            tr.innerHTML = `<td style="padding:4px 12px;"><i class="fas ${icon}" style="margin-right:6px;opacity:0.5;"></i>${escapeHtml(f.label || f.name)}</td><td style="padding:4px 12px;text-align:center;">${typeBadge}</td><td style="padding:4px 12px;text-align:right;color:var(--text-muted);font-size:0.7rem;">${dateStr}</td>`;
-            tr.style.cursor = 'pointer';
-            tr.addEventListener('click', () => { tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected')); tr.classList.add('selected'); state._selectedFileToLoad = f; loadConfirm.disabled = false; });
-            tr.addEventListener('dblclick', () => { state._selectedFileToLoad = f; closeDialog(loadDialog); loadModelFile(f).catch(e => alert(`Fehler: ${e.message}`)); });
-            tbody.appendChild(tr);
-        }
-    } catch (e) { tbody.innerHTML = `<tr><td colspan="3" style="padding:12px;color:#ef4444;text-align:center;">Fehler: ${e.message}</td></tr>`; }
-}
 
-async function loadSceneListInto(listEl, onSelect) {
-    listEl.innerHTML = '<li style="color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Lade...</li>';
-    try {
-        const resp = await fetch('/api/character/scenes/');
-        const data = await resp.json();
-        listEl.innerHTML = '';
-        if (!data.scenes || data.scenes.length === 0) { listEl.innerHTML = '<li style="color:var(--text-muted)">Keine Szenen.</li>'; return; }
-        for (const s of data.scenes) {
-            const li = document.createElement('li');
-            li.innerHTML = `${escapeHtml(s.label || s.name)} <span class="preset-sub">${s.character_count} Charakter(e)</span>`;
-            li.addEventListener('click', () => { listEl.querySelectorAll('li').forEach(x => x.classList.remove('selected')); li.classList.add('selected'); onSelect(s.name); });
-            listEl.appendChild(li);
-        }
-    } catch (e) { listEl.innerHTML = `<li style="color:#ef4444">Fehler: ${e.message}</li>`; }
-}
 
 // Register
 fn.gatherSceneState = gatherSceneState;

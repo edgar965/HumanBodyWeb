@@ -2,7 +2,7 @@
  * Viewer — Wardrobe UI (GLB asset toggles).
  */
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 export async function loadWardrobe() {
     try {

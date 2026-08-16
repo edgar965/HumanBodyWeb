@@ -3,7 +3,7 @@
  */
 import * as THREE from 'three';
 import { state, API, MODEL_OFFSET_X } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import {
     base64ToFloat32, base64ToUint32, blenderToThreeCoords,
     alignBodyToSMPLX, BODY_MATERIALS,

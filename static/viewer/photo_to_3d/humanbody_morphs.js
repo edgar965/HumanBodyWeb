@@ -2,7 +2,7 @@
  * Photo To 3D — HumanBody morph UI: body type selector, meta sliders, morph panel.
  */
 import { state, API } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 // =========================================================================
 // HumanBody Morph UI

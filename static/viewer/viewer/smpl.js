@@ -3,8 +3,8 @@
  */
 import * as THREE from 'three';
 import { state } from './state.js';
-import { fn } from './registry.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, bindSlider, sliderVal, setSlider } from './utils.js';
+import { fn } from '../gemeinsam/registrierung.js';
+import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, bindSlider, setSlider } from './utils.js';
 import { ensureSkinned } from './skinning.js';
 import { buildBodyFitQueryString } from './garment.js';
 import { VIEWER_TONE_MAPPINGS } from './scene_settings.js';

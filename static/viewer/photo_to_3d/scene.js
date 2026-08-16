@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { state, MODEL_OFFSET_X, SMPLX_OFFSET_X } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 export function initScene() {
     const canvas = document.getElementById('viewer-canvas');

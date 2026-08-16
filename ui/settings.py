@@ -37,6 +37,10 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    # Direkt hinter der CSRF-Prüfung: Sie greift bei den 35 `csrf_exempt`-
+    # Endpunkten nicht, diese hier schon. Sie fragt nicht nach einem Token,
+    # sondern ob die Anfrage von der eigenen Seite kommt (13.08.2026).
+    'ui.same_origin.GleicherUrsprungMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -151,6 +155,8 @@ LOG_DIR.mkdir(exist_ok=True)
 # tries to rotate it). In-place monkeypatch avoids a separate module that would
 # need to be importable at dictConfig time.
 import logging.handlers as _lh
+
+from .review_bereiche import REVIEW_BEREICHE
 _orig_do_rollover = _lh.RotatingFileHandler.doRollover
 _orig_rotate = _lh.RotatingFileHandler.rotate
 def _safe_do_rollover(self):
@@ -297,6 +303,15 @@ CHANNEL_LAYERS = {
 DJANGOBASE = {
     'titel': 'HumanBody',
     'logo_icon': 'bi-person-walking',
+    # Hilfe -> Skills: Ordner, die die Analysewerkzeuge auslassen. Ohne diese
+    # Liste kommen die meisten Befunde aus fremdem Referenzcode (CharMorph,
+    # MB-Lab) und aus alten Staenden — die eigenen gehen darin unter.
+    # 'vendor' ist three.js (Fremdbibliothek), 'theatre' die Vite-Ausgabe
+    # (static/theatre/theatre-app.js entsteht aus TheatreJS/src/) — beides ist
+    # kein eigener Quelltext und darf in den Befunden nicht auftauchen.
+    'skills_ausser': ['TestCharakter', 'alt', '_merge_tmp2', 'Backup',
+                      'ProjektTemp', 'debug', 'tools', 'vendor', 'theatre',
+                      'theatre-studio'],
     'farben': {
         'sidebar_bg': '#1a1a2e',     # = --bg-secondary (style.css)
         'sidebar_light': '#16213e',  # = --bg-card  (Hover/Active-Fill)
@@ -338,6 +353,22 @@ DJANGOBASE = {
          'cmd': [str(BASE_DIR.parent / 'python14' / 'Scripts' / 'python.exe'),
                  'manage.py', 'test', 'core']},
     ],
+    # ----- Hilfe -> Review: Code-Review im Gespräch mit einem zweiten Modell --
+    # Nemotron ist der starke, kostenpflichtige Partner (~0,6 $/Mio. Token, ein
+    # Code-Paket kostet unter einem Cent); Gemma läuft lokal und schickt nichts
+    # aus dem Haus, findet dafür deutlich weniger.
+    'review_partner': [
+        {'slug': 'nemotron', 'name': 'Nemotron 550B', 'ziel': 'online',
+         'modell': 'nvidia/nemotron-3-ultra-550b-a55b'},
+        {'slug': 'gemma', 'name': 'Gemma 4 26B (lokal)', 'ziel': 'lokal',
+         'modell': 'gemma4:26b-a4b-it-qat', 'num_ctx': 32768},
+        {'slug': 'qwen', 'name': 'Qwen 3.6 27B (lokal)', 'ziel': 'lokal',
+         'modell': 'qwen3.6:27b', 'num_ctx': 32768},
+    ],
+    # Die Dateien liegen teils im Django-Teil, teils in der Kern-Bibliothek
+    # daneben — deshalb ist die Wurzel das gemeinsame Arbeitsverzeichnis.
+    'review_wurzel': str(TOOLS_ROOT),
+    'review_bereiche': REVIEW_BEREICHE,
     'menu': [
         {'label': 'Dashboard', 'icon': 'bi-speedometer2', 'untermenu': [
             {'label': 'BVH Studio', 'icon': 'bi-scissors', 'url': '/humanbody/bvh-studio/'},

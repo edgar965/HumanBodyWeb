@@ -170,6 +170,75 @@ class SafePathTest(TestCase):
         with self.assertRaises(PfadAbgelehnt):
             SafePath.dateiname('NUL.mp4')
 
+    def test_dateiname_doppelpunkt_wird_abgelehnt(self):
+        """DER FUND DER ZWEITEN SPARRING-RUNDE (13.08.2026).
+
+        `video:1.mp4` ist unter NTFS kein Dateiname, sondern der Datenstrom
+        `1.mp4` der Datei `video`. Vorher nahm `dateiname` das an. Gemessen:
+        geschrieben wurde eine 0 Byte grosse Datei `video`, der Inhalt lag
+        unsichtbar im Datenstrom, und der Video-Export meldete Erfolg — der
+        Nutzer hätte eine leere Datei und keinen Hinweis."""
+        for roh in ('video:1.mp4', 'video.mp4:versteckt', 'a:b'):
+            with self.subTest(roh=roh), self.assertRaises(PfadAbgelehnt):
+                SafePath.dateiname(roh, '.mp4')
+
+    def test_vertrag_dateiname_verbietet_was_pruefe_verbietet(self):
+        """Beide Methoden müssen DIESELBE Verbotsliste durchsetzen.
+
+        Der Doppelpunkt-Fund entstand genau daraus, dass sie es nicht taten:
+        `pruefe` verbot ihn, `dateiname` nicht. Ein Test je Einzelfall hätte das
+        nicht gefunden — er prüft, was jemand geprüft haben WOLLTE. Dieser hier
+        prüft den Vertrag der Klasse und schlägt auch dann fehl, wenn die Liste
+        später um ein Zeichen wächst und nur eine der beiden Methoden es lernt."""
+        for zeichen in '<>:"|?*':
+            name = 'datei%sname.bvh' % zeichen
+            with self.subTest(zeichen=zeichen):
+                with self.assertRaises(PfadAbgelehnt):
+                    SafePath.dateiname(name, '.bvh')
+                with self.assertRaises(PfadAbgelehnt):
+                    self.sp.pruefe(str(self.medien / name))
+
+    def test_pfad_mit_punkt_oder_leerzeichen_am_ende(self):
+        """`resolve()` behält beides, das Dateisystem schneidet es ab.
+
+        Ohne diese Prüfung nennt die Antwort einen Pfad, den es so nie gab:
+        gespeichert wird `video.mp4`, gemeldet `video.mp4.`.
+
+        GEMESSEN (13.08.2026), weil der erste Testfall danebenlag: Ein
+        Leerzeichen ganz am Ende entfernt schon das `.strip()` in `pruefe` —
+        dagegen war der Wächter also längst immun. Offen waren nur der Punkt
+        am Ende und Leerzeichen in einem Verzeichnisnamen mitten im Pfad."""
+        for roh in (str(self.medien / 'video.mp4.'),
+                    str(self.medien / 'ordner ' / 'x.json'),
+                    str(self.medien / 'ordner.' / 'x.json')):
+            with self.subTest(roh=roh), self.assertRaises(PfadAbgelehnt):
+                self.sp.pruefe(roh)
+
+    def test_leerzeichen_ganz_am_ende_wird_abgeschnitten_nicht_abgelehnt(self):
+        """Gegenstück zum Test darüber: `.strip()` macht daraus einen gültigen
+        Pfad. Das ist gewollt (Tippfehler beim Einfügen) und wird hier
+        festgehalten, damit niemand es später für ein Versehen hält."""
+        ziel = self.sp.pruefe(str(self.medien / 'video.mp4') + ' ')
+        self.assertEqual(ziel.name, 'video.mp4')
+
+    def test_bvh_wurzel_scheitert_verschlossen(self):
+        """Zeigt die Einstellung weder auf `bvh` noch auf eine Kategorie darunter,
+        muss die Wurzel VERWEIGERT werden.
+
+        Vorher wurde nur gewarnt und `.parent` trotzdem geliefert — bei
+        `…/data/animations` wäre das `…/data` gewesen, also Morphdaten, Meshes
+        und Skelett zum Schreiben und Löschen freigegeben."""
+        with self.settings(HUMANBODY_BVH_DIR=str(Path(settings.TOOLS_ROOT) / 'HumanBody' / 'data')):
+            with self.assertRaises(PfadAbgelehnt):
+                SafePath.bvh_wurzel()
+
+    def test_bvh_wurzel_akzeptiert_beide_schreibweisen(self):
+        """Sowohl `…/bvh/MocapNET` (heutige Einstellung) als auch `…/bvh`
+        müssen dieselbe Wurzel ergeben."""
+        erwartet = SafePath.bvh_wurzel()
+        with self.settings(HUMANBODY_BVH_DIR=str(erwartet)):
+            self.assertEqual(SafePath.bvh_wurzel(), erwartet)
+
     def test_dateiname_beginnt_nicht_mit_bindestrich(self):
         """Ein Name wie `-i.mp4` würde in einer Kommandozeile als Option gelesen.
 

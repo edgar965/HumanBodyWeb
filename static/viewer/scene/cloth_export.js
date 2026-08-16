@@ -9,7 +9,7 @@
  */
 import { THREE } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 function _encodeFloat32(a) {
     const u8 = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);

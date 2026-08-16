@@ -2,7 +2,7 @@
  * BVH Studio — BVH Library management (sidebar tree, context menus, file ops).
  */
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 // Module-level state
 let _libOpenCats = new Set();

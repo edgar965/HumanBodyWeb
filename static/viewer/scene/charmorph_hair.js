@@ -7,7 +7,7 @@
  */
 import * as THREE from 'three';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 let _cmHairColors = {};  // name -> {viewport_color: [r,g,b], melanin, ...}
 

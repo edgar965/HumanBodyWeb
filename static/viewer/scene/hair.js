@@ -3,7 +3,7 @@
  */
 import { THREE, gltfLoader } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { _selectedInst } from './utils.js';
 import { convertInstToSkinned, _skinifyHairGroup } from './skeleton.js';
 

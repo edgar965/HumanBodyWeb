@@ -2,7 +2,7 @@
  * BVH Studio — Undo/Redo system (snapshot-based, max 20 steps).
  */
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 export const undoStack = [];
 export const redoStack = [];

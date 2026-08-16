@@ -3,7 +3,7 @@
  */
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import {
     sharedState,
     findHeadBoneIndex, skinifyHairGroup, applyHairColor,

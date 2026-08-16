@@ -14,6 +14,7 @@ import logging
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseNotAllowed
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 from .safe_paths import SafePath, PfadAbgelehnt
 
@@ -50,7 +51,31 @@ def _load_settings():
         return None
 
 
+def _namensstamm(scene_name):
+    """Szenenname -> unbedenklicher Namensstamm für die Ausgabedatei.
+
+    WARUM BEREINIGEN UND NICHT ABLEHNEN (Review 15.08.2026): `scene_name` ist ein
+    ANZEIGENAME — „Kleid v2 / Test" ist eine legitime Bezeichnung, und eine Absage
+    beim Export wäre hier die falsche Antwort. Der Weg über den Dateinamen ist es
+    aber, der geprüft werden muss.
+
+    Vorher stand hier `scene_name.replace('/', '_')` — nur der Schrägstrich, nicht
+    der Backslash, mit dem Windows Verzeichnisse trennt. Nachgerechnet:
+
+        '..\\..\\..\\evil'   -> A:\\3DTools\\evil_blender_eevee_....mp4
+        'C:\\evil'           -> C:\\evil_blender_eevee_....mp4   (absolut ersetzt Basis)
+
+    Am 12.08.2026 wurden `output_dir` und `filename` auf SafePath umgestellt; DIESER
+    Zweig — der ohne `filename` — blieb übrig. Deshalb Positivliste statt Verbotsliste:
+    Was nicht ausdrücklich erlaubt ist, wird ein Unterstrich."""
+    text = str(scene_name or '').strip()
+    stamm = ''.join(c if (c.isalnum() or c in '-_') else '_' for c in text)
+    stamm = stamm.strip('_')[:60]
+    return stamm or 'scene'
+
+
 @csrf_exempt
+@require_POST
 def export_cloth(request):
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
@@ -97,7 +122,8 @@ def export_cloth(request):
         base, ext = os.path.splitext(requested_name)
         out_name = f"{base}_{engine}{ext}"
     else:
-        out_name = f"{payload.get('scene_name', 'scene').replace('/', '_')}_{engine}_{int(time.time())}_{uuid.uuid4().hex[:6]}.mp4"
+        out_name = (f"{_namensstamm(payload.get('scene_name'))}_{engine}"
+                    f"_{int(time.time())}_{uuid.uuid4().hex[:6]}.mp4")
     out_path = os.path.join(out_dir, out_name)
 
     # Optional resolution override from client

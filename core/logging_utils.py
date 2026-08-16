@@ -38,8 +38,6 @@ def with_job_id(job_id):
         _job_id_var.reset(token)
 
 
-def current_job_id():
-    return _job_id_var.get()
 
 
 class JobContextFilter(logging.Filter):

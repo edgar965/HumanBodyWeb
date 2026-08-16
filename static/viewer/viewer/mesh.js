@@ -3,7 +3,7 @@
  */
 import * as THREE from 'three';
 import { state, API, BODY_MATERIALS } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './utils.js';
 import { applySceneSkinSettings, applySkinColor } from './scene_settings.js';
 

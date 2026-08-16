@@ -3,7 +3,7 @@
  */
 import * as THREE from 'three';
 import { state, API } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
 
 export async function loadSkinWeights() {

@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 // Import all modules (order: foundational first, then dependent)
 import './utils.js';
@@ -31,7 +31,7 @@ import { loadSkinWeights, loadRigifySkeleton } from './skinning.js';
 import { connectWebSocket } from './websocket.js';
 import { loadMorphs } from './morphs.js';
 import { loadWardrobe } from './wardrobe.js';
-import { loadAnimations, loadBVHAnimation, stopAnimation } from './animation.js';
+import { loadAnimations, loadBVHAnimation } from './animation.js';
 import { loadClothUI, removeAllCloth } from './cloth.js';
 import { loadHairUI, removeHair, refitHairToBody } from './hair.js';
 import { loadGarmentUI, removeAllGarments } from './garment.js';

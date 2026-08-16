@@ -3,8 +3,8 @@
  */
 import { THREE, LIGHT_PRESETS, TONE_MAPPINGS } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
-import { markDirty, markClean } from './undo.js';
+import { fn } from '../gemeinsam/registrierung.js';
+import { markDirty } from './undo.js';
 
 function autoSave() {
     clearTimeout(state.saveTimer);

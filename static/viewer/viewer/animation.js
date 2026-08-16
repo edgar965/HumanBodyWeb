@@ -3,8 +3,8 @@
  */
 import * as THREE from 'three';
 import { state } from './state.js';
-import { fn } from './registry.js';
-import { detectBVHFormat, fetchRetargetedClipFromUrl } from '../retarget_hybrid.js?v=32';
+import { fn } from '../gemeinsam/registrierung.js';
+import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js?v=32';
 import { convertToRigifySkinnedMesh } from './skinning.js';
 
 export async function loadAnimations() {

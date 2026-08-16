@@ -5,9 +5,7 @@
  * Full controls: model preset, morphs (via WebSocket), cloth template/builder/primitive,
  * model/rig/clothes toggles, face bones checkbox.
  */
-import * as THREE from 'three';
 import { state } from './state.js';
-import { fn } from './registry.js';
 import {
     sharedState,
     loadRigifySkeleton, loadSkinWeights, loadSkinColors, loadHairColors,
@@ -15,12 +13,12 @@ import {
 } from '../character_core.js?v=1';
 
 // Import all modules so they register their functions in the registry.
-import { applySceneSettings, applySceneSkinSettings } from './scene_setup.js';
-import { connectWebSocket, wsSend, sendMorphThrottled } from './websocket.js';
-import { loadMesh, convertToRigifySkinnedMesh, applySkinColor, reloadBodyMesh } from './mesh_loading.js';
-import { loadCloth, removeClothRegion, removeAllCloth, loadGarment, removeGarment, removeAllGarments } from './cloth_garments.js';
-import { loadHair, removeHair } from './hair.js';
-import { loadBVH, positionCameraAfterRetarget } from './bvh_animation.js';
+import { applySceneSettings } from './scene_setup.js';
+import { connectWebSocket } from './websocket.js';
+import { loadMesh, convertToRigifySkinnedMesh, applySkinColor } from './mesh_loading.js';
+import { loadCloth } from './cloth_garments.js';
+import { loadHair } from './hair.js';
+import { loadBVH } from './bvh_animation.js';
 import { loadPresetClothAndHair, reloadForPreset } from './presets.js';
 import { buildControlPanel } from './ui_panel.js';
 

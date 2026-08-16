@@ -9,20 +9,19 @@ import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { detectBVHFormat, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText } from '../retarget_hybrid.js?v=32';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
-import {
-    classifyBones, getDefaultModelConfig, computeBoneWorldTransforms,
-    generateModelMesh, classifyRigBones, getDefaultRigConfig,
-    generateRigBoneMesh, BODY_BONES, FINGER_BONES,
-} from '../model_generator.js';
+import { Knochengruppen } from '../modellbau/knochengruppen.js';
+import { computeBoneWorldTransforms } from '../modellbau/knochenmatrizen.js';
+import { generateModelMesh } from '../modellbau/modellnetz.js';
+import { getDefaultModelConfig, getDefaultRigConfig } from '../modellbau/modellvorgaben.js';
+import { generateRigBoneMesh } from '../modellbau/rignetz.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 // Re-export everything that other modules may need
 export { THREE, OrbitControls, TransformControls, BVHLoader, GLTFLoader };
 export { detectBVHFormat, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText };
 export { buildRigifySkeleton };
 export {
-    classifyBones, getDefaultModelConfig, computeBoneWorldTransforms,
-    generateModelMesh, classifyRigBones, getDefaultRigConfig,
-    generateRigBoneMesh, BODY_BONES, FINGER_BONES,
+    Knochengruppen, getDefaultModelConfig, computeBoneWorldTransforms, generateModelMesh, getDefaultRigConfig, generateRigBoneMesh,
 };
 
 export const gltfLoader = new GLTFLoader();
@@ -209,12 +208,6 @@ export const state = {
     _refitting: false,
 
     // Model generator
-    _mgConfig: null,
-    _mgSelectedBone: null,
-    _mgInitialized: false,
-    _mgSkeletonType: 'rig',
-    _mgRigBonesData: null,
-    _mgCharacterId: null,
 
     // Kleider
     _selectedKleiderId: null,
@@ -248,3 +241,8 @@ export const REGION_DEFS = [
 ];
 export const REGION_RADIUS = 0.20;
 export const REGION_IDS = ['top', 'upper', 'mid', 'lower', 'bottom'];
+
+// Drei Stellen rufen `if (fn.serverLog) fn.serverLog(…)` — die Abfrage war
+// bisher immer falsch, weil die Szenenseite ihren Logger nie angemeldet hat
+// (Befund 16.08.2026). Die Aufrufe liefen also ins Leere.
+fn.serverLog = serverLog;

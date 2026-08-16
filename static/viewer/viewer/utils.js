@@ -1,26 +1,15 @@
 /**
  * Viewer — Utility functions (base64, coordinate transforms, slider helpers).
  */
-import * as THREE from 'three';
-import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
+// Aus gemeinsam/kodierung.js — die Kopien hier sind am 15.08.2026 entfallen (sechsfach vorhanden).
+import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+export { base64ToFloat32, base64ToUint32, blenderToThreeCoords };
 
 // =========================================================================
 // Base64 decode
 // =========================================================================
-export function base64ToFloat32(b64) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Float32Array(bytes.buffer);
-}
 
-export function base64ToUint32(b64) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Uint32Array(bytes.buffer);
-}
 
 // =========================================================================
 // Base64 encode (for sending buffers to server)
@@ -43,20 +32,6 @@ export function uint32ToBase64(u32) {
 // Coordinate transforms
 // =========================================================================
 
-/**
- * Convert Blender coordinate system to Three.js in-place.
- * Blender: X-right, Y-forward, Z-up
- * Three.js: X-right, Y-up, Z-forward (toward camera)
- * Transform: (x, y, z) -> (x, z, -y)
- */
-export function blenderToThreeCoords(buf) {
-    for (let i = 0; i < buf.length; i += 3) {
-        const y = buf[i + 1];
-        const z = buf[i + 2];
-        buf[i + 1] = z;
-        buf[i + 2] = -y;
-    }
-}
 
 // Three.js -> Blender: (x, y, z) -> (x, -z, y)
 export function threeToBlenderCoords(buf) {

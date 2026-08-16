@@ -3,7 +3,7 @@
  */
 import * as THREE from 'three';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 // smplxExpr: [jawOpen, smile, browUp, browDown, lipUp, lipCorner, cheekPuff, squint, noseWrinkle, eyeWide]
 export function applyFacialExpression(expr) {

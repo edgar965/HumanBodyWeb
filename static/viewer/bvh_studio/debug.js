@@ -3,7 +3,7 @@
  */
 import * as THREE from 'three';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 const _dbgV = new THREE.Vector3();
 let _dbgThrottle = 0;

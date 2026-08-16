@@ -4,7 +4,7 @@
  */
 import { THREE, buildRigifySkeleton } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32 } from './utils.js';
 
 export async function loadRigifySkeleton() {

@@ -4,7 +4,7 @@
  */
 import { THREE, OrbitControls, TransformControls, SESSION_KEY, buildRigifySkeleton } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 // Import all modules so they register their functions in the registry.
 import './undo.js';
@@ -24,8 +24,8 @@ import './hair.js';
 import './cloth.js';
 import './animation.js';
 import './kleider.js';
+import './modellgenerator_ui.js';
 import './mh_proxy.js';
-import './model_generator.js';
 import './rigging.js';
 import './charmorph.js';
 import { loadCharmorphHairUI } from './charmorph_hair.js';

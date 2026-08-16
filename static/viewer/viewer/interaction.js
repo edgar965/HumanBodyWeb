@@ -1,13 +1,13 @@
 /**
  * Viewer — 3D Interaction (hover highlight, click-to-select, equipped list).
  */
-import * as THREE from 'three';
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { removeGarment } from './garment.js';
 import { removeClothRegion } from './cloth.js';
 import { removeHair } from './hair.js';
-import { isVeActive, isVeBoxSelecting, getVeTargetMesh, veHandleClick, veBoxSelectStart, veBoxSelectMove, veBoxSelectEnd, veHandleKeydown } from './vertex_editor.js';
+import { isVeActive, isVeBoxSelecting, getVeTargetMesh, veHandleKeydown } from './vertex_editor.js';
+import { veHandleClick, veBoxSelectStart, veBoxSelectMove, veBoxSelectEnd } from './vertex_auswahl.js';
 
 export function getSelectableTargets() {
     const targets = [];
@@ -238,3 +238,6 @@ fn.getSelectableTargets = getSelectableTargets;
 fn._setEmissiveOnItem = _setEmissiveOnItem;
 fn.updateEquippedList = updateEquippedList;
 fn.initInteraction = initInteraction;
+// Der Menuepunkt "Loeschen" ruft ueber die Registry — ohne diese
+// Zeile tat er nichts (Befund 16.08.2026).
+fn._removeSelectedItem = _removeSelectedItem;

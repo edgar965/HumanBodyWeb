@@ -85,8 +85,14 @@
         display: flex; align-items: center; padding: 0 8px; font-size: 0.75rem; color: var(--text-muted);
         flex-shrink: 0; gap: 12px;
     }
-    .timeline-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
-    #timeline-canvas { width: 100%; height: 100%; display: block; cursor: default; }
+    /* Senkrecht scrollbar (Review 15.08.2026): Der Bereich ist in der
+       Vorgabehöhe 175 px hoch (gemessen), eine Spur ist 40 px, das Lineal 20 px
+       — es waren also DREI Spuren sichtbar, und alles darunter war weder zu
+       sehen noch anzuklicken, weil `overflow: hidden` auch keinen Balken gab.
+       Die Mauskoordinaten kommen überall aus `tlCanvas.getBoundingClientRect()`
+       und bleiben beim Scrollen deshalb richtig. */
+    .timeline-canvas-wrap { flex: 1; position: relative; overflow-y: auto; overflow-x: hidden; }
+    #timeline-canvas { display: block; cursor: default; }
 
     /* Playback bar */
     .studio-playback {
@@ -123,8 +129,11 @@
     }
 
     /* Track headers (left side of timeline) */
+    /* Kein `bottom: 0` mehr: In einem scrollenden Container bezieht sich das auf
+       den SICHTBAREN Bereich, die Kopfspalte würde also nicht mitscrollen. Die
+       Höhe setzt updateTrackHeaders() auf die Canvas-Höhe. */
     .track-headers {
-        position: absolute; left: 0; top: 0; bottom: 0; width: 200px;
+        position: absolute; left: 0; top: 0; width: 200px;
         background: var(--bg-secondary); border-right: 1px solid var(--border); z-index: 2;
     }
     .track-header {

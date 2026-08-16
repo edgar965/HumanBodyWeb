@@ -2,11 +2,11 @@
  * Viewer — Model Presets (load/save dialogs, apply preset, gather state).
  */
 import { state, DEFAULT_BODY } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { wsSend } from './websocket.js';
 import { applySceneSkinSettings } from './scene_settings.js';
 import { removeAllCloth, loadCloth } from './cloth.js';
-import { loadHair, removeHair, applyHairColor } from './hair.js';
+import { loadHair, applyHairColor } from './hair.js';
 import { loadGarment, removeAllGarments } from './garment.js';
 import { loadBVHAnimation } from './animation.js';
 

@@ -11,7 +11,12 @@
         <div class="drop-zone" id="dropTarget">
             <i class="fas fa-cloud-upload-alt fa-3x"></i>
             <p>Drag & drop video here or click to browse</p>
-            <input type="file" name="video" id="videoInput" accept="video/*" {% if not unique_videos %}required{% endif %}>
+            {% comment %}Review 16.08.2026: hier stand `{% if not unique_videos %}`.
+            Diesen Namen hat nie eine Ansicht geliefert (seit dem 31.03.2026), also
+            war die Bedingung immer wahr und das Feld immer Pflicht — auch wenn
+            unten ein vorhandenes Video zur Auswahl stand. Gemeint war die Liste,
+            die die Ansicht `upload_files` nennt.{% endcomment %}
+            <input type="file" name="video" id="videoInput" accept="video/*" {% if not upload_files %}required{% endif %}>
         </div>
 
         <!-- Video file selector (from uploads/ directory) -->

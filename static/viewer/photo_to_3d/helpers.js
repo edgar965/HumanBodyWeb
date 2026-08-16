@@ -1,36 +1,12 @@
 /**
  * Photo To 3D — Utility functions: base64 decoding, coordinate conversion, materials.
  */
-import * as THREE from 'three';
+// Aus gemeinsam/kodierung.js — die Kopien hier sind am 15.08.2026 entfallen (sechsfach vorhanden).
+export { base64ToFloat32, base64ToUint16, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 
-export function base64ToFloat32(b64) {
-    const bin = atob(b64);
-    const u8 = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-    return new Float32Array(u8.buffer);
-}
 
-export function base64ToUint32(b64) {
-    const bin = atob(b64);
-    const u8 = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-    return new Uint32Array(u8.buffer);
-}
 
-export function base64ToUint16(b64) {
-    const bin = atob(b64);
-    const u8 = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-    return new Uint16Array(u8.buffer);
-}
 
-export function blenderToThreeCoords(buf) {
-    for (let i = 0; i < buf.length; i += 3) {
-        const y = buf[i + 1], z = buf[i + 2];
-        buf[i + 1] = z;
-        buf[i + 2] = -y;
-    }
-}
 
 /**
  * Align HB face/head profile to match SMPL-X proportions.

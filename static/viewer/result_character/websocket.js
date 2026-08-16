@@ -2,7 +2,7 @@
  * Result Character — WebSocket morph communication.
  */
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { blenderToThreeCoords } from '../character_core.js?v=1';
 
 export function connectWebSocket() {

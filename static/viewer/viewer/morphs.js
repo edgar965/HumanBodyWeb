@@ -2,7 +2,7 @@
  * Viewer — Morph UI (body type, meta sliders, morph categories).
  */
 import { state, API } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { wsSend, sendMorphThrottled } from './websocket.js';
 import { getSkinMat, syncSkinUI, applySkinColor } from './scene_settings.js';
 

@@ -2,7 +2,7 @@
  * Scene Editor -- Rigging tab UI bindings.
  */
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { markDirty } from './undo.js';
 
 export const _defaultRigParams = {

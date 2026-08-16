@@ -2,7 +2,7 @@
  * Result Character — Preset loading and switching.
  */
 import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { sharedState, applyHairColor } from '../character_core.js?v=1';
 
 const ss = sharedState;

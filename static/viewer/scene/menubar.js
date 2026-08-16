@@ -3,8 +3,7 @@
  */
 import { THREE, SESSION_KEY } from './state.js';
 import { state } from './state.js';
-import { fn } from './registry.js';
-import { sceneUndo } from './undo.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { closeAllDialogs } from './utils.js';
 
 export function closeAllMenus() {

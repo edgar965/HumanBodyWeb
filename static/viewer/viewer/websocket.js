@@ -2,7 +2,7 @@
  * Viewer — WebSocket for live morphing.
  */
 import { state, WS_PATH } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { updateMeshVertices, reloadMeshForBodyType } from './mesh.js';
 
 export function connectWebSocket() {

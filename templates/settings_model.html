@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Modell - Einstellungen{% endblock %}
 
 {% block content %}
@@ -118,90 +119,25 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-(function() {
-    const currentConfig = "{{ settings.default_model_config|escapejs }}";
-    const currentAnims = "{{ settings.default_model_animations|escapejs }}";
+{% comment %}Umbau 16.08.2026: Modell-Feld, Tab-Ankreuzfelder und
+Animationsauswahl lagen als Inline-Skript hier — und wortgleich noch dreimal in
+settings_result/scene/theatre. Jetzt drei ES-Module unter static/js/einstellungen/;
+hier bleiben nur die Werte, die diese Seite von den anderen unterscheiden.{% endcomment %}
+<script type="module">
+import { Modellfeld } from "{% static 'js/einstellungen/modellfeld.js' %}?t={% now 'U' %}";
+import { Tabfelder } from "{% static 'js/einstellungen/tabfelder.js' %}?t={% now 'U' %}";
+import { Animationsauswahl } from "{% static 'js/einstellungen/animationsauswahl.js' %}?t={% now 'U' %}";
 
-    // Populate model presets
-    fetch('/api/character/models/')
-        .then(r => r.json())
-        .then(data => {
-            const presets = data.presets || [];
-            ['default-model-config', 'default-model-animations'].forEach((id, idx) => {
-                const sel = document.getElementById(id);
-                if (!sel) return;
-                const current = [currentConfig, currentAnims][idx];
-                sel.innerHTML = '';
-                presets.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.name;
-                    opt.textContent = p.label || p.name;
-                    if (p.name === current) opt.selected = true;
-                    sel.appendChild(opt);
-                });
-            });
-        })
-        .catch(e => console.warn('Failed to load model presets:', e));
+Modellfeld.fuellen('default-model-config', "{{ settings.default_model_config|escapejs }}");
+Modellfeld.fuellen('default-model-animations', "{{ settings.default_model_animations|escapejs }}");
 
-    // Expanded panels checkboxes
-    const CONFIG_PANELS = [
-        ['body_type', 'Body Type'], ['morphs', 'Morphs'],
-        ['cloth_template', 'Cloth - from Template'], ['cloth_builder', 'Cloth Builder'],
-        ['cloth_primitive', 'Cloth - Primitive'], ['hair', 'Hair'],
-        ['wardrobe', 'Wardrobe'], ['animations', 'Animations'],
-    ];
-    function buildPanelCheckboxes(wrapId, panels, prefix, expandedJson) {
-        const wrap = document.getElementById(wrapId);
-        if (!wrap) return;
-        let expanded = [];
-        try { expanded = JSON.parse(expandedJson || '[]'); } catch(e) {}
-        wrap.innerHTML = '';
-        panels.forEach(([key, label]) => {
-            const lbl = document.createElement('label');
-            lbl.className = 'settings-checkbox';
-            lbl.style.display = 'block';
-            lbl.style.marginBottom = '4px';
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.name = prefix + key;
-            cb.checked = expanded.includes(key);
-            lbl.appendChild(cb);
-            lbl.appendChild(document.createTextNode(' ' + label));
-            wrap.appendChild(lbl);
-        });
-    }
-    buildPanelCheckboxes('panels-config-wrap', CONFIG_PANELS, 'panel_config_',
-        "{{ settings.expanded_panels_config|escapejs }}");
+Tabfelder.bauen('panels-config-wrap', [
+    ['body_type', 'Body Type'], ['morphs', 'Morphs'],
+    ['cloth_template', 'Cloth - from Template'], ['cloth_builder', 'Cloth Builder'],
+    ['cloth_primitive', 'Cloth - Primitive'], ['hair', 'Hair'],
+    ['wardrobe', 'Wardrobe'], ['animations', 'Animations'],
+], 'panel_config_', "{{ settings.expanded_panels_config|escapejs }}");
 
-    // Animation selector expand/collapse + click (shared widget)
-    document.querySelectorAll('.anim-cat-header-settings').forEach(header => {
-        header.addEventListener('click', () => {
-            const body = header.nextElementSibling;
-            const icon = header.querySelector('.fa-chevron-down');
-            if (body.style.display === 'none') {
-                body.style.display = 'block';
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                body.style.display = 'none';
-                icon.style.transform = 'rotate(0deg)';
-            }
-        });
-    });
-    document.querySelectorAll('.anim-selection-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const selectorId = item.getAttribute('data-selector');
-            const value = item.getAttribute('data-value');
-            document.getElementById(selectorId + '-hidden').value = value;
-            document.getElementById(selectorId + '-display').textContent = value || '(Keine Auto-Load)';
-            document.querySelectorAll(`.anim-selection-item[data-selector="${selectorId}"]`).forEach(i => {
-                i.style.background = '';
-                i.style.color = '';
-            });
-            item.style.background = 'var(--accent)';
-            item.style.color = 'white';
-        });
-    });
-})();
+Animationsauswahl.alleStarten();
 </script>
 {% endblock %}

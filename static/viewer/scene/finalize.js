@@ -1,8 +1,7 @@
 /**
  * finalize.js — Finalize tab: Export, Cleanup, Format conversion.
  */
-import { state } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 export function initFinalizeTab() {
     // Export button

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Result - Einstellungen{% endblock %}
 
 {% block content %}
@@ -39,56 +40,11 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-(function() {
-    const currentResult = "{{ settings.default_model_result|escapejs }}";
+<script type="module">
+import { Modellfeld } from "{% static 'js/einstellungen/modellfeld.js' %}?t={% now 'U' %}";
+import { Animationsauswahl } from "{% static 'js/einstellungen/animationsauswahl.js' %}?t={% now 'U' %}";
 
-    // Populate model presets
-    fetch('/api/character/models/')
-        .then(r => r.json())
-        .then(data => {
-            const presets = data.presets || [];
-            const sel = document.getElementById('default-model-result');
-            if (!sel) return;
-            sel.innerHTML = '';
-            presets.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.name;
-                opt.textContent = p.label || p.name;
-                if (p.name === currentResult) opt.selected = true;
-                sel.appendChild(opt);
-            });
-        })
-        .catch(e => console.warn('Failed to load model presets:', e));
-
-    // Animation selector expand/collapse + click (shared widget)
-    document.querySelectorAll('.anim-cat-header-settings').forEach(header => {
-        header.addEventListener('click', () => {
-            const body = header.nextElementSibling;
-            const icon = header.querySelector('.fa-chevron-down');
-            if (body.style.display === 'none') {
-                body.style.display = 'block';
-                icon.style.transform = 'rotate(180deg)';
-            } else {
-                body.style.display = 'none';
-                icon.style.transform = 'rotate(0deg)';
-            }
-        });
-    });
-    document.querySelectorAll('.anim-selection-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const selectorId = item.getAttribute('data-selector');
-            const value = item.getAttribute('data-value');
-            document.getElementById(selectorId + '-hidden').value = value;
-            document.getElementById(selectorId + '-display').textContent = value || '(Keine Auto-Load)';
-            document.querySelectorAll(`.anim-selection-item[data-selector="${selectorId}"]`).forEach(i => {
-                i.style.background = '';
-                i.style.color = '';
-            });
-            item.style.background = 'var(--accent)';
-            item.style.color = 'white';
-        });
-    });
-})();
+Modellfeld.fuellen('default-model-result', "{{ settings.default_model_result|escapejs }}");
+Animationsauswahl.alleStarten();
 </script>
 {% endblock %}

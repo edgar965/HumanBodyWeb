@@ -1,9 +1,9 @@
 /**
  * Scene Editor -- sessionStorage persistence.
  */
-import { THREE, TONE_MAPPINGS } from './state.js';
+import { TONE_MAPPINGS } from './state.js';
 import { state, SESSION_KEY } from './state.js';
-import { fn } from './registry.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 // =========================================================================
 // Save session state to sessionStorage

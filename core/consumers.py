@@ -4,6 +4,8 @@ import logging
 import numpy as np
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+from .dienste.charakterdaten import Charakterdaten
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,16 +57,16 @@ class CharacterConsumer(AsyncWebsocketConsumer):
             self._char_state.set_body_type('Female_Caucasian')
 
             # Preload female CC subdivider
-            from core.character_api import _get_cc_subdivider
-            self._cc_subs['female'] = _get_cc_subdivider('female')
+            from core.dienste.charakterdaten import Charakterdaten
+            self._cc_subs['female'] = Charakterdaten.unterteiler('female')
         except Exception as e:
             logger.error("Failed to init CharacterState: %s", e)
 
     def _get_cc(self):
         """Get CC subdivider for current gender, lazy-loading if needed."""
         if self._current_gender not in self._cc_subs:
-            from core.character_api import _get_cc_subdivider
-            self._cc_subs[self._current_gender] = _get_cc_subdivider(self._current_gender)
+            from core.dienste.charakterdaten import Charakterdaten
+            self._cc_subs[self._current_gender] = Charakterdaten.unterteiler(self._current_gender)
         return self._cc_subs.get(self._current_gender)
 
     async def disconnect(self, close_code):
@@ -79,9 +81,26 @@ class CharacterConsumer(AsyncWebsocketConsumer):
         await self.send(bytes_data=vertices.astype(np.float32).tobytes())
 
     async def _handle_body_type(self, body_type):
-        """Handle body type change, detecting gender switch."""
-        gender_changed = self._char_state.set_body_type(body_type)
-        new_gender = self._char_state.current_gender
+        """Koerperart wechseln und dabei einen Geschlechtswechsel erkennen.
+
+        BEFUND 16.08.2026: Hier stand
+            gender_changed = self._char_state.set_body_type(body_type)
+            new_gender = self._char_state.current_gender
+        `set_body_type` gibt aber nichts zurueck, und `CharacterState` hat kein
+        Feld `current_gender` — nur `gender` als Zahl zwischen 0 und 1. Jede
+        Koerperart-Umstellung endete deshalb in
+
+            AttributeError: 'CharacterState' object has no attribute
+            'current_gender'
+
+        und riss die WebSocket-Verbindung ab; die linke Spalte der
+        Vergleichsseite war danach tot. Das Geschlecht steht im Namen der
+        Koerperart, und der Wechsel ergibt sich aus dem Vergleich mit dem
+        bisher gemerkten Wert — genau dafuer gibt es `self._current_gender`.
+        """
+        self._char_state.set_body_type(body_type)
+        new_gender = Charakterdaten.geschlecht_zu(body_type)
+        gender_changed = new_gender != self._current_gender
         self._current_gender = new_gender
 
         if gender_changed:
@@ -162,6 +181,22 @@ class TestCharacterConsumer(CharacterConsumer):
             self._char_state = mod.CharacterState(md, cd)
             self._char_state.set_body_type(_get_default_body_type())
 
-            self._cc_sub = _get_test_cc_subdivider()
+            self._cc_subs = {'test': _get_test_cc_subdivider()}
         except Exception as e:
             logger.error("Failed to init test CharacterState: %s", e)
+
+    def _get_cc(self):
+        """Der Unterteiler des TESTcharakters — nicht der der Produktion.
+
+        BEFUND 16.08.2026: Diese Klasse legte ihren Unterteiler unter
+        `self._cc_sub` ab (Einzahl), die geerbte `_get_cc` liest aber
+        `self._cc_subs` (Mehrzahl) und holte dort den Produktionsunterteiler
+        nach. Der ist auf 18.210 Grundvertices gebaut, der Testcharakter hat
+        17.996 — beim ersten Unterteilen brach es mit
+
+            ValueError: matmul: dimension mismatch with signature
+            (n,k=18210),(k=17996,m)->(n,m)
+
+        und die Verbindung riss ab. Ein Buchstabe Unterschied im Feldnamen.
+        """
+        return self._cc_subs.get('test')

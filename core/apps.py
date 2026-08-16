@@ -26,6 +26,20 @@ class CoreConfig(AppConfig):
         from django.conf import settings as django_settings
         from core.models import BVHJob
 
+        # Zwischendateien einmal beim Start aufräumen (Review 15.08.2026):
+        # `ProjektTemp.hausmeister` lief bisher NUR beim Anlegen einer neuen
+        # Zwischendatei. Wer wochenlang nur liest, behält den Müll für immer.
+        try:
+            from core.projekt_temp import ProjektTemp
+            entfernt = ProjektTemp.hausmeister(erzwingen=True)
+            if entfernt:
+                logging.getLogger('core').info(
+                    'Start: %d alte Zwischendateien entfernt', entfernt)
+        except Exception:                                          # noqa: BLE001
+            logging.getLogger('core').warning(
+                'Aufräumen der Zwischendateien beim Start fehlgeschlagen',
+                exc_info=True)
+
         running_statuses = [
             'detecting_2d', 'openpose', 'openpose_csv', 'mediapipe',
             'lifting_3d', 'mocapnet', 'v4_processing', 'processing',
@@ -34,7 +48,7 @@ class CoreConfig(AppConfig):
         if not orphaned:
             return
 
-        from core.views import _is_pid_alive, remonitor_smpl_job
+        from core.pipelines.werkzeuge import _is_pid_alive, remonitor_smpl_job
 
         for job in orphaned:
             output_dir = Path(django_settings.MEDIA_ROOT) / 'output' / str(job.id)
@@ -62,7 +76,7 @@ class CoreConfig(AppConfig):
                     pid_file.unlink()
                 except (FileNotFoundError, OSError):
                     logging.getLogger('core').debug('uebergangen', exc_info=True)
-                print(f'[CoreConfig] Job {job.id}: BVH found, marked complete.')
+                logging.getLogger('core').info('Job %s: BVH gefunden, als fertig vermerkt', job.id)
                 continue
 
             # 2. Check if subprocess is still running (PID file exists)
@@ -75,7 +89,7 @@ class CoreConfig(AppConfig):
                             args=(str(job.id), pid),
                             daemon=True,
                         ).start()
-                        print(f'[CoreConfig] Job {job.id}: PID {pid} still running, re-monitoring.')
+                        logging.getLogger('core').info('Job %s: PID %s laeuft noch, wird weiter beobachtet', job.id, pid)
                         continue
                 except (ValueError, FileNotFoundError):
                     logging.getLogger('core').debug('uebergangen', exc_info=True)
@@ -84,4 +98,4 @@ class CoreConfig(AppConfig):
             job.status = 'failed'
             job.error_message = 'Server was restarted while job was running. Click "Neu starten" to retry.'
             job.save()
-            print(f'[CoreConfig] Job {job.id}: marked as failed.')
+            logging.getLogger('core').warning('Job %s: als fehlgeschlagen vermerkt (Serverneustart)', job.id)
