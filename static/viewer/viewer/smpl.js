@@ -12,6 +12,7 @@ import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
 
 // =========================================================================
 // SMPL Garment Library
@@ -54,7 +55,15 @@ function _renderSmplGarmentList() {
         const body = document.createElement('div'); body.className = 'anim-category-body';
         for (const g of byCat[cat]) {
             const item = document.createElement('div'); item.className = 'anim-item'; if (g.id === state._smplSelectedId) item.classList.add('active');
-            if (g.has_thumb) { const img = document.createElement('img'); img.src = `/api/smpl/garment/thumb/${g.id}/`; img.alt = g.name; img.loading = 'lazy'; img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;margin-right:6px;'; item.appendChild(img); }
+            if (g.has_thumb) {
+                const img = document.createElement('img');
+                img.alt = g.name;
+                // Erst laden, wenn die Zeile sichtbar wird.
+                Bildnachlader.vormerken(
+                    img, `/api/smpl/garment/thumb/${g.id}/`);
+                img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;margin-right:6px;';
+                item.appendChild(img);
+            }
             const nameSpan = document.createElement('span'); nameSpan.textContent = g.name; nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; item.appendChild(nameSpan);
             if (state.smplGarmentMeshes[g.id]) { const badge = document.createElement('span'); badge.textContent = '\u2713'; badge.style.cssText = 'color:var(--success);margin-left:4px;'; item.appendChild(badge); }
             item.style.cssText += 'display:flex;align-items:center;padding:4px 12px 4px 28px;';

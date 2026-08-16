@@ -30,7 +30,7 @@
     <tbody>
         {% for job in jobs %}
         <tr>
-            <td><img class="thumb" src="{% url 'video_thumbnail' job.id %}" alt="thumb"></td>
+            <td><img class="thumb" src="{% url 'video_thumbnail' job.id %}" loading="lazy" alt="thumb"></td>
             <td>{{ job.bvh_basename }}</td>
             <td><span class="badge badge-{{ job.pipeline }}">{{ job.get_pipeline_display }}</span></td>
             <td>{{ job.updated_at|date:"d.m.Y H:i" }}</td>

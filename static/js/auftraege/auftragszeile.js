@@ -52,7 +52,7 @@ export class Auftragszeile {
             + `<div class="detail-progress-text" id="detail-text-${this.id}">`
             + 'Startet …</div>'
             + `<div class="detail-thumb" id="detail-thumb-${this.id}">`
-            + `<img src="/api/thumbnail/${this.id}/" alt="Video"></div>`
+            + `<img src="/api/thumbnail/${this.id}/" alt="Video" loading="lazy"></div>`
             + `<div class="detail-error hb-versteckt" id="detail-error-${this.id}">`
             + '</div>'
             + `<div class="detail-actions" id="detail-actions-${this.id}">`

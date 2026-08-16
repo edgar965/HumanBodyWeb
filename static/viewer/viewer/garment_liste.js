@@ -1,6 +1,7 @@
 import { setSlider, sliderVal } from './utils.js';
 import { state, REGION_DEFS } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
 /**
  * Kleidungsliste und Downloadpakete der Modellseite.
  *
@@ -42,8 +43,8 @@ export function _renderGarmentList() {
             if (g.id === state.selectedGarmentId) item.classList.add('active');
             if (g.has_thumb) {
                 const img = document.createElement('img');
-                img.src = `/api/character/garment/thumb/${g.id}/`;
                 img.alt = g.name;
+                Bildnachlader.vormerken(img, `/api/character/garment/thumb/${g.id}/`);   // erst beim Aufklappen laden
                 img.className = 'garment-thumb';
                 img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;margin-right:6px;';
                 item.appendChild(img);

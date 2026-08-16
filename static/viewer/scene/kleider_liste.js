@@ -7,6 +7,7 @@
 import { state } from './state.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
 
 
 function _kleiderSelectById(id) {
@@ -206,7 +207,10 @@ function _renderKleiderList() {
             if (state._selectedKleiderId === g.id) row.classList.add('selected');
             if (g.has_thumb) {
                 const img = document.createElement('img');
-                img.src = `/api/character/garment/thumb/${g.id}/`;
+                // Erst beim Aufklappen laden — 4,77 MB und 125 Anfragen
+                // weniger je Seitenaufruf (siehe Bildnachlader).
+                Bildnachlader.vormerken(
+                    img, `/api/character/garment/thumb/${g.id}/`);
                 img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;';
                 row.appendChild(img);
             }

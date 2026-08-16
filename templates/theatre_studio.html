@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% comment %}
+    Debugseite für Theatre.js — nicht verlinkt, nur über
+    /humanbody/theatre-studio/ erreichbar. Ihre KONSOLENAUSGABE IST DAS
+    ERGEBNIS: Sie sagt, ob `studio.initialize()` durchgelaufen ist und ob die
+    Studio-Oberfläche gerendert hat. Die zehn `console.log` hier sind deshalb
+    dauerhaft gewollt und werden vom Prüfer `jsbefunde` an diesem Vermerk
+    erkannt — vorher stand der Pfad hart in einem Werkzeug, und die Zählungen
+    wichen um zehn Befunde voneinander ab.
+{% endcomment %}
+
 {% block title %}Theatre Studio — MocapNET{% endblock %}
 
 {% block extra_head %}

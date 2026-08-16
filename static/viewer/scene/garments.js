@@ -8,6 +8,7 @@ import { escapeHtml, _selectedInst, _bindSlider, _sliderVal } from './utils.js';
 import './skeleton.js';
 import { _applyGarmentRegionOffsets, _computeGarmentRegionWeights, _doGarmentFit, _saveSelectedGarmentState, _syncGarmentSliders } from './kleidung_anpassen.js';
 import { Assetsbedienung } from './assetsbedienung.js';
+import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
 
 
 
@@ -72,8 +73,15 @@ export function _renderGarmentList() {
             item.className = 'anim-item garment-item' + (g.id === state._selectedGarmentId ? ' active' : '');
             if (g.has_thumb) {
                 const img = document.createElement('img');
-                img.src = `/api/character/garment/thumb/${g.id}/`;
                 img.alt = g.name;
+                // Erst laden, wenn die Kategorie aufgeklappt ist.
+                //
+                // GEMESSEN auf /humanbody/scene/ (17.08.2026): 253 Dateien,
+                // 14,1 MB — davon 125 Vorschaubilder mit 4,77 MB fuer Bilder,
+                // die in `display:none` stehen und niemand sieht. `loading="lazy"`
+                // hilft dort NICHT (nachgemessen: 127 → 125), Chrome laedt Bilder
+                // ohne Layout-Box sofort. Begruendung in der Klasse.
+                Bildnachlader.vormerken(img, `/api/character/garment/thumb/${g.id}/`);
                 img.className = 'garment-thumb';
                 img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;margin-right:6px;';
                 item.appendChild(img);

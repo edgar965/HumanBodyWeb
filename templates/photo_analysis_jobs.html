@@ -113,13 +113,13 @@
             data-duration="{{ job.duration_seconds }}">
             <td class="cb-cell"><input type="checkbox" class="job-cb" data-job-id="{{ job.id }}"></td>
             <td>
-                <img src="/{{ job.photo_file }}" alt="photo"
+                <img src="/{{ job.photo_file }}" loading="lazy" alt="photo"
                      class="hb-width-60px"
                      data-detail>
             </td>
             <td>
                 {% if job.result_image %}
-                <img src="/{{ job.result_image }}" alt="3D"
+                <img src="/{{ job.result_image }}" loading="lazy" alt="3D"
                      style="width:100px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
                      data-detail>
                 {% else %}
@@ -128,7 +128,7 @@
             </td>
             <td>
                 {% if job.silhouette_path %}
-                <img src="/{{ job.silhouette_path }}" alt="Silhouette"
+                <img src="/{{ job.silhouette_path }}" loading="lazy" alt="Silhouette"
                      class="hb-width-60px"
                      data-detail>
                 {% else %}
@@ -137,7 +137,7 @@
             </td>
             <td>
                 {% if job.texture_path %}
-                <img src="/{{ job.texture_path }}" alt="Textur"
+                <img src="/{{ job.texture_path }}" loading="lazy" alt="Textur"
                      style="width:60px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
                      data-detail>
                 {% else %}
