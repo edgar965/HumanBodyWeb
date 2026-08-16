@@ -1,9 +1,18 @@
 /**
- * Untermenue „Clip hinzufuegen" der Spuren.
+ * Spurmenue — das Untermenü „Clip hinzufügen" einer Spur.
  *
- * Aus timeline.js herausgeloest (Umbau 15.08.2026): 244 Zeilen, die je Spurtyp
- * ein dreistufiges Menue aufbauen (Kategorie -> Animation, Modelle, Audio,
- * Szenenobjekte). Mit dem Zeichnen der Zeitleiste hat das nichts zu tun.
+ * Aus timeline.js herausgeloest (Umbau 15.08.2026), am 16.08.2026 in eine
+ * Klasse umgebaut. Vorher: eine Funktion mit 244 Zeilen und einer
+ * `if/else if`-Kette ueber sieben Spurtypen. Darin dreimal dasselbe Muster —
+ *
+ *   * ACHTMAL "Element anlegen, Klasse setzen, innerHTML mit Symbol und
+ *     Inline-Stil, Klick-Zuhoerer" -> jetzt `_eintrag()`,
+ *   * ZWEIMAL das Positionieren eines Untermenues beim Ueberfahren
+ *     (getBoundingClientRect, left/top) -> jetzt `_untermenue()`,
+ *   * in jedem Zweig `sub.innerHTML = ''` und eine eigene Leer-Meldung.
+ *
+ * Die Symbolfarben standen als Inline-Stil in jedem innerHTML; sie sind jetzt
+ * benannte Konstanten und gehen ueber eine CSS-Variable in die Vorlage.
  */
 
 import { state } from './state.js';
@@ -11,254 +20,351 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { pushUndo } from './undo.js';
 import { Clip } from './models.js';
 
-
-// Cached animations list — Modelle werden immer frisch vom Server geholt
-// damit neue Dateien in data/models/ sofort erscheinen.
+/** Animationsliste wird gemerkt; Modelle immer frisch geholt (siehe _modell). */
 export let _cachedAnimations = null;
 
 export const DEFAULT_CLIP_SECONDS = 10;
 
-export async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame, submenuId = 'track-ctx-add-submenu') {
-    const sub = document.getElementById(submenuId);
-    if (!sub) return;
-    sub.innerHTML = '<div class="ctx-submenu-empty">Lade...</div>';
+export class Spurmenue {
 
-    const closeCtx = () => { ctx.style.display = 'none'; };
-    const fps = state.project.fps;
-    const defaultFrames = DEFAULT_CLIP_SECONDS * fps;
-    // Platziere Clip an übergebener Position, oder Playhead als Fallback
-    const placeFrame = (targetFrame != null) ? targetFrame : state.playheadFrame;
+    /** Symbol und Farbe je Spurtyp. */
+    static SYMBOLE = {
+        bvh: ['fa-running', null],
+        model: ['fa-user', '#e91e63'],
+        audio: ['fa-music', '#4caf50'],
+        scene_object: ['fa-cube', '#7c5cbf'],
+        camera: ['fa-video', '#00bcd4'],
+        light: ['fa-lightbulb', '#ffc107'],
+    };
+    static ORDNER_FARBE = 'var(--text-muted)';
+    /** Ein Untermenü sitzt fünf Pixel höher als sein Elternteil. */
+    static VERSATZ_Y = 5;
 
-    if (track.type === 'bvh') {
+    /**
+     * @param {Object} spur       die Spur aus dem Projekt
+     * @param {number} nummer     ihr Index
+     * @param {HTMLElement} ctx   das Kontextmenü (wird beim Klick geschlossen)
+     * @param {number} zielbild   Bildnummer, an der der Clip liegen soll
+     */
+    constructor(spur, nummer, ctx, zielbild) {
+        this.spur = spur;
+        this.nummer = nummer;
+        this.ctx = ctx;
+        this.fps = state.project.fps;
+        this.vorgabebilder = DEFAULT_CLIP_SECONDS * this.fps;
+        this.bild = (zielbild != null) ? zielbild : state.playheadFrame;
+        this.ziel = null;
+    }
+
+    /** Menü aufbauen. Der Verteiler auf die Spurtypen. */
+    async fuellen(untermenueId = 'track-ctx-add-submenu') {
+        this.ziel = document.getElementById(untermenueId);
+        if (!this.ziel) return;
+        this._laden();
+        const wege = {
+            bvh: () => this._bvh(),
+            model: () => this._modell(),
+            audio: () => this._ton(),
+            scene_object: () => this._szenenobjekt(),
+            camera: () => this._kamera(),
+            light: () => this._licht(),
+        };
+        const weg = wege[this.spur.type];
+        if (!weg) {
+            this._hinweis('Nicht verfügbar für diesen Spurtyp');
+            return;
+        }
+        await weg();
+    }
+
+    // ------------------------------------------------------------- Bausteine
+
+    _laden() {
+        this._hinweis('Lade...');
+    }
+
+    _hinweis(text) {
+        this.ziel.innerHTML = `<div class="ctx-submenu-empty">${text}</div>`;
+    }
+
+    _leeren() {
+        this.ziel.innerHTML = '';
+    }
+
+    _schliessen() {
+        this.ctx.style.display = 'none';
+    }
+
+    /**
+     * Ein Menüeintrag. Ersetzt acht gleich gebaute Bloecke.
+     * @param {Object} angaben { symbol, farbe, text, rechts, titel, klasse }
+     * @param {Function} beiKlick
+     */
+    _eintrag(angaben, beiKlick) {
+        const { symbol, farbe, text, rechts, titel, klasse } = angaben;
+        const element = document.createElement('div');
+        element.className = 'ctx-item' + (klasse ? ' ' + klasse : '');
+        const stil = farbe ? ` style="--ctx-symbolfarbe:${farbe};"` : '';
+        element.innerHTML = `<i class="fas ${symbol} ctx-symbol"${stil}></i> ${text}`
+            + (rechts ? `<span class="ctx-rechts">${rechts}</span>` : '');
+        if (titel) element.title = titel;
+        if (beiKlick) {
+            element.addEventListener('click', async () => {
+                this._schliessen();
+                await beiKlick();
+            });
+        }
+        return element;
+    }
+
+    /** Eintrag mit dem Symbol seines Spurtyps. */
+    _spureintrag(text, beiKlick, zusatz = {}) {
+        const [symbol, farbe] = Spurmenue.SYMBOLE[this.spur.type] || ['fa-plus', null];
+        return this._eintrag({ symbol, farbe, text, ...zusatz }, beiKlick);
+    }
+
+    /**
+     * Ein Untermenü anhängen, das beim Überfahren neben seinem Elternteil
+     * erscheint. `position: fixed` ist noetig, weil das Menue der ersten Ebene
+     * `overflow: auto` hat und das Untermenue sonst abgeschnitten wuerde.
+     */
+    _untermenue(elternteil) {
+        const feld = document.createElement('div');
+        feld.className = 'ctx-submenu ctx-submenu-fixed';
+        elternteil.appendChild(feld);
+        elternteil.addEventListener('mouseenter', () => {
+            const rahmen = elternteil.getBoundingClientRect();
+            feld.style.left = rahmen.right + 'px';
+            feld.style.top = (rahmen.top - Spurmenue.VERSATZ_Y) + 'px';
+        });
+        return feld;
+    }
+
+    // --------------------------------------------------------- Spurtyp: BVH
+
+    async _bvh() {
         if (!_cachedAnimations) {
             try {
-                const resp = await fetch('/api/character/animations/');
-                _cachedAnimations = await resp.json();
-            } catch (e) {
-                sub.innerHTML = '<div class="ctx-submenu-empty">Fehler beim Laden</div>';
+                const antwort = await fetch('/api/character/animations/');
+                _cachedAnimations = await antwort.json();
+            } catch (fehler) {
+                this._hinweis('Fehler beim Laden');
                 return;
             }
         }
-        sub.innerHTML = '';
-        const cats = _cachedAnimations.categories || {};
-        const keys = Object.keys(cats).sort();
-        if (keys.length === 0) {
-            sub.innerHTML = '<div class="ctx-submenu-empty">Keine Animationen verfügbar</div>';
+        const kategorien = _cachedAnimations.categories || {};
+        const namen = Object.keys(kategorien).sort();
+        if (!namen.length) {
+            this._hinweis('Keine Animationen verfügbar');
             return;
         }
-        // Zwei-stufiges Menü: Kategorie → Animation
-        for (const cat of keys) {
-            const anims = cats[cat] || [];
-            const catItem = document.createElement('div');
-            catItem.className = 'ctx-item has-submenu';
-            catItem.innerHTML = `
-                <i class="fas fa-folder" style="width:16px;color:var(--text-muted);"></i>
-                ${cat}
-                <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:0.7rem;color:var(--text-muted);">${anims.length}</span>
-                    <i class="fas fa-caret-right" style="font-size:0.7rem;color:var(--text-muted);"></i>
-                </span>
-            `;
-            const nested = document.createElement('div');
-            nested.className = 'ctx-submenu';
-            if (anims.length === 0) {
-                nested.innerHTML = '<div class="ctx-submenu-empty">Leer</div>';
-            } else {
-                for (const anim of anims) {
-                    const animItem = document.createElement('div');
-                    animItem.className = 'ctx-item';
-                    animItem.innerHTML = `<i class="fas fa-running" style="width:16px;"></i> ${anim.name} <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">${anim.frames || '?'}f</span>`;
-                    animItem.addEventListener('click', async () => {
-                        closeCtx();
-                        await fn.addClipToTrack(trackIdx, cat, anim.name, anim.frames || 0);
-                        const t2 = state.project.tracks[trackIdx];
-                        const c = t2.clips[t2.clips.length - 1];
-                        if (c) {
-                            // Default 10s — trim only if animation is longer than 10s in clip-fps.
-                            const targetClipFrames = Math.round(DEFAULT_CLIP_SECONDS * c.fps);
-                            if (c.totalFrames > targetClipFrames) c.trimOut = c.totalFrames - targetClipFrames;
-                            c.startFrame = placeFrame;
-                            fn.updateDuration();
-                            fn.renderTimeline();
-                        }
-                    });
-                    nested.appendChild(animItem);
-                }
+        this._leeren();
+        for (const name of namen) {
+            const animationen = kategorien[name] || [];
+            const kopf = this._eintrag({
+                symbol: 'fa-folder', farbe: Spurmenue.ORDNER_FARBE, text: name,
+                rechts: `${animationen.length} <i class="fas fa-caret-right"></i>`,
+                klasse: 'has-submenu',
+            }, null);
+            const unter = this._untermenue(kopf);
+            if (!animationen.length) {
+                unter.innerHTML = '<div class="ctx-submenu-empty">Leer</div>';
             }
-            // Position level-3 submenu with position:fixed on hover to break out
-            // of the level-1 submenu's overflow:auto clipping.
-            nested.classList.add('ctx-submenu-fixed');
-            catItem.addEventListener('mouseenter', () => {
-                const rect = catItem.getBoundingClientRect();
-                nested.style.left = rect.right + 'px';
-                nested.style.top = (rect.top - 5) + 'px';
-            });
-            catItem.appendChild(nested);
-            sub.appendChild(catItem);
-        }
-    } else if (track.type === 'model') {
-        // Immer frisch vom Server holen (kein Cache) — so werden neu hinzugefügte
-        // Modelle im data/models/-Verzeichnis sofort angezeigt.
-        let presets = [];
-        try {
-            const resp = await fetch('/api/character/models/');
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const data = await resp.json();
-            presets = data.presets || [];
-        } catch (e) {
-            sub.innerHTML = `<div class="ctx-submenu-empty">Fehler beim Laden: ${e.message}</div>`;
-            return;
-        }
-        sub.innerHTML = '';
-        if (presets.length === 0) {
-            sub.innerHTML = '<div class="ctx-submenu-empty">Keine Modelle in data/models/</div>';
-            return;
-        }
-        for (const p of presets) {
-            const item = document.createElement('div');
-            item.className = 'ctx-item';
-            item.innerHTML = `<i class="fas fa-user" style="width:16px;color:#e91e63;"></i> ${p.label || p.name}`;
-            item.addEventListener('click', () => {
-                closeCtx();
-                pushUndo('Modell-Clip hinzufügen');
-                const clip = new Clip(null, p.label || p.name, defaultFrames, fps);
-                clip.type = 'model';
-                clip.startFrame = placeFrame;
-                clip.data = { preset: p.name, bodyType: 'Female_Caucasian' };
-                track.clips.push(clip);
-                track._currentPreset = null;
-                fn.applyPlayhead();
-                fn.updateDuration();
-                fn.renderTimeline();
-                fn.updateProperties();
-            });
-            sub.appendChild(item);
-        }
-    } else if (track.type === 'audio') {
-        sub.innerHTML = '';
-        const item = document.createElement('div');
-        item.className = 'ctx-item';
-        item.innerHTML = `<i class="fas fa-music" style="width:16px;color:#4caf50;"></i> Audio-Datei wählen...`;
-        item.addEventListener('click', () => {
-            closeCtx();
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'audio/*';
-            input.addEventListener('change', async () => {
-                const file = input.files[0];
-                if (!file) return;
-                try {
-                    const arrayBuf = await file.arrayBuffer();
-                    const audioBuffer = await track.audioCtx.decodeAudioData(arrayBuf);
-                    pushUndo('Audio-Clip hinzufügen');
-                    // Default 10s Clip — audioDuration bestimmt clip.duration für Audio-Tracks
-                    const clip = new Clip(null, file.name, defaultFrames, fps);
-                    clip.type = 'audio';
-                    clip.startFrame = placeFrame;
-                    clip.data = {
-                        fileName: file.name,
-                        audioBuffer: audioBuffer,
-                        audioDuration: Math.min(DEFAULT_CLIP_SECONDS, audioBuffer.duration),
-                        volume: 1.0, fadeIn: 0, fadeOut: 0, offset: 0,
-                    };
-                    try {
-                        const formData = new FormData();
-                        formData.append('audio', file);
-                        const upResp = await fetch('/api/studio/audio-upload/', { method: 'POST', body: formData });
-                        const upData = await upResp.json();
-                        if (upData.ok) clip.data.audioUrl = upData.url;
-                    } catch {}
-                    track.clips.push(clip);
-                    fn.updateDuration();
-                    fn.renderTimeline();
-                    fn.updateProperties();
-                } catch (err) {
-                    console.error('[BVH Studio] Audio decode failed:', err);
-                    alert('Audio laden fehlgeschlagen: ' + err.message);
-                }
-            });
-            input.click();
-        });
-        sub.appendChild(item);
-    } else if (track.type === 'scene_object') {
-        sub.innerHTML = '';
-        const item = document.createElement('div');
-        item.className = 'ctx-item';
-        item.innerHTML = `<i class="fas fa-cube" style="width:16px;color:#7c5cbf;"></i> 3D-Datei wählen...`;
-        item.addEventListener('click', () => {
-            closeCtx();
-            fn.addSceneObjectClip?.(trackIdx, placeFrame);
-        });
-        sub.appendChild(item);
-    } else if (track.type === 'camera') {
-        sub.innerHTML = '';
-        const item = document.createElement('div');
-        item.className = 'ctx-item';
-        item.innerHTML = `<i class="fas fa-video" style="width:16px;color:#00bcd4;"></i> Kameraposition`;
-        item.addEventListener('click', () => {
-            closeCtx();
-            fn.addCameraKeyframe(trackIdx, placeFrame);
-        });
-        sub.appendChild(item);
-    } else if (track.type === 'light') {
-        sub.innerHTML = '';
-        const pairItem = document.createElement('div');
-        pairItem.className = 'ctx-item';
-        pairItem.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Lichteigenschaft (Pair: vor/nach)`;
-        pairItem.title = 'Legt zwei Keyframes am gleichen Frame an — einer für das Segment davor, einer für danach';
-        pairItem.addEventListener('click', () => {
-            closeCtx();
-            fn.addLightKeyframePair(trackIdx, placeFrame);
-        });
-        sub.appendChild(pairItem);
-        const singleItem = document.createElement('div');
-        singleItem.className = 'ctx-item';
-        singleItem.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Lichteigenschaft (einzel)`;
-        singleItem.addEventListener('click', () => {
-            closeCtx();
-            fn.addLightKeyframe(trackIdx, placeFrame);
-        });
-        sub.appendChild(singleItem);
-        // Presets-Submenu: fügt Preset-Lichter HINZU (keine Löschung existierender)
-        const presetsItem = document.createElement('div');
-        presetsItem.className = 'ctx-item has-submenu';
-        presetsItem.innerHTML = `<i class="fas fa-star" style="width:16px;color:#ffc107;"></i> Presets <i class="fas fa-caret-right" style="margin-left:auto;"></i>`;
-        const nested = document.createElement('div');
-        nested.className = 'ctx-submenu ctx-submenu-fixed';
-        nested.innerHTML = '<div class="ctx-submenu-empty">Lade...</div>';
-        presetsItem.appendChild(nested);
-        sub.appendChild(presetsItem);
-        // Nested-Submenü positionieren (wie bei Animationen)
-        presetsItem.addEventListener('mouseenter', () => {
-            const rect = presetsItem.getBoundingClientRect();
-            nested.style.left = rect.right + 'px';
-            nested.style.top = rect.top + 'px';
-        });
-        // Presets async laden
-        (async () => {
-            try {
-                const presets = await (fn.fetchTheatrePresets?.() ?? fetch('/api/studio/theatre-presets/').then(r => r.json()).then(d => d.presets || []));
-                nested.innerHTML = '';
-                if (!presets || presets.length === 0) {
-                    nested.innerHTML = '<div class="ctx-submenu-empty">Keine Presets</div>';
-                    return;
-                }
-                for (const p of presets) {
-                    const item = document.createElement('div');
-                    item.className = 'ctx-item';
-                    item.innerHTML = `<i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> <span>${p.label}</span> <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">${p.lightCount}x</span>`;
-                    item.title = (p.description || '') + '\n\nFügt Preset-Lichter HINZU (existierende bleiben erhalten).';
-                    item.addEventListener('click', () => {
-                        closeCtx();
-                        fn.applyTheatrePresetAdditive?.(p.name, placeFrame);
-                    });
-                    nested.appendChild(item);
-                }
-            } catch (e) {
-                nested.innerHTML = '<div class="ctx-submenu-empty">Fehler beim Laden</div>';
+            for (const animation of animationen) {
+                unter.appendChild(this._eintrag({
+                    symbol: 'fa-running', text: animation.name,
+                    rechts: (animation.frames || '?') + 'f',
+                }, () => this._animationEinfuegen(name, animation)));
             }
-        })();
-    } else {
-        sub.innerHTML = '<div class="ctx-submenu-empty">Nicht verfügbar für diesen Spurtyp</div>';
+            this.ziel.appendChild(kopf);
+        }
     }
+
+    async _animationEinfuegen(kategorie, animation) {
+        await fn.addClipToTrack(this.nummer, kategorie, animation.name,
+                                animation.frames || 0);
+        const spur = state.project.tracks[this.nummer];
+        const clip = spur.clips[spur.clips.length - 1];
+        if (!clip) return;
+        // Vorgabe sind zehn Sekunden — laengere Animationen werden beschnitten,
+        // kuerzere bleiben, wie sie sind.
+        const grenze = Math.round(DEFAULT_CLIP_SECONDS * clip.fps);
+        if (clip.totalFrames > grenze) clip.trimOut = clip.totalFrames - grenze;
+        clip.startFrame = this.bild;
+        fn.updateDuration();
+        fn.renderTimeline();
+    }
+
+    // ------------------------------------------------------- Spurtyp: Modell
+
+    async _modell() {
+        // Immer frisch holen (kein Zwischenspeicher): So erscheinen neue
+        // Dateien in data/models/ sofort im Menue.
+        let vorgaben = [];
+        try {
+            const antwort = await fetch('/api/character/models/');
+            if (!antwort.ok) throw new Error('HTTP ' + antwort.status);
+            vorgaben = (await antwort.json()).presets || [];
+        } catch (fehler) {
+            this._hinweis('Fehler beim Laden: ' + fehler.message);
+            return;
+        }
+        if (!vorgaben.length) {
+            this._hinweis('Keine Modelle in data/models/');
+            return;
+        }
+        this._leeren();
+        for (const vorgabe of vorgaben) {
+            this.ziel.appendChild(this._spureintrag(
+                vorgabe.label || vorgabe.name,
+                () => this._modellEinfuegen(vorgabe)));
+        }
+    }
+
+    _modellEinfuegen(vorgabe) {
+        pushUndo('Modell-Clip hinzufügen');
+        const clip = new Clip(null, vorgabe.label || vorgabe.name,
+                              this.vorgabebilder, this.fps);
+        clip.type = 'model';
+        clip.startFrame = this.bild;
+        clip.data = { preset: vorgabe.name, bodyType: 'Female_Caucasian' };
+        this.spur.clips.push(clip);
+        this.spur._currentPreset = null;
+        fn.applyPlayhead();
+        fn.updateDuration();
+        fn.renderTimeline();
+        fn.updateProperties();
+    }
+
+    // ---------------------------------------------------------- Spurtyp: Ton
+
+    _ton() {
+        this._leeren();
+        this.ziel.appendChild(this._spureintrag('Audio-Datei wählen...',
+                                                () => this._tonWaehlen()));
+    }
+
+    _tonWaehlen() {
+        const feld = document.createElement('input');
+        feld.type = 'file';
+        feld.accept = 'audio/*';
+        feld.addEventListener('change', () => this._tonEinfuegen(feld.files[0]));
+        feld.click();
+    }
+
+    async _tonEinfuegen(datei) {
+        if (!datei) return;
+        try {
+            const puffer = await this.spur.audioCtx.decodeAudioData(
+                await datei.arrayBuffer());
+            pushUndo('Audio-Clip hinzufügen');
+            const clip = new Clip(null, datei.name, this.vorgabebilder, this.fps);
+            clip.type = 'audio';
+            clip.startFrame = this.bild;
+            clip.data = {
+                fileName: datei.name,
+                audioBuffer: puffer,
+                audioDuration: Math.min(DEFAULT_CLIP_SECONDS, puffer.duration),
+                volume: 1.0, fadeIn: 0, fadeOut: 0, offset: 0,
+            };
+            clip.data.audioUrl = await this._tonHochladen(datei);
+            this.spur.clips.push(clip);
+            fn.updateDuration();
+            fn.renderTimeline();
+            fn.updateProperties();
+        } catch (fehler) {
+            console.error('[BVH Studio] Ton nicht lesbar:', fehler);
+            alert('Audio laden fehlgeschlagen: ' + fehler.message);
+        }
+    }
+
+    /**
+     * Datei zum Server geben, damit sie beim Videoexport zur Verfuegung steht.
+     * Schlaegt das fehl, bleibt der Clip trotzdem — im Browser klingt er.
+     */
+    async _tonHochladen(datei) {
+        try {
+            const daten = new FormData();
+            daten.append('audio', datei);
+            const antwort = await fetch('/api/studio/audio-upload/',
+                                        { method: 'POST', body: daten });
+            const ergebnis = await antwort.json();
+            return ergebnis.ok ? ergebnis.url : undefined;
+        } catch (fehler) {
+            console.warn('Ton nicht hochladbar:', fehler);
+            return undefined;
+        }
+    }
+
+    // -------------------------------------------- Spurtypen mit einem Eintrag
+
+    _szenenobjekt() {
+        this._leeren();
+        this.ziel.appendChild(this._spureintrag('3D-Datei wählen...',
+            () => fn.addSceneObjectClip?.(this.nummer, this.bild)));
+    }
+
+    _kamera() {
+        this._leeren();
+        this.ziel.appendChild(this._spureintrag('Kameraposition',
+            () => fn.addCameraKeyframe(this.nummer, this.bild)));
+    }
+
+    // -------------------------------------------------------- Spurtyp: Licht
+
+    _licht() {
+        this._leeren();
+        this.ziel.appendChild(this._spureintrag(
+            'Lichteigenschaft (Pair: vor/nach)',
+            () => fn.addLightKeyframePair(this.nummer, this.bild),
+            { titel: 'Legt zwei Keyframes am gleichen Frame an — einer für das '
+                     + 'Segment davor, einer für danach' }));
+        this.ziel.appendChild(this._spureintrag('Lichteigenschaft (einzel)',
+            () => fn.addLightKeyframe(this.nummer, this.bild)));
+
+        const kopf = this._eintrag({
+            symbol: 'fa-star', farbe: Spurmenue.SYMBOLE.light[1],
+            text: 'Presets', rechts: '<i class="fas fa-caret-right"></i>',
+            klasse: 'has-submenu',
+        }, null);
+        const unter = this._untermenue(kopf);
+        unter.innerHTML = '<div class="ctx-submenu-empty">Lade...</div>';
+        this.ziel.appendChild(kopf);
+        this._lichtvorgaben(unter);
+    }
+
+    /** Vorgaben nachladen — sie FÜGEN Lichter hinzu, ersetzen keine. */
+    async _lichtvorgaben(unter) {
+        try {
+            const vorgaben = await (fn.fetchTheatrePresets?.()
+                ?? fetch('/api/studio/theatre-presets/')
+                    .then(a => a.json()).then(d => d.presets || []));
+            if (!vorgaben?.length) {
+                unter.innerHTML = '<div class="ctx-submenu-empty">Keine Presets</div>';
+                return;
+            }
+            unter.innerHTML = '';
+            for (const vorgabe of vorgaben) {
+                unter.appendChild(this._eintrag({
+                    symbol: 'fa-lightbulb', farbe: Spurmenue.SYMBOLE.light[1],
+                    text: `<span>${vorgabe.label}</span>`,
+                    rechts: vorgabe.lightCount + 'x',
+                    titel: (vorgabe.description || '')
+                        + '\n\nFügt Preset-Lichter HINZU (existierende bleiben erhalten).',
+                }, () => fn.applyTheatrePresetAdditive?.(vorgabe.name, this.bild)));
+            }
+        } catch (fehler) {
+            unter.innerHTML = '<div class="ctx-submenu-empty">Fehler beim Laden</div>';
+            console.warn('Licht-Vorgaben nicht ladbar:', fehler);
+        }
+    }
+}
+
+/**
+ * Bisherige Aufrufform. Die Zeitleiste ruft sie an mehreren Stellen auf,
+ * deshalb bleibt sie als Huelle.
+ */
+export async function _populateTrackAddSubmenu(track, trackIdx, ctx, targetFrame,
+                                               submenuId = 'track-ctx-add-submenu') {
+    return new Spurmenue(track, trackIdx, ctx, targetFrame).fuellen(submenuId);
 }

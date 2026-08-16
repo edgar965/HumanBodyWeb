@@ -604,6 +604,47 @@
         color: #fff;
         border-color: var(--accent);
     }
+
+    /* Ergebnisanzeige der Fotoanalyse.
+       Umbau 16.08.2026: Diese Regeln standen als Inline-Stil in
+       `analyzePhoto()` — der 272-Zeilen-Funktion, die jetzt in
+       photo_to_3d/fotoanalyse.js und fotoergebnis.js liegt. */
+    .haut-tupfer {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+        vertical-align: middle;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-right: 4px;
+    }
+    .foto-geschlechtszeile {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .foto-beschriftung {
+        font-size: 0.82rem;
+        color: var(--text);
+    }
+    .foto-geschlechtsfeld {
+        margin-bottom: 0;
+        flex: 1;
+    }
+    .foto-mockhinweis {
+        margin-top: 8px;
+        padding: 8px;
+        background: rgba(243, 156, 18, 0.1);
+        border: 1px solid var(--warning);
+        border-radius: 6px;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+    }
+    .foto-mockhinweis i { color: var(--warning); margin-right: 4px; }
+    .foto-meldung { padding: 8px 0; }
+    .foto-warning { color: var(--warning); }
+    .foto-danger { color: var(--danger); }
 </style>
 {% endblock %}
 

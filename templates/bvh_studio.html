@@ -683,6 +683,26 @@
 }
 .ctx-submenu .ctx-item { min-width:200px; }
 .ctx-submenu-empty { padding:7px 14px; font-size:0.75rem; color:var(--text-muted); font-style:italic; }
+
+/* Symbol und rechte Spalte der Menüeinträge.
+   Umbau 16.08.2026: Diese drei Regeln standen als Inline-Stil in jedem
+   innerHTML des Spurmenüs — achtmal `style="width:16px;color:…"` und
+   fünfmal die Kette für die rechte Spalte. Die Farbe kommt jetzt über die
+   Variable --ctx-symbolfarbe, die der Eintrag setzt (siehe
+   bvh_studio/zeitleiste_spurmenue.js). */
+.ctx-symbol {
+    width: 16px;
+    color: var(--ctx-symbolfarbe, inherit);
+    flex: none;
+}
+.ctx-rechts {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
 </style>
 
 <!-- Help Modal -->
