@@ -6,6 +6,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js?v=32';
 import { convertToRigifySkinnedMesh } from './skinning.js';
+import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 
 export async function loadAnimations() {
     try {
@@ -146,15 +147,11 @@ export async function loadBVHAnimation(url, name, fc) {
             const clip = await fetchRetargetedClipFromUrl(url, state.rigifySkeleton, { bodyHeight: bodyH });
             console.log(`Retargeted clip: ${clip.tracks.length} tracks, ${clip.duration.toFixed(2)}s`);
 
+            // Vierte Fundstelle derselben fuenf Einstellungen im Projekt —
+            // jetzt aus gemeinsam/skelettanzeige.js.
             if (!state.skeletonHelper) {
-                state.skeletonHelper = new THREE.SkeletonHelper(state.rigifySkeleton.rootBone);
-                state.skeletonHelper.material.depthTest = false;
-                state.skeletonHelper.material.depthWrite = false;
-                state.skeletonHelper.material.color.set(0x00ffaa);
-                state.skeletonHelper.material.linewidth = 2;
-                state.skeletonHelper.renderOrder = 999;
-                state.skeletonHelper.visible = state.rigVisible;
-                state.scene.add(state.skeletonHelper);
+                state.skeletonHelper = Skelettanzeige.bauen(
+                    state.scene, state.rigifySkeleton.rootBone, state.rigVisible);
             }
 
             state.mixer = new THREE.AnimationMixer(state.bodyMesh);
@@ -173,7 +170,17 @@ export async function loadBVHAnimation(url, name, fc) {
             if (info) info.textContent = `${state.currentAnimName} \u2014 0/${Math.floor(state.currentAnimDuration)}s  0/${state.currentAnimFrames}f`;
             return;
         } catch (e) {
-            console.error('Server retarget failed:', e);
+            // Fehlt die Datei, ist der Rueckfallweg zwecklos: Er holt dieselbe
+            // Adresse noch einmal und scheitert genauso. Bis 16.08.2026 standen
+            // deshalb ZWEI rote Meldungen in der Konsole, wenn eine gespeicherte
+            // Standard-Animation umbenannt oder geloescht worden war — ohne einen
+            // Hinweis darauf, was eigentlich fehlt.
+            if (String(e && e.message).includes('404')) {
+                console.warn('Animation nicht vorhanden:', url);
+                if (info) info.textContent = `Datei fehlt: ${name || url}`;
+                return;
+            }
+            console.error('Umzielen am Server fehlgeschlagen:', e);
         }
     }
 
@@ -205,14 +212,7 @@ export async function loadBVHAnimation(url, name, fc) {
         state.scene.add(state.skelWrapper);
 
         if (state.skeletonHelper) state.scene.remove(state.skeletonHelper);
-        state.skeletonHelper = new THREE.SkeletonHelper(rootBone);
-        state.skeletonHelper.material.depthTest = false;
-        state.skeletonHelper.material.depthWrite = false;
-        state.skeletonHelper.material.color.set(0x00ffaa);
-        state.skeletonHelper.material.linewidth = 2;
-        state.skeletonHelper.renderOrder = 999;
-        state.skeletonHelper.visible = state.rigVisible;
-        state.scene.add(state.skeletonHelper);
+        state.skeletonHelper = Skelettanzeige.bauen(state.scene, rootBone, state.rigVisible);
 
         state.mixer = new THREE.AnimationMixer(rootBone);
         const ss2 = document.getElementById('anim-speed');
@@ -256,13 +256,7 @@ export function stopAnimation(destroy = false) {
         state.skeletonHelper = null;
     }
     if (state.rigVisible && state.rigifySkeleton) {
-        state.skeletonHelper = new THREE.SkeletonHelper(state.rigifySkeleton.rootBone);
-        state.skeletonHelper.material.depthTest = false;
-        state.skeletonHelper.material.depthWrite = false;
-        state.skeletonHelper.material.color.set(0x00ffaa);
-        state.skeletonHelper.material.linewidth = 2;
-        state.skeletonHelper.renderOrder = 999;
-        state.scene.add(state.skeletonHelper);
+        state.skeletonHelper = Skelettanzeige.bauen(state.scene, state.rigifySkeleton.rootBone);
     }
     state.playing = false;
 }

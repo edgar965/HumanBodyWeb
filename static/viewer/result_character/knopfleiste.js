@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import '../gemeinsam/registrierung.js';
 import { el } from './ui_panel.js';
+import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 
 export class Knopfleiste {
     /** Baut die Leiste in den Behaelter. */
@@ -32,13 +33,7 @@ export class Knopfleiste {
         state.rigVisible = !state.rigVisible;
         if (state.rigVisible) {
             if (!state.skeletonHelper && state.rigifySkeleton) {
-                state.skeletonHelper = new THREE.SkeletonHelper(state.rigifySkeleton.rootBone);
-                state.skeletonHelper.material.depthTest = false;
-                state.skeletonHelper.material.depthWrite = false;
-                state.skeletonHelper.material.color.set(0x00ffaa);
-                state.skeletonHelper.material.linewidth = 2;
-                state.skeletonHelper.renderOrder = 999;
-                state.scene.add(state.skeletonHelper);
+                state.skeletonHelper = Skelettanzeige.bauen(state.scene, state.rigifySkeleton.rootBone);
             }
             if (state.skeletonHelper) state.skeletonHelper.visible = true;
         } else {

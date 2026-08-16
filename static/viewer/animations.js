@@ -12,6 +12,7 @@ import { loadAnimationTree, setupAnimManagement } from './animation/baum.js';
 import { loadMesh, loadRigifySkeleton, loadSkinWeights } from './animation/netz.js';
 import { loadBVHAnimation, bindPlaybackControls, animate } from './animation/wiedergabe.js';
 import { initSaveButtons } from './animation/speichern.js';
+import { Skelettanzeige } from './gemeinsam/skelettanzeige.js';
 
 
 
@@ -122,13 +123,7 @@ async function init() {
             Seitenzustand.rigVisible = !Seitenzustand.rigVisible;
             if (Seitenzustand.rigVisible) {
                 if (!Seitenzustand.skeletonHelper && Seitenzustand.rigifySkeleton) {
-                    Seitenzustand.skeletonHelper = new THREE.SkeletonHelper(Seitenzustand.rigifySkeleton.rootBone);
-                    Seitenzustand.skeletonHelper.material.depthTest = false;
-                    Seitenzustand.skeletonHelper.material.depthWrite = false;
-                    Seitenzustand.skeletonHelper.material.color.set(0x00ffaa);
-                    Seitenzustand.skeletonHelper.material.linewidth = 2;
-                    Seitenzustand.skeletonHelper.renderOrder = 999;
-                    Seitenzustand.scene.add(Seitenzustand.skeletonHelper);
+                    Seitenzustand.skeletonHelper = Skelettanzeige.bauen(Seitenzustand.scene, Seitenzustand.rigifySkeleton.rootBone);
                 }
                 if (Seitenzustand.skeletonHelper) Seitenzustand.skeletonHelper.visible = true;
             } else {

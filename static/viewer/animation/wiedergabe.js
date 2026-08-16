@@ -9,6 +9,7 @@ import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js?v=32';
 import { Seitenzustand } from './seitenzustand.js';
 import { convertToRigifySkinnedMesh, skelWrapper } from './netz.js';
+import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 
 
 // =========================================================================
@@ -54,14 +55,7 @@ export async function loadBVHAnimation(url, name, fc) {
 
             // Ensure SkeletonHelper exists for DEF skeleton
             if (!Seitenzustand.skeletonHelper) {
-                Seitenzustand.skeletonHelper = new THREE.SkeletonHelper(Seitenzustand.rigifySkeleton.rootBone);
-                Seitenzustand.skeletonHelper.material.depthTest = false;
-                Seitenzustand.skeletonHelper.material.depthWrite = false;
-                Seitenzustand.skeletonHelper.material.color.set(0x00ffaa);
-                Seitenzustand.skeletonHelper.material.linewidth = 2;
-                Seitenzustand.skeletonHelper.renderOrder = 999;
-                Seitenzustand.skeletonHelper.visible = Seitenzustand.rigVisible;
-                Seitenzustand.scene.add(Seitenzustand.skeletonHelper);
+                Seitenzustand.skeletonHelper = Skelettanzeige.bauen(Seitenzustand.scene, Seitenzustand.rigifySkeleton.rootBone, Seitenzustand.rigVisible);
             }
 
             // Play retargeted clip on the SkinnedMesh
@@ -76,8 +70,15 @@ export async function loadBVHAnimation(url, name, fc) {
             document.getElementById('anim-info').textContent =
                 `${name} — ${fc}f — ${clip.duration.toFixed(1)}s`;
         } catch (e) {
-            console.error('Server retarget failed:', e);
-            document.getElementById('anim-info').textContent = `Fehler: ${name}`;
+            // Fehlt die Datei, ist es kein Fehler des Umzielens: dann wurde die
+            // gespeicherte Animation umbenannt oder geloescht. Vorher stand
+            // dafuer ein roter Stapelabzug in der Konsole.
+            const fehlt = String(e && e.message).includes('404');
+            if (fehlt) console.warn('Animation nicht vorhanden:', url);
+            else console.error('Umzielen am Server fehlgeschlagen:', e);
+            document.getElementById('anim-info').textContent =
+                fehlt ? `Datei fehlt: ${name}` : `Fehler: ${name}`;
+            if (fehlt) return;
         }
     } else {
         // Fallback: BVH skeleton overlay (no skinning data available)
@@ -109,14 +110,7 @@ export async function loadBVHAnimation(url, name, fc) {
             Seitenzustand.scene.add(skelWrapper);
 
             if (Seitenzustand.skeletonHelper) Seitenzustand.scene.remove(Seitenzustand.skeletonHelper);
-            Seitenzustand.skeletonHelper = new THREE.SkeletonHelper(rootBone);
-            Seitenzustand.skeletonHelper.material.depthTest = false;
-            Seitenzustand.skeletonHelper.material.depthWrite = false;
-            Seitenzustand.skeletonHelper.material.color.set(0x00ffaa);
-            Seitenzustand.skeletonHelper.material.linewidth = 2;
-            Seitenzustand.skeletonHelper.renderOrder = 999;
-            Seitenzustand.skeletonHelper.visible = Seitenzustand.rigVisible;
-            Seitenzustand.scene.add(Seitenzustand.skeletonHelper);
+            Seitenzustand.skeletonHelper = Skelettanzeige.bauen(Seitenzustand.scene, rootBone, Seitenzustand.rigVisible);
 
             Seitenzustand.mixer = new THREE.AnimationMixer(rootBone);
             const ss2 = document.getElementById('anim-speed');
@@ -153,13 +147,7 @@ export function stopAnimation(destroy = false) {
     if (skelWrapper) { Seitenzustand.scene.remove(skelWrapper); skelWrapper = null; }
     if (Seitenzustand.skeletonHelper) { Seitenzustand.scene.remove(Seitenzustand.skeletonHelper); Seitenzustand.skeletonHelper = null; }
     if (Seitenzustand.rigVisible && Seitenzustand.rigifySkeleton) {
-        Seitenzustand.skeletonHelper = new THREE.SkeletonHelper(Seitenzustand.rigifySkeleton.rootBone);
-        Seitenzustand.skeletonHelper.material.depthTest = false;
-        Seitenzustand.skeletonHelper.material.depthWrite = false;
-        Seitenzustand.skeletonHelper.material.color.set(0x00ffaa);
-        Seitenzustand.skeletonHelper.material.linewidth = 2;
-        Seitenzustand.skeletonHelper.renderOrder = 999;
-        Seitenzustand.scene.add(Seitenzustand.skeletonHelper);
+        Seitenzustand.skeletonHelper = Skelettanzeige.bauen(Seitenzustand.scene, Seitenzustand.rigifySkeleton.rootBone);
     }
     Seitenzustand.playing = false;
 }

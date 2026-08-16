@@ -5,6 +5,7 @@ import { THREE, SESSION_KEY } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { closeAllDialogs } from './utils.js';
+import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 
 export function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
@@ -169,9 +170,7 @@ export function toggleRigVisibility() {
             else { state.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, state.skinWeightData); state.scene.add(state.rigifySkeleton.rootBone); skel = state.rigifySkeleton; }
         }
         if (!state.skeletonHelper && skel) {
-            state.skeletonHelper = new THREE.SkeletonHelper(skel.rootBone);
-            state.skeletonHelper.material.depthTest = false;
-            state.skeletonHelper.material.depthWrite = false;
+            state.skeletonHelper = Skelettanzeige.bauen(state.scene, skel.rootBone);
             state.skeletonHelper.material.transparent = true;
             state.skeletonHelper.material.color.set(0x00ffaa);
             state.skeletonHelper.material.linewidth = 2;

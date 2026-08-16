@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { fetchRetargetedClipFromText } from '../retarget_hybrid.js';
+import { Skelettanzeige } from '../../../static/viewer/gemeinsam/skelettanzeige.js';
 
 /**
  * Skinner — Skelett, Hautgewichte und die Umwandlung zu SkinnedMesh.
@@ -177,25 +178,18 @@ export class Skinner {
     // ------------------------------------------------------------ Rig-Anzeige
 
     /**
-     * SkeletonHelper (neu) aufbauen. Diese Methode ersetzt zwei gleichlautende
-     * Bloecke aus main.js — einen beim Umwandeln, einen beim Einschalten.
+     * SkeletonHelper (neu) aufbauen. Ersetzt zwei gleichlautende Bloecke aus
+     * main.js — einen beim Umwandeln, einen beim Einschalten. Die fuenf
+     * Einstellungen selbst kommen aus gemeinsam/skelettanzeige.js: Dieselben
+     * Zeilen standen auch im Rig-Umschalter der Viewer-Seite, also dreimal im
+     * Projekt.
      */
     rigAufbauen(sichtbar = true) {
         if (!this.skelett) return null;
-        if (this.anzeige) {
-            this.scene.remove(this.anzeige);
-            this.anzeige.dispose();
-        }
-        const anzeige = new THREE.SkeletonHelper(this.skelett.rootBone);
-        anzeige.material.depthTest = false;
-        anzeige.material.depthWrite = false;
-        anzeige.material.color.set(0x00ffaa);
-        anzeige.material.linewidth = 2;
-        anzeige.renderOrder = 999;
-        anzeige.visible = sichtbar;
-        this.scene.add(anzeige);
-        this.anzeige = anzeige;
-        return anzeige;
+        this.anzeige = this.anzeige
+            ? Skelettanzeige.erneuern(this.scene, this.anzeige, this.skelett.rootBone)
+            : Skelettanzeige.bauen(this.scene, this.skelett.rootBone, sichtbar);
+        return this.anzeige;
     }
 
     /** Rig-Anzeige umschalten; gibt den neuen Zustand zurueck. */

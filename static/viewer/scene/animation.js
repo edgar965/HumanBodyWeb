@@ -8,6 +8,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { escapeHtml, _selectedInst, getCSRFToken } from './utils.js';
 import { convertToRigifySkinnedMesh, convertInstToSkinned } from './skeleton.js';
+import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 
 export function stopAnimation(destroy = false) {
     if (state.currentAction) { state.currentAction.stop(); state.currentAction.reset(); if (destroy) state.currentAction = null; }
@@ -22,10 +23,7 @@ export function stopAnimation(destroy = false) {
     if (state.skeletonHelper) { state.scene.remove(state.skeletonHelper); state.skeletonHelper = null; }
     const activeSkel = state._animatedCharId ? state.characters.get(state._animatedCharId)?.rigifySkeleton : state.rigifySkeleton;
     if (state.rigVisible && activeSkel) {
-        state.skeletonHelper = new THREE.SkeletonHelper(activeSkel.rootBone);
-        state.skeletonHelper.material.depthTest = false; state.skeletonHelper.material.depthWrite = false;
-        state.skeletonHelper.material.color.set(0x00ffaa); state.skeletonHelper.renderOrder = 999;
-        state.scene.add(state.skeletonHelper);
+        state.skeletonHelper = Skelettanzeige.bauen(state.scene, activeSkel.rootBone);
     }
     state._animatedCharId = null; state.playing = false; state.currentAnimUrl = ''; state.currentAnimBvhText = ''; state.currentAnimGroundFixed = false;
 }
@@ -53,11 +51,7 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             if (rawBvhText) { clip = await fetchRetargetedClipFromText(rawBvhText, skel, { bodyHeight: bodyH, deltaNorm: state._sceneDeltaNorm }); state.currentAnimBvhText = rawBvhText; }
             else { clip = await fetchRetargetedClipFromUrl(url, skel, { bodyHeight: bodyH, deltaNorm: state._sceneDeltaNorm }); try { const tr = await fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now()); state.currentAnimBvhText = await tr.text(); } catch { state.currentAnimBvhText = ''; } }
             if (!state.skeletonHelper) {
-                state.skeletonHelper = new THREE.SkeletonHelper(skel.rootBone);
-                state.skeletonHelper.material.depthTest = false; state.skeletonHelper.material.depthWrite = false;
-                state.skeletonHelper.material.color.set(0x00ffaa); state.skeletonHelper.renderOrder = 999;
-                state.skeletonHelper.visible = state.rigVisible;
-                state.scene.add(state.skeletonHelper);
+                state.skeletonHelper = Skelettanzeige.bauen(state.scene, skel.rootBone, state.rigVisible);
             }
             state.mixer = new THREE.AnimationMixer(bMesh);
             state.currentAction = state.mixer.clipAction(clip);
@@ -77,11 +71,7 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             if (inst) state.skelWrapper.position.copy(inst.group.position);
             state.scene.add(state.skelWrapper);
             if (state.skeletonHelper) state.scene.remove(state.skeletonHelper);
-            state.skeletonHelper = new THREE.SkeletonHelper(rootBone);
-            state.skeletonHelper.material.depthTest = false; state.skeletonHelper.material.depthWrite = false;
-            state.skeletonHelper.material.color.set(0x00ffaa); state.skeletonHelper.renderOrder = 999;
-            state.skeletonHelper.visible = state.rigVisible;
-            state.scene.add(state.skeletonHelper);
+            state.skeletonHelper = Skelettanzeige.bauen(state.scene, rootBone, state.rigVisible);
             state.mixer = new THREE.AnimationMixer(rootBone);
             state.currentAction = state.mixer.clipAction(result.clip);
             state.currentAction.play(); state.playing = true; state._animatedCharId = inst ? inst.id : null;
