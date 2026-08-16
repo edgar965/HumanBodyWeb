@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Track } from './models.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 let _cachedFloorTextures = null;
 const _textureLoader = new THREE.TextureLoader();
@@ -131,8 +132,7 @@ export function setFloorSize(track, size) {
 export async function getFloorTextures() {
     if (_cachedFloorTextures) return _cachedFloorTextures;
     try {
-        const resp = await fetch('/api/studio/floor-textures/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/studio/floor-textures/');
         _cachedFloorTextures = data.textures || [];
     } catch (e) {
         _cachedFloorTextures = [{ name: 'none', label: 'Keine', url: '' }];

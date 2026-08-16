@@ -5,14 +5,14 @@
  */
 
 import * as THREE from 'three';
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
-import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Clip } from './models.js';
 import { pushUndo } from './undo.js';
 import { _autoDiscoverMtl } from './mtl_laden.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Objektlader } from './objektlader.js';
 
 const _textureLoader = new THREE.TextureLoader();
 
@@ -53,8 +53,8 @@ export async function addSceneObjectClip(trackIdx, startFrame) {
                 const fd = new FormData();
                 fd.append('object', file);
                 fd.append('bundleId', bundleId);
-                const resp = await fetch('/api/studio/scene-object-upload/', { method: 'POST', body: fd });
-                const data = await resp.json();
+                const data = await Serverabruf.formular(
+                    '/api/studio/scene-object-upload/', fd);
                 if (data.ok) uploaded[file.name.toLowerCase()] = { url: data.url, name: file.name, ext: data.ext };
                 else console.warn('[scene_extras] Upload fehlgeschlagen:', file.name, data.error);
             }));
@@ -82,121 +82,61 @@ export async function addSceneObjectClip(trackIdx, startFrame) {
 
 
 
-export async function _loadSceneObjectIntoTrack(track, url, displayName, ext, startFrame, mtlUrl = null) {
+/**
+ * Ein 3D-Objekt laden und als Clip in eine Spur setzen.
+ *
+ * Umbau 17.08.2026: Diese Funktion hatte 116 Zeilen. Das Laden, die
+ * Materialreparatur und das Normieren stehen jetzt in `Objektlader`
+ * (objektlader.js); hier bleibt, was mit der Spur und der Zeitleiste zu tun
+ * hat — und genau das steht jetzt auch auf einer Bildschirmseite.
+ */
+export async function _loadSceneObjectIntoTrack(track, url, displayName, ext,
+                                                startFrame, mtlUrl = null) {
     pushUndo('3D-Objekt Clip hinzufügen');
-    let object3d = null;
-    let customMaterials = null;
+    let objekt;
     try {
-        if (ext === 'obj') {
-            // Wenn kein MTL explizit übergeben wurde: versuche Auto-Discover aus 'mtllib'-Zeile
-            // im OBJ. Damit funktioniert auch Single-File-Selection (nur OBJ), sofern MTL und
-            // Texturen zuvor/gleichzeitig in denselben Bundle-Ordner hochgeladen wurden.
-            if (!mtlUrl) {
-                mtlUrl = await _autoDiscoverMtl(url);
-            }
-            const loader = new OBJLoader();
-            // Three.js MTLLoader (bewährt) — setzt Materialien inkl. Texturen am OBJLoader.
-            if (mtlUrl) {
-                try {
-                    const mtlLoader = new MTLLoader();
-                    const basePath = mtlUrl.substring(0, mtlUrl.lastIndexOf('/') + 1);
-                    mtlLoader.setResourcePath(basePath);
-                    const mtlFileName = mtlUrl.substring(mtlUrl.lastIndexOf('/') + 1);
-                    mtlLoader.setPath(basePath);
-                    const materials = await mtlLoader.loadAsync(mtlFileName);
-                    materials.preload();
-                    loader.setMaterials(materials);
-                    const matNames = Object.keys(materials.materials || {});
-                    console.log(`[scene_extras] MTL via Three.js MTLLoader: ${matNames.length} Materialien (${matNames.join(', ')})`);
-                } catch (mtlErr) {
-                    console.warn('[scene_extras] MTLLoader fehlgeschlagen, OBJ ohne MTL:', mtlErr);
-                }
-            }
-            object3d = await loader.loadAsync(url);
-            // Vertex-Normals berechnen falls OBJ keine hatte — sonst ist Material schwarz.
-            object3d.traverse(o => {
-                if (o.isMesh && o.geometry && !o.geometry.attributes.normal) {
-                    o.geometry.computeVertexNormals();
-                }
-                if (o.isMesh && o.material) {
-                    const mats = Array.isArray(o.material) ? o.material : [o.material];
-                    mats.forEach(m => {
-                        if (!m) return;
-                        // DoubleSide für alle Materialien (viele OBJs haben inkonsistente Normals).
-                        m.side = THREE.DoubleSide;
-                        // 3ds Max MTL-Export-Bug: Ke (emissive) oft auf 1,1,1 gesetzt — das überstrahlt
-                        // komplett die Textur und lässt das Mesh einheitlich weiß aussehen. Bei vorhandener
-                        // Textur (map_Kd) ist Emissive praktisch immer ein Fehler → auf 0 forcieren.
-                        if (m.map && m.emissive && (m.emissive.r > 0 || m.emissive.g > 0 || m.emissive.b > 0)) {
-                            m.emissive.setRGB(0, 0, 0);
-                            m.needsUpdate = true;
-                        }
-                    });
-                }
-            });
-        } else if (ext === 'glb' || ext === 'gltf') {
-            const gltf = await new GLTFLoader().loadAsync(url);
-            object3d = gltf.scene;
-        } else {
-            throw new Error(`Format "${ext}" wird noch nicht unterstützt`);
-        }
-    } catch (e) {
-        console.warn('[scene_extras] 3D-Objekt Load fehlgeschlagen:', url, e);
-        throw e;  // Caller entscheidet über alert (Session-Restore schluckt, User-Upload zeigt)
+        // Ohne ausdrueckliche MTL-Angabe: die `mtllib`-Zeile im OBJ lesen. So
+        // funktioniert auch die Auswahl einer einzelnen Datei, sofern MTL und
+        // Texturen im selben Buendelordner liegen.
+        if (ext === 'obj' && !mtlUrl) mtlUrl = await _autoDiscoverMtl(url);
+        objekt = await new Objektlader(url, ext, mtlUrl).laden();
+    } catch (fehler) {
+        Protokoll.warnung('3D-Objekt', 'nicht ladbar:', url, fehler);
+        // Der Aufrufer entscheidet ueber die Meldung: Beim Wiederherstellen
+        // einer Sitzung wird geschluckt, beim Hochladen nicht.
+        throw fehler;
     }
 
-    // Fallback-Material nur wenn gar keins vorhanden
-    if (ext === 'obj' && !mtlUrl) {
-        object3d.traverse(obj => {
-            if (obj.isMesh && (!obj.material || !obj.material.color)) {
-                obj.material = new THREE.MeshStandardMaterial({ color: 0x888899, roughness: 0.7 });
-            }
-        });
-    }
-
-    // Auto-center + scale auf 1m
-    const box = new THREE.Box3().setFromObject(object3d);
-    const size = new THREE.Vector3(); const center = new THREE.Vector3();
-    box.getSize(size); box.getCenter(center);
-    const maxDim = Math.max(size.x, size.y, size.z);
-    if (maxDim > 0) {
-        const scale = 1 / maxDim;
-        object3d.scale.setScalar(scale);
-        object3d.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
-    }
-
-    // Falls Track schon ein Mesh hat (mehrere Clips → selbes Mesh wiederverwenden):
-    // altes entsorgen, neues einsetzen. Einfachheit halber: erst mal immer neues Mesh.
     if (track.mesh) {
         state.scene.remove(track.mesh);
-        track.mesh.traverse?.(obj => {
-            if (obj.geometry) obj.geometry.dispose?.();
-            if (obj.material) {
-                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose?.());
-                else obj.material.dispose?.();
-            }
-        });
+        Objektlader.entsorgen(track.mesh);
     }
-    track.mesh = object3d;
+    track.mesh = objekt;
     track.objectUrl = url;
     track.objectExt = ext;
-    track.objectMtlUrl = mtlUrl || null;  // für Restore
+    track.objectMtlUrl = mtlUrl || null;        // fuer das Wiederherstellen
     if (track.objectTint) setObjectTint(track, track.objectTint);
-    state.scene.add(object3d);
-    object3d.visible = true;  // applyPlayhead korrigiert ggf. (hasClips && !muted)
+    state.scene.add(objekt);
+    objekt.visible = true;      // applyPlayhead korrigiert das gleich
 
-    // Clip auf der Timeline anlegen: 10s default
+    const clip = _objektclip(displayName, startFrame, url, ext, mtlUrl);
+    track.clips.push(clip);
+    fn.applyPlayhead?.();
+    fn.serverLog?.('scene_object_loaded',
+                   `track=${track.name} clip=${displayName} @${clip.startFrame}f`);
+}
+
+/** Vorgabelaenge eines Objekt-Clips in Sekunden. */
+const OBJEKT_SEKUNDEN = 10;
+
+function _objektclip(displayName, startFrame, url, ext, mtlUrl) {
     const fps = state.project.fps;
-    const durationFrames = 10 * fps;
-    const clip = new Clip(null, displayName.replace(/\.(obj|glb|gltf|fbx)$/i, ''), durationFrames, fps);
+    const clip = new Clip(null, displayName.replace(/\.(obj|glb|gltf|fbx)$/i, ''),
+                          OBJEKT_SEKUNDEN * fps, fps);
     clip.type = 'object_clip';
     clip.startFrame = Math.max(0, startFrame || 0);
     clip.data = { url, ext, fileName: displayName, mtlUrl: mtlUrl || null };
-    track.clips.push(clip);
-
-    // Sichtbarkeit jetzt sofort anhand Playhead auswerten
-    fn.applyPlayhead?.();
-    fn.serverLog?.('scene_object_loaded', `track=${track.name} clip=${displayName} @${clip.startFrame}f`);
+    return clip;
 }
 
 export function setObjectTint(track, colorHex) {

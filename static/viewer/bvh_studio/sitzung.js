@@ -7,6 +7,8 @@ import { state, SESSION_KEY } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Projektdaten } from './projekt_daten.js';
 import { Projektwiederherstellung } from './projekt_wiederherstellung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export class Sitzung {
     static sichern() {
@@ -51,7 +53,7 @@ export class Sitzung {
                 return false;
             }
             Sitzung._bedienzustandUebernehmen(sitzung);
-            console.log(`[BVH Studio] Session restored: ${state.project.tracks.length} tracks`);
+            Protokoll.debug('BVH Studio', `Session restored: ${state.project.tracks.length} tracks`);
             return true;
         } catch (e) {
             console.warn('[BVH Studio] Session restore failed, clearing:', e);
@@ -75,11 +77,11 @@ export class Sitzung {
      */
     static async _vorrangDefaultprojekt(sitzung) {
         try {
-            const prefs = await (await fetch('/api/ui-prefs/')).json();
+            const prefs = await Serverabruf.json('/api/ui-prefs/');
             const vorgabe = prefs.studio_default_project;
             const name = sitzung.project.name || '';
             if (!vorgabe || !name || vorgabe !== name) return false;
-            console.log(`[BVH Studio] Session passt zum Default-Projekt "${vorgabe}" `
+            Protokoll.debug('BVH Studio', `Session passt zum Default-Projekt "${vorgabe}" `
                         + '→ frisch aus Datei laden (Session verworfen, UI-State behalten).');
             // Die Spurdaten entfernen, damit der Default-Ladeweg in index.js greift
             // (der prueft tracks.length === 0). Den Bedienzustand (Abspielkopf, Zoom,

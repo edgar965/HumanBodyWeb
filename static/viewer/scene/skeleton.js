@@ -84,9 +84,16 @@ export function convertInstToSkinned(inst) {
     inst.group.add(inst.bodyMesh);
     inst.isSkinned = true;
 
+    // FEHLER bis 16.08.2026: Hier stand `inst._loadHair()` — eine Methode, die
+    // `CharacterInstance` nicht (mehr) hat; das Laden der Haare wurde beim
+    // Umbau am 16.08. nach `Charakterzubehoer.haare()` verschoben. Der Aufruf
+    // warf "inst._loadHair is not a function" und brach damit ALLES ab, was
+    // `convertInstToSkinned` sonst noch anstößt — unter anderem die erste Stufe
+    // der Kleideranpassung. Zweiter Fall desselben Musters nach
+    // `inst.reloadBody()` in properties.js.
     if (inst.hairMesh) {
         inst.group.remove(inst.hairMesh);
-        inst._loadHair();
+        fn.charakterHaare?.(inst);
     }
 }
 

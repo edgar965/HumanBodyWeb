@@ -12,8 +12,19 @@ Luecken hinterlaesst. Deshalb kommen sie zuerst und als Klasse.
 
 Die Zwischenspeicher sind bewusst Klassenattribute: Es gibt einen Prozess und
 eine Datenlage; zwei Instanzen wuerden dieselben 70.000 Vertices doppelt laden.
+
+FEHLER 16.08.2026: Die Zwischenspeicher wurden VOR dem Laden gesetzt —
+`cls._morph_data = MorphData(...)`, danach `load()`. Daphne beantwortet Anfragen
+parallel: Ein zweiter Aufruf sah das Attribut schon gesetzt und arbeitete mit
+den noch LEEREN Daten weiter. `MorphData.get_l2_for_type()` merkt sich sein
+Ergebnis in `_l2_cache` — die leere Morph-Liste blieb also fuer die Lebensdauer
+des Prozesses stehen, und `/api/character/morphs/` lieferte dauerhaft
+`morphs: []`. Alle Seiten zeigten dann eine leere Morph-Liste; ein Neustart
+half nur, solange kein Rennen auftrat, was den Fehler zufaellig erscheinen
+liess. Jetzt: erst laden, dann zuweisen, und das Ganze unter einem Schloss.
 """
 import logging
+import threading
 
 from django.conf import settings
 
@@ -35,6 +46,11 @@ class Charakterdaten:
     _smpl_library = None
     _smpl_body_gen = None
 
+    #: Schuetzt das Fuellen der Zwischenspeicher. Wiedereintretend, weil
+    #: `unterteiler()` waehrend des Ladens `netzdaten()` und `morphdaten()`
+    #: braucht.
+    _schloss = threading.RLock()
+
     VORGABE_KOERPERTYP = 'Female_Caucasian'
 
     # ------------------------------------------------------------ Grunddaten
@@ -46,28 +62,42 @@ class Charakterdaten:
 
     @classmethod
     def morphdaten(cls):
-        if cls._morph_data is None:
-            cls._morph_data = MorphData(data_dir=str(settings.HUMANBODY_DATA_DIR))
-            cls._morph_data.load()
+        if cls._morph_data is not None:
+            return cls._morph_data
+        with cls._schloss:
+            if cls._morph_data is None:
+                daten = MorphData(data_dir=str(settings.HUMANBODY_DATA_DIR))
+                daten.load()
+                # Erst nach dem Laden sichtbar machen — sonst sieht eine
+                # parallele Anfrage leere Morph-Packs (siehe Modulkopf).
+                cls._morph_data = daten
         return cls._morph_data
 
     @classmethod
     def voreinstellungen(cls):
-        if cls._char_defaults is None:
-            cls._char_defaults = CharacterDefaults()
-            cls._char_defaults.load(str(settings.HUMANBODY_ROOT / 'settings.yaml'))
+        if cls._char_defaults is not None:
+            return cls._char_defaults
+        with cls._schloss:
+            if cls._char_defaults is None:
+                werte = CharacterDefaults()
+                werte.load(str(settings.HUMANBODY_ROOT / 'settings.yaml'))
+                cls._char_defaults = werte
         return cls._char_defaults
 
     @classmethod
     def netzdaten(cls, geschlecht='female'):
         """MeshData je Geschlecht — die maennlichen Daten liegen in `_male`."""
-        if geschlecht not in cls._mesh_data:
-            verzeichnis = str(settings.HUMANBODY_DATA_DIR)
-            if geschlecht == 'male':
-                verzeichnis += '_male'
-            md = MeshData(data_dir=verzeichnis)
-            md.load()
-            cls._mesh_data[geschlecht] = md
+        vorhanden = cls._mesh_data.get(geschlecht)
+        if vorhanden is not None:
+            return vorhanden
+        with cls._schloss:
+            if geschlecht not in cls._mesh_data:
+                verzeichnis = str(settings.HUMANBODY_DATA_DIR)
+                if geschlecht == 'male':
+                    verzeichnis += '_male'
+                md = MeshData(data_dir=verzeichnis)
+                md.load()
+                cls._mesh_data[geschlecht] = md
         return cls._mesh_data[geschlecht]
 
     # ---------------------------------------------------------- Unterteilung
@@ -80,19 +110,25 @@ class Charakterdaten:
         Koerpertypen haben zusammenfallende Vertices, aus denen sich keine
         brauchbare Richtung ergibt — ohne diese Referenz zeigen dort Flaechen
         nach innen."""
-        if geschlecht in cls._cc_subdivider:
-            return cls._cc_subdivider[geschlecht]
-        mesh = cls.netzdaten(geschlecht)
-        if mesh.faces is None or mesh.faces.ndim != 2 or mesh.faces.shape[1] != 4:
-            return None
-        cc = CatmullClarkSubdivider(mesh.faces, face_materials=mesh.face_materials,
-                                    uvs=mesh.uvs, levels=1)
-        logger.info('CC-Unterteiler (%s): %d Basis- -> %d Untervertices, %d Dreiecke',
-                    geschlecht, mesh.faces.max() + 1, cc.sub_vertex_count,
-                    len(cc.triangles))
-        cls._referenznormalen(cc, geschlecht)
-        cls._cc_subdivider[geschlecht] = cc
-        return cc
+        vorhanden = cls._cc_subdivider.get(geschlecht)
+        if vorhanden is not None:
+            return vorhanden
+        with cls._schloss:
+            if geschlecht in cls._cc_subdivider:
+                return cls._cc_subdivider[geschlecht]
+            mesh = cls.netzdaten(geschlecht)
+            if mesh.faces is None or mesh.faces.ndim != 2 or mesh.faces.shape[1] != 4:
+                return None
+            cc = CatmullClarkSubdivider(mesh.faces,
+                                        face_materials=mesh.face_materials,
+                                        uvs=mesh.uvs, levels=1)
+            logger.info('CC-Unterteiler (%s): %d Basis- -> %d Untervertices, '
+                        '%d Dreiecke', geschlecht, mesh.faces.max() + 1,
+                        cc.sub_vertex_count, len(cc.triangles))
+            cls._referenznormalen(cc, geschlecht)
+            # Erst mit fertigen Referenznormalen sichtbar machen.
+            cls._cc_subdivider[geschlecht] = cc
+            return cc
 
     @classmethod
     def _referenznormalen(cls, cc, geschlecht):
@@ -110,18 +146,28 @@ class Charakterdaten:
 
     @classmethod
     def smpl_bibliothek(cls):
-        if cls._smpl_library is None:
-            from GarmentFitter.smpl_library import SmplGarmentLibrary
-            cls._smpl_library = SmplGarmentLibrary(
-                str(settings.HUMANBODY_SMPL_GARMENT_DIR))
-            cls._smpl_library.scan()
+        if cls._smpl_library is not None:
+            return cls._smpl_library
+        with cls._schloss:
+            if cls._smpl_library is None:
+                from GarmentFitter.smpl_library import SmplGarmentLibrary
+                bibliothek = SmplGarmentLibrary(
+                    str(settings.HUMANBODY_SMPL_GARMENT_DIR))
+                bibliothek.scan()
+                # Erst nach dem Einlesen sichtbar — sonst sieht eine parallele
+                # Anfrage eine leere Kleiderliste.
+                cls._smpl_library = bibliothek
         return cls._smpl_library
 
     @classmethod
     def smpl_koerpergenerator(cls):
-        if cls._smpl_body_gen is None:
-            from GarmentFitter.smpl_library import SmplBodyGenerator
-            cls._smpl_body_gen = SmplBodyGenerator(str(settings.SMPL_MODELS_DIR))
+        if cls._smpl_body_gen is not None:
+            return cls._smpl_body_gen
+        with cls._schloss:
+            if cls._smpl_body_gen is None:
+                from GarmentFitter.smpl_library import SmplBodyGenerator
+                cls._smpl_body_gen = SmplBodyGenerator(
+                    str(settings.SMPL_MODELS_DIR))
         return cls._smpl_body_gen
 
     # ------------------------------------------------------------- Koerper bauen

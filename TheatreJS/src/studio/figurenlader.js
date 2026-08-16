@@ -66,7 +66,7 @@ export class Figurenlader {
             geladen.push(await this.ausVorgabe(figurdaten,
                                                figurdaten.name || name));
         }
-        console.log('Szene geladen:', name, geladen.length, 'Figuren');
+        console.debug('Szene geladen:', name, geladen.length, 'Figuren');
         return geladen;
     }
 

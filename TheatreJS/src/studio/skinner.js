@@ -60,11 +60,11 @@ export class Skinner {
                 ]);
                 if (skelett.ok) this.skelettdaten = await skelett.json();
                 if (gewichte.ok) this.gewichte = await gewichte.json();
-                console.log('✓ Skelett und Gewichte geladen:',
+                console.debug('✓ Skelett und Gewichte geladen:',
                     this.skelettdaten?.bones?.length || 0, 'Knochen');
                 if (this.bereit) {
                     this.skelett = buildRigifySkeleton(this.skelettdaten, this.gewichte);
-                    console.log('✓ Skelett gebaut:', this.skelett.bones.length, 'Knochen');
+                    console.debug('✓ Skelett gebaut:', this.skelett.bones.length, 'Knochen');
                     // Fuer die Browser-Konsole und die UI-Tests.
                     window.rigifySkeletonData = this.skelettdaten;
                     window.rigifySkeleton = this.skelett;
@@ -87,7 +87,7 @@ export class Skinner {
         setTimeout(() => {
             try {
                 this.umwandeln(figur);
-                console.log('✓ zu SkinnedMesh umgewandelt:', figur.userData.presetName);
+                console.debug('✓ zu SkinnedMesh umgewandelt:', figur.userData.presetName);
             } catch (fehler) {
                 console.warn('Umwandeln fehlgeschlagen:', fehler);
             }
@@ -148,7 +148,7 @@ export class Skinner {
 
         this._kleiderBinden(figur, netz);
         this._haareBinden(figur, netz);
-        console.log('✓ SkinnedMesh erstellt:', this.skelett.skeleton.bones.length,
+        console.debug('✓ SkinnedMesh erstellt:', this.skelett.skeleton.bones.length,
             'Knochen, skinIndex:', !!geo.attributes.skinIndex);
         return netz;
     }
@@ -164,7 +164,7 @@ export class Skinner {
         aktion.play();
         aktion.paused = true;
         const dauer = clip.duration || 1;
-        console.log(`✓ Umgezielter Clip: ${clip.tracks.length} Spuren, ${dauer.toFixed(2)}s`);
+        console.debug(`✓ Umgezielter Clip: ${clip.tracks.length} Spuren, ${dauer.toFixed(2)}s`);
         return { mixer, action: aktion, duration: dauer };
     }
 
@@ -236,7 +236,7 @@ export class Skinner {
             if (kind.isSkinnedMesh && kind !== netz && kind.userData.needsBinding) {
                 kind.bind(this.skelett.skeleton, netz.bindMatrix);
                 delete kind.userData.needsBinding;
-                console.log('✓ Kleidung gebunden:', kind.name || kind.userData.garmentId);
+                console.debug('✓ Kleidung gebunden:', kind.name || kind.userData.garmentId);
             }
         });
     }
@@ -253,7 +253,7 @@ export class Skinner {
             const gebunden = this.haareUmwandeln(haare, kopf, netz);
             figur.remove(haare);
             figur.add(gebunden);
-            console.log('✓ Haare zu SkinnedMesh umgewandelt:', haare.name || 'Haare');
+            console.debug('✓ Haare zu SkinnedMesh umgewandelt:', haare.name || 'Haare');
         }
     }
 

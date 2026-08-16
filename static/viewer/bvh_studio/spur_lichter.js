@@ -12,6 +12,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Track, Clip } from './models.js';
 import { pushUndo } from './undo.js';
 import { TRACK_COLORS } from './state.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 // Erzeugt Helper-Group für beliebigen Licht-Typ. Enthält:
@@ -316,5 +317,5 @@ export function addLightKeyframe(trackIdx, frame) {
     fn.updateDuration();
     fn.renderTimeline();
     fn.updateProperties();
-    console.log(`[BVH Studio] Licht-Keyframe gespeichert bei Frame ${targetFrame}`);
+    Protokoll.info('BVH Studio', `Licht-Keyframe gespeichert bei Frame ${targetFrame}`);
 }

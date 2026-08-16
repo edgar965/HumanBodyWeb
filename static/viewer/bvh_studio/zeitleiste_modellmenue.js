@@ -11,6 +11,7 @@ import { pushUndo } from './undo.js';
 import { Clip } from './models.js';
 import { _populateTrackAddSubmenu } from './zeitleiste_spurmenue.js';
 import { Zeitleistenziehen } from './zeitleiste_ziehen.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /** Kleinste Laenge eines neu angelegten Modellclips in Bildern. */
 const MINDESTLAENGE = 300;
@@ -117,7 +118,7 @@ export class Modellmenue {
         fn.applyPlayhead();
         fn.renderTimeline();
         fn.updateProperties();
-        console.log(`[BVH Studio] Model preset changed to: ${vorlage}`);
+        Protokoll.debug('BVH Studio', `Model preset changed to: ${vorlage}`);
     }
 
     static _clipAmAbspielkopf(spur, spurNr) {

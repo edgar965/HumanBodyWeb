@@ -7,46 +7,36 @@
 
 import { state } from './state.js';
 import { base64ToFloat32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
+import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
+import { _charQueryParams } from './utils.js';
 import { generateModelMesh, generateRigBoneMesh } from './state.js';
 import { Modellbauzustand } from './modellgenerator/zustand.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export class Charakterkoerper {
 
+    /**
+     * Körpernetz zu den aktuellen Reglerständen neu holen.
+     *
+     * FEHLER 16.08.2026: `properties.js` rief nach jeder Reglerbewegung
+     * `inst.reloadBody()` — eine Methode, die es seit dem Herauslösen dieser
+     * Klasse aus character.js nicht mehr gab. Jede Morph- und Metaänderung im
+     * Eigenschaftsfeld der Szene endete in der Konsole mit
+     * "inst.reloadBody is not a function"; das Netz blieb stehen. Umgekehrt
+     * wurde `neuLaden` von niemandem gerufen.
+     */
     static async neuLaden(inst) {
-        const params = new URLSearchParams();
-        params.set('body_type', inst.bodyType);
-        for (const [k, v] of Object.entries(inst.morphs)) {
-            if (v !== 0) params.set(`morph_${k}`, v);
-        }
-        for (const [k, v] of Object.entries(inst.meta)) {
-            if (v !== 0) params.set(`meta_${k}`, v);
-        }
-
-        const resp = await fetch(`/api/character/mesh/?${params}`);
-        const data = await resp.json();
+        // `nur_punkte=1`: Dreiecke, UVs und Materialgruppen bleiben weg. Die
+        // Topologie aendert sich durch Morphs nicht, und der Zweig unten setzt
+        // ohnehin nur `position` und `normal`. Gemessen 16.08.2026: 5,24 MB ->
+        // 2,26 MB je Reglerbewegung. Passt die Punktzahl NICHT (Wechsel der
+        // Koerperart), laedt `inst.load()` unten alles vollstaendig.
+        const data = await Serverabruf.json(
+            `/api/character/mesh/?${_charQueryParams(inst)}&nur_punkte=1`);
         if (data.error) throw new Error(data.error);
 
-        const vertBuf = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(vertBuf);
-
-        if (inst.bodyMesh && inst.bodyMesh.geometry.attributes.position.count === vertBuf.length / 3) {
-            inst.bodyMesh.geometry.attributes.position.array.set(vertBuf);
-            inst.bodyMesh.geometry.attributes.position.needsUpdate = true;
-
-            if (data.normals) {
-                const normalBuf = base64ToFloat32(data.normals);
-                blenderToThreeCoords(normalBuf);
-                if (inst.bodyMesh.geometry.attributes.normal) {
-                    inst.bodyMesh.geometry.attributes.normal.array.set(normalBuf);
-                    inst.bodyMesh.geometry.attributes.normal.needsUpdate = true;
-                }
-            } else {
-                inst.bodyMesh.geometry.computeVertexNormals();
-            }
-
-            inst.bodyMesh.geometry.computeBoundingSphere();
-            inst.bodyMesh.geometry.computeBoundingBox();
-        } else {
+        if (!Netzpunkte.aktualisieren(inst.bodyMesh, data)) {
             if (inst.bodyMesh) {
                 inst.group.remove(inst.bodyMesh);
                 inst.bodyMesh.geometry.dispose();
@@ -93,18 +83,7 @@ export class Charakterkoerper {
 
     static hautfarbe(inst, materials) {
         if (!Object.keys(state.skinColors).length) return;
-        const parts = inst.bodyType.split('_');
-        const ethnicity = parts.length > 1 ? parts.slice(1).join('_') : 'Caucasian';
-        const colors = state.skinColors[ethnicity] || state.skinColors['Caucasian'];
-        if (colors && materials[0]) {
-            materials[0].color.setRGB(
-                Math.pow(colors[0], 1/2.2),
-                Math.pow(colors[1], 1/2.2),
-                Math.pow(colors[2], 1/2.2)
-            );
-            if (materials[1]) {
-                materials[1].color.copy(materials[0].color);
-            }
-        }
+        Hautfarbe.ausKoerperart(materials[0], inst.bodyType, state.skinColors,
+                                { zweites: materials[1], mitErsatz: true });
     }
 }

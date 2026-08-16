@@ -8,6 +8,9 @@
 import './state.js';
 import '../gemeinsam/registrierung.js';
 import { _buildPayload } from './export_nutzlast.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 function _setStatus(text, color) {
@@ -61,7 +64,7 @@ function _startProgress(engine, expectedSeconds = 30, label = 'Sim + Render läu
         _progress(engine, lastPct, `${label} — ${elapsed.toFixed(0)}s`);
     };
     tick();
-    const t = setInterval(tick, 500);
+    const t = setInterval(tick, Zeiten.FORTSCHRITT_MS);
     _progressTimers[engine] = { t };
     return () => {
         if (_progressTimers[engine]) { clearInterval(_progressTimers[engine].t); _progressTimers[engine] = null; }
@@ -130,15 +133,15 @@ async function _runClothExport(engine) {
     const cancelBtn = document.getElementById('cloth-export-cancel');
     if (cancelBtn) cancelBtn.style.display = '';
     try {
-        const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-        const resp = await fetch('/api/cloth/export/', {
+        // Kein `Serverabruf.senden`: Der Abbruch-Knopf braucht das `signal`.
+        const data = await Serverabruf.json('/api/cloth/export/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            headers: { 'Content-Type': 'application/json',
+                       'X-CSRFToken': Serverabruf.csrfToken() },
             body: JSON.stringify(payload),
             signal: _clothAbort.signal,
         });
         stopPulse();
-        const data = await resp.json();
         const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
         if (data.ok) {
             const t = Math.round(data.elapsed_sec || elapsed);
@@ -172,8 +175,7 @@ async function _autofillTargetDir() {
     const el = document.getElementById('cloth-target-dir');
     if (!el || el.value) return;
     try {
-        const r = await fetch('/api/ui-prefs/');
-        const prefs = await r.json();
+        const prefs = await Serverabruf.json('/api/ui-prefs/');
         el.value = prefs.studio_video_output || '';
     } catch (e) { /* ignore */ }
 }
@@ -191,9 +193,9 @@ export function bindClothExportButtons() {
             e.preventDefault();
             const engine = btn.dataset.engine;
             if (!engine) return;
-            console.log(`[Cloth Export] click engine=${engine}`);
+            Protokoll.debug('Cloth Export', `Klick auf ${engine}`);
             _runClothExport(engine);
         });
     });
-    console.log('[Cloth Export] bound ' + document.querySelectorAll('.cloth-export-btn').length + ' buttons');
+    Protokoll.debug('Cloth Export', 'bound ' + document.querySelectorAll('.cloth-export-btn').length + ' buttons');
 }

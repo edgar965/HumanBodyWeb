@@ -36,6 +36,13 @@ export class Seitenzustand {
     static currentAction = null;
     static skeletonHelper = null;
     static playing = false;
+    /**
+     * Gruppe, die das BVH-Skelett auf Körperhöhe skaliert (Rückfallweg ohne
+     * Skinning). Lag bis zum Umbau am 16.08.2026 als `export let` in netz.js und
+     * wurde von wiedergabe.js beschrieben — eine Zuweisung auf eine importierte
+     * Bindung, die zur Laufzeit einen TypeError wirft.
+     */
+    static skelWrapper = null;
 
     // ----- Skelett und Gewichte
     static rigifySkeletonData = null;

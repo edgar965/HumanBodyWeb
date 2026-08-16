@@ -5,11 +5,12 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { ensureSkinned } from './skinning.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export async function loadHairUI() {
     try {
-        const resp = await fetch('/api/character/hairstyles/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/hairstyles/');
         const select = document.getElementById('hair-style-select');
         const colorSelect = document.getElementById('hair-color-select');
         if (!select) return;
@@ -68,7 +69,7 @@ export function loadHair(url) {
             applyHairColorToObject(state.hairMesh, colorSelect.value);
         }
         state.scene.add(state.hairMesh);
-        console.log('Hair loaded:', url, 'skinned=' + (state.isSkinned && state.rigifySkeleton ? 'yes' : 'no'));
+        Protokoll.debug('Viewer', 'Hair loaded:', url, 'skinned=' + (state.isSkinned && state.rigifySkeleton ? 'yes' : 'no'));
         fn.updateEquippedList();
     }, undefined, (err) => {
         console.error('Failed to load hair:', err);
@@ -168,7 +169,7 @@ export function refitHairToBody() {
         if (colorName) applyHairColorToObject(state.hairMesh, colorName);
         state.scene.add(state.hairMesh);
         fn.updateEquippedList();
-        console.log(`[Hair refit] scale=${scale.toFixed(4)} (initial=${state.initialBodyTop.toFixed(4)}, current=${currentTop.toFixed(4)})`);
+        Protokoll.debug('Hair refit', `scale=${scale.toFixed(4)} (initial=${state.initialBodyTop.toFixed(4)}, current=${currentTop.toFixed(4)})`);
     }, undefined, (err) => {
         console.error('[Hair refit] failed to reload:', err);
     });

@@ -79,7 +79,7 @@ export class Animationslauf {
             this.abspieler.zeit = 0;
             this._sequenzlaengeSetzen(dauer);
             this._weiterlaufen(liefVorher);
-            console.log('Animation geladen:', kategorie, name, dauer);
+            console.debug('Animation geladen:', kategorie, name, dauer);
             return dauer;
         } catch (fehler) {
             console.error('Animation nicht ladbar:', fehler);
@@ -115,7 +115,7 @@ export class Animationslauf {
         this.skinner.skelett.rootBone.updateWorldMatrix(true, true);
 
         const dauer = clip.duration || 1;
-        console.log(`✓ BVH umgezielt: ${dauer.toFixed(1)}s, ${clip.tracks.length} Spuren`);
+        console.debug(`✓ BVH umgezielt: ${dauer.toFixed(1)}s, ${clip.tracks.length} Spuren`);
         return dauer;
     }
 
@@ -142,7 +142,7 @@ export class Animationslauf {
             this.buehne.studio.transaction(({ set }) => {
                 set(this.buehne.sheet.sequence.pointer.length, laenge);
             });
-            console.log(`✓ Theatre-Sequenz auf ${laenge}s gesetzt`);
+            console.debug(`✓ Theatre-Sequenz auf ${laenge}s gesetzt`);
         } catch (fehler) {
             console.warn('Sequenzlänge nicht setzbar:', fehler);
         }
@@ -154,7 +154,7 @@ export class Animationslauf {
         if (liefVorher) {
             this.abspieler.umschalten();
             knopf?.classList.add('playing');
-            console.log('✓ neue Animation läuft weiter');
+            console.debug('✓ neue Animation läuft weiter');
         } else {
             this.abspieler.laeuft = false;
             window.isPlaying = false;

@@ -10,23 +10,28 @@ import './models.js';
 import './spur_lichter.js';
 import { pushUndo } from './undo.js';
 import { _createLightTrackFromDef } from './theatre_lichtspuren.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 let _cachedTheatrePresets = null;
 
 
 export async function _fetchTheatrePresets() {
     if (_cachedTheatrePresets) return _cachedTheatrePresets;
-    const resp = await fetch('/api/studio/theatre-presets/');
-    const data = await resp.json();
+    const data = await Serverabruf.json('/api/studio/theatre-presets/');
     _cachedTheatrePresets = data.presets || [];
     return _cachedTheatrePresets;
 }
 
 
 async function _applyTheatrePreset(presetName) {
-    const resp = await fetch(`/api/studio/theatre-preset/${encodeURIComponent(presetName)}/`);
-    if (!resp.ok) { alert(`Preset "${presetName}" nicht gefunden`); return; }
-    const preset = await resp.json();
+    let preset;
+    try {
+        preset = await Serverabruf.json(
+            `/api/studio/theatre-preset/${encodeURIComponent(presetName)}/`);
+    } catch (fehler) {
+        alert(`Preset "${presetName}" nicht ladbar: ${fehler.message}`);
+        return;
+    }
     const presetLights = preset.lights || [];
     pushUndo(`Theatre-Preset: ${preset.label || presetName}`);
 

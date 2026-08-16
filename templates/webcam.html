@@ -2,12 +2,20 @@
 {% block title %}Live Webcam - MocapNET{% endblock %}
 
 {% block content %}
+<style>
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-color-red.hb-color-red.hb-color-red { color:red; }   /* 3x */
+.hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* 2x */
+</style>
 <h1>Live Webcam Capture</h1>
 
 <div class="webcam-layout">
     <div class="webcam-feed">
         <video id="webcamVideo" autoplay playsinline></video>
-        <canvas id="webcamCanvas" style="display:none;"></canvas>
+        <canvas id="webcamCanvas" class="hb-versteckt"></canvas>
     </div>
 
     <div class="webcam-controls">
@@ -15,13 +23,13 @@
             <i class="fas fa-camera"></i> Start Webcam
         </button>
         <button id="recordBtn" class="btn btn-secondary" onclick="toggleRecording()" disabled>
-            <i class="fas fa-circle" style="color:red"></i> Record
+            <i class="fas fa-circle hb-color-red"></i> Record
         </button>
         <button id="stopBtn" class="btn btn-danger" onclick="stopWebcam()" disabled>
             <i class="fas fa-stop"></i> Stop
         </button>
 
-        <div class="record-info" id="recordInfo" style="display:none;">
+        <div class="record-info hb-versteckt" id="recordInfo">
             <p>Recording: <span id="frameCount">0</span> frames</p>
         </div>
     </div>
@@ -65,12 +73,12 @@ function toggleRecording() {
         mediaRecorder.onstop = uploadRecording;
         mediaRecorder.start();
         recording = true;
-        document.getElementById('recordBtn').innerHTML = '<i class="fas fa-stop" style="color:red"></i> Stop Recording';
+        document.getElementById('recordBtn').innerHTML = '<i class="fas fa-stop hb-color-red"></i> Stop Recording';
         document.getElementById('recordInfo').style.display = 'block';
     } else {
         mediaRecorder.stop();
         recording = false;
-        document.getElementById('recordBtn').innerHTML = '<i class="fas fa-circle" style="color:red"></i> Record';
+        document.getElementById('recordBtn').innerHTML = '<i class="fas fa-circle hb-color-red"></i> Record';
         document.getElementById('recordInfo').style.display = 'none';
     }
 }

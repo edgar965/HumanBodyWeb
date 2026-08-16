@@ -127,7 +127,6 @@ export const state = {
     // Morph throttle
     morphTimer: null,
     pendingMorphs: {},
-    morphCategories: {},
 
     // SMPL
     smplGarmentMeshes: {},

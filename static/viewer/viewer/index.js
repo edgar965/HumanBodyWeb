@@ -53,8 +53,9 @@ import { Buehne } from './buehne.js';
 import { Werkzeugknoepfe } from './werkzeugknoepfe.js';
 import { Seitenbefehle } from './seitenbefehle.js';
 import { Bildschleife } from './bildschleife.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
-console.log('[Viewer] v2.1 geladen (ES-Module, Klassen)');
+Protokoll.debug('Viewer', 'v2.1 geladen (ES-Module, Klassen)');
 
 /** Alle Panel-Bereiche auf- und zuklappbar machen. */
 function bereicheKlappbar() {

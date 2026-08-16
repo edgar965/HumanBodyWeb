@@ -12,6 +12,7 @@ import { fn } from '../../gemeinsam/registrierung.js';
 import { generateModelMesh, generateRigBoneMesh } from '../state.js';
 import { generateCharacterId } from '../utils.js';
 import { Modellbauzustand } from './zustand.js';
+import { Protokoll } from '../../gemeinsam/protokoll.js';
 
 /** Wartezeit, bis eine Reglerbewegung als abgeschlossen gilt (ms). */
 const RUHEZEIT = 400;
@@ -110,7 +111,7 @@ export class Modellerzeugung {
         fn.updateCharacterListUI();
         fn.updateVertexCount();
         fn.selectCharacter(id);
-        console.log('Model Generator: created '
+        Protokoll.debug('Modellbau', 'Model Generator: created '
             + (Modellbauzustand.skelettart === 'rig' ? 'Mesh' : 'SkinnedMesh')
             + ` with ${ergebnis.mesh.geometry.attributes.position.count} vertices `
             + `as character "${inst.presetName}"`);

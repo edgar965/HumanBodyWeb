@@ -73,6 +73,9 @@ export function selectCharacter(id) {
 
     fn.updateCharacterListUI();
     fn.populateProperties(id);
+    // Der Kleider-Reiter zeigt ohne Figur nur einen Hinweis. Vorher prüfte er
+    // das mit einem Sekundenintervall selbst nach.
+    fn.kleiderSichtbarkeit?.();
 }
 
 export function deselectCharacter() {
@@ -88,6 +91,7 @@ export function deselectCharacter() {
     state.transformControls.enabled = false;
     fn.updateCharacterListUI();
     fn.clearProperties();
+    fn.kleiderSichtbarkeit?.();
 }
 
 export function deleteCharacter(id) {

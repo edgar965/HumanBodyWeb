@@ -35,14 +35,14 @@ try {
         const hasUserKeyframes = stored.includes('"keyframes":[{');
         if (!hasUserKeyframes) {
             localStorage.removeItem('theatre-0.4.persistent');
-            console.log('[Theatre Studio] Cleared stale localStorage (no user keyframes)');
+            console.debug('[Theatre Studio] Cleared stale localStorage (no user keyframes)');
         }
     }
 } catch (_) { /* ignore */ }
 
 // Theatre Studio MUST be initialized at module level (before DOMContentLoaded)
 studio.initialize().then(() => {
-    console.log('[Theatre Studio] initialized successfully');
+    console.debug('[Theatre Studio] initialized successfully');
     // Force Studio visible (it remembers hide state in localStorage)
     studio.ui.restore();
     // Wait for render() setTimeout to create DOM element
@@ -94,7 +94,7 @@ studio.initialize().then(() => {
                 `;
                 sr.prepend(style);
             }
-            console.log('[Theatre Studio] UI visible, position:fixed, context menu fix active');
+            console.debug('[Theatre Studio] UI visible, position:fixed, context menu fix active');
         }
     }, 100);
 }).catch(err => {
@@ -194,7 +194,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             if (clickedIcon.userData.light) {
                 auswahl.lichtWaehlen(clickedIcon);
-                console.log('✓ Licht ausgewählt:', clickedIcon.userData.light);
+                console.debug('✓ Licht ausgewählt:', clickedIcon.userData.light);
                 lichtpanel.zeigen(clickedIcon.userData.light, clickedIcon);
                 return;
             }
@@ -214,7 +214,7 @@ window.addEventListener('DOMContentLoaded', () => {
             // Check if it's a garment (higher priority than character)
             if (clickedMesh.userData.isGarment) {
                 auswahl.kleidungWaehlen(clickedMesh);
-                console.log('✓ Garment ausgewählt:', clickedMesh.name);
+                console.debug('✓ Garment ausgewählt:', clickedMesh.name);
                 kleiderpanel.zeigen(clickedMesh);
                 return;
             }
@@ -227,7 +227,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             if (clickedChar.userData.isCharacter) {
                 auswahl.figurWaehlen(clickedChar);
-                console.log('✓ Character ausgewählt:', clickedChar.userData.presetName);
+                console.debug('✓ Character ausgewählt:', clickedChar.userData.presetName);
                 figurpanel.zeigen(clickedChar);
                 return;
             }
@@ -364,14 +364,14 @@ window.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 });
-                console.log('✓ Timeline:', name, 'OK');
+                console.debug('✓ Timeline:', name, 'OK');
             } catch(e) {
                 console.error('✗ Timeline:', name, e.message);
             }
         }
 
         studio.setSelection([sheet]);
-        console.log('✓ Timeline rebuilt:', objEntries.length, 'objects');
+        console.debug('✓ Timeline rebuilt:', objEntries.length, 'objects');
     };
 
     window.clearTimeline = function() {
@@ -490,7 +490,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const preset = PRESETS[presetName];
             if (preset) {
                 applyPreset(preset, camera, lights, controls);
-                console.log('✓ Applied preset:', preset.name);
+                console.debug('✓ Applied preset:', preset.name);
             } else {
                 console.error('Preset not found:', presetName);
             }
@@ -628,7 +628,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 const preset = PRESETS[cfg.preset];
                 if (preset) {
                     applyPreset(preset, camera, lights, controls);
-                    console.log('✓ Auto-applied preset:', preset.name);
+                    console.debug('✓ Auto-applied preset:', preset.name);
                 }
             }
 
@@ -638,14 +638,14 @@ window.addEventListener('DOMContentLoaded', () => {
                     // Dritte Fundstelle derselben fuenf Zeilen — jetzt ueber
                     // Figurenlader.modell() wie die anderen beiden.
                     await figurenlader.modell(cfg.model);
-                    console.log('✓ Auto-loaded model:', cfg.model);
+                    console.debug('✓ Auto-loaded model:', cfg.model);
 
                     // Load animation if model loaded successfully
                     if (cfg.animation) {
                         const [category, name] = cfg.animation.split('/');
                         if (category && name) {
                             await animationslauf.laden(category, name);
-                            console.log('✓ Auto-loaded animation:', cfg.animation);
+                            console.debug('✓ Auto-loaded animation:', cfg.animation);
                         }
                     }
                 } catch (err) {

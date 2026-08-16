@@ -160,7 +160,7 @@ export const PRESETS = {
  * @param {OrbitControls} controls OrbitControls instance
  */
 export function applyPreset(preset, camera, lights, controls) {
-    console.log(`[Preset] Applying: ${preset.name}`);
+    console.debug(`[Preset] Applying: ${preset.name}`);
 
     // Apply camera position directly (Theatre props are read-only, can't be set programmatically)
     camera.position.set(
@@ -183,7 +183,7 @@ export function applyPreset(preset, camera, lights, controls) {
     applyLightDirect(lights.spotRight, preset.lights.spotRight);
     applyLightDirect(lights.backLight, preset.lights.backLight);
 
-    console.log(`✓ Preset "${preset.name}" applied (direct Three.js)`);
+    console.debug(`✓ Preset "${preset.name}" applied (direct Three.js)`);
 }
 
 function applyLightDirect(light, settings) {

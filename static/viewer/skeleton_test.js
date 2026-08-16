@@ -15,6 +15,7 @@ import './animation/baum.js';
 import { Testzustand } from './skelett_test/testzustand.js';
 import { createBoneLabels, createBoneViz } from './skelett_test/knochenbild.js';
 import { init } from './skelett_test/aufbau.js';
+import { Protokoll } from './gemeinsam/protokoll.js';
 
 // =========================================================================
 // Global state
@@ -74,7 +75,7 @@ export async function loadRigifySkeleton() {
         // Bone number labels
         createBoneLabels(rigifySkel.bones, 'def');
 
-        console.log(`DEF skeleton loaded: ${rigifySkel.bones.length} bones`);
+        Protokoll.debug('Viewer', `DEF skeleton loaded: ${rigifySkel.bones.length} bones`);
     } catch (e) {
         console.error('Failed to load DEF skeleton:', e);
     }
@@ -168,7 +169,7 @@ export function placeBvhSkeleton(result, skelKey) {
     // Bone number labels
     createBoneLabels(bones, skelKey);
 
-    console.log(`${skelKey.toUpperCase()} skeleton placed: ${bones.length} bones, scale=${scale.toFixed(4)}, bvhH=${bvhHeight.toFixed(1)}, box.y=[${box.min.y.toFixed(1)},${box.max.y.toFixed(1)}], center.z=${center.z.toFixed(1)}, wrapper.z=${wrapper.position.z.toFixed(3)}`);
+    Protokoll.debug('Viewer', `${skelKey.toUpperCase()} skeleton placed: ${bones.length} bones, scale=${scale.toFixed(4)}, bvhH=${bvhHeight.toFixed(1)}, box.y=[${box.min.y.toFixed(1)},${box.max.y.toFixed(1)}], center.z=${center.z.toFixed(1)}, wrapper.z=${wrapper.position.z.toFixed(3)}`);
 }
 
 
@@ -179,4 +180,8 @@ export function placeBvhSkeleton(result, skelKey) {
 // =========================================================================
 // Boot
 // =========================================================================
-init();
+// `.catch`: Ein Fehler im Aufbau darf nicht als stille Rejection enden —
+// die Seite waere leer, ohne dass jemand den Grund sieht.
+init().catch(fehler => {
+    console.error('[Skelett-Test] Aufbau gescheitert:', fehler);
+});

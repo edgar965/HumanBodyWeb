@@ -87,6 +87,11 @@
         gap: 6px;
         padding-right: 8px;
     }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* 3x */
 </style>
 {% endblock %}
 
@@ -148,9 +153,9 @@
 {% endblock %}
 
 {% block viewer_buttons_left %}
-<button id="load-preset-btn" class="viewer-btn" style="display:none;"></button>
-<button id="save-model-btn" class="viewer-btn" style="display:none;"></button>
-<button id="save-model-as-btn" class="viewer-btn" style="display:none;"></button>
+<button id="load-preset-btn" class="viewer-btn hb-versteckt"></button>
+<button id="save-model-btn" class="viewer-btn hb-versteckt"></button>
+<button id="save-model-as-btn" class="viewer-btn hb-versteckt"></button>
 {% endblock %}
 
 {% block viewer_status_bar %}

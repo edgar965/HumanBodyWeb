@@ -13,12 +13,13 @@ import { pushUndo } from './undo.js';
 import { sharedState } from '../character_core.js?v=1';
 import { addTrack } from './tracks.js';
 import { loadTrackCharacter } from './spur_charakter.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 const ss = sharedState;
 
 
 export async function addClipToTrack(trackIdx, category, name, frames) {
     pushUndo('Clip hinzufügen');
-    console.log(`[BVH Studio] addClipToTrack: trackIdx=${trackIdx}, ${category}/${name}, existingTracks=${state.project.tracks.length}`);
+    Protokoll.debug('BVH Studio', `addClipToTrack: trackIdx=${trackIdx}, ${category}/${name}, existingTracks=${state.project.tracks.length}`);
     if (trackIdx < 0 || !state.project.tracks[trackIdx]) {
         if (state.project.tracks.length === 0) addTrack();
         trackIdx = state.project.tracks.length - 1;
@@ -46,7 +47,7 @@ export async function addClipToTrack(trackIdx, category, name, frames) {
 
     // Load retargeted animation
     await loadClipAnimation(track, clip);
-    console.log(`[BVH Studio] addClipToTrack done: clips=${track.clips.length}, hasMixer=${!!track.mixer}, hasSkeleton=${!!track.skeleton}`);
+    Protokoll.debug('BVH Studio', `addClipToTrack done: clips=${track.clips.length}, hasMixer=${!!track.mixer}, hasSkeleton=${!!track.skeleton}`);
     fn.updateProperties();
 }
 
@@ -260,7 +261,7 @@ export function trimSelectedClip(mode, frames = 10) {
     fn.updateDuration();
     fn.renderTimeline();
     fn.updateProperties();
-    console.log(`[BVH Studio] Trim ${mode}: in=${clip.trimIn}, out=${clip.trimOut}`);
+    Protokoll.debug('BVH Studio', `Trim ${mode}: in=${clip.trimIn}, out=${clip.trimOut}`);
 }
 
 export function splitClipAtPlayhead() {
@@ -290,7 +291,7 @@ export function splitClipAtPlayhead() {
             track.clips.splice(i + 1, 0, clip2);
             fn.updateDuration();
             fn.renderTimeline();
-            console.log(`[BVH Studio] Split clip at frame ${splitFrame}`);
+            Protokoll.debug('BVH Studio', `Split clip at frame ${splitFrame}`);
             break;
         }
     }

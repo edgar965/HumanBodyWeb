@@ -6,6 +6,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, _selectedInst, _charQueryParams, _bindSlider, _sliderVal } from './utils.js';
 import { markDirty } from './undo.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export async function loadClothUI() {
     _bindSlider('cloth-tpl-segments', 'cloth-tpl-segments-val', v => v);
@@ -17,8 +18,8 @@ export async function loadClothUI() {
     _bindSlider('cloth-prim-length', 'cloth-prim-length-val', v => (v / 100).toFixed(2));
     _bindSlider('cloth-prim-flare', 'cloth-prim-flare-val', v => (v / 100).toFixed(2));
     try {
-        const resp = await fetch('/api/character/cloth/regions/');
-        state._clothRegionsData = await resp.json();
+        state._clothRegionsData = await Serverabruf.json(
+            '/api/character/cloth/regions/');
         const tplSelect = document.getElementById('cloth-tpl-type');
         if (tplSelect && state._clothRegionsData.templates) { for (const t of state._clothRegionsData.templates) { const opt = document.createElement('option'); opt.value = t.key; opt.textContent = t.label; tplSelect.appendChild(opt); } }
         const bldSelect = document.getElementById('cloth-bld-region');
@@ -57,8 +58,7 @@ export async function _loadClothForCharacter(inst, key, clothParams) {
     const colorHex = document.getElementById('cloth-color')?.value || '#404870';
     const matColor = new THREE.Color(colorHex);
     try {
-        const resp = await fetch(`/api/character/cloth/?${params}`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`/api/character/cloth/?${params}`);
         if (data.error) { console.warn('Cloth error:', data.error); return; }
         if (inst.clothMeshes[key]) { inst.group.remove(inst.clothMeshes[key]); inst.clothMeshes[key].geometry.dispose(); inst.clothMeshes[key].material.dispose(); delete inst.clothMeshes[key]; }
         const vertBuf = base64ToFloat32(data.vertices); blenderToThreeCoords(vertBuf);

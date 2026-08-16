@@ -7,6 +7,13 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { escapeHtml } from './utils.js';
 import { markDirty } from './undo.js';
 import { _sameSubMesh, getSelectableSubMeshes } from './teilnetz_auswahl.js';
+import { Charakterkoerper } from './charakter_koerper.js';
+import { Morphliste } from '../gemeinsam/morphliste.js';
+import { Metaregler } from '../gemeinsam/metaregler.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+
+/** Unter diesem Betrag gilt ein Morph als aus und wird aus der Figur entfernt. */
+const MORPH_SCHWELLE = 0.005;
 
 export function initTabs() {
     document.querySelectorAll('.panel-tab').forEach(tab => {
@@ -37,8 +44,7 @@ export function switchTab(tabName) {
 
 export async function fetchMorphDefs() {
     if (state.morphDefs && state.morphDefs.morphs && state.morphDefs.morphs.length > 0) return state.morphDefs;
-    const resp = await fetch('/api/character/morphs/');
-    state.morphDefs = await resp.json();
+    state.morphDefs = await Serverabruf.json('/api/character/morphs/');
     return state.morphDefs;
 }
 
@@ -128,8 +134,7 @@ async function populatePresets(inst) {
     const sel = document.getElementById('prop-preset');
     if (!sel || sel._loaded) return;
     try {
-        const resp = await fetch('/api/character/charmorph-presets/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/charmorph-presets/');
         sel.innerHTML = '<option value="">-- Kein Preset --</option>';
         for (const p of (data.presets || [])) { const opt = document.createElement('option'); opt.value = JSON.stringify(p); opt.textContent = p.label; sel.appendChild(opt); }
         sel._loaded = true;
@@ -143,62 +148,80 @@ async function populatePresets(inst) {
     } catch(e) { console.error('Failed to load presets:', e); }
 }
 
+/**
+ * Metaregler der Figur. Die Werte stehen in der Figur als -1..1 und im Regler
+ * in ihrer Einheit — die Umrechnung kommt aus `Metaregler`, wo sie einmal
+ * steht (war vorher an fünf Stellen ausgeschrieben).
+ */
 function populateMetaSliders(inst) {
     const container = document.getElementById('prop-meta-sliders');
     container.innerHTML = '';
-    if (!state.morphDefs || !state.morphDefs.meta_sliders) return;
-    for (const [name, meta] of Object.entries(state.morphDefs.meta_sliders)) {
-        const neutral = (meta.min + meta.max) / 2;
-        const half = (meta.max - meta.min) / 2;
-        const internal = inst.meta[name] || 0;
-        const displayVal = neutral + internal * half;
-        const row = document.createElement('div'); row.className = 'slider-row';
-        const label = document.createElement('label'); label.textContent = meta.label || name; label.style.minWidth = '80px';
-        const slider = document.createElement('input'); slider.type = 'range'; slider.min = meta.min; slider.max = meta.max; slider.step = 1; slider.value = Math.round(displayVal); slider.dataset.meta = name;
-        const valSpan = document.createElement('span'); valSpan.className = 'slider-val'; valSpan.textContent = Math.round(displayVal);
+    for (const [name, meta] of Object.entries(state.morphDefs?.meta_sliders || {})) {
+        const angezeigt = Math.round(
+            Metaregler.aussen(inst.meta[name] || 0, meta.min, meta.max));
+        const row = document.createElement('div');
+        row.className = 'slider-row';
+        const label = document.createElement('label');
+        label.textContent = meta.label || name;
+        const slider = document.createElement('input');
+        Object.assign(slider, { type: 'range', min: meta.min, max: meta.max,
+                                step: 1, value: angezeigt });
+        slider.dataset.meta = name;
+        const valSpan = document.createElement('span');
+        valSpan.className = 'slider-val';
+        valSpan.textContent = angezeigt;
         slider.addEventListener('input', () => { valSpan.textContent = slider.value; });
-        slider.addEventListener('change', () => { const dv = parseFloat(slider.value); inst.meta[name] = (dv - neutral) / half; reloadCharacterMesh(inst); });
-        row.appendChild(label); row.appendChild(slider); row.appendChild(valSpan); container.appendChild(row);
+        // Erst beim Loslassen, weil danach das Netz neu geholt wird.
+        slider.addEventListener('change', () => {
+            inst.meta[name] = Metaregler.innen(parseFloat(slider.value),
+                                               meta.min, meta.max);
+            reloadCharacterMesh(inst);
+        });
+        row.append(label, slider, valSpan);
+        container.appendChild(row);
     }
 }
 
+/**
+ * Morphregler der Figur — dieselbe Liste wie auf den anderen Seiten, deshalb
+ * aus `Morphliste`. Eigen ist hier nur: Meldung erst beim Loslassen, Pfeil vor
+ * dem Kategorienamen, und Werte unter der Schwelle werden ganz entfernt, damit
+ * die Figur keine Nullwerte mitschleppt.
+ */
 function populateMorphSliders(inst) {
     const container = document.getElementById('prop-morphs-panel');
-    container.innerHTML = '';
-    if (!state.morphDefs || !state.morphDefs.morphs || !state.morphDefs.categories) return;
-    const byCategory = {};
-    for (const m of state.morphDefs.morphs) { const cat = m.category || 'Other'; if (!byCategory[cat]) byCategory[cat] = []; byCategory[cat].push(m); }
-    for (const cat of state.morphDefs.categories) {
-        const morphs = byCategory[cat];
-        if (!morphs || morphs.length === 0) continue;
-        const div = document.createElement('div'); div.className = 'morph-category';
-        const header = document.createElement('div'); header.className = 'morph-category-header';
-        header.innerHTML = `<span class="cat-chevron">&#9654;</span> ${escapeHtml(cat)} (${morphs.length})`;
-        header.addEventListener('click', () => div.classList.toggle('open'));
-        const body = document.createElement('div'); body.className = 'morph-category-body';
-        for (const m of morphs) {
-            const currentVal = (inst.morphs[m.name] || 0) * 100;
-            const row = document.createElement('div'); row.className = 'slider-row';
-            const label = document.createElement('label');
-            let displayName = m.name;
-            if (displayName.startsWith(cat + '_')) displayName = displayName.substring(cat.length + 1);
-            label.textContent = displayName.replace(/_/g, ' '); label.title = m.name; label.style.minWidth = '80px'; label.style.fontSize = '0.72rem';
-            const slider = document.createElement('input'); slider.type = 'range'; slider.min = -100; slider.max = 100; slider.step = 1; slider.value = Math.round(currentVal);
-            const valSpan = document.createElement('span'); valSpan.className = 'slider-val'; valSpan.textContent = Math.round(currentVal);
-            slider.addEventListener('input', () => { valSpan.textContent = slider.value; });
-            slider.addEventListener('change', () => { const v = parseFloat(slider.value) / 100; if (Math.abs(v) < 0.005) delete inst.morphs[m.name]; else inst.morphs[m.name] = v; reloadCharacterMesh(inst); });
-            row.appendChild(label); row.appendChild(slider); row.appendChild(valSpan); body.appendChild(row);
-        }
-        div.appendChild(header); div.appendChild(body); container.appendChild(div);
+    if (!state.morphDefs?.morphs || !state.morphDefs?.categories) {
+        container.innerHTML = '';
+        return;
     }
+    new Morphliste({
+        ereignis: 'change',
+        chevron: true,
+        startwert: name => inst.morphs[name],
+        geaendert: (name, wert) => {
+            if (Math.abs(wert) < MORPH_SCHWELLE) delete inst.morphs[name];
+            else inst.morphs[name] = wert;
+            reloadCharacterMesh(inst);
+        },
+    }).bauen(container, state.morphDefs.morphs, state.morphDefs.categories);
 }
+
+/** Ruhezeit, bevor das Netz neu geholt wird — beim Ziehen sammeln sich Werte. */
+const NEULADEN_RUHE_MS = 300;
 
 export async function reloadCharacterMesh(inst) {
     clearTimeout(state.reloadTimer);
     state.reloadTimer = setTimeout(async () => {
-        try { await inst.reloadBody(); fn.updateVertexCount(); fn.updateCharacterListUI(); if (state.currentPropsCharId === inst.id) updateEquippedList(inst); markDirty(); }
-        catch (e) { console.error('Failed to reload:', e); }
-    }, 300);
+        try {
+            await Charakterkoerper.neuLaden(inst);
+            fn.updateVertexCount();
+            fn.updateCharacterListUI();
+            if (state.currentPropsCharId === inst.id) updateEquippedList(inst);
+            markDirty();
+        } catch (fehler) {
+            console.error('Netz nicht neu ladbar:', fehler);
+        }
+    }, NEULADEN_RUHE_MS);
 }
 
 export function updateEquippedList(inst) {

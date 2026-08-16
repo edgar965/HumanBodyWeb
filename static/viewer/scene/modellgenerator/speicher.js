@@ -11,8 +11,10 @@
  */
 import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
-import { _selectedInst, getCSRFToken } from '../utils.js';
+import { _selectedInst } from '../utils.js';
 import { Modellbauzustand } from './zustand.js';
+import { Serverabruf } from '../../gemeinsam/serverabruf.js';
+import { Protokoll } from '../../gemeinsam/protokoll.js';
 
 export class Modellspeicher {
     /**
@@ -29,7 +31,8 @@ export class Modellspeicher {
         }
         if (!inst?.generatedConfig) return false;
         Modellbauzustand.ausCharakter(inst);
-        console.log('[MG] Synced config from character:', inst.presetName);
+        Protokoll.debug('MG', 'Konfiguration vom Charakter uebernommen:',
+                        inst.presetName);
         return true;
     }
 
@@ -63,19 +66,15 @@ export class Modellspeicher {
         // Seiten das Modell sehen.
         const name = gewaehlt.replace(/\.json$/i, '');
         try {
-            await fetch('/api/character/model/save/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json',
-                           'X-CSRFToken': getCSRFToken() },
-                body: JSON.stringify({ name, data: daten }),
-            });
+            await Serverabruf.senden('/api/character/model/save/',
+                                     { name, data: daten });
             const ci = Modellbauzustand.charakterId
                 ? state.characters.get(Modellbauzustand.charakterId) : null;
             if (ci) {
                 ci.generatedConfig = JSON.parse(JSON.stringify(daten));
                 ci.presetKey = name;
             }
-            console.log(`[MG] Model saved as "${name}" (file + server)`);
+            Protokoll.info('MG', `Model saved as "${name}" (file + server)`);
         } catch (e) {
             console.warn('[MG] Server save failed:', e);
         }

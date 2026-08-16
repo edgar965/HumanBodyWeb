@@ -3,13 +3,21 @@
 {% block title %}Theatre - Einstellungen{% endblock %}
 
 {% block content %}
+<style>
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-abstand-oben.hb-abstand-oben.hb-abstand-oben { margin-top:1.5rem; }   /* 2x */
+.hb-color-var-text-muted.hb-color-var-text-muted.hb-color-var-text-muted { color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem; }   /* 2x */
+</style>
 <h1>Einstellungen — Theatre</h1>
 
 <form method="post">
     {% csrf_token %}
     <div class="settings-card">
         <h2><i class="fas fa-film"></i> Theatre Defaults</h2>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+        <p class="hb-color-var-text-muted">
             Diese Werte werden beim Laden der Theatre-Seite als Standardwerte verwendet.
         </p>
 
@@ -55,9 +63,9 @@
         </div>
     </div>
 
-    <div class="settings-card" style="margin-top:1.5rem;">
+    <div class="settings-card hb-abstand-oben">
         <h2><i class="fas fa-file-video"></i> Video Export</h2>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+        <p class="hb-color-var-text-muted">
             Einstellungen für den Video-Export aus der Theatre-Seite.
         </p>
 
@@ -129,7 +137,7 @@
     </div>
 </form>
 
-<div class="settings-card" style="margin-top:1.5rem;">
+<div class="settings-card hb-abstand-oben">
     <h2><i class="fas fa-question-circle"></i> Hinweise</h2>
     <ul style="color:var(--text-muted);font-size:0.85rem;line-height:1.6;">
         <li>Die <strong>Standard-Animation</strong> wird nur geladen, wenn ein Standard-Modell ausgewählt ist.</li>

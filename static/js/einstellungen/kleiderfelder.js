@@ -8,6 +8,7 @@
  * Die Bibliothek kommt als {Kategorie: [Kleid, …]}; im Auswahlfeld wird daraus
  * je Kategorie ein <optgroup>.
  */
+import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
 export class Kleiderfelder {
 
     static ENDPUNKT = '/api/character/garment/library/';
@@ -19,8 +20,7 @@ export class Kleiderfelder {
      */
     static async fuellen(feldIds, gewaehlt) {
         try {
-            const antwort = await fetch(`${Kleiderfelder.ENDPUNKT}?t=${Date.now()}`);
-            const daten = await antwort.json();
+            const daten = await Serverabruf.json(`${Kleiderfelder.ENDPUNKT}?t=${Date.now()}`);
             const nachKategorie = daten.garments || {};
             feldIds.forEach((feldId, nummer) => {
                 const feld = document.getElementById(feldId);

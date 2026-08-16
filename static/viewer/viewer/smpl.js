@@ -8,6 +8,10 @@ import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, bindSlider, setS
 import { ensureSkinned } from './skinning.js';
 import { buildBodyFitQueryString } from './garment.js';
 import { VIEWER_TONE_MAPPINGS } from './scene_settings.js';
+import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 // =========================================================================
 // SMPL Garment Library
@@ -29,7 +33,7 @@ export async function loadSmplGarmentUI() {
     const catSelect = document.getElementById('smpl-garment-category');
     if (catSelect) catSelect.addEventListener('change', () => _renderSmplGarmentList());
     try {
-        const resp = await fetch('/api/smpl/garment/library/'); const data = await resp.json(); state._smplCatalog = [];
+        const data = await Serverabruf.json('/api/smpl/garment/library/'); state._smplCatalog = [];
         if (catSelect && data.categories) data.categories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat; opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1); catSelect.appendChild(opt); });
         if (data.garments) { for (const cat of Object.keys(data.garments)) for (const g of data.garments[cat]) state._smplCatalog.push(g); }
         _renderSmplGarmentList();
@@ -65,7 +69,7 @@ function _renderSmplGarmentList() {
 async function loadSmplGarment(garmentId) {
     const loadBtn = document.getElementById('smpl-garment-load'); if (loadBtn) { loadBtn.disabled = true; loadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Laden...'; }
     try {
-        const resp = await fetch(`/api/smpl/garment/mesh/?garment_id=${encodeURIComponent(garmentId)}`); const data = await resp.json();
+        const data = await Serverabruf.json(`/api/smpl/garment/mesh/?garment_id=${encodeURIComponent(garmentId)}`);
         if (data.error) { console.error('SMPL garment load error:', data.error); return; }
         removeSmplGarment(garmentId);
         const vertBuf = base64ToFloat32(data.vertices); const faceBuf = base64ToUint32(data.faces); const normBuf = base64ToFloat32(data.normals);
@@ -77,7 +81,7 @@ async function loadSmplGarment(garmentId) {
         if (state.smplBodyMesh) { mesh.position.copy(state.smplBodyMesh.position); mesh.rotation.copy(state.smplBodyMesh.rotation); const posAttr = state.smplBodyMesh.geometry.getAttribute('position'); let sumY = 0; for (let i = 0; i < posAttr.count; i++) sumY += posAttr.getY(i); mesh.position.y = sumY / posAttr.count; }
         else { const xOffsetEl = document.getElementById('smpl-body-xoffset'); mesh.position.x = xOffsetEl ? xOffsetEl.value / 100 : 1.0; mesh.position.y = 0.86; mesh.rotation.y = Math.PI; }
         state.smplGarmentMeshes[garmentId] = mesh; state.scene.add(mesh);
-        console.log(`SMPL garment loaded: ${garmentId} (${data.vertex_count} verts)`);
+        Protokoll.debug('Viewer', `SMPL garment loaded: ${garmentId} (${data.vertex_count} verts)`);
         _renderSmplGarmentList();
         if (state.bodyMesh && state.rigifySkeleton) _fitSmplGarmentToBody(garmentId);
     } catch (e) { console.error('Failed to load SMPL garment:', e); }
@@ -95,7 +99,7 @@ async function _fitSmplGarmentToBody(garmentId) {
         const colorEl = document.getElementById('smpl-garment-color'); const colorHex = colorEl ? colorEl.value : '#4d8066';
         const cr = parseInt(colorHex.slice(1, 3), 16) / 255; const cg = parseInt(colorHex.slice(3, 5), 16) / 255; const cb = parseInt(colorHex.slice(5, 7), 16) / 255;
         const qs = `garment_id=${encodeURIComponent(garmentId)}&${bodyQs}&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
-        const resp = await fetch(`/api/smpl/garment/fit/?${qs}`); const data = await resp.json();
+        const data = await Serverabruf.json(`/api/smpl/garment/fit/?${qs}`);
         if (data.error) { console.error('SMPL garment fit error:', data.error); return; }
         const prev = state.garmentMeshes[fitKey]; if (prev) { state.scene.remove(prev); prev.geometry.dispose(); prev.material.dispose(); delete state.garmentMeshes[fitKey]; }
         const vertBuf = base64ToFloat32(data.vertices); blenderToThreeCoords(vertBuf); const faceBuf = base64ToUint32(data.faces);
@@ -123,7 +127,14 @@ let _smplBodyUpdateTimer = null;
 
 function _getSmplBetas() { const sliders = document.querySelectorAll('.smpl-beta-slider'); const betas = []; sliders.forEach(s => { betas[parseInt(s.dataset.index)] = s.value / 100; }); return betas; }
 function _getSmplGender() { const sel = document.getElementById('smpl-body-gender'); return sel ? sel.value : 'female'; }
-function _scheduleSmplBodyUpdate() { if (_smplBodyUpdateTimer) clearTimeout(_smplBodyUpdateTimer); _smplBodyUpdateTimer = setTimeout(() => { _smplBodyUpdateTimer = null; loadSmplBody(); }, 100); }
+/** Reglerbewegungen sammeln, damit nicht jeder Pixel ein Modell nachlaedt. */
+function _scheduleSmplBodyUpdate() {
+    if (_smplBodyUpdateTimer) clearTimeout(_smplBodyUpdateTimer);
+    _smplBodyUpdateTimer = setTimeout(() => {
+        _smplBodyUpdateTimer = null;
+        loadSmplBody();
+    }, Zeiten.SAMMELN_MS);
+}
 
 function _updateSmplBodyInfo() {
     const infoSection = document.getElementById('smpl-body-info-section'); const infoDiv = document.getElementById('smpl-body-info');
@@ -154,7 +165,7 @@ export async function initSmplBodyUI() {
     if (toggle) toggle.addEventListener('click', () => { if (!state.smplBodyMesh) return; state.smplBodyVisible = !state.smplBodyVisible; state.smplBodyMesh.visible = state.smplBodyVisible; toggle.classList.toggle('active', state.smplBodyVisible); });
 
     try {
-        const resp = await fetch('/api/settings/smpl/'); const cfg = await resp.json();
+        const cfg = await Serverabruf.json('/api/settings/smpl/');
         if (genderSel && cfg.gender) genderSel.value = cfg.gender;
         if (cfg.betas && cfg.betas.length === 10) betaSliders.forEach((s, i) => { s.value = Math.round(cfg.betas[i] * 100); betaVals[i].textContent = cfg.betas[i].toFixed(2); });
         if (opacityEl && cfg.opacity != null) { opacityEl.value = Math.round(cfg.opacity * 100); if (opacityVal) opacityVal.textContent = cfg.opacity.toFixed(2); }
@@ -171,7 +182,7 @@ export async function initSmplBodyUI() {
 async function loadSmplBody() {
     const gender = _getSmplGender(); const betas = _getSmplBetas(); const betaStr = betas.join(',');
     try {
-        const resp = await fetch(`/api/smpl/body/?gender=${gender}&betas=${betaStr}`); const data = await resp.json();
+        const data = await Serverabruf.json(`/api/smpl/body/?gender=${gender}&betas=${betaStr}`);
         if (data.error) { console.warn('SMPL body error:', data.error); return; }
         const vertBuf = base64ToFloat32(data.vertices); const normBuf = base64ToFloat32(data.normals);
         if (state.smplBodyMesh) {
@@ -268,11 +279,17 @@ async function _saveSmplSettings() {
     const body = { gender: genderSel ? genderSel.value : 'female', betas: _getSmplBetas(), opacity: opacityEl ? opacityEl.value / 100 : 1.0, color: colorEl ? colorEl.value : '#88aaff', wireframe: wireEl ? wireEl.checked : false, xoffset: xOffsetEl ? xOffsetEl.value / 100 : 1.0, scene: _gatherSceneSettings() };
     try {
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Speichern...'; }
-        const resp = await fetch('/api/settings/smpl/save/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        const data = await resp.json();
-        if (data.ok) { if (btn) { btn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!'; btn.style.borderColor = 'var(--success)'; } setTimeout(() => { if (btn) { btn.innerHTML = '<i class="fas fa-save"></i> Einstellungen speichern'; btn.style.borderColor = ''; btn.disabled = false; } }, 2000); }
-        else throw new Error(data.error || 'Save failed');
-    } catch (e) { console.error('Failed to save SMPL settings:', e); if (btn) { btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Fehler!'; btn.disabled = false; } setTimeout(() => { if (btn) btn.innerHTML = '<i class="fas fa-save"></i> Einstellungen speichern'; }, 2000); }
+        const data = await Serverabruf.json('/api/settings/smpl/save/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        if (!data.ok) throw new Error(data.error || 'Save failed');
+        // `Knopfmeldung` nimmt Text UND Farbe zurueck; hier muss zusaetzlich die
+        // Sperre des Knopfs fallen.
+        Knopfmeldung.fertig(btn);
+        setTimeout(() => { if (btn) btn.disabled = false; }, Zeiten.BESTAETIGUNG_MS);
+    } catch (e) {
+        console.error('SMPL-Einstellungen nicht speicherbar:', e);
+        if (btn) btn.disabled = false;
+        Knopfmeldung.fehler(btn, 'Fehler!');
+    }
 }
 
 fn.loadSmplGarmentUI = loadSmplGarmentUI;

@@ -1,197 +1,138 @@
-/**
- * Knopfleiste der Ergebnisseite — Umschalter fuer Haare, Rig, Kleidung,
- * Ansicht und Aufnahme.
- *
- * Aus ui_panel.js herausgeloest (Umbau 16.08.2026): `buildControlPanel` war
- * 393 Zeilen — Knopfleiste, Reiter, vier Reiterinhalte und die Umschaltlogik
- * in einer Funktion. Die Knopfleiste allein sind 185 davon.
- */
-
-import * as THREE from 'three';
 import { state } from './state.js';
 import '../gemeinsam/registrierung.js';
-import { el } from './ui_panel.js';
+import { el, Ziehgriff } from './bauteile.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
+import { Videofenster } from './videofenster.js';
 
+/**
+ * Knopfleiste der Ergebnisseite — Umschalter für Modell, Rig, Kleidung, Haar,
+ * das Originalvideo und die Größe der 3D-Ansicht.
+ *
+ * Erster Umbau (16.08.2026) hatte die 185 Zeilen nur aus ui_panel.js
+ * herübergeschoben, in EINE statische Methode. Zweiter Durchgang: die vier
+ * Umschalter waren viermal derselbe Block (Knopf bauen, Sichtbarkeit kippen,
+ * Klasse `active` nachziehen) — jetzt die Tabelle UMSCHALTER. Das Videofenster
+ * (Verschieben, Größe, Schließen) ist eine eigene Klasse, weil es nichts mit
+ * der Leiste zu tun hat außer dem Knopf, der es zeigt.
+ */
 export class Knopfleiste {
-    /** Baut die Leiste in den Behaelter. */
-    static bauen(container, data) {
-    // --- Toggle buttons bar ---
-    const toggleBar = el('div', 'rc-toggle-bar');
-    
-    const modelBtn = el('button', 'rc-toggle-btn active');
-    modelBtn.innerHTML = '<i class="fas fa-user"></i> Model';
-    modelBtn.addEventListener('click', () => {
-        if (state.bodyMesh) state.bodyMesh.visible = !state.bodyMesh.visible;
-        modelBtn.classList.toggle('active', state.bodyMesh && state.bodyMesh.visible);
-    });
-    toggleBar.appendChild(modelBtn);
-    
-    const rigBtn = el('button', 'rc-toggle-btn');
-    rigBtn.innerHTML = '<i class="fas fa-bone"></i> Rig';
-    rigBtn.addEventListener('click', () => {
-        state.rigVisible = !state.rigVisible;
-        if (state.rigVisible) {
-            if (!state.skeletonHelper && state.rigifySkeleton) {
-                state.skeletonHelper = Skelettanzeige.bauen(state.scene, state.rigifySkeleton.rootBone);
-            }
-            if (state.skeletonHelper) state.skeletonHelper.visible = true;
-        } else {
-            if (state.skeletonHelper) state.skeletonHelper.visible = false;
+
+    /** Kleinste Höhe der 3D-Ansicht beim Ziehen. */
+    static MIN_HOEHE = 250;
+    /** Höhe, wenn das Vollbild verlassen wird und keine gemerkt ist. */
+    static HOEHE_ERSATZ = 500;
+
+    /**
+     * Die vier Sichtbarkeits-Umschalter: Beschriftung, Symbol, ob sie
+     * anfangs leuchten, und was sie kippen.
+     */
+    static UMSCHALTER = [
+        { text: 'Model', symbol: 'fa-user', an: true,
+          kippen: () => Knopfleiste._netzKippen(state.bodyMesh),
+          steht: () => state.bodyMesh?.visible },
+        { text: 'Rig', symbol: 'fa-bone', an: false,
+          kippen: () => Knopfleiste._rigKippen(),
+          steht: () => state.rigVisible },
+        { text: 'Kleider', symbol: 'fa-tshirt', an: true,
+          kippen: () => Knopfleiste._kleidungKippen(),
+          steht: () => state.clothesVisible },
+        { text: 'Haar', symbol: 'fa-hat-wizard', an: true,
+          kippen: () => Knopfleiste._netzKippen(state.hairMesh),
+          steht: () => state.hairMesh?.visible },
+    ];
+
+    /** Baut die Leiste in den Behälter. */
+    static bauen(behaelter) {
+        const leiste = el('div', 'rc-toggle-bar');
+        for (const eintrag of Knopfleiste.UMSCHALTER) {
+            leiste.appendChild(Knopfleiste._umschalter(eintrag));
         }
-        rigBtn.classList.toggle('active', state.rigVisible);
+        const fenster = Videofenster.bauen(leiste);
+        Knopfleiste._ansichtsgroesse();
+        behaelter.appendChild(leiste);
+        return fenster;
+    }
+
+    static _umschalter({ text, symbol, an, kippen, steht }) {
+        const knopf = el('button', 'rc-toggle-btn' + (an ? ' active' : ''));
+        knopf.innerHTML = `<i class="fas ${symbol}"></i> ${text}`;
+        knopf.addEventListener('click', () => {
+            kippen();
+            knopf.classList.toggle('active', !!steht());
+        });
+        return knopf;
+    }
+
+    static _netzKippen(netz) {
+        if (netz) netz.visible = !netz.visible;
+    }
+
+    /**
+     * Das Rig wird erst beim ersten Einschalten gebaut — vorher gibt es noch
+     * kein Skelett, auf das es zeigen könnte.
+     */
+    static _rigKippen() {
+        state.rigVisible = !state.rigVisible;
+        if (state.rigVisible && !state.skeletonHelper && state.rigifySkeleton) {
+            state.skeletonHelper = Skelettanzeige.bauen(
+                state.scene, state.rigifySkeleton.rootBone);
+        }
+        if (state.skeletonHelper) state.skeletonHelper.visible = state.rigVisible;
         if (typeof window.setBvhOverlayVisible === 'function') {
             window.setBvhOverlayVisible(state.rigVisible);
         }
-    });
-    toggleBar.appendChild(rigBtn);
-    
-    const clothBtn = el('button', 'rc-toggle-btn active');
-    clothBtn.innerHTML = '<i class="fas fa-tshirt"></i> Kleider';
-    clothBtn.addEventListener('click', () => {
+    }
+
+    static _kleidungKippen() {
         state.clothesVisible = !state.clothesVisible;
-        for (const m of Object.values(state.clothMeshes)) {
-            if (m) m.visible = state.clothesVisible;
-        }
-        for (const m of Object.values(state.garmentMeshes)) {
-            if (m) m.visible = state.clothesVisible;
-        }
-        clothBtn.classList.toggle('active', state.clothesVisible);
-    });
-    toggleBar.appendChild(clothBtn);
-    
-    const hairBtn = el('button', 'rc-toggle-btn active');
-    hairBtn.innerHTML = '<i class="fas fa-hat-wizard"></i> Haar';
-    hairBtn.addEventListener('click', () => {
-        if (state.hairMesh) {
-            state.hairMesh.visible = !state.hairMesh.visible;
-            hairBtn.classList.toggle('active', state.hairMesh.visible);
-        }
-    });
-    toggleBar.appendChild(hairBtn);
-    
-    // Video floating window toggle
-    const floatingEl = document.getElementById('floatingVideo');
-    if (floatingEl) {
-        const videoBtn = el('button', 'rc-toggle-btn active');
-        videoBtn.innerHTML = '<i class="fas fa-video"></i> Original';
-        videoBtn.addEventListener('click', () => {
-            floatingEl.classList.toggle('hidden');
-            videoBtn.classList.toggle('active', !floatingEl.classList.contains('hidden'));
-        });
-        toggleBar.appendChild(videoBtn);
-    
-        const closeBtn = document.getElementById('floatingVideoClose');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                floatingEl.classList.add('hidden');
-                videoBtn.classList.remove('active');
-            });
-        }
-    
-        // Drag by titlebar
-        const titlebar = document.getElementById('floatingVideoTitlebar');
-        if (titlebar) {
-            let dragX = 0, dragY = 0, startX = 0, startY = 0;
-            titlebar.addEventListener('mousedown', (e) => {
-                if (e.target.closest('.floating-video-close')) return;
-                e.preventDefault();
-                startX = e.clientX; startY = e.clientY;
-                const onMove = (ev) => {
-                    dragX = ev.clientX - startX; dragY = ev.clientY - startY;
-                    startX = ev.clientX; startY = ev.clientY;
-                    const rect = floatingEl.getBoundingClientRect();
-                    floatingEl.style.left = rect.left + dragX + 'px';
-                    floatingEl.style.top = rect.top + dragY + 'px';
-                    floatingEl.style.bottom = 'auto';
-                };
-                const onUp = () => {
-                    document.removeEventListener('mousemove', onMove);
-                    document.removeEventListener('mouseup', onUp);
-                };
-                document.addEventListener('mousemove', onMove);
-                document.addEventListener('mouseup', onUp);
-            });
-        }
-    
-        // Resize handle
-        const resizeHandle = document.getElementById('floatingVideoResize');
-        if (resizeHandle) {
-            resizeHandle.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const startW = floatingEl.offsetWidth;
-                const startH = floatingEl.offsetHeight;
-                const startMX = e.clientX;
-                const startMY = e.clientY;
-                const onMove = (ev) => {
-                    const newW = Math.max(200, startW + (ev.clientX - startMX));
-                    const newH = Math.max(120, startH + (ev.clientY - startMY));
-                    floatingEl.style.width = newW + 'px';
-                    floatingEl.style.height = newH + 'px';
-                };
-                const onUp = () => {
-                    document.removeEventListener('mousemove', onMove);
-                    document.removeEventListener('mouseup', onUp);
-                };
-                document.addEventListener('mousemove', onMove);
-                document.addEventListener('mouseup', onUp);
-            });
+        for (const netz of [...Object.values(state.clothMeshes),
+                            ...Object.values(state.garmentMeshes)]) {
+            if (netz) netz.visible = state.clothesVisible;
         }
     }
-    
-    // 3D viewport fullscreen toggle + resize
-    const charContainer = document.getElementById('resultCharacter');
-    const charViewport = document.getElementById('characterViewport');
-    const fsBtn = document.getElementById('btnViewportFullscreen');
-    const resizeHandle = document.getElementById('viewportResizeHandle');
-    
-    if (fsBtn && charContainer && charViewport) {
-        let isFullscreen = true;
-        let customHeight = null;
-    
-        fsBtn.addEventListener('click', () => {
-            isFullscreen = !isFullscreen;
-            if (isFullscreen) {
-                charContainer.classList.add('result-character-fullscreen');
-                charViewport.style.height = '';
-                customHeight = null;
-                fsBtn.innerHTML = '<i class="fas fa-expand"></i>';
+
+    // ------------------------------------------------------- Größe der Ansicht
+
+    /**
+     * Vollbild-Knopf und Ziehgriff der 3D-Ansicht. Wird an der Höhe gezogen,
+     * verlässt die Ansicht das Vollbild — sonst hätte das Ziehen keine Wirkung,
+     * weil das Vollbild die Höhe vorgibt.
+     */
+    static _ansichtsgroesse() {
+        const rahmen = document.getElementById('resultCharacter');
+        const ansicht = document.getElementById('characterViewport');
+        const knopf = document.getElementById('btnViewportFullscreen');
+        if (!knopf || !rahmen || !ansicht) return;
+
+        const stand = { vollbild: true, hoehe: null };
+        const vollbildSetzen = ein => {
+            stand.vollbild = ein;
+            rahmen.classList.toggle('result-character-fullscreen', ein);
+            knopf.innerHTML = ein ? '<i class="fas fa-expand"></i>'
+                                  : '<i class="fas fa-compress"></i>';
+        };
+        knopf.addEventListener('click', () => {
+            vollbildSetzen(!stand.vollbild);
+            if (stand.vollbild) {
+                ansicht.style.height = '';
+                stand.hoehe = null;
             } else {
-                charContainer.classList.remove('result-character-fullscreen');
-                charViewport.style.height = (customHeight || 500) + 'px';
-                fsBtn.innerHTML = '<i class="fas fa-compress"></i>';
+                ansicht.style.height =
+                    (stand.hoehe || Knopfleiste.HOEHE_ERSATZ) + 'px';
             }
             window.dispatchEvent(new Event('resize'));
         });
-    
-        if (resizeHandle) {
-            resizeHandle.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                const startY = e.clientY;
-                const startH = charViewport.offsetHeight;
-                if (isFullscreen) {
-                    isFullscreen = false;
-                    charContainer.classList.remove('result-character-fullscreen');
-                    fsBtn.innerHTML = '<i class="fas fa-compress"></i>';
-                }
-                const onMove = (ev) => {
-                    const newH = Math.max(250, startH + (ev.clientY - startY));
-                    charViewport.style.height = newH + 'px';
-                    customHeight = newH;
-                    window.dispatchEvent(new Event('resize'));
-                };
-                const onUp = () => {
-                    document.removeEventListener('mousemove', onMove);
-                    document.removeEventListener('mouseup', onUp);
-                };
-                document.addEventListener('mousemove', onMove);
-                document.addEventListener('mouseup', onUp);
-            });
-        }
-    }
-    
-    container.appendChild(toggleBar);
-    
+
+        let starthoehe = 0;
+        Ziehgriff.an(document.getElementById('viewportResizeHandle'),
+            (dx, dy) => {
+                stand.hoehe = Math.max(Knopfleiste.MIN_HOEHE, starthoehe + dy);
+                ansicht.style.height = stand.hoehe + 'px';
+                window.dispatchEvent(new Event('resize'));
+            },
+            { beginn: () => {
+                starthoehe = ansicht.offsetHeight;
+                if (stand.vollbild) vollbildSetzen(false);
+            } });
     }
 }

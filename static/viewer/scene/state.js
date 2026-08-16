@@ -15,6 +15,7 @@ import { generateModelMesh } from '../modellbau/modellnetz.js';
 import { getDefaultModelConfig, getDefaultRigConfig } from '../modellbau/modellvorgaben.js';
 import { generateRigBoneMesh } from '../modellbau/rignetz.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 // Re-export everything that other modules may need
 export { THREE, OrbitControls, TransformControls, BVHLoader, GLTFLoader };
@@ -31,7 +32,7 @@ export const gltfLoader = new GLTFLoader();
 // =========================================================================
 export function serverLog(action, detail, level) {
     const msg = detail ? `${action} — ${detail}` : action;
-    console.log(`[Scene] ${msg}`);
+    Protokoll.debug('Scene', `${msg}`);
     fetch('/api/log/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

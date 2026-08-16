@@ -6,8 +6,8 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { removeGarment } from './garment.js';
 import { removeClothRegion } from './cloth.js';
 import { removeHair } from './hair.js';
-import { isVeActive, isVeBoxSelecting, getVeTargetMesh, veHandleKeydown } from './vertex_editor.js';
-import { veHandleClick, veBoxSelectStart, veBoxSelectMove, veBoxSelectEnd } from './vertex_auswahl.js';
+import { Zeigerinteraktion } from './zeigerinteraktion.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
 
 export function getSelectableTargets() {
     const targets = [];
@@ -67,111 +67,16 @@ function _onSelectionChanged(item) {
 }
 
 export function initInteraction() {
-    const canvas = state.renderer.domElement;
-    const tooltip = document.getElementById('garment-tooltip');
-    const removeBtn = document.getElementById('selection-remove-btn');
-
-    let _hoverPending = false;
-    let _lastMouseEvent = null;
-
-    canvas.addEventListener('mousemove', (e) => {
-        if (isVeActive() && isVeBoxSelecting()) { veBoxSelectMove(e); return; }
-        _lastMouseEvent = e;
-        if (!_hoverPending) {
-            _hoverPending = true;
-            requestAnimationFrame(() => {
-                _hoverPending = false;
-                if (_lastMouseEvent) {
-                    if (isVeActive()) {
-                        const rect = canvas.getBoundingClientRect();
-                        state._mouseNDC.x = ((_lastMouseEvent.clientX - rect.left) / rect.width) * 2 - 1;
-                        state._mouseNDC.y = -((_lastMouseEvent.clientY - rect.top) / rect.height) * 2 + 1;
-                        state._raycaster.setFromCamera(state._mouseNDC, state.camera);
-                        const hits = state._raycaster.intersectObject(getVeTargetMesh());
-                        canvas.style.cursor = hits.length > 0 ? 'pointer' : '';
-                    } else {
-                        _doHover(_lastMouseEvent);
-                    }
-                }
-            });
-        }
-    });
-
-    canvas.addEventListener('mouseleave', () => {
-        if (state._hoveredItem && !_sameItem(state._hoveredItem, state._selectedItem)) _setEmissiveOnItem(state._hoveredItem, state._ZERO_EMISSIVE);
-        state._hoveredItem = null;
-        if (tooltip) tooltip.style.display = 'none';
-    });
-
-    canvas.addEventListener('mousedown', (e) => {
-        if (e.button === 0) {
-            state._mouseDownPos = { x: e.clientX, y: e.clientY };
-            if (isVeActive() && e.altKey) veBoxSelectStart(e);
-        }
-    });
-
-    canvas.addEventListener('mouseup', (e) => {
-        if (isVeActive() && isVeBoxSelecting()) { veBoxSelectEnd(e); state._mouseDownPos = null; return; }
-        if (e.button !== 0 || !state._mouseDownPos) return;
-        const dx = e.clientX - state._mouseDownPos.x;
-        const dy = e.clientY - state._mouseDownPos.y;
-        state._mouseDownPos = null;
-        if (Math.sqrt(dx * dx + dy * dy) > 3) return;
-        if (isVeActive()) { veHandleClick(e); return; }
-        _doClick();
-    });
-
-    window.addEventListener('keydown', (e) => {
-        if (e.target.closest('input, select, textarea')) return;
-        if (e.key === 'Delete' && state._selectedItem) { _removeSelectedItem(); return; }
-        if (isVeActive()) { veHandleKeydown(e); return; }
-    });
-
-    if (removeBtn) removeBtn.addEventListener('click', () => _removeSelectedItem());
-
-    function _doHover(e) {
-        const rect = canvas.getBoundingClientRect();
-        state._mouseNDC.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        state._mouseNDC.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        state._raycaster.setFromCamera(state._mouseNDC, state.camera);
-        const targets = getSelectableTargets();
-        const roots = targets.map(t => t.root);
-        const intersects = state._raycaster.intersectObjects(roots, true);
-        let newItem = null;
-        if (intersects.length > 0) newItem = _findItemForObject(intersects[0].object, targets);
-        if (newItem && tooltip) {
-            tooltip.textContent = newItem.label;
-            tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
-            tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
-            tooltip.style.display = 'block';
-            canvas.style.cursor = 'pointer';
-        } else { if (tooltip) tooltip.style.display = 'none'; canvas.style.cursor = ''; }
-        if (!_sameItem(state._hoveredItem, newItem)) {
-            if (state._hoveredItem && !_sameItem(state._hoveredItem, state._selectedItem)) _setEmissiveOnItem(state._hoveredItem, state._ZERO_EMISSIVE);
-            state._hoveredItem = newItem;
-            if (state._hoveredItem && !_sameItem(state._hoveredItem, state._selectedItem)) _setEmissiveOnItem(state._hoveredItem, state._HOVER_EMISSIVE);
-        }
-    }
-
-    function _doClick() {
-        const prev = state._selectedItem;
-        if (state._hoveredItem) {
-            if (_sameItem(state._selectedItem, state._hoveredItem)) {
-                _setEmissiveOnItem(state._selectedItem, state._ZERO_EMISSIVE); state._selectedItem = null;
-                if (removeBtn) removeBtn.style.display = 'none';
-            } else {
-                if (state._selectedItem) _setEmissiveOnItem(state._selectedItem, state._ZERO_EMISSIVE);
-                state._selectedItem = state._hoveredItem;
-                _setEmissiveOnItem(state._selectedItem, state._SELECT_EMISSIVE);
-                if (removeBtn) removeBtn.style.display = '';
-            }
-        } else {
-            if (state._selectedItem) _setEmissiveOnItem(state._selectedItem, state._ZERO_EMISSIVE);
-            state._selectedItem = null;
-            if (removeBtn) removeBtn.style.display = 'none';
-        }
-        if (!_sameItem(prev, state._selectedItem)) _onSelectionChanged(state._selectedItem);
-    }
+    // Die Ereignisse stecken in `Zeigerinteraktion` — vorher standen hier
+    // 107 Zeilen mit zwei inneren Funktionen und doppelter Strahlrechnung.
+    return new Zeigerinteraktion({
+        ziele: getSelectableTargets,
+        finden: _findItemForObject,
+        gleich: _sameItem,
+        leuchten: _setEmissiveOnItem,
+        entfernen: _removeSelectedItem,
+        gewechselt: _onSelectionChanged,
+    }).verdrahten();
 }
 
 function _removeSelectedItem() {
@@ -193,7 +98,7 @@ function _removeSelectedItem() {
 let _equippedListTimer = null;
 export function updateEquippedList() {
     clearTimeout(_equippedListTimer);
-    _equippedListTimer = setTimeout(_buildEquippedList, 100);
+    _equippedListTimer = setTimeout(_buildEquippedList, Zeiten.SAMMELN_MS);
 }
 
 function _buildEquippedList() {

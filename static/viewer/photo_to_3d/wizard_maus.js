@@ -1,4 +1,5 @@
-import { inverseTransformPt, renderWizardCanvas, transformPtGlobal } from './wizard_zeichnen.js';
+import { renderWizardCanvas } from './wizard_zeichnen.js';
+import { inverseTransformPt, transformPtGlobal } from './wizard_umrechnung.js';
 import { _wizardEditParams } from './wizard.js';
 import { wizardState } from './wizard.js';
 /**
@@ -7,6 +8,33 @@ import { wizardState } from './wizard.js';
  * Aus wizard.js herausgeloest (Umbau 16.08.2026).
  */
 
+/**
+ * Verschiebung des aktuellen Schritts: Schritt 0 richtet den Körper aus, alles
+ * danach das Gesicht. Diese Abfrage stand fünfmal in dieser Datei.
+ */
+function verschiebung() {
+    return wizardState.step === 0 ? wizardState.bodyTransform
+                                  : wizardState.faceTransform;
+}
+
+/** Startwerte für das Ziehen merken — für Maus und Finger gleich. */
+function ziehenBeginnen(x, y) {
+    const t = verschiebung();
+    wizardState.isDragging = true;
+    wizardState.dragStartX = x;
+    wizardState.dragStartY = y;
+    wizardState.dragStartCx = t.center_x;
+    wizardState.dragStartCy = t.center_y;
+}
+
+/** Verschiebung aus der Zeigerbewegung — für Maus und Finger gleich. */
+function ziehen(x, y) {
+    const maszstab = wizardState.canvasScale;
+    const t = verschiebung();
+    t.center_x = wizardState.dragStartCx + (x - wizardState.dragStartX) / maszstab;
+    t.center_y = wizardState.dragStartCy + (y - wizardState.dragStartY) / maszstab;
+    renderWizardCanvas();
+}
 
 export function wizardMouseDown(e) {
     const canvas = e.target;
@@ -30,12 +58,7 @@ export function wizardMouseDown(e) {
         }
     }
 
-    wizardState.isDragging = true;
-    const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
-    wizardState.dragStartX = e.clientX;
-    wizardState.dragStartY = e.clientY;
-    wizardState.dragStartCx = t.center_x;
-    wizardState.dragStartCy = t.center_y;
+    ziehenBeginnen(e.clientX, e.clientY);
 }
 
 export function wizardMouseMove(e) {
@@ -57,13 +80,7 @@ export function wizardMouseMove(e) {
     }
 
     if (!wizardState.isDragging) return;
-    const cs = wizardState.canvasScale;
-    const dx = (e.clientX - wizardState.dragStartX) / cs;
-    const dy = (e.clientY - wizardState.dragStartY) / cs;
-    const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
-    t.center_x = wizardState.dragStartCx + dx;
-    t.center_y = wizardState.dragStartCy + dy;
-    renderWizardCanvas();
+    ziehen(e.clientX, e.clientY);
 }
 
 export function wizardMouseUp() {
@@ -77,32 +94,19 @@ export function wizardMouseUp() {
 export function wizardTouchStart(e) {
     e.preventDefault();
     if (e.touches.length === 1) {
-        const touch = e.touches[0];
-        wizardState.isDragging = true;
-        const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
-        wizardState.dragStartX = touch.clientX;
-        wizardState.dragStartY = touch.clientY;
-        wizardState.dragStartCx = t.center_x;
-        wizardState.dragStartCy = t.center_y;
+        ziehenBeginnen(e.touches[0].clientX, e.touches[0].clientY);
     }
 }
 
 export function wizardTouchMove(e) {
     e.preventDefault();
     if (!wizardState.isDragging || e.touches.length !== 1) return;
-    const touch = e.touches[0];
-    const cs = wizardState.canvasScale;
-    const dx = (touch.clientX - wizardState.dragStartX) / cs;
-    const dy = (touch.clientY - wizardState.dragStartY) / cs;
-    const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
-    t.center_x = wizardState.dragStartCx + dx;
-    t.center_y = wizardState.dragStartCy + dy;
-    renderWizardCanvas();
+    ziehen(e.touches[0].clientX, e.touches[0].clientY);
 }
 
 export function wizardWheel(e) {
     e.preventDefault();
-    const t = wizardState.step === 0 ? wizardState.bodyTransform : wizardState.faceTransform;
+    const t = verschiebung();
     const factor = e.deltaY > 0 ? 0.95 : 1.05;
     t.scale = Math.max(0.3, Math.min(3.0, t.scale * factor));
     renderWizardCanvas();

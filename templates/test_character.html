@@ -299,6 +299,13 @@
         color: var(--text-muted);
         margin-top: 2px;
     }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-color-e74c3c.hb-color-e74c3c.hb-color-e74c3c { color:#e74c3c; }   /* 2x */
+.hb-gedaempft-theme.hb-gedaempft-theme.hb-gedaempft-theme { color:var(--text-muted); }   /* 3x */
+.hb-padding-24px.hb-padding-24px.hb-padding-24px { padding:24px; color:var(--text-muted); }   /* 2x */
 </style>
 {% endblock %}
 
@@ -337,7 +344,7 @@
     </div>
     <div class="code-tabs" id="code-tabs"></div>
     <div class="code-content" id="code-content">
-        <div style="padding:24px;color:var(--text-muted);">Lade Source Code...</div>
+        <div class="hb-padding-24px">Lade Source Code...</div>
     </div>
 </div>
 {% endblock %}
@@ -481,7 +488,7 @@ right.init();
     }
 
     function loadSource() {
-        contentEl.innerHTML = '<div style="padding:24px;color:var(--text-muted);">Lade Source Code...</div>';
+        contentEl.innerHTML = '<div class="hb-padding-24px">Lade Source Code...</div>';
         fetch('/api/character-test/source/')
             .then(r => r.ok ? r.json() : Promise.reject('Not found'))
             .then(data => {
@@ -579,7 +586,7 @@ right.init();
                     : '<span class="diag-tag female">Female</span>';
                 html += '<tr' + cls + '><td>' + tag + ' ' + l.name + '</td>';
                 if (l.error) {
-                    html += '<td colspan="4" style="color:#e74c3c;">' + l.error + '</td>';
+                    html += '<td colspan="4" class="hb-color-e74c3c">' + l.error + '</td>';
                 } else {
                     html += '<td>' + l.vertex_count.toLocaleString() + '</td>';
                     html += '<td>[' + l.shape.join(', ') + ']</td>';
@@ -596,7 +603,7 @@ right.init();
                     + 'Male und Female haben verschiedene Topologien!</p>';
             }
         } else {
-            html += '<p style="color:var(--text-muted);">Keine L1 Dateien gefunden.</p>';
+            html += '<p class="hb-gedaempft-theme">Keine L1 Dateien gefunden.</p>';
         }
         html += '</div>';
 
@@ -624,7 +631,7 @@ right.init();
                 }
             }
         } else {
-            html += '<p style="color:var(--text-muted);">Kein gender_male.npy vorhanden.</p>';
+            html += '<p class="hb-gedaempft-theme">Kein gender_male.npy vorhanden.</p>';
         }
         html += '</div>';
 
@@ -634,7 +641,7 @@ right.init();
                 html += '<div style="margin-bottom:8px;">';
                 html += '<strong>' + p.file + '</strong>';
                 if (p.error) {
-                    html += ' <span style="color:#e74c3c;">' + p.error + '</span>';
+                    html += ' <span class="hb-color-e74c3c">' + p.error + '</span>';
                 } else {
                     html += ' — ' + p.morph_count + ' Morphs, ' + formatBytes(p.size_bytes);
                     html += '<br><span style="font-size:0.72rem;color:var(--text-muted);">'
@@ -645,7 +652,7 @@ right.init();
                 html += '</div>';
             });
         } else {
-            html += '<p style="color:var(--text-muted);">Keine L2 Packs gefunden.</p>';
+            html += '<p class="hb-gedaempft-theme">Keine L2 Packs gefunden.</p>';
         }
         html += '</div>';
 

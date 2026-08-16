@@ -10,6 +10,7 @@ import { veEnterEditMode, veExitEditMode, initVertexEditorBindings, isVeActive }
 import { Musterzustand } from './muster_zustand.js';
 import { _peHitControlPoint, _peHitEdge, _peHitVertex, peRender } from './muster_zeichnen.js';
 import { peGenerate3D, peLoadFromGarment, peRegionGenerate, peSaveToLibrary } from './muster_erzeugen.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export const pePreviewKey = 'pe_preview';
 export const PE_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c'];
@@ -184,7 +185,7 @@ export function initPatternEditor() {
 
     initVertexEditorBindings();
     peRender();
-    console.log('Pattern Editor initialized');
+    Protokoll.debug('Viewer', 'Pattern Editor initialized');
 }
 
 // Register

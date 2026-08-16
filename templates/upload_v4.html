@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Video To BVH - HumanBody{% endblock %}
 
 {% block content %}
-<h1>Video To BVH <small style="color:#888;">(3D Pipeline)</small></h1>
+<h1>Video To BVH <small class="hb-gedaempft">(3D Pipeline)</small></h1>
 
 <div class="upload-area" id="dropZone">
     <form method="post" enctype="multipart/form-data" id="uploadForm">
@@ -55,9 +56,9 @@
                     </label>
                     <div class="pipeline-settings" id="settings-v4">
                         <div class="preset-bar">
-                            <button type="button" class="preset-btn" onclick="applyPreset('v4','fast')">Schnell</button>
-                            <button type="button" class="preset-btn active" onclick="applyPreset('v4','standard')">Standard</button>
-                            <button type="button" class="preset-btn" onclick="applyPreset('v4','max')">Maximum</button>
+                            <button type="button" class="preset-btn" data-vorgabe="v4:fast">Schnell</button>
+                            <button type="button" class="preset-btn active" data-vorgabe="v4:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="v4:max">Maximum</button>
                         </div>
                         <div class="settings-row">
                             <label>Body Parts:</label>
@@ -108,16 +109,16 @@
                         <input type="radio" name="pipeline" value="gvhmr"
                             {% if default_3d == 'gvhmr' %}checked{% endif %}
                             {% if not status_3d.gvhmr %}disabled{% endif %}>
-                        <span class="pipeline-card-title">GVHMR <span style="color:#2ecc71;">&starf;</span></span>
+                        <span class="pipeline-card-title">GVHMR <span class="hb-gut">&starf;</span></span>
                         <span class="pipeline-card-desc">
                             {% if status_3d.gvhmr %}SMPL, GPU, beste Qualit&auml;t, 36 mm{% else %}nicht installiert{% endif %}
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-gvhmr">
                         <div class="preset-bar">
-                            <button type="button" class="preset-btn" onclick="applyPreset('gvhmr','fast')">Schnell</button>
-                            <button type="button" class="preset-btn active" onclick="applyPreset('gvhmr','standard')">Standard</button>
-                            <button type="button" class="preset-btn" onclick="applyPreset('gvhmr','max')">Maximum</button>
+                            <button type="button" class="preset-btn" data-vorgabe="gvhmr:fast">Schnell</button>
+                            <button type="button" class="preset-btn active" data-vorgabe="gvhmr:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="gvhmr:max">Maximum</button>
                         </div>
                         <div class="settings-list">
                             <div class="setting-item">
@@ -173,9 +174,9 @@
                     </label>
                     <div class="pipeline-settings" id="settings-wham">
                         <div class="preset-bar">
-                            <button type="button" class="preset-btn" onclick="applyPreset('wham','fast')">Schnell</button>
-                            <button type="button" class="preset-btn active" onclick="applyPreset('wham','standard')">Standard</button>
-                            <button type="button" class="preset-btn" onclick="applyPreset('wham','max')">Maximum</button>
+                            <button type="button" class="preset-btn" data-vorgabe="wham:fast">Schnell</button>
+                            <button type="button" class="preset-btn active" data-vorgabe="wham:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="wham:max">Maximum</button>
                         </div>
                         <div class="settings-list">
                             <div class="setting-item">
@@ -210,9 +211,9 @@
                     </label>
                     <div class="pipeline-settings" id="settings-prompthmr">
                         <div class="preset-bar">
-                            <button type="button" class="preset-btn" onclick="applyPreset('prompthmr','fast')">Schnell</button>
-                            <button type="button" class="preset-btn active" onclick="applyPreset('prompthmr','standard')">Standard</button>
-                            <button type="button" class="preset-btn" onclick="applyPreset('prompthmr','max')">Maximum</button>
+                            <button type="button" class="preset-btn" data-vorgabe="prompthmr:fast">Schnell</button>
+                            <button type="button" class="preset-btn active" data-vorgabe="prompthmr:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="prompthmr:max">Maximum</button>
                         </div>
                         <div class="settings-list">
                             <div class="setting-item">
@@ -237,21 +238,21 @@
                             id="hybridRadio"
                             {% if default_3d == 'hybrid_gvhmr' or default_3d == 'hybrid_prompthmr' %}checked{% endif %}
                             {% if not status_3d.hybrid_gvhmr and not status_3d.hybrid_prompthmr %}disabled{% endif %}>
-                        <span class="pipeline-card-title">Hybrid <span style="color:#e67e22;">&starf;</span></span>
+                        <span class="pipeline-card-title">Hybrid <span class="hb-color-e67e22">&starf;</span></span>
                         <span class="pipeline-card-desc">
                             SMPL Body (GPU) + MocapNET v4 H&auml;nde (CPU) + SMPLest-X Gesicht
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-hybrid">
                         <div class="preset-bar">
-                            <button type="button" class="preset-btn" onclick="applyPreset('hybrid','fast')">Schnell</button>
-                            <button type="button" class="preset-btn active" onclick="applyPreset('hybrid','standard')">Standard</button>
-                            <button type="button" class="preset-btn" onclick="applyPreset('hybrid','max')">Maximum</button>
+                            <button type="button" class="preset-btn" data-vorgabe="hybrid:fast">Schnell</button>
+                            <button type="button" class="preset-btn active" data-vorgabe="hybrid:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="hybrid:max">Maximum</button>
                         </div>
                         <div class="settings-list">
                             <div class="setting-item">
                                 <div class="setting-label">Body-Backend <span class="setting-hint">SMPL-Pipeline f&uuml;r K&ouml;rper-Tracking (GPU)</span></div>
-                                <select name="hybrid_body_backend" id="hybridBodyBackend" onchange="updateHybridBackend()">
+                                <select name="hybrid_body_backend" id="hybridBodyBackend">
                                     <option value="gvhmr" {% if not status_3d.gvhmr %}disabled{% endif %}>GVHMR</option>
                                     <option value="prompthmr" {% if not status_3d.prompthmr %}disabled{% endif %}>PromptHMR</option>
                                 </select>
@@ -287,7 +288,7 @@
                             </div>
                         </div>
                         <!-- PromptHMR body settings -->
-                        <div id="hybrid-prompthmr-settings" class="hybrid-body-settings" style="display:none;">
+                        <div id="hybrid-prompthmr-settings" class="hybrid-body-settings hb-versteckt">
                             <div class="settings-list" style="margin-top:8px; padding-left:12px; border-left:2px solid #e67e22;">
                                 <div class="setting-item">
                                     <div class="setting-label">Statische Kamera <span class="setting-hint">Empfohlen f&uuml;r feste Kamera</span></div>
@@ -346,7 +347,7 @@
         <!-- Start button for selected video + pipeline -->
         {% if upload_files %}
         <div class="form-group" style="margin-top:12px;">
-            <button type="button" class="btn btn-lg btn-primary" id="startSelectedBtn" onclick="startSelectedVideo()" style="width:100%;padding:12px;font-size:1.1rem;">
+            <button type="button" class="btn btn-lg btn-primary" id="startSelectedBtn" style="width:100%;padding:12px;font-size:1.1rem;">
                 <i class="fas fa-play"></i> Pipeline starten
             </button>
         </div>
@@ -358,20 +359,20 @@
 {% if v4_jobs %}
 <div class="job-list-section">
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-        <h3 style="margin:0;">Uploaded Videos</h3>
-        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled onclick="bulkDelete()">
+        <h3 class="hb-ohne-abstand">Uploaded Videos</h3>
+        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled>
             <i class="fas fa-trash"></i> Delete Selected (<span id="bulkCount">0</span>)
         </button>
     </div>
     <table class="processed-table" id="jobTable">
         <thead>
             <tr>
-                <th style="width:30px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
-                <th class="sortable" onclick="sortTable('name')">Name <i class="fas fa-sort"></i></th>
+                <th style="width:30px;"><input type="checkbox" id="selectAll"></th>
+                <th class="sortable" data-sort="name">Name <i class="fas fa-sort"></i></th>
                 <th>Pipeline</th>
                 <th>Status</th>
-                <th class="sortable" onclick="sortTable('size')">Size <i class="fas fa-sort"></i></th>
-                <th class="sortable" onclick="sortTable('date')">Created <i class="fas fa-sort"></i></th>
+                <th class="sortable" data-sort="size">Size <i class="fas fa-sort"></i></th>
+                <th class="sortable" data-sort="date">Created <i class="fas fa-sort"></i></th>
                 <th>Process</th>
                 <th>Actions</th>
             </tr>
@@ -379,16 +380,16 @@
         <tbody id="jobTableBody">
             {% for job in v4_jobs %}
             <tr id="row-{{ job.id }}" data-name="{{ job.name|lower }}" data-size="{{ job.video_size }}" data-date="{{ job.created_at|date:'Y-m-d H:i:s' }}">
-                <td><input type="checkbox" class="job-check" value="{{ job.id }}" onchange="updateBulkBtn()"></td>
+                <td><input type="checkbox" class="job-check" value="{{ job.id }}"></td>
                 <td>{{ job.name }}</td>
                 <td><span class="badge badge-{{ job.pipeline }}">{{ job.get_pipeline_display }}</span></td>
                 <td id="status-{{ job.id }}">
                     {% if job.status == 'complete' %}
-                        <span style="color:#2ecc71;"><i class="fas fa-check-circle"></i> Complete</span>
+                        <span class="hb-gut"><i class="fas fa-check-circle"></i> Complete</span>
                     {% elif job.status == 'failed' %}
-                        <span style="color:#e74c3c;"><i class="fas fa-times-circle"></i> Failed</span>
+                        <span class="hb-schlecht"><i class="fas fa-times-circle"></i> Failed</span>
                     {% elif job.status == 'pending' %}
-                        <span style="color:#f39c12;"><i class="fas fa-clock"></i> Pending</span>
+                        <span class="hb-laeuft"><i class="fas fa-clock"></i> Pending</span>
                     {% else %}
                         <div class="inline-progress">
                             <span class="status-text"><i class="fas fa-spinner fa-spin"></i> {{ job.get_status_display }}</span>
@@ -402,7 +403,7 @@
                 <td>{{ job.video_size_display }}</td>
                 <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
                 <td>
-                    <div style="display:flex; gap:4px; align-items:center;">
+                    <div class="hb-zeilenaktionen">
                         <select class="pipeline-select" id="pl-{{ job.id }}" data-current="{{ job.pipeline }}">
                             <option value="v4" {% if job.pipeline == 'v4' %}selected{% endif %}>v4</option>
                             <option value="gvhmr" {% if job.pipeline == 'gvhmr' %}selected{% endif %}>GVHMR</option>
@@ -411,12 +412,12 @@
                             <option value="hybrid_gvhmr" {% if job.pipeline == 'hybrid_gvhmr' %}selected{% endif %}>Hybrid (GVHMR)</option>
                             <option value="hybrid_prompthmr" {% if job.pipeline == 'hybrid_prompthmr' %}selected{% endif %}>Hybrid (PromptHMR)</option>
                         </select>
-                        <button class="btn btn-sm btn-primary" onclick="startProcessing('{{ job.id }}', this)">
+                        <button class="btn btn-sm btn-primary" data-aktion="start" data-auftrag="{{ job.id }}">
                             <i class="fas fa-play"></i>
                         </button>
                     </div>
                 </td>
-                <td style="display:flex; gap:5px;">
+                <td class="hb-zeilenaktionen">
                     {% if job.status == 'complete' %}
                     <a class="btn btn-sm btn-primary" href="{% url 'job_result' job.id %}">
                         <i class="fas fa-eye"></i> View
@@ -426,7 +427,7 @@
                         <i class="fas fa-info-circle"></i> Status
                     </a>
                     {% endif %}
-                    <button class="btn btn-sm btn-danger" onclick="deleteJob('{{ job.id }}', this)">
+                    <button class="btn btn-sm btn-danger" data-aktion="delete" data-auftrag="{{ job.id }}">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -473,7 +474,7 @@
                 <td>~10&ndash;20 FPS</td>
                 <td>6&ndash;8 GB</td>
                 <td>~8&ndash;12 GB</td>
-                <td><span style="color:#e67e22;">&starf; Beste Qualit&auml;t (per-frame)</span></td>
+                <td><span class="hb-color-e67e22">&starf; Beste Qualit&auml;t (per-frame)</span></td>
             </tr>
             <tr style="background:#1a2a1a;">
                 <td><strong>GVHMR</strong></td>
@@ -481,7 +482,7 @@
                 <td>~5&ndash;10 FPS</td>
                 <td>6&ndash;8 GB</td>
                 <td>~8&ndash;16 GB</td>
-                <td><span style="color:#2ecc71;">&starf; Empfohlen</span></td>
+                <td><span class="hb-gut">&starf; Empfohlen</span></td>
             </tr>
             <tr style="background:#2a1a0a;">
                 <td><strong>Hybrid</strong></td>
@@ -489,7 +490,7 @@
                 <td>~60s (parallel)</td>
                 <td>6&ndash;8 GB</td>
                 <td>~10&ndash;16 GB</td>
-                <td><span style="color:#e67e22;">&starf; SMPL Body + v4 Gesicht+Finger</span></td>
+                <td><span class="hb-color-e67e22">&starf; SMPL Body + v4 Gesicht+Finger</span></td>
             </tr>
         </tbody>
     </table>
@@ -499,7 +500,7 @@
         Geschwindigkeit gesch&auml;tzt f&uuml;r RTX 3060. GVHMR/WHAM/PromptHMR ben&ouml;tigen mindestens 6 GB VRAM.</small>
     </p>
 
-    <h3 style="margin-top:1.5rem;">SMPL-Lizenz</h3>
+    <h3 class="hb-abstand-oben">SMPL-Lizenz</h3>
     <p>GVHMR, WHAM und PromptHMR ben&ouml;tigen SMPL Modell-Dateien. Kostenlos beantragen: <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
 </div>
 {% endblock %}
@@ -621,619 +622,38 @@
 .detail-panel .detail-thumb img {
     max-width: 200px; border-radius: 6px; border: 1px solid var(--border, #333);
 }
+
+/* Umbau 16.08.2026: Diese Klassen ersetzen Inline-Stile, die vorher im
+   JavaScript standen (style.display, style.color, style.width). */
+.hb-versteckt { display: none; }
+.hb-breite-0 { width: 0%; }
+.hb-gut { color: #2ecc71; }
+.hb-schlecht { color: #e74c3c; }
+.hb-laeuft { color: #f39c12; }
+.hb-zeilenaktionen { display: flex; gap: 5px; align-items: center; }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-abstand-oben.hb-abstand-oben.hb-abstand-oben { margin-top:1.5rem; }   /* 1x */
+.hb-color-e67e22.hb-color-e67e22.hb-color-e67e22 { color:#e67e22; }   /* 3x */
+.hb-gedaempft.hb-gedaempft.hb-gedaempft { color:#888; }   /* 1x */
+.hb-ohne-abstand.hb-ohne-abstand.hb-ohne-abstand { margin:0; }   /* 1x */
+.hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* 1x */
 </style>
-<script>
-// --- Video file selection + persistence ---
-document.querySelectorAll('input[name="selected_video"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-        // Visual highlight
-        document.querySelectorAll('.video-file-item').forEach(function(el) {
-            el.classList.toggle('selected', el.querySelector('input').checked);
-        });
-        // Persist to server
-        fetch('/api/ui-prefs/', {
-            method: 'POST',
-            headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
-            body: JSON.stringify({selected_video_path: this.value})
-        });
-    });
-});
+{% comment %}Umbau 16.08.2026: Hier standen 612 Zeilen JavaScript inline —
+mit 84 `var`, drei ungepruefen fetch-Ketten, der Pipeline-Feldliste in zwei
+Fassungen (PRESETS und collectPipelineParams) und 28 onclick-Attributen. Jetzt
+sechs Klassen unter static/js/auftraege/. Die Knoepfe der Tabelle haengen an
+`data-aktion`, weil ein onclick aus einem ES-Modul keinen Namen findet.
+{% endcomment %}
+<script type="module">
+import { Pipelinewahl } from "{% static 'js/auftraege/pipelinewahl.js' %}?t={% now 'U' %}";
+import { Videowahl } from "{% static 'js/auftraege/videowahl.js' %}?t={% now 'U' %}";
+import { Auftragsliste } from "{% static 'js/auftraege/auftragsliste.js' %}?t={% now 'U' %}";
 
-// --- Start pipeline on selected video ---
-function startSelectedVideo() {
-    var sel = document.querySelector('input[name="selected_video"]:checked');
-    if (!sel) {
-        alert('Bitte zuerst ein Video auswählen.');
-        return;
-    }
-    var videoPath = sel.value;  // e.g. 'uploads/Nuss.webm'
-    var videoName = sel.dataset.name;
-    var pipeline = document.querySelector('input[name="pipeline"]:checked');
-    if (!pipeline) {
-        alert('Bitte eine Pipeline auswählen.');
-        return;
-    }
-    var plValue = pipeline.value;
-    var pp = collectPipelineParams(plValue);
-
-    // Persist selections
-    fetch('/api/ui-prefs/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
-        body: JSON.stringify({last_pipeline: plValue, selected_video_path: videoPath})
-    });
-
-    var btn = document.getElementById('startSelectedBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starte...';
-
-    // Create new job from existing video file and start processing
-    fetch('/api/job/create-from-file/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
-        body: JSON.stringify({video_path: videoPath, pipeline: plValue, pipeline_params: pp})
-    }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.ok) {
-            // Go to status page to follow progress
-            window.location.href = '/process/VideoToBVH/';
-        } else {
-            alert('Error: ' + (data.error || 'Unknown'));
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-play"></i> Pipeline starten';
-        }
-    }).catch(function(e) {
-        alert('Fehler: ' + e.message);
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-play"></i> Pipeline starten';
-    });
-}
-
-// --- Pipeline card selection + settings toggle ---
-function updatePipelineCards() {
-    var selected = document.querySelector('input[name="pipeline"]:checked');
-    var selVal = selected ? selected.value : '';
-    // Hybrid radio has dynamic value — match by prefix
-    var isHybrid = selVal.startsWith('hybrid_');
-    document.querySelectorAll('.pipeline-card').forEach(function(card) {
-        var pl = card.dataset.pipeline;
-        var match = (isHybrid && pl === 'hybrid') || pl === selVal;
-        var settings = document.getElementById('settings-' + pl);
-        if (match) {
-            card.classList.add('selected');
-            if (settings) settings.classList.add('visible');
-        } else {
-            card.classList.remove('selected');
-            if (settings) settings.classList.remove('visible');
-        }
-    });
-}
-document.querySelectorAll('input[name="pipeline"]').forEach(function(radio) {
-    radio.addEventListener('change', updatePipelineCards);
-});
-updatePipelineCards();
-
-// --- Hybrid body backend toggle ---
-function updateHybridBackend() {
-    var sel = document.getElementById('hybridBodyBackend');
-    if (!sel) return;
-    var backend = sel.value;
-    var radio = document.getElementById('hybridRadio');
-    if (radio) radio.value = 'hybrid_' + backend;
-    document.getElementById('hybrid-gvhmr-settings').style.display = backend === 'gvhmr' ? '' : 'none';
-    document.getElementById('hybrid-prompthmr-settings').style.display = backend === 'prompthmr' ? '' : 'none';
-}
-updateHybridBackend();
-
-// --- Quality Presets ---
-var PRESETS = {
-    v4: {
-        fast: {
-            v4_hcd_iterations: 3, v4_hcd_epochs: 10, v4_hcd_learning_rate: 0.01,
-            v4_smoothing_cutoff: 10.0, v4_smoothing_sampling: 30,
-            v4_mp_detection: 0.3, v4_mp_tracking: 0.1,
-            v4_parts: {body: true, hands: false, face: false, mouth: false, eyes: false}
-        },
-        standard: {
-            v4_hcd_iterations: 10, v4_hcd_epochs: 30, v4_hcd_learning_rate: 0.001,
-            v4_smoothing_cutoff: 5.0, v4_smoothing_sampling: 30,
-            v4_mp_detection: 0.5, v4_mp_tracking: 0.2,
-            v4_parts: {body: true, hands: true, face: true, mouth: true, eyes: false}
-        },
-        max: {
-            v4_hcd_iterations: 50, v4_hcd_epochs: 100, v4_hcd_learning_rate: 0.0005,
-            v4_smoothing_cutoff: 2.5, v4_smoothing_sampling: 60,
-            v4_mp_detection: 0.7, v4_mp_tracking: 0.5,
-            v4_parts: {body: true, hands: true, face: true, mouth: true, eyes: true}
-        }
-    },
-    gvhmr: {
-        fast:     {gvhmr_static_cam: true,  gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda', gvhmr_smooth_sigma: 4.0, gvhmr_joint_limits: true},
-        standard: {gvhmr_static_cam: true,  gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda', gvhmr_smooth_sigma: 2.0, gvhmr_joint_limits: true},
-        max:      {gvhmr_static_cam: false, gvhmr_focal_length_mm: 0, gvhmr_device: 'cuda', gvhmr_smooth_sigma: 1.0, gvhmr_joint_limits: true}
-    },
-    wham: {
-        fast:     {wham_local_only: true,  wham_smplify: false, wham_device: 'cuda'},
-        standard: {wham_local_only: false, wham_smplify: false, wham_device: 'cuda'},
-        max:      {wham_local_only: false, wham_smplify: true,  wham_device: 'cuda'}
-    },
-    prompthmr: {
-        fast:     {prompthmr_static_cam: true,  prompthmr_device: 'cuda'},
-        standard: {prompthmr_static_cam: true,  prompthmr_device: 'cuda'},
-        max:      {prompthmr_static_cam: false, prompthmr_device: 'cuda'}
-    },
-    hybrid: {
-        fast: {
-            hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true, hybrid_gvhmr_focal_length_mm: 0,
-            hybrid_prompthmr_static_cam: true,
-            hybrid_hands_source: 'v4', hybrid_face_source: 'smplest_x',
-            hybrid_v4_hcd_iterations: 3, hybrid_v4_hcd_epochs: 10,
-            hybrid_v4_mp_detection: 0.3, hybrid_v4_mp_tracking: 0.1,
-            hybrid_v4_parts: {face: true, hands: true, mouth: false, eyes: false}
-        },
-        standard: {
-            hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true, hybrid_gvhmr_focal_length_mm: 0,
-            hybrid_prompthmr_static_cam: true,
-            hybrid_hands_source: 'v4', hybrid_face_source: 'smplest_x',
-            hybrid_v4_hcd_iterations: 10, hybrid_v4_hcd_epochs: 30,
-            hybrid_v4_mp_detection: 0.5, hybrid_v4_mp_tracking: 0.2,
-            hybrid_v4_parts: {face: true, hands: true, mouth: true, eyes: false}
-        },
-        max: {
-            hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: false, hybrid_gvhmr_focal_length_mm: 0,
-            hybrid_prompthmr_static_cam: false,
-            hybrid_hands_source: 'v4', hybrid_face_source: 'smplest_x',
-            hybrid_v4_hcd_iterations: 30, hybrid_v4_hcd_epochs: 80,
-            hybrid_v4_mp_detection: 0.7, hybrid_v4_mp_tracking: 0.5,
-            hybrid_v4_parts: {face: true, hands: true, mouth: true, eyes: true}
-        }
-    }
-};
-
-function applyPreset(pipeline, level) {
-    var preset = PRESETS[pipeline] && PRESETS[pipeline][level];
-    if (!preset) return;
-    // Update active button
-    var card = document.getElementById('settings-' + pipeline);
-    if (card) {
-        card.querySelectorAll('.preset-btn').forEach(function(btn) {
-            btn.classList.toggle('active', btn.textContent.trim().toLowerCase() === {fast:'schnell',standard:'standard',max:'maximum'}[level]);
-        });
-    }
-    // Apply values
-    Object.keys(preset).forEach(function(key) {
-        if (key.endsWith('_parts')) {
-            // Checkbox group
-            var parts = preset[key];
-            var prefix = key.replace('_parts', '_');  // e.g. 'v4_' or 'hybrid_v4_'
-            // For v4_parts, the name attribute is 'v4_parts'; for hybrid, 'hybrid_v4_parts'
-            var name = key === 'v4_parts' ? 'v4_parts' : 'hybrid_v4_parts';
-            document.querySelectorAll('[name="' + name + '"]').forEach(function(cb) {
-                cb.checked = !!parts[cb.value];
-            });
-            return;
-        }
-        var el = document.querySelector('[name="' + key + '"]');
-        if (!el) return;
-        if (el.type === 'checkbox') {
-            el.checked = preset[key];
-        } else if (el.tagName === 'SELECT') {
-            el.value = preset[key];
-        } else {
-            el.value = preset[key];
-        }
-    });
-    // Trigger hybrid backend update if needed
-    if (pipeline === 'hybrid') updateHybridBackend();
-}
-
-// --- Collect current pipeline settings from UI as a params object ---
-function collectPipelineParams(pipeline) {
-    var params = {};
-    if (pipeline === 'v4') {
-        params.hcd_iterations = parseInt(document.querySelector('[name="v4_hcd_iterations"]').value);
-        params.hcd_epochs = parseInt(document.querySelector('[name="v4_hcd_epochs"]').value);
-        params.hcd_learning_rate = parseFloat(document.querySelector('[name="v4_hcd_learning_rate"]').value);
-        params.smoothing_cutoff = parseFloat(document.querySelector('[name="v4_smoothing_cutoff"]').value);
-        params.smoothing_sampling = parseFloat(document.querySelector('[name="v4_smoothing_sampling"]').value);
-        params.mp_detection = parseFloat(document.querySelector('[name="v4_mp_detection"]').value);
-        params.mp_tracking = parseFloat(document.querySelector('[name="v4_mp_tracking"]').value);
-        var parts = document.querySelectorAll('[name="v4_parts"]');
-        parts.forEach(function(cb) { params[cb.value] = cb.checked; });
-    } else if (pipeline === 'gvhmr') {
-        params.static_cam = document.querySelector('[name="gvhmr_static_cam"]').checked;
-        params.focal_length_mm = parseFloat(document.querySelector('[name="gvhmr_focal_length_mm"]').value);
-        params.smooth_sigma = parseFloat(document.querySelector('[name="gvhmr_smooth_sigma"]').value);
-        params.joint_limits = document.querySelector('[name="gvhmr_joint_limits"]').checked;
-        params.use_dpvo = document.querySelector('[name="gvhmr_use_dpvo"]').checked;
-        params.verbose = document.querySelector('[name="gvhmr_verbose"]').checked;
-        params.device = document.querySelector('[name="gvhmr_device"]').value;
-        var vidDir = document.querySelector('[name="gvhmr_video_output_dir"]');
-        if (vidDir && vidDir.value.trim()) params.video_output_dir = vidDir.value.trim();
-    } else if (pipeline === 'wham') {
-        params.local_only = document.querySelector('[name="wham_local_only"]').checked;
-        params.smplify = document.querySelector('[name="wham_smplify"]').checked;
-        params.device = document.querySelector('[name="wham_device"]').value;
-    } else if (pipeline === 'prompthmr') {
-        params.static_cam = document.querySelector('[name="prompthmr_static_cam"]').checked;
-        params.device = document.querySelector('[name="prompthmr_device"]').value;
-    } else if (pipeline.startsWith('hybrid_')) {
-        var bbSel = document.querySelector('[name="hybrid_body_backend"]');
-        params.body_backend = bbSel ? bbSel.value : 'gvhmr';
-        params.body_device = document.querySelector('[name="hybrid_body_device"]').value;
-        // Body-specific
-        if (params.body_backend === 'gvhmr') {
-            params.static_cam = document.querySelector('[name="hybrid_gvhmr_static_cam"]').checked;
-            params.focal_length_mm = parseFloat(document.querySelector('[name="hybrid_gvhmr_focal_length_mm"]').value);
-        } else {
-            params.static_cam = document.querySelector('[name="hybrid_prompthmr_static_cam"]').checked;
-        }
-        // V4 face+hands
-        var v4parts = document.querySelectorAll('[name="hybrid_v4_parts"]');
-        v4parts.forEach(function(cb) { params['v4_' + cb.value] = cb.checked; });
-        params.v4_hcd_iterations = parseInt(document.querySelector('[name="hybrid_v4_hcd_iterations"]').value);
-        params.v4_hcd_epochs = parseInt(document.querySelector('[name="hybrid_v4_hcd_epochs"]').value);
-        params.v4_mp_detection = parseFloat(document.querySelector('[name="hybrid_v4_mp_detection"]').value);
-        params.v4_mp_tracking = parseFloat(document.querySelector('[name="hybrid_v4_mp_tracking"]').value);
-    }
-    return params;
-}
-
-// --- Drag & drop ---
-const dropTarget = document.getElementById('dropTarget');
-const videoInput = document.getElementById('videoInput');
-
-dropTarget.addEventListener('click', () => videoInput.click());
-
-dropTarget.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropTarget.classList.add('drag-over');
-});
-
-dropTarget.addEventListener('dragleave', () => {
-    dropTarget.classList.remove('drag-over');
-});
-
-dropTarget.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropTarget.classList.remove('drag-over');
-    if (e.dataTransfer.files.length) {
-        videoInput.files = e.dataTransfer.files;
-        dropTarget.querySelector('p').textContent = e.dataTransfer.files[0].name;
-        document.getElementById('uploadForm').submit();
-    }
-});
-
-videoInput.addEventListener('change', () => {
-    if (videoInput.files.length) {
-        dropTarget.querySelector('p').textContent = videoInput.files[0].name;
-        document.getElementById('uploadForm').submit();
-    }
-});
-
-function getCsrf() {
-    return document.querySelector('[name=csrfmiddlewaretoken]').value;
-}
-
-function deleteJob(jobId, btn) {
-    if (!confirm('Delete this job?')) return;
-    fetch('/api/job/' + jobId + '/delete/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf()}
-    }).then(r => r.json()).then(data => {
-        if (data.ok) {
-            var detail = document.getElementById('detail-' + jobId);
-            if (detail) detail.remove();
-            var row = document.getElementById('row-' + jobId);
-            if (row) row.remove();
-            updateBulkBtn();
-            var tbody = document.getElementById('jobTableBody');
-            if (tbody && tbody.querySelectorAll('tr:not(.detail-row)').length === 0) {
-                var section = tbody.closest('.job-list-section');
-                if (section) section.style.display = 'none';
-            }
-        }
-    });
-}
-
-function toggleSelectAll(el) {
-    document.querySelectorAll('.job-check').forEach(c => c.checked = el.checked);
-    updateBulkBtn();
-}
-
-function updateBulkBtn() {
-    var checked = document.querySelectorAll('.job-check:checked').length;
-    var btn = document.getElementById('bulkDeleteBtn');
-    var cnt = document.getElementById('bulkCount');
-    if (btn) btn.disabled = checked === 0;
-    if (cnt) cnt.textContent = checked;
-}
-
-function bulkDelete() {
-    var ids = Array.from(document.querySelectorAll('.job-check:checked')).map(c => c.value);
-    if (!ids.length) return;
-    if (!confirm('Delete ' + ids.length + ' job(s)?')) return;
-    var btn = document.getElementById('bulkDeleteBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-    fetch('/api/jobs/bulk-delete/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
-        body: JSON.stringify({ids: ids})
-    }).then(r => r.json()).then(data => {
-        if (data.ok) {
-            data.deleted.forEach(id => {
-                var detail = document.getElementById('detail-' + id);
-                if (detail) detail.remove();
-                var row = document.getElementById('row-' + id);
-                if (row) row.remove();
-            });
-            document.getElementById('selectAll').checked = false;
-            updateBulkBtn();
-            var tbody = document.getElementById('jobTableBody');
-            if (tbody && tbody.querySelectorAll('tr:not(.detail-row)').length === 0) {
-                var section = tbody.closest('.job-list-section');
-                if (section) section.style.display = 'none';
-            }
-        }
-    }).catch(function(e) {
-        alert('Bulk delete failed: ' + e.message);
-    }).finally(function() {
-        updateBulkBtn();
-        btn.innerHTML = '<i class="fas fa-trash"></i> Delete Selected (<span id="bulkCount">0</span>)';
-    });
-}
-
-// --- Phase labels ---
-var PHASE_LABELS = {
-    'pending': 'Pending', 'detecting_2d': '2D Pose Detection',
-    'openpose': '2D Detection (GPU)', 'openpose_csv': 'CSV Convert',
-    'mediapipe': '2D Detection (CPU)', 'lifting_3d': '3D Pose Estimation',
-    'mocapnet': '3D Pose Estimation', 'v4_processing': 'MocapNET v4',
-    'processing': 'Processing', 'complete': 'Complete', 'failed': 'Failed',
-    'hybrid_processing': 'Hybrid (Body + Face)'
-};
-
-// --- Detail row management ---
-function getOrCreateDetailRow(jobId) {
-    var existing = document.getElementById('detail-' + jobId);
-    if (existing) return existing;
-    var mainRow = document.getElementById('row-' + jobId);
-    if (!mainRow) return null;
-    var colSpan = mainRow.children.length;
-    var tr = document.createElement('tr');
-    tr.id = 'detail-' + jobId;
-    tr.className = 'detail-row';
-    tr.innerHTML = '<td colspan="' + colSpan + '">' +
-        '<div class="detail-panel">' +
-            '<div class="detail-header">' +
-                '<span class="badge" id="detail-badge-' + jobId + '">Starting</span>' +
-                '<span class="detail-phase" id="detail-phase-' + jobId + '"></span>' +
-            '</div>' +
-            '<div class="progress-bar"><div class="progress-fill" id="detail-fill-' + jobId + '" style="width:0%"><span id="detail-pct-' + jobId + '">0%</span></div></div>' +
-            '<div class="detail-progress-text" id="detail-text-' + jobId + '">Starting...</div>' +
-            '<div class="detail-thumb" id="detail-thumb-' + jobId + '">' +
-                '<img src="/api/thumbnail/' + jobId + '/" alt="Video" onerror="this.style.display=\'none\'">' +
-            '</div>' +
-            '<div class="detail-error" id="detail-error-' + jobId + '" style="display:none;"></div>' +
-            '<div class="detail-actions" id="detail-actions-' + jobId + '">' +
-                '<button class="btn btn-sm btn-danger" onclick="stopProcessing(\'' + jobId + '\', this)"><i class="fas fa-stop"></i> Stop</button>' +
-            '</div>' +
-        '</div></td>';
-    mainRow.after(tr);
-    return tr;
-}
-
-function stopProcessing(jobId, btn) {
-    if (!confirm('Stop processing?')) return;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Stopping...';
-    fetch('/api/job/' + jobId + '/stop/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf()}
-    }).then(r => r.json()).then(function() {
-        btn.innerHTML = '<i class="fas fa-stop"></i> Stopped';
-    }).catch(function() {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-stop"></i> Stop';
-    });
-}
-
-// --- Inline processing start + detail row + polling ---
-// Sends the current UI pipeline_params along with re-process requests
-function startProcessing(jobId, btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    var sel = document.getElementById('pl-' + jobId);
-    var pipeline = sel ? sel.value : 'v4';
-    var pp = collectPipelineParams(pipeline);
-    var body = 'pipeline=' + encodeURIComponent(pipeline) +
-               '&pipeline_params=' + encodeURIComponent(JSON.stringify(pp));
-    fetch('/api/job/' + jobId + '/start/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: body
-    }).then(r => r.json()).then(data => {
-        if (data.ok) {
-            var activeId = jobId;
-            if (data.new_job_id) {
-                activeId = data.new_job_id;
-                addNewJobRow(data.new_job_id, data.new_pipeline, data.new_pipeline_display, jobId);
-                if (sel) sel.value = sel.dataset.current;
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-play"></i>';
-            }
-            getOrCreateDetailRow(activeId);
-            updateJobUI(activeId, {status: data.status, progress: 0, progress_detail: 'Starting...'});
-            startJobPolling(activeId);
-        } else {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-play"></i>';
-            alert('Error: ' + (data.error || 'Unknown'));
-        }
-    }).catch(() => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-play"></i>';
-    });
-}
-
-function addNewJobRow(newJobId, pipeline, pipelineDisplay, sourceJobId) {
-    var srcRow = document.getElementById('row-' + sourceJobId);
-    if (!srcRow) return;
-    var name = srcRow.querySelector('td:nth-child(2)').textContent;
-    var sizeText = srcRow.querySelector('td:nth-child(5)').textContent;
-    var now = new Date();
-    var dateStr = now.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    var tr = document.createElement('tr');
-    tr.id = 'row-' + newJobId;
-    tr.innerHTML =
-        '<td></td>' +
-        '<td>' + name + '</td>' +
-        '<td><span class="badge badge-' + pipeline + '">' + pipelineDisplay + '</span></td>' +
-        '<td id="status-' + newJobId + '"><span style="color:#f39c12;"><i class="fas fa-spinner fa-spin"></i> Starting...</span></td>' +
-        '<td>' + sizeText + '</td>' +
-        '<td>' + dateStr + '</td>' +
-        '<td><div style="display:flex;gap:4px;align-items:center;">' +
-            '<select class="pipeline-select" id="pl-' + newJobId + '" data-current="' + pipeline + '">' +
-            '<option value="v4"' + (pipeline==='v4'?' selected':'') + '>v4</option>' +
-            '<option value="gvhmr"' + (pipeline==='gvhmr'?' selected':'') + '>GVHMR</option>' +
-            '<option value="wham"' + (pipeline==='wham'?' selected':'') + '>WHAM</option>' +
-            '<option value="prompthmr"' + (pipeline==='prompthmr'?' selected':'') + '>PromptHMR</option>' +
-            '<option value="hybrid_gvhmr"' + (pipeline==='hybrid_gvhmr'?' selected':'') + '>Hybrid (GVHMR)</option>' +
-            '<option value="hybrid_prompthmr"' + (pipeline==='hybrid_prompthmr'?' selected':'') + '>Hybrid (PromptHMR)</option>' +
-            '</select>' +
-            '<button class="btn btn-sm btn-primary" onclick="startProcessing(\'' + newJobId + '\', this)">' +
-            '<i class="fas fa-play"></i></button></div></td>' +
-        '<td style="display:flex;gap:5px;">' +
-            '<button class="btn btn-sm btn-danger" onclick="deleteJob(\'' + newJobId + '\', this)"><i class="fas fa-trash"></i></button>' +
-        '</td>';
-    var tbody = document.getElementById('jobTableBody');
-    if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
-    else tbody.appendChild(tr);
-}
-
-function updateJobUI(jobId, data) {
-    var cell = document.getElementById('status-' + jobId);
-    if (cell) {
-        if (data.status === 'complete') {
-            cell.innerHTML = '<span style="color:#2ecc71;"><i class="fas fa-check-circle"></i> Complete</span>';
-        } else if (data.status === 'failed') {
-            cell.innerHTML = '<span style="color:#e74c3c;"><i class="fas fa-times-circle"></i> Failed</span>';
-        } else {
-            var pct = data.progress || 0;
-            var detail = data.progress_detail || data.status || '';
-            cell.innerHTML =
-                '<div class="inline-progress">' +
-                '<span class="status-text"><i class="fas fa-spinner fa-spin"></i> ' + detail.substring(0, 30) + '</span>' +
-                '<div class="progress-bar-mini"><div class="progress-fill-mini" style="width:' + pct + '%"></div></div>' +
-                '<span class="progress-pct">' + pct + '%</span></div>';
-        }
-    }
-
-    var detailRow = document.getElementById('detail-' + jobId);
-    if (!detailRow) return;
-
-    var badge = document.getElementById('detail-badge-' + jobId);
-    var phase = document.getElementById('detail-phase-' + jobId);
-    var fill = document.getElementById('detail-fill-' + jobId);
-    var pctEl = document.getElementById('detail-pct-' + jobId);
-    var textEl = document.getElementById('detail-text-' + jobId);
-    var errorEl = document.getElementById('detail-error-' + jobId);
-    var actionsEl = document.getElementById('detail-actions-' + jobId);
-
-    var p = data.progress || 0;
-    if (badge) {
-        badge.textContent = PHASE_LABELS[data.status] || data.status;
-        badge.className = 'badge badge-' + data.status;
-    }
-    if (phase) phase.textContent = PHASE_LABELS[data.status] || '';
-    if (fill) fill.style.width = p + '%';
-    if (pctEl) pctEl.textContent = p + '%';
-    if (textEl) textEl.textContent = data.progress_detail || '';
-
-    if (data.status === 'complete' || data.status === 'failed') {
-        var mainRow = document.getElementById('row-' + jobId);
-        if (mainRow) {
-            var procBtn = mainRow.querySelector('button[onclick*="startProcessing"]');
-            if (procBtn) {
-                procBtn.disabled = false;
-                procBtn.innerHTML = '<i class="fas fa-play"></i>';
-            }
-        }
-    }
-
-    if (data.status === 'complete') {
-        if (errorEl) errorEl.style.display = 'none';
-        if (actionsEl) {
-            actionsEl.innerHTML =
-                '<a class="btn btn-sm btn-primary" href="/process/' + jobId + '/result/"><i class="fas fa-eye"></i> View Result</a>' +
-                (data.bvh_file ? ' <a class="btn btn-sm btn-secondary" href="/api/bvh/' + jobId + '/" download><i class="fas fa-download"></i> Download BVH</a>' : '');
-        }
-        var mainRow2 = document.getElementById('row-' + jobId);
-        if (mainRow2) {
-            var actionsTd = mainRow2.querySelector('td:last-child');
-            if (actionsTd && !actionsTd.querySelector('a[href*="result"]')) {
-                var a = document.createElement('a');
-                a.className = 'btn btn-sm btn-primary';
-                a.href = '/process/' + jobId + '/result/';
-                a.innerHTML = '<i class="fas fa-eye"></i> View';
-                actionsTd.insertBefore(a, actionsTd.firstChild);
-            }
-        }
-    } else if (data.status === 'failed') {
-        if (errorEl && data.error) {
-            errorEl.style.display = '';
-            errorEl.innerHTML = '<strong>Error:</strong> ' + data.error;
-        }
-        if (actionsEl) actionsEl.innerHTML = '';
-    }
-}
-
-function startJobPolling(jobId) {
-    function poll() {
-        fetch('/api/job/' + jobId + '/status/')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                updateJobUI(jobId, data);
-                if (data.status !== 'complete' && data.status !== 'failed') {
-                    setTimeout(poll, 2000);
-                }
-            })
-            .catch(function() { setTimeout(poll, 5000); });
-    }
-    setTimeout(poll, 1500);
-}
-
-// Auto-expand + poll for jobs that are currently processing
-(function() {
-    document.querySelectorAll('tr[id^="row-"]').forEach(function(row) {
-        var statusCell = row.querySelector('td[id^="status-"]');
-        if (statusCell && statusCell.querySelector('.inline-progress')) {
-            var jobId = statusCell.id.replace('status-', '');
-            getOrCreateDetailRow(jobId);
-            startJobPolling(jobId);
-        }
-    });
-})();
-
-// Sortable table (skip detail rows)
-var sortDir = {};
-function sortTable(key) {
-    var tbody = document.getElementById('jobTableBody');
-    if (!tbody) return;
-    var rows = Array.from(tbody.querySelectorAll('tr:not(.detail-row)'));
-    sortDir[key] = !sortDir[key];
-    var asc = sortDir[key];
-    rows.sort(function(a, b) {
-        var va = a.dataset[key] || '';
-        var vb = b.dataset[key] || '';
-        if (key === 'size') return asc ? (Number(va) - Number(vb)) : (Number(vb) - Number(va));
-        return asc ? va.localeCompare(vb) : vb.localeCompare(va);
-    });
-    rows.forEach(function(row) {
-        tbody.appendChild(row);
-        var detail = document.getElementById('detail-' + row.id.replace('row-', ''));
-        if (detail) tbody.appendChild(detail);
-    });
-}
+const wahl = Pipelinewahl.aufbauen();
+Videowahl.aufbauen(wahl);
+Auftragsliste.aufbauen();
 </script>
 {% endblock %}

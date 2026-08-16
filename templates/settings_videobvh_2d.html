@@ -2,6 +2,14 @@
 {% block title %}Video to BVH: 2D - Einstellungen{% endblock %}
 
 {% block content %}
+<style>
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-abstand-oben.hb-abstand-oben.hb-abstand-oben { margin-top:1.5rem; }   /* 5x */
+.hb-gedaempft.hb-gedaempft.hb-gedaempft { color:#888; }   /* 5x */
+</style>
 <h1>Einstellungen &mdash; Video to BVH: 2D</h1>
 
 <form method="post">
@@ -28,8 +36,8 @@
         </div>
     </div>
 
-    <div class="settings-card" style="margin-top:1.5rem;">
-        <h2><i class="fas fa-eye"></i> MediaPipe <small style="color:#888;">~50 AP, CPU</small></h2>
+    <div class="settings-card hb-abstand-oben">
+        <h2><i class="fas fa-eye"></i> MediaPipe <small class="hb-gedaempft">~50 AP, CPU</small></h2>
 
         <div class="settings-row">
             <div class="settings-label">
@@ -69,13 +77,13 @@
         </div>
     </div>
 
-    <div class="settings-card" style="margin-top:1.5rem;">
-        <h2><i class="fas fa-walking"></i> OpenPose <small style="color:#888;">61 AP, CUDA</small></h2>
+    <div class="settings-card hb-abstand-oben">
+        <h2><i class="fas fa-walking"></i> OpenPose <small class="hb-gedaempft">61 AP, CUDA</small></h2>
         <p style="color:#888; padding:0.5rem 1rem;">Keine zus&auml;tzlichen Einstellungen. OpenPose verwendet BODY_25 Standardkonfiguration.</p>
     </div>
 
-    <div class="settings-card" style="margin-top:1.5rem;">
-        <h2><i class="fas fa-bullseye"></i> YOLO11-Pose <small style="color:#888;">66 AP, GPU</small></h2>
+    <div class="settings-card hb-abstand-oben">
+        <h2><i class="fas fa-bullseye"></i> YOLO11-Pose <small class="hb-gedaempft">66 AP, GPU</small></h2>
 
         <div class="settings-row">
             <div class="settings-label">
@@ -94,8 +102,8 @@
         </div>
     </div>
 
-    <div class="settings-card" style="margin-top:1.5rem;">
-        <h2><i class="fas fa-crosshairs"></i> RTMPose <small style="color:#888;">77 AP, GPU &mdash; Empfohlen</small></h2>
+    <div class="settings-card hb-abstand-oben">
+        <h2><i class="fas fa-crosshairs"></i> RTMPose <small class="hb-gedaempft">77 AP, GPU &mdash; Empfohlen</small></h2>
 
         <div class="settings-row">
             <div class="settings-label">
@@ -112,8 +120,8 @@
         </div>
     </div>
 
-    <div class="settings-card" style="margin-top:1.5rem;">
-        <h2><i class="fas fa-brain"></i> ViTPose <small style="color:#888;">79 AP, GPU &mdash; Beste Qualit&auml;t</small></h2>
+    <div class="settings-card hb-abstand-oben">
+        <h2><i class="fas fa-brain"></i> ViTPose <small class="hb-gedaempft">79 AP, GPU &mdash; Beste Qualit&auml;t</small></h2>
 
         <div class="settings-row">
             <div class="settings-label">

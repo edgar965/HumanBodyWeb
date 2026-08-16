@@ -37,7 +37,21 @@ logger = logging.getLogger(__name__)
 
 @require_GET
 def character_mesh(request):
-    """Return base mesh data (vertices, faces, UVs) as JSON with base64 binary."""
+    """Netzdaten als JSON mit base64-Binaerteilen.
+
+    `nur_punkte=1` laesst Dreiecke, UVs und Materialgruppen weg. Gemessen am
+    16.08.2026 mit dem weiblichen Grundkoerper (70.851 Punkte):
+
+        vollstaendig   5,24 MB   (vertices 1,13 + normals 1,13
+                                  + faces 2,21 + uvs 0,76)
+        nur_punkte     2,26 MB   —  57 % weniger
+
+    Der Aufrufer, der beim Ziehen eines Morph-Reglers neu laedt
+    (`Charakterkoerper.neuLaden`), verwirft Dreiecke und UVs ohnehin: Die
+    Topologie aendert sich durch Morphs nicht, nur die Punktlagen. Bis heute
+    wurden sie bei JEDER Reglerbewegung mitgeschickt und weggeworfen.
+    """
+    nur_punkte = request.GET.get('nur_punkte') == '1'
     body_type = request.GET.get('body_type', 'Female_Caucasian')
     gender = Charakterdaten.geschlecht_zu(body_type)
 
@@ -102,15 +116,15 @@ def character_mesh(request):
             'normals': base64.b64encode(
                 normals.ravel().astype(np.float32).tobytes()).decode('ascii'),
             'face_count': int(len(cc.triangles)),
-            'faces': base64.b64encode(
-                cc.triangles.ravel().astype(np.uint32).tobytes()).decode('ascii'),
-            'groups': cc.groups,
-            'material_names': mesh.material_names or [],
         }
-
-        if cc.uvs is not None:
-            result['uvs'] = base64.b64encode(
-                cc.uvs.ravel().astype(np.float32).tobytes()).decode('ascii')
+        if not nur_punkte:
+            result['faces'] = base64.b64encode(
+                cc.triangles.ravel().astype(np.uint32).tobytes()).decode('ascii')
+            result['groups'] = cc.groups
+            result['material_names'] = mesh.material_names or []
+            if cc.uvs is not None:
+                result['uvs'] = base64.b64encode(
+                    cc.uvs.ravel().astype(np.float32).tobytes()).decode('ascii')
 
         return JsonResponse(result)
 
@@ -121,7 +135,7 @@ def character_mesh(request):
             vertices.astype(np.float32).tobytes()).decode('ascii'),
     }
 
-    if mesh.faces is not None:
+    if mesh.faces is not None and not nur_punkte:
         faces = mesh.faces
         face_mats = mesh.face_materials
 
@@ -167,7 +181,7 @@ def character_mesh(request):
         result['faces'] = base64.b64encode(
             triangles.ravel().astype(np.uint32).tobytes()).decode('ascii')
 
-    if mesh.uvs is not None:
+    if mesh.uvs is not None and not nur_punkte:
         result['uvs'] = base64.b64encode(
             mesh.uvs.ravel().astype(np.float32).tobytes()).decode('ascii')
 

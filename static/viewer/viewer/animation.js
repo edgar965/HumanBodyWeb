@@ -7,11 +7,12 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js?v=32';
 import { convertToRigifySkinnedMesh } from './skinning.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
+import { Animationslader } from '../gemeinsam/animationslader.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export async function loadAnimations() {
     try {
-        const resp = await fetch('/api/character/animations/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/animations/');
         const tree = document.getElementById('anim-tree');
         if (!tree) return;
         tree.innerHTML = '';
@@ -128,110 +129,27 @@ function bindPlaybackControls() {
     }
 }
 
+/**
+ * BVH laden und abspielen. Der Ablauf steckt in `Animationslader` — er stand
+ * bis zum Umbau am 16.08.2026 zweimal im Projekt, hier mit 105 und in
+ * animation/wiedergabe.js mit 91 Zeilen.
+ */
 export async function loadBVHAnimation(url, name, fc) {
-    stopAnimation(true);
-
-    const info = document.getElementById('anim-info');
-    if (info) info.textContent = `Lade ${name || 'Animation'}...`;
-
-    // DEF skeleton path
-    if (state.rigifySkeletonData && state.skinWeightData && state.bodyMesh) {
-        if (!state.isSkinned) {
-            convertToRigifySkinnedMesh(null, state.skinWeightData);
-        }
-        let bodyH = 1.68;
-        const bb = new THREE.Box3().setFromObject(state.bodyMesh);
-        if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
-
-        try {
-            const clip = await fetchRetargetedClipFromUrl(url, state.rigifySkeleton, { bodyHeight: bodyH });
-            console.log(`Retargeted clip: ${clip.tracks.length} tracks, ${clip.duration.toFixed(2)}s`);
-
-            // Vierte Fundstelle derselben fuenf Einstellungen im Projekt —
-            // jetzt aus gemeinsam/skelettanzeige.js.
-            if (!state.skeletonHelper) {
-                state.skeletonHelper = Skelettanzeige.bauen(
-                    state.scene, state.rigifySkeleton.rootBone, state.rigVisible);
-            }
-
-            state.mixer = new THREE.AnimationMixer(state.bodyMesh);
-            const ss = document.getElementById('anim-speed');
-            if (ss) state.mixer.timeScale = parseInt(ss.value) / 100;
-            state.currentAction = state.mixer.clipAction(clip);
-            state.currentAction.play();
-            state.playing = true;
-
-            state.currentAnimName = name || 'Animation';
-            state.currentAnimFrames = fc || 0;
-            state.currentAnimDuration = state.currentAction ? state.currentAction.getClip().duration : clip.duration;
-
-            const playBtn = document.getElementById('anim-play');
-            if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-            if (info) info.textContent = `${state.currentAnimName} \u2014 0/${Math.floor(state.currentAnimDuration)}s  0/${state.currentAnimFrames}f`;
-            return;
-        } catch (e) {
-            // Fehlt die Datei, ist der Rueckfallweg zwecklos: Er holt dieselbe
-            // Adresse noch einmal und scheitert genauso. Bis 16.08.2026 standen
-            // deshalb ZWEI rote Meldungen in der Konsole, wenn eine gespeicherte
-            // Standard-Animation umbenannt oder geloescht worden war — ohne einen
-            // Hinweis darauf, was eigentlich fehlt.
-            if (String(e && e.message).includes('404')) {
-                console.warn('Animation nicht vorhanden:', url);
-                if (info) info.textContent = `Datei fehlt: ${name || url}`;
-                return;
-            }
-            console.error('Umzielen am Server fehlgeschlagen:', e);
-        }
-    }
-
-    // Fallback: separate BVH skeleton
-    state.bvhLoader.load(url, (result) => {
-        const bvhBones = result.skeleton.bones;
-        if (bvhBones.length === 0) return;
-
-        const rootBone = bvhBones[0];
-        rootBone.updateWorldMatrix(true, true);
-        const skelBox = new THREE.Box3();
-        const tmpVec = new THREE.Vector3();
-        bvhBones.forEach(b => {
-            b.updateWorldMatrix(true, false);
-            b.getWorldPosition(tmpVec);
-            skelBox.expandByPoint(tmpVec);
-        });
-        const skelHeight = skelBox.max.y - skelBox.min.y;
-        let bodyHeight = 1.75;
-        if (state.bodyMesh) {
-            const bodyBox = new THREE.Box3().setFromObject(state.bodyMesh);
-            if (!bodyBox.isEmpty()) bodyHeight = bodyBox.max.y - bodyBox.min.y;
-        }
-        const scale = bodyHeight / Math.max(skelHeight, 0.01);
-
-        state.skelWrapper = new THREE.Group();
-        state.skelWrapper.scale.set(scale, scale, scale);
-        state.skelWrapper.add(rootBone);
-        state.scene.add(state.skelWrapper);
-
-        if (state.skeletonHelper) state.scene.remove(state.skeletonHelper);
-        state.skeletonHelper = Skelettanzeige.bauen(state.scene, rootBone, state.rigVisible);
-
-        state.mixer = new THREE.AnimationMixer(rootBone);
-        const ss2 = document.getElementById('anim-speed');
-        if (ss2) state.mixer.timeScale = parseInt(ss2.value) / 100;
-        state.currentAction = state.mixer.clipAction(result.clip);
-        state.currentAction.play();
-        state.playing = true;
-
-        state.currentAnimName = name || 'Animation';
-        state.currentAnimFrames = fc || 0;
-        state.currentAnimDuration = state.currentAction ? state.currentAction.getClip().duration : result.clip.duration;
-
-        const playBtn = document.getElementById('anim-play');
-        if (playBtn) playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-        if (info) info.textContent = `${state.currentAnimName} \u2014 0/${Math.floor(state.currentAnimDuration)}s  0/${state.currentAnimFrames}f`;
-    }, undefined, (err) => {
-        console.error('Failed to load BVH:', err);
-        if (info) info.textContent = `Fehler: ${name || url}`;
-    });
+    return new Animationslader(state, {
+        anhalten: zerstoeren => stopAnimation(zerstoeren),
+        skinnen: gewichte => convertToRigifySkinnedMesh(null, gewichte),
+        umzielen: (adresse, skelett, wahl) =>
+            fetchRetargetedClipFromUrl(adresse, skelett, wahl),
+        // Die Viewer-Seite zeigt Fortschritt in Sekunden und Bildern, ihre
+        // Zeitleiste braucht dafür Name, Bildzahl und Dauer im Zustand.
+        merken: (name2, bilder, dauer) => {
+            state.currentAnimName = name2;
+            state.currentAnimFrames = bilder;
+            state.currentAnimDuration = dauer;
+        },
+        beschriften: (name2, bilder, dauer) =>
+            `${name2} — 0/${Math.floor(dauer)}s  0/${bilder}f`,
+    }).laden(url, name, fc);
 }
 
 export function stopAnimation(destroy = false) {

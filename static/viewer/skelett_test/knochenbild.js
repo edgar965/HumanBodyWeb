@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { Testzustand } from './testzustand.js';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 // Shared materials for bone visualization
@@ -111,5 +112,5 @@ export function createBoneLabels(bones, skelKey) {
     }
 
     // Log mapping to console for reference
-    console.log(`${skelKey.toUpperCase()} bone index:`, skel.boneIndex.map((n, i) => `${i}: ${n}`));
+    Protokoll.debug('Viewer', `${skelKey.toUpperCase()} bone index:`, skel.boneIndex.map((n, i) => `${i}: ${n}`));
 }

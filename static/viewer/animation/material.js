@@ -6,6 +6,8 @@
 
 import * as THREE from 'three';
 import { Seitenzustand } from './seitenzustand.js';
+import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 
 // =========================================================================
@@ -107,21 +109,14 @@ export function getSkinMat() {
 
 export function applySkinColor() {
     if (!Object.keys(Seitenzustand.skinColors).length) return;
-    const colors = Seitenzustand.skinColors['Caucasian'];  // default body type is Female_Caucasian
-    const mat = getSkinMat();
-    if (colors && mat) {
-        mat.color.setRGB(
-            Math.pow(colors[0], 1/2.2),
-            Math.pow(colors[1], 1/2.2),
-            Math.pow(colors[2], 1/2.2)
-        );
-    }
+    // Die Seite startet immer mit Female_Caucasian.
+    Hautfarbe.setzen(getSkinMat(),
+                     Seitenzustand.skinColors[Hautfarbe.ERSATZ_ETHNIE]);
 }
 
 export async function loadSkinColors() {
     try {
-        const resp = await fetch('/api/character/morphs/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/morphs/');
         Seitenzustand.skinColors = data.skin_colors || {};
         applySkinColor();
     } catch (e) { /* optional */ }

@@ -1,6 +1,7 @@
 import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
 import { exportCancelled } from './export_video.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 /**
  * Bildfolge in ein Video schreiben — auf dem Server oder im Browser.
  *
@@ -20,7 +21,7 @@ export async function saveBlobAs(blob, suggestedName, mimeType) {
             const writable = await handle.createWritable();
             await writable.write(blob);
             await writable.close();
-            console.log(`[BVH Studio] Saved via picker: ${handle.name}`);
+            Protokoll.info('BVH Studio', `Saved via picker: ${handle.name}`);
             return;
         } catch (e) {
             if (e.name === 'AbortError') return;
@@ -101,7 +102,7 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
         statusText.textContent = 'Fehler: ' + e.message;
     }
 
-    console.log(`[BVH Studio] Server export done: ${totalFrames} frames, crf=${crf}, save_path=${formData.get('save_path')}`);
+    Protokoll.info('BVH Studio', `Server export done: ${totalFrames} frames, crf=${crf}, save_path=${formData.get('save_path')}`);
 }
 
 export async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toFrame, fps, filename, statusText, progressBar) {
@@ -143,5 +144,5 @@ export async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFra
     await saveBlobAs(blob, filename.replace('.mp4', '.webm'), mimeType);
     statusText.textContent = 'Fertig!';
     progressBar.style.width = '100%';
-    console.log(`[BVH Studio] Browser export: ${totalFrames} frames`);
+    Protokoll.info('BVH Studio', `Browser export: ${totalFrames} frames`);
 }

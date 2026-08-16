@@ -10,6 +10,8 @@
 import { THREE } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 function _encodeFloat32(a) {
     const u8 = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
@@ -137,19 +139,13 @@ export async function exportClothMP4({ engine = 'warp_only', quality = 'medium',
     payload.height = height;
     if (outputDir) payload.output_dir = outputDir;
     if (filename) payload.filename = filename;
-    console.log(`[Cloth Export] engine=${engine} quality=${quality} res=${width}x${height} frames=${payload.anim_frames} dir=${outputDir||'(default)'} file=${filename||'(auto)'}`);
-    const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-    const resp = await fetch('/api/cloth/export/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-        body: JSON.stringify(payload),
-    });
-    const data = await resp.json();
-    if (!resp.ok || !data.ok) {
+    Protokoll.debug('Cloth Export', `engine=${engine} quality=${quality} res=${width}x${height} frames=${payload.anim_frames} dir=${outputDir||'(default)'} file=${filename||'(auto)'}`);
+    const data = await Serverabruf.senden('/api/cloth/export/', payload);
+    if (!data.ok) {
         console.error('[Cloth Export] failed', data);
         throw new Error(data.error || data.log || 'Export fehlgeschlagen');
     }
-    console.log('[Cloth Export] MP4:', data.url);
+    Protokoll.info('Cloth Export', 'MP4:', data.url);
     if (data.url) window.open(data.url, '_blank');
     return data;
 }

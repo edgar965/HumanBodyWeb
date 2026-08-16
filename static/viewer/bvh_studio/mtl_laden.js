@@ -9,6 +9,7 @@
  */
 
 import * as THREE from 'three';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 const _textureLoader = new THREE.TextureLoader();
 
@@ -38,7 +39,7 @@ export async function _autoDiscoverMtl(objUrl) {
             try {
                 const head = await fetch(testUrl, { method: 'HEAD' });
                 if (head.ok) {
-                    console.log(`[OBJ] mtllib "${ref}" aufgelöst → ${testUrl}`);
+                    Protokoll.debug('OBJ', `mtllib "${ref}" aufgelöst → ${testUrl}`);
                     return testUrl;
                 }
             } catch {}
@@ -108,7 +109,7 @@ export async function _parseMtlAndBuildMaterials(mtlUrl) {
                 tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
                 tex.colorSpace = THREE.SRGBColorSpace;
                 tex.needsUpdate = true;
-                console.log(`[MTL] Textur geladen: ${c}`);
+                Protokoll.debug('MTL', `Textur geladen: ${c}`);
                 return tex;
             } catch (e) {
                 // stille Retry auf nächsten Kandidaten

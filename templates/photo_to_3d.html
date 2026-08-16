@@ -5,6 +5,62 @@
 
 {% block extra_head %}
 <style>
+    /* Kurzfassung ueber dem Auftragsergebnis. Stand bis zum Umbau am 16.08.2026
+       als style="" im innerHTML. */
+    .auftrag-kopfzeile {
+        padding: 4px 0;
+        font-size: 0.85rem;
+    }
+    /* SMPL-X-Reglerfeld. Stand bis zum Umbau am 16.08.2026 als style.cssText
+       und style.display im JavaScript. */
+    .smplx-zeile { margin-bottom: 8px; }
+    .smplx-kopf { cursor: pointer; margin-top: 8px; }
+    .smplx-rumpf { display: block; }
+    .smplx-rumpf.zu { display: none; }
+    /* Vergroesserte Projektionsvorschau. Stand bis zum Umbau am 16.08.2026 als
+       vier Object.assign(element.style, {...})-Bloecke im JavaScript. */
+    .zoomfenster {
+        position: fixed;
+        inset: 0;
+        z-index: 11000;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        cursor: zoom-out;
+    }
+    .zoomfenster-rahmen {
+        position: relative;
+        overflow: hidden;
+        max-width: 92vw;
+        max-height: 90vh;
+        border-radius: 8px;
+        border: 1px solid #444;
+    }
+    .zoomfenster-bild {
+        transform-origin: 0 0;
+        display: block;
+        cursor: grab;
+    }
+    .zoomfenster-bild.zieht { cursor: grabbing; }
+    .zoomfenster-zu {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 1;
+        background: rgba(0, 0, 0, 0.7);
+        border: none;
+        color: #fff;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
     .main-content {
         padding: 0 !important;
         max-width: none !important;
@@ -645,6 +701,16 @@
     .foto-meldung { padding: 8px 0; }
     .foto-warning { color: var(--warning); }
     .foto-danger { color: var(--danger); }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* 1x */
+.hb-farbfeld.hb-farbfeld.hb-farbfeld { width:40px; height:24px; border:none; cursor:pointer; }   /* 1x */
+.hb-flex-1.hb-flex-1.hb-flex-1 { flex:1; text-align:center; }   /* 2x */
+.hb-font-size-0-68rem.hb-font-size-0-68rem.hb-font-size-0-68rem { font-size:0.68rem; color:var(--text-muted); margin-bottom:3px; }   /* 2x */
+.hb-max-width-100.hb-max-width-100.hb-max-width-100 { max-width:100%; max-height:220px; border-radius:4px; border:1px solid var(--border); }   /* 2x */
+.hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* 4x */
 </style>
 {% endblock %}
 
@@ -706,13 +772,13 @@
                         <i class="fas fa-crosshairs"></i> Auto-Ausrichtung (Pipeline Kameradaten)
                     </div>
                     <div style="display:flex;gap:6px;align-items:flex-start;">
-                        <div style="flex:1;text-align:center;">
-                            <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:3px;">Original</div>
-                            <img id="preview-original" style="max-width:100%;max-height:220px;border-radius:4px;border:1px solid var(--border);" alt="">
+                        <div class="hb-flex-1">
+                            <div class="hb-font-size-0-68rem">Original</div>
+                            <img id="preview-original" class="hb-max-width-100" alt="">
                         </div>
-                        <div style="flex:1;text-align:center;">
-                            <div style="font-size:0.68rem;color:var(--text-muted);margin-bottom:3px;">Projektion</div>
-                            <canvas id="preview-projection" style="max-width:100%;max-height:220px;border-radius:4px;border:1px solid var(--border);"></canvas>
+                        <div class="hb-flex-1">
+                            <div class="hb-font-size-0-68rem">Projektion</div>
+                            <canvas id="preview-projection" class="hb-max-width-100"></canvas>
                         </div>
                     </div>
                     <div class="alignment-status" style="font-size:0.66rem;color:var(--text-muted);margin-top:4px;text-align:center;"></div>
@@ -724,7 +790,7 @@
                 </button>
 
                 <div style="display:flex;gap:6px;margin:6px 0 12px;">
-                    <button class="btn-texture btn-wizard" id="btn-start-wizard" disabled style="flex:1;">
+                    <button class="btn-texture btn-wizard hb-dehnt" id="btn-start-wizard" disabled>
                         <span><i class="fas fa-sliders-h"></i> Anpassen</span>
                         <div class="spinner"></div>
                     </button>
@@ -748,11 +814,11 @@
                     <div class="spinner"></div>
                 </button>
 
-                <div class="texture-progress" id="texture-progress" style="display:none;">
+                <div class="texture-progress hb-versteckt" id="texture-progress">
                     <div class="texture-progress-bar"><div class="texture-progress-fill" id="texture-progress-fill"></div></div>
                     <div class="texture-status" id="texture-status">Starte...</div>
                 </div>
-                <div class="texture-info" id="texture-info" style="display:none;"></div>
+                <div class="texture-info hb-versteckt" id="texture-info"></div>
             </div>
         </div>
     </div>
@@ -801,7 +867,7 @@
                     <div style="margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
                         <div class="slider-row">
                             <label>Skin</label>
-                            <input type="color" id="skin-color-viewer" value="#d4a574" style="width:40px;height:24px;border:none;cursor:pointer;">
+                            <input type="color" id="skin-color-viewer" value="#d4a574" class="hb-farbfeld">
                         </div>
                     </div>
                 </div>
@@ -829,7 +895,7 @@
     </div>
 </div>
 <!-- Alignment Wizard Modal -->
-<div id="alignment-wizard" style="display:none;" class="wizard-overlay">
+<div id="alignment-wizard" class="wizard-overlay hb-versteckt">
     <div class="wizard-panel">
         <div class="wizard-header">
             <h3 id="wizard-title">Schritt 1: Koerper ausrichten</h3>
@@ -847,7 +913,7 @@
             <span style="flex:1"></span>
             <button id="wizard-bake-body" class="btn-primary">Koerper-Textur</button>
             <button id="wizard-bake-face" class="btn-primary">Gesicht-Textur</button>
-            <button id="wizard-back" style="display:none;">Zurueck</button>
+            <button id="wizard-back" class="hb-versteckt">Zurueck</button>
             <button id="wizard-next" class="btn-primary">Weiter</button>
         </div>
     </div>

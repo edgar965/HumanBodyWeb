@@ -2,6 +2,7 @@
  * Scene Editor -- Shared utility functions.
  */
 import { state } from './state.js';
+import { Htmltext } from '/static/djangobase/js/htmltext.js';
 import { fn } from '../gemeinsam/registrierung.js';
 // Aus gemeinsam/kodierung.js — die Kopien hier sind am 15.08.2026 entfallen (sechsfach vorhanden).
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
@@ -10,24 +11,41 @@ export { base64ToFloat32, base64ToUint32, blenderToThreeCoords };
 
 
 
+/**
+ * Maskiert Fremdtext fuer `innerHTML`.
+ *
+ * Umbau 16.08.2026: Die Umsetzung steht jetzt in `Htmltext` (djangoBase) —
+ * dieselbe Aufgabe stand hier und in der Auftragstabelle. Die alte Fassung
+ * baute dafuer ein `<div>` und las `innerHTML`; das maskiert Anfuehrungszeichen
+ * NICHT und war damit in Attributen (`title="…"`) unsicher.
+ */
 export function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return Htmltext.maskieren(str);
 }
 
 export function generateCharacterId() {
     return `char_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function getCSRFToken() {
-    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
-    return cookie ? cookie.split('=')[1] : '';
-}
-
 /** Get the currently selected character instance. */
 export function _selectedInst() {
     return state.selectedCharacterId ? state.characters.get(state.selectedCharacterId) : null;
+}
+
+/**
+ * Das gewählte MakeHuman-Kleidungsnetz, oder null.
+ *
+ * Stand bis zum Umbau am 16.08.2026 in `mh_proxy.js`. Von dort holte sich
+ * `mhproxy_anpassen.js` die Funktion, und `mh_proxy.js` holte sich umgekehrt
+ * `_doMHProxyFit` aus `mhproxy_anpassen.js` — ein Ringimport. Hier neben
+ * `_selectedInst()`, wo die andere Auswahl-Hilfe schon liegt, ist der Ring weg.
+ */
+export function _selectedMHMesh() {
+    const auswahl = state._selectedSubMesh;
+    if (!auswahl?.key?.startsWith('mh_')) return null;
+    const figur = state.characters.get(auswahl.charId);
+    if (!figur) return null;
+    return { inst: figur, key: auswahl.key, mesh: figur.clothMeshes[auswahl.key] };
 }
 
 /** Build morph+meta query params for a character. */
@@ -98,7 +116,6 @@ export function initDialogCloseHandlers() {
 // Register shared utils
 fn.escapeHtml = escapeHtml;
 fn.generateCharacterId = generateCharacterId;
-fn.getCSRFToken = getCSRFToken;
 fn._selectedInst = _selectedInst;
 fn._charQueryParams = _charQueryParams;
 fn._bindSlider = _bindSlider;

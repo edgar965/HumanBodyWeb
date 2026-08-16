@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { loadRigifySkeleton } from '../skeleton_test.js';
 import { loadAnimationTree, bindPlaybackControls } from './animationsliste.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 /**
  * Aufbau der Vergleichsseite: Szene, Umschalter, Zeichenschleife.
  *
@@ -16,7 +17,23 @@ import { loadAnimationTree, bindPlaybackControls } from './animationsliste.js';
 // Initialization
 // =========================================================================
 export async function init() {
-    await loadRetargetConfig();
+    // Ohne die Zuordnungstabelle kann die Seite nichts vergleichen. Der Abruf
+    // wirft bei einem Serverfehler (`Serverabruf` prueft den Status) —
+    // ungefangen bliebe die Seite leer, mit einer stillen Rejection in der
+    // Konsole. Gefunden mit skills2 `jsfaenger` am 16.08.2026.
+    try {
+        await loadRetargetConfig();
+    } catch (fehler) {
+        Protokoll.fehler('Skelett-Test', 'Retarget-Konfiguration nicht ladbar:',
+                         fehler);
+        const platz = document.getElementById('viewer-canvas')?.parentElement;
+        if (platz) {
+            platz.insertAdjacentHTML('afterbegin',
+                '<p class="st-fehler">Retarget-Konfiguration nicht ladbar: '
+                + fehler.message + '</p>');
+        }
+        return;
+    }
     const canvas = document.getElementById('viewer-canvas');
     const container = canvas.parentElement;
     const w = container.clientWidth;

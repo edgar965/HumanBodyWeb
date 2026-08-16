@@ -19,8 +19,25 @@ import { initModelToggle, initRigToggle, initSmplxToggle, initSmplxRigToggle } f
 import { initPhotoUpload, analyzePhoto } from './photo_upload.js';
 import { loadBackendStatus, initSaveButton, initTextureButtons, initPhotoTabs } from './job_management.js';
 import { loadJobResult } from './auftragsergebnis.js';
+// FEHLER 16.08.2026: Diese drei Zweige waren von NIEMANDEM importiert, melden
+// aber Funktionen in der Registrierung an, die das Template aufruft:
+//   * facial_expression.js  → fn.applyFacialExpression, gerufen in
+//     `Fotoanalyse.modelleLaden()`. Lief immer in ein "is not a function",
+//     verschluckt vom umgebenden try — alles danach (Hautfarbe setzen,
+//     Rohdaten anzeigen) wurde übersprungen.
+//   * wizard.js             → fn.startWizard, am Knopf "Ausrichten" (#btn-start-wizard).
+//   * alignment_preview.js  → fn.renderAlignmentPreview, beim Wechsel auf den
+//     Reiter "Textur".
+// Gefunden mit Docu/umbau/verwaiste_module.py, das die Erreichbarkeit ab den
+// Templates prüft — ein Modul, das sich selbst anmeldet, fällt ohne Import
+// sonst nicht auf: kein unbenutzter Import, keine offene Referenz.
+import './facial_expression.js';
+import './wizard.js';
+import './alignment_preview.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
-console.log('[Photo To 3D] ES modules loaded');
+Protokoll.debug('Photo To 3D', 'ES modules loaded');
 
 // =========================================================================
 // Init
@@ -68,7 +85,7 @@ init();
                 if (tabEl) tabEl.click();
             }
             if (params.get('reanalyze') === '1') {
-                setTimeout(() => analyzePhoto(), 500);
+                setTimeout(() => analyzePhoto(), Zeiten.BILDPAUSE_MS);
             }
         }, 1500);
     }

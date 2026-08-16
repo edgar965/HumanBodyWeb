@@ -8,6 +8,8 @@ import {
     base64ToFloat32, base64ToUint32, blenderToThreeCoords,
     skinifyMesh,
 } from '../character_core.js?v=1';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 // =====================================================================
 // Cloth (templates)
@@ -19,8 +21,7 @@ export async function loadCloth(key, params, presetColor, useApiColor = false) {
     try {
         const qs = Object.entries(params)
             .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-        const resp = await fetch(`/api/character/cloth/?${qs}`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`/api/character/cloth/?${qs}`);
         if (data.error) { console.error('Cloth error:', data.error); return; }
 
         removeClothRegion(key);
@@ -116,8 +117,7 @@ export async function loadGarment(garmentId, opts = {}) {
             if (Math.abs(v) > 0.001) qs += `&meta_${k}=${v}`;
         }
 
-        const resp = await fetch(`/api/character/garment/fit/?${qs}`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`/api/character/garment/fit/?${qs}`);
         if (data.error) {
             console.error('Garment fit error:', data.error);
             return;
@@ -153,7 +153,7 @@ export async function loadGarment(garmentId, opts = {}) {
         mesh.visible = state.clothesVisible;
         state.garmentMeshes[garmentId] = mesh;
         state.scene.add(mesh);
-        console.log('[result_character] Garment loaded:', garmentId);
+        Protokoll.debug('result_character', 'Garment loaded:', garmentId);
     } catch (e) {
         console.error('Failed to load garment:', e);
     }

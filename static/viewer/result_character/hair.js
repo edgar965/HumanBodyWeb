@@ -8,6 +8,7 @@ import {
     sharedState,
     findHeadBoneIndex, skinifyHairGroup, applyHairColor,
 } from '../character_core.js?v=1';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 const ss = sharedState;
 const gltfLoader = new GLTFLoader();
@@ -30,7 +31,7 @@ export function loadHair(url) {
             applyHairColor(state.hairMesh, firstName, ss.hairColorData);
         }
         state.scene.add(state.hairMesh);
-        console.log('[result_character] Hair loaded:', url);
+        Protokoll.debug('result_character', 'Hair loaded:', url);
     }, undefined, (err) => {
         console.error('[result_character] Failed to load hair:', err);
     });

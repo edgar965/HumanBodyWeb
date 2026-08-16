@@ -5,6 +5,8 @@
  */
 
 import { state } from './state.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 
 // Persist last open category + selected garment
@@ -76,11 +78,8 @@ async function _handleMHCtx(action) {
         const newName = prompt('Neuer Name:', g.name || g.id);
         if (newName && newName !== g.name) {
             try {
-                await fetch('/api/character/garment/manage/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'rename', id: g.id, new_name: newName }),
-                });
+                await Serverabruf.senden('/api/character/garment/manage/',
+                    { action: 'rename', id: g.id, new_name: newName });
                 g.name = newName;
                 _renderMHList();
             } catch(e) { console.error('Rename failed:', e); }
@@ -90,11 +89,8 @@ async function _handleMHCtx(action) {
         const target = prompt('Verschieben nach Kategorie:\n' + cats.join(', '), g._category);
         if (target && target !== g._category) {
             try {
-                await fetch('/api/character/garment/manage/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'move', id: g.id, target_category: target }),
-                });
+                await Serverabruf.senden('/api/character/garment/manage/',
+                    { action: 'move', id: g.id, target_category: target });
                 g._category = target;
                 _mhOpenCat = target;
                 _renderMHList();
@@ -104,15 +100,11 @@ async function _handleMHCtx(action) {
         const newName = prompt('Kopie-Name:', (g.name || g.id) + '_copy');
         if (newName) {
             try {
-                await fetch('/api/character/garment/manage/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'copy', id: g.id, new_name: newName }),
-                });
+                await Serverabruf.senden('/api/character/garment/manage/',
+                    { action: 'copy', id: g.id, new_name: newName });
                 // Reload catalog
                 state._garmentCatalog.length = 0;
-                const resp = await fetch('/api/character/garment/library/');
-                const data = await resp.json();
+                const data = await Serverabruf.json('/api/character/garment/library/');
                 if (data.garments) {
                     for (const cat of Object.keys(data.garments)) {
                         for (const gg of data.garments[cat]) {
@@ -127,11 +119,8 @@ async function _handleMHCtx(action) {
     } else if (action === 'delete') {
         if (!confirm(`"${g.name || g.id}" wirklich löschen?`)) return;
         try {
-            await fetch('/api/character/garment/manage/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'delete', id: g.id }),
-            });
+            await Serverabruf.senden('/api/character/garment/manage/',
+                    { action: 'delete', id: g.id });
             const idx = state._garmentCatalog.indexOf(g);
             if (idx >= 0) state._garmentCatalog.splice(idx, 1);
             if (state._selectedMHId === g.id) state._selectedMHId = '';
@@ -224,7 +213,7 @@ function _renderMHList() {
     // Scroll to selected item
     if (state._selectedMHId) {
         const sel = list.querySelector(`[data-garment-id="${state._selectedMHId}"]`);
-        if (sel) setTimeout(() => sel.scrollIntoView({ block: 'nearest' }), 50);
+        if (sel) setTimeout(() => sel.scrollIntoView({ block: 'nearest' }), Zeiten.ROLLEN_MS);
     }
 }
 

@@ -143,7 +143,7 @@ export class KeyframeUI {
         this.applyKeyframesToSequence();
         this.renderKeyframeList();
 
-        console.log(`✓ Keyframe added for ${objectName} at ${this.currentTime.toFixed(2)}s`, values);
+        console.debug(`✓ Keyframe added for ${objectName} at ${this.currentTime.toFixed(2)}s`, values);
     }
 
     applyKeyframesToSequence() {
@@ -286,7 +286,7 @@ export class KeyframeUI {
         a.href = url;
         a.download = 'theatre_keyframes.json';
         a.click();
-        console.log('✓ Keyframes exported');
+        console.debug('✓ Keyframes exported');
     }
 
     importKeyframes() {
@@ -305,7 +305,7 @@ export class KeyframeUI {
                     document.getElementById('kf-timeline').max = this.duration;
                     this.applyKeyframesToSequence();
                     this.renderKeyframeList();
-                    console.log('✓ Keyframes imported:', this.keyframes.length);
+                    console.debug('✓ Keyframes imported:', this.keyframes.length);
                 } catch (err) {
                     alert('Import failed: ' + err.message);
                 }

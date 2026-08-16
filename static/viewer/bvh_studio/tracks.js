@@ -14,6 +14,8 @@ import {
 import { createLightHelper, addLightKeyframePair, addLightKeyframe } from './spur_lichter.js';
 import { addClipToTrack, loadClipAnimation, buildClipFromData, duplicateSelectedClip, deleteSelectedClip, trimSelectedClip, splitClipAtPlayhead } from './spur_clips.js';
 import { loadTrackCharacter } from './spur_charakter.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 export function addTrack(name, _skipModelTrack) {
@@ -136,7 +138,7 @@ export function addCameraKeyframe(trackIdx, frame) {
     fn.updateDuration();
     fn.renderTimeline();
     fn.updateProperties();
-    console.log(`[BVH Studio] Kameraposition gespeichert bei Frame ${targetFrame}`);
+    Protokoll.info('BVH Studio', `Kameraposition gespeichert bei Frame ${targetFrame}`);
 }
 
 
@@ -171,11 +173,11 @@ export async function loadAudioFile(trackIdx) {
             try {
                 const formData = new FormData();
                 formData.append('audio', file);
-                const uploadResp = await fetch('/api/studio/audio-upload/', { method: 'POST', body: formData });
-                const uploadData = await uploadResp.json();
+                const uploadData = await Serverabruf.formular(
+                    '/api/studio/audio-upload/', formData);
                 if (uploadData.ok) {
                     clip.data.audioUrl = uploadData.url;
-                    console.log(`[BVH Studio] Audio uploaded: ${uploadData.url}`);
+                    Protokoll.debug('BVH Studio', `Audio uploaded: ${uploadData.url}`);
                 } else {
                     console.warn('[BVH Studio] Audio upload failed:', uploadData.error);
                 }
@@ -186,7 +188,7 @@ export async function loadAudioFile(trackIdx) {
             fn.updateDuration();
             fn.renderTimeline();
             fn.updateProperties();
-            console.log(`[BVH Studio] Audio loaded: ${file.name} (${audioBuffer.duration.toFixed(1)}s)`);
+            Protokoll.debug('BVH Studio', `Audio loaded: ${file.name} (${audioBuffer.duration.toFixed(1)}s)`);
         } catch (e) {
             console.error('[BVH Studio] Audio decode failed:', e);
             alert('Audio laden fehlgeschlagen: ' + e.message);

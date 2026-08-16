@@ -1,8 +1,11 @@
 import { state, API } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { enableTextureButtons, captureAndSaveScreenshot } from './job_management.js';
-import { showJobJson } from './auftragsergebnis.js';
+import { showJobJson } from './auftragsjson.js';
 import { Fotoergebnis } from './fotoergebnis.js';
+import { Metaregler } from '../gemeinsam/metaregler.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
  * Fotoanalyse — ein Foto zum Server geben und das Ergebnis in die Seite bringen.
@@ -89,9 +92,10 @@ export class Fotoanalyse {
         const form = new FormData();
         form.append('photo', datei);
         form.append('backend', state.selectedBackend);
-        const antwort = await fetch(`${API}/analyze-photo/`,
-                                    { method: 'POST', body: form });
-        return antwort.json();
+        // `Serverabruf` prueft den Statuscode: Bei einem Serverfehler kaeme
+        // sonst die HTML-Fehlerseite in `json()` und die Meldung waere
+        // "Unexpected token '<'".
+        return Serverabruf.formular(`${API}/analyze-photo/`, form);
     }
 
     // -------------------------------------------------------- Schritt 1: Zustand
@@ -129,9 +133,8 @@ export class Fotoanalyse {
         for (const [name, wert] of Object.entries(werte)) {
             const bereich = bekannt[name] || Fotoanalyse.META_BEREICHE[name];
             if (!bereich) continue;
-            const mitte = (bereich.min + bereich.max) / 2;
-            const halbe = (bereich.max - bereich.min) / 2;
-            state.metaValues[name] = halbe ? (wert - mitte) / halbe : 0;
+            state.metaValues[name] = Metaregler.innen(wert, bereich.min,
+                                                      bereich.max);
         }
     }
 
@@ -186,7 +189,7 @@ export class Fotoanalyse {
     // -------------------------------------------------------- Schritt 3: Modelle
 
     async modelleLaden(daten) {
-        console.log('[Foto->3D] Modelle laden:', {
+        Protokoll.debug('Foto->3D', 'Modelle laden:', {
             bodyType: state.currentBodyType, smplxGender: state.smplxGender,
             betas: state.smplxBetas.slice(0, 5), meta: { ...state.metaValues },
             skinColor: state.detectedSkinColor,
@@ -203,9 +206,8 @@ export class Fotoanalyse {
 
     async _morphsHolen() {
         try {
-            const antwort = await fetch(`${API}/morphs/?body_type=`
+            state.morphsData = await Serverabruf.json(`${API}/morphs/?body_type=`
                 + encodeURIComponent(state.currentBodyType));
-            state.morphsData = await antwort.json();
             state.skinColors = state.morphsData.skin_colors || {};
             fn.buildMorphPanel(state.morphsData);
         } catch (fehler) {
@@ -216,13 +218,13 @@ export class Fotoanalyse {
     async _skelettHolen() {
         try {
             const typ = encodeURIComponent(state.currentBodyType);
-            const gewichte = await fetch(`${API}/skin-weights/?body_type=${typ}`);
-            state.skinWeightData = await gewichte.json();
-            const skelett = await fetch(`${API}/rigify-skeleton/?body_type=${typ}`);
-            state.rigifySkeletonData = await skelett.json();
+            state.skinWeightData = await Serverabruf.json(
+                `${API}/skin-weights/?body_type=${typ}`);
+            state.rigifySkeletonData = await Serverabruf.json(
+                `${API}/rigify-skeleton/?body_type=${typ}`);
             state.rigifySkeleton = null;
             fn.buildRigifySkeleton();
-            console.log('[Foto->3D] Gewichte und Skelett neu geladen für',
+            Protokoll.debug('Foto->3D', 'Gewichte und Skelett neu geladen für',
                         state.currentBodyType);
         } catch (fehler) {
             console.warn('Gewichte/Skelett nicht neu ladbar:', fehler);

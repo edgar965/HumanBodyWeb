@@ -6,11 +6,11 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _selectedInst } from './utils.js';
 import { convertInstToSkinned, _skinifyHairGroup } from './skeleton.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export async function loadHairUI() {
     try {
-        const resp = await fetch('/api/character/hairstyles/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/hairstyles/');
         state._hairStylesData = data.hairstyles || [];
         state.hairColorData = data.colors || {};
         _populatePropHairOptions();

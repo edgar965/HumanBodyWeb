@@ -111,110 +111,136 @@ export class Zeitleistenspuren {
         
     }
 
-    /** Alle Clips einer Spur. */
+    /**
+     * Alle Clips einer Spur zeichnen.
+     *
+     * Umbau 17.08.2026: Die Methode hatte 104 Zeilen und zeichnete zwei ganz
+     * verschiedene Dinge — Schluesselbild-Marker (Diamanten) und Clips
+     * (Rechtecke mit Beschriftung). Jetzt drei Methoden, die je EINE Form
+     * zeichnen; die Auswahl trifft `klips`.
+     */
     static klips(track, ti, y, pps) {
         for (let ci = 0; ci < track.clips.length; ci++) {
             const clip = track.clips[ci];
-            const cx = HEADER_WIDTH + (clip.startFrame / state.project.fps) * pps - state.timelineScrollX;
-            const isSelected = (ti === state.selectedTrackIdx && ci === state.selectedClipIdx);
-        
+            const x = HEADER_WIDTH
+                + (clip.startFrame / state.project.fps) * pps
+                - state.timelineScrollX;
+            const gewaehlt = (ti === state.selectedTrackIdx
+                              && ci === state.selectedClipIdx);
             if (clip.type === 'camera_kf' || clip.type === 'light_kf') {
-                // Keyframe marker: Diamant (einheitlich für Kamera + Licht)
-                // Pair-KFs versetzt: 'upper' oben, 'lower' unten; Standard zentriert
-                const pos = clip.data?.trackPosition;
-                const my = pos === 'upper' ? y + TRACK_HEIGHT * 0.28
-                         : pos === 'lower' ? y + TRACK_HEIGHT * 0.72
-                         : y + TRACK_HEIGHT / 2;
-                const sz = isSelected ? 8 : 6;
-                Zeitleistenflaeche.ctx.fillStyle = track.color;
-                Zeitleistenflaeche.ctx.globalAlpha = isSelected ? 1.0 : 0.8;
-                // Diamant
-                Zeitleistenflaeche.ctx.beginPath();
-                Zeitleistenflaeche.ctx.moveTo(cx, my - sz);
-                Zeitleistenflaeche.ctx.lineTo(cx + sz, my);
-                Zeitleistenflaeche.ctx.lineTo(cx, my + sz);
-                Zeitleistenflaeche.ctx.lineTo(cx - sz, my);
-                Zeitleistenflaeche.ctx.closePath();
-                Zeitleistenflaeche.ctx.fill();
-                // Wenn Fade aus → hollow (nur Umriss, weiß) für "Sprung"-Anzeige
-                if (clip.data?.fade === false) {
-                    Zeitleistenflaeche.ctx.fillStyle = '#1a1a2e';
-                    Zeitleistenflaeche.ctx.beginPath();
-                    Zeitleistenflaeche.ctx.moveTo(cx, my - sz + 2);
-                    Zeitleistenflaeche.ctx.lineTo(cx + sz - 2, my);
-                    Zeitleistenflaeche.ctx.lineTo(cx, my + sz - 2);
-                    Zeitleistenflaeche.ctx.lineTo(cx - sz + 2, my);
-                    Zeitleistenflaeche.ctx.closePath();
-                    Zeitleistenflaeche.ctx.fill();
-                }
-                if (isSelected) {
-                    Zeitleistenflaeche.ctx.strokeStyle = '#fff';
-                    Zeitleistenflaeche.ctx.lineWidth = 2;
-                    Zeitleistenflaeche.ctx.beginPath();
-                    Zeitleistenflaeche.ctx.moveTo(cx, my - sz);
-                    Zeitleistenflaeche.ctx.lineTo(cx + sz, my);
-                    Zeitleistenflaeche.ctx.lineTo(cx, my + sz);
-                    Zeitleistenflaeche.ctx.lineTo(cx - sz, my);
-                    Zeitleistenflaeche.ctx.closePath();
-                    Zeitleistenflaeche.ctx.stroke();
-                }
-                Zeitleistenflaeche.ctx.globalAlpha = 1.0;
-                // Label rechts neben dem Marker (Name z.B. "Kameraposition 1")
-                if (clip.name) {
-                    Zeitleistenflaeche.ctx.fillStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.75)';
-                    Zeitleistenflaeche.ctx.font = '10px sans-serif';
-                    Zeitleistenflaeche.ctx.textBaseline = 'middle';
-                    Zeitleistenflaeche.ctx.fillText(clip.name, cx + sz + 4, my);
-                }
+                Zeitleistenspuren._marker(clip, track, x, y, gewaehlt);
             } else {
-                // Rectangle clips (BVH, Audio)
-                const cw = Math.max(clip.duration * pps, 4);
-                const cy = y + 4;
-                const ch = TRACK_HEIGHT - 8;
-        
-                Zeitleistenflaeche.ctx.fillStyle = track.color;
-                Zeitleistenflaeche.ctx.globalAlpha = isSelected ? 1.0 : 0.7;
-                Zeitleistenflaeche.ctx.fillRect(cx, cy, cw, ch);
-                Zeitleistenflaeche.ctx.globalAlpha = 1.0;
-        
-                // Audio waveform indicator
-                if (clip.type === 'audio') {
-                    Zeitleistenflaeche.ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-                    Zeitleistenflaeche.ctx.lineWidth = 1;
-                    for (let wx = cx + 4; wx < cx + cw - 2; wx += 6) {
-                        const wh = 3 + Math.random() * (ch - 8);
-                        Zeitleistenflaeche.ctx.beginPath();
-                        Zeitleistenflaeche.ctx.moveTo(wx, cy + ch / 2 - wh / 2);
-                        Zeitleistenflaeche.ctx.lineTo(wx, cy + ch / 2 + wh / 2);
-                        Zeitleistenflaeche.ctx.stroke();
-                    }
-                }
-        
-                // Clip border
-                Zeitleistenflaeche.ctx.strokeStyle = '#fff';
-                Zeitleistenflaeche.ctx.lineWidth = isSelected ? 2 : 0.5;
-                Zeitleistenflaeche.ctx.strokeRect(cx, cy, cw, ch);
-        
-                // Clip label
-                Zeitleistenflaeche.ctx.fillStyle = '#fff';
-                Zeitleistenflaeche.ctx.font = '10px sans-serif';
-                if (clip.type === 'model' && clip.data?.preset) {
-                    // Model clip: show person icon + preset name
-                    const presetName = clip.data.preset;
-                    const maxLen = Math.max(3, Math.floor((cw - 24) / 6));
-                    const label = presetName.length > maxLen ? presetName.substring(0, maxLen) + '…' : presetName;
-                    // Person icon (Unicode)
-                    Zeitleistenflaeche.ctx.font = '12px sans-serif';
-                    Zeitleistenflaeche.ctx.fillText('👤', cx + 3, cy + ch / 2 + 4);
-                    // Preset name
-                    Zeitleistenflaeche.ctx.font = 'bold 10px sans-serif';
-                    Zeitleistenflaeche.ctx.fillText(label, cx + 18, cy + ch / 2 + 3, cw - 22);
-                } else {
-                    Zeitleistenflaeche.ctx.fillText(clip.name, cx + 4, cy + ch / 2 + 3, cw - 8);
-                }
+                Zeitleistenspuren._rechteck(clip, track, x, y, pps, gewaehlt);
             }
         }
-        
+    }
+
+    /** Anteil der Spurhoehe, auf dem ein versetzter Marker sitzt. */
+    static MARKER_OBEN = 0.28;
+    static MARKER_UNTEN = 0.72;
+    static MARKER_GROSS = 8;
+    static MARKER_KLEIN = 6;
+
+    /**
+     * Schluesselbild als Diamant. Paare sitzen versetzt (`trackPosition`),
+     * damit zwei Marker auf demselben Bild sichtbar bleiben.
+     */
+    static _marker(clip, track, x, y, gewaehlt) {
+        const ctx = Zeitleistenflaeche.ctx;
+        const lage = clip.data?.trackPosition;
+        const my = lage === 'upper' ? y + TRACK_HEIGHT * Zeitleistenspuren.MARKER_OBEN
+                 : lage === 'lower' ? y + TRACK_HEIGHT * Zeitleistenspuren.MARKER_UNTEN
+                 : y + TRACK_HEIGHT / 2;
+        const gr = gewaehlt ? Zeitleistenspuren.MARKER_GROSS
+                            : Zeitleistenspuren.MARKER_KLEIN;
+        ctx.fillStyle = track.color;
+        ctx.globalAlpha = gewaehlt ? 1.0 : 0.8;
+        Zeitleistenspuren._diamant(x, my, gr);
+        ctx.fill();
+        // Ohne Ueberblendung: innen aushoehlen — das zeigt den Sprung an.
+        if (clip.data?.fade === false) {
+            ctx.fillStyle = '#1a1a2e';
+            Zeitleistenspuren._diamant(x, my, gr - 2);
+            ctx.fill();
+        }
+        if (gewaehlt) {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            Zeitleistenspuren._diamant(x, my, gr);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1.0;
+        if (clip.name) {
+            ctx.fillStyle = gewaehlt ? '#fff' : 'rgba(255,255,255,0.75)';
+            ctx.font = '10px sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(clip.name, x + gr + 4, my);
+        }
+    }
+
+    static _diamant(x, y, groesse) {
+        const ctx = Zeitleistenflaeche.ctx;
+        ctx.beginPath();
+        ctx.moveTo(x, y - groesse);
+        ctx.lineTo(x + groesse, y);
+        ctx.lineTo(x, y + groesse);
+        ctx.lineTo(x - groesse, y);
+        ctx.closePath();
+    }
+
+    /** BVH-, Ton- und Modellclips als Rechteck. */
+    static _rechteck(clip, track, x, y, pps, gewaehlt) {
+        const ctx = Zeitleistenflaeche.ctx;
+        const breite = Math.max(clip.duration * pps, 4);
+        const oben = y + 4;
+        const hoehe = TRACK_HEIGHT - 8;
+
+        ctx.fillStyle = track.color;
+        ctx.globalAlpha = gewaehlt ? 1.0 : 0.7;
+        ctx.fillRect(x, oben, breite, hoehe);
+        ctx.globalAlpha = 1.0;
+        if (clip.type === 'audio') {
+            Zeitleistenspuren._tonzacken(x, oben, breite, hoehe);
+        }
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = gewaehlt ? 2 : 0.5;
+        ctx.strokeRect(x, oben, breite, hoehe);
+        Zeitleistenspuren._beschriftung(clip, x, oben, breite, hoehe);
+    }
+
+    /**
+     * Andeutung einer Tonspur. Bewusst zufaellig: Die echten Pegel liegen im
+     * Browser nicht vor, und eine gerade Linie saehe nach „kein Ton" aus.
+     */
+    static _tonzacken(x, oben, breite, hoehe) {
+        const ctx = Zeitleistenflaeche.ctx;
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.lineWidth = 1;
+        for (let zx = x + 4; zx < x + breite - 2; zx += 6) {
+            const zh = 3 + Math.random() * (hoehe - 8);
+            ctx.beginPath();
+            ctx.moveTo(zx, oben + hoehe / 2 - zh / 2);
+            ctx.lineTo(zx, oben + hoehe / 2 + zh / 2);
+            ctx.stroke();
+        }
+    }
+
+    static _beschriftung(clip, x, oben, breite, hoehe) {
+        const ctx = Zeitleistenflaeche.ctx;
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px sans-serif';
+        if (clip.type !== 'model' || !clip.data?.preset) {
+            ctx.fillText(clip.name, x + 4, oben + hoehe / 2 + 3, breite - 8);
+            return;
+        }
+        // Modellclip: Symbol plus Name der Vorgabe, gekuerzt auf die Breite.
+        const name = clip.data.preset;
+        const passt = Math.max(3, Math.floor((breite - 24) / 6));
+        ctx.font = '12px sans-serif';
+        ctx.fillText('\u{1F464}', x + 3, oben + hoehe / 2 + 4);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText(name.length > passt ? name.substring(0, passt) + '…' : name,
+                     x + 18, oben + hoehe / 2 + 3, breite - 22);
     }
 
     /** Ueberblendzonen der Modellspuren — nach den Clips, damit sie obenauf liegen. */

@@ -11,10 +11,11 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Clip } from './models.js';
 import { Studioanzeige } from './studioanzeige.js';
 import { Projektnachladen } from './projekt_nachladen.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export class Projektwiederherstellung {
     static async uebernehmen(data) {
-        console.log(`[Restore] Starting. Input tracks: ${data.tracks?.length}, `
+        Protokoll.debug('Restore', `Starting. Input tracks: ${data.tracks?.length}, `
                     + `clips: ${data.tracks?.map(t => t.clips?.length)}`);
         // Rueckgaengig-Aufzeichnung fuer den GESAMTEN Vorgang aussetzen.
         state._undoSuppressed = true;
@@ -55,7 +56,7 @@ export class Projektwiederherstellung {
         fn.renderTimeline();
         fn.updateTrackHeaders();
         fn.applyPlayhead();  // Modellspuren aktivieren + Netze zeigen
-        console.log(`[BVH Studio] Project restored: ${state.project.name} `
+        Protokoll.debug('BVH Studio', `Project restored: ${state.project.name} `
                     + `(${state.project.tracks.length} tracks)`);
         Studioanzeige.aktualisieren();
     }
@@ -175,7 +176,7 @@ export class Projektwiederherstellung {
             if (t.type !== 'model') continue;
             const verbunden = state.project.tracks[t._linkedAnimIdx];
             if (verbunden && verbunden.type === 'bvh') continue;
-            console.log(`[Restore] Model-Track "${t.name}" neu verlinkt `
+            Protokoll.debug('Restore', `Model-Track "${t.name}" neu verlinkt `
                         + `(war ${t._linkedAnimIdx}) → ${erste}`);
             t._linkedAnimIdx = erste;
         }

@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}2D Pipeline - HumanBody{% endblock %}
 
 {% block content %}
-<h1>2D Pipeline <small style="color:#888;">(2D Detector + MocapNET v2.1)</small></h1>
+<h1>2D Pipeline <small class="hb-gedaempft">(2D Detector + MocapNET v2.1)</small></h1>
 
 <div class="upload-area" id="dropZone">
     <form method="post" enctype="multipart/form-data" id="uploadForm">
@@ -63,7 +64,7 @@
         </div>
 
         <div class="form-group" style="margin-top:10px;">
-            <small style="color:#888;">Alle Detektoren geben Body25 (OpenPose-Format) aus &rarr; MocapNET v2.1 (CMU Skeleton, 164 Joints) hebt automatisch auf 3D.</small>
+            <small class="hb-gedaempft">Alle Detektoren geben Body25 (OpenPose-Format) aus &rarr; MocapNET v2.1 (CMU Skeleton, 164 Joints) hebt automatisch auf 3D.</small>
         </div>
 
     </form>
@@ -72,20 +73,20 @@
 {% if v21_jobs %}
 <div class="job-list-section">
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-        <h3 style="margin:0;">Uploaded Videos</h3>
-        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" style="display:none;" onclick="bulkDelete()">
+        <h3 class="hb-ohne-abstand">Uploaded Videos</h3>
+        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" class="hb-versteckt">
             <i class="fas fa-trash"></i> Delete Selected
         </button>
     </div>
     <table class="processed-table" id="jobTable">
         <thead>
             <tr>
-                <th style="width:30px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
-                <th class="sortable" onclick="sortTable('name')">Name <i class="fas fa-sort"></i></th>
+                <th style="width:30px;"><input type="checkbox" id="selectAll"></th>
+                <th class="sortable" data-sort="name">Name <i class="fas fa-sort"></i></th>
                 <th>Pipeline</th>
                 <th>Status</th>
-                <th class="sortable" onclick="sortTable('size')">Size <i class="fas fa-sort"></i></th>
-                <th class="sortable" onclick="sortTable('date')">Created <i class="fas fa-sort"></i></th>
+                <th class="sortable" data-sort="size">Size <i class="fas fa-sort"></i></th>
+                <th class="sortable" data-sort="date">Created <i class="fas fa-sort"></i></th>
                 <th>Process</th>
                 <th>Actions</th>
             </tr>
@@ -93,16 +94,16 @@
         <tbody id="jobTableBody">
             {% for job in v21_jobs %}
             <tr id="row-{{ job.id }}" data-name="{{ job.name|lower }}" data-size="{{ job.video_size }}" data-date="{{ job.created_at|date:'Y-m-d H:i:s' }}">
-                <td><input type="checkbox" class="job-check" value="{{ job.id }}" onchange="updateBulkBtn()"></td>
+                <td><input type="checkbox" class="job-check" value="{{ job.id }}"></td>
                 <td>{{ job.name }}</td>
                 <td><span class="badge badge-{{ job.pipeline }}">{{ job.get_pipeline_display }}</span></td>
                 <td id="status-{{ job.id }}">
                     {% if job.status == 'complete' %}
-                        <span style="color:#2ecc71;"><i class="fas fa-check-circle"></i> Complete</span>
+                        <span class="hb-gut"><i class="fas fa-check-circle"></i> Complete</span>
                     {% elif job.status == 'failed' %}
-                        <span style="color:#e74c3c;"><i class="fas fa-times-circle"></i> Failed</span>
+                        <span class="hb-schlecht"><i class="fas fa-times-circle"></i> Failed</span>
                     {% elif job.status == 'pending' %}
-                        <span style="color:#f39c12;"><i class="fas fa-clock"></i> Pending</span>
+                        <span class="hb-laeuft"><i class="fas fa-clock"></i> Pending</span>
                     {% else %}
                         <div class="inline-progress">
                             <span class="status-text"><i class="fas fa-spinner fa-spin"></i> {{ job.get_status_display }}</span>
@@ -116,7 +117,7 @@
                 <td>{{ job.video_size_display }}</td>
                 <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
                 <td>
-                    <div style="display:flex; gap:4px; align-items:center;">
+                    <div class="hb-zeilenaktionen">
                         <select class="pipeline-select" id="pl-{{ job.id }}" data-current="{{ job.pipeline }}">
                             <option value="mediapipe" {% if job.pipeline == 'mediapipe' %}selected{% endif %}>MediaPipe</option>
                             <option value="openpose" {% if job.pipeline == 'openpose' %}selected{% endif %}>OpenPose</option>
@@ -124,12 +125,12 @@
                             <option value="vitpose" {% if job.pipeline == 'vitpose' %}selected{% endif %}>ViTPose</option>
                             <option value="yolo11" {% if job.pipeline == 'yolo11' %}selected{% endif %}>YOLO11</option>
                         </select>
-                        <button class="btn btn-sm btn-primary" onclick="startProcessing('{{ job.id }}', this)">
+                        <button class="btn btn-sm btn-primary" data-aktion="start" data-auftrag="{{ job.id }}">
                             <i class="fas fa-play"></i>
                         </button>
                     </div>
                 </td>
-                <td style="display:flex; gap:5px;">
+                <td class="hb-zeilenaktionen">
                     {% if job.status == 'complete' %}
                     <a class="btn btn-sm btn-primary" href="{% url 'job_result' job.id %}">
                         <i class="fas fa-eye"></i> View
@@ -139,7 +140,7 @@
                         <i class="fas fa-info-circle"></i> Status
                     </a>
                     {% endif %}
-                    <button class="btn btn-sm btn-danger" onclick="deleteJob('{{ job.id }}', this)">
+                    <button class="btn btn-sm btn-danger" data-aktion="delete" data-auftrag="{{ job.id }}">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -194,7 +195,7 @@
                 <td>~200&ndash;350 FPS</td>
                 <td>1&ndash;2 GB</td>
                 <td>~2 GB</td>
-                <td><span style="color:#2ecc71;">&starf; Empfohlen</span></td>
+                <td><span class="hb-gut">&starf; Empfohlen</span></td>
             </tr>
             <tr>
                 <td><strong>ViTPose-H</strong></td>
@@ -209,7 +210,7 @@
     <p style="margin-top:8px; color:#888;"><small>AP = COCO Average Precision (h&ouml;her = besser). Geschwindigkeit gesch&auml;tzt f&uuml;r RTX 3060.<br>
     Alle Detektoren konvertieren ihre Keypoints ins Body25 (OpenPose) Format f&uuml;r MocapNET v2.1.</small></p>
 
-    <h3 style="margin-top:1.5rem;">Processing Steps</h3>
+    <h3 class="hb-abstand-oben">Processing Steps</h3>
     <ol>
         <li>Video &rarr; 2D Joint Detection (gew&auml;hlter Detektor)</li>
         <li>2D Keypoints &rarr; Body25 CSV (OpenPose-Format, 25 Joints)</li>
@@ -261,369 +262,32 @@
 .detail-panel .detail-thumb img {
     max-width: 200px; border-radius: 6px; border: 1px solid var(--border, #333);
 }
+
+/* Umbau 16.08.2026: ersetzt Inline-Stile aus dem fruehen JavaScript. */
+.hb-versteckt { display: none; }
+.hb-breite-0 { width: 0%; }
+.hb-gut { color: #2ecc71; }
+.hb-schlecht { color: #e74c3c; }
+.hb-laeuft { color: #f39c12; }
+.hb-zeilenaktionen { display: flex; gap: 5px; align-items: center; }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-abstand-oben.hb-abstand-oben.hb-abstand-oben { margin-top:1.5rem; }   /* 1x */
+.hb-gedaempft.hb-gedaempft.hb-gedaempft { color:#888; }   /* 2x */
+.hb-ohne-abstand.hb-ohne-abstand.hb-ohne-abstand { margin:0; }   /* 1x */
 </style>
-<script>
-const dropTarget = document.getElementById('dropTarget');
-const videoInput = document.getElementById('videoInput');
+{% comment %}Umbau 16.08.2026: Hier standen 362 Zeilen JavaScript inline —
+mit 53 `var` und, bis auf `pipeline_params`, buchstabengleich zu upload_v4.html
+(deleteJob, bulkDelete, sortTable, getOrCreateDetailRow, updateJobUI,
+startJobPolling, addNewJobRow). Beide Seiten nutzen jetzt dieselben Klassen
+unter static/js/auftraege/.{% endcomment %}
+<script type="module">
+import { Videoablage } from "{% static 'js/auftraege/videoablage.js' %}?t={% now 'U' %}";
+import { Auftragsliste } from "{% static 'js/auftraege/auftragsliste.js' %}?t={% now 'U' %}";
 
-dropTarget.addEventListener('click', () => videoInput.click());
-
-// Double-submit guard
-let _submitting = false;
-document.getElementById('uploadForm').addEventListener('submit', function(e) {
-    if (_submitting) { e.preventDefault(); return; }
-    _submitting = true;
-});
-
-dropTarget.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropTarget.classList.add('drag-over');
-});
-
-dropTarget.addEventListener('dragleave', () => {
-    dropTarget.classList.remove('drag-over');
-});
-
-dropTarget.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropTarget.classList.remove('drag-over');
-    if (e.dataTransfer.files.length) {
-        videoInput.files = e.dataTransfer.files;
-        dropTarget.querySelector('p').textContent = e.dataTransfer.files[0].name;
-        document.getElementById('uploadForm').submit();
-    }
-});
-
-videoInput.addEventListener('change', () => {
-    if (videoInput.files.length) {
-        dropTarget.querySelector('p').textContent = videoInput.files[0].name;
-        document.getElementById('uploadForm').submit();
-    }
-});
-
-function getCsrf() {
-    return document.querySelector('[name=csrfmiddlewaretoken]').value;
-}
-
-function deleteJob(jobId, btn) {
-    if (!confirm('Delete this job?')) return;
-    fetch('/api/job/' + jobId + '/delete/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf()}
-    }).then(r => r.json()).then(data => {
-        if (data.ok) {
-            var detail = document.getElementById('detail-' + jobId);
-            if (detail) detail.remove();
-            var row = document.getElementById('row-' + jobId);
-            if (row) row.remove();
-            updateBulkBtn();
-            var tbody = document.getElementById('jobTableBody');
-            if (tbody && tbody.querySelectorAll('tr:not(.detail-row)').length === 0) {
-                var section = tbody.closest('.job-list-section');
-                if (section) section.style.display = 'none';
-            }
-        }
-    });
-}
-
-function toggleSelectAll(el) {
-    document.querySelectorAll('.job-check').forEach(c => c.checked = el.checked);
-    updateBulkBtn();
-}
-
-function updateBulkBtn() {
-    var checked = document.querySelectorAll('.job-check:checked').length;
-    var btn = document.getElementById('bulkDeleteBtn');
-    if (btn) btn.style.display = checked > 0 ? '' : 'none';
-}
-
-function bulkDelete() {
-    var ids = Array.from(document.querySelectorAll('.job-check:checked')).map(c => c.value);
-    if (!ids.length) return;
-    if (!confirm('Delete ' + ids.length + ' job(s)?')) return;
-    var btn = document.getElementById('bulkDeleteBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-    fetch('/api/jobs/bulk-delete/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
-        body: JSON.stringify({ids: ids})
-    }).then(r => r.json()).then(data => {
-        if (data.ok) {
-            data.deleted.forEach(id => {
-                var detail = document.getElementById('detail-' + id);
-                if (detail) detail.remove();
-                var row = document.getElementById('row-' + id);
-                if (row) row.remove();
-            });
-            document.getElementById('selectAll').checked = false;
-            updateBulkBtn();
-            var tbody = document.getElementById('jobTableBody');
-            if (tbody && tbody.querySelectorAll('tr:not(.detail-row)').length === 0) {
-                var section = tbody.closest('.job-list-section');
-                if (section) section.style.display = 'none';
-            }
-        }
-    }).finally(function() {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-trash"></i> Delete Selected';
-    });
-}
-
-// --- Phase labels ---
-var PHASE_LABELS = {
-    'pending': 'Pending', 'detecting_2d': '2D Pose Detection',
-    'openpose': '2D Detection (GPU)', 'openpose_csv': 'CSV Convert',
-    'mediapipe': '2D Detection (CPU)', 'lifting_3d': '3D Pose Estimation',
-    'mocapnet': '3D Pose Estimation', 'v4_processing': 'MocapNET v4',
-    'processing': 'Processing', 'complete': 'Complete', 'failed': 'Failed'
-};
-
-// --- Detail row management ---
-function getOrCreateDetailRow(jobId) {
-    var existing = document.getElementById('detail-' + jobId);
-    if (existing) return existing;
-    var mainRow = document.getElementById('row-' + jobId);
-    if (!mainRow) return null;
-    var colSpan = mainRow.children.length;
-    var tr = document.createElement('tr');
-    tr.id = 'detail-' + jobId;
-    tr.className = 'detail-row';
-    tr.innerHTML = '<td colspan="' + colSpan + '">' +
-        '<div class="detail-panel">' +
-            '<div class="detail-header">' +
-                '<span class="badge" id="detail-badge-' + jobId + '">Starting</span>' +
-                '<span class="detail-phase" id="detail-phase-' + jobId + '"></span>' +
-            '</div>' +
-            '<div class="progress-bar"><div class="progress-fill" id="detail-fill-' + jobId + '" style="width:0%"><span id="detail-pct-' + jobId + '">0%</span></div></div>' +
-            '<div class="detail-progress-text" id="detail-text-' + jobId + '">Starting...</div>' +
-            '<div class="detail-thumb" id="detail-thumb-' + jobId + '">' +
-                '<img src="/api/thumbnail/' + jobId + '/" alt="Video" onerror="this.style.display=\'none\'">' +
-            '</div>' +
-            '<div class="detail-error" id="detail-error-' + jobId + '" style="display:none;"></div>' +
-            '<div class="detail-actions" id="detail-actions-' + jobId + '">' +
-                '<button class="btn btn-sm btn-danger" onclick="stopProcessing(\'' + jobId + '\', this)"><i class="fas fa-stop"></i> Stop</button>' +
-            '</div>' +
-        '</div></td>';
-    mainRow.after(tr);
-    return tr;
-}
-
-function stopProcessing(jobId, btn) {
-    if (!confirm('Stop processing?')) return;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Stopping...';
-    fetch('/api/job/' + jobId + '/stop/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf()}
-    }).then(r => r.json()).then(function() {
-        btn.innerHTML = '<i class="fas fa-stop"></i> Stopped';
-    }).catch(function() {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-stop"></i> Stop';
-    });
-}
-
-// --- Inline processing start + detail row + polling ---
-function startProcessing(jobId, btn) {
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    var sel = document.getElementById('pl-' + jobId);
-    var body = '';
-    if (sel) body = 'pipeline=' + encodeURIComponent(sel.value);
-    fetch('/api/job/' + jobId + '/start/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: body
-    }).then(r => r.json()).then(data => {
-        if (data.ok) {
-            var activeId = jobId;
-            if (data.new_job_id) {
-                // New job created with different pipeline — add row to table
-                activeId = data.new_job_id;
-                addNewJobRow(data.new_job_id, data.new_pipeline, data.new_pipeline_display, jobId);
-                // Reset original dropdown back to its actual pipeline
-                if (sel) sel.value = sel.dataset.current;
-                // Re-enable original button
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-play"></i>';
-            }
-            getOrCreateDetailRow(activeId);
-            updateJobUI(activeId, {status: data.status, progress: 0, progress_detail: 'Starting...'});
-            startJobPolling(activeId);
-        } else {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-play"></i>';
-            alert('Error: ' + (data.error || 'Unknown'));
-        }
-    }).catch(() => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-play"></i>';
-    });
-}
-
-function addNewJobRow(newJobId, pipeline, pipelineDisplay, sourceJobId) {
-    var srcRow = document.getElementById('row-' + sourceJobId);
-    if (!srcRow) return;
-    var name = srcRow.querySelector('td:nth-child(2)').textContent;
-    var sizeText = srcRow.querySelector('td:nth-child(5)').textContent;
-    var now = new Date();
-    var dateStr = now.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    var tr = document.createElement('tr');
-    tr.id = 'row-' + newJobId;
-    tr.innerHTML =
-        '<td></td>' +
-        '<td>' + name + '</td>' +
-        '<td><span class="badge badge-' + pipeline + '">' + pipelineDisplay + '</span></td>' +
-        '<td id="status-' + newJobId + '"><span style="color:#f39c12;"><i class="fas fa-spinner fa-spin"></i> Starting...</span></td>' +
-        '<td>' + sizeText + '</td>' +
-        '<td>' + dateStr + '</td>' +
-        '<td><div style="display:flex;gap:4px;align-items:center;">' +
-            '<select class="pipeline-select" id="pl-' + newJobId + '" data-current="' + pipeline + '">' +
-            '<option value="mediapipe"' + (pipeline==='mediapipe'?' selected':'') + '>MediaPipe</option>' +
-            '<option value="openpose"' + (pipeline==='openpose'?' selected':'') + '>OpenPose</option>' +
-            '<option value="rtmpose"' + (pipeline==='rtmpose'?' selected':'') + '>RTMPose</option>' +
-            '<option value="vitpose"' + (pipeline==='vitpose'?' selected':'') + '>ViTPose</option>' +
-            '<option value="yolo11"' + (pipeline==='yolo11'?' selected':'') + '>YOLO11</option>' +
-            '</select>' +
-            '<button class="btn btn-sm btn-primary" onclick="startProcessing(\'' + newJobId + '\', this)">' +
-            '<i class="fas fa-play"></i></button></div></td>' +
-        '<td style="display:flex;gap:5px;">' +
-            '<button class="btn btn-sm btn-danger" onclick="deleteJob(\'' + newJobId + '\', this)"><i class="fas fa-trash"></i></button>' +
-        '</td>';
-    // Insert at top of table body
-    var tbody = document.getElementById('jobTableBody');
-    if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
-    else tbody.appendChild(tr);
-}
-
-function updateJobUI(jobId, data) {
-    // --- Update inline status cell ---
-    var cell = document.getElementById('status-' + jobId);
-    if (cell) {
-        if (data.status === 'complete') {
-            cell.innerHTML = '<span style="color:#2ecc71;"><i class="fas fa-check-circle"></i> Complete</span>';
-        } else if (data.status === 'failed') {
-            cell.innerHTML = '<span style="color:#e74c3c;"><i class="fas fa-times-circle"></i> Failed</span>';
-        } else {
-            var pct = data.progress || 0;
-            var detail = data.progress_detail || data.status || '';
-            cell.innerHTML =
-                '<div class="inline-progress">' +
-                '<span class="status-text"><i class="fas fa-spinner fa-spin"></i> ' + detail.substring(0, 30) + '</span>' +
-                '<div class="progress-bar-mini"><div class="progress-fill-mini" style="width:' + pct + '%"></div></div>' +
-                '<span class="progress-pct">' + pct + '%</span></div>';
-        }
-    }
-
-    // --- Update detail row ---
-    var detailRow = document.getElementById('detail-' + jobId);
-    if (!detailRow) return;
-
-    var badge = document.getElementById('detail-badge-' + jobId);
-    var phase = document.getElementById('detail-phase-' + jobId);
-    var fill = document.getElementById('detail-fill-' + jobId);
-    var pctEl = document.getElementById('detail-pct-' + jobId);
-    var textEl = document.getElementById('detail-text-' + jobId);
-    var errorEl = document.getElementById('detail-error-' + jobId);
-    var actionsEl = document.getElementById('detail-actions-' + jobId);
-
-    var p = data.progress || 0;
-    if (badge) {
-        badge.textContent = PHASE_LABELS[data.status] || data.status;
-        badge.className = 'badge badge-' + data.status;
-    }
-    if (phase) phase.textContent = PHASE_LABELS[data.status] || '';
-    if (fill) fill.style.width = p + '%';
-    if (pctEl) pctEl.textContent = p + '%';
-    if (textEl) textEl.textContent = data.progress_detail || '';
-
-    // Reset the process button (spinner → play) when job is done
-    if (data.status === 'complete' || data.status === 'failed') {
-        var mainRow = document.getElementById('row-' + jobId);
-        if (mainRow) {
-            var procBtn = mainRow.querySelector('button[onclick*="startProcessing"]');
-            if (procBtn) {
-                procBtn.disabled = false;
-                procBtn.innerHTML = '<i class="fas fa-play"></i>';
-            }
-        }
-    }
-
-    if (data.status === 'complete') {
-        if (errorEl) errorEl.style.display = 'none';
-        if (actionsEl) {
-            actionsEl.innerHTML =
-                '<a class="btn btn-sm btn-primary" href="/process/' + jobId + '/result/"><i class="fas fa-eye"></i> View Result</a>' +
-                (data.bvh_file ? ' <a class="btn btn-sm btn-secondary" href="/api/bvh/' + jobId + '/" download><i class="fas fa-download"></i> Download BVH</a>' : '');
-        }
-        // Update main row actions too
-        var mainRow2 = document.getElementById('row-' + jobId);
-        if (mainRow2) {
-            var actionsTd = mainRow2.querySelector('td:last-child');
-            if (actionsTd && !actionsTd.querySelector('a[href*="result"]')) {
-                var a = document.createElement('a');
-                a.className = 'btn btn-sm btn-primary';
-                a.href = '/process/' + jobId + '/result/';
-                a.innerHTML = '<i class="fas fa-eye"></i> View';
-                actionsTd.insertBefore(a, actionsTd.firstChild);
-            }
-        }
-    } else if (data.status === 'failed') {
-        if (errorEl && data.error) {
-            errorEl.style.display = '';
-            errorEl.innerHTML = '<strong>Error:</strong> ' + data.error;
-        }
-        if (actionsEl) actionsEl.innerHTML = '';
-    }
-}
-
-function startJobPolling(jobId) {
-    function poll() {
-        fetch('/api/job/' + jobId + '/status/')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                updateJobUI(jobId, data);
-                if (data.status !== 'complete' && data.status !== 'failed') {
-                    setTimeout(poll, 2000);
-                }
-            })
-            .catch(function() { setTimeout(poll, 5000); });
-    }
-    setTimeout(poll, 1500);
-}
-
-// Auto-expand + poll for jobs that are currently processing
-(function() {
-    document.querySelectorAll('tr[id^="row-"]').forEach(function(row) {
-        var statusCell = row.querySelector('td[id^="status-"]');
-        if (statusCell && statusCell.querySelector('.inline-progress')) {
-            var jobId = statusCell.id.replace('status-', '');
-            getOrCreateDetailRow(jobId);
-            startJobPolling(jobId);
-        }
-    });
-})();
-
-// Sortable table (skip detail rows)
-var sortDir = {};
-function sortTable(key) {
-    var tbody = document.getElementById('jobTableBody');
-    if (!tbody) return;
-    var rows = Array.from(tbody.querySelectorAll('tr:not(.detail-row)'));
-    sortDir[key] = !sortDir[key];
-    var asc = sortDir[key];
-    rows.sort(function(a, b) {
-        var va = a.dataset[key] || '';
-        var vb = b.dataset[key] || '';
-        if (key === 'size') return asc ? (Number(va) - Number(vb)) : (Number(vb) - Number(va));
-        return asc ? va.localeCompare(vb) : vb.localeCompare(va);
-    });
-    rows.forEach(function(row) {
-        tbody.appendChild(row);
-        var detail = document.getElementById('detail-' + row.id.replace('row-', ''));
-        if (detail) tbody.appendChild(detail);
-    });
-}
+Videoablage.aufbauen();
+Auftragsliste.aufbauen();
 </script>
 {% endblock %}

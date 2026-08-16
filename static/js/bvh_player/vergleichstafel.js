@@ -11,19 +11,19 @@ import { Vergleichsdaten } from './vergleichsdaten.js';
 const GRUEN = 0.15;
 const GELB = 0.4;
 
-const KOPFZEILE = '<tr style="color:#f472b6;border-bottom:2px solid #475569">'
-    + '<th style="text-align:center;padding:3px 1px;width:14px">#</th>'
-    + '<th style="text-align:left;padding:3px 3px">Bone</th>'
-    + '<th style="text-align:center;padding:3px 2px;background:#1a0f2e" colspan="3">Video/2D</th>'
-    + '<th style="text-align:center;padding:3px 2px;background:#1e1a2e">3D</th>'
-    + '<th style="text-align:center;padding:3px 2px">Diff</th></tr>'
-    + '<tr style="color:#999;font-size:9px;border-bottom:1px solid #334155">'
+const KOPFZEILE = '<tr class="vt-kopf">'
+    + '<th class="vt-nr">#</th>'
+    + '<th class="vt-name-kopf">Bone</th>'
+    + '<th class="vt-mitte vt-video" colspan="3">Video/2D</th>'
+    + '<th class="vt-mitte vt-drei-d">3D</th>'
+    + '<th class="vt-mitte">Diff</th></tr>'
+    + '<tr class="vt-unterkopf">'
     + '<td></td><td></td>'
-    + '<td style="text-align:right;padding:1px 3px;background:#1a0f2e">dist</td>'
-    + '<td style="text-align:right;padding:1px 3px;background:#1a0f2e">ang°</td>'
-    + '<td style="text-align:right;padding:1px 3px;background:#1a0f2e">Δdist</td>'
-    + '<td style="text-align:right;padding:1px 3px;background:#1e1a2e">dist</td>'
-    + '<td style="text-align:right;padding:1px 3px">Δdist</td></tr>';
+    + '<td class="vt-zahl vt-video">dist</td>'
+    + '<td class="vt-zahl vt-video">ang°</td>'
+    + '<td class="vt-zahl vt-video">Δdist</td>'
+    + '<td class="vt-zahl vt-drei-d">dist</td>'
+    + '<td class="vt-zahl">Δdist</td></tr>';
 
 /** Gliedmassen der Zusammenfassung: [Beschriftung, oben, unten]. */
 const GLIEDER = [
@@ -45,7 +45,7 @@ export class Vergleichstafel {
     }
 
     _warten() {
-        this.feld.innerHTML = '<div style="padding:8px;color:#fbbf24">'
+        this.feld.innerHTML = '<div class="vt-hinweis">'
                             + 'Warte auf BVH-Daten...</div>';
     }
 
@@ -56,7 +56,7 @@ export class Vergleichstafel {
         this.daten.erheben(bild, skelett);
         this.feld.innerHTML =
             this._kopf(zustand, skelett, spielerdaten, fps)
-            + `<table style="width:100%;border-collapse:collapse;font-size:11px;padding:0 6px">`
+            + `<table class="vt-tabelle">`
             + KOPFZEILE + this._zeilen() + '</table>'
             + this._zusammenfassung() + this._rohwerte();
     }
@@ -66,9 +66,9 @@ export class Vergleichstafel {
         const bilddauer = skelett.bilddauer(fps);
         const bild3d = skelett.klipdauer > 0
             ? Math.floor((zustand.fortschritt * skelett.klipdauer) / bilddauer) : 0;
-        return '<div style="padding:8px;border-bottom:1px solid #334155;margin-bottom:4px">'
-            + '<div style="color:#16c784;font-size:13px;font-weight:bold">Bone-Vergleich</div>'
-            + `<div style="color:#ccc;font-size:10px">Frame `
+        return '<div class="vt-titelzeile">'
+            + '<div class="vt-titel">Bone-Vergleich</div>'
+            + `<div class="vt-bildnummer">Frame `
             + `${Math.floor(zustand.zeit * fps)} | 2D:${bild2d} 3D:${bild3d} `
             + `(${zustand.zeit.toFixed(2)}s)</div></div>`;
     }
@@ -80,30 +80,39 @@ export class Vergleichstafel {
             const d3 = Vergleichsdaten.abstand(dreiD, name);
             const winkel = Vergleichsdaten.winkel(zweiD, name);
             const abschnitt = Vergleichsdaten.abschnitt(zweiD, name);
-            const { text: diff, farbe } = Vergleichstafel._abweichung(d2, d3);
-            return '<tr style="border-top:1px solid #1e293b">'
-                + `<td style="text-align:center;padding:2px 1px;color:#64748b;font-size:10px">${nr}</td>`
-                + `<td style="padding:2px 3px;color:#8cb4ff;white-space:nowrap;font-size:10px">${name}</td>`
+            const { text: diff, stufe } = Vergleichstafel._abweichung(d2, d3);
+            return '<tr class="vt-reihe">'
+                + `<td class="vt-nr-zelle">${nr}</td>`
+                + `<td class="vt-name">${name}</td>`
                 + Vergleichstafel._zelle(d2 === null ? '—' : d2.toFixed(2), '#1a0f2e')
-                + Vergleichstafel._zelle(winkel === null ? '—' : `${winkel.toFixed(0)}°`, '#1a0f2e')
-                + Vergleichstafel._zelle(abschnitt === null ? '—' : abschnitt.toFixed(2), '#1a0f2e')
-                + Vergleichstafel._zelle(d3 === null ? '—' : d3.toFixed(2), '#1e1a2e', '')
-                + `<td style="text-align:right;padding:2px 3px;color:${farbe}">${diff}</td></tr>`;
+                + Vergleichstafel._zelle(winkel === null ? '—' : `${winkel.toFixed(0)}°`, 'vt-video')
+                + Vergleichstafel._zelle(abschnitt === null ? '—' : abschnitt.toFixed(2), 'vt-video')
+                + Vergleichstafel._zelle(d3 === null ? '—' : d3.toFixed(2), 'vt-drei-d', '')
+                + `<td class="vt-zahl-klein vt-${stufe}">${diff}</td></tr>`;
         }).join('');
     }
 
-    static _zelle(inhalt, hintergrund, farbe = '#c084fc') {
-        return `<td style="text-align:right;padding:2px 3px;background:${hintergrund};`
-             + (farbe ? `color:${farbe}` : '') + `">${inhalt}</td>`;
+    /**
+     * Zahlenzelle. `spalte` ist die Klasse der Spaltengruppe (Video oder 3D),
+     * `betont` die Textfarbe — beides ueber CSS, nicht als Hex im Code
+     * (Umbau 16.08.2026).
+     */
+    static _zelle(inhalt, spalte, betont = 'vt-betont') {
+        return `<td class="vt-zahl-klein ${spalte} ${betont}">${inhalt}</td>`;
     }
 
+    /**
+     * Abweichung mit ihrer Guetestufe. Die Stufe wird als CSS-Klasse gezeigt
+     * (`vt-gut`/`vt-mittel`/`vt-schlecht`) — welche Farbe dazu gehoert, steht im
+     * Stylesheet und nicht hier.
+     */
     static _abweichung(d2, d3) {
-        if (d2 === null || d3 === null) return { text: '—', farbe: '#64748b' };
+        if (d2 === null || d3 === null) return { text: '—', stufe: 'leer' };
         const dd = d3 - d2;
         const betrag = Math.abs(dd);
         return {
             text: (dd >= 0 ? '+' : '') + dd.toFixed(2),
-            farbe: betrag < GRUEN ? '#16c784' : betrag < GELB ? '#fbbf24' : '#ef4444',
+            stufe: betrag < GRUEN ? 'gut' : betrag < GELB ? 'mittel' : 'schlecht',
         };
     }
 
@@ -112,8 +121,7 @@ export class Vergleichstafel {
             `${beschriftung}: `
             + `2D=${Vergleichsdaten.gefaelle(this.daten.zweiD, oben, unten)} `
             + `3D=${Vergleichsdaten.gefaelle(this.daten.dreiD, oben, unten)}`);
-        return '<div style="margin-top:6px;border-top:1px solid #475569;'
-            + 'padding-top:4px;color:#fbbf24;font-size:12px">'
+        return '<div class="vt-zusammenfassung">'
             + teile.join(' &nbsp;|&nbsp; ') + ' &nbsp;|&nbsp; </div>';
     }
 
@@ -124,7 +132,7 @@ export class Vergleichstafel {
             const p = this.daten.roh3d[n];
             return p ? `${n}=[${p.x.toFixed(0)},${p.y.toFixed(0)},${p.z.toFixed(0)}] ` : '';
         }).join('');
-        return '<div style="margin-top:4px;color:#64748b;font-size:10px">'
+        return '<div class="vt-fussnote">'
              + 'Raw 3D (cm): ' + werte + '</div>';
     }
 }

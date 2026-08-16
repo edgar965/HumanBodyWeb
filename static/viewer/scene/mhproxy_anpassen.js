@@ -7,10 +7,14 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { _bindSlider, _charQueryParams, _selectedInst, _sliderVal } from './utils.js';
-import { _selectedMHMesh } from './mh_proxy.js';
+import { _bindSlider, _charQueryParams, _selectedInst, _selectedMHMesh,
+         _sliderVal } from './utils.js';
 import { _skinifyMesh, convertInstToSkinned } from './skeleton.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+import { Materialregler } from './materialregler.js';
+import { Mhverformung } from './mhproxy_verformung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 // EINE Anpassung zur Zeit (Review 15.08.2026).
@@ -92,8 +96,7 @@ async function _fitMHProxyOnInst(inst, garmentId, p) {
     params.set('tpose_displacement', p.tpose_disp ?? window._mhTposeDisplacement ?? '1');
 
     try {
-        const resp = await fetch(`/api/character/mh-proxy-fit/?${params}`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`/api/character/mh-proxy-fit/?${params}`);
         if (data.error) { console.warn('MH proxy fit error:', data.error); return; }
 
         const key = `mh_${garmentId}`;
@@ -161,7 +164,7 @@ async function _fitMHProxyOnInst(inst, garmentId, p) {
             opacity: p.opacity ?? 100,
         };
 
-        console.log(`[MH] fit: ${garmentId} (${data.vertex_count} verts)`);
+        Protokoll.debug('MH', `fit: ${garmentId} (${data.vertex_count} verts)`);
         fn.markDirty?.(`MH ${garmentId}`);
     } catch (e) {
         console.error('MH proxy fit failed:', e);
@@ -204,111 +207,41 @@ function _syncPropMHControls() {
     _bindSlider('prop-mh-opacity', 'prop-mh-opacity-val', v => (v/100).toFixed(2));
 }
 
+/**
+ * Bedienung im Eigenschaften-Reiter. Sie zeigt dieselben Werte wie der
+ * Assets-Reiter, nur unter `prop-`-Kennungen — deshalb kommen Material und
+ * Verformung aus denselben Klassen (`Materialregler`, `Mhverformung`). Vorher
+ * standen hier 106 Zeilen, davon 60 als Zeile-fuer-Zeile-Kopie des
+ * Herausdrueckens aus dem Assets-Reiter.
+ */
 function _initPropMHControls() {
-    // Real-time material changes from Eigenschaften tab
-    for (const [id, prop] of [['prop-mh-roughness', 'roughness'], ['prop-mh-metalness', 'metalness']]) {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('input', () => {
-            const sel = _selectedMHMesh();
-            if (sel) sel.mesh.material[prop] = parseFloat(el.value) / 100;
-        });
+    new Materialregler('prop-mh', _selectedMHMesh).grundwerte().deckkraft();
+
+    // Die vier Anpassregler spiegeln auf den Assets-Reiter: dort haengt die
+    // Neuanpassung am Server. Waehrend des Ziehens nur den Wert nachziehen,
+    // beim Loslassen das `change`-Ereignis weitergeben.
+    for (const [hier, dort] of [['prop-mh-stiffness', 'mh-stiffness'],
+                                ['prop-mh-offset', 'mh-offset'],
+                                ['prop-mh-scale', 'mh-scale'],
+                                ['prop-mh-y-offset', 'mh-y-offset']]) {
+        const regler = document.getElementById(hier);
+        if (!regler) continue;
+        const spiegeln = (weiter) => {
+            const ziel = document.getElementById(dort);
+            if (!ziel) return;
+            ziel.value = regler.value;
+            if (weiter) ziel.dispatchEvent(new Event('change'));
+        };
+        regler.addEventListener('input', () => spiegeln(false));
+        regler.addEventListener('change', () => spiegeln(true));
     }
-    const opEl = document.getElementById('prop-mh-opacity');
-    if (opEl) opEl.addEventListener('input', () => {
-        const sel = _selectedMHMesh();
-        if (sel) {
-            const v = parseFloat(opEl.value) / 100;
-            sel.mesh.material.opacity = v;
-            sel.mesh.material.transparent = v < 1;
-        }
-    });
-    const colEl = document.getElementById('prop-mh-color');
-    if (colEl) colEl.addEventListener('input', () => {
-        const sel = _selectedMHMesh();
-        if (sel) sel.mesh.material.color.set(colEl.value);
-    });
-    // Transform sliders -- sync to asset tab + trigger refit on release
-    for (const [propId, srcId] of [['prop-mh-stiffness','mh-stiffness'],['prop-mh-offset','mh-offset'],['prop-mh-scale','mh-scale'],['prop-mh-y-offset','mh-y-offset']]) {
-        const el = document.getElementById(propId);
-        if (el) {
-            // Sync value display while dragging
-            el.addEventListener('input', () => {
-                const src = document.getElementById(srcId);
-                if (src) src.value = el.value;
-            });
-            // Trigger refit on release
-            el.addEventListener('change', () => {
-                const src = document.getElementById(srcId);
-                if (src) { src.value = el.value; src.dispatchEvent(new Event('change')); }
-            });
-        }
-    }
-    // Push Outside from Eigenschaften tab
+
     _bindSlider('prop-mh-push-dist', 'prop-mh-push-dist-val', v => v + ' mm');
-    const propPushBtn = document.getElementById('prop-mh-push');
-    if (propPushBtn) propPushBtn.addEventListener('click', async () => {
-        const inst = _selectedInst();
-        if (!inst) return;
-        const key = Object.keys(inst.clothMeshes || {}).find(k => k.startsWith('mh_'));
-        if (!key) return;
-        const mesh = inst.clothMeshes[key];
-        if (!mesh) return;
-
-        if (!inst._mhPrePush) inst._mhPrePush = {};
-        if (!inst._mhPrePush[key]) {
-            const pos = mesh.geometry.getAttribute('position');
-            inst._mhPrePush[key] = new Float32Array(pos.array);
-        }
-
-        const pos = mesh.geometry.getAttribute('position');
-        const threeVerts = new Float32Array(pos.array);
-        const blenderVerts = new Float32Array(threeVerts.length);
-        for (let i = 0; i < threeVerts.length; i += 3) {
-            blenderVerts[i] = threeVerts[i];
-            blenderVerts[i+1] = -threeVerts[i+2];
-            blenderVerts[i+2] = threeVerts[i+1];
-        }
-
-        const pushDist = parseFloat(document.getElementById('prop-mh-push-dist')?.value || '3');
-        const params = _charQueryParams(inst);
-        params.set('push_dist', pushDist);
-        params.set('use_mh_body', '0');
-
-        const b64 = btoa(String.fromCharCode(...new Uint8Array(blenderVerts.buffer)));
-        try {
-            const resp = await fetch(`/api/character/mh-push-outside/?${params}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ vertices: b64 }),
-            });
-            const data = await resp.json();
-            if (data.error) { console.warn('Push failed:', data.error); return; }
-
-            const newVerts = base64ToFloat32(data.vertices);
-            blenderToThreeCoords(newVerts);
-            pos.array.set(newVerts);
-            pos.needsUpdate = true;
-            mesh.geometry.computeBoundingSphere();
-            inst.garmentOrigPositions[key] = new Float32Array(newVerts);
-            console.log('[Prop] Push outside done');
-        } catch(e) { console.error('Push failed:', e); }
-    });
-    const propPushUndo = document.getElementById('prop-mh-push-undo');
-    if (propPushUndo) propPushUndo.addEventListener('click', () => {
-        const inst = _selectedInst();
-        if (!inst) return;
-        const key = Object.keys(inst.clothMeshes || {}).find(k => k.startsWith('mh_'));
-        if (!key || !inst._mhPrePush?.[key]) return;
-        const mesh = inst.clothMeshes[key];
-        if (!mesh) return;
-        const pos = mesh.geometry.getAttribute('position');
-        pos.array.set(inst._mhPrePush[key]);
-        pos.needsUpdate = true;
-        mesh.geometry.computeBoundingSphere();
-        inst.garmentOrigPositions[key] = new Float32Array(inst._mhPrePush[key]);
-        delete inst._mhPrePush[key];
-        console.log('[Prop] Push undone');
-    });
+    const verformung = new Mhverformung('prop-mh');
+    document.getElementById('prop-mh-push')
+        ?.addEventListener('click', () => verformung.herausdruecken());
+    document.getElementById('prop-mh-push-undo')
+        ?.addEventListener('click', () => verformung.zuruecknehmen());
 }
 
 export { _doMHProxyFit, _fitMHProxyOnInst, _syncPropMHControls, _initPropMHControls };

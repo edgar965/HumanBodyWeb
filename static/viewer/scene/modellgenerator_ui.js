@@ -26,6 +26,7 @@ import { Knochenbaum } from './modellgenerator/knochenbaum.js';
 import { Knochenauswahl } from './modellgenerator/knochenauswahl.js';
 import { Modellerzeugung } from './modellgenerator/erzeugung.js';
 import { Modellspeicher } from './modellgenerator/speicher.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export class Modellgenerator {
     static async starten() {
@@ -57,7 +58,8 @@ export class Modellgenerator {
             if (Modellbauzustand.skelettart === 'rig') {
                 await Modellbauzustand.rigKnochenLaden();
             }
-            console.log('[MG] Synced config from loaded character:', inst.presetName);
+            Protokoll.debug('MG', 'Konfiguration vom geladenen Charakter '
+                            + 'uebernommen:', inst.presetName);
             return;
         }
         await Modellgenerator._vorgabeKonfig();

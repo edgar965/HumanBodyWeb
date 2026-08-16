@@ -9,13 +9,14 @@ import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 import { Seitenzustand } from './seitenzustand.js';
 import { BODY_MATERIALS, applySceneSkinSettings, applySkinColor } from './material.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 export async function loadMesh() {
     try {
-        const resp = await fetch('/api/character/mesh/');
-        const data = await resp.json();
-        if (data.error) { console.error(data.error); return; }
+        const data = await Serverabruf.json('/api/character/mesh/');
+        if (data.error) { Protokoll.fehler('Netz', data.error); return; }
 
         document.getElementById('vertex-count').textContent =
             data.vertex_count.toLocaleString();
@@ -78,29 +79,22 @@ export async function loadMesh() {
         applySkinColor();
         Seitenzustand.groesseAnpassen();
     } catch (e) {
-        console.error('Failed to load mesh:', e);
+        Protokoll.fehler('Netz', 'nicht ladbar:', e);
     }
 }
 
 export async function loadRigifySkeleton() {
-    try {
-        const resp = await fetch('/api/character/rigify-skeleton/');
-        if (resp.ok) {
-            Seitenzustand.rigifySkeletonData = await resp.json();
-            console.log(`DEF skeleton loaded: ${Seitenzustand.rigifySkeletonData.bone_count} bones`);
-        }
-    } catch (e) {
-        console.warn('DEF skeleton not available:', e);
-    }
+    // `jsonOderNull`: Ohne Skelett laeuft die Seite weiter (kein Skinning),
+    // deshalb warnen statt werfen — wie die frueheren `if (resp.ok)`-Zweige.
+    const daten = await Serverabruf.jsonOderNull('/api/character/rigify-skeleton/');
+    if (!daten) return;
+    Seitenzustand.rigifySkeletonData = daten;
+    Protokoll.debug('Skelett', `DEF-Skelett geladen: ${daten.bone_count} Knochen`);
 }
 
 export async function loadSkinWeights() {
-    try {
-        const resp = await fetch('/api/character/skin-weights/');
-        if (resp.ok) Seitenzustand.skinWeightData = await resp.json();
-    } catch (e) {
-        console.warn('Skin weights not available:', e);
-    }
+    const daten = await Serverabruf.jsonOderNull('/api/character/skin-weights/');
+    if (daten) Seitenzustand.skinWeightData = daten;
 }
 
 export function convertToRigifySkinnedMesh(rigifySkel, swData) {
@@ -140,11 +134,10 @@ export function convertToRigifySkinnedMesh(rigifySkel, swData) {
     Seitenzustand.bodyMesh.bind(Seitenzustand.rigifySkeleton.skeleton);
     Seitenzustand.scene.add(Seitenzustand.bodyMesh);
     Seitenzustand.isSkinned = true;
-    console.log('SkinnedMesh created:', Seitenzustand.bodyMesh.isSkinnedMesh, 'bones:', Seitenzustand.rigifySkeleton.skeleton.bones.length);
+    Protokoll.debug('Netz', 'SkinnedMesh gebaut,',
+                    Seitenzustand.rigifySkeleton.skeleton.bones.length, 'Knochen');
 }
 
-// =========================================================================
-// BVH animation playback
-// =========================================================================
-// Skeleton wrapper for scaling
-export let skelWrapper = null;
+// Die Skalierungsgruppe des BVH-Skeletts liegt jetzt im Seitenzustand
+// (`Seitenzustand.skelWrapper`) — hier war sie ein `export let`, auf das
+// wiedergabe.js schrieb: ein TypeError zur Laufzeit (Umbau 16.08.2026).

@@ -160,6 +160,92 @@
         display: flex; align-items: center; gap: 8px;
     }
     .toolbar-dd-item:hover { background: rgba(124,92,191,0.3); color: #fff; }
+    /* Hilfefenster. Die Hilfetexte trugen bis zum Umbau am 16.08.2026
+       74 style=""-Angaben, 22 davon dieselbe Tabellenzeile. Jetzt Klassen —
+       damit passt die Hilfe auch zum hellen Theme. */
+    .hilfe-titel {
+        color: var(--accent);
+        margin: 0 0 8px;
+    }
+    .hilfe-untertitel { margin: 12px 0 6px; }
+    .hilfe-abschnitt { margin: 14px 0 6px; }
+    /* Farbe je Spurart — dieselbe Zuordnung wie in der Zeitleiste. */
+    .hilfe-animation { color: var(--accent); }
+    .hilfe-modell { color: #e91e63; }
+    .hilfe-kamera { color: #00bcd4; }
+    .hilfe-licht { color: #ffc107; }
+    .hilfe-audio { color: #4caf50; }
+    .hilfe-tabelle {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+    }
+    .hilfe-tabelle-klein { font-size: 0.82rem; }
+    .hilfe-trennlinie { border-bottom: 1px solid var(--border); }
+    .hilfe-feld { padding: 6px 0; }
+    .hilfe-zelle { padding: 5px 0; }
+    .hilfe-zeile { margin: 4px 0; }
+    .hilfe-mitte { text-align: center; }
+    .hilfe-schmal { width: 40px; }
+    .hilfe-breit { width: 40%; }
+    .hilfe-warnung { background: rgba(255, 193, 7, 0.08); }
+    .hilfe-abstand { margin-top: 12px; }
+    .hilfe-liste {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 1.6;
+    }
+    .hilfe-fussnote {
+        margin: 8px 0 0;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+    }
+    /* Taste in einem Tastenkürzel, etwa "Strg". */
+    .hilfe-taste {
+        background: var(--bg-card);
+        padding: 2px 6px;
+        border-radius: 3px;
+        border: 1px solid var(--border);
+    }
+    /* Hervorgehobener Hinweiskasten. */
+    .hilfe-kasten {
+        background: rgba(255, 193, 7, 0.1);
+        border-left: 3px solid #ffc107;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        border-radius: 4px;
+    }
+    .hilfe-kasten-titel {
+        color: #ffc107;
+        margin: 0 0 8px;
+        font-size: 0.95rem;
+    }
+    /* Beispielblock (Pfad, Befehl). */
+    .hilfe-beispiel {
+        background: var(--bg-dark, #1a1a2e);
+        padding: 8px;
+        border-left: 3px solid var(--accent);
+        font-size: 0.8rem;
+        margin: 8px 0;
+    }
+    /* Hinweis im Bibliotheksbaum ("wird geladen", Fehler). Stand bis zum Umbau
+       am 16.08.2026 als style="" in den innerHTML-Strings von index.js. */
+    .lib-hinweis {
+        padding: 12px;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+    }
+    .lib-hinweis i { margin-right: 6px; }
+    .lib-hinweis.lib-fehler { color: var(--danger); }
+    .lib-hinweis a { color: var(--accent); }
+    /* Zustand rechts in einem Menueintrag ("An"/"Aus"). Stand bis zum Umbau am
+       16.08.2026 als style="" im Markup und als style.color im JavaScript. */
+    .dd-status {
+        margin-left: auto;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+    }
+    .dd-status.an { color: #4caf50; }
     /* Nested submenu — appears to the right of parent on hover */
     .toolbar-dd-item.has-submenu { position: relative; }
     .toolbar-dd-item.has-submenu > .toolbar-dropdown-menu {
@@ -180,6 +266,45 @@
     .props-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
     .props-tab-content { display: none; }
     .props-tab-content.active { display: block; }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-abschnittstitel.hb-abschnittstitel.hb-abschnittstitel { font-size:0.85rem; color:var(--accent); margin-bottom:10px; }   /* 3x */
+.hb-abstand-unten.hb-abstand-unten.hb-abstand-unten { margin-bottom:6px; }   /* 3x */
+.hb-balken.hb-balken.hb-balken { height:4px; background:var(--bg-card); border-radius:2px; overflow:hidden; }   /* 4x */
+.hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* 5x */
+.hb-dehnt-fein.hb-dehnt-fein.hb-dehnt-fein { flex:1; font-size:0.72rem; }   /* 3x */
+.hb-erklaerung.hb-erklaerung.hb-erklaerung { font-size:0.7rem; color:var(--text-muted); margin-bottom:6px; line-height:1.4; }   /* 3x */
+.hb-fein.hb-fein.hb-fein { font-size:0.72rem; }   /* 3x */
+.hb-hinweis.hb-hinweis.hb-hinweis { padding:12px; color:var(--text-muted); font-size:0.8rem; }   /* 1x */
+.hb-klappteil.hb-klappteil.hb-klappteil { display:none; margin-top:6px; }   /* 4x */
+.hb-knopf-klein.hb-knopf-klein.hb-knopf-klein { padding:3px 6px; background:var(--bg-card); border:1px solid var(--border); border-radius:3px; color:var(--text-muted); cursor:pointer; font-size:0.7rem; }   /* 4x */
+.hb-kontextmenue.hb-kontextmenue.hb-kontextmenue { display:none; position:fixed; z-index:9999; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:4px 0; min-width:180px; box-shadow:0 8px 24px rgba(0,0,0,0.4); }   /* 4x */
+.hb-kuerzel.hb-kuerzel.hb-kuerzel { margin-left:auto; font-size:0.7rem; color:var(--text-muted); }   /* 7x */
+.hb-menueeintrag.hb-menueeintrag.hb-menueeintrag { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; }   /* 9x */
+.hb-symbolspalte.hb-symbolspalte.hb-symbolspalte { width:16px; }   /* 50x */
+.hb-symbolspalte-warn.hb-symbolspalte-warn.hb-symbolspalte-warn { width:16px; color:#ffc107; }   /* 4x */
+.hb-trennlinie.hb-trennlinie.hb-trennlinie { height:1px; background:var(--border); margin:4px 0; }   /* 17x */
+.hb-untertitel.hb-untertitel.hb-untertitel { font-size:0.7rem; color:var(--text-muted); margin-top:3px; }   /* 4x */
+.hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* 1x */
+.hb-winzig.hb-winzig.hb-winzig { font-size:0.65rem; }   /* 5x */
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-border-1px-solid-var-border.hb-border-1px-solid-var-border.hb-border-1px-solid-var-border { border:1px solid var(--border); border-radius:6px; padding:10px; margin-top:8px; }   /* 2x */
+.hb-display-none.hb-display-none.hb-display-none { display:none; position:fixed; z-index:9999; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:4px 0; min-width:200px; box-shadow:0 8px 24px rgba(0,0,0,0.4); }   /* 2x */
+.hb-flex-1.hb-flex-1.hb-flex-1 { flex:1; font-size:0.75rem; }   /* 2x */
+.hb-gap-8px.hb-gap-8px.hb-gap-8px { gap:8px; cursor:default; }   /* 2x */
+.hb-height-100.hb-height-100.hb-height-100 { height:100%; background:#4caf50; width:0%; transition:width 0.25s; }   /* 2x */
+.hb-margin-top-4px.hb-margin-top-4px.hb-margin-top-4px { margin-top:4px; font-size:0.72rem; color:var(--text-muted); }   /* 2x */
+.hb-margin-top-8px.hb-margin-top-8px.hb-margin-top-8px { margin-top:8px; }   /* 2x */
+.hb-min-width-260px.hb-min-width-260px.hb-min-width-260px { min-width:260px; }   /* 2x */
+.hb-padding-4px-12px.hb-padding-4px-12px.hb-padding-4px-12px { padding:4px 12px; font-size:0.7rem; color:var(--text-muted); }   /* 2x */
+.hb-padding-5px-12px.hb-padding-5px-12px.hb-padding-5px-12px { padding:5px 12px; background:var(--accent); color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem; }   /* 2x */
+.hb-width-100.hb-width-100.hb-width-100 { width:100%; padding:6px 10px; background:#4caf50; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem; }   /* 2x */
+.hb-width-16px.hb-width-16px.hb-width-16px { width:16px; color:#e91e63; }   /* 2x */
 </style>
 {% endblock %}
 
@@ -188,30 +313,30 @@
 <div class="studio-toolbar">
     <!-- File dropdown -->
     <div class="toolbar-dropdown" id="file-dropdown">
-        <button id="btn-file" title="Datei"><i class="fas fa-file"></i> Datei <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
+        <button id="btn-file" title="Datei"><i class="fas fa-file"></i> Datei <i class="fas fa-caret-down hb-winzig"></i></button>
         <div class="toolbar-dropdown-menu" style="min-width:220px;">
-            <div class="toolbar-dd-item" id="dd-file-save"><i class="fas fa-save" style="width:16px;"></i> Projekt speichern <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">Ctrl+S</span></div>
-            <div class="toolbar-dd-item" id="dd-file-save-as"><i class="fas fa-file-export" style="width:16px;"></i> Projekt speichern unter...</div>
-            <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-            <div class="toolbar-dd-item" id="dd-file-load"><i class="fas fa-folder-open" style="width:16px;"></i> Projekt laden... <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">Ctrl+O</span></div>
-            <div class="toolbar-dd-item" id="dd-file-load-last"><i class="fas fa-history" style="width:16px;"></i> Letztes Projekt laden</div>
-            <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-            <div class="toolbar-dd-item" id="dd-file-default"><i class="fas fa-sync" style="width:16px;"></i> Default (alles zur&uuml;cksetzen)</div>
+            <div class="toolbar-dd-item" id="dd-file-save"><i class="fas fa-save hb-symbolspalte"></i> Projekt speichern <span class="hb-kuerzel">Ctrl+S</span></div>
+            <div class="toolbar-dd-item" id="dd-file-save-as"><i class="fas fa-file-export hb-symbolspalte"></i> Projekt speichern unter...</div>
+            <div class="hb-trennlinie"></div>
+            <div class="toolbar-dd-item" id="dd-file-load"><i class="fas fa-folder-open hb-symbolspalte"></i> Projekt laden... <span class="hb-kuerzel">Ctrl+O</span></div>
+            <div class="toolbar-dd-item" id="dd-file-load-last"><i class="fas fa-history hb-symbolspalte"></i> Letztes Projekt laden</div>
+            <div class="hb-trennlinie"></div>
+            <div class="toolbar-dd-item" id="dd-file-default"><i class="fas fa-sync hb-symbolspalte"></i> Default (alles zur&uuml;cksetzen)</div>
         </div>
     </div>
     <div class="sep"></div>
     <!-- Track dropdown -->
     <div class="toolbar-dropdown" id="track-dropdown">
-        <button id="btn-add-track" title="Hinzufügen"><i class="fas fa-plus"></i> Hinzufügen <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
+        <button id="btn-add-track" title="Hinzufügen"><i class="fas fa-plus"></i> Hinzufügen <i class="fas fa-caret-down hb-winzig"></i></button>
         <div class="toolbar-dropdown-menu">
             <div class="toolbar-dd-item has-submenu">
-                <i class="fas fa-layer-group" style="width:16px;"></i> Spur
-                <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+                <i class="fas fa-layer-group hb-symbolspalte"></i> Spur
+                <i class="fas fa-caret-right hb-kuerzel"></i>
                 <div class="toolbar-dropdown-menu">
-                    <div class="toolbar-dd-item" id="dd-add-bvh"><i class="fas fa-running" style="width:16px;"></i> Animation</div>
-                    <div class="toolbar-dd-item" id="dd-add-model"><i class="fas fa-user" style="width:16px;color:#e91e63;"></i> Modell</div>
+                    <div class="toolbar-dd-item" id="dd-add-bvh"><i class="fas fa-running hb-symbolspalte"></i> Animation</div>
+                    <div class="toolbar-dd-item" id="dd-add-model"><i class="fas fa-user hb-width-16px"></i> Modell</div>
                     <div class="toolbar-dd-item" id="dd-add-camera"><i class="fas fa-video" style="width:16px;color:#00bcd4;"></i> Kamera</div>
-                    <div class="toolbar-dd-item" id="dd-add-light"><i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht</div>
+                    <div class="toolbar-dd-item" id="dd-add-light"><i class="fas fa-lightbulb hb-symbolspalte-warn"></i> Licht</div>
                     <div class="toolbar-dd-item" id="dd-add-audio"><i class="fas fa-music" style="width:16px;color:#4caf50;"></i> Audio</div>
                     <div class="toolbar-dd-item" id="dd-add-3d-object"><i class="fas fa-cube" style="width:16px;color:#7c5cbf;"></i> 3D-Objekt...</div>
                 </div>
@@ -220,11 +345,11 @@
     </div>
     <!-- Theatre dropdown -->
     <div class="toolbar-dropdown" id="theatre-dropdown">
-        <button id="btn-theatre" title="Theatre-Presets"><i class="fas fa-theater-masks"></i> Theatre <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
-        <div class="toolbar-dropdown-menu" style="min-width:260px;">
+        <button id="btn-theatre" title="Theatre-Presets"><i class="fas fa-theater-masks"></i> Theatre <i class="fas fa-caret-down hb-winzig"></i></button>
+        <div class="toolbar-dropdown-menu hb-min-width-260px">
             <div class="toolbar-dd-item has-submenu" id="dd-theatre-lights">
-                <i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht-Presets
-                <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+                <i class="fas fa-lightbulb hb-symbolspalte-warn"></i> Licht-Presets
+                <i class="fas fa-caret-right hb-kuerzel"></i>
                 <div id="theatre-lights-submenu" class="ctx-submenu"></div>
             </div>
         </div>
@@ -232,27 +357,32 @@
     <div class="sep"></div>
     <button id="btn-delete-track" title="Löschen"><i class="fas fa-trash"></i></button>
     <div class="sep"></div>
-    <button id="btn-undo" title="Undo (Ctrl+Shift+U)" onclick="window.__studioUndo && window.__studioUndo()"><i class="fas fa-undo"></i></button>
-    <button id="btn-redo" title="Redo" onclick="window.__studioRedo && window.__studioRedo()"><i class="fas fa-redo"></i></button>
+    {% comment %}
+       Kein onclick: Die Werkzeugleiste haengt die Handler an (werkzeugleiste.js).
+       Bis zum Umbau am 16.08.2026 stand hier zusaetzlich onclick=__studioUndo() —
+       ein Klick loeste damit ZWEI Undos aus.
+    {% endcomment %}
+    <button id="btn-undo" title="Undo (Ctrl+Shift+U)"><i class="fas fa-undo"></i></button>
+    <button id="btn-redo" title="Redo"><i class="fas fa-redo"></i></button>
     <div class="sep"></div>
     <button id="btn-split" title="Clip splitten (S)"><i class="fas fa-cut"></i> Split</button>
     <button id="btn-delete-clip" title="Clip löschen (Del)"><i class="fas fa-times"></i></button>
     <div class="sep"></div>
     <!-- Tools dropdown -->
     <div class="toolbar-dropdown" id="tools-dropdown">
-        <button id="btn-tools" title="Tools"><i class="fas fa-wrench"></i> Tools <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
-        <div class="toolbar-dropdown-menu" style="min-width:260px;">
+        <button id="btn-tools" title="Tools"><i class="fas fa-wrench"></i> Tools <i class="fas fa-caret-down hb-winzig"></i></button>
+        <div class="toolbar-dropdown-menu hb-min-width-260px">
             <div style="padding:4px 14px;font-size:0.72rem;color:var(--text-muted);font-weight:600;">Gaussian Smooth</div>
-            <div class="toolbar-dd-item" id="dd-gauss-on" style="color:#4caf50;"><i class="fas fa-play" style="width:16px;"></i> Smooth EINSCHALTEN</div>
-            <div class="toolbar-dd-item" id="dd-gauss-off"><i class="fas fa-stop" style="width:16px;"></i> Smooth AUSSCHALTEN</div>
-            <div class="toolbar-dd-item" style="gap:8px;cursor:default;"><i class="fas fa-sliders-h" style="width:16px;"></i> Sigma: <input type="number" id="dd-gauss-sigma-input" value="2" min="0.5" max="20" step="0.5" style="width:50px;background:var(--bg-card,#1a1a2e);border:1px solid var(--border,#334);border-radius:3px;color:#ccc;padding:2px 4px;font-size:0.8rem;text-align:center;" onclick="event.stopPropagation()"></div>
-            <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-            <div class="toolbar-dd-item" id="dd-ground"><i class="fas fa-shoe-prints" style="width:16px;"></i> Auf Bodenniveau</div>
-            <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-            <div class="toolbar-dd-item" id="dd-fixed-pos"><i class="fas fa-map-pin" style="width:16px;"></i> Feste Position <span id="fixed-pos-status" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">Aus</span></div>
-            <div class="toolbar-dd-item" style="gap:8px;cursor:default;"><i class="fas fa-bullseye" style="width:16px;"></i> Max. Radius: <input type="range" id="fixed-pos-radius" min="10" max="200" value="50" step="10" style="width:80px;vertical-align:middle;" onclick="event.stopPropagation()"> <span id="fixed-pos-radius-val" style="font-size:0.75rem;min-width:32px;">50cm</span></div>
+            <div class="toolbar-dd-item" id="dd-gauss-on" style="color:#4caf50;"><i class="fas fa-play hb-symbolspalte"></i> Smooth EINSCHALTEN</div>
+            <div class="toolbar-dd-item" id="dd-gauss-off"><i class="fas fa-stop hb-symbolspalte"></i> Smooth AUSSCHALTEN</div>
+            <div class="toolbar-dd-item hb-gap-8px"><i class="fas fa-sliders-h hb-symbolspalte"></i> Sigma: <input type="number" id="dd-gauss-sigma-input" value="2" min="0.5" max="20" step="0.5" style="width:50px;background:var(--bg-card,#1a1a2e);border:1px solid var(--border,#334);border-radius:3px;color:#ccc;padding:2px 4px;font-size:0.8rem;text-align:center;" onclick="event.stopPropagation()"></div>
+            <div class="hb-trennlinie"></div>
+            <div class="toolbar-dd-item" id="dd-ground"><i class="fas fa-shoe-prints hb-symbolspalte"></i> Auf Bodenniveau</div>
+            <div class="hb-trennlinie"></div>
+            <div class="toolbar-dd-item" id="dd-fixed-pos"><i class="fas fa-map-pin hb-symbolspalte"></i> Feste Position <span id="fixed-pos-status" class="dd-status">Aus</span></div>
+            <div class="toolbar-dd-item hb-gap-8px"><i class="fas fa-bullseye hb-symbolspalte"></i> Max. Radius: <input type="range" id="fixed-pos-radius" min="10" max="200" value="50" step="10" style="width:80px;vertical-align:middle;" onclick="event.stopPropagation()"> <span id="fixed-pos-radius-val" style="font-size:0.75rem;min-width:32px;">50cm</span></div>
             <div style="border-top:1px solid var(--border,#334);margin:4px 0;"></div>
-            <div class="toolbar-dd-item" id="dd-save-bvh"><i class="fas fa-save" style="width:16px;"></i> BVH Speichern (mit allen Effekten)</div>
+            <div class="toolbar-dd-item" id="dd-save-bvh"><i class="fas fa-save hb-symbolspalte"></i> BVH Speichern (mit allen Effekten)</div>
         </div>
     </div>
     <div class="sep"></div>
@@ -261,19 +391,19 @@
     <div class="sep"></div>
     <!-- Help dropdown -->
     <div class="toolbar-dropdown" id="help-dropdown">
-        <button id="btn-help" title="Hilfe"><i class="fas fa-question-circle"></i> Hilfe <i class="fas fa-caret-down" style="font-size:0.65rem;"></i></button>
+        <button id="btn-help" title="Hilfe"><i class="fas fa-question-circle"></i> Hilfe <i class="fas fa-caret-down hb-winzig"></i></button>
         <div class="toolbar-dropdown-menu" style="right:0;left:auto;min-width:160px;">
-            <div class="toolbar-dd-item" id="dd-help-tracks"><i class="fas fa-layer-group" style="width:16px;"></i> Tracks</div>
-            <div class="toolbar-dd-item" id="dd-help-camera"><i class="fas fa-video" style="width:16px;"></i> Kamera</div>
-            <div class="toolbar-dd-item" id="dd-help-light"><i class="fas fa-lightbulb" style="width:16px;"></i> Licht</div>
-            <div class="toolbar-dd-item" id="dd-help-audio"><i class="fas fa-music" style="width:16px;"></i> Audio</div>
-            <div class="toolbar-dd-item" id="dd-help-shortcuts"><i class="fas fa-keyboard" style="width:16px;"></i> Tastenkürzel</div>
-            <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-            <div class="toolbar-dd-item" id="dd-help-animations"><i class="fas fa-running" style="width:16px;"></i> Animationen</div>
-            <div class="toolbar-dd-item" id="dd-help-export"><i class="fas fa-file-export" style="width:16px;"></i> Export (MP4 + Cloth)</div>
+            <div class="toolbar-dd-item" id="dd-help-tracks"><i class="fas fa-layer-group hb-symbolspalte"></i> Tracks</div>
+            <div class="toolbar-dd-item" id="dd-help-camera"><i class="fas fa-video hb-symbolspalte"></i> Kamera</div>
+            <div class="toolbar-dd-item" id="dd-help-light"><i class="fas fa-lightbulb hb-symbolspalte"></i> Licht</div>
+            <div class="toolbar-dd-item" id="dd-help-audio"><i class="fas fa-music hb-symbolspalte"></i> Audio</div>
+            <div class="toolbar-dd-item" id="dd-help-shortcuts"><i class="fas fa-keyboard hb-symbolspalte"></i> Tastenkürzel</div>
+            <div class="hb-trennlinie"></div>
+            <div class="toolbar-dd-item" id="dd-help-animations"><i class="fas fa-running hb-symbolspalte"></i> Animationen</div>
+            <div class="toolbar-dd-item" id="dd-help-export"><i class="fas fa-file-export hb-symbolspalte"></i> Export (MP4 + Cloth)</div>
         </div>
     </div>
-    <div style="flex:1;"></div>
+    <div class="hb-dehnt"></div>
     <span id="studio-info" style="font-size:0.75rem;color:var(--text-muted);" title="Aktuelles Projekt">Projekt: Untitled</span>
 </div>
 
@@ -284,32 +414,32 @@
         <div class="sidebar-resize-handle" id="sidebar-resize"></div>
         <h3><i class="fas fa-music"></i> BVH Bibliothek</h3>
         <div style="display:flex;gap:3px;padding:4px 8px;border-bottom:1px solid var(--border);flex-shrink:0;">
-            <button id="lib-new-folder" title="Neuer Ordner" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-folder-plus"></i></button>
-            <button id="lib-rename" title="Umbenennen (F2)" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-pen"></i></button>
-            <button id="lib-delete" title="Löschen (Del)" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-trash"></i></button>
-            <div style="flex:1;"></div>
-            <button id="lib-refresh" title="Aktualisieren" style="padding:3px 6px;background:var(--bg-card);border:1px solid var(--border);border-radius:3px;color:var(--text-muted);cursor:pointer;font-size:0.7rem;"><i class="fas fa-sync-alt"></i></button>
+            <button id="lib-new-folder" title="Neuer Ordner" class="hb-knopf-klein"><i class="fas fa-folder-plus"></i></button>
+            <button id="lib-rename" title="Umbenennen (F2)" class="hb-knopf-klein"><i class="fas fa-pen"></i></button>
+            <button id="lib-delete" title="Löschen (Del)" class="hb-knopf-klein"><i class="fas fa-trash"></i></button>
+            <div class="hb-dehnt"></div>
+            <button id="lib-refresh" title="Aktualisieren" class="hb-knopf-klein"><i class="fas fa-sync-alt"></i></button>
         </div>
         <div class="lib-tree" id="lib-tree">
-            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade...</div>
+            <div class="hb-hinweis">Lade...</div>
         </div>
     </div>
 
     <!-- Library context menus -->
-    <div class="lib-ctx" id="lib-ctx-file" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-        <div class="lib-ctx-item" data-action="add" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-plus" style="width:16px;"></i> Zur Animation hinzufügen</div>
-        <div class="lib-ctx-item" data-action="preview" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-eye" style="width:16px;"></i> Vorschau (A)</div>
-        <div class="lib-ctx-item" data-action="copy" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-copy" style="width:16px;"></i> Kopieren</div>
-        <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-        <div class="lib-ctx-item" data-action="rename" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen</div>
-        <div class="lib-ctx-item" data-action="move" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-arrows-alt" style="width:16px;"></i> Verschieben nach...</div>
-        <div class="lib-ctx-item" data-action="delete" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-trash" style="width:16px;"></i> Löschen</div>
+    <div class="lib-ctx hb-kontextmenue" id="lib-ctx-file">
+        <div class="lib-ctx-item hb-menueeintrag" data-action="add"><i class="fas fa-plus hb-symbolspalte"></i> Zur Animation hinzufügen</div>
+        <div class="lib-ctx-item hb-menueeintrag" data-action="preview"><i class="fas fa-eye hb-symbolspalte"></i> Vorschau (A)</div>
+        <div class="lib-ctx-item hb-menueeintrag" data-action="copy"><i class="fas fa-copy hb-symbolspalte"></i> Kopieren</div>
+        <div class="hb-trennlinie"></div>
+        <div class="lib-ctx-item hb-menueeintrag" data-action="rename"><i class="fas fa-pen hb-symbolspalte"></i> Umbenennen</div>
+        <div class="lib-ctx-item hb-menueeintrag" data-action="move"><i class="fas fa-arrows-alt hb-symbolspalte"></i> Verschieben nach...</div>
+        <div class="lib-ctx-item hb-menueeintrag" data-action="delete"><i class="fas fa-trash hb-symbolspalte"></i> Löschen</div>
     </div>
-    <div class="lib-ctx" id="lib-ctx-folder" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-        <div class="lib-ctx-item" data-action="rename-folder" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-pen" style="width:16px;"></i> Ordner umbenennen</div>
-        <div class="lib-ctx-item" data-action="new-folder" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-folder-plus" style="width:16px;"></i> Neuer Ordner</div>
-        <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-        <div class="lib-ctx-item" data-action="delete-folder" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-trash" style="width:16px;"></i> Ordner löschen</div>
+    <div class="lib-ctx hb-kontextmenue" id="lib-ctx-folder">
+        <div class="lib-ctx-item hb-menueeintrag" data-action="rename-folder"><i class="fas fa-pen hb-symbolspalte"></i> Ordner umbenennen</div>
+        <div class="lib-ctx-item hb-menueeintrag" data-action="new-folder"><i class="fas fa-folder-plus hb-symbolspalte"></i> Neuer Ordner</div>
+        <div class="hb-trennlinie"></div>
+        <div class="lib-ctx-item hb-menueeintrag" data-action="delete-folder"><i class="fas fa-trash hb-symbolspalte"></i> Ordner löschen</div>
     </div>
 
     <!-- Center: Viewport + Timeline -->
@@ -346,7 +476,7 @@
             <span class="playback-time" id="pb-frame">F: 0</span>
             <span class="playback-time">/</span>
             <span class="playback-time" id="pb-duration">00:00.00</span>
-            <div style="flex:1;"></div>
+            <div class="hb-dehnt"></div>
             <label style="font-size:0.78rem;color:var(--text-muted);">Speed:</label>
             <select id="pb-speed" style="padding:2px 4px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.78rem;">
                 <option value="0.25">0.25x</option>
@@ -374,7 +504,7 @@
         </div>
         <div id="props-tab-tools" class="props-tab-content">
             <div id="tools-content">
-                <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:10px;"><i class="fas fa-wave-square"></i> Smooth</h3>
+                <h3 class="hb-abschnittstitel"><i class="fas fa-wave-square"></i> Smooth</h3>
                 <div class="prop-group">
                     <div class="prop-row"><label>Sigma:</label><input type="number" id="tool-smooth-sigma" value="2" min="0.5" max="20" step="0.5"></div>
                     <div class="prop-row"><label>Radius:</label><span id="tool-smooth-radius" style="font-size:0.8rem;color:var(--text-muted);">6</span></div>
@@ -385,13 +515,13 @@
                             <option value="hands">Nur Haende</option>
                         </select>
                     </div>
-                    <div style="margin-top:8px;">
-                        <button id="tool-smooth-apply" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;"><i class="fas fa-wave-square"></i> Smooth anwenden</button>
+                    <div class="hb-margin-top-8px">
+                        <button id="tool-smooth-apply" class="hb-padding-5px-12px"><i class="fas fa-wave-square"></i> Smooth anwenden</button>
                     </div>
-                    <div style="margin-top:4px;font-size:0.72rem;color:var(--text-muted);">Gauss-Filter auf die Rotations-Keyframes des selektierten Clips.</div>
+                    <div class="hb-margin-top-4px">Gauss-Filter auf die Rotations-Keyframes des selektierten Clips.</div>
                 </div>
                 <hr style="border-color:var(--border);margin:16px 0;">
-                <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:10px;"><i class="fas fa-shoe-prints"></i> Bodenniveau</h3>
+                <h3 class="hb-abschnittstitel"><i class="fas fa-shoe-prints"></i> Bodenniveau</h3>
                 <div class="prop-group">
                     <div class="prop-row"><label>Methode:</label>
                         <select id="tool-ground-method">
@@ -399,19 +529,19 @@
                         </select>
                     </div>
                     <div class="prop-row"><label>Abstand:</label><input type="number" id="tool-ground-offset" value="0.03" min="0" max="1" step="0.005"> <span style="font-size:0.72rem;color:var(--text-muted);">m</span></div>
-                    <div style="margin-top:8px;">
-                        <button id="tool-ground-apply" style="padding:5px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;"><i class="fas fa-shoe-prints"></i> Bodenniveau anwenden</button>
+                    <div class="hb-margin-top-8px">
+                        <button id="tool-ground-apply" class="hb-padding-5px-12px"><i class="fas fa-shoe-prints"></i> Bodenniveau anwenden</button>
                     </div>
-                    <div style="margin-top:4px;font-size:0.72rem;color:var(--text-muted);">Korrigiert die Y-Position pro Frame so dass der tiefste Knochen bei Abstand (Default: 3cm) liegt.</div>
+                    <div class="hb-margin-top-4px">Korrigiert die Y-Position pro Frame so dass der tiefste Knochen bei Abstand (Default: 3cm) liegt.</div>
                 </div>
             </div>
         </div>
         <div id="props-tab-export" class="props-tab-content">
             <div id="export-content">
-                <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:10px;"><i class="fas fa-video"></i> Video Export</h3>
+                <h3 class="hb-abschnittstitel"><i class="fas fa-video"></i> Video Export</h3>
                 <div class="prop-group">
-                    <div class="prop-row"><label>Zielordner:</label><input type="text" id="export-target-dir" value="" style="flex:1;font-size:0.75rem;" placeholder="Einstellungen > BVH Studio"></div>
-                    <div class="prop-row"><label>Dateiname:</label><input type="text" id="export-filename" value="bvh_studio_export.mp4" style="flex:1;"></div>
+                    <div class="prop-row"><label>Zielordner:</label><input type="text" id="export-target-dir" value="" class="hb-flex-1" placeholder="Einstellungen > BVH Studio"></div>
+                    <div class="prop-row"><label>Dateiname:</label><input type="text" id="export-filename" value="bvh_studio_export.mp4" class="hb-dehnt"></div>
                     <div class="prop-row"><label>Von (Frame):</label><input type="number" id="export-from" value="0" min="0"></div>
                     <div class="prop-row"><label>Bis (Frame):</label><input type="number" id="export-to" value="0" min="0"></div>
                     <div class="prop-row"><label>FPS:</label>
@@ -463,8 +593,8 @@
                 </div>
 
                 <div class="prop-group">
-                    <div class="prop-row"><label>Zielordner:</label><input type="text" id="cloth-target-dir" value="" style="flex:1;font-size:0.75rem;" placeholder="Einstellungen > BVH Studio"></div>
-                    <div class="prop-row"><label>Dateiname:</label><input type="text" id="cloth-filename" value="cloth_export.mp4" style="flex:1;"></div>
+                    <div class="prop-row"><label>Zielordner:</label><input type="text" id="cloth-target-dir" value="" class="hb-flex-1" placeholder="Einstellungen > BVH Studio"></div>
+                    <div class="prop-row"><label>Dateiname:</label><input type="text" id="cloth-filename" value="cloth_export.mp4" class="hb-dehnt"></div>
                     <div class="prop-row"><label>Dauer (s):</label><input type="number" id="cloth-duration" value="3.0" min="0.2" max="120" step="0.1" style="width:70px;"></div>
                     <div class="prop-row"><label>FPS:</label>
                         <select id="cloth-fps">
@@ -486,32 +616,32 @@
                 <!-- Engine 1: Blender Cloth + EEVEE -->
                 <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:12px;">
                     <div style="font-size:0.82rem;color:#4caf50;font-weight:600;margin-bottom:4px;"><i class="fas fa-cube"></i> Blender Cloth + EEVEE</div>
-                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;line-height:1.4;">CPU-Sim (Blender 5.0) + GPU-Render. Robust, stabile Physik. ~1 min f&uuml;r 5s @ 30fps.</div>
-                    <div class="prop-row" style="margin-bottom:6px;"><label style="font-size:0.72rem;">Qualit&auml;t:</label>
-                        <select id="cloth-quality-blender-eevee" style="flex:1;font-size:0.72rem;">
+                    <div class="hb-erklaerung">CPU-Sim (Blender 5.0) + GPU-Render. Robust, stabile Physik. ~1 min f&uuml;r 5s @ 30fps.</div>
+                    <div class="prop-row hb-abstand-unten"><label class="hb-fein">Qualit&auml;t:</label>
+                        <select id="cloth-quality-blender-eevee" class="hb-dehnt-fein">
                             <option value="low">Niedrig &mdash; Cloth-Steps 3, Bend 0.3, EEVEE 32 Samples</option>
                             <option value="medium" selected>Mittel &mdash; Cloth-Steps 5, Bend 0.5, EEVEE 64 Samples</option>
                             <option value="high">Hoch &mdash; Cloth-Steps 10, Bend 1.0, EEVEE 128 Samples, Subdiv 2</option>
                         </select>
                     </div>
-                    <button id="cloth-run-blender-eevee" class="cloth-export-btn" data-engine="blender_eevee"
-                            style="width:100%;padding:6px 10px;background:#4caf50;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">
+                    <button id="cloth-run-blender-eevee" class="cloth-export-btn hb-width-100" data-engine="blender_eevee"
+                           >
                         <i class="fas fa-play"></i> Export mit Blender Cloth
                     </button>
-                    <div class="cloth-progress" data-engine="blender_eevee" style="display:none;margin-top:6px;">
-                        <div class="cloth-progress-bar" style="height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
-                            <div class="cloth-progress-fill" style="height:100%;background:#4caf50;width:0%;transition:width 0.25s;"></div>
+                    <div class="cloth-progress hb-klappteil" data-engine="blender_eevee">
+                        <div class="cloth-progress-bar hb-balken">
+                            <div class="cloth-progress-fill hb-height-100"></div>
                         </div>
-                        <div class="cloth-progress-text" style="font-size:0.7rem;color:var(--text-muted);margin-top:3px;">Bereit</div>
+                        <div class="cloth-progress-text hb-untertitel">Bereit</div>
                     </div>
                 </div>
 
                 <!-- Engine 2: Warp + Blender -->
-                <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:8px;">
+                <div class="hb-border-1px-solid-var-border">
                     <div style="font-size:0.82rem;color:#00bcd4;font-weight:600;margin-bottom:4px;"><i class="fas fa-rocket"></i> NVIDIA Warp + Blender Render <span style="color:var(--accent);font-weight:400;font-size:0.7rem;">(empfohlen)</span></div>
-                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;line-height:1.4;">GPU-Sim (CUDA, RTX 3060) + GPU-Render (EEVEE). Beste Qualit&auml;t/Speed-Balance. ~30s f&uuml;r 5s @ 30fps.</div>
-                    <div class="prop-row" style="margin-bottom:6px;"><label style="font-size:0.72rem;">Qualit&auml;t:</label>
-                        <select id="cloth-quality-warp-blender" style="flex:1;font-size:0.72rem;">
+                    <div class="hb-erklaerung">GPU-Sim (CUDA, RTX 3060) + GPU-Render (EEVEE). Beste Qualit&auml;t/Speed-Balance. ~30s f&uuml;r 5s @ 30fps.</div>
+                    <div class="prop-row hb-abstand-unten"><label class="hb-fein">Qualit&auml;t:</label>
+                        <select id="cloth-quality-warp-blender" class="hb-dehnt-fein">
                             <option value="low">Niedrig &mdash; Warp 16 Substeps, Stretch 5e3, EEVEE 32</option>
                             <option value="medium" selected>Mittel &mdash; Warp 32 Substeps, Stretch 1e4, EEVEE 64</option>
                             <option value="high">Hoch &mdash; Warp 64 Substeps, Stretch 3e4, EEVEE 128</option>
@@ -521,20 +651,20 @@
                             style="width:100%;padding:6px 10px;background:#00bcd4;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">
                         <i class="fas fa-play"></i> Export mit Warp + Blender
                     </button>
-                    <div class="cloth-progress" data-engine="warp_blender" style="display:none;margin-top:6px;">
-                        <div class="cloth-progress-bar" style="height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+                    <div class="cloth-progress hb-klappteil" data-engine="warp_blender">
+                        <div class="cloth-progress-bar hb-balken">
                             <div class="cloth-progress-fill" style="height:100%;background:#00bcd4;width:0%;transition:width 0.25s;"></div>
                         </div>
-                        <div class="cloth-progress-text" style="font-size:0.7rem;color:var(--text-muted);margin-top:3px;">Bereit</div>
+                        <div class="cloth-progress-text hb-untertitel">Bereit</div>
                     </div>
                 </div>
 
                 <!-- Engine 3: Warp pure -->
-                <div style="border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:8px;">
+                <div class="hb-border-1px-solid-var-border">
                     <div style="font-size:0.82rem;color:#e91e63;font-weight:600;margin-bottom:4px;"><i class="fas fa-bolt"></i> NVIDIA Warp pur (Offscreen GL)</div>
-                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:6px;line-height:1.4;">Komplett GPU, kein Blender. Schnellste Pipeline, einfacheres Rendering. ~20s f&uuml;r 5s @ 30fps.</div>
-                    <div class="prop-row" style="margin-bottom:6px;"><label style="font-size:0.72rem;">Qualit&auml;t:</label>
-                        <select id="cloth-quality-warp-only" style="flex:1;font-size:0.72rem;">
+                    <div class="hb-erklaerung">Komplett GPU, kein Blender. Schnellste Pipeline, einfacheres Rendering. ~20s f&uuml;r 5s @ 30fps.</div>
+                    <div class="prop-row hb-abstand-unten"><label class="hb-fein">Qualit&auml;t:</label>
+                        <select id="cloth-quality-warp-only" class="hb-dehnt-fein">
                             <option value="low">Niedrig &mdash; Warp 16 Substeps, pyrender basic</option>
                             <option value="medium" selected>Mittel &mdash; Warp 32 Substeps, pyrender Shading</option>
                             <option value="high">Hoch &mdash; Warp 64 Substeps, pyrender + Lights</option>
@@ -544,11 +674,11 @@
                             style="width:100%;padding:6px 10px;background:#e91e63;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">
                         <i class="fas fa-play"></i> Export mit Warp
                     </button>
-                    <div class="cloth-progress" data-engine="warp_only" style="display:none;margin-top:6px;">
-                        <div class="cloth-progress-bar" style="height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+                    <div class="cloth-progress hb-klappteil" data-engine="warp_only">
+                        <div class="cloth-progress-bar hb-balken">
                             <div class="cloth-progress-fill" style="height:100%;background:#e91e63;width:0%;transition:width 0.25s;"></div>
                         </div>
-                        <div class="cloth-progress-text" style="font-size:0.7rem;color:var(--text-muted);margin-top:3px;">Bereit</div>
+                        <div class="cloth-progress-text hb-untertitel">Bereit</div>
                     </div>
                 </div>
 
@@ -560,15 +690,15 @@
                         mechanisch aus dem Body herausgedrückt. <b>Schnell</b> (&lt;5 s zzgl. Render)
                         und <b>garantiert keine Knochen-durch-Rock</b>-Artefakte. Kein Schwingen.
                     </div>
-                    <button id="cloth-run-skinning-blender" class="cloth-export-btn" data-engine="skinning_blender"
-                            style="width:100%;padding:6px 10px;background:#4caf50;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.8rem;">
+                    <button id="cloth-run-skinning-blender" class="cloth-export-btn hb-width-100" data-engine="skinning_blender"
+                           >
                         <i class="fas fa-play"></i> Export mit Skinning-Only
                     </button>
-                    <div class="cloth-progress" data-engine="skinning_blender" style="display:none;margin-top:6px;">
-                        <div class="cloth-progress-bar" style="height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
-                            <div class="cloth-progress-fill" style="height:100%;background:#4caf50;width:0%;transition:width 0.25s;"></div>
+                    <div class="cloth-progress hb-klappteil" data-engine="skinning_blender">
+                        <div class="cloth-progress-bar hb-balken">
+                            <div class="cloth-progress-fill hb-height-100"></div>
                         </div>
-                        <div class="cloth-progress-text" style="font-size:0.7rem;color:var(--text-muted);margin-top:3px;">Bereit</div>
+                        <div class="cloth-progress-text hb-untertitel">Bereit</div>
                     </div>
                 </div>
 
@@ -600,70 +730,70 @@
 </div>
 
 <!-- Context Menu -->
-<div id="clip-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+<div id="clip-context-menu" class="hb-kontextmenue">
     <div class="ctx-item has-submenu" id="clip-ctx-add">
-        <i class="fas fa-plus" style="width:16px;"></i> Hinzufügen
-        <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+        <i class="fas fa-plus hb-symbolspalte"></i> Hinzufügen
+        <i class="fas fa-caret-right hb-kuerzel"></i>
         <div id="clip-ctx-add-submenu" class="ctx-submenu"></div>
     </div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt" style="width:16px;"></i> Playhead hierher</div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut" style="width:16px;"></i> Split an Playhead (S)</div>
-    <div class="ctx-item" data-action="ctx-duplicate"><i class="fas fa-copy" style="width:16px;"></i> Duplizieren</div>
-    <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen (Del)</div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" data-action="ctx-trim-start"><i class="fas fa-step-forward" style="width:16px;"></i> Anfang trimmen (+10f)</div>
-    <div class="ctx-item" data-action="ctx-trim-end"><i class="fas fa-step-backward" style="width:16px;"></i> Ende trimmen (+10f)</div>
-    <div class="ctx-item" data-action="ctx-trim-reset"><i class="fas fa-undo" style="width:16px;"></i> Trim zurücksetzen</div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" data-action="ctx-save-bvh"><i class="fas fa-file-export" style="width:16px;"></i> BVH speichern unter...</div>
-    <div class="ctx-item" data-action="ctx-smooth"><i class="fas fa-wave-square" style="width:16px;"></i> Smooth</div>
-    <div class="ctx-item" data-action="ctx-ground"><i class="fas fa-shoe-prints" style="width:16px;"></i> Bodenniveau</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt hb-symbolspalte"></i> Playhead hierher</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut hb-symbolspalte"></i> Split an Playhead (S)</div>
+    <div class="ctx-item" data-action="ctx-duplicate"><i class="fas fa-copy hb-symbolspalte"></i> Duplizieren</div>
+    <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen (Del)</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-trim-start"><i class="fas fa-step-forward hb-symbolspalte"></i> Anfang trimmen (+10f)</div>
+    <div class="ctx-item" data-action="ctx-trim-end"><i class="fas fa-step-backward hb-symbolspalte"></i> Ende trimmen (+10f)</div>
+    <div class="ctx-item" data-action="ctx-trim-reset"><i class="fas fa-undo hb-symbolspalte"></i> Trim zurücksetzen</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-save-bvh"><i class="fas fa-file-export hb-symbolspalte"></i> BVH speichern unter...</div>
+    <div class="ctx-item" data-action="ctx-smooth"><i class="fas fa-wave-square hb-symbolspalte"></i> Smooth</div>
+    <div class="ctx-item" data-action="ctx-ground"><i class="fas fa-shoe-prints hb-symbolspalte"></i> Bodenniveau</div>
 </div>
 
 <!-- Model Context Menu (for model track clips) -->
-<div id="model-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+<div id="model-context-menu" class="hb-display-none">
     <div class="ctx-item has-submenu" id="model-ctx-add">
-        <i class="fas fa-plus" style="width:16px;"></i> Hinzufügen
-        <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+        <i class="fas fa-plus hb-symbolspalte"></i> Hinzufügen
+        <i class="fas fa-caret-right hb-kuerzel"></i>
         <div id="model-ctx-add-submenu" class="ctx-submenu"></div>
     </div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt" style="width:16px;"></i> Playhead hierher</div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div style="padding:4px 12px;font-size:0.7rem;color:var(--text-muted);"><i class="fas fa-user" style="width:16px;color:#e91e63;"></i> Modell w&auml;hlen:</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt hb-symbolspalte"></i> Playhead hierher</div>
+    <div class="hb-trennlinie"></div>
+    <div class="hb-padding-4px-12px"><i class="fas fa-user hb-width-16px"></i> Modell w&auml;hlen:</div>
     <div id="model-preset-list" style="max-height:300px;overflow-y:auto;">
         <!-- Populated dynamically -->
     </div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut" style="width:16px;"></i> Split an Playhead</div>
-    <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut hb-symbolspalte"></i> Split an Playhead</div>
+    <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
 </div>
 
 <!-- Viewport Context Menu (right-click in 3D scene when Light track selected) -->
-<div id="viewport-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-    <div class="ctx-item" id="vp-ctx-light-here"><i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i> Licht hierher setzen</div>
-    <div class="ctx-item" id="vp-ctx-light-target"><i class="fas fa-crosshairs" style="width:16px;color:#ffc107;"></i> Licht-Ziel hierher</div>
+<div id="viewport-context-menu" class="hb-display-none">
+    <div class="ctx-item" id="vp-ctx-light-here"><i class="fas fa-lightbulb hb-symbolspalte-warn"></i> Licht hierher setzen</div>
+    <div class="ctx-item" id="vp-ctx-light-target"><i class="fas fa-crosshairs hb-symbolspalte-warn"></i> Licht-Ziel hierher</div>
 </div>
 
 <!-- Track Context Menu -->
-<div id="track-context-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+<div id="track-context-menu" class="hb-kontextmenue">
     <div class="ctx-item has-submenu" id="track-ctx-add">
-        <i class="fas fa-plus" style="width:16px;"></i> Hinzufügen
-        <i class="fas fa-caret-right" style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);"></i>
+        <i class="fas fa-plus hb-symbolspalte"></i> Hinzufügen
+        <i class="fas fa-caret-right hb-kuerzel"></i>
         <div id="track-ctx-add-submenu" class="ctx-submenu"></div>
     </div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" id="track-ctx-rename"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen</div>
-    <div class="ctx-item" id="track-ctx-mute"><i class="fas fa-power-off" style="width:16px;"></i> <span id="track-ctx-mute-label">Ausschalten</span></div>
-    <div id="track-ctx-link-section" style="display:none;">
-        <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-        <div style="padding:4px 12px;font-size:0.7rem;color:var(--text-muted);"><i class="fas fa-link" style="width:16px;"></i> Zuordnung:</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" id="track-ctx-rename"><i class="fas fa-pen hb-symbolspalte"></i> Umbenennen</div>
+    <div class="ctx-item" id="track-ctx-mute"><i class="fas fa-power-off hb-symbolspalte"></i> <span id="track-ctx-mute-label">Ausschalten</span></div>
+    <div id="track-ctx-link-section" class="hb-versteckt">
+        <div class="hb-trennlinie"></div>
+        <div class="hb-padding-4px-12px"><i class="fas fa-link hb-symbolspalte"></i> Zuordnung:</div>
         <div id="track-ctx-link-list"></div>
     </div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="ctx-item" id="track-ctx-delete"><i class="fas fa-trash" style="width:16px;"></i> Löschen</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" id="track-ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> Löschen</div>
 </div>
 <style>
 .ctx-item { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; position:relative; }

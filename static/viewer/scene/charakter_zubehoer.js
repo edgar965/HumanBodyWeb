@@ -12,8 +12,10 @@ import * as THREE from 'three';
 import { state, gltfLoader } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _computeGarmentRegionWeights } from './kleidung_anpassen.js';
+import { Kleidungszustand } from './kleidungszustand.js';
 import { _skinifyHairGroup, _skinifyMesh, convertInstToSkinned } from './skeleton.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export class Charakterzubehoer {
 
@@ -78,8 +80,7 @@ export class Charakterzubehoer {
                     if (v !== 0) params.set(`meta_${k}`, v);
                 }
 
-                const resp = await fetch(`/api/character/cloth/?${params}`);
-                const data = await resp.json();
+                const data = await Serverabruf.json(`/api/character/cloth/?${params}`);
                 if (data.error) { console.warn('Cloth error:', data.error); continue; }
 
                 const vertBuf = base64ToFloat32(data.vertices);
@@ -147,8 +148,7 @@ export class Charakterzubehoer {
                     p.set('color_b', cb.toFixed(3));
                 }
 
-                const resp = await fetch(`/api/character/garment/fit/?${p}`);
-                const data = await resp.json();
+                const data = await Serverabruf.json(`/api/character/garment/fit/?${p}`);
                 if (data.error) { console.warn('Garment load error:', data.error); continue; }
 
                 const vertBuf = base64ToFloat32(data.vertices);
@@ -178,18 +178,11 @@ export class Charakterzubehoer {
                 inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
                 _computeGarmentRegionWeights(inst, key);
 
-                inst.garmentState[key] = {
-                    offset: g.offset || 0,
-                    stiffness: g.stiffness || 0.5,
-                    minDist: g.minDist !== undefined ? g.minDist : 3,
-                    crotchFloor: g.crotchFloor !== undefined ? g.crotchFloor : 0,
-                    lift: g.lift !== undefined ? g.lift : 0,
-                    crotchDepth: g.crotchDepth !== undefined ? g.crotchDepth : 0,
-                    color: g.color || [color.r, color.g, color.b],
-                    roughness: g.roughness ?? 0.8,
-                    metalness: g.metalness ?? 0.0,
-                    regionTop: 0, regionUpper: 0, regionMid: 0, regionLower: 0, regionBottom: 0,
-                };
+                // Die Vorgabewerte stehen in `Kleidungszustand.VORGABEN` —
+                // vorher stand die Feldliste hier ein viertes Mal.
+                inst.garmentState[key] = Kleidungszustand.ausJson({
+                    ...g, color: g.color || [color.r, color.g, color.b],
+                });
             } catch (e) {
                 console.error('Failed to load garment:', g.id, e);
             }
@@ -241,3 +234,8 @@ export class Charakterzubehoer {
         });
     }
 }
+
+// In der Registrierung angemeldet, damit skeleton.js die Haare nachladen kann,
+// ohne diese Datei zu importieren: charakter_zubehoer.js holt sich seinerseits
+// `convertInstToSkinned` von dort — ein direkter Import waere ein Ring.
+fn.charakterHaare = (inst) => Charakterzubehoer.haare(inst);

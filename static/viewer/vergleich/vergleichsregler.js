@@ -8,14 +8,18 @@
  */
 import { Vergleichsnetz } from './vergleichsnetz.js';
 import { GRUNDREGLER } from './vergleichspanel.js';
+import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
+import { Metaregler } from '../gemeinsam/metaregler.js';
+import { Morphliste } from '../gemeinsam/morphliste.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 /** Vorgabe-Hautfarbe, wenn die Herkunft keine kennt. */
-const HAUTVORGABE = 0xd4a574;
+const HAUTVORGABE = Hautfarbe.ERSATZ_FARBE;
 
 export class Vergleichsregler {
     static async laden(ansicht) {
         try {
-            const daten = await (await fetch(ansicht.apiPrefix + '/morphs/')).json();
+            const daten = await Serverabruf.json(ansicht.apiPrefix + '/morphs/');
             ansicht.morphData = daten;
             ansicht.skinColorMap = daten.skin_colors || {};
             Vergleichsregler._koerperarten(ansicht, daten);
@@ -51,32 +55,18 @@ export class Vergleichsregler {
         for (const [name] of GRUNDREGLER) {
             const els = ansicht.felder.grundregler[name];
             if (!els) continue;
-            const grenzen = daten.meta_sliders?.[name];
-            if (grenzen) {
-                els.slider.min = grenzen.min;
-                els.slider.max = grenzen.max;
-                els.slider.value = grenzen.default;
-                els.val.textContent = grenzen.default;
-            }
+            // Die Vergleichsseite hat ihre Regler in `felder.grundregler`,
+            // nicht unter `meta-<name>` — deshalb hier `grenzenSetzen` von Hand.
+            Metaregler.grenzenSetzen({ regler: els.slider, anzeige: els.val },
+                                     daten.meta_sliders?.[name]);
             els.slider.addEventListener('input', () => {
-                const angezeigt = parseInt(els.slider.value);
-                els.val.textContent = angezeigt;
+                els.val.textContent = els.slider.value;
                 ansicht.funk.senden({
                     type: 'meta', name,
-                    value: Vergleichsregler._innenwert(els.slider, angezeigt),
+                    value: Metaregler.ausRegler(els.slider),
                 });
             });
         }
-    }
-
-    /**
-     * Reglerstellung in den Bereich [-1, 1] umrechnen.
-     * Die Mitte des Reglers ist der neutrale Wert 0.
-     */
-    static _innenwert(slider, angezeigt) {
-        const min = parseInt(slider.min), max = parseInt(slider.max);
-        const halb = (max - min) / 2;
-        return halb ? (angezeigt - (min + max) / 2) / halb : 0;
     }
 
     static _hautregler(ansicht) {
@@ -97,81 +87,27 @@ export class Vergleichsregler {
         anteil(f.metall, f.metallWert, 'metalness');
     }
 
+    /**
+     * Die Morph-Liste kommt aus `Morphliste` — dieselbe Liste wie auf der
+     * Viewer-, Foto- und Ergebnisseite. Vorher stand sie hier als eigene
+     * `_kategorie`/`_morphzeile`-Kopie.
+     */
     static _morphliste(ansicht, daten) {
-        const nachKategorie = {};
-        for (const m of daten.morphs) {
-            (nachKategorie[m.category] ||= []).push(m);
-        }
-        const liste = ansicht.felder.morphliste;
-        liste.innerHTML = '';
-        for (const kategorie of daten.categories.sort()) {
-            const morphs = nachKategorie[kategorie];
-            if (!morphs?.length) continue;
-            liste.appendChild(
-                Vergleichsregler._kategorie(ansicht, kategorie, morphs));
-        }
-    }
-
-    static _kategorie(ansicht, name, morphs) {
-        const kasten = document.createElement('div');
-        kasten.className = 'morph-category';
-        const kopf = document.createElement('div');
-        kopf.className = 'morph-category-header';
-        kopf.textContent = `${name} (${morphs.length})`;
-        kopf.addEventListener('click', () => kasten.classList.toggle('open'));
-        kasten.appendChild(kopf);
-
-        const rumpf = document.createElement('div');
-        rumpf.className = 'morph-category-body';
-        for (const m of morphs) {
-            rumpf.appendChild(Vergleichsregler._morphzeile(ansicht, m));
-        }
-        kasten.appendChild(rumpf);
-        return kasten;
-    }
-
-    static _morphzeile(ansicht, morph) {
-        const zeile = document.createElement('div');
-        zeile.className = 'slider-row';
-        const beschriftung = document.createElement('label');
-        beschriftung.textContent = morph.name.split('_').slice(1).join(' ')
-                                   || morph.name;
-        beschriftung.title = morph.name;
-
-        const regler = document.createElement('input');
-        regler.type = 'range';
-        regler.min = -100;
-        regler.max = 100;
-        regler.value = 0;
-        regler.step = 1;
-        regler.dataset.morph = morph.name;
-
-        const anzeige = document.createElement('span');
-        anzeige.className = 'slider-val';
-        anzeige.textContent = '0';
-
-        regler.addEventListener('input', () => {
-            anzeige.textContent = regler.value;
-            ansicht.funk.morphGebremst(morph.name, parseInt(regler.value) / 100.0);
+        const liste = new Morphliste({
+            geaendert: (name, wert) => ansicht.funk.morphGebremst(name, wert),
         });
-        zeile.append(beschriftung, regler, anzeige);
-        return zeile;
+        liste.bauen(ansicht.felder.morphliste, daten.morphs, daten.categories);
     }
 
     /** Alle Regler auf ihre Vorgaben zuruecksetzen. */
     static zuruecksetzen(ansicht) {
         const f = ansicht.felder;
-        f.morphliste?.querySelectorAll('input[type="range"]').forEach(r => {
-            r.value = 0;
-            r.nextElementSibling.textContent = '0';
-        });
+        if (f.morphliste) Morphliste.zuruecksetzen(f.morphliste);
         for (const [name] of GRUNDREGLER) {
             const els = f.grundregler[name];
-            const grenzen = ansicht.morphData?.meta_sliders?.[name];
-            if (els && grenzen) {
-                els.slider.value = grenzen.default;
-                els.val.textContent = grenzen.default;
-            }
+            if (!els) continue;
+            Metaregler.grenzenSetzen({ regler: els.slider, anzeige: els.val },
+                                     ansicht.morphData?.meta_sliders?.[name]);
         }
         Vergleichsregler._hautZuruecksetzen(ansicht);
         ansicht.funk.senden({
@@ -184,13 +120,7 @@ export class Vergleichsregler {
         const material = Vergleichsnetz.hautmaterial(ansicht);
         if (!material) return;
         const art = ansicht.felder.koerperart?.value || '';
-        const teile = art.split('_');
-        const farben = ansicht.skinColorMap[teile[1] || teile[0]];
-        if (farben) {
-            material.color.setRGB(Math.pow(farben[0], 1 / 2.2),
-                                  Math.pow(farben[1], 1 / 2.2),
-                                  Math.pow(farben[2], 1 / 2.2));
-        } else {
+        if (!Hautfarbe.ausKoerperart(material, art, ansicht.skinColorMap)) {
             material.color.setHex(HAUTVORGABE);
         }
         material.roughness = 0.55;

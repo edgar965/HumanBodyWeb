@@ -3,7 +3,12 @@
 {% block title %}Result{% endblock %}
 
 {% block extra_head %}
-<style>.main-content { max-width: none !important; padding: 1rem 2rem; }</style>
+<style>.main-content { max-width: none !important; padding: 1rem 2rem; }
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* 1x */
+</style>
 <script type="importmap">
 {
   "imports": {
@@ -116,7 +121,7 @@
     </div>
     <div class="floating-video-resize" id="floatingVideoResize"></div>
 </div>
-<div id="skeletonCanvas" style="display:none;"></div>
+<div id="skeletonCanvas" class="hb-versteckt"></div>
 
 {% else %}
 <div style="text-align:center;padding:4rem 2rem;color:#888;">

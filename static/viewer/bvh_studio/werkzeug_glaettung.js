@@ -10,6 +10,8 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { pushUndo } from './undo.js';
 import { applyFixedPositionAll } from './werkzeug_position.js';
 import { _fixedPos } from './werkzeug_position.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 
 // Gaussian Smooth (session-wide toggle)
@@ -69,7 +71,7 @@ export function applyGaussToAllClips() {
     let totalTracks = 0;
     for (const track of state.project.tracks) {
         totalTracks++;
-        if (track.type !== 'bvh') { console.log(`[Gauss] skip track type=${track.type}`); continue; }
+        if (track.type !== 'bvh') { Protokoll.debug('Gauss', 'uebersprungen:', track.type); continue; }
         for (const clip of track.clips) {
             if (!clip.animClip) continue;
             const key = `${clip.category}/${clip.name}`;
@@ -92,9 +94,9 @@ export function applyGaussToAllClips() {
             // Log before/after for first track of first clip
             if (smoothedCount === 0 && clip.animClip.tracks.length > 0) {
                 const t0 = clip.animClip.tracks[0];
-                console.log(`[Gauss] Track "${t0.name}" first 4 values AFTER smooth: [${t0.values[0].toFixed(4)}, ${t0.values[1].toFixed(4)}, ${t0.values[2].toFixed(4)}, ${t0.values[3].toFixed(4)}]`);
+                Protokoll.debug('Gauss', `${t0.name} nach der Glaettung:`, t0.values.slice(0, 4));
                 const bk = backup[t0.name];
-                if (bk) console.log(`[Gauss] Track "${t0.name}" first 4 values ORIGINAL: [${bk[0].toFixed(4)}, ${bk[1].toFixed(4)}, ${bk[2].toFixed(4)}, ${bk[3].toFixed(4)}]`);
+                if (bk) Protokoll.debug('Gauss', `${t0.name} vorher:`, Array.from(bk.slice(0, 4)));
             }
             // CRITICAL: uncache the clip so Three.js creates a fresh Action with new data
             if (track.mixer) track.mixer.uncacheClip(clip.animClip);
@@ -168,12 +170,11 @@ export async function saveSmoothedBVH() {
     let saved = 0;
     for (const clip of clips) {
         try {
-            const resp = await fetch(`/api/retarget/smooth-bvh/`, {
+            const result = await Serverabruf.json(`/api/retarget/smooth-bvh/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ category: clip.category, name: clip.name, sigma }),
             });
-            const result = await resp.json();
             if (result.ok) {
                 saved++;
                 fn.serverLog('gauss_saved', `${clip.category}/${clip.name} sigma=${sigma}`);
@@ -184,7 +185,7 @@ export async function saveSmoothedBVH() {
     }
     _gaussSmooth.origClips.clear();
     alert(`Smooth (σ=${sigma}) permanent gespeichert auf ${saved} von ${clips.length} Clip(s).`);
-    console.log(`[BVH Studio] Smoothed clips saved: ${saved}`);
+    Protokoll.info('BVH Studio', `${saved} geglaettete Clips gespeichert`);
 }
 
 export function smoothSelectedClip() {
@@ -245,5 +246,5 @@ export function smoothSelectedClip() {
     // Update clip property
     clip.smoothSigma = sigma;
     fn.updateProperties();
-    console.log(`[BVH Studio] Smoothed ${clip.name}: sigma=${sigma}, mode=${mode}, ${smoothedCount} tracks`);
+    Protokoll.info('BVH Studio', `${clip.name} geglaettet: sigma=${sigma}, ${mode}, ${smoothedCount} Spuren`);
 }

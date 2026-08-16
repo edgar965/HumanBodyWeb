@@ -3,6 +3,8 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 // Module-level state
 let _libOpenCats = new Set();
@@ -24,14 +26,11 @@ function showLibCtx(menuId, x, y) {
 
 async function libManage(action, data) {
     try {
-        const resp = await fetch('/api/character/bvh-manage/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action, ...data }),
-        });
-        const result = await resp.json();
-        if (!resp.ok) { alert(result.error || 'Fehler'); return null; }
-        return result;
+        // Fruehere Reihenfolge: erst `resp.json()`, dann `resp.ok` — bei einer
+        // Fehlerseite scheiterte das Auslesen, und der `alert` mit der
+        // Servermeldung kam nie.
+        return await Serverabruf.senden('/api/character/bvh-manage/',
+                                        { action, ...data });
     } catch (e) {
         alert('Fehler: ' + e.message);
         return null;
@@ -82,7 +81,7 @@ function removeClipsFromTracks(category, name) {
         fn.updateDuration();
         fn.renderTimeline();
         fn.updateProperties();
-        console.log(`[BVH Studio] Removed ${removed} clip(s) of ${category}/${name} from tracks`);
+        Protokoll.debug('BVH Studio', `Removed ${removed} clip(s) of ${category}/${name} from tracks`);
     }
 }
 
@@ -111,8 +110,7 @@ export async function loadLibrary(selectAfter) {
             if (el.dataset.category) _libOpenCats.add(el.dataset.category);
         });
 
-        const resp = await fetch('/api/character/animations/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/animations/');
         const tree = document.getElementById('lib-tree');
         if (!tree) return;
         tree.innerHTML = '';

@@ -3,6 +3,8 @@ import { doSaveScene, loadModelFile, loadSceneFromData } from './save_load.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
 import { markDirty } from './undo.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 /**
  * Die Dialoge zum Speichern, Laden und Charakter-Hinzufuegen.
  *
@@ -54,7 +56,7 @@ export async function _saveJsonWithPicker(jsonData, defaultName) {
     a.href = url; a.download = defaultName; a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, Zeiten.DOWNLOAD_MS);
     return defaultName;
 }
 
@@ -111,8 +113,7 @@ export async function openAddCharacterDialog() {
     confirmBtn.disabled = true;
     presetList.innerHTML = '<li style="color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Lade Presets...</li>';
     try {
-        const resp = await fetch('/api/character/models/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/models/');
         presetList.innerHTML = '';
         if (!data.presets || data.presets.length === 0) { presetList.innerHTML = '<li style="color:var(--text-muted)">Keine Presets vorhanden.</li>'; return; }
         for (const p of data.presets) {
@@ -154,8 +155,7 @@ export async function openLoadDialog() {
     loadConfirm.disabled = true;
     tbody.innerHTML = '<tr><td colspan="3" style="padding:12px;color:var(--text-muted);text-align:center;"><i class="fas fa-spinner fa-spin"></i> Lade...</td></tr>';
     try {
-        const resp = await fetch('/api/character/model-files/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/model-files/');
         tbody.innerHTML = '';
         const files = data.files || [];
         if (files.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="padding:12px;color:var(--text-muted);text-align:center;">Keine Dateien.</td></tr>'; return; }
@@ -177,8 +177,7 @@ export async function openLoadDialog() {
 export async function loadSceneListInto(listEl, onSelect) {
     listEl.innerHTML = '<li style="color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Lade...</li>';
     try {
-        const resp = await fetch('/api/character/scenes/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/scenes/');
         listEl.innerHTML = '';
         if (!data.scenes || data.scenes.length === 0) { listEl.innerHTML = '<li style="color:var(--text-muted)">Keine Szenen.</li>'; return; }
         for (const s of data.scenes) {

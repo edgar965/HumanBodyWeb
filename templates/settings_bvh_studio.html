@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Einstellungen — BVH Studio{% endblock %}
 
 {% block content %}
@@ -11,22 +12,22 @@
     <h3>Pfade</h3>
     <div class="settings-row">
         <label>BVH Eingabepfad:</label>
-        <input type="text" name="studio_bvh_input" id="studio_bvh_input" value="{{ prefs.studio_bvh_input }}" style="flex:1;">
+        <input type="text" name="studio_bvh_input" id="studio_bvh_input" value="{{ prefs.studio_bvh_input }}" class="hb-dehnt">
         <span class="hint">Verzeichnis mit BVH-Dateien (Standard: HumanBody/data/animations/bvh/)</span>
     </div>
     <div class="settings-row">
         <label>BVH Ausgabepfad:</label>
-        <input type="text" name="studio_bvh_output" id="studio_bvh_output" value="{{ prefs.studio_bvh_output }}" style="flex:1;">
+        <input type="text" name="studio_bvh_output" id="studio_bvh_output" value="{{ prefs.studio_bvh_output }}" class="hb-dehnt">
         <span class="hint">Verzeichnis f&uuml;r exportierte BVH-Dateien</span>
     </div>
     <div class="settings-row">
         <label>Video Ausgabepfad:</label>
-        <input type="text" name="studio_video_output" id="studio_video_output" value="{{ prefs.studio_video_output }}" style="flex:1;">
+        <input type="text" name="studio_video_output" id="studio_video_output" value="{{ prefs.studio_video_output }}" class="hb-dehnt">
         <span class="hint">Verzeichnis f&uuml;r exportierte Videos (MP4)</span>
     </div>
     <div class="settings-row">
         <label>Projekt-Pfad:</label>
-        <input type="text" name="studio_project_path" id="studio_project_path" value="{{ prefs.studio_project_path }}" style="flex:1;">
+        <input type="text" name="studio_project_path" id="studio_project_path" value="{{ prefs.studio_project_path }}" class="hb-dehnt">
         <span class="hint">Verzeichnis f&uuml;r Studio-Projektdateien (.studio.json)</span>
     </div>
 </div>
@@ -135,58 +136,22 @@
 .settings-row input, .settings-row select { padding: 6px 10px; background: var(--bg-card); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem; }
 .settings-row .hint { font-size: 0.75rem; color: var(--text-muted); }
 .settings-actions { margin-top: 20px; }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* 4x */
 </style>
 
-<script>
-document.getElementById('studio-settings-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const data = {};
-    for (const [key, val] of new FormData(form)) {
-        if (key !== 'csrfmiddlewaretoken') data[key] = val;
-    }
-    const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value
-        || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-    const resp = await fetch('/api/ui-prefs/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': csrfToken,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data),
-    });
-    if (resp.ok) {
-        alert('Einstellungen gespeichert.');
-    } else {
-        alert('Fehler beim Speichern.');
-    }
-});
+{% comment %}Umbau 16.08.2026: Hier standen 50 Zeilen inline — Formular-Versand
+und Projektliste, mit eigener CSRF-Regex und zwei ungepruefen fetch-Aufrufen.
+Jetzt zwei Klassen unter static/js/einstellungen/.{% endcomment %}
+<script type="module">
+import { Vorgabenformular } from "{% static 'js/einstellungen/vorgabenformular.js' %}?t={% now 'U' %}";
+import { Projektfeld } from "{% static 'js/einstellungen/projektfeld.js' %}?t={% now 'U' %}";
 
-// Populate project dropdown
-(async () => {
-    const sel = document.getElementById('studio_default_project');
-    if (!sel) return;
-    const saved = "{{ prefs.studio_default_project|default:'TechnoDance'|escapejs }}";
-    try {
-        const prefsResp = await fetch('/api/ui-prefs/');
-        const prefs = await prefsResp.json();
-        const dir = prefs.studio_project_path || '';
-        const resp = await fetch(`/api/studio/project-list/?dir=${encodeURIComponent(dir)}`);
-        const data = await resp.json();
-        if (data.files) {
-            for (const f of data.files) {
-                const name = f.name.replace(/\.studio\.json$/i, '');
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
-                if (name === saved) opt.selected = true;
-                sel.appendChild(opt);
-            }
-        }
-        if (!sel.value && saved) sel.value = saved;
-    } catch(e) {
-        console.warn('Failed to load project list:', e);
-    }
-})();
+Vorgabenformular.anmelden('studio-settings-form');
+Projektfeld.fuellen('studio_default_project',
+    "{{ prefs.studio_default_project|default:'TechnoDance'|escapejs }}");
 </script>
 {% endblock %}

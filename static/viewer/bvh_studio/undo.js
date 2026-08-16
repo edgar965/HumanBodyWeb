@@ -3,15 +3,16 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export const undoStack = [];
 export const redoStack = [];
 const UNDO_MAX = 20;
 
 export function pushUndo(label) {
-    if (state._undoSuppressed) { console.log(`[Undo] SUPPRESSED: ${label}`); return; }
+    if (state._undoSuppressed) { Protokoll.debug('Undo', 'unterdrueckt:', label); return; }
     try {
-        console.log(`[Undo] pushUndo('${label}') — tracks: ${state.project.tracks.length}, clips: ${state.project.tracks.map(t=>t.clips.length)}`);
+        Protokoll.debug('Undo', `gemerkt: ${label} — ${state.project.tracks.length} Spuren`);
         const snapshot = {
             label,
             data: fn.buildProjectData(),
@@ -28,10 +29,10 @@ export function pushUndo(label) {
 }
 
 export async function undo() {
-    if (state._undoInProgress) { console.log('[Undo] Already in progress, skip.'); return; }
-    if (undoStack.length === 0) { console.log('[Undo] Nothing to undo. Stack empty.'); return; }
+    if (state._undoInProgress) { Protokoll.debug('Undo', 'laeuft schon'); return; }
+    if (undoStack.length === 0) { Protokoll.debug('Undo', 'nichts zurueckzunehmen'); return; }
     state._undoInProgress = true;
-    console.log(`[Undo] Starting. Stack size: ${undoStack.length}, top label: ${undoStack[undoStack.length-1].label}, tracks in snapshot: ${undoStack[undoStack.length-1].data.tracks?.length}`);
+    Protokoll.debug('Undo', `beginnt — ${undoStack.length} Schritte, oben: ${undoStack[undoStack.length - 1].label}`);
     // Save current state to redo
     try {
         redoStack.push({
@@ -52,13 +53,13 @@ export async function undo() {
     fn.updatePlaybackUI();
     fn.updateProperties();
     fn.flashStudioInfo?.(`Undo: ${snap.label}`);
-    console.log(`[Undo] Restored: ${snap.label} (${undoStack.length} left)`);
+    Protokoll.info('Undo', `zurueckgenommen: ${snap.label} (${undoStack.length} verbleiben)`);
     state._undoInProgress = false;
 }
 
 export async function redo() {
     if (state._undoInProgress) return;
-    if (redoStack.length === 0) { console.log('[Redo] Nothing to redo'); return; }
+    if (redoStack.length === 0) { Protokoll.debug('Redo', 'nichts wiederherzustellen'); return; }
     state._undoInProgress = true;
     undoStack.push({
         label: 'undo',
@@ -77,6 +78,6 @@ export async function redo() {
     fn.updatePlaybackUI();
     fn.updateProperties();
     fn.flashStudioInfo?.(`Redo`);
-    console.log(`[Redo] Restored (${redoStack.length} left)`);
+    Protokoll.info('Redo', `wiederhergestellt (${redoStack.length} verbleiben)`);
     state._undoInProgress = false;
 }

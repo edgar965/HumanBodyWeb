@@ -12,6 +12,8 @@
  * Die Liste wird je Seitenaufruf einmal geholt und geteilt: mehrere Felder auf
  * derselben Seite loesen sonst mehrere gleiche Abfragen aus.
  */
+import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
+
 export class Modellfeld {
 
     static ENDPUNKT = '/api/character/models/';
@@ -20,8 +22,8 @@ export class Modellfeld {
     /** Vorgabenliste holen — je Seitenaufruf nur eine Abfrage. */
     static async vorgaben() {
         if (!Modellfeld._laufend) {
-            Modellfeld._laufend = fetch(`${Modellfeld.ENDPUNKT}?t=${Date.now()}`)
-                .then(antwort => antwort.json())
+            Modellfeld._laufend = Serverabruf
+                .json(`${Modellfeld.ENDPUNKT}?t=${Date.now()}`)
                 .then(daten => daten.presets || []);
         }
         return Modellfeld._laufend;

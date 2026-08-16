@@ -4,6 +4,7 @@
 import { TONE_MAPPINGS } from './state.js';
 import { state, SESSION_KEY } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 // =========================================================================
 // Save session state to sessionStorage
@@ -30,7 +31,7 @@ export async function restoreSessionState() {
         sessionStorage.removeItem(SESSION_KEY);
 
         if (data._defaultPresetSnapshot && data._defaultPresetSnapshot !== state.defaultPresetName) {
-            console.log('[Scene] Default model changed from', data._defaultPresetSnapshot, 'to', state.defaultPresetName, '— discarding session.');
+            Protokoll.debug('Scene', 'Default model changed from', data._defaultPresetSnapshot, 'to', state.defaultPresetName, '— discarding session.');
             return false;
         }
 

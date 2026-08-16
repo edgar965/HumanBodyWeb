@@ -55,7 +55,7 @@ function buildClipFromRetargetData(data, rigifySkel) {
         }
     }
 
-    console.log(`[RETARGET] buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames`);
+    console.debug(`[RETARGET] buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames`);
     return new THREE.AnimationClip('retargeted', data.duration, tracks);
 }
 
@@ -73,7 +73,7 @@ export async function fetchRetargetedClip(bvhCategory, bvhName, rigifySkel, opts
     if (opts.format) params.set('format', opts.format);
 
     const url = `/api/character/retarget-bvh/${encodeURIComponent(bvhCategory)}/${encodeURIComponent(bvhName)}/?${params}`;
-    console.log(`[RETARGET] Fetching: ${url}`);
+    console.debug(`[RETARGET] Fetching: ${url}`);
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`Retarget API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();

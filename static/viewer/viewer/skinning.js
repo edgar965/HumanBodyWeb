@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { state, API } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export async function loadSkinWeights() {
     try {
@@ -20,7 +21,7 @@ export async function loadRigifySkeleton() {
         const resp = await fetch(`${API}/rigify-skeleton/`);
         if (resp.ok) {
             state.rigifySkeletonData = await resp.json();
-            console.log(`DEF skeleton loaded: ${state.rigifySkeletonData.bone_count} bones`);
+            Protokoll.debug('Viewer', `DEF skeleton loaded: ${state.rigifySkeletonData.bone_count} bones`);
         }
     } catch (e) {
         console.warn('DEF skeleton not available:', e);
@@ -70,7 +71,7 @@ export function convertToRigifySkinnedMesh(rigifySkel, swData) {
 
     state.scene.add(state.bodyMesh);
     state.isSkinned = true;
-    console.log('SkinnedMesh created:', state.bodyMesh.isSkinnedMesh,
+    Protokoll.debug('Viewer', 'SkinnedMesh created:', state.bodyMesh.isSkinnedMesh,
                 'bones:', state.rigifySkeleton.skeleton.bones.length,
                 'skinIndex:', !!state.bodyGeometry.attributes.skinIndex,
                 'skinWeight:', !!state.bodyGeometry.attributes.skinWeight);

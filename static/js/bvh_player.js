@@ -23,8 +23,9 @@ import { Spielerdaten } from './bvh_player/spielerdaten.js';
 import { Videoueberlagerung } from './bvh_player/videoueberlagerung.js';
 import { Vergleichstafel } from './bvh_player/vergleichstafel.js';
 import { Spielerbedienung } from './bvh_player/bedienung.js';
+import { Protokoll } from '../viewer/gemeinsam/protokoll.js';
 
-console.log('[bvh_player] v0.89 loaded (Klassen, 3-Spalten-Ansicht)');
+Protokoll.debug('bvh_player', 'v0.89 loaded (Klassen, 3-Spalten-Ansicht)');
 
 export class BvhSpieler {
     constructor(video, behaelter, fps) {
@@ -42,7 +43,7 @@ export class BvhSpieler {
     /** Knochennummern ein- oder ausschalten. Gibt den neuen Stand zurueck. */
     nummernUmschalten() {
         this.szene.nummernZeigen = !this.szene.nummernZeigen;
-        console.log('[bvh_player] Bone labels:',
+        Protokoll.debug('bvh_player', 'Bone labels:',
                     this.szene.nummernZeigen ? 'ON' : 'OFF');
         return this.szene.nummernZeigen;
     }
@@ -59,7 +60,7 @@ export class BvhSpieler {
         try {
             this.zustand.klipdauer = await this.skelett.laden(bvhUrl);
             this.bedienung.dauerUebernehmen();
-            console.log('[bvh_player] Ready, clip duration:',
+            Protokoll.debug('bvh_player', 'Ready, clip duration:',
                         this.zustand.klipdauer.toFixed(1) + 's');
         } catch (e) {
             console.error('[bvh_player] BVH load error:', e);
@@ -121,7 +122,7 @@ export class BvhSpieler {
 export function initBVHPlayer({ videoId, canvasId, bvhUrl, fps = 30,
                                 overlayId = null, detectionUrl = null,
                                 keypointsUrl = null }) {
-    console.log('[bvh_player] initBVHPlayer called', { videoId, canvasId });
+    Protokoll.debug('bvh_player', 'initBVHPlayer called', { videoId, canvasId });
     const video = document.getElementById(videoId);
     const behaelter = document.getElementById(canvasId);
     if (!video || !behaelter) {

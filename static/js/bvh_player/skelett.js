@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { Skelettformat } from './skelettformate.js';
+import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
 
 export class Spielerskelett {
     constructor(szene) {
@@ -38,7 +39,7 @@ export class Spielerskelett {
     }
 
     _uebernehmen(ergebnis) {
-        console.log('[bvh_player] BVH loaded, bones:', ergebnis.skeleton.bones.length);
+        Protokoll.debug('bvh_player', 'BVH loaded, bones:', ergebnis.skeleton.bones.length);
         this.wurzel = ergebnis.skeleton.bones[0];
         this.szene.scene.add(this.wurzel);
         for (const knochen of ergebnis.skeleton.bones) {
@@ -60,8 +61,8 @@ export class Spielerskelett {
 
     _abgleichMelden(namen) {
         const { da, fehlt } = this.format.abgleich(namen);
-        console.log(`[bvh_player] Detected ${this.format.name} format`);
-        console.log(`[bvh_player] Bones matched: ${da.length}/`
+        Protokoll.debug('bvh_player', `Detected ${this.format.name} format`);
+        Protokoll.debug('bvh_player', `Bones matched: ${da.length}/`
                     + `${this.format.reihenfolge.length}`, da);
         if (fehlt.length) console.warn('[bvh_player] Bones MISSING:', fehlt);
         window.__bvhDebug = { matched: da, missing: fehlt,

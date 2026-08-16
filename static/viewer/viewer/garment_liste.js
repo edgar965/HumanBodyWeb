@@ -1,5 +1,6 @@
 import { setSlider, sliderVal } from './utils.js';
 import { state, REGION_DEFS } from './state.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 /**
  * Kleidungsliste und Downloadpakete der Modellseite.
  *
@@ -174,8 +175,8 @@ export async function _loadDownloadPacks() {
     const packSelect = document.getElementById('garment-pack-select');
     if (!packSelect) return;
     try {
-        const resp = await fetch('/api/character/garment/download/available/');
-        const data = await resp.json();
+        const data = await Serverabruf.json(
+            '/api/character/garment/download/available/');
         packSelect.innerHTML = '';
         (data.packs || []).forEach(p => {
             const opt = document.createElement('option');
@@ -195,15 +196,13 @@ export async function _downloadPack() {
     if (dlBtn) dlBtn.disabled = true;
     if (statusEl) statusEl.textContent = `Lade ${packName}...`;
     try {
-        const resp = await fetch('/api/character/garment/download/', {
+        const data = await Serverabruf.json('/api/character/garment/download/', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pack_name: packName }),
         });
-        const data = await resp.json();
         if (data.ok) {
             if (statusEl) statusEl.textContent = `${data.count} Garments installiert!`;
-            const resp2 = await fetch('/api/character/garment/library/');
-            const lib = await resp2.json();
+            const lib = await Serverabruf.json('/api/character/garment/library/');
             state._garmentCatalog = [];
             if (lib.garments) { for (const cat of Object.keys(lib.garments)) for (const g of lib.garments[cat]) state._garmentCatalog.push(g); }
             const catSelect = document.getElementById('garment-category');

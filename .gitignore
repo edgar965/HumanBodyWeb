@@ -40,6 +40,13 @@ Thumbs.db
 # naechsten `git add -A` mit ins Repo.
 logs/
 media/photo_analysis/
+# Vom Studio hochgeladene 3D-Objekte (52 MB) und Tonspuren (2,9 MB)
+media/scene_objects/
+media/studio_audio/
+media/tmp/
+# Visual-Studio-Projektdateien
+*.pyproj
+*.pyproj.user
 ProjektTemp/
 
 # Zustand der Hilfe-Seiten (djangoBase): Ankreuzliste der Skills-Lehren und die

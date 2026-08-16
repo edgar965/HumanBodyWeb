@@ -9,6 +9,7 @@
 
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 // =========================================================================
@@ -62,7 +63,7 @@ export function applyFixedPositionAll() {
         }
     }
     fn.applyPlayhead();
-    console.log(`[BVH Studio] Fixed position: radius=${r}m`);
+    Protokoll.debug('BVH Studio', `Fixed position: radius=${r}m`);
 }
 
 export function restoreFixedPositionAll() {
@@ -76,5 +77,5 @@ export function restoreFixedPositionAll() {
     }
     _fixedPos.origData.clear();
     fn.applyPlayhead();
-    console.log('[BVH Studio] Fixed position: restored originals');
+    Protokoll.debug('BVH Studio', 'Fixed position: restored originals');
 }

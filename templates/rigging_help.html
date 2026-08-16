@@ -27,6 +27,18 @@
     .rigging-help .pipeline-step .num { background: #7c5cbf; color: #fff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; flex-shrink: 0; }
     .rigging-help .pipeline-arrow { text-align: center; color: #555; font-size: 1.2rem; }
     .rigging-help .compare-table td:first-child { font-weight: 600; color: #bb9af7; white-space: nowrap; }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-margin-top-20px.hb-margin-top-20px.hb-margin-top-20px { margin-top: 20px; color: #4fc1ff; }   /* 3x */
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-color-4fc1ff.hb-color-4fc1ff.hb-color-4fc1ff { color: #4fc1ff; margin-top: 50px; }   /* 2x */
+.hb-color-73daca.hb-color-73daca.hb-color-73daca { color: #73daca; margin-top: 50px; }   /* 2x */
+.hb-margin-top-20px.hb-margin-top-20px.hb-margin-top-20px { margin-top: 20px; color: #ff9940; }   /* 2x */
 </style>
 <div class="rigging-help">
 
@@ -56,7 +68,7 @@ DEF-spine (Pelvis) &rarr; .001 (Lumbar) &rarr; .002 &rarr; .003 (Chest) &rarr; .
     <!-- ============================================================ -->
     <!-- GRUNDPRINZIP -->
     <!-- ============================================================ -->
-    <h2 id="principle" style="color: #4fc1ff; margin-top: 50px;">Das Grundprinzip: Skinning</h2>
+    <h2 id="principle" class="hb-color-4fc1ff">Das Grundprinzip: Skinning</h2>
 
     <div class="info-box info-box-blue">
         <p><strong>Skinning</strong> bedeutet: Jeder Vertex einer Geometrie wei&szlig;, welche Knochen ihn beeinflussen und wie stark.</p>
@@ -143,7 +155,7 @@ Vertex #42:
     <!-- ============================================================ -->
     <!-- BODY MESH -->
     <!-- ============================================================ -->
-    <h2 id="body" style="color: #73daca; margin-top: 50px;">Body Mesh im Detail</h2>
+    <h2 id="body" class="hb-color-73daca">Body Mesh im Detail</h2>
 
     <div class="info-box info-box-green">
         <h3 style="margin-top: 0; color: #73daca;">Gewichtung mit weichen &Uuml;berg&auml;ngen</h3>
@@ -172,7 +184,7 @@ F&uuml;r jeden Garment-Vertex:
     2. Kopiere dessen Bone-Indices + Weights
     3. &rarr; Garment-Vertex bewegt sich identisch zum darunterliegenden K&ouml;rper</pre>
 
-        <h3 style="margin-top: 20px; color: #ff9940;">Fitting-Pipeline (10 Schritte)</h3>
+        <h3 class="hb-margin-top-20px">Fitting-Pipeline (10 Schritte)</h3>
         <div class="pipeline-step"><div class="num">1</div><div><strong>Koordinaten-Konvertierung</strong> &mdash; Dezimeter/cm Y-up &rarr; Meter Z-up</div></div>
         <div class="pipeline-arrow">&darr;</div>
         <div class="pipeline-step"><div class="num">2</div><div><strong>Feet-to-Feet Alignment</strong> &mdash; F&uuml;&szlig;e ausrichten</div></div>
@@ -193,7 +205,7 @@ F&uuml;r jeden Garment-Vertex:
         <div class="pipeline-arrow">&darr;</div>
         <div class="pipeline-step"><div class="num">10</div><div><strong>SkinnedMesh im Browser</strong> &mdash; Bind an Shared Skeleton</div></div>
 
-        <h3 style="margin-top: 20px; color: #ff9940;">Clipping-Vermeidung</h3>
+        <h3 class="hb-margin-top-20px">Clipping-Vermeidung</h3>
         <table>
             <tr><th>Wo</th><th>Methode</th><th>Wie</th></tr>
             <tr><td>Server (Fitting)</td><td>Push-Outside-Body</td><td>Normal-basierte Distanzpr&uuml;fung, Deficit-Push entlang Normalen</td></tr>
@@ -205,7 +217,7 @@ F&uuml;r jeden Garment-Vertex:
     <!-- ============================================================ -->
     <!-- FORMS -->
     <!-- ============================================================ -->
-    <h2 id="forms" style="color: #4fc1ff; margin-top: 50px;">Form (Model Generator) im Detail</h2>
+    <h2 id="forms" class="hb-color-4fc1ff">Form (Model Generator) im Detail</h2>
 
     <div class="info-box info-box-blue">
         <h3 style="margin-top: 0; color: #4fc1ff;">Einfachstes Rigging: 100% pro Bone</h3>
@@ -219,7 +231,7 @@ Tutu am DEF-spine.002 (H&uuml;fte):
 
         <p><strong>Kein Blending n&ouml;tig</strong> &mdash; die Form geh&ouml;rt komplett zu einem Bone. Deshalb kein weiches Biegen an Gelenken, aber auch kein kompliziertes Weight-Painting.</p>
 
-        <h3 style="margin-top: 20px; color: #4fc1ff;">Zwei Modi</h3>
+        <h3 class="hb-margin-top-20px">Zwei Modi</h3>
         <table>
             <tr><th>Modus</th><th>Mesh-Typ</th><th>Animation</th></tr>
             <tr>
@@ -234,7 +246,7 @@ Tutu am DEF-spine.002 (H&uuml;fte):
             </tr>
         </table>
 
-        <h3 style="margin-top: 20px; color: #4fc1ff;">Geometrie-Erzeugung</h3>
+        <h3 class="hb-margin-top-20px">Geometrie-Erzeugung</h3>
         <p>Die Geometrie wird <strong>komplett im Browser</strong> erzeugt (kein Server-Roundtrip):</p>
         <ol>
             <li>Three.js Geometrie erstellen (CylinderGeometry, LatheGeometry, BufferGeometry...)</li>
@@ -244,7 +256,7 @@ Tutu am DEF-spine.002 (H&uuml;fte):
             <li>Alle Bones zu einem Mesh zusammenf&uuml;hren</li>
         </ol>
 
-        <h3 style="margin-top: 20px; color: #4fc1ff;">Verf&uuml;gbare Formen</h3>
+        <h3 class="hb-margin-top-20px">Verf&uuml;gbare Formen</h3>
         <table>
             <tr><th>Form</th><th>Geometrie</th><th>Spezial-Parameter</th></tr>
             <tr><td>Zylinder</td><td>CylinderGeometry</td><td>&mdash;</td></tr>
@@ -264,7 +276,7 @@ Tutu am DEF-spine.002 (H&uuml;fte):
     <!-- ============================================================ -->
     <!-- ANIMATION -->
     <!-- ============================================================ -->
-    <h2 id="animation" style="color: #73daca; margin-top: 50px;">Animation: Wie sich alles zusammen bewegt</h2>
+    <h2 id="animation" class="hb-color-73daca">Animation: Wie sich alles zusammen bewegt</h2>
 
     <div class="info-box info-box-green">
         <pre>

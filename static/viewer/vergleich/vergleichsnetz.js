@@ -10,6 +10,8 @@
 import * as THREE from 'three';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords }
     from '../gemeinsam/kodierung.js';
+import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 /** Materialien des Koerpers, nach Materialnummer des Netzes. */
 const KOERPERMATERIALIEN = [
@@ -26,9 +28,6 @@ const KOERPERMATERIALIEN = [
     { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },   // 10 Fussnaegel
 ];
 
-/** Gamma, mit dem die Hautfarben aus der Datenbank aufgehellt werden. */
-const GAMMA = 1 / 2.2;
-
 export class Vergleichsnetz {
     /**
      * Netz laden und in die Szene setzen.
@@ -39,7 +38,7 @@ export class Vergleichsnetz {
         const adresse = ansicht.apiPrefix + '/mesh/'
             + (koerperart ? '?body_type=' + encodeURIComponent(koerperart) : '');
         try {
-            const daten = await (await fetch(adresse)).json();
+            const daten = await Serverabruf.json(adresse);
             if (daten.error) {
                 console.error(`[${ansicht.label}] mesh error:`, daten.error);
                 return;
@@ -124,13 +123,8 @@ export class Vergleichsnetz {
     static hautfarbeAnwenden(ansicht) {
         const art = ansicht.felder.koerperart?.value || ansicht.defaultBodyType || '';
         if (!art || !Object.keys(ansicht.skinColorMap).length) return;
-        const teile = art.split('_');
-        const farben = ansicht.skinColorMap[teile[1] || teile[0]];
         const material = Vergleichsnetz.hautmaterial(ansicht);
-        if (!farben || !material) return;
-        material.color.setRGB(Math.pow(farben[0], GAMMA),
-                              Math.pow(farben[1], GAMMA),
-                              Math.pow(farben[2], GAMMA));
+        if (!Hautfarbe.ausKoerperart(material, art, ansicht.skinColorMap)) return;
         Vergleichsnetz.reglerNachziehen(ansicht, material);
     }
 

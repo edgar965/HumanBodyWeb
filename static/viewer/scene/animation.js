@@ -6,9 +6,10 @@
 import { THREE, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { escapeHtml, _selectedInst, getCSRFToken } from './utils.js';
+import { escapeHtml, _selectedInst } from './utils.js';
 import { convertToRigifySkinnedMesh, convertInstToSkinned } from './skeleton.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export function stopAnimation(destroy = false) {
     if (state.currentAction) { state.currentAction.stop(); state.currentAction.reset(); if (destroy) state.currentAction = null; }
@@ -48,8 +49,18 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
         let bodyH = 1.68; const bb = new THREE.Box3().setFromObject(bMesh); if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
         try {
             let clip;
-            if (rawBvhText) { clip = await fetchRetargetedClipFromText(rawBvhText, skel, { bodyHeight: bodyH, deltaNorm: state._sceneDeltaNorm }); state.currentAnimBvhText = rawBvhText; }
-            else { clip = await fetchRetargetedClipFromUrl(url, skel, { bodyHeight: bodyH, deltaNorm: state._sceneDeltaNorm }); try { const tr = await fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now()); state.currentAnimBvhText = await tr.text(); } catch { state.currentAnimBvhText = ''; } }
+            const wahl = { bodyHeight: bodyH, deltaNorm: state._sceneDeltaNorm };
+            if (rawBvhText) {
+                clip = await fetchRetargetedClipFromText(rawBvhText, skel, wahl);
+                state.currentAnimBvhText = rawBvhText;
+            } else {
+                clip = await fetchRetargetedClipFromUrl(url, skel, wahl);
+                // Der Rohtext wird fuer "Boden richten" und den Export
+                // gebraucht; ohne ihn bleiben beide Knoepfe wirkungslos.
+                state.currentAnimBvhText = await Serverabruf.text(
+                    url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now())
+                    .catch(() => '');
+            }
             if (!state.skeletonHelper) {
                 state.skeletonHelper = Skelettanzeige.bauen(state.scene, skel.rootBone, state.rigVisible);
             }
@@ -145,8 +156,8 @@ export function _initSaveAnimDialog() {
         const name = document.getElementById('save-anim-name').value.trim();
         if (!name) { alert('Bitte Dateiname eingeben.'); return; }
         try {
-            const resp = await fetch('/api/character/animation/save/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() }, body: JSON.stringify({ category, name, bvh_content: state.currentAnimBvhText }) });
-            const data = await resp.json();
+            const data = await Serverabruf.senden('/api/character/animation/save/',
+                { category, name, bvh_content: state.currentAnimBvhText });
             if (data.ok) { dlg.classList.remove('visible'); state.currentAnimUrl = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`; state.currentAnimName = name; loadAnimationUI(); }
             else alert('Fehler: ' + (data.error || 'Unbekannt'));
         } catch (e) { alert('Speichern fehlgeschlagen: ' + e.message); }
@@ -155,8 +166,7 @@ export function _initSaveAnimDialog() {
 
 export async function loadAnimationUI() {
     try {
-        const resp = await fetch('/api/character/animations/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/animations/');
         const tree = document.getElementById('anim-tree'); if (!tree) return;
         tree.innerHTML = '';
         const categories = data.categories || {};

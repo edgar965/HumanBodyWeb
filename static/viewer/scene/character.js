@@ -12,6 +12,7 @@ import './modellgenerator/zustand.js';
 import { Charakterzubehoer } from './charakter_zubehoer.js';
 import { Charakterkoerper } from './charakter_koerper.js';
 import { addCharacterFromPreset, clearAllCharacters, deleteCharacter, deselectCharacter, focusCharacter, loadDefaultCharacter, selectCharacter, setTransformMode, updateCharacterListUI, updateVertexCount } from './charakterliste.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 // =========================================================================
 // CharacterInstance
@@ -57,8 +58,7 @@ export class CharacterInstance {
             if (v !== 0) params.set(`meta_${k}`, v);
         }
 
-        const resp = await fetch(`/api/character/mesh/?${params}`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`/api/character/mesh/?${params}`);
         if (data.error) throw new Error(data.error);
 
         const vertBuf = base64ToFloat32(data.vertices);

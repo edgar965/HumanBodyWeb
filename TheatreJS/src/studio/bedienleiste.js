@@ -66,7 +66,7 @@ export class Bedienleiste {
                     return;
                 }
                 applyPreset(vorgabe, camera, lights, controls);
-                console.log('✓ Vorgabe angewendet:', vorgabe.name);
+                console.debug('✓ Vorgabe angewendet:', vorgabe.name);
                 Bedienleiste.menuesZuklappen();
             });
         });

@@ -16,6 +16,13 @@ Umbau 16.08.2026 (Performance + Anforderung 5):
 {% endcomment %}
 
 {% block content %}
+<style>
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-display-inline.hb-display-inline.hb-display-inline { display:inline; }   /* 2x */
+</style>
 <h1>BVH Library</h1>
 
 <div class="toolbar">
@@ -60,13 +67,13 @@ Umbau 16.08.2026 (Performance + Anforderung 5):
             Seite mit einem eingebetteten Bild auslösen, denn die
             Gleiche-Herkunft-Prüfung greift nur bei unsicheren Methoden.
             {% endcomment %}
-            <form method="post" action="{% url 'open_in_blender' file.pk %}" style="display:inline;">
+            <form method="post" action="{% url 'open_in_blender' file.pk %}" class="hb-display-inline">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-primary" title="Open in Blender">
                     <i class="fas fa-cube"></i> Blender
                 </button>
             </form>
-            <form method="post" action="{% url 'delete_bvh' file.pk %}" style="display:inline;"
+            <form method="post" action="{% url 'delete_bvh' file.pk %}" class="hb-display-inline"
                   onsubmit="return confirm('Remove from library?')">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-danger" title="Remove">

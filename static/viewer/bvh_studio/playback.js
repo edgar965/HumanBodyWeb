@@ -235,3 +235,9 @@ fn.stopAudioTrack = stopAudioTrack;
 fn.stopAllAudio = stopAllAudio;
 fn.startAudioPlayback = startAudioPlayback;
 fn.setupPlayback = setupPlayback;
+// FEHLER bis 16.08.2026: Nicht angemeldet, aber in eigenschaften/licht.js als
+// `fn.syncLightVisibility?.()` gerufen — nach einem Wechsel der Lichtart wurde
+// die Sichtbarkeit still NICHT nachgezogen (ein stummgeschaltetes Licht konnte
+// wieder leuchten). Das `?.` verschluckte den fehlenden Namen.
+// Gefunden mit Docu/umbau/registrierungspruefung.py.
+fn.syncLightVisibility = syncLightVisibility;

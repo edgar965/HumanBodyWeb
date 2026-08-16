@@ -67,7 +67,7 @@ export class Kamerabahn {
             set(fov, this.kamera.fov);
         });
         const p = this.kamera.position;
-        console.log(`✓ Kamera-Keyframe bei ${zeit.toFixed(2)}s:`,
+        console.debug(`✓ Kamera-Keyframe bei ${zeit.toFixed(2)}s:`,
             `pos(${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`,
             `fov=${this.kamera.fov.toFixed(1)}`);
     }
@@ -84,10 +84,10 @@ export class Kamerabahn {
                 entfernt += vorher - spur.keyframes.length;
             }
             if (!entfernt) {
-                console.log(`Keine Kamera-Keyframes bei ${zeit.toFixed(2)}s`);
+                console.debug(`Keine Kamera-Keyframes bei ${zeit.toFixed(2)}s`);
                 return false;
             }
-            console.log(`✓ ${entfernt} Kamera-Keyframe(s) bei ${zeit.toFixed(2)}s `
+            console.debug(`✓ ${entfernt} Kamera-Keyframe(s) bei ${zeit.toFixed(2)}s `
                         + 'gelöscht — Seite wird neu geladen');
             return true;
         });
@@ -99,7 +99,7 @@ export class Kamerabahn {
             for (const spur of Object.values(spuren)) {
                 if (spur.keyframes) spur.keyframes = [];
             }
-            console.log('✓ Alle Kamera-Keyframes gelöscht — Seite wird neu geladen');
+            console.debug('✓ Alle Kamera-Keyframes gelöscht — Seite wird neu geladen');
             return true;
         });
     }

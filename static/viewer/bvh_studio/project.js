@@ -19,6 +19,8 @@ import { undoStack, redoStack } from './undo.js';
 import { Studioanzeige } from './studioanzeige.js';
 import { Projektdaten } from './projekt_daten.js';
 import { Projektwiederherstellung } from './projekt_wiederherstellung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /** localStorage-Schluessel des zuletzt benutzten Projektpfads. */
 const LETZTES = 'bvhStudio_lastProject';
@@ -33,12 +35,9 @@ export class Projektdatei {
         const trenner = ordner.includes('\\') ? '\\' : '/';
         const pfad = ordner.replace(/[/\\]$/, '') + trenner + dateiname;
         try {
-            const resp = await fetch('/api/studio/project-save/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: pfad, project: Projektdaten.sammeln() }),
-            });
-            const ergebnis = await resp.json();
+            const ergebnis = await Serverabruf.senden(
+                '/api/studio/project-save/',
+                { path: pfad, project: Projektdaten.sammeln() });
             if (!ergebnis.ok) {
                 alert('Speichern fehlgeschlagen: '
                       + (ergebnis.error || 'Unbekannter Fehler'));
@@ -46,7 +45,7 @@ export class Projektdatei {
             }
             state.project._lastSavePath = ergebnis.path;
             Projektdatei._merken(ergebnis.path);
-            console.log(`[BVH Studio] Project saved: ${ergebnis.path}`);
+            Protokoll.info('BVH Studio', `Project saved: ${ergebnis.path}`);
             Studioanzeige.melden(`Gespeichert: ${dateiname}`);
         } catch (e) {
             alert('Speichern fehlgeschlagen: ' + e.message);
@@ -72,9 +71,8 @@ export class Projektdatei {
 
     static async _ausOrdner(ordner) {
         try {
-            const resp = await fetch('/api/studio/project-list/?dir='
-                                     + encodeURIComponent(ordner));
-            const ergebnis = await resp.json();
+            const ergebnis = await Serverabruf.json(
+                '/api/studio/project-list/?dir=' + encodeURIComponent(ordner));
             if (!ergebnis.files?.length) {
                 alert(`Keine Projekte in ${ordner} gefunden.\nDatei manuell wählen...`);
                 return false;
@@ -96,9 +94,8 @@ export class Projektdatei {
     }
 
     static async _vomServer(pfad, anzeigename) {
-        const resp = await fetch('/api/studio/project-load/?path='
-                                 + encodeURIComponent(pfad));
-        const ergebnis = await resp.json();
+        const ergebnis = await Serverabruf.json(
+            '/api/studio/project-load/?path=' + encodeURIComponent(pfad));
         if (!ergebnis.ok) {
             alert('Laden fehlgeschlagen: ' + (ergebnis.error || ''));
             return true;
@@ -134,7 +131,7 @@ export class Projektdatei {
         try {
             const name = pfad.split(/[/\\]/).pop().replace('.studio.json', '');
             await Projektdatei._vomServer(pfad, name);
-            console.log(`[BVH Studio] Last project loaded: ${pfad}`);
+            Protokoll.debug('BVH Studio', `Last project loaded: ${pfad}`);
         } catch (e) {
             alert('Laden fehlgeschlagen: ' + e.message);
         }

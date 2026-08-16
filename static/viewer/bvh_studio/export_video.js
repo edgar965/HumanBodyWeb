@@ -5,6 +5,9 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { exportBrowserMediaRecorder, exportServerFfmpeg, saveBlobAs } from './video_schreiben.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export let exportCancelled = false;
 
@@ -18,9 +21,7 @@ export async function exportBVH() {
     for (const clip of track.clips) {
         try {
             const url = `/api/character/bvh/${encodeURIComponent(clip.category)}/${encodeURIComponent(clip.name)}/`;
-            const resp = await fetch(url);
-            const text = await resp.text();
-            bvhTexts.push({ clip, text });
+            bvhTexts.push({ clip, text: await Serverabruf.text(url) });
         } catch (e) {
             console.error(`Failed to fetch BVH for ${clip.name}:`, e);
         }
@@ -44,10 +45,10 @@ export async function exportBVH() {
             const a = document.createElement('a'); a.href = url;
             a.download = `${track.name}_${clip.name}.bvh`;
             a.click(); URL.revokeObjectURL(url);
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, Zeiten.BILDPAUSE_MS));
         }
     }
-    console.log(`[BVH Studio] Exported ${bvhTexts.length} BVH file(s) for track "${track.name}"`);
+    Protokoll.info('BVH Studio', `Exported ${bvhTexts.length} BVH file(s) for track "${track.name}"`);
 }
 
 export async function saveBvhAs() {
@@ -55,8 +56,7 @@ export async function saveBvhAs() {
     const clip = state.project.tracks[state.selectedTrackIdx].clips[state.selectedClipIdx];
     try {
         const url = `/api/character/bvh/${encodeURIComponent(clip.category)}/${encodeURIComponent(clip.name)}/`;
-        const resp = await fetch(url);
-        const text = await resp.text();
+        const text = await Serverabruf.text(url);
         const blob = new Blob([text], { type: 'text/plain' });
         const defaultName = `${clip.name}.bvh`;
 
@@ -73,7 +73,7 @@ export async function saveBvhAs() {
                 const writable = await handle.createWritable();
                 await writable.write(blob);
                 await writable.close();
-                console.log(`[BVH Studio] BVH saved via picker: ${handle.name}`);
+                Protokoll.info('BVH Studio', `BVH saved via picker: ${handle.name}`);
                 return;
             } catch (pickerErr) {
                 if (pickerErr.name === 'AbortError') return;  // user cancelled
@@ -90,7 +90,7 @@ export async function saveBvhAs() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(dlUrl);
-        console.log(`[BVH Studio] BVH downloaded: ${defaultName}`);
+        Protokoll.debug('BVH Studio', `BVH downloaded: ${defaultName}`);
     } catch (e) {
         alert('BVH speichern fehlgeschlagen: ' + e.message);
     }
@@ -114,7 +114,7 @@ export function setupExportPanel() {
 
     // Export engine info
     document.getElementById('export-engine')?.addEventListener('change', (e) => {
-        console.log(`[BVH Studio] Export engine: ${e.target.value}`);
+        Protokoll.debug('BVH Studio', `Export-Engine: ${e.target.value}`);
     });
 
     // Auto-update frame range + target dir when export tab opens

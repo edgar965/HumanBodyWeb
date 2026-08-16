@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 // smplxExpr: [jawOpen, smile, browUp, browDown, lipUp, lipCorner, cheekPuff, squint, noseWrinkle, eyeWide]
 export function applyFacialExpression(expr) {
@@ -106,7 +107,7 @@ export function applyFacialExpression(expr) {
     if (state.rigifySkeleton.rootBone) state.rigifySkeleton.rootBone.updateWorldMatrix(true, true);
     if (state.bodyMesh && state.bodyMesh.skeleton) state.bodyMesh.skeleton.update();
 
-    console.log('[FaceExpr] Applied:', {jawOpen, smile, browUp, browDown, lipUp, lipCorner, cheekPuff, squint, noseWrinkle, eyeWide});
+    Protokoll.debug('FaceExpr', 'Applied:', {jawOpen, smile, browUp, browDown, lipUp, lipCorner, cheekPuff, squint, noseWrinkle, eyeWide});
 }
 
 fn.applyFacialExpression = applyFacialExpression;

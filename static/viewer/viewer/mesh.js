@@ -6,6 +6,8 @@ import { state, API, BODY_MATERIALS } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './utils.js';
 import { applySceneSkinSettings, applySkinColor } from './scene_settings.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 function _getBodyTop() {
     if (!state.bodyGeometry) return null;
@@ -32,8 +34,7 @@ export function updateMeshVertices(float32Buffer) {
 
 export async function loadMesh() {
     try {
-        const resp = await fetch(`${API}/mesh/`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`${API}/mesh/`);
         if (data.error) { console.error(data.error); return; }
 
         state.vertexCount = data.vertex_count;
@@ -101,7 +102,7 @@ export async function loadMesh() {
 }
 
 export async function reloadMeshForBodyType(bodyType, gender) {
-    console.log('Reloading mesh for', bodyType, '(gender:', gender, ')');
+    Protokoll.debug('Viewer', 'Reloading mesh for', bodyType, '(gender:', gender, ')');
     if (state.bodyMesh) {
         state.scene.remove(state.bodyMesh);
         state.bodyMesh.geometry?.dispose();
@@ -114,8 +115,7 @@ export async function reloadMeshForBodyType(bodyType, gender) {
     state.initialBodyTop = null;
 
     try {
-        const resp = await fetch(`${API}/mesh/?body_type=${encodeURIComponent(bodyType)}`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`${API}/mesh/?body_type=${encodeURIComponent(bodyType)}`);
         if (data.error) { console.error(data.error); return; }
 
         state.vertexCount = data.vertex_count;
@@ -176,8 +176,8 @@ export async function reloadMeshForBodyType(bodyType, gender) {
         applySceneSkinSettings();
         applySkinColor();
 
-        const swResp = await fetch(`${API}/skin-weights/?body_type=${encodeURIComponent(bodyType)}`);
-        state.skinWeightData = await swResp.json();
+        state.skinWeightData = await Serverabruf.json(
+            `${API}/skin-weights/?body_type=${encodeURIComponent(bodyType)}`);
 
         if (typeof fn.removeAllCloth === 'function') fn.removeAllCloth();
     } catch (e) {

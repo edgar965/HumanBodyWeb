@@ -14,12 +14,14 @@
  */
 
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 // Aus gemeinsam/kodierung.js — die Kopien hier sind am 15.08.2026 entfallen (sechsfach vorhanden).
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './gemeinsam/kodierung.js';
+import { Hautfarbe } from './gemeinsam/hautfarbe.js';
+import { Buehne } from './gemeinsam/buehne.js';
+import { Protokoll } from './gemeinsam/protokoll.js';
 export { base64ToFloat32, base64ToUint32, blenderToThreeCoords };
 
-console.log('[character_core] v1.0 loaded');
+Protokoll.debug('character_core', 'v1.0 loaded');
 
 // =========================================================================
 // Shared state — loaded once, used by both Result and Scene
@@ -151,19 +153,8 @@ export function computeSkinAttributes(geometry, skinWD) {
  */
 export function applySkinColorToMaterials(materials, bodyType, colors) {
     if (!colors || !Object.keys(colors).length) return;
-    const parts = bodyType.split('_');
-    const ethnicity = parts.length > 1 ? parts.slice(1).join('_') : 'Caucasian';
-    const rgb = colors[ethnicity] || colors['Caucasian'];
-    if (rgb && materials[0]) {
-        materials[0].color.setRGB(
-            Math.pow(rgb[0], 1 / 2.2),
-            Math.pow(rgb[1], 1 / 2.2),
-            Math.pow(rgb[2], 1 / 2.2)
-        );
-        if (materials[1]) {
-            materials[1].color.copy(materials[0].color);
-        }
-    }
+    Hautfarbe.ausKoerperart(materials[0], bodyType, colors,
+                            { zweites: materials[1], mitErsatz: true });
 }
 
 // =========================================================================
@@ -269,47 +260,7 @@ export function skinifyMesh(geo, mat, skeletonInfo, data) {
  * @returns {Object} {renderer, scene, camera, controls, keyLight, fillLight, backLight, ambient, grid}
  */
 export function createSceneSetup(canvas) {
-    const w = canvas.clientWidth || canvas.width;
-    const h = canvas.clientHeight || canvas.height;
-
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(w, h, false);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.6;
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a2e);
-
-    const camera = new THREE.PerspectiveCamera(35, w / h, 0.01, 100);
-    camera.position.set(0, 1.0, 3.5);
-
-    const controls = new OrbitControls(camera, canvas);
-    controls.target.set(0, 0.9, 0);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.minDistance = 0.5;
-    controls.maxDistance = 15;
-    controls.update();
-
-    const keyLight = new THREE.DirectionalLight(0xffffff, 3.0);
-    keyLight.position.set(2, 4, -5);
-    scene.add(keyLight);
-
-    const fillLight = new THREE.DirectionalLight(0xeeeeff, 2.0);
-    fillLight.position.set(-3, 3, -4);
-    scene.add(fillLight);
-
-    const backLight = new THREE.DirectionalLight(0xffeedd, 2.5);
-    backLight.position.set(0, 4, 5);
-    scene.add(backLight);
-
-    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambient);
-
-    const grid = new THREE.GridHelper(4, 20, 0x333355, 0x222244);
-    scene.add(grid);
-
-    return { renderer, scene, camera, controls, keyLight, fillLight, backLight, ambient, grid };
+    // Der Aufbau steckt in `Buehne` — er stand bis zum Umbau am 16.08.2026
+    // dreimal im Projekt (hier, in scene/boot.js und in animations.js).
+    return Buehne.bauen(canvas, { masse: 'leinwand', stil: false });
 }

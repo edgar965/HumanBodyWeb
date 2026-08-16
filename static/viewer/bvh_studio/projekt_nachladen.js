@@ -8,6 +8,7 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export class Projektnachladen {
     /**
@@ -55,7 +56,7 @@ export class Projektnachladen {
             clip.data.audioBuffer =
                 await track.audioCtx.decodeAudioData(await resp.arrayBuffer());
             clip._needsReload = false;
-            console.log('[Restore] Audio reloaded:', clip.data.fileName);
+            Protokoll.debug('Restore', 'Audio reloaded:', clip.data.fileName);
         } catch (e) {
             console.warn('[Restore] Audio reload failed:', clip.data?.fileName, e);
             clip._needsReload = true;

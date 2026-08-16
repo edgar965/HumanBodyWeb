@@ -140,6 +140,14 @@
         accent-color: var(--accent);
         height: 4px;
     }
+    /* Morph- und Metaregler im Eigenschaftsfeld: engere Beschriftung, weil dort
+       viele Regler untereinander stehen. Stand bis zum Umbau am 16.08.2026 als
+       label.style.minWidth/fontSize im JavaScript. */
+    #prop-meta-sliders .slider-row label { min-width: 80px; }
+    .morph-category-body .slider-row label {
+        min-width: 80px;
+        font-size: 0.72rem;
+    }
     .slider-row .slider-val {
         font-size: 0.75rem;
         color: var(--text-muted);
@@ -785,6 +793,45 @@
         border: 1px solid rgba(255,255,255,0.2);
         flex-shrink: 0;
     }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-align-items-center.hb-align-items-center.hb-align-items-center { align-items:center; }   /* 5x */
+.hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* 9x */
+.hb-dehnt-ohne-abstand.hb-dehnt-ohne-abstand.hb-dehnt-ohne-abstand { margin-bottom:0; flex:1; }   /* 8x */
+.hb-display-flex.hb-display-flex.hb-display-flex { display:flex; gap:6px; margin-top:6px; }   /* 4x */
+.hb-farbfeld.hb-farbfeld.hb-farbfeld { width:40px; height:24px; border:none; cursor:pointer; }   /* 6x */
+.hb-fest.hb-fest.hb-fest { flex:0 0 auto; padding:6px 10px; }   /* 9x */
+.hb-flex-1.hb-flex-1.hb-flex-1 { flex:1; font-size:0.7rem; padding:6px 4px; }   /* 3x */
+.hb-font-size-0-72rem.hb-font-size-0-72rem.hb-font-size-0-72rem { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); margin:6px 0 4px; }   /* 9x */
+.hb-font-size-0-75rem.hb-font-size-0-75rem.hb-font-size-0-75rem { font-size:0.75rem; padding:4px 10px; }   /* 3x */
+.hb-font-size-0-7rem.hb-font-size-0-7rem.hb-font-size-0-7rem { font-size:0.7rem; color:var(--text-secondary); margin-bottom:2px; }   /* 3x */
+.hb-font-size-1-5rem.hb-font-size-1-5rem.hb-font-size-1-5rem { font-size:1.5rem; margin-bottom:8px; display:block; }   /* 3x */
+.hb-hinweis.hb-hinweis.hb-hinweis { padding:12px; color:var(--text-muted); font-size:0.8rem; }   /* 6x */
+.hb-kontextmenue.hb-kontextmenue.hb-kontextmenue { display:none; position:fixed; z-index:9999; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:4px 0; min-width:180px; box-shadow:0 8px 24px rgba(0,0,0,0.4); }   /* 1x */
+.hb-margin-top-6px.hb-margin-top-6px.hb-margin-top-6px { margin-top:6px; }   /* 3x */
+.hb-margin-top-8px.hb-margin-top-8px.hb-margin-top-8px { margin-top:8px; font-size:0.75rem; color:var(--text-secondary); font-weight:600; }   /* 4x */
+.hb-max-height-300px.hb-max-height-300px.hb-max-height-300px { max-height:300px; margin-bottom:0; overflow-y:auto; resize:vertical; min-height:80px; }   /* 3x */
+.hb-menueeintrag.hb-menueeintrag.hb-menueeintrag { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; }   /* 3x */
+.hb-symbolspalte.hb-symbolspalte.hb-symbolspalte { width:16px; }   /* 3x */
+.hb-trennlinie.hb-trennlinie.hb-trennlinie { height:1px; background:var(--border); margin:4px 0; }   /* 1x */
+.hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* 14x */
+.hb-volle-breite.hb-volle-breite.hb-volle-breite { width:100%; }   /* 4x */
+.hb-width-100.hb-width-100.hb-width-100 { width:100%; margin-top:8px; }   /* 3x */
+.hb-width-auto.hb-width-auto.hb-width-auto { width:auto; margin-left:8px; }   /* 4x */
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-cursor-pointer.hb-cursor-pointer.hb-cursor-pointer { cursor:pointer; padding:4px 8px; font-size:0.82rem; border:none; background:none; color:var(--text-muted); }   /* 2x */
+.hb-display-flex.hb-display-flex.hb-display-flex { display:flex; gap:6px; }   /* 2x */
+.hb-font-size-0-75rem.hb-font-size-0-75rem.hb-font-size-0-75rem { font-size:0.75rem; color:var(--text-muted); margin-bottom:4px; }   /* 2x */
+.hb-font-size-0-8rem.hb-font-size-0-8rem.hb-font-size-0-8rem { font-size:0.8rem; color:var(--text-muted); }   /* 2x */
+.hb-margin-right-4px.hb-margin-right-4px.hb-margin-right-4px { margin-right:4px; }   /* 2x */
+.hb-padding-0.hb-padding-0.hb-padding-0 { padding:0; }   /* 2x */
+.hb-width-40px.hb-width-40px.hb-width-40px { width:40px; height:24px; border:none; background:none; cursor:pointer; }   /* 2x */
+.hb-width-60px.hb-width-60px.hb-width-60px { width:60px; }   /* 2x */
 </style>
 {% endblock %}
 
@@ -879,8 +926,8 @@
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:2px;margin-left:12px;">
-                <button onclick="window.__sceneUndo && window.__sceneUndo()" title="Undo (Ctrl+Z)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-undo"></i></button>
-                <button onclick="window.__sceneRedo && window.__sceneRedo()" title="Redo (Ctrl+Y oder Ctrl+Shift+Z)" class="menu-title" style="cursor:pointer;padding:4px 8px;font-size:0.82rem;border:none;background:none;color:var(--text-muted);"><i class="fas fa-redo"></i></button>
+                <button onclick="window.__sceneUndo && window.__sceneUndo()" title="Undo (Ctrl+Z)" class="menu-title hb-cursor-pointer"><i class="fas fa-undo"></i></button>
+                <button onclick="window.__sceneRedo && window.__sceneRedo()" title="Redo (Ctrl+Y oder Ctrl+Shift+Z)" class="menu-title hb-cursor-pointer"><i class="fas fa-redo"></i></button>
             </div>
             <div class="menubar-right">
                 <div class="transform-btn-group">
@@ -930,10 +977,10 @@
             <!-- Eigenschaften Tab -->
             <div class="tab-pane active" id="tab-eigenschaften">
                 <div class="prop-empty" id="prop-empty">
-                    <i class="fas fa-mouse-pointer" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>
+                    <i class="fas fa-mouse-pointer hb-font-size-1-5rem"></i>
                     Charakter auswählen
                 </div>
-                <div id="prop-content" style="display:none;">
+                <div id="prop-content" class="hb-versteckt">
                     <!-- Transform (body context) -->
                     <div class="prop-section" id="prop-transform-section">
                         <div class="prop-section-title">Transform</div>
@@ -947,7 +994,7 @@
                         </ul>
                     </div>
                     <!-- Garment Properties (garment context) -->
-                    <div class="prop-section" id="prop-garment-section" style="display:none;">
+                    <div class="prop-section hb-versteckt" id="prop-garment-section">
                         <div class="prop-section-title">Garment Eigenschaften</div>
                         <div class="slider-row"><label>Offset</label>
                             <input type="range" id="prop-garment-offset" min="0" max="15" value="6" step="1">
@@ -974,7 +1021,7 @@
                             <span class="slider-val" id="prop-garment-crotch-depth-val">0 mm</span>
                         </div>
                         <div class="slider-row"><label>Color</label>
-                            <input type="color" id="prop-garment-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                            <input type="color" id="prop-garment-color" value="#4d5980" class="hb-farbfeld">
                         </div>
                         <div class="slider-row"><label>Roughness</label>
                             <input type="range" id="prop-garment-roughness" min="0" max="100" value="80" step="1">
@@ -985,7 +1032,7 @@
                             <span class="slider-val" id="prop-garment-metalness-val">0.00</span>
                         </div>
                         <!-- Region -->
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Region</div>
+                        <div class="hb-font-size-0-72rem">Region</div>
                         <div class="slider-row"><label>Top</label>
                             <input type="range" id="prop-garment-region-top" min="-30" max="30" value="0" step="1">
                             <span class="slider-val" id="prop-garment-region-top-val">0.00 m</span>
@@ -1008,15 +1055,15 @@
                         </div>
                     </div>
                     <!-- Hair Properties (hair context) -->
-                    <div class="prop-section" id="prop-hair-section" style="display:none;">
+                    <div class="prop-section hb-versteckt" id="prop-hair-section">
                         <div class="prop-section-title">Haar Eigenschaften</div>
                         <div class="slider-row"><label>Frisur</label>
-                            <select id="prop-hair-style" class="viewer-select" style="margin-bottom:0;flex:1;">
+                            <select id="prop-hair-style" class="viewer-select hb-dehnt-ohne-abstand">
                                 <option value="">— Kein Haar —</option>
                             </select>
                         </div>
                         <div class="slider-row"><label>Farbe</label>
-                            <select id="prop-hair-color" class="viewer-select" style="margin-bottom:0;flex:1;">
+                            <select id="prop-hair-color" class="viewer-select hb-dehnt-ohne-abstand">
                             </select>
                         </div>
                     </div>
@@ -1034,7 +1081,7 @@
                         </button>
                     </div>
                     <!-- MakeHuman Garment Properties -->
-                    <div class="prop-section" id="prop-mh-section" style="display:none;">
+                    <div class="prop-section hb-versteckt" id="prop-mh-section">
                         <div class="prop-section-title">MakeHuman Eigenschaften</div>
                         <div class="prop-section-title" style="font-size:0.7rem;margin-top:4px;">Fit</div>
                         <div class="slider-row"><label>Stiffness</label>
@@ -1054,7 +1101,7 @@
                             <span class="slider-val" id="prop-mh-y-offset-val">0 mm</span>
                         </div>
                         <div class="slider-row"><label>Farbe</label>
-                            <input type="color" id="prop-mh-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                            <input type="color" id="prop-mh-color" value="#4d5980" class="hb-farbfeld">
                         </div>
                         <div class="slider-row"><label>Roughness</label>
                             <input type="range" id="prop-mh-roughness" min="0" max="100" value="80" step="1">
@@ -1092,26 +1139,26 @@
             <!-- Kleider Tab (2-stage fitting: Rig → Mesh) -->
             <div class="tab-pane" id="tab-kleider">
                 <div class="prop-empty" id="kleider-empty">
-                    <i class="fas fa-mouse-pointer" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>
+                    <i class="fas fa-mouse-pointer hb-font-size-1-5rem"></i>
                     Charakter ausw&auml;hlen
                 </div>
-                <div id="kleider-content" style="display:none;">
+                <div id="kleider-content" class="hb-versteckt">
                 <div class="panel-section" data-panel-key="kleider_fit">
                     <h3>Kleider (2-Stufen Fit) <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="kleider-panel">
                         <div class="slider-row"><label>Kategorie</label>
-                            <select id="kleider-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                            <select id="kleider-category" class="viewer-select hb-dehnt-ohne-abstand">
                                 <option value="">Alle</option>
                             </select>
                         </div>
-                        <div id="kleider-list" class="anim-tree" style="max-height:300px;margin-bottom:0;overflow-y:auto;resize:vertical;min-height:80px;">
-                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Kleider-Library...</div>
+                        <div id="kleider-list" class="anim-tree hb-max-height-300px">
+                            <div class="hb-hinweis">Lade Kleider-Library...</div>
                         </div>
                         <div class="slider-row"><label>Knochen-Radius</label>
                             <input type="range" id="kleider-bone-radius" min="0.5" max="3.0" step="0.1" value="1.3">
                             <span class="slider-val" id="kleider-bone-radius-val">1.3x</span>
                         </div>
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Fit-Parameter</div>
+                        <div class="hb-font-size-0-72rem">Fit-Parameter</div>
                         <div class="slider-row"><label>Offset</label>
                             <input type="range" id="kleider-offset" min="0" max="15" value="6" step="1">
                             <span class="slider-val" id="kleider-offset-val">0.006</span>
@@ -1136,9 +1183,9 @@
                             <input type="range" id="kleider-crotch-depth" min="0" max="40" value="0" step="1">
                             <span class="slider-val" id="kleider-crotch-depth-val">0 mm</span>
                         </div>
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
+                        <div class="hb-font-size-0-72rem">Farbe / Material</div>
                         <div class="slider-row"><label>Farbe</label>
-                            <input type="color" id="kleider-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                            <input type="color" id="kleider-color" value="#4d5980" class="hb-farbfeld">
                         </div>
                         <div class="slider-row"><label>Roughness</label>
                             <input type="range" id="kleider-roughness" min="0" max="100" value="80" step="1">
@@ -1149,7 +1196,7 @@
                             <span class="slider-val" id="kleider-metalness-val">0.00</span>
                         </div>
                         <!-- Region -->
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Region</div>
+                        <div class="hb-font-size-0-72rem">Region</div>
                         <div class="slider-row"><label>Top</label>
                             <input type="range" id="kleider-region-top" min="-30" max="30" value="0" step="1">
                             <span class="slider-val" id="kleider-region-top-val">0.00 m</span>
@@ -1171,13 +1218,13 @@
                             <span class="slider-val" id="kleider-region-bottom-val">0.00 m</span>
                         </div>
                         <div style="display:flex;gap:4px;margin-top:6px;">
-                            <button id="kleider-stage1" class="btn-toggle" style="flex:1;font-size:0.7rem;padding:6px 4px;" title="Stufe 1: Knochen-Modell erzeugen"><i class="fas fa-bone"></i> 1. Knochen</button>
-                            <button id="kleider-stage2" class="btn-toggle" style="flex:1;font-size:0.7rem;padding:6px 4px;" title="Stufe 2: Kleid um Knochen-Modell fitten"><i class="fas fa-tshirt"></i> 2. Fit Rig</button>
-                            <button id="kleider-stage3" class="btn-toggle" style="flex:1;font-size:0.7rem;padding:6px 4px;" title="Stufe 3: Verfeinerung am Body-Mesh"><i class="fas fa-user"></i> 3. Fit Body</button>
+                            <button id="kleider-stage1" class="btn-toggle hb-flex-1" title="Stufe 1: Knochen-Modell erzeugen"><i class="fas fa-bone"></i> 1. Knochen</button>
+                            <button id="kleider-stage2" class="btn-toggle hb-flex-1" title="Stufe 2: Kleid um Knochen-Modell fitten"><i class="fas fa-tshirt"></i> 2. Fit Rig</button>
+                            <button id="kleider-stage3" class="btn-toggle hb-flex-1" title="Stufe 3: Verfeinerung am Body-Mesh"><i class="fas fa-user"></i> 3. Fit Body</button>
                         </div>
                         <div style="display:flex;gap:6px;margin-top:4px;">
-                            <button id="kleider-remove" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Kleid entfernen"><i class="fas fa-times"></i></button>
-                            <button id="kleider-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Kleider entfernen"><i class="fas fa-trash"></i></button>
+                            <button id="kleider-remove" class="btn-toggle hb-fest" title="Kleid entfernen"><i class="fas fa-times"></i></button>
+                            <button id="kleider-remove-all" class="btn-toggle hb-fest" title="Alle Kleider entfernen"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 </div>
@@ -1187,25 +1234,26 @@
             <!-- Assets Tab -->
             <div class="tab-pane" id="tab-assets">
                 <div class="prop-empty" id="assets-empty">
-                    <i class="fas fa-mouse-pointer" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>
+                    <i class="fas fa-mouse-pointer hb-font-size-1-5rem"></i>
                     Charakter auswählen
                 </div>
-                <div id="assets-content" style="display:none;">
+                <div id="assets-content" class="hb-versteckt">
                 <!-- MakeHuman Proxy Fit -->
                 <div class="panel-section" data-panel-key="mh_proxy_fit">
                     <h3>MakeHuman <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="mh-proxy-panel">
                         <div class="slider-row"><label>Kategorie</label>
-                            <select id="mh-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                            <select id="mh-category" class="viewer-select hb-dehnt-ohne-abstand">
                                 <option value="">Alle</option>
                             </select>
                         </div>
-                        <div id="mh-list" class="anim-tree" style="max-height:300px;margin-bottom:0;overflow-y:auto;resize:vertical;min-height:80px;">
-                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade MakeHuman Library...</div>
+                        <div id="mh-list" class="anim-tree hb-max-height-300px">
+                            <div class="hb-hinweis">Lade MakeHuman Library...</div>
                         </div>
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Fit</div>
+                        <div class="hb-font-size-0-72rem">Fit</div>
                         <div class="slider-row"><label>Stiffness</label>
-                            <input type="range" id="mh-stiffness" min="0" max="100" value="50" step="5">
+                            {# step=1 wie bei prop-mh-stiffness: Beide Regler zeigen denselben Wert, mit step=5 rastete der Assets-Regler beim Spiegeln auf ein anderes Vielfaches (Umbau 16.08.2026). #}
+                            <input type="range" id="mh-stiffness" min="0" max="100" value="50" step="1">
                             <span class="slider-val" id="mh-stiffness-val">0.50</span>
                         </div>
                         <div class="slider-row"><label>Offset</label>
@@ -1220,9 +1268,9 @@
                             <input type="range" id="mh-y-offset" min="-50" max="50" value="0" step="1">
                             <span class="slider-val" id="mh-y-offset-val">0 mm</span>
                         </div>
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
+                        <div class="hb-font-size-0-72rem">Farbe / Material</div>
                         <div class="slider-row"><label>Farbe</label>
-                            <input type="color" id="mh-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                            <input type="color" id="mh-color" value="#4d5980" class="hb-farbfeld">
                         </div>
                         <div class="slider-row"><label>Roughness</label>
                             <input type="range" id="mh-roughness" min="0" max="100" value="80" step="1">
@@ -1236,19 +1284,19 @@
                             <input type="range" id="mh-opacity" min="10" max="100" value="100" step="1">
                             <span class="slider-val" id="mh-opacity-val">1.00</span>
                         </div>
-                        <div style="display:flex;gap:6px;margin-top:6px;">
-                            <button id="mh-create" class="btn-toggle" style="flex:1;"><i class="fas fa-magic"></i> 1. Erzeuge (Proxy)</button>
-                            <button id="mh-remove" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Entfernen"><i class="fas fa-times"></i></button>
-                            <button id="mh-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle entfernen"><i class="fas fa-trash"></i></button>
+                        <div class="hb-display-flex">
+                            <button id="mh-create" class="btn-toggle hb-dehnt"><i class="fas fa-magic"></i> 1. Erzeuge (Proxy)</button>
+                            <button id="mh-remove" class="btn-toggle hb-fest" title="Entfernen"><i class="fas fa-times"></i></button>
+                            <button id="mh-remove-all" class="btn-toggle hb-fest" title="Alle entfernen"><i class="fas fa-trash"></i></button>
                         </div>
                         <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:8px 0 4px;">Schritt 2: Push Outside</div>
                         <div class="slider-row"><label>Max. Abstand</label>
                             <input type="range" id="mh-push-dist" min="1" max="200" value="3" step="1">
                             <span class="slider-val" id="mh-push-dist-val">3 mm</span>
                         </div>
-                        <div style="display:flex;gap:6px;">
-                            <button id="mh-push" class="btn-toggle" style="flex:1;"><i class="fas fa-expand-arrows-alt"></i> 2. Push Outside</button>
-                            <button id="mh-push-undo" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Push r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i></button>
+                        <div class="hb-display-flex">
+                            <button id="mh-push" class="btn-toggle hb-dehnt"><i class="fas fa-expand-arrows-alt"></i> 2. Push Outside</button>
+                            <button id="mh-push-undo" class="btn-toggle hb-fest" title="Push r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i></button>
                         </div>
                     </div>
                 </div>
@@ -1257,14 +1305,14 @@
                     <h3>Garment Fit <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="garment-panel">
                         <div class="slider-row"><label>Category</label>
-                            <select id="garment-category" class="viewer-select" style="margin-bottom:0;flex:1;">
+                            <select id="garment-category" class="viewer-select hb-dehnt-ohne-abstand">
                                 <option value="">All</option>
                             </select>
                         </div>
-                        <div id="garment-list" class="anim-tree" style="max-height:300px;margin-bottom:0;overflow-y:auto;resize:vertical;min-height:80px;">
-                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Garment-Library...</div>
+                        <div id="garment-list" class="anim-tree hb-max-height-300px">
+                            <div class="hb-hinweis">Lade Garment-Library...</div>
                         </div>
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Fit</div>
+                        <div class="hb-font-size-0-72rem">Fit</div>
                         <div class="slider-row"><label>Offset</label>
                             <input type="range" id="garment-offset" min="0" max="15" value="6" step="1">
                             <span class="slider-val" id="garment-offset-val">0.006</span>
@@ -1289,9 +1337,9 @@
                             <input type="range" id="garment-crotch-depth" min="0" max="40" value="0" step="1">
                             <span class="slider-val" id="garment-crotch-depth-val">0 mm</span>
                         </div>
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Farbe / Material</div>
+                        <div class="hb-font-size-0-72rem">Farbe / Material</div>
                         <div class="slider-row"><label>Color</label>
-                            <input type="color" id="garment-color" value="#4d5980" style="width:40px;height:24px;border:none;cursor:pointer;">
+                            <input type="color" id="garment-color" value="#4d5980" class="hb-farbfeld">
                         </div>
                         <div class="slider-row"><label>Roughness</label>
                             <input type="range" id="garment-roughness" min="0" max="100" value="80" step="1">
@@ -1302,7 +1350,7 @@
                             <span class="slider-val" id="garment-metalness-val">0.00</span>
                         </div>
                         <!-- Region -->
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 4px;">Region</div>
+                        <div class="hb-font-size-0-72rem">Region</div>
                         <div class="slider-row"><label>Top</label>
                             <input type="range" id="garment-region-top" min="-30" max="30" value="0" step="1">
                             <span class="slider-val" id="garment-region-top-val">0.00 m</span>
@@ -1323,10 +1371,10 @@
                             <input type="range" id="garment-region-bottom" min="-30" max="30" value="0" step="1">
                             <span class="slider-val" id="garment-region-bottom-val">0.00 m</span>
                         </div>
-                        <div style="display:flex;gap:6px;margin-top:6px;">
-                            <button id="garment-create" class="btn-toggle" style="flex:1;"><i class="fas fa-tshirt"></i> Erzeuge</button>
-                            <button id="garment-remove" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Garment entfernen"><i class="fas fa-times"></i></button>
-                            <button id="garment-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
+                        <div class="hb-display-flex">
+                            <button id="garment-create" class="btn-toggle hb-dehnt"><i class="fas fa-tshirt"></i> Erzeuge</button>
+                            <button id="garment-remove" class="btn-toggle hb-fest" title="Garment entfernen"><i class="fas fa-times"></i></button>
+                            <button id="garment-remove-all" class="btn-toggle hb-fest" title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 </div>
@@ -1350,7 +1398,7 @@
                     <h3>Cloth - from Template <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="cloth-template-panel">
                         <div class="slider-row"><label>Template</label>
-                            <select id="cloth-tpl-type" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
+                            <select id="cloth-tpl-type" class="viewer-select hb-dehnt-ohne-abstand"></select>
                         </div>
                         <div class="slider-row"><label>Segments</label>
                             <input type="range" id="cloth-tpl-segments" min="16" max="64" value="32" step="2">
@@ -1369,13 +1417,13 @@
                             <span class="slider-val" id="cloth-tpl-bot-ext-val">0 m</span>
                         </div>
                         <div class="slider-row"><label>Color</label>
-                            <input type="color" id="cloth-color" value="#404870" style="width:40px;height:24px;border:none;cursor:pointer;">
+                            <input type="color" id="cloth-color" value="#404870" class="hb-farbfeld">
                         </div>
-                        <div style="display:flex;gap:6px;margin-top:6px;">
-                            <button id="cloth-tpl-create" class="btn-toggle" style="flex:1;"><i class="fas fa-plus"></i> Create</button>
-                            <button id="cloth-tpl-update" class="btn-toggle" style="flex:1;"><i class="fas fa-sync-alt"></i> Update</button>
-                            <button id="cloth-tpl-delete" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Aktuelles Template löschen"><i class="fas fa-times"></i></button>
-                            <button id="cloth-remove-all" class="btn-toggle" style="flex:0 0 auto;padding:6px 10px;" title="Alle Cloth löschen"><i class="fas fa-trash"></i></button>
+                        <div class="hb-display-flex">
+                            <button id="cloth-tpl-create" class="btn-toggle hb-dehnt"><i class="fas fa-plus"></i> Create</button>
+                            <button id="cloth-tpl-update" class="btn-toggle hb-dehnt"><i class="fas fa-sync-alt"></i> Update</button>
+                            <button id="cloth-tpl-delete" class="btn-toggle hb-fest" title="Aktuelles Template löschen"><i class="fas fa-times"></i></button>
+                            <button id="cloth-remove-all" class="btn-toggle hb-fest" title="Alle Cloth löschen"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 </div>
@@ -1385,14 +1433,14 @@
                     <h3>Cloth Builder <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="cloth-builder-panel">
                         <div class="slider-row"><label>Region</label>
-                            <select id="cloth-bld-region" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
+                            <select id="cloth-bld-region" class="viewer-select hb-dehnt-ohne-abstand"></select>
                         </div>
                         <div class="slider-row"><label>Looseness</label>
                             <input type="range" id="cloth-bld-looseness" min="0" max="200" value="30" step="5">
                             <span class="slider-val" id="cloth-bld-looseness-val">0.30</span>
                         </div>
-                        <div style="margin-top:6px;">
-                            <button id="cloth-bld-create" class="btn-toggle" style="width:100%;"><i class="fas fa-plus"></i> Create Garment</button>
+                        <div class="hb-margin-top-6px">
+                            <button id="cloth-bld-create" class="btn-toggle hb-volle-breite"><i class="fas fa-plus"></i> Create Garment</button>
                         </div>
                     </div>
                 </div>
@@ -1402,7 +1450,7 @@
                     <h3>Cloth - Primitive <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="cloth-prim-panel">
                         <div class="slider-row"><label>Primitive</label>
-                            <select id="cloth-prim-type" class="viewer-select" style="margin-bottom:0;flex:1;"></select>
+                            <select id="cloth-prim-type" class="viewer-select hb-dehnt-ohne-abstand"></select>
                         </div>
                         <div class="slider-row"><label>Segments</label>
                             <input type="range" id="cloth-prim-segments" min="12" max="64" value="32" step="2">
@@ -1416,8 +1464,8 @@
                             <input type="range" id="cloth-prim-flare" min="0" max="200" value="30" step="5">
                             <span class="slider-val" id="cloth-prim-flare-val">0.30</span>
                         </div>
-                        <div style="margin-top:6px;">
-                            <button id="cloth-prim-create" class="btn-toggle" style="width:100%;"><i class="fas fa-plus"></i> Create Primitive</button>
+                        <div class="hb-margin-top-6px">
+                            <button id="cloth-prim-create" class="btn-toggle hb-volle-breite"><i class="fas fa-plus"></i> Create Primitive</button>
                         </div>
                     </div>
                 </div>
@@ -1445,8 +1493,8 @@
                         </div>
                         <div class="prop-row"><label>Farbe:</label><input type="color" id="cm-color" value="#cccccc"></div>
                         <div style="margin-top:8px;display:flex;gap:6px;">
-                            <button id="cm-add" class="viewer-btn" style="flex:1;"><i class="fas fa-plus"></i> Hinzufuegen</button>
-                            <button id="cm-remove" class="viewer-btn" style="flex:1;"><i class="fas fa-trash"></i> Entfernen</button>
+                            <button id="cm-add" class="viewer-btn hb-dehnt"><i class="fas fa-plus"></i> Hinzufuegen</button>
+                            <button id="cm-remove" class="viewer-btn hb-dehnt"><i class="fas fa-trash"></i> Entfernen</button>
                         </div>
                     </div>
                 </div>
@@ -1466,7 +1514,7 @@
                             </select>
                         </div>
                         <div class="prop-row"><label>Farbe:</label><input type="color" id="cm-hair-color" value="#3d2b1f"></div>
-                        <div class="prop-section-title" style="margin-top:6px;">Fitting</div>
+                        <div class="prop-section-title hb-margin-top-6px">Fitting</div>
                         <div class="prop-row"><label><input type="checkbox" id="cm-hair-shrinkwrap"> Shrinkwrap</label></div>
                         <div class="prop-row"><label>Offset:</label><input type="range" id="cm-hair-offset" min="0" max="0.01" step="0.0001" value="0.0002"><span id="cm-hair-offset-val">0.0002</span></div>
                     </div>
@@ -1479,7 +1527,7 @@
                 <div class="panel-section" data-panel-key="animations" style="border:none;">
                     <div class="panel-body" id="animation-panel" style="display:block;">
                         <div class="anim-tree" id="anim-tree">
-                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Animationen...</div>
+                            <div class="hb-hinweis">Lade Animationen...</div>
                         </div>
                         <div class="anim-speed">
                             <label id="speed-label">Speed: 1.0x</label>
@@ -1493,26 +1541,26 @@
                         <div class="anim-time" id="anim-time" style="font-family:monospace;font-size:0.8rem;color:var(--text-muted);margin:4px 0;">Frame 0 / 0 &bull; 0.00s / 0.00s</div>
                         <div class="anim-info" id="anim-info">&mdash;</div>
                         <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <label style="font-size:0.8rem;color:var(--text-muted);">Delta:</label>
+                            <label class="hb-font-size-0-8rem">Delta:</label>
                             <select id="scene-delta-norm" style="font-size:0.75rem;padding:2px 4px;background:var(--bg-darker);color:var(--text);border:1px solid var(--border);border-radius:4px;">
                                 <option value="auto">Auto</option>
                                 <option value="1">An</option>
                                 <option value="0">Aus</option>
                             </select>
-                            <label style="font-size:0.8rem;color:var(--text-muted);"><input type="checkbox" id="scene-ground-fix" style="margin-right:4px;">Boden</label>
+                            <label class="hb-font-size-0-8rem"><input type="checkbox" id="scene-ground-fix" class="hb-margin-right-4px">Boden</label>
                         </div>
 
                         <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
                             <div style="font-size:0.85rem;font-weight:600;color:var(--text);margin-bottom:6px;">Smoothing</div>
                             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                                 <label style="font-size:0.8rem;color:var(--text-muted);min-width:50px;">Sigma:</label>
-                                <input type="range" id="smooth-sigma" min="0" max="10" value="2" step="0.5" style="flex:1;">
+                                <input type="range" id="smooth-sigma" min="0" max="10" value="2" step="0.5" class="hb-dehnt">
                                 <span id="smooth-sigma-val" style="font-size:0.8rem;color:var(--text-muted);min-width:24px;">2.0</span>
                             </div>
-                            <div style="display:flex;gap:6px;">
-                                <button id="smooth-apply" class="viewer-btn" style="font-size:0.75rem;padding:4px 10px;" title="Smoothing anwenden (Vorschau)"><i class="fas fa-wave-square"></i> Smooth</button>
-                                <button id="smooth-reset" class="viewer-btn" style="font-size:0.75rem;padding:4px 10px;" title="Smoothing r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i> Reset</button>
-                                <button id="anim-save-btn" class="viewer-btn" style="font-size:0.75rem;padding:4px 10px;" title="Animation speichern"><i class="fas fa-save"></i> Speichern</button>
+                            <div class="hb-display-flex">
+                                <button id="smooth-apply" class="viewer-btn hb-font-size-0-75rem" title="Smoothing anwenden (Vorschau)"><i class="fas fa-wave-square"></i> Smooth</button>
+                                <button id="smooth-reset" class="viewer-btn hb-font-size-0-75rem" title="Smoothing r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i> Reset</button>
+                                <button id="anim-save-btn" class="viewer-btn hb-font-size-0-75rem" title="Animation speichern"><i class="fas fa-save"></i> Speichern</button>
                             </div>
                         </div>
                     </div>
@@ -1699,7 +1747,7 @@
                     <div class="panel-body">
                         <div class="slider-row">
                             <label>Name</label>
-                            <input type="text" id="mg-model-name" value="Neues Modell" class="viewer-select" style="width:100%;">
+                            <input type="text" id="mg-model-name" value="Neues Modell" class="viewer-select hb-volle-breite">
                         </div>
                         <div class="slider-row">
                             <label>Skeleton</label>
@@ -1710,7 +1758,7 @@
                         </div>
                         <div class="slider-row">
                             <label>Standard-Farbe</label>
-                            <input type="color" id="mg-default-color" value="#4488cc" style="width:40px;height:24px;border:none;background:none;cursor:pointer;">
+                            <input type="color" id="mg-default-color" value="#4488cc" class="hb-width-40px">
                         </div>
                         <div class="slider-row">
                             <label>Standard-Radius</label>
@@ -1728,9 +1776,9 @@
                 <!-- Bone Tree -->
                 <div class="panel-section" data-panel-key="modell-bones">
                     <h3>Knochen <span class="chevron">&#9660;</span></h3>
-                    <div class="panel-body" style="padding:0;">
+                    <div class="panel-body hb-padding-0">
                         <div id="mg-bone-tree" class="mg-bone-tree">
-                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">
+                            <div class="hb-hinweis">
                                 Erst "Erzeugen" klicken um Knochen zu laden...
                             </div>
                         </div>
@@ -1738,13 +1786,13 @@
                 </div>
 
                 <!-- Selected Bone Properties -->
-                <div class="panel-section" data-panel-key="modell-bone-props" id="mg-bone-props-section" style="display:none;">
+                <div class="panel-section hb-versteckt" data-panel-key="modell-bone-props" id="mg-bone-props-section">
                     <h3>Knochen-Eigenschaften <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body">
                         <div id="mg-bone-name" style="font-size:0.8rem;color:var(--accent);margin-bottom:6px;font-weight:600;"></div>
                         <div class="slider-row">
                             <label>Form</label>
-                            <select id="mg-bone-shape" class="viewer-select" style="width:100%;">
+                            <select id="mg-bone-shape" class="viewer-select hb-volle-breite">
                                 <option value="cylinder">Zylinder</option>
                                 <option value="box">Box</option>
                                 <option value="sphere">Kugel</option>
@@ -1762,16 +1810,16 @@
                                 <option value="skirt">Rock</option>
                             </select>
                         </div>
-                        <div class="slider-row" style="align-items:center;">
+                        <div class="slider-row hb-align-items-center">
                             <label title="Wenn aktiv: wird beim MP4-Export als Cloth simuliert (Physik, Kollision mit K&ouml;rper)">Kleidungsst&uuml;ck</label>
-                            <input type="checkbox" id="mg-bone-garment" style="width:auto;margin-left:8px;" title="Als Stoff simulieren (K&ouml;rper-Kollision beim Export)">
+                            <input type="checkbox" id="mg-bone-garment" class="hb-width-auto" title="Als Stoff simulieren (K&ouml;rper-Kollision beim Export)">
                         </div>
-                        <div class="slider-row" id="mg-overlap-row" style="display:none;">
+                        <div class="slider-row hb-versteckt" id="mg-overlap-row">
                             <label>Überlappung</label>
                             <input type="range" id="mg-bone-overlap" min="0" max="1" step="0.05" value="0.5">
                             <span id="mg-bone-overlap-val" class="slider-val">0.50</span>
                         </div>
-                        <div id="mg-tutu-params" style="display:none;">
+                        <div id="mg-tutu-params" class="hb-versteckt">
                             <div class="slider-row">
                                 <label>Dicke</label>
                                 <input type="range" id="mg-tutu-thickness" min="0.002" max="0.05" step="0.001" value="0.01">
@@ -1793,7 +1841,7 @@
                                 <span id="mg-tutu-offset-val" class="slider-val">0.000</span>
                             </div>
                         </div>
-                        <div id="mg-spiral-tutu-params" style="display:none;">
+                        <div id="mg-spiral-tutu-params" class="hb-versteckt">
                             <div class="slider-row">
                                 <label>Windungen</label>
                                 <input type="range" id="mg-spiral-winds" min="1" max="8" step="1" value="3">
@@ -1829,12 +1877,12 @@
                                 <input type="range" id="mg-spiral-droop" min="0" max="0.15" step="0.005" value="0.02">
                                 <span id="mg-spiral-droop-val" class="slider-val">0.020</span>
                             </div>
-                            <div class="slider-row" style="align-items:center;">
+                            <div class="slider-row hb-align-items-center">
                                 <label>Innerer Rock</label>
-                                <input type="checkbox" id="mg-spiral-skirt" style="width:auto;margin-left:8px;">
+                                <input type="checkbox" id="mg-spiral-skirt" class="hb-width-auto">
                             </div>
                         </div>
-                        <div id="mg-helix-ribbon-params" style="display:none;">
+                        <div id="mg-helix-ribbon-params" class="hb-versteckt">
                             <div class="slider-row">
                                 <label>Windungen</label>
                                 <input type="range" id="mg-helix-winds" min="1" max="8" step="0.5" value="3">
@@ -1875,12 +1923,12 @@
                                 <input type="range" id="mg-helix-droop" min="0" max="0.08" step="0.002" value="0.015">
                                 <span id="mg-helix-droop-val" class="slider-val">0.015</span>
                             </div>
-                            <div class="slider-row" style="align-items:center;">
+                            <div class="slider-row hb-align-items-center">
                                 <label>Innerer Rock</label>
-                                <input type="checkbox" id="mg-helix-skirt" style="width:auto;margin-left:8px;">
+                                <input type="checkbox" id="mg-helix-skirt" class="hb-width-auto">
                             </div>
                         </div>
-                        <div id="mg-skirt-params" style="display:none;">
+                        <div id="mg-skirt-params" class="hb-versteckt">
                             <div class="slider-row">
                                 <label>Radius oben</label>
                                 <input type="range" id="mg-skirt-radius-top" min="0.01" max="0.5" step="0.005" value="0.08">
@@ -1907,7 +1955,7 @@
                                 <span id="mg-skirt-thickness-val" class="slider-val">0.005</span>
                             </div>
                         </div>
-                        <div id="mg-plane-params" style="display:none;">
+                        <div id="mg-plane-params" class="hb-versteckt">
                             <div class="slider-row">
                                 <label>Breite</label>
                                 <input type="range" id="mg-plane-width" min="0.01" max="1.0" step="0.005" value="0.15">
@@ -1918,13 +1966,13 @@
                                 <input type="range" id="mg-plane-height" min="0.01" max="1.0" step="0.005" value="0.22">
                                 <span id="mg-plane-height-val" class="slider-val">0.220</span>
                             </div>
-                            <div class="slider-row" style="align-items:center;">
+                            <div class="slider-row hb-align-items-center">
                                 <label title="Rendert beide Seiten der Ebene (sonst nur Vorderseite sichtbar)">Doppelseitig</label>
-                                <input type="checkbox" id="mg-plane-doublesided" checked style="width:auto;margin-left:8px;">
+                                <input type="checkbox" id="mg-plane-doublesided" checked class="hb-width-auto">
                             </div>
                         </div>
-                        <div id="mg-rhombus-params" style="display:none;">
-                            <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:2px;">Obere Fl&auml;che</div>
+                        <div id="mg-rhombus-params" class="hb-versteckt">
+                            <div class="hb-font-size-0-7rem">Obere Fl&auml;che</div>
                             <div class="slider-row">
                                 <label>Breite</label>
                                 <input type="range" id="mg-rhombus-top-w" min="0.01" max="0.8" step="0.005" value="0.10">
@@ -1959,10 +2007,10 @@
                         </div>
                         <div class="slider-row">
                             <label>Farbe</label>
-                            <input type="color" id="mg-bone-color" value="#4488cc" style="width:40px;height:24px;border:none;background:none;cursor:pointer;">
+                            <input type="color" id="mg-bone-color" value="#4488cc" class="hb-width-40px">
                         </div>
-                        <div style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);font-weight:600;">Textur</div>
-                        <div class="slider-row" style="align-items:center;">
+                        <div class="hb-margin-top-8px">Textur</div>
+                        <div class="slider-row hb-align-items-center">
                             <label>Bild</label>
                             <input type="file" id="mg-bone-texture-file" accept="image/*" style="font-size:0.7rem;flex:1;">
                             <button type="button" id="mg-bone-texture-clear" class="action-btn" style="padding:2px 8px;font-size:0.7rem;" title="Textur entfernen">&#10005;</button>
@@ -1970,14 +2018,14 @@
                         <div id="mg-bone-texture-preview" style="display:none;margin-top:4px;text-align:center;">
                             <img id="mg-bone-texture-thumb" src="" alt="Textur" style="max-width:120px;max-height:120px;border:1px solid var(--border);border-radius:3px;">
                         </div>
-                        <div style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);font-weight:600;">Gr&ouml;sse entlang Achse</div>
+                        <div class="hb-margin-top-8px">Gr&ouml;sse entlang Achse</div>
                         <div class="slider-row">
                             <label>Skala</label>
                             <input type="range" id="mg-axial-scale" min="0.1" max="3.0" step="0.05" value="1.0">
                             <span id="mg-axial-scale-val" class="slider-val">1.00</span>
                         </div>
-                        <div style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);font-weight:600;">Position (World)</div>
-                        <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:2px;">Anfang (Head)</div>
+                        <div class="hb-margin-top-8px">Position (World)</div>
+                        <div class="hb-font-size-0-7rem">Anfang (Head)</div>
                         <div class="slider-row">
                             <label>X</label>
                             <input type="range" id="mg-head-off-x" min="-0.15" max="0.15" step="0.001" value="0">
@@ -1993,7 +2041,7 @@
                             <input type="range" id="mg-head-off-z" min="-0.15" max="0.15" step="0.001" value="0">
                             <span id="mg-head-off-z-val" class="slider-val">0.000</span>
                         </div>
-                        <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:2px;">Ende (Tail)</div>
+                        <div class="hb-font-size-0-7rem">Ende (Tail)</div>
                         <div style="font-size:0.65rem;color:var(--text-muted);margin-top:-2px;margin-bottom:2px;">World X/Y/Z Koordinaten</div>
                         <div class="slider-row">
                             <label>X</label>
@@ -2010,7 +2058,7 @@
                             <input type="range" id="mg-tail-off-z" min="-0.15" max="0.15" step="0.001" value="0">
                             <span id="mg-tail-off-z-val" class="slider-val">0.000</span>
                         </div>
-                        <div style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);font-weight:600;">Form-Rotation (°)</div>
+                        <div class="hb-margin-top-8px">Form-Rotation (°)</div>
                         <div class="slider-row">
                             <label>X</label>
                             <input type="range" id="mg-shape-rot-x" min="-180" max="180" step="1" value="0">
@@ -2042,10 +2090,10 @@
                     <h3>Pose <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="pose-panel">
                         <div id="pose-list" class="anim-tree" style="max-height:300px;overflow-y:auto;resize:vertical;min-height:60px;">
-                            <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Poses...</div>
+                            <div class="hb-hinweis">Lade Poses...</div>
                         </div>
-                        <div style="display:flex;gap:6px;margin-top:6px;">
-                            <button id="pose-reset" class="btn-toggle" style="flex:1;"><i class="fas fa-undo"></i> A-Pose (Reset)</button>
+                        <div class="hb-display-flex">
+                            <button id="pose-reset" class="btn-toggle hb-dehnt"><i class="fas fa-undo"></i> A-Pose (Reset)</button>
                         </div>
                     </div>
                 </div>
@@ -2058,8 +2106,8 @@
                     <div class="panel-body">
                         <div class="prop-row"><label><input type="checkbox" id="rig-ik-no-stretch" checked> IK Stretch deaktivieren</label></div>
                         <div class="prop-row"><label><input type="checkbox" id="rig-ik-limit" checked> IK Rotation begrenzen</label></div>
-                        <div class="prop-row"><label>Min:</label><input type="number" id="rig-ik-min" value="-10" min="-180" max="0" style="width:60px;"> &deg;</div>
-                        <div class="prop-row"><label>Max:</label><input type="number" id="rig-ik-max" value="160" min="0" max="180" style="width:60px;"> &deg;</div>
+                        <div class="prop-row"><label>Min:</label><input type="number" id="rig-ik-min" value="-10" min="-180" max="0" class="hb-width-60px"> &deg;</div>
+                        <div class="prop-row"><label>Max:</label><input type="number" id="rig-ik-max" value="160" min="0" max="180" class="hb-width-60px"> &deg;</div>
                         <div class="prop-row"><label><input type="checkbox" id="rig-finger-ik"> Finger IK</label></div>
                     </div>
                 </div>
@@ -2102,7 +2150,7 @@
                         <div class="prop-row"><label><input type="checkbox" id="fin-include-rig" checked> Rig einschliessen</label></div>
                         <div class="prop-row"><label><input type="checkbox" id="fin-include-clothes"> Kleidung einschliessen</label></div>
                         <div class="prop-row"><label><input type="checkbox" id="fin-include-hair"> Haare einschliessen</label></div>
-                        <button id="fin-export" class="viewer-btn" style="width:100%;margin-top:8px;"><i class="fas fa-file-export"></i> Exportieren</button>
+                        <button id="fin-export" class="viewer-btn hb-width-100"><i class="fas fa-file-export"></i> Exportieren</button>
                     </div>
                 </div>
                 <div class="panel-section">
@@ -2110,7 +2158,7 @@
                     <div class="panel-body">
                         <div class="prop-row"><label><input type="checkbox" id="fin-collapse-morphs"> Shape Keys zusammenfassen</label></div>
                         <div class="prop-row"><label><input type="checkbox" id="fin-remove-unused"> Unbenutzte Morphs entfernen</label></div>
-                        <button id="fin-cleanup" class="viewer-btn" style="width:100%;margin-top:8px;"><i class="fas fa-broom"></i> Cleanup</button>
+                        <button id="fin-cleanup" class="viewer-btn hb-width-100"><i class="fas fa-broom"></i> Cleanup</button>
                     </div>
                 </div>
                 <div class="panel-section">
@@ -2128,7 +2176,7 @@
                                 <option value="yaml">YAML</option>
                             </select>
                         </div>
-                        <button id="fin-convert" class="viewer-btn" style="width:100%;margin-top:8px;"><i class="fas fa-exchange-alt"></i> Konvertieren</button>
+                        <button id="fin-convert" class="viewer-btn hb-width-100"><i class="fas fa-exchange-alt"></i> Konvertieren</button>
                     </div>
                 </div>
             </div><!-- /tab-finalize -->
@@ -2195,9 +2243,9 @@
             <h4><i class="fas fa-folder-open"></i> Modell / Szene laden</h4>
             <button class="scene-modal-close" data-close>&times;</button>
         </div>
-        <div class="scene-modal-body" style="padding:0;">
+        <div class="scene-modal-body hb-padding-0">
             <div style="padding:8px 12px 4px;font-size:0.7rem;color:var(--text-muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                <i class="fas fa-folder" style="margin-right:4px;"></i> data/models/
+                <i class="fas fa-folder hb-margin-right-4px"></i> data/models/
             </div>
             <table class="file-browser-table" id="load-file-table" style="width:100%;font-size:0.78rem;border-collapse:collapse;">
                 <thead>
@@ -2227,9 +2275,9 @@
             <button class="scene-modal-close" data-close>&times;</button>
         </div>
         <div class="scene-modal-body">
-            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Kategorie</div>
+            <div class="hb-font-size-0-75rem">Kategorie</div>
             <input class="scene-name-input" id="save-anim-category" type="text" readonly style="opacity:0.6;margin-bottom:8px;">
-            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Dateiname</div>
+            <div class="hb-font-size-0-75rem">Dateiname</div>
             <input class="scene-name-input" id="save-anim-name" type="text" placeholder="Dateiname..." autocomplete="off">
         </div>
         <div class="scene-modal-footer">
@@ -2240,11 +2288,11 @@
 </div>
 
 <!-- Pose context menu -->
-<div id="pose-ctx-menu" style="display:none;position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;padding:4px 0;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.4);">
-    <div class="pose-ctx-item" data-action="apply" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-play" style="width:16px;"></i> Anwenden</div>
-    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
-    <div class="pose-ctx-item" data-action="rename" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen (F2)</div>
-    <div class="pose-ctx-item" data-action="delete" style="padding:7px 14px;font-size:0.82rem;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="fas fa-trash" style="width:16px;"></i> Loeschen (Entf)</div>
+<div id="pose-ctx-menu" class="hb-kontextmenue">
+    <div class="pose-ctx-item hb-menueeintrag" data-action="apply"><i class="fas fa-play hb-symbolspalte"></i> Anwenden</div>
+    <div class="hb-trennlinie"></div>
+    <div class="pose-ctx-item hb-menueeintrag" data-action="rename"><i class="fas fa-pen hb-symbolspalte"></i> Umbenennen (F2)</div>
+    <div class="pose-ctx-item hb-menueeintrag" data-action="delete"><i class="fas fa-trash hb-symbolspalte"></i> Loeschen (Entf)</div>
 </div>
 <style>
 .pose-ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }

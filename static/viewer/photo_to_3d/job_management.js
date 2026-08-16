@@ -4,6 +4,10 @@
 import { state, API } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { loadJobResult } from './auftragsergebnis.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 // =========================================================================
 // Status + Save
@@ -13,8 +17,7 @@ export async function loadBackendStatus() {
     if (!list) return;
 
     try {
-        const resp = await fetch(`${API}/analyze-photo/status/`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`${API}/analyze-photo/status/`);
         state.backendStatus = data.backends || {};
     } catch (e) {
         console.warn('Failed to load backend status:', e);
@@ -106,9 +109,8 @@ export function initSaveButton() {
             },
         };
         try {
-            const resp = await fetch(`${API}/model/save/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(saveData) });
-            const result = await resp.json();
-            if (result.ok) { btn.innerHTML = '<i class="fas fa-check"></i> Gespeichert'; setTimeout(() => { btn.innerHTML = '<i class="fas fa-save"></i> Speichern'; }, 2000); }
+            const result = await Serverabruf.json(`${API}/model/save/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(saveData) });
+            if (result.ok) Knopfmeldung.fertig(btn, 'Gespeichert');
         } catch (e) { console.error('Save failed:', e); }
     });
 }
@@ -121,12 +123,9 @@ export async function captureAndSaveScreenshot(jobId) {
     try {
         state.renderer.render(state.scene, state.camera);
         const dataUrl = state.renderer.domElement.toDataURL('image/jpeg', 0.85);
-        await fetch(`${API}/photo-job/${jobId}/screenshot/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: dataUrl }),
-        });
-        console.log('[Photo->3D] Screenshot saved for job', jobId);
+        await Serverabruf.senden(`${API}/photo-job/${jobId}/screenshot/`,
+                                 { image: dataUrl });
+        Protokoll.debug('Photo->3D', 'Bildschirmfoto gesichert, Auftrag', jobId);
     } catch (e) {
         console.warn('Screenshot capture failed:', e);
     }
@@ -155,7 +154,7 @@ export function initTextureButtons() {
                     info.style.display = 'block';
                     info.textContent = `${backend} Textur auf SMPL-X Mesh angewendet`;
                 }
-                setTimeout(() => captureAndSaveScreenshot(state.currentJobId), 500);
+                setTimeout(() => captureAndSaveScreenshot(state.currentJobId), Zeiten.FOTO_MS);
             } catch (e) {
                 showTextureProgress(true, `${backend}: Fehler — ${e.message}`, 0);
             } finally {

@@ -5,9 +5,10 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { fetchRetargetedClipForJob, fetchMergedClipForJob } from '../retarget_hybrid.js?v=32';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export async function applyBvhRetarget() {
-    console.log('[result_character] applyBvhRetarget called, jobId=', state.jobId, 'rigifySkeleton=', !!state.rigifySkeleton, 'bodyMesh=', !!state.bodyMesh);
+    Protokoll.debug('result_character', 'applyBvhRetarget called, jobId=', state.jobId, 'rigifySkeleton=', !!state.rigifySkeleton, 'bodyMesh=', !!state.bodyMesh);
     if (state.mixer) { state.mixer.stopAllAction(); state.mixer = null; state.currentAction = null; }
 
     let bodyH = 1.68;
@@ -15,7 +16,7 @@ export async function applyBvhRetarget() {
         const bb = new THREE.Box3().setFromObject(state.bodyMesh);
         if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
     }
-    console.log('[result_character] bodyHeight=', bodyH);
+    Protokoll.debug('result_character', 'bodyHeight=', bodyH);
 
     const clip = await fetchRetargetedClipForJob(state.jobId, state.rigifySkeleton, {
         bodyHeight: bodyH,
@@ -23,7 +24,7 @@ export async function applyBvhRetarget() {
         deltaNorm: state.deltaNormMode,
     });
 
-    console.log('[result_character] clip:', clip.duration, 'sec,', clip.tracks.length, 'tracks');
+    Protokoll.debug('result_character', 'clip:', clip.duration, 'sec,', clip.tracks.length, 'tracks');
 
     state.mixer = new THREE.AnimationMixer(state.bodyMesh);
     state.currentAction = state.mixer.clipAction(clip);
@@ -31,7 +32,7 @@ export async function applyBvhRetarget() {
     state.currentAction.clampWhenFinished = true;
     state.currentAction.play();
     state.bvhClipDuration = clip.duration;
-    console.log('[result_character] Animation playing, bvhClipDuration=', state.bvhClipDuration);
+    Protokoll.debug('result_character', 'Animation playing, bvhClipDuration=', state.bvhClipDuration);
 }
 
 /**

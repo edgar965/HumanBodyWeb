@@ -1,7 +1,14 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Processed Videos - MocapNET{% endblock %}
 
 {% block content %}
+<style>
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+</style>
 <h1>Processed Videos</h1>
 
 {% if jobs %}
@@ -29,7 +36,8 @@
             <td>{{ job.updated_at|date:"d.m.Y H:i" }}</td>
             <td>
                 <button class="btn btn-sm btn-secondary btn-video"
-                        onclick="showVideo('{% url 'serve_video' job.id %}', '{{ job.name }}')">
+                        data-video="{% url 'serve_video' job.id %}"
+                        data-videoname="{{ job.name }}">
                     <i class="fas fa-play"></i> Video
                 </button>
             </td>
@@ -67,7 +75,7 @@
 <div id="videoPreview" class="video-preview-panel">
     <div class="preview-header">
         <h3 id="previewTitle"></h3>
-        <button class="btn btn-sm btn-secondary" onclick="closePreview()">
+        <button class="btn btn-sm btn-secondary" id="previewClose">
             <i class="fas fa-times"></i>
         </button>
     </div>
@@ -84,22 +92,10 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-function showVideo(videoUrl, name) {
-    var panel = document.getElementById('videoPreview');
-    var video = document.getElementById('previewVideo');
-    var title = document.getElementById('previewTitle');
-    video.src = videoUrl;
-    title.textContent = name;
-    panel.classList.add('visible');
-    video.play();
-}
-function closePreview() {
-    var panel = document.getElementById('videoPreview');
-    var video = document.getElementById('previewVideo');
-    video.pause();
-    video.src = '';
-    panel.classList.remove('visible');
-}
+{% comment %}Umbau 16.08.2026: 16 Zeilen inline mit fuenf `var`.{% endcomment %}
+<script type="module">
+import { Videovorschau } from "{% static 'js/auftraege/videovorschau.js' %}?t={% now 'U' %}";
+
+Videovorschau.aufbauen();
 </script>
 {% endblock %}

@@ -4,9 +4,10 @@
 import { THREE, TONE_MAPPINGS } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { getCSRFToken } from './utils.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { markClean } from './undo.js';
 import { _saveJsonWithPicker, importModelFromFilePicker, initCharacterDialog, initSceneDialogs, loadFromFilePicker, openAddCharacterDialog, openLoadDialog, openSaveDialog } from './szene_dialoge.js';
+import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
 
 export function gatherSceneState() {
     const chars = [];
@@ -38,21 +39,17 @@ export async function doSaveScene(name) {
     const data = gatherSceneState();
     data.name = name;
     try {
-        const resp = await fetch('/api/character/scene/save/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
-            body: JSON.stringify({ name, data }),
-        });
-        const result = await resp.json();
+        const result = await Serverabruf.senden('/api/character/scene/save/',
+                                               { name, data });
         if (result.ok) {
             state.currentSceneName = name;
             markClean();
             const dateiTitle = document.querySelector('.menu:first-child .menu-title');
             if (dateiTitle) {
-                const orig = dateiTitle.textContent;
-                dateiTitle.textContent = 'Gespeichert!';
-                dateiTitle.style.color = 'var(--accent)';
-                setTimeout(() => { dateiTitle.textContent = orig; dateiTitle.style.color = ''; }, 1500);
+                // `Knopfmeldung` setzt Text und Farbe und nimmt beides
+                // zurueck — hier auf dem Titel statt auf einem Knopf.
+                Knopfmeldung.zeigen(dateiTitle, 'Gespeichert!',
+                                    { symbol: null, farbe: 'var(--accent)' });
             }
         } else { alert('Fehler: ' + (result.error || 'Unbekannt')); }
     } catch (e) { alert('Fehler: ' + e.message); }

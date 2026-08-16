@@ -994,6 +994,19 @@ td a { color: var(--accent); text-decoration: none; }
     color: var(--text-muted);
     font-size: 0.85rem;
 }
+/* Symbol über dem Hinweistext eines leeren Reiters — stand als style="" im JS */
+.rc-tab-empty-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    display: block;
+}
+/* Farbwähler im Stoffabschnitt — stand als style.cssText im JS */
+.rc-color-input {
+    width: 40px;
+    height: 24px;
+    border: none;
+    cursor: pointer;
+}
 
 /* Floating video window */
 .floating-video {
@@ -1116,18 +1129,116 @@ td a { color: var(--accent); text-decoration: none; }
     text-align: right;
 }
 
-/* Morph categories */
-.rc-morph-cat { margin-bottom: 2px; }
-.rc-morph-cat-header {
+/* ===================================================================
+   Vergleichstafel der Ergebnisseite (2D gegen 3D je Knochen).
+   Stand bis zum Umbau am 16.08.2026 als 24 style=""-Angaben im
+   JavaScript, darunter die Guetefarben gruen/gelb/rot als Hexwerte
+   mitten in der Rechnung.
+   =================================================================== */
+.vt-tabelle {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    padding: 0 6px;
+}
+.vt-kopf {
+    color: #f472b6;
+    border-bottom: 2px solid #475569;
+}
+.vt-unterkopf {
+    color: #999;
+    font-size: 9px;
+    border-bottom: 1px solid #334155;
+}
+.vt-reihe { border-top: 1px solid #1e293b; }
+.vt-nr {
+    text-align: center;
+    padding: 3px 1px;
+    width: 14px;
+}
+.vt-nr-zelle {
+    text-align: center;
+    padding: 2px 1px;
+    color: #64748b;
+    font-size: 10px;
+}
+.vt-name-kopf {
+    text-align: left;
+    padding: 3px 3px;
+}
+.vt-name {
+    padding: 2px 3px;
+    color: #8cb4ff;
+    white-space: nowrap;
+    font-size: 10px;
+}
+.vt-mitte {
+    text-align: center;
+    padding: 3px 2px;
+}
+.vt-zahl {
+    text-align: right;
+    padding: 1px 3px;
+}
+.vt-zahl-klein {
+    text-align: right;
+    padding: 2px 3px;
+}
+/* Spaltengruppen: was aus dem Video kommt und was das 3D-Modell sagt. */
+.vt-video { background: #1a0f2e; }
+.vt-drei-d { background: #1e1a2e; }
+.vt-betont { color: #c084fc; }
+/* Guete der Abweichung — die Grenzen stehen in vergleichstafel.js. */
+.vt-gut { color: #16c784; }
+.vt-mittel { color: #fbbf24; }
+.vt-schlecht { color: #ef4444; }
+.vt-leer { color: #64748b; }
+.vt-titelzeile {
+    padding: 8px;
+    border-bottom: 1px solid #334155;
+    margin-bottom: 4px;
+}
+.vt-titel {
+    color: #16c784;
+    font-size: 13px;
+    font-weight: bold;
+}
+.vt-bildnummer {
+    color: #ccc;
+    font-size: 10px;
+}
+.vt-hinweis {
+    padding: 8px;
+    color: #fbbf24;
+}
+.vt-zusammenfassung {
+    margin-top: 6px;
+    border-top: 1px solid #475569;
+    padding-top: 4px;
+    color: #fbbf24;
+    font-size: 12px;
+}
+.vt-fussnote {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 10px;
+}
+
+/* Morph categories.
+   Hiessen bis zum Umbau am 16.08.2026 .rc-morph-cat*, waehrend alle anderen
+   Seiten .morph-category* nutzen — dieselbe Liste unter zwei Namen. Jetzt
+   ueberall .morph-category*, hier nur mit rc-Praefix fuer die eigene Groesse. */
+.rc-morph-category { margin-bottom: 2px; }
+.rc-morph-category-header {
     font-size: 0.75rem;
     color: var(--text);
     cursor: pointer;
     padding: 3px 0;
     user-select: none;
 }
-.rc-morph-cat-header:hover { color: var(--accent); }
-.rc-morph-cat-body { display: none; }
-.rc-morph-cat.open .rc-morph-cat-body { display: block; }
+.rc-morph-category-header:hover { color: var(--accent); }
+.rc-morph-category-body { display: none; }
+.rc-morph-category.open .rc-morph-category-body { display: block; }
 
 /* Buttons */
 .rc-btn-row { display: flex; gap: 4px; margin-top: 6px; }

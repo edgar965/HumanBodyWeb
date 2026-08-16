@@ -5,6 +5,8 @@ import { _skinifyMesh, convertInstToSkinned } from './skeleton.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 import { state, REGION_DEFS, REGION_IDS, REGION_RADIUS } from './state.js';
+import { Kleidungszustand } from './kleidungszustand.js';
+import { Kleideranpassung } from './kleideranpassung.js';
 /**
  * Kleidungsstueck an den Koerper anpassen und die Regler dazu.
  *
@@ -61,167 +63,77 @@ export function _applyGarmentRegionOffsets(inst, key) {
     mesh.geometry.computeBoundingSphere();
 }
 
-/** Save slider state back into garmentState for the selected garment. */
+/**
+ * Reglerstaende in den Zustand des gewaehlten Stuecks zuruecklegen. Die
+ * Feldliste steht in `Kleidungszustand` — vorher war sie hier zum dritten Mal
+ * ausgeschrieben, inklusive der Umrechnung der fuenf Regionsregler.
+ */
 export function _saveSelectedGarmentState() {
     const sel = _selectedGarmentMesh();
-    if (!sel) return;
-    const st = sel.inst.garmentState[sel.key];
-    if (!st) return;
-    st.offset = _sliderVal('garment-offset') / 1000;
-    st.stiffness = _sliderVal('garment-stiffness') / 100;
-    st.minDist = _sliderVal('garment-min-dist');
-    st.crotchFloor = _sliderVal('garment-crotch-floor');
-    st.lift = _sliderVal('garment-lift');
-    st.crotchDepth = _sliderVal('garment-crotch-depth');
-    st.roughness = _sliderVal('garment-roughness') / 100;
-    st.metalness = _sliderVal('garment-metalness') / 100;
-    for (const rid of REGION_IDS) {
-        const stKey = 'region' + rid[0].toUpperCase() + rid.slice(1);
-        st[stKey] = _sliderVal(`garment-region-${rid}`) / 100;
-    }
-    const colorEl = document.getElementById('garment-color');
-    if (colorEl) {
-        const c = new THREE.Color(colorEl.value);
-        st.color = [c.r, c.g, c.b];
-    }
+    const zustand = sel && sel.inst.garmentState[sel.key];
+    if (!zustand) return;
+    const farbfeld = document.getElementById('garment-color');
+    const neu = Kleidungszustand.ausJson(zustand).ausReglernUebernehmen(
+        'garment', _sliderVal,
+        farbfeld ? new THREE.Color(farbfeld.value) : null);
+    // Die Werte in das vorhandene Objekt schreiben, nicht die Instanz
+    // austauschen: Andere Stellen halten eine Referenz darauf.
+    Object.assign(zustand, neu.zuJson());
 }
 
-/** Sync garment sliders to selected garment state. */
+/**
+ * Regler auf den Zustand des gewaehlten Stuecks stellen. Die elf Zuweisungen
+ * stehen in `Kleidungszustand.inRegler()` — hier bleibt nur, was diese Seite
+ * eigen hat: die gewaehlte Kennung und die Farbe.
+ */
 export function _syncGarmentSliders() {
-    if (!state._selectedSubMesh || state._selectedSubMesh.type !== 'cloth') return;
+    if (state._selectedSubMesh?.type !== 'cloth') return;
     const inst = state.characters.get(state._selectedSubMesh.charId);
-    if (!inst) return;
     const key = state._selectedSubMesh.key;
-    const st = inst.garmentState[key];
+    const st = inst?.garmentState[key];
     if (!st) return;
-
     if (key.startsWith('gar_')) state._selectedGarmentId = key.slice(4);
 
+    // Die Regler loesen beim Setzen ihr `input` aus; ohne diese Sperre wuerde
+    // das als Benutzereingabe gelten und eine Neuanpassung anstossen.
     state._syncingSliders = true;
-    const offEl = document.getElementById('garment-offset');
-    if (offEl) { offEl.value = Math.round(st.offset * 1000); offEl.dispatchEvent(new Event('input')); }
-    const stiffEl = document.getElementById('garment-stiffness');
-    if (stiffEl) { stiffEl.value = Math.round(st.stiffness * 100); stiffEl.dispatchEvent(new Event('input')); }
-    const minDistEl = document.getElementById('garment-min-dist');
-    if (minDistEl) { minDistEl.value = st.minDist !== undefined ? st.minDist : 3; minDistEl.dispatchEvent(new Event('input')); }
-    const crotchFloorEl = document.getElementById('garment-crotch-floor');
-    if (crotchFloorEl) { crotchFloorEl.value = st.crotchFloor !== undefined ? st.crotchFloor : 0; crotchFloorEl.dispatchEvent(new Event('input')); }
-    const liftEl = document.getElementById('garment-lift');
-    if (liftEl) { liftEl.value = st.lift !== undefined ? st.lift : 0; liftEl.dispatchEvent(new Event('input')); }
-    const crotchDepthSyncEl = document.getElementById('garment-crotch-depth');
-    if (crotchDepthSyncEl) { crotchDepthSyncEl.value = st.crotchDepth !== undefined ? st.crotchDepth : 0; crotchDepthSyncEl.dispatchEvent(new Event('input')); }
-    const roughEl = document.getElementById('garment-roughness');
-    if (roughEl) { roughEl.value = Math.round(st.roughness * 100); roughEl.dispatchEvent(new Event('input')); }
-    const metalEl = document.getElementById('garment-metalness');
-    if (metalEl) { metalEl.value = Math.round(st.metalness * 100); metalEl.dispatchEvent(new Event('input')); }
-    const colorEl = document.getElementById('garment-color');
-    if (colorEl && st.color) colorEl.value = '#' + new THREE.Color(st.color[0], st.color[1], st.color[2]).getHexString();
-    for (const rid of REGION_IDS) {
-        const stKey = 'region' + rid[0].toUpperCase() + rid.slice(1);
-        const rEl = document.getElementById(`garment-region-${rid}`);
-        if (rEl) { rEl.value = Math.round((st[stKey] || 0) * 100); rEl.dispatchEvent(new Event('input')); }
+    try {
+        Kleidungszustand.ausJson(st).inRegler('garment');
+        const farbfeld = document.getElementById('garment-color');
+        if (farbfeld && st.color) {
+            farbfeld.value = '#' + new THREE.Color(...st.color).getHexString();
+        }
+    } finally {
+        state._syncingSliders = false;
     }
-    state._syncingSliders = false;
 }
 
+/**
+ * Kleidungsstueck des Assets-Reiters anpassen. Der Ablauf steckt in
+ * `Kleideranpassung` — er stand bis zum Umbau am 16.08.2026 hier mit 101 Zeilen
+ * und fast gleich noch einmal in `_doKleiderFit` (Kleider-Reiter).
+ *
+ * Eigen ist nur, was danach passiert: Der Assets-Reiter fuehrt eine Liste
+ * `inst.garments` (fuer das Speichern der Szene) und stellt die Auswahl des
+ * Teilnetzes wieder her, wenn genau dieses Stueck gewaehlt war.
+ */
 export async function _doGarmentFit() {
-    if (!state._selectedGarmentId) return;
-    const inst = _selectedInst();
-    if (!inst) return;
-
-    if (!inst.isSkinned && state.rigifySkeletonData && state.skinWeightData) {
-        convertInstToSkinned(inst);
-    }
-
-    const selKey = (state._selectedSubMesh && state._selectedSubMesh.charId === inst.id)
-        ? state._selectedSubMesh.key : null;
-
-    state._refitting = true;
-
-    const params = _charQueryParams(inst);
-    params.set('garment_id', state._selectedGarmentId);
-    params.set('offset', (_sliderVal('garment-offset') / 1000).toFixed(4));
-    params.set('stiffness', (_sliderVal('garment-stiffness') / 100).toFixed(2));
-    params.set('min_dist', _sliderVal('garment-min-dist'));
-    params.set('crotch_floor', _sliderVal('garment-crotch-floor'));
-    params.set('lift', _sliderVal('garment-lift'));
-    params.set('crotch_depth', _sliderVal('garment-crotch-depth'));
-
-    const colorHex = document.getElementById('garment-color')?.value || '#4d5980';
-    const c = new THREE.Color(colorHex);
-    params.set('color_r', c.r.toFixed(3));
-    params.set('color_g', c.g.toFixed(3));
-    params.set('color_b', c.b.toFixed(3));
-
-    try {
-        const resp = await fetch(`/api/character/garment/fit/?${params}`);
-        const data = await resp.json();
-        if (data.error) { console.warn('Garment fit error:', data.error); state._refitting = false; return; }
-
-        const key = `gar_${state._selectedGarmentId}`;
-
-        if (inst.clothMeshes[key]) {
-            inst.group.remove(inst.clothMeshes[key]);
-            inst.clothMeshes[key].geometry.dispose();
-            inst.clothMeshes[key].material.dispose();
-            delete inst.clothMeshes[key];
-        }
-
-        const vertBuf = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(vertBuf);
-        const faceBuf = base64ToUint32(data.faces);
-        const normalBuf = base64ToFloat32(data.normals);
-        blenderToThreeCoords(normalBuf);
-
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
-
-        const roughness = _sliderVal('garment-roughness') / 100;
-        const metalness = _sliderVal('garment-metalness') / 100;
-        const mat = new THREE.MeshStandardMaterial({
-            color: c, roughness, metalness, side: THREE.DoubleSide,
-        });
-
-        const mesh = _skinifyMesh(geo, mat, inst, data);
-        inst.clothMeshes[key] = mesh;
-        inst.group.add(mesh);
-
-        inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
-        _computeGarmentRegionWeights(inst, key);
-
-        const prevSt = inst.garmentState[key];
-        const gState = {
-            offset: _sliderVal('garment-offset') / 1000,
-            stiffness: _sliderVal('garment-stiffness') / 100,
-            minDist: _sliderVal('garment-min-dist'),
-            crotchFloor: _sliderVal('garment-crotch-floor'),
-            lift: _sliderVal('garment-lift'),
-            crotchDepth: _sliderVal('garment-crotch-depth'),
-            color: [c.r, c.g, c.b],
-            roughness, metalness,
-            regionTop: prevSt?.regionTop || 0, regionUpper: prevSt?.regionUpper || 0,
-            regionMid: prevSt?.regionMid || 0, regionLower: prevSt?.regionLower || 0,
-            regionBottom: prevSt?.regionBottom || 0,
-        };
-        inst.garmentState[key] = gState;
-        _applyGarmentRegionOffsets(inst, key);
-
-        inst.garments = inst.garments.filter(g => g.id !== state._selectedGarmentId);
-        inst.garments.push({ id: state._selectedGarmentId, ...gState });
-
-        if (selKey === key) {
-            state._selectedSubMesh = { type: 'cloth', key, label: state._selectedGarmentId, meshObj: mesh, charId: inst.id };
+    const kennung = state._selectedGarmentId;
+    if (!kennung) return null;
+    const vorherGewaehlt = state._selectedSubMesh?.key;
+    return new Kleideranpassung({
+        vorsilbe: 'garment',
+        schluessel: 'gar_',
+        kennung,
+        danach: (figur, schluessel, zustand, netz) => {
+            figur.garments = figur.garments.filter(g => g.id !== kennung);
+            figur.garments.push({ id: kennung, ...zustand.zuJson() });
+            if (vorherGewaehlt !== schluessel) return;
+            state._selectedSubMesh = { type: 'cloth', key: schluessel,
+                                       label: kennung, meshObj: netz,
+                                       charId: figur.id };
             fn._setSubMeshEmissive(state._selectedSubMesh, state._SELECT_EMISSIVE);
             fn._syncPropGarmentControls();
-        }
-
-        state._refitting = false;
-        fn.updateEquippedList(inst);
-        fn.updateVertexCount();
-    } catch (e) {
-        state._refitting = false;
-        console.error('Garment fit failed:', e);
-    }
+        },
+    }).ausfuehren();
 }

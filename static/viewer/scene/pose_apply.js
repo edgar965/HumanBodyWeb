@@ -1,11 +1,12 @@
 /**
  * Scene Editor -- Pose browser + apply + rename/delete.
  */
-import { SESSION_KEY } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { _selectedInst, getCSRFToken } from './utils.js';
+import { _selectedInst } from './utils.js';
 import { convertInstToSkinned } from './skeleton.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /* ── Selection state ── */
 let _selectedPoseRow = null;
@@ -32,14 +33,20 @@ function _showCtx(x, y) {
 
 function _hideCtx() { const m = _ctxMenu(); if (m) m.style.display = 'none'; }
 
-/* ── API helper ── */
+/**
+ * Posen umbenennen und löschen.
+ *
+ * Liefert im Fehlerfall `{ok: false, error}` statt zu werfen — die beiden
+ * Aufrufer hängen einen `.then` an und zeigen `error` in einem `alert`.
+ */
 async function poseManage(action, data) {
-    const resp = await fetch('/api/character/pose-manage/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
-        body: JSON.stringify({ action, ...data }),
-    });
-    return resp.json();
+    try {
+        return await Serverabruf.senden('/api/character/pose-manage/',
+                                        { action, ...data });
+    } catch (fehler) {
+        Protokoll.fehler('Pose', action, fehler);
+        return { ok: false, error: fehler.message };
+    }
 }
 
 /* ── Rename / Delete ── */
@@ -99,8 +106,7 @@ export async function loadPoseUI() {
     _bindCtxMenu();
     _bindKeyboard();
     try {
-        const resp = await fetch('/api/character/poses/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/poses/');
         list.innerHTML = '';
         for (const [cat, poses] of Object.entries(data.categories || {})) {
             const folder = document.createElement('div'); folder.className = 'anim-folder';
@@ -135,14 +141,31 @@ export async function loadPoseUI() {
     }
 }
 
+/**
+ * Posendaten holen und den Fehler sichtbar machen.
+ *
+ * Der Aufruf kommt aus dem Menü (Pose → T-Pose), aus dem Doppelklick auf die
+ * Liste und aus dem Szenenaufbau — an keiner dieser Stellen fängt jemand.
+ * Ohne diesen Fänger endet ein Serverfehler in einer stillen
+ * "Unhandled promise rejection", und die Figur bleibt einfach stehen.
+ */
+async function _posendaten(poseId) {
+    try {
+        return await Serverabruf.json(`/api/character/pose/${poseId}/`);
+    } catch (fehler) {
+        Protokoll.fehler('Pose', poseId, fehler);
+        alert('Pose nicht ladbar: ' + fehler.message);
+        return null;
+    }
+}
+
 export async function applyPoseFromServer(poseId) {
     const inst = _selectedInst();
     if (!inst) return;
     if (!inst.isSkinned && state.rigifySkeletonData && state.skinWeightData) convertInstToSkinned(inst);
     if (!inst.isSkinned) return;
-    const resp = await fetch(`/api/character/pose/${poseId}/`);
-    const data = await resp.json();
-    if (!data.bones) return;
+    const data = await _posendaten(poseId);
+    if (!data?.bones) return;
     let skel = null;
     inst.group.traverse(child => { if (!skel && child.isSkinnedMesh && child.skeleton) skel = child.skeleton; });
     if (!skel) return;
@@ -177,7 +200,7 @@ export async function applyPoseFromServer(poseId) {
     }
     skel.bones[0].updateWorldMatrix(true, true);
     const _correctedLegs = _correctThighsToTPose(skel, poseId);
-    console.log(`[Pose] Applied ${poseId}: ${applied} bones (${_correctedLegs} leg corrections)`);
+    Protokoll.debug('Pose', `Applied ${poseId}: ${applied} bones (${_correctedLegs} leg corrections)`);
 }
 
 function _correctThighsToTPose(skel, poseId) {
@@ -201,17 +224,8 @@ function _correctThighsToTPose(skel, poseId) {
     return corrected;
 }
 
-export function _applyPose(pose) {
-    if (pose === state._currentPose) return;
-    fetch('/api/ui-pref/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'default_pose', value: pose }) });
-    sessionStorage.removeItem(SESSION_KEY);
-    window.location.reload();
-}
-
 // Register
 fn.loadPoseUI = loadPoseUI;
 fn.applyPoseFromServer = applyPoseFromServer;
-fn._applyPose = _applyPose;
-window.__applyPose = _applyPose;
 window.__applyPoseRuntime = applyPoseFromServer;
 window.__characters = state.characters;

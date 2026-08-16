@@ -11,13 +11,13 @@ import {
     computeSkinAttributes, applySkinColorToMaterials,
 } from '../character_core.js?v=1';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 const ss = sharedState;
 
 export async function loadMesh(bodyType) {
     try {
-        const resp = await fetch('/api/character/mesh/?body_type=' + encodeURIComponent(bodyType));
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/mesh/?body_type=' + encodeURIComponent(bodyType));
         if (data.error) { console.error('[result_character] mesh error:', data.error); return false; }
 
         const vertBuf = base64ToFloat32(data.vertices);

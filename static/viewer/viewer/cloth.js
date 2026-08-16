@@ -8,6 +8,8 @@ import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, bindSlider, slid
 import { ensureSkinned } from './skinning.js';
 import { Stoffvorlagen } from './cloth/stoffvorlagen.js';
 import { Stoffbauer } from './cloth/stoffbauer.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
  * Kleidungs-Bedienfeld aufbauen.
@@ -18,8 +20,7 @@ import { Stoffbauer } from './cloth/stoffbauer.js';
  */
 export async function loadClothUI() {
     try {
-        const antwort = await fetch('/api/character/cloth/regions/');
-        const daten = await antwort.json();
+        const daten = await Serverabruf.json('/api/character/cloth/regions/');
         const dienste = {
             reglerBinden: bindSlider,
             reglerWert: sliderVal,
@@ -45,8 +46,7 @@ export async function loadCloth(key, params, color) {
     try {
         const qs = Object.entries(params)
             .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-        const resp = await fetch(`/api/character/cloth/?${qs}`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`/api/character/cloth/?${qs}`);
         if (data.error) { console.error('Cloth error:', data.error); return; }
 
         removeClothRegion(key);
@@ -90,7 +90,7 @@ export async function loadCloth(key, params, color) {
         state.clothParams[key] = { params, color: '#' + mesh.material.color.getHexString() };
         state.scene.add(mesh);
 
-        console.log(`Cloth ${key}: ${data.vertex_count} verts, ${data.face_count} tris, skinned=${mesh.isSkinnedMesh || false}`);
+        Protokoll.debug('Viewer', `Cloth ${key}: ${data.vertex_count} verts, ${data.face_count} tris, skinned=${mesh.isSkinnedMesh || false}`);
         fn.updateEquippedList();
     } catch (e) {
         console.error('Failed to load cloth:', e);

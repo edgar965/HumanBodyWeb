@@ -10,6 +10,8 @@ import { _selectedGarmentMesh } from './garments.js';
 import { _computeGarmentRegionWeights, _applyGarmentRegionOffsets } from './kleidung_anpassen.js';
 import { _skinifyMesh } from './skeleton.js';
 import { markDirty } from './undo.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export function _syncPropGarmentControls() {
     const sel = _selectedGarmentMesh();
@@ -76,8 +78,9 @@ export async function _refitAllForCurrentChar() {
             if (!color || !Array.isArray(color)) { const c = new THREE.Color(color || 0x4d5980); color = [c.r, c.g, c.b]; }
             params.set('color_r', Number(color[0]).toFixed(3)); params.set('color_g', Number(color[1]).toFixed(3)); params.set('color_b', Number(color[2]).toFixed(3));
             try {
-                const resp = await fetch(`/api/character/garment/fit/?${params}`);
-                const data = await resp.json(); if (data.error) continue;
+                const data = await Serverabruf.json(
+                    `/api/character/garment/fit/?${params}`);
+                if (data.error) continue;
                 if (inst.clothMeshes[key]) { inst.group.remove(inst.clothMeshes[key]); inst.clothMeshes[key].geometry.dispose(); inst.clothMeshes[key].material.dispose(); }
                 const vertBuf = base64ToFloat32(data.vertices); blenderToThreeCoords(vertBuf);
                 const faceBuf = base64ToUint32(data.faces);
@@ -89,7 +92,7 @@ export async function _refitAllForCurrentChar() {
                 inst.clothMeshes[key] = mesh; inst.group.add(mesh);
                 inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
                 _computeGarmentRegionWeights(inst, key); _applyGarmentRegionOffsets(inst, key);
-            } catch (e) { console.log(`[Refit] ${key} failed: ${e.message}`); }
+            } catch (e) { Protokoll.warnung('Refit', `${key}: ${e.message}`); }
         }
         fn.updateEquippedList(inst); fn.updateVertexCount(); markDirty();
     } catch (e) { console.error('Refit all failed:', e); }

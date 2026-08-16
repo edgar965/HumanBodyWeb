@@ -8,152 +8,18 @@ import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, bindSlider, slid
 import { ensureSkinned } from './skinning.js';
 import { _saveGarmentState } from './garment_liste.js';
 import { _applyGarmentState, _downloadPack, _loadDownloadPacks, _renderGarmentList } from './garment_liste.js';
+import { Kleiderbedienung } from './kleiderbedienung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export async function loadGarmentUI() {
-    // Slider display bindings
-    bindSlider('garment-offset', 'garment-offset-val', v => (v / 1000).toFixed(3));
-    bindSlider('garment-stiffness', 'garment-stiffness-val', v => (v / 100).toFixed(2));
-    bindSlider('garment-min-dist', 'garment-min-dist-val', v => v + ' mm');
-    bindSlider('garment-crotch-floor', 'garment-crotch-floor-val', v => v + ' mm');
-    bindSlider('garment-lift', 'garment-lift-val', v => v + ' mm');
-    bindSlider('garment-crotch-depth', 'garment-crotch-depth-val', v => v + ' mm');
-    bindSlider('garment-roughness', 'garment-roughness-val', v => (v / 100).toFixed(2));
-    bindSlider('garment-metalness', 'garment-metalness-val', v => (v / 100).toFixed(2));
-    bindSlider('garment-pos-x', 'garment-pos-x-val', v => (v / 100).toFixed(2) + ' m');
-    bindSlider('garment-pos-y', 'garment-pos-y-val', v => (v / 100).toFixed(2) + ' m');
-    bindSlider('garment-pos-z', 'garment-pos-z-val', v => (v / 100).toFixed(2) + ' m');
-    bindSlider('garment-scale-x', 'garment-scale-x-val', v => (v / 100).toFixed(2));
-    bindSlider('garment-scale-y', 'garment-scale-y-val', v => (v / 100).toFixed(2));
-    bindSlider('garment-scale-z', 'garment-scale-z-val', v => (v / 100).toFixed(2));
-    for (const rid of ['top', 'upper', 'mid', 'lower', 'bottom']) {
-        bindSlider(`garment-region-${rid}`, `garment-region-${rid}-val`, v => (v / 100).toFixed(2) + ' m');
-    }
-
-    // Live garment sliders
-    _garmentLiveSlider('garment-pos-x'); _garmentLiveSlider('garment-pos-y'); _garmentLiveSlider('garment-pos-z');
-    _garmentLiveSlider('garment-scale-x'); _garmentLiveSlider('garment-scale-y'); _garmentLiveSlider('garment-scale-z');
-    _garmentLiveSlider('garment-roughness'); _garmentLiveSlider('garment-metalness');
-    for (const rid of ['top', 'upper', 'mid', 'lower', 'bottom']) _garmentLiveSlider(`garment-region-${rid}`);
-
-    // Server re-fit sliders
-    _garmentRefitSlider('garment-offset'); _garmentRefitSlider('garment-stiffness');
-    _garmentRefitSlider('garment-min-dist'); _garmentRefitSlider('garment-crotch-floor');
-    _garmentRefitSlider('garment-lift'); _garmentRefitSlider('garment-crotch-depth');
-
-    // Color picker
-    const garmentColorEl = document.getElementById('garment-color');
-    if (garmentColorEl) {
-        garmentColorEl.addEventListener('input', () => {
-            if (!state.selectedGarmentId || !state.garmentMeshes[state.selectedGarmentId]) return;
-            state.garmentMeshes[state.selectedGarmentId].material.color.set(garmentColorEl.value);
-            _saveGarmentState(state.selectedGarmentId);
-        });
-    }
-
-    // Buttons
-    const createBtn = document.getElementById('garment-create');
-    if (createBtn) createBtn.addEventListener('click', () => {
-        if (!state.selectedGarmentId) { console.warn('No garment selected'); return; }
-        loadGarment(state.selectedGarmentId);
-    });
-
-    const updateBtn = document.getElementById('garment-update');
-    if (updateBtn) updateBtn.addEventListener('click', () => {
-        if (!state.selectedGarmentId || !state.garmentMeshes[state.selectedGarmentId]) return;
-        _saveGarmentState(state.selectedGarmentId);
-        loadGarment(state.selectedGarmentId);
-    });
-
-    const refitAllBtn = document.getElementById('garment-refit-all');
-    if (refitAllBtn) refitAllBtn.addEventListener('click', async () => {
-        const ids = Object.keys(state.garmentMeshes);
-        if (ids.length === 0) return;
-        refitAllBtn.disabled = true;
-        refitAllBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refit...';
-        for (const gid of ids) _saveGarmentState(gid);
-        for (const gid of ids) await loadGarment(gid);
-        refitAllBtn.disabled = false;
-        refitAllBtn.innerHTML = '<i class="fas fa-sync"></i> Refit';
-    });
-
-    const removeBtn = document.getElementById('garment-remove');
-    if (removeBtn) removeBtn.addEventListener('click', () => {
-        if (state.selectedGarmentId && state.garmentMeshes[state.selectedGarmentId]) removeGarment(state.selectedGarmentId);
-    });
-
-    const removeAllBtn = document.getElementById('garment-remove-all');
-    if (removeAllBtn) removeAllBtn.addEventListener('click', () => removeAllGarments());
-
-    const catSelect = document.getElementById('garment-category');
-    if (catSelect) catSelect.addEventListener('change', () => _renderGarmentList());
-
-    // Download panel
-    const dlBtn = document.getElementById('garment-download-btn');
-    const dlPanel = document.getElementById('garment-download-panel');
-    if (dlBtn && dlPanel) {
-        dlBtn.addEventListener('click', async () => {
-            const isOpen = dlPanel.style.display !== 'none';
-            dlPanel.style.display = isOpen ? 'none' : 'block';
-            if (!isOpen) await _loadDownloadPacks();
-        });
-    }
-    const packDlBtn = document.getElementById('garment-pack-download');
-    if (packDlBtn) packDlBtn.addEventListener('click', () => _downloadPack());
-
-    // Edit Pattern button
-    document.getElementById('garment-edit-pattern')?.addEventListener('click', () => {
-        if (state.selectedGarmentId && fn.peLoadFromGarment) fn.peLoadFromGarment(state.selectedGarmentId);
-    });
-
-    // --- API catalog ---
-    try {
-        const resp = await fetch('/api/character/garment/library/');
-        const data = await resp.json();
-        state._garmentCatalog = [];
-
-        if (catSelect && data.categories) {
-            data.categories.forEach(cat => {
-                const opt = document.createElement('option');
-                opt.value = cat;
-                opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
-                catSelect.appendChild(opt);
-            });
-        }
-
-        if (data.garments) {
-            for (const cat of Object.keys(data.garments)) {
-                for (const g of data.garments[cat]) state._garmentCatalog.push(g);
-            }
-        }
-
-        _renderGarmentList();
-    } catch (e) {
-        console.warn('Garment UI not available:', e);
-        const listEl = document.getElementById('garment-list');
-        if (listEl) listEl.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Garment-Library</div>';
-    }
-}
-
-
-
-function _garmentLiveSlider(sliderId) {
-    const el = document.getElementById(sliderId);
-    if (!el) return;
-    el.addEventListener('input', () => {
-        if (!state.selectedGarmentId || !state.garmentMeshes[state.selectedGarmentId]) return;
-        _saveGarmentState(state.selectedGarmentId);
-        _applyGarmentState(state.selectedGarmentId);
-    });
-}
-
-function _garmentRefitSlider(sliderId) {
-    const el = document.getElementById(sliderId);
-    if (!el) return;
-    el.addEventListener('change', () => {
-        if (!state.selectedGarmentId || !state.garmentMeshes[state.selectedGarmentId]) return;
-        _saveGarmentState(state.selectedGarmentId);
-        loadGarment(state.selectedGarmentId);
-    });
+    // Die Bedienung steckt in `Kleiderbedienung` (viewer/kleiderbedienung.js) —
+    // vorher standen hier 124 Zeilen, davon 30 nur Reglerbindungen.
+    return new Kleiderbedienung({
+        anziehen: kennung => loadGarment(kennung),
+        abziehen: kennung => removeGarment(kennung),
+        alleAb: () => removeAllGarments(),
+    }).verdrahten();
 }
 
 
@@ -222,8 +88,7 @@ export async function loadGarment(garmentId) {
     try {
         const bodyQs = buildBodyFitQueryString();
         let qs = `garment_id=${encodeURIComponent(garmentId)}&${bodyQs}`;
-        const resp = await fetch(`/api/character/garment/fit/?${qs}`);
-        const data = await resp.json();
+        const data = await Serverabruf.json(`/api/character/garment/fit/?${qs}`);
         if (data.error) { console.error('Garment fit error:', data.error); return; }
 
         removeGarment(garmentId, true);
@@ -262,7 +127,7 @@ export async function loadGarment(garmentId) {
         _saveGarmentState(garmentId);
         _applyGarmentState(garmentId);
 
-        console.log(`Garment ${garmentId}: ${data.vertex_count} verts, skinned=${mesh.isSkinnedMesh || false}`);
+        Protokoll.debug('Viewer', `Garment ${garmentId}: ${data.vertex_count} verts, skinned=${mesh.isSkinnedMesh || false}`);
 
         // Auto-select
         if (state._selectedItem) fn._setEmissiveOnItem(state._selectedItem, state._ZERO_EMISSIVE);

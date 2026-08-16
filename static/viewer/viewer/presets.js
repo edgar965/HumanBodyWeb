@@ -9,6 +9,10 @@ import { removeAllCloth, loadCloth } from './cloth.js';
 import { loadHair, applyHairColor } from './hair.js';
 import { loadGarment, removeAllGarments } from './garment.js';
 import { loadBVHAnimation } from './animation.js';
+import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export function initLoadPreset() {
     const btn = document.getElementById('load-preset-btn');
@@ -22,8 +26,7 @@ export function initLoadPreset() {
             const preset = await resp.json();
             applyModelPreset(preset);
             state.currentPresetName = preset.name || name;
-            btn.innerHTML = '<i class="fas fa-check"></i> Geladen!';
-            setTimeout(() => { btn.innerHTML = '<i class="fas fa-folder-open"></i> Laden'; }, 1500);
+            Knopfmeldung.fertig(btn, 'Geladen!');
         } catch (err) { console.error('Load preset error:', err); alert('Fehler beim Laden: ' + err.message); }
     });
     loadDefaultPreset();
@@ -31,15 +34,15 @@ export function initLoadPreset() {
 
 async function loadDefaultPreset() {
     const maxWait = 15000; const start = Date.now();
-    while (!state.bodyMesh && Date.now() - start < maxWait) await new Promise(r => setTimeout(r, 200));
+    while (!state.bodyMesh && Date.now() - start < maxWait) await new Promise(r => setTimeout(r, Zeiten.WARTESCHRITT_MS));
     if (!state.bodyMesh) { console.warn('Default preset: mesh not ready, skipping'); return; }
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, Zeiten.BILDPAUSE_MS));
 
     if (DEFAULT_BODY) {
         try {
             const bodySelect = document.getElementById('body-type-select');
             if (bodySelect) { bodySelect.value = DEFAULT_BODY; bodySelect.dispatchEvent(new Event('change')); }
-            console.log(`Default body type applied: ${DEFAULT_BODY}`);
+            Protokoll.debug('Viewer', `Default body type applied: ${DEFAULT_BODY}`);
         } catch (e) { console.warn('Failed to apply default body type:', e); }
         return;
     }
@@ -57,8 +60,8 @@ async function loadDefaultPreset() {
         if (!resp.ok) return;
         const preset = await resp.json();
         applyModelPreset(preset);
-        setTimeout(() => applySceneSkinSettings(), 200);
-        console.log(`Default preset loaded: ${presetName}`);
+        setTimeout(() => applySceneSkinSettings(), Zeiten.NACHZIEHEN_MS);
+        Protokoll.debug('Viewer', `Default preset loaded: ${presetName}`);
         if (defaultAnim) {
             setTimeout(() => {
                 loadBVHAnimation(defaultAnim, 'Default', 0);
@@ -135,7 +138,12 @@ export function applyModelPreset(preset) {
         const hairSelect = document.getElementById('hair-style-select');
         const hairColorSelect = document.getElementById('hair-color-select');
         if (hairSelect && preset.hair_style.url) { for (const opt of hairSelect.options) { if (opt.value === preset.hair_style.url) { hairSelect.value = opt.value; break; } } loadHair(preset.hair_style.url); }
-        if (hairColorSelect && preset.hair_style.color) { hairColorSelect.value = preset.hair_style.color; setTimeout(() => applyHairColor(preset.hair_style.color), 1000); }
+        if (hairColorSelect && preset.hair_style.color) {
+            hairColorSelect.value = preset.hair_style.color;
+            // Die Farbe wirkt erst, wenn das Haarnetz geladen ist.
+            setTimeout(() => applyHairColor(preset.hair_style.color),
+                       Zeiten.SEKUNDE_MS);
+        }
     }
 
     if (preset.garments && preset.garments.length > 0) {
@@ -154,12 +162,12 @@ export function applyModelPreset(preset) {
             }
             fn.updateEquippedList();
         };
-        setTimeout(() => loadGarments(), 800);
+        setTimeout(() => loadGarments(), Zeiten.NACHLADEN_MS);
     }
 
     state.currentPresetName = preset.name || '';
     setTimeout(() => { try { localStorage.setItem('humanbody_current_model', JSON.stringify(gatherModelState())); } catch (e) {} }, 2000);
-    console.log(`Preset "${preset.name || 'unknown'}" applied`);
+    Protokoll.debug('Viewer', `Preset "${preset.name || 'unknown'}" applied`);
 }
 
 export function gatherModelState() {
@@ -209,9 +217,8 @@ export function gatherModelState() {
 async function saveModel(name) {
     const data = gatherModelState(); data.name = name;
     try {
-        const resp = await fetch('/api/character/model/save/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, data }) });
-        const result = await resp.json();
-        if (result.ok) { state.currentPresetName = name; console.log(`Model saved: ${result.filename}`); return true; }
+        const result = await Serverabruf.json('/api/character/model/save/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, data }) });
+        if (result.ok) { state.currentPresetName = name; Protokoll.info('Viewer', `Modell gespeichert: ${result.filename}`); return true; }
         else { alert('Fehler beim Speichern: ' + (result.error || 'Unbekannt')); return false; }
     } catch (e) { alert('Fehler beim Speichern: ' + e.message); return false; }
 }
@@ -290,16 +297,16 @@ export function initSaveButtons() {
     const saveAsBtn = document.getElementById('save-model-as-btn');
     if (saveBtn) {
         saveBtn.addEventListener('click', async () => {
-            if (!state.currentPresetName) { const name = await showSaveDialog(); if (!name) return; const ok = await saveModel(name); if (ok) { saveBtn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!'; setTimeout(() => { saveBtn.innerHTML = '<i class="fas fa-save"></i> Speichern'; }, 1500); } return; }
+            if (!state.currentPresetName) { const name = await showSaveDialog(); if (!name) return; const ok = await saveModel(name); if (ok) Knopfmeldung.fertig(saveBtn); return; }
             const ok = await saveModel(state.currentPresetName);
-            if (ok) { saveBtn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!'; setTimeout(() => { saveBtn.innerHTML = '<i class="fas fa-save"></i> Speichern'; }, 1500); }
+            if (ok) Knopfmeldung.fertig(saveBtn);
         });
     }
     if (saveAsBtn) {
         saveAsBtn.addEventListener('click', async () => {
             const name = await showSaveDialog(); if (!name) return;
             const ok = await saveModel(name);
-            if (ok) { saveAsBtn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!'; setTimeout(() => { saveAsBtn.innerHTML = '<i class="fas fa-file-export"></i> Speichern unter'; }, 1500); }
+            if (ok) Knopfmeldung.fertig(saveAsBtn);
         });
     }
 }

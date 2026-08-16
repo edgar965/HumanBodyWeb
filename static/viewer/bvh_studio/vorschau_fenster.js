@@ -17,6 +17,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _gaussSmooth } from './werkzeug_glaettung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 /** Gemerkte Fenstergroesse — ueberlebt den Seitenwechsel. */
 const GROESSE_SCHLUESSEL = 'bvhStudio_previewSize';
@@ -164,12 +165,11 @@ export class Vorschaufenster {
         if (!category || !name) { alert('Keine Animation geladen.'); return; }
         const sigma = _gaussSmooth.sigma;
         try {
-            const resp = await fetch('/api/retarget/smooth-bvh/', {
+            const ergebnis = await Serverabruf.json('/api/retarget/smooth-bvh/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ category, name, sigma }),
             });
-            const ergebnis = await resp.json();
             if (!ergebnis.ok) {
                 alert('Fehler: ' + (ergebnis.error || 'Unbekannt'));
                 return;

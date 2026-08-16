@@ -566,6 +566,30 @@
         font-size: 0.75rem;
     }
     .pnl-schieberkopf .pnl-wert { margin-left: 0; }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* 1x */
+.hb-display-block.hb-display-block.hb-display-block { display:block; font-size:0.8rem; color:var(--text-muted,#aaa); margin-bottom:4px; }   /* 4x */
+.hb-font-size-0-8rem.hb-font-size-0-8rem.hb-font-size-0-8rem { font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:4px; }   /* 8x */
+.hb-font-size-0-9rem.hb-font-size-0-9rem.hb-font-size-0-9rem { font-size:0.9rem; margin-bottom:10px; color:var(--text-muted); }   /* 3x */
+.hb-gedaempft-theme.hb-gedaempft-theme.hb-gedaempft-theme { color:var(--text-muted); }   /* 1x */
+.hb-hinweis.hb-hinweis.hb-hinweis { padding:12px; color:var(--text-muted); font-size:0.8rem; }   /* 2x */
+.hb-margin-bottom-8px.hb-margin-bottom-8px.hb-margin-bottom-8px { margin-bottom:8px; }   /* 5x */
+.hb-padding-3px.hb-padding-3px.hb-padding-3px { padding:3px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:3px; font-size:0.8rem; }   /* 4x */
+.hb-volle-breite.hb-volle-breite.hb-volle-breite { width:100%; }   /* 2x */
+.hb-width-100.hb-width-100.hb-width-100 { width:100%; padding:4px 8px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:4px; font-size:0.82rem; }   /* 5x */
+.hb-width-100-2.hb-width-100-2.hb-width-100-2 { width:100%; padding:6px 8px; }   /* 4x */
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-color-e74c3c.hb-color-e74c3c.hb-color-e74c3c { color: #e74c3c; }   /* 2x */
+.hb-font-size-0-7rem.hb-font-size-0-7rem.hb-font-size-0-7rem { font-size:0.7rem; color:var(--text-muted); margin-top:2px; }   /* 2x */
+.hb-margin-bottom-10px.hb-margin-bottom-10px.hb-margin-bottom-10px { margin-bottom:10px; }   /* 2x */
+.hb-width-40.hb-width-40.hb-width-40 { width:40%; padding:3px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:3px; font-size:0.8rem; }   /* 2x */
+.hb-width-50.hb-width-50.hb-width-50 { width:50%; padding:3px; background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:3px; font-size:0.8rem; }   /* 2x */
 </style>
 {% endblock %}
 
@@ -635,7 +659,7 @@
             </div>
             <div class="menu-separator"></div>
             <div class="menu-action" id="menu-cam-clear">
-                <i class="fas fa-trash" style="color: #e74c3c;"></i> Alle Kamera-Keyframes löschen
+                <i class="fas fa-trash hb-color-e74c3c"></i> Alle Kamera-Keyframes löschen
             </div>
         </div>
     </div>
@@ -646,7 +670,7 @@
                 <i class="fas fa-sync"></i> Timeline neu aufbauen
             </div>
             <div class="menu-action" id="menu-tracks-clear">
-                <i class="fas fa-eraser" style="color: #e74c3c;"></i> Timeline löschen
+                <i class="fas fa-eraser hb-color-e74c3c"></i> Timeline löschen
             </div>
         </div>
     </div>
@@ -702,17 +726,17 @@
         <div class="panel-tab-content">
             <!-- Tab: Animationen -->
             <div class="tab-pane active" id="tab-animations">
-                <h3 style="font-size:0.9rem;margin-bottom:10px;color:var(--text-muted);">BVH Bibliothek</h3>
+                <h3 class="hb-font-size-0-9rem">BVH Bibliothek</h3>
                 <div class="anim-tree" id="anim-tree">
-                    <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Animationen...</div>
+                    <div class="hb-hinweis">Lade Animationen...</div>
                 </div>
             </div>
 
             <!-- Tab: Modelle -->
             <div class="tab-pane" id="tab-models">
-                <h3 style="font-size:0.9rem;margin-bottom:10px;color:var(--text-muted);">Character Presets</h3>
+                <h3 class="hb-font-size-0-9rem">Character Presets</h3>
                 <div class="anim-tree" id="model-list">
-                    <div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Lade Modelle...</div>
+                    <div class="hb-hinweis">Lade Modelle...</div>
                 </div>
             </div>
 
@@ -733,21 +757,21 @@
 
             <!-- Tab: Export -->
             <div class="tab-pane" id="tab-export">
-                <h3 style="font-size:0.9rem;margin-bottom:10px;color:var(--text-muted);">Video Export</h3>
+                <h3 class="hb-font-size-0-9rem">Video Export</h3>
 
                 <!-- Export Method -->
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Methode:</label>
-                    <select id="export-method" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                <div class="hb-margin-bottom-10px">
+                    <label class="hb-font-size-0-8rem">Methode:</label>
+                    <select id="export-method" class="hb-width-100">
                         <option value="browser">Browser (MediaRecorder, Echtzeit)</option>
                         <option value="server">Server (Playwright + ffmpeg, Offline)</option>
                     </select>
                 </div>
 
                 <!-- Resolution -->
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Aufl&ouml;sung:</label>
-                    <select id="export-resolution" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                <div class="hb-margin-bottom-8px">
+                    <label class="hb-font-size-0-8rem">Aufl&ouml;sung:</label>
+                    <select id="export-resolution" class="hb-width-100">
                         <option value="viewport">Viewport (aktuell)</option>
                         <option value="720">720p (1280&times;720)</option>
                         <option value="1080" selected>1080p (1920&times;1080)</option>
@@ -756,15 +780,15 @@
                         <option value="custom">Benutzerdefiniert</option>
                     </select>
                     <div id="export-custom-res" style="display:none;margin-top:4px;display:flex;gap:4px;">
-                        <input type="number" id="export-width" value="1920" min="320" max="7680" style="width:50%;padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;" placeholder="Breite">
-                        <input type="number" id="export-height" value="1080" min="240" max="4320" style="width:50%;padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;" placeholder="H&ouml;he">
+                        <input type="number" id="export-width" value="1920" min="320" max="7680" class="hb-width-50" placeholder="Breite">
+                        <input type="number" id="export-height" value="1080" min="240" max="4320" class="hb-width-50" placeholder="H&ouml;he">
                     </div>
                 </div>
 
                 <!-- FPS -->
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">FPS:</label>
-                    <select id="export-fps" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                <div class="hb-margin-bottom-8px">
+                    <label class="hb-font-size-0-8rem">FPS:</label>
+                    <select id="export-fps" class="hb-width-100">
                         <option value="24">24 fps (Film)</option>
                         <option value="25">25 fps (PAL)</option>
                         <option value="30" selected>30 fps</option>
@@ -773,9 +797,9 @@
                 </div>
 
                 <!-- Format -->
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Format:</label>
-                    <select id="export-format" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                <div class="hb-margin-bottom-8px">
+                    <label class="hb-font-size-0-8rem">Format:</label>
+                    <select id="export-format" class="hb-width-100">
                         <option value="mp4" selected>MP4 (H.264)</option>
                         <option value="webm">WebM (VP9)</option>
                         <option value="png">PNG Sequenz</option>
@@ -783,10 +807,10 @@
                 </div>
 
                 <!-- Quality -->
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Qualit&auml;t (CRF):</label>
+                <div class="hb-margin-bottom-8px">
+                    <label class="hb-font-size-0-8rem">Qualit&auml;t (CRF):</label>
                     <div style="display:flex;align-items:center;gap:6px;">
-                        <input type="range" id="export-crf" min="0" max="51" value="18" style="flex:1;">
+                        <input type="range" id="export-crf" min="0" max="51" value="18" class="hb-dehnt">
                         <span id="export-crf-val" style="font-size:0.8rem;color:var(--text-muted);min-width:20px;">18</span>
                     </div>
                     <div style="font-size:0.7rem;color:var(--text-muted);display:flex;justify-content:space-between;">
@@ -795,21 +819,21 @@
                 </div>
 
                 <!-- Time Range -->
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Zeitbereich:</label>
+                <div class="hb-margin-bottom-8px">
+                    <label class="hb-font-size-0-8rem">Zeitbereich:</label>
                     <div style="display:flex;gap:4px;align-items:center;">
-                        <input type="number" id="export-start" value="0" min="0" step="0.1" style="width:40%;padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;" placeholder="Start (s)">
-                        <span style="color:var(--text-muted);">&ndash;</span>
-                        <input type="number" id="export-end" value="0" min="0" step="0.1" style="width:40%;padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;" placeholder="Ende (s)">
+                        <input type="number" id="export-start" value="0" min="0" step="0.1" class="hb-width-40" placeholder="Start (s)">
+                        <span class="hb-gedaempft-theme">&ndash;</span>
+                        <input type="number" id="export-end" value="0" min="0" step="0.1" class="hb-width-40" placeholder="Ende (s)">
                         <span style="font-size:0.7rem;color:var(--text-muted);">s</span>
                     </div>
-                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">0 = gesamte Animation</div>
+                    <div class="hb-font-size-0-7rem">0 = gesamte Animation</div>
                 </div>
 
                 <!-- Background -->
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Hintergrund:</label>
-                    <select id="export-bg" style="width:100%;padding:4px 8px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:4px;font-size:0.82rem;">
+                <div class="hb-margin-bottom-10px">
+                    <label class="hb-font-size-0-8rem">Hintergrund:</label>
+                    <select id="export-bg" class="hb-width-100">
                         <option value="scene">Szene (wie angezeigt)</option>
                         <option value="transparent">Transparent (PNG Seq. only)</option>
                         <option value="green">Greenscreen</option>
@@ -820,14 +844,14 @@
 
                 <!-- Screen Region (Server only) -->
                 <div id="export-region-section" style="margin-bottom:10px;display:none;">
-                    <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px;">Bildausschnitt (px):</label>
+                    <label class="hb-font-size-0-8rem">Bildausschnitt (px):</label>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-                        <input type="number" id="export-crop-x" value="0" min="0" placeholder="X" style="padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;">
-                        <input type="number" id="export-crop-y" value="0" min="0" placeholder="Y" style="padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;">
-                        <input type="number" id="export-crop-w" value="0" min="0" placeholder="Breite (0=voll)" style="padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;">
-                        <input type="number" id="export-crop-h" value="0" min="0" placeholder="H&ouml;he (0=voll)" style="padding:3px;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;font-size:0.8rem;">
+                        <input type="number" id="export-crop-x" value="0" min="0" placeholder="X" class="hb-padding-3px">
+                        <input type="number" id="export-crop-y" value="0" min="0" placeholder="Y" class="hb-padding-3px">
+                        <input type="number" id="export-crop-w" value="0" min="0" placeholder="Breite (0=voll)" class="hb-padding-3px">
+                        <input type="number" id="export-crop-h" value="0" min="0" placeholder="H&ouml;he (0=voll)" class="hb-padding-3px">
                     </div>
-                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">0 = gesamter Viewport</div>
+                    <div class="hb-font-size-0-7rem">0 = gesamter Viewport</div>
                 </div>
 
                 <!-- Info: current animation -->
@@ -931,12 +955,12 @@
         <div class="theatre-modal-body">
             <div style="margin-bottom:12px;">
                 <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:6px;">Dateiname</label>
-                <input type="text" class="save-modal-input" id="export-mp4-filename" value="theatre-export.mp4" style="width:100%;">
+                <input type="text" class="save-modal-input hb-volle-breite" id="export-mp4-filename" value="theatre-export.mp4">
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
                 <div>
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:4px;">Auflösung</label>
-                    <select id="export-mp4-resolution" class="save-modal-input" style="width:100%;padding:6px 8px;">
+                    <label class="hb-display-block">Auflösung</label>
+                    <select id="export-mp4-resolution" class="save-modal-input hb-width-100-2">
                         <option value="720p">720p (1280x720)</option>
                         <option value="1080p" selected>1080p (1920x1080)</option>
                         <option value="1440p">1440p (2560x1440)</option>
@@ -944,16 +968,16 @@
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:4px;">FPS</label>
-                    <select id="export-mp4-fps" class="save-modal-input" style="width:100%;padding:6px 8px;">
+                    <label class="hb-display-block">FPS</label>
+                    <select id="export-mp4-fps" class="save-modal-input hb-width-100-2">
                         <option value="24">24 fps</option>
                         <option value="30" selected>30 fps</option>
                         <option value="60">60 fps</option>
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:4px;">Qualität</label>
-                    <select id="export-mp4-quality" class="save-modal-input" style="width:100%;padding:6px 8px;">
+                    <label class="hb-display-block">Qualität</label>
+                    <select id="export-mp4-quality" class="save-modal-input hb-width-100-2">
                         <option value="low">Niedrig (2 Mbps)</option>
                         <option value="medium">Mittel (5 Mbps)</option>
                         <option value="high" selected>Hoch (8 Mbps)</option>
@@ -961,8 +985,8 @@
                     </select>
                 </div>
                 <div>
-                    <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:4px;">Format</label>
-                    <select id="export-mp4-format" class="save-modal-input" style="width:100%;padding:6px 8px;">
+                    <label class="hb-display-block">Format</label>
+                    <select id="export-mp4-format" class="save-modal-input hb-width-100-2">
                         <option value="mp4" selected>MP4 (H.264)</option>
                         <option value="webm">WebM (VP9)</option>
                     </select>
@@ -970,7 +994,7 @@
             </div>
             <div id="export-mp4-status" style="display:none;padding:8px 12px;margin-bottom:10px;border-radius:6px;font-size:0.85rem;background:rgba(124,92,191,0.15);color:#b39ddb;">
             </div>
-            <button class="save-modal-btn" id="export-mp4-start" style="width:100%;">
+            <button class="save-modal-btn hb-volle-breite" id="export-mp4-start">
                 <i class="fas fa-circle" style="color:#e74c3c;"></i> Aufnahme starten
             </button>
         </div>

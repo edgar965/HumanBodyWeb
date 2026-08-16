@@ -4,14 +4,15 @@
  */
 import { serverLog } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 let _charmorphAssets = [];
 let _selectedAsset = null;
 
 export async function loadCharmorphAssets() {
     try {
-        const resp = await fetch('/api/character/charmorph-assets/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/charmorph-assets/');
         _charmorphAssets = data.assets || [];
 
         // Populate category dropdown
@@ -26,7 +27,7 @@ export async function loadCharmorphAssets() {
         renderCharmorphList();
         _bindControls();
 
-        console.log(`[CharMorph] ${_charmorphAssets.length} assets loaded`);
+        Protokoll.debug('CharMorph', `${_charmorphAssets.length} assets loaded`);
     } catch (e) {
         console.error('[CharMorph] Asset load failed:', e);
     }
@@ -123,7 +124,7 @@ function _showAssetParams(asset) {
 
     // Show tags
     if (asset.tags && asset.tags.length > 0) {
-        console.log(`[CharMorph] ${asset.name}: tags=[${asset.tags.join(', ')}]`);
+        Protokoll.debug('CharMorph', `${asset.name}: tags=[${asset.tags.join(', ')}]`);
     }
 }
 

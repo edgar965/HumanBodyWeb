@@ -4,6 +4,7 @@
 import { state, WS_PATH } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { updateMeshVertices, reloadMeshForBodyType } from './mesh.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
 
 export function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -27,7 +28,7 @@ export function connectWebSocket() {
         state.wsReady = false;
         const wsEl = document.getElementById('ws-status');
         if (wsEl) { wsEl.textContent = 'Disconnected'; wsEl.className = 'disconnected'; }
-        setTimeout(connectWebSocket, 2000);
+        setTimeout(connectWebSocket, Zeiten.VERBINDEN_MS);
     };
 
     state.ws.onerror = (e) => {

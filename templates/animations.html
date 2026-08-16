@@ -212,6 +212,23 @@
         max-width:600px; width:90%; max-height:80vh; overflow-y:auto; padding:24px;
         box-shadow:0 16px 48px rgba(0,0,0,0.5);
     }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* 1x */
+.hb-margin-14px-0-6px.hb-margin-14px-0-6px.hb-margin-14px-0-6px { margin:14px 0 6px; }   /* 5x */
+.hb-margin-4px-0.hb-margin-4px-0.hb-margin-4px-0 { margin:4px 0; }   /* 4x */
+.hb-padding-5px-0.hb-padding-5px-0.hb-padding-5px-0 { padding:5px 0; text-align:center; }   /* 4x */
+.hb-padding-5px-0-2.hb-padding-5px-0-2.hb-padding-5px-0-2 { padding:5px 0; }   /* 3x */
+.hb-symbolspalte.hb-symbolspalte.hb-symbolspalte { width:16px; }   /* 8x */
+.hb-untere-linie.hb-untere-linie.hb-untere-linie { border-bottom:1px solid var(--border); }   /* 6x */
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-background-var-bg-card.hb-background-var-bg-card.hb-background-var-bg-card { background:var(--bg-card); padding:2px 6px; border-radius:3px; border:1px solid var(--border); }   /* 2x */
+.hb-width-100.hb-width-100.hb-width-100 { width:100%; border-collapse:collapse; font-size:0.85rem; }   /* 2x */
 </style>
 {% endblock %}
 
@@ -240,12 +257,12 @@
             <button id="anim-rename" title="Umbenennen (F2)"><i class="fas fa-pen"></i></button>
             <button id="anim-move" title="Verschieben"><i class="fas fa-arrows-alt"></i></button>
             <button id="anim-delete" title="Loeschen (Del)"><i class="fas fa-trash"></i></button>
-            <div style="flex:1;"></div>
+            <div class="hb-dehnt"></div>
             <button id="anim-refresh" title="Aktualisieren"><i class="fas fa-sync-alt"></i></button>
             <div class="toolbar-dropdown" id="anim-help-dropdown" style="position:relative;">
                 <button id="anim-help-btn" title="Hilfe" style="padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);cursor:pointer;font-size:0.75rem;"><i class="fas fa-question-circle"></i> Hilfe</button>
                 <div class="anim-ctx" id="anim-help-menu" style="position:absolute;bottom:100%;right:0;left:auto;top:auto;min-width:160px;">
-                    <div class="anim-ctx-item" id="anim-help-animations"><i class="fas fa-running" style="width:16px;"></i> Animationen</div>
+                    <div class="anim-ctx-item" id="anim-help-animations"><i class="fas fa-running hb-symbolspalte"></i> Animationen</div>
                 </div>
             </div>
         </div>
@@ -255,17 +272,17 @@
 
         <!-- Context menus -->
         <div class="anim-ctx" id="anim-ctx-file">
-            <div class="anim-ctx-item" data-action="play"><i class="fas fa-play" style="width:16px;"></i> Abspielen</div>
+            <div class="anim-ctx-item" data-action="play"><i class="fas fa-play hb-symbolspalte"></i> Abspielen</div>
             <div class="anim-ctx-sep"></div>
-            <div class="anim-ctx-item" data-action="rename"><i class="fas fa-pen" style="width:16px;"></i> Umbenennen</div>
-            <div class="anim-ctx-item" data-action="move"><i class="fas fa-arrows-alt" style="width:16px;"></i> Verschieben nach...</div>
-            <div class="anim-ctx-item" data-action="delete"><i class="fas fa-trash" style="width:16px;"></i> L&ouml;schen</div>
+            <div class="anim-ctx-item" data-action="rename"><i class="fas fa-pen hb-symbolspalte"></i> Umbenennen</div>
+            <div class="anim-ctx-item" data-action="move"><i class="fas fa-arrows-alt hb-symbolspalte"></i> Verschieben nach...</div>
+            <div class="anim-ctx-item" data-action="delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
         </div>
         <div class="anim-ctx" id="anim-ctx-folder">
-            <div class="anim-ctx-item" data-action="rename-folder"><i class="fas fa-pen" style="width:16px;"></i> Ordner umbenennen</div>
-            <div class="anim-ctx-item" data-action="new-folder"><i class="fas fa-folder-plus" style="width:16px;"></i> Neuer Unterordner</div>
+            <div class="anim-ctx-item" data-action="rename-folder"><i class="fas fa-pen hb-symbolspalte"></i> Ordner umbenennen</div>
+            <div class="anim-ctx-item" data-action="new-folder"><i class="fas fa-folder-plus hb-symbolspalte"></i> Neuer Unterordner</div>
             <div class="anim-ctx-sep"></div>
-            <div class="anim-ctx-item" data-action="delete-folder"><i class="fas fa-trash" style="width:16px;"></i> Ordner l&ouml;schen</div>
+            <div class="anim-ctx-item" data-action="delete-folder"><i class="fas fa-trash hb-symbolspalte"></i> Ordner l&ouml;schen</div>
         </div>
 
         <!-- Speed Slider -->
@@ -301,47 +318,47 @@
 <h4 style="color:var(--accent);margin:0 0 8px;">Animationen verwalten</h4>
 <p>Die Animationsseite zeigt alle BVH-Dateien gruppiert nach Ordnern. Klicke auf eine Animation um sie abzuspielen.</p>
 
-<h4 style="margin:14px 0 6px;">Toolbar</h4>
-<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;width:40px;text-align:center;"><i class="fas fa-folder-plus"></i></td><td><b>Neuer Ordner</b> — Erstellt einen neuen Kategorie-Ordner</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;text-align:center;"><i class="fas fa-pen"></i></td><td><b>Umbenennen</b> — Benennt die ausgewaehlte Animation um (auch: F2)</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;text-align:center;"><i class="fas fa-arrows-alt"></i></td><td><b>Verschieben</b> — Verschiebt die Animation in einen anderen Ordner</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;text-align:center;"><i class="fas fa-trash"></i></td><td><b>Loeschen</b> — Loescht die ausgewaehlte Animation (auch: Del)</td></tr>
-<tr><td style="padding:5px 0;text-align:center;"><i class="fas fa-sync-alt"></i></td><td><b>Aktualisieren</b> — Laedt die Animationsliste neu</td></tr>
+<h4 class="hb-margin-14px-0-6px">Toolbar</h4>
+<table class="hb-width-100">
+<tr class="hb-untere-linie"><td style="padding:5px 0;width:40px;text-align:center;"><i class="fas fa-folder-plus"></i></td><td><b>Neuer Ordner</b> — Erstellt einen neuen Kategorie-Ordner</td></tr>
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0"><i class="fas fa-pen"></i></td><td><b>Umbenennen</b> — Benennt die ausgewaehlte Animation um (auch: F2)</td></tr>
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0"><i class="fas fa-arrows-alt"></i></td><td><b>Verschieben</b> — Verschiebt die Animation in einen anderen Ordner</td></tr>
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0"><i class="fas fa-trash"></i></td><td><b>Loeschen</b> — Loescht die ausgewaehlte Animation (auch: Del)</td></tr>
+<tr><td class="hb-padding-5px-0"><i class="fas fa-sync-alt"></i></td><td><b>Aktualisieren</b> — Laedt die Animationsliste neu</td></tr>
 </table>
 
-<h4 style="margin:14px 0 6px;">Kontextmenue (Rechtsklick)</h4>
+<h4 class="hb-margin-14px-0-6px">Kontextmenue (Rechtsklick)</h4>
 <p><b>Auf eine Animation:</b></p>
-<ul style="margin:4px 0;">
+<ul class="hb-margin-4px-0">
 <li><b>Abspielen</b> — Spielt die Animation ab</li>
 <li><b>Umbenennen</b> — Aendert den Dateinamen</li>
 <li><b>Verschieben nach...</b> — Verschiebt in einen anderen Ordner (Name eingeben)</li>
 <li><b>Loeschen</b> — Entfernt die BVH-Datei (mit Bestaetigung)</li>
 </ul>
 <p><b>Auf einen Ordner:</b></p>
-<ul style="margin:4px 0;">
+<ul class="hb-margin-4px-0">
 <li><b>Ordner umbenennen</b> — Aendert den Ordnernamen</li>
 <li><b>Neuer Unterordner</b> — Erstellt einen neuen Ordner</li>
 <li><b>Ordner loeschen</b> — Entfernt einen leeren Ordner</li>
 </ul>
 
-<h4 style="margin:14px 0 6px;">Tastenkuerzel</h4>
-<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">F2</kbd></td><td>Ausgewaehlte Animation umbenennen</td></tr>
-<tr style="border-bottom:1px solid var(--border);"><td style="padding:5px 0;"><kbd style="background:var(--bg-card);padding:2px 6px;border-radius:3px;border:1px solid var(--border);">Del</kbd></td><td>Ausgewaehlte Animation loeschen</td></tr>
-<tr><td style="padding:5px 0;"><b>Rechtsklick</b></td><td>Kontextmenue fuer Datei oder Ordner</td></tr>
+<h4 class="hb-margin-14px-0-6px">Tastenkuerzel</h4>
+<table class="hb-width-100">
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0-2"><kbd class="hb-background-var-bg-card">F2</kbd></td><td>Ausgewaehlte Animation umbenennen</td></tr>
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0-2"><kbd class="hb-background-var-bg-card">Del</kbd></td><td>Ausgewaehlte Animation loeschen</td></tr>
+<tr><td class="hb-padding-5px-0-2"><b>Rechtsklick</b></td><td>Kontextmenue fuer Datei oder Ordner</td></tr>
 </table>
 
-<h4 style="margin:14px 0 6px;">Wiedergabe</h4>
-<ul style="margin:4px 0;">
+<h4 class="hb-margin-14px-0-6px">Wiedergabe</h4>
+<ul class="hb-margin-4px-0">
 <li><b>Play/Pause</b> — Startet oder pausiert die Animation</li>
 <li><b>Stop</b> — Setzt die Animation auf Frame 0 zurueck</li>
 <li><b>Speed-Slider</b> — Aendert die Abspielgeschwindigkeit (0.1x bis 3.0x)</li>
 <li><b>Timeline-Slider</b> — Scrubbt durch die Animation</li>
 </ul>
 
-<h4 style="margin:14px 0 6px;">Hinweise</h4>
-<ul style="margin:4px 0;">
+<h4 class="hb-margin-14px-0-6px">Hinweise</h4>
+<ul class="hb-margin-4px-0">
 <li>Ordner koennen nur geloescht werden wenn sie leer sind</li>
 <li>Beim Umbenennen/Verschieben wird auch die Retarget-Cache-Datei (.json) mitverschoben</li>
 <li>Alle Aenderungen werden sofort auf der Festplatte ausgefuehrt</li>

@@ -4,6 +4,7 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { blenderToThreeCoords } from '../character_core.js?v=1';
+import { Zeiten } from '../gemeinsam/zeiten.js';
 
 export function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -25,7 +26,9 @@ export function connectWebSocket() {
     };
     state.ws.onclose = () => {
         state.wsReady = false;
-        setTimeout(connectWebSocket, 3000);
+        // Dieselbe Lage wie auf der Viewer-Seite — dort waren es
+        // 2000 ms, hier 3000: derselbe Wert fuer dasselbe (16.08.2026).
+        setTimeout(connectWebSocket, Zeiten.VERBINDEN_MS);
     };
     state.ws.onerror = () => {};
     state.ws.onmessage = (event) => {

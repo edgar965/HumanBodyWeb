@@ -5,6 +5,7 @@ import { THREE, LIGHT_PRESETS, TONE_MAPPINGS } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { markDirty } from './undo.js';
+import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
 
 function autoSave() {
     clearTimeout(state.saveTimer);
@@ -168,9 +169,7 @@ export function bindActions() {
         const settings = gatherSettings();
         localStorage.setItem('humanbody_scene_settings', JSON.stringify(settings));
         const btn = document.getElementById('btn-apply');
-        const orig = btn.textContent;
-        btn.textContent = 'Gespeichert!';
-        setTimeout(() => { btn.textContent = orig; }, 1500);
+        Knopfmeldung.fertig(btn);
     });
     document.getElementById('btn-reset').addEventListener('click', () => {
         applyPreset(LIGHT_PRESETS.studio);

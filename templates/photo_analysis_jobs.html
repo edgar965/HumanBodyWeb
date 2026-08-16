@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Photo-to-3D Jobs{% endblock %}
 
 {% block extra_styles %}
@@ -33,6 +34,10 @@
     display: none; position: fixed; inset: 0; z-index: 1000;
     background: rgba(0,0,0,0.7); justify-content: center; align-items: center;
 }
+/* Umbau 16.08.2026: Das Fenster wurde vorher ueber `style.display = 'flex'`
+   geoeffnet — jetzt ueber diese Klasse, damit das Aussehen im CSS bleibt. */
+.job-modal-overlay.offen { display: flex; }
+.hb-versteckt { display: none; }
 .job-modal {
     background: var(--bg-card, #1e1e2e); border-radius: 8px;
     display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -52,6 +57,13 @@
 .job-detail-meta .meta-item { margin-bottom: 0.3rem; }
 .job-detail-meta .meta-item b { color: var(--text-muted); font-weight: 600; margin-right: 0.5rem; }
 .job-detail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
+.hb-max-height-250px.hb-max-height-250px.hb-max-height-250px { max-height:250px; border-radius:6px; }   /* 3x */
+.hb-padding-4px-8px.hb-padding-4px-8px.hb-padding-4px-8px { padding:4px 8px; font-size:0.75rem; }   /* 3x */
+.hb-width-60px.hb-width-60px.hb-width-60px { width:60px; height:60px; object-fit:contain; border-radius:4px; cursor:pointer; display:block; }   /* 2x */
 </style>
 {% endblock %}
 
@@ -66,14 +78,14 @@
 {% if jobs %}
 <div class="bulk-actions" id="bulk-actions">
     <span class="selection-count" id="selection-count">0 ausgewählt</span>
-    <button class="btn btn-sm btn-danger" onclick="bulkDelete()">
+    <button class="btn btn-sm btn-danger" id="bulk-delete-btn">
         <i class="fas fa-trash"></i> Ausgewählte löschen
     </button>
 </div>
 <table class="photo-jobs-table">
     <thead>
         <tr>
-            <th class="cb-cell"><input type="checkbox" id="select-all" title="Alle auswählen" onclick="toggleAll(this)"></th>
+            <th class="cb-cell"><input type="checkbox" id="select-all" title="Alle auswählen"></th>
             <th>Foto</th>
             <th>3D Ergebnis</th>
             <th>Silhouette</th>
@@ -99,17 +111,17 @@
             data-bodytype="{{ job.body_type }}"
             data-date="{{ job.created_at|date:'d.m.Y H:i' }}"
             data-duration="{{ job.duration_seconds }}">
-            <td class="cb-cell"><input type="checkbox" class="job-cb" data-job-id="{{ job.id }}" onclick="updateSelection()"></td>
+            <td class="cb-cell"><input type="checkbox" class="job-cb" data-job-id="{{ job.id }}"></td>
             <td>
                 <img src="/{{ job.photo_file }}" alt="photo"
-                     style="width:60px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;"
-                     onclick="showDetailFromRow(this)">
+                     class="hb-width-60px"
+                     data-detail>
             </td>
             <td>
                 {% if job.result_image %}
                 <img src="/{{ job.result_image }}" alt="3D"
                      style="width:100px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
-                     onclick="showDetailFromRow(this)">
+                     data-detail>
                 {% else %}
                 <span class="no-thumb"><i class="fas fa-cube"></i></span>
                 {% endif %}
@@ -117,8 +129,8 @@
             <td>
                 {% if job.silhouette_path %}
                 <img src="/{{ job.silhouette_path }}" alt="Silhouette"
-                     style="width:60px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;"
-                     onclick="showDetailFromRow(this)">
+                     class="hb-width-60px"
+                     data-detail>
                 {% else %}
                 <span class="no-thumb"><i class="fas fa-running"></i></span>
                 {% endif %}
@@ -127,7 +139,7 @@
                 {% if job.texture_path %}
                 <img src="/{{ job.texture_path }}" alt="Textur"
                      style="width:60px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
-                     onclick="showDetailFromRow(this)">
+                     data-detail>
                 {% else %}
                 <span class="no-thumb"><i class="fas fa-palette"></i></span>
                 {% endif %}
@@ -151,14 +163,14 @@
             <td style="white-space:nowrap;">{{ job.created_at|date:"d.m.Y H:i" }}</td>
             <td>
                 <div class="btn-actions">
-                    <a class="btn btn-sm btn-primary" title="3D Ansicht"
+                    <a class="btn btn-sm btn-primary hb-padding-4px-8px" title="3D Ansicht"
                        href="{% url 'photo_to_3d' %}?job={{ job.id }}"
-                       style="padding:4px 8px;font-size:0.75rem;">
+                      >
                         <i class="fas fa-cube"></i> 3D
                     </a>
-                    <a class="btn btn-sm btn-secondary" title="Textur bearbeiten"
+                    <a class="btn btn-sm btn-secondary hb-padding-4px-8px" title="Textur bearbeiten"
                        href="{% url 'photo_to_3d' %}?job={{ job.id }}&tab=textur"
-                       style="padding:4px 8px;font-size:0.75rem;">
+                      >
                         <i class="fas fa-palette"></i> Textur
                     </a>
                     {% comment %}
@@ -170,9 +182,10 @@
                     gilt nur für EINE Zeile. Mehrzeilig stand der Kommentar
                     sichtbar in der Tabelle — im Screenshot sofort aufgefallen.)
                     {% endcomment %}
-                    <button type="button" class="btn btn-sm btn-danger" title="Löschen"
-                       onclick="deleteJob('{% url 'photo_analysis_delete' job.id %}', '{{ job.original_filename|escapejs }}')"
-                       style="padding:4px 8px;font-size:0.75rem;">
+                    <button type="button" class="btn btn-sm btn-danger hb-padding-4px-8px" title="Löschen"
+                       data-loeschen="{% url 'photo_analysis_delete' job.id %}"
+                       data-name="{{ job.original_filename }}"
+                      >
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -190,24 +203,24 @@
 {% endif %}
 
 <!-- Detail popup -->
-<div id="detailModal" class="job-modal-overlay" style="display:none" onclick="if(event.target===this)closeDetail()">
+<div id="detailModal" class="job-modal-overlay">
     <div class="job-modal" style="width:90vw;max-width:1400px;max-height:90vh;">
         <div class="job-modal-header">
             <h3 id="detailTitle"></h3>
-            <button class="btn btn-sm btn-secondary" onclick="closeDetail()"><i class="fas fa-times"></i></button>
+            <button class="btn btn-sm btn-secondary" id="detailClose"><i class="fas fa-times"></i></button>
         </div>
         <div class="job-modal-body">
             <div class="job-detail-images">
                 <div class="img-box">
-                    <img id="detailPhoto" src="" alt="Foto" style="max-height:250px;border-radius:6px;">
+                    <img id="detailPhoto" src="" alt="Foto" class="hb-max-height-250px">
                     <span class="img-label">Originalfoto</span>
                 </div>
                 <div class="img-box" id="detailResultBox">
-                    <img id="detailResult" src="" alt="3D" style="max-height:250px;border-radius:6px;">
+                    <img id="detailResult" src="" alt="3D" class="hb-max-height-250px">
                     <span class="img-label">3D Ergebnis</span>
                 </div>
                 <div class="img-box" id="detailSilhouetteBox">
-                    <img id="detailSilhouette" src="" alt="Silhouette" style="max-height:250px;border-radius:6px;">
+                    <img id="detailSilhouette" src="" alt="Silhouette" class="hb-max-height-250px">
                     <span class="img-label">Silhouette / Alignment</span>
                 </div>
                 <div class="img-box" id="detailTextureBox">
@@ -245,96 +258,14 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-var _currentDetailJobId = null;
+{% comment %}Umbau 16.08.2026: 90 Zeilen inline mit 12 `var`, dem
+CSRF-Token als Django-Variable im JavaScript und sieben onclick-Attributen.
+Jetzt zwei Klassen unter static/js/auftraege/.{% endcomment %}
+<script type="module">
+import { Fotoauftragsliste } from "{% static 'js/auftraege/fotoauftragsliste.js' %}?t={% now 'U' %}";
+import { Fotoauftragsdetail } from "{% static 'js/auftraege/fotoauftragsdetail.js' %}?t={% now 'U' %}";
 
-function showDetailFromRow(el) {
-    var tr = el.closest('tr');
-    if (!tr) return;
-    var d = tr.dataset;
-    _currentDetailJobId = d.jobId;
-
-    document.getElementById('detailTitle').textContent = d.name;
-    document.getElementById('detailPhoto').src = d.photo;
-
-    setImgBox('detailResultBox', 'detailResult', d.result);
-    setImgBox('detailSilhouetteBox', 'detailSilhouette', d.silhouette);
-    setImgBox('detailTextureBox', 'detailTexture', d.texture);
-
-    document.getElementById('detailBackend').textContent = d.backend;
-    document.getElementById('detailGender').textContent = d.gender === 'male' ? 'Männlich' : 'Weiblich';
-    document.getElementById('detailBodyType').textContent = d.bodytype;
-    document.getElementById('detailDuration').textContent = d.duration && parseFloat(d.duration) > 0 ? parseFloat(d.duration).toFixed(1) + 's' : '\u2014';
-    document.getElementById('detailDate').textContent = d.date;
-
-    var base = '{% url "photo_to_3d" %}';
-    document.getElementById('detailBtn3D').href = base + '?job=' + d.jobId;
-    document.getElementById('detailBtnTextur').href = base + '?job=' + d.jobId + '&tab=textur';
-    document.getElementById('detailBtnReanalyze').href = base + '?job=' + d.jobId + '&reanalyze=1';
-
-    document.getElementById('detailModal').style.display = 'flex';
-}
-
-function setImgBox(boxId, imgId, url) {
-    var box = document.getElementById(boxId);
-    var img = document.getElementById(imgId);
-    if (url) {
-        img.src = url;
-        box.style.display = '';
-    } else {
-        box.style.display = 'none';
-    }
-}
-
-function closeDetail() {
-    document.getElementById('detailModal').style.display = 'none';
-}
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeDetail();
-});
-
-function toggleAll(master) {
-    document.querySelectorAll('.job-cb').forEach(function(cb) { cb.checked = master.checked; });
-    updateSelection();
-}
-function updateSelection() {
-    var cbs = document.querySelectorAll('.job-cb');
-    var checked = document.querySelectorAll('.job-cb:checked');
-    var bar = document.getElementById('bulk-actions');
-    var count = document.getElementById('selection-count');
-    if (checked.length > 0) {
-        bar.classList.add('has-selection');
-        count.textContent = checked.length + ' von ' + cbs.length + ' ausgewählt';
-    } else {
-        bar.classList.remove('has-selection');
-    }
-    var master = document.getElementById('select-all');
-    master.checked = checked.length === cbs.length && cbs.length > 0;
-    master.indeterminate = checked.length > 0 && checked.length < cbs.length;
-}
-function deleteJob(url, name) {
-    if (!confirm('Job löschen: ' + name + '?')) return;
-    fetch(url, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-    }).then(function(r) {
-        if (r.ok) location.reload();
-        else alert('Fehler: HTTP ' + r.status);
-    }).catch(function(e) { alert('Fehler: ' + e.message); });
-}
-function bulkDelete() {
-    var ids = [];
-    document.querySelectorAll('.job-cb:checked').forEach(function(cb) { ids.push(cb.dataset.jobId); });
-    if (ids.length === 0) return;
-    if (!confirm(ids.length + ' Job(s) endgültig löschen?')) return;
-    fetch('{% url "photo_analysis_bulk_delete" %}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-        body: JSON.stringify({ ids: ids })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.ok) location.reload();
-        else alert('Fehler: ' + (data.error || 'Unbekannt'));
-    }).catch(function(e) { alert('Fehler: ' + e.message); });
-}
+Fotoauftragsliste.aufbauen("{% url 'photo_analysis_bulk_delete' %}");
+Fotoauftragsdetail.aufbauen("{% url 'photo_to_3d' %}");
 </script>
 {% endblock %}

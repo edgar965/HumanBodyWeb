@@ -75,7 +75,7 @@ export class Vorgabefigur {
                 if (kind.isMesh) kind.userData.isHair = true;
             });
             gruppe.add(geladen);
-            console.log('✓ Haare geladen:', haare.name);
+            console.debug('✓ Haare geladen:', haare.name);
         } catch (fehler) {
             console.error('Haare nicht ladbar:', fehler);
         }
@@ -89,7 +89,7 @@ export class Vorgabefigur {
                     kleid, vorgabe.body_type, vorgabe);
                 netz.userData.isGarment = true;
                 gruppe.add(netz);
-                console.log('✓ Kleidung geladen:', kleid.id);
+                console.debug('✓ Kleidung geladen:', kleid.id);
             } catch (fehler) {
                 console.error('Kleidung nicht ladbar:', kleid.id, fehler);
             }

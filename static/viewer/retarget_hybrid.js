@@ -7,6 +7,8 @@
  * and building Three.js AnimationClips from the API response.
  */
 import * as THREE from 'three';
+import { Serverabruf } from './gemeinsam/serverabruf.js';
+import { Protokoll } from './gemeinsam/protokoll.js';
 
 // =========================================================================
 // BVH format detection
@@ -40,8 +42,7 @@ let _retargetConfig = null;
  */
 export async function loadRetargetConfig() {
     if (_retargetConfig) return _retargetConfig;
-    const resp = await fetch('/api/character/retarget-config/');
-    _retargetConfig = await resp.json();
+    _retargetConfig = await Serverabruf.json('/api/character/retarget-config/');
     return _retargetConfig;
 }
 
@@ -117,7 +118,7 @@ function buildClipFromRetargetData(data, rigifySkel) {
         }
     }
 
-    console.log(`[RETARGET] buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames, duration=${data.duration}`);
+    Protokoll.debug('RETARGET', `buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames, duration=${data.duration}`);
     if (missedNames.length > 0) console.warn('[RETARGET] missed bones:', missedNames);
 
     return new THREE.AnimationClip('retargeted', data.duration, tracks);
@@ -157,11 +158,11 @@ export async function fetchRetarget(source, rigifySkel, opts = {}) {
     if (opts.format) params.set('format', opts.format);
 
     const url = `/api/retarget/?${params}`;
-    console.log(`[RETARGET] Fetching: ${url}`);
+    Protokoll.debug('RETARGET', `Fetching: ${url}`);
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`Retarget API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
-    console.log(`[RETARGET] ${data.mapped_bones?.length || 0} bones, ${data.frame_count} frames, ${data.duration?.toFixed(2)}s`);
+    Protokoll.debug('RETARGET', `${data.mapped_bones?.length || 0} bones, ${data.frame_count} frames, ${data.duration?.toFixed(2)}s`);
     return buildClipFromRetargetData(data, rigifySkel);
 }
 
@@ -205,7 +206,7 @@ export async function fetchMergedClipForJob(jobId, rigifySkel, opts = {}) {
     if (opts.deltaNorm !== undefined) params.set('delta_norm', opts.deltaNorm ? '1' : '0');
 
     const url = `/api/character/retarget-job-merge/${jobId}/?${params}`;
-    console.log(`[RETARGET] Fetching job merge: ${url}`);
+    Protokoll.debug('RETARGET', `Fetching job merge: ${url}`);
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`Job merge API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();

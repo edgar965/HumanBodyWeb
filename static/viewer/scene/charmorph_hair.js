@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 let _cmHairColors = {};  // name -> {viewport_color: [r,g,b], melanin, ...}
 
@@ -17,8 +18,7 @@ export async function loadCharmorphHairUI() {
 
     // Load CharMorph hairstyles (NPZ - info only, can't render in web)
     try {
-        const resp = await fetch('/api/character/charmorph-hairstyles/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/charmorph-hairstyles/');
         sel.innerHTML = '<option value="">-- Kein Haar --</option>';
         for (const h of (data.hairstyles || [])) {
             const opt = document.createElement('option');

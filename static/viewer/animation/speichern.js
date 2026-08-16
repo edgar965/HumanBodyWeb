@@ -6,6 +6,10 @@
 
 import { Seitenzustand } from './seitenzustand.js';
 import { loadBVHAnimation } from './wiedergabe.js';
+import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
+import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 // =========================================================================
@@ -28,24 +32,15 @@ export function gatherModelState() {
     return model;
 }
 
-export function getCSRFToken() {
-    const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
-    return cookie ? cookie.split('=')[1] : '';
-}
-
 export async function saveModel(name) {
     const data = gatherModelState();
     data.name = name;
     try {
-        const resp = await fetch('/api/character/model/save/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRFToken() },
-            body: JSON.stringify({ name, data }),
-        });
-        const result = await resp.json();
+        const result = await Serverabruf.senden('/api/character/model/save/',
+                                                { name, data });
         if (result.ok) {
             currentPresetName = name;
-            console.log(`Model saved: ${result.filename}`);
+            Protokoll.info('Animation', `Model saved: ${result.filename}`);
             return true;
         } else {
             alert('Fehler beim Speichern: ' + (result.error || 'Unbekannt'));
@@ -57,35 +52,33 @@ export async function saveModel(name) {
     }
 }
 
+/** So lange wird auf das Netz gewartet, bevor die Startanimation entfällt. */
+const NETZ_WARTEN_MS = 15000;
+
 export async function loadDefaultPresetName() {
-    try {
-        const resp = await fetch('/api/settings/humanbody/');
-        if (resp.ok) {
-            const s = await resp.json();
-            if (s.animations) currentPresetName = s.animations;
-            // Apply rig visibility from settings
-            if (s.show_rig_animations) {
-                Seitenzustand.rigVisible = true;
-                const rigToggle = document.getElementById('rig-toggle');
-                if (rigToggle) rigToggle.classList.add('active');
+    const s = await Serverabruf.jsonOderNull('/api/settings/humanbody/');
+    if (!s) return;
+    if (s.animations) currentPresetName = s.animations;
+    // Apply rig visibility from settings
+    if (s.show_rig_animations) {
+        Seitenzustand.rigVisible = true;
+        const rigToggle = document.getElementById('rig-toggle');
+        if (rigToggle) rigToggle.classList.add('active');
+    }
+    // Auto-play default animation
+    if (s.default_anim_animations) {
+        const waitForMesh = async () => {
+            const start = Date.now();
+            while (!Seitenzustand.bodyMesh && Date.now() - start < NETZ_WARTEN_MS) {
+                await new Promise(r => setTimeout(r, Zeiten.WARTESCHRITT_MS));
             }
-            // Auto-play default animation
-            if (s.default_anim_animations) {
-                const waitForMesh = async () => {
-                    const maxWait = 15000;
-                    const start = Date.now();
-                    while (!Seitenzustand.bodyMesh && Date.now() - start < maxWait) {
-                        await new Promise(r => setTimeout(r, 200));
-                    }
-                    if (Seitenzustand.bodyMesh) {
-                        await new Promise(r => setTimeout(r, 1000));
-                        loadBVHAnimation(s.default_anim_animations, 'Default', 0);
-                    }
-                };
-                waitForMesh();
+            if (Seitenzustand.bodyMesh) {
+                await new Promise(r => setTimeout(r, Zeiten.SEKUNDE_MS));
+                loadBVHAnimation(s.default_anim_animations, 'Default', 0);
             }
-        }
-    } catch (e) { /* ignore */ }
+        };
+        waitForMesh();
+    }
 }
 
 export function initSaveButtons() {
@@ -101,8 +94,7 @@ export function initSaveButtons() {
             }
             const ok = await saveModel(currentPresetName);
             if (ok) {
-                saveBtn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!';
-                setTimeout(() => { saveBtn.innerHTML = '<i class="fas fa-save"></i> Speichern'; }, 1500);
+                Knopfmeldung.fertig(saveBtn);
             }
         });
     }
@@ -113,8 +105,7 @@ export function initSaveButtons() {
             if (!name || !name.trim()) return;
             const ok = await saveModel(name.trim());
             if (ok) {
-                saveAsBtn.innerHTML = '<i class="fas fa-check"></i> Gespeichert!';
-                setTimeout(() => { saveAsBtn.innerHTML = '<i class="fas fa-file-export"></i> Speichern unter'; }, 1500);
+                Knopfmeldung.fertig(saveAsBtn);
             }
         });
     }

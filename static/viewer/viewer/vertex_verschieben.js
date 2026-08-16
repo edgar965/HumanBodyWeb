@@ -8,6 +8,11 @@ import * as THREE from 'three';
 import { _veUpdateSelectionInfo } from './vertex_auswahl.js';
 import { buildBodyQueryString, float32ToBase64, threeToBlenderCoords, uint32ToBase64 } from './utils.js';
 import { base64ToFloat32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+
+/** Laplace-Glaettung: Schritte und Staerke je Aufruf des Knopfes. */
+const GLAETTUNG_SCHRITTE = 3;
+const GLAETTUNG_STAERKE = 0.3;
 
 
 export function _veUpdatePosInputs() {
@@ -68,11 +73,11 @@ export async function _veSmooth() {
     const statusEl = document.getElementById('ve-selection-info');
     if (statusEl) statusEl.textContent = 'Smoothing...';
     try {
-        const resp = await fetch('/api/character/vertex-edit/smooth/', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ vertices: float32ToBase64(blenderVerts), faces: uint32ToBase64(facesArr), selected, iterations: 3, factor: 0.3 })
-        });
-        const data = await resp.json();
+        const data = await Serverabruf.senden(
+            '/api/character/vertex-edit/smooth/',
+            { vertices: float32ToBase64(blenderVerts),
+              faces: uint32ToBase64(facesArr), selected,
+              iterations: GLAETTUNG_SCHRITTE, factor: GLAETTUNG_STAERKE });
         if (data.error) { console.error(data.error); return; }
         const updatedBlender = base64ToFloat32(data.vertices);
         blenderToThreeCoords(updatedBlender);
@@ -94,11 +99,10 @@ export async function _vePushOutside() {
     const statusEl = document.getElementById('ve-selection-info');
     if (statusEl) statusEl.textContent = 'Pushing outside...';
     try {
-        const resp = await fetch(`/api/character/vertex-edit/push-outside/?${bodyQs}`, {
+        const data = await Serverabruf.json(`/api/character/vertex-edit/push-outside/?${bodyQs}`, {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ vertices: float32ToBase64(blenderVerts), selected, min_dist: 0.006 })
         });
-        const data = await resp.json();
         if (data.error) { console.error(data.error); return; }
         const updatedBlender = base64ToFloat32(data.vertices);
         blenderToThreeCoords(updatedBlender);

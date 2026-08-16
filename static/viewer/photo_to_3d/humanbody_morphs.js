@@ -1,138 +1,116 @@
 /**
- * Photo To 3D — HumanBody morph UI: body type selector, meta sliders, morph panel.
+ * Photo To 3D — Morph-Bedienung: Körperart, Metaregler, Morph-Liste.
+ *
+ * Umbau 16.08.2026: `buildMorphPanel()` baute die Kategorienliste Zeile für
+ * Zeile genauso wie viewer/morphs.js, scene/properties.js,
+ * vergleich/vergleichsregler.js und result_character — fünf Kopien derselben
+ * Liste. Sie kommt jetzt aus `Morphliste`, die Meta-Umrechnung aus
+ * `Metaregler`.
  */
 import { state, API } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Morphliste } from '../gemeinsam/morphliste.js';
+import { Metaregler } from '../gemeinsam/metaregler.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
-// =========================================================================
-// HumanBody Morph UI
-// =========================================================================
+/** Die Liste dieser Seite: Startwert aus `morphValues`, Änderung neu rechnen. */
+const liste = new Morphliste({
+    startwert: name => state.morphValues[name],
+    geaendert: (name, wert) => {
+        state.morphValues[name] = wert;
+        fn.requestMeshUpdate();
+    },
+});
+
 export async function loadMorphs() {
     try {
-        const resp = await fetch(`${API}/morphs/`);
-        state.morphsData = await resp.json();
-    } catch (e) { console.error('Failed to load morphs:', e); return; }
-
-    const data = state.morphsData;
-    state.skinColors = data.skin_colors || {};
-
-    const select = document.getElementById('body-type-select');
-    data.body_types.forEach(bt => {
-        const opt = document.createElement('option');
-        opt.value = bt;
-        opt.textContent = bt.replace('_', ' ');
-        select.appendChild(opt);
-    });
-    select.value = state.currentBodyType;
-
-    select.addEventListener('change', async () => {
-        const oldGender = state.currentBodyType.startsWith('Male_') ? 'male' : 'female';
-        state.currentBodyType = select.value;
-        const newGender = state.currentBodyType.startsWith('Male_') ? 'male' : 'female';
-
-        if (oldGender !== newGender) {
-            try {
-                const swResp = await fetch(`${API}/skin-weights/?body_type=${encodeURIComponent(state.currentBodyType)}`);
-                state.skinWeightData = await swResp.json();
-            } catch (e) { /* ignore */ }
-        }
-
-        await fn.loadMesh(state.currentBodyType);
-        const mResp = await fetch(`${API}/morphs/?body_type=${encodeURIComponent(state.currentBodyType)}`);
-        state.morphsData = await mResp.json();
-        state.skinColors = state.morphsData.skin_colors || {};
-        buildMorphPanel(state.morphsData);
-    });
-
-    ['age', 'mass', 'tone', 'height'].forEach(name => {
-        const slider = document.getElementById(`meta-${name}`);
-        const valSpan = document.getElementById(`meta-${name}-val`);
-        if (!slider) return;
-        const meta = data.meta_sliders?.[name];
-        if (meta) {
-            slider.min = meta.min; slider.max = meta.max;
-            slider.value = meta.default; valSpan.textContent = meta.default;
-        }
-        slider.addEventListener('input', () => {
-            valSpan.textContent = slider.value;
-            const min = parseInt(slider.min), max = parseInt(slider.max);
-            const neutral = (min + max) / 2, half = (max - min) / 2;
-            state.metaValues[name] = half ? (parseInt(slider.value) - neutral) / half : 0;
-            fn.requestMeshUpdate();
-        });
-    });
-
-    const skinColorInput = document.getElementById('skin-color-viewer');
-    if (skinColorInput) {
-        skinColorInput.addEventListener('input', e => {
-            const mat = state.bodyMesh?.material;
-            const skinMat = mat ? (Array.isArray(mat) ? mat[0] : mat) : null;
-            if (skinMat) skinMat.color.set(e.target.value);
-        });
+        state.morphsData = await Serverabruf.json(`${API}/morphs/`);
+    } catch (fehler) {
+        Protokoll.fehler('Morphs', 'Liste nicht ladbar:', fehler);
+        return;
     }
+    const daten = state.morphsData;
+    state.skinColors = daten.skin_colors || {};
 
-    buildMorphPanel(data);
-
-    const resetBtn = document.getElementById('reset-morphs');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-            state.morphValues = {};
-            document.querySelectorAll('#morphs-panel input[type="range"]').forEach(s => {
-                s.value = 0;
-                const valEl = s.parentElement.querySelector('.slider-val');
-                if (valEl) valEl.textContent = '0';
-            });
-            fn.requestMeshUpdate();
-        });
-    }
+    koerperartwahl(daten);
+    Metaregler.verdrahten(daten.meta_sliders, (name, wert) => {
+        state.metaValues[name] = wert;
+        fn.requestMeshUpdate();
+    });
+    hautfarbwahl();
+    buildMorphPanel(daten);
+    zuruecksetzenKnopf();
 }
 
-export function buildMorphPanel(data) {
-    const categories = {};
-    data.morphs.forEach(m => {
-        if (!categories[m.category]) categories[m.category] = [];
-        categories[m.category].push(m);
-    });
+function koerperartwahl(daten) {
+    const feld = document.getElementById('body-type-select');
+    if (!feld) return;
+    for (const art of daten.body_types) {
+        feld.appendChild(new Option(art.replace('_', ' '), art));
+    }
+    feld.value = state.currentBodyType;
+    feld.addEventListener('change', () => koerperartWechseln(feld.value));
+}
 
-    const panel = document.getElementById('morphs-panel');
-    panel.innerHTML = '';
+/**
+ * Beim Wechsel des Geschlechts müssen die Hautgewichte neu geholt werden —
+ * männliche und weibliche Netze haben verschiedene Vertexzahlen.
+ */
+async function koerperartWechseln(neueArt) {
+    const vorher = geschlecht(state.currentBodyType);
+    state.currentBodyType = neueArt;
+    if (vorher !== geschlecht(neueArt)) {
+        try {
+            const adresse = `${API}/skin-weights/?body_type=`
+                + encodeURIComponent(neueArt);
+            state.skinWeightData = await Serverabruf.json(adresse);
+        } catch (fehler) {
+            Protokoll.warnung('Morphs', 'Hautgewichte nicht ladbar:', fehler);
+        }
+    }
+    await fn.loadMesh(neueArt);
+    const adresse = `${API}/morphs/?body_type=` + encodeURIComponent(neueArt);
+    try {
+        state.morphsData = await Serverabruf.json(adresse);
+    } catch (fehler) {
+        // Ohne diesen Fänger endet der Wechsel in einer stillen
+        // "Unhandled promise rejection": Die Reglerliste bliebe die der alten
+        // Körperart, ohne dass jemand etwas merkt.
+        Protokoll.fehler('Morphs', 'Körperart nicht ladbar:', fehler);
+        alert('Die Morph-Liste für ' + neueArt + ' ist nicht ladbar: '
+              + fehler.message);
+        return;
+    }
+    state.skinColors = state.morphsData.skin_colors || {};
+    buildMorphPanel(state.morphsData);
+}
 
-    data.categories.sort().forEach(cat => {
-        const morphs = categories[cat];
-        if (!morphs || morphs.length === 0) return;
-        const div = document.createElement('div');
-        div.className = 'morph-category';
-        const header = document.createElement('div');
-        header.className = 'morph-category-header';
-        header.textContent = `${cat} (${morphs.length})`;
-        header.addEventListener('click', () => div.classList.toggle('open'));
-        div.appendChild(header);
-        const body = document.createElement('div');
-        body.className = 'morph-category-body';
-        morphs.forEach(m => {
-            const row = document.createElement('div');
-            row.className = 'slider-row';
-            const label = document.createElement('label');
-            label.textContent = m.name.split('_').slice(1).join(' ') || m.name;
-            label.title = m.name;
-            const slider = document.createElement('input');
-            slider.type = 'range'; slider.min = -100; slider.max = 100;
-            slider.value = Math.round((state.morphValues[m.name] || 0) * 100);
-            slider.step = 1; slider.dataset.morph = m.name;
-            const valSpan = document.createElement('span');
-            valSpan.className = 'slider-val'; valSpan.textContent = slider.value;
-            slider.addEventListener('input', () => {
-                const v = parseInt(slider.value) / 100.0;
-                valSpan.textContent = slider.value;
-                state.morphValues[m.name] = v;
-                fn.requestMeshUpdate();
-            });
-            row.appendChild(label); row.appendChild(slider); row.appendChild(valSpan);
-            body.appendChild(row);
+function geschlecht(koerperart) {
+    return koerperart.startsWith('Male_') ? 'male' : 'female';
+}
+
+function hautfarbwahl() {
+    document.getElementById('skin-color-viewer')
+        ?.addEventListener('input', ereignis => {
+            const material = state.bodyMesh?.material;
+            const haut = Array.isArray(material) ? material[0] : material;
+            if (haut) haut.color.set(ereignis.target.value);
         });
-        div.appendChild(body);
-        panel.appendChild(div);
+}
+
+function zuruecksetzenKnopf() {
+    const feld = document.getElementById('morphs-panel');
+    document.getElementById('reset-morphs')?.addEventListener('click', () => {
+        state.morphValues = {};
+        if (feld) Morphliste.zuruecksetzen(feld);
+        fn.requestMeshUpdate();
     });
+}
+
+export function buildMorphPanel(daten) {
+    const feld = document.getElementById('morphs-panel');
+    if (feld) liste.bauen(feld, daten.morphs, daten.categories);
 }
 
 fn.loadMorphs = loadMorphs;

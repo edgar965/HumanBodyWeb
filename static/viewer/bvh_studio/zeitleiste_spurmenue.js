@@ -19,6 +19,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { pushUndo } from './undo.js';
 import { Clip } from './models.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 /** Animationsliste wird gemerkt; Modelle immer frisch geholt (siehe _modell). */
 export let _cachedAnimations = null;
@@ -145,8 +146,8 @@ export class Spurmenue {
     async _bvh() {
         if (!_cachedAnimations) {
             try {
-                const antwort = await fetch('/api/character/animations/');
-                _cachedAnimations = await antwort.json();
+                _cachedAnimations = await Serverabruf.json(
+                    '/api/character/animations/');
             } catch (fehler) {
                 this._hinweis('Fehler beim Laden');
                 return;
@@ -286,9 +287,8 @@ export class Spurmenue {
         try {
             const daten = new FormData();
             daten.append('audio', datei);
-            const antwort = await fetch('/api/studio/audio-upload/',
-                                        { method: 'POST', body: daten });
-            const ergebnis = await antwort.json();
+            const ergebnis = await Serverabruf.formular(
+                '/api/studio/audio-upload/', daten);
             return ergebnis.ok ? ergebnis.url : undefined;
         } catch (fehler) {
             console.warn('Ton nicht hochladbar:', fehler);

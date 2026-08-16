@@ -14,6 +14,8 @@
  *  * Die Parameterliste der Vorlage stand zweimal: einmal zum Erzeugen
  *    (`_tplParams`), einmal zum Speichern (`_saveClothPreset`).
  */
+import { Serverabruf } from '../../gemeinsam/serverabruf.js';
+import { Protokoll } from '../../gemeinsam/protokoll.js';
 export class Stoffvorlagen {
 
     /** Welche Vorlage zu welcher Vorgaben-Kategorie gehört. */
@@ -112,9 +114,8 @@ export class Stoffvorlagen {
     async vorgabenListe() {
         if (!this.vorgabenfeld || !this.vorlagenfeld) return;
         try {
-            const antwort = await fetch(
+            const daten = await Serverabruf.json(
                 `/api/character/cloth/presets/?category=${this.kategorie()}`);
-            const daten = await antwort.json();
             // Den ersten Eintrag („bitte wählen") stehen lassen.
             while (this.vorgabenfeld.options.length > 1) this.vorgabenfeld.remove(1);
             for (const vorgabe of (daten.presets || [])) {
@@ -147,7 +148,7 @@ export class Stoffvorlagen {
             if (this.vorgabenfeld) {
                 this.vorgabenfeld.value = ergebnis.filename.replace('.json', '');
             }
-            console.log('Stoff-Vorgabe gespeichert:', ergebnis.filename);
+            Protokoll.info('Kleidung', 'Stoff-Vorgabe gespeichert:', ergebnis.filename);
             return true;
         } catch (fehler) {
             alert('Fehler: ' + fehler.message);
@@ -158,9 +159,8 @@ export class Stoffvorlagen {
     async vorgabeLaden() {
         if (!this.vorgabenfeld?.value) return;
         try {
-            const antwort = await fetch(`/api/character/cloth/presets/`
+            const daten = await Serverabruf.json(`/api/character/cloth/presets/`
                 + `${this.kategorie()}/${encodeURIComponent(this.vorgabenfeld.value)}/`);
-            const daten = await antwort.json();
             if (daten.error) {
                 alert(daten.error);
                 return;
@@ -173,7 +173,7 @@ export class Stoffvorlagen {
             }
             const farbfeld = document.getElementById('cloth-color');
             if (farbfeld && daten.color) farbfeld.value = daten.color;
-            console.log('Stoff-Vorgabe geladen:', this.vorgabenfeld.value);
+            Protokoll.debug('Kleidung', 'Stoff-Vorgabe geladen:', this.vorgabenfeld.value);
         } catch (fehler) {
             alert('Fehler beim Laden: ' + fehler.message);
         }
@@ -228,7 +228,7 @@ export class Stoffvorlagen {
             const key = `tpl_${this.vorlage()}`;
             if (!this.dienste.stoffNetze()[key]) return;
             this.dienste.bereichEntfernen(key);
-            console.log(`Stoff "${key}" entfernt`);
+            Protokoll.debug('Kleidung', `Stoff "${key}" entfernt`);
         });
     }
 }

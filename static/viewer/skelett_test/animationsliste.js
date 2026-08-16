@@ -10,6 +10,7 @@ import { Testzustand } from './testzustand.js';
 import { removeBoneViz } from './knochenbild.js';
 import { detectBVHFormat, fetchRetargetedClipFromUrl } from '../retarget_hybrid.js?v=32';
 import { placeBvhSkeleton } from '../skeleton_test.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 
 // =========================================================================
@@ -17,8 +18,7 @@ import { placeBvhSkeleton } from '../skeleton_test.js';
 // =========================================================================
 export async function loadAnimationTree() {
     try {
-        const resp = await fetch('/api/character/animations/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/animations/');
         Testzustand.allAnimations = data.categories || {};
 
         const tree = document.getElementById('anim-tree');

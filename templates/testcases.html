@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Testcases — BVH Studio{% endblock %}
 
 {% block extra_head %}
@@ -47,6 +48,11 @@
 .tc-status.fail { color:#ef4444; }
 .tc-status.running { color:#ffc107; }
 .tc-status.pending { color:#666; }
+/* Umbau 16.08.2026: Diese drei standen als Inline-Stil im JavaScript
+   (Zaehler-Farben, Ausblenden per style.display). */
+.tc-pass { color:#4caf50; }
+.tc-fail { color:#ef4444; }
+.tc-versteckt { display:none; }
 .tc-case-name { flex:1; }
 .tc-case-detail { font-size:0.72rem; color:var(--text-muted); margin-left:8px; }
 .tc-case-duration { font-size:0.7rem; color:var(--text-muted); }
@@ -59,6 +65,10 @@
     display:none;
 }
 .tc-case.has-error .tc-error-detail { display:block; }
+
+/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
+   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
+   Fassungen wurden zu einer Klasse zusammengefasst. */
 </style>
 {% endblock %}
 
@@ -117,142 +127,12 @@
 </div>
 {% endfor %}
 
-<script>
-const RUN_URL = '/api/tests/run/';
-let results = [];
+{% comment %}Umbau 16.08.2026: Hier standen 137 Zeilen inline — darunter
+dreimal dasselbe Muster (alle / je Kategorie / je Fall). Jetzt zwei Klassen:
+static/js/tests/testlauf.js (Server) und fallanzeige.js (Anzeige).{% endcomment %}
+<script type="module">
+import { Testlauf } from "{% static 'js/tests/testlauf.js' %}?t={% now 'U' %}";
 
-function setStatus(el, state, detail, durationMs, error) {
-    const icon = el.querySelector('[data-status]');
-    const detailEl = el.querySelector('[data-detail]');
-    const durEl = el.querySelector('[data-duration]');
-    const errEl = el.querySelector('[data-error]');
-    icon.className = 'tc-status ' + state;
-    const iconMap = { ok: 'fa-check-circle', fail: 'fa-times-circle', running: 'fa-spinner fa-spin', pending: 'fa-circle' };
-    icon.innerHTML = `<i class="fas ${iconMap[state] || 'fa-question-circle'}"></i>`;
-    detailEl.textContent = detail || '';
-    durEl.textContent = durationMs != null ? `${durationMs}ms` : '';
-    if (error) {
-        errEl.textContent = error;
-        el.classList.add('has-error');
-    } else {
-        el.classList.remove('has-error');
-    }
-}
-
-function updateCatBadge(catId) {
-    const cat = document.querySelector(`.tc-cat[data-category="${catId}"]`);
-    if (!cat) return;
-    const cases = cat.querySelectorAll('.tc-case');
-    let pass = 0, fail = 0, pending = 0;
-    for (const c of cases) {
-        const s = c.querySelector('[data-status]').className;
-        if (s.includes('ok')) pass++;
-        else if (s.includes('fail')) fail++;
-        else pending++;
-    }
-    const badge = cat.querySelector('.tc-cat-badge');
-    if (pending === cases.length) badge.textContent = '';
-    else badge.innerHTML = `<span style="color:#4caf50;">✓ ${pass}</span> · <span style="color:#ef4444;">✗ ${fail}</span>`;
-}
-
-function updateSummary() {
-    let total = 0, pass = 0, fail = 0;
-    document.querySelectorAll('.tc-case').forEach(c => {
-        total++;
-        const s = c.querySelector('[data-status]').className;
-        if (s.includes('ok')) pass++;
-        else if (s.includes('fail')) fail++;
-    });
-    document.getElementById('sum-total').textContent = `${total} Tests`;
-    document.getElementById('sum-pass').textContent = pass;
-    document.getElementById('sum-fail').textContent = fail;
-}
-
-async function runTest(params) {
-    const query = new URLSearchParams(params).toString();
-    const resp = await fetch(RUN_URL + (query ? '?' + query : ''));
-    const data = await resp.json();
-    return data;
-}
-
-async function runAll() {
-    const t0 = performance.now();
-    // Alle auf "running" setzen
-    document.querySelectorAll('.tc-case').forEach(c => {
-        setStatus(c, 'running', '', null, null);
-    });
-    try {
-        const data = await runTest({});
-        for (const r of data.results) {
-            const el = document.querySelector(`.tc-case[data-category="${r.categoryId}"][data-case="${r.caseId}"]`);
-            if (el) setStatus(el, r.ok ? 'ok' : 'fail', r.detail, r.durationMs, r.error);
-        }
-        document.querySelectorAll('.tc-cat').forEach(cat => updateCatBadge(cat.dataset.category));
-        updateSummary();
-        document.getElementById('sum-time').textContent = `${Math.round(performance.now() - t0)}ms gesamt`;
-    } catch (e) {
-        alert('Testlauf fehlgeschlagen: ' + e.message);
-    }
-}
-
-async function runCategory(catId) {
-    const cat = document.querySelector(`.tc-cat[data-category="${catId}"]`);
-    cat.classList.add('open');
-    cat.querySelectorAll('.tc-case').forEach(c => setStatus(c, 'running', '', null, null));
-    try {
-        const data = await runTest({ category: catId });
-        for (const r of data.results) {
-            const el = document.querySelector(`.tc-case[data-category="${r.categoryId}"][data-case="${r.caseId}"]`);
-            if (el) setStatus(el, r.ok ? 'ok' : 'fail', r.detail, r.durationMs, r.error);
-        }
-        updateCatBadge(catId);
-        updateSummary();
-    } catch (e) { alert('Fehler: ' + e.message); }
-}
-
-async function runSingle(catId, caseId) {
-    const el = document.querySelector(`.tc-case[data-category="${catId}"][data-case="${caseId}"]`);
-    setStatus(el, 'running', '', null, null);
-    try {
-        const data = await runTest({ category: catId, case: caseId });
-        for (const r of data.results) {
-            setStatus(el, r.ok ? 'ok' : 'fail', r.detail, r.durationMs, r.error);
-        }
-        updateCatBadge(catId);
-        updateSummary();
-    } catch (e) { alert('Fehler: ' + e.message); }
-}
-
-// Wire up events
-document.getElementById('run-all-btn').addEventListener('click', runAll);
-document.getElementById('expand-all-btn').addEventListener('click', () => {
-    document.querySelectorAll('.tc-cat').forEach(c => c.classList.add('open'));
-});
-document.getElementById('collapse-all-btn').addEventListener('click', () => {
-    document.querySelectorAll('.tc-cat').forEach(c => c.classList.remove('open'));
-});
-document.getElementById('show-only-failed-btn').addEventListener('click', () => {
-    document.querySelectorAll('.tc-case').forEach(c => {
-        const s = c.querySelector('[data-status]').className;
-        c.style.display = s.includes('fail') ? '' : 'none';
-    });
-    document.querySelectorAll('.tc-cat').forEach(c => c.classList.add('open'));
-});
-document.getElementById('reset-view-btn').addEventListener('click', () => {
-    document.querySelectorAll('.tc-case').forEach(c => c.style.display = '');
-});
-
-document.querySelectorAll('[data-toggle-cat]').forEach(el => {
-    el.addEventListener('click', (e) => {
-        if (e.target.closest('button')) return;
-        el.closest('.tc-cat').classList.toggle('open');
-    });
-});
-document.querySelectorAll('.tc-run-cat').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); runCategory(btn.dataset.category); });
-});
-document.querySelectorAll('[data-run-case]').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); runSingle(btn.dataset.category, btn.dataset.case); });
-});
+Testlauf.aufbauen();
 </script>
 {% endblock %}

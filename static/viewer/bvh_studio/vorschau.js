@@ -12,6 +12,8 @@ import { sharedState } from '../character_core.js?v=1';
 import { _gaussSmooth, _gaussFilter } from './werkzeug_glaettung.js';
 import { generateRigBoneMesh } from '../modellbau/rignetz.js';
 import { Vorschaufenster } from './vorschau_fenster.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 const ss = sharedState;
 
@@ -44,7 +46,7 @@ export class Vorschau {
             Vorschaufenster.meldung('Fehler: Keine Animationsdaten');
             return;
         }
-        console.log(`[Preview] Retarget loaded: ${data.frame_count} frames, `
+        Protokoll.debug('Preview', `Retarget loaded: ${data.frame_count} frames, `
                     + `${Object.keys(data.tracks).length} bones`);
 
         if (!ss.rigifySkeletonData || !ss.skinWeightData) {
@@ -73,7 +75,7 @@ export class Vorschau {
         Vorschaufenster.action = Vorschaufenster.mixer.clipAction(clip);
         Vorschaufenster.action.play();
         Vorschau._schleifeStarten(data.frame_count, data.frame_count / data.duration);
-        console.log('[Preview] Rig2 model + retargeted animation ready');
+        Protokoll.debug('Preview', 'Rig2 model + retargeted animation ready');
     }
 
     /**
@@ -90,7 +92,7 @@ export class Vorschau {
             if (resp.ok) rigKnochen = await resp.json();
         } catch (e) { /* ohne Rig-Daten kein generiertes Modell */ }
 
-        const modellDaten = await (await fetch('/api/character/model/Rig2/')).json();
+        const modellDaten = await Serverabruf.json('/api/character/model/Rig2/');
         if (!rigKnochen || modellDaten.type !== 'generated_model') return null;
 
         const ergebnis = generateRigBoneMesh(rigKnochen, modellDaten,

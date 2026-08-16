@@ -4,6 +4,7 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { sharedState, applyHairColor } from '../character_core.js?v=1';
+import { Zeiten } from '../gemeinsam/zeiten.js';
 
 const ss = sharedState;
 
@@ -59,7 +60,7 @@ export function loadPresetClothAndHair(preset) {
                 });
             }
         };
-        setTimeout(() => loadGarments(), 800);
+        setTimeout(() => loadGarments(), Zeiten.NACHLADEN_MS);
     }
 }
 

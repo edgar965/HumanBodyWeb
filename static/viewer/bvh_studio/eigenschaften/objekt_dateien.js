@@ -10,6 +10,7 @@
  */
 import * as THREE from 'three';
 import { fn } from '../../gemeinsam/registrierung.js';
+import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 
 export class Objektdateien {
     /** Buendel-Kennung aus der vorhandenen Objekt-URL ziehen. */
@@ -23,9 +24,8 @@ export class Objektdateien {
         daten.append('object', datei);
         const buendel = Objektdateien._buendel(track);
         if (buendel) daten.append('bundleId', buendel);
-        const resp = await fetch('/api/studio/scene-object-upload/',
-                                 { method: 'POST', body: daten });
-        const ergebnis = await resp.json();
+        const ergebnis = await Serverabruf.formular(
+            '/api/studio/scene-object-upload/', daten);
         if (!ergebnis.ok) throw new Error(ergebnis.error || 'Upload fehlgeschlagen');
         return ergebnis;
     }

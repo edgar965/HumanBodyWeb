@@ -8,8 +8,9 @@ import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
 import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js?v=32';
 import { Seitenzustand } from './seitenzustand.js';
-import { convertToRigifySkinnedMesh, skelWrapper } from './netz.js';
+import { convertToRigifySkinnedMesh } from './netz.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
+import { Animationslader } from '../gemeinsam/animationslader.js';
 
 
 // =========================================================================
@@ -37,96 +38,21 @@ export function animate() {
     }
 }
 
+/**
+ * BVH laden und abspielen — über `Animationslader`, den auch die Viewer-Seite
+ * nutzt. Vorher standen hier 91 Zeilen, die Zeile für Zeile denen in
+ * viewer/animation.js entsprachen.
+ */
 export async function loadBVHAnimation(url, name, fc) {
-    stopAnimation(true);
-
-    document.getElementById('anim-info').textContent = `Lade ${name}...`;
-
-    if (Seitenzustand.rigifySkeletonData && Seitenzustand.skinWeightData && Seitenzustand.bodyMesh) {
-        // Server-side retarget path: skin mesh + retarget BVH via API
-        if (!Seitenzustand.isSkinned) convertToRigifySkinnedMesh(null, Seitenzustand.skinWeightData);
-
-        let bodyH = 1.68;
-        const bb = new THREE.Box3().setFromObject(Seitenzustand.bodyMesh);
-        if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
-
-        try {
-            const clip = await fetchRetargetedClipFromUrl(url, Seitenzustand.rigifySkeleton, { bodyHeight: bodyH });
-
-            // Ensure SkeletonHelper exists for DEF skeleton
-            if (!Seitenzustand.skeletonHelper) {
-                Seitenzustand.skeletonHelper = Skelettanzeige.bauen(Seitenzustand.scene, Seitenzustand.rigifySkeleton.rootBone, Seitenzustand.rigVisible);
-            }
-
-            // Play retargeted clip on the SkinnedMesh
-            Seitenzustand.mixer = new THREE.AnimationMixer(Seitenzustand.bodyMesh);
-            const ss = document.getElementById('anim-speed');
-            if (ss) Seitenzustand.mixer.timeScale = parseInt(ss.value) / 100;
-            Seitenzustand.currentAction = Seitenzustand.mixer.clipAction(clip);
-            Seitenzustand.currentAction.play();
-            Seitenzustand.playing = true;
-
-            document.getElementById('anim-play').innerHTML = '<i class="fas fa-pause"></i>';
-            document.getElementById('anim-info').textContent =
-                `${name} — ${fc}f — ${clip.duration.toFixed(1)}s`;
-        } catch (e) {
-            // Fehlt die Datei, ist es kein Fehler des Umzielens: dann wurde die
-            // gespeicherte Animation umbenannt oder geloescht. Vorher stand
-            // dafuer ein roter Stapelabzug in der Konsole.
-            const fehlt = String(e && e.message).includes('404');
-            if (fehlt) console.warn('Animation nicht vorhanden:', url);
-            else console.error('Umzielen am Server fehlgeschlagen:', e);
-            document.getElementById('anim-info').textContent =
-                fehlt ? `Datei fehlt: ${name}` : `Fehler: ${name}`;
-            if (fehlt) return;
-        }
-    } else {
-        // Fallback: BVH skeleton overlay (no skinning data available)
-        bvhLoader.load(url, (result) => {
-            const bones = result.skeleton.bones;
-            if (bones.length === 0) return;
-
-            const rootBone = bones[0];
-            rootBone.updateWorldMatrix(true, true);
-            const skelBox = new THREE.Box3();
-            const tmpVec = new THREE.Vector3();
-            bones.forEach(b => {
-                b.updateWorldMatrix(true, false);
-                b.getWorldPosition(tmpVec);
-                skelBox.expandByPoint(tmpVec);
-            });
-            const skelHeight = skelBox.max.y - skelBox.min.y;
-
-            let bodyHeight = 1.75;
-            if (Seitenzustand.bodyMesh) {
-                const bodyBox = new THREE.Box3().setFromObject(Seitenzustand.bodyMesh);
-                if (!bodyBox.isEmpty()) bodyHeight = bodyBox.max.y - bodyBox.min.y;
-            }
-
-            skelWrapper = new THREE.Group();
-            const scale = bodyHeight / Math.max(skelHeight, 0.01);
-            skelWrapper.scale.set(scale, scale, scale);
-            skelWrapper.add(rootBone);
-            Seitenzustand.scene.add(skelWrapper);
-
-            if (Seitenzustand.skeletonHelper) Seitenzustand.scene.remove(Seitenzustand.skeletonHelper);
-            Seitenzustand.skeletonHelper = Skelettanzeige.bauen(Seitenzustand.scene, rootBone, Seitenzustand.rigVisible);
-
-            Seitenzustand.mixer = new THREE.AnimationMixer(rootBone);
-            const ss2 = document.getElementById('anim-speed');
-            if (ss2) Seitenzustand.mixer.timeScale = parseInt(ss2.value) / 100;
-            Seitenzustand.currentAction = Seitenzustand.mixer.clipAction(result.clip);
-            Seitenzustand.currentAction.play();
-            Seitenzustand.playing = true;
-
-            document.getElementById('anim-play').innerHTML = '<i class="fas fa-pause"></i>';
-            document.getElementById('anim-info').textContent =
-                `${name} — ${fc}f — ${result.clip.duration.toFixed(1)}s`;
-        }, undefined, (err) => {
-            console.error('Failed to load BVH:', err);
-            document.getElementById('anim-info').textContent = `Fehler: ${name}`;
-        });
-    }
+    return new Animationslader(Seitenzustand, {
+        bvhLader: bvhLoader,
+        anhalten: zerstoeren => stopAnimation(zerstoeren),
+        skinnen: gewichte => convertToRigifySkinnedMesh(null, gewichte),
+        umzielen: (adresse, skelett, wahl) =>
+            fetchRetargetedClipFromUrl(adresse, skelett, wahl),
+        beschriften: (name2, bilder, dauer) =>
+            `${name2} — ${bilder}f — ${dauer.toFixed(1)}s`,
+    }).laden(url, name, fc);
 }
 
 export function stopAnimation(destroy = false) {
@@ -144,7 +70,14 @@ export function stopAnimation(destroy = false) {
         Seitenzustand.rigifySkeleton.skeleton.pose();
     }
     // Clean up animation skeleton; recreate from DEF skeleton if rig visible
-    if (skelWrapper) { Seitenzustand.scene.remove(skelWrapper); skelWrapper = null; }
+    // FEHLER bis 16.08.2026: `skelWrapper` war aus netz.js IMPORTIERT und
+    // wurde hier zugewiesen — auf eine importierte Bindung darf man nicht
+    // schreiben ("TypeError: Assignment to constant variable"). Der
+    // Rueckfallweg ohne Skinning brach deshalb ab. Jetzt im Seitenzustand.
+    if (Seitenzustand.skelWrapper) {
+        Seitenzustand.scene.remove(Seitenzustand.skelWrapper);
+        Seitenzustand.skelWrapper = null;
+    }
     if (Seitenzustand.skeletonHelper) { Seitenzustand.scene.remove(Seitenzustand.skeletonHelper); Seitenzustand.skeletonHelper = null; }
     if (Seitenzustand.rigVisible && Seitenzustand.rigifySkeleton) {
         Seitenzustand.skeletonHelper = Skelettanzeige.bauen(Seitenzustand.scene, Seitenzustand.rigifySkeleton.rootBone);

@@ -3,11 +3,11 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export async function loadWardrobe() {
     try {
-        const resp = await fetch('/api/character/wardrobe/');
-        const data = await resp.json();
+        const data = await Serverabruf.json('/api/character/wardrobe/');
         const panel = document.getElementById('wardrobe-panel');
         panel.innerHTML = '';
 
