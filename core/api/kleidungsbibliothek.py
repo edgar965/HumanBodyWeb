@@ -16,6 +16,8 @@ import json
 import os
 import re
 
+from ..dienste.kleiderverwaltung import Kleiderverwaltung, KleiderFehler
+
 
 _garment_library = None
 logger = logging.getLogger(__name__)
@@ -52,6 +54,35 @@ def garment_library(request):
         'garments': by_cat,
         'total': len(catalog),
     })
+
+
+@csrf_exempt
+@require_POST
+def garment_manage(request):
+    """Kleider umbenennen, verschieben, kopieren, in den Papierkorb legen.
+
+    POST /api/character/garment/manage/ mit JSON-Feld `action`:
+      rename, move, copy, delete
+
+    Die Arbeit macht `Kleiderverwaltung`; hier steht nur die HTTP-Schale — wie
+    bei `bvh_manage`. Der Endpunkt FEHLTE bis zum 17.08.2026, obwohl die
+    Kontextmenüs der Kleider- und der MakeHuman-Liste ihn von acht Stellen aus
+    aufriefen: vier tote Aktionen in zwei Listen, ohne Hinweis für den Benutzer.
+
+    Nach jeder Änderung ist der Bibliotheks-Cache hinfällig — die Kennung eines
+    Kleides ist sein Pfad, und der hat sich gerade geändert.
+    """
+    global _garment_library
+    try:
+        daten = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    try:
+        antwort = Kleiderverwaltung.ausfuehren(daten)
+    except KleiderFehler as e:
+        return JsonResponse({'error': e.text}, status=e.kennzahl)
+    _garment_library = None
+    return JsonResponse(antwort)
 
 
 @require_GET

@@ -163,6 +163,7 @@ urlpatterns = [
     # Garment Fitter
     path('api/character/garment/library/', kleidungsbibliothek.garment_library, name='garment_library'),
     path('api/character/garment/library/rescan/', kleidungsbibliothek.garment_library_rescan, name='garment_library_rescan'),
+    path('api/character/garment/manage/', kleidungsbibliothek.garment_manage, name='garment_manage'),
     path('api/character/garment/fit/', kleidung.garment_fit, name='garment_fit'),
     path('api/character/garment/export/', kleidungsbibliothek.garment_export, name='garment_export'),
     path('api/character/garment/download/available/', kleidungsbibliothek.garment_download_available, name='garment_download_available'),
