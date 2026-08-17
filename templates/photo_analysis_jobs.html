@@ -2,7 +2,16 @@
 {% load static %}
 {% block title %}Photo-to-3D Jobs{% endblock %}
 
-{% block extra_styles %}
+{% comment %}
+    `extra_head`, NICHT `extra_styles`: Diesen Block gibt es in `base.html` nicht,
+    und Django verwirft einen unbekannten Block auf oberster Ebene STILL — kein
+    Fehler, kein Hinweis. Der ganze Stilblock dieser Seite (62 Regeln) kam
+    deshalb nie im Browser an. Gemessen am 17.08.2026: `.hb-width-60px` stand in
+    keinem Stylesheet, die 180 Foto- und Silhouetten-Bilder waren 0×0 Pixel gross
+    — also unsichtbar —, `.btn-actions` war kein Flex, `.no-thumb` ohne Form und
+    `.hb-versteckt` blendete nichts aus. Die Seite lud mit HTTP 200.
+{% endcomment %}
+{% block extra_head %}
 <style>
 .photo-thumb { width: 80px; height: 80px; object-fit: contain; border-radius: 4px; cursor: pointer; }
 .result-thumb { width: 120px; height: 80px; object-fit: contain; border-radius: 4px; cursor: pointer; background: #1a1a2e; }
@@ -64,6 +73,18 @@
 .hb-max-height-250px.hb-max-height-250px.hb-max-height-250px { max-height:250px; border-radius:6px; }   /* 3x */
 .hb-padding-4px-8px.hb-padding-4px-8px.hb-padding-4px-8px { padding:4px 8px; font-size:0.75rem; }   /* 3x */
 .hb-width-60px.hb-width-60px.hb-width-60px { width:60px; height:60px; object-fit:contain; border-radius:4px; cursor:pointer; display:block; }   /* 2x */
+
+/* Umbau 17.08.2026, aus GEMESSENEM Anlass: Diese vier Fassungen standen 174,
+   174, 14 und 5 mal inline in der Tabelle — zusammen 20 KB von 520 KB HTML,
+   jede Zeile trug sie erneut. Dreifacher Selektor wie oben: Eine einfache
+   Klasse (0,0,1,0) verliert gegen `.photo-jobs-table td` (0,0,1,1), und genau
+   so sind am 16.08. zwei Regressionen entstanden.
+   Die beiden Bild-Klassen sind NICHT `hb-width-60px`: dort fehlt der dunkle
+   Hintergrund, auf dem freigestellte Texturen erst sichtbar werden. */
+.hb-namenszelle.hb-namenszelle.hb-namenszelle { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }   /* 174x */
+.hb-nowrap.hb-nowrap.hb-nowrap { white-space:nowrap; }   /* 174x */
+.hb-thumb-3d.hb-thumb-3d.hb-thumb-3d { width:100px; height:60px; object-fit:contain; border-radius:4px; cursor:pointer; display:block; background:#1a1a2e; }   /* 14x */
+.hb-thumb-textur.hb-thumb-textur.hb-thumb-textur { width:60px; height:60px; object-fit:contain; border-radius:4px; cursor:pointer; display:block; background:#1a1a2e; }   /* 5x */
 </style>
 {% endblock %}
 
@@ -99,6 +120,16 @@
         </tr>
     </thead>
     <tbody>
+        {% comment %}
+            `spaceless` entfernt den Leerraum ZWISCHEN Tags. Gemessen am
+            17.08.2026: Der Tabellenrumpf war 503 KB, davon 127 KB (25 %) reine
+            Einrückung und Zeilenumbrüche — 174 Zeilen tragen sie jede erneut.
+            Textinhalt bleibt unberührt, also auch das Leerzeichen in
+            `<i class="fas fa-cube"></i> 3D`. Gefahrlos ist es hier, weil
+            `.btn-actions` ein Flex mit `gap` ist und nicht auf dem Leerzeichen
+            zwischen den Knöpfen als Abstand beruht.
+        {% endcomment %}
+        {% spaceless %}
         {% for job in jobs %}
         <tr data-job-id="{{ job.id }}"
             data-name="{{ job.original_filename }}"
@@ -120,7 +151,7 @@
             <td>
                 {% if job.result_image %}
                 <img src="/{{ job.result_image }}" loading="lazy" alt="3D"
-                     style="width:100px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
+                     class="hb-thumb-3d"
                      data-detail>
                 {% else %}
                 <span class="no-thumb"><i class="fas fa-cube"></i></span>
@@ -138,13 +169,13 @@
             <td>
                 {% if job.texture_path %}
                 <img src="/{{ job.texture_path }}" loading="lazy" alt="Textur"
-                     style="width:60px;height:60px;object-fit:contain;border-radius:4px;cursor:pointer;display:block;background:#1a1a2e;"
+                     class="hb-thumb-textur"
                      data-detail>
                 {% else %}
                 <span class="no-thumb"><i class="fas fa-palette"></i></span>
                 {% endif %}
             </td>
-            <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ job.original_filename }}">{{ job.original_filename }}</td>
+            <td class="hb-namenszelle" title="{{ job.original_filename }}">{{ job.original_filename }}</td>
             <td><span class="badge-backend badge-{{ job.backend }}">{{ job.get_backend_display }}</span></td>
             <td>
                 {% if job.gender == 'male' %}
@@ -160,7 +191,7 @@
                 <span class="duration-badge">&mdash;</span>
                 {% endif %}
             </td>
-            <td style="white-space:nowrap;">{{ job.created_at|date:"d.m.Y H:i" }}</td>
+            <td class="hb-nowrap">{{ job.created_at|date:"d.m.Y H:i" }}</td>
             <td>
                 <div class="btn-actions">
                     <a class="btn btn-sm btn-primary hb-padding-4px-8px" title="3D Ansicht"
@@ -192,6 +223,7 @@
             </td>
         </tr>
         {% endfor %}
+        {% endspaceless %}
     </tbody>
 </table>
 {% else %}

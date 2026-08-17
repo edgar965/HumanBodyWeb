@@ -153,17 +153,22 @@ try {
 <script>
 // --- ResizeObserver for Three.js (layout only, not panels — avoids infinite loop) ---
 (function() {
+    /** So lange muss die Groesse ruhen, bevor neu gerechnet wird. */
+    const GROESSE_RUHE_MS = 100;
     const layout = document.querySelector('.result-layout');
     if (!layout) return;
     let resizeTimer;
     new ResizeObserver(() => {
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+        resizeTimer = setTimeout(
+            () => window.dispatchEvent(new Event('resize')), GROESSE_RUHE_MS);
     }).observe(layout);
 })();
 </script>
 {% if job.bvh_file %}
 <script type="module">
+/** So lange bleibt der fertige Fortschrittsbalken stehen, damit „100 %" lesbar ist. */
+const BALKEN_NACHLEUCHTEN_MS = 1500;
 try {
     const { initResultCharacter } = await import('{% static "viewer/result_character/index.js" %}?t={% now "U" %}');
     initResultCharacter({
@@ -313,8 +318,8 @@ async function recordVideo3D() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    // Cleanup
-    await new Promise(r => setTimeout(r, 1500));
+    // Den fertigen Balken kurz stehen lassen, damit „100 %" lesbar ist.
+    await new Promise(r => setTimeout(r, BALKEN_NACHLEUCHTEN_MS));
     progressBar.remove();
     btn.disabled = false;
     btn.innerHTML = origText;

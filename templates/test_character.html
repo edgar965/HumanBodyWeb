@@ -388,6 +388,8 @@ right.init();
 <script>
 // --- CharMorphPlugin character selector (left panel) ---
 (function() {
+    /** Ein Tick, damit die Auswahlliste im DOM steht, bevor sie gefuellt wird. */
+    const DOM_TICK_MS = 100;
     function initCharSelector() {
         fetch('/api/character-test/version/')
             .then(r => r.ok ? r.json() : null)
@@ -460,7 +462,8 @@ right.init();
             .catch(() => {});
     }
 
-    setTimeout(initCharSelector, 100);
+    // Ein Tick, damit die Auswahlliste im DOM steht, bevor sie gefuellt wird.
+    setTimeout(initCharSelector, DOM_TICK_MS);
 })();
 </script>
 <script>

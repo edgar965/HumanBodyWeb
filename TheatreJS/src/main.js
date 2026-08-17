@@ -12,6 +12,9 @@ import { fetchBVH } from './scene-manager.js';
 import { PRESETS, applyPreset } from './presets.js';
 import { fetchRetargetedClip, fetchRetargetedClipFromText, detectBVHFormat } from './retarget_hybrid.js';
 import { buildRigifySkeleton } from './rigify_skeleton_builder.js';
+
+/** So lange braucht Theatre.js, bis sein Studio steht. */
+const WARTEN_AUF_STUDIO_MS = 500;
 import { KeyframeUI } from './keyframe-ui.js';
 import { Skinner } from './studio/skinner.js';
 import { Lichtpanel } from './studio/panels/lichtpanel.js';
@@ -657,8 +660,9 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Load defaults after a short delay
-    setTimeout(loadDefaults, 500);
+    // Erst laden, wenn Theatre.js sein Studio aufgebaut hat — sonst
+    // ueberschreibt der Aufbau die geladenen Vorgaben wieder.
+    setTimeout(loadDefaults, WARTEN_AUF_STUDIO_MS);
 
 
 
