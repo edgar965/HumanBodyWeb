@@ -27,7 +27,7 @@ export class Eigenschaftsfeld {
         if (!feld) return;
         const spuren = state.project.tracks;
         if (state.selectedTrackIdx < 0 || state.selectedTrackIdx >= spuren.length) {
-            feld.innerHTML = '<div style="color:var(--text-muted);font-size:0.8rem;">'
+            feld.innerHTML = '<div class="gedaempft-klein">'
                            + 'Animation oder Clip auswählen</div>';
             return;
         }
@@ -65,7 +65,7 @@ export class Eigenschaftsfeld {
     static _spurmaske(track) {
         if (track.type === 'bvh') {
             return `<div class="prop-group">
-            <div class="prop-row"><label>Modell:</label><span style="font-size:0.8rem;color:var(--accent);">${track.preset}</span></div>
+            <div class="prop-row"><label>Modell:</label><span class="marke-akzent">${track.preset}</span></div>
             <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${track.position[0]}" id="prop-pos-x"></div>
             <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${track.position[2]}" id="prop-pos-z"></div>
         </div>`;
@@ -73,8 +73,8 @@ export class Eigenschaftsfeld {
         if (track.type === 'camera') {
             return `<div class="prop-group">
             <div class="prop-row"><label>Aktiv:</label><input type="checkbox" ${track.cameraActive ? 'checked' : ''} id="prop-cam-active"></div>
-            <div style="margin-top:6px;">
-                <button id="prop-cam-add-kf" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-key"></i> Keyframe setzen (K)</button>
+            <div class="abstand-6">
+                <button id="prop-cam-add-kf" class="knopf-akzent"><i class="fas fa-key"></i> Keyframe setzen (K)</button>
             </div>
             <div style="margin-top:4px;font-size:0.72rem;color:var(--text-muted);">Setzt aktuelle Kamera-Position als Keyframe am Playhead.</div>
         </div>`;
@@ -83,13 +83,13 @@ export class Eigenschaftsfeld {
         if (track.type === 'model') {
             const verbunden = state.project.getLinkedAnimation(track);
             return `<div class="prop-group">
-            <div class="prop-row"><label>Verknüpft:</label><span style="font-size:0.8rem;color:var(--accent);">${verbunden ? verbunden.name : '(keiner)'}</span></div>
+            <div class="prop-row"><label>Verknüpft:</label><span class="marke-akzent">${verbunden ? verbunden.name : '(keiner)'}</span></div>
         </div>`;
         }
         if (track.type === 'audio') {
             return `<div class="prop-group">
             <div style="margin-bottom:6px;">
-                <button id="prop-audio-load" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-folder-open"></i> Audio laden</button>
+                <button id="prop-audio-load" class="knopf-akzent"><i class="fas fa-folder-open"></i> Audio laden</button>
             </div>
         </div>`;
         }

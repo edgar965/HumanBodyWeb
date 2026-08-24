@@ -9,6 +9,7 @@
  * Beide Dateien sind ausdruecklich freiwillig: Fehlt eine, laeuft der Spieler
  * ohne Ueberlagerung weiter — deshalb wird ein Fehler nur vermerkt.
  */
+import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
 
 export class Spielerdaten {
     constructor() {
@@ -35,7 +36,7 @@ export class Spielerdaten {
             const antwort = await fetch(url);
             return antwort.ok ? await antwort.json() : null;
         } catch (e) {
-            console.warn('[bvh_player] optionale Daten nicht geladen:', url);
+            Protokoll.warnung('bvh_player', 'optionale Daten nicht geladen:', url);
             return null;
         }
     }

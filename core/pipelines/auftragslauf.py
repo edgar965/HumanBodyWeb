@@ -69,6 +69,7 @@ class Auftragslauf:
             else:
                 self._route_zweidimensional()
         except Exception as fehler:                               # noqa: BLE001
+            logger.exception('Auftrag %s: Lauf abgebrochen', self.job_id)
             self._teilergebnis_oder_fehler(fehler)
         finally:
             LaufendeProzesse.entfernen(self.job_id)

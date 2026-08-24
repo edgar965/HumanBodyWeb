@@ -41,7 +41,11 @@ export function peRender() {
             ctx.strokeStyle = (isActive && Musterzustand.peSelectedEdge && Musterzustand.peSelectedEdge.panel === name && Musterzustand.peSelectedEdge.index === ei) ? '#fff' : color;
             ctx.lineWidth = isActive ? 2.5 : 1.5;
             ctx.beginPath();
-            if (edge.curvature) { const cp = peWorldToCanvas(...edge.curvature); ctx.moveTo(p0[0], p0[1]); ctx.quadraticCurveTo(cp[0], cp[1], p1[0], p1[1]); }
+            if (edge.curvature) {
+                const cp = peWorldToCanvas(...edge.curvature);
+                ctx.moveTo(p0[0], p0[1]);
+                ctx.quadraticCurveTo(cp[0], cp[1], p1[0], p1[1]);
+            }
             else { ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); }
             ctx.stroke();
         });

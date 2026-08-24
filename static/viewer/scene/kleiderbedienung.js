@@ -7,6 +7,7 @@ import { _kleiderSelectById, _renderKleiderList,
          _selectedKleiderMesh } from './kleider_liste.js';
 import { Stueckbedienung } from './stueckbedienung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
  * Kleiderbedienung — der Reiter "Kleider" der Szene-Seite (Anpassen in Stufen).
@@ -117,7 +118,7 @@ export class Kleiderbedienung {
             const daten = await Serverabruf.json('/api/settings/humanbody/');
             kennung = daten.ui_prefs?.last_kleider_id;
         } catch (fehler) {
-            console.warn('Einstellungen nicht ladbar:', fehler);
+            Protokoll.warnung('kleiderbedienung', 'Einstellungen nicht ladbar:', fehler);
             return;
         }
         if (!kennung) return;

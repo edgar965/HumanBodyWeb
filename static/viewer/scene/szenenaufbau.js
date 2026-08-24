@@ -64,7 +64,7 @@ export class Szenenaufbau {
         for (const name of Szenenaufbau.AUFBAUEN) {
             const aufruf = fn[name];
             if (typeof aufruf !== 'function') {
-                console.warn('[Scene] Aufbau fehlt:', name);
+                Protokoll.warnung('Scene', 'Aufbau fehlt:', name);
                 continue;
             }
             aufruf();
@@ -94,7 +94,7 @@ export class Szenenaufbau {
             try {
                 await fn.loadDefaultCharacter();
             } catch (fehler) {
-                console.warn('[Scene] Vorgabefigur nicht ladbar:', fehler);
+                Protokoll.warnung('Scene', 'Vorgabefigur nicht ladbar:', fehler);
             }
         }
         fn.captureInitial?.();
@@ -108,7 +108,7 @@ export class Szenenaufbau {
         try {
             await fn.applyPoseFromServer(pfad);
         } catch (fehler) {
-            console.warn('[Pose] Anfangspose fehlgeschlagen:', fehler);
+            Protokoll.warnung('Pose', 'Anfangspose fehlgeschlagen:', fehler);
         }
     }
 
@@ -130,7 +130,7 @@ export class Szenenaufbau {
                     await fn._doMHProxyFit();
                     Protokoll.debug('MH Auto', 'angezogen:', kennung);
                 } catch (fehler) {
-                    console.warn('[MH Auto] fehlgeschlagen:', kennung, fehler);
+                    Protokoll.warnung('MH Auto', 'fehlgeschlagen:', kennung, fehler);
                 }
             }
         }, Szenenaufbau.KLEIDUNG_VERZOEGERUNG_MS);
@@ -141,7 +141,7 @@ export class Szenenaufbau {
             const daten = await fn.fetchMorphDefs();
             state.skinColors = daten.skin_colors || {};
         } catch (fehler) {
-            console.warn('[Scene] Hautfarben nicht ladbar:', fehler);
+            Protokoll.warnung('Scene', 'Hautfarben nicht ladbar:', fehler);
         }
     }
 

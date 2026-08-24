@@ -8,9 +8,13 @@ ohne jeden HTTP-Bezug (Umbau 15.08.2026).
 """
 
 import logging
-import numpy as np
 import os
+
+import numpy as np
 from django.conf import settings
+
+from ..daten.netzmasse import Netzmasse
+from ..daten.persongrenzen import Persongrenzen
 
 
 logger = logging.getLogger('core')
@@ -21,198 +25,168 @@ class Fotoausrichtung:
 
     @staticmethod
     def automatisch(cam_data, betas, gender, photo_path=None):
-        """Compute automatic body alignment from pipeline camera parameters.
+        """Ausrichtung aus den Kameradaten der Pipeline — oder None.
 
-        Supports two formats:
-        - SMPLest-X: cam_trans [tx,ty,tz] + focal/princpt/processed_bbox
-        - PyMAF-X:   pred_cam [s,tx,ty] + bbox_cxcywh + bbox_scale + focal_length
+        Zwei Formate kommen herein, und beide werden zum selben
+        `body_transform` (Mitte + Maßstab), mit dem der Backvorgang arbeitet:
 
-        Both are converted to a body_transform dict compatible with the baker.
-        After computing, the result is validated: if the projected head/feet
-        are too far from the visible person in the photo, we fall back to a
-        simple fit-to-image approach.
+            SMPLest-X   cam_trans [tx,ty,tz] + focal/princpt/processed_bbox
+            PyMAF-X     pred_cam [s,tx,ty] + bbox_cxcywh + bbox_scale
 
-        Returns dict with 'body_transform' key, or None if cam_data is incomplete.
+        Danach wird GEPRÜFT: Liegen der projizierte Kopf und die Füße zu weit
+        von der im Foto erkennbaren Person, gilt die Pipeline-Kamera als
+        unbrauchbar und es wird auf „Netz in die Personenhöhe einpassen"
+        zurückgefallen.
+
+        WARUM DAS AUFGETEILT IST (17.08.2026): Diese Methode hatte 194 Zeilen
+        und acht durchgereichte Werte — Befund `dateigroesse` (Kriterium 2) und
+        Kriterium 10. Die Maße stehen jetzt in `Netzmasse`, die Personengrenzen
+        in `Persongrenzen`, und die drei Rechnungen sind je eine Methode.
+        """
+        netz = Fotoausrichtung._netz(betas, gender)
+        if netz is None:
+            return None
+        masse = Netzmasse.aus(netz['vertices'].reshape(netz['n_verts'], 3),
+                              cam_data)
+        vorschlag = (Fotoausrichtung._aus_pymafx(cam_data, masse)
+                     or Fotoausrichtung._aus_smplestx(cam_data, masse))
+        if vorschlag is None:
+            return None
+        grenzen = Persongrenzen.aus_foto(photo_path, masse.img_w, masse.img_h)
+        if Fotoausrichtung._passt(vorschlag['body_transform'], masse, grenzen):
+            return vorschlag
+        return Fotoausrichtung._einpassen(vorschlag, masse, grenzen)
+
+    # ------------------------------------------------------------------- Netz
+
+    @staticmethod
+    def _netz(betas, gender):
+        """SMPL-X-Netz über den Wrapper — None, wenn er nicht da ist.
+
+        Der Wrapper liegt in `VideoToBVH/wrappers`, nicht im Django-Teil; der
+        Pfad wird deshalb nur für den Import gesetzt und danach wieder entfernt.
         """
         import sys
-        import numpy as np
-
-        # Generate SMPL-X mesh to get mesh center (cx, cy) and base_scale
-        wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
+        wrappers_dir = os.path.join(str(settings.BASE_DIR), '..',
+                                    'VideoToBVH', 'wrappers')
         sys.path.insert(0, wrappers_dir)
         try:
             from smplest_x_wrapper import generate_mesh
-            mesh = generate_mesh(betas, gender)
+            return generate_mesh(betas, gender)
         except ImportError:
+            logger.warning('smplest_x_wrapper nicht importierbar — keine '
+                           'automatische Ausrichtung', exc_info=True)
             return None
         finally:
             if wrappers_dir in sys.path:
                 sys.path.remove(wrappers_dir)
 
-        if mesh is None:
-            return None
+    # --------------------------------------------------------- die zwei Formate
 
-        n_verts = mesh['n_verts']
-        vertices = mesh['vertices'].reshape(n_verts, 3)
-
-        cx = (vertices[:, 0].min() + vertices[:, 0].max()) / 2
-        cy = (vertices[:, 1].min() + vertices[:, 1].max()) / 2
-
-        # `or` statt Vorgabe-Wert in .get() (Review 13.08.2026): Die gespeicherten
-        # SMPL-X-Parameter enthalten `'image_width': result.get('image_width')` — der
-        # Schlüssel ist also VORHANDEN und kann None sein. `.get(k, 1920)` greift dann
-        # NICHT, die Vorgabe ist toter Code, und weiter unten rechnet
-        # `img_w * (1 - 2*margin)` mit None: TypeError. Bei 0 wird `base_scale` zu 0
-        # und `s_pixels / base_scale` zu einer Division durch Null. Beides gemessen.
-        img_w = cam_data.get('image_width') or 1920
-        img_h = cam_data.get('image_height') or 1080
-
-        margin = 0.05
-        mesh_w = vertices[:, 0].max() - vertices[:, 0].min()
-        mesh_h = vertices[:, 1].max() - vertices[:, 1].min()
-        scale_x = img_w * (1 - 2 * margin) / max(mesh_w, 1e-6)
-        scale_y = img_h * (1 - 2 * margin) / max(mesh_h, 1e-6)
-        base_scale = min(scale_x, scale_y)
-
-        y_max = vertices[:, 1].max()  # head
-        y_min = vertices[:, 1].min()  # feet
-
-        candidate = None
-
-        # --- PyMAF-X format: pred_cam [s, tx, ty] in crop space ---
+    @staticmethod
+    def _aus_pymafx(cam_data, masse):
+        """PyMAF-X: `pred_cam` [s, tx, ty] im Ausschnittsraum."""
         pred_cam = cam_data.get('pred_cam')
         bbox_cxcywh = cam_data.get('bbox_cxcywh')
-        bbox_scale_val = cam_data.get('bbox_scale')
-
-        if pred_cam and bbox_cxcywh and bbox_scale_val:
-            s_crop, tx_crop, ty_crop = pred_cam
-            bbox_cx, bbox_cy, bbox_w_px, bbox_h_px = bbox_cxcywh
-
-            h = max(bbox_w_px, bbox_h_px)
-            s_pixels = s_crop * h / 2.0
-
-            orig_tx = 2.0 * (bbox_cx - img_w / 2.0) / (s_crop * h) + tx_crop
-            orig_ty = 2.0 * (bbox_cy - img_h / 2.0) / (s_crop * h) + ty_crop
-
-            bt_scale = s_pixels / base_scale
-            bt_center_x = orig_tx * (img_w / 2.0) + img_w / 2.0
-            bt_center_y = orig_ty * (img_h / 2.0) + img_h / 2.0
-
-            candidate = {
-                'body_transform': {
-                    'center_x': float(bt_center_x),
-                    'center_y': float(bt_center_y),
-                    'scale': float(bt_scale),
-                },
-                'auto': True,
-                'method': 'pymafx',
-            }
-
-        # --- SMPLest-X format: cam_trans [tx,ty,tz] + focal/princpt ---
-        if candidate is None:
-            cam_trans = cam_data.get('cam_trans')
-            processed_bbox = cam_data.get('processed_bbox')
-            focal_arr = cam_data.get('cam_focal')
-            princpt = cam_data.get('cam_princpt')
-            input_body_shape = cam_data.get('input_body_shape')
-
-            if cam_trans and processed_bbox and focal_arr and princpt and input_body_shape:
-                tx, ty, tz = cam_trans
-                if abs(tz) > 1e-6:
-                    bbox_x, bbox_y, bbox_w, bbox_h = processed_bbox
-                    body_h, body_w = input_body_shape
-
-                    focal_orig_x = focal_arr[0] / body_w * bbox_w
-                    princpt_orig_x = princpt[0] / body_w * bbox_w + bbox_x
-                    princpt_orig_y = princpt[1] / body_h * bbox_h + bbox_y
-
-                    wp_scale = focal_orig_x / tz
-                    bt_scale = wp_scale / base_scale
-                    bt_center_x = wp_scale * (cx + tx) + princpt_orig_x
-                    bt_center_y = princpt_orig_y - wp_scale * (ty + cy)
-
-                    candidate = {
-                        'body_transform': {
-                            'center_x': float(bt_center_x),
-                            'center_y': float(bt_center_y),
-                            'scale': float(bt_scale),
-                        },
-                        'auto': True,
-                        'method': 'smplest_x',
-                    }
-
-        if candidate is None:
+        if not (pred_cam and bbox_cxcywh and cam_data.get('bbox_scale')):
             return None
+        s_crop, tx_crop, ty_crop = pred_cam
+        bbox_cx, bbox_cy, bbox_w_px, bbox_h_px = bbox_cxcywh
+        h = max(bbox_w_px, bbox_h_px)
+        s_pixels = s_crop * h / 2.0
+        orig_tx = 2.0 * (bbox_cx - masse.img_w / 2.0) / (s_crop * h) + tx_crop
+        orig_ty = 2.0 * (bbox_cy - masse.img_h / 2.0) / (s_crop * h) + ty_crop
+        return Fotoausrichtung._vorschlag(
+            orig_tx * (masse.img_w / 2.0) + masse.img_w / 2.0,
+            orig_ty * (masse.img_h / 2.0) + masse.img_h / 2.0,
+            s_pixels / masse.base_scale, 'pymafx')
 
-        # --- Detect person bounds from photo for validation ---
-        person_top, person_bottom, person_cx = 0.0, float(img_h), img_w / 2.0
-        person_detected = False
+    @staticmethod
+    def _aus_smplestx(cam_data, masse):
+        """SMPLest-X: `cam_trans` [tx,ty,tz] mit Brennweite und Hauptpunkt."""
+        cam_trans = cam_data.get('cam_trans')
+        processed_bbox = cam_data.get('processed_bbox')
+        focal_arr = cam_data.get('cam_focal')
+        princpt = cam_data.get('cam_princpt')
+        input_body_shape = cam_data.get('input_body_shape')
+        if not (cam_trans and processed_bbox and focal_arr and princpt
+                and input_body_shape):
+            return None
+        tx, ty, tz = cam_trans
+        if abs(tz) <= 1e-6:
+            return None
+        bbox_x, bbox_y, bbox_w, bbox_h = processed_bbox
+        body_h, body_w = input_body_shape
+        # Brennweite und Hauptpunkt gelten im ZUGESCHNITTENEN Bild; beides wird
+        # auf das Originalbild zurückgerechnet.
+        focal_orig_x = focal_arr[0] / body_w * bbox_w
+        princpt_orig_x = princpt[0] / body_w * bbox_w + bbox_x
+        princpt_orig_y = princpt[1] / body_h * bbox_h + bbox_y
+        wp_scale = focal_orig_x / tz
+        return Fotoausrichtung._vorschlag(
+            wp_scale * (masse.cx + tx) + princpt_orig_x,
+            princpt_orig_y - wp_scale * (ty + masse.cy),
+            wp_scale / masse.base_scale, 'smplest_x')
 
-        if photo_path:
-            try:
-                import cv2
-                photo = cv2.imread(photo_path)
-                if photo is not None:
-                    gray = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY)
-                    _, mask = cv2.threshold(gray, 240, 255, cv2.THRESH_BINARY_INV)
-                    ys, xs = np.where(mask > 0)
-                    if len(ys) > 100:
-                        person_top = float(np.percentile(ys, 1))
-                        person_bottom = float(np.percentile(ys, 99))
-                        person_cx = float(np.median(xs))
-                        person_detected = True
-            except Exception:
-                logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
-
-        # --- Validate: projected head/feet vs detected person ---
-        bt = candidate['body_transform']
-        s = base_scale * bt['scale']
-        head_proj_y = (cy - y_max) * s + bt['center_y']
-        feet_proj_y = (cy - y_min) * s + bt['center_y']
-
-        valid = True
-        if person_detected:
-            person_h = person_bottom - person_top
-            # Head should be within 15% of image height from actual person top
-            head_off = abs(head_proj_y - person_top) / max(person_h, 1)
-            feet_off = abs(feet_proj_y - person_bottom) / max(person_h, 1)
-            if head_off > 0.15 or feet_off > 0.15:
-                logger.info('Pipeline alignment off: head_off=%.1f%%, feet_off=%.1f%%',
-                            head_off * 100, feet_off * 100)
-                valid = False
-        else:
-            # No person detection: use loose check
-            head_ok = head_proj_y < img_h * 0.20
-            feet_ok = feet_proj_y > img_h * 0.80
-            overlap_top = max(0, min(feet_proj_y, img_h) - max(head_proj_y, 0))
-            mesh_proj_h = feet_proj_y - head_proj_y
-            overlap_ratio = overlap_top / max(mesh_proj_h, 1) if mesh_proj_h > 0 else 0
-            if not (head_ok and feet_ok and overlap_ratio > 0.7):
-                valid = False
-
-        if valid:
-            return candidate
-
-        # --- Fallback: fit mesh to detected person bbox ---
-        logger.info('Pipeline alignment rejected (head=%.0f vs person_top=%.0f, '
-                    'feet=%.0f vs person_bottom=%.0f), using image-fit fallback',
-                    head_proj_y, person_top, feet_proj_y, person_bottom)
-
-        person_h = person_bottom - person_top
-        person_cy_val = (person_top + person_bottom) / 2.0
-
-        fit_scale = person_h * 0.95 / max(mesh_h, 1e-6)
-        bt_scale_fit = fit_scale / base_scale
-
+    @staticmethod
+    def _vorschlag(mitte_x, mitte_y, skalierung, verfahren):
+        # Dictionary gewollt: geht als JSON an den Browser und in die Ablage.
         return {
             'body_transform': {
-                'center_x': float(person_cx),
-                'center_y': float(person_cy_val),
-                'scale': float(bt_scale_fit),
+                'center_x': float(mitte_x),
+                'center_y': float(mitte_y),
+                'scale': float(skalierung),
             },
             'auto': True,
-            'method': candidate['method'] + '_fallback',
+            'method': verfahren,
         }
+
+    # ------------------------------------------------------------------ Prüfung
+
+    #: Kopf und Füße dürfen um höchstens 15 % der Personenhöhe abweichen.
+    ABWEICHUNG = 0.15
+    #: Ohne erkannte Person: Kopf im oberen Fünftel, Füße im unteren.
+    KOPF_OBEN = 0.20
+    FUESSE_UNTEN = 0.80
+    #: Und mindestens 70 % des projizierten Netzes müssen im Bild liegen.
+    MIND_UEBERDECKUNG = 0.7
+
+    @staticmethod
+    def _passt(verschiebung, masse, grenzen):
+        """Liegt das Netz da, wo die Person ist?"""
+        kopf_y = masse.bildhoehe_von(masse.y_max, verschiebung)
+        fuesse_y = masse.bildhoehe_von(masse.y_min, verschiebung)
+        if grenzen.erkannt:
+            hoehe = max(grenzen.hoehe, 1)
+            kopf_ab = abs(kopf_y - grenzen.oben) / hoehe
+            fuesse_ab = abs(fuesse_y - grenzen.unten) / hoehe
+            if max(kopf_ab, fuesse_ab) > Fotoausrichtung.ABWEICHUNG:
+                logger.info('Ausrichtung der Pipeline daneben: Kopf %.1f %%, '
+                            'Fuesse %.1f %%', kopf_ab * 100, fuesse_ab * 100)
+                return False
+            return True
+        # Ohne Personenerkennung nur der grobe Maßstab.
+        kopf_ok = kopf_y < masse.img_h * Fotoausrichtung.KOPF_OBEN
+        fuesse_ok = fuesse_y > masse.img_h * Fotoausrichtung.FUESSE_UNTEN
+        netz_hoehe = fuesse_y - kopf_y
+        im_bild = max(0, min(fuesse_y, masse.img_h) - max(kopf_y, 0))
+        anteil = im_bild / max(netz_hoehe, 1) if netz_hoehe > 0 else 0
+        return bool(kopf_ok and fuesse_ok
+                    and anteil > Fotoausrichtung.MIND_UEBERDECKUNG)
+
+    #: Das Netz füllt 95 % der erkannten Personenhöhe.
+    EINPASSUNG = 0.95
+
+    @staticmethod
+    def _einpassen(vorschlag, masse, grenzen):
+        """Rückfall: Netz in die erkannte Personenhöhe einpassen."""
+        logger.info('Ausrichtung der Pipeline verworfen — Netz wird in die '
+                    'Personenhoehe eingepasst (%s)', vorschlag['method'])
+        fit_scale = (grenzen.hoehe * Fotoausrichtung.EINPASSUNG
+                     / max(masse.mesh_h, 1e-6))
+        return Fotoausrichtung._vorschlag(
+            grenzen.mitte_x, grenzen.mitte_y, fit_scale / masse.base_scale,
+            vorschlag['method'] + '_fallback')
 
     @staticmethod
     def koerper_verschiebung(vertices, posed_proj, w_img, h_img, margin=0.05):

@@ -1,4 +1,7 @@
 from django.conf import settings
+import logging
+
+logger = logging.getLogger('core')
 
 
 def version(request):
@@ -34,4 +37,5 @@ def active_theme(request):
             return {'aktives_theme': 'light'}
         return {'aktives_theme': c.get('theme_default') or 'dark'}
     except Exception:
+        logger.warning('Theme nicht aus djangoBase lesbar — dunkel', exc_info=True)
         return {'aktives_theme': 'dark'}

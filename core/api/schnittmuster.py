@@ -7,13 +7,13 @@ Endpunkten aus vier Themen — Stoffbau, Vorlagen, Schnittmuster und Bibliothek
 standen nur durch Reihenfolge getrennt beieinander.
 """
 
+from ..daten.stoffantwort import Stoffantwort
+from .bereichsstoff import Bereichsstoff
 from ..dienste.charakterdaten import Charakterdaten
-from ..dienste.skingewichte import Skingewichte
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
-from humanbody_core.cloth import generate_builder_custom, generate_from_pattern, _push_outside_body
-import base64
+from humanbody_core.cloth import generate_from_pattern, _push_outside_body
 import json
 import logging
 import numpy as np
@@ -66,34 +66,7 @@ def pattern_generate(request):
         )
         result['vertices'] = cloth_v.astype(np.float32)
 
-    response_data = {
-        'vertex_count': int(result['vertices'].shape[0]),
-        'vertices': base64.b64encode(
-            result['vertices'].tobytes()).decode('ascii'),
-        'face_count': int(result['faces'].shape[0]),
-        'faces': base64.b64encode(
-            result['faces'].ravel().astype(np.uint32).tobytes()).decode('ascii'),
-        'normals': base64.b64encode(
-            result['normals'].tobytes()).decode('ascii'),
-        'color': list(result['color']),
-    }
-
-    # Add skin weights
-    skin_arrays = Skingewichte.arrays(gender)
-    if skin_arrays is not None:
-        from humanbody_core.nachbarsuche import Nachbarsuche
-        body_si, body_sw = skin_arrays
-        suche = Nachbarsuche(vertices)
-        cloth_verts = result['vertices']
-        _, nearest = suche.naechster(cloth_verts)
-        cloth_si = body_si[nearest]
-        cloth_sw = body_sw[nearest]
-        response_data['skin_indices'] = base64.b64encode(
-            cloth_si.tobytes()).decode('ascii')
-        response_data['skin_weights'] = base64.b64encode(
-            cloth_sw.tobytes()).decode('ascii')
-
-    return JsonResponse(response_data)
+    return JsonResponse(Stoffantwort.aus(result, vertices, gender))
 
 
 
@@ -111,85 +84,18 @@ def pattern_region_generate(request):
         grow — integer grow iterations (0-5)
         looseness — 0.0-1.0
         category — optional category hint
+
+    Gebaut wird in `api/bereichsstoff.Bereichsstoff`; dort steht auch, warum auf
+    dem unterteilten Koerper und warum zweimal herausgeschoben wird.
     """
-    z_min = float(request.GET.get('z_min', 0.0))
-    z_max = float(request.GET.get('z_max', 1.0))
-    include_arms = request.GET.get('include_arms', '0') == '1'
-    grow = int(request.GET.get('grow', 2))
-    looseness = float(request.GET.get('looseness', 0.3))
-    category = request.GET.get('category', None)
-
-    state, gender, vertices, faces = Charakterdaten.koerper_aus(request.GET)
-    if vertices is None:
+    koerper = Charakterdaten.koerper_aus(request.GET)
+    if koerper.vertices is None:
         return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
-
-    body_verts = np.asarray(vertices, dtype=np.float64)
-
-    # Need face topology for builder
-    if faces is None:
-        mesh = Charakterdaten.netzdaten(gender)
-        if mesh.faces is not None and mesh.faces.ndim == 2:
-            faces = mesh.faces
-    if faces is None:
-        return JsonResponse({'error': 'No face topology available'}, status=500)
-
-    # Use CC-subdivided body for cloth generation so cloth resolution
-    # matches the displayed mesh (70k verts), preventing skin-through.
-    cc = Charakterdaten.unterteiler(gender)
-    if cc is not None:
-        sub_verts = cc.subdivide(body_verts).astype(np.float64)
-        sub_faces = cc._sub_quads  # subdivided quad faces
-        result = generate_builder_custom(
-            sub_verts, sub_faces, z_min, z_max,
-            include_arms=include_arms, looseness=looseness,
-            grow=grow, category=category,
-        )
-    else:
-        sub_verts = body_verts
-        result = generate_builder_custom(
-            body_verts, faces, z_min, z_max,
-            include_arms=include_arms, looseness=looseness,
-            grow=grow, category=category,
-        )
-    if result is None:
-        return JsonResponse({'error': 'No body faces in region'}, status=400)
-
-    # Extra push_outside to fix remaining skin-through in convex areas.
-    # Use a slightly larger min_dist than the normal offset to catch
-    # vertices pulled inside by laplacian smoothing on convex peaks.
-    push_body = sub_verts if cc is not None else body_verts
-    offset_dist = 0.006 + looseness * 0.010
-    cloth_v = _push_outside_body(
-        result['vertices'].astype(np.float64),
-        push_body,
-        min_dist=offset_dist,
-    )
-    result['vertices'] = cloth_v.astype(np.float32)
-
-    response_data = {
-        'vertex_count': int(result['vertices'].shape[0]),
-        'vertices': base64.b64encode(
-            result['vertices'].tobytes()).decode('ascii'),
-        'face_count': int(result['faces'].shape[0]),
-        'faces': base64.b64encode(
-            result['faces'].ravel().astype(np.uint32).tobytes()).decode('ascii'),
-        'normals': base64.b64encode(
-            result['normals'].tobytes()).decode('ascii'),
-        'color': list(result['color']),
-    }
-
-    skin_arrays = Skingewichte.arrays(gender)
-    if skin_arrays is not None:
-        from humanbody_core.nachbarsuche import Nachbarsuche
-        body_si, body_sw = skin_arrays
-        suche = Nachbarsuche(vertices)
-        cloth_verts = result['vertices']
-        _, nearest = suche.naechster(cloth_verts)
-        cloth_si = body_si[nearest]
-        cloth_sw = body_sw[nearest]
-        response_data['skin_indices'] = base64.b64encode(
-            cloth_si.tobytes()).decode('ascii')
-        response_data['skin_weights'] = base64.b64encode(
-            cloth_sw.tobytes()).decode('ascii')
-
-    return JsonResponse(response_data)
+    ergebnis, fehler = Bereichsstoff(request.GET).bauen(koerper)
+    if fehler:
+        # 400, wenn im Bereich keine Flaeche liegt (Eingabe), 500, wenn die
+        # Topologie fehlt (Datenlage).
+        code = 400 if ergebnis is None and 'region' in fehler else 500
+        return JsonResponse({'error': fehler}, status=code)
+    return JsonResponse(Stoffantwort.aus(ergebnis, koerper.vertices,
+                                        koerper.geschlecht))

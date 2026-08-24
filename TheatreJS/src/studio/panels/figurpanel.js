@@ -1,6 +1,7 @@
 import { Panel } from './panel.js';
 import { Koerperfrage } from '../../laden/koerperfrage.js';
 import { Kodierung } from '../../../../static/viewer/gemeinsam/kodierung.js';
+import { Protokoll } from '../../../../static/viewer/gemeinsam/protokoll.js';
 
 /**
  * Figurpanel — Meta-Parameter, Morphs, Position und Drehung einer Figur.
@@ -203,7 +204,7 @@ export class Figurpanel {
             const koerper = figur.children.find(
                 k => k.isMesh && !k.userData.isHair && !k.userData.isGarment);
             if (!koerper) {
-                console.warn('Kein Koerpernetz zum Aktualisieren gefunden');
+                Protokoll.warnung('figurpanel', 'Kein Koerpernetz zum Aktualisieren gefunden');
                 return;
             }
             const punkte = Kodierung.blenderNachThree(

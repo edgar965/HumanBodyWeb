@@ -34,6 +34,7 @@ def photo_analysis_job_data(request, job_id):
     try:
         data = json.loads(job.result_json)
     except (json.JSONDecodeError, TypeError):
+        logger.exception('photo_analysis_job_data: JSONDecodeError/TypeError')
         return JsonResponse({'ok': False, 'error': 'Invalid result data'}, status=500)
 
     # Re-compute morph mapping from stored betas for latest mapping quality
@@ -50,7 +51,11 @@ def photo_analysis_job_data(request, job_id):
             data['meta_sliders'] = mapping['meta_sliders']
             data['body_type'] = mapping['body_type']
         except Exception:
-            pass  # Fall back to cached data
+            # Kein `stumm gewollt`: Hier faellt der Aufruf des SMPL-Wrappers
+            # aus, und die Seite zeigt danach die ALTEN Morphs — das sieht wie
+            # ein Rechenfehler aus, nicht wie ein fehlendes Modul.
+            logger.warning('[foto] Morph-Zuordnung aus Betas fehlgeschlagen, '
+                           'gespeicherte Werte bleiben stehen', exc_info=True)
         finally:
             if wrappers_dir in sys.path:
                 sys.path.remove(wrappers_dir)
@@ -181,6 +186,9 @@ def photo_analysis_bulk_delete(request):
                     os.remove(p)
             job.delete()
             deleted += 1
+        # stumm gewollt: Massenloeschen ueber eine Liste von Kennungen. Ein
+        # Auftrag, den ein anderer Tab schon geloescht hat, ist genau das
+        # gewuenschte Ergebnis — die Zaehlung unten nennt die echte Zahl.
         except PhotoAnalysisJob.DoesNotExist:
             continue
     return JsonResponse({'ok': True, 'deleted': deleted})
@@ -232,14 +240,14 @@ def _analyse_auftrag_anlegen(ergebnis, dateiname):
         return None
 
 
-def _ausrichtung_nachtragen(ergebnis, job, fotopfad):
+def _ausrichtung_nachtragen(ergebnis, job, foto_pfad):
     """Automatische Ausrichtung rechnen und beim Auftrag hinterlegen."""
     if not ergebnis.hat_kamera:
         return
     try:
         ausrichtung = Fotoausrichtung.automatisch(
             ergebnis.kameradaten, ergebnis.betas, ergebnis.geschlecht,
-            photo_path=fotopfad)
+            photo_path=foto_pfad)
     except Exception as e:                                        # noqa: BLE001
         logger.error('Automatische Ausrichtung fehlgeschlagen: %s', e)
         return
@@ -264,6 +272,7 @@ def analyze_photo_status(request):
         from photo_analyzer import get_all_status
         backends = get_all_status()
     except ImportError:
+        logger.warning('photo_analyzer nicht importierbar — keine Backends', exc_info=True)
         backends = {}
     finally:
         if wrappers_dir in sys.path:

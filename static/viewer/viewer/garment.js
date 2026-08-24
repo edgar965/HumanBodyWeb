@@ -9,8 +9,10 @@ import { ensureSkinned } from './skinning.js';
 import { _saveGarmentState } from './garment_liste.js';
 import { _applyGarmentState, _downloadPack, _loadDownloadPacks, _renderGarmentList } from './garment_liste.js';
 import { Kleiderbedienung } from './kleiderbedienung.js';
+import { Metawerte } from './metawerte.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
 
 export async function loadGarmentUI() {
     // Die Bedienung steckt in `Kleiderbedienung` (viewer/kleiderbedienung.js) —
@@ -66,17 +68,7 @@ export function buildBodyFitQueryString() {
         const mName = slider.dataset.morph;
         if (mName) qs += `&morph_${mName}=${slider.value / 100}`;
     });
-    ['age', 'mass', 'tone', 'height'].forEach(m => {
-        const el = document.getElementById(`meta-${m}`);
-        if (el) {
-            const dv = parseInt(el.value);
-            const mn = parseInt(el.min), mx = parseInt(el.max);
-            const neutral = (mn + mx) / 2;
-            const half = (mx - mn) / 2;
-            const internal = half ? (dv - neutral) / half : 0;
-            qs += `&meta_${m}=${internal}`;
-        }
-    });
+    qs += Metawerte.frage();   // Alter/Masse/Tonus/Größe, siehe metawerte.js
     return qs;
 }
 
@@ -147,8 +139,7 @@ export function removeGarment(garmentId, keepState) {
     const m = state.garmentMeshes[garmentId];
     if (m) {
         state.scene.remove(m);
-        m.geometry.dispose();
-        m.material.dispose();
+        Werkstofffreigabe.netz(m);   // samt Texturen
         delete state.garmentMeshes[garmentId];
         if (!keepState) {
             delete state.garmentState[garmentId];

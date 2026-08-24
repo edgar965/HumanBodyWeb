@@ -149,7 +149,7 @@ export function syncLightVisibility() {
         if (track.type !== 'light' || !track.light) continue;
         const visible = _lightVisibleAtPlayhead(track);
         track.light.visible = visible;
-        // Helper-Group: Lichtkegel (coneVisible) + Helfer-Linien (lightVisible)
+        // Helper-Group: Lichtkegel (coneVisible) + Helferlinien (lightVisible)
         // unabhängig voneinander steuerbar. Beide bleiben auch sichtbar wenn Licht aus
         // (damit User weiß wo das Licht steht).
         const lh = track.lightHelper;

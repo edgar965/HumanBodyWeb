@@ -9,7 +9,11 @@
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-abstand-oben.hb-abstand-oben.hb-abstand-oben { margin-top:1.5rem; }   /* 2x */
-.hb-color-var-text-muted.hb-color-var-text-muted.hb-color-var-text-muted { color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem; }   /* 2x */
+.hb-color-var-text-muted.hb-color-var-text-muted.hb-color-var-text-muted {
+    color:var(--text-muted);
+    font-size:0.85rem;
+    margin-bottom:1rem;
+}   /* 2x */
 </style>
 <h1>Einstellungen — Theatre</h1>
 
@@ -127,14 +131,7 @@
         </div>
     </div>
 
-    <div class="settings-actions">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-save"></i> Speichern
-        </button>
-        <a href="{% url 'theatre' %}" class="btn">
-            <i class="fas fa-film"></i> Zur Theatre-Seite
-        </a>
-    </div>
+    {% include "_einstellungen_speichern.html" with weiter_route="theatre" weiter_text="Zur Theatre-Seite" weiter_icon="fa-film" %}
 </form>
 
 <div class="settings-card hb-abstand-oben">
@@ -143,7 +140,7 @@
         <li>Die <strong>Standard-Animation</strong> wird nur geladen, wenn ein Standard-Modell ausgewählt ist.</li>
         <li>Du kannst auf der Theatre-Seite jederzeit manuell andere Modelle und Animationen laden.</li>
         <li>Die Licht-Presets können auch über das <strong>Settings</strong>-Menü in der Theatre-Seite gewechselt werden.</li>
-        <li>Siehe <a href="{% url 'theatre_help' %}" target="_blank" style="color:var(--accent);">Theatre Hilfe</a> für eine detaillierte Anleitung.</li>
+        <li>Siehe <a href="{% url 'theatre_help' %}" target="_blank" class="akzent-verweis">Theatre Hilfe</a> für eine detaillierte Anleitung.</li>
     </ul>
 </div>
 

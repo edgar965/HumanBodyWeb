@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 /**
  * Nutzlast des Stoff-Exports zusammenstellen: Bilder abtasten, Lichter, Ton.
  *
@@ -40,7 +41,7 @@ export function _dumpTracksForDebug() {
         preset: t.preset, currentPreset: t._currentPreset,
         clips: (t.clips || []).length,
     }));
-    console.table(info);
+    Protokoll.debug('export_nutzlast', info);
     return info;
 }
 

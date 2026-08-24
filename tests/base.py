@@ -1,111 +1,76 @@
-"""Basis-Klassen für BVH Studio Tests.
+"""Basis-Klassen für die Oberflächenfälle.
 
-TestCase: repräsentiert einen einzelnen Test.
-TestCategory: Sammlung zusammengehöriger Tests.
+TestCase: repräsentiert einen einzelnen Fall.
+TestCategory: Sammlung zusammengehöriger Fälle.
+
+UMBAU 17.08.2026 (Ansage: „Halte dich an die djangoBase test implementierung und
+baue nichts neues, leite nur ab")
+=====================================================================
+Diese Fälle liefen über einen eigenen Läufer und eine eigene API. Sie sind jetzt
+reguläre Django-Tests: `core/tests/ui/test_oberflaeche.py` macht aus jeder
+Kategorie eine `django.test.TestCase`-Klasse mit je einer Methode pro Fall.
+Damit fährt `manage.py test` sie mit, djangoBases Hilfe → Tests listet sie, die
+Laufzeiten stehen in `Testhistorie`, und `skills.testdeckung` findet sie.
+
+Übrig bleibt hier, was die Fälle SELBST brauchen: das Sammeln der `test_*`-
+Methoden und das Ergebnis eines Falls. Wie der Fall den Server erreicht, steht in
+`kanal.py` — in-process im Testlauf, über das Netz beim Lauf gegen den echten
+Server.
 """
-import json
-import urllib.request
-import urllib.parse
-import urllib.error
 
-
-BASE_URL = 'http://localhost:8081'
+from .kanal import Kanal
 
 
 def http_request(path, method='GET', data=None, files=None, timeout=15):
-    """Minimaler HTTP-Client. Returns (status_code, json_or_dict)."""
-    url = BASE_URL + path
-    if files:
-        boundary = '----TestBoundary9876xyz'
-        body = b''
-        for name, (fname, content, ctype) in files.items():
-            body += f'--{boundary}\r\n'.encode()
-            body += f'Content-Disposition: form-data; name="{name}"; filename="{fname}"\r\n'.encode()
-            body += f'Content-Type: {ctype}\r\n\r\n'.encode()
-            body += content
-            body += b'\r\n'
-        body += f'--{boundary}--\r\n'.encode()
-        req = urllib.request.Request(url, data=body, method=method)
-        req.add_header('Content-Type', f'multipart/form-data; boundary={boundary}')
-    elif data is not None:
-        body = json.dumps(data).encode()
-        req = urllib.request.Request(url, data=body, method=method)
-        req.add_header('Content-Type', 'application/json')
-    else:
-        req = urllib.request.Request(url, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            payload = resp.read().decode()
-            try:
-                return resp.status, json.loads(payload)
-            except json.JSONDecodeError:
-                return resp.status, {'_raw': payload}
-    except urllib.error.HTTPError as e:
-        try:
-            return e.code, json.loads(e.read().decode())
-        except Exception:
-            return e.code, {'error': str(e)}
-    except Exception as e:
-        return 0, {'error': str(e)}
+    """Anfrage über den gerade gültigen Kanal. Liefert `(status, wörterbuch)`."""
+    return Kanal.aktueller().senden(path, method=method, data=data,
+                                    files=files, timeout=timeout)
 
 
 class TestCase:
-    """Ein einzelner Test. Jedes fn sollte einen Bool oder (bool, detail) zurückgeben."""
+    """Ein einzelner Fall. Jedes fn liefert einen Bool oder (bool, detail)."""
+
     def __init__(self, name, fn, description=''):
         self.name = name
         self.fn = fn
         self.description = description
 
     def run(self):
-        """Führt den Test aus; returns dict: {ok, name, description, detail, error}."""
+        """Fuehrt den Fall aus; liefert das Woerterbuch aus `Fallergebnis`."""
+        from ._fallergebnis import Fallergebnis
         try:
-            result = self.fn()
-            if isinstance(result, tuple):
-                ok, detail = result[0], result[1] if len(result) > 1 else ''
-            else:
-                ok, detail = bool(result), ''
-            return {
-                'ok': ok,
-                'name': self.name,
-                'description': self.description,
-                'detail': detail,
-                'error': None,
-            }
-        except Exception as e:
-            import traceback
-            return {
-                'ok': False,
-                'name': self.name,
-                'description': self.description,
-                'detail': '',
-                'error': f'{type(e).__name__}: {e}\n{traceback.format_exc()}',
-            }
+            return Fallergebnis.aus_rueckgabe(self.fn(), self.name,
+                                              self.description).als_dict()
+        except Exception as fehler:                               # noqa: BLE001
+            # Absichtlich jede Ausnahme: Ein Fall darf den ganzen Lauf nicht
+            # mitnehmen — sein Fehler ist sein Ergebnis.
+            return Fallergebnis.aus_ausnahme(fehler, self.name,
+                                             self.description).als_dict()
 
 
 class TestCategory:
-    """Basis-Klasse für Test-Kategorien. Subklassen definieren test_* Methoden."""
+    """Basis-Klasse für Kategorien. Unterklassen definieren test_*-Methoden."""
+
     name = 'Unbenannte Kategorie'
     description = ''
 
     @classmethod
     def cases(cls):
-        """Sammelt alle test_* Methoden als TestCase-Objekte."""
-        cases = []
-        for attr in dir(cls):
-            if not attr.startswith('test_'):
+        """Sammelt alle test_*-Methoden als `TestCase`-Objekte."""
+        faelle = []
+        for name in dir(cls):
+            if not name.startswith('test_'):
                 continue
-            fn = getattr(cls, attr)
+            fn = getattr(cls, name)
             if not callable(fn):
                 continue
-            desc = fn.__doc__.strip() if fn.__doc__ else ''
-            cases.append(TestCase(
-                name=attr.replace('test_', '').replace('_', ' ').title(),
+            faelle.append(TestCase(
+                name=name.replace('test_', '').replace('_', ' ').title(),
                 fn=fn,
-                description=desc,
-            ))
-        return cases
+                description=fn.__doc__.strip() if fn.__doc__ else ''))
+        return faelle
 
     @classmethod
     def run_all(cls):
-        """Führt alle Tests der Kategorie aus; returns list of result dicts."""
-        return [c.run() for c in cls.cases()]
+        """Führt alle Fälle der Kategorie aus; liefert die Ergebnisliste."""
+        return [fall.run() for fall in cls.cases()]

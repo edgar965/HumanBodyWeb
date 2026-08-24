@@ -158,7 +158,7 @@ export class Projektwiederherstellung {
             wartend.push(Projektnachladen.ton(track, clip));
         } else if (clip.type === 'audio') {
             clip._needsReload = true;
-            console.warn(`[Restore] Audio "${clip.data?.fileName}" has no server URL `
+            Protokoll.warnung('Restore', `Audio "${clip.data?.fileName}" has no server URL `
                          + '— needs manual reload');
         }
         return clip;

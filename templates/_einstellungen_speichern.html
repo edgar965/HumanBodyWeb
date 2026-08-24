@@ -1,0 +1,28 @@
+{% comment %}
+    Der Speichern-Knopf der Einstellungsseiten.
+
+    WARUM ALS EIGENE VORLAGE (17.08.2026): Dieser Block stand achtmal — in allen
+    `settings_*.html`. Sechsmal Zeichen für Zeichen gleich, einmal in einer
+    Zeile, einmal mit einem zweiten Knopf daneben. Werkzeug `doppelcode` meldete
+    ihn als eine der grössten Fundgruppen (Kriterium 6).
+
+    Ein zweiter Knopf kommt über `weiter_route` (der ROUTENNAME, nicht die
+    Adresse) und `weiter_text` dazu — so braucht `settings_theatre.html` keine
+    eigene Fassung mehr:
+
+        {% include "_einstellungen_speichern.html" with weiter_route="theatre" weiter_text="Zur Theatre-Seite" weiter_icon="fa-film" %}
+
+    Der Routenname statt der Adresse, weil `{% include with %}` kein `{% url %}`
+    im Argument auswerten kann — und weil eine ausgeschriebene Adresse bei der
+    nächsten Umbenennung ins Leere zeigt.
+{% endcomment %}
+<div class="settings-actions">
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save"></i> Speichern
+    </button>
+    {% if weiter_route %}
+    <a href="{% url weiter_route %}" class="btn">
+        <i class="fas {{ weiter_icon|default:'fa-arrow-right' }}"></i> {{ weiter_text }}
+    </a>
+    {% endif %}
+</div>

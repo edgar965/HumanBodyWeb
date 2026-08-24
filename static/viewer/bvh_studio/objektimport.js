@@ -56,7 +56,7 @@ export async function addSceneObjectClip(trackIdx, startFrame) {
                 const data = await Serverabruf.formular(
                     '/api/studio/scene-object-upload/', fd);
                 if (data.ok) uploaded[file.name.toLowerCase()] = { url: data.url, name: file.name, ext: data.ext };
-                else console.warn('[scene_extras] Upload fehlgeschlagen:', file.name, data.error);
+                else Protokoll.warnung('scene_extras', 'Upload fehlgeschlagen:', file.name, data.error);
             }));
             // Haupt-Datei: erste OBJ/GLB/GLTF/FBX
             const mainKey = Object.keys(uploaded).find(k => /\.(obj|glb|gltf|fbx)$/i.test(k));

@@ -122,7 +122,7 @@ export class Stoffvorlagen {
                 this.vorgabenfeld.appendChild(new Option(vorgabe.name, vorgabe.name));
             }
         } catch (fehler) {
-            console.warn('Stoff-Vorgaben nicht ladbar:', fehler);
+            Protokoll.warnung('stoffvorlagen', 'Stoff-Vorgaben nicht ladbar:', fehler);
         }
     }
 
@@ -183,7 +183,7 @@ export class Stoffvorlagen {
     _reglerSetzen(feldId, wert, faktor, form) {
         if (wert === undefined || wert === null) return;
         const feld = document.getElementById(feldId);
-        if (!feld) return;
+        if (!feld) { Protokoll.debug('stoffvorlagen', `kein Regler ${feldId}`); return; }
         feld.value = Math.round(wert * faktor);
         const anzeige = document.getElementById(feldId + '-val');
         if (anzeige) anzeige.textContent = form(wert);
@@ -219,7 +219,7 @@ export class Stoffvorlagen {
         document.getElementById('cloth-tpl-update')?.addEventListener('click', () => {
             const { key, params } = this.auftrag();
             if (!this.dienste.stoffNetze()[key]) {
-                console.warn(`Kein Stoff "${key}" zum Ändern — erst Erzeugen`);
+                Protokoll.warnung('stoffvorlagen', `Kein Stoff "${key}" zum Ändern — erst Erzeugen`);
                 return;
             }
             this.dienste.stoffLaden(key, params);

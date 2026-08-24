@@ -78,7 +78,10 @@ export function stopAnimation(destroy = false) {
         Seitenzustand.scene.remove(Seitenzustand.skelWrapper);
         Seitenzustand.skelWrapper = null;
     }
-    if (Seitenzustand.skeletonHelper) { Seitenzustand.scene.remove(Seitenzustand.skeletonHelper); Seitenzustand.skeletonHelper = null; }
+    if (Seitenzustand.skeletonHelper) {
+        Seitenzustand.scene.remove(Seitenzustand.skeletonHelper);
+        Seitenzustand.skeletonHelper = null;
+    }
     if (Seitenzustand.rigVisible && Seitenzustand.rigifySkeleton) {
         Seitenzustand.skeletonHelper = Skelettanzeige.bauen(Seitenzustand.scene, Seitenzustand.rigifySkeleton.rootBone);
     }

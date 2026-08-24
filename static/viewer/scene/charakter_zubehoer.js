@@ -16,6 +16,7 @@ import { Kleidungszustand } from './kleidungszustand.js';
 import { _skinifyHairGroup, _skinifyMesh, convertInstToSkinned } from './skeleton.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export class Charakterzubehoer {
 
@@ -25,7 +26,7 @@ export class Charakterzubehoer {
         for (const entry of list) {
             if (!entry || !entry.id) continue;
             try { await fn._fitMHProxyOnInst(inst, entry.id, entry); }
-            catch (e) { console.warn('MH proxy load failed:', entry.id, e); }
+            catch (e) { Protokoll.warnung('charakter_zubehoer', 'MH proxy load failed:', entry.id, e); }
         }
     }
 
@@ -81,7 +82,7 @@ export class Charakterzubehoer {
                 }
 
                 const data = await Serverabruf.json(`/api/character/cloth/?${params}`);
-                if (data.error) { console.warn('Cloth error:', data.error); continue; }
+                if (data.error) { Protokoll.warnung('charakter_zubehoer', 'Cloth error:', data.error); continue; }
 
                 const vertBuf = base64ToFloat32(data.vertices);
                 blenderToThreeCoords(vertBuf);
@@ -149,7 +150,10 @@ export class Charakterzubehoer {
                 }
 
                 const data = await Serverabruf.json(`/api/character/garment/fit/?${p}`);
-                if (data.error) { console.warn('Garment load error:', data.error); continue; }
+                if (data.error) {
+                    Protokoll.warnung('charakter_zubehoer', 'Garment load error:', data.error);
+                    continue;
+                }
 
                 const vertBuf = base64ToFloat32(data.vertices);
                 blenderToThreeCoords(vertBuf);
@@ -228,7 +232,7 @@ export class Charakterzubehoer {
                 inst.group.add(inst.hairMesh);
                 resolve();
             }, undefined, (err) => {
-                console.warn('Failed to load hair:', err);
+                Protokoll.warnung('charakter_zubehoer', 'Failed to load hair:', err);
                 resolve();
             });
         });

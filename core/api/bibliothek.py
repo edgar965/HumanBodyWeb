@@ -30,8 +30,21 @@ def _copy_bvh_to_results(bvh_path, video_name, pipeline):
     return str(dest)
 
 
+@require_POST
 def scan_bvh_files(request):
-    """Scan directories for BVH files and add to library."""
+    """Scan directories for BVH files and add to library.
+
+    NUR POST (17.08.2026). Diese Route hat als einzige der drei
+    Bibliotheks-Aktionen keinen Methodenschutz gehabt und ist dabei aufgefallen,
+    dass der Leistungstest sie mit einem GET anfuhr: 35 Abfragen, 7.067
+    BVH-Koepfe gelesen, Datenbank geschrieben. Ein `<img src="/library/scan/">`
+    auf einer fremden Seite hat damit einen vollen Neuaufbau der Bibliothek
+    ausgeloest — die `GleicherUrsprung`-Middleware prueft nur schreibende
+    METHODEN, und GET gehoert nicht dazu.
+
+    Die drei Aufrufstellen (`browser.html` 2x, `test_mocapnet.html`) sind
+    deshalb von `<a href>` auf ein kleines POST-Formular umgestellt.
+    """
     scan_dirs = [
         settings.MOCAPNET_ROOT / 'output',
         settings.BLENDER_BVH_DIR,

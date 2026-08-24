@@ -8,6 +8,7 @@ import { state } from './state.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 // Persist last open category + selected garment
@@ -25,7 +26,7 @@ function _saveMHState() {
             selectedId: state._selectedMHId,
         }));
     } catch (e) {
-        console.warn('[MH-Proxy] Zustand nicht speicherbar:', e?.name || e);
+        Protokoll.warnung('MH-Proxy', 'Zustand nicht speicherbar:', e?.name || e);
     }
 }
 
@@ -33,7 +34,7 @@ function _loadMHState() {
     try {
         const s = JSON.parse(localStorage.getItem(MH_STORAGE_KEY));
         if (s) { _mhOpenCat = s.openCat || ''; state._selectedMHId = s.selectedId || ''; }
-    } catch(e) {}
+    } catch(e) { Protokoll.debug('mhproxy', 'gemerkte Auswahl nicht lesbar', e); }
 }
 
 let _mhOpenCat = '';
@@ -50,9 +51,9 @@ function _showMHCtx(x, y, garment) {
         menu.className = 'ctx-menu';
         menu.style.cssText = 'position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:4px 0;min-width:140px;font-size:0.8rem;box-shadow:0 4px 12px rgba(0,0,0,.4);';
         menu.innerHTML = `
-            <div class="ctx-item" data-action="rename" style="padding:4px 12px;cursor:pointer;">Umbenennen</div>
-            <div class="ctx-item" data-action="move" style="padding:4px 12px;cursor:pointer;">Verschieben...</div>
-            <div class="ctx-item" data-action="copy" style="padding:4px 12px;cursor:pointer;">Kopieren...</div>
+            <div class="ctx-item knopf-klein" data-action="rename">Umbenennen</div>
+            <div class="ctx-item knopf-klein" data-action="move">Verschieben...</div>
+            <div class="ctx-item knopf-klein" data-action="copy">Kopieren...</div>
             <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
             <div class="ctx-item" data-action="delete" style="padding:4px 12px;cursor:pointer;color:#f44;">Löschen</div>
         `;
@@ -143,7 +144,7 @@ function _renderMHList() {
         : state._garmentCatalog;
 
     if (filtered.length === 0) {
-        list.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Garments</div>';
+        list.innerHTML = '<div class="leer-hinweis">Keine Garments</div>';
         return;
     }
 

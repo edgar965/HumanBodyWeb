@@ -1,4 +1,5 @@
 import { Pipelinefelder } from './pipelinefelder.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /**
  * Pipelinevorgaben — die drei Qualitaetsstufen (Schnell, Standard, Maximum)
@@ -118,7 +119,7 @@ export class Pipelinevorgaben {
 
     static _feld(name, wert) {
         const feld = document.querySelector(`[name="${name}"]`);
-        if (!feld) return;
+        if (!feld) { Protokoll.debug('pipelinevorgaben', `kein Feld für "${name}"`); return; }
         if (feld.type === 'checkbox') feld.checked = wert;
         else feld.value = wert;
     }

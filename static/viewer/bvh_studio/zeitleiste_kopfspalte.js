@@ -12,6 +12,7 @@ import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { _populateTrackAddSubmenu } from './zeitleiste_spurmenue.js';
 import { pushUndo } from './undo.js';
 import { renderTimeline } from './zeitleiste_zeichnen.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 
 export function updateTrackHeaders() {
@@ -106,7 +107,7 @@ export function updateTrackHeaders() {
             try {
                 const data = JSON.parse(e.dataTransfer.getData('application/json'));
                 fn.addClipToTrack(i, data.category, data.name, data.frames);
-            } catch (err) {}
+            } catch (err) { Protokoll.debug('zeitleiste', 'Ablage ohne verwertbare JSON-Daten', err); }
         });
         container.appendChild(el);
     }

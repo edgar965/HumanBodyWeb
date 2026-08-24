@@ -5,6 +5,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { blenderToThreeCoords } from '../character_core.js?v=1';
 import { Zeiten } from '../gemeinsam/zeiten.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 export function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -40,7 +41,7 @@ export function connectWebSocket() {
                 if (msg.type === 'reload_mesh') {
                     fn.reloadBodyMesh(msg.body_type);
                 }
-            } catch (e) { /* ignore */ }
+            } catch (e) { Protokoll.debug('websocket', 'Nachricht nicht verwertbar', e); }
         }
     };
 }

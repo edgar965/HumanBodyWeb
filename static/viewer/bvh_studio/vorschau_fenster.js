@@ -18,6 +18,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _gaussSmooth } from './werkzeug_glaettung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /** Gemerkte Fenstergroesse — ueberlebt den Seitenwechsel. */
 const GROESSE_SCHLUESSEL = 'bvhStudio_previewSize';
@@ -111,7 +112,7 @@ export class Vorschaufenster {
                 box.style.width = gemerkt.w + 'px';
                 box.style.height = gemerkt.h + 'px';
             }
-        } catch (e) { /* nichts gemerkt */ }
+        } catch (e) { Protokoll.debug('vorschau', 'gemerkte Fenstergröße nicht lesbar', e); }
 
         requestAnimationFrame(Vorschaufenster.groesseAnpassen);
         if (!box._resizeObserver) {
@@ -120,7 +121,7 @@ export class Vorschaufenster {
                 try {
                     localStorage.setItem(GROESSE_SCHLUESSEL, JSON.stringify(
                         { w: box.clientWidth, h: box.clientHeight }));
-                } catch (e) { /* Speicher voll */ }
+                } catch (e) { Protokoll.debug('vorschau', 'Fenstergröße nicht merkbar', e); }
             });
             box._resizeObserver.observe(box);
         }

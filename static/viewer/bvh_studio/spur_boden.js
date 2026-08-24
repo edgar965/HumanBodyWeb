@@ -11,6 +11,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Track } from './models.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 let _cachedFloorTextures = null;
 const _textureLoader = new THREE.TextureLoader();
@@ -103,7 +104,7 @@ export async function applyFloorTexture(track, textureUrl) {
         m.map = tex;
         m.needsUpdate = true;
     } catch (e) {
-        console.warn('[scene_extras] Textur-Load fehlgeschlagen:', textureUrl, e);
+        Protokoll.warnung('scene_extras', 'Textur-Load fehlgeschlagen:', textureUrl, e);
     }
 }
 

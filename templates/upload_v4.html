@@ -276,7 +276,8 @@
                         </div>
                         <!-- GVHMR body settings -->
                         <div id="hybrid-gvhmr-settings" class="hybrid-body-settings">
-                            <div class="settings-list" style="margin-top:8px; padding-left:12px; border-left:2px solid #3498db;">
+                            <div class="settings-list"
+                                 style="margin-top:8px; padding-left:12px; border-left:2px solid #3498db;">
                                 <div class="setting-item">
                                     <div class="setting-label">Statische Kamera <span class="setting-hint">DPVO Kamera-Tracking &uuml;berspringen</span></div>
                                     <input type="checkbox" name="hybrid_gvhmr_static_cam" {% if defaults.hybrid_gvhmr_static_cam %}checked{% endif %}>
@@ -289,7 +290,8 @@
                         </div>
                         <!-- PromptHMR body settings -->
                         <div id="hybrid-prompthmr-settings" class="hybrid-body-settings hb-versteckt">
-                            <div class="settings-list" style="margin-top:8px; padding-left:12px; border-left:2px solid #e67e22;">
+                            <div class="settings-list"
+                                 style="margin-top:8px; padding-left:12px; border-left:2px solid #e67e22;">
                                 <div class="setting-item">
                                     <div class="setting-label">Statische Kamera <span class="setting-hint">Empfohlen f&uuml;r feste Kamera</span></div>
                                     <input type="checkbox" name="hybrid_prompthmr_static_cam" {% if defaults.hybrid_prompthmr_static_cam %}checked{% endif %}>
@@ -297,7 +299,7 @@
                             </div>
                         </div>
                         <!-- Shared body device -->
-                        <div class="settings-list" style="margin-top:8px;">
+                        <div class="settings-list abstand-8">
                             <div class="setting-item">
                                 <div class="setting-label">Body Device <span class="setting-hint">GPU (CUDA) f&uuml;r SMPL-Pipeline</span></div>
                                 <select name="hybrid_body_device">
@@ -318,7 +320,7 @@
                                     <label><input type="checkbox" name="hybrid_v4_parts" value="eyes" {% if defaults.hybrid_v4_eyes %}checked{% endif %}> Eyes</label>
                                 </div>
                             </div>
-                            <div class="settings-list" style="margin-top:6px;">
+                            <div class="settings-list abstand-6">
                                 <div class="setting-item">
                                     <div class="setting-label">IK Iterations <span class="setting-hint">Gradient-Descent Iterationen pro Frame</span></div>
                                     <input type="number" name="hybrid_v4_hcd_iterations" min="1" max="100" step="1" value="{{ defaults.hybrid_v4_hcd_iterations }}">
@@ -346,8 +348,9 @@
 
         <!-- Start button for selected video + pipeline -->
         {% if upload_files %}
-        <div class="form-group" style="margin-top:12px;">
-            <button type="button" class="btn btn-lg btn-primary" id="startSelectedBtn" style="width:100%;padding:12px;font-size:1.1rem;">
+        <div class="form-group abstand-12">
+            <button type="button" class="btn btn-lg btn-primary" id="startSelectedBtn"
+                    style="width:100%;padding:12px;font-size:1.1rem;">
                 <i class="fas fa-play"></i> Pipeline starten
             </button>
         </div>
@@ -358,16 +361,16 @@
 
 {% if v4_jobs %}
 <div class="job-list-section">
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+    <div class="zeile-mit-abstand">
         <h3 class="hb-ohne-abstand">Uploaded Videos</h3>
-        <button class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled>
-            <i class="fas fa-trash"></i> Delete Selected (<span id="bulkCount">0</span>)
+        <button class="btn btn-sm btn-danger" id="bulk-delete-btn" disabled>
+            <i class="fas fa-trash"></i> Delete Selected (<span id="bulk-count">0</span>)
         </button>
     </div>
     <table class="processed-table" id="jobTable">
         <thead>
             <tr>
-                <th style="width:30px;"><input type="checkbox" id="selectAll"></th>
+                <th class="spalte-schmal"><input type="checkbox" id="select-all"></th>
                 <th class="sortable" data-sort="name">Name <i class="fas fa-sort"></i></th>
                 <th>Pipeline</th>
                 <th>Status</th>
@@ -476,7 +479,7 @@
                 <td>~8&ndash;12 GB</td>
                 <td><span class="hb-color-e67e22">&starf; Beste Qualit&auml;t (per-frame)</span></td>
             </tr>
-            <tr style="background:#1a2a1a;">
+            <tr class="zeile-hervor">
                 <td><strong>GVHMR</strong></td>
                 <td>36 mm PA-MPJPE</td>
                 <td>~5&ndash;10 FPS</td>
@@ -494,7 +497,7 @@
             </tr>
         </tbody>
     </table>
-    <p style="margin-top:8px; color:#888;">
+    <p class="tabellen-fussnote">
         <small>PA-MPJPE = Procrustes-Aligned Mean Per Joint Position Error auf 3DPW (niedriger = besser).<br>
         *MocapNET v4 nutzt H3.6M und ein eigenes Skelett &mdash; nicht direkt vergleichbar mit SMPL-Methoden.<br>
         Geschwindigkeit gesch&auml;tzt f&uuml;r RTX 3060. GVHMR/WHAM/PromptHMR ben&ouml;tigen mindestens 6 GB VRAM.</small>
@@ -524,7 +527,13 @@
 .video-file-item input[type="radio"] { margin: 0; flex-shrink: 0; }
 .video-file-name { font-weight: 500; flex: 1; }
 .video-file-meta { color: var(--text-muted, #888); font-size: 0.8rem; white-space: nowrap; }
-.video-file-path { display: block; color: var(--text-muted, #666); font-size: 0.7rem; font-family: monospace; word-break: break-all; }
+.video-file-path {
+    display: block;
+    color: var(--text-muted, #666);
+    font-size: 0.7rem;
+    font-family: monospace;
+    word-break: break-all;
+}
 
 /* Pipeline cards */
 .pipeline-cards { display: flex; flex-direction: column; gap: 8px; }
@@ -565,7 +574,15 @@
 .settings-row { display: flex; align-items: center; gap: 8px; min-height: 32px; }
 .settings-row label { font-size: 0.85rem; color: var(--text-muted, #aaa); min-width: 160px; white-space: nowrap; }
 .checkbox-group { display: flex; gap: 12px; flex-wrap: wrap; }
-.checkbox-group label { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; color: var(--text-muted, #aaa); cursor: pointer; min-width: auto; }
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted, #aaa);
+    cursor: pointer;
+    min-width: auto;
+}
 
 /* Quality preset bar */
 .preset-bar {
@@ -587,7 +604,12 @@
 .inline-progress { display: flex; align-items: center; gap: 6px; min-width: 180px; }
 .inline-progress .status-text { font-size: 0.82rem; white-space: nowrap; color: #3498db; }
 .progress-bar-mini { flex: 1; height: 6px; background: #2a2a3e; border-radius: 3px; overflow: hidden; min-width: 60px; }
-.progress-fill-mini { height: 100%; background: linear-gradient(90deg, #3498db, #2ecc71); border-radius: 3px; transition: width 0.5s; }
+.progress-fill-mini {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    border-radius: 3px;
+    transition: width 0.5s;
+}
 .inline-progress .progress-pct { font-size: 0.75rem; color: #888; min-width: 30px; text-align: right; }
 /* Detail row */
 .detail-row td { padding: 0 !important; border-top: none !important; }

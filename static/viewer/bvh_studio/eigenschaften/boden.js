@@ -22,15 +22,15 @@ export class Bodeneigenschaften {
             `<div class="prop-row"><label>${id.startsWith('s') ? 'Start' : 'Ende'} ${achse}:</label><input type="number" value="${wert}" id="prop-floor-${id}" step="0.1"> m</div>`;
 
         return `<div class="prop-group">
-            <div class="prop-row"><label>Typ:</label><span style="font-size:0.8rem;color:var(--accent);">Boden (Szene)</span></div>
+            <div class="prop-row"><label>Typ:</label><span class="marke-akzent">Boden (Szene)</span></div>
             <div class="prop-row"><label>Farbe:</label><input type="color" value="${track.floorColor || '#3a3a4a'}" id="prop-floor-color"></div>
-            <div class="prop-row"><label>Textur:</label><select id="prop-floor-texture" style="flex:1;"><option value="">(Lade...)</option></select></div>
+            <div class="prop-row"><label>Textur:</label><select id="prop-floor-texture" class="dehnen"><option value="">(Lade...)</option></select></div>
             <div class="prop-row"><label>Rauheit:</label><input type="number" value="${(track.floorRoughness ?? 0.9).toFixed(2)}" id="prop-floor-roughness" min="0" max="1" step="0.05"></div>
             <div class="prop-row"><label>Metall:</label><input type="number" value="${(track.floorMetalness ?? 0.05).toFixed(2)}" id="prop-floor-metalness" min="0" max="1" step="0.05"></div>
-            <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Abmessungen (Mittelpunkt-bezogen)</h3>
+            <h3 class="gruppentitel">Abmessungen (Mittelpunkt-bezogen)</h3>
             <div class="prop-row"><label>Breite X:</label><input type="number" value="${w.toFixed(2)}" id="prop-floor-width" min="0.2" max="200" step="0.1"> m</div>
             <div class="prop-row"><label>Länge Z:</label><input type="number" value="${l.toFixed(2)}" id="prop-floor-length" min="0.2" max="200" step="0.1"> m</div>
-            <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Kanten-Positionen</h3>
+            <h3 class="gruppentitel">Kanten-Positionen</h3>
             ${kante('sx', (cx - w / 2).toFixed(2), 'X')}
             ${kante('ex', (cx + w / 2).toFixed(2), 'X')}
             ${kante('sz', (cz - l / 2).toFixed(2), 'Z')}
@@ -38,7 +38,7 @@ export class Bodeneigenschaften {
             <div class="prop-row"><label>Raster:</label>
                 <button id="prop-floor-grid" style="padding:5px 16px;background:${raster ? '#4caf50' : '#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:60px;">${raster ? 'An' : 'Aus'}</button>
             </div>
-            <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Breite/Länge wachsen um den aktuellen Mittelpunkt. Start/Ende-Kanten editieren verschiebt nur die jeweilige Kante (Gegen-Kante bleibt fix).</div>
+            <div class="fussnote">Breite/Länge wachsen um den aktuellen Mittelpunkt. Start/Ende-Kanten editieren verschiebt nur die jeweilige Kante (Gegen-Kante bleibt fix).</div>
         </div>`;
     }
 

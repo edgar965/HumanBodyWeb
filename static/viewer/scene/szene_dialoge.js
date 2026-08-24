@@ -111,11 +111,11 @@ export async function openAddCharacterDialog() {
     openDialog(dialog);
     state._addCharSelectedPreset = null;
     confirmBtn.disabled = true;
-    presetList.innerHTML = '<li style="color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Lade Presets...</li>';
+    presetList.innerHTML = '<li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Presets...</li>';
     try {
         const data = await Serverabruf.json('/api/character/models/');
         presetList.innerHTML = '';
-        if (!data.presets || data.presets.length === 0) { presetList.innerHTML = '<li style="color:var(--text-muted)">Keine Presets vorhanden.</li>'; return; }
+        if (!data.presets || data.presets.length === 0) { presetList.innerHTML = '<li class="gedaempft">Keine Presets vorhanden.</li>'; return; }
         for (const p of data.presets) {
             const li = document.createElement('li'); li.textContent = p.label || p.name; li.dataset.presetName = p.name;
             li.addEventListener('click', () => { presetList.querySelectorAll('li').forEach(x => x.classList.remove('selected')); li.classList.add('selected'); state._addCharSelectedPreset = p.name; confirmBtn.disabled = false; });
@@ -129,11 +129,26 @@ export function initSceneDialogs() {
     const saveDialog = document.getElementById('save-scene-dialog');
     const saveNameInput = document.getElementById('save-scene-name');
     const saveConfirm = document.getElementById('save-scene-confirm');
-    saveConfirm.addEventListener('click', async () => { const name = saveNameInput.value.trim(); if (!name) { saveNameInput.focus(); return; } closeDialog(saveDialog); await doSaveScene(name); });
+    saveConfirm.addEventListener('click', async () => {
+        const name = saveNameInput.value.trim();
+        if (!name) { saveNameInput.focus(); return; }
+        closeDialog(saveDialog);
+        await doSaveScene(name);
+    });
     saveNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveConfirm.click(); });
     const loadDialog = document.getElementById('load-scene-dialog');
     const loadConfirm = document.getElementById('load-scene-confirm');
-    loadConfirm.addEventListener('click', async () => { if (!state._selectedFileToLoad) return; closeDialog(loadDialog); try { await loadModelFile(state._selectedFileToLoad); } catch (e) { alert(`Fehler: ${e.message}`); } });
+    loadConfirm.addEventListener('click', async () => {
+        if (!state._selectedFileToLoad) return;
+        closeDialog(loadDialog);
+        // Der Ladeweg wirft bei einem Fehlerstatus (`Serverabruf.json`) — ohne
+        // dieses `catch` bliebe der Dialog zu und nichts würde passieren.
+        try {
+            await loadModelFile(state._selectedFileToLoad);
+        } catch (fehler) {
+            alert(`Fehler: ${fehler.message}`);
+        }
+    });
 }
 
 export async function openSaveDialog() {
@@ -153,12 +168,12 @@ export async function openLoadDialog() {
     openDialog(loadDialog);
     state._selectedFileToLoad = null;
     loadConfirm.disabled = true;
-    tbody.innerHTML = '<tr><td colspan="3" style="padding:12px;color:var(--text-muted);text-align:center;"><i class="fas fa-spinner fa-spin"></i> Lade...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" class="leer-hinweis-mitte"><i class="fas fa-spinner fa-spin"></i> Lade...</td></tr>';
     try {
         const data = await Serverabruf.json('/api/character/model-files/');
         tbody.innerHTML = '';
         const files = data.files || [];
-        if (files.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="padding:12px;color:var(--text-muted);text-align:center;">Keine Dateien.</td></tr>'; return; }
+        if (files.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="leer-hinweis-mitte">Keine Dateien.</td></tr>'; return; }
         for (const f of files) {
             const tr = document.createElement('tr');
             const isScene = f.type === 'scene';
@@ -168,18 +183,23 @@ export async function openLoadDialog() {
             tr.innerHTML = `<td style="padding:4px 12px;"><i class="fas ${icon}" style="margin-right:6px;opacity:0.5;"></i>${escapeHtml(f.label || f.name)}</td><td style="padding:4px 12px;text-align:center;">${typeBadge}</td><td style="padding:4px 12px;text-align:right;color:var(--text-muted);font-size:0.7rem;">${dateStr}</td>`;
             tr.style.cursor = 'pointer';
             tr.addEventListener('click', () => { tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected')); tr.classList.add('selected'); state._selectedFileToLoad = f; loadConfirm.disabled = false; });
-            tr.addEventListener('dblclick', () => { state._selectedFileToLoad = f; closeDialog(loadDialog); loadModelFile(f).catch(e => alert(`Fehler: ${e.message}`)); });
+            tr.addEventListener('dblclick', () => {
+                state._selectedFileToLoad = f;
+                closeDialog(loadDialog);
+                loadModelFile(f).catch(
+                    fehler => alert(`Fehler: ${fehler.message}`));
+            });
             tbody.appendChild(tr);
         }
     } catch (e) { tbody.innerHTML = `<tr><td colspan="3" style="padding:12px;color:#ef4444;text-align:center;">Fehler: ${e.message}</td></tr>`; }
 }
 
 export async function loadSceneListInto(listEl, onSelect) {
-    listEl.innerHTML = '<li style="color:var(--text-muted)"><i class="fas fa-spinner fa-spin"></i> Lade...</li>';
+    listEl.innerHTML = '<li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade...</li>';
     try {
         const data = await Serverabruf.json('/api/character/scenes/');
         listEl.innerHTML = '';
-        if (!data.scenes || data.scenes.length === 0) { listEl.innerHTML = '<li style="color:var(--text-muted)">Keine Szenen.</li>'; return; }
+        if (!data.scenes || data.scenes.length === 0) { listEl.innerHTML = '<li class="gedaempft">Keine Szenen.</li>'; return; }
         for (const s of data.scenes) {
             const li = document.createElement('li');
             li.innerHTML = `${escapeHtml(s.label || s.name)} <span class="preset-sub">${s.character_count} Charakter(e)</span>`;

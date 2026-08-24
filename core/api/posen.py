@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 """Posen: auflisten, lesen, verwalten.
 
-Herausgeloest aus core/character_api.py (Umbau 15.08.2026). Die Datei hatte
-6.495 Zeilen und 110 Endpunkte; die Themen darin waren nur durch Reihenfolge
-getrennt. Die Endpunkte hier bleiben duenne Funktionen — Django-Dekoratoren,
-Stapelspuren und Tests bleiben damit lesbar —, waehrend die Fachlogik in
-core/dienste/ als Klassen liegt.
+Aus core/character_api.py herausgeloest (Umbau 15.08.2026) — warum so
+geschnitten, steht in `core/api/__init__.py`.
 """
 
 from django.conf import settings
@@ -28,8 +25,16 @@ def list_poses(request):
 
 
 @require_GET
-def get_pose(request, pose_id):
-    """Return pose quaternions mapped to DEF bone names."""
+def pose_load(request, pose_id):
+    """Return pose quaternions mapped to DEF bone names.
+
+    Hiess bis zum 17.08.2026 `get_pose`. Umbenannt wegen `namens-dubletten`
+    (Kriterium 7): Fuer „lesen" gab es im Projekt zwei Schreibweisen — `get_…`
+    hier, `…_load` bei `studio_project_load`. Die Mehrheit der Endpunkte stellt
+    die Sache vor die Taetigkeit (`studio_project_list`, `cloth_preset_list`),
+    also gilt die. Der URL-PFAD bleibt unveraendert, das Frontend ruft ihn
+    direkt auf.
+    """
     from humanbody_core.pose import load_pose
     try:
         pose = load_pose(pose_id)

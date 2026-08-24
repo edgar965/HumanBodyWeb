@@ -7,6 +7,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, _selectedInst, _charQueryParams, _bindSlider, _sliderVal } from './utils.js';
 import { markDirty } from './undo.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export async function loadClothUI() {
     _bindSlider('cloth-tpl-segments', 'cloth-tpl-segments-val', v => v);
@@ -29,7 +30,7 @@ export async function loadClothUI() {
             for (const p of state._clothRegionsData.primitives) { const opt = document.createElement('option'); opt.value = p.key; opt.textContent = p.label; primSelect.appendChild(opt); }
             primSelect.addEventListener('change', () => { const flareRow = document.getElementById('cloth-prim-flare-row'); if (flareRow) flareRow.style.display = primSelect.value === 'PRIM_SKIRT' ? 'flex' : 'none'; });
         }
-    } catch (e) { console.warn('Cloth UI not available:', e); }
+    } catch (e) { Protokoll.warnung('cloth', 'Cloth UI not available:', e); }
     const tplCreate = document.getElementById('cloth-tpl-create');
     if (tplCreate) tplCreate.addEventListener('click', () => _doClothFromTemplate(false));
     const tplUpdate = document.getElementById('cloth-tpl-update');
@@ -59,10 +60,17 @@ export async function _loadClothForCharacter(inst, key, clothParams) {
     const matColor = new THREE.Color(colorHex);
     try {
         const data = await Serverabruf.json(`/api/character/cloth/?${params}`);
-        if (data.error) { console.warn('Cloth error:', data.error); return; }
-        if (inst.clothMeshes[key]) { inst.group.remove(inst.clothMeshes[key]); inst.clothMeshes[key].geometry.dispose(); inst.clothMeshes[key].material.dispose(); delete inst.clothMeshes[key]; }
+        if (data.error) { Protokoll.warnung('cloth', 'Cloth error:', data.error); return; }
+        if (inst.clothMeshes[key]) {
+            inst.group.remove(inst.clothMeshes[key]);
+            inst.clothMeshes[key].geometry.dispose();
+            inst.clothMeshes[key].material.dispose();
+            delete inst.clothMeshes[key];
+        }
         const vertBuf = base64ToFloat32(data.vertices); blenderToThreeCoords(vertBuf);
-        const faceBuf = base64ToUint32(data.faces); const normalBuf = base64ToFloat32(data.normals); blenderToThreeCoords(normalBuf);
+        const faceBuf = base64ToUint32(data.faces);
+        const normalBuf = base64ToFloat32(data.normals);
+        blenderToThreeCoords(normalBuf);
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
         geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));

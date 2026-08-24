@@ -13,6 +13,7 @@
  * derselben Seite loesen sonst mehrere gleiche Abfragen aus.
  */
 import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
+import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
 
 export class Modellfeld {
 
@@ -55,7 +56,7 @@ export class Modellfeld {
             return feld;
         } catch (fehler) {
             feld.innerHTML = '<option value="">Fehler beim Laden</option>';
-            console.warn('Modell-Vorgaben nicht ladbar:', fehler);
+            Protokoll.warnung('modellfeld', 'Modell-Vorgaben nicht ladbar:', fehler);
             return feld;
         }
     }

@@ -140,9 +140,21 @@ export async function exportClothMP4({ engine = 'warp_only', quality = 'medium',
     if (outputDir) payload.output_dir = outputDir;
     if (filename) payload.filename = filename;
     Protokoll.debug('Cloth Export', `engine=${engine} quality=${quality} res=${width}x${height} frames=${payload.anim_frames} dir=${outputDir||'(default)'} file=${filename||'(auto)'}`);
-    const data = await Serverabruf.senden('/api/cloth/export/', payload);
+    // Der Abruf WIRFT bei jedem Status außer 2xx, und diese Funktion hat keinen
+    // Aufrufer im Projekt — sie hängt an `fn.`/`window.__` und wird aus der
+    // Konsole oder einem Knopf gerufen. Ohne diesen Fänger wäre ein Serverfehler
+    // eine stille „Unhandled promise rejection" (Befund `jsfaenger`, 17.08.2026).
+    // Erst melden, dann weiterwerfen: Wer aus der Konsole ruft, will den Fehler
+    // auch als Rückgabe sehen.
+    let data;
+    try {
+        data = await Serverabruf.senden('/api/cloth/export/', payload);
+    } catch (fehler) {
+        Protokoll.fehler('Cloth Export', 'Abruf fehlgeschlagen:', fehler.message);
+        throw fehler;
+    }
     if (!data.ok) {
-        console.error('[Cloth Export] failed', data);
+        Protokoll.fehler('Cloth Export', 'Server meldet einen Fehler:', data);
         throw new Error(data.error || data.log || 'Export fehlgeschlagen');
     }
     Protokoll.info('Cloth Export', 'MP4:', data.url);

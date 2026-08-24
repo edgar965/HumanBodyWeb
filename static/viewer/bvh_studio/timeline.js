@@ -17,6 +17,7 @@ import { renderTimeline } from './zeitleiste_zeichnen.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { Zeitleistenziehen } from './zeitleiste_ziehen.js';
 import { Zeitleistenmenue } from './zeitleiste_menue.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /** Grenzen des Zooms in Bildpunkten je Sekunde. */
 const ZOOM_MIN = 10;
@@ -80,7 +81,7 @@ function _ablegenAnbinden() {
                                   daten.category, daten.name, daten.frames);
             }
         } catch (err) {
-            console.warn('Drop failed:', err);
+            Protokoll.warnung('timeline', 'Drop failed:', err);
         }
     });
 }

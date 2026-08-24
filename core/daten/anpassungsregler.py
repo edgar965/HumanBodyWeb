@@ -26,7 +26,7 @@ class Anpassungsregler:
     SKALIERUNG = 1.0
     HOEHENVERSATZ = 0.0
     AUSSCHIEBEN_MM = 3.0
-    VORGABEFARBE = (0.3, 0.35, 0.5)
+    VORGABE_FARBE = (0.3, 0.35, 0.5)
 
     def __init__(self, steifigkeit=None, abstand=None, skalierung=None,
                  hoehenversatz=None, ausschieben_mm=None, mh_koerper=True,
@@ -63,6 +63,8 @@ class Anpassungsregler:
         try:
             wert = p.get(name)
             return vorgabe if wert in (None, '') else float(wert)
+        # stumm gewollt: Vorschrift dieser Klasse ist „unbrauchbar → Vorgabe“.
+        # Sie läuft je Regler jeder Anfrage; ein Log wäre eine Zeile pro Slider.
         except (TypeError, ValueError):
             return vorgabe
 
@@ -74,6 +76,7 @@ class Anpassungsregler:
             return None
         try:
             return tuple(float(w) for w in werte)
+        # stumm gewollt: wie `_zahl` — fehlt ein Kanal, gilt die Materialfarbe.
         except (TypeError, ValueError):
             return None
 
@@ -98,7 +101,7 @@ class Anpassungsregler:
             return self.farbe
         if ersatz:
             return tuple(ersatz)
-        return self.VORGABEFARBE
+        return self.VORGABE_FARBE
 
     def __repr__(self):
         return ('<Anpassungsregler steif=%.2f abstand=%.3f skal=%.2f '

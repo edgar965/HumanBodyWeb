@@ -211,7 +211,7 @@ export class Fotoanalyse {
             state.skinColors = state.morphsData.skin_colors || {};
             fn.buildMorphPanel(state.morphsData);
         } catch (fehler) {
-            console.warn('Morphs nicht neu ladbar:', fehler);
+            Protokoll.warnung('fotoanalyse', 'Morphs nicht neu ladbar:', fehler);
         }
     }
 
@@ -227,7 +227,7 @@ export class Fotoanalyse {
             Protokoll.debug('Foto->3D', 'Gewichte und Skelett neu geladen für',
                         state.currentBodyType);
         } catch (fehler) {
-            console.warn('Gewichte/Skelett nicht neu ladbar:', fehler);
+            Protokoll.warnung('fotoanalyse', 'Gewichte/Skelett nicht neu ladbar:', fehler);
         }
     }
 

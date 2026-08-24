@@ -5,200 +5,150 @@ Aus core/pipelines/pipelinelauf.py herausgeloest (Umbau 15.08.2026). Die Datei
 war beim Aufteilen von views.py entstanden und hatte selbst 1.228 Zeilen —
 darunter Funktionen von 300 Zeilen. Getrennt wird nach Pipeline: Wer an der
 OpenPose-Erkennung arbeitet, soll nicht die GVHMR-Nachbereitung mitlesen.
+
+UMBAU 17.08.2026: Hier standen drei freie Funktionen, die alle drei `job`,
+`video_path` und `output_dir` durchreichten — der einzige Befund des Werkzeugs
+`kapselung`. Dazu lag die Fortschrittsauswertung ZWEIMAL wortgleich in der
+Datei (25 Zeilen je Erkenner).
+
+Jetzt: eine Klasse `Erkennung2d` mit den drei Werten als Felder, und die
+Auswertung in `Erkennungsfortschritt` daneben. Die drei `_run_*`-Hüllen bleiben,
+weil `Auftragslauf._csv_erzeugen()` sie unter diesen Namen aufruft — und weil
+`ui/review_bereiche.py` sie als Fundstelle nennt.
 """
 
 import logging
+import os
+import time
+
+from django.conf import settings
+
+from .erkennungsfortschritt import Erkennungsfortschritt
 from .openposelauf import Openposelauf
 from .werkzeuge import _get_video_frame_count
 from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..models import AppSettings
 from ..pipeline_process import PipelineProzess
-from django.conf import settings
-import os
-
 
 MAX_ERROR_CHARS = 2000  # max stderr chars to include in error messages
 logger = logging.getLogger('core')
 
 
+class Erkennung2d:
+    """Ein 2D-Erkennungslauf zu genau einem Auftrag."""
+
+    #: Wie lange der Erkenner schweigen darf, bevor „hängt" gilt.
+    #: MediaPipe meldet mit `--progress-interval 1` jede Frame; so lange
+    #: schweigt es nur beim Laden der Modelle.
+    STILLE_MEDIAPIPE_S = 300
+    #: YOLO/RTMPose holen ihre Gewichte beim ersten Lauf — deshalb länger.
+    STILLE_NEUE_S = 900
+    #: Modellgröße je Erkenner aus den Einstellungen.
+    MODELLFELD = {'rtmpose': 'rtmpose_model_size',
+                  'vitpose': 'vitpose_model_size',
+                  'yolo11': 'yolo_model_size'}
+
+    def __init__(self, job, video_path, output_dir):
+        self.job = job
+        self.video_path = video_path
+        self.output_dir = output_dir
+
+    # ---------------------------------------------------------------- MediaPipe
+
+    def mediapipe(self):
+        """Schritt 1a: MediaPipe -> CSV, mit Fortschritt in Echtzeit."""
+        csv_ausgabe = self.output_dir / 'frames'
+        # `--progress-interval 1`: jede Frame melden, damit der Balken läuft.
+        befehl = [settings.PIPELINE_PYTHON, str(settings.MEDIAPIPE_SCRIPT),
+                  '--from', str(self.video_path), '-o', str(csv_ausgabe),
+                  '--headless', '--progress-interval', '1']
+        pp = self._fahren(befehl, settings.MOCAPNET_ROOT, 'mediapipe',
+                          Erkennung2d.STILLE_MEDIAPIPE_S, warten=600)
+
+        # Ein Abbruch über die Stoppmarke ist kein Fehlschlag: Der Aufrufer
+        # verwertet ein angefangenes CSV weiter (`Auftragslauf._csv_erzeugen`).
+        gestoppt = (self.output_dir / 'STOP_FLAG').exists()
+        if pp.proc.returncode != 0 and not gestoppt:
+            self._werfen('MediaPipe', pp)
+
+        csv_datei = os.path.join(str(csv_ausgabe) + '-mpdata',
+                                 '2dJoints_mediapipe.csv')
+        if not os.path.exists(csv_datei):
+            if gestoppt:
+                raise RuntimeError('Stopped early — no CSV data was written yet')
+            raise RuntimeError('CSV file not found at %s' % csv_datei)
+        return csv_datei
+
+    # ----------------------------------------------------------------- OpenPose
+
+    def openpose(self):
+        """Schritt 1b: OpenPose -> JSON -> CSV mit Fortschritt.
+
+        Der Ablauf steckt in `Openposelauf` (openposelauf.py) — vorher 138 Zeilen
+        hier, die längste Funktion des Projekts.
+        """
+        return Openposelauf(self.job, self.video_path, self.output_dir,
+                            _get_video_frame_count(self.video_path),
+                            PipelineProzess, LaufendeProzesse).ausfuehren()
+
+    # ------------------------------------------------------- Neue 2D-Erkenner
+
+    def neuer_erkenner(self):
+        """RTMPose / ViTPose / YOLO11 über die Wrapper-Skripte."""
+        csv_ausgabe = str(self.output_dir / ('%s_2d.csv' % self.job.pipeline))
+        einstellungen = AppSettings.load()
+        groesse = getattr(einstellungen,
+                          Erkennung2d.MODELLFELD.get(self.job.pipeline, ''), 'l')
+        befehl = [settings.PIPELINE_PYTHON,
+                  str(settings.WRAPPERS_DIR / 'detect_2d.py'),
+                  '--detector', self.job.pipeline,
+                  '--video', str(self.video_path),
+                  '--output', csv_ausgabe,
+                  '--model-size', groesse]
+        pp = self._fahren(befehl, settings.WRAPPERS_DIR.parent, 'detecting_2d',
+                          Erkennung2d.STILLE_NEUE_S, warten=3600,
+                          name=self.job.get_pipeline_display())
+        if pp.proc.returncode != 0:
+            self._werfen("2D detector '%s'" % self.job.pipeline, pp)
+        return csv_ausgabe
+
+    # ---------------------------------------------------------------- Gemeinsam
+
+    def _fahren(self, befehl, arbeitsordner, status, stille, warten, name=''):
+        """Prozess starten, Ausgabe auswerten, auf das Ende warten.
+
+        `PipelineProzess.starten` setzt `encoding='utf-8'`/`errors='replace'`
+        (Windows-Vorgabe ist cp1252) und räumt stderr in einem eigenen Faden ab —
+        ohne das blockiert die Pipe bei viel Ausgabe.
+        """
+        fortschritt = Erkennungsfortschritt(
+            self.job, _get_video_frame_count(self.video_path), time.time(), name)
+        fortschritt.anfangsmeldung(status)
+        pp = PipelineProzess.starten(befehl, cwd=arbeitsordner)
+        LaufendeProzesse.eintragen(self.job.id, pp.proc)
+        for zeile in pp.stdout_zeilen(stille_timeout=stille):
+            fortschritt.zeile_lesen(zeile, time.time())
+        pp.warten(timeout=warten)
+        return pp
+
+    @staticmethod
+    def _werfen(was, pp):
+        fehler = ''.join(pp.stderr_zeilen)[-MAX_ERROR_CHARS:]
+        raise RuntimeError('%s failed (exit code %s):\n%s'
+                           % (was, pp.proc.returncode, fehler))
+
+
+# --- Hüllen für `Auftragslauf._csv_erzeugen()` -------------------------------
+# Die Pipeline-Steuerung ruft diese drei Namen; `ui/review_bereiche.py` nennt sie
+# als Fundstelle. Deshalb bleiben sie stehen — als Einzeiler.
+
 def _run_mediapipe_to_csv(job, video_path, output_dir):
-    """Step 1a: MediaPipe -> CSV with real-time progress updates."""
-    import time as _time
-
-    total_frames = _get_video_frame_count(video_path)
-    job.status = 'mediapipe'
-    job.progress = 0
-    job.progress_detail = f'0 / {total_frames} frames' if total_frames else 'Starting MediaPipe...'
-    job.save()
-
-    csv_output = output_dir / 'frames'
-    mediapipe_script = str(settings.MEDIAPIPE_SCRIPT)
-
-    # Use interval=1 so we get every frame for smooth progress
-    cmd = [settings.PIPELINE_PYTHON, mediapipe_script, '--from', str(video_path),
-           '-o', str(csv_output), '--headless',
-           '--progress-interval', '1']
-
-
-    # Capture stderr in a thread to prevent pipe deadlock
-    # Start über PipelineProzess: setzt encoding='utf-8'/errors='replace' (hier
-    # fehlte es — Windows-Vorgabe ist cp1252) und räumt stderr in einem eigenen
-    # Faden ab. Leselogik und Erfolgsprüfung unten bleiben unverändert.
-    pp = PipelineProzess.starten(cmd, cwd=settings.MOCAPNET_ROOT)
-    proc, stderr_lines = pp.proc, pp.stderr_zeilen
-    LaufendeProzesse.eintragen(job.id, proc)
-
-    mp_start = _time.time()
-    last_update = 0
-
-    # 300 s Stille sind hier grosszuegig: MediaPipe meldet mit
-    # --progress-interval 1 jede Frame. So lange schweigt es nur beim Laden der
-    # Modelle. Danach heisst Stille: haengt (siehe PipelineProzess).
-    for line in pp.stdout_zeilen(stille_timeout=300):
-        line = line.strip()
-        if line.startswith('TOTAL:'):
-            try:
-                total_frames = int(line[6:])
-                job.progress_detail = f'0 / {total_frames} frames — starting...'
-                job.save()
-            except ValueError:
-                logger.debug('uebergangen', exc_info=True)
-        elif line.startswith('PROGRESS:'):
-            now = _time.time()
-            # Only save to DB once per second to avoid overhead
-            if now - last_update < 1.0:
-                continue
-            last_update = now
-            try:
-                parts = line[9:].split('/')
-                current = int(parts[0])
-                total = int(parts[1]) if len(parts) > 1 else total_frames
-                if total > 0 and current > 0:
-                    pct = int((current / total) * 45)
-                    elapsed = now - mp_start
-                    fps = current / max(elapsed, 0.1)
-                    remaining = int((total - current) / max(fps, 0.01))
-                    job.progress = pct
-                    job.progress_detail = (
-                        f'{current} / {total} frames — '
-                        f'{fps:.1f} fps, ~{remaining}s left'
-                    )
-                    job.save()
-            except (ValueError, IndexError):
-                logger.debug('uebergangen', exc_info=True)
-
-    pp.warten(timeout=600)
-
-    # Check if stopped via STOP_FLAG
-    stop_flag = output_dir / 'STOP_FLAG'
-    stopped = stop_flag.exists()
-
-    if proc.returncode != 0 and not stopped:
-        stderr = ''.join(stderr_lines)
-        raise RuntimeError(f"MediaPipe failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
-
-    csv_dir = str(csv_output) + '-mpdata'
-    csv_file = os.path.join(csv_dir, '2dJoints_mediapipe.csv')
-    if not os.path.exists(csv_file):
-        if stopped:
-            raise RuntimeError("Stopped early — no CSV data was written yet")
-        raise RuntimeError(f"CSV file not found at {csv_file}")
-
-    return csv_file
+    return Erkennung2d(job, video_path, output_dir).mediapipe()
 
 
 def _run_openpose_to_csv(job, video_path, output_dir):
-    """Step 1b: OpenPose -> JSON -> CSV mit Fortschritt.
-
-    Der Ablauf steckt in Openposelauf (openposelauf.py) — vorher 138 Zeilen
-    hier, die laengste Funktion des Projekts. Diese Huelle bleibt, weil die
-    Pipeline-Steuerung sie unter diesem Namen aufruft.
-    """
-    return Openposelauf(job, video_path, output_dir,
-                        _get_video_frame_count(video_path),
-                        PipelineProzess, LaufendeProzesse).ausfuehren()
+    return Erkennung2d(job, video_path, output_dir).openpose()
 
 
 def _run_new_2d_detector(job, video_path, output_dir):
-    """Run RTMPose / ViTPose / YOLO11 2D detection via wrapper scripts."""
-    import time as _time
-
-    csv_output = str(output_dir / f'{job.pipeline}_2d.csv')
-    wrapper_script = str(settings.WRAPPERS_DIR / 'detect_2d.py')
-
-    s = AppSettings.load()
-    model_size_map = {
-        'rtmpose': s.rtmpose_model_size,
-        'vitpose': s.vitpose_model_size,
-        'yolo11': s.yolo_model_size,
-    }
-    model_size = model_size_map.get(job.pipeline, 'l')
-
-    total_frames = _get_video_frame_count(video_path)
-    pipeline_name = job.get_pipeline_display()
-
-    job.status = 'detecting_2d'
-    job.progress = 0
-    job.progress_detail = f'0 / {total_frames} frames' if total_frames else f'Starting {pipeline_name}...'
-    job.save()
-
-    cmd = [
-        settings.PIPELINE_PYTHON, wrapper_script,
-        '--detector', job.pipeline,
-        '--video', str(video_path),
-        '--output', csv_output,
-        '--model-size', model_size,
-    ]
-
-    pp = PipelineProzess.starten(cmd, cwd=settings.WRAPPERS_DIR.parent)
-    proc, stderr_lines = pp.proc, pp.stderr_zeilen
-    LaufendeProzesse.eintragen(job.id, proc)
-
-    det_start = _time.time()
-    last_update = 0
-
-    # 900 s wie bei v4: YOLO/RTMPose holen ihre Gewichte beim ersten Lauf.
-    for line in pp.stdout_zeilen(stille_timeout=900):
-        line = line.strip()
-        if line.startswith('STATUS:'):
-            msg = line[7:]
-            job.progress_detail = f'{pipeline_name}: {msg}'
-            job.save()
-        elif line.startswith('TOTAL:'):
-            try:
-                total_frames = int(line[6:])
-                job.progress_detail = f'0 / {total_frames} frames — starting...'
-                job.save()
-                det_start = _time.time()
-            except ValueError:
-                logger.debug('uebergangen', exc_info=True)
-        elif line.startswith('PROGRESS:'):
-            now = _time.time()
-            if now - last_update < 1.0:
-                continue
-            last_update = now
-            try:
-                parts = line[9:].split('/')
-                current = int(parts[0])
-                total = int(parts[1]) if len(parts) > 1 else total_frames
-                if total > 0 and current > 0:
-                    pct = int((current / total) * 45)
-                    elapsed = now - det_start
-                    fps = current / max(elapsed, 0.1)
-                    remaining = int((total - current) / max(fps, 0.01))
-                    job.progress = pct
-                    job.progress_detail = (
-                        f'{pipeline_name}: {current} / {total} frames — '
-                        f'{fps:.1f} fps, ~{remaining}s left'
-                    )
-                    job.save()
-            except (ValueError, IndexError):
-                logger.debug('uebergangen', exc_info=True)
-
-    pp.warten(timeout=3600)
-
-    if proc.returncode != 0:
-        stderr = ''.join(stderr_lines)
-        raise RuntimeError(f"2D detector '{job.pipeline}' failed (exit code {proc.returncode}):\n{stderr[-MAX_ERROR_CHARS:]}")
-
-    return csv_output
+    return Erkennung2d(job, video_path, output_dir).neuer_erkenner()

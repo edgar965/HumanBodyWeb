@@ -17,7 +17,7 @@ export class Videovorschau {
     constructor() {
         this.bereich = document.getElementById('videoPreview');
         this.video = document.getElementById('previewVideo');
-        this.titel = document.getElementById('previewTitle');
+        this.titel = document.getElementById('preview-title');
     }
 
     aufbauen() {
@@ -26,7 +26,7 @@ export class Videovorschau {
                 this.zeigen(element.dataset.video, element.dataset.videoname);
             });
         });
-        document.getElementById('previewClose')
+        document.getElementById('preview-close')
             ?.addEventListener('click', () => this.schliessen());
         return this;
     }
@@ -40,6 +40,8 @@ export class Videovorschau {
         // vorher `pause()` kommt (Schliessen kurz nach dem Oeffnen). Ohne
         // diesen Fänger steht die Ausnahme in der Konsole, obwohl nichts
         // kaputt ist — im Browser gemessen am 16.08.2026.
+        // stumm gewollt: Die Autoplay-Sperre des Browsers ist der erwartete Fall,
+        // siehe die drei Zeilen darüber.
         this.video.play()?.catch(() => {});
     }
 

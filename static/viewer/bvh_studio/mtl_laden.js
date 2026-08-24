@@ -42,12 +42,12 @@ export async function _autoDiscoverMtl(objUrl) {
                     Protokoll.debug('OBJ', `mtllib "${ref}" aufgelöst → ${testUrl}`);
                     return testUrl;
                 }
-            } catch {}
+            } catch { Protokoll.debug('OBJ', `mtllib-Kandidat ${testUrl} nicht erreichbar`); }
         }
-        console.warn(`[OBJ] mtllib "${ref}" konnte nicht im Bundle aufgelöst werden`);
+        Protokoll.warnung('OBJ', `mtllib "${ref}" konnte nicht im Bundle aufgelöst werden`);
         return null;
     } catch (e) {
-        console.warn('[OBJ] MTL-Autodiscover fehlgeschlagen:', e);
+        Protokoll.warnung('OBJ', 'MTL-Autodiscover fehlgeschlagen:', e);
         return null;
     }
 }
@@ -112,10 +112,11 @@ export async function _parseMtlAndBuildMaterials(mtlUrl) {
                 Protokoll.debug('MTL', `Textur geladen: ${c}`);
                 return tex;
             } catch (e) {
+                Protokoll.debug('MTL', `Textur-Kandidat ${c} nicht ladbar`, e);
                 // stille Retry auf nächsten Kandidaten
             }
         }
-        console.warn(`[MTL] Textur NICHT GEFUNDEN: "${rawPath}" — getestet: ${candidates.map(c => basePath + c).join(', ')}`);
+        Protokoll.warnung('MTL', `Textur NICHT GEFUNDEN: "${rawPath}" — getestet: ${candidates.map(c => basePath + c).join(', ')}`);
         return null;
     };
 

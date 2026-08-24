@@ -1,0 +1,171 @@
+/* Viewer-Hülle — Leinwand, Seitenleisten, Regler
+ *
+ * Die Hülle jeder 3D-Seite: Vollbild-Leinwand links, Klapp-Panels
+ * rechts, Reglerzeilen darin. Sie stand in sieben Vorlagen kopiert.
+ *
+ * ERZEUGT von Docu/umbau/css_ausziehen.py am 17.08.2026 aus den Inline-Stilen der Vorlagen. Wer hier ändert,
+ * ändert alle Seiten — genau das war der Zweck.
+ */
+
+.main-content {
+    padding: 0 !important;
+    max-width: none !important;
+    width: calc(100vw - var(--sidebar-width));
+}
+
+.viewer-container {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    gap: 0;
+    position: relative;
+}
+
+.canvas-wrap {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+}
+
+#viewer-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #111;
+    cursor: grab;
+}
+
+#viewer-canvas:active { cursor: grabbing; }
+
+.viewer-btn {
+    padding: 8px 14px;
+    background: rgba(26, 26, 46, 0.85);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.82rem;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s;
+}
+
+.viewer-btn:hover { border-color: var(--accent); color: var(--text); }
+
+.viewer-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.viewer-panel {
+    width: 320px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 0;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-section {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+}
+
+.panel-section h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    margin-bottom: 10px;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.panel-section h3 .chevron {
+    transition: transform 0.2s;
+    font-size: 0.7rem;
+}
+
+.panel-section.collapsed .panel-body { display: none; }
+
+.panel-section.collapsed h3 .chevron { transform: rotate(-90deg); }
+
+.panel-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-pane { display: none; }
+
+.tab-pane.active { display: block; }
+
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    height: 4px;
+}
+
+.slider-row .slider-val {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    min-width: 35px;
+    text-align: right;
+}
+
+select.viewer-select {
+    width: 100%;
+    padding: 6px 8px;
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+}
+
+.status-bar {
+    padding: 8px 16px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    background: var(--bg-primary);
+}
+
+.morph-category {
+    margin-bottom: 4px;
+}
+
+.morph-category-header {
+    font-size: 0.78rem;
+    color: var(--text);
+    cursor: pointer;
+    padding: 4px 0;
+    user-select: none;
+}
+
+.morph-category-header:hover { color: var(--accent); }
+
+.morph-category-body { display: none; }
+
+.morph-category.open .morph-category-body { display: block; }
+
+.btn-reset {
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    float: right;
+}
+
+.btn-reset:hover { border-color: var(--accent); color: var(--text); }

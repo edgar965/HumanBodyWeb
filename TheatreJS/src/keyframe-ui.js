@@ -1,317 +1,208 @@
 /**
  * Simple Keyframe UI for Camera/Light Animation
  * Uses Theatre.js Core API without Studio UI
+ *
+ * UMBAU 18.08.2026: 319 Zeilen, davon rund 60 Markup mit Inline-Stilen. Jetzt:
+ *
+ *     studio/keyframefeld.js    das Bedienfeld (Stile als .kf-* in theatre.html)
+ *     studio/keyframeliste.js   die Liste der Schlüsselbilder
+ *     studio/keyframeablage.js  Aus- und Einlesen als JSON
+ *
+ * Hier bleiben Zustand und Ablauf: setzen, auf die Sequenz schreiben, abspielen.
  */
+import { Keyframefeld } from './studio/keyframefeld.js';
+import { Keyframeliste } from './studio/keyframeliste.js';
+import { Keyframeablage } from './studio/keyframeablage.js';
+import { Protokoll } from '../../static/viewer/gemeinsam/protokoll.js';
 
 export class KeyframeUI {
-    constructor(project, sheet, objects) {
+
+    static VORGABE_DAUER = 10;
+
+    constructor(project, sheet, objects, studio) {
         this.project = project;
         this.sheet = sheet;
-        this.objects = objects; // { Camera: theatreObj, 'Spot Left': theatreObj, ... }
-        this.keyframes = []; // { time, objectName, values }
+        this.studio = studio;
+        this.sequence = sheet.sequence;
+        this.objects = objects;   // { Camera: theatreObj, 'Spot Left': …, … }
+        this.keyframes = [];      // { id, time, objectName, values }
         this.isPlaying = false;
         this.currentTime = 0;
-        this.duration = 10; // Default 10 seconds
-
-        this.setupUI();
-        this.setupSequence();
-    }
-
-    setupUI() {
-        // Create Keyframe panel in right sidebar
-        const tabPane = document.getElementById('tab-keyframes');
-        if (!tabPane) {
-            console.error('Keyframe tab pane not found');
-            return;
+        this.duration = KeyframeUI.VORGABE_DAUER;
+        this.liste = new Keyframeliste(kennung => this.deleteKeyframe(kennung));
+        if (new Keyframefeld(Object.keys(objects)).aufbauen()) {
+            this.attachEventListeners();
+        } else {
+            Protokoll.warnung('keyframe-ui', 'Reiter „Keyframes" nicht gefunden');
         }
-
-        tabPane.innerHTML = `
-            <div class="keyframe-panel">
-                <div class="kf-controls">
-                    <h3 style="margin: 0 0 12px 0; font-size: 0.9rem; color: #aaa;">Animation Timeline</h3>
-
-                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                        <button id="kf-play" class="btn-secondary" style="flex: 1;">
-                            <i class="fas fa-play"></i> Play
-                        </button>
-                        <button id="kf-stop" class="btn-secondary" style="flex: 1;">
-                            <i class="fas fa-stop"></i> Stop
-                        </button>
-                    </div>
-
-                    <div style="margin-bottom: 12px;">
-                        <label style="font-size: 0.75rem; color: #888;">Duration (seconds)</label>
-                        <input type="number" id="kf-duration" value="10" min="1" max="300"
-                               style="width: 100%; padding: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px;">
-                    </div>
-
-                    <div style="margin-bottom: 12px;">
-                        <label style="font-size: 0.75rem; color: #888;">Current Time: <span id="kf-time-display">0.00s</span></label>
-                        <input type="range" id="kf-timeline" min="0" max="10" step="0.1" value="0"
-                               style="width: 100%; margin-top: 4px;">
-                    </div>
-
-                    <div style="margin-bottom: 16px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
-                        <label style="font-size: 0.75rem; color: #888; display: block; margin-bottom: 8px;">Add Keyframe</label>
-                        <select id="kf-object-select" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px; margin-bottom: 8px;">
-                            ${Object.keys(this.objects).map(name => `<option value="${name}">${name}</option>`).join('')}
-                        </select>
-                        <button id="kf-add" class="btn-primary" style="width: 100%;">
-                            <i class="fas fa-plus"></i> Add Keyframe at Current Time
-                        </button>
-                    </div>
-                </div>
-
-                <div class="kf-list">
-                    <h4 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #888;">Keyframes</h4>
-                    <div id="kf-keyframes" style="max-height: 300px; overflow-y: auto;">
-                        <div style="color: #666; font-size: 0.75rem; padding: 12px; text-align: center;">
-                            No keyframes yet. Add one to start animating!
-                        </div>
-                    </div>
-                </div>
-
-                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 8px;">
-                    <button id="kf-export" class="btn-secondary" style="flex: 1; font-size: 0.75rem;">
-                        <i class="fas fa-download"></i> Export
-                    </button>
-                    <button id="kf-import" class="btn-secondary" style="flex: 1; font-size: 0.75rem;">
-                        <i class="fas fa-upload"></i> Import
-                    </button>
-                    <button id="kf-clear" class="btn-secondary" style="flex: 1; font-size: 0.75rem;">
-                        <i class="fas fa-trash"></i> Clear
-                    </button>
-                </div>
-            </div>
-        `;
-
-        this.attachEventListeners();
     }
 
-    setupSequence() {
-        this.sequence = this.sheet.sequence;
-    }
+    // ------------------------------------------------------------- Verdrahten
 
     attachEventListeners() {
-        // Play/Stop controls
-        document.getElementById('kf-play').addEventListener('click', () => this.play());
-        document.getElementById('kf-stop').addEventListener('click', () => this.stop());
-
-        // Duration change
-        document.getElementById('kf-duration').addEventListener('change', (e) => {
-            this.duration = parseFloat(e.target.value);
-            document.getElementById('kf-timeline').max = this.duration;
-        });
-
-        // Timeline scrubbing
-        const timeline = document.getElementById('kf-timeline');
-        timeline.addEventListener('input', (e) => {
-            this.currentTime = parseFloat(e.target.value);
-            this.sequence.position = this.currentTime;
-            this.updateTimeDisplay();
-        });
-
-        // Add keyframe
-        document.getElementById('kf-add').addEventListener('click', () => this.addKeyframe());
-
-        // Export/Import/Clear
-        document.getElementById('kf-export').addEventListener('click', () => this.exportKeyframes());
-        document.getElementById('kf-import').addEventListener('click', () => this.importKeyframes());
-        document.getElementById('kf-clear').addEventListener('click', () => this.clearKeyframes());
+        this._klick('kf-play', () => this.play());
+        this._klick('kf-stop', () => this.stop());
+        this._klick('kf-add', () => this.addKeyframe());
+        this._klick('kf-clear', () => this.clearKeyframes());
+        this._klick('kf-export',
+                    () => Keyframeablage.ausgeben(this.duration, this.keyframes));
+        this._klick('kf-import',
+                    () => Keyframeablage.einlesen(daten => this._uebernehmen(daten)));
+        document.getElementById('kf-duration')?.addEventListener('change',
+            ereignis => this.dauerSetzen(parseFloat(ereignis.target.value)));
+        document.getElementById('kf-timeline')?.addEventListener('input',
+            ereignis => this.zeitSetzen(parseFloat(ereignis.target.value)));
     }
+
+    _klick(kennung, tun) {
+        document.getElementById(kennung)?.addEventListener('click', tun);
+    }
+
+    dauerSetzen(dauer) {
+        this.duration = dauer;
+        const leiste = document.getElementById('kf-timeline');
+        if (leiste) leiste.max = dauer;
+    }
+
+    zeitSetzen(zeit) {
+        this.currentTime = zeit;
+        this.sequence.position = zeit;
+        this.updateTimeDisplay();
+    }
+
+    // -------------------------------------------------------- Schlüsselbilder
 
     addKeyframe() {
-        const objectName = document.getElementById('kf-object-select').value;
-        const theatreObj = this.objects[objectName];
-        if (!theatreObj) return;
-
-        // Get current values from Theatre.js object
-        const values = theatreObj.value;
-
-        // Store keyframe
-        const keyframe = {
+        const name = document.getElementById('kf-object-select')?.value;
+        const objekt = this.objects[name];
+        if (!objekt) return;
+        this.keyframes.push({
             id: Date.now(),
             time: this.currentTime,
-            objectName: objectName,
-            values: JSON.parse(JSON.stringify(values)) // Deep copy
-        };
-
-        this.keyframes.push(keyframe);
+            objectName: name,
+            values: JSON.parse(JSON.stringify(objekt.value)),   // tiefe Kopie
+        });
         this.keyframes.sort((a, b) => a.time - b.time);
-
-        // Update Theatre.js sequence with keyframe
         this.applyKeyframesToSequence();
-        this.renderKeyframeList();
-
-        console.debug(`✓ Keyframe added for ${objectName} at ${this.currentTime.toFixed(2)}s`, values);
+        this.liste.zeichnen(this.keyframes);
+        Protokoll.debug('keyframe-ui',
+                        `✓ Keyframe added for ${name} `
+                        + `at ${this.currentTime.toFixed(2)}s`);
     }
 
+    /**
+     * Alle Schlüsselbilder in die Theatre-Sequenz schreiben.
+     *
+     * Theatre.js setzt einen Schlüssel dort, wo die Sequenz gerade steht —
+     * deshalb wird die Position je Bild verschoben und am Ende zurückgestellt.
+     *
+     * GESCHRIEBEN WIRD ÜBER `studio.transaction` (Befund 18.08.2026). Vorher
+     * stand hier `objekt.props[feld][unterfeld].setValue(wert)` — ein Zeiger
+     * von Theatre.js hat aber gar kein `setValue`. Jeder Klick auf „Add
+     * Keyframe" endete deshalb in
+     *
+     *     TypeError: e.props[n][a].setValue is not a function
+     *
+     * und weil der Fehler mitten im Ablauf flog, wurde auch die Liste darunter
+     * nie neu gezeichnet: Der Reiter sah aus, als nähme er keine Keyframes an.
+     * `Zeitleistenwerkzeuge.neuAufbauen` macht es seit jeher richtig.
+     */
     applyKeyframesToSequence() {
-        // Group keyframes by object
-        const byObject = {};
-        for (const kf of this.keyframes) {
-            if (!byObject[kf.objectName]) byObject[kf.objectName] = [];
-            byObject[kf.objectName].push(kf);
-        }
-
-        // Apply to each object's track
-        for (const [objName, kfList] of Object.entries(byObject)) {
-            const theatreObj = this.objects[objName];
-            if (!theatreObj) continue;
-
-            // Theatre.js uses sequence.position to set keyframes
-            for (const kf of kfList) {
-                this.sequence.position = kf.time;
-                // Set values at this position
-                for (const [key, value] of Object.entries(kf.values)) {
-                    if (typeof value === 'object' && !Array.isArray(value)) {
-                        // Compound prop (position, rotation, etc.)
-                        for (const [subKey, subValue] of Object.entries(value)) {
-                            theatreObj.props[key][subKey].setValue(subValue);
-                        }
-                    } else {
-                        theatreObj.props[key].setValue(value);
-                    }
+        for (const bild of this.keyframes) {
+            const objekt = this.objects[bild.objectName];
+            if (!objekt) continue;
+            this.sequence.position = bild.time;
+            this.studio.transaction(({ set }) => {
+                for (const [feld, wert] of Object.entries(bild.values)) {
+                    KeyframeUI._setzen(set, objekt, feld, wert);
                 }
-            }
+            });
         }
-
-        // Return to current time
         this.sequence.position = this.currentTime;
     }
 
-    renderKeyframeList() {
-        const container = document.getElementById('kf-keyframes');
-        if (this.keyframes.length === 0) {
-            container.innerHTML = '<div style="color: #666; font-size: 0.75rem; padding: 12px; text-align: center;">No keyframes yet</div>';
+    /** Zusammengesetzte Werte (Position, Drehung) gehen nur einzeln. */
+    static _setzen(set, objekt, feld, wert) {
+        if (typeof wert === 'object' && wert !== null && !Array.isArray(wert)) {
+            for (const [unterfeld, unterwert] of Object.entries(wert)) {
+                set(objekt.props[feld][unterfeld], unterwert);
+            }
             return;
         }
-
-        container.innerHTML = this.keyframes.map(kf => `
-            <div class="kf-item" data-id="${kf.id}" style="padding: 8px; margin-bottom: 4px; background: rgba(255,255,255,0.05); border-radius: 4px; font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="color: #aaa; font-weight: 500;">${kf.objectName}</div>
-                    <div style="color: #666; font-size: 0.7rem;">${kf.time.toFixed(2)}s</div>
-                </div>
-                <button class="kf-delete" data-id="${kf.id}" style="background: rgba(231, 76, 60, 0.2); border: none; color: #e74c3c; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 0.7rem;">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `).join('');
-
-        // Attach delete handlers
-        container.querySelectorAll('.kf-delete').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const id = parseInt(e.currentTarget.dataset.id);
-                this.deleteKeyframe(id);
-            });
-        });
+        set(objekt.props[feld], wert);
     }
 
-    deleteKeyframe(id) {
-        this.keyframes = this.keyframes.filter(kf => kf.id !== id);
+    deleteKeyframe(kennung) {
+        this.keyframes = this.keyframes.filter(bild => bild.id !== kennung);
         this.applyKeyframesToSequence();
-        this.renderKeyframeList();
+        this.liste.zeichnen(this.keyframes);
     }
 
     clearKeyframes() {
         this.keyframes = [];
-        this.renderKeyframeList();
-        // Trigger the Tools > Timeline löschen menu action
-        const btn = document.getElementById('menu-tracks-clear');
-        if (btn) btn.click();
+        this.liste.zeichnen(this.keyframes);
+        // „Timeline löschen" im Werkzeugmenü raeumt auch den gespeicherten
+        // Theatre-Zustand ab — sonst kaeme er beim naechsten Laden zurueck.
+        document.getElementById('menu-tracks-clear')?.click();
     }
+
+    _uebernehmen({ dauer, schluesselbilder }) {
+        this.keyframes = schluesselbilder;
+        this.dauerSetzen(dauer);
+        const feld = document.getElementById('kf-duration');
+        if (feld) feld.value = dauer;
+        this.applyKeyframesToSequence();
+        this.liste.zeichnen(this.keyframes);
+    }
+
+    // ------------------------------------------------------------- Abspielen
 
     play() {
         if (this.isPlaying) return;
         this.isPlaying = true;
-
-        const playBtn = document.getElementById('kf-play');
-        playBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
-        playBtn.onclick = () => this.pause();
-
-        // Use Theatre.js sequence play
+        this._spielknopf(true);
         this.sequence.play({ range: [0, this.duration], rate: 1 });
-
-        // Update UI in sync
         this.playLoop();
     }
 
     pause() {
         this.isPlaying = false;
-        const playBtn = document.getElementById('kf-play');
-        playBtn.innerHTML = '<i class="fas fa-play"></i> Play';
-        playBtn.onclick = () => this.play();
+        this._spielknopf(false);
     }
 
     stop() {
         this.isPlaying = false;
-        this.currentTime = 0;
-        this.sequence.position = 0;
-        document.getElementById('kf-timeline').value = 0;
-        this.updateTimeDisplay();
+        this.zeitSetzen(0);
+        const leiste = document.getElementById('kf-timeline');
+        if (leiste) leiste.value = 0;
+        this._spielknopf(false);
+    }
 
-        const playBtn = document.getElementById('kf-play');
-        playBtn.innerHTML = '<i class="fas fa-play"></i> Play';
-        playBtn.onclick = () => this.play();
+    /** Der Knopf trägt beide Bedeutungen — deshalb wechselt auch sein Zuhörer. */
+    _spielknopf(laeuft) {
+        const knopf = document.getElementById('kf-play');
+        if (!knopf) return;
+        knopf.innerHTML = laeuft
+            ? '<i class="fas fa-pause"></i> Pause'
+            : '<i class="fas fa-play"></i> Play';
+        knopf.onclick = laeuft ? () => this.pause() : () => this.play();
     }
 
     playLoop() {
         if (!this.isPlaying) return;
-
         this.currentTime = this.sequence.position;
         if (this.currentTime >= this.duration) {
             this.stop();
             return;
         }
-
-        document.getElementById('kf-timeline').value = this.currentTime;
+        const leiste = document.getElementById('kf-timeline');
+        if (leiste) leiste.value = this.currentTime;
         this.updateTimeDisplay();
-
         requestAnimationFrame(() => this.playLoop());
     }
 
     updateTimeDisplay() {
-        document.getElementById('kf-time-display').textContent = this.currentTime.toFixed(2) + 's';
-    }
-
-    exportKeyframes() {
-        const data = {
-            duration: this.duration,
-            keyframes: this.keyframes
-        };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'theatre_keyframes.json';
-        a.click();
-        console.debug('✓ Keyframes exported');
-    }
-
-    importKeyframes() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                try {
-                    const data = JSON.parse(ev.target.result);
-                    this.keyframes = data.keyframes || [];
-                    this.duration = data.duration || 10;
-                    document.getElementById('kf-duration').value = this.duration;
-                    document.getElementById('kf-timeline').max = this.duration;
-                    this.applyKeyframesToSequence();
-                    this.renderKeyframeList();
-                    console.debug('✓ Keyframes imported:', this.keyframes.length);
-                } catch (err) {
-                    alert('Import failed: ' + err.message);
-                }
-            };
-            reader.readAsText(file);
-        };
-        input.click();
+        const anzeige = document.getElementById('kf-time-display');
+        if (anzeige) anzeige.textContent = this.currentTime.toFixed(2) + 's';
     }
 }

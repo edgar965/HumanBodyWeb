@@ -91,7 +91,11 @@ function populateTransform(inst) {
         const lbl = document.createElement('label'); lbl.textContent = row.label; grid.appendChild(lbl);
         for (const axis of axes) {
             const input = document.createElement('input');
-            input.type = 'number'; input.step = row.step; input.dataset.prop = row.prop; input.dataset.axis = axis; input.className = 'prop-transform-input';
+            input.type = 'number';
+            input.step = row.step;
+            input.dataset.prop = row.prop;
+            input.dataset.axis = axis;
+            input.className = 'prop-transform-input';
             let val = row.isDeg ? THREE.MathUtils.radToDeg(inst.group.rotation[axis]) : inst.group[row.prop][axis];
             input.value = parseFloat(val.toFixed(3));
             input.addEventListener('input', () => {
@@ -249,7 +253,10 @@ export function updateEquippedList(inst) {
             else if (fresh.type === 'hair') fn._syncPropHairControls();
             updateEquippedList(inst);
         });
-        const rmBtn = document.createElement('button'); rmBtn.className = 'equipped-item-remove'; rmBtn.innerHTML = '&#10005;'; rmBtn.title = 'Entfernen';
+        const rmBtn = document.createElement('button');
+        rmBtn.className = 'equipped-item-remove';
+        rmBtn.innerHTML = '&#10005;';
+        rmBtn.title = 'Entfernen';
         rmBtn.addEventListener('click', (e) => { e.stopPropagation(); fn._removeSubMesh(t); });
         li.appendChild(nameSpan); li.appendChild(rmBtn); list.appendChild(li);
     }

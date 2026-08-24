@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { el, Abschnitt, Reglerzeile } from './bauteile.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
  * Stoffabschnitt — der Bereich "Cloth - Template" des Bedienfelds: Schnitt
@@ -132,7 +133,7 @@ export class Stoffabschnitt {
                     new Option(schnitt.label, schnitt.key));
             }
         } catch (fehler) {
-            console.warn('[result_character] Schnitte nicht ladbar:', fehler);
+            Protokoll.warnung('result_character', 'Schnitte nicht ladbar:', fehler);
         }
     }
 }

@@ -44,7 +44,7 @@ export function _renderGarmentList() {
         : state._garmentCatalog;
 
     if (filtered.length === 0) {
-        list.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Garments gefunden</div>';
+        list.innerHTML = '<div class="leer-hinweis">Keine Garments gefunden</div>';
         return;
     }
 

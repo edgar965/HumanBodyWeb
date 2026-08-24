@@ -193,8 +193,10 @@ class PipelineProzess:
                 ziel.append(zeile)
                 if len(ziel) > PipelineProzess.STDERR_ZEILEN:
                     del ziel[:-PipelineProzess.STDERR_ZEILEN]
+        # stumm gewollt: Der Strom wurde geschlossen — der Prozess ist fertig.
+        # Das ist das normale Ende dieses Fadens, kein Fehler.
         except (ValueError, OSError):
-            pass                     # Strom wurde geschlossen — der Prozess ist fertig
+            pass
 
     @classmethod
     def _stdout_lesen(cls, strom, ziel_q):
@@ -202,8 +204,10 @@ class PipelineProzess:
         try:
             for zeile in strom:
                 ziel_q.put(zeile)
+        # stumm gewollt: Strom geschlossen — normales Ende. Das `finally`
+        # darunter setzt die Endmarke, sonst wartet der Abholer ewig.
         except (ValueError, OSError):
-            pass                     # Strom geschlossen
+            pass
         finally:
             ziel_q.put(cls._ENDE)    # auch im Fehlerfall: sonst wartet der Abholer ewig
 
@@ -279,6 +283,8 @@ class PipelineProzess:
             # Prozess gewartet, den niemand beendet hat.
             try:
                 self.proc.kill()
+            # stumm gewollt: Der Prozess kann zwischen der Pruefung und dem
+            # `kill` von selbst enden. Genau dann wollten wir ihn beenden.
             except OSError:
                 pass
         try:

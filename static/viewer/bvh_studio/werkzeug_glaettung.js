@@ -3,248 +3,223 @@
  *
  * Aus tools.js herausgeloest (Umbau 15.08.2026). Geglaettet werden
  * QUATERNIONEN, nicht Eulerwinkel — die springen bei jedem Umlauf.
+ *
+ * UMBAU 18.08.2026: 250 Zeilen, und der Filter stand ZWEIMAL darin. Jetzt:
+ *
+ *     gaussfilter.js        Kernel, Faltung, Quaternionen-Normierung (einmal)
+ *     glaettungszustand.js  Schalter, Sigma, gesicherte Rohwerte
+ *
+ * Hier bleiben die vier Befehle: alles glätten, zurücknehmen, dauerhaft
+ * speichern, einen ausgewählten Clip glätten.
  */
 
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { pushUndo } from './undo.js';
-import { applyFixedPositionAll } from './werkzeug_position.js';
-import { _fixedPos } from './werkzeug_position.js';
+import { applyFixedPositionAll, _fixedPos } from './werkzeug_position.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Gaussfilter } from './gaussfilter.js';
+import { Glaettungszustand } from './glaettungszustand.js';
 
+/**
+ * EIN Zustand je Sitzung. Der Name bleibt `_gaussSmooth`, weil `tools.js`,
+ * `vorschau.js` und `vorschau_fenster.js` ihn so importieren.
+ */
+export const _gaussSmooth = new Glaettungszustand();
 
-// Gaussian Smooth (session-wide toggle)
-export const _gaussSmooth = { active: false, sigma: 2.0, origClips: new Map() };
-
-// =========================================================================
-// Gaussian Smooth
-// =========================================================================
-export function _updateGaussUI() {
-    const sigmaInput = document.getElementById('dd-gauss-sigma-input');
-    if (sigmaInput) sigmaInput.value = _gaussSmooth.sigma;
-    const onEl = document.getElementById('dd-gauss-on');
-    const offEl = document.getElementById('dd-gauss-off');
-    if (onEl) onEl.style.color = _gaussSmooth.active ? '#888' : '#4caf50';
-    if (offEl) offEl.style.color = _gaussSmooth.active ? '#ef4444' : '#888';
-    const toolsBtn = document.getElementById('btn-tools');
-    if (toolsBtn) toolsBtn.innerHTML = _gaussSmooth.active
-        ? `<i class="fas fa-wrench"></i> Tools <span style="font-size:0.65rem;color:#4caf50;">●σ=${_gaussSmooth.sigma}</span> <i class="fas fa-caret-down" style="font-size:0.65rem;"></i>`
-        : `<i class="fas fa-wrench"></i> Tools <i class="fas fa-caret-down" style="font-size:0.65rem;"></i>`;
-}
-
+/** Der alte Name des Filters — Aufrufer in `vorschau.js` und `fn.gaussFilter`. */
 export function _gaussFilter(values, stride, sigma) {
-    const nKeys = values.length / stride;
-    const radius = Math.ceil(sigma * 3);
-    const kernel = [];
-    let ksum = 0;
-    for (let i = -radius; i <= radius; i++) {
-        const v = Math.exp(-0.5 * (i / sigma) ** 2);
-        kernel.push(v); ksum += v;
-    }
-    for (let i = 0; i < kernel.length; i++) kernel[i] /= ksum;
-
-    const orig = new Float32Array(values);
-    for (let c = 0; c < stride; c++) {
-        for (let k = 0; k < nKeys; k++) {
-            let sum = 0;
-            for (let j = 0; j < kernel.length; j++) {
-                const idx = Math.max(0, Math.min(nKeys - 1, k + j - radius));
-                sum += kernel[j] * orig[idx * stride + c];
-            }
-            values[k * stride + c] = sum;
-        }
-    }
-    // Re-normalize quaternions
-    if (stride === 4) {
-        for (let k = 0; k < nKeys; k++) {
-            const i = k * 4;
-            const len = Math.sqrt(values[i]**2 + values[i+1]**2 + values[i+2]**2 + values[i+3]**2);
-            if (len > 1e-8) { values[i]/=len; values[i+1]/=len; values[i+2]/=len; values[i+3]/=len; }
-        }
-    }
+    return Gaussfilter.glaetten(values, stride, sigma);
 }
 
+/** Anzeige im Werkzeugmenü: Sigma, Schalterfarben, Knopfbeschriftung. */
+export function _updateGaussUI() {
+    const sigmafeld = document.getElementById('dd-gauss-sigma-input');
+    if (sigmafeld) sigmafeld.value = _gaussSmooth.sigma;
+    // Klassen statt Inline-Farben (Befund `jsstilfassungen`): Ein Inline-Stil
+    // schlägt jede Regel im Stylesheet, auch die des Themes.
+    const an = document.getElementById('dd-gauss-on');
+    const aus = document.getElementById('dd-gauss-off');
+    an?.classList.toggle('gauss-gedaempft', _gaussSmooth.active);
+    an?.classList.toggle('gauss-an', !_gaussSmooth.active);
+    aus?.classList.toggle('gauss-aus', _gaussSmooth.active);
+    aus?.classList.toggle('gauss-gedaempft', !_gaussSmooth.active);
+    const knopf = document.getElementById('btn-tools');
+    if (!knopf) return;
+    const marke = _gaussSmooth.active
+        ? `<span class="gauss-marke">●σ=${_gaussSmooth.sigma}</span> ` : '';
+    knopf.innerHTML = `<i class="fas fa-wrench"></i> Tools ${marke}`
+        + '<i class="fas fa-caret-down gauss-pfeil"></i>';
+}
+
+/** Alle Bewegungsclips glätten (Schalter EIN). */
 export function applyGaussToAllClips() {
-    const sigma = _gaussSmooth.sigma;
-    let smoothedCount = 0;
-    let totalTracks = 0;
-    for (const track of state.project.tracks) {
-        totalTracks++;
-        if (track.type !== 'bvh') { Protokoll.debug('Gauss', 'uebersprungen:', track.type); continue; }
-        for (const clip of track.clips) {
-            if (!clip.animClip) continue;
-            const key = `${clip.category}/${clip.name}`;
-            // Save original values if not saved yet
-            if (!_gaussSmooth.origClips.has(key)) {
-                const backup = {};
-                for (const t of clip.animClip.tracks) {
-                    backup[t.name] = new Float32Array(t.values);
-                }
-                _gaussSmooth.origClips.set(key, backup);
+    const filter = new Gaussfilter(_gaussSmooth.sigma);
+    const clips = Glaettungszustand.clips();
+    let geglaettet = 0;
+    for (const { spur, clip } of clips) {
+        const sicherung = _gaussSmooth.sichern(clip);
+        // Erst zurücksetzen, dann glätten — sonst faltet der zweite Lauf über
+        // das Ergebnis des ersten (siehe Glaettungszustand).
+        for (const bewegung of clip.animClip.tracks) {
+            if (sicherung[bewegung.name]) {
+                bewegung.values.set(sicherung[bewegung.name]);
             }
-            // Restore original then apply smooth
-            const backup = _gaussSmooth.origClips.get(key);
-            let trackCount = 0;
-            for (const t of clip.animClip.tracks) {
-                if (backup[t.name]) t.values.set(backup[t.name]);
-                _gaussFilter(t.values, t.getValueSize(), sigma);
-                trackCount++;
-            }
-            // Log before/after for first track of first clip
-            if (smoothedCount === 0 && clip.animClip.tracks.length > 0) {
-                const t0 = clip.animClip.tracks[0];
-                Protokoll.debug('Gauss', `${t0.name} nach der Glaettung:`, t0.values.slice(0, 4));
-                const bk = backup[t0.name];
-                if (bk) Protokoll.debug('Gauss', `${t0.name} vorher:`, Array.from(bk.slice(0, 4)));
-            }
-            // CRITICAL: uncache the clip so Three.js creates a fresh Action with new data
-            if (track.mixer) track.mixer.uncacheClip(clip.animClip);
-            smoothedCount++;
+            filter.anwenden(bewegung.values, bewegung.getValueSize());
         }
-        // Reset active clip reference
-        if (track.mixer) track.mixer.stopAllAction();
-        track._activeClip = null;
-        track._activeAction = null;
+        Glaettungszustand.mixerLoesen(spur, clip);
+        geglaettet++;
     }
-    // Re-apply fixed position if active (gauss changed track values)
-    if (_fixedPos.active) { _fixedPos.origData.clear(); applyFixedPositionAll(); }
-    fn.applyPlayhead();
-    fn.serverLog('gauss_smooth_on', `sigma=${sigma} clips=${smoothedCount}/${totalTracks}`);
-    if (smoothedCount === 0) console.warn('[BVH Studio] WARNING: No clips were smoothed! Check track.type and clip.animClip.');
+    for (const spur of state.project.tracks) {
+        Glaettungszustand.spurZuruecksetzen(spur);
+    }
+    _nachziehen();
+    fn.serverLog('gauss_smooth_on',
+                 `sigma=${_gaussSmooth.sigma} clips=${geglaettet}/${clips.length}`);
+    if (geglaettet === 0) {
+        Protokoll.warnung('BVH Studio',
+                          'Kein Clip geglättet — keine BVH-Spur mit Animation.');
+    }
 }
 
+/** Rohwerte zurückschreiben (Schalter AUS). */
 export function reloadAllClipAnimations() {
-    // Restore originals
-    for (const track of state.project.tracks) {
-        if (track.type !== 'bvh') continue;
-        for (const clip of track.clips) {
-            if (!clip.animClip) continue;
-            const key = `${clip.category}/${clip.name}`;
-            const backup = _gaussSmooth.origClips.get(key);
-            if (backup) {
-                for (const t of clip.animClip.tracks) {
-                    if (backup[t.name]) t.values.set(backup[t.name]);
-                }
-            }
-            // Uncache so mixer uses restored data
-            if (track.mixer) track.mixer.uncacheClip(clip.animClip);
-        }
-        if (track.mixer) track.mixer.stopAllAction();
-        track._activeClip = null;
-        track._activeAction = null;
+    for (const { spur, clip } of Glaettungszustand.clips()) {
+        _gaussSmooth.zuruecksetzen(clip);
+        Glaettungszustand.mixerLoesen(spur, clip);
+        Glaettungszustand.spurZuruecksetzen(spur);
     }
-    _gaussSmooth.origClips.clear();
-    // Re-apply fixed position if active (originals were overwritten by gauss restore)
-    if (_fixedPos.active) { _fixedPos.origData.clear(); applyFixedPositionAll(); }
-    fn.applyPlayhead();
+    _gaussSmooth.vergessen();
+    _nachziehen();
     fn.serverLog('gauss_smooth_off');
 }
 
-export async function saveSmoothedBVH() {
-    if (!_gaussSmooth.active) { alert('Gaussian Smooth ist nicht aktiv.\nBitte erst EINSCHALTEN.'); return; }
-
-    // Collect all clips from tracks
-    const clips = [];
-    for (const track of state.project.tracks) {
-        if (track.type !== 'bvh') continue;
-        for (const clip of track.clips) {
-            if (clip.category && clip.name) clips.push(clip);
-        }
+/**
+ * Nach jeder Änderung an den Werten: feste Position neu anwenden und den
+ * Abspielkopf auffrischen.
+ *
+ * Die feste Position arbeitet auf denselben Werten. Ohne das Leeren ihrer
+ * Sicherung hält sie die Lage von VOR der Glättung fest.
+ */
+function _nachziehen() {
+    if (_fixedPos.active) {
+        _fixedPos.origData.clear();
+        applyFixedPositionAll();
     }
-
-    // If no track clips, try current preview animation
-    if (clips.length === 0) {
-        const previewInfo = fn.getPreviewInfo ? fn.getPreviewInfo() : null;
-        if (previewInfo && previewInfo.category && previewInfo.name) {
-            clips.push({ category: previewInfo.category, name: previewInfo.name });
-        }
-    }
-
-    if (clips.length === 0) {
-        alert('Keine Animation geladen.\nBitte erst eine Animation per Doppelklick zum Track hinzufügen\noder per A-Taste in der Vorschau öffnen.');
-        return;
-    }
-
-    const sigma = _gaussSmooth.sigma;
-    let saved = 0;
-    for (const clip of clips) {
-        try {
-            const result = await Serverabruf.json(`/api/retarget/smooth-bvh/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ category: clip.category, name: clip.name, sigma }),
-            });
-            if (result.ok) {
-                saved++;
-                fn.serverLog('gauss_saved', `${clip.category}/${clip.name} sigma=${sigma}`);
-            } else {
-                console.error(`Save failed for ${clip.name}:`, result.error);
-            }
-        } catch(e) { console.error(`Save failed for ${clip.name}:`, e); }
-    }
-    _gaussSmooth.origClips.clear();
-    alert(`Smooth (σ=${sigma}) permanent gespeichert auf ${saved} von ${clips.length} Clip(s).`);
-    Protokoll.info('BVH Studio', `${saved} geglaettete Clips gespeichert`);
+    fn.applyPlayhead();
 }
 
+/** Die geglätteten Clips dauerhaft auf dem Server speichern. */
+export async function saveSmoothedBVH() {
+    if (!_gaussSmooth.active) {
+        alert('Gaussian Smooth ist nicht aktiv.\nBitte erst EINSCHALTEN.');
+        return;
+    }
+    const clips = _zuSpeichern();
+    if (clips.length === 0) {
+        alert('Keine Animation geladen.\nBitte erst eine Animation per '
+              + 'Doppelklick zum Track hinzufügen\noder per A-Taste in der '
+              + 'Vorschau öffnen.');
+        return;
+    }
+    const sigma = _gaussSmooth.sigma;
+    let gespeichert = 0;
+    for (const clip of clips) {
+        if (await _speichern(clip, sigma)) gespeichert++;
+    }
+    _gaussSmooth.vergessen();
+    alert(`Smooth (σ=${sigma}) permanent gespeichert auf ${gespeichert} von `
+          + `${clips.length} Clip(s).`);
+    Protokoll.info('BVH Studio', `${gespeichert} geglaettete Clips gespeichert`);
+}
+
+/**
+ * Die Clips, die gespeichert werden — aus der Zeitleiste oder aus der Vorschau.
+ *
+ * Der Rückfall auf die Vorschau ist wichtig: Wer eine Animation nur mit der
+ * A-Taste ansieht, hat keinen Clip in der Zeitleiste und bekäme sonst „Keine
+ * Animation geladen", obwohl eine vor ihm läuft.
+ */
+function _zuSpeichern() {
+    const clips = Glaettungszustand.clips()
+        .map(({ clip }) => clip)
+        .filter(clip => clip.category && clip.name);
+    if (clips.length > 0) return clips;
+    const vorschau = fn.getPreviewInfo ? fn.getPreviewInfo() : null;
+    if (vorschau?.category && vorschau?.name) {
+        return [{ category: vorschau.category, name: vorschau.name }];
+    }
+    return [];
+}
+
+async function _speichern(clip, sigma) {
+    try {
+        const ergebnis = await Serverabruf.senden('/api/retarget/smooth-bvh/', {
+            category: clip.category, name: clip.name, sigma,
+        });
+        if (!ergebnis.ok) {
+            Protokoll.fehler('BVH Studio',
+                             `Speichern fehlgeschlagen für ${clip.name}`,
+                             ergebnis.error);
+            return false;
+        }
+        fn.serverLog('gauss_saved', `${clip.category}/${clip.name} sigma=${sigma}`);
+        return true;
+    } catch (fehler) {
+        Protokoll.fehler('BVH Studio',
+                         `Speichern fehlgeschlagen für ${clip.name}`, fehler);
+        return false;
+    }
+}
+
+/** Nur den ausgewählten Clip glätten — mit Auswahl der Knochengruppe. */
 export function smoothSelectedClip() {
-    if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) { alert('Clip auswählen.'); return; }
+    if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) {
+        alert('Clip auswählen.');
+        return;
+    }
     pushUndo('Smooth');
-    const clip = state.project.tracks[state.selectedTrackIdx].clips[state.selectedClipIdx];
-    if (!clip.animClip) { alert('Clip hat keine Animation.'); return; }
-
-    // Read sigma from tools panel, fallback to clip property
-    const sigmaInput = document.getElementById('tool-smooth-sigma');
-    const sigma = sigmaInput ? parseFloat(sigmaInput.value) || 2 : (clip.smoothSigma || 2);
-    if (sigma <= 0) { alert('Sigma muss > 0 sein.'); return; }
-
-    const mode = document.getElementById('tool-smooth-mode')?.value || 'all';
-
-    const radius = Math.ceil(sigma * 3);
-    const kernel = [];
-    let ksum = 0;
-    for (let i = -radius; i <= radius; i++) {
-        const v = Math.exp(-0.5 * (i / sigma) ** 2);
-        kernel.push(v); ksum += v;
+    const clip = state.project.tracks[state.selectedTrackIdx]
+        .clips[state.selectedClipIdx];
+    if (!clip.animClip) {
+        alert('Clip hat keine Animation.');
+        return;
     }
-    for (let i = 0; i < kernel.length; i++) kernel[i] /= ksum;
-
-    // Filter bone names by mode
-    const HAND_BONES = ['hand', 'finger', 'thumb', 'palm'];
-    const BODY_ONLY_SKIP = [...HAND_BONES];
-
-    let smoothedCount = 0;
-    for (const track of clip.animClip.tracks) {
-        const tn = track.name.toLowerCase();
-        if (mode === 'body' && HAND_BONES.some(h => tn.includes(h))) continue;
-        if (mode === 'hands' && !HAND_BONES.some(h => tn.includes(h))) continue;
-
-        const stride = track.getValueSize();
-        const nKeys = track.values.length / stride;
-        const orig = new Float32Array(track.values);
-        for (let c = 0; c < stride; c++) {
-            for (let k = 0; k < nKeys; k++) {
-                let sum = 0;
-                for (let j = 0; j < kernel.length; j++) {
-                    const idx = Math.max(0, Math.min(nKeys - 1, k + j - radius));
-                    sum += kernel[j] * orig[idx * stride + c];
-                }
-                track.values[k * stride + c] = sum;
-            }
-        }
-        // Re-normalize quaternions
-        if (stride === 4) {
-            for (let k = 0; k < nKeys; k++) {
-                const i = k * 4;
-                const len = Math.sqrt(track.values[i]**2 + track.values[i+1]**2 + track.values[i+2]**2 + track.values[i+3]**2);
-                if (len > 1e-8) { track.values[i]/=len; track.values[i+1]/=len; track.values[i+2]/=len; track.values[i+3]/=len; }
-            }
-        }
-        smoothedCount++;
+    const sigma = _sigmaAusDemFeld(clip);
+    if (sigma === null) return;
+    const art = document.getElementById('tool-smooth-mode')?.value || 'all';
+    const filter = new Gaussfilter(sigma);
+    let geglaettet = 0;
+    for (const bewegung of clip.animClip.tracks) {
+        if (!_gemeint(bewegung.name, art)) continue;
+        filter.anwenden(bewegung.values, bewegung.getValueSize());
+        geglaettet++;
     }
-    // Update clip property
     clip.smoothSigma = sigma;
     fn.updateProperties();
-    Protokoll.info('BVH Studio', `${clip.name} geglaettet: sigma=${sigma}, ${mode}, ${smoothedCount} Spuren`);
+    Protokoll.info('BVH Studio',
+                   `${clip.name} geglaettet: sigma=${sigma}, ${art}, `
+                   + `${geglaettet} Spuren`);
+}
+
+function _sigmaAusDemFeld(clip) {
+    const feld = document.getElementById('tool-smooth-sigma');
+    const sigma = feld ? parseFloat(feld.value) || 2 : (clip.smoothSigma || 2);
+    if (sigma <= 0) {
+        alert('Sigma muss > 0 sein.');
+        return null;
+    }
+    return sigma;
+}
+
+/** Knochen der Hände heißen so — daran hängt die Auswahl `body`/`hands`. */
+const HANDKNOCHEN = ['hand', 'finger', 'thumb', 'palm'];
+
+function _gemeint(spurname, art) {
+    const name = spurname.toLowerCase();
+    const istHand = HANDKNOCHEN.some(teil => name.includes(teil));
+    if (art === 'body') return !istHand;
+    if (art === 'hands') return istHand;
+    return true;
 }

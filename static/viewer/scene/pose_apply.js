@@ -1,43 +1,57 @@
 /**
  * Scene Editor -- Pose browser + apply + rename/delete.
+ *
+ * UMBAU 18.08.2026: 236 Zeilen. Die Rechnung (Ruhelage, Deltas, Gliedmaßen,
+ * T-Pose-Beine) steht jetzt in `posenanwendung.Posenanwendung`; hier bleibt die
+ * Liste mit Auswahl, Kontextmenü und Tastaturkürzeln.
  */
-import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { _selectedInst } from './utils.js';
-import { convertInstToSkinned } from './skeleton.js';
+import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Posenanwendung } from './posenanwendung.js';
 
-/* ── Selection state ── */
-let _selectedPoseRow = null;
-let _selectedPoseData = null;  // {id, name, category}
+/** Ausgewählte Zeile und ihre Pose (`{id, name, category}`). */
+let _zeile = null;
+let _pose = null;
 
-function _selectPoseRow(row, pose) {
-    if (_selectedPoseRow) _selectedPoseRow.style.background = '';
-    _selectedPoseRow = row;
-    _selectedPoseData = pose;
-    row.style.background = 'rgba(124,92,191,0.35)';
+function _auswaehlen(zeile, pose) {
+    _zeile?.classList.remove('pose-gewaehlt');
+    _zeile = zeile;
+    _pose = pose;
+    zeile.classList.add('pose-gewaehlt');
 }
 
-/* ── Context menu ── */
-const _ctxMenu = () => document.getElementById('pose-ctx-menu');
+/* ── Kontextmenü ── */
+const _menue = () => document.getElementById('pose-ctx-menu');
 
-function _showCtx(x, y) {
-    const m = _ctxMenu(); if (!m) return;
-    m.style.display = 'block'; m.style.left = x + 'px'; m.style.top = y + 'px';
-    // Clamp to viewport
-    const r = m.getBoundingClientRect();
-    if (r.right > window.innerWidth) m.style.left = (window.innerWidth - r.width - 4) + 'px';
-    if (r.bottom > window.innerHeight) m.style.top = (window.innerHeight - r.height - 4) + 'px';
+function _menueZeigen(x, y) {
+    const menue = _menue();
+    if (!menue) return;
+    menue.style.display = 'block';
+    menue.style.left = x + 'px';
+    menue.style.top = y + 'px';
+    // Ins Fenster ziehen: Am rechten oder unteren Rand stünde es sonst halb
+    // außerhalb und die letzten Einträge wären nicht erreichbar.
+    const rahmen = menue.getBoundingClientRect();
+    if (rahmen.right > window.innerWidth) {
+        menue.style.left = (window.innerWidth - rahmen.width - 4) + 'px';
+    }
+    if (rahmen.bottom > window.innerHeight) {
+        menue.style.top = (window.innerHeight - rahmen.height - 4) + 'px';
+    }
 }
 
-function _hideCtx() { const m = _ctxMenu(); if (m) m.style.display = 'none'; }
+function _menueVerbergen() {
+    const menue = _menue();
+    if (menue) menue.style.display = 'none';
+}
 
 /**
  * Posen umbenennen und löschen.
  *
  * Liefert im Fehlerfall `{ok: false, error}` statt zu werfen — die beiden
- * Aufrufer hängen einen `.then` an und zeigen `error` in einem `alert`.
+ * Aufrufer zeigen `error` in einem `alert`.
  */
 async function poseManage(action, data) {
     try {
@@ -49,179 +63,144 @@ async function poseManage(action, data) {
     }
 }
 
-/* ── Rename / Delete ── */
-function renameSelectedPose() {
-    if (!_selectedPoseData) return;
-    const newName = prompt('Neuer Name:', _selectedPoseData.name);
-    if (!newName || newName === _selectedPoseData.name) return;
-    poseManage('rename', { category: _selectedPoseData.category, name: _selectedPoseData.name, new_name: newName }).then(res => {
-        if (res.ok) { _selectedPoseRow = null; _selectedPoseData = null; loadPoseUI(); }
-        else alert(res.error || 'Rename fehlgeschlagen');
-    });
+async function renameSelectedPose() {
+    if (!_pose) return;
+    const name = prompt('Neuer Name:', _pose.name);
+    if (!name || name === _pose.name) return;
+    const antwort = await poseManage('rename', { category: _pose.category,
+                                                name: _pose.name,
+                                                new_name: name });
+    _nachAktion(antwort, 'Rename fehlgeschlagen');
 }
 
-function deleteSelectedPose() {
-    if (!_selectedPoseData) return;
-    if (!confirm(`Pose "${_selectedPoseData.name}" wirklich loeschen?`)) return;
-    poseManage('delete', { category: _selectedPoseData.category, name: _selectedPoseData.name }).then(res => {
-        if (res.ok) { _selectedPoseRow = null; _selectedPoseData = null; loadPoseUI(); }
-        else alert(res.error || 'Delete fehlgeschlagen');
-    });
+async function deleteSelectedPose() {
+    if (!_pose) return;
+    if (!confirm(`Pose "${_pose.name}" wirklich loeschen?`)) return;
+    const antwort = await poseManage('delete', { category: _pose.category,
+                                                name: _pose.name });
+    _nachAktion(antwort, 'Delete fehlgeschlagen');
 }
 
-/* ── Init context menu actions (once) ── */
-let _ctxBound = false;
-function _bindCtxMenu() {
-    if (_ctxBound) return; _ctxBound = true;
-    document.addEventListener('click', _hideCtx);
-    const m = _ctxMenu(); if (!m) return;
-    m.querySelectorAll('.pose-ctx-item').forEach(el => {
-        el.addEventListener('click', e => {
-            e.stopPropagation(); _hideCtx();
-            const action = el.dataset.action;
-            if (action === 'apply' && _selectedPoseData) applyPoseFromServer(_selectedPoseData.id);
-            else if (action === 'rename') renameSelectedPose();
-            else if (action === 'delete') deleteSelectedPose();
+function _nachAktion(antwort, fehlertext) {
+    if (!antwort.ok) {
+        alert(antwort.error || fehlertext);
+        return;
+    }
+    // Auswahl fallen lassen: Die Zeile, auf die sie zeigt, wird neu gebaut.
+    _zeile = null;
+    _pose = null;
+    loadPoseUI();
+}
+
+/* ── Kontextmenü und Tastatur: je einmal anmelden ── */
+let _menueGebunden = false;
+
+function _menueBinden() {
+    if (_menueGebunden) return;
+    _menueGebunden = true;
+    document.addEventListener('click', _menueVerbergen);
+    const menue = _menue();
+    if (!menue) return;
+    const aktionen = { apply: () => Posenanwendung.vomServer(_pose?.id),
+                       rename: renameSelectedPose,
+                       delete: deleteSelectedPose };
+    menue.querySelectorAll('.pose-ctx-item').forEach(eintrag => {
+        eintrag.addEventListener('click', ereignis => {
+            ereignis.stopPropagation();
+            _menueVerbergen();
+            if (eintrag.dataset.action === 'apply' && !_pose) return;
+            aktionen[eintrag.dataset.action]?.();
         });
     });
 }
 
-/* ── Keyboard shortcuts (on pose-list focus area) ── */
-let _kbBound = false;
-function _bindKeyboard() {
-    if (_kbBound) return; _kbBound = true;
-    const list = document.getElementById('pose-list');
-    if (!list) return;
-    list.setAttribute('tabindex', '0');
-    list.addEventListener('keydown', e => {
-        if (e.key === 'F2') { e.preventDefault(); renameSelectedPose(); }
-        else if (e.key === 'Delete') { e.preventDefault(); deleteSelectedPose(); }
+let _tastenGebunden = false;
+
+function _tastenBinden() {
+    if (_tastenGebunden) return;
+    _tastenGebunden = true;
+    const liste = document.getElementById('pose-list');
+    if (!liste) return;
+    // `tabindex`: Ohne ihn bekommt die Liste keinen Fokus und keine Tasten.
+    liste.setAttribute('tabindex', '0');
+    liste.addEventListener('keydown', ereignis => {
+        if (ereignis.key === 'F2') {
+            ereignis.preventDefault();
+            renameSelectedPose();
+        } else if (ereignis.key === 'Delete') {
+            ereignis.preventDefault();
+            deleteSelectedPose();
+        }
     });
 }
+
+/* ── Liste ── */
 
 export async function loadPoseUI() {
-    const list = document.getElementById('pose-list');
-    const resetBtn = document.getElementById('pose-reset');
-    if (!list) return;
-    _bindCtxMenu();
-    _bindKeyboard();
+    const liste = document.getElementById('pose-list');
+    if (!liste) return;
+    _menueBinden();
+    _tastenBinden();
     try {
-        const data = await Serverabruf.json('/api/character/poses/');
-        list.innerHTML = '';
-        for (const [cat, poses] of Object.entries(data.categories || {})) {
-            const folder = document.createElement('div'); folder.className = 'anim-folder';
-            const header = document.createElement('div'); header.className = 'anim-folder-header';
-            header.innerHTML = `<span class="chevron">&#9660;</span> ${cat} (${poses.length})`;
-            folder.appendChild(header);
-            const body = document.createElement('div'); body.className = 'anim-folder-body';
-            for (const pose of poses) {
-                const poseInfo = { id: pose.id, name: pose.name, category: cat };
-                const row = document.createElement('div'); row.className = 'anim-item'; row.style.cssText = 'padding:4px 8px;cursor:pointer;font-size:0.8rem;';
-                row.textContent = pose.name;
-                row.addEventListener('click', () => _selectPoseRow(row, poseInfo));
-                row.addEventListener('dblclick', () => applyPoseFromServer(pose.id));
-                row.addEventListener('contextmenu', e => { e.preventDefault(); _selectPoseRow(row, poseInfo); _showCtx(e.clientX, e.clientY); });
-                body.appendChild(row);
-            }
-            folder.appendChild(body);
-            header.addEventListener('click', () => { body.style.display = body.style.display === 'none' ? '' : 'none'; header.querySelector('.chevron').textContent = body.style.display === 'none' ? '\u25B6' : '\u25BC'; });
-            if (cat !== 'rest_poses') { body.style.display = 'none'; header.querySelector('.chevron').textContent = '\u25B6'; }
-            list.appendChild(folder);
+        const daten = await Serverabruf.json('/api/character/poses/');
+        liste.innerHTML = '';
+        for (const [kategorie, posen] of Object.entries(daten.categories || {})) {
+            liste.appendChild(_ordner(kategorie, posen));
         }
-    } catch(e) { list.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Poses nicht verf\u00fcgbar</div>'; }
-    if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-            const inst = _selectedInst();
-            if (!inst?.isSkinned) return;
-            let skel = null;
-            inst.group.traverse(child => { if (!skel && child.isSkinnedMesh && child.skeleton) skel = child.skeleton; });
-            if (!skel || !inst._aPoseBones) return;
-            for (const bone of skel.bones) { const saved = inst._aPoseBones[bone.name]; if (saved) bone.quaternion.copy(saved); }
-        });
+    } catch (fehler) {
+        Protokoll.fehler('Pose', 'Liste nicht ladbar', fehler);
+        liste.innerHTML = '<div class="leer-hinweis">Poses nicht verfügbar</div>';
     }
+    document.getElementById('pose-reset')
+        ?.addEventListener('click', () => Posenanwendung.zuruecksetzen());
 }
 
 /**
- * Posendaten holen und den Fehler sichtbar machen.
- *
- * Der Aufruf kommt aus dem Menü (Pose → T-Pose), aus dem Doppelklick auf die
- * Liste und aus dem Szenenaufbau — an keiner dieser Stellen fängt jemand.
- * Ohne diesen Fänger endet ein Serverfehler in einer stillen
- * "Unhandled promise rejection", und die Figur bleibt einfach stehen.
+ * Ein Kategorieordner. Nur `rest_poses` ist offen: Dort liegen T- und A-Pose,
+ * die fast immer gemeint sind; alles andere sind Dutzende Stilposen.
  */
-async function _posendaten(poseId) {
-    try {
-        return await Serverabruf.json(`/api/character/pose/${poseId}/`);
-    } catch (fehler) {
-        Protokoll.fehler('Pose', poseId, fehler);
-        alert('Pose nicht ladbar: ' + fehler.message);
-        return null;
+function _ordner(kategorie, posen) {
+    const kasten = document.createElement('div');
+    kasten.className = 'anim-folder';
+    const kopf = document.createElement('div');
+    kopf.className = 'anim-folder-header';
+    kopf.innerHTML = `<span class="chevron">&#9660;</span> ${kategorie} `
+        + `(${posen.length})`;
+    kasten.appendChild(kopf);
+    const koerper = document.createElement('div');
+    koerper.className = 'anim-folder-body';
+    for (const pose of posen) {
+        koerper.appendChild(_zeileBauen(kategorie, pose));
     }
+    kasten.appendChild(koerper);
+    const klappen = (offen) => {
+        koerper.style.display = offen ? '' : 'none';
+        kopf.querySelector('.chevron').textContent = offen ? '▼' : '▶';
+    };
+    kopf.addEventListener('click',
+                          () => klappen(koerper.style.display === 'none'));
+    klappen(kategorie === 'rest_poses');
+    return kasten;
+}
+
+function _zeileBauen(kategorie, pose) {
+    const angabe = { id: pose.id, name: pose.name, category: kategorie };
+    const zeile = document.createElement('div');
+    zeile.className = 'anim-item pose-zeile';
+    zeile.textContent = pose.name;
+    zeile.addEventListener('click', () => _auswaehlen(zeile, angabe));
+    zeile.addEventListener('dblclick',
+                           () => Posenanwendung.vomServer(pose.id));
+    zeile.addEventListener('contextmenu', ereignis => {
+        ereignis.preventDefault();
+        _auswaehlen(zeile, angabe);
+        _menueZeigen(ereignis.clientX, ereignis.clientY);
+    });
+    return zeile;
 }
 
 export async function applyPoseFromServer(poseId) {
-    const inst = _selectedInst();
-    if (!inst) return;
-    if (!inst.isSkinned && state.rigifySkeletonData && state.skinWeightData) convertInstToSkinned(inst);
-    if (!inst.isSkinned) return;
-    const data = await _posendaten(poseId);
-    if (!data?.bones) return;
-    let skel = null;
-    inst.group.traverse(child => { if (!skel && child.isSkinnedMesh && child.skeleton) skel = child.skeleton; });
-    if (!skel) return;
-    if (!inst._aPoseBones) {
-        inst._aPoseBones = {};
-        for (const bone of skel.bones) inst._aPoseBones[bone.name] = bone.quaternion.clone();
-    }
-    for (const bone of skel.bones) { const saved = inst._aPoseBones[bone.name]; if (saved) bone.quaternion.copy(saved); }
-    const limbRoots = new Set(['DEF-upper_arm.L', 'DEF-upper_arm.R', 'DEF-thigh.L', 'DEF-thigh.R']);
-    skel.bones[0].updateWorldMatrix(true, true);
-    const restParentWorldQ = {};
-    const Quat = skel.bones[0].quaternion.constructor;
-    for (const defName of limbRoots) {
-        const threeName = defName.replace(/\./g, '_');
-        const bone = skel.getBoneByName(threeName);
-        if (bone?.parent) { const wq = new Quat(); bone.parent.getWorldQuaternion(wq); restParentWorldQ[defName] = wq; }
-    }
-    let applied = 0;
-    const threeData = data.threejs || {};
-    for (const [defName, q] of Object.entries(threeData)) {
-        const threeName = defName.replace(/\./g, '_');
-        const bone = skel.getBoneByName(threeName);
-        if (bone) { bone.quaternion.multiply(new Quat(q[0], q[1], q[2], q[3])); applied++; }
-    }
-    skel.bones[0].updateWorldMatrix(true, true);
-    for (const defName of limbRoots) {
-        const restPWQ = restParentWorldQ[defName]; if (!restPWQ) continue;
-        const threeName = defName.replace(/\./g, '_');
-        const bone = skel.getBoneByName(threeName); if (!bone?.parent) continue;
-        const posedPWQ = new Quat(); bone.parent.getWorldQuaternion(posedPWQ);
-        bone.quaternion.premultiply(posedPWQ.clone().invert().multiply(restPWQ));
-    }
-    skel.bones[0].updateWorldMatrix(true, true);
-    const _correctedLegs = _correctThighsToTPose(skel, poseId);
-    Protokoll.debug('Pose', `Applied ${poseId}: ${applied} bones (${_correctedLegs} leg corrections)`);
-}
-
-function _correctThighsToTPose(skel, poseId) {
-    if (!poseId.includes('t-pose') && !poseId.includes('tpose')) return 0;
-    const thighPairs = [['DEF-thigh_L', 'DEF-thigh_L_001'], ['DEF-thigh_R', 'DEF-thigh_R_001']];
-    let corrected = 0;
-    for (const [thighName, childName] of thighPairs) {
-        const thigh = skel.getBoneByName(thighName); const child = skel.getBoneByName(childName);
-        if (!thigh || !child) continue;
-        const Vec3 = thigh.position.constructor; const Quat = thigh.quaternion.constructor;
-        const posHead = new Vec3(); const posTail = new Vec3();
-        thigh.getWorldPosition(posHead); child.getWorldPosition(posTail);
-        const currentDir = posTail.clone().sub(posHead).normalize(); const desiredDir = new Vec3(0, -1, 0);
-        if (currentDir.dot(desiredDir) > 0.9999) continue;
-        const corrWorld = new Quat().setFromUnitVectors(currentDir, desiredDir);
-        const parentWQ = new Quat(); if (thigh.parent) thigh.parent.getWorldQuaternion(parentWQ);
-        const parentWQ_inv = parentWQ.clone().invert();
-        thigh.quaternion.premultiply(parentWQ_inv.clone().multiply(corrWorld).multiply(parentWQ));
-        corrected++;
-    }
-    return corrected;
+    return Posenanwendung.vomServer(poseId);
 }
 
 // Register

@@ -7,6 +7,7 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import * as THREE from 'three';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 
 // Preload-Cache: lädt Preset-Assets im Hintergrund via Shadow-Track.
@@ -78,7 +79,7 @@ export function _schedulePreloads(t) {
                 if (animTrack.meshActive === preset) continue;
                 if (animTrack._loadingPreset === preset) continue;
                 if (animTrack._preloadCache?.[preset]) continue;
-                _preloadPreset(animTrack, preset).catch(() => {});
+                _preloadPreset(animTrack, preset).catch((e) => { Protokoll.debug('vorladen', `Vorladen von ${preset} fehlgeschlagen`, e); });
             }
         }
     }

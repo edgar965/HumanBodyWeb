@@ -16,6 +16,10 @@ war genau diese eine unbekannt.
 Die Tests laufen ausschliesslich in einem Wegwerfverzeichnis. An die echte
 Bibliothek unter `HumanBody/data/garment_library` fasst hier nichts.
 
+Die HTTP-Schale (Route, Statuscodes) steht seit dem 17.08.2026 daneben in
+`core/tests/component/test_kleider_endpunkt.py` — zwei eigenstaendige Klassen in
+einer Datei waren ein Befund von `klassen-je-datei`, und eine davon fuhr HTTP.
+
 Das Wegwerfverzeichnis liegt unter ProjektTemp (MEDIA_ROOT/tmp), NICHT im
 System-Temp: `tempfile.TemporaryDirectory()` ohne `dir=` schreibt auf C:, und
 das ist in diesem Projekt verboten.
@@ -165,62 +169,3 @@ class KleiderverwaltungTest(SimpleTestCase):
             Kleiderverwaltung.ausfuehren({'action': 'rename',
                                           'id': 'Tops/shirt',
                                           'new_name': '.versteckt'})
-
-
-class GarmentManageEndpunktTest(SimpleTestCase):
-    """Die HTTP-Schale: Route, JSON, Statuscodes.
-
-    Der Dienst darüber ist einzeln geprüft; hier geht es nur darum, dass die
-    Adresse existiert und Fehler als JSON mit der richtigen Kennzahl
-    herauskommen. Genau die Adresse fehlte — acht Aufrufstellen im Frontend
-    liefen in eine 404.
-    """
-
-    def setUp(self):
-        self._temp = ProjektTemp.ordner(prefix='kleiderhttp_')
-        self.wurzel = Path(self._temp) / 'garment_library'
-        (self.wurzel / 'Tops' / 'shirt').mkdir(parents=True)
-        (self.wurzel / 'Tops' / 'shirt' / 'meta.json').write_text(
-            '{}', encoding='utf-8')
-        self._ueberschreibung = override_settings(
-            HUMANBODY_GARMENT_LIBRARY_DIR=str(self.wurzel))
-        self._ueberschreibung.enable()
-
-    def tearDown(self):
-        self._ueberschreibung.disable()
-        shutil.rmtree(self._temp, ignore_errors=True)
-
-    def test_route_existiert(self):
-        from django.urls import resolve
-        self.assertEqual(resolve('/api/character/garment/manage/').func.__name__,
-                         'garment_manage')
-
-    def test_umbenennen_ueber_http(self):
-        from django.test import Client
-        antwort = Client().post('/api/character/garment/manage/',
-                                data='{"action":"rename","id":"Tops/shirt",'
-                                     '"new_name":"hemd"}',
-                                content_type='application/json')
-        self.assertEqual(antwort.status_code, 200, antwort.content)
-        self.assertTrue((self.wurzel / 'Tops' / 'hemd').is_dir())
-
-    def test_unbekanntes_kleid_gibt_404_als_json(self):
-        from django.test import Client
-        antwort = Client().post('/api/character/garment/manage/',
-                                data='{"action":"delete","id":"Tops/weg"}',
-                                content_type='application/json')
-        self.assertEqual(antwort.status_code, 404)
-        self.assertIn('error', antwort.json())
-
-    def test_kaputtes_json_gibt_400(self):
-        from django.test import Client
-        antwort = Client().post('/api/character/garment/manage/',
-                                data='{kein json', content_type='application/json')
-        self.assertEqual(antwort.status_code, 400)
-
-    def test_get_ist_nicht_erlaubt(self):
-        """Eine Adresse, die Dateien verschiebt, darf kein GET beantworten —
-        sonst genügt ein <img src> auf einer fremden Seite."""
-        from django.test import Client
-        self.assertEqual(
-            Client().get('/api/character/garment/manage/').status_code, 405)

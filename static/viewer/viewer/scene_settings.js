@@ -5,13 +5,14 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 
-export const VIEWER_TONE_MAPPINGS = {
-    ACESFilmic: THREE.ACESFilmicToneMapping,
-    Linear:     THREE.LinearToneMapping,
-    Reinhard:   THREE.ReinhardToneMapping,
-    Cineon:     THREE.CineonToneMapping,
-    None:       THREE.NoToneMapping
-};
+// Die Tabelle stand hier als eine von vier Kopien, eine davon unter
+// anderem Namen — jetzt an EINER Stelle (`gemeinsam/tonwerte.js`,
+// Befunde `doppelcode` und `namensvarianten`, 17.08.2026).
+import { tonwerte } from '../gemeinsam/tonwerte.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
+// Der alte Name bleibt, damit die Aufrufstellen dieser Seite
+// unveraendert bleiben — inhaltlich WAR er dieselbe Tabelle.
+export const VIEWER_TONE_MAPPINGS = tonwerte(THREE);
 
 export function applySceneSettings() {
     const saved = localStorage.getItem('humanbody_scene_settings');
@@ -55,7 +56,7 @@ export function applySceneSettings() {
             state.camera.updateProjectionMatrix();
         }
     } catch (e) {
-        console.warn('Failed to load scene settings:', e);
+        Protokoll.warnung('scene_settings', 'Failed to load scene settings:', e);
     }
 }
 
@@ -70,10 +71,16 @@ export function syncSkinUI(mat) {
     if (colorInput) colorInput.value = '#' + mat.color.getHexString();
     const roughSlider = document.getElementById('skin-roughness-viewer');
     const roughVal = document.getElementById('skin-roughness-viewer-val');
-    if (roughSlider) { roughSlider.value = Math.round(mat.roughness * 100); roughVal.textContent = mat.roughness.toFixed(2); }
+    if (roughSlider) {
+        roughSlider.value = Math.round(mat.roughness * 100);
+        roughVal.textContent = mat.roughness.toFixed(2);
+    }
     const metalSlider = document.getElementById('skin-metalness-viewer');
     const metalVal = document.getElementById('skin-metalness-viewer-val');
-    if (metalSlider) { metalSlider.value = Math.round(mat.metalness * 100); metalVal.textContent = mat.metalness.toFixed(2); }
+    if (metalSlider) {
+        metalSlider.value = Math.round(mat.metalness * 100);
+        metalVal.textContent = mat.metalness.toFixed(2);
+    }
 }
 
 export function applySceneSkinSettings() {
@@ -87,7 +94,7 @@ export function applySceneSkinSettings() {
             if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
             syncSkinUI(mat);
         }
-    } catch (e) { /* ignore */ }
+    } catch (e) { Protokoll.debug('szeneneinstellungen', 'Hauteinstellungen nicht anwendbar', e); }
 }
 
 export function applySkinColor() {
@@ -129,7 +136,7 @@ export function applyExpandedPanels() {
                 state._HOVER_EMISSIVE = new THREE.Color(o * 0.133, o * 0.133, o * 0.333);
             }
         })
-        .catch(() => {});
+        .catch((e) => { Protokoll.debug('szeneneinstellungen', 'Hover-Farbe nicht abrufbar', e); });
 }
 
 // Register

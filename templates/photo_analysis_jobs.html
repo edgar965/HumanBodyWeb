@@ -14,11 +14,33 @@
 {% block extra_head %}
 <style>
 .photo-thumb { width: 80px; height: 80px; object-fit: contain; border-radius: 4px; cursor: pointer; }
-.result-thumb { width: 120px; height: 80px; object-fit: contain; border-radius: 4px; cursor: pointer; background: #1a1a2e; }
-.no-thumb { width: 80px; height: 60px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 0.65rem; }
+.result-thumb {
+    width: 120px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #1a1a2e;
+}
+.no-thumb {
+    width: 80px;
+    height: 60px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-muted);
+    font-size: 0.65rem;
+}
 .photo-jobs-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
 .photo-jobs-table th,
-.photo-jobs-table td { padding: 0.4rem 0.6rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.photo-jobs-table td {
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
 .photo-jobs-table th { font-weight: 600; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
 .photo-jobs-table tr:hover { background: var(--bg-hover, rgba(255,255,255,0.03)); }
 .badge-backend { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; font-weight: 600; }
@@ -60,19 +82,48 @@
 .job-detail-images { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .job-detail-images .img-box { text-align: center; }
 .job-detail-images .img-box img { max-width: 100%; max-height: 220px; border-radius: 6px; }
-.job-detail-images .img-box .img-label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
-.job-detail-images .img-box .no-img { display:inline-flex; align-items:center; justify-content:center; width:180px; height:120px; border-radius:6px; background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:0.8rem; }
+.job-detail-images .img-box .img-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+}
+.job-detail-images .img-box .no-img {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:180px;
+    height:120px;
+    border-radius:6px;
+    background:rgba(255,255,255,0.05);
+    color:var(--text-muted);
+    font-size:0.8rem;
+}
 .job-detail-meta { display: flex; gap: 2rem; flex-wrap: wrap; font-size: 0.9rem; }
 .job-detail-meta .meta-item { margin-bottom: 0.3rem; }
 .job-detail-meta .meta-item b { color: var(--text-muted); font-weight: 600; margin-right: 0.5rem; }
-.job-detail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+.job-detail-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-max-height-250px.hb-max-height-250px.hb-max-height-250px { max-height:250px; border-radius:6px; }   /* 3x */
 .hb-padding-4px-8px.hb-padding-4px-8px.hb-padding-4px-8px { padding:4px 8px; font-size:0.75rem; }   /* 3x */
-.hb-width-60px.hb-width-60px.hb-width-60px { width:60px; height:60px; object-fit:contain; border-radius:4px; cursor:pointer; display:block; }   /* 2x */
+.hb-width-60px.hb-width-60px.hb-width-60px {
+    width:60px;
+    height:60px;
+    object-fit:contain;
+    border-radius:4px;
+    cursor:pointer;
+    display:block;
+}   /* 2x */
 
 /* Umbau 17.08.2026, aus GEMESSENEM Anlass: Diese vier Fassungen standen 174,
    174, 14 und 5 mal inline in der Tabelle — zusammen 20 KB von 520 KB HTML,
@@ -81,10 +132,31 @@
    so sind am 16.08. zwei Regressionen entstanden.
    Die beiden Bild-Klassen sind NICHT `hb-width-60px`: dort fehlt der dunkle
    Hintergrund, auf dem freigestellte Texturen erst sichtbar werden. */
-.hb-namenszelle.hb-namenszelle.hb-namenszelle { max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }   /* 174x */
+.hb-namenszelle.hb-namenszelle.hb-namenszelle {
+    max-width:160px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}   /* 174x */
 .hb-nowrap.hb-nowrap.hb-nowrap { white-space:nowrap; }   /* 174x */
-.hb-thumb-3d.hb-thumb-3d.hb-thumb-3d { width:100px; height:60px; object-fit:contain; border-radius:4px; cursor:pointer; display:block; background:#1a1a2e; }   /* 14x */
-.hb-thumb-textur.hb-thumb-textur.hb-thumb-textur { width:60px; height:60px; object-fit:contain; border-radius:4px; cursor:pointer; display:block; background:#1a1a2e; }   /* 5x */
+.hb-thumb-3d.hb-thumb-3d.hb-thumb-3d {
+    width:100px;
+    height:60px;
+    object-fit:contain;
+    border-radius:4px;
+    cursor:pointer;
+    display:block;
+    background:#1a1a2e;
+}   /* 14x */
+.hb-thumb-textur.hb-thumb-textur.hb-thumb-textur {
+    width:60px;
+    height:60px;
+    object-fit:contain;
+    border-radius:4px;
+    cursor:pointer;
+    display:block;
+    background:#1a1a2e;
+}   /* 5x */
 </style>
 {% endblock %}
 
@@ -256,7 +328,8 @@
                     <span class="img-label">Silhouette / Alignment</span>
                 </div>
                 <div class="img-box" id="detailTextureBox">
-                    <img id="detailTexture" src="" alt="Textur" style="max-height:250px;border-radius:6px;background:#1a1a2e;">
+                    <img id="detailTexture" src="" alt="Textur"
+                         style="max-height:250px;border-radius:6px;background:#1a1a2e;">
                     <span class="img-label">Textur (UV Map)</span>
                 </div>
             </div>

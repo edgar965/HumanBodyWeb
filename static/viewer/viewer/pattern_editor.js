@@ -38,7 +38,11 @@ function _peSetRegionMode(active) {
     const patternControls = document.getElementById('pe-pattern-controls');
     const regionControls = document.getElementById('pe-region-controls');
     const wrapSection = document.getElementById('pe-wrap-section');
-    if (active) { if (patternControls) patternControls.style.display = 'none'; if (wrapSection) wrapSection.style.display = 'none'; if (regionControls) regionControls.style.display = ''; }
+    if (active) {
+        if (patternControls) patternControls.style.display = 'none';
+        if (wrapSection) wrapSection.style.display = 'none';
+        if (regionControls) regionControls.style.display = '';
+    }
     else { if (patternControls) patternControls.style.display = ''; if (wrapSection) wrapSection.style.display = ''; if (regionControls) regionControls.style.display = 'none'; }
 }
 
@@ -58,7 +62,9 @@ export function peUpdatePanelList() {
     const PLACEMENT_BADGES = {flat:'',front:'[F]',back:'[B]',left:'[L]',right:'[R]',sleeve_L:'[SL]',sleeve_R:'[SR]'};
     list.innerHTML = names.map((name, i) => {
         const color = PE_COLORS[i % PE_COLORS.length]; const active = name === Musterzustand.peActivePanel;
-        const p = Musterzustand.pePattern.panels[name]; const nv = p.vertices.length; const closed = p.closed ? 'closed' : 'open';
+        const p = Musterzustand.pePattern.panels[name];
+        const nv = p.vertices.length;
+        const closed = p.closed ? 'closed' : 'open';
         const badge = PLACEMENT_BADGES[p.placement || 'flat'] || '';
         return `<div class="pe-panel-item${active ? ' active' : ''}" data-name="${name}" style="cursor:pointer;padding:3px 6px;border-left:3px solid ${color};margin-bottom:2px;background:${active ? 'var(--bg-highlight)' : 'transparent'};border-radius:2px;font-size:0.8rem;"><span style="color:${color};">&#9679;</span> ${name} ${badge ? `<span style="color:#f39c12;font-size:0.7rem;">${badge}</span> ` : ''}<span style="color:var(--text-muted);font-size:0.72rem;">(${nv}v, ${closed})</span></div>`;
     }).join('');
@@ -90,7 +96,8 @@ export function _peAutoFit() {
     const xMin = Math.min(...xs), xMax = Math.max(...xs), yMin = Math.min(...ys), yMax = Math.max(...ys);
     const pw = xMax - xMin || 20, ph = yMax - yMin || 20;
     const margin = 0.15; const zoomX = W * (1 - 2 * margin) / pw; const zoomY = H * (1 - 2 * margin) / ph;
-    Musterzustand.peZoom = Math.min(zoomX, zoomY); Musterzustand.peZoom = Math.max(0.5, Math.min(20, Musterzustand.peZoom));
+    Musterzustand.peZoom = Math.min(zoomX, zoomY);
+    Musterzustand.peZoom = Math.max(0.5, Math.min(20, Musterzustand.peZoom));
     const cx = (xMin + xMax) / 2; const cy = (yMin + yMax) / 2;
     Musterzustand.pePan.x = W / 2 - cx * Musterzustand.peZoom; Musterzustand.pePan.y = H / 2 + cy * Musterzustand.peZoom;
 }
@@ -108,18 +115,29 @@ function _peInitCanvas() {
             Musterzustand.peSelectedVertex = null; Musterzustand.peSelectedEdge = null; peRender();
         } else if (Musterzustand.peMode === 'draw') {
             if (!Musterzustand.peActivePanel || !Musterzustand.pePattern.panels[Musterzustand.peActivePanel]) return;
-            const panel = Musterzustand.pePattern.panels[Musterzustand.peActivePanel]; const [wx, wy] = peCanvasToWorld(cx, cy);
+            const panel = Musterzustand.pePattern.panels[Musterzustand.peActivePanel];
+            const [wx, wy] = peCanvasToWorld(cx, cy);
             if (panel.vertices.length >= 3) { const [fx, fy] = peWorldToCanvas(...panel.vertices[0]); if (Math.hypot(cx - fx, cy - fy) < 10) { panel.edges.push({endpoints: [panel.vertices.length - 1, 0], curvature: null}); panel.closed = true; Musterzustand.peMode = 'select'; _peSetModeButtons(); peRender(); peUpdatePanelList(); return; } }
             const vi = panel.vertices.length; panel.vertices.push([wx, wy]); if (vi > 0) panel.edges.push({endpoints: [vi - 1, vi], curvature: null}); peRender();
         } else if (Musterzustand.peMode === 'stitch') {
             const eHit = _peHitEdge(cx, cy); if (!eHit) return;
-            if (!Musterzustand.peStitchFirst) { Musterzustand.peStitchFirst = eHit; Musterzustand.peSelectedEdge = eHit; Musterzustand.peActivePanel = eHit.panel; peRender(); }
+            if (!Musterzustand.peStitchFirst) {
+                Musterzustand.peStitchFirst = eHit;
+                Musterzustand.peSelectedEdge = eHit;
+                Musterzustand.peActivePanel = eHit.panel;
+                peRender();
+            }
             else { if (eHit.panel !== Musterzustand.peStitchFirst.panel) Musterzustand.pePattern.stitches.push({panelA: Musterzustand.peStitchFirst.panel, edgeA: Musterzustand.peStitchFirst.index, panelB: eHit.panel, edgeB: eHit.index}); peUpdateStitchList(); Musterzustand.peStitchFirst = null; Musterzustand.peSelectedEdge = null; peRender(); }
         }
     });
     canvas.addEventListener('mousemove', (e) => {
         const cx = e.offsetX, cy = e.offsetY; Musterzustand.peLastMouse = {x: cx, y: cy};
-        if (Musterzustand.pePanning && Musterzustand.pePanStart) { Musterzustand.pePan.x = Musterzustand.pePanStart.px + (e.clientX - Musterzustand.pePanStart.x); Musterzustand.pePan.y = Musterzustand.pePanStart.py + (e.clientY - Musterzustand.pePanStart.y); peRender(); return; }
+        if (Musterzustand.pePanning && Musterzustand.pePanStart) {
+            Musterzustand.pePan.x = Musterzustand.pePanStart.px + (e.clientX - Musterzustand.pePanStart.x);
+            Musterzustand.pePan.y = Musterzustand.pePanStart.py + (e.clientY - Musterzustand.pePanStart.y);
+            peRender();
+            return;
+        }
         if (Musterzustand.peDragging) { const [wx, wy] = peCanvasToWorld(cx, cy); if (Musterzustand.peDragging.type === 'vertex') Musterzustand.pePattern.panels[Musterzustand.peDragging.panel].vertices[Musterzustand.peDragging.index] = [wx, wy]; else if (Musterzustand.peDragging.type === 'cp') Musterzustand.pePattern.panels[Musterzustand.peDragging.panel].edges[Musterzustand.peDragging.edgeIndex].curvature = [wx, wy]; peRender(); }
         const statusEl = document.getElementById('pe-status'); if (statusEl) { const [wx, wy] = peCanvasToWorld(cx, cy); statusEl.textContent = `${wx.toFixed(1)}, ${wy.toFixed(1)} cm    ${Math.round(Musterzustand.peZoom / 2 * 100)}%`; }
     });
@@ -127,7 +145,8 @@ function _peInitCanvas() {
     canvas.addEventListener('mouseleave', () => { Musterzustand.peDragging = null; Musterzustand.pePanning = false; Musterzustand.pePanStart = null; });
     canvas.addEventListener('dblclick', (e) => {
         if (Musterzustand.peMode !== 'select') return; const cx = e.offsetX, cy = e.offsetY; const eHit = _peHitEdge(cx, cy); if (eHit) {
-            const edge = Musterzustand.pePattern.panels[eHit.panel].edges[eHit.index]; if (edge.curvature) edge.curvature = null;
+            const edge = Musterzustand.pePattern.panels[eHit.panel].edges[eHit.index];
+            if (edge.curvature) edge.curvature = null;
             else { const panel = Musterzustand.pePattern.panels[eHit.panel]; const v0 = panel.vertices[edge.endpoints[0]]; const v1 = panel.vertices[edge.endpoints[1]]; const mx = (v0[0] + v1[0]) / 2, my = (v0[1] + v1[1]) / 2; const dx = v1[0] - v0[0], dy = v1[1] - v0[1]; const len = Math.hypot(dx, dy) || 1; edge.curvature = [mx + (-dy / len) * 5, my + (dx / len) * 5]; }
             peRender();
         }
@@ -135,7 +154,9 @@ function _peInitCanvas() {
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault(); const cx = e.offsetX, cy = e.offsetY; const [wx, wy] = peCanvasToWorld(cx, cy);
         const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15; Musterzustand.peZoom = Math.max(0.5, Math.min(20, Musterzustand.peZoom * factor));
-        Musterzustand.pePan.x = cx - wx * Musterzustand.peZoom; Musterzustand.pePan.y = cy + wy * Musterzustand.peZoom; peRender();
+        Musterzustand.pePan.x = cx - wx * Musterzustand.peZoom;
+        Musterzustand.pePan.y = cy + wy * Musterzustand.peZoom;
+        peRender();
     }, {passive: false});
     canvas.addEventListener('contextmenu', e => e.preventDefault());
 }
@@ -152,8 +173,14 @@ export function initPatternEditor() {
     });
     document.getElementById('pe-del-panel')?.addEventListener('click', () => {
         if (!Musterzustand.peActivePanel) return; Musterzustand.pePattern.stitches = Musterzustand.pePattern.stitches.filter(s => s.panelA !== Musterzustand.peActivePanel && s.panelB !== Musterzustand.peActivePanel);
-        delete Musterzustand.pePattern.panels[Musterzustand.peActivePanel]; const names = Object.keys(Musterzustand.pePattern.panels); Musterzustand.peActivePanel = names.length > 0 ? names[0] : null;
-        Musterzustand.peSelectedVertex = null; Musterzustand.peSelectedEdge = null; peUpdatePanelList(); peUpdateStitchList(); peRender();
+        delete Musterzustand.pePattern.panels[Musterzustand.peActivePanel];
+        const names = Object.keys(Musterzustand.pePattern.panels);
+        Musterzustand.peActivePanel = names.length > 0 ? names[0] : null;
+        Musterzustand.peSelectedVertex = null;
+        Musterzustand.peSelectedEdge = null;
+        peUpdatePanelList();
+        peUpdateStitchList();
+        peRender();
     });
     document.getElementById('pe-placement')?.addEventListener('change', (e) => { if (Musterzustand.peActivePanel && Musterzustand.pePattern.panels[Musterzustand.peActivePanel]) { Musterzustand.pePattern.panels[Musterzustand.peActivePanel].placement = e.target.value; peUpdatePanelList(); } });
     document.getElementById('pe-wrap')?.addEventListener('change', (e) => { const sliders = document.getElementById('pe-wrap-sliders'); if (sliders) sliders.style.display = e.target.checked ? '' : 'none'; });
@@ -163,7 +190,10 @@ export function initPatternEditor() {
     document.getElementById('pe-region-category')?.addEventListener('change', (e) => {
         const preset = PE_REGION_PRESETS[e.target.value]; if (!preset) return;
         const setS = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val; el.dispatchEvent(new Event('input')); } };
-        setS('pe-region-zmin', preset.z_min); setS('pe-region-zmax', preset.z_max); setS('pe-region-grow', preset.grow); setS('pe-region-looseness', preset.looseness);
+        setS('pe-region-zmin', preset.z_min);
+        setS('pe-region-zmax', preset.z_max);
+        setS('pe-region-grow', preset.grow);
+        setS('pe-region-looseness', preset.looseness);
         const armsEl = document.getElementById('pe-region-arms'); if (armsEl) armsEl.checked = preset.arms;
         if (Musterzustand.peMode === 'region') peRegionGenerate();
     });

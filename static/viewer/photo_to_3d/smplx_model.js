@@ -64,11 +64,11 @@ function _altesEntsorgen() {
  */
 export async function loadSmplxTexture(jobId, backend = 'orthographic', region = 'all') {
     if (!jobId || !state.smplxSkinnedMesh) {
-        console.warn('[SMPL-X Tex] No jobId or mesh');
+        Protokoll.warnung('SMPL-X Tex', 'No jobId or mesh');
         return;
     }
     if (!state.smplxSkinnedMesh.geometry.getAttribute('uv')) {
-        console.warn('[SMPL-X Tex] No UV attribute on SMPL-X mesh');
+        Protokoll.warnung('SMPL-X Tex', 'No UV attribute on SMPL-X mesh');
         return;
     }
 
@@ -85,7 +85,7 @@ export async function loadSmplxTexture(jobId, backend = 'orthographic', region =
             } catch (_) {
                 errMsg = await resp.text() || errMsg;
             }
-            console.warn('[SMPL-X Tex] Server error:', errMsg);
+            Protokoll.warnung('SMPL-X Tex', 'Server error:', errMsg);
             throw new Error(errMsg);
         }
 

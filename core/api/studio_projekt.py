@@ -11,8 +11,15 @@ from django.http import JsonResponse, HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 import json
+import logging
 import os
 import re
+
+#: EIN Logger fuer das Modul. Vorher stand `import logging; log =
+#: logging.getLogger('core')` zweimal in je einer Funktion — `scene_list`
+#: hatte damit keinen, und die dort nachgetragene Zeile waere ein NameError
+#: gewesen (gefunden 17.08.2026 durch `logs_namen_pruefen.py`).
+log = logging.getLogger('core')
 
 
 @require_GET
@@ -34,6 +41,7 @@ def scene_list(request):
                         'character_count': len(data.get('characters', [])),
                     })
                 except (json.JSONDecodeError, IOError):
+                    log.warning('Szene %s nicht lesbar — ohne Figurenzahl gelistet', fpath, exc_info=True)
                     scenes.append({'name': name, 'label': name, 'character_count': 0})
     return JsonResponse({'scenes': scenes})
 
@@ -99,9 +107,6 @@ def studio_project_save(request):
     Webseite auslösbar. Geschrieben wird über AtomarSchreiber, damit zwei
     gleichzeitige Speichervorgänge keine halbe Datei hinterlassen.
     """
-    import logging
-    log = logging.getLogger('core')
-
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
@@ -131,9 +136,6 @@ def studio_project_load(request):
 
     GET /api/studio/project-load/?path=full/path.studio.json
     """
-    import logging
-    log = logging.getLogger('core')
-
     try:
         fp = SafePath.fuer_studio_projekte().pruefe(request.GET.get('path'))
     except PfadAbgelehnt as e:

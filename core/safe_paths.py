@@ -60,6 +60,8 @@ from pathlib import Path
 
 from django.conf import settings
 
+from .daten.pfadwurzeln import Pfadwurzeln
+
 logger = logging.getLogger('core')
 
 #: Windows-Gerätenamen. Ein Schreibversuch darauf ist nie gewollt.
@@ -105,26 +107,36 @@ class SafePath:
     @classmethod
     def fuer_studio_projekte(cls):
         """Projektdateien des BVH-Studios (.studio.json)."""
-        return cls([Path(settings.MEDIA_ROOT), cls.projekt_standard()]
-                   + cls._prefs_wurzeln('studio_project_path', 'studio_bvh_input',
-                                        'studio_bvh_output'))
+        return cls(Pfadwurzeln.studio_projekte())
 
     @classmethod
     def fuer_bvh(cls):
         """BVH-Dateien: die Kategorie-Wurzel plus die eingestellten Ordner."""
-        return cls([cls.bvh_wurzel(), Path(settings.MEDIA_ROOT)]
-                   + cls._prefs_wurzeln('studio_bvh_input', 'studio_bvh_output'))
+        return cls(Pfadwurzeln.bvh(cls.bvh_wurzel()))
 
     @classmethod
     def fuer_ausgabe(cls):
         """Render-Ausgaben (Video-Export)."""
-        return cls([Path(settings.MEDIA_ROOT)]
-                   + cls._prefs_wurzeln('studio_video_output'))
+        return cls(Pfadwurzeln.ausgabe())
+
+    @classmethod
+    def fuer_videos(cls):
+        """Videodateien, aus denen ein Auftrag entstehen darf.
+
+        Anlass (Sparring mit Nemotron, 18.08.2026): `create_job_from_file`
+        uebernahm den `video_path` aus dem Rumpf UNGEPRUEFT — auch absolut.
+        `BVHJob.video_file` haelt ihn dann, und `video_thumbnail` oeffnet
+        `MEDIA_ROOT / str(job.video_file)`; bei einem absoluten Wert schluckt
+        `pathlib` die Wurzel und uebrig bleibt genau der fremde Pfad. Der Weg
+        ueber die Oberflaeche schickt nur Dateien aus dieser Liste, die Pruefung
+        kostet also nichts — sie schliesst nur den direkten Aufruf aus.
+        """
+        return cls(Pfadwurzeln.videos())
 
     @classmethod
     def projekt_standard(cls):
         """Vorgabe-Verzeichnis der Studio-Projekte (wie in den Einstellungen)."""
-        return Path(settings.TOOLS_ROOT) / 'HumanBody' / 'data' / 'studio_projects'
+        return Pfadwurzeln.projekt_standard()
 
     # ------------------------------------------------------------------- Wurzeln
 
@@ -154,27 +166,12 @@ class SafePath:
             raise PfadAbgelehnt('BVH-Wurzel nicht bestimmbar (HUMANBODY_BVH_DIR)')
         return wurzel
 
-    # `TOOLS_ROOT` ist BEWUSST KEINE Wurzel. Der erste Wurf hatte sie drin — die
-    # Live-Prüfung zeigte sofort, dass damit `A:\3DTools\evil.json`,
-    # `…\HumanBodyWeb\media_evil\…` und jeder Pfad im Projekt durchgehen, also
-    # auch `ui/settings.py`, `.git/` und die `.npy`-Morphdaten. Ein Wächter, der
-    # das gesamte Arbeitsverzeichnis freigibt, ist keiner (12.08.2026).
-
-    @classmethod
-    def _prefs_wurzeln(cls, *schluessel):
-        """Vom Nutzer eingestellte Verzeichnisse (leer, wenn nicht gesetzt)."""
-        try:
-            from .models import AppSettings
-            prefs = AppSettings.load().ui_prefs or {}
-        except Exception:                                        # noqa: BLE001
-            logger.exception('SafePath: Einstellungen nicht lesbar')
-            return []
-        return [Path(prefs[k]) for k in schluessel if (prefs.get(k) or '').strip()]
-
     @staticmethod
     def _auflösen(pfad):
         try:
             return Path(str(pfad)).resolve()
+        # stumm gewollt: `None` ist hier die Antwort „kein auswertbarer Pfad“ —
+        # der Aufrufer lehnt danach ab und DER protokolliert.
         except (OSError, ValueError):
             return None
 
@@ -203,6 +200,14 @@ class SafePath:
         for teil in ziel.parts[1:]:
             if NAME_VERBOTEN & set(teil):
                 raise PfadAbgelehnt('Unzulässiges Zeichen im Pfad')
+            # Gerätenamen auch als VERZEICHNIS ablehnen, nicht nur am Ende
+            # (`…\COM1\datei.txt`). Windows legt ein solches Verzeichnis nicht
+            # an; der Pfad kam bis zum 18.08.2026 durch die Prüfung und
+            # scheiterte erst beim Zugriff — mit einem OSError statt einer
+            # klaren Ablehnung. Befund aus dem Sparring mit Nemotron.
+            if teil.split('.')[0].upper() in GERAETE:
+                raise PfadAbgelehnt('Gerätename ist kein gültiger Pfadteil: %s'
+                                    % teil)
             # Windows schneidet Punkt und Leerzeichen am Ende ab. Gemessen
             # (13.08.2026): `resolve()` behält sie, das Dateisystem nicht —
             # die Antwort nennt dann einen Pfad, den es so nie gab.
@@ -240,6 +245,8 @@ class SafePath:
         z, w = Path(os.path.normcase(ziel)), Path(os.path.normcase(wurzel))
         try:
             return z == w or z.is_relative_to(w)
+        # stumm gewollt: `ValueError` heißt bei `is_relative_to` schlicht
+        # „liegt nicht darunter“ — genau der Rückgabewert.
         except ValueError:
             return False
 

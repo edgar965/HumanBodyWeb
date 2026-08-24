@@ -64,7 +64,7 @@ export class Spielerskelett {
         Protokoll.debug('bvh_player', `Detected ${this.format.name} format`);
         Protokoll.debug('bvh_player', `Bones matched: ${da.length}/`
                     + `${this.format.reihenfolge.length}`, da);
-        if (fehlt.length) console.warn('[bvh_player] Bones MISSING:', fehlt);
+        if (fehlt.length) Protokoll.warnung('bvh_player', 'Bones MISSING:', fehlt);
         window.__bvhDebug = { matched: da, missing: fehlt,
                               allBones: [...namen], bodyBoneMap: this.knochen };
     }

@@ -15,7 +15,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from .retarget import retarget_bvh_data
+from ..dienste.retargetdaten import Retargetdaten
 import json
 import logging
 import os
@@ -57,7 +57,8 @@ def retarget_bvh_text(request):
         tmp_path = tmp.name
 
     try:
-        return JsonResponse(retarget_bvh_data(tmp_path, body_height, fmt, foot_correction))
+        return JsonResponse(Retargetdaten(tmp_path, body_height, fmt,
+                                          foot_correction).holen())
     finally:
         os.unlink(tmp_path)
 

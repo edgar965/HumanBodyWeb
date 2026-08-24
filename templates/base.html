@@ -25,6 +25,11 @@ Variablen), dann style.css (Struktur + nutzt die Variablen). JS_VERSION bricht
 den Cache bei jedem Versions-Bump.{% endcomment %}
 <link rel="stylesheet" href="{% static 'css/theme.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/style.css' %}?t={% now 'U' %}">
+{% comment %}stilhelfer.css ZULETZT: Die Klassen darin ersetzen Inline-Stile, und
+ein Inline-Stil hat vorher jede Regel geschlagen. Bei gleicher Spezifität
+gewinnt die spätere Regel — also muss diese Datei nach style.css kommen, sonst
+sieht ein Element anders aus als vor dem Umbau (17.08.2026).{% endcomment %}
+<link rel="stylesheet" href="{% static 'css/stilhelfer.css' %}?t={% now 'U' %}">
 {% block extra_head %}{% endblock %}
 {% endblock %}
 

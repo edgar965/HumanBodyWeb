@@ -29,7 +29,7 @@ export class Projektnachladen {
             // Gespeicherte Lage anwenden — ueberschreibt die Auto-Normalisierung.
             if (track.mesh) Projektnachladen._lageSetzen(track, td);
         } catch (e) {
-            console.warn('[Restore] 3D-Objekt reload failed:', clip.data?.fileName, e);
+            Protokoll.warnung('Restore', '3D-Objekt reload failed:', clip.data?.fileName, e);
         }
     }
 
@@ -58,7 +58,7 @@ export class Projektnachladen {
             clip._needsReload = false;
             Protokoll.debug('Restore', 'Audio reloaded:', clip.data.fileName);
         } catch (e) {
-            console.warn('[Restore] Audio reload failed:', clip.data?.fileName, e);
+            Protokoll.warnung('Restore', 'Audio reload failed:', clip.data?.fileName, e);
             clip._needsReload = true;
         }
     }

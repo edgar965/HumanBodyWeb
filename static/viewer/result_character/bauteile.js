@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
  * Bausteine des Bedienfelds der Ergebnisseite.
@@ -118,7 +119,7 @@ export async function modellwahlFuellen(feld, wechseln, leeren = false) {
             feld.appendChild(eintrag);
         }
     } catch (fehler) {
-        console.warn('[result_character] Modell-Liste nicht ladbar:', fehler);
+        Protokoll.warnung('result_character', 'Modell-Liste nicht ladbar:', fehler);
         return false;
     }
     feld.addEventListener('change', () => wechseln(feld.value));

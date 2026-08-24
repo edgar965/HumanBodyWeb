@@ -14,6 +14,7 @@
  * Als reine Datenklasse mit `zuJson()`/`ausJson()`: Was in der Szenendatei
  * steht, bleibt unverändert (dieselben Namen, dieselben Werte).
  */
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 export class Kleidungszustand {
 
     /** Die fünf Regionen von oben nach unten. */
@@ -30,7 +31,7 @@ export class Kleidungszustand {
         offset: 0, stiffness: 0.5, minDist: 3, crotchFloor: 0, lift: 0,
         crotchDepth: 0, roughness: 0.8, metalness: 0.0,
     };
-    static VORGABEFARBE = [0.3, 0.35, 0.5];
+    static VORGABE_FARBE = [0.3, 0.35, 0.5];
 
     /** Anpasswerte: Feldname → Reglerkennung ohne Vorsilbe und Teiler. */
     static ANPASSWERTE = [
@@ -50,7 +51,7 @@ export class Kleidungszustand {
                               ...Kleidungszustand.MATERIALWERTE]) {
             this[feld] = werte[feld] ?? Kleidungszustand.VORGABEN[feld];
         }
-        this.color = werte.color || [...Kleidungszustand.VORGABEFARBE];
+        this.color = werte.color || [...Kleidungszustand.VORGABE_FARBE];
         for (const region of Kleidungszustand.REGIONEN) {
             this['region' + region] = werte['region' + region] || 0;
         }
@@ -119,7 +120,7 @@ export class Kleidungszustand {
 
     static _setzen(id, wert) {
         const feld = document.getElementById(id);
-        if (!feld) return;
+        if (!feld) { Protokoll.debug('kleidungszustand', `kein Feld ${id}`); return; }
         feld.value = wert;
         feld.dispatchEvent(new Event('input'));
     }

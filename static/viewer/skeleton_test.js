@@ -55,7 +55,7 @@ export async function loadRigifySkeleton() {
         ]);
 
         if (!skelResp.ok || !swResp.ok) {
-            console.warn('DEF skeleton or skin weights not available');
+            Protokoll.warnung('skeleton_test', 'DEF skeleton or skin weights not available');
             return;
         }
 

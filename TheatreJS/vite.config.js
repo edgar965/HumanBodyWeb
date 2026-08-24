@@ -5,6 +5,16 @@ export default defineConfig({
     resolve: {
         // Allow model_generator.js (outside TheatreJS/) to resolve 'three'
         dedupe: ['three'],
+        alias: {
+            // Die Module unter static/viewer/gemeinsam/ leiten auf djangoBase
+            // weiter — mit einer ABSOLUTEN URL (`/static/djangobase/js/...`),
+            // wie der Browser sie braucht. Beim Bauen gibt es keinen Server,
+            // der sie ausliefert, also zeigt dieser Alias auf das Paket auf der
+            // Platte. Ohne ihn scheitert der Build mit „Could not resolve"
+            // (17.08.2026, beim Umstellen von console.* auf Protokoll).
+            '/static/djangobase/js': path.resolve(
+                __dirname, '../../../shared/djangoBase/djangobase/static/djangobase/js'),
+        },
     },
     build: {
         outDir: path.resolve(__dirname, '../static/theatre'),

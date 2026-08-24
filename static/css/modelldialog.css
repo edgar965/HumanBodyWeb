@@ -1,0 +1,84 @@
+/*
+ * Der Dialog „Modell laden / speichern unter".
+ *
+ * Umbau 18.08.2026: Diese Regeln standen als 3.000 Zeichen langer String in
+ * `viewer/presets.js` und wurden beim ersten Öffnen in ein `<style>`-Element
+ * geschrieben (Befund `jsstilfassungen`). Sie gehören in eine Stildatei — dort
+ * sind sie lesbar, überschreibbar und werden vom Browser mitgecacht.
+ *
+ * Die Ersatzfarben (`var(--x, #…)`) bleiben erhalten: Der Dialog wird auch auf
+ * Seiten geöffnet, die das Theme-CSS nicht laden.
+ */
+
+#save-dialog-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.6); z-index: 10000;
+    align-items: center; justify-content: center;
+}
+#save-dialog-overlay.open { display: flex; }
+
+.save-dialog {
+    background: var(--bg-secondary, #1e1e2e);
+    border: 1px solid var(--border, #333); border-radius: 8px;
+    width: 420px; max-height: 80vh; display: flex; flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.save-dialog-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-bottom: 1px solid var(--border, #333);
+}
+.save-dialog-header h3 { margin: 0; font-size: 1rem; color: var(--text, #eee); }
+.save-dialog-close {
+    background: none; border: none; color: var(--text-muted, #888);
+    font-size: 1.4rem; cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.save-dialog-close:hover { color: var(--text, #eee); }
+
+.save-dialog-body { padding: 14px 18px; overflow-y: auto; }
+.save-dialog-body label {
+    display: block; font-size: 0.85rem; color: var(--text-muted, #999);
+    margin-bottom: 6px;
+}
+.save-dialog-list {
+    max-height: 200px; overflow-y: auto;
+    border: 1px solid var(--border, #333); border-radius: 4px;
+    background: var(--bg-primary, #12121e);
+}
+.save-dialog-item {
+    padding: 8px 12px; cursor: pointer; font-size: 0.9rem;
+    color: var(--text, #eee); border-bottom: 1px solid var(--border, #222);
+}
+.save-dialog-item:last-child { border-bottom: none; }
+.save-dialog-item:hover,
+.save-dialog-item.selected { background: var(--accent, #5865f2); color: #fff; }
+
+/* Die drei Zustände der Liste: lädt, leer, Fehler. Standen als Inline-Stil
+   im JavaScript. */
+.save-dialog-hinweis {
+    padding: 8px 12px; color: var(--text-muted, #888); font-size: 0.85rem;
+}
+.save-dialog-hinweis.save-dialog-fehler { color: #f44; }
+
+#save-dialog-name {
+    width: 100%; padding: 8px 10px;
+    border: 1px solid var(--border, #333); border-radius: 4px;
+    background: var(--bg-primary, #12121e); color: var(--text, #eee);
+    font-size: 0.95rem; box-sizing: border-box;
+}
+#save-dialog-name:focus { outline: none; border-color: var(--accent, #5865f2); }
+
+.save-dialog-footer {
+    display: flex; justify-content: flex-end; gap: 8px;
+    padding: 12px 18px; border-top: 1px solid var(--border, #333);
+}
+.save-dialog-btn {
+    padding: 8px 18px; border: 1px solid var(--border, #333);
+    border-radius: 4px; cursor: pointer; font-size: 0.9rem;
+}
+.save-dialog-btn.cancel { background: transparent; color: var(--text-muted, #999); }
+.save-dialog-btn.cancel:hover { color: var(--text, #eee); }
+.save-dialog-btn.confirm {
+    background: var(--accent, #5865f2); color: #fff;
+    border-color: var(--accent, #5865f2);
+}
+.save-dialog-btn.confirm:hover { filter: brightness(1.15); }

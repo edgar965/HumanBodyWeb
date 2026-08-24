@@ -87,7 +87,7 @@ export function setupViewportContextMenu() {
         for (let i = 0; i < state.project.tracks.length; i++) {
             const t = state.project.tracks[i];
             let hits = null;
-            // Licht-Helper nur wenn User die Helfer-Linien eingeschaltet hat (track.lightVisible).
+            // Licht-Helper nur wenn User die Helferlinien eingeschaltet hat (track.lightVisible).
             // Für den Kegel (indicator) reicht ein Hit — er ist immer da wenn coneVisible.
             if (t.type === 'light' && t.lightHelper) {
                 const targets = [];

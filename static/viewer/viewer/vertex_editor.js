@@ -9,6 +9,7 @@ import './utils.js';
 import { Vertexzustand } from './vertex_zustand.js';
 import { _veApplyGizmoDelta, _veMoveSelectedByDelta, _vePushOutside, _veReset, _veSmooth, _veUpdateGizmo } from './vertex_verschieben.js';
 import { _veUpdateAllColors, _veUpdateSelectionInfo, veBoxSelectEnd, veBoxSelectMove, veBoxSelectStart, veHandleClick } from './vertex_auswahl.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 // Vertex editor state
 export const VE_COLOR_DEFAULT  = new THREE.Color(0.35, 0.45, 0.65);
@@ -22,7 +23,7 @@ export function veEnterEditMode() {
         key = state._selectedItem.id;
     }
     if (!mesh) { mesh = state.clothMeshes['pe_preview']; key = 'pe_preview'; }
-    if (!mesh) { console.warn('Vertex Edit: no cloth/garment mesh found'); return; }
+    if (!mesh) { Protokoll.warnung('vertex_editor', 'Vertex Edit: no cloth/garment mesh found'); return; }
 
     Vertexzustand.veActive = true;
     Vertexzustand.veTargetMesh = mesh;
@@ -89,12 +90,33 @@ export function veEnterEditMode() {
 }
 
 export function veExitEditMode() {
-    if (Vertexzustand.veTargetMesh && Vertexzustand.veOrigRaycast) { Vertexzustand.veTargetMesh.raycast = Vertexzustand.veOrigRaycast; Vertexzustand.veOrigRaycast = null; }
+    if (Vertexzustand.veTargetMesh && Vertexzustand.veOrigRaycast) {
+        Vertexzustand.veTargetMesh.raycast = Vertexzustand.veOrigRaycast;
+        Vertexzustand.veOrigRaycast = null;
+    }
     if (Vertexzustand.veTargetMesh?.geometry?.disposeBoundsTree) Vertexzustand.veTargetMesh.geometry.disposeBoundsTree();
-    if (Vertexzustand.veGizmo) { state.scene.remove(Vertexzustand.veGizmo.getHelper()); Vertexzustand.veGizmo.detach(); Vertexzustand.veGizmo.dispose(); Vertexzustand.veGizmo = null; }
-    if (Vertexzustand.veGizmoHelper) { state.scene.remove(Vertexzustand.veGizmoHelper); Vertexzustand.veGizmoHelper = null; }
-    if (Vertexzustand.vePointsOverlay) { state.scene.remove(Vertexzustand.vePointsOverlay); Vertexzustand.vePointsOverlay.geometry.dispose(); Vertexzustand.vePointsOverlay.material.dispose(); Vertexzustand.vePointsOverlay = null; }
-    Vertexzustand.veActive = false; Vertexzustand.veTargetMesh = null; Vertexzustand.veTargetKey = null; Vertexzustand.veSelectedIndices.clear(); Vertexzustand.veOrigPositions = null; Vertexzustand.veBoxSelecting = false;
+    if (Vertexzustand.veGizmo) {
+        state.scene.remove(Vertexzustand.veGizmo.getHelper());
+        Vertexzustand.veGizmo.detach();
+        Vertexzustand.veGizmo.dispose();
+        Vertexzustand.veGizmo = null;
+    }
+    if (Vertexzustand.veGizmoHelper) {
+        state.scene.remove(Vertexzustand.veGizmoHelper);
+        Vertexzustand.veGizmoHelper = null;
+    }
+    if (Vertexzustand.vePointsOverlay) {
+        state.scene.remove(Vertexzustand.vePointsOverlay);
+        Vertexzustand.vePointsOverlay.geometry.dispose();
+        Vertexzustand.vePointsOverlay.material.dispose();
+        Vertexzustand.vePointsOverlay = null;
+    }
+    Vertexzustand.veActive = false;
+    Vertexzustand.veTargetMesh = null;
+    Vertexzustand.veTargetKey = null;
+    Vertexzustand.veSelectedIndices.clear();
+    Vertexzustand.veOrigPositions = null;
+    Vertexzustand.veBoxSelecting = false;
     const boxEl = document.getElementById('ve-box-select');
     if (boxEl) boxEl.style.display = 'none';
     const editCtrl = document.getElementById('pe-edit-controls');
@@ -131,7 +153,11 @@ export function initVertexEditorBindings() {
         _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
     });
     document.getElementById('ve-deselect-all')?.addEventListener('click', () => {
-        if (!Vertexzustand.veActive) return; Vertexzustand.veSelectedIndices.clear(); _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
+        if (!Vertexzustand.veActive) return;
+        Vertexzustand.veSelectedIndices.clear();
+        _veUpdateAllColors();
+        _veUpdateGizmo();
+        _veUpdateSelectionInfo();
     });
     document.getElementById('ve-smooth')?.addEventListener('click', () => _veSmooth());
     document.getElementById('ve-push-outside')?.addEventListener('click', () => _vePushOutside());

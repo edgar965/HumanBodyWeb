@@ -5,6 +5,9 @@ Aus core/api/foto.py herausgeloest (Umbau 15.08.2026).
 """
 
 import numpy as np
+import logging
+
+logger = logging.getLogger('core')
 
 
 class Hautfarbe:
@@ -40,4 +43,5 @@ class Hautfarbe:
             r, g, b = int(median[2]), int(median[1]), int(median[0])
             return f'#{r:02x}{g:02x}{b:02x}'
         except Exception:
+            logger.warning('Hautfarbe aus dem Foto nicht ermittelbar', exc_info=True)
             return None

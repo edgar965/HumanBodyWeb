@@ -47,6 +47,7 @@ def theatre_convert_video(request):
         fertig = True
         return antwort
     except VideoFehler as e:
+        logger.exception('theatre_convert_video: VideoFehler')
         return JsonResponse({'error': str(e)}, status=500)
     except Exception as e:                                        # noqa: BLE001
         logger.exception('Videoumwandlung fehlgeschlagen')
@@ -99,6 +100,7 @@ def theatre_render_video(request):
         return _datei_und_aufraeumen(ausgabe, Videokodierer.inhaltstyp(format),
                                      'theatre_export.' + endung, arbeitsordner)
     except (RenderFehler, VideoFehler) as e:
+        logger.exception('theatre_render_video: RenderFehler/VideoFehler')
         shutil.rmtree(arbeitsordner, ignore_errors=True)
         return JsonResponse({'error': str(e)}, status=500)
     except Exception as e:                                        # noqa: BLE001
@@ -157,6 +159,7 @@ def theatre_encode_frames(request):
         return _datei_und_aufraeumen(ausgabe, Videokodierer.inhaltstyp(format),
                                      'theatre_export.' + endung, arbeitsordner)
     except VideoFehler as e:
+        logger.exception('theatre_encode_frames: VideoFehler')
         shutil.rmtree(arbeitsordner, ignore_errors=True)
         return JsonResponse({'error': str(e)}, status=500)
     except Exception as e:                                        # noqa: BLE001

@@ -1,113 +1,76 @@
 /**
  * Scene Editor -- Scene save/load, file dialogs, gather/restore.
+ *
+ * UMBAU 17.08.2026: 208 Zeilen mit drei Themen. Jetzt:
+ *
+ *     szenenzustand.js   einsammeln / herstellen / zurücksetzen
+ *     szenenausgabe.js   Szene oder Figur als JSON-Datei schreiben
+ *
+ * Hier bleiben die Befehle, die das Menü auslöst (speichern, neu, schnell
+ * speichern, laden) und die Registrierung — die Menüleiste und die Dialoge rufen
+ * die Namen über `fn`.
  */
-import { THREE, TONE_MAPPINGS } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { markClean } from './undo.js';
-import { _saveJsonWithPicker, importModelFromFilePicker, initCharacterDialog, initSceneDialogs, loadFromFilePicker, openAddCharacterDialog, openLoadDialog, openSaveDialog } from './szene_dialoge.js';
+import { _saveJsonWithPicker, importModelFromFilePicker, initCharacterDialog,
+         initSceneDialogs, loadFromFilePicker, openAddCharacterDialog,
+         openLoadDialog, openSaveDialog } from './szene_dialoge.js';
 import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
+import { Szenenausgabe } from './szenenausgabe.js';
+import { Szenenzustand } from './szenenzustand.js';
 
-export function gatherSceneState() {
-    const chars = [];
-    state.characters.forEach(inst => chars.push(inst.toJSON()));
-    return {
-        version: 1,
-        name: state.currentSceneName || 'Unnamed',
-        characters: chars,
-        lighting: {
-            key: { intensity: state.keyLight.intensity, color: '#' + state.keyLight.color.getHexString(), pos: [state.keyLight.position.x, state.keyLight.position.y, state.keyLight.position.z] },
-            fill: { intensity: state.fillLight.intensity, color: '#' + state.fillLight.color.getHexString(), pos: [state.fillLight.position.x, state.fillLight.position.y, state.fillLight.position.z] },
-            back: { intensity: state.backLight.intensity, color: '#' + state.backLight.color.getHexString(), pos: [state.backLight.position.x, state.backLight.position.y, state.backLight.position.z] },
-            ambient: { intensity: state.ambientLight.intensity, color: '#' + state.ambientLight.color.getHexString() }
-        },
-        renderer: {
-            toneMapping: document.getElementById('tone-mapping').value,
-            exposure: state.renderer.toneMappingExposure,
-            background: '#' + state.scene.background.getHexString()
-        },
-        camera: {
-            fov: state.camera.fov,
-            position: state.camera.position.toArray(),
-            target: state.controls.target.toArray()
-        }
-    };
-}
+export function gatherSceneState() { return Szenenzustand.einsammeln(); }
 
 export async function doSaveScene(name) {
-    const data = gatherSceneState();
-    data.name = name;
+    const daten = Szenenzustand.einsammeln();
+    daten.name = name;
     try {
-        const result = await Serverabruf.senden('/api/character/scene/save/',
-                                               { name, data });
-        if (result.ok) {
-            state.currentSceneName = name;
-            markClean();
-            const dateiTitle = document.querySelector('.menu:first-child .menu-title');
-            if (dateiTitle) {
-                // `Knopfmeldung` setzt Text und Farbe und nimmt beides
-                // zurueck — hier auf dem Titel statt auf einem Knopf.
-                Knopfmeldung.zeigen(dateiTitle, 'Gespeichert!',
-                                    { symbol: null, farbe: 'var(--accent)' });
-            }
-        } else { alert('Fehler: ' + (result.error || 'Unbekannt')); }
-    } catch (e) { alert('Fehler: ' + e.message); }
+        const ergebnis = await Serverabruf.senden('/api/character/scene/save/',
+                                                 { name, data: daten });
+        if (!ergebnis.ok) {
+            alert('Fehler: ' + (ergebnis.error || 'Unbekannt'));
+            return;
+        }
+        state.currentSceneName = name;
+        markClean();
+        const titel = document.querySelector('.menu:first-child .menu-title');
+        if (titel) {
+            // `Knopfmeldung` setzt Text und Farbe und nimmt beides zurueck —
+            // hier auf dem Menütitel statt auf einem Knopf.
+            Knopfmeldung.zeigen(titel, 'Gespeichert!',
+                                { symbol: null, farbe: 'var(--accent)' });
+        }
+    } catch (fehler) {
+        alert('Fehler: ' + fehler.message);
+    }
 }
 
 export async function loadSceneFromData(data, sceneName) {
-    fn.clearAllCharacters();
-    state.currentSceneName = sceneName || data.name || '';
-    if (data.characters) {
-        for (const charData of data.characters) {
-            try {
-                const inst = await fn.CharacterInstance.fromJSON(charData);
-                state.characters.set(inst.id, inst);
-                state.scene.add(inst.group);
-            } catch (e) { console.error(`Failed to load character ${charData.presetName}:`, e); }
-        }
-    }
-    if (data.lighting) {
-        if (data.lighting.key) { state.keyLight.intensity = data.lighting.key.intensity; state.keyLight.color.set(data.lighting.key.color); state.keyLight.position.set(...data.lighting.key.pos); }
-        if (data.lighting.fill) { state.fillLight.intensity = data.lighting.fill.intensity; state.fillLight.color.set(data.lighting.fill.color); state.fillLight.position.set(...data.lighting.fill.pos); }
-        if (data.lighting.back) { state.backLight.intensity = data.lighting.back.intensity; state.backLight.color.set(data.lighting.back.color); state.backLight.position.set(...data.lighting.back.pos); }
-        if (data.lighting.ambient) { state.ambientLight.intensity = data.lighting.ambient.intensity; state.ambientLight.color.set(data.lighting.ambient.color); }
-    }
-    if (data.renderer) {
-        if (data.renderer.toneMapping && TONE_MAPPINGS[data.renderer.toneMapping] !== undefined) state.renderer.toneMapping = TONE_MAPPINGS[data.renderer.toneMapping];
-        if (data.renderer.exposure !== undefined) state.renderer.toneMappingExposure = data.renderer.exposure;
-        if (data.renderer.background) state.scene.background.set(data.renderer.background);
-    }
-    if (data.camera) {
-        if (data.camera.fov) { state.camera.fov = data.camera.fov; state.camera.updateProjectionMatrix(); }
-        if (data.camera.position) state.camera.position.fromArray(data.camera.position);
-        if (data.camera.target) state.controls.target.fromArray(data.camera.target);
-        state.controls.update();
-    }
-    fn.syncUIFromState();
-    fn.updateCharacterListUI();
-    fn.updateVertexCount();
-    if (state.characters.size > 0 && !state.selectedCharacterId) {
-        fn.selectCharacter(state.characters.keys().next().value);
-    }
-    fn.captureInitial?.();
+    return Szenenzustand.herstellen(data, sceneName);
 }
 
 export async function loadSceneFromServer(name) {
-    const resp = await fetch(`/api/character/scene/${encodeURIComponent(name)}/`);
-    if (!resp.ok) throw new Error('Scene not found');
-    const data = await resp.json();
-    await loadSceneFromData(data, name);
+    const daten = await Serverabruf.json(
+        `/api/character/scene/${encodeURIComponent(name)}/`);
+    await Szenenzustand.herstellen(daten, name);
 }
 
 export async function loadModelFile(fileEntry) {
-    if (fileEntry.type === 'scene') { await loadSceneFromServer(fileEntry.name); }
-    else { fn.clearAllCharacters(); state.currentSceneName = ''; await fn.addCharacterFromPreset(fileEntry.name); }
+    if (fileEntry.type === 'scene') {
+        await loadSceneFromServer(fileEntry.name);
+        return;
+    }
+    fn.clearAllCharacters();
+    state.currentSceneName = '';
+    await fn.addCharacterFromPreset(fileEntry.name);
 }
 
 export function newScene() {
-    if (state.characters.size > 0) {
-        if (!confirm('Aktuelle Szene verwerfen und neue Szene erstellen?')) return;
+    if (state.characters.size > 0
+            && !confirm('Aktuelle Szene verwerfen und neue Szene erstellen?')) {
+        return;
     }
     fn.clearAllCharacters();
     state.currentSceneName = '';
@@ -121,56 +84,20 @@ export function newScene() {
 }
 
 export function quickSave() {
-    if (state.currentSceneName) { doSaveScene(state.currentSceneName); }
-    else { openSaveDialog(); }
+    if (state.currentSceneName) doSaveScene(state.currentSceneName);
+    else openSaveDialog();
 }
 
 export function resetScene() {
-    if (!confirm('Szene komplett zur\u00fccksetzen? Alle \u00c4nderungen gehen verloren.')) return;
-    fn.clearAllCharacters();
-    state.currentSceneName = '';
-    fn.resetLighting();
-    fn.resetCamera();
-    state.scene.background.set(0x1a1a2e);
-    state.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    fn.syncUIFromState();
-    fn.loadDefaultCharacter();
+    if (!confirm('Szene komplett zurücksetzen? Alle Änderungen gehen verloren.')) {
+        return;
+    }
+    Szenenzustand.zuruecksetzen();
     markClean();
 }
 
-
-
-
-
-export async function exportSceneJSON() {
-    const data = gatherSceneState();
-    await _saveJsonWithPicker(data, (state.currentSceneName || 'scene') + '.json');
-}
-
-export async function exportModelJSON() {
-    if (!state.selectedCharacterId) { alert('Bitte zuerst einen Charakter ausw\u00e4hlen.'); return; }
-    const inst = state.characters.get(state.selectedCharacterId);
-    if (!inst) return;
-    let data;
-    if (inst.generatedConfig) {
-        data = { ...inst.generatedConfig, type: 'generated_model', name: inst.presetName || 'Generiertes Modell', body_type: inst.generatedConfig.skeleton_type === 'rig' ? 'Rig Bones' : 'DEF Skeleton', skeleton_type: inst.generatedConfig.skeleton_type || 'def' };
-    } else {
-        data = { name: inst.presetName, body_type: inst.bodyType, morphs: inst.morphs || {}, meta: inst.meta || {}, cloth: inst.cloth || [], hair_style: inst.hairStyle || null, garments: inst.garments || [], mh_proxy: Object.values(inst.mhProxies || {}) };
-    }
-    const savedName = await _saveJsonWithPicker(data, (inst.presetName || 'model') + '.json');
-    if (savedName) {
-        const newName = savedName.replace(/\.json$/i, '');
-        inst.presetName = newName;
-        inst.presetKey = newName;
-        fn.updateCharacterListUI?.();
-    }
-}
-
-
-
-
-
-
+export async function exportSceneJSON() { return Szenenausgabe.szene(); }
+export async function exportModelJSON() { return Szenenausgabe.figur(); }
 
 // Register
 fn.gatherSceneState = gatherSceneState;

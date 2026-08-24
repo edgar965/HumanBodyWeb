@@ -9,6 +9,7 @@
  * je Kategorie ein <optgroup>.
  */
 import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
+import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
 export class Kleiderfelder {
 
     static ENDPUNKT = '/api/character/garment/library/';
@@ -27,7 +28,7 @@ export class Kleiderfelder {
                 if (feld) Kleiderfelder._eintragen(feld, nachKategorie, gewaehlt[nummer]);
             });
         } catch (fehler) {
-            console.warn('Kleider-Bibliothek nicht ladbar:', fehler);
+            Protokoll.warnung('kleiderfelder', 'Kleider-Bibliothek nicht ladbar:', fehler);
         }
     }
 

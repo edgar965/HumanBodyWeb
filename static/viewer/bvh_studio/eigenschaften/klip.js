@@ -41,28 +41,28 @@ export class Klipeigenschaften {
     static _ton(clip) {
         const d = clip.data;
         const prozent = Math.round((d.volume || 1) * 100);
-        const f = ' <span style="font-size:0.7rem;">f</span>';
+        const f = ' <span class="winzig">f</span>';
         return M.gruppe(`Audio: ${d.fileName || '?'}`, `
-            ${M.zeile('Datei', `<span style="font-size:0.75rem;color:var(--text-muted);">${d.fileName || '—'}</span>`)}
+            ${M.zeile('Datei', `<span class="text-klein">${d.fileName || '—'}</span>`)}
             ${M.zeile('Dauer', `<span style="font-size:0.8rem;">${(d.audioDuration || 0).toFixed(1)}s</span>`)}
             ${M.zeile('Start', M.zahl('prop-audio-start', clip.startFrame, 'min="0"') + f)}
             ${M.zeile('Lautstärke', `<input type="range" value="${prozent}" id="prop-audio-vol" min="0" max="100"> <span id="prop-audio-vol-label" style="font-size:0.75rem;">${prozent}%</span>`)}
             ${M.zeile('Fade In', M.zahl('prop-audio-fadein', d.fadeIn || 0, 'min="0"') + f)}
             ${M.zeile('Fade Out', M.zahl('prop-audio-fadeout', d.fadeOut || 0, 'min="0"') + f)}
-            ${M.zeile('Offset', M.zahl('prop-audio-offset', d.offset || 0, 'min="0" step="0.1"') + ' <span style="font-size:0.7rem;">s</span>')}`);
+            ${M.zeile('Offset', M.zahl('prop-audio-offset', d.offset || 0, 'min="0" step="0.1"') + ' <span class="winzig">s</span>')}`);
     }
 
     static _objekt(clip) {
-        const f = ' <span style="font-size:0.7rem;">f</span>';
+        const f = ' <span class="winzig">f</span>';
         return M.gruppe('3D-Objekt Clip', `
-            ${M.zeile('Datei', `<span style="font-size:0.75rem;color:var(--text-muted);">${clip.data?.fileName || '—'}</span>`)}
+            ${M.zeile('Datei', `<span class="text-klein">${clip.data?.fileName || '—'}</span>`)}
             ${M.zeile('Start', M.zahl('prop-oc-start', clip.startFrame, 'min="0"') + f)}
             ${M.zeile('Dauer', M.zahl('prop-oc-frames', clip.totalFrames, 'min="1"') + f)}
-            <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Objekt ist in der Szene sichtbar wenn der Playhead im Clip-Bereich ist. Position/Rotation/Größe über die Track-Eigenschaften oben.</div>`);
+            <div class="fussnote">Objekt ist in der Szene sichtbar wenn der Playhead im Clip-Bereich ist. Position/Rotation/Größe über die Track-Eigenschaften oben.</div>`);
     }
 
     static _modell(clip) {
-        const f = ' <span style="font-size:0.7rem;">f</span>';
+        const f = ' <span class="winzig">f</span>';
         return M.gruppe('Modell Clip', `
             ${M.zeile('Preset', `<input type="text" value="${clip.data?.preset || ''}" id="prop-model-preset" placeholder="z.B. FemaleGarment">`)}
             ${M.zeile('Body Type', `<input type="text" value="${clip.data?.bodyType || 'Female_Caucasian'}" id="prop-model-bodytype">`)}
@@ -71,9 +71,9 @@ export class Klipeigenschaften {
     }
 
     static _bvh(clip) {
-        const f = ' <span style="font-size:0.7rem;">f</span>';
+        const f = ' <span class="winzig">f</span>';
         return M.gruppe(`Clip: ${clip.name}`, `
-            ${M.zeile('Start', M.zahl('prop-clip-start', clip.startFrame, 'min="0"') + ' <span style="font-size:0.7rem;color:var(--text-muted);">frames</span>')}
+            ${M.zeile('Start', M.zahl('prop-clip-start', clip.startFrame, 'min="0"') + ' <span class="text-winzig">frames</span>')}
             ${M.zeile('Trim In', M.zahl('prop-clip-trim-in', clip.trimIn, 'min="0"'))}
             ${M.zeile('Trim Out', M.zahl('prop-clip-trim-out', clip.trimOut, 'min="0"'))}
             ${M.zeile('Speed', M.zahl('prop-clip-speed', clip.speed, 'min="0.1" max="4" step="0.1"'))}

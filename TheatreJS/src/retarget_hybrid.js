@@ -7,6 +7,7 @@
  * building Three.js AnimationClips from the API response.
  */
 import * as THREE from 'three';
+import { Protokoll } from '../../static/viewer/gemeinsam/protokoll.js';
 
 // =========================================================================
 // BVH format detection
@@ -55,7 +56,7 @@ function buildClipFromRetargetData(data, rigifySkel) {
         }
     }
 
-    console.debug(`[RETARGET] buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames`);
+    Protokoll.debug('RETARGET', `buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames`);
     return new THREE.AnimationClip('retargeted', data.duration, tracks);
 }
 
@@ -73,7 +74,7 @@ export async function fetchRetargetedClip(bvhCategory, bvhName, rigifySkel, opts
     if (opts.format) params.set('format', opts.format);
 
     const url = `/api/character/retarget-bvh/${encodeURIComponent(bvhCategory)}/${encodeURIComponent(bvhName)}/?${params}`;
-    console.debug(`[RETARGET] Fetching: ${url}`);
+    Protokoll.debug('RETARGET', `Fetching: ${url}`);
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`Retarget API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();

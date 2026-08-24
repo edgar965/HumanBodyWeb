@@ -61,7 +61,7 @@ export class Modellerzeugung {
     static netzBauen() {
         const konfig = Modellbauzustand.konfig;
         if (!konfig) {
-            console.warn('Model Generator: missing config');
+            Protokoll.warnung('erzeugung', 'Model Generator: missing config');
             return null;
         }
         if (Modellbauzustand.skelettart === 'rig' && Modellbauzustand.rigKnochen) {
@@ -70,7 +70,7 @@ export class Modellerzeugung {
                    || null;
         }
         if (!state.rigifySkeletonData || !state.skinWeightData) {
-            console.warn('Model Generator: missing skeleton data');
+            Protokoll.warnung('erzeugung', 'Model Generator: missing skeleton data');
             return null;
         }
         return generateModelMesh(state.rigifySkeletonData, state.skinWeightData,

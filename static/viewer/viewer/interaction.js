@@ -112,7 +112,9 @@ function _buildEquippedList() {
     }
     for (const t of targets) {
         const li = document.createElement('li'); li.className = 'equipped-item';
-        const nameSpan = document.createElement('span'); nameSpan.className = 'equipped-item-name'; nameSpan.textContent = t.label;
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'equipped-item-name';
+        nameSpan.textContent = t.label;
         nameSpan.addEventListener('click', () => {
             if (state._selectedItem) _setEmissiveOnItem(state._selectedItem, state._ZERO_EMISSIVE);
             const fresh = getSelectableTargets().find(x => x.type === t.type && x.id === t.id);
@@ -121,7 +123,10 @@ function _buildEquippedList() {
             _setEmissiveOnItem(state._selectedItem, state._SELECT_EMISSIVE);
             const rb = document.getElementById('selection-remove-btn'); if (rb) rb.style.display = '';
         });
-        const rmBtn = document.createElement('button'); rmBtn.className = 'equipped-item-remove'; rmBtn.innerHTML = '&#10005;'; rmBtn.title = 'Remove';
+        const rmBtn = document.createElement('button');
+        rmBtn.className = 'equipped-item-remove';
+        rmBtn.innerHTML = '&#10005;';
+        rmBtn.title = 'Remove';
         rmBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             switch (t.type) {
@@ -131,7 +136,11 @@ function _buildEquippedList() {
                 case 'wardrobe': { const btn = document.querySelector(`.asset-btn[data-asset="${t.id}"]`); if (btn) btn.click(); break; }
                 case 'smpl_garment': if (fn.removeSmplGarment) fn.removeSmplGarment(t.id); break;
             }
-            if (_sameItem(state._selectedItem, t)) { state._selectedItem = null; const rb = document.getElementById('selection-remove-btn'); if (rb) rb.style.display = 'none'; }
+            if (_sameItem(state._selectedItem, t)) {
+                state._selectedItem = null;
+                const rb = document.getElementById('selection-remove-btn');
+                if (rb) rb.style.display = 'none';
+            }
             updateEquippedList();
         });
         li.appendChild(nameSpan); li.appendChild(rmBtn); list.appendChild(li);

@@ -31,7 +31,7 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 export class Modellgenerator {
     static async starten() {
         if (!state.rigifySkeletonData || !state.skinWeightData) {
-            console.warn('Model Generator: skeleton data not loaded yet');
+            Protokoll.warnung('modellgenerator_ui', 'Model Generator: skeleton data not loaded yet');
             return;
         }
         if (!Modellbauzustand.konfig) await Modellgenerator._konfigBeschaffen();

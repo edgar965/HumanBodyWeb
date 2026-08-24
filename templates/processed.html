@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Processed Videos - MocapNET{% endblock %}
+{% block title %}HumanBody · Processed Videos{% endblock %}
 
 {% block content %}
 <style>
@@ -62,10 +62,21 @@
                 </a>
             </td>
             <td>
-                <a class="btn btn-sm btn-danger" href="{% url 'delete_job' job.id %}"
-                   onclick="return confirm('Delete {{ job.name }}?')" title="Delete">
-                    <i class="fas fa-trash"></i>
-                </a>
+                {% comment %}POST, nicht <a href>: Diese Adresse löscht den
+                Auftrag samt Dateien. Ein onclick="return confirm(…)" schützt nur
+                den menschlichen Klick — kein Prefetch und kein <img src>. Siehe
+                core/api/auftraege.delete_job (17.08.2026).
+                {# … #} geht NUR einzeilig; mehrzeilig rendert Django den Text als
+                Seiteninhalt — er stand sichtbar in jeder Zeile der Tabelle
+                (gefunden im Browser, 17.08.2026).{% endcomment %}
+                <form method="post" action="{% url 'delete_job' job.id %}"
+                      class="d-inline"
+                      onsubmit="return confirm('Delete {{ job.name }}?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
             </td>
         </tr>
         {% endfor %}
@@ -74,8 +85,8 @@
 
 <div id="videoPreview" class="video-preview-panel">
     <div class="preview-header">
-        <h3 id="previewTitle"></h3>
-        <button class="btn btn-sm btn-secondary" id="previewClose">
+        <h3 id="preview-title"></h3>
+        <button class="btn btn-sm btn-secondary" id="preview-close">
             <i class="fas fa-times"></i>
         </button>
     </div>

@@ -69,6 +69,7 @@ class Kleidungsregler:
             return vorgabe
         try:
             return float(wert)
+        # stumm gewollt: Vorschrift dieser Klasse ist „unbrauchbar → Vorgabe“.
         except (TypeError, ValueError):
             return vorgabe
 

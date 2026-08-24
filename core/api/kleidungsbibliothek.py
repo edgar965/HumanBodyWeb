@@ -17,19 +17,20 @@ import os
 import re
 
 from ..dienste.kleiderverwaltung import Kleiderverwaltung, KleiderFehler
+from ..dienste.kleiderbibliothek import Kleiderbibliothek
 
 
-_garment_library = None
 logger = logging.getLogger(__name__)
 
 
 def _get_garment_library():
-    global _garment_library
-    if _garment_library is None:
-        from GarmentFitter import GarmentLibrary
-        _garment_library = GarmentLibrary(str(settings.HUMANBODY_GARMENT_LIBRARY_DIR))
-        _garment_library.scan()
-    return _garment_library
+    """Bisherige Aufrufform — siehe dienste/kleiderbibliothek.py.
+
+    Der faule Aufbau stand hier ohne Schloss: Zwei parallele Anfragen vor dem
+    ersten Einlesen bauten den Katalog zweimal (Sparring mit Nemotron,
+    18.08.2026).
+    """
+    return Kleiderbibliothek.holen()
 
 
 @require_GET
@@ -88,10 +89,8 @@ def garment_manage(request):
 @require_GET
 def garment_library_rescan(request):
     """Force rescan of garment library directory."""
-    global _garment_library
-    _garment_library = None
-    lib = _get_garment_library()
-    return JsonResponse({'ok': True, 'count': len(lib.catalog)})
+    katalog = Kleiderbibliothek.neu_einlesen()
+    return JsonResponse({'ok': True, 'count': len(katalog.catalog)})
 
 
 @require_GET

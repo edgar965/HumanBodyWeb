@@ -12,7 +12,11 @@ import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export function stopAnimation(destroy = false) {
-    if (state.currentAction) { state.currentAction.stop(); state.currentAction.reset(); if (destroy) state.currentAction = null; }
+    if (state.currentAction) {
+        state.currentAction.stop();
+        state.currentAction.reset();
+        if (destroy) state.currentAction = null;
+    }
     if (state.mixer && destroy) { state.mixer.stopAllAction(); state.mixer = null; }
     if (state._animatedCharId) {
         const inst = state.characters.get(state._animatedCharId);
@@ -26,7 +30,11 @@ export function stopAnimation(destroy = false) {
     if (state.rigVisible && activeSkel) {
         state.skeletonHelper = Skelettanzeige.bauen(state.scene, activeSkel.rootBone);
     }
-    state._animatedCharId = null; state.playing = false; state.currentAnimUrl = ''; state.currentAnimBvhText = ''; state.currentAnimGroundFixed = false;
+    state._animatedCharId = null;
+    state.playing = false;
+    state.currentAnimUrl = '';
+    state.currentAnimBvhText = '';
+    state.currentAnimGroundFixed = false;
 }
 
 export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
@@ -46,7 +54,9 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
     if (skel) {
         const bMesh = inst ? inst.bodyMesh : state.bodyMesh;
         state._animatedCharId = inst ? inst.id : null;
-        let bodyH = 1.68; const bb = new THREE.Box3().setFromObject(bMesh); if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
+        let bodyH = 1.68;
+        const bb = new THREE.Box3().setFromObject(bMesh);
+        if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
         try {
             let clip;
             const wahl = { bodyHeight: bodyH, deltaNorm: state._sceneDeltaNorm };
@@ -78,7 +88,9 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             bvhBones.forEach(b => { b.updateWorldMatrix(true, false); b.getWorldPosition(tmpVec); skelBox.expandByPoint(tmpVec); });
             let bodyHeight = 1.75; if (targetMesh) { const bb = new THREE.Box3().setFromObject(targetMesh); if (!bb.isEmpty()) bodyHeight = bb.max.y - bb.min.y; }
             const scale = bodyHeight / Math.max(skelBox.max.y - skelBox.min.y, 0.01);
-            state.skelWrapper = new THREE.Group(); state.skelWrapper.scale.set(scale, scale, scale); state.skelWrapper.add(rootBone);
+            state.skelWrapper = new THREE.Group();
+            state.skelWrapper.scale.set(scale, scale, scale);
+            state.skelWrapper.add(rootBone);
             if (inst) state.skelWrapper.position.copy(inst.group.position);
             state.scene.add(state.skelWrapper);
             if (state.skeletonHelper) state.scene.remove(state.skeletonHelper);
@@ -171,7 +183,7 @@ export async function loadAnimationUI() {
         tree.innerHTML = '';
         const categories = data.categories || {};
         const catNames = Object.keys(categories).sort();
-        if (catNames.length === 0) { tree.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Animationen</div>'; return; }
+        if (catNames.length === 0) { tree.innerHTML = '<div class="leer-hinweis">Keine Animationen</div>'; return; }
         for (const cat of catNames) {
             const anims = categories[cat];
             const catDiv = document.createElement('div'); catDiv.className = 'anim-category';

@@ -1,4 +1,5 @@
 import { Bedienleiste } from './bedienleiste.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /**
  * Kamerabahn — Kamera-Keyframes setzen und löschen.
@@ -67,7 +68,7 @@ export class Kamerabahn {
             set(fov, this.kamera.fov);
         });
         const p = this.kamera.position;
-        console.debug(`✓ Kamera-Keyframe bei ${zeit.toFixed(2)}s:`,
+        Protokoll.debug('kamerabahn', `✓ Kamera-Keyframe bei ${zeit.toFixed(2)}s:`,
             `pos(${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`,
             `fov=${this.kamera.fov.toFixed(1)}`);
     }
@@ -84,10 +85,10 @@ export class Kamerabahn {
                 entfernt += vorher - spur.keyframes.length;
             }
             if (!entfernt) {
-                console.debug(`Keine Kamera-Keyframes bei ${zeit.toFixed(2)}s`);
+                Protokoll.debug('kamerabahn', `Keine Kamera-Keyframes bei ${zeit.toFixed(2)}s`);
                 return false;
             }
-            console.debug(`✓ ${entfernt} Kamera-Keyframe(s) bei ${zeit.toFixed(2)}s `
+            Protokoll.debug('kamerabahn', `✓ ${entfernt} Kamera-Keyframe(s) bei ${zeit.toFixed(2)}s `
                         + 'gelöscht — Seite wird neu geladen');
             return true;
         });
@@ -99,7 +100,7 @@ export class Kamerabahn {
             for (const spur of Object.values(spuren)) {
                 if (spur.keyframes) spur.keyframes = [];
             }
-            console.debug('✓ Alle Kamera-Keyframes gelöscht — Seite wird neu geladen');
+            Protokoll.debug('kamerabahn', '✓ Alle Kamera-Keyframes gelöscht — Seite wird neu geladen');
             return true;
         });
     }
@@ -114,7 +115,7 @@ export class Kamerabahn {
         const schluessel = Object.keys(localStorage).find(
             k => k.toLowerCase().includes('theatre'));
         if (!schluessel) {
-            console.warn('Kein Theatre-Zustand im localStorage');
+            Protokoll.warnung('kamerabahn', 'Kein Theatre-Zustand im localStorage');
             return;
         }
         try {
@@ -122,7 +123,7 @@ export class Kamerabahn {
             const spuren = zustand?.sheetsById?.Main?.sequence
                 ?.tracksByObject?.Camera?.trackData;
             if (!spuren) {
-                console.warn('Keine Kameraspuren gefunden');
+                Protokoll.warnung('kamerabahn', 'Keine Kameraspuren gefunden');
                 return;
             }
             if (aendern(spuren)) {

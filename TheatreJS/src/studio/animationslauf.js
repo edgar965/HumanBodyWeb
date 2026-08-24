@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { loadBVHFromText } from '../asset-loader.js';
 import { fetchBVH } from '../scene-manager.js';
 import { fetchRetargetedClip } from '../retarget_hybrid.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /**
  * Animationslauf — eine BVH-Animation auf die gewählte Figur legen.
@@ -79,7 +80,7 @@ export class Animationslauf {
             this.abspieler.zeit = 0;
             this._sequenzlaengeSetzen(dauer);
             this._weiterlaufen(liefVorher);
-            console.debug('Animation geladen:', kategorie, name, dauer);
+            Protokoll.debug('animationslauf', 'Animation geladen:', kategorie, name, dauer);
             return dauer;
         } catch (fehler) {
             console.error('Animation nicht ladbar:', fehler);
@@ -115,7 +116,7 @@ export class Animationslauf {
         this.skinner.skelett.rootBone.updateWorldMatrix(true, true);
 
         const dauer = clip.duration || 1;
-        console.debug(`✓ BVH umgezielt: ${dauer.toFixed(1)}s, ${clip.tracks.length} Spuren`);
+        Protokoll.debug('animationslauf', `✓ BVH umgezielt: ${dauer.toFixed(1)}s, ${clip.tracks.length} Spuren`);
         return dauer;
     }
 
@@ -142,9 +143,9 @@ export class Animationslauf {
             this.buehne.studio.transaction(({ set }) => {
                 set(this.buehne.sheet.sequence.pointer.length, laenge);
             });
-            console.debug(`✓ Theatre-Sequenz auf ${laenge}s gesetzt`);
+            Protokoll.debug('animationslauf', `✓ Theatre-Sequenz auf ${laenge}s gesetzt`);
         } catch (fehler) {
-            console.warn('Sequenzlänge nicht setzbar:', fehler);
+            Protokoll.warnung('animationslauf', 'Sequenzlänge nicht setzbar:', fehler);
         }
     }
 
@@ -154,7 +155,7 @@ export class Animationslauf {
         if (liefVorher) {
             this.abspieler.umschalten();
             knopf?.classList.add('playing');
-            console.debug('✓ neue Animation läuft weiter');
+            Protokoll.debug('animationslauf', '✓ neue Animation läuft weiter');
         } else {
             this.abspieler.laeuft = false;
             window.isPlaying = false;

@@ -20,7 +20,7 @@ export async function loadBackendStatus() {
         const data = await Serverabruf.json(`${API}/analyze-photo/status/`);
         state.backendStatus = data.backends || {};
     } catch (e) {
-        console.warn('Failed to load backend status:', e);
+        Protokoll.warnung('job_management', 'Failed to load backend status:', e);
         return;
     }
 
@@ -127,7 +127,7 @@ export async function captureAndSaveScreenshot(jobId) {
                                  { image: dataUrl });
         Protokoll.debug('Photo->3D', 'Bildschirmfoto gesichert, Auftrag', jobId);
     } catch (e) {
-        console.warn('Screenshot capture failed:', e);
+        Protokoll.warnung('job_management', 'Screenshot capture failed:', e);
     }
 }
 

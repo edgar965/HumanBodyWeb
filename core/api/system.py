@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 """Einstellungen, Protokoll und CharMorph-Bestand.
 
-Herausgeloest aus core/character_api.py (Umbau 15.08.2026). Die Datei hatte
-6.495 Zeilen und 110 Endpunkte; die Themen darin waren nur durch Reihenfolge
-getrennt. Die Endpunkte hier bleiben duenne Funktionen — Django-Dekoratoren,
-Stapelspuren und Tests bleiben damit lesbar —, waehrend die Fachlogik in
-core/dienste/ als Klassen liegt.
+Aus core/character_api.py herausgeloest (Umbau 15.08.2026) — warum so
+geschnitten, steht in `core/api/__init__.py`.
 """
 
 from ..models import AppSettings
@@ -63,6 +60,7 @@ def ui_pref_save(request):
         s.save()
         return JsonResponse({'ok': True})
     except Exception as e:
+        logger.exception('ui_pref_save: unerwarteter Fehler')
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -132,6 +130,8 @@ def charmorph_assets(request):
     import os as _os
     try:
         import yaml
+    # stumm gewollt: Die Antwort nennt die Ursache („pyyaml not installed“)
+    # und steht in der Oberfläche.
     except ImportError:
         return JsonResponse({'assets': [], 'error': 'pyyaml not installed'})
     asset_dir = _os.path.join(str(settings.TOOLS_ROOT), 'tools', 'CharMorphPlugin', 'data', 'characters', 'mb_female', 'assets')

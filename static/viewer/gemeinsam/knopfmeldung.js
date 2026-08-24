@@ -1,4 +1,5 @@
 import { Zeiten } from './zeiten.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /**
  * Knopfmeldung — ein Knopf zeigt kurz eine Rückmeldung und wird dann wieder
@@ -28,7 +29,7 @@ export class Knopfmeldung {
      * @param wahl    { symbol, dauer, farbe }
      */
     static zeigen(knopf, text, wahl = {}) {
-        if (!knopf) return;
+        if (!knopf) { Protokoll.warnung('knopfmeldung', text); return; }
         const { symbol = Knopfmeldung.SYMBOL_FERTIG,
                 dauer = Zeiten.BESTAETIGUNG_MS, farbe = null } = wahl;
         // Vorherigen Zustand vollständig merken — auch die Farbe, sonst bleibt

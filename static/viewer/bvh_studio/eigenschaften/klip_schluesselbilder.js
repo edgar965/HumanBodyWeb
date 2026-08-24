@@ -37,7 +37,7 @@ export class Schluesselbildeigenschaften {
             ${M.zeile('FOV', M.zahl('prop-kf-fov', d.fov || 50, 'min="10" max="120"'))}
             ${M.zeile('Fade-Effekt', `<input type="checkbox" ${d.fade !== false ? 'checked' : ''} id="prop-kf-fade"> <span style="font-size:0.72rem;color:var(--text-muted);margin-left:4px;">aus = Sprung</span>`)}
             ${M.zeile('Interp.', `<select id="prop-kf-interp" ${d.fade === false ? 'disabled' : ''}>${stufen}</select>`)}
-            <div style="margin-top:6px;">
+            <div class="abstand-6">
                 <button id="prop-kf-set-view" style="padding:3px 8px;font-size:0.75rem;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer;">Aktuelle Ansicht übernehmen</button>
             </div>`);
     }

@@ -1,11 +1,18 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Theatre Help — MocapNET{% endblock %}
+{% block title %}HumanBody · Theatre Help{% endblock %}
 
 {% block content %}
 <style>
-    .theatre-help { max-width: 960px; margin: 0 auto; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #e0e0e0; background: #0f0f1a; }
+    .theatre-help {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #e0e0e0;
+        background: #0f0f1a;
+    }
     .theatre-help * { color: inherit; }
     .theatre-help h1, .theatre-help h2, .theatre-help h3, .theatre-help h4 { color: inherit; }
     .theatre-help pre { background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto; }
@@ -20,13 +27,47 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-background-0d1117.hb-background-0d1117.hb-background-0d1117 { background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto; }   /* 6x */
-.hb-background-1a2332.hb-background-1a2332.hb-background-1a2332 { background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #4fc1ff; }   /* 3x */
-.hb-background-1a2332-2.hb-background-1a2332-2.hb-background-1a2332-2 { background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ff9940; }   /* 3x */
-.hb-background-1e1e2e.hb-background-1e1e2e.hb-background-1e1e2e { background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f7c948; }   /* 4x */
+.hb-background-0d1117.hb-background-0d1117.hb-background-0d1117 {
+    background: #0d1117;
+    color: #c9d1d9;
+    padding: 15px;
+    border-radius: 6px;
+    overflow-x: auto;
+}   /* 6x */
+.hb-background-1a2332.hb-background-1a2332.hb-background-1a2332 {
+    background: #1a2332;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border-left: 4px solid #4fc1ff;
+}   /* 3x */
+.hb-background-1a2332-2.hb-background-1a2332-2.hb-background-1a2332-2 {
+    background: #1a2332;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border-left: 4px solid #ff9940;
+}   /* 3x */
+.hb-background-1e1e2e.hb-background-1e1e2e.hb-background-1e1e2e {
+    background: #1e1e2e;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border-left: 4px solid #f7c948;
+}   /* 4x */
 .hb-background-252535.hb-background-252535.hb-background-252535 { background: #252535; }   /* 5x */
-.hb-background-2d1b1b.hb-background-2d1b1b.hb-background-2d1b1b { background: #2d1b1b; padding: 15px; border-left: 4px solid #f7768e; margin: 15px 0; border-radius: 0 8px 8px 0; }   /* 4x */
-.hb-background-333.hb-background-333.hb-background-333 { background:#333; padding:3px 8px; border-radius:3px; }   /* 5x */
+.hb-background-2d1b1b.hb-background-2d1b1b.hb-background-2d1b1b {
+    background: #2d1b1b;
+    padding: 15px;
+    border-left: 4px solid #f7768e;
+    margin: 15px 0;
+    border-radius: 0 8px 8px 0;
+}   /* 4x */
+.hb-background-333.hb-background-333.hb-background-333 {
+    background:#333;
+    padding:3px 8px;
+    border-radius:3px;
+}   /* 5x */
 .hb-kopfzelle.hb-kopfzelle.hb-kopfzelle { padding: 10px; text-align: left; border-bottom: 2px solid #444; }   /* 14x */
 .hb-line-height-2.hb-line-height-2.hb-line-height-2 { line-height: 2; }   /* 8x */
 .hb-margin-top-0.hb-margin-top-0.hb-margin-top-0 { margin-top: 0; color: #bb9af7; }   /* 3x */
@@ -41,9 +82,25 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-background-1e1e2e.hb-background-1e1e2e.hb-background-1e1e2e { background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #7c5cbf; }   /* 2x */
-.hb-background-1e1e2e-2.hb-background-1e1e2e-2.hb-background-1e1e2e-2 { background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; }   /* 2x */
-.hb-background-332244.hb-background-332244.hb-background-332244 { background: #332244; padding: 12px; border-radius: 6px; margin-top: 10px; }   /* 2x */
+.hb-background-1e1e2e.hb-background-1e1e2e.hb-background-1e1e2e {
+    background: #1e1e2e;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border-left: 4px solid #7c5cbf;
+}   /* 2x */
+.hb-background-1e1e2e-2.hb-background-1e1e2e-2.hb-background-1e1e2e-2 {
+    background: #1e1e2e;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+}   /* 2x */
+.hb-background-332244.hb-background-332244.hb-background-332244 {
+    background: #332244;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 10px;
+}   /* 2x */
 .hb-color-73daca.hb-color-73daca.hb-color-73daca { color: #73daca; margin-top: 50px; }   /* 2x */
 .hb-color-c0caf5.hb-color-c0caf5.hb-color-c0caf5 { color: #c0caf5; margin-top: 50px; }   /* 2x */
 .hb-color-e74c3c.hb-color-e74c3c.hb-color-e74c3c { color: #e74c3c; }   /* 2x */
@@ -52,12 +109,12 @@
 </style>
 <div class="theatre-help">
 
-    <h1 style="border-bottom: 2px solid #7c5cbf; padding-bottom: 10px;">Theatre.js — Vollständige Anleitung</h1>
+    <h1 class="hilfeseite-h1">Theatre.js — Vollständige Anleitung</h1>
 
     <!-- ============================================================ -->
     <!-- KAMERA -->
     <!-- ============================================================ -->
-    <h2 id="kamera" style="color: #7c5cbf; margin-top: 40px;">Kamera</h2>
+    <h2 id="kamera" class="hilfeseite-h2">Kamera</h2>
 
     <div class="hb-background-1e1e2e">
         <h3 class="hb-margin-top-0">Kamera bewegen (Maus)</h3>
@@ -303,7 +360,7 @@ Keyframe 2:  Zeit = 5s  |  Position x=+5, y=4, z=3   (rechts)
     <h2 id="szene" class="hb-color-73daca">Komplette Szene aufbauen</h2>
 
     <div style="background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #73daca;">
-        <h3 style="margin-top: 0; color: #73daca;">Beispiel: Dramatische Tanzszene</h3>
+        <h3 class="hilfeseite-beispiel-h3">Beispiel: Dramatische Tanzszene</h3>
         <pre style="background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto; line-height: 1.8;">
 <strong>1. Setup</strong>
    Settings &rarr; "Cinematic Moody" (dunkle Stimmung)
@@ -543,7 +600,7 @@ Keyframe 2:  Zeit = 5s  |  Position x=+5, y=4, z=3   (rechts)
 
     <!-- Footer -->
     <div style="margin-top: 50px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
-        <h2 style="margin-top: 0; color: white;">Bereit?</h2>
+        <h2 class="hilfeseite-kasten-h2">Bereit?</h2>
         <a href="{% url 'theatre' %}" style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px;">
             Zur Theatre Seite &rarr;
         </a>

@@ -1,0 +1,237 @@
+/* Stilhelfer — die Inline-Stile, die im Projekt mehrfach vorkamen.
+ *
+ * ANLASS (17.08.2026): Das Werkzeug `jsstilfassungen` hat 478 statische
+ * `style="…"`-Angaben in 365 Fassungen gezählt; 173 davon standen mehrfach —
+ * dieselbe Zeichenkette an bis zu ACHT Stellen (Kriterium 6, doppelter Code).
+ *
+ * Warum das mehr ist als Kosmetik: Ein Farbwert, der an acht Stellen steht,
+ * wird bei der nächsten Themenumstellung an sieben geändert. Die fünf
+ * Themen-Paletten dieses Projekts (`theme.css`) wirken über Variablen — eine
+ * feste Farbe in einem Inline-Stil macht bei jedem Wechsel nicht mit.
+ *
+ * Die Namen beschreiben den ZWECK, nicht die Eigenschaft: `.leer-hinweis` sagt,
+ * was das Element ist; `.p12-muted-08` wäre nur eine kürzere Schreibweise für
+ * dasselbe Problem.
+ *
+ * Geladen aus `base.html` (mit `?t=`-Cache-Busting), also auf allen Seiten.
+ */
+
+/* WARUM JEDER NAME DREIMAL STEHT
+ * ==============================
+ * `.x.x.x` hat die Spezifität (0,3,0). Diese Klassen ERSETZEN Inline-Stile, und
+ * ein Inline-Stil schlägt jede Stylesheet-Regel. Mit einem einzelnen Selektor
+ * (0,1,0) verlieren sie gegen Regeln wie `.file-browser-table td` (0,1,1) oder
+ * `.preset-list li` — und die stehen in den `<style>`-Blöcken der Seiten, also
+ * NACH dieser Datei.
+ *
+ * Im Browser gemessen (17.08.2026), bevor das hier stand:
+ *     .leer-hinweis-mitte   padding  12px   ->  5px 12px
+ *     .gedaempft            color    muted  ->  var(--text)
+ *
+ * Dieselbe Lösung benutzt das Projekt schon für die `hb-*`-Klassen in
+ * `bvh_studio.html`. Gegen eine ID-Regel (1,0,0) verliert auch das — dort steht
+ * dann aber eine bewusste Ausnahme der Seite.
+ */
+
+/* --- Hinweise, wo eine Liste leer ist (8x + 4x + 3x) -------------------- */
+.leer-hinweis.leer-hinweis.leer-hinweis {
+    padding: 12px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.leer-hinweis-gross.leer-hinweis-gross.leer-hinweis-gross {
+    padding: 16px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.leer-hinweis-mitte.leer-hinweis-mitte.leer-hinweis-mitte {
+    padding: 12px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* --- Beschriftungen und Kleintext (7x + 4x + 4x + 3x + 3x + 3x) --------- */
+.gruppentitel.gruppentitel.gruppentitel {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 8px 0 4px;
+}
+
+.gedaempft.gedaempft.gedaempft {
+    color: var(--text-muted);
+}
+
+.gedaempft-klein.gedaempft-klein.gedaempft-klein {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.text-klein.text-klein.text-klein {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.text-winzig.text-winzig.text-winzig {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.text-schmal.text-schmal.text-schmal {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.marke-akzent.marke-akzent.marke-akzent {
+    font-size: 0.8rem;
+    color: var(--accent);
+}
+
+.fussnote.fussnote.fussnote {
+    margin-top: 6px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.rechts-grau.rechts-grau.rechts-grau {
+    margin-left: auto;
+    color: #666;
+    font-size: 0.75rem;
+}
+
+.marke-dunkel.marke-dunkel.marke-dunkel {
+    background: #333;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* --- Knöpfe (6x + 3x + 3x) --------------------------------------------- */
+.knopf-klein.knopf-klein.knopf-klein {
+    padding: 4px 12px;
+    cursor: pointer;
+}
+
+.knopf-akzent.knopf-akzent.knopf-akzent {
+    padding: 4px 10px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.78rem;
+}
+
+.knopf-akzent-schmal.knopf-akzent-schmal.knopf-akzent-schmal {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+/* --- Abstände und Fluss (6x + 5x + 3x + 3x + 3x + 3x) ------------------- */
+.abstand-6.abstand-6.abstand-6 { margin-top: 6px; }
+.abstand-8.abstand-8.abstand-8 { margin-top: 8px; }
+.abstand-12.abstand-12.abstand-12 { margin-top: 12px; }
+
+.breit-abstand.breit-abstand.breit-abstand {
+    width: 100%;
+    margin-top: 6px;
+}
+
+.dehnen.dehnen.dehnen { flex: 1; }
+
+.dehnen-klein.dehnen-klein.dehnen-klein {
+    flex: 1;
+    font-size: 0.75rem;
+}
+
+/* --- Fehlertext (6x + 3x) ---------------------------------------------- *
+ * `--danger` gibt es in ALLEN fünf Themen (`theme.css`), und im Standardthema
+ * „Dark" ist es genau `#e74c3c` — der Wert, der vorher neunmal fest im
+ * Quelltext stand. In den anderen vier Themen folgt die Farbe jetzt der Palette
+ * (Light `#c62828`, Cyber `#ff5d73`, Forest `#e86a5e`, Sunset `#ff5d56`); vorher
+ * blieb sie dort auf dem Dark-Rot stehen. Der Rückfall deckt den Fall ab, dass
+ * ein Element außerhalb von `body[data-theme]` hängt. */
+.fehlertext.fehlertext.fehlertext { color: var(--danger, #e74c3c); }
+
+/* --- Nur eine Zeile Kleintext, ohne Dämpfung (5x) ---------------------- */
+.winzig.winzig.winzig { font-size: 0.7rem; }
+
+
+/* ------------------------------------------------------------------------
+ * DATEIUEBERGREIFENDE DUBLETTEN (18.08.2026)
+ *
+ * `stil_zu_klassen.py` fasst gleiche Fassungen INNERHALB einer Vorlage
+ * zusammen. Diese 22 standen jeweils in ZWEI verschiedenen Dateien und blieben
+ * deshalb liegen — gefunden mit `Docu/umbau/stil_dubletten.py`.
+ * ------------------------------------------------------------------------ */
+
+/* Kopfzeile des Hilfe-Fensters: Titel links, Schliessen rechts */
+.hilfemodal-kopf.hilfemodal-kopf.hilfemodal-kopf { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+
+/* Titel im Hilfe-Fenster */
+.hilfemodal-titel.hilfemodal-titel.hilfemodal-titel { font-size:1.1rem; color:var(--accent); margin:0; }
+
+/* Das Kreuz oben rechts */
+.hilfemodal-schliessen.hilfemodal-schliessen.hilfemodal-schliessen { background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; }
+
+/* Fliesstext im Hilfe-Fenster */
+.hilfemodal-text.hilfemodal-text.hilfemodal-text { font-size:0.85rem; color:var(--text); line-height:1.7; }
+
+/* Die Rinne, in der der Fortschrittsbalken laeuft */
+.fortschritt-rinne.fortschritt-rinne.fortschritt-rinne { height:6px; background:var(--bg-card); border-radius:3px; overflow:hidden; }
+
+/* Verweis in der Akzentfarbe (statt Browser-Blau) */
+.akzent-verweis.akzent-verweis.akzent-verweis { color:var(--accent); }
+
+/* Trennlinie zwischen zwei Bedienabschnitten */
+.abschnitt-trenner.abschnitt-trenner.abschnitt-trenner { margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
+
+/* Bereich, den erst eine Aktion einblendet */
+.verborgen-mit-abstand.verborgen-mit-abstand.verborgen-mit-abstand { display:none; margin-top:8px; }
+
+/* Letztes Feld einer Gruppe */
+.ohne-unterrand.ohne-unterrand.ohne-unterrand { margin-bottom:0; }
+
+/* Kleiner Knopf neben einem Regler */
+.knopf-schmal.knopf-schmal.knopf-schmal { flex:0 0 auto; padding:4px 8px; font-size:0.78rem; }
+
+/* Kleiner Abstand nach oben */
+.abstand-oben-4.abstand-oben-4.abstand-oben-4 { margin-top:4px; }
+
+/* Taste im Hilfetext (<kbd>) */
+.tastenkappe.tastenkappe.tastenkappe { background:#333; padding:2px 6px; border-radius:3px; margin-left:6px; }
+
+/* Wegklicken der roten JS-Fehlerleiste */
+.fehlerknopf.fehlerknopf.fehlerknopf { background:none; border:1px solid white; color:white; padding:4px 12px; cursor:pointer; border-radius:4px; }
+
+/* Ueberschrift der langen Hilfeseiten */
+.hilfeseite-h1.hilfeseite-h1.hilfeseite-h1 { border-bottom: 2px solid #7c5cbf; padding-bottom: 10px; }
+
+/* Kapitelueberschrift der Hilfeseiten */
+.hilfeseite-h2.hilfeseite-h2.hilfeseite-h2 { color: #7c5cbf; margin-top: 40px; }
+
+/* Ueberschrift in einem Beispielkasten */
+.hilfeseite-beispiel-h3.hilfeseite-beispiel-h3.hilfeseite-beispiel-h3 { margin-top: 0; color: #73daca; }
+
+/* Ueberschrift in einem farbigen Kasten */
+.hilfeseite-kasten-h2.hilfeseite-kasten-h2.hilfeseite-kasten-h2 { margin-top: 0; color: white; }
+
+/* Zahl neben einem Regler — feste Breite, damit nichts springt */
+.wertanzeige.wertanzeige.wertanzeige { min-width:3em; text-align:right; }
+
+/* Waagerechte Zeile aus Bedienelementen */
+.zeile-mit-abstand.zeile-mit-abstand.zeile-mit-abstand { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+
+/* Tabellenspalte fuer ein Kaestchen */
+.spalte-schmal.spalte-schmal.spalte-schmal { width:30px; }
+
+/* Hervorgehobene Tabellenzeile */
+.zeile-hervor.zeile-hervor.zeile-hervor { background:#1a2a1a; }
+
+/* Erlaeuterung unter einer Tabelle */
+.tabellen-fussnote.tabellen-fussnote.tabellen-fussnote { margin-top:8px; color:#888; }

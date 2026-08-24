@@ -6,6 +6,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { markDirty } from './undo.js';
 import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 function autoSave() {
     clearTimeout(state.saveTimer);
@@ -214,10 +215,25 @@ export function loadSettings() {
     try {
         const s = JSON.parse(saved);
         if (s.lighting) {
-            if (s.lighting.key) { state.keyLight.intensity = s.lighting.key.intensity; state.keyLight.color.set(s.lighting.key.color); state.keyLight.position.set(...s.lighting.key.pos); }
-            if (s.lighting.fill) { state.fillLight.intensity = s.lighting.fill.intensity; state.fillLight.color.set(s.lighting.fill.color); state.fillLight.position.set(...s.lighting.fill.pos); }
-            if (s.lighting.back) { state.backLight.intensity = s.lighting.back.intensity; state.backLight.color.set(s.lighting.back.color); state.backLight.position.set(...s.lighting.back.pos); }
-            if (s.lighting.ambient) { state.ambientLight.intensity = s.lighting.ambient.intensity; state.ambientLight.color.set(s.lighting.ambient.color); }
+            if (s.lighting.key) {
+                state.keyLight.intensity = s.lighting.key.intensity;
+                state.keyLight.color.set(s.lighting.key.color);
+                state.keyLight.position.set(...s.lighting.key.pos);
+            }
+            if (s.lighting.fill) {
+                state.fillLight.intensity = s.lighting.fill.intensity;
+                state.fillLight.color.set(s.lighting.fill.color);
+                state.fillLight.position.set(...s.lighting.fill.pos);
+            }
+            if (s.lighting.back) {
+                state.backLight.intensity = s.lighting.back.intensity;
+                state.backLight.color.set(s.lighting.back.color);
+                state.backLight.position.set(...s.lighting.back.pos);
+            }
+            if (s.lighting.ambient) {
+                state.ambientLight.intensity = s.lighting.ambient.intensity;
+                state.ambientLight.color.set(s.lighting.ambient.color);
+            }
         }
         if (s.renderer) {
             if (s.renderer.toneMapping && TONE_MAPPINGS[s.renderer.toneMapping] !== undefined) state.renderer.toneMapping = TONE_MAPPINGS[s.renderer.toneMapping];
@@ -227,7 +243,7 @@ export function loadSettings() {
         if (s.camera && s.camera.fov) { state.camera.fov = s.camera.fov; state.camera.updateProjectionMatrix(); }
         document.getElementById('light-preset').value = '';
         syncUIFromState();
-    } catch (e) { console.warn('Failed to load scene settings:', e); }
+    } catch (e) { Protokoll.warnung('lighting', 'Failed to load scene settings:', e); }
 }
 
 // Register

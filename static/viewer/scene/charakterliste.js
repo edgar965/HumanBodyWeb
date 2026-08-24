@@ -5,6 +5,7 @@ import { escapeHtml, generateCharacterId } from './utils.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
 import { markDirty } from './undo.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 /**
  * Charakterliste der Szene: anzeigen, auswaehlen, entfernen, anfliegen.
  *
@@ -45,7 +46,7 @@ export async function loadDefaultCharacter() {
     try {
         await addCharacterFromPreset(state.defaultPresetName);
     } catch (e) {
-        console.warn('Failed to load default character:', e);
+        Protokoll.warnung('charakterliste', 'Failed to load default character:', e);
     }
 }
 

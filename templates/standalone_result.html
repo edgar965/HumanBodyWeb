@@ -9,21 +9,15 @@
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* 1x */
 </style>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-  }
-}
-</script>
+{% include "_importmap.html" %}
 {% endblock %}
 
 {% block content %}
 <div class="result-header">
     <h1>Result</h1>
     <div class="result-header-actions">
-        <select id="jobSelector" class="result-body-select" style="min-width:250px;margin-right:0.5rem;" onchange="if(this.value) window.location.href='?job='+this.value">
+        <select id="jobSelector" class="result-body-select" style="min-width:250px;margin-right:0.5rem;"
+                onchange="if(this.value) window.location.href='?job='+this.value">
             {% for j in jobs %}
             <option value="{{ j.id }}" {% if job and j.id == job.id %}selected{% endif %}>
                 {{ j.name }} ({{ j.created_at|date:"d.m.Y H:i" }})
@@ -100,9 +94,9 @@
         <button class="speed-btn" data-speed="0.5">0.5x</button>
         <button class="speed-btn active" data-speed="1">1x</button>
         <button class="speed-btn" data-speed="2">2x</button>
-        <span style="margin-left:auto;color:#666;font-size:0.75rem;">
-            <kbd style="background:#333;padding:2px 6px;border-radius:3px;">Space</kbd> Play/Pause
-            <kbd style="background:#333;padding:2px 6px;border-radius:3px;margin-left:6px;">&larr;&rarr;</kbd> Frame
+        <span class="rechts-grau">
+            <kbd class="marke-dunkel">Space</kbd> Play/Pause
+            <kbd class="tastenkappe">&larr;&rarr;</kbd> Frame
         </span>
     </div>
 </div>
@@ -150,7 +144,7 @@ try {
     console.error('[bvh_player] Init error:', e);
     const err = document.createElement('div');
     err.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:white;padding:1rem;z-index:99999;font-size:14px;display:flex;justify-content:space-between;align-items:center;';
-    err.innerHTML = '<span>JS Error: ' + e.message + '</span><button onclick="this.parentElement.remove()" style="background:none;border:1px solid white;color:white;padding:4px 12px;cursor:pointer;border-radius:4px;">X</button>';
+    err.innerHTML = '<span>JS Error: ' + e.message + '</span><button onclick="this.parentElement.remove()" class="fehlerknopf">X</button>';
     document.body.appendChild(err);
 }
 </script>
@@ -213,7 +207,7 @@ async function recordVideo3D() {
     viewport.appendChild(progressBar);
 
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle" style="color:#e74c3c"></i> Aufnahme...';
+    btn.innerHTML = '<i class="fas fa-circle fehlertext"></i> Aufnahme...';
 
     video.pause();
     video.currentTime = 0;

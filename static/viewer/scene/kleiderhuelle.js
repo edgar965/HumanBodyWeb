@@ -7,6 +7,7 @@ import { generateModelMesh } from './state.js';
 import { generateRigBoneMesh } from '../modellbau/rignetz.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
 
 /**
  * Kleiderhuelle — Stufe 1 der Kleideranpassung: Aus einem Knochenmodell wird
@@ -58,7 +59,7 @@ export class Kleiderhuelle {
         this.radienSkalieren(vorgabe);
         const ergebnis = await this.netz(vorgabe);
         if (!ergebnis?.mesh) {
-            console.warn('Stufe 1: Knochenmodell nicht baubar:', modellname);
+            Protokoll.warnung('kleiderhuelle', 'Stufe 1: Knochenmodell nicht baubar:', modellname);
             return null;
         }
         this.alteHuelleEntfernen();
@@ -78,7 +79,7 @@ export class Kleiderhuelle {
             return daten.ui_prefs?.kleider_bone_model
                    || Kleiderhuelle.VORGABEMODELL;
         } catch (fehler) {
-            console.warn('Einstellungen nicht ladbar:', fehler);
+            Protokoll.warnung('kleiderhuelle', 'Einstellungen nicht ladbar:', fehler);
             return Kleiderhuelle.VORGABEMODELL;
         }
     }
@@ -117,7 +118,7 @@ export class Kleiderhuelle {
         try {
             rigdaten = await Serverabruf.json('/api/character/rig/');
         } catch (fehler) {
-            console.warn('Rig nicht ladbar:', fehler);
+            Protokoll.warnung('kleiderhuelle', 'Rig nicht ladbar:', fehler);
         }
         return generateRigBoneMesh(rigdaten, vorgabe, state.rigifySkeletonData,
                                    state.skinWeightData);
@@ -127,8 +128,7 @@ export class Kleiderhuelle {
         const alt = this.figur.clothMeshes[Kleiderhuelle.SCHLUESSEL];
         if (!alt) return;
         this.figur.group.remove(alt);
-        alt.geometry.dispose();
-        alt.material.dispose();
+        Werkstofffreigabe.netz(alt);   // samt Texturen
         delete this.figur.clothMeshes[Kleiderhuelle.SCHLUESSEL];
     }
 

@@ -12,6 +12,9 @@ from humanbody_core.cloth import TEMPLATE_TYPES, PRIMITIVE_TYPES, BUILDER_REGION
 import json
 import os
 import re
+import logging
+
+logger = logging.getLogger('core')
 
 
 _TPL_CATEGORY = {
@@ -57,6 +60,7 @@ def cloth_preset_list(request):
             data = json.loads(f.read_text(encoding='utf-8'))
             presets.append({'name': f.stem, 'label': data.get('name', f.stem)})
         except (json.JSONDecodeError, IOError):
+            logger.warning('Kleidervorlage %s nicht lesbar — Dateiname als Bezeichnung', f, exc_info=True)
             presets.append({'name': f.stem, 'label': f.stem})
     return JsonResponse({'presets': presets})
 

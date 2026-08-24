@@ -12,7 +12,7 @@ export async function loadWardrobe() {
         panel.innerHTML = '';
 
         if (!data.assets || data.assets.length === 0) {
-            panel.innerHTML += '<div style="color:var(--text-muted);font-size:0.8rem;">No assets available</div>';
+            panel.innerHTML += '<div class="gedaempft-klein">No assets available</div>';
             return;
         }
 

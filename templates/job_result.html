@@ -3,14 +3,7 @@
 {% block title %}{{ job.name }} - Result{% endblock %}
 
 {% block extra_head %}
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
-  }
-}
-</script>
+{% include "_importmap.html" %}
 {% endblock %}
 
 {% block content %}
@@ -90,9 +83,9 @@
         <button class="speed-btn active" data-speed="1">1x</button>
         <button class="speed-btn" data-speed="2">2x</button>
         <button class="speed-btn" id="btnToggleIdx" title="Toggle bone index numbers on 3D skeleton">Idx</button>
-        <span style="margin-left:auto;color:#666;font-size:0.75rem;">
-            <kbd style="background:#333;padding:2px 6px;border-radius:3px;">Space</kbd> Play/Pause
-            <kbd style="background:#333;padding:2px 6px;border-radius:3px;margin-left:6px;">&larr;&rarr;</kbd> Frame
+        <span class="rechts-grau">
+            <kbd class="marke-dunkel">Space</kbd> Play/Pause
+            <kbd class="tastenkappe">&larr;&rarr;</kbd> Frame
         </span>
     </div>
 </div>
@@ -104,7 +97,8 @@
     <div class="result-character-controls">
         <label>Modell:</label>
         <select id="resultModelPreset" class="result-body-select"></select>
-        <button class="btn btn-sm btn-secondary" id="btnToggleHair" style="margin-left:auto;padding:0.15rem 0.5rem;font-size:0.75rem;">
+        <button class="btn btn-sm btn-secondary" id="btnToggleHair"
+                style="margin-left:auto;padding:0.15rem 0.5rem;font-size:0.75rem;">
             <i class="fas fa-hat-wizard"></i> Hair
         </button>
         <label class="result-checkbox">
@@ -146,7 +140,7 @@ try {
     console.error('[bvh_player] Init error:', e);
     const err = document.createElement('div');
     err.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:white;padding:1rem;z-index:99999;font-size:14px;display:flex;justify-content:space-between;align-items:center;';
-    err.innerHTML = '<span>JS Error: ' + e.message + '</span><button onclick="this.parentElement.remove()" style="background:none;border:1px solid white;color:white;padding:4px 12px;cursor:pointer;border-radius:4px;">X</button>';
+    err.innerHTML = '<span>JS Error: ' + e.message + '</span><button onclick="this.parentElement.remove()" class="fehlerknopf">X</button>';
     document.body.appendChild(err);
 }
 </script>
@@ -226,7 +220,7 @@ async function recordVideo3D() {
 
     // Disable button, show recording state
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle" style="color:#e74c3c"></i> Aufnahme...';
+    btn.innerHTML = '<i class="fas fa-circle fehlertext"></i> Aufnahme...';
 
     // Pause and seek to start
     video.pause();

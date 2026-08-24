@@ -35,9 +35,9 @@ export class Auftragsliste {
         this.koerper.addEventListener('change', ereignis => {
             if (ereignis.target.classList.contains('job-check')) this.knopfstand();
         });
-        document.getElementById('selectAll')
+        document.getElementById('select-all')
             ?.addEventListener('change', feld => this.alleWaehlen(feld.target));
-        document.getElementById('bulkDeleteBtn')
+        document.getElementById('bulk-delete-btn')
             ?.addEventListener('click', () => this.massenloeschen());
         document.querySelectorAll('[data-sort]').forEach(kopf => {
             kopf.addEventListener('click', () => this.sortieren(kopf.dataset.sort));
@@ -88,7 +88,7 @@ export class Auftragsliste {
             .map(feld => feld.value);
         if (!kennungen.length) return;
         if (!confirm(`${kennungen.length} Auftrag/Aufträge löschen?`)) return;
-        const knopf = document.getElementById('bulkDeleteBtn');
+        const knopf = document.getElementById('bulk-delete-btn');
         if (knopf) {
             knopf.disabled = true;
             knopf.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Löscht …';
@@ -98,7 +98,7 @@ export class Auftragsliste {
                 Auftragsliste.MASSENLOESCHEN, { ids: kennungen });
             if (!daten.ok) throw new Error(daten.error || 'Unbekannter Fehler');
             (daten.deleted || []).forEach(id => this._zeileEntfernen(id));
-            const alle = document.getElementById('selectAll');
+            const alle = document.getElementById('select-all');
             if (alle) alle.checked = false;
             this._leerPruefen();
         } catch (fehler) {
@@ -110,10 +110,10 @@ export class Auftragsliste {
     }
 
     _knopfBeschriften() {
-        const knopf = document.getElementById('bulkDeleteBtn');
+        const knopf = document.getElementById('bulk-delete-btn');
         if (!knopf) return;
         knopf.innerHTML = '<i class="fas fa-trash"></i> Auswahl löschen '
-            + '(<span id="bulkCount">0</span>)';
+            + '(<span id="bulk-count">0</span>)';
     }
 
     _zeileEntfernen(auftragId) {
@@ -140,8 +140,8 @@ export class Auftragsliste {
     /** Der Massenlösch-Knopf zeigt die Zahl der Häkchen. */
     knopfstand() {
         const anzahl = document.querySelectorAll('.job-check:checked').length;
-        const knopf = document.getElementById('bulkDeleteBtn');
-        const zaehler = document.getElementById('bulkCount');
+        const knopf = document.getElementById('bulk-delete-btn');
+        const zaehler = document.getElementById('bulk-count');
         if (knopf) knopf.disabled = anzahl === 0;
         if (zaehler) zaehler.textContent = anzahl;
     }

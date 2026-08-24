@@ -5,14 +5,41 @@
 
 {% block content %}
 <style>
-    .rigging-help { max-width: 960px; margin: 0 auto; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #e0e0e0; background: #0f0f1a; }
+    .rigging-help {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #e0e0e0;
+        background: #0f0f1a;
+    }
     .rigging-help * { color: inherit; }
     .rigging-help h1, .rigging-help h2, .rigging-help h3, .rigging-help h4 { color: inherit; }
-    .rigging-help pre { background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; }
+    .rigging-help pre {
+        background: #0d1117;
+        color: #c9d1d9;
+        padding: 15px;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-size: 0.85rem;
+        line-height: 1.6;
+    }
     .rigging-help pre strong { color: #58a6ff; }
     .rigging-help code { background: #333; padding: 3px 8px; border-radius: 3px; color: #e0e0e0; font-size: 0.85rem; }
-    .rigging-help table { width: 100%; border-collapse: collapse; background: transparent; border: none; margin: 15px 0; }
-    .rigging-help th { background: #252535 !important; color: #bbb !important; padding: 10px; text-align: left; border-bottom: 2px solid #444; }
+    .rigging-help table {
+        width: 100%;
+        border-collapse: collapse;
+        background: transparent;
+        border: none;
+        margin: 15px 0;
+    }
+    .rigging-help th {
+        background: #252535 !important;
+        color: #bbb !important;
+        padding: 10px;
+        text-align: left;
+        border-bottom: 2px solid #444;
+    }
     .rigging-help td { color: #e0e0e0; padding: 10px; border-bottom: 1px solid #333; vertical-align: top; }
     .rigging-help a { color: #7c5cbf; }
     .rigging-help ol, .rigging-help ul, .rigging-help li, .rigging-help p { color: #e0e0e0; line-height: 1.8; }
@@ -24,7 +51,19 @@
     .rigging-help .info-box-red { border-left: 4px solid #f7768e; }
     .rigging-help .tip { background: #332244; padding: 12px; border-radius: 6px; margin-top: 10px; }
     .rigging-help .pipeline-step { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
-    .rigging-help .pipeline-step .num { background: #7c5cbf; color: #fff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; flex-shrink: 0; }
+    .rigging-help .pipeline-step .num {
+        background: #7c5cbf;
+        color: #fff;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
     .rigging-help .pipeline-arrow { text-align: center; color: #555; font-size: 1.2rem; }
     .rigging-help .compare-table td:first-child { font-weight: 600; color: #bb9af7; white-space: nowrap; }
 
@@ -42,14 +81,14 @@
 </style>
 <div class="rigging-help">
 
-    <h1 style="border-bottom: 2px solid #7c5cbf; padding-bottom: 10px;">Rigging &mdash; Wie Geometrie an Knochen gebunden wird</h1>
+    <h1 class="hilfeseite-h1">Rigging &mdash; Wie Geometrie an Knochen gebunden wird</h1>
 
     <p style="color: #999; font-size: 0.9rem;">Erkl&auml;rt die drei Arten von Geometrie im Projekt und wie sie jeweils an das Skeleton gebunden werden.</p>
 
     <!-- ============================================================ -->
     <!-- DAS SKELETON -->
     <!-- ============================================================ -->
-    <h2 id="skeleton" style="color: #7c5cbf; margin-top: 40px;">Das Skeleton (gemeinsame Basis)</h2>
+    <h2 id="skeleton" class="hilfeseite-h2">Das Skeleton (gemeinsame Basis)</h2>
 
     <div class="info-box info-box-purple">
         <p>Alles basiert auf dem <strong>DEF-Skeleton</strong> &mdash; 176 Bones aus dem Rigify-System:</p>
@@ -158,7 +197,7 @@ Vertex #42:
     <h2 id="body" class="hb-color-73daca">Body Mesh im Detail</h2>
 
     <div class="info-box info-box-green">
-        <h3 style="margin-top: 0; color: #73daca;">Gewichtung mit weichen &Uuml;berg&auml;ngen</h3>
+        <h3 class="hilfeseite-beispiel-h3">Gewichtung mit weichen &Uuml;berg&auml;ngen</h3>
         <p>Der K&ouml;rper braucht <strong>Blending zwischen benachbarten Bones</strong> an Gelenken:</p>
         <pre>
 <strong>Vertex am Ellbogen:</strong>
@@ -305,7 +344,7 @@ renderer.render(scene, camera)</pre>
     <!-- ZUSAMMENFASSUNG -->
     <!-- ============================================================ -->
     <div style="margin-top: 60px; padding: 20px; background: #1a1a2e; border-radius: 8px; text-align: center;">
-        <h2 style="margin-top: 0; color: white;">Zusammenfassung</h2>
+        <h2 class="hilfeseite-kasten-h2">Zusammenfassung</h2>
         <table style="margin: 20px auto; text-align: left;">
             <tr><th></th><th>Weights</th><th>Quelle</th><th>Animiert?</th></tr>
             <tr><td style="color: #73daca; font-weight: bold;">Body</td><td>Blended (manuell gemalt)</td><td>Server (JSON + Morphs)</td><td>Ja</td></tr>

@@ -4,6 +4,7 @@ import { bindSlider } from './utils.js';
 import { _saveGarmentState, _applyGarmentState, _downloadPack,
          _loadDownloadPacks, _renderGarmentList } from './garment_liste.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
  * Kleiderbedienung (Viewer-Seite) — das Bedienfeld des Garment Fitters:
@@ -118,7 +119,7 @@ export class Kleiderbedienung {
     _knoepfe() {
         document.getElementById('garment-create')?.addEventListener('click', () => {
             if (!state.selectedGarmentId) {
-                console.warn('Kein Kleidungsstück gewählt');
+                Protokoll.warnung('kleiderbedienung', 'Kein Kleidungsstück gewählt');
                 return;
             }
             this.anziehen(state.selectedGarmentId);
@@ -185,7 +186,7 @@ export class Kleiderbedienung {
             this._kategorienFuellen(daten.categories);
             _renderGarmentList();
         } catch (fehler) {
-            console.warn('Kleiderliste nicht ladbar:', fehler);
+            Protokoll.warnung('kleiderbedienung', 'Kleiderliste nicht ladbar:', fehler);
             const liste = document.getElementById('garment-list');
             if (liste) {
                 liste.innerHTML =

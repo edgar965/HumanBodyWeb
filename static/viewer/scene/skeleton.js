@@ -6,39 +6,27 @@ import { THREE, buildRigifySkeleton } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32 } from './utils.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
 
 export async function loadRigifySkeleton() {
     try {
         const resp = await fetch('/api/character/rigify-skeleton/');
         if (resp.ok) state.rigifySkeletonData = await resp.json();
-    } catch (e) { /* optional */ }
+    } catch (e) { Protokoll.debug('skelett', 'Rigify-Skelett nicht abrufbar', e); }
 }
 
 export async function loadSkinWeights() {
     try {
         const resp = await fetch('/api/character/skin-weights/');
         if (resp.ok) state.skinWeightData = await resp.json();
-    } catch (e) { /* optional */ }
+    } catch (e) { Protokoll.debug('skelett', 'Hautgewichte nicht abrufbar', e); }
 }
 
 export function convertToRigifySkinnedMesh() {
     if (state.isSkinned || !state.bodyMesh || !state.bodyGeometry || !state.skinWeightData) return;
     state.bodyGeometry = state.bodyGeometry.clone();
-    const vCount = state.bodyGeometry.attributes.position.count;
-    const skinIndices = new Float32Array(vCount * 4);
-    const skinWeights = new Float32Array(vCount * 4);
-    for (let v = 0; v < vCount; v++) {
-        const infs = state.skinWeightData.weights[v] || [];
-        const sorted = infs.slice().sort((a, b) => b[1] - a[1]).slice(0, 4);
-        let sum = sorted.reduce((s, e) => s + e[1], 0);
-        if (sum < 1e-6) sum = 1;
-        for (let i = 0; i < 4; i++) {
-            skinIndices[v * 4 + i] = i < sorted.length ? sorted[i][0] : 0;
-            skinWeights[v * 4 + i] = i < sorted.length ? sorted[i][1] / sum : 0;
-        }
-    }
-    state.bodyGeometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
-    state.bodyGeometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+    Hautgewichte.anGeometrie(state.bodyGeometry, state.skinWeightData, THREE.Float32BufferAttribute);
     state.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, state.skinWeightData);
     const mat = state.bodyMesh.material;
     const pos = state.bodyMesh.position.clone();
@@ -58,21 +46,7 @@ export function convertInstToSkinned(inst) {
     if (inst.isSkinned || !inst.bodyMesh || !state.skinWeightData || !state.rigifySkeletonData) return;
     if (inst.generatedConfig) return;
     const geo = inst.bodyMesh.geometry.clone();
-    const vCount = geo.attributes.position.count;
-    const skinIndices = new Float32Array(vCount * 4);
-    const skinWeights = new Float32Array(vCount * 4);
-    for (let v = 0; v < vCount; v++) {
-        const infs = state.skinWeightData.weights[v] || [];
-        const sorted = infs.slice().sort((a, b) => b[1] - a[1]).slice(0, 4);
-        let sum = sorted.reduce((s, e) => s + e[1], 0);
-        if (sum < 1e-6) sum = 1;
-        for (let i = 0; i < 4; i++) {
-            skinIndices[v * 4 + i] = i < sorted.length ? sorted[i][0] : 0;
-            skinWeights[v * 4 + i] = i < sorted.length ? sorted[i][1] / sum : 0;
-        }
-    }
-    geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
-    geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+    Hautgewichte.anGeometrie(geo, state.skinWeightData, THREE.Float32BufferAttribute);
     inst.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, state.skinWeightData);
     const mat = inst.bodyMesh.material;
     const vis = inst.bodyMesh.visible;
@@ -139,15 +113,7 @@ export function _skinifyHairGroup(gltfScene, inst) {
     const group = new THREE.Group();
     for (const child of meshChildren) {
         const geo = child.geometry.clone();
-        const vCount = geo.attributes.position.count;
-        const si = new Float32Array(vCount * 4);
-        const sw = new Float32Array(vCount * 4);
-        for (let v = 0; v < vCount; v++) {
-            si[v * 4] = headBoneIdx;
-            sw[v * 4] = 1.0;
-        }
-        geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(si, 4));
-        geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+        Hautgewichte.anEinenKnochen(geo, headBoneIdx, THREE.Float32BufferAttribute);
 
         const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
         child.updateWorldMatrix(true, false);

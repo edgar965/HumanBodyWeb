@@ -24,7 +24,7 @@ export function pushUndo(label) {
         if (undoStack.length > UNDO_MAX) undoStack.shift();
         redoStack.length = 0;
     } catch (e) {
-        console.warn('[Undo] Snapshot failed:', e);
+        Protokoll.warnung('Undo', 'Snapshot failed:', e);
     }
 }
 
@@ -42,7 +42,7 @@ export async function undo() {
             selectedTrackIdx: state.selectedTrackIdx,
             selectedClipIdx: state.selectedClipIdx,
         });
-    } catch (e) { console.warn('[Undo] Redo snapshot failed:', e); }
+    } catch (e) { Protokoll.warnung('Undo', 'Redo snapshot failed:', e); }
     const snap = undoStack.pop();
     await fn.restoreProjectData(snap.data);
     state.playheadFrame = snap.playheadFrame || 0;

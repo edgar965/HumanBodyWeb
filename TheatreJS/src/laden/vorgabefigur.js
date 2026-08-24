@@ -1,6 +1,7 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Koerperfrage } from './koerperfrage.js';
 import { Kleidungsnetz } from './kleidungsnetz.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /**
  * Vorgabefigur — eine Figur samt Haaren und Kleidung aus einer Vorgabe laden.
@@ -75,7 +76,7 @@ export class Vorgabefigur {
                 if (kind.isMesh) kind.userData.isHair = true;
             });
             gruppe.add(geladen);
-            console.debug('✓ Haare geladen:', haare.name);
+            Protokoll.debug('vorgabefigur', '✓ Haare geladen:', haare.name);
         } catch (fehler) {
             console.error('Haare nicht ladbar:', fehler);
         }
@@ -89,7 +90,7 @@ export class Vorgabefigur {
                     kleid, vorgabe.body_type, vorgabe);
                 netz.userData.isGarment = true;
                 gruppe.add(netz);
-                console.debug('✓ Kleidung geladen:', kleid.id);
+                Protokoll.debug('vorgabefigur', '✓ Kleidung geladen:', kleid.id);
             } catch (fehler) {
                 console.error('Kleidung nicht ladbar:', kleid.id, fehler);
             }

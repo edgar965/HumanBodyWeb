@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}BVH Library - MocapNET{% endblock %}
+{% block title %}HumanBody · BVH Library{% endblock %}
 
 {% comment %}
 Umbau 16.08.2026 (Performance + Anforderung 5):
@@ -26,9 +26,11 @@ Umbau 16.08.2026 (Performance + Anforderung 5):
 <h1>BVH Library</h1>
 
 <div class="toolbar">
-    <a href="{% url 'scan_bvh' %}" class="btn btn-secondary">
-        <i class="fas fa-sync"></i> Scan for new files
-    </a>
+    <form method="post" action="{% url 'scan_bvh' %}" class="d-inline">{% csrf_token %}
+        <button type="submit" class="btn btn-secondary">
+            <i class="fas fa-sync"></i> Scan for new files
+        </button>
+    </form>
     <a href="{% url 'upload' %}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Create from Video
     </a>
@@ -108,7 +110,13 @@ Umbau 16.08.2026 (Performance + Anforderung 5):
     {% if suche or quelle %}
     <p>Kein Treffer für diese Suche. <a href="{% url 'library' %}">Filter zurücksetzen</a></p>
     {% else %}
-    <p>No BVH files yet. <a href="{% url 'upload' %}">Upload a video</a> or <a href="{% url 'scan_bvh' %}">scan directories</a>.</p>
+    {% comment %}Der Scan SCHREIBT (7.067 BVH-Koepfe, 35 Abfragen) und darf
+    deshalb kein Link sein — siehe core/api/bibliothek.scan_bvh_files. Eigene ID,
+    kein generischer Selektor: Auf Seiten mit Sidebar steht das Logout-Formular
+    frueher im DOM.{% endcomment %}
+    <p>No BVH files yet. <a href="{% url 'upload' %}">Upload a video</a> or
+    <button type="submit" form="scan-bvh-leer" class="btn btn-link p-0 align-baseline">scan directories</button>.</p>
+    <form method="post" action="{% url 'scan_bvh' %}" id="scan-bvh-leer">{% csrf_token %}</form>
     {% endif %}
 </div>
 {% endif %}

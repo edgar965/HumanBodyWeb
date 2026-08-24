@@ -76,7 +76,7 @@ export class Modellspeicher {
             }
             Protokoll.info('MG', `Model saved as "${name}" (file + server)`);
         } catch (e) {
-            console.warn('[MG] Server save failed:', e);
+            Protokoll.warnung('MG', 'Server save failed:', e);
         }
     }
 }

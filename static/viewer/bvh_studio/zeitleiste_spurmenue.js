@@ -6,23 +6,27 @@
  * `if/else if`-Kette ueber sieben Spurtypen. Darin dreimal dasselbe Muster —
  *
  *   * ACHTMAL "Element anlegen, Klasse setzen, innerHTML mit Symbol und
- *     Inline-Stil, Klick-Zuhoerer" -> jetzt `_eintrag()`,
+ *     Inline-Stil, Klick-Zuhoerer" -> jetzt `eintrag()`,
  *   * ZWEIMAL das Positionieren eines Untermenues beim Ueberfahren
- *     (getBoundingClientRect, left/top) -> jetzt `_untermenue()`,
+ *     (getBoundingClientRect, left/top) -> jetzt `untermenue()`,
  *   * in jedem Zweig `sub.innerHTML = ''` und eine eigene Leer-Meldung.
  *
  * Die Symbolfarben standen als Inline-Stil in jedem innerHTML; sie sind jetzt
  * benannte Konstanten und gehen ueber eine CSS-Variable in die Vorlage.
+ *
+ * UMBAU 18.08.2026: 372 Zeilen. Die drei grossen Zweige stehen jetzt je in
+ * einer eigenen Klasse — `menue_animationen.js`, `menue_modelle.js`,
+ * `menue_licht.js`. Der Ton-Zweig ist ganz entfallen: Er war eine Kopie von
+ * `audiospur.js` (dekodieren, Clip bauen, hochladen) und ruft die jetzt auf.
+ * Hier bleiben Aufbau, Bausteine und der Verteiler.
  */
 
 import { state } from './state.js';
+import { Menueanimationen } from './menue_animationen.js';
+import { Menuemodelle } from './menue_modelle.js';
+import { Menuelicht } from './menue_licht.js';
+import { Audiospur } from './audiospur.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { pushUndo } from './undo.js';
-import { Clip } from './models.js';
-import { Serverabruf } from '../gemeinsam/serverabruf.js';
-
-/** Animationsliste wird gemerkt; Modelle immer frisch geholt (siehe _modell). */
-export let _cachedAnimations = null;
 
 export const DEFAULT_CLIP_SECONDS = 10;
 
@@ -52,6 +56,7 @@ export class Spurmenue {
         this.nummer = nummer;
         this.ctx = ctx;
         this.fps = state.project.fps;
+        this.vorgabesekunden = DEFAULT_CLIP_SECONDS;
         this.vorgabebilder = DEFAULT_CLIP_SECONDS * this.fps;
         this.bild = (zielbild != null) ? zielbild : state.playheadFrame;
         this.ziel = null;
@@ -61,18 +66,20 @@ export class Spurmenue {
     async fuellen(untermenueId = 'track-ctx-add-submenu') {
         this.ziel = document.getElementById(untermenueId);
         if (!this.ziel) return;
-        this._laden();
+        this.hinweis('Lade...');
         const wege = {
-            bvh: () => this._bvh(),
-            model: () => this._modell(),
+            bvh: () => new Menueanimationen(this).fuellen(),
+            model: () => new Menuemodelle(this).fuellen(),
             audio: () => this._ton(),
-            scene_object: () => this._szenenobjekt(),
-            camera: () => this._kamera(),
-            light: () => this._licht(),
+            scene_object: () => this._einzeleintrag('3D-Datei wählen...',
+                () => fn.addSceneObjectClip?.(this.nummer, this.bild)),
+            camera: () => this._einzeleintrag('Kameraposition',
+                () => fn.addCameraKeyframe(this.nummer, this.bild)),
+            light: () => new Menuelicht(this).fuellen(),
         };
         const weg = wege[this.spur.type];
         if (!weg) {
-            this._hinweis('Nicht verfügbar für diesen Spurtyp');
+            this.hinweis('Nicht verfügbar für diesen Spurtyp');
             return;
         }
         await weg();
@@ -80,15 +87,11 @@ export class Spurmenue {
 
     // ------------------------------------------------------------- Bausteine
 
-    _laden() {
-        this._hinweis('Lade...');
-    }
-
-    _hinweis(text) {
+    hinweis(text) {
         this.ziel.innerHTML = `<div class="ctx-submenu-empty">${text}</div>`;
     }
 
-    _leeren() {
+    leeren() {
         this.ziel.innerHTML = '';
     }
 
@@ -101,7 +104,7 @@ export class Spurmenue {
      * @param {Object} angaben { symbol, farbe, text, rechts, titel, klasse }
      * @param {Function} beiKlick
      */
-    _eintrag(angaben, beiKlick) {
+    eintrag(angaben, beiKlick) {
         const { symbol, farbe, text, rechts, titel, klasse } = angaben;
         const element = document.createElement('div');
         element.className = 'ctx-item' + (klasse ? ' ' + klasse : '');
@@ -119,9 +122,10 @@ export class Spurmenue {
     }
 
     /** Eintrag mit dem Symbol seines Spurtyps. */
-    _spureintrag(text, beiKlick, zusatz = {}) {
-        const [symbol, farbe] = Spurmenue.SYMBOLE[this.spur.type] || ['fa-plus', null];
-        return this._eintrag({ symbol, farbe, text, ...zusatz }, beiKlick);
+    spureintrag(text, beiKlick, zusatz = {}) {
+        const [symbol, farbe] = Spurmenue.SYMBOLE[this.spur.type]
+            || ['fa-plus', null];
+        return this.eintrag({ symbol, farbe, text, ...zusatz }, beiKlick);
     }
 
     /**
@@ -129,7 +133,7 @@ export class Spurmenue {
      * erscheint. `position: fixed` ist noetig, weil das Menue der ersten Ebene
      * `overflow: auto` hat und das Untermenue sonst abgeschnitten wuerde.
      */
-    _untermenue(elternteil) {
+    untermenue(elternteil) {
         const feld = document.createElement('div');
         feld.className = 'ctx-submenu ctx-submenu-fixed';
         elternteil.appendChild(feld);
@@ -141,222 +145,22 @@ export class Spurmenue {
         return feld;
     }
 
-    // --------------------------------------------------------- Spurtyp: BVH
+    // ------------------------------------------------- Zweige mit einem Eintrag
 
-    async _bvh() {
-        if (!_cachedAnimations) {
-            try {
-                _cachedAnimations = await Serverabruf.json(
-                    '/api/character/animations/');
-            } catch (fehler) {
-                this._hinweis('Fehler beim Laden');
-                return;
-            }
-        }
-        const kategorien = _cachedAnimations.categories || {};
-        const namen = Object.keys(kategorien).sort();
-        if (!namen.length) {
-            this._hinweis('Keine Animationen verfügbar');
-            return;
-        }
-        this._leeren();
-        for (const name of namen) {
-            const animationen = kategorien[name] || [];
-            const kopf = this._eintrag({
-                symbol: 'fa-folder', farbe: Spurmenue.ORDNER_FARBE, text: name,
-                rechts: `${animationen.length} <i class="fas fa-caret-right"></i>`,
-                klasse: 'has-submenu',
-            }, null);
-            const unter = this._untermenue(kopf);
-            if (!animationen.length) {
-                unter.innerHTML = '<div class="ctx-submenu-empty">Leer</div>';
-            }
-            for (const animation of animationen) {
-                unter.appendChild(this._eintrag({
-                    symbol: 'fa-running', text: animation.name,
-                    rechts: (animation.frames || '?') + 'f',
-                }, () => this._animationEinfuegen(name, animation)));
-            }
-            this.ziel.appendChild(kopf);
-        }
+    _einzeleintrag(text, beiKlick) {
+        this.leeren();
+        this.ziel.appendChild(this.spureintrag(text, beiKlick));
     }
 
-    async _animationEinfuegen(kategorie, animation) {
-        await fn.addClipToTrack(this.nummer, kategorie, animation.name,
-                                animation.frames || 0);
-        const spur = state.project.tracks[this.nummer];
-        const clip = spur.clips[spur.clips.length - 1];
-        if (!clip) return;
-        // Vorgabe sind zehn Sekunden — laengere Animationen werden beschnitten,
-        // kuerzere bleiben, wie sie sind.
-        const grenze = Math.round(DEFAULT_CLIP_SECONDS * clip.fps);
-        if (clip.totalFrames > grenze) clip.trimOut = clip.totalFrames - grenze;
-        clip.startFrame = this.bild;
-        fn.updateDuration();
-        fn.renderTimeline();
-    }
-
-    // ------------------------------------------------------- Spurtyp: Modell
-
-    async _modell() {
-        // Immer frisch holen (kein Zwischenspeicher): So erscheinen neue
-        // Dateien in data/models/ sofort im Menue.
-        let vorgaben = [];
-        try {
-            const antwort = await fetch('/api/character/models/');
-            if (!antwort.ok) throw new Error('HTTP ' + antwort.status);
-            vorgaben = (await antwort.json()).presets || [];
-        } catch (fehler) {
-            this._hinweis('Fehler beim Laden: ' + fehler.message);
-            return;
-        }
-        if (!vorgaben.length) {
-            this._hinweis('Keine Modelle in data/models/');
-            return;
-        }
-        this._leeren();
-        for (const vorgabe of vorgaben) {
-            this.ziel.appendChild(this._spureintrag(
-                vorgabe.label || vorgabe.name,
-                () => this._modellEinfuegen(vorgabe)));
-        }
-    }
-
-    _modellEinfuegen(vorgabe) {
-        pushUndo('Modell-Clip hinzufügen');
-        const clip = new Clip(null, vorgabe.label || vorgabe.name,
-                              this.vorgabebilder, this.fps);
-        clip.type = 'model';
-        clip.startFrame = this.bild;
-        clip.data = { preset: vorgabe.name, bodyType: 'Female_Caucasian' };
-        this.spur.clips.push(clip);
-        this.spur._currentPreset = null;
-        fn.applyPlayhead();
-        fn.updateDuration();
-        fn.renderTimeline();
-        fn.updateProperties();
-    }
-
-    // ---------------------------------------------------------- Spurtyp: Ton
-
+    /** Ton: Auswahl öffnen, Clip auf die Vorgabelänge begrenzen. */
     _ton() {
-        this._leeren();
-        this.ziel.appendChild(this._spureintrag('Audio-Datei wählen...',
-                                                () => this._tonWaehlen()));
-    }
-
-    _tonWaehlen() {
-        const feld = document.createElement('input');
-        feld.type = 'file';
-        feld.accept = 'audio/*';
-        feld.addEventListener('change', () => this._tonEinfuegen(feld.files[0]));
-        feld.click();
-    }
-
-    async _tonEinfuegen(datei) {
-        if (!datei) return;
-        try {
-            const puffer = await this.spur.audioCtx.decodeAudioData(
-                await datei.arrayBuffer());
-            pushUndo('Audio-Clip hinzufügen');
-            const clip = new Clip(null, datei.name, this.vorgabebilder, this.fps);
-            clip.type = 'audio';
-            clip.startFrame = this.bild;
-            clip.data = {
-                fileName: datei.name,
-                audioBuffer: puffer,
-                audioDuration: Math.min(DEFAULT_CLIP_SECONDS, puffer.duration),
-                volume: 1.0, fadeIn: 0, fadeOut: 0, offset: 0,
-            };
-            clip.data.audioUrl = await this._tonHochladen(datei);
-            this.spur.clips.push(clip);
-            fn.updateDuration();
-            fn.renderTimeline();
-            fn.updateProperties();
-        } catch (fehler) {
-            console.error('[BVH Studio] Ton nicht lesbar:', fehler);
-            alert('Audio laden fehlgeschlagen: ' + fehler.message);
-        }
-    }
-
-    /**
-     * Datei zum Server geben, damit sie beim Videoexport zur Verfuegung steht.
-     * Schlaegt das fehl, bleibt der Clip trotzdem — im Browser klingt er.
-     */
-    async _tonHochladen(datei) {
-        try {
-            const daten = new FormData();
-            daten.append('audio', datei);
-            const ergebnis = await Serverabruf.formular(
-                '/api/studio/audio-upload/', daten);
-            return ergebnis.ok ? ergebnis.url : undefined;
-        } catch (fehler) {
-            console.warn('Ton nicht hochladbar:', fehler);
-            return undefined;
-        }
-    }
-
-    // -------------------------------------------- Spurtypen mit einem Eintrag
-
-    _szenenobjekt() {
-        this._leeren();
-        this.ziel.appendChild(this._spureintrag('3D-Datei wählen...',
-            () => fn.addSceneObjectClip?.(this.nummer, this.bild)));
-    }
-
-    _kamera() {
-        this._leeren();
-        this.ziel.appendChild(this._spureintrag('Kameraposition',
-            () => fn.addCameraKeyframe(this.nummer, this.bild)));
-    }
-
-    // -------------------------------------------------------- Spurtyp: Licht
-
-    _licht() {
-        this._leeren();
-        this.ziel.appendChild(this._spureintrag(
-            'Lichteigenschaft (Pair: vor/nach)',
-            () => fn.addLightKeyframePair(this.nummer, this.bild),
-            { titel: 'Legt zwei Keyframes am gleichen Frame an — einer für das '
-                     + 'Segment davor, einer für danach' }));
-        this.ziel.appendChild(this._spureintrag('Lichteigenschaft (einzel)',
-            () => fn.addLightKeyframe(this.nummer, this.bild)));
-
-        const kopf = this._eintrag({
-            symbol: 'fa-star', farbe: Spurmenue.SYMBOLE.light[1],
-            text: 'Presets', rechts: '<i class="fas fa-caret-right"></i>',
-            klasse: 'has-submenu',
-        }, null);
-        const unter = this._untermenue(kopf);
-        unter.innerHTML = '<div class="ctx-submenu-empty">Lade...</div>';
-        this.ziel.appendChild(kopf);
-        this._lichtvorgaben(unter);
-    }
-
-    /** Vorgaben nachladen — sie FÜGEN Lichter hinzu, ersetzen keine. */
-    async _lichtvorgaben(unter) {
-        try {
-            const vorgaben = await (fn.fetchTheatrePresets?.()
-                ?? fetch('/api/studio/theatre-presets/')
-                    .then(a => a.json()).then(d => d.presets || []));
-            if (!vorgaben?.length) {
-                unter.innerHTML = '<div class="ctx-submenu-empty">Keine Presets</div>';
-                return;
-            }
-            unter.innerHTML = '';
-            for (const vorgabe of vorgaben) {
-                unter.appendChild(this._eintrag({
-                    symbol: 'fa-lightbulb', farbe: Spurmenue.SYMBOLE.light[1],
-                    text: `<span>${vorgabe.label}</span>`,
-                    rechts: vorgabe.lightCount + 'x',
-                    titel: (vorgabe.description || '')
-                        + '\n\nFügt Preset-Lichter HINZU (existierende bleiben erhalten).',
-                }, () => fn.applyTheatrePresetAdditive?.(vorgabe.name, this.bild)));
-            }
-        } catch (fehler) {
-            unter.innerHTML = '<div class="ctx-submenu-empty">Fehler beim Laden</div>';
-            console.warn('Licht-Vorgaben nicht ladbar:', fehler);
-        }
+        this._einzeleintrag('Audio-Datei wählen...', () =>
+            Audiospur.dateiWaehlen(this.nummer, {
+                startbild: this.bild,
+                bilder: this.vorgabebilder,
+                hoechstdauer: DEFAULT_CLIP_SECONDS,
+                undoText: 'Audio-Clip hinzufügen',
+            }));
     }
 }
 

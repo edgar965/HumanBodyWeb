@@ -1,4 +1,5 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
  * Bvhtext — eine BVH-Datei als Text lesen, einzelne Kanalwerte ersetzen und
@@ -89,7 +90,7 @@ export class Bvhtext {
                                        bvh_text: this.text() });
             return true;
         } catch (fehler) {
-            console.warn('[BVH Studio] BVH nicht gespeichert:', fehler.message);
+            Protokoll.warnung('BVH Studio', 'BVH nicht gespeichert:', fehler.message);
             return false;
         }
     }

@@ -60,10 +60,30 @@ class Systemzustand:
         """{name: bool, name_version: str|None} — ohne den Import zu behalten."""
         try:
             modul = __import__(modulname or name)
+        # stumm gewollt: Das Ergebnis dieser Prüfung IST „installiert: nein“ —
+        # es steht auf der Startseite. Ein Log daneben schriebe je Seitenaufruf
+        # eine Zeile für jedes nicht installierte Werkzeug.
         except ImportError:
             return {name: False, '%s_version' % name: None}
         return {name: True,
                 '%s_version' % name: getattr(modul, '__version__', None)}
+
+    @classmethod
+    def pipeline_paket(cls, name):
+        """Liegt `name` in der venv, die die PIPELINES fährt?
+
+        WARUM NICHT `__import__` (17.08.2026): Django läuft in `python14`, die
+        Erkenner laufen als Unterprozess in `python10` (`PIPELINE_PYTHON`).
+        `rtmlib` und `ultralytics` sind dort installiert und hier nicht — ein
+        Import im Serverprozess würde also „nicht installiert" melden, während
+        die Pipeline einwandfrei läuft.
+
+        Geprüft wird deshalb das Verzeichnis in `site-packages` der anderen
+        venv. Das ist ein `is_dir()` und kostet nichts; ein Unterprozess je
+        Seitenaufruf wäre die Alternative gewesen.
+        """
+        pakete = Path(settings.PIPELINE_PYTHON).parent.parent / 'Lib' / 'site-packages'
+        return (pakete / name).is_dir()
 
     @staticmethod
     def _mocapnet_modelle():

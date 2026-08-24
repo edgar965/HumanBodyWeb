@@ -108,13 +108,21 @@ function _showAssetParams(asset) {
     if (params.offset) {
         const sl = document.getElementById('cm-offset');
         const val = document.getElementById('cm-offset-val');
-        if (sl) { sl.value = params.offset.default || 0.001; sl.min = params.offset.min || -0.005; sl.max = params.offset.max || 0.02; }
+        if (sl) {
+            sl.value = params.offset.default || 0.001;
+            sl.min = params.offset.min || -0.005;
+            sl.max = params.offset.max || 0.02;
+        }
         if (val) val.textContent = (params.offset.default || 0.001).toFixed(3);
     }
     if (params.smoothing) {
         const sl = document.getElementById('cm-smooth');
         const val = document.getElementById('cm-smooth-val');
-        if (sl) { sl.value = params.smoothing.default || 0; sl.min = params.smoothing.min || 0; sl.max = params.smoothing.max || 1; }
+        if (sl) {
+            sl.value = params.smoothing.default || 0;
+            sl.min = params.smoothing.min || 0;
+            sl.max = params.smoothing.max || 1;
+        }
         if (val) val.textContent = (params.smoothing.default || 0).toFixed(2);
     }
 

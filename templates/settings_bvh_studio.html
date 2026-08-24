@@ -93,7 +93,7 @@
         </select>
         <span class="hint">Sim-Iterationen pro Frame. Hoch = stabiler, weniger Durchst&ouml;&szlig;e</span>
     </div>
-    <div class="settings-row" style="margin-top:6px;">
+    <div class="settings-row abstand-6">
         <div style="flex:1;font-size:0.75rem;color:var(--text-muted);line-height:1.5;">
             <strong>Richtwerte (5s @ 30fps, RTX 3060):</strong><br>
             &bull; Aus: Render 15s (EEVEE)<br>
@@ -122,18 +122,29 @@
     </div>
 </div>
 
-<div class="settings-actions">
-    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Speichern</button>
-</div>
+{% include "_einstellungen_speichern.html" %}
 
 </form>
 
 <style>
 .settings-section { margin-bottom: 24px; }
-.settings-section h3 { color: var(--accent); font-size: 1rem; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.settings-section h3 {
+    color: var(--accent);
+    font-size: 1rem;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
 .settings-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 .settings-row label { min-width: 160px; font-size: 0.9rem; color: var(--text-muted); }
-.settings-row input, .settings-row select { padding: 6px 10px; background: var(--bg-card); color: var(--text); border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem; }
+.settings-row input, .settings-row select {
+    padding: 6px 10px;
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
 .settings-row .hint { font-size: 0.75rem; color: var(--text-muted); }
 .settings-actions { margin-top: 20px; }
 

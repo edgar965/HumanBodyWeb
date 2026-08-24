@@ -21,7 +21,9 @@ export function _veUpdatePosInputs() {
     let cx = 0, cy = 0, cz = 0;
     for (const idx of Vertexzustand.veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx); cz += posAttr.getZ(idx); }
     const n = Vertexzustand.veSelectedIndices.size;
-    const px = document.getElementById('ve-pos-x'); const py = document.getElementById('ve-pos-y'); const pz = document.getElementById('ve-pos-z');
+    const px = document.getElementById('ve-pos-x');
+    const py = document.getElementById('ve-pos-y');
+    const pz = document.getElementById('ve-pos-z');
     if (px) px.value = (cx / n).toFixed(4); if (py) py.value = (cy / n).toFixed(4); if (pz) pz.value = (cz / n).toFixed(4);
 }
 
@@ -34,7 +36,8 @@ export function _veMoveSelectedByDelta(dx, dy, dz) {
         overlayPos.setXYZ(idx, overlayPos.getX(idx) + dx, overlayPos.getY(idx) + dy, overlayPos.getZ(idx) + dz);
     }
     meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-    Vertexzustand.veTargetMesh.geometry.computeVertexNormals(); Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
+    Vertexzustand.veTargetMesh.geometry.computeVertexNormals();
+    Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
 }
 
 export function _veApplyGizmoDelta() {
@@ -50,7 +53,11 @@ export function _veApplyGizmoDelta() {
 
 export function _veUpdateGizmo() {
     if (!Vertexzustand.veGizmo || !Vertexzustand.veGizmoHelper || !Vertexzustand.veTargetMesh) return;
-    if (Vertexzustand.veSelectedIndices.size === 0) { Vertexzustand.veGizmo.visible = false; Vertexzustand.veGizmo.enabled = false; return; }
+    if (Vertexzustand.veSelectedIndices.size === 0) {
+        Vertexzustand.veGizmo.visible = false;
+        Vertexzustand.veGizmo.enabled = false;
+        return;
+    }
     const posAttr = Vertexzustand.veTargetMesh.geometry.getAttribute('position');
     let cx = 0, cy = 0, cz = 0;
     for (const idx of Vertexzustand.veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx); cz += posAttr.getZ(idx); }
@@ -84,7 +91,8 @@ export async function _veSmooth() {
         const overlayPos = Vertexzustand.vePointsOverlay.geometry.getAttribute('position');
         for (const idx of selected) { const x = updatedBlender[idx*3]; const y = updatedBlender[idx*3+1]; const z = updatedBlender[idx*3+2]; meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
         meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-        Vertexzustand.veTargetMesh.geometry.computeVertexNormals(); Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
+        Vertexzustand.veTargetMesh.geometry.computeVertexNormals();
+        Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
     } catch (err) { console.error('Smooth failed:', err); }
     _veUpdateGizmo(); _veUpdateSelectionInfo();
 }
@@ -109,7 +117,8 @@ export async function _vePushOutside() {
         const overlayPos = Vertexzustand.vePointsOverlay.geometry.getAttribute('position');
         for (const idx of selected) { const x = updatedBlender[idx*3]; const y = updatedBlender[idx*3+1]; const z = updatedBlender[idx*3+2]; meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
         meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-        Vertexzustand.veTargetMesh.geometry.computeVertexNormals(); Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
+        Vertexzustand.veTargetMesh.geometry.computeVertexNormals();
+        Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
     } catch (err) { console.error('Push outside failed:', err); }
     _veUpdateGizmo(); _veUpdateSelectionInfo();
 }
@@ -123,6 +132,7 @@ export function _veReset() {
         for (const idx of indices) { const x = Vertexzustand.veOrigPositions[idx*3]; const y = Vertexzustand.veOrigPositions[idx*3+1]; const z = Vertexzustand.veOrigPositions[idx*3+2]; meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
     } else { meshPos.array.set(Vertexzustand.veOrigPositions); overlayPos.array.set(Vertexzustand.veOrigPositions); }
     meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-    Vertexzustand.veTargetMesh.geometry.computeVertexNormals(); Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
+    Vertexzustand.veTargetMesh.geometry.computeVertexNormals();
+    Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
     _veUpdateGizmo(); _veUpdatePosInputs();
 }

@@ -75,8 +75,12 @@ export function handleMenuAction(action) {
             break;
         }
         case 'add-character': fn.openAddCharacterDialog(); break;
-        case 'toggle-model': fn.toggleModelVisibility(); document.getElementById('model-toggle')?.classList.toggle('active', state.modelVisible); break;
-        case 'toggle-rig': fn.toggleRigVisibility(); document.getElementById('rig-toggle')?.classList.toggle('active', state.rigVisible); break;
+        case 'toggle-model': fn.toggleModelVisibility();
+        document.getElementById('model-toggle')?.classList.toggle('active', state.modelVisible);
+        break;
+        case 'toggle-rig': fn.toggleRigVisibility();
+        document.getElementById('rig-toggle')?.classList.toggle('active', state.rigVisible);
+        break;
         case 'mode-translate': fn.setTransformMode('translate'); break;
         case 'mode-rotate': fn.setTransformMode('rotate'); break;
         case 'mode-scale': fn.setTransformMode('scale'); break;

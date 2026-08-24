@@ -177,7 +177,7 @@ async function _autofillTargetDir() {
     try {
         const prefs = await Serverabruf.json('/api/ui-prefs/');
         el.value = prefs.studio_video_output || '';
-    } catch (e) { /* ignore */ }
+    } catch (e) { Protokoll.debug('export', 'Ausgabeordner nicht abrufbar', e); }
 }
 
 export function bindClothExportButtons() {

@@ -4,6 +4,7 @@
 Aus core/api/netz.py herausgeloest (Umbau 16.08.2026).
 """
 
+from ..daten.netzantwort import Netzantwort
 from ..dienste.charakterdaten import Charakterdaten
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -54,7 +55,7 @@ def vertex_edit_smooth(request):
 
     result_f32 = result.astype(np.float32)
     return JsonResponse({
-        'vertices': base64.b64encode(result_f32.tobytes()).decode('ascii'),
+        'vertices': Netzantwort.feld(result_f32, 'vertices'),
     })
 
 
@@ -104,5 +105,5 @@ def vertex_edit_push_outside(request):
 
     result_f32 = result.astype(np.float32)
     return JsonResponse({
-        'vertices': base64.b64encode(result_f32.tobytes()).decode('ascii'),
+        'vertices': Netzantwort.feld(result_f32, 'vertices'),
     })

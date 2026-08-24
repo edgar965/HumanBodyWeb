@@ -1,24 +1,19 @@
 # -*- coding: utf-8 -*-
 """SMPL-Koerper und SMPL-Kleidungsbibliothek.
 
-Herausgeloest aus core/character_api.py (Umbau 15.08.2026). Die Datei hatte
-6.495 Zeilen und 110 Endpunkte; die Themen darin waren nur durch Reihenfolge
-getrennt. Die Endpunkte hier bleiben duenne Funktionen — Django-Dekoratoren,
-Stapelspuren und Tests bleiben damit lesbar —, waehrend die Fachlogik in
-core/dienste/ als Klassen liegt.
+Aus core/character_api.py herausgeloest (Umbau 15.08.2026) — warum so
+geschnitten, steht in `core/api/__init__.py`.
 """
 
+from ..daten.netzantwort import Netzantwort
+from ..daten.stoffantwort import Stoffantwort
 from ..dienste.charakterdaten import Charakterdaten
-from ..dienste.skingewichte import Skingewichte
 from ..models import AppSettings
 from django.http import JsonResponse, HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
-from humanbody_core import CharacterState
-import base64
 import json
 import logging
-import numpy as np
 
 
 logger = logging.getLogger(__name__)
@@ -126,9 +121,9 @@ def smpl_body_mesh(request):
         return JsonResponse({'error': str(e)}, status=400)
 
     return JsonResponse({
-        'vertices': base64.b64encode(mesh['vertices'].tobytes()).decode(),
-        'faces': base64.b64encode(mesh['faces'].tobytes()).decode(),
-        'normals': base64.b64encode(mesh['normals'].tobytes()).decode(),
+        'vertices': Netzantwort.feld(mesh['vertices'], 'vertices'),
+        'faces': Netzantwort.feld(mesh['faces'], 'faces'),
+        'normals': Netzantwort.feld(mesh['normals'], 'normals'),
         'vertex_count': mesh['vertex_count'],
         'face_count': mesh['face_count'],
         'gender': gender,
@@ -159,9 +154,9 @@ def smpl_garment_mesh(request):
 
     return JsonResponse({
         'garment_id': garment_id,
-        'vertices': base64.b64encode(mesh['vertices'].tobytes()).decode(),
-        'faces': base64.b64encode(mesh['faces'].tobytes()).decode(),
-        'normals': base64.b64encode(mesh['normals'].tobytes()).decode(),
+        'vertices': Netzantwort.feld(mesh['vertices'], 'vertices'),
+        'faces': Netzantwort.feld(mesh['faces'], 'faces'),
+        'normals': Netzantwort.feld(mesh['normals'], 'normals'),
         'vertex_count': len(mesh['vertices']) // 3,
         'face_count': len(mesh['faces']) // 3,
     })
@@ -191,34 +186,14 @@ def smpl_garment_fit(request):
         logger.error("Error loading SMPL garment raw %s: %s", garment_id, e)
         return JsonResponse({'error': str(e)}, status=500)
 
-    body_type = request.GET.get('body_type', 'Female_Caucasian')
-    gender = Charakterdaten.geschlecht_zu(body_type)
-
-    # Compute morphed body vertices
-    md = Charakterdaten.morphdaten()
-    cd = Charakterdaten.voreinstellungen()
-    state = CharacterState(md, cd)
-    state.set_body_type(body_type)
-
-    for key, val in request.GET.items():
-        if key.startswith('morph_'):
-            try:
-                state.set_morph(key[6:], float(val))
-            except ValueError:
-                logger.debug('uebergangen', exc_info=True)
-    for key, val in request.GET.items():
-        if key.startswith('meta_'):
-            try:
-                state.set_meta(key[5:], float(val))
-            except (ValueError, AttributeError):
-                logger.debug('uebergangen', exc_info=True)
-
-    body_verts = state.compute()
+    # Koerper aus der Anfrage — derselbe Weg wie ueberall
+    # (`Charakterdaten.koerper_aus`); der Reglerblock stand hier ein viertes Mal.
+    koerper = Charakterdaten.koerper_aus(request.GET)
+    gender, body_verts = koerper.geschlecht, koerper.vertices
     if body_verts is None:
         return JsonResponse({'error': 'Failed to compute body mesh'}, status=500)
 
-    mesh = Charakterdaten.netzdaten(gender)
-    body_faces = mesh.faces
+    body_faces = Charakterdaten.netzdaten(gender).faces
 
     offset = float(request.GET.get('offset', 0.006))
     stiffness = float(request.GET.get('stiffness', 0.5))
@@ -242,34 +217,8 @@ def smpl_garment_fit(request):
     if result is None:
         return JsonResponse({'error': 'Fitting failed'}, status=500)
 
-    response_data = {
-        'vertex_count': int(result['vertices'].shape[0]),
-        'vertices': base64.b64encode(
-            result['vertices'].tobytes()).decode('ascii'),
-        'face_count': int(result['faces'].shape[0]),
-        'faces': base64.b64encode(
-            result['faces'].ravel().astype(np.uint32).tobytes()).decode('ascii'),
-        'normals': base64.b64encode(
-            result['normals'].tobytes()).decode('ascii'),
-        'color': list(color),
-        'garment_id': garment_id,
-    }
-
-    # Skin weights
-    skin_arrays = Skingewichte.arrays(gender)
-    if skin_arrays is not None:
-        from humanbody_core.nachbarsuche import Nachbarsuche
-        body_si, body_sw = skin_arrays
-        suche = Nachbarsuche(body_verts)
-        _, nearest = suche.naechster(result['vertices'])
-        cloth_si = body_si[nearest]
-        cloth_sw = body_sw[nearest]
-        response_data['skin_indices'] = base64.b64encode(
-            cloth_si.tobytes()).decode('ascii')
-        response_data['skin_weights'] = base64.b64encode(
-            cloth_sw.tobytes()).decode('ascii')
-
-    return JsonResponse(response_data)
+    return JsonResponse(Stoffantwort.aus(result, body_verts, gender,
+                                        farbe=color, garment_id=garment_id))
 
 
 @require_GET

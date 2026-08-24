@@ -50,15 +50,25 @@ class Silhouettenergebnis:
         a = self.ausrichtung or {}
         return bool(a.get('body_transform') or a.get('proj_2d_offset'))
 
+    @staticmethod
+    def _rahmen(wert):
+        """`Bildrahmen` -> Drahtformat, `None` bleibt `None`.
+
+        Die drei Rahmen sind seit dem 17.08.2026 `Bildrahmen`-Objekte (vorher
+        drei Kopien derselben Min-Max-Rechnung). Nur hier werden sie zu dem
+        Wörterbuch, das `assistentenbild.js` als `rahmen.w`/`rahmen.h` liest.
+        """
+        return wert.als_dict() if wert is not None else None
+
     def als_dict(self):
         """Die Form, die der Browser erwartet — Feldnamen unveraendert."""
         return {
             'ok': True,
             'body_contour': self.koerperkontur,
             'face_contour': self.gesichtskontur,
-            'mesh_bbox': self.netz_rahmen,
-            'face_bbox_detected': self.gesichtsrahmen_erkannt,
-            'face_bbox_mesh': self.gesichtsrahmen_netz,
+            'mesh_bbox': self._rahmen(self.netz_rahmen),
+            'face_bbox_detected': self._rahmen(self.gesichtsrahmen_erkannt),
+            'face_bbox_mesh': self._rahmen(self.gesichtsrahmen_netz),
             'yolo_bbox': self.yolo_rahmen,
             'photo_width': self.breite,
             'photo_height': self.hoehe,

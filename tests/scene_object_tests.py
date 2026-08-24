@@ -23,7 +23,6 @@ class SceneObjectTests(TestCategory):
     @staticmethod
     def test_bundle_preserves_filename():
         """Upload mit bundleId behält Original-Dateinamen (für MTL→Textur-Referenzen)"""
-        import io
         boundary = '----TestBoundary9876xyz'
         body = b''
         body += f'--{boundary}\r\n'.encode()

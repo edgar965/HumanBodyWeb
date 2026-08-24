@@ -31,10 +31,10 @@ export class Lichteigenschaften {
         const farbe = L ? L.color : new THREE.Color(0xffffff);
         const R = Math.round(farbe.r * 255), G = Math.round(farbe.g * 255),
               B = Math.round(farbe.b * 255);
-        const auswahl = `<select id="prop-light-type" style="flex:1;">${ARTEN.map(o =>
+        const auswahl = `<select id="prop-light-type" class="dehnen">${ARTEN.map(o =>
             `<option value="${o.v}" ${o.v === art ? 'selected' : ''}>${o.label}</option>`
         ).join('')}</select>`;
-        const schieber = (kanal, wert) => `<div class="prop-row"><label>${kanal.toUpperCase()}:</label><input type="range" min="0" max="255" value="${wert}" id="prop-light-${kanal}" style="flex:1;"><span id="prop-light-${kanal}-val" style="width:30px;font-size:0.75rem;">${wert}</span></div>`;
+        const schieber = (kanal, wert) => `<div class="prop-row"><label>${kanal.toUpperCase()}:</label><input type="range" min="0" max="255" value="${wert}" id="prop-light-${kanal}" class="dehnen"><span id="prop-light-${kanal}-val" style="width:30px;font-size:0.75rem;">${wert}</span></div>`;
         const knopf = (id, an) => `<button id="${id}" style="padding:5px 14px;background:${an ? '#4caf50' : '#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:50px;">${an ? 'An' : 'Aus'}</button>`;
         const achsen = (praefix, p) => ['x', 'y', 'z'].map(a =>
             `<div class="prop-row"><label>${a.toUpperCase()}:</label><input type="number" step="0.1" value="${p[a].toFixed(2)}" id="prop-light-${praefix}${a}"></div>`
@@ -50,13 +50,13 @@ export class Lichteigenschaften {
             <div class="prop-row"><label>Reichweite:</label><input type="number" value="${(L?.distance ?? 50).toFixed(1)}" id="prop-light-distance" min="0" max="200" step="1"></div>`}
             ${!track.lightHelper ? '' : `
             <div class="prop-row"><label>Lichtkegel:</label>${knopf('prop-light-cone-toggle', track.coneVisible !== false)}</div>
-            <div class="prop-row"><label>Helfer-Linien:</label>${knopf('prop-light-lines-toggle', track.lightVisible)}</div>`}
-            ${ambient ? '' : `<h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Position</h3>${achsen('', lp)}`}
-            ${!L?.target ? '' : `<h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Ziel (Blickrichtung)</h3>${achsen('t', tg)}`}
-            <div style="margin-top:6px;">
-                <button id="prop-light-add-kf" style="padding:4px 10px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;"><i class="fas fa-key"></i> Keyframe setzen</button>
+            <div class="prop-row"><label>Helferlinien:</label>${knopf('prop-light-lines-toggle', track.lightVisible)}</div>`}
+            ${ambient ? '' : `<h3 class="gruppentitel">Position</h3>${achsen('', lp)}`}
+            ${!L?.target ? '' : `<h3 class="gruppentitel">Ziel (Blickrichtung)</h3>${achsen('t', tg)}`}
+            <div class="abstand-6">
+                <button id="prop-light-add-kf" class="knopf-akzent"><i class="fas fa-key"></i> Keyframe setzen</button>
             </div>
-            ${!track._sceneLight ? '' : '<div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Szenen-Licht — wird immer geladen, kann nicht gelöscht werden.</div>'}
+            ${!track._sceneLight ? '' : '<div class="fussnote">Szenen-Licht — wird immer geladen, kann nicht gelöscht werden.</div>'}
         </div>`;
     }
 

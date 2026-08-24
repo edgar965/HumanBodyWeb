@@ -53,3 +53,6 @@ ProjektTemp/
 # Referenz der Endpunktprobe — pro Rechner verschieden.
 .djangobase-skills.json
 .djangobase-endpunkte.json
+# Ladezeiten-Protokoll der Leistungstests: gemessen auf DIESEM Rechner, mit
+# dieser Tageslast. Im Repo waere es eine Zahl, die anderswo nichts bedeutet.
+.djangobase-leistung.json

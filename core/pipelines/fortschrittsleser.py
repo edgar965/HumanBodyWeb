@@ -40,6 +40,8 @@ class Fortschrittsleser:
                 aktuell = int(zahlen[0])
                 gesamt = int(zahlen[1]) if len(zahlen) > 1 else 0
                 return aktuell, gesamt
+            # stumm gewollt: Diese Klasse liest FREMDE Ausgabezeilen. „frame“ ohne
+            # Zahl dahinter ist Text, kein Fehler; geloggt wäre es je Zeile einmal.
             except (ValueError, IndexError):
                 return None
         return None

@@ -8,6 +8,7 @@
  * `skinMetalVal`. Sie werden an einer Stelle gefuellt und an sechs gelesen; als
  * Datensatz gehoeren sie zusammen.
  */
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 export class Vergleichsfelder {
     constructor() {
@@ -31,7 +32,7 @@ export class Vergleichsfelder {
 
     /** Kurzmeldung in der Statusleiste. */
     melden(text, klasse) {
-        if (!this.status) return;
+        if (!this.status) { Protokoll.warnung('vergleich', text); return; }
         this.status.textContent = text;
         this.status.className = klasse;
     }

@@ -8,6 +8,8 @@ import { base64ToFloat32, base64ToUint32,
 import { _applyGarmentRegionOffsets,
          _computeGarmentRegionWeights } from './kleidung_anpassen.js';
 import { Kleidungszustand } from './kleidungszustand.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
 
 /**
  * Kleideranpassung — ein Kleidungsstück am Server an die Figur anpassen lassen
@@ -30,7 +32,7 @@ import { Kleidungszustand } from './kleidungszustand.js';
 export class Kleideranpassung {
 
     static ADRESSE = '/api/character/garment/fit/';
-    static VORGABEFARBE = '#4d5980';
+    static VORGABE_FARBE = '#4d5980';
 
     /**
      * @param wahl.vorsilbe    Reglervorsilbe, etwa 'kleider'
@@ -80,7 +82,7 @@ export class Kleideranpassung {
 
     farbe() {
         const feld = document.getElementById(`${this.vorsilbe}-color`);
-        return new THREE.Color(feld?.value || Kleideranpassung.VORGABEFARBE);
+        return new THREE.Color(feld?.value || Kleideranpassung.VORGABE_FARBE);
     }
 
     // ------------------------------------------------------------------- Server
@@ -95,7 +97,7 @@ export class Kleideranpassung {
             : fetch(`${Kleideranpassung.ADRESSE}?${frage}`));
         const daten = await antwort.json();
         if (!daten.error) return daten;
-        console.warn('Anpassen fehlgeschlagen:', daten.error);
+        Protokoll.warnung('kleideranpassung', 'Anpassen fehlgeschlagen:', daten.error);
         return null;
     }
 
@@ -143,8 +145,7 @@ export class Kleideranpassung {
         const alt = figur.clothMeshes[schluessel];
         if (!alt) return;
         figur.group.remove(alt);
-        alt.geometry.dispose();
-        alt.material.dispose();
+        Werkstofffreigabe.netz(alt);   // samt Texturen
         delete figur.clothMeshes[schluessel];
     }
 }

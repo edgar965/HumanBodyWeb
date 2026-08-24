@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- HumanBody-Tab-Symbol: laufende Figur in der Akzentfarbe (#e94560) auf dem
+       Sidebar-Hintergrund (#1a1a2e) — dieselben Farben wie DJANGOBASE['farben'].
+       Der dunkle Kasten sorgt dafür, dass die Figur in hellen UND dunklen
+       Browser-Leisten sichtbar bleibt; eine reine Strichfigur verschwindet in
+       Chromes hellem Tab-Streifen. -->
+  <rect width="32" height="32" rx="7" fill="#1a1a2e"/>
+  <circle cx="18.5" cy="8" r="3.2" fill="#e94560"/>
+  <g fill="none" stroke="#e94560" stroke-width="2.6"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 12.2 L15 18"/>
+    <path d="M15 18 L18.6 22.6 L17.6 27"/>
+    <path d="M15 18 L10.6 21.8 L11.2 26"/>
+    <path d="M17.2 13.8 L21.4 16.4"/>
+    <path d="M17.2 13.8 L12.2 15.2"/>
+  </g>
+</svg>

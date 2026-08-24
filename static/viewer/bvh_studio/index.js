@@ -36,6 +36,8 @@ function serverLog(aktion, detail, stufe) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ page: 'bvh_studio', action: aktion,
                                detail: detail || '', level: stufe || 'info' }),
+    // stumm gewollt: Diese Zeile IST der Protokollweg — ein Fehler dabei darf
+    // die Aktion nicht aufhalten und sich nicht selbst melden wollen.
     }).catch(() => {});   // Protokoll darf nichts aufhalten
 }
 

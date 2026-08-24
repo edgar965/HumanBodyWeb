@@ -22,19 +22,9 @@ export const DEFAULT_BODY = CFG.defaultBodyType || null;
 // =========================================================================
 // Constants
 // =========================================================================
-export const BODY_MATERIALS = [
-    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 0 Skin
-    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 1 Censor
-    { color: 0x111111, roughness: 0.8,  metalness: 0.0 },  // 2 Eyelash
-    { color: 0x0a0a0a, roughness: 0.1,  metalness: 0.0 },  // 3 Pupil
-    { color: 0xf4f0e8, roughness: 0.2,  metalness: 0.0 },  // 4 Sclera
-    { color: 0xf4f0e8, roughness: 0.05, metalness: 0.0, opacity: 0.3, transparent: true },  // 5 Cornea
-    { color: 0x4a7a9b, roughness: 0.15, metalness: 0.0 },  // 6 Iris
-    { color: 0xb55a6a, roughness: 0.7,  metalness: 0.0 },  // 7 Tongue
-    { color: 0xf0ece0, roughness: 0.3,  metalness: 0.0 },  // 8 Teeth
-    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 9 Nails Hand
-    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 10 Nails Feet
-];
+// Die Tabelle stand hier als sechste Kopie — jetzt an EINER Stelle
+// (`gemeinsam/koerpermaterialien.js`, Befund `doppelcode` 17.08.2026).
+export { BODY_MATERIALS } from '../gemeinsam/koerpermaterialien.js';
 
 // Region definitions: each region is a band of the garment's Y extent
 export const REGION_DEFS = [

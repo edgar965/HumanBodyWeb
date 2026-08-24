@@ -22,13 +22,18 @@ export function _syncPropGarmentControls() {
     const _set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     const _setV = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
     _set('prop-garment-offset', Math.round(st.offset * 1000)); _setV('prop-garment-offset-val', st.offset.toFixed(3));
-    _set('prop-garment-stiffness', Math.round(st.stiffness * 100)); _setV('prop-garment-stiffness-val', st.stiffness.toFixed(2));
+    _set('prop-garment-stiffness', Math.round(st.stiffness * 100));
+    _setV('prop-garment-stiffness-val', st.stiffness.toFixed(2));
     _set('prop-garment-min-dist', st.minDist ?? 3); _setV('prop-garment-min-dist-val', (st.minDist ?? 3) + ' mm');
-    _set('prop-garment-crotch-floor', st.crotchFloor ?? 0); _setV('prop-garment-crotch-floor-val', (st.crotchFloor ?? 0) + ' mm');
+    _set('prop-garment-crotch-floor', st.crotchFloor ?? 0);
+    _setV('prop-garment-crotch-floor-val', (st.crotchFloor ?? 0) + ' mm');
     _set('prop-garment-lift', st.lift ?? 0); _setV('prop-garment-lift-val', (st.lift ?? 0) + ' mm');
-    _set('prop-garment-crotch-depth', st.crotchDepth ?? 0); _setV('prop-garment-crotch-depth-val', (st.crotchDepth ?? 0) + ' mm');
-    _set('prop-garment-roughness', Math.round(st.roughness * 100)); _setV('prop-garment-roughness-val', st.roughness.toFixed(2));
-    _set('prop-garment-metalness', Math.round(st.metalness * 100)); _setV('prop-garment-metalness-val', st.metalness.toFixed(2));
+    _set('prop-garment-crotch-depth', st.crotchDepth ?? 0);
+    _setV('prop-garment-crotch-depth-val', (st.crotchDepth ?? 0) + ' mm');
+    _set('prop-garment-roughness', Math.round(st.roughness * 100));
+    _setV('prop-garment-roughness-val', st.roughness.toFixed(2));
+    _set('prop-garment-metalness', Math.round(st.metalness * 100));
+    _setV('prop-garment-metalness-val', st.metalness.toFixed(2));
     const colorEl = document.getElementById('prop-garment-color');
     if (colorEl && st.color) colorEl.value = '#' + new THREE.Color(st.color[0], st.color[1], st.color[2]).getHexString();
     for (const rid of REGION_IDS) {
@@ -75,13 +80,22 @@ export async function _refitAllForCurrentChar() {
             params.set('offset', (gState.offset || 0.006).toFixed(4));
             params.set('stiffness', (gState.stiffness || 0.5).toFixed(2));
             let color = gState.color;
-            if (!color || !Array.isArray(color)) { const c = new THREE.Color(color || 0x4d5980); color = [c.r, c.g, c.b]; }
-            params.set('color_r', Number(color[0]).toFixed(3)); params.set('color_g', Number(color[1]).toFixed(3)); params.set('color_b', Number(color[2]).toFixed(3));
+            if (!color || !Array.isArray(color)) {
+                const c = new THREE.Color(color || 0x4d5980);
+                color = [c.r, c.g, c.b];
+            }
+            params.set('color_r', Number(color[0]).toFixed(3));
+            params.set('color_g', Number(color[1]).toFixed(3));
+            params.set('color_b', Number(color[2]).toFixed(3));
             try {
                 const data = await Serverabruf.json(
                     `/api/character/garment/fit/?${params}`);
                 if (data.error) continue;
-                if (inst.clothMeshes[key]) { inst.group.remove(inst.clothMeshes[key]); inst.clothMeshes[key].geometry.dispose(); inst.clothMeshes[key].material.dispose(); }
+                if (inst.clothMeshes[key]) {
+                    inst.group.remove(inst.clothMeshes[key]);
+                    inst.clothMeshes[key].geometry.dispose();
+                    inst.clothMeshes[key].material.dispose();
+                }
                 const vertBuf = base64ToFloat32(data.vertices); blenderToThreeCoords(vertBuf);
                 const faceBuf = base64ToUint32(data.faces);
                 const geo = new THREE.BufferGeometry();

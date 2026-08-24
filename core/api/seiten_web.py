@@ -32,23 +32,6 @@ def test_mocapnet(request):
     })
 
 
-def testcases_page(request):
-    """Testcases Übersicht — Kategorien, einzelne Tests, Run-All-Button."""
-    from tests import ALL_CATEGORIES
-    cats = []
-    for CatClass in ALL_CATEGORIES:
-        cats.append({
-            'id': CatClass.__name__,
-            'name': CatClass.name,
-            'description': CatClass.description,
-            'cases': [
-                {'name': c.name, 'description': c.description, 'id': c.fn.__name__}
-                for c in CatClass.cases()
-            ],
-        })
-    return render(request, 'testcases.html', {'categories': cats})
-
-
 def job_status(request, job_id):
     """Show the status of a processing job."""
     job = get_object_or_404(BVHJob, id=job_id)

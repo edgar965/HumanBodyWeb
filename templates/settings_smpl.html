@@ -8,7 +8,11 @@
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-abstand-oben.hb-abstand-oben.hb-abstand-oben { margin-top:1.5rem; }   /* 3x */
-.hb-color-var-text-muted.hb-color-var-text-muted.hb-color-var-text-muted { color:var(--text-muted); font-size:0.85rem; margin-bottom:1rem; }   /* 3x */
+.hb-color-var-text-muted.hb-color-var-text-muted.hb-color-var-text-muted {
+    color:var(--text-muted);
+    font-size:0.85rem;
+    margin-bottom:1rem;
+}   /* 3x */
 .hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* 2x */
 .hb-display-flex.hb-display-flex.hb-display-flex { display:flex; gap:12px; align-items:center; }   /* 2x */
 .hb-padding-6px-0.hb-padding-6px-0.hb-padding-6px-0 { padding:6px 0; }   /* 7x */
@@ -62,7 +66,7 @@
             <div class="settings-input hb-display-flex">
                 <input type="range" id="smpl-opacity-range" min="5" max="100" step="5"
                        value="{{ opacity_pct }}" class="hb-dehnt">
-                <span id="smpl-opacity-val" style="min-width:3em;text-align:right;">{{ opacity_pct }}%</span>
+                <span id="smpl-opacity-val" class="wertanzeige">{{ opacity_pct }}%</span>
                 <input type="hidden" name="smpl_default_opacity" id="smpl-opacity-hidden"
                        value="{{ settings.smpl_default_opacity }}">
             </div>
@@ -129,11 +133,7 @@
         </div>
     </div>
 
-    <div class="settings-actions">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-save"></i> Speichern
-        </button>
-    </div>
+    {% include "_einstellungen_speichern.html" %}
 </form>
 
 <div class="settings-card hb-abstand-oben">
@@ -178,7 +178,7 @@
         {% endif %}
     </div>
     {% if scene_settings %}
-    <form method="post" style="margin-top:12px;">
+    <form method="post" class="abstand-12">
         {% csrf_token %}
         <input type="hidden" name="reset_scene" value="1">
         <button type="submit" class="btn" style="font-size:0.85rem;">

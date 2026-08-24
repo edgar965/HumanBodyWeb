@@ -22,6 +22,7 @@ from pathlib import Path
 
 from django.conf import settings
 
+from ..dienste.haenger import Haenger
 from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..pipelines.werkzeuge import _get_video_frame_count, _is_pid_alive
 
@@ -45,10 +46,37 @@ class Auftragssteuerung:
 
     # ------------------------------------------------------------------ Start
 
+    #: Zustaende, aus denen ein Auftrag gestartet werden darf.
+    STARTBAR = ('pending', 'complete', 'failed')
+
+    @staticmethod
+    def _beanspruchen(job, zustand):
+        """Den Auftrag in EINEM Schritt auf „laeuft" setzen.
+
+        Zwei Startanfragen kurz hintereinander (Doppelklick, zwei Reiter) lasen
+        beide „complete", und beide warfen einen Hintergrundfaden an: doppelte
+        Last auf der Grafikkarte, und wer die Ergebnisdatei schreibt, ist Zufall.
+        Ein bedingtes UPDATE laesst nur EINEN gewinnen — die Datenbank
+        entscheidet, nicht die Reihenfolge im Prozess.
+        (Sparring mit Nemotron, 18.08.2026.)
+        """
+        geaendert = type(job).objects.filter(
+            id=job.id, status__in=Auftragssteuerung.STARTBAR).update(status=zustand)
+        if not geaendert:
+            pipeline_logger.info('start_processing: Auftrag %s laeuft bereits '
+                                 '— zweiter Start uebergangen', job.id)
+        return bool(geaendert)
+
     @staticmethod
     def starten(job):
-        """Zustand zuruecksetzen und den Verarbeitungsfaden anwerfen."""
-        job.status = Auftragssteuerung._anfangszustand(job.pipeline)
+        """Zustand zuruecksetzen und den Verarbeitungsfaden anwerfen.
+
+        Liefert `False`, wenn der Auftrag schon laeuft (siehe `_beanspruchen`).
+        """
+        zustand = Auftragssteuerung._anfangszustand(job.pipeline)
+        if not Auftragssteuerung._beanspruchen(job, zustand):
+            return False
+        job.status = zustand
         job.progress = 0
         job.error_message = ''
         job.bvh_file = ''
@@ -58,6 +86,7 @@ class Auftragssteuerung:
         job.progress_detail = f'0 / {bilder} frames' if bilder else 'Starting...'
         job.save()
         Auftragssteuerung._faden_starten(str(job.id))
+        return True
 
     @staticmethod
     def _anfangszustand(pipeline):
@@ -78,6 +107,7 @@ class Auftragssteuerung:
             try:
                 _run_processing(jid)
             except Exception:
+                logger.exception('Auftrag %s: Hintergrundfaden abgestürzt', jid)
                 Auftragssteuerung._absturz_vermerken(jid)
 
         threading.Thread(target=_sicher, args=(job_id,), daemon=True).start()
@@ -126,9 +156,31 @@ class Auftragssteuerung:
         # Kein bekannter Prozess — nach Serverneustart verwaister Lauf.
         Auftragssteuerung._per_pid_beenden(ordner)
         LaufendeProzesse.entfernen(jid)
-        job.status = 'failed'
-        job.error_message = 'Cancelled by user'
-        job.save(update_fields=['status', 'error_message'])
+        Auftragssteuerung._als_abgebrochen(job)
+
+    @staticmethod
+    def _als_abgebrochen(job):
+        """Auf `failed` setzen — aber NUR, wenn er ueberhaupt noch laeuft.
+
+        Zwischen dem Klick des Nutzers und dieser Zeile kann der Lauf von selbst
+        fertig geworden sein: Der Hintergrundfaden schreibt dann `complete` samt
+        Ergebnisdatei, und wir wuerden das mit „Cancelled by user" ueberschreiben
+        — das Ergebnis waere in der Oberflaeche verloren, obwohl die BVH-Datei
+        auf der Platte liegt. Der Auftrag wird DESHALB frisch aus der Datenbank
+        gelesen; das Objekt in der Hand ist so alt wie die Anfrage.
+        (Sparring mit Nemotron, 18.08.2026.)
+        """
+        frisch = type(job).objects.filter(id=job.id).first()
+        if frisch is None or frisch.status not in Haenger.ARBEITET:
+            pipeline_logger.info(
+                'stop_processing: Auftrag %s steht auf "%s" — nicht mehr '
+                'laufend, Zustand bleibt', job.id,
+                frisch.status if frisch else 'geloescht')
+            return
+        frisch.status = 'failed'
+        frisch.error_message = 'Cancelled by user'
+        frisch.save(update_fields=['status', 'error_message'])
+        job.status, job.error_message = frisch.status, frisch.error_message
 
     @staticmethod
     def _prozess_beenden(prozess, pipeline):
@@ -136,8 +188,10 @@ class Auftragssteuerung:
             try:
                 prozess.wait(timeout=V4_GEDULD)
                 return
+            # stumm gewollt: Die Geduldsfrist ist abgelaufen, jetzt wird
+            # hart beendet — die Zeile darunter IST die Behandlung.
             except subprocess.TimeoutExpired:
-                pass                     # dann eben hart
+                pass
         prozess.kill()
         prozess.wait(timeout=KILL_GEDULD)
 

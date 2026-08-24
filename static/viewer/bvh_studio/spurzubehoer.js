@@ -60,7 +60,7 @@ export class Spurzubehoer {
             const daten = await Serverabruf.json(
                 `/api/character/garment/fit/?${this._kleiderfrage(kleid)}`);
             if (daten.error) {
-                console.warn(`[BVH Studio] Garment ${kleid.id} fehlgeschlagen:`,
+                Protokoll.warnung('BVH Studio', `Garment ${kleid.id} fehlgeschlagen:`,
                              daten.error);
                 return;
             }
@@ -69,7 +69,7 @@ export class Spurzubehoer {
                             daten.skin_indices, daten.skin_weights);
             Protokoll.debug('BVH Studio', 'Garment geladen:', kleid.id);
         } catch (fehler) {
-            console.warn(`[BVH Studio] Garment ${kleid.id} Fehler:`, fehler);
+            Protokoll.warnung('BVH Studio', `Garment ${kleid.id} Fehler:`, fehler);
         }
     }
 
@@ -121,7 +121,7 @@ export class Spurzubehoer {
             this.spur.group.add(gruppe);
             Protokoll.debug('BVH Studio', 'Haar geladen:', frisur.name || frisur.url);
         } catch (fehler) {
-            console.warn('[BVH Studio] Haar nicht ladbar:', fehler);
+            Protokoll.warnung('BVH Studio', 'Haar nicht ladbar:', fehler);
         }
     }
 

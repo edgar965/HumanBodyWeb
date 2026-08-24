@@ -47,7 +47,10 @@ export function bindCanvasClick() {
         const meshes = [];
         state.characters.forEach((inst, id) => {
             inst.group.traverse(child => {
-                if (child.isMesh && !child.userData._boneOverlay) { child.userData._parentCharId = id; meshes.push(child); }
+                if (child.isMesh && !child.userData._boneOverlay) {
+                    child.userData._parentCharId = id;
+                    meshes.push(child);
+                }
             });
         });
 
@@ -68,7 +71,10 @@ export function bindCanvasClick() {
                 if (e.ctrlKey && inst && inst.generatedConfig && hitObj === inst.bodyMesh && inst.bodyMesh.userData.boneVertexRanges) {
                     const boneName = _getBoneFromIntersection(hits[0], inst.bodyMesh);
                     if (boneName) {
-                        if (state.selectedCharacterId !== charId) { clearSubMeshSelection(); fn.selectCharacter(charId); }
+                        if (state.selectedCharacterId !== charId) {
+                            clearSubMeshSelection();
+                            fn.selectCharacter(charId);
+                        }
                         fn._doBoneClick(boneName, inst);
                         return;
                     }
@@ -169,7 +175,10 @@ export function initSubMeshInteraction() {
         }
 
         if (state._hoveredBoneName !== newBoneName) {
-            if (state._boneHoverOverlay) { _removeBoneOverlay(state._boneHoverOverlay); state._boneHoverOverlay = null; }
+            if (state._boneHoverOverlay) {
+                _removeBoneOverlay(state._boneHoverOverlay);
+                state._boneHoverOverlay = null;
+            }
             state._hoveredBoneName = newBoneName;
             if (newBoneName && hitBodyMesh && newBoneName !== state._selectedBoneName) {
                 state._boneHoverOverlay = _createBoneOverlay(hitBodyMesh, newBoneName, state._BONE_HOVER_MAT);

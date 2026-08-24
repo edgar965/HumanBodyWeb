@@ -110,7 +110,7 @@ export class Ergebnisfigur {
             const daten = await Serverabruf.json('/api/settings/humanbody/');
             return daten.result;
         } catch (fehler) {
-            console.warn('[result_character] Einstellungen nicht ladbar,'
+            Protokoll.warnung('result_character', 'Einstellungen nicht ladbar,'
                          + ' Vorgabe bleibt', state.defaultPresetName);
             return null;
         }
@@ -120,7 +120,7 @@ export class Ergebnisfigur {
         try {
             const antwort = await fetch(
                 `/api/character/model/${encodeURIComponent(name)}/`);
-            if (!antwort.ok) return;
+            if (!antwort.ok) { Protokoll.warnung('ergebnisfigur', `Modell "${name}" nicht abrufbar (HTTP ${antwort.status})`); return; }
             const daten = await antwort.json();
             state.presetData = daten;
             if (daten.body_type) state.currentBodyType = daten.body_type;
@@ -128,7 +128,7 @@ export class Ergebnisfigur {
             state.currentMorphs = daten.morphs || {};
             state.currentMeta = daten.meta || {};
         } catch (fehler) {
-            console.warn('[result_character] Modell nicht ladbar:', name);
+            Protokoll.warnung('result_character', 'Modell nicht ladbar:', name);
         }
     }
 

@@ -49,7 +49,10 @@ export function veHandleClick(e) {
             const d = vp.distanceTo(hitLocal);
             if (d < bestDist) { bestDist = d; bestIdx = vi; }
         }
-        if (e.shiftKey) { if (Vertexzustand.veSelectedIndices.has(bestIdx)) Vertexzustand.veSelectedIndices.delete(bestIdx); else Vertexzustand.veSelectedIndices.add(bestIdx); }
+        if (e.shiftKey) {
+            if (Vertexzustand.veSelectedIndices.has(bestIdx)) Vertexzustand.veSelectedIndices.delete(bestIdx);
+            else Vertexzustand.veSelectedIndices.add(bestIdx);
+        }
         else { Vertexzustand.veSelectedIndices.clear(); Vertexzustand.veSelectedIndices.add(bestIdx); }
     } else if (!e.shiftKey) { Vertexzustand.veSelectedIndices.clear(); }
     _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
@@ -62,7 +65,13 @@ export function veBoxSelectStart(e) {
     Vertexzustand.veBoxSelecting = true;
     Vertexzustand.veBoxStart = { x: e.clientX - rect.left, y: e.clientY - rect.top }; Vertexzustand.veBoxEnd = { ...veBoxStart };
     const boxEl = document.getElementById('ve-box-select');
-    if (boxEl) { boxEl.style.display = 'block'; boxEl.style.left = Vertexzustand.veBoxStart.x + 'px'; boxEl.style.top = Vertexzustand.veBoxStart.y + 'px'; boxEl.style.width = '0px'; boxEl.style.height = '0px'; }
+    if (boxEl) {
+        boxEl.style.display = 'block';
+        boxEl.style.left = Vertexzustand.veBoxStart.x + 'px';
+        boxEl.style.top = Vertexzustand.veBoxStart.y + 'px';
+        boxEl.style.width = '0px';
+        boxEl.style.height = '0px';
+    }
     state.controls.enabled = false;
 }
 
@@ -75,7 +84,10 @@ export function veBoxSelectMove(e) {
     if (boxEl) {
         const x = Math.min(Vertexzustand.veBoxStart.x, Vertexzustand.veBoxEnd.x), y = Math.min(Vertexzustand.veBoxStart.y, Vertexzustand.veBoxEnd.y);
         const w = Math.abs(Vertexzustand.veBoxEnd.x - Vertexzustand.veBoxStart.x), h = Math.abs(Vertexzustand.veBoxEnd.y - Vertexzustand.veBoxStart.y);
-        boxEl.style.left = x + 'px'; boxEl.style.top = y + 'px'; boxEl.style.width = w + 'px'; boxEl.style.height = h + 'px';
+        boxEl.style.left = x + 'px';
+        boxEl.style.top = y + 'px';
+        boxEl.style.width = w + 'px';
+        boxEl.style.height = h + 'px';
     }
 }
 

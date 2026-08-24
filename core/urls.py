@@ -1,6 +1,9 @@
 from django.urls import path
-from .api import auftraege, auftrag_upload, bibliothek, bvhdateien, bvhtext, dateien, einstellungen, fotoauftraege, fotoausrichtung, kleidung, kleidungsbibliothek, kleidungsvorlagen, mhproxy, modelldateien, netz, netzbearbeitung, posen, retarget, schnittmuster, schnittmuster_ablage, seiten, seiten_web, skelettdaten, smpl, smplx_ausgabe, studio, studio_projekt, studio_video, system
-from . import test_character_api
+from .api import auftraege, auftrag_upload, bibliothek, bvhdateien, bvhtext, dateien, einstellungen, fotoabgleich, fotoauftraege, kleidung, kleidungsbibliothek, kleidungsvorlagen, mhproxy, modelldateien, netz, netzbearbeitung, posen, retarget, schnittmuster, schnittmuster_ablage, seiten, seiten_web, skelettdaten, smpl, smplx_ausgabe, studio, studio_projekt, studio_video, system, testfigur, ui_vorgaben
+# Die drei Seiten MIT Logik stehen als je eine Klasse in eigenen Modulen —
+# `seiten.py` fuehrt nur noch die reinen Vorlagen (Umbau 17.08.2026).
+from .api import (seite_bvhstudio_einstellungen, seite_fotoauftraege,
+                  seite_theatre_einstellungen)
 from . import cloth_export_api
 
 urlpatterns = [
@@ -40,8 +43,8 @@ urlpatterns = [
     path('settings/video-to-bvh-2d/', einstellungen.app_settings_videobvh_2d, name='settings_videobvh_2d'),
     path('settings/video-to-bvh-3d/', einstellungen.app_settings_videobvh_3d, name='settings_videobvh_3d'),
     path('settings/smpl/', einstellungen.app_settings_smpl, name='settings_smpl'),
-    path('settings/theatre/', seiten.theatre_settings_page, name='settings_theatre'),
-    path('settings/bvh-studio/', seiten.bvh_studio_settings_page, name='settings_bvh_studio'),
+    path('settings/theatre/', seite_theatre_einstellungen.theatre_settings_page, name='settings_theatre'),
+    path('settings/bvh-studio/', seite_bvhstudio_einstellungen.bvh_studio_settings_page, name='settings_bvh_studio'),
     path('api/job/<uuid:job_id>/start/', auftraege.api_start_processing, name='api_start_processing'),
     path('api/job/<uuid:job_id>/stop/', auftraege.api_stop_processing, name='api_stop_processing'),
     path('api/job/<uuid:job_id>/status/', auftraege.job_status_api, name='job_status_api'),
@@ -51,7 +54,7 @@ urlpatterns = [
 
     # HumanBody
     path('humanbody/photo-to-3d/', seiten.photo_to_3d_page, name='photo_to_3d'),
-    path('humanbody/photo-to-3d/jobs/', seiten.photo_analysis_jobs_page, name='photo_analysis_jobs'),
+    path('humanbody/photo-to-3d/jobs/', seite_fotoauftraege.photo_analysis_jobs_page, name='photo_analysis_jobs'),
     path('api/character/analyze-photo/', fotoauftraege.analyze_photo, name='analyze_photo'),
     path('api/character/analyze-photo/status/', fotoauftraege.analyze_photo_status, name='analyze_photo_status'),
     path('api/character/photo-job/<uuid:job_id>/', fotoauftraege.photo_analysis_job_data, name='photo_analysis_job_data'),
@@ -59,9 +62,9 @@ urlpatterns = [
     path('api/character/photo-job/<uuid:job_id>/reprocess/', fotoauftraege.photo_analysis_reprocess, name='photo_analysis_reprocess'),
     path('api/character/photo-job/<uuid:job_id>/delete/', fotoauftraege.photo_analysis_delete, name='photo_analysis_delete'),
     path('api/character/photo-jobs/bulk-delete/', fotoauftraege.photo_analysis_bulk_delete, name='photo_analysis_bulk_delete'),
-    path('api/character/photo-job/<uuid:job_id>/silhouette/', fotoausrichtung.photo_silhouette_data, name='photo_silhouette_data'),
-    path('api/character/photo-job/<uuid:job_id>/save-alignment/', fotoausrichtung.photo_save_alignment, name='photo_save_alignment'),
-    path('api/character/photo-job/<uuid:job_id>/save-projection/', fotoausrichtung.photo_save_projection, name='photo_save_projection'),
+    path('api/character/photo-job/<uuid:job_id>/silhouette/', fotoabgleich.photo_silhouette_data, name='photo_silhouette_data'),
+    path('api/character/photo-job/<uuid:job_id>/save-alignment/', fotoabgleich.photo_save_alignment, name='photo_save_alignment'),
+    path('api/character/photo-job/<uuid:job_id>/save-projection/', fotoabgleich.photo_save_projection, name='photo_save_projection'),
     path('api/character/smplx-mesh/', smplx_ausgabe.smplx_mesh, name='smplx_mesh'),
     path('api/character/smplx-texture/<uuid:job_id>/', smplx_ausgabe.smplx_texture, name='smplx_texture'),
     path('humanbody/config/', seiten.character_viewer, name='humanbody_config'),
@@ -76,7 +79,7 @@ urlpatterns = [
     path('api/character/mh-proxy-fit/', mhproxy.mh_proxy_fit, name='mh_proxy_fit'),
     path('api/character/tpose-vertices/', mhproxy.tpose_vertices, name='tpose_vertices'),
     path('api/character/poses/', posen.list_poses, name='list_poses'),
-    path('api/character/pose/<path:pose_id>/', posen.get_pose, name='get_pose'),
+    path('api/character/pose/<path:pose_id>/', posen.pose_load, name='pose_load'),
     path('api/character/pose-manage/', posen.pose_manage, name='pose_manage'),
     path('api/character/mh-push-outside/', mhproxy.mh_push_outside, name='mh_push_outside'),
     path('humanbody/animations/', seiten.animations_page, name='humanbody_animations'),
@@ -104,8 +107,6 @@ urlpatterns = [
     path('api/studio/project-save/', studio_projekt.studio_project_save, name='studio_project_save'),
     path('api/studio/project-load/', studio_projekt.studio_project_load, name='studio_project_load'),
     path('api/studio/project-list/', studio_projekt.studio_project_list, name='studio_project_list'),
-    path('tests/', seiten_web.testcases_page, name='testcases'),
-    path('api/tests/run/', auftraege.run_testcases_api, name='run_testcases'),
     path('api/studio/theatre-presets/', studio.studio_theatre_presets, name='studio_theatre_presets'),
     path('api/studio/theatre-preset/<str:name>/', studio.studio_theatre_preset_detail, name='studio_theatre_preset_detail'),
     path('api/studio/scene-object-upload/', studio.studio_scene_object_upload, name='studio_scene_object_upload'),
@@ -126,8 +127,8 @@ urlpatterns = [
     path('api/theatre/encode-frames/', studio_video.theatre_encode_frames, name='theatre_encode_frames'),
     path('api/settings/smpl/', smpl.smpl_settings_api, name='smpl_settings_api'),
     path('api/settings/smpl/save/', smpl.smpl_settings_save, name='smpl_settings_save'),
-    path('api/ui-prefs/', einstellungen.ui_prefs_api, name='ui_prefs_api'),
-    path('api/animationen/<str:kategorie>/', einstellungen.animationen_der_kategorie,
+    path('api/ui-prefs/', ui_vorgaben.ui_prefs_api, name='ui_prefs_api'),
+    path('api/animationen/<str:kategorie>/', ui_vorgaben.animationen_der_kategorie,
          name='animationen_der_kategorie'),
     path('api/character/asset/<str:name>/', netz.character_asset_glb, name='character_asset_glb'),
     path('api/character/bvh/<str:category>/<str:name>/', bvhdateien.character_bvh_file_cat, name='character_bvh_file_cat'),
@@ -182,12 +183,12 @@ urlpatterns = [
     # Help (Logs/Versionen/Tests) jetzt aus djangoBase: /help/ -> djangobase.urls
 
     # Test Character API (isolated version from TestCharakter/)
-    path('api/character-test/mesh/', test_character_api.test_character_mesh, name='test_character_mesh'),
-    path('api/character-test/morphs/', test_character_api.test_character_morphs, name='test_character_morphs'),
-    path('api/character-test/skin-weights/', test_character_api.test_character_skin_weights, name='test_character_skin_weights'),
-    path('api/character-test/rigify-skeleton/', test_character_api.test_character_rigify_skeleton, name='test_character_rigify_skeleton'),
-    path('api/character-test/version/', test_character_api.test_version_info, name='test_version_info'),
-    path('api/character-test/source/', test_character_api.test_character_source, name='test_character_source'),
-    path('api/character-test/reload/', test_character_api.test_reload, name='test_reload'),
-    path('api/character-test/switch/', test_character_api.test_switch_character, name='test_switch_character'),
+    path('api/character-test/mesh/', testfigur.test_character_mesh, name='test_character_mesh'),
+    path('api/character-test/morphs/', testfigur.test_character_morphs, name='test_character_morphs'),
+    path('api/character-test/skin-weights/', testfigur.test_character_skin_weights, name='test_character_skin_weights'),
+    path('api/character-test/rigify-skeleton/', testfigur.test_character_rigify_skeleton, name='test_character_rigify_skeleton'),
+    path('api/character-test/version/', testfigur.test_version_info, name='test_version_info'),
+    path('api/character-test/source/', testfigur.test_character_source, name='test_character_source'),
+    path('api/character-test/reload/', testfigur.test_reload, name='test_reload'),
+    path('api/character-test/switch/', testfigur.test_switch_character, name='test_switch_character'),
 ]

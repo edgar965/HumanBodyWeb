@@ -4,7 +4,13 @@
 
 {% block extra_head %}
 <style>
-    .main-content { padding: 0 !important; max-width: none !important; height: 100vh; display: flex; flex-direction: column; }
+    .main-content {
+        padding: 0 !important;
+        max-width: none !important;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
 
     /* Top bar */
     .studio-toolbar {
@@ -38,12 +44,39 @@
     .studio-sidebar h3 { font-size: 0.85rem; padding: 10px 12px 6px; color: var(--text-muted); margin: 0; }
     .lib-tree { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
     .lib-cat { margin-bottom: 2px; }
-    .lib-cat-header { padding: 5px 8px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+    .lib-cat-header {
+        padding: 5px 8px;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
     .lib-cat-header:hover { background: rgba(255,255,255,0.05); }
     .lib-cat-body { display: none; padding-left: 12px; }
     .lib-cat.open .lib-cat-body { display: block; }
     .lib-cat.open .lib-chevron { transform: rotate(90deg); }
     .lib-chevron { transition: transform 0.15s; font-size: 0.7rem; }
+    /* Die Anzahl hinter dem Ordnernamen. Stand als Inline-Stil im
+       JavaScript (`style="color:…;font-size:…"`) — Befund `jsstilfassungen`. */
+    .lib-cat-anzahl { color: var(--text-muted); font-size: 0.7rem; }
+    /* Die Gauß-Glättung im Werkzeugmenü. Stand als Inline-Stil im
+       JavaScript (`style.color = '#4caf50'` und drei `<span style=…>`) —
+       Befund `jsstilfassungen`, 18.08.2026. Inline-Stil schlägt jede Regel im
+       Stylesheet, auch die des Themes. */
+    /* Doppelt benannt (0,2,0): `.toolbar-dd-item { color: … }` steht weiter
+       unten in derselben Datei und gewinnt bei gleicher Spezifität. Gemessen
+       im Browser: mit einfachen Klassen blieben alle drei Einträge grau. */
+    .toolbar-dd-item.gauss-an { color: #4caf50; }
+    .toolbar-dd-item.gauss-aus { color: #ef4444; }
+    .toolbar-dd-item.gauss-gedaempft { color: #888; }
+    .gauss-marke { font-size: 0.65rem; color: #4caf50; }
+    .gauss-pfeil { font-size: 0.65rem; }
+    /* Gesperrter Knopf (Export läuft). Stand als `style.opacity = '0.5'`
+       im JavaScript — Befund `jsstilfassungen`. */
+    .knopf-gesperrt { opacity: 0.5; }
     .lib-item {
         padding: 4px 8px; font-size: 0.78rem; color: var(--text); cursor: grab;
         border-radius: 3px; word-break: break-all;
@@ -270,19 +303,54 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-abschnittstitel.hb-abschnittstitel.hb-abschnittstitel { font-size:0.85rem; color:var(--accent); margin-bottom:10px; }   /* 3x */
+.hb-abschnittstitel.hb-abschnittstitel.hb-abschnittstitel {
+    font-size:0.85rem;
+    color:var(--accent);
+    margin-bottom:10px;
+}   /* 3x */
 .hb-abstand-unten.hb-abstand-unten.hb-abstand-unten { margin-bottom:6px; }   /* 3x */
 .hb-balken.hb-balken.hb-balken { height:4px; background:var(--bg-card); border-radius:2px; overflow:hidden; }   /* 4x */
 .hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* 5x */
 .hb-dehnt-fein.hb-dehnt-fein.hb-dehnt-fein { flex:1; font-size:0.72rem; }   /* 3x */
-.hb-erklaerung.hb-erklaerung.hb-erklaerung { font-size:0.7rem; color:var(--text-muted); margin-bottom:6px; line-height:1.4; }   /* 3x */
+.hb-erklaerung.hb-erklaerung.hb-erklaerung {
+    font-size:0.7rem;
+    color:var(--text-muted);
+    margin-bottom:6px;
+    line-height:1.4;
+}   /* 3x */
 .hb-fein.hb-fein.hb-fein { font-size:0.72rem; }   /* 3x */
 .hb-hinweis.hb-hinweis.hb-hinweis { padding:12px; color:var(--text-muted); font-size:0.8rem; }   /* 1x */
 .hb-klappteil.hb-klappteil.hb-klappteil { display:none; margin-top:6px; }   /* 4x */
-.hb-knopf-klein.hb-knopf-klein.hb-knopf-klein { padding:3px 6px; background:var(--bg-card); border:1px solid var(--border); border-radius:3px; color:var(--text-muted); cursor:pointer; font-size:0.7rem; }   /* 4x */
-.hb-kontextmenue.hb-kontextmenue.hb-kontextmenue { display:none; position:fixed; z-index:9999; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:4px 0; min-width:180px; box-shadow:0 8px 24px rgba(0,0,0,0.4); }   /* 4x */
+.hb-knopf-klein.hb-knopf-klein.hb-knopf-klein {
+    padding:3px 6px;
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:3px;
+    color:var(--text-muted);
+    cursor:pointer;
+    font-size:0.7rem;
+}   /* 4x */
+.hb-kontextmenue.hb-kontextmenue.hb-kontextmenue {
+    display:none;
+    position:fixed;
+    z-index:9999;
+    background:var(--bg-secondary);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:4px 0;
+    min-width:180px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+}   /* 4x */
 .hb-kuerzel.hb-kuerzel.hb-kuerzel { margin-left:auto; font-size:0.7rem; color:var(--text-muted); }   /* 7x */
-.hb-menueeintrag.hb-menueeintrag.hb-menueeintrag { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; }   /* 9x */
+.hb-menueeintrag.hb-menueeintrag.hb-menueeintrag {
+    padding:7px 14px;
+    font-size:0.82rem;
+    color:#ccc;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}   /* 9x */
 .hb-symbolspalte.hb-symbolspalte.hb-symbolspalte { width:16px; }   /* 50x */
 .hb-symbolspalte-warn.hb-symbolspalte-warn.hb-symbolspalte-warn { width:16px; color:#ffc107; }   /* 4x */
 .hb-trennlinie.hb-trennlinie.hb-trennlinie { height:1px; background:var(--border); margin:4px 0; }   /* 17x */
@@ -293,17 +361,62 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-border-1px-solid-var-border.hb-border-1px-solid-var-border.hb-border-1px-solid-var-border { border:1px solid var(--border); border-radius:6px; padding:10px; margin-top:8px; }   /* 2x */
-.hb-display-none.hb-display-none.hb-display-none { display:none; position:fixed; z-index:9999; background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:4px 0; min-width:200px; box-shadow:0 8px 24px rgba(0,0,0,0.4); }   /* 2x */
+.hb-border-1px-solid-var-border.hb-border-1px-solid-var-border.hb-border-1px-solid-var-border {
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:10px;
+    margin-top:8px;
+}   /* 2x */
+.hb-display-none.hb-display-none.hb-display-none {
+    display:none;
+    position:fixed;
+    z-index:9999;
+    background:var(--bg-secondary);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:4px 0;
+    min-width:200px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+}   /* 2x */
 .hb-flex-1.hb-flex-1.hb-flex-1 { flex:1; font-size:0.75rem; }   /* 2x */
 .hb-gap-8px.hb-gap-8px.hb-gap-8px { gap:8px; cursor:default; }   /* 2x */
-.hb-height-100.hb-height-100.hb-height-100 { height:100%; background:#4caf50; width:0%; transition:width 0.25s; }   /* 2x */
-.hb-margin-top-4px.hb-margin-top-4px.hb-margin-top-4px { margin-top:4px; font-size:0.72rem; color:var(--text-muted); }   /* 2x */
+.hb-height-100.hb-height-100.hb-height-100 {
+    height:100%;
+    background:#4caf50;
+    width:0%;
+    transition:width 0.25s;
+}   /* 2x */
+.hb-margin-top-4px.hb-margin-top-4px.hb-margin-top-4px {
+    margin-top:4px;
+    font-size:0.72rem;
+    color:var(--text-muted);
+}   /* 2x */
 .hb-margin-top-8px.hb-margin-top-8px.hb-margin-top-8px { margin-top:8px; }   /* 2x */
 .hb-min-width-260px.hb-min-width-260px.hb-min-width-260px { min-width:260px; }   /* 2x */
-.hb-padding-4px-12px.hb-padding-4px-12px.hb-padding-4px-12px { padding:4px 12px; font-size:0.7rem; color:var(--text-muted); }   /* 2x */
-.hb-padding-5px-12px.hb-padding-5px-12px.hb-padding-5px-12px { padding:5px 12px; background:var(--accent); color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem; }   /* 2x */
-.hb-width-100.hb-width-100.hb-width-100 { width:100%; padding:6px 10px; background:#4caf50; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.8rem; }   /* 2x */
+.hb-padding-4px-12px.hb-padding-4px-12px.hb-padding-4px-12px {
+    padding:4px 12px;
+    font-size:0.7rem;
+    color:var(--text-muted);
+}   /* 2x */
+.hb-padding-5px-12px.hb-padding-5px-12px.hb-padding-5px-12px {
+    padding:5px 12px;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:4px;
+    cursor:pointer;
+    font-size:0.8rem;
+}   /* 2x */
+.hb-width-100.hb-width-100.hb-width-100 {
+    width:100%;
+    padding:6px 10px;
+    background:#4caf50;
+    color:#fff;
+    border:none;
+    border-radius:4px;
+    cursor:pointer;
+    font-size:0.8rem;
+}   /* 2x */
 .hb-width-16px.hb-width-16px.hb-width-16px { width:16px; color:#e91e63; }   /* 2x */
 </style>
 {% endblock %}
@@ -373,8 +486,8 @@
         <button id="btn-tools" title="Tools"><i class="fas fa-wrench"></i> Tools <i class="fas fa-caret-down hb-winzig"></i></button>
         <div class="toolbar-dropdown-menu hb-min-width-260px">
             <div style="padding:4px 14px;font-size:0.72rem;color:var(--text-muted);font-weight:600;">Gaussian Smooth</div>
-            <div class="toolbar-dd-item" id="dd-gauss-on" style="color:#4caf50;"><i class="fas fa-play hb-symbolspalte"></i> Smooth EINSCHALTEN</div>
-            <div class="toolbar-dd-item" id="dd-gauss-off"><i class="fas fa-stop hb-symbolspalte"></i> Smooth AUSSCHALTEN</div>
+            <div class="toolbar-dd-item gauss-an" id="dd-gauss-on"><i class="fas fa-play hb-symbolspalte"></i> Smooth EINSCHALTEN</div>
+            <div class="toolbar-dd-item gauss-gedaempft" id="dd-gauss-off"><i class="fas fa-stop hb-symbolspalte"></i> Smooth AUSSCHALTEN</div>
             <div class="toolbar-dd-item hb-gap-8px"><i class="fas fa-sliders-h hb-symbolspalte"></i> Sigma: <input type="number" id="dd-gauss-sigma-input" value="2" min="0.5" max="20" step="0.5" style="width:50px;background:var(--bg-card,#1a1a2e);border:1px solid var(--border,#334);border-radius:3px;color:#ccc;padding:2px 4px;font-size:0.8rem;text-align:center;" onclick="event.stopPropagation()"></div>
             <div class="hb-trennlinie"></div>
             <div class="toolbar-dd-item" id="dd-ground"><i class="fas fa-shoe-prints hb-symbolspalte"></i> Auf Bodenniveau</div>
@@ -404,7 +517,7 @@
         </div>
     </div>
     <div class="hb-dehnt"></div>
-    <span id="studio-info" style="font-size:0.75rem;color:var(--text-muted);" title="Aktuelles Projekt">Projekt: Untitled</span>
+    <span id="studio-info" class="text-klein" title="Aktuelles Projekt">Projekt: Untitled</span>
 </div>
 
 <!-- Main layout -->
@@ -499,7 +612,7 @@
         </div>
         <div id="props-tab-props" class="props-tab-content active">
             <div id="props-content">
-                <div style="color:var(--text-muted);font-size:0.8rem;">Animation oder Clip auswählen</div>
+                <div class="gedaempft-klein">Animation oder Clip auswählen</div>
             </div>
         </div>
         <div id="props-tab-tools" class="props-tab-content">
@@ -528,7 +641,7 @@
                             <option value="bone">Knochen-basiert (FK)</option>
                         </select>
                     </div>
-                    <div class="prop-row"><label>Abstand:</label><input type="number" id="tool-ground-offset" value="0.03" min="0" max="1" step="0.005"> <span style="font-size:0.72rem;color:var(--text-muted);">m</span></div>
+                    <div class="prop-row"><label>Abstand:</label><input type="number" id="tool-ground-offset" value="0.03" min="0" max="1" step="0.005"> <span class="text-schmal">m</span></div>
                     <div class="hb-margin-top-8px">
                         <button id="tool-ground-apply" class="hb-padding-5px-12px"><i class="fas fa-shoe-prints"></i> Bodenniveau anwenden</button>
                     </div>
@@ -575,12 +688,12 @@
                 </div>
                 <div id="export-progress" style="display:none;margin-bottom:10px;">
                     <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px;" id="export-status-text">Bereit</div>
-                    <div style="height:6px;background:var(--bg-card);border-radius:3px;overflow:hidden;">
+                    <div class="fortschritt-rinne">
                         <div id="export-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width 0.2s;"></div>
                     </div>
                 </div>
                 <div style="display:flex;gap:6px;margin-top:10px;">
-                    <button id="export-start" style="flex:1;padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.82rem;"><i class="fas fa-circle" style="color:#e74c3c;"></i> Export starten</button>
+                    <button id="export-start" style="flex:1;padding:6px 12px;background:var(--accent);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.82rem;"><i class="fas fa-circle fehlertext"></i> Export starten</button>
                     <button id="export-cancel" style="padding:6px 12px;background:var(--bg-card);color:var(--text-muted);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:0.82rem;display:none;"><i class="fas fa-stop"></i> Abbrechen</button>
                 </div>
             </div>
@@ -710,7 +823,7 @@
 
                 <div style="margin-top:10px;font-size:0.7rem;color:var(--text-muted);line-height:1.4;">
                     <i class="fas fa-info-circle"></i> Der Export nutzt die Szene im
-                    <a href="{% url 'humanbody_scene' %}" target="_blank" style="color:var(--accent);">Szenen-Editor</a> —
+                    <a href="{% url 'humanbody_scene' %}" target="_blank" class="akzent-verweis">Szenen-Editor</a> —
                     dort Modell + Animation setzen, dann hier Export starten.
                     Details unter <b>Hilfe &rarr; Export</b>.
                 </div>
@@ -796,7 +909,16 @@
     <div class="ctx-item" id="track-ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> Löschen</div>
 </div>
 <style>
-.ctx-item { padding:7px 14px; font-size:0.82rem; color:#ccc; cursor:pointer; display:flex; align-items:center; gap:8px; position:relative; }
+.ctx-item {
+    padding:7px 14px;
+    font-size:0.82rem;
+    color:#ccc;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    position:relative;
+}
 .ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }
 /* Nested submenu — appears to the right of parent on hover */
 .ctx-item.has-submenu > .ctx-submenu {
@@ -838,11 +960,11 @@
 <!-- Help Modal -->
 <div id="help-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
     <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;max-width:640px;width:90%;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 16px 48px rgba(0,0,0,0.5);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h2 id="help-modal-title" style="font-size:1.1rem;color:var(--accent);margin:0;"></h2>
-            <button id="help-modal-close" style="background:none;border:none;color:var(--text-muted);font-size:1.2rem;cursor:pointer;">&times;</button>
+        <div class="hilfemodal-kopf">
+            <h2 id="help-modal-title" class="hilfemodal-titel"></h2>
+            <button id="help-modal-close" class="hilfemodal-schliessen">&times;</button>
         </div>
-        <div id="help-modal-body" style="font-size:0.85rem;color:var(--text);line-height:1.7;"></div>
+        <div id="help-modal-body" class="hilfemodal-text"></div>
     </div>
 </div>
 

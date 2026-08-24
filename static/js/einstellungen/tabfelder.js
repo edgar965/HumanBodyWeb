@@ -9,6 +9,7 @@
  * Das Praefix landet im name-Attribut (`panel_config_morphs`); die Ansicht
  * sammelt daraus beim Speichern die angekreuzten Schluessel ein.
  */
+import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
 export class Tabfelder {
 
     /**
@@ -25,7 +26,7 @@ export class Tabfelder {
             offen = JSON.parse(offenJson || '[]');
         } catch (fehler) {
             // Kaputter Stand darf die Seite nicht kosten — dann eben alle zu.
-            console.warn('Tab-Stand nicht lesbar:', fehler);
+            Protokoll.warnung('tabfelder', 'Tab-Stand nicht lesbar:', fehler);
         }
         ziel.innerHTML = '';
         tabs.forEach(([schluessel, beschriftung]) => {

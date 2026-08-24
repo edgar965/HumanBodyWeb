@@ -1,0 +1,36 @@
+{% comment %}
+Die Importkarte für three.js — EINMAL, statt neunmal.
+
+WARUM (17.08.2026, Befund `doppelcode`): Derselbe Block stand in zehn Vorlagen,
+und die Version `0.170.0` darin neunmal. Ein Versionswechsel heißt damit: neun
+Dateien ändern und keine vergessen — und wer eine vergisst, bekommt ZWEI
+three.js-Fassungen im Projekt. Das ist die unangenehmste Sorte Fehler in diesem
+Umfeld: `instanceof THREE.Mesh` schlägt dann fehl, obwohl das Objekt eines ist,
+und Materialien/Geometrien passen nicht zusammen — ohne eine einzige
+Fehlermeldung.
+
+Verwendung, je nachdem was die Seite braucht:
+
+    {% verbatim %}{% include "_importmap.html" %}{% endverbatim %}
+    {% verbatim %}{% include "_importmap.html" with subdivide=1 %}{% endverbatim %}
+    {% verbatim %}{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}{% endverbatim %}
+    {% verbatim %}{% include "_importmap.html" with theatre=1 %}{% endverbatim %}
+
+NICHT hier eingebunden ist `bvh_studio.html`: Die Seite lädt three.js aus
+`static/vendor/` statt vom CDN (sie muss ohne Netz laufen). Das ist eine
+Entscheidung über die Herkunft, keine Dublette.
+{% endcomment %}
+{% with drei="0.170.0" unterteilung="1.1.5" meshbvh="0.9.9" theatrejs="0.7.2" %}
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@{{ drei }}/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@{{ drei }}/examples/jsm/"{% if subdivide %},
+    "three-subdivide": "https://cdn.jsdelivr.net/npm/three-subdivide@{{ unterteilung }}/build/index.module.js"{% endif %}{% if mesh_bvh %},
+    "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@{{ meshbvh }}/+esm"{% endif %}{% if theatre %},
+    "@theatre/core": "https://cdn.jsdelivr.net/npm/@theatre/core@{{ theatrejs }}/dist/core.esm.js",
+    "@theatre/studio": "https://cdn.jsdelivr.net/npm/@theatre/studio@{{ theatrejs }}/dist/studio.esm.js"{% endif %}
+  }
+}
+</script>
+{% endwith %}

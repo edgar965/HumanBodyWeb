@@ -23,7 +23,7 @@ export async function loadAnimationTree() {
         const catNames = Object.keys(categories).sort();
 
         if (catNames.length === 0) {
-            tree.innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:0.8rem;">Keine Animationen gefunden</div>';
+            tree.innerHTML = '<div class="leer-hinweis-gross">Keine Animationen gefunden</div>';
             return;
         }
 

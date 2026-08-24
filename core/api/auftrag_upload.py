@@ -51,17 +51,31 @@ def upload_video(request):
 
 
 def _erkenner_verfuegbar():
-    """Sind die nachgeruesteten 2D-Erkenner installiert?"""
-    try:
-        rtmpose = True
-    except ImportError:
-        rtmpose = False
-    try:
-        yolo = True
-    except ImportError:
-        yolo = False
+    """Sind die nachgeruesteten 2D-Erkenner installiert?
+
+    DIESE PRUEFUNG HAT NICHTS GEPRUEFT (gefunden 17.08.2026). Hier stand:
+
+        try:
+            rtmpose = True
+        except ImportError:
+            rtmpose = False
+
+    Im `try` fehlt der Import — der Name wird schlicht auf `True` gesetzt, ein
+    `ImportError` kann dabei nicht entstehen. Damit meldete die Uploadseite
+    RTMPose, ViTPose und YOLO11 immer als vorhanden; der Hinweis
+    „nicht installiert (pip install ultralytics)" aus `upload.html` war
+    unerreichbar, und wer ohne die Pakete einen Auftrag startete, bekam den
+    Fehler erst aus dem Unterprozess.
+
+    Ein `import rtmlib` an dieser Stelle waere aber auch falsch: Der Server
+    laeuft in `python14`, die Erkenner laufen in `python10` — siehe
+    `Systemzustand.pipeline_paket`.
+    """
+    rtmlib_da = Systemzustand.pipeline_paket('rtmlib')
     # ViTPose laeuft ueber rtmlib mit.
-    return {'rtmpose': rtmpose, 'yolo11': yolo, 'vitpose': rtmpose}
+    return {'rtmpose': rtmlib_da,
+            'yolo11': Systemzustand.pipeline_paket('ultralytics'),
+            'vitpose': rtmlib_da}
 
 
 def upload_video_v4(request):

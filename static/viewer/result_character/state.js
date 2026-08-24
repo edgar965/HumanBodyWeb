@@ -7,13 +7,11 @@
  */
 import * as THREE from 'three';
 
-export const TONE_MAPPINGS = {
-    ACESFilmic: THREE.ACESFilmicToneMapping,
-    Linear:     THREE.LinearToneMapping,
-    Reinhard:   THREE.ReinhardToneMapping,
-    Cineon:     THREE.CineonToneMapping,
-    None:       THREE.NoToneMapping,
-};
+// Die Tabelle stand hier als eine von vier Kopien, eine davon unter
+// anderem Namen — jetzt an EINER Stelle (`gemeinsam/tonwerte.js`,
+// Befunde `doppelcode` und `namensvarianten`, 17.08.2026).
+import { tonwerte } from '../gemeinsam/tonwerte.js';
+export const TONE_MAPPINGS = tonwerte(THREE);
 
 /**
  * Mutable state for the result character viewer.

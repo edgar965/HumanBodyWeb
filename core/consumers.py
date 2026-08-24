@@ -122,6 +122,9 @@ class CharacterConsumer(AsyncWebsocketConsumer):
 
         try:
             msg = json.loads(text_data)
+        # stumm gewollt: Der Rumpf kommt aus einer WebSocket-Nachricht des
+        # Browsers. Kaputtes JSON ist eine fremde Eingabe, kein Serverfehler —
+        # ein Log daraus laesst sich von aussen beliebig oft ausloesen.
         except json.JSONDecodeError:
             return
 
@@ -169,21 +172,14 @@ class TestCharacterConsumer(CharacterConsumer):
     def _init_state(self):
         """Initialize CharacterState from TestCharakter/ directory."""
         try:
-            from core.test_character_api import (
-                _load_test_module, _get_test_morph_data,
-                _get_test_char_defaults, _get_test_cc_subdivider,
-                _get_default_body_type,
-            )
-            mod = _load_test_module()
-            md = _get_test_morph_data()
-            cd = _get_test_char_defaults()
-
-            self._char_state = mod.CharacterState(md, cd)
-            self._char_state.set_body_type(_get_default_body_type())
-
-            self._cc_subs = {'test': _get_test_cc_subdivider()}
+            # `Testkern` seit dem 17.08.2026: Vorher standen hier fünf private
+            # Funktionen von `test_character_api` — Modulinneres, das mit dem
+            # Aufteilen der Datei verschwunden wäre.
+            from core.api.testfigur import Testkern
+            self._char_state = Testkern.zustand()
+            self._cc_subs = {'test': Testkern.unterteiler()}
         except Exception as e:
-            logger.error("Failed to init test CharacterState: %s", e)
+            logger.exception('Test-CharacterState nicht aufbaubar: %s', e)
 
     def _get_cc(self):
         """Der Unterteiler des TESTcharakters — nicht der der Produktion.

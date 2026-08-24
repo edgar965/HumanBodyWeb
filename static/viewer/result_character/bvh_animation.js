@@ -94,7 +94,7 @@ export async function loadBVH() {
         console.error('[result_character] BVH retarget error:', err);
         if (state.loadingEl) {
             state.loadingEl.style.display = '';
-            state.loadingEl.innerHTML = '<span style="color:#e74c3c"><i class="fas fa-exclamation-triangle"></i> Retarget: ' + (err.message || err) + '</span>';
+            state.loadingEl.innerHTML = '<span class="fehlertext"><i class="fas fa-exclamation-triangle"></i> Retarget: ' + (err.message || err) + '</span>';
         }
     }
 }

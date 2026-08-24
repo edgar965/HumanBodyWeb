@@ -48,6 +48,8 @@ class Texturbacken:
             g = int(hexwert[3:5], 16)
             b = int(hexwert[5:7], 16)
             return (b, g, r)
+        # stumm gewollt: Ein Farbwert, der nicht wie „#ccaa88“ aussieht, ist keine
+        # Störung — die Vorgabefarbe ist die Antwort darauf.
         except (ValueError, IndexError, TypeError):
             return cls.VORGABE_HINTERGRUND
 

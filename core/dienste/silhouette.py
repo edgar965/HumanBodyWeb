@@ -11,6 +11,8 @@ import logging
 
 import numpy as np
 
+from ..daten.bildrahmen import Bildrahmen
+
 logger = logging.getLogger('core')
 
 
@@ -157,8 +159,10 @@ class Silhouette:
         return [[float(p[0][0] / sx), float(p[0][1] / sy)] for p in vereinfacht]
 
     def netz_rahmen(self):
-        """Umschliessendes Rechteck der Projektion (NaN-fest)."""
-        p = self.projektion
-        x_min, y_min = float(np.nanmin(p[:, 0])), float(np.nanmin(p[:, 1]))
-        x_max, y_max = float(np.nanmax(p[:, 0])), float(np.nanmax(p[:, 1]))
-        return {'x': x_min, 'y': y_min, 'w': x_max - x_min, 'h': y_max - y_min}
+        """Umschliessendes Rechteck der Projektion (NaN-fest).
+
+        Die Rechnung steht in `Bildrahmen` — sie lag hier und in
+        `Gesichtskontur` zweimal, und das Drahtformat `{x, y, w, h}` damit auch
+        (17.08.2026).
+        """
+        return Bildrahmen.um(self.projektion)

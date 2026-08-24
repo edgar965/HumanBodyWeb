@@ -1,28 +1,22 @@
 # -*- coding: utf-8 -*-
 """Kleidung: Bibliothek, Anpassung, Schnittmuster, Proxy.
 
-Herausgeloest aus core/character_api.py (Umbau 15.08.2026). Die Datei hatte
-6.495 Zeilen und 110 Endpunkte; die Themen darin waren nur durch Reihenfolge
-getrennt. Die Endpunkte hier bleiben duenne Funktionen — Django-Dekoratoren,
-Stapelspuren und Tests bleiben damit lesbar —, waehrend die Fachlogik in
-core/dienste/ als Klassen liegt.
+Aus core/character_api.py herausgeloest (Umbau 15.08.2026) — warum so
+geschnitten, steht in `core/api/__init__.py`.
 """
 
+from ..daten.stoffantwort import Stoffantwort
 from ..daten.kleidungsregler import Kleidungsregler
 from ..dienste.kleidungsanpassung import Kleidungsanpassung
 from .kleidungsbibliothek import _get_garment_library
 from ..dienste.charakterdaten import Charakterdaten
-from ..dienste.skingewichte import Skingewichte
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
-from humanbody_core import CharacterState
 from humanbody_core.cloth import generate_cloth
-import base64
 import json
 import logging
-import numpy as np
 import os
 
 
@@ -98,24 +92,10 @@ def character_cloth(request):
     """
     method = request.GET.get('method', 'template')
 
-    body_type = request.GET.get('body_type', 'Female_Caucasian')
-    gender = Charakterdaten.geschlecht_zu(body_type)
-
-    md = Charakterdaten.morphdaten()
-    cd = Charakterdaten.voreinstellungen()
-
-    state = CharacterState(md, cd)
-    state.set_body_type(body_type)
-
-    for key, val in request.GET.items():
-        if key.startswith('morph_'):
-            morph_name = key[len('morph_'):]
-            try:
-                state.set_morph(morph_name, float(val))
-            except ValueError:
-                logger.debug('uebergangen', exc_info=True)
-
-    vertices = state.compute()
+    # Koerper aus der Anfrage: derselbe Weg wie in allen anderen Endpunkten
+    # (`Charakterdaten.koerper_aus`). Der Reglerblock stand hier ein viertes Mal.
+    koerper = Charakterdaten.koerper_aus(request.GET)
+    gender, vertices = koerper.geschlecht, koerper.vertices
     if vertices is None:
         return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
 
@@ -150,34 +130,7 @@ def character_cloth(request):
     if result is None:
         return JsonResponse({'error': 'Failed to generate cloth'}, status=400)
 
-    response_data = {
-        'vertex_count': int(result['vertices'].shape[0]),
-        'vertices': base64.b64encode(
-            result['vertices'].tobytes()).decode('ascii'),
-        'face_count': int(result['faces'].shape[0]),
-        'faces': base64.b64encode(
-            result['faces'].ravel().astype(np.uint32).tobytes()).decode('ascii'),
-        'normals': base64.b64encode(
-            result['normals'].tobytes()).decode('ascii'),
-        'color': list(result['color']),
-    }
-
-    # Compute skin weights for cloth vertices (nearest body vertex)
-    skin_arrays = Skingewichte.arrays(gender)
-    if skin_arrays is not None:
-        from humanbody_core.nachbarsuche import Nachbarsuche
-        body_si, body_sw = skin_arrays
-        suche = Nachbarsuche(vertices)
-        cloth_verts = result['vertices']
-        _, nearest = suche.naechster(cloth_verts)
-        cloth_si = body_si[nearest]   # (n_cloth, 4) float32
-        cloth_sw = body_sw[nearest]   # (n_cloth, 4) float32
-        response_data['skin_indices'] = base64.b64encode(
-            cloth_si.tobytes()).decode('ascii')
-        response_data['skin_weights'] = base64.b64encode(
-            cloth_sw.tobytes()).decode('ascii')
-
-    return JsonResponse(response_data)
+    return JsonResponse(Stoffantwort.aus(result, vertices, gender))
 
 
 

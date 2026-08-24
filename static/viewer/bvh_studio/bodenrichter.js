@@ -131,7 +131,7 @@ export class Bodenrichter {
             const datei = await Bvhtext.holen(this.clip.category, this.clip.name);
             const kanal = datei.kanal('Yposition');
             if (kanal < 0) {
-                console.warn('[BVH Studio] Kein Yposition-Kanal, nicht gespeichert.');
+                Protokoll.warnung('BVH Studio', 'Kein Yposition-Kanal, nicht gespeichert.');
                 return false;
             }
             datei.kanalSetzen(kanal, positionsspur.times.length,

@@ -145,7 +145,7 @@ export function _createLightTrackFromDef(def, presetLabel) {
     track.color = TRACK_COLORS.light || track.color;
     track.light = light;
     track.lightType = type;
-    track.lightVisible = false;  // Helfer-Linien: default AUS
+    track.lightVisible = false;  // Helferlinien: default AUS
     track.coneVisible = true;    // Lichtkegel (Formkörper): default an
     track._theatrePreset = presetLabel;
     track.lightHelper = createLightHelper(light);

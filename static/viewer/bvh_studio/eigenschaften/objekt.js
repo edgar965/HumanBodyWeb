@@ -25,11 +25,11 @@ export class Objekteigenschaften {
             zeile('r' + a, (rot[a] * 180 / Math.PI).toFixed(1), 1)).join('');
 
         return `<div class="prop-group">
-            <div class="prop-row"><label>Typ:</label><span style="font-size:0.8rem;color:var(--accent);">3D-Objekt (${track.objectExt || '?'})</span></div>
+            <div class="prop-row"><label>Typ:</label><span class="marke-akzent">3D-Objekt (${track.objectExt || '?'})</span></div>
             <div class="prop-row"><label>Tönung:</label><input type="color" value="${track.objectTint || '#ffffff'}" id="prop-obj-tint"></div>
-            <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Position</h3>${lage}
-            <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Rotation (Grad)</h3>${drehung}
-            <h3 style="font-size:0.8rem;color:var(--text-muted);margin:8px 0 4px;">Größe</h3>
+            <h3 class="gruppentitel">Position</h3>${lage}
+            <h3 class="gruppentitel">Rotation (Grad)</h3>${drehung}
+            <h3 class="gruppentitel">Größe</h3>
             <div class="prop-row"><label>Scale:</label><input type="number" step="0.05" min="0.01" max="100" value="${scl.x.toFixed(2)}" id="prop-obj-scale"></div>
             <div class="prop-row"><label>Modus:</label>
                 <select id="prop-obj-gizmo"><option value="translate" selected>Verschieben</option><option value="rotate">Rotieren</option><option value="scale">Skalieren</option></select>
@@ -37,20 +37,20 @@ export class Objekteigenschaften {
             <h3 style="font-size:0.8rem;color:var(--text-muted);margin:10px 0 4px;">Material</h3>
             ${Objekteigenschaften._texturvorschau(track)}
             <div class="prop-row"><label>Textur:</label>
-                <button id="prop-obj-tex-replace" style="padding:4px 8px;font-size:0.72rem;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;"><i class="fas fa-image"></i> Ersetzen…</button>
+                <button id="prop-obj-tex-replace" class="knopf-akzent-schmal"><i class="fas fa-image"></i> Ersetzen…</button>
                 <button id="prop-obj-tex-remove" style="padding:4px 8px;font-size:0.72rem;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer;margin-left:4px;">Entfernen</button>
             </div>
             <div class="prop-row"><label>MTL:</label>
-                <button id="prop-obj-mtl-replace" style="padding:4px 8px;font-size:0.72rem;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;"><i class="fas fa-file-code"></i> Ersetzen…</button>
+                <button id="prop-obj-mtl-replace" class="knopf-akzent-schmal"><i class="fas fa-file-code"></i> Ersetzen…</button>
                 ${track.objectMtlUrl
                     ? `<span style="margin-left:6px;font-size:0.65rem;color:var(--text-muted);">${track.objectMtlUrl.split('/').pop()}</span>`
                     : '<span style="margin-left:6px;font-size:0.65rem;color:var(--danger);">fehlt</span>'}
             </div>
             <div class="prop-row"><label>Mesh:</label>
-                <button id="prop-obj-mesh-replace" style="padding:4px 8px;font-size:0.72rem;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;"><i class="fas fa-cube"></i> Ersetzen…</button>
+                <button id="prop-obj-mesh-replace" class="knopf-akzent-schmal"><i class="fas fa-cube"></i> Ersetzen…</button>
                 ${track.objectUrl ? `<span style="margin-left:6px;font-size:0.65rem;color:var(--text-muted);">${track.objectUrl.split('/').pop()}</span>` : ''}
             </div>
-            <div style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);">Tipp: Beim Import OBJ + MTL + alle Texturen gleichzeitig auswählen (Ctrl+Klick im Datei-Dialog). Sonst werden sie nicht im selben Bundle-Ordner abgelegt und MTL→Textur-Referenzen schlagen fehl.</div>
+            <div class="fussnote">Tipp: Beim Import OBJ + MTL + alle Texturen gleichzeitig auswählen (Ctrl+Klick im Datei-Dialog). Sonst werden sie nicht im selben Bundle-Ordner abgelegt und MTL→Textur-Referenzen schlagen fehl.</div>
         </div>`;
     }
 

@@ -90,7 +90,7 @@ export class Vorschau {
         try {
             const resp = await fetch('/api/character/rig/');
             if (resp.ok) rigKnochen = await resp.json();
-        } catch (e) { /* ohne Rig-Daten kein generiertes Modell */ }
+        } catch (e) { Protokoll.debug('vorschau', 'Rig-Daten nicht abrufbar — kein erzeugtes Modell', e); }
 
         const modellDaten = await Serverabruf.json('/api/character/model/Rig2/');
         if (!rigKnochen || modellDaten.type !== 'generated_model') return null;

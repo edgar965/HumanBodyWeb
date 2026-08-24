@@ -13,6 +13,7 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 export class Studioanzeige {
     /** Laufender Zeitgeber einer Kurzmeldung, sonst null. */
@@ -32,7 +33,7 @@ export class Studioanzeige {
     /** Kurzmeldung zeigen (Speichern, Laden, Rueckgaengig), danach zurueck. */
     static melden(text, ms = 2500) {
         const el = Studioanzeige._feld();
-        if (!el) return;
+        if (!el) { Protokoll.warnung('studioanzeige', text); return; }
         el.textContent = text;
         if (Studioanzeige._blinker) clearTimeout(Studioanzeige._blinker);
         Studioanzeige._blinker = setTimeout(() => {

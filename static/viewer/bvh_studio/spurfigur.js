@@ -75,7 +75,7 @@ export class Spurfigur {
             const antwort = await fetch('/api/character/rig/');
             if (antwort.ok) knochen = await antwort.json();
         } catch (fehler) {
-            console.warn('[BVH Studio] Rig nicht ladbar:', fehler);
+            Protokoll.warnung('BVH Studio', 'Rig nicht ladbar:', fehler);
         }
         if (!knochen || !sharedState.rigifySkeletonData
             || !sharedState.skinWeightData) return null;
@@ -110,7 +110,7 @@ export class Spurfigur {
         }
         const daten = await Serverabruf.json(`/api/character/mesh/?${frage}`);
         if (daten.error) {
-            console.warn('[BVH Studio] Netz nicht ladbar:', daten.error);
+            Protokoll.warnung('BVH Studio', 'Netz nicht ladbar:', daten.error);
             return null;
         }
         const geo = Spurzubehoer.geometrie(daten);

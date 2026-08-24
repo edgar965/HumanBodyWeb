@@ -11,6 +11,9 @@ from django.views.decorators.http import require_GET, require_POST
 import json
 import os
 import re
+import logging
+
+logger = logging.getLogger('core')
 
 
 HAIR_COLORS = {
@@ -57,6 +60,7 @@ def model_files(request):
                 if is_scene:
                     entry['character_count'] = len(data.get('characters', []))
             except (json.JSONDecodeError, IOError):
+                logger.warning('%s nicht lesbar — Dateiname als Bezeichnung', fpath, exc_info=True)
                 entry['label'] = name
             files.append(entry)
     return JsonResponse({'files': files})
@@ -80,6 +84,7 @@ def character_models(request):
                         'label': name,
                     })
                 except (json.JSONDecodeError, IOError):
+                    logger.warning('%s nicht lesbar — Dateiname als Bezeichnung', fpath, exc_info=True)
                     presets.append({'name': name, 'label': name})
     return JsonResponse({'presets': presets})
 

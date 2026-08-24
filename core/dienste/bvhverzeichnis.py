@@ -18,6 +18,9 @@ Systemaufruf. Im Profil von `/api/character/animations/` war `nt.stat` mit
 import os
 
 from django.conf import settings
+import logging
+
+logger = logging.getLogger('core')
 
 
 class Bvhdatei:
@@ -62,9 +65,13 @@ class Bvhverzeichnis:
                     try:
                         if eintrag.is_dir():
                             namen.append(eintrag.name)
+                    # stumm gewollt: Ein einzelner Eintrag, der sich nicht
+                    # befragen laesst (Netzlaufwerk, Rechte, gerade geloescht),
+                    # darf die Liste der anderen nicht kosten.
                     except OSError:
                         continue
         except OSError:
+            logger.warning('BVH-Wurzel %s nicht lesbar', self.wurzel(), exc_info=True)
             return []
         return sorted(namen)
 
@@ -79,6 +86,8 @@ class Bvhverzeichnis:
                         continue
                     try:
                         stand = eintrag.stat()
+                    # stumm gewollt: siehe oben — eine unlesbare Datei unter
+                    # tausenden wird uebersprungen, nicht gemeldet.
                     except OSError:
                         continue
                     gefunden.append(Bvhdatei(
@@ -87,6 +96,7 @@ class Bvhverzeichnis:
                         kategorie=kategorie,
                         mtime_ns=stand.st_mtime_ns))
         except OSError:
+            logger.warning('BVH-Ordner %s nicht lesbar', ordner, exc_info=True)
             return []
         # Sortiert wird nach dem PFAD, was innerhalb eines Ordners dasselbe ist
         # wie nach dem Dateinamen MIT Endung — und darauf kommt es an: die
@@ -109,4 +119,5 @@ class Bvhverzeichnis:
                 return sum(1 for e in eintraege
                            if e.name.lower().endswith(self.ENDUNG))
         except OSError:
+            logger.warning('BVH-Ordner %s nicht lesbar', ordner, exc_info=True)
             return 0

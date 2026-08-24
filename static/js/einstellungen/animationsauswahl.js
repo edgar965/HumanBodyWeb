@@ -16,6 +16,7 @@
  * noetige `data-selector` an jedem einzelnen Eintrag entfaellt damit: die
  * Zugehoerigkeit steht in der DOM-Struktur, nicht in 7.067 Attributen.
  */
+import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
 export class Animationsauswahl {
 
     static ENDPUNKT = '/api/animationen/';
@@ -74,7 +75,7 @@ export class Animationsauswahl {
             // Log: ohne das Zuruecknehmen bliebe die Kategorie fuer immer leer.
             this.geladen.delete(name);
             koerper.textContent = 'Fehler beim Laden';
-            console.warn('Animationen der Kategorie', name, 'nicht ladbar:', fehler);
+            Protokoll.warnung('animationsauswahl', 'Animationen der Kategorie', name, 'nicht ladbar:', fehler);
         }
     }
 

@@ -1,4 +1,5 @@
 import { loadCharacterFromPreset } from '../asset-loader.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 import { fetchScene, fetchSceneList, fetchModel, fetchModelList,
          saveScene } from '../scene-manager.js';
 
@@ -66,7 +67,7 @@ export class Figurenlader {
             geladen.push(await this.ausVorgabe(figurdaten,
                                                figurdaten.name || name));
         }
-        console.debug('Szene geladen:', name, geladen.length, 'Figuren');
+        Protokoll.debug('figurenlader', 'Szene geladen:', name, geladen.length, 'Figuren');
         return geladen;
     }
 

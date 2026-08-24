@@ -30,6 +30,7 @@ import logging
 import shutil
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
 
 from django.conf import settings
@@ -82,6 +83,27 @@ class ProjektTemp:
         cls.hausmeister()
         return Path(tempfile.mkdtemp(dir=str(basis), prefix=prefix))
 
+    @classmethod
+    @contextmanager
+    def wegwerfordner(cls, prefix='hb_'):
+        """`with ProjektTemp.wegwerfordner() as ordner:` — wie
+        `tempfile.TemporaryDirectory()`, aber im Projekt.
+
+        WARUM ES DEN GIBT (17.08.2026): Vier Stellen der Oberflächen-Testsuite
+        benutzten `tempfile.TemporaryDirectory()`. Das schreibt auf C: (verboten)
+        UND liegt ausserhalb der Wurzeln, die `SafePath.fuer_studio_projekte()`
+        zulässt — `studio_project_save` antwortete dort mit 403, und **48 von
+        127 Tests waren seit dem 12.08.2026 rot**, ohne dass jemand hinsah.
+
+        `MEDIA_ROOT/tmp` erfüllt beides: Es ist im Projekt und eine erlaubte
+        Wurzel. Aufgeräumt wird auch nach einer Ausnahme.
+        """
+        ordner = cls.ordner(prefix=prefix)
+        try:
+            yield ordner
+        finally:
+            cls.weg(ordner)
+
     # ---------------------------------------------------------------- aufräumen
 
     @classmethod
@@ -121,6 +143,8 @@ class ProjektTemp:
         grenze = time.time() - (max_alter_h or cls.MAX_ALTER_H) * 3600
         try:
             eintraege = list(Path(settings.MEDIA_ROOT).joinpath('tmp').iterdir())
+        # stumm gewollt: Gibt es das Verzeichnis noch nicht, ist nichts
+        # aufzuräumen — der Hausmeister läuft beim nächsten Anlegen erneut.
         except OSError:
             return 0
         entfernt = 0
@@ -128,6 +152,9 @@ class ProjektTemp:
             try:
                 if p.stat().st_mtime >= grenze:
                     continue
+            # stumm gewollt: Der Hausmeister laeuft ueber fremde Eintraege;
+            # einer, der gerade verschwindet oder gesperrt ist, wird beim
+            # naechsten Lauf wieder betrachtet.
             except OSError:
                 continue
             cls.weg(p)

@@ -70,7 +70,7 @@ export class Ausrichtungsvorschau {
             await this.sichern(leinwand);
             return daten;
         } catch (fehler) {
-            console.warn('Ausrichtungsvorschau fehlgeschlagen:', fehler);
+            Protokoll.warnung('ausrichtungsvorschau', 'Ausrichtungsvorschau fehlgeschlagen:', fehler);
             return null;
         }
     }
@@ -186,7 +186,7 @@ export class Ausrichtungsvorschau {
                 { image: bild });
             Protokoll.debug('Photo->3D', 'Projektionsvorschau gesichert');
         } catch (fehler) {
-            console.warn('Projektionsvorschau nicht sicherbar:', fehler);
+            Protokoll.warnung('ausrichtungsvorschau', 'Projektionsvorschau nicht sicherbar:', fehler);
         }
     }
 }

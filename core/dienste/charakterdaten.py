@@ -24,7 +24,6 @@ half nur, solange kein Rennen auftrat, was den Fehler zufaellig erscheinen
 liess. Jetzt: erst laden, dann zuweisen, und das Ganze unter einem Schloss.
 """
 import logging
-import threading
 
 from django.conf import settings
 
@@ -32,6 +31,7 @@ from humanbody_core import CharacterDefaults, CharacterState, MeshData, MorphDat
 from humanbody_core.catmull_clark import CatmullClarkSubdivider
 
 from ..daten.koerperzustand import Koerperzustand
+from ..daten.ladeschloss import Ladeschloss
 
 logger = logging.getLogger('core')
 
@@ -46,10 +46,12 @@ class Charakterdaten:
     _smpl_library = None
     _smpl_body_gen = None
 
-    #: Schuetzt das Fuellen der Zwischenspeicher. Wiedereintretend, weil
-    #: `unterteiler()` waehrend des Ladens `netzdaten()` und `morphdaten()`
-    #: braucht.
-    _schloss = threading.RLock()
+    #: Schuetzt das Fuellen der Zwischenspeicher — EIN Schloss JE Wert
+    #: (18.08.2026). Vorher hielt ein einziges Schloss waehrend der
+    #: Catmull-Clark-Unterteilung **gemessene 1,21 s**, und in dieser Zeit
+    #: warteten auch Anfragen, die nur die Morphdaten brauchten. Warum
+    #: wiedereintretend: siehe `daten/ladeschloss.py`.
+    _schloesser = Ladeschloss()
 
     VORGABE_KOERPERTYP = 'Female_Caucasian'
 
@@ -62,43 +64,39 @@ class Charakterdaten:
 
     @classmethod
     def morphdaten(cls):
-        if cls._morph_data is not None:
-            return cls._morph_data
-        with cls._schloss:
-            if cls._morph_data is None:
-                daten = MorphData(data_dir=str(settings.HUMANBODY_DATA_DIR))
-                daten.load()
-                # Erst nach dem Laden sichtbar machen — sonst sieht eine
-                # parallele Anfrage leere Morph-Packs (siehe Modulkopf).
-                cls._morph_data = daten
-        return cls._morph_data
+        def bauen():
+            daten = MorphData(data_dir=str(settings.HUMANBODY_DATA_DIR))
+            daten.load()
+            # Erst nach dem Laden sichtbar machen — sonst sieht eine parallele
+            # Anfrage leere Morph-Packs (siehe Modulkopf).
+            cls._morph_data = daten
+            return daten
+        return cls._schloesser.einmal('morph', lambda: cls._morph_data, bauen)
 
     @classmethod
     def voreinstellungen(cls):
-        if cls._char_defaults is not None:
-            return cls._char_defaults
-        with cls._schloss:
-            if cls._char_defaults is None:
-                werte = CharacterDefaults()
-                werte.load(str(settings.HUMANBODY_ROOT / 'settings.yaml'))
-                cls._char_defaults = werte
-        return cls._char_defaults
+        def bauen():
+            werte = CharacterDefaults()
+            werte.load(str(settings.HUMANBODY_ROOT / 'settings.yaml'))
+            cls._char_defaults = werte
+            return werte
+        return cls._schloesser.einmal('vorgaben', lambda: cls._char_defaults,
+                                      bauen)
 
     @classmethod
     def netzdaten(cls, geschlecht='female'):
         """MeshData je Geschlecht — die maennlichen Daten liegen in `_male`."""
-        vorhanden = cls._mesh_data.get(geschlecht)
-        if vorhanden is not None:
-            return vorhanden
-        with cls._schloss:
-            if geschlecht not in cls._mesh_data:
-                verzeichnis = str(settings.HUMANBODY_DATA_DIR)
-                if geschlecht == 'male':
-                    verzeichnis += '_male'
-                md = MeshData(data_dir=verzeichnis)
-                md.load()
-                cls._mesh_data[geschlecht] = md
-        return cls._mesh_data[geschlecht]
+        def bauen():
+            verzeichnis = str(settings.HUMANBODY_DATA_DIR)
+            if geschlecht == 'male':
+                verzeichnis += '_male'
+            netz = MeshData(data_dir=verzeichnis)
+            netz.load()
+            cls._mesh_data[geschlecht] = netz
+            return netz
+        return cls._schloesser.einmal('netz:' + geschlecht,
+                                      lambda: cls._mesh_data.get(geschlecht),
+                                      bauen)
 
     # ---------------------------------------------------------- Unterteilung
 
@@ -110,25 +108,32 @@ class Charakterdaten:
         Koerpertypen haben zusammenfallende Vertices, aus denen sich keine
         brauchbare Richtung ergibt — ohne diese Referenz zeigen dort Flaechen
         nach innen."""
-        vorhanden = cls._cc_subdivider.get(geschlecht)
-        if vorhanden is not None:
-            return vorhanden
-        with cls._schloss:
-            if geschlecht in cls._cc_subdivider:
-                return cls._cc_subdivider[geschlecht]
-            mesh = cls.netzdaten(geschlecht)
-            if mesh.faces is None or mesh.faces.ndim != 2 or mesh.faces.shape[1] != 4:
-                return None
-            cc = CatmullClarkSubdivider(mesh.faces,
-                                        face_materials=mesh.face_materials,
-                                        uvs=mesh.uvs, levels=1)
-            logger.info('CC-Unterteiler (%s): %d Basis- -> %d Untervertices, '
-                        '%d Dreiecke', geschlecht, mesh.faces.max() + 1,
-                        cc.sub_vertex_count, len(cc.triangles))
-            cls._referenznormalen(cc, geschlecht)
-            # Erst mit fertigen Referenznormalen sichtbar machen.
-            cls._cc_subdivider[geschlecht] = cc
-            return cc
+        return cls._schloesser.einmal(
+            'unterteiler:' + geschlecht,
+            lambda: cls._cc_subdivider.get(geschlecht),
+            lambda: cls._unterteiler_bauen(geschlecht))
+
+    @classmethod
+    def _unterteiler_bauen(cls, geschlecht):
+        """Der teure Teil — laeuft unter dem Schloss NUR dieses Namens.
+
+        Gemessen 1,21 s beim ersten Aufruf. Vorher blockierte er ueber das
+        gemeinsame Schloss auch Anfragen, die nur Morph- oder Netzdaten
+        brauchten (Befund aus dem Sparring, 18.08.2026).
+        """
+        mesh = cls.netzdaten(geschlecht)
+        if mesh.faces is None or mesh.faces.ndim != 2 or mesh.faces.shape[1] != 4:
+            return None
+        cc = CatmullClarkSubdivider(mesh.faces,
+                                    face_materials=mesh.face_materials,
+                                    uvs=mesh.uvs, levels=1)
+        logger.info('CC-Unterteiler (%s): %d Basis- -> %d Untervertices, '
+                    '%d Dreiecke', geschlecht, mesh.faces.max() + 1,
+                    cc.sub_vertex_count, len(cc.triangles))
+        cls._referenznormalen(cc, geschlecht)
+        # Erst mit fertigen Referenznormalen sichtbar machen.
+        cls._cc_subdivider[geschlecht] = cc
+        return cc
 
     @classmethod
     def _referenznormalen(cls, cc, geschlecht):
@@ -146,29 +151,26 @@ class Charakterdaten:
 
     @classmethod
     def smpl_bibliothek(cls):
-        if cls._smpl_library is not None:
-            return cls._smpl_library
-        with cls._schloss:
-            if cls._smpl_library is None:
-                from GarmentFitter.smpl_library import SmplGarmentLibrary
-                bibliothek = SmplGarmentLibrary(
-                    str(settings.HUMANBODY_SMPL_GARMENT_DIR))
-                bibliothek.scan()
-                # Erst nach dem Einlesen sichtbar — sonst sieht eine parallele
-                # Anfrage eine leere Kleiderliste.
-                cls._smpl_library = bibliothek
-        return cls._smpl_library
+        def bauen():
+            from GarmentFitter.smpl_library import SmplGarmentLibrary
+            bibliothek = SmplGarmentLibrary(
+                str(settings.HUMANBODY_SMPL_GARMENT_DIR))
+            bibliothek.scan()
+            # Erst nach dem Einlesen sichtbar — sonst sieht eine parallele
+            # Anfrage eine leere Kleiderliste.
+            cls._smpl_library = bibliothek
+            return bibliothek
+        return cls._schloesser.einmal('smpl_bibliothek',
+                                      lambda: cls._smpl_library, bauen)
 
     @classmethod
     def smpl_koerpergenerator(cls):
-        if cls._smpl_body_gen is not None:
+        def bauen():
+            from GarmentFitter.smpl_library import SmplBodyGenerator
+            cls._smpl_body_gen = SmplBodyGenerator(str(settings.SMPL_MODELS_DIR))
             return cls._smpl_body_gen
-        with cls._schloss:
-            if cls._smpl_body_gen is None:
-                from GarmentFitter.smpl_library import SmplBodyGenerator
-                cls._smpl_body_gen = SmplBodyGenerator(
-                    str(settings.SMPL_MODELS_DIR))
-        return cls._smpl_body_gen
+        return cls._schloesser.einmal('smpl_generator',
+                                      lambda: cls._smpl_body_gen, bauen)
 
     # ------------------------------------------------------------- Koerper bauen
 

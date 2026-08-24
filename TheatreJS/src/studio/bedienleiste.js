@@ -11,6 +11,7 @@
  *     Ablauf: Zustand kippen, Sichtbarkeit setzen, Knopfklasse nachziehen —
  *     jeweils mit eigener Closure-Variable.
  */
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 export class Bedienleiste {
 
     /**
@@ -66,7 +67,7 @@ export class Bedienleiste {
                     return;
                 }
                 applyPreset(vorgabe, camera, lights, controls);
-                console.debug('✓ Vorgabe angewendet:', vorgabe.name);
+                Protokoll.debug('bedienleiste', '✓ Vorgabe angewendet:', vorgabe.name);
                 Bedienleiste.menuesZuklappen();
             });
         });

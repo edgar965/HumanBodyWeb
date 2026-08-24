@@ -34,19 +34,16 @@ from pathlib import Path
 
 from django.conf import settings
 
+from .dienstfehler import DienstFehler
+
 logger = logging.getLogger('core')
 
 #: Ordner für gelöschte Kleider. Der Punkt hält ihn aus dem Bibliotheks-Scan.
 PAPIERKORB = '.trash'
 
 
-class KleiderFehler(Exception):
-    """Ablehnung mit HTTP-Kennzahl — der Endpunkt macht daraus JSON."""
-
-    def __init__(self, text, kennzahl=400):
-        super().__init__(text)
-        self.text = text
-        self.kennzahl = kennzahl
+class KleiderFehler(DienstFehler):
+    """Ablehnung der Kleider-Verwaltung. Rumpf und Kennzahl siehe `DienstFehler`."""
 
 
 class Kleiderverwaltung:
@@ -121,6 +118,7 @@ class Kleiderverwaltung:
             wurzel = Kleiderverwaltung.wurzel().resolve()
             ziel = Path(pfad).resolve()
         except OSError:
+            logger.debug('Pfad %s nicht auflösbar — gilt als außerhalb', pfad, exc_info=True)
             return False
         return wurzel == ziel or wurzel in ziel.parents
 

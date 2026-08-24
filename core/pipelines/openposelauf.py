@@ -103,6 +103,9 @@ class Openposelauf:
         try:
             return len([d for d in os.listdir(self.jsonordner)
                         if d.endswith(self.JSON_ENDUNG)])
+        # stumm gewollt: Zählt die geschriebenen Bilder fuer den Fortschritt,
+        # mehrmals je Sekunde. Der Ersatzwert hält die Anzeige, das Ergebnis
+        # hängt nicht daran.
         except OSError:
             return ersatz
 

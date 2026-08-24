@@ -13,6 +13,9 @@ for proc in psutil.process_iter(['pid', 'cmdline']):
             print(f"Killing process {proc.info['pid']}: {' '.join(cmdline)}")
             proc.kill()
             time.sleep(2)
+    # stumm gewollt: Der Prozess kann zwischen dem Auflisten und dem `kill`
+    # von selbst enden — genau das war das Ziel. Fremde Prozesse ohne Zugriff
+    # gehen uns nichts an.
     except (psutil.NoSuchProcess, psutil.AccessDenied):
         pass
 

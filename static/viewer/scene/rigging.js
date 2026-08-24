@@ -36,7 +36,10 @@ export function initRiggingTab(toggleRigVisibility) {
     for (const [id, cfg] of Object.entries(ids)) {
         const el = document.getElementById(id); if (!el) continue;
         const params = getRigParams();
-        if (cfg.type === 'check') { el.checked = params[cfg.key]; el.addEventListener('change', () => setRigParam(cfg.key, el.checked)); }
+        if (cfg.type === 'check') {
+            el.checked = params[cfg.key];
+            el.addEventListener('change', () => setRigParam(cfg.key, el.checked));
+        }
         else if (cfg.type === 'number') { el.value = params[cfg.key]; el.addEventListener('change', () => setRigParam(cfg.key, parseFloat(el.value))); }
         else if (cfg.type === 'range') { el.value = params[cfg.key]; const valEl = document.getElementById(cfg.valId); if (valEl) valEl.textContent = parseFloat(el.value).toFixed(2); el.addEventListener('input', () => { if (valEl) valEl.textContent = parseFloat(el.value).toFixed(2); setRigParam(cfg.key, parseFloat(el.value)); }); }
     }

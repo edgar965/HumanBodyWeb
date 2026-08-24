@@ -1,62 +1,166 @@
 # -*- coding: utf-8 -*-
-"""Skelett in ein Video zeichnen.
+"""Skelettvideo — Video mit Skelett-Überlagerung oder Skelett auf Schwarz.
 
-Herausgeloest aus core/views.py (Umbau 15.08.2026). Die Datei hatte 3.496 Zeilen
-und 43 Endpunkte, dazwischen die Pipeline-Laeufe mit bis zu 304 Zeilen je
-Funktion. Getrennt wird nach Aufgabe: Endpunkte in core/api/, Fachlogik in
-core/dienste/, die Laeufe in core/pipelines/.
+UMBAU 17.08.2026
+================
+`_render_video_with_skeleton` war 97 Zeilen und tat vier Dinge: Zielpfad und
+Zwischenspeicher bestimmen, die Punktquelle wählen (BVH-Projektion oder
+2D-Erkennung), Bild für Bild zeichnen, schreiben. Das Zeichnen liegt jetzt in
+`skelettzeichner.Skelettzeichner` (ohne Video prüfbar), der Ablauf in `Skelettfilm`.
+
+DIE BILDZUORDNUNG IST DER KNIFFLIGE TEIL
+========================================
+Video und Bewegungsdaten haben nicht gleich viele Bilder. Zugeordnet wird
+VERHÄLTNISMÄSSIG (`vi / (videobilder-1) * (punkte-1)`) — genauso rechnet die
+Three.js-Wiedergabe (`currentTime / duration * clipDuration`). Wer hier
+stattdessen 1:1 zählt, bekommt ein Skelett, das dem Video vorausläuft oder
+nachhinkt, und sucht den Fehler in der Kamera.
 """
 
-from .keypoints_quellen import _get_2d_keypoints
-from .bvh_projektion import _parse_bvh_to_2d
-from django.conf import settings
-from pathlib import Path
+import logging
 import os
+from pathlib import Path
+
+from django.conf import settings
+
+from .bvh_projektion import _parse_bvh_to_2d
+from .keypoints_quellen import _get_2d_keypoints
+from .skelettzeichner import Skelettzeichner
+from ..daten.gelenknamen import Gelenknamen
+
+logger = logging.getLogger('core')
+
+#: Die Kanten des gezeichneten Skeletts — aus `Gelenknamen`, nicht hier.
+#:
+#: Vorher stand hier jede Kante ZWEIMAL: einmal mit `midhip`/`nose` (OpenPose)
+#: und einmal mit `hip`/`head` (MocapNET/MediaPipe). Seit `Gelenkquelle` die
+#: OpenPose-Namen beim Lesen umschreibt, gibt es nur noch eine Schreibweise
+#: (Kriterium 7: keine verschiedenen Namen für dasselbe).
+_BODY_CONNECTIONS = Gelenknamen.alle_verbindungen()
 
 
-_BODY_CONNECTIONS = [
-    ('neck', 'rshoulder'), ('rshoulder', 'relbow'), ('relbow', 'rhand'),
-    ('neck', 'lshoulder'), ('lshoulder', 'lelbow'), ('lelbow', 'lhand'),
-    ('neck', 'midhip'), ('neck', 'hip'),  # OpenPose uses midhip, MediaPipe/MocapNET uses hip
-    ('midhip', 'rhip'), ('hip', 'rhip'),
-    ('rhip', 'rknee'), ('rknee', 'rfoot'),
-    ('midhip', 'lhip'), ('hip', 'lhip'),
-    ('lhip', 'lknee'), ('lknee', 'lfoot'),
-    ('nose', 'neck'), ('head', 'neck'),  # OpenPose: nose, MocapNET: head
-    ('nose', 'reye'), ('nose', 'leye'),
-    ('reye', 'rear'), ('leye', 'lear'),
-    # MocapNET eye/ear names (for RTMPose/ViTPose/YOLO CSV)
-    ('head', 'endsite_eye.r'), ('head', 'endsite_eye.l'),
-    ('endsite_eye.r', 'rear'), ('endsite_eye.l', 'lear'),
-]
+class Skelettfilm:
+    """Schreibt das Video mit Skelett — und nutzt eine fertige Datei wieder."""
+
+    UEBERLAGERUNG = (0, 255, 0)
+    NUR_RIG = (255, 255, 255)
+    DICKE = 3
+    VORGABE_FPS = 30
+
+    def __init__(self, job, ueberlagern=True):
+        self.job = job
+        self.ueberlagern = ueberlagern
+        self.ordner = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
+        self.video = Path(settings.MEDIA_ROOT) / str(job.video_file)
+
+    # ------------------------------------------------------------------ Ablauf
+
+    def erzeugen(self):
+        """Pfad zum Video — oder `None`, wenn es keine Punkte gibt."""
+        ziel = self.zielpfad()
+        if ziel.exists():
+            return ziel
+        breite, hoehe = self._masse()
+        punkte, verbindungen, masse = self._punkte(breite, hoehe)
+        if not punkte:
+            return None
+        return self._schreiben(ziel, punkte, verbindungen, *masse)
+
+    def zielpfad(self):
+        """`<pipeline>_<name>_overlay.mp4` bzw. `…_rig_only[_bvh].mp4`."""
+        zusatz = '_overlay' if self.ueberlagern else '_rig_only'
+        if self._aus_bvh():
+            zusatz += '_bvh'
+        self.ordner.mkdir(parents=True, exist_ok=True)
+        return self.ordner / ('%s_%s%s.mp4' % (self.job.pipeline,
+                                               Path(self.job.name).stem, zusatz))
+
+    def _aus_bvh(self):
+        """Nur für das Rig auf Schwarz und nur bei v4.
+
+        Für die Überlagerung braucht es die 2D-Erkennung: Nur sie sitzt auf
+        denselben Bildpunkten wie das Video. Die BVH-Projektion hat ihre eigene
+        Kamera und läge daneben.
+        """
+        return (not self.ueberlagern and self.job.pipeline == 'v4'
+                and self.job.bvh_file and os.path.exists(self.job.bvh_file))
+
+    # ---------------------------------------------------------------- Bausteine
+
+    def _masse(self):
+        import cv2
+        film = cv2.VideoCapture(str(self.video))
+        masse = (int(film.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                 int(film.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        film.release()
+        return masse
+
+    def _punkte(self, breite, hoehe):
+        """`(punkte je Bild, Verbindungen, (breite, hoehe))`.
+
+        Erst die BVH-Projektion (vollständiges v4-Rig mit eigenen Kanten), dann
+        die 2D-Erkennung. Scheitert die Projektion, ist das kein Abbruch — das
+        Video bekommt dann das 2D-Skelett.
+        """
+        if self._aus_bvh():
+            try:
+                punkte, kanten = _parse_bvh_to_2d(self.job.bvh_file, breite, hoehe)
+                if punkte and kanten:
+                    return punkte, kanten, (breite, hoehe)
+            except Exception:                                      # noqa: BLE001
+                logger.warning('BVH-Projektion fehlgeschlagen — kein Rig im Video',
+                               exc_info=True)
+        punkte, masse = _get_2d_keypoints(self.job)
+        return punkte, _BODY_CONNECTIONS, masse
+
+    def _schreiben(self, ziel, punkte, verbindungen, breite, hoehe):
+        import cv2
+        import numpy as np
+        film = cv2.VideoCapture(str(self.video))
+        bildrate = film.get(cv2.CAP_PROP_FPS) or (self.job.fps or self.VORGABE_FPS)
+        anzahl = int(film.get(cv2.CAP_PROP_FRAME_COUNT))
+        if not self.ueberlagern:
+            film.release()
+            film = None
+        zeichner = Skelettzeichner(
+            verbindungen,
+            farbe=self.UEBERLAGERUNG if self.ueberlagern else self.NUR_RIG,
+            dicke=self.DICKE)
+        schreiber = cv2.VideoWriter(str(ziel),
+                                    cv2.VideoWriter_fourcc(*'mp4v'),
+                                    bildrate, (breite, hoehe))
+        for nummer in range(anzahl):
+            bild = self._bild(film, breite, hoehe, np)
+            zeichner.zeichnen(bild, punkte[self.zuordnen(nummer, anzahl,
+                                                         len(punkte))])
+            schreiber.write(bild)
+        schreiber.release()
+        if film:
+            film.release()
+        return ziel
+
+    def _bild(self, film, breite, hoehe, np):
+        """Das Videobild — oder Schwarz (Rig-Modus und am Dateiende)."""
+        if film is not None:
+            gelesen, bild = film.read()
+            if gelesen:
+                return bild
+        return np.zeros((hoehe, breite, 3), dtype=np.uint8)
+
+    @staticmethod
+    def zuordnen(nummer, videobilder, punktbilder):
+        """Videobild -> Bewegungsbild, verhältnismäßig (siehe Modul-Docstring)."""
+        if videobilder <= 1 or punktbilder <= 1:
+            return 0
+        stelle = int(nummer / (videobilder - 1) * (punktbilder - 1))
+        return max(0, min(stelle, punktbilder - 1))
 
 
 def _draw_skeleton(frame, keypoints, connections=None, color=(0, 255, 0),
                    thickness=2):
-    """Draw skeleton on a frame using 2D keypoints."""
-    import cv2
-    h, w = frame.shape[:2]
-    min_conf = 0.3
-
-    if connections is None:
-        connections = _BODY_CONNECTIONS
-
-    # Draw connections
-    for j1, j2 in connections:
-        p1 = keypoints.get(j1)
-        p2 = keypoints.get(j2)
-        if p1 and p2 and p1[2] > min_conf and p2[2] > min_conf:
-            pt1 = (int(p1[0]), int(p1[1]))
-            pt2 = (int(p2[0]), int(p2[1]))
-            if 0 <= pt1[0] < w and 0 <= pt1[1] < h and 0 <= pt2[0] < w and 0 <= pt2[1] < h:
-                cv2.line(frame, pt1, pt2, color, thickness, cv2.LINE_AA)
-
-    # Draw joints
-    for name, (x, y, conf) in keypoints.items():
-        if conf > min_conf and 0 <= x < w and 0 <= y < h:
-            cv2.circle(frame, (int(x), int(y)), 3, (0, 200, 255), -1, cv2.LINE_AA)
-
-    return frame
+    """Draw skeleton on a frame using 2D keypoints (siehe `Skelettzeichner`)."""
+    return Skelettzeichner(connections, farbe=color,
+                           dicke=thickness).zeichnen(frame, keypoints)
 
 
 def _render_video_with_skeleton(job, overlay=True):
@@ -67,91 +171,4 @@ def _render_video_with_skeleton(job, overlay=True):
 
     Returns path to the rendered mp4 file (cached in output dir).
     """
-    import cv2
-    import numpy as np
-
-    # BVH reprojection only for rig-only mode (black bg) — for overlay
-    # we need the original 2D keypoints so they match the video camera
-    use_bvh = (not overlay and job.pipeline == 'v4' and job.bvh_file
-               and os.path.exists(job.bvh_file))
-    suffix = '_overlay' if overlay else '_rig_only'
-    if use_bvh:
-        suffix += '_bvh'
-    stem = Path(job.name).stem
-    prefix = job.pipeline
-    output_dir = Path(settings.MEDIA_ROOT) / 'output' / str(job.id)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / f'{prefix}_{stem}{suffix}.mp4'
-
-    if out_path.exists():
-        return out_path
-
-    # Get video dimensions
-    video_path = Path(settings.MEDIA_ROOT) / str(job.video_file)
-    cap_probe = cv2.VideoCapture(str(video_path))
-    w = int(cap_probe.get(cv2.CAP_PROP_FRAME_WIDTH))
-    h = int(cap_probe.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    cap_probe.release()
-
-    connections = _BODY_CONNECTIONS
-    keypoints_list = None
-
-    # Rig-only for v4: parse BVH and project 3D skeleton to 2D
-    if use_bvh:
-        try:
-            keypoints_list, bvh_conns = _parse_bvh_to_2d(job.bvh_file, w, h)
-            if keypoints_list and bvh_conns:
-                connections = bvh_conns
-        except Exception:
-            keypoints_list = None
-
-    # 2D keypoints: always for overlay, fallback for rig-only
-    if not keypoints_list:
-        result = _get_2d_keypoints(job)
-        keypoints_list, (w, h) = result
-        connections = _BODY_CONNECTIONS
-
-    if not keypoints_list:
-        return None
-
-    cap = cv2.VideoCapture(str(video_path))
-    video_fps = cap.get(cv2.CAP_PROP_FPS) or (job.fps or 30)
-    total_video_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    if not overlay:
-        cap.release()
-        cap = None
-
-    fps = job.fps or 30
-    n_bvh = len(keypoints_list)
-
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    writer = cv2.VideoWriter(str(out_path), fourcc, video_fps, (w, h))
-
-    # Proportional mapping: video frame i → BVH frame
-    # Matches Three.js: (currentTime / duration) * clipDuration
-    for vi in range(total_video_frames):
-        if overlay and cap:
-            ret, frame = cap.read()
-            if not ret:
-                frame = np.zeros((h, w, 3), dtype=np.uint8)
-        else:
-            frame = np.zeros((h, w, 3), dtype=np.uint8)
-
-        # Map video frame to BVH frame proportionally
-        if total_video_frames > 1:
-            bvh_idx = int(vi / (total_video_frames - 1) * (n_bvh - 1))
-        else:
-            bvh_idx = 0
-        bvh_idx = max(0, min(bvh_idx, n_bvh - 1))
-        kp = keypoints_list[bvh_idx]
-
-        color = (0, 255, 0) if overlay else (255, 255, 255)
-        _draw_skeleton(frame, kp, connections=connections, color=color,
-                       thickness=3)
-        writer.write(frame)
-
-    writer.release()
-    if cap:
-        cap.release()
-
-    return out_path
+    return Skelettfilm(job, ueberlagern=overlay).erzeugen()

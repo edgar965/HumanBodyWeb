@@ -12,6 +12,8 @@ jetzt an einer Stelle:
     3. Konvexe Huelle des oberen Achtels der Projektion — der Rueckfall.
 """
 import logging
+
+from ..daten.bildrahmen import Bildrahmen
 import os
 
 import numpy as np
@@ -62,7 +64,7 @@ class Gesichtskontur:
         punkte = punkte[~np.isnan(punkte).any(axis=1)]
         if len(punkte) < 3:
             return False
-        self.rahmen_netz = self._rahmen(punkte)
+        self.rahmen_netz = Bildrahmen.um(punkte)
         huelle = self._huelle(punkte)
         if huelle:
             self.kontur = huelle
@@ -83,7 +85,7 @@ class Gesichtskontur:
         if not huelle:
             return False
         self.kontur = huelle
-        self.rahmen_netz = self._rahmen(kopf)
+        self.rahmen_netz = Bildrahmen.um(kopf)
         return True
 
     # ------------------------------------------------------------- aus dem Foto
@@ -93,11 +95,8 @@ class Gesichtskontur:
         landmarken = self._landmarken(foto, cv2)
         if not landmarken:
             return False
-        xs = [l.x * self.breite for l in landmarken]
-        ys = [l.y * self.hoehe for l in landmarken]
-        self.rahmen_erkannt = {'x': float(min(xs)), 'y': float(min(ys)),
-                               'w': float(max(xs) - min(xs)),
-                               'h': float(max(ys) - min(ys))}
+        self.rahmen_erkannt = Bildrahmen.um(
+            [[l.x * self.breite, l.y * self.hoehe] for l in landmarken])
         self.kontur = [[float(landmarken[i].x * self.breite),
                         float(landmarken[i].y * self.hoehe)]
                        for i in self.OVAL if i < len(landmarken)]
@@ -143,9 +142,8 @@ class Gesichtskontur:
             logger.debug('Konvexe Huelle fehlgeschlagen', exc_info=True)
             return []
 
-    @staticmethod
-    def _rahmen(punkte):
-        x_min, y_min = punkte[:, 0].min(), punkte[:, 1].min()
-        x_max, y_max = punkte[:, 0].max(), punkte[:, 1].max()
-        return {'x': float(x_min), 'y': float(y_min),
-                'w': float(x_max - x_min), 'h': float(y_max - y_min)}
+    #: `_rahmen` stand hier als eigene Min-Max-Rechnung und lieferte ein
+    #: Wörterbuch `{x, y, w, h}` — dieselben sechs Zeilen wie in
+    #: `Silhouette.netz_rahmen`. Beides ist jetzt `Bildrahmen.um` (17.08.2026,
+    #: Befund `leserzahl`/`rueckgabedict`): Das Drahtformat für den Browser
+    #: steht damit an einer Stelle, und die NaN-Festigkeit gilt hier ebenfalls.

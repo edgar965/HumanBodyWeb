@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 """BVH-Studio und Theatre: Projekte, Ton, Szenenobjekte, Video.
 
-Herausgeloest aus core/character_api.py (Umbau 15.08.2026). Die Datei hatte
-6.495 Zeilen und 110 Endpunkte; die Themen darin waren nur durch Reihenfolge
-getrennt. Die Endpunkte hier bleiben duenne Funktionen — Django-Dekoratoren,
-Stapelspuren und Tests bleiben damit lesbar —, waehrend die Fachlogik in
-core/dienste/ als Klassen liegt.
+Aus core/character_api.py herausgeloest (Umbau 15.08.2026) — warum so
+geschnitten, steht in `core/api/__init__.py`.
 """
 
 from django.conf import settings
@@ -146,6 +143,7 @@ def studio_theatre_preset_detail(request, name):
             data = json.load(fh)
         return JsonResponse(data)
     except Exception as e:
+        logger.exception('studio_theatre_preset_detail: unerwarteter Fehler')
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -215,4 +213,5 @@ def studio_scene_object_upload(request):
             'ext': ext,
         })
     except Exception as e:
+        logger.exception('studio_scene_object_upload: unerwarteter Fehler')
         return JsonResponse({'error': str(e)}, status=500)

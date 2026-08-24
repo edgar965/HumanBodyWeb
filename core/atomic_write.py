@@ -93,6 +93,8 @@ class AtomarSchreiber:
             try:
                 os.replace(quelle, str(ziel))
                 return
+            # stumm gewollt: Der letzte Fehlschlag steht nach der Versuchsreihe im Log
+            # (`letzter`) — je Versuch zu protokollieren wäre derselbe Fehler dreimal.
             except PermissionError as e:
                 # Typisch Windows: Datei ist kurz von einem anderen Programm offen.
                 letzter = e

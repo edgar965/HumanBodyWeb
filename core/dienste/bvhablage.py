@@ -52,5 +52,6 @@ class Bvhablage:
         hier."""
         try:
             return SafePath([SafePath.bvh_wurzel()]).pruefe(p)
-        except PfadAbgelehnt:
+        except PfadAbgelehnt as e:
+            logger.warning('BVH-Pfad abgelehnt: %s', e)
             return None

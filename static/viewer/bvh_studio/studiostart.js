@@ -77,7 +77,7 @@ export class Studiostart {
                 + 'BVH-Library wird geladen …</div>';
         }
         loadLibrary().catch(fehler => {
-            console.warn('[BVH Studio] Library nicht ladbar:', fehler);
+            Protokoll.warnung('BVH Studio', 'Library nicht ladbar:', fehler);
             if (!baum) return;
             baum.innerHTML = '<div class="lib-hinweis lib-fehler">'
                 + 'Library-Load fehlgeschlagen. '
@@ -99,7 +99,7 @@ export class Studiostart {
             if (!pfad) return;
             const daten = await this._projektdaten(pfad);
             if (!daten?.name) {
-                console.warn('[BVH Studio] project-load ohne Projekt:', pfad);
+                Protokoll.warnung('BVH Studio', 'project-load ohne Projekt:', pfad);
                 return;
             }
             await Projektwiederherstellung.uebernehmen(daten);
@@ -107,7 +107,7 @@ export class Studiostart {
                         einstellungen.vorgabeprojekt);
             this.anzeigestandUebernehmen();
         } catch (fehler) {
-            console.warn('[BVH Studio] Vorgabeprojekt nicht ladbar:', fehler);
+            Protokoll.warnung('BVH Studio', 'Vorgabeprojekt nicht ladbar:', fehler);
         }
     }
 
@@ -142,7 +142,7 @@ export class Studiostart {
             if (!roh) return;
             stand = JSON.parse(roh);
         } catch (fehler) {
-            console.warn('[BVH Studio] Anzeigestand unlesbar:', fehler);
+            Protokoll.warnung('BVH Studio', 'Anzeigestand unlesbar:', fehler);
             return;
         }
         state.playheadFrame = stand.playheadFrame ?? 0;

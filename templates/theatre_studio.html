@@ -11,7 +11,7 @@
     wichen um zehn Befunde voneinander ab.
 {% endcomment %}
 
-{% block title %}Theatre Studio — MocapNET{% endblock %}
+{% block title %}HumanBody · Theatre Studio{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -85,15 +85,7 @@
     <canvas id="studio-canvas"></canvas>
 </main>
 
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
-    "@theatre/studio": "https://cdn.jsdelivr.net/npm/@theatre/studio@0.7.2/dist/studio.esm.js",
-    "@theatre/core": "https://cdn.jsdelivr.net/npm/@theatre/core@0.7.2/dist/core.esm.js"
-  }
-}
-</script>
+{% include "_importmap.html" with theatre=1 %}
 
 <script type="module">
 import * as THREE from 'three';

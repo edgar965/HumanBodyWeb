@@ -148,7 +148,7 @@ export class Mhverformung {
             body: JSON.stringify({ vertices: b64 }),
         });
         if (daten.error) {
-            console.warn('Herausdrücken fehlgeschlagen:', daten.error);
+            Protokoll.warnung('mhproxy_verformung', 'Herausdrücken fehlgeschlagen:', daten.error);
             return null;
         }
         const neue = base64ToFloat32(daten.vertices);

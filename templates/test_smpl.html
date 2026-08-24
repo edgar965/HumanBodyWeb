@@ -1,6 +1,6 @@
 {% extends "scene_model.html" %}
 
-{% block title %}SMPL Test — MocapNET{% endblock %}
+{% block title %}HumanBody · SMPL Test{% endblock %}
 
 {% block extra_head %}
 {{ block.super }}
@@ -12,20 +12,11 @@
     .camera-info { font-size: 0.78rem; color: var(--text-muted); padding: 4px 0; }
     .camera-info span { color: var(--text); }
 
-    /* SMPL garment thumbnail in list */
-    .smpl-garment-thumb {
-        width: 40px;
-        height: 40px;
-        object-fit: cover;
-        border-radius: 3px;
-        margin-right: 8px;
-        flex-shrink: 0;
-        background: var(--bg-card);
-    }
-    .smpl-garment-item {
-        display: flex;
-        align-items: center;
-    }
+    /* Die Zeilen der SMPL-Kleiderliste nutzen die gemeinsamen Klassen
+       `garment-item` / `garment-thumb` / `garment-name` aus
+       css/animationsbaum.css (über character_viewer.html geladen). Die frueher
+       hier stehenden `.smpl-garment-*`-Klassen hat nie jemand gesetzt — das
+       JavaScript schrieb die gleichen Werte als Inline-Stil. */
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
@@ -134,10 +125,10 @@
             <input type="range" id="smpl-body-xoffset" min="-200" max="200" value="100" step="5">
             <span class="slider-val" id="smpl-body-xoffset-val">1.00 m</span>
         </div>
-        <div style="margin-top:6px;">
+        <div class="abstand-6">
             <button id="smpl-body-toggle" class="btn-toggle active hb-volle-breite"><i class="fas fa-people-arrows"></i> SMPL Body ein/aus</button>
         </div>
-        <button id="smpl-save-settings" class="btn-toggle" style="width:100%;margin-top:6px;">
+        <button id="smpl-save-settings" class="btn-toggle breit-abstand">
             <i class="fas fa-save"></i> Einstellungen speichern
         </button>
     </div>
@@ -305,7 +296,7 @@
             <input type="range" id="scene-fov" min="10" max="120" value="35" step="1">
             <span class="slider-val" id="scene-fov-val">35&deg;</span>
         </div>
-        <div style="margin-top:8px;">
+        <div class="abstand-8">
             <button id="scene-reset-lighting" class="btn-toggle hb-volle-breite"><i class="fas fa-undo"></i> Alles zur&uuml;cksetzen</button>
         </div>
     </div>

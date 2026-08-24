@@ -16,7 +16,7 @@ export function saveSessionState() {
         sceneData._defaultPresetSnapshot = state.defaultPresetName;
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(sceneData));
     } catch (e) {
-        console.warn('Failed to save session state:', e);
+        Protokoll.warnung('session', 'Failed to save session state:', e);
     }
 }
 

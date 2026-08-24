@@ -2,265 +2,190 @@
  * Kleiderliste: anzeigen, auswaehlen, Kontextmenue, gemerkter Zustand.
  *
  * Aus kleider.js herausgeloest (Umbau 16.08.2026).
+ *
+ * UMBAU 18.08.2026: 267 Zeilen, drei Themen. Jetzt:
+ *
+ *     kleiderverwaltung.js  Umbenennen/Verschieben/Kopieren/Löschen + Menü
+ *     kleiderzustand.js     gemerkte Kategorie und Auswahl (localStorage)
+ *
+ * Hier bleibt das Zeichnen der Liste und das Auswählen — und die Inline-Stile
+ * sind zu Klassen geworden (`kld-*` in `static/css/kleider.css`), Befund
+ * `jsstilfassungen`.
  */
 
 import { state } from './state.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Kleiderverwaltung } from './kleiderverwaltung.js';
+import { Kleiderzustand } from './kleiderzustand.js';
 
+const zustand = new Kleiderzustand();
+const verwaltung = new Kleiderverwaltung(
+    (kategorie) => {
+        if (kategorie) zustand.kategorie = kategorie;
+        _renderKleiderList();
+    });
 
+/** Ein Kleidungsstück auswählen — Ordner aufklappen, Zeile hervorheben. */
 function _kleiderSelectById(id) {
     state._selectedKleiderId = id;
-    const list = document.getElementById('kleider-list');
-    if (!list) return;
-
-    // 1. Collapse ALL folders first
-    list.querySelectorAll('.anim-folder').forEach(folder => {
-        const body = folder.querySelector('.anim-folder-body');
-        if (body) body.style.display = 'none';
-        const chev = folder.querySelector('.chevron');
-        if (chev) chev.textContent = '\u25B6';
-    });
-
-    // 2. Find the item, expand its parent folder, select it
-    list.querySelectorAll('.anim-item').forEach(el => {
-        if (el.dataset.kleiderId === id) {
-            // Expand parent folder
-            const folder = el.closest('.anim-folder');
-            if (folder) {
-                const body = folder.querySelector('.anim-folder-body');
-                if (body) body.style.display = '';
-                const chev = folder.querySelector('.chevron');
-                if (chev) chev.textContent = '\u25BC';
-            }
-            // Select + highlight
-            list.querySelectorAll('.anim-item').forEach(e => e.classList.remove('selected'));
-            el.classList.add('selected');
-            state._selectedKleiderId = id;
-
-            // 3. Set category dropdown to match
-            const catSelect = document.getElementById('kleider-category');
-            if (catSelect && folder) {
-                const g = state._garmentCatalog.find(g => g.id === id);
-                if (g && g._category) catSelect.value = g._category;
-            }
-        }
-    });
+    const liste = document.getElementById('kleider-list');
+    if (!liste) return;
+    // Erst ALLE Ordner zuklappen, dann den einen öffnen: Sonst bleibt bei
+    // mehreren Treffern der zuvor offene Ordner mit offen.
+    liste.querySelectorAll('.anim-folder').forEach(ordner => _klappen(ordner, false));
+    for (const zeile of liste.querySelectorAll('.anim-item')) {
+        if (zeile.dataset.kleiderId !== id) continue;
+        const ordner = zeile.closest('.anim-folder');
+        if (ordner) _klappen(ordner, true);
+        _hervorheben(liste, zeile);
+        _kategorieWaehlen(ordner, id);
+    }
 }
 
+function _klappen(ordner, offen) {
+    const koerper = ordner.querySelector('.anim-folder-body');
+    if (koerper) koerper.style.display = offen ? '' : 'none';
+    const pfeil = ordner.querySelector('.chevron');
+    if (pfeil) pfeil.textContent = offen ? '▼' : '▶';
+}
+
+function _hervorheben(liste, zeile) {
+    liste.querySelectorAll('.anim-item.selected')
+        .forEach(el => el.classList.remove('selected'));
+    zeile.classList.add('selected');
+    state._selectedKleiderId = zeile.dataset.kleiderId;
+}
+
+function _kategorieWaehlen(ordner, id) {
+    const auswahl = document.getElementById('kleider-category');
+    if (!auswahl || !ordner) return;
+    const stueck = state._garmentCatalog.find(g => g.id === id);
+    if (stueck && stueck._category) auswahl.value = stueck._category;
+}
+
+/** Das ausgewählte Kleidungsnetz der ausgewählten Figur — oder `null`. */
 function _selectedKleiderMesh() {
-    if (!state._selectedSubMesh || !state._selectedSubMesh.key.startsWith('kld_')) return null;
-    const inst = state.characters.get(state._selectedSubMesh.charId);
-    if (!inst) return null;
-    return { inst, key: state._selectedSubMesh.key, mesh: inst.clothMeshes[state._selectedSubMesh.key] };
+    const wahl = state._selectedSubMesh;
+    if (!wahl || !wahl.key.startsWith('kld_')) return null;
+    const figur = state.characters.get(wahl.charId);
+    if (!figur) return null;
+    return { inst: figur, key: wahl.key, mesh: figur.clothMeshes[wahl.key] };
 }
 
-// Persist last open category + selected garment
-const KLD_STORAGE_KEY = 'kleider_state';
-
-let _kldOpenCat = '';
-
-function _saveKldState() {
-    localStorage.setItem(KLD_STORAGE_KEY, JSON.stringify({
-        openCat: _kldOpenCat,
-        selectedId: state._selectedKleiderId,
-    }));
-}
-
-function _loadKldState() {
-    try {
-        const s = JSON.parse(localStorage.getItem(KLD_STORAGE_KEY));
-        if (s) { _kldOpenCat = s.openCat || ''; state._selectedKleiderId = s.selectedId || ''; }
-    } catch(e) {}
-}
-
-// Context menu for garment items (shared between Kleider and MH)
-let _kldCtxTarget = null;
-
-function _showKldCtx(x, y, garment) {
-    _kldCtxTarget = garment;
-    let menu = document.getElementById('kld-ctx-menu');
-    if (!menu) {
-        menu = document.createElement('div');
-        menu.id = 'kld-ctx-menu';
-        menu.style.cssText = 'position:fixed;z-index:9999;background:var(--bg-secondary);border:1px solid var(--border);border-radius:4px;padding:4px 0;min-width:140px;font-size:0.8rem;box-shadow:0 4px 12px rgba(0,0,0,.4);';
-        menu.innerHTML = `
-            <div class="ctx-item" data-action="rename" style="padding:4px 12px;cursor:pointer;">Umbenennen</div>
-            <div class="ctx-item" data-action="move" style="padding:4px 12px;cursor:pointer;">Verschieben...</div>
-            <div class="ctx-item" data-action="copy" style="padding:4px 12px;cursor:pointer;">Kopieren...</div>
-            <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
-            <div class="ctx-item" data-action="delete" style="padding:4px 12px;cursor:pointer;color:#f44;">Löschen</div>
-        `;
-        menu.querySelectorAll('.ctx-item').forEach(item => {
-            item.addEventListener('mouseenter', () => item.style.background = 'var(--accent)');
-            item.addEventListener('mouseleave', () => item.style.background = '');
-            item.addEventListener('click', () => _handleKldCtx(item.dataset.action));
-        });
-        document.body.appendChild(menu);
-        document.addEventListener('click', () => { menu.style.display = 'none'; }, { capture: true });
-    }
-    menu.style.left = x + 'px';
-    menu.style.top = y + 'px';
-    menu.style.display = 'block';
-}
-
-async function _handleKldCtx(action) {
-    const g = _kldCtxTarget;
-    if (!g) return;
-    const menu = document.getElementById('kld-ctx-menu');
-    if (menu) menu.style.display = 'none';
-
-    if (action === 'rename') {
-        const newName = prompt('Neuer Name:', g.name || g.id);
-        if (newName && newName !== g.name) {
-            try {
-                await Serverabruf.senden('/api/character/garment/manage/',
-                    { action: 'rename', id: g.id, new_name: newName });
-                g.name = newName;
-                _renderKleiderList();
-            } catch(e) { console.error('Rename failed:', e); }
-        }
-    } else if (action === 'move') {
-        const cats = [...new Set(state._garmentCatalog.map(x => x._category))];
-        const target = prompt('Verschieben nach Kategorie:\n' + cats.join(', '), g._category);
-        if (target && target !== g._category) {
-            try {
-                await Serverabruf.senden('/api/character/garment/manage/',
-                    { action: 'move', id: g.id, target_category: target });
-                g._category = target;
-                _kldOpenCat = target;
-                _renderKleiderList();
-            } catch(e) { console.error('Move failed:', e); }
-        }
-    } else if (action === 'copy') {
-        const newName = prompt('Kopie-Name:', (g.name || g.id) + '_copy');
-        if (newName) {
-            try {
-                await Serverabruf.senden('/api/character/garment/manage/',
-                    { action: 'copy', id: g.id, new_name: newName });
-                state._garmentCatalog.length = 0;
-                const data = await Serverabruf.json('/api/character/garment/library/');
-                if (data.garments) {
-                    for (const cat of Object.keys(data.garments)) {
-                        for (const gg of data.garments[cat]) {
-                            gg._category = cat;
-                            state._garmentCatalog.push(gg);
-                        }
-                    }
-                }
-                _renderKleiderList();
-            } catch(e) { console.error('Copy failed:', e); }
-        }
-    } else if (action === 'delete') {
-        if (!confirm(`"${g.name || g.id}" wirklich löschen?`)) return;
-        try {
-            await Serverabruf.senden('/api/character/garment/manage/',
-                    { action: 'delete', id: g.id });
-            const idx = state._garmentCatalog.indexOf(g);
-            if (idx >= 0) state._garmentCatalog.splice(idx, 1);
-            if (state._selectedKleiderId === g.id) state._selectedKleiderId = '';
-            _renderKleiderList();
-        } catch(e) { console.error('Delete failed:', e); }
-    }
-}
-
+/** Die Liste neu aufbauen — gruppiert nach Kategorie. */
 function _renderKleiderList() {
-    const list = document.getElementById('kleider-list');
-    if (!list) return;
-    list.innerHTML = '';
-
-    _loadKldState();
-
-    const catFilter = document.getElementById('kleider-category')?.value || '';
-    const filtered = catFilter
-        ? state._garmentCatalog.filter(g => g._category === catFilter)
-        : state._garmentCatalog;
-
-    if (filtered.length === 0) {
-        list.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.8rem;">Keine Kleider gefunden</div>';
+    const liste = document.getElementById('kleider-list');
+    if (!liste) return;
+    liste.innerHTML = '';
+    zustand.laden();
+    const gruppen = _gruppen();
+    if (!gruppen) {
+        liste.innerHTML = '<div class="leer-hinweis">Keine Kleider gefunden</div>';
         return;
     }
-
-    const groups = {};
-    for (const g of filtered) {
-        if (!groups[g._category]) groups[g._category] = [];
-        groups[g._category].push(g);
+    for (const [kategorie, stuecke] of Object.entries(gruppen)) {
+        liste.appendChild(_ordner(liste, kategorie, stuecke));
     }
+    _auswahlInDenBlick(liste);
+}
 
-    for (const [cat, items] of Object.entries(groups)) {
-        const catDiv = document.createElement('div');
-        catDiv.className = 'anim-folder';
-        catDiv.innerHTML = `<div class="anim-folder-header"><span class="chevron">&#9660;</span> ${cat} (${items.length})</div>`;
-        const body = document.createElement('div');
-        body.className = 'anim-folder-body';
+/** Nach Kategorie gruppiert — `null`, wenn der Filter nichts übrig lässt. */
+function _gruppen() {
+    const filter = document.getElementById('kleider-category')?.value || '';
+    const gewaehlt = filter
+        ? state._garmentCatalog.filter(g => g._category === filter)
+        : state._garmentCatalog;
+    if (gewaehlt.length === 0) return null;
+    const gruppen = {};
+    for (const stueck of gewaehlt) {
+        (gruppen[stueck._category] = gruppen[stueck._category] || []).push(stueck);
+    }
+    return gruppen;
+}
 
-        const isOpen = _kldOpenCat === cat;
-        body.style.display = isOpen ? '' : 'none';
-        catDiv.querySelector('.chevron').textContent = isOpen ? '\u25BC' : '\u25B6';
-
-        for (const g of items) {
-            const row = document.createElement('div');
-            row.className = 'anim-item';
-            row.dataset.kleiderId = g.id;
-            row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;';
-            if (state._selectedKleiderId === g.id) row.classList.add('selected');
-            if (g.has_thumb) {
-                const img = document.createElement('img');
-                // Erst beim Aufklappen laden — 4,77 MB und 125 Anfragen
-                // weniger je Seitenaufruf (siehe Bildnachlader).
-                Bildnachlader.vormerken(
-                    img, `/api/character/garment/thumb/${g.id}/`);
-                img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;';
-                row.appendChild(img);
-            }
-            const name = document.createElement('span');
-            name.textContent = g.name || g.id;
-            name.style.cssText = 'font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-            row.appendChild(name);
-            row.addEventListener('click', () => {
-                state._selectedKleiderId = g.id;
-                _kldOpenCat = cat;
-                _saveKldState();
-                list.querySelectorAll('.anim-item').forEach(el => el.classList.remove('selected'));
-                row.classList.add('selected');
-                const offEl = document.getElementById('kleider-offset');
-                if (offEl && g.offset != null) offEl.value = Math.round(g.offset * 1000);
-                const stEl = document.getElementById('kleider-stiffness');
-                if (stEl && g.stiffness != null) stEl.value = Math.round(g.stiffness * 100);
-                fetch('/api/ui-pref/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key: 'last_kleider_id', value: g.id }),
-                }).catch(() => {});
-            });
-            row.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                state._selectedKleiderId = g.id;
-                list.querySelectorAll('.anim-item').forEach(el => el.classList.remove('selected'));
-                row.classList.add('selected');
-                _showKldCtx(e.clientX, e.clientY, g);
-            });
-            body.appendChild(row);
+function _ordner(liste, kategorie, stuecke) {
+    const kasten = document.createElement('div');
+    kasten.className = 'anim-folder';
+    kasten.innerHTML = '<div class="anim-folder-header">'
+        + `<span class="chevron">&#9660;</span> ${kategorie} (${stuecke.length})</div>`;
+    const koerper = document.createElement('div');
+    koerper.className = 'anim-folder-body';
+    _klappen(kasten, zustand.kategorie === kategorie);
+    for (const stueck of stuecke) {
+        koerper.appendChild(_zeile(liste, kategorie, stueck));
+    }
+    kasten.appendChild(koerper);
+    const kopf = kasten.querySelector('.anim-folder-header');
+    kopf.addEventListener('click', () => {
+        const oeffnen = koerper.style.display === 'none';
+        _klappen(kasten, oeffnen);
+        if (oeffnen) {
+            zustand.kategorie = kategorie;
+            zustand.merken();
         }
-        catDiv.appendChild(body);
-        const header = catDiv.querySelector('.anim-folder-header');
-        header.addEventListener('click', () => {
-            const opening = body.style.display === 'none';
-            body.style.display = opening ? '' : 'none';
-            header.querySelector('.chevron').textContent = opening ? '\u25BC' : '\u25B6';
-            if (opening) {
-                _kldOpenCat = cat;
-                _saveKldState();
-            }
-        });
-        list.appendChild(catDiv);
-    }
+    });
+    return kasten;
+}
 
-    if (state._selectedKleiderId) {
-        const sel = list.querySelector(`[data-kleider-id="${state._selectedKleiderId}"]`);
-        if (sel) setTimeout(() => sel.scrollIntoView({ block: 'nearest' }), Zeiten.ROLLEN_MS);
+function _zeile(liste, kategorie, stueck) {
+    const zeile = document.createElement('div');
+    zeile.className = 'anim-item kld-zeile';
+    zeile.dataset.kleiderId = stueck.id;
+    if (state._selectedKleiderId === stueck.id) zeile.classList.add('selected');
+    if (stueck.has_thumb) zeile.appendChild(_bild(stueck));
+    const name = document.createElement('span');
+    name.className = 'kld-name';
+    name.textContent = stueck.name || stueck.id;
+    zeile.appendChild(name);
+    zeile.addEventListener('click',
+                           () => _auswaehlen(liste, zeile, kategorie, stueck));
+    zeile.addEventListener('contextmenu', ereignis => {
+        ereignis.preventDefault();
+        _hervorheben(liste, zeile);
+        verwaltung.zeigen(ereignis.clientX, ereignis.clientY, stueck);
+    });
+    return zeile;
+}
+
+function _bild(stueck) {
+    const bild = document.createElement('img');
+    bild.className = 'kld-bild';
+    // Erst beim Aufklappen laden — 4,77 MB und 125 Anfragen weniger je
+    // Seitenaufruf (siehe Bildnachlader).
+    Bildnachlader.vormerken(bild, `/api/character/garment/thumb/${stueck.id}/`);
+    return bild;
+}
+
+function _auswaehlen(liste, zeile, kategorie, stueck) {
+    _hervorheben(liste, zeile);
+    zustand.kategorie = kategorie;
+    zustand.merken();
+    _reglerSetzen(stueck);
+    zustand.aufDemServerMerken(stueck.id);
+}
+
+/** Abstand und Steifigkeit des Stücks in die Regler schreiben. */
+function _reglerSetzen(stueck) {
+    const abstand = document.getElementById('kleider-offset');
+    if (abstand && stueck.offset != null) {
+        abstand.value = Math.round(stueck.offset * 1000);      // Meter -> mm
     }
+    const steife = document.getElementById('kleider-stiffness');
+    if (steife && stueck.stiffness != null) {
+        steife.value = Math.round(stueck.stiffness * 100);     // 0..1 -> Prozent
+    }
+}
+
+function _auswahlInDenBlick(liste) {
+    if (!state._selectedKleiderId) return;
+    const zeile = liste.querySelector(
+        `[data-kleider-id="${state._selectedKleiderId}"]`);
+    if (!zeile) return;
+    // Erst nach dem Aufklappen scrollen, sonst steht die Zeile noch auf 0 Höhe.
+    setTimeout(() => zeile.scrollIntoView({ block: 'nearest' }), Zeiten.ROLLEN_MS);
 }
 
 export { _kleiderSelectById, _selectedKleiderMesh, _renderKleiderList };

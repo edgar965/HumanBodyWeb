@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Skelettanzeige } from './skelettanzeige.js';
+import { Protokoll } from './protokoll.js';
 
 /**
  * Animationslader — eine BVH laden, am Server auf das DEF-Skelett umzielen und
@@ -108,7 +109,7 @@ export class Animationslader {
      */
     _umzielfehler(fehler, url) {
         if (String(fehler?.message).includes('404')) {
-            console.warn('Animation nicht vorhanden:', url);
+            Protokoll.warnung('animationslader', 'Animation nicht vorhanden:', url);
             this._info(`Datei fehlt: ${this.name}`);
             return true;   // als behandelt gelten lassen
         }

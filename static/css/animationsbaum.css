@@ -1,0 +1,111 @@
+/* Animationsbaum — Kategorien und Einträge
+ *
+ * Der aufklappbare Baum der BVH-Kategorien. Er stand in fünf
+ * Vorlagen kopiert; `animationsauswahl.js` erzeugt das Markup.
+ *
+ * ERZEUGT von Docu/umbau/css_ausziehen.py am 17.08.2026 aus den Inline-Stilen der Vorlagen. Wer hier ändert,
+ * ändert alle Seiten — genau das war der Zweck.
+ */
+
+.anim-category {
+    border-bottom: 1px solid var(--border);
+}
+
+.anim-category-header:hover { background: var(--bg-card); }
+
+.anim-category-header .cat-chevron {
+    font-size: 0.65rem;
+    transition: transform 0.2s;
+    color: var(--text-muted);
+}
+
+.anim-category.open .cat-chevron { transform: rotate(90deg); }
+
+.anim-category-header .cat-count {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+.anim-category.open .anim-category-body { display: block; }
+
+.anim-item:hover { background: var(--bg-card); color: var(--text); }
+
+.anim-item.active {
+    background: var(--accent);
+    color: #fff;
+}
+
+.anim-item .frames {
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+.anim-speed label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+.anim-speed input[type="range"] { flex: 1; accent-color: var(--accent); }
+
+.anim-controls button {
+    padding: 6px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.anim-controls button:hover { border-color: var(--accent); }
+
+.anim-controls input[type="range"] { flex: 1; accent-color: var(--accent); }
+
+
+/* ---------------------------------------------------------------------------
+   Kleiderliste — was vorher als Inline-Stil im JavaScript stand
+   ---------------------------------------------------------------------------
+   Befund `jsstilfassungen` (18.08.2026): `kleider_liste.js` setzte sechs
+   Stilangaben über `style.cssText`, darunter das ganze Kontextmenü. Inline-Stil
+   schlägt jede Regel im Stylesheet — ein Theme-Wechsel erreichte diese Stellen
+   deshalb nie.
+
+   Dreifach benannte Selektoren wären hier zu viel: Die `kld-*`-Klassen sind neu
+   und kommen mit keiner Regel in `style.css` in Berührung. */
+.kld-zeile { display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+             cursor: pointer; }
+.kld-bild { width: 36px; height: 36px; border-radius: 3px; object-fit: cover;
+            flex-shrink: 0; }
+.kld-name { font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; }
+
+/* Das Kontextmenü der Kleiderliste. `position: fixed`, weil es an der
+   Mausstelle steht und nicht mit der Liste scrollen darf. */
+.kld-ctx { position: fixed; z-index: 9999; background: var(--bg-secondary);
+           border: 1px solid var(--border); border-radius: 4px; padding: 4px 0;
+           min-width: 140px; font-size: 0.8rem;
+           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+.kld-ctx .ctx-item:hover { background: var(--accent); }
+.kld-ctx-trenner { border-top: 1px solid var(--border); margin: 2px 0; }
+.kld-ctx-loeschen { padding: 4px 12px; cursor: pointer; color: #f44; }
+
+/* Posenliste — Auswahl und Zeile. Standen als Inline-Stil im JavaScript
+   (`row.style.background = 'rgba(124,92,191,0.35)'` und `style.cssText`),
+   Befund `jsstilfassungen`, 18.08.2026. Zweifach benannt, weil `.anim-item`
+   in derselben Datei eine eigene Hintergrundregel hat. */
+.anim-item.pose-zeile { padding: 4px 8px; cursor: pointer; font-size: 0.8rem; }
+.anim-item.pose-gewaehlt { background: rgba(124, 92, 191, 0.35); }
+
+/* Kleiderkatalog der Modellseite. Stand als `style.cssText` im JavaScript
+   (Befund `jsstilfassungen`, 18.08.2026). Zweifach benannt, weil `.anim-item`
+   weiter oben in derselben Datei Polsterung und Anzeigeart setzt. */
+.anim-item.garment-item { display: flex; align-items: center;
+                          padding: 4px 12px 4px 28px; }
+.garment-thumb { width: 36px; height: 36px; border-radius: 3px;
+                 object-fit: cover; flex-shrink: 0; margin-right: 6px; }
+.garment-name { flex: 1; overflow: hidden; text-overflow: ellipsis;
+                white-space: nowrap; }
+.garment-haken { color: var(--success); margin-left: 4px; }

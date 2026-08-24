@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
 """BVH-Bibliothek, Retarget und Bearbeitung der Bewegungen.
 
-Herausgeloest aus core/character_api.py (Umbau 15.08.2026). Die Datei hatte
-6.495 Zeilen und 110 Endpunkte; die Themen darin waren nur durch Reihenfolge
-getrennt. Die Endpunkte hier bleiben duenne Funktionen — Django-Dekoratoren,
-Stapelspuren und Tests bleiben damit lesbar —, waehrend die Fachlogik in
-core/dienste/ als Klassen liegt.
+Aus core/character_api.py herausgeloest (Umbau 15.08.2026) — warum so
+geschnitten, steht in `core/api/__init__.py`.
 """
 
 from ..dienste.bvhverwaltung import Bvhverwaltung, BvhFehler
-from ..dienste.skelettgeometrie import Skelettgeometrie
+from ..dienste.retargetdaten import Retargetdaten
 from ..dienste.bvhablage import Bvhablage
 from ..models import BVHJob
 from django.http import JsonResponse, HttpResponseNotFound
@@ -55,58 +52,14 @@ def retarget_config(request):
 
 def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=False,
                       delta_norm=None):
-    """Core retarget: BVH file path → dict with Rigify/DEF quaternion tracks.
+    """Bisherige Aufrufform — die Rechnung steht in dienste/retargetdaten.py.
 
-    Caches the result as a JSON file next to the BVH. Subsequent calls
-    with the same parameters return the cached result instantly.
+    Dorthin ausgelagert am 18.08.2026: Sie ist Fachlogik und hat einen
+    Ringimport zwischen `api/retarget.py` und `api/dateien.py` getragen.
     """
-    import hashlib
+    return Retargetdaten(bvh_path, body_height, fmt, foot_correction,
+                         delta_norm).holen()
 
-    # Build cache key from parameters
-    cache_params = f'{body_height:.4f}_{fmt}_{foot_correction}_{delta_norm}'
-    cache_hash = hashlib.md5(cache_params.encode()).hexdigest()[:8]
-    cache_path = bvh_path.rsplit('.', 1)[0] + f'_retarget_{cache_hash}.json'
-
-    # Return cached result if BVH hasn't changed
-    if os.path.isfile(cache_path):
-        bvh_mtime = os.path.getmtime(bvh_path)
-        cache_mtime = os.path.getmtime(cache_path)
-        if cache_mtime > bvh_mtime:
-            try:
-                with open(cache_path, 'r') as f:
-                    return json.load(f)
-            except Exception:
-                pass  # cache corrupt, recompute
-
-    from humanbody_core.skeleton import Skeleton, SkeletonRigify
-
-    skel_geom = Skelettgeometrie.holen()
-    bvh = SkeletonRigify.parse_bvh(bvh_path)
-
-    if fmt:
-        fmt_cls = Skeleton.get_format(fmt)
-    else:
-        fmt_cls = Skeleton.detect_format(bvh.names)
-    if fmt_cls and fmt_cls.BONE_MAP_TO_RIGIFY:
-        result = fmt_cls.retarget_to_rigify(bvh, skel_geom, body_height=body_height,
-                                            foot_correction=foot_correction,
-                                            delta_norm=delta_norm)
-    else:
-        result = SkeletonRigify.retarget_bvh(bvh, skel_geom, fmt=fmt,
-                                              body_height=body_height,
-                                              foot_correction=foot_correction)
-
-    # Save cache
-    try:
-        with open(cache_path, 'w') as f:
-            json.dump(result, f)
-    except Exception:
-        logger.debug('optionaler Schritt fehlgeschlagen', exc_info=True)
-
-    return result
-
-
-@require_GET
 def retarget(request):
     """Unified retarget endpoint — ONE URL for both Job and Library BVH.
 

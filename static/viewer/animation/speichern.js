@@ -22,12 +22,20 @@ export function gatherModelState() {
     let model = {};
     const saved = localStorage.getItem('humanbody_current_model');
     if (saved) {
-        try { model = JSON.parse(saved); } catch (e) { /* ignore */ }
+        try {
+            model = JSON.parse(saved);
+        } catch (e) {
+            Protokoll.debug('speichern', 'gespeichertes Modell nicht lesbar', e);
+        }
     }
     // Scene settings from localStorage
     const sceneSaved = localStorage.getItem('humanbody_scene_settings');
     if (sceneSaved) {
-        try { model.scene = JSON.parse(sceneSaved); } catch (e) { /* ignore */ }
+        try {
+            model.scene = JSON.parse(sceneSaved);
+        } catch (e) {
+            Protokoll.debug('speichern', 'gespeicherte Szeneneinstellungen nicht lesbar', e);
+        }
     }
     return model;
 }

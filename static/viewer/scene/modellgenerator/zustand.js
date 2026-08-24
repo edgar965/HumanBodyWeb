@@ -11,6 +11,7 @@
  * Modell-JSON und geht unveraendert an den Server. Eine Klasse dazwischen waere
  * eine zweite Beschreibung desselben Formats.
  */
+import { Protokoll } from '../../gemeinsam/protokoll.js';
 
 export class Modellbauzustand {
     /** Modellbeschreibung (Dateiformat, Dictionary). */
@@ -47,7 +48,7 @@ export class Modellbauzustand {
             const resp = await fetch('/api/character/rig/');
             if (resp.ok) Modellbauzustand.rigKnochen = await resp.json();
         } catch (e) {
-            console.warn('Failed to load rig bones:', e);
+            Protokoll.warnung('zustand', 'Failed to load rig bones:', e);
         }
         return Modellbauzustand.rigKnochen;
     }

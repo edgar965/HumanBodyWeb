@@ -11,6 +11,7 @@ import {
     computeSkinAttributes, applySkinColorToMaterials,
 } from '../character_core.js?v=1';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
+import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 const ss = sharedState;
@@ -20,50 +21,10 @@ export async function loadMesh(bodyType) {
         const data = await Serverabruf.json('/api/character/mesh/?body_type=' + encodeURIComponent(bodyType));
         if (data.error) { console.error('[result_character] mesh error:', data.error); return false; }
 
-        const vertBuf = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(vertBuf);
-        const positions = new THREE.BufferAttribute(vertBuf, 3);
-
-        let index = null;
-        if (data.faces) {
-            const faceBuf = base64ToUint32(data.faces);
-            index = new THREE.BufferAttribute(faceBuf, 1);
-        }
-
-        let uvAttr = null;
-        if (data.uvs) {
-            const uvBuf = base64ToFloat32(data.uvs);
-            uvAttr = new THREE.BufferAttribute(uvBuf, 2);
-        }
-
-        const materials = BODY_MATERIALS.map(d => new THREE.MeshStandardMaterial({
-            color: d.color, roughness: d.roughness, metalness: d.metalness,
-            side: THREE.DoubleSide,
-            transparent: d.transparent || false,
-            opacity: d.opacity !== undefined ? d.opacity : 1.0,
-        }));
-
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', positions);
-        if (index) geo.setIndex(index);
-        if (uvAttr) geo.setAttribute('uv', uvAttr);
-
-        const groups = data.groups || [];
-
-        if (data.normals) {
-            const normalBuf = base64ToFloat32(data.normals);
-            blenderToThreeCoords(normalBuf);
-            geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
-        } else {
-            geo.computeVertexNormals();
-        }
-
-        if (index && groups.length > 0) {
-            for (const g of groups) geo.addGroup(g.start, g.count, g.materialIndex);
-            state.bodyMesh = new THREE.Mesh(geo, materials);
-        } else {
-            state.bodyMesh = new THREE.Mesh(geo, materials[0]);
-        }
+        // Puffer, Normalen, Materialgruppen: siehe `Koerpernetz`. Diese dreissig
+        // Zeilen standen fuenfmal im Projekt (Befund `doppelcode`, 17.08.2026).
+        state.bodyMesh = Koerpernetz.netz(data, THREE);
+        const geo = state.bodyMesh.geometry;
 
         state.bodyGeometry = geo;
         state.scene.add(state.bodyMesh);

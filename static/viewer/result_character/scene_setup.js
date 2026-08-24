@@ -3,6 +3,7 @@
  */
 import { TONE_MAPPINGS } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export function applySceneSettings(renderer, scene, camera, keyLight, fillLight, backLight, ambient) {
     const saved = localStorage.getItem('humanbody_scene_settings');
@@ -46,7 +47,7 @@ export function applySceneSettings(renderer, scene, camera, keyLight, fillLight,
             camera.updateProjectionMatrix();
         }
     } catch (e) {
-        console.warn('[result_character] Failed to load scene settings:', e);
+        Protokoll.warnung('result_character', 'Failed to load scene settings:', e);
     }
 }
 
@@ -62,7 +63,7 @@ export function applySceneSkinSettings(mesh) {
             if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
             if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
         }
-    } catch (e) { /* ignore */ }
+    } catch (e) { Protokoll.debug('szene', 'Hauteinstellungen nicht anwendbar', e); }
 }
 
 fn.applySceneSettings = applySceneSettings;

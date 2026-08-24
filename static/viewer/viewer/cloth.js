@@ -33,7 +33,7 @@ export async function loadClothUI() {
         document.getElementById('cloth-remove-all')
             ?.addEventListener('click', () => removeAllCloth());
     } catch (fehler) {
-        console.warn('Kleidungs-Bedienfeld nicht verfuegbar:', fehler);
+        Protokoll.warnung('cloth', 'Kleidungs-Bedienfeld nicht verfuegbar:', fehler);
     }
 }
 

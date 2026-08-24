@@ -7,6 +7,8 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { ensureSkinned } from './skinning.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
+import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
 
 export async function loadHairUI() {
     try {
@@ -45,7 +47,7 @@ export async function loadHairUI() {
             });
         }
     } catch (e) {
-        console.warn('Hair UI not available:', e);
+        Protokoll.warnung('hair', 'Hair UI not available:', e);
     }
 }
 
@@ -95,15 +97,7 @@ function _skinifyHairGroup(gltfScene, headBoneIdx) {
     const group = new THREE.Group();
     for (const child of meshChildren) {
         const geo = child.geometry.clone();
-        const vCount = geo.attributes.position.count;
-        const si = new Float32Array(vCount * 4);
-        const sw = new Float32Array(vCount * 4);
-        for (let v = 0; v < vCount; v++) {
-            si[v * 4] = headBoneIdx;
-            sw[v * 4] = 1.0;
-        }
-        geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(si, 4));
-        geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+        Hautgewichte.anEinenKnochen(geo, headBoneIdx, THREE.Float32BufferAttribute);
 
         const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
         child.updateWorldMatrix(true, false);
@@ -117,18 +111,7 @@ function _skinifyHairGroup(gltfScene, headBoneIdx) {
 export function removeHair() {
     if (state.hairMesh) {
         state.scene.remove(state.hairMesh);
-        state.hairMesh.traverse(child => {
-            if (child.isMesh) {
-                child.geometry.dispose();
-                if (child.material) {
-                    if (Array.isArray(child.material)) {
-                        child.material.forEach(m => m.dispose());
-                    } else {
-                        child.material.dispose();
-                    }
-                }
-            }
-        });
+        Werkstofffreigabe.baum(state.hairMesh);   // samt Texturen
         state.hairMesh = null;
         fn.updateEquippedList();
     }

@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { fetchRetargetedClipFromText } from '../retarget_hybrid.js';
 import { Skelettanzeige } from '../../../static/viewer/gemeinsam/skelettanzeige.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Haarbindung } from './haarbindung.js';
 
 /**
  * Skinner — Skelett, Hautgewichte und die Umwandlung zu SkinnedMesh.
@@ -21,8 +23,6 @@ import { Skelettanzeige } from '../../../static/viewer/gemeinsam/skelettanzeige.
  */
 export class Skinner {
 
-    /** Kopfknochen in der Reihenfolge, in der gesucht wird. */
-    static KOPFKNOCHEN = ['DEF-spine.006', 'DEF-spine.005', 'DEF-head'];
     /** Hoechstens so viele Knochen wirken auf einen Vertex (Three.js-Grenze). */
     static EINFLUESSE = 4;
     /** Koerperhoehe, wenn sie sich nicht messen laesst. */
@@ -60,11 +60,11 @@ export class Skinner {
                 ]);
                 if (skelett.ok) this.skelettdaten = await skelett.json();
                 if (gewichte.ok) this.gewichte = await gewichte.json();
-                console.debug('✓ Skelett und Gewichte geladen:',
+                Protokoll.debug('skinner', '✓ Skelett und Gewichte geladen:',
                     this.skelettdaten?.bones?.length || 0, 'Knochen');
                 if (this.bereit) {
                     this.skelett = buildRigifySkeleton(this.skelettdaten, this.gewichte);
-                    console.debug('✓ Skelett gebaut:', this.skelett.bones.length, 'Knochen');
+                    Protokoll.debug('skinner', '✓ Skelett gebaut:', this.skelett.bones.length, 'Knochen');
                     // Fuer die Browser-Konsole und die UI-Tests.
                     window.rigifySkeletonData = this.skelettdaten;
                     window.rigifySkeleton = this.skelett;
@@ -74,7 +74,7 @@ export class Skinner {
                     if (!figur.userData.isSkinnedMesh) this.autoUmwandeln(figur);
                 }
             } catch (fehler) {
-                console.warn('Skelett/Gewichte nicht ladbar:', fehler);
+                Protokoll.warnung('skinner', 'Skelett/Gewichte nicht ladbar:', fehler);
             }
         })();
         return this._laden;
@@ -87,9 +87,9 @@ export class Skinner {
         setTimeout(() => {
             try {
                 this.umwandeln(figur);
-                console.debug('✓ zu SkinnedMesh umgewandelt:', figur.userData.presetName);
+                Protokoll.debug('skinner', '✓ zu SkinnedMesh umgewandelt:', figur.userData.presetName);
             } catch (fehler) {
-                console.warn('Umwandeln fehlgeschlagen:', fehler);
+                Protokoll.warnung('skinner', 'Umwandeln fehlgeschlagen:', fehler);
             }
         }, 100);
     }
@@ -100,7 +100,7 @@ export class Skinner {
      */
     umwandeln(figur) {
         if (!this.bereit) {
-            console.warn('Umwandeln nicht moeglich: Skelett/Gewichte fehlen');
+            Protokoll.warnung('skinner', 'Umwandeln nicht moeglich: Skelett/Gewichte fehlen');
             return null;
         }
         if (figur.userData.isSkinnedMesh) return figur.userData.skinnedMesh;
@@ -108,7 +108,7 @@ export class Skinner {
         const koerper = figur.children.find(
             k => k.isMesh && !k.userData.isHair && !k.userData.isGarment);
         if (!koerper) {
-            console.warn('Kein Koerpernetz in der Figur gefunden');
+            Protokoll.warnung('skinner', 'Kein Koerpernetz in der Figur gefunden');
             return null;
         }
 
@@ -147,8 +147,9 @@ export class Skinner {
         }
 
         this._kleiderBinden(figur, netz);
-        this._haareBinden(figur, netz);
-        console.debug('✓ SkinnedMesh erstellt:', this.skelett.skeleton.bones.length,
+        new Haarbindung(this.skelett, this.gewichte)
+            .binden(figur, netz);
+        Protokoll.debug('skinner', '✓ SkinnedMesh erstellt:', this.skelett.skeleton.bones.length,
             'Knochen, skinIndex:', !!geo.attributes.skinIndex);
         return netz;
     }
@@ -164,7 +165,7 @@ export class Skinner {
         aktion.play();
         aktion.paused = true;
         const dauer = clip.duration || 1;
-        console.debug(`✓ Umgezielter Clip: ${clip.tracks.length} Spuren, ${dauer.toFixed(2)}s`);
+        Protokoll.debug('skinner', `✓ Umgezielter Clip: ${clip.tracks.length} Spuren, ${dauer.toFixed(2)}s`);
         return { mixer, action: aktion, duration: dauer };
     }
 
@@ -210,7 +211,8 @@ export class Skinner {
         const werte = new Float32Array(anzahl * k);
         const vorhanden = this.gewichte.weights ? this.gewichte.weights.length : 0;
         if (anzahl !== vorhanden) {
-            console.error(`[SkinnedMesh] Vertexzahl passt nicht: Netz=${anzahl} Gewichte=${vorhanden}`);
+            Protokoll.fehler('skinner', 'Vertexzahl passt nicht: '
+                             + `Netz=${anzahl} Gewichte=${vorhanden}`);
         }
         for (let v = 0; v < anzahl; v++) {
             const paare = this.gewichte.weights[v] || [];
@@ -236,66 +238,9 @@ export class Skinner {
             if (kind.isSkinnedMesh && kind !== netz && kind.userData.needsBinding) {
                 kind.bind(this.skelett.skeleton, netz.bindMatrix);
                 delete kind.userData.needsBinding;
-                console.debug('✓ Kleidung gebunden:', kind.name || kind.userData.garmentId);
+                Protokoll.debug('skinner', '✓ Kleidung gebunden:', kind.name || kind.userData.garmentId);
             }
         });
     }
 
-    _haareBinden(figur, netz) {
-        const kopf = this.kopfknochenNummer();
-        if (kopf < 0) return;
-        for (const haare of figur.children.filter(k => k.userData.isHair)) {
-            let ungebunden = false;
-            haare.traverse((kind) => {
-                if (kind.isMesh && !kind.isSkinnedMesh) ungebunden = true;
-            });
-            if (!ungebunden) continue;
-            const gebunden = this.haareUmwandeln(haare, kopf, netz);
-            figur.remove(haare);
-            figur.add(gebunden);
-            console.debug('✓ Haare zu SkinnedMesh umgewandelt:', haare.name || 'Haare');
-        }
-    }
-
-    /** Nummer des Kopfknochens in der Gewichtsliste, sonst -1. */
-    kopfknochenNummer() {
-        if (!this.gewichte) return -1;
-        const namen = this.gewichte.bone_names;
-        for (const name of Skinner.KOPFKNOCHEN) {
-            const nummer = namen.indexOf(name);
-            if (nummer >= 0) return nummer;
-        }
-        return -1;
-    }
-
-    /** Haarnetze vollstaendig an den Kopfknochen binden (Gewicht 1). */
-    haareUmwandeln(gltfSzene, kopfnummer, koerpernetz) {
-        const netze = [];
-        gltfSzene.traverse(kind => {
-            if (kind.isMesh) netze.push(kind);
-        });
-        const gruppe = new THREE.Group();
-        gruppe.userData.isHair = true;
-        for (const kind of netze) {
-            const geo = kind.geometry.clone();
-            const anzahl = geo.attributes.position.count;
-            const k = Skinner.EINFLUESSE;
-            const indizes = new Float32Array(anzahl * k);
-            const werte = new Float32Array(anzahl * k);
-            for (let v = 0; v < anzahl; v++) {
-                indizes[v * k] = kopfnummer;
-                werte[v * k] = 1.0;
-            }
-            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(indizes, k));
-            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(werte, k));
-            const gebunden = new THREE.SkinnedMesh(geo, kind.material);
-            // Weltmatrix uebernehmen, sonst sitzen die Haare falsch.
-            kind.updateWorldMatrix(true, false);
-            gebunden.applyMatrix4(kind.matrixWorld);
-            gebunden.bind(this.skelett.skeleton, koerpernetz.bindMatrix);
-            gebunden.userData.isHair = true;
-            gruppe.add(gebunden);
-        }
-        return gruppe;
-    }
 }

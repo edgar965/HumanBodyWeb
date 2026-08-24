@@ -20,19 +20,21 @@ import shutil
 
 from .bvhablage import Bvhablage
 
+from .dienstfehler import DienstFehler
+
 logger = logging.getLogger('core')
 
 #: Muster der Retarget-Zwischenspeicher zu einer BVH-Datei.
 CACHE_MUSTER = '%s_retarget_*.json'
 
 
-class BvhFehler(Exception):
-    """Ablehnung mit HTTP-Kennzahl — der Endpunkt macht daraus JSON."""
+class BvhFehler(DienstFehler):
+    """Ablehnung der BVH-Verwaltung. Rumpf und Kennzahl siehe `DienstFehler`.
 
-    def __init__(self, text, kennzahl=400):
-        super().__init__(text)
-        self.text = text
-        self.kennzahl = kennzahl
+    Eigene Klasse, damit ein `except BvhFehler` nicht die Kleiderverwaltung
+    mitfaengt — aber ohne den Rumpf noch einmal zu schreiben (Befund
+    `doppelrumpf`, 17.08.2026: derselbe Rumpf und dasselbe `__init__` lagen
+    zweimal im Projekt)."""
 
 
 class Bvhverwaltung:

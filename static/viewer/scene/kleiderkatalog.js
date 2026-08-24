@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
  * Kleiderkatalog — die Kleiderbibliothek einmal holen und die Kategorien in ein
@@ -37,7 +38,7 @@ export class Kleiderkatalog {
             await new Promise(weiter => setTimeout(weiter, Kleiderkatalog.PAUSE_MS));
         }
         if (!state._garmentCatalog.length) {
-            console.warn('Kleider-Katalog bleibt leer — Kategorien fehlen');
+            Protokoll.warnung('kleiderkatalog', 'Kleider-Katalog bleibt leer — Kategorien fehlen');
             return false;
         }
         this.kategorienFuellen();
@@ -56,7 +57,7 @@ export class Kleiderkatalog {
                 }
             }
         } catch (fehler) {
-            console.warn('Kleider-Katalog nicht ladbar:', fehler);
+            Protokoll.warnung('kleiderkatalog', 'Kleider-Katalog nicht ladbar:', fehler);
         }
     }
 

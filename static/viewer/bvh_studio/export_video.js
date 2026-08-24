@@ -1,233 +1,113 @@
 /**
  * BVH Studio — BVH Export and Video Export (server ffmpeg + browser MediaRecorder).
+ *
+ * UMBAU 18.08.2026: 236 Zeilen für zwei ganz verschiedene Ausgaben. Jetzt:
+ *
+ *     bvhausgabe.js    BVH-Text herunterladen (Spur, einzelner Clip, Dialog)
+ *     videoausgabe.js  Szene aufnehmen (Kamera aus der Zeitleiste, Rückweg)
+ *
+ * Hier bleibt die Bedienung: Werte aus dem Formular lesen, Fortschritt zeigen,
+ * Knöpfe sperren.
  */
-import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { exportBrowserMediaRecorder, exportServerFfmpeg, saveBlobAs } from './video_schreiben.js';
-import { Zeiten } from '../gemeinsam/zeiten.js';
-import { Serverabruf } from '../gemeinsam/serverabruf.js';
-import { Protokoll } from '../gemeinsam/protokoll.js';
+import { saveBlobAs } from './video_schreiben.js';
+import { Bvhausgabe } from './bvhausgabe.js';
+import { Videoausgabe } from './videoausgabe.js';
 
+/** Wird von `video_schreiben.js` gelesen, um den Lauf abzubrechen. */
 export let exportCancelled = false;
 
-export async function exportBVH() {
-    if (state.selectedTrackIdx < 0) { alert('Track auswählen.'); return; }
-    const track = state.project.tracks[state.selectedTrackIdx];
-    if (track.clips.length === 0) { alert('Track hat keine Clips.'); return; }
-
-    // For each clip, fetch the original BVH text and concatenate
-    const bvhTexts = [];
-    for (const clip of track.clips) {
-        try {
-            const url = `/api/character/bvh/${encodeURIComponent(clip.category)}/${encodeURIComponent(clip.name)}/`;
-            bvhTexts.push({ clip, text: await Serverabruf.text(url) });
-        } catch (e) {
-            console.error(`Failed to fetch BVH for ${clip.name}:`, e);
-        }
-    }
-
-    if (bvhTexts.length === 0) { alert('Keine BVH Daten.'); return; }
-
-    // For single clip: trim and download
-    // For multiple clips: download each separately (BVH doesn't support multi-skeleton)
-    if (bvhTexts.length === 1) {
-        const blob = new Blob([bvhTexts[0].text], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url;
-        a.download = `${track.name}_${bvhTexts[0].clip.name}.bvh`;
-        a.click(); URL.revokeObjectURL(url);
-    } else {
-        // Download all as individual files
-        for (const { clip, text } of bvhTexts) {
-            const blob = new Blob([text], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url;
-            a.download = `${track.name}_${clip.name}.bvh`;
-            a.click(); URL.revokeObjectURL(url);
-            await new Promise(r => setTimeout(r, Zeiten.BILDPAUSE_MS));
-        }
-    }
-    Protokoll.info('BVH Studio', `Exported ${bvhTexts.length} BVH file(s) for track "${track.name}"`);
-}
-
-export async function saveBvhAs() {
-    if (state.selectedTrackIdx < 0 || state.selectedClipIdx < 0) { alert('Clip auswählen.'); return; }
-    const clip = state.project.tracks[state.selectedTrackIdx].clips[state.selectedClipIdx];
-    try {
-        const url = `/api/character/bvh/${encodeURIComponent(clip.category)}/${encodeURIComponent(clip.name)}/`;
-        const text = await Serverabruf.text(url);
-        const blob = new Blob([text], { type: 'text/plain' });
-        const defaultName = `${clip.name}.bvh`;
-
-        // Use File System Access API for native "Save As" dialog
-        if (window.showSaveFilePicker) {
-            try {
-                const handle = await window.showSaveFilePicker({
-                    suggestedName: defaultName,
-                    types: [{
-                        description: 'BVH Motion Capture',
-                        accept: { 'text/plain': ['.bvh'] },
-                    }],
-                });
-                const writable = await handle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-                Protokoll.info('BVH Studio', `BVH saved via picker: ${handle.name}`);
-                return;
-            } catch (pickerErr) {
-                if (pickerErr.name === 'AbortError') return;  // user cancelled
-                console.warn('[BVH Studio] File picker failed, fallback to download:', pickerErr);
-            }
-        }
-
-        // Fallback: classic download
-        const dlUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = dlUrl;
-        a.download = defaultName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(dlUrl);
-        Protokoll.debug('BVH Studio', `BVH downloaded: ${defaultName}`);
-    } catch (e) {
-        alert('BVH speichern fehlgeschlagen: ' + e.message);
-    }
-}
+export async function exportBVH() { return Bvhausgabe.spur(); }
+export async function saveBvhAs() { return Bvhausgabe.speichernUnter(); }
 
 export function setupExportPanel() {
-    // Pre-fill target dir from prefs
-    const dirEl = document.getElementById('export-target-dir');
-    if (dirEl && state.project.videoOutputPath) dirEl.value = state.project.videoOutputPath;
-
-    // Set default range from project duration
-    const updateRange = () => {
-        const toEl = document.getElementById('export-to');
-        if (toEl && toEl.value === '0') toEl.value = Math.round(state.project.duration * state.project.fps);
-        const fpsEl = document.getElementById('export-fps');
-        if (fpsEl) fpsEl.value = String(state.project.fps);
-    };
-
-    document.getElementById('export-start')?.addEventListener('click', startExport);
-    document.getElementById('export-cancel')?.addEventListener('click', () => { exportCancelled = true; });
-
-    // Export engine info
-    document.getElementById('export-engine')?.addEventListener('change', (e) => {
-        Protokoll.debug('BVH Studio', `Export-Engine: ${e.target.value}`);
+    _feld('export-target-dir', feld => {
+        if (state.project.videoOutputPath) feld.value = state.project.videoOutputPath;
     });
-
-    // Auto-update frame range + target dir when export tab opens
-    document.querySelectorAll('.props-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            if (tab.dataset.tab === 'export') {
-                updateRange();
-                const dirEl = document.getElementById('export-target-dir');
-                if (dirEl && !dirEl.value) dirEl.value = state.project.videoOutputPath || '';
-            }
+    document.getElementById('export-start')?.addEventListener('click', startExport);
+    document.getElementById('export-cancel')?.addEventListener('click', () => {
+        exportCancelled = true;
+    });
+    // Bildbereich und Zielordner auffrischen, wenn der Reiter „Export" aufgeht:
+    // Die Projektdauer ändert sich, während das Formular schon steht.
+    document.querySelectorAll('.props-tab').forEach(reiter => {
+        reiter.addEventListener('click', () => {
+            if (reiter.dataset.tab === 'export') _bereichAuffrischen();
         });
     });
 }
 
-async function startExport() {
-    const fromFrame = parseInt(document.getElementById('export-from')?.value) || 0;
-    let toFrame = parseInt(document.getElementById('export-to')?.value) || 0;
-    const fps = parseInt(document.getElementById('export-fps')?.value) || state.project.fps;
-    const resolution = parseInt(document.getElementById('export-resolution')?.value) || 1080;
-    const crf = document.getElementById('export-quality')?.value || '18';
-    const engine = document.getElementById('export-engine')?.value || 'server';
-    const filename = document.getElementById('export-filename')?.value || 'bvh_studio_export.mp4';
-
-    if (toFrame <= fromFrame) toFrame = Math.round(state.project.duration * state.project.fps);
-    if (toFrame <= fromFrame) { alert('Keine Frames zum Exportieren.'); return; }
-
-    const totalFrames = toFrame - fromFrame;
-    exportCancelled = false;
-
-    // UI: show progress, cancel button
-    const progressDiv = document.getElementById('export-progress');
-    const statusText = document.getElementById('export-status-text');
-    const progressBar = document.getElementById('export-progress-bar');
-    const startBtn = document.getElementById('export-start');
-    const cancelBtn = document.getElementById('export-cancel');
-    progressDiv.style.display = '';
-    cancelBtn.style.display = '';
-    startBtn.disabled = true;
-    startBtn.style.opacity = '0.5';
-
-    // Create offscreen renderer (same size as export resolution)
-    const aspect = 16 / 9;
-    const expW = Math.round(resolution * aspect);
-    const expH = resolution;
-    const offCanvas = document.createElement('canvas');
-    offCanvas.width = expW;
-    offCanvas.height = expH;
-    const offRenderer = new THREE.WebGLRenderer({ canvas: offCanvas, antialias: true, preserveDrawingBuffer: true });
-    offRenderer.setSize(expW, expH, false);
-    offRenderer.setPixelRatio(1);
-
-    // Snapshot and override camera so the export uses the SCENE camera
-    // (= first Kamera-Track with keyframes), not the user's OrbitControls
-    // pose. If there is no such track, we bail with a clear message instead
-    // of silently baking the current view.
-    const camTrack = state.project.tracks.find(
-        t => t.type === 'camera' && (t.clips?.length || 0) > 0
-    );
-    if (!camTrack) {
-        statusText.textContent = 'Fehler: Kein Kamera-Track mit Keyframes. '
-            + 'Lege im Timeline-Bereich einen Kamera-Track an und füge mind. einen Keyframe hinzu.';
-        progressBar.style.width = '0%';
-        startBtn.disabled = false;
-        startBtn.style.opacity = '1';
-        cancelBtn.style.display = 'none';
-        return;
+function _bereichAuffrischen() {
+    const bis = document.getElementById('export-to');
+    if (bis && bis.value === '0') {
+        bis.value = Math.round(state.project.duration * state.project.fps);
     }
-    // Remember user's live orbit pose so we can restore after export.
-    const camRestore = {
-        pos: state.camera.position.clone(),
-        quat: state.camera.quaternion.clone(),
-        fov: state.camera.fov,
-        aspect: state.camera.aspect,
-        cameraActive: camTrack.cameraActive,
-        controlsEnabled: state.controls ? state.controls.enabled : true,
+    _feld('export-fps', feld => { feld.value = String(state.project.fps); });
+    _feld('export-target-dir', feld => {
+        if (!feld.value) feld.value = state.project.videoOutputPath || '';
+    });
+}
+
+function _feld(kennung, tun) {
+    const feld = document.getElementById(kennung);
+    if (feld) tun(feld);
+}
+
+/** Die Werte des Formulars — `null`, wenn der Bereich leer wäre. */
+function _angaben() {
+    const zahl = (kennung, vorgabe) =>
+        parseInt(document.getElementById(kennung)?.value) || vorgabe;
+    const von = zahl('export-from', 0);
+    let bis = zahl('export-to', 0);
+    if (bis <= von) bis = Math.round(state.project.duration * state.project.fps);
+    if (bis <= von) {
+        alert('Keine Frames zum Exportieren.');
+        return null;
+    }
+    return {
+        von, bis,
+        bilder: zahl('export-fps', state.project.fps),
+        hoehe: zahl('export-resolution', 1080),
+        guete: document.getElementById('export-quality')?.value || '18',
+        motor: document.getElementById('export-engine')?.value || 'server',
+        dateiname: document.getElementById('export-filename')?.value
+            || 'bvh_studio_export.mp4',
     };
-    // Disable OrbitControls so they cannot overwrite the timeline pose.
-    if (state.controls) state.controls.enabled = false;
-    // Force the chosen track to drive the camera, even if the user muted it.
-    camTrack.cameraActive = true;
-    state.camera.aspect = expW / expH;
-    state.camera.updateProjectionMatrix();
+}
 
-    const wasPlaying = state.playing;
-    state.playing = false;
-
+async function startExport() {
+    const angaben = _angaben();
+    if (!angaben) return;
+    exportCancelled = false;
+    const felder = {
+        rahmen: document.getElementById('export-progress'),
+        status: document.getElementById('export-status-text'),
+        balken: document.getElementById('export-progress-bar'),
+        start: document.getElementById('export-start'),
+        abbruch: document.getElementById('export-cancel'),
+    };
+    _laufAnzeigen(felder, true);
     try {
-        if (engine === 'server') {
-            await exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, crf, filename, statusText, progressBar);
-        } else {
-            await exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toFrame, fps, filename, statusText, progressBar);
-        }
+        await Videoausgabe.aufnehmen(angaben, felder);
     } finally {
-        // Cleanup: restore camera + controls exactly as the user left them.
-        offRenderer.dispose();
-        camTrack.cameraActive = camRestore.cameraActive;
-        state.camera.position.copy(camRestore.pos);
-        state.camera.quaternion.copy(camRestore.quat);
-        state.camera.fov = camRestore.fov;
-        state.camera.aspect = camRestore.aspect;
-        state.camera.updateProjectionMatrix();
-        if (state.controls) state.controls.enabled = camRestore.controlsEnabled;
-        if (wasPlaying) state.playing = true;
-
-        progressDiv.style.display = 'none';
-        cancelBtn.style.display = 'none';
-        startBtn.disabled = false;
-        startBtn.style.opacity = '1';
+        _laufAnzeigen(felder, false);
     }
 }
 
-
-
+/**
+ * Fortschritt und Knöpfe umschalten.
+ *
+ * Die Statuszeile bleibt beim Beenden stehen: Bricht der Export ab, ist ihre
+ * Meldung das Einzige, was dem Nutzer sagt, warum.
+ */
+function _laufAnzeigen(felder, laeuft) {
+    if (felder.rahmen) felder.rahmen.style.display = laeuft ? '' : 'none';
+    if (felder.abbruch) felder.abbruch.style.display = laeuft ? '' : 'none';
+    if (!felder.start) return;
+    felder.start.disabled = laeuft;
+    felder.start.classList.toggle('knopf-gesperrt', laeuft);
+}
 
 // Register functions in registry
 fn.exportBVH = exportBVH;

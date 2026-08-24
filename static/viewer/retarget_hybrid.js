@@ -114,12 +114,12 @@ function buildClipFromRetargetData(data, rigifySkel) {
             tracks.push(new THREE.VectorKeyframeTrack(
                 `${bone.name}.position`, times, new Float32Array(data.position_track.values)));
         } else {
-            console.warn('[RETARGET] position_track bone not found:', data.position_track.bone);
+            Protokoll.warnung('RETARGET', 'position_track bone not found:', data.position_track.bone);
         }
     }
 
     Protokoll.debug('RETARGET', `buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames, duration=${data.duration}`);
-    if (missedNames.length > 0) console.warn('[RETARGET] missed bones:', missedNames);
+    if (missedNames.length > 0) Protokoll.warnung('RETARGET', 'missed bones:', missedNames);
 
     return new THREE.AnimationClip('retargeted', data.duration, tracks);
 }

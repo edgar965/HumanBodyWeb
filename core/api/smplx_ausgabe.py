@@ -4,13 +4,13 @@
 Aus core/api/foto.py herausgeloest (Umbau 16.08.2026).
 """
 
+from ..daten.netzantwort import Netzantwort
 from ..dienste.smplxnetz import SmplxNetz, SmplxNetzFehler
 from ..dienste.texturbacken import Texturbacken
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
-import base64
 import json
 import os
 
@@ -34,6 +34,7 @@ def smplx_mesh(request):
     try:
         from smplest_x_wrapper import generate_mesh
     except ImportError:
+        logger.warning('SMPL-X-Wrapper nicht importierbar', exc_info=True)
         return JsonResponse({'ok': False, 'error': 'Wrapper not found'})
     finally:
         if wrappers_dir in sys.path:
@@ -53,12 +54,12 @@ def smplx_mesh(request):
 
     resp = {
         'ok': True,
-        'vertices': base64.b64encode(result['vertices'].tobytes()).decode(),
-        'faces': base64.b64encode(result['faces'].tobytes()).decode(),
-        'joints': base64.b64encode(result['joints'].tobytes()).decode(),
+        'vertices': Netzantwort.smplx_feld(result['vertices'], 'vertices'),
+        'faces': Netzantwort.smplx_feld(result['faces'], 'faces'),
+        'joints': Netzantwort.smplx_feld(result['joints'], 'joints'),
         'parents': result['parents'],
-        'skin_indices': base64.b64encode(result['skin_indices'].tobytes()).decode(),
-        'skin_weights': base64.b64encode(result['skin_weights'].tobytes()).decode(),
+        'skin_indices': Netzantwort.smplx_feld(result['skin_indices'], 'skin_indices'),
+        'skin_weights': Netzantwort.smplx_feld(result['skin_weights'], 'skin_weights'),
         'n_verts': result['n_verts'],
         'n_faces': result['n_faces'],
         'n_joints': result['n_joints'],
@@ -66,11 +67,11 @@ def smplx_mesh(request):
 
     # Include UV data if available (seam-duplicated vertex arrays)
     if 'uv_coords' in result:
-        resp['uv_vertices']     = base64.b64encode(result['uv_vertices'].tobytes()).decode()
-        resp['uv_coords']       = base64.b64encode(result['uv_coords'].tobytes()).decode()
-        resp['uv_faces']        = base64.b64encode(result['uv_faces'].tobytes()).decode()
-        resp['uv_skin_indices'] = base64.b64encode(result['uv_skin_indices'].tobytes()).decode()
-        resp['uv_skin_weights'] = base64.b64encode(result['uv_skin_weights'].tobytes()).decode()
+        resp['uv_vertices']     = Netzantwort.smplx_feld(result['uv_vertices'], 'uv_vertices')
+        resp['uv_coords']       = Netzantwort.smplx_feld(result['uv_coords'], 'uv_coords')
+        resp['uv_faces']        = Netzantwort.smplx_feld(result['uv_faces'], 'uv_faces')
+        resp['uv_skin_indices'] = Netzantwort.smplx_feld(result['uv_skin_indices'], 'uv_skin_indices')
+        resp['uv_skin_weights'] = Netzantwort.smplx_feld(result['uv_skin_weights'], 'uv_skin_weights')
         resp['n_uv_verts']      = result['n_uv_verts']
 
     return JsonResponse(resp)
@@ -102,12 +103,14 @@ def smplx_texture(request, job_id):
     try:
         daten = json.loads(job.result_json)
     except (json.JSONDecodeError, TypeError):
+        logger.exception('smplx_texture: JSONDecodeError/TypeError')
         return JsonResponse({'ok': False, 'error': 'Invalid result data'}, status=500)
 
     try:
         vertices, faces, _netz = SmplxNetz.erzeugen(
             daten.get('betas', [0.0] * 10), daten.get('gender', 'neutral'))
     except SmplxNetzFehler as e:
+        logger.exception('smplx_texture: SmplxNetzFehler')
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
 
     region = request.GET.get('region', 'all')

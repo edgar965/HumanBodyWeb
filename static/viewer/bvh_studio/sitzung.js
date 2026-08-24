@@ -25,7 +25,7 @@ export class Sitzung {
                 timelineZoom: state.timelineZoom,
                 timelineScrollX: state.timelineScrollX,
             }));
-        } catch (e) { /* Speicher voll oder nicht verfuegbar */ }
+        } catch (e) { Protokoll.debug('sitzung', 'Sitzung nicht speicherbar', e); }
     }
 
     /** true, wenn eine Sitzung zurueckgespielt wurde. */
@@ -56,7 +56,7 @@ export class Sitzung {
             Protokoll.debug('BVH Studio', `Session restored: ${state.project.tracks.length} tracks`);
             return true;
         } catch (e) {
-            console.warn('[BVH Studio] Session restore failed, clearing:', e);
+            Protokoll.warnung('BVH Studio', 'Session restore failed, clearing:', e);
             sessionStorage.removeItem(SESSION_KEY);
             Sitzung._halbGeladenesAufraeumen();
             return false;
@@ -96,7 +96,7 @@ export class Sitzung {
             }));
             return true;
         } catch (e) {
-            console.warn('[BVH Studio] UI-Prefs-Fetch fehlgeschlagen, '
+            Protokoll.warnung('BVH Studio', 'UI-Prefs-Fetch fehlgeschlagen, '
                          + 'fahre mit Session-Restore fort:', e);
             return false;
         }
@@ -115,7 +115,7 @@ export class Sitzung {
         state._undoSuppressed = true;
         for (const idx of kaputt) fn.removeTrack(idx);
         state._undoSuppressed = false;
-        console.warn(`[BVH Studio] Removed ${kaputt.length} broken tracks from session`);
+        Protokoll.warnung('BVH Studio', `Removed ${kaputt.length} broken tracks from session`);
     }
 
     static _bedienzustandUebernehmen(sitzung) {

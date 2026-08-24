@@ -25,7 +25,7 @@ export async function saveBlobAs(blob, suggestedName, mimeType) {
             return;
         } catch (e) {
             if (e.name === 'AbortError') return;
-            console.warn('[BVH Studio] Picker failed, fallback:', e);
+            Protokoll.warnung('BVH Studio', 'Picker failed, fallback:', e);
         }
     }
     const url = URL.createObjectURL(blob);

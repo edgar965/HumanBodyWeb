@@ -11,7 +11,11 @@ zerlegt, weil hier drei Dinge doppelt standen:
   * die Sperre "ein Auftrag laeuft schon" — zweimal mit demselben Text
 
 Dazu ausgelagert: die Formularparameter (api/pipelineparameter.py) und die
-Videosuche der Uploadseite (dienste/videoauswahl.py).
+Videosuche der Uploadseite (dienste/videoauswahl.py). Am 17.08.2026 kam der
+Rest heraus, der hier nur einquartiert war:
+
+  * der Lauf der Oberflaechen-Testsuite  → api/testlauf.py
+  * „steht dieser Auftrag still?"        → dienste/haenger.py
 """
 
 import json
@@ -26,10 +30,11 @@ from django.views.decorators.http import require_POST
 
 from ..dienste.auftragsanlage import Auftragsanlage
 from ..dienste.auftragssteuerung import Auftragssteuerung
-from ..dienste.laufende_prozesse import LaufendeProzesse
+from ..dienste.auftragsstart import Auftragsstart
+from ..dienste.haenger import Haenger
 from ..logging_utils import with_job_id
 from ..models import BVHJob
-from ..pipelines.werkzeuge import _is_pid_alive
+from ..safe_paths import PfadAbgelehnt, SafePath
 
 logger = logging.getLogger('core')
 pipeline_logger = logging.getLogger('core.pipeline')
@@ -41,67 +46,14 @@ PIPELINES_2D = ('mediapipe', 'openpose', 'rtmpose', 'vitpose', 'yolo11')
 PIPELINES_3D = ('v4', 'gvhmr', 'wham', 'prompthmr',
                 'hybrid_gvhmr', 'hybrid_prompthmr')
 
-#: Zustaende, in denen ein Auftrag als laufend gilt.
-LAEUFT = ('processing', 'v4_processing')
-
-#: Minuten ohne Fortschritt, nach denen ein Auftrag als haengend gilt.
-HAENGT_NACH = 5
+#: Zustaende, in denen ein Auftrag die Sperre haelt. EINE Quelle: `Haenger`
+#: braucht dieselbe Liste, um die Sperre wieder freizugeben.
+LAEUFT = Haenger.LAEUFT
 
 
 def _belegt(ausser=None):
-    """Antwort, falls schon ein Auftrag laeuft — sonst None."""
-    frage = BVHJob.objects.filter(status__in=LAEUFT)
-    if ausser is not None:
-        frage = frage.exclude(id=ausser)
-    laeuft = frage.first()
-    if not laeuft:
-        return None
-    return JsonResponse({
-        'ok': False,
-        'error': f'Job "{laeuft.name}" läuft bereits ({laeuft.status}). '
-                 'Bitte warten oder abbrechen.',
-    }, status=409)
-
-
-def run_testcases_api(request):
-    """API: fuehrt Tests aus. Query params: category (optional), case (optional).
-
-    GET /api/tests/run/                   → alle Kategorien
-    GET /api/tests/run/?category=X        → eine Kategorie
-    GET /api/tests/run/?category=X&case=Y → einzelner Test
-    Response: { results: [{category, name, ok, detail, error, durationMs}] }
-    """
-    import time
-    from tests import ALL_CATEGORIES
-    kategorie = request.GET.get('category', '').strip()
-    fall = request.GET.get('case', '').strip()
-    ergebnisse = []
-    for Kategorie in ALL_CATEGORIES:
-        if kategorie and Kategorie.__name__ != kategorie:
-            continue
-        for c in Kategorie.cases():
-            if fall and c.fn.__name__ != fall:
-                continue
-            start = time.time()
-            r = c.run()
-            r['category'] = Kategorie.name
-            r['categoryId'] = Kategorie.__name__
-            r['caseId'] = c.fn.__name__
-            r['durationMs'] = int((time.time() - start) * 1000)
-            ergebnisse.append(r)
-    return JsonResponse({
-        'results': ergebnisse, 'total': len(ergebnisse),
-        'passed': sum(1 for r in ergebnisse if r['ok']),
-        'failed': sum(1 for r in ergebnisse if not r['ok']),
-    })
-
-
-
-
-
-
-
-
+    """Bisherige Aufrufform — siehe dienste/auftragsstart.py."""
+    return Auftragsstart.belegt(ausser)
 
 
 def job_status_api(request, job_id):
@@ -112,7 +64,7 @@ def job_status_api(request, job_id):
     er als gescheitert.
     """
     job = get_object_or_404(BVHJob, id=job_id)
-    _haenger_erkennen(job)
+    Haenger.erkennen(job)
     daten = {
         'status': job.status,
         'progress': job.progress,
@@ -123,41 +75,6 @@ def job_status_api(request, job_id):
     if job.bvh_file_face:
         daten['bvh_file_face'] = job.bvh_file_face
     return JsonResponse(daten)
-
-
-#: Zustaende, in denen noch gerechnet werden sollte.
-_ARBEITSZUSTAENDE = ('detecting_2d', 'openpose', 'openpose_csv', 'mediapipe',
-                     'lifting_3d', 'mocapnet', 'v4_processing', 'processing')
-
-
-def _haenger_erkennen(job):
-    from django.utils import timezone
-    if job.status not in _ARBEITSZUSTAENDE:
-        return
-    alter = (timezone.now() - job.updated_at).total_seconds()
-    if alter <= HAENGT_NACH * 60:
-        return
-    if _prozess_lebt(str(job.id)):
-        return
-    job.status = 'failed'
-    job.error_message = (f'Pipeline stalled (no progress for '
-                         f'{int(alter // 60)} min, no running process)')
-    job.save(update_fields=['status', 'error_message'])
-
-
-def _prozess_lebt(jid):
-    """Laeuft zu diesem Auftrag noch ein Prozess — als Objekt oder per PID-Datei?"""
-    prozess = LaufendeProzesse.holen(jid)
-    if prozess and prozess.poll() is None:
-        return True
-    pid_datei = Path(settings.MEDIA_ROOT) / 'output' / jid / 'pipeline.pid'
-    if not pid_datei.exists():
-        return False
-    try:
-        return _is_pid_alive(int(pid_datei.read_text().strip()))
-    except (ValueError, OSError):
-        logger.debug('uebergangen', exc_info=True)
-        return False
 
 
 @require_POST
@@ -194,13 +111,9 @@ def api_start_processing(request, job_id):
     roh = request.POST.get('pipeline_params', '')
     parameter = json.loads(roh) if roh else {}
     neue = request.POST.get('pipeline', '').strip()
-    erlaubt = {c[0] for c in BVHJob.PIPELINE_CHOICES}
 
-    if neue and neue in erlaubt and neue != job.pipeline:
-        zwilling = BVHJob(name=job.name, fps=job.fps, pipeline=neue,
-                          pipeline_params=parameter)
-        zwilling.video_file.name = job.video_file.name   # dieselbe Datei
-        zwilling.save()
+    if Auftragsstart.braucht_zwilling(job, neue):
+        zwilling = Auftragsstart.zwilling(job, neue, parameter)
         Auftragssteuerung.starten(zwilling)
         return JsonResponse({
             'ok': True, 'status': zwilling.status,
@@ -239,8 +152,24 @@ def api_stop_processing(request, job_id):
     return JsonResponse({'ok': True})
 
 
+@require_POST
 def delete_job(request, job_id):
-    """Auftrag samt Dateien loeschen (Formularfassung)."""
+    """Auftrag samt Dateien loeschen (Formularfassung).
+
+    NUR POST (17.08.2026). Diese Ansicht hat **auf ein GET hin geloescht** —
+    Auftrag und Dateien. In `processed.html` stand dafuer ein `<a href>` mit
+    einem `onclick="return confirm(…)"`, und das schuetzt genau einen Fall: den
+    menschlichen Klick. Ein Vorschau-Abruf des Browsers, ein Prefetch, ein
+    Lesezeichen oder ein `<img src>` auf einer fremden Seite haetten gereicht.
+
+    Die AJAX-Fassung `delete_job_api` daneben prueft die Methode seit langem
+    selbst; diese hier war die letzte ungeschuetzte Loeschroute. Aufgefallen ist
+    sie einem neuen Component-Test, der 405 erwartete und 404 bekam — also
+    „Ansicht lief los und suchte den Auftrag".
+
+    Die Aufrufstelle ist deshalb auf ein POST-Formular umgestellt; die Rueckfrage
+    haengt jetzt am `submit`.
+    """
     job = get_object_or_404(BVHJob, id=job_id)
     name = job.name
     logger.info('delete_job id=%s name=%s pipeline=%s', job_id, name, job.pipeline)
@@ -286,7 +215,7 @@ def create_job_from_file(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     try:
-        _haenger_freigeben()
+        Haenger.freigeben()
         belegt = _belegt()
         if belegt:
             return belegt
@@ -297,9 +226,18 @@ def create_job_from_file(request):
             return JsonResponse({'error': f'Invalid pipeline: {pipeline}'},
                                 status=400)
         angabe = daten.get('video_path', '')
-        pfad = Path(angabe)
-        if not pfad.is_absolute():
-            pfad = Path(settings.MEDIA_ROOT) / angabe
+        roh = Path(angabe)
+        if not roh.is_absolute():
+            roh = Path(settings.MEDIA_ROOT) / angabe
+        # Pfadpruefung wie bei den anderen schreibenden Endpunkten: Der Wert
+        # landet in `BVHJob.video_file` und wird spaeter geoeffnet (Vorschau,
+        # Bildrate, Pipeline). Ohne Pruefung war jeder Pfad des Rechners
+        # erreichbar — Sparring mit Nemotron, 18.08.2026.
+        try:
+            pfad = SafePath.fuer_videos().pruefe(str(roh))
+        except PfadAbgelehnt as fehler:
+            return JsonResponse({'error': f'Video-Pfad abgelehnt: {fehler}'},
+                                status=403)
         if not pfad.is_file():
             return JsonResponse({'error': f'Video file not found: {angabe}'},
                                 status=404)
@@ -312,12 +250,7 @@ def create_job_from_file(request):
         return JsonResponse({'ok': True, 'job_id': str(job.id),
                              'status': job.status})
     except Exception as e:
+        logger.exception('create_job_from_file: unerwarteter Fehler')
         return JsonResponse({'error': str(e)}, status=500)
 
 
-def _haenger_freigeben():
-    """Auftraege, die seit zehn Minuten stillstehen, auf gescheitert setzen."""
-    from django.utils import timezone
-    grenze = timezone.now() - timezone.timedelta(minutes=10)
-    BVHJob.objects.filter(status__in=LAEUFT, updated_at__lt=grenze).update(
-        status='failed', error_message='Auto-cancelled: stuck > 10 min')

@@ -6,13 +6,14 @@ import { state, API } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
 
 export async function loadSkinWeights() {
     try {
         const resp = await fetch(`${API}/skin-weights/`);
         if (resp.ok) state.skinWeightData = await resp.json();
     } catch (e) {
-        console.warn('Skin weights not available:', e);
+        Protokoll.warnung('skinning', 'Skin weights not available:', e);
     }
 }
 
@@ -24,7 +25,7 @@ export async function loadRigifySkeleton() {
             Protokoll.debug('Viewer', `DEF skeleton loaded: ${state.rigifySkeletonData.bone_count} bones`);
         }
     } catch (e) {
-        console.warn('DEF skeleton not available:', e);
+        Protokoll.warnung('skinning', 'DEF skeleton not available:', e);
     }
 }
 
@@ -36,25 +37,8 @@ export function convertToRigifySkinnedMesh(rigifySkel, swData) {
 
     state.bodyGeometry = state.bodyGeometry.clone();
 
-    const vCount = state.bodyGeometry.attributes.position.count;
-    const skinIndices = new Float32Array(vCount * 4);
-    const skinWeights = new Float32Array(vCount * 4);
 
-    for (let v = 0; v < vCount; v++) {
-        const infs = swData.weights[v] || [];
-        const sorted = infs.slice().sort((a, b) => b[1] - a[1]).slice(0, 4);
-        let sum = sorted.reduce((s, e) => s + e[1], 0);
-        if (sum < 1e-6) sum = 1;
-        for (let i = 0; i < 4; i++) {
-            skinIndices[v * 4 + i] = i < sorted.length ? sorted[i][0] : 0;
-            skinWeights[v * 4 + i] = i < sorted.length ? sorted[i][1] / sum : 0;
-        }
-    }
-
-    state.bodyGeometry.setAttribute('skinIndex',
-        new THREE.Float32BufferAttribute(skinIndices, 4));
-    state.bodyGeometry.setAttribute('skinWeight',
-        new THREE.Float32BufferAttribute(skinWeights, 4));
+    Hautgewichte.anGeometrie(state.bodyGeometry, swData, THREE.Float32BufferAttribute);
 
     state.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, swData);
 

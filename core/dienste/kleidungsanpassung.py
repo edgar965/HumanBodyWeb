@@ -16,6 +16,8 @@ Die Knochengewichte kommen ueber den naechsten Koerpervertex. Das stand vorher
 in drei Endpunkten je einmal von Hand da (character_cloth, garment_fit,
 mh_proxy_fit).
 """
+from ..daten.netzantwort import Netzantwort
+from ..daten.stoffantwort import Stoffantwort
 import base64
 import logging
 
@@ -23,7 +25,6 @@ import numpy as np
 
 from ..daten.anpassungsergebnis import Anpassungsergebnis
 from .koerperhuelle import Koerperhuelle
-from .skingewichte import Skingewichte
 
 logger = logging.getLogger('core')
 
@@ -76,10 +77,10 @@ class Kleidungsanpassung:
         vertices = self.ergebnis.vertices
         antwort = {
             'vertex_count': self.ergebnis.vertexzahl,
-            'vertices': self._b64(vertices),
+            'vertices': Netzantwort.feld(vertices, 'vertices'),
             'face_count': self.ergebnis.flaechenzahl,
-            'faces': self._b64(self.ergebnis.flaechen_flach()),
-            'normals': self._b64(self.ergebnis.normals),
+            'faces': Netzantwort.feld(self.ergebnis.flaechen_flach(), 'faces'),
+            'normals': Netzantwort.feld(self.ergebnis.normals, 'normals'),
             'color': list(regler.farbe),
             'garment_id': garment_id,
             'garment_name': self.vorlage.name,
@@ -91,20 +92,13 @@ class Kleidungsanpassung:
         """Gewichte des naechstgelegenen Koerpervertex, kodiert.
 
         Leeres Ergebnis, wenn keine Basisgewichte vorliegen — die Kleidung wird
-        dann nicht mitbewegt, ist aber sichtbar."""
-        arrays = Skingewichte.arrays(self.koerper.geschlecht)
-        if arrays is None:
-            return {}
-        from humanbody_core.nachbarsuche import Nachbarsuche
-        indizes, gewichte = arrays
-        _abstand, naechster = Nachbarsuche.zuordnen(
-            self.koerper.vertices, kleidungsvertices)
-        return {'skin_indices': self._b64(indizes[naechster]),
-                'skin_weights': self._b64(gewichte[naechster])}
+        dann nicht mitbewegt, ist aber sichtbar.
 
-    @staticmethod
-    def _b64(feld):
-        return base64.b64encode(feld.tobytes()).decode('ascii')
+        Rechnung und Kodierung stehen in `Stoffantwort.gewichte`; dieselbe
+        Übertragung gab es am 17.08.2026 an fünf Stellen.
+        """
+        return Stoffantwort.gewichte(kleidungsvertices, self.koerper.vertices,
+                                     self.koerper.geschlecht)
 
     # ------------------------------------------------------------------ Huelle
 

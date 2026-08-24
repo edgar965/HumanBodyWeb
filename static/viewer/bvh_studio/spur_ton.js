@@ -5,6 +5,7 @@
  */
 
 import { state } from './state.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 export function applyAudioTrack(track, t) {
@@ -37,7 +38,7 @@ export function startAudioPlayback() {
             if (!clip.data.audioBuffer) {
                 if (clip._needsReload && !clip._reloadWarned) {
                     clip._reloadWarned = true;
-                    console.warn(`[Audio] "${clip.data?.fileName}" nicht geladen — bitte Audio-Datei erneut hinzufügen`);
+                    Protokoll.warnung('Audio', `"${clip.data?.fileName}" nicht geladen — bitte Audio-Datei erneut hinzufügen`);
                 }
                 continue;
             }
@@ -59,6 +60,8 @@ export function startAudioPlayback() {
 
 export function stopAudioTrack(track) {
     if (track.sourceNode) {
+        // stumm gewollt: Ein Tonknoten, der schon zu Ende gelaufen ist, wirft beim
+        // Stoppen — genau der Normalfall beim Anhalten.
         try { track.sourceNode.stop(); } catch(e) {}
         track.sourceNode = null;
         track._audioClip = null;

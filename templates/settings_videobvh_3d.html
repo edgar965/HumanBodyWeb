@@ -33,7 +33,7 @@
                 <small>Welches Modell-Preset auf der Process-Ergebnis-Seite standardm&auml;&szlig;ig geladen wird.</small>
             </div>
             <div class="settings-input">
-                <select name="default_model_result" id="defaultModelResult" class="settings-select">
+                <select name="default_model_result" id="default-model-result" class="settings-select">
                     <option value="{{ settings.default_model_result }}">{{ settings.default_model_result }}</option>
                 </select>
             </div>
@@ -333,11 +333,7 @@
         </div>
     </div>
 
-    <div class="settings-actions">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-save"></i> Speichern
-        </button>
-    </div>
+    {% include "_einstellungen_speichern.html" %}
 </form>
 
 {% comment %}Umbau 16.08.2026: Hier stand die sechste Kopie des
@@ -345,6 +341,6 @@ Modell-Listen-Blocks (siehe modellfeld.js), ohne ok-Pruefung.{% endcomment %}
 <script type="module">
 import { Modellfeld } from "{% static 'js/einstellungen/modellfeld.js' %}?t={% now 'U' %}";
 
-Modellfeld.fuellen('defaultModelResult', "{{ settings.default_model_result|escapejs }}");
+Modellfeld.fuellen('default-model-result', "{{ settings.default_model_result|escapejs }}");
 </script>
 {% endblock %}

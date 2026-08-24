@@ -63,6 +63,9 @@ class LaufendeProzesse:
             prozess.terminate()
             try:
                 prozess.wait(timeout=warten_s)
+            # stumm gewollt: Der Ablauf der Wartezeit IST der erwartete Fall — darauf
+            # folgt das harte Beenden, und scheitert auch das, steht es im Zweig
+            # darunter im Log.
             except Exception:                                     # noqa: BLE001
                 prozess.kill()
         except Exception as e:                                    # noqa: BLE001

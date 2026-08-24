@@ -7,6 +7,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { _selectedInst } from './utils.js';
 import { convertInstToSkinned, _skinifyHairGroup } from './skeleton.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export async function loadHairUI() {
     try {
@@ -30,7 +31,7 @@ export async function loadHairUI() {
             const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
             inst.hairMesh.traverse(c => { if (c.isMesh && c.material) (Array.isArray(c.material)?c.material:[c.material]).forEach(m => m.color.copy(color)); });
         }); }
-    } catch (e) { console.warn('Hair UI not available:', e); }
+    } catch (e) { Protokoll.warnung('hair', 'Hair UI not available:', e); }
 }
 
 export function _loadHairForCharacter(inst, url, colorName) {
@@ -47,7 +48,7 @@ export function _loadHairForCharacter(inst, url, colorName) {
         }
         inst.group.add(inst.hairMesh);
         fn.updateEquippedList(inst); fn.updateVertexCount();
-    }, undefined, (err) => { console.warn('Failed to load hair:', err); });
+    }, undefined, (err) => { Protokoll.warnung('hair', 'Failed to load hair:', err); });
 }
 
 export function syncHairSelect(inst) {
@@ -86,7 +87,10 @@ function _populatePropHairOptions() {
 export function _syncPropHairControls() {
     const inst = _selectedInst();
     const sec = document.getElementById('prop-hair-section');
-    if (!inst || !state._selectedSubMesh || state._selectedSubMesh.type !== 'hair') { if (sec) sec.style.display = 'none'; return; }
+    if (!inst || !state._selectedSubMesh || state._selectedSubMesh.type !== 'hair') {
+        if (sec) sec.style.display = 'none';
+        return;
+    }
     if (sec) sec.style.display = '';
     _populatePropHairOptions();
     const styleEl = document.getElementById('prop-hair-style');

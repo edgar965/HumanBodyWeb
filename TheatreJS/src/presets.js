@@ -4,6 +4,7 @@
  */
 
 import { getTheatreObject } from './theatre-bridge.js';
+import { Protokoll } from '../../static/viewer/gemeinsam/protokoll.js';
 
 export const PRESETS = {
     // ────────────────────────────────────────────────────────────
@@ -160,7 +161,7 @@ export const PRESETS = {
  * @param {OrbitControls} controls OrbitControls instance
  */
 export function applyPreset(preset, camera, lights, controls) {
-    console.debug(`[Preset] Applying: ${preset.name}`);
+    Protokoll.debug('Preset', `Applying: ${preset.name}`);
 
     // Apply camera position directly (Theatre props are read-only, can't be set programmatically)
     camera.position.set(
@@ -183,7 +184,7 @@ export function applyPreset(preset, camera, lights, controls) {
     applyLightDirect(lights.spotRight, preset.lights.spotRight);
     applyLightDirect(lights.backLight, preset.lights.backLight);
 
-    console.debug(`✓ Preset "${preset.name}" applied (direct Three.js)`);
+    Protokoll.debug('presets', `✓ Preset "${preset.name}" applied (direct Three.js)`);
 }
 
 function applyLightDirect(light, settings) {

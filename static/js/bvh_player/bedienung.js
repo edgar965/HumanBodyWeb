@@ -3,6 +3,7 @@
  *
  * Aus bvh_player.js herausgeloest (Umbau 16.08.2026).
  */
+import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
 
 /** Sekunden je Sprungknopf. */
 const SPRUENGE = [
@@ -34,7 +35,7 @@ export class Spielerbedienung {
     _an(id, tun) {
         const el = document.getElementById(id);
         if (el) el.addEventListener('click', tun);
-        else console.warn('[bvh_player] Missing button:', id);
+        else Protokoll.warnung('bvh_player', 'Missing button:', id);
     }
 
     _knoepfe() {
@@ -107,7 +108,7 @@ export class Spielerbedienung {
         this.video.addEventListener('seeked', () => { this.zustand.zeigen = true; });
         this.video.addEventListener('loadedmetadata', () => this.dauerUebernehmen());
         this.video.addEventListener('error', () => {
-            console.warn('[bvh_player] Video error — using BVH clock fallback');
+            Protokoll.warnung('bvh_player', 'Video error — using BVH clock fallback');
         });
         // Schon geladen (aus dem Zwischenspeicher)? Dann sofort uebernehmen.
         if (this.video.duration && !isNaN(this.video.duration)) {
@@ -126,7 +127,7 @@ export class Spielerbedienung {
             // Der Zustand kommt ueber die play/pause-Ereignisse zurueck.
             if (this.video.paused) {
                 this.video.play().catch(
-                    e => console.warn('[bvh_player] play() rejected:', e.message));
+                    e => Protokoll.warnung('bvh_player', 'play() rejected:', e.message));
             } else {
                 this.video.pause();
             }

@@ -96,6 +96,17 @@ class SafePathTest(TestCase):
             with self.subTest(roh=roh), self.assertRaises(PfadAbgelehnt):
                 self.sp.pruefe(str(self.medien / roh))
 
+    def test_geraetename_als_verzeichnis(self):
+        """Auch MITTEN im Pfad — `…\\COM1\\datei.json` ist kein gültiges Ziel.
+
+        Bis zum 18.08.2026 prüfte nur der letzte Pfadteil auf Gerätenamen; ein
+        Gerät als Verzeichnis kam durch und scheiterte erst beim Zugriff, mit
+        einem OSError statt einer klaren Ablehnung (Sparring mit Nemotron).
+        """
+        for roh in ('COM1', 'NUL', 'LPT1'):
+            with self.subTest(roh=roh), self.assertRaises(PfadAbgelehnt):
+                self.sp.pruefe(str(self.medien / roh / 'datei.json'))
+
     def test_datenstrom(self):
         """NTFS-Datenstrom: die Datei landet nicht als Datei."""
         with self.assertRaises(PfadAbgelehnt):

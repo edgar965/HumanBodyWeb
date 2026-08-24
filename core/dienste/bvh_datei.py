@@ -55,6 +55,7 @@ class BvhDatei:
         sigma = float(sigma)
         if sigma <= 0:
             return self
+        self._warnen_bei_grossem_sigma(sigma)
         self._vorzeichen_angleichen()
         self.bvh.quats = gaussian_filter1d(self.bvh.quats, sigma=sigma, axis=0)
         laengen = np.linalg.norm(self.bvh.quats, axis=2, keepdims=True)
@@ -71,6 +72,34 @@ class BvhDatei:
                         self.bvh.positions[:, ji, c], sigma=sigma)
         self.angewandt.append('smooth sigma=%s' % sigma)
         return self
+
+    #: Ab diesem Anteil der Bildzahl frisst die Glaettung die Bewegung.
+    SIGMA_WARNGRENZE = 6
+
+    def _warnen_bei_grossem_sigma(self, sigma):
+        """Ein zu grosses Sigma glaettet die Bewegung weg — ohne Fehlermeldung.
+
+        GEMESSEN am 18.08.2026 (Anlass: Sparring mit Nemotron). Eine saubere
+        90-Grad-Drehung um Y ueber 30 Bilder, danach geglaettet:
+
+            sigma  1  ->  87,3 Grad   (97 %)
+            sigma  2  ->  82,8 Grad   (92 %)
+            sigma  5  ->  68,2 Grad   (76 %)   = Bildzahl/6
+            sigma 10  ->  43,7 Grad   (49 %)
+            sigma 30  ->   0,5 Grad   ( 1 %)   = Bildzahl
+
+        NICHT bestaetigt hat sich der Verdacht, die komponentenweise Mittelung
+        der Quaternionen sei schuld: Dieselbe Rechnung ueber die Tangentialebene
+        (Log-Map, filtern, Exp-Map) liefert bis auf 0,2 Grad dasselbe, bei
+        wechselnder Drehachse bis auf 2,0 Grad. Der Verlust ist der Filter
+        selbst, nicht die Quaternionen — deshalb bleibt die Rechnung, wie sie
+        ist, und es wird nur gewarnt.
+        """
+        if self.frames and sigma > self.frames / BvhDatei.SIGMA_WARNGRENZE:
+            logger.warning(
+                'Glaettung mit sigma=%.1f auf nur %d Bildern — die Bewegung '
+                'wird dabei deutlich flacher (gemessen: bei sigma = Bildzahl/6 '
+                'bleiben rund drei Viertel des Drehwinkels)', sigma, self.frames)
 
     def _vorzeichen_angleichen(self):
         """Aufeinanderfolgende Quaternionen auf dieselbe Halbkugel bringen.

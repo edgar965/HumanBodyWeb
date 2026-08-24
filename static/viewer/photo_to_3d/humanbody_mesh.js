@@ -6,6 +6,7 @@ import { state, API, MODEL_OFFSET_X } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
 import { Koerpernetz } from './koerpernetz.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 import {
     base64ToFloat32, base64ToUint32, blenderToThreeCoords,
     alignBodyToSMPLX, BODY_MATERIALS,
@@ -67,11 +68,11 @@ export async function loadRigifySkeleton(bodyType) {
     try {
         const resp = await fetch(`${API}/rigify-skeleton/?body_type=${encodeURIComponent(bodyType)}`);
         if (resp.ok) state.rigifySkeletonData = await resp.json();
-    } catch (e) { console.warn('DEF skeleton not available:', e); }
+    } catch (e) { Protokoll.warnung('humanbody_mesh', 'DEF skeleton not available:', e); }
     try {
         const resp = await fetch(`${API}/skin-weights/?body_type=${encodeURIComponent(bodyType)}`);
         if (resp.ok) state.skinWeightData = await resp.json();
-    } catch (e) { console.warn('Skin weights not available:', e); }
+    } catch (e) { Protokoll.warnung('humanbody_mesh', 'Skin weights not available:', e); }
     if (state.rigifySkeletonData && state.skinWeightData) buildRigifySkeleton();
 }
 

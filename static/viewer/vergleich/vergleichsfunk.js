@@ -8,6 +8,7 @@
  * mehrere Morphs in einem Paket.
  */
 import { Vergleichsnetz } from './vergleichsnetz.js';
+import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /** Sammelzeit fuer Reglerbewegungen in Millisekunden. */
 const BUENDELZEIT = 33;
@@ -61,7 +62,7 @@ export class Vergleichsfunk {
             } else if (m.type === 'reload_mesh') {
                 Vergleichsnetz.laden(this.ansicht, m.body_type);
             }
-        } catch (e) { /* keine JSON-Nachricht */ }
+        } catch (e) { Protokoll.debug('vergleich', 'Nachricht ohne JSON übergangen', e); }
     }
 
     senden(nachricht) {

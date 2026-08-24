@@ -126,7 +126,11 @@ export class Projektdatei {
 
     static async zuletztBenutztes() {
         let pfad = '';
-        try { pfad = localStorage.getItem(LETZTES) || ''; } catch (e) { /* gesperrt */ }
+        try {
+            pfad = localStorage.getItem(LETZTES) || '';
+        } catch (e) {
+            Protokoll.debug('projekt', 'letztes Projekt nicht lesbar (Speicher gesperrt)', e);
+        }
         if (!pfad) { alert('Kein letztes Projekt gespeichert.'); return; }
         try {
             const name = pfad.split(/[/\\]/).pop().replace('.studio.json', '');
@@ -162,7 +166,11 @@ export class Projektdatei {
     }
 
     static _merken(pfad) {
-        try { localStorage.setItem(LETZTES, pfad); } catch (e) { /* gesperrt */ }
+        try {
+            localStorage.setItem(LETZTES, pfad);
+        } catch (e) {
+            Protokoll.debug('projekt', 'letztes Projekt nicht merkbar (Speicher gesperrt)', e);
+        }
     }
 }
 

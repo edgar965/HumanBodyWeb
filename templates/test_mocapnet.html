@@ -50,9 +50,11 @@
     <a href="{% url 'webcam' %}" class="btn btn-secondary">
         <i class="fas fa-camera"></i> Live Webcam
     </a>
-    <a href="{% url 'scan_bvh' %}" class="btn btn-secondary">
-        <i class="fas fa-search"></i> Scan for BVH Files
-    </a>
+    <form method="post" action="{% url 'scan_bvh' %}" class="d-inline">{% csrf_token %}
+        <button type="submit" class="btn btn-secondary">
+            <i class="fas fa-search"></i> Scan for BVH Files
+        </button>
+    </form>
 </div>
 
 {% if recent_jobs %}

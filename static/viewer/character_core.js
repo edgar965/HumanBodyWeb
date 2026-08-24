@@ -17,6 +17,7 @@ import * as THREE from 'three';
 // Aus gemeinsam/kodierung.js — die Kopien hier sind am 15.08.2026 entfallen (sechsfach vorhanden).
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './gemeinsam/kodierung.js';
 import { Hautfarbe } from './gemeinsam/hautfarbe.js';
+import { Hautgewichte } from './gemeinsam/hautgewichte.js';
 import { Buehne } from './gemeinsam/buehne.js';
 import { Protokoll } from './gemeinsam/protokoll.js';
 export { base64ToFloat32, base64ToUint32, blenderToThreeCoords };
@@ -36,19 +37,9 @@ export const sharedState = {
 // =========================================================================
 // Constants
 // =========================================================================
-export const BODY_MATERIALS = [
-    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 0 Skin
-    { color: 0xd4a574, roughness: 0.55, metalness: 0.0 },  // 1 Censor
-    { color: 0x111111, roughness: 0.8,  metalness: 0.0 },  // 2 Eyelash
-    { color: 0x0a0a0a, roughness: 0.1,  metalness: 0.0 },  // 3 Pupil
-    { color: 0xf4f0e8, roughness: 0.2,  metalness: 0.0 },  // 4 Sclera
-    { color: 0xf4f0e8, roughness: 0.05, metalness: 0.0, opacity: 0.3, transparent: true },  // 5 Cornea
-    { color: 0x4a7a9b, roughness: 0.15, metalness: 0.0 },  // 6 Iris
-    { color: 0xb55a6a, roughness: 0.7,  metalness: 0.0 },  // 7 Tongue
-    { color: 0xf0ece0, roughness: 0.3,  metalness: 0.0 },  // 8 Teeth
-    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 9 Nails Hand
-    { color: 0xe0a88a, roughness: 0.4,  metalness: 0.0 },  // 10 Nails Feet
-];
+// Die Tabelle stand hier als sechste Kopie — jetzt an EINER Stelle
+// (`gemeinsam/koerpermaterialien.js`, Befund `doppelcode` 17.08.2026).
+export { BODY_MATERIALS } from './gemeinsam/koerpermaterialien.js';
 
 // =========================================================================
 // Base64 / Coordinate Utilities
@@ -69,7 +60,7 @@ export async function loadRigifySkeleton() {
             return true;
         }
     } catch (e) {
-        console.warn('[character_core] DEF skeleton not available:', e);
+        Protokoll.warnung('character_core', 'DEF skeleton not available:', e);
     }
     return false;
 }
@@ -85,7 +76,7 @@ export async function loadSkinWeights(bodyType) {
             return true;
         }
     } catch (e) {
-        console.warn('[character_core] Skin weights not available:', e);
+        Protokoll.warnung('character_core', 'Skin weights not available:', e);
     }
     return false;
 }
@@ -100,7 +91,7 @@ export async function loadSkinColors() {
                 return true;
             }
         }
-    } catch (e) { /* optional */ }
+    } catch (e) { Protokoll.debug('figur', 'Hautfarben nicht abrufbar', e); }
     return false;
 }
 
@@ -112,7 +103,7 @@ export async function loadHairColors() {
             sharedState.hairColorData = data.colors || {};
             return true;
         }
-    } catch (e) { /* optional */ }
+    } catch (e) { Protokoll.debug('figur', 'Haarfarben nicht abrufbar', e); }
     return false;
 }
 
@@ -125,20 +116,9 @@ export async function loadHairColors() {
  * Returns {skinIndices, skinWeights} Float32Arrays (vCount * 4 each).
  */
 export function computeSkinAttributes(geometry, skinWD) {
-    const vCount = geometry.attributes.position.count;
-    const skinIndices = new Float32Array(vCount * 4);
-    const skinWeights = new Float32Array(vCount * 4);
-    for (let v = 0; v < vCount; v++) {
-        const infs = skinWD.weights[v] || [];
-        const sorted = infs.slice().sort((a, b) => b[1] - a[1]).slice(0, 4);
-        let sum = sorted.reduce((s, e) => s + e[1], 0);
-        if (sum < 1e-6) sum = 1;
-        for (let i = 0; i < 4; i++) {
-            skinIndices[v * 4 + i] = i < sorted.length ? sorted[i][0] : 0;
-            skinWeights[v * 4 + i] = i < sorted.length ? sorted[i][1] / sum : 0;
-        }
-    }
-    return { skinIndices, skinWeights };
+    const { indices, gewichte } = Hautgewichte.vierervektoren(
+        skinWD, geometry.attributes.position.count);
+    return { skinIndices: indices, skinWeights: gewichte };
 }
 
 // =========================================================================
@@ -189,15 +169,7 @@ export function skinifyHairGroup(gltfScene, headBoneIdx, skeleton, bindMatrix) {
     const group = new THREE.Group();
     for (const child of meshChildren) {
         const geo = child.geometry.clone();
-        const vCount = geo.attributes.position.count;
-        const si = new Float32Array(vCount * 4);
-        const sw = new Float32Array(vCount * 4);
-        for (let v = 0; v < vCount; v++) {
-            si[v * 4] = headBoneIdx;
-            sw[v * 4] = 1.0;
-        }
-        geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(si, 4));
-        geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+        Hautgewichte.anEinenKnochen(geo, headBoneIdx, THREE.Float32BufferAttribute);
         const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
         child.updateWorldMatrix(true, false);
         skinnedChild.applyMatrix4(child.matrixWorld);

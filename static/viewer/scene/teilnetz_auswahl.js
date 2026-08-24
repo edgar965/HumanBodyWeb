@@ -72,8 +72,14 @@ export function _setBodyEmissive(inst, color) {
 }
 
 export function clearSubMeshSelection() {
-    if (state._selectedSubMesh) { _setSubMeshEmissive(state._selectedSubMesh, state._ZERO_EMISSIVE); state._selectedSubMesh = null; }
-    if (state._hoveredSubMesh) { _setSubMeshEmissive(state._hoveredSubMesh, state._ZERO_EMISSIVE); state._hoveredSubMesh = null; }
+    if (state._selectedSubMesh) {
+        _setSubMeshEmissive(state._selectedSubMesh, state._ZERO_EMISSIVE);
+        state._selectedSubMesh = null;
+    }
+    if (state._hoveredSubMesh) {
+        _setSubMeshEmissive(state._hoveredSubMesh, state._ZERO_EMISSIVE);
+        state._hoveredSubMesh = null;
+    }
     fn._updatePropContext();
     const tooltip = document.getElementById('mesh-tooltip');
     if (tooltip) tooltip.style.display = 'none';
@@ -138,7 +144,11 @@ export function _removeSubMesh(target) {
             if (inst.hairMesh) {
                 inst.group.remove(inst.hairMesh);
                 inst.hairMesh.traverse(child => {
-                    if (child.isMesh) { child.geometry.dispose(); const mats = Array.isArray(child.material) ? child.material : [child.material]; mats.forEach(m => m.dispose()); }
+                    if (child.isMesh) {
+                        child.geometry.dispose();
+                        const mats = Array.isArray(child.material) ? child.material : [child.material];
+                        mats.forEach(m => m.dispose());
+                    }
                 });
                 inst.hairMesh = null;
                 inst.hairStyle = null;
