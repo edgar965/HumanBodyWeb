@@ -24,7 +24,8 @@ from django.conf import settings
 
 from ..dienste.haenger import Haenger
 from ..dienste.laufende_prozesse import LaufendeProzesse
-from ..pipelines.werkzeuge import _get_video_frame_count, _is_pid_alive
+from ..pipelines.prozesspruefung import Prozesspruefung
+from ..pipelines.videolaenge import Videolaenge
 
 logger = logging.getLogger('core')
 pipeline_logger = logging.getLogger('core.pipeline')
@@ -81,7 +82,7 @@ class Auftragssteuerung:
         job.error_message = ''
         job.bvh_file = ''
         job.bvh_file_face = ''
-        bilder = _get_video_frame_count(
+        bilder = Videolaenge.bilder(
             Path(settings.MEDIA_ROOT) / str(job.video_file))
         job.progress_detail = f'0 / {bilder} frames' if bilder else 'Starting...'
         job.save()
@@ -101,11 +102,11 @@ class Auftragssteuerung:
     @staticmethod
     def _faden_starten(job_id):
         """Hintergrundfaden mit Absturzsicherung."""
-        from ..pipelines.pipelinelauf import _run_processing
+        from ..pipelines.auftragslauf import Auftragslauf
 
         def _sicher(jid):
             try:
-                _run_processing(jid)
+                Auftragslauf(jid).ausfuehren()
             except Exception:
                 logger.exception('Auftrag %s: Hintergrundfaden abgestürzt', jid)
                 Auftragssteuerung._absturz_vermerken(jid)
@@ -230,7 +231,7 @@ class Auftragssteuerung:
             return False
         try:
             pid = int(pid_datei.read_text().strip())
-            if _is_pid_alive(pid):
+            if Prozesspruefung.lebt(pid):
                 os.kill(pid, 9)
                 return True
         except (ValueError, OSError, ProcessLookupError):

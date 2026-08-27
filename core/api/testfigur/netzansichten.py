@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
-"""Netz, Morphs, Hautgewichte und Skelett der Testfassung.
+"""Testnetz — die Netzantwort der Testfassung fuer EINE Anfrage.
 
 Aus `core/test_character_api.py` herausgelöst (17.08.2026). `test_character_mesh`
 hatte 65 Zeilen mit zwei vollständigen Antwortzweigen (mit und ohne
-Unterteilung); die stehen jetzt als zwei Methoden von `Testnetz` nebeneinander,
-und die Ansicht darüber ist drei Zeilen.
+Unterteilung); die stehen jetzt als zwei Methoden von `Testnetz` nebeneinander.
+
+Die Endpunkte, die diese Klasse benutzen, stehen seit dem 27.08.2026 in
+`testfigur/netzendpunkte.py` (Befunde `freie-funktionen`, `klassen-je-datei`).
 """
 
-import json
 import logging
-import os
 
 import numpy as np
-from django.http import JsonResponse
-from django.views.decorators.http import require_GET
 
 from ...daten.netzantwort import Netzantwort
 from .testkern import Testkern
@@ -87,68 +85,3 @@ class Testnetz:
         if flaechen.shape[1] == 3:
             return flaechen[:, [0, 2, 1]]
         return flaechen
-
-
-@require_GET
-def test_character_mesh(request):
-    """Netzdaten der Testfassung."""
-    antwort = Testnetz(request).antwort()
-    if antwort is None:
-        return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
-    return JsonResponse(antwort)
-
-
-@require_GET
-def test_character_morphs(request):
-    """Reglerliste der Testfassung — Kategorien, Körpertypen, Metaregler."""
-    zustand = Testkern.zustand()
-    morphs = zustand.get_morph_list()
-    return JsonResponse({
-        'body_types': sorted(Testkern.morphdaten().l1.keys()),
-        'morphs': morphs,
-        'categories': sorted({m['category'] for m in morphs}),
-        'skin_colors': Testkern.modul().MorphData.SKIN_COLORS,
-        'meta_sliders': _metaregler(),
-    })
-
-
-#: Die vier Regler, die nicht aus den Morphdaten kommen, sondern aus den
-#: Vorgaben — mit ihrer Beschriftung.
-METAREGLER = (('age', 'Age'), ('mass', 'Mass (kg)'),
-              ('tone', 'Tone'), ('height', 'Height (cm)'))
-
-
-def _metaregler():
-    vorgaben = Testkern.vorgaben()
-    aus = {}
-    for name, beschriftung in METAREGLER:
-        regler = getattr(vorgaben, name, None)
-        if regler:
-            aus[name] = {'min': regler.min, 'max': regler.max,
-                         'default': regler.default, 'label': beschriftung}
-    return aus
-
-
-@require_GET
-def test_character_skin_weights(request):
-    """Hautgewichte der Testfassung — durch die Unterteilung gereicht."""
-    gewichte = Testkern.gewichte()
-    if gewichte is not None:
-        return JsonResponse(gewichte)
-    return _json_datei(Testkern.datei('skin_weights.json'),
-                       'Skin weights not found')
-
-
-@require_GET
-def test_character_rigify_skeleton(request):
-    """DEF-Skelett der Testfassung."""
-    return _json_datei(Testkern.datei('def_skeleton.json'),
-                       'DEF skeleton not exported yet')
-
-
-def _json_datei(pfad, fehlt):
-    """Eine JSON-Datei unverändert ausliefern — oder 404 mit Grund."""
-    if not os.path.isfile(pfad):
-        return JsonResponse({'error': fehlt}, status=404)
-    with open(pfad, 'r', encoding='utf-8') as f:
-        return JsonResponse(json.load(f))

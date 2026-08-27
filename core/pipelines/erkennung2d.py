@@ -12,9 +12,12 @@ UMBAU 17.08.2026: Hier standen drei freie Funktionen, die alle drei `job`,
 Datei (25 Zeilen je Erkenner).
 
 Jetzt: eine Klasse `Erkennung2d` mit den drei Werten als Felder, und die
-Auswertung in `Erkennungsfortschritt` daneben. Die drei `_run_*`-Hüllen bleiben,
-weil `Auftragslauf._csv_erzeugen()` sie unter diesen Namen aufruft — und weil
-`ui/review_bereiche.py` sie als Fundstelle nennt.
+Auswertung in `Erkennungsfortschritt` daneben.
+
+UMBAU 27.08.2026: Die drei `_run_*`-Hüllen sind entfallen. Sie standen als
+Einzeiler da, weil `Auftragslauf._csv_erzeugen()` sie unter diesen Namen rief;
+jetzt ruft der Aufrufer die Methoden direkt. Der Umweg hat nichts geleistet
+ausser die Klasse zu verstecken (Befunde `freie-funktionen`, `klassenreif`).
 """
 
 import logging
@@ -25,7 +28,7 @@ from django.conf import settings
 
 from .erkennungsfortschritt import Erkennungsfortschritt
 from .openposelauf import Openposelauf
-from .werkzeuge import _get_video_frame_count
+from .videolaenge import Videolaenge
 from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..models import AppSettings
 from ..pipeline_process import PipelineProzess
@@ -88,7 +91,7 @@ class Erkennung2d:
         hier, die längste Funktion des Projekts.
         """
         return Openposelauf(self.job, self.video_path, self.output_dir,
-                            _get_video_frame_count(self.video_path),
+                            Videolaenge.bilder(self.video_path),
                             PipelineProzess, LaufendeProzesse).ausfuehren()
 
     # ------------------------------------------------------- Neue 2D-Erkenner
@@ -122,7 +125,7 @@ class Erkennung2d:
         ohne das blockiert die Pipe bei viel Ausgabe.
         """
         fortschritt = Erkennungsfortschritt(
-            self.job, _get_video_frame_count(self.video_path), time.time(), name)
+            self.job, Videolaenge.bilder(self.video_path), time.time(), name)
         fortschritt.anfangsmeldung(status)
         pp = PipelineProzess.starten(befehl, cwd=arbeitsordner)
         LaufendeProzesse.eintragen(self.job.id, pp.proc)
@@ -137,18 +140,3 @@ class Erkennung2d:
         raise RuntimeError('%s failed (exit code %s):\n%s'
                            % (was, pp.proc.returncode, fehler))
 
-
-# --- Hüllen für `Auftragslauf._csv_erzeugen()` -------------------------------
-# Die Pipeline-Steuerung ruft diese drei Namen; `ui/review_bereiche.py` nennt sie
-# als Fundstelle. Deshalb bleiben sie stehen — als Einzeiler.
-
-def _run_mediapipe_to_csv(job, video_path, output_dir):
-    return Erkennung2d(job, video_path, output_dir).mediapipe()
-
-
-def _run_openpose_to_csv(job, video_path, output_dir):
-    return Erkennung2d(job, video_path, output_dir).openpose()
-
-
-def _run_new_2d_detector(job, video_path, output_dir):
-    return Erkennung2d(job, video_path, output_dir).neuer_erkenner()

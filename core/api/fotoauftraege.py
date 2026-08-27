@@ -14,7 +14,6 @@ Ein Klassenmethoden-Deskriptor schoebe der umschlossenen Funktion die Klasse
 als erstes Argument unter, und der Dekorator sucht dort die Anfrage.
 """
 
-import base64
 import json
 import logging
 import os
@@ -26,6 +25,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.wrapperpfad import Wrapperpfad
+from ..dienste.bildablage import Bildablage
 from ..dienste.fotoanalyse import Fotoanalyse, FotoanalyseFehler
 from ..dienste.fotoausrichtung import Fotoausrichtung
 from ..dienste.smplx_archiv import SmplxArchiv
@@ -122,40 +122,17 @@ class Fotoauftraege:
         except (json.JSONDecodeError, ValueError):
             return JsonResponse({'ok': False, 'error': 'Invalid JSON'},
                                 status=400)
-        roh = Fotoauftraege._bilddaten(rumpf.get('image', ''))
+        roh = Bildablage.bytes_aus_dataurl(rumpf.get('image', ''))
         if roh is None:
             return JsonResponse({'ok': False, 'error': 'Invalid base64'},
                                 status=400)
         if not roh:
             return JsonResponse({'ok': False, 'error': 'No image data'},
                                 status=400)
-        relativ = Fotoauftraege._bild_schreiben(job_id, roh)
+        relativ = Bildablage('screenshots').sichern(job_id, roh)
         job.result_image = relativ
         job.save(update_fields=['result_image'])
         return JsonResponse({'ok': True, 'path': '/%s' % relativ})
-
-    @staticmethod
-    def _bilddaten(angabe):
-        """Bytes aus einer Data-URL — `None` bei kaputtem base64."""
-        if not angabe:
-            return b''
-        if ',' in angabe:
-            angabe = angabe.split(',', 1)[1]
-        try:
-            return base64.b64decode(angabe)
-        except Exception:
-            logger.warning('Bilddaten nicht dekodierbar', exc_info=True)
-            return None
-
-    @staticmethod
-    def _bild_schreiben(job_id, roh):
-        ordner = os.path.join(str(settings.BASE_DIR), 'media',
-                              'photo_analysis', 'screenshots')
-        os.makedirs(ordner, exist_ok=True)
-        name = '%s.jpg' % job_id
-        with open(os.path.join(ordner, name), 'wb') as datei:
-            datei.write(roh)
-        return 'media/photo_analysis/screenshots/%s' % name
 
     # ---------------------------------------------------------------- Loeschen
 

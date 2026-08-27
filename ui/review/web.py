@@ -11,11 +11,11 @@ BEREICHE = [
     {'slug': 'mesh_api', 'name': 'Mesh-Auslieferung und Zwischenspeicher',
      'dateien': ['HumanBodyWeb/core/dienste/charakterdaten.py',
                  {'pfad': 'HumanBodyWeb/core/api/netz.py',
-                  'funktionen': ['character_mesh']},
+                  'funktionen': ['Netzendpunkte']},
                  {'pfad': 'HumanBodyWeb/core/api/kleidung.py',
-                  'funktionen': ['character_cloth', 'garment_fit']},
+                  'funktionen': ['Kleidung']},
                  {'pfad': 'HumanBodyWeb/core/api/mhproxy.py',
-                  'funktionen': ['mh_proxy_fit']},
+                  'funktionen': ['Mhproxy']},
                  {'pfad': 'HumanBodyWeb/core/api/kleidungsbibliothek.py',
                   'funktionen': ['Kleiderbibliothek']}],
      'hinweis': (
@@ -77,10 +77,9 @@ BEREICHE = [
                  {'pfad': 'HumanBodyWeb/core/api/fotoauftraege.py',
                   'funktionen': ['Fotoauftraege']},
                  {'pfad': 'HumanBodyWeb/core/api/fotoabgleich.py',
-                  'funktionen': ['photo_silhouette_data',
-                                 'photo_save_projection']},
+                  'funktionen': ['Fotoabgleich']},
                  {'pfad': 'HumanBodyWeb/core/api/smplx_ausgabe.py',
-                  'funktionen': ['smplx_mesh', 'smplx_texture']}],
+                  'funktionen': ['SmplxAusgabe']}],
      'hinweis': (
          'Aus einem Foto wird über SMPLest-X/PyMAF-X ein SMPL-X-Körper '
          'geschätzt, auf den eigenen Charakter ausgerichtet und dessen Textur '
@@ -103,8 +102,7 @@ BEREICHE = [
      ]},
     {'slug': 'video', 'name': 'Video-Ausgabe (Theatre, ffmpeg)',
      'dateien': [{'pfad': 'HumanBodyWeb/core/api/studio_video.py',
-                  'funktionen': ['theatre_render_video', 'theatre_encode_frames',
-                                 'theatre_convert_video']},
+                  'funktionen': ['Theatrevideo']},
                  'HumanBodyWeb/core/cloth_export_api.py'],
      'hinweis': (
          'Der Browser schickt gerenderte Einzelbilder (base64-PNG) an den '
@@ -160,11 +158,11 @@ BEREICHE = [
      ]},
     {'slug': 'api_pattern', 'name': 'API: Schnittmuster-Editor',
      'dateien': [{'pfad': 'HumanBodyWeb/core/api/schnittmuster.py',
-                  'funktionen': ['pattern_generate', 'pattern_region_generate']},
+                  'funktionen': ['Schnittmuster']},
                  {'pfad': 'HumanBodyWeb/core/api/schnittmuster_ablage.py',
-                  'funktionen': ['pattern_save', 'pattern_specification']},
+                  'funktionen': ['Schnittmusterablage']},
                  {'pfad': 'HumanBodyWeb/core/api/netzbearbeitung.py',
-                  'funktionen': ['vertex_edit_smooth']},
+                  'funktionen': ['Netzbearbeitung']},
                  'HumanBodyWeb/core/dienste/kleidungswerkzeuge.py'],
      'hinweis': ('Aus 2D-Umrissen (Bezier-Kanten) werden Kleidungsteile im Raum platziert und zu einem Netz verbunden. Reine Geometrie, viel NumPy. Fehler zeigen sich als Loecher, umgeklappte Flaechen oder Teile an der falschen Stelle.'),
      'fragen': [
@@ -250,7 +248,7 @@ BEREICHE = [
              'compute() ueberschrieben wird?'),
          ('TimestampedStream ersetzt sys.stdout. Was passiert bei einer Ausnahme darin, '
              'bei Teilzeilen ohne Umbruch und bei mehreren Faeden gleichzeitig? Und was, '
-             'wenn install_stdout_timestamps zweimal laeuft (Autoreload)?'),
+             'wenn Zeitstempelausgabe.einhaengen zweimal laeuft (Autoreload)?'),
          ('apps.ready: Was gehoert dort nicht hin, weil es bei jedem Reload nochmal '
              'passiert?'),
      ]},

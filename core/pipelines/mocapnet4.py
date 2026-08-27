@@ -24,7 +24,7 @@ import time
 from django.conf import settings
 
 from .erkennungsfortschritt import Erkennungsfortschritt
-from .werkzeuge import _get_video_frame_count
+from .videolaenge import Videolaenge
 from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..models import AppSettings
 from ..pipeline_process import PipelineProzess
@@ -60,7 +60,7 @@ class V4Lauf:
     # ------------------------------------------------------------------ Ablauf
 
     def fahren(self):
-        bilder = _get_video_frame_count(self.video_path)
+        bilder = Videolaenge.bilder(self.video_path)
         fortschritt = Erkennungsfortschritt(self.job, bilder, time.time(),
                                             anteil=self.ANTEIL)
         fortschritt.anfangsmeldung('v4_processing', 'MocapNET v4')
@@ -168,7 +168,3 @@ class V4Lauf:
         return (os.path.exists(self.bvh)
                 and os.path.getsize(self.bvh) > self.MINDESTGROESSE)
 
-
-def _run_v4_pipeline(job, video_path, output_dir):
-    """Run MocapNET v4 pipeline: video -> BVH in one step."""
-    return V4Lauf(job, video_path, output_dir).fahren()

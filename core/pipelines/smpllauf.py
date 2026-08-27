@@ -15,7 +15,7 @@ verfolgen, Ergebnis prüfen.
 WARUM HIER KEIN `PipelineProzess` (Stand 17.08.2026)
 ====================================================
 Diese Pipelines schreiben ihre Ausgabe in eine LOGDATEI, nicht in eine Pipe: Nur
-so übersteht der Lauf einen Django-Neustart — `_monitor_pipeline_log` liest die
+so übersteht der Lauf einen Django-Neustart — `Logbeobachter` liest die
 Datei ab der letzten Stelle weiter. Die Umgebung kommt trotzdem von dort
 (`PipelineProzess.umgebung()`): `PYTHONIOENCODING`/`PYTHONUTF8` bringen den
 Kindprozess dazu, UTF-8 zu schreiben. Ohne das landet cp1252 in einer Datei, die
@@ -30,7 +30,9 @@ import subprocess
 from django.conf import settings
 
 from .smplbefehl import Smplbefehl
-from .werkzeuge import _ensure_mp4, _get_video_frame_count, _monitor_pipeline_log
+from .logbeobachter import Logbeobachter
+from .videolaenge import Videolaenge
+from .videovorbereitung import Videovorbereitung
 from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..models import AppSettings
 from ..pipeline_process import PipelineProzess
@@ -51,8 +53,8 @@ class Smpllauf:
         self.job = job
         self.ordner = output_dir
         # GVHMR/WHAM nutzen PyAV — das kann kein WebM.
-        self.video = _ensure_mp4(video_path, output_dir)
-        self.bilder = _get_video_frame_count(self.video)
+        self.video = Videovorbereitung.als_mp4(video_path, output_dir)
+        self.bilder = Videolaenge.bilder(self.video)
         stamm = job.name.rsplit('.', 1)[0]
         self.bvh = str(output_dir / ('%s_%s.bvh' % (job.pipeline, stamm)))
         self.logdatei = output_dir / 'pipeline.log'
@@ -67,8 +69,8 @@ class Smpllauf:
             settings.WRAPPERS_DIR / 'lift_3d.py', self.video, self.bvh)
         prozess, protokoll = self._starten(befehl)
         try:
-            _monitor_pipeline_log(self.job, self.logdatei, self.bilder,
-                                  proc=prozess)
+            Logbeobachter(self.job, self.logdatei, self.bilder,
+                          proc=prozess).verfolgen()
         finally:
             protokoll.close()
         prozess.wait(timeout=self.ENDE_S)
@@ -134,7 +136,3 @@ class Smpllauf:
                          exc_info=True)
             return ''
 
-
-def _run_smpl_pipeline(job, video_path, output_dir):
-    """Run GVHMR / WHAM / PromptHMR 3D pipeline via wrapper scripts."""
-    return Smpllauf(job, video_path, output_dir).fahren()

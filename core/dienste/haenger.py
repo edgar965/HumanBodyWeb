@@ -29,7 +29,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from .laufende_prozesse import LaufendeProzesse
-from ..pipelines.werkzeuge import _is_pid_alive
+from ..pipelines.prozesspruefung import Prozesspruefung
 
 logger = logging.getLogger('core')
 
@@ -78,7 +78,7 @@ class Haenger:
         if not pid_datei.exists():
             return False
         try:
-            return _is_pid_alive(int(pid_datei.read_text().strip()))
+            return Prozesspruefung.lebt(int(pid_datei.read_text().strip()))
         except (ValueError, OSError):
             logger.debug('PID-Datei %s nicht lesbar', pid_datei, exc_info=True)
             return False

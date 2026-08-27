@@ -28,29 +28,44 @@ LOG_DIR.mkdir(exist_ok=True)
 # Logaufruf, also an einer Stelle, an der niemand mit einer Ausnahme rechnet.
 # Der Eingriff steht hier statt in einem eigenen Modul, weil er zum Zeitpunkt
 # von `dictConfig` schon gelaufen sein muss.
-_orig_do_rollover = _lh.RotatingFileHandler.doRollover
-_orig_rotate = _lh.RotatingFileHandler.rotate
+class Rotationsschutz:
+    """Die urspruenglichen Methoden und die zwei stillen Ersatzfassungen.
+
+    Als Klasse statt zweier freier Funktionen (Befund `freie-funktionen`,
+    27.08.2026). Beide Ersatzmethoden sind `@staticmethod`: Zugegriffen wird
+    ueber die Klasse, und das Ergebnis wird als UNGEBUNDENE Methode an
+    `RotatingFileHandler` gehaengt — deshalb bleibt `self` das erste Argument.
+    """
+
+    #: Was der Standard tut, bevor wir uns davorhaengen.
+    urspruenglich_rollover = _lh.RotatingFileHandler.doRollover
+    urspruenglich_rotate = _lh.RotatingFileHandler.rotate
+
+    @staticmethod
+    def do_rollover(self):
+        try:
+            Rotationsschutz.urspruenglich_rollover(self)
+        # stumm gewollt: Rotation des Logs selbst — ein Log darueber riefe
+        # sich im Zweifel selbst auf. Die Rotation wird beim naechsten Mal
+        # nachgeholt.
+        except (PermissionError, OSError):
+            pass
+
+    @staticmethod
+    def rotate(self, source, dest):
+        try:
+            Rotationsschutz.urspruenglich_rotate(self, source, dest)
+        # stumm gewollt: siehe oben.
+        except (PermissionError, OSError):
+            pass
+
+    @classmethod
+    def einhaengen(cls):
+        _lh.RotatingFileHandler.doRollover = cls.do_rollover
+        _lh.RotatingFileHandler.rotate = cls.rotate
 
 
-def _safe_do_rollover(self):
-    try:
-        _orig_do_rollover(self)
-    # stumm gewollt: Rotation des Logs selbst — ein Log darüber riefe sich im
-    # Zweifel selbst auf. Die Rotation wird beim nächsten Mal nachgeholt.
-    except (PermissionError, OSError):
-        pass
-
-
-def _safe_rotate(self, source, dest):
-    try:
-        _orig_rotate(self, source, dest)
-    # stumm gewollt: siehe oben.
-    except (PermissionError, OSError):
-        pass
-
-
-_lh.RotatingFileHandler.doRollover = _safe_do_rollover
-_lh.RotatingFileHandler.rotate = _safe_rotate
+Rotationsschutz.einhaengen()
 
 LOGGING = {
     'version': 1,

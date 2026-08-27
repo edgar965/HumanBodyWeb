@@ -34,9 +34,9 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404
 
-from ..dienste.keypoints import _serve_keypoints_2d_impl
+from ..dienste.keypoints import Ueberlagerungspunkte
 from ..dienste.retargetdaten import Retargetdaten
-from ..dienste.skelettvideo import _render_video_with_skeleton
+from ..dienste.skelettvideo import Skelettfilm
 from ..dienste.videoablage import Videoablage
 from ..dienste.videoauslieferung import Videoauslieferung
 from ..models import BVHJob
@@ -70,7 +70,7 @@ class Auftragsdateien:
         selbst = cls(request, job_id)
         art = request.GET.get('mode', 'bvh')
         if art == 'keypoints2d':
-            return _serve_keypoints_2d_impl(selbst.job)
+            return JsonResponse(Ueberlagerungspunkte(selbst.job).daten())
         if art == 'retarget':
             return selbst._retarget()
         return selbst._bewegungsdatei()
@@ -113,7 +113,8 @@ class Auftragsdateien:
     @classmethod
     def punkte_2d(cls, request, job_id):
         """Aeltere Adresse — dasselbe wie `bvh(?mode=keypoints2d)`."""
-        return _serve_keypoints_2d_impl(cls(request, job_id).job)
+        return JsonResponse(
+            Ueberlagerungspunkte(cls(request, job_id).job).daten())
 
     # --------------------------------------------------------------- Video
 
@@ -176,7 +177,7 @@ class Auftragsdateien:
 
     def _rendern(self, ueberlagern, dateiname):
         """Video rendern, in den Ausgabeordner legen und herunterladen."""
-        pfad = _render_video_with_skeleton(self.job, overlay=ueberlagern)
+        pfad = Skelettfilm(self.job, ueberlagern=ueberlagern).erzeugen()
         if not pfad or not pfad.exists():
             art = 'overlay' if ueberlagern else 'rig'
             return HttpResponseNotFound('Could not render %s video' % art)

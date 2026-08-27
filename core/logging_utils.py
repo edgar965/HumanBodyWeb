@@ -1,9 +1,9 @@
 """Strukturiertes Logging mit ContextVar-basierter Korrelation.
 
 Beispiel:
-    from core.logging_utils import with_job_id
+    from core.logging_utils import Auftragskontext
 
-    with with_job_id(job_uuid):
+    with Auftragskontext.mit_auftrag(job_uuid):
         logger.info('analyze START')
         ...
 
@@ -28,16 +28,23 @@ _job_id_var: contextvars.ContextVar = contextvars.ContextVar(
 )
 
 
-@contextmanager
-def with_job_id(job_id):
-    """Setzt den Job-ID-Kontext fuer alle Log-Calls im with-Block."""
-    token = _job_id_var.set(job_id)
-    try:
-        yield
-    finally:
-        _job_id_var.reset(token)
+class Auftragskontext:
+    """Welcher Auftrag gerade laeuft — je Faden bzw. Task getrennt.
 
+    Der Wert steht in einer `ContextVar`, nicht in einem Klassenfeld: Daphne
+    beantwortet Anfragen nebenlaeufig, und ein gemeinsames Feld haette allen
+    Anfragen dieselbe Auftragskennung untergeschoben.
+    """
 
+    @staticmethod
+    @contextmanager
+    def mit_auftrag(job_id):
+        """Setzt die Auftragskennung fuer alle Log-Aufrufe im `with`-Block."""
+        marke = _job_id_var.set(job_id)
+        try:
+            yield
+        finally:
+            _job_id_var.reset(marke)
 
 
 class JobContextFilter(logging.Filter):
@@ -121,18 +128,25 @@ class TimestampedStream:
         return getattr(self._wrapped, name)
 
 
-_INSTALLED = False
-_INSTALL_LOCK = threading.Lock()
+class Zeitstempelausgabe:
+    """Haengt `TimestampedStream` vor stdout und stderr. Genau einmal.
 
+    Als Klasse statt `global _INSTALLED` (Befund `klassenreif`, Frage 1,
+    27.08.2026): Der Merker haengt jetzt an der Klasse und laesst sich in einer
+    Pruefung zuruecksetzen, ohne ein Modul neu zu laden.
+    """
 
-def install_stdout_timestamps():
-    """Wickelt sys.stdout/sys.stderr in TimestampedStream ein. Idempotent."""
-    global _INSTALLED
-    with _INSTALL_LOCK:
-        if _INSTALLED:
-            return
-        if not isinstance(sys.stdout, TimestampedStream):
-            sys.stdout = TimestampedStream(sys.stdout)
-        if not isinstance(sys.stderr, TimestampedStream):
-            sys.stderr = TimestampedStream(sys.stderr)
-        _INSTALLED = True
+    #: Schon eingehaengt? Der Entwicklungsserver laedt bei jeder Aenderung neu.
+    eingehaengt = False
+    _schloss = threading.Lock()
+
+    @classmethod
+    def einhaengen(cls):
+        with cls._schloss:
+            if cls.eingehaengt:
+                return
+            if not isinstance(sys.stdout, TimestampedStream):
+                sys.stdout = TimestampedStream(sys.stdout)
+            if not isinstance(sys.stderr, TimestampedStream):
+                sys.stderr = TimestampedStream(sys.stderr)
+            cls.eingehaengt = True

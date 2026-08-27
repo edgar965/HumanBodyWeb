@@ -19,11 +19,10 @@ import json
 import logging
 from pathlib import Path
 
-from django.http import JsonResponse
 
 from ..daten.gelenknamen import Gelenknamen
 from .gelenkquelle import Gelenkquelle
-from .keypoints_quellen import _try_generate_smpl_2d_keypoints
+from .keypoints_quellen import Keypointsquellen
 
 logger = logging.getLogger('core')
 
@@ -70,9 +69,6 @@ class Ueberlagerungspunkte:
             if kandidat.exists():
                 with open(kandidat) as datei:
                     return json.load(datei)
-        return _try_generate_smpl_2d_keypoints(self.job, self.quelle.ordner)
+        return Keypointsquellen.aus_gvhmr_nachziehen(self.job,
+                                             self.quelle.ordner)
 
-
-def _serve_keypoints_2d_impl(job):
-    """Serve per-frame 2D keypoints as JSON for the Canvas2D overlay."""
-    return JsonResponse(Ueberlagerungspunkte(job).daten())

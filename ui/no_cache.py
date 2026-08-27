@@ -2,7 +2,7 @@
 
 Two layers that together cover every response Daphne can serve:
 
-1. patch_static_handler() — Monkey-patches ASGIStaticFilesHandler.__call__
+1. Statikschutz.einhaengen() — Monkey-patches ASGIStaticFilesHandler.__call__
    so that ALL HTTP responses (static AND proxied-to-Django) get no-cache
    headers at the ASGI transport level.  Must be called once in asgi.py
    BEFORE the application object is created.
@@ -19,38 +19,48 @@ _NO_CACHE_HEADERS = [
     (b'vary',          b'*'),
 ]
 
-_patched = False
+class Statikschutz:
+    """Haengt die No-Cache-Kopfzeilen an ALLE ASGI-Antworten. Genau einmal.
 
+    Als Klasse statt `global _patched` (Befunde `freie-funktionen`,
+    `klassenreif` Frage 1, 27.08.2026): Der Merker haengt an der Klasse und
+    laesst sich in einer Pruefung zuruecksetzen, ohne ein Modul neu zu laden.
+    """
 
-def patch_static_handler():
-    """Monkey-patch ASGIStaticFilesHandler to add no-cache headers to ALL responses."""
-    global _patched
-    if _patched:
-        return
-    _patched = True
+    #: Kopfzeilen, die eine Antwort danach NICHT mehr fuehren darf.
+    ENTFERNEN = {b'cache-control', b'pragma', b'expires', b'vary', b'etag',
+                 b'last-modified'}
 
-    from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
+    #: Schon eingehaengt? `asgi.py` laeuft beim Autoreload mehrfach.
+    eingehaengt = False
 
-    _original_call = ASGIStaticFilesHandler.__call__
+    @classmethod
+    def einhaengen(cls):
+        """`ASGIStaticFilesHandler.__call__` umhaengen. Idempotent."""
+        if cls.eingehaengt:
+            return
+        cls.eingehaengt = True
+        from django.contrib.staticfiles.handlers import ASGIStaticFilesHandler
+        urspruenglich = ASGIStaticFilesHandler.__call__
 
-    async def _nocache_call(self, scope, receive, send):
-        if scope['type'] == 'http':
-            async def send_with_nocache(message):
-                if message['type'] == 'http.response.start':
-                    _strip = {b'cache-control', b'pragma', b'expires',
-                              b'vary', b'etag', b'last-modified'}
-                    headers = [
-                        (k, v) for k, v in message.get('headers', [])
-                        if k.lower() not in _strip
-                    ]
-                    headers.extend(_NO_CACHE_HEADERS)
-                    message = {**message, 'headers': headers}
-                await send(message)
-            await _original_call(self, scope, receive, send_with_nocache)
-        else:
-            await _original_call(self, scope, receive, send)
+        async def _ohne_zwischenspeicher(selbst, scope, receive, send):
+            if scope['type'] != 'http':
+                await urspruenglich(selbst, scope, receive, send)
+                return
 
-    ASGIStaticFilesHandler.__call__ = _nocache_call
+            async def senden(nachricht):
+                if nachricht['type'] == 'http.response.start':
+                    kopfzeilen = [
+                        (name, wert)
+                        for name, wert in nachricht.get('headers', [])
+                        if name.lower() not in cls.ENTFERNEN]
+                    kopfzeilen.extend(_NO_CACHE_HEADERS)
+                    nachricht = {**nachricht, 'headers': kopfzeilen}
+                await send(nachricht)
+
+            await urspruenglich(selbst, scope, receive, senden)
+
+        ASGIStaticFilesHandler.__call__ = _ohne_zwischenspeicher
 
 
 class NoCacheStaticMiddleware:

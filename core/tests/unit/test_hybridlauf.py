@@ -40,29 +40,46 @@ class HybridBasis(TestCase):
         self.aufrufe = {'koerper': None, 'gesicht': None, 'ausdruck': None}
         self.koerper = lambda auftrag, video, ordner: 'body.bvh'
         self.gesicht = lambda auftrag, video, ordner: 'face.bvh'
+        pruefung = self
 
-        def koerper(auftrag, video, ordner):
-            self.aufrufe['koerper'] = auftrag
-            return self.koerper(auftrag, video, ordner)
+        class Laufattrappe:
+            """Steht fuer `Smpllauf`/`V4Lauf` — merkt sich den Unterauftrag.
 
-        def gesicht(auftrag, video, ordner):
-            self.aufrufe['gesicht'] = auftrag
-            return self.gesicht(auftrag, video, ordner)
+            Seit dem 27.08.2026 uebergibt `Hybridlauf` die KLASSE an den
+            Faden und ruft `.fahren()`; die Attrappe muss deshalb ebenfalls
+            eine Klasse sein (vorher waren es zwei freie Funktionen).
+            """
+
+            welcher = ''
+
+            def __init__(self, auftrag, video, ordner):
+                self.auftrag, self.video, self.ordner = auftrag, video, ordner
+                pruefung.aufrufe[self.welcher] = auftrag
+
+            def fahren(self):
+                macher = getattr(pruefung, self.welcher)
+                return macher(self.auftrag, self.video, self.ordner)
+
+        class Koerperattrappe(Laufattrappe):
+            welcher = 'koerper'
+
+        class Gesichtsattrappe(Laufattrappe):
+            welcher = 'gesicht'
 
         def lauf(befehl, **kw):
             self.aufrufe['ausdruck'] = befehl
             return None
 
-        self._alt = (hybridlauf._run_smpl_pipeline, hybridlauf._run_v4_pipeline,
+        self._alt = (hybridlauf.Smpllauf, hybridlauf.V4Lauf,
                      hybridlauf.subprocess.run, Hybridlauf.TAKT)
-        hybridlauf._run_smpl_pipeline = koerper
-        hybridlauf._run_v4_pipeline = gesicht
+        hybridlauf.Smpllauf = Koerperattrappe
+        hybridlauf.V4Lauf = Gesichtsattrappe
         hybridlauf.subprocess.run = lauf
         # Ohne das schläft `_verfolgen` zwei Sekunden je Runde.
         Hybridlauf.TAKT = 0.01
 
     def tearDown(self):
-        (hybridlauf._run_smpl_pipeline, hybridlauf._run_v4_pipeline,
+        (hybridlauf.Smpllauf, hybridlauf.V4Lauf,
          hybridlauf.subprocess.run, Hybridlauf.TAKT) = self._alt
 
     def fahren(self, pipeline='hybrid_gvhmr', params=None):

@@ -24,7 +24,7 @@ from pathlib import Path
 from django.conf import settings
 
 from .bvh_projektion import _parse_bvh_to_2d
-from .keypoints_quellen import _get_2d_keypoints
+from .keypoints_quellen import Keypointsquellen
 from .skelettzeichner import Skelettzeichner
 from ..daten.gelenknamen import Gelenknamen
 
@@ -110,7 +110,7 @@ class Skelettfilm:
             except Exception:                                      # noqa: BLE001
                 logger.warning('BVH-Projektion fehlgeschlagen — kein Rig im Video',
                                exc_info=True)
-        punkte, masse = _get_2d_keypoints(self.job)
+        punkte, masse = Keypointsquellen.in_pixeln(self.job)
         return punkte, _BODY_CONNECTIONS, masse
 
     def _schreiben(self, ziel, punkte, verbindungen, breite, hoehe):
@@ -155,20 +155,3 @@ class Skelettfilm:
         stelle = int(nummer / (videobilder - 1) * (punktbilder - 1))
         return max(0, min(stelle, punktbilder - 1))
 
-
-def _draw_skeleton(frame, keypoints, connections=None, color=(0, 255, 0),
-                   thickness=2):
-    """Draw skeleton on a frame using 2D keypoints (siehe `Skelettzeichner`)."""
-    return Skelettzeichner(connections, farbe=color,
-                           dicke=thickness).zeichnen(frame, keypoints)
-
-
-def _render_video_with_skeleton(job, overlay=True):
-    """Render a video with skeleton overlay (or skeleton-only on black bg).
-
-    For v4: uses BVH 3D skeleton projected to 2D (full MocapNET v4 rig).
-    For v2.1: uses 2D MediaPipe/OpenPose keypoints.
-
-    Returns path to the rendered mp4 file (cached in output dir).
-    """
-    return Skelettfilm(job, ueberlagern=overlay).erzeugen()

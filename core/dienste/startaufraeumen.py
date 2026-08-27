@@ -115,15 +115,16 @@ class Startaufraeumen:
         """True, wenn ein lebender Prozess wieder beobachtet wird."""
         if not pid_datei.exists():
             return False
-        from core.pipelines.werkzeuge import _is_pid_alive, remonitor_smpl_job
+        from core.pipelines.prozesspruefung import Prozesspruefung
+        from core.pipelines.wiederaufnahme import Wiederaufnahme
         try:
             pid = int(pid_datei.read_text().strip())
         except (ValueError, FileNotFoundError, OSError):
             logger.debug('PID-Datei %s unlesbar', pid_datei, exc_info=True)
             return False
-        if not _is_pid_alive(pid):
+        if not Prozesspruefung.lebt(pid):
             return False
-        threading.Thread(target=remonitor_smpl_job,
+        threading.Thread(target=Wiederaufnahme.fahren,
                          args=(str(auftrag.id), pid), daemon=True).start()
         logger.info('Job %s: PID %s laeuft noch, wird weiter beobachtet',
                     auftrag.id, pid)

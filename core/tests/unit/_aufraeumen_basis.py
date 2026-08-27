@@ -43,13 +43,16 @@ class AufraeumenBasis(TestCase):
         def beobachten(kennung, pid):
             self.beobachtet.append((kennung, pid))
 
-        # Umgeleitet wird im MODUL, das die Namen fuehrt — `werkzeuge` selbst zu
-        # patchen greift ins Leere, weil hier lokal importiert wird.
-        import core.pipelines.werkzeuge as werkzeuge
-        self._alt = (werkzeuge._is_pid_alive, werkzeuge.remonitor_smpl_job)
-        werkzeuge._is_pid_alive = lebt_pid
-        werkzeuge.remonitor_smpl_job = beobachten
-        self.addCleanup(self._zurueck, werkzeuge)
+        # Umgeleitet wird an der KLASSE, die den Namen fuehrt. Frueher stand
+        # dazwischen `pipelines.werkzeuge` mit sechs Weiterleitungen; die Datei
+        # ist am 27.08.2026 entfallen (Befund `freie-funktionen`), die Aufrufer
+        # holen sich die Klassen direkt.
+        from core.pipelines.prozesspruefung import Prozesspruefung
+        from core.pipelines.wiederaufnahme import Wiederaufnahme
+        self._alt = (Prozesspruefung.lebt, Wiederaufnahme.fahren)
+        Prozesspruefung.lebt = staticmethod(lebt_pid)
+        Wiederaufnahme.fahren = staticmethod(beobachten)
+        self.addCleanup(self._zurueck, Prozesspruefung, Wiederaufnahme)
         # Threads wuerden den Test nichtdeterministisch machen: hier direkt rufen.
         self._alt_thread = modul.threading.Thread
         modul.threading.Thread = self._SofortFaden
@@ -62,8 +65,9 @@ class AufraeumenBasis(TestCase):
         def start(self):
             self._ziel(*self._args)
 
-    def _zurueck(self, werkzeuge):
-        werkzeuge._is_pid_alive, werkzeuge.remonitor_smpl_job = self._alt
+    def _zurueck(self, pruefung, wiederaufnahme):
+        pruefung.lebt, wiederaufnahme.fahren = (staticmethod(self._alt[0]),
+                                                staticmethod(self._alt[1]))
 
     def _faden_zurueck(self):
         modul.threading.Thread = self._alt_thread

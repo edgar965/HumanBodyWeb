@@ -1,79 +1,87 @@
 # -*- coding: utf-8 -*-
-"""Netz, Morph-Regler, Rig und Skinning-Gewichte.
+"""Netz, Morph-Regler und Garderobendateien.
 
 Aus core/character_api.py herausgeloest (Umbau 15.08.2026) — warum so
 geschnitten, steht in `core/api/__init__.py`.
+
+`HAIR_COLORS` stand hier ein zweites Mal, wortgleich zu `api/modelldateien.py`
+(dort gelesen von der Frisurenliste) — hier von niemandem. Entfernt am
+17.08.2026.
+
+UMBAU 27.08.2026 (Befund `freie-funktionen`): drei freie Funktionen, jetzt
+Methoden von `Netzendpunkte`.
 """
 
-from ..dienste.charakterdaten import Charakterdaten
-from .netzanfrage import Netzanfrage
+import os
+
 from django.conf import settings
 from django.http import JsonResponse, FileResponse, HttpResponseNotFound
 from django.views.decorators.http import require_GET
 from humanbody_core import MorphData, CharacterState
-import os
 
-# `HAIR_COLORS` stand hier ein zweites Mal, wortgleich zu `api/modelldateien.py`
-# (dort gelesen von `model_files`) — hier von niemandem. Entfernt am 17.08.2026.
-
-
-@require_GET
-def character_mesh(request):
-    """Netzdaten als JSON mit base64-Binaerteilen — siehe `Netzanfrage`."""
-    anfrage = Netzanfrage(request)
-    punkte = anfrage.punkte()
-    if punkte is None:
-        return JsonResponse({'error': 'Failed to compute mesh'}, status=500)
-    return JsonResponse(anfrage.antwort(punkte))
+from ..dienste.charakterdaten import Charakterdaten
+from .netzanfrage import Netzanfrage
 
 
-@require_GET
-def character_morphs(request):
-    """Return list of available morphs and body types."""
-    body_type = request.GET.get('body_type', 'Female_Caucasian')
-    md = Charakterdaten.morphdaten()
-    cd = Charakterdaten.voreinstellungen()
+class Netzendpunkte:
+    """Das Koerpernetz, die Reglerliste und die Garderobendateien."""
 
-    state = CharacterState(md, cd)
-    state.set_body_type(body_type)
+    #: Koerpertyp, wenn keiner mitkommt.
+    VORGABE_KOERPERTYP = 'Female_Caucasian'
+    #: Die vier Sammelregler und ihre Beschriftung.
+    METAREGLER = {'age': 'Age', 'mass': 'Mass (kg)', 'tone': 'Tone',
+                  'height': 'Height (cm)'}
 
-    morphs = state.get_morph_list()
+    @staticmethod
+    @require_GET
+    def netz(request):
+        """Netzdaten als JSON mit base64-Binaerteilen — siehe `Netzanfrage`."""
+        anfrage = Netzanfrage(request)
+        punkte = anfrage.punkte()
+        if punkte is None:
+            return JsonResponse({'error': 'Failed to compute mesh'},
+                                status=500)
+        return JsonResponse(anfrage.antwort(punkte))
 
-    # Group by category
-    categories = {}
-    for m in morphs:
-        cat = m['category']
-        if cat not in categories:
-            categories[cat] = []
-        categories[cat].append(m)
+    @staticmethod
+    @require_GET
+    def regler(request):
+        """Alle Morph-Regler, Koerpertypen und Sammelregler."""
+        vorgaben = Charakterdaten.voreinstellungen()
+        zustand = CharacterState(Charakterdaten.morphdaten(), vorgaben)
+        zustand.set_body_type(request.GET.get(
+            'body_type', Netzendpunkte.VORGABE_KOERPERTYP))
+        regler = zustand.get_morph_list()
+        kategorien = {}
+        for eintrag in regler:
+            kategorien.setdefault(eintrag['category'], []).append(eintrag)
+        return JsonResponse({
+            'body_types': MorphData.BODY_TYPES,
+            'morphs': regler,
+            'categories': sorted(kategorien.keys()),
+            'skin_colors': MorphData.SKIN_COLORS,
+            'meta_sliders': Netzendpunkte._metaregler(vorgaben),
+        })
 
-    # Build meta slider definitions from CharacterDefaults
-    meta_sliders = {}
-    meta_labels = {'age': 'Age', 'mass': 'Mass (kg)', 'tone': 'Tone', 'height': 'Height (cm)'}
-    for name in ('age', 'mass', 'tone', 'height'):
-        sdef = getattr(cd, name, None)
-        if sdef:
-            meta_sliders[name] = {
-                'min': sdef.min, 'max': sdef.max,
-                'default': sdef.default, 'label': meta_labels[name],
-            }
+    @classmethod
+    def _metaregler(cls, vorgaben):
+        werte = {}
+        for name, beschriftung in cls.METAREGLER.items():
+            beschreibung = getattr(vorgaben, name, None)
+            if beschreibung:
+                werte[name] = {
+                    'min': beschreibung.min, 'max': beschreibung.max,
+                    'default': beschreibung.default, 'label': beschriftung,
+                }
+        return werte
 
-    return JsonResponse({
-        'body_types': MorphData.BODY_TYPES,
-        'morphs': morphs,
-        'categories': sorted(categories.keys()),
-        'skin_colors': MorphData.SKIN_COLORS,
-        'meta_sliders': meta_sliders,
-    })
-
-
-def character_asset_glb(request, name):
-    """Serve a wardrobe asset GLB file."""
-    glb_path = os.path.join(str(settings.HUMANBODY_ASSETS_GLB_DIR), f"{name}.glb")
-    if not os.path.isfile(glb_path):
-        return HttpResponseNotFound(f'GLB not found: {name}')
-    return FileResponse(
-        open(glb_path, 'rb'),
-        content_type='model/gltf-binary',
-        filename=f'{name}.glb',
-    )
+    @staticmethod
+    def garderobendatei(request, name):
+        """Eine GLB-Datei aus der Garderobe."""
+        pfad = os.path.join(str(settings.HUMANBODY_ASSETS_GLB_DIR),
+                            '%s.glb' % name)
+        if not os.path.isfile(pfad):
+            return HttpResponseNotFound('GLB not found: %s' % name)
+        return FileResponse(open(pfad, 'rb'),
+                            content_type='model/gltf-binary',
+                            filename='%s.glb' % name)

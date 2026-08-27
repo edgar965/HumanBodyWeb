@@ -77,19 +77,19 @@ class Auftragslauf:
     # ------------------------------------------------------------------ Routen
 
     def _route_hybrid(self):
-        from .hybridlauf import _run_hybrid_pipeline
-        from .werkzeuge import _copy_gvhmr_render_videos
-        from ..api.bibliothek import _copy_bvh_to_results
+        from .hybridlauf import Hybridlauf
+        from .gvhmr_ausgabe import GvhmrAusgabe
+        from ..dienste.ergebnisablage import Ergebnisablage
 
-        koerper_bvh, gesicht_bvh = _run_hybrid_pipeline(
-            self.job, self.videopfad, self.ausgabeordner)
+        koerper_bvh, gesicht_bvh = Hybridlauf(
+            self.job, self.videopfad, self.ausgabeordner).fahren()
         if koerper_bvh:
-            _copy_bvh_to_results(koerper_bvh, self.job.name, self.job.pipeline)
+            Ergebnisablage.kopieren(koerper_bvh, self.job.name, self.job.pipeline)
         if gesicht_bvh:
-            _copy_bvh_to_results(gesicht_bvh, self.job.name,
+            Ergebnisablage.kopieren(gesicht_bvh, self.job.name,
                                  self.job.pipeline + '_face')
         if self.job.pipeline == 'hybrid_gvhmr' and koerper_bvh:
-            _copy_gvhmr_render_videos(self.job, self.ausgabeordner / 'body')
+            GvhmrAusgabe(self.job, self.ausgabeordner / 'body').kopieren()
 
         self.job.status = 'complete'
         self.job.progress = 100
@@ -99,18 +99,20 @@ class Auftragslauf:
                                      namenszusatz='_body')
 
     def _route_smpl(self):
-        from .smpllauf import _run_smpl_pipeline
-        from .werkzeuge import _copy_gvhmr_render_videos
+        from .smpllauf import Smpllauf
+        from .gvhmr_ausgabe import GvhmrAusgabe
 
-        bvh = _run_smpl_pipeline(self.job, self.videopfad, self.ausgabeordner)
+        bvh = Smpllauf(self.job, self.videopfad,
+                       self.ausgabeordner).fahren()
         if self.job.pipeline == 'gvhmr':
-            _copy_gvhmr_render_videos(self.job, self.ausgabeordner)
+            GvhmrAusgabe(self.job, self.ausgabeordner).kopieren()
         self._fertigmelden(bvh, self.job.pipeline)
 
     def _route_v4(self):
-        from .mocapnet4 import _run_v4_pipeline
+        from .mocapnet4 import V4Lauf
 
-        bvh = _run_v4_pipeline(self.job, self.videopfad, self.ausgabeordner)
+        bvh = V4Lauf(self.job, self.videopfad,
+                     self.ausgabeordner).fahren()
         self.teilweise = self._ist_teilergebnis(bvh)
         self._fertigmelden(bvh, 'v4', quelle_bibliothek='mocapnet_v4')
 
@@ -145,17 +147,14 @@ class Auftragslauf:
 
     def _csv_erzeugen(self, stoppmarke):
         """2D-Erkennung starten; bei Abbruch ein angefangenes CSV weiterbenutzen."""
-        from .erkennung2d import (_run_mediapipe_to_csv, _run_new_2d_detector,
-                                  _run_openpose_to_csv)
+        from .erkennung2d import Erkennung2d
+        lauf = Erkennung2d(self.job, self.videopfad, self.ausgabeordner)
         try:
             if self.job.pipeline == 'openpose':
-                return _run_openpose_to_csv(self.job, self.videopfad,
-                                            self.ausgabeordner)
+                return lauf.openpose()
             if self.job.pipeline in self.NEUE_2D_ERKENNER:
-                return _run_new_2d_detector(self.job, self.videopfad,
-                                            self.ausgabeordner)
-            return _run_mediapipe_to_csv(self.job, self.videopfad,
-                                         self.ausgabeordner)
+                return lauf.neuer_erkenner()
+            return lauf.mediapipe()
         except RuntimeError:
             if not stoppmarke.exists():
                 raise
@@ -179,7 +178,7 @@ class Auftragslauf:
 
     def _mocapnet(self, csv_datei):
         """MocapNET (C++) starten, Fortschritt melden, Ausgabedatei bestimmen."""
-        from .werkzeuge import _get_video_frame_count
+        from .videolaenge import Videolaenge
 
         stamm = str(self.ausgabeordner
                     / ('%s_%s' % (self.job.pipeline,
@@ -190,7 +189,7 @@ class Auftragslauf:
             cwd=settings.MOCAPNET_ROOT)
         LaufendeProzesse.eintragen(self.job.id, lauf.proc)
 
-        leser = Fortschrittsleser(_get_video_frame_count(self.videopfad),
+        leser = Fortschrittsleser(Videolaenge.bilder(self.videopfad),
                                   time.time())
         for zeile in lauf.stdout_zeilen(stille_timeout=self.STILLE_TIMEOUT_S):
             meldung = leser.zeile_lesen(zeile)
@@ -230,8 +229,8 @@ class Auftragslauf:
 
     def _ist_teilergebnis(self, bvh):
         """Hat die Datei deutlich weniger Bilder als das Video?"""
-        from .werkzeuge import _get_video_frame_count
-        gesamt = _get_video_frame_count(self.videopfad)
+        from .videolaenge import Videolaenge
+        gesamt = Videolaenge.bilder(self.videopfad)
         if not gesamt or not os.path.exists(bvh):
             return False
         try:
@@ -248,8 +247,8 @@ class Auftragslauf:
 
     def _fertigmelden(self, bvh, quelle, quelle_bibliothek=None):
         """Der Teil, der vorher fuenfmal fast gleich im Code stand."""
-        from ..api.bibliothek import _copy_bvh_to_results
-        ergebnispfad = _copy_bvh_to_results(bvh, self.job.name, quelle)
+        from ..dienste.ergebnisablage import Ergebnisablage
+        ergebnispfad = Ergebnisablage.kopieren(bvh, self.job.name, quelle)
         self.job.bvh_file = bvh
         self.job.status = 'complete'
         self.job.progress = 100
@@ -277,8 +276,8 @@ class Auftragslauf:
             return
         self.teilweise = True
         try:
-            from ..api.bibliothek import _copy_bvh_to_results
-            ergebnispfad = _copy_bvh_to_results(angefangen, self.job.name,
+            from ..dienste.ergebnisablage import Ergebnisablage
+            ergebnispfad = Ergebnisablage.kopieren(angefangen, self.job.name,
                                                 self.job.pipeline)
         except Exception:                                         # noqa: BLE001
             logger.warning('Teilergebnis nicht in die Ablage kopierbar',

@@ -25,8 +25,8 @@ import time
 
 from django.conf import settings
 
-from .mocapnet4 import _run_v4_pipeline
-from .smpllauf import _run_smpl_pipeline
+from .mocapnet4 import V4Lauf
+from .smpllauf import Smpllauf
 from .teilauftrag import Teilauftrag
 from ..models import AppSettings
 
@@ -124,24 +124,30 @@ class Hybridlauf:
     def _starten(self, koerper_ordner, gesicht_ordner):
         laeufe = [
             threading.Thread(target=self._lauf, daemon=True,
-                             args=('koerper', _run_smpl_pipeline, self.koerper,
+                             args=('koerper', Smpllauf, self.koerper,
                                    koerper_ordner)),
             threading.Thread(target=self._lauf, daemon=True,
-                             args=('gesicht', _run_v4_pipeline, self.gesicht,
+                             args=('gesicht', V4Lauf, self.gesicht,
                                    gesicht_ordner)),
         ]
         for lauf in laeufe:
             lauf.start()
         return laeufe
 
-    def _lauf(self, welcher, pipeline, auftrag, ordner):
+    def _lauf(self, welcher, pipelineklasse, auftrag, ordner):
         """Ein Unterlauf im eigenen Thread — Fehler bleiben in `self.fehler`.
 
         Eine Ausnahme darf hier nicht durchfallen: Sie würde nur den Thread
         beenden, und der Hauptlauf wartete auf ein Ergebnis, das nie kommt.
+
+        `pipelineklasse` ist `Smpllauf` bzw. `V4Lauf`. Bis zum 27.08.2026
+        standen hier die Weiterleitungen `_run_smpl_pipeline` und
+        `_run_v4_pipeline` — Einzeiler, die nur die Klasse verdeckten
+        (Befund `freie-funktionen`).
         """
         try:
-            self.ergebnis[welcher] = pipeline(auftrag, self.video_path, ordner)
+            self.ergebnis[welcher] = pipelineklasse(
+                auftrag, self.video_path, ordner).fahren()
         except Exception as fehler:                                # noqa: BLE001
             logger.exception('Hybridlauf: %s-Pipeline gescheitert', welcher)
             self.fehler[welcher] = str(fehler)
@@ -222,7 +228,3 @@ class Hybridlauf:
         except Exception as fehler:                                # noqa: BLE001
             logger.warning('Face expression extraction failed: %s', fehler)
 
-
-def _run_hybrid_pipeline(job, video_path, output_dir):
-    """Run hybrid pipeline: SMPL body (GPU) + MocapNET v4 face+hands (CPU)."""
-    return Hybridlauf(job, video_path, output_dir).fahren()

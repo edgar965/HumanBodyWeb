@@ -44,7 +44,7 @@ from ..dienste.auftragsanlage import Auftragsanlage
 from ..dienste.auftragssteuerung import Auftragssteuerung
 from ..dienste.auftragsstart import Auftragsstart
 from ..dienste.haenger import Haenger
-from ..logging_utils import with_job_id
+from ..logging_utils import Auftragskontext
 from ..models import BVHJob
 from ..safe_paths import PfadAbgelehnt, SafePath
 
@@ -111,7 +111,7 @@ class Auftragsendpunkte:
         """
         job = Auftragsendpunkte(job_id).job
         if job.status in ('pending', 'complete', 'failed'):
-            with with_job_id(str(job.id)):
+            with Auftragskontext.mit_auftrag(str(job.id)):
                 pipeline_logger.info('start_processing pipeline=%s name=%s',
                                      job.pipeline, job.name)
                 Auftragssteuerung.starten(job)
