@@ -20,12 +20,12 @@ import logging
 import os
 
 import numpy as np
-from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.fotoauftrag import Fotoauftrag
+from ..daten.smplxablage import Smplxablage
 from ..dienste.bildablage import Bildablage
 from ..dienste.fotoausrichtung import Fotoausrichtung
 
@@ -107,8 +107,7 @@ class Fotoabgleich:
         passen.
         """
         kamera = daten.get('cam_data')
-        pfad = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody', 'data',
-                            'photoTo3D', 'SMPLX', '%s.npz' % job_id)
+        pfad = Smplxablage.datei(job_id)
         if not (kamera and os.path.isfile(pfad)):
             return None
         try:

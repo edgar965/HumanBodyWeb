@@ -104,7 +104,7 @@ class EndpunkteTest(EndpunktProbe):
         (WIRKUNG, 'modell_sichern', '/api/character/model/save/'),
         (LESEN, 'modellliste', '/api/character/models/'),
         (LESEN, 'regler', '/api/character/morphs/'),
-        (WIRKUNG, 'aus_schnitt', '/api/character/pattern/generate/'),
+        (WIRKUNG, 'aus_schnittmuster', '/api/character/pattern/generate/'),
         (LESEN, 'aus_bereich', '/api/character/pattern/region/generate/'),
         (WIRKUNG, 'sichern', '/api/character/pattern/save/'),
         (LESEN, 'beschreibung', '/api/character/pattern/specification/'),

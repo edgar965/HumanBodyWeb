@@ -31,7 +31,7 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
-from core.dienste.bvh_projektion import _parse_bvh_to_2d
+from core.dienste.bvh_projektion import Bvhprojektion
 from core.dienste.bvhbaum import Bvhbaum
 from core.dienste.vorwaertskinematik import Vorwaertskinematik
 from core.projekt_temp import ProjektTemp
@@ -127,7 +127,7 @@ class BvhProjektionTest(SimpleTestCase):
     # --------------------------------------------------------------- Projektion
 
     def test_pixel_wie_von_hand_gerechnet(self):
-        punkte, verbindungen = _parse_bvh_to_2d(self.pfad, 100, 100)
+        punkte, verbindungen = Bvhprojektion.punkte(self.pfad, 100, 100)
         self.assertEqual(len(punkte), 2)
         self.assertEqual(verbindungen, [('Hips', 'Spine')])
         hips = punkte[0]['Hips']
@@ -140,13 +140,13 @@ class BvhProjektionTest(SimpleTestCase):
 
     def test_y_ist_gespiegelt(self):
         """Der höhere Punkt (Spine) muss den KLEINEREN Pixelwert haben."""
-        punkte, _ = _parse_bvh_to_2d(self.pfad, 100, 100)
+        punkte, _ = Bvhprojektion.punkte(self.pfad, 100, 100)
         self.assertLess(punkte[0]['Spine'][1], punkte[0]['Hips'][1])
 
     def test_breites_video_zieht_den_ausschnitt_in_die_breite(self):
         """Bei 200x100 verdoppelt sich halb_x — die Y-Werte bleiben."""
-        schmal, _ = _parse_bvh_to_2d(self.pfad, 100, 100)
-        breit, _ = _parse_bvh_to_2d(self.pfad, 200, 100)
+        schmal, _ = Bvhprojektion.punkte(self.pfad, 100, 100)
+        breit, _ = Bvhprojektion.punkte(self.pfad, 200, 100)
         self.assertAlmostEqual(breit[0]['Hips'][1], schmal[0]['Hips'][1],
                                places=3)
         self.assertAlmostEqual(breit[0]['Hips'][0], 100.0, places=3)
@@ -154,7 +154,7 @@ class BvhProjektionTest(SimpleTestCase):
     def test_bvh_ohne_bewegung_ergibt_leere_listen(self):
         pfad = Path(self.ordner) / 'ohne.bvh'
         pfad.write_text('HIERARCHY\nROOT Hips\n{\n}\nMOTION\n', encoding='utf-8')
-        self.assertEqual(_parse_bvh_to_2d(pfad, 100, 100), ([], []))
+        self.assertEqual(Bvhprojektion.punkte(pfad, 100, 100), ([], []))
 
 
 if __name__ == '__main__':

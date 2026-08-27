@@ -7,7 +7,7 @@ Aus `scene_object_bundle_tests.py` herausgeloest (17.08.2026, Befund
 `dateigroesse`): Die Datei hatte 422 Zeilen und eine Klasse mit 13 Tests.
 """
 from .base import TestCategory
-from ._bundle_basis import _PNG_CONTENT, _fetch, _post_multipart
+from ._bundle_basis import (Bundelruf, _PNG_CONTENT)
 
 
 class BundleMtlTests(TestCategory):
@@ -26,11 +26,11 @@ class BundleMtlTests(TestCategory):
             b'Kd 1.0 1.0 1.0\n'
             b'map_Kd -s 1 1 -o 0 0 0 swan_tex.png\n'
         )
-        status1, mtl_data = _post_multipart('/api/studio/scene-object-upload/', [
+        status1, mtl_data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'swan.mtl', mtl_with_opts, 'text/plain'),
             ('bundleId', None, bundle, 'text/plain'),
         ])
-        status2, tex_data = _post_multipart('/api/studio/scene-object-upload/', [
+        status2, tex_data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'swan_tex.png', _PNG_CONTENT, 'image/png'),
             ('bundleId', None, bundle, 'text/plain'),
         ])
@@ -42,7 +42,7 @@ class BundleMtlTests(TestCategory):
         mtl_url = mtl_data.get('url')
         if not mtl_url:
             return False, 'Keine MTL-URL geliefert'
-        _, mtl_bytes = _fetch(mtl_url)
+        _, mtl_bytes = Bundelruf.abrufen(mtl_url)
         mtl_text = mtl_bytes.decode('utf-8', errors='ignore')
         m = re.search(r'^\s*map_Kd\s+(.+?)\s*$', mtl_text, re.IGNORECASE | re.MULTILINE)
         if not m:
@@ -54,7 +54,7 @@ class BundleMtlTests(TestCategory):
             return False, f'Parser extrahierte "{ref_name}" (erwartet: "swan_tex.png")'
         # Textur unter demselben Bundle-Ordner muss existieren
         base = mtl_url.rsplit('/', 1)[0]
-        status3, _ = _fetch(f"{base}/{ref_name}")
+        status3, _ = Bundelruf.abrufen(f"{base}/{ref_name}")
         if status3 != 200:
             return False, f'Referenzierte Textur (mit Options-Flags davor) HTTP {status3}'
         return True, f'Parser ignoriert "-s 1 1 -o 0 0 0" → "{ref_name}" korrekt'
@@ -68,15 +68,15 @@ class BundleMtlTests(TestCategory):
         obj_with_mtllib = b"mtllib myswan.mtl\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"
         mtl_content = b"newmtl Swan\nKd 1 1 1\nmap_Kd myswan.png\n"
         # Alle 3 im gleichen Bundle hochladen
-        status1, obj_data = _post_multipart('/api/studio/scene-object-upload/', [
+        status1, obj_data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'myswan.obj', obj_with_mtllib, 'text/plain'),
             ('bundleId', None, bundle, 'text/plain'),
         ])
-        status2, _ = _post_multipart('/api/studio/scene-object-upload/', [
+        status2, _ = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'myswan.mtl', mtl_content, 'text/plain'),
             ('bundleId', None, bundle, 'text/plain'),
         ])
-        status3, _ = _post_multipart('/api/studio/scene-object-upload/', [
+        status3, _ = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'myswan.png', _PNG_CONTENT, 'image/png'),
             ('bundleId', None, bundle, 'text/plain'),
         ])
@@ -85,7 +85,7 @@ class BundleMtlTests(TestCategory):
         # Simuliere _autoDiscoverMtl-Logik: OBJ-Content parsen, mtllib extrahieren,
         # URL aus basePath + mtllib-filename bauen, HEAD-Check.
         import re
-        _, obj_bytes = _fetch(obj_data['url'])
+        _, obj_bytes = Bundelruf.abrufen(obj_data['url'])
         obj_text = obj_bytes.decode('utf-8', errors='ignore')
         m = re.search(r'^\s*mtllib\s+(.+?)\s*$', obj_text, re.IGNORECASE | re.MULTILINE)
         if not m:
@@ -93,7 +93,7 @@ class BundleMtlTests(TestCategory):
         mtllib_ref = m.group(1).strip().replace('\\', '/').lstrip('./')
         base = obj_data['url'].rsplit('/', 1)[0]
         expected_mtl_url = f"{base}/{mtllib_ref}"
-        status4, mtl_bytes = _fetch(expected_mtl_url)
+        status4, mtl_bytes = Bundelruf.abrufen(expected_mtl_url)
         if status4 != 200:
             return False, f'Auto-discover Ziel "{expected_mtl_url}" HTTP {status4}'
         if b'map_Kd' not in mtl_bytes:
@@ -107,11 +107,11 @@ class BundleMtlTests(TestCategory):
         bundle = 'pytest_subdir_' + str(id(cls))
         # MTL mit Sub-Pfad, aber PNG wird FLACH ins Bundle gelegt (typisch für unseren Upload-Flow)
         mtl_sub = b'newmtl Swan\nmap_Kd textures/swan.png\n'
-        status1, mtl_data = _post_multipart('/api/studio/scene-object-upload/', [
+        status1, mtl_data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'sub.mtl', mtl_sub, 'text/plain'),
             ('bundleId', None, bundle, 'text/plain'),
         ])
-        status2, _ = _post_multipart('/api/studio/scene-object-upload/', [
+        status2, _ = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'swan.png', _PNG_CONTENT, 'image/png'),
             ('bundleId', None, bundle, 'text/plain'),
         ])
@@ -119,7 +119,7 @@ class BundleMtlTests(TestCategory):
             return False, f'Upload HTTP: {status1}/{status2}'
         # Simuliere Parser: probiere "textures/swan.png" (fehlt), dann "swan.png" (OK)
         import re
-        _, mtl_bytes = _fetch(mtl_data['url'])
+        _, mtl_bytes = Bundelruf.abrufen(mtl_data['url'])
         mtl_text = mtl_bytes.decode('utf-8', errors='ignore')
         m = re.search(r'^\s*map_Kd\s+(.+?)\s*$', mtl_text, re.IGNORECASE | re.MULTILINE)
         raw_ref = m.group(1).strip()
@@ -131,7 +131,7 @@ class BundleMtlTests(TestCategory):
         base = mtl_data['url'].rsplit('/', 1)[0]
         found_url = None
         for c in candidates:
-            s, _ = _fetch(f"{base}/{c}")
+            s, _ = Bundelruf.abrufen(f"{base}/{c}")
             if s == 200:
                 found_url = f"{base}/{c}"
                 break
@@ -147,18 +147,18 @@ class BundleMtlTests(TestCategory):
         den reinen Dateinamen 'swan.png' im Bundle-Ordner resolved werden"""
         bundle = 'pytest_bs_' + str(id(object()))
         mtl_bs = b'newmtl Swan\nmap_Kd textures\\swan.png\n'
-        status1, mtl_data = _post_multipart('/api/studio/scene-object-upload/', [
+        status1, mtl_data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'bs.mtl', mtl_bs, 'text/plain'),
             ('bundleId', None, bundle, 'text/plain'),
         ])
-        status2, _ = _post_multipart('/api/studio/scene-object-upload/', [
+        status2, _ = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'swan.png', _PNG_CONTENT, 'image/png'),
             ('bundleId', None, bundle, 'text/plain'),
         ])
         if status1 != 200 or status2 != 200:
             return False, f'Upload HTTP: {status1}/{status2}'
         import re
-        _, mtl_bytes = _fetch(mtl_data['url'])
+        _, mtl_bytes = Bundelruf.abrufen(mtl_data['url'])
         mtl_text = mtl_bytes.decode('utf-8', errors='ignore')
         m = re.search(r'^\s*map_Kd\s+(.+?)\s*$', mtl_text, re.IGNORECASE | re.MULTILINE)
         raw_ref = m.group(1).strip()
@@ -167,7 +167,7 @@ class BundleMtlTests(TestCategory):
         if ref_name != 'swan.png':
             return False, f'Parser extrahierte "{ref_name}" (erwartet: "swan.png")'
         base = mtl_data['url'].rsplit('/', 1)[0]
-        status3, _ = _fetch(f"{base}/{ref_name}")
+        status3, _ = Bundelruf.abrufen(f"{base}/{ref_name}")
         if status3 != 200:
             return False, f'Pfad-Normalisierung ergibt HTTP {status3}'
         return True, 'Backslash → Dateiname korrekt aufgelöst'

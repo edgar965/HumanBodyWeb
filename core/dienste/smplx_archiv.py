@@ -15,7 +15,7 @@ import logging
 import os
 
 import numpy as np
-from django.conf import settings
+from ..daten.smplxablage import Smplxablage
 
 from .smplxnetz import SmplxNetz, SmplxNetzFehler
 
@@ -27,8 +27,8 @@ class SmplxArchiv:
 
     @staticmethod
     def verzeichnis():
-        pfad = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody', 'data',
-                            'photoTo3D', 'SMPLX')
+        """Der Ablageordner — angelegt, falls er noch fehlt."""
+        pfad = Smplxablage.verzeichnis()
         os.makedirs(pfad, exist_ok=True)
         return pfad
 

@@ -30,17 +30,17 @@ class Videovorbereitung:
     VORLAUF = 'fast'
 
     @staticmethod
-    def als_mp4(video_pfad, ausgabeordner):
+    def als_mp4(videopfad, ausgabeordner):
         """Pfad zu einer MP4 — der urspruengliche, wenn es schon eine ist."""
-        quelle = Path(video_pfad)
+        quelle = Path(videopfad)
         if quelle.suffix.lower() == '.mp4':
-            return video_pfad
+            return videopfad
         ziel = Path(ausgabeordner) / (quelle.stem + '.mp4')
         if ziel.exists():
             return str(ziel)      # schon einmal umgewandelt
         pipeline_logger.info('[SMPL] Converting %s -> MP4 for SMPL pipeline...',
                              quelle.name)
-        Videovorbereitung._ffmpeg(video_pfad, ziel)
+        Videovorbereitung._ffmpeg(videopfad, ziel)
         pipeline_logger.info('[SMPL] Converted to %s', ziel)
         return str(ziel)
 

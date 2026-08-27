@@ -23,7 +23,7 @@ from pathlib import Path
 
 from django.conf import settings
 
-from .bvh_projektion import _parse_bvh_to_2d
+from .bvh_projektion import Bvhprojektion
 from .keypoints_quellen import Keypointsquellen
 from .skelettzeichner import Skelettzeichner
 from ..daten.gelenknamen import Gelenknamen
@@ -104,7 +104,8 @@ class Skelettfilm:
         """
         if self._aus_bvh():
             try:
-                punkte, kanten = _parse_bvh_to_2d(self.job.bvh_file, breite, hoehe)
+                punkte, kanten = Bvhprojektion.punkte(self.job.bvh_file,
+                                              breite, hoehe)
                 if punkte and kanten:
                     return punkte, kanten, (breite, hoehe)
             except Exception:                                      # noqa: BLE001

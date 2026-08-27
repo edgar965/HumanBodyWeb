@@ -9,10 +9,10 @@ Fixtures stehen in `_cloth_basis.py`.
 """
 from .base import TestCategory, Netzruf
 # siehe `cloth_engine_tests`: der Aufruf setzt `sys.path` fuer `collision.*`.
-from ._cloth_basis import pfad_sichern
+from ._cloth_basis import Clothbasis
 
 
-pfad_sichern()
+Clothbasis.pfad_sichern()
 
 
 class ClothExportTests(TestCategory):

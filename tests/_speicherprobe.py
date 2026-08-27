@@ -80,8 +80,3 @@ class Speicherprobe:
         return {'_save_code': self.speichercode, '_save_ok': self.gespeichert,
                 '_file_exists': self.datei_da, '_load_code': self.ladecode,
                 '_load_ok': self.geladen, 'project': self.projekt}
-
-
-def _save_load(project_data):
-    """Alter Name — liefert das Wörterbuch aus `Speicherprobe`."""
-    return Speicherprobe.fahren(project_data).als_dict()

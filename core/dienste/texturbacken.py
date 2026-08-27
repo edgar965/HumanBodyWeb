@@ -19,6 +19,7 @@ import sys
 
 import numpy as np
 from django.conf import settings
+from ..daten.smplxablage import Smplxablage
 
 from .fotoausrichtung import Fotoausrichtung
 
@@ -61,8 +62,7 @@ class Texturbacken:
         Passt die Vertexzahl, wird direkt projiziert. Passt sie nicht, taugt die
         Projektion immer noch, um die orthographische Lage zu bestimmen."""
         kamera = self.daten.get('cam_data')
-        pfad = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody', 'data',
-                            'photoTo3D', 'SMPLX', '%s.npz' % self.job_id)
+        pfad = Smplxablage.datei(self.job_id)
         if not (kamera and os.path.isfile(pfad)):
             return None, None
         try:

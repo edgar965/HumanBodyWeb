@@ -8,17 +8,17 @@ eine Klasse mit ueber 300 — Befund `dateigroesse`. Gemeinsame Importe und
 Fixtures stehen in `_cloth_basis.py`.
 """
 from .base import TestCategory
-# `pfad_sichern()` haengt `HumanBody/` an `sys.path` — ohne den Aufruf unten
+# `Clothbasis.pfad_sichern()` haengt `HumanBody/` an `sys.path` — ohne den Aufruf unten
 # ist `collision.*` in den Testmethoden nicht importierbar. Vorher stand hier
 # ein `import *` samt Namensliste, von der drei Namen nirgends vorkamen
 # (17.08.2026, `tote-importe`).
-from ._cloth_basis import pfad_sichern
+from ._cloth_basis import Clothbasis
 import inspect
 
 import numpy as np
 
 
-pfad_sichern()
+Clothbasis.pfad_sichern()
 
 
 class ClothEngineTests(TestCategory):

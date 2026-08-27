@@ -182,7 +182,7 @@ urlpatterns = [
     path('api/character/vertex-edit/push-outside/', Netzbearbeitung.herausschieben, name='vertex_edit_push_outside'),
 
     # Pattern Editor
-    path('api/character/pattern/generate/', Schnittmuster.aus_schnitt, name='pattern_generate'),
+    path('api/character/pattern/generate/', Schnittmuster.aus_schnittmuster, name='pattern_generate'),
     path('api/character/pattern/save/', Schnittmusterablage.sichern, name='pattern_save'),
     path('api/character/pattern/specification/', Schnittmusterablage.beschreibung, name='pattern_specification'),
     path('api/character/pattern/region/generate/', Schnittmuster.aus_bereich, name='pattern_region_generate'),

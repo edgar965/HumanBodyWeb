@@ -1,5 +1,24 @@
-from django.conf import settings
+"""Vorlagen-Kontext: App-Version und aktives Theme.
+
+WARUM HIER FREIE FUNKTIONEN STEHEN (Befund `freie-funktionen`, 27.08.2026)
+==========================================================================
+Django löst Kontext-Prozessoren mit `django.utils.module_loading.import_string`
+auf, und das macht **genau einen** `rsplit(".", 1)`:
+
+    module_path, class_name = dotted_path.rsplit(".", 1)
+
+`ui.context_processors.Vorlagenkontext.version` würde damit als Modul
+`ui.context_processors.Vorlagenkontext` gesucht — und scheitern. Ein
+Kontext-Prozessor MUSS eine Funktion auf Modulebene sein; dieselbe Vorschrift
+wie Djangos `Command`-Klasse in einem Management-Befehl.
+
+Eine dünne Hülle um eine Klasse wäre keine Verbesserung: Sie bliebe eine freie
+Funktion, nur mit einer Zeile mehr.
+"""
+
 import logging
+
+from django.conf import settings
 
 logger = logging.getLogger('core')
 

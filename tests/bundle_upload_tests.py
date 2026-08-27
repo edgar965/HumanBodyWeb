@@ -7,8 +7,8 @@ Aus `scene_object_bundle_tests.py` herausgeloest (17.08.2026, Befund
 `dateigroesse`): Die Datei hatte 422 Zeilen und eine Klasse mit 13 Tests.
 """
 from .base import TestCategory
-from ._bundle_basis import (_MTL_CONTENT, _OBJ_CONTENT, _PNG_CONTENT,
-                            _fetch, _post_multipart)
+from ._bundle_basis import (Bundelruf, _MTL_CONTENT, _OBJ_CONTENT,
+                            _PNG_CONTENT)
 
 
 class BundleUploadTests(TestCategory):
@@ -26,7 +26,7 @@ class BundleUploadTests(TestCategory):
     @classmethod
     def test_01_obj_upload_in_bundle(cls):
         """OBJ-Datei mit bundleId: Upload OK, URL enthält bundleId"""
-        status, data = _post_multipart('/api/studio/scene-object-upload/', [
+        status, data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'bundle_test.obj', _OBJ_CONTENT, 'text/plain'),
             ('bundleId', None, cls._bundle_id, 'text/plain'),
         ])
@@ -45,7 +45,7 @@ class BundleUploadTests(TestCategory):
     @classmethod
     def test_02_mtl_upload_same_bundle(cls):
         """MTL mit gleicher bundleId landet im gleichen Ordner wie OBJ"""
-        status, data = _post_multipart('/api/studio/scene-object-upload/', [
+        status, data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'bundle_test.mtl', _MTL_CONTENT, 'text/plain'),
             ('bundleId', None, cls._bundle_id, 'text/plain'),
         ])
@@ -64,7 +64,7 @@ class BundleUploadTests(TestCategory):
     @classmethod
     def test_03_texture_upload_same_bundle(cls):
         """Textur-PNG mit gleicher bundleId landet im gleichen Ordner"""
-        status, data = _post_multipart('/api/studio/scene-object-upload/', [
+        status, data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'bundle_tex.png', _PNG_CONTENT, 'image/png'),
             ('bundleId', None, cls._bundle_id, 'text/plain'),
         ])
@@ -83,7 +83,7 @@ class BundleUploadTests(TestCategory):
         """Hochgeladene OBJ ist über /media/ abrufbar und Inhalt intakt"""
         if not hasattr(cls, '_obj_url'):
             return False, 'OBJ-Upload-Test lief nicht'
-        status, content = _fetch(cls._obj_url)
+        status, content = Bundelruf.abrufen(cls._obj_url)
         if status != 200:
             return False, f'OBJ-Download HTTP {status}'
         if b'mtllib bundle_test.mtl' not in content:
@@ -95,7 +95,7 @@ class BundleUploadTests(TestCategory):
         """Hochgeladene MTL abrufbar + referenziert Textur"""
         if not hasattr(cls, '_mtl_url'):
             return False, 'MTL-Upload-Test lief nicht'
-        status, content = _fetch(cls._mtl_url)
+        status, content = Bundelruf.abrufen(cls._mtl_url)
         if status != 200:
             return False, f'MTL-Download HTTP {status}'
         if b'map_Kd bundle_tex.png' not in content:
@@ -107,7 +107,7 @@ class BundleUploadTests(TestCategory):
         """Hochgeladene Textur-PNG abrufbar und als PNG erkannt"""
         if not hasattr(cls, '_tex_url'):
             return False, 'Textur-Upload-Test lief nicht'
-        status, content = _fetch(cls._tex_url)
+        status, content = Bundelruf.abrufen(cls._tex_url)
         if status != 200:
             return False, f'Textur-Download HTTP {status}'
         if not content.startswith(b'\x89PNG'):
@@ -132,10 +132,10 @@ class BundleUploadTests(TestCategory):
     @classmethod
     def test_08_without_bundle_id_uses_random(cls):
         """Upload OHNE bundleId landet trotzdem in separatem Ordner (kein Überschreiben)"""
-        status1, data1 = _post_multipart('/api/studio/scene-object-upload/', [
+        status1, data1 = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'solo.obj', b'# a\nv 0 0 0\n', 'text/plain'),
         ])
-        status2, data2 = _post_multipart('/api/studio/scene-object-upload/', [
+        status2, data2 = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'solo.obj', b'# b\nv 1 1 1\n', 'text/plain'),
         ])
         if status1 != 200 or status2 != 200:
@@ -150,7 +150,7 @@ class BundleUploadTests(TestCategory):
         diesem Pfad abrufbar (OBJ→MTL→PNG-Chain komplett)"""
         if not (hasattr(cls, '_obj_url') and hasattr(cls, '_mtl_url') and hasattr(cls, '_tex_url')):
             return False, 'Vorgänger-Tests fehlgeschlagen'
-        status, mtl_content = _fetch(cls._mtl_url)
+        status, mtl_content = Bundelruf.abrufen(cls._mtl_url)
         if status != 200 or not mtl_content:
             return False, f'MTL-Fetch HTTP {status}'
         import re
@@ -169,7 +169,7 @@ class BundleUploadTests(TestCategory):
         expected_tex_url = f"{base}/{ref_name}"
         if expected_tex_url != cls._tex_url:
             return False, f'MTL zeigt auf "{ref_name}" → URL "{expected_tex_url}", aber Textur liegt unter "{cls._tex_url}"'
-        status2, png_data = _fetch(expected_tex_url)
+        status2, png_data = Bundelruf.abrufen(expected_tex_url)
         if status2 != 200:
             return False, f'Referenzierte Textur nicht abrufbar (HTTP {status2})'
         if not png_data.startswith(b'\x89PNG'):

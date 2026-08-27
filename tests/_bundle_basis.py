@@ -5,14 +5,18 @@ Fuehrender Unterstrich mit Absicht: `testaufbau` erkennt daran, dass das keine
 Testdatei ist. Aus `scene_object_bundle_tests.py` herausgeloest (17.08.2026,
 416 Zeilen).
 
-Die drei Kunstdateien (`_OBJ_CONTENT`, `_MTL_CONTENT`, `_PNG_CONTENT`) sind
-absichtlich winzig und trotzdem gueltig: Ein OBJ mit `mtllib`-Verweis, ein MTL
-mit `map_Kd`-Verweis und ein 1x1-PNG. Damit laesst sich die ganze Kette
-OBJ -> MTL -> PNG pruefen, ohne ein echtes Modell hochzuladen.
+Die drei Kunstdateien (`OBJ`, `MTL`, `PNG`) sind absichtlich winzig und
+trotzdem gueltig: Ein OBJ mit `mtllib`-Verweis, ein MTL mit `map_Kd`-Verweis
+und ein 1x1-PNG. Damit laesst sich die ganze Kette OBJ -> MTL -> PNG pruefen,
+ohne ein echtes Modell hochzuladen.
+
+UMBAU 27.08.2026 (Befund `freie-funktionen`): Die beiden Sende-Funktionen
+stehen jetzt als `Bundelruf`; die Kunstdateien sind Klassenfelder daneben.
 """
 
 # `io` stand hier und wurde nie benutzt (Befund `tote-importe`).
 import json
+import urllib.error
 import urllib.request
 
 # EINE Adresse für alle Tests. Hier stand eine zweite Kopie mit `localhost` —
@@ -28,59 +32,80 @@ import urllib.request
 from .kanal import BASE_URL
 
 
-def _post_multipart(path, fields):
-    """Sendet ein Multipart-Form-Upload. fields = list[(name, filename|None, content, ctype)].
+class Bundelruf:
+    """Multipart-Upload und Abruf — von Hand gebaut, absichtlich am Kanal vorbei."""
 
-    filename=None → normales Text-Feld. Sonst → Datei.
-    Returns (status, json_or_raw).
-    """
-    boundary = '----BundleBoundary' + str(id(fields))
-    body = b''
-    for name, fname, content, ctype in fields:
-        body += f'--{boundary}\r\n'.encode()
-        if fname is not None:
-            body += f'Content-Disposition: form-data; name="{name}"; filename="{fname}"\r\n'.encode()
-            body += f'Content-Type: {ctype}\r\n\r\n'.encode()
-        else:
-            body += f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode()
-        body += content if isinstance(content, (bytes, bytearray)) else content.encode()
-        body += b'\r\n'
-    body += f'--{boundary}--\r\n'.encode()
-    req = urllib.request.Request(BASE_URL + path, data=body, method='POST')
-    req.add_header('Content-Type', f'multipart/form-data; boundary={boundary}')
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            payload = resp.read().decode()
-            try:
-                return resp.status, json.loads(payload)
-            # stumm gewollt: Der Rohtext geht als `_raw` in den Bericht — er
-            # sagt mehr als die Parser-Meldung.
-            except json.JSONDecodeError:
-                return resp.status, {'_raw': payload}
-    except urllib.error.HTTPError as e:
-        return e.code, {'error': str(e)}
-    except Exception as e:
-        return 0, {'error': str(e)}
+    #: Wie lange auf eine Antwort gewartet wird.
+    FRIST_UPLOAD_S = 15
+    FRIST_ABRUF_S = 10
+
+    @classmethod
+    def hochladen(cls, pfad, felder):
+        """Sendet ein Multipart-Formular.
+
+        `felder` = [(name, dateiname|None, inhalt, inhaltstyp)];
+        `dateiname=None` -> normales Textfeld, sonst Datei.
+        Rueckgabe: `(Status, JSON oder {'_raw': Text})`.
+        """
+        grenze = '----BundleBoundary' + str(id(felder))
+        anfrage = urllib.request.Request(
+            BASE_URL + pfad, data=cls._rumpf(grenze, felder), method='POST')
+        anfrage.add_header('Content-Type',
+                           'multipart/form-data; boundary=%s' % grenze)
+        try:
+            with urllib.request.urlopen(
+                    anfrage, timeout=cls.FRIST_UPLOAD_S) as antwort:
+                text = antwort.read().decode()
+                try:
+                    return antwort.status, json.loads(text)
+                # stumm gewollt: Der Rohtext geht als `_raw` in den Bericht —
+                # er sagt mehr als die Parser-Meldung.
+                except json.JSONDecodeError:
+                    return antwort.status, {'_raw': text}
+        except urllib.error.HTTPError as fehler:
+            return fehler.code, {'error': str(fehler)}
+        except Exception as fehler:                              # noqa: BLE001
+            return 0, {'error': str(fehler)}
+
+    @staticmethod
+    def _rumpf(grenze, felder):
+        """Der Multipart-Rumpf als Bytes."""
+        teile = b''
+        for name, dateiname, inhalt, inhaltstyp in felder:
+            teile += ('--%s\r\n' % grenze).encode()
+            if dateiname is not None:
+                teile += ('Content-Disposition: form-data; name="%s"; '
+                          'filename="%s"\r\n' % (name, dateiname)).encode()
+                teile += ('Content-Type: %s\r\n\r\n' % inhaltstyp).encode()
+            else:
+                teile += ('Content-Disposition: form-data; name="%s"\r\n\r\n'
+                          % name).encode()
+            teile += (inhalt if isinstance(inhalt, (bytes, bytearray))
+                      else inhalt.encode())
+            teile += b'\r\n'
+        return teile + ('--%s--\r\n' % grenze).encode()
+
+    @classmethod
+    def abrufen(cls, adresse):
+        """Laedt den Inhalt einer Adresse (absolut oder relativ)."""
+        if adresse.startswith('/'):
+            adresse = BASE_URL + adresse
+        try:
+            with urllib.request.urlopen(
+                    adresse, timeout=cls.FRIST_ABRUF_S) as antwort:
+                return antwort.status, antwort.read()
+        except urllib.error.HTTPError as fehler:
+            return fehler.code, b''
+        except Exception as fehler:                              # noqa: BLE001
+            # Der Grund gehoert in den Bericht: Ein Aufrufer sieht sonst nur
+            # „HTTP 0" und weiss nicht, ob der Server aus war, der Name nicht
+            # aufloeste oder die Zeit ablief. Die Bytes sind hier frei — beim
+            # Statuscode 0 prueft niemand den Inhalt.
+            return 0, str(fehler).encode('utf-8', 'replace')
 
 
-def _fetch(url):
-    """Lädt den Inhalt einer URL (absolut oder relativ). Returns (status, bytes)."""
-    if url.startswith('/'):
-        url = BASE_URL + url
-    try:
-        with urllib.request.urlopen(url, timeout=10) as resp:
-            return resp.status, resp.read()
-    except urllib.error.HTTPError as e:
-        return e.code, b''
-    except Exception as e:                                    # noqa: BLE001
-        # Der Grund gehoert in den Bericht: Ein Aufrufer sieht sonst nur
-        # „HTTP 0" und weiss nicht, ob der Server aus war, der Name nicht
-        # aufloeste oder die Zeit ablief. Die Bytes sind hier frei — beim
-        # Statuscode 0 prueft niemand den Inhalt.
-        return 0, str(e).encode('utf-8', 'replace')
-
-
-# Synthetische Test-Dateien — minimal, aber syntaktisch gültig.
+# Synthetische Test-Dateien — minimal, aber syntaktisch gültig. Sie bleiben
+# Modulkonstanten: Das sind DATEN, kein Verhalten.
 _OBJ_CONTENT = b"""# Bundle-Test OBJ
 mtllib bundle_test.mtl
 v 0.0 0.0 0.0
@@ -111,4 +136,3 @@ _PNG_CONTENT = bytes([
     0x73, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E,
     0x44, 0xAE, 0x42, 0x60, 0x82,
 ])
-

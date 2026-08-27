@@ -38,8 +38,12 @@ class Schnittmuster:
     @staticmethod
     @csrf_exempt
     @require_POST
-    def aus_schnitt(request):
+    def aus_schnittmuster(request):
         """3D-Stoffnetz aus einem 2D-Bezier-Schnitt.
+
+        NICHT `aus_schnitt`: `ausschnitt` ist im Projekt der BILDAUSSCHNITT
+        (crop) der Theatre-Aufnahme. Zwei Bedeutungen auf einem Wortstamm sind
+        genau das, was `namensvarianten` meldet (27.08.2026).
 
         POST (JSON): {pattern: {panels, stitches}}
         Abfrageparameter: body_type, morph_* fuer den Koerper.

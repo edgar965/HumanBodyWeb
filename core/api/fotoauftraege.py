@@ -25,6 +25,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.fotoauftrag import Fotoauftrag
+from ..daten.smplxablage import Smplxablage
 from ..daten.wrapperpfad import Wrapperpfad
 from ..dienste.bildablage import Bildablage
 from ..dienste.fotoanalyse import Fotoanalyse, FotoanalyseFehler
@@ -36,9 +37,6 @@ logger = logging.getLogger(__name__)
 
 class Fotoauftraege:
     """Alles, was mit einem Fotoanalyse-Auftrag geschieht."""
-
-    #: Dateiendungen der SMPL-X-Ausgabe je Auftrag.
-    SMPLX_ENDUNGEN = ('.json', '.npz')
 
     # ----------------------------------------------------------- Nachschlagen
 
@@ -140,10 +138,7 @@ class Fotoauftraege:
             bild = os.path.join(basis, job.result_image)
             if os.path.isfile(bild):
                 os.remove(bild)
-        smplx = os.path.join(basis, '..', 'HumanBody', 'data', 'photoTo3D',
-                             'SMPLX')
-        for endung in Fotoauftraege.SMPLX_ENDUNGEN:
-            pfad = os.path.join(smplx, '%s%s' % (job.id, endung))
+        for pfad in Smplxablage.dateien(job.id):
             if os.path.isfile(pfad):
                 os.remove(pfad)
 
