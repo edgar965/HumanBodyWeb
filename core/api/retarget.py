@@ -3,237 +3,222 @@
 
 Aus core/character_api.py herausgeloest (Umbau 15.08.2026) — warum so
 geschnitten, steht in `core/api/__init__.py`.
+
+UMBAU 27.08.2026 (Befunde `freie-funktionen`, `doppelcode`): acht freie
+Funktionen. Die Weiterleitung `retarget_bvh_data` ist entfallen — sie rief nur
+`Retargetdaten(...).holen()` und wurde ausserhalb dieser Datei nirgends mehr
+gebraucht. Die dreifach ausgeschriebene Pfadpruefung („pruefen, dann `is_file`,
+dann 404 mit passendem Text") steht einmal in `_bibliothekspfad`.
 """
 
-from ..dienste.bvhverwaltung import Bvhverwaltung, BvhFehler
-from ..dienste.retargetdaten import Retargetdaten
-from ..dienste.bvhablage import Bvhablage
-from ..models import BVHJob
-from django.http import JsonResponse, HttpResponseNotFound
-from django.shortcuts import get_object_or_404
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
 import json
 import logging
 import os
 
+from django.http import JsonResponse, HttpResponseNotFound
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
+
+from ..dienste.bvhablage import Bvhablage
+from ..dienste.bvhverwaltung import Bvhverwaltung, BvhFehler
+from ..dienste.retargetdaten import Retargetdaten
+from ..models import BVHJob
 
 logger = logging.getLogger(__name__)
 
 
+class Retargetendpunkte:
+    """Bewegungen auf das Rigify/DEF-Skelett uebertragen und zusammenfuehren."""
 
+    #: Koerpergroesse in Metern, wenn keine mitkommt.
+    VORGABE_GROESSE = 1.68
 
+    # ------------------------------------------------------------- Zuordnung
 
+    @staticmethod
+    @require_GET
+    def zuordnungstabellen(request):
+        """Die Tabellen BVH→Rigify, die Ausnahmen und die Gesichtsknochen."""
+        from humanbody_core.skeleton import Skeleton, FACE_HAND_BONES
+        zuordnungen = {}
+        ohne_richtungskorrektur = {}
+        for art, klasse in Skeleton._registry.items():
+            if klasse.BONE_MAP_TO_RIGIFY:
+                zuordnungen[art] = klasse.BONE_MAP_TO_RIGIFY
+                ohne_richtungskorrektur[art] = klasse.SKIP_DIR_CORRECTION
+        return JsonResponse({
+            'mappings': zuordnungen,
+            'skip_dir_correction': ohne_richtungskorrektur,
+            'face_hand_bones': FACE_HAND_BONES,
+        })
 
+    # ----------------------------------------------------------- Hilfsmittel
 
+    @classmethod
+    def _wahlwerte(cls, werte):
+        """(Groesse, Format, Fusskorrektur, Delta) aus einer Parametertabelle."""
+        delta = werte.get('delta_norm', '').lower()
+        return (float(werte.get('body_height', cls.VORGABE_GROESSE)),
+                werte.get('format', None),
+                werte.get('foot_correction', '').lower() in ('1', 'true'),
+                True if delta == '1' else (False if delta == '0' else None))
 
+    @staticmethod
+    def _bibliothekspfad(schluessel):
+        """Geprueften Pfad zu `<kategorie>/<name>.bvh` — oder eine 404-Antwort.
 
+        Pfadpruefung ueber `Bvhablage` statt per Zeichenkettenvergleich:
+        `startswith` besteht auch ein Nachbarverzeichnis mit gleichem
+        Namensanfang. Am 16.08.2026 nachgezogen — an den uebrigen Stellen war
+        das schon am 12.08. umgestellt worden, diese hier war uebersehen.
+        """
+        geprueft = Bvhablage.pfad_pruefen(Bvhablage.wurzel()
+                                          / ('%s.bvh' % schluessel))
+        if not geprueft:
+            return HttpResponseNotFound('Invalid path: %s' % schluessel)
+        if not geprueft.is_file():
+            return HttpResponseNotFound('BVH not found: %s' % schluessel)
+        return str(geprueft)
 
-
-
-@require_GET
-def retarget_config(request):
-    """Serve BVH-to-Rigify mapping tables, skip-dir-correction lists, and face/hand bone list."""
-    from humanbody_core.skeleton import Skeleton, FACE_HAND_BONES
-    mappings = {}
-    skip_dir_correction = {}
-    for fmt, cls in Skeleton._registry.items():
-        if cls.BONE_MAP_TO_RIGIFY:
-            mappings[fmt] = cls.BONE_MAP_TO_RIGIFY
-            skip_dir_correction[fmt] = cls.SKIP_DIR_CORRECTION
-    return JsonResponse({
-        'mappings': mappings,
-        'skip_dir_correction': skip_dir_correction,
-        'face_hand_bones': FACE_HAND_BONES,
-    })
-
-
-
-
-def retarget_bvh_data(bvh_path, body_height=1.68, fmt=None, foot_correction=False,
-                      delta_norm=None):
-    """Bisherige Aufrufform — die Rechnung steht in dienste/retargetdaten.py.
-
-    Dorthin ausgelagert am 18.08.2026: Sie ist Fachlogik und hat einen
-    Ringimport zwischen `api/retarget.py` und `api/dateien.py` getragen.
-    """
-    return Retargetdaten(bvh_path, body_height, fmt, foot_correction,
-                         delta_norm).holen()
-
-def retarget(request):
-    """Unified retarget endpoint — ONE URL for both Job and Library BVH.
-
-    GET /api/retarget/?job=<uuid>                        → job's BVH file
-    GET /api/retarget/?category=<cat>&name=<name>        → library BVH file
-    Common query params: body_height, format, foot_correction
-    """
-    job_id = request.GET.get('job')
-    category = request.GET.get('category')
-    name = request.GET.get('name')
-
-    body_height = float(request.GET.get('body_height', 1.68))
-    fmt = request.GET.get('format', None)
-    foot_correction = request.GET.get('foot_correction', '').lower() in ('1', 'true')
-    delta_norm_str = request.GET.get('delta_norm', '').lower()
-    delta_norm = True if delta_norm_str == '1' else (False if delta_norm_str == '0' else None)
-
-    if job_id:
+    @staticmethod
+    def _auftragspfad(job_id):
+        """Die BVH eines Auftrags — oder eine 404-Antwort."""
         job = get_object_or_404(BVHJob, id=job_id)
         if not job.bvh_file or not os.path.isfile(job.bvh_file):
             return HttpResponseNotFound('Job has no BVH file')
-        bvh_path = job.bvh_file
-    elif category and name:
-        # Pfadpruefung ueber Bvhablage statt per Zeichenkettenvergleich:
-        # `startswith` besteht auch ein Nachbarverzeichnis mit gleichem
-        # Namensanfang. Am 16.08.2026 nachgezogen — an den uebrigen Stellen war
-        # das schon am 12.08. umgestellt worden, diese hier war uebersehen.
-        geprueft = Bvhablage.pfad_pruefen(
-            Bvhablage.wurzel() / category / f'{name}.bvh')
-        if not geprueft:
-            return HttpResponseNotFound('Invalid path')
-        bvh_path = str(geprueft)
-        if not os.path.isfile(bvh_path):
-            return HttpResponseNotFound(f'BVH not found: {category}/{name}')
-    else:
-        return JsonResponse({'error': 'Provide ?job=<uuid> or ?category=<cat>&name=<name>'}, status=400)
+        return job.bvh_file
 
-    return JsonResponse(retarget_bvh_data(bvh_path, body_height, fmt, foot_correction, delta_norm))
+    # -------------------------------------------------------------- Umsetzen
 
+    @classmethod
+    def umsetzen(cls, request):
+        """EINE Adresse fuer Auftrags- und Bibliotheks-BVH.
 
-@require_GET
-def retarget_bvh(request, category, name):
-    """Legacy — forwards to unified retarget()."""
-    request.GET = request.GET.copy()
-    request.GET['category'] = category
-    request.GET['name'] = name
-    return retarget(request)
+        GET /api/retarget/?job=<uuid>                 → BVH des Auftrags
+        GET /api/retarget/?category=<cat>&name=<name> → BVH der Bibliothek
 
+        Dazu: `body_height`, `format`, `foot_correction`, `delta_norm`.
+        """
+        groesse, art, fusskorrektur, delta = cls._wahlwerte(request.GET)
+        auftrag = request.GET.get('job')
+        kategorie = request.GET.get('category')
+        name = request.GET.get('name')
+        if auftrag:
+            pfad = cls._auftragspfad(auftrag)
+        elif kategorie and name:
+            pfad = cls._bibliothekspfad('%s/%s' % (kategorie, name))
+        else:
+            return JsonResponse(
+                {'error': 'Provide ?job=<uuid> or ?category=<cat>&name=<name>'},
+                status=400)
+        if not isinstance(pfad, str):
+            return pfad                          # fertige Fehlerantwort
+        return JsonResponse(Retargetdaten(pfad, groesse, art, fusskorrektur,
+                                          delta).holen())
 
-@csrf_exempt
-@require_POST
-def retarget_merge(request):
-    """Server-side hybrid merge: retarget body + face BVHs and merge.
+    @staticmethod
+    @require_GET
+    def bibliotheks_bvh(request, category, name):
+        """Aeltere Adresse — leitet auf `umsetzen` weiter."""
+        request.GET = request.GET.copy()
+        request.GET['category'] = category
+        request.GET['name'] = name
+        return Retargetendpunkte.umsetzen(request)
 
-    POST /api/character/retarget-merge/
-    Body JSON: { body_bvh: "category/name", face_bvh: "category/name",
-                 body_height: 1.68, foot_correction: false }
-    """
-    from humanbody_core.skeleton import SkeletonRigify
+    @staticmethod
+    @require_GET
+    def auftrags_bvh(request, job_id):
+        """Aeltere Adresse — jetzt `Auftragsdateien.bvh(?mode=retarget)`."""
+        from .dateien import Auftragsdateien
+        request.GET = request.GET.copy()
+        request.GET['mode'] = 'retarget'
+        return Auftragsdateien.bvh(request, job_id)
 
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+    # --------------------------------------------------- Koerper und Gesicht
 
-    body_bvh_key = data.get('body_bvh', '')
-    face_bvh_key = data.get('face_bvh', '')
-    if not body_bvh_key or not face_bvh_key:
-        return JsonResponse({'error': 'body_bvh and face_bvh are required'}, status=400)
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def zusammenfuehren(request):
+        """Koerper- und Gesicht-BVH umsetzen und mischen — serverseitig.
 
-    body_height = float(data.get('body_height', 1.68))
-    foot_correction = bool(data.get('foot_correction', False))
+        POST /api/character/retarget-merge/
+        JSON: { body_bvh: "kategorie/name", face_bvh: "kategorie/name",
+                body_height: 1.68, foot_correction: false }
+        """
+        from humanbody_core.skeleton import SkeletonRigify
+        try:
+            daten = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+        koerper = daten.get('body_bvh', '')
+        gesicht = daten.get('face_bvh', '')
+        if not koerper or not gesicht:
+            return JsonResponse(
+                {'error': 'body_bvh and face_bvh are required'}, status=400)
+        groesse = float(daten.get('body_height',
+                                  Retargetendpunkte.VORGABE_GROESSE))
+        fusskorrektur = bool(daten.get('foot_correction', False))
+        koerperpfad = Retargetendpunkte._bibliothekspfad(koerper)
+        if not isinstance(koerperpfad, str):
+            return koerperpfad
+        gesichtspfad = Retargetendpunkte._bibliothekspfad(gesicht)
+        if not isinstance(gesichtspfad, str):
+            return gesichtspfad
+        return JsonResponse(SkeletonRigify.merge_retargeted_clips(
+            Retargetdaten(koerperpfad, groesse,
+                          foot_correction=fusskorrektur).holen(),
+            Retargetdaten(gesichtspfad, groesse).holen()))
 
-    # Pfadpruefung ueber Bvhablage — siehe Begruendung in `retarget`.
-    body_path = Bvhablage.pfad_pruefen(Bvhablage.wurzel() / f'{body_bvh_key}.bvh')
-    if not body_path:
-        return HttpResponseNotFound('Invalid body_bvh path')
-    if not body_path.is_file():
-        return HttpResponseNotFound(f'Body BVH not found: {body_bvh_key}')
+    @staticmethod
+    @require_GET
+    def auftrag_zusammenfuehren(request, job_id):
+        """Koerper- und Gesicht-BVH EINES Hybrid-Auftrags mischen.
 
-    face_path = Bvhablage.pfad_pruefen(Bvhablage.wurzel() / f'{face_bvh_key}.bvh')
-    if not face_path:
-        return HttpResponseNotFound('Invalid face_bvh path')
-    if not face_path.is_file():
-        return HttpResponseNotFound(f'Face BVH not found: {face_bvh_key}')
+        GET /api/character/retarget-job-merge/<job_id>/
+        Wahlweise: `body_height`, `foot_correction`.
+        """
+        from humanbody_core.skeleton import SkeletonRigify
+        job = get_object_or_404(BVHJob, id=job_id)
+        if not job.bvh_file:
+            return HttpResponseNotFound('Job has no body BVH file')
+        if not job.bvh_file_face:
+            return HttpResponseNotFound('Job has no face BVH file')
+        for pfad in (job.bvh_file, job.bvh_file_face):
+            if not os.path.isfile(pfad):
+                return HttpResponseNotFound('BVH file not found: %s' % pfad)
+        groesse = float(request.GET.get('body_height',
+                                        Retargetendpunkte.VORGABE_GROESSE))
+        fusskorrektur = (request.GET.get('foot_correction', '').lower()
+                         in ('1', 'true'))
+        # Die v4-BVH wird IMMER umgesetzt (sie fuehrt die Handknochen); beim
+        # Mischen fallen die unruhigen v4-Gesichtsknochen heraus.
+        return JsonResponse(SkeletonRigify.merge_retargeted_clips(
+            Retargetdaten(job.bvh_file, groesse,
+                          foot_correction=fusskorrektur).holen(),
+            Retargetdaten(job.bvh_file_face, groesse).holen(),
+            filter_noisy_face=True))
 
-    body_path, face_path = str(body_path), str(face_path)
+    # -------------------------------------------------------- Bibliothek
 
-    body_result = retarget_bvh_data(body_path, body_height=body_height,
-                                     foot_correction=foot_correction)
-    face_result = retarget_bvh_data(face_path, body_height=body_height)
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def bvh_verwalten(request):
+        """Dateien und Ordner der BVH-Bibliothek verwalten.
 
-    merged = SkeletonRigify.merge_retargeted_clips(body_result, face_result)
-    return JsonResponse(merged)
+        POST /api/character/bvh-manage/ mit JSON-Feld `action`:
+        delete, rename, move, copy, create_folder, rename_folder, delete_folder
 
-
-@require_GET
-def retarget_job_bvh(request, job_id):
-    """Legacy endpoint — now handled by serve_bvh_file(?mode=retarget) in views.py."""
-    from .dateien import serve_bvh_file
-    # Forward to unified handler with mode=retarget
-    request.GET = request.GET.copy()
-    request.GET['mode'] = 'retarget'
-    return serve_bvh_file(request, job_id)
-
-
-@require_GET
-def retarget_job_merge(request, job_id):
-    """Server-side retarget + merge for a hybrid pipeline job (body + face BVH).
-
-    GET /api/character/retarget-job-merge/<job_id>/
-    Optional query params: body_height, foot_correction
-    """
-    from humanbody_core.skeleton import SkeletonRigify
-
-    job = get_object_or_404(BVHJob, id=job_id)
-    if not job.bvh_file:
-        return HttpResponseNotFound('Job has no body BVH file')
-    if not job.bvh_file_face:
-        return HttpResponseNotFound('Job has no face BVH file')
-
-    for path in (job.bvh_file, job.bvh_file_face):
-        if not os.path.isfile(path):
-            return HttpResponseNotFound(f'BVH file not found: {path}')
-
-    body_height = float(request.GET.get('body_height', 1.68))
-    foot_correction = request.GET.get('foot_correction', '').lower() in ('1', 'true')
-
-    body_result = retarget_bvh_data(job.bvh_file, body_height=body_height,
-                                     foot_correction=foot_correction)
-
-    # Always retarget v4 BVH (has hand bones)
-    face_result = retarget_bvh_data(job.bvh_file_face, body_height=body_height)
-
-    # Merge body + v4 (hands), filter ALL noisy v4 face bones → neutral face
-    merged = SkeletonRigify.merge_retargeted_clips(
-        body_result, face_result, filter_noisy_face=True)
-    return JsonResponse(merged)
-
-
-
-
-
-
-
-
-
-
-@csrf_exempt
-@require_POST
-def bvh_manage(request):
-    """Dateien und Ordner der BVH-Bibliothek verwalten.
-
-    POST /api/character/bvh-manage/ mit JSON-Feld `action`:
-      delete, rename, move, copy, create_folder, rename_folder, delete_folder
-
-    Die Arbeit macht Bvhverwaltung; hier steht nur die HTTP-Schale. Bis zum
-    16.08.2026 waren beides 149 Zeilen in einer Funktion.
-    """
-    try:
-        daten = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-    try:
-        return JsonResponse(Bvhverwaltung.ausfuehren(daten))
-    except BvhFehler as e:
-        return JsonResponse({'error': e.text}, status=e.kennzahl)
-
-
-
-
-
-
-
-
-
-
+        Die Arbeit macht Bvhverwaltung; hier steht nur die HTTP-Schale. Bis zum
+        16.08.2026 waren beides 149 Zeilen in einer Funktion.
+        """
+        try:
+            daten = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        try:
+            return JsonResponse(Bvhverwaltung.ausfuehren(daten))
+        except BvhFehler as fehler:
+            return JsonResponse({'error': fehler.text}, status=fehler.kennzahl)

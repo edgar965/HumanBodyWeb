@@ -97,7 +97,6 @@ def open_in_blender(request, pk):
     einer fremden Seite aus auslösen (`<img src=…>`), weil GET die
     Gleiche-Herkunft-Prüfung nicht durchläuft."""
     bvh = get_object_or_404(BVHFile, pk=pk)
-    bvh_path = bvh.path.replace('\\', '/')
 
     blender_exe = str(settings.BLENDER_EXE)
 

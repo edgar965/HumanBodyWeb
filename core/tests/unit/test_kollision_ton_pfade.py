@@ -27,9 +27,9 @@ Drei Befunde, alle am Code nachgelesen und nachgestellt:
    Am 12.08.2026 wurden `output_dir` und `filename` auf SafePath umgestellt; der
    Zweig OHNE `filename` blieb übrig.
 """
-import glob
 import os
 import sys
+from pathlib import Path
 
 from django.conf import settings
 from django.test import SimpleTestCase
@@ -90,17 +90,28 @@ class TonquellenTest(SimpleTestCase):
         self.assertNotIn('4040', self.am.BASIS_URL)
 
     def test_datei_im_projekt_wird_genommen(self):
-        treffer = glob.glob(os.path.join(str(settings.MEDIA_ROOT), '**', '*.*'),
-                            recursive=True)
-        if not treffer:
-            self.skipTest('keine Datei unter MEDIA_ROOT zum Prüfen')
-        self.assertEqual(self.am._resolve_url(treffer[0]), treffer[0])
+        """`manage.py` statt eines glob-Treffers unter MEDIA_ROOT.
+
+        Bis zum 27.08.2026 suchte die Prüfung sich ihre Datei selbst und
+        übersprang sich, wenn MEDIA_ROOT leer war — also genau auf einem
+        frisch ausgecheckten Rechner. Eine Prüfung, die sich selbst
+        wegdrückt, meldet grün, ohne etwas geprüft zu haben."""
+        eigen = str(Path(settings.BASE_DIR) / 'manage.py')
+        self.assertTrue(os.path.isfile(eigen), eigen)
+        self.assertEqual(self.am._resolve_url(eigen), eigen)
 
     def test_datei_ausserhalb_wird_abgelehnt(self):
-        fremd = glob.glob(r'C:\Windows\Media\*.wav')
-        if not fremd:
-            self.skipTest('keine Fremddatei zum Prüfen gefunden')
-        self.assertIsNone(self.am._resolve_url(fremd[0]))
+        """Der Python-Interpreter liegt sicher AUSSERHALB der Projektwurzeln.
+
+        `sys.executable` gibt es auf jedem Rechner, und er liegt weder unter
+        HumanBodyWeb noch unter HumanBody — anders als der frühere
+        `C:/Windows/Media/*.wav`-Fund, den es nicht überall gibt."""
+        fremd = sys.executable
+        self.assertTrue(os.path.isfile(fremd))
+        for wurzel in self.am.WURZELN:
+            self.assertFalse(fremd.lower().startswith(wurzel.lower()),
+                             'Interpreter liegt IM Projekt: %s' % fremd)
+        self.assertIsNone(self.am._resolve_url(fremd))
 
     def test_fremder_host_wird_abgelehnt(self):
         for u in ('http://169.254.169.254/latest/meta-data',

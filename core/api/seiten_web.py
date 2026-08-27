@@ -5,86 +5,105 @@ Herausgeloest aus core/views.py (Umbau 15.08.2026). Die Datei hatte 3.496 Zeilen
 und 43 Endpunkte, dazwischen die Pipeline-Laeufe mit bis zu 304 Zeilen je
 Funktion. Getrennt wird nach Aufgabe: Endpunkte in core/api/, Fachlogik in
 core/dienste/, die Laeufe in core/pipelines/.
+
+UMBAU 27.08.2026 (Befund `freie-funktionen`): zehn freie Funktionen, keine
+Klasse. Sie stehen jetzt als Methoden in `Webseiten` — und die beiden, die
+denselben Auftrag aufloesen (`auftragsseite`, `ergebnisseite`), holen ihn ueber
+eine gemeinsame Hilfsmethode statt jede fuer sich.
 """
+
+import os
+
+from django.shortcuts import render, redirect, get_object_or_404
 
 from ..dienste.systemzustand import Systemzustand
 from ..models import BVHJob
-from django.shortcuts import render, redirect, get_object_or_404
-import os
 
 
-def dashboard(request):
-    """Redirect to Result page."""
-    from django.shortcuts import redirect
-    return redirect('standalone_result')
+class Webseiten:
+    """Die Seiten des Video-zu-BVH-Teils. Jede rendert nur eine Vorlage."""
 
+    @staticmethod
+    def start(request):
+        """`/` zeigt die Ergebnisseite."""
+        return redirect('standalone_result')
 
-def test_mocapnet(request):
-    """MocapNET system status and recent jobs.
+    @staticmethod
+    def werkzeugstatus(request):
+        """MocapNET-Systemzustand und die letzten Auftraege.
 
-    Review 16.08.2026: `bvh_count` ist entfallen. Die Zahl wurde bei jedem
-    Aufruf per COUNT(*) geholt und der Vorlage uebergeben, die sie nirgends
-    anzeigt.
-    """
-    return render(request, 'test_mocapnet.html', {
-        'status': Systemzustand.holen(),
-        'recent_jobs': BVHJob.objects.all()[:10],
-    })
+        Review 16.08.2026: `bvh_count` ist entfallen. Die Zahl wurde bei jedem
+        Aufruf per COUNT(*) geholt und der Vorlage uebergeben, die sie nirgends
+        anzeigt.
+        """
+        return render(request, 'test_mocapnet.html', {
+            'status': Systemzustand.holen(),
+            'recent_jobs': BVHJob.objects.all()[:10],
+        })
 
+    # --------------------------------------------------------- Ein Auftrag
 
-def job_status(request, job_id):
-    """Show the status of a processing job."""
-    job = get_object_or_404(BVHJob, id=job_id)
-    return render(request, 'job_status.html', {'job': job})
+    @staticmethod
+    def _auftrag(job_id):
+        return get_object_or_404(BVHJob, id=job_id)
 
+    @classmethod
+    def auftragsseite(cls, request, job_id):
+        """Der Fortschritt eines laufenden Auftrags."""
+        return render(request, 'job_status.html',
+                      {'job': cls._auftrag(job_id)})
 
-def job_result(request, job_id):
-    """Show the result viewer with video + BVH skeleton."""
-    job = get_object_or_404(BVHJob, id=job_id)
-    return render(request, 'job_result.html', {'job': job})
+    @classmethod
+    def ergebnisseite(cls, request, job_id):
+        """Ergebnis-Ansicht mit Video und BVH-Skelett."""
+        return render(request, 'job_result.html',
+                      {'job': cls._auftrag(job_id)})
 
+    # -------------------------------------------------------------- Listen
 
-def standalone_result(request):
-    """Standalone result page with job dropdown selector."""
-    completed_jobs = BVHJob.objects.filter(status='complete').order_by('-created_at')
-    job = None
-    job_id = request.GET.get('job')
-    if job_id:
-        job = get_object_or_404(BVHJob, id=job_id, status='complete')
-    elif completed_jobs.exists():
-        job = completed_jobs.first()
-    return render(request, 'standalone_result.html', {
-        'job': job,
-        'jobs': completed_jobs,
-    })
+    @staticmethod
+    def ergebnisauswahl(request):
+        """Ergebnisseite mit Auswahlliste statt festem Auftrag."""
+        fertige = BVHJob.objects.filter(status='complete').order_by('-created_at')
+        auftrag = None
+        gewaehlt = request.GET.get('job')
+        if gewaehlt:
+            auftrag = get_object_or_404(BVHJob, id=gewaehlt, status='complete')
+        elif fertige.exists():
+            auftrag = fertige.first()
+        return render(request, 'standalone_result.html',
+                      {'job': auftrag, 'jobs': fertige})
 
+    @staticmethod
+    def fertigliste(request):
+        """Alle fertigen Auftraege mit Vorschaubild."""
+        auftraege = BVHJob.objects.filter(status='complete')
+        # `bvh_basename` haengt nur fuer die Vorlage am Objekt.
+        for auftrag in auftraege:
+            auftrag.bvh_basename = (os.path.basename(auftrag.bvh_file)
+                                    if auftrag.bvh_file else '—')
+        return render(request, 'processed.html', {'jobs': auftraege})
 
-def bvh_library(request):
-    """BVH-Dateien durchsuchen — seitenweise, siehe Bvhbibliothek."""
-    from ..dienste.bvhbibliothek import Bvhbibliothek
-    return render(request, 'browser.html',
-                  Bvhbibliothek.aus_anfrage(request).zusammenhang())
+    @staticmethod
+    def bvhbibliothek(request):
+        """BVH-Dateien durchsuchen — seitenweise, siehe Bvhbibliothek."""
+        from ..dienste.bvhbibliothek import Bvhbibliothek
+        return render(request, 'browser.html',
+                      Bvhbibliothek.aus_anfrage(request).zusammenhang())
 
+    @staticmethod
+    def webcam(request):
+        """Aufnahme ueber die angeschlossene Kamera."""
+        return render(request, 'webcam.html')
 
-def processed_list(request):
-    """List all completed jobs with thumbnails."""
-    jobs = BVHJob.objects.filter(status='complete')
-    # Add bvh_basename as an annotation for the template
-    for job in jobs:
-        job.bvh_basename = os.path.basename(job.bvh_file) if job.bvh_file else '—'
-    return render(request, 'processed.html', {'jobs': jobs})
+    # ------------------------------------------------------ Weiterleitungen
 
+    @staticmethod
+    def einstellungen(request):
+        """`/settings/` zeigt auf `/settings/model/`."""
+        return redirect('settings_model')
 
-def webcam(request):
-    """Live webcam capture page."""
-    return render(request, 'webcam.html')
-
-
-def app_settings(request):
-    """Redirect /settings/ to /settings/model/."""
-    return redirect('settings_model')
-
-
-def app_settings_videobvh(request):
-    """Redirect old URL to 2D settings."""
-    return redirect('settings_videobvh_2d')
+    @staticmethod
+    def einstellungen_videobvh(request):
+        """Alte Adresse — jetzt die 2D-Einstellungen."""
+        return redirect('settings_videobvh_2d')

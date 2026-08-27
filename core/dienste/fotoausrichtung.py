@@ -15,6 +15,7 @@ from django.conf import settings
 
 from ..daten.netzmasse import Netzmasse
 from ..daten.persongrenzen import Persongrenzen
+from ..daten.wrapperpfad import Wrapperpfad
 
 
 logger = logging.getLogger('core')
@@ -64,22 +65,17 @@ class Fotoausrichtung:
         """SMPL-X-Netz über den Wrapper — None, wenn er nicht da ist.
 
         Der Wrapper liegt in `VideoToBVH/wrappers`, nicht im Django-Teil; der
-        Pfad wird deshalb nur für den Import gesetzt und danach wieder entfernt.
+        Pfad wird deshalb nur für den Import gesetzt und danach wieder entfernt
+        (siehe `daten/wrapperpfad.py`).
         """
-        import sys
-        wrappers_dir = os.path.join(str(settings.BASE_DIR), '..',
-                                    'VideoToBVH', 'wrappers')
-        sys.path.insert(0, wrappers_dir)
         try:
-            from smplest_x_wrapper import generate_mesh
-            return generate_mesh(betas, gender)
+            with Wrapperpfad():
+                from smplest_x_wrapper import generate_mesh
+                return generate_mesh(betas, gender)
         except ImportError:
             logger.warning('smplest_x_wrapper nicht importierbar — keine '
                            'automatische Ausrichtung', exc_info=True)
             return None
-        finally:
-            if wrappers_dir in sys.path:
-                sys.path.remove(wrappers_dir)
 
     # --------------------------------------------------------- die zwei Formate
 

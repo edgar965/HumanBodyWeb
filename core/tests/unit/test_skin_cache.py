@@ -32,8 +32,15 @@ class SkinArrayCacheTest(TestCase):
         cls.arrays = Skingewichte.arrays('female')
 
     def setUp(self):
-        if self.arrays is None:
-            self.skipTest('Basis-Skin-Weights nicht vorhanden')
+        # KEIN skipTest: `skin_weights_base.json` liegt fuer beide
+        # Geschlechter IM Repo (`HumanBody/data/humanBody*/`). Fehlt sie,
+        # ist das der Befund und nicht der Grund, die Pruefung wegzulassen —
+        # ein uebersprungener Fall sieht in der Auswertung aus wie ein
+        # bestandener (27.08.2026).
+        self.assertIsNotNone(
+            self.arrays,
+            'skin_weights_base.json fehlt — die Produktivdaten sind '
+            'versioniert, ihr Fehlen ist eine Regression')
 
     def test_zwischengespeicherte_arrays_sind_schreibgeschuetzt(self):
         indices, weights = self.arrays

@@ -129,7 +129,7 @@ class SchluesselpaarTest(unittest.TestCase):
     def test_stufe_bleibt_auf_null(self):
         self.assertEqual(self.ergebnis['stufe'], [0.0, 0.0, 0.0])
 
-    def test_sonderfaelle(self):
+    def test_ohne_paar_kein_uebergang_sonst_harter_sprung(self):
         sonder = self.ergebnis['sonderfaelle']
         self.assertIsNone(sonder['ohneClips'], 'ohne Keyframes kein Paar')
         self.assertTrue(sonder['einer'], 'ein Keyframe = Sprung')
@@ -139,7 +139,7 @@ class SchluesselpaarTest(unittest.TestCase):
                          'kein Teilen durch 0')
         self.assertTrue(sonder['fadeAus'], 'fade=false = harter Wechsel')
 
-    def test_mischen(self):
+    def test_mischen_trifft_die_mitte_und_uebergeht_fehlende_felder(self):
         sonder = self.ergebnis['sonderfaelle']
         self.assertEqual(sonder['mischen'], 5, '0 und 10 in der Mitte')
         self.assertIsNone(sonder['mischenFehlend'],

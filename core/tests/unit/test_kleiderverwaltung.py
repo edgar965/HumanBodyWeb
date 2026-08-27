@@ -59,7 +59,7 @@ class KleiderverwaltungTest(SimpleTestCase):
 
     # ---------------------------------------------------------------- Aktionen
 
-    def test_umbenennen(self):
+    def test_umbenennen_verschiebt_den_ordner_mitsamt_meta(self):
         self._anlegen('Tops', 'shirt')
         antwort = Kleiderverwaltung.ausfuehren(
             {'action': 'rename', 'id': 'Tops/shirt', 'new_name': 'hemd'})
@@ -67,7 +67,7 @@ class KleiderverwaltungTest(SimpleTestCase):
         self.assertFalse((self.wurzel / 'Tops' / 'shirt').exists())
         self.assertTrue((self.wurzel / 'Tops' / 'hemd' / 'meta.json').is_file())
 
-    def test_verschieben(self):
+    def test_verschieben_nimmt_die_dateien_in_die_neue_kategorie_mit(self):
         self._anlegen('Tops', 'shirt')
         antwort = Kleiderverwaltung.ausfuehren(
             {'action': 'move', 'id': 'Tops/shirt', 'target_category': 'Unten'})

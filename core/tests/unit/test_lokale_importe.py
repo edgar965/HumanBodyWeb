@@ -22,9 +22,12 @@ sondern zu pruefen.
 
 import ast
 import importlib.util
+import logging
 from pathlib import Path
 
 from django.test import SimpleTestCase
+
+logger = logging.getLogger('core')
 
 WURZEL = Path(__file__).resolve().parents[3]
 #: Pakete des Projekts, deren Ziele hier ueberhaupt aufloesbar sind.
@@ -57,6 +60,10 @@ class Lokalerimport:
         try:
             return importlib.util.find_spec(self.modul) is not None
         except (ImportError, ValueError, AttributeError):
+            # Nicht dasselbe wie „gibt es nicht": Hier scheitert schon das
+            # Paket DARUEBER. Ohne diese Zeile sehen beide Faelle gleich aus.
+            logger.warning('%s: %s nicht aufloesbar', self, self.modul,
+                           exc_info=True)
             return False
 
 
@@ -65,6 +72,9 @@ class Modulsuche:
 
     def __init__(self, ordner):
         self.ordner = ordner
+        #: Dateien, die nicht parsen. Sie werden NICHT geprueft — der Test
+        #: sagt das ausdruecklich, statt stillschweigend weniger zu pruefen.
+        self.nicht_lesbar = []
 
     def dateien(self):
         for pfad in self.ordner.rglob('*.py'):
@@ -79,6 +89,9 @@ class Modulsuche:
                 baum = ast.parse(pfad.read_text(encoding='utf-8',
                                                 errors='replace'))
             except SyntaxError:
+                logger.warning('%s parst nicht — nicht geprueft', pfad,
+                               exc_info=True)
+                self.nicht_lesbar.append(pfad)
                 continue
             yield from self._aus_baum(pfad, baum)
 
@@ -106,6 +119,10 @@ class Modulsuche:
         try:
             teile = paket.relative_to(WURZEL).parts
         except ValueError:
+            # Mehr `..` als Ebenen bis zur Projektwurzel — der Import zeigt
+            # aus dem Projekt heraus und ist hier nicht pruefbar.
+            logger.warning('%s:%d — %d Ebenen fuehren aus %s heraus',
+                           pfad, knoten.lineno, knoten.level, WURZEL)
             return ''
         return '.'.join(teile + ((knoten.module,) if knoten.module else ()))
 
@@ -113,12 +130,16 @@ class Modulsuche:
 class LokaleImporteTest(SimpleTestCase):
 
     def test_jeder_import_in_einer_funktion_findet_sein_modul(self):
+        suche = Modulsuche(WURZEL / 'core')
         tot = []
-        for eintrag in Modulsuche(WURZEL / 'core').importe():
+        for eintrag in suche.importe():
             if eintrag.pruefbar and not eintrag.loesbar:
                 tot.append(str(eintrag))
         self.assertEqual(tot, [], 'Import in einer Funktion zeigt ins Leere: '
                                  + ', '.join(tot))
+        self.assertEqual(suche.nicht_lesbar, [],
+                         'Diese Dateien parsen nicht und wurden deshalb NICHT '
+                         'geprueft: %s' % suche.nicht_lesbar)
 
     def test_der_test_findet_einen_kaputten_import(self):
         """Gegenprobe: Ein erfundener Modulname MUSS auffallen."""

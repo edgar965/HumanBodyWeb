@@ -8,7 +8,7 @@ geschnitten, steht in `core/api/__init__.py`.
 from ..daten.stoffantwort import Stoffantwort
 from ..daten.kleidungsregler import Kleidungsregler
 from ..dienste.kleidungsanpassung import Kleidungsanpassung
-from .kleidungsbibliothek import _get_garment_library
+from ..dienste.kleiderbibliothek import Kleiderbibliothek
 from ..dienste.charakterdaten import Charakterdaten
 from django.conf import settings
 from django.http import JsonResponse
@@ -190,7 +190,7 @@ def garment_fit(request):
     if not garment_id:
         return JsonResponse({'error': 'garment_id required'}, status=400)
 
-    vorlage = _get_garment_library().get_template(garment_id)
+    vorlage = Kleiderbibliothek.holen().get_template(garment_id)
     if vorlage is None or vorlage.vertices is None:
         return JsonResponse({'error': 'Garment not found: %s' % garment_id},
                             status=404)

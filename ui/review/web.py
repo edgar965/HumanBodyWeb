@@ -17,7 +17,7 @@ BEREICHE = [
                  {'pfad': 'HumanBodyWeb/core/api/mhproxy.py',
                   'funktionen': ['mh_proxy_fit']},
                  {'pfad': 'HumanBodyWeb/core/api/kleidungsbibliothek.py',
-                  'funktionen': ['_get_garment_library']}],
+                  'funktionen': ['Kleiderbibliothek']}],
      'hinweis': (
          'Django-Endpunkte, die Netzdaten an den Browser liefern: Vertices und '
          'Indizes als base64-kodierte Float32/Uint32-Blöcke. Darunter liegen '
@@ -47,8 +47,7 @@ BEREICHE = [
      ]},
     {'slug': 'jobstate', 'name': 'Job-Zustandsmaschine (Start, Stopp, Aufräumen)',
      'dateien': [{'pfad': 'HumanBodyWeb/core/api/auftraege.py',
-                  'funktionen': ['job_status_api', 'start_processing',
-                                 'stop_processing', 'api_stop_processing']},
+                  'funktionen': ['Auftragsendpunkte']},
                  'HumanBodyWeb/core/dienste/auftragssteuerung.py',
                  {'pfad': 'HumanBodyWeb/core/models/auftrag.py',
                   'funktionen': ['BVHJob']}],
@@ -76,7 +75,7 @@ BEREICHE = [
     {'slug': 'foto3d', 'name': 'Foto-nach-3D: Ausrichtung und Textur',
      'dateien': ['HumanBodyWeb/core/dienste/fotoausrichtung.py',
                  {'pfad': 'HumanBodyWeb/core/api/fotoauftraege.py',
-                  'funktionen': ['analyze_photo']},
+                  'funktionen': ['Fotoauftraege']},
                  {'pfad': 'HumanBodyWeb/core/api/fotoabgleich.py',
                   'funktionen': ['photo_silhouette_data',
                                  'photo_save_projection']},
@@ -148,7 +147,7 @@ BEREICHE = [
      # jede Aussage zur Glaettung geraten. Jetzt liegen sie bei.
      'dateien': ['HumanBodyWeb/core/api/bvhtext.py',
                  {'pfad': 'HumanBodyWeb/core/api/retarget.py',
-                  'funktionen': ['bvh_manage']},
+                  'funktionen': ['bvh_verwalten']},
                  'HumanBodyWeb/core/api/studio_projekt.py',
                  'HumanBodyWeb/core/dienste/bvh_datei.py',
                  'HumanBodyWeb/core/dienste/bvhverwaltung.py',
@@ -176,10 +175,10 @@ BEREICHE = [
     {'slug': 'api_smpl', 'name': 'API: SMPL-Koerper und Kleidungsbibliothek',
      'dateien': ['HumanBodyWeb/core/api/smpl.py',
                  {'pfad': 'HumanBodyWeb/core/api/kleidungsbibliothek.py',
-                  'funktionen': ['garment_library', 'garment_library_rescan']}],
+                  'funktionen': ['Kleiderendpunkte']}],
      'hinweis': ('SMPL-Koerper aus Formparametern (betas) erzeugen und Kleidung anpassen; dazu eine Bibliothek, die das Dateisystem durchsucht. BEKANNT UND ERLEDIGT, nicht nochmal melden: SMPL (6890 Vertices) und SMPL-X (10475) haben unvereinbare Topologien, der Code faengt das ueber einen Laengenvergleich ab.'),
      'fragen': [
-         'garment_library_rescan durchsucht das Dateisystem — wie lange dauert das, blockiert es die Anfrage, und was bei einem tiefen oder verknuepften Verzeichnis?',
+         'Neu-Einlesen durchsucht das Dateisystem — wie lange dauert das, blockiert es die Anfrage, und was bei einem tiefen oder verknuepften Verzeichnis?',
          'betas: Werden Anzahl und Wertebereich geprueft, bevor gerechnet wird?',
          'Vorschaubilder: Wo erzeugt, wo abgelegt, wann veraltet?',
      ]},

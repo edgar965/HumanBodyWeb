@@ -8,7 +8,7 @@ braucht.
 """
 from .auftraege import PIPELINES_2D, PIPELINES_3D
 
-from ..api.dateien import _annotate_file_sizes
+from ..daten.dateigroessen import Dateigroessen
 from ..api.pipelineparameter import Pipelineparameter
 from ..dienste.auftragsanlage import Auftragsanlage
 from ..dienste.systemzustand import Systemzustand
@@ -41,7 +41,7 @@ def upload_video(request):
     s = AppSettings.load()
     auftraege = BVHJob.objects.filter(
         pipeline__in=list(PIPELINES_2D)).order_by('-created_at')
-    _annotate_file_sizes(auftraege)
+    Dateigroessen.anhaengen(auftraege)
     return render(request, 'upload.html', {
         'status': zustand,
         'v21_jobs': auftraege,
@@ -96,7 +96,7 @@ def upload_video_v4(request):
     s = AppSettings.load()
     auftraege = BVHJob.objects.filter(
         pipeline__in=list(PIPELINES_3D)).order_by('-created_at')
-    _annotate_file_sizes(auftraege)
+    Dateigroessen.anhaengen(auftraege)
     einstellungen = s.ui_prefs or {}
     vorgabe = einstellungen.get('last_pipeline',
                                 s.lifter_3d_default)

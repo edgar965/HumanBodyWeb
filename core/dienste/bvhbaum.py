@@ -36,15 +36,26 @@ class Bvhbaum:
         self.gelenke = []
         self.eltern = {}
         self.verschiebung = {}
+        #: {Gelenk: [Kanalname]} — in der Reihenfolge der Datei. Daraus
+        #: leitet sich `kanalfolge` ab; zwei Felder mit demselben Inhalt
+        #: laufen frueher oder spaeter auseinander.
         self.kanaele = {}
-        #: (Gelenk, Kanal) in der Reihenfolge der Bewegungswerte.
-        self.kanalfolge = []
         self.bilder = []
         self._lesen(pfad)
 
     @property
     def leer(self):
         return not self.bilder or not self.gelenke
+
+    @property
+    def kanalfolge(self):
+        """(Gelenk, Kanal) in der Reihenfolge der Bewegungswerte.
+
+        Das ist genau `kanaele` flach gelegt: Ein Gelenk hat GENAU EINE
+        `CHANNELS`-Zeile, und die Woerterbuch-Reihenfolge ist die der Datei.
+        """
+        return [(gelenk, kanal)
+                for gelenk, liste in self.kanaele.items() for kanal in liste]
 
     def verbindungen(self):
         """(Eltern, Kind) für jede Kante der Hierarchie."""
@@ -104,7 +115,6 @@ class Bvhbaum:
             anzahl = int(wortliste[1])
             liste = wortliste[2:2 + anzahl]
             self.kanaele[self.gelenke[-1]] = liste
-            self.kanalfolge += [(self.gelenke[-1], k) for k in liste]
         return aktuell, endpunkt
 
     def _bewegung(self, zeilen, stelle):

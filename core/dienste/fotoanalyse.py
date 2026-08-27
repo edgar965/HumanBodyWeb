@@ -15,6 +15,7 @@ import uuid
 from django.conf import settings
 
 from ..daten.analyseergebnis import Analyseergebnis
+from ..daten.wrapperpfad import Wrapperpfad
 from .hautfarbe import Hautfarbe
 
 logger = logging.getLogger('core')
@@ -33,19 +34,18 @@ class Fotoanalyse:
 
     VORGABE_BACKEND = 'mediapipe'
 
-    @staticmethod
-    def wrapper_verzeichnis():
-        return os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
-
     @classmethod
     def _werkzeuge(cls):
-        """(analyse, betas_zu_reglern) — mit Pfadumweg zu den Wrappern."""
-        verzeichnis = cls.wrapper_verzeichnis()
-        if verzeichnis not in sys.path:
-            sys.path.insert(0, verzeichnis)
+        """(analyse, betas_zu_reglern) — mit Pfadumweg zu den Wrappern.
+
+        Bis zum 27.08.2026 blieb das Wrapper-Verzeichnis nach dem ersten
+        Aufruf DAUERHAFT in `sys.path` — es gab kein `finally`. `Wrapperpfad`
+        nimmt es wieder heraus.
+        """
         try:
-            from photo_analyzer import analyze
-            from smplest_x_wrapper import betas_to_morph_sliders
+            with Wrapperpfad():
+                from photo_analyzer import analyze
+                from smplest_x_wrapper import betas_to_morph_sliders
         except ImportError as e:
             raise FotoanalyseFehler('Photo analyzer not found: %s' % e) from e
         return analyze, betas_to_morph_sliders

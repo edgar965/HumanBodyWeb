@@ -5,6 +5,7 @@ Aus core/api/foto.py herausgeloest (Umbau 16.08.2026).
 """
 
 from ..daten.netzantwort import Netzantwort
+from ..daten.wrapperpfad import Wrapperpfad
 from ..dienste.smplxnetz import SmplxNetz, SmplxNetzFehler
 from ..dienste.texturbacken import Texturbacken
 from django.conf import settings
@@ -28,17 +29,12 @@ def smplx_mesh(request):
     Expects JSON: {"betas": [...], "gender": "female"|"male"|"neutral"}
     Returns base64-encoded vertices (float32) and faces (uint32).
     """
-    import sys
-    wrappers_dir = os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
-    sys.path.insert(0, wrappers_dir)
     try:
-        from smplest_x_wrapper import generate_mesh
+        with Wrapperpfad():
+            from smplest_x_wrapper import generate_mesh
     except ImportError:
         logger.warning('SMPL-X-Wrapper nicht importierbar', exc_info=True)
         return JsonResponse({'ok': False, 'error': 'Wrapper not found'})
-    finally:
-        if wrappers_dir in sys.path:
-            sys.path.remove(wrappers_dir)
 
     try:
         body = json.loads(request.body)

@@ -43,7 +43,7 @@ class BvhbibliothekTest(TestCase):
     def test_suche_ist_gross_klein_unabhaengig(self):
         self.assertEqual(Bvhbibliothek(suche='JUMP').seiteninhalt().paginator.count, 5)
 
-    def test_quellfilter(self):
+    def test_quellfilter_zeigt_nur_dateien_dieser_quelle(self):
         self.assertEqual(Bvhbibliothek(quelle='gvhmr').seiteninhalt().paginator.count, 5)
 
     def test_suche_und_quelle_wirken_zusammen(self):

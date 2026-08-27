@@ -2,18 +2,25 @@
 """Studioprojekte und Szenen auf dem Server ablegen und lesen.
 
 Aus core/api/studio.py herausgeloest (Umbau 16.08.2026).
+
+UMBAU 27.08.2026 (Befund `freie-funktionen`): sechs freie Funktionen, keine
+Klasse. Die Pfadpruefung fuer Szenendateien stand zweimal wortgleich hier und
+viermal in `api/modelldateien.py` — sie liegt jetzt in `daten/modellpfad.py`.
 """
 
-from ..atomic_write import AtomarSchreiber
-from ..safe_paths import SafePath, PfadAbgelehnt
-from django.conf import settings
-from django.http import JsonResponse, HttpResponseNotFound
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
 import json
 import logging
 import os
 import re
+
+from django.conf import settings
+from django.http import JsonResponse, HttpResponseNotFound
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
+
+from ..atomic_write import AtomarSchreiber
+from ..daten.modellpfad import Modellpfad
+from ..safe_paths import SafePath, PfadAbgelehnt
 
 #: EIN Logger fuer das Modul. Vorher stand `import logging; log =
 #: logging.getLogger('core')` zweimal in je einer Funktion — `scene_list`
@@ -22,162 +29,176 @@ import re
 log = logging.getLogger('core')
 
 
-@require_GET
-def scene_list(request):
-    """Return list of available scene files (.scene.json)."""
-    models_dir = str(settings.HUMANBODY_MODELS_DIR)
-    scenes = []
-    if os.path.isdir(models_dir):
-        for fname in sorted(os.listdir(models_dir)):
-            if fname.endswith('.scene.json'):
-                name = fname[:-len('.scene.json')]
-                fpath = os.path.join(models_dir, fname)
-                try:
-                    with open(fpath, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                    scenes.append({
-                        'name': name,
-                        'label': data.get('name', name),
-                        'character_count': len(data.get('characters', [])),
-                    })
-                except (json.JSONDecodeError, IOError):
-                    log.warning('Szene %s nicht lesbar — ohne Figurenzahl gelistet', fpath, exc_info=True)
-                    scenes.append({'name': name, 'label': name, 'character_count': 0})
-    return JsonResponse({'scenes': scenes})
+class Studioprojekte:
+    """Szenen im Modellordner und `.studio.json`-Projekte auf der Platte."""
 
+    #: Endung einer Szenendatei.
+    SZENE = '.scene.json'
+    #: Muster der Projektdateien im Projektordner.
+    PROJEKTMUSTER = '*.studio.json'
 
-@require_GET
-def scene_detail(request, name):
-    """Return contents of a scene JSON file."""
-    if '/' in name or '\\' in name or '..' in name:
-        return JsonResponse({'error': 'Invalid name'}, status=400)
-    models_dir = str(settings.HUMANBODY_MODELS_DIR)
-    fpath = os.path.normpath(os.path.join(models_dir, f"{name}.scene.json"))
-    if not fpath.startswith(os.path.normpath(models_dir)):
-        return JsonResponse({'error': 'Invalid path'}, status=400)
-    if not os.path.isfile(fpath):
-        return HttpResponseNotFound(f'Scene not found: {name}')
-    with open(fpath, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    return JsonResponse(data)
+    @staticmethod
+    def _modellordner():
+        return str(settings.HUMANBODY_MODELS_DIR)
 
+    # -------------------------------------------------------------- Szenen
 
-@csrf_exempt
-@require_POST
-def scene_save(request):
-    """Save a scene JSON file."""
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    @staticmethod
+    @require_GET
+    def szenenliste(request):
+        """Alle Szenendateien (`.scene.json`) mit Figurenzahl."""
+        ordner = Studioprojekte._modellordner()
+        szenen = []
+        if os.path.isdir(ordner):
+            for dateiname in sorted(os.listdir(ordner)):
+                if not dateiname.endswith(Studioprojekte.SZENE):
+                    continue
+                szenen.append(Studioprojekte._szeneneintrag(ordner, dateiname))
+        return JsonResponse({'scenes': szenen})
 
-    name = body.get('name', '').strip()
-    data = body.get('data')
-    if not name or not data:
-        return JsonResponse({'error': 'name and data required'}, status=400)
+    @staticmethod
+    def _szeneneintrag(ordner, dateiname):
+        name = dateiname[:-len(Studioprojekte.SZENE)]
+        pfad = os.path.join(ordner, dateiname)
+        try:
+            with open(pfad, 'r', encoding='utf-8') as datei:
+                daten = json.load(datei)
+        except (json.JSONDecodeError, IOError):
+            log.warning('Szene %s nicht lesbar — ohne Figurenzahl gelistet',
+                        pfad, exc_info=True)
+            return {'name': name, 'label': name, 'character_count': 0}
+        return {'name': name, 'label': daten.get('name', name),
+                'character_count': len(daten.get('characters', []))}
 
-    safe_name = re.sub(r'[^\w\s\-]', '', name).strip()
-    if not safe_name:
-        return JsonResponse({'error': 'Invalid name'}, status=400)
+    @staticmethod
+    @require_GET
+    def szene(request, name):
+        """Der Inhalt EINER Szenendatei."""
+        pfad = Modellpfad.geprueft(Studioprojekte._modellordner(), name,
+                                   Studioprojekte.SZENE)
+        if pfad is None:
+            return JsonResponse({'error': 'Invalid name'}, status=400)
+        if not os.path.isfile(pfad):
+            return HttpResponseNotFound('Scene not found: %s' % name)
+        with open(pfad, 'r', encoding='utf-8') as datei:
+            return JsonResponse(json.load(datei))
 
-    models_dir = str(settings.HUMANBODY_MODELS_DIR)
-    fpath = os.path.normpath(os.path.join(models_dir, f"{safe_name}.scene.json"))
-    if not fpath.startswith(os.path.normpath(models_dir)):
-        return JsonResponse({'error': 'Invalid path'}, status=400)
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def szene_sichern(request):
+        """Eine Szenendatei schreiben."""
+        try:
+            rumpf = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        name = rumpf.get('name', '').strip()
+        daten = rumpf.get('data')
+        if not name or not daten:
+            return JsonResponse({'error': 'name and data required'}, status=400)
+        sauber = re.sub(r'[^\w\s\-]', '', name).strip()
+        ordner = Studioprojekte._modellordner()
+        pfad = (Modellpfad.geprueft(ordner, sauber, Studioprojekte.SZENE)
+                if sauber else None)
+        if pfad is None:
+            return JsonResponse({'error': 'Invalid name'}, status=400)
+        os.makedirs(ordner, exist_ok=True)
+        # Anders als bei den Modellen bleibt hier der ANGEZEIGTE Name stehen —
+        # der Dateiname ist die bereinigte Fassung.
+        daten['name'] = name
+        with open(pfad, 'w', encoding='utf-8') as datei:
+            json.dump(daten, datei, indent=2, ensure_ascii=False)
+        return JsonResponse({'ok': True,
+                             'filename': '%s%s' % (sauber,
+                                                   Studioprojekte.SZENE)})
 
-    os.makedirs(models_dir, exist_ok=True)
-    data['name'] = name
+    # ----------------------------------------------------------- Projekte
 
-    with open(fpath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def projekt_sichern(request):
+        """Ein BVH-Studio-Projekt als JSON auf die Platte schreiben.
 
-    return JsonResponse({'ok': True, 'filename': f"{safe_name}.scene.json"})
+        POST /api/studio/project-save/
+        JSON: { path: "voller/pfad.studio.json", project: {...} }
 
+        Pfad wird ueber SafePath geprueft (12.08.2026): vorher schrieb dieser
+        Endpunkt an JEDE Stelle der Platte, ohne CSRF-Token und damit auch von
+        einer fremden Webseite ausloesbar. Geschrieben wird ueber
+        AtomarSchreiber, damit zwei gleichzeitige Speichervorgaenge keine halbe
+        Datei hinterlassen.
+        """
+        try:
+            daten = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        projekt = daten.get('project')
+        if not projekt:
+            return JsonResponse({'error': 'path + project required'},
+                                status=400)
+        try:
+            ziel = SafePath.fuer_studio_projekte().pruefe(daten.get('path'))
+        except PfadAbgelehnt as fehler:
+            return JsonResponse({'error': str(fehler)}, status=403)
+        try:
+            AtomarSchreiber.json_schreiben(ziel, projekt)
+        except Exception as fehler:                              # noqa: BLE001
+            log.exception('[studio] Project save failed: %s', ziel)
+            return JsonResponse({'error': str(fehler)}, status=500)
+        log.info('[studio] Project saved: %s', ziel)
+        return JsonResponse({'ok': True, 'path': str(ziel)})
 
-@csrf_exempt
-@require_POST
-def studio_project_save(request):
-    """Save BVH Studio project JSON to a file on disk.
+    @staticmethod
+    @require_GET
+    def projekt_laden(request):
+        """Ein BVH-Studio-Projekt von der Platte lesen.
 
-    POST /api/studio/project-save/
-    Body JSON: { path: "full/path.studio.json", project: {...} }
+        GET /api/studio/project-load/?path=voller/pfad.studio.json
+        """
+        try:
+            pfad = SafePath.fuer_studio_projekte().pruefe(
+                request.GET.get('path'))
+        except PfadAbgelehnt as fehler:
+            return JsonResponse({'error': str(fehler)}, status=403)
+        if not pfad.is_file():
+            # Kein voller Pfad in der Antwort: Das waere eine Auskunft
+            # darueber, was auf der Platte liegt. Der Pfad steht im Protokoll.
+            log.info('[studio] Project not found: %s', pfad)
+            return JsonResponse({'error': 'File not found'}, status=404)
+        try:
+            with open(str(pfad), 'r', encoding='utf-8') as datei:
+                projekt = json.load(datei)
+        except Exception as fehler:                              # noqa: BLE001
+            log.exception('[studio] Project load failed: %s', pfad)
+            return JsonResponse({'error': str(fehler)}, status=500)
+        log.info('[studio] Project loaded: %s', pfad)
+        return JsonResponse({'ok': True, 'project': projekt,
+                             'path': str(pfad)})
 
-    Pfad wird über SafePath geprüft (12.08.2026): vorher schrieb dieser Endpunkt
-    an JEDE Stelle der Platte, ohne CSRF-Token und damit auch von einer fremden
-    Webseite auslösbar. Geschrieben wird über AtomarSchreiber, damit zwei
-    gleichzeitige Speichervorgänge keine halbe Datei hinterlassen.
-    """
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    @staticmethod
+    @require_GET
+    def projektliste(request):
+        """Die Projektdateien im eingestellten Projektordner.
 
-    project_data = data.get('project')
-    if not project_data:
-        return JsonResponse({'error': 'path + project required'}, status=400)
-
-    try:
-        sp = SafePath.fuer_studio_projekte().pruefe(data.get('path'))
-    except PfadAbgelehnt as e:
-        return JsonResponse({'error': str(e)}, status=403)
-
-    try:
-        AtomarSchreiber.json_schreiben(sp, project_data)
-        log.info('[studio] Project saved: %s', sp)
-        return JsonResponse({'ok': True, 'path': str(sp)})
-    except Exception as e:                                       # noqa: BLE001
-        log.exception('[studio] Project save failed: %s', sp)
-        return JsonResponse({'error': str(e)}, status=500)
-
-
-@require_GET
-def studio_project_load(request):
-    """Load BVH Studio project JSON from a file on disk.
-
-    GET /api/studio/project-load/?path=full/path.studio.json
-    """
-    try:
-        fp = SafePath.fuer_studio_projekte().pruefe(request.GET.get('path'))
-    except PfadAbgelehnt as e:
-        return JsonResponse({'error': str(e)}, status=403)
-    if not fp.is_file():
-        # Kein voller Pfad in der Antwort: Das war eine Auskunft darüber, was auf
-        # der Platte liegt. Der Pfad steht im Protokoll.
-        log.info('[studio] Project not found: %s', fp)
-        return JsonResponse({'error': 'File not found'}, status=404)
-
-    try:
-        with open(str(fp), 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        log.info('[studio] Project loaded: %s', fp)
-        return JsonResponse({'ok': True, 'project': data, 'path': str(fp)})
-    except Exception as e:                                       # noqa: BLE001
-        log.exception('[studio] Project load failed: %s', fp)
-        return JsonResponse({'error': str(e)}, status=500)
-
-
-@require_GET
-def studio_project_list(request):
-    """List project files in the configured project directory.
-
-    GET /api/studio/project-list/?dir=path
-    """
-    roh = (request.GET.get('dir') or '').strip()
-    if not roh:
-        return JsonResponse({'files': []})
-    try:
-        dp = SafePath.fuer_studio_projekte().pruefe(roh)
-    except PfadAbgelehnt as e:
-        return JsonResponse({'error': str(e)}, status=403)
-    if not dp.is_dir():
-        return JsonResponse({'files': []})
-
-    files = []
-    for f in sorted(dp.glob('*.studio.json')):
-        files.append({
-            'name': f.stem.replace('.studio', ''),
-            'path': str(f),
-            'size': f.stat().st_size,
-            'modified': f.stat().st_mtime,
-        })
-    return JsonResponse({'files': files})
+        GET /api/studio/project-list/?dir=pfad
+        """
+        roh = (request.GET.get('dir') or '').strip()
+        if not roh:
+            return JsonResponse({'files': []})
+        try:
+            ordner = SafePath.fuer_studio_projekte().pruefe(roh)
+        except PfadAbgelehnt as fehler:
+            return JsonResponse({'error': str(fehler)}, status=403)
+        if not ordner.is_dir():
+            return JsonResponse({'files': []})
+        dateien = []
+        for datei in sorted(ordner.glob(Studioprojekte.PROJEKTMUSTER)):
+            angaben = datei.stat()
+            dateien.append({
+                'name': datei.stem.replace('.studio', ''),
+                'path': str(datei),
+                'size': angaben.st_size,
+                'modified': angaben.st_mtime,
+            })
+        return JsonResponse({'files': dateien})

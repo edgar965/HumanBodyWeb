@@ -53,9 +53,18 @@ class ProjektTempTest(TestCase):
         ProjektTemp.weg(d)
         self.assertFalse(d.exists(), 'Verzeichnis mit Inhalt blieb liegen')
 
-    def test_weg_klagt_nicht_ueber_fehlendes(self):
-        """Für den `finally`-Zweig: Was schon weg ist, ist in Ordnung."""
-        ProjektTemp.weg(self.basis / 'gibtesnicht.tmp', None)
+    def test_weg_raeumt_vorhandenes_und_uebergeht_fehlendes(self):
+        """Für den `finally`-Zweig: Was schon weg ist, ist in Ordnung.
+
+        Der Rumpf behauptete bis zum 27.08.2026 NICHTS — er verliess sich
+        darauf, dass keine Ausnahme fliegt. Eine solche Prüfung meldet auch
+        dann grün, wenn `weg` gar nichts mehr tut."""
+        da = ProjektTemp.datei(suffix='.tmp')
+        fehlt = self.basis / 'gibtesnicht.tmp'
+        self.assertTrue(da.exists())
+        ProjektTemp.weg(da, fehlt, None)
+        self.assertFalse(da.exists(), 'vorhandene Datei blieb liegen')
+        self.assertFalse(fehlt.exists())
 
     def test_hausmeister_entfernt_nur_altes(self):
         """DER FALL, DEN KEIN finally ABDECKT: abgebrochener Upload.

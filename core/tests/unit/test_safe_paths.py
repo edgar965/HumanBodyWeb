@@ -19,6 +19,7 @@ Windows-Sonderfälle: UNC, Gerätenamen, Datenströme, Namen mit Punkt am Ende.
 Aufruf:  python manage.py test core
 """
 import os
+import unittest
 from pathlib import Path
 
 from django.conf import settings
@@ -54,13 +55,15 @@ class SafePathTest(TestCase):
         """Das Verzeichnis-Listing fragt die Wurzel selbst ab — die muss durch."""
         self.assertEqual(self.sp.pruefe(str(self.medien)), self.medien)
 
+    @unittest.skipUnless(os.name == 'nt',
+                         'nur unter Windows aussagekraeftig')
     def test_gross_klein_egal_unter_windows(self):
         """A:\\Media und a:\\media sind dasselbe Verzeichnis.
 
         Ein String-Vergleich sieht das nicht; `normcase` schon. Auf anderen
         Systemen ist Gross-/Kleinschreibung bedeutsam, dort wird nicht geprüft."""
-        if os.name != 'nt':
-            self.skipTest('nur unter Windows aussagekräftig')
+        # Die Bedingung steht als Dekorator: Ein `skipTest` IM Rumpf
+        # sieht in der Auswertung aus wie eine bestandene Pruefung.
         gemischt = str(self.medien).upper() + os.sep + 'x.json'
         self.assertIsNotNone(self.sp.pruefe(gemischt))
 
@@ -91,7 +94,7 @@ class SafePathTest(TestCase):
             with self.subTest(roh=roh), self.assertRaises(PfadAbgelehnt):
                 self.sp.pruefe(roh)
 
-    def test_geraetename(self):
+    def test_geraetename_als_dateiname_wird_abgelehnt(self):
         for roh in ('NUL', 'CON', 'COM1'):
             with self.subTest(roh=roh), self.assertRaises(PfadAbgelehnt):
                 self.sp.pruefe(str(self.medien / roh))
@@ -107,7 +110,7 @@ class SafePathTest(TestCase):
             with self.subTest(roh=roh), self.assertRaises(PfadAbgelehnt):
                 self.sp.pruefe(str(self.medien / roh / 'datei.json'))
 
-    def test_datenstrom(self):
+    def test_datenstrom_im_namen_wird_abgelehnt(self):
         """NTFS-Datenstrom: die Datei landet nicht als Datei."""
         with self.assertRaises(PfadAbgelehnt):
             self.sp.pruefe(str(self.medien / 'x.json') + ':versteckt')

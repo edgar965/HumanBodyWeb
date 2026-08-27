@@ -3,215 +3,237 @@
 
 Aus core/character_api.py herausgeloest (Umbau 15.08.2026) — warum so
 geschnitten, steht in `core/api/__init__.py`.
+
+UMBAU 27.08.2026 (Befunde `freie-funktionen`, `globaler-zustand`): sechs freie
+Funktionen und drei Verzeichnisse, die beim IMPORT aus `settings` gerechnet
+wurden. Ein solcher Wert haelt sich bis zum Prozessende und geht an jedem
+`override_settings` vorbei — die Verzeichnisse sind jetzt Methoden.
+
+Dazu: Drei Funktionen holten sich mit `logging.getLogger('core')` einen eigenen
+Logger, obwohl das Modul schon einen fuehrt.
 """
+
+import json
+import logging
+import os
+import pathlib
+import uuid
 
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-import json
-import logging
-import os
-import uuid
+
+logger = logging.getLogger('core')
 
 
-_FLOOR_TEXTURES_DIR = settings.BASE_DIR / 'static' / 'assets' / 'floor_textures'
-_SCENE_OBJECTS_DIR = settings.MEDIA_ROOT / 'scene_objects'
-_THEATRE_PRESETS_DIR = settings.HUMANBODY_ROOT / 'data' / 'theatre_presets'
-logger = logging.getLogger(__name__)
+class Studioendpunkte:
+    """Ton, Szenenobjekte, Lichtvorgaben und Bodentexturen des Studios."""
 
+    #: Groesste zulaessige Tondatei (50 MB).
+    TON_MAXIMUM = 50 * 1024 * 1024
+    #: Tonformate, die der Browser abspielen kann.
+    TONFORMATE = frozenset({'.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac',
+                            '.webm'})
+    #: Was als Szenenobjekt hochgeladen werden darf (Netze und Texturen).
+    OBJEKTFORMATE = frozenset({'obj', 'glb', 'gltf', 'fbx', 'mtl', 'jpg',
+                               'jpeg', 'png', 'webp', 'bmp', 'tga'})
+    #: Bildformate der Bodentexturen.
+    BODENFORMATE = ('.jpg', '.jpeg', '.png', '.webp')
+    #: So lang darf eine Buendelkennung hoechstens sein.
+    BUENDEL_LAENGE = 32
 
-def theatre_settings_api(request):
-    """API: Get Theatre default settings (for auto-load)."""
-    from core.models import AppSettings
-    s = AppSettings.load()
-    return JsonResponse({
-        'model': s.theatre_default_model or '',
-        'animation': s.theatre_default_animation or '',
-        'preset': s.theatre_default_preset or 'ballet_stage',
-        'video_format': s.theatre_video_format or 'mp4',
-        'video_resolution': s.theatre_video_resolution or '1080p',
-        'video_fps': s.theatre_video_fps or 30,
-        'video_quality': s.theatre_video_quality or 'high',
-    })
+    # -------------------------------------------------------- Verzeichnisse
 
+    @staticmethod
+    def bodentexturen_ordner():
+        return settings.BASE_DIR / 'static' / 'assets' / 'floor_textures'
 
+    @staticmethod
+    def szenenobjekte_ordner():
+        return settings.MEDIA_ROOT / 'scene_objects'
 
+    @staticmethod
+    def lichtvorgaben_ordner():
+        return settings.HUMANBODY_ROOT / 'data' / 'theatre_presets'
 
+    # ------------------------------------------------------- Einstellungen
 
+    @staticmethod
+    def theatre_einstellungen(request):
+        """Die Theatre-Vorgaben zum automatischen Laden."""
+        from core.models import AppSettings
+        gespeichert = AppSettings.load()
+        return JsonResponse({
+            'model': gespeichert.theatre_default_model or '',
+            'animation': gespeichert.theatre_default_animation or '',
+            'preset': gespeichert.theatre_default_preset or 'ballet_stage',
+            'video_format': gespeichert.theatre_video_format or 'mp4',
+            'video_resolution': gespeichert.theatre_video_resolution or '1080p',
+            'video_fps': gespeichert.theatre_video_fps or 30,
+            'video_quality': gespeichert.theatre_video_quality or 'high',
+        })
 
+    # ----------------------------------------------------------------- Ton
 
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def ton_hochladen(request):
+        """Tondatei fuer ein BVH-Studio-Projekt ablegen.
 
+        POST /api/studio/audio-upload/
+        Antwort: { ok: true, url: '/media/studio_audio/xxx.mp3' }
+        """
+        datei = request.FILES.get('audio')
+        if not datei:
+            return JsonResponse({'error': 'No audio file provided'}, status=400)
+        if datei.size > Studioendpunkte.TON_MAXIMUM:
+            return JsonResponse(
+                {'error': 'File too large (%dMB). Max 50MB.'
+                          % (datei.size // (1024 * 1024))}, status=400)
+        endung = pathlib.Path(datei.name).suffix.lower()
+        if endung not in Studioendpunkte.TONFORMATE:
+            return JsonResponse(
+                {'error': 'Unsupported format: %s. Allowed: %s'
+                          % (endung, ', '.join(sorted(
+                              Studioendpunkte.TONFORMATE)))}, status=400)
+        ordner = os.path.join(settings.MEDIA_ROOT, 'studio_audio')
+        os.makedirs(ordner, exist_ok=True)
+        name = '%s%s' % (uuid.uuid4().hex, endung)
+        try:
+            Studioendpunkte._schreiben(os.path.join(ordner, name), datei)
+        except Exception as fehler:
+            logger.error('[studio] Audio upload failed: %s', fehler)
+            return JsonResponse({'error': str(fehler)}, status=500)
+        logger.info('[studio] Audio uploaded: %s (%d bytes) -> %s',
+                    datei.name, datei.size, name)
+        return JsonResponse({'ok': True,
+                             'url': '%sstudio_audio/%s'
+                                    % (settings.MEDIA_URL, name)})
 
+    @staticmethod
+    def _schreiben(ziel, hochgeladen):
+        with open(ziel, 'wb') as datei:
+            for stueck in hochgeladen.chunks():
+                datei.write(stueck)
 
+    # -------------------------------------------------------- Lichtvorgaben
 
+    @staticmethod
+    def lichtvorgaben(request):
+        """Alle Theatre-Lichtvorgaben.
 
-
-
-
-
-
-
-
-
-
-@csrf_exempt
-@require_POST
-def studio_audio_upload(request):
-    """Upload audio file for BVH Studio project.
-
-    POST /api/studio/audio-upload/
-    Returns: { ok: true, url: '/media/studio_audio/xxx.mp3' }
-    """
-    log = logging.getLogger('core')
-
-    audio_file = request.FILES.get('audio')
-    if not audio_file:
-        return JsonResponse({'error': 'No audio file provided'}, status=400)
-
-    # Size check: 50 MB max
-    max_size = 50 * 1024 * 1024
-    if audio_file.size > max_size:
-        return JsonResponse({'error': f'File too large ({audio_file.size // (1024*1024)}MB). Max 50MB.'}, status=400)
-
-    # Extension whitelist
-    import pathlib
-    ext = pathlib.Path(audio_file.name).suffix.lower()
-    allowed = {'.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.webm'}
-    if ext not in allowed:
-        return JsonResponse({'error': f'Unsupported format: {ext}. Allowed: {", ".join(sorted(allowed))}'}, status=400)
-
-    # Save to media/studio_audio/ with unique name
-    dest_dir = os.path.join(settings.MEDIA_ROOT, 'studio_audio')
-    os.makedirs(dest_dir, exist_ok=True)
-
-    unique_name = f'{uuid.uuid4().hex}{ext}'
-    dest_path = os.path.join(dest_dir, unique_name)
-
-    try:
-        with open(dest_path, 'wb') as f:
-            for chunk in audio_file.chunks():
-                f.write(chunk)
-        url = f'{settings.MEDIA_URL}studio_audio/{unique_name}'
-        log.info('[studio] Audio uploaded: %s (%d bytes) -> %s', audio_file.name, audio_file.size, unique_name)
-        return JsonResponse({'ok': True, 'url': url})
-    except Exception as e:
-        log.error('[studio] Audio upload failed: %s', e)
-        return JsonResponse({'error': str(e)}, status=500)
-
-
-
-
-
-
-
-
-def studio_theatre_presets(request):
-    """Liste aller Theatre-Licht-Presets.
-
-    GET /api/studio/theatre-presets/
-    Response: { presets: [{ name, label, lightCount, description }] }
-    """
-    log = logging.getLogger('core')
-    presets = []
-    if _THEATRE_PRESETS_DIR.is_dir():
-        for f in sorted(_THEATRE_PRESETS_DIR.glob('*.json')):
-            try:
-                with open(f, 'r', encoding='utf-8') as fh:
-                    data = json.load(fh)
-                presets.append({
-                    'name': f.stem,
-                    'label': data.get('label', f.stem),
-                    'description': data.get('description', ''),
-                    'lightCount': len(data.get('lights', [])),
+        GET /api/studio/theatre-presets/
+        Antwort: { presets: [{ name, label, lightCount, description }] }
+        """
+        ordner = Studioendpunkte.lichtvorgaben_ordner()
+        vorgaben = []
+        if ordner.is_dir():
+            for datei in sorted(ordner.glob('*.json')):
+                try:
+                    with open(datei, 'r', encoding='utf-8') as offen:
+                        daten = json.load(offen)
+                except Exception as fehler:
+                    logger.error('[theatre-presets] Failed to read %s: %s',
+                                 datei, fehler)
+                    continue
+                vorgaben.append({
+                    'name': datei.stem,
+                    'label': daten.get('label', datei.stem),
+                    'description': daten.get('description', ''),
+                    'lightCount': len(daten.get('lights', [])),
                 })
-            except Exception as e:
-                log.error(f'[theatre-presets] Failed to read {f}: {e}')
-    return JsonResponse({'presets': presets})
+        return JsonResponse({'presets': vorgaben})
 
+    @staticmethod
+    def lichtvorgabe(request, name):
+        """Die JSON-Beschreibung EINER Lichtvorgabe.
 
-def studio_theatre_preset_detail(request, name):
-    """Liefert die JSON-Definition eines Theatre-Licht-Presets.
+        GET /api/studio/theatre-preset/<name>/
+        """
+        datei = Studioendpunkte.lichtvorgaben_ordner() / ('%s.json' % name)
+        if not datei.is_file():
+            return JsonResponse({'error': 'Preset nicht gefunden'}, status=404)
+        try:
+            with open(datei, 'r', encoding='utf-8') as offen:
+                return JsonResponse(json.load(offen))
+        except Exception as fehler:
+            logger.exception('studio_theatre_preset_detail: unerwarteter Fehler')
+            return JsonResponse({'error': str(fehler)}, status=500)
 
-    GET /api/studio/theatre-preset/<name>/
-    """
-    fp = _THEATRE_PRESETS_DIR / f'{name}.json'
-    if not fp.is_file():
-        return JsonResponse({'error': 'Preset nicht gefunden'}, status=404)
-    try:
-        with open(fp, 'r', encoding='utf-8') as fh:
-            data = json.load(fh)
-        return JsonResponse(data)
-    except Exception as e:
-        logger.exception('studio_theatre_preset_detail: unerwarteter Fehler')
-        return JsonResponse({'error': str(e)}, status=500)
+    # ------------------------------------------------------- Bodentexturen
 
+    @staticmethod
+    def bodentexturen(request):
+        """Alle verfuegbaren Bodentexturen.
 
-def studio_floor_textures(request):
-    """Liste verfügbarer Boden-Texturen.
-
-    GET /api/studio/floor-textures/
-    Response: { textures: [{ name, label, url }] }
-    """
-    textures = [
-        {'name': 'none', 'label': 'Keine (Farbe)', 'url': ''},
-    ]
-    if _FLOOR_TEXTURES_DIR.is_dir():
-        for f in sorted(_FLOOR_TEXTURES_DIR.glob('*')):
-            if f.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp'):
-                textures.append({
-                    'name': f.stem,
-                    'label': f.stem.replace('_', ' ').title(),
-                    'url': f'/static/assets/floor_textures/{f.name}',
+        GET /api/studio/floor-textures/
+        Antwort: { textures: [{ name, label, url }] }
+        """
+        texturen = [{'name': 'none', 'label': 'Keine (Farbe)', 'url': ''}]
+        ordner = Studioendpunkte.bodentexturen_ordner()
+        if ordner.is_dir():
+            for datei in sorted(ordner.glob('*')):
+                if datei.suffix.lower() not in Studioendpunkte.BODENFORMATE:
+                    continue
+                texturen.append({
+                    'name': datei.stem,
+                    'label': datei.stem.replace('_', ' ').title(),
+                    'url': '/static/assets/floor_textures/%s' % datei.name,
                 })
-    return JsonResponse({'textures': textures})
+        return JsonResponse({'textures': texturen})
 
+    # ------------------------------------------------------ Szenenobjekte
 
-@csrf_exempt
-@require_POST
-def studio_scene_object_upload(request):
-    """Upload eines 3D-Objekts für den BVH Studio.
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def objekt_hochladen(request):
+        """Ein 3D-Objekt fuer den BVH-Studio ablegen.
 
-    POST /api/studio/scene-object-upload/
-    Form: object=<file>
-    Returns: { ok: true, url: "/media/scene_objects/<uuid>.obj", name: "...", ext: "obj" }
-    """
-    import uuid
-    log = logging.getLogger('core')
-    if request.method != 'POST' or 'object' not in request.FILES:
-        return JsonResponse({'error': 'Kein object File'}, status=400)
-
-    upload = request.FILES['object']
-    ext = (upload.name.rsplit('.', 1)[-1] if '.' in upload.name else '').lower()
-    allowed = {'obj', 'glb', 'gltf', 'fbx', 'mtl', 'jpg', 'jpeg', 'png', 'webp', 'bmp', 'tga'}
-    if ext not in allowed:
-        return JsonResponse({'error': f'Format "{ext}" nicht unterstützt'}, status=400)
-
-    # Optional bundleId — alle Dateien des gleichen Imports gehen in denselben Unterordner,
-    # damit MTL → Textur-Referenzen per Original-Dateinamen funktionieren.
-    bundle_id = request.POST.get('bundleId', '').strip()
-    safe_bundle = ''.join(c for c in bundle_id if c.isalnum() or c in '-_')[:32]
-    if safe_bundle:
-        target_dir = _SCENE_OBJECTS_DIR / safe_bundle
-        fname = upload.name.replace(' ', '_')  # Original behalten
-    else:
-        target_dir = _SCENE_OBJECTS_DIR
-        stem = upload.name.rsplit('.', 1)[0].replace(' ', '_')
-        fname = f'{stem}_{uuid.uuid4().hex[:8]}.{ext}'
-    target_dir.mkdir(parents=True, exist_ok=True)
-    fp = target_dir / fname
-    try:
-        with open(fp, 'wb') as out:
-            for chunk in upload.chunks():
-                out.write(chunk)
-        log.info(f'[scene-object] Uploaded: {fp} ({upload.size} bytes)')
-        url_path = f'{settings.MEDIA_URL}scene_objects/' + (f'{safe_bundle}/' if safe_bundle else '') + fname
+        POST /api/studio/scene-object-upload/  (Formularfeld `object`)
+        Antwort: { ok, url, name, ext }
+        """
+        if 'object' not in request.FILES:
+            return JsonResponse({'error': 'Kein object File'}, status=400)
+        hochgeladen = request.FILES['object']
+        endung = (hochgeladen.name.rsplit('.', 1)[-1]
+                  if '.' in hochgeladen.name else '').lower()
+        if endung not in Studioendpunkte.OBJEKTFORMATE:
+            return JsonResponse(
+                {'error': 'Format "%s" nicht unterstützt' % endung}, status=400)
+        ordner, name, buendel = Studioendpunkte._ablageort(request, hochgeladen,
+                                                           endung)
+        ordner.mkdir(parents=True, exist_ok=True)
+        try:
+            Studioendpunkte._schreiben(ordner / name, hochgeladen)
+        except Exception as fehler:
+            logger.exception('studio_scene_object_upload: unerwarteter Fehler')
+            return JsonResponse({'error': str(fehler)}, status=500)
+        logger.info('[scene-object] Uploaded: %s (%d bytes)',
+                    ordner / name, hochgeladen.size)
         return JsonResponse({
             'ok': True,
-            'url': url_path,
-            'name': upload.name,
-            'ext': ext,
+            'url': '%sscene_objects/%s%s' % (settings.MEDIA_URL,
+                                             '%s/' % buendel if buendel else '',
+                                             name),
+            'name': hochgeladen.name,
+            'ext': endung,
         })
-    except Exception as e:
-        logger.exception('studio_scene_object_upload: unerwarteter Fehler')
-        return JsonResponse({'error': str(e)}, status=500)
+
+    @staticmethod
+    def _ablageort(request, hochgeladen, endung):
+        """(Ordner, Dateiname, Buendel) — Buendel behaelt Originalnamen.
+
+        Alle Dateien EINES Imports gehen in denselben Unterordner, damit die
+        Texturverweise in der MTL-Datei ueber die Originalnamen aufgehen.
+        """
+        roh = request.POST.get('bundleId', '').strip()
+        buendel = ''.join(z for z in roh if z.isalnum() or z in '-_')
+        buendel = buendel[:Studioendpunkte.BUENDEL_LAENGE]
+        wurzel = Studioendpunkte.szenenobjekte_ordner()
+        if buendel:
+            return wurzel / buendel, hochgeladen.name.replace(' ', '_'), buendel
+        stamm = hochgeladen.name.rsplit('.', 1)[0].replace(' ', '_')
+        return wurzel, '%s_%s.%s' % (stamm, uuid.uuid4().hex[:8], endung), ''

@@ -175,6 +175,13 @@ class Koerperhuelle:
         dreiecke = cls.dreiecke(flaechen)
         ecke = [punkte[dreiecke[:, i]] for i in range(3)]
         flaechennormalen = np.cross(ecke[1] - ecke[0], ecke[2] - ecke[0])
+        # `np.add.at` und nicht `np.bincount` — die Lehre
+        # „bincount-statt-add-at" gilt hier NICHT. Gemessen am 27.08.2026
+        # unter numpy 2.4 mit denselben Zahlen (bitgleiches Ergebnis,
+        # groesste Abweichung 5e-15): 18.000 Punkte / 36.000 Dreiecke je
+        # 12 ms, bei 70.000 Punkten 29 ms gegen 31 ms fuer bincount. Die
+        # bincount-Fassung braucht zusaetzlich ein `np.repeat` ueber alle
+        # Dreiecksecken — mehr Speicher, kein Zeitgewinn.
         normalen = np.zeros_like(punkte)
         for i in range(3):
             np.add.at(normalen, dreiecke[:, i], flaechennormalen)

@@ -38,8 +38,7 @@ class BundleMtlTests(TestCategory):
             return False, f'Upload HTTP: {status1}/{status2}'
         # Simuliere Parser-Logik aus scene_extras.js
         import re
-        content = mtl_data.get('_raw', '')  # _post_multipart returns JSON normally
-        # Falls JSON OK, MTL-URL aus data.url dann separat fetchen
+        # Die MTL kommt nicht im Upload-Ergebnis zurueck, nur ihre Adresse.
         mtl_url = mtl_data.get('url')
         if not mtl_url:
             return False, 'Keine MTL-URL geliefert'

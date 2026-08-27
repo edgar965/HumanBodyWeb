@@ -34,7 +34,7 @@ class FortschrittsleserTest(SimpleTestCase):
         self.assertIsNone(leser.zeile_lesen('Frame 11/100', jetzt=5.2))
         self.assertIsNotNone(leser.zeile_lesen('Frame 20/100', jetzt=6.5))
 
-    def test_obergrenze(self):
+    def test_vor_dem_abschluss_nie_hundert_prozent(self):
         """Vor dem Abschluss darf nie 100 % gemeldet werden."""
         leser = Fortschrittsleser(100, jetzt=0.0)
         prozent, _ = leser.zeile_lesen('Frame 100/100', jetzt=10.0)

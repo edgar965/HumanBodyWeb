@@ -10,10 +10,8 @@ Der Pfadumweg ist noetig, weil die Wrapper nicht als Paket installiert sind; er
 gehoert deshalb an EINE Stelle und nicht in jeden Endpunkt.
 """
 import logging
-import os
-import sys
 
-from django.conf import settings
+from ..daten.wrapperpfad import Wrapperpfad
 
 logger = logging.getLogger('core')
 
@@ -31,23 +29,15 @@ class SmplxNetz:
     SMPLX_VERTICES = 10475
     SMPL_VERTICES = 6890
 
-    @staticmethod
-    def wrapper_verzeichnis():
-        return os.path.join(str(settings.BASE_DIR), '..', 'VideoToBVH', 'wrappers')
-
     @classmethod
     def erzeugen(cls, betas, geschlecht='neutral'):
         """(vertices, faces, netz) — wirft `SmplxNetzFehler`, wenn es nicht geht."""
-        verzeichnis = cls.wrapper_verzeichnis()
-        sys.path.insert(0, verzeichnis)
         try:
-            from smplest_x_wrapper import generate_mesh
-            netz = generate_mesh(betas, geschlecht)
+            with Wrapperpfad():
+                from smplest_x_wrapper import generate_mesh
+                netz = generate_mesh(betas, geschlecht)
         except ImportError as e:
             raise SmplxNetzFehler('SMPL-X-Wrapper nicht gefunden: %s' % e) from e
-        finally:
-            if verzeichnis in sys.path:
-                sys.path.remove(verzeichnis)
         if netz is None:
             raise SmplxNetzFehler('SMPL-X-Modell nicht verfuegbar')
         import numpy as np

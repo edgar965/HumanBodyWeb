@@ -19,6 +19,7 @@ from pathlib import Path
 from django.test import Client, SimpleTestCase, override_settings
 from django.urls import resolve
 
+from core.dienste.kleiderbibliothek import Kleiderbibliothek
 from core.projekt_temp import ProjektTemp
 
 ADRESSE = '/api/character/garment/manage/'
@@ -33,16 +34,25 @@ class GarmentManageEndpunktTest(SimpleTestCase):
         (self.wurzel / 'Tops' / 'shirt').mkdir(parents=True)
         (self.wurzel / 'Tops' / 'shirt' / 'meta.json').write_text(
             '{}', encoding='utf-8')
+        # Ohne Netzdatei nimmt `GarmentLibrary.scan()` den Ordner NICHT in den
+        # Katalog auf (`load_metadata` verlangt garment.json, .mhclo oder .obj).
+        (self.wurzel / 'Tops' / 'shirt' / 'shirt.obj').write_text(
+            'o shirt\n', encoding='utf-8')
         self._ueberschreibung = override_settings(
             HUMANBODY_GARMENT_LIBRARY_DIR=str(self.wurzel))
         self._ueberschreibung.enable()
+        # `Kleiderbibliothek._katalog` haengt an der KLASSE und lebt bis zum
+        # Prozessende. Ohne dieses Leeren traegt der erste Test seinen Katalog
+        # in alle folgenden — und in den echten Serverlauf danach.
+        Kleiderbibliothek._katalog = None
 
     def tearDown(self):
+        Kleiderbibliothek._katalog = None
         self._ueberschreibung.disable()
         shutil.rmtree(self._temp, ignore_errors=True)
 
     def test_route_existiert(self):
-        self.assertEqual(resolve(ADRESSE).func.__name__, 'garment_manage')
+        self.assertEqual(resolve(ADRESSE).func.__name__, 'verwalten')
 
     def test_umbenennen_ueber_http(self):
         antwort = Client().post(ADRESSE,
@@ -51,6 +61,32 @@ class GarmentManageEndpunktTest(SimpleTestCase):
                                 content_type='application/json')
         self.assertEqual(antwort.status_code, 200, antwort.content)
         self.assertTrue((self.wurzel / 'Tops' / 'hemd').is_dir())
+
+    def test_umbenennen_frischt_den_zwischenspeicher_auf(self):
+        """DER BEFUND VOM 27.08.2026: Der Katalog blieb stehen.
+
+        `garment_manage` schrieb `_garment_library = None` — eine Modulvariable,
+        die es seit dem 18.08.2026 nicht mehr gibt (der Zwischenspeicher liegt
+        in `Kleiderbibliothek`). `global` legte sie stumm neu an, niemand las
+        sie, und die Kleiderliste zeigte bis zum Serverneustart Pfade, die es
+        nicht mehr gab. Ohne Fehlermeldung.
+
+        Gegenprobe: Nimmt man `Kleiderbibliothek.neu_einlesen()` in
+        `Kleiderendpunkte.verwalten` wieder heraus, faellt dieser Test.
+        """
+        Kleiderbibliothek.holen()          # Katalog steht, mit „shirt"
+        vorher = [s['id'] for s in Kleiderbibliothek.holen().catalog]
+        self.assertTrue(any('shirt' in s for s in vorher), vorher)
+
+        antwort = Client().post(ADRESSE,
+                                data='{"action":"rename","id":"Tops/shirt",'
+                                     '"new_name":"hemd"}',
+                                content_type='application/json')
+        self.assertEqual(antwort.status_code, 200, antwort.content)
+
+        nachher = [s['id'] for s in Kleiderbibliothek.holen().catalog]
+        self.assertFalse(any('shirt' in s for s in nachher),
+                         'Der alte Pfad steht noch im Katalog: %s' % nachher)
 
     def test_unbekanntes_kleid_gibt_404_als_json(self):
         antwort = Client().post(ADRESSE,
