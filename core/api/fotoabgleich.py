@@ -25,6 +25,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
+from ..daten.fotoauftrag import Fotoauftrag
 from ..dienste.bildablage import Bildablage
 from ..dienste.fotoausrichtung import Fotoausrichtung
 
@@ -34,18 +35,6 @@ logger = logging.getLogger(__name__)
 class Fotoabgleich:
     """Foto und Koerpernetz zur Deckung bringen und das Ergebnis speichern."""
 
-    @staticmethod
-    def _auftrag(job_id):
-        from ..models import PhotoAnalysisJob
-        try:
-            return PhotoAnalysisJob.objects.get(id=job_id)
-        except PhotoAnalysisJob.DoesNotExist:
-            return None
-
-    @staticmethod
-    def _nicht_gefunden():
-        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
-
     # ----------------------------------------------------------- Projektion
 
     @staticmethod
@@ -53,9 +42,9 @@ class Fotoabgleich:
     @require_POST
     def projektion_sichern(request, job_id):
         """Die im Browser gerenderte Vorschau als Silhouettenbild ablegen."""
-        job = Fotoabgleich._auftrag(job_id)
+        job = Fotoauftrag.holen(job_id)
         if job is None:
-            return Fotoabgleich._nicht_gefunden()
+            return Fotoauftrag.nicht_gefunden()
         try:
             rumpf = json.loads(request.body)
         except (json.JSONDecodeError, ValueError):
@@ -98,9 +87,9 @@ class Fotoabgleich:
         import cv2
         from ..dienste.silhouettenauftrag import (Fotofehler,
                                                   Silhouettenauftrag)
-        job = Fotoabgleich._auftrag(job_id)
+        job = Fotoauftrag.holen(job_id)
         if job is None:
-            return Fotoabgleich._nicht_gefunden()
+            return Fotoauftrag.nicht_gefunden()
         try:
             auftrag = Silhouettenauftrag(job, Fotoabgleich._posierte_punkte)
             return JsonResponse(auftrag.ergebnis(cv2))
@@ -142,9 +131,9 @@ class Fotoabgleich:
     @require_POST
     def ausrichtung_sichern(request, job_id):
         """Die vom Benutzer bestaetigte Ausrichtung im Auftrag hinterlegen."""
-        job = Fotoabgleich._auftrag(job_id)
+        job = Fotoauftrag.holen(job_id)
         if job is None:
-            return Fotoabgleich._nicht_gefunden()
+            return Fotoauftrag.nicht_gefunden()
         try:
             rumpf = json.loads(request.body)
         except (json.JSONDecodeError, ValueError):

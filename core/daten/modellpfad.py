@@ -23,6 +23,7 @@ Wurzel, EINE Endung.
 
 import os
 
+from .pfadvergleich import Pfadvergleich
 
 class Modellpfad:
     """`<wurzel>/<name><endung>` — oder nichts."""
@@ -34,14 +35,16 @@ class Modellpfad:
     def geprueft(cls, wurzel, name, endung):
         """Der volle Pfad, oder None wenn der Name die Wurzel verlassen will.
 
-        Zwei Pruefungen, weil jede allein zu wenig ist: die Zeichenliste faengt
-        den offensichtlichen Fall, der Praefixvergleich nach `normpath` den
-        Rest (etwa einen absoluten Pfad, der `join` die Wurzel wegnimmt).
+        Zwei Pruefungen, weil jede allein zu wenig ist: die Zeichenliste
+        faengt den offensichtlichen Fall, `Pfadvergleich` den Rest (etwa einen
+        absoluten Pfad, der `join` die Wurzel wegnimmt). Bis zum 27.08.2026
+        stand hier ein `startswith` — genau der Zeichenvergleich, den das
+        Werkzeug `pfadpraefix` seitdem meldet.
         """
         if not name or any(z in name for z in cls.VERBOTEN):
             return None
         pfad = os.path.normpath(os.path.join(str(wurzel),
                                              '%s%s' % (name, endung)))
-        if not pfad.startswith(os.path.normpath(str(wurzel))):
+        if not Pfadvergleich.liegt_unter(pfad, wurzel):
             return None
         return pfad

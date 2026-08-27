@@ -11,8 +11,8 @@ from pathlib import Path
 
 from core.projekt_temp import ProjektTemp
 
-from .base import TestCategory, http_request
-from ._kamera_basis import _fx_cam_kf_roundtrip
+from .base import TestCategory, Netzruf
+from ._kamera_basis import Kamerabasis
 
 
 class KameraKeyframeTests(TestCategory):
@@ -23,39 +23,39 @@ class KameraKeyframeTests(TestCategory):
     @staticmethod
     def test_camera_track_project_save_api_returns_ok():
         """POST /api/studio/project-save/ mit Kamera-Track antwortet ok=true."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         return bool(r.get('_save_ok')), f"save_code={r.get('_save_code')}"
 
     @staticmethod
     def test_camera_track_project_load_api_returns_ok():
         """GET /api/studio/project-load/ liest den Kamera-Track zurück (ok=true)."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         return bool(r.get('_load_ok')), f"load_code={r.get('_load_code')}"
 
     @staticmethod
     def test_camera_track_survives_project_save_load_roundtrip():
         """Der Kamera-Track (type='camera') liegt nach Save→Load wieder im Projekt."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         return r.get('track_count') == 1, f"tracks={r.get('track_count')}"
 
     @staticmethod
     def test_camera_track_cameraactive_flag_preserved_after_load():
         """track.cameraActive=true bleibt nach Save→Load true (sonst fährt der
         Track die Viewport-Kamera während Play nicht mehr an)."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         return r.get('cameraActive') is True, f"cameraActive={r.get('cameraActive')}"
 
     @staticmethod
     def test_camera_track_both_keyframes_preserved_after_load():
         """Beide Kamera-Keyframes (KF1 + KF2) überleben den Save/Load-Roundtrip."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         return r.get('clip_count') == 2, f"clips={r.get('clip_count')}"
 
     # --- BVH Studio: einzelne Keyframe-Felder ---
     @staticmethod
     def test_camera_keyframe_position_xyz_preserved_after_load():
         """Keyframe-data.position (x=2.0, y=1.5, z=3.0) bleibt exakt erhalten."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         kf = r.get('kf1') or {}
         pos = kf.get('data', {}).get('position', {})
         ok = (pos.get('x') == 2.0 and pos.get('y') == 1.5 and pos.get('z') == 3.0)
@@ -66,7 +66,7 @@ class KameraKeyframeTests(TestCategory):
         """Das neue Keyframe-data.quaternion-Feld (x,y,z,w) überlebt Save→Load.
         Das ist der Fix-Kern: ohne gespeicherte Quaternion musste die Playback-
         Seite Euler→Quaternion rekonstruieren und landete im falschen Hemi."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         kf = r.get('kf1') or {}
         q = kf.get('data', {}).get('quaternion')
         if not q:
@@ -78,14 +78,14 @@ class KameraKeyframeTests(TestCategory):
     @staticmethod
     def test_camera_keyframe_fov_preserved_after_load():
         """Keyframe-data.fov=45 bleibt erhalten (sonst zoomt der Export falsch)."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         kf = r.get('kf1') or {}
         return kf.get('data', {}).get('fov') == 45, f"fov={kf.get('data', {}).get('fov')}"
 
     @staticmethod
     def test_camera_keyframe_interpolation_mode_preserved_after_load():
         """Keyframe-data.interpolation='smooth' bleibt nach Save→Load erhalten."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         kf = r.get('kf1') or {}
         return kf.get('data', {}).get('interpolation') == 'smooth', \
                f"interp={kf.get('data', {}).get('interpolation')}"
@@ -94,7 +94,7 @@ class KameraKeyframeTests(TestCategory):
     def test_camera_keyframe_fade_flag_preserved_after_load():
         """Keyframe-data.fade=true bleibt nach Save→Load erhalten (steuert,
         ob der Vor-Keyframe auf diesen Keyframe interpoliert oder hart springt)."""
-        r = _fx_cam_kf_roundtrip()
+        r = Kamerabasis.umlauf_ergebnis()
         kf = r.get('kf1') or {}
         return kf.get('data', {}).get('fade') is True, \
                f"fade={kf.get('data', {}).get('fade')}"
@@ -124,11 +124,11 @@ class KameraKeyframeTests(TestCategory):
         # (System-Temp gab 403 — 48 Tests rot seit 12.08.2026).
         with ProjektTemp.wegwerfordner() as tmpdir:
             path = Path(tmpdir) / 'legacy_cam.json'
-            code_s, saved = http_request('/api/studio/project-save/', method='POST',
+            code_s, saved = Netzruf.senden('/api/studio/project-save/', method='POST',
                                           data={'path': str(path), 'project': proj})
             if code_s != 200 or not saved.get('ok'):
                 return False, f'save failed ({code_s})'
-            code_l, loaded = http_request(
+            code_l, loaded = Netzruf.senden(
                 f'/api/studio/project-load/?path={urllib.parse.quote(str(path))}'
             )
         if code_l != 200 or not loaded.get('ok'):

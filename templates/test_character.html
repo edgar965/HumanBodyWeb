@@ -6,12 +6,6 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
 <style>
-    /* Override main-content for full-bleed viewer */
-    .main-content {
-        padding: 0 !important;
-        max-width: none !important;
-        width: calc(100vw - var(--sidebar-width));
-    }
 
     /* Panels on left & right edges */
     .viewer-panel {
@@ -26,12 +20,6 @@
     .viewer-panel.panel-left { border-left: none; }
     .viewer-panel.panel-right { border-right: none; }
 
-    /* Canvas columns */
-    .canvas-wrap {
-        flex: 1;
-        min-width: 0;
-        position: relative;
-    }
     .canvas-wrap canvas {
         width: 100%;
         height: 100%;
@@ -58,11 +46,6 @@
         gap: 6px;
     }
 
-    /* Panel sections (shared by viewer_compare.js generated DOM) */
-    .panel-section {
-        border-bottom: 1px solid var(--border);
-        padding: 12px 16px;
-    }
     .slider-row label {
         font-size: 0.8rem;
         color: var(--text-muted);

@@ -8,12 +8,6 @@
 <link rel="stylesheet" href="{% static 'css/modelldialog.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
 <style>
-    /* Override main-content for full-bleed viewer */
-    .main-content {
-        padding: 0 !important;
-        max-width: none !important;
-        width: calc(100vw - var(--sidebar-width));
-    }
     .viewer-container {
         display: flex;
         flex-direction: column;
@@ -264,10 +258,6 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* 7x */
-.hb-dehnt-ohne-abstand.hb-dehnt-ohne-abstand.hb-dehnt-ohne-abstand { margin-bottom:0; flex:1; }   /* 8x */
-.hb-farbfeld.hb-farbfeld.hb-farbfeld { width:40px; height:24px; border:none; cursor:pointer; }   /* 4x */
-.hb-fest.hb-fest.hb-fest { flex:0 0 auto; padding:6px 10px; }   /* 5x */
 .hb-flex-0-0-auto.hb-flex-0-0-auto.hb-flex-0-0-auto { flex:0 0 auto; padding:6px 10px; width:auto; }   /* 3x */
 .hb-flex-1.hb-flex-1.hb-flex-1 { flex:1; min-width:0; font-size:0.72rem; padding:6px 2px; }   /* 5x */
 .hb-flex-1-2.hb-flex-1-2.hb-flex-1-2 { flex:1; font-size:0.78rem; }   /* 5x */
@@ -281,17 +271,7 @@
     font-size:0.8rem;
     width:60px;
 }   /* 3x */
-.hb-font-size-0-72rem.hb-font-size-0-72rem.hb-font-size-0-72rem {
-    font-size:0.72rem;
-    text-transform:uppercase;
-    letter-spacing:0.04em;
-    color:var(--text-muted);
-    margin:6px 0 4px;
-}   /* 5x */
-.hb-hinweis.hb-hinweis.hb-hinweis { padding:12px; color:var(--text-muted); font-size:0.8rem; }   /* 2x */
 .hb-margin-top-6px.hb-margin-top-6px.hb-margin-top-6px { margin-top:6px; }   /* 3x */
-.hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* 2x */
-.hb-volle-breite.hb-volle-breite.hb-volle-breite { width:100%; }   /* 4x */
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche

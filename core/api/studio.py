@@ -24,6 +24,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from ..daten.hochgeladen import Hochgeladen
+
 logger = logging.getLogger('core')
 
 
@@ -102,7 +104,7 @@ class Studioendpunkte:
         os.makedirs(ordner, exist_ok=True)
         name = '%s%s' % (uuid.uuid4().hex, endung)
         try:
-            Studioendpunkte._schreiben(os.path.join(ordner, name), datei)
+            Hochgeladen.ablegen(os.path.join(ordner, name), datei)
         except Exception as fehler:
             logger.error('[studio] Audio upload failed: %s', fehler)
             return JsonResponse({'error': str(fehler)}, status=500)
@@ -111,12 +113,6 @@ class Studioendpunkte:
         return JsonResponse({'ok': True,
                              'url': '%sstudio_audio/%s'
                                     % (settings.MEDIA_URL, name)})
-
-    @staticmethod
-    def _schreiben(ziel, hochgeladen):
-        with open(ziel, 'wb') as datei:
-            for stueck in hochgeladen.chunks():
-                datei.write(stueck)
 
     # -------------------------------------------------------- Lichtvorgaben
 
@@ -207,7 +203,7 @@ class Studioendpunkte:
                                                            endung)
         ordner.mkdir(parents=True, exist_ok=True)
         try:
-            Studioendpunkte._schreiben(ordner / name, hochgeladen)
+            Hochgeladen.ablegen(ordner / name, hochgeladen)
         except Exception as fehler:
             logger.exception('studio_scene_object_upload: unerwarteter Fehler')
             return JsonResponse({'error': str(fehler)}, status=500)

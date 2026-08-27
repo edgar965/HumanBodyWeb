@@ -235,3 +235,23 @@
 
 /* Erlaeuterung unter einer Tabelle */
 .tabellen-fussnote.tabellen-fussnote.tabellen-fussnote { margin-top:8px; color:#888; }
+
+/* ZUSAMMENGEFASST AM 27.08.2026 (Werkzeug `css-dubletten`)
+ * =======================================================
+ * Diese Regeln standen wortgleich in drei bis zehn Vorlagen —
+ * `stil_zu_klassen.py` hat sie am 16.08.2026 je Vorlage einzeln
+ * erzeugt und dabei nicht gesehen, dass die Nachbarvorlage
+ * dasselbe bekommt. Verschoben wurde nur, was im ganzen Projekt
+ * mit genau EINEM Rumpf vorkommt.
+ */
+.hb-abstand-oben.hb-abstand-oben.hb-abstand-oben { margin-top:1.5rem; }   /* aus 8 Vorlagen */
+.hb-dehnt-ohne-abstand.hb-dehnt-ohne-abstand.hb-dehnt-ohne-abstand { margin-bottom:0; flex:1; }   /* aus 3 Vorlagen */
+.hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* aus 10 Vorlagen */
+.hb-farbfeld.hb-farbfeld.hb-farbfeld { width:40px; height:24px; border:none; cursor:pointer; }   /* aus 4 Vorlagen */
+.hb-fest.hb-fest.hb-fest { flex:0 0 auto; padding:6px 10px; }   /* aus 3 Vorlagen */
+.hb-font-size-0-72rem.hb-font-size-0-72rem.hb-font-size-0-72rem { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); margin:6px 0 4px; }   /* aus 3 Vorlagen */
+.hb-gedaempft.hb-gedaempft.hb-gedaempft { color:#888; }   /* aus 4 Vorlagen */
+.hb-hinweis.hb-hinweis.hb-hinweis { padding:12px; color:var(--text-muted); font-size:0.8rem; }   /* aus 5 Vorlagen */
+.hb-symbolspalte.hb-symbolspalte.hb-symbolspalte { width:16px; }   /* aus 3 Vorlagen */
+.hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* aus 9 Vorlagen */
+.hb-volle-breite.hb-volle-breite.hb-volle-breite { width:100%; }   /* aus 4 Vorlagen */

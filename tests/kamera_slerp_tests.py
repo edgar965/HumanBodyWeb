@@ -13,8 +13,8 @@ import numpy as np
 
 from core.projekt_temp import ProjektTemp
 
-from .base import TestCategory, http_request
-from ._kamera_basis import _slerp_short_arc
+from .base import TestCategory, Netzruf
+from ._kamera_basis import Kamerabasis
 
 
 class KameraSlerpTests(TestCategory):
@@ -31,7 +31,7 @@ class KameraSlerpTests(TestCategory):
         """slerp(q, q, 0.5) == q — ohne Drift bei wirklich identischen Keyframes."""
         q = np.array([0.1, 0.27, -0.03, 0.96])
         q = q / np.linalg.norm(q)
-        r = _slerp_short_arc(q, q, 0.5)
+        r = Kamerabasis.slerp_kurzbogen(q, q, 0.5)
         return float(abs(r @ q)) > 0.999, f'dot={r @ q:.6f}'
 
     @staticmethod
@@ -42,7 +42,7 @@ class KameraSlerpTests(TestCategory):
         q = np.array([0.103, 0.275, -0.031, 0.956])
         q = q / np.linalg.norm(q)
         q_flipped = -q
-        r_mid = _slerp_short_arc(q, q_flipped, 0.5)
+        r_mid = Kamerabasis.slerp_kurzbogen(q, q_flipped, 0.5)
         return float(abs(r_mid @ q)) > 0.999, f'dot={abs(r_mid @ q):.6f}'
 
     @staticmethod
@@ -54,7 +54,7 @@ class KameraSlerpTests(TestCategory):
         q_flipped = -q
         ws = []
         for t in np.linspace(0, 1, 21):
-            r = _slerp_short_arc(q, q_flipped, float(t))
+            r = Kamerabasis.slerp_kurzbogen(q, q_flipped, float(t))
             ws.append(float(r[3]))
         w_min, w_max = min(ws), max(ws)
         return (w_min > 0.9 or w_max < -0.9), f'w_range=[{w_min:.3f}, {w_max:.3f}]'
@@ -65,7 +65,7 @@ class KameraSlerpTests(TestCategory):
         deckungsgleich mit Start-Keyframe (dot > 0.9999)."""
         q0 = np.array([0.103, 0.275, -0.031, 0.956]); q0 /= np.linalg.norm(q0)
         q1 = np.array([0.104, 0.278, -0.031, 0.955]); q1 /= np.linalg.norm(q1)
-        r = _slerp_short_arc(q0, q1, 0.5)
+        r = Kamerabasis.slerp_kurzbogen(q0, q1, 0.5)
         return float(abs(r @ q0)) > 0.9999, f'dot={abs(r @ q0):.6f}'
 
     # --- LookAt-Interpolation (echter Fix für "wirre Kamera durch die Szene") ---
@@ -128,7 +128,7 @@ class KameraSlerpTests(TestCategory):
             t = i / 20.0
             ts = t * t * (3 - 2 * t)
             pos = (1 - ts) * p0 + ts * p1
-            q = _slerp_short_arc(q0, q1, ts)
+            q = Kamerabasis.slerp_kurzbogen(q0, q1, ts)
             q = q / np.linalg.norm(q)
             fwd = rot_vec(np.array([0, 0, -1]), q)
             s = float(fwd @ (tgt - pos))
@@ -162,11 +162,11 @@ class KameraSlerpTests(TestCategory):
         # (System-Temp gab 403 — 48 Tests rot seit 12.08.2026).
         with ProjektTemp.wegwerfordner() as tmpdir:
             path = Path(tmpdir) / 'lookat.json'
-            code_s, saved = http_request('/api/studio/project-save/', method='POST',
+            code_s, saved = Netzruf.senden('/api/studio/project-save/', method='POST',
                                           data={'path': str(path), 'project': proj})
             if code_s != 200 or not saved.get('ok'):
                 return False, f'save failed ({code_s})'
-            code_l, loaded = http_request(
+            code_l, loaded = Netzruf.senden(
                 f'/api/studio/project-load/?path={urllib.parse.quote(str(path))}'
             )
         if code_l != 200 or not loaded.get('ok'):

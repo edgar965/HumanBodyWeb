@@ -1,5 +1,5 @@
 """Tests für Character-API Endpoints."""
-from .base import TestCategory, http_request
+from .base import TestCategory, Netzruf
 
 
 class CharacterApiTests(TestCategory):
@@ -9,7 +9,7 @@ class CharacterApiTests(TestCategory):
     @staticmethod
     def test_models_endpoint():
         """GET /api/character/models/ → HTTP 200 + presets-Array"""
-        code, data = http_request('/api/character/models/')
+        code, data = Netzruf.senden('/api/character/models/')
         if code != 200:
             return False, f'HTTP {code}'
         presets = data.get('presets', [])
@@ -18,7 +18,7 @@ class CharacterApiTests(TestCategory):
     @staticmethod
     def test_models_contains_rig2():
         """Rig2 in models-Liste vorhanden"""
-        code, data = http_request('/api/character/models/')
+        code, data = Netzruf.senden('/api/character/models/')
         if code != 200:
             return False, f'HTTP {code}'
         names = {p.get('name') for p in data.get('presets', [])}
@@ -27,29 +27,29 @@ class CharacterApiTests(TestCategory):
     @staticmethod
     def test_model_detail_rig2():
         """GET /api/character/model/Rig2/ → HTTP 200"""
-        code, _ = http_request('/api/character/model/Rig2/')
+        code, _ = Netzruf.senden('/api/character/model/Rig2/')
         return code == 200, f'HTTP {code}'
 
     @staticmethod
     def test_mesh_endpoint():
         """GET /api/character/mesh/ → HTTP 200"""
-        code, _ = http_request('/api/character/mesh/?body_type=Female_Caucasian')
+        code, _ = Netzruf.senden('/api/character/mesh/?body_type=Female_Caucasian')
         return code == 200, f'HTTP {code}'
 
     @staticmethod
     def test_morphs_endpoint():
         """GET /api/character/morphs/ → HTTP 200"""
-        code, _ = http_request('/api/character/morphs/')
+        code, _ = Netzruf.senden('/api/character/morphs/')
         return code == 200, f'HTTP {code}'
 
     @staticmethod
     def test_hairstyles_endpoint():
         """GET /api/character/hairstyles/ → HTTP 200"""
-        code, _ = http_request('/api/character/hairstyles/')
+        code, _ = Netzruf.senden('/api/character/hairstyles/')
         return code == 200, f'HTTP {code}'
 
     @staticmethod
     def test_scenes_endpoint():
         """GET /api/character/scenes/ → HTTP 200"""
-        code, _ = http_request('/api/character/scenes/')
+        code, _ = Netzruf.senden('/api/character/scenes/')
         return code == 200, f'HTTP {code}'

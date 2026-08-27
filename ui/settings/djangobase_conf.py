@@ -54,6 +54,27 @@ DJANGOBASE = {
     'skills_ignorieren': ['TestCharakter', 'alt', '_merge_tmp2', 'Backup',
                           'ProjektTemp', 'debug', 'tools', 'vendor', 'theatre',
                           'theatre-studio'],
+    # WELCHE VERZEICHNISSE NUR GELESEN WERDEN DUERFEN (Werkzeug `nur-lesen`)
+    # ======================================================================
+    # Aus CLAUDE.md: „NEVER write to `HumanBody/data/` or
+    # `HumanBodyBlender/data/` — these are production assets (morphs, meshes,
+    # weights, skeleton). Read only." Belegter Schaden: Die maennlichen `.npy`
+    # schrumpften einmal von 437 KB auf 218 KB — halbe Vertexzahl, Charakter
+    # zerstoert, ohne Fehlermeldung.
+    #
+    # `ausser` nennt die Unterordner, die der Benutzer ueber die Oberflaeche
+    # SEHR WOHL fuellt: gespeicherte Figuren, die BVH-Bibliothek, Studio-
+    # Projekte, Foto-Ergebnisse, Posen, Kleider. Ohne diese Liste meldete das
+    # Werkzeug jeden Speichern-Knopf des Projekts.
+    'daten_nur_lesen': {
+        'wurzeln': ['HumanBody/data', 'HumanBodyBlender/data'],
+        'ausser': ['models', 'animations', 'studio_projects', 'assetsInstance',
+                   'photoTo3D', 'poseData', 'garment_library',
+                   'theatre_presets', 'hairstyles', 'output', 'tmp',
+                   'TestCharakter', 'charmorph_data', 'music', 'test'],
+        'einstellungen': ['HUMANBODY_DATA_DIR', 'HUMANBODY_BVH_DIR',
+                          'BLENDER_BVH_DIR'],
+    },
     'farben': {
         'sidebar_bg': '#1a1a2e',     # = --bg-secondary (style.css)
         'sidebar_light': '#16213e',  # = --bg-card  (Hover/Active-Fill)

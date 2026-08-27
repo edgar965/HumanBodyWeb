@@ -103,6 +103,8 @@ class Schnittmusterablage:
         try:
             ziel = (wurzel / kennung / 'specification.json').resolve()
         except (OSError, ValueError):
+            logger.warning('pattern_specification: Kennung nicht aufloesbar: '
+                           '%s', kennung, exc_info=True)
             return None
         if not (ziel == wurzel or ziel.is_relative_to(wurzel)):
             logger.warning('pattern_specification: Pfad ausserhalb der '

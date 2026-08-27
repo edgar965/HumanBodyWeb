@@ -25,7 +25,7 @@ from pathlib import Path
 
 from core.projekt_temp import ProjektTemp
 
-from .base import http_request
+from .base import Netzruf
 
 
 class Speicherprobe:
@@ -58,7 +58,7 @@ class Speicherprobe:
         return probe
 
     def _speichern(self, pfad, projektdaten):
-        self.speichercode, antwort = http_request(
+        self.speichercode, antwort = Netzruf.senden(
             self.SPEICHERN, method='POST',
             data={'path': str(pfad), 'project': projektdaten})
         self.gespeichert = self.speichercode == 200 and bool(antwort.get('ok'))
@@ -67,7 +67,7 @@ class Speicherprobe:
         return self.gespeichert
 
     def _laden(self, pfad):
-        self.ladecode, antwort = http_request(
+        self.ladecode, antwort = Netzruf.senden(
             '%s?path=%s' % (self.LADEN, urllib.parse.quote(str(pfad))))
         self.geladen = self.ladecode == 200 and bool(antwort.get('ok'))
         if self.geladen:

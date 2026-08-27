@@ -27,6 +27,8 @@ import uuid
 
 from django.conf import settings
 
+from ..daten.pfadvergleich import Pfadvergleich
+
 from ..safe_paths import SafePath
 
 
@@ -88,7 +90,7 @@ class Stoffexportziel:
         ein toter Link.
         """
         wurzel = str(settings.MEDIA_ROOT)
-        if not pfad.startswith(wurzel):
+        if not Pfadvergleich.liegt_unter(pfad, wurzel):
             return None
         rest = pfad[len(wurzel):].replace('\\', '/').lstrip('/')
         return settings.MEDIA_URL.rstrip('/') + '/' + rest

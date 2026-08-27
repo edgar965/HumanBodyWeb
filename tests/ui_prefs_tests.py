@@ -1,5 +1,5 @@
 """Tests für UI-Prefs Endpoint."""
-from .base import TestCategory, http_request
+from .base import TestCategory, Netzruf
 
 
 class UiPrefsTests(TestCategory):
@@ -9,7 +9,7 @@ class UiPrefsTests(TestCategory):
     @staticmethod
     def test_ui_prefs_get():
         """/api/ui-prefs/ liefert 200 + dict"""
-        code, data = http_request('/api/ui-prefs/')
+        code, data = Netzruf.senden('/api/ui-prefs/')
         if code != 200:
             return False, f'HTTP {code}'
         if not isinstance(data, dict):

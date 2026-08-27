@@ -1,5 +1,5 @@
 """Tests für Boden-Texturen API."""
-from .base import TestCategory, http_request
+from .base import TestCategory, Netzruf
 
 
 class FloorTests(TestCategory):
@@ -9,7 +9,7 @@ class FloorTests(TestCategory):
     @staticmethod
     def test_textures_endpoint():
         """/api/studio/floor-textures/ → HTTP 200"""
-        code, data = http_request('/api/studio/floor-textures/')
+        code, data = Netzruf.senden('/api/studio/floor-textures/')
         if code != 200:
             return False, f'HTTP {code}'
         if 'textures' not in data:
@@ -19,7 +19,7 @@ class FloorTests(TestCategory):
     @staticmethod
     def test_contains_none_fallback():
         """Textur-Liste enthält "none" Fallback (für reine Farbe)"""
-        code, data = http_request('/api/studio/floor-textures/')
+        code, data = Netzruf.senden('/api/studio/floor-textures/')
         if code != 200:
             return False, f'HTTP {code}'
         has_none = any(t.get('name') == 'none' for t in data.get('textures', []))

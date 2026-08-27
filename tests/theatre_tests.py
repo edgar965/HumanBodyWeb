@@ -1,5 +1,5 @@
 """Tests für Theatre-Licht-Presets API."""
-from .base import TestCategory, http_request
+from .base import TestCategory, Netzruf
 
 
 class TheatreTests(TestCategory):
@@ -9,7 +9,7 @@ class TheatreTests(TestCategory):
     @staticmethod
     def test_list_returns_200():
         """/api/studio/theatre-presets/ liefert HTTP 200 + presets-Array"""
-        code, data = http_request('/api/studio/theatre-presets/')
+        code, data = Netzruf.senden('/api/studio/theatre-presets/')
         if code != 200:
             return False, f'HTTP {code}'
         if 'presets' not in data:
@@ -19,7 +19,7 @@ class TheatreTests(TestCategory):
     @staticmethod
     def test_list_contains_defaults():
         """Liste enthält alle 5 Default-Presets (Ballett, Jazz, Club, Studio, Sonnenuntergang)"""
-        code, data = http_request('/api/studio/theatre-presets/')
+        code, data = Netzruf.senden('/api/studio/theatre-presets/')
         if code != 200:
             return False, f'HTTP {code}'
         names = {p.get('name') for p in data.get('presets', [])}
@@ -33,7 +33,7 @@ class TheatreTests(TestCategory):
     @staticmethod
     def test_ballett_details():
         """Ballett-Preset hat 4 Lichter + korrektes Label"""
-        code, data = http_request('/api/studio/theatre-preset/ballett_klassisch/')
+        code, data = Netzruf.senden('/api/studio/theatre-preset/ballett_klassisch/')
         if code != 200:
             return False, f'HTTP {code}'
         lights = data.get('lights', [])
@@ -46,7 +46,7 @@ class TheatreTests(TestCategory):
     @staticmethod
     def test_light_structure():
         """Jedes Licht hat type + position (3 Werte)"""
-        code, data = http_request('/api/studio/theatre-preset/ballett_klassisch/')
+        code, data = Netzruf.senden('/api/studio/theatre-preset/ballett_klassisch/')
         if code != 200:
             return False, f'HTTP {code}'
         for lg in data.get('lights', []):
@@ -60,7 +60,7 @@ class TheatreTests(TestCategory):
     @staticmethod
     def test_nonexistent_returns_404():
         """Nicht-existentes Preset → HTTP 404"""
-        code, _ = http_request('/api/studio/theatre-preset/nonexistent_xyz/')
+        code, _ = Netzruf.senden('/api/studio/theatre-preset/nonexistent_xyz/')
         if code != 404:
             return False, f'HTTP {code} (erwartet 404)'
         return True, '404 korrekt'
@@ -68,7 +68,7 @@ class TheatreTests(TestCategory):
     @staticmethod
     def test_bvh_studio_default_exists():
         """BVH Studio Default Preset vorhanden (Ersatz für alte Auto-Szenen-Lichter)"""
-        code, data = http_request('/api/studio/theatre-preset/bvh_studio_default/')
+        code, data = Netzruf.senden('/api/studio/theatre-preset/bvh_studio_default/')
         if code != 200:
             return False, f'HTTP {code}'
         if data.get('label') != 'BVH Studio Default':
@@ -78,7 +78,7 @@ class TheatreTests(TestCategory):
     @staticmethod
     def test_bvh_studio_default_has_full_light_set():
         """BVH Studio Default hat Key + Fill + Back + Ambient (wie Original-BVH-Studio-Setup)"""
-        code, data = http_request('/api/studio/theatre-preset/bvh_studio_default/')
+        code, data = Netzruf.senden('/api/studio/theatre-preset/bvh_studio_default/')
         if code != 200:
             return False, f'HTTP {code}'
         names = {lg.get('name') for lg in data.get('lights', [])}
@@ -91,7 +91,7 @@ class TheatreTests(TestCategory):
     @staticmethod
     def test_bvh_studio_default_light_types():
         """BVH Studio Default: 3× directional + 1× ambient (native Typen, keine Approximation)"""
-        code, data = http_request('/api/studio/theatre-preset/bvh_studio_default/')
+        code, data = Netzruf.senden('/api/studio/theatre-preset/bvh_studio_default/')
         if code != 200:
             return False, f'HTTP {code}'
         types = [lg.get('type') for lg in data.get('lights', [])]
@@ -105,13 +105,13 @@ class TheatreTests(TestCategory):
     def test_every_preset_renderable_as_timeline():
         """Jedes Preset-Licht hat Position + Intensität — Grundlage für durchgehende
         Timeline-Einträge (Start/Ende-KFs beim Preset-Apply)"""
-        code, presets = http_request('/api/studio/theatre-presets/')
+        code, presets = Netzruf.senden('/api/studio/theatre-presets/')
         if code != 200:
             return False, f'Liste HTTP {code}'
         errors = []
         for p in presets.get('presets', []):
             pname = p['name']
-            code2, detail = http_request(f'/api/studio/theatre-preset/{pname}/')
+            code2, detail = Netzruf.senden(f'/api/studio/theatre-preset/{pname}/')
             if code2 != 200:
                 errors.append(f'{pname}: HTTP {code2}')
                 continue
@@ -131,7 +131,7 @@ class TheatreTests(TestCategory):
     @staticmethod
     def test_all_presets_have_labels_and_descriptions():
         """Jedes Preset hat Label + Beschreibung (UI-Anzeige im Theatre-Menü)"""
-        code, presets = http_request('/api/studio/theatre-presets/')
+        code, presets = Netzruf.senden('/api/studio/theatre-presets/')
         if code != 200:
             return False, f'HTTP {code}'
         missing = []

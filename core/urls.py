@@ -4,8 +4,8 @@ from .api import einstellungen, seiten
 # `seiten.py` fuehrt nur noch die reinen Vorlagen (Umbau 17.08.2026).
 from .api import (seite_bvhstudio_einstellungen, seite_fotoauftraege,
                   seite_theatre_einstellungen)
-from . import cloth_export_api
 from .api.charmorph_bestand import CharmorphBestand
+from .cloth_export_api import Stoffexport
 from .api.testfigur import Testendpunkte, Testverwaltung
 from .api.dateien import Auftragsdateien
 from .api.auftraege import Auftragsendpunkte
@@ -132,7 +132,7 @@ urlpatterns = [
     path('api/retarget/save-bvh-effects/', Bvhtext.effekte_sichern, name='save_bvh_effects'),
     path('api/character/save-bvh-text/', Bvhtext.sichern, name='save_bvh_text'),
     path('api/character/bvh-manage/', Retargetendpunkte.bvh_verwalten, name='bvh_manage'),
-    path('api/cloth/export/', cloth_export_api.export_cloth, name='cloth_export'),
+    path('api/cloth/export/', Stoffexport.ausfuehren, name='cloth_export'),
     path('api/studio/audio-upload/', Studioendpunkte.ton_hochladen, name='studio_audio_upload'),
     path('api/studio/project-save/', Studioprojekte.projekt_sichern, name='studio_project_save'),
     path('api/studio/project-load/', Studioprojekte.projekt_laden, name='studio_project_load'),

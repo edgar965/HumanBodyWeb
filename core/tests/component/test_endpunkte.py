@@ -138,7 +138,7 @@ class EndpunkteTest(EndpunktProbe):
         (WIRKUNG, 'herausschieben', '/api/character/vertex-edit/push-outside/'),
         (WIRKUNG, 'glaetten', '/api/character/vertex-edit/smooth/'),
         (LESEN, 'garderobe', '/api/character/wardrobe/'),
-        (WIRKUNG, 'export_cloth', '/api/cloth/export/'),
+        (WIRKUNG, 'ausfuehren', '/api/cloth/export/'),
         (LESEN, 'erkennungsdaten', '/api/detection/00000000-0000-0000-0000-000000000001/'),
         (WIRKUNG, 'loeschen', '/api/job/00000000-0000-0000-0000-000000000001/delete/'),
         (WIRKUNG, 'starten', '/api/job/00000000-0000-0000-0000-000000000001/start/'),

@@ -24,6 +24,7 @@ from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
+from ..daten.fotoauftrag import Fotoauftrag
 from ..daten.wrapperpfad import Wrapperpfad
 from ..dienste.bildablage import Bildablage
 from ..dienste.fotoanalyse import Fotoanalyse, FotoanalyseFehler
@@ -42,19 +43,6 @@ class Fotoauftraege:
     # ----------------------------------------------------------- Nachschlagen
 
     @staticmethod
-    def _auftrag(job_id):
-        """Der Auftrag — oder None, wenn es ihn nicht (mehr) gibt."""
-        from ..models import PhotoAnalysisJob
-        try:
-            return PhotoAnalysisJob.objects.get(id=job_id)
-        except PhotoAnalysisJob.DoesNotExist:
-            return None
-
-    @staticmethod
-    def _nicht_gefunden():
-        return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
-
-    @staticmethod
     @require_GET
     def daten(request, job_id):
         """Das gespeicherte Analyseergebnis eines Auftrags.
@@ -62,9 +50,9 @@ class Fotoauftraege:
         Die Morph-Zuordnung wird aus den gespeicherten Betas NEU gerechnet —
         damit eine verbesserte Zuordnung auch alte Auftraege erreicht.
         """
-        job = Fotoauftraege._auftrag(job_id)
+        job = Fotoauftrag.holen(job_id)
         if job is None:
-            return Fotoauftraege._nicht_gefunden()
+            return Fotoauftrag.nicht_gefunden()
         try:
             daten = json.loads(job.result_json)
         except (json.JSONDecodeError, TypeError):
@@ -114,9 +102,9 @@ class Fotoauftraege:
     @require_POST
     def bild_sichern(request, job_id):
         """Ein im Browser gerendertes 3D-Bild beim Auftrag ablegen."""
-        job = Fotoauftraege._auftrag(job_id)
+        job = Fotoauftrag.holen(job_id)
         if job is None:
-            return Fotoauftraege._nicht_gefunden()
+            return Fotoauftrag.nicht_gefunden()
         try:
             rumpf = json.loads(request.body)
         except (json.JSONDecodeError, ValueError):
@@ -164,9 +152,9 @@ class Fotoauftraege:
     @require_POST
     def loeschen(request, job_id):
         """Einen Fotoanalyse-Auftrag samt Dateien loeschen."""
-        job = Fotoauftraege._auftrag(job_id)
+        job = Fotoauftrag.holen(job_id)
         if job is None:
-            return Fotoauftraege._nicht_gefunden()
+            return Fotoauftrag.nicht_gefunden()
         Fotoauftraege._dateien_entfernen(job)
         job.delete()
         return redirect('photo_analysis_jobs')
@@ -186,7 +174,7 @@ class Fotoauftraege:
                                 status=400)
         geloescht = 0
         for kennung in kennungen:
-            job = Fotoauftraege._auftrag(kennung)
+            job = Fotoauftrag.holen(kennung)
             # stumm gewollt: Ein Auftrag, den ein anderer Tab schon geloescht
             # hat, ist genau das gewuenschte Ergebnis — die Zahl unten nennt
             # die echte Menge.

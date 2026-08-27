@@ -23,6 +23,8 @@ from pathlib import Path
 from django.conf import settings
 
 from ..dienste.haenger import Haenger
+from ..daten.pfadvergleich import Pfadvergleich
+
 from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..pipelines.prozesspruefung import Prozesspruefung
 from ..pipelines.videolaenge import Videolaenge
@@ -258,5 +260,5 @@ class Auftragssteuerung:
         if job.bvh_file and os.path.exists(job.bvh_file):
             bvh = Path(job.bvh_file)
             # Liegt die BVH im Ausgabeordner, ist sie schon weg.
-            if not str(bvh).startswith(str(ordner)):
+            if not Pfadvergleich.liegt_unter(bvh, ordner):
                 bvh.unlink(missing_ok=True)

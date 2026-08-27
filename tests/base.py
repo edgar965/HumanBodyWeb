@@ -21,10 +21,22 @@ Server.
 from .kanal import Kanal
 
 
-def http_request(path, method='GET', data=None, files=None, timeout=15):
-    """Anfrage über den gerade gültigen Kanal. Liefert `(status, wörterbuch)`."""
-    return Kanal.aktueller().senden(path, method=method, data=data,
-                                    files=files, timeout=timeout)
+class Netzruf:
+    """Der Weg zum Server — in-process im Testlauf, sonst ueber das Netz.
+
+    Als Klasse statt einer freien Funktion (Befund `freie-funktionen`,
+    27.08.2026). Welcher Kanal gilt, entscheidet `kanal.Kanal`.
+    """
+
+    #: Sekunden, die eine Antwort hoechstens brauchen darf.
+    FRIST_S = 15
+
+    @classmethod
+    def senden(cls, pfad, method='GET', data=None, files=None, timeout=None):
+        """Anfrage ueber den gerade gueltigen Kanal -> `(Status, Woerterbuch)`."""
+        return Kanal.aktueller().senden(
+            pfad, method=method, data=data, files=files,
+            timeout=cls.FRIST_S if timeout is None else timeout)
 
 
 class TestCase:

@@ -48,8 +48,13 @@ class SafePathTest(TestCase):
     # ------------------------------------------------------------- Muss erlaubt
 
     def test_pfad_in_der_wurzel_wird_angenommen(self):
-        ziel = self.sp.pruefe(str(self.medien / 'studio_projects' / 'a.studio.json'))
-        self.assertTrue(str(ziel).startswith(str(self.medien)))
+        ziel = self.sp.pruefe(str(self.medien / 'studio_projects'
+                                  / 'a.studio.json'))
+        # `is_relative_to` statt `startswith`: Der Zeichenvergleich ist genau
+        # der Fehler, den dieser Test verhindern soll (siehe Werkzeug
+        # `pfadpraefix`) — er hat hier nichts zu suchen, auch nicht als
+        # Zusicherung.
+        self.assertTrue(ziel.is_relative_to(self.medien))
 
     def test_wurzel_selbst_wird_angenommen(self):
         """Das Verzeichnis-Listing fragt die Wurzel selbst ab — die muss durch."""

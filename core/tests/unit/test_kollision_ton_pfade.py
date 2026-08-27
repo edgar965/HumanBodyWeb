@@ -34,7 +34,7 @@ from pathlib import Path
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from core.cloth_export_api import _namensstamm
+from core.cloth_export_api import Stoffexport
 
 
 class NamensstammTest(SimpleTestCase):
@@ -43,7 +43,7 @@ class NamensstammTest(SimpleTestCase):
     AUSGABE = r'A:\3DTools\HumanBodyWeb\media\cloth_exports'
 
     def _ziel(self, scene_name):
-        name = '%s_blender_eevee_1_abc.mp4' % _namensstamm(scene_name)
+        name = '%s_blender_eevee_1_abc.mp4' % Stoffexport.namensstamm(scene_name)
         return os.path.normpath(os.path.join(self.AUSGABE, name))
 
     def test_fiese_namen_bleiben_im_ordner(self):
@@ -55,16 +55,16 @@ class NamensstammTest(SimpleTestCase):
                                 '%r landet in %s' % (sn, ziel))
 
     def test_normale_namen_bleiben_lesbar(self):
-        self.assertEqual(_namensstamm('Ballett Probe 2'), 'Ballett_Probe_2')
-        self.assertEqual(_namensstamm('kleid-v2_final'), 'kleid-v2_final')
+        self.assertEqual(Stoffexport.namensstamm('Ballett Probe 2'), 'Ballett_Probe_2')
+        self.assertEqual(Stoffexport.namensstamm('kleid-v2_final'), 'kleid-v2_final')
 
     def test_leerer_name_wird_scene(self):
         for leer in ('', None, '   ', '///', '...'):
             with self.subTest(wert=leer):
-                self.assertEqual(_namensstamm(leer), 'scene')
+                self.assertEqual(Stoffexport.namensstamm(leer), 'scene')
 
     def test_name_bleibt_kurz(self):
-        self.assertLessEqual(len(_namensstamm('x' * 500)), 60)
+        self.assertLessEqual(len(Stoffexport.namensstamm('x' * 500)), 60)
 
 
 class TonquellenTest(SimpleTestCase):

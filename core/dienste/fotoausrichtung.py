@@ -8,10 +8,8 @@ ohne jeden HTTP-Bezug (Umbau 15.08.2026).
 """
 
 import logging
-import os
 
 import numpy as np
-from django.conf import settings
 
 from ..daten.netzmasse import Netzmasse
 from ..daten.persongrenzen import Persongrenzen

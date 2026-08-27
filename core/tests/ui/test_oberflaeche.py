@@ -21,7 +21,7 @@ WIE DIE FÄLLE DEN SERVER ERREICHEN
 ==================================
 `tests/kanal.py` schaltet um: im Testlauf `django.test.Client` (in-process,
 Testdatenbank), außerhalb `urllib` an den laufenden Server. Der Fall selbst ruft
-weiter `http_request(...)` und merkt nichts davon.
+weiter `Netzruf.senden(...)` und merkt nichts davon.
 
 WARUM DIE FÄLLE HIER NICHT EINZELN AUFGEZÄHLT SIND
 ==================================================

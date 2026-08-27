@@ -1,5 +1,5 @@
 """Tests für Client-Logging Endpoint."""
-from .base import TestCategory, http_request
+from .base import TestCategory, Netzruf
 
 
 class ClientLogTests(TestCategory):
@@ -9,7 +9,7 @@ class ClientLogTests(TestCategory):
     @staticmethod
     def test_client_log_accepts_post():
         """POST /api/log/ mit page+action+detail → HTTP 200"""
-        code, _ = http_request('/api/log/', method='POST',
+        code, _ = Netzruf.senden('/api/log/', method='POST',
                                data={'page': 'bvh_studio', 'action': 'test_runner',
                                      'detail': 'automated test'})
         if code != 200:

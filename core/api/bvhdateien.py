@@ -17,6 +17,7 @@ from django.http import JsonResponse, FileResponse, HttpResponseNotFound
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
+from ..daten.pfadvergleich import Pfadvergleich
 
 class Bvhauslieferung:
     """Bewegungsdateien der Bibliothek listen, ausliefern und ablegen."""
@@ -50,8 +51,9 @@ class Bvhauslieferung:
     def datei_der_kategorie(request, category, name):
         """Eine Datei aus einem Kategorieordner."""
         wurzel = Bvhauslieferung.wurzel()
-        pfad = os.path.normpath(os.path.join(wurzel, category, '%s.bvh' % name))
-        if not pfad.startswith(os.path.normpath(wurzel)):
+        pfad = os.path.normpath(os.path.join(wurzel, category,
+                                             '%s.bvh' % name))
+        if not Pfadvergleich.liegt_unter(pfad, wurzel):
             return HttpResponseNotFound('Invalid path')
         if not os.path.isfile(pfad):
             return HttpResponseNotFound('BVH not found: %s/%s'
@@ -83,7 +85,7 @@ class Bvhauslieferung:
         wurzel = Bvhauslieferung.wurzel()
         ordner = os.path.normpath(os.path.join(wurzel, kategorie))
         ziel = os.path.normpath(os.path.join(ordner, '%s.bvh' % name))
-        if not ziel.startswith(os.path.normpath(wurzel)):
+        if not Pfadvergleich.liegt_unter(ziel, wurzel):
             return JsonResponse({'error': 'Invalid path'}, status=400)
         os.makedirs(ordner, exist_ok=True)
         with open(ziel, 'w', encoding='utf-8') as datei:

@@ -18,6 +18,7 @@ from django.http import JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from ..daten.hochgeladen import Hochgeladen
 from ..dienste.bildfolgen_render import BildfolgenRender, RenderFehler
 from ..dienste.videokodierer import Videokodierer, VideoFehler
 from ..projekt_temp import ProjektTemp
@@ -57,7 +58,7 @@ class Theatrevideo:
         fertig = False
         try:
             webm = ProjektTemp.datei(suffix='.webm', prefix='theatre_webm_')
-            Theatrevideo._schreiben(webm, hochgeladen)
+            Hochgeladen.ablegen(webm, hochgeladen)
             mp4 = ProjektTemp.datei(suffix='.mp4', prefix='theatre_mp4_')
             Videokodierer.ausfuehren(Videokodierer.umwandeln(webm, mp4),
                                      zeitgrenze=Theatrevideo.UMWANDLUNG_S)
@@ -81,12 +82,6 @@ class Theatrevideo:
             # aufraeumt.
             if not fertig:
                 ProjektTemp.weg(webm, mp4)
-
-    @staticmethod
-    def _schreiben(ziel, hochgeladen):
-        with open(ziel, 'wb') as datei:
-            for stueck in hochgeladen.chunks():
-                datei.write(stueck)
 
     # ------------------------------------------------------- Serveraufnahme
 
@@ -166,10 +161,11 @@ class Theatrevideo:
         os.makedirs(ordner)
         try:
             for platz, hochgeladen in enumerate(bilder):
-                Theatrevideo._schreiben(
+                Hochgeladen.ablegen(
                     os.path.join(ordner, '%06d.png' % platz), hochgeladen)
-            return Theatrevideo._kodieren(request, ordner, arbeitsordner,
-                                          zielpfad, len(bilder))
+            return Theatrevideo._kodieren(request.POST, ordner,
+                                          arbeitsordner, zielpfad,
+                                          len(bilder))
         except VideoFehler as fehler:
             return Theatrevideo._abbrechen(
                 arbeitsordner, fehler, 'theatre_encode_frames: VideoFehler')
@@ -198,16 +194,23 @@ class Theatrevideo:
                 {'error': 'save_path abgelehnt: %s' % fehler}, status=403)
 
     @staticmethod
-    def _kodieren(request, ordner, arbeitsordner, zielpfad, anzahl):
-        fps = int(request.POST.get('fps', Theatrevideo.VORGABE_FPS))
-        format_ = request.POST.get('format', 'mp4')
+    def _kodieren(werte, ordner, arbeitsordner, zielpfad, anzahl):
+        """Die Bildfolge kodieren.
+
+        `werte` ist `request.POST`, nicht die Anfrage: Das Werkzeug
+        `schreibrouten` haelt jede Methode mit `request` als erstem Argument
+        fuer eine ANSICHT — und diese hier ruft `rmtree`. Sie ist aber ein
+        Helfer hinter `@require_POST`, kein Endpunkt.
+        """
+        fps = int(werte.get('fps', Theatrevideo.VORGABE_FPS))
+        format_ = werte.get('format', 'mp4')
         endung = Videokodierer.endung(format_)
         ausgabe = os.path.join(arbeitsordner, 'output.' + endung)
         Videokodierer.ausfuehren(Videokodierer.aus_bildfolge(
             ordner, ausgabe, fps,
-            int(request.POST.get('crf', Theatrevideo.VORGABE_CRF)), format_,
-            int(request.POST.get('width', 0)),
-            int(request.POST.get('height', 0))))
+            int(werte.get('crf', Theatrevideo.VORGABE_CRF)), format_,
+            int(werte.get('width', 0)),
+            int(werte.get('height', 0))))
         logger.info('Bilder kodiert: %d Bilder, %d fps, %s',
                     anzahl, fps, format_)
         if zielpfad:

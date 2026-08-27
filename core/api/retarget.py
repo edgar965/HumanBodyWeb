@@ -20,6 +20,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
+from ..daten.retargetwahl import Retargetwahl
 from ..dienste.bvhablage import Bvhablage
 from ..dienste.bvhverwaltung import Bvhverwaltung, BvhFehler
 from ..dienste.retargetdaten import Retargetdaten
@@ -54,15 +55,6 @@ class Retargetendpunkte:
         })
 
     # ----------------------------------------------------------- Hilfsmittel
-
-    @classmethod
-    def _wahlwerte(cls, werte):
-        """(Groesse, Format, Fusskorrektur, Delta) aus einer Parametertabelle."""
-        delta = werte.get('delta_norm', '').lower()
-        return (float(werte.get('body_height', cls.VORGABE_GROESSE)),
-                werte.get('format', None),
-                werte.get('foot_correction', '').lower() in ('1', 'true'),
-                True if delta == '1' else (False if delta == '0' else None))
 
     @staticmethod
     def _bibliothekspfad(schluessel):
@@ -100,7 +92,7 @@ class Retargetendpunkte:
 
         Dazu: `body_height`, `format`, `foot_correction`, `delta_norm`.
         """
-        groesse, art, fusskorrektur, delta = cls._wahlwerte(request.GET)
+        wahl = Retargetwahl(request.GET, cls.VORGABE_GROESSE)
         auftrag = request.GET.get('job')
         kategorie = request.GET.get('category')
         name = request.GET.get('name')
@@ -114,8 +106,9 @@ class Retargetendpunkte:
                 status=400)
         if not isinstance(pfad, str):
             return pfad                          # fertige Fehlerantwort
-        return JsonResponse(Retargetdaten(pfad, groesse, art, fusskorrektur,
-                                          delta).holen())
+        return JsonResponse(Retargetdaten(
+            pfad, wahl.groesse, wahl.format, wahl.fusskorrektur,
+            wahl.delta_norm).holen())
 
     @staticmethod
     @require_GET

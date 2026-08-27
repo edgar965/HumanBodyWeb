@@ -8,7 +8,6 @@ Morph-Regler abbilden, Hautfarbe nachtragen. Das Archivieren der Rohdaten macht
 """
 import logging
 import os
-import sys
 import time
 import uuid
 

@@ -46,6 +46,11 @@ class Posen:
         try:
             ziel = (cls.wurzel() / kategorie / ('%s.json' % name)).resolve()
         except (OSError, ValueError):
+            # Kategorie oder Name kommen aus dem Anfragerumpf; ein Pfad, den
+            # das Betriebssystem nicht aufloesen kann, ist eine ABGELEHNTE
+            # Eingabe — und die will man sehen, wenn jemand sie probiert.
+            logger.warning('[pose-manage] Pfad nicht aufloesbar: %s/%s',
+                           kategorie, name, exc_info=True)
             return None
         return ziel if ziel.is_relative_to(wurzel) else None
 

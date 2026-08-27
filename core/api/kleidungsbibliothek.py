@@ -38,6 +38,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from ..dienste.kleiderbibliothek import Kleiderbibliothek
+from ..daten.pfadvergleich import Pfadvergleich
+
 from ..dienste.kleiderverwaltung import Kleiderverwaltung, KleiderFehler
 
 logger = logging.getLogger(__name__)
@@ -177,7 +179,7 @@ class Kleiderendpunkte:
         wurzel = str(settings.HUMANBODY_GARMENT_EXPORT_DIR)
         os.makedirs(wurzel, exist_ok=True)
         ziel = os.path.normpath(os.path.join(wurzel, sauber))
-        if not ziel.startswith(os.path.normpath(wurzel)):
+        if not Pfadvergleich.liegt_unter(ziel, wurzel):
             return JsonResponse({'error': 'Invalid path'}, status=400)
         return JsonResponse({
             'ok': True, 'export_dir': ziel,
@@ -195,7 +197,7 @@ class Kleiderendpunkte:
         if '..' in sauber:
             return HttpResponseNotFound('Invalid path')
         ordner = os.path.join(wurzel, sauber)
-        if not os.path.normpath(ordner).startswith(os.path.normpath(wurzel)):
+        if not Pfadvergleich.liegt_unter(ordner, wurzel):
             return HttpResponseNotFound('Invalid path')
         if not os.path.isdir(ordner):
             return HttpResponseNotFound('Garment not found')
