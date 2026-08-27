@@ -14,7 +14,8 @@ from .protokoll import LOG_DIR
 from .djangobase_menue import EINSTELLUNGEN_EXTRA, MENUE
 from .djangobase_tests import TEST_BEFEHLE, TEST_BEREICHE
 from ..review import REVIEW_BEREICHE
-from .wurzeln import BASE_DIR, HUMANBODY_ROOT, TOOLS_ROOT, VIDEOTOBVH_ROOT
+from .wurzeln import (BASE_DIR, HUMANBODY_ROOT, TOOLS_ROOT, VERSION,
+                      VIDEOTOBVH_ROOT)
 
 # djangoBase — wiederverwendbare Infra (Sidebar-Layout, Hilfe: Logs/Versionen/
 # Tests, Einstellungen). Installiert als editable Package aus A:\shared\djangoBase.
@@ -22,6 +23,14 @@ from .wurzeln import BASE_DIR, HUMANBODY_ROOT, TOOLS_ROOT, VIDEOTOBVH_ROOT
 # Slug aus dem lokalen origin-Remote ab (keine Slugs hardcodiert).
 DJANGOBASE = {
     'titel': 'HumanBody',
+    # Die aktuelle Version steht immer im UI (Projektkonvention) — djangoBase
+    # zeigt sie unten in der Seitenleiste. Sie kam bis zum 28.08.2026 nicht
+    # hier an: `wurzeln.VERSION` war gesetzt, die Sidebar zeigte trotzdem
+    # nichts (Konformitätsprüfung `test_version_ist_gesetzt`).
+    'version': VERSION,
+    # Ziehgriff an der Seitenleiste. djangoBase bringt ihn fertig mit; ohne
+    # den Schalter ließ sich die Leiste nicht in der Breite ziehen.
+    'resizable_sidebar': True,
     'logo_icon': 'bi-person-walking',
     # Das Tab-/Lesezeichen-Symbol. `logo_icon` ist NUR das Sidebar-Zeichen
     # (Bootstrap-Icon-Schrift) — der Browser braucht eine echte Bilddatei, sonst
@@ -114,6 +123,12 @@ DJANGOBASE = {
     'test_befehle': TEST_BEFEHLE,
     'tests_djangobase_sichtbar': True,
     'test_bereiche': TEST_BEREICHE,
+    # `TestCategory` (tests/base.py) erbt von nichts — `test_pruefcode` hielt
+    # die 16 Kategorien deshalb für verwaist („unittest führt sie NIE aus").
+    # Tatsächlich macht `core/tests/ui/test_oberflaeche.py` aus jeder eine
+    # `django.test.TestCase`-Klasse; die 127 Fälle laufen über die Art `ui`
+    # mit (Befund 27.08.2026).
+    'test_basen': ['TestCategory'],
     # ----- Hilfe -> Review: Code-Review im Gespräch mit einem zweiten Modell --
     # Nemotron ist der starke, kostenpflichtige Partner (~0,6 $/Mio. Token, ein
     # Code-Paket kostet unter einem Cent); Gemma läuft lokal und schickt nichts

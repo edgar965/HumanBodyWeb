@@ -5,8 +5,9 @@ import './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import './undo.js';
-import { _clearBoneHighlightCache, _clearBoneHover, _clearBoneSelection, _createBoneOverlay, _getBoneFromIntersection, _removeBoneOverlay } from './knochenmarkierung.js';
-import { _doSubMeshClick, _findSubMeshForObject, _removeSubMesh, _sameSubMesh, _setBodyEmissive, _setSubMeshEmissive, clearSubMeshSelection, getAllSubMeshTargets, getSelectableSubMeshes } from './teilnetz_auswahl.js';
+import { _clearBoneHighlightCache, _clearBoneSelection, _createBoneOverlay, _getBoneFromIntersection, _removeBoneOverlay } from './knochenmarkierung.js';
+import { _doSubMeshClick, _findSubMeshForObject, _removeSubMesh, _sameSubMesh, _setBodyEmissive, _setSubMeshEmissive, clearSubMeshSelection, getSelectableSubMeshes } from './teilnetz_auswahl.js';
+import { Schwebeanzeige } from './schwebeanzeige.js';
 
 
 
@@ -92,99 +93,12 @@ export function bindCanvasClick() {
     });
 }
 
-// =========================================================================
-// Sub-mesh hover interaction
-// =========================================================================
+/**
+ * Was unter dem Zeiger liegt, zeigt `Schwebeanzeige` (Umbau 27.08.2026, Befund
+ * `jsfunktionen`: `initSubMeshInteraction()` hatte 91 Zeilen).
+ */
 export function initSubMeshInteraction() {
-    const canvas = state.canvas;
-    const tooltip = document.getElementById('mesh-tooltip');
-
-    canvas.addEventListener('mousemove', (e) => {
-        state._lastMouseEvent = e;
-        if (!state._hoverPending) {
-            state._hoverPending = true;
-            requestAnimationFrame(() => {
-                state._hoverPending = false;
-                if (state._lastMouseEvent) _doSubMeshHover(state._lastMouseEvent);
-            });
-        }
-    });
-
-    canvas.addEventListener('mouseleave', () => {
-        if (state._hoveredSubMesh && !_sameSubMesh(state._hoveredSubMesh, state._selectedSubMesh)) {
-            _setSubMeshEmissive(state._hoveredSubMesh, state._ZERO_EMISSIVE);
-        }
-        state._hoveredSubMesh = null;
-        _clearBoneHover();
-        if (tooltip) tooltip.style.display = 'none';
-        canvas.style.cursor = '';
-    });
-
-    function _doSubMeshHover(e) {
-        if (state._refitting) return;
-        const rect = canvas.getBoundingClientRect();
-        state.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        state.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        state.raycaster.setFromCamera(state.mouse, state.camera);
-
-        const targets = getAllSubMeshTargets();
-        const roots = targets.map(t => t.meshObj);
-        const boneTargets = [];
-        state.characters.forEach((inst, id) => {
-            if (inst.generatedConfig && inst.bodyMesh && inst.bodyMesh.userData.boneVertexRanges) {
-                boneTargets.push({ bodyMesh: inst.bodyMesh, charId: id });
-                roots.push(inst.bodyMesh);
-            }
-        });
-
-        const intersects = state.raycaster.intersectObjects(roots, true);
-        let newItem = null, newBoneName = null, hitBodyMesh = null;
-        if (intersects.length > 0) {
-            newItem = _findSubMeshForObject(intersects[0].object, targets);
-            if (!newItem) {
-                for (const bt of boneTargets) {
-                    if (intersects[0].object === bt.bodyMesh) {
-                        newBoneName = _getBoneFromIntersection(intersects[0], bt.bodyMesh);
-                        hitBodyMesh = bt.bodyMesh;
-                        break;
-                    }
-                }
-            }
-        }
-
-        const label = newItem ? newItem.label : newBoneName;
-        if (label && tooltip) {
-            tooltip.textContent = label;
-            tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
-            tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
-            tooltip.style.display = 'block';
-            canvas.style.cursor = 'pointer';
-        } else {
-            if (tooltip) tooltip.style.display = 'none';
-            canvas.style.cursor = '';
-        }
-
-        if (!_sameSubMesh(state._hoveredSubMesh, newItem)) {
-            if (state._hoveredSubMesh && !_sameSubMesh(state._hoveredSubMesh, state._selectedSubMesh)) {
-                _setSubMeshEmissive(state._hoveredSubMesh, state._ZERO_EMISSIVE);
-            }
-            state._hoveredSubMesh = newItem;
-            if (state._hoveredSubMesh && !_sameSubMesh(state._hoveredSubMesh, state._selectedSubMesh)) {
-                _setSubMeshEmissive(state._hoveredSubMesh, state._HOVER_EMISSIVE);
-            }
-        }
-
-        if (state._hoveredBoneName !== newBoneName) {
-            if (state._boneHoverOverlay) {
-                _removeBoneOverlay(state._boneHoverOverlay);
-                state._boneHoverOverlay = null;
-            }
-            state._hoveredBoneName = newBoneName;
-            if (newBoneName && hitBodyMesh && newBoneName !== state._selectedBoneName) {
-                state._boneHoverOverlay = _createBoneOverlay(hitBodyMesh, newBoneName, state._BONE_HOVER_MAT);
-            }
-        }
-    }
+    new Schwebeanzeige(state.canvas);
 }
 
 // Register

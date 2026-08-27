@@ -32,7 +32,7 @@ MENUE = [
         # (`core/tests/ui/test_oberflaeche.py`) und stehen damit auf
         # Hilfe → Tests — zusammen mit allen anderen.
         {'label': 'Testcases', 'icon': 'bi-check2-all',
-         'url': '/help/tests/?tab=Alle&unter=ui'},
+         'url': '/hilfe/tests/?tab=Alle&unter=ui'},
         {'label': 'Test Animation', 'icon': 'bi-collection-play', 'url': '/humanbody/test-animation/'},
         {'label': 'Test Charakter', 'icon': 'bi-person-check', 'url': '/humanbody/test-character/'},
         {'label': 'SMPL', 'icon': 'bi-people', 'url': '/humanbody/test-smpl/'},

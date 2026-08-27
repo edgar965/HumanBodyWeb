@@ -4,10 +4,11 @@
 import { THREE } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, _selectedInst, _charQueryParams, _bindSlider, _sliderVal } from './utils.js';
+import { _selectedInst, _charQueryParams, _bindSlider, _sliderVal } from './utils.js';
 import { markDirty } from './undo.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Stoffgeometrie } from '../gemeinsam/stoffgeometrie.js';
 
 export async function loadClothUI() {
     _bindSlider('cloth-tpl-segments', 'cloth-tpl-segments-val', v => v);
@@ -67,14 +68,7 @@ export async function _loadClothForCharacter(inst, key, clothParams) {
             inst.clothMeshes[key].material.dispose();
             delete inst.clothMeshes[key];
         }
-        const vertBuf = base64ToFloat32(data.vertices); blenderToThreeCoords(vertBuf);
-        const faceBuf = base64ToUint32(data.faces);
-        const normalBuf = base64ToFloat32(data.normals);
-        blenderToThreeCoords(normalBuf);
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+        const geo = Stoffgeometrie.bauen(data, THREE);
         const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: matColor, roughness: 0.8, metalness: 0.0, side: THREE.DoubleSide }));
         inst.clothMeshes[key] = mesh; inst.group.add(mesh);
         const clothEntry = { ...clothParams, color: colorHex };

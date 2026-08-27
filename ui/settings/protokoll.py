@@ -1,19 +1,39 @@
 # -*- coding: utf-8 -*-
-"""Protokoll — Log-Verzeichnis, die Rotationssicherung und die LOGGING-Config.
+"""Protokoll — Log-Verzeichnis und die LOGGING-Config aus djangoBase.
 
-Aus `ui/settings.py` herausgelöst (17.08.2026). Die 120 Zeilen `LOGGING` sind der
-größte Einzelblock der alten Datei gewesen; dazu gehört der Eingriff in
-`RotatingFileHandler` direkt darüber, der ohne den Zusammenhang unerklärlich ist.
+Aus `ui/settings.py` herausgelöst (17.08.2026).
+
+UMBAU 28.08.2026 — KONFORM STATT EIGENGEBAUT
+============================================
+Hier standen 190 Zeilen: ein selbst geschriebenes `LOGGING`-Wörterbuch mit
+fünf Rotationssicherungen und ein Eingriff in `RotatingFileHandler`. Vier
+Konformitätsprüfungen von djangoBase schlugen darauf an, und jede benannte
+einen echten Nachteil:
+
+* **`errors.log` statt `error.log`** — Hilfe → Logs zeigt genau zwei Reiter,
+  „Allgemein" (django.log) und „Exceptions" (error.log). Die Datei hieß
+  anders, also war der Reiter „Exceptions" leer. Eine leere Fehlerseite liest
+  sich wie „keine Fehler".
+* **Kein Formatierer `voll`** — und das Format hatte keinen Doppelpunkt hinter
+  dem Namen. `LogFenster.KOPF` konnte die Zeilen nicht zerlegen; die
+  Testaufzeichnung sammelte still NULL Log-Zeilen.
+* **`error_file` auf WARNING** — dann ist „Exceptions" eine Kopie von
+  „Allgemein" und taugt nicht zum Nachsehen. Warnungen stehen weiterhin in
+  `django.log`, es geht also nichts verloren.
+* **Eigener `RotatingFileHandler`-Eingriff** — djangoBase nimmt
+  `concurrent_log_handler` (portalocker), sobald er da ist. Der löst dasselbe
+  Windows-Problem richtig, statt den `PermissionError` zu verschlucken.
 
 FÜNF DATEIEN, WEIL FÜNF FRAGEN
 ==============================
 `django.log` (Anfragen), `core.log` (Figur/API), `pipeline.log`
 (Unterprozesse der Video-Kette), `client.log` (Meldungen aus dem Browser) und
-`errors.log` (alles Rote, aggregiert). Wer eine Ursache sucht, sucht in genau
-einer davon — deshalb nicht alles in eine.
+`error.log` (alles Rote, aggregiert). Wer eine Ursache sucht, sucht in genau
+einer davon — deshalb nicht alles in eine. Die ersten beiden liefert
+djangoBase, die drei mittleren kommen als `extra_handlers` dazu.
 """
 
-import logging.handlers as _lh
+import djangobase.logging as dblog
 
 from .wurzeln import BASE_DIR
 
@@ -21,170 +41,60 @@ from .wurzeln import BASE_DIR
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
 
+#: Größe, ab der eine Logdatei rotiert wird (5 MB), und wie viele alte Stände
+#: liegen bleiben. Gilt für alle fünf Dateien.
+GROESSE = 5 * 1024 * 1024
+SICHERUNGEN = 3
 
-# DIE ROTATION DES LOGS SELBST DARF NICHT WERFEN (Windows-Eigenheit): Hält ein
-# zweiter Prozess (Daphne-Neustart, geöffneter Editor) `django.log` fest,
-# scheitert das Umbenennen mit `PermissionError` — und zwar mitten in einem
-# Logaufruf, also an einer Stelle, an der niemand mit einer Ausnahme rechnet.
-# Der Eingriff steht hier statt in einem eigenen Modul, weil er zum Zeitpunkt
-# von `dictConfig` schon gelaufen sein muss.
-class Rotationsschutz:
-    """Die urspruenglichen Methoden und die zwei stillen Ersatzfassungen.
-
-    Als Klasse statt zweier freier Funktionen (Befund `freie-funktionen`,
-    27.08.2026). Beide Ersatzmethoden sind `@staticmethod`: Zugegriffen wird
-    ueber die Klasse, und das Ergebnis wird als UNGEBUNDENE Methode an
-    `RotatingFileHandler` gehaengt — deshalb bleibt `self` das erste Argument.
-    """
-
-    #: Was der Standard tut, bevor wir uns davorhaengen.
-    urspruenglich_rollover = _lh.RotatingFileHandler.doRollover
-    urspruenglich_rotate = _lh.RotatingFileHandler.rotate
-
-    @staticmethod
-    def do_rollover(self):
-        try:
-            Rotationsschutz.urspruenglich_rollover(self)
-        # stumm gewollt: Rotation des Logs selbst — ein Log darueber riefe
-        # sich im Zweifel selbst auf. Die Rotation wird beim naechsten Mal
-        # nachgeholt.
-        except (PermissionError, OSError):
-            pass
-
-    @staticmethod
-    def rotate(self, source, dest):
-        try:
-            Rotationsschutz.urspruenglich_rotate(self, source, dest)
-        # stumm gewollt: siehe oben.
-        except (PermissionError, OSError):
-            pass
-
-    @classmethod
-    def einhaengen(cls):
-        _lh.RotatingFileHandler.doRollover = cls.do_rollover
-        _lh.RotatingFileHandler.rotate = cls.rotate
-
-
-Rotationsschutz.einhaengen()
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'filters': {
-        'job_ctx': {
-            '()': 'core.logging_utils.JobContextFilter',
-        },
-    },
-    'formatters': {
-        'verbose': {
-            'format': '{asctime} [{levelname}] {name} {job_str}{message}',
-            'style': '{',
-            'datefmt': '%Y-%m-%d %H:%M:%S',
-        },
-    },
-    'handlers': {
-        # Aggregat: Django-Request-Pipeline + Errors
-        'django_file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(LOG_DIR / 'django.log'),
-            'maxBytes': 5 * 1024 * 1024,
-            'backupCount': 3,
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-            'filters': ['job_ctx'],
-        },
-        # Character / HumanBody API: Mesh, Morphs, Rig, Wardrobe, Retarget
-        'core_file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(LOG_DIR / 'core.log'),
-            'maxBytes': 5 * 1024 * 1024,
-            'backupCount': 3,
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-            'filters': ['job_ctx'],
-        },
-        # Video-to-BVH-Pipeline: MocapNET, GVHMR, OpenPose Subprocess-Output
-        'pipeline_file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(LOG_DIR / 'pipeline.log'),
-            'maxBytes': 5 * 1024 * 1024,
-            'backupCount': 3,
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-            'filters': ['job_ctx'],
-        },
-        # Client-seitige JS-Logs (per /api/log/ gepostet)
-        'client_file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(LOG_DIR / 'client.log'),
-            'maxBytes': 5 * 1024 * 1024,
-            'backupCount': 3,
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-            'filters': ['job_ctx'],
-        },
-        # Errors-Aggregat: alles WARNING+ landet zusaetzlich hier
-        'error_file': {
-            'level': 'WARNING',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(LOG_DIR / 'errors.log'),
-            'maxBytes': 5 * 1024 * 1024,
-            'backupCount': 5,
-            'formatter': 'verbose',
-            'encoding': 'utf-8',
-            'filters': ['job_ctx'],
-        },
-        'console': {
-            'level': 'INFO',
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-            'filters': ['job_ctx'],
-        },
-    },
-    'root': {
-        'handlers': ['django_file', 'error_file', 'console'],
-        'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['django_file', 'error_file', 'console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'django.channels.server': {
-            'handlers': ['django_file', 'error_file', 'console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'daphne': {
-            'handlers': ['django_file', 'error_file'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        'core': {
-            'handlers': ['core_file', 'error_file', 'console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'core.pipeline': {
-            'handlers': ['pipeline_file', 'error_file', 'console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'core.client': {
-            'handlers': ['client_file', 'error_file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'GarmentFitter': {
-            'handlers': ['core_file', 'error_file', 'console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
+#: Die drei Dateien, die es nur in diesem Projekt gibt: Name -> Erklärung.
+EIGENE = {
+    'core_file': ('core.log',
+                  'Character/HumanBody-API: Netz, Regler, Rig, Garderobe'),
+    'pipeline_file': ('pipeline.log',
+                      'Video-to-BVH-Kette: MocapNET, GVHMR, OpenPose'),
+    'client_file': ('client.log',
+                    'Meldungen aus dem Browser (über /api/log/)'),
 }
 
+#: Was in `django.log` und `error.log` MIT hineingehört.
+GRUNDZIELE = ['console', 'django_file', 'error_file']
+
+
+#: Die drei eigenen Dateien, fertig gebaut. Der Bausatz kommt aus djangoBase
+#: (`dblog.datei_handler`, seit 28.08.2026 öffentlich): Nachgebaut sähe er
+#: genauso aus — nur bliebe er beim nächsten Wechsel der Handler-Klasse oder
+#: der Dateigröße stehen, während `django.log` und `error.log` mitzögen.
+EIGENE_HANDLER = {
+    name: dblog.datei_handler(LOG_DIR, datei, level='DEBUG',
+                              max_bytes=GROESSE, backup_count=SICHERUNGEN,
+                              filters=dblog.handler_filters_fuer(True))
+    for name, (datei, _zweck) in EIGENE.items()
+}
+
+LOGGING = dblog.config(
+    LOG_DIR,
+    level='INFO',
+    # Der `{job_str}`-Platz im Format und `djangobase.jobctx.JobContextFilter`
+    # auf jedem Handler. Die Auftragskennung setzt
+    # `core.logging_utils.Auftragskontext` — seit dem 28.08.2026 derselbe
+    # ContextVar (vorher zwei, und der eine las nie, was der andere schrieb).
+    job_context=True,
+    extra_handlers=EIGENE_HANDLER,
+    extra_loggers={
+        'django.channels.server': {'handlers': GRUNDZIELE,
+                                   'level': 'INFO', 'propagate': False},
+        'daphne': {'handlers': ['django_file', 'error_file'],
+                   'level': 'WARNING', 'propagate': False},
+        'core': {'handlers': ['core_file', 'error_file', 'console'],
+                 'level': 'DEBUG', 'propagate': False},
+        'core.pipeline': {'handlers': ['pipeline_file', 'error_file',
+                                       'console'],
+                          'level': 'DEBUG', 'propagate': False},
+        'core.client': {'handlers': ['client_file', 'error_file'],
+                        'level': 'DEBUG', 'propagate': False},
+        'GarmentFitter': {'handlers': ['core_file', 'error_file', 'console'],
+                          'level': 'INFO', 'propagate': False},
+    },
+    file_max_bytes=GROESSE,
+    file_backup_count=SICHERUNGEN,
+)

@@ -1,10 +1,16 @@
 import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
 import { Auftragslauf } from './auftragslauf.js';
 import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
+import { Detailzeilen } from './detailzeilen.js';
 
 /**
- * Auftragsliste — die Tabelle der Auftraege: auswaehlen, loeschen, sortieren
- * und die Knoepfe je Zeile.
+ * Auftragsliste — die Tabelle der Auftraege: auswaehlen, loeschen und die
+ * Knoepfe je Zeile.
+ *
+ * SORTIERT WIRD SEIT DEM 28.08.2026 VON djangoBase. Hier stand eine eigene
+ * Fassung (Klick auf `th[data-sort]`, Zeilen umhaengen) — dieselbe Aufgabe
+ * wie `TabellenSortierung`, nur ohne sichtbare Pfeile und ohne gemerkte
+ * Spaltenbreiten. Was djangoBase nicht wissen kann, steht in `Detailzeilen`.
  *
  * Herausgeloest aus templates/upload_v4.html (Umbau 16.08.2026): `deleteJob`,
  * `bulkDelete`, `toggleSelectAll`, `updateBulkBtn` und `sortTable` — dazu 28
@@ -26,7 +32,6 @@ export class Auftragsliste {
 
     constructor() {
         this.koerper = document.getElementById('jobTableBody');
-        this.richtung = {};
     }
 
     aufbauen() {
@@ -39,9 +44,10 @@ export class Auftragsliste {
             ?.addEventListener('change', feld => this.alleWaehlen(feld.target));
         document.getElementById('bulk-delete-btn')
             ?.addEventListener('click', () => this.massenloeschen());
-        document.querySelectorAll('[data-sort]').forEach(kopf => {
-            kopf.addEventListener('click', () => this.sortieren(kopf.dataset.sort));
-        });
+        // Sortiert wird von djangoBase (`tabellen_auto.js` bindet jede
+        // `table.sortable` von selbst an). Hier bleibt nur, was djangoBase
+        // nicht wissen kann: dass eine Detailzeile ihrer Hauptzeile folgt.
+        Detailzeilen.binden(document.getElementById('jobTable'));
         Auftragslauf.laufendeVerfolgen();
         return this;
     }
@@ -144,33 +150,5 @@ export class Auftragsliste {
         const zaehler = document.getElementById('bulk-count');
         if (knopf) knopf.disabled = anzahl === 0;
         if (zaehler) zaehler.textContent = anzahl;
-    }
-
-    /**
-     * Nach einer Spalte sortieren. Die Detailzeile folgt ihrer Hauptzeile —
-     * sonst stehen aufgeklappte Details nach dem Sortieren beim falschen
-     * Auftrag.
-     */
-    sortieren(schluessel) {
-        if (!this.koerper) return;
-        const zeilen = [...this.koerper.querySelectorAll('tr:not(.detail-row)')];
-        this.richtung[schluessel] = !this.richtung[schluessel];
-        const aufwaerts = this.richtung[schluessel];
-        zeilen.sort((a, b) => {
-            const links = a.dataset[schluessel] || '';
-            const rechts = b.dataset[schluessel] || '';
-            if (schluessel === 'size') {
-                return aufwaerts ? Number(links) - Number(rechts)
-                                 : Number(rechts) - Number(links);
-            }
-            return aufwaerts ? links.localeCompare(rechts)
-                             : rechts.localeCompare(links);
-        });
-        for (const zeile of zeilen) {
-            this.koerper.appendChild(zeile);
-            const detail = document.getElementById(
-                'detail-' + zeile.id.replace('row-', ''));
-            if (detail) this.koerper.appendChild(detail);
-        }
     }
 }

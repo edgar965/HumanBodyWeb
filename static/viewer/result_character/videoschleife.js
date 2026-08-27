@@ -6,24 +6,23 @@
  * Animation wird auf den Bruchteil gesetzt, an dem das Video steht — so laufen
  * Video und Figur zusammen, auch wenn der Benutzer im Video springt.
  */
-export class Videoschleife {
+import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
+
+
+export class Videoschleife extends Zeichenschleife {
 
     /** Fällt die Höhe des Rahmens aus, gilt diese. */
     static HOEHE_ERSATZ = 500;
 
     constructor(state) {
+        super();
         this.state = state;
         this.rahmen = state.canvas.parentElement;
     }
 
-    starten() {
+    /** Vorbereitung dieser Seite — vor dem ersten Takt. */
+    vorbereiten() {
         this._groesseVerfolgen();
-        const takt = () => {
-            requestAnimationFrame(takt);
-            this.schritt();
-        };
-        requestAnimationFrame(takt);
-        return this;
     }
 
     schritt() {

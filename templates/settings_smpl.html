@@ -81,18 +81,7 @@
             </div>
         </div>
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Wireframe</strong>
-                <small>Body als Drahtgitter anzeigen.</small>
-            </div>
-            <div class="settings-input">
-                <label class="settings-checkbox">
-                    <input type="checkbox" name="smpl_default_wireframe"
-                           {% if settings.smpl_default_wireframe %}checked{% endif %}>
-                    Wireframe aktivieren
-                </label>
-            </div>
+        {% include "_einstellungen_kaestchen.html" with titel="Wireframe" beschriftung="Body als Drahtgitter anzeigen." feld="smpl_default_wireframe" text="Wireframe aktivieren" an=settings.smpl_default_wireframe %}
         </div>
 
         <div class="settings-row">

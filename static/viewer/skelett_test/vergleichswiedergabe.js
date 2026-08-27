@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Testzustand } from './testzustand.js';
 import { removeBoneViz } from './knochenbild.js';
 import { detectBVHFormat, fetchRetargetedClipFromUrl }
-    from '../retarget_hybrid.js?v=32';
+    from '../retarget_hybrid.js';
 import { placeBvhSkeleton } from '../skeleton_test.js';
 import { Animationsbaum } from './animationsbaum.js';
 import { Mischerbund } from './mischerbund.js';

@@ -52,7 +52,7 @@ export const HILFE_SPUREN = {
 <p>Der Kamera-Track steuert die 3D-Kamera über <b>Kamerapositionen</b> (Keyframes). Zwischen zwei Keyframes wird die Kamera interpoliert. Manuelle Bewegung ist auch während Play jederzeit möglich.</p>
 
 <h4 class="hilfe-abschnitt">Maus-Steuerung in der 3D-Szene (OrbitControls)</h4>
-<table class="hilfe-tabelle hilfe-tabelle-klein">
+<table class="hilfe-tabelle hilfe-tabelle-klein doku">
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-breit"><b>Links-Drag</b></td><td>Rotieren um Mittelpunkt</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle"><b>Rechts-Drag</b></td><td>Kamera verschieben (Pan)</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle"><b>Mausrad</b></td><td>Zoomen</td></tr>
@@ -105,7 +105,7 @@ export const HILFE_SPUREN = {
 <p>Unterstützte Typen: <b>SpotLight</b>, <b>DirectionalLight</b>, <b>PointLight</b>, <b>AmbientLight</b>. Properties-Panel zeigt nur die relevanten Felder je Typ.</p>
 
 <h4 class="hilfe-abschnitt">Alle Maus-Bindings für Lichter</h4>
-<table class="hilfe-tabelle hilfe-tabelle-klein">
+<table class="hilfe-tabelle hilfe-tabelle-klein doku">
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-breit"><b>Links-Klick auf Licht-Kegel (3D)</b></td><td>Licht-Track auswählen</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle"><b>Klick auf Timeline-Header</b></td><td>Licht-Track auswählen</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-warnung"><b>Alt + Links-Klick in 3D</b></td><td class="hilfe-warnung"><b>Licht hier platzieren</b> (Raycast gegen Mesh, Fallback Boden)</td></tr>

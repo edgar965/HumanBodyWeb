@@ -40,7 +40,7 @@ urlpatterns = [
     path('', Webseiten.start, name='dashboard'),
     # Die Auslastungs-Leiste (GPU/VRAM/Temp/CPU/RAM/Netz) hat hier KEINEN Endpunkt
     # mehr: sie kommt seit 12.08.2026 aus djangoBase und antwortet unter
-    # /help/api/system-stats/ (ui/urls.py bindet djangobase.urls auf help/ ein).
+    # /hilfe/api/system-stats/ (ui/urls.py bindet djangobase.urls dort ein).
     path('process/', Uploadseiten.zweid, name='upload'),
     path('process/VideoToBVH/', Uploadseiten.dreid, name='upload_v4'),
     path('process/list/', Webseiten.fertigliste, name='processed'),
@@ -210,7 +210,8 @@ urlpatterns = [
     path('api/smpl/garment/fit/', Smplendpunkte.kleid_anpassen, name='smpl_garment_fit'),
     path('api/smpl/garment/thumb/<path:garment_path>/', Smplendpunkte.vorschaubild, name='smpl_garment_thumbnail'),
 
-    # Help (Logs/Versionen/Tests) jetzt aus djangoBase: /help/ -> djangobase.urls
+    # Hilfe (Logs/Versionen/Tests/Werkzeuge) aus djangoBase:
+    # /hilfe/ -> djangobase.urls (ui/urls.py)
 
     # Test Character API (isolated version from TestCharakter/)
     path('api/character-test/mesh/', Testendpunkte.netz, name='test_character_mesh'),

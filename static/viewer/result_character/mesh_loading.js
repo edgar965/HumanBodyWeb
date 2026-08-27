@@ -9,8 +9,8 @@ import {
     sharedState, BODY_MATERIALS,
     loadRigifySkeleton, loadSkinWeights,
     computeSkinAttributes, applySkinColorToMaterials,
-} from '../character_core.js?v=1';
-import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
+} from '../character_core.js';
+import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 

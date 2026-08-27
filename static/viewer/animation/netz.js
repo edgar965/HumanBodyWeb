@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
+import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 import { Seitenzustand } from './seitenzustand.js';

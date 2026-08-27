@@ -5,13 +5,14 @@
 import { THREE } from './state.js';
 import { state, REGION_IDS } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { _bindSlider, _sliderVal, _charQueryParams, base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './utils.js';
+import { _bindSlider, _sliderVal, _charQueryParams } from './utils.js';
 import { _selectedGarmentMesh } from './garments.js';
 import { _computeGarmentRegionWeights, _applyGarmentRegionOffsets } from './kleidung_anpassen.js';
 import { _skinifyMesh } from './skeleton.js';
 import { markDirty } from './undo.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Stoffgeometrie } from '../gemeinsam/stoffgeometrie.js';
 
 export function _syncPropGarmentControls() {
     const sel = _selectedGarmentMesh();
@@ -96,11 +97,9 @@ export async function _refitAllForCurrentChar() {
                     inst.clothMeshes[key].geometry.dispose();
                     inst.clothMeshes[key].material.dispose();
                 }
-                const vertBuf = base64ToFloat32(data.vertices); blenderToThreeCoords(vertBuf);
-                const faceBuf = base64ToUint32(data.faces);
-                const geo = new THREE.BufferGeometry();
-                geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-                geo.setIndex(new THREE.BufferAttribute(faceBuf, 1)); geo.computeVertexNormals();
+                const vertBuf = Stoffgeometrie.punkte(data.vertices);
+                const geo = Stoffgeometrie.bauen(
+                    { vertices: data.vertices, faces: data.faces }, THREE);
                 const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color[0], color[1], color[2]), roughness: gState.roughness ?? 0.8, metalness: gState.metalness ?? 0.0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnit: -1 });
                 const mesh = _skinifyMesh(geo, mat, inst, data);
                 inst.clothMeshes[key] = mesh; inst.group.add(mesh);

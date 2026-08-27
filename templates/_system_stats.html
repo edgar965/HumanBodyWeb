@@ -9,9 +9,10 @@ Das Modul bringt Markup UND Aussehen selbst mit, deshalb steht hier nur noch
 ein leeres Ziel-Div. `binden()` füllt es und startet das Polling.
 
 URL: djangoBase liefert den Endpunkt unter dem Präfix, unter dem das Projekt
-`djangobase.urls` einbindet — hier `help/` (ui/urls.py), also
-/help/api/system-stats/. Deshalb per {% templatetag openblock %} url {% templatetag closeblock %}, nicht hart verdrahtet;
-die Modul-Vorgabe /hilfe/api/system-stats/ (shortlongx) gäbe hier einen 404.{% endcomment %}
+`djangobase.urls` einbindet — seit dem 28.08.2026 `hilfe/` wie in allen
+anderen Projekten (ui/urls.py). Trotzdem per {% templatetag openblock %} url {% templatetag closeblock %} und nicht
+hart verdrahtet: Der Präfix ist eine Entscheidung des Projekts, keine
+Eigenschaft des Moduls.{% endcomment %}
 <div id="hbSysStats"></div>
 <script type="module">
     import { SystemStatsLeiste } from "{% static 'djangobase/js/system_stats.js' %}?t={% now 'U' %}";

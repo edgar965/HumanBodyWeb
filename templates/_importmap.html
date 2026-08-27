@@ -19,6 +19,20 @@ Verwendung, je nachdem was die Seite braucht:
 NICHT hier eingebunden ist `bvh_studio.html`: Die Seite lädt three.js aus
 `static/vendor/` statt vom CDN (sie muss ohne Netz laufen). Das ist eine
 Entscheidung über die Herkunft, keine Dublette.
+
+THEATRE HÄNGT AN `+esm`, NICHT AN EINEM DATEINAMEN (Befund 27.08.2026)
+=====================================================================
+Hier standen `dist/core.esm.js` und `dist/studio.esm.js` — Dateien, die es in
+Theatre 0.7 nicht gibt (die Namen stammen aus 0.4/0.5). jsDelivr antwortete mit
+404, und `/humanbody/theatre-studio/` blieb auf „Initializing Studio…" stehen.
+Der einzige Hinweis lag in der Browserkonsole; der Seitenabruf selbst kam mit
+200. Gefunden mit `Docu/umbau/seitenprobe.mjs`, das auf Antwortcodes ≥ 400
+achtet.
+
+Theatre 0.7 liefert `dist/index.js` als **CommonJS** aus (`"type":
+"commonjs"`, kein `module`-Eintrag) — direkt importieren geht also auch nicht.
+`/+esm` lässt jsDelivr daraus ein ES-Modul bauen; genauso läuft es hier schon
+für `three-mesh-bvh`.
 {% endcomment %}
 {% with drei="0.170.0" unterteilung="1.1.5" meshbvh="0.9.9" theatrejs="0.7.2" %}
 <script type="importmap">
@@ -28,8 +42,8 @@ Entscheidung über die Herkunft, keine Dublette.
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@{{ drei }}/examples/jsm/"{% if subdivide %},
     "three-subdivide": "https://cdn.jsdelivr.net/npm/three-subdivide@{{ unterteilung }}/build/index.module.js"{% endif %}{% if mesh_bvh %},
     "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@{{ meshbvh }}/+esm"{% endif %}{% if theatre %},
-    "@theatre/core": "https://cdn.jsdelivr.net/npm/@theatre/core@{{ theatrejs }}/dist/core.esm.js",
-    "@theatre/studio": "https://cdn.jsdelivr.net/npm/@theatre/studio@{{ theatrejs }}/dist/studio.esm.js"{% endif %}
+    "@theatre/core": "https://cdn.jsdelivr.net/npm/@theatre/core@{{ theatrejs }}/+esm",
+    "@theatre/studio": "https://cdn.jsdelivr.net/npm/@theatre/studio@{{ theatrejs }}/+esm"{% endif %}
   }
 }
 </script>

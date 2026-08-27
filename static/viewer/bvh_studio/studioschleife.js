@@ -3,6 +3,7 @@ import { renderTimeline } from './zeitleiste_zeichnen.js';
 import { applyPlayhead, updatePlaybackUI,
          syncLightVisibility } from './playback.js';
 import { updateDebugPanel } from './debug.js';
+import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
 
 /**
  * Studioschleife — die Renderschleife des BVH-Studios.
@@ -12,19 +13,10 @@ import { updateDebugPanel } from './debug.js';
  * springt am Ende auf 0 zurück; ohne Abspielen wird nur die Sichtbarkeit der
  * Lichter nachgezogen.
  */
-export class Studioschleife {
+export class Studioschleife extends Zeichenschleife {
 
     /** Größter Zeitschritt — nach einem Tabwechsel sonst ein Sprung. */
     static MAX_SCHRITT_S = 0.1;
-
-    starten() {
-        const takt = () => {
-            requestAnimationFrame(takt);
-            this.schritt();
-        };
-        requestAnimationFrame(takt);
-        return this;
-    }
 
     schritt() {
         const dt = Math.min(state.clock.getDelta(), Studioschleife.MAX_SCHRITT_S);

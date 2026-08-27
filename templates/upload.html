@@ -85,15 +85,16 @@
             <i class="fas fa-trash"></i> Delete Selected
         </button>
     </div>
-    <table class="processed-table" id="jobTable">
+    <table class="processed-table db-tabelle sortable" id="jobTable"
+           data-sort-key="videoauftraege-2d">
         <thead>
             <tr>
                 <th class="spalte-schmal"><input type="checkbox" id="select-all"></th>
-                <th class="sortable" data-sort="name">Name <i class="fas fa-sort"></i></th>
+                <th>Name</th>
                 <th>Pipeline</th>
                 <th>Status</th>
-                <th class="sortable" data-sort="size">Size <i class="fas fa-sort"></i></th>
-                <th class="sortable" data-sort="date">Created <i class="fas fa-sort"></i></th>
+                <th>Size</th>
+                <th>Created</th>
                 <th>Process</th>
                 <th>Actions</th>
             </tr>
@@ -121,8 +122,8 @@
                         </div>
                     {% endif %}
                 </td>
-                <td>{{ job.video_size_display }}</td>
-                <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
+                <td data-sort="{{ job.video_size }}">{{ job.video_size_display }}</td>
+                <td data-sort="{{ job.created_at|date:'Y-m-d H:i:s' }}">{{ job.created_at|date:"d.m.Y H:i" }}</td>
                 <td>
                     <div class="hb-zeilenaktionen">
                         <select class="pipeline-select" id="pl-{{ job.id }}" data-current="{{ job.pipeline }}">
@@ -160,7 +161,7 @@
 
 <div class="info-box">
     <h3>Vergleich 2D Detektoren</h3>
-    <table class="compare-table">
+    <table class="compare-table doku">
         <thead>
             <tr>
                 <th>Detektor</th>

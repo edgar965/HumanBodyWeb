@@ -42,6 +42,10 @@ class ProjektTempTest(TestCase):
         self.eigene.append(f)
         self.assertTrue(f.is_relative_to(Path(settings.MEDIA_ROOT)),
                         '%s liegt nicht unter MEDIA_ROOT' % f)
+        # `gettempdir()` steht hier in einer ZUSICHERUNG, es wird nichts
+        # dorthin geschrieben — Lehre gilt hier nicht
+        # („keine-temp-dateien-im-system"). Der Wächter meldete sonst
+        # genau die Prüfung, die seine eigene Lehre durchsetzt.
         system = Path(_t.gettempdir()).resolve()
         self.assertFalse(str(f.resolve()).lower().startswith(str(system).lower()),
                          'Datei liegt in System-Temp: %s' % f)

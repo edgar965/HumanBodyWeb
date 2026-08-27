@@ -1,6 +1,7 @@
 import { THREE } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
 
 /**
  * Szenenschleife — die Renderschleife der Szene-Seite samt Anzeigen.
@@ -17,7 +18,7 @@ import { fn } from '../gemeinsam/registrierung.js';
  * Schleife — ein Objekt pro Bild, das der Sammler wieder einsammeln muss.
  * Jetzt ein wiederverwendeter Vektor.
  */
-export class Szenenschleife {
+export class Szenenschleife extends Zeichenschleife {
 
     /** Größter Zeitschritt — nach einem Tab-Wechsel sonst ein Sprung. */
     static MAX_SCHRITT_S = 0.1;
@@ -36,6 +37,7 @@ export class Szenenschleife {
     };
 
     constructor() {
+        super();
         this.anzeigen = null;
         this._arbeitsvektor = new THREE.Vector3();
     }
@@ -61,14 +63,9 @@ export class Szenenschleife {
         return felder;
     }
 
-    starten() {
+    /** Vorbereitung dieser Seite — vor dem ersten Takt. */
+    vorbereiten() {
         this.anzeigen = this._anzeigen();
-        const takt = () => {
-            requestAnimationFrame(takt);
-            this.schritt();
-        };
-        requestAnimationFrame(takt);
-        return this;
     }
 
     schritt() {

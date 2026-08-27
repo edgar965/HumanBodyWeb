@@ -5,11 +5,11 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import {
-    base64ToFloat32, base64ToUint32, blenderToThreeCoords,
-    skinifyMesh,
-} from '../character_core.js?v=1';
+        skinifyMesh,
+} from '../character_core.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Stoffgeometrie } from '../gemeinsam/stoffgeometrie.js';
 
 // =====================================================================
 // Cloth (templates)
@@ -26,16 +26,7 @@ export async function loadCloth(key, params, presetColor, useApiColor = false) {
 
         removeClothRegion(key);
 
-        const vertBuf = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(vertBuf);
-        const faceBuf = base64ToUint32(data.faces);
-        const normalBuf = base64ToFloat32(data.normals);
-        blenderToThreeCoords(normalBuf);
-
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+        const geo = Stoffgeometrie.bauen(data, THREE);
 
         let matColor;
         if (presetColor) {
@@ -125,14 +116,9 @@ export async function loadGarment(garmentId, opts = {}) {
 
         removeGarment(garmentId);
 
-        const vertBuf = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(vertBuf);
-        const faceBuf = base64ToUint32(data.faces);
-
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-        geo.computeVertexNormals();
+        const vertBuf = Stoffgeometrie.punkte(data.vertices);
+        const geo = Stoffgeometrie.bauen({ vertices: data.vertices,
+                                           faces: data.faces }, THREE);
 
         const matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
         const roughness = opts.roughness !== undefined ? opts.roughness : 0.8;

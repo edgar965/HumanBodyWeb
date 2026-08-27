@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { sharedState, loadRigifySkeleton, loadSkinWeights,
-         createSceneSetup } from '../character_core.js?v=1';
+         createSceneSetup } from '../character_core.js';
 import { applySceneSettings } from './scene_setup.js';
 import { connectWebSocket } from './websocket.js';
 import { loadMesh, convertToRigifySkinnedMesh, applySkinColor } from './mesh_loading.js';

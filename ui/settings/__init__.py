@@ -37,8 +37,18 @@ INSTALLED_APPS = [
     'core',
 ]
 
+# `djangobase.cache_middleware.CacheHeaderMiddleware` steht NICHT hier: Sie
+# traegt sich in `DjangoBaseConfig.ready()` selbst ans Ende der Kette.
+#
+# HIER STAND `ui.no_cache.NoCacheStaticMiddleware` (bis 28.08.2026)
+# ================================================================
+# Sie setzte `no-store` auf JEDE Antwort — auch auf JS und CSS. Damit laedt
+# der Browser bei jedem Seitenaufruf saemtliche Module neu, und jede
+# `?v=`-Kennung ist wirkungslos. djangoBase unterscheidet: HTML nie aus dem
+# Cache, versionierte Statik ein Jahr, Statik OHNE Kennung unangetastet.
+# Der Zweck bleibt also erfuellt — eine geaenderte Datei kommt an —, nur
+# ohne den Preis.
 MIDDLEWARE = [
-    'ui.no_cache.NoCacheStaticMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -106,6 +116,23 @@ DATA_UPLOAD_MAX_NUMBER_FILES = 10000              # bis zu 10.000 Bilder
 CHANNEL_LAYERS = {
     'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'},
 }
+
+#: Was die djangoBase-Konformitätsprüfungen NICHT ansehen sollen.
+#:
+#: `docs/` hält eine einzelne Zeichnung (`template_hierarchy.html`): ein
+#: eigenständiges HTML-Dokument, das man direkt im Browser öffnet. Keine View
+#: rendert es. `test_keine_seite_mit_eigenem_html` meldete es trotzdem als
+#: „Seiten-Vorlage ohne `{% extends %}`" — richtig gesehen, falsche Sorte
+#: Datei (28.08.2026).
+DJANGOBASE_KONFORM_AUS = ('docs/',)
+
+#: Dateien, in denen die Tabellen-Konformitaet nicht gilt.
+#:
+#: `static/theatre/theatre-app.js` ist die Vite-AUSGABE aus `TheatreJS/src/`.
+#: Sie enthaelt three.js und Theatre.js mit; die Tabelle darin gehoert einer
+#: Fremdbibliothek. Aendern liesse sie sich nur, indem man den Build anfasst —
+#: und beim naechsten `npm run build` waere es wieder weg (28.08.2026).
+DJANGOBASE_KONFORM_TABELLEN_AUS = ('static/theatre/',)
 
 from .djangobase_conf import DJANGOBASE                       # noqa: E402,F401
 

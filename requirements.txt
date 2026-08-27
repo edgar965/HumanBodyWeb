@@ -39,6 +39,26 @@ opencv-python
 # djangobase/system_stats.py (dort optional — fehlt psutil, bleiben die Felder leer).
 psutil==7.2.2
 
+# --- Mehrprozessfeste Log-Rotation (djangoBase nimmt ihn, wenn er da ist) ---
+# Zwei Prozesse reichen: Laeuft ein Werkzeug neben dem Server, halten beide
+# dieselbe Datei offen, und unter Windows kann nur einer umbenennen. Ohne das
+# Paket faellt djangoBase auf den stdlib-Handler zurueck und verliert dabei
+# Logzeilen (gemessen in shortlongx: 107 PermissionError in einem Lauf).
+concurrent-log-handler>=0.9
+
 # --- Wiederverwendbare Django-Infra (Sidebar, Hilfe: Logs/Versionen/Tests) ---
 # Dev: editable aus A:\shared\djangoBase (pip install -e A:\shared\djangoBase).
 djangobase @ git+https://github.com/edgar965/djangoBase.git
+
+# --- Hilfe -> Werkzeug Code Review, Werkzeug „Code-Qualität" ---
+# radon (Komplexität, Wartbarkeitsindex), pyflakes (echte Fehler),
+# pycodestyle (PEP 8). Sie sind djangoBases Extra `codequalitaet`.
+#
+# WARUM SIE HIER STEHEN (27.08.2026): Ohne sie meldet das Werkzeug „nicht
+# gelaufen: pycodestyle, pyflakes, radon" und NULL Befunde — und der Wächter
+# `anlassfall-check` stufte es als blind ein: geprüft und trotzdem nichts
+# gefunden. Ein Prüfwerkzeug, dessen Messmittel fehlen, sieht von außen genauso
+# aus wie eines, das nichts zu beanstanden hat.
+radon>=6
+pyflakes>=3
+pycodestyle>=2.11

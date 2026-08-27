@@ -2,12 +2,6 @@
 {% block title %}MocapNET - Test{% endblock %}
 
 {% block content %}
-<style>
-
-/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
-   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
-   Fassungen wurden zu einer Klasse zusammengefasst. */
-</style>
 <h1>MocapNET</h1>
 
 <div class="status-grid">
@@ -60,7 +54,7 @@
 {% if recent_jobs %}
 <div class="recent-jobs">
     <h2>Recent Jobs</h2>
-    <table>
+    <table class="db-tabelle sortable" data-sort-key="werkzeug-auftraege">
         <thead>
             <tr>
                 <th>Name</th>

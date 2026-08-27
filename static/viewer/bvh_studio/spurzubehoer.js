@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { sharedState } from '../character_core.js?v=1';
+import { sharedState } from '../character_core.js';
 import { base64ToFloat32, base64ToUint32,
          blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';

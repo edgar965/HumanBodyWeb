@@ -8,7 +8,7 @@
  */
 import * as THREE from 'three';
 import { fn } from '../gemeinsam/registrierung.js';
-import { sharedState } from '../character_core.js?v=1';
+import { sharedState } from '../character_core.js';
 import { _gaussSmooth, _gaussFilter } from './werkzeug_glaettung.js';
 import { generateRigBoneMesh } from '../modellbau/rignetz.js';
 import { Vorschaufenster } from './vorschau_fenster.js';

@@ -37,6 +37,8 @@ import numpy as np
 
 from core.projekt_temp import ProjektTemp
 
+from ._messwerte import Messwerte
+
 
 class Clothbasis:
     """Pfad, Kunstanimation und die zwei teuren Vorlagen der Cloth-Tests."""
@@ -102,7 +104,8 @@ class Clothbasis:
         try:
             from collision.scene_input import SceneInput, ClothSegment
         except Exception as fehler:                              # noqa: BLE001
-            cls._vorlagen['npz'] = {'_err': 'import failed: %s' % fehler}
+            cls._vorlagen['npz'] = Messwerte.gescheitert(
+                'import failed: %s' % fehler)
             return cls._vorlagen['npz']
         szene = cls._kunstszene(SceneInput, ClothSegment)
         cls._vorlagen['npz'] = cls._schreiben_und_lesen(szene)
@@ -140,15 +143,14 @@ class Clothbasis:
             szene.save_npz(pfad)
             da = os.path.isfile(pfad)
             with np.load(pfad, allow_pickle=True) as daten:
-                return {
-                    'exists': bool(da),
-                    'rigid_V': int(daten['rigid_vertices'].shape[0]),
-                    'num_segs': int(daten['num_cloth_segments'][0]),
-                    'anim_fps': float(daten['anim_fps'][0]),
-                    'scene_name': str(daten['scene_name'][0]),
-                    'seg_bone': str(daten['seg0_bone_name'][0]),
-                    'seg_V': int(daten['seg0_vertices'].shape[0]),
-                }
+                return Messwerte(
+                    exists=bool(da),
+                    rigid_V=int(daten['rigid_vertices'].shape[0]),
+                    num_segs=int(daten['num_cloth_segments'][0]),
+                    anim_fps=float(daten['anim_fps'][0]),
+                    scene_name=str(daten['scene_name'][0]),
+                    seg_bone=str(daten['seg0_bone_name'][0]),
+                    seg_V=int(daten['seg0_vertices'].shape[0]))
         finally:
             shutil.rmtree(ordner, ignore_errors=True)
 
@@ -163,17 +165,17 @@ class Clothbasis:
         try:
             from collision.splitter import split_scene
         except Exception as fehler:                              # noqa: BLE001
-            cls._vorlagen['split'] = {'_err': 'import failed: %s' % fehler}
+            cls._vorlagen['split'] = Messwerte.gescheitert(
+                'import failed: %s' % fehler)
             return cls._vorlagen['split']
         szene = cls._aufgeteilte_szene(split_scene)
         stoff = szene.cloth_segments
-        cls._vorlagen['split'] = {
-            'rigid_V': int(szene.rigid_vertices.shape[0]),
-            'cloth_count': len(stoff),
-            'cloth0_bone': stoff[0].bone_name if stoff else '',
-            'cloth0_V': int(stoff[0].vertices.shape[0]) if stoff else 0,
-            'cloth0_pins': int(stoff[0].pin_indices.shape[0]) if stoff else 0,
-        }
+        cls._vorlagen['split'] = Messwerte(
+            rigid_V=int(szene.rigid_vertices.shape[0]),
+            cloth_count=len(stoff),
+            cloth0_bone=stoff[0].bone_name if stoff else '',
+            cloth0_V=int(stoff[0].vertices.shape[0]) if stoff else 0,
+            cloth0_pins=int(stoff[0].pin_indices.shape[0]) if stoff else 0)
         return cls._vorlagen['split']
 
     @classmethod

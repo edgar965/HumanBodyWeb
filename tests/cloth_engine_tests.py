@@ -180,7 +180,7 @@ class ClothEngineTests(TestCategory):
         if pruefung.geprueft == 0:
             return True, ('Skip: keine vergleichbaren Slices (cloth zu klein?) '
                           '— latest=%s' % ordner)
-        return pruefung.bestanden, pruefung.bericht()
+        return bool(pruefung.bestanden), pruefung.bericht()
 
     @staticmethod
     def test_warp_blender_lights_preserved_from_payload():

@@ -1,0 +1,32 @@
+{% comment %}
+Eine Einstellungszeile mit Ankreuzfeld.
+
+BEFUND `doppelcode` (27.08.2026): Dieselben sieben bis elf Zeilen standen in
+vier Einstellungsseiten achtmal — jedes Mal gleich, nur mit anderem Feldnamen.
+Wer die Zeilenform ändert (Beschriftung links, Hilfetext, ARIA), musste es
+achtmal tun; beim achten Mal ist eine anders.
+
+Verwendung:
+
+  {% verbatim %}{% include "_einstellungen_kaestchen.html" with
+     beschriftung="Anzeige mit Rig" feld="show_rig_scene"
+     text="Rig beim Start anzeigen" an=settings.show_rig_scene %}{% endverbatim %}
+
+  titel         fette Überschrift links (wahlweise)
+  beschriftung  erklärender Text links
+  feld          `name` des Ankreuzfelds
+  text          Text neben dem Kästchen
+  an            wahr, wenn es angekreuzt sein soll
+{% endcomment %}
+<div class="settings-row">
+    <div class="settings-label">
+        {% if titel %}<strong>{{ titel }}</strong>{% endif %}
+        <small>{{ beschriftung }}</small>
+    </div>
+    <div class="settings-input">
+        <label class="settings-checkbox">
+            <input type="checkbox" name="{{ feld }}"{% if an %} checked{% endif %}>
+            {{ text }}
+        </label>
+    </div>
+</div>

@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { loadRigifySkeleton, loadSkinWeights, loadSkinColors,
-         loadHairColors } from '../character_core.js?v=1';
+         loadHairColors } from '../character_core.js';
 import { loadLibrary, setupLibraryManagement, setupSidebarResize } from './library.js';
 import { createSceneLightTracks } from './spur_lichter.js';
 import { setupTimeline } from './timeline.js';

@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { state, API } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
+import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
 

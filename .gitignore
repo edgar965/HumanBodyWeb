@@ -56,3 +56,10 @@ ProjektTemp/
 # Ladezeiten-Protokoll der Leistungstests: gemessen auf DIESEM Rechner, mit
 # dieser Tageslast. Im Repo waere es eine Zahl, die anderswo nichts bedeutet.
 .djangobase-leistung.json
+
+# Laufzeit-Ablagen (28.08.2026): Beide entstehen im Betrieb und waren als
+# "untracked" im Status — `.cache` allein 8,4 MB.
+#   .cache/  Zwischenstände der Umbau-Werkzeuge und geladener KI-Modelle
+#   output/  Renderergebnisse und Exporte
+.cache/
+output/

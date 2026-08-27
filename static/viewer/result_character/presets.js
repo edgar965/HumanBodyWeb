@@ -3,7 +3,7 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { sharedState, applyHairColor } from '../character_core.js?v=1';
+import { sharedState, applyHairColor } from '../character_core.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 
 const ss = sharedState;

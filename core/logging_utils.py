@@ -1,60 +1,54 @@
-"""Strukturiertes Logging mit ContextVar-basierter Korrelation.
+"""Zeitstempel auf stdout/stderr — und der Auftragskontext aus djangoBase.
 
 Beispiel:
     from core.logging_utils import Auftragskontext
 
     with Auftragskontext.mit_auftrag(job_uuid):
         logger.info('analyze START')
-        ...
 
-Alle Log-Records aus diesem ContextVar-Scope kriegen `record.job_id`
-gesetzt; der Format-String '%(job_str)s' macht daraus '[job=...] ' bzw.
-leeren String wenn nicht gesetzt.
+Alle Log-Records in diesem Block bekommen `record.job_id` und `record.job_str`;
+der Formatierer setzt daraus '[job=...] ' bzw. nichts.
 
-Portiert aus dem CamTrack-Projekt (app/logging_utils.py).
+UMBAU 28.08.2026 (djangoBase-Konformitaet): ContextVar, `with`-Block und
+`JobContextFilter` standen hier als eigene Fassung — Zeile fuer Zeile
+dasselbe wie `djangobase.jobctx`, was der alte Kopf der Datei mit „Portiert
+aus dem CamTrack-Projekt" auch sagte. Zwei Kopien einer ContextVar sind
+schlimmer als zwei Kopien einer Rechnung: Setzt der eine Weg den Wert und
+liest der andere, fehlt die Auftragskennung im Log — still, und niemand
+sieht, dass sie fehlt.
+
+`TimestampedStream` bleibt hier: Den gibt es in djangoBase nicht.
 """
 from __future__ import annotations
 
-import contextvars
-import logging
 import re
 import sys
 import threading
 import time
-from contextlib import contextmanager
 
-_job_id_var: contextvars.ContextVar = contextvars.ContextVar(
-    'humanbody_job_id', default=None,
-)
+from djangobase.jobctx import JobContextFilter, with_job_id
+
+__all__ = ['Auftragskontext', 'JobContextFilter', 'TimestampedStream',
+           'Zeitstempelausgabe']
 
 
 class Auftragskontext:
     """Welcher Auftrag gerade laeuft — je Faden bzw. Task getrennt.
 
-    Der Wert steht in einer `ContextVar`, nicht in einem Klassenfeld: Daphne
-    beantwortet Anfragen nebenlaeufig, und ein gemeinsames Feld haette allen
-    Anfragen dieselbe Auftragskennung untergeschoben.
+    Der Wert steht in einer `ContextVar` (djangoBase), nicht in einem
+    Klassenfeld: Daphne beantwortet Anfragen nebenlaeufig, und ein
+    gemeinsames Feld haette allen Anfragen dieselbe Auftragskennung
+    untergeschoben.
+
+    Die Klasse bleibt als deutscher Name fuer den djangoBase-Block: 20
+    Aufrufstellen heissen `Auftragskontext.mit_auftrag(...)`, und der Name
+    sagt hier mehr als `with_job_id`.
     """
 
     @staticmethod
-    @contextmanager
     def mit_auftrag(job_id):
         """Setzt die Auftragskennung fuer alle Log-Aufrufe im `with`-Block."""
-        marke = _job_id_var.set(job_id)
-        try:
-            yield
-        finally:
-            _job_id_var.reset(marke)
-
-
-class JobContextFilter(logging.Filter):
-    """Haengt job_id + job_str an jeden LogRecord."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        job_id = _job_id_var.get()
-        record.job_id = job_id if job_id is not None else ''
-        record.job_str = f'[job={job_id}] ' if job_id is not None else ''
-        return True
+        return with_job_id(job_id)
 
 
 _TS_PREFIX_RE = re.compile(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}')

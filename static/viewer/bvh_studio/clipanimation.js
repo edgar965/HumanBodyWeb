@@ -3,7 +3,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { sharedState } from '../character_core.js?v=1';
+import { sharedState } from '../character_core.js';
 import { loadTrackCharacter } from './spur_charakter.js';
 
 /**

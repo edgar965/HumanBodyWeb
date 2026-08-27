@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js?v=32';
+import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js';
 import { convertToRigifySkinnedMesh } from './skinning.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Animationslader } from '../gemeinsam/animationslader.js';

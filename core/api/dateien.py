@@ -25,6 +25,7 @@ DABEI GEFUNDEN (18.08.2026): `_serve_retarget_job_impl` holte
 weder beim Start noch dem Werkzeug `tote-importe` auf -- nur beim Aufruf.
 """
 
+import logging
 import os
 from pathlib import Path
 
@@ -40,6 +41,8 @@ from ..dienste.skelettvideo import Skelettfilm
 from ..dienste.videoablage import Videoablage
 from ..dienste.videoauslieferung import Videoauslieferung
 from ..models import BVHJob
+
+logger = logging.getLogger('core')
 
 
 class Auftragsdateien:
@@ -123,25 +126,62 @@ class Auftragsdateien:
         """Das hochgeladene Video, ersatzweise das aus dem Ausgabeordner."""
         return Videoauslieferung(cls(request, job_id).job).antwort(request)
 
+    #: Kantenlängen des Vorschaubilds.
+    VORSCHAU_BREITE = 160
+    VORSCHAU_HOEHE = 90
+    #: JPEG-Güte — Vorschaubilder sind 160 Pixel breit, mehr bringt nichts.
+    VORSCHAU_GUETE = 75
+
     @classmethod
     def vorschaubild(cls, request, job_id):
-        """Bild 0 des Videos als JPEG."""
+        """Bild 0 des Videos als JPEG.
+
+        JEDER FEHLSCHLAG WIRD PROTOKOLLIERT (28.08.2026): Hier stand
+        `except Exception: return 404` ohne eine einzige Logzeile. Auf
+        `/process/list/` liefen dadurch drei Anfragen ins Leere, und im Log
+        stand nichts — weder „Video weg" noch „cv2 fehlt". Die Browserprobe
+        hat es gefunden, nicht das Fehlerlog.
+
+        Der häufigste Fall ist harmlos: Das Video wurde verschoben oder
+        gelöscht, der Auftrag zeigt noch auf den alten Pfad. Er wird deshalb
+        als Warnung gemeldet, nicht als Fehler — aber gemeldet.
+        """
         selbst = cls(request, job_id)
         pfad = Path(settings.MEDIA_ROOT) / str(selbst.job.video_file)
+        if not pfad.is_file():
+            logger.warning('Vorschaubild %s: Video liegt nicht (mehr) '
+                           'unter %s', job_id, pfad)
+            return HttpResponseNotFound('Video file missing')
         try:
-            import cv2
-            aufnahme = cv2.VideoCapture(str(pfad))
-            gelesen, bild = aufnahme.read()
-            aufnahme.release()
-            if not gelesen:
-                return HttpResponseNotFound('Could not read video frame')
-            hoehe, breite = bild.shape[:2]
-            faktor = min(160 / breite, 90 / hoehe)
-            bild = cv2.resize(bild, (int(breite * faktor), int(hoehe * faktor)))
-            _, jpeg = cv2.imencode('.jpg', bild, [cv2.IMWRITE_JPEG_QUALITY, 75])
-            return HttpResponse(jpeg.tobytes(), content_type='image/jpeg')
-        except Exception:
+            return cls._vorschau_aus(pfad)
+        except ImportError:
+            logger.warning('Vorschaubild %s: cv2 fehlt in dieser Umgebung',
+                           job_id, exc_info=True)
             return HttpResponseNotFound('Thumbnail generation failed')
+        except Exception:                                    # noqa: BLE001
+            logger.warning('Vorschaubild %s aus %s nicht erzeugbar',
+                           job_id, pfad, exc_info=True)
+            return HttpResponseNotFound('Thumbnail generation failed')
+
+    @classmethod
+    def _vorschau_aus(cls, pfad):
+        """Erstes Bild lesen, verkleinern, als JPEG zurückgeben."""
+        import cv2
+        aufnahme = cv2.VideoCapture(str(pfad))
+        try:
+            gelesen, bild = aufnahme.read()
+        finally:
+            aufnahme.release()
+        if not gelesen:
+            logger.warning('Vorschaubild: %s hat kein lesbares erstes Bild',
+                           pfad)
+            return HttpResponseNotFound('Could not read video frame')
+        hoehe, breite = bild.shape[:2]
+        faktor = min(cls.VORSCHAU_BREITE / breite, cls.VORSCHAU_HOEHE / hoehe)
+        bild = cv2.resize(bild, (int(breite * faktor), int(hoehe * faktor)))
+        _, jpeg = cv2.imencode('.jpg', bild,
+                               [cv2.IMWRITE_JPEG_QUALITY, cls.VORSCHAU_GUETE])
+        return HttpResponse(jpeg.tobytes(), content_type='image/jpeg')
 
     @classmethod
     def erkennungsdaten(cls, request, job_id):

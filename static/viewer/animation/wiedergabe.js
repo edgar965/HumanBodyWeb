@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { BVHLoader } from 'three/addons/loaders/BVHLoader.js';
-import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js?v=32';
+import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js';
 import { Seitenzustand } from './seitenzustand.js';
 import { convertToRigifySkinnedMesh } from './netz.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';

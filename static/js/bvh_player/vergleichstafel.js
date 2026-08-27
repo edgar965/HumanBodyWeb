@@ -56,7 +56,7 @@ export class Vergleichstafel {
         this.daten.erheben(bild, skelett);
         this.feld.innerHTML =
             this._kopf(zustand, skelett, spielerdaten, fps)
-            + `<table class="vt-tabelle">`
+            + `<table class="vt-tabelle doku">`
             + KOPFZEILE + this._zeilen() + '</table>'
             + this._zusammenfassung() + this._rohwerte();
     }

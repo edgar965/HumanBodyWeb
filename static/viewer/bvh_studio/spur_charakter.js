@@ -5,8 +5,8 @@
  * `Spurzubehoer`. Vorher standen hier zwei Funktionen mit je 113 Zeilen, die
  * beide Netzdaten holten, ein SkinnedMesh bauten und banden.
  */
-import { buildRigifySkeleton } from '../rigify_skeleton_builder.js?v=2';
-import { computeSkinAttributes } from '../character_core.js?v=1';
+import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
+import { computeSkinAttributes } from '../character_core.js';
 import { _sanitizeBoneNames } from './spur_clips.js';
 import { Spurzubehoer } from './spurzubehoer.js';
 import { Spurfigur } from './spurfigur.js';

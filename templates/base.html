@@ -6,12 +6,7 @@ Hilfe-/Einstellungen-Bereich kommen aus djangoBase und werden über DJANGOBASE i
 ui/settings.py gesteuert (Branding, Farben, Menü, Log-Quellen, Repos).
 
 Seiten füllen wie bisher {% block content %}
-<style>
-
-/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
-   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
-   Fassungen wurden zu einer Klasse zusammengefasst. */
-</style>. Ihre eigenen Styles/Scripts laufen
+. Ihre eigenen Styles/Scripts laufen
 weiter über {% block extra_head %} / {% block extra_scripts %} — hier in die
 djangoBase-Blocks head_extra / body_scripts eingehängt. Font Awesome bleibt für
 die Seiten-Inhalte geladen (die Sidebar nutzt Bootstrap Icons); style.css lädt

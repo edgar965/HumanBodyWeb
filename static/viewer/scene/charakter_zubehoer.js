@@ -14,9 +14,9 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { _computeGarmentRegionWeights } from './kleidung_anpassen.js';
 import { Kleidungszustand } from './kleidungszustand.js';
 import { _skinifyHairGroup, _skinifyMesh, convertInstToSkinned } from './skeleton.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Stoffgeometrie } from '../gemeinsam/stoffgeometrie.js';
 
 export class Charakterzubehoer {
 
@@ -84,16 +84,7 @@ export class Charakterzubehoer {
                 const data = await Serverabruf.json(`/api/character/cloth/?${params}`);
                 if (data.error) { Protokoll.warnung('charakter_zubehoer', 'Cloth error:', data.error); continue; }
 
-                const vertBuf = base64ToFloat32(data.vertices);
-                blenderToThreeCoords(vertBuf);
-                const faceBuf = base64ToUint32(data.faces);
-                const normalBuf = base64ToFloat32(data.normals);
-                blenderToThreeCoords(normalBuf);
-
-                const geo = new THREE.BufferGeometry();
-                geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-                geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-                geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+                const geo = Stoffgeometrie.bauen(data, THREE);
 
                 const matColor = c.color ? new THREE.Color(c.color) : new THREE.Color(0.5, 0.5, 0.6);
                 const mat = new THREE.MeshStandardMaterial({
@@ -155,14 +146,9 @@ export class Charakterzubehoer {
                     continue;
                 }
 
-                const vertBuf = base64ToFloat32(data.vertices);
-                blenderToThreeCoords(vertBuf);
-                const faceBuf = base64ToUint32(data.faces);
-
-                const geo = new THREE.BufferGeometry();
-                geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-                geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-                geo.computeVertexNormals();
+                const vertBuf = Stoffgeometrie.punkte(data.vertices);
+                const geo = Stoffgeometrie.bauen(
+                    { vertices: data.vertices, faces: data.faces }, THREE);
 
                 const color = g.color ? new THREE.Color(g.color[0], g.color[1], g.color[2])
                                       : new THREE.Color(0.3, 0.35, 0.5);

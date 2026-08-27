@@ -16,14 +16,9 @@ Funktionen und ein Zwischenspeicher mit `global`. Beides steht jetzt in
 
 from __future__ import annotations
 
-import urllib.parse
-from pathlib import Path
-
 import numpy as np
 
-from core.projekt_temp import ProjektTemp
-
-from .base import Netzruf
+from ._kameraumlauf import Kameraumlauf
 
 
 class Kamerabasis:
@@ -33,9 +28,10 @@ class Kamerabasis:
     #: Kugelinterpolation numerisch kippt — dann linear mischen.
     ENTARTET_AB = 0.9995
 
-    #: Das Ergebnis des Speichern-Laden-Umlaufs, einmal gerechnet. Er faehrt
-    #: zwei HTTP-Aufrufe und wird von zehn Pruefungen gebraucht; als
-    #: KLASSENFELD laesst er sich mit `Kamerabasis.umlauf = None` leeren.
+    #: Das Ergebnis des Speichern-Laden-Umlaufs (`Kameraumlauf`), einmal
+    #: gerechnet. Er faehrt zwei HTTP-Aufrufe und wird von zehn Pruefungen
+    #: gebraucht; als KLASSENFELD laesst er sich mit
+    #: `Kamerabasis.umlauf = None` leeren.
     umlauf = None
 
     # ------------------------------------------------------------------ Slerp
@@ -108,39 +104,15 @@ class Kamerabasis:
 
     @classmethod
     def umlauf_ergebnis(cls):
-        """Speichern, laden, vergleichen — einmal je Prozess."""
-        if cls.umlauf is not None:
-            return cls.umlauf
-        # ProjektTemp statt tempfile: SafePath laesst nur MEDIA_ROOT zu
-        # (System-Temp gab 403 — 48 Tests rot seit 12.08.2026).
-        with ProjektTemp.wegwerfordner() as ordner:
-            pfad = Path(ordner) / 'cam_proj.studio.json'
-            code, gesichert = Netzruf.senden(
-                '/api/studio/project-save/', method='POST',
-                data={'path': str(pfad), 'project': cls.projekt()})
-            if code != 200 or not gesichert.get('ok'):
-                cls.umlauf = {'_save_code': code, '_save_ok': False}
-                return cls.umlauf
-            adresse = urllib.parse.quote(str(pfad))
-            code, geladen = Netzruf.senden(
-                '/api/studio/project-load/?path=%s' % adresse)
-        if code != 200 or not geladen.get('ok'):
-            cls.umlauf = {'_save_ok': True, '_load_code': code,
-                          '_load_ok': False}
-            return cls.umlauf
-        cls.umlauf = cls._auswerten(geladen.get('project', {}))
-        return cls.umlauf
+        """Speichern, laden, auswerten — einmal je Prozess.
 
-    @staticmethod
-    def _auswerten(projekt):
-        spuren = [s for s in projekt.get('tracks', [])
-                  if s.get('type') == 'camera']
-        clips = spuren[0].get('clips', []) if spuren else []
-        return {
-            '_save_ok': True, '_load_ok': True,
-            'track_count': len(spuren),
-            'clip_count': len(clips),
-            'kf1': clips[0] if len(clips) > 0 else None,
-            'kf2': clips[1] if len(clips) > 1 else None,
-            'cameraActive': spuren[0].get('cameraActive') if spuren else None,
-        }
+        UMBAU 27.08.2026 (Befund `rueckgabedict`): Hier stand der
+        Speichern-Laden-Umlauf ein ZWEITES Mal ausgeschrieben, obwohl
+        `Speicherprobe` daneben genau das tut — samt eigener Handhabung von
+        `ProjektTemp` und den beiden Statuscodes. Das Ergebnis war ein
+        Wörterbuch, das je nach Abbruchstelle zwei, drei oder sieben
+        Schlüssel hatte.
+        """
+        if cls.umlauf is None:
+            cls.umlauf = Kameraumlauf.fahren(cls.projekt())
+        return cls.umlauf

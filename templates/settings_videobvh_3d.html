@@ -232,17 +232,7 @@
             {% else %}<span class="hb-color-e74c3c" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Static Camera</strong>
-                <small>Statische Kamera annehmen (kein DPVO). Empfohlen f&uuml;r feste Kameraperspektive.</small>
-            </div>
-            <div class="settings-input">
-                <label class="settings-checkbox">
-                    <input type="checkbox" name="gvhmr_static_cam" {% if settings.gvhmr_static_cam %}checked{% endif %}> Aktiviert
-                </label>
-            </div>
-        </div>
+        {% include "_einstellungen_kaestchen.html" with titel="Static Camera" beschriftung="Statische Kamera annehmen (kein DPVO). Empfohlen f&uuml;r feste Kameraperspektive." feld="gvhmr_static_cam" text="Aktiviert" an=settings.gvhmr_static_cam %}
 
         <div class="settings-row">
             <div class="settings-label">
@@ -266,29 +256,9 @@
             {% else %}<span class="hb-color-e74c3c" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Estimate Local Only</strong>
-                <small>Nur lokale K&ouml;rperbewegung sch&auml;tzen (keine globale Trajektorie).</small>
-            </div>
-            <div class="settings-input">
-                <label class="settings-checkbox">
-                    <input type="checkbox" name="wham_estimate_local_only" {% if settings.wham_estimate_local_only %}checked{% endif %}> Aktiviert
-                </label>
-            </div>
-        </div>
+        {% include "_einstellungen_kaestchen.html" with titel="Estimate Local Only" beschriftung="Nur lokale K&ouml;rperbewegung sch&auml;tzen (keine globale Trajektorie)." feld="wham_estimate_local_only" text="Aktiviert" an=settings.wham_estimate_local_only %}
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Run SMPLify</strong>
-                <small>SMPLify-Verfeinerung ausf&uuml;hren. Langsamer aber genauer.</small>
-            </div>
-            <div class="settings-input">
-                <label class="settings-checkbox">
-                    <input type="checkbox" name="wham_run_smplify" {% if settings.wham_run_smplify %}checked{% endif %}> Aktiviert
-                </label>
-            </div>
-        </div>
+        {% include "_einstellungen_kaestchen.html" with titel="Run SMPLify" beschriftung="SMPLify-Verfeinerung ausf&uuml;hren. Langsamer aber genauer." feld="wham_run_smplify" text="Aktiviert" an=settings.wham_run_smplify %}
     </div>
 
     {# ── PromptHMR ── #}
@@ -300,17 +270,7 @@
             {% else %}<span class="hb-color-e74c3c" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Static Camera</strong>
-                <small>Statische Kamera annehmen. Empfohlen f&uuml;r die meisten Videos.</small>
-            </div>
-            <div class="settings-input">
-                <label class="settings-checkbox">
-                    <input type="checkbox" name="prompthmr_static_camera" {% if settings.prompthmr_static_camera %}checked{% endif %}> Aktiviert
-                </label>
-            </div>
-        </div>
+        {% include "_einstellungen_kaestchen.html" with titel="Static Camera" beschriftung="Statische Kamera annehmen. Empfohlen f&uuml;r die meisten Videos." feld="prompthmr_static_camera" text="Aktiviert" an=settings.prompthmr_static_camera %}
     </div>
 
     {# ── 3D Video Output ── #}

@@ -3,7 +3,7 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { blenderToThreeCoords } from '../character_core.js?v=1';
+import { blenderToThreeCoords } from '../character_core.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 

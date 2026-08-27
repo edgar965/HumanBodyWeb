@@ -9,7 +9,7 @@ export const HILFE_BEDIENUNG = {
     shortcuts: {
         title: 'Tastenkürzel',
         body: `
-<table class="hilfe-tabelle">
+<table class="hilfe-tabelle doku">
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd class="hilfe-taste">Space</kbd></td><td>Play / Pause</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd class="hilfe-taste">&#8592;</kbd> <kbd class="hilfe-taste">&#8594;</kbd></td><td>Frame vor / zurück</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd class="hilfe-taste">S</kbd></td><td>Clip splitten am Playhead</td></tr>
@@ -31,7 +31,7 @@ export const HILFE_BEDIENUNG = {
 <p>Die BVH Bibliothek links zeigt alle BVH-Dateien gruppiert nach Ordnern. Animationen können per <b>Doppelklick</b> oder <b>Drag &amp; Drop</b> zum ausgewählten Track hinzugefügt werden.</p>
 
 <h4 class="hilfe-abschnitt">Bibliothek-Toolbar</h4>
-<table class="hilfe-tabelle">
+<table class="hilfe-tabelle doku">
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-mitte hilfe-schmal"><i class="fas fa-folder-plus"></i></td><td><b>Neuer Ordner</b> — Erstellt einen neuen Kategorie-Ordner</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-mitte"><i class="fas fa-pen"></i></td><td><b>Umbenennen</b> — Benennt die ausgewählte Animation um</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-mitte"><i class="fas fa-trash"></i></td><td><b>Löschen</b> — Löscht die ausgewählte Animation</td></tr>

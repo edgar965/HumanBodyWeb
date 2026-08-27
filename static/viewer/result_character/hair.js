@@ -7,7 +7,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import {
     sharedState,
     findHeadBoneIndex, skinifyHairGroup, applyHairColor,
-} from '../character_core.js?v=1';
+} from '../character_core.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
 const ss = sharedState;

@@ -3,16 +3,11 @@
 {% block title %}HumanBody · Processed Videos{% endblock %}
 
 {% block content %}
-<style>
-
-/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
-   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
-   Fassungen wurden zu einer Klasse zusammengefasst. */
-</style>
 <h1>Processed Videos</h1>
 
 {% if jobs %}
-<table class="processed-table">
+<table class="processed-table db-tabelle sortable"
+       data-sort-key="fertige-videos">
     <thead>
         <tr>
             <th>Thumb</th>

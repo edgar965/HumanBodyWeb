@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { sharedState, applySkinColorToMaterials,
-         BODY_MATERIALS } from '../character_core.js?v=1';
+         BODY_MATERIALS } from '../character_core.js';
 import { base64ToFloat32, base64ToUint32,
          blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 import { generateRigBoneMesh } from '../modellbau/rignetz.js';

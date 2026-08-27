@@ -1,5 +1,5 @@
 import { Testzustand } from './testzustand.js';
-import { detectBVHFormat } from '../retarget_hybrid.js?v=32';
+import { detectBVHFormat } from '../retarget_hybrid.js';
 import { placeBvhSkeleton } from '../skeleton_test.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';

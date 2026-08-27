@@ -9,7 +9,8 @@
 
 import * as THREE from 'three';
 import { _mergeSimpleGeos, _buildPlane, _buildRhombus, _getOrLoadTexture, _makeDoubleSided } from './formenbauer.js';
-import { _buildSpiralTutu, _buildSkirt, _buildHelixRibbon } from './formen_band.js';
+import { _buildSpiralTutu, _buildSkirt } from './formen_band.js';
+import { Wendelband } from './wendelband.js';
 import { computeRigBoneWorldTransforms } from './knochenmatrizen.js';
 
 export class Rigformen {
@@ -119,7 +120,7 @@ export class Rigformen {
                     shapeGeo = _buildSpiralTutu(part, radius);
                     break;
                 case 'helix_ribbon':
-                    shapeGeo = _buildHelixRibbon(part, radius);
+                    shapeGeo = Wendelband.bauen(part, radius);
                     break;
                 case 'skirt':
                     shapeGeo = _buildSkirt(part, radius);

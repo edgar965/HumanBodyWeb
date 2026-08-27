@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { createSceneSetup } from '../character_core.js?v=1';
+import { createSceneSetup } from '../character_core.js';
 
 /**
  * Studiobuehne — Renderer, Szene und Kamera des BVH-Studios.

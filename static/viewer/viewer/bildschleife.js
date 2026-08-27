@@ -6,27 +6,22 @@
  * Beschriftung nachziehen, Bildrate zaehlen. Das mittlere Stueck rechnete
  * Prozent, Sekunden und Bildnummern in derselben Zeile aus.
  */
-export class Bildschleife {
+import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
+
+
+export class Bildschleife extends Zeichenschleife {
 
     /** Nach dieser Zeit wird die Bildrate neu angezeigt. */
     static FPS_FENSTER_S = 1.0;
 
     constructor(state) {
+        super();
         this.state = state;
         this.bilder = 0;
         this.zeitkonto = 0;
     }
 
     /** Schleife starten — laeuft bis zum Seitenwechsel. */
-    starten() {
-        const takt = () => {
-            requestAnimationFrame(takt);
-            this.schritt();
-        };
-        requestAnimationFrame(takt);
-        return this;
-    }
-
     schritt() {
         const dt = this.state.clock.getDelta();
         this.state.controls.update();

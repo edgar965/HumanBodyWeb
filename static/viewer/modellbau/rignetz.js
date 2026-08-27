@@ -7,7 +7,6 @@
 
 import * as THREE from 'three';
 import { _mergeSimpleGeos, _buildPlane, _buildRhombus, _getOrLoadTexture, _makeDoubleSided } from './formenbauer.js';
-import { _buildSpiralTutu, _buildSkirt, _buildHelixRibbon } from './formen_band.js';
 import { computeRigBoneWorldTransforms } from './knochenmatrizen.js';
 import { Rigformen } from './rigformen.js';
 import { Netzverschmelzung } from './netzverschmelzung.js';
