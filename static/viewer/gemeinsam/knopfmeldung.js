@@ -1,5 +1,5 @@
 import { Zeiten } from './zeiten.js';
-import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Protokoll } from './protokoll.js';
 
 /**
  * Knopfmeldung — ein Knopf zeigt kurz eine Rückmeldung und wird dann wieder

@@ -1,0 +1,59 @@
+{% comment %}
+Die 3D-Figur einer Ergebnisseite starten — samt Video-Aufnahme.
+
+BEFUND `doppelcode` (28.08.2026): Diese 38 Zeilen standen in
+`job_result.html` und `standalone_result.html` — bis auf ZWEI Stellen
+wortgleich, und genau die waren ein Fehler: Die zweite Vorlage lud
+`serve_bvh` und `serve_bvh_face` OHNE `?t=`. Eine neu berechnete BVH-Datei
+kam dort aus dem Browser-Cache, und der Betrachter sah die alte Bewegung —
+ohne Fehler, ohne Hinweis. Beide Seiten hängen die Kennung jetzt an.
+
+Verwendung (innerhalb `{% verbatim %}{% if job.bvh_file %}{% endverbatim %}` steht schon hier):
+
+  {% verbatim %}{% include "_ergebnisfigur.html" %}{% endverbatim %}
+
+Erwartet im Zusammenhang: `job` mit `id`, `name`, `fps`, `bvh_file`,
+`bvh_file_face`. Die Kennungen (`characterCanvas`, `resultVideo`,
+`characterPanel`, `resultModelPreset`, `btnVideo3D`) sind das Drahtformat zu
+`result_character/index.js` — sie stehen in beiden Vorlagen gleich.
+{% endcomment %}
+{% load static %}
+{% if job.bvh_file %}
+<script type="module">
+/** So lange bleibt der fertige Fortschrittsbalken stehen, damit „100 %" lesbar ist. */
+const BALKEN_NACHLEUCHTEN_MS = 1500;
+try {
+    const { initResultCharacter } = await import('{% static "viewer/result_character/index.js" %}?t={% now "U" %}');
+    initResultCharacter({
+        canvasId: 'characterCanvas',
+        videoId: 'resultVideo',
+        bvhUrl: '{% url "serve_bvh" job.id %}?t={% now "U" %}',
+        {% if job.bvh_file_face %}bvhFaceUrl: '{% url "serve_bvh_face" job.id %}?t={% now "U" %}',{% endif %}
+        jobId: '{{ job.id }}',
+        panelId: 'characterPanel',
+        modelSelectId: 'resultModelPreset',
+    });
+} catch(e) {
+    console.error('[result_character] Init error:', e);
+}
+
+// --- Video3D recording ---
+const btn3d = document.getElementById('btnVideo3D');
+if (btn3d) btn3d.addEventListener('click', async () => {
+    // Der ganze Ablauf steht in `Videoaufnahme` (Umbau 28.08.2026, Befund
+    // `doppelcode`): Er stand hier UND in der zweiten Ergebnisvorlage als
+    // 130-Zeilen-Block, bis auf zehn Kommentarzeilen wortgleich.
+    const canvas = document.getElementById('characterCanvas');
+    const video = document.getElementById('resultVideo');
+    if (!canvas || !video) return;
+    const { Videoaufnahme } = await import(
+        '{% static "js/bvh_player/videoaufnahme.js" %}?t={% now "U" %}');
+    await new Videoaufnahme({
+        canvas, video, knopf: btn3d,
+        fps: {{ job.fps|default:"30" }},
+        dateiname: '{{ job.name }}_3d_character.webm',
+        ablageUrl: '{% url "save_video3d" job.id %}',
+    }).laufen();
+});
+</script>
+{% endif %}

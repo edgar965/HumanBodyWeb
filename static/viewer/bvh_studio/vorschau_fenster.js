@@ -18,7 +18,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _gaussSmooth } from './werkzeug_glaettung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
-import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /** Gemerkte Fenstergroesse — ueberlebt den Seitenwechsel. */
 const GROESSE_SCHLUESSEL = 'bvhStudio_previewSize';

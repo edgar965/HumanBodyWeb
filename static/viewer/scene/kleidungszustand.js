@@ -14,7 +14,7 @@
  * Als reine Datenklasse mit `zuJson()`/`ausJson()`: Was in der Szenendatei
  * steht, bleibt unverändert (dieselben Namen, dieselben Werte).
  */
-import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 export class Kleidungszustand {
 
     /** Die fünf Regionen von oben nach unten. */

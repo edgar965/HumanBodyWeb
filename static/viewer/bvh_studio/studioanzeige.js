@@ -13,7 +13,7 @@
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export class Studioanzeige {
     /** Laufender Zeitgeber einer Kurzmeldung, sonst null. */

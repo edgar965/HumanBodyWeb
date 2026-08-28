@@ -7,7 +7,7 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import * as THREE from 'three';
-import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 
 // Preload-Cache: lädt Preset-Assets im Hintergrund via Shadow-Track.

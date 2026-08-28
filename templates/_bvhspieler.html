@@ -1,0 +1,37 @@
+{% comment %}
+Den BVH-Spieler starten (Video + Skelett-Überlagerung).
+
+BEFUND `doppelcode` (28.08.2026): Diese 22 Zeilen standen in
+`job_result.html` und `standalone_result.html` — bis auf DREI Adressen
+wortgleich, und genau die waren ein Fehler: Die zweite Vorlage lud `serve_bvh`,
+`serve_detection` und `serve_keypoints` OHNE `?t=`. Neu berechnete Daten kamen
+dort aus dem Browser-Cache; der Betrachter sah die alte Bewegung, ohne Fehler
+und ohne Hinweis. Beide Seiten hängen die Kennung jetzt an.
+
+Erwartet im Zusammenhang: `job` mit `id` und `fps`. Die Kennungen
+(`resultVideo`, `skeletonCanvas`, `skeletonOverlay`) sind das Drahtformat zu
+`js/bvh_player.js`.
+{% endcomment %}
+{% load static %}
+<script type="module">
+try {
+    const { initBVHPlayer } = await import('{% static "js/bvh_player.js" %}?t={% now "U" %}');
+    initBVHPlayer({
+        videoId: 'resultVideo',
+        canvasId: 'skeletonCanvas',
+        bvhUrl: '{% url "serve_bvh" job.id %}?t={% now "U" %}',
+        fps: {{ job.fps|default:"30" }},
+        overlayId: 'skeletonOverlay',
+        detectionUrl: '{% url "serve_detection" job.id %}?t={% now "U" %}',
+        keypointsUrl: '{% url "serve_keypoints" job.id %}?t={% now "U" %}',
+    });
+} catch(e) {
+    // Der Balken kommt aus `Startfehler` (28.08.2026, Befund `doppelcode`):
+    // Hier stand er in zwei Vorlagen wortgleich, samt 200 Zeichen
+    // Inline-Stil. Der Import steht IM `catch`, damit ein Fehler beim Laden
+    // des Spielers die Anzeige nicht mitreisst.
+    const { Startfehler } = await import(
+        '{% static "js/bvh_player/startfehler.js" %}?t={% now "U" %}');
+    Startfehler.zeigen('bvh_player', e);
+}
+</script>

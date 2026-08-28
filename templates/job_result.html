@@ -102,28 +102,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script type="module">
-try {
-    const { initBVHPlayer } = await import('{% static "js/bvh_player.js" %}?t={% now "U" %}');
-    initBVHPlayer({
-        videoId: 'resultVideo',
-        canvasId: 'skeletonCanvas',
-        bvhUrl: '{% url "serve_bvh" job.id %}?t={% now "U" %}',
-        fps: {{ job.fps|default:"30" }},
-        overlayId: 'skeletonOverlay',
-        detectionUrl: '{% url "serve_detection" job.id %}?t={% now "U" %}',
-        keypointsUrl: '{% url "serve_keypoints" job.id %}?t={% now "U" %}',
-    });
-} catch(e) {
-    // Der Balken kommt aus `Startfehler` (28.08.2026, Befund `doppelcode`):
-    // Hier stand er in zwei Vorlagen wortgleich, samt 200 Zeichen
-    // Inline-Stil. Der Import steht IM `catch`, damit ein Fehler beim Laden
-    // des Spielers die Anzeige nicht mitreisst.
-    const { Startfehler } = await import(
-        '{% static "js/bvh_player/startfehler.js" %}?t={% now "U" %}');
-    Startfehler.zeigen('bvh_player', e);
-}
-</script>
+{% include "_bvhspieler.html" %}
 <script>
 // --- ResizeObserver for Three.js (layout only, not panels — avoids infinite loop) ---
 (function() {
@@ -139,43 +118,5 @@ try {
     }).observe(layout);
 })();
 </script>
-{% if job.bvh_file %}
-<script type="module">
-/** So lange bleibt der fertige Fortschrittsbalken stehen, damit „100 %" lesbar ist. */
-const BALKEN_NACHLEUCHTEN_MS = 1500;
-try {
-    const { initResultCharacter } = await import('{% static "viewer/result_character/index.js" %}?t={% now "U" %}');
-    initResultCharacter({
-        canvasId: 'characterCanvas',
-        videoId: 'resultVideo',
-        bvhUrl: '{% url "serve_bvh" job.id %}?t={% now "U" %}',
-        {% if job.bvh_file_face %}bvhFaceUrl: '{% url "serve_bvh_face" job.id %}?t={% now "U" %}',{% endif %}
-        jobId: '{{ job.id }}',
-        panelId: 'characterPanel',
-        modelSelectId: 'resultModelPreset',
-    });
-} catch(e) {
-    console.error('[result_character] Init error:', e);
-}
-
-// --- Video3D recording ---
-const btn3d = document.getElementById('btnVideo3D');
-if (btn3d) btn3d.addEventListener('click', async () => {
-    // Der ganze Ablauf steht in `Videoaufnahme` (Umbau 28.08.2026, Befund
-    // `doppelcode`): Er stand hier UND in der zweiten Ergebnisvorlage als
-    // 130-Zeilen-Block, bis auf zehn Kommentarzeilen wortgleich.
-    const canvas = document.getElementById('characterCanvas');
-    const video = document.getElementById('resultVideo');
-    if (!canvas || !video) return;
-    const { Videoaufnahme } = await import(
-        '{% static "js/bvh_player/videoaufnahme.js" %}?t={% now "U" %}');
-    await new Videoaufnahme({
-        canvas, video, knopf: btn3d,
-        fps: {{ job.fps|default:"30" }},
-        dateiname: '{{ job.name }}_3d_character.webm',
-        ablageUrl: '{% url "save_video3d" job.id %}',
-    }).laufen();
-});
-</script>
-{% endif %}
+{% include "_ergebnisfigur.html" %}
 {% endblock %}

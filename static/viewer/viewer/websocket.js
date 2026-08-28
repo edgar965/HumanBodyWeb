@@ -5,7 +5,7 @@ import { state, WS_PATH } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { updateMeshVertices, reloadMeshForBodyType } from './mesh.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
-import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';

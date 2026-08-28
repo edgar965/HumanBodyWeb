@@ -7,6 +7,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
+import { Hautbindung } from '../gemeinsam/hautbindung.js';
 
 export async function loadSkinWeights() {
     try {
@@ -42,18 +43,9 @@ export function convertToRigifySkinnedMesh(rigifySkel, swData) {
 
     state.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, swData);
 
-    const mat = state.bodyMesh.material;
-    const pos = state.bodyMesh.position.clone();
-    const vis = state.bodyMesh.visible;
-    state.scene.remove(state.bodyMesh);
-
-    state.bodyMesh = new THREE.SkinnedMesh(state.bodyGeometry, mat);
-    state.bodyMesh.position.copy(pos);
-    state.bodyMesh.visible = vis;
-    state.bodyMesh.add(state.rigifySkeleton.rootBone);
-    state.bodyMesh.bind(state.rigifySkeleton.skeleton);
-
-    state.scene.add(state.bodyMesh);
+    state.bodyMesh = Hautbindung.ersetzen(
+        state.scene, state.bodyMesh, state.bodyGeometry,
+        state.rigifySkeleton, THREE);
     state.isSkinned = true;
     Protokoll.debug('Viewer', 'SkinnedMesh created:', state.bodyMesh.isSkinnedMesh,
                 'bones:', state.rigifySkeleton.skeleton.bones.length,

@@ -8,7 +8,7 @@
  * `skinMetalVal`. Sie werden an einer Stelle gefuellt und an sechs gelesen; als
  * Datensatz gehoeren sie zusammen.
  */
-import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export class Vergleichsfelder {
     constructor() {

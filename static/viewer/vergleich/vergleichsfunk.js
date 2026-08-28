@@ -8,7 +8,7 @@
  * mehrere Morphs in einem Paket.
  */
 import { Vergleichsnetz } from './vergleichsnetz.js';
-import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /** Sammelzeit fuer Reglerbewegungen in Millisekunden. */
 const BUENDELZEIT = 33;

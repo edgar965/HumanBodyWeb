@@ -14,6 +14,7 @@ import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { Hautbindung } from '../gemeinsam/hautbindung.js';
 
 const ss = sharedState;
 
@@ -45,14 +46,12 @@ export function convertToRigifySkinnedMesh() {
     state.bodyGeometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
     state.bodyGeometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
     state.rigifySkeleton = buildRigifySkeleton(ss.rigifySkeletonData, ss.skinWeightData);
-    const mat = state.bodyMesh.material;
-    const pos = state.bodyMesh.position.clone();
-    state.scene.remove(state.bodyMesh);
-    state.bodyMesh = new THREE.SkinnedMesh(state.bodyGeometry, mat);
-    state.bodyMesh.position.copy(pos);
-    state.bodyMesh.add(state.rigifySkeleton.rootBone);
-    state.bodyMesh.bind(state.rigifySkeleton.skeleton);
-    state.scene.add(state.bodyMesh);
+    // NEU MIT `visible` (28.08.2026): Diese Fassung hat die Sichtbarkeit
+    // als einzige nicht mitgenommen — ein ausgeblendeter Koerper kam beim
+    // Zuschalten des Skeletts zurueck, ohne dass der Schalter umsprang.
+    state.bodyMesh = Hautbindung.ersetzen(
+        state.scene, state.bodyMesh, state.bodyGeometry,
+        state.rigifySkeleton, THREE);
     state.isSkinned = true;
 }
 
