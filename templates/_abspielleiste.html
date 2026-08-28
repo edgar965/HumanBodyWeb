@@ -1,0 +1,40 @@
+{% comment %}
+Zeitleiste und Geschwindigkeitsknöpfe eines Abspielers.
+
+BEFUND `doppelcode` (28.08.2026): Dieselben sechzehn Zeilen standen in
+`job_result.html`, `standalone_result.html` und `theatre.html`. Sie waren schon
+auseinandergelaufen — und zwar an einer Stelle, die niemand absichtlich anders
+gewollt hat: Die Theatre-Seite fährt die Zeitleiste in Schritten von 0,1
+Sekunden, die beiden Ergebnisseiten in 0,01. Wer das ändern wollte, musste es
+dreimal tun.
+
+Verwendung:
+
+  {% verbatim %}{% include "_abspielleiste.html" %}
+  {% include "_abspielleiste.html" with schritt="0.1" ohne_frametaste=1 %}
+  {% include "_abspielleiste.html" with mit_idx=1 %}{% endverbatim %}
+
+  schritt          Schrittweite der Zeitleiste (Vorgabe 0.01)
+  mit_idx          Knopf „Idx" (Knochennummern am 3D-Skelett) mitzeigen
+  ohne_frametaste  Den Hinweis „←→ Frame" weglassen
+
+Die Kennungen (`timelineSlider`, `timeCurrent`, `speed-btn`) sind das
+Drahtformat zum JavaScript der jeweiligen Seite — sie bleiben, wie sie sind.
+{% endcomment %}
+<div class="controls-row controls-timeline">
+    <span class="time-display" id="timeCurrent">00:00</span>
+    <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="100" step="{{ schritt|default:'0.01' }}" value="0">
+    <span class="time-display" id="timeDuration">00:00</span>
+</div>
+<div class="controls-row controls-speed">
+    <span class="speed-label">Speed:</span>
+    <button class="speed-btn" data-speed="0.25">0.25x</button>
+    <button class="speed-btn" data-speed="0.5">0.5x</button>
+    <button class="speed-btn active" data-speed="1">1x</button>
+    <button class="speed-btn" data-speed="2">2x</button>
+    {% if mit_idx %}<button class="speed-btn" id="btnToggleIdx" title="Toggle bone index numbers on 3D skeleton">Idx</button>{% endif %}
+    <span class="rechts-grau">
+        <kbd class="marke-dunkel">Space</kbd> Play/Pause
+        {% if not ohne_frametaste %}<kbd class="tastenkappe">&larr;&rarr;</kbd> Frame{% endif %}
+    </span>
+</div>

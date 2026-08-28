@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { sharedState } from '../character_core.js';
-import { base64ToFloat32, base64ToUint32,
-         blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+import { base64ToFloat32 } from '../gemeinsam/kodierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 
 /**
  * Spurzubehoer — Kleidung und Haare einer Modellvorgabe an die Figur einer
@@ -161,22 +161,9 @@ export class Spurzubehoer {
 
     // ------------------------------------------------------------- Gemeinsames
 
+    /** Die Geometrie einer Spur — gebaut wie ueberall (28.08.2026). */
     static geometrie(daten) {
-        const punkte = base64ToFloat32(daten.vertices);
-        blenderToThreeCoords(punkte);
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
-        if (daten.faces) {
-            geo.setIndex(new THREE.BufferAttribute(base64ToUint32(daten.faces), 1));
-        }
-        if (daten.normals) {
-            const normalen = base64ToFloat32(daten.normals);
-            blenderToThreeCoords(normalen);
-            geo.setAttribute('normal', new THREE.BufferAttribute(normalen, 3));
-        } else {
-            geo.computeVertexNormals();
-        }
-        return geo;
+        return Koerpernetz.geometrie(daten, THREE);
     }
 
     /** Mit Gewichten als SkinnedMesh anhängen, ohne als einfaches Mesh. */

@@ -19,17 +19,10 @@ Ohne `node` im Pfad wird der Test übersprungen, nicht rot.
 """
 import shutil
 import unittest
-from pathlib import Path
 
-from djangobase.testhelfer import Webmodul
+from ..jsmodul import Jsmodul
 
-WURZEL = Path(__file__).resolve().parents[3]
-MODUL = WURZEL / 'static' / 'viewer' / 'gemeinsam' / 'hautgewichte.js'
-STATIC_WURZELN = {
-    '/static/djangobase/': Path(__import__('djangobase').__file__).parent
-                           / 'static' / 'djangobase',
-    '/static/': WURZEL / 'static',
-}
+MODUL = Jsmodul('gemeinsam', 'hautgewichte.js')
 
 #: Die Fälle, auf die es ankommt — je Punkt eine Liste [Knochen, Gewicht].
 SKRIPT = """
@@ -89,7 +82,7 @@ class HautgewichteTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.e = Webmodul(MODUL, STATIC_WURZELN).laufen(SKRIPT)
+        cls.e = MODUL.laufen(SKRIPT)
 
     def test_gleiche_indices_wie_die_alte_schleife(self):
         self.assertEqual(self.e['neuIndices'], self.e['altIndices'])

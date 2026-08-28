@@ -47,6 +47,7 @@ from ..dienste.haenger import Haenger
 from ..logging_utils import Auftragskontext
 from ..models import BVHJob
 from ..safe_paths import PfadAbgelehnt, SafePath
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger('core')
 pipeline_logger = logging.getLogger('core.pipeline')
@@ -226,10 +227,9 @@ class Auftragsendpunkte:
         """Mehrere Auftraege auf einmal loeschen."""
         if request.method != 'POST':
             return JsonResponse({'error': 'POST required'}, status=405)
-        try:
-            ids = json.loads(request.body).get('ids', [])
-        except (json.JSONDecodeError, AttributeError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        ids, fehler = Anfragerumpf.feld(request, 'ids', [])
+        if fehler:
+            return fehler
         geloescht = []
         for jid in ids:
             try:

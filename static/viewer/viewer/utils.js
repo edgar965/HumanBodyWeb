@@ -3,8 +3,10 @@
  */
 import { fn } from '../gemeinsam/registrierung.js';
 // Aus gemeinsam/kodierung.js — die Kopien hier sind am 15.08.2026 entfallen (sechsfach vorhanden).
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
-export { base64ToFloat32, base64ToUint32, blenderToThreeCoords };
+import { base64ToFloat32, base64ToUint32, blenderToThreeCoords,
+         float32ToBase64, uint32ToBase64 } from '../gemeinsam/kodierung.js';
+export { base64ToFloat32, base64ToUint32, blenderToThreeCoords,
+         float32ToBase64, uint32ToBase64 };
 
 // =========================================================================
 // Base64 decode
@@ -14,19 +16,6 @@ export { base64ToFloat32, base64ToUint32, blenderToThreeCoords };
 // =========================================================================
 // Base64 encode (for sending buffers to server)
 // =========================================================================
-export function float32ToBase64(f32) {
-    const bytes = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-}
-
-export function uint32ToBase64(u32) {
-    const bytes = new Uint8Array(u32.buffer, u32.byteOffset, u32.byteLength);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-}
 
 // =========================================================================
 // Coordinate transforms

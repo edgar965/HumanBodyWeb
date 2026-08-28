@@ -27,7 +27,6 @@ Funktionen und eine Modulvariable mit `global`. Beides steht jetzt in einer
 Klasse.
 """
 
-import json
 import logging
 import os
 import re
@@ -41,6 +40,7 @@ from ..dienste.kleiderbibliothek import Kleiderbibliothek
 from ..daten.pfadvergleich import Pfadvergleich
 
 from ..dienste.kleiderverwaltung import Kleiderverwaltung, KleiderFehler
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger(__name__)
 
@@ -96,10 +96,9 @@ class Kleiderendpunkte:
         die Kennung eines Kleides ist sein Pfad, und der hat sich gerade
         geaendert.
         """
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         try:
             antwort = Kleiderverwaltung.ausfuehren(daten)
         except KleiderFehler as fehler:
@@ -137,10 +136,9 @@ class Kleiderendpunkte:
         JSON-Rumpf: `pack_name` (ZIP-Paket, z. B. 'shirts01') ODER
         `asset_name` (ein mitgeliefertes Stueck).
         """
-        try:
-            rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        rumpf, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         lader = Kleiderendpunkte._herunterlader()
         paket = rumpf.get('pack_name', '')
         stueck = rumpf.get('asset_name', '')
@@ -164,10 +162,9 @@ class Kleiderendpunkte:
     @require_POST
     def ausgabeordner(request):
         """Den Ordner fuer OBJ + Gewichte eines Kleides vorbereiten."""
-        try:
-            rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        rumpf, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         kennung = rumpf.get('garment_id', '')
         name = rumpf.get('name', 'garment').strip()
         if not kennung or not name:

@@ -48,6 +48,43 @@ export function blenderToThreeCoords(buf) {
     return buf;
 }
 
+/**
+ * Typisierten Puffer -> base64. Die eine Stelle, an der kodiert wird.
+ *
+ * WARUM STUECKWEISE (28.08.2026, Befund `doppelcode`): Es gab VIER Fassungen
+ * in drei Bauarten. Zwei arbeiteten stueckweise wie hier, die dritte
+ * (`viewer/utils.js`) haengte Zeichen fuer Zeichen an eine Zeichenkette an —
+ * bei 70.851 Punkten sind das 850.212 Durchlaeufe mit je einer neuen
+ * Zeichenkette. `String.fromCharCode.apply` auf Stuecken von 32.768 Bytes
+ * macht daraus 26 Aufrufe.
+ *
+ * Die Stueckgroesse ist kein Feinschliff: `apply` legt jedes Byte als eigenes
+ * Argument auf den Aufrufstapel. Bei einem Puffer am Stueck (850 KB) ist das
+ * ein `RangeError: Maximum call stack size exceeded` — genau deshalb steht in
+ * den beiden aelteren Fassungen dieselbe Zahl.
+ *
+ * Der TYP spielt beim Kodieren keine Rolle: Gelesen werden die Bytes. Die
+ * beiden benannten Fassungen darunter gibt es nur, damit an der Aufrufstelle
+ * steht, was drinsteckt.
+ */
+export function pufferZuBase64(puffer) {
+    const bytes = new Uint8Array(puffer.buffer, puffer.byteOffset,
+                                 puffer.byteLength);
+    const stueck = 32768;
+    let binaer = '';
+    for (let i = 0; i < bytes.length; i += stueck) {
+        binaer += String.fromCharCode.apply(
+            null, bytes.subarray(i, Math.min(i + stueck, bytes.length)));
+    }
+    return btoa(binaer);
+}
+
+/** Float32Array -> base64 (Punkte, Normalen, Gewichte, Matrizen). */
+export function float32ToBase64(f32) { return pufferZuBase64(f32); }
+
+/** Uint32Array -> base64 (Dreiecksindizes). */
+export function uint32ToBase64(u32) { return pufferZuBase64(u32); }
+
 /** base64 -> Uint8Array. Die eine Stelle, an der dekodiert wird. */
 function base64ToBytes(b64) {
     const binaer = atob(b64);
@@ -62,4 +99,6 @@ export class Kodierung {
     static zuUint32(b64) { return base64ToUint32(b64); }
     static zuUint16(b64) { return base64ToUint16(b64); }
     static blenderNachThree(buf) { return blenderToThreeCoords(buf); }
+    static ausFloat32(f32) { return float32ToBase64(f32); }
+    static ausUint32(u32) { return uint32ToBase64(u32); }
 }

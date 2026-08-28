@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { float32ToBase64, uint32ToBase64 }
+    from '../gemeinsam/kodierung.js';
 /**
  * Nutzlast des Stoff-Exports zusammenstellen: Bilder abtasten, Lichter, Ton.
  *
@@ -9,17 +11,6 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  */
 
 
-export function _encodeFloat32(a) {
-    const u8 = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
-    let bin = '';
-    const step = 32768;
-    for (let i = 0; i < u8.length; i += step) {
-        bin += String.fromCharCode.apply(null, u8.subarray(i, Math.min(i + step, u8.length)));
-    }
-    return btoa(bin);
-}
-
-export function _encodeUint32(a) { return _encodeFloat32(a); }
 
 export function _pickAnimTrack() {
     // Animation tracks (type 'bvh') carry the actual Three.js mesh + skeleton.
@@ -197,21 +188,21 @@ export async function _buildPayload({ duration, fps }) {
 
     return {
         scene_name: modelData.name || track.preset || track.name || 'studio_scene',
-        positions: _encodeFloat32(positions),
+        positions: float32ToBase64(positions),
         vertex_count: positions.length / 3,
-        faces: _encodeUint32(faces),
+        faces: uint32ToBase64(faces),
         face_count: faces.length / 3,
-        skin_indices: _encodeUint32(skinI),
-        skin_weights: _encodeFloat32(skinW),
+        skin_indices: uint32ToBase64(skinI),
+        skin_weights: float32ToBase64(skinW),
         bone_names: boneNames,
-        inv_bind: _encodeFloat32(invBind),
-        anim_matrices: _encodeFloat32(matrices),
+        inv_bind: float32ToBase64(invBind),
+        anim_matrices: float32ToBase64(matrices),
         anim_fps: fps,
         anim_frames: frameCount,
         bone_vertex_ranges: mesh.userData.boneVertexRanges,
         bone_parts: modelData.bone_parts || {},
-        camera_matrices: _encodeFloat32(camMats),
-        camera_params: _encodeFloat32(camParams),
+        camera_matrices: float32ToBase64(camMats),
+        camera_params: float32ToBase64(camParams),
         lights: lights,
         audio: audioClips,
     };

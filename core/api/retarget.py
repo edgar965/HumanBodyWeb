@@ -11,7 +11,6 @@ gebraucht. Die dreifach ausgeschriebene Pfadpruefung („pruefen, dann `is_file`
 dann 404 mit passendem Text") steht einmal in `_bibliothekspfad`.
 """
 
-import json
 import logging
 import os
 
@@ -25,6 +24,7 @@ from ..dienste.bvhablage import Bvhablage
 from ..dienste.bvhverwaltung import Bvhverwaltung, BvhFehler
 from ..dienste.retargetdaten import Retargetdaten
 from ..models import BVHJob
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger(__name__)
 
@@ -141,10 +141,9 @@ class Retargetendpunkte:
                 body_height: 1.68, foot_correction: false }
         """
         from humanbody_core.skeleton import SkeletonRigify
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
+        if fehler:
+            return fehler
         koerper = daten.get('body_bvh', '')
         gesicht = daten.get('face_bvh', '')
         if not koerper or not gesicht:
@@ -207,10 +206,9 @@ class Retargetendpunkte:
         Die Arbeit macht Bvhverwaltung; hier steht nur die HTTP-Schale. Bis zum
         16.08.2026 waren beides 149 Zeilen in einer Funktion.
         """
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         try:
             return JsonResponse(Bvhverwaltung.ausfuehren(daten))
         except BvhFehler as fehler:

@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { state, API, MODEL_OFFSET_X } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
-import { Koerpernetz } from './koerpernetz.js';
+import { Fotokoerpernetz } from './fotokoerpernetz.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import {
     base64ToFloat32, base64ToUint32, blenderToThreeCoords,
@@ -40,9 +40,9 @@ export function applySkinColor(bodyType) {
 // HumanBody mesh loading (shifted left)
 // =========================================================================
 export async function loadMesh(bodyType) {
-    // Das Netz baut `Koerpernetz` (koerpernetz.js) — vorher standen hier
+    // Das Netz baut `Fotokoerpernetz` (fotokoerpernetz.js) — vorher standen hier
     // 119 Zeilen in einer Funktion.
-    const netz = await new Koerpernetz(bodyType).laden();
+    const netz = await new Fotokoerpernetz(bodyType).laden();
     if (netz) applySkinColor(bodyType || state.currentBodyType);
     return netz;
 }

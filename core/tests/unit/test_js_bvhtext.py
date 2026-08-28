@@ -18,18 +18,10 @@ Helfer spiegelt die Kette und biegt solche Pfade um.
 import json
 import shutil
 import unittest
-from pathlib import Path
 
-from djangobase.testhelfer import Webmodul
+from ..jsmodul import Jsmodul
 
-WURZEL = Path(__file__).resolve().parents[3]
-BVHTEXT = WURZEL / 'static' / 'viewer' / 'bvh_studio' / 'bvhtext.js'
-#: Woher absolute /static/-Importe kommen: erst djangoBase, dann das Projekt.
-STATIC_WURZELN = {
-    '/static/djangobase/': Path(__import__('djangobase').__file__).parent
-                           / 'static' / 'djangobase',
-    '/static/': WURZEL / 'static',
-}
+BVHTEXT = Jsmodul('bvh_studio', 'bvhtext.js')
 
 #: Kleine, aber vollständige BVH: Wurzel mit 6 Kanälen, ein Gelenk mit 3.
 BVH = '\n'.join([
@@ -76,7 +68,7 @@ class BvhtextTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         skript = SKRIPT.format(bvh=json.dumps(BVH))
-        cls.ergebnis = Webmodul(BVHTEXT, STATIC_WURZELN).laufen(skript)
+        cls.ergebnis = BVHTEXT.laufen(skript)
 
     def test_yposition_ist_der_zweite_kanal(self):
         self.assertEqual(self.ergebnis['kanal'], 1)

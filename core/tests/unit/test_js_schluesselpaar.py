@@ -23,19 +23,11 @@ Dazu die Gewichtung: `smooth` ist `3t²−2t³` (bei 0,5 genau 0,5, bei 0,25 abe
 
 Ohne `node` im Pfad wird der Test übersprungen, nicht rot.
 """
-import shutil
 import unittest
-from pathlib import Path
 
-from djangobase.testhelfer import Webmodul
+from ..jsmodul import Jsmodul
 
-WURZEL = Path(__file__).resolve().parents[3]
-MODUL = WURZEL / 'static' / 'viewer' / 'bvh_studio' / 'schluesselpaar.js'
-STATIC_WURZELN = {
-    '/static/djangobase/': Path(__import__('djangobase').__file__).parent
-                           / 'static' / 'djangobase',
-    '/static/': WURZEL / 'static',
-}
+MODUL = Jsmodul('bvh_studio', 'schluesselpaar.js')
 
 SKRIPT = """
 const { Schluesselpaar } = await import(MODUL);
@@ -104,12 +96,12 @@ console.log(JSON.stringify(ergebnis));
 """
 
 
-@unittest.skipUnless(shutil.which('node'), 'node fehlt')
+@Jsmodul.ohne_node()
 class SchluesselpaarTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.ergebnis = Webmodul(MODUL, STATIC_WURZELN).laufen(SKRIPT)
+        cls.ergebnis = MODUL.laufen(SKRIPT)
 
     def test_paare_wie_die_alte_schleife(self):
         """Für jedes geprüfte Bild dasselbe Paar wie vorher."""

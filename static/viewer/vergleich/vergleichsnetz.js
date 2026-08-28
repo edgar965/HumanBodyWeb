@@ -8,10 +8,11 @@
  * Hautfarbe. Hier ist es EINE Methode mit zwei Schaltern.
  */
 import * as THREE from 'three';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords }
+import { base64ToFloat32, blenderToThreeCoords }
     from '../gemeinsam/kodierung.js';
 import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 
 /** Materialien des Koerpers, nach Materialnummer des Netzes. */
 const KOERPERMATERIALIEN = [
@@ -79,26 +80,9 @@ export class Vergleichsnetz {
         ansicht.bodyGeometry = null;
     }
 
+    /** Die Geometrie einer Ansicht — gebaut wie ueberall (28.08.2026). */
     static _geometrie(daten) {
-        const punkte = base64ToFloat32(daten.vertices);
-        blenderToThreeCoords(punkte);
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
-        if (daten.faces) {
-            geo.setIndex(new THREE.BufferAttribute(base64ToUint32(daten.faces), 1));
-        }
-        if (daten.uvs) {
-            geo.setAttribute('uv',
-                new THREE.BufferAttribute(base64ToFloat32(daten.uvs), 2));
-        }
-        if (daten.normals) {
-            const normalen = base64ToFloat32(daten.normals);
-            blenderToThreeCoords(normalen);
-            geo.setAttribute('normal', new THREE.BufferAttribute(normalen, 3));
-        } else {
-            geo.computeVertexNormals();
-        }
-        return geo;
+        return Koerpernetz.geometrie(daten, THREE);
     }
 
     /** Neue Punkte vom Server einsetzen (Morph-Aenderung ueber die Funkstrecke). */

@@ -21,6 +21,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ..atomic_write import AtomarSchreiber
 from ..daten.modellpfad import Modellpfad
 from ..safe_paths import SafePath, PfadAbgelehnt
+from ..daten.anfragerumpf import Anfragerumpf
 
 #: EIN Logger fuer das Modul. Vorher stand `import logging; log =
 #: logging.getLogger('core')` zweimal in je einer Funktion — `scene_list`
@@ -88,14 +89,9 @@ class Studioprojekte:
     @require_POST
     def szene_sichern(request):
         """Eine Szenendatei schreiben."""
-        try:
-            rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        name = rumpf.get('name', '').strip()
-        daten = rumpf.get('data')
-        if not name or not daten:
-            return JsonResponse({'error': 'name and data required'}, status=400)
+        name, daten, fehler = Anfragerumpf.name_und_daten(request)
+        if fehler:
+            return fehler
         sauber = re.sub(r'[^\w\s\-]', '', name).strip()
         ordner = Studioprojekte._modellordner()
         pfad = (Modellpfad.geprueft(ordner, sauber, Studioprojekte.SZENE)
@@ -129,10 +125,9 @@ class Studioprojekte:
         AtomarSchreiber, damit zwei gleichzeitige Speichervorgaenge keine halbe
         Datei hinterlassen.
         """
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         projekt = daten.get('project')
         if not projekt:
             return JsonResponse({'error': 'path + project required'},

@@ -12,25 +12,9 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { float32ToBase64, uint32ToBase64 }
+    from '../gemeinsam/kodierung.js';
 
-function _encodeFloat32(a) {
-    const u8 = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
-    let bin = '';
-    const step = 32768;
-    for (let i = 0; i < u8.length; i += step) {
-        bin += String.fromCharCode.apply(null, u8.subarray(i, Math.min(i + step, u8.length)));
-    }
-    return btoa(bin);
-}
-function _encodeUint32(a) {
-    const u8 = new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
-    let bin = '';
-    const step = 32768;
-    for (let i = 0; i < u8.length; i += step) {
-        bin += String.fromCharCode.apply(null, u8.subarray(i, Math.min(i + step, u8.length)));
-    }
-    return btoa(bin);
-}
 
 function _selectedInstWithGenerated() {
     const inst = state.characters.get(state.selectedCharacterId);
@@ -111,15 +95,15 @@ export async function buildClothPayload({ duration = 3.0, fps = 30 } = {}) {
 
     return {
         scene_name: inst.presetName || 'scene',
-        positions: _encodeFloat32(positions),
+        positions: float32ToBase64(positions),
         vertex_count: positions.length / 3,
-        faces: _encodeUint32(faces),
+        faces: uint32ToBase64(faces),
         face_count: faces.length / 3,
-        skin_indices: _encodeUint32(skinI),
-        skin_weights: _encodeFloat32(skinW),
+        skin_indices: uint32ToBase64(skinI),
+        skin_weights: float32ToBase64(skinW),
         bone_names: boneNames,
-        inv_bind: _encodeFloat32(invBind),
-        anim_matrices: _encodeFloat32(matrices),
+        inv_bind: float32ToBase64(invBind),
+        anim_matrices: float32ToBase64(matrices),
         anim_fps: fps,
         anim_frames: frameCount,
         bone_vertex_ranges: ranges,

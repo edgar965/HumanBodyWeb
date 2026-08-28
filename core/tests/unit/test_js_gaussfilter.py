@@ -25,19 +25,11 @@ DIE FÄLLE, DIE WEHTUN
 
 Ohne `node` im Pfad wird der Test übersprungen, nicht rot.
 """
-import shutil
 import unittest
-from pathlib import Path
 
-from djangobase.testhelfer import Webmodul
+from ..jsmodul import Jsmodul
 
-WURZEL = Path(__file__).resolve().parents[3]
-MODUL = WURZEL / 'static' / 'viewer' / 'bvh_studio' / 'gaussfilter.js'
-STATIC_WURZELN = {
-    '/static/djangobase/': Path(__import__('djangobase').__file__).parent
-                           / 'static' / 'djangobase',
-    '/static/': WURZEL / 'static',
-}
+MODUL = Jsmodul('bvh_studio', 'gaussfilter.js')
 
 SKRIPT = """
 const { Gaussfilter } = await import(MODUL);
@@ -136,12 +128,12 @@ console.log(JSON.stringify(ergebnis));
 """
 
 
-@unittest.skipUnless(shutil.which('node'), 'node fehlt')
+@Jsmodul.ohne_node()
 class GaussfilterTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.ergebnis = Webmodul(MODUL, STATIC_WURZELN).laufen(SKRIPT)
+        cls.ergebnis = MODUL.laufen(SKRIPT)
 
     def test_gleiche_werte_wie_die_alte_fassung(self):
         """Bei drei Sigmas: kein Wert weicht messbar ab."""

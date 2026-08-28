@@ -169,3 +169,23 @@ select.viewer-select {
 }
 
 .btn-reset:hover { border-color: var(--accent); color: var(--text); }
+
+/* Knopfleiste oben links auf der Leinwand (28.08.2026, Befund `doppelcode`).
+ *
+ * Stand wortgleich in character_viewer.html, photo_to_3d.html und
+ * test_character.html — und in animations.html ein viertes Mal, dort als
+ * Inline-Stil am Element selbst. */
+.viewer-buttons-left {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    display: flex;
+    gap: 6px;
+}
+
+/* Zwei Knoepfe, die zusammengehoeren (character_viewer, scene_config). */
+.toggle-btn-group {
+    display: flex;
+    gap: 2px;
+}

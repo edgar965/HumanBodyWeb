@@ -65,23 +65,7 @@
         <button class="ctrl-btn" id="btnSkipFwd1" title="Forward 1s">1s <i class="fas fa-forward-step"></i></button>
         <button class="ctrl-btn" id="btnSkipFwd10" title="Forward 10s">10s <i class="fas fa-forward"></i></button>
     </div>
-    <div class="controls-row controls-timeline">
-        <span class="time-display" id="timeCurrent">00:00</span>
-        <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="100" step="0.01" value="0">
-        <span class="time-display" id="timeDuration">00:00</span>
-    </div>
-    <div class="controls-row controls-speed">
-        <span class="speed-label">Speed:</span>
-        <button class="speed-btn" data-speed="0.25">0.25x</button>
-        <button class="speed-btn" data-speed="0.5">0.5x</button>
-        <button class="speed-btn active" data-speed="1">1x</button>
-        <button class="speed-btn" data-speed="2">2x</button>
-        <button class="speed-btn" id="btnToggleIdx" title="Toggle bone index numbers on 3D skeleton">Idx</button>
-        <span class="rechts-grau">
-            <kbd class="marke-dunkel">Space</kbd> Play/Pause
-            <kbd class="tastenkappe">&larr;&rarr;</kbd> Frame
-        </span>
-    </div>
+    {% include "_abspielleiste.html" with mit_idx=1 %}
 </div>
 
 {% if job.bvh_file %}

@@ -8,7 +8,6 @@ Methoden von `Bvhauslieferung`. Die Wurzel der Bibliothek wurde dreimal aus
 `HUMANBODY_BVH_DIR` zurueckgerechnet — jetzt einmal.
 """
 
-import json
 import os
 import re
 
@@ -18,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.pfadvergleich import Pfadvergleich
+from ..daten.anfragerumpf import Anfragerumpf
 
 class Bvhauslieferung:
     """Bewegungsdateien der Bibliothek listen, ausliefern und ablegen."""
@@ -65,10 +65,9 @@ class Bvhauslieferung:
     @require_POST
     def sichern(request):
         """Eine BVH-Animation in ihren Kategorieordner schreiben."""
-        try:
-            rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        rumpf, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         kategorie = rumpf.get('category', '').strip()
         name = rumpf.get('name', '').strip()
         inhalt = rumpf.get('bvh_content', '')

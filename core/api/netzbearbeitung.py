@@ -10,7 +10,6 @@ die AUSGEWAEHLTEN Punkte uebernehmen. Diese Uebernahme steht jetzt einmal in
 """
 
 import base64
-import json
 
 import numpy as np
 from django.http import JsonResponse
@@ -20,6 +19,7 @@ from humanbody_core.cloth import _push_outside_body, _laplacian_smooth
 
 from ..daten.netzantwort import Netzantwort
 from ..dienste.charakterdaten import Charakterdaten
+from ..daten.anfragerumpf import Anfragerumpf
 
 
 class Netzbearbeitung:
@@ -54,14 +54,6 @@ class Netzbearbeitung:
         return JsonResponse({'vertices': Netzantwort.feld(
             ergebnis.astype(np.float32), 'vertices')})
 
-    @staticmethod
-    def _rumpf(request):
-        try:
-            return json.loads(request.body), None
-        except json.JSONDecodeError:
-            return None, JsonResponse({'error': 'Invalid JSON body'},
-                                      status=400)
-
     # ---------------------------------------------------------------- Aktionen
 
     @staticmethod
@@ -73,7 +65,7 @@ class Netzbearbeitung:
         POST (JSON): {vertices (base64 Float32), faces (base64 Uint32),
                       selected (Liste von int), iterations, factor}
         """
-        rumpf, fehler = Netzbearbeitung._rumpf(request)
+        rumpf, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
         if fehler:
             return fehler
         punkte_roh = rumpf.get('vertices')
@@ -102,7 +94,7 @@ class Netzbearbeitung:
         POST (JSON): {vertices (base64 Float32), selected, min_dist}
         Abfrageparameter: body_type, morph_* fuer den Koerper.
         """
-        rumpf, fehler = Netzbearbeitung._rumpf(request)
+        rumpf, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
         if fehler:
             return fehler
         punkte_roh = rumpf.get('vertices')

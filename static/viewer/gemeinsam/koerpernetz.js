@@ -43,9 +43,33 @@ export class Koerpernetz {
      * @returns {{geometrie: object, materialien: object[]}}
      */
     static bauen(daten, THREE) {
-        const geometrie = new THREE.BufferGeometry();
-        geometrie.setAttribute('position', Koerpernetz._punkte(daten, THREE));
+        const geometrie = Koerpernetz.geometrie(daten, THREE);
+        Koerpernetz._gruppen(geometrie, daten);
+        return { geometrie, materialien: Koerpernetz.materialien(THREE) };
+    }
 
+    /**
+     * Die nackte Geometrie: Punkte, Flaechen, UVs, Normalen — ohne
+     * Materialgruppen und ohne Materialliste.
+     *
+     * WARUM GETRENNT (28.08.2026, Befund `doppelcode`): Drei weitere Stellen
+     * bauten dieselbe Geometrie noch einmal von Hand — die Spuren im
+     * BVH-Studio, das Foto-Netz und die Vergleichsansicht. Sie brauchen die
+     * Materialgruppen des Koerpers nicht und konnten `bauen()` deshalb nicht
+     * benutzen; das war der ganze Unterschied.
+     *
+     * @param nachPunkten Optionaler Eingriff am Punktpuffer, NACH der
+     *        Achsdrehung und VOR dem Attribut. Das Foto-Netz richtet die
+     *        Punkte dort auf SMPL-X aus; ohne diesen Haken haette es seine
+     *        eigene Kopie behalten muessen.
+     */
+    static geometrie(daten, THREE, nachPunkten = null) {
+        const geometrie = new THREE.BufferGeometry();
+        const puffer = base64ToFloat32(daten.vertices);
+        blenderToThreeCoords(puffer);
+        if (nachPunkten) nachPunkten(puffer);
+        geometrie.setAttribute('position',
+                               new THREE.BufferAttribute(puffer, 3));
         if (daten.faces) {
             geometrie.setIndex(
                 new THREE.BufferAttribute(base64ToUint32(daten.faces), 1));
@@ -55,8 +79,7 @@ export class Koerpernetz {
                 'uv', new THREE.BufferAttribute(base64ToFloat32(daten.uvs), 2));
         }
         Koerpernetz._normalen(geometrie, daten, THREE);
-        Koerpernetz._gruppen(geometrie, daten);
-        return { geometrie, materialien: Koerpernetz.materialien(THREE) };
+        return geometrie;
     }
 
     /**
@@ -71,13 +94,6 @@ export class Koerpernetz {
         return new THREE.Mesh(geometrie,
                               geometrie.groups.length ? materialien
                                                       : materialien[0]);
-    }
-
-    /** Nur die Punktlagen — gedreht und als Attribut. */
-    static _punkte(daten, THREE) {
-        const puffer = base64ToFloat32(daten.vertices);
-        blenderToThreeCoords(puffer);
-        return new THREE.BufferAttribute(puffer, 3);
     }
 
     /**

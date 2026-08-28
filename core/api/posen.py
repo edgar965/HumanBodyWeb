@@ -20,7 +20,6 @@ UMBAU 27.08.2026 (Befund `freie-funktionen`): drei freie Funktionen, dazu eine
 Funktion IN einer Funktion und ein `logging.getLogger` mitten im Rumpf.
 """
 
-import json
 import logging
 from pathlib import Path
 
@@ -28,6 +27,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger('core')
 
@@ -101,10 +101,9 @@ class Posen:
         POST /api/character/pose-manage/
         { action: "rename"|"delete", category, name, new_name }
         """
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         aktion = daten.get('action', '')
         kategorie = daten.get('category', '')
         name = daten.get('name', '')

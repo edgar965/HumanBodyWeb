@@ -9,7 +9,6 @@ UMBAU 27.08.2026 (Befund `freie-funktionen`): fuenf freie Funktionen, jetzt
 Methoden von `Bvhtext`.
 """
 
-import json
 import logging
 import os
 import tempfile
@@ -26,6 +25,7 @@ from ..dienste.bvhablage import Bvhablage
 from ..dienste.retargetdaten import Retargetdaten
 from ..projekt_temp import ProjektTemp
 from ..safe_paths import SafePath, PfadAbgelehnt
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +48,9 @@ class Bvhtext:
         JSON: { bvh_text: "HIERARCHY\\nROOT ...", body_height: 1.68,
                 foot_correction: false, format: null }
         """
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
+        if fehler:
+            return fehler
         text = daten.get('bvh_text', '')
         if not text:
             return JsonResponse({'error': 'bvh_text is required'}, status=400)
@@ -81,10 +80,9 @@ class Bvhtext:
         JSON: { path: "/abs/pfad/datei.bvh", bvh_text: "HIERARCHY\\n..." }
         oder  { category, name, bvh_text }
         """
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         text = daten.get('bvh_text', '')
         if not text:
             return JsonResponse({'error': 'bvh_text required'}, status=400)
@@ -156,10 +154,9 @@ class Bvhtext:
         neun Zehnteln glichen — inklusive der Pfadpruefung, die am 13.08.2026
         in BEIDEN nachgezogen werden musste.
         """
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         kategorie = daten.get('category', '')
         name = daten.get('name', '')
         if not kategorie or not name:

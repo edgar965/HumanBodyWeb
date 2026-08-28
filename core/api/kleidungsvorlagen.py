@@ -21,6 +21,7 @@ from humanbody_core.cloth import (TEMPLATE_TYPES, PRIMITIVE_TYPES,
                                   BUILDER_REGIONS)
 
 from ..daten.modellpfad import Modellpfad
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger('core')
 
@@ -85,14 +86,9 @@ class Kleidungsvorlagen:
     @require_POST
     def sichern(request):
         """Eine Stoffvorlage speichern."""
-        try:
-            rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        name = rumpf.get('name', '').strip()
-        daten = rumpf.get('data')
-        if not name or not daten:
-            return JsonResponse({'error': 'name and data required'}, status=400)
+        name, daten, fehler = Anfragerumpf.name_und_daten(request)
+        if fehler:
+            return fehler
         vorlage = daten.get('template', '')
         kategorie = Kleidungsvorlagen.KATEGORIE_JE_VORLAGE.get(vorlage)
         if not kategorie:

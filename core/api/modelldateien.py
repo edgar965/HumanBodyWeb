@@ -21,6 +21,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.modellpfad import Modellpfad
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger('core')
 
@@ -138,14 +139,9 @@ class Modelldateien:
     @require_POST
     def modell_sichern(request):
         """Eine Modellvorgabe schreiben."""
-        try:
-            rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        name = rumpf.get('name', '').strip()
-        daten = rumpf.get('data')
-        if not name or not daten:
-            return JsonResponse({'error': 'name and data required'}, status=400)
+        name, daten, fehler = Anfragerumpf.name_und_daten(request)
+        if fehler:
+            return fehler
         # Nur Buchstaben, Ziffern, Leerzeichen, Binde- und Unterstriche.
         sauber = re.sub(r'[^\w\s\-]', '', name).strip()
         ordner = Modelldateien._modellordner()

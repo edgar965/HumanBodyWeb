@@ -9,7 +9,6 @@ Funktion; das Aufraeumen des Arbeitsordners auf jedem Fehlerweg stand
 viermal — beides einmal.
 """
 
-import json
 import logging
 import os
 import shutil
@@ -23,6 +22,7 @@ from ..dienste.bildfolgen_render import BildfolgenRender, RenderFehler
 from ..dienste.videokodierer import Videokodierer, VideoFehler
 from ..projekt_temp import ProjektTemp
 from ..safe_paths import SafePath, PfadAbgelehnt
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger(__name__)
 
@@ -90,10 +90,9 @@ class Theatrevideo:
     @require_POST
     def aufnehmen(request):
         """Die Szene serverseitig aufnehmen und kodieren (MP4, WebM, PNG-Zip)."""
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         if not daten.get('scene_url'):
             return JsonResponse({'error': 'scene_url required'}, status=400)
         arbeitsordner = str(ProjektTemp.ordner(prefix='theatre_render_'))

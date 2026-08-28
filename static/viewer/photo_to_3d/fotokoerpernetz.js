@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { state, API, MODEL_OFFSET_X } from './state.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords,
-         alignBodyToSMPLX, BODY_MATERIALS } from './helpers.js';
+import { alignBodyToSMPLX, BODY_MATERIALS } from './helpers.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
+import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 
 /**
- * Koerpernetz — das HumanBody-Netz der Foto-Seite holen und in die Szene
+ * Fotokoerpernetz — das HumanBody-Netz der Foto-Seite holen und in die Szene
  * setzen, mit Skelett wenn Gewichte vorliegen.
  *
  * Aus photo_to_3d/humanbody_mesh.js herausgeloest (Umbau 16.08.2026):
@@ -20,7 +20,7 @@ import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
  * wäre eine Verhaltensänderung, und Skinning-Fehler zeigen sich erst bei
  * Einzelknochen-Drehungen — nicht in der Ruhelage.
  */
-export class Koerpernetz {
+export class Fotokoerpernetz {
 
     /** Werte unter dieser Schwelle gehen nicht in die Adresse. */
     static SCHWELLE = 0.001;
@@ -86,10 +86,10 @@ export class Koerpernetz {
     adresse() {
         const frage = new URLSearchParams({ body_type: this.koerperart });
         for (const [name, wert] of Object.entries(state.morphValues)) {
-            if (Math.abs(wert) > Koerpernetz.SCHWELLE) frage.set(`morph_${name}`, wert);
+            if (Math.abs(wert) > Fotokoerpernetz.SCHWELLE) frage.set(`morph_${name}`, wert);
         }
         for (const [name, wert] of Object.entries(state.metaValues)) {
-            if (Math.abs(wert) > Koerpernetz.SCHWELLE) frage.set(`meta_${name}`, wert);
+            if (Math.abs(wert) > Fotokoerpernetz.SCHWELLE) frage.set(`meta_${name}`, wert);
         }
         return `${API}/mesh/?${frage}`;
     }
@@ -112,28 +112,13 @@ export class Koerpernetz {
 
     // -------------------------------------------------------------- Geometrie
 
+    /**
+     * Die Geometrie — gebaut wie ueberall (28.08.2026, Befund `doppelcode`),
+     * nur mit einem Schritt mehr: Die Punkte werden nach der Achsdrehung auf
+     * SMPL-X ausgerichtet, damit Koerper und SMPL-X-Netz uebereinanderliegen.
+     */
     _geometrie(daten) {
-        const punkte = base64ToFloat32(daten.vertices);
-        blenderToThreeCoords(punkte);
-        alignBodyToSMPLX(punkte);
-
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
-        if (daten.faces) {
-            geo.setIndex(new THREE.BufferAttribute(base64ToUint32(daten.faces), 1));
-        }
-        if (daten.uvs) {
-            geo.setAttribute('uv',
-                new THREE.BufferAttribute(base64ToFloat32(daten.uvs), 2));
-        }
-        if (daten.normals) {
-            const normalen = base64ToFloat32(daten.normals);
-            blenderToThreeCoords(normalen);
-            geo.setAttribute('normal', new THREE.BufferAttribute(normalen, 3));
-        } else {
-            geo.computeVertexNormals();
-        }
-        return geo;
+        return Koerpernetz.geometrie(daten, THREE, alignBodyToSMPLX);
     }
 
     /**
@@ -177,16 +162,16 @@ export class Koerpernetz {
      */
     _gewichteSetzen(geo) {
         const anzahl = geo.attributes.position.count;
-        const indizes = new Uint16Array(anzahl * Koerpernetz.EINFLUESSE);
-        const gewichte = new Float32Array(anzahl * Koerpernetz.EINFLUESSE);
+        const indizes = new Uint16Array(anzahl * Fotokoerpernetz.EINFLUESSE);
+        const gewichte = new Float32Array(anzahl * Fotokoerpernetz.EINFLUESSE);
         const nachIndex = this._knochenzuordnung();
 
         const daten = state.skinWeightData.weights;
         for (let v = 0; v < Math.min(anzahl, daten.length); v++) {
             const paare = daten[v];
-            for (let j = 0; j < Math.min(paare.length, Koerpernetz.EINFLUESSE); j++) {
+            for (let j = 0; j < Math.min(paare.length, Fotokoerpernetz.EINFLUESSE); j++) {
                 const knochen = nachIndex[paare[j][0]];
-                const platz = v * Koerpernetz.EINFLUESSE + j;
+                const platz = v * Fotokoerpernetz.EINFLUESSE + j;
                 indizes[platz] = knochen !== undefined ? knochen : 0;
                 gewichte[platz] = knochen !== undefined ? paare[j][1] : 0;
             }
@@ -212,7 +197,7 @@ export class Koerpernetz {
      * jedem Netzwechsel weiter.
      */
     _kopfLageZuruecksetzen() {
-        const kopf = state.rigifySkeleton.boneByName[Koerpernetz.KOPFKNOCHEN];
+        const kopf = state.rigifySkeleton.boneByName[Fotokoerpernetz.KOPFKNOCHEN];
         if (!kopf) return;
         if (kopf._origY === undefined) kopf._origY = kopf.position.y;
         if (kopf._origZ === undefined) kopf._origZ = kopf.position.z;

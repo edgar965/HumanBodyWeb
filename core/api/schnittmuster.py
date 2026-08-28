@@ -11,7 +11,6 @@ Methoden von `Schnittmuster`. Die eine packte den `Koerperzustand` noch als
 Tupel aus — das war eine Uebergangshilfe von 2026-08-15 und ist entfallen.
 """
 
-import json
 import logging
 
 import numpy as np
@@ -23,6 +22,7 @@ from humanbody_core.cloth import generate_from_pattern, _push_outside_body
 from ..daten.stoffantwort import Stoffantwort
 from ..dienste.charakterdaten import Charakterdaten
 from .bereichsstoff import Bereichsstoff
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +48,9 @@ class Schnittmuster:
         POST (JSON): {pattern: {panels, stitches}}
         Abfrageparameter: body_type, morph_* fuer den Koerper.
         """
-        try:
-            rumpf = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+        rumpf, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
+        if fehler:
+            return fehler
         schnitt = rumpf.get('pattern')
         if not schnitt or not schnitt.get('panels'):
             return JsonResponse({'error': 'Pattern with panels is required'},

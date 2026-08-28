@@ -21,6 +21,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..dienste.charakterdaten import Charakterdaten
 from .musterablage import Musterablage
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +41,9 @@ class Schnittmusterablage:
         Der Ablauf steht in `api/musterablage.Musterablage`; hier bleiben die
         Statuscodes, weil nur die Ansicht antwortet.
         """
-        try:
-            rumpf = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON body'}, status=400)
+        rumpf, fehler = Anfragerumpf.lesen(request, 'Invalid JSON body')
+        if fehler:
+            return fehler
         ablage = Musterablage(rumpf)
         einwand = ablage.fehler()
         if einwand:

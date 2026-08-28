@@ -18,6 +18,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from ..models import AppSettings
+from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger(__name__)
 
@@ -86,10 +87,9 @@ class Systemendpunkte:
         """
         # Routet auf den Logger `core.client` -> client.log
         protokoll = logging.getLogger('core.client')
-        try:
-            daten = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        daten, fehler = Anfragerumpf.lesen(request)
+        if fehler:
+            return fehler
         text = '[%s] %s' % (daten.get('page', '?'), daten.get('action', '?'))
         einzelheit = daten.get('detail', '')
         if einzelheit:
