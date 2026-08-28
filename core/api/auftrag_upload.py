@@ -38,6 +38,21 @@ class Uploadseiten:
         return auftraege
 
     @staticmethod
+    def _pipelinewahl(pipelines):
+        """[(wert, beschriftung)] fuer das Auswahlfeld je Auftragszeile.
+
+        AUS DEM MODELL, nicht aus der Vorlage (28.08.2026, Befund
+        `doppelcode`): Die Beschriftungen standen ein drittes Mal in
+        `upload.html` und `upload_v4.html` — und liefen bereits auseinander.
+        Die Tabelle zeigte ueber `get_pipeline_display` „YOLO11-Pose", das
+        Auswahlfeld daneben „YOLO11"; ebenso „MocapNET v4" gegen „v4". Dieselbe
+        Pipeline, zwei Namen, auf derselben Seite.
+        """
+        erlaubt = set(pipelines)
+        return [(wert, text) for wert, text in BVHJob.PIPELINE_CHOICES
+                if wert in erlaubt]
+
+    @staticmethod
     def _annehmen(request, pipelines, vorgabe, ziel, parameter=None):
         """Die POST-Haelfte beider Seiten: Datei pruefen, Auftrag anlegen."""
         video = request.FILES.get('video')
@@ -69,6 +84,7 @@ class Uploadseiten:
         return render(request, 'upload.html', {
             'status': zustand,
             'v21_jobs': Uploadseiten._auftraege(PIPELINES_2D),
+            'pipelines': Uploadseiten._pipelinewahl(PIPELINES_2D),
             'default_2d': (vorgabe if vorgabe in PIPELINES_2D else 'mediapipe'),
         })
 
@@ -117,6 +133,7 @@ class Uploadseiten:
             vorgabe = 'v4'
         return render(request, 'upload_v4.html', {
             'v4_jobs': auftraege,
+            'pipelines': Uploadseiten._pipelinewahl(PIPELINES_3D),
             'status_3d': Uploadseiten._pipelines_verfuegbar(),
             'default_3d': vorgabe,
             'defaults': Pipelineparameter.vorgaben(gespeichert),

@@ -1,0 +1,108 @@
+{% comment %}
+Die Tabelle der hochgeladenen Videos — 2D- und 3D-Uploadseite.
+
+BEFUND `doppelcode` (28.08.2026): 77 Zeilen standen zweimal, wortgleich bis auf
+vier Stellen: den Sortierschlüssel, die Auftragsliste, die Pipeline-Auswahl und
+die Zahl im Löschknopf. Wer die Zeilendarstellung ändert — Status, Fortschritt,
+Aktionen —, musste es zweimal tun.
+
+Verwendung:
+
+  {% verbatim %}{% include "_auftragstabelle.html" with auftraege=v21_jobs
+     sortier="videoauftraege-2d" pipelines=pipelines_2d %}{% endverbatim %}
+
+  auftraege   die Auftragsliste
+  sortier     `data-sort-key` der Tabelle (djangoBase merkt sich die Sortierung)
+  pipelines   [(wert, beschriftung)] für das Auswahlfeld je Zeile
+  mit_zahl    Löschknopf mit Zähler „(0)" — nur die 3D-Seite hat ihn
+
+DIE BESCHRIFTUNGEN KOMMEN JETZT AUS DEM MODELL (`BVHJob.PIPELINE_CHOICES`).
+Vorher standen sie ein drittes Mal in den Vorlagen, und sie liefen bereits
+auseinander: Die Tabelle zeigte über `get_pipeline_display` „YOLO11-Pose",
+das Auswahlfeld daneben „YOLO11"; ebenso „MocapNET v4" gegen „v4" und
+„Hybrid (GVHMR + MocapNET v4)" gegen „Hybrid (GVHMR)". Dieselbe Pipeline, zwei
+Namen, auf derselben Seite.
+
+Die Kennungen (`jobTable`, `jobTableBody`, `row-<id>`, `pl-<id>`, `select-all`,
+`bulk-delete-btn`) sind das Drahtformat zu `auftragsliste.js` — sie bleiben.
+{% endcomment %}
+<div class="zeile-mit-abstand">
+    <h3 class="hb-ohne-abstand">Uploaded Videos</h3>
+    {% comment %}`disabled` ist der richtige Anfangszustand:
+    `Auftragsliste.knopfstand()` schaltet den Knopf frei, sobald eine Zeile
+    angekreuzt ist. Hier stand einmal ein zweites `class`-Attribut
+    (`class="hb-versteckt"`) neben dem ersten — HTML kennt nur eines, der
+    Browser verwarf das zweite stillschweigend (gefunden 17.08.2026).{% endcomment %}
+    <button class="btn btn-sm btn-danger" id="bulk-delete-btn" disabled>
+        <i class="fas fa-trash"></i> Delete Selected{% if mit_zahl %} (<span id="bulk-count">0</span>){% endif %}
+    </button>
+</div>
+<table class="processed-table db-tabelle sortable" id="jobTable"
+       data-sort-key="{{ sortier }}">
+    <thead>
+        <tr>
+            <th class="spalte-schmal"><input type="checkbox" id="select-all"></th>
+            <th>Name</th>
+            <th>Pipeline</th>
+            <th>Status</th>
+            <th>Size</th>
+            <th>Created</th>
+            <th>Process</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="jobTableBody">
+        {% for job in auftraege %}
+        <tr id="row-{{ job.id }}" data-name="{{ job.name|lower }}" data-size="{{ job.video_size }}" data-date="{{ job.created_at|date:'Y-m-d H:i:s' }}">
+            <td><input type="checkbox" class="job-check" value="{{ job.id }}"></td>
+            <td>{{ job.name }}</td>
+            <td><span class="badge badge-{{ job.pipeline }}">{{ job.get_pipeline_display }}</span></td>
+            <td id="status-{{ job.id }}">
+                {% if job.status == 'complete' %}
+                    <span class="hb-gut"><i class="fas fa-check-circle"></i> Complete</span>
+                {% elif job.status == 'failed' %}
+                    <span class="hb-schlecht"><i class="fas fa-times-circle"></i> Failed</span>
+                {% elif job.status == 'pending' %}
+                    <span class="hb-laeuft"><i class="fas fa-clock"></i> Pending</span>
+                {% else %}
+                    <div class="inline-progress">
+                        <span class="status-text"><i class="fas fa-spinner fa-spin"></i> {{ job.get_status_display }}</span>
+                        <div class="progress-bar-mini">
+                            <div class="progress-fill-mini" style="width:{{ job.progress }}%"></div>
+                        </div>
+                        <span class="progress-pct">{{ job.progress }}%</span>
+                    </div>
+                {% endif %}
+            </td>
+            <td data-sort="{{ job.video_size }}">{{ job.video_size_display }}</td>
+            <td data-sort="{{ job.created_at|date:'Y-m-d H:i:s' }}">{{ job.created_at|date:"d.m.Y H:i" }}</td>
+            <td>
+                <div class="hb-zeilenaktionen">
+                    <select class="pipeline-select" id="pl-{{ job.id }}" data-current="{{ job.pipeline }}">
+                        {% for wert, beschriftung in pipelines %}
+                        <option value="{{ wert }}" {% if job.pipeline == wert %}selected{% endif %}>{{ beschriftung }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-primary" data-aktion="start" data-auftrag="{{ job.id }}">
+                        <i class="fas fa-play"></i>
+                    </button>
+                </div>
+            </td>
+            <td class="hb-zeilenaktionen">
+                {% if job.status == 'complete' %}
+                <a class="btn btn-sm btn-primary" href="{% url 'job_result' job.id %}">
+                    <i class="fas fa-eye"></i> View
+                </a>
+                {% elif job.status != 'pending' %}
+                <a class="btn btn-sm btn-secondary" href="{% url 'job_status' job.id %}">
+                    <i class="fas fa-info-circle"></i> Status
+                </a>
+                {% endif %}
+                <button class="btn btn-sm btn-danger" data-aktion="delete" data-auftrag="{{ job.id }}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
