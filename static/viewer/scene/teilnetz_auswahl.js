@@ -1,6 +1,7 @@
 import { fn } from '../gemeinsam/registrierung.js';
 import { markDirty } from './undo.js';
 import { state } from './state.js';
+import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 /**
  * Teilnetze eines Charakters auswaehlen und entfernen.
  *
@@ -142,14 +143,7 @@ export function _removeSubMesh(target) {
         }
         case 'hair': {
             if (inst.hairMesh) {
-                inst.group.remove(inst.hairMesh);
-                inst.hairMesh.traverse(child => {
-                    if (child.isMesh) {
-                        child.geometry.dispose();
-                        const mats = Array.isArray(child.material) ? child.material : [child.material];
-                        mats.forEach(m => m.dispose());
-                    }
-                });
+                Netzentsorgung.entfernen(inst.group, inst.hairMesh);
                 inst.hairMesh = null;
                 inst.hairStyle = null;
             }

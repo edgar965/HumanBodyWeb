@@ -17,6 +17,8 @@ import { _skinifyHairGroup, _skinifyMesh, convertInstToSkinned } from './skeleto
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
+import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { applyHairColor } from '../character_core.js';
 
 export class Charakterzubehoer {
 
@@ -181,14 +183,7 @@ export class Charakterzubehoer {
 
     static async haare(inst) {
         if (inst.hairMesh) {
-            inst.group.remove(inst.hairMesh);
-            inst.hairMesh.traverse(child => {
-                if (child.isMesh) {
-                    child.geometry.dispose();
-                    const mats = Array.isArray(child.material) ? child.material : [child.material];
-                    mats.forEach(m => m.dispose());
-                }
-            });
+            Netzentsorgung.entfernen(inst.group, inst.hairMesh);
             inst.hairMesh = null;
         }
 
@@ -204,16 +199,10 @@ export class Charakterzubehoer {
 
                 inst.hairMesh = hairGroup;
 
-                if (inst.hairStyle.color && state.hairColorData[inst.hairStyle.color]) {
-                    const rgb = state.hairColorData[inst.hairStyle.color];
-                    const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
-                    inst.hairMesh.traverse(child => {
-                        if (child.isMesh && child.material) {
-                            const mats = Array.isArray(child.material) ? child.material : [child.material];
-                            mats.forEach(m => { m.color.copy(color); });
-                        }
-                    });
-                }
+                // `applyHairColor` prueft die Farbe selbst und tut nichts,
+                // wenn es sie nicht gibt (28.08.2026, Befund `doppelcode`).
+                applyHairColor(inst.hairMesh, inst.hairStyle.color,
+                               state.hairColorData);
 
                 inst.group.add(inst.hairMesh);
                 resolve();

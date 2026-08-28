@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { wsSend } from './websocket.js';
 import { removeAllCloth, loadCloth } from './cloth.js';
-import { loadHair, applyHairColor } from './hair.js';
+import { loadHair, haarfarbeSetzen } from './hair.js';
 import { loadGarment, removeAllGarments } from './garment.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Metawerte } from './metawerte.js';
@@ -187,7 +187,7 @@ export class Modellvorgabe {
         if (!farbe || !angabe.color) return;
         farbe.value = angabe.color;
         // Die Farbe wirkt erst, wenn das Haarnetz geladen ist.
-        setTimeout(() => applyHairColor(angabe.color), Zeiten.SEKUNDE_MS);
+        setTimeout(() => haarfarbeSetzen(angabe.color), Zeiten.SEKUNDE_MS);
     }
 
     static _kleider(liste) {

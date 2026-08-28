@@ -13,6 +13,7 @@ import {
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
 const ss = sharedState;
 
@@ -68,10 +69,7 @@ export async function reloadBodyMesh(newType) {
     if (state.mixer) { state.mixer.stopAllAction(); state.mixer = null; state.currentAction = null; }
 
     if (state.bodyMesh) {
-        state.scene.remove(state.bodyMesh);
-        if (state.bodyMesh.geometry) state.bodyMesh.geometry.dispose();
-        const mats = Array.isArray(state.bodyMesh.material) ? state.bodyMesh.material : [state.bodyMesh.material];
-        mats.forEach(m => m.dispose());
+        Netzentsorgung.entfernen(state.scene, state.bodyMesh);
         state.bodyMesh = null;
     }
     state.bodyGeometry = null;

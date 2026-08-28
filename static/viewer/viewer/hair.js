@@ -8,7 +8,8 @@ import { ensureSkinned } from './skinning.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
-import { skinifyHairGroup } from '../character_core.js';
+import { applyHairColor, findHeadBoneIndex, skinifyHairGroup }
+    from '../character_core.js';
 
 export async function loadHairUI() {
     try {
@@ -43,7 +44,7 @@ export async function loadHairUI() {
 
         if (colorSelect) {
             colorSelect.addEventListener('change', () => {
-                applyHairColor(colorSelect.value);
+                haarfarbeSetzen(colorSelect.value);
             });
         }
     } catch (e) {
@@ -78,14 +79,10 @@ export function loadHair(url) {
     });
 }
 
+/** Kopfknochen dieser Seite — die Suche steht in `character_core`
+ *  (Umbau 28.08.2026, Befund `doppelcode`). */
 function _findHeadBoneIndex() {
-    if (!state.skinWeightData) return -1;
-    const names = state.skinWeightData.bone_names;
-    for (const tryName of ['DEF-spine.006', 'DEF-spine.005', 'DEF-head']) {
-        const idx = names.indexOf(tryName);
-        if (idx >= 0) return idx;
-    }
-    return -1;
+    return findHeadBoneIndex(state.skinWeightData);
 }
 
 /** Haare an den Kopfknochen des SEITENZUSTANDS binden.
@@ -148,20 +145,24 @@ export function refitHairToBody() {
     });
 }
 
-export function applyHairColor(colorName) {
+/**
+ * Die Farbe auf das Haar DIESER SEITE legen.
+ *
+ * Hiess bis zum 28.08.2026 ebenfalls `applyHairColor` — wie die Rechnung in
+ * `character_core`, aber mit anderer Bedeutung und anderer Signatur. Ein Name
+ * fuer zwei Dinge ist genauso teuer wie zwei Namen fuer eins (Kriterium 7);
+ * aufgefallen ist es, als diese Datei die gemeinsame Fassung importieren
+ * sollte und der Modullader abbrach.
+ */
+export function haarfarbeSetzen(colorName) {
     if (state.hairMesh) applyHairColorToObject(state.hairMesh, colorName);
 }
 
+/** Haarfarbe auf einen Objektbaum legen — die Rechnung steht in
+ *  `character_core.applyHairColor` (Umbau 28.08.2026, Befund `doppelcode`;
+ *  sie stand dreimal im Projekt). */
 export function applyHairColorToObject(obj, colorName) {
-    const rgb = state.hairColorData[colorName];
-    if (!rgb) return;
-    const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
-    obj.traverse(child => {
-        if (child.isMesh && child.material) {
-            const mats = Array.isArray(child.material) ? child.material : [child.material];
-            mats.forEach(m => { m.color.copy(color); });
-        }
-    });
+    applyHairColor(obj, colorName, state.hairColorData);
 }
 
 // Register
@@ -169,4 +170,4 @@ fn.loadHairUI = loadHairUI;
 fn.loadHair = loadHair;
 fn.removeHair = removeHair;
 fn.refitHairToBody = refitHairToBody;
-fn.applyHairColor = applyHairColor;
+fn.applyHairColor = haarfarbeSetzen;

@@ -13,6 +13,7 @@ import { _charQueryParams } from './utils.js';
 import { generateModelMesh, generateRigBoneMesh } from './state.js';
 import { Modellbauzustand } from './modellgenerator/zustand.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
 export class Charakterkoerper {
 
@@ -38,11 +39,7 @@ export class Charakterkoerper {
 
         if (!Netzpunkte.aktualisieren(inst.bodyMesh, data)) {
             if (inst.bodyMesh) {
-                inst.group.remove(inst.bodyMesh);
-                inst.bodyMesh.geometry.dispose();
-                const mats = Array.isArray(inst.bodyMesh.material)
-                    ? inst.bodyMesh.material : [inst.bodyMesh.material];
-                mats.forEach(m => m.dispose());
+                Netzentsorgung.entfernen(inst.group, inst.bodyMesh);
                 inst.bodyMesh = null;
             }
             await inst.load();

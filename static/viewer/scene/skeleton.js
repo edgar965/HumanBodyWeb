@@ -8,7 +8,8 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32 } from './utils.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
-import { skinifyHairGroup } from '../character_core.js';
+import { findHeadBoneIndex, skinifyHairGroup }
+    from '../character_core.js';
 
 export async function loadRigifySkeleton() {
     try {
@@ -88,15 +89,16 @@ export function _skinifyMesh(geo, mat, inst, data) {
     return new THREE.Mesh(geo, mat);
 }
 
-/** Find the head bone index in skinWeightData.bone_names. */
+/**
+ * Kopfknochen dieser SEITE.
+ *
+ * Die Suche steht in `character_core.findHeadBoneIndex` (Umbau 28.08.2026,
+ * Befund `doppelcode`) — hier und in `viewer/hair.js` stand sie ein zweites
+ * und drittes Mal, mit derselben Namensliste. Kommt ein Rig mit anderem
+ * Kopfknochen dazu, muss die Liste an EINER Stelle wachsen.
+ */
 export function _findHeadBoneIndex() {
-    if (!state.skinWeightData) return -1;
-    const names = state.skinWeightData.bone_names;
-    for (const tryName of ['DEF-spine.006', 'DEF-spine.005', 'DEF-head']) {
-        const idx = names.indexOf(tryName);
-        if (idx >= 0) return idx;
-    }
-    return -1;
+    return findHeadBoneIndex(state.skinWeightData);
 }
 
 /**

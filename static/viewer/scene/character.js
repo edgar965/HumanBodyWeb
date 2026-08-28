@@ -14,6 +14,7 @@ import { Charakterzubehoer } from './charakter_zubehoer.js';
 import { Charakterkoerper } from './charakter_koerper.js';
 import { addCharacterFromPreset, clearAllCharacters, deleteCharacter, deselectCharacter, focusCharacter, loadDefaultCharacter, selectCharacter, setTransformMode, updateCharacterListUI, updateVertexCount } from './charakterliste.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
 // =========================================================================
 // CharacterInstance
@@ -88,24 +89,15 @@ export class CharacterInstance {
 
 
     dispose() {
-        if (this.bodyMesh) {
-            this.bodyMesh.geometry.dispose();
-            const mats = Array.isArray(this.bodyMesh.material) ? this.bodyMesh.material : [this.bodyMesh.material];
-            mats.forEach(m => m.dispose());
+        Netzentsorgung.netz(this.bodyMesh);
+        // Ueber `Netzentsorgung`, nicht `mesh.material.dispose()`: Ein Netz
+        // mit MEHREREN Materialien haette hier eine TypeError geworfen
+        // (`material` ist dann ein Array). Bisher kam das nicht vor — der
+        // naechste Stoff mit Materialgruppen haette es ausgeloest.
+        for (const netz of Object.values(this.clothMeshes)) {
+            Netzentsorgung.netz(netz);
         }
-        for (const mesh of Object.values(this.clothMeshes)) {
-            mesh.geometry.dispose();
-            mesh.material.dispose();
-        }
-        if (this.hairMesh) {
-            this.hairMesh.traverse(child => {
-                if (child.isMesh) {
-                    child.geometry.dispose();
-                    const mats = Array.isArray(child.material) ? child.material : [child.material];
-                    mats.forEach(m => m.dispose());
-                }
-            });
-        }
+        Netzentsorgung.baum(this.hairMesh);
         if (this.group.parent) this.group.parent.remove(this.group);
     }
 
