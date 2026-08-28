@@ -220,18 +220,11 @@ export const state = {
 // =========================================================================
 export const SESSION_KEY = 'humanbody_scene_session';
 
-// =========================================================================
-// Garment region definitions (shared by garments, kleider, properties)
-// =========================================================================
-export const REGION_DEFS = [
-    { id: 'bottom', center: 0.10 },
-    { id: 'lower',  center: 0.30 },
-    { id: 'mid',    center: 0.50 },
-    { id: 'upper',  center: 0.70 },
-    { id: 'top',    center: 0.90 },
-];
-export const REGION_RADIUS = 0.20;
-export const REGION_IDS = ['top', 'upper', 'mid', 'lower', 'bottom'];
+// Kleiderregionen: die Tabelle stand hier UND in `viewer/state.js`
+// (Umbau 28.08.2026, Befund `doppelcode`). `REGION_IDS` gab es nur hier —
+// die beiden waren schon dabei auseinanderzulaufen.
+export { REGION_DEFS, REGION_RADIUS, REGION_IDS }
+    from '../gemeinsam/kleiderregionen.js';
 
 // Drei Stellen rufen `if (fn.serverLog) fn.serverLog(…)` — die Abfrage war
 // bisher immer falsch, weil die Szenenseite ihren Logger nie angemeldet hat

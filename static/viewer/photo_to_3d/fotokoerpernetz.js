@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { state, API, MODEL_OFFSET_X } from './state.js';
-import { alignBodyToSMPLX, BODY_MATERIALS } from './helpers.js';
+import { alignBodyToSMPLX } from './helpers.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
 import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
@@ -126,19 +126,7 @@ export class Fotokoerpernetz {
      * Materialien zuordnen — sonst gilt das erste für alles.
      */
     _materialien(daten, geo) {
-        const materialien = BODY_MATERIALS.map(angabe =>
-            new THREE.MeshStandardMaterial({
-                color: angabe.color, roughness: angabe.roughness,
-                metalness: angabe.metalness, side: THREE.DoubleSide,
-                transparent: angabe.transparent || false,
-                opacity: angabe.opacity !== undefined ? angabe.opacity : 1.0,
-            }));
-        const gruppen = daten.groups || [];
-        if (!geo.index || !gruppen.length) return materialien[0];
-        for (const gruppe of gruppen) {
-            geo.addGroup(gruppe.start, gruppe.count, gruppe.materialIndex);
-        }
-        return materialien;
+        return Koerpernetz.materialsatz(geo, daten, THREE);
     }
 
     // ---------------------------------------------------------------- Skinning

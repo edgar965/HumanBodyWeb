@@ -1,8 +1,6 @@
 import * as THREE from 'three';
-import { sharedState, applySkinColorToMaterials,
-         BODY_MATERIALS } from '../character_core.js';
-import { base64ToFloat32, base64ToUint32,
-         blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+import { sharedState, applySkinColorToMaterials }
+    from '../character_core.js';
 import { generateRigBoneMesh } from '../modellbau/rignetz.js';
 import { Spurzubehoer } from './spurzubehoer.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
@@ -118,22 +116,20 @@ export class Spurfigur {
         return this._geskinnt(geo, material);
     }
 
+    /**
+     * Materialien dieser Spur — mit ihrer Hautfarbe.
+     *
+     * Die Rechnung steht in `Koerpernetz.materialsatz` (28.08.2026, Befund
+     * `doppelcode`). Hier stand sie ein zweites Mal, in
+     * `photo_to_3d/fotokoerpernetz.js` ein drittes — und die Fassung hier
+     * hat die Verzweigung „Liste oder Hautmaterial allein" nur an der
+     * Gruppenzahl festgemacht, nicht am Index.
+     */
     _materialien(daten, geo) {
-        const materialien = BODY_MATERIALS.map(angabe =>
-            new THREE.MeshStandardMaterial({
-                color: angabe.color, roughness: angabe.roughness,
-                metalness: angabe.metalness, side: THREE.DoubleSide,
-                transparent: angabe.transparent || false,
-                opacity: angabe.opacity !== undefined ? angabe.opacity : 1.0,
-            }));
-        applySkinColorToMaterials(materialien, this.spur.bodyType,
-                                  sharedState.skinColors);
-        const gruppen = daten.groups || [];
-        if (!gruppen.length) return materialien[0];
-        for (const gruppe of gruppen) {
-            geo.addGroup(gruppe.start, gruppe.count, gruppe.materialIndex);
-        }
-        return materialien;
+        return Koerpernetz.materialsatz(
+            geo, daten, THREE,
+            (materialien) => applySkinColorToMaterials(
+                materialien, this.spur.bodyType, sharedState.skinColors));
     }
 
     _geskinnt(geo, material) {

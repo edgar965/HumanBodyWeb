@@ -35,15 +35,7 @@ export class Modellgenerator {
             return;
         }
         if (!Modellbauzustand.konfig) await Modellgenerator._konfigBeschaffen();
-        if (!Modellbauzustand.gebunden) {
-            Modellgenerator.binden();
-            Modellbauzustand.gebunden = true;
-        }
-        const art = document.getElementById('mg-skeleton-type');
-        if (art) art.value = Modellbauzustand.skelettart;
-
-        Modellgenerator.baumAufbauen();
-        Modellgenerator.globalreglerNachziehen();
+        Modellgenerator._anlaufen();
         document.querySelectorAll('#tab-modell .panel-section')
             .forEach(p => p.classList.remove('collapsed'));
     }
@@ -78,6 +70,30 @@ export class Modellgenerator {
         Modellbauzustand.konfig = getDefaultModelConfig(state.rigifySkeletonData,
                                                         state.skinWeightData);
         return true;
+    }
+
+    /**
+     * Einmal binden, Skelettart nachziehen, Baum und Regler aufbauen.
+     *
+     * WARUM ALS EIGENER SCHRITT (28.08.2026, Befund `doppelcode`): Diese acht
+     * Zeilen standen zweimal in DIESER Datei — in `starten()` und in
+     * `knochenklick()`. Sie hängen zusammen und müssen in dieser Reihenfolge
+     * laufen: `binden()` zuerst, sonst hängen die Ereignisse an Elementen,
+     * die der Baumaufbau gleich wieder ersetzt.
+     *
+     * `gebunden` ist die Sperre dagegen, zweimal zu binden. Ohne sie feuert
+     * jeder Regler doppelt — und das sieht man nicht, man merkt es nur daran,
+     * dass das Modell zweimal neu gebaut wird.
+     */
+    static _anlaufen() {
+        if (!Modellbauzustand.gebunden) {
+            Modellgenerator.binden();
+            Modellbauzustand.gebunden = true;
+        }
+        const art = document.getElementById('mg-skeleton-type');
+        if (art) art.value = Modellbauzustand.skelettart;
+        Modellgenerator.baumAufbauen();
+        Modellgenerator.globalreglerNachziehen();
     }
 
     static baumAufbauen() {
@@ -170,14 +186,7 @@ export class Modellgenerator {
     static knochenklick(name, inst) {
         if (!Modellbauzustand.konfig && inst.generatedConfig) {
             Modellbauzustand.ausCharakter(inst);
-            if (!Modellbauzustand.gebunden) {
-                Modellgenerator.binden();
-                Modellbauzustand.gebunden = true;
-            }
-            const art = document.getElementById('mg-skeleton-type');
-            if (art) art.value = Modellbauzustand.skelettart;
-            Modellgenerator.baumAufbauen();
-            Modellgenerator.globalreglerNachziehen();
+            Modellgenerator._anlaufen();
         }
         if (!Modellbauzustand.charakterId && inst.generatedConfig) {
             Modellbauzustand.ausCharakter(inst);

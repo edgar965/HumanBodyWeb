@@ -26,15 +26,10 @@ export const DEFAULT_BODY = CFG.defaultBodyType || null;
 // (`gemeinsam/koerpermaterialien.js`, Befund `doppelcode` 17.08.2026).
 export { BODY_MATERIALS } from '../gemeinsam/koerpermaterialien.js';
 
-// Region definitions: each region is a band of the garment's Y extent
-export const REGION_DEFS = [
-    { id: 'bottom', center: 0.10 },
-    { id: 'lower',  center: 0.30 },
-    { id: 'mid',    center: 0.50 },
-    { id: 'upper',  center: 0.70 },
-    { id: 'top',    center: 0.90 },
-];
-export const REGION_RADIUS = 0.20;
+// Kleiderregionen: siehe `gemeinsam/kleiderregionen.js` (Umbau 28.08.2026,
+// Befund `doppelcode`). `REGION_IDS` kommt jetzt mit — hier fehlte es.
+export { REGION_DEFS, REGION_RADIUS, REGION_IDS }
+    from '../gemeinsam/kleiderregionen.js';
 
 // =========================================================================
 // Shared mutable state

@@ -44,7 +44,7 @@ export class Koerpernetz {
      */
     static bauen(daten, THREE) {
         const geometrie = Koerpernetz.geometrie(daten, THREE);
-        Koerpernetz._gruppen(geometrie, daten);
+        Koerpernetz.gruppen(geometrie, daten);
         return { geometrie, materialien: Koerpernetz.materialien(THREE) };
     }
 
@@ -87,11 +87,35 @@ export class Koerpernetz {
      * Ohne die Gruppen trägt das ganze Netz Material 0 (Haut): Augen, Zähne
      * und Nägel verschwinden optisch im Körper.
      */
-    static _gruppen(geometrie, daten) {
+    static gruppen(geometrie, daten) {
         if (!geometrie.getIndex()) return;
         for (const g of daten.groups || []) {
             geometrie.addGroup(g.start, g.count, g.materialIndex);
         }
+    }
+
+    /**
+     * Materialien UND Materialgruppen in einem Schritt.
+     *
+     * WARUM ZUSAMMEN (28.08.2026, Befund `doppelcode`): Die beiden gehören
+     * zusammen und standen trotzdem dreimal getrennt da — in `bauen()` hier,
+     * in `bvh_studio/spurfigur.js` und in `photo_to_3d/fotokoerpernetz.js`.
+     *
+     * Der Rückgabewert ist der heikle Teil: OHNE Gruppen kann Three.js mit
+     * einem Array nichts anfangen und rendert das Netz SCHWARZ. Deshalb dann
+     * das Hautmaterial allein. `spurfigur` hat diese Verzweigung nur an der
+     * Gruppenzahl festgemacht, nicht am Index — ein Netz ohne Index bekam
+     * dort eine Materialliste, die keine Gruppe adressiert.
+     *
+     * @param nachbereiten Optionaler Eingriff an der Liste, BEVOR sie
+     *     zurückgeht — die Spuren im BVH-Studio färben dort ihre Hautfarbe
+     *     ein.
+     */
+    static materialsatz(geometrie, daten, THREE, nachbereiten = null) {
+        const materialien = Koerpernetz.materialien(THREE);
+        if (nachbereiten) nachbereiten(materialien);
+        Koerpernetz.gruppen(geometrie, daten);
+        return geometrie.groups.length ? materialien : materialien[0];
     }
 
     /** Die Materialliste des Körpers, in der Reihenfolge der Gruppen. */
