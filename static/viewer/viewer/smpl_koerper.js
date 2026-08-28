@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { state } from './state.js';
-import { base64ToFloat32, base64ToUint32 } from './utils.js';
+import { base64ToFloat32 } from './utils.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Smpllicht } from './smpl_licht.js';
 import { Smpleinstellungen } from './smpl_einstellungen.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 /**
  * Smplkoerper — der SMPL-Körper des Reiters, seine zehn Formregler und
@@ -169,12 +170,17 @@ export class Smplkoerper {
         geometrie.computeBoundingSphere();
     }
 
+    /**
+     * Das Koerpernetz — Punkte und Normalen kommen FERTIG herein.
+     *
+     * Sie werden vorher an anderer Stelle aus der Antwort geholt und beim
+     * Auffrischen wiederverwendet; deshalb gehen hier `vertices`/`normals`
+     * als bereits dekodierte Puffer in die gemeinsame Fassung, und gedreht
+     * wird nicht mehr (28.08.2026, Befund `doppelcode`).
+     */
     static _aufbauenNetz(daten, punkte, normalen) {
-        const geometrie = new THREE.BufferGeometry();
-        geometrie.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
-        geometrie.setIndex(new THREE.BufferAttribute(
-            base64ToUint32(daten.faces), 1));
-        geometrie.setAttribute('normal', new THREE.BufferAttribute(normalen, 3));
+        const geometrie = Netzgeometrie.ausPuffern(punkte, normalen,
+                                                   daten.faces, THREE);
         const gitter = document.getElementById('smpl-body-wireframe')?.checked
             || false;
         const netz = new THREE.Mesh(geometrie, new THREE.MeshStandardMaterial({

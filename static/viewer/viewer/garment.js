@@ -86,13 +86,12 @@ export async function loadGarment(garmentId) {
 
         removeGarment(garmentId, true);
 
-        // `normals: null` mit Absicht: Diese Stelle hat die vom Server
-        // mitgelieferten Normalen SCHON IMMER verworfen und selbst gerechnet,
-        // waehrend jede andere Stoff-Stelle sie benutzt. Beim Zusammenziehen
-        // (28.08.2026) bleibt das Verhalten, wie es war — welche der beiden
-        // Beleuchtungen richtig ist, entscheidet ein Blick, nicht eine
-        // Aufraeumarbeit.
-        const geo = Netzgeometrie.bauen({ ...data, normals: null }, THREE);
+        // MIT den Normalen vom Server (28.08.2026). Diese Stelle war die
+        // EINZIGE im Projekt, die sie verworfen und selbst gerechnet hat —
+        // dasselbe Kleidungsstueck war im Betrachter anders beleuchtet als in
+        // der Szene. Das war kein Entwurf, sondern eine Kopie, die
+        // auseinandergelaufen ist.
+        const geo = Netzgeometrie.bauen(data, THREE);
 
         const matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
         const mat = new THREE.MeshStandardMaterial({
@@ -114,7 +113,12 @@ export async function loadGarment(garmentId) {
 
         state.garmentMeshes[garmentId] = mesh;
         state.scene.add(mesh);
-        state.garmentOrigPositions[garmentId] = new Float32Array(vertBuf);
+        // Die Ausgangslagen kommen aus dem Attribut, nicht aus einer
+        // Zwischenvariablen: `vertBuf` gab es hier bis zum 28.08.2026, und
+        // beim Zusammenziehen ist genau diese Zeile stehengeblieben —
+        // gefunden von `Docu/umbau/kleidung_probe.mjs`, nicht vom Testlauf.
+        state.garmentOrigPositions[garmentId] =
+            new Float32Array(geo.getAttribute('position').array);
         _computeRegionWeights(garmentId);
         _saveGarmentState(garmentId);
         _applyGarmentState(garmentId);

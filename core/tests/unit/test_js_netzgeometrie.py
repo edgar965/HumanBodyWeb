@@ -96,6 +96,26 @@ const neu2 = Netzgeometrie.bauen({...daten, normals: null}, THREE);
 let gemerkt = null;
 const neu3 = Netzgeometrie.bauen(daten, THREE, (p) => { gemerkt = Array.from(p); });
 
+// --- SMPL: dieselbe Rechnung OHNE Drehung ---------------------------------
+function altOhneDrehung(data) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(
+        base64ToFloat32(data.vertices), 3));
+    geo.setIndex(new THREE.BufferAttribute(base64ToUint32(data.faces), 1));
+    geo.setAttribute('normal', new THREE.BufferAttribute(
+        base64ToFloat32(data.normals), 3));
+    return geo;
+}
+const alt4 = altOhneDrehung(daten);
+const neu4 = Netzgeometrie.bauen(daten, THREE, null, false);
+
+// --- und aus fertigen Puffern (smpl_koerper) ------------------------------
+const fertigePunkte = new Float32Array([9, 8, 7,  6, 5, 4]);
+const fertigeNormalen = new Float32Array([1, 0, 0,  0, 1, 0]);
+const neu5 = Netzgeometrie.ausPuffern(fertigePunkte, fertigeNormalen,
+                                      daten.faces, THREE);
+const neu6 = Netzgeometrie.ausPuffern(fertigePunkte, null, null, THREE);
+
 const feld = (g, n) => g.attribute[n] ? Array.from(g.attribute[n].array) : null;
 console.log(JSON.stringify({
     altPosition: feld(alt1, 'position'), neuPosition: feld(neu1, 'position'),
@@ -107,6 +127,11 @@ console.log(JSON.stringify({
     ohneUv: feld(Netzgeometrie.bauen({vertices: daten.vertices}, THREE), 'uv'),
     ohneIndex: Netzgeometrie.bauen({vertices: daten.vertices}, THREE).index,
     gemerkt, neu3Position: feld(neu3, 'position'),
+    altUngedreht: feld(alt4, 'position'), neuUngedreht: feld(neu4, 'position'),
+    altUngedrehtN: feld(alt4, 'normal'), neuUngedrehtN: feld(neu4, 'normal'),
+    puffPosition: feld(neu5, 'position'), puffNormal: feld(neu5, 'normal'),
+    puffIndex: Array.from(neu5.index.array),
+    puffOhneIndex: neu6.index, puffGerechnet: neu6.gerechnet,
 }));
 """
 
@@ -149,6 +174,30 @@ class NetzgeometrieTest(SimpleTestCase):
         Attribut und keinen leeren Index erzeugen."""
         self.assertIsNone(self.e['ohneUv'])
         self.assertIsNone(self.e['ohneIndex'])
+
+    def test_ohne_drehung_wie_die_alte_smpl_fassung(self):
+        u"""SMPL liefert bereits Three-Achsen. Wer sie ein zweites Mal dreht,
+        legt das Netz um 90 Grad gekippt daneben — deshalb waren die drei
+        SMPL-Stellen bis zum 28.08.2026 handgebaut."""
+        self.assertEqual(self.e['neuUngedreht'], self.e['altUngedreht'])
+        self.assertEqual(self.e['neuUngedrehtN'], self.e['altUngedrehtN'])
+
+    def test_ohne_drehung_ist_wirklich_ungedreht(self):
+        u"""Gegenprobe: Der Schalter muss auch etwas BEWIRKEN — sonst wäre der
+        Vergleich oben grün, weil beide Fassungen drehen."""
+        self.assertNotEqual(self.e['neuUngedreht'], self.e['neuPosition'])
+        self.assertEqual(self.e['neuUngedreht'][:3], [0, 1, 2])
+
+    def test_aus_fertigen_puffern(self):
+        u"""`smpl_koerper` holt Punkte und Normalen an anderer Stelle und
+        frischt sie später im selben Puffer auf."""
+        self.assertEqual(self.e['puffPosition'], [9, 8, 7, 6, 5, 4])
+        self.assertEqual(self.e['puffNormal'], [1, 0, 0, 0, 1, 0])
+        self.assertEqual(self.e['puffIndex'], self.e['altIndex'])
+
+    def test_aus_puffern_ohne_normalen_und_ohne_flaechen(self):
+        self.assertIsNone(self.e['puffOhneIndex'])
+        self.assertTrue(self.e['puffGerechnet'])
 
     def test_haken_bekommt_den_gedrehten_puffer(self):
         u"""`mhproxynetz` merkt sich den Puffer für die Anpassung an die

@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { state } from './state.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './utils.js';
+import { base64ToFloat32 } from './utils.js';
 import { ensureSkinned } from './skinning.js';
 import { Smplkoerperfrage } from './smpl_koerperfrage.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 /**
  * Smplkleidernetz — ein SMPL-Kleidungsstück laden, anpassen und entfernen.
@@ -66,15 +67,15 @@ export class Smplkleidernetz {
         return true;
     }
 
+    /**
+     * Die Vorschau-Geometrie — OHNE Achsdrehung.
+     *
+     * SMPL liefert bereits Three-Achsen. Der vierte Parameter ist genau
+     * dieser Unterschied (28.08.2026, Befund `doppelcode`); davor war die
+     * Stelle deshalb handgebaut.
+     */
     static _geometrie(daten) {
-        const geometrie = new THREE.BufferGeometry();
-        geometrie.setAttribute('position', new THREE.BufferAttribute(
-            base64ToFloat32(daten.vertices), 3));
-        geometrie.setIndex(new THREE.BufferAttribute(
-            base64ToUint32(daten.faces), 1));
-        geometrie.setAttribute('normal', new THREE.BufferAttribute(
-            base64ToFloat32(daten.normals), 3));
-        return geometrie;
+        return Netzgeometrie.bauen(daten, THREE, null, false);
     }
 
     static _werkstoffAusReglern() {
@@ -150,13 +151,11 @@ export class Smplkleidernetz {
      * sich die Figur bewegt.
      */
     static _angepasstesNetz(daten) {
-        const punkte = base64ToFloat32(daten.vertices);
-        blenderToThreeCoords(punkte);
-        const geometrie = new THREE.BufferGeometry();
-        geometrie.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
-        geometrie.setIndex(new THREE.BufferAttribute(
-            base64ToUint32(daten.faces), 1));
-        geometrie.computeVertexNormals();
+        // MIT Drehung: Das ANGEPASSTE Netz kommt aus der Kleider-Anpassung
+        // und damit in Blender-Achsen — anders als die SMPL-Vorschau
+        // darueber. Die Normalen rechnet Three, der Server liefert hier keine.
+        const geometrie = Netzgeometrie.bauen({ ...daten, normals: null },
+                                              THREE);
         const werkstoff = Smplkleidernetz.stoffwerkstoff(
             new THREE.Color(daten.color[0], daten.color[1], daten.color[2]), 0.8);
         if (!state.isSkinned || !state.rigifySkeleton
