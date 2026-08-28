@@ -8,6 +8,7 @@
  */
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Modellbauzustand } from './zustand.js';
+import { Teilbindung } from './teilbindung.js';
 
 /** [Kennung, Eigenschaft, Vorgabe, Stellen, Baumeintrag auffrischen] */
 const SCHIEBER = [
@@ -42,14 +43,7 @@ export class Knochenregler {
 
     static _schieberBinden(neuAufbauen, baumAuffrischen) {
         for (const [id, eigenschaft, , stellen, imBaum] of SCHIEBER) {
-            const regler = document.getElementById(id);
-            if (!regler) continue;
-            const anzeige = document.getElementById(id + '-val');
-            regler.addEventListener('input', () => {
-                const v = parseFloat(regler.value);
-                if (anzeige) anzeige.textContent = v.toFixed(stellen);
-                const teil = Modellbauzustand.teil();
-                if (!teil) return;
+            Teilbindung.regler(id, (v) => v.toFixed(stellen), (teil, v) => {
                 teil[eigenschaft] = v;
                 if (imBaum) baumAuffrischen(Modellbauzustand.gewaehlterKnochen);
                 neuAufbauen();
@@ -59,11 +53,7 @@ export class Knochenregler {
 
     static _schalterBinden(neuAufbauen) {
         for (const [id, eigenschaft] of SCHALTER) {
-            const feld = document.getElementById(id);
-            if (!feld) continue;
-            feld.addEventListener('change', () => {
-                const teil = Modellbauzustand.teil();
-                if (!teil) return;
+            Teilbindung.an(id, 'change', (teil, feld) => {
                 teil[eigenschaft] = feld.checked;
                 neuAufbauen();
             });
@@ -73,30 +63,24 @@ export class Knochenregler {
     static _vektorenBinden(neuAufbauen) {
         for (const [praefix, eigenschaft, stellen] of VEKTOREN) {
             for (const achse of ['x', 'y', 'z']) {
-                const regler = document.getElementById(praefix + achse);
-                if (!regler) continue;
-                const anzeige = document.getElementById(praefix + achse + '-val');
-                regler.addEventListener('input', () => {
-                    const v = parseFloat(regler.value);
-                    if (anzeige) {
-                        anzeige.textContent = stellen ? v.toFixed(stellen) : String(v);
-                    }
-                    const teil = Modellbauzustand.teil();
-                    if (!teil) return;
-                    if (!teil[eigenschaft]) teil[eigenschaft] = { x: 0, y: 0, z: 0 };
-                    teil[eigenschaft][achse] = v;
-                    neuAufbauen();
-                });
+                // `String(v)` bei null Stellen, nicht `toFixed(0)`: Die
+                // Drehung zeigt so „7.5“ statt „8“ (Stand vor dem Umbau).
+                Teilbindung.regler(
+                    praefix + achse,
+                    (v) => (stellen ? v.toFixed(stellen) : String(v)),
+                    (teil, v) => {
+                        if (!teil[eigenschaft]) {
+                            teil[eigenschaft] = { x: 0, y: 0, z: 0 };
+                        }
+                        teil[eigenschaft][achse] = v;
+                        neuAufbauen();
+                    });
             }
         }
     }
 
     static _farbeBinden(neuAufbauen, baumAuffrischen) {
-        const feld = document.getElementById('mg-bone-color');
-        if (!feld) return;
-        feld.addEventListener('input', () => {
-            const teil = Modellbauzustand.teil();
-            if (!teil) return;
+        Teilbindung.an('mg-bone-color', 'input', (teil, feld) => {
             teil.color = feld.value;
             baumAuffrischen(Modellbauzustand.gewaehlterKnochen);
             neuAufbauen();
@@ -104,35 +88,22 @@ export class Knochenregler {
     }
 
     static _formBinden(formGewechselt) {
-        const form = document.getElementById('mg-bone-shape');
-        if (form) {
-            form.addEventListener('change', () => {
-                const teil = Modellbauzustand.teil();
-                if (!teil) return;
-                teil.shape = form.value;
-                formGewechselt(form.value);
-            });
-        }
-        const kleidung = document.getElementById('mg-bone-garment');
-        if (kleidung) {
-            kleidung.addEventListener('change', () => {
-                const teil = Modellbauzustand.teil();
-                if (!teil) return;
-                teil.is_garment = kleidung.checked;
-                fn.markDirty?.(kleidung.checked ? 'Kleidungsstueck an'
-                                                : 'Kleidungsstueck aus');
-            });
-        }
+        Teilbindung.an('mg-bone-shape', 'change', (teil, form) => {
+            teil.shape = form.value;
+            formGewechselt(form.value);
+        });
+        Teilbindung.an('mg-bone-garment', 'change', (teil, kleidung) => {
+            teil.is_garment = kleidung.checked;
+            fn.markDirty?.(kleidung.checked ? 'Kleidungsstueck an'
+                                            : 'Kleidungsstueck aus');
+        });
     }
 
     static _texturBinden(neuAufbauen) {
-        const datei = document.getElementById('mg-bone-texture-file');
-        const loeschen = document.getElementById('mg-bone-texture-clear');
-        if (datei) {
-            datei.addEventListener('change', () => {
-                const f = datei.files && datei.files[0];
-                const teil = Modellbauzustand.teil();
-                if (!f || !teil) return;
+        const datei = Teilbindung.an(
+            'mg-bone-texture-file', 'change', (teil, feld) => {
+                const f = feld.files && feld.files[0];
+                if (!f) return;
                 const leser = new FileReader();
                 leser.onload = () => {
                     teil.texture = leser.result;
@@ -142,18 +113,13 @@ export class Knochenregler {
                 };
                 leser.readAsDataURL(f);
             });
-        }
-        if (loeschen) {
-            loeschen.addEventListener('click', () => {
-                const teil = Modellbauzustand.teil();
-                if (!teil) return;
-                delete teil.texture;
-                Knochenregler._texturZeigen(null);
-                if (datei) datei.value = '';
-                neuAufbauen();
-                fn.markDirty?.('Textur entfernt');
-            });
-        }
+        Teilbindung.an('mg-bone-texture-clear', 'click', (teil) => {
+            delete teil.texture;
+            Knochenregler._texturZeigen(null);
+            if (datei) datei.value = '';
+            neuAufbauen();
+            fn.markDirty?.('Textur entfernt');
+        });
     }
 
     static _texturZeigen(datenUrl) {

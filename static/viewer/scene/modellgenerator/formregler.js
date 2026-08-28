@@ -13,6 +13,7 @@
  */
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Modellbauzustand } from './zustand.js';
+import { Teilbindung } from './teilbindung.js';
 
 /** [Kennung, Eigenschaft, Vorgabewert, Nachkommastellen] */
 export const FORMREGLER = [
@@ -70,18 +71,11 @@ export class Formregler {
     /** Alle Regler einmalig an den Zustand haengen. */
     static binden(neuAufbauen) {
         for (const [id, eigenschaft, , stellen] of FORMREGLER) {
-            const regler = document.getElementById(id);
-            if (!regler) continue;
-            const anzeige = document.getElementById(id + '-val');
-            regler.addEventListener('input', () => {
-                const v = parseFloat(regler.value);
-                if (anzeige) anzeige.textContent = v.toFixed(stellen);
-                const teil = Modellbauzustand.teil();
-                if (!teil) return;
-                teil[eigenschaft] = v;
-                neuAufbauen();
-            });
-            regler.addEventListener('change', () => fn.markDirty?.(eigenschaft));
+            const regler = Teilbindung.regler(
+                id, (v) => v.toFixed(stellen),
+                (teil, v) => { teil[eigenschaft] = v; neuAufbauen(); });
+            regler?.addEventListener('change',
+                                     () => fn.markDirty?.(eigenschaft));
         }
     }
 
