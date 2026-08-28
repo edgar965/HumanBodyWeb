@@ -1,0 +1,27 @@
+{% comment %}
+Der Kopf einer Vergleichstabelle (Uploadseiten).
+
+BEFUND `doppelcode` (28.08.2026): Diese neun Zeilen standen in `upload.html`
+und `upload_v4.html` — fünf der sechs Spaltennamen gleich, nur der erste
+unterschiedlich („Detektor" gegen „Pipeline"). Wer eine Spalte ergänzt, muss
+sie sonst zweimal ergänzen, und beim zweiten Mal steht sie an anderer Stelle.
+
+Verwendung:
+
+  {% verbatim %}<table class="compare-table doku">
+    {% include "_vergleichskopf.html" with spalte="Detektor" %}
+    <tbody>…</tbody>
+  </table>{% endverbatim %}
+
+  spalte  Name der ersten Spalte
+{% endcomment %}
+<thead>
+    <tr>
+        <th>{{ spalte }}</th>
+        <th>Genauigkeit</th>
+        <th>Geschwindigkeit</th>
+        <th>GPU VRAM</th>
+        <th>RAM</th>
+        <th>Empfehlung</th>
+    </tr>
+</thead>

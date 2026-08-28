@@ -324,3 +324,14 @@
 .hb-symbolspalte.hb-symbolspalte.hb-symbolspalte { width:16px; }   /* aus 3 Vorlagen */
 .hb-versteckt.hb-versteckt.hb-versteckt { display:none; }   /* aus 9 Vorlagen */
 .hb-volle-breite.hb-volle-breite.hb-volle-breite { width:100%; }   /* aus 4 Vorlagen */
+
+/* Auftragszustaende und Zeilenaktionen (28.08.2026, Befund `doppelcode`).
+ *
+ * Standen in `upload.html` und `upload_v4.html` je einmal. Seit die Tabelle
+ * aus `_auftragstabelle.html` kommt, braucht sie JEDE Seite, die den Baustein
+ * einbindet — und die kennt die Klassen nur von hier. */
+.hb-breite-0.hb-breite-0.hb-breite-0 { width:0%; }
+.hb-gut.hb-gut.hb-gut { color:#2ecc71; }
+.hb-schlecht.hb-schlecht.hb-schlecht { color:#e74c3c; }
+.hb-laeuft.hb-laeuft.hb-laeuft { color:#f39c12; }
+.hb-zeilenaktionen.hb-zeilenaktionen.hb-zeilenaktionen { display:flex; gap:5px; align-items:center; }

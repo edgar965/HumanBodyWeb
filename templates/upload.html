@@ -79,16 +79,7 @@
 <div class="info-box">
     <h3>Vergleich 2D Detektoren</h3>
     <table class="compare-table doku">
-        <thead>
-            <tr>
-                <th>Detektor</th>
-                <th>Genauigkeit</th>
-                <th>Geschwindigkeit</th>
-                <th>GPU VRAM</th>
-                <th>RAM</th>
-                <th>Empfehlung</th>
-            </tr>
-        </thead>
+        {% include "_vergleichskopf.html" with spalte="Detektor" %}
         <tbody>
             <tr>
                 <td><strong>MediaPipe</strong></td>
@@ -194,12 +185,6 @@
 }
 
 /* Umbau 16.08.2026: ersetzt Inline-Stile aus dem fruehen JavaScript. */
-.hb-versteckt { display: none; }
-.hb-breite-0 { width: 0%; }
-.hb-gut { color: #2ecc71; }
-.hb-schlecht { color: #e74c3c; }
-.hb-laeuft { color: #f39c12; }
-.hb-zeilenaktionen { display: flex; gap: 5px; align-items: center; }
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
