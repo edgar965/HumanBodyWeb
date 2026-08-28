@@ -12,7 +12,7 @@ import { _skinifyMesh } from './skeleton.js';
 import { markDirty } from './undo.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Stoffgeometrie } from '../gemeinsam/stoffgeometrie.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 export function _syncPropGarmentControls() {
     const sel = _selectedGarmentMesh();
@@ -97,8 +97,8 @@ export async function _refitAllForCurrentChar() {
                     inst.clothMeshes[key].geometry.dispose();
                     inst.clothMeshes[key].material.dispose();
                 }
-                const vertBuf = Stoffgeometrie.punkte(data.vertices);
-                const geo = Stoffgeometrie.bauen(
+                const vertBuf = Netzgeometrie.punkte(data.vertices);
+                const geo = Netzgeometrie.bauen(
                     { vertices: data.vertices, faces: data.faces }, THREE);
                 const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color[0], color[1], color[2]), roughness: gState.roughness ?? 0.8, metalness: gState.metalness ?? 0.0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnit: -1 });
                 const mesh = _skinifyMesh(geo, mat, inst, data);

@@ -4,15 +4,16 @@
 import * as THREE from 'three';
 import { state, REGION_DEFS, REGION_RADIUS } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, bindSlider, sliderVal } from './utils.js';
+import { base64ToFloat32, sliderVal } from './utils.js';
 import { ensureSkinned } from './skinning.js';
-import { _saveGarmentState } from './garment_liste.js';
-import { _applyGarmentState, _downloadPack, _loadDownloadPacks, _renderGarmentList } from './garment_liste.js';
+import { _applyGarmentState, _saveGarmentState }
+    from './garment_liste.js';
 import { Kleiderbedienung } from './kleiderbedienung.js';
 import { Metawerte } from './metawerte.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 export async function loadGarmentUI() {
     // Die Bedienung steckt in `Kleiderbedienung` (viewer/kleiderbedienung.js) —
@@ -85,14 +86,13 @@ export async function loadGarment(garmentId) {
 
         removeGarment(garmentId, true);
 
-        const vertBuf = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(vertBuf);
-        const faceBuf = base64ToUint32(data.faces);
-
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-        geo.computeVertexNormals();
+        // `normals: null` mit Absicht: Diese Stelle hat die vom Server
+        // mitgelieferten Normalen SCHON IMMER verworfen und selbst gerechnet,
+        // waehrend jede andere Stoff-Stelle sie benutzt. Beim Zusammenziehen
+        // (28.08.2026) bleibt das Verhalten, wie es war — welche der beiden
+        // Beleuchtungen richtig ist, entscheidet ein Blick, nicht eine
+        // Aufraeumarbeit.
+        const geo = Netzgeometrie.bauen({ ...data, normals: null }, THREE);
 
         const matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
         const mat = new THREE.MeshStandardMaterial({

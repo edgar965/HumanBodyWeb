@@ -3,10 +3,9 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _charQueryParams } from './utils.js';
 import { _skinifyMesh, convertInstToSkinned } from './skeleton.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords }
-    from '../gemeinsam/kodierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 /**
  * Mhproxynetz — ein MakeHuman-Proxy anfragen und als Netz in die Figur hängen.
@@ -122,16 +121,11 @@ export class Mhproxynetz {
     // -------------------------------------------------------------------- Netz
 
     netzBauen(daten) {
-        const punkte = base64ToFloat32(daten.vertices);
-        blenderToThreeCoords(punkte);
-        const normalen = base64ToFloat32(daten.normals);
-        blenderToThreeCoords(normalen);     // auch die Normalen (siehe Doku)
-        const geometrie = new THREE.BufferGeometry();
-        geometrie.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
-        geometrie.setIndex(
-            new THREE.BufferAttribute(base64ToUint32(daten.faces), 1));
-        geometrie.setAttribute('normal', new THREE.BufferAttribute(normalen, 3));
-        this._punkte = punkte;
+        // Der Haken merkt sich den Punktpuffer: Er wird spaeter fuer die
+        // Anpassung an die Figur gebraucht, und ein zweites Dekodieren waere
+        // bei 70.000 Punkten Verschwendung.
+        const geometrie = Netzgeometrie.bauen(
+            daten, THREE, (puffer) => { this._punkte = puffer; });
         return _skinifyMesh(geometrie, this.werkstoff(daten), this.inst, daten);
     }
 

@@ -3,13 +3,12 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _charQueryParams, _selectedInst, _sliderVal } from './utils.js';
 import { _skinifyMesh, convertInstToSkinned } from './skeleton.js';
-import { base64ToFloat32, base64ToUint32,
-         blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 import { _applyGarmentRegionOffsets,
          _computeGarmentRegionWeights } from './kleidung_anpassen.js';
 import { Kleidungszustand } from './kleidungszustand.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 /**
  * Kleideranpassung — ein Kleidungsstück am Server an die Figur anpassen lassen
@@ -119,15 +118,7 @@ export class Kleideranpassung {
 
     netzEinsetzen(figur, schluessel, daten, farbe, zustand) {
         this._altesEntsorgen(figur, schluessel);
-        const punkte = base64ToFloat32(daten.vertices);
-        blenderToThreeCoords(punkte);
-        const normalen = base64ToFloat32(daten.normals);
-        blenderToThreeCoords(normalen);
-
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
-        geo.setIndex(new THREE.BufferAttribute(base64ToUint32(daten.faces), 1));
-        geo.setAttribute('normal', new THREE.BufferAttribute(normalen, 3));
+        const geo = Netzgeometrie.bauen(daten, THREE);
 
         const material = new THREE.MeshStandardMaterial({
             color: farbe, roughness: zustand.roughness,

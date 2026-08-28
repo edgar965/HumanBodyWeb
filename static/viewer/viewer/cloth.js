@@ -4,12 +4,13 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, bindSlider, sliderVal } from './utils.js';
+import { base64ToFloat32, bindSlider, sliderVal } from './utils.js';
 import { ensureSkinned } from './skinning.js';
 import { Stoffvorlagen } from './cloth/stoffvorlagen.js';
 import { Stoffbauer } from './cloth/stoffbauer.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 /**
  * Kleidungs-Bedienfeld aufbauen.
@@ -51,16 +52,7 @@ export async function loadCloth(key, params, color) {
 
         removeClothRegion(key);
 
-        const vertBuf = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(vertBuf);
-        const faceBuf = base64ToUint32(data.faces);
-        const normalBuf = base64ToFloat32(data.normals);
-        blenderToThreeCoords(normalBuf);
-
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+        const geo = Netzgeometrie.bauen(data, THREE);
 
         let matColor;
         if (color) {

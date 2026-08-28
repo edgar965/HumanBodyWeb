@@ -19,27 +19,39 @@ import { base64ToFloat32, base64ToUint32,
  * Kleidungsstück, das um 90° verdreht neben der Figur schwebt — und zwar nur
  * auf DER einen Seite. Genau das ist hier schon passiert.
  *
- * `Koerpernetz` daneben macht dasselbe für den KÖRPER; das ist ein anderer
- * Fall: UVs, Materialgruppen, Hautmaterial. Ein Kleidungsstück hat nichts
- * davon.
+ * WARUM SIE JETZT `Netzgeometrie` HEISST (28.08.2026): Sie hiess vorher nach
+ * dem Stoff, weil sie aus den Kleidungs-Stellen herausgeloest wurde. Am selben
+ * Tag bekam `Koerpernetz` eine Geometrie ohne Materialgruppen — und damit
+ * standen ZWEI Bauer nebeneinander, die sich nur noch darin unterschieden, ob
+ * sie UVs setzen. Das ist kein Unterschied, sondern ein fehlendes Feld: Ein
+ * Kleidungsstueck bringt keine `uvs` mit, und dann passiert nichts.
+ *
+ * `Koerpernetz` baut darauf auf und legt Materialgruppen und Hautmaterial
+ * dazu — das ist der Teil, der wirklich nur den Koerper betrifft.
  */
-export class Stoffgeometrie {
+export class Netzgeometrie {
     /**
-     * @param {Object} daten Antwort mit `vertices`, `faces`, `normals`
-     *     (Base64, Blender-Achsen)
+     * @param {Object} daten Antwort mit `vertices`, `faces`, `uvs`, `normals`
+     *     (Base64, Blender-Achsen) — alles ausser `vertices` ist freiwillig
      * @param {Object} THREE die Three.js-Instanz der Seite
+     * @param nachPunkten Eingriff am Punktpuffer, NACH der Drehung und VOR
+     *     dem Attribut. Die Foto-Seite richtet die Punkte dort auf SMPL-X aus.
      * @returns {Object} BufferGeometry
      */
-    static bauen(daten, THREE) {
+    static bauen(daten, THREE, nachPunkten = null) {
         const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position',
-                         new THREE.BufferAttribute(
-                             Stoffgeometrie.punkte(daten.vertices), 3));
+        const punkte = Netzgeometrie.punkte(daten.vertices);
+        if (nachPunkten) nachPunkten(punkte);
+        geo.setAttribute('position', new THREE.BufferAttribute(punkte, 3));
         if (daten.faces) {
             geo.setIndex(new THREE.BufferAttribute(
                 base64ToUint32(daten.faces), 1));
         }
-        Stoffgeometrie._normalen(geo, daten, THREE);
+        if (daten.uvs) {
+            geo.setAttribute('uv', new THREE.BufferAttribute(
+                base64ToFloat32(daten.uvs), 2));
+        }
+        Netzgeometrie._normalen(geo, daten, THREE);
         return geo;
     }
 
@@ -61,6 +73,6 @@ export class Stoffgeometrie {
             return;
         }
         geo.setAttribute('normal', new THREE.BufferAttribute(
-            Stoffgeometrie.punkte(daten.normals), 3));
+            Netzgeometrie.punkte(daten.normals), 3));
     }
 }

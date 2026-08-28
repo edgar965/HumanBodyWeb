@@ -8,7 +8,7 @@ import { _selectedInst, _charQueryParams, _bindSlider, _sliderVal } from './util
 import { markDirty } from './undo.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Stoffgeometrie } from '../gemeinsam/stoffgeometrie.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 export async function loadClothUI() {
     _bindSlider('cloth-tpl-segments', 'cloth-tpl-segments-val', v => v);
@@ -68,7 +68,7 @@ export async function _loadClothForCharacter(inst, key, clothParams) {
             inst.clothMeshes[key].material.dispose();
             delete inst.clothMeshes[key];
         }
-        const geo = Stoffgeometrie.bauen(data, THREE);
+        const geo = Netzgeometrie.bauen(data, THREE);
         const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: matColor, roughness: 0.8, metalness: 0.0, side: THREE.DoubleSide }));
         inst.clothMeshes[key] = mesh; inst.group.add(mesh);
         const clothEntry = { ...clothParams, color: colorHex };

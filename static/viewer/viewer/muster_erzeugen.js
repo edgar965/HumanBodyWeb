@@ -10,12 +10,13 @@ import { buildBodyQueryString, sliderVal } from './utils.js';
 import { ensureSkinned } from './skinning.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { peRender } from './muster_zeichnen.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+import { base64ToFloat32 } from '../gemeinsam/kodierung.js';
 import { peUpdateStitchList } from './pattern_editor.js';
 import { removeClothRegion } from './cloth.js';
 import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 
 export async function peRegionGenerate() {
@@ -34,14 +35,7 @@ export async function peRegionGenerate() {
             `/api/character/pattern/region/generate/?${bodyQs}&${regionQs}`);
         if (data.error) { if (statusEl) statusEl.textContent = `Error: ${data.error}`; if (genBtn) genBtn.disabled = false; return; }
         removeClothRegion(pePreviewKey);
-        const vertBuf = base64ToFloat32(data.vertices); blenderToThreeCoords(vertBuf);
-        const faceBuf = base64ToUint32(data.faces);
-        const normalBuf = base64ToFloat32(data.normals);
-        blenderToThreeCoords(normalBuf);
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+        const geo = Netzgeometrie.bauen(data, THREE);
         const colorPicker = document.getElementById('pe-color');
         const matColor = colorPicker ? new THREE.Color(colorPicker.value) : new THREE.Color(0.3, 0.35, 0.5);
         const roughness = (sliderVal('pe-roughness') / 100); const metalness = (sliderVal('pe-metalness') / 100);
@@ -74,14 +68,7 @@ export async function peGenerate3D() {
               stiffness: wrapStiffness });
         if (data.error) { if (statusEl) statusEl.textContent = `Error: ${data.error}`; if (genBtn) genBtn.disabled = false; return; }
         removeClothRegion(pePreviewKey);
-        const vertBuf = base64ToFloat32(data.vertices); blenderToThreeCoords(vertBuf);
-        const faceBuf = base64ToUint32(data.faces);
-        const normalBuf = base64ToFloat32(data.normals);
-        blenderToThreeCoords(normalBuf);
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(vertBuf, 3));
-        geo.setIndex(new THREE.BufferAttribute(faceBuf, 1));
-        geo.setAttribute('normal', new THREE.BufferAttribute(normalBuf, 3));
+        const geo = Netzgeometrie.bauen(data, THREE);
         const colorPicker = document.getElementById('pe-color');
         const matColor = colorPicker ? new THREE.Color(colorPicker.value) : new THREE.Color(0.3, 0.35, 0.5);
         const roughness = (sliderVal('pe-roughness') / 100); const metalness = (sliderVal('pe-metalness') / 100);

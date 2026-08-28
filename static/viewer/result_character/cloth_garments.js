@@ -9,7 +9,7 @@ import {
 } from '../character_core.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Stoffgeometrie } from '../gemeinsam/stoffgeometrie.js';
+import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 
 // =====================================================================
 // Cloth (templates)
@@ -26,7 +26,7 @@ export async function loadCloth(key, params, presetColor, useApiColor = false) {
 
         removeClothRegion(key);
 
-        const geo = Stoffgeometrie.bauen(data, THREE);
+        const geo = Netzgeometrie.bauen(data, THREE);
 
         let matColor;
         if (presetColor) {
@@ -116,8 +116,8 @@ export async function loadGarment(garmentId, opts = {}) {
 
         removeGarment(garmentId);
 
-        const vertBuf = Stoffgeometrie.punkte(data.vertices);
-        const geo = Stoffgeometrie.bauen({ vertices: data.vertices,
+        const vertBuf = Netzgeometrie.punkte(data.vertices);
+        const geo = Netzgeometrie.bauen({ vertices: data.vertices,
                                            faces: data.faces }, THREE);
 
         const matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);

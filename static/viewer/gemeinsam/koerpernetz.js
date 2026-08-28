@@ -1,4 +1,4 @@
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './kodierung.js';
+import { Netzgeometrie } from './netzgeometrie.js';
 import { BODY_MATERIALS } from './koerpermaterialien.js';
 
 /**
@@ -64,22 +64,7 @@ export class Koerpernetz {
      *        eigene Kopie behalten muessen.
      */
     static geometrie(daten, THREE, nachPunkten = null) {
-        const geometrie = new THREE.BufferGeometry();
-        const puffer = base64ToFloat32(daten.vertices);
-        blenderToThreeCoords(puffer);
-        if (nachPunkten) nachPunkten(puffer);
-        geometrie.setAttribute('position',
-                               new THREE.BufferAttribute(puffer, 3));
-        if (daten.faces) {
-            geometrie.setIndex(
-                new THREE.BufferAttribute(base64ToUint32(daten.faces), 1));
-        }
-        if (daten.uvs) {
-            geometrie.setAttribute(
-                'uv', new THREE.BufferAttribute(base64ToFloat32(daten.uvs), 2));
-        }
-        Koerpernetz._normalen(geometrie, daten, THREE);
-        return geometrie;
+        return Netzgeometrie.bauen(daten, THREE, nachPunkten);
     }
 
     /**
@@ -94,23 +79,6 @@ export class Koerpernetz {
         return new THREE.Mesh(geometrie,
                               geometrie.groups.length ? materialien
                                                       : materialien[0]);
-    }
-
-    /**
-     * Normalen vom Server, sonst gerechnet.
-     *
-     * Die Server-Normalen kommen in Blender-Achsen und brauchen dieselbe
-     * Drehung wie die Punkte. Ohne sie zeigen die Flächen nach innen und das
-     * Modell wirkt von innen beleuchtet.
-     */
-    static _normalen(geometrie, daten, THREE) {
-        if (!daten.normals) {
-            geometrie.computeVertexNormals();
-            return;
-        }
-        const puffer = base64ToFloat32(daten.normals);
-        blenderToThreeCoords(puffer);
-        geometrie.setAttribute('normal', new THREE.BufferAttribute(puffer, 3));
     }
 
     /**
