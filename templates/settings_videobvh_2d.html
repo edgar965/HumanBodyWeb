@@ -31,29 +31,9 @@
     <div class="settings-card hb-abstand-oben">
         <h2><i class="fas fa-eye"></i> MediaPipe <small class="hb-gedaempft">~50 AP, CPU</small></h2>
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Detection Confidence</strong>
-                <small>Mindest-Konfidenz damit ein Pose-Ergebnis als erkannt gilt.</small>
-            </div>
-            <div class="settings-input">
-                <input type="number" name="mp_min_detection_confidence"
-                       value="{{ settings.mp_min_detection_confidence }}"
-                       min="0.0" max="1.0" step="0.05">
-            </div>
-        </div>
+        {% include "_einstellungen_zahl.html" with titel="Detection Confidence" beschriftung="Mindest-Konfidenz damit ein Pose-Ergebnis als erkannt gilt." feld="mp_min_detection_confidence" wert=settings.mp_min_detection_confidence min="0.0" max="1.0" schritt="0.05" %}
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Tracking Confidence</strong>
-                <small>Mindest-Konfidenz f&uuml;r Pose-Tracking zwischen Frames.</small>
-            </div>
-            <div class="settings-input">
-                <input type="number" name="mp_min_tracking_confidence"
-                       value="{{ settings.mp_min_tracking_confidence }}"
-                       min="0.0" max="1.0" step="0.05">
-            </div>
-        </div>
+        {% include "_einstellungen_zahl.html" with titel="Tracking Confidence" beschriftung="Mindest-Konfidenz f&uuml;r Pose-Tracking zwischen Frames." feld="mp_min_tracking_confidence" wert=settings.mp_min_tracking_confidence min="0.0" max="1.0" schritt="0.05" %}
 
         <div class="settings-row">
             <div class="settings-label">
