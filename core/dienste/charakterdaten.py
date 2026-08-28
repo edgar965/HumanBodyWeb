@@ -25,6 +25,7 @@ liess. Jetzt: erst laden, dann zuweisen, und das Ganze unter einem Schloss.
 """
 import logging
 
+import numpy as np
 from django.conf import settings
 
 from humanbody_core import CharacterDefaults, CharacterState, MeshData, MorphData
@@ -83,6 +84,9 @@ class Charakterdaten:
         return cls._schloesser.einmal('vorgaben', lambda: cls._char_defaults,
                                       bauen)
 
+    #: Felder von `MeshData`, die als NumPy-Feld im Zwischenspeicher liegen.
+    NETZFELDER = ('faces', 'face_materials', 'normals', 'uvs')
+
     @classmethod
     def netzdaten(cls, geschlecht='female'):
         """MeshData je Geschlecht — die maennlichen Daten liegen in `_male`."""
@@ -92,11 +96,37 @@ class Charakterdaten:
                 verzeichnis += '_male'
             netz = MeshData(data_dir=verzeichnis)
             netz.load()
+            cls._schreibschutz(netz)
             cls._mesh_data[geschlecht] = netz
             return netz
         return cls._schloesser.einmal('netz:' + geschlecht,
                                       lambda: cls._mesh_data.get(geschlecht),
                                       bauen)
+
+    @classmethod
+    def _schreibschutz(cls, netz):
+        """Die Felder im Zwischenspeicher gegen Schreibzugriff sperren.
+
+        WARUM (Review-Befund „mutable Rückgabe gecachter NumPy-Arrays", von
+        Nemotron als Rückfrage gestellt und am 28.08.2026 nachgeprüft):
+        `netzdaten()` gibt das GEMERKTE Objekt heraus, nicht eine Kopie —
+        18.210 Punkte, 17.288 Flächen. Wer eines der Felder an Ort und Stelle
+        ändert, ändert es für JEDE weitere Anfrage dieses Prozesses. Das ist
+        die unangenehmste Sorte Fehler: Die erste Anfrage ist richtig, die
+        zweite falsch, und ein Serverneustart „behebt" es.
+
+        Heute schreibt niemand hinein — nachgezählt am 28.08.2026, alle acht
+        Aufrufer lesen nur (`netz.faces[…]`, nie `netz.faces[…] =`). Der
+        Schutz kostet nichts und macht aus einem stillen Schaden eine
+        Ausnahme an der Stelle, an der er entsteht.
+
+        Kopieren wäre die Alternative und ist die schlechtere: 18.210 Punkte
+        je Anfrage kopieren, damit niemand schreibt, der ohnehin nicht schreibt.
+        """
+        for name in cls.NETZFELDER:
+            feld = getattr(netz, name, None)
+            if isinstance(feld, np.ndarray):
+                feld.flags.writeable = False
 
     # ---------------------------------------------------------- Unterteilung
 

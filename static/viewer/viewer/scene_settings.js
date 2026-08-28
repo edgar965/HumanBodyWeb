@@ -10,54 +10,23 @@ import { fn } from '../gemeinsam/registrierung.js';
 // Befunde `doppelcode` und `namensvarianten`, 17.08.2026).
 import { tonwerte } from '../gemeinsam/tonwerte.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Szeneneinstellungen } from '../gemeinsam/szeneneinstellungen.js';
 // Der alte Name bleibt, damit die Aufrufstellen dieser Seite
 // unveraendert bleiben — inhaltlich WAR er dieselbe Tabelle.
 export const VIEWER_TONE_MAPPINGS = tonwerte(THREE);
 
 export function applySceneSettings() {
-    const saved = localStorage.getItem('humanbody_scene_settings');
-    if (!saved) return;
-    try {
-        const s = JSON.parse(saved);
-        if (s.lighting) {
-            if (s.lighting.key) {
-                state.keyLight.intensity = s.lighting.key.intensity;
-                state.keyLight.color.set(s.lighting.key.color);
-                state.keyLight.position.set(...s.lighting.key.pos);
-            }
-            if (s.lighting.fill) {
-                state.fillLight.intensity = s.lighting.fill.intensity;
-                state.fillLight.color.set(s.lighting.fill.color);
-                state.fillLight.position.set(...s.lighting.fill.pos);
-            }
-            if (s.lighting.back) {
-                state.backLight.intensity = s.lighting.back.intensity;
-                state.backLight.color.set(s.lighting.back.color);
-                state.backLight.position.set(...s.lighting.back.pos);
-            }
-            if (s.lighting.ambient) {
-                state.ambient.intensity = s.lighting.ambient.intensity;
-                state.ambient.color.set(s.lighting.ambient.color);
-            }
-        }
-        if (s.renderer) {
-            if (s.renderer.toneMapping && VIEWER_TONE_MAPPINGS[s.renderer.toneMapping] !== undefined) {
-                state.renderer.toneMapping = VIEWER_TONE_MAPPINGS[s.renderer.toneMapping];
-            }
-            if (s.renderer.exposure !== undefined) {
-                state.renderer.toneMappingExposure = s.renderer.exposure;
-            }
-            if (s.renderer.background) {
-                state.scene.background.set(s.renderer.background);
-            }
-        }
-        if (s.camera && s.camera.fov) {
-            state.camera.fov = s.camera.fov;
-            state.camera.updateProjectionMatrix();
-        }
-    } catch (e) {
-        Protokoll.warnung('scene_settings', 'Failed to load scene settings:', e);
-    }
+    new Szeneneinstellungen({
+        keyLight: state.keyLight,
+        fillLight: state.fillLight,
+        backLight: state.backLight,
+        ambient: state.ambient,
+        renderer: state.renderer,
+        scene: state.scene,
+        camera: state.camera,
+        tonwerte: VIEWER_TONE_MAPPINGS,
+        woher: 'scene_settings',
+    }).anwenden();
 }
 
 export function getSkinMat() {

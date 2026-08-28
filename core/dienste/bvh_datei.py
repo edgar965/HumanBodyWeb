@@ -156,6 +156,21 @@ class BvhDatei:
         return self.frames
 
     def _frame_schreiben(self, Rotation, werte, fi, ordnungen):
+        """Die Werte EINES Bildes an ihre Stellen in der Zeile schreiben.
+
+        WEITERGERÜCKT WIRD IMMER UM DIE ANGEGEBENE KANALZAHL (28.08.2026).
+        Hier stand `stelle += kanaele if kanaele >= 6 else 3`. Für die beiden
+        üblichen Fälle (3 und 6) ist das dasselbe — für alles dazwischen nicht:
+        Ein Gelenk mit `CHANNELS 4` rückte um 3 weiter, und ab da landete
+        JEDES weitere Gelenk der Zeile eine Spalte zu früh. Die Datei bleibt
+        dabei formal gültig; sie beschreibt nur eine andere Bewegung.
+
+        Die Kanalzahl kommt ungeprüft aus dem Dateikopf (`_kanalordnungen`:
+        `int(teile[1])`), 4 und 5 sind nach der BVH-Spezifikation erlaubt.
+        Anlass war ein Review-Befund zu dieser Methode; der dort behauptete
+        Fehler („schreibt Positionen auch bei 3 Kanälen") trifft NICHT zu —
+        die Wache `if kanaele >= 6` steht da. Dieser hier lag daneben.
+        """
         stelle = 0
         for ji in range(min(self.gelenke, len(ordnungen))):
             kanaele, ordnung = ordnungen[ji]
@@ -169,7 +184,7 @@ class BvhDatei:
                 ordnung, degrees=True)
             for k in range(3):
                 werte[stelle_rot + k] = '%.6f' % euler[k]
-            stelle += kanaele if kanaele >= 6 else 3
+            stelle += kanaele
 
     @classmethod
     def _kanalordnungen(cls, zeilen):

@@ -100,14 +100,9 @@ class Fotoauftraege:
     @require_POST
     def bild_sichern(request, job_id):
         """Ein im Browser gerendertes 3D-Bild beim Auftrag ablegen."""
-        job = Fotoauftrag.holen(job_id)
-        if job is None:
-            return Fotoauftrag.nicht_gefunden()
-        try:
-            rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'ok': False, 'error': 'Invalid JSON'},
-                                status=400)
+        job, rumpf, fehler = Fotoauftrag.mit_rumpf(request, job_id)
+        if fehler:
+            return fehler
         roh = Bildablage.bytes_aus_dataurl(rumpf.get('image', ''))
         if roh is None:
             return JsonResponse({'ok': False, 'error': 'Invalid base64'},

@@ -39,17 +39,9 @@
             </div>
         </div>
 
-        <div class="settings-row">
-            <div class="settings-label">
-                <strong>Standard-Animation</strong>
-                <small>Welche Animation automatisch beim Laden der Theatre-Seite abgespielt wird.</small>
-            </div>
-            <div class="settings-input">
-                {% comment %}wertformat="pfad": Theatre speichert <kat>/<name>,
-                nicht die Viewer-URL — siehe Animationsauswahl.{% endcomment %}
-                {% include "_anim_selector.html" with field_name="theatre_default_animation" current_value=settings.theatre_default_animation selector_id="anim-sel-theatre" wertformat="pfad" %}
-            </div>
-        </div>
+        {% comment %}wertformat="pfad": Theatre speichert <kat>/<name>,
+        nicht die Viewer-URL — siehe Animationsauswahl.{% endcomment %}
+        {% include "_einstellungen_animation.html" with titel="Standard-Animation" beschriftung="Welche Animation automatisch beim Laden der Theatre-Seite abgespielt wird." feld="theatre_default_animation" wert=settings.theatre_default_animation kennung="anim-sel-theatre" wertformat="pfad" %}
 
         <div class="settings-row">
             <div class="settings-label">

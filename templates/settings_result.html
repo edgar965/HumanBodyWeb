@@ -21,14 +21,7 @@
                 </select>
             </div>
         </div>
-        <div class="settings-row">
-            <div class="settings-label">
-                <small>Default Animation</small>
-            </div>
-            <div class="settings-input">
-                {% include "_anim_selector.html" with field_name="default_anim_result" current_value=settings.default_anim_result selector_id="anim-sel-result" %}
-            </div>
-        </div>
+        {% include "_einstellungen_animation.html" with feld="default_anim_result" wert=settings.default_anim_result kennung="anim-sel-result" %}
     </div>
 
     {% include "_einstellungen_speichern.html" %}

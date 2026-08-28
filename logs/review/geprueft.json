@@ -1,0 +1,78 @@
+{
+  "Bildrate und BVH-Kopf beim Zurückschreiben": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: Die Wache `if kanaele >= 6` steht in `_frame_schreiben` — bei drei Kanaelen wird KEINE Position geschrieben. Beim Nachsehen lag daneben ein echter Fehler (`stelle += kanaele if kanaele >= 6 else 3` verrechnet sich bei 4 und 5 Kanaelen); behoben, Test `test_bvh_kanalversatz`."
+  },
+  "`smooth_bvh` / `save_bvh_effects` — Wo kippt das Ergebnis?": {
+    "am": "2026-08-28",
+    "urteil": "Erledigt: Beide Funktionen sind am 15.08.2026 zu `BvhDatei` zusammengefasst worden — sie waren zu neun Zehnteln dieselbe Funktion. Der Befund beschreibt den Zustand davor."
+  },
+  "Frames ↔ Sekunden vermischt / Rundung vs. Abschneiden": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: `Clip.duration` rechnet `speed` mit ein (models.js:157-158), und `endFrame` nutzt `Math.ceil`, nicht `Math.round` (models.js:162). Beide Vorwuerfe beschreiben eine aeltere Fassung."
+  },
+  "Manipulation während der Wiedergabe (Race Conditions / State": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: `stopAudioTrack` stoppt den Tonknoten und setzt `sourceNode`/`_audioClip` auf null (spur_ton.js:61-69); `_nachziehen` ruft `removeTrackAt`, das `_linkedAnimIdx` nachzieht, klemmt `selectedTrackIdx` und setzt `selectedClipIdx` zurueck (spurabbau.js:104-113)."
+  },
+  "Randfälle (Erster/Letzter Frame, Länge 0, Überblendung)": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: `Array.prototype.sort` ist seit ES2019 stabil, die Reihenfolge bei gleichem `startFrame` also bestimmt. Ein Clip vor Bild 0 ist ausgeschlossen — `Zeitleistentreffer.bildBei` klemmt mit `Math.max(0, …)`."
+  },
+  "Vermischung von Frames und Sekunden / Rundungsfehler": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: siehe „Frames ↔ Sekunden vermischt“. `Audiospur._clip` erbt den geklemmten Startwert."
+  },
+  "Event-Zuhörer / Zeitgeber nach Szenenwechsel": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: `saveTimer` und `reloadTimer` werden vor jedem Setzen mit `clearTimeout` geraeumt (lighting.js:12, properties.js:217) — das ist das uebliche Entprellen. Einen Szenenwechsel ohne Seitenneuladen gibt es in diesem Projekt nicht."
+  },
+  "Knochen-Umbenennung: Kollision / Leere Spur": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: `rigify_skeleton_builder.js:22-24` setzt `bone.name` mit Unterstrichen, legt den Schluessel in `boneByName` aber MIT Punkten ab (Kommentar dort). Der Reviewer sagt selbst, dass er die Datei nicht vorliegen hatte."
+  },
+  "Race Condition bei schnellen Ladevorgängen": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: dieselbe Annahme wie oben — der Lookup geht ueber den Punkt-Schluessel und kann nicht kollidieren. Verfehlte Knochen werden mit Namen protokolliert (retarget_hybrid.js:122)."
+  },
+  "Three.js-Objekte ohne `dispose()` ersetzt": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: Jede Stelle legt einen NEUEN `AnimationMixer` an (animation.js:77/98, vorschau.js:74, bodenrichter.js:96, animationslader.js:69) — der alte wird samt seiner Clips einsammelbar. Wo ein Mixer wiederverwendet wird, steht `uncacheClip` (bvhspur.js:56-58, bibliothekablage.js:70)."
+  },
+  "Base64-Kodierung: stille Inkompatibilitäten (Byte-Reihenfolg": {
+    "am": "2026-08-28",
+    "urteil": "Keine Aussage: Der Reviewer schreibt selbst „Netzantwort.feld() (fehlt)“ und bittet um den Code. `feld()` normalisiert ueber `np.ascontiguousarray(..., dtype=typ)` — Typ und Anordnung stehen damit fest."
+  },
+  "Globales Schloss blockiert **alle** Caches während schwerer ": {
+    "am": "2026-08-28",
+    "urteil": "Erledigt am 18.08.2026: `Charakterdaten._schloesser` ist ein `Ladeschloss` mit EINEM Schloss je Name. Vorher hielt ein einziges Schloss waehrend der Catmull-Clark-Unterteilung gemessene 1,21 s."
+  },
+  "Rennen beim globalen `_garment_library` — falsche Instanz / ": {
+    "am": "2026-08-28",
+    "urteil": "Erledigt am 18.08.2026: Die Modulvariable gibt es nicht mehr, der Zwischenspeicher liegt in `dienste/kleiderbibliothek.Kleiderbibliothek`. Der Modulkopf von `kleidungsbibliothek.py` beschreibt den Umbau."
+  },
+  "Unbegrenztes Wachstum durch `body_type` als Cache-Schlüssel ": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: Der Schluessel ist NICHT der Koerpertyp, sondern das Geschlecht — `_mesh_data` und `_cc_subdivider` haben hoechstens zwei Eintraege ('female', 'male'), siehe `geschlecht_zu`."
+  },
+  "Knochen ohne Mapping-Eintrag": {
+    "am": "2026-08-28",
+    "urteil": "Andere Datei: Gemeint ist `humanbody_core/skeleton/retarget.py`, nicht `core/api/retarget.py` (217 Zeilen HTTP-Schale). Der Befund gehoert in den HumanBody-Durchgang."
+  },
+  "Fehlende Fehlerbehandlung bei `localStorage` (Schaden: Mitte": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: In `scene/state.js` steht kein einziger `localStorage`-Zugriff. Wo im Projekt einer steht, ist er gefangen (z. B. `Mhproxystand.sichern`, mit Begruendung)."
+  },
+  "Memory Leak bei Texturen (Schaden: Hoch / Performance)": {
+    "am": "2026-08-28",
+    "urteil": "Erledigt: `mhproxynetz.js:112-118` gibt `material.map` ausdruecklich frei („Textures of a material don't get disposed“), und eine verspaetet eintreffende Textur wird in :188 entsorgt."
+  },
+  "Race Condition & Datenkorruption (Kritisch)": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: `_doMHProxyFit` ist ein Zusammenfassen, keine Warteschlange — der zweite Aufrufer setzt nur `_mhFitNachziehen` und kehrt SOFORT zurueck. Zwischen `finally` und dem Nachziehen liegt kein `await`, es kann sich also nichts dazwischenschieben."
+  },
+  "Unvollständige Bereinigung / Event-Leaks (Schaden: Mittel)": {
+    "am": "2026-08-28",
+    "urteil": "Trifft nicht zu: `_initPropMHControls` laeuft genau einmal, aus `Szenenaufbau.AUFBAUEN`. Ein Seitenwechsel ist hier ein echtes Neuladen; das Bedienfeld wird nicht auf- und zugebaut."
+  }
+}

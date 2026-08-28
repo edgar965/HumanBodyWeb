@@ -15,6 +15,8 @@ App-Registrierung nach, und diese Klasse liegt in `daten/`, wo sonst nichts
 von Django abhaengt.
 """
 
+import json
+
 from django.http import JsonResponse
 
 
@@ -36,3 +38,37 @@ class Fotoauftrag:
     @staticmethod
     def nicht_gefunden():
         return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
+
+    @staticmethod
+    def mit_rumpf(request, job_id):
+        """Auftrag UND JSON-Rumpf — oder die fertige Fehlerantwort.
+
+        WARUM ZUSAMMEN (Befund `doppelcode`, 28.08.2026): Diese acht Zeilen
+
+            job = Fotoauftrag.holen(job_id)
+            if job is None:
+                return Fotoauftrag.nicht_gefunden()
+            try:
+                rumpf = json.loads(request.body)
+            except (json.JSONDecodeError, ValueError):
+                return JsonResponse({'ok': False, 'error': 'Invalid JSON'},
+                                    status=400)
+
+        standen an DREI Endpunkten wortgleich. Sie gehoeren zusammen: Beide
+        beantworten dieselbe Frage — „habe ich ueberhaupt etwas, womit ich
+        arbeiten kann?" — und beide enden in einer Antwort, nicht in einem
+        Wert.
+
+        @returns (job, rumpf, antwort). Ist `antwort` gesetzt, gibt der
+                 Aufrufer sie zurueck und hoert auf; sonst sind `job` und
+                 `rumpf` gefuellt.
+        """
+        job = Fotoauftrag.holen(job_id)
+        if job is None:
+            return None, None, Fotoauftrag.nicht_gefunden()
+        try:
+            rumpf = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return None, None, JsonResponse(
+                {'ok': False, 'error': 'Invalid JSON'}, status=400)
+        return job, rumpf, None

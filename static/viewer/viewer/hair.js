@@ -7,8 +7,8 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { ensureSkinned } from './skinning.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
 import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
+import { skinifyHairGroup } from '../character_core.js';
 
 export async function loadHairUI() {
     try {
@@ -88,24 +88,14 @@ function _findHeadBoneIndex() {
     return -1;
 }
 
+/** Haare an den Kopfknochen des SEITENZUSTANDS binden.
+ *
+ *  Die Rechnung steht in `character_core.skinifyHairGroup` (Umbau
+ *  28.08.2026, Befund `doppelcode`) — hier stand sie ein drittes Mal. */
 function _skinifyHairGroup(gltfScene, headBoneIdx) {
-    const meshChildren = [];
-    gltfScene.traverse(child => {
-        if (child.isMesh) meshChildren.push(child);
-    });
-
-    const group = new THREE.Group();
-    for (const child of meshChildren) {
-        const geo = child.geometry.clone();
-        Hautgewichte.anEinenKnochen(geo, headBoneIdx, THREE.Float32BufferAttribute);
-
-        const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
-        child.updateWorldMatrix(true, false);
-        skinnedChild.applyMatrix4(child.matrixWorld);
-        skinnedChild.bind(state.rigifySkeleton.skeleton, state.bodyMesh.bindMatrix);
-        group.add(skinnedChild);
-    }
-    return group;
+    return skinifyHairGroup(gltfScene, headBoneIdx,
+                            state.rigifySkeleton.skeleton,
+                            state.bodyMesh.bindMatrix);
 }
 
 export function removeHair() {

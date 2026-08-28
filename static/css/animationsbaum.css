@@ -11,6 +11,24 @@
     border-bottom: 1px solid var(--border);
 }
 
+/* Kopfzeile einer Kategorie (28.08.2026, Befund `doppelcode`).
+ *
+ * Stand in VIER Vorlagen wortgleich — bis auf das Polster, und genau deshalb
+ * blieb sie beim Ausziehen am 17.08. liegen. Es kommt jetzt aus
+ * `--anim-kopf-polster`; wer es anders will, setzt die Variable auf seiner
+ * Seite, statt die ganze Regel zu kopieren. */
+.anim-category-header {
+    font-size: 0.82rem;
+    color: var(--text);
+    cursor: pointer;
+    padding: var(--anim-kopf-polster, 8px 12px);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.15s;
+}
+
 .anim-category-header:hover { background: var(--bg-card); }
 
 .anim-category-header .cat-chevron {

@@ -38,7 +38,20 @@ Thumbs.db
 # Betrieb und gehoeren nicht in die Versionsverwaltung. Ohne die Eintraege
 # standen ueber 300 Analysebilder als "untracked" im Status und wanderten beim
 # naechsten `git add -A` mit ins Repo.
-logs/
+# Logdateien und Review-Mitschriften — aber NICHT das Pruefbuch.
+#
+# `logs/review/geprueft.json` haelt fest, welcher Review-Befund nachgeprueft
+# wurde und warum (Werkzeug `review-befunde`). Das ist Wissen, kein Log: Ohne
+# die Datei stehen beim naechsten Lauf dieselben 19 Befunde wieder als offen
+# da, und jemand faengt die Nachpruefung von vorn an (28.08.2026).
+#
+# Die Kette ist noetig, weil git in einem ausgenommenen VERZEICHNIS keine
+# einzelne Datei zurueckholen kann — der Ordner muss Schritt fuer Schritt
+# wieder betretbar werden.
+logs/*
+!logs/review/
+logs/review/*
+!logs/review/geprueft.json
 media/photo_analysis/
 # Vom Studio hochgeladene 3D-Objekte (52 MB) und Tonspuren (2,9 MB)
 media/scene_objects/

@@ -50,14 +50,7 @@
             </div>
         </div>
         {% include "_einstellungen_kaestchen.html" with beschriftung="Anzeige mit Rig" feld="show_rig_config" text="Rig beim Start anzeigen" an=settings.show_rig_config %}
-        <div class="settings-row">
-            <div class="settings-label">
-                <small>Default Animation</small>
-            </div>
-            <div class="settings-input">
-                {% include "_anim_selector.html" with field_name="default_anim_config" current_value=settings.default_anim_config selector_id="anim-sel-config" %}
-            </div>
-        </div>
+        {% include "_einstellungen_animation.html" with feld="default_anim_config" wert=settings.default_anim_config kennung="anim-sel-config" %}
         <div class="settings-row">
             <div class="settings-label">
                 <small>Ausgeklappte Tabs</small>
@@ -80,14 +73,7 @@
             </div>
         </div>
         {% include "_einstellungen_kaestchen.html" with beschriftung="Anzeige mit Rig" feld="show_rig_animations" text="Rig beim Start anzeigen" an=settings.show_rig_animations %}
-        <div class="settings-row">
-            <div class="settings-label">
-                <small>Default Animation</small>
-            </div>
-            <div class="settings-input">
-                {% include "_anim_selector.html" with field_name="default_anim_animations" current_value=settings.default_anim_animations selector_id="anim-sel-anims" %}
-            </div>
-        </div>
+        {% include "_einstellungen_animation.html" with feld="default_anim_animations" wert=settings.default_anim_animations kennung="anim-sel-anims" %}
     </div>
 
     {% include "_einstellungen_speichern.html" %}

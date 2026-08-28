@@ -79,7 +79,7 @@ export class Animationsverwaltung {
     }
 
     static menuesZu() {
-        for (const menue of document.querySelectorAll('.anim-ctx')) {
+        for (const menue of document.querySelectorAll('.hb-kontextmenue')) {
             menue.style.display = 'none';
         }
     }
@@ -138,7 +138,7 @@ export class Animationsverwaltung {
     /** Datei- und Ordner-Kontextmenü; der Vorgang steht in `data-action`. */
     _kontextmenues() {
         for (const eintrag of document.querySelectorAll(
-                '#anim-ctx-file .anim-ctx-item, #anim-ctx-folder .anim-ctx-item')) {
+                '#anim-ctx-file .hb-menueeintrag, #anim-ctx-folder .hb-menueeintrag')) {
             eintrag.addEventListener('click', () => {
                 this.ausfuehren(eintrag.dataset.action, this.ziel());
             });

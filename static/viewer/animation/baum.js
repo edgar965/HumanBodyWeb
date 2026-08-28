@@ -89,7 +89,8 @@ export async function loadAnimationTree() {
 export let _animCtxTarget = null;
 
 export function showAnimCtx(menuId, x, y) {
-    document.querySelectorAll('.anim-ctx').forEach(m => m.style.display = 'none');
+    document.querySelectorAll('.hb-kontextmenue')
+            .forEach(m => m.style.display = 'none');
     const menu = document.getElementById(menuId);
     if (!menu) return;
     menu.style.display = 'block';

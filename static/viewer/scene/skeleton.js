@@ -8,6 +8,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32 } from './utils.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
+import { skinifyHairGroup } from '../character_core.js';
 
 export async function loadRigifySkeleton() {
     try {
@@ -99,29 +100,20 @@ export function _findHeadBoneIndex() {
 }
 
 /**
- * Convert all meshes in a GLTF scene (hair) to SkinnedMesh bound to head bone.
+ * Haare einer GLTF-Szene an den Kopfknochen dieser FIGUR binden.
+ *
+ * Die Rechnung steht in `character_core.skinifyHairGroup` (Umbau 28.08.2026,
+ * Befund `doppelcode`): Hier stand sie ein zweites Mal, in `viewer/hair.js`
+ * ein drittes. Die drei unterschieden sich NUR darin, woher Skelett und
+ * Bindematrix kommen — hier aus der Figur, dort aus dem Seitenzustand. Genau
+ * das gehoert an die Aufrufstelle.
  */
 export function _skinifyHairGroup(gltfScene, inst) {
     const headBoneIdx = _findHeadBoneIndex();
     if (headBoneIdx < 0 || !inst.isSkinned || !inst.rigifySkeleton) return gltfScene;
-
-    const meshChildren = [];
-    gltfScene.traverse(child => {
-        if (child.isMesh) meshChildren.push(child);
-    });
-
-    const group = new THREE.Group();
-    for (const child of meshChildren) {
-        const geo = child.geometry.clone();
-        Hautgewichte.anEinenKnochen(geo, headBoneIdx, THREE.Float32BufferAttribute);
-
-        const skinnedChild = new THREE.SkinnedMesh(geo, child.material);
-        child.updateWorldMatrix(true, false);
-        skinnedChild.applyMatrix4(child.matrixWorld);
-        skinnedChild.bind(inst.rigifySkeleton.skeleton, inst.bodyMesh.bindMatrix);
-        group.add(skinnedChild);
-    }
-    return group;
+    return skinifyHairGroup(gltfScene, headBoneIdx,
+                            inst.rigifySkeleton.skeleton,
+                            inst.bodyMesh.bindMatrix);
 }
 
 // Register

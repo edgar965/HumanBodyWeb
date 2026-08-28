@@ -21,17 +21,9 @@
         overflow-y: auto;
         padding: 0;
     }
-    .anim-category-header {
-        font-size: 0.82rem;
-        color: var(--text);
-        cursor: pointer;
-        padding: 10px 16px;
-        user-select: none;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: background 0.15s;
-    }
+    /* Nur das Polster weicht ab — der Rest steht in
+       `animationsbaum.css` (28.08.2026). */
+    .anim-category-header { --anim-kopf-polster: 10px 16px; }
     .anim-category-body {
         display: none;
         padding: 0;
@@ -56,29 +48,9 @@
         border-radius: 4px; color: var(--text-muted); cursor: pointer; font-size: 0.75rem;
     }
     .anim-toolbar button:hover { color: var(--text); background: rgba(124,92,191,0.2); }
-    /* Context menu */
-    .anim-ctx {
-        display:none;
-        position:fixed;
-        z-index:9999;
-        background:var(--bg-secondary);
-        border:1px solid var(--border);
-        border-radius:6px;
-        padding:4px 0;
-        min-width:180px;
-        box-shadow:0 8px 24px rgba(0,0,0,0.4);
-    }
-    .anim-ctx-item {
-        padding:7px 14px;
-        font-size:0.82rem;
-        color:#ccc;
-        cursor:pointer;
-        display:flex;
-        align-items:center;
-        gap:8px;
-    }
-    .anim-ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }
-    .anim-ctx-sep { height:1px; background:var(--border); margin:4px 0; }
+    /* Kontextmenue: `.hb-kontextmenue` / `.hb-menueeintrag` /
+       `.hb-trennlinie` stehen seit dem 28.08.2026 in `stilhelfer.css` —
+       hier standen sie unter eigenen Namen mit demselben Rumpf. */
 
     .anim-speed {
         padding: 6px 16px;
@@ -170,9 +142,9 @@
             <button id="anim-refresh" title="Aktualisieren"><i class="fas fa-sync-alt"></i></button>
             <div class="toolbar-dropdown" id="anim-help-dropdown" style="position:relative;">
                 <button id="anim-help-btn" title="Hilfe" style="padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);cursor:pointer;font-size:0.75rem;"><i class="fas fa-question-circle"></i> Hilfe</button>
-                <div class="anim-ctx" id="anim-help-menu"
+                <div class="hb-kontextmenue" id="anim-help-menu"
                      style="position:absolute;bottom:100%;right:0;left:auto;top:auto;min-width:160px;">
-                    <div class="anim-ctx-item" id="anim-help-animations"><i class="fas fa-running hb-symbolspalte"></i> Animationen</div>
+                    <div class="hb-menueeintrag" id="anim-help-animations"><i class="fas fa-running hb-symbolspalte"></i> Animationen</div>
                 </div>
             </div>
         </div>
@@ -181,18 +153,18 @@
         </div>
 
         <!-- Context menus -->
-        <div class="anim-ctx" id="anim-ctx-file">
-            <div class="anim-ctx-item" data-action="play"><i class="fas fa-play hb-symbolspalte"></i> Abspielen</div>
-            <div class="anim-ctx-sep"></div>
-            <div class="anim-ctx-item" data-action="rename"><i class="fas fa-pen hb-symbolspalte"></i> Umbenennen</div>
-            <div class="anim-ctx-item" data-action="move"><i class="fas fa-arrows-alt hb-symbolspalte"></i> Verschieben nach...</div>
-            <div class="anim-ctx-item" data-action="delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
+        <div class="hb-kontextmenue" id="anim-ctx-file">
+            <div class="hb-menueeintrag" data-action="play"><i class="fas fa-play hb-symbolspalte"></i> Abspielen</div>
+            <div class="hb-trennlinie"></div>
+            <div class="hb-menueeintrag" data-action="rename"><i class="fas fa-pen hb-symbolspalte"></i> Umbenennen</div>
+            <div class="hb-menueeintrag" data-action="move"><i class="fas fa-arrows-alt hb-symbolspalte"></i> Verschieben nach...</div>
+            <div class="hb-menueeintrag" data-action="delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
         </div>
-        <div class="anim-ctx" id="anim-ctx-folder">
-            <div class="anim-ctx-item" data-action="rename-folder"><i class="fas fa-pen hb-symbolspalte"></i> Ordner umbenennen</div>
-            <div class="anim-ctx-item" data-action="new-folder"><i class="fas fa-folder-plus hb-symbolspalte"></i> Neuer Unterordner</div>
-            <div class="anim-ctx-sep"></div>
-            <div class="anim-ctx-item" data-action="delete-folder"><i class="fas fa-trash hb-symbolspalte"></i> Ordner l&ouml;schen</div>
+        <div class="hb-kontextmenue" id="anim-ctx-folder">
+            <div class="hb-menueeintrag" data-action="rename-folder"><i class="fas fa-pen hb-symbolspalte"></i> Ordner umbenennen</div>
+            <div class="hb-menueeintrag" data-action="new-folder"><i class="fas fa-folder-plus hb-symbolspalte"></i> Neuer Unterordner</div>
+            <div class="hb-trennlinie"></div>
+            <div class="hb-menueeintrag" data-action="delete-folder"><i class="fas fa-trash hb-symbolspalte"></i> Ordner l&ouml;schen</div>
         </div>
 
         <!-- Speed Slider -->

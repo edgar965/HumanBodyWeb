@@ -131,11 +131,13 @@ try {
         keypointsUrl: '{% url "serve_keypoints" job.id %}?t={% now "U" %}',
     });
 } catch(e) {
-    console.error('[bvh_player] Init error:', e);
-    const err = document.createElement('div');
-    err.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:white;padding:1rem;z-index:99999;font-size:14px;display:flex;justify-content:space-between;align-items:center;';
-    err.innerHTML = '<span>JS Error: ' + e.message + '</span><button onclick="this.parentElement.remove()" class="fehlerknopf">X</button>';
-    document.body.appendChild(err);
+    // Der Balken kommt aus `Startfehler` (28.08.2026, Befund `doppelcode`):
+    // Hier stand er in zwei Vorlagen wortgleich, samt 200 Zeichen
+    // Inline-Stil. Der Import steht IM `catch`, damit ein Fehler beim Laden
+    // des Spielers die Anzeige nicht mitreisst.
+    const { Startfehler } = await import(
+        '{% static "js/bvh_player/startfehler.js" %}?t={% now "U" %}');
+    Startfehler.zeigen('bvh_player', e);
 }
 </script>
 <script>
@@ -174,145 +176,22 @@ try {
 
 // --- Video3D recording ---
 const btn3d = document.getElementById('btnVideo3D');
-if (btn3d) {
-    btn3d.addEventListener('click', () => recordVideo3D());
-}
-
-async function recordVideo3D() {
+if (btn3d) btn3d.addEventListener('click', async () => {
+    // Der ganze Ablauf steht in `Videoaufnahme` (Umbau 28.08.2026, Befund
+    // `doppelcode`): Er stand hier UND in der zweiten Ergebnisvorlage als
+    // 130-Zeilen-Block, bis auf zehn Kommentarzeilen wortgleich.
     const canvas = document.getElementById('characterCanvas');
     const video = document.getElementById('resultVideo');
-    const btn = document.getElementById('btnVideo3D');
     if (!canvas || !video) return;
-
-    const fps = {{ job.fps|default:"30" }};
-    const origText = btn.innerHTML;
-
-    // Create progress bar overlay on the character viewport
-    const viewport = canvas.parentElement;
-    const progressBar = document.createElement('div');
-    progressBar.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:32px;background:rgba(0,0,0,0.7);display:flex;align-items:center;padding:0 10px;gap:8px;z-index:10;font-size:0.8rem;color:#fff;';
-    const progressTrack = document.createElement('div');
-    progressTrack.style.cssText = 'flex:1;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;overflow:hidden;';
-    const progressFill = document.createElement('div');
-    progressFill.style.cssText = 'height:100%;width:0%;background:#e74c3c;border-radius:3px;transition:width 0.1s;';
-    progressTrack.appendChild(progressFill);
-    const progressLabel = document.createElement('span');
-    progressLabel.textContent = '0%';
-    progressLabel.style.cssText = 'min-width:36px;text-align:right;';
-    const recDot = document.createElement('span');
-    recDot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:#e74c3c;animation:recPulse 1s infinite;';
-    // Add pulse animation
-    if (!document.getElementById('recPulseStyle')) {
-        const style = document.createElement('style');
-        style.id = 'recPulseStyle';
-        style.textContent = '@keyframes recPulse{0%,100%{opacity:1}50%{opacity:0.3}}';
-        document.head.appendChild(style);
-    }
-    progressBar.append(recDot, progressTrack, progressLabel);
-    viewport.style.position = 'relative';
-    viewport.appendChild(progressBar);
-
-    // Disable button, show recording state
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle fehlertext"></i> Aufnahme...';
-
-    // Pause and seek to start
-    video.pause();
-    video.currentTime = 0;
-    await new Promise(r => { video.onseeked = r; });
-
-    // Wait for the 3D scene to update
-    await new Promise(r => requestAnimationFrame(r));
-    await new Promise(r => requestAnimationFrame(r));
-
-    // Start recording the canvas
-    const stream = canvas.captureStream(fps);
-    const chunks = [];
-    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : 'video/webm';
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-
-    const recordingDone = new Promise(resolve => {
-        recorder.onstop = resolve;
-    });
-
-    // Update progress bar during playback
-    let progressRAF;
-    function updateProgress() {
-        if (video.duration > 0) {
-            const pct = Math.min(100, (video.currentTime / video.duration) * 100);
-            progressFill.style.width = pct + '%';
-            progressLabel.textContent = Math.round(pct) + '%';
-        }
-        progressRAF = requestAnimationFrame(updateProgress);
-    }
-
-    recorder.start();
-    video.play();
-    updateProgress();
-
-    await new Promise(resolve => {
-        video.onended = resolve;
-        video.onpause = () => {
-            if (video.currentTime < video.duration - 0.5) {
-                recorder.stop();
-                resolve();
-            }
-        };
-    });
-
-    cancelAnimationFrame(progressRAF);
-    progressFill.style.width = '100%';
-    progressLabel.textContent = '100%';
-
-    // Stop recording if still active
-    if (recorder.state === 'recording') {
-        recorder.stop();
-    }
-
-    await recordingDone;
-
-    // Create blob and save to server + download
-    const blob = new Blob(chunks, { type: mimeType });
-
-    // Upload to server (save to video_output_dir)
-    const formData = new FormData();
-    formData.append('video', blob, '{{ job.name }}_3d_character.webm');
-    try {
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
-            || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-        const resp = await fetch('{% url "save_video3d" job.id %}', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': csrfToken },
-            body: formData,
-        });
-        const data = await resp.json();
-        if (data.ok) {
-            progressLabel.textContent = 'Saved!';
-        }
-    } catch(err) {
-        console.warn('Video3D upload failed:', err);
-    }
-
-    // Also trigger browser download
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '{{ job.name }}_3d_character.webm';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    // Den fertigen Balken kurz stehen lassen, damit „100 %" lesbar ist.
-    await new Promise(r => setTimeout(r, BALKEN_NACHLEUCHTEN_MS));
-    progressBar.remove();
-    btn.disabled = false;
-    btn.innerHTML = origText;
-    video.pause();
-}
+    const { Videoaufnahme } = await import(
+        '{% static "js/bvh_player/videoaufnahme.js" %}?t={% now "U" %}');
+    await new Videoaufnahme({
+        canvas, video, knopf: btn3d,
+        fps: {{ job.fps|default:"30" }},
+        dateiname: '{{ job.name }}_3d_character.webm',
+        ablageUrl: '{% url "save_video3d" job.id %}',
+    }).laufen();
+});
 </script>
 {% endif %}
 {% endblock %}

@@ -129,6 +129,12 @@ DJANGOBASE = {
     # `django.test.TestCase`-Klasse; die 127 Fälle laufen über die Art `ui`
     # mit (Befund 27.08.2026).
     'test_basen': ['TestCategory'],
+    # ----- Hilfe -> Werkzeuge: wo die Proben liegen ------------------------
+    # Die Gegenproben (Seitenaufrufe, Cache-Header, LOGGING-Gleichheit,
+    # Szenenwerte im Browser) liegen unter `A:/3DTools/Docu/umbau` — eine
+    # Ebene ÜBER dem Repo `HumanBodyWeb`, weil sich vier Repos diesen
+    # Arbeitsplatz teilen und die Proben über mehrere davon laufen.
+    'proben_ordner': [str(TOOLS_ROOT / 'Docu' / 'umbau')],
     # ----- Hilfe -> Review: Code-Review im Gespräch mit einem zweiten Modell --
     # Nemotron ist der starke, kostenpflichtige Partner (~0,6 $/Mio. Token, ein
     # Code-Paket kostet unter einem Cent); Gemma läuft lokal und schickt nichts

@@ -42,14 +42,9 @@ class Fotoabgleich:
     @require_POST
     def projektion_sichern(request, job_id):
         """Die im Browser gerenderte Vorschau als Silhouettenbild ablegen."""
-        job = Fotoauftrag.holen(job_id)
-        if job is None:
-            return Fotoauftrag.nicht_gefunden()
-        try:
-            rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'ok': False, 'error': 'Invalid JSON'},
-                                status=400)
+        job, rumpf, fehler = Fotoauftrag.mit_rumpf(request, job_id)
+        if fehler:
+            return fehler
         roh = Bildablage.bytes_aus_dataurl(rumpf.get('image', ''))
         if roh is None:
             return JsonResponse({'ok': False, 'error': 'Invalid base64'},
@@ -130,14 +125,9 @@ class Fotoabgleich:
     @require_POST
     def ausrichtung_sichern(request, job_id):
         """Die vom Benutzer bestaetigte Ausrichtung im Auftrag hinterlegen."""
-        job = Fotoauftrag.holen(job_id)
-        if job is None:
-            return Fotoauftrag.nicht_gefunden()
-        try:
-            rumpf = json.loads(request.body)
-        except (json.JSONDecodeError, ValueError):
-            return JsonResponse({'ok': False, 'error': 'Invalid JSON'},
-                                status=400)
+        job, rumpf, fehler = Fotoauftrag.mit_rumpf(request, job_id)
+        if fehler:
+            return fehler
         koerper = rumpf.get('body_transform')
         versatz = rumpf.get('proj_2d_offset')
         if not koerper and not versatz:

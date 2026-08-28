@@ -1,7 +1,8 @@
-import { THREE, TONE_MAPPINGS } from './state.js';
+import { THREE } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { szenenteile } from './szenenteile.js';
 
 /**
  * Szenenzustand — eine Szene einsammeln und wieder herstellen.
@@ -84,9 +85,7 @@ export class Szenenzustand {
         fn.clearAllCharacters();
         state.currentSceneName = szenenname || daten.name || '';
         await Szenenzustand._figuren(daten.characters);
-        Szenenzustand._lichterSetzen(daten.lighting);
-        Szenenzustand._renderer(daten.renderer);
-        Szenenzustand._kamera(daten.camera);
+        Szenenzustand._uebernehmen(daten);
         Szenenzustand._oberflaeche();
     }
 
@@ -106,38 +105,17 @@ export class Szenenzustand {
         }
     }
 
-    static _lichterSetzen(werte) {
-        if (!werte) return;
-        for (const { schluessel, feld, mitOrt } of Szenenzustand.LICHTER) {
-            const gespeichert = werte[schluessel];
-            if (!gespeichert) continue;
-            const licht = state[feld];
-            licht.intensity = gespeichert.intensity;
-            licht.color.set(gespeichert.color);
-            if (mitOrt && gespeichert.pos) licht.position.set(...gespeichert.pos);
-        }
-    }
-
-    static _renderer(werte) {
-        if (!werte) return;
-        if (werte.toneMapping && TONE_MAPPINGS[werte.toneMapping] !== undefined) {
-            state.renderer.toneMapping = TONE_MAPPINGS[werte.toneMapping];
-        }
-        if (werte.exposure !== undefined) {
-            state.renderer.toneMappingExposure = werte.exposure;
-        }
-        if (werte.background) state.scene.background.set(werte.background);
-    }
-
-    static _kamera(werte) {
-        if (!werte) return;
-        if (werte.fov) {
-            state.camera.fov = werte.fov;
-            state.camera.updateProjectionMatrix();
-        }
-        if (werte.position) state.camera.position.fromArray(werte.position);
-        if (werte.target) state.controls.target.fromArray(werte.target);
-        state.controls.update();
+    /**
+     * Licht, Bild und Kamera einer gespeicherten Szene setzen.
+     *
+     * Die Rechnung steht in `gemeinsam/szeneneinstellungen.js` (Umbau
+     * 28.08.2026, Befund `doppelcode`): Sie stand hier, in `session.js`, in
+     * `lighting.js` und in drei Betrachter-Modulen — sechsmal dasselbe, nur
+     * mit anderer Herkunft der Teile. Die Herkunft steht jetzt hier, die
+     * Rechnung dort.
+     */
+    static _uebernehmen(daten) {
+        szenenteile('Szenenzustand').uebernehmen(daten);
     }
 
     static _oberflaeche() {

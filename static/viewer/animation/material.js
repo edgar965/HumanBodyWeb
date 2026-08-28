@@ -18,55 +18,21 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 // Befunde `doppelcode` und `namensvarianten`, 17.08.2026).
 import { tonwerte } from '../gemeinsam/tonwerte.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Szeneneinstellungen } from '../gemeinsam/szeneneinstellungen.js';
 export const TONE_MAPPINGS = tonwerte(THREE);
 
 // =========================================================================
 // Scene settings from localStorage
 // =========================================================================
 export function applySceneSettings(keyLight, fillLight, backLight, ambient) {
-    const saved = localStorage.getItem('humanbody_scene_settings');
-    if (!saved) return;
-    try {
-        const s = JSON.parse(saved);
-        if (s.lighting) {
-            if (s.lighting.key) {
-                keyLight.intensity = s.lighting.key.intensity;
-                keyLight.color.set(s.lighting.key.color);
-                keyLight.position.set(...s.lighting.key.pos);
-            }
-            if (s.lighting.fill) {
-                fillLight.intensity = s.lighting.fill.intensity;
-                fillLight.color.set(s.lighting.fill.color);
-                fillLight.position.set(...s.lighting.fill.pos);
-            }
-            if (s.lighting.back) {
-                backLight.intensity = s.lighting.back.intensity;
-                backLight.color.set(s.lighting.back.color);
-                backLight.position.set(...s.lighting.back.pos);
-            }
-            if (s.lighting.ambient) {
-                ambient.intensity = s.lighting.ambient.intensity;
-                ambient.color.set(s.lighting.ambient.color);
-            }
-        }
-        if (s.renderer) {
-            if (s.renderer.toneMapping && TONE_MAPPINGS[s.renderer.toneMapping] !== undefined) {
-                Seitenzustand.renderer.toneMapping = TONE_MAPPINGS[s.renderer.toneMapping];
-            }
-            if (s.renderer.exposure !== undefined) {
-                Seitenzustand.renderer.toneMappingExposure = s.renderer.exposure;
-            }
-            if (s.renderer.background) {
-                Seitenzustand.scene.background.set(s.renderer.background);
-            }
-        }
-        if (s.camera && s.camera.fov) {
-            Seitenzustand.camera.fov = s.camera.fov;
-            Seitenzustand.camera.updateProjectionMatrix();
-        }
-    } catch (e) {
-        Protokoll.warnung('material', 'Failed to load scene settings:', e);
-    }
+    new Szeneneinstellungen({
+        keyLight, fillLight, backLight, ambient,
+        renderer: Seitenzustand.renderer,
+        scene: Seitenzustand.scene,
+        camera: Seitenzustand.camera,
+        tonwerte: TONE_MAPPINGS,
+        woher: 'material',
+    }).anwenden();
 }
 
 export function applySceneSkinSettings() {

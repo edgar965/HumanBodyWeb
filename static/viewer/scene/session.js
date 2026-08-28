@@ -1,10 +1,10 @@
 /**
  * Scene Editor -- sessionStorage persistence.
  */
-import { TONE_MAPPINGS } from './state.js';
 import { state, SESSION_KEY } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { szenenteile } from './szenenteile.js';
 
 // =========================================================================
 // Save session state to sessionStorage
@@ -50,52 +50,10 @@ export async function restoreSessionState() {
             }
         }
 
-        // Restore lighting
-        if (data.lighting) {
-            if (data.lighting.key) {
-                state.keyLight.intensity = data.lighting.key.intensity;
-                state.keyLight.color.set(data.lighting.key.color);
-                state.keyLight.position.set(...data.lighting.key.pos);
-            }
-            if (data.lighting.fill) {
-                state.fillLight.intensity = data.lighting.fill.intensity;
-                state.fillLight.color.set(data.lighting.fill.color);
-                state.fillLight.position.set(...data.lighting.fill.pos);
-            }
-            if (data.lighting.back) {
-                state.backLight.intensity = data.lighting.back.intensity;
-                state.backLight.color.set(data.lighting.back.color);
-                state.backLight.position.set(...data.lighting.back.pos);
-            }
-            if (data.lighting.ambient) {
-                state.ambientLight.intensity = data.lighting.ambient.intensity;
-                state.ambientLight.color.set(data.lighting.ambient.color);
-            }
-        }
-
-        // Restore renderer
-        if (data.renderer) {
-            if (data.renderer.toneMapping && TONE_MAPPINGS[data.renderer.toneMapping] !== undefined) {
-                state.renderer.toneMapping = TONE_MAPPINGS[data.renderer.toneMapping];
-            }
-            if (data.renderer.exposure !== undefined) {
-                state.renderer.toneMappingExposure = data.renderer.exposure;
-            }
-            if (data.renderer.background) {
-                state.scene.background.set(data.renderer.background);
-            }
-        }
-
-        // Restore camera
-        if (data.camera) {
-            if (data.camera.fov) {
-                state.camera.fov = data.camera.fov;
-                state.camera.updateProjectionMatrix();
-            }
-            if (data.camera.position) state.camera.position.fromArray(data.camera.position);
-            if (data.camera.target) state.controls.target.fromArray(data.camera.target);
-            state.controls.update();
-        }
+        // Licht, Bild und Kamera: dieselbe Rechnung wie beim Laden einer
+        // Szene und beim localStorage-Eintrag — sie steht in
+        // `gemeinsam/szeneneinstellungen.js` (Umbau 28.08.2026, `doppelcode`).
+        szenenteile('session').uebernehmen(data);
 
         fn.syncUIFromState();
         fn.updateCharacterListUI();
