@@ -81,16 +81,9 @@
         padding: 0;
     }
 
-    .anim-item {
-        font-size: 0.78rem;
-        color: var(--text-muted);
-        padding: 6px 16px 6px 36px;
-        cursor: pointer;
-        transition: all 0.15s;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+    /* Nur das Polster weicht ab — der Rest steht in
+       `animationsbaum.css` (28.08.2026). */
+    .anim-item { --anim-eintrag-polster: 6px 16px 6px 36px; }
 
     .anim-speed {
         padding: 6px 16px;

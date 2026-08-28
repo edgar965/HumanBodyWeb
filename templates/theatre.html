@@ -566,20 +566,36 @@
 }   /* 3x */
 .hb-gedaempft-theme.hb-gedaempft-theme.hb-gedaempft-theme { color:var(--text-muted); }   /* 1x */
 .hb-margin-bottom-8px.hb-margin-bottom-8px.hb-margin-bottom-8px { margin-bottom:8px; }   /* 5x */
-.hb-padding-3px.hb-padding-3px.hb-padding-3px {
-    padding:3px;
+/* Der gemeinsame Feld-Look (28.08.2026, Befund `doppelcode`).
+ *
+ * `stil_zu_klassen.py` hat am 16.08.2026 je Inline-Stil eine eigene Klasse
+ * erzeugt — und damit viermal denselben Rumpf: Grund, Schrift, Rahmen.
+ * Unterschiedlich sind nur Breite, Polster, Rundung und Schriftgroesse.
+ *
+ * Dreifach benannt wie die Einzelklassen: Nur so gewinnt die Regel gegen
+ * `style.css`. Wer die Wiederholung wegkuerzt, kippt die Spezifitaet — und
+ * die Seite sieht dabei NICHT kaputt aus, sie sieht nur anders aus.
+ * Nachgemessen von `Docu/umbau/theatre_felder_probe.mjs`. */
+.hb-padding-3px.hb-padding-3px.hb-padding-3px,
+.hb-width-40.hb-width-40.hb-width-40,
+.hb-width-50.hb-width-50.hb-width-50,
+.hb-width-100.hb-width-100.hb-width-100 {
     background:var(--bg-card);
     color:var(--text);
     border:1px solid var(--border);
+}
+.hb-padding-3px.hb-padding-3px.hb-padding-3px,
+.hb-width-40.hb-width-40.hb-width-40,
+.hb-width-50.hb-width-50.hb-width-50 {
+    padding:3px;
     border-radius:3px;
     font-size:0.8rem;
-}   /* 4x */
+}
+.hb-width-40.hb-width-40.hb-width-40 { width:40%; }   /* 2x */
+.hb-width-50.hb-width-50.hb-width-50 { width:50%; }   /* 2x */
 .hb-width-100.hb-width-100.hb-width-100 {
     width:100%;
     padding:4px 8px;
-    background:var(--bg-card);
-    color:var(--text);
-    border:1px solid var(--border);
     border-radius:4px;
     font-size:0.82rem;
 }   /* 5x */
@@ -595,24 +611,6 @@
     margin-top:2px;
 }   /* 2x */
 .hb-margin-bottom-10px.hb-margin-bottom-10px.hb-margin-bottom-10px { margin-bottom:10px; }   /* 2x */
-.hb-width-40.hb-width-40.hb-width-40 {
-    width:40%;
-    padding:3px;
-    background:var(--bg-card);
-    color:var(--text);
-    border:1px solid var(--border);
-    border-radius:3px;
-    font-size:0.8rem;
-}   /* 2x */
-.hb-width-50.hb-width-50.hb-width-50 {
-    width:50%;
-    padding:3px;
-    background:var(--bg-card);
-    color:var(--text);
-    border:1px solid var(--border);
-    border-radius:3px;
-    font-size:0.8rem;
-}   /* 2x */
 
 /* Statuszeile der Videoaufnahme. Die drei Zustaende standen als Inline-Stil
    im JavaScript (`status.style.background = ...`), Befund `jsstilfassungen`

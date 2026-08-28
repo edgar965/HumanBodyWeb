@@ -72,10 +72,13 @@ export class Mhproxyordner {
 
     static _zeile(stueck, kategorie, liste, aufKontextmenue) {
         const zeile = document.createElement('div');
-        zeile.className = 'anim-item';
+        // `kld-zeile` statt eines Inline-Stils (28.08.2026, Befund
+        // `jsstilfassungen`): Die Klasse in `animationsbaum.css` sagt genau
+        // dasselbe. Der Inline-Stil stand an 7.248 Zeilen im DOM — rund
+        // 60 Zeichen je Zeile, und er hat ausserdem jede Messung der
+        // `.anim-item`-Regel unbrauchbar gemacht.
+        zeile.className = 'anim-item kld-zeile';
         zeile.dataset.garmentId = stueck.id;
-        zeile.style.cssText = 'display:flex;align-items:center;gap:6px;'
-            + 'padding:4px 8px;cursor:pointer;';
         if (state._selectedMHId === stueck.id) zeile.classList.add('selected');
         if (stueck.has_thumb) zeile.appendChild(Mhproxyordner._bild(stueck));
         zeile.appendChild(Mhproxyordner._name(stueck));

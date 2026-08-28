@@ -47,6 +47,26 @@
 
 .anim-category.open .anim-category-body { display: block; }
 
+/* Ein Eintrag im Animationsbaum (28.08.2026, Befund `doppelcode`).
+ *
+ * Stand in animations.html, character_viewer.html, scene_config.html und
+ * skeleton_test.html — viermal gleich bis auf das Polster. Das kommt jetzt
+ * aus `--anim-eintrag-polster`.
+ *
+ * NICHT hierher gehoert die Fassung aus theatre.html: Die ist wirklich anders
+ * (Rundung, Abstand darunter, eigene Schriftgroesse) und beschreibt eine
+ * andere Liste. */
+.anim-item {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    padding: var(--anim-eintrag-polster, 5px 12px 5px 28px);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .anim-item:hover { background: var(--bg-card); color: var(--text); }
 
 .anim-item.active {
