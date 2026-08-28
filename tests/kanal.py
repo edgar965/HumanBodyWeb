@@ -35,6 +35,7 @@ Wiederholungen konstanter Wert ist fast nie Last, sondern ein Timeout.
 
 import json
 import logging
+from pathlib import Path
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -69,16 +70,41 @@ class Kanal:
 
     @staticmethod
     def _mehrteilig(files, grenze='----TestBoundary9876xyz'):
-        """Dateien als `multipart/form-data` — von beiden Kanälen gebraucht."""
+        """`multipart/form-data` — von beiden Kanälen gebraucht.
+
+        `files` ist entweder ein Wörterbuch
+        ``{name: (dateiname, inhalt, typ)}`` oder eine LISTE aus
+        ``(name, dateiname|None, inhalt, typ)``. Die Listenform gibt es seit
+        dem 28.08.2026: Ein Bundle-Upload schickt neben der Datei ein
+        normales Textfeld (`bundleId`) mit, und dafür muss `filename`
+        fehlen dürfen — mit `filename` macht Django daraus eine Datei, und
+        `request.POST` bleibt leer.
+        """
+        eintraege = (files if isinstance(files, (list, tuple))
+                     else [(name, wert[0], wert[1], wert[2])
+                           for name, wert in files.items()])
         rumpf = b''
-        for name, (dateiname, inhalt, typ) in files.items():
+        for name, dateiname, inhalt, typ in eintraege:
             rumpf += ('--%s\r\n' % grenze).encode()
-            rumpf += ('Content-Disposition: form-data; name="%s"; '
-                      'filename="%s"\r\n' % (name, dateiname)).encode()
-            rumpf += ('Content-Type: %s\r\n\r\n' % typ).encode()
-            rumpf += inhalt + b'\r\n'
+            if dateiname is None:
+                rumpf += ('Content-Disposition: form-data; name="%s"\r\n\r\n'
+                          % name).encode()
+            else:
+                rumpf += ('Content-Disposition: form-data; name="%s"; '
+                          'filename="%s"\r\n' % (name, dateiname)).encode()
+                rumpf += ('Content-Type: %s\r\n\r\n' % typ).encode()
+            rumpf += (inhalt if isinstance(inhalt, bytes)
+                      else str(inhalt).encode()) + b'\r\n'
         rumpf += ('--%s--\r\n' % grenze).encode()
         return rumpf, 'multipart/form-data; boundary=%s' % grenze
+
+    def rohabruf(self, pfad, timeout=10):
+        """Den Inhalt einer Adresse als BYTES — für Dateien, nicht für JSON.
+
+        Ein Bundle-Test lädt eine `.mtl` hoch und liest sie danach zurück;
+        `senden()` würde daraus ein Wörterbuch machen wollen.
+        """
+        raise NotImplementedError
 
     @staticmethod
     def _lesen(status, text):
@@ -130,6 +156,20 @@ class NetzKanal(Kanal):
             return 0, {'error': str(fehler)}
 
 
+    def rohabruf(self, pfad, timeout=10):
+        adresse = pfad if pfad.startswith('http') else BASE_URL + pfad
+        try:
+            with urllib.request.urlopen(adresse, timeout=timeout) as antwort:
+                return antwort.status, antwort.read()
+        except urllib.error.HTTPError as fehler:
+            return fehler.code, b''
+        except Exception as fehler:                               # noqa: BLE001
+            # Der Grund gehoert in den Bericht: Ein Aufrufer sieht sonst nur
+            # „HTTP 0" und weiss nicht, ob der Server aus war, der Name nicht
+            # aufloeste oder die Zeit ablief.
+            return 0, str(fehler).encode('utf-8', 'replace')
+
+
 class ClientKanal(Kanal):
     """In-process über `django.test.Client` — im `manage.py test`-Lauf."""
 
@@ -154,3 +194,24 @@ class ClientKanal(Kanal):
             return self.client.generic(method, pfad, json.dumps(data),
                                        content_type='application/json')
         return self.client.generic(method, pfad)
+
+    def rohabruf(self, pfad, timeout=10):
+        """In-process — die Datei kommt aus der Antwort des Testclients.
+
+        `MEDIA_URL`-Adressen bedient der Testclient NICHT: Statik und Medien
+        liefert im Testlauf niemand aus. Deshalb wird eine Medienadresse
+        direkt von der Platte gelesen; das ist dieselbe Datei, die die
+        Ansicht gerade geschrieben hat.
+        """
+        from django.conf import settings
+        if pfad.startswith(str(settings.MEDIA_URL)):
+            rest = pfad[len(str(settings.MEDIA_URL)):].split('?')[0]
+            datei = Path(settings.MEDIA_ROOT) / rest
+            if not datei.is_file():
+                return 404, b''
+            return 200, datei.read_bytes()
+        try:
+            antwort = self.client.get(pfad)
+        except Exception as fehler:                               # noqa: BLE001
+            return 0, str(fehler).encode('utf-8', 'replace')
+        return antwort.status_code, antwort.content

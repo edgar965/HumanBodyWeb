@@ -30,14 +30,32 @@ wäre eine zweite Wahrheit, die beim ersten neuen Fall veraltet. Django findet d
 erzeugten Klassen über die Discovery genauso wie handgeschriebene.
 """
 
+import tempfile
 import unittest
+from pathlib import Path
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from tests import ALL_CATEGORIES
 from tests.kanal import ClientKanal, Kanal
 
 
+#: Wegwerf-Medienordner für den ganzen Lauf.
+#:
+#: WARUM (28.08.2026, gemessen): In `media/scene_objects/` lagen 2.782
+#: Einträge, davon 1.374 mit dem Präfix `pytest_` — Rückstände aus
+#: Testläufen, mitten in den echten Mediendaten. Die Bundle-Fälle luden über
+#: das Netz an den laufenden Server hoch und landeten damit zwangsläufig
+#: dort. Seit sie durch den Kanal gehen, läuft der Upload in-process, und
+#: `MEDIA_ROOT` lässt sich umlenken.
+#:
+#: Das Verzeichnis bleibt für die Dauer des Prozesses stehen und wird von
+#: Python selbst geräumt — ein `rmtree` im `tearDown` würde Dateien löschen,
+#: die ein noch laufender Fall gerade schreibt.
+_MEDIEN = tempfile.TemporaryDirectory(prefix='hb-ui-medien-')
+
+
+@override_settings(MEDIA_ROOT=Path(_MEDIEN.name))
 class Oberflaechenfall(TestCase):
     """Basis: schaltet den Kanal auf den Testclient und wieder zurück."""
 

@@ -1,5 +1,6 @@
 """Tests für Scene-Object (3D-Objekt) Upload API."""
 from .base import TestCategory, Netzruf
+from ._bundle_basis import Bundelruf
 
 
 class SceneObjectTests(TestCategory):
@@ -22,33 +23,27 @@ class SceneObjectTests(TestCategory):
 
     @staticmethod
     def test_bundle_preserves_filename():
-        """Upload mit bundleId behält Original-Dateinamen (für MTL→Textur-Referenzen)"""
-        boundary = '----TestBoundary9876xyz'
-        body = b''
-        body += f'--{boundary}\r\n'.encode()
-        body += b'Content-Disposition: form-data; name="object"; filename="my_model.obj"\r\n'
-        body += b'Content-Type: text/plain\r\n\r\n'
-        body += b'v 0 0 0\n'
-        body += b'\r\n'
-        body += f'--{boundary}\r\n'.encode()
-        body += b'Content-Disposition: form-data; name="bundleId"\r\n\r\n'
-        body += b'testbundle123\r\n'
-        body += f'--{boundary}--\r\n'.encode()
-        import urllib.request
-        req = urllib.request.Request('http://localhost:8081/api/studio/scene-object-upload/',
-                                     data=body, method='POST')
-        req.add_header('Content-Type', f'multipart/form-data; boundary={boundary}')
-        try:
-            import json as _json
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = _json.loads(resp.read().decode())
-            if 'testbundle123' not in data.get('url', ''):
-                return False, f'bundleId fehlt in URL: {data.get("url")}'
-            if 'my_model.obj' not in data.get('url', ''):
-                return False, f'Original-Name fehlt: {data.get("url")}'
-            return True, 'Bundle-Pfad + Original-Name OK'
-        except Exception as e:
-            return False, str(e)
+        """Upload mit bundleId behält Original-Dateinamen (für MTL→Textur-Referenzen)
+
+        DURCH DEN KANAL, seit dem 28.08.2026: Dieser Fall baute seinen
+        Multipart-Rumpf selbst und schickte ihn per `urllib` an
+        `http://localhost:8081`. Er brauchte damit einen laufenden
+        Dev-Server — ohne ihn stand „Es konnte keine Verbindung hergestellt
+        werden" als Fehlschlag da. Und `localhost` statt `127.0.0.1` kostet
+        unter Windows 2 s je Aufruf (gemessen, siehe `tests/kanal.py`).
+        """
+        status, daten = Bundelruf.hochladen(
+            '/api/studio/scene-object-upload/',
+            [('object', 'my_model.obj', b'v 0 0 0\n', 'text/plain'),
+             ('bundleId', None, b'testbundle123', 'text/plain')])
+        if status != 200:
+            return False, f'HTTP {status}: {daten.get("error", daten)}'
+        adresse = daten.get('url', '')
+        if 'testbundle123' not in adresse:
+            return False, f'bundleId fehlt in URL: {adresse}'
+        if 'my_model.obj' not in adresse:
+            return False, f'Original-Name fehlt: {adresse}'
+        return True, 'Bundle-Pfad + Original-Name OK'
 
     @staticmethod
     def test_mtl_upload_ok():

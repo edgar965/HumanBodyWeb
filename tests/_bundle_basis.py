@@ -14,10 +14,9 @@ UMBAU 27.08.2026 (Befund `freie-funktionen`): Die beiden Sende-Funktionen
 stehen jetzt als `Bundelruf`; die Kunstdateien sind Klassenfelder daneben.
 """
 
-# `io` stand hier und wurde nie benutzt (Befund `tote-importe`).
-import json
-import urllib.error
-import urllib.request
+# `json`, `urllib` und `BASE_URL` sind mit dem 28.08.2026 entfallen: Der
+# Upload geht jetzt durch den Kanal, und der kennt beides.
+from .kanal import Kanal
 
 # EINE Adresse für alle Tests. Hier stand eine zweite Kopie mit `localhost` —
 # die kostete 2 s je Anfrage. Sie kommt aus `kanal.py`, wo auch der Netzkanal
@@ -25,15 +24,27 @@ import urllib.request
 # 18.08.2026 — und dieser Import hier war der Beleg, dass sie doch gebraucht
 # wird: der Testlauf brach danach mit ImportError ab).
 #
-# DIESE DATEI SCHICKT SELBST (multipart) und nicht über `Kanal`: Sie prüft den
-# Upload-Weg mit einem von Hand gebauten Rumpf. Im in-process-Lauf greift sie
-# damit ins Netz — deshalb steht sie in der Oberflächen-Suite, die gegen den
-# laufenden Server fährt.
-from .kanal import BASE_URL
+# BIS ZUM 28.08.2026 SCHICKTE DIESE DATEI SELBST und nicht über `Kanal`. Der
+# Satz „Im in-process-Lauf greift sie damit ins Netz“ stand hier als
+# Feststellung — er war die Fehlerbeschreibung: Die Fälle brauchten einen
+# laufenden Dev-Server, kippten bei Nebenlast um und schrieben in die echten
+# Mediendaten. Jetzt entscheidet der Kanal.
 
 
 class Bundelruf:
-    """Multipart-Upload und Abruf — von Hand gebaut, absichtlich am Kanal vorbei."""
+    """Multipart-Upload und Abruf — DURCH den Kanal.
+
+    BIS ZUM 28.08.2026 GING DAS AM KANAL VORBEI: `urllib` an
+    `127.0.0.1:8081`, also an den laufenden Dev-Server. Das hat dreimal einen
+    Fehlschlag erzeugt, der beim naechsten Lauf verschwand („Upload HTTP:
+    0/0") — reproduzierbar erst, als die Testsuite waehrend laufender
+    Browser-Proben gestartet wurde. Dazu schrieben die Faelle in die ECHTEN
+    Mediendaten statt in die des Laufs.
+
+    Jetzt entscheidet der Kanal: im Testlauf in-process ueber
+    `django.test.Client` (Testdatenbank, eigener Medienordner), ausserhalb
+    weiter ueber das Netz.
+    """
 
     #: Wie lange auf eine Antwort gewartet wird.
     FRIST_UPLOAD_S = 15
@@ -47,61 +58,13 @@ class Bundelruf:
         `dateiname=None` -> normales Textfeld, sonst Datei.
         Rueckgabe: `(Status, JSON oder {'_raw': Text})`.
         """
-        grenze = '----BundleBoundary' + str(id(felder))
-        anfrage = urllib.request.Request(
-            BASE_URL + pfad, data=cls._rumpf(grenze, felder), method='POST')
-        anfrage.add_header('Content-Type',
-                           'multipart/form-data; boundary=%s' % grenze)
-        try:
-            with urllib.request.urlopen(
-                    anfrage, timeout=cls.FRIST_UPLOAD_S) as antwort:
-                text = antwort.read().decode()
-                try:
-                    return antwort.status, json.loads(text)
-                # stumm gewollt: Der Rohtext geht als `_raw` in den Bericht —
-                # er sagt mehr als die Parser-Meldung.
-                except json.JSONDecodeError:
-                    return antwort.status, {'_raw': text}
-        except urllib.error.HTTPError as fehler:
-            return fehler.code, {'error': str(fehler)}
-        except Exception as fehler:                              # noqa: BLE001
-            return 0, {'error': str(fehler)}
-
-    @staticmethod
-    def _rumpf(grenze, felder):
-        """Der Multipart-Rumpf als Bytes."""
-        teile = b''
-        for name, dateiname, inhalt, inhaltstyp in felder:
-            teile += ('--%s\r\n' % grenze).encode()
-            if dateiname is not None:
-                teile += ('Content-Disposition: form-data; name="%s"; '
-                          'filename="%s"\r\n' % (name, dateiname)).encode()
-                teile += ('Content-Type: %s\r\n\r\n' % inhaltstyp).encode()
-            else:
-                teile += ('Content-Disposition: form-data; name="%s"\r\n\r\n'
-                          % name).encode()
-            teile += (inhalt if isinstance(inhalt, (bytes, bytearray))
-                      else inhalt.encode())
-            teile += b'\r\n'
-        return teile + ('--%s--\r\n' % grenze).encode()
+        return Kanal.aktueller().senden(pfad, method='POST', files=list(felder),
+                                        timeout=cls.FRIST_UPLOAD_S)
 
     @classmethod
     def abrufen(cls, adresse):
-        """Laedt den Inhalt einer Adresse (absolut oder relativ)."""
-        if adresse.startswith('/'):
-            adresse = BASE_URL + adresse
-        try:
-            with urllib.request.urlopen(
-                    adresse, timeout=cls.FRIST_ABRUF_S) as antwort:
-                return antwort.status, antwort.read()
-        except urllib.error.HTTPError as fehler:
-            return fehler.code, b''
-        except Exception as fehler:                              # noqa: BLE001
-            # Der Grund gehoert in den Bericht: Ein Aufrufer sieht sonst nur
-            # „HTTP 0" und weiss nicht, ob der Server aus war, der Name nicht
-            # aufloeste oder die Zeit ablief. Die Bytes sind hier frei — beim
-            # Statuscode 0 prueft niemand den Inhalt.
-            return 0, str(fehler).encode('utf-8', 'replace')
+        """Laedt den Inhalt einer Adresse als Bytes."""
+        return Kanal.aktueller().rohabruf(adresse, timeout=cls.FRIST_ABRUF_S)
 
 
 # Synthetische Test-Dateien — minimal, aber syntaktisch gültig. Sie bleiben
