@@ -6,16 +6,13 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
+{% comment %}Hier stand ein `.main-content`-Block mit sieben Angaben —
+WIRKUNGSLOS: Diese Seite hat gar kein Element mit dieser Klasse (nachgesehen
+im Browser, 28.08.2026). Die Basisvorlage von djangoBase benutzt
+`db-content`. Entfallen mit dem Befund `doppelcode`; die Angaben stehen
+jetzt als `.main-content.hb-vollhoehe` in `viewer_huelle.css`, wo die
+Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 <style>
-    .main-content {
-        padding: 0 !important;
-        max-width: none !important;
-        width: calc(100vw - var(--sidebar-width));
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-    }
-
     /* ── Menubar ── */
     .theatre-menubar {
         position: relative;

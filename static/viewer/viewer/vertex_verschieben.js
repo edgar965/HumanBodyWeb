@@ -86,16 +86,48 @@ export async function _veSmooth() {
               faces: uint32ToBase64(facesArr), selected,
               iterations: GLAETTUNG_SCHRITTE, factor: GLAETTUNG_STAERKE });
         if (data.error) { console.error(data.error); return; }
-        const updatedBlender = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(updatedBlender);
-        const overlayPos = Vertexzustand.vePointsOverlay.geometry.getAttribute('position');
-        for (const idx of selected) { const x = updatedBlender[idx*3]; const y = updatedBlender[idx*3+1]; const z = updatedBlender[idx*3+2]; meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
-        meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-        Vertexzustand.veTargetMesh.geometry.computeVertexNormals();
-        Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
+        _vePunkteUebernehmen(data, selected, meshPos);
     } catch (err) { console.error('Smooth failed:', err); }
     _veUpdateGizmo(); _veUpdateSelectionInfo();
 }
+
+/**
+ * Die vom Server gerechneten Punkte ins Netz UND in die Punktanzeige tragen.
+ *
+ * WARUM ALS EIGENER SCHRITT (28.08.2026, Befund `doppelcode`): Diese acht
+ * Zeilen standen zweimal in DIESER Datei — beim Glätten und beim
+ * Nach-außen-Schieben.
+ *
+ * DREI DINGE MÜSSEN ZUSAMMEN PASSIEREN, und jedes einzeln vergessen sieht
+ * anders aus:
+ *
+ * * `needsUpdate` auf BEIDEN Attributen. Ohne das rechnet Three mit den neuen
+ *   Zahlen, lädt aber die alten in die Grafikkarte — das Netz bleibt stehen,
+ *   und nichts wirft.
+ * * `computeVertexNormals`. Ohne das behalten die verschobenen Punkte ihre
+ *   alten Normalen: Die Stelle leuchtet falsch, sieht aber nicht kaputt aus.
+ * * `computeBoundingSphere`. Ohne das rechnet Three mit der alten Hülle und
+ *   blendet das Netz aus, sobald die Kamera an ihren Rand kommt.
+ *
+ * Die Punkte kommen in BLENDER-Achsen und werden hier gedreht — dieselbe
+ * Drehung wie überall (`gemeinsam/kodierung.js`).
+ */
+function _vePunkteUebernehmen(data, selected, meshPos) {
+    const neu = base64ToFloat32(data.vertices);
+    blenderToThreeCoords(neu);
+    const overlayPos =
+        Vertexzustand.vePointsOverlay.geometry.getAttribute('position');
+    for (const idx of selected) {
+        const x = neu[idx * 3], y = neu[idx * 3 + 1], z = neu[idx * 3 + 2];
+        meshPos.setXYZ(idx, x, y, z);
+        overlayPos.setXYZ(idx, x, y, z);
+    }
+    meshPos.needsUpdate = true;
+    overlayPos.needsUpdate = true;
+    Vertexzustand.veTargetMesh.geometry.computeVertexNormals();
+    Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
+}
+
 
 export async function _vePushOutside() {
     if (!Vertexzustand.veActive || !Vertexzustand.veTargetMesh || Vertexzustand.veSelectedIndices.size === 0) return;
@@ -112,13 +144,7 @@ export async function _vePushOutside() {
             body: JSON.stringify({ vertices: float32ToBase64(blenderVerts), selected, min_dist: 0.006 })
         });
         if (data.error) { console.error(data.error); return; }
-        const updatedBlender = base64ToFloat32(data.vertices);
-        blenderToThreeCoords(updatedBlender);
-        const overlayPos = Vertexzustand.vePointsOverlay.geometry.getAttribute('position');
-        for (const idx of selected) { const x = updatedBlender[idx*3]; const y = updatedBlender[idx*3+1]; const z = updatedBlender[idx*3+2]; meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
-        meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
-        Vertexzustand.veTargetMesh.geometry.computeVertexNormals();
-        Vertexzustand.veTargetMesh.geometry.computeBoundingSphere();
+        _vePunkteUebernehmen(data, selected, meshPos);
     } catch (err) { console.error('Push outside failed:', err); }
     _veUpdateGizmo(); _veUpdateSelectionInfo();
 }

@@ -14,14 +14,13 @@
 {% block title %}HumanBody · Theatre Studio{% endblock %}
 
 {% block extra_head %}
+{% comment %}Die sieben Angaben zu `.main-content` standen hier UND in
+`theatre.html` (28.08.2026, Befund `doppelcode`). Sie kommen jetzt aus
+`viewer_huelle.css`; von den Klassen dort trifft auf dieser Seite nur
+`.main-content` zu (nachgesehen), der Rest liegt brach.{% endcomment %}
+<link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
 <style>
     .main-content {
-        padding: 0 !important;
-        max-width: none !important;
-        width: calc(100vw - var(--sidebar-width));
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
         background: #111;
     }
 
@@ -70,7 +69,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="main-content">
+<main class="main-content hb-vollhoehe">
     <div class="studio-info">
         <h2><i class="fas fa-theater-masks"></i> Theatre.js Studio Debugger</h2>
         <p>This is a minimal setup to debug Theatre.js Studio.</p>

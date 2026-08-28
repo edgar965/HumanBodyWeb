@@ -13,6 +13,21 @@
     width: calc(100vw - var(--sidebar-width));
 }
 
+/* Eine Seite, die die ganze Hoehe fuellt und ihre Kinder untereinander legt
+ * (28.08.2026, Befund `doppelcode`).
+ *
+ * `theatre.html` und `theatre_studio.html` hatten je einen eigenen
+ * `.main-content`-Block mit denselben sieben Angaben — obwohl `theatre.html`
+ * diese Datei schon laedt und die ersten drei damit doppelt hatte.
+ *
+ * Als eigene Klasse und nicht in `.main-content` selbst: Nicht jede
+ * Betrachter-Seite ist ein Vollhoehen-Fenster. Die Modellseite scrollt. */
+.main-content.hb-vollhoehe {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
 .viewer-container {
     display: flex;
     width: 100%;

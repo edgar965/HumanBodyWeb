@@ -33,29 +33,50 @@ export function updateMeshVertices(float32Buffer) {
     }
 }
 
+/**
+ * Aus der Netz-Antwort das Körpernetz bauen und in die Szene stellen.
+ *
+ * WARUM ALS EIGENER SCHRITT (28.08.2026, Befund `doppelcode`): Diese elf
+ * Zeilen standen zweimal in DIESER Datei — in `loadMesh` und in
+ * `reloadMeshForBodyType`. Sie hängen zusammen und müssen in dieser
+ * Reihenfolge laufen.
+ *
+ * DIE PUNKTZAHL WIRD ZWEIMAL GESCHRIEBEN — einmal aus der Antwort
+ * (`vertex_count`) und einmal aus der fertigen Geometrie. Beide Aufrufe
+ * standen schon vorher da und bleiben, weil sie unterschiedliche Quellen
+ * haben; ob sie je auseinandergehen, ist NICHT gemessen. Auf der Modellseite
+ * liefern sie denselben Wert (70.851, gemessen 28.08.2026) — die Probe kann
+ * die beiden deshalb nicht unterscheiden und behauptet es auch nicht.
+ */
+function _netzAufbauen(data) {
+    state.vertexCount = data.vertex_count;
+    _punktzahlZeigen(state.vertexCount);
+
+    // Puffer, Normalen, Materialgruppen: siehe `Koerpernetz`. Diese dreissig
+    // Zeilen standen fuenfmal im Projekt (Befund `doppelcode`, 17.08.2026).
+    state.bodyMesh = Koerpernetz.netz(data, THREE);
+    state.bodyGeometry = state.bodyMesh.geometry;
+    state.scene.add(state.bodyMesh);
+    _punktzahlZeigen(state.bodyGeometry.attributes.position.count);
+
+    applySceneSkinSettings();
+    applySkinColor();
+}
+
+/** Die Punktzahl in der Statuszeile — fehlt das Feld, passiert nichts. */
+function _punktzahlZeigen(anzahl) {
+    const feld = document.getElementById('vertex-count');
+    if (feld) feld.textContent = anzahl.toLocaleString();
+}
+
+
 export async function loadMesh() {
     try {
         const data = await Serverabruf.json(`${API}/mesh/`);
         if (data.error) { console.error(data.error); return; }
 
-        state.vertexCount = data.vertex_count;
-        { const el = document.getElementById('vertex-count'); if (el) el.textContent = state.vertexCount.toLocaleString(); }
-
-        // Puffer, Normalen, Materialgruppen: siehe `Koerpernetz`. Diese dreissig
-        // Zeilen standen fuenfmal im Projekt, zweimal in DIESER Datei
-        // (Befund `doppelcode`, 17.08.2026).
-        state.bodyMesh = Koerpernetz.netz(data, THREE);
-        const geo = state.bodyMesh.geometry;
-
-
-        state.bodyGeometry = geo;
-        state.scene.add(state.bodyMesh);
+        _netzAufbauen(data);
         if (state.initialBodyTop === null) state.initialBodyTop = _getBodyTop();
-
-        { const el = document.getElementById('vertex-count'); if (el) el.textContent = geo.attributes.position.count.toLocaleString(); }
-
-        applySceneSkinSettings();
-        applySkinColor();
         fn.onResize();
     } catch (e) {
         console.error('Failed to load mesh:', e);
@@ -79,24 +100,8 @@ export async function reloadMeshForBodyType(bodyType, gender) {
         const data = await Serverabruf.json(`${API}/mesh/?body_type=${encodeURIComponent(bodyType)}`);
         if (data.error) { console.error(data.error); return; }
 
-        state.vertexCount = data.vertex_count;
-        { const el = document.getElementById('vertex-count'); if (el) el.textContent = state.vertexCount.toLocaleString(); }
-
-        // Puffer, Normalen, Materialgruppen: siehe `Koerpernetz`. Diese dreissig
-        // Zeilen standen fuenfmal im Projekt, zweimal in DIESER Datei
-        // (Befund `doppelcode`, 17.08.2026).
-        state.bodyMesh = Koerpernetz.netz(data, THREE);
-        const geo = state.bodyMesh.geometry;
-
-
-        state.bodyGeometry = geo;
-        state.scene.add(state.bodyMesh);
+        _netzAufbauen(data);
         state.initialBodyTop = _getBodyTop();
-
-        { const el = document.getElementById('vertex-count'); if (el) el.textContent = geo.attributes.position.count.toLocaleString(); }
-
-        applySceneSkinSettings();
-        applySkinColor();
 
         state.skinWeightData = await Serverabruf.json(
             `${API}/skin-weights/?body_type=${encodeURIComponent(bodyType)}`);
