@@ -6,6 +6,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { updateMeshVertices, reloadMeshForBodyType } from './mesh.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Morphdrossel } from '../gemeinsam/morphdrossel.js';
 
 export function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -85,19 +86,7 @@ function _resyncMorphsOnReconnect() {
 }
 
 export function sendMorphThrottled(key, value) {
-    state.pendingMorphs[key] = value;
-    if (!state.morphTimer) {
-        state.morphTimer = setTimeout(() => {
-            if (Object.keys(state.pendingMorphs).length === 1) {
-                const [k, v] = Object.entries(state.pendingMorphs)[0];
-                wsSend({ type: 'morph', key: k, value: v });
-            } else {
-                wsSend({ type: 'morph_batch', morphs: state.pendingMorphs });
-            }
-            state.pendingMorphs = {};
-            state.morphTimer = null;
-        }, 33);
-    }
+    Morphdrossel.schieben(state, wsSend, key, value);
 }
 
 // Register

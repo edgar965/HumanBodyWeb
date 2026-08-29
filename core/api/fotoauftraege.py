@@ -103,14 +103,10 @@ class Fotoauftraege:
         job, rumpf, fehler = Fotoauftrag.mit_rumpf(request, job_id)
         if fehler:
             return fehler
-        roh = Bildablage.bytes_aus_dataurl(rumpf.get('image', ''))
-        if roh is None:
-            return JsonResponse({'ok': False, 'error': 'Invalid base64'},
-                                status=400)
-        if not roh:
-            return JsonResponse({'ok': False, 'error': 'No image data'},
-                                status=400)
-        relativ = Bildablage('screenshots').sichern(job_id, roh)
+        relativ, fehlertext = Bildablage('screenshots').sichern_aus_dataurl(
+            job_id, rumpf.get('image', ''))
+        if fehlertext:
+            return JsonResponse({'ok': False, 'error': fehlertext}, status=400)
         job.result_image = relativ
         job.save(update_fields=['result_image'])
         return JsonResponse({'ok': True, 'path': '/%s' % relativ})

@@ -53,6 +53,26 @@ class Bildablage:
         os.makedirs(pfad, exist_ok=True)
         return pfad
 
+    def sichern_aus_dataurl(self, name, angabe):
+        """Data-URL entgegennehmen, prüfen, ablegen.
+
+        BEFUND `doppelcode` (29.08.2026): Diese drei Schritte standen in
+        `Fotoabgleich.projektion_sichern` und `Fotoauftraege.bild_sichern`
+        wortgleich — zehn Zeilen. Die beiden legen dasselbe Bild in zwei
+        Unterordnern ab.
+
+        Zurück kommt `(relativer Pfad, Fehlertext)`; genau einer von beiden
+        ist gesetzt. Die HTTP-Antwort baut der Endpunkt — ein Dienst, der
+        `JsonResponse` zurückgibt, ist nur noch aus einer Ansicht heraus
+        benutzbar.
+        """
+        roh = self.bytes_aus_dataurl(angabe)
+        if roh is None:
+            return None, 'Invalid base64'
+        if not roh:
+            return None, 'No image data'
+        return self.sichern(name, roh), None
+
     def sichern(self, name, roh):
         """Schreibt `<name>.jpg` und gibt den Pfad RELATIV zu `BASE_DIR`."""
         dateiname = '%s.jpg' % name
