@@ -1,7 +1,6 @@
 /**
  * Photo To 3D — HumanBody mesh loading, DEF skeleton, skin color.
  */
-import * as THREE from 'three';
 import { state, API, MODEL_OFFSET_X } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
@@ -11,6 +10,8 @@ import {
     base64ToFloat32, base64ToUint32, blenderToThreeCoords,
     alignBodyToSMPLX, BODY_MATERIALS,
 } from './helpers.js';
+import { buildRigifySkeleton as Rigifyskelett }
+    from '../rigify_skeleton_builder.js';
 
 // =========================================================================
 // HumanBody skin color
@@ -76,55 +77,35 @@ export async function loadRigifySkeleton(bodyType) {
     if (state.rigifySkeletonData && state.skinWeightData) buildRigifySkeleton();
 }
 
+/**
+ * Das DEF-Skelett aufbauen und die Ruhedrehungen dazu merken.
+ *
+ * BEFUND `doppelcode` (29.08.2026): Diese Funktion trug denselben Namen wie
+ * `buildRigifySkeleton` in `rigify_skeleton_builder.js` und baute dieselben
+ * 38 Zeilen noch einmal nach — nur ohne Argumente und mit `state` fest
+ * verdrahtet. Zwei gleichnamige Funktionen mit verschiedener Signatur sind
+ * die unangenehmste Sorte Doppelung: Wer `fn.buildRigifySkeleton` liest,
+ * greift beim Suchen die falsche.
+ *
+ * EIN UNTERSCHIED WAR ECHT und ist geprueft, nicht weggewischt: Die alte
+ * Fassung hing JEDEN elternlosen Knochen an die Wurzel, die gemeinsame nur
+ * die mit Skelettdaten. Beides faellt zusammen, solange kein Gewichtsname
+ * ohne Knochen ankommt — und das kann er nicht: `Skingewichte
+ * ._nicht_def_entfernen` wirft solche Namen serverseitig weg. Gemessen am
+ * 29.08.2026: In `humanBody_male/skin_weights_base.json` steht genau ein
+ * solcher Name (`corrective_smooth_inv`, 3.192 Punkte, Gewichtssumme 2886) —
+ * er verlaesst den Server nicht.
+ */
 export function buildRigifySkeleton() {
-    const skelByName = {};
-    for (const b of state.rigifySkeletonData.bones) skelByName[b.name] = b;
+    const skelett = Rigifyskelett(state.rigifySkeletonData, state.skinWeightData);
+    if (!skelett.rootBone) return;
 
-    const bones = [];
-    const boneByName = {};
-    let rootBone = null;
-
-    for (const name of state.skinWeightData.bone_names) {
-        const bone = new THREE.Bone();
-        bone.name = name.replace(/\./g, '_');
-        bones.push(bone);
-        boneByName[name] = bone;
-    }
-
-    for (let i = 0; i < state.skinWeightData.bone_names.length; i++) {
-        const name = state.skinWeightData.bone_names[i];
-        const bone = bones[i];
-        const data = skelByName[name];
-        if (!data) continue;
-
-        const p = data.local_position;
-        bone.position.set(p[0], p[2], -p[1]);
-        const q = data.local_quaternion;
-        bone.quaternion.set(q[1], q[3], -q[2], q[0]);
-
-        if (data.parent && boneByName[data.parent]) {
-            boneByName[data.parent].add(bone);
-        } else if (!rootBone) {
-            rootBone = bone;
-        }
-    }
-
-    for (let i = 0; i < bones.length; i++) {
-        if (!bones[i].parent && bones[i] !== rootBone && rootBone) {
-            rootBone.add(bones[i]);
-        }
-    }
-
-    // Store rest quaternions for facial expression deltas
+    // Ruhedrehungen fuer die Mimik: die Ausdruecke kommen als Differenz dazu.
     const restQuats = {};
-    for (const [name, bone] of Object.entries(boneByName)) {
+    for (const [name, bone] of Object.entries(skelett.boneByName)) {
         restQuats[name] = bone.quaternion.clone();
     }
-
-    if (rootBone) {
-        rootBone.updateWorldMatrix(true, true);
-        state.rigifySkeleton = { rootBone, bones, boneByName, restQuats };
-    }
+    state.rigifySkeleton = { ...skelett, restQuats };
 }
 
 fn.loadMesh = loadMesh;

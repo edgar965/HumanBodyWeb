@@ -4,14 +4,17 @@
  * Aus model_generator.js herausgeloest (Umbau 15.08.2026): eine Funktion von
  * 375 Zeilen, die je Knochen eine Form erzeugt, alle Formen verschmilzt,
  * Gewichte setzt und das Ergebnis an das Skelett bindet.
+ *
+ * Der Skelettaufbau steht seit dem 29.08.2026 in `skinnetz.js` und geht
+ * damit durch `buildRigifySkeleton` — dieselben 38 Zeilen standen hier,
+ * in `rignetz.js` und in `rigify_skeleton_builder.js` (Befund
+ * `doppelcode`). Der Kommentar an der Stelle nannte die Vorlage sogar.
  */
 
-import * as THREE from 'three';
-import './formenbauer.js';
 import { computeBoneWorldTransforms } from './knochenmatrizen.js';
-import './knochengruppen.js';
 import { Knochenformen } from './knochenformen.js';
 import { Netzverschmelzung } from './netzverschmelzung.js';
+import { Skinnetz } from './skinnetz.js';
 
 
 /**
@@ -53,57 +56,6 @@ export function generateModelMesh(skelData, swData, config) {
     const { geometry: mergedGeo, materials, boneVertexRanges } =
         Netzverschmelzung.zusammenfuegen(geoChunks);
 
-    // Build skeleton (same as buildRigifySkeleton in scene_config.js)
-    const skelByNameMap = {};
-    for (const b of skelData.bones) skelByNameMap[b.name] = b;
-
-    const bones = [];
-    const boneByName = {};
-    let rootBone = null;
-
-    for (const name of swData.bone_names) {
-        const bone = new THREE.Bone();
-        bone.name = name.replace(/\./g, '_');
-        bones.push(bone);
-        boneByName[name] = bone;
-    }
-
-    for (let i = 0; i < swData.bone_names.length; i++) {
-        const name = swData.bone_names[i];
-        const bone = bones[i];
-        const bdata = skelByNameMap[name];
-        if (!bdata) continue;
-        const p = bdata.local_position;
-        bone.position.set(p[0], p[2], -p[1]);
-        const q = bdata.local_quaternion;
-        bone.quaternion.set(q[1], q[3], -q[2], q[0]);
-        if (bdata.parent && boneByName[bdata.parent]) {
-            boneByName[bdata.parent].add(bone);
-        } else if (!rootBone) {
-            rootBone = bone;
-        }
-    }
-    for (let i = 0; i < bones.length; i++) {
-        const name = swData.bone_names[i];
-        const bdata = skelByNameMap[name];
-        if (!bdata) continue;
-        if (!bdata.parent && bones[i] !== rootBone && rootBone) rootBone.add(bones[i]);
-    }
-    if (!rootBone && bones.length > 0) rootBone = bones[0];
-    rootBone.updateWorldMatrix(true, true);
-
-    const skeleton = new THREE.Skeleton(bones);
-
-    // Create SkinnedMesh
-    const skinnedMesh = new THREE.SkinnedMesh(mergedGeo, materials);
-    skinnedMesh.add(rootBone);
-    skinnedMesh.bind(skeleton);
-
-    skinnedMesh.userData.boneVertexRanges = boneVertexRanges;
-    skinnedMesh.userData.isGeneratedModel = true;
-
-    return {
-        mesh: skinnedMesh,
-        skeleton: { skeleton, rootBone, bones, boneByName },
-    };
+    return Skinnetz.bauen(mergedGeo, materials, boneVertexRanges,
+                          skelData, swData);
 }

@@ -4,13 +4,14 @@
  * Aus modellnetz.js herausgeloest (Umbau 16.08.2026): `generateModelMesh` war
  * 375 Zeilen in vier Abschnitten — Knochenindex, Formen je Knochen,
  * Materialgruppen, Skelettaufbau. Die Formenschleife allein sind 180 davon.
+ *
+ * Die Formen-Weiche und das Einpassen zwischen Kopf und Spitze stehen seit
+ * dem 29.08.2026 in `formstueck.js` — sie standen hier und in `rigformen.js`
+ * zeichengleich doppelt (Befund `doppelcode`, 82 Zeilen).
  */
 
 import * as THREE from 'three';
-import { _mergeSimpleGeos, _buildPlane, _buildRhombus, _makeDoubleSided } from './formenbauer.js';
-import { _buildSpiralTutu, _buildSkirt } from './formen_band.js';
-import { Wendelband } from './wendelband.js';
-import './knochenmatrizen.js';
+import { Formstueck } from './formstueck.js';
 import { Knochengruppen } from './knochengruppen.js';
 
 export class Knochenformen {
@@ -80,120 +81,9 @@ export class Knochenformen {
             const effectiveLen = effectiveHead.distanceTo(effectiveTail);
             if (effectiveLen > 0.001) boneLen = effectiveLen;
         
-            // Create shape geometry (centered at origin, along Y axis)
-            let shapeGeo;
-            switch (part.shape) {
-                case 'box':
-                    shapeGeo = new THREE.BoxGeometry(radius * 2, boneLen, radius * 2, 1, 1, 1);
-                    break;
-                case 'sphere_low':
-                    shapeGeo = new THREE.SphereGeometry(radius, segments, Math.max(4, segments >> 1));
-                    break;
-                case 'sphere':
-                    shapeGeo = new THREE.SphereGeometry(radius, 24, 16);
-                    break;
-                case 'cone':
-                    shapeGeo = new THREE.ConeGeometry(radius, boneLen, segments);
-                    break;
-                case 'capsule':
-                    shapeGeo = new THREE.CapsuleGeometry(radius, Math.max(0.001, boneLen - radius * 2), segments, Math.max(4, segments >> 1));
-                    break;
-                case 'oval':
-                    shapeGeo = new THREE.SphereGeometry(radius, segments, Math.max(4, segments >> 1));
-                    shapeGeo.scale(1, boneLen / (radius * 2), 1);
-                    break;
-                case 'double_oval': {
-                    const ov = part.overlap ?? 0.5;
-                    const halfLen = boneLen * 0.5;
-                    const ovalLen = halfLen + halfLen * ov;
-                    const scY = ovalLen / (radius * 2);
-                    const sep = halfLen * (1 - ov);
-                    const hSegs = Math.max(4, segments >> 1);
-                    const g1 = new THREE.SphereGeometry(radius, segments, hSegs);
-                    g1.scale(1, scY, 1); g1.translate(0, -sep, 0);
-                    const g2 = new THREE.SphereGeometry(radius, segments, hSegs);
-                    g2.scale(1, scY, 1); g2.translate(0, sep, 0);
-                    shapeGeo = _mergeSimpleGeos(g1, g2);
-                    break;
-                }
-                case 'diamond':
-                    shapeGeo = new THREE.OctahedronGeometry(radius);
-                    shapeGeo.scale(1, boneLen / (radius * 2), 1);
-                    break;
-                case 'tutu': {
-                    // Tutu: flat disc with drooping outer rim, built as LatheGeometry
-                    const thickness = part.tutuThickness ?? 0.01;
-                    const droop = part.tutuDroop ?? 0.03;
-                    const droopStart = part.tutuDroopStart ?? 0.7;
-                    const innerR = radius * 0.08; // small hole in center around bone
-                    const outerR = radius;
-                    const halfT = thickness * 0.5;
-                    const droopR = outerR * droopStart;
-                    const radSegs = Math.max(16, segments * 4);
-                    // Profile points (in XY plane, X=radius, Y=height), rotated around Y
-                    const pts = [
-                        new THREE.Vector2(innerR, halfT),    // inner top
-                        new THREE.Vector2(droopR, halfT),     // flat top to droop start
-                        new THREE.Vector2(outerR, -droop),    // outer edge droops down
-                        new THREE.Vector2(outerR - 0.002, -droop - halfT), // outer bottom edge
-                        new THREE.Vector2(droopR, -halfT),    // flat bottom from droop start
-                        new THREE.Vector2(innerR, -halfT),    // inner bottom
-                    ];
-                    shapeGeo = _makeDoubleSided(new THREE.LatheGeometry(pts, radSegs));
-                    // Apply tutuOffset (shift along bone axis)
-                    const tOff = part.tutuOffset ?? 0;
-                    if (Math.abs(tOff) > 0.0001) shapeGeo.translate(0, tOff, 0);
-                    break;
-                }
-                case 'spiral_tutu':
-                    shapeGeo = _buildSpiralTutu(part, radius);
-                    break;
-                case 'helix_ribbon':
-                    shapeGeo = Wendelband.bauen(part, radius);
-                    break;
-                case 'skirt':
-                    shapeGeo = _buildSkirt(part, radius);
-                    break;
-                case 'plane':
-                    shapeGeo = _buildPlane(part);
-                    break;
-                case 'rhombus':
-                    shapeGeo = _buildRhombus(part);
-                    break;
-                default: // cylinder
-                    shapeGeo = new THREE.CylinderGeometry(radius, radius, boneLen, segments, 1);
-                    break;
-            }
-        
-            // Position shape from effective head to effective tail
-            const midpoint = new THREE.Vector3().lerpVectors(effectiveHead, effectiveTail, 0.5);
-            const direction = new THREE.Vector3().subVectors(effectiveTail, effectiveHead);
-            if (direction.length() > 0.0001) direction.normalize();
-            else direction.copy(boneDir);
-        
-            const yAxis = new THREE.Vector3(0, 1, 0);
-            const shapeQuat = new THREE.Quaternion();
-            if (Math.abs(direction.dot(yAxis)) < 0.9999) {
-                shapeQuat.setFromUnitVectors(yAxis, direction);
-            } else if (direction.y < 0) {
-                shapeQuat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);
-            }
-        
-            // World-space rotation around shape center (premultiply = applied after bone alignment)
-            if (part.shapeRotation) {
-                const sr = part.shapeRotation;
-                const rx = sr.x || 0, ry = sr.y || 0, rz = sr.z || 0;
-                if (rx || ry || rz) {
-                    const deg = Math.PI / 180;
-                    const userRot = new THREE.Quaternion().setFromEuler(
-                        new THREE.Euler(rx * deg, ry * deg, rz * deg));
-                    shapeQuat.premultiply(userRot);
-                }
-            }
-        
-            const mat4 = new THREE.Matrix4();
-            mat4.compose(midpoint, shapeQuat, new THREE.Vector3(1, 1, 1));
-            shapeGeo.applyMatrix4(mat4);
+            const shapeGeo = Formstueck.geometrie(part, radius, boneLen, segments);
+            Formstueck.einpassen(shapeGeo, effectiveHead, effectiveTail,
+                                 boneDir, part);
         
             geoChunks.push({ geometry: shapeGeo, boneIndex: boneIdx, color, boneName, texture: part.texture || null });
         }
