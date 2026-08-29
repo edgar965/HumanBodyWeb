@@ -1,6 +1,8 @@
 import * as THREE from 'three';
-import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
-import { fetchRetargetedClipFromText } from '../retarget_hybrid.js';
+import { buildRigifySkeleton }
+    from '../../../static/viewer/rigify_skeleton_builder.js';
+import { fetchRetargetedClipFromText }
+    from '../../../static/viewer/retarget_hybrid.js';
 import { Skelettanzeige } from '../../../static/viewer/gemeinsam/skelettanzeige.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 import { Haarbindung } from './haarbindung.js';

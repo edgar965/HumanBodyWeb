@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { loadBVHFromText } from '../asset-loader.js';
 import { fetchBVH } from '../scene-manager.js';
-import { fetchRetargetedClip } from '../retarget_hybrid.js';
+import { fetchRetargetedClip }
+    from '../../../static/viewer/retarget_hybrid.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /**
