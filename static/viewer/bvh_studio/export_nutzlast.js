@@ -4,6 +4,7 @@ import { state } from './state.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { float32ToBase64, uint32ToBase64 }
     from '../gemeinsam/kodierung.js';
+import { Netznutzlast } from '../gemeinsam/netznutzlast.js';
 /**
  * Nutzlast des Stoff-Exports zusammenstellen: Bilder abtasten, Lichter, Ton.
  *
@@ -187,20 +188,16 @@ export async function _buildPayload({ duration, fps }) {
     const audioClips = _collectAudio();
 
     return {
-        scene_name: modelData.name || track.preset || track.name || 'studio_scene',
-        positions: float32ToBase64(positions),
-        vertex_count: positions.length / 3,
-        faces: uint32ToBase64(faces),
-        face_count: faces.length / 3,
-        skin_indices: uint32ToBase64(skinI),
-        skin_weights: float32ToBase64(skinW),
-        bone_names: boneNames,
-        inv_bind: float32ToBase64(invBind),
-        anim_matrices: float32ToBase64(matrices),
-        anim_fps: fps,
-        anim_frames: frameCount,
-        bone_vertex_ranges: mesh.userData.boneVertexRanges,
-        bone_parts: modelData.bone_parts || {},
+        ...Netznutzlast.bauen({
+            name: modelData.name || track.preset || track.name || 'studio_scene',
+            punkte: positions, dreiecke: faces,
+            hautindizes: skinI, hautgewichte: skinW,
+            knochennamen: boneNames, bindeinverse: invBind,
+            matrizen: matrices, fps, bilder: frameCount,
+            bereiche: mesh.userData.boneVertexRanges,
+            knochenteile: modelData.bone_parts,
+        }),
+        // Nur das Studio schickt Kamera, Licht und Ton mit.
         camera_matrices: float32ToBase64(camMats),
         camera_params: float32ToBase64(camParams),
         lights: lights,

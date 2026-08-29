@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { base64ToFloat32 } from '../gemeinsam/kodierung.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { sliderVal } from './utils.js';
 import { state } from './state.js';
 import { removeClothRegion } from './cloth.js';
 import { pePreviewKey } from './pattern_editor.js';
+import { Hautnetz } from '../gemeinsam/hautnetz.js';
 
 /**
  * Musternetz — aus der Serverantwort die Muster-Vorschau in der Szene.
@@ -39,17 +39,7 @@ export class Musternetz {
             color: matColor, roughness, metalness, side: THREE.DoubleSide,
             polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
         });
-        let mesh;
-        if (state.isSkinned && state.rigifySkeleton && daten.skin_indices && daten.skin_weights) {
-            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(
-                base64ToFloat32(daten.skin_indices), 4));
-            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(
-                base64ToFloat32(daten.skin_weights), 4));
-            mesh = new THREE.SkinnedMesh(geo, mat);
-            mesh.bind(state.rigifySkeleton.skeleton, state.bodyMesh.bindMatrix);
-        } else {
-            mesh = new THREE.Mesh(geo, mat);
-        }
+        const mesh = Hautnetz.bauen(geo, mat, state, daten);
         state.clothMeshes[pePreviewKey] = mesh;
         state.clothParams[pePreviewKey] = {
             params: {}, color: '#' + mesh.material.color.getHexString(),

@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { base64ToFloat32, bindSlider, sliderVal } from './utils.js';
+import { bindSlider, sliderVal } from './utils.js';
 import { ensureSkinned } from './skinning.js';
 import { Stoffvorlagen } from './cloth/stoffvorlagen.js';
 import { Stoffbauer } from './cloth/stoffbauer.js';
@@ -12,6 +12,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { Hautnetz } from '../gemeinsam/hautnetz.js';
 
 /**
  * Kleidungs-Bedienfeld aufbauen.
@@ -67,17 +68,7 @@ export async function loadCloth(key, params, color) {
 
         const mat = new THREE.MeshStandardMaterial({ color: matColor, roughness: 0.8, metalness: 0.0, side: THREE.DoubleSide });
 
-        let mesh;
-        if (state.isSkinned && state.rigifySkeleton && data.skin_indices && data.skin_weights) {
-            const siBuf = base64ToFloat32(data.skin_indices);
-            const swBuf = base64ToFloat32(data.skin_weights);
-            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
-            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
-            mesh = new THREE.SkinnedMesh(geo, mat);
-            mesh.bind(state.rigifySkeleton.skeleton, state.bodyMesh.bindMatrix);
-        } else {
-            mesh = new THREE.Mesh(geo, mat);
-        }
+        const mesh = Hautnetz.bauen(geo, mat, state, data);
 
         state.clothMeshes[key] = mesh;
         state.clothParams[key] = { params, color: '#' + mesh.material.color.getHexString() };

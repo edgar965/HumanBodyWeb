@@ -19,6 +19,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { float32ToBase64, uint32ToBase64 }
     from '../gemeinsam/kodierung.js';
+import { Netznutzlast } from '../gemeinsam/netznutzlast.js';
 
 function _selectedInstWithGenerated() {
     const inst = state.characters.get(state.selectedCharacterId);
@@ -97,22 +98,14 @@ export async function buildClothPayload({ duration = 3.0, fps = 30 } = {}) {
     const ranges = mesh.userData.boneVertexRanges;  // bone_name -> {start, count}
     const bone_parts = inst.generatedConfig.bone_parts || {};
 
-    return {
-        scene_name: inst.presetName || 'scene',
-        positions: float32ToBase64(positions),
-        vertex_count: positions.length / 3,
-        faces: uint32ToBase64(faces),
-        face_count: faces.length / 3,
-        skin_indices: uint32ToBase64(skinI),
-        skin_weights: float32ToBase64(skinW),
-        bone_names: boneNames,
-        inv_bind: float32ToBase64(invBind),
-        anim_matrices: float32ToBase64(matrices),
-        anim_fps: fps,
-        anim_frames: frameCount,
-        bone_vertex_ranges: ranges,
-        bone_parts: bone_parts,
-    };
+    return Netznutzlast.bauen({
+        name: inst.presetName || 'scene',
+        punkte: positions, dreiecke: faces,
+        hautindizes: skinI, hautgewichte: skinW,
+        knochennamen: boneNames, bindeinverse: invBind,
+        matrizen: matrices, fps, bilder: frameCount,
+        bereiche: ranges, knochenteile: bone_parts,
+    });
 }
 
 /**
