@@ -1,0 +1,105 @@
+/* Menueleiste — Leiste, Menues, Untermenues.
+ *
+ * BEFUND `doppelcode` (29.08.2026): Dieselben 94 Zeilen standen als
+ * `<style>` in `scene_config.html` (557-650) und `scene_model.html` (8-90),
+ * gemeldet als zwei Bloecke a 43 und 30 Zeilen.
+ *
+ * Sie waren schon auseinandergelaufen: Der Modellseite fehlten
+ * `.menu-item.disabled` und `.menu-item.radio.checked::before` — ein
+ * abgeschalteter Menueeintrag sah dort aus wie ein anschaltbarer, und ein
+ * Auswahlpunkt zeigte keinen Punkt. Kein Widerspruch zwischen den beiden
+ * Fassungen, nur zwei fehlende Regeln; deshalb gilt hier die vollstaendige.
+ */
+/* ===== Menubar ===== */
+.menubar {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 20;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+.menu { position: relative; }
+.menu-title {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    line-height: 20px;
+}
+.menu-title:hover, .menu.open .menu-title {
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+}
+.menu-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 220px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    padding: 4px 0;
+    z-index: 100;
+}
+.menu.open .menu-dropdown { display: block; }
+.menu-item {
+    padding: 6px 30px 6px 28px;
+    font-size: 0.82rem;
+    color: var(--text);
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+}
+.menu-item:hover { background: var(--accent); color: #fff; }
+.menu-item.disabled { color: var(--text-muted); pointer-events: none; opacity: 0.5; }
+.menu-item .shortcut { float: right; color: var(--text-muted); margin-left: 24px; font-size: 0.75rem; }
+.menu-item:hover .shortcut { color: rgba(255,255,255,0.7); }
+.menu-item.checkable.checked::before { content: "\2713"; position: absolute; left: 10px; }
+.menu-item.radio.checked::before {
+    content: "\25CF";
+    position: absolute;
+    left: 10px;
+    font-size: 0.5em;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.menu-sep { height: 1px; background: var(--border); margin: 4px 8px; }
+.menu-submenu-wrap {
+    position: relative;
+}
+.menu-submenu-wrap > .menu-item::after {
+    content: "\25B6";
+    position: absolute;
+    right: 10px;
+    font-size: 0.6em;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.menu-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: -4px;
+    min-width: 180px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    padding: 4px 0;
+    z-index: 101;
+}
+.menu-submenu-wrap:hover > .menu-submenu { display: block; }
+.menubar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 8px;
+}
