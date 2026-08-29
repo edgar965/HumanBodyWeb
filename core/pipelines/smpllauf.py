@@ -86,11 +86,23 @@ class Smpllauf:
         self.job.save()
 
     def _starten(self, befehl):
+        """Den Wrapper starten; die Logdatei geht an den Aufrufer.
+
+        DER `try` IST NICHT ZIERAT (Befund `offene-datei`, 29.08.2026):
+        `fahren` schliesst die Datei im `finally` — aber erst, wenn sie sie
+        HAT. Wirft `Popen` (fehlender Wrapper, kaputter Befehl), bleibt der
+        Deskriptor offen, und zwar einer je Fehlversuch. Genau dann passiert
+        es auch: Ein Lauf, der sofort scheitert, wird wiederholt.
+        """
         protokoll = open(self.logdatei, 'w', encoding='utf-8')
-        prozess = subprocess.Popen(
-            befehl, stdout=protokoll, stderr=subprocess.STDOUT,
-            cwd=str(settings.WRAPPERS_DIR.parent),
-            env=PipelineProzess.umgebung())
+        try:
+            prozess = subprocess.Popen(
+                befehl, stdout=protokoll, stderr=subprocess.STDOUT,
+                cwd=str(settings.WRAPPERS_DIR.parent),
+                env=PipelineProzess.umgebung())
+        except Exception:
+            protokoll.close()
+            raise
         self.pid_datei.write_text(str(prozess.pid))
         LaufendeProzesse.eintragen(self.job.id, prozess)
         return prozess, protokoll

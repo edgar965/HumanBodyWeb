@@ -2,7 +2,6 @@
  * Photo To 3D — Photo upload and analyze functionality.
  */
 import { state } from './state.js';
-import { fn } from '../gemeinsam/registrierung.js';
 import { Fotoanalyse } from './fotoanalyse.js';
 
 // =========================================================================
@@ -55,6 +54,3 @@ export async function analyzePhoto() {
     return new Fotoanalyse().ausfuehren();
 }
 
-
-fn.initPhotoUpload = initPhotoUpload;
-fn.analyzePhoto = analyzePhoto;

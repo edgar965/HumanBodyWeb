@@ -7,7 +7,6 @@ import { Musterzustand } from './muster_zustand.js';
 import { _peAutoFit, _peSetModeButtons, pePreviewKey, peUpdatePanelList } from './pattern_editor.js';
 import { buildBodyQueryString, sliderVal } from './utils.js';
 import { ensureSkinned } from './skinning.js';
-import { fn } from '../gemeinsam/registrierung.js';
 import { peRender } from './muster_zeichnen.js';
 import { peUpdateStitchList } from './pattern_editor.js';
 import { state } from './state.js';

@@ -112,4 +112,3 @@ fn.loadMesh = loadMesh;
 fn.requestMeshUpdate = requestMeshUpdate;
 fn.loadRigifySkeleton = loadRigifySkeleton;
 fn.buildRigifySkeleton = buildRigifySkeleton;
-fn.applySkinColor = applySkinColor;

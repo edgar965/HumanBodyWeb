@@ -54,7 +54,6 @@ fn.loadAudioFile = loadAudioFile;
 fn.removeTrack = removeTrack;
 fn.selectTrack = selectTrack;
 fn.loadClipAnimation = loadClipAnimation;
-fn.buildClipFromData = buildClipFromData;
 fn.loadTrackCharacter = loadTrackCharacter;
 fn.duplicateSelectedClip = duplicateSelectedClip;
 fn.deleteSelectedClip = deleteSelectedClip;

@@ -53,7 +53,3 @@ export function initSmplxRigToggle() {
     });
 }
 
-fn.initModelToggle = initModelToggle;
-fn.initRigToggle = initRigToggle;
-fn.initSmplxToggle = initSmplxToggle;
-fn.initSmplxRigToggle = initSmplxRigToggle;

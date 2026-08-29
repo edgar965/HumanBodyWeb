@@ -101,10 +101,7 @@ export async function exportModelJSON() { return Szenenausgabe.figur(); }
 
 // Register
 fn.gatherSceneState = gatherSceneState;
-fn.doSaveScene = doSaveScene;
 fn.loadSceneFromData = loadSceneFromData;
-fn.loadSceneFromServer = loadSceneFromServer;
-fn.loadModelFile = loadModelFile;
 fn.newScene = newScene;
 fn.quickSave = quickSave;
 fn.resetScene = resetScene;

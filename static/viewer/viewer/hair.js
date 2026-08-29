@@ -169,5 +169,3 @@ export function applyHairColorToObject(obj, colorName) {
 fn.loadHairUI = loadHairUI;
 fn.loadHair = loadHair;
 fn.removeHair = removeHair;
-fn.refitHairToBody = refitHairToBody;
-fn.applyHairColor = haarfarbeSetzen;

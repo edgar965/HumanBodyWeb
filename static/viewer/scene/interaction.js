@@ -9,23 +9,6 @@ import { _clearBoneHighlightCache, _clearBoneSelection, _createBoneOverlay, _get
 import { _doSubMeshClick, _findSubMeshForObject, _removeSubMesh, _sameSubMesh, _setBodyEmissive, _setSubMeshEmissive, clearSubMeshSelection, getSelectableSubMeshes } from './teilnetz_auswahl.js';
 import { Schwebeanzeige } from './schwebeanzeige.js';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // =========================================================================
 // Canvas click binding
 // =========================================================================
@@ -102,8 +85,6 @@ export function initSubMeshInteraction() {
 }
 
 // Register
-fn.getSelectableSubMeshes = getSelectableSubMeshes;
-fn._sameSubMesh = _sameSubMesh;
 fn._setSubMeshEmissive = _setSubMeshEmissive;
 fn._setBodyEmissive = _setBodyEmissive;
 fn.clearSubMeshSelection = clearSubMeshSelection;

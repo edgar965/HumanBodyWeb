@@ -31,6 +31,8 @@ erzeugten Klassen über die Discovery genauso wie handgeschriebene.
 """
 
 import tempfile
+
+from django.conf import settings
 import unittest
 from pathlib import Path
 
@@ -52,7 +54,16 @@ from tests.kanal import ClientKanal, Kanal
 #: Das Verzeichnis bleibt für die Dauer des Prozesses stehen und wird von
 #: Python selbst geräumt — ein `rmtree` im `tearDown` würde Dateien löschen,
 #: die ein noch laufender Fall gerade schreibt.
-_MEDIEN = tempfile.TemporaryDirectory(prefix='hb-ui-medien-')
+#: `dir=` ist Pflicht (Befund `lehren-treue`, 29.08.2026): Ohne ihn
+#: schreibt `TemporaryDirectory` nach `C:\…\AppData\Local\Temp`, und
+#: genau so sind in diesem Projekt einmal rund 100 GB Datenmüll
+#: entstanden. `ProjektTemp` geht hier nicht: Es legt unter
+#: `MEDIA_ROOT/tmp` ab, und MEDIA_ROOT ist genau das, was hier erst
+#: erzeugt wird.
+_TEMPBASIS = Path(settings.BASE_DIR).parent / 'ProjektTemp'
+_TEMPBASIS.mkdir(exist_ok=True)
+_MEDIEN = tempfile.TemporaryDirectory(prefix='hb-ui-medien-',
+                                      dir=str(_TEMPBASIS))
 
 
 @override_settings(MEDIA_ROOT=Path(_MEDIEN.name))

@@ -93,8 +93,6 @@ window.__sceneUndo = sceneUndo;
 window.__sceneRedo = sceneRedo;
 
 fn.markDirty = markDirty;
-fn.markClean = markClean;
-fn.pushSceneUndo = pushSceneUndo;
 fn.sceneUndo = sceneUndo;
 fn.sceneRedo = sceneRedo;
 fn.captureInitial = captureInitial;

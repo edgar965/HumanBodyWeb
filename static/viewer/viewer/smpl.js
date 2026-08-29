@@ -28,6 +28,4 @@ export function removeSmplGarment(garmentId) {
     Smplkleidernetz.entfernen(garmentId);
 }
 
-fn.loadSmplGarmentUI = loadSmplGarmentUI;
-fn.initSmplBodyUI = initSmplBodyUI;
 fn.removeSmplGarment = removeSmplGarment;

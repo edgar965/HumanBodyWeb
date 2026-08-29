@@ -160,5 +160,4 @@ fn.loadCloth = loadCloth;
 fn.removeClothRegion = removeClothRegion;
 fn.removeAllCloth = removeAllCloth;
 fn.loadGarment = loadGarment;
-fn.removeGarment = removeGarment;
 fn.removeAllGarments = removeAllGarments;

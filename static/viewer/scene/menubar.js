@@ -193,9 +193,7 @@ export function deleteSelectedCharacter() {
 }
 
 // Register
-fn.closeAllMenus = closeAllMenus;
 fn.bindMenubar = bindMenubar;
-fn.handleMenuAction = handleMenuAction;
 fn.bindKeyboardShortcuts = bindKeyboardShortcuts;
 fn.bindVisibilityToggles = bindVisibilityToggles;
 fn.toggleModelVisibility = toggleModelVisibility;

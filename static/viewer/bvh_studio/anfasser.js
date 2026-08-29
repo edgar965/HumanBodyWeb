@@ -45,7 +45,6 @@ export class Anfasser {
     }
 }
 
-fn.setupTransformControls = Anfasser.aufbauen;
 fn.attachTransformControls = Anfasser.anhaengen;
 fn.detachTransformControls = Anfasser.loesen;
 fn.setTransformMode = Anfasser.modus;

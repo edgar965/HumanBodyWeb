@@ -213,8 +213,3 @@ export class Modellgenerator {
 
 fn.initModelGenerator = Modellgenerator.starten;
 fn._doBoneClick = Modellgenerator.knochenklick;
-fn._mgSelectBone = Knochenauswahl.waehlen;
-fn._mgGenerateCharacter = Modellerzeugung.charakterBauen;
-fn._mgGeneratePreview = Modellerzeugung.netzBauen;
-fn._mgAutoRegenerate = Modellerzeugung.anfordern;
-fn._mgSaveModelToServer = Modellspeicher.speichern;

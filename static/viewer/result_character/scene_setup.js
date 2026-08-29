@@ -29,5 +29,4 @@ export function applySceneSkinSettings(mesh) {
     } catch (e) { Protokoll.debug('szene', 'Hauteinstellungen nicht anwendbar', e); }
 }
 
-fn.applySceneSettings = applySceneSettings;
 fn.applySceneSkinSettings = applySceneSkinSettings;

@@ -26,7 +26,7 @@ Aufraeumarbeit. Wer die Texte angleichen will, tut das sichtbar und einzeln.
 
 WARUM (wert, antwort) UND NICHT EINE AUSNAHME
 =============================================
-Wie ``Fotoauftrag.mit_rumpf`` daneben: Der Aufrufer bekommt die FERTIGE
+Wie ``Fotoauftragszugriff.mit_rumpf`` daneben: Der Aufrufer bekommt die FERTIGE
 Antwort und gibt sie zurueck. Das liest sich an der Aufrufstelle wie vorher
 und braucht keine eigene Ausnahmeklasse, die jeder Endpunkt fangen muesste.
 """

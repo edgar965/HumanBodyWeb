@@ -109,9 +109,4 @@ export function applyExpandedPanels() {
 }
 
 // Register
-fn.applySceneSettings = applySceneSettings;
 fn.applySceneSkinSettings = applySceneSkinSettings;
-fn.applySkinColor = applySkinColor;
-fn.getSkinMat = getSkinMat;
-fn.syncSkinUI = syncSkinUI;
-fn.applyExpandedPanels = applyExpandedPanels;

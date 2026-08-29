@@ -16,7 +16,6 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 let _cachedFloorTextures = null;
 const _textureLoader = new THREE.TextureLoader();
 
-
 export function createFloorTrack() {
     if (state.project.tracks.some(t => t._sceneItem === 'floor')) return;
     const override = state.project._pendingSceneOverrides?.sceneFloor;
@@ -141,9 +140,7 @@ export async function getFloorTextures() {
     return _cachedFloorTextures;
 }
 
-fn.createFloorTrack = createFloorTrack;
 fn.updateFloorMaterial = updateFloorMaterial;
 fn.applyFloorTexture = applyFloorTexture;
-fn.setFloorSize = setFloorSize;
 fn.setFloorGeometry = setFloorGeometry;
 fn.getFloorTextures = getFloorTextures;

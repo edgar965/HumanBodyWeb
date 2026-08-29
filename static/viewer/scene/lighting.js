@@ -221,11 +221,8 @@ export function loadSettings() {
 fn.resetLighting = resetLighting;
 fn.resetCamera = resetCamera;
 fn.syncUIFromState = syncUIFromState;
-fn.autoSave = autoSave;
 fn.bindLightingUI = bindLightingUI;
 fn.bindRendererUI = bindRendererUI;
 fn.bindCameraUI = bindCameraUI;
 fn.bindActions = bindActions;
 fn.loadSettings = loadSettings;
-fn.gatherSettings = gatherSettings;
-fn.applyPreset = applyPreset;

@@ -4,17 +4,21 @@
  * into a binary payload, POSTs it to the cloth-export API, polls for the
  * rendered MP4, and triggers a download.
  *
- * Usage from console / button:
- *   fn.exportClothMP4({ engine: 'warp_only', quality: 'medium', duration: 3.0 })
+ * Aufruf von der Konsole:
+ *   window.__exportClothMP4({ engine: 'warp_only', quality: 'medium', duration: 3.0 })
+ *
+ * NICHT `fn.exportClothMP4` (Befund `jsregistrierung`, 29.08.2026): Hier stand
+ * genau das — nur liegt `fn` nicht auf `window`, sondern ist der Modulzustand
+ * von `gemeinsam/registrierung.js`. Von der Konsole aus war die Anleitung
+ * also unbrauchbar, und die Anmeldung daneben las niemand. Der Weg, der
+ * funktioniert, ist `window.__exportClothMP4` — die Zeile stand schon da.
  */
 import { THREE } from './state.js';
 import { state } from './state.js';
-import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { float32ToBase64, uint32ToBase64 }
     from '../gemeinsam/kodierung.js';
-
 
 function _selectedInstWithGenerated() {
     const inst = state.characters.get(state.selectedCharacterId);
@@ -146,6 +150,4 @@ export async function exportClothMP4({ engine = 'warp_only', quality = 'medium',
     return data;
 }
 
-fn.buildClothPayload = buildClothPayload;
-fn.exportClothMP4 = exportClothMP4;
 window.__exportClothMP4 = exportClothMP4;

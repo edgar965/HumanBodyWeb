@@ -125,11 +125,6 @@ function matchModelHeights() {
     }
 }
 
-
-
-
 fn.loadSmplxModel = loadSmplxModel;
 fn.loadSmplxTexture = loadSmplxTexture;
-fn.requestSmplxUpdate = requestSmplxUpdate;
 fn.showSmplxRig = showSmplxRig;
-fn.buildSmplxPanel = buildSmplxPanel;

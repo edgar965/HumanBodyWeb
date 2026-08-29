@@ -87,7 +87,6 @@ export async function loadCharmorphHairUI() {
         if (fn.serverLog) fn.serverLog('charmorph_hair', sel.value);
     });
 
-    fn.loadCharmorphHairUI = loadCharmorphHairUI;
 }
 
 function _applyHairColor(hex) {

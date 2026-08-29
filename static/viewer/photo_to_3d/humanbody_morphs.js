@@ -113,5 +113,4 @@ export function buildMorphPanel(daten) {
     if (feld) liste.bauen(feld, daten.morphs, daten.categories);
 }
 
-fn.loadMorphs = loadMorphs;
 fn.buildMorphPanel = buildMorphPanel;

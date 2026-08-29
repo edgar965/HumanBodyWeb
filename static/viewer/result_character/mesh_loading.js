@@ -102,6 +102,4 @@ export async function reloadBodyMesh(newType) {
 }
 
 fn.loadMesh = loadMesh;
-fn.convertToRigifySkinnedMesh = convertToRigifySkinnedMesh;
-fn.applySkinColor = applySkinColor;
 fn.reloadBodyMesh = reloadBodyMesh;

@@ -28,12 +28,6 @@ const PE_REGION_PRESETS = {
 export function peWorldToCanvas(wx, wy) { return [Musterzustand.pePan.x + wx * Musterzustand.peZoom, Musterzustand.pePan.y - wy * Musterzustand.peZoom]; }
 export function peCanvasToWorld(cx, cy) { return [(cx - Musterzustand.pePan.x) / Musterzustand.peZoom, (Musterzustand.pePan.y - cy) / Musterzustand.peZoom]; }
 
-
-
-
-
-
-
 function _peSetRegionMode(active) {
     const patternControls = document.getElementById('pe-pattern-controls');
     const regionControls = document.getElementById('pe-region-controls');
@@ -82,10 +76,6 @@ export function peUpdateStitchList() {
 }
 
 function _peSyncPlacementDropdown() { const dd = document.getElementById('pe-placement'); if (!dd || !Musterzustand.peActivePanel) return; const p = Musterzustand.pePattern.panels[Musterzustand.peActivePanel]; dd.value = (p && p.placement) || 'flat'; }
-
-
-
-
 
 export function _peAutoFit() {
     const canvas = document.getElementById('pe-canvas'); if (!canvas) return;
@@ -219,7 +209,6 @@ export function initPatternEditor() {
 }
 
 // Register
-fn.initPatternEditor = initPatternEditor;
 fn.peRegionGenerate = peRegionGenerate;
 fn.peGenerate3D = peGenerate3D;
 fn.peLoadFromGarment = peLoadFromGarment;

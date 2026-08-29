@@ -25,7 +25,6 @@ export async function loadGarmentUI() {
     }).verdrahten();
 }
 
-
 function _computeRegionWeights(gid) {
     const orig = state.garmentOrigPositions[gid];
     if (!orig) return;
@@ -44,7 +43,6 @@ function _computeRegionWeights(gid) {
     }
     state.garmentRegionWeights[gid] = weights;
 }
-
 
 export function buildBodyFitQueryString() {
     const bodySelect = document.getElementById('body-type-select');
@@ -159,12 +157,8 @@ export function removeAllGarments() {
     fn.updateEquippedList();
 }
 
-
-
 // Register
 fn.loadGarmentUI = loadGarmentUI;
 fn.loadGarment = loadGarment;
-fn.removeGarment = removeGarment;
 fn.removeAllGarments = removeAllGarments;
 fn._saveGarmentState = _saveGarmentState;
-fn.buildBodyFitQueryString = buildBodyFitQueryString;

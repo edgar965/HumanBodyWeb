@@ -11,7 +11,6 @@
  * Hier bleibt der Seitenaufbau: die drei Knöpfe und die Startvorgabe.
  */
 import { state } from './state.js';
-import { fn } from '../gemeinsam/registrierung.js';
 import { Knopfmeldung } from '../gemeinsam/knopfmeldung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
@@ -69,7 +68,3 @@ function _speicherknopf(kennung, nameBehalten) {
     });
 }
 
-fn.initLoadPreset = initLoadPreset;
-fn.initSaveButtons = initSaveButtons;
-fn.gatherModelState = gatherModelState;
-fn.applyModelPreset = applyModelPreset;

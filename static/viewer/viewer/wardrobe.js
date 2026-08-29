@@ -76,4 +76,3 @@ function toggleAsset(name, url, btn) {
     }
 }
 
-fn.loadWardrobe = loadWardrobe;

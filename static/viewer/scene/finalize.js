@@ -74,5 +74,4 @@ export function initFinalizeTab() {
         if (fn.serverLog) fn.serverLog('convert', `${inFmt} -> ${outFmt}`);
     });
 
-    fn.initFinalizeTab = initFinalizeTab;
 }

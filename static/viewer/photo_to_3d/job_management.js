@@ -131,7 +131,6 @@ export async function captureAndSaveScreenshot(jobId) {
     }
 }
 
-
 // =========================================================================
 // Texture buttons
 // =========================================================================
@@ -205,12 +204,6 @@ export function initPhotoTabs() {
     });
 }
 
-
-fn.loadBackendStatus = loadBackendStatus;
-fn.initSaveButton = initSaveButton;
-fn.initTextureButtons = initTextureButtons;
 fn.enableTextureButtons = enableTextureButtons;
 fn.showTextureProgress = showTextureProgress;
-fn.initPhotoTabs = initPhotoTabs;
-fn.loadJobResult = loadJobResult;
 fn.captureAndSaveScreenshot = captureAndSaveScreenshot;

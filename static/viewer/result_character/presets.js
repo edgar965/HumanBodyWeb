@@ -136,5 +136,4 @@ export async function reloadForPreset(presetName) {
     if (state.loadingEl) state.loadingEl.style.display = 'none';
 }
 
-fn.loadPresetClothAndHair = loadPresetClothAndHair;
 fn.reloadForPreset = reloadForPreset;

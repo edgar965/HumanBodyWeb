@@ -14,14 +14,12 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 let _cachedTheatrePresets = null;
 
-
 export async function _fetchTheatrePresets() {
     if (_cachedTheatrePresets) return _cachedTheatrePresets;
     const data = await Serverabruf.json('/api/studio/theatre-presets/');
     _cachedTheatrePresets = data.presets || [];
     return _cachedTheatrePresets;
 }
-
 
 async function _applyTheatrePreset(presetName) {
     let preset;
@@ -77,7 +75,6 @@ async function _applyTheatrePreset(presetName) {
         `${presetName}: alte Lichter entfernt, ${newTracks} Preset-Lichter`);
 }
 
-
 export async function populateTheatrePresetsMenu() {
     const submenu = document.getElementById('theatre-lights-submenu');
     if (!submenu) return;
@@ -121,5 +118,4 @@ export function setupTheatreMenu() {
     document.addEventListener('click', () => dd.classList.remove('open'));
 }
 
-fn.setupTheatreMenu = setupTheatreMenu;
 fn.fetchTheatrePresets = _fetchTheatrePresets;

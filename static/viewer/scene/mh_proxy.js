@@ -25,8 +25,6 @@ async function loadMHProxyUI() {
 export { loadMHProxyUI, _selectedMHMesh };
 
 fn.loadMHProxyUI = loadMHProxyUI;
-fn._selectedMHMesh = _selectedMHMesh;
-fn._renderMHList = _renderMHList;
 fn._doMHProxyFit = _doMHProxyFit;
 fn._fitMHProxyOnInst = _fitMHProxyOnInst;
 fn._syncPropMHControls = _syncPropMHControls;

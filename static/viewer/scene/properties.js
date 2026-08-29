@@ -282,6 +282,5 @@ fn.fetchMorphDefs = fetchMorphDefs;
 fn.populateProperties = populateProperties;
 fn.clearProperties = clearProperties;
 fn.syncTransformInputs = syncTransformInputs;
-fn.reloadCharacterMesh = reloadCharacterMesh;
 fn.updateEquippedList = updateEquippedList;
 fn._updatePropContext = _updatePropContext;

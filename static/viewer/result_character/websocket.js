@@ -65,6 +65,5 @@ function updateMeshVertices(float32Buffer) {
     state.bodyGeometry.computeBoundingSphere();
 }
 
-fn.connectWebSocket = connectWebSocket;
 fn.wsSend = wsSend;
 fn.sendMorphThrottled = sendMorphThrottled;

@@ -137,4 +137,3 @@ function _showAssetParams(asset) {
 }
 
 fn.loadCharmorphAssets = loadCharmorphAssets;
-fn.renderCharmorphList = renderCharmorphList;

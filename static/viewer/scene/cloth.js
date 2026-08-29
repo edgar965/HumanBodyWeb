@@ -76,4 +76,3 @@ export async function _loadClothForCharacter(inst, key, clothParams) {
 }
 
 fn.loadClothUI = loadClothUI;
-fn._loadClothForCharacter = _loadClothForCharacter;

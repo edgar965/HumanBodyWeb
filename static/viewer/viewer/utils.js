@@ -12,7 +12,6 @@ export { base64ToFloat32, base64ToUint32, blenderToThreeCoords,
 // Base64 decode
 // =========================================================================
 
-
 // =========================================================================
 // Base64 encode (for sending buffers to server)
 // =========================================================================
@@ -20,7 +19,6 @@ export { base64ToFloat32, base64ToUint32, blenderToThreeCoords,
 // =========================================================================
 // Coordinate transforms
 // =========================================================================
-
 
 // Three.js -> Blender: (x, y, z) -> (x, -z, y)
 export function threeToBlenderCoords(buf) {
@@ -93,13 +91,4 @@ export function buildBodyQueryString() {
 }
 
 // Register in fn
-fn.base64ToFloat32 = base64ToFloat32;
-fn.base64ToUint32 = base64ToUint32;
-fn.float32ToBase64 = float32ToBase64;
-fn.uint32ToBase64 = uint32ToBase64;
-fn.blenderToThreeCoords = blenderToThreeCoords;
-fn.threeToBlenderCoords = threeToBlenderCoords;
-fn.bindSlider = bindSlider;
-fn.sliderVal = sliderVal;
-fn.setSlider = setSlider;
 fn.buildBodyQueryString = buildBodyQueryString;

@@ -69,7 +69,6 @@ function _punktzahlZeigen(anzahl) {
     if (feld) feld.textContent = anzahl.toLocaleString();
 }
 
-
 export async function loadMesh() {
     try {
         const data = await Serverabruf.json(`${API}/mesh/`);
@@ -114,6 +113,4 @@ export async function reloadMeshForBodyType(bodyType, gender) {
 
 // Register
 fn.loadMesh = loadMesh;
-fn.reloadMeshForBodyType = reloadMeshForBodyType;
-fn.updateMeshVertices = updateMeshVertices;
 fn._getBodyTop = _getBodyTop;

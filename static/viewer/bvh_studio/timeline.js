@@ -102,4 +102,3 @@ function _scrollenAnbinden() {
     });
 }
 
-fn.setupTimeline = setupTimeline;

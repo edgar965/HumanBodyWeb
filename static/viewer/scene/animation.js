@@ -217,7 +217,6 @@ export async function loadAnimationUI() {
 
 fn.loadAnimationUI = loadAnimationUI;
 fn.loadBVHAnimation = loadBVHAnimation;
-fn.stopAnimation = stopAnimation;
 fn.applyGroundLevelFix = applyGroundLevelFix;
 fn.openSaveAnimDialog = openSaveAnimDialog;
 fn._initSaveAnimDialog = _initSaveAnimDialog;

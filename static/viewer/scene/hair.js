@@ -100,7 +100,6 @@ export function _syncPropHairControls() {
 }
 
 fn.loadHairUI = loadHairUI;
-fn._loadHairForCharacter = _loadHairForCharacter;
 fn.syncHairSelect = syncHairSelect;
 fn.initPropHairControls = initPropHairControls;
 fn._syncPropHairControls = _syncPropHairControls;

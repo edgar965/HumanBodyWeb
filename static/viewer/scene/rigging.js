@@ -46,4 +46,3 @@ export function initRiggingTab(toggleRigVisibility) {
 }
 
 fn.initRiggingTab = initRiggingTab;
-fn._defaultRigParams = _defaultRigParams;

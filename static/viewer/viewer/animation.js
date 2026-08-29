@@ -169,6 +169,4 @@ export function stopAnimation(destroy = false) {
 }
 
 // Register
-fn.loadAnimations = loadAnimations;
 fn.loadBVHAnimation = loadBVHAnimation;
-fn.stopAnimation = stopAnimation;

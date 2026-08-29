@@ -24,7 +24,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from ..daten.fotoauftrag import Fotoauftrag
+from ..daten.fotoauftragszugriff import Fotoauftragszugriff
 from ..daten.smplxablage import Smplxablage
 from ..dienste.bildablage import Bildablage
 from ..dienste.fotoausrichtung import Fotoausrichtung
@@ -42,7 +42,7 @@ class Fotoabgleich:
     @require_POST
     def projektion_sichern(request, job_id):
         """Die im Browser gerenderte Vorschau als Silhouettenbild ablegen."""
-        job, rumpf, fehler = Fotoauftrag.mit_rumpf(request, job_id)
+        job, rumpf, fehler = Fotoauftragszugriff.mit_rumpf(request, job_id)
         if fehler:
             return fehler
         relativ, fehlertext = Bildablage('silhouettes').sichern_aus_dataurl(
@@ -78,9 +78,9 @@ class Fotoabgleich:
         import cv2
         from ..dienste.silhouettenauftrag import (Fotofehler,
                                                   Silhouettenauftrag)
-        job = Fotoauftrag.holen(job_id)
+        job = Fotoauftragszugriff.holen(job_id)
         if job is None:
-            return Fotoauftrag.nicht_gefunden()
+            return Fotoauftragszugriff.nicht_gefunden()
         try:
             auftrag = Silhouettenauftrag(job, Fotoabgleich._posierte_punkte)
             return JsonResponse(auftrag.ergebnis(cv2))
@@ -121,7 +121,7 @@ class Fotoabgleich:
     @require_POST
     def ausrichtung_sichern(request, job_id):
         """Die vom Benutzer bestaetigte Ausrichtung im Auftrag hinterlegen."""
-        job, rumpf, fehler = Fotoauftrag.mit_rumpf(request, job_id)
+        job, rumpf, fehler = Fotoauftragszugriff.mit_rumpf(request, job_id)
         if fehler:
             return fehler
         koerper = rumpf.get('body_transform')

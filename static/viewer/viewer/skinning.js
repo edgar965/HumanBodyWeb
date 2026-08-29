@@ -38,7 +38,6 @@ export function convertToRigifySkinnedMesh(rigifySkel, swData) {
 
     state.bodyGeometry = state.bodyGeometry.clone();
 
-
     Hautgewichte.anGeometrie(state.bodyGeometry, swData, THREE.Float32BufferAttribute);
 
     state.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, swData);
@@ -65,5 +64,3 @@ export function ensureSkinned() {
 // Register
 fn.loadSkinWeights = loadSkinWeights;
 fn.loadRigifySkeleton = loadRigifySkeleton;
-fn.convertToRigifySkinnedMesh = convertToRigifySkinnedMesh;
-fn.ensureSkinned = ensureSkinned;

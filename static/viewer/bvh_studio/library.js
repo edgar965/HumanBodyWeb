@@ -39,6 +39,5 @@ export function setupSidebarResize() {
 }
 
 // Register functions in registry
-fn.loadLibrary = loadLibrary;
 fn.deleteSelectedLibItem = () => new Bibliothekmenues(baum).auswahlLoeschen();
 fn.renameSelectedLibItem = () => new Bibliothekmenues(baum).auswahlUmbenennen();

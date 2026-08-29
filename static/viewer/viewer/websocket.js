@@ -90,6 +90,5 @@ export function sendMorphThrottled(key, value) {
 }
 
 // Register
-fn.connectWebSocket = connectWebSocket;
 fn.wsSend = wsSend;
 fn.sendMorphThrottled = sendMorphThrottled;

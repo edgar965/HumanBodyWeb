@@ -16,7 +16,6 @@ import { Objektlader } from './objektlader.js';
 
 const _textureLoader = new THREE.TextureLoader();
 
-
 export function setupSceneObjectImport() {
     const addBtn = document.getElementById('dd-add-3d-object');
     if (!addBtn) return;
@@ -79,8 +78,6 @@ export async function addSceneObjectClip(trackIdx, startFrame) {
     });
     input.click();
 }
-
-
 
 /**
  * Ein 3D-Objekt laden und als Clip in eine Spur setzen.
@@ -150,6 +147,5 @@ export function setObjectTint(track, colorHex) {
     });
 }
 
-fn.setupSceneObjectImport = setupSceneObjectImport;
 fn.setObjectTint = setObjectTint;
 fn.addSceneObjectClip = addSceneObjectClip;

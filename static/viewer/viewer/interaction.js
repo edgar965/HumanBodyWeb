@@ -151,7 +151,6 @@ function _buildEquippedList() {
 fn.getSelectableTargets = getSelectableTargets;
 fn._setEmissiveOnItem = _setEmissiveOnItem;
 fn.updateEquippedList = updateEquippedList;
-fn.initInteraction = initInteraction;
 // Der Menuepunkt "Loeschen" ruft ueber die Registry — ohne diese
 // Zeile tat er nichts (Befund 16.08.2026).
 fn._removeSelectedItem = _removeSelectedItem;

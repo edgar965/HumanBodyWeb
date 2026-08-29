@@ -123,19 +123,6 @@ export function veExitEditMode() {
     if (editCtrl) editCtrl.style.display = 'none';
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 export function veHandleKeydown(e) {
     if (e.key === 'Escape') { fn.peSetMode('select'); return; }
     if (e.key === 'a' || e.key === 'A') {
@@ -197,12 +184,5 @@ export function getVeSelectedIndices() { return Vertexzustand.veSelectedIndices;
 // Register
 fn.veEnterEditMode = veEnterEditMode;
 fn.veExitEditMode = veExitEditMode;
-fn.veHandleClick = veHandleClick;
-fn.veBoxSelectStart = veBoxSelectStart;
-fn.veBoxSelectMove = veBoxSelectMove;
-fn.veBoxSelectEnd = veBoxSelectEnd;
-fn.veHandleKeydown = veHandleKeydown;
-fn.isVeActive = isVeActive;
-fn.isVeBoxSelecting = isVeBoxSelecting;
 fn.getVeTargetMesh = getVeTargetMesh;
 fn.getVeSelectedIndices = getVeSelectedIndices;

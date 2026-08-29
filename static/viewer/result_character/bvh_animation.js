@@ -123,4 +123,3 @@ async function applyHybridRetarget() {
 }
 
 fn.loadBVH = loadBVH;
-fn.positionCameraAfterRetarget = positionCameraAfterRetarget;

@@ -24,14 +24,9 @@ export function showHelp(thema) {
     return Hilfefenster.zeigen(thema);
 }
 
-fn.setupToolbar = setupToolbar;
-fn.showHelp = showHelp;
 fn.smoothSelectedClip = smoothSelectedClip;
 fn.groundFixSelectedClip = groundFixSelectedClip;
 fn.getGaussSmooth = () => _gaussSmooth;
 fn.gaussFilter = _gaussFilter;
-fn.applyGaussToAllClips = applyGaussToAllClips;
-fn.reloadAllClipAnimations = reloadAllClipAnimations;
 fn.getFixedPos = () => _fixedPos;
 fn.applyFixedPositionAll = applyFixedPositionAll;
-fn.restoreFixedPositionAll = restoreFixedPositionAll;

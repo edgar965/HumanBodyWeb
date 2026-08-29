@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Fotoauftrag — den Auftrag EINMAL nachschlagen, statt zweimal.
+"""Fotoauftragszugriff — den Auftrag EINMAL nachschlagen, statt zweimal.
 
 `api/fotoauftraege.py` und `api/fotoabgleich.py` bearbeiten denselben
 `PhotoAnalysisJob` und hatten dafuer je eine eigene Kopie derselben sechs
@@ -20,7 +20,7 @@ import json
 from django.http import JsonResponse
 
 
-class Fotoauftrag:
+class Fotoauftragszugriff:
     """Zugang zu einem `PhotoAnalysisJob` und die Antwort, wenn es ihn nicht gibt."""
 
     @staticmethod
@@ -45,9 +45,9 @@ class Fotoauftrag:
 
         WARUM ZUSAMMEN (Befund `doppelcode`, 28.08.2026): Diese acht Zeilen
 
-            job = Fotoauftrag.holen(job_id)
+            job = Fotoauftragszugriff.holen(job_id)
             if job is None:
-                return Fotoauftrag.nicht_gefunden()
+                return Fotoauftragszugriff.nicht_gefunden()
             try:
                 rumpf = json.loads(request.body)
             except (json.JSONDecodeError, ValueError):
@@ -63,12 +63,19 @@ class Fotoauftrag:
                  Aufrufer sie zurueck und hoert auf; sonst sind `job` und
                  `rumpf` gefuellt.
         """
-        job = Fotoauftrag.holen(job_id)
+        job = Fotoauftragszugriff.holen(job_id)
         if job is None:
-            return None, None, Fotoauftrag.nicht_gefunden()
+            return None, None, Fotoauftragszugriff.nicht_gefunden()
         try:
             rumpf = json.loads(request.body)
         except (json.JSONDecodeError, ValueError):
             return None, None, JsonResponse(
                 {'ok': False, 'error': 'Invalid JSON'}, status=400)
         return job, rumpf, None
+
+
+#: DER NAME (29.08.2026, Befund `namens-dubletten`): Die Datei hiess
+#: `fotoauftrag.py` — genau wie `core/models/fotoauftrag.py`, das den
+#: `PhotoAnalysisJob` traegt. Zwei Dateien gleichen Namens mit
+#: verschiedenem Inhalt sind eine Stolperstelle bei jeder Suche. Das
+#: Modell behaelt den Namen, der Helfer heisst nach seiner Aufgabe.

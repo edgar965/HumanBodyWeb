@@ -115,7 +115,4 @@ export function _skinifyHairGroup(gltfScene, inst) {
 // Register
 fn.loadRigifySkeleton = loadRigifySkeleton;
 fn.loadSkinWeights = loadSkinWeights;
-fn.convertToRigifySkinnedMesh = convertToRigifySkinnedMesh;
 fn.convertInstToSkinned = convertInstToSkinned;
-fn._skinifyMesh = _skinifyMesh;
-fn._skinifyHairGroup = _skinifyHairGroup;

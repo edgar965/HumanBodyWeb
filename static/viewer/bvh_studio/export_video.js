@@ -112,5 +112,3 @@ function _laufAnzeigen(felder, laeuft) {
 // Register functions in registry
 fn.exportBVH = exportBVH;
 fn.saveBvhAs = saveBvhAs;
-fn.setupExportPanel = setupExportPanel;
-fn.saveBlobAs = saveBlobAs;

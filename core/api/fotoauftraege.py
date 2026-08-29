@@ -24,7 +24,7 @@ from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
-from ..daten.fotoauftrag import Fotoauftrag
+from ..daten.fotoauftragszugriff import Fotoauftragszugriff
 from ..daten.smplxablage import Smplxablage
 from ..daten.wrapperpfad import Wrapperpfad
 from ..dienste.bildablage import Bildablage
@@ -48,9 +48,9 @@ class Fotoauftraege:
         Die Morph-Zuordnung wird aus den gespeicherten Betas NEU gerechnet —
         damit eine verbesserte Zuordnung auch alte Auftraege erreicht.
         """
-        job = Fotoauftrag.holen(job_id)
+        job = Fotoauftragszugriff.holen(job_id)
         if job is None:
-            return Fotoauftrag.nicht_gefunden()
+            return Fotoauftragszugriff.nicht_gefunden()
         try:
             daten = json.loads(job.result_json)
         except (json.JSONDecodeError, TypeError):
@@ -100,7 +100,7 @@ class Fotoauftraege:
     @require_POST
     def bild_sichern(request, job_id):
         """Ein im Browser gerendertes 3D-Bild beim Auftrag ablegen."""
-        job, rumpf, fehler = Fotoauftrag.mit_rumpf(request, job_id)
+        job, rumpf, fehler = Fotoauftragszugriff.mit_rumpf(request, job_id)
         if fehler:
             return fehler
         relativ, fehlertext = Bildablage('screenshots').sichern_aus_dataurl(
@@ -138,9 +138,9 @@ class Fotoauftraege:
     @require_POST
     def loeschen(request, job_id):
         """Einen Fotoanalyse-Auftrag samt Dateien loeschen."""
-        job = Fotoauftrag.holen(job_id)
+        job = Fotoauftragszugriff.holen(job_id)
         if job is None:
-            return Fotoauftrag.nicht_gefunden()
+            return Fotoauftragszugriff.nicht_gefunden()
         Fotoauftraege._dateien_entfernen(job)
         job.delete()
         return redirect('photo_analysis_jobs')
@@ -160,7 +160,7 @@ class Fotoauftraege:
                                 status=400)
         geloescht = 0
         for kennung in kennungen:
-            job = Fotoauftrag.holen(kennung)
+            job = Fotoauftragszugriff.holen(kennung)
             # stumm gewollt: Ein Auftrag, den ein anderer Tab schon geloescht
             # hat, ist genau das gewuenschte Ergebnis — die Zahl unten nennt
             # die echte Menge.

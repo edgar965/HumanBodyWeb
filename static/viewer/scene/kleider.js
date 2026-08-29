@@ -22,8 +22,3 @@ async function loadKleiderUI() {
 export { loadKleiderUI };
 
 fn.loadKleiderUI = loadKleiderUI;
-fn._kleiderSelectById = _kleiderSelectById;
-fn._selectedKleiderMesh = _selectedKleiderMesh;
-fn._renderKleiderList = _renderKleiderList;
-fn._doKleiderStage1 = _doKleiderStage1;
-fn._doKleiderFit = _doKleiderFit;

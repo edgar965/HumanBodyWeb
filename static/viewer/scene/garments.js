@@ -11,8 +11,6 @@ import { Assetsbedienung } from './assetsbedienung.js';
 import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 
-
-
 /** Get the mesh+inst for the currently selected garment sub-mesh. */
 export function _selectedGarmentMesh() {
     if (!state._selectedSubMesh || state._selectedSubMesh.type !== 'cloth') return null;
@@ -23,9 +21,6 @@ export function _selectedGarmentMesh() {
     if (!mesh) return null;
     return { inst, key, mesh };
 }
-
-
-
 
 export async function loadGarmentUI() {
     // Die Bedienung steckt in `Assetsbedienung`, ihr gemeinsamer Teil mit dem
@@ -112,10 +107,5 @@ export function _renderGarmentList() {
 }
 
 // Register
-fn._computeGarmentRegionWeights = _computeGarmentRegionWeights;
-fn._applyGarmentRegionOffsets = _applyGarmentRegionOffsets;
-fn._selectedGarmentMesh = _selectedGarmentMesh;
-fn._saveSelectedGarmentState = _saveSelectedGarmentState;
 fn._syncGarmentSliders = _syncGarmentSliders;
-fn._doGarmentFit = _doGarmentFit;
 fn.loadGarmentUI = loadGarmentUI;

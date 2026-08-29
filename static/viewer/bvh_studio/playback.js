@@ -111,9 +111,6 @@ export function stepFrame(delta) {
     updatePlaybackUI();
 }
 
-
-
-
 // Bestimmt den Licht-An/Aus-State am aktuellen Playhead für einen Track.
 // Priorität:
 //  1. Wenn track.muted=true → immer aus (User-Override via Aus-Button)
@@ -199,15 +196,6 @@ export function applyPlayhead() {
     }
 }
 
-
-
-
-
-
-
-
-
-
 export function updatePlaybackUI() {
     const t = state.playheadFrame / state.project.fps;
     const el = document.getElementById('pb-time');
@@ -227,14 +215,7 @@ export function formatTime(s) {
 // Register functions in registry
 fn.applyPlayhead = applyPlayhead;
 fn.updatePlaybackUI = updatePlaybackUI;
-fn.formatTime = formatTime;
-fn.togglePlay = togglePlay;
-fn.stopPlayback = stopPlayback;
-fn.stepFrame = stepFrame;
 fn.stopAudioTrack = stopAudioTrack;
-fn.stopAllAudio = stopAllAudio;
-fn.startAudioPlayback = startAudioPlayback;
-fn.setupPlayback = setupPlayback;
 // FEHLER bis 16.08.2026: Nicht angemeldet, aber in eigenschaften/licht.js als
 // `fn.syncLightVisibility?.()` gerufen — nach einem Wechsel der Lichtart wurde
 // die Sichtbarkeit still NICHT nachgezogen (ein stummgeschaltetes Licht konnte

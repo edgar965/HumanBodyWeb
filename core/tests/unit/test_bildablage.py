@@ -28,7 +28,9 @@ import os
 import shutil
 import tempfile
 import unittest
+from pathlib import Path
 
+from django.conf import settings
 from django.test import SimpleTestCase, override_settings
 
 from core.dienste.bildablage import Bildablage
@@ -78,7 +80,10 @@ class SichernAusDataurlTest(SimpleTestCase):
     u"""Der Weg, den beide Endpunkte gehen — in einem Wegwerf-Verzeichnis."""
 
     def setUp(self):
-        self.ordner = tempfile.mkdtemp(prefix='bildablage_')
+        # `dir=` ist Pflicht: sonst System-Temp auf C: (Befund `lehren-treue`).
+        basis = Path(settings.BASE_DIR).parent / 'ProjektTemp'
+        basis.mkdir(exist_ok=True)
+        self.ordner = tempfile.mkdtemp(prefix='bildablage_', dir=str(basis))
         self.addCleanup(shutil.rmtree, self.ordner, True)
 
     def _ablage(self, unterordner='pruefung'):

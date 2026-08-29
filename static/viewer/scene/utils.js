@@ -8,9 +8,6 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 export { base64ToFloat32, base64ToUint32, blenderToThreeCoords };
 
-
-
-
 /**
  * Maskiert Fremdtext fuer `innerHTML`.
  *
@@ -114,17 +111,6 @@ export function initDialogCloseHandlers() {
 }
 
 // Register shared utils
-fn.escapeHtml = escapeHtml;
-fn.generateCharacterId = generateCharacterId;
 fn._selectedInst = _selectedInst;
-fn._charQueryParams = _charQueryParams;
-fn._bindSlider = _bindSlider;
-fn._sliderVal = _sliderVal;
 fn._getBodyTop = _getBodyTop;
-fn.openDialog = openDialog;
-fn.closeDialog = closeDialog;
-fn.closeAllDialogs = closeAllDialogs;
 fn.initDialogCloseHandlers = initDialogCloseHandlers;
-fn.base64ToFloat32 = base64ToFloat32;
-fn.base64ToUint32 = base64ToUint32;
-fn.blenderToThreeCoords = blenderToThreeCoords;
