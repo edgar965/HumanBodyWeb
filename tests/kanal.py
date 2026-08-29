@@ -35,10 +35,6 @@ Wiederholungen konstanter Wert ist fast nie Last, sondern ein Timeout.
 
 import json
 import logging
-from pathlib import Path
-import urllib.error
-import urllib.parse
-import urllib.request
 
 #: Adresse des laufenden Dev-Servers (siehe Modul-Docstring).
 BASE_URL = 'http://127.0.0.1:8081'
@@ -125,93 +121,11 @@ class Kanal:
             return status, {'_raw': text}
 
 
-class NetzKanal(Kanal):
-    """Über das Netz an den laufenden Server."""
+# Die beiden Fassungen liegen seit dem 29.08.2026 in eigenen Dateien
+# (Befund `klassen-je-datei`). Sie werden hier wieder hereingeholt, damit
+# `from tests.kanal import ClientKanal` weiter gilt: Ein Umbau der
+# Testablage soll keine Importzeile im Wirtsprojekt anfassen.
+from .clientkanal import ClientKanal      # noqa: E402
+from .netzkanal import NetzKanal          # noqa: E402
 
-    def senden(self, pfad, method='GET', data=None, files=None, timeout=15):
-        adresse = BASE_URL + pfad
-        if files:
-            rumpf, typ = self._mehrteilig(files)
-            anfrage = urllib.request.Request(adresse, data=rumpf, method=method)
-            anfrage.add_header('Content-Type', typ)
-        elif data is not None:
-            anfrage = urllib.request.Request(adresse,
-                                             data=json.dumps(data).encode(),
-                                             method=method)
-            anfrage.add_header('Content-Type', 'application/json')
-        else:
-            anfrage = urllib.request.Request(adresse, method=method)
-        try:
-            with urllib.request.urlopen(anfrage, timeout=timeout) as antwort:
-                return self._lesen(antwort.status, antwort.read().decode())
-        except urllib.error.HTTPError as fehler:
-            try:
-                return fehler.code, json.loads(fehler.read().decode())
-            except Exception as roh:                              # noqa: BLE001
-                # Beide Gruende in den Bericht: der Statuscode UND warum sein
-                # Rumpf nicht lesbar war.
-                return fehler.code, {
-                    'error': '%s (Fehlerrumpf unlesbar: %s)' % (fehler, roh)}
-        except Exception as fehler:                               # noqa: BLE001
-            return 0, {'error': str(fehler)}
-
-
-    def rohabruf(self, pfad, timeout=10):
-        adresse = pfad if pfad.startswith('http') else BASE_URL + pfad
-        try:
-            with urllib.request.urlopen(adresse, timeout=timeout) as antwort:
-                return antwort.status, antwort.read()
-        except urllib.error.HTTPError as fehler:
-            return fehler.code, b''
-        except Exception as fehler:                               # noqa: BLE001
-            # Der Grund gehoert in den Bericht: Ein Aufrufer sieht sonst nur
-            # „HTTP 0" und weiss nicht, ob der Server aus war, der Name nicht
-            # aufloeste oder die Zeit ablief.
-            return 0, str(fehler).encode('utf-8', 'replace')
-
-
-class ClientKanal(Kanal):
-    """In-process über `django.test.Client` — im `manage.py test`-Lauf."""
-
-    def __init__(self, client):
-        self.client = client
-
-    def senden(self, pfad, method='GET', data=None, files=None, timeout=15):
-        try:
-            antwort = self._anfahren(pfad, method, data, files)
-        except Exception as fehler:                               # noqa: BLE001
-            # Eine Ausnahme in der View ist das Ergebnis des Falls, nicht ein
-            # Abbruch des Laufs — genauso wie beim Netzkanal (dort waere es 500).
-            return 0, {'error': '%s: %s' % (type(fehler).__name__, fehler)}
-        text = antwort.content.decode('utf-8', errors='replace')
-        return self._lesen(antwort.status_code, text)
-
-    def _anfahren(self, pfad, method, data, files):
-        if files:
-            rumpf, typ = self._mehrteilig(files)
-            return self.client.generic(method, pfad, rumpf, content_type=typ)
-        if data is not None:
-            return self.client.generic(method, pfad, json.dumps(data),
-                                       content_type='application/json')
-        return self.client.generic(method, pfad)
-
-    def rohabruf(self, pfad, timeout=10):
-        """In-process — die Datei kommt aus der Antwort des Testclients.
-
-        `MEDIA_URL`-Adressen bedient der Testclient NICHT: Statik und Medien
-        liefert im Testlauf niemand aus. Deshalb wird eine Medienadresse
-        direkt von der Platte gelesen; das ist dieselbe Datei, die die
-        Ansicht gerade geschrieben hat.
-        """
-        from django.conf import settings
-        if pfad.startswith(str(settings.MEDIA_URL)):
-            rest = pfad[len(str(settings.MEDIA_URL)):].split('?')[0]
-            datei = Path(settings.MEDIA_ROOT) / rest
-            if not datei.is_file():
-                return 404, b''
-            return 200, datei.read_bytes()
-        try:
-            antwort = self.client.get(pfad)
-        except Exception as fehler:                               # noqa: BLE001
-            return 0, str(fehler).encode('utf-8', 'replace')
-        return antwort.status_code, antwort.content
+__all__ = ['BASE_URL', 'Kanal', 'ClientKanal', 'NetzKanal']
