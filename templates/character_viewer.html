@@ -226,7 +226,7 @@
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-flex-0-0-auto.hb-flex-0-0-auto.hb-flex-0-0-auto { flex:0 0 auto; padding:6px 10px; width:auto; }   /* 3x */
-.hb-flex-1.hb-flex-1.hb-flex-1 { flex:1; min-width:0; font-size:0.72rem; padding:6px 2px; }   /* 5x */
+.hb-flex-1-b.hb-flex-1-b.hb-flex-1-b { flex:1; min-width:0; font-size:0.72rem; padding:6px 2px; }   /* 5x */
 .hb-flex-1-2.hb-flex-1-2.hb-flex-1-2 { flex:1; font-size:0.78rem; }   /* 5x */
 .hb-flex-1-3.hb-flex-1-3.hb-flex-1-3 {
     flex:1;
@@ -245,13 +245,13 @@
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-display-flex.hb-display-flex.hb-display-flex { display:flex; gap:6px; margin-top:6px; }   /* 2x */
 .hb-display-flex-2.hb-display-flex-2.hb-display-flex-2 { display:flex; gap:4px; margin-bottom:4px; }   /* 2x */
-.hb-display-none.hb-display-none.hb-display-none { display:none; margin-bottom:8px; }   /* 2x */
+.hb-display-none-b.hb-display-none-b.hb-display-none-b { display:none; margin-bottom:8px; }   /* 2x */
 .hb-font-size-0-75rem.hb-font-size-0-75rem.hb-font-size-0-75rem {
     font-size:0.75rem;
     color:var(--text-muted);
     margin-top:4px;
 }   /* 2x */
-.hb-margin-top-8px.hb-margin-top-8px.hb-margin-top-8px {
+.hb-margin-top-8px-b.hb-margin-top-8px-b.hb-margin-top-8px-b {
     margin-top:8px;
     border-top:1px solid var(--border);
     padding-top:8px;
@@ -386,7 +386,7 @@
                     <button id="garment-remove-all" class="btn-toggle hb-fest" title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
                 </div>
                 <button id="garment-edit-pattern" class="btn-toggle" style="width:100%;margin-top:6px;display:none;" title="Pattern im Pattern Editor bearbeiten"><i class="fas fa-drafting-compass"></i> Edit Pattern</button>
-                <div class="hb-margin-top-8px">
+                <div class="hb-margin-top-8px-b">
                     <button id="garment-download-btn" class="btn-toggle hb-volle-breite"><i class="fas fa-cloud-download-alt"></i> MakeHuman Assets herunterladen</button>
                     <div id="garment-download-panel" class="verborgen-mit-abstand">
                         <select id="garment-pack-select" class="viewer-select"></select>
@@ -464,11 +464,11 @@
                 <div class="panel-body" id="pe-panel">
                     <!-- Mode Buttons -->
                     <div id="pe-mode-btns" style="display:flex;gap:3px;margin-bottom:6px;">
-                        <button class="btn-toggle active hb-flex-1" data-mode="select" title="Select / Move"><i class="fas fa-mouse-pointer"></i> Select</button>
-                        <button class="btn-toggle hb-flex-1" data-mode="draw" title="Draw vertices"><i class="fas fa-pen"></i> Draw</button>
-                        <button class="btn-toggle hb-flex-1" data-mode="stitch" title="Link edges"><i class="fas fa-link"></i> Stitch</button>
-                        <button class="btn-toggle hb-flex-1" data-mode="region" title="Body Region"><i class="fas fa-crop-alt"></i> Region</button>
-                        <button class="btn-toggle hb-flex-1" data-mode="edit" title="Edit Vertices in 3D"><i class="fas fa-vector-square"></i> Edit</button>
+                        <button class="btn-toggle active hb-flex-1-b" data-mode="select" title="Select / Move"><i class="fas fa-mouse-pointer"></i> Select</button>
+                        <button class="btn-toggle hb-flex-1-b" data-mode="draw" title="Draw vertices"><i class="fas fa-pen"></i> Draw</button>
+                        <button class="btn-toggle hb-flex-1-b" data-mode="stitch" title="Link edges"><i class="fas fa-link"></i> Stitch</button>
+                        <button class="btn-toggle hb-flex-1-b" data-mode="region" title="Body Region"><i class="fas fa-crop-alt"></i> Region</button>
+                        <button class="btn-toggle hb-flex-1-b" data-mode="edit" title="Edit Vertices in 3D"><i class="fas fa-vector-square"></i> Edit</button>
                     </div>
                     <!-- Pattern drawing controls (hidden in Region mode) -->
                     <div id="pe-pattern-controls">
@@ -504,7 +504,7 @@
                     </div>
 
                     <!-- Region Controls (hidden unless Region mode) -->
-                    <div id="pe-region-controls" class="hb-display-none">
+                    <div id="pe-region-controls" class="hb-display-none-b">
                         <div class="slider-row"><label>Category</label>
                             <select id="pe-region-category" class="viewer-select hb-dehnt-ohne-abstand">
                                 <option value="custom">Custom</option>
@@ -526,7 +526,7 @@
                     </div>
 
                     <!-- Vertex Edit Controls (hidden unless Edit mode) -->
-                    <div id="pe-edit-controls" class="hb-display-none">
+                    <div id="pe-edit-controls" class="hb-display-none-b">
                         <div id="ve-selection-info" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">No vertices selected</div>
                         <div id="ve-pos-fields" style="display:none;margin-bottom:6px;">
                             <div class="slider-row"><label>X</label>
@@ -567,7 +567,7 @@
                     </div>
 
                     <!-- Generate + Save -->
-                    <div class="hb-margin-top-8px">
+                    <div class="hb-margin-top-8px-b">
                         <div style="display:flex;gap:6px;">
                             <button id="pe-generate" class="btn-toggle hb-dehnt" title="Generate 3D mesh from pattern"><i class="fas fa-cube"></i> Generate 3D</button>
                             <button id="pe-delete" class="btn-toggle hb-fest" title="Remove preview"><i class="fas fa-times"></i></button>

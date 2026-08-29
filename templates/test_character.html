@@ -180,7 +180,7 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-color-e74c3c.hb-color-e74c3c.hb-color-e74c3c { color:#e74c3c; }   /* 2x */
+.hb-color-e74c3c-c.hb-color-e74c3c-c.hb-color-e74c3c-c { color:#e74c3c; }   /* 2x */
 .hb-gedaempft-theme.hb-gedaempft-theme.hb-gedaempft-theme { color:var(--text-muted); }   /* 3x */
 .hb-padding-24px.hb-padding-24px.hb-padding-24px { padding:24px; color:var(--text-muted); }   /* 2x */
 </style>
@@ -460,7 +460,7 @@ right.init();
                     : '<span class="diag-tag female">Female</span>';
                 html += '<tr' + cls + '><td>' + tag + ' ' + l.name + '</td>';
                 if (l.error) {
-                    html += '<td colspan="4" class="hb-color-e74c3c">' + l.error + '</td>';
+                    html += '<td colspan="4" class="hb-color-e74c3c-c">' + l.error + '</td>';
                 } else {
                     html += '<td>' + l.vertex_count.toLocaleString() + '</td>';
                     html += '<td>[' + l.shape.join(', ') + ']</td>';
@@ -515,7 +515,7 @@ right.init();
                 html += '<div style="margin-bottom:8px;">';
                 html += '<strong>' + p.file + '</strong>';
                 if (p.error) {
-                    html += ' <span class="hb-color-e74c3c">' + p.error + '</span>';
+                    html += ' <span class="hb-color-e74c3c-c">' + p.error + '</span>';
                 } else {
                     html += ' — ' + p.morph_count + ' Morphs, ' + formatBytes(p.size_bytes);
                     html += '<br><span class="text-schmal">'

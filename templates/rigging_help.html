@@ -70,14 +70,14 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-margin-top-20px.hb-margin-top-20px.hb-margin-top-20px { margin-top: 20px; color: #4fc1ff; }   /* 3x */
+.hb-margin-top-20px-4fc1ff.hb-margin-top-20px-4fc1ff.hb-margin-top-20px-4fc1ff { margin-top: 20px; color: #4fc1ff; }   /* 3x */
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-color-4fc1ff.hb-color-4fc1ff.hb-color-4fc1ff { color: #4fc1ff; margin-top: 50px; }   /* 2x */
 .hb-color-73daca.hb-color-73daca.hb-color-73daca { color: #73daca; margin-top: 50px; }   /* 2x */
-.hb-margin-top-20px.hb-margin-top-20px.hb-margin-top-20px { margin-top: 20px; color: #ff9940; }   /* 2x */
+.hb-margin-top-20px-ff9940.hb-margin-top-20px-ff9940.hb-margin-top-20px-ff9940 { margin-top: 20px; color: #ff9940; }   /* 2x */
 </style>
 <div class="rigging-help">
 
@@ -223,7 +223,7 @@ F&uuml;r jeden Garment-Vertex:
     2. Kopiere dessen Bone-Indices + Weights
     3. &rarr; Garment-Vertex bewegt sich identisch zum darunterliegenden K&ouml;rper</pre>
 
-        <h3 class="hb-margin-top-20px">Fitting-Pipeline (10 Schritte)</h3>
+        <h3 class="hb-margin-top-20px-ff9940">Fitting-Pipeline (10 Schritte)</h3>
         <div class="pipeline-step"><div class="num">1</div><div><strong>Koordinaten-Konvertierung</strong> &mdash; Dezimeter/cm Y-up &rarr; Meter Z-up</div></div>
         <div class="pipeline-arrow">&darr;</div>
         <div class="pipeline-step"><div class="num">2</div><div><strong>Feet-to-Feet Alignment</strong> &mdash; F&uuml;&szlig;e ausrichten</div></div>
@@ -244,7 +244,7 @@ F&uuml;r jeden Garment-Vertex:
         <div class="pipeline-arrow">&darr;</div>
         <div class="pipeline-step"><div class="num">10</div><div><strong>SkinnedMesh im Browser</strong> &mdash; Bind an Shared Skeleton</div></div>
 
-        <h3 class="hb-margin-top-20px">Clipping-Vermeidung</h3>
+        <h3 class="hb-margin-top-20px-ff9940">Clipping-Vermeidung</h3>
         <table>
             <tr><th>Wo</th><th>Methode</th><th>Wie</th></tr>
             <tr><td>Server (Fitting)</td><td>Push-Outside-Body</td><td>Normal-basierte Distanzpr&uuml;fung, Deficit-Push entlang Normalen</td></tr>
@@ -270,7 +270,7 @@ Tutu am DEF-spine.002 (H&uuml;fte):
 
         <p><strong>Kein Blending n&ouml;tig</strong> &mdash; die Form geh&ouml;rt komplett zu einem Bone. Deshalb kein weiches Biegen an Gelenken, aber auch kein kompliziertes Weight-Painting.</p>
 
-        <h3 class="hb-margin-top-20px">Zwei Modi</h3>
+        <h3 class="hb-margin-top-20px-4fc1ff">Zwei Modi</h3>
         <table>
             <tr><th>Modus</th><th>Mesh-Typ</th><th>Animation</th></tr>
             <tr>
@@ -285,7 +285,7 @@ Tutu am DEF-spine.002 (H&uuml;fte):
             </tr>
         </table>
 
-        <h3 class="hb-margin-top-20px">Geometrie-Erzeugung</h3>
+        <h3 class="hb-margin-top-20px-4fc1ff">Geometrie-Erzeugung</h3>
         <p>Die Geometrie wird <strong>komplett im Browser</strong> erzeugt (kein Server-Roundtrip):</p>
         <ol>
             <li>Three.js Geometrie erstellen (CylinderGeometry, LatheGeometry, BufferGeometry...)</li>
@@ -295,7 +295,7 @@ Tutu am DEF-spine.002 (H&uuml;fte):
             <li>Alle Bones zu einem Mesh zusammenf&uuml;hren</li>
         </ol>
 
-        <h3 class="hb-margin-top-20px">Verf&uuml;gbare Formen</h3>
+        <h3 class="hb-margin-top-20px-4fc1ff">Verf&uuml;gbare Formen</h3>
         <table>
             <tr><th>Form</th><th>Geometrie</th><th>Spezial-Parameter</th></tr>
             <tr><td>Zylinder</td><td>CylinderGeometry</td><td>&mdash;</td></tr>

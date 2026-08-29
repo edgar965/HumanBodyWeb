@@ -618,8 +618,8 @@
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-align-items-center.hb-align-items-center.hb-align-items-center { align-items:center; }   /* 5x */
 .hb-display-flex.hb-display-flex.hb-display-flex { display:flex; gap:6px; margin-top:6px; }   /* 4x */
-.hb-flex-1.hb-flex-1.hb-flex-1 { flex:1; font-size:0.7rem; padding:6px 4px; }   /* 3x */
-.hb-font-size-0-75rem.hb-font-size-0-75rem.hb-font-size-0-75rem { font-size:0.75rem; padding:4px 10px; }   /* 3x */
+.hb-flex-1-d.hb-flex-1-d.hb-flex-1-d { flex:1; font-size:0.7rem; padding:6px 4px; }   /* 3x */
+.hb-font-size-0-75rem-b.hb-font-size-0-75rem-b.hb-font-size-0-75rem-b { font-size:0.75rem; padding:4px 10px; }   /* 3x */
 .hb-font-size-0-7rem.hb-font-size-0-7rem.hb-font-size-0-7rem {
     font-size:0.7rem;
     color:var(--text-secondary);
@@ -631,7 +631,7 @@
     display:block;
 }   /* 3x */
 .hb-margin-top-6px.hb-margin-top-6px.hb-margin-top-6px { margin-top:6px; }   /* 3x */
-.hb-margin-top-8px.hb-margin-top-8px.hb-margin-top-8px {
+.hb-margin-top-8px-c.hb-margin-top-8px-c.hb-margin-top-8px-c {
     margin-top:8px;
     font-size:0.75rem;
     color:var(--text-secondary);
@@ -644,7 +644,7 @@
     resize:vertical;
     min-height:80px;
 }   /* 3x */
-.hb-width-100.hb-width-100.hb-width-100 { width:100%; margin-top:8px; }   /* 3x */
+.hb-width-100-c.hb-width-100-c.hb-width-100-c { width:100%; margin-top:8px; }   /* 3x */
 .hb-width-auto.hb-width-auto.hb-width-auto { width:auto; margin-left:8px; }   /* 4x */
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
@@ -658,8 +658,8 @@
     background:none;
     color:var(--text-muted);
 }   /* 2x */
-.hb-display-flex.hb-display-flex.hb-display-flex { display:flex; gap:6px; }   /* 2x */
-.hb-font-size-0-75rem.hb-font-size-0-75rem.hb-font-size-0-75rem {
+.hb-display-flex-eng.hb-display-flex-eng.hb-display-flex-eng { display:flex; gap:6px; }   /* 2x */
+.hb-font-size-0-75rem-gedaempft.hb-font-size-0-75rem-gedaempft.hb-font-size-0-75rem-gedaempft {
     font-size:0.75rem;
     color:var(--text-muted);
     margin-bottom:4px;
@@ -674,7 +674,7 @@
     background:none;
     cursor:pointer;
 }   /* 2x */
-.hb-width-60px.hb-width-60px.hb-width-60px { width:60px; }   /* 2x */
+.hb-width-60px-b.hb-width-60px-b.hb-width-60px-b { width:60px; }   /* 2x */
 </style>
 {% endblock %}
 
@@ -961,9 +961,9 @@
                         {% include "_schieberegler.html" with kennung="kleider-region-lower" beschriftung="Lower" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
                         {% include "_schieberegler.html" with kennung="kleider-region-bottom" beschriftung="Bottom" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
                         <div style="display:flex;gap:4px;margin-top:6px;">
-                            <button id="kleider-stage1" class="btn-toggle hb-flex-1" title="Stufe 1: Knochen-Modell erzeugen"><i class="fas fa-bone"></i> 1. Knochen</button>
-                            <button id="kleider-stage2" class="btn-toggle hb-flex-1" title="Stufe 2: Kleid um Knochen-Modell fitten"><i class="fas fa-tshirt"></i> 2. Fit Rig</button>
-                            <button id="kleider-stage3" class="btn-toggle hb-flex-1" title="Stufe 3: Verfeinerung am Body-Mesh"><i class="fas fa-user"></i> 3. Fit Body</button>
+                            <button id="kleider-stage1" class="btn-toggle hb-flex-1-d" title="Stufe 1: Knochen-Modell erzeugen"><i class="fas fa-bone"></i> 1. Knochen</button>
+                            <button id="kleider-stage2" class="btn-toggle hb-flex-1-d" title="Stufe 2: Kleid um Knochen-Modell fitten"><i class="fas fa-tshirt"></i> 2. Fit Rig</button>
+                            <button id="kleider-stage3" class="btn-toggle hb-flex-1-d" title="Stufe 3: Verfeinerung am Body-Mesh"><i class="fas fa-user"></i> 3. Fit Body</button>
                         </div>
                         <div style="display:flex;gap:6px;margin-top:4px;">
                             <button id="kleider-remove" class="btn-toggle hb-fest" title="Kleid entfernen"><i class="fas fa-times"></i></button>
@@ -1016,7 +1016,7 @@
                         </div>
                         <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:8px 0 4px;">Schritt 2: Push Outside</div>
                         {% include "_schieberegler.html" with kennung="mh-push-dist" beschriftung="Max. Abstand" min="1" max="200" wert="3" schritt="1" anzeige="3 mm" %}
-                        <div class="hb-display-flex">
+                        <div class="hb-display-flex-eng">
                             <button id="mh-push" class="btn-toggle hb-dehnt"><i class="fas fa-expand-arrows-alt"></i> 2. Push Outside</button>
                             <button id="mh-push-undo" class="btn-toggle hb-fest" title="Push r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i></button>
                         </div>
@@ -1166,10 +1166,10 @@
                                        class="hb-dehnt">
                                 <span id="smooth-sigma-val" style="font-size:0.8rem;color:var(--text-muted);min-width:24px;">2.0</span>
                             </div>
-                            <div class="hb-display-flex">
-                                <button id="smooth-apply" class="viewer-btn hb-font-size-0-75rem" title="Smoothing anwenden (Vorschau)"><i class="fas fa-wave-square"></i> Smooth</button>
-                                <button id="smooth-reset" class="viewer-btn hb-font-size-0-75rem" title="Smoothing r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i> Reset</button>
-                                <button id="anim-save-btn" class="viewer-btn hb-font-size-0-75rem" title="Animation speichern"><i class="fas fa-save"></i> Speichern</button>
+                            <div class="hb-display-flex-eng">
+                                <button id="smooth-apply" class="viewer-btn hb-font-size-0-75rem-b" title="Smoothing anwenden (Vorschau)"><i class="fas fa-wave-square"></i> Smooth</button>
+                                <button id="smooth-reset" class="viewer-btn hb-font-size-0-75rem-b" title="Smoothing r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i> Reset</button>
+                                <button id="anim-save-btn" class="viewer-btn hb-font-size-0-75rem-b" title="Animation speichern"><i class="fas fa-save"></i> Speichern</button>
                             </div>
                         </div>
                     </div>
@@ -1573,7 +1573,7 @@
                             <label>Farbe</label>
                             <input type="color" id="mg-bone-color" value="#4488cc" class="hb-width-40px">
                         </div>
-                        <div class="hb-margin-top-8px">Textur</div>
+                        <div class="hb-margin-top-8px-c">Textur</div>
                         <div class="slider-row hb-align-items-center">
                             <label>Bild</label>
                             <input type="file" id="mg-bone-texture-file" accept="image/*"
@@ -1583,13 +1583,13 @@
                         <div id="mg-bone-texture-preview" style="display:none;margin-top:4px;text-align:center;">
                             <img id="mg-bone-texture-thumb" src="" alt="Textur" style="max-width:120px;max-height:120px;border:1px solid var(--border);border-radius:3px;">
                         </div>
-                        <div class="hb-margin-top-8px">Gr&ouml;sse entlang Achse</div>
+                        <div class="hb-margin-top-8px-c">Gr&ouml;sse entlang Achse</div>
                         <div class="slider-row">
                             <label>Skala</label>
                             <input type="range" id="mg-axial-scale" min="0.1" max="3.0" step="0.05" value="1.0">
                             <span id="mg-axial-scale-val" class="slider-val">1.00</span>
                         </div>
-                        <div class="hb-margin-top-8px">Position (World)</div>
+                        <div class="hb-margin-top-8px-c">Position (World)</div>
                         <div class="hb-font-size-0-7rem">Anfang (Head)</div>
                         <div class="slider-row">
                             <label>X</label>
@@ -1623,7 +1623,7 @@
                             <input type="range" id="mg-tail-off-z" min="-0.15" max="0.15" step="0.001" value="0">
                             <span id="mg-tail-off-z-val" class="slider-val">0.000</span>
                         </div>
-                        <div class="hb-margin-top-8px">Form-Rotation (°)</div>
+                        <div class="hb-margin-top-8px-c">Form-Rotation (°)</div>
                         <div class="slider-row">
                             <label>X</label>
                             <input type="range" id="mg-shape-rot-x" min="-180" max="180" step="1" value="0">
@@ -1672,8 +1672,8 @@
                     <div class="panel-body">
                         <div class="prop-row"><label><input type="checkbox" id="rig-ik-no-stretch" checked> IK Stretch deaktivieren</label></div>
                         <div class="prop-row"><label><input type="checkbox" id="rig-ik-limit" checked> IK Rotation begrenzen</label></div>
-                        <div class="prop-row"><label>Min:</label><input type="number" id="rig-ik-min" value="-10" min="-180" max="0" class="hb-width-60px"> &deg;</div>
-                        <div class="prop-row"><label>Max:</label><input type="number" id="rig-ik-max" value="160" min="0" max="180" class="hb-width-60px"> &deg;</div>
+                        <div class="prop-row"><label>Min:</label><input type="number" id="rig-ik-min" value="-10" min="-180" max="0" class="hb-width-60px-b"> &deg;</div>
+                        <div class="prop-row"><label>Max:</label><input type="number" id="rig-ik-max" value="160" min="0" max="180" class="hb-width-60px-b"> &deg;</div>
                         <div class="prop-row"><label><input type="checkbox" id="rig-finger-ik"> Finger IK</label></div>
                     </div>
                 </div>
@@ -1716,7 +1716,7 @@
                         <div class="prop-row"><label><input type="checkbox" id="fin-include-rig" checked> Rig einschliessen</label></div>
                         <div class="prop-row"><label><input type="checkbox" id="fin-include-clothes"> Kleidung einschliessen</label></div>
                         <div class="prop-row"><label><input type="checkbox" id="fin-include-hair"> Haare einschliessen</label></div>
-                        <button id="fin-export" class="viewer-btn hb-width-100"><i class="fas fa-file-export"></i> Exportieren</button>
+                        <button id="fin-export" class="viewer-btn hb-width-100-c"><i class="fas fa-file-export"></i> Exportieren</button>
                     </div>
                 </div>
                 <div class="panel-section">
@@ -1724,7 +1724,7 @@
                     <div class="panel-body">
                         <div class="prop-row"><label><input type="checkbox" id="fin-collapse-morphs"> Shape Keys zusammenfassen</label></div>
                         <div class="prop-row"><label><input type="checkbox" id="fin-remove-unused"> Unbenutzte Morphs entfernen</label></div>
-                        <button id="fin-cleanup" class="viewer-btn hb-width-100"><i class="fas fa-broom"></i> Cleanup</button>
+                        <button id="fin-cleanup" class="viewer-btn hb-width-100-c"><i class="fas fa-broom"></i> Cleanup</button>
                     </div>
                 </div>
                 <div class="panel-section">
@@ -1742,7 +1742,7 @@
                                 <option value="yaml">YAML</option>
                             </select>
                         </div>
-                        <button id="fin-convert" class="viewer-btn hb-width-100"><i class="fas fa-exchange-alt"></i> Konvertieren</button>
+                        <button id="fin-convert" class="viewer-btn hb-width-100-c"><i class="fas fa-exchange-alt"></i> Konvertieren</button>
                     </div>
                 </div>
             </div><!-- /tab-finalize -->
@@ -1844,10 +1844,10 @@
             <button class="scene-modal-close" data-close>&times;</button>
         </div>
         <div class="scene-modal-body">
-            <div class="hb-font-size-0-75rem">Kategorie</div>
+            <div class="hb-font-size-0-75rem-gedaempft">Kategorie</div>
             <input class="scene-name-input" id="save-anim-category" type="text" readonly
                    style="opacity:0.6;margin-bottom:8px;">
-            <div class="hb-font-size-0-75rem">Dateiname</div>
+            <div class="hb-font-size-0-75rem-gedaempft">Dateiname</div>
             <input class="scene-name-input" id="save-anim-name" type="text" placeholder="Dateiname..."
                    autocomplete="off">
         </div>

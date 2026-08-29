@@ -9,12 +9,12 @@
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-color-27ae60.hb-color-27ae60.hb-color-27ae60 { color:#27ae60; margin-left:0.5rem; }   /* 4x */
-.hb-color-e74c3c.hb-color-e74c3c.hb-color-e74c3c { color:#e74c3c; margin-left:0.5rem; }   /* 4x */
+.hb-color-e74c3c-b.hb-color-e74c3c-b.hb-color-e74c3c-b { color:#e74c3c; margin-left:0.5rem; }   /* 4x */
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-color-e74c3c.hb-color-e74c3c.hb-color-e74c3c { color:#e74c3c; }   /* 2x */
+.hb-color-e74c3c-blank.hb-color-e74c3c-blank.hb-color-e74c3c-blank { color:#e74c3c; }   /* 2x */
 </style>
 <h1>Einstellungen &mdash; Video to BVH: 3D</h1>
 
@@ -64,7 +64,7 @@
             <i class="fas fa-brain"></i> MocapNET v4
             <small class="hb-gedaempft">~75 mm, CPU, 165 Bones</small>
             {% if v4_installed %}<span class="hb-color-27ae60" title="Installiert"><i class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
         {# Components #}
@@ -142,8 +142,8 @@
 
         {% if not smpl_models_ok %}
         <div style="background:rgba(231,76,60,0.1); border:1px solid rgba(231,76,60,0.3); border-radius:6px; padding:0.75rem 1rem; margin:0.5rem 0.75rem;">
-            <i class="fas fa-exclamation-triangle hb-color-e74c3c"></i>
-            <strong class="hb-color-e74c3c">SMPL-Modelle fehlen</strong>
+            <i class="fas fa-exclamation-triangle hb-color-e74c3c-blank"></i>
+            <strong class="hb-color-e74c3c-blank">SMPL-Modelle fehlen</strong>
             <small style="display:block;color:#888;margin-top:0.25rem;">
                 Die SMPL .pkl Dateien werden ben&ouml;tigt. Lizenz registrieren unter
                 <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a>,
@@ -159,7 +159,7 @@
             <i class="fas fa-walking"></i> GVHMR
             <small class="hb-gedaempft">36 mm, GPU &mdash; Empfohlen</small>
             {% if gvhmr_installed %}<span class="hb-color-27ae60" title="Installiert"><i class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
         {% include "_einstellungen_kaestchen.html" with titel="Static Camera" beschriftung="Statische Kamera annehmen (kein DPVO). Empfohlen f&uuml;r feste Kameraperspektive." feld="gvhmr_static_cam" text="Aktiviert" an=settings.gvhmr_static_cam %}
@@ -173,7 +173,7 @@
             <i class="fas fa-globe"></i> WHAM
             <small class="hb-gedaempft">37 mm, GPU, World-Koordinaten</small>
             {% if wham_installed %}<span class="hb-color-27ae60" title="Installiert"><i class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
         {% include "_einstellungen_kaestchen.html" with titel="Estimate Local Only" beschriftung="Nur lokale K&ouml;rperbewegung sch&auml;tzen (keine globale Trajektorie)." feld="wham_estimate_local_only" text="Aktiviert" an=settings.wham_estimate_local_only %}
@@ -187,7 +187,7 @@
             <i class="fas fa-comment-dots"></i> PromptHMR
             <small class="hb-gedaempft">37 mm, GPU &mdash; Beste per-frame</small>
             {% if prompthmr_installed %}<span class="hb-color-27ae60" title="Installiert"><i class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
         {% include "_einstellungen_kaestchen.html" with titel="Static Camera" beschriftung="Statische Kamera annehmen. Empfohlen f&uuml;r die meisten Videos." feld="prompthmr_static_camera" text="Aktiviert" an=settings.prompthmr_static_camera %}

@@ -550,7 +550,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
     color:var(--text-muted,#aaa);
     margin-bottom:4px;
 }   /* 4x */
-.hb-font-size-0-8rem.hb-font-size-0-8rem.hb-font-size-0-8rem {
+.hb-font-size-0-8rem-b.hb-font-size-0-8rem-b.hb-font-size-0-8rem-b {
     font-size:0.8rem;
     color:var(--text-muted);
     display:block;
@@ -596,13 +596,13 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
     border-radius:4px;
     font-size:0.82rem;
 }   /* 5x */
-.hb-width-100-2.hb-width-100-2.hb-width-100-2 { width:100%; padding:6px 8px; }   /* 4x */
+.hb-width-100-2-b.hb-width-100-2-b.hb-width-100-2-b { width:100%; padding:6px 8px; }   /* 4x */
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-color-e74c3c.hb-color-e74c3c.hb-color-e74c3c { color: #e74c3c; }   /* 2x */
-.hb-font-size-0-7rem.hb-font-size-0-7rem.hb-font-size-0-7rem {
+.hb-font-size-0-7rem-b.hb-font-size-0-7rem-b.hb-font-size-0-7rem-b {
     font-size:0.7rem;
     color:var(--text-muted);
     margin-top:2px;
@@ -824,7 +824,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
                 <!-- Export Method -->
                 <div class="hb-margin-bottom-10px">
-                    <label class="hb-font-size-0-8rem">Methode:</label>
+                    <label class="hb-font-size-0-8rem-b">Methode:</label>
                     <select id="export-method" class="hb-width-100">
                         <option value="browser">Browser (MediaRecorder, Echtzeit)</option>
                         <option value="server">Server (Playwright + ffmpeg, Offline)</option>
@@ -833,7 +833,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
                 <!-- Resolution -->
                 <div class="hb-margin-bottom-8px">
-                    <label class="hb-font-size-0-8rem">Aufl&ouml;sung:</label>
+                    <label class="hb-font-size-0-8rem-b">Aufl&ouml;sung:</label>
                     <select id="export-resolution" class="hb-width-100">
                         <option value="viewport">Viewport (aktuell)</option>
                         <option value="720">720p (1280&times;720)</option>
@@ -852,7 +852,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
                 <!-- FPS -->
                 <div class="hb-margin-bottom-8px">
-                    <label class="hb-font-size-0-8rem">FPS:</label>
+                    <label class="hb-font-size-0-8rem-b">FPS:</label>
                     <select id="export-fps" class="hb-width-100">
                         <option value="24">24 fps (Film)</option>
                         <option value="25">25 fps (PAL)</option>
@@ -863,7 +863,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
                 <!-- Format -->
                 <div class="hb-margin-bottom-8px">
-                    <label class="hb-font-size-0-8rem">Format:</label>
+                    <label class="hb-font-size-0-8rem-b">Format:</label>
                     <select id="export-format" class="hb-width-100">
                         <option value="mp4" selected>MP4 (H.264)</option>
                         <option value="webm">WebM (VP9)</option>
@@ -873,7 +873,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
                 <!-- Quality -->
                 <div class="hb-margin-bottom-8px">
-                    <label class="hb-font-size-0-8rem">Qualit&auml;t (CRF):</label>
+                    <label class="hb-font-size-0-8rem-b">Qualit&auml;t (CRF):</label>
                     <div style="display:flex;align-items:center;gap:6px;">
                         <input type="range" id="export-crf" min="0" max="51" value="18" class="hb-dehnt">
                         <span id="export-crf-val" style="font-size:0.8rem;color:var(--text-muted);min-width:20px;">18</span>
@@ -885,7 +885,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
                 <!-- Time Range -->
                 <div class="hb-margin-bottom-8px">
-                    <label class="hb-font-size-0-8rem">Zeitbereich:</label>
+                    <label class="hb-font-size-0-8rem-b">Zeitbereich:</label>
                     <div style="display:flex;gap:4px;align-items:center;">
                         <input type="number" id="export-start" value="0" min="0" step="0.1" class="hb-width-40"
                                placeholder="Start (s)">
@@ -894,12 +894,12 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                                placeholder="Ende (s)">
                         <span class="text-winzig">s</span>
                     </div>
-                    <div class="hb-font-size-0-7rem">0 = gesamte Animation</div>
+                    <div class="hb-font-size-0-7rem-b">0 = gesamte Animation</div>
                 </div>
 
                 <!-- Background -->
                 <div class="hb-margin-bottom-10px">
-                    <label class="hb-font-size-0-8rem">Hintergrund:</label>
+                    <label class="hb-font-size-0-8rem-b">Hintergrund:</label>
                     <select id="export-bg" class="hb-width-100">
                         <option value="scene">Szene (wie angezeigt)</option>
                         <option value="transparent">Transparent (PNG Seq. only)</option>
@@ -911,7 +911,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
                 <!-- Screen Region (Server only) -->
                 <div id="export-region-section" style="margin-bottom:10px;display:none;">
-                    <label class="hb-font-size-0-8rem">Bildausschnitt (px):</label>
+                    <label class="hb-font-size-0-8rem-b">Bildausschnitt (px):</label>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
                         <input type="number" id="export-crop-x" value="0" min="0" placeholder="X" class="hb-padding-3px">
                         <input type="number" id="export-crop-y" value="0" min="0" placeholder="Y" class="hb-padding-3px">
@@ -920,7 +920,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                         <input type="number" id="export-crop-h" value="0" min="0" placeholder="H&ouml;he (0=voll)"
                                class="hb-padding-3px">
                     </div>
-                    <div class="hb-font-size-0-7rem">0 = gesamter Viewport</div>
+                    <div class="hb-font-size-0-7rem-b">0 = gesamter Viewport</div>
                 </div>
 
                 <!-- Info: current animation -->
@@ -1003,7 +1003,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
                 <div>
                     <label class="hb-display-block">Auflösung</label>
-                    <select id="export-mp4-resolution" class="save-modal-input hb-width-100-2">
+                    <select id="export-mp4-resolution" class="save-modal-input hb-width-100-2-b">
                         <option value="720p">720p (1280x720)</option>
                         <option value="1080p" selected>1080p (1920x1080)</option>
                         <option value="1440p">1440p (2560x1440)</option>
@@ -1012,7 +1012,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                 </div>
                 <div>
                     <label class="hb-display-block">FPS</label>
-                    <select id="export-mp4-fps" class="save-modal-input hb-width-100-2">
+                    <select id="export-mp4-fps" class="save-modal-input hb-width-100-2-b">
                         <option value="24">24 fps</option>
                         <option value="30" selected>30 fps</option>
                         <option value="60">60 fps</option>
@@ -1020,7 +1020,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                 </div>
                 <div>
                     <label class="hb-display-block">Qualität</label>
-                    <select id="export-mp4-quality" class="save-modal-input hb-width-100-2">
+                    <select id="export-mp4-quality" class="save-modal-input hb-width-100-2-b">
                         <option value="low">Niedrig (2 Mbps)</option>
                         <option value="medium">Mittel (5 Mbps)</option>
                         <option value="high" selected>Hoch (8 Mbps)</option>
@@ -1029,7 +1029,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                 </div>
                 <div>
                     <label class="hb-display-block">Format</label>
-                    <select id="export-mp4-format" class="save-modal-input hb-width-100-2">
+                    <select id="export-mp4-format" class="save-modal-input hb-width-100-2-b">
                         <option value="mp4" selected>MP4 (H.264)</option>
                         <option value="webm">WebM (VP9)</option>
                     </select>
