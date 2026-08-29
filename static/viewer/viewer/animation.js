@@ -9,6 +9,7 @@ import { convertToRigifySkinnedMesh } from './skinning.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Animationslader } from '../gemeinsam/animationslader.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 
 export async function loadAnimations() {
     try {
@@ -27,19 +28,8 @@ export async function loadAnimations() {
 
         catNames.forEach(cat => {
             const anims = categories[cat];
-            const catDiv = document.createElement('div');
-            catDiv.className = 'anim-category';
-
-            const header = document.createElement('div');
-            header.className = 'anim-category-header';
-            header.innerHTML = `<span class="cat-chevron"><i class="fas fa-chevron-right"></i></span>
-                <span>${cat}</span>
-                <span class="cat-count">${anims.length}</span>`;
-            header.addEventListener('click', () => catDiv.classList.toggle('open'));
-            catDiv.appendChild(header);
-
-            const body = document.createElement('div');
-            body.className = 'anim-category-body';
+            const {kasten: catDiv, koerper: body} =
+                Kategoriekasten.bauen(cat, anims.length);
 
             anims.forEach(anim => {
                 const item = document.createElement('div');
@@ -54,7 +44,6 @@ export async function loadAnimations() {
                 body.appendChild(item);
             });
 
-            catDiv.appendChild(body);
             tree.appendChild(catDiv);
         });
 

@@ -8,6 +8,7 @@
 import { loadBVHAnimation } from './wiedergabe.js';
 import { Animationsverwaltung } from './verwaltung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 
 
 // =========================================================================
@@ -29,26 +30,16 @@ export async function loadAnimationTree() {
 
         catNames.forEach(cat => {
             const anims = categories[cat];
-            const catDiv = document.createElement('div');
-            catDiv.className = 'anim-category';
+            const {kasten: catDiv, kopf: header} =
+                Kategoriekasten.bauen(cat, anims.length);
             catDiv.dataset.category = cat;
-
-            const header = document.createElement('div');
-            header.className = 'anim-category-header';
-            header.innerHTML = `<span class="cat-chevron"><i class="fas fa-chevron-right"></i></span>
-                <span>${cat}</span>
-                <span class="cat-count">${anims.length}</span>`;
-            header.addEventListener('click', () => catDiv.classList.toggle('open'));
             // Right-click on folder
             header.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 _animCtxTarget = { type: 'folder', category: cat };
                 showAnimCtx('anim-ctx-folder', e.clientX, e.clientY);
             });
-            catDiv.appendChild(header);
-
-            const body = document.createElement('div');
-            body.className = 'anim-category-body';
+            const body = catDiv.querySelector('.anim-category-body');
 
             anims.forEach(anim => {
                 const item = document.createElement('div');
@@ -75,7 +66,6 @@ export async function loadAnimationTree() {
                 body.appendChild(item);
             });
 
-            catDiv.appendChild(body);
             tree.appendChild(catDiv);
         });
     } catch (e) {

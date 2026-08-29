@@ -10,6 +10,7 @@ import { escapeHtml, _selectedInst } from './utils.js';
 import { convertToRigifySkinnedMesh, convertInstToSkinned } from './skeleton.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 
 export function stopAnimation(destroy = false) {
     if (state.currentAction) {
@@ -186,19 +187,15 @@ export async function loadAnimationUI() {
         if (catNames.length === 0) { tree.innerHTML = '<div class="leer-hinweis">Keine Animationen</div>'; return; }
         for (const cat of catNames) {
             const anims = categories[cat];
-            const catDiv = document.createElement('div'); catDiv.className = 'anim-category';
-            const header = document.createElement('div'); header.className = 'anim-category-header';
-            header.innerHTML = `<span class="cat-chevron"><i class="fas fa-chevron-right"></i></span><span>${escapeHtml(cat)}</span><span class="cat-count">${anims.length}</span>`;
-            header.addEventListener('click', () => catDiv.classList.toggle('open'));
-            catDiv.appendChild(header);
-            const body = document.createElement('div'); body.className = 'anim-category-body';
+            const {kasten: catDiv, koerper: body} =
+                Kategoriekasten.bauen(cat, anims.length);
             for (const anim of anims) {
                 const item = document.createElement('div'); item.className = 'anim-item';
                 item.innerHTML = `<span>${escapeHtml(anim.name)}</span><span class="frames">${anim.frames || ''}f</span>`;
                 item.addEventListener('click', () => { tree.querySelectorAll('.anim-item.active').forEach(el => el.classList.remove('active')); item.classList.add('active'); state.currentAnimName = anim.name; loadBVHAnimation(anim.url, anim.name, anim.frames || 0); });
                 body.appendChild(item);
             }
-            catDiv.appendChild(body); tree.appendChild(catDiv);
+            tree.appendChild(catDiv);
         }
     } catch (e) { const tree = document.getElementById('anim-tree'); if (tree) tree.innerHTML = '<div style="padding:12px;color:var(--text-muted);">Animationen nicht verf\u00fcgbar</div>'; }
     // Playback controls binding

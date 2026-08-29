@@ -4,6 +4,7 @@ import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Smplkleidernetz } from './smpl_kleidernetz.js';
+import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 
 /**
  * Smplkleiderliste — der SMPL-Kleiderkatalog samt Bedienfeld.
@@ -151,18 +152,9 @@ export class Smplkleiderliste {
     }
 
     _kategorie(name, eintraege) {
-        const kasten = document.createElement('div');
-        kasten.className = 'anim-category';
-        const kopf = document.createElement('div');
-        kopf.className = 'anim-category-header';
-        kopf.innerHTML = `<span class="cat-chevron">&#9654;</span> `
-            + `${name.toUpperCase()} <span class="cat-count">${eintraege.length}</span>`;
-        kopf.addEventListener('click', () => kasten.classList.toggle('open'));
-        kasten.appendChild(kopf);
-        const koerper = document.createElement('div');
-        koerper.className = 'anim-category-body';
+        const {kasten, koerper} = Kategoriekasten.bauen(
+            name, eintraege.length, {gross: true});
         for (const eintrag of eintraege) koerper.appendChild(this._zeile(eintrag));
-        kasten.appendChild(koerper);
         return kasten;
     }
 

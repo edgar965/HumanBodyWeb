@@ -3,6 +3,7 @@ import { detectBVHFormat } from '../retarget_hybrid.js';
 import { placeBvhSkeleton } from '../skeleton_test.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 
 /**
  * Animationsbaum — die Kategorien der Vergleichsseite als aufklappbare Liste.
@@ -73,21 +74,11 @@ export class Animationsbaum {
     }
 
     _kategorie(name, animationen) {
-        const kasten = document.createElement('div');
-        kasten.className = 'anim-category';
-        const kopf = document.createElement('div');
-        kopf.className = 'anim-category-header';
-        kopf.innerHTML = `<span class="cat-chevron"><i class="fas fa-chevron-right"></i></span>
-                <span>${name}</span>
-                <span class="cat-count">${animationen.length}</span>`;
-        kopf.addEventListener('click', () => kasten.classList.toggle('open'));
-        kasten.appendChild(kopf);
-        const koerper = document.createElement('div');
-        koerper.className = 'anim-category-body';
+        const {kasten, koerper} = Kategoriekasten.bauen(
+            name, animationen.length);
         for (const anim of animationen) {
             koerper.appendChild(this._zeile(name, anim));
         }
-        kasten.appendChild(koerper);
         return kasten;
     }
 

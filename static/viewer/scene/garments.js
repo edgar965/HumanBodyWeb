@@ -9,6 +9,7 @@ import './skeleton.js';
 import { _applyGarmentRegionOffsets, _computeGarmentRegionWeights, _doGarmentFit, _saveSelectedGarmentState, _syncGarmentSliders } from './kleidung_anpassen.js';
 import { Assetsbedienung } from './assetsbedienung.js';
 import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
+import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 
 
 
@@ -56,18 +57,8 @@ export function _renderGarmentList() {
     }
 
     for (const [cat, garments] of Object.entries(byCategory)) {
-        const catDiv = document.createElement('div');
-        catDiv.className = 'anim-category';
-        const header = document.createElement('div');
-        header.className = 'anim-category-header';
-        header.innerHTML = `<span class="cat-chevron"><i class="fas fa-chevron-right"></i></span>
-            <span>${escapeHtml(cat)}</span>
-            <span class="cat-count">${garments.length}</span>`;
-        header.addEventListener('click', () => catDiv.classList.toggle('open'));
-        catDiv.appendChild(header);
-
-        const body = document.createElement('div');
-        body.className = 'anim-category-body';
+        const {kasten: catDiv, koerper: body} =
+            Kategoriekasten.bauen(cat, garments.length);
         for (const g of garments) {
             const item = document.createElement('div');
             item.className = 'anim-item garment-item' + (g.id === state._selectedGarmentId ? ' active' : '');
@@ -116,7 +107,6 @@ export function _renderGarmentList() {
             item.addEventListener('dblclick', () => _doGarmentFit());
             body.appendChild(item);
         }
-        catDiv.appendChild(body);
         list.appendChild(catDiv);
     }
 }
