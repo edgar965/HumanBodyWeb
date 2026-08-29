@@ -49,6 +49,11 @@ class Kanal:
     @classmethod
     def aktueller(cls):
         if cls._aktiv is None:
+            # Der Import steht IN der Methode: `netzkanal` holt sich von hier
+            # `Kanal` und `BASE_URL`, oben waere es ein Kreis
+            # (`abhaengigkeiten`). Und er wird selten gebraucht — im Testlauf
+            # setzt `Kanal.setzen(ClientKanal(...))` den Kanal vorher.
+            from .netzkanal import NetzKanal
             cls._aktiv = NetzKanal()
         return cls._aktiv
 
@@ -121,11 +126,12 @@ class Kanal:
             return status, {'_raw': text}
 
 
-# Die beiden Fassungen liegen seit dem 29.08.2026 in eigenen Dateien
-# (Befund `klassen-je-datei`). Sie werden hier wieder hereingeholt, damit
-# `from tests.kanal import ClientKanal` weiter gilt: Ein Umbau der
-# Testablage soll keine Importzeile im Wirtsprojekt anfassen.
-from .clientkanal import ClientKanal      # noqa: E402
-from .netzkanal import NetzKanal          # noqa: E402
-
-__all__ = ['BASE_URL', 'Kanal', 'ClientKanal', 'NetzKanal']
+#: WOHIN DIE BEIDEN FASSUNGEN GEGANGEN SIND (29.08.2026):
+#:
+#:     tests/clientkanal.py   ClientKanal — in-process, ueber `django.test.Client`
+#:     tests/netzkanal.py     NetzKanal   — ueber das Netz an den laufenden Server
+#:
+#: Sie wurden hier zuerst wieder hereingeholt, damit `from tests.kanal import
+#: ClientKanal` weitergilt. Das war ein Importkreis (`abhaengigkeiten`) fuer
+#: genau EINEN Aufrufer — der importiert jetzt dort, wo die Klasse steht.
+__all__ = ['BASE_URL', 'Kanal']

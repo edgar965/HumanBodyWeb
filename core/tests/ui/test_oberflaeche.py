@@ -39,7 +39,8 @@ from pathlib import Path
 from django.test import TestCase, override_settings
 
 from tests import ALL_CATEGORIES
-from tests.kanal import ClientKanal, Kanal
+from tests.clientkanal import ClientKanal
+from tests.kanal import Kanal
 
 
 #: Wegwerf-Medienordner für den ganzen Lauf.
