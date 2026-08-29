@@ -11,6 +11,8 @@ import uuid
 
 from django.db import models
 
+from ..daten.fehlerkurzfassung import Fehlerkurzfassung
+
 
 class BVHJob(models.Model):
     """Represents a video-to-BVH processing job."""
@@ -77,29 +79,14 @@ class BVHJob(models.Model):
 
     @property
     def error_summary(self):
-        """Short error description (before traceback)."""
-        if not self.error_message:
-            return ''
-        msg = self.error_message
-        # Extract the actual error type from traceback
-        if 'Traceback' in msg:
-            lines = [l for l in msg.strip().splitlines() if l.strip()]
-            prefix = msg.split('Traceback')[0].strip().rstrip(':').strip()
-            # Find last line that looks like "ErrorType: message"
-            error_line = ''
-            for line in reversed(lines):
-                s = line.strip()
-                if 'Error' in s and ':' in s and not s.startswith('File '):
-                    error_line = s
-                    break
-            if prefix and error_line:
-                return f"{prefix}: {error_line}"
-            elif error_line:
-                return error_line
-            elif prefix:
-                return prefix
-            return 'Processing failed (traceback truncated)'
-        return msg.split('\n')[0].strip()
+        """Eine Zeile aus der Fehlermeldung — siehe `Fehlerkurzfassung`.
+
+        Die Rechnung stand hier mit acht Verzweigungen (Rang C, Befund
+        `code-qualitaet` 29.08.2026). Sie beantwortet vier Fragen, die
+        nichts mit dem Modell zu tun haben; jetzt beantwortet sie sie an
+        einer Stelle, die dafuer Tests hat.
+        """
+        return Fehlerkurzfassung.aus(self.error_message)
 
     @property
     def error_traceback(self):
