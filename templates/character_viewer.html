@@ -306,41 +306,17 @@
             <h3>Body Type <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
                 <select id="body-type-select" class="viewer-select"></select>
-                <div class="slider-row">
-                    <label>Age</label>
-                    <input type="range" id="meta-age" min="18" max="100" value="59" step="1">
-                    <span class="slider-val" id="meta-age-val">59</span>
-                </div>
-                <div class="slider-row">
-                    <label>Mass</label>
-                    <input type="range" id="meta-mass" min="45" max="200" value="123" step="1">
-                    <span class="slider-val" id="meta-mass-val">123</span>
-                </div>
-                <div class="slider-row">
-                    <label>Tone</label>
-                    <input type="range" id="meta-tone" min="0" max="100" value="50" step="1">
-                    <span class="slider-val" id="meta-tone-val">50</span>
-                </div>
-                <div class="slider-row">
-                    <label>Height</label>
-                    <input type="range" id="meta-height" min="150" max="200" value="175" step="1">
-                    <span class="slider-val" id="meta-height-val">175</span>
-                </div>
+                {% include "_schieberegler.html" with kennung="meta-age" beschriftung="Age" min="18" max="100" wert="59" schritt="1" anzeige="59" %}
+                {% include "_schieberegler.html" with kennung="meta-mass" beschriftung="Mass" min="45" max="200" wert="123" schritt="1" anzeige="123" %}
+                {% include "_schieberegler.html" with kennung="meta-tone" beschriftung="Tone" min="0" max="100" wert="50" schritt="1" anzeige="50" %}
+                {% include "_schieberegler.html" with kennung="meta-height" beschriftung="Height" min="150" max="200" wert="175" schritt="1" anzeige="175" %}
                 <div class="abschnitt-trenner">
                     <div class="slider-row">
                         <label>Skin</label>
                         <input type="color" id="skin-color-viewer" value="#d4a574" class="hb-farbfeld">
                     </div>
-                    <div class="slider-row">
-                        <label>Roughness</label>
-                        <input type="range" id="skin-roughness-viewer" min="0" max="100" value="55" step="1">
-                        <span class="slider-val" id="skin-roughness-viewer-val">0.55</span>
-                    </div>
-                    <div class="slider-row">
-                        <label>Metalness</label>
-                        <input type="range" id="skin-metalness-viewer" min="0" max="100" value="0" step="1">
-                        <span class="slider-val" id="skin-metalness-viewer-val">0.00</span>
-                    </div>
+                    {% include "_schieberegler.html" with kennung="skin-roughness-viewer" beschriftung="Roughness" min="0" max="100" wert="55" schritt="1" anzeige="0.55" %}
+                    {% include "_schieberegler.html" with kennung="skin-metalness-viewer" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
                 </div>
             </div>
         </div>
@@ -370,94 +346,37 @@
                 </div>
                 <!-- Fit -->
                 <div class="hb-font-size-0-72rem">Fit</div>
-                <div class="slider-row"><label>Offset</label>
-                    <input type="range" id="garment-offset" min="0" max="30" value="6" step="1">
-                    <span class="slider-val" id="garment-offset-val">0.006</span>
-                </div>
-                <div class="slider-row"><label>Stiffness</label>
-                    <input type="range" id="garment-stiffness" min="0" max="100" value="80" step="1">
-                    <span class="slider-val" id="garment-stiffness-val">0.80</span>
-                </div>
-                <div class="slider-row"><label>Min. Abstand</label>
-                    <input type="range" id="garment-min-dist" min="0" max="15" value="3" step="1">
-                    <span class="slider-val" id="garment-min-dist-val">3 mm</span>
-                </div>
-                <div class="slider-row"><label>Schritt-Boden</label>
-                    <input type="range" id="garment-crotch-floor" min="-40" max="40" value="0" step="1">
-                    <span class="slider-val" id="garment-crotch-floor-val">0 mm</span>
-                </div>
-                <div class="slider-row"><label>Anheben</label>
-                    <input type="range" id="garment-lift" min="-20" max="40" value="0" step="1">
-                    <span class="slider-val" id="garment-lift-val">0 mm</span>
-                </div>
-                <div class="slider-row"><label>Schritt-Tiefe</label>
-                    <input type="range" id="garment-crotch-depth" min="0" max="40" value="0" step="1">
-                    <span class="slider-val" id="garment-crotch-depth-val">0 mm</span>
-                </div>
+                {% include "_schieberegler.html" with kennung="garment-offset" beschriftung="Offset" min="0" max="30" wert="6" schritt="1" anzeige="0.006" %}
+                {% include "_schieberegler.html" with kennung="garment-stiffness" beschriftung="Stiffness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
+                {% include "_schieberegler.html" with kennung="garment-min-dist" beschriftung="Min. Abstand" min="0" max="15" wert="3" schritt="1" anzeige="3 mm" %}
+                {% include "_schieberegler.html" with kennung="garment-crotch-floor" beschriftung="Schritt-Boden" min="-40" max="40" wert="0" schritt="1" anzeige="0 mm" %}
+                {% include "_schieberegler.html" with kennung="garment-lift" beschriftung="Anheben" min="-20" max="40" wert="0" schritt="1" anzeige="0 mm" %}
+                {% include "_schieberegler.html" with kennung="garment-crotch-depth" beschriftung="Schritt-Tiefe" min="0" max="40" wert="0" schritt="1" anzeige="0 mm" %}
                 <!-- Farbe / Material -->
                 <div class="hb-font-size-0-72rem">Farbe / Material</div>
                 <div class="slider-row"><label>Color</label>
                     <input type="color" id="garment-color" value="#4d5980" class="hb-farbfeld">
                 </div>
-                <div class="slider-row"><label>Roughness</label>
-                    <input type="range" id="garment-roughness" min="0" max="100" value="80" step="1">
-                    <span class="slider-val" id="garment-roughness-val">0.80</span>
-                </div>
-                <div class="slider-row"><label>Metalness</label>
-                    <input type="range" id="garment-metalness" min="0" max="100" value="0" step="1">
-                    <span class="slider-val" id="garment-metalness-val">0.00</span>
-                </div>
+                {% include "_schieberegler.html" with kennung="garment-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
+                {% include "_schieberegler.html" with kennung="garment-metalness" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
                 <!-- Position -->
                 <div id="garment-adjustments">
                     <div class="hb-font-size-0-72rem">Position</div>
-                    <div class="slider-row"><label>Pos X</label>
-                        <input type="range" id="garment-pos-x" min="-50" max="50" value="0" step="1">
-                        <span class="slider-val" id="garment-pos-x-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Pos Y</label>
-                        <input type="range" id="garment-pos-y" min="-50" max="50" value="0" step="1">
-                        <span class="slider-val" id="garment-pos-y-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Pos Z</label>
-                        <input type="range" id="garment-pos-z" min="-50" max="50" value="0" step="1">
-                        <span class="slider-val" id="garment-pos-z-val">0.00 m</span>
-                    </div>
+                    {% include "_schieberegler.html" with kennung="garment-pos-x" beschriftung="Pos X" min="-50" max="50" wert="0" schritt="1" anzeige="0.00 m" %}
+                    {% include "_schieberegler.html" with kennung="garment-pos-y" beschriftung="Pos Y" min="-50" max="50" wert="0" schritt="1" anzeige="0.00 m" %}
+                    {% include "_schieberegler.html" with kennung="garment-pos-z" beschriftung="Pos Z" min="-50" max="50" wert="0" schritt="1" anzeige="0.00 m" %}
                     <!-- Scale -->
                     <div class="hb-font-size-0-72rem">Scale</div>
-                    <div class="slider-row"><label>Scale X</label>
-                        <input type="range" id="garment-scale-x" min="50" max="200" value="100" step="1">
-                        <span class="slider-val" id="garment-scale-x-val">1.00</span>
-                    </div>
-                    <div class="slider-row"><label>Scale Y</label>
-                        <input type="range" id="garment-scale-y" min="50" max="200" value="100" step="1">
-                        <span class="slider-val" id="garment-scale-y-val">1.00</span>
-                    </div>
-                    <div class="slider-row"><label>Scale Z</label>
-                        <input type="range" id="garment-scale-z" min="50" max="200" value="100" step="1">
-                        <span class="slider-val" id="garment-scale-z-val">1.00</span>
-                    </div>
+                    {% include "_schieberegler.html" with kennung="garment-scale-x" beschriftung="Scale X" min="50" max="200" wert="100" schritt="1" anzeige="1.00" %}
+                    {% include "_schieberegler.html" with kennung="garment-scale-y" beschriftung="Scale Y" min="50" max="200" wert="100" schritt="1" anzeige="1.00" %}
+                    {% include "_schieberegler.html" with kennung="garment-scale-z" beschriftung="Scale Z" min="50" max="200" wert="100" schritt="1" anzeige="1.00" %}
                     <!-- Region -->
                     <div class="hb-font-size-0-72rem">Region</div>
-                    <div class="slider-row"><label>Top</label>
-                        <input type="range" id="garment-region-top" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-top-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Upper</label>
-                        <input type="range" id="garment-region-upper" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-upper-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Mid</label>
-                        <input type="range" id="garment-region-mid" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-mid-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Lower</label>
-                        <input type="range" id="garment-region-lower" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-lower-val">0.00 m</span>
-                    </div>
-                    <div class="slider-row"><label>Bottom</label>
-                        <input type="range" id="garment-region-bottom" min="-30" max="30" value="0" step="1">
-                        <span class="slider-val" id="garment-region-bottom-val">0.00 m</span>
-                    </div>
+                    {% include "_schieberegler.html" with kennung="garment-region-top" beschriftung="Top" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
+                    {% include "_schieberegler.html" with kennung="garment-region-upper" beschriftung="Upper" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
+                    {% include "_schieberegler.html" with kennung="garment-region-mid" beschriftung="Mid" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
+                    {% include "_schieberegler.html" with kennung="garment-region-lower" beschriftung="Lower" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
+                    {% include "_schieberegler.html" with kennung="garment-region-bottom" beschriftung="Bottom" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
                 </div>
                 <div class="hb-display-flex">
                     <button id="garment-create" class="btn-toggle hb-dehnt"><i class="fas fa-tshirt"></i> Erzeuge</button>
@@ -597,25 +516,13 @@
                                 <option value="shoes">Shoes</option>
                             </select>
                         </div>
-                        <div class="slider-row"><label>Z-Min</label>
-                            <input type="range" id="pe-region-zmin" min="0" max="180" value="60" step="1">
-                            <span class="slider-val" id="pe-region-zmin-val">0.60</span>
-                        </div>
-                        <div class="slider-row"><label>Z-Max</label>
-                            <input type="range" id="pe-region-zmax" min="0" max="180" value="140" step="1">
-                            <span class="slider-val" id="pe-region-zmax-val">1.40</span>
-                        </div>
+                        {% include "_schieberegler.html" with kennung="pe-region-zmin" beschriftung="Z-Min" min="0" max="180" wert="60" schritt="1" anzeige="0.60" %}
+                        {% include "_schieberegler.html" with kennung="pe-region-zmax" beschriftung="Z-Max" min="0" max="180" wert="140" schritt="1" anzeige="1.40" %}
                         <div class="slider-row">
                             <label><input type="checkbox" id="pe-region-arms"> Include Arms</label>
                         </div>
-                        <div class="slider-row"><label>Grow</label>
-                            <input type="range" id="pe-region-grow" min="0" max="5" value="2" step="1">
-                            <span class="slider-val" id="pe-region-grow-val">2</span>
-                        </div>
-                        <div class="slider-row"><label>Looseness</label>
-                            <input type="range" id="pe-region-looseness" min="0" max="100" value="30" step="1">
-                            <span class="slider-val" id="pe-region-looseness-val">0.30</span>
-                        </div>
+                        {% include "_schieberegler.html" with kennung="pe-region-grow" beschriftung="Grow" min="0" max="5" wert="2" schritt="1" anzeige="2" %}
+                        {% include "_schieberegler.html" with kennung="pe-region-looseness" beschriftung="Looseness" min="0" max="100" wert="30" schritt="1" anzeige="0.30" %}
                     </div>
 
                     <!-- Vertex Edit Controls (hidden unless Edit mode) -->
@@ -655,14 +562,8 @@
                         <div class="slider-row"><label>Color</label>
                             <input type="color" id="pe-color" value="#404870" class="hb-farbfeld">
                         </div>
-                        <div class="slider-row"><label>Roughness</label>
-                            <input type="range" id="pe-roughness" min="0" max="100" value="80" step="1">
-                            <span class="slider-val" id="pe-roughness-val">0.80</span>
-                        </div>
-                        <div class="slider-row"><label>Metalness</label>
-                            <input type="range" id="pe-metalness" min="0" max="100" value="0" step="1">
-                            <span class="slider-val" id="pe-metalness-val">0.00</span>
-                        </div>
+                        {% include "_schieberegler.html" with kennung="pe-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
+                        {% include "_schieberegler.html" with kennung="pe-metalness" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
                     </div>
 
                     <!-- Generate + Save -->
@@ -677,14 +578,8 @@
                                 <label><input type="checkbox" id="pe-wrap"> Wrap to Body</label>
                             </div>
                             <div id="pe-wrap-sliders" class="hb-versteckt">
-                                <div class="slider-row"><label>Offset (mm)</label>
-                                    <input type="range" id="pe-wrap-offset" min="1" max="20" value="6" step="1">
-                                    <span class="slider-val" id="pe-wrap-offset-val">6</span>
-                                </div>
-                                <div class="slider-row"><label>Stiffness</label>
-                                    <input type="range" id="pe-wrap-stiffness" min="0" max="100" value="50" step="1">
-                                    <span class="slider-val" id="pe-wrap-stiffness-val">0.50</span>
-                                </div>
+                                {% include "_schieberegler.html" with kennung="pe-wrap-offset" beschriftung="Offset (mm)" min="1" max="20" wert="6" schritt="1" anzeige="6" %}
+                                {% include "_schieberegler.html" with kennung="pe-wrap-stiffness" beschriftung="Stiffness" min="0" max="100" wert="50" schritt="1" anzeige="0.50" %}
                             </div>
                         </div>
                         <div class="abstand-8">

@@ -1,0 +1,37 @@
+{% comment %}
+Eine Reglerzeile: Beschriftung, Schieberegler, Wertanzeige.
+
+BEFUND `doppelcode` (29.08.2026): Diese vier Zeilen standen 133-mal in fünf
+Vorlagen — gleich bis auf Beschriftung, Kennung, Grenzen und Anzeigetext. Zwei
+der Wiederholungen waren als Blöcke à 22 und 23 Zeilen gemeldet
+(`character_viewer.html` gegen `scene_config.html`), der Rest fiel unter die
+Blockgrösse und stand trotzdem da.
+
+    <div class="slider-row"><label>Offset</label>
+        <input type="range" id="garment-offset" min="0" max="30" value="6" step="1">
+        <span class="slider-val" id="garment-offset-val">0.006</span>
+    </div>
+
+DIE ANZEIGE-KENNUNG WIRD GERECHNET, nicht übergeben: Sie heisst in allen 133
+Fällen `<kennung>-val`, und das JavaScript verlässt sich darauf
+(`document.getElementById(id + '-val')` in `modellgenerator_probe.mjs` und in
+den Reglermodulen). Als eigenes Feld wäre sie eine Stelle, an der die beiden
+auseinanderlaufen können — und ein Regler, dessen Anzeige ins Leere zeigt,
+bewegt sich stumm weiter.
+
+Verwendung — IN EINER ZEILE (Djangos Lexer kennt kein DOTALL; ein Tag über
+zwei Zeilen wird stillschweigend zu Text, siehe `vorlagen-tags`):
+
+  {% verbatim %}{% include "_schieberegler.html" with kennung="garment-offset" beschriftung="Offset" min="0" max="30" wert="6" schritt="1" anzeige="0.006" %}{% endverbatim %}
+
+  kennung        `id` des Reglers; die Anzeige heisst `<kennung>-val`
+  beschriftung   Text links
+  min/max/wert   Grenzen und Startwert
+  schritt        `step`
+  anzeige        Starttext der Wertanzeige
+  zeilenkennung  `id` der Zeile selbst (nur wo das JS sie ein- und ausblendet)
+{% endcomment %}
+<div class="slider-row"{% if zeilenkennung %} id="{{ zeilenkennung }}"{% endif %}><label>{{ beschriftung }}</label>
+    <input type="range" id="{{ kennung }}" min="{{ min }}" max="{{ max }}" value="{{ wert }}" step="{{ schritt }}">
+    <span class="slider-val" id="{{ kennung }}-val">{{ anzeige }}</span>
+</div>

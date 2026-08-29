@@ -740,26 +740,10 @@
                 <h3>HumanBody <span class="chevron">&#9660;</span></h3>
                 <div class="panel-body">
                     <select id="body-type-select" class="viewer-select"></select>
-                    <div class="slider-row">
-                        <label>Age</label>
-                        <input type="range" id="meta-age" min="18" max="100" value="59" step="1">
-                        <span class="slider-val" id="meta-age-val">59</span>
-                    </div>
-                    <div class="slider-row">
-                        <label>Mass</label>
-                        <input type="range" id="meta-mass" min="45" max="200" value="123" step="1">
-                        <span class="slider-val" id="meta-mass-val">123</span>
-                    </div>
-                    <div class="slider-row">
-                        <label>Tone</label>
-                        <input type="range" id="meta-tone" min="0" max="100" value="50" step="1">
-                        <span class="slider-val" id="meta-tone-val">50</span>
-                    </div>
-                    <div class="slider-row">
-                        <label>Height</label>
-                        <input type="range" id="meta-height" min="150" max="200" value="175" step="1">
-                        <span class="slider-val" id="meta-height-val">175</span>
-                    </div>
+                    {% include "_schieberegler.html" with kennung="meta-age" beschriftung="Age" min="18" max="100" wert="59" schritt="1" anzeige="59" %}
+                    {% include "_schieberegler.html" with kennung="meta-mass" beschriftung="Mass" min="45" max="200" wert="123" schritt="1" anzeige="123" %}
+                    {% include "_schieberegler.html" with kennung="meta-tone" beschriftung="Tone" min="0" max="100" wert="50" schritt="1" anzeige="50" %}
+                    {% include "_schieberegler.html" with kennung="meta-height" beschriftung="Height" min="150" max="200" wert="175" schritt="1" anzeige="175" %}
                     <div class="abschnitt-trenner">
                         <div class="slider-row">
                             <label>Skin</label>
