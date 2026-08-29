@@ -164,17 +164,7 @@
         </div>
 
         <!-- Speed Slider -->
-        <div class="anim-speed">
-            <label id="speed-label">Speed: 1.0x</label>
-            <input type="range" id="anim-speed" min="10" max="300" value="100" step="10">
-        </div>
-
-        <!-- Playback Controls -->
-        <div class="anim-controls">
-            <button id="anim-play" title="Play / Pause"><i class="fas fa-play"></i></button>
-            <button id="anim-stop" title="Stop"><i class="fas fa-stop"></i></button>
-            <input type="range" id="anim-timeline" min="0" max="100" value="0" step="1">
-        </div>
+        {% include "_animationsleiste.html" %}
 
         <!-- Status -->
         <div class="status-bar">

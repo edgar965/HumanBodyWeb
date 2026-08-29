@@ -7,15 +7,8 @@
 <link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/modelldialog.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% static 'css/viewer_seitenleiste.css' %}?t={% now 'U' %}">
 <style>
-    .viewer-container {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        height: 100vh;
-        gap: 0;
-        position: relative;
-    }
     .viewer-main {
         display: flex;
         flex: 1;
@@ -123,14 +116,6 @@
         user-select: none;
         transition: color 0.15s;
     }
-    .panel-tab:hover { color: var(--text); }
-
-    /* ===== Tab content ===== */
-    .panel-tab-content {
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0;
-    }
     .slider-row label {
         font-size: 0.8rem;
         color: var(--text-muted);
@@ -164,14 +149,6 @@
         opacity: 0.4;
         cursor: not-allowed;
     }
-
-    .anim-tree {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        margin-bottom: 8px;
-    }
     /* Hinweis in einer leeren Liste ("Keine Garment-Library"). Stand bis zum
        Umbau am 16.08.2026 als style="" in einem innerHTML-String. */
     .listen-hinweis {
@@ -179,48 +156,8 @@
         color: var(--text-muted);
         font-size: 0.8rem;
     }
-    .anim-category:last-child { border-bottom: none; }
-    .anim-category-body {
-        display: none;
-    }
-
-    .anim-speed {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-    .anim-controls {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-        margin-bottom: 4px;
-    }
-    .anim-info {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        margin-top: 4px;
-    }
     .status-bar .connected { color: var(--success); }
     .status-bar .disconnected { color: var(--danger); }
-
-    .btn-toggle {
-        padding: 6px 14px;
-        font-size: 0.82rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        color: var(--text-muted);
-        cursor: pointer;
-        width: 100%;
-        transition: all 0.2s;
-    }
-    .btn-toggle:hover { border-color: var(--accent); color: var(--text); }
-    .btn-toggle.active {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
-    }
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
@@ -237,13 +174,7 @@
     color:var(--text);
     font-size:0.8rem;
     width:60px;
-}   /* 3x */
-.hb-margin-top-6px.hb-margin-top-6px.hb-margin-top-6px { margin-top:6px; }   /* 3x */
-
-/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
-   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
-   Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-display-flex.hb-display-flex.hb-display-flex { display:flex; gap:6px; margin-top:6px; }   /* 2x */
+}   /* 2x */
 .hb-display-flex-2.hb-display-flex-2.hb-display-flex-2 { display:flex; gap:4px; margin-bottom:4px; }   /* 2x */
 .hb-display-none-b.hb-display-none-b.hb-display-none-b { display:none; margin-bottom:8px; }   /* 2x */
 .hb-font-size-0-75rem.hb-font-size-0-75rem.hb-font-size-0-75rem {
@@ -305,19 +236,7 @@
         <div class="panel-section" data-panel-key="body_type">
             <h3>Body Type <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
-                <select id="body-type-select" class="viewer-select"></select>
-                {% include "_schieberegler.html" with kennung="meta-age" beschriftung="Age" min="18" max="100" wert="59" schritt="1" anzeige="59" %}
-                {% include "_schieberegler.html" with kennung="meta-mass" beschriftung="Mass" min="45" max="200" wert="123" schritt="1" anzeige="123" %}
-                {% include "_schieberegler.html" with kennung="meta-tone" beschriftung="Tone" min="0" max="100" wert="50" schritt="1" anzeige="50" %}
-                {% include "_schieberegler.html" with kennung="meta-height" beschriftung="Height" min="150" max="200" wert="175" schritt="1" anzeige="175" %}
-                <div class="abschnitt-trenner">
-                    <div class="slider-row">
-                        <label>Skin</label>
-                        <input type="color" id="skin-color-viewer" value="#d4a574" class="hb-farbfeld">
-                    </div>
-                    {% include "_schieberegler.html" with kennung="skin-roughness-viewer" beschriftung="Roughness" min="0" max="100" wert="55" schritt="1" anzeige="0.55" %}
-                    {% include "_schieberegler.html" with kennung="skin-metalness-viewer" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
-                </div>
+                {% include "_koerpermasse.html" with mit_material=1 %}
             </div>
         </div>
 
@@ -400,18 +319,7 @@
         {% include "_kleidungspanele.html" with vorlage_offen=1 mit_preset=1 %}
 
         <!-- Hair -->
-        <div class="panel-section collapsed" data-panel-key="hair">
-            <h3>Hair <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body" id="hair-panel">
-                <select id="hair-style-select" class="viewer-select">
-                    <option value="">— No Hair —</option>
-                </select>
-                <div class="slider-row">
-                    <label>Color</label>
-                    <select id="hair-color-select" class="viewer-select ohne-unterrand"></select>
-                </div>
-            </div>
-        </div>
+        {% include "_haarbereich.html" %}
 
         <!-- Wardrobe -->
         <div class="panel-section collapsed" data-panel-key="wardrobe">
@@ -440,15 +348,7 @@
                 <div class="anim-tree" id="anim-tree">
                     <div class="hb-hinweis">Lade Animationen...</div>
                 </div>
-                <div class="anim-speed">
-                    <label id="speed-label">Speed: 1.0x</label>
-                    <input type="range" id="anim-speed" min="10" max="300" value="100" step="10">
-                </div>
-                <div class="anim-controls">
-                    <button id="anim-play" title="Play / Pause"><i class="fas fa-play"></i></button>
-                    <button id="anim-stop" title="Stop"><i class="fas fa-stop"></i></button>
-                    <input type="range" id="anim-timeline" min="0" max="100" value="0" step="1">
-                </div>
+                {% include "_animationsleiste.html" %}
                 <div class="anim-info" id="anim-info">&mdash;</div>
             </div>
         </div>

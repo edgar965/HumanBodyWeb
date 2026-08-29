@@ -6,16 +6,9 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% static 'css/viewer_seitenleiste.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/menueleiste.css' %}?t={% now 'U' %}">
 <style>
-    .viewer-container {
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-        height: 100vh;
-        gap: 0;
-        position: relative;
-    }
     .viewer-row {
         display: flex;
         flex: 1;
@@ -402,14 +395,6 @@
         user-select: none;
         transition: color 0.15s;
     }
-    .panel-tab:hover { color: var(--text); }
-
-    /* ===== Tab content ===== */
-    .panel-tab-content {
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0;
-    }
 
     /* ===== Properties (Eigenschaften tab) ===== */
     .prop-empty {
@@ -525,36 +510,6 @@
     .file-type-scene { background:rgba(99,102,241,0.25); color:var(--accent); }
     .file-type-model { background:rgba(52,211,153,0.2); color:#34d399; }
 
-    /* ===== Asset/Anim panel buttons ===== */
-    .btn-toggle {
-        padding: 6px 14px;
-        font-size: 0.82rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        color: var(--text-muted);
-        cursor: pointer;
-        width: 100%;
-        transition: all 0.2s;
-    }
-    .btn-toggle:hover { border-color: var(--accent); color: var(--text); }
-    .btn-toggle.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-    /* ===== Animation tree ===== */
-    .anim-tree {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        margin-bottom: 8px;
-    }
-    .anim-category:last-child { border-bottom: none; }
-    .anim-category-body { display: none; }
-
-    .anim-speed { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-    .anim-controls { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
-    .anim-info { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
-
     /* ===== Model Generator Bone Tree ===== */
     .mg-bone-tree {
         max-height: 300px;
@@ -616,8 +571,7 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-align-items-center.hb-align-items-center.hb-align-items-center { align-items:center; }   /* 5x */
-.hb-display-flex.hb-display-flex.hb-display-flex { display:flex; gap:6px; margin-top:6px; }   /* 4x */
+.hb-align-items-center.hb-align-items-center.hb-align-items-center { align-items:center; }   /* 4x */
 .hb-flex-1-d.hb-flex-1-d.hb-flex-1-d { flex:1; font-size:0.7rem; padding:6px 4px; }   /* 3x */
 .hb-font-size-0-75rem-b.hb-font-size-0-75rem-b.hb-font-size-0-75rem-b { font-size:0.75rem; padding:4px 10px; }   /* 3x */
 .hb-font-size-0-7rem.hb-font-size-0-7rem.hb-font-size-0-7rem {
@@ -630,7 +584,6 @@
     margin-bottom:8px;
     display:block;
 }   /* 3x */
-.hb-margin-top-6px.hb-margin-top-6px.hb-margin-top-6px { margin-top:6px; }   /* 3x */
 .hb-margin-top-8px-c.hb-margin-top-8px-c.hb-margin-top-8px-c {
     margin-top:8px;
     font-size:0.75rem;
@@ -1063,18 +1016,7 @@
                 </div>
 
                 <!-- Hair -->
-                <div class="panel-section collapsed" data-panel-key="hair">
-                    <h3>Hair <span class="chevron">&#9660;</span></h3>
-                    <div class="panel-body" id="hair-panel">
-                        <select id="hair-style-select" class="viewer-select">
-                            <option value="">— No Hair —</option>
-                        </select>
-                        <div class="slider-row">
-                            <label>Color</label>
-                            <select id="hair-color-select" class="viewer-select ohne-unterrand"></select>
-                        </div>
-                    </div>
-                </div>
+                {% include "_haarbereich.html" %}
 
                 {% include "_kleidungspanele.html" %}
                 <div class="panel-section collapsed" id="charmorph-panel">
@@ -1137,15 +1079,7 @@
                         <div class="anim-tree" id="anim-tree">
                             <div class="hb-hinweis">Lade Animationen...</div>
                         </div>
-                        <div class="anim-speed">
-                            <label id="speed-label">Speed: 1.0x</label>
-                            <input type="range" id="anim-speed" min="10" max="300" value="100" step="10">
-                        </div>
-                        <div class="anim-controls">
-                            <button id="anim-play" title="Play / Pause"><i class="fas fa-play"></i></button>
-                            <button id="anim-stop" title="Stop"><i class="fas fa-stop"></i></button>
-                            <input type="range" id="anim-timeline" min="0" max="100" value="0" step="1">
-                        </div>
+                        {% include "_animationsleiste.html" %}
                         <div class="anim-time" id="anim-time" style="font-family:monospace;font-size:0.8rem;color:var(--text-muted);margin:4px 0;">Frame 0 / 0 &bull; 0.00s / 0.00s</div>
                         <div class="anim-info" id="anim-info">&mdash;</div>
                         <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">

@@ -1,0 +1,30 @@
+{% comment %}
+Geschwindigkeit und Abspielknöpfe des Animationsbaums.
+
+BEFUND `doppelcode` (30.08.2026): Diese neun Zeilen standen auf VIER Seiten
+zeichengleich — `character_viewer.html`, `scene_config.html`,
+`animations.html`, `skeleton_test.html`. Gemeldet waren zwei davon.
+
+Die Kennungen (`anim-speed`, `speed-label`, `anim-play`, `anim-stop`,
+`anim-timeline`) sind das Drahtformat zum JavaScript der jeweiligen Seite —
+vier Module greifen sie mit `getElementById`. Sie bleiben, wie sie sind; genau
+deshalb ist EINE Fassung wichtig: Wer eine Kennung ändert und drei Stellen
+findet, lässt die vierte tot zurück, und die Seite sieht dabei vollständig aus.
+
+Nicht verwechseln mit `_abspielleiste.html` — das ist der Abspieler der
+Ergebnis- und Theatre-Seiten (Zeitleiste, Geschwindigkeitsknöpfe, `btnPlayPause`).
+Hier geht es um den Animationsbaum der Charakterseiten.
+
+Verwendung:
+
+  {% verbatim %}{% include "_animationsleiste.html" %}{% endverbatim %}
+{% endcomment %}
+<div class="anim-speed">
+    <label id="speed-label">Speed: 1.0x</label>
+    <input type="range" id="anim-speed" min="10" max="300" value="100" step="10">
+</div>
+<div class="anim-controls">
+    <button id="anim-play" title="Play / Pause"><i class="fas fa-play"></i></button>
+    <button id="anim-stop" title="Stop"><i class="fas fa-stop"></i></button>
+    <input type="range" id="anim-timeline" min="0" max="100" value="0" step="1">
+</div>

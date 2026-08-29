@@ -739,17 +739,7 @@
             <div class="panel-section">
                 <h3>HumanBody <span class="chevron">&#9660;</span></h3>
                 <div class="panel-body">
-                    <select id="body-type-select" class="viewer-select"></select>
-                    {% include "_schieberegler.html" with kennung="meta-age" beschriftung="Age" min="18" max="100" wert="59" schritt="1" anzeige="59" %}
-                    {% include "_schieberegler.html" with kennung="meta-mass" beschriftung="Mass" min="45" max="200" wert="123" schritt="1" anzeige="123" %}
-                    {% include "_schieberegler.html" with kennung="meta-tone" beschriftung="Tone" min="0" max="100" wert="50" schritt="1" anzeige="50" %}
-                    {% include "_schieberegler.html" with kennung="meta-height" beschriftung="Height" min="150" max="200" wert="175" schritt="1" anzeige="175" %}
-                    <div class="abschnitt-trenner">
-                        <div class="slider-row">
-                            <label>Skin</label>
-                            <input type="color" id="skin-color-viewer" value="#d4a574" class="hb-farbfeld">
-                        </div>
-                    </div>
+                    {% include "_koerpermasse.html" %}
                 </div>
             </div>
 
