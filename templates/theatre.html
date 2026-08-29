@@ -954,21 +954,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
 <!-- Bottom Player Controls -->
 <div class="player-controls">
-    <div class="controls-row controls-buttons">
-        <button class="ctrl-btn" id="btnFrameBack" title="Previous frame">
-            <i class="fas fa-caret-left"></i> Frame
-        </button>
-        <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause">
-            <i class="fas fa-play" id="playIcon"></i>
-        </button>
-        <button class="ctrl-btn" id="btnStop" title="Stop (reset)">
-            <i class="fas fa-stop"></i>
-        </button>
-        <button class="ctrl-btn" id="btnFrameFwd" title="Next frame">
-            Frame <i class="fas fa-caret-right"></i>
-        </button>
-    </div>
-    {% include "_abspielleiste.html" with schritt="0.1" ohne_frametaste=1 %}
+    {% include "_abspielleiste.html" with schritt="0.1" ohne_frametaste=1 knapp=1 %}
 </div>
 
 <!-- Hidden file input -->

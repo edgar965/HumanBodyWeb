@@ -1,0 +1,35 @@
+{% comment %}
+Download-Knöpfe eines fertigen Auftrags: BVH, Video + Skelett, Video3D.
+
+BEFUND `doppelcode` (29.08.2026): Diese achtzehn Zeilen standen zeichengleich
+in `job_result.html` (16-33) und `standalone_result.html` (32-49). Die beiden
+Seiten zeigen dasselbe Ergebnis, einmal im Rahmen der Anwendung und einmal
+allein — und ein Knopf, den man nur auf einer der beiden nachzieht, fehlt
+danach auf der anderen, ohne dass etwas kaputtgeht.
+
+Erwartet `job` im Kontext. Die drei Adressen (`serve_bvh`, `save_overlay_video`,
+`save_rig_video`) und die Kennung `btnVideo3D` sind das Drahtformat zum
+JavaScript beider Seiten.
+
+Verwendung:
+
+  {% verbatim %}{% include "_ergebnis_downloads.html" %}{% endverbatim %}
+{% endcomment %}
+{% if job.bvh_file %}
+<a href="{% url 'serve_bvh' job.id %}" class="btn btn-primary btn-sm" download title="Download BVH">
+    <i class="fas fa-download"></i> BVH
+</a>
+{% endif %}
+{% if job.status == 'complete' %}
+<a href="{% url 'save_overlay_video' job.id %}" class="btn btn-secondary btn-sm" download title="Download Video + Skeleton">
+    <i class="fas fa-download"></i> Video + Skeleton
+</a>
+<a href="{% url 'save_rig_video' job.id %}" class="btn btn-secondary btn-sm" download title="Download Nur Skeleton">
+    <i class="fas fa-download"></i> Nur Skeleton
+</a>
+{% if job.bvh_file %}
+<button class="btn btn-secondary btn-sm" id="btnVideo3D" title="Record 3D Character Animation as Video">
+    <i class="fas fa-cube"></i> Video3D
+</button>
+{% endif %}
+{% endif %}

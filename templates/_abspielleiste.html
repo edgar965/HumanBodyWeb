@@ -1,5 +1,5 @@
 {% comment %}
-Zeitleiste und Geschwindigkeitsknöpfe eines Abspielers.
+Ein Abspieler: Knopfreihe, Zeitleiste, Geschwindigkeit.
 
 BEFUND `doppelcode` (28.08.2026): Dieselben sechzehn Zeilen standen in
 `job_result.html`, `standalone_result.html` und `theatre.html`. Sie waren schon
@@ -17,10 +17,38 @@ Verwendung:
   schritt          Schrittweite der Zeitleiste (Vorgabe 0.01)
   mit_idx          Knopf „Idx" (Knochennummern am 3D-Skelett) mitzeigen
   ohne_frametaste  Den Hinweis „←→ Frame" weglassen
+  knapp            Nur vier Knöpfe statt acht (Theatre-Seite)
+
+DIE KNOPFREIHE KAM AM 29.08.2026 DAZU — derselbe Befund, eine Ebene höher:
+Sie stand in `job_result.html` und `standalone_result.html` zeichengleich
+(11 Zeilen) und in `theatre.html` in einer kürzeren Fassung. Die Zeitleiste
+war schon hier, die Knöpfe darüber nicht; wer den Abspieler anfasste, musste
+also immer noch an zwei Stellen suchen.
+
+Die Theatre-Fassung hat kein Springen um 1 s / 10 s und schreibt „Frame" aus,
+wo die Ergebnisseiten „F" setzen — deshalb `knapp`. Zusammengelegt wären es
+zwei verschiedene Oberflächen unter einem Namen.
 
 Die Kennungen (`timelineSlider`, `timeCurrent`, `speed-btn`) sind das
 Drahtformat zum JavaScript der jeweiligen Seite — sie bleiben, wie sie sind.
 {% endcomment %}
+<div class="controls-row controls-buttons">
+    {% if knapp %}
+    <button class="ctrl-btn" id="btnFrameBack" title="Previous frame"><i class="fas fa-caret-left"></i> Frame</button>
+    <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause"><i class="fas fa-play" id="playIcon"></i></button>
+    <button class="ctrl-btn" id="btnStop" title="Stop (reset)"><i class="fas fa-stop"></i></button>
+    <button class="ctrl-btn" id="btnFrameFwd" title="Next frame">Frame <i class="fas fa-caret-right"></i></button>
+    {% else %}
+    <button class="ctrl-btn" id="btnSkipBack10" title="Back 10s"><i class="fas fa-backward"></i> 10s</button>
+    <button class="ctrl-btn" id="btnSkipBack1" title="Back 1s"><i class="fas fa-backward-step"></i> 1s</button>
+    <button class="ctrl-btn" id="btnFrameBack" title="Previous frame"><i class="fas fa-caret-left"></i> F</button>
+    <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause"><i class="fas fa-play" id="playIcon"></i></button>
+    <button class="ctrl-btn" id="btnStop" title="Stop (reset to start)"><i class="fas fa-stop"></i></button>
+    <button class="ctrl-btn" id="btnFrameFwd" title="Next frame">F <i class="fas fa-caret-right"></i></button>
+    <button class="ctrl-btn" id="btnSkipFwd1" title="Forward 1s">1s <i class="fas fa-forward-step"></i></button>
+    <button class="ctrl-btn" id="btnSkipFwd10" title="Forward 10s">10s <i class="fas fa-forward"></i></button>
+    {% endif %}
+</div>
 <div class="controls-row controls-timeline">
     <span class="time-display" id="timeCurrent">00:00</span>
     <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="100" step="{{ schritt|default:'0.01' }}" value="0">

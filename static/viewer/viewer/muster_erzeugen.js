@@ -4,19 +4,16 @@
  * Aus pattern_editor.js herausgeloest (Umbau 16.08.2026).
  */
 import { Musterzustand } from './muster_zustand.js';
-import * as THREE from 'three';
 import { _peAutoFit, _peSetModeButtons, pePreviewKey, peUpdatePanelList } from './pattern_editor.js';
 import { buildBodyQueryString, sliderVal } from './utils.js';
 import { ensureSkinned } from './skinning.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { peRender } from './muster_zeichnen.js';
-import { base64ToFloat32 } from '../gemeinsam/kodierung.js';
 import { peUpdateStitchList } from './pattern_editor.js';
-import { removeClothRegion } from './cloth.js';
 import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
+import { Musternetz } from './musternetz.js';
 
 
 export async function peRegionGenerate() {
@@ -34,21 +31,7 @@ export async function peRegionGenerate() {
         const data = await Serverabruf.json(
             `/api/character/pattern/region/generate/?${bodyQs}&${regionQs}`);
         if (data.error) { if (statusEl) statusEl.textContent = `Error: ${data.error}`; if (genBtn) genBtn.disabled = false; return; }
-        removeClothRegion(pePreviewKey);
-        const geo = Netzgeometrie.bauen(data, THREE);
-        const colorPicker = document.getElementById('pe-color');
-        const matColor = colorPicker ? new THREE.Color(colorPicker.value) : new THREE.Color(0.3, 0.35, 0.5);
-        const roughness = (sliderVal('pe-roughness') / 100); const metalness = (sliderVal('pe-metalness') / 100);
-        const mat = new THREE.MeshStandardMaterial({ color: matColor, roughness, metalness, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
-        let mesh;
-        if (state.isSkinned && state.rigifySkeleton && data.skin_indices && data.skin_weights) {
-            const siBuf = base64ToFloat32(data.skin_indices); const swBuf = base64ToFloat32(data.skin_weights);
-            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
-            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
-            mesh = new THREE.SkinnedMesh(geo, mat); mesh.bind(state.rigifySkeleton.skeleton, state.bodyMesh.bindMatrix);
-        } else { mesh = new THREE.Mesh(geo, mat); }
-        state.clothMeshes[pePreviewKey] = mesh; state.clothParams[pePreviewKey] = {params: {}, color: '#' + mesh.material.color.getHexString()};
-        state.scene.add(mesh); fn.updateEquippedList();
+        Musternetz.einsetzen(data);
         if (statusEl) statusEl.textContent = `Region: ${data.vertex_count} verts, ${data.face_count} tris`;
     } catch (e) { if (statusEl) statusEl.textContent = `Error: ${e.message}`; }
     if (genBtn) genBtn.disabled = false;
@@ -67,21 +50,7 @@ export async function peGenerate3D() {
             { pattern: Musterzustand.pePattern, wrap, offset: wrapOffset,
               stiffness: wrapStiffness });
         if (data.error) { if (statusEl) statusEl.textContent = `Error: ${data.error}`; if (genBtn) genBtn.disabled = false; return; }
-        removeClothRegion(pePreviewKey);
-        const geo = Netzgeometrie.bauen(data, THREE);
-        const colorPicker = document.getElementById('pe-color');
-        const matColor = colorPicker ? new THREE.Color(colorPicker.value) : new THREE.Color(0.3, 0.35, 0.5);
-        const roughness = (sliderVal('pe-roughness') / 100); const metalness = (sliderVal('pe-metalness') / 100);
-        const mat = new THREE.MeshStandardMaterial({ color: matColor, roughness, metalness, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
-        let mesh;
-        if (state.isSkinned && state.rigifySkeleton && data.skin_indices && data.skin_weights) {
-            const siBuf = base64ToFloat32(data.skin_indices); const swBuf = base64ToFloat32(data.skin_weights);
-            geo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(siBuf, 4));
-            geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(swBuf, 4));
-            mesh = new THREE.SkinnedMesh(geo, mat); mesh.bind(state.rigifySkeleton.skeleton, state.bodyMesh.bindMatrix);
-        } else { mesh = new THREE.Mesh(geo, mat); }
-        state.clothMeshes[pePreviewKey] = mesh; state.clothParams[pePreviewKey] = {params: {}, color: '#' + mesh.material.color.getHexString()};
-        state.scene.add(mesh); fn.updateEquippedList();
+        Musternetz.einsetzen(data);
         if (statusEl) statusEl.textContent = `Generated: ${data.vertex_count} verts, ${data.face_count} tris`;
     } catch (e) { if (statusEl) statusEl.textContent = `Error: ${e.message}`; }
     if (genBtn) genBtn.disabled = false;

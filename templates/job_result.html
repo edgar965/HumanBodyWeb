@@ -13,24 +13,7 @@
         <a href="{% url 'job_status' job.id %}" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Back
         </a>
-        {% if job.bvh_file %}
-        <a href="{% url 'serve_bvh' job.id %}" class="btn btn-primary btn-sm" download title="Download BVH">
-            <i class="fas fa-download"></i> BVH
-        </a>
-        {% endif %}
-        {% if job.status == 'complete' %}
-        <a href="{% url 'save_overlay_video' job.id %}" class="btn btn-secondary btn-sm" download title="Download Video + Skeleton">
-            <i class="fas fa-download"></i> Video + Skeleton
-        </a>
-        <a href="{% url 'save_rig_video' job.id %}" class="btn btn-secondary btn-sm" download title="Download Nur Skeleton">
-            <i class="fas fa-download"></i> Nur Skeleton
-        </a>
-        {% if job.bvh_file %}
-        <button class="btn btn-secondary btn-sm" id="btnVideo3D" title="Record 3D Character Animation as Video">
-            <i class="fas fa-cube"></i> Video3D
-        </button>
-        {% endif %}
-        {% endif %}
+        {% include "_ergebnis_downloads.html" %}
     </div>
 </div>
 
@@ -55,16 +38,6 @@
 </div>
 
 <div class="player-controls">
-    <div class="controls-row controls-buttons">
-        <button class="ctrl-btn" id="btnSkipBack10" title="Back 10s"><i class="fas fa-backward"></i> 10s</button>
-        <button class="ctrl-btn" id="btnSkipBack1" title="Back 1s"><i class="fas fa-backward-step"></i> 1s</button>
-        <button class="ctrl-btn" id="btnFrameBack" title="Previous frame"><i class="fas fa-caret-left"></i> F</button>
-        <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause"><i class="fas fa-play" id="playIcon"></i></button>
-        <button class="ctrl-btn" id="btnStop" title="Stop (reset to start)"><i class="fas fa-stop"></i></button>
-        <button class="ctrl-btn" id="btnFrameFwd" title="Next frame">F <i class="fas fa-caret-right"></i></button>
-        <button class="ctrl-btn" id="btnSkipFwd1" title="Forward 1s">1s <i class="fas fa-forward-step"></i></button>
-        <button class="ctrl-btn" id="btnSkipFwd10" title="Forward 10s">10s <i class="fas fa-forward"></i></button>
-    </div>
     {% include "_abspielleiste.html" with mit_idx=1 %}
 </div>
 
