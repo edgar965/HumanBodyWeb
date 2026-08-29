@@ -51,6 +51,28 @@ export class Netzentsorgung {
     }
 
     /**
+     * Ein Netz aus einer ABLAGE nehmen: aus der Szene, freigeben, streichen.
+     *
+     * WARUM (29.08.2026, Befund `doppelcode`): Diese vier Zeilen standen an
+     * vier Stellen — zweimal fuer `state.clothMeshes`, zweimal fuer
+     * `inst.clothMeshes`. Drei davon riefen `material.dispose()` direkt; bei
+     * einem Netz mit MEHREREN Materialien ist `material` ein Array, und das
+     * waere eine TypeError gewesen. Dieselbe latente Stelle wie in
+     * `Charakter.dispose()` (28.08.2026).
+     *
+     * @returns true, wenn wirklich etwas da war — die Aufrufer haengen
+     *          daran ihre eigenen Aufraeumschritte (`clothParams`, Liste
+     *          auffrischen).
+     */
+    static ausAblage(elternteil, ablage, schluessel) {
+        const netz = ablage?.[schluessel];
+        if (!netz) return false;
+        Netzentsorgung.entfernen(elternteil, netz);
+        delete ablage[schluessel];
+        return true;
+    }
+
+    /**
      * Aus der Szene nehmen UND freigeben — die haeufigste Reihenfolge.
      *
      * @param elternteil Objekt oder Szene, aus der entfernt wird

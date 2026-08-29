@@ -10,6 +10,7 @@ import {
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
+import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
 // =====================================================================
 // Cloth (templates)
@@ -59,13 +60,7 @@ export async function loadCloth(key, params, presetColor, useApiColor = false) {
 }
 
 export function removeClothRegion(key) {
-    const m = state.clothMeshes[key];
-    if (m) {
-        state.scene.remove(m);
-        m.geometry.dispose();
-        m.material.dispose();
-        delete state.clothMeshes[key];
-    }
+    Netzentsorgung.ausAblage(state.scene, state.clothMeshes, key);
 }
 
 export function removeAllCloth() {

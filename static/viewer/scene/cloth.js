@@ -9,6 +9,7 @@ import { markDirty } from './undo.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
+import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
 export async function loadClothUI() {
     _bindSlider('cloth-tpl-segments', 'cloth-tpl-segments-val', v => v);
@@ -62,12 +63,7 @@ export async function _loadClothForCharacter(inst, key, clothParams) {
     try {
         const data = await Serverabruf.json(`/api/character/cloth/?${params}`);
         if (data.error) { Protokoll.warnung('cloth', 'Cloth error:', data.error); return; }
-        if (inst.clothMeshes[key]) {
-            inst.group.remove(inst.clothMeshes[key]);
-            inst.clothMeshes[key].geometry.dispose();
-            inst.clothMeshes[key].material.dispose();
-            delete inst.clothMeshes[key];
-        }
+        Netzentsorgung.ausAblage(inst.group, inst.clothMeshes, key);
         const geo = Netzgeometrie.bauen(data, THREE);
         const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: matColor, roughness: 0.8, metalness: 0.0, side: THREE.DoubleSide }));
         inst.clothMeshes[key] = mesh; inst.group.add(mesh);

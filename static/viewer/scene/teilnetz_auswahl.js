@@ -116,12 +116,8 @@ export function _removeSubMesh(target) {
 
     switch (target.type) {
         case 'cloth': {
-            const mesh = inst.clothMeshes[target.key];
-            if (mesh) {
-                inst.group.remove(mesh);
-                mesh.geometry.dispose();
-                if (Array.isArray(mesh.material)) { mesh.material.forEach(m => m.dispose()); } else { mesh.material.dispose(); }
-                delete inst.clothMeshes[target.key];
+            if (Netzentsorgung.ausAblage(inst.group, inst.clothMeshes,
+                                         target.key)) {
                 if (target.key.startsWith('gar_')) {
                     const garId = target.key.slice(4);
                     inst.garments = (inst.garments || []).filter(g => g.id !== garId);

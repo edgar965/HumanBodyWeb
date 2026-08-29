@@ -11,6 +11,7 @@ import { Stoffbauer } from './cloth/stoffbauer.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
+import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
 /**
  * Kleidungs-Bedienfeld aufbauen.
@@ -91,15 +92,9 @@ export async function loadCloth(key, params, color) {
 }
 
 export function removeClothRegion(key) {
-    const m = state.clothMeshes[key];
-    if (m) {
-        state.scene.remove(m);
-        m.geometry.dispose();
-        m.material.dispose();
-        delete state.clothMeshes[key];
-        delete state.clothParams[key];
-        fn.updateEquippedList();
-    }
+    if (!Netzentsorgung.ausAblage(state.scene, state.clothMeshes, key)) return;
+    delete state.clothParams[key];
+    fn.updateEquippedList();
 }
 
 export function removeAllCloth() {
