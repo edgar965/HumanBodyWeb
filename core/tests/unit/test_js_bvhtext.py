@@ -8,7 +8,8 @@ findet den Yposition-Kanal im Kopf einer BVH und ersetzt Werte in den
 Bewegungszeilen. Genau das entschied beim Bodenrichten, ob die Korrektur in der
 Datei landet oder verloren geht.
 
-Ohne `node` im Pfad wird der Test übersprungen, nicht rot.
+Ohne `node` im Pfad bricht der Lauf mit einer Meldung ab (seit dem
+30.08.2026) — vorher meldete er grün, ohne gelaufen zu sein.
 
 Geladen wird über `djangobase.testhelfer.Webmodul`: Seit `Serverabruf` in
 djangoBase liegt, enthält die Importkette einen absoluten Pfad
@@ -16,7 +17,6 @@ djangoBase liegt, enthält die Importkette einen absoluten Pfad
 Helfer spiegelt die Kette und biegt solche Pfade um.
 """
 import json
-import shutil
 import unittest
 
 from ..jsmodul import Jsmodul
@@ -62,7 +62,6 @@ console.log(JSON.stringify({{
 """
 
 
-@unittest.skipUnless(shutil.which('node'), 'node nicht im Pfad')
 class BvhtextTest(unittest.TestCase):
 
     @classmethod

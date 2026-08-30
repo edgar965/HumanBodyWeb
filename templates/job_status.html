@@ -24,6 +24,42 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#jobPhase {
+    margin-left: 0.5rem;
+    color: var(--text-muted);
+}
+#progressDetail {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.3rem;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.fehleraufklapper.fehleraufklapper.fehleraufklapper {
+    margin-top: 0.5rem;
+}
+.fehlerausgabe.fehlerausgabe.fehlerausgabe {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    max-height: 400px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.fehlerzusammenfassung.fehlerzusammenfassung.fehlerzusammenfassung {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
 </style>
 {% endblock %}
 
@@ -32,8 +68,9 @@
 
 <div class="job-detail">
     <div class="job-info">
-        <p><strong>Status:</strong> <span class="badge badge-{{ job.status }}" id="jobBadge">{{ job.get_status_display }}</span>
-        <span id="jobPhase" style="margin-left: 0.5rem; color: var(--text-muted);"></span></p>
+        <p><strong>Status:</strong> <span class="badge badge-{{ job.status }}"
+             id="jobBadge">{{ job.get_status_display }}</span>
+        <span id="jobPhase"></span></p>
         <p><strong>Pipeline:</strong> {{ job.get_pipeline_display }}</p>
         <p><strong>FPS:</strong> {{ job.fps }}</p>
         <p><strong>Created:</strong> {{ job.created_at|date:"d.m.Y H:i:s" }}</p>
@@ -43,7 +80,7 @@
                 <span id="progressText">{{ job.progress }}%</span>
             </div>
         </div>
-        <p id="progressDetail" style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.3rem;">{{ job.progress_detail }}</p>
+        <p id="progressDetail">{{ job.progress_detail }}</p>
 
         {% if job.status == 'pending' %}
         <form method="post" action="{% url 'start_processing' job.id %}">
@@ -62,9 +99,9 @@
         <div class="alert alert-error">
             <strong>Error:</strong> {{ job.error_summary }}
             {% if job.error_traceback %}
-            <details style="margin-top: 0.5rem;">
-                <summary style="cursor: pointer; color: var(--text-muted); font-size: 0.85rem;">Show full traceback</summary>
-                <pre style="margin-top: 0.5rem; padding: 0.75rem; background: rgba(0,0,0,0.3); border-radius: 6px; overflow-x: auto; font-size: 0.8rem; line-height: 1.4; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;">{{ job.error_traceback }}</pre>
+            <details class="fehleraufklapper">
+                <summary class="fehlerzusammenfassung">Show full traceback</summary>
+                <pre class="fehlerausgabe">{{ job.error_traceback }}</pre>
             </details>
             {% endif %}
         </div>

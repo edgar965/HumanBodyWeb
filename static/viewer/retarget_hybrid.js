@@ -118,7 +118,8 @@ function buildClipFromRetargetData(data, rigifySkel) {
         }
     }
 
-    Protokoll.debug('RETARGET', `buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames, duration=${data.duration}`);
+    Protokoll.debug('RETARGET',
+        `buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames, duration=${data.duration}`);
     if (missedNames.length > 0) Protokoll.warnung('RETARGET', 'missed bones:', missedNames);
 
     return new THREE.AnimationClip('retargeted', data.duration, tracks);
@@ -162,7 +163,8 @@ export async function fetchRetarget(source, rigifySkel, opts = {}) {
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`Retarget API error: ${resp.status} ${resp.statusText}`);
     const data = await resp.json();
-    Protokoll.debug('RETARGET', `${data.mapped_bones?.length || 0} bones, ${data.frame_count} frames, ${data.duration?.toFixed(2)}s`);
+    Protokoll.debug('RETARGET',
+        `${data.mapped_bones?.length || 0} bones, ${data.frame_count} frames, ${data.duration?.toFixed(2)}s`);
     return buildClipFromRetargetData(data, rigifySkel);
 }
 

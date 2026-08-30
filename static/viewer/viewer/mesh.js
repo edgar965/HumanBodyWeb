@@ -2,9 +2,10 @@
  * Viewer — Mesh loading, body materials, vertex updates.
  */
 import * as THREE from 'three';
+import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
 import { state, API, BODY_MATERIALS } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from './utils.js';
+import { base64ToFloat32, base64ToUint32 } from './utils.js';
 import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 import { applySceneSkinSettings, applySkinColor } from './scene_settings.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
@@ -21,13 +22,9 @@ function _getBodyTop() {
 }
 
 export function updateMeshVertices(float32Buffer) {
-    if (!state.bodyGeometry) return;
-    const positions = state.bodyGeometry.attributes.position;
-    const newData = new Float32Array(float32Buffer);
-    blenderToThreeCoords(newData);
-    positions.array.set(newData);
-    positions.needsUpdate = true;
-    state.bodyGeometry.computeBoundingSphere();
+    if (!Netzpunkte.ausPuffer(state.bodyGeometry, float32Buffer)) return;
+    // Die Ausgangshoehe wird beim ERSTEN Netz gemerkt: An ihr haengt die
+    // Nachskalierung der Haare (`refitHairToBody`).
     if (state.initialBodyTop === null) {
         state.initialBodyTop = _getBodyTop();
     }

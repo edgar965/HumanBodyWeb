@@ -48,6 +48,11 @@ from django.test import Client, override_settings
 
 logger = logging.getLogger('core')
 
+#: Ein Auftrag mit fester Kennung — die Adresse stand achtmal da und
+#: war allein schon zu lang fuer eine Zeile (30.08.2026).
+FOTOAUFTRAG = ('/api/character/photo-job/'
+               '00000000-0000-0000-0000-000000000001/')
+
 
 @override_settings(ALLOWED_HOSTS=['*'])
 class EndpunkteTest(EndpunktProbe):
@@ -108,13 +113,20 @@ class EndpunkteTest(EndpunktProbe):
         (LESEN, 'aus_bereich', '/api/character/pattern/region/generate/'),
         (WIRKUNG, 'sichern', '/api/character/pattern/save/'),
         (LESEN, 'beschreibung', '/api/character/pattern/specification/'),
-        (LESEN, 'daten', '/api/character/photo-job/00000000-0000-0000-0000-000000000001/'),
-        (WIRKUNG, 'loeschen', '/api/character/photo-job/00000000-0000-0000-0000-000000000001/delete/'),
-        (LESEN, 'erneut_analysieren', '/api/character/photo-job/00000000-0000-0000-0000-000000000001/reprocess/'),
-        (WIRKUNG, 'ausrichtung_sichern', '/api/character/photo-job/00000000-0000-0000-0000-000000000001/save-alignment/'),
-        (WIRKUNG, 'projektion_sichern', '/api/character/photo-job/00000000-0000-0000-0000-000000000001/save-projection/'),
-        (WIRKUNG, 'bild_sichern', '/api/character/photo-job/00000000-0000-0000-0000-000000000001/screenshot/'),
-        (LESEN, 'silhouette', '/api/character/photo-job/00000000-0000-0000-0000-000000000001/silhouette/'),
+        (LESEN, 'daten',
+         FOTOAUFTRAG),
+        (WIRKUNG, 'loeschen',
+         FOTOAUFTRAG + 'delete/'),
+        (LESEN, 'erneut_analysieren',
+         FOTOAUFTRAG + 'reprocess/'),
+        (WIRKUNG, 'ausrichtung_sichern',
+         FOTOAUFTRAG + 'save-alignment/'),
+        (WIRKUNG, 'projektion_sichern',
+         FOTOAUFTRAG + 'save-projection/'),
+        (WIRKUNG, 'bild_sichern',
+         FOTOAUFTRAG + 'screenshot/'),
+        (LESEN, 'silhouette',
+         FOTOAUFTRAG + 'silhouette/'),
         (WIRKUNG, 'mehrere_loeschen', '/api/character/photo-jobs/bulk-delete/'),
         (WIRKUNG, 'verwalten', '/api/character/pose-manage/'),
         (LESEN, 'pose', '/api/character/pose/probe/'),
@@ -122,8 +134,10 @@ class EndpunkteTest(EndpunktProbe):
         (WIRKUNG, 'umsetzen', '/api/character/retarget-bvh-text/'),
         (LESEN, 'bibliotheks_bvh', '/api/character/retarget-bvh/probe/probe/'),
         (LESEN, 'zuordnungstabellen', '/api/character/retarget-config/'),
-        (LESEN, 'auftrag_zusammenfuehren', '/api/character/retarget-job-merge/00000000-0000-0000-0000-000000000001/'),
-        (LESEN, 'auftrags_bvh', '/api/character/retarget-job/00000000-0000-0000-0000-000000000001/'),
+        (LESEN, 'auftrag_zusammenfuehren',
+         '/api/character/retarget-job-merge/00000000-0000-0000-0000-000000000001/'),
+        (LESEN, 'auftrags_bvh',
+         '/api/character/retarget-job/00000000-0000-0000-0000-000000000001/'),
         (WIRKUNG, 'zusammenfuehren', '/api/character/retarget-merge/'),
         (LESEN, 'rig', '/api/character/rig/'),
         (LESEN, 'def_skelett', '/api/character/rigify-skeleton/'),
@@ -133,13 +147,15 @@ class EndpunkteTest(EndpunktProbe):
         (LESEN, 'szenenliste', '/api/character/scenes/'),
         (LESEN, 'hautgewichte', '/api/character/skin-weights/'),
         (WIRKUNG, 'netz', '/api/character/smplx-mesh/'),
-        (LESEN, 'textur', '/api/character/smplx-texture/00000000-0000-0000-0000-000000000001/'),
+        (LESEN, 'textur',
+         '/api/character/smplx-texture/00000000-0000-0000-0000-000000000001/'),
         (LESEN, 'tpose_punkte', '/api/character/tpose-vertices/'),
         (WIRKUNG, 'herausschieben', '/api/character/vertex-edit/push-outside/'),
         (WIRKUNG, 'glaetten', '/api/character/vertex-edit/smooth/'),
         (LESEN, 'garderobe', '/api/character/wardrobe/'),
         (WIRKUNG, 'ausfuehren', '/api/cloth/export/'),
-        (LESEN, 'erkennungsdaten', '/api/detection/00000000-0000-0000-0000-000000000001/'),
+        (LESEN, 'erkennungsdaten',
+         '/api/detection/00000000-0000-0000-0000-000000000001/'),
         (WIRKUNG, 'loeschen', '/api/job/00000000-0000-0000-0000-000000000001/delete/'),
         (WIRKUNG, 'starten', '/api/job/00000000-0000-0000-0000-000000000001/start/'),
         (LESEN, 'zustand', '/api/job/00000000-0000-0000-0000-000000000001/status/'),
@@ -148,7 +164,8 @@ class EndpunkteTest(EndpunktProbe):
         (WIRKUNG, 'mehrere_loeschen', '/api/jobs/bulk-delete/'),
         (LESEN, 'punkte_2d', '/api/keypoints/00000000-0000-0000-0000-000000000001/'),
         (WIRKUNG, 'browsermeldung', '/api/log/'),
-        (LESEN, 'ueberlagerungsvideo', '/api/overlay-video/00000000-0000-0000-0000-000000000001/'),
+        (LESEN, 'ueberlagerungsvideo',
+         '/api/overlay-video/00000000-0000-0000-0000-000000000001/'),
         (LESEN, 'umsetzen', '/api/retarget/'),
         (WIRKUNG, 'effekte_sichern', '/api/retarget/save-bvh-effects/'),
         (WIRKUNG, 'glaetten', '/api/retarget/smooth-bvh/'),
@@ -177,7 +194,8 @@ class EndpunkteTest(EndpunktProbe):
         (WIRKUNG, 'vorgabe_sichern', '/api/ui-pref/'),
         (LESEN, 'vorlieben', '/api/ui-prefs/'),
         (LESEN, 'video', '/api/video/00000000-0000-0000-0000-000000000001/'),
-        (WIRKUNG, 'video3d_sichern', '/api/video3d/00000000-0000-0000-0000-000000000001/'),
+        (WIRKUNG, 'video3d_sichern',
+         '/api/video3d/00000000-0000-0000-0000-000000000001/'),
     ]
 
     def setUp(self):

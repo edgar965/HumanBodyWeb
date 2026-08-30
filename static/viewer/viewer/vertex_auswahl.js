@@ -28,7 +28,8 @@ export function _veUpdateSelectionInfo() {
     if (!info) return;
     const n = Vertexzustand.veSelectedIndices.size;
     if (n === 0) { info.textContent = 'No vertices selected'; if (posFields) posFields.style.display = 'none'; }
-    else { info.textContent = `${n} ${n === 1 ? 'vertex' : 'vertices'} selected`; if (posFields) { posFields.style.display = ''; _veUpdatePosInputs(); } }
+    else { info.textContent = `${n} ${n === 1 ? 'vertex' : 'vertices'} selected`;
+        if (posFields) { posFields.style.display = ''; _veUpdatePosInputs(); } }
 }
 
 export function veHandleClick(e) {
@@ -63,7 +64,8 @@ export function veBoxSelectStart(e) {
     const canvas = state.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
     Vertexzustand.veBoxSelecting = true;
-    Vertexzustand.veBoxStart = { x: e.clientX - rect.left, y: e.clientY - rect.top }; Vertexzustand.veBoxEnd = { ...veBoxStart };
+    Vertexzustand.veBoxStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        Vertexzustand.veBoxEnd = { ...veBoxStart };
     const boxEl = document.getElementById('ve-box-select');
     if (boxEl) {
         boxEl.style.display = 'block';
@@ -82,8 +84,10 @@ export function veBoxSelectMove(e) {
     Vertexzustand.veBoxEnd = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const boxEl = document.getElementById('ve-box-select');
     if (boxEl) {
-        const x = Math.min(Vertexzustand.veBoxStart.x, Vertexzustand.veBoxEnd.x), y = Math.min(Vertexzustand.veBoxStart.y, Vertexzustand.veBoxEnd.y);
-        const w = Math.abs(Vertexzustand.veBoxEnd.x - Vertexzustand.veBoxStart.x), h = Math.abs(Vertexzustand.veBoxEnd.y - Vertexzustand.veBoxStart.y);
+        const x = Math.min(Vertexzustand.veBoxStart.x,
+            Vertexzustand.veBoxEnd.x), y = Math.min(Vertexzustand.veBoxStart.y, Vertexzustand.veBoxEnd.y);
+        const w = Math.abs(Vertexzustand.veBoxEnd.x
+            - Vertexzustand.veBoxStart.x), h = Math.abs(Vertexzustand.veBoxEnd.y - Vertexzustand.veBoxStart.y);
         boxEl.style.left = x + 'px';
         boxEl.style.top = y + 'px';
         boxEl.style.width = w + 'px';
@@ -100,8 +104,10 @@ export function veBoxSelectEnd(e) {
     const canvas = state.renderer.domElement;
     const rect = canvas.getBoundingClientRect();
     const w = rect.width, h = rect.height;
-    const minX = Math.min(Vertexzustand.veBoxStart.x, Vertexzustand.veBoxEnd.x), maxX = Math.max(Vertexzustand.veBoxStart.x, Vertexzustand.veBoxEnd.x);
-    const minY = Math.min(Vertexzustand.veBoxStart.y, Vertexzustand.veBoxEnd.y), maxY = Math.max(Vertexzustand.veBoxStart.y, Vertexzustand.veBoxEnd.y);
+    const minX = Math.min(Vertexzustand.veBoxStart.x,
+        Vertexzustand.veBoxEnd.x), maxX = Math.max(Vertexzustand.veBoxStart.x, Vertexzustand.veBoxEnd.x);
+    const minY = Math.min(Vertexzustand.veBoxStart.y,
+        Vertexzustand.veBoxEnd.y), maxY = Math.max(Vertexzustand.veBoxStart.y, Vertexzustand.veBoxEnd.y);
     if ((maxX - minX) < 3 && (maxY - minY) < 3) return;
     if (!e.shiftKey) Vertexzustand.veSelectedIndices.clear();
     const posAttr = Vertexzustand.veTargetMesh.geometry.getAttribute('position');
@@ -111,7 +117,8 @@ export function veBoxSelectEnd(e) {
         v.set(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
         v.applyMatrix4(Vertexzustand.veTargetMesh.matrixWorld); v.project(state.camera);
         const sx = (v.x * 0.5 + 0.5) * w, sy = (-v.y * 0.5 + 0.5) * h;
-        if (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY && v.z > 0 && v.z < 1) Vertexzustand.veSelectedIndices.add(i);
+        if (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY && v.z > 0
+            && v.z < 1) Vertexzustand.veSelectedIndices.add(i);
     }
     _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
 }

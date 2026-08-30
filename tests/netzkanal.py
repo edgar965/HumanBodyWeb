@@ -47,7 +47,6 @@ class NetzKanal(Kanal):
         except Exception as fehler:                               # noqa: BLE001
             return 0, {'error': str(fehler)}
 
-
     def rohabruf(self, pfad, timeout=10):
         adresse = pfad if pfad.startswith('http') else BASE_URL + pfad
         try:

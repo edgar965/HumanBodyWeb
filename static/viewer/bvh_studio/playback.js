@@ -6,7 +6,8 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { startAudioPlayback, stopAllAudio, stopAudioTrack } from './spur_ton.js';
 import { _schedulePreloads } from './vorladen.js';
 import { applyAudioTrack } from './spur_ton.js';
-import { applyBvhTrack, applyCameraTrack, applyLightTrack, applyModelTrack, applySceneObjectTrack } from './spur_anwenden.js';
+import { applyBvhTrack, applyCameraTrack, applyLightTrack, applyModelTrack,
+    applySceneObjectTrack } from './spur_anwenden.js';
 
 export function setupPlayback() {
     document.getElementById('pb-play')?.addEventListener('click', togglePlay);
@@ -84,7 +85,8 @@ export function togglePlay() {
             }).join(',');
             return `T${i}(${tr.type}/${tr.name}${link} ${ctrl} ${has}): [${clipsInfo}]`;
         }).join(' | ');
-        fn.serverLog('play_start', `frame=${state.playheadFrame} fps=${state.project.fps} tracks=${state.project.tracks.length} ${summary}`);
+        fn.serverLog('play_start',
+            `frame=${state.playheadFrame} fps=${state.project.fps} tracks=${state.project.tracks.length} ${summary}`);
         startAudioPlayback();
     } else {
         stopAllAudio();

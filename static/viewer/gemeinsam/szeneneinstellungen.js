@@ -57,6 +57,45 @@ export class Szeneneinstellungen {
     }
 
     /**
+     * Die gespeicherten HAUT-Werte auf ein Material legen.
+     *
+     * BEFUND `doppelcode` (30.08.2026): `applySceneSkinSettings` stand dreimal
+     * — `animation/material.js`, `viewer/scene_settings.js`,
+     * `result_character/scene_setup.js`. Gleiche Schluessel, gleiche
+     * Reihenfolge, drei Fassungen.
+     *
+     * DIE HAUTFARBE BLEIBT AUSSEN VOR, und das ist der Punkt: Sie kommt aus
+     * `SKIN_COLORS` je Koerpertyp, nicht aus den Szeneneinstellungen. Wer sie
+     * hier mitschreibt, ueberschreibt die Hautfarbe der Figur mit der des
+     * zuletzt betrachteten Modells — sichtbar, aber nicht als Fehler
+     * erkennbar. In einer der drei Fassungen stand das als Kommentar, in den
+     * anderen beiden nicht.
+     *
+     * @param {Object} material Three-Material (oder null)
+     * @returns {boolean} true, wenn Werte uebernommen wurden — daran haengt
+     *          auf der Viewer-Seite das Nachziehen der Regler
+     */
+    static hautWerte(material) {
+        if (!material) return false;
+        const werte = Szeneneinstellungen.gespeichert();
+        if (!werte || !werte.skin) return false;
+        if (werte.skin.roughness !== undefined) {
+            material.roughness = werte.skin.roughness;
+        }
+        if (werte.skin.metalness !== undefined) {
+            material.metalness = werte.skin.metalness;
+        }
+        return true;
+    }
+
+    /** Das erste Material eines Netzes — Netze koennen mehrere tragen. */
+    static erstesMaterial(netz) {
+        const m = netz && netz.material;
+        if (!m) return null;
+        return Array.isArray(m) ? m[0] : m;
+    }
+
+    /**
      * Anwenden.
      *
      * @returns true, wenn wirklich etwas angewendet wurde. Der Rueckgabewert

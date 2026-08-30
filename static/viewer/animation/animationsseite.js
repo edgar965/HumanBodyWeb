@@ -6,6 +6,7 @@ import { loadBVHAnimation, bindPlaybackControls, animate } from './wiedergabe.js
 import { initSaveButtons } from './speichern.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Buehne } from '../gemeinsam/buehne.js';
+import { Klappbereiche } from '../gemeinsam/klappbereiche.js';
 
 /**
  * Animationsseite — der Start der Animationsseite: Bühne, Bedienung, Daten.
@@ -50,12 +51,9 @@ export class Animationsseite {
         window.addEventListener('resize', Seitenzustand.groesseAnpassen);
     }
 
+    /** Abschnitte auf- und zuklappbar machen — siehe `Klappbereiche`. */
     _bereicheKlappbar() {
-        for (const kopf of document.querySelectorAll('.panel-section h3')) {
-            kopf.addEventListener('click', () => {
-                kopf.closest('.panel-section').classList.toggle('collapsed');
-            });
-        }
+        Klappbereiche.verdrahten();
     }
 
     datenLaden() {

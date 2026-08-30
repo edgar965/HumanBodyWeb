@@ -27,10 +27,9 @@ export class Vergleichspanel {
     static _kopf(ansicht) {
         const kasten = document.createElement('div');
         kasten.className = 'panel-section';
-        kasten.style.cssText = 'padding:10px 16px;background:var(--bg-card);'
-                             + 'border-bottom:2px solid var(--accent);';
-        kasten.innerHTML = '<h3 style="margin:0;font-size:0.9rem;'
-            + `color:var(--accent);cursor:default;">${ansicht.label}</h3>`;
+        kasten.classList.add('vergleichskopf');
+        kasten.innerHTML =
+            `<h3 class="vergleichstitel">${ansicht.label}</h3>`;
         return kasten;
     }
 
@@ -61,15 +60,14 @@ export class Vergleichspanel {
 
     static _hautregler(ansicht) {
         const kasten = document.createElement('div');
-        kasten.style.cssText = 'margin-top:8px;border-top:1px solid var(--border);'
-                             + 'padding-top:8px;';
+        kasten.className = 'vergleichsabschnitt';
         const farbzeile = document.createElement('div');
         farbzeile.className = 'slider-row';
         farbzeile.innerHTML = '<label>Skin</label>';
         const farbe = document.createElement('input');
         farbe.type = 'color';
         farbe.value = '#d4a574';
-        farbe.style.cssText = 'width:40px;height:24px;border:none;cursor:pointer;';
+        farbe.className = 'hb-farbfeld';
         farbzeile.appendChild(farbe);
         kasten.appendChild(farbzeile);
         ansicht.felder.hautfarbe = farbe;

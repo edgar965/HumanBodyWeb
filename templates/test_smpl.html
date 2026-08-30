@@ -1,4 +1,5 @@
 {% extends "scene_model.html" %}
+{% load regler %}
 
 {% block title %}HumanBody · SMPL Test{% endblock %}
 
@@ -25,6 +26,27 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#smpl-body-info {
+    font-size:0.78rem;
+    color:var(--text-muted);
+    line-height:1.6;
+}
+#smpl-beta-reset {
+    float:right;
+}
+#smpl-body-wireframe {
+    accent-color:var(--accent);
+}
+#smpl-garment-list {
+    max-height:250px;
+    margin-bottom:8px;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
 </style>
 {% endblock %}
 
@@ -37,7 +59,7 @@
 <div class="panel-section hb-versteckt" data-panel-key="smpl_body_info" id="smpl-body-info-section">
     <h3>SMPL Body <span class="chevron">&#9660;</span></h3>
     <div class="panel-body">
-        <div id="smpl-body-info" style="font-size:0.78rem;color:var(--text-muted);line-height:1.6;"></div>
+        <div id="smpl-body-info"></div>
     </div>
 </div>
 {% endblock %}
@@ -59,7 +81,7 @@
         <!-- Shape Parameters -->
         <div class="hb-font-size-0-72rem">
             Shape Parameters
-            <button class="btn-reset" id="smpl-beta-reset" style="float:right;">Reset</button>
+            <button class="btn-reset" id="smpl-beta-reset">Reset</button>
         </div>
         <div class="slider-row"><label title="&#946;0: Height / overall size">Height</label>
             <input type="range" class="smpl-beta-slider" data-index="0" min="-300" max="300" value="0" step="1">
@@ -103,16 +125,17 @@
         </div>
         <!-- Display -->
         <div class="hb-font-size-0-72rem">Display</div>
-        {% include "_schieberegler.html" with kennung="smpl-body-opacity" beschriftung="Opacity" min="5" max="100" wert="50" schritt="5" anzeige="0.50" %}
+        {% regler "smpl-body-opacity" "Opacity" min="5" max="100" wert="50" schritt="5" anzeige="0.50" %}
         <div class="slider-row"><label>Color</label>
             <input type="color" id="smpl-body-color" value="#88aaff" class="hb-farbfeld">
         </div>
         <div class="slider-row"><label>Wireframe</label>
-            <input type="checkbox" id="smpl-body-wireframe" style="accent-color:var(--accent);">
+            <input type="checkbox" id="smpl-body-wireframe">
         </div>
-        {% include "_schieberegler.html" with kennung="smpl-body-xoffset" beschriftung="X Offset" min="-200" max="200" wert="100" schritt="5" anzeige="1.00 m" %}
+        {% regler "smpl-body-xoffset" "X Offset" min="-200" max="200" wert="100" schritt="5" anzeige="1.00 m" %}
         <div class="abstand-6">
-            <button id="smpl-body-toggle" class="btn-toggle active hb-volle-breite"><i class="fas fa-people-arrows"></i> SMPL Body ein/aus</button>
+            <button id="smpl-body-toggle" class="btn-toggle active hb-volle-breite"><i
+                 class="fas fa-people-arrows"></i> SMPL Body ein/aus</button>
         </div>
         <button id="smpl-save-settings" class="btn-toggle breit-abstand">
             <i class="fas fa-save"></i> Einstellungen speichern
@@ -129,7 +152,7 @@
                 <option value="">All</option>
             </select>
         </div>
-        <div id="smpl-garment-list" class="anim-tree" style="max-height:250px;margin-bottom:8px;">
+        <div id="smpl-garment-list" class="anim-tree">
             <div class="hb-hinweis">Lade SMPL-Garments...</div>
         </div>
         <!-- Farbe / Material -->
@@ -137,11 +160,13 @@
         <div class="slider-row"><label>Color</label>
             <input type="color" id="smpl-garment-color" value="#4d8066" class="hb-farbfeld">
         </div>
-        {% include "_schieberegler.html" with kennung="smpl-garment-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-        <div style="display:flex;gap:6px;margin-top:6px;">
+        {% regler "smpl-garment-roughness" "Roughness" max="100" wert="80" anzeige="0.80" %}
+        <div class="knopfzeile abstand-6">
             <button id="smpl-garment-load" class="btn-toggle hb-dehnt"><i class="fas fa-tshirt"></i> Laden</button>
-            <button id="smpl-garment-remove" class="btn-toggle hb-fest" title="Ausgewähltes SMPL Garment entfernen"><i class="fas fa-times"></i></button>
-            <button id="smpl-garment-remove-all" class="btn-toggle hb-fest" title="Alle SMPL Garments entfernen"><i class="fas fa-trash"></i></button>
+            <button id="smpl-garment-remove" class="btn-toggle hb-fest" title="Ausgewähltes SMPL Garment entfernen"><i
+                 class="fas fa-times"></i></button>
+            <button id="smpl-garment-remove-all" class="btn-toggle hb-fest" title="Alle SMPL Garments entfernen"><i
+                 class="fas fa-trash"></i></button>
         </div>
     </div>
 </div>
@@ -165,43 +190,43 @@
         <!-- Key Light -->
         <div class="light-group">
             <div class="light-group-title">Key Light</div>
-            {% include "_schieberegler.html" with kennung="scene-key-intensity" beschriftung="Intensität" min="0" max="800" wert="300" schritt="10" anzeige="3.00" %}
+            {% regler "scene-key-intensity" "Intensität" max="800" wert="300" schritt="10" anzeige="3.00" %}
             <div class="slider-row"><label>Farbe</label>
                 <input type="color" id="scene-key-color" value="#ffffff" class="hb-farbfeld">
             </div>
-            {% include "_schieberegler.html" with kennung="scene-key-pos-x" beschriftung="Pos X" min="-10" max="10" wert="2" schritt="0.5" anzeige="2.0" %}
-            {% include "_schieberegler.html" with kennung="scene-key-pos-y" beschriftung="Pos Y" min="-10" max="10" wert="4" schritt="0.5" anzeige="4.0" %}
-            {% include "_schieberegler.html" with kennung="scene-key-pos-z" beschriftung="Pos Z" min="-10" max="10" wert="-5" schritt="0.5" anzeige="-5.0" %}
+            {% regler "scene-key-pos-x" "Pos X" min="-10" max="10" wert="2" schritt="0.5" anzeige="2.0" %}
+            {% regler "scene-key-pos-y" "Pos Y" min="-10" max="10" wert="4" schritt="0.5" anzeige="4.0" %}
+            {% regler "scene-key-pos-z" "Pos Z" min="-10" max="10" wert="-5" schritt="0.5" anzeige="-5.0" %}
         </div>
 
         <!-- Fill Light -->
         <div class="light-group">
             <div class="light-group-title">Fill Light</div>
-            {% include "_schieberegler.html" with kennung="scene-fill-intensity" beschriftung="Intensität" min="0" max="800" wert="200" schritt="10" anzeige="2.00" %}
+            {% regler "scene-fill-intensity" "Intensität" max="800" wert="200" schritt="10" anzeige="2.00" %}
             <div class="slider-row"><label>Farbe</label>
                 <input type="color" id="scene-fill-color" value="#eeeeff" class="hb-farbfeld">
             </div>
-            {% include "_schieberegler.html" with kennung="scene-fill-pos-x" beschriftung="Pos X" min="-10" max="10" wert="-3" schritt="0.5" anzeige="-3.0" %}
-            {% include "_schieberegler.html" with kennung="scene-fill-pos-y" beschriftung="Pos Y" min="-10" max="10" wert="3" schritt="0.5" anzeige="3.0" %}
-            {% include "_schieberegler.html" with kennung="scene-fill-pos-z" beschriftung="Pos Z" min="-10" max="10" wert="-4" schritt="0.5" anzeige="-4.0" %}
+            {% regler "scene-fill-pos-x" "Pos X" min="-10" max="10" wert="-3" schritt="0.5" anzeige="-3.0" %}
+            {% regler "scene-fill-pos-y" "Pos Y" min="-10" max="10" wert="3" schritt="0.5" anzeige="3.0" %}
+            {% regler "scene-fill-pos-z" "Pos Z" min="-10" max="10" wert="-4" schritt="0.5" anzeige="-4.0" %}
         </div>
 
         <!-- Back Light -->
         <div class="light-group">
             <div class="light-group-title">Back Light</div>
-            {% include "_schieberegler.html" with kennung="scene-back-intensity" beschriftung="Intensität" min="0" max="800" wert="250" schritt="10" anzeige="2.50" %}
+            {% regler "scene-back-intensity" "Intensität" max="800" wert="250" schritt="10" anzeige="2.50" %}
             <div class="slider-row"><label>Farbe</label>
                 <input type="color" id="scene-back-color" value="#ffeedd" class="hb-farbfeld">
             </div>
-            {% include "_schieberegler.html" with kennung="scene-back-pos-x" beschriftung="Pos X" min="-10" max="10" wert="0" schritt="0.5" anzeige="0.0" %}
-            {% include "_schieberegler.html" with kennung="scene-back-pos-y" beschriftung="Pos Y" min="-10" max="10" wert="4" schritt="0.5" anzeige="4.0" %}
-            {% include "_schieberegler.html" with kennung="scene-back-pos-z" beschriftung="Pos Z" min="-10" max="10" wert="5" schritt="0.5" anzeige="5.0" %}
+            {% regler "scene-back-pos-x" "Pos X" min="-10" max="10" wert="0" schritt="0.5" anzeige="0.0" %}
+            {% regler "scene-back-pos-y" "Pos Y" min="-10" max="10" wert="4" schritt="0.5" anzeige="4.0" %}
+            {% regler "scene-back-pos-z" "Pos Z" min="-10" max="10" wert="5" schritt="0.5" anzeige="5.0" %}
         </div>
 
         <!-- Ambient Light -->
         <div class="light-group">
             <div class="light-group-title">Ambient Light</div>
-            {% include "_schieberegler.html" with kennung="scene-ambient-intensity" beschriftung="Intensität" min="0" max="300" wert="80" schritt="10" anzeige="0.80" %}
+            {% regler "scene-ambient-intensity" "Intensität" max="300" wert="80" schritt="10" anzeige="0.80" %}
             <div class="slider-row"><label>Farbe</label>
                 <input type="color" id="scene-ambient-color" value="#ffffff" class="hb-farbfeld">
             </div>
@@ -214,15 +239,9 @@
     <h3>Renderer <span class="chevron">&#9660;</span></h3>
     <div class="panel-body">
         <div class="slider-row"><label>Tone Mapping</label>
-            <select id="scene-tonemapping" class="viewer-select hb-dehnt-ohne-abstand">
-                <option value="ACESFilmic" selected>ACES Filmic</option>
-                <option value="Linear">Linear</option>
-                <option value="Reinhard">Reinhard</option>
-                <option value="Cineon">Cineon</option>
-                <option value="None">None</option>
-            </select>
+            {% include "_tonwertauswahl.html" with kennung="scene-tonemapping" klasse="hb-dehnt-ohne-abstand" %}
         </div>
-        {% include "_schieberegler.html" with kennung="scene-exposure" beschriftung="Exposure" min="20" max="400" wert="160" schritt="5" anzeige="1.60" %}
+        {% regler "scene-exposure" "Exposure" min="20" max="400" wert="160" schritt="5" anzeige="1.60" %}
         <div class="slider-row"><label>Hintergrund</label>
             <input type="color" id="scene-background" value="#1a1a2e" class="hb-farbfeld">
         </div>
@@ -233,9 +252,10 @@
 <div class="panel-section" data-panel-key="kamera_settings">
     <h3>Kamera <span class="chevron">&#9660;</span></h3>
     <div class="panel-body">
-        {% include "_schieberegler.html" with kennung="scene-fov" beschriftung="FOV" min="10" max="120" wert="35" schritt="1" anzeige="35°" %}
+        {% regler "scene-fov" "FOV" min="10" max="120" wert="35" anzeige="35°" %}
         <div class="abstand-8">
-            <button id="scene-reset-lighting" class="btn-toggle hb-volle-breite"><i class="fas fa-undo"></i> Alles zur&uuml;cksetzen</button>
+            <button id="scene-reset-lighting" class="btn-toggle hb-volle-breite"><i
+                 class="fas fa-undo"></i> Alles zur&uuml;cksetzen</button>
         </div>
     </div>
 </div>

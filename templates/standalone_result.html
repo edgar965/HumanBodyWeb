@@ -7,6 +7,29 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#jobSelector {
+    min-width:250px;
+    margin-right:0.5rem;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.leersymbol.leersymbol.leersymbol {
+    font-size:3rem;
+    margin-bottom:1rem;
+    display:block;
+}
+.leertext.leertext.leertext {
+    font-size:1.1rem;
+}
+.leerzustand-mitte.leerzustand-mitte.leerzustand-mitte {
+    text-align:center;
+    padding:4rem 2rem;
+    color:#888;
+}
 </style>
 {% include "_importmap.html" %}
 {% endblock %}
@@ -15,7 +38,7 @@
 <div class="result-header">
     <h1>Result</h1>
     <div class="result-header-actions">
-        <select id="jobSelector" class="result-body-select" style="min-width:250px;margin-right:0.5rem;"
+        <select id="jobSelector" class="result-body-select"
                 onchange="if(this.value) window.location.href='?job='+this.value">
             {% for j in jobs %}
             <option value="{{ j.id }}" {% if job and j.id == job.id %}selected{% endif %}>
@@ -62,22 +85,18 @@
 <div id="floatingVideo" class="floating-video">
     <div class="floating-video-titlebar" id="floatingVideoTitlebar">
         <span><i class="fas fa-video"></i> Video + Skeleton</span>
-        <button class="floating-video-close" id="floatingVideoClose" title="Schließen"><i class="fas fa-times"></i></button>
+        <button class="floating-video-close" id="floatingVideoClose" title="Schließen"><i
+             class="fas fa-times"></i></button>
     </div>
-    <div class="video-overlay-wrapper">
-        <video id="resultVideo" preload="auto" muted>
-            <source src="{% url 'serve_video' job.id %}" type="video/mp4">
-        </video>
-        <div id="skeletonOverlay" class="skeleton-overlay"></div>
-    </div>
+    {% include "_ergebnisvideo.html" %}
     <div class="floating-video-resize" id="floatingVideoResize"></div>
 </div>
 <div id="skeletonCanvas" class="hb-versteckt"></div>
 
 {% else %}
-<div style="text-align:center;padding:4rem 2rem;color:#888;">
-    <i class="fas fa-inbox" style="font-size:3rem;margin-bottom:1rem;display:block;"></i>
-    <p style="font-size:1.1rem;">Keine abgeschlossenen Jobs vorhanden.</p>
+<div class="leerzustand-mitte">
+    <i class="fas fa-inbox leersymbol"></i>
+    <p class="leertext">Keine abgeschlossenen Jobs vorhanden.</p>
     <p>Verarbeite zuerst ein Video unter <a href="{% url 'upload' %}">Process Videos</a>.</p>
 </div>
 {% endif %}

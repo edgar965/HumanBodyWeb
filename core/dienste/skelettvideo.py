@@ -105,7 +105,7 @@ class Skelettfilm:
         if self._aus_bvh():
             try:
                 punkte, kanten = Bvhprojektion.punkte(self.job.bvh_file,
-                                              breite, hoehe)
+                                                      breite, hoehe)
                 if punkte and kanten:
                     return punkte, kanten, (breite, hoehe)
             except Exception:                                      # noqa: BLE001
@@ -155,4 +155,3 @@ class Skelettfilm:
             return 0
         stelle = int(nummer / (videobilder - 1) * (punktbilder - 1))
         return max(0, min(stelle, punktbilder - 1))
-

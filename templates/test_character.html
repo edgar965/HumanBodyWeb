@@ -108,20 +108,11 @@
         flex-shrink: 0;
         overflow-x: auto;
     }
+    /* Aussehen und Hinterlegung: `stilhelfer.css`. */
     .code-tab {
         padding: 8px 16px;
         font-size: 0.82rem;
-        color: var(--text-muted);
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
         white-space: nowrap;
-        transition: all 0.15s;
-    }
-    .code-tab:hover { color: var(--text); background: var(--bg-card); }
-    .code-tab.active {
-        color: var(--accent);
-        border-bottom-color: var(--accent);
-        background: var(--bg-card);
     }
     .code-content {
         flex: 1;
@@ -142,7 +133,12 @@
     .diag-section { padding: 16px; border-bottom: 1px solid var(--border); }
     .diag-section h3 { font-size: 0.85rem; color: var(--accent); margin-bottom: 8px; }
     .diag-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-    .diag-table th { text-align: left; color: var(--text-muted); padding: 4px 12px 4px 0; border-bottom: 1px solid var(--border); }
+    .diag-table th {
+        text-align: left;
+        color: var(--text-muted);
+        padding: 4px 12px 4px 0;
+        border-bottom: 1px solid var(--border);
+    }
     .diag-table td { padding: 4px 12px 4px 0; color: var(--text); }
     .diag-table tr.highlight td { background: rgba(230, 126, 34, 0.15); font-weight: 600; }
     .diag-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.72rem; margin: 0 2px; }
@@ -183,6 +179,31 @@
 .hb-color-e74c3c-c.hb-color-e74c3c-c.hb-color-e74c3c-c { color:#e74c3c; }   /* 2x */
 .hb-gedaempft-theme.hb-gedaempft-theme.hb-gedaempft-theme { color:var(--text-muted); }   /* 3x */
 .hb-padding-24px.hb-padding-24px.hb-padding-24px { padding:24px; color:var(--text-muted); }   /* 2x */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.feldabstand.feldabstand.feldabstand {
+    margin-bottom:8px;
+}
+.hilfeliste.hilfeliste.hilfeliste {
+    padding-left:20px;
+}
+.hilfetext.hilfetext.hilfetext {
+    font-size:0.82rem;
+    line-height:1.6;
+    color:var(--text);
+}
+.ladefehler.ladefehler.ladefehler {
+    padding:24px;
+    color:#e74c3c;
+}
+.quelle-abweichend.quelle-abweichend.quelle-abweichend {
+    color:#e67e22;
+    font-weight:600;
+}
+.quelle-aktuell.quelle-aktuell.quelle-aktuell {
+    color:var(--accent);
+    font-weight:600;
+}
 </style>
 {% endblock %}
 
@@ -195,7 +216,8 @@
     <div class="canvas-wrap">
         <canvas id="canvas-left"></canvas>
         <div class="viewer-buttons-left">
-            <button id="show-code-btn" class="viewer-btn" title="Source Code anzeigen"><i class="fas fa-code"></i> Code</button>
+            <button id="show-code-btn" class="viewer-btn" title="Source Code anzeigen"><i
+                 class="fas fa-code"></i> Code</button>
         </div>
         <div class="canvas-label">CharMorphPlugin (Test)</div>
     </div>
@@ -370,7 +392,7 @@ right.init();
                 renderTabs(data);
             })
             .catch(err => {
-                contentEl.innerHTML = '<div style="padding:24px;color:#e74c3c;">Fehler: ' + err + '</div>';
+                contentEl.innerHTML = '<div class="ladefehler">Fehler: ' + err + '</div>';
             });
     }
 
@@ -393,14 +415,14 @@ right.init();
                 const tab = document.createElement('div');
                 tab.className = 'code-tab';
                 tab.textContent = 'CM: ' + f.name;
-                tab.style.color = '#e67e22';
+                tab.classList.add('code-tab-charmorph');
                 tab.onclick = () => selectTab(tab, () => renderFile(f, 'CharMorphPlugin'));
                 tabsEl.appendChild(tab);
             });
         }
 
         const sep = document.createElement('div');
-        sep.style.cssText = 'border-left:1px solid var(--border);margin:0 4px;';
+        sep.className = 'reitertrenner';
         tabsEl.appendChild(sep);
 
         const fileOrder = ['character.py', 'morphing.py', '__init__.py', 'config.py', 'mesh.py'];
@@ -429,11 +451,11 @@ right.init();
     function renderFile(f, source) {
         contentEl.innerHTML = '';
         const hdr = document.createElement('div');
-        hdr.style.cssText = 'padding:8px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border);font-size:0.82rem;';
+        hdr.className = 'dateikopf';
         if (source === 'CharMorphPlugin') {
-            hdr.innerHTML = '<span style="color:#e67e22;font-weight:600;">CharMorphPlugin</span> (Original, git 69e914e) &mdash; <code>' + f.name + '</code>';
+            hdr.innerHTML = '<span class="quelle-abweichend">CharMorphPlugin</span> (Original, git 69e914e) &mdash; <code>' + f.name + '</code>';
         } else {
-            hdr.innerHTML = '<span style="color:var(--accent);font-weight:600;">humanbody_core</span> (TestCharakter) &mdash; <code>' + f.name + '</code>';
+            hdr.innerHTML = '<span class="quelle-aktuell">humanbody_core</span> (TestCharakter) &mdash; <code>' + f.name + '</code>';
         }
         contentEl.appendChild(hdr);
         const pre = document.createElement('pre');
@@ -512,7 +534,7 @@ right.init();
         html += '<div class="diag-section"><h3>L2 Packed Morphs</h3>';
         if (diag.l2_packed && diag.l2_packed.length) {
             diag.l2_packed.forEach(p => {
-                html += '<div style="margin-bottom:8px;">';
+                html += '<div class="feldabstand">';
                 html += '<strong>' + p.file + '</strong>';
                 if (p.error) {
                     html += ' <span class="hb-color-e74c3c-c">' + p.error + '</span>';
@@ -541,8 +563,8 @@ right.init();
         html += '</div>';
 
         html += '<div class="diag-section"><h3>Code-Flow: Male_Caucasian</h3>';
-        html += '<div style="font-size:0.82rem;line-height:1.6;color:var(--text);">';
-        html += '<ol style="padding-left:20px;">';
+        html += '<div class="hilfetext">';
+        html += '<ol class="hilfeliste">';
         html += '<li><code>MorphData.load()</code> — Liest alle L1/*.npy Dateien. Male_Caucasian.npy wird als Basis geladen.</li>';
         html += '<li><code>CharacterState.set_body_type("Male_Caucasian")</code> — Setzt <code>self._basis = l1["Male_Caucasian"]</code></li>';
         html += '<li><code>get_l2_for_type("Male_Caucasian")</code> — Lädt L2_packed/__main__.npz + L2_packed/Caucasian.npz</li>';

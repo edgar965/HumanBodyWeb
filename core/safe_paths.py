@@ -60,29 +60,18 @@ from pathlib import Path
 
 from django.conf import settings
 
+from . import namensregeln
 from .daten.pfadwurzeln import Pfadwurzeln
+from .namensregeln import Namensregeln
 
 logger = logging.getLogger('core')
 
-#: Windows-Gerätenamen. Ein Schreibversuch darauf ist nie gewollt.
-GERAETE = {
-    'CON', 'PRN', 'AUX', 'NUL', 'CLOCK$',
-    *(f'COM{i}' for i in range(1, 10)),
-    *(f'LPT{i}' for i in range(1, 10)),
-}
-
-#: Zeichen, die in einem Namensbestandteil nicht vorkommen dürfen (13.08.2026).
-#: Der Doppelpunkt ist der gefährliche davon: `video:1.mp4` ist unter NTFS kein
-#: Dateiname, sondern der Datenstrom `1.mp4` der Datei `video`. Gemessen:
-#: geschrieben wurde eine 0 Byte grosse Datei `video`, der Inhalt lag unsichtbar
-#: im Datenstrom — und der Export meldete Erfolg.
-#: `pruefe()` verbot Doppelpunkte von Anfang an, `dateiname()` nicht. Also
-#: wieder dasselbe Muster (an einer Stelle richtig, an der anderen nicht),
-#: diesmal im Wächter selbst. Deshalb steht die Liste HIER und wird von beiden
-#: Methoden benutzt; `test_safe_paths` hält fest, dass sie es tun.
-#: Die übrigen Zeichen kann Windows ohnehin nicht anlegen — sie früh abzulehnen
-#: erspart einen `OSError` an einer Stelle, die nichts mehr erklären kann.
-NAME_VERBOTEN = frozenset('<>:"|?*') | frozenset(chr(c) for c in range(32))
+#: Weitergereicht, damit `from .safe_paths import GERAETE` weiter geht — die
+#: Listen und ihre Begruendung stehen seit dem 30.08.2026 in `namensregeln.py`,
+#: weil `pruefe` und `dateiname` sie GEMEINSAM brauchen und die Regeln dazwischen
+#: schon einmal auseinandergelaufen sind.
+GERAETE = namensregeln.GERAETE
+NAME_VERBOTEN = namensregeln.VERBOTEN
 
 
 class PfadAbgelehnt(ValueError):
@@ -100,7 +89,8 @@ class SafePath:
     """
 
     def __init__(self, wurzeln):
-        self.wurzeln = [w for w in (self._auflösen(w) for w in wurzeln) if w is not None]
+        self.wurzeln = [w for w in (self._auflösen(w) for w in wurzeln) if w is
+                        not None]
 
     # ------------------------------------------------------------ Fabrikmethoden
 
@@ -181,50 +171,60 @@ class SafePath:
         """Rohangabe -> aufgelöster Path innerhalb der Wurzeln.
 
         Wirft `PfadAbgelehnt`, sonst nichts. Der Aufrufer muss NICHT selbst
-        `resolve()` aufrufen; das Ergebnis ist bereits aufgelöst."""
+        `resolve()` aufrufen; das Ergebnis ist bereits aufgelöst.
+
+        DREI PRÜFUNGEN, in dieser Reihenfolge — sie bauen aufeinander auf:
+        auflösen, die Namen prüfen, die Lage prüfen. Getrennt seit dem
+        30.08.2026 (Rang C, zwölf Verzweigungen in einem Rumpf).
+        """
+        ziel = self._aufloesen(roh)
+        self._namen_pruefen(ziel)
+        self._lage_pruefen(ziel)
+        if muss_existieren and not ziel.exists():
+            raise PfadAbgelehnt('Datei oder Verzeichnis nicht gefunden')
+        return ziel
+
+    def _aufloesen(self, roh):
+        """Rohangabe -> `Path`, aufgelöst. Prüft noch nichts über die Lage."""
         text = (str(roh) if roh is not None else '').strip()
         if not text:
             raise PfadAbgelehnt('Kein Pfad angegeben')
         self._grobpruefung(text)
-
         try:
-            ziel = Path(text).resolve()
+            return Path(text).resolve()
         except (OSError, ValueError) as e:
             raise PfadAbgelehnt('Pfad nicht auflösbar: %s' % e) from e
 
-        if ziel.name.split('.')[0].upper() in GERAETE:
-            raise PfadAbgelehnt('Gerätename ist kein gültiges Ziel: %s' % ziel.name)
+    @staticmethod
+    def _namen_pruefen(ziel):
+        r"""JEDEN Namensbestandteil prüfen, nicht nur den letzten.
 
-        # Jeden Namensbestandteil prüfen — `parts[0]` ist der Anker (`A:\`) und
-        # enthält den einen erlaubten Doppelpunkt.
+        `parts[0]` ist der Anker (`A:\`) und enthält den einen erlaubten
+        Doppelpunkt. Die Regeln stehen in `namensregeln.py`; bis zum
+        18.08.2026 wurde ein Gerätename als VERZEICHNIS
+        (`…\COM1\datei.txt`) nicht bemerkt.
+        """
+        if Namensregeln.geraet(ziel.name):
+            raise PfadAbgelehnt('Gerätename ist kein gültiges Ziel: %s'
+                                % ziel.name)
         for teil in ziel.parts[1:]:
-            if NAME_VERBOTEN & set(teil):
-                raise PfadAbgelehnt('Unzulässiges Zeichen im Pfad')
-            # Gerätenamen auch als VERZEICHNIS ablehnen, nicht nur am Ende
-            # (`…\COM1\datei.txt`). Windows legt ein solches Verzeichnis nicht
-            # an; der Pfad kam bis zum 18.08.2026 durch die Prüfung und
-            # scheiterte erst beim Zugriff — mit einem OSError statt einer
-            # klaren Ablehnung. Befund aus dem Sparring mit Nemotron.
-            if teil.split('.')[0].upper() in GERAETE:
-                raise PfadAbgelehnt('Gerätename ist kein gültiger Pfadteil: %s'
-                                    % teil)
-            # Windows schneidet Punkt und Leerzeichen am Ende ab. Gemessen
-            # (13.08.2026): `resolve()` behält sie, das Dateisystem nicht —
-            # die Antwort nennt dann einen Pfad, den es so nie gab.
-            if teil != teil.rstrip(' .'):
-                raise PfadAbgelehnt('Pfadteil darf nicht auf Punkt oder Leerzeichen enden')
+            grund = Namensregeln.teil(teil)
+            if grund:
+                raise PfadAbgelehnt(grund)
 
-        if not any(self._liegt_in(ziel, w) for w in self.wurzeln):
-            # Der abgelehnte Pfad gehört ins Protokoll, nicht in die Antwort:
-            # eine Fehlermeldung mit vollem Pfad ist eine Auskunft über das
-            # Dateisystem (im Review als Read-Oracle benannt).
-            logger.warning('SafePath: Pfad abgelehnt: %s (Wurzeln: %s)',
-                           ziel, ', '.join(str(w) for w in self.wurzeln))
-            raise PfadAbgelehnt('Pfad liegt ausserhalb der erlaubten Verzeichnisse')
+    def _lage_pruefen(self, ziel):
+        """Liegt der Pfad in einer der erlaubten Wurzeln?
 
-        if muss_existieren and not ziel.exists():
-            raise PfadAbgelehnt('Datei oder Verzeichnis nicht gefunden')
-        return ziel
+        Der abgelehnte Pfad gehört ins Protokoll, nicht in die Antwort: Eine
+        Fehlermeldung mit vollem Pfad ist eine Auskunft über das Dateisystem
+        (im Review als Read-Oracle benannt).
+        """
+        if any(self._liegt_in(ziel, w) for w in self.wurzeln):
+            return
+        logger.warning('SafePath: Pfad abgelehnt: %s (Wurzeln: %s)',
+                       ziel, ', '.join(str(w) for w in self.wurzeln))
+        raise PfadAbgelehnt(
+            'Pfad liegt ausserhalb der erlaubten Verzeichnisse')
 
     @staticmethod
     def _grobpruefung(text):
@@ -264,24 +264,11 @@ class SafePath:
             raise PfadAbgelehnt('Kein Dateiname angegeben')
         if Path(text).name != text or text in ('.', '..'):
             raise PfadAbgelehnt('Dateiname darf keinen Pfadanteil enthalten')
-        # Dieselbe Verbotsliste wie in `pruefe` — siehe NAME_VERBOTEN. Hier
-        # fehlte sie, und ein Name wie `video:1.mp4` kam durch.
-        if NAME_VERBOTEN & set(text):
-            raise PfadAbgelehnt('Unzulässiges Zeichen im Dateinamen')
-        if text.split('.')[0].upper() in GERAETE:
-            raise PfadAbgelehnt('Gerätename ist kein gültiger Dateiname')
-        # Fuehrender Bindestrich: Der Name landet in Kommandozeilen (ffmpeg im
-        # Video-Export). Dort wuerde "-i.mp4" als OPTION gelesen, nicht als Datei.
-        # Praktisch schuetzt hier schon der vorangestellte Verzeichnispfad, aber
-        # ein Dateiname, der wie ein Schalter aussieht, ist nie gewollt — und die
-        # naechste Aufrufstelle stellt den Pfad vielleicht nicht davor
-        # (Einwand aus dem Sparring, 12.08.2026).
-        if text.startswith('-'):
-            raise PfadAbgelehnt('Dateiname darf nicht mit einem Bindestrich beginnen')
-        # Windows schneidet Punkte und Leerzeichen am Ende ab — dann zeigt die
-        # Oberfläche einen anderen Namen an als auf der Platte steht.
-        if text != text.rstrip(' .'):
-            raise PfadAbgelehnt('Dateiname darf nicht auf Punkt oder Leerzeichen enden')
+        # DIESELBEN Regeln wie in `pruefe` (`namensregeln.py`). Sie fehlten
+        # hier einmal, und ein Name wie `video:1.mp4` kam durch.
+        grund = Namensregeln.datei(text)
+        if grund:
+            raise PfadAbgelehnt(grund)
         if endung and not text.lower().endswith(endung.lower()):
             text += endung
         return text

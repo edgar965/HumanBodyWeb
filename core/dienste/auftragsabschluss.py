@@ -30,6 +30,7 @@ import os
 from pathlib import Path
 
 from django.conf import settings
+from .videobildrate import Videobildrate
 
 logger = logging.getLogger('core')
 
@@ -39,7 +40,9 @@ class Auftragsabschluss:
 
     #: Kleiner heisst: die BVH ist ein Rumpf ohne Bewegung.
     MINDESTGROESSE = 100
-    VORGABE_BILDRATE = 30.0
+    #: Weitergereicht — der Wert und seine Begruendung stehen in
+    #: `videobildrate.py`.
+    VORGABE_BILDRATE = Videobildrate.VORGABE
     NEUSTART_HINWEIS = ('Server was restarted while job was running. '
                         'Click "Neu starten" to retry.')
 
@@ -77,22 +80,12 @@ class Auftragsabschluss:
 
     @classmethod
     def bildrate(cls, auftrag):
-        """Bildrate aus dem Video — die Wiedergabe braucht sie.
+        """Bildrate aus dem Video — siehe `Videobildrate`.
 
-        Ohne sie läuft die Animation mit 30 statt der echten Rate: sichtbar zu
-        schnell oder zu langsam, ohne Fehlermeldung.
+        Bleibt als Durchreicher stehen: Die Klassenkonstante
+        `VORGABE_BILDRATE` ist Teil der bisherigen Schnittstelle.
         """
-        try:
-            import cv2
-            pfad = Path(settings.MEDIA_ROOT) / str(auftrag.video_file)
-            film = cv2.VideoCapture(str(pfad))
-            rate = film.get(cv2.CAP_PROP_FPS) or cls.VORGABE_BILDRATE
-            film.release()
-            return rate
-        except Exception:                                          # noqa: BLE001
-            logger.debug('Video-FPS nicht lesbar — Vorgabe %s wird benutzt',
-                         cls.VORGABE_BILDRATE, exc_info=True)
-            return cls.VORGABE_BILDRATE
+        return Videobildrate.zu(auftrag)
 
     @staticmethod
     def pid_weg(pid_datei):

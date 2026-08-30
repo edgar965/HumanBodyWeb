@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% comment %}
+Grundgerüst der Doku-Seiten (`rigging_help`, `theatre_help`).
+
+BEFUND `doppelcode` (30.08.2026): Der Kopf beider Vorlagen — `extra_head` mit
+`_dokustile.html`, `{% templatetag openblock %} block content {% templatetag closeblock %}`, `<style>` und der
+dreizeilige Hinweis des Stil-Umbaus darunter — stand Zeichen für Zeichen
+gleich. Der Hinweis auf `_dokustile.html` in jener Datei sagt, warum das mehr
+ist als Ordnung: Er trägt die `?t=`-Kennung, und die wird beim Abschreiben
+vergessen.
+
+    doku_stile     `<style>`-Block der Seite
+    doku_inhalt    Der Text
+{% endcomment %}
+
+{% block extra_head %}{% include "_dokustile.html" %}{% endblock %}
+
+{% block content %}
+{% block doku_stile %}{% endblock %}
+{% block doku_inhalt %}{% endblock %}
+{% endblock %}

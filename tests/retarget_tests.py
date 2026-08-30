@@ -34,5 +34,6 @@ class RetargetTests(TestCategory):
     @staticmethod
     def test_skin_weights_endpoint():
         """GET /api/character/skin-weights/ → HTTP 200"""
-        code, _ = Netzruf.senden('/api/character/skin-weights/?body_type=Female_Caucasian')
+        code, _ = Netzruf.senden(
+            '/api/character/skin-weights/?body_type=Female_Caucasian')
         return code == 200, f'HTTP {code}'

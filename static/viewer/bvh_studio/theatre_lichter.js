@@ -90,9 +90,9 @@ export async function populateTheatrePresetsMenu() {
             const item = document.createElement('div');
             item.className = 'ctx-item';
             item.innerHTML = `
-                <i class="fas fa-lightbulb" style="width:16px;color:#ffc107;"></i>
+                <i class="fas fa-lightbulb symbol-licht"></i>
                 <span>${p.label}</span>
-                <span style="margin-left:auto;font-size:0.7rem;color:var(--text-muted);">${p.lightCount}x</span>
+                <span class="hb-kuerzel">${p.lightCount}x</span>
             `;
             item.title = p.description || '';
             item.addEventListener('click', async () => {

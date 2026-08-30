@@ -3,7 +3,8 @@
 
 SceneInput als .npz und das Aufteilen in Rigid- und Stoffteile
 
-Aus tests/cloth_export_tests.py herausgeloest (17.08.2026): Die Datei hatte ueber 300 Zeilen und
+Aus tests/cloth_export_tests.py herausgeloest (17.08.2026): Die Datei hatte ueber 300
+Zeilen und
 eine Klasse mit ueber 300 — Befund `dateigroesse`. Gemeinsame Importe und
 Fixtures stehen in `_cloth_basis.py`.
 """
@@ -65,7 +66,8 @@ class ClothSzeneTests(TestCategory):
 
     @staticmethod
     def test_mesh_splitter_keeps_only_spine_vertices_in_rigid_body():
-        """Der Splitter lässt die 3 spine-Vertices im Rigid-Body, die 3 skirt-Vertices nicht."""
+        """Der Splitter lässt die 3 spine-Vertices im Rigid-Body, die 3 skirt-Vertices
+        nicht."""
         r = Clothbasis.aufteilung()
         if r.fehler:
             return False, r.fehler
@@ -73,7 +75,8 @@ class ClothSzeneTests(TestCategory):
 
     @staticmethod
     def test_mesh_splitter_creates_cloth_segment_for_garment_bone():
-        """Der Splitter erzeugt 1 Cloth-Segment für den skirt-Bone (is_garment default)."""
+        """Der Splitter erzeugt 1 Cloth-Segment für den skirt-Bone
+        (is_garment default)."""
         r = Clothbasis.aufteilung()
         if r.fehler:
             return False, r.fehler
@@ -89,7 +92,8 @@ class ClothSzeneTests(TestCategory):
 
     @staticmethod
     def test_mesh_splitter_extracts_all_three_skirt_vertices():
-        """Der Splitter extrahiert alle 3 Vertices aus dem skirt-Range ins Cloth-Mesh."""
+        """Der Splitter extrahiert alle 3 Vertices aus dem skirt-Range
+        ins Cloth-Mesh."""
         r = Clothbasis.aufteilung()
         if r.fehler:
             return False, r.fehler

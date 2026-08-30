@@ -17,7 +17,8 @@ muss ohne Gruppen das Hautmaterial ALLEIN zurückgehen.
 am Index — ein Netz ohne Index bekam dort eine Materialliste, die keine Gruppe
 adressiert. Das ist genau der schwarze Fall.
 
-Ohne `node` im Pfad wird übersprungen, nicht rot.
+FEHLT `node`, ist das ein FEHLER — node ist Werkzeug dieses Projekts,
+kein Zufall der Umgebung (siehe `Jsmodul.laufen`).
 """
 from django.test import SimpleTestCase
 
@@ -92,7 +93,6 @@ console.log(JSON.stringify({
 """
 
 
-@Jsmodul.ohne_node()
 class MaterialsatzTest(SimpleTestCase):
 
     @classmethod

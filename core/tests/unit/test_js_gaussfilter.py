@@ -23,7 +23,8 @@ DIE FÄLLE, DIE WEHTUN
   Figur in den Einheitskreis um den Ursprung zwingen.
 * **Entartetes Quaternion** (Länge 0): bleibt, wie es ist — kein Teilen durch 0.
 
-Ohne `node` im Pfad wird der Test übersprungen, nicht rot.
+Ohne `node` im Pfad bricht der Lauf mit einer Meldung ab (seit dem
+30.08.2026) — vorher meldete er grün, ohne gelaufen zu sein.
 """
 import unittest
 
@@ -59,8 +60,11 @@ function alt(values, stride, sigma) {
     if (stride === 4) {
         for (let k = 0; k < nKeys; k++) {
             const i = k * 4;
-            const len = Math.sqrt(values[i]**2 + values[i+1]**2 + values[i+2]**2 + values[i+3]**2);
-            if (len > 1e-8) { values[i]/=len; values[i+1]/=len; values[i+2]/=len; values[i+3]/=len; }
+            const len = Math.sqrt(values[i]**2 + values[i+1]**2
+                                  + values[i+2]**2 + values[i+3]**2);
+            if (len > 1e-8) {
+                for (let c = 0; c < 4; c++) values[i+c] /= len;
+            }
         }
     }
     return values;
@@ -108,7 +112,8 @@ for (let i = 0; i < geglaettet.length; i += 4) {
 }
 
 // 4) Raender werden GEHALTEN: eine konstante Reihe bleibt konstant
-const konstant = new Float32Array(Array.from({length: 6 * 3}, (_, i) => (i % 3 === 0 ? 5 : 0)));
+const konstant = new Float32Array(
+    Array.from({length: 6 * 3}, (_, i) => (i % 3 === 0 ? 5 : 0)));
 const nachher = new Gaussfilter(2).anwenden(konstant, 3);
 ergebnis.raender = { erster: Number(nachher[0].toFixed(6)),
                      letzter: Number(nachher[nachher.length - 3].toFixed(6)) };
@@ -128,7 +133,6 @@ console.log(JSON.stringify(ergebnis));
 """
 
 
-@Jsmodul.ohne_node()
 class GaussfilterTest(unittest.TestCase):
 
     @classmethod

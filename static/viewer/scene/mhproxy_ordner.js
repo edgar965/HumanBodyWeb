@@ -109,8 +109,7 @@ export class Mhproxyordner {
     static _name(stueck) {
         const name = document.createElement('span');
         name.textContent = stueck.name || stueck.id;
-        name.style.cssText = 'font-size:0.8rem;overflow:hidden;'
-            + 'text-overflow:ellipsis;white-space:nowrap;';
+        name.className = 'stueckname';
         return name;
     }
 

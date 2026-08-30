@@ -53,7 +53,8 @@ Die Kennungen (`jobTable`, `jobTableBody`, `row-<id>`, `pl-<id>`, `select-all`,
     </thead>
     <tbody id="jobTableBody">
         {% for job in auftraege %}
-        <tr id="row-{{ job.id }}" data-name="{{ job.name|lower }}" data-size="{{ job.video_size }}" data-date="{{ job.created_at|date:'Y-m-d H:i:s' }}">
+        <tr id="row-{{ job.id }}" data-name="{{ job.name|lower }}" data-size="{{ job.video_size }}"
+             data-date="{{ job.created_at|date:'Y-m-d H:i:s' }}">
             <td><input type="checkbox" class="job-check" value="{{ job.id }}"></td>
             <td>{{ job.name }}</td>
             <td><span class="badge badge-{{ job.pipeline }}">{{ job.get_pipeline_display }}</span></td>
@@ -66,7 +67,8 @@ Die Kennungen (`jobTable`, `jobTableBody`, `row-<id>`, `pl-<id>`, `select-all`,
                     <span class="hb-laeuft"><i class="fas fa-clock"></i> Pending</span>
                 {% else %}
                     <div class="inline-progress">
-                        <span class="status-text"><i class="fas fa-spinner fa-spin"></i> {{ job.get_status_display }}</span>
+                        <span class="status-text"><i
+                             class="fas fa-spinner fa-spin"></i> {{ job.get_status_display }}</span>
                         <div class="progress-bar-mini">
                             <div class="progress-fill-mini" style="width:{{ job.progress }}%"></div>
                         </div>
@@ -80,7 +82,8 @@ Die Kennungen (`jobTable`, `jobTableBody`, `row-<id>`, `pl-<id>`, `select-all`,
                 <div class="hb-zeilenaktionen">
                     <select class="pipeline-select" id="pl-{{ job.id }}" data-current="{{ job.pipeline }}">
                         {% for wert, beschriftung in pipelines %}
-                        <option value="{{ wert }}" {% if job.pipeline == wert %}selected{% endif %}>{{ beschriftung }}</option>
+                        <option value="{{ wert }}"
+                             {% if job.pipeline == wert %}selected{% endif %}>{{ beschriftung }}</option>
                         {% endfor %}
                     </select>
                     <button class="btn btn-sm btn-primary" data-aktion="start" data-auftrag="{{ job.id }}">

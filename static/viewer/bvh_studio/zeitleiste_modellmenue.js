@@ -74,8 +74,8 @@ export class Modellmenue {
                 eintrag.className = 'ctx-item';
                 eintrag.dataset.action = 'ctx-model-preset';
                 eintrag.dataset.preset = p.name;
-                eintrag.innerHTML = '<i class="fas fa-user" style="width:16px;'
-                    + `color:#e91e63;"></i> ${p.label || p.name}`;
+                eintrag.innerHTML = '<i class="fas fa-user symbol-modell">'
+                    + `</i> ${p.label || p.name}`;
                 liste.appendChild(eintrag);
             }
             liste.querySelectorAll('.ctx-item').forEach(eintrag => {

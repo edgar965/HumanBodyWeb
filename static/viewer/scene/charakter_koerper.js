@@ -55,7 +55,8 @@ export class Charakterkoerper {
             if (!Modellbauzustand.rigKnochen) {
                 throw new Error('Rig bones data not loaded');
             }
-            result = generateRigBoneMesh(Modellbauzustand.rigKnochen, inst.generatedConfig, state.rigifySkeletonData, state.skinWeightData);
+            result = generateRigBoneMesh(Modellbauzustand.rigKnochen, inst.generatedConfig, state.rigifySkeletonData,
+                state.skinWeightData);
             if (result.skeleton) {
                 inst.rigifySkeleton = result.skeleton;
                 inst.isSkinned = true;

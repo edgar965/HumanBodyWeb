@@ -1,3 +1,4 @@
+{% load regler %}
 {% comment %}
 HumanBody-Grundmaße: Körpertyp, vier Regler, Hautfarbe.
 
@@ -17,15 +18,15 @@ Verwendung:
   {% include "_koerpermasse.html" %}{% endverbatim %}
 {% endcomment %}
 <select id="body-type-select" class="viewer-select"></select>
-{% include "_schieberegler.html" with kennung="meta-age" beschriftung="Age" min="18" max="100" wert="59" schritt="1" anzeige="59" %}
-{% include "_schieberegler.html" with kennung="meta-mass" beschriftung="Mass" min="45" max="200" wert="123" schritt="1" anzeige="123" %}
-{% include "_schieberegler.html" with kennung="meta-tone" beschriftung="Tone" min="0" max="100" wert="50" schritt="1" anzeige="50" %}
-{% include "_schieberegler.html" with kennung="meta-height" beschriftung="Height" min="150" max="200" wert="175" schritt="1" anzeige="175" %}
+{% regler "meta-age" "Age" min="18" max="100" wert="59" anzeige="59" %}
+{% regler "meta-mass" "Mass" min="45" max="200" wert="123" anzeige="123" %}
+{% regler "meta-tone" "Tone" max="100" wert="50" anzeige="50" %}
+{% regler "meta-height" "Height" min="150" max="200" wert="175" anzeige="175" %}
 <div class="abschnitt-trenner">
     <div class="slider-row">
         <label>Skin</label>
         <input type="color" id="skin-color-viewer" value="#d4a574" class="hb-farbfeld">
     </div>
-    {% if mit_material %}{% include "_schieberegler.html" with kennung="skin-roughness-viewer" beschriftung="Roughness" min="0" max="100" wert="55" schritt="1" anzeige="0.55" %}
-    {% include "_schieberegler.html" with kennung="skin-metalness-viewer" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}{% endif %}
+    {% if mit_material %}{% regler "skin-roughness-viewer" "Roughness" max="100" wert="55" anzeige="0.55" %}
+    {% regler "skin-metalness-viewer" "Metalness" max="100" wert="0" anzeige="0.00" %}{% endif %}
 </div>

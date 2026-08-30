@@ -1,0 +1,49 @@
+{% load regler %}
+{% comment %}
+Der Passungs-Bereich eines Kleidungsstücks: Auswahl, Sitz, Farbe, Regionen.
+
+BEFUND `doppelcode` (30.08.2026): Diese 25 Zeilen standen in
+`character_viewer.html` und `scene_config.html` nahezu gleich — dieselben
+Kennungen, dieselben Grenzen, dieselbe Reihenfolge. Zwei Stellen waren schon
+auseinandergelaufen: die Obergrenze des Offset-Reglers (30 gegen 15) und die
+Höhe der Liste.
+
+DIE KENNUNGEN SIND DRAHTFORMAT. `garment-offset`, `garment-min-dist`,
+`garment-region-top` … liest `viewer/garment.js` und `scene/kleidung_anpassen.js`
+mit `getElementById`, und `garment-region-*` steht so auch in gespeicherten
+Kleiderzuständen. Wer eine Kennung ändert, macht gespeicherte Anpassungen still
+wirkungslos — genau deshalb gehört die Liste an EINE Stelle.
+
+WAS NICHT HIERHER GEHÖRT: Die Knopfreihe darunter. Die Szenenseite hat zwei
+Knöpfe, die Charakterseite fünf, und auf der Charakterseite folgen Ort- und
+Größenregler. Ein Baustein, der beides mit Schaltern abdeckt, wäre schwerer zu
+lesen als die zwei Fassungen.
+
+Verwendung:
+
+  {% verbatim %}{% include "_kleiderpassung.html" with offset_max="30" listenklasse="hb-max-height-200px" %}{% endverbatim %}
+
+  offset_max     Obergrenze des Offset-Reglers (Charakterseite 30, Szene 15)
+  listenklasse   Zusatzklasse der Kleiderliste (steuert ihre Höhe)
+{% endcomment %}
+<div class="slider-row"><label>Category</label>
+    <select id="garment-category" class="viewer-select hb-dehnt-ohne-abstand">
+        <option value="">All</option>
+    </select>
+</div>
+<div id="garment-list" class="anim-tree {{ listenklasse|default:'hb-max-height-300px' }}">
+    <div class="hb-hinweis">Lade Garment-Library...</div>
+</div>
+<div class="hb-font-size-0-72rem">Fit</div>
+{% regler "garment-offset" "Offset" max=offset_max wert="6" anzeige="0.006" %}
+{% regler "garment-stiffness" "Stiffness" max="100" wert="80" anzeige="0.80" %}
+{% regler "garment-min-dist" "Min. Abstand" max="15" wert="3" anzeige="3 mm" %}
+{% regler "garment-crotch-floor" "Schritt-Boden" min="-40" max="40" wert="0" anzeige="0 mm" %}
+{% regler "garment-lift" "Anheben" min="-20" max="40" wert="0" anzeige="0 mm" %}
+{% regler "garment-crotch-depth" "Schritt-Tiefe" max="40" wert="0" anzeige="0 mm" %}
+<div class="hb-font-size-0-72rem">Farbe / Material</div>
+<div class="slider-row"><label>Color</label>
+    <input type="color" id="garment-color" value="#4d5980" class="hb-farbfeld">
+</div>
+{% regler "garment-roughness" "Roughness" max="100" wert="80" anzeige="0.80" %}
+{% regler "garment-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}

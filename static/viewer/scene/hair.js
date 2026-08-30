@@ -3,6 +3,7 @@
  */
 import { THREE, gltfLoader } from './state.js';
 import { state } from './state.js';
+import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _selectedInst } from './utils.js';
 import { convertInstToSkinned, _skinifyHairGroup } from './skeleton.js';
@@ -18,24 +19,33 @@ export async function loadHairUI() {
         const select = document.getElementById('hair-style-select');
         const colorSelect = document.getElementById('hair-color-select');
         if (!select) return;
-        for (const h of state._hairStylesData) { const opt = document.createElement('option'); opt.value = h.url; opt.textContent = h.label; opt.dataset.name = h.name; select.appendChild(opt); }
-        if (colorSelect) { for (const name of Object.keys(state.hairColorData)) { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; colorSelect.appendChild(opt); } }
+        Auswahlfeld.fuellen(select, state._hairStylesData.map(
+            (h) => ({ wert: h.url, text: h.label, daten: { name: h.name } })));
+        Auswahlfeld.ausNamen(colorSelect, Object.keys(state.hairColorData));
         select.addEventListener('change', () => {
             const inst = _selectedInst(); if (!inst) return;
-            if (!select.value) { if (inst.hairMesh) { inst.group.remove(inst.hairMesh); inst.hairMesh.traverse(c => { if (c.isMesh) { c.geometry.dispose(); (Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose()); } }); inst.hairMesh = null; inst.hairStyle = null; } fn.updateEquippedList(inst); fn.updateVertexCount(); return; }
+            if (!select.value) { if (inst.hairMesh) { inst.group.remove(inst.hairMesh);
+                inst.hairMesh.traverse(c => { if (c.isMesh) { c.geometry.dispose();
+                    (Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose()); } });
+                        inst.hairMesh = null; inst.hairStyle = null; } fn.updateEquippedList(inst);
+                            fn.updateVertexCount(); return; }
             _loadHairForCharacter(inst, select.value, colorSelect?.value || '');
         });
         if (colorSelect) { colorSelect.addEventListener('change', () => {
             const inst = _selectedInst(); if (!inst || !inst.hairMesh) return;
             const rgb = state.hairColorData[colorSelect.value]; if (!rgb) return;
             const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
-            inst.hairMesh.traverse(c => { if (c.isMesh && c.material) (Array.isArray(c.material)?c.material:[c.material]).forEach(m => m.color.copy(color)); });
+            inst.hairMesh.traverse(c => { if (c.isMesh
+                && c.material) (Array.isArray(c.material)?c.material:[c.material]).forEach(m => m.color.copy(color));
+                    });
         }); }
     } catch (e) { Protokoll.warnung('hair', 'Hair UI not available:', e); }
 }
 
 export function _loadHairForCharacter(inst, url, colorName) {
-    if (inst.hairMesh) { inst.group.remove(inst.hairMesh); inst.hairMesh.traverse(c => { if (c.isMesh) { c.geometry.dispose(); (Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose()); } }); inst.hairMesh = null; }
+    if (inst.hairMesh) { inst.group.remove(inst.hairMesh);
+        inst.hairMesh.traverse(c => { if (c.isMesh) { c.geometry.dispose();
+            (Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose()); } }); inst.hairMesh = null; }
     if (!inst.isSkinned && state.rigifySkeletonData && state.skinWeightData) convertInstToSkinned(inst);
     gltfLoader.load(url, (gltf) => {
         let hairGroup = gltf.scene;
@@ -44,7 +54,9 @@ export function _loadHairForCharacter(inst, url, colorName) {
         inst.hairStyle = { url, name: url.split('/').pop(), color: colorName };
         if (colorName && state.hairColorData[colorName]) {
             const rgb = state.hairColorData[colorName]; const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
-            inst.hairMesh.traverse(c => { if (c.isMesh && c.material) (Array.isArray(c.material)?c.material:[c.material]).forEach(m => m.color.copy(color)); });
+            inst.hairMesh.traverse(c => { if (c.isMesh
+                && c.material) (Array.isArray(c.material)?c.material:[c.material]).forEach(m => m.color.copy(color));
+                    });
         }
         inst.group.add(inst.hairMesh);
         fn.updateEquippedList(inst); fn.updateVertexCount();
@@ -63,7 +75,8 @@ export function initPropHairControls() {
     _populatePropHairOptions();
     styleEl.addEventListener('change', () => {
         const inst = _selectedInst(); if (!inst) return;
-        if (!styleEl.value) { if (inst.hairMesh) { inst.group.remove(inst.hairMesh); inst.hairMesh.traverse(c=>{if(c.isMesh){c.geometry.dispose();(Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose());}}); inst.hairMesh=null; inst.hairStyle=null; } const a=document.getElementById('hair-style-select'); if(a) a.value=''; fn.updateEquippedList(inst); fn.updateVertexCount(); return; }
+        if (!styleEl.value) { if (inst.hairMesh) { inst.group.remove(inst.hairMesh);
+            inst.hairMesh.traverse(c=>{if(c.isMesh){c.geometry.dispose();(Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose());}}); inst.hairMesh=null; inst.hairStyle=null; } const a=document.getElementById('hair-style-select'); if(a) a.value=''; fn.updateEquippedList(inst); fn.updateVertexCount(); return; }
         _loadHairForCharacter(inst, styleEl.value, colorEl.value || '');
         const a = document.getElementById('hair-style-select'); if(a) a.value = styleEl.value;
     });
@@ -71,7 +84,8 @@ export function initPropHairControls() {
         const inst = _selectedInst(); if (!inst || !inst.hairMesh) return;
         const rgb = state.hairColorData[colorEl.value]; if (!rgb) return;
         const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
-        inst.hairMesh.traverse(c => { if (c.isMesh && c.material) (Array.isArray(c.material)?c.material:[c.material]).forEach(m => m.color.copy(color)); });
+        inst.hairMesh.traverse(c => { if (c.isMesh
+            && c.material) (Array.isArray(c.material)?c.material:[c.material]).forEach(m => m.color.copy(color)); });
         if (inst.hairStyle) inst.hairStyle.color = colorEl.value;
     });
 }
@@ -80,8 +94,9 @@ function _populatePropHairOptions() {
     const styleEl = document.getElementById('prop-hair-style');
     const colorEl = document.getElementById('prop-hair-color');
     if (!styleEl || !colorEl || styleEl.options.length > 1) return;
-    for (const h of (state._hairStylesData || [])) { const opt = document.createElement('option'); opt.value = h.url; opt.textContent = h.label; styleEl.appendChild(opt); }
-    for (const name of Object.keys(state.hairColorData || {})) { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; colorEl.appendChild(opt); }
+    Auswahlfeld.fuellen(styleEl, (state._hairStylesData || []).map(
+        (h) => ({ wert: h.url, text: h.label })));
+    Auswahlfeld.ausNamen(colorEl, Object.keys(state.hairColorData || {}));
 }
 
 export function _syncPropHairControls() {

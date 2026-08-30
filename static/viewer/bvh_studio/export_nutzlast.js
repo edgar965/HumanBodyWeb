@@ -163,7 +163,8 @@ export async function _buildPayload({ duration, fps }) {
         throw new Error('Kein Animations-Track mit Mesh + Skelett. Im BVH Studio: Animations-Spur anlegen + BVH-Clip drauf, Modell-Spur mit Preset verbinden, abspielen, dann Export. (Track-Dump in Console)');
     }
     const clip = _activeAnimationClip(track);
-    if (!clip || !clip.animClip) throw new Error('Kein animierter Clip gefunden. Zieh eine BVH-Animation (z.B. AIST/d01_mJS3_ch07) auf einen Animations-Track.');
+    if (!clip
+        || !clip.animClip) throw new Error('Kein animierter Clip gefunden. Zieh eine BVH-Animation (z.B. AIST/d01_mJS3_ch07) auf einen Animations-Track.');
 
     const modelData = await _ensureModelData(track);
     if (modelData.type !== 'generated_model') {

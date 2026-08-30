@@ -5,8 +5,10 @@ import './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import './undo.js';
-import { _clearBoneHighlightCache, _clearBoneSelection, _createBoneOverlay, _getBoneFromIntersection, _removeBoneOverlay } from './knochenmarkierung.js';
-import { _doSubMeshClick, _findSubMeshForObject, _removeSubMesh, _sameSubMesh, _setBodyEmissive, _setSubMeshEmissive, clearSubMeshSelection, getSelectableSubMeshes } from './teilnetz_auswahl.js';
+import { _clearBoneHighlightCache, _clearBoneSelection, _createBoneOverlay, _getBoneFromIntersection,
+    _removeBoneOverlay } from './knochenmarkierung.js';
+import { _doSubMeshClick, _findSubMeshForObject, _removeSubMesh, _sameSubMesh, _setBodyEmissive, _setSubMeshEmissive,
+    clearSubMeshSelection, getSelectableSubMeshes } from './teilnetz_auswahl.js';
 import { Schwebeanzeige } from './schwebeanzeige.js';
 
 // =========================================================================
@@ -52,7 +54,8 @@ export function bindCanvasClick() {
                     return;
                 }
                 const inst = state.characters.get(charId);
-                if (e.ctrlKey && inst && inst.generatedConfig && hitObj === inst.bodyMesh && inst.bodyMesh.userData.boneVertexRanges) {
+                if (e.ctrlKey && inst && inst.generatedConfig && hitObj === inst.bodyMesh
+                    && inst.bodyMesh.userData.boneVertexRanges) {
                     const boneName = _getBoneFromIntersection(hits[0], inst.bodyMesh);
                     if (boneName) {
                         if (state.selectedCharacterId !== charId) {

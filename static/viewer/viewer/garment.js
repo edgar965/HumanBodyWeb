@@ -2,12 +2,13 @@
  * Viewer — Garment Fitter UI (catalog, fitting, region transforms).
  */
 import * as THREE from 'three';
-import { state, REGION_DEFS, REGION_RADIUS } from './state.js';
+import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { sliderVal } from './utils.js';
 import { ensureSkinned } from './skinning.js';
 import { _applyGarmentState, _saveGarmentState }
     from './garment_liste.js';
+import { Bereichsgewichte } from '../gemeinsam/bereichsgewichte.js';
 import { Kleiderbedienung } from './kleiderbedienung.js';
 import { Metawerte } from './metawerte.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
@@ -26,23 +27,11 @@ export async function loadGarmentUI() {
     }).verdrahten();
 }
 
+/** Die Kosinus-Gewichte der fuenf Baender — Rechnung siehe `Bereichsgewichte`. */
 function _computeRegionWeights(gid) {
-    const orig = state.garmentOrigPositions[gid];
-    if (!orig) return;
-    const n = orig.length / 3;
-    let yMin = Infinity, yMax = -Infinity;
-    for (let i = 0; i < n; i++) { const y = orig[i * 3 + 1]; if (y < yMin) yMin = y; if (y > yMax) yMax = y; }
-    const yRange = yMax - yMin || 1e-6;
-    const weights = {};
-    for (const def of REGION_DEFS) weights[def.id] = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-        const t = (orig[i * 3 + 1] - yMin) / yRange;
-        for (const def of REGION_DEFS) {
-            const dist = Math.abs(t - def.center);
-            if (dist < REGION_RADIUS) weights[def.id][i] = 0.5 * (1 + Math.cos(Math.PI * dist / REGION_RADIUS));
-        }
-    }
-    state.garmentRegionWeights[gid] = weights;
+    const gewichte = Bereichsgewichte.rechnen(state.garmentOrigPositions[gid]);
+    if (!gewichte) return;
+    state.garmentRegionWeights[gid] = gewichte;
 }
 
 export function buildBodyFitQueryString() {
@@ -112,7 +101,8 @@ export async function loadGarment(garmentId) {
         _saveGarmentState(garmentId);
         _applyGarmentState(garmentId);
 
-        Protokoll.debug('Viewer', `Garment ${garmentId}: ${data.vertex_count} verts, skinned=${mesh.isSkinnedMesh || false}`);
+        Protokoll.debug('Viewer',
+            `Garment ${garmentId}: ${data.vertex_count} verts, skinned=${mesh.isSkinnedMesh || false}`);
 
         // Auto-select
         if (state._selectedItem) fn._setEmissiveOnItem(state._selectedItem, state._ZERO_EMISSIVE);

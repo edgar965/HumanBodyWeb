@@ -32,9 +32,14 @@ class AppSettings(models.Model):
         max_length=200, default='femaleWithClothes', blank=True,
         help_text="Default model preset for Process result page",
     )
-    show_rig_config = models.BooleanField(default=False, help_text="Show rig by default on Konfiguration page")
-    show_rig_scene = models.BooleanField(default=False, help_text="Show rig by default on Szene page")
-    show_rig_animations = models.BooleanField(default=False, help_text="Show rig by default on Animationen page")
+    show_rig_config = models.BooleanField(default=False,
+                                          help_text="Show rig by default on "
+                                          "Konfiguration page")
+    show_rig_scene = models.BooleanField(default=False,
+                                         help_text="Show rig by default on Szene page")
+    show_rig_animations = models.BooleanField(default=False,
+                                              help_text="Show rig by default on "
+                                              "Animationen page")
     default_anim_config = models.CharField(
         max_length=300, default='', blank=True,
         help_text="Default animation URL for Konfiguration page",
@@ -56,7 +61,9 @@ class AppSettings(models.Model):
         help_text="JSON list of expanded panel keys for Konfiguration page",
     )
     expanded_panels_scene = models.CharField(
-        max_length=500, default='["beleuchtung","renderer","kamera","material_skin","aktionen"]', blank=True,
+        max_length=500,
+        default='["beleuchtung","renderer","kamera","material_skin","aktionen"]',
+        blank=True,
         help_text="JSON list of expanded panel keys for Szene page",
     )
     selection_opacity = models.FloatField(
@@ -100,7 +107,8 @@ class AppSettings(models.Model):
     # --- Video to BVH: 3D Pipeline defaults ---
     lifter_3d_default = models.CharField(
         max_length=20, default='hybrid_gvhmr',
-        help_text="Default 3D pipeline (v4/gvhmr/wham/prompthmr/hybrid_gvhmr/hybrid_prompthmr)",
+        help_text="Default 3D pipeline "
+        "(v4/gvhmr/wham/prompthmr/hybrid_gvhmr/hybrid_prompthmr)",
     )
 
     # --- Video to BVH: MocapNET v4 settings ---
@@ -123,8 +131,10 @@ class AppSettings(models.Model):
     # --- Video to BVH: MocapNET v4 component flags ---
     v4_enable_body = models.BooleanField(default=True, help_text="Enable body tracking")
     v4_enable_face = models.BooleanField(default=True, help_text="Enable face tracking")
-    v4_enable_hands = models.BooleanField(default=True, help_text="Enable hand tracking")
-    v4_enable_mouth = models.BooleanField(default=True, help_text="Enable mouth tracking")
+    v4_enable_hands = models.BooleanField(default=True,
+                                          help_text="Enable hand tracking")
+    v4_enable_mouth = models.BooleanField(default=True,
+                                          help_text="Enable mouth tracking")
     v4_enable_eyes = models.BooleanField(default=False, help_text="Enable eye tracking")
 
     # --- Video to BVH: SMPL pipeline settings ---
@@ -143,7 +153,8 @@ class AppSettings(models.Model):
 
     # --- Video to BVH: WHAM settings ---
     wham_estimate_local_only = models.BooleanField(
-        default=False, help_text="Only estimate local body motion (no global trajectory)",
+        default=False,
+        help_text="Only estimate local body motion (no global trajectory)",
     )
     wham_run_smplify = models.BooleanField(
         default=False, help_text="Run SMPLify refinement (slower but more accurate)",

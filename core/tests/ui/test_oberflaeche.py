@@ -88,30 +88,36 @@ class Oberflaechenfall(TestCase):
                         '%s: %s' % (fall.name, ergebnis['detail']))
 
 
-def _methode(fall):
-    """Eine Testmethode, die genau diesen Fall fährt."""
-    def pruefung(self):
-        self.pruefen(fall)
-    pruefung.__name__ = 'test_%s' % fall.fn.__name__.replace('test_', '')
-    pruefung.__doc__ = fall.description or fall.name
-    return pruefung
+class Fallbau:
+    """Baut aus den `TestCategory`-Objekten der Oberflaeche
+    `TestCase`-Klassen. Stand bis zum 30.08.2026 als zwei freie
+    Funktionen daneben (Befund `freie-funktionen`)."""
 
+    @staticmethod
+    def methode(fall):
+        """Eine Testmethode, die genau diesen Fall fährt."""
+        def pruefung(self):
+            self.pruefen(fall)
+        pruefung.__name__ = 'test_%s' % fall.fn.__name__.replace('test_', '')
+        pruefung.__doc__ = fall.description or fall.name
+        return pruefung
 
-def _klasse(kategorie):
-    """Aus einer `TestCategory` eine `TestCase`-Klasse bauen."""
-    inhalt = {'KATEGORIE': kategorie,
-              '__doc__': '%s — %s' % (kategorie.name, kategorie.description)}
-    for fall in kategorie.cases():
-        methode = _methode(fall)
-        inhalt[methode.__name__] = methode
-    return type(kategorie.__name__, (Oberflaechenfall,), inhalt)
+    @classmethod
+    def klasse(cls, kategorie):
+        """Aus einer `TestCategory` eine `TestCase`-Klasse bauen."""
+        inhalt = {'KATEGORIE': kategorie,
+                  '__doc__': '%s — %s' % (kategorie.name, kategorie.description)}
+        for fall in kategorie.cases():
+            methode = cls.methode(fall)
+            inhalt[methode.__name__] = methode
+        return type(kategorie.__name__, (Oberflaechenfall,), inhalt)
 
 
 #: Je Kategorie eine Klasse im Modul-Namensraum — Djangos Discovery findet sie
 #: darüber. `globals()` ist hier der Punkt: Eine Klasse, die nur in einer Liste
 #: steht, wird nicht gefunden.
 for _kategorie in ALL_CATEGORIES:
-    globals()[_kategorie.__name__] = _klasse(_kategorie)
+    globals()[_kategorie.__name__] = Fallbau.klasse(_kategorie)
 
 #: Aufräumen, damit die Schleifenvariable nicht als Modulname stehen bleibt.
 del _kategorie

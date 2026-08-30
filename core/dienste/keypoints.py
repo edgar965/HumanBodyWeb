@@ -70,5 +70,4 @@ class Ueberlagerungspunkte:
                 with open(kandidat) as datei:
                     return json.load(datei)
         return Keypointsquellen.aus_gvhmr_nachziehen(self.job,
-                                             self.quelle.ordner)
-
+                                                     self.quelle.ordner)

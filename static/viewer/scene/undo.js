@@ -40,7 +40,8 @@ export function markDirty(label) {
     if (!fn.gatherSceneState) return;
     // Push the PRE-mutation snapshot (captured at previous markDirty / init) to undo
     if (_lastSnapshot) {
-        _undoStack.push({ label: label || 'Aenderung', data: _lastSnapshot.data, selectedCharacterId: _lastSnapshot.selectedCharacterId });
+        _undoStack.push({ label: label || 'Aenderung', data: _lastSnapshot.data,
+            selectedCharacterId: _lastSnapshot.selectedCharacterId });
         if (_undoStack.length > _UNDO_MAX) _undoStack.shift();
     }
     // Re-snapshot the now-current state for the next mutation
@@ -55,38 +56,42 @@ export function markClean() {
 
 export function pushSceneUndo(label) { markDirty(label); }
 
-export async function sceneUndo() {
-    if (_undoInProgress || _undoStack.length === 0) return;
+/**
+ * Einen Stand zurueckspielen — von einem Stapel auf den anderen.
+ *
+ * BEFUND `doppelcode` (30.08.2026): `sceneUndo` und `sceneRedo` waren
+ * zeichengleich bis auf die VERTAUSCHTEN Stapel. Zwei Fassungen derselben
+ * Mechanik, und eine davon hat man beim naechsten Umbau uebersehen.
+ *
+ * `_undoSuppressed` haelt das Laden davon ab, sich selbst als neue Aenderung
+ * einzutragen — ohne das legte jedes Rueckgaengig einen neuen Stand an, und
+ * man kaeme nie weiter zurueck als einen Schritt. Es wird auch im Fehlerfall
+ * zurueckgesetzt: Bliebe es stehen, merkte sich die Seite ab da GAR keine
+ * Aenderung mehr, ohne dass etwas darauf hinweist.
+ */
+async function _zurueckspielen(vonStapel, aufStapel, name) {
+    if (_undoInProgress || vonStapel.length === 0) return;
     _undoInProgress = true;
-    if (_lastSnapshot) _redoStack.push(_lastSnapshot);
-    const snap = _undoStack.pop();
+    if (_lastSnapshot) aufStapel.push(_lastSnapshot);
+    const snap = vonStapel.pop();
     _undoSuppressed = true;
     try {
         await fn.loadSceneFromData(snap.data, snap.data.name || '');
         if (snap.selectedCharacterId && state.characters.has(snap.selectedCharacterId)) {
             fn.selectCharacter(snap.selectedCharacterId);
         }
-    } catch (e) { console.error('[Scene Undo] Restore failed:', e); }
+    } catch (e) { console.error(`[Scene ${name}] Restore failed:`, e); }
     _undoSuppressed = false;
     _undoInProgress = false;
     _lastSnapshot = snap;
 }
 
+export async function sceneUndo() {
+    await _zurueckspielen(_undoStack, _redoStack, 'Undo');
+}
+
 export async function sceneRedo() {
-    if (_undoInProgress || _redoStack.length === 0) return;
-    _undoInProgress = true;
-    if (_lastSnapshot) _undoStack.push(_lastSnapshot);
-    const snap = _redoStack.pop();
-    _undoSuppressed = true;
-    try {
-        await fn.loadSceneFromData(snap.data, snap.data.name || '');
-        if (snap.selectedCharacterId && state.characters.has(snap.selectedCharacterId)) {
-            fn.selectCharacter(snap.selectedCharacterId);
-        }
-    } catch (e) { console.error('[Scene Redo] Restore failed:', e); }
-    _undoSuppressed = false;
-    _undoInProgress = false;
-    _lastSnapshot = snap;
+    await _zurueckspielen(_redoStack, _undoStack, 'Redo');
 }
 
 window.__sceneUndo = sceneUndo;

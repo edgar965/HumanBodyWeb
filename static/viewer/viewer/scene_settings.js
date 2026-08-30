@@ -53,17 +53,10 @@ export function syncSkinUI(mat) {
 }
 
 export function applySceneSkinSettings() {
-    const saved = localStorage.getItem('humanbody_scene_settings');
     const mat = getSkinMat();
-    if (!saved || !mat) return;
-    try {
-        const s = JSON.parse(saved);
-        if (s.skin) {
-            if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
-            if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
-            syncSkinUI(mat);
-        }
-    } catch (e) { Protokoll.debug('szeneneinstellungen', 'Hauteinstellungen nicht anwendbar', e); }
+    // Die Regler NUR nachziehen, wenn wirklich etwas uebernommen wurde —
+    // sonst zeigten sie Werte an, die nirgends stehen.
+    if (Szeneneinstellungen.hautWerte(mat)) syncSkinUI(mat);
 }
 
 export function applySkinColor() {

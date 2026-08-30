@@ -44,9 +44,10 @@ export class Klipeigenschaften {
         const f = ' <span class="winzig">f</span>';
         return M.gruppe(`Audio: ${d.fileName || '?'}`, `
             ${M.zeile('Datei', `<span class="text-klein">${d.fileName || '—'}</span>`)}
-            ${M.zeile('Dauer', `<span style="font-size:0.8rem;">${(d.audioDuration || 0).toFixed(1)}s</span>`)}
+            ${M.zeile('Dauer', `<span class="tonwert">${(d.audioDuration || 0).toFixed(1)}s</span>`)}
             ${M.zeile('Start', M.zahl('prop-audio-start', clip.startFrame, 'min="0"') + f)}
-            ${M.zeile('Lautstärke', `<input type="range" value="${prozent}" id="prop-audio-vol" min="0" max="100"> <span id="prop-audio-vol-label" style="font-size:0.75rem;">${prozent}%</span>`)}
+            ${M.zeile('Lautstärke', `<input type="range" value="${prozent}" id="prop-audio-vol" min="0"
+                max="100"> <span id="prop-audio-vol-label" class="reglerwert">${prozent}%</span>`)}
             ${M.zeile('Fade In', M.zahl('prop-audio-fadein', d.fadeIn || 0, 'min="0"') + f)}
             ${M.zeile('Fade Out', M.zahl('prop-audio-fadeout', d.fadeOut || 0, 'min="0"') + f)}
             ${M.zeile('Offset', M.zahl('prop-audio-offset', d.offset || 0, 'min="0" step="0.1"') + ' <span class="winzig">s</span>')}`);
@@ -58,14 +59,17 @@ export class Klipeigenschaften {
             ${M.zeile('Datei', `<span class="text-klein">${clip.data?.fileName || '—'}</span>`)}
             ${M.zeile('Start', M.zahl('prop-oc-start', clip.startFrame, 'min="0"') + f)}
             ${M.zeile('Dauer', M.zahl('prop-oc-frames', clip.totalFrames, 'min="1"') + f)}
-            <div class="fussnote">Objekt ist in der Szene sichtbar wenn der Playhead im Clip-Bereich ist. Position/Rotation/Größe über die Track-Eigenschaften oben.</div>`);
+            <div class="fussnote">Objekt ist in der Szene sichtbar wenn der Playhead im Clip-Bereich ist.
+                Position/Rotation/Größe über die Track-Eigenschaften oben.</div>`);
     }
 
     static _modell(clip) {
         const f = ' <span class="winzig">f</span>';
         return M.gruppe('Modell Clip', `
-            ${M.zeile('Preset', `<input type="text" value="${clip.data?.preset || ''}" id="prop-model-preset" placeholder="z.B. FemaleGarment">`)}
-            ${M.zeile('Body Type', `<input type="text" value="${clip.data?.bodyType || 'Female_Caucasian'}" id="prop-model-bodytype">`)}
+            ${M.zeile('Preset', `<input type="text" value="${clip.data?.preset || ''}" id="prop-model-preset"
+                placeholder="z.B. FemaleGarment">`)}
+            ${M.zeile('Body Type', `<input type="text" value="${clip.data?.bodyType || 'Female_Caucasian'}"
+                id="prop-model-bodytype">`)}
             ${M.zeile('Start', M.zahl('prop-model-start', clip.startFrame, 'min="0"') + f)}
             ${M.zeile('Dauer', M.zahl('prop-model-frames', clip.totalFrames, 'min="1"') + f)}`);
     }

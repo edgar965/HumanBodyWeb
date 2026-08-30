@@ -7,6 +7,7 @@
 import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Maskenbausteine as M } from './bausteine.js';
+import { Schaltknopf } from '../schaltknopf.js';
 
 const STUFEN = ['linear', 'smooth', 'step'];
 
@@ -35,10 +36,12 @@ export class Schluesselbildeigenschaften {
             ${M.zeile('Frame', M.zahl('prop-kf-frame', clip.startFrame, 'min="0"'))}
             ${lage}${dreh}
             ${M.zeile('FOV', M.zahl('prop-kf-fov', d.fov || 50, 'min="10" max="120"'))}
-            ${M.zeile('Fade-Effekt', `<input type="checkbox" ${d.fade !== false ? 'checked' : ''} id="prop-kf-fade"> <span style="font-size:0.72rem;color:var(--text-muted);margin-left:4px;">aus = Sprung</span>`)}
-            ${M.zeile('Interp.', `<select id="prop-kf-interp" ${d.fade === false ? 'disabled' : ''}>${stufen}</select>`)}
+            ${M.zeile('Fade-Effekt', `<input type="checkbox" ${d.fade !== false ? 'checked' : ''}
+                id="prop-kf-fade"> <span class="kaestchen-hinweis">aus = Sprung</span>`)}
+            ${M.zeile('Interp.', `<select id="prop-kf-interp" ${d.fade === false ? 'disabled'
+                : ''}>${stufen}</select>`)}
             <div class="abstand-6">
-                <button id="prop-kf-set-view" style="padding:3px 8px;font-size:0.75rem;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:3px;cursor:pointer;">Aktuelle Ansicht übernehmen</button>
+                <button id="prop-kf-set-view" class="knopf-schmal-grau">Aktuelle Ansicht übernehmen</button>
             </div>`);
     }
 
@@ -55,8 +58,9 @@ export class Schluesselbildeigenschaften {
             ${d.angle == null ? '' : M.zeile('Winkel', M.zahl('prop-lkf-angle', (d.angle * 180 / Math.PI).toFixed(1), 'min="1" max="170" step="1"') + ' °')}
             ${d.penumbra == null ? '' : M.zeile('Penumbra', M.zahl('prop-lkf-penumbra', d.penumbra.toFixed(2), 'min="0" max="1" step="0.05"'))}
             ${d.distance == null ? '' : M.zeile('Reichweite', M.zahl('prop-lkf-distance', d.distance.toFixed(1), 'min="0" max="200" step="1"'))}
-            ${M.zeile('Licht', `<button id="prop-lkf-visible" style="padding:4px 12px;background:${an ? '#4caf50' : '#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:50px;">${an ? 'An' : 'Aus'}</button>`)}
-            ${M.zeile('Fade-Effekt', `<input type="checkbox" ${d.fade !== false ? 'checked' : ''} id="prop-lkf-fade"> <span style="font-size:0.72rem;color:var(--text-muted);margin-left:4px;">aus = Sprung</span>`)}`);
+            ${M.zeile('Licht', Schaltknopf.bauen('prop-lkf-visible', an, true))}
+            ${M.zeile('Fade-Effekt', `<input type="checkbox" ${d.fade !== false ? 'checked' : ''}
+                id="prop-lkf-fade"> <span class="kaestchen-hinweis">aus = Sprung</span>`)}`);
     }
 
     /** Bildnummer aendern: Clips neu sortieren, Zeitleiste neu zeichnen. */

@@ -17,6 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.netzantwort import Netzantwort
+from ..daten.smplvorgaben import Smplvorgaben
 from ..daten.stoffantwort import Stoffantwort
 from ..dienste.charakterdaten import Charakterdaten
 from ..models import AppSettings
@@ -27,10 +28,10 @@ logger = logging.getLogger(__name__)
 class Smplendpunkte:
     """Einstellungen, Koerpernetz und Kleiderbestand der SMPL-Seite."""
 
-    #: Zulaessige Geschlechter des SMPL-Modells.
-    GESCHLECHTER = ('female', 'male', 'neutral')
-    #: So viele Formparameter fuehrt SMPL.
-    BETAS = 10
+    #: Weitergereicht — die Listen stehen in `Smplvorgaben`, weil dort auch
+    #: geprueft wird, was hineindarf.
+    GESCHLECHTER = Smplvorgaben.GESCHLECHTER
+    BETAS = Smplvorgaben.BETAS
     #: Abstand des Stoffs zur Haut in Metern.
     VORGABE_ABSTAND = 0.006
     #: Steifigkeit des Stoffs (0…1).
@@ -83,25 +84,10 @@ class Smplendpunkte:
             return JsonResponse({'ok': False, 'error': 'Invalid JSON'},
                                 status=400)
         gespeichert = AppSettings.load()
-        geschlecht = daten.get('gender', 'female')
-        gespeichert.smpl_default_gender = (
-            geschlecht if geschlecht in Smplendpunkte.GESCHLECHTER else 'female')
-        betas = daten.get('betas', [])
-        if isinstance(betas, list) and len(betas) == Smplendpunkte.BETAS:
-            gespeichert.smpl_default_betas = ','.join('%.2f' % b for b in betas)
-        deckung = daten.get('opacity')
-        if deckung is not None:
-            gespeichert.smpl_default_opacity = max(0.0, min(1.0, float(deckung)))
-        farbe = daten.get('color', '')
-        if farbe and isinstance(farbe, str) and farbe.startswith('#'):
-            gespeichert.smpl_default_color = farbe
-        gespeichert.smpl_default_wireframe = bool(daten.get('wireframe', False))
-        versatz = daten.get('xoffset')
-        if versatz is not None:
-            gespeichert.smpl_default_xoffset = max(-2.0, min(2.0, float(versatz)))
-        szene = daten.get('scene')
-        if szene and isinstance(szene, dict):
-            gespeichert.smpl_default_scene = json.dumps(szene)
+        # Welche Felder es gibt und was fuer sie gilt, steht in
+        # `Smplvorgaben` — hier standen bis zum 30.08.2026 sieben `if`-Bloecke
+        # mit ihren Grenzen mitten im Rumpf.
+        Smplvorgaben.uebernehmen(daten, gespeichert)
         gespeichert.save()
         return JsonResponse({'ok': True})
 

@@ -21,7 +21,8 @@ Verwendung:
 </a>
 {% endif %}
 {% if job.status == 'complete' %}
-<a href="{% url 'save_overlay_video' job.id %}" class="btn btn-secondary btn-sm" download title="Download Video + Skeleton">
+<a href="{% url 'save_overlay_video' job.id %}" class="btn btn-secondary btn-sm" download
+     title="Download Video + Skeleton">
     <i class="fas fa-download"></i> Video + Skeleton
 </a>
 <a href="{% url 'save_rig_video' job.id %}" class="btn btn-secondary btn-sm" download title="Download Nur Skeleton">

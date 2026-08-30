@@ -1,0 +1,25 @@
+{% comment %}
+Fortschrittsbalken einer Cloth-Engine auf der BVH-Studio-Seite.
+
+BEFUND `doppelcode` (30.08.2026): Diese fünf Zeilen standen VIERMAL in
+`bvh_studio.html` — einmal je Engine. Zwei Fassungen waren wortgleich (der
+Befund), die beiden anderen unterschieden sich nur in der Farbe des Balkens,
+die dort als Inline-Stil danebenstand.
+
+Die Farbe steckt jetzt in `bvh_studio.html` an
+`.cloth-progress[data-engine="…"] .cloth-progress-fill`; die Kennung genügt.
+
+`export1.js` findet den Balken über `.cloth-progress[data-engine="…"]` und
+setzt Breite und Text — an den Klassennamen darf sich nichts ändern, ohne
+dass `_progress()` dort mitgeht.
+
+Verwendung:
+
+  {% templatetag openblock %} include "_cloth_fortschritt.html" with kennung="warp_only" {% templatetag closeblock %}
+{% endcomment %}
+<div class="cloth-progress hb-klappteil" data-engine="{{ kennung }}">
+    <div class="cloth-progress-bar hb-balken">
+        <div class="cloth-progress-fill"></div>
+    </div>
+    <div class="cloth-progress-text hb-untertitel">Bereit</div>
+</div>

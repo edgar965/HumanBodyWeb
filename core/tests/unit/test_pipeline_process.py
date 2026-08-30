@@ -25,6 +25,7 @@ import time
 from django.test import SimpleTestCase
 
 from core.pipeline_process import PipelineProzess, PipelineStille
+from core.prozessleser import Stromleser
 
 
 class PipelineProzessTest(SimpleTestCase):
@@ -91,7 +92,7 @@ class PipelineProzessTest(SimpleTestCase):
              'import sys\n'
              'for i in range(3000): sys.stderr.write(f"Zeile {i}\\n")\n'])
         p.warten(timeout=60)
-        self.assertLessEqual(len(p.stderr_zeilen), PipelineProzess.STDERR_ZEILEN + 1)
+        self.assertLessEqual(len(p.stderr_zeilen), Stromleser.STDERR_ZEILEN + 1)
         self.assertIn('Zeile 2999', p.fehlertext(), 'die LETZTEN Zeilen fehlen')
 
     def test_rueckgabewert_wird_durchgereicht(self):
@@ -109,7 +110,8 @@ class PipelineProzessTest(SimpleTestCase):
         self.assertEqual(env['EIGEN'], 'wert')
 
     def test_beenden_raeumt_den_prozess_ab(self):
-        p = PipelineProzess.starten([sys.executable, '-c', 'import time; time.sleep(60)'])
+        p = PipelineProzess.starten([sys.executable, '-c',
+                                     'import time; time.sleep(60)'])
         p.beenden()
         # KEIN `wait()` mehr davor: `beenden()` wartet seit 13.08.2026 selbst.
         # `taskkill` kehrt zurück, sobald es die Beendigung angestossen hat —
@@ -155,7 +157,10 @@ class PipelineProzessTest(SimpleTestCase):
         CUDA-Start, Stapelrechnung."""
         p = PipelineProzess.starten(
             [sys.executable, '-c',
-             'import time\nprint("START", flush=True)\ntime.sleep(3)\nprint("FERTIG", flush=True)\n'])
+             'import time\n'
+             'print("START", flush=True)\n'
+             'time.sleep(3)\n'
+             'print("FERTIG", flush=True)\n'])
         zeilen = [z.strip() for z in p.stdout_zeilen(stille_timeout=30)]
         p.warten(timeout=30)
         self.assertEqual(zeilen, ['START', 'FERTIG'])

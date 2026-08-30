@@ -1,3 +1,4 @@
+{% load regler %}
 {% comment %}
 Kleidungs-Bereiche: aus Vorlage, Builder, Grundform.
 
@@ -27,7 +28,7 @@ Aufruf:
                     <select id="cloth-tpl-type" class="viewer-select hb-dehnt-ohne-abstand"></select>
                 </div>
         {% if mit_preset %}
-                <div class="slider-row" style="gap:4px;">
+                <div class="slider-row reglerzeile-eng">
                     <label>Preset</label>
                     <select id="cloth-tpl-preset" class="viewer-select hb-dehnt-ohne-abstand">
                         <option value="">-- none --</option>
@@ -44,18 +45,22 @@ Aufruf:
                     </button>
                 </div>
         {% endif %}
-                {% include "_schieberegler.html" with kennung="cloth-tpl-segments" beschriftung="Segments" min="16" max="64" wert="32" schritt="2" anzeige="32" %}
-                {% include "_schieberegler.html" with kennung="cloth-tpl-tightness" beschriftung="Tightness" min="0" max="100" wert="50" schritt="1" anzeige="0.50" %}
-                {% include "_schieberegler.html" with kennung="cloth-tpl-top-ext" beschriftung="Top" min="-30" max="30" wert="0" schritt="1" anzeige="0 m" %}
-                {% include "_schieberegler.html" with kennung="cloth-tpl-bot-ext" beschriftung="Bottom" min="-30" max="50" wert="0" schritt="1" anzeige="0 m" %}
+                {% regler "cloth-tpl-segments" "Segments" min="16" max="64" wert="32" schritt="2" anzeige="32" %}
+                {% regler "cloth-tpl-tightness" "Tightness" max="100" wert="50" anzeige="0.50" %}
+                {% regler "cloth-tpl-top-ext" "Top" min="-30" max="30" wert="0" anzeige="0 m" %}
+                {% regler "cloth-tpl-bot-ext" "Bottom" min="-30" max="50" wert="0" anzeige="0 m" %}
                 <div class="slider-row"><label>Color</label>
                     <input type="color" id="cloth-color" value="#404870" class="hb-farbfeld">
                 </div>
                 <div class="hb-display-flex">
-                    <button id="cloth-tpl-create" class="btn-toggle hb-dehnt"><i class="fas fa-plus"></i> Create</button>
-                    <button id="cloth-tpl-update" class="btn-toggle hb-dehnt"><i class="fas fa-sync-alt"></i> Update</button>
-                    <button id="cloth-tpl-delete" class="btn-toggle hb-fest" title="Aktuelles Template löschen"><i class="fas fa-times"></i></button>
-                    <button id="cloth-remove-all" class="btn-toggle hb-fest" title="Alle Cloth löschen"><i class="fas fa-trash"></i></button>
+                    <button id="cloth-tpl-create" class="btn-toggle hb-dehnt"><i
+                         class="fas fa-plus"></i> Create</button>
+                    <button id="cloth-tpl-update" class="btn-toggle hb-dehnt"><i
+                         class="fas fa-sync-alt"></i> Update</button>
+                    <button id="cloth-tpl-delete" class="btn-toggle hb-fest" title="Aktuelles Template löschen"><i
+                         class="fas fa-times"></i></button>
+                    <button id="cloth-remove-all" class="btn-toggle hb-fest" title="Alle Cloth löschen"><i
+                         class="fas fa-trash"></i></button>
                 </div>
             </div>
         </div>
@@ -67,9 +72,10 @@ Aufruf:
                 <div class="slider-row"><label>Region</label>
                     <select id="cloth-bld-region" class="viewer-select hb-dehnt-ohne-abstand"></select>
                 </div>
-                {% include "_schieberegler.html" with kennung="cloth-bld-looseness" beschriftung="Looseness" min="0" max="200" wert="30" schritt="5" anzeige="0.30" %}
+                {% regler "cloth-bld-looseness" "Looseness" max="200" wert="30" schritt="5" anzeige="0.30" %}
                 <div class="hb-margin-top-6px">
-                    <button id="cloth-bld-create" class="btn-toggle hb-volle-breite"><i class="fas fa-plus"></i> Create Garment</button>
+                    <button id="cloth-bld-create" class="btn-toggle hb-volle-breite"><i
+                         class="fas fa-plus"></i> Create Garment</button>
                 </div>
             </div>
         </div>
@@ -81,11 +87,12 @@ Aufruf:
                 <div class="slider-row"><label>Primitive</label>
                     <select id="cloth-prim-type" class="viewer-select hb-dehnt-ohne-abstand"></select>
                 </div>
-                {% include "_schieberegler.html" with kennung="cloth-prim-segments" beschriftung="Segments" min="12" max="64" wert="32" schritt="2" anzeige="32" %}
-                {% include "_schieberegler.html" with kennung="cloth-prim-length" beschriftung="Length" min="10" max="150" wert="50" schritt="5" anzeige="0.50" %}
-                {% include "_schieberegler.html" with kennung="cloth-prim-flare" beschriftung="Flare" min="0" max="200" wert="30" schritt="5" anzeige="0.30" zeilenkennung="cloth-prim-flare-row" %}
+                {% regler "cloth-prim-segments" "Segments" min="12" max="64" wert="32" schritt="2" anzeige="32" %}
+                {% regler "cloth-prim-length" "Length" min="10" max="150" wert="50" schritt="5" anzeige="0.50" %}
+                {% regler "cloth-prim-flare" "Flare" max="200" wert="30" schritt="5" anzeige="0.30" zeilenkennung="cloth-prim-flare-row" %}
                 <div class="hb-margin-top-6px">
-                    <button id="cloth-prim-create" class="btn-toggle hb-volle-breite"><i class="fas fa-plus"></i> Create Primitive</button>
+                    <button id="cloth-prim-create" class="btn-toggle hb-volle-breite"><i
+                         class="fas fa-plus"></i> Create Primitive</button>
                 </div>
             </div>
         </div>

@@ -59,9 +59,17 @@ class TimestampedStream:
     wenn die Zeile noch keines hat. So kriegen print()-Calls + Third-Party-
     Libs (torch, tqdm, ffmpeg-Output) im Server-Log einen Zeitstempel.
 
-    Buffert Teil-Schreibvorgaenge bis zum naechsten '\\n' - sonst kriegen
-    z.B. tqdm-Progress-Bar-Updates jeweils einen eigenen Timestamp pro
-    Carriage-Return-Tick (waere unleserlich).
+    Gepuffert wird bis zum naechsten Zeilenende — sonst stuende der
+    Zeitstempel mitten im Satz, weil `write` nicht immer ganze Zeilen
+    bekommt.
+
+    ZEILENENDE HEISST `\n` ODER `\r`. Fortschrittsbalken (tqdm, ffmpeg)
+    schreiben mit `\r`; jeder Tick bekommt deshalb SEINEN EIGENEN
+    Zeitstempel. Das ist keine schoene Ausgabe, aber die richtige: Ohne
+    `\r` als Ende stuende ein ganzer Balkenlauf als EINE Zeile im Log,
+    mit einem Stempel ganz vorn — die Dauer waere nicht mehr ablesbar.
+    (Dieser Absatz behauptete bis zum 30.08.2026 das Gegenteil; der Code
+    tat schon immer dies.)
     """
 
     def __init__(self, wrapped):
@@ -76,35 +84,55 @@ class TimestampedStream:
         with self._lock:
             return self._write_locked(s)
 
+    @staticmethod
+    def _zeilenende(s, ab):
+        """Stelle des naechsten `\n` oder `\r` ab `ab` — oder -1.
+
+        BEIDE Zeichen, weil Fortschrittsbalken (`tqdm`, ffmpeg) mit `\r`
+        arbeiten: Ohne `\r` waere ein ganzer Lauf EINE Zeile, und der
+        Zeitstempel stuende nur ganz am Anfang.
+        """
+        stellen = [x for x in (s.find('\n', ab), s.find('\r', ab)) if x != -1]
+        return min(stellen) if stellen else -1
+
+    @staticmethod
+    def _mit_stempel(stueck, zeilenanfang):
+        """Eine Zeile, bei Bedarf mit Zeitstempel davor.
+
+        Leerzeilen und Zeilen, die schon einen Stempel tragen, bleiben wie sie
+        sind — sonst stuende in Log-Dateien zweimal eine Uhrzeit, und der
+        Leser in Hilfe -> Logs erkennt die Zeile dann nicht mehr.
+        """
+        if not zeilenanfang or not stueck.strip():
+            return stueck
+        if _TS_PREFIX_RE.match(stueck):
+            return stueck
+        return f'{time.strftime("%Y-%m-%d %H:%M:%S")} {stueck}'
+
     def _write_locked(self, s):
+        """Fertige Zeilen durchreichen, den Rest bis zum naechsten Mal halten.
+
+        Der Puffer ist der Punkt: `write` bekommt nicht immer ganze Zeilen.
+        Wer den Rest sofort schreibt, bekommt einen Zeitstempel mitten im Satz.
+        """
         s = self._buffer + s
-        out = []
-        i = 0
-        n = len(s)
-        line_start = self._at_line_start
-        broke_early = False
+        fertig = []
+        i, n = 0, len(s)
+        zeilenanfang = self._at_line_start
         while i < n:
-            j_n = s.find('\n', i)
-            j_r = s.find('\r', i)
-            j = min(x for x in (j_n, j_r) if x != -1) if (j_n != -1 or j_r != -1) else -1
-            if j == -1:
+            ende = self._zeilenende(s, i)
+            if ende == -1:
                 self._buffer = s[i:]
-                self._at_line_start = line_start
-                broke_early = True
+                self._at_line_start = zeilenanfang
                 break
-            chunk = s[i:j+1]
-            if line_start and chunk.strip() and not _TS_PREFIX_RE.match(chunk):
-                ts = time.strftime('%Y-%m-%d %H:%M:%S')
-                out.append(f'{ts} {chunk}')
-            else:
-                out.append(chunk)
-            line_start = True
-            i = j + 1
-        if not broke_early:
+            fertig.append(self._mit_stempel(s[i:ende + 1], zeilenanfang))
+            zeilenanfang = True
+            i = ende + 1
+        else:
             self._buffer = ''
-            self._at_line_start = line_start
-        if out:
-            self._wrapped.write(''.join(out))
+            self._at_line_start = zeilenanfang
+        if fertig:
+            self._wrapped.write(''.join(fertig))
         return len(s)
 
     def flush(self):

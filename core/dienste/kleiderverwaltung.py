@@ -118,7 +118,8 @@ class Kleiderverwaltung:
             wurzel = Kleiderverwaltung.wurzel().resolve()
             ziel = Path(pfad).resolve()
         except OSError:
-            logger.debug('Pfad %s nicht auflösbar — gilt als außerhalb', pfad, exc_info=True)
+            logger.debug('Pfad %s nicht auflösbar — gilt als außerhalb', pfad,
+                         exc_info=True)
             return False
         return wurzel == ziel or wurzel in ziel.parents
 
@@ -151,7 +152,7 @@ class Kleiderverwaltung:
             daten, 'id', 'target_category')
         _kategorie, name, alt = Kleiderverwaltung._kleid(kennung)
         ziel_kategorie = Kleiderverwaltung._teil(ziel_kategorie,
-                                                'target_category')
+                                                 'target_category')
         ordner = Kleiderverwaltung.wurzel() / ziel_kategorie
         if not Kleiderverwaltung._liegt_in_bibliothek(ordner):
             raise KleiderFehler('Invalid target category')
@@ -173,7 +174,7 @@ class Kleiderverwaltung:
         ordner.mkdir(parents=True, exist_ok=True)
         neu = Kleiderverwaltung._teil(neu, 'new_name')
         ziel = Kleiderverwaltung._freies_ziel(ordner / neu,
-                                             f'{neu} already exists')
+                                              f'{neu} already exists')
         shutil.copytree(str(alt), str(ziel))
         logger.info('[garment-manage] Copied: %s -> %s', alt, ziel)
         return {'ok': True, 'id': f'{ziel_kategorie}/{neu}'}

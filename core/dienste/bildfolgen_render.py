@@ -35,7 +35,8 @@ with sync_playwright() as p:
             break
         page.wait_for_timeout(1000)
 
-    dauer = page.evaluate("window.__theatreGetDuration ? window.__theatreGetDuration() : 0")
+    dauer = page.evaluate(
+        "window.__theatreGetDuration ? window.__theatreGetDuration() : 0")
     print("Dauer laut Seite: %ss" % dauer, flush=True)
 
     ausschnitt = cfg.get("ausschnitt")

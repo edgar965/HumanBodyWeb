@@ -12,6 +12,7 @@ import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
 import { Metaregler } from '../gemeinsam/metaregler.js';
 import { Morphliste } from '../gemeinsam/morphliste.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 
 /** Vorgabe-Hautfarbe, wenn die Herkunft keine kennt. */
 const HAUTVORGABE = Hautfarbe.ERSATZ_FARBE;
@@ -35,12 +36,8 @@ export class Vergleichsregler {
 
     static _koerperarten(ansicht, daten) {
         const auswahl = ansicht.felder.koerperart;
-        for (const art of daten.body_types) {
-            const eintrag = document.createElement('option');
-            eintrag.value = art;
-            eintrag.textContent = art.replace(/_/g, ' ');
-            auswahl.appendChild(eintrag);
-        }
+        Auswahlfeld.ausNamen(auswahl, daten.body_types,
+            (art) => art.replace(/_/g, ' '));
         if (ansicht.defaultBodyType
             && daten.body_types.includes(ansicht.defaultBodyType)) {
             auswahl.value = ansicht.defaultBodyType;

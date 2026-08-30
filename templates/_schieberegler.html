@@ -1,3 +1,4 @@
+{% load regler %}
 {% comment %}
 Eine Reglerzeile: Beschriftung, Schieberegler, Wertanzeige.
 
@@ -12,6 +13,18 @@ Blockgrösse und stand trotzdem da.
         <span class="slider-val" id="garment-offset-val">0.006</span>
     </div>
 
+NICHT MEHR PER `{% verbatim %}{% include %}{% endverbatim %}` EINBINDEN (30.08.2026): Die Marke
+`{% verbatim %}{% regler %}{% endverbatim %}` (`core/templatetags/regler.py`) rendert diese Vorlage und
+kommt mit Stellungsangaben aus. Der Grund ist eine Zahl: Als
+`{% verbatim %}{% include … with … %}{% endverbatim %}` war die Zeile regelmaessig 150 bis 172 Zeichen
+lang, und umbrechen laesst sie sich NICHT — Djangos Lexer kennt kein DOTALL,
+ein Tag ueber zwei Zeilen wird STILL zu Text (genau so ist an dem Tag
+`/humanbody/scene/` kaputtgegangen). Als Marke passt dieselbe Zeile in
+achtzig Zeichen.
+
+`min` ist ohne Angabe 0, `schritt` ohne Angabe 1 — beides stand in 83 bzw. 93
+der 114 Aufrufe.
+
 DIE ANZEIGE-KENNUNG WIRD GERECHNET, nicht übergeben: Sie heisst in allen 133
 Fällen `<kennung>-val`, und das JavaScript verlässt sich darauf
 (`document.getElementById(id + '-val')` in `modellgenerator_probe.mjs` und in
@@ -20,18 +33,24 @@ auseinanderlaufen können — und ein Regler, dessen Anzeige ins Leere zeigt,
 bewegt sich stumm weiter.
 
 Verwendung — IN EINER ZEILE (Djangos Lexer kennt kein DOTALL; ein Tag über
-zwei Zeilen wird stillschweigend zu Text, siehe `vorlagen-tags`):
+zwei Zeilen wird stillschweigend zu Text, siehe `vorlagen-tags`). Oben im
+Kopf der Vorlage muss `{% verbatim %}{% load regler %}{% endverbatim %}` stehen:
 
-  {% verbatim %}{% include "_schieberegler.html" with kennung="garment-offset" beschriftung="Offset" min="0" max="30" wert="6" schritt="1" anzeige="0.006" %}{% endverbatim %}
+  {% verbatim %}{% regler "garment-offset" "Offset" max=30 wert=6 anzeige="0.006" %}{% endverbatim %}
+
+Die Reihenfolge der ersten beiden ist fest (Kennung, Beschriftung); alles
+Weitere wird benannt. Belegt ist der Umstieg von `Docu/umbau/regler_probe.mjs`:
+115 Regler, jeder mit denselben Grenzen und demselben Startwert wie vorher.
 
   kennung        `id` des Reglers; die Anzeige heisst `<kennung>-val`
   beschriftung   Text links
-  min/max/wert   Grenzen und Startwert
-  schritt        `step`
+  min/max/wert   Grenzen und Startwert; `min` ist ohne Angabe 0
+  schritt        `step`, ohne Angabe 1
   anzeige        Starttext der Wertanzeige
   zeilenkennung  `id` der Zeile selbst (nur wo das JS sie ein- und ausblendet)
 {% endcomment %}
 <div class="slider-row"{% if zeilenkennung %} id="{{ zeilenkennung }}"{% endif %}><label>{{ beschriftung }}</label>
-    <input type="range" id="{{ kennung }}" min="{{ min }}" max="{{ max }}" value="{{ wert }}" step="{{ schritt }}">
+    <input type="range" id="{{ kennung }}" min="{{ min|default:'0' }}" max="{{ max }}"
+           value="{{ wert }}" step="{{ schritt|default:'1' }}">
     <span class="slider-val" id="{{ kennung }}-val">{{ anzeige }}</span>
 </div>

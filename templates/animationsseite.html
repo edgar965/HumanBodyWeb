@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% comment %}
+Grundgerüst der beiden Animationsseiten (`animations`, `skeleton_test`).
+
+BEFUND `doppelcode` (30.08.2026), zwei Stellen: Der ANFANG des Inhaltsblocks
+(`</style>` · `{% templatetag openblock %} endblock {% templatetag closeblock %}` · `{% templatetag openblock %} block
+     content {% templatetag closeblock %}` ·
+`viewer-container` · `canvas-wrap` · `<canvas id="viewer-canvas">`) und sein
+ENDE (drei schließende `div`, dann `extra_scripts` mit `_importmap.html`)
+standen in beiden Vorlagen Zeichen für Zeichen gleich — und das Ende außerdem
+in `photo_to_3d.html`.
+
+Das ist kein Zufall und kein Kosmetikbefund: Beide Seiten sind DIESELBE Seite
+mit anderem Inhalt — Leinwand links, Leiste rechts, Animationsbaum, Zeitleiste.
+Wer die Hülle einer der beiden ändert, hat die andere nicht geändert; genau so
+sind die Unterschiede in den Stilen entstanden, die am 30.08.2026 aufzuräumen
+waren.
+
+DIE VIER BLÖCKE:
+
+    viewer_stile     Inhalt des `<style>`-Blocks der Seite
+    leinwand         Was ÜBER der Leinwand liegt (Knopfleisten, Beschriftungen)
+    seitenleiste     Inhalt der rechten Leiste
+    nach_viewer      Was NEBEN der Hülle steht (Hilfe-Dialoge, Overlays)
+    viewer_skript    Das `<script type="module">` der Seite
+
+`viewer_importmap` ist der einzige Block mit einer Vorbelegung: `animations`
+braucht die Importkarte mit `subdivide=1`, `skeleton_test` ohne.
+
+`_animationsstile.html` und `_importmap.html` kommen für beide von hier; eine
+Seite, die eines davon nicht braucht, gehört nicht auf dieses Gerüst.
+{% endcomment %}
+{% load static %}
+
+{% block extra_head %}
+{% include "_animationsstile.html" %}
+<style>
+{% block viewer_stile %}{% endblock %}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="viewer-container">
+    <div class="canvas-wrap">
+        <canvas id="viewer-canvas"></canvas>
+{% block leinwand %}{% endblock %}
+    </div>
+
+    <div class="viewer-panel">
+{% block seitenleiste %}{% endblock %}
+    </div>
+</div>
+{% block nach_viewer %}{% endblock %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% block viewer_importmap %}{% include "_importmap.html" %}{% endblock %}
+{% block viewer_skript %}{% endblock %}
+{% endblock %}

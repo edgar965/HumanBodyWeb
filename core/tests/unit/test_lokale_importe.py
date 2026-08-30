@@ -46,7 +46,7 @@ class LokaleImporteTest(SimpleTestCase):
             if eintrag.pruefbar and not eintrag.loesbar:
                 tot.append(str(eintrag))
         self.assertEqual(tot, [], 'Import in einer Funktion zeigt ins Leere: '
-                                 + ', '.join(tot))
+                         + ', '.join(tot))
         self.assertEqual(suche.nicht_lesbar, [],
                          'Diese Dateien parsen nicht und wurden deshalb NICHT '
                          'geprueft: %s' % suche.nicht_lesbar)

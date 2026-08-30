@@ -159,9 +159,27 @@ export class Kleiderverwaltung {
             Protokoll.fehler('kleider', 'Katalog nicht neu ladbar', fehler);
             return;
         }
+        Kleiderverwaltung.uebernehmen(daten);
+    }
+
+    /**
+     * Die Antwort des Katalog-Endpunkts in `state._garmentCatalog` legen.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Dieselben sieben Zeilen standen in
+     * `mhproxy_menue.js`. Der Katalog kommt vom Server nach KATEGORIEN
+     * geordnet, die Liste im Zustand ist flach — und jedes Stueck traegt seine
+     * Kategorie danach selbst (`_category`). Ohne dieses Feld verliert die
+     * Anzeige ihre Gruppierung, und zwar erst beim naechsten Neuzeichnen.
+     *
+     * DIE LISTE WIRD GELEERT, NICHT ERSETZT: Andere Module halten eine
+     * Referenz darauf (`state._garmentCatalog`). Eine neue Liste zuzuweisen
+     * liesse sie auf der alten sitzen.
+     */
+    static uebernehmen(daten) {
         state._garmentCatalog.length = 0;
-        for (const kategorie of Object.keys(daten.garments || {})) {
-            for (const stueck of daten.garments[kategorie]) {
+        const nachKategorie = (daten && daten.garments) || {};
+        for (const kategorie of Object.keys(nachKategorie)) {
+            for (const stueck of nachKategorie[kategorie]) {
                 stueck._category = kategorie;
                 state._garmentCatalog.push(stueck);
             }

@@ -1,4 +1,5 @@
 import { Testzustand } from './testzustand.js';
+import { Klappbereiche } from '../gemeinsam/klappbereiche.js';
 
 /**
  * Die Sichtbarkeitsschalter der Vergleichsseite.
@@ -47,11 +48,8 @@ export class Sichtschalter {
         });
     }
 
+    /** Abschnitte auf- und zuklappbar machen — siehe `Klappbereiche`. */
     static _klappabschnitte() {
-        document.querySelectorAll('.panel-section h3').forEach(h3 => {
-            h3.addEventListener('click', () => {
-                h3.closest('.panel-section').classList.toggle('collapsed');
-            });
-        });
+        Klappbereiche.verdrahten();
     }
 }

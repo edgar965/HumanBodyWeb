@@ -12,7 +12,19 @@ from ._projekt_basis import Projektvorlagen
 
 class ProjektLichtTests(TestCategory):
     name = 'Projekt: Licht-Roundtrip'
-    description = 'Speichern/Laden von Lichtspuren: Eigenschaften, Keyframes, Szenen-Overrides'
+    description = (
+        'Speichern/Laden von Lichtspuren: Eigenschaften, Keyframes, Szenen-Overrides')
+
+    @staticmethod
+    def _lichtspuren(antwort):
+        """Die Lichtspuren aus einer geladenen Projektantwort.
+
+        Stand am 30.08.2026 zehnmal wortgleich in dieser Datei — vier davon
+        meldete `doppelcode` als Block. Wer die Antwortform aendert, aendert
+        sie jetzt an einer Stelle.
+        """
+        spuren = antwort.get('project', {}).get('tracks', [])
+        return [s for s in spuren if s.get('type') == 'light']
 
     # --- Save/Load Mechanik ---
     @staticmethod
@@ -27,13 +39,16 @@ class ProjektLichtTests(TestCategory):
     def test_save_ok_flag():
         """Save response enthält ok=true"""
         r = Projektvorlagen.licht()
-        return bool(r.get('_save_ok')), 'ok-Flag OK' if r.get('_save_ok') else 'ok=false'
+        return (
+            bool(r.get('_save_ok')), 'ok-Flag OK' if r.get('_save_ok') else 'ok=false')
 
     @staticmethod
     def test_save_file_exists():
         """Gespeicherte Datei existiert im Dateisystem"""
         r = Projektvorlagen.licht()
-        return bool(r.get('_file_exists')), 'Datei existiert' if r.get('_file_exists') else 'fehlt'
+        return (
+            bool(r.get('_file_exists')),
+            'Datei existiert' if r.get('_file_exists') else 'fehlt')
 
     @staticmethod
     def test_load_http_200():
@@ -54,32 +69,37 @@ class ProjektLichtTests(TestCategory):
     def test_user_light_track_count():
         """Genau 1 Licht-Track im restored Projekt"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = [t for t in r.get('project', {}).get('tracks',
+                                                      []) if t.get('type') == 'light']
         return len(tracks) == 1, f'{len(tracks)} Tracks (erwartet: 1)'
 
     @staticmethod
     def test_user_light_color_preserved():
         """lightColor: '#ff00ff' bleibt erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
-        return tracks[0].get('lightColor') == '#ff00ff', f'got {tracks[0].get("lightColor")}'
+        return (
+            tracks[0].get('lightColor') == '#ff00ff',
+            f'got {tracks[0].get("lightColor")}')
 
     @staticmethod
     def test_user_light_intensity_preserved():
         """lightIntensity: 7.5 bleibt erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
-        return tracks[0].get('lightIntensity') == 7.5, f'got {tracks[0].get("lightIntensity")}'
+        return (
+            tracks[0].get('lightIntensity') == 7.5,
+            f'got {tracks[0].get("lightIntensity")}')
 
     @staticmethod
     def test_user_light_position_x():
         """lightPosition.x: 1.5 erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
         x = tracks[0].get('lightPosition', {}).get('x')
@@ -89,7 +109,7 @@ class ProjektLichtTests(TestCategory):
     def test_user_light_position_y():
         """lightPosition.y: 3.5 erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
         y = tracks[0].get('lightPosition', {}).get('y')
@@ -99,7 +119,7 @@ class ProjektLichtTests(TestCategory):
     def test_user_light_position_z():
         """lightPosition.z: 2.5 erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
         z = tracks[0].get('lightPosition', {}).get('z')
@@ -109,7 +129,7 @@ class ProjektLichtTests(TestCategory):
     def test_user_light_target_preserved():
         """lightTarget als Objekt erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
         tgt = tracks[0].get('lightTarget')
@@ -119,7 +139,7 @@ class ProjektLichtTests(TestCategory):
     def test_user_light_angle_preserved():
         """lightAngle: 0.7854 (45°) erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
         a = tracks[0].get('lightAngle', 0)
@@ -129,25 +149,29 @@ class ProjektLichtTests(TestCategory):
     def test_user_light_penumbra_preserved():
         """lightPenumbra: 0.42 erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
-        return tracks[0].get('lightPenumbra') == 0.42, f'got {tracks[0].get("lightPenumbra")}'
+        return (
+            tracks[0].get('lightPenumbra') == 0.42,
+            f'got {tracks[0].get("lightPenumbra")}')
 
     @staticmethod
     def test_user_light_distance_preserved():
         """lightDistance: 30.0 erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
-        return tracks[0].get('lightDistance') == 30.0, f'got {tracks[0].get("lightDistance")}'
+        return (
+            tracks[0].get('lightDistance') == 30.0,
+            f'got {tracks[0].get("lightDistance")}')
 
     @staticmethod
     def test_user_light_type_preserved():
         """lightType='spot' erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
         return tracks[0].get('lightType') == 'spot', f'got {tracks[0].get("lightType")}'
@@ -157,7 +181,7 @@ class ProjektLichtTests(TestCategory):
     def test_light_kf_count():
         """1 Licht-Keyframe im restored Track"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = ProjektLichtTests._lichtspuren(r)
         if not tracks:
             return False, 'Kein Track'
         kfs = [c for c in tracks[0].get('clips', []) if c.get('type') == 'light_kf']
@@ -167,7 +191,8 @@ class ProjektLichtTests(TestCategory):
     def test_light_kf_intensity():
         """Keyframe intensity: 12.0 erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = [t for t in r.get('project', {}).get('tracks',
+                                                      []) if t.get('type') == 'light']
         if not tracks or not tracks[0].get('clips'):
             return False, 'Kein KF'
         return tracks[0]['clips'][0].get('data', {}).get('intensity') == 12.0, ''
@@ -176,7 +201,8 @@ class ProjektLichtTests(TestCategory):
     def test_light_kf_fade_false():
         """Keyframe fade=false erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = [t for t in r.get('project', {}).get('tracks',
+                                                      []) if t.get('type') == 'light']
         if not tracks or not tracks[0].get('clips'):
             return False, 'Kein KF'
         return tracks[0]['clips'][0].get('data', {}).get('fade') is False, ''
@@ -185,7 +211,8 @@ class ProjektLichtTests(TestCategory):
     def test_light_kf_angle():
         """Keyframe angle: 0.5236 (30°) erhalten"""
         r = Projektvorlagen.licht()
-        tracks = [t for t in r.get('project', {}).get('tracks', []) if t.get('type') == 'light']
+        tracks = [t for t in r.get('project', {}).get('tracks',
+                                                      []) if t.get('type') == 'light']
         if not tracks or not tracks[0].get('clips'):
             return False, 'Kein KF'
         a = tracks[0]['clips'][0].get('data', {}).get('angle', 0)

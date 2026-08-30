@@ -6,6 +6,7 @@ import { _renderMHList } from './mhproxy_liste.js';
 import { Mhverformung } from './mhproxy_verformung.js';
 import { Kleiderkatalog } from './kleiderkatalog.js';
 import { Materialregler } from './materialregler.js';
+import { Stueckbedienung } from './stueckbedienung.js';
 
 /**
  * MhProxyBedienung — das Bedienfeld für MakeHuman-Kleidung verdrahten.
@@ -139,14 +140,8 @@ export class MhProxyBedienung {
             ?.addEventListener('click', () => this.alleEntfernen());
     }
 
+    /** Alle MakeHuman-Stuecke abnehmen — siehe `Stueckbedienung`. */
     alleEntfernen() {
-        const figur = _selectedInst();
-        if (!figur) return;
-        for (const schluessel of Object.keys(figur.clothMeshes)
-                .filter(name => name.startsWith('mh_'))) {
-            fn._removeSubMesh({ type: 'cloth', key: schluessel,
-                                meshObj: figur.clothMeshes[schluessel],
-                                charId: figur.id });
-        }
+        Stueckbedienung.alleMitVorsilbe('mh_');
     }
 }

@@ -67,6 +67,8 @@ import queue
 import subprocess
 import threading
 
+from .prozessleser import Stromleser
+
 logger = logging.getLogger('core')
 
 
@@ -81,21 +83,14 @@ class PipelineStille(TimeoutError):
 class PipelineProzess:
     """Startet einen Subprozess mit einheitlichem Zeichensatz und abgeräumten Strömen.
 
-        p = PipelineProzess.starten(cmd, cwd=..., env_extra={'CUDA_VISIBLE_DEVICES': '0'})
+        p = PipelineProzess.starten(cmd, cwd=..., env_extra={'CUDA_VISIBLE_DEVICES':
+        '0'})
         for zeile in p.stdout_zeilen(stille_timeout=300):
             ...
         p.warten(timeout=1800)
         if p.proc.returncode != 0:
             raise RuntimeError(p.fehlertext())
     """
-
-    #: So viele stderr-Zeilen werden behalten. Mehr braucht keine Fehlermeldung,
-    #: und ein Modell-Download mit Fortschrittsbalken schreibt Zehntausende.
-    STDERR_ZEILEN = 400
-
-    #: Endemarke in der stdout-Warteschlange. Eine eigene Kennung statt `None`,
-    #: damit eine leere Zeile aus der Pipeline nicht als Ende gelesen wird.
-    _ENDE = object()
 
     def __init__(self, proc, stderr_zeilen, faeden, stdout_q):
         self.proc = proc
@@ -125,20 +120,22 @@ class PipelineProzess:
             stdout=subprocess.PIPE if stdout_lesen else subprocess.DEVNULL,
             stderr=subprocess.PIPE if stderr_sammeln else subprocess.DEVNULL,
             text=True,
-            bufsize=1,                      # zeilenweise, sonst kommt Fortschritt in Schüben
+            bufsize=1,
+            # zeilenweise, sonst kommt Fortschritt in Schüben
             encoding='utf-8',
-            errors='replace',               # ein Ersatzzeichen ist besser als ein Absturz
+            errors='replace',
+            # ein Ersatzzeichen ist besser als ein Absturz
             cwd=str(cwd) if cwd else None,
             env=env,
         )
         zeilen, stderr_faden, stdout_faden, stdout_q = [], None, None, None
         if stderr_sammeln:
-            stderr_faden = threading.Thread(target=cls._stderr_lesen,
+            stderr_faden = threading.Thread(target=Stromleser.stderr_lesen,
                                             args=(proc.stderr, zeilen), daemon=True)
             stderr_faden.start()
         if stdout_lesen:
             stdout_q = queue.Queue()
-            stdout_faden = threading.Thread(target=cls._stdout_lesen,
+            stdout_faden = threading.Thread(target=Stromleser.stdout_lesen,
                                             args=(proc.stdout, stdout_q), daemon=True)
             stdout_faden.start()
         return cls(proc, zeilen, [stderr_faden, stdout_faden], stdout_q)
@@ -178,39 +175,6 @@ class PipelineProzess:
         die erst nach dem Zugriff eintreffen."""
         return self._stderr_zeilen
 
-    @staticmethod
-    def _stderr_lesen(strom, ziel):
-        # KEIN Lock um Anhängen und Kürzen, und das ist geprüft: `str.join` und
-        # `list(...)` auf der Leserseite sind C-Funktionen, die den GIL nicht
-        # abgeben — ein anderer Faden läuft währenddessen gar nicht. Zwei
-        # Modelle haben hier unabhängig ein Datenrennen vorhergesagt;
-        # `Docu/gegenprobe_stderr_race.py` hat es mit 3,2 Mio. Anhänge- und
-        # 434.000 Lesevorgängen nicht auslösen können (13.08.2026).
-        # ACHTUNG: Diese Zusicherung fällt mit dem GIL. Die Gegenprobe prüft
-        # `sys._is_gil_enabled()` mit und schlägt an, wenn sie nicht mehr gilt.
-        try:
-            for zeile in strom:
-                ziel.append(zeile)
-                if len(ziel) > PipelineProzess.STDERR_ZEILEN:
-                    del ziel[:-PipelineProzess.STDERR_ZEILEN]
-        # stumm gewollt: Der Strom wurde geschlossen — der Prozess ist fertig.
-        # Das ist das normale Ende dieses Fadens, kein Fehler.
-        except (ValueError, OSError):
-            pass
-
-    @classmethod
-    def _stdout_lesen(cls, strom, ziel_q):
-        """stdout leerlesen — ohne Rücksicht darauf, ob jemand abholt."""
-        try:
-            for zeile in strom:
-                ziel_q.put(zeile)
-        # stumm gewollt: Strom geschlossen — normales Ende. Das `finally`
-        # darunter setzt die Endmarke, sonst wartet der Abholer ewig.
-        except (ValueError, OSError):
-            pass
-        finally:
-            ziel_q.put(cls._ENDE)    # auch im Fehlerfall: sonst wartet der Abholer ewig
-
     # ------------------------------------------------------------------- Abholen
 
     def stdout_zeilen(self, stille_timeout=None):
@@ -226,7 +190,8 @@ class PipelineProzess:
         Krankheit. Und ein Prozess, den wir gerade für hängend erklärt haben,
         darf die Grafikkarte nicht weiter belegen."""
         if self._stdout_q is None:
-            raise RuntimeError('Mit stdout_lesen=False gestartet — es gibt keine Zeilen')
+            raise RuntimeError('Mit stdout_lesen=False gestartet — es gibt keine '
+                               'Zeilen')
         while True:
             try:
                 zeile = self._stdout_q.get(timeout=stille_timeout)
@@ -237,7 +202,7 @@ class PipelineProzess:
                 raise PipelineStille(
                     'Pipeline hat seit %s Sekunden nichts geschrieben und wurde '
                     'beendet' % stille_timeout)
-            if zeile is self._ENDE:
+            if zeile is Stromleser.ENDE:
                 return
             yield zeile
 

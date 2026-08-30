@@ -27,17 +27,16 @@ import time
 from django.conf import settings
 
 from .erkennungsfortschritt import Erkennungsfortschritt
+from .laufbasis import Pipelinelauf
 from .openposelauf import Openposelauf
 from .videolaenge import Videolaenge
 from ..dienste.laufende_prozesse import LaufendeProzesse
-from ..models import AppSettings
 from ..pipeline_process import PipelineProzess
 
-MAX_ERROR_CHARS = 2000  # max stderr chars to include in error messages
 logger = logging.getLogger('core')
 
 
-class Erkennung2d:
+class Erkennung2d(Pipelinelauf):
     """Ein 2D-Erkennungslauf zu genau einem Auftrag."""
 
     #: Wie lange der Erkenner schweigen darf, bevor „hängt" gilt.
@@ -50,11 +49,6 @@ class Erkennung2d:
     MODELLFELD = {'rtmpose': 'rtmpose_model_size',
                   'vitpose': 'vitpose_model_size',
                   'yolo11': 'yolo_model_size'}
-
-    def __init__(self, job, video_path, output_dir):
-        self.job = job
-        self.video_path = video_path
-        self.output_dir = output_dir
 
     # ---------------------------------------------------------------- MediaPipe
 
@@ -99,8 +93,7 @@ class Erkennung2d:
     def neuer_erkenner(self):
         """RTMPose / ViTPose / YOLO11 über die Wrapper-Skripte."""
         csv_ausgabe = str(self.output_dir / ('%s_2d.csv' % self.job.pipeline))
-        einstellungen = AppSettings.load()
-        groesse = getattr(einstellungen,
+        groesse = getattr(self.einstellungen,
                           Erkennung2d.MODELLFELD.get(self.job.pipeline, ''), 'l')
         befehl = [settings.PIPELINE_PYTHON,
                   str(settings.WRAPPERS_DIR / 'detect_2d.py'),
@@ -136,7 +129,6 @@ class Erkennung2d:
 
     @staticmethod
     def _werfen(was, pp):
-        fehler = ''.join(pp.stderr_zeilen)[-MAX_ERROR_CHARS:]
+        fehler = Pipelinelauf.fehlerausschnitt(''.join(pp.stderr_zeilen))
         raise RuntimeError('%s failed (exit code %s):\n%s'
                            % (was, pp.proc.returncode, fehler))
-

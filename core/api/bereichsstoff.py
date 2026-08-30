@@ -49,7 +49,7 @@ class Bereichsstoff:
         if flaechen is None:
             return None, 'No face topology available'
         grundlage, grundflaechen = self._grundlage(koerper.geschlecht, punkte,
-                                                  flaechen)
+                                                   flaechen)
         ergebnis = generate_builder_custom(
             grundlage, grundflaechen, self.von, self.bis,
             include_arms=self.mit_armen, looseness=self.weite,

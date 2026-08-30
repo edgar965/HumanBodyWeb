@@ -7,7 +7,7 @@ Aus `scene_object_bundle_tests.py` herausgeloest (17.08.2026, Befund
 `dateigroesse`): Die Datei hatte 422 Zeilen und eine Klasse mit 13 Tests.
 """
 from .base import TestCategory
-from ._bundle_basis import (Bundelruf, _MTL_CONTENT, _OBJ_CONTENT,
+from ._bundle_basis import (Bundelruf, Mtlbezug, _MTL_CONTENT, _OBJ_CONTENT,
                             _PNG_CONTENT)
 
 
@@ -17,7 +17,9 @@ class BundleUploadTests(TestCategory):
     #: teilen sie, zwei Kategorien duerfen sich nicht ins Bundle fassen.
     _bundle_id = 'pytest_bundle_' + str(id(object()))
 
-    description = 'Hochladen von OBJ, MTL und Textur in EIN Bundle und die Kette OBJ -> MTL -> PNG'
+    description = (
+        'Hochladen von OBJ, MTL und Textur in EIN Bundle und die Kette OBJ -> MTL -> '
+        'PNG')
 
     # --- Upload, Abruf und die Kette OBJ -> MTL -> PNG ---
     # Diese neun Tests haengen aneinander: 01 bis 03 laden hoch und merken die
@@ -43,21 +45,40 @@ class BundleUploadTests(TestCategory):
         return True, f'URL: {url[-60:]}'
 
     @classmethod
+    def _geprueft(cls, status, daten):
+        """Antwort eines Buendel-Uploads pruefen.
+
+        BEFUND `doppelcode` (30.08.2026): Diese fuenf Zeilen standen in
+        `test_02` und `test_03`.
+
+        Die Buendelkennung MUSS in der Adresse stehen — daran haengt, dass
+        OBJ, MTL und Texturen im selben Ordner landen. Fehlt sie, liegt jede
+        Datei fuer sich, und der Loader findet die Textur nicht mehr.
+
+        @return (fehlertext, url) — fehlertext ist leer, wenn alles passt
+        """
+        if status != 200:
+            return f'HTTP {status}', ''
+        url = daten.get('url', '')
+        if cls._bundle_id not in url:
+            return f'bundleId fehlt: {url}', url
+        return '', url
+
+    @classmethod
     def test_02_mtl_upload_same_bundle(cls):
         """MTL mit gleicher bundleId landet im gleichen Ordner wie OBJ"""
         status, data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'bundle_test.mtl', _MTL_CONTENT, 'text/plain'),
             ('bundleId', None, cls._bundle_id, 'text/plain'),
         ])
-        if status != 200:
-            return False, f'HTTP {status}'
-        url = data.get('url', '')
-        if cls._bundle_id not in url:
-            return False, f'bundleId fehlt: {url}'
+        fehler, url = cls._geprueft(status, data)
+        if fehler:
+            return False, fehler
         obj_dir = getattr(cls, '_obj_url', '').rsplit('/', 1)[0]
         mtl_dir = url.rsplit('/', 1)[0]
         if obj_dir != mtl_dir:
-            return False, f'OBJ/MTL in verschiedenen Ordnern: obj={obj_dir} mtl={mtl_dir}'
+            return (
+                False, f'OBJ/MTL in verschiedenen Ordnern: obj={obj_dir} mtl={mtl_dir}')
         cls._mtl_url = url
         return True, 'OBJ+MTL gleicher Bundle-Ordner'
 
@@ -68,11 +89,9 @@ class BundleUploadTests(TestCategory):
             ('object', 'bundle_tex.png', _PNG_CONTENT, 'image/png'),
             ('bundleId', None, cls._bundle_id, 'text/plain'),
         ])
-        if status != 200:
-            return False, f'HTTP {status}'
-        url = data.get('url', '')
-        if cls._bundle_id not in url:
-            return False, f'bundleId fehlt: {url}'
+        fehler, url = cls._geprueft(status, data)
+        if fehler:
+            return False, fehler
         if 'bundle_tex.png' not in url:
             return False, f'Original-Name fehlt: {url}'
         cls._tex_url = url
@@ -131,7 +150,8 @@ class BundleUploadTests(TestCategory):
 
     @classmethod
     def test_08_without_bundle_id_uses_random(cls):
-        """Upload OHNE bundleId landet trotzdem in separatem Ordner (kein Überschreiben)"""
+        """Upload OHNE bundleId landet trotzdem in separatem Ordner —
+        nichts wird überschrieben."""
         status1, data1 = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
             ('object', 'solo.obj', b'# a\nv 0 0 0\n', 'text/plain'),
         ])
@@ -148,30 +168,26 @@ class BundleUploadTests(TestCategory):
     def test_09_mtl_kd_references_texture_in_bundle(cls):
         """MTL-Inhalt referenziert 'map_Kd bundle_tex.png' und die PNG ist unter exakt
         diesem Pfad abrufbar (OBJ→MTL→PNG-Chain komplett)"""
-        if not (hasattr(cls, '_obj_url') and hasattr(cls, '_mtl_url') and hasattr(cls, '_tex_url')):
+        if not all(hasattr(cls, name)
+                   for name in ('_obj_url', '_mtl_url', '_tex_url')):
             return False, 'Vorgänger-Tests fehlgeschlagen'
         status, mtl_content = Bundelruf.abrufen(cls._mtl_url)
         if status != 200 or not mtl_content:
             return False, f'MTL-Fetch HTTP {status}'
-        import re
-        text = mtl_content.decode('utf-8', errors='ignore')
-        # Suche map_Kd (case-insensitive) und extrahiere referenzierten Dateinamen
-        m = re.search(r'^\s*map_Kd\s+(.+?)\s*$', text, re.IGNORECASE | re.MULTILINE)
-        if not m:
+        rohangabe, wortteile = Mtlbezug.aus_text(
+            mtl_content.decode('utf-8', errors='ignore'))
+        if not rohangabe:
             return False, 'map_Kd-Referenz nicht im MTL gefunden'
-        raw_ref = m.group(1).strip()
-        # MTL-Optionen (-s, -o, etc.) ignorieren — letztes Token ohne - ist Dateiname
-        tokens = [t for t in raw_ref.split() if t and not t.startswith('-')]
-        ref_name = tokens[-1] if tokens else raw_ref
-        ref_name = ref_name.replace('\\', '/').lstrip('./').split('/')[-1]
-        # Die PNG muss unter basePath + ref_name abrufbar sein
-        base = cls._obj_url.rsplit('/', 1)[0]
-        expected_tex_url = f"{base}/{ref_name}"
-        if expected_tex_url != cls._tex_url:
-            return False, f'MTL zeigt auf "{ref_name}" → URL "{expected_tex_url}", aber Textur liegt unter "{cls._tex_url}"'
-        status2, png_data = Bundelruf.abrufen(expected_tex_url)
+        name = Mtlbezug.dateiname(rohangabe, wortteile)
+        # Die PNG muss unter basePath + Dateiname abrufbar sein.
+        basis = cls._obj_url.rsplit('/', 1)[0]
+        erwartet = f'{basis}/{name}'
+        if erwartet != cls._tex_url:
+            return False, (f'MTL zeigt auf "{name}" -> URL "{erwartet}", '
+                           f'aber Textur liegt unter "{cls._tex_url}"')
+        status2, png = Bundelruf.abrufen(erwartet)
         if status2 != 200:
             return False, f'Referenzierte Textur nicht abrufbar (HTTP {status2})'
-        if not png_data.startswith(b'\x89PNG'):
+        if not png.startswith(b'\x89PNG'):
             return False, 'Referenzierter Textur-Download ist kein PNG'
-        return True, f'map_Kd="{ref_name}" → {len(png_data)}B PNG OK'
+        return True, f'map_Kd="{name}" -> {len(png)}B PNG OK'

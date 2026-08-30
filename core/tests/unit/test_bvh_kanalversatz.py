@@ -52,15 +52,14 @@ class Schreibprobe(BvhDatei):
         self.bvh = Bewegungsattrappe(gelenke)
         self.angewandt = []
 
-
-def _schreiben(ordnungen):
-    """Eine Zeile schreiben und die belegten Spalten zurückgeben."""
-    from scipy.spatial.transform import Rotation
-    probe = Schreibprobe(len(ordnungen))
-    breite = sum(k for k, _o in ordnungen)
-    werte = ['LEER'] * breite
-    probe._frame_schreiben(Rotation, werte, 0, ordnungen)
-    return werte
+    @classmethod
+    def zeile(cls, ordnungen):
+        """Eine Zeile schreiben und die belegten Spalten zurückgeben."""
+        from scipy.spatial.transform import Rotation
+        probe = cls(len(ordnungen))
+        werte = ['LEER'] * sum(k for k, _o in ordnungen)
+        probe._frame_schreiben(Rotation, werte, 0, ordnungen)
+        return werte
 
 
 class KanalversatzTest(SimpleTestCase):
@@ -72,7 +71,7 @@ class KanalversatzTest(SimpleTestCase):
 
     def test_der_uebliche_fall_bleibt_wie_er_war(self):
         """6 + 3 + 3 — die Gegenprobe, dass der Fix nichts verschiebt."""
-        werte = _schreiben([self.WURZEL, self.GELENK, self.GELENK])
+        werte = Schreibprobe.zeile([self.WURZEL, self.GELENK, self.GELENK])
         self.assertEqual(len(werte), 12)
         self.assertNotIn('LEER', werte, 'jede Spalte muss belegt sein')
         # Die Wurzelposition steht vorn und ist die des ERSTEN Gelenks.
@@ -87,7 +86,7 @@ class KanalversatzTest(SimpleTestCase):
         FOLGENDE Gelenk anfaengt — mit `+= 3` waere es Spalte 9 statt 10
         gewesen, und ab da stuende die ganze Zeile verschoben.
         """
-        werte = _schreiben([self.WURZEL, (4, 'ZXY'), self.GELENK])
+        werte = Schreibprobe.zeile([self.WURZEL, (4, 'ZXY'), self.GELENK])
         self.assertEqual(len(werte), 13)
         # 6 (Wurzel) + 4 (Gelenk mit vier Kanaelen) = Spalte 10.
         self.assertEqual(werte[9], 'LEER',
@@ -97,7 +96,7 @@ class KanalversatzTest(SimpleTestCase):
                         'auf: %s' % werte)
 
     def test_fuenf_kanaele_ebenso(self):
-        werte = _schreiben([self.WURZEL, (5, 'ZXY'), self.GELENK])
+        werte = Schreibprobe.zeile([self.WURZEL, (5, 'ZXY'), self.GELENK])
         self.assertEqual(len(werte), 14)
         self.assertEqual(werte[9:11], ['LEER', 'LEER'])
         self.assertTrue(all(w != 'LEER' for w in werte[11:14]),
@@ -127,7 +126,7 @@ class KanalversatzTest(SimpleTestCase):
         Bei drei Kanälen darf KEINE Position geschrieben werden; die drei
         Werte des Gelenks sind Drehwinkel (hier 0).
         """
-        werte = _schreiben([self.GELENK, self.GELENK])
+        werte = Schreibprobe.zeile([self.GELENK, self.GELENK])
         self.assertEqual(len(werte), 6)
         self.assertTrue(all(float(w) == 0.0 for w in werte),
                         'bei 3 Kanaelen stehen dort Drehwinkel, keine '

@@ -1,0 +1,22 @@
+{% comment %}
+Das Feld zum Ablegen oder Auswählen einer Videodatei.
+
+BEFUND `doppelcode` (30.08.2026): Stand in `upload.html` (2D-Pipeline) und
+`upload_v4.html` (3D-Pipeline) Zeile für Zeile gleich. Es ist derselbe
+Uploadschritt zweier Seiten, die sich erst danach unterscheiden — dieselbe
+Lage wie bei den Pipeline-Beschriftungen, die am 28.08.2026 schon einmal
+auseinandergelaufen waren (siehe `Uploadseiten._pipelinewahl`).
+
+`{% templatetag openblock %} if not upload_files {% templatetag closeblock %}`: Nur die 3D-Seite bietet zusätzlich
+vorhandene Dateien aus `uploads/` an — dort darf das Feld leer bleiben. Die
+2D-Seite liefert `upload_files` gar nicht, dort ist die Bedingung wahr und die
+Datei damit Pflicht. Genau so stand es vorher in beiden Vorlagen.
+
+`dropTarget` und `videoInput` sind die Kennungen, an denen `upload.js` das
+Ziehen-und-Ablegen anbindet.
+{% endcomment %}
+<div class="drop-zone" id="dropTarget">
+    <i class="fas fa-cloud-upload-alt fa-3x"></i>
+    <p>Drag & drop video here or click to browse</p>
+    <input type="file" name="video" id="videoInput" accept="video/*" {% if not upload_files %}required{% endif %}>
+</div>

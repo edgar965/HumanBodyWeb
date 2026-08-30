@@ -1,89 +1,43 @@
-{% extends "base.html" %}
+{% extends "dokuseite.html" %}
 {% load static %}
 
 {% block title %}Rigging — Dokumentation{% endblock %}
 
-{% block content %}
+{% block doku_stile %}
 <style>
-    .rigging-help {
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        color: #e0e0e0;
-        background: #0f0f1a;
-    }
-    .rigging-help * { color: inherit; }
-    .rigging-help h1, .rigging-help h2, .rigging-help h3, .rigging-help h4 { color: inherit; }
-    .rigging-help pre {
-        background: #0d1117;
-        color: #c9d1d9;
-        padding: 15px;
-        border-radius: 6px;
-        overflow-x: auto;
-        font-size: 0.85rem;
-        line-height: 1.6;
-    }
-    .rigging-help pre strong { color: #58a6ff; }
-    .rigging-help code { background: #333; padding: 3px 8px; border-radius: 3px; color: #e0e0e0; font-size: 0.85rem; }
-    .rigging-help table {
-        width: 100%;
-        border-collapse: collapse;
-        background: transparent;
-        border: none;
-        margin: 15px 0;
-    }
-    .rigging-help th {
-        background: #252535 !important;
-        color: #bbb !important;
-        padding: 10px;
-        text-align: left;
-        border-bottom: 2px solid #444;
-    }
-    .rigging-help td { color: #e0e0e0; padding: 10px; border-bottom: 1px solid #333; vertical-align: top; }
-    .rigging-help a { color: #7c5cbf; }
-    .rigging-help ol, .rigging-help ul, .rigging-help li, .rigging-help p { color: #e0e0e0; line-height: 1.8; }
-    .rigging-help .info-box { background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; }
-    .rigging-help .info-box-blue { border-left: 4px solid #4fc1ff; }
-    .rigging-help .info-box-purple { border-left: 4px solid #bb9af7; }
-    .rigging-help .info-box-green { border-left: 4px solid #73daca; }
-    .rigging-help .info-box-orange { border-left: 4px solid #ff9940; }
-    .rigging-help .info-box-red { border-left: 4px solid #f7768e; }
-    .rigging-help .tip { background: #332244; padding: 12px; border-radius: 6px; margin-top: 10px; }
-    .rigging-help .pipeline-step { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
-    .rigging-help .pipeline-step .num {
-        background: #7c5cbf;
-        color: #fff;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 0.85rem;
-        flex-shrink: 0;
-    }
-    .rigging-help .pipeline-arrow { text-align: center; color: #555; font-size: 1.2rem; }
-    .rigging-help .compare-table td:first-child { font-weight: 600; color: #bb9af7; white-space: nowrap; }
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-margin-top-20px-4fc1ff.hb-margin-top-20px-4fc1ff.hb-margin-top-20px-4fc1ff { margin-top: 20px; color: #4fc1ff; }   /* 3x */
+.hb-margin-top-20px-4fc1ff.hb-margin-top-20px-4fc1ff.hb-margin-top-20px-4fc1ff {
+    margin-top: 20px;
+    color: #4fc1ff;
+}   /* 3x */
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-color-4fc1ff.hb-color-4fc1ff.hb-color-4fc1ff { color: #4fc1ff; margin-top: 50px; }   /* 2x */
 .hb-color-73daca.hb-color-73daca.hb-color-73daca { color: #73daca; margin-top: 50px; }   /* 2x */
-.hb-margin-top-20px-ff9940.hb-margin-top-20px-ff9940.hb-margin-top-20px-ff9940 { margin-top: 20px; color: #ff9940; }   /* 2x */
+.hb-margin-top-20px-ff9940.hb-margin-top-20px-ff9940.hb-margin-top-20px-ff9940 {
+    margin-top: 20px;
+    color: #ff9940;
+}   /* 2x */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#comparison { color: #f7c948; }
+#garment { color: #ff9940; }
 </style>
-<div class="rigging-help">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite">
 
     <h1 class="hilfeseite-h1">Rigging &mdash; Wie Geometrie an Knochen gebunden wird</h1>
 
-    <p style="color: #999; font-size: 0.9rem;">Erkl&auml;rt die drei Arten von Geometrie im Projekt und wie sie jeweils an das Skeleton gebunden werden.</p>
+    <p class="doku-untertitel">Erkl&auml;rt die drei Arten von Geometrie im Projekt und wie sie jeweils an das Skeleton gebunden werden.</p>
 
     <!-- ============================================================ -->
     <!-- DAS SKELETON -->
@@ -93,9 +47,11 @@
     <div class="info-box info-box-purple">
         <p>Alles basiert auf dem <strong>DEF-Skeleton</strong> &mdash; 176 Bones aus dem Rigify-System:</p>
         <pre>
-DEF-spine (Pelvis) &rarr; .001 (Lumbar) &rarr; .002 &rarr; .003 (Chest) &rarr; .004 (Neck) &rarr; .005 &rarr; .006 (Head)
+DEF-spine (Pelvis) &rarr; .001 (Lumbar) &rarr; .002 &rarr; .003 (Chest) &rarr; .004 (Neck) &rarr; .005 &rarr; .006
+     (Head)
                                                                         &darr;
-                                                               DEF-shoulder.L &rarr; upper_arm &rarr; forearm &rarr; hand &rarr; finger...</pre>
+                                                               DEF-shoulder.L &rarr; upper_arm &rarr; forearm &rarr;
+                                                                    hand &rarr; finger...</pre>
         <p>Jeder Bone hat:</p>
         <ul>
             <li><strong>Rest-Position</strong>: Wo der Knochen in der Grundpose liegt (Head + Tail Koordinaten)</li>
@@ -110,7 +66,8 @@ DEF-spine (Pelvis) &rarr; .001 (Lumbar) &rarr; .002 &rarr; .003 (Chest) &rarr; .
     <h2 id="principle" class="hb-color-4fc1ff">Das Grundprinzip: Skinning</h2>
 
     <div class="info-box info-box-blue">
-        <p><strong>Skinning</strong> bedeutet: Jeder Vertex einer Geometrie wei&szlig;, welche Knochen ihn beeinflussen und wie stark.</p>
+        <p><strong>Skinning</strong> bedeutet: Jeder Vertex einer Geometrie wei&szlig;, welche Knochen ihn beeinflussen
+             und wie stark.</p>
 
         <pre>
 Vertex #42:
@@ -121,21 +78,22 @@ Vertex #42:
     finalPosition = 0.7 &times; boneMatrix[12] &times; originalPos
                   + 0.3 &times; boneMatrix[13] &times; originalPos</pre>
 
-        <p>Das passiert im <strong>Vertex-Shader</strong> auf der Grafikkarte &mdash; extrem schnell, f&uuml;r tausende Vertices gleichzeitig.</p>
+        <p>Das passiert im <strong>Vertex-Shader</strong> auf der Grafikkarte &mdash; extrem schnell, f&uuml;r tausende
+             Vertices gleichzeitig.</p>
         <p>Three.js nennt das einen <strong>SkinnedMesh</strong>: Ein Mesh + Skeleton + Skin-Weights.</p>
     </div>
 
     <!-- ============================================================ -->
     <!-- VERGLEICHSTABELLE -->
     <!-- ============================================================ -->
-    <h2 id="comparison" style="color: #f7c948; margin-top: 50px;">Die drei Rigging-Arten im Vergleich</h2>
+    <h2 id="comparison" class="doku-sprungziel">Die drei Rigging-Arten im Vergleich</h2>
 
     <table class="compare-table">
         <tr>
             <th></th>
-            <th style="color: #73daca;">Body Mesh</th>
-            <th style="color: #ff9940;">Garment (Kleidung)</th>
-            <th style="color: #4fc1ff;">Form (Model Generator)</th>
+            <th class="doku-body">Body Mesh</th>
+            <th class="doku-garment">Garment (Kleidung)</th>
+            <th class="doku-form">Form (Model Generator)</th>
         </tr>
         <tr>
             <td>Was ist es?</td>
@@ -152,18 +110,20 @@ Vertex #42:
         <tr>
             <td>Skin Weights</td>
             <td>Aus <code>skin_weights_base.json</code><br>(von Blender vordefiniert, pro Vertex manuell gewichtet)</td>
-            <td><strong>Vom Body &uuml;bertragen</strong><br>KDTree: n&auml;chster Body-Vertex &rarr; dessen Weights kopieren</td>
+            <td><strong>Vom Body &uuml;bertragen</strong><br>KDTree: n&auml;chster Body-Vertex &rarr; dessen Weights
+                 kopieren</td>
             <td><strong>100% pro Bone</strong><br>Jeder Vertex geh&ouml;rt zu genau einem Knochen (Weight = 1.0)</td>
         </tr>
         <tr>
             <td>Warum so?</td>
             <td>K&ouml;rper braucht weiche &Uuml;berg&auml;nge an Gelenken (Ellbogen, Knie)</td>
             <td>Kleidung soll sich wie der darunterliegende K&ouml;rper bewegen</td>
-            <td>Einfache Formen brauchen keine Gelenk&uuml;berg&auml;nge &mdash; sie geh&ouml;ren fest zu einem Knochen</td>
+            <td>Einfache Formen brauchen keine Gelenk&uuml;berg&auml;nge &mdash; sie geh&ouml;ren fest zu einem
+                 Knochen</td>
         </tr>
         <tr>
             <td>Skeleton</td>
-            <td colspan="3" style="text-align: center;"><strong>Alle drei teilen dasselbe 176-Bone DEF-Skeleton</strong></td>
+            <td class="doku-mittig" colspan="3"><strong>Alle drei teilen dasselbe 176-Bone DEF-Skeleton</strong></td>
         </tr>
         <tr>
             <td>Geometrie-Quelle</td>
@@ -207,16 +167,17 @@ Vertex #42:
 Wenn der Arm sich beugt, folgt dieser Vertex zu 60% dem Unterarm
 und zu 40% dem Oberarm &rarr; <strong>glatter &Uuml;bergang statt hartem Knick</strong></pre>
 
-        <p>Diese Weights werden in Blender <strong>manuell gemalt</strong> (Weight Painting) und in <code>skin_weights_base.json</code> exportiert.</p>
+        <p>Diese Weights werden in Blender <strong>manuell gemalt</strong> (Weight Painting) und in
+             <code>skin_weights_base.json</code> exportiert.</p>
     </div>
 
     <!-- ============================================================ -->
     <!-- GARMENTS -->
     <!-- ============================================================ -->
-    <h2 id="garment" style="color: #ff9940; margin-top: 50px;">Garment (Kleidung) im Detail</h2>
+    <h2 id="garment" class="doku-sprungziel">Garment (Kleidung) im Detail</h2>
 
     <div class="info-box info-box-orange">
-        <h3 style="margin-top: 0; color: #ff9940;">Weight Transfer vom K&ouml;rper</h3>
+        <h3 class="doku-kastentitel-garment">Weight Transfer vom K&ouml;rper</h3>
         <pre>
 F&uuml;r jeden Garment-Vertex:
     1. KDTree: Finde n&auml;chsten Body-Vertex
@@ -224,32 +185,52 @@ F&uuml;r jeden Garment-Vertex:
     3. &rarr; Garment-Vertex bewegt sich identisch zum darunterliegenden K&ouml;rper</pre>
 
         <h3 class="hb-margin-top-20px-ff9940">Fitting-Pipeline (10 Schritte)</h3>
-        <div class="pipeline-step"><div class="num">1</div><div><strong>Koordinaten-Konvertierung</strong> &mdash; Dezimeter/cm Y-up &rarr; Meter Z-up</div></div>
+        <div class="pipeline-step"><div
+             class="num">1</div><div><strong>Koordinaten-Konvertierung</strong> &mdash; Dezimeter/cm Y-up &rarr; Meter
+                  Z-up</div></div>
         <div class="pipeline-arrow">&darr;</div>
-        <div class="pipeline-step"><div class="num">2</div><div><strong>Feet-to-Feet Alignment</strong> &mdash; F&uuml;&szlig;e ausrichten</div></div>
+        <div class="pipeline-step"><div
+             class="num">2</div><div><strong>Feet-to-Feet Alignment</strong> &mdash; F&uuml;&szlig;e
+                  ausrichten</div></div>
         <div class="pipeline-arrow">&darr;</div>
-        <div class="pipeline-step"><div class="num">3</div><div><strong>Arm-Retarget</strong> &mdash; T-Pose &rarr; A-Pose + L&auml;ngen-Stretch</div></div>
+        <div class="pipeline-step"><div
+             class="num">3</div><div><strong>Arm-Retarget</strong> &mdash; T-Pose &rarr; A-Pose +
+                  L&auml;ngen-Stretch</div></div>
         <div class="pipeline-arrow">&darr;</div>
-        <div class="pipeline-step"><div class="num">4</div><div><strong>Coverage Expansion</strong> &mdash; K&ouml;rper muss bedeckt sein</div></div>
+        <div class="pipeline-step"><div
+             class="num">4</div><div><strong>Coverage Expansion</strong> &mdash; K&ouml;rper muss bedeckt
+                  sein</div></div>
         <div class="pipeline-arrow">&darr;</div>
-        <div class="pipeline-step"><div class="num">5</div><div><strong>Subdivide</strong> &mdash; Mehr Aufl&ouml;sung vor Shrinkwrap</div></div>
+        <div class="pipeline-step"><div
+             class="num">5</div><div><strong>Subdivide</strong> &mdash; Mehr Aufl&ouml;sung vor Shrinkwrap</div></div>
         <div class="pipeline-arrow">&darr;</div>
-        <div class="pipeline-step"><div class="num">6</div><div><strong>Soft Shrinkwrap</strong> &mdash; Auf K&ouml;rperoberfl&auml;che projizieren + Offset</div></div>
+        <div class="pipeline-step"><div
+             class="num">6</div><div><strong>Soft Shrinkwrap</strong> &mdash; Auf K&ouml;rperoberfl&auml;che
+                  projizieren + Offset</div></div>
         <div class="pipeline-arrow">&darr;</div>
-        <div class="pipeline-step"><div class="num">7</div><div><strong>Push-Outside-Body</strong> &mdash; Durchdringende Vertices rausschieben</div></div>
+        <div class="pipeline-step"><div
+             class="num">7</div><div><strong>Push-Outside-Body</strong> &mdash; Durchdringende Vertices
+                  rausschieben</div></div>
         <div class="pipeline-arrow">&darr;</div>
-        <div class="pipeline-step"><div class="num">8</div><div><strong>Laplacian Smoothing</strong> &mdash; Artefakte gl&auml;tten</div></div>
+        <div class="pipeline-step"><div
+             class="num">8</div><div><strong>Laplacian Smoothing</strong> &mdash; Artefakte gl&auml;tten</div></div>
         <div class="pipeline-arrow">&darr;</div>
-        <div class="pipeline-step"><div class="num">9</div><div><strong>Weight Transfer</strong> &mdash; KDTree nearest-vertex</div></div>
+        <div class="pipeline-step"><div
+             class="num">9</div><div><strong>Weight Transfer</strong> &mdash; KDTree nearest-vertex</div></div>
         <div class="pipeline-arrow">&darr;</div>
-        <div class="pipeline-step"><div class="num">10</div><div><strong>SkinnedMesh im Browser</strong> &mdash; Bind an Shared Skeleton</div></div>
+        <div class="pipeline-step"><div
+             class="num">10</div><div><strong>SkinnedMesh im Browser</strong> &mdash; Bind an Shared
+                  Skeleton</div></div>
 
         <h3 class="hb-margin-top-20px-ff9940">Clipping-Vermeidung</h3>
         <table>
             <tr><th>Wo</th><th>Methode</th><th>Wie</th></tr>
-            <tr><td>Server (Fitting)</td><td>Push-Outside-Body</td><td>Normal-basierte Distanzpr&uuml;fung, Deficit-Push entlang Normalen</td></tr>
-            <tr><td>Server (Fitting)</td><td>Shrinkwrap + Offset</td><td>6mm Abstand zur K&ouml;rperoberfl&auml;che</td></tr>
-            <tr><td>Browser (Render)</td><td>Polygon Offset</td><td><code>polygonOffsetFactor: -1</code> &mdash; Depth-Buffer Bias gegen Z-Fighting</td></tr>
+            <tr><td>Server (Fitting)</td><td>Push-Outside-Body</td><td>Normal-basierte Distanzpr&uuml;fung,
+                 Deficit-Push entlang Normalen</td></tr>
+            <tr><td>Server (Fitting)</td><td>Shrinkwrap + Offset</td><td>6mm Abstand zur
+                 K&ouml;rperoberfl&auml;che</td></tr>
+            <tr><td>Browser (Render)</td><td>Polygon Offset</td><td><code>polygonOffsetFactor: -1</code> &mdash;
+                 Depth-Buffer Bias gegen Z-Fighting</td></tr>
         </table>
     </div>
 
@@ -259,7 +240,7 @@ F&uuml;r jeden Garment-Vertex:
     <h2 id="forms" class="hb-color-4fc1ff">Form (Model Generator) im Detail</h2>
 
     <div class="info-box info-box-blue">
-        <h3 style="margin-top: 0; color: #4fc1ff;">Einfachstes Rigging: 100% pro Bone</h3>
+        <h3 class="doku-kastentitel-form">Einfachstes Rigging: 100% pro Bone</h3>
         <p>Im Model Generator wird jede Form <strong>direkt einem Knochen zugeordnet</strong>:</p>
         <pre>
 Tutu am DEF-spine.002 (H&uuml;fte):
@@ -268,7 +249,8 @@ Tutu am DEF-spine.002 (H&uuml;fte):
 
 &rarr; Bewegt sich der H&uuml;ftknochen, bewegt sich das gesamte Tutu starr mit.</pre>
 
-        <p><strong>Kein Blending n&ouml;tig</strong> &mdash; die Form geh&ouml;rt komplett zu einem Bone. Deshalb kein weiches Biegen an Gelenken, aber auch kein kompliziertes Weight-Painting.</p>
+        <p><strong>Kein Blending n&ouml;tig</strong> &mdash; die Form geh&ouml;rt komplett zu einem Bone. Deshalb kein
+             weiches Biegen an Gelenken, aber auch kein kompliziertes Weight-Painting.</p>
 
         <h3 class="hb-margin-top-20px-4fc1ff">Zwei Modi</h3>
         <table>
@@ -307,7 +289,8 @@ Tutu am DEF-spine.002 (H&uuml;fte):
             <tr><td>Diamant</td><td>OctahedronGeometry</td><td>&mdash;</td></tr>
             <tr><td>Tutu</td><td>LatheGeometry (doppelseitig)</td><td>Dicke, Rand-Absenkung, Position</td></tr>
             <tr><td>Spiral-Tutu</td><td>Mehrere LatheGeometry-Scheiben</td><td>Windungen, Radien, Innerer Rock</td></tr>
-            <tr><td>Spiral-Band</td><td>Custom BufferGeometry (Helix)</td><td>Windungen, Bandbreite, Droop, Innerer Rock</td></tr>
+            <tr><td>Spiral-Band</td><td>Custom BufferGeometry (Helix)</td><td>Windungen, Bandbreite, Droop, Innerer
+                 Rock</td></tr>
             <tr><td>Rock</td><td>LatheGeometry (Hohlkegel)</td><td>Radius oben/unten, Dicke</td></tr>
         </table>
     </div>
@@ -336,20 +319,21 @@ GPU Vertex Shader f&uuml;r JEDES SkinnedMesh:
 renderer.render(scene, camera)</pre>
 
         <div class="tip">
-            <strong>Alles teilt dasselbe Skeleton.</strong> Ein <code>mixer.update()</code> bewegt Body + alle Garments + alle Forms gleichzeitig. Kein zus&auml;tzlicher Code pro Objekt n&ouml;tig.
+            <strong>Alles teilt dasselbe Skeleton.</strong> Ein <code>mixer.update()</code> bewegt Body + alle Garments
+                 + alle Forms gleichzeitig. Kein zus&auml;tzlicher Code pro Objekt n&ouml;tig.
         </div>
     </div>
 
     <!-- ============================================================ -->
     <!-- ZUSAMMENFASSUNG -->
     <!-- ============================================================ -->
-    <div style="margin-top: 60px; padding: 20px; background: #1a1a2e; border-radius: 8px; text-align: center;">
+    <div class="doku-abschluss">
         <h2 class="hilfeseite-kasten-h2">Zusammenfassung</h2>
-        <table style="margin: 20px auto; text-align: left;">
+        <table class="doku-abschlusstabelle">
             <tr><th></th><th>Weights</th><th>Quelle</th><th>Animiert?</th></tr>
-            <tr><td style="color: #73daca; font-weight: bold;">Body</td><td>Blended (manuell gemalt)</td><td>Server (JSON + Morphs)</td><td>Ja</td></tr>
-            <tr><td style="color: #ff9940; font-weight: bold;">Garment</td><td>Vom Body &uuml;bertragen (KDTree)</td><td>Server (Fitting-Pipeline)</td><td>Ja</td></tr>
-            <tr><td style="color: #4fc1ff; font-weight: bold;">Form</td><td>100% pro Bone</td><td>Client (Three.js Geometrie)</td><td>Ja (Rigify) / Nein (Rig)</td></tr>
+            <tr class="doku-body-fett"><td>Body</td><td>Blended (manuell gemalt)</td><td>Server (JSON + Morphs)</td><td>Ja</td></tr>
+            <tr class="doku-garment-fett"><td>Garment</td><td>Vom Body &uuml;bertragen (KDTree)</td><td>Server (Fitting-Pipeline)</td><td>Ja</td></tr>
+            <tr class="doku-form-fett"><td>Form</td><td>100% pro Bone</td><td>Client (Three.js Geometrie)</td><td>Ja (Rigify) / Nein (Rig)</td></tr>
         </table>
     </div>
 

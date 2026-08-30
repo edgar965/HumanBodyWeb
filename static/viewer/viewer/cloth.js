@@ -10,9 +10,9 @@ import { Stoffvorlagen } from './cloth/stoffvorlagen.js';
 import { Stoffbauer } from './cloth/stoffbauer.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { Hautnetz } from '../gemeinsam/hautnetz.js';
+import { Stoffabruf } from '../gemeinsam/stoffabruf.js';
 
 /**
  * Kleidungs-Bedienfeld aufbauen.
@@ -47,26 +47,12 @@ export async function loadCloth(key, params, color) {
     ensureSkinned();
 
     try {
-        const qs = Object.entries(params)
-            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-        const data = await Serverabruf.json(`/api/character/cloth/?${qs}`);
-        if (data.error) { console.error('Cloth error:', data.error); return; }
+        const stoff = await Stoffabruf.netz(params, () => removeClothRegion(key));
+        if (!stoff) return;
+        const { daten: data, geometrie: geo } = stoff;
 
-        removeClothRegion(key);
-
-        const geo = Netzgeometrie.bauen(data, THREE);
-
-        let matColor;
-        if (color) {
-            matColor = new THREE.Color(color);
-        } else {
-            const colorPicker = document.getElementById('cloth-color');
-            matColor = colorPicker
-                ? new THREE.Color(colorPicker.value)
-                : new THREE.Color(data.color[0], data.color[1], data.color[2]);
-        }
-
-        const mat = new THREE.MeshStandardMaterial({ color: matColor, roughness: 0.8, metalness: 0.0, side: THREE.DoubleSide });
+        const mat = Stoffabruf.material(
+            Stoffabruf.farbe(data, { wunsch: color, farbfeld: 'cloth-color' }));
 
         const mesh = Hautnetz.bauen(geo, mat, state, data);
 
@@ -74,12 +60,19 @@ export async function loadCloth(key, params, color) {
         state.clothParams[key] = { params, color: '#' + mesh.material.color.getHexString() };
         state.scene.add(mesh);
 
-        Protokoll.debug('Viewer', `Cloth ${key}: ${data.vertex_count} verts, ${data.face_count} tris, skinned=${mesh.isSkinnedMesh || false}`);
+        Protokoll.debug('Viewer',
+            `Cloth ${key}: ${data.vertex_count} verts, ${data.face_count} tris, skinned=${mesh.isSkinnedMesh || false}`);
         fn.updateEquippedList();
     } catch (e) {
         console.error('Failed to load cloth:', e);
+    } finally {
+        // `finally`, NICHT hinter dem try (Befund 30.08.2026): Der frueher
+        // dort stehende Aufruf wurde bei `return` im Fehlerfall uebersprungen.
+        // Antwortete der Server einmal mit `error`, blieben die drei
+        // Erzeugen-Knoepfe bis zum Neuladen der Seite grau — ohne Meldung, ohne
+        // erkennbaren Grund.
+        createBtns.forEach(b => b.disabled = false);
     }
-    createBtns.forEach(b => b.disabled = false);
 }
 
 export function removeClothRegion(key) {

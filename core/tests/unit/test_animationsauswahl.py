@@ -21,18 +21,19 @@ from django.test import TestCase, override_settings
 from core.dienste.animationsauswahl import Animationsauswahl
 
 
-def _baum_anlegen(wurzel, inhalt):
-    for kategorie, dateien in inhalt.items():
-        ordner = Path(wurzel) / 'data' / 'animations' / 'bvh' / kategorie
-        ordner.mkdir(parents=True, exist_ok=True)
-        for datei in dateien:
-            (ordner / datei).write_text('HIERARCHY\n', encoding='utf-8')
-
-
 class AnimationsBaum:
     """Gemeinsamer Testbaum. Bewusst KEIN TestCase, sondern eine Beimischung —
     als Basisklasse liefen die Tests der Basis in jeder Unterklasse noch einmal.
     """
+
+    @staticmethod
+    def anlegen(wurzel, inhalt):
+        """{Kategorie: [Dateiname]} als Verzeichnisbaum auf die Platte."""
+        for kategorie, dateien in inhalt.items():
+            ordner = Path(wurzel) / 'data' / 'animations' / 'bvh' / kategorie
+            ordner.mkdir(parents=True, exist_ok=True)
+            for datei in dateien:
+                (ordner / datei).write_text('HIERARCHY\n', encoding='utf-8')
 
     @classmethod
     def setUpClass(cls):
@@ -41,7 +42,7 @@ class AnimationsBaum:
         basis = Path(settings.BASE_DIR).parent / 'ProjektTemp'
         basis.mkdir(exist_ok=True)
         cls.wurzel = tempfile.mkdtemp(prefix='animauswahl_', dir=str(basis))
-        _baum_anlegen(cls.wurzel, {
+        cls.anlegen(cls.wurzel, {
             'Aist': ['tanz_01.bvh', 'tanz_02.bvh'],
             'Bandai 1': ['gehen.bvh'],
             'Leer': [],
@@ -103,7 +104,8 @@ class AnimationsauswahlTest(AnimationsBaum, TestCase):
     def test_zerlegen_kennt_beide_wertformate(self):
         self.assertEqual(Animationsauswahl.zerlegen('/api/character/bvh/Aist/tanz_01/'),
                          ('Aist', 'tanz_01'))
-        self.assertEqual(Animationsauswahl.zerlegen('Aist/tanz_01'), ('Aist', 'tanz_01'))
+        self.assertEqual(Animationsauswahl.zerlegen('Aist/tanz_01'), ('Aist',
+                                                                      'tanz_01'))
         for unsinn in ('', None, 'nurname', 'a/b/c/d'):
             self.assertIsNone(Animationsauswahl.zerlegen(unsinn))
 

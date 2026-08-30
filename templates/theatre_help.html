@@ -1,28 +1,10 @@
-{% extends "base.html" %}
+{% extends "dokuseite.html" %}
 {% load static %}
 
 {% block title %}HumanBody · Theatre Help{% endblock %}
 
-{% block content %}
+{% block doku_stile %}
 <style>
-    .theatre-help {
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        color: #e0e0e0;
-        background: #0f0f1a;
-    }
-    .theatre-help * { color: inherit; }
-    .theatre-help h1, .theatre-help h2, .theatre-help h3, .theatre-help h4 { color: inherit; }
-    .theatre-help pre { background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto; }
-    .theatre-help pre strong { color: #58a6ff; }
-    .theatre-help code { background: #333; padding: 3px 8px; border-radius: 3px; color: #e0e0e0; }
-    .theatre-help table { background: transparent; border: none; }
-    .theatre-help th { background: #252535 !important; color: #bbb !important; }
-    .theatre-help td { color: #e0e0e0; }
-    .theatre-help a { color: #7c5cbf; }
-    .theatre-help ol, .theatre-help ul, .theatre-help li, .theatre-help p { color: #e0e0e0; }
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
@@ -106,8 +88,17 @@
 .hb-color-e74c3c.hb-color-e74c3c.hb-color-e74c3c { color: #e74c3c; }   /* 2x */
 .hb-color-f7c948.hb-color-f7c948.hb-color-f7c948 { color: #f7c948; margin-top: 50px; }   /* 2x */
 .hb-color-ffc080.hb-color-ffc080.hb-color-ffc080 { color: #ffc080; margin-top: 20px; }   /* 2x */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#studio { color: #bb9af7; }
+#probleme { color: #f7768e; }
 </style>
-<div class="theatre-help">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite">
 
     <h1 class="hilfeseite-h1">Theatre.js — Vollständige Anleitung</h1>
 
@@ -120,7 +111,7 @@
         <h3 class="hb-margin-top-0">Kamera bewegen (Maus)</h3>
         <table class="hb-width-100-f">
             <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #333; width: 45%;"><strong>Rechtsklick + Ziehen</strong></td>
+                <td class="doku-zelle-breit"><strong>Rechtsklick + Ziehen</strong></td>
                 <td class="hb-zelle">Kamera verschieben (Pan)</td>
             </tr>
             <tr>
@@ -197,7 +188,7 @@
     <div class="hb-background-1a2332-2">
         <h3 class="hb-margin-top-0-3">Kamerawechsel: Totale &rarr; Nahaufnahme</h3>
 
-        <h4 style="color: #ffc080;">Harter Schnitt (Cut)</h4>
+        <h4 class="doku-zwischentitel">Harter Schnitt (Cut)</h4>
         <p>Zwei Keyframes direkt nebeneinander setzen:</p>
         <pre class="hb-background-0d1117">
 Keyframe 1:  Zeit = 5.00s  |  Position z = 6   |  FOV = 50  (Totale)
@@ -267,7 +258,7 @@ Keyframe 2:  Zeit = 6.0s  |  Position z = 1.5 |  FOV = 28  (Nahaufnahme)
             <li>Achsen-Pfeile (rot/grün/blau) erscheinen</li>
             <li>Pfeil <strong>ziehen</strong> um das Licht zu verschieben</li>
         </ol>
-        <p style="margin-top: 10px;"><strong>Alternativ:</strong> Rechtes Panel &rarr; Tab "Eigenschaften" &rarr; Position X/Y/Z direkt eingeben.</p>
+        <p class="doku-absatz-abstand"><strong>Alternativ:</strong> Rechtes Panel &rarr; Tab "Eigenschaften" &rarr; Position X/Y/Z direkt eingeben.</p>
         <p><strong>Toolbar-Button "Licht-Icons"</strong> schaltet die Kegel-Anzeige ein/aus.</p>
     </div>
 
@@ -276,7 +267,7 @@ Keyframe 2:  Zeit = 6.0s  |  Position z = 1.5 |  FOV = 28  (Nahaufnahme)
         <h3 class="hb-margin-top-0-4">Licht-Einstellungen ändern</h3>
         <table class="hb-width-100-f">
             <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #333; width: 30%;"><strong>Intensität</strong></td>
+                <td class="doku-zelle-schmal"><strong>Intensität</strong></td>
                 <td class="hb-zelle">Properties-Tab &rarr; Intensity-Slider (0 = aus, 100 = max)</td>
             </tr>
             <tr>
@@ -359,9 +350,9 @@ Keyframe 2:  Zeit = 5s  |  Position x=+5, y=4, z=3   (rechts)
     <!-- ============================================================ -->
     <h2 id="szene" class="hb-color-73daca">Komplette Szene aufbauen</h2>
 
-    <div style="background: #1a2332; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #73daca;">
+    <div class="doku-kasten-szene">
         <h3 class="hilfeseite-beispiel-h3">Beispiel: Dramatische Tanzszene</h3>
-        <pre style="background: #0d1117; color: #c9d1d9; padding: 15px; border-radius: 6px; overflow-x: auto; line-height: 1.8;">
+        <pre class="doku-quelltext">
 <strong>1. Setup</strong>
    Settings &rarr; "Cinematic Moody" (dunkle Stimmung)
    Modelle-Tab &rarr; "FemaleWithHair" laden
@@ -391,9 +382,9 @@ Keyframe 2:  Zeit = 5s  |  Position x=+5, y=4, z=3   (rechts)
     <!-- ============================================================ -->
     <!-- THEATRE STUDIO -->
     <!-- ============================================================ -->
-    <h2 id="studio" style="color: #bb9af7; margin-top: 50px;">Theatre.js Studio (Profi-Timeline)</h2>
+    <h2 id="studio" class="doku-sprungziel">Theatre.js Studio (Profi-Timeline)</h2>
 
-    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #bb9af7;">
+    <div class="doku-kasten-studio">
         <h3 class="hb-margin-top-0">Studio ein-/ausschalten</h3>
         <p>Toolbar-Button <strong>"Studio"</strong> &rarr; Theatre.js Studio-Overlay erscheint am unteren Rand.</p>
         <p>Das Studio bietet feinere Kontrolle als das Keyframes-Panel:</p>
@@ -439,7 +430,7 @@ Keyframe 2:  Zeit = 5s  |  Position x=+5, y=4, z=3   (rechts)
     <div class="hb-background-1e1e2e-2">
         <table class="hb-width-100-f">
             <tr class="hb-background-252535">
-                <th style="padding: 10px; text-align: left; border-bottom: 2px solid #444; width: 40%;">Taste</th>
+                <th class="doku-kopfzelle-breit">Taste</th>
                 <th class="hb-kopfzelle">Aktion</th>
             </tr>
             <tr>
@@ -562,7 +553,7 @@ Keyframe 2:  Zeit = 5s  |  Position x=+5, y=4, z=3   (rechts)
     <!-- ============================================================ -->
     <h2 id="export" class="hb-color-73daca">Video Export</h2>
 
-    <div style="background: #1e1e2e; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #73daca;">
+    <div class="doku-kasten-export">
         <ol class="hb-line-height-2">
             <li>Animation fertig aufgebaut (Kamera + Lichter + BVH)</li>
             <li>Menü <strong>"Datei"</strong> &rarr; <strong>"Export MP4"</strong></li>
@@ -576,7 +567,7 @@ Keyframe 2:  Zeit = 5s  |  Position x=+5, y=4, z=3   (rechts)
     <!-- ============================================================ -->
     <!-- TROUBLESHOOTING -->
     <!-- ============================================================ -->
-    <h2 id="probleme" style="color: #f7768e; margin-top: 50px;">Häufige Probleme</h2>
+    <h2 id="probleme" class="doku-sprungziel">Häufige Probleme</h2>
 
     <div class="hb-background-2d1b1b">
         <strong>Character liegt auf dem Boden!</strong><br>
@@ -599,9 +590,9 @@ Keyframe 2:  Zeit = 5s  |  Position x=+5, y=4, z=3   (rechts)
     </div>
 
     <!-- Footer -->
-    <div style="margin-top: 50px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; text-align: center;">
+    <div class="doku-schlusskasten">
         <h2 class="hilfeseite-kasten-h2">Bereit?</h2>
-        <a href="{% url 'theatre' %}" style="display: inline-block; background: white; color: #667eea; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 10px;">
+        <a class="doku-schlussknopf" href="{% url 'theatre' %}">
             Zur Theatre Seite &rarr;
         </a>
     </div>

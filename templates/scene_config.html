@@ -1,11 +1,10 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static regler %}
 
 {% block title %}HumanBody · Szene{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
+{% include "_viewerstile.html" %}
 <link rel="stylesheet" href="{% static 'css/viewer_seitenleiste.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/menueleiste.css' %}?t={% now 'U' %}">
 <style>
@@ -275,22 +274,13 @@
         gap: 8px;
         justify-content: flex-end;
     }
+    /* Rahmen, Farbe, Übergang: `stilhelfer.css`. Hier nur die Größe. */
     .scene-modal-footer button {
         padding: 7px 16px;
         font-size: 0.82rem;
         border-radius: 5px;
-        cursor: pointer;
-        border: 1px solid var(--border);
-        background: var(--bg-card);
-        color: var(--text);
-        transition: all 0.15s;
     }
     .scene-modal-footer button:hover { border-color: var(--accent); }
-    .scene-modal-footer button.primary {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
-    }
     .scene-modal-footer button.primary:hover { opacity: 0.9; }
 
     /* Preset / Scene list inside modal */
@@ -382,6 +372,8 @@
         border-bottom: 1px solid var(--border);
         flex-shrink: 0;
     }
+    /* Farbe, Zeiger, Unterkante: `stilhelfer.css`. Diese Seite hat ACHT
+       Reiter, deshalb `flex: 0 0 auto` mit Umbruch statt gleicher Breite. */
     .panel-tab {
         flex: 0 0 auto;
         text-align: center;
@@ -389,11 +381,6 @@
         font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.03em;
-        color: var(--text-muted);
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        user-select: none;
-        transition: color 0.15s;
     }
 
     /* ===== Properties (Eigenschaften tab) ===== */
@@ -573,7 +560,10 @@
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-align-items-center.hb-align-items-center.hb-align-items-center { align-items:center; }   /* 4x */
 .hb-flex-1-d.hb-flex-1-d.hb-flex-1-d { flex:1; font-size:0.7rem; padding:6px 4px; }   /* 3x */
-.hb-font-size-0-75rem-b.hb-font-size-0-75rem-b.hb-font-size-0-75rem-b { font-size:0.75rem; padding:4px 10px; }   /* 3x */
+.hb-font-size-0-75rem-b.hb-font-size-0-75rem-b.hb-font-size-0-75rem-b {
+    font-size:0.75rem;
+    padding:4px 10px;
+}   /* 3x */
 .hb-font-size-0-7rem.hb-font-size-0-7rem.hb-font-size-0-7rem {
     font-size:0.7rem;
     color:var(--text-secondary);
@@ -590,13 +580,6 @@
     color:var(--text-secondary);
     font-weight:600;
 }   /* 4x */
-.hb-max-height-300px.hb-max-height-300px.hb-max-height-300px {
-    max-height:300px;
-    margin-bottom:0;
-    overflow-y:auto;
-    resize:vertical;
-    min-height:80px;
-}   /* 3x */
 .hb-width-100-c.hb-width-100-c.hb-width-100-c { width:100%; margin-top:8px; }   /* 3x */
 .hb-width-auto.hb-width-auto.hb-width-auto { width:auto; margin-left:8px; }   /* 4x */
 
@@ -640,7 +623,8 @@
                     <div class="menu-item" data-action="new">Neu <span class="shortcut">Ctrl+N</span></div>
                     <div class="menu-item" data-action="load">Laden... <span class="shortcut">Ctrl+O</span></div>
                     <div class="menu-item" data-action="save">Speichern <span class="shortcut">Ctrl+S</span></div>
-                    <div class="menu-item" data-action="save-as">Speichern unter... <span class="shortcut">Ctrl+Shift+S</span></div>
+                    <div class="menu-item" data-action="save-as">Speichern unter... <span
+                         class="shortcut">Ctrl+Shift+S</span></div>
                     <div class="menu-sep"></div>
                     <div class="menu-item" data-action="default-scene">Default Szene</div>
                     <div class="menu-sep"></div>
@@ -658,10 +642,12 @@
             <div class="menu">
                 <div class="menu-title">Bearbeiten</div>
                 <div class="menu-dropdown">
-                    <div class="menu-item" onclick="window.__sceneUndo && window.__sceneUndo()">Undo <span class="shortcut">Ctrl+Shift+U</span></div>
+                    <div class="menu-item" onclick="window.__sceneUndo && window.__sceneUndo()">Undo <span
+                         class="shortcut">Ctrl+Shift+U</span></div>
                     <div class="menu-item" onclick="window.__sceneRedo && window.__sceneRedo()">Redo</div>
                     <div class="menu-sep"></div>
-                    <div class="menu-item" data-action="deselect">Auswahl aufheben <span class="shortcut">Esc</span></div>
+                    <div class="menu-item" data-action="deselect">Auswahl aufheben <span
+                         class="shortcut">Esc</span></div>
                     <div class="menu-item" data-action="delete">L&ouml;schen <span class="shortcut">Del</span></div>
                     <div class="menu-sep"></div>
                     <div class="menu-item" data-action="clear-all">Alles l&ouml;schen</div>
@@ -690,7 +676,8 @@
                     <div class="menu-item checkable checked" data-action="toggle-model">Modell</div>
                     <div class="menu-item checkable" data-action="toggle-rig">Rig</div>
                     <div class="menu-sep"></div>
-                    <div class="menu-item radio checked" data-action="mode-translate">Translate <span class="shortcut">G</span></div>
+                    <div class="menu-item radio checked" data-action="mode-translate">Translate <span
+                         class="shortcut">G</span></div>
                     <div class="menu-item radio" data-action="mode-rotate">Rotate <span class="shortcut">R</span></div>
                     <div class="menu-item radio" data-action="mode-scale">Scale <span class="shortcut">S</span></div>
                     <div class="menu-sep"></div>
@@ -718,25 +705,25 @@
             <div class="menu">
                 <div class="menu-title">Hilfe</div>
                 <div class="menu-dropdown">
-                    <a class="menu-item" href="{% url 'rigging_help' %}" target="_blank" style="color:inherit;text-decoration:none;">Rigging</a>
+                    <a class="menu-item menueverweis" href="{% url 'rigging_help' %}" target="_blank">Rigging</a>
                 </div>
             </div>
-            <div style="display:flex;align-items:center;gap:2px;margin-left:12px;">
-                <button onclick="window.__sceneUndo && window.__sceneUndo()" title="Undo (Ctrl+Z)" class="menu-title hb-cursor-pointer"><i class="fas fa-undo"></i></button>
-                <button onclick="window.__sceneRedo && window.__sceneRedo()" title="Redo (Ctrl+Y oder Ctrl+Shift+Z)" class="menu-title hb-cursor-pointer"><i class="fas fa-redo"></i></button>
+            <div class="kopfzeilengruppe">
+                <button onclick="window.__sceneUndo && window.__sceneUndo()" title="Undo (Ctrl+Z)"
+                     class="menu-title hb-cursor-pointer"><i class="fas fa-undo"></i></button>
+                <button onclick="window.__sceneRedo && window.__sceneRedo()" title="Redo (Ctrl+Y oder Ctrl+Shift+Z)"
+                     class="menu-title hb-cursor-pointer"><i class="fas fa-redo"></i></button>
             </div>
             <div class="menubar-right">
                 <div class="transform-btn-group">
-                    <button class="transform-btn active" data-mode="translate" title="Translate (G)"><i class="fas fa-arrows-alt"></i></button>
-                    <button class="transform-btn" data-mode="rotate" title="Rotate (R)"><i class="fas fa-sync-alt"></i></button>
-                    <button class="transform-btn" data-mode="scale" title="Scale (S)"><i class="fas fa-expand-arrows-alt"></i></button>
+                    <button class="transform-btn active" data-mode="translate" title="Translate (G)"><i
+                         class="fas fa-arrows-alt"></i></button>
+                    <button class="transform-btn" data-mode="rotate" title="Rotate (R)"><i
+                         class="fas fa-sync-alt"></i></button>
+                    <button class="transform-btn" data-mode="scale" title="Scale (S)"><i
+                         class="fas fa-expand-arrows-alt"></i></button>
                 </div>
-                <div class="toggle-btn-group">
-                    <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i></button>
-                    <button id="clothes-toggle" class="viewer-btn active" title="Kleider ein/ausblenden"><i class="fas fa-tshirt"></i></button>
-                    <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i></button>
-                </div>
-                <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
+                {% include "_ansichtsschalter.html" %}
             </div>
     </div>
     <div class="viewer-row">
@@ -751,7 +738,7 @@
                 </button>
             </div>
             <ul id="character-list"></ul>
-            <div class="kbd-hint" style="padding:0 12px 6px;">
+            <div class="kbd-hint tastenhinweis-fuss">
                 <kbd>G</kbd> Translate <kbd>R</kbd> Rotate <kbd>S</kbd> Scale <kbd>Del</kbd> Delete
             </div>
         </div>
@@ -792,24 +779,24 @@
                     <!-- Garment Properties (garment context) -->
                     <div class="prop-section hb-versteckt" id="prop-garment-section">
                         <div class="prop-section-title">Garment Eigenschaften</div>
-                        {% include "_schieberegler.html" with kennung="prop-garment-offset" beschriftung="Offset" min="0" max="15" wert="6" schritt="1" anzeige="0.006" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-stiffness" beschriftung="Stiffness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-min-dist" beschriftung="Min. Abstand" min="0" max="15" wert="3" schritt="1" anzeige="3 mm" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-crotch-floor" beschriftung="Schritt-Boden" min="-40" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-lift" beschriftung="Anheben" min="-20" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-crotch-depth" beschriftung="Schritt-Tiefe" min="0" max="40" wert="0" schritt="1" anzeige="0 mm" %}
+                        {% regler "prop-garment-offset" "Offset" max="15" wert="6" anzeige="0.006" %}
+                        {% regler "prop-garment-stiffness" "Stiffness" max="100" wert="80" anzeige="0.80" %}
+                        {% regler "prop-garment-min-dist" "Min. Abstand" max="15" wert="3" anzeige="3 mm" %}
+                        {% regler "prop-garment-crotch-floor" "Schritt-Boden" min="-40" max="40" wert="0" anzeige="0 mm" %}
+                        {% regler "prop-garment-lift" "Anheben" min="-20" max="40" wert="0" anzeige="0 mm" %}
+                        {% regler "prop-garment-crotch-depth" "Schritt-Tiefe" max="40" wert="0" anzeige="0 mm" %}
                         <div class="slider-row"><label>Color</label>
                             <input type="color" id="prop-garment-color" value="#4d5980" class="hb-farbfeld">
                         </div>
-                        {% include "_schieberegler.html" with kennung="prop-garment-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-metalness" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
+                        {% regler "prop-garment-roughness" "Roughness" max="100" wert="80" anzeige="0.80" %}
+                        {% regler "prop-garment-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
                         <!-- Region -->
                         <div class="hb-font-size-0-72rem">Region</div>
-                        {% include "_schieberegler.html" with kennung="prop-garment-region-top" beschriftung="Top" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-region-upper" beschriftung="Upper" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-region-mid" beschriftung="Mid" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-region-lower" beschriftung="Lower" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="prop-garment-region-bottom" beschriftung="Bottom" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
+                        {% regler "prop-garment-region-top" "Top" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+                        {% regler "prop-garment-region-upper" "Upper" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+                        {% regler "prop-garment-region-mid" "Mid" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+                        {% regler "prop-garment-region-lower" "Lower" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+                        {% regler "prop-garment-region-bottom" "Bottom" min="-30" max="30" wert="0" anzeige="0.00 m" %}
                     </div>
                     <!-- Hair Properties (hair context) -->
                     <div class="prop-section hb-versteckt" id="prop-hair-section">
@@ -841,28 +828,30 @@
                     <!-- MakeHuman Garment Properties -->
                     <div class="prop-section hb-versteckt" id="prop-mh-section">
                         <div class="prop-section-title">MakeHuman Eigenschaften</div>
-                        <div class="prop-section-title" style="font-size:0.7rem;margin-top:4px;">Fit</div>
-                        {% include "_schieberegler.html" with kennung="prop-mh-stiffness" beschriftung="Stiffness" min="0" max="100" wert="50" schritt="1" anzeige="0.50" %}
-                        {% include "_schieberegler.html" with kennung="prop-mh-offset" beschriftung="Offset" min="0" max="30" wert="6" schritt="1" anzeige="0.006" %}
-                        {% include "_schieberegler.html" with kennung="prop-mh-scale" beschriftung="Skalierung" min="80" max="120" wert="100" schritt="1" anzeige="100%" %}
-                        {% include "_schieberegler.html" with kennung="prop-mh-y-offset" beschriftung="Y-Versatz" min="-50" max="50" wert="0" schritt="1" anzeige="0 mm" %}
+                        <div class="prop-section-title unterabschnittstitel">Fit</div>
+                        {% regler "prop-mh-stiffness" "Stiffness" max="100" wert="50" anzeige="0.50" %}
+                        {% regler "prop-mh-offset" "Offset" max="30" wert="6" anzeige="0.006" %}
+                        {% regler "prop-mh-scale" "Skalierung" min="80" max="120" wert="100" anzeige="100%" %}
+                        {% regler "prop-mh-y-offset" "Y-Versatz" min="-50" max="50" wert="0" anzeige="0 mm" %}
                         <div class="slider-row"><label>Farbe</label>
                             <input type="color" id="prop-mh-color" value="#4d5980" class="hb-farbfeld">
                         </div>
-                        {% include "_schieberegler.html" with kennung="prop-mh-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                        {% include "_schieberegler.html" with kennung="prop-mh-metalness" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
-                        {% include "_schieberegler.html" with kennung="prop-mh-opacity" beschriftung="Opacity" min="10" max="100" wert="100" schritt="1" anzeige="1.00" %}
-                        <div class="prop-section-title" style="font-size:0.7rem;margin-top:8px;">Push Outside</div>
-                        {% include "_schieberegler.html" with kennung="prop-mh-push-dist" beschriftung="Max. Abstand" min="1" max="200" wert="3" schritt="1" anzeige="3 mm" %}
-                        <div style="display:flex;gap:4px;margin-top:4px;">
-                            <button id="prop-mh-push" class="btn-toggle" style="flex:1;font-size:0.78rem;"><i class="fas fa-expand-arrows-alt"></i> Push Outside</button>
-                            <button id="prop-mh-push-undo" class="btn-toggle knopf-schmal" title="Push rückgängig"><i class="fas fa-undo"></i></button>
+                        {% regler "prop-mh-roughness" "Roughness" max="100" wert="80" anzeige="0.80" %}
+                        {% regler "prop-mh-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
+                        {% regler "prop-mh-opacity" "Opacity" min="10" max="100" wert="100" anzeige="1.00" %}
+                        <div class="prop-section-title unterabschnittstitel-weit">Push Outside</div>
+                        {% regler "prop-mh-push-dist" "Max. Abstand" min="1" max="200" wert="3" anzeige="3 mm" %}
+                        <div class="knopfzeile-eng abstand-oben-4">
+                            <button id="prop-mh-push" class="btn-toggle"><i
+                                 class="fas fa-expand-arrows-alt"></i> Push Outside</button>
+                            <button id="prop-mh-push-undo" class="btn-toggle knopf-schmal" title="Push rückgängig"><i
+                                 class="fas fa-undo"></i></button>
                         </div>
                     </div>
                     <!-- Morphs (body context) -->
                     <div class="prop-section" id="prop-morphs-section">
-                        <div class="prop-section-title"
-                             style="display:flex;justify-content:space-between;align-items:center;">
+                        <div class="prop-section-title zeile-verteilt"
+                            >
                             Morphs
                             <button class="btn-reset-morphs" id="prop-reset-morphs">Reset</button>
                         </div>
@@ -894,33 +883,41 @@
                             <span class="slider-val" id="kleider-bone-radius-val">1.3x</span>
                         </div>
                         <div class="hb-font-size-0-72rem">Fit-Parameter</div>
-                        {% include "_schieberegler.html" with kennung="kleider-offset" beschriftung="Offset" min="0" max="15" wert="6" schritt="1" anzeige="0.006" %}
-                        {% include "_schieberegler.html" with kennung="kleider-stiffness" beschriftung="Stiffness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                        {% include "_schieberegler.html" with kennung="kleider-min-dist" beschriftung="Min. Abstand" min="0" max="15" wert="3" schritt="1" anzeige="3 mm" %}
-                        {% include "_schieberegler.html" with kennung="kleider-crotch-floor" beschriftung="Schritt-Boden" min="-40" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                        {% include "_schieberegler.html" with kennung="kleider-lift" beschriftung="Anheben" min="-20" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                        {% include "_schieberegler.html" with kennung="kleider-crotch-depth" beschriftung="Schritt-Tiefe" min="0" max="40" wert="0" schritt="1" anzeige="0 mm" %}
+                        {% regler "kleider-offset" "Offset" max="15" wert="6" anzeige="0.006" %}
+                        {% regler "kleider-stiffness" "Stiffness" max="100" wert="80" anzeige="0.80" %}
+                        {% regler "kleider-min-dist" "Min. Abstand" max="15" wert="3" anzeige="3 mm" %}
+                        {% regler "kleider-crotch-floor" "Schritt-Boden" min="-40" max="40" wert="0" anzeige="0 mm" %}
+                        {% regler "kleider-lift" "Anheben" min="-20" max="40" wert="0" anzeige="0 mm" %}
+                        {% regler "kleider-crotch-depth" "Schritt-Tiefe" max="40" wert="0" anzeige="0 mm" %}
                         <div class="hb-font-size-0-72rem">Farbe / Material</div>
                         <div class="slider-row"><label>Farbe</label>
                             <input type="color" id="kleider-color" value="#4d5980" class="hb-farbfeld">
                         </div>
-                        {% include "_schieberegler.html" with kennung="kleider-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                        {% include "_schieberegler.html" with kennung="kleider-metalness" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
+                        {% regler "kleider-roughness" "Roughness" max="100" wert="80" anzeige="0.80" %}
+                        {% regler "kleider-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
                         <!-- Region -->
                         <div class="hb-font-size-0-72rem">Region</div>
-                        {% include "_schieberegler.html" with kennung="kleider-region-top" beschriftung="Top" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="kleider-region-upper" beschriftung="Upper" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="kleider-region-mid" beschriftung="Mid" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="kleider-region-lower" beschriftung="Lower" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="kleider-region-bottom" beschriftung="Bottom" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        <div style="display:flex;gap:4px;margin-top:6px;">
-                            <button id="kleider-stage1" class="btn-toggle hb-flex-1-d" title="Stufe 1: Knochen-Modell erzeugen"><i class="fas fa-bone"></i> 1. Knochen</button>
-                            <button id="kleider-stage2" class="btn-toggle hb-flex-1-d" title="Stufe 2: Kleid um Knochen-Modell fitten"><i class="fas fa-tshirt"></i> 2. Fit Rig</button>
-                            <button id="kleider-stage3" class="btn-toggle hb-flex-1-d" title="Stufe 3: Verfeinerung am Body-Mesh"><i class="fas fa-user"></i> 3. Fit Body</button>
+                        {% regler "kleider-region-top" "Top" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+                        {% regler "kleider-region-upper" "Upper" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+                        {% regler "kleider-region-mid" "Mid" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+                        {% regler "kleider-region-lower" "Lower" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+                        {% regler "kleider-region-bottom" "Bottom" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+                        <div class="knopfzeile-eng abstand-6">
+                            <button id="kleider-stage1" class="btn-toggle hb-flex-1-d"
+                                 title="Stufe 1: Knochen-Modell erzeugen"><i
+                                      class="fas fa-bone"></i> 1. Knochen</button>
+                            <button id="kleider-stage2" class="btn-toggle hb-flex-1-d"
+                                 title="Stufe 2: Kleid um Knochen-Modell fitten"><i
+                                      class="fas fa-tshirt"></i> 2. Fit Rig</button>
+                            <button id="kleider-stage3" class="btn-toggle hb-flex-1-d"
+                                 title="Stufe 3: Verfeinerung am Body-Mesh"><i
+                                      class="fas fa-user"></i> 3. Fit Body</button>
                         </div>
-                        <div style="display:flex;gap:6px;margin-top:4px;">
-                            <button id="kleider-remove" class="btn-toggle hb-fest" title="Kleid entfernen"><i class="fas fa-times"></i></button>
-                            <button id="kleider-remove-all" class="btn-toggle hb-fest" title="Alle Kleider entfernen"><i class="fas fa-trash"></i></button>
+                        <div class="knopfzeile abstand-oben-4">
+                            <button id="kleider-remove" class="btn-toggle hb-fest" title="Kleid entfernen"><i
+                                 class="fas fa-times"></i></button>
+                            <button id="kleider-remove-all" class="btn-toggle hb-fest"
+                                 title="Alle Kleider entfernen"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 </div>
@@ -948,30 +945,36 @@
                         </div>
                         <div class="hb-font-size-0-72rem">Fit</div>
                         <div class="slider-row"><label>Stiffness</label>
-                            {# step=1 wie bei prop-mh-stiffness: Beide Regler zeigen denselben Wert, mit step=5 rastete der Assets-Regler beim Spiegeln auf ein anderes Vielfaches (Umbau 16.08.2026). #}
+                            {# step=1 wie bei prop-mh-stiffness: Beide Regler zeigen denselben Wert, mit step=5 rastete
+                                 der Assets-Regler beim Spiegeln auf ein anderes Vielfaches (Umbau 16.08.2026). #}
                             <input type="range" id="mh-stiffness" min="0" max="100" value="50" step="1">
                             <span class="slider-val" id="mh-stiffness-val">0.50</span>
                         </div>
-                        {% include "_schieberegler.html" with kennung="mh-offset" beschriftung="Offset" min="0" max="30" wert="6" schritt="1" anzeige="0.006" %}
-                        {% include "_schieberegler.html" with kennung="mh-scale" beschriftung="Skalierung" min="80" max="120" wert="100" schritt="1" anzeige="100%" %}
-                        {% include "_schieberegler.html" with kennung="mh-y-offset" beschriftung="Y-Versatz" min="-50" max="50" wert="0" schritt="1" anzeige="0 mm" %}
+                        {% regler "mh-offset" "Offset" max="30" wert="6" anzeige="0.006" %}
+                        {% regler "mh-scale" "Skalierung" min="80" max="120" wert="100" anzeige="100%" %}
+                        {% regler "mh-y-offset" "Y-Versatz" min="-50" max="50" wert="0" anzeige="0 mm" %}
                         <div class="hb-font-size-0-72rem">Farbe / Material</div>
                         <div class="slider-row"><label>Farbe</label>
                             <input type="color" id="mh-color" value="#4d5980" class="hb-farbfeld">
                         </div>
-                        {% include "_schieberegler.html" with kennung="mh-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                        {% include "_schieberegler.html" with kennung="mh-metalness" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
-                        {% include "_schieberegler.html" with kennung="mh-opacity" beschriftung="Opacity" min="10" max="100" wert="100" schritt="1" anzeige="1.00" %}
+                        {% regler "mh-roughness" "Roughness" max="100" wert="80" anzeige="0.80" %}
+                        {% regler "mh-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
+                        {% regler "mh-opacity" "Opacity" min="10" max="100" wert="100" anzeige="1.00" %}
                         <div class="hb-display-flex">
-                            <button id="mh-create" class="btn-toggle hb-dehnt"><i class="fas fa-magic"></i> 1. Erzeuge (Proxy)</button>
-                            <button id="mh-remove" class="btn-toggle hb-fest" title="Entfernen"><i class="fas fa-times"></i></button>
-                            <button id="mh-remove-all" class="btn-toggle hb-fest" title="Alle entfernen"><i class="fas fa-trash"></i></button>
+                            <button id="mh-create" class="btn-toggle hb-dehnt"><i
+                                 class="fas fa-magic"></i> 1. Erzeuge (Proxy)</button>
+                            <button id="mh-remove" class="btn-toggle hb-fest" title="Entfernen"><i
+                                 class="fas fa-times"></i></button>
+                            <button id="mh-remove-all" class="btn-toggle hb-fest" title="Alle entfernen"><i
+                                 class="fas fa-trash"></i></button>
                         </div>
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:8px 0 4px;">Schritt 2: Push Outside</div>
-                        {% include "_schieberegler.html" with kennung="mh-push-dist" beschriftung="Max. Abstand" min="1" max="200" wert="3" schritt="1" anzeige="3 mm" %}
+                        <div class="gruppentitel-klein">Schritt 2: Push Outside</div>
+                        {% regler "mh-push-dist" "Max. Abstand" min="1" max="200" wert="3" anzeige="3 mm" %}
                         <div class="hb-display-flex-eng">
-                            <button id="mh-push" class="btn-toggle hb-dehnt"><i class="fas fa-expand-arrows-alt"></i> 2. Push Outside</button>
-                            <button id="mh-push-undo" class="btn-toggle hb-fest" title="Push r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i></button>
+                            <button id="mh-push" class="btn-toggle hb-dehnt"><i
+                                 class="fas fa-expand-arrows-alt"></i> 2. Push Outside</button>
+                            <button id="mh-push-undo" class="btn-toggle hb-fest" title="Push r&uuml;ckg&auml;ngig"><i
+                                 class="fas fa-undo"></i></button>
                         </div>
                     </div>
                 </div>
@@ -979,38 +982,15 @@
                 <div class="panel-section" data-panel-key="garment_fit">
                     <h3>Garment Fit <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="garment-panel">
-                        <div class="slider-row"><label>Category</label>
-                            <select id="garment-category" class="viewer-select hb-dehnt-ohne-abstand">
-                                <option value="">All</option>
-                            </select>
-                        </div>
-                        <div id="garment-list" class="anim-tree hb-max-height-300px">
-                            <div class="hb-hinweis">Lade Garment-Library...</div>
-                        </div>
-                        <div class="hb-font-size-0-72rem">Fit</div>
-                        {% include "_schieberegler.html" with kennung="garment-offset" beschriftung="Offset" min="0" max="15" wert="6" schritt="1" anzeige="0.006" %}
-                        {% include "_schieberegler.html" with kennung="garment-stiffness" beschriftung="Stiffness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                        {% include "_schieberegler.html" with kennung="garment-min-dist" beschriftung="Min. Abstand" min="0" max="15" wert="3" schritt="1" anzeige="3 mm" %}
-                        {% include "_schieberegler.html" with kennung="garment-crotch-floor" beschriftung="Schritt-Boden" min="-40" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                        {% include "_schieberegler.html" with kennung="garment-lift" beschriftung="Anheben" min="-20" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                        {% include "_schieberegler.html" with kennung="garment-crotch-depth" beschriftung="Schritt-Tiefe" min="0" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                        <div class="hb-font-size-0-72rem">Farbe / Material</div>
-                        <div class="slider-row"><label>Color</label>
-                            <input type="color" id="garment-color" value="#4d5980" class="hb-farbfeld">
-                        </div>
-                        {% include "_schieberegler.html" with kennung="garment-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                        {% include "_schieberegler.html" with kennung="garment-metalness" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
-                        <!-- Region -->
-                        <div class="hb-font-size-0-72rem">Region</div>
-                        {% include "_schieberegler.html" with kennung="garment-region-top" beschriftung="Top" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="garment-region-upper" beschriftung="Upper" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="garment-region-mid" beschriftung="Mid" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="garment-region-lower" beschriftung="Lower" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                        {% include "_schieberegler.html" with kennung="garment-region-bottom" beschriftung="Bottom" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
+                        {% include "_kleiderpassung.html" with offset_max="15" %}
+                        {% include "_kleiderregionen.html" %}
                         <div class="hb-display-flex">
-                            <button id="garment-create" class="btn-toggle hb-dehnt"><i class="fas fa-tshirt"></i> Erzeuge</button>
-                            <button id="garment-remove" class="btn-toggle hb-fest" title="Garment entfernen"><i class="fas fa-times"></i></button>
-                            <button id="garment-remove-all" class="btn-toggle hb-fest" title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
+                            <button id="garment-create" class="btn-toggle hb-dehnt"><i
+                                 class="fas fa-tshirt"></i> Erzeuge</button>
+                            <button id="garment-remove" class="btn-toggle hb-fest" title="Garment entfernen"><i
+                                 class="fas fa-times"></i></button>
+                            <button id="garment-remove-all" class="btn-toggle hb-fest"
+                                 title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
                 </div>
@@ -1020,53 +1000,65 @@
 
                 {% include "_kleidungspanele.html" %}
                 <div class="panel-section collapsed" id="charmorph-panel">
-                    <h3 class="panel-title" onclick="this.parentElement.classList.toggle('collapsed')">CharMorph Kleidung <span class="chevron">&#9660;</span></h3>
+                    <h3 class="panel-title"
+                         onclick="this.parentElement.classList.toggle('collapsed')">CharMorph Kleidung <span
+                              class="chevron">&#9660;</span></h3>
                     <div class="panel-body">
                         <div class="prop-row"><label>Kategorie:</label>
                             <select id="cm-category" class="viewer-select">
                                 <option value="">Alle</option>
                             </select>
                         </div>
-                        <div id="cm-asset-list" style="max-height:200px;overflow-y:auto;margin:6px 0;border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
+                        <div id="cm-asset-list"></div>
                         <div class="prop-row"><label>Fitting:</label>
                             <select id="cm-fitting" class="viewer-select">
                                 <option value="soft">Soft</option>
                                 <option value="hard">Hard</option>
                             </select>
                         </div>
-                        <div class="prop-row"><label>Offset:</label><input type="range" id="cm-offset" min="-0.005" max="0.02" step="0.001" value="0.001"><span id="cm-offset-val">0.001</span></div>
-                        <div class="prop-row"><label>Smoothing:</label><input type="range" id="cm-smooth" min="0" max="1" step="0.05" value="0"><span id="cm-smooth-val">0.00</span></div>
+                        <div class="prop-row"><label>Offset:</label><input type="range" id="cm-offset" min="-0.005"
+                             max="0.02" step="0.001" value="0.001"><span id="cm-offset-val">0.001</span></div>
+                        <div class="prop-row"><label>Smoothing:</label><input type="range" id="cm-smooth" min="0"
+                             max="1" step="0.05" value="0"><span id="cm-smooth-val">0.00</span></div>
                         <div class="prop-row"><label>Material:</label>
                             <select id="cm-material" class="viewer-select">
                                 <option value="">Standard</option>
                             </select>
                         </div>
-                        <div class="prop-row"><label>Farbe:</label><input type="color" id="cm-color" value="#cccccc"></div>
-                        <div style="margin-top:8px;display:flex;gap:6px;">
-                            <button id="cm-add" class="viewer-btn hb-dehnt"><i class="fas fa-plus"></i> Hinzufuegen</button>
-                            <button id="cm-remove" class="viewer-btn hb-dehnt"><i class="fas fa-trash"></i> Entfernen</button>
+                        <div class="prop-row"><label>Farbe:</label><input type="color" id="cm-color"
+                             value="#cccccc"></div>
+                        <div class="knopfzeile abstand-8">
+                            <button id="cm-add" class="viewer-btn hb-dehnt"><i
+                                 class="fas fa-plus"></i> Hinzufuegen</button>
+                            <button id="cm-remove" class="viewer-btn hb-dehnt"><i
+                                 class="fas fa-trash"></i> Entfernen</button>
                         </div>
                     </div>
                 </div>
                 <div class="panel-section collapsed" id="charmorph-hair-panel">
-                    <h3 class="panel-title" onclick="this.parentElement.classList.toggle('collapsed')">Hair &mdash; CharMorph <span class="chevron">&#9660;</span></h3>
+                    <h3 class="panel-title"
+                         onclick="this.parentElement.classList.toggle('collapsed')">Hair &mdash; CharMorph <span
+                              class="chevron">&#9660;</span></h3>
                     <div class="panel-body">
                         <div class="prop-row"><label>Hairstyle:</label>
                             <select id="cm-hairstyle" class="viewer-select">
                                 <option value="">-- Kein Haar --</option>
                             </select>
                         </div>
-                        <div style="font-size:0.72rem;color:var(--text-muted);margin:2px 0 6px;">CharMorph NPZ Hairstyles (Blender-only Info)</div>
+                        <div class="feldhinweis">CharMorph NPZ Hairstyles (Blender-only Info)</div>
                         <div class="prop-section-title abstand-oben-4">Haarfarbe</div>
                         <div class="prop-row"><label>Preset:</label>
                             <select id="cm-hair-color-preset" class="viewer-select">
                                 <option value="">-- Manuelle Farbe --</option>
                             </select>
                         </div>
-                        <div class="prop-row"><label>Farbe:</label><input type="color" id="cm-hair-color" value="#3d2b1f"></div>
+                        <div class="prop-row"><label>Farbe:</label><input type="color" id="cm-hair-color"
+                             value="#3d2b1f"></div>
                         <div class="prop-section-title hb-margin-top-6px">Fitting</div>
-                        <div class="prop-row"><label><input type="checkbox" id="cm-hair-shrinkwrap"> Shrinkwrap</label></div>
-                        <div class="prop-row"><label>Offset:</label><input type="range" id="cm-hair-offset" min="0" max="0.01" step="0.0001" value="0.0002"><span id="cm-hair-offset-val">0.0002</span></div>
+                        <div class="prop-row"><label><input type="checkbox"
+                             id="cm-hair-shrinkwrap"> Shrinkwrap</label></div>
+                        <div class="prop-row"><label>Offset:</label><input type="range" id="cm-hair-offset" min="0"
+                             max="0.01" step="0.0001" value="0.0002"><span id="cm-hair-offset-val">0.0002</span></div>
                     </div>
                 </div>
                 </div><!-- /assets-content -->
@@ -1074,36 +1066,41 @@
 
             <!-- Animation Tab -->
             <div class="tab-pane" id="tab-animation">
-                <div class="panel-section" data-panel-key="animations" style="border:none;">
-                    <div class="panel-body" id="animation-panel" style="display:block;">
+                <div class="panel-section abschnitt-ohne-rahmen" data-panel-key="animations">
+                    <div class="panel-body" id="animation-panel">
                         <div class="anim-tree" id="anim-tree">
                             <div class="hb-hinweis">Lade Animationen...</div>
                         </div>
                         {% include "_animationsleiste.html" %}
-                        <div class="anim-time" id="anim-time" style="font-family:monospace;font-size:0.8rem;color:var(--text-muted);margin:4px 0;">Frame 0 / 0 &bull; 0.00s / 0.00s</div>
+                        <div class="anim-time" id="anim-time">Frame 0 / 0 &bull; 0.00s / 0.00s</div>
                         <div class="anim-info" id="anim-info">&mdash;</div>
-                        <div style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <div class="wiedergabezeile">
                             <label class="hb-font-size-0-8rem">Delta:</label>
-                            <select id="scene-delta-norm" style="font-size:0.75rem;padding:2px 4px;background:var(--bg-darker);color:var(--text);border:1px solid var(--border);border-radius:4px;">
+                            <select id="scene-delta-norm">
                                 <option value="auto">Auto</option>
                                 <option value="1">An</option>
                                 <option value="0">Aus</option>
                             </select>
-                            <label class="hb-font-size-0-8rem"><input type="checkbox" id="scene-ground-fix" class="hb-margin-right-4px">Boden</label>
+                            <label class="hb-font-size-0-8rem"><input type="checkbox" id="scene-ground-fix"
+                                 class="hb-margin-right-4px">Boden</label>
                         </div>
 
-                        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
-                            <div style="font-size:0.85rem;font-weight:600;color:var(--text);margin-bottom:6px;">Smoothing</div>
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                                <label style="font-size:0.8rem;color:var(--text-muted);min-width:50px;">Sigma:</label>
+                        <div class="abschnitt-abgesetzt">
+                            <div class="abschnittstitel-fett">Smoothing</div>
+                            <div class="reglerzeile">
+                                <label class="reglerbeschriftung">Sigma:</label>
                                 <input type="range" id="smooth-sigma" min="0" max="10" value="2" step="0.5"
                                        class="hb-dehnt">
-                                <span id="smooth-sigma-val" style="font-size:0.8rem;color:var(--text-muted);min-width:24px;">2.0</span>
+                                <span id="smooth-sigma-val">2.0</span>
                             </div>
                             <div class="hb-display-flex-eng">
-                                <button id="smooth-apply" class="viewer-btn hb-font-size-0-75rem-b" title="Smoothing anwenden (Vorschau)"><i class="fas fa-wave-square"></i> Smooth</button>
-                                <button id="smooth-reset" class="viewer-btn hb-font-size-0-75rem-b" title="Smoothing r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i> Reset</button>
-                                <button id="anim-save-btn" class="viewer-btn hb-font-size-0-75rem-b" title="Animation speichern"><i class="fas fa-save"></i> Speichern</button>
+                                <button id="smooth-apply" class="viewer-btn hb-font-size-0-75rem-b"
+                                     title="Smoothing anwenden (Vorschau)"><i
+                                          class="fas fa-wave-square"></i> Smooth</button>
+                                <button id="smooth-reset" class="viewer-btn hb-font-size-0-75rem-b"
+                                     title="Smoothing r&uuml;ckg&auml;ngig"><i class="fas fa-undo"></i> Reset</button>
+                                <button id="anim-save-btn" class="viewer-btn hb-font-size-0-75rem-b"
+                                     title="Animation speichern"><i class="fas fa-save"></i> Speichern</button>
                             </div>
                         </div>
                     </div>
@@ -1127,46 +1124,46 @@
                 <!-- Key Light -->
                 <div class="light-group">
                     <div class="light-group-title">Key Light</div>
-                    {% include "_schieberegler.html" with kennung="key-intensity" beschriftung="Intensität" min="0" max="500" wert="300" schritt="10" anzeige="3.0" %}
+                    {% regler "key-intensity" "Intensität" max="500" wert="300" schritt="10" anzeige="3.0" %}
                     <div class="slider-row">
                         <label>Farbe</label>
                         <input type="color" id="key-color" value="#ffffff">
                     </div>
-                    {% include "_schieberegler.html" with kennung="key-pos-x" beschriftung="Pos X" min="-100" max="100" wert="20" schritt="1" anzeige="2.0" %}
-                    {% include "_schieberegler.html" with kennung="key-pos-y" beschriftung="Pos Y" min="-100" max="100" wert="40" schritt="1" anzeige="4.0" %}
-                    {% include "_schieberegler.html" with kennung="key-pos-z" beschriftung="Pos Z" min="-100" max="100" wert="-50" schritt="1" anzeige="-5.0" %}
+                    {% regler "key-pos-x" "Pos X" min="-100" max="100" wert="20" anzeige="2.0" %}
+                    {% regler "key-pos-y" "Pos Y" min="-100" max="100" wert="40" anzeige="4.0" %}
+                    {% regler "key-pos-z" "Pos Z" min="-100" max="100" wert="-50" anzeige="-5.0" %}
                 </div>
 
                 <!-- Fill Light -->
                 <div class="light-group">
                     <div class="light-group-title">Fill Light</div>
-                    {% include "_schieberegler.html" with kennung="fill-intensity" beschriftung="Intensität" min="0" max="500" wert="200" schritt="10" anzeige="2.0" %}
+                    {% regler "fill-intensity" "Intensität" max="500" wert="200" schritt="10" anzeige="2.0" %}
                     <div class="slider-row">
                         <label>Farbe</label>
                         <input type="color" id="fill-color" value="#eeeeff">
                     </div>
-                    {% include "_schieberegler.html" with kennung="fill-pos-x" beschriftung="Pos X" min="-100" max="100" wert="-30" schritt="1" anzeige="-3.0" %}
-                    {% include "_schieberegler.html" with kennung="fill-pos-y" beschriftung="Pos Y" min="-100" max="100" wert="30" schritt="1" anzeige="3.0" %}
-                    {% include "_schieberegler.html" with kennung="fill-pos-z" beschriftung="Pos Z" min="-100" max="100" wert="-40" schritt="1" anzeige="-4.0" %}
+                    {% regler "fill-pos-x" "Pos X" min="-100" max="100" wert="-30" anzeige="-3.0" %}
+                    {% regler "fill-pos-y" "Pos Y" min="-100" max="100" wert="30" anzeige="3.0" %}
+                    {% regler "fill-pos-z" "Pos Z" min="-100" max="100" wert="-40" anzeige="-4.0" %}
                 </div>
 
                 <!-- Back Light -->
                 <div class="light-group">
                     <div class="light-group-title">Back Light</div>
-                    {% include "_schieberegler.html" with kennung="back-intensity" beschriftung="Intensität" min="0" max="500" wert="250" schritt="10" anzeige="2.5" %}
+                    {% regler "back-intensity" "Intensität" max="500" wert="250" schritt="10" anzeige="2.5" %}
                     <div class="slider-row">
                         <label>Farbe</label>
                         <input type="color" id="back-color" value="#ffeedd">
                     </div>
-                    {% include "_schieberegler.html" with kennung="back-pos-x" beschriftung="Pos X" min="-100" max="100" wert="0" schritt="1" anzeige="0.0" %}
-                    {% include "_schieberegler.html" with kennung="back-pos-y" beschriftung="Pos Y" min="-100" max="100" wert="40" schritt="1" anzeige="4.0" %}
-                    {% include "_schieberegler.html" with kennung="back-pos-z" beschriftung="Pos Z" min="-100" max="100" wert="50" schritt="1" anzeige="5.0" %}
+                    {% regler "back-pos-x" "Pos X" min="-100" max="100" wert="0" anzeige="0.0" %}
+                    {% regler "back-pos-y" "Pos Y" min="-100" max="100" wert="40" anzeige="4.0" %}
+                    {% regler "back-pos-z" "Pos Z" min="-100" max="100" wert="50" anzeige="5.0" %}
                 </div>
 
                 <!-- Ambient -->
                 <div class="light-group">
                     <div class="light-group-title">Ambient</div>
-                    {% include "_schieberegler.html" with kennung="ambient-intensity" beschriftung="Intensität" min="0" max="200" wert="80" schritt="5" anzeige="0.8" %}
+                    {% regler "ambient-intensity" "Intensität" max="200" wert="80" schritt="5" anzeige="0.8" %}
                     <div class="slider-row">
                         <label>Farbe</label>
                         <input type="color" id="ambient-color" value="#ffffff">
@@ -1182,14 +1179,8 @@
                         <div class="slider-row">
                             <label>Tone Mapping</label>
                         </div>
-                        <select id="tone-mapping" class="viewer-select">
-                            <option value="ACESFilmic" selected>ACES Filmic</option>
-                            <option value="Linear">Linear</option>
-                            <option value="Reinhard">Reinhard</option>
-                            <option value="Cineon">Cineon</option>
-                            <option value="None">None</option>
-                        </select>
-                        {% include "_schieberegler.html" with kennung="exposure" beschriftung="Exposure" min="50" max="300" wert="160" schritt="5" anzeige="1.6" %}
+                        {% include "_tonwertauswahl.html" with kennung="tone-mapping" %}
+                        {% regler "exposure" "Exposure" min="50" max="300" wert="160" schritt="5" anzeige="1.6" %}
                         <div class="slider-row">
                             <label>Hintergrund</label>
                             <input type="color" id="bg-color" value="#1a1a2e">
@@ -1201,7 +1192,7 @@
                 <div class="panel-section" data-panel-key="kamera">
                     <h3>Kamera <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body">
-                        {% include "_schieberegler.html" with kennung="camera-fov" beschriftung="FOV" min="20" max="80" wert="35" schritt="1" anzeige="35" %}
+                        {% regler "camera-fov" "FOV" min="20" max="80" wert="35" anzeige="35" %}
                         <div class="camera-info">
                             Position: <span id="cam-pos">0.00, 1.00, 3.50</span>
                         </div>
@@ -1235,7 +1226,7 @@
                         </div>
                         <div class="slider-row">
                             <label>Skeleton</label>
-                            <select id="mg-skeleton-type" class="viewer-select" style="width:100%;margin-bottom:0;">
+                            <select id="mg-skeleton-type" class="viewer-select">
                                 <option value="def">DEF Skeleton</option>
                                 <option value="rig" selected>Rig Bones</option>
                             </select>
@@ -1273,7 +1264,7 @@
                 <div class="panel-section hb-versteckt" data-panel-key="modell-bone-props" id="mg-bone-props-section">
                     <h3>Knochen-Eigenschaften <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body">
-                        <div id="mg-bone-name" style="font-size:0.8rem;color:var(--accent);margin-bottom:6px;font-weight:600;"></div>
+                        <div id="mg-bone-name"></div>
                         <div class="slider-row">
                             <label>Form</label>
                             <select id="mg-bone-shape" class="viewer-select hb-volle-breite">
@@ -1295,7 +1286,8 @@
                             </select>
                         </div>
                         <div class="slider-row hb-align-items-center">
-                            <label title="Wenn aktiv: wird beim MP4-Export als Cloth simuliert (Physik, Kollision mit K&ouml;rper)">Kleidungsst&uuml;ck</label>
+                            <label
+                                 title="Wenn aktiv: wird beim MP4-Export als Cloth simuliert (Physik, Kollision mit K&ouml;rper)">Kleidungsst&uuml;ck</label>
                             <input type="checkbox" id="mg-bone-garment" class="hb-width-auto"
                                    title="Als Stoff simulieren (K&ouml;rper-Kollision beim Export)">
                         </div>
@@ -1336,7 +1328,8 @@
                             </div>
                             <div class="slider-row">
                                 <label>Radius oben</label>
-                                <input type="range" id="mg-spiral-start-r" min="0.05" max="0.8" step="0.01" value="0.15">
+                                <input type="range" id="mg-spiral-start-r" min="0.05" max="0.8" step="0.01"
+                                     value="0.15">
                                 <span id="mg-spiral-start-r-val" class="slider-val">0.150</span>
                             </div>
                             <div class="slider-row">
@@ -1396,7 +1389,8 @@
                             </div>
                             <div class="slider-row">
                                 <label>Position oben</label>
-                                <input type="range" id="mg-helix-pos-top" min="-0.1" max="0.3" step="0.005" value="0.05">
+                                <input type="range" id="mg-helix-pos-top" min="-0.1" max="0.3" step="0.005"
+                                     value="0.05">
                                 <span id="mg-helix-pos-top-val" class="slider-val">0.050</span>
                             </div>
                             <div class="slider-row">
@@ -1436,7 +1430,8 @@
                             </div>
                             <div class="slider-row">
                                 <label>Position oben</label>
-                                <input type="range" id="mg-skirt-pos-top" min="-0.1" max="0.3" step="0.005" value="0.02">
+                                <input type="range" id="mg-skirt-pos-top" min="-0.1" max="0.3" step="0.005"
+                                     value="0.02">
                                 <span id="mg-skirt-pos-top-val" class="slider-val">0.020</span>
                             </div>
                             <div class="slider-row">
@@ -1464,7 +1459,8 @@
                                 <span id="mg-plane-height-val" class="slider-val">0.220</span>
                             </div>
                             <div class="slider-row hb-align-items-center">
-                                <label title="Rendert beide Seiten der Ebene (sonst nur Vorderseite sichtbar)">Doppelseitig</label>
+                                <label
+                                     title="Rendert beide Seiten der Ebene (sonst nur Vorderseite sichtbar)">Doppelseitig</label>
                                 <input type="checkbox" id="mg-plane-doublesided" checked class="hb-width-auto">
                             </div>
                         </div>
@@ -1472,23 +1468,27 @@
                             <div class="hb-font-size-0-7rem">Obere Fl&auml;che</div>
                             <div class="slider-row">
                                 <label>Breite</label>
-                                <input type="range" id="mg-rhombus-top-w" min="0.01" max="0.8" step="0.005" value="0.10">
+                                <input type="range" id="mg-rhombus-top-w" min="0.01" max="0.8" step="0.005"
+                                     value="0.10">
                                 <span id="mg-rhombus-top-w-val" class="slider-val">0.100</span>
                             </div>
                             <div class="slider-row">
                                 <label>Tiefe</label>
-                                <input type="range" id="mg-rhombus-top-d" min="0.01" max="0.8" step="0.005" value="0.10">
+                                <input type="range" id="mg-rhombus-top-d" min="0.01" max="0.8" step="0.005"
+                                     value="0.10">
                                 <span id="mg-rhombus-top-d-val" class="slider-val">0.100</span>
                             </div>
-                            <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:6px;margin-bottom:2px;">Untere Fl&auml;che</div>
+                            <div class="feldhinweis-oben">Untere Fl&auml;che</div>
                             <div class="slider-row">
                                 <label>Breite</label>
-                                <input type="range" id="mg-rhombus-bot-w" min="0.01" max="0.8" step="0.005" value="0.20">
+                                <input type="range" id="mg-rhombus-bot-w" min="0.01" max="0.8" step="0.005"
+                                     value="0.20">
                                 <span id="mg-rhombus-bot-w-val" class="slider-val">0.200</span>
                             </div>
                             <div class="slider-row">
                                 <label>Tiefe</label>
-                                <input type="range" id="mg-rhombus-bot-d" min="0.01" max="0.8" step="0.005" value="0.20">
+                                <input type="range" id="mg-rhombus-bot-d" min="0.01" max="0.8" step="0.005"
+                                     value="0.20">
                                 <span id="mg-rhombus-bot-d-val" class="slider-val">0.200</span>
                             </div>
                             <div class="slider-row">
@@ -1510,12 +1510,13 @@
                         <div class="hb-margin-top-8px-c">Textur</div>
                         <div class="slider-row hb-align-items-center">
                             <label>Bild</label>
-                            <input type="file" id="mg-bone-texture-file" accept="image/*"
-                                   style="font-size:0.7rem;flex:1;">
-                            <button type="button" id="mg-bone-texture-clear" class="action-btn" style="padding:2px 8px;font-size:0.7rem;" title="Textur entfernen">&#10005;</button>
+                            <input class="auswahl-schmal" type="file" id="mg-bone-texture-file" accept="image/*"
+                                  >
+                            <button type="button" id="mg-bone-texture-clear" class="action-btn"
+                                 title="Textur entfernen">&#10005;</button>
                         </div>
-                        <div id="mg-bone-texture-preview" style="display:none;margin-top:4px;text-align:center;">
-                            <img id="mg-bone-texture-thumb" src="" alt="Textur" style="max-width:120px;max-height:120px;border:1px solid var(--border);border-radius:3px;">
+                        <div id="mg-bone-texture-preview">
+                            <img id="mg-bone-texture-thumb" src="" alt="Textur">
                         </div>
                         <div class="hb-margin-top-8px-c">Gr&ouml;sse entlang Achse</div>
                         <div class="slider-row">
@@ -1541,7 +1542,7 @@
                             <span id="mg-head-off-z-val" class="slider-val">0.000</span>
                         </div>
                         <div class="hb-font-size-0-7rem">Ende (Tail)</div>
-                        <div style="font-size:0.65rem;color:var(--text-muted);margin-top:-2px;margin-bottom:2px;">World X/Y/Z Koordinaten</div>
+                        <div class="feldhinweis-eng">World X/Y/Z Koordinaten</div>
                         <div class="slider-row">
                             <label>X</label>
                             <input type="range" id="mg-tail-off-x" min="-0.15" max="0.15" step="0.001" value="0">
@@ -1579,7 +1580,7 @@
                 <!-- Actions -->
                 <div class="panel-section" data-panel-key="modell-actions">
                     <h3>Aktionen <span class="chevron">&#9660;</span></h3>
-                    <div class="panel-body" style="display:flex;flex-direction:column;gap:6px;">
+                    <div class="panel-body spaltenkoerper">
                         <button class="action-btn primary" id="mg-generate">Erzeugen</button>
                         <button class="action-btn" id="mg-save-server">Speichern unter...</button>
                     </div>
@@ -1588,12 +1589,13 @@
                 <div class="panel-section" data-panel-key="pose_browser">
                     <h3>Pose <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="pose-panel">
-                        <div id="pose-list" class="anim-tree"
-                             style="max-height:300px;overflow-y:auto;resize:vertical;min-height:60px;">
+                        <div id="pose-list" class="anim-tree textfeld-dehnbar"
+                            >
                             <div class="hb-hinweis">Lade Poses...</div>
                         </div>
                         <div class="hb-display-flex">
-                            <button id="pose-reset" class="btn-toggle hb-dehnt"><i class="fas fa-undo"></i> A-Pose (Reset)</button>
+                            <button id="pose-reset" class="btn-toggle hb-dehnt"><i
+                                 class="fas fa-undo"></i> A-Pose (Reset)</button>
                         </div>
                     </div>
                 </div>
@@ -1604,24 +1606,31 @@
                 <div class="panel-section">
                     <h3 class="panel-title">IK Einstellungen</h3>
                     <div class="panel-body">
-                        <div class="prop-row"><label><input type="checkbox" id="rig-ik-no-stretch" checked> IK Stretch deaktivieren</label></div>
-                        <div class="prop-row"><label><input type="checkbox" id="rig-ik-limit" checked> IK Rotation begrenzen</label></div>
-                        <div class="prop-row"><label>Min:</label><input type="number" id="rig-ik-min" value="-10" min="-180" max="0" class="hb-width-60px-b"> &deg;</div>
-                        <div class="prop-row"><label>Max:</label><input type="number" id="rig-ik-max" value="160" min="0" max="180" class="hb-width-60px-b"> &deg;</div>
+                        <div class="prop-row"><label><input type="checkbox" id="rig-ik-no-stretch"
+                             checked> IK Stretch deaktivieren</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="rig-ik-limit"
+                             checked> IK Rotation begrenzen</label></div>
+                        <div class="prop-row"><label>Min:</label><input type="number" id="rig-ik-min" value="-10"
+                             min="-180" max="0" class="hb-width-60px-b"> &deg;</div>
+                        <div class="prop-row"><label>Max:</label><input type="number" id="rig-ik-max" value="160"
+                             min="0" max="180" class="hb-width-60px-b"> &deg;</div>
                         <div class="prop-row"><label><input type="checkbox" id="rig-finger-ik"> Finger IK</label></div>
                     </div>
                 </div>
                 <div class="panel-section">
                     <h3 class="panel-title">Spine</h3>
                     <div class="panel-body">
-                        <div class="prop-row"><label><input type="checkbox" id="rig-spine-pivot"> Spine Pivot</label></div>
+                        <div class="prop-row"><label><input type="checkbox"
+                             id="rig-spine-pivot"> Spine Pivot</label></div>
                     </div>
                 </div>
                 <div class="panel-section">
                     <h3 class="panel-title">Sliding Joints</h3>
                     <div class="panel-body">
-                        <div class="prop-row"><label>Ellbogen:</label><input type="range" id="rig-slide-elbow" min="0" max="0.5" step="0.01" value="0.08"><span id="rig-slide-elbow-val">0.08</span></div>
-                        <div class="prop-row"><label>Knie:</label><input type="range" id="rig-slide-knee" min="0" max="0.5" step="0.01" value="0.05"><span id="rig-slide-knee-val">0.05</span></div>
+                        <div class="prop-row"><label>Ellbogen:</label><input type="range" id="rig-slide-elbow" min="0"
+                             max="0.5" step="0.01" value="0.08"><span id="rig-slide-elbow-val">0.08</span></div>
+                        <div class="prop-row"><label>Knie:</label><input type="range" id="rig-slide-knee" min="0"
+                             max="0.5" step="0.01" value="0.05"><span id="rig-slide-knee-val">0.05</span></div>
                     </div>
                 </div>
                 <div class="panel-section">
@@ -1645,20 +1654,29 @@
                                 <option value="json">JSON (Szene)</option>
                             </select>
                         </div>
-                        <div class="prop-row"><label><input type="checkbox" id="fin-apply-morphs" checked> Morphs anwenden</label></div>
-                        <div class="prop-row"><label><input type="checkbox" id="fin-apply-pose" checked> Pose anwenden</label></div>
-                        <div class="prop-row"><label><input type="checkbox" id="fin-include-rig" checked> Rig einschliessen</label></div>
-                        <div class="prop-row"><label><input type="checkbox" id="fin-include-clothes"> Kleidung einschliessen</label></div>
-                        <div class="prop-row"><label><input type="checkbox" id="fin-include-hair"> Haare einschliessen</label></div>
-                        <button id="fin-export" class="viewer-btn hb-width-100-c"><i class="fas fa-file-export"></i> Exportieren</button>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-apply-morphs"
+                             checked> Morphs anwenden</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-apply-pose"
+                             checked> Pose anwenden</label></div>
+                        <div class="prop-row"><label><input type="checkbox" id="fin-include-rig"
+                             checked> Rig einschliessen</label></div>
+                        <div class="prop-row"><label><input type="checkbox"
+                             id="fin-include-clothes"> Kleidung einschliessen</label></div>
+                        <div class="prop-row"><label><input type="checkbox"
+                             id="fin-include-hair"> Haare einschliessen</label></div>
+                        <button id="fin-export" class="viewer-btn hb-width-100-c"><i
+                             class="fas fa-file-export"></i> Exportieren</button>
                     </div>
                 </div>
                 <div class="panel-section">
                     <h3 class="panel-title">Cleanup</h3>
                     <div class="panel-body">
-                        <div class="prop-row"><label><input type="checkbox" id="fin-collapse-morphs"> Shape Keys zusammenfassen</label></div>
-                        <div class="prop-row"><label><input type="checkbox" id="fin-remove-unused"> Unbenutzte Morphs entfernen</label></div>
-                        <button id="fin-cleanup" class="viewer-btn hb-width-100-c"><i class="fas fa-broom"></i> Cleanup</button>
+                        <div class="prop-row"><label><input type="checkbox"
+                             id="fin-collapse-morphs"> Shape Keys zusammenfassen</label></div>
+                        <div class="prop-row"><label><input type="checkbox"
+                             id="fin-remove-unused"> Unbenutzte Morphs entfernen</label></div>
+                        <button id="fin-cleanup" class="viewer-btn hb-width-100-c"><i
+                             class="fas fa-broom"></i> Cleanup</button>
                     </div>
                 </div>
                 <div class="panel-section">
@@ -1676,7 +1694,8 @@
                                 <option value="yaml">YAML</option>
                             </select>
                         </div>
-                        <button id="fin-convert" class="viewer-btn hb-width-100-c"><i class="fas fa-exchange-alt"></i> Konvertieren</button>
+                        <button id="fin-convert" class="viewer-btn hb-width-100-c"><i
+                             class="fas fa-exchange-alt"></i> Konvertieren</button>
                     </div>
                 </div>
             </div><!-- /tab-finalize -->
@@ -1727,7 +1746,7 @@
         <div class="scene-modal-body">
             <input class="scene-name-input" id="save-scene-name" type="text" placeholder="Szene-Name..."
                    autocomplete="off">
-            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">Vorhandene Szenen:</div>
+            <div class="dialoghinweis">Vorhandene Szenen:</div>
             <ul class="preset-list" id="save-scene-list"></ul>
         </div>
         <div class="scene-modal-footer">
@@ -1739,27 +1758,28 @@
 
 <!-- Load File Dialog -->
 <div class="scene-modal-overlay" id="load-scene-dialog">
-    <div class="scene-modal" style="max-width:520px;">
+    <div class="scene-modal dialog-schmal">
         <div class="scene-modal-header">
             <h4><i class="fas fa-folder-open"></i> Modell / Szene laden</h4>
             <button class="scene-modal-close" data-close>&times;</button>
         </div>
         <div class="scene-modal-body hb-padding-0">
-            <div style="padding:8px 12px 4px;font-size:0.7rem;color:var(--text-muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            <div class="dialogpfad">
                 <i class="fas fa-folder hb-margin-right-4px"></i> data/models/
             </div>
-            <table class="file-browser-table db-tabelle sortable"
+            <table class="file-browser-table db-tabelle sortable dialogtabelle"
                    id="load-file-table" data-sort-key="szene-dateiliste"
-                   style="width:100%;font-size:0.78rem;border-collapse:collapse;">
+                  >
                 <thead>
-                    <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);font-size:0.7rem;">
-                        <th style="text-align:left;padding:4px 12px;">Name</th>
-                        <th style="text-align:left;padding:4px 8px;width:60px;">Typ</th>
-                        <th style="text-align:right;padding:4px 12px;width:80px;">Geändert</th>
+                    <tr class="dialogtabellenkopf">
+                        <th class="spalte-name">Name</th>
+                        <th class="spalte-art">Typ</th>
+                        <th class="spalte-groesse">Geändert</th>
                     </tr>
                 </thead>
                 <tbody id="load-file-tbody">
-                    <tr><td colspan="3" class="leer-hinweis-mitte"><i class="fas fa-spinner fa-spin"></i> Lade...</td></tr>
+                    <tr><td colspan="3" class="leer-hinweis-mitte"><i
+                         class="fas fa-spinner fa-spin"></i> Lade...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -1779,8 +1799,8 @@
         </div>
         <div class="scene-modal-body">
             <div class="hb-font-size-0-75rem-gedaempft">Kategorie</div>
-            <input class="scene-name-input" id="save-anim-category" type="text" readonly
-                   style="opacity:0.6;margin-bottom:8px;">
+            <input class="scene-name-input vorschaubild-blass" id="save-anim-category" type="text" readonly
+                  >
             <div class="hb-font-size-0-75rem-gedaempft">Dateiname</div>
             <input class="scene-name-input" id="save-anim-name" type="text" placeholder="Dateiname..."
                    autocomplete="off">
@@ -1794,13 +1814,223 @@
 
 <!-- Pose context menu -->
 <div id="pose-ctx-menu" class="hb-kontextmenue">
-    <div class="pose-ctx-item hb-menueeintrag" data-action="apply"><i class="fas fa-play hb-symbolspalte"></i> Anwenden</div>
+    <div class="pose-ctx-item hb-menueeintrag" data-action="apply"><i
+         class="fas fa-play hb-symbolspalte"></i> Anwenden</div>
     <div class="hb-trennlinie"></div>
-    <div class="pose-ctx-item hb-menueeintrag" data-action="rename"><i class="fas fa-pen hb-symbolspalte"></i> Umbenennen (F2)</div>
-    <div class="pose-ctx-item hb-menueeintrag" data-action="delete"><i class="fas fa-trash hb-symbolspalte"></i> Loeschen (Entf)</div>
+    <div class="pose-ctx-item hb-menueeintrag" data-action="rename"><i
+         class="fas fa-pen hb-symbolspalte"></i> Umbenennen (F2)</div>
+    <div class="pose-ctx-item hb-menueeintrag" data-action="delete"><i
+         class="fas fa-trash hb-symbolspalte"></i> Loeschen (Entf)</div>
 </div>
 <style>
 .pose-ctx-item:hover { background:rgba(124,92,191,0.3); color:#fff; }
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#prop-mh-push {
+    flex:1;
+    font-size:0.78rem;
+}
+#cm-asset-list {
+    max-height:200px;
+    overflow-y:auto;
+    margin:6px 0;
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:4px;
+}
+#animation-panel {
+    display:block;
+}
+#anim-time {
+    font-family:monospace;
+    font-size:0.8rem;
+    color:var(--text-muted);
+    margin:4px 0;
+}
+#scene-delta-norm {
+    font-size:0.75rem;
+    padding:2px 4px;
+    background:var(--bg-darker);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:4px;
+}
+#smooth-sigma-val {
+    font-size:0.8rem;
+    color:var(--text-muted);
+    min-width:24px;
+}
+#mg-skeleton-type {
+    width:100%;
+    margin-bottom:0;
+}
+#mg-bone-name {
+    font-size:0.8rem;
+    color:var(--accent);
+    margin-bottom:6px;
+    font-weight:600;
+}
+#mg-bone-texture-clear {
+    padding:2px 8px;
+    font-size:0.7rem;
+}
+#mg-bone-texture-preview {
+    display:none;
+    margin-top:4px;
+    text-align:center;
+}
+#mg-bone-texture-thumb {
+    max-width:120px;
+    max-height:120px;
+    border:1px solid var(--border);
+    border-radius:3px;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.abschnitt-abgesetzt.abschnitt-abgesetzt.abschnitt-abgesetzt {
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--border);
+}
+.abschnitt-ohne-rahmen.abschnitt-ohne-rahmen.abschnitt-ohne-rahmen {
+    border:none;
+}
+.abschnittstitel-fett.abschnittstitel-fett.abschnittstitel-fett {
+    font-size:0.85rem;
+    font-weight:600;
+    color:var(--text);
+    margin-bottom:6px;
+}
+.auswahl-schmal.auswahl-schmal.auswahl-schmal {
+    font-size:0.7rem;
+    flex:1;
+}
+.dialog-schmal.dialog-schmal.dialog-schmal {
+    max-width:520px;
+}
+.dialoghinweis.dialoghinweis.dialoghinweis {
+    font-size:0.75rem;
+    color:var(--text-muted);
+    margin-bottom:8px;
+}
+.dialogpfad.dialogpfad.dialogpfad {
+    padding:8px 12px 4px;
+    font-size:0.7rem;
+    color:var(--text-muted);
+    font-family:monospace;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.dialogtabelle.dialogtabelle.dialogtabelle {
+    width:100%;
+    font-size:0.78rem;
+    border-collapse:collapse;
+}
+.dialogtabellenkopf.dialogtabellenkopf.dialogtabellenkopf {
+    border-bottom:1px solid var(--border);
+    color:var(--text-muted);
+    font-size:0.7rem;
+}
+.feldhinweis.feldhinweis.feldhinweis {
+    font-size:0.72rem;
+    color:var(--text-muted);
+    margin:2px 0 6px;
+}
+.feldhinweis-eng.feldhinweis-eng.feldhinweis-eng {
+    font-size:0.65rem;
+    color:var(--text-muted);
+    margin-top:-2px;
+    margin-bottom:2px;
+}
+.feldhinweis-oben.feldhinweis-oben.feldhinweis-oben {
+    font-size:0.7rem;
+    color:var(--text-secondary);
+    margin-top:6px;
+    margin-bottom:2px;
+}
+.gruppentitel-klein.gruppentitel-klein.gruppentitel-klein {
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--text-muted);
+    margin:8px 0 4px;
+}
+.kopfzeilengruppe.kopfzeilengruppe.kopfzeilengruppe {
+    display:flex;
+    align-items:center;
+    gap:2px;
+    margin-left:12px;
+}
+.menueverweis.menueverweis.menueverweis {
+    color:inherit;
+    text-decoration:none;
+}
+.reglerbeschriftung.reglerbeschriftung.reglerbeschriftung {
+    font-size:0.8rem;
+    color:var(--text-muted);
+    min-width:50px;
+}
+.reglerzeile.reglerzeile.reglerzeile {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:4px;
+}
+.spalte-art.spalte-art.spalte-art {
+    text-align:left;
+    padding:4px 8px;
+    width:60px;
+}
+.spalte-groesse.spalte-groesse.spalte-groesse {
+    text-align:right;
+    padding:4px 12px;
+    width:80px;
+}
+.spalte-name.spalte-name.spalte-name {
+    text-align:left;
+    padding:4px 12px;
+}
+.spaltenkoerper.spaltenkoerper.spaltenkoerper {
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+.tastenhinweis-fuss.tastenhinweis-fuss.tastenhinweis-fuss {
+    padding:0 12px 6px;
+}
+.textfeld-dehnbar.textfeld-dehnbar.textfeld-dehnbar {
+    max-height:300px;
+    overflow-y:auto;
+    resize:vertical;
+    min-height:60px;
+}
+.unterabschnittstitel.unterabschnittstitel.unterabschnittstitel {
+    font-size:0.7rem;
+    margin-top:4px;
+}
+.unterabschnittstitel-weit.unterabschnittstitel-weit.unterabschnittstitel-weit {
+    font-size:0.7rem;
+    margin-top:8px;
+}
+.vorschaubild-blass.vorschaubild-blass.vorschaubild-blass {
+    opacity:0.6;
+    margin-bottom:8px;
+}
+.wiedergabezeile.wiedergabezeile.wiedergabezeile {
+    margin-top:6px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+}
+.zeile-verteilt.zeile-verteilt.zeile-verteilt {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
 </style>
 {% endblock %}
 

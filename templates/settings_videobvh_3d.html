@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+{% extends "einstellungsseite.html" %}
 {% load static %}
 {% block title %}Video to BVH: 3D - Einstellungen{% endblock %}
 
-{% block content %}
+{% block einstellungen_stile %}
 <style>
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
@@ -15,12 +15,36 @@
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-color-e74c3c-blank.hb-color-e74c3c-blank.hb-color-e74c3c-blank { color:#e74c3c; }   /* 2x */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.auswahlgruppe.auswahlgruppe.auswahlgruppe {
+    display:flex;
+    flex-wrap:wrap;
+    gap:1rem;
+}
+.befehlsfeld.befehlsfeld.befehlsfeld {
+    width:100%;
+    font-family:monospace;
+    font-size:0.85rem;
+}
+.warnhinweis.warnhinweis.warnhinweis {
+    display:block;
+    color:#888;
+    margin-top:0.25rem;
+}
+.warnkasten.warnkasten.warnkasten {
+    background:rgba(231,76,60,0.1);
+    border:1px solid rgba(231,76,60,0.3);
+    border-radius:6px;
+    padding:0.75rem 1rem;
+    margin:0.5rem 0.75rem;
+}
 </style>
-<h1>Einstellungen &mdash; Video to BVH: 3D</h1>
+{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
+{% block einstellungen_titel %}Einstellungen &mdash; Video to BVH: 3D{% endblock %}
 
+{% block einstellungen_karten %}
     {# ── Standard-Modell ── #}
     <div class="settings-card">
         <h2><i class="fas fa-user"></i> Standard-Modell (Result-Seite)</h2>
@@ -28,7 +52,8 @@
         <div class="settings-row">
             <div class="settings-label">
                 <strong>Default Model Preset</strong>
-                <small>Welches Modell-Preset auf der Process-Ergebnis-Seite standardm&auml;&szlig;ig geladen wird.</small>
+                <small>Welches Modell-Preset auf der Process-Ergebnis-Seite standardm&auml;&szlig;ig geladen
+                     wird.</small>
             </div>
             <div class="settings-input">
                 <select name="default_model_result" id="default-model-result" class="settings-select">
@@ -49,10 +74,18 @@
             </div>
             <div class="settings-input">
                 <select name="lifter_3d_default" class="settings-select">
-                    <option value="v4" {% if settings.lifter_3d_default == 'v4' %}selected{% endif %}>MocapNET v4 (CPU, ~75 mm)</option>
-                    <option value="wham" {% if settings.lifter_3d_default == 'wham' %}selected{% endif %}>WHAM (SMPL, GPU, 37 mm)</option>
-                    <option value="prompthmr" {% if settings.lifter_3d_default == 'prompthmr' %}selected{% endif %}>PromptHMR (SMPL, GPU, 37 mm)</option>
-                    <option value="gvhmr" {% if settings.lifter_3d_default == 'gvhmr' %}selected{% endif %}>GVHMR (SMPL, GPU, 36 mm, empfohlen)</option>
+                    <option value="v4"
+                         {% if settings.lifter_3d_default == 'v4' %}selected{% endif %}>MocapNET v4 (CPU, ~75
+                              mm)</option>
+                    <option value="wham"
+                         {% if settings.lifter_3d_default == 'wham' %}selected{% endif %}>WHAM (SMPL, GPU, 37
+                              mm)</option>
+                    <option value="prompthmr"
+                         {% if settings.lifter_3d_default == 'prompthmr' %}selected{% endif %}>PromptHMR (SMPL, GPU, 37
+                              mm)</option>
+                    <option value="gvhmr"
+                         {% if settings.lifter_3d_default == 'gvhmr' %}selected{% endif %}>GVHMR (SMPL, GPU, 36 mm,
+                              empfohlen)</option>
                 </select>
             </div>
         </div>
@@ -63,8 +96,10 @@
         <h2>
             <i class="fas fa-brain"></i> MocapNET v4
             <small class="hb-gedaempft">~75 mm, CPU, 165 Bones</small>
-            {% if v4_installed %}<span class="hb-color-27ae60" title="Installiert"><i class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+            {% if v4_installed %}<span class="hb-color-27ae60" title="Installiert"><i
+                 class="fas fa-check-circle"></i></span>
+            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i
+                 class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
         {# Components #}
@@ -73,21 +108,26 @@
                 <strong>Komponenten</strong>
                 <small>Welche Tracking-Komponenten aktiv sind. Body sollte immer aktiviert sein.</small>
             </div>
-            <div class="settings-input" style="display:flex;flex-wrap:wrap;gap:1rem;">
+            <div class="settings-input auswahlgruppe">
                 <label class="settings-checkbox">
-                    <input type="checkbox" name="v4_enable_body" {% if settings.v4_enable_body %}checked{% endif %}> Body
+                    <input type="checkbox" name="v4_enable_body"
+                         {% if settings.v4_enable_body %}checked{% endif %}> Body
                 </label>
                 <label class="settings-checkbox">
-                    <input type="checkbox" name="v4_enable_face" {% if settings.v4_enable_face %}checked{% endif %}> Face
+                    <input type="checkbox" name="v4_enable_face"
+                         {% if settings.v4_enable_face %}checked{% endif %}> Face
                 </label>
                 <label class="settings-checkbox">
-                    <input type="checkbox" name="v4_enable_hands" {% if settings.v4_enable_hands %}checked{% endif %}> Hands
+                    <input type="checkbox" name="v4_enable_hands"
+                         {% if settings.v4_enable_hands %}checked{% endif %}> Hands
                 </label>
                 <label class="settings-checkbox">
-                    <input type="checkbox" name="v4_enable_mouth" {% if settings.v4_enable_mouth %}checked{% endif %}> Mouth
+                    <input type="checkbox" name="v4_enable_mouth"
+                         {% if settings.v4_enable_mouth %}checked{% endif %}> Mouth
                 </label>
                 <label class="settings-checkbox">
-                    <input type="checkbox" name="v4_enable_eyes" {% if settings.v4_enable_eyes %}checked{% endif %}> Eyes
+                    <input type="checkbox" name="v4_enable_eyes"
+                         {% if settings.v4_enable_eyes %}checked{% endif %}> Eyes
                 </label>
             </div>
         </div>
@@ -116,8 +156,10 @@
             </div>
             <div class="settings-input">
                 <select name="mp_model_complexity" class="settings-select">
-                    <option value="0" {% if settings.mp_model_complexity == 0 %}selected{% endif %}>0 &ndash; Lite (schnell)</option>
-                    <option value="1" {% if settings.mp_model_complexity == 1 %}selected{% endif %}>1 &ndash; Full (genau)</option>
+                    <option value="0"
+                         {% if settings.mp_model_complexity == 0 %}selected{% endif %}>0 &ndash; Lite (schnell)</option>
+                    <option value="1"
+                         {% if settings.mp_model_complexity == 1 %}selected{% endif %}>1 &ndash; Full (genau)</option>
                 </select>
             </div>
         </div>
@@ -125,7 +167,8 @@
 
     {# ── SMPL Pipelines ── #}
     <div class="settings-card hb-abstand-oben">
-        <h2><i class="fas fa-microchip"></i> SMPL Pipelines <small class="hb-gedaempft">Gemeinsame Einstellungen</small></h2>
+        <h2><i class="fas fa-microchip"></i> SMPL Pipelines <small
+             class="hb-gedaempft">Gemeinsame Einstellungen</small></h2>
 
         <div class="settings-row">
             <div class="settings-label">
@@ -141,10 +184,10 @@
         </div>
 
         {% if not smpl_models_ok %}
-        <div style="background:rgba(231,76,60,0.1); border:1px solid rgba(231,76,60,0.3); border-radius:6px; padding:0.75rem 1rem; margin:0.5rem 0.75rem;">
+        <div class="warnkasten">
             <i class="fas fa-exclamation-triangle hb-color-e74c3c-blank"></i>
             <strong class="hb-color-e74c3c-blank">SMPL-Modelle fehlen</strong>
-            <small style="display:block;color:#888;margin-top:0.25rem;">
+            <small class="warnhinweis">
                 Die SMPL .pkl Dateien werden ben&ouml;tigt. Lizenz registrieren unter
                 <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a>,
                 dann die Dateien nach <code>VideoToBVH/models/smpl/</code> kopieren.
@@ -158,8 +201,10 @@
         <h2>
             <i class="fas fa-walking"></i> GVHMR
             <small class="hb-gedaempft">36 mm, GPU &mdash; Empfohlen</small>
-            {% if gvhmr_installed %}<span class="hb-color-27ae60" title="Installiert"><i class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+            {% if gvhmr_installed %}<span class="hb-color-27ae60" title="Installiert"><i
+                 class="fas fa-check-circle"></i></span>
+            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i
+                 class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
         {% include "_einstellungen_kaestchen.html" with titel="Static Camera" beschriftung="Statische Kamera annehmen (kein DPVO). Empfohlen f&uuml;r feste Kameraperspektive." feld="gvhmr_static_cam" text="Aktiviert" an=settings.gvhmr_static_cam %}
@@ -172,8 +217,10 @@
         <h2>
             <i class="fas fa-globe"></i> WHAM
             <small class="hb-gedaempft">37 mm, GPU, World-Koordinaten</small>
-            {% if wham_installed %}<span class="hb-color-27ae60" title="Installiert"><i class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+            {% if wham_installed %}<span class="hb-color-27ae60" title="Installiert"><i
+                 class="fas fa-check-circle"></i></span>
+            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i
+                 class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
         {% include "_einstellungen_kaestchen.html" with titel="Estimate Local Only" beschriftung="Nur lokale K&ouml;rperbewegung sch&auml;tzen (keine globale Trajektorie)." feld="wham_estimate_local_only" text="Aktiviert" an=settings.wham_estimate_local_only %}
@@ -186,8 +233,10 @@
         <h2>
             <i class="fas fa-comment-dots"></i> PromptHMR
             <small class="hb-gedaempft">37 mm, GPU &mdash; Beste per-frame</small>
-            {% if prompthmr_installed %}<span class="hb-color-27ae60" title="Installiert"><i class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i class="fas fa-times-circle"></i></span>{% endif %}
+            {% if prompthmr_installed %}<span class="hb-color-27ae60" title="Installiert"><i
+                 class="fas fa-check-circle"></i></span>
+            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i
+                 class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
         {% include "_einstellungen_kaestchen.html" with titel="Static Camera" beschriftung="Statische Kamera annehmen. Empfohlen f&uuml;r die meisten Videos." feld="prompthmr_static_camera" text="Aktiviert" an=settings.prompthmr_static_camera %}
@@ -200,20 +249,20 @@
         <div class="settings-row">
             <div class="settings-label">
                 <strong>Output-Verzeichnis</strong>
-                <small>Verzeichnis f&uuml;r gespeicherte Videos (Skeleton Overlay, Rig Only, 3D Character) von der Process-Seite.</small>
+                <small>Verzeichnis f&uuml;r gespeicherte Videos (Skeleton Overlay, Rig Only, 3D Character) von der
+                     Process-Seite.</small>
             </div>
             <div class="settings-input">
-                <input type="text" name="video_output_dir"
+                <input class="befehlsfeld" type="text" name="video_output_dir"
                        value="{{ settings.video_output_dir }}"
-                       style="width:100%;font-family:monospace;font-size:0.85rem;"
+                      
                        placeholder="A:\3DTools\HumanBodyWeb\media\output">
             </div>
         </div>
     </div>
+{% endblock %}
 
-    {% include "_einstellungen_speichern.html" %}
-</form>
-
+{% block einstellungen_nachtrag %}
 {% comment %}Umbau 16.08.2026: Hier stand die sechste Kopie des
 Modell-Listen-Blocks (siehe modellfeld.js), ohne ok-Pruefung.{% endcomment %}
 <script type="module">

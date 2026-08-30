@@ -24,7 +24,7 @@ export async function loadWardrobe() {
 
         Object.keys(cats).sort().forEach(cat => {
             const label = document.createElement('div');
-            label.style.cssText = 'font-size:0.78rem;color:var(--text-muted);margin:8px 0 4px;';
+            label.className = 'schranktitel';
             label.textContent = cat;
             panel.appendChild(label);
 

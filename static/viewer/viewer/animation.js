@@ -6,7 +6,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { fetchRetargetedClipFromUrl } from '../retarget_hybrid.js';
 import { convertToRigifySkinnedMesh } from './skinning.js';
-import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
+import { Animationsstopp } from '../gemeinsam/animationsstopp.js';
 import { Animationslader } from '../gemeinsam/animationslader.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
@@ -142,29 +142,14 @@ export async function loadBVHAnimation(url, name, fc) {
 }
 
 export function stopAnimation(destroy = false) {
-    if (state.currentAction) {
-        state.currentAction.stop();
-        state.currentAction.reset();
-        if (destroy) state.currentAction = null;
-    }
-    if (state.mixer && destroy) {
-        state.mixer.stopAllAction();
-        state.mixer = null;
-    }
+    Animationsstopp.aktion(state, destroy);
+    Animationsstopp.mischer(state, destroy);
+    // Diese Seite zeigt EINE Figur; ihr Netz trägt das Skelett selbst.
     if (state.isSkinned && state.bodyMesh && state.bodyMesh.isSkinnedMesh) {
         state.bodyMesh.skeleton.pose();
     }
-    if (state.skelWrapper) {
-        state.scene.remove(state.skelWrapper);
-        state.skelWrapper = null;
-    }
-    if (state.skeletonHelper) {
-        state.scene.remove(state.skeletonHelper);
-        state.skeletonHelper = null;
-    }
-    if (state.rigVisible && state.rigifySkeleton) {
-        state.skeletonHelper = Skelettanzeige.bauen(state.scene, state.rigifySkeleton.rootBone);
-    }
+    Animationsstopp.hilfslinien(state);
+    Animationsstopp.rigZeigen(state, state.rigifySkeleton);
     state.playing = false;
 }
 

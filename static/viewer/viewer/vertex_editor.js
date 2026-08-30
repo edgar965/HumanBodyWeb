@@ -7,8 +7,10 @@ import { state, acceleratedRaycast } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import './utils.js';
 import { Vertexzustand } from './vertex_zustand.js';
-import { _veApplyGizmoDelta, _veMoveSelectedByDelta, _vePushOutside, _veReset, _veSmooth, _veUpdateGizmo } from './vertex_verschieben.js';
-import { _veUpdateAllColors, _veUpdateSelectionInfo, veBoxSelectEnd, veBoxSelectMove, veBoxSelectStart, veHandleClick } from './vertex_auswahl.js';
+import { _veApplyGizmoDelta, _veMoveSelectedByDelta, _vePushOutside, _veReset, _veSmooth,
+    _veUpdateGizmo } from './vertex_verschieben.js';
+import { _veUpdateAllColors, _veUpdateSelectionInfo, veBoxSelectEnd, veBoxSelectMove, veBoxSelectStart,
+    veHandleClick } from './vertex_auswahl.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
 // Vertex editor state
@@ -126,7 +128,8 @@ export function veExitEditMode() {
 export function veHandleKeydown(e) {
     if (e.key === 'Escape') { fn.peSetMode('select'); return; }
     if (e.key === 'a' || e.key === 'A') {
-        if (Vertexzustand.veSelectedIndices.size > 0 && Vertexzustand.vePointsOverlay) Vertexzustand.veSelectedIndices.clear();
+        if (Vertexzustand.veSelectedIndices.size > 0
+            && Vertexzustand.vePointsOverlay) Vertexzustand.veSelectedIndices.clear();
         else if (Vertexzustand.vePointsOverlay) { const count = Vertexzustand.vePointsOverlay.geometry.getAttribute('position').count; for (let i = 0; i < count; i++) Vertexzustand.veSelectedIndices.add(i); }
         _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
     }
@@ -161,10 +164,12 @@ export function initVertexEditorBindings() {
 
     ['ve-pos-x', 've-pos-y', 've-pos-z'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', () => {
-            if (!Vertexzustand.veActive || !Vertexzustand.veTargetMesh || Vertexzustand.veSelectedIndices.size === 0) return;
+            if (!Vertexzustand.veActive || !Vertexzustand.veTargetMesh || Vertexzustand.veSelectedIndices.size
+                === 0) return;
             const posAttr = Vertexzustand.veTargetMesh.geometry.getAttribute('position');
             let cx = 0, cy = 0, cz = 0;
-            for (const idx of Vertexzustand.veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx); cz += posAttr.getZ(idx); }
+            for (const idx of Vertexzustand.veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx);
+                cz += posAttr.getZ(idx); }
             const n = Vertexzustand.veSelectedIndices.size;
             const newX = parseFloat(document.getElementById('ve-pos-x')?.value || 0);
             const newY = parseFloat(document.getElementById('ve-pos-y')?.value || 0);

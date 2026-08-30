@@ -38,7 +38,8 @@ export function peRender() {
         panel.edges.forEach((edge, ei) => {
             const p0 = peWorldToCanvas(...panel.vertices[edge.endpoints[0]]);
             const p1 = peWorldToCanvas(...panel.vertices[edge.endpoints[1]]);
-            ctx.strokeStyle = (isActive && Musterzustand.peSelectedEdge && Musterzustand.peSelectedEdge.panel === name && Musterzustand.peSelectedEdge.index === ei) ? '#fff' : color;
+            ctx.strokeStyle = (isActive && Musterzustand.peSelectedEdge && Musterzustand.peSelectedEdge.panel
+                === name && Musterzustand.peSelectedEdge.index === ei) ? '#fff' : color;
             ctx.lineWidth = isActive ? 2.5 : 1.5;
             ctx.beginPath();
             if (edge.curvature) {
@@ -75,16 +76,19 @@ export function peRender() {
     });
 
     const statusEl = document.getElementById('pe-status');
-    if (statusEl) { const [wx, wy] = peCanvasToWorld(Musterzustand.peLastMouse.x, Musterzustand.peLastMouse.y); statusEl.textContent = `${wx.toFixed(1)}, ${wy.toFixed(1)} cm    ${Math.round(Musterzustand.peZoom / 2 * 100)}%`; }
+    if (statusEl) { const [wx, wy] = peCanvasToWorld(Musterzustand.peLastMouse.x, Musterzustand.peLastMouse.y);
+        statusEl.textContent = `${wx.toFixed(1)}, ${wy.toFixed(1)} cm    ${Math.round(Musterzustand.peZoom / 2 * 100)}%`; }
 }
 
-export function _peMidpoint(panel, edge) { const v0 = panel.vertices[edge.endpoints[0]]; const v1 = panel.vertices[edge.endpoints[1]]; return [(v0[0] + v1[0]) / 2, (v0[1] + v1[1]) / 2]; }
+export function _peMidpoint(panel, edge) { const v0 = panel.vertices[edge.endpoints[0]];
+    const v1 = panel.vertices[edge.endpoints[1]]; return [(v0[0] + v1[0]) / 2, (v0[1] + v1[1]) / 2]; }
 
 export function _peHitVertex(cx, cy, threshold) {
     const thr = threshold || 8;
     for (const name of Object.keys(Musterzustand.pePattern.panels)) {
         const panel = Musterzustand.pePattern.panels[name];
-        for (let i = 0; i < panel.vertices.length; i++) { const [vx, vy] = peWorldToCanvas(...panel.vertices[i]); if (Math.hypot(cx - vx, cy - vy) < thr) return {panel: name, index: i}; }
+        for (let i = 0; i < panel.vertices.length; i++) { const [vx, vy] = peWorldToCanvas(...panel.vertices[i]);
+            if (Math.hypot(cx - vx, cy - vy) < thr) return {panel: name, index: i}; }
     }
     return null;
 }
@@ -93,18 +97,25 @@ export function _peHitEdge(cx, cy, threshold) {
     const thr = threshold || 6;
     for (const name of Object.keys(Musterzustand.pePattern.panels)) {
         const panel = Musterzustand.pePattern.panels[name];
-        for (let i = 0; i < panel.edges.length; i++) { const edge = panel.edges[i]; const p0 = peWorldToCanvas(...panel.vertices[edge.endpoints[0]]); const p1 = peWorldToCanvas(...panel.vertices[edge.endpoints[1]]); const dist = _pePointToSegDist(cx, cy, p0[0], p0[1], p1[0], p1[1]); if (dist < thr) return {panel: name, index: i}; }
+        for (let i = 0; i < panel.edges.length; i++) { const edge = panel.edges[i];
+            const p0 = peWorldToCanvas(...panel.vertices[edge.endpoints[0]]);
+                const p1 = peWorldToCanvas(...panel.vertices[edge.endpoints[1]]); const dist = _pePointToSegDist(cx, cy,
+                    p0[0], p0[1], p1[0], p1[1]); if (dist < thr) return {panel: name, index: i}; }
     }
     return null;
 }
 
-export function _pePointToSegDist(px, py, x1, y1, x2, y2) { const dx = x2 - x1, dy = y2 - y1; const lenSq = dx * dx + dy * dy; if (lenSq < 1e-6) return Math.hypot(px - x1, py - y1); let t = ((px - x1) * dx + (py - y1) * dy) / lenSq; t = Math.max(0, Math.min(1, t)); return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy)); }
+export function _pePointToSegDist(px, py, x1, y1, x2, y2) { const dx = x2 - x1, dy = y2 - y1; const lenSq = dx * dx
+    + dy * dy; if (lenSq < 1e-6) return Math.hypot(px - x1, py - y1); let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t)); return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy)); }
 
 export function _peHitControlPoint(cx, cy, threshold) {
     const thr = threshold || 8;
     for (const name of Object.keys(Musterzustand.pePattern.panels)) {
         const panel = Musterzustand.pePattern.panels[name];
-        for (let i = 0; i < panel.edges.length; i++) { const edge = panel.edges[i]; if (!edge.curvature) continue; const cp = peWorldToCanvas(...edge.curvature); if (Math.hypot(cx - cp[0], cy - cp[1]) < thr) return {panel: name, edgeIndex: i}; }
+        for (let i = 0; i < panel.edges.length; i++) { const edge = panel.edges[i]; if (!edge.curvature) continue;
+            const cp = peWorldToCanvas(...edge.curvature); if (Math.hypot(cx - cp[0], cy
+                - cp[1]) < thr) return {panel: name, edgeIndex: i}; }
     }
     return null;
 }

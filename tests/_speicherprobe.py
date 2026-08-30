@@ -77,6 +77,10 @@ class Speicherprobe:
 
     def als_dict(self):
         """Die Schlüssel, die die Vorlagen und Tests schon lesen."""
+        # Dictionary gewollt: Diese sechs Namen mit fuehrendem Unterstrich sind
+        # das ALTE Ergebnisformat der Oberflaechen-Tests. Sie stehen in den
+        # Testfaellen, nicht im Frontend — deshalb findet `anzeigeformat` sie
+        # dort nicht wieder. Eine Klasse waere hier der Umbau der Aufrufer.
         return {'_save_code': self.speichercode, '_save_ok': self.gespeichert,
                 '_file_exists': self.datei_da, '_load_code': self.ladecode,
                 '_load_ok': self.geladen, 'project': self.projekt}

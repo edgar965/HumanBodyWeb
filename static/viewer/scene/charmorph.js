@@ -72,19 +72,21 @@ export function renderCharmorphList() {
 
     list.innerHTML = '';
     if (filtered.length === 0) {
-        list.innerHTML = '<div style="padding:6px;font-size:0.75rem;color:var(--text-muted);">Keine Assets</div>';
+        list.innerHTML = '<div class="leer-hinweis-eng">Keine Assets</div>';
         return;
     }
 
     for (const asset of filtered) {
         const item = document.createElement('div');
-        item.style.cssText = 'padding:4px 8px;cursor:pointer;font-size:0.78rem;border-radius:3px;display:flex;justify-content:space-between;';
-        item.innerHTML = `<span>${asset.name.replace(/_/g, ' ')}</span><span style="font-size:0.65rem;color:var(--text-muted);">${asset.category || ''}</span>`;
+        item.className = 'bestandszeile';
+        item.innerHTML = `<span>${asset.name.replace(/_/g, ' ')}</span><span
+            class="bestandsart">${asset.category || ''}</span>`;
 
         item.addEventListener('click', () => {
             // Deselect all
-            list.querySelectorAll('div').forEach(d => d.style.background = '');
-            item.style.background = 'rgba(124,92,191,0.3)';
+            list.querySelectorAll('div')
+                .forEach(d => d.classList.remove('bestandszeile-gewaehlt'));
+            item.classList.add('bestandszeile-gewaehlt');
             _selectedAsset = asset;
             _showAssetParams(asset);
         });

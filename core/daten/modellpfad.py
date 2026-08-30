@@ -25,6 +25,7 @@ import os
 
 from .pfadvergleich import Pfadvergleich
 
+
 class Modellpfad:
     """`<wurzel>/<name><endung>` — oder nichts."""
 

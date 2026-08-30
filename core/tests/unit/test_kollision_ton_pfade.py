@@ -35,6 +35,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 from core.cloth_export_api import Stoffexport
+from ._humanbodypfad import Humanbodypfad
 
 
 class NamensstammTest(SimpleTestCase):
@@ -73,9 +74,7 @@ class TonquellenTest(SimpleTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        wurzel = str(getattr(settings, 'HUMANBODY_ROOT', ''))
-        if wurzel and wurzel not in sys.path:
-            sys.path.insert(0, wurzel)
+        Humanbodypfad.setzen()
         from collision import audio_mux
         cls.am = audio_mux
 

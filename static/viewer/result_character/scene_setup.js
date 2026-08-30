@@ -15,18 +15,7 @@ export function applySceneSettings(renderer, scene, camera, keyLight, fillLight,
 }
 
 export function applySceneSkinSettings(mesh) {
-    const saved = localStorage.getItem('humanbody_scene_settings');
-    const mat = mesh && mesh.material
-        ? (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material)
-        : null;
-    if (!saved || !mat) return;
-    try {
-        const s = JSON.parse(saved);
-        if (s.skin) {
-            if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
-            if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
-        }
-    } catch (e) { Protokoll.debug('szene', 'Hauteinstellungen nicht anwendbar', e); }
+    Szeneneinstellungen.hautWerte(Szeneneinstellungen.erstesMaterial(mesh));
 }
 
 fn.applySceneSkinSettings = applySceneSkinSettings;

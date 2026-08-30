@@ -17,7 +17,6 @@ djangoBase-Import landet im falschen Ordner — der Lauf bricht dann mit
 „Cannot find module" ab, und man sucht den Fehler im Testfall.
 """
 import shutil
-import unittest
 from pathlib import Path
 
 from djangobase.testhelfer import Webmodul
@@ -31,8 +30,8 @@ class Jsmodul:
 
     #: Reihenfolge zählt: die LÄNGERE Vorsilbe muss zuerst passen.
     WURZELN = {
-        '/static/djangobase/': Path(__import__('djangobase').__file__).parent
-                               / 'static' / 'djangobase',
+        '/static/djangobase/': (Path(__import__('djangobase').__file__).parent
+                                / 'static' / 'djangobase'),
         '/static/': WURZEL / 'static',
     }
 
@@ -41,10 +40,23 @@ class Jsmodul:
         self.pfad = WURZEL.joinpath('static', 'viewer', *teile)
 
     def laufen(self, skript):
-        """Das Skript in Node ausführen; `MODUL` zeigt darin auf dieses Modul."""
-        return Webmodul(self.pfad, Jsmodul.WURZELN).laufen(skript)
+        """Das Skript in Node ausführen; `MODUL` zeigt darin auf dieses Modul.
 
-    @staticmethod
-    def ohne_node():
-        """Dekorator: überspringen, wenn `node` nicht im Pfad ist."""
-        return unittest.skipUnless(shutil.which('node'), 'node fehlt')
+        FEHLT `node`, IST DAS EIN FEHLER — kein Grund zum Überspringen
+        (30.08.2026, Befund `uebersprungen`). Bis dahin trug jeder dieser
+        neun Tests einen Wächter: sieben über `Jsmodul.ohne_node()`, zwei mit
+        `@unittest.skipUnless` von Hand. Auf einem Rechner ohne node meldeten
+        alle neun grün, ohne eine Zeile JavaScript ausgeführt zu haben — und
+        das Werkzeug sah nur die zwei offenen, die sieben hinter dem Helfer
+        nicht.
+
+        Node ist Werkzeug dieses Projekts (die Proben unter `Docu/umbau/`
+        laufen damit, TheatreJS wird damit gebaut). Wer es nicht hat, hat den
+        Rechner nicht fertig eingerichtet.
+        """
+        if not shutil.which('node'):
+            raise RuntimeError(
+                'node ist nicht im Pfad. Die JS-Tests führen die Module '
+                'wirklich aus; ohne node gibt es kein Ergebnis — und ein '
+                'übersprungener Test darf nicht grün melden.')
+        return Webmodul(self.pfad, Jsmodul.WURZELN).laufen(skript)

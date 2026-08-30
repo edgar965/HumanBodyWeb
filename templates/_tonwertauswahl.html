@@ -1,0 +1,22 @@
+{% comment %}
+Die Auswahl des Tonwert-Verfahrens (Tone Mapping).
+
+BEFUND `doppelcode` (30.08.2026): Die fünf Einträge standen in
+`scene_config.html` und `test_smpl.html` Zeile für Zeile gleich. Die Namen
+sind KEINE freie Beschriftung — `static/viewer/gemeinsam/tonwerte.js` bildet
+sie über `TONWERTNAMEN` auf die Konstanten von Three.js ab. Ein Tippfehler in
+einer der beiden Listen fällt dort still auf ACESFilmic zurück.
+
+Verwendung:
+
+  {% templatetag openblock %} include "_tonwertauswahl.html" with kennung="tone-mapping" {% templatetag closeblock %}
+  {% templatetag openblock %} include "_tonwertauswahl.html" with kennung="scene-tonemapping"
+       klasse="hb-dehnt-ohne-abstand" {% templatetag closeblock %}
+{% endcomment %}
+<select id="{{ kennung }}" class="viewer-select{% if klasse %} {{ klasse }}{% endif %}">
+    <option value="ACESFilmic" selected>ACES Filmic</option>
+    <option value="Linear">Linear</option>
+    <option value="Reinhard">Reinhard</option>
+    <option value="Cineon">Cineon</option>
+    <option value="None">None</option>
+</select>

@@ -65,6 +65,15 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.abschnittslinie.abschnittslinie.abschnittslinie {
+    border-color: rgba(255,255,255,0.1);
+    margin: 12px 0;
+}
+.fusszeile.fusszeile.fusszeile {
+    font-size: 0.75rem;
+}
 </style>
 {% endblock %}
 
@@ -77,8 +86,8 @@
         <p><strong>Project:</strong> <code id="project-name">-</code></p>
         <p><strong>Sheet:</strong> <code id="sheet-name">-</code></p>
         <p><strong>Objects:</strong> <span id="object-count">0</span></p>
-        <hr style="border-color: rgba(255,255,255,0.1); margin: 12px 0;">
-        <p style="font-size: 0.75rem;">Open browser console (F12) for debugging</p>
+        <hr class="abschnittslinie">
+        <p class="fusszeile">Open browser console (F12) for debugging</p>
     </div>
 
     <canvas id="studio-canvas"></canvas>

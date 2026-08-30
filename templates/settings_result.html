@@ -1,12 +1,10 @@
-{% extends "base.html" %}
+{% extends "einstellungsseite.html" %}
 {% load static %}
 {% block title %}Result - Einstellungen{% endblock %}
 
-{% block content %}
-<h1>Einstellungen — Result</h1>
+{% block einstellungen_titel %}Einstellungen — Result{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
+{% block einstellungen_karten %}
     <div class="settings-card">
         <h2><i class="fas fa-video"></i> Result-Seite</h2>
 
@@ -23,9 +21,9 @@
         </div>
         {% include "_einstellungen_animation.html" with feld="default_anim_result" wert=settings.default_anim_result kennung="anim-sel-result" %}
     </div>
+{% endblock %}
 
-    {% include "_einstellungen_speichern.html" %}
-</form>
+{% block einstellungen_nachtrag %}
 {% endblock %}
 
 {% block extra_scripts %}

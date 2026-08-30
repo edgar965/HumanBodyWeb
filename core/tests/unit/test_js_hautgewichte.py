@@ -15,9 +15,9 @@ Klasse gerechnet — auf Fällen, die weh tun: mehr als vier Einflüsse, unsorti
 Reihenfolge, Summe über und unter 1, ein Punkt ohne jeden Einfluss, ein Punkt
 ohne Eintrag im Feld.
 
-Ohne `node` im Pfad wird der Test übersprungen, nicht rot.
+Ohne `node` im Pfad bricht der Lauf mit einer Meldung ab (seit dem
+30.08.2026) — vorher meldete er grün, ohne gelaufen zu sein.
 """
-import shutil
 import unittest
 
 from ..jsmodul import Jsmodul
@@ -77,7 +77,6 @@ console.log(JSON.stringify({
 """
 
 
-@unittest.skipUnless(shutil.which('node'), 'node nicht im Pfad')
 class HautgewichteTest(unittest.TestCase):
 
     @classmethod

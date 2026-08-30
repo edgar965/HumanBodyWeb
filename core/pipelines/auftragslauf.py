@@ -26,11 +26,9 @@ from django.conf import settings
 from ..dienste.laufende_prozesse import LaufendeProzesse
 from ..pipeline_process import PipelineProzess
 from .fortschrittsleser import Fortschrittsleser
+from .laufbasis import Pipelinelauf
 
 logger = logging.getLogger('core')
-
-#: So viele Zeichen der Fehlerausgabe landen in der Meldung.
-MAX_FEHLERZEICHEN = 2000
 
 
 class Auftragslauf:
@@ -87,7 +85,7 @@ class Auftragslauf:
             Ergebnisablage.kopieren(koerper_bvh, self.job.name, self.job.pipeline)
         if gesicht_bvh:
             Ergebnisablage.kopieren(gesicht_bvh, self.job.name,
-                                 self.job.pipeline + '_face')
+                                    self.job.pipeline + '_face')
         if self.job.pipeline == 'hybrid_gvhmr' and koerper_bvh:
             GvhmrAusgabe(self.job, self.ausgabeordner / 'body').kopieren()
 
@@ -203,7 +201,8 @@ class Auftragslauf:
             if os.path.exists(bvh) and os.path.getsize(bvh) > 100:
                 self.teilweise = True
             else:
-                fehlertext = ''.join(lauf.stderr_zeilen)[-MAX_FEHLERZEICHEN:]
+                fehlertext = Pipelinelauf.fehlerausschnitt(
+                    ''.join(lauf.stderr_zeilen))
                 raise RuntimeError('MocapNET failed (exit code %s):\n%s'
                                    % (lauf.proc.returncode, fehlertext))
         return self._auf_bvh_endung(bvh, stamm)
@@ -278,7 +277,7 @@ class Auftragslauf:
         try:
             from ..dienste.ergebnisablage import Ergebnisablage
             ergebnispfad = Ergebnisablage.kopieren(angefangen, self.job.name,
-                                                self.job.pipeline)
+                                                   self.job.pipeline)
         except Exception:                                         # noqa: BLE001
             logger.warning('Teilergebnis nicht in die Ablage kopierbar',
                            exc_info=True)

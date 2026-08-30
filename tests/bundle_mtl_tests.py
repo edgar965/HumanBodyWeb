@@ -7,7 +7,7 @@ Aus `scene_object_bundle_tests.py` herausgeloest (17.08.2026, Befund
 `dateigroesse`): Die Datei hatte 422 Zeilen und eine Klasse mit 13 Tests.
 """
 from .base import TestCategory
-from ._bundle_basis import (Bundelruf, _PNG_CONTENT)
+from ._bundle_basis import Bundelruf, Mtlbezug, _PNG_CONTENT
 
 
 class BundleMtlTests(TestCategory):
@@ -16,48 +16,68 @@ class BundleMtlTests(TestCategory):
 
     # --- MTL-Parser: Optionsflaggen, Unterordner, Backslash-Pfade ---
     # Ab hier baut jeder Test sein eigenes Bundle — kein gemerkter Zustand.
+    # ------------------------------------------------------------- Bausteine
+    #
+    # BEFUND `doppelcode` (30.08.2026): Die beiden Bloecke unten standen in
+    # `test_12` und `test_13` zeichengleich. Ein Test, der seinen Aufbau
+    # kopiert, laeuft beim naechsten Umbau der Schnittstelle nur zur Haelfte
+    # mit — und der zurueckgebliebene wird gruen, weil er etwas anderes prueft
+    # als sein Name sagt.
+
+    @classmethod
+    def _mtl_und_textur(cls, bundle, mtl_name, mtl_inhalt,
+                        textur='swan.png'):
+        """MTL und PNG in DASSELBE Buendel legen.
+
+        Die Textur kommt FLACH ins Buendel, auch wenn die MTL einen Unterpfad
+        nennt — genau so laedt der Upload-Weg der Anwendung hoch. Darauf beruht
+        die Rueckfall-Suche, die beide Faelle pruefen.
+
+        @param textur Name der Bilddatei; `test_10` braucht einen anderen
+        @return (fehlertext, mtl_daten) — fehlertext ist leer, wenn es klappte
+        """
+        status1, mtl_daten = Bundelruf.hochladen(
+            '/api/studio/scene-object-upload/', [
+                ('object', mtl_name, mtl_inhalt, 'text/plain'),
+                ('bundleId', None, bundle, 'text/plain'),
+            ])
+        status2, _ = Bundelruf.hochladen(
+            '/api/studio/scene-object-upload/', [
+                ('object', textur, _PNG_CONTENT, 'image/png'),
+                ('bundleId', None, bundle, 'text/plain'),
+            ])
+        if status1 != 200 or status2 != 200:
+            return f'Upload HTTP: {status1}/{status2}', None
+        return '', mtl_daten
+
     @classmethod
     def test_10_mtl_options_parser_strips_flags(cls):
-        """MTL-Parser muss Optionen wie '-s 1 1 -o 0 0 0' vor dem Dateinamen ignorieren.
-        Simuliert via MTL mit Optionen-Zeile + Textur-Upload im gleichen Bundle."""
+        """Optionen wie `-s 1 1 -o 0 0 0` stehen VOR dem Dateinamen.
+
+        Der Parser muss sie ueberspringen. Bis zum 30.08.2026 baute dieser
+        Test Upload und MTL-Auswertung selbst nach — Zeile fuer Zeile das,
+        was `_mtl_und_textur` und `_map_kd` daneben schon konnten (elf
+        Verzweigungen, Rang C).
+        """
         bundle = 'pytest_mtlopts_' + str(id(cls))
-        mtl_with_opts = (
-            b'newmtl Swan\n'
-            b'Kd 1.0 1.0 1.0\n'
-            b'map_Kd -s 1 1 -o 0 0 0 swan_tex.png\n'
-        )
-        status1, mtl_data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
-            ('object', 'swan.mtl', mtl_with_opts, 'text/plain'),
-            ('bundleId', None, bundle, 'text/plain'),
-        ])
-        status2, tex_data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
-            ('object', 'swan_tex.png', _PNG_CONTENT, 'image/png'),
-            ('bundleId', None, bundle, 'text/plain'),
-        ])
-        if status1 != 200 or status2 != 200:
-            return False, f'Upload HTTP: {status1}/{status2}'
-        # Simuliere Parser-Logik aus scene_extras.js
-        import re
-        # Die MTL kommt nicht im Upload-Ergebnis zurueck, nur ihre Adresse.
-        mtl_url = mtl_data.get('url')
-        if not mtl_url:
-            return False, 'Keine MTL-URL geliefert'
-        _, mtl_bytes = Bundelruf.abrufen(mtl_url)
-        mtl_text = mtl_bytes.decode('utf-8', errors='ignore')
-        m = re.search(r'^\s*map_Kd\s+(.+?)\s*$', mtl_text, re.IGNORECASE | re.MULTILINE)
-        if not m:
-            return False, 'map_Kd fehlt'
-        raw_ref = m.group(1).strip()
-        tokens = [t for t in raw_ref.split() if t and not t.startswith('-')]
-        ref_name = (tokens[-1] if tokens else raw_ref).replace('\\', '/').lstrip('./').split('/')[-1]
-        if ref_name != 'swan_tex.png':
-            return False, f'Parser extrahierte "{ref_name}" (erwartet: "swan_tex.png")'
-        # Textur unter demselben Bundle-Ordner muss existieren
-        base = mtl_url.rsplit('/', 1)[0]
-        status3, _ = Bundelruf.abrufen(f"{base}/{ref_name}")
-        if status3 != 200:
-            return False, f'Referenzierte Textur (mit Options-Flags davor) HTTP {status3}'
-        return True, f'Parser ignoriert "-s 1 1 -o 0 0 0" → "{ref_name}" korrekt'
+        mtl = (b'newmtl Swan\n'
+               b'Kd 1.0 1.0 1.0\n'
+               b'map_Kd -s 1 1 -o 0 0 0 swan_tex.png\n')
+        fehler, mtl_daten = cls._mtl_und_textur(bundle, 'swan.mtl', mtl,
+                                                textur='swan_tex.png')
+        if fehler:
+            return False, fehler
+        rohangabe, wortteile = Mtlbezug.aus_adresse(mtl_daten['url'])
+        name = Mtlbezug.dateiname(rohangabe, wortteile)
+        if name != 'swan_tex.png':
+            return False, (f'Parser extrahierte "{name}" '
+                           f'(erwartet: "swan_tex.png")')
+        basis = mtl_daten['url'].rsplit('/', 1)[0]
+        status, _ = Bundelruf.abrufen(f'{basis}/{name}')
+        if status != 200:
+            return False, (f'Referenzierte Textur (mit Options-Flags davor) '
+                           f'HTTP {status}')
+        return True, f'Parser ignoriert "-s 1 1 -o 0 0 0" -> "{name}" korrekt'
 
     @classmethod
     def test_11_auto_discover_mtl_from_obj(cls):
@@ -105,26 +125,16 @@ class BundleMtlTests(TestCategory):
         """MTL-Referenz 'map_Kd textures/swan.png' — Parser versucht Sub-Pfad zuerst,
         fällt auf Dateiname zurück wenn Sub-Pfad nicht existiert (Bundle ist flach)"""
         bundle = 'pytest_subdir_' + str(id(cls))
-        # MTL mit Sub-Pfad, aber PNG wird FLACH ins Bundle gelegt (typisch für unseren Upload-Flow)
+        # MTL mit Sub-Pfad, aber PNG wird FLACH ins Bundle gelegt (typisch für unseren
+        # Upload-Flow)
         mtl_sub = b'newmtl Swan\nmap_Kd textures/swan.png\n'
-        status1, mtl_data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
-            ('object', 'sub.mtl', mtl_sub, 'text/plain'),
-            ('bundleId', None, bundle, 'text/plain'),
-        ])
-        status2, _ = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
-            ('object', 'swan.png', _PNG_CONTENT, 'image/png'),
-            ('bundleId', None, bundle, 'text/plain'),
-        ])
-        if status1 != 200 or status2 != 200:
-            return False, f'Upload HTTP: {status1}/{status2}'
+        fehler, mtl_data = cls._mtl_und_textur(bundle, 'sub.mtl', mtl_sub)
+        if fehler:
+            return False, fehler
         # Simuliere Parser: probiere "textures/swan.png" (fehlt), dann "swan.png" (OK)
-        import re
-        _, mtl_bytes = Bundelruf.abrufen(mtl_data['url'])
-        mtl_text = mtl_bytes.decode('utf-8', errors='ignore')
-        m = re.search(r'^\s*map_Kd\s+(.+?)\s*$', mtl_text, re.IGNORECASE | re.MULTILINE)
-        raw_ref = m.group(1).strip()
-        tokens = [t for t in raw_ref.split() if t and not t.startswith('-')]
-        candidate = (tokens[-1] if tokens else raw_ref).replace('\\', '/').lstrip('./')
+        raw_ref, tokens = Mtlbezug.aus_adresse(mtl_data['url'])
+        candidate = ((tokens[-1] if tokens else raw_ref)
+                     .replace('\\', '/').lstrip('./'))
         filename = candidate.split('/')[-1]
         candidates = [candidate] if candidate != filename else []
         candidates.append(filename)
@@ -147,23 +157,11 @@ class BundleMtlTests(TestCategory):
         den reinen Dateinamen 'swan.png' im Bundle-Ordner resolved werden"""
         bundle = 'pytest_bs_' + str(id(object()))
         mtl_bs = b'newmtl Swan\nmap_Kd textures\\swan.png\n'
-        status1, mtl_data = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
-            ('object', 'bs.mtl', mtl_bs, 'text/plain'),
-            ('bundleId', None, bundle, 'text/plain'),
-        ])
-        status2, _ = Bundelruf.hochladen('/api/studio/scene-object-upload/', [
-            ('object', 'swan.png', _PNG_CONTENT, 'image/png'),
-            ('bundleId', None, bundle, 'text/plain'),
-        ])
-        if status1 != 200 or status2 != 200:
-            return False, f'Upload HTTP: {status1}/{status2}'
-        import re
-        _, mtl_bytes = Bundelruf.abrufen(mtl_data['url'])
-        mtl_text = mtl_bytes.decode('utf-8', errors='ignore')
-        m = re.search(r'^\s*map_Kd\s+(.+?)\s*$', mtl_text, re.IGNORECASE | re.MULTILINE)
-        raw_ref = m.group(1).strip()
-        tokens = [t for t in raw_ref.split() if t and not t.startswith('-')]
-        ref_name = (tokens[-1] if tokens else raw_ref).replace('\\', '/').lstrip('./').split('/')[-1]
+        fehler, mtl_data = cls._mtl_und_textur(bundle, 'bs.mtl', mtl_bs)
+        if fehler:
+            return False, fehler
+        raw_ref, tokens = Mtlbezug.aus_adresse(mtl_data['url'])
+        ref_name = Mtlbezug.dateiname(raw_ref, tokens)
         if ref_name != 'swan.png':
             return False, f'Parser extrahierte "{ref_name}" (erwartet: "swan.png")'
         base = mtl_data['url'].rsplit('/', 1)[0]

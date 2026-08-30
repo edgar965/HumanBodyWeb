@@ -30,7 +30,8 @@ export function initRiggingTab(toggleRigVisibility) {
     }
     function setRigParam(key, val) {
         const inst = state.selectedCharacterId ? state.characters.get(state.selectedCharacterId) : null;
-        if (inst) { if (!inst._rigParams) inst._rigParams = { ..._defaultRigParams }; inst._rigParams[key] = val; markDirty('Rigging'); }
+        if (inst) { if (!inst._rigParams) inst._rigParams = { ..._defaultRigParams }; inst._rigParams[key] = val;
+            markDirty('Rigging'); }
         if (key === 'rigVisible') { state.rigVisible = val; if (toggleRigVisibility) toggleRigVisibility(); }
     }
     for (const [id, cfg] of Object.entries(ids)) {
@@ -40,8 +41,12 @@ export function initRiggingTab(toggleRigVisibility) {
             el.checked = params[cfg.key];
             el.addEventListener('change', () => setRigParam(cfg.key, el.checked));
         }
-        else if (cfg.type === 'number') { el.value = params[cfg.key]; el.addEventListener('change', () => setRigParam(cfg.key, parseFloat(el.value))); }
-        else if (cfg.type === 'range') { el.value = params[cfg.key]; const valEl = document.getElementById(cfg.valId); if (valEl) valEl.textContent = parseFloat(el.value).toFixed(2); el.addEventListener('input', () => { if (valEl) valEl.textContent = parseFloat(el.value).toFixed(2); setRigParam(cfg.key, parseFloat(el.value)); }); }
+        else if (cfg.type === 'number') { el.value = params[cfg.key]; el.addEventListener('change',
+            () => setRigParam(cfg.key, parseFloat(el.value))); }
+        else if (cfg.type === 'range') { el.value = params[cfg.key]; const valEl = document.getElementById(cfg.valId);
+            if (valEl) valEl.textContent = parseFloat(el.value).toFixed(2); el.addEventListener('input',
+                () => { if (valEl) valEl.textContent = parseFloat(el.value).toFixed(2); setRigParam(cfg.key,
+                    parseFloat(el.value)); }); }
     }
 }
 

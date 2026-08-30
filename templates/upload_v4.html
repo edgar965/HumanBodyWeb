@@ -9,16 +9,14 @@
     <form method="post" enctype="multipart/form-data" id="uploadForm">
         {% csrf_token %}
 
-        <div class="drop-zone" id="dropTarget">
-            <i class="fas fa-cloud-upload-alt fa-3x"></i>
-            <p>Drag & drop video here or click to browse</p>
-            {% comment %}Review 16.08.2026: hier stand `{% if not unique_videos %}`.
-            Diesen Namen hat nie eine Ansicht geliefert (seit dem 31.03.2026), also
-            war die Bedingung immer wahr und das Feld immer Pflicht — auch wenn
-            unten ein vorhandenes Video zur Auswahl stand. Gemeint war die Liste,
-            die die Ansicht `upload_files` nennt.{% endcomment %}
-            <input type="file" name="video" id="videoInput" accept="video/*" {% if not upload_files %}required{% endif %}>
-        </div>
+        {% comment %}Review 16.08.2026: In der Bedingung des Dateifeldes stand
+        `{% templatetag openblock %} if not unique_videos {% templatetag closeblock %}`. Diesen Namen hat nie eine
+             Ansicht
+        geliefert (seit dem 31.03.2026), also war die Bedingung immer wahr und
+        das Feld immer Pflicht — auch wenn unten ein vorhandenes Video zur
+        Auswahl stand. Gemeint war die Liste, die die Ansicht `upload_files`
+        nennt; sie steht jetzt in `_videoablage.html`.{% endcomment %}
+        {% include "_videoablage.html" %}
 
         <!-- Video file selector (from uploads/ directory) -->
         {% if upload_files %}
@@ -63,41 +61,67 @@
                         <div class="settings-row">
                             <label>Body Parts:</label>
                             <div class="checkbox-group">
-                                <label><input type="checkbox" name="v4_parts" value="body" {% if defaults.v4_body %}checked{% endif %}> Body</label>
-                                <label><input type="checkbox" name="v4_parts" value="hands" {% if defaults.v4_hands %}checked{% endif %}> Hands</label>
-                                <label><input type="checkbox" name="v4_parts" value="face" {% if defaults.v4_face %}checked{% endif %}> Face</label>
-                                <label><input type="checkbox" name="v4_parts" value="mouth" {% if defaults.v4_mouth %}checked{% endif %}> Mouth</label>
-                                <label><input type="checkbox" name="v4_parts" value="eyes" {% if defaults.v4_eyes %}checked{% endif %}> Eyes</label>
+                                <label><input type="checkbox" name="v4_parts" value="body"
+                                     {% if defaults.v4_body %}checked{% endif %}> Body</label>
+                                <label><input type="checkbox" name="v4_parts" value="hands"
+                                     {% if defaults.v4_hands %}checked{% endif %}> Hands</label>
+                                <label><input type="checkbox" name="v4_parts" value="face"
+                                     {% if defaults.v4_face %}checked{% endif %}> Face</label>
+                                <label><input type="checkbox" name="v4_parts" value="mouth"
+                                     {% if defaults.v4_mouth %}checked{% endif %}> Mouth</label>
+                                <label><input type="checkbox" name="v4_parts" value="eyes"
+                                     {% if defaults.v4_eyes %}checked{% endif %}> Eyes</label>
                             </div>
                         </div>
                         <div class="settings-list">
                             <div class="setting-item">
-                                <div class="setting-label">IK Iterations <span class="setting-hint">Gradient-Descent Iterationen pro Frame (1&ndash;100)</span></div>
-                                <input type="number" name="v4_hcd_iterations" min="1" max="100" step="1" value="{{ defaults.v4_hcd_iterations }}">
+                                <div class="setting-label">IK Iterations <span
+                                     class="setting-hint">Gradient-Descent Iterationen pro Frame
+                                          (1&ndash;100)</span></div>
+                                <input type="number" name="v4_hcd_iterations" min="1" max="100" step="1"
+                                     value="{{ defaults.v4_hcd_iterations }}">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">IK Epochs <span class="setting-hint">Epochen pro Frame &mdash; h&ouml;her = genauer, langsamer (1&ndash;200)</span></div>
-                                <input type="number" name="v4_hcd_epochs" min="1" max="200" step="1" value="{{ defaults.v4_hcd_epochs }}">
+                                <div class="setting-label">IK Epochs <span
+                                     class="setting-hint">Epochen pro Frame &mdash; h&ouml;her = genauer, langsamer
+                                          (1&ndash;200)</span></div>
+                                <input type="number" name="v4_hcd_epochs" min="1" max="200" step="1"
+                                     value="{{ defaults.v4_hcd_epochs }}">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">IK Learning Rate <span class="setting-hint">Schrittweite f&uuml;r IK-Optimierung (0.0001&ndash;0.1)</span></div>
-                                <input type="number" name="v4_hcd_learning_rate" min="0.0001" max="0.1" step="0.0001" value="{{ defaults.v4_hcd_learning_rate }}">
+                                <div class="setting-label">IK Learning Rate <span
+                                     class="setting-hint">Schrittweite f&uuml;r IK-Optimierung
+                                          (0.0001&ndash;0.1)</span></div>
+                                <input type="number" name="v4_hcd_learning_rate" min="0.0001" max="0.1" step="0.0001"
+                                     value="{{ defaults.v4_hcd_learning_rate }}">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Smoothing Cutoff <span class="setting-hint">Butterworth Tiefpass-Frequenz in Hz &mdash; niedriger = glatter (0.5&ndash;15.0)</span></div>
-                                <input type="number" name="v4_smoothing_cutoff" min="0.5" max="15" step="0.5" value="{{ defaults.v4_smoothing_cutoff }}">
+                                <div class="setting-label">Smoothing Cutoff <span
+                                     class="setting-hint">Butterworth Tiefpass-Frequenz in Hz &mdash; niedriger =
+                                          glatter (0.5&ndash;15.0)</span></div>
+                                <input type="number" name="v4_smoothing_cutoff" min="0.5" max="15" step="0.5"
+                                     value="{{ defaults.v4_smoothing_cutoff }}">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Smoothing Sampling <span class="setting-hint">Abtastrate in Hz f&uuml;r Butterworth-Filter &mdash; sollte FPS entsprechen (10&ndash;120)</span></div>
-                                <input type="number" name="v4_smoothing_sampling" min="10" max="120" step="1" value="{{ defaults.v4_smoothing_sampling }}">
+                                <div class="setting-label">Smoothing Sampling <span
+                                     class="setting-hint">Abtastrate in Hz f&uuml;r Butterworth-Filter &mdash; sollte
+                                          FPS entsprechen (10&ndash;120)</span></div>
+                                <input type="number" name="v4_smoothing_sampling" min="10" max="120" step="1"
+                                     value="{{ defaults.v4_smoothing_sampling }}">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">MP Detection Confidence <span class="setting-hint">MediaPipe Pose-Erkennung Schwellwert (0.0&ndash;1.0)</span></div>
-                                <input type="number" name="v4_mp_detection" min="0" max="1" step="0.05" value="{{ defaults.v4_mp_detection }}">
+                                <div class="setting-label">MP Detection Confidence <span
+                                     class="setting-hint">MediaPipe Pose-Erkennung Schwellwert
+                                          (0.0&ndash;1.0)</span></div>
+                                <input type="number" name="v4_mp_detection" min="0" max="1" step="0.05"
+                                     value="{{ defaults.v4_mp_detection }}">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">MP Tracking Confidence <span class="setting-hint">MediaPipe Tracking-Schwellwert &mdash; niedriger = stabileres Tracking (0.0&ndash;1.0)</span></div>
-                                <input type="number" name="v4_mp_tracking" min="0" max="1" step="0.05" value="{{ defaults.v4_mp_tracking }}">
+                                <div class="setting-label">MP Tracking Confidence <span
+                                     class="setting-hint">MediaPipe Tracking-Schwellwert &mdash; niedriger = stabileres
+                                          Tracking (0.0&ndash;1.0)</span></div>
+                                <input type="number" name="v4_mp_tracking" min="0" max="1" step="0.05"
+                                     value="{{ defaults.v4_mp_tracking }}">
                             </div>
                         </div>
                     </div>
@@ -111,53 +135,77 @@
                             {% if not status_3d.gvhmr %}disabled{% endif %}>
                         <span class="pipeline-card-title">GVHMR <span class="hb-gut">&starf;</span></span>
                         <span class="pipeline-card-desc">
-                            {% if status_3d.gvhmr %}SMPL, GPU, beste Qualit&auml;t, 36 mm{% else %}nicht installiert{% endif %}
+                            {% if status_3d.gvhmr %}SMPL, GPU, beste Qualit&auml;t, 36 mm{% else %}nicht
+                                 installiert{% endif %}
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-gvhmr">
                         <div class="preset-bar">
                             <button type="button" class="preset-btn" data-vorgabe="gvhmr:fast">Schnell</button>
-                            <button type="button" class="preset-btn active" data-vorgabe="gvhmr:standard">Standard</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="gvhmr:standard">Standard</button>
                             <button type="button" class="preset-btn" data-vorgabe="gvhmr:max">Maximum</button>
                         </div>
                         <div class="settings-list">
                             <div class="setting-item">
-                                <div class="setting-label">Statische Kamera <span class="setting-hint">&Uuml;berspringt DPVO Kamera-Tracking &mdash; empfohlen f&uuml;r feste Kamera</span></div>
-                                <input type="checkbox" name="gvhmr_static_cam" {% if defaults.gvhmr_static_cam %}checked{% endif %}>
+                                <div class="setting-label">Statische Kamera <span
+                                     class="setting-hint">&Uuml;berspringt DPVO Kamera-Tracking &mdash; empfohlen
+                                          f&uuml;r feste Kamera</span></div>
+                                <input type="checkbox" name="gvhmr_static_cam"
+                                     {% if defaults.gvhmr_static_cam %}checked{% endif %}>
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Brennweite (mm) <span class="setting-hint">Kamera-Brennweite in mm &mdash; 0 = automatische Sch&auml;tzung (Standard: 26mm)</span></div>
-                                <input type="number" name="gvhmr_focal_length_mm" min="0" max="200" step="1" value="{{ defaults.gvhmr_focal_length_mm }}">
+                                <div class="setting-label">Brennweite (mm) <span
+                                     class="setting-hint">Kamera-Brennweite in mm &mdash; 0 = automatische
+                                          Sch&auml;tzung (Standard: 26mm)</span></div>
+                                <input type="number" name="gvhmr_focal_length_mm" min="0" max="200" step="1"
+                                     value="{{ defaults.gvhmr_focal_length_mm }}">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Temporal Smoothing <span class="setting-hint">Gaussian-Gl&auml;ttung (0=aus, 2=Standard, 4+=stark)</span></div>
+                                <div class="setting-label">Temporal Smoothing <span
+                                     class="setting-hint">Gaussian-Gl&auml;ttung (0=aus, 2=Standard,
+                                          4+=stark)</span></div>
                                 <input type="number" name="gvhmr_smooth_sigma" min="0" max="10" step="0.5" value="2.0">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Joint Limits <span class="setting-hint">Anatomische Grenzen f&uuml;r Knie/Ellbogen/H&uuml;fte</span></div>
+                                <div class="setting-label">Joint Limits <span
+                                     class="setting-hint">Anatomische Grenzen f&uuml;r
+                                          Knie/Ellbogen/H&uuml;fte</span></div>
                                 <input type="checkbox" name="gvhmr_joint_limits" checked>
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">DPVO <span class="setting-hint">DPVO statt SimpleVO (genauer, langsamer, braucht mehr VRAM)</span></div>
+                                <div class="setting-label">DPVO <span
+                                     class="setting-hint">DPVO statt SimpleVO (genauer, langsamer, braucht mehr
+                                          VRAM)</span></div>
                                 <input type="checkbox" name="gvhmr_use_dpvo">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Verbose <span class="setting-hint">Debug-Visualisierungen ausgeben</span></div>
+                                <div class="setting-label">Verbose <span
+                                     class="setting-hint">Debug-Visualisierungen ausgeben</span></div>
                                 <input type="checkbox" name="gvhmr_verbose">
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Device <span class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB VRAM</span></div>
+                                <div class="setting-label">Device <span
+                                     class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB
+                                          VRAM</span></div>
                                 <select name="gvhmr_device">
-                                    <option value="cuda" {% if defaults.gvhmr_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
-                                    <option value="cpu" {% if defaults.gvhmr_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                    <option value="cuda"
+                                         {% if defaults.gvhmr_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.gvhmr_device == 'cpu' %}selected{% endif %}>CPU</option>
                                 </select>
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Video-Output Verzeichnis <span class="setting-hint">Ordner f&uuml;r SMPL-Render-Videos (In-Camera Overlay, Global 3D, Combined)</span></div>
-                                <input type="text" name="gvhmr_video_output_dir" value="{{ defaults.gvhmr_video_output_dir }}" style="flex:1;min-width:200px;">
+                                <div class="setting-label">Video-Output Verzeichnis <span
+                                     class="setting-hint">Ordner f&uuml;r SMPL-Render-Videos (In-Camera Overlay, Global
+                                          3D, Combined)</span></div>
+                                <input class="pfadfeld" type="text" name="gvhmr_video_output_dir"
+                                     value="{{ defaults.gvhmr_video_output_dir }}">
                             </div>
                         </div>
-                        <p class="setting-note"><i class="fas fa-info-circle"></i> GVHMR erzeugt automatisch 3 Render-Videos: In-Camera SMPL Overlay, Global 3D Ansicht, und Combined.</p>
+                        <p class="setting-note"><i
+                             class="fas fa-info-circle"></i> GVHMR erzeugt automatisch 3 Render-Videos: In-Camera SMPL
+                                  Overlay, Global 3D Ansicht, und Combined.</p>
                     </div>
                 </div>
 
@@ -169,29 +217,41 @@
                             {% if not status_3d.wham %}disabled{% endif %}>
                         <span class="pipeline-card-title">WHAM</span>
                         <span class="pipeline-card-desc">
-                            {% if status_3d.wham %}SMPL, GPU, World-Koordinaten, 37 mm{% else %}nicht installiert{% endif %}
+                            {% if status_3d.wham %}SMPL, GPU, World-Koordinaten, 37 mm{% else %}nicht
+                                 installiert{% endif %}
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-wham">
                         <div class="preset-bar">
                             <button type="button" class="preset-btn" data-vorgabe="wham:fast">Schnell</button>
-                            <button type="button" class="preset-btn active" data-vorgabe="wham:standard">Standard</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="wham:standard">Standard</button>
                             <button type="button" class="preset-btn" data-vorgabe="wham:max">Maximum</button>
                         </div>
                         <div class="settings-list">
                             <div class="setting-item">
-                                <div class="setting-label">Nur lokale Bewegung <span class="setting-hint">Keine globale Trajektorie sch&auml;tzen &mdash; nur K&ouml;rperbewegung relativ zur Kamera</span></div>
-                                <input type="checkbox" name="wham_local_only" {% if defaults.wham_local_only %}checked{% endif %}>
+                                <div class="setting-label">Nur lokale Bewegung <span
+                                     class="setting-hint">Keine globale Trajektorie sch&auml;tzen &mdash; nur
+                                          K&ouml;rperbewegung relativ zur Kamera</span></div>
+                                <input type="checkbox" name="wham_local_only"
+                                     {% if defaults.wham_local_only %}checked{% endif %}>
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">SMPLify Refinement <span class="setting-hint">Zus&auml;tzliche Optimierung &mdash; langsamer aber genauer (2&ndash;3x l&auml;nger)</span></div>
-                                <input type="checkbox" name="wham_smplify" {% if defaults.wham_smplify %}checked{% endif %}>
+                                <div class="setting-label">SMPLify Refinement <span
+                                     class="setting-hint">Zus&auml;tzliche Optimierung &mdash; langsamer aber genauer
+                                          (2&ndash;3x l&auml;nger)</span></div>
+                                <input type="checkbox" name="wham_smplify"
+                                     {% if defaults.wham_smplify %}checked{% endif %}>
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Device <span class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB VRAM</span></div>
+                                <div class="setting-label">Device <span
+                                     class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB
+                                          VRAM</span></div>
                                 <select name="wham_device">
-                                    <option value="cuda" {% if defaults.wham_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
-                                    <option value="cpu" {% if defaults.wham_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                    <option value="cuda"
+                                         {% if defaults.wham_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.wham_device == 'cpu' %}selected{% endif %}>CPU</option>
                                 </select>
                             </div>
                         </div>
@@ -199,32 +259,43 @@
                 </div>
 
                 <!-- PromptHMR -->
-                <div class="pipeline-card {% if not status_3d.prompthmr %}disabled{% endif %}" data-pipeline="prompthmr">
+                <div class="pipeline-card {% if not status_3d.prompthmr %}disabled{% endif %}"
+                     data-pipeline="prompthmr">
                     <label class="pipeline-card-header">
                         <input type="radio" name="pipeline" value="prompthmr"
                             {% if default_3d == 'prompthmr' %}checked{% endif %}
                             {% if not status_3d.prompthmr %}disabled{% endif %}>
                         <span class="pipeline-card-title">PromptHMR</span>
                         <span class="pipeline-card-desc">
-                            {% if status_3d.prompthmr %}SMPL, GPU, CVPR 2025, 37 mm{% else %}nicht installiert{% endif %}
+                            {% if status_3d.prompthmr %}SMPL, GPU, CVPR 2025, 37 mm{% else %}nicht
+                                 installiert{% endif %}
                         </span>
                     </label>
                     <div class="pipeline-settings" id="settings-prompthmr">
                         <div class="preset-bar">
                             <button type="button" class="preset-btn" data-vorgabe="prompthmr:fast">Schnell</button>
-                            <button type="button" class="preset-btn active" data-vorgabe="prompthmr:standard">Standard</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="prompthmr:standard">Standard</button>
                             <button type="button" class="preset-btn" data-vorgabe="prompthmr:max">Maximum</button>
                         </div>
                         <div class="settings-list">
                             <div class="setting-item">
-                                <div class="setting-label">Statische Kamera <span class="setting-hint">Empfohlen f&uuml;r feste Kamera &mdash; deaktivieren bei Handy-Videos mit Bewegung</span></div>
-                                <input type="checkbox" name="prompthmr_static_cam" {% if defaults.prompthmr_static_cam %}checked{% endif %}>
+                                <div class="setting-label">Statische Kamera <span
+                                     class="setting-hint">Empfohlen f&uuml;r feste Kamera &mdash; deaktivieren bei
+                                          Handy-Videos mit Bewegung</span></div>
+                                <input type="checkbox" name="prompthmr_static_cam"
+                                     {% if defaults.prompthmr_static_cam %}checked{% endif %}>
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Device <span class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB VRAM</span></div>
+                                <div class="setting-label">Device <span
+                                     class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB
+                                          VRAM</span></div>
                                 <select name="prompthmr_device">
-                                    <option value="cuda" {% if defaults.prompthmr_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
-                                    <option value="cpu" {% if defaults.prompthmr_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                    <option value="cuda"
+                                         {% if defaults.prompthmr_device == 'cuda' %}selected{% endif %}>CUDA
+                                              (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.prompthmr_device == 'cpu' %}selected{% endif %}>CPU</option>
                                 </select>
                             </div>
                         </div>
@@ -246,19 +317,23 @@
                     <div class="pipeline-settings" id="settings-hybrid">
                         <div class="preset-bar">
                             <button type="button" class="preset-btn" data-vorgabe="hybrid:fast">Schnell</button>
-                            <button type="button" class="preset-btn active" data-vorgabe="hybrid:standard">Standard</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="hybrid:standard">Standard</button>
                             <button type="button" class="preset-btn" data-vorgabe="hybrid:max">Maximum</button>
                         </div>
                         <div class="settings-list">
                             <div class="setting-item">
-                                <div class="setting-label">Body-Backend <span class="setting-hint">SMPL-Pipeline f&uuml;r K&ouml;rper-Tracking (GPU)</span></div>
+                                <div class="setting-label">Body-Backend <span
+                                     class="setting-hint">SMPL-Pipeline f&uuml;r K&ouml;rper-Tracking (GPU)</span></div>
                                 <select name="hybrid_body_backend" id="hybridBodyBackend">
                                     <option value="gvhmr" {% if not status_3d.gvhmr %}disabled{% endif %}>GVHMR</option>
-                                    <option value="prompthmr" {% if not status_3d.prompthmr %}disabled{% endif %}>PromptHMR</option>
+                                    <option value="prompthmr"
+                                         {% if not status_3d.prompthmr %}disabled{% endif %}>PromptHMR</option>
                                 </select>
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">H&auml;nde-Quelle <span class="setting-hint">Finger-Tracking Methode</span></div>
+                                <div class="setting-label">H&auml;nde-Quelle <span
+                                     class="setting-hint">Finger-Tracking Methode</span></div>
                                 <select name="hybrid_hands_source" id="hybridHandsSource">
                                     <option value="v4" selected>MocapNET v4 (Finger-Detail)</option>
                                     <option value="smplest_x">SMPLest-X (konsistenter)</option>
@@ -266,7 +341,8 @@
                                 </select>
                             </div>
                             <div class="setting-item">
-                                <div class="setting-label">Gesicht-Quelle <span class="setting-hint">Gesichtsausdruck-Tracking</span></div>
+                                <div class="setting-label">Gesicht-Quelle <span
+                                     class="setting-hint">Gesichtsausdruck-Tracking</span></div>
                                 <select name="hybrid_face_source" id="hybridFaceSource">
                                     <option value="smplest_x" selected>SMPLest-X Expression</option>
                                     <option value="v4">MocapNET v4 (noisy)</option>
@@ -276,70 +352,94 @@
                         </div>
                         <!-- GVHMR body settings -->
                         <div id="hybrid-gvhmr-settings" class="hybrid-body-settings">
-                            <div class="settings-list"
-                                 style="margin-top:8px; padding-left:12px; border-left:2px solid #3498db;">
+                            <div class="settings-list untergruppe-blau"
+                                >
                                 <div class="setting-item">
-                                    <div class="setting-label">Statische Kamera <span class="setting-hint">DPVO Kamera-Tracking &uuml;berspringen</span></div>
-                                    <input type="checkbox" name="hybrid_gvhmr_static_cam" {% if defaults.hybrid_gvhmr_static_cam %}checked{% endif %}>
+                                    <div class="setting-label">Statische Kamera <span
+                                         class="setting-hint">DPVO Kamera-Tracking &uuml;berspringen</span></div>
+                                    <input type="checkbox" name="hybrid_gvhmr_static_cam"
+                                         {% if defaults.hybrid_gvhmr_static_cam %}checked{% endif %}>
                                 </div>
                                 <div class="setting-item">
-                                    <div class="setting-label">Brennweite (mm) <span class="setting-hint">0 = automatisch</span></div>
-                                    <input type="number" name="hybrid_gvhmr_focal_length_mm" min="0" max="200" step="1" value="{{ defaults.hybrid_gvhmr_focal_length_mm }}">
+                                    <div class="setting-label">Brennweite (mm) <span
+                                         class="setting-hint">0 = automatisch</span></div>
+                                    <input type="number" name="hybrid_gvhmr_focal_length_mm" min="0" max="200"
+                                         step="1" value="{{ defaults.hybrid_gvhmr_focal_length_mm }}">
                                 </div>
                             </div>
                         </div>
                         <!-- PromptHMR body settings -->
                         <div id="hybrid-prompthmr-settings" class="hybrid-body-settings hb-versteckt">
-                            <div class="settings-list"
-                                 style="margin-top:8px; padding-left:12px; border-left:2px solid #e67e22;">
+                            <div class="settings-list untergruppe-orange"
+                                >
                                 <div class="setting-item">
-                                    <div class="setting-label">Statische Kamera <span class="setting-hint">Empfohlen f&uuml;r feste Kamera</span></div>
-                                    <input type="checkbox" name="hybrid_prompthmr_static_cam" {% if defaults.hybrid_prompthmr_static_cam %}checked{% endif %}>
+                                    <div class="setting-label">Statische Kamera <span
+                                         class="setting-hint">Empfohlen f&uuml;r feste Kamera</span></div>
+                                    <input type="checkbox" name="hybrid_prompthmr_static_cam"
+                                         {% if defaults.hybrid_prompthmr_static_cam %}checked{% endif %}>
                                 </div>
                             </div>
                         </div>
                         <!-- Shared body device -->
                         <div class="settings-list abstand-8">
                             <div class="setting-item">
-                                <div class="setting-label">Body Device <span class="setting-hint">GPU (CUDA) f&uuml;r SMPL-Pipeline</span></div>
+                                <div class="setting-label">Body Device <span
+                                     class="setting-hint">GPU (CUDA) f&uuml;r SMPL-Pipeline</span></div>
                                 <select name="hybrid_body_device">
-                                    <option value="cuda" {% if defaults.hybrid_body_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
-                                    <option value="cpu" {% if defaults.hybrid_body_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                    <option value="cuda"
+                                         {% if defaults.hybrid_body_device == 'cuda' %}selected{% endif %}>CUDA
+                                              (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.hybrid_body_device == 'cpu' %}selected{% endif %}>CPU</option>
                                 </select>
                             </div>
                         </div>
                         <!-- v4 Face+Hands settings -->
-                        <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border, #333);">
-                            <div style="font-size:0.85rem; color:#e67e22; margin-bottom:6px;">Face+Hands (MocapNET v4, CPU)</div>
+                        <div class="abschnitt-abgesetzt">
+                            <div class="abschnittstitel-orange">Face+Hands (MocapNET v4, CPU)</div>
                             <div class="settings-row">
                                 <label>Parts:</label>
                                 <div class="checkbox-group">
-                                    <label><input type="checkbox" name="hybrid_v4_parts" value="face" {% if defaults.hybrid_v4_face %}checked{% endif %}> Face</label>
-                                    <label><input type="checkbox" name="hybrid_v4_parts" value="hands" {% if defaults.hybrid_v4_hands %}checked{% endif %}> Hands</label>
-                                    <label><input type="checkbox" name="hybrid_v4_parts" value="mouth" {% if defaults.hybrid_v4_mouth %}checked{% endif %}> Mouth</label>
-                                    <label><input type="checkbox" name="hybrid_v4_parts" value="eyes" {% if defaults.hybrid_v4_eyes %}checked{% endif %}> Eyes</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="face"
+                                         {% if defaults.hybrid_v4_face %}checked{% endif %}> Face</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="hands"
+                                         {% if defaults.hybrid_v4_hands %}checked{% endif %}> Hands</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="mouth"
+                                         {% if defaults.hybrid_v4_mouth %}checked{% endif %}> Mouth</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="eyes"
+                                         {% if defaults.hybrid_v4_eyes %}checked{% endif %}> Eyes</label>
                                 </div>
                             </div>
                             <div class="settings-list abstand-6">
                                 <div class="setting-item">
-                                    <div class="setting-label">IK Iterations <span class="setting-hint">Gradient-Descent Iterationen pro Frame</span></div>
-                                    <input type="number" name="hybrid_v4_hcd_iterations" min="1" max="100" step="1" value="{{ defaults.hybrid_v4_hcd_iterations }}">
+                                    <div class="setting-label">IK Iterations <span
+                                         class="setting-hint">Gradient-Descent Iterationen pro Frame</span></div>
+                                    <input type="number" name="hybrid_v4_hcd_iterations" min="1" max="100" step="1"
+                                         value="{{ defaults.hybrid_v4_hcd_iterations }}">
                                 </div>
                                 <div class="setting-item">
-                                    <div class="setting-label">IK Epochs <span class="setting-hint">Epochen pro Frame</span></div>
-                                    <input type="number" name="hybrid_v4_hcd_epochs" min="1" max="200" step="1" value="{{ defaults.hybrid_v4_hcd_epochs }}">
+                                    <div class="setting-label">IK Epochs <span
+                                         class="setting-hint">Epochen pro Frame</span></div>
+                                    <input type="number" name="hybrid_v4_hcd_epochs" min="1" max="200" step="1"
+                                         value="{{ defaults.hybrid_v4_hcd_epochs }}">
                                 </div>
                                 <div class="setting-item">
-                                    <div class="setting-label">MP Detection <span class="setting-hint">MediaPipe Pose-Erkennung (0.0&ndash;1.0)</span></div>
-                                    <input type="number" name="hybrid_v4_mp_detection" min="0" max="1" step="0.05" value="{{ defaults.hybrid_v4_mp_detection }}">
+                                    <div class="setting-label">MP Detection <span
+                                         class="setting-hint">MediaPipe Pose-Erkennung (0.0&ndash;1.0)</span></div>
+                                    <input type="number" name="hybrid_v4_mp_detection" min="0" max="1" step="0.05"
+                                         value="{{ defaults.hybrid_v4_mp_detection }}">
                                 </div>
                                 <div class="setting-item">
-                                    <div class="setting-label">MP Tracking <span class="setting-hint">MediaPipe Tracking (0.0&ndash;1.0)</span></div>
-                                    <input type="number" name="hybrid_v4_mp_tracking" min="0" max="1" step="0.05" value="{{ defaults.hybrid_v4_mp_tracking }}">
+                                    <div class="setting-label">MP Tracking <span
+                                         class="setting-hint">MediaPipe Tracking (0.0&ndash;1.0)</span></div>
+                                    <input type="number" name="hybrid_v4_mp_tracking" min="0" max="1" step="0.05"
+                                         value="{{ defaults.hybrid_v4_mp_tracking }}">
                                 </div>
                             </div>
                         </div>
-                        <p class="setting-note"><i class="fas fa-info-circle"></i> Body (GPU) und Face+Hands (CPU) laufen parallel &mdash; Gesamtdauer = l&auml;ngere der beiden Pipelines.</p>
+                        <p class="setting-note"><i
+                             class="fas fa-info-circle"></i> Body (GPU) und Face+Hands (CPU) laufen parallel &mdash;
+                                  Gesamtdauer = l&auml;ngere der beiden Pipelines.</p>
                     </div>
                 </div>
 
@@ -349,8 +449,8 @@
         <!-- Start button for selected video + pipeline -->
         {% if upload_files %}
         <div class="form-group abstand-12">
-            <button type="button" class="btn btn-lg btn-primary" id="startSelectedBtn"
-                    style="width:100%;padding:12px;font-size:1.1rem;">
+            <button type="button" class="btn btn-lg btn-primary startknopf" id="startSelectedBtn"
+                   >
                 <i class="fas fa-play"></i> Pipeline starten
             </button>
         </div>
@@ -402,7 +502,7 @@
                 <td>~8&ndash;16 GB</td>
                 <td><span class="hb-gut">&starf; Empfohlen</span></td>
             </tr>
-            <tr style="background:#2a1a0a;">
+            <tr class="zeile-hervorgehoben">
                 <td><strong>Hybrid</strong></td>
                 <td>36 mm + Face+Hands</td>
                 <td>~60s (parallel)</td>
@@ -415,7 +515,8 @@
     <p class="tabellen-fussnote">
         <small>PA-MPJPE = Procrustes-Aligned Mean Per Joint Position Error auf 3DPW (niedriger = besser).<br>
         *MocapNET v4 nutzt H3.6M und ein eigenes Skelett &mdash; nicht direkt vergleichbar mit SMPL-Methoden.<br>
-        Geschwindigkeit gesch&auml;tzt f&uuml;r RTX 3060. GVHMR/WHAM/PromptHMR ben&ouml;tigen mindestens 6 GB VRAM.</small>
+        Geschwindigkeit gesch&auml;tzt f&uuml;r RTX 3060. GVHMR/WHAM/PromptHMR ben&ouml;tigen mindestens 6 GB
+             VRAM.</small>
     </p>
 
     <h3 class="hb-abstand-oben">SMPL-Lizenz</h3>
@@ -523,6 +624,40 @@
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-color-e67e22.hb-color-e67e22.hb-color-e67e22 { color:#e67e22; }   /* 3x */
 .hb-ohne-abstand.hb-ohne-abstand.hb-ohne-abstand { margin:0; }   /* 1x */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.abschnitt-abgesetzt.abschnitt-abgesetzt.abschnitt-abgesetzt {
+    margin-top:12px;
+    padding-top:10px;
+    border-top:1px solid var(--border, #333);
+}
+.abschnittstitel-orange.abschnittstitel-orange.abschnittstitel-orange {
+    font-size:0.85rem;
+    color:#e67e22;
+    margin-bottom:6px;
+}
+.pfadfeld.pfadfeld.pfadfeld {
+    flex:1;
+    min-width:200px;
+}
+.startknopf.startknopf.startknopf {
+    width:100%;
+    padding:12px;
+    font-size:1.1rem;
+}
+.untergruppe-blau.untergruppe-blau.untergruppe-blau {
+    margin-top:8px;
+    padding-left:12px;
+    border-left:2px solid #3498db;
+}
+.untergruppe-orange.untergruppe-orange.untergruppe-orange {
+    margin-top:8px;
+    padding-left:12px;
+    border-left:2px solid #e67e22;
+}
+.zeile-hervorgehoben.zeile-hervorgehoben.zeile-hervorgehoben {
+    background:#2a1a0a;
+}
 </style>
 {% comment %}Umbau 16.08.2026: Hier standen 612 Zeilen JavaScript inline —
 mit 84 `var`, drei ungepruefen fetch-Ketten, der Pipeline-Feldliste in zwei

@@ -15,7 +15,8 @@ export const HILFE_SPUREN = {
 <ul>
 <li>Enthält Skelett-Animationen (BVH-Dateien)</li>
 <li>Clips aus der <b>BVH Bibliothek</b> per Doppelklick oder Drag & Drop hinzufügen</li>
-<li>Clips können <b>verschoben</b> (Drag), <b>gesplittet</b> (S), <b>dupliziert</b> und <b>gelöscht</b> (Del) werden</li>
+<li>Clips können <b>verschoben</b> (Drag), <b>gesplittet</b> (S), <b>dupliziert</b> und <b>gelöscht</b> (Del)
+    werden</li>
 <li>Rechtsklick auf Clip für Kontextmenü</li>
 <li>Standard-Modell: Rig2 (konfigurierbar in Einstellungen)</li>
 </ul>
@@ -49,11 +50,13 @@ export const HILFE_SPUREN = {
         title: 'Kamera',
         body: `
 <h4 class="hilfe-titel">Kamera-Track Funktionen</h4>
-<p>Der Kamera-Track steuert die 3D-Kamera über <b>Kamerapositionen</b> (Keyframes). Zwischen zwei Keyframes wird die Kamera interpoliert. Manuelle Bewegung ist auch während Play jederzeit möglich.</p>
+<p>Der Kamera-Track steuert die 3D-Kamera über <b>Kamerapositionen</b> (Keyframes). Zwischen zwei Keyframes wird die
+    Kamera interpoliert. Manuelle Bewegung ist auch während Play jederzeit möglich.</p>
 
 <h4 class="hilfe-abschnitt">Maus-Steuerung in der 3D-Szene (OrbitControls)</h4>
 <table class="hilfe-tabelle hilfe-tabelle-klein doku">
-<tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-breit"><b>Links-Drag</b></td><td>Rotieren um Mittelpunkt</td></tr>
+<tr class="hilfe-trennlinie"><td
+    class="hilfe-zelle hilfe-breit"><b>Links-Drag</b></td><td>Rotieren um Mittelpunkt</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle"><b>Rechts-Drag</b></td><td>Kamera verschieben (Pan)</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle"><b>Mausrad</b></td><td>Zoomen</td></tr>
 <tr><td class="hilfe-zelle"><b>Middle-Drag</b></td><td>Dolly (Zoom)</td></tr>
@@ -78,7 +81,8 @@ export const HILFE_SPUREN = {
 </ul>
 
 <h4 class="hilfe-abschnitt">Wiedergabe</h4>
-<p>Bei <b>Play</b> interpoliert die Kamera zwischen den Keyframes. Die Maussteuerung bleibt aktiv — du kannst jederzeit manuell die Kamera bewegen (ab dem nächsten Keyframe nimmt die Interpolation wieder die Kontrolle).</p>
+<p>Bei <b>Play</b> interpoliert die Kamera zwischen den Keyframes. Die Maussteuerung bleibt aktiv — du kannst jederzeit
+    manuell die Kamera bewegen (ab dem nächsten Keyframe nimmt die Interpolation wieder die Kontrolle).</p>
 <p><b>"Aktiv" Checkbox</b>: Deaktivieren um den Kamera-Track temporär zu ignorieren.</p>
 `},
     light: {
@@ -87,12 +91,16 @@ export const HILFE_SPUREN = {
 <div class="hilfe-kasten">
   <h4 class="hilfe-kasten-titel"><i class="fas fa-hand-pointer"></i> Licht verschieben — Kurz-Anleitung</h4>
   <ol class="hilfe-liste">
-    <li><b>Licht auswählen</b>: Klick auf den gelben Kegel im 3D-Viewport <i>oder</i> auf den Timeline-Header (z.B. "Key Light")</li>
-    <li><b>An neue Position setzen</b>: <kbd class="hilfe-taste">Alt</kbd> + <b>Links-Klick</b> irgendwo in die 3D-Szene — das Licht springt dorthin</li>
+    <li><b>Licht auswählen</b>: Klick auf den gelben Kegel im 3D-Viewport <i>oder</i> auf den Timeline-Header (z.B.
+        "Key Light")</li>
+    <li><b>An neue Position setzen</b>: <kbd
+        class="hilfe-taste">Alt</kbd> + <b>Links-Klick</b> irgendwo in die 3D-Szene — das Licht springt dorthin</li>
     <li><b>Feinjustage</b>: X/Y/Z-Zahlen-Inputs im Properties-Panel rechts</li>
     <li><b>Ausrichtung</b>: Ziel (Blickrichtung) X/Y/Z im Properties-Panel — Licht zeigt Richtung Target</li>
   </ol>
-  <p class="hilfe-fussnote"><i class="fas fa-info-circle"></i> Middle-Maus/Rechtsklick sind von OrbitControls (Zoom/Pan) belegt — daher <b>Alt+Klick</b>. <b>Alt+Drag</b> rotiert weiterhin die Szene (Drag ≠ Click).</p>
+  <p class="hilfe-fussnote"><i
+      class="fas fa-info-circle"></i> Middle-Maus/Rechtsklick sind von OrbitControls (Zoom/Pan) belegt — daher
+          <b>Alt+Klick</b>. <b>Alt+Drag</b> rotiert weiterhin die Szene (Drag ≠ Click).</p>
 </div>
 
 <h4 class="hilfe-titel">Licht-System Übersicht</h4>
@@ -102,16 +110,23 @@ export const HILFE_SPUREN = {
 <li><b>User-Lichter</b> — eigene SpotLights (via Toolbar Hinzufügen → Spur → Licht)</li>
 <li><b>Theatre-Presets</b> — via Toolbar-Dropdown "Theatre" (z.B. Ballett, Jazz, Club)</li>
 </ul>
-<p>Unterstützte Typen: <b>SpotLight</b>, <b>DirectionalLight</b>, <b>PointLight</b>, <b>AmbientLight</b>. Properties-Panel zeigt nur die relevanten Felder je Typ.</p>
+<p>Unterstützte Typen: <b>SpotLight</b>, <b>DirectionalLight</b>, <b>PointLight</b>, <b>AmbientLight</b>.
+    Properties-Panel zeigt nur die relevanten Felder je Typ.</p>
 
 <h4 class="hilfe-abschnitt">Alle Maus-Bindings für Lichter</h4>
 <table class="hilfe-tabelle hilfe-tabelle-klein doku">
-<tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-breit"><b>Links-Klick auf Licht-Kegel (3D)</b></td><td>Licht-Track auswählen</td></tr>
-<tr class="hilfe-trennlinie"><td class="hilfe-zelle"><b>Klick auf Timeline-Header</b></td><td>Licht-Track auswählen</td></tr>
-<tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-warnung"><b>Alt + Links-Klick in 3D</b></td><td class="hilfe-warnung"><b>Licht hier platzieren</b> (Raycast gegen Mesh, Fallback Boden)</td></tr>
+<tr class="hilfe-trennlinie"><td
+    class="hilfe-zelle hilfe-breit"><b>Links-Klick auf Licht-Kegel (3D)</b></td><td>Licht-Track auswählen</td></tr>
+<tr class="hilfe-trennlinie"><td
+    class="hilfe-zelle"><b>Klick auf Timeline-Header</b></td><td>Licht-Track auswählen</td></tr>
+<tr class="hilfe-trennlinie"><td class="hilfe-zelle hilfe-warnung"><b>Alt + Links-Klick in 3D</b></td><td
+    class="hilfe-warnung"><b>Licht hier platzieren</b> (Raycast gegen Mesh, Fallback Boden)</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-zelle"><b>Properties X/Y/Z</b></td><td>Position exakt per Zahl</td></tr>
-<tr class="hilfe-trennlinie"><td class="hilfe-zelle"><b>Properties Ziel X/Y/Z</b></td><td>Blickrichtung (wo das Licht hinzeigt)</td></tr>
-<tr><td class="hilfe-zelle"><b>Rechts-Drag im Viewport</b></td><td>Kamera pannen (nicht Licht — für Licht → Alt+Klick)</td></tr>
+<tr class="hilfe-trennlinie"><td
+    class="hilfe-zelle"><b>Properties Ziel X/Y/Z</b></td><td>Blickrichtung (wo das Licht hinzeigt)</td></tr>
+<tr><td
+    class="hilfe-zelle"><b>Rechts-Drag im Viewport</b></td><td>Kamera pannen (nicht Licht — für Licht →
+        Alt+Klick)</td></tr>
 </table>
 
 <h4 class="hilfe-abschnitt">Licht konfigurieren (Properties-Panel)</h4>
@@ -167,7 +182,8 @@ export const HILFE_SPUREN = {
 </ul>
 
 <h4 class="hilfe-abschnitt">Wiedergabe</h4>
-<p>Audio wird automatisch zur Timeline synchronisiert. Bei <b>Play</b> startet die Audiowiedergabe am aktuellen Playhead. Bei <b>Pause/Stop</b> wird die Audiowiedergabe gestoppt.</p>
+<p>Audio wird automatisch zur Timeline synchronisiert. Bei <b>Play</b> startet die Audiowiedergabe am aktuellen
+    Playhead. Bei <b>Pause/Stop</b> wird die Audiowiedergabe gestoppt.</p>
 <p>Audio-Clips können wie BVH-Clips <b>verschoben</b> und <b>gelöscht</b> werden.</p>
 `},
 };

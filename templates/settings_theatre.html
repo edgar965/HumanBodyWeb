@@ -1,23 +1,24 @@
-{% extends "base.html" %}
+{% extends "einstellungsseite.html" %}
 {% load static %}
 {% block title %}Theatre - Einstellungen{% endblock %}
 
-{% block content %}
+{% block einstellungen_stile %}
 <style>
+/* Stile dieser Seite. Angelegt am 30.08.2026, als die Inline-Stile
+   des Markups hierher gezogen wurden (Befund `jsbefunde`). */
 
-/* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
-   Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
-   Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-color-var-text-muted.hb-color-var-text-muted.hb-color-var-text-muted {
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.hinweisliste.hinweisliste.hinweisliste {
     color:var(--text-muted);
     font-size:0.85rem;
-    margin-bottom:1rem;
-}   /* 2x */
+    line-height:1.6;
+}
 </style>
-<h1>Einstellungen — Theatre</h1>
+{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
+{% block einstellungen_titel %}Einstellungen — Theatre{% endblock %}
+
+{% block einstellungen_karten %}
     <div class="settings-card">
         <h2><i class="fas fa-film"></i> Theatre Defaults</h2>
         <p class="hb-color-var-text-muted">
@@ -31,9 +32,11 @@
             </div>
             <div class="settings-input">
                 <select name="theatre_default_model" class="settings-select">
-                    <option value="" {% if not settings.theatre_default_model %}selected{% endif %}>(Kein Auto-Load)</option>
+                    <option value=""
+                         {% if not settings.theatre_default_model %}selected{% endif %}>(Kein Auto-Load)</option>
                     {% for preset in available_presets %}
-                    <option value="{{ preset }}" {% if settings.theatre_default_model == preset %}selected{% endif %}>{{ preset }}</option>
+                    <option value="{{ preset }}"
+                         {% if settings.theatre_default_model == preset %}selected{% endif %}>{{ preset }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -51,7 +54,8 @@
             <div class="settings-input">
                 <select name="theatre_default_preset" class="settings-select">
                     {% for preset in available_lighting_presets %}
-                    <option value="{{ preset.value }}" {% if settings.theatre_default_preset == preset.value %}selected{% endif %}>{{ preset.label }}</option>
+                    <option value="{{ preset.value }}"
+                         {% if settings.theatre_default_preset == preset.value %}selected{% endif %}>{{ preset.label }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -71,8 +75,10 @@
             </div>
             <div class="settings-input">
                 <select name="theatre_video_format" class="settings-select">
-                    <option value="mp4" {% if settings.theatre_video_format == 'mp4' %}selected{% endif %}>MP4 (H.264)</option>
-                    <option value="webm" {% if settings.theatre_video_format == 'webm' %}selected{% endif %}>WebM (VP9)</option>
+                    <option value="mp4"
+                         {% if settings.theatre_video_format == 'mp4' %}selected{% endif %}>MP4 (H.264)</option>
+                    <option value="webm"
+                         {% if settings.theatre_video_format == 'webm' %}selected{% endif %}>WebM (VP9)</option>
                 </select>
             </div>
         </div>
@@ -84,10 +90,17 @@
             </div>
             <div class="settings-input">
                 <select name="theatre_video_resolution" class="settings-select">
-                    <option value="720p" {% if settings.theatre_video_resolution == '720p' %}selected{% endif %}>720p (1280 x 720)</option>
-                    <option value="1080p" {% if settings.theatre_video_resolution == '1080p' %}selected{% endif %}>1080p (1920 x 1080)</option>
-                    <option value="1440p" {% if settings.theatre_video_resolution == '1440p' %}selected{% endif %}>1440p (2560 x 1440)</option>
-                    <option value="4k" {% if settings.theatre_video_resolution == '4k' %}selected{% endif %}>4K (3840 x 2160)</option>
+                    <option value="720p"
+                         {% if settings.theatre_video_resolution == '720p' %}selected{% endif %}>720p (1280 x
+                              720)</option>
+                    <option value="1080p"
+                         {% if settings.theatre_video_resolution == '1080p' %}selected{% endif %}>1080p (1920 x
+                              1080)</option>
+                    <option value="1440p"
+                         {% if settings.theatre_video_resolution == '1440p' %}selected{% endif %}>1440p (2560 x
+                              1440)</option>
+                    <option value="4k"
+                         {% if settings.theatre_video_resolution == '4k' %}selected{% endif %}>4K (3840 x 2160)</option>
                 </select>
             </div>
         </div>
@@ -99,9 +112,12 @@
             </div>
             <div class="settings-input">
                 <select name="theatre_video_fps" class="settings-select">
-                    <option value="24" {% if settings.theatre_video_fps == 24 %}selected{% endif %}>24 fps (Film)</option>
-                    <option value="30" {% if settings.theatre_video_fps == 30 %}selected{% endif %}>30 fps (Standard)</option>
-                    <option value="60" {% if settings.theatre_video_fps == 60 %}selected{% endif %}>60 fps (Smooth)</option>
+                    <option value="24"
+                         {% if settings.theatre_video_fps == 24 %}selected{% endif %}>24 fps (Film)</option>
+                    <option value="30"
+                         {% if settings.theatre_video_fps == 30 %}selected{% endif %}>30 fps (Standard)</option>
+                    <option value="60"
+                         {% if settings.theatre_video_fps == 60 %}selected{% endif %}>60 fps (Smooth)</option>
                 </select>
             </div>
         </div>
@@ -113,25 +129,33 @@
             </div>
             <div class="settings-input">
                 <select name="theatre_video_quality" class="settings-select">
-                    <option value="low" {% if settings.theatre_video_quality == 'low' %}selected{% endif %}>Niedrig (2 Mbps)</option>
-                    <option value="medium" {% if settings.theatre_video_quality == 'medium' %}selected{% endif %}>Mittel (5 Mbps)</option>
-                    <option value="high" {% if settings.theatre_video_quality == 'high' %}selected{% endif %}>Hoch (8 Mbps)</option>
-                    <option value="ultra" {% if settings.theatre_video_quality == 'ultra' %}selected{% endif %}>Ultra (15 Mbps)</option>
+                    <option value="low"
+                         {% if settings.theatre_video_quality == 'low' %}selected{% endif %}>Niedrig (2 Mbps)</option>
+                    <option value="medium"
+                         {% if settings.theatre_video_quality == 'medium' %}selected{% endif %}>Mittel (5 Mbps)</option>
+                    <option value="high"
+                         {% if settings.theatre_video_quality == 'high' %}selected{% endif %}>Hoch (8 Mbps)</option>
+                    <option value="ultra"
+                         {% if settings.theatre_video_quality == 'ultra' %}selected{% endif %}>Ultra (15 Mbps)</option>
                 </select>
             </div>
         </div>
     </div>
+{% endblock %}
 
-    {% include "_einstellungen_speichern.html" with weiter_route="theatre" weiter_text="Zur Theatre-Seite" weiter_icon="fa-film" %}
-</form>
+{% block einstellungen_speichern %}
+     {% include "_einstellungen_speichern.html" with weiter_route="theatre" weiter_text="Zur Theatre-Seite" weiter_icon="fa-film" %}{% endblock %}
 
+{% block einstellungen_nachtrag %}
 <div class="settings-card hb-abstand-oben">
     <h2><i class="fas fa-question-circle"></i> Hinweise</h2>
-    <ul style="color:var(--text-muted);font-size:0.85rem;line-height:1.6;">
+    <ul class="hinweisliste">
         <li>Die <strong>Standard-Animation</strong> wird nur geladen, wenn ein Standard-Modell ausgewählt ist.</li>
         <li>Du kannst auf der Theatre-Seite jederzeit manuell andere Modelle und Animationen laden.</li>
-        <li>Die Licht-Presets können auch über das <strong>Settings</strong>-Menü in der Theatre-Seite gewechselt werden.</li>
-        <li>Siehe <a href="{% url 'theatre_help' %}" target="_blank" class="akzent-verweis">Theatre Hilfe</a> für eine detaillierte Anleitung.</li>
+        <li>Die Licht-Presets können auch über das <strong>Settings</strong>-Menü in der Theatre-Seite gewechselt
+             werden.</li>
+        <li>Siehe <a href="{% url 'theatre_help' %}" target="_blank"
+             class="akzent-verweis">Theatre Hilfe</a> für eine detaillierte Anleitung.</li>
     </ul>
 </div>
 

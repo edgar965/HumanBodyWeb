@@ -2,11 +2,11 @@
  * Result Character — WebSocket morph communication.
  */
 import { state } from './state.js';
+import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { blenderToThreeCoords } from '../character_core.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
-import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Morphdrossel } from '../gemeinsam/morphdrossel.js';
+import { Netznachricht } from '../gemeinsam/netznachricht.js';
 
 export function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -33,18 +33,10 @@ export function connectWebSocket() {
         setTimeout(connectWebSocket, Zeiten.VERBINDEN_MS);
     };
     state.ws.onerror = () => {};
-    state.ws.onmessage = (event) => {
-        if (event.data instanceof ArrayBuffer) {
-            updateMeshVertices(event.data);
-        } else {
-            try {
-                const msg = JSON.parse(event.data);
-                if (msg.type === 'reload_mesh') {
-                    fn.reloadBodyMesh(msg.body_type);
-                }
-            } catch (e) { Protokoll.debug('websocket', 'Nachricht nicht verwertbar', e); }
-        }
-    };
+    state.ws.onmessage = (ereignis) => Netznachricht.verteilen(ereignis, {
+        punkte: updateMeshVertices,
+        neuLaden: (typ) => fn.reloadBodyMesh(typ),
+    });
 }
 
 export function wsSend(msg) {
@@ -56,13 +48,7 @@ export function sendMorphThrottled(key, value) {
 }
 
 function updateMeshVertices(float32Buffer) {
-    if (!state.bodyGeometry) return;
-    const positions = state.bodyGeometry.attributes.position;
-    const newData = new Float32Array(float32Buffer);
-    blenderToThreeCoords(newData);
-    positions.array.set(newData);
-    positions.needsUpdate = true;
-    state.bodyGeometry.computeBoundingSphere();
+    Netzpunkte.ausPuffer(state.bodyGeometry, float32Buffer);
 }
 
 fn.wsSend = wsSend;

@@ -7,24 +7,51 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { fetchRetargetedClipForJob, fetchMergedClipForJob } from '../retarget_hybrid.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
-export async function applyBvhRetarget() {
-    Protokoll.debug('result_character', 'applyBvhRetarget called, jobId=', state.jobId, 'rigifySkeleton=', !!state.rigifySkeleton, 'bodyMesh=', !!state.bodyMesh);
-    if (state.mixer) { state.mixer.stopAllAction(); state.mixer = null; state.currentAction = null; }
+/**
+ * Die gemessene Koerperhoehe der Figur — Grundlage der Umzielung.
+ *
+ * 1,68 m ist der Rueckfall, wenn noch kein Netz da ist oder es leer ist. Der
+ * Wert geht als Massstab in `fetchRetargetedClipForJob`: Ist er falsch,
+ * stimmen die Schrittlaengen nicht, und die Figur rutscht oder stakst — kein
+ * Fehler, den man einer Meldung ansieht.
+ */
+function _koerperhoehe() {
+    if (!state.bodyMesh) return 1.68;
+    const kasten = new THREE.Box3().setFromObject(state.bodyMesh);
+    return kasten.isEmpty() ? 1.68 : kasten.max.y - kasten.min.y;
+}
 
-    let bodyH = 1.68;
-    if (state.bodyMesh) {
-        const bb = new THREE.Box3().setFromObject(state.bodyMesh);
-        if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
+/**
+ * Einen umgezielten Clip abspielen.
+ *
+ * BEFUND `doppelcode` (30.08.2026): `applyBvhRetarget` und
+ * `applyHybridRetarget` waren derselbe Ablauf mit einer anderen Abrufstelle —
+ * alten Mischer stoppen, Hoehe messen, Clip holen, neuen Mischer bauen, EINMAL
+ * abspielen. Die Doppelung war schon sichtbar: Die Hybrid-Fassung protokolliert
+ * nichts, die andere an vier Stellen.
+ *
+ * `LoopOnce` mit `clampWhenFinished`: Der Clip laeuft einmal und bleibt im
+ * letzten Bild stehen. Ohne `clampWhenFinished` springt die Figur am Ende in
+ * die Ruhelage zurueck — das sieht aus wie ein abgebrochener Import.
+ *
+ * @param {Function} holen (jobId, skelett, optionen) -> Promise<AnimationClip>
+ * @param {string} woher Name fuer das Protokoll
+ */
+async function _abspielen(holen, woher) {
+    if (state.mixer) {
+        state.mixer.stopAllAction();
+        state.mixer = null;
+        state.currentAction = null;
     }
-    Protokoll.debug('result_character', 'bodyHeight=', bodyH);
-
-    const clip = await fetchRetargetedClipForJob(state.jobId, state.rigifySkeleton, {
-        bodyHeight: bodyH,
+    const hoehe = _koerperhoehe();
+    Protokoll.debug('result_character', woher, 'bodyHeight=', hoehe);
+    const clip = await holen(state.jobId, state.rigifySkeleton, {
+        bodyHeight: hoehe,
         footCorrection: state.enableFootCorrection,
         deltaNorm: state.deltaNormMode,
     });
-
-    Protokoll.debug('result_character', 'clip:', clip.duration, 'sec,', clip.tracks.length, 'tracks');
+    Protokoll.debug('result_character', woher, 'clip:', clip.duration, 'sec,',
+                    clip.tracks.length, 'tracks');
 
     state.mixer = new THREE.AnimationMixer(state.bodyMesh);
     state.currentAction = state.mixer.clipAction(clip);
@@ -32,7 +59,12 @@ export async function applyBvhRetarget() {
     state.currentAction.clampWhenFinished = true;
     state.currentAction.play();
     state.bvhClipDuration = clip.duration;
-    Protokoll.debug('result_character', 'Animation playing, bvhClipDuration=', state.bvhClipDuration);
+}
+
+export async function applyBvhRetarget() {
+    Protokoll.debug('result_character', 'applyBvhRetarget called, jobId=', state.jobId, 'rigifySkeleton=',
+        !!state.rigifySkeleton, 'bodyMesh=', !!state.bodyMesh);
+    await _abspielen(fetchRetargetedClipForJob, 'bvh');
 }
 
 /**
@@ -100,26 +132,7 @@ export async function loadBVH() {
 }
 
 async function applyHybridRetarget() {
-    if (state.mixer) { state.mixer.stopAllAction(); state.mixer = null; state.currentAction = null; }
-
-    let bodyH = 1.68;
-    if (state.bodyMesh) {
-        const bb = new THREE.Box3().setFromObject(state.bodyMesh);
-        if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
-    }
-
-    const clip = await fetchMergedClipForJob(state.jobId, state.rigifySkeleton, {
-        bodyHeight: bodyH,
-        footCorrection: state.enableFootCorrection,
-        deltaNorm: state.deltaNormMode,
-    });
-
-    state.mixer = new THREE.AnimationMixer(state.bodyMesh);
-    state.currentAction = state.mixer.clipAction(clip);
-    state.currentAction.setLoop(THREE.LoopOnce);
-    state.currentAction.clampWhenFinished = true;
-    state.currentAction.play();
-    state.bvhClipDuration = clip.duration;
+    await _abspielen(fetchMergedClipForJob, 'hybrid');
 }
 
 fn.loadBVH = loadBVH;

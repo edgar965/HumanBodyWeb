@@ -6,6 +6,7 @@ import { Htmltext } from '/static/djangobase/js/htmltext.js';
 import { fn } from '../gemeinsam/registrierung.js';
 // Aus gemeinsam/kodierung.js — die Kopien hier sind am 15.08.2026 entfallen (sechsfach vorhanden).
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+import { Schieberegler } from '../gemeinsam/schieberegler.js';
 export { base64ToFloat32, base64ToUint32, blenderToThreeCoords };
 
 /**
@@ -58,20 +59,14 @@ export function _charQueryParams(inst) {
     return params;
 }
 
-/** Bind a slider to its display element. */
+/** Regler an seine Anzeige haengen — Rechnung siehe `Schieberegler`. */
 export function _bindSlider(id, valId, fmt) {
-    const slider = document.getElementById(id);
-    const val = document.getElementById(valId);
-    if (slider && val) {
-        slider.addEventListener('input', () => {
-            val.textContent = fmt(parseInt(slider.value));
-        });
-    }
+    Schieberegler.binden(id, valId, fmt);
 }
 
+/** Stellung eines Reglers — Rechnung siehe `Schieberegler`. */
 export function _sliderVal(id) {
-    const el = document.getElementById(id);
-    return el ? parseInt(el.value) : 0;
+    return Schieberegler.wert(id);
 }
 
 /** Returns the max Y coordinate from a character's body mesh positions. */

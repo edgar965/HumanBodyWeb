@@ -66,7 +66,8 @@ class CharacterConsumer(AsyncWebsocketConsumer):
         """Get CC subdivider for current gender, lazy-loading if needed."""
         if self._current_gender not in self._cc_subs:
             from core.dienste.charakterdaten import Charakterdaten
-            self._cc_subs[self._current_gender] = Charakterdaten.unterteiler(self._current_gender)
+            self._cc_subs[self._current_gender] = (
+                Charakterdaten.unterteiler(self._current_gender))
         return self._cc_subs.get(self._current_gender)
 
     async def disconnect(self, close_code):

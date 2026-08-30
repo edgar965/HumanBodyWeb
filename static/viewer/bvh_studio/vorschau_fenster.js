@@ -27,17 +27,19 @@ const GROESSE_SCHLUESSEL = 'bvhStudio_previewSize';
 const KOPFHOEHE = 50;
 
 const RUMPF = `
-    <div id="preview-box" style="background:var(--bg-secondary,#1a1a2e);border:1px solid var(--border,#334);border-radius:10px;width:1000px;height:700px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,0.5);resize:both;min-width:500px;min-height:400px;max-width:95vw;max-height:90vh;">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border,#334);">
-            <span id="preview-title" style="font-size:0.9rem;color:#ccc;"></span>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <button id="preview-play" style="background:none;border:1px solid var(--border,#334);border-radius:4px;color:#ccc;cursor:pointer;padding:4px 10px;font-size:0.8rem;"><i class="fas fa-play" id="preview-play-icon"></i></button>
-                <span id="preview-frame" style="font-size:0.75rem;color:#888;">0 / 0</span>
-                <button id="preview-save-smooth" style="background:none;border:1px solid var(--border,#334);border-radius:4px;color:#4caf50;cursor:pointer;padding:4px 10px;font-size:0.75rem;" title="Smooth permanent auf BVH speichern"><i class="fas fa-save"></i> Smooth speichern</button>
-                <button id="preview-close" style="background:none;border:none;color:#888;cursor:pointer;font-size:1.2rem;">&times;</button>
+    <div id="preview-box">
+        <div class="studio-fensterkopf">
+            <span id="preview-title"></span>
+            <div class="studio-fensterknoepfe">
+                <button id="preview-play" class="studio-fensterknopf"><i class="fas fa-play"
+                    id="preview-play-icon"></i></button>
+                <span id="preview-frame">0 / 0</span>
+                <button id="preview-save-smooth" class="studio-fensterknopf studio-knopf-gruen"
+                    title="Smooth permanent auf BVH speichern"><i class="fas fa-save"></i> Smooth speichern</button>
+                <button id="preview-close">&times;</button>
             </div>
         </div>
-        <canvas id="preview-canvas" style="flex:1;width:100%;"></canvas>
+        <canvas id="preview-canvas"></canvas>
     </div>`;
 
 export class Vorschaufenster {
@@ -61,7 +63,7 @@ export class Vorschaufenster {
     static _fensterBauen() {
         const modal = document.createElement('div');
         modal.id = 'preview-modal';
-        modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+        modal.className = 'studio-fensterhuelle';
         modal.innerHTML = RUMPF;
         document.body.appendChild(modal);
         Vorschaufenster.modal = modal;

@@ -221,7 +221,8 @@ class Charakterdaten:
             cls._regler_setzen(zustand, schluessel, wert)
 
         mesh = cls.netzdaten(geschlecht)
-        faces = mesh.faces if (mesh.faces is not None and mesh.faces.ndim == 2) else None
+        faces = mesh.faces if (mesh.faces is not None and mesh.faces.ndim
+                               == 2) else None
         return Koerperzustand(zustand, geschlecht, zustand.compute(), faces,
                               koerpertyp)
 

@@ -21,7 +21,8 @@ Klasse gerechnet, auf den Fällen, die weh tun:
 Dazu die Gewichtung: `smooth` ist `3t²−2t³` (bei 0,5 genau 0,5, bei 0,25 aber
 0,156), `step` bleibt auf 0.
 
-Ohne `node` im Pfad wird der Test übersprungen, nicht rot.
+Ohne `node` im Pfad bricht der Lauf mit einer Meldung ab (seit dem
+30.08.2026) — vorher meldete er grün, ohne gelaufen zu sein.
 """
 import unittest
 
@@ -96,7 +97,6 @@ console.log(JSON.stringify(ergebnis));
 """
 
 
-@Jsmodul.ohne_node()
 class SchluesselpaarTest(unittest.TestCase):
 
     @classmethod

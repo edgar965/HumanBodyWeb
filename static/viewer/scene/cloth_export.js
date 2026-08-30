@@ -20,6 +20,7 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 import { float32ToBase64, uint32ToBase64 }
     from '../gemeinsam/kodierung.js';
 import { Netznutzlast } from '../gemeinsam/netznutzlast.js';
+import { Ausgabeoptionen } from '../gemeinsam/ausgabeoptionen.js';
 
 function _selectedInstWithGenerated() {
     const inst = state.characters.get(state.selectedCharacterId);
@@ -112,15 +113,13 @@ export async function buildClothPayload({ duration = 3.0, fps = 30 } = {}) {
  * Export the selected character with the active animation as MP4 via the
  * chosen cloth engine. Returns the download URL.
  */
-export async function exportClothMP4({ engine = 'warp_only', quality = 'medium', duration = 3.0, fps = 30, outputDir = '', filename = '', width = 1920, height = 1080 } = {}) {
+export async function exportClothMP4({ engine = 'warp_only', quality = 'medium', duration = 3.0, fps = 30,
+    outputDir = '', filename = '', width = 1920, height = 1080 } = {}) {
     const payload = await buildClothPayload({ duration, fps });
-    payload.engine = engine;
-    payload.quality = quality;
-    payload.width = width;
-    payload.height = height;
-    if (outputDir) payload.output_dir = outputDir;
-    if (filename) payload.filename = filename;
-    Protokoll.debug('Cloth Export', `engine=${engine} quality=${quality} res=${width}x${height} frames=${payload.anim_frames} dir=${outputDir||'(default)'} file=${filename||'(auto)'}`);
+    Ausgabeoptionen.anhaengen(payload, {engine, quality, width, height,
+                                        outputDir, filename});
+    Protokoll.debug('Cloth Export',
+        `engine=${engine} quality=${quality} res=${width}x${height} frames=${payload.anim_frames} dir=${outputDir||'(default)'} file=${filename||'(auto)'}`);
     // Der Abruf WIRFT bei jedem Status außer 2xx, und diese Funktion hat keinen
     // Aufrufer im Projekt — sie hängt an `fn.`/`window.__` und wird aus der
     // Konsole oder einem Knopf gerufen. Ohne diesen Fänger wäre ein Serverfehler

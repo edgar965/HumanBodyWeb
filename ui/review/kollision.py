@@ -32,10 +32,14 @@ BEREICHE = [
     {'slug': 'coll_bridge', 'name': 'Kollision: Brücke vom Browser zur Pipeline',
      'dateien': ['HumanBody/collision/bridge.py', 'HumanBody/collision/scene_input.py'],
      'hinweis': ('Der Browser schickt eine ganze Szene als JSON: Netze base64-kodiert '
-                 '(Float32/Uint32), Skelett-Matrizen, Animationsspuren, Kleidungsteile. '
-                 'bridge.payload_to_scene_input baut daraus SceneInput; das wird als .npz '
-                 'gespeichert und von einem Python-3.10-Unterprozess wieder geladen. Alles '
-                 'hier kommt aus einer HTTP-Anfrage. Ich kann diesen Code ausfuehren (NumPy '
+                 '(Float32/Uint32), Skelett-Matrizen, Animationsspuren, '
+                 'Kleidungsteile. '
+                 'bridge.payload_to_scene_input baut daraus SceneInput; das wird als '
+                 '.npz '
+                 'gespeichert und von einem Python-3.10-Unterprozess wieder geladen. '
+                 'Alles '
+                 'hier kommt aus einer HTTP-Anfrage. Ich kann diesen Code ausfuehren '
+                 '(NumPy '
                  'vorhanden) und Messungen machen.'),
      'fragen': [
          ('Welche Eingabe laesst _b64_to_f32 oder _b64_to_u32 abstuerzen oder '
@@ -48,9 +52,12 @@ BEREICHE = [
      ]},
     {'slug': 'coll_splitter', 'name': 'Kollision: Szene aufteilen, Ton anhängen',
      'dateien': ['HumanBody/collision/splitter.py', 'HumanBody/collision/audio_mux.py'],
-     'hinweis': ('splitter.split_scene trennt die Szene in Koerper und Stoff und bestimmt die '
-                 'Pins (die festgehaltenen Stoffpunkte). audio_mux.mux_audio ruft ffmpeg auf, '
-                 'um Tonspuren unter das gerenderte Video zu legen; _resolve_url macht aus '
+     'hinweis': ('splitter.split_scene trennt die Szene in Koerper und Stoff und '
+                 'bestimmt die '
+                 'Pins (die festgehaltenen Stoffpunkte). audio_mux.mux_audio ruft '
+                 'ffmpeg auf, '
+                 'um Tonspuren unter das gerenderte Video zu legen; _resolve_url macht '
+                 'aus '
                  'einer URL aus dem Browser einen Pfad auf der Platte. Ausfuehrbar.'),
      'fragen': [
          ('_resolve_url: Welche URL fuehrt aus dem Medienverzeichnis heraus? Nenne die '
@@ -61,11 +68,15 @@ BEREICHE = [
              'einer Kommandozeile, das dort nicht hingehoert?'),
      ]},
     {'slug': 'coll_skinning', 'name': 'Kollision: rigides Skinning und Body-Push-Out',
-     'dateien': ['HumanBody/collision/skinning_only.py', 'HumanBody/collision/skinning_blender.py'],
-     'hinweis': ('Die schnellste der vier Pipelines: keine Stoffsimulation, sondern der Stoff '
+     'dateien': ['HumanBody/collision/skinning_only.py',
+                 'HumanBody/collision/skinning_blender.py'],
+     'hinweis': ('Die schnellste der vier Pipelines: keine Stoffsimulation, sondern '
+                 'der Stoff '
                  'wird mitbewegt (rigid skinning) und danach aus dem Koerper geschoben '
-                 '(_push_outside_body). Die Kernrechnung ist reines NumPy und laeuft je Frame '
-                 'ueber alle Vertices. Ausfuehrbar und MESSBAR — nenne Groessen, ich messe.'),
+                 '(_push_outside_body). Die Kernrechnung ist reines NumPy und laeuft '
+                 'je Frame '
+                 'ueber alle Vertices. Ausfuehrbar und MESSBAR — nenne Groessen, ich '
+                 'messe.'),
      'fragen': [
          ('_skin_rigid_frame: Ist die Reihenfolge inv_bind mal frame_mat richtig, oder '
              'ist sie vertauscht? Woran wuerde man es im Bild sehen?'),
@@ -75,11 +86,16 @@ BEREICHE = [
              'Vertices und 300 Frames?'),
      ]},
     {'slug': 'coll_render', 'name': 'Kollision: Bilder rendern (pyrender und Blender)',
-     'dateien': ['HumanBody/collision/warp_render.py', 'HumanBody/collision/blender_render_from_bake.py'],
-     'hinweis': ('Zwei Renderwege aus derselben Bake-Datei: pyrender offscreen (Python 3.14) '
-                 'und Blender im Hintergrund. Beide bauen Kamera und Licht aus derselben '
-                 'Nutzlast, und beide rechnen zwischen Y-oben (Three.js) und Z-oben (Blender) '
-                 'um. Zwei Wege, dieselbe Kamera — wenn die Umrechnung an einer Stelle anders '
+     'dateien': ['HumanBody/collision/warp_render.py',
+                 'HumanBody/collision/blender_render_from_bake.py'],
+     'hinweis': ('Zwei Renderwege aus derselben Bake-Datei: pyrender offscreen (Python '
+                 '3.14) '
+                 'und Blender im Hintergrund. Beide bauen Kamera und Licht aus '
+                 'derselben '
+                 'Nutzlast, und beide rechnen zwischen Y-oben (Three.js) und Z-oben '
+                 '(Blender) '
+                 'um. Zwei Wege, dieselbe Kamera — wenn die Umrechnung an einer Stelle '
+                 'anders '
                  'ist, sehen die Videos verschieden aus. warp_render ist ausfuehrbar.'),
      'fragen': [
          ('Vergleiche _pose_from_camera_matrix (pyrender) mit _yup_to_zup_mat44 und '

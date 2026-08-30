@@ -9,11 +9,7 @@
     <form method="post" enctype="multipart/form-data" id="uploadForm">
         {% csrf_token %}
 
-        <div class="drop-zone" id="dropTarget">
-            <i class="fas fa-cloud-upload-alt fa-3x"></i>
-            <p>Drag & drop video here or click to browse</p>
-            <input type="file" name="video" id="videoInput" accept="video/*" required>
-        </div>
+        {% include "_videoablage.html" %}
 
         <div class="form-group">
             <label>2D Detector:</label>
@@ -24,13 +20,15 @@
                     <span class="pipeline-label">MediaPipe</span>
                     <span class="pipeline-desc">CPU, schnell, ~50 AP</span>
                 </label>
-                <label class="pipeline-option {% if not status.openpose_exe or not status.openpose_models %}disabled{% endif %}">
+                <label
+                     class="pipeline-option {% if not status.openpose_exe or not status.openpose_models %}disabled{% endif %}">
                     <input type="radio" name="pipeline" value="openpose"
                         {% if default_2d == 'openpose' %}checked{% endif %}
                         {% if not status.openpose_exe or not status.openpose_models %}disabled{% endif %}>
                     <span class="pipeline-label">OpenPose</span>
                     <span class="pipeline-desc">
-                        {% if status.openpose_exe and status.openpose_models %}CUDA GPU, 61 AP, Legacy{% else %}nicht verf&uuml;gbar{% endif %}
+                        {% if status.openpose_exe and status.openpose_models %}CUDA GPU, 61 AP, Legacy{% else %}nicht
+                             verf&uuml;gbar{% endif %}
                     </span>
                 </label>
                 <label class="pipeline-option {% if not status.yolo11 %}disabled{% endif %}">
@@ -39,7 +37,8 @@
                         {% if not status.yolo11 %}disabled{% endif %}>
                     <span class="pipeline-label">YOLO11-l</span>
                     <span class="pipeline-desc">
-                        {% if status.yolo11 %}GPU, schnell, 66 AP{% else %}nicht installiert (pip install ultralytics){% endif %}
+                        {% if status.yolo11 %}GPU, schnell, 66 AP{% else %}nicht installiert (pip install
+                             ultralytics){% endif %}
                     </span>
                 </label>
                 <label class="pipeline-option {% if not status.rtmpose %}disabled{% endif %}">
@@ -48,7 +47,8 @@
                         {% if not status.rtmpose %}disabled{% endif %}>
                     <span class="pipeline-label">RTMPose-l &star;</span>
                     <span class="pipeline-desc">
-                        {% if status.rtmpose %}GPU, sehr schnell, 77 AP{% else %}nicht installiert (pip install rtmlib){% endif %}
+                        {% if status.rtmpose %}GPU, sehr schnell, 77 AP{% else %}nicht installiert (pip install
+                             rtmlib){% endif %}
                     </span>
                 </label>
                 <label class="pipeline-option {% if not status.vitpose %}disabled{% endif %}">
@@ -57,14 +57,17 @@
                         {% if not status.vitpose %}disabled{% endif %}>
                     <span class="pipeline-label">ViTPose-H</span>
                     <span class="pipeline-desc">
-                        {% if status.vitpose %}GPU, langsamer, 79 AP (h&ouml;chste Genauigkeit){% else %}nicht installiert{% endif %}
+                        {% if status.vitpose %}GPU, langsamer, 79 AP (h&ouml;chste Genauigkeit){% else %}nicht
+                             installiert{% endif %}
                     </span>
                 </label>
             </div>
         </div>
 
-        <div class="form-group" style="margin-top:10px;">
-            <small class="hb-gedaempft">Alle Detektoren geben Body25 (OpenPose-Format) aus &rarr; MocapNET v2.1 (CMU Skeleton, 164 Joints) hebt automatisch auf 3D.</small>
+        <div class="form-group feldgruppe-abgesetzt">
+            <small
+                 class="hb-gedaempft">Alle Detektoren geben Body25 (OpenPose-Format) aus &rarr; MocapNET v2.1 (CMU
+                      Skeleton, 164 Joints) hebt automatisch auf 3D.</small>
         </div>
 
     </form>
@@ -119,7 +122,7 @@
                 <td>~50&ndash;80 FPS</td>
                 <td>4&ndash;6 GB</td>
                 <td>~4 GB</td>
-                <td><span style="color:#e67e22;">&starf; Beste Qualit&auml;t</span></td>
+                <td><span class="warnfarbe">&starf; Beste Qualit&auml;t</span></td>
             </tr>
         </tbody>
     </table>
@@ -145,6 +148,14 @@
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-ohne-abstand.hb-ohne-abstand.hb-ohne-abstand { margin:0; }   /* 1x */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.feldgruppe-abgesetzt.feldgruppe-abgesetzt.feldgruppe-abgesetzt {
+    margin-top:10px;
+}
+.warnfarbe.warnfarbe.warnfarbe {
+    color:#e67e22;
+}
 </style>
 {% comment %}Umbau 16.08.2026: Hier standen 362 Zeilen JavaScript inline —
 mit 53 `var` und, bis auf `pipeline_params`, buchstabengleich zu upload_v4.html

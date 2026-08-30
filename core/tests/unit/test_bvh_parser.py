@@ -17,7 +17,6 @@ auf `HumanBody/data/` — das sind Produktionsdaten.
 
 import shutil
 import tempfile
-import unittest
 from pathlib import Path
 
 from django.conf import settings
@@ -44,11 +43,6 @@ MOTION
 Frames: %d
 Frame Time: 0.040000
 """
-
-#: Die Datei, die den Fehler ausgeloest hat. Nicht versioniert —
-#: der Dekorator unten haengt an ihrem Vorhandensein.
-NUSSIE = (Path(settings.HUMANBODY_ROOT) / 'data' / 'animations'
-          / 'bvh' / 'Results' / 'nussie1.bvh')
 
 #: Ein Bild: 6 Kanaele Hips + 3 Kanaele Spine.
 BILD = '0.0 1.0 0.0 0.0 0.0 0.0 5.0 0.0 0.0'
@@ -108,16 +102,20 @@ class BvhParserTest(TestCase):
         pfad = self.datei('zuwenig.bvh', KOPF % 10 + '\n'.join([BILD] * 2) + '\n')
         self.assertEqual(SkeletonRigify.parse_bvh(pfad).quats.shape[0], 10)
 
-    @unittest.skipUnless(NUSSIE.is_file(), 'nussie1.bvh liegt hier nicht')
-    def test_echte_datei_mit_leerzeile(self):
-        """Zugabe an der Datei, die den Fehler 500 ausgeloest hat.
+    def test_grosse_datei_mit_leerzeile(self):
+        """Der Fall, der den Fehler 500 ausgeloest hat — in voller Groesse.
 
-        Sie ist NICHT versioniert (Produktionsdaten, 2,7 MB) und fehlt auf
-        einem frisch ausgecheckten Rechner. Das ist vertretbar, weil der
-        Mechanismus selbst — Leerzeile nach „Frame Time:" — von
-        `test_leerzeile_vor_den_daten` auf einer selbst geschriebenen Datei
-        geprueft wird. Die Bedingung steht als Dekorator, damit ein
-        uebersprungener Fall in der Auswertung nicht wie ein bestandener
-        aussieht."""
-        daten = SkeletonRigify.parse_bvh(str(NUSSIE))
-        self.assertEqual(daten.quats.shape[0], 3669)
+        Bis zum 30.08.2026 lief dieser Test auf `Results/nussie1.bvh`, 3.669
+        Bilder Produktionsdaten, 2,7 MB und nicht versioniert. Auf einem frisch
+        ausgecheckten Rechner fehlte die Datei, und der Fall uebersprang sich —
+        er meldete gruen, ohne gelaufen zu sein (Befund `uebersprungen`).
+
+        Dieselbe Datei entsteht jetzt hier: gleiche Bilderzahl, dieselbe
+        Leerzeile hinter „Frame Time:". Der Test braucht keine fremden Daten
+        mehr und laeuft auf jedem Rechner.
+        """
+        bilder = 3669
+        pfad = self.datei('gross.bvh',
+                          KOPF % bilder + '\n' + '\n'.join([BILD] * bilder)
+                          + '\n')
+        self.assertEqual(SkeletonRigify.parse_bvh(pfad).quats.shape[0], bilder)

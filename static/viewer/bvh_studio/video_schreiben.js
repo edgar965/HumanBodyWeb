@@ -35,7 +35,8 @@ export async function saveBlobAs(blob, suggestedName, mimeType) {
     URL.revokeObjectURL(url);
 }
 
-export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, crf, filename, statusText, progressBar) {
+export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFrame, fps, crf, filename, statusText,
+    progressBar) {
     const totalFrames = toFrame - fromFrame;
     const frames = [];
 
@@ -102,10 +103,12 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
         statusText.textContent = 'Fehler: ' + e.message;
     }
 
-    Protokoll.info('BVH Studio', `Server export done: ${totalFrames} frames, crf=${crf}, save_path=${formData.get('save_path')}`);
+    Protokoll.info('BVH Studio',
+        `Server export done: ${totalFrames} frames, crf=${crf}, save_path=${formData.get('save_path')}`);
 }
 
-export async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toFrame, fps, filename, statusText, progressBar) {
+export async function exportBrowserMediaRecorder(offRenderer, offCanvas, fromFrame, toFrame, fps, filename, statusText,
+    progressBar) {
     const totalFrames = toFrame - fromFrame;
     const stream = offCanvas.captureStream(0);  // 0 = manual frame push
     const chunks = [];

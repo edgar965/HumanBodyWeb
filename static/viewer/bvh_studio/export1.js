@@ -11,6 +11,7 @@ import { _buildPayload } from './export_nutzlast.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Ausgabeoptionen } from '../gemeinsam/ausgabeoptionen.js';
 
 
 function _setStatus(text, color) {
@@ -115,12 +116,8 @@ async function _runClothExport(engine) {
         setTimeout(() => _progress(engine, null), 6000);
         return;
     }
-    payload.engine = engine;
-    payload.quality = quality;
-    payload.width = width;
-    payload.height = height;
-    if (outputDir) payload.output_dir = outputDir;
-    if (filename) payload.filename = filename;
+    Ausgabeoptionen.anhaengen(payload, {engine, quality, width, height,
+                                        outputDir, filename});
 
     _progress(engine, 25, `POST ${payload.anim_frames} Frames → Server`);
     _setStatus(`Läuft: ${engine}, ${payload.anim_frames} Frames…`, 'var(--accent)');

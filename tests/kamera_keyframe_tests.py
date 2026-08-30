@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Kamera: Keyframes speichern und laden
 
-Kamera-Spur im Speichern/Laden-Umlauf — Felder, Flaggen und alte Projekte ohne Quaternion
+Kamera-Spur im Speichern/Laden-Umlauf — Felder, Flaggen und alte Projekte ohne
+Quaternion
 
 Aus `camera_track_tests.py` herausgeloest (17.08.2026, Befund `dateigroesse`):
 Die Datei hatte 393 Zeilen und eine Klasse mit 18 Testmethoden.
@@ -13,7 +14,9 @@ from ._kameraumlauf import Kameraumlauf
 
 class KameraKeyframeTests(TestCategory):
     name = 'Kamera: Keyframes speichern und laden'
-    description = 'Kamera-Spur im Speichern/Laden-Umlauf — Felder, Flaggen und alte Projekte ohne Quaternion'
+    description = (
+        'Kamera-Spur im Speichern/Laden-Umlauf — Felder, Flaggen und alte Projekte '
+        'ohne Quaternion')
 
     # --- BVH Studio: Kamera-Track Projekt Save/Load Roundtrip ---
     @staticmethod
@@ -102,7 +105,8 @@ class KameraKeyframeTests(TestCategory):
                 'cameraActive': True,
                 'clips': [{
                     'type': 'camera_kf', 'name': 'KF', 'startFrame': 1,
-                    'fps': 30, 'totalFrames': 0, 'trimIn': 0, 'trimOut': 0, 'speed': 1.0,
+                    'fps': 30, 'totalFrames': 0, 'trimIn': 0, 'trimOut': 0,
+                    'speed': 1.0,
                     'data': {
                         'position': {'x': 1.0, 'y': 2.0, 'z': 3.0},
                         'rotation': {'x': 0.1, 'y': 0.2, 'z': 0.0},

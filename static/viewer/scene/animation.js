@@ -9,28 +9,24 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { escapeHtml, _selectedInst } from './utils.js';
 import { convertToRigifySkinnedMesh, convertInstToSkinned } from './skeleton.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
+import { Animationsstopp } from '../gemeinsam/animationsstopp.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 
 export function stopAnimation(destroy = false) {
-    if (state.currentAction) {
-        state.currentAction.stop();
-        state.currentAction.reset();
-        if (destroy) state.currentAction = null;
+    Animationsstopp.aktion(state, destroy);
+    Animationsstopp.mischer(state, destroy);
+    // Das Skelett der animierten Figur — auf dieser Seite kann das eine von
+    // mehreren Instanzen sein. Genau darin unterscheidet sich diese Fassung
+    // von der des Einzel-Viewers; alles andere kommt aus `Animationsstopp`.
+    const inst = state._animatedCharId
+        ? state.characters.get(state._animatedCharId) : null;
+    const skelett = inst ? inst.rigifySkeleton : state.rigifySkeleton;
+    if (inst ? (inst.isSkinned && skelett) : (state.isSkinned && skelett)) {
+        skelett.skeleton.pose();
     }
-    if (state.mixer && destroy) { state.mixer.stopAllAction(); state.mixer = null; }
-    if (state._animatedCharId) {
-        const inst = state.characters.get(state._animatedCharId);
-        if (inst && inst.isSkinned && inst.rigifySkeleton) inst.rigifySkeleton.skeleton.pose();
-    } else {
-        if (state.isSkinned && state.rigifySkeleton) state.rigifySkeleton.skeleton.pose();
-    }
-    if (state.skelWrapper) { state.scene.remove(state.skelWrapper); state.skelWrapper = null; }
-    if (state.skeletonHelper) { state.scene.remove(state.skeletonHelper); state.skeletonHelper = null; }
-    const activeSkel = state._animatedCharId ? state.characters.get(state._animatedCharId)?.rigifySkeleton : state.rigifySkeleton;
-    if (state.rigVisible && activeSkel) {
-        state.skeletonHelper = Skelettanzeige.bauen(state.scene, activeSkel.rootBone);
-    }
+    Animationsstopp.hilfslinien(state);
+    Animationsstopp.rigZeigen(state, skelett);
     state._animatedCharId = null;
     state.playing = false;
     state.currentAnimUrl = '';
@@ -86,8 +82,10 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             const bvhBones = result.skeleton.bones; if (bvhBones.length === 0) return;
             const rootBone = bvhBones[0]; rootBone.updateWorldMatrix(true, true);
             const skelBox = new THREE.Box3(); const tmpVec = new THREE.Vector3();
-            bvhBones.forEach(b => { b.updateWorldMatrix(true, false); b.getWorldPosition(tmpVec); skelBox.expandByPoint(tmpVec); });
-            let bodyHeight = 1.75; if (targetMesh) { const bb = new THREE.Box3().setFromObject(targetMesh); if (!bb.isEmpty()) bodyHeight = bb.max.y - bb.min.y; }
+            bvhBones.forEach(b => { b.updateWorldMatrix(true, false); b.getWorldPosition(tmpVec);
+                skelBox.expandByPoint(tmpVec); });
+            let bodyHeight = 1.75; if (targetMesh) { const bb = new THREE.Box3().setFromObject(targetMesh);
+                if (!bb.isEmpty()) bodyHeight = bb.max.y - bb.min.y; }
             const scale = bodyHeight / Math.max(skelBox.max.y - skelBox.min.y, 0.01);
             state.skelWrapper = new THREE.Group();
             state.skelWrapper.scale.set(scale, scale, scale);
@@ -103,7 +101,9 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
         if (rawBvhText) { handleBvhFallback(state.bvhLoader.parse(rawBvhText), rawBvhText); }
         else {
             const fileLoader = new THREE.FileLoader(state.bvhLoader.manager);
-            fileLoader.load(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(), (text) => { handleBvhFallback(state.bvhLoader.parse(text), text); }, undefined, (err) => { console.error('BVH load failed:', err); });
+            fileLoader.load(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(),
+                (text) => { handleBvhFallback(state.bvhLoader.parse(text), text);
+                    }, undefined, (err) => { console.error('BVH load failed:', err); });
         }
     }
     const _pb = document.getElementById('anim-play');
@@ -117,12 +117,16 @@ export async function applyGroundLevelFix() {
     // Simplified ground fix -- modifies BVH Y root channel
     const lines = state.currentAnimBvhText.split('\n');
     let yPosChannel = -1, foundRoot = false;
-    for (let i = 0; i < lines.length; i++) { const t = lines[i].trim(); if (t.startsWith('ROOT ')) { foundRoot = true; continue; } if (foundRoot && t.startsWith('CHANNELS')) { const parts = t.split(/\s+/); for (let c = 2; c < parts.length; c++) { if (parts[c] === 'Yposition') { yPosChannel = c - 2; break; } } break; } }
+    for (let i = 0; i < lines.length; i++) { const t = lines[i].trim(); if (t.startsWith('ROOT ')) { foundRoot = true;
+        continue; } if (foundRoot && t.startsWith('CHANNELS')) { const parts = t.split(/\s+/); for (let c = 2;
+            c < parts.length; c++) { if (parts[c] === 'Yposition') { yPosChannel = c - 2; break; } } break; } }
     if (yPosChannel < 0) { alert('Yposition nicht gefunden.'); return; }
     let motionIdx = lines.findIndex(l => l.trim() === 'MOTION'); if (motionIdx < 0) return;
     let frameTime = 1/30, dataStart = motionIdx + 1;
-    while (dataStart < lines.length && !lines[dataStart].trim().match(/^[\d\-\.]/)) { const t = lines[dataStart].trim(); if (t.startsWith('Frame Time:')) frameTime = parseFloat(t.split(':')[1].trim()); dataStart++; }
-    const frameLineIdx = []; for (let i = dataStart; i < lines.length; i++) { if (lines[i].trim().match(/^[\d\-\.]/)) frameLineIdx.push(i); }
+    while (dataStart < lines.length && !lines[dataStart].trim().match(/^[\d\-\.]/)) { const t = lines[dataStart].trim();
+        if (t.startsWith('Frame Time:')) frameTime = parseFloat(t.split(':')[1].trim()); dataStart++; }
+    const frameLineIdx = []; for (let i = dataStart; i < lines.length;
+        i++) { if (lines[i].trim().match(/^[\d\-\.]/)) frameLineIdx.push(i); }
     if (!frameLineIdx.length) return;
     const parsed = state.bvhLoader.parse(state.currentAnimBvhText);
     const bones = parsed.skeleton.bones, rootBone = bones[0];
@@ -131,7 +135,9 @@ export async function applyGroundLevelFix() {
     for (let f = 0; f < frameLineIdx.length; f++) {
         tmpMixer.setTime(f * frameTime); rootBone.updateWorldMatrix(true, true);
         let minY = Infinity; for (const b of bones) { b.getWorldPosition(tmpV); if (tmpV.y < minY) minY = tmpV.y; }
-        if (Math.abs(minY) > 0.001) { const vals = lines[frameLineIdx[f]].trim().split(/\s+/); vals[yPosChannel] = (parseFloat(vals[yPosChannel]) - minY).toFixed(6); lines[frameLineIdx[f]] = vals.join(' '); corrected++; }
+        if (Math.abs(minY) > 0.001) { const vals = lines[frameLineIdx[f]].trim().split(/\s+/);
+            vals[yPosChannel] = (parseFloat(vals[yPosChannel]) - minY).toFixed(6);
+                lines[frameLineIdx[f]] = vals.join(' '); corrected++; }
     }
     tmpAction.stop(); tmpMixer.stopAllAction();
     if (corrected === 0) { alert('Bereits auf Bodenniveau.'); return; }
@@ -139,9 +145,12 @@ export async function applyGroundLevelFix() {
     if (state.currentAnimUrl) {
         const urlPath = state.currentAnimUrl.replace(/\?.*$/, '');
         const bvhMatch = urlPath.match(/\/api\/character\/bvh\/([^/]+)\/([^/]+)/);
-        const saveBody = bvhMatch ? { category: bvhMatch[1], name: bvhMatch[2], bvh_text: state.currentAnimBvhText } : { path: urlPath, bvh_text: state.currentAnimBvhText };
-        try { const resp = await fetch('/api/character/save-bvh-text/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(saveBody) });
-            if (resp.ok) loadBVHAnimation(state.currentAnimUrl + (state.currentAnimUrl.includes('?') ? '&' : '?') + '_ground=' + Date.now(), state.currentAnimName, 0);
+        const saveBody = bvhMatch ? { category: bvhMatch[1], name: bvhMatch[2],
+            bvh_text: state.currentAnimBvhText } : { path: urlPath, bvh_text: state.currentAnimBvhText };
+        try { const resp = await fetch('/api/character/save-bvh-text/', { method: 'POST',
+            headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(saveBody) });
+            if (resp.ok) loadBVHAnimation(state.currentAnimUrl + (state.currentAnimUrl.includes('?') ? '&' : '?')
+                + '_ground=' + Date.now(), state.currentAnimName, 0);
             else loadBVHAnimation(state.currentAnimUrl, state.currentAnimName, 0, state.currentAnimBvhText);
         } catch (e) { loadBVHAnimation(state.currentAnimUrl, state.currentAnimName, 0, state.currentAnimBvhText); }
     }
@@ -152,7 +161,8 @@ export function openSaveAnimDialog() {
     if (!state.currentAnimBvhText) { alert('Keine Animation geladen.'); return; }
     let category = '', baseName = '';
     const m = state.currentAnimUrl.match(/\/api\/character\/bvh\/([^/]+)\/([^/]+)\/?/);
-    if (m) { category = decodeURIComponent(m[1]); baseName = decodeURIComponent(m[2]); } else { category = 'Custom'; baseName = state.currentAnimName || 'animation'; }
+    if (m) { category = decodeURIComponent(m[1]); baseName = decodeURIComponent(m[2]); } else { category = 'Custom';
+        baseName = state.currentAnimName || 'animation'; }
     let suggestedName = baseName;
     if (state.currentAnimGroundFixed && !baseName.endsWith('_ground')) suggestedName = baseName + '_ground';
     document.getElementById('save-anim-category').value = category;
@@ -162,7 +172,8 @@ export function openSaveAnimDialog() {
 
 export function _initSaveAnimDialog() {
     const dlg = document.getElementById('save-anim-dialog'); if (!dlg) return;
-    dlg.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => dlg.classList.remove('visible')));
+    dlg.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click',
+        () => dlg.classList.remove('visible')));
     dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.classList.remove('visible'); });
     document.getElementById('save-anim-confirm')?.addEventListener('click', async () => {
         const category = document.getElementById('save-anim-category').value.trim();
@@ -171,7 +182,8 @@ export function _initSaveAnimDialog() {
         try {
             const data = await Serverabruf.senden('/api/character/animation/save/',
                 { category, name, bvh_content: state.currentAnimBvhText });
-            if (data.ok) { dlg.classList.remove('visible'); state.currentAnimUrl = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`; state.currentAnimName = name; loadAnimationUI(); }
+            if (data.ok) { dlg.classList.remove('visible');
+                state.currentAnimUrl = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`; state.currentAnimName = name; loadAnimationUI(); }
             else alert('Fehler: ' + (data.error || 'Unbekannt'));
         } catch (e) { alert('Speichern fehlgeschlagen: ' + e.message); }
     });
@@ -191,28 +203,47 @@ export async function loadAnimationUI() {
                 Kategoriekasten.bauen(cat, anims.length);
             for (const anim of anims) {
                 const item = document.createElement('div'); item.className = 'anim-item';
-                item.innerHTML = `<span>${escapeHtml(anim.name)}</span><span class="frames">${anim.frames || ''}f</span>`;
-                item.addEventListener('click', () => { tree.querySelectorAll('.anim-item.active').forEach(el => el.classList.remove('active')); item.classList.add('active'); state.currentAnimName = anim.name; loadBVHAnimation(anim.url, anim.name, anim.frames || 0); });
+                item.innerHTML = `<span>${escapeHtml(anim.name)}</span><span
+                    class="frames">${anim.frames || ''}f</span>`;
+                item.addEventListener('click',
+                    () => { tree.querySelectorAll('.anim-item.active').forEach(el => el.classList.remove('active'));
+                        item.classList.add('active'); state.currentAnimName = anim.name; loadBVHAnimation(anim.url,
+                            anim.name, anim.frames || 0); });
                 body.appendChild(item);
             }
             tree.appendChild(catDiv);
         }
-    } catch (e) { const tree = document.getElementById('anim-tree'); if (tree) tree.innerHTML = '<div style="padding:12px;color:var(--text-muted);">Animationen nicht verf\u00fcgbar</div>'; }
+    } catch (e) { const tree = document.getElementById('anim-tree');
+        if (tree) tree.innerHTML = '<div class="leer-hinweis">Animationen nicht verf\u00fcgbar</div>'; }
     // Playback controls binding
     const playBtn = document.getElementById('anim-play');
-    if (playBtn) playBtn.addEventListener('click', () => { if (!state.currentAction) return; state.playing = !state.playing; if (state.playing) { if (!state.currentAction.isRunning()) state.currentAction.play(); state.currentAction.paused = false; } else state.currentAction.paused = true; playBtn.innerHTML = state.playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>'; });
+    if (playBtn) playBtn.addEventListener('click', () => { if (!state.currentAction) return;
+        state.playing = !state.playing;
+            if (state.playing) { if (!state.currentAction.isRunning()) state.currentAction.play();
+                state.currentAction.paused = false; } else state.currentAction.paused = true;
+                    playBtn.innerHTML = state.playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+                        });
     const stopBtn = document.getElementById('anim-stop');
-    if (stopBtn) stopBtn.addEventListener('click', () => { stopAnimation(false); if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>'; state.currentAnimName = ''; });
+    if (stopBtn) stopBtn.addEventListener('click', () => { stopAnimation(false);
+        if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>'; state.currentAnimName = ''; });
     const timeline = document.getElementById('anim-timeline');
-    if (timeline) timeline.addEventListener('input', () => { if (state.currentAction?.getClip()) { const dur = state.currentAction.getClip().duration; state.currentAction.time = (parseInt(timeline.value) / 100) * dur; if (state.mixer) state.mixer.update(0); } });
+    if (timeline) timeline.addEventListener('input',
+        () => { if (state.currentAction?.getClip()) { const dur = state.currentAction.getClip().duration;
+            state.currentAction.time = (parseInt(timeline.value) / 100) * dur; if (state.mixer) state.mixer.update(0);
+                } });
     const speedSlider = document.getElementById('anim-speed');
     const speedLabel = document.getElementById('speed-label');
-    if (speedSlider && speedLabel) speedSlider.addEventListener('input', () => { const speed = parseInt(speedSlider.value) / 100; speedLabel.textContent = `Speed: ${speed.toFixed(1)}x`; if (state.mixer) state.mixer.timeScale = speed; });
+    if (speedSlider && speedLabel) speedSlider.addEventListener('input',
+        () => { const speed = parseInt(speedSlider.value) / 100; speedLabel.textContent = `Speed: ${speed.toFixed(1)}x`;
+            if (state.mixer) state.mixer.timeScale = speed; });
     const deltaSel = document.getElementById('scene-delta-norm');
-    if (deltaSel) deltaSel.addEventListener('change', () => { const v = deltaSel.value; state._sceneDeltaNorm = v === 'auto' ? undefined : v === '1'; if (state.currentAnimUrl) loadBVHAnimation(state.currentAnimUrl, state.currentAnimName, 0, state.currentAnimBvhText || null); });
+    if (deltaSel) deltaSel.addEventListener('change', () => { const v = deltaSel.value; state._sceneDeltaNorm = v
+        === 'auto' ? undefined : v === '1'; if (state.currentAnimUrl) loadBVHAnimation(state.currentAnimUrl,
+            state.currentAnimName, 0, state.currentAnimBvhText || null); });
     const groundChk = document.getElementById('scene-ground-fix');
     if (groundChk) groundChk.addEventListener('change', () => { state.currentAnimGroundFixed = groundChk.checked; });
-    document.getElementById('anim-save-btn')?.addEventListener('click', () => { if (!state.currentAnimBvhText && !state.currentAnimUrl) { alert('Keine Animation geladen.'); return; } openSaveAnimDialog(); });
+    document.getElementById('anim-save-btn')?.addEventListener('click', () => { if (!state.currentAnimBvhText
+        && !state.currentAnimUrl) { alert('Keine Animation geladen.'); return; } openSaveAnimDialog(); });
 }
 
 fn.loadAnimationUI = loadAnimationUI;

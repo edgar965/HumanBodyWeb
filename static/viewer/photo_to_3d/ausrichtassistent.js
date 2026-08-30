@@ -4,6 +4,7 @@ import { wizardState, showWizardModal } from './wizard.js';
 import { renderWizardCanvas } from './wizard_zeichnen.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Ausrichtungsvorschau } from './ausrichtungsvorschau.js';
 
 /**
  * Ausrichtassistent — startet den Assistenten, mit dem der Umriss des Modells
@@ -76,13 +77,11 @@ export class Ausrichtassistent {
             alert('Kein Foto geladen');
             return false;
         }
-        wizardState.photoImg = await new Promise((fertig, fehler) => {
-            const bild = new Image();
-            bild.crossOrigin = 'anonymous';
-            bild.onload = () => fertig(bild);
-            bild.onerror = fehler;
-            bild.src = quelle;
-        });
+        // Dasselbe Laden wie in `Ausrichtungsvorschau` — dort steht es
+        // (Befund `doppelcode`, 30.08.2026). `crossOrigin` gehoert dazu: Ohne
+        // das faerbt das Bild die Leinwand ein, und `getImageData` wirft
+        // danach — an einer ganz anderen Stelle.
+        wizardState.photoImg = await Ausrichtungsvorschau.bildLaden(quelle);
         return true;
     }
 

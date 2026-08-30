@@ -28,13 +28,19 @@ from django.test import SimpleTestCase
 from tests._rockradien import Rockradien
 
 
-def zylinder(radius, punkte=64, hoehen=20, mitte=(0.0, 0.0), von=0.0, bis=1.0):
-    """Punkte auf einem Zylindermantel — (N, 3) mit Y als Höhe."""
-    winkel = np.linspace(0, 2 * np.pi, punkte, endpoint=False)
-    hoehe = np.linspace(von, bis, hoehen)
-    x = mitte[0] + radius * np.cos(winkel)
-    z = mitte[1] + radius * np.sin(winkel)
-    return np.array([[x[i], y, z[i]] for y in hoehe for i in range(punkte)])
+class Probeform:
+    """Die Netze, mit denen hier gerechnet wird."""
+
+    @staticmethod
+    def zylinder(radius, punkte=64, hoehen=20, mitte=(0.0, 0.0),
+                 von=0.0, bis=1.0):
+        """Punkte auf einem Zylindermantel — (N, 3) mit Y als Höhe."""
+        winkel = np.linspace(0, 2 * np.pi, punkte, endpoint=False)
+        hoehe = np.linspace(von, bis, hoehen)
+        x = mitte[0] + radius * np.cos(winkel)
+        z = mitte[1] + radius * np.sin(winkel)
+        return np.array([[x[i], y, z[i]]
+                         for y in hoehe for i in range(punkte)])
 
 
 class RockradienTest(SimpleTestCase):
@@ -45,40 +51,44 @@ class RockradienTest(SimpleTestCase):
         return pruefung
 
     def test_weiter_rock_ist_in_ordnung(self):
-        pruefung = self.pruefen(zylinder(0.10), zylinder(0.15))
+        pruefung = self.pruefen(Probeform.zylinder(0.10), Probeform.zylinder(0.15))
         self.assertGreater(pruefung.geprueft, 0, 'es muss geprüft worden sein')
         self.assertEqual(pruefung.verletzt, 0)
         self.assertTrue(pruefung.bestanden)
 
     def test_zu_enger_rock_wird_erkannt(self):
-        pruefung = self.pruefen(zylinder(0.10), zylinder(0.05))
+        pruefung = self.pruefen(Probeform.zylinder(0.10), Probeform.zylinder(0.05))
         self.assertEqual(pruefung.verletzt, pruefung.geprueft)
         self.assertFalse(pruefung.bestanden)
         self.assertIn('worst=', pruefung.bericht())
 
     def test_toleranz_von_fuenf_millimetern(self):
         """Radius 0,102 gegen Bein 0,10: 2 mm Abstand — noch in Ordnung."""
-        self.assertEqual(self.pruefen(zylinder(0.10), zylinder(0.102)).verletzt, 0)
+        self.assertEqual(self.pruefen(Probeform.zylinder(0.10),
+                                      Probeform.zylinder(0.102)).verletzt, 0)
         # 8 mm zu eng liegt über der Toleranz.
-        self.assertGreater(self.pruefen(zylinder(0.10), zylinder(0.092)).verletzt, 0)
+        self.assertGreater(self.pruefen(Probeform.zylinder(0.10),
+                                        Probeform.zylinder(0.092)).verletzt, 0)
 
     def test_mitte_wandert_mit_dem_stoff(self):
         """Zur Seite gelehnt: Die Mitte ist der Stoffschwerpunkt, nicht (0|0).
 
         Ohne das wäre jeder seitlich verschobene Rock eine Verletzung.
         """
-        pruefung = self.pruefen(zylinder(0.10, mitte=(0.5, 0.0)),
-                                zylinder(0.15, mitte=(0.5, 0.0)))
+        pruefung = self.pruefen(Probeform.zylinder(0.10, mitte=(0.5, 0.0)),
+                                Probeform.zylinder(0.15, mitte=(0.5, 0.0)))
         self.assertEqual(pruefung.verletzt, 0)
 
     def test_flacher_stoff_wird_uebersprungen(self):
         """Ein Fetzen (unter 5 cm hoch) ist Sache eines anderen Tests."""
-        pruefung = self.pruefen(zylinder(0.10), zylinder(0.05, von=0.0, bis=0.02))
+        pruefung = self.pruefen(Probeform.zylinder(0.10), Probeform.zylinder(0.05,
+                                                                             von=0.0,
+                                                                             bis=0.02))
         self.assertEqual(pruefung.geprueft, 0)
 
     def test_huefte_und_saum_bleiben_aussen_vor(self):
         """Geprüft werden fünf Höhen zwischen 10 % und 90 % der Stoffhöhe."""
-        pruefung = self.pruefen(zylinder(0.10), zylinder(0.15))
+        pruefung = self.pruefen(Probeform.zylinder(0.10), Probeform.zylinder(0.15))
         self.assertEqual(pruefung.geprueft, Rockradien.HOEHEN)
 
     def test_beispielbilder_sind_anfang_mitte_ende(self):

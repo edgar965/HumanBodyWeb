@@ -29,9 +29,10 @@ class _Anfrage:
     def __init__(self, body):
         self.body = body
 
-
-def _roh(antwort):
-    return json.loads(antwort.content.decode('utf-8'))
+    @staticmethod
+    def roh(antwort):
+        """Der JSON-Rumpf einer Antwort - als Woerterbuch."""
+        return json.loads(antwort.content.decode('utf-8'))
 
 
 class LesenTest(SimpleTestCase):
@@ -45,7 +46,7 @@ class LesenTest(SimpleTestCase):
         rumpf, fehler = Anfragerumpf.lesen(_Anfrage(b''))
         self.assertIsNone(rumpf)
         self.assertEqual(fehler.status_code, 400)
-        self.assertEqual(_roh(fehler), {'error': 'Invalid JSON'})
+        self.assertEqual(_Anfrage.roh(fehler), {'error': 'Invalid JSON'})
 
     def test_kaputter_rumpf_gibt_400(self):
         _, fehler = Anfragerumpf.lesen(_Anfrage(b'{nicht json'))
@@ -55,7 +56,7 @@ class LesenTest(SimpleTestCase):
         u"""Vier Endpunkte antworten „Invalid JSON body\" — das ist ihr
         Drahtformat und darf sich beim Aufraeumen nicht aendern."""
         _, fehler = Anfragerumpf.lesen(_Anfrage(b''), 'Invalid JSON body')
-        self.assertEqual(_roh(fehler), {'error': 'Invalid JSON body'})
+        self.assertEqual(_Anfrage.roh(fehler), {'error': 'Invalid JSON body'})
 
 
 class FeldTest(SimpleTestCase):
@@ -91,7 +92,7 @@ class NameUndDatenTest(SimpleTestCase):
         _, _, fehler = Anfragerumpf.name_und_daten(
             _Anfrage(b'{"name": "   ", "data": {"x": 1}}'))
         self.assertEqual(fehler.status_code, 400)
-        self.assertEqual(_roh(fehler), {'error': 'name and data required'})
+        self.assertEqual(_Anfrage.roh(fehler), {'error': 'name and data required'})
 
     def test_name_null_wirft_nicht(self):
         u"""`rumpf.get('name', '')` liefert bei `"name": null` ein `None` —
@@ -106,4 +107,4 @@ class NameUndDatenTest(SimpleTestCase):
 
     def test_kaputter_rumpf_meldet_json_nicht_pflichtfelder(self):
         _, _, fehler = Anfragerumpf.name_und_daten(_Anfrage(b'kaputt'))
-        self.assertEqual(_roh(fehler), {'error': 'Invalid JSON'})
+        self.assertEqual(_Anfrage.roh(fehler), {'error': 'Invalid JSON'})

@@ -18,7 +18,8 @@ class TheatreTests(TestCategory):
 
     @staticmethod
     def test_list_contains_defaults():
-        """Liste enthält alle 5 Default-Presets (Ballett, Jazz, Club, Studio, Sonnenuntergang)"""
+        """Liste enthält alle 5 Default-Presets (Ballett, Jazz, Club, Studio,
+        Sonnenuntergang)"""
         code, data = Netzruf.senden('/api/studio/theatre-presets/')
         if code != 200:
             return False, f'HTTP {code}'
@@ -77,7 +78,8 @@ class TheatreTests(TestCategory):
 
     @staticmethod
     def test_bvh_studio_default_has_full_light_set():
-        """BVH Studio Default hat Key + Fill + Back + Ambient (wie Original-BVH-Studio-Setup)"""
+        """BVH Studio Default hat Key + Fill + Back + Ambient (wie
+        Original-BVH-Studio-Setup)"""
         code, data = Netzruf.senden('/api/studio/theatre-preset/bvh_studio_default/')
         if code != 200:
             return False, f'HTTP {code}'
@@ -90,7 +92,8 @@ class TheatreTests(TestCategory):
 
     @staticmethod
     def test_bvh_studio_default_light_types():
-        """BVH Studio Default: 3× directional + 1× ambient (native Typen, keine Approximation)"""
+        """BVH Studio Default: 3× directional + 1× ambient (native Typen, keine
+        Approximation)"""
         code, data = Netzruf.senden('/api/studio/theatre-preset/bvh_studio_default/')
         if code != 200:
             return False, f'HTTP {code}'
@@ -98,35 +101,52 @@ class TheatreTests(TestCategory):
         n_dir = sum(1 for t in types if t == 'directional')
         n_amb = sum(1 for t in types if t == 'ambient')
         if n_dir != 3 or n_amb != 1:
-            return False, f'Typen: {n_dir}× directional, {n_amb}× ambient (erwartet 3+1)'
+            return (
+                False, f'Typen: {n_dir}× directional, {n_amb}× ambient (erwartet 3+1)')
         return True, '3× directional + 1× ambient'
 
-    @staticmethod
-    def test_every_preset_renderable_as_timeline():
+    @classmethod
+    def test_every_preset_renderable_as_timeline(cls):
         """Jedes Preset-Licht hat Position + Intensität — Grundlage für durchgehende
         Timeline-Einträge (Start/Ende-KFs beim Preset-Apply)"""
         code, presets = Netzruf.senden('/api/studio/theatre-presets/')
         if code != 200:
             return False, f'Liste HTTP {code}'
-        errors = []
-        for p in presets.get('presets', []):
-            pname = p['name']
-            code2, detail = Netzruf.senden(f'/api/studio/theatre-preset/{pname}/')
-            if code2 != 200:
-                errors.append(f'{pname}: HTTP {code2}')
-                continue
-            for i, lg in enumerate(detail.get('lights', [])):
-                # Ambient braucht keine Position; alle anderen schon
-                if lg.get('type') != 'ambient':
-                    pos = lg.get('position')
-                    if not isinstance(pos, list) or len(pos) != 3:
-                        errors.append(f'{pname}/{i}: Position ungültig')
-                # Jedes Licht muss Intensität haben (sonst wäre Timeline-KF sinnlos)
-                if not isinstance(lg.get('intensity'), (int, float)):
-                    errors.append(f'{pname}/{i}: Intensität fehlt')
-        if errors:
-            return False, '; '.join(errors[:3]) + (f' (+{len(errors)-3})' if len(errors) > 3 else '')
+        fehler = []
+        for eintrag in presets.get('presets', []):
+            fehler += cls._preset_pruefen(eintrag['name'])
+        if fehler:
+            mehr = f' (+{len(fehler) - 3})' if len(fehler) > 3 else ''
+            return False, '; '.join(fehler[:3]) + mehr
         return True, f'{len(presets.get("presets", []))} Presets komplett'
+
+    @classmethod
+    def _preset_pruefen(cls, name):
+        """Die Maengel EINES Presets — leere Liste heisst: in Ordnung."""
+        code, detail = Netzruf.senden(f'/api/studio/theatre-preset/{name}/')
+        if code != 200:
+            return [f'{name}: HTTP {code}']
+        fehler = []
+        for i, licht in enumerate(detail.get('lights', [])):
+            fehler += ['%s/%d: %s' % (name, i, mangel)
+                       for mangel in cls._licht_pruefen(licht)]
+        return fehler
+
+    @staticmethod
+    def _licht_pruefen(licht):
+        """Position und Intensitaet EINES Lichts.
+
+        Ambient braucht keine Position; alle anderen schon. Intensitaet
+        braucht jedes — ohne sie waere ein Timeline-Keyframe sinnlos.
+        """
+        mangel = []
+        if licht.get('type') != 'ambient':
+            ort = licht.get('position')
+            if not isinstance(ort, list) or len(ort) != 3:
+                mangel.append('Position ungültig')
+        if not isinstance(licht.get('intensity'), (int, float)):
+            mangel.append('Intensität fehlt')
+        return mangel
 
     @staticmethod
     def test_all_presets_have_labels_and_descriptions():

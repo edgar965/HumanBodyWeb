@@ -1,0 +1,26 @@
+{% load regler %}
+{% comment %}
+Die fünf Regionsregler eines Kleidungsstücks — von oben nach unten.
+
+BEFUND `doppelcode` (30.08.2026): Diese sechs Zeilen standen in
+`character_viewer.html` und `scene_config.html` zeichengleich.
+
+DIE REIHENFOLGE IST DIE DER BEDIENUNG, nicht die der Rechnung: Im Panel steht
+„Top" oben, in `kleiderregionen.js` läuft `REGION_DEFS` von unten nach oben.
+`REGION_IDS` dort ist genau deshalb die Umkehrung — wer hier umsortiert, muss
+dort nichts ändern, aber wer die NAMEN ändert, macht gespeicherte
+Kleiderzustände (`region_weights`) still wirkungslos.
+
+DIE GRENZEN ±30 sind Millimeter im Bedienelement und werden im JavaScript durch
+1000 geteilt. Eine Änderung hier ändert also den Verstellbereich in Metern mit.
+
+Verwendung:
+
+  {% verbatim %}{% include "_kleiderregionen.html" %}{% endverbatim %}
+{% endcomment %}
+<div class="hb-font-size-0-72rem">Region</div>
+{% regler "garment-region-top" "Top" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+{% regler "garment-region-upper" "Upper" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+{% regler "garment-region-mid" "Mid" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+{% regler "garment-region-lower" "Lower" min="-30" max="30" wert="0" anzeige="0.00 m" %}
+{% regler "garment-region-bottom" "Bottom" min="-30" max="30" wert="0" anzeige="0.00 m" %}

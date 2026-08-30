@@ -28,7 +28,7 @@ from django.conf import settings
 from .mocapnet4 import V4Lauf
 from .smpllauf import Smpllauf
 from .teilauftrag import Teilauftrag
-from ..models import AppSettings
+from .laufbasis import Pipelinelauf
 
 #: Ein Logger fuer das Modul statt `logging.getLogger(__name__)` an jeder
 #: Aufrufstelle — derselbe Name wie in den anderen Pipeline-Modulen, damit die
@@ -36,7 +36,7 @@ from ..models import AppSettings
 logger = logging.getLogger('core.pipeline')
 
 
-class Hybridlauf:
+class Hybridlauf(Pipelinelauf):
     """SMPL-Körper (GPU) und MocapNET v4 Gesicht/Hände (CPU) gleichzeitig."""
 
     #: Wie oft der Fortschritt der beiden Unterläufe zusammengefasst wird.
@@ -45,11 +45,7 @@ class Hybridlauf:
     AUSDRUCK_FRIST = 1200
 
     def __init__(self, job, video_path, output_dir):
-        self.job = job
-        self.video_path = video_path
-        self.output_dir = output_dir
-        self.params = job.pipeline_params or {}
-        self.einstellungen = AppSettings.load()
+        super().__init__(job, video_path, output_dir)
         #: Der Körper-Rücken hängt am Pipeline-Namen: `hybrid_gvhmr` -> GVHMR,
         #: alles andere -> PromptHMR.
         self.koerper_rueckgrat = ('gvhmr' if job.pipeline == 'hybrid_gvhmr'
@@ -227,4 +223,3 @@ class Hybridlauf:
             logger.info('Face expressions extracted: %s', ziel)
         except Exception as fehler:                                # noqa: BLE001
             logger.warning('Face expression extraction failed: %s', fehler)
-

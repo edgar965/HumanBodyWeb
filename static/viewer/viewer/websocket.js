@@ -5,8 +5,8 @@ import { state, WS_PATH } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { updateMeshVertices, reloadMeshForBodyType } from './mesh.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
-import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Morphdrossel } from '../gemeinsam/morphdrossel.js';
+import { Netznachricht } from '../gemeinsam/netznachricht.js';
 
 export function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -37,23 +37,11 @@ export function connectWebSocket() {
         console.error('WebSocket error:', e);
     };
 
-    state.ws.onmessage = (event) => {
-        if (event.data instanceof ArrayBuffer) {
-            updateMeshVertices(event.data);
-        } else {
-            try {
-                const msg = JSON.parse(event.data);
-                if (msg.type === 'error') {
-                    console.error('Server error:', msg.message);
-                } else if (msg.type === 'reload_mesh') {
-                    reloadMeshForBodyType(msg.body_type, msg.gender);
-                }
-            } catch (e) {
-                Protokoll.debug('websocket', 'Nachricht nicht verwertbar', e);
-                // ignore
-            }
-        }
-    };
+    state.ws.onmessage = (ereignis) => Netznachricht.verteilen(ereignis, {
+        punkte: updateMeshVertices,
+        neuLaden: reloadMeshForBodyType,
+        fehler: (text) => console.error('Server error:', text),
+    });
 }
 
 export function wsSend(msg) {

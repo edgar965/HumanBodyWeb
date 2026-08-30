@@ -28,6 +28,7 @@ import threading
 from pathlib import Path
 
 from django.conf import settings
+from .videobildrate import Videobildrate
 
 logger = logging.getLogger('core')
 
@@ -40,7 +41,6 @@ class Startaufraeumen:
                'lifting_3d', 'mocapnet', 'v4_processing', 'processing')
     #: Kleiner heisst: die BVH ist ein Rumpf ohne Bewegung.
     MINDESTGROESSE = 100
-    VORGABE_BILDRATE = 30.0
     NEUSTART_HINWEIS = ('Server was restarted while job was running. '
                         'Click "Neu starten" to retry.')
 
@@ -78,28 +78,10 @@ class Startaufraeumen:
         auftrag.progress = 100
         auftrag.progress_detail = 'Complete (recovered after restart)'
         auftrag.error_message = ''
-        auftrag.fps = self._bildrate(auftrag)
+        auftrag.fps = Videobildrate.zu(auftrag)
         auftrag.save()
         self._pid_weg(pid_datei)
         logger.info('Job %s: BVH gefunden, als fertig vermerkt', auftrag.id)
-
-    def _bildrate(self, auftrag):
-        """Bildrate aus dem Video — die Wiedergabe braucht sie.
-
-        Ohne sie liefe die Animation mit 30 statt der echten Rate: sichtbar zu
-        schnell oder zu langsam, ohne Fehlermeldung.
-        """
-        try:
-            import cv2
-            pfad = Path(settings.MEDIA_ROOT) / str(auftrag.video_file)
-            film = cv2.VideoCapture(str(pfad))
-            rate = film.get(cv2.CAP_PROP_FPS) or self.VORGABE_BILDRATE
-            film.release()
-            return rate
-        except Exception:                                          # noqa: BLE001
-            logger.debug('Video-FPS nicht lesbar — Vorgabe %s wird benutzt',
-                         self.VORGABE_BILDRATE, exc_info=True)
-            return self.VORGABE_BILDRATE
 
     @staticmethod
     def _pid_weg(pid_datei):

@@ -3,7 +3,8 @@
 
 Methodenpruefung und Engine-Auswahl von /api/cloth/export/
 
-Aus tests/cloth_export_tests.py herausgeloest (17.08.2026): Die Datei hatte ueber 300 Zeilen und
+Aus tests/cloth_export_tests.py herausgeloest (17.08.2026): Die Datei hatte ueber 300
+Zeilen und
 eine Klasse mit ueber 300 — Befund `dateigroesse`. Gemeinsame Importe und
 Fixtures stehen in `_cloth_basis.py`.
 """
@@ -29,7 +30,7 @@ class ClothExportTests(TestCategory):
     def test_cloth_export_api_rejects_unknown_engine_name():
         """POST mit engine='bogus' wird vom Dispatcher mit 400 abgelehnt."""
         code, body = Netzruf.senden('/api/cloth/export/', method='POST',
-                                   data={'engine': 'bogus', 'quality': 'low'})
+                                    data={'engine': 'bogus', 'quality': 'low'})
         if code != 400:
             return False, f'HTTP {code} body={body}'
         return True, f'HTTP {code}'
@@ -39,7 +40,7 @@ class ClothExportTests(TestCategory):
         """blender_eevee / warp_blender / warp_only sind im Dispatcher eingetragen."""
         for eng in ('blender_eevee', 'warp_blender', 'warp_only'):
             code, body = Netzruf.senden('/api/cloth/export/', method='POST',
-                                       data={'engine': eng, 'quality': 'low'})
+                                        data={'engine': eng, 'quality': 'low'})
             err = str(body.get('error', ''))
             if 'unknown engine' in err.lower():
                 return False, f'{eng}: {err}'

@@ -185,19 +185,33 @@ select.viewer-select {
 
 .btn-reset:hover { border-color: var(--accent); color: var(--text); }
 
-/* Knopfleiste oben links auf der Leinwand (28.08.2026, Befund `doppelcode`).
+/* Die beiden Knopfleisten auf der Leinwand — links und rechts oben.
  *
- * Stand wortgleich in character_viewer.html, photo_to_3d.html und
- * test_character.html — und in animations.html ein viertes Mal, dort als
- * Inline-Stil am Element selbst. */
-.viewer-buttons-left {
+ * LINKS (28.08.2026, Befund `doppelcode`): stand wortgleich in
+ * character_viewer.html, photo_to_3d.html und test_character.html — und in
+ * animations.html ein viertes Mal, dort als Inline-Stil am Element selbst.
+ *
+ * RECHTS (30.08.2026, derselbe Befund): stand in animations.html und
+ * photo_to_3d.html, und unterschied sich von der linken in genau EINER
+ * Eigenschaft. Zwei Regeln, die sich um `left`/`right` unterscheiden, laufen
+ * beim naechsten Abstand auseinander — deshalb eine gemeinsame Regel.
+ *
+ * ACHTUNG, GLEICHER NAME FUER ETWAS ANDERES: In character_viewer.html hiess
+ * eine WAAGERECHTE Kopfleiste der rechten Seitenleiste ebenfalls
+ * `.viewer-buttons` — kein Ueberlagerungs-Element, sondern eine Zeile mit
+ * Rahmen unten. Die heisst seit dem 30.08.2026 `.panel-knopfleiste`; sonst
+ * haette diese Regel sie mit uebernommen (die Seite laedt diese Datei ueber
+ * `_viewerstile.html`). */
+.viewer-buttons-left,
+.viewer-buttons {
     position: absolute;
     top: 12px;
-    left: 12px;
     z-index: 10;
     display: flex;
     gap: 6px;
 }
+.viewer-buttons-left { left: 12px; }
+.viewer-buttons { right: 12px; }
 
 /* Zwei Knoepfe, die zusammengehoeren (character_viewer, scene_config). */
 .toggle-btn-group {

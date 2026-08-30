@@ -19,7 +19,6 @@ Windows-Sonderfälle: UNC, Gerätenamen, Datenströme, Namen mit Punkt am Ende.
 Aufruf:  python manage.py test core
 """
 import os
-import unittest
 from pathlib import Path
 
 from django.conf import settings
@@ -60,21 +59,33 @@ class SafePathTest(TestCase):
         """Das Verzeichnis-Listing fragt die Wurzel selbst ab — die muss durch."""
         self.assertEqual(self.sp.pruefe(str(self.medien)), self.medien)
 
-    @unittest.skipUnless(os.name == 'nt',
-                         'nur unter Windows aussagekraeftig')
-    def test_gross_klein_egal_unter_windows(self):
-        """A:\\Media und a:\\media sind dasselbe Verzeichnis.
+    def test_gross_klein_folgt_dem_dateisystem(self):
+        """A:\\Media und a:\\media sind unter Windows dasselbe Verzeichnis.
 
-        Ein String-Vergleich sieht das nicht; `normcase` schon. Auf anderen
-        Systemen ist Gross-/Kleinschreibung bedeutsam, dort wird nicht geprüft."""
-        # Die Bedingung steht als Dekorator: Ein `skipTest` IM Rumpf
-        # sieht in der Auswertung aus wie eine bestandene Pruefung.
-        gemischt = str(self.medien).upper() + os.sep + 'x.json'
-        self.assertIsNotNone(self.sp.pruefe(gemischt))
+        Ein Zeichenvergleich sieht das nicht; `normcase` schon — und genau
+        danach richtet sich `pruefe`. Unter POSIX ist die Schreibweise
+        bedeutsam, dort MUSS derselbe Pfad in Grossbuchstaben abgelehnt werden.
+
+        Bis zum 30.08.2026 stand hier `@skipUnless(os.name == 'nt')`. Auf einem
+        Linux-Rechner meldete der Fall gruen, ohne etwas geprueft zu haben —
+        und die POSIX-Haelfte der Regel war ueberhaupt nicht abgedeckt (Befund
+        `uebersprungen`). Die Erwartung kommt jetzt aus `normcase` selbst, also
+        aus derselben Quelle, aus der auch `pruefe` sie nimmt.
+        """
+        oben = str(self.medien).upper()
+        gemischt = oben + os.sep + 'x.json'
+        dasselbe_verzeichnis = (os.path.normcase(oben)
+                                == os.path.normcase(str(self.medien)))
+        if dasselbe_verzeichnis:
+            self.assertIsNotNone(self.sp.pruefe(gemischt))
+        else:
+            with self.assertRaises(PfadAbgelehnt):
+                self.sp.pruefe(gemischt)
 
     def test_bvh_kategorien_erlaubt(self):
         """Die Kategorie-Ordner (Aist, Bandai, Mixamo …) müssen beschreibbar bleiben."""
-        ziel = SafePath([self.bvh_wurzel]).pruefe(str(self.bvh_wurzel / 'Aist' / 'x.bvh'))
+        ziel = (
+            SafePath([self.bvh_wurzel]).pruefe(str(self.bvh_wurzel / 'Aist' / 'x.bvh')))
         self.assertTrue(ziel.is_relative_to(self.bvh_wurzel))
 
     # ----------------------------------------------------------- Muss abgelehnt
@@ -151,7 +162,8 @@ class SafePathTest(TestCase):
         sp = SafePath.fuer_studio_projekte()
         tools = Path(settings.TOOLS_ROOT).resolve()
         self.assertNotIn(tools, sp.wurzeln,
-                         'TOOLS_ROOT ist als Wurzel eingetragen — das hebt den Schutz auf')
+                         'TOOLS_ROOT ist als Wurzel eingetragen — das hebt den Schutz '
+                         'auf')
         for roh in (str(tools / 'evil.studio.json'),
                     str(tools / 'HumanBodyWeb' / 'ui' / 'settings.py'),
                     str(tools / 'HumanBodyWeb' / 'media_evil' / 'x.studio.json')):
@@ -247,7 +259,8 @@ class SafePathTest(TestCase):
         Vorher wurde nur gewarnt und `.parent` trotzdem geliefert — bei
         `…/data/animations` wäre das `…/data` gewesen, also Morphdaten, Meshes
         und Skelett zum Schreiben und Löschen freigegeben."""
-        with self.settings(HUMANBODY_BVH_DIR=str(Path(settings.TOOLS_ROOT) / 'HumanBody' / 'data')):
+        daten = str(Path(settings.TOOLS_ROOT) / 'HumanBody' / 'data')
+        with self.settings(HUMANBODY_BVH_DIR=daten):
             with self.assertRaises(PfadAbgelehnt):
                 SafePath.bvh_wurzel()
 

@@ -155,12 +155,21 @@ BEREICHE = [
          'wo könnte eine Seite vertauscht sein?',
          'Was passiert, wenn kein Format erkannt wird?',
      ]},
-    {'slug': 'hb_mesh', 'name': 'Kern: Netzdaten, Voreinstellungen, Gesichts-Blendshapes',
-     'dateien': ['HumanBody/humanbody_core/mesh.py', 'HumanBody/humanbody_core/skeleton/presets.py', 'HumanBody/humanbody_core/skeleton/face_blendshapes.py'],
-     'hinweis': ('mesh.py laedt das Basisnetz (Vertices, Vierecke, UVs, Material-Gruppen) aus .npy/.npz — unersetzliche Produktivdaten, read-only zu behandeln. presets.py haelt Skelett-Voreinstellungen, face_blendshapes bildet Gesichtsausdruecke auf Knochen ab.'),
+    {'slug': 'hb_mesh',
+     'name': 'Kern: Netzdaten, Voreinstellungen, Gesichts-Blendshapes',
+     'dateien': ['HumanBody/humanbody_core/mesh.py',
+                 'HumanBody/humanbody_core/skeleton/presets.py',
+                 'HumanBody/humanbody_core/skeleton/face_blendshapes.py'],
+     'hinweis': ('mesh.py laedt das Basisnetz (Vertices, Vierecke, UVs, '
+                 'Material-Gruppen) aus .npy/.npz — unersetzliche Produktivdaten, '
+                 'read-only zu behandeln. presets.py haelt Skelett-Voreinstellungen, '
+                 'face_blendshapes bildet Gesichtsausdruecke auf Knochen ab.'),
      'fragen': [
-         'Wo wird ein geladenes Array veraendert oder ohne Schreibschutz weitergegeben?',
-         'Was passiert bei einer fehlenden oder halb geschriebenen Datendatei — klare Meldung oder spaeterer Folgefehler?',
-         'Werden Datentyp und Form der geladenen Daten geprueft, bevor damit gerechnet wird?',
+         'Wo wird ein geladenes Array veraendert oder ohne Schreibschutz '
+         'weitergegeben?',
+         'Was passiert bei einer fehlenden oder halb geschriebenen Datendatei — klare '
+         'Meldung oder spaeterer Folgefehler?',
+         'Werden Datentyp und Form der geladenen Daten geprueft, bevor damit gerechnet '
+         'wird?',
      ]},
 ]

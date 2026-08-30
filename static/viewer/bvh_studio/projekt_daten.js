@@ -108,7 +108,8 @@ export class Projektdaten {
         td.lightIntensity = t.light.intensity;
         td.lightPosition = { x: t.light.position.x, y: t.light.position.y, z: t.light.position.z };
         if (t.light.target) {
-            td.lightTarget = { x: t.light.target.position.x, y: t.light.target.position.y, z: t.light.target.position.z };
+            td.lightTarget = { x: t.light.target.position.x, y: t.light.target.position.y,
+                z: t.light.target.position.z };
         }
         if (t.light.angle != null) td.lightAngle = t.light.angle;
         if (t.light.penumbra != null) td.lightPenumbra = t.light.penumbra;

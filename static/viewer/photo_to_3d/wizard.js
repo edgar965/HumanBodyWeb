@@ -5,7 +5,8 @@ import './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import './alignment_preview.js';
 import { renderWizardCanvas } from './wizard_zeichnen.js';
-import { wizardMouseDown, wizardMouseMove, wizardMouseUp, wizardReset, wizardTouchMove, wizardTouchStart, wizardWheel } from './wizard_maus.js';
+import { wizardMouseDown, wizardMouseMove, wizardMouseUp, wizardReset, wizardTouchMove, wizardTouchStart,
+    wizardWheel } from './wizard_maus.js';
 import { saveAlignmentAndBake, startWizard, wizardNext } from './wizard_ablauf.js';
 
 export let wizardState = {

@@ -12,7 +12,7 @@ class SceneObjectTests(TestCategory):
         """OBJ Upload → HTTP 200 + URL in /media/scene_objects/"""
         obj = b"# Test OBJ\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n"
         code, data = Netzruf.senden('/api/studio/scene-object-upload/', method='POST',
-                                  files={'object': ('test.obj', obj, 'text/plain')})
+                                    files={'object': ('test.obj', obj, 'text/plain')})
         if code != 200:
             return False, f'HTTP {code}'
         if not data.get('ok'):
@@ -50,7 +50,7 @@ class SceneObjectTests(TestCategory):
         """MTL-Datei kann hochgeladen werden"""
         mtl = b"newmtl Default\nKd 0.8 0.8 0.8\n"
         code, data = Netzruf.senden('/api/studio/scene-object-upload/', method='POST',
-                                  files={'object': ('test.mtl', mtl, 'text/plain')})
+                                    files={'object': ('test.mtl', mtl, 'text/plain')})
         if code != 200:
             return False, f'HTTP {code}'
         if data.get('ext') != 'mtl':
@@ -61,7 +61,7 @@ class SceneObjectTests(TestCategory):
     def test_invalid_extension_rejected():
         """Unerlaubte Extension → HTTP 400"""
         code, _ = Netzruf.senden('/api/studio/scene-object-upload/', method='POST',
-                               files={'object': ('bad.xyz', b'junk', 'text/plain')})
+                                 files={'object': ('bad.xyz', b'junk', 'text/plain')})
         if code != 400:
             return False, f'HTTP {code} (erwartet 400)'
         return True, '400 korrekt'

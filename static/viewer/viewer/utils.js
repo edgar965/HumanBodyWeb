@@ -5,6 +5,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 // Aus gemeinsam/kodierung.js — die Kopien hier sind am 15.08.2026 entfallen (sechsfach vorhanden).
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords,
          float32ToBase64, uint32ToBase64 } from '../gemeinsam/kodierung.js';
+import { Schieberegler } from '../gemeinsam/schieberegler.js';
 export { base64ToFloat32, base64ToUint32, blenderToThreeCoords,
          float32ToBase64, uint32ToBase64 };
 
@@ -35,30 +36,15 @@ export function threeToBlenderCoords(buf) {
 // Slider helpers
 // =========================================================================
 export function bindSlider(sliderId, valId, fmt) {
-    const slider = document.getElementById(sliderId);
-    const val = document.getElementById(valId);
-    if (slider && val) {
-        slider.addEventListener('input', () => {
-            val.textContent = fmt(parseInt(slider.value));
-        });
-    }
+    Schieberegler.binden(sliderId, valId, fmt);
 }
 
 export function sliderVal(sliderId) {
-    const el = document.getElementById(sliderId);
-    return el ? parseInt(el.value) : 0;
+    return Schieberegler.wert(sliderId);
 }
 
 export function setSlider(sliderId, value, fmt) {
-    const el = document.getElementById(sliderId);
-    if (!el) return;
-    if (el.type === 'color') {
-        el.value = value;
-        return;
-    }
-    el.value = value;
-    const valEl = document.getElementById(sliderId + '-val');
-    if (valEl && fmt) valEl.textContent = fmt(parseInt(value));
+    Schieberegler.setzen(sliderId, value, fmt);
 }
 
 // =========================================================================

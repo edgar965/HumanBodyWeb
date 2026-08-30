@@ -145,7 +145,7 @@ class Gelenkquelle:
         for datei in sorted(ordner.glob('*_keypoints.json')):
             with open(datei) as offen:
                 bilder.append(self._openpose_bild(json.load(offen), namen,
-                                                 breite, hoehe, tupel))
+                                                  breite, hoehe, tupel))
         return bilder
 
     def _openpose_bild(self, daten, namen, breite, hoehe, tupel):

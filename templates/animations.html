@@ -1,24 +1,9 @@
-{% extends "base.html" %}
+{% extends "animationsseite.html" %}
 {% load static %}
 
 {% block title %}HumanBody · Animationen{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/animationsseite.css' %}?t={% now 'U' %}">
-<style>
-    /* Kontextmenue: `.hb-kontextmenue` / `.hb-menueeintrag` /
-       `.hb-trennlinie` stehen seit dem 28.08.2026 in `stilhelfer.css` —
-       hier standen sie unter eigenen Namen mit demselben Rumpf. */
-    .viewer-buttons {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        z-index: 10;
-        display: flex;
-        gap: 6px;
-    }
+{% block viewer_stile %}
     .anim-toolbar {
         display: flex; gap: 4px; padding: 6px 10px; border-bottom: 1px solid var(--border);
         background: var(--bg-primary); flex-shrink: 0;
@@ -59,25 +44,25 @@
     border:1px solid var(--border);
 }   /* 2x */
 .hb-width-100.hb-width-100.hb-width-100 { width:100%; border-collapse:collapse; font-size:0.85rem; }   /* 2x */
-</style>
 {% endblock %}
 
-{% block content %}
-<div class="viewer-container">
-    <div class="canvas-wrap">
-        <canvas id="viewer-canvas"></canvas>
+{% block leinwand %}
         <div class="viewer-buttons-left">
             <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
-            <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
-            <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i class="fas fa-file-export"></i> Speichern unter</button>
+            <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i
+                 class="fas fa-save"></i> Speichern</button>
+            <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i
+                 class="fas fa-file-export"></i> Speichern unter</button>
         </div>
         <div class="viewer-buttons">
-            <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i> Model</button>
-            <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i> Rig</button>
+            <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i
+                 class="fas fa-user"></i> Model</button>
+            <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i
+                 class="fas fa-bone"></i> Rig</button>
         </div>
-    </div>
+{% endblock %}
 
-    <div class="viewer-panel">
+{% block seitenleiste %}
         <!-- Animation Tree -->
         <div class="panel-section">
             <h3>Animationen <span class="chevron">&#9660;</span></h3>
@@ -89,11 +74,13 @@
             <button id="anim-delete" title="Loeschen (Del)"><i class="fas fa-trash"></i></button>
             <div class="hb-dehnt"></div>
             <button id="anim-refresh" title="Aktualisieren"><i class="fas fa-sync-alt"></i></button>
-            <div class="toolbar-dropdown" id="anim-help-dropdown" style="position:relative;">
-                <button id="anim-help-btn" title="Hilfe" style="padding:4px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);cursor:pointer;font-size:0.75rem;"><i class="fas fa-question-circle"></i> Hilfe</button>
-                <div class="hb-kontextmenue" id="anim-help-menu"
-                     style="position:absolute;bottom:100%;right:0;left:auto;top:auto;min-width:160px;">
-                    <div class="hb-menueeintrag" id="anim-help-animations"><i class="fas fa-running hb-symbolspalte"></i> Animationen</div>
+            <div class="toolbar-dropdown hilfe-aufklapper" id="anim-help-dropdown">
+                <button id="anim-help-btn" title="Hilfe"><i
+                     class="fas fa-question-circle hilfeknopf"></i> Hilfe</button>
+                <div class="hb-kontextmenue hilfemenue" id="anim-help-menu"
+                    >
+                    <div class="hb-menueeintrag" id="anim-help-animations"><i
+                         class="fas fa-running hb-symbolspalte"></i> Animationen</div>
                 </div>
             </div>
         </div>
@@ -105,15 +92,21 @@
         <div class="hb-kontextmenue" id="anim-ctx-file">
             <div class="hb-menueeintrag" data-action="play"><i class="fas fa-play hb-symbolspalte"></i> Abspielen</div>
             <div class="hb-trennlinie"></div>
-            <div class="hb-menueeintrag" data-action="rename"><i class="fas fa-pen hb-symbolspalte"></i> Umbenennen</div>
-            <div class="hb-menueeintrag" data-action="move"><i class="fas fa-arrows-alt hb-symbolspalte"></i> Verschieben nach...</div>
-            <div class="hb-menueeintrag" data-action="delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
+            <div class="hb-menueeintrag" data-action="rename"><i
+                 class="fas fa-pen hb-symbolspalte"></i> Umbenennen</div>
+            <div class="hb-menueeintrag" data-action="move"><i
+                 class="fas fa-arrows-alt hb-symbolspalte"></i> Verschieben nach...</div>
+            <div class="hb-menueeintrag" data-action="delete"><i
+                 class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
         </div>
         <div class="hb-kontextmenue" id="anim-ctx-folder">
-            <div class="hb-menueeintrag" data-action="rename-folder"><i class="fas fa-pen hb-symbolspalte"></i> Ordner umbenennen</div>
-            <div class="hb-menueeintrag" data-action="new-folder"><i class="fas fa-folder-plus hb-symbolspalte"></i> Neuer Unterordner</div>
+            <div class="hb-menueeintrag" data-action="rename-folder"><i
+                 class="fas fa-pen hb-symbolspalte"></i> Ordner umbenennen</div>
+            <div class="hb-menueeintrag" data-action="new-folder"><i
+                 class="fas fa-folder-plus hb-symbolspalte"></i> Neuer Unterordner</div>
             <div class="hb-trennlinie"></div>
-            <div class="hb-menueeintrag" data-action="delete-folder"><i class="fas fa-trash hb-symbolspalte"></i> Ordner l&ouml;schen</div>
+            <div class="hb-menueeintrag" data-action="delete-folder"><i
+                 class="fas fa-trash hb-symbolspalte"></i> Ordner l&ouml;schen</div>
         </div>
 
         <!-- Speed Slider -->
@@ -125,8 +118,9 @@
             &nbsp;|&nbsp; <span id="fps-display">—</span> fps
             &nbsp;|&nbsp; <span id="anim-info">—</span>
         </div>
-    </div>
-</div>
+{% endblock %}
+
+{% block nach_viewer %}
 <!-- Help Modal -->
 <div class="anim-help-overlay" id="anim-help-modal">
     <div class="anim-help-box">
@@ -136,16 +130,22 @@
         </div>
         <div class="hilfemodal-text">
 
-<h4 style="color:var(--accent);margin:0 0 8px;">Animationen verwalten</h4>
+<h4 class="hilfe-abschnittstitel">Animationen verwalten</h4>
 <p>Die Animationsseite zeigt alle BVH-Dateien gruppiert nach Ordnern. Klicke auf eine Animation um sie abzuspielen.</p>
 
 <h4 class="hb-margin-14px-0-6px">Toolbar</h4>
 <table class="hb-width-100">
-<tr class="hb-untere-linie"><td style="padding:5px 0;width:40px;text-align:center;"><i class="fas fa-folder-plus"></i></td><td><b>Neuer Ordner</b> — Erstellt einen neuen Kategorie-Ordner</td></tr>
-<tr class="hb-untere-linie"><td class="hb-padding-5px-0"><i class="fas fa-pen"></i></td><td><b>Umbenennen</b> — Benennt die ausgewaehlte Animation um (auch: F2)</td></tr>
-<tr class="hb-untere-linie"><td class="hb-padding-5px-0"><i class="fas fa-arrows-alt"></i></td><td><b>Verschieben</b> — Verschiebt die Animation in einen anderen Ordner</td></tr>
-<tr class="hb-untere-linie"><td class="hb-padding-5px-0"><i class="fas fa-trash"></i></td><td><b>Loeschen</b> — Loescht die ausgewaehlte Animation (auch: Del)</td></tr>
-<tr><td class="hb-padding-5px-0"><i class="fas fa-sync-alt"></i></td><td><b>Aktualisieren</b> — Laedt die Animationsliste neu</td></tr>
+<tr class="hb-untere-linie hilfe-symbolzelle"><td><i
+     class="fas fa-folder-plus"></i></td><td><b>Neuer Ordner</b> — Erstellt einen neuen Kategorie-Ordner</td></tr>
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0"><i
+     class="fas fa-pen"></i></td><td><b>Umbenennen</b> — Benennt die ausgewaehlte Animation um (auch: F2)</td></tr>
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0"><i
+     class="fas fa-arrows-alt"></i></td><td><b>Verschieben</b> — Verschiebt die Animation in einen anderen
+          Ordner</td></tr>
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0"><i
+     class="fas fa-trash"></i></td><td><b>Loeschen</b> — Loescht die ausgewaehlte Animation (auch: Del)</td></tr>
+<tr><td class="hb-padding-5px-0"><i
+     class="fas fa-sync-alt"></i></td><td><b>Aktualisieren</b> — Laedt die Animationsliste neu</td></tr>
 </table>
 
 <h4 class="hb-margin-14px-0-6px">Kontextmenue (Rechtsklick)</h4>
@@ -165,8 +165,10 @@
 
 <h4 class="hb-margin-14px-0-6px">Tastenkuerzel</h4>
 <table class="hb-width-100">
-<tr class="hb-untere-linie"><td class="hb-padding-5px-0-2"><kbd class="hb-background-var-bg-card">F2</kbd></td><td>Ausgewaehlte Animation umbenennen</td></tr>
-<tr class="hb-untere-linie"><td class="hb-padding-5px-0-2"><kbd class="hb-background-var-bg-card">Del</kbd></td><td>Ausgewaehlte Animation loeschen</td></tr>
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0-2"><kbd
+     class="hb-background-var-bg-card">F2</kbd></td><td>Ausgewaehlte Animation umbenennen</td></tr>
+<tr class="hb-untere-linie"><td class="hb-padding-5px-0-2"><kbd
+     class="hb-background-var-bg-card">Del</kbd></td><td>Ausgewaehlte Animation loeschen</td></tr>
 <tr><td class="hb-padding-5px-0-2"><b>Rechtsklick</b></td><td>Kontextmenue fuer Datei oder Ordner</td></tr>
 </table>
 
@@ -190,7 +192,8 @@
 </div>
 {% endblock %}
 
-{% block extra_scripts %}
-{% include "_importmap.html" with subdivide=1 %}
+{% block viewer_importmap %}{% include "_importmap.html" with subdivide=1 %}{% endblock %}
+
+{% block viewer_skript %}
 <script type="module" src="{% static 'viewer/animations.js' %}?t={% now "U" %}"></script>
 {% endblock %}

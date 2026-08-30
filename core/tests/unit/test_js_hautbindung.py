@@ -20,7 +20,8 @@ DIE STELLE, DIE SCHON AUSEINANDERGELAUFEN WAR: `mesh_loading.js` hat
 dann das Skelett zuschaltete, bekam ihn zurück — ohne dass der Schalter
 umsprang. Der Test nagelt das neue, vollständige Verhalten fest.
 
-Ohne `node` im Pfad wird übersprungen, nicht rot.
+FEHLT `node`, ist das ein FEHLER — node ist Werkzeug dieses Projekts,
+kein Zufall der Umgebung (siehe `Jsmodul.laufen`).
 """
 from django.test import SimpleTestCase
 
@@ -79,7 +80,6 @@ console.log(JSON.stringify({
 """
 
 
-@Jsmodul.ohne_node()
 class HautbindungTest(SimpleTestCase):
 
     @classmethod

@@ -7,6 +7,7 @@ import { Szenenschleife } from './szenenschleife.js';
 import { Starteinstellungen } from './starteinstellungen.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Klappbereiche } from '../gemeinsam/klappbereiche.js';
 
 /**
  * Szenenaufbau — der Start der Szene-Seite: Bühne, Bedienung verdrahten,
@@ -71,12 +72,9 @@ export class Szenenaufbau {
         }
     }
 
+    /** Abschnitte auf- und zuklappbar machen — siehe `Klappbereiche`. */
     _bereicheKlappbar() {
-        for (const kopf of document.querySelectorAll('.panel-section h3')) {
-            kopf.addEventListener('click', () => {
-                kopf.closest('.panel-section').classList.toggle('collapsed');
-            });
-        }
+        Klappbereiche.verdrahten();
     }
 
     // ---------------------------------------------------------- Startsequenz

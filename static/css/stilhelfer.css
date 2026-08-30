@@ -171,25 +171,45 @@
  * ------------------------------------------------------------------------ */
 
 /* Kopfzeile des Hilfe-Fensters: Titel links, Schliessen rechts */
-.hilfemodal-kopf.hilfemodal-kopf.hilfemodal-kopf { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.hilfemodal-kopf.hilfemodal-kopf.hilfemodal-kopf {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:16px;
+}
 
 /* Titel im Hilfe-Fenster */
 .hilfemodal-titel.hilfemodal-titel.hilfemodal-titel { font-size:1.1rem; color:var(--accent); margin:0; }
 
 /* Das Kreuz oben rechts */
-.hilfemodal-schliessen.hilfemodal-schliessen.hilfemodal-schliessen { background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; }
+.hilfemodal-schliessen.hilfemodal-schliessen.hilfemodal-schliessen {
+    background:none;
+    border:none;
+    color:var(--text-muted);
+    font-size:1.2rem;
+    cursor:pointer;
+}
 
 /* Fliesstext im Hilfe-Fenster */
 .hilfemodal-text.hilfemodal-text.hilfemodal-text { font-size:0.85rem; color:var(--text); line-height:1.7; }
 
 /* Die Rinne, in der der Fortschrittsbalken laeuft */
-.fortschritt-rinne.fortschritt-rinne.fortschritt-rinne { height:6px; background:var(--bg-card); border-radius:3px; overflow:hidden; }
+.fortschritt-rinne.fortschritt-rinne.fortschritt-rinne {
+    height:6px;
+    background:var(--bg-card);
+    border-radius:3px;
+    overflow:hidden;
+}
 
 /* Verweis in der Akzentfarbe (statt Browser-Blau) */
 .akzent-verweis.akzent-verweis.akzent-verweis { color:var(--accent); }
 
 /* Trennlinie zwischen zwei Bedienabschnitten */
-.abschnitt-trenner.abschnitt-trenner.abschnitt-trenner { margin-top:8px; border-top:1px solid var(--border); padding-top:8px; }
+.abschnitt-trenner.abschnitt-trenner.abschnitt-trenner {
+    margin-top:8px;
+    border-top:1px solid var(--border);
+    padding-top:8px;
+}
 
 /* Bereich, den erst eine Aktion einblendet */
 .verborgen-mit-abstand.verborgen-mit-abstand.verborgen-mit-abstand { display:none; margin-top:8px; }
@@ -276,7 +296,14 @@
 }
 
 /* Wegklicken der roten JS-Fehlerleiste */
-.fehlerknopf.fehlerknopf.fehlerknopf { background:none; border:1px solid white; color:white; padding:4px 12px; cursor:pointer; border-radius:4px; }
+.fehlerknopf.fehlerknopf.fehlerknopf {
+    background:none;
+    border:1px solid white;
+    color:white;
+    padding:4px 12px;
+    cursor:pointer;
+    border-radius:4px;
+}
 
 /* Ueberschrift der langen Hilfeseiten */
 .hilfeseite-h1.hilfeseite-h1.hilfeseite-h1 { border-bottom: 2px solid #7c5cbf; padding-bottom: 10px; }
@@ -294,7 +321,12 @@
 .wertanzeige.wertanzeige.wertanzeige { min-width:3em; text-align:right; }
 
 /* Waagerechte Zeile aus Bedienelementen */
-.zeile-mit-abstand.zeile-mit-abstand.zeile-mit-abstand { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.zeile-mit-abstand.zeile-mit-abstand.zeile-mit-abstand {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+}
 
 /* Tabellenspalte fuer ein Kaestchen */
 .spalte-schmal.spalte-schmal.spalte-schmal { width:30px; }
@@ -318,7 +350,13 @@
 .hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* aus 10 Vorlagen */
 .hb-farbfeld.hb-farbfeld.hb-farbfeld { width:40px; height:24px; border:none; cursor:pointer; }   /* aus 4 Vorlagen */
 .hb-fest.hb-fest.hb-fest { flex:0 0 auto; padding:6px 10px; }   /* aus 3 Vorlagen */
-.hb-font-size-0-72rem.hb-font-size-0-72rem.hb-font-size-0-72rem { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted); margin:6px 0 4px; }   /* aus 3 Vorlagen */
+.hb-font-size-0-72rem.hb-font-size-0-72rem.hb-font-size-0-72rem {
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--text-muted);
+    margin:6px 0 4px;
+}   /* aus 3 Vorlagen */
 .hb-gedaempft.hb-gedaempft.hb-gedaempft { color:#888; }   /* aus 4 Vorlagen */
 .hb-hinweis.hb-hinweis.hb-hinweis { padding:12px; color:var(--text-muted); font-size:0.8rem; }   /* aus 5 Vorlagen */
 .hb-symbolspalte.hb-symbolspalte.hb-symbolspalte { width:16px; }   /* aus 3 Vorlagen */
@@ -335,3 +373,525 @@
 .hb-schlecht.hb-schlecht.hb-schlecht { color:#e74c3c; }
 .hb-laeuft.hb-laeuft.hb-laeuft { color:#f39c12; }
 .hb-zeilenaktionen.hb-zeilenaktionen.hb-zeilenaktionen { display:flex; gap:5px; align-items:center; }
+
+/* Der Einleitungssatz der Einstellungsseiten (30.08.2026, Befund `doppelcode`).
+ *
+ * Stand Wort fuer Wort in `settings_smpl.html` und `settings_theatre.html` —
+ * beide Seiten fuehren denselben Absatz „Diese Werte werden beim Laden … als
+ * Standardwerte verwendet". Die naechste Einstellungsseite haette ihn ein
+ * drittes Mal mitgebracht. */
+.hb-color-var-text-muted.hb-color-var-text-muted.hb-color-var-text-muted {
+    color:var(--text-muted);
+    font-size:0.85rem;
+    margin-bottom:1rem;
+}
+
+/* Hoehe der Kleiderliste auf der Charakterseite (30.08.2026, Befund
+ * `doppelcode`). Stand dort als Inline-Stil und war der einzige Unterschied
+ * zur Szenenseite, die `hb-max-height-300px` benutzt. */
+.hb-max-height-200px.hb-max-height-200px.hb-max-height-200px {
+    max-height:200px;
+    margin-bottom:8px;
+    overflow-y:auto;
+}
+
+/* Hoehe der Kleiderlisten auf der Szenenseite (30.08.2026, Befund
+ * `doppelcode`). Stand in `scene_config.html`; seit `_kleiderpassung.html` sie
+ * als Vorgabe fuehrt, braucht sie jede Seite, die den Baustein einbindet.
+ * `resize: vertical` ist Absicht: Die Listen sind lang, und wer eine davon
+ * aufzieht, will sie aufgezogen lassen. */
+.hb-max-height-300px.hb-max-height-300px.hb-max-height-300px {
+    max-height:300px;
+    margin-bottom:0;
+    overflow-y:auto;
+    resize:vertical;
+    min-height:80px;
+}
+
+/* --- Reiterleisten: sechs Namen, ein Verhalten -------------------------- */
+/* BEFUND `doppelcode` (30.08.2026): `.photo-tab` und `.code-tab` standen mit
+ * SIEBEN gleichen Eigenschaften nebeneinander, `.panel-tab` in
+ * character_viewer.html und scene_config.html mit sechs. Insgesamt führt das
+ * Projekt sechs Reiterleisten — `.panel-tab` in drei Fassungen, dazu
+ * `.photo-tab`, `.code-tab`, `.props-tab`. Gleiche Bedienung, jede mit
+ * eigenem Namen und eigener Fassung derselben fünf Zeilen.
+ *
+ * WARUM NICHT EIN NAME: Die Namen stehen nicht nur im Markup, sondern im
+ * JavaScript jeder Seite (`querySelectorAll('.panel-tab')`). Zusammengelegt
+ * ist hier erst einmal das AUSSEHEN; die Namen bleiben, bis die Leisten auch
+ * im Code eine gemeinsame Klasse haben.
+ *
+ * Was eine Seite EIGEN hat (Breite, Schriftgröße, Großbuchstaben, ihre eigene
+ * Hover-Farbe), steht weiterhin in ihrem `<style>`-Block. Der kommt später als
+ * diese Datei und gewinnt bei gleicher Spezifität. */
+.panel-tab, .photo-tab, .code-tab, .props-tab {
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    user-select: none;
+    transition: all 0.15s;
+}
+
+.panel-tab:hover, .photo-tab:hover, .code-tab:hover, .props-tab:hover {
+    color: var(--text);
+}
+
+.panel-tab.active, .photo-tab.active, .code-tab.active, .props-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* Die beiden Leisten, deren aktiver Reiter zusätzlich hinterlegt ist. */
+.photo-tab:hover, .code-tab:hover,
+.photo-tab.active, .code-tab.active { background: var(--bg-card); }
+
+/* --- Knöpfe im Fuß eines Dialogs --------------------------------------- */
+/* BEFUND `doppelcode` (30.08.2026): `.wizard-footer button` (photo_to_3d) und
+ * `.scene-modal-footer button` (scene_config) standen mit SECHS gleichen
+ * Zeilen da, der hervorgehobene Knopf mit weiteren dreien. Zwei Dialoge,
+ * dieselbe Fußleiste, zwei Fassungen.
+ *
+ * Nicht zusammengelegt sind Innenabstand, Schriftgröße und Eckenradius: Der
+ * Assistent hat größere Knöpfe als der Szenendialog. Das steht weiter in den
+ * `<style>`-Blöcken der beiden Seiten. */
+.wizard-footer button, .scene-modal-footer button {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    transition: all 0.15s;
+}
+
+.wizard-footer .btn-primary, .scene-modal-footer button.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+/* --- Vier Fassungen, die je zweimal dastanden (30.08.2026) -------------- */
+/* Befund `jsstilfassungen`. Zwei davon standen in einer Vorlage UND im
+ * JavaScript daneben, das dieselbe Liste neu aufbaut — die schlimmste Sorte:
+ * Wer die Vorlage ändert, sieht beim ersten Aufbau das Neue und nach dem
+ * ersten Neuladen der Liste wieder das Alte. */
+
+/* „No items equipped" — einmal in character_viewer.html, einmal in
+ * viewer/interaction.js, das die Liste danach neu füllt. */
+.leer-hinweis-zeile.leer-hinweis-zeile.leer-hinweis-zeile {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    padding: 4px 0;
+}
+
+/* Erklärung neben einem Ankreuzfeld („aus = Sprung"), 2x in
+ * bvh_studio/eigenschaften/klip_schluesselbilder.js. */
+.kaestchen-hinweis.kaestchen-hinweis.kaestchen-hinweis {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-left: 4px;
+}
+
+/* Der Dateiname hinter einem Auswahlknopf, 2x in
+ * bvh_studio/eigenschaften/objekt.js. */
+.dateiname-hinweis.dateiname-hinweis.dateiname-hinweis {
+    margin-left: 6px;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+/* --- Aus Inline-Stilen im JavaScript des BVH-Studios (30.08.2026) -------- */
+/* Befund `jsbefunde`, Art „Inline-Stil". Die Module bauen HTML als
+ * Zeichenkette; ihre Stile konnten deshalb weder ein Theme noch der
+ * Browser-Inspektor erreichen. Vorsatz `studio-`, wo der Name sonst zu
+ * allgemein waere. */
+#preview-modal.studio-fensterhuelle {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#preview-box {
+    background: var(--bg-secondary, #1a1a2e);
+    border: 1px solid var(--border, #334);
+    border-radius: 10px;
+    width: 1000px;
+    height: 700px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    resize: both;
+    min-width: 500px;
+    min-height: 400px;
+    max-width: 95vw;
+    max-height: 90vh;
+}
+
+#preview-title { font-size: 0.9rem; color: #ccc; }
+#preview-frame { font-size: 0.75rem; color: #888; }
+#preview-canvas { flex: 1; width: 100%; }
+
+#preview-close {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+.studio-fensterkopf.studio-fensterkopf.studio-fensterkopf {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border, #334);
+}
+
+.studio-fensterknoepfe.studio-fensterknoepfe.studio-fensterknoepfe {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.studio-fensterknopf.studio-fensterknopf.studio-fensterknopf {
+    background: none;
+    border: 1px solid var(--border, #334);
+    border-radius: 4px;
+    color: #ccc;
+    cursor: pointer;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+}
+
+.studio-knopf-gruen.studio-knopf-gruen.studio-knopf-gruen {
+    color: #4caf50;
+    font-size: 0.75rem;
+}
+
+.studio-abschnittstitel.studio-abschnittstitel.studio-abschnittstitel {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 10px 0 4px;
+}
+
+.knopf-schmal-grau.knopf-schmal-grau.knopf-schmal-grau {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.dateiname-fehlt.dateiname-fehlt.dateiname-fehlt {
+    margin-left: 6px;
+    font-size: 0.65rem;
+    color: var(--danger);
+}
+
+.texturfehler.texturfehler.texturfehler {
+    font-size: 0.7rem;
+    color: var(--danger);
+}
+
+.zeile-oben.zeile-oben.zeile-oben { align-items: flex-start; }
+
+.texturspalte.texturspalte.texturspalte {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.texturbild.texturbild.texturbild {
+    max-width: 140px;
+    max-height: 90px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: #000;
+    object-fit: contain;
+}
+
+.texturname.texturname.texturname {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    word-break: break-all;
+}
+
+.abstand-unten-6.abstand-unten-6.abstand-unten-6 { margin-bottom: 6px; }
+
+.symbol-licht.symbol-licht.symbol-licht { width: 16px; color: #ffc107; }
+.symbol-modell.symbol-modell.symbol-modell { width: 16px; color: #e91e63; }
+
+/* --- Aus Inline-Stilen der uebrigen Frontend-Module (30.08.2026) --------- */
+/* Befund `jsbefunde`, Art „Inline-Stil". Wie im Studio: Die Module bauen
+ * ihr Markup als Zeichenkette, und ein Inline-Stil dort ist weder ueber ein
+ * Theme erreichbar noch im Inspektor auffindbar. */
+.leer-hinweis-eng.leer-hinweis-eng.leer-hinweis-eng {
+    padding: 6px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.bestandszeile.bestandszeile.bestandszeile {
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    border-radius: 3px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.bestandszeile-gewaehlt.bestandszeile-gewaehlt.bestandszeile-gewaehlt {
+    background: rgba(124,92,191,0.3);
+}
+
+.bestandsart.bestandsart.bestandsart {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+.kleidungsbild.kleidungsbild.kleidungsbild {
+    width: 36px;
+    height: 36px;
+    border-radius: 3px;
+    object-fit: cover;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.kleidungsname.kleidungsname.kleidungsname {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kleidungszeile.kleidungszeile.kleidungszeile {
+    display: flex;
+    align-items: center;
+    padding: 4px 12px 4px 28px;
+}
+
+.kontextmenue-schwebend.kontextmenue-schwebend.kontextmenue-schwebend {
+    position: fixed;
+    z-index: 9999;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 0;
+    min-width: 140px;
+    font-size: 0.8rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+
+.ctx-loeschen.ctx-loeschen.ctx-loeschen {
+    padding: 4px 12px;
+    cursor: pointer;
+    color: #f44;
+}
+
+.stueckname.stueckname.stueckname {
+    font-size: 0.8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.spieler-beschriftung.spieler-beschriftung.spieler-beschriftung {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.spieler-ueberlagerung.spieler-ueberlagerung.spieler-ueberlagerung {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.spieler-fehler.spieler-fehler.spieler-fehler {
+    color: #e94560;
+    padding: 2rem;
+    text-align: center;
+}
+
+.vergleichskopf.vergleichskopf.vergleichskopf {
+    padding: 10px 16px;
+    background: var(--bg-card);
+    border-bottom: 2px solid var(--accent);
+}
+
+.vergleichstitel.vergleichstitel.vergleichstitel {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--accent);
+    cursor: default;
+}
+
+.vergleichsabschnitt.vergleichsabschnitt.vergleichsabschnitt {
+    margin-top: 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+}
+
+.naht-zeile.naht-zeile.naht-zeile {
+    font-size: 0.78rem;
+    padding: 2px 4px;
+    color: var(--text-muted);
+}
+
+.pe-stitch-del.pe-stitch-del.pe-stitch-del {
+    cursor: pointer;
+    color: #e74c3c;
+    margin-left: 4px;
+}
+
+.schranktitel.schranktitel.schranktitel {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 8px 0 4px;
+}
+
+/* --- Aus den letzten Inline-Stilen im JavaScript (30.08.2026) ------------ */
+.knochennummer.knochennummer.knochennummer {
+    font-size: 8px;
+    font-family: monospace;
+    background: rgba(0,0,0,0.55);
+    padding: 0px 2px;
+    border-radius: 2px;
+    line-height: 1.1;
+    pointer-events: none;
+}
+
+.spur-eingerueckt.spur-eingerueckt.spur-eingerueckt { padding-left: 20px; }
+
+.beta-zeile.beta-zeile.beta-zeile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.beta-name.beta-name.beta-name {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    min-width: 90px;
+}
+
+.beta-regler.beta-regler.beta-regler {
+    flex: 1;
+    accent-color: var(--accent);
+}
+
+.beta-wert.beta-wert.beta-wert {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    min-width: 3em;
+    text-align: right;
+}
+
+.code-tab-charmorph.code-tab-charmorph.code-tab-charmorph { color: #e67e22; }
+
+.reitertrenner.reitertrenner.reitertrenner {
+    border-left: 1px solid var(--border);
+    margin: 0 4px;
+}
+
+.dateikopf.dateikopf.dateikopf {
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+}
+
+/* --- Knopfzeilen: EIN Name, EINE Regel (30.08.2026) --------------------- */
+/* Beim Benennen der Inline-Stile landete `knopfzeile-eng` in fuenf Vorlagen —
+ * in `scene_config` mit `margin-top`, in `character_viewer` ohne. Gleicher
+ * Name, verschiedener Inhalt: `doppelcode` meldete den Block, und `stilnamen`
+ * haette es beim naechsten Lauf ebenso getan. Der Abstand nach oben kommt
+ * jetzt von den Helfern `abstand-oben-4` / `abstand-6` / `abstand-8` /
+ * `abstand-12` daneben. */
+.knopfzeile.knopfzeile.knopfzeile {
+    display: flex;
+    gap: 6px;
+}
+
+.knopfzeile-eng.knopfzeile-eng.knopfzeile-eng {
+    display: flex;
+    gap: 4px;
+}
+
+/* --- Die letzten Inline-Stile in Vorlagen-Literalen (30.08.2026) --------- */
+/* Befund `jsstilfassungen`: 18 feste `style="…"` in Zeichenketten, die
+ * daneben berechnete Werte tragen. Der feste Teil gehoert trotzdem ins CSS. */
+.dateizelle.dateizelle.dateizelle { padding: 4px 12px; }
+.mittig.mittig.mittig { text-align: center; }
+
+.datumszelle.datumszelle.datumszelle {
+    text-align: right;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+.dateisymbol.dateisymbol.dateisymbol {
+    margin-right: 6px;
+    opacity: 0.5;
+}
+
+.tonwert.tonwert.tonwert { font-size: 0.8rem; }
+.reglerwert.reglerwert.reglerwert { font-size: 0.75rem; }
+
+.kanalwert.kanalwert.kanalwert {
+    width: 30px;
+    font-size: 0.75rem;
+}
+
+.szenenmarke.szenenmarke.szenenmarke {
+    margin-left: 6px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.spurtitel.spurtitel.spurtitel {
+    font-size: 0.85rem;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+
+.clipliste-titel.clipliste-titel.clipliste-titel {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.abschnittstitel-akzent.abschnittstitel-akzent.abschnittstitel-akzent {
+    font-size: 0.85rem;
+    color: var(--accent);
+}
+
+.muster-marke.muster-marke.muster-marke {
+    color: #f39c12;
+    font-size: 0.7rem;
+}
+
+.muster-anzahl.muster-anzahl.muster-anzahl {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.gruppensymbol.gruppensymbol.gruppensymbol { margin-right: 6px; }
+
+.gruppenpfeil.gruppenpfeil.gruppenpfeil {
+    margin-right: 6px;
+    width: 10px;
+}

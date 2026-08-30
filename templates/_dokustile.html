@@ -1,0 +1,13 @@
+{% comment %}
+Das Stylesheet der Doku-Seiten (Rigging, Theatre).
+
+BEFUND `doppelcode` (30.08.2026): Der `extra_head`-Block stand in beiden
+Vorlagen gleich. Er ist kurz — aber er traegt die `?t=`-Kennung, und genau die
+wird beim Abschreiben vergessen (Regel `frontend-cache`).
+
+Verwendung:
+
+  {% verbatim %}{% block extra_head %}{% include "_dokustile.html" %}{% endblock %}{% endverbatim %}
+{% endcomment %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/dokuseite.css' %}?t={% now 'U' %}">

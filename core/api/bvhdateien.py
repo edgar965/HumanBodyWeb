@@ -19,6 +19,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ..daten.pfadvergleich import Pfadvergleich
 from ..daten.anfragerumpf import Anfragerumpf
 
+
 class Bvhauslieferung:
     """Bewegungsdateien der Bibliothek listen, ausliefern und ablegen."""
 

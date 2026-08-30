@@ -30,6 +30,7 @@ Namen an. Wer hier umbenennt, muss die Ansicht mitnehmen.
     </div>
     <div class="settings-input">
         <input type="number" name="{{ feld }}" value="{{ wert }}"
-               {% if min %}min="{{ min }}" {% endif %}{% if max %}max="{{ max }}" {% endif %}step="{{ schritt|default:'1' }}">
+               {% if min %}min="{{ min }}" {% endif %}{% if max %}max="{{ max }}"
+                    {% endif %}step="{{ schritt|default:'1' }}">
     </div>
 </div>

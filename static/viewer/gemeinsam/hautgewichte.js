@@ -70,14 +70,26 @@ export class Hautgewichte {
      *        bringen ihre eigene Three-Instanz mit; ein Import hier würde eine
      *        ZWEITE Fassung laden — siehe `_importmap.html`)
      */
-    static anGeometrie(geometrie, daten, Attribut) {
-        const punkte = geometrie.attributes.position.count;
-        const { indices, gewichte } = Hautgewichte.vierervektoren(daten, punkte);
+    /**
+     * Die beiden Felder ans Netz haengen.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Diese sechs Zeilen standen in beiden
+     * oeffentlichen Methoden. Beide Felder MUESSEN zusammen gesetzt werden und
+     * beide mit derselben Breite — ein Netz mit `skinIndex`, aber ohne
+     * `skinWeight` faellt in Three.js im Ursprung zusammen, ohne Meldung.
+     */
+    static _anhaengen(geometrie, indices, gewichte, Attribut) {
         geometrie.setAttribute('skinIndex',
             new Attribut(indices, Hautgewichte.VIER));
         geometrie.setAttribute('skinWeight',
             new Attribut(gewichte, Hautgewichte.VIER));
         return geometrie;
+    }
+
+    static anGeometrie(geometrie, daten, Attribut) {
+        const punkte = geometrie.attributes.position.count;
+        const { indices, gewichte } = Hautgewichte.vierervektoren(daten, punkte);
+        return Hautgewichte._anhaengen(geometrie, indices, gewichte, Attribut);
     }
 
     /**
@@ -101,10 +113,6 @@ export class Hautgewichte {
             indices[v * Hautgewichte.VIER] = knochen;
             gewichte[v * Hautgewichte.VIER] = 1.0;
         }
-        geometrie.setAttribute('skinIndex',
-            new Attribut(indices, Hautgewichte.VIER));
-        geometrie.setAttribute('skinWeight',
-            new Attribut(gewichte, Hautgewichte.VIER));
-        return geometrie;
+        return Hautgewichte._anhaengen(geometrie, indices, gewichte, Attribut);
     }
 }

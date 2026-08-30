@@ -1,12 +1,27 @@
-{% extends "base.html" %}
+{% extends "einstellungsseite.html" %}
 {% load static %}
 {% block title %}Modell - Einstellungen{% endblock %}
 
-{% block content %}
-<h1>Einstellungen — Modell</h1>
+{% block einstellungen_stile %}
+<style>
+/* Stile dieser Seite. Angelegt am 30.08.2026, als die Inline-Stile
+   des Markups hierher gezogen wurden (Befund `jsbefunde`). */
 
-<form method="post">
-    {% csrf_token %}
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.feld-gesperrt.feld-gesperrt.feld-gesperrt {
+    background:var(--bg-tertiary,#2a2a3e);
+    color:var(--text-muted,#999);
+    cursor:default;
+}
+.zeile-abgesetzt.zeile-abgesetzt.zeile-abgesetzt {
+    margin-top:1rem;
+}
+</style>
+{% endblock %}
+
+{% block einstellungen_titel %}Einstellungen — Modell{% endblock %}
+
+{% block einstellungen_karten %}
     <div class="settings-card">
         <h2><i class="fas fa-sliders-h"></i> Processing</h2>
 
@@ -22,8 +37,8 @@
                 <small>Verzeichnis in dem die Model-Presets gespeichert werden.</small>
             </div>
             <div class="settings-input">
-                <input type="text" value="{{ models_dir }}" readonly
-                       style="background:var(--bg-tertiary,#2a2a3e);color:var(--text-muted,#999);cursor:default;">
+                <input class="feld-gesperrt" type="text" value="{{ models_dir }}" readonly
+                      >
             </div>
         </div>
 
@@ -51,7 +66,7 @@
         </div>
 
         <!-- Animationen -->
-        <div class="settings-row" style="margin-top:1rem;">
+        <div class="settings-row zeile-abgesetzt">
             <div class="settings-label">
                 <strong>Animationen</strong>
                 <small>Standard-Modell das beim Öffnen der Animationen-Seite geladen wird.</small>
@@ -65,9 +80,9 @@
         {% include "_einstellungen_kaestchen.html" with beschriftung="Anzeige mit Rig" feld="show_rig_animations" text="Rig beim Start anzeigen" an=settings.show_rig_animations %}
         {% include "_einstellungen_animation.html" with feld="default_anim_animations" wert=settings.default_anim_animations kennung="anim-sel-anims" %}
     </div>
+{% endblock %}
 
-    {% include "_einstellungen_speichern.html" %}
-</form>
+{% block einstellungen_nachtrag %}
 {% endblock %}
 
 {% block extra_scripts %}

@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class Testkern:
     """Geladene Testfassung samt ihrer Daten — alles klassenweit gemerkt."""
 
-    #: Wurzel der Testfassung (`HumanBodyWeb/../TestCharakter`).
+    #: Wurzel der Testfassung (`HumanBodyWeb/TestCharakter`).
     WURZEL = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(
             os.path.dirname(os.path.abspath(__file__))))),
@@ -54,6 +54,8 @@ class Testkern:
     _netzdaten = None
     _unterteiler = None
     _gewichte = None
+    #: Wurde das Fehlen des Unterteilers schon gemeldet?
+    _unterteiler_gemeldet = False
 
     # ------------------------------------------------------------------- laden
 
@@ -179,7 +181,12 @@ class Testkern:
             return modul.CatmullClarkSubdivider
         pfad = os.path.join(cls.WURZEL, 'humanbody_core', 'catmull_clark.py')
         if not os.path.isfile(pfad):
-            logger.error('CatmullClarkSubdivider fehlt in der Testfassung')
+            if not cls._unterteiler_gemeldet:
+                cls._unterteiler_gemeldet = True
+                logger.warning(
+                    'Testfassung unter %s kennt keine Unterteilung '
+                    '(%s fehlt) — die Antwort bleibt beim Grundnetz',
+                    cls.WURZEL, os.path.basename(pfad))
             return None
         spec = importlib.util.spec_from_file_location(
             cls.MODULNAME + '.catmull_clark', pfad)
@@ -243,4 +250,5 @@ class Testkern:
         cls._netzdaten = None
         cls._unterteiler = None
         cls._gewichte = None
+        cls._unterteiler_gemeldet = False
         logger.info('Testfassung vergessen — wird beim nächsten Zugriff neu geladen')

@@ -22,6 +22,26 @@ import { applyHairColor } from '../character_core.js';
 
 export class Charakterzubehoer {
 
+    /**
+     * Die Regler-Werte der Figur an die Abfrage anhaengen.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Die zwei Schleifen standen zweimal in
+     * dieser Datei — einmal fuer Stoffvorlagen, einmal fuer Kleidungsstuecke.
+     *
+     * NULLWERTE BLEIBEN DRAUSSEN, und das ist kein Sparen: Der Server nimmt
+     * fuer jeden NICHT genannten Regler seine Vorgabe, und die ist 0. Wer alle
+     * 207 Morphs mitschickt, macht aus jeder Kleideranfrage eine Adresse von
+     * mehreren Kilobyte — bei jedem Reglerzug.
+     */
+    static morphparameter(inst, params) {
+        for (const [name, wert] of Object.entries(inst.morphs)) {
+            if (wert !== 0) params.set(`morph_${name}`, wert);
+        }
+        for (const [name, wert] of Object.entries(inst.meta)) {
+            if (wert !== 0) params.set(`meta_${name}`, wert);
+        }
+    }
+
     static async proxys(inst) {
         const list = inst._pendingMHProxies || [];
         inst._pendingMHProxies = [];
@@ -76,12 +96,7 @@ export class Charakterzubehoer {
                     key = `tpl_${tpl}`;
                 }
 
-                for (const [k, v] of Object.entries(inst.morphs)) {
-                    if (v !== 0) params.set(`morph_${k}`, v);
-                }
-                for (const [k, v] of Object.entries(inst.meta)) {
-                    if (v !== 0) params.set(`meta_${k}`, v);
-                }
+                Charakterzubehoer.morphparameter(inst, params);
 
                 const data = await Serverabruf.json(`/api/character/cloth/?${params}`);
                 if (data.error) { Protokoll.warnung('charakter_zubehoer', 'Cloth error:', data.error); continue; }
@@ -112,12 +127,7 @@ export class Charakterzubehoer {
 
         const params = new URLSearchParams();
         params.set('body_type', inst.bodyType);
-        for (const [k, v] of Object.entries(inst.morphs)) {
-            if (v !== 0) params.set(`morph_${k}`, v);
-        }
-        for (const [k, v] of Object.entries(inst.meta)) {
-            if (v !== 0) params.set(`meta_${k}`, v);
-        }
+        Charakterzubehoer.morphparameter(inst, params);
 
         for (const g of inst.garments) {
             try {

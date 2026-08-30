@@ -85,8 +85,10 @@ function _removeSelectedItem() {
     switch (type) {
         case 'garment': removeGarment(id); break;
         case 'cloth': removeClothRegion(id); break;
-        case 'hair': { removeHair(); const hs = document.getElementById('hair-style-select'); if (hs) hs.value = ''; break; }
-        case 'wardrobe': { const btn = document.querySelector(`.asset-btn[data-asset="${id}"]`); if (btn) btn.click(); break; }
+        case 'hair': { removeHair(); const hs = document.getElementById('hair-style-select'); if (hs) hs.value = '';
+            break; }
+        case 'wardrobe': { const btn = document.querySelector(`.asset-btn[data-asset="${id}"]`); if (btn) btn.click();
+            break; }
         case 'smpl_garment': if (fn.removeSmplGarment) fn.removeSmplGarment(id); break;
     }
     state._selectedItem = null; state._hoveredItem = null;
@@ -107,7 +109,7 @@ function _buildEquippedList() {
     list.innerHTML = '';
     const targets = getSelectableTargets();
     if (targets.length === 0) {
-        list.innerHTML = '<li style="color:var(--text-muted);font-size:0.78rem;padding:4px 0;">No items equipped</li>';
+        list.innerHTML = '<li class="leer-hinweis-zeile">No items equipped</li>';
         return;
     }
     for (const t of targets) {
@@ -132,8 +134,10 @@ function _buildEquippedList() {
             switch (t.type) {
                 case 'garment': removeGarment(t.id); break;
                 case 'cloth': removeClothRegion(t.id); break;
-                case 'hair': { removeHair(); const hs2 = document.getElementById('hair-style-select'); if (hs2) hs2.value = ''; break; }
-                case 'wardrobe': { const btn = document.querySelector(`.asset-btn[data-asset="${t.id}"]`); if (btn) btn.click(); break; }
+                case 'hair': { removeHair(); const hs2 = document.getElementById('hair-style-select');
+                    if (hs2) hs2.value = ''; break; }
+                case 'wardrobe': { const btn = document.querySelector(`.asset-btn[data-asset="${t.id}"]`);
+                    if (btn) btn.click(); break; }
                 case 'smpl_garment': if (fn.removeSmplGarment) fn.removeSmplGarment(t.id); break;
             }
             if (_sameItem(state._selectedItem, t)) {

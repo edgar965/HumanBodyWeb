@@ -22,7 +22,8 @@ DIE ZWEI FÄLLE, DIE SICH UNTERSCHEIDEN
 * **Ohne** (`garment.js`): Dann rechnet Three.js sie — und das darf die neue
   Fassung nicht stillschweigend anders machen.
 
-Ohne `node` im Pfad wird übersprungen, nicht rot.
+FEHLT `node`, ist das ein FEHLER — node ist Werkzeug dieses Projekts,
+kein Zufall der Umgebung (siehe `Jsmodul.laufen`).
 """
 from django.test import SimpleTestCase
 
@@ -136,7 +137,6 @@ console.log(JSON.stringify({
 """
 
 
-@Jsmodul.ohne_node()
 class NetzgeometrieTest(SimpleTestCase):
 
     @classmethod

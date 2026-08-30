@@ -96,7 +96,8 @@ class Silhouette:
     def _vorderseiten_im_bild(self, proj):
         """Dasselbe in Bildkoordinaten: Y zeigt nach unten, also ist im
         Uhrzeigersinn vorne (kreuz_z < 0)."""
-        p0, p1, p2 = proj[self.faces[:, 0]], proj[self.faces[:, 1]], proj[self.faces[:, 2]]
+        p0, p1, p2 = proj[self.faces[:, 0]], proj[self.faces[:, 1]], proj[self.faces[:,
+                                                                                     2]]
         hat_nan = (np.isnan(p0).any(axis=1) | np.isnan(p1).any(axis=1)
                    | np.isnan(p2).any(axis=1))
         e1, e2 = p1 - p0, p2 - p0

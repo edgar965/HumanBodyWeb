@@ -1,12 +1,11 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static regler %}
 
 {% block title %}HumanBody · Konfiguration{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">
+{% include "_viewerstile.html" %}
 <link rel="stylesheet" href="{% static 'css/modelldialog.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
 <link rel="stylesheet" href="{% static 'css/viewer_seitenleiste.css' %}?t={% now 'U' %}">
 <style>
     .viewer-main {
@@ -77,7 +76,11 @@
         color: var(--danger);
         border-color: var(--danger);
     }
-    .viewer-buttons {
+    /* Kopfleiste der rechten Seitenleiste. Hiess bis zum 30.08.2026
+       `.viewer-buttons` wie die Ueberlagerung auf der Leinwand — zwei ganz
+       verschiedene Dinge unter einem Namen, und die Leinwand-Regel steht seit
+       demselben Tag in `viewer_huelle.css`, das diese Seite mitlaedt. */
+    .panel-knopfleiste {
         display: flex;
         align-items: center;
         justify-content: center;
@@ -103,6 +106,8 @@
         border-bottom: 1px solid var(--border);
         flex-shrink: 0;
     }
+    /* Farbe, Zeiger, Unterkante: `stilhelfer.css`. Hier nur, was diese
+       Seite eigen hat — vier gleich breite Reiter in Großbuchstaben. */
     .panel-tab {
         flex: 1;
         text-align: center;
@@ -110,11 +115,6 @@
         font-size: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--text-muted);
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        user-select: none;
-        transition: color 0.15s;
     }
     .slider-row label {
         font-size: 0.8rem;
@@ -187,6 +187,144 @@
     border-top:1px solid var(--border);
     padding-top:8px;
 }   /* 2x */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#ve-box-select {
+    display:none;
+    position:absolute;
+    border:1.5px dashed #f1c40f;
+    background:rgba(241,196,15,0.08);
+    pointer-events:none;
+    z-index:25;
+}
+#garment-edit-pattern {
+    width:100%;
+    margin-top:6px;
+    display:none;
+}
+#pe-mode-btns {
+    display:flex;
+    gap:3px;
+    margin-bottom:6px;
+}
+#pe-canvas {
+    width:100%;
+    background:#1a1a2e;
+    border:1px solid var(--border);
+    border-radius:4px;
+    cursor:crosshair;
+}
+#pe-status {
+    font-size:0.72rem;
+    color:var(--text-muted);
+    margin:2px 0 6px;
+    display:flex;
+    justify-content:space-between;
+}
+#pe-panel-list {
+    max-height:100px;
+    overflow-y:auto;
+    margin-bottom:4px;
+}
+#pe-stitch-list {
+    max-height:80px;
+    overflow-y:auto;
+    margin-bottom:4px;
+}
+#ve-selection-info {
+    font-size:0.8rem;
+    color:var(--text-muted);
+    margin-bottom:6px;
+}
+#ve-pos-fields {
+    display:none;
+    margin-bottom:6px;
+}
+#ve-reset {
+    width:100%;
+    font-size:0.78rem;
+}
+#pe-save-name {
+    flex:1;
+    background:var(--bg-primary);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:4px 8px;
+    color:var(--text);
+    font-size:0.82rem;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.abschnitt-abgesetzt.abschnitt-abgesetzt.abschnitt-abgesetzt {
+    margin-top:6px;
+    border-top:1px solid var(--border);
+    padding-top:6px;
+}
+.dialogtitel.dialogtitel.dialogtitel {
+    font-size:0.8rem;
+    color:var(--text);
+    margin-bottom:6px;
+    font-weight:600;
+}
+.gruppentitel-eng.gruppentitel-eng.gruppentitel-eng {
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--text-muted);
+    margin:4px 0 3px;
+}
+.gruppentitel-klein.gruppentitel-klein.gruppentitel-klein {
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--text-muted);
+    margin:4px 0 3px;
+}
+.gruppentitel-klein-weit.gruppentitel-klein-weit.gruppentitel-klein-weit {
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--text-muted);
+    margin:6px 0 3px;
+}
+.gruppentitel-untenbuendig.gruppentitel-untenbuendig.gruppentitel-untenbuendig {
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--text-muted);
+    margin-bottom:3px;
+}
+.gruppentitel-weit.gruppentitel-weit.gruppentitel-weit {
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--text-muted);
+    margin:8px 0 3px;
+}
+.leerhinweis-mitte.leerhinweis-mitte.leerhinweis-mitte {
+    padding:20px 0;
+    color:var(--text-muted);
+    font-size:0.82rem;
+    text-align:center;
+}
+
+/* Ein Eintrag der Musterliste (`viewer/pattern_editor.js`). Stand als
+   siebenteiliger Inline-Stil im JS; nur die Musterfarbe haengt am Eintrag,
+   sie kommt weiterhin als `border-left-color`. */
+.pe-panel-item {
+    cursor:pointer;
+    padding:3px 6px;
+    border-left:3px solid transparent;
+    margin-bottom:2px;
+    background:transparent;
+    border-radius:2px;
+    font-size:0.8rem;
+}
+.pe-panel-item.active {
+    background:var(--bg-highlight);
+}
 </style>
 {% endblock %}
 
@@ -196,28 +334,26 @@
     <div class="viewer-main">
     <div class="canvas-wrap">
         <canvas id="viewer-canvas"></canvas>
-        <div id="ve-box-select" style="display:none;position:absolute;border:1.5px dashed #f1c40f;background:rgba(241,196,15,0.08);pointer-events:none;z-index:25;"></div>
+        <div id="ve-box-select"></div>
         <div id="garment-tooltip"></div>
-        <button id="selection-remove-btn" class="viewer-btn hb-versteckt"><i class="fas fa-trash-alt"></i> Remove</button>
+        <button id="selection-remove-btn" class="viewer-btn hb-versteckt"><i
+             class="fas fa-trash-alt"></i> Remove</button>
         <div class="viewer-buttons-left">
             {% block viewer_buttons_left %}
-            <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i class="fas fa-folder-open"></i> Laden</button>
-            <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
-            <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i class="fas fa-file-export"></i> Speichern unter</button>
+            <button id="load-preset-btn" class="viewer-btn" title="Preset-JSON laden"><i
+                 class="fas fa-folder-open"></i> Laden</button>
+            <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i
+                 class="fas fa-save"></i> Speichern</button>
+            <button id="save-model-as-btn" class="viewer-btn" title="Modell speichern unter..."><i
+                 class="fas fa-file-export"></i> Speichern unter</button>
             {% endblock %}
         </div>
     </div>
 
     <div class="viewer-panel">
-        <div class="viewer-buttons">
+        <div class="panel-knopfleiste">
             {% block viewer_buttons_right %}
-            <div class="toggle-btn-group">
-                <button id="refit-all-btn" class="viewer-btn" title="Garments &amp; Haare an aktuelle Morphs anpassen"><i class="fas fa-sync"></i></button>
-                <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i class="fas fa-user"></i></button>
-                <button id="clothes-toggle" class="viewer-btn active" title="Kleider ein/ausblenden"><i class="fas fa-tshirt"></i></button>
-                <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i class="fas fa-bone"></i></button>
-            </div>
-            <button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i class="fas fa-play"></i></button>
+            {% include "_ansichtsschalter.html" with refit=1 %}
             {% endblock %}
         </div>
         <!-- Tab Bar -->
@@ -242,7 +378,8 @@
 
         <!-- Morphs -->
         <div class="panel-section" data-panel-key="morphs">
-            <h3>Morphs <button class="btn-reset" id="reset-morphs">Reset</button> <span class="chevron">&#9660;</span></h3>
+            <h3>Morphs <button class="btn-reset" id="reset-morphs">Reset</button> <span
+                 class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="morphs-panel"></div>
         </div>
 
@@ -255,61 +392,41 @@
         <div class="panel-section collapsed" data-panel-key="garment_fit">
             <h3>Garment Fit <span class="chevron">&#9660;</span></h3>
             <div class="panel-body" id="garment-panel">
-                <div class="slider-row"><label>Category</label>
-                    <select id="garment-category" class="viewer-select hb-dehnt-ohne-abstand">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div id="garment-list" class="anim-tree" style="max-height:200px;margin-bottom:8px;">
-                    <div class="hb-hinweis">Lade Garment-Library...</div>
-                </div>
-                <!-- Fit -->
-                <div class="hb-font-size-0-72rem">Fit</div>
-                {% include "_schieberegler.html" with kennung="garment-offset" beschriftung="Offset" min="0" max="30" wert="6" schritt="1" anzeige="0.006" %}
-                {% include "_schieberegler.html" with kennung="garment-stiffness" beschriftung="Stiffness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                {% include "_schieberegler.html" with kennung="garment-min-dist" beschriftung="Min. Abstand" min="0" max="15" wert="3" schritt="1" anzeige="3 mm" %}
-                {% include "_schieberegler.html" with kennung="garment-crotch-floor" beschriftung="Schritt-Boden" min="-40" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                {% include "_schieberegler.html" with kennung="garment-lift" beschriftung="Anheben" min="-20" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                {% include "_schieberegler.html" with kennung="garment-crotch-depth" beschriftung="Schritt-Tiefe" min="0" max="40" wert="0" schritt="1" anzeige="0 mm" %}
-                <!-- Farbe / Material -->
-                <div class="hb-font-size-0-72rem">Farbe / Material</div>
-                <div class="slider-row"><label>Color</label>
-                    <input type="color" id="garment-color" value="#4d5980" class="hb-farbfeld">
-                </div>
-                {% include "_schieberegler.html" with kennung="garment-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                {% include "_schieberegler.html" with kennung="garment-metalness" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
+                {% include "_kleiderpassung.html" with offset_max="30" listenklasse="hb-max-height-200px" %}
                 <!-- Position -->
                 <div id="garment-adjustments">
                     <div class="hb-font-size-0-72rem">Position</div>
-                    {% include "_schieberegler.html" with kennung="garment-pos-x" beschriftung="Pos X" min="-50" max="50" wert="0" schritt="1" anzeige="0.00 m" %}
-                    {% include "_schieberegler.html" with kennung="garment-pos-y" beschriftung="Pos Y" min="-50" max="50" wert="0" schritt="1" anzeige="0.00 m" %}
-                    {% include "_schieberegler.html" with kennung="garment-pos-z" beschriftung="Pos Z" min="-50" max="50" wert="0" schritt="1" anzeige="0.00 m" %}
+                    {% regler "garment-pos-x" "Pos X" min="-50" max="50" wert="0" anzeige="0.00 m" %}
+                    {% regler "garment-pos-y" "Pos Y" min="-50" max="50" wert="0" anzeige="0.00 m" %}
+                    {% regler "garment-pos-z" "Pos Z" min="-50" max="50" wert="0" anzeige="0.00 m" %}
                     <!-- Scale -->
                     <div class="hb-font-size-0-72rem">Scale</div>
-                    {% include "_schieberegler.html" with kennung="garment-scale-x" beschriftung="Scale X" min="50" max="200" wert="100" schritt="1" anzeige="1.00" %}
-                    {% include "_schieberegler.html" with kennung="garment-scale-y" beschriftung="Scale Y" min="50" max="200" wert="100" schritt="1" anzeige="1.00" %}
-                    {% include "_schieberegler.html" with kennung="garment-scale-z" beschriftung="Scale Z" min="50" max="200" wert="100" schritt="1" anzeige="1.00" %}
-                    <!-- Region -->
-                    <div class="hb-font-size-0-72rem">Region</div>
-                    {% include "_schieberegler.html" with kennung="garment-region-top" beschriftung="Top" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                    {% include "_schieberegler.html" with kennung="garment-region-upper" beschriftung="Upper" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                    {% include "_schieberegler.html" with kennung="garment-region-mid" beschriftung="Mid" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                    {% include "_schieberegler.html" with kennung="garment-region-lower" beschriftung="Lower" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
-                    {% include "_schieberegler.html" with kennung="garment-region-bottom" beschriftung="Bottom" min="-30" max="30" wert="0" schritt="1" anzeige="0.00 m" %}
+                    {% regler "garment-scale-x" "Scale X" min="50" max="200" wert="100" anzeige="1.00" %}
+                    {% regler "garment-scale-y" "Scale Y" min="50" max="200" wert="100" anzeige="1.00" %}
+                    {% regler "garment-scale-z" "Scale Z" min="50" max="200" wert="100" anzeige="1.00" %}
+                    {% include "_kleiderregionen.html" %}
                 </div>
                 <div class="hb-display-flex">
-                    <button id="garment-create" class="btn-toggle hb-dehnt"><i class="fas fa-tshirt"></i> Erzeuge</button>
-                    <button id="garment-update" class="btn-toggle hb-dehnt"><i class="fas fa-sync-alt"></i> Update</button>
-                    <button id="garment-refit-all" class="btn-toggle hb-dehnt" title="Alle Garments an aktuelle Morphs anpassen"><i class="fas fa-sync"></i> Refit</button>
-                    <button id="garment-remove" class="btn-toggle hb-fest" title="Garment entfernen"><i class="fas fa-times"></i></button>
-                    <button id="garment-remove-all" class="btn-toggle hb-fest" title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
+                    <button id="garment-create" class="btn-toggle hb-dehnt"><i
+                         class="fas fa-tshirt"></i> Erzeuge</button>
+                    <button id="garment-update" class="btn-toggle hb-dehnt"><i
+                         class="fas fa-sync-alt"></i> Update</button>
+                    <button id="garment-refit-all" class="btn-toggle hb-dehnt"
+                         title="Alle Garments an aktuelle Morphs anpassen"><i class="fas fa-sync"></i> Refit</button>
+                    <button id="garment-remove" class="btn-toggle hb-fest" title="Garment entfernen"><i
+                         class="fas fa-times"></i></button>
+                    <button id="garment-remove-all" class="btn-toggle hb-fest" title="Alle Garments entfernen"><i
+                         class="fas fa-trash"></i></button>
                 </div>
-                <button id="garment-edit-pattern" class="btn-toggle" style="width:100%;margin-top:6px;display:none;" title="Pattern im Pattern Editor bearbeiten"><i class="fas fa-drafting-compass"></i> Edit Pattern</button>
+                <button id="garment-edit-pattern" class="btn-toggle" title="Pattern im Pattern Editor bearbeiten"><i
+                     class="fas fa-drafting-compass"></i> Edit Pattern</button>
                 <div class="hb-margin-top-8px-b">
-                    <button id="garment-download-btn" class="btn-toggle hb-volle-breite"><i class="fas fa-cloud-download-alt"></i> MakeHuman Assets herunterladen</button>
+                    <button id="garment-download-btn" class="btn-toggle hb-volle-breite"><i
+                         class="fas fa-cloud-download-alt"></i> MakeHuman Assets herunterladen</button>
                     <div id="garment-download-panel" class="verborgen-mit-abstand">
                         <select id="garment-pack-select" class="viewer-select"></select>
-                        <button id="garment-pack-download" class="btn-toggle hb-volle-breite"><i class="fas fa-download"></i> Pack herunterladen</button>
+                        <button id="garment-pack-download" class="btn-toggle hb-volle-breite"><i
+                             class="fas fa-download"></i> Pack herunterladen</button>
                         <div id="garment-download-status" class="hb-font-size-0-75rem"></div>
                     </div>
                 </div>
@@ -332,7 +449,7 @@
             <h3>Equipped Items <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
                 <ul id="equipped-items-list">
-                    <li style="color:var(--text-muted);font-size:0.78rem;padding:4px 0;">No items equipped</li>
+                    <li class="leer-hinweis-zeile">No items equipped</li>
                 </ul>
             </div>
         </div>
@@ -363,25 +480,32 @@
                 <h3>Pattern Editor <span class="chevron">&#9660;</span></h3>
                 <div class="panel-body" id="pe-panel">
                     <!-- Mode Buttons -->
-                    <div id="pe-mode-btns" style="display:flex;gap:3px;margin-bottom:6px;">
-                        <button class="btn-toggle active hb-flex-1-b" data-mode="select" title="Select / Move"><i class="fas fa-mouse-pointer"></i> Select</button>
-                        <button class="btn-toggle hb-flex-1-b" data-mode="draw" title="Draw vertices"><i class="fas fa-pen"></i> Draw</button>
-                        <button class="btn-toggle hb-flex-1-b" data-mode="stitch" title="Link edges"><i class="fas fa-link"></i> Stitch</button>
-                        <button class="btn-toggle hb-flex-1-b" data-mode="region" title="Body Region"><i class="fas fa-crop-alt"></i> Region</button>
-                        <button class="btn-toggle hb-flex-1-b" data-mode="edit" title="Edit Vertices in 3D"><i class="fas fa-vector-square"></i> Edit</button>
+                    <div id="pe-mode-btns">
+                        <button class="btn-toggle active hb-flex-1-b" data-mode="select" title="Select / Move"><i
+                             class="fas fa-mouse-pointer"></i> Select</button>
+                        <button class="btn-toggle hb-flex-1-b" data-mode="draw" title="Draw vertices"><i
+                             class="fas fa-pen"></i> Draw</button>
+                        <button class="btn-toggle hb-flex-1-b" data-mode="stitch" title="Link edges"><i
+                             class="fas fa-link"></i> Stitch</button>
+                        <button class="btn-toggle hb-flex-1-b" data-mode="region" title="Body Region"><i
+                             class="fas fa-crop-alt"></i> Region</button>
+                        <button class="btn-toggle hb-flex-1-b" data-mode="edit" title="Edit Vertices in 3D"><i
+                             class="fas fa-vector-square"></i> Edit</button>
                     </div>
                     <!-- Pattern drawing controls (hidden in Region mode) -->
                     <div id="pe-pattern-controls">
                         <!-- Canvas -->
-                        <canvas id="pe-canvas" width="288" height="240" style="width:100%;background:#1a1a2e;border:1px solid var(--border);border-radius:4px;cursor:crosshair;"></canvas>
-                        <div id="pe-status" style="font-size:0.72rem;color:var(--text-muted);margin:2px 0 6px;display:flex;justify-content:space-between;">0, 0 cm &nbsp; 100%</div>
+                        <canvas id="pe-canvas" width="288" height="240"></canvas>
+                        <div id="pe-status">0, 0 cm &nbsp; 100%</div>
 
                         <!-- Panels -->
-                        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:4px 0 3px;">Panels</div>
-                        <div id="pe-panel-list" style="max-height:100px;overflow-y:auto;margin-bottom:4px;"></div>
-                        <div style="display:flex;gap:4px;">
-                            <button id="pe-add-panel" class="btn-toggle hb-flex-1-2"><i class="fas fa-plus"></i> Add Panel</button>
-                            <button id="pe-del-panel" class="btn-toggle knopf-schmal" title="Delete active panel"><i class="fas fa-trash"></i></button>
+                        <div class="gruppentitel-eng">Panels</div>
+                        <div id="pe-panel-list"></div>
+                        <div class="knopfzeile-eng">
+                            <button id="pe-add-panel" class="btn-toggle hb-flex-1-2"><i
+                                 class="fas fa-plus"></i> Add Panel</button>
+                            <button id="pe-del-panel" class="btn-toggle knopf-schmal" title="Delete active panel"><i
+                                 class="fas fa-trash"></i></button>
                         </div>
 
                         <!-- Panel Placement -->
@@ -399,8 +523,8 @@
                         </div>
 
                         <!-- Stitches -->
-                        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:8px 0 3px;">Stitches <span id="pe-stitch-count">(0)</span></div>
-                        <div id="pe-stitch-list" style="max-height:80px;overflow-y:auto;margin-bottom:4px;"></div>
+                        <div class="gruppentitel-weit">Stitches <span id="pe-stitch-count">(0)</span></div>
+                        <div id="pe-stitch-list"></div>
                     </div>
 
                     <!-- Region Controls (hidden unless Region mode) -->
@@ -416,19 +540,19 @@
                                 <option value="shoes">Shoes</option>
                             </select>
                         </div>
-                        {% include "_schieberegler.html" with kennung="pe-region-zmin" beschriftung="Z-Min" min="0" max="180" wert="60" schritt="1" anzeige="0.60" %}
-                        {% include "_schieberegler.html" with kennung="pe-region-zmax" beschriftung="Z-Max" min="0" max="180" wert="140" schritt="1" anzeige="1.40" %}
+                        {% regler "pe-region-zmin" "Z-Min" max="180" wert="60" anzeige="0.60" %}
+                        {% regler "pe-region-zmax" "Z-Max" max="180" wert="140" anzeige="1.40" %}
                         <div class="slider-row">
                             <label><input type="checkbox" id="pe-region-arms"> Include Arms</label>
                         </div>
-                        {% include "_schieberegler.html" with kennung="pe-region-grow" beschriftung="Grow" min="0" max="5" wert="2" schritt="1" anzeige="2" %}
-                        {% include "_schieberegler.html" with kennung="pe-region-looseness" beschriftung="Looseness" min="0" max="100" wert="30" schritt="1" anzeige="0.30" %}
+                        {% regler "pe-region-grow" "Grow" max="5" wert="2" anzeige="2" %}
+                        {% regler "pe-region-looseness" "Looseness" max="100" wert="30" anzeige="0.30" %}
                     </div>
 
                     <!-- Vertex Edit Controls (hidden unless Edit mode) -->
                     <div id="pe-edit-controls" class="hb-display-none-b">
-                        <div id="ve-selection-info" style="font-size:0.8rem;color:var(--text-muted);margin-bottom:6px;">No vertices selected</div>
-                        <div id="ve-pos-fields" style="display:none;margin-bottom:6px;">
+                        <div id="ve-selection-info">No vertices selected</div>
+                        <div id="ve-pos-fields">
                             <div class="slider-row"><label>X</label>
                                 <input type="number" id="ve-pos-x" step="0.001" class="hb-flex-1-3">
                             </div>
@@ -439,38 +563,44 @@
                                 <input type="number" id="ve-pos-z" step="0.001" class="hb-flex-1-3">
                             </div>
                         </div>
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:4px 0 3px;">Vertex Size</div>
+                        <div class="gruppentitel-klein">Vertex Size</div>
                         <div class="slider-row">
                             <input type="range" id="ve-point-size" min="2" max="12" value="5" step="1" class="hb-dehnt">
                             <span class="slider-val" id="ve-point-size-val">5</span>
                         </div>
-                        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin:6px 0 3px;">Tools</div>
+                        <div class="gruppentitel-klein-weit">Tools</div>
                         <div class="hb-display-flex-2">
-                            <button id="ve-select-all" class="btn-toggle hb-flex-1-2"><i class="fas fa-object-group"></i> All</button>
-                            <button id="ve-deselect-all" class="btn-toggle hb-flex-1-2"><i class="fas fa-object-ungroup"></i> None</button>
+                            <button id="ve-select-all" class="btn-toggle hb-flex-1-2"><i
+                                 class="fas fa-object-group"></i> All</button>
+                            <button id="ve-deselect-all" class="btn-toggle hb-flex-1-2"><i
+                                 class="fas fa-object-ungroup"></i> None</button>
                         </div>
                         <div class="hb-display-flex-2">
-                            <button id="ve-smooth" class="btn-toggle hb-flex-1-2"><i class="fas fa-water"></i> Smooth</button>
-                            <button id="ve-push-outside" class="btn-toggle hb-flex-1-2"><i class="fas fa-expand-arrows-alt"></i> Push Out</button>
+                            <button id="ve-smooth" class="btn-toggle hb-flex-1-2"><i
+                                 class="fas fa-water"></i> Smooth</button>
+                            <button id="ve-push-outside" class="btn-toggle hb-flex-1-2"><i
+                                 class="fas fa-expand-arrows-alt"></i> Push Out</button>
                         </div>
-                        <button id="ve-reset" class="btn-toggle" style="width:100%;font-size:0.78rem;"><i class="fas fa-undo"></i> Reset to Original</button>
+                        <button id="ve-reset" class="btn-toggle"><i class="fas fa-undo"></i> Reset to Original</button>
                     </div>
 
                     <!-- Material -->
-                    <div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px;">
-                        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-muted);margin-bottom:3px;">Material</div>
+                    <div class="abschnitt-abgesetzt">
+                        <div class="gruppentitel-untenbuendig">Material</div>
                         <div class="slider-row"><label>Color</label>
                             <input type="color" id="pe-color" value="#404870" class="hb-farbfeld">
                         </div>
-                        {% include "_schieberegler.html" with kennung="pe-roughness" beschriftung="Roughness" min="0" max="100" wert="80" schritt="1" anzeige="0.80" %}
-                        {% include "_schieberegler.html" with kennung="pe-metalness" beschriftung="Metalness" min="0" max="100" wert="0" schritt="1" anzeige="0.00" %}
+                        {% regler "pe-roughness" "Roughness" max="100" wert="80" anzeige="0.80" %}
+                        {% regler "pe-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
                     </div>
 
                     <!-- Generate + Save -->
                     <div class="hb-margin-top-8px-b">
-                        <div style="display:flex;gap:6px;">
-                            <button id="pe-generate" class="btn-toggle hb-dehnt" title="Generate 3D mesh from pattern"><i class="fas fa-cube"></i> Generate 3D</button>
-                            <button id="pe-delete" class="btn-toggle hb-fest" title="Remove preview"><i class="fas fa-times"></i></button>
+                        <div class="knopfzeile">
+                            <button id="pe-generate" class="btn-toggle hb-dehnt"
+                                 title="Generate 3D mesh from pattern"><i class="fas fa-cube"></i> Generate 3D</button>
+                            <button id="pe-delete" class="btn-toggle hb-fest" title="Remove preview"><i
+                                 class="fas fa-times"></i></button>
                         </div>
                         <!-- Wrap to Body -->
                         <div id="pe-wrap-section" class="hb-margin-top-6px">
@@ -478,14 +608,14 @@
                                 <label><input type="checkbox" id="pe-wrap"> Wrap to Body</label>
                             </div>
                             <div id="pe-wrap-sliders" class="hb-versteckt">
-                                {% include "_schieberegler.html" with kennung="pe-wrap-offset" beschriftung="Offset (mm)" min="1" max="20" wert="6" schritt="1" anzeige="6" %}
-                                {% include "_schieberegler.html" with kennung="pe-wrap-stiffness" beschriftung="Stiffness" min="0" max="100" wert="50" schritt="1" anzeige="0.50" %}
+                                {% regler "pe-wrap-offset" "Offset (mm)" min="1" max="20" wert="6" anzeige="6" %}
+                                {% regler "pe-wrap-stiffness" "Stiffness" max="100" wert="50" anzeige="0.50" %}
                             </div>
                         </div>
                         <div class="abstand-8">
-                            <div style="font-size:0.8rem;color:var(--text);margin-bottom:6px;font-weight:600;">Save to Library</div>
+                            <div class="dialogtitel">Save to Library</div>
                             <div class="slider-row"><label>Name</label>
-                                <input type="text" id="pe-save-name" placeholder="My Pattern" style="flex:1;background:var(--bg-primary);border:1px solid var(--border);border-radius:4px;padding:4px 8px;color:var(--text);font-size:0.82rem;">
+                                <input type="text" id="pe-save-name" placeholder="My Pattern">
                             </div>
                             <div class="slider-row"><label>Category</label>
                                 <select id="pe-save-category" class="viewer-select hb-dehnt-ohne-abstand">
@@ -497,7 +627,8 @@
                                     <option value="custom">Custom</option>
                                 </select>
                             </div>
-                            <button id="pe-save" class="btn-toggle breit-abstand"><i class="fas fa-save"></i> Save to Library</button>
+                            <button id="pe-save" class="btn-toggle breit-abstand"><i
+                                 class="fas fa-save"></i> Save to Library</button>
                             <div id="pe-save-status" class="hb-font-size-0-75rem"></div>
                         </div>
                     </div>
@@ -509,7 +640,7 @@
         <div class="tab-pane" id="tab-szene">
             {% block tab_szene_content %}
             <div class="panel-section">
-                <div style="padding:20px 0;color:var(--text-muted);font-size:0.82rem;text-align:center;">Szene-Einstellungen folgen...</div>
+                <div class="leerhinweis-mitte">Szene-Einstellungen folgen...</div>
             </div>
             {% endblock %}
         </div><!-- /tab-szene -->

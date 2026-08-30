@@ -3,6 +3,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Clip } from './models.js';
 import { pushUndo } from './undo.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Studioanzeige } from './studioanzeige.js';
 
 /**
  * Lichtschluessel — Keyframes einer Lichtspur anlegen.
@@ -144,9 +145,8 @@ export class Lichtschluessel {
         return spur;
     }
 
+    /** Dauer, Zeitleiste, Eigenschaften — siehe `Studioanzeige`. */
     static _nachtragen() {
-        fn.updateDuration();
-        fn.renderTimeline();
-        fn.updateProperties();
+        Studioanzeige.nachtragen();
     }
 }

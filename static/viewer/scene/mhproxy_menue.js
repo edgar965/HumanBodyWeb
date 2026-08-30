@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Mhproxystand } from './mhproxy_stand.js';
+import { Kleiderverwaltung } from './kleiderverwaltung.js';
 
 /**
  * Das Rechtsklickmenü über einem Kleidungsstück der Proxy-Liste: Umbenennen,
@@ -39,16 +40,13 @@ export class Mhproxymenue {
         const menue = document.createElement('div');
         menue.id = 'mh-ctx-menu';
         menue.className = 'ctx-menu';
-        menue.style.cssText = 'position:fixed;z-index:9999;'
-            + 'background:var(--bg-secondary);border:1px solid var(--border);'
-            + 'border-radius:4px;padding:4px 0;min-width:140px;'
-            + 'font-size:0.8rem;box-shadow:0 4px 12px rgba(0,0,0,.4);';
+        menue.classList.add('kontextmenue-schwebend');
         menue.innerHTML = `
             <div class="ctx-item knopf-klein" data-action="rename">Umbenennen</div>
             <div class="ctx-item knopf-klein" data-action="move">Verschieben...</div>
             <div class="ctx-item knopf-klein" data-action="copy">Kopieren...</div>
-            <div style="border-top:1px solid var(--border);margin:2px 0;"></div>
-            <div class="ctx-item" data-action="delete" style="padding:4px 12px;cursor:pointer;color:#f44;">Löschen</div>
+            <div class="hb-trennlinie"></div>
+            <div class="ctx-item ctx-loeschen" data-action="delete">Löschen</div>
         `;
         menue.querySelectorAll('.ctx-item').forEach(eintrag => {
             eintrag.addEventListener('mouseenter',
@@ -127,14 +125,7 @@ export class Mhproxymenue {
 
     /** Die Kopie liegt nur auf dem Server — der Katalog muss frisch geholt werden. */
     static async _katalogNeuLaden() {
-        state._garmentCatalog.length = 0;
-        const daten = await Serverabruf.json('/api/character/garment/library/');
-        if (!daten.garments) return;
-        for (const kategorie of Object.keys(daten.garments)) {
-            for (const stueck of daten.garments[kategorie]) {
-                stueck._category = kategorie;
-                state._garmentCatalog.push(stueck);
-            }
-        }
+        Kleiderverwaltung.uebernehmen(
+            await Serverabruf.json('/api/character/garment/library/'));
     }
 }

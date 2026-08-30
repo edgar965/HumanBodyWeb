@@ -50,6 +50,36 @@ export class Netzpunkte {
     }
 
     /**
+     * Punkte aus einem ROHEN Puffer schreiben — der Weg des Live-Reglers.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Diese sieben Zeilen standen in
+     * `viewer/mesh.js` und `result_character/websocket.js`. Der Unterschied zu
+     * `aktualisieren`: Hier kommen die Zahlen nicht als Base64 aus einer
+     * Antwort, sondern als `ArrayBuffer` über den WebSocket — bei jeder
+     * Reglerbewegung, mehrmals je Sekunde. Deshalb wird hier auch NICHTS
+     * nachgerechnet, was warten kann: keine Normalen, keine Bounding-Box.
+     *
+     * DIE UMRECHNUNG DARF NICHT FEHLEN. Blender hat Z nach oben, Three.js Y —
+     * ohne `blenderToThreeCoords` liegt die Figur auf dem Rücken, und zwar
+     * erst ab dem ersten Reglerzug. Das sieht nach einem Fehler des Reglers
+     * aus und ist einer des Puffers.
+     *
+     * @param {THREE.BufferGeometry} geometrie Geometrie des Körpers
+     * @param {ArrayBuffer} puffer Float32-Punkte in Blender-Koordinaten
+     * @returns {boolean} false, wenn es nichts zu schreiben gab
+     */
+    static ausPuffer(geometrie, puffer) {
+        if (!geometrie) return false;
+        const punkte = geometrie.attributes.position;
+        const neue = new Float32Array(puffer);
+        blenderToThreeCoords(neue);
+        punkte.array.set(neue);
+        punkte.needsUpdate = true;
+        geometrie.computeBoundingSphere();
+        return true;
+    }
+
+    /**
      * Normalen übernehmen. Fehlen sie in der Antwort, werden sie gerechnet —
      * das ist teurer, aber besser als flache Beleuchtung.
      */

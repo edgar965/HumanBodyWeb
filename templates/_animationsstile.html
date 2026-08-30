@@ -1,0 +1,22 @@
+{% comment %}
+Die Stylesheets der beiden Animationsseiten.
+
+BEFUND `doppelcode` (30.08.2026): `animations.html` und `skeleton_test.html`
+laden dieselben drei Dateien und tragen darunter denselben Hinweis auf das
+Kontextmenue. Beides stand doppelt.
+
+`animationsseite.css` kommt zu den allgemeinen Viewer-Stilen dazu: Beide Seiten
+zeigen einen Animationsbaum mit Zeitleiste, die anderen 3D-Ansichten nicht.
+
+Verwendung, im `extra_head`-Block:
+
+  {% verbatim %}{% include "_animationsstile.html" %}{% endverbatim %}
+{% endcomment %}
+{% load static %}
+{% include "_viewerstile.html" %}
+<link rel="stylesheet" href="{% static 'css/animationsseite.css' %}?t={% now 'U' %}">
+{% comment %}
+Kontextmenue: `.hb-kontextmenue` / `.hb-menueeintrag` / `.hb-trennlinie` stehen
+seit dem 28.08.2026 in `stilhelfer.css` — in den beiden Seiten standen sie
+unter eigenen Namen mit demselben Rumpf.
+{% endcomment %}

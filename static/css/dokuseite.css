@@ -1,0 +1,220 @@
+/* Dokuseite — das Aussehen der beiden Hilfeseiten Rigging und Theatre.
+ *
+ * BEFUND `doppelcode` (30.08.2026): Derselbe Stilblock stand in
+ * `rigging_help.html` und `theatre_help.html`, jeweils an den eigenen
+ * Wrapper-Namen gebunden (`.rigging-help` / `.theatre-help`). Zwei Namen für
+ * dasselbe, und die beiden Fassungen waren schon auseinandergelaufen: Die
+ * Rigging-Seite hat Zeilenhöhen, Tabellenränder und die vier farbigen
+ * Hinweiskästen, die Theatre-Seite nicht.
+ *
+ * Beide Vorlagen benutzen jetzt `.doku-seite`. Die frühere Rigging-Fassung ist
+ * die vollständigere und deshalb die Grundlage — die Theatre-Seite bekommt
+ * damit die Zeilenhöhen dazu, die ihr fehlten.
+ *
+ * FESTE FARBEN, KEINE VARIABLEN: Diese beiden Seiten sind bewusst dunkel und
+ * folgen NICHT den fünf Themen aus `theme.css`. Sie zeigen Codebeispiele und
+ * Tabellen, die auf hellem Grund unlesbar würden. Wer sie in die Themen
+ * einhängen will, muss vorher die Kontraste aller fünf Paletten prüfen.
+ */
+
+.doku-seite {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #e0e0e0;
+    background: #0f0f1a;
+}
+
+/* Alles erbt die Schriftfarbe: Die Seiten stehen im dunklen Rahmen, und ein
+ * Element mit eigener Farbe aus `style.css` fiele hier heraus. */
+.doku-seite * { color: inherit; }
+.doku-seite h1, .doku-seite h2, .doku-seite h3, .doku-seite h4 { color: inherit; }
+
+.doku-seite pre {
+    background: #0d1117;
+    color: #c9d1d9;
+    padding: 15px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+.doku-seite pre strong { color: #58a6ff; }
+.doku-seite code {
+    background: #333;
+    padding: 3px 8px;
+    border-radius: 3px;
+    color: #e0e0e0;
+    font-size: 0.85rem;
+}
+
+.doku-seite table {
+    width: 100%;
+    border-collapse: collapse;
+    background: transparent;
+    border: none;
+    margin: 15px 0;
+}
+/* `!important`: Die Tabellenköpfe der Anwendung (`style.css`) sind heller
+ * gedacht und würden diese Regel sonst schlagen. */
+.doku-seite th {
+    background: #252535 !important;
+    color: #bbb !important;
+    padding: 10px;
+    text-align: left;
+    border-bottom: 2px solid #444;
+}
+.doku-seite td {
+    color: #e0e0e0;
+    padding: 10px;
+    border-bottom: 1px solid #333;
+    vertical-align: top;
+}
+
+.doku-seite a { color: #7c5cbf; }
+.doku-seite ol, .doku-seite ul, .doku-seite li, .doku-seite p {
+    color: #e0e0e0;
+    line-height: 1.8;
+}
+
+/* Die farbigen Hinweiskästen. Die Farbe steckt im linken Rand, nicht im
+ * Hintergrund — vier verschiedene Hintergründe nebeneinander machen eine
+ * Seite unruhig, vier Ränder nicht. */
+.doku-seite .info-box {
+    background: #1e1e2e;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+.doku-seite .info-box-blue { border-left: 4px solid #4fc1ff; }
+.doku-seite .info-box-purple { border-left: 4px solid #bb9af7; }
+.doku-seite .info-box-green { border-left: 4px solid #73daca; }
+.doku-seite .info-box-orange { border-left: 4px solid #ff9940; }
+
+/* Aus Inline-Stilen der Doku-Seiten (Befund `jsbefunde`, 30.08.2026). Die drei Farben stehen fuer Body, Garment und Form — dieselben drei in beiden Seiten. */
+.doku-abschluss.doku-abschluss.doku-abschluss {
+    margin-top: 60px;
+    padding: 20px;
+    background: #1a1a2e;
+    border-radius: 8px;
+    text-align: center;
+}
+.doku-abschlusstabelle.doku-abschlusstabelle.doku-abschlusstabelle {
+    margin: 20px auto;
+    text-align: left;
+}
+.doku-body.doku-body.doku-body {
+    color: #73daca;
+}
+.doku-body-fett.doku-body-fett.doku-body-fett {
+    color: #73daca;
+    font-weight: bold;
+}
+.doku-form.doku-form.doku-form {
+    color: #4fc1ff;
+}
+.doku-form-fett.doku-form-fett.doku-form-fett {
+    color: #4fc1ff;
+    font-weight: bold;
+}
+.doku-garment.doku-garment.doku-garment {
+    color: #ff9940;
+}
+.doku-garment-fett.doku-garment-fett.doku-garment-fett {
+    color: #ff9940;
+    font-weight: bold;
+}
+.doku-kastentitel-form.doku-kastentitel-form.doku-kastentitel-form {
+    margin-top: 0;
+    color: #4fc1ff;
+}
+.doku-kastentitel-garment.doku-kastentitel-garment.doku-kastentitel-garment {
+    margin-top: 0;
+    color: #ff9940;
+}
+.doku-mittig.doku-mittig.doku-mittig {
+    text-align: center;
+}
+.doku-untertitel.doku-untertitel.doku-untertitel {
+    color: #999;
+    font-size: 0.9rem;
+}
+
+/* Aus Inline-Stilen der Doku-Seiten (Befund `jsbefunde`, 30.08.2026). Die drei Farben stehen fuer Body, Garment und Form — dieselben drei in beiden Seiten. */
+.doku-absatz-abstand.doku-absatz-abstand.doku-absatz-abstand {
+    margin-top: 10px;
+}
+.doku-kasten-export.doku-kasten-export.doku-kasten-export {
+    background: #1e1e2e;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border-left: 4px solid #73daca;
+}
+.doku-kasten-studio.doku-kasten-studio.doku-kasten-studio {
+    background: #1e1e2e;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border-left: 4px solid #bb9af7;
+}
+.doku-kasten-szene.doku-kasten-szene.doku-kasten-szene {
+    background: #1a2332;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 15px 0;
+    border-left: 4px solid #73daca;
+}
+.doku-kopfzelle-breit.doku-kopfzelle-breit.doku-kopfzelle-breit {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 2px solid #444;
+    width: 40%;
+}
+.doku-quelltext.doku-quelltext.doku-quelltext {
+    background: #0d1117;
+    color: #c9d1d9;
+    padding: 15px;
+    border-radius: 6px;
+    overflow-x: auto;
+    line-height: 1.8;
+}
+.doku-schlusskasten.doku-schlusskasten.doku-schlusskasten {
+    margin-top: 50px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    text-align: center;
+}
+.doku-schlussknopf.doku-schlussknopf.doku-schlussknopf {
+    display: inline-block;
+    background: white;
+    color: #667eea;
+    padding: 12px 30px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 10px;
+}
+.doku-zelle-breit.doku-zelle-breit.doku-zelle-breit {
+    padding: 8px;
+    border-bottom: 1px solid #333;
+    width: 45%;
+}
+.doku-zelle-schmal.doku-zelle-schmal.doku-zelle-schmal {
+    padding: 8px;
+    border-bottom: 1px solid #333;
+    width: 30%;
+}
+.doku-zwischentitel.doku-zwischentitel.doku-zwischentitel {
+    color: #ffc080;
+}
+
+/* Abstand vor einem Sprungziel — die vier Ueberschriften, auf die das
+ * Inhaltsverzeichnis zeigt (30.08.2026, Befund `doppelcode`: Der Abstand
+ * stand viermal neben der Farbe, und die vier Bloecke waren dadurch
+ * zeichengleich). Die FARBE bleibt bei der Kennung: Sie sagt, um welchen
+ * Teil es geht. */
+.doku-sprungziel.doku-sprungziel.doku-sprungziel { margin-top: 50px; }

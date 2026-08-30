@@ -20,8 +20,8 @@ export class Spurkopf {
         const spur = state.project.tracks[index];
         const el = document.createElement('div');
         el.className = 'track-header'
-            + (index === state.selectedTrackIdx ? ' selected' : '');
-        if (reihe.indent) el.style.paddingLeft = '20px';
+            + (index === state.selectedTrackIdx ? ' selected' : '')
+            + (reihe.indent ? ' spur-eingerueckt' : '');
         const bild = TRACK_ICONS[spur.type] || 'fa-running';
         el.innerHTML = `<i class="fas ${bild}" style="color:${spur.color};`
             + 'margin-right:6px;font-size:0.75rem;width:14px;'

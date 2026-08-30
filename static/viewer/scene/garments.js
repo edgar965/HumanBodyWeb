@@ -6,7 +6,8 @@ import { state, REGION_IDS } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { escapeHtml, _selectedInst, _bindSlider, _sliderVal } from './utils.js';
 import './skeleton.js';
-import { _applyGarmentRegionOffsets, _computeGarmentRegionWeights, _doGarmentFit, _saveSelectedGarmentState, _syncGarmentSliders } from './kleidung_anpassen.js';
+import { _applyGarmentRegionOffsets, _computeGarmentRegionWeights, _doGarmentFit, _saveSelectedGarmentState,
+    _syncGarmentSliders } from './kleidung_anpassen.js';
 import { Assetsbedienung } from './assetsbedienung.js';
 import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
@@ -69,15 +70,15 @@ export function _renderGarmentList() {
                 // ohne Layout-Box sofort. Begruendung in der Klasse.
                 Bildnachlader.vormerken(img, `/api/character/garment/thumb/${g.id}/`);
                 img.className = 'garment-thumb';
-                img.style.cssText = 'width:36px;height:36px;border-radius:3px;object-fit:cover;flex-shrink:0;margin-right:6px;';
+                img.classList.add('kleidungsbild');
                 item.appendChild(img);
             }
             const nameSpan = document.createElement('span');
             nameSpan.className = 'garment-name';
             nameSpan.textContent = g.name || g.id;
-            nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            nameSpan.classList.add('kleidungsname');
             item.appendChild(nameSpan);
-            item.style.cssText += 'display:flex;align-items:center;padding:4px 12px 4px 28px;';
+            item.classList.add('kleidungszeile');
             item.addEventListener('click', () => {
                 list.querySelectorAll('.anim-item.active').forEach(el => el.classList.remove('active'));
                 item.classList.add('active');

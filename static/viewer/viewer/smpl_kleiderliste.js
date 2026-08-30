@@ -5,6 +5,8 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Smplkleidernetz } from './smpl_kleidernetz.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
+import { Kategoriewahl } from '../gemeinsam/kategoriewahl.js';
+import { Kleiderliste } from './kleiderliste.js';
 
 /**
  * Smplkleiderliste — der SMPL-Kleiderkatalog samt Bedienfeld.
@@ -84,15 +86,14 @@ export class Smplkleiderliste {
         Smplkleiderliste.zeichnen();
     }
 
+    /**
+     * Die Kategorieliste füllen — siehe `Kategoriewahl`.
+     *
+     * Räumt seit dem 30.08.2026 vorher auf. Die frühere Fassung hier tat das
+     * nicht: Ein zweiter Aufruf hängte jede Kategorie ein zweites Mal an.
+     */
     static _kategorien(namen) {
-        const wahl = document.getElementById(Smplkleiderliste.KATEGORIEWAHL);
-        if (!wahl || !namen) return;
-        for (const name of namen) {
-            const eintrag = document.createElement('option');
-            eintrag.value = name;
-            eintrag.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-            wahl.appendChild(eintrag);
-        }
+        Kategoriewahl.fuellen(Smplkleiderliste.KATEGORIEWAHL, namen);
     }
 
     // ----------------------------------------------------------------- Aktionen
@@ -151,11 +152,9 @@ export class Smplkleiderliste {
         }
     }
 
+    /** Zugeklappt, weil die SMPL-Liste lang ist — siehe `Kleiderliste.kastenMitZeilen`. */
     _kategorie(name, eintraege) {
-        const {kasten, koerper} = Kategoriekasten.bauen(
-            name, eintraege.length, {gross: true});
-        for (const eintrag of eintraege) koerper.appendChild(this._zeile(eintrag));
-        return kasten;
+        return Kleiderliste.kastenMitZeilen(name, eintraege, (e) => this._zeile(e));
     }
 
     _zeile(eintrag) {

@@ -1,16 +1,9 @@
-{% extends "base.html" %}
+{% extends "animationsseite.html" %}
 {% load static %}
 
 {% block title %}HumanBody · Test Animation{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/animationsseite.css' %}?t={% now 'U' %}">
-<style>
-    /* Kontextmenue: `.hb-kontextmenue` / `.hb-menueeintrag` /
-       `.hb-trennlinie` stehen seit dem 28.08.2026 in `stilhelfer.css` —
-       hier standen sie unter eigenen Namen mit demselben Rumpf. */
+{% block viewer_stile %}
 
     .skeleton-labels {
         position: absolute;
@@ -89,13 +82,9 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-</style>
 {% endblock %}
 
-{% block content %}
-<div class="viewer-container">
-    <div class="canvas-wrap">
-        <canvas id="viewer-canvas"></canvas>
+{% block leinwand %}
         <div id="label-renderer"></div>
         <div class="skeleton-labels">
             <div class="skeleton-label def">AutoRig (DEF)</div>
@@ -106,9 +95,9 @@
             <div class="skeleton-label smpl">SMPL</div>
             <div class="skeleton-label openpose">OpenPose</div>
         </div>
-    </div>
+{% endblock %}
 
-    <div class="viewer-panel">
+{% block seitenleiste %}
         <!-- Visibility toggles -->
         <div class="panel-section">
             <h3>Anzeige <span class="chevron">&#9660;</span></h3>
@@ -119,37 +108,37 @@
                 </div>
                 <div class="toggle-row">
                     <input type="checkbox" id="toggle-def" checked>
-                    <span class="color-dot" style="background:#ff4444;"></span>
+                    <span class="color-dot punkt-def"></span>
                     <label for="toggle-def">AutoRig Skeleton</label>
                 </div>
                 <div class="toggle-row">
                     <input type="checkbox" id="toggle-cmu" checked>
-                    <span class="color-dot" style="background:#44ff44;"></span>
+                    <span class="color-dot punkt-cmu"></span>
                     <label for="toggle-cmu">CMU Skeleton</label>
                 </div>
                 <div class="toggle-row">
                     <input type="checkbox" id="toggle-mixamo" checked>
-                    <span class="color-dot" style="background:#ffaa44;"></span>
+                    <span class="color-dot punkt-mixamo"></span>
                     <label for="toggle-mixamo">Mixamo Skeleton</label>
                 </div>
                 <div class="toggle-row">
                     <input type="checkbox" id="toggle-mocapnet" checked>
-                    <span class="color-dot" style="background:#4488ff;"></span>
+                    <span class="color-dot punkt-mocapnet"></span>
                     <label for="toggle-mocapnet">MocapNET Skeleton</label>
                 </div>
                 <div class="toggle-row">
                     <input type="checkbox" id="toggle-bandai" checked>
-                    <span class="color-dot" style="background:#bb44ff;"></span>
+                    <span class="color-dot punkt-bandai"></span>
                     <label for="toggle-bandai">Bandai Skeleton</label>
                 </div>
                 <div class="toggle-row">
                     <input type="checkbox" id="toggle-smpl" checked>
-                    <span class="color-dot" style="background:#ffff00;"></span>
+                    <span class="color-dot punkt-smpl"></span>
                     <label for="toggle-smpl">SMPL Skeleton</label>
                 </div>
                 <div class="toggle-row">
                     <input type="checkbox" id="toggle-openpose" checked>
-                    <span class="color-dot" style="background:#44dddd;"></span>
+                    <span class="color-dot punkt-openpose"></span>
                     <label for="toggle-openpose">OpenPose Skeleton</label>
                 </div>
             </div>
@@ -171,11 +160,8 @@
             <span id="fps-display">—</span> fps
             &nbsp;|&nbsp; <span id="anim-info">—</span>
         </div>
-    </div>
-</div>
 {% endblock %}
 
-{% block extra_scripts %}
-{% include "_importmap.html" %}
+{% block viewer_skript %}
 <script type="module" src="{% static 'viewer/skeleton_test.js' %}?t={% now "U" %}"></script>
 {% endblock %}

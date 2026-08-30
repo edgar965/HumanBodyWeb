@@ -60,11 +60,23 @@ export class Kleiderliste {
         return nachKategorie;
     }
 
-    _kategorie(name, eintraege) {
+    /**
+     * Ein Kategoriekasten mit den Zeilen darin.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Stand in `smpl_kleiderliste.js` noch
+     * einmal — dort ZUGEKLAPPT (`offen` fehlt). Der Unterschied ist gewollt:
+     * Die SMPL-Liste ist deutlich laenger.
+     */
+    static kastenMitZeilen(name, eintraege, zeilenbauer, offen = false) {
         const {kasten, koerper} = Kategoriekasten.bauen(
-            name, eintraege.length, {offen: true, gross: true});
-        for (const eintrag of eintraege) koerper.appendChild(this._zeile(eintrag));
+            name, eintraege.length, {offen, gross: true});
+        for (const eintrag of eintraege) koerper.appendChild(zeilenbauer(eintrag));
         return kasten;
+    }
+
+    _kategorie(name, eintraege) {
+        return Kleiderliste.kastenMitZeilen(
+            name, eintraege, (e) => this._zeile(e), true);
     }
 
     _zeile(eintrag) {

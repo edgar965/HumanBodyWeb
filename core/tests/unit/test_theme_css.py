@@ -96,7 +96,8 @@ class ThemeCssTest(SimpleTestCase):
         Variable, ist die Deklaration ungueltig: keine Fuellung, kein Rahmen."""
         for thema in self.THEMES:
             block = self._block(thema)
-            self.assertIsNotNone(block, "Theme-Block fuer %r fehlt in theme.css" % thema)
+            self.assertIsNotNone(block,
+                                 "Theme-Block fuer %r fehlt in theme.css" % thema)
             self.assertRegex(
                 block, r"--fg-rgb:\s*\d+\s*,\s*\d+\s*,\s*\d+",
                 "Theme %r definiert --fg-rgb nicht als KOMMA-getrenntes Tripel. "
@@ -123,7 +124,8 @@ class ThemeCssTest(SimpleTestCase):
                 re.escape(zustand), variable)
             self.assertRegex(self.theme, muster,
                              "Ampel-Regel fuer %r auf %s fehlt oder hat kein "
-                             "vorangestelltes `body`." % (zustand or "normal", variable))
+                             "vorangestelltes `body`." % (zustand or "normal",
+                                                          variable))
 
     def test_leiste_hat_absteigende_breakpoints(self):
         """Die Stufen der Auslastungs-Leiste müssen absteigend und vollständig sein.

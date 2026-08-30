@@ -1,0 +1,28 @@
+{% comment %}
+Das Ergebnisvideo mit der Skelett-Überlagerung darüber.
+
+BEFUND `doppelcode` (30.08.2026): Diese sechs Zeilen standen in
+`job_result.html` und `standalone_result.html`. Die eine Seite zeigt sie im
+Raster, die andere in einem verschiebbaren Fenster — der Inhalt ist derselbe.
+
+DIE KENNUNGEN SIND DRAHTFORMAT: `resultVideo` und `skeletonOverlay` greift
+`static/js/ergebnis/*.js` mit `getElementById`, und die Überlagerung wird
+Bild für Bild auf die Videozeit gerechnet. Wer eine der beiden umbenennt,
+bekommt ein Video ohne Skelett — ohne Meldung.
+
+`muted` ist Pflicht, nicht Geschmack: Ein Video mit Ton startet in keinem
+Browser von selbst. `preload="auto"` gehört dazu, weil die Überlagerung die
+Dauer braucht, bevor jemand auf Abspielen drückt.
+
+Verwendung:
+
+  {% verbatim %}{% include "_ergebnisvideo.html" %}{% endverbatim %}
+
+  Erwartet `job` im Kontext.
+{% endcomment %}
+<div class="video-overlay-wrapper">
+    <video id="resultVideo" preload="auto" muted>
+        <source src="{% url 'serve_video' job.id %}" type="video/mp4">
+    </video>
+    <div id="skeletonOverlay" class="skeleton-overlay"></div>
+</div>

@@ -84,7 +84,8 @@ class AtomarSchreiber:
                 try:
                     os.unlink(tmp_name)
                 except OSError:
-                    logger.warning('AtomarSchreiber: Nebendatei blieb liegen: %s', tmp_name)
+                    logger.warning('AtomarSchreiber: Nebendatei blieb liegen: %s',
+                                   tmp_name)
 
     @classmethod
     def _ersetzen(cls, quelle, ziel):

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% comment %}
+Grundgerüst der acht Einstellungsseiten.
+
+BEFUND `doppelcode` (30.08.2026), zwei Stellen: Das ENDE des Formulars —
+drei schließende `div`, `{% templatetag openblock %} include "_einstellungen_speichern.html"
+     {% templatetag closeblock %}`,
+`</form>`, `{% templatetag openblock %} endblock {% templatetag closeblock %}` — stand in `settings_scene`,
+`settings_smpl` und `settings_videobvh_2d` Zeichen für Zeichen gleich. Bei acht
+Seiten mit demselben Aufbau ist das kein Zufall: Jede neue Einstellungsseite
+entstand als Kopie der vorigen.
+
+DIE BLÖCKE:
+
+    einstellungen_stile      `<style>`-Block der Seite (nicht jede hat einen)
+    einstellungen_titel      Text der `<h1>` — nur der Text
+    formular_zusatz          Zusätzliche Attribute am `<form>` (z. B. eine id)
+    einstellungen_karten     Die `settings-card`-Abschnitte
+    einstellungen_speichern  Vorbelegt mit `_einstellungen_speichern.html`;
+                             `settings_theatre` reicht dort Parameter durch
+    einstellungen_nachtrag   Was HINTER dem Formular steht (zweite Formulare,
+                             Hinweise, das `<script type="module">` der Seite)
+
+`{% templatetag openblock %} csrf_token {% templatetag closeblock %}` steht hier ein Mal statt achtmal. Es fehlt
+nicht: Ohne das Zeichen weist Django das Speichern mit 403 ab.
+{% endcomment %}
+{% load static %}
+
+{% block content %}
+{% block einstellungen_stile %}{% endblock %}
+<h1>{% block einstellungen_titel %}{% endblock %}</h1>
+
+<form method="post"{% block formular_zusatz %}{% endblock %}>
+    {% csrf_token %}
+{% block einstellungen_karten %}{% endblock %}
+{% block einstellungen_speichern %}    {% include "_einstellungen_speichern.html" %}{% endblock %}
+</form>
+{% block einstellungen_nachtrag %}{% endblock %}
+{% endblock %}

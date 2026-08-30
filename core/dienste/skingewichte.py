@@ -71,16 +71,27 @@ class Skingewichte:
         weg = {i for i, n in enumerate(alte_namen) if n not in erlaubt}
         if not weg:
             return
-        umnummerierung, neu = {}, 0
-        for alt in range(len(alte_namen)):
-            if alt not in weg:
-                umnummerierung[alt] = neu
-                neu += 1
+        umnummerierung = cls._umnummerierung(len(alte_namen), weg)
         daten['bone_names'] = [n for i, n in enumerate(alte_namen) if i not in weg]
         daten['weights'] = [cls._paare_umnummerieren(paare, umnummerierung, weg)
                             for paare in daten['weights']]
         logger.info('Basisgewichte (%s): %d Nicht-DEF-Knochen entfernt',
                     geschlecht, len(weg))
+
+    @staticmethod
+    def _umnummerierung(anzahl, weg):
+        """{alter Index: neuer Index} nach dem Streichen von `weg`.
+
+        Der Browser bekommt die verbleibenden Knochen LUECKENLOS durchgezaehlt.
+        Ohne die Verschiebung zeigte jeder Index hinter einer gestrichenen
+        Stelle auf den falschen Knochen — und zwar erst in Bewegung sichtbar.
+        """
+        umnummerierung, neu = {}, 0
+        for alt in range(anzahl):
+            if alt not in weg:
+                umnummerierung[alt] = neu
+                neu += 1
+        return umnummerierung
 
     @staticmethod
     def _paare_umnummerieren(paare, umnummerierung, weg):

@@ -1,0 +1,27 @@
+{% comment %}
+Die drei Schalter „Modell / Kleider / Rig" und der Abspielknopf daneben.
+
+BEFUND `doppelcode` (30.08.2026): Standen in `character_viewer.html` und
+`scene_config.html` Zeichen für Zeichen gleich — dieselben vier Kennungen,
+dieselben Titel. Das JavaScript beider Seiten hängt an genau diesen Kennungen
+(`model-toggle`, `clothes-toggle`, `rig-toggle`, `play-demo-anim`); wer sie in
+einer der beiden Vorlagen ändert, macht die andere Seite stumm kaputt.
+
+`refit` = true blendet zusätzlich den Anpassen-Knopf ein. Den hat nur die
+Modellseite: Auf der Szenenseite passt jede Figur ihre Kleidung selbst an.
+{% endcomment %}
+<div class="toggle-btn-group">
+    {% if refit %}
+    <button id="refit-all-btn" class="viewer-btn"
+            title="Garments &amp; Haare an aktuelle Morphs anpassen"><i
+            class="fas fa-sync"></i></button>
+    {% endif %}
+    <button id="model-toggle" class="viewer-btn active" title="Modell ein/ausblenden"><i
+            class="fas fa-user"></i></button>
+    <button id="clothes-toggle" class="viewer-btn active" title="Kleider ein/ausblenden"><i
+            class="fas fa-tshirt"></i></button>
+    <button id="rig-toggle" class="viewer-btn" title="Rig ein/ausblenden"><i
+            class="fas fa-bone"></i></button>
+</div>
+<button id="play-demo-anim" class="viewer-btn" title="Play Animation"><i
+        class="fas fa-play"></i></button>

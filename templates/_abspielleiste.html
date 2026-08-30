@@ -35,14 +35,16 @@ Drahtformat zum JavaScript der jeweiligen Seite — sie bleiben, wie sie sind.
 <div class="controls-row controls-buttons">
     {% if knapp %}
     <button class="ctrl-btn" id="btnFrameBack" title="Previous frame"><i class="fas fa-caret-left"></i> Frame</button>
-    <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause"><i class="fas fa-play" id="playIcon"></i></button>
+    <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause"><i class="fas fa-play"
+         id="playIcon"></i></button>
     <button class="ctrl-btn" id="btnStop" title="Stop (reset)"><i class="fas fa-stop"></i></button>
     <button class="ctrl-btn" id="btnFrameFwd" title="Next frame">Frame <i class="fas fa-caret-right"></i></button>
     {% else %}
     <button class="ctrl-btn" id="btnSkipBack10" title="Back 10s"><i class="fas fa-backward"></i> 10s</button>
     <button class="ctrl-btn" id="btnSkipBack1" title="Back 1s"><i class="fas fa-backward-step"></i> 1s</button>
     <button class="ctrl-btn" id="btnFrameBack" title="Previous frame"><i class="fas fa-caret-left"></i> F</button>
-    <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause"><i class="fas fa-play" id="playIcon"></i></button>
+    <button class="ctrl-btn ctrl-btn-play" id="btnPlayPause" title="Play/Pause"><i class="fas fa-play"
+         id="playIcon"></i></button>
     <button class="ctrl-btn" id="btnStop" title="Stop (reset to start)"><i class="fas fa-stop"></i></button>
     <button class="ctrl-btn" id="btnFrameFwd" title="Next frame">F <i class="fas fa-caret-right"></i></button>
     <button class="ctrl-btn" id="btnSkipFwd1" title="Forward 1s">1s <i class="fas fa-forward-step"></i></button>
@@ -51,7 +53,8 @@ Drahtformat zum JavaScript der jeweiligen Seite — sie bleiben, wie sie sind.
 </div>
 <div class="controls-row controls-timeline">
     <span class="time-display" id="timeCurrent">00:00</span>
-    <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="100" step="{{ schritt|default:'0.01' }}" value="0">
+    <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="100"
+         step="{{ schritt|default:'0.01' }}" value="0">
     <span class="time-display" id="timeDuration">00:00</span>
 </div>
 <div class="controls-row controls-speed">
@@ -60,7 +63,8 @@ Drahtformat zum JavaScript der jeweiligen Seite — sie bleiben, wie sie sind.
     <button class="speed-btn" data-speed="0.5">0.5x</button>
     <button class="speed-btn active" data-speed="1">1x</button>
     <button class="speed-btn" data-speed="2">2x</button>
-    {% if mit_idx %}<button class="speed-btn" id="btnToggleIdx" title="Toggle bone index numbers on 3D skeleton">Idx</button>{% endif %}
+    {% if mit_idx %}<button class="speed-btn" id="btnToggleIdx"
+         title="Toggle bone index numbers on 3D skeleton">Idx</button>{% endif %}
     <span class="rechts-grau">
         <kbd class="marke-dunkel">Space</kbd> Play/Pause
         {% if not ohne_frametaste %}<kbd class="tastenkappe">&larr;&rarr;</kbd> Frame{% endif %}

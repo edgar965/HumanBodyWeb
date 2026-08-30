@@ -6,7 +6,8 @@
     `extra_head`, NICHT `extra_styles`: Diesen Block gibt es in `base.html` nicht,
     und Django verwirft einen unbekannten Block auf oberster Ebene STILL — kein
     Fehler, kein Hinweis. Der ganze Stilblock dieser Seite (62 Regeln) kam
-    deshalb nie im Browser an. Gemessen am 17.08.2026: `.hb-width-60px` stand in
+    deshalb nie im Browser an. Gemessen am 17.08.2026: `.hb-thumb-quelle` (damals
+    `.hb-width-60px`) stand in
     keinem Stylesheet, die 180 Foto- und Silhouetten-Bilder waren 0×0 Pixel gross
     — also unsichtbar —, `.btn-actions` war kein Flex, `.no-thumb` ohne Form und
     `.hb-versteckt` blendete nichts aus. Die Seite lud mit HTTP 200.
@@ -116,22 +117,30 @@
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-max-height-250px.hb-max-height-250px.hb-max-height-250px { max-height:250px; border-radius:6px; }   /* 3x */
 .hb-padding-4px-8px.hb-padding-4px-8px.hb-padding-4px-8px { padding:4px 8px; font-size:0.75rem; }   /* 3x */
-.hb-width-60px.hb-width-60px.hb-width-60px {
-    width:60px;
-    height:60px;
-    object-fit:contain;
-    border-radius:4px;
-    cursor:pointer;
-    display:block;
-}   /* 2x */
 
 /* Umbau 17.08.2026, aus GEMESSENEM Anlass: Diese vier Fassungen standen 174,
    174, 14 und 5 mal inline in der Tabelle — zusammen 20 KB von 520 KB HTML,
    jede Zeile trug sie erneut. Dreifacher Selektor wie oben: Eine einfache
    Klasse (0,0,1,0) verliert gegen `.photo-jobs-table td` (0,0,1,1), und genau
    so sind am 16.08. zwei Regressionen entstanden.
-   Die beiden Bild-Klassen sind NICHT `hb-width-60px`: dort fehlt der dunkle
-   Hintergrund, auf dem freigestellte Texturen erst sichtbar werden. */
+   Die drei Bild-Klassen unterscheiden sich in genau zwei Eigenschaften:
+   `hb-thumb-quelle` (Foto und Silhouette) hat KEINEN dunklen Hintergrund, auf
+   dem freigestellte Texturen erst sichtbar werden, und das 3D-Ergebnis ist
+   breiter. Alles Uebrige stand am 30.08.2026 dreimal wortgleich da (Befund
+   `doppelcode`) und steht jetzt einmal.
+   Die Klasse hiess bis dahin `hb-width-60px` — ein Name, der die Breite nennt
+   und den Zweck verschweigt, und der nach dieser Zusammenfassung auch noch
+   falsch gewesen waere. */
+.hb-thumb-quelle.hb-thumb-quelle.hb-thumb-quelle,
+.hb-thumb-3d.hb-thumb-3d.hb-thumb-3d,
+.hb-thumb-textur.hb-thumb-textur.hb-thumb-textur {
+    height:60px;
+    object-fit:contain;
+    border-radius:4px;
+    cursor:pointer;
+    display:block;
+}
+.hb-thumb-quelle.hb-thumb-quelle.hb-thumb-quelle { width:60px; }   /* 2x */
 .hb-namenszelle.hb-namenszelle.hb-namenszelle {
     max-width:160px;
     overflow:hidden;
@@ -139,24 +148,36 @@
     white-space:nowrap;
 }   /* 174x */
 .hb-nowrap.hb-nowrap.hb-nowrap { white-space:nowrap; }   /* 174x */
-.hb-thumb-3d.hb-thumb-3d.hb-thumb-3d {
-    width:100px;
-    height:60px;
-    object-fit:contain;
-    border-radius:4px;
-    cursor:pointer;
-    display:block;
+.hb-thumb-3d.hb-thumb-3d.hb-thumb-3d { width:100px; background:#1a1a2e; }   /* 14x */
+.hb-thumb-textur.hb-thumb-textur.hb-thumb-textur { width:60px; background:#1a1a2e; }   /* 5x */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#detailBtnReanalyze {
+    color:#000;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.auftragsdialog-gross.auftragsdialog-gross.auftragsdialog-gross {
+    width:90vw;
+    max-width:1400px;
+    max-height:90vh;
+}
+.dialogbild.dialogbild.dialogbild {
+    max-height:250px;
+    border-radius:6px;
     background:#1a1a2e;
-}   /* 14x */
-.hb-thumb-textur.hb-thumb-textur.hb-thumb-textur {
-    width:60px;
-    height:60px;
-    object-fit:contain;
-    border-radius:4px;
-    cursor:pointer;
+}
+.leersymbol.leersymbol.leersymbol {
+    margin-bottom:1rem;
     display:block;
-    background:#1a1a2e;
-}   /* 5x */
+}
+.leerzustand-mitte.leerzustand-mitte.leerzustand-mitte {
+    text-align:center;
+    padding:3rem;
+    color:var(--text-muted);
+}
 </style>
 {% endblock %}
 
@@ -218,7 +239,7 @@
             <td class="cb-cell"><input type="checkbox" class="job-cb" data-job-id="{{ job.id }}"></td>
             <td>
                 <img src="/{{ job.photo_file }}" loading="lazy" alt="photo"
-                     class="hb-width-60px"
+                     class="hb-thumb-quelle"
                      data-detail>
             </td>
             <td>
@@ -233,7 +254,7 @@
             <td>
                 {% if job.silhouette_path %}
                 <img src="/{{ job.silhouette_path }}" loading="lazy" alt="Silhouette"
-                     class="hb-width-60px"
+                     class="hb-thumb-quelle"
                      data-detail>
                 {% else %}
                 <span class="no-thumb"><i class="fas fa-running"></i></span>
@@ -300,8 +321,8 @@
     </tbody>
 </table>
 {% else %}
-<div class="empty-state" style="text-align:center; padding:3rem; color:var(--text-muted);">
-    <i class="fas fa-camera fa-3x" style="margin-bottom:1rem;display:block;"></i>
+<div class="empty-state leerzustand-mitte">
+    <i class="fas fa-camera fa-3x leersymbol"></i>
     <p>Noch keine Photo-Analysen vorhanden.</p>
     <p><a href="{% url 'photo_to_3d' %}">Foto hochladen</a> um zu starten.</p>
 </div>
@@ -309,7 +330,7 @@
 
 <!-- Detail popup -->
 <div id="detailModal" class="job-modal-overlay">
-    <div class="job-modal" style="width:90vw;max-width:1400px;max-height:90vh;">
+    <div class="job-modal auftragsdialog-gross">
         <div class="job-modal-header">
             <h3 id="detailTitle"></h3>
             <button class="btn btn-sm btn-secondary" id="detailClose"><i class="fas fa-times"></i></button>
@@ -329,8 +350,8 @@
                     <span class="img-label">Silhouette / Alignment</span>
                 </div>
                 <div class="img-box" id="detailTextureBox">
-                    <img id="detailTexture" src="" alt="Textur"
-                         style="max-height:250px;border-radius:6px;background:#1a1a2e;">
+                    <img class="dialogbild" id="detailTexture" src="" alt="Textur"
+                        >
                     <span class="img-label">Textur (UV Map)</span>
                 </div>
             </div>
@@ -354,7 +375,7 @@
                 <a id="detailBtnTextur" class="btn btn-sm btn-secondary" href="#">
                     <i class="fas fa-palette"></i> Textur bearbeiten
                 </a>
-                <a id="detailBtnReanalyze" class="btn btn-sm btn-warning" href="#" style="color:#000;">
+                <a id="detailBtnReanalyze" class="btn btn-sm btn-warning" href="#">
                     <i class="fas fa-redo"></i> Neu analysieren
                 </a>
             </div>

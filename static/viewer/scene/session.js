@@ -5,6 +5,7 @@ import { state, SESSION_KEY } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { szenenteile } from './szenenteile.js';
+import { Szenenzustand } from './szenenzustand.js';
 
 // =========================================================================
 // Save session state to sessionStorage
@@ -31,7 +32,8 @@ export async function restoreSessionState() {
         sessionStorage.removeItem(SESSION_KEY);
 
         if (data._defaultPresetSnapshot && data._defaultPresetSnapshot !== state.defaultPresetName) {
-            Protokoll.debug('Scene', 'Default model changed from', data._defaultPresetSnapshot, 'to', state.defaultPresetName, '— discarding session.');
+            Protokoll.debug('Scene', 'Default model changed from', data._defaultPresetSnapshot, 'to',
+                state.defaultPresetName, '— discarding session.');
             return false;
         }
 
@@ -55,14 +57,7 @@ export async function restoreSessionState() {
         // `gemeinsam/szeneneinstellungen.js` (Umbau 28.08.2026, `doppelcode`).
         szenenteile('session').uebernehmen(data);
 
-        fn.syncUIFromState();
-        fn.updateCharacterListUI();
-        fn.updateVertexCount();
-
-        if (state.characters.size > 0 && !state.selectedCharacterId) {
-            fn.selectCharacter(state.characters.keys().next().value);
-        }
-
+        Szenenzustand.oberflaecheAngleichen();
         return true;
     } catch (e) {
         console.error('Failed to restore session state:', e);

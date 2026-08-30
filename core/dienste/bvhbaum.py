@@ -85,37 +85,66 @@ class Bvhbaum:
         return i
 
     def _wort(self, wortliste, stapel, aktuell, endpunkt):
-        """Eine Zeile der Hierarchie auswerten. Gibt (aktuell, endpunkt)."""
+        """Eine Zeile der Hierarchie auswerten. Gibt (aktuell, endpunkt).
+
+        DIE VIER SCHLÜSSELWÖRTER, in der Reihenfolge, in der sie in einer
+        BVH-Datei stehen können. Aufgeteilt am 30.08.2026: Der Rumpf hatte
+        fünfzehn Verzweigungen, und die drei Zustandsgrößen (`stapel`,
+        `aktuell`, `endpunkt`) wurden zwischen ihnen weitergereicht — die
+        unangenehmste Sorte Funktion, weil jede Änderung alle drei betrifft.
+        """
         kopf = wortliste[0]
         if kopf in ('ROOT', 'JOINT'):
-            name = wortliste[1]
-            self.gelenke.append(name)
-            self.eltern[name] = stapel[-1] if stapel else None
-            return name, False
+            return self._gelenk_beginnt(wortliste[1], stapel), False
+        # „End Site" — ein Endpunkt ohne Namen und ohne Kanäle. Er zählt nicht
+        # als Gelenk, braucht auf dem Stapel aber einen Platz (siehe ENDPUNKT).
         if kopf == 'End' and len(wortliste) > 1 and wortliste[1] == 'Site':
             return None, True
         if kopf == '{':
-            if endpunkt:
-                stapel.append(self.ENDPUNKT)
-            elif aktuell:
-                stapel.append(aktuell)
-                aktuell = None
-            return aktuell, endpunkt
+            return self._klammer_auf(stapel, aktuell, endpunkt), endpunkt
         if kopf == '}':
             if stapel:
                 stapel.pop()
             return aktuell, False
-        if endpunkt or not self.gelenke:
-            return aktuell, endpunkt
+        # Alles Weitere gehört zum zuletzt begonnenen GELENK. Im Endpunkt und
+        # vor dem ersten `ROOT` gibt es keines — dort wird nichts eingetragen.
+        if not endpunkt and self.gelenke:
+            self._eigenschaft(kopf, wortliste)
+        return aktuell, endpunkt
+
+    def _gelenk_beginnt(self, name, stapel):
+        """`ROOT`/`JOINT`: Gelenk merken und an seinen Elternknoten hängen."""
+        self.gelenke.append(name)
+        self.eltern[name] = stapel[-1] if stapel else None
+        return name
+
+    def _klammer_auf(self, stapel, aktuell, endpunkt):
+        """`{`: den zuletzt genannten Knoten auf den Stapel legen.
+
+        Für einen Endpunkt kommt der Platzhalter darauf, sonst der Gelenkname —
+        und der wird zurückgesetzt, damit die nächste `{` nicht dasselbe Gelenk
+        ein zweites Mal legt.
+        """
+        if endpunkt:
+            stapel.append(self.ENDPUNKT)
+            return aktuell
+        if aktuell:
+            stapel.append(aktuell)
+            return None
+        return aktuell
+
+    def _eigenschaft(self, kopf, wortliste):
+        """`OFFSET` und `CHANNELS` des zuletzt begonnenen Gelenks."""
+        gelenk = self.gelenke[-1]
         if kopf == 'OFFSET':
-            self.verschiebung[self.gelenke[-1]] = np.array(
+            self.verschiebung[gelenk] = np.array(
                 [float(wortliste[1]), float(wortliste[2]),
                  float(wortliste[3])])
         elif kopf == 'CHANNELS':
+            # Die ANZAHL steht in der Zeile; mehr Namen dahinter wären ein
+            # Fehler der Datei und werden abgeschnitten, nicht gelesen.
             anzahl = int(wortliste[1])
-            liste = wortliste[2:2 + anzahl]
-            self.kanaele[self.gelenke[-1]] = liste
-        return aktuell, endpunkt
+            self.kanaele[gelenk] = wortliste[2:2 + anzahl]
 
     def _bewegung(self, zeilen, stelle):
         """Bewegungswerte je Bild — Leerzeilen übersprungen.

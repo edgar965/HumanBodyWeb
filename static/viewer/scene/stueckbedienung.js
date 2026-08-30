@@ -139,15 +139,28 @@ export class Stueckbedienung {
             ?.addEventListener('click', () => this.alleEntfernen());
     }
 
-    alleEntfernen() {
+    /**
+     * Alle Stuecke DIESES Reiters von der Figur nehmen.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Stand in `mhproxy_bedienung.js` noch
+     * einmal, dort mit fest verdrahtetem `'mh_'`. Die Vorsilbe entscheidet,
+     * WELCHE Stuecke gemeint sind — sie steckt im Schluessel der Netze
+     * (`mh_…`, `gar_…`, `tpl_…`). Ein falscher Vorsilbenvergleich raeumt
+     * entweder nichts weg oder die Stuecke des anderen Reiters mit.
+     */
+    static alleMitVorsilbe(vorsilbe) {
         const figur = _selectedInst();
         if (!figur) return;
         for (const schluessel of Object.keys(figur.clothMeshes)
-                .filter(name => name.startsWith(this.schluessel))) {
+                .filter(name => name.startsWith(vorsilbe))) {
             fn._removeSubMesh({ type: 'cloth', key: schluessel,
                                 meshObj: figur.clothMeshes[schluessel],
                                 charId: figur.id });
         }
+    }
+
+    alleEntfernen() {
+        Stueckbedienung.alleMitVorsilbe(this.schluessel);
     }
 
     /** Katalog laden und die Liste zeichnen. true, wenn etwas da ist. */

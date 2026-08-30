@@ -33,12 +33,12 @@ class Videoauswahl:
             return
         self._gesehen.add(absolut)
         merkmale = pfad.stat()
+        geaendert = datetime.fromtimestamp(merkmale.st_mtime)
         self.dateien.append({
             'path': absolut,
             'name': pfad.name,
             'size': '%.1f MB' % (merkmale.st_size / (1024 * 1024)),
-            'date': datetime.fromtimestamp(merkmale.st_mtime)
-                            .strftime('%d.%m.%Y %H:%M'),
+            'date': geaendert.strftime('%d.%m.%Y %H:%M'),
             'dir': str(pfad.parent),
         })
 

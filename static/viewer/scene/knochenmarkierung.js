@@ -43,8 +43,10 @@ export function _getOrCreateBoneHighlightGeo(bodyMesh, boneName) {
     subGeo.setIndex(newIndices);
     subGeo.computeVertexNormals();
     if (geo.attributes.skinIndex && geo.attributes.skinWeight) {
-        subGeo.setAttribute('skinIndex', new THREE.Float32BufferAttribute(geo.attributes.skinIndex.array.slice(start * 4, end * 4), 4));
-        subGeo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(geo.attributes.skinWeight.array.slice(start * 4, end * 4), 4));
+        subGeo.setAttribute('skinIndex',
+            new THREE.Float32BufferAttribute(geo.attributes.skinIndex.array.slice(start * 4, end * 4), 4));
+        subGeo.setAttribute('skinWeight',
+            new THREE.Float32BufferAttribute(geo.attributes.skinWeight.array.slice(start * 4, end * 4), 4));
     }
     state._boneHighlightCache.set(boneName, subGeo);
     return subGeo;

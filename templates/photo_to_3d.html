@@ -301,13 +301,10 @@
         position: relative;
     }
 
+    /* Die Grundform steht in `viewer_huelle.css`. Hier stehen nur die drei
+       Eigenschaften, die diese Seite braucht: Sie hat bis zu acht Knoepfe in
+       der Leiste, und ohne Umbruch schoeben sie sich ueber die Leinwand. */
     .viewer-buttons {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        z-index: 10;
-        display: flex;
-        gap: 6px;
         flex-wrap: wrap;
         max-width: 320px;
         justify-content: flex-end;
@@ -349,22 +346,13 @@
         border-bottom: 1px solid var(--border);
         flex-shrink: 0;
     }
+    /* Aussehen und Hinterlegung: `stilhelfer.css`. */
     .photo-tab {
         padding: 8px 16px;
         font-size: 0.82rem;
-        color: var(--text-muted);
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
         white-space: nowrap;
-        transition: all 0.15s;
         flex: 1;
         text-align: center;
-    }
-    .photo-tab:hover { color: var(--text); background: var(--bg-card); }
-    .photo-tab.active {
-        color: var(--accent);
-        border-bottom-color: var(--accent);
-        background: var(--bg-card);
     }
     .photo-tab-content { display: none; }
     .photo-tab-content.active { display: block; }
@@ -525,22 +513,13 @@
         border-top: 1px solid var(--border);
         gap: 8px;
     }
+    /* Rahmen, Farbe, Übergang: `stilhelfer.css`. Hier nur die Größe. */
     .wizard-footer button {
         padding: 8px 20px;
         border-radius: 6px;
         font-size: 0.85rem;
-        cursor: pointer;
-        border: 1px solid var(--border);
-        background: var(--bg-card);
-        color: var(--text);
-        transition: all 0.15s;
     }
     .wizard-footer button:hover { border-color: var(--text-muted); }
-    .wizard-footer .btn-primary {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
-    }
     .wizard-footer .btn-primary:hover { background: var(--accent-hover); }
     .wizard-panel::-webkit-resizer {
         background: linear-gradient(135deg, transparent 60%, var(--text-muted) 60%, var(--text-muted) 65%, transparent 65%, transparent 75%, var(--text-muted) 75%, var(--text-muted) 80%, transparent 80%);
@@ -607,6 +586,59 @@
     border-radius:4px;
     border:1px solid var(--border);
 }   /* 2x */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#detection-json {
+    display:none;
+    margin-top:8px;
+    max-height:400px;
+    overflow-y:auto;
+    font-family:monospace;
+    font-size:0.72rem;
+    background:rgba(0,0,0,0.3);
+    padding:8px;
+    border-radius:4px;
+    white-space:pre-wrap;
+    color:#ccc;
+    line-height:1.4;
+}
+#alignment-preview {
+    display:none;
+    margin:0 0 12px;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.ausrichtungshinweis.ausrichtungshinweis.ausrichtungshinweis {
+    font-size:0.72rem;
+    color:var(--text-muted);
+    margin-bottom:6px;
+}
+.ausrichtungsstand.ausrichtungsstand.ausrichtungsstand {
+    font-size:0.66rem;
+    color:var(--text-muted);
+    margin-top:4px;
+    text-align:center;
+}
+.ausrichtungszeile.ausrichtungszeile.ausrichtungszeile {
+    display:flex;
+    gap:6px;
+    align-items:flex-start;
+}
+.fussdehner.fussdehner.fussdehner {
+    flex:1;
+}
+.schritthinweis.schritthinweis.schritthinweis {
+    font-size:0.78rem;
+    margin-top:4px;
+    color:var(--text-muted);
+}
+.texturhinweis.texturhinweis.texturhinweis {
+    font-size:0.72rem;
+    color:var(--text-muted);
+    margin:0 0 12px;
+}
 </style>
 {% endblock %}
 
@@ -621,7 +653,7 @@
         <div class="photo-upload-zone" id="upload-zone">
             <i class="fas fa-cloud-upload-alt"></i>
             <div>Foto hierher ziehen</div>
-            <div style="font-size:0.78rem;margin-top:4px;color:var(--text-muted);">oder klicken zum Auswählen</div>
+            <div class="schritthinweis">oder klicken zum Auswählen</div>
             <input type="file" id="photo-input" accept="image/*">
         </div>
 
@@ -655,7 +687,7 @@
             <div class="detection-results" id="detection-results">
                 <h4>Erkannte Parameter</h4>
                 <div id="detection-params"></div>
-                <div id="detection-json" style="display:none;margin-top:8px;max-height:400px;overflow-y:auto;font-family:monospace;font-size:0.72rem;background:rgba(0,0,0,0.3);padding:8px;border-radius:4px;white-space:pre-wrap;color:#ccc;line-height:1.4;"></div>
+                <div id="detection-json"></div>
             </div>
         </div>
 
@@ -663,11 +695,11 @@
         <div class="photo-tab-content" id="tab-textur">
             <div class="texture-controls">
                 <!-- Alignment Preview -->
-                <div id="alignment-preview" style="display:none;margin:0 0 12px;">
-                    <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px;">
+                <div id="alignment-preview">
+                    <div class="ausrichtungshinweis">
                         <i class="fas fa-crosshairs"></i> Auto-Ausrichtung (Pipeline Kameradaten)
                     </div>
-                    <div style="display:flex;gap:6px;align-items:flex-start;">
+                    <div class="ausrichtungszeile">
                         <div class="hb-flex-1-c">
                             <div class="hb-font-size-0-68rem">Original</div>
                             <img id="preview-original" class="hb-max-width-100" alt="">
@@ -677,7 +709,7 @@
                             <canvas id="preview-projection" class="hb-max-width-100"></canvas>
                         </div>
                     </div>
-                    <div class="alignment-status" style="font-size:0.66rem;color:var(--text-muted);margin-top:4px;text-align:center;"></div>
+                    <div class="alignment-status ausrichtungsstand"></div>
                 </div>
 
                 <button class="btn-texture" id="btn-bake-aligned" data-backend="orthographic" disabled>
@@ -685,13 +717,13 @@
                     <div class="spinner"></div>
                 </button>
 
-                <div style="display:flex;gap:6px;margin:6px 0 12px;">
+                <div class="knopfzeile abstand-6">
                     <button class="btn-texture btn-wizard hb-dehnt" id="btn-start-wizard" disabled>
                         <span><i class="fas fa-sliders-h"></i> Anpassen</span>
                         <div class="spinner"></div>
                     </button>
                 </div>
-                <div style="font-size:0.72rem;color:var(--text-muted);margin:0 0 12px;">
+                <div class="texturhinweis">
                     Automatische Ausrichtung durch Pipeline-Kameradaten. Mit "Anpassen" manuell korrigieren.
                 </div>
 
@@ -711,7 +743,8 @@
                 </button>
 
                 <div class="texture-progress hb-versteckt" id="texture-progress">
-                    <div class="texture-progress-bar"><div class="texture-progress-fill" id="texture-progress-fill"></div></div>
+                    <div class="texture-progress-bar"><div class="texture-progress-fill"
+                         id="texture-progress-fill"></div></div>
                     <div class="texture-status" id="texture-status">Starte...</div>
                 </div>
                 <div class="texture-info hb-versteckt" id="texture-info"></div>
@@ -724,13 +757,18 @@
         <div class="canvas-wrap">
             <canvas id="viewer-canvas"></canvas>
             <div class="viewer-buttons-left">
-                <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i class="fas fa-save"></i> Speichern</button>
+                <button id="save-model-btn" class="viewer-btn" title="Modell speichern"><i
+                     class="fas fa-save"></i> Speichern</button>
             </div>
             <div class="viewer-buttons">
-                <button id="model-toggle" class="viewer-btn active" title="HumanBody Modell"><i class="fas fa-user"></i> HumanBody</button>
-                <button id="rig-toggle" class="viewer-btn" title="HumanBody Rig"><i class="fas fa-bone"></i> Rig</button>
-                <button id="smplx-toggle" class="viewer-btn smplx-btn active" title="SMPL-X Modell"><i class="fas fa-project-diagram"></i> SMPL-X</button>
-                <button id="smplx-rig-toggle" class="viewer-btn smplx-btn" title="SMPL-X Skeleton"><i class="fas fa-drafting-compass"></i> SMPL-X Rig</button>
+                <button id="model-toggle" class="viewer-btn active" title="HumanBody Modell"><i
+                     class="fas fa-user"></i> HumanBody</button>
+                <button id="rig-toggle" class="viewer-btn" title="HumanBody Rig"><i
+                     class="fas fa-bone"></i> Rig</button>
+                <button id="smplx-toggle" class="viewer-btn smplx-btn active" title="SMPL-X Modell"><i
+                     class="fas fa-project-diagram"></i> SMPL-X</button>
+                <button id="smplx-rig-toggle" class="viewer-btn smplx-btn" title="SMPL-X Skeleton"><i
+                     class="fas fa-drafting-compass"></i> SMPL-X Rig</button>
             </div>
         </div>
 
@@ -745,13 +783,15 @@
 
             <!-- HumanBody: Morphs -->
             <div class="panel-section collapsed">
-                <h3>Morphs <button class="btn-reset" id="reset-morphs">Reset</button> <span class="chevron">&#9660;</span></h3>
+                <h3>Morphs <button class="btn-reset" id="reset-morphs">Reset</button> <span
+                     class="chevron">&#9660;</span></h3>
                 <div class="panel-body" id="morphs-panel"></div>
             </div>
 
             <!-- SMPL-X Parameters -->
             <div class="panel-section">
-                <h3 class="smplx-header">SMPL-X Parameter <button class="btn-reset" id="reset-smplx">Reset</button> <span class="chevron">&#9660;</span></h3>
+                <h3 class="smplx-header">SMPL-X Parameter <button class="btn-reset"
+                     id="reset-smplx">Reset</button> <span class="chevron">&#9660;</span></h3>
                 <div class="panel-body" id="smplx-panel"></div>
             </div>
 
@@ -780,7 +820,7 @@
         <div class="wizard-footer">
             <button id="wizard-reset">Reset</button>
             <button id="wizard-edit-points" title="Einzelne Punkte verschieben">Punkte</button>
-            <span style="flex:1"></span>
+            <span class="fussdehner"></span>
             <button id="wizard-bake-body" class="btn-primary">Koerper-Textur</button>
             <button id="wizard-bake-face" class="btn-primary">Gesicht-Textur</button>
             <button id="wizard-back" class="hb-versteckt">Zurueck</button>

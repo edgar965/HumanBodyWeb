@@ -10,6 +10,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 
 export async function loadClothUI() {
     _bindSlider('cloth-tpl-segments', 'cloth-tpl-segments-val', v => v);
@@ -23,14 +24,17 @@ export async function loadClothUI() {
     try {
         state._clothRegionsData = await Serverabruf.json(
             '/api/character/cloth/regions/');
-        const tplSelect = document.getElementById('cloth-tpl-type');
-        if (tplSelect && state._clothRegionsData.templates) { for (const t of state._clothRegionsData.templates) { const opt = document.createElement('option'); opt.value = t.key; opt.textContent = t.label; tplSelect.appendChild(opt); } }
-        const bldSelect = document.getElementById('cloth-bld-region');
-        if (bldSelect && state._clothRegionsData.builder_regions) { for (const r of state._clothRegionsData.builder_regions) { const opt = document.createElement('option'); opt.value = r.key; opt.textContent = r.label; bldSelect.appendChild(opt); } }
+        const bereiche = state._clothRegionsData;
+        Auswahlfeld.ausSchluesseln(
+            document.getElementById('cloth-tpl-type'), bereiche.templates);
+        Auswahlfeld.ausSchluesseln(
+            document.getElementById('cloth-bld-region'), bereiche.builder_regions);
         const primSelect = document.getElementById('cloth-prim-type');
-        if (primSelect && state._clothRegionsData.primitives) {
-            for (const p of state._clothRegionsData.primitives) { const opt = document.createElement('option'); opt.value = p.key; opt.textContent = p.label; primSelect.appendChild(opt); }
-            primSelect.addEventListener('change', () => { const flareRow = document.getElementById('cloth-prim-flare-row'); if (flareRow) flareRow.style.display = primSelect.value === 'PRIM_SKIRT' ? 'flex' : 'none'; });
+        if (primSelect && bereiche.primitives) {
+            Auswahlfeld.ausSchluesseln(primSelect, bereiche.primitives);
+            primSelect.addEventListener('change',
+                () => { const flareRow = document.getElementById('cloth-prim-flare-row');
+                    if (flareRow) flareRow.style.display = primSelect.value === 'PRIM_SKIRT' ? 'flex' : 'none'; });
         }
     } catch (e) { Protokoll.warnung('cloth', 'Cloth UI not available:', e); }
     const tplCreate = document.getElementById('cloth-tpl-create');
@@ -38,13 +42,22 @@ export async function loadClothUI() {
     const tplUpdate = document.getElementById('cloth-tpl-update');
     if (tplUpdate) tplUpdate.addEventListener('click', () => _doClothFromTemplate(true));
     const tplDelete = document.getElementById('cloth-tpl-delete');
-    if (tplDelete) tplDelete.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return; const tpl = document.getElementById('cloth-tpl-type')?.value; if (!tpl) return; const key = `tpl_${tpl}`; if (inst.clothMeshes[key]) fn._removeSubMesh({ type: 'cloth', key, meshObj: inst.clothMeshes[key], charId: inst.id }); });
+    if (tplDelete) tplDelete.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return;
+        const tpl = document.getElementById('cloth-tpl-type')?.value; if (!tpl) return; const key = `tpl_${tpl}`;
+            if (inst.clothMeshes[key]) fn._removeSubMesh({ type: 'cloth', key, meshObj: inst.clothMeshes[key],
+                charId: inst.id }); });
     const removeAll = document.getElementById('cloth-remove-all');
-    if (removeAll) removeAll.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return; Object.keys(inst.clothMeshes).filter(k => k.startsWith('tpl_')).forEach(key => fn._removeSubMesh({ type: 'cloth', key, meshObj: inst.clothMeshes[key], charId: inst.id })); });
+    if (removeAll) removeAll.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return;
+        Object.keys(inst.clothMeshes).filter(k => k.startsWith('tpl_')).forEach(key => fn._removeSubMesh({ type: 'cloth', key, meshObj: inst.clothMeshes[key], charId: inst.id })); });
     const bldCreate = document.getElementById('cloth-bld-create');
-    if (bldCreate) bldCreate.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return; const region = document.getElementById('cloth-bld-region')?.value || 'TOP'; _loadClothForCharacter(inst, `bld_${region}`, { method: 'builder', region, looseness: _sliderVal('cloth-bld-looseness') / 100 }); });
+    if (bldCreate) bldCreate.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return;
+        const region = document.getElementById('cloth-bld-region')?.value || 'TOP'; _loadClothForCharacter(inst,
+            `bld_${region}`, { method: 'builder', region, looseness: _sliderVal('cloth-bld-looseness') / 100 }); });
     const primCreate = document.getElementById('cloth-prim-create');
-    if (primCreate) primCreate.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return; const pt = document.getElementById('cloth-prim-type')?.value || 'PRIM_SKIRT'; _loadClothForCharacter(inst, `prim_${pt}`, { method: 'primitive', prim_type: pt, segments: _sliderVal('cloth-prim-segments'), length: _sliderVal('cloth-prim-length') / 100, flare: _sliderVal('cloth-prim-flare') / 100 }); });
+    if (primCreate) primCreate.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return;
+        const pt = document.getElementById('cloth-prim-type')?.value || 'PRIM_SKIRT'; _loadClothForCharacter(inst,
+            `prim_${pt}`, { method: 'primitive', prim_type: pt, segments: _sliderVal('cloth-prim-segments'),
+                length: _sliderVal('cloth-prim-length') / 100, flare: _sliderVal('cloth-prim-flare') / 100 }); });
 }
 
 function _doClothFromTemplate(isUpdate) {
@@ -52,7 +65,8 @@ function _doClothFromTemplate(isUpdate) {
     const tpl = document.getElementById('cloth-tpl-type')?.value; if (!tpl) return;
     const key = `tpl_${tpl}`;
     if (isUpdate && !inst.clothMeshes[key]) return;
-    _loadClothForCharacter(inst, key, { method: 'template', template: tpl, segments: _sliderVal('cloth-tpl-segments'), tightness: _sliderVal('cloth-tpl-tightness') / 100, top_extend: _sliderVal('cloth-tpl-top-ext') / 100, bottom_extend: _sliderVal('cloth-tpl-bot-ext') / 100 });
+    _loadClothForCharacter(inst, key, { method: 'template', template: tpl, segments: _sliderVal('cloth-tpl-segments'),
+        tightness: _sliderVal('cloth-tpl-tightness') / 100, top_extend: _sliderVal('cloth-tpl-top-ext') / 100, bottom_extend: _sliderVal('cloth-tpl-bot-ext') / 100 });
 }
 
 export async function _loadClothForCharacter(inst, key, clothParams) {
@@ -65,11 +79,15 @@ export async function _loadClothForCharacter(inst, key, clothParams) {
         if (data.error) { Protokoll.warnung('cloth', 'Cloth error:', data.error); return; }
         Netzentsorgung.ausAblage(inst.group, inst.clothMeshes, key);
         const geo = Netzgeometrie.bauen(data, THREE);
-        const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: matColor, roughness: 0.8, metalness: 0.0, side: THREE.DoubleSide }));
+        const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: matColor, roughness: 0.8,
+            metalness: 0.0, side: THREE.DoubleSide }));
         inst.clothMeshes[key] = mesh; inst.group.add(mesh);
         const clothEntry = { ...clothParams, color: colorHex };
         if (!inst.cloth) inst.cloth = [];
-        const idx = inst.cloth.findIndex(c => { const m = c.method || 'template'; let ck; if (m === 'builder') ck = `bld_${c.region || 'TOP'}`; else if (m === 'primitive') ck = `prim_${c.prim_type || 'PRIM_SKIRT'}`; else ck = `tpl_${c.template || 'TPL_TSHIRT'}`; return ck === key; });
+        const idx = inst.cloth.findIndex(c => { const m = c.method || 'template'; let ck; if (m
+            === 'builder') ck = `bld_${c.region || 'TOP'}`; else if (m
+                === 'primitive') ck = `prim_${c.prim_type || 'PRIM_SKIRT'}`;
+                    else ck = `tpl_${c.template || 'TPL_TSHIRT'}`; return ck === key; });
         if (idx >= 0) inst.cloth[idx] = clothEntry; else inst.cloth.push(clothEntry);
         fn.updateEquippedList(inst); fn.updateVertexCount(); markDirty();
     } catch (e) { console.error('Cloth load failed:', e); }

@@ -68,8 +68,10 @@ class SkeletonStrukturTest(SimpleTestCase):
         gebaut = 0
         for name in dir(formats):
             kls = getattr(formats, name)
-            if isinstance(kls, type) and issubclass(kls, Skeleton) and kls is not Skeleton:
+            if isinstance(kls, type) and issubclass(kls,
+                                                    Skeleton) and kls is not Skeleton:
                 with self.subTest(klasse=name):
                     self.assertIsNotNone(kls())
                     gebaut += 1
-        self.assertGreaterEqual(gebaut, 8, 'weniger Formatklassen gefunden als erwartet')
+        self.assertGreaterEqual(gebaut, 8,
+                                'weniger Formatklassen gefunden als erwartet')

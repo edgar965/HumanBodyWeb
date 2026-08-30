@@ -16,6 +16,8 @@ stehen jetzt als `Bundelruf`; die Kunstdateien sind Klassenfelder daneben.
 
 # `json`, `urllib` und `BASE_URL` sind mit dem 28.08.2026 entfallen: Der
 # Upload geht jetzt durch den Kanal, und der kennt beides.
+import re
+
 from .kanal import Kanal
 
 # EINE Adresse für alle Tests. Hier stand eine zweite Kopie mit `localhost` —
@@ -65,6 +67,47 @@ class Bundelruf:
     def abrufen(cls, adresse):
         """Laedt den Inhalt einer Adresse als Bytes."""
         return Kanal.aktueller().rohabruf(adresse, timeout=cls.FRIST_ABRUF_S)
+
+
+class Mtlbezug:
+    """Die `map_Kd`-Zeile einer MTL lesen — wie der Parser der Anwendung.
+
+    BEFUND (30.08.2026): Dieselbe Auswertung stand in DREI Tests
+    (`bundle_mtl_tests` zweimal, `bundle_upload_tests` einmal), jedes Mal als
+    dieselbe Kette aus regulaerem Ausdruck, Optionsfilter und
+    Pfad-Normalisierung. Zwei der drei Faelle lagen deshalb bei Rang C —
+    elf und vierzehn Verzweigungen in einer Testmethode.
+
+    Nachgebaut ist die Logik aus `scene_extras.js`. Wer sie hier anders
+    schreibt als dort, prueft etwas, das die Anwendung nie tut.
+    """
+
+    #: `map_Kd` steht am Zeilenanfang; der Rest der Zeile ist die Angabe.
+    ZEILE = re.compile(r'^\s*map_Kd\s+(.+?)\s*$',
+                       re.IGNORECASE | re.MULTILINE)
+
+    @classmethod
+    def aus_text(cls, mtl_text):
+        """(rohe Angabe, Wortteile ohne Optionen) — oder (`''`, [])."""
+        treffer = cls.ZEILE.search(mtl_text)
+        if not treffer:
+            return '', []
+        angabe = treffer.group(1).strip()
+        # Optionen wie `-s 1 1` oder `-o 0 0 0` stehen VOR dem Dateinamen.
+        return angabe, [w for w in angabe.split()
+                        if w and not w.startswith('-')]
+
+    @classmethod
+    def aus_adresse(cls, adresse):
+        """Dieselbe Auswertung, aber die MTL wird erst geladen."""
+        _status, roh = Bundelruf.abrufen(adresse)
+        return cls.aus_text(roh.decode('utf-8', errors='ignore'))
+
+    @staticmethod
+    def dateiname(rohangabe, wortteile):
+        """Der reine Dateiname: Backslashes, `./` und Unterpfade weg."""
+        angabe = wortteile[-1] if wortteile else rohangabe
+        return angabe.replace('\\', '/').lstrip('./').split('/')[-1]
 
 
 # Synthetische Test-Dateien — minimal, aber syntaktisch gültig. Sie bleiben

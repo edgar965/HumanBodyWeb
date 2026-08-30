@@ -44,12 +44,14 @@ class BvhbibliothekTest(TestCase):
         self.assertEqual(Bvhbibliothek(suche='JUMP').seiteninhalt().paginator.count, 5)
 
     def test_quellfilter_zeigt_nur_dateien_dieser_quelle(self):
-        self.assertEqual(Bvhbibliothek(quelle='gvhmr').seiteninhalt().paginator.count, 5)
+        self.assertEqual(Bvhbibliothek(quelle='gvhmr').seiteninhalt().paginator.count,
+                         5)
 
     def test_suche_und_quelle_wirken_zusammen(self):
         # 'walk' gibt es nur mit Quelle cmu — die Kombination muss leer bleiben.
         self.assertEqual(
-            Bvhbibliothek(suche='walk', quelle='gvhmr').seiteninhalt().paginator.count, 0)
+            Bvhbibliothek(suche='walk', quelle='gvhmr').seiteninhalt().paginator.count,
+            0)
 
     def test_quellen_sind_eindeutig(self):
         """Der distinct()-Fehlgriff: vorher kam eine Zeile je DATEI zurueck."""

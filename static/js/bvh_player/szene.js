@@ -40,8 +40,7 @@ export class Spielerszene {
     _beschriftungBauen() {
         this.behaelter.style.position = 'relative';
         this.beschriftung = document.createElement('canvas');
-        this.beschriftung.style.cssText = 'position:absolute;top:0;left:0;'
-            + 'width:100%;height:100%;pointer-events:none;z-index:10';
+        this.beschriftung.className = 'spieler-beschriftung';
         this.behaelter.appendChild(this.beschriftung);
         this.stift = this.beschriftung.getContext('2d');
     }
@@ -121,7 +120,7 @@ export class Spielerszene {
     }
 
     fehler(text) {
-        this.behaelter.innerHTML = '<div style="color:#e94560;padding:2rem;'
-            + `text-align:center;">${text}</div>`;
+        this.behaelter.innerHTML =
+            `<div class="spieler-fehler">${text}</div>`;
     }
 }

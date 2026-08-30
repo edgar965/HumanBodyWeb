@@ -120,7 +120,8 @@ export class Ergebnisfigur {
         try {
             const antwort = await fetch(
                 `/api/character/model/${encodeURIComponent(name)}/`);
-            if (!antwort.ok) { Protokoll.warnung('ergebnisfigur', `Modell "${name}" nicht abrufbar (HTTP ${antwort.status})`); return; }
+            if (!antwort.ok) { Protokoll.warnung('ergebnisfigur',
+                `Modell "${name}" nicht abrufbar (HTTP ${antwort.status})`); return; }
             const daten = await antwort.json();
             state.presetData = daten;
             if (daten.body_type) state.currentBodyType = daten.body_type;

@@ -59,3 +59,57 @@
     background: var(--bg-primary);
     flex-shrink: 0;
 }
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.hilfe-abschnittstitel.hilfe-abschnittstitel.hilfe-abschnittstitel {
+    color:var(--accent);
+    margin:0 0 8px;
+}
+.hilfe-aufklapper.hilfe-aufklapper.hilfe-aufklapper {
+    position:relative;
+}
+.hilfe-symbolzelle.hilfe-symbolzelle.hilfe-symbolzelle {
+    padding:5px 0;
+    width:40px;
+    text-align:center;
+}
+.hilfeknopf.hilfeknopf.hilfeknopf {
+    padding:4px 8px;
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:4px;
+    color:var(--text-muted);
+    cursor:pointer;
+    font-size:0.75rem;
+}
+.hilfemenue.hilfemenue.hilfemenue {
+    position:absolute;
+    bottom:100%;
+    right:0;
+    left:auto;
+    top:auto;
+    min-width:160px;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.punkt-bandai.punkt-bandai.punkt-bandai {
+    background:#bb44ff;
+}
+.punkt-cmu.punkt-cmu.punkt-cmu {
+    background:#44ff44;
+}
+.punkt-def.punkt-def.punkt-def {
+    background:#ff4444;
+}
+.punkt-mixamo.punkt-mixamo.punkt-mixamo {
+    background:#ffaa44;
+}
+.punkt-mocapnet.punkt-mocapnet.punkt-mocapnet {
+    background:#4488ff;
+}
+.punkt-openpose.punkt-openpose.punkt-openpose {
+    background:#44dddd;
+}
+.punkt-smpl.punkt-smpl.punkt-smpl {
+    background:#ffff00;
+}

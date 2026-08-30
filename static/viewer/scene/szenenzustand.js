@@ -86,7 +86,7 @@ export class Szenenzustand {
         state.currentSceneName = szenenname || daten.name || '';
         await Szenenzustand._figuren(daten.characters);
         Szenenzustand._uebernehmen(daten);
-        Szenenzustand._oberflaeche();
+        Szenenzustand.oberflaecheAngleichen();
     }
 
     static async _figuren(figuren) {
@@ -118,7 +118,19 @@ export class Szenenzustand {
         szenenteile('Szenenzustand').uebernehmen(daten);
     }
 
-    static _oberflaeche() {
+    /**
+     * Die Oberflaeche an den frisch geladenen Zustand angleichen.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Dieselben vier Aufrufe standen in
+     * `session.js`, nachdem dort eine gespeicherte Sitzung eingelesen wurde.
+     * Die Reihenfolge zaehlt: Erst die Regler, dann die Figurenliste, dann die
+     * Punktzahl — und ERST DANN eine Figur waehlen, weil das Waehlen die
+     * Regler auf sie umstellt.
+     *
+     * Ohne `selectCharacter` steht die Szene mit Figuren da, aber ohne
+     * ausgewaehlte: Jeder Regler geht dann ins Leere, ohne Meldung.
+     */
+    static oberflaecheAngleichen() {
         fn.syncUIFromState();
         fn.updateCharacterListUI();
         fn.updateVertexCount();

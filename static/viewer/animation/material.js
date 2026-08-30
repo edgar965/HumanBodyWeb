@@ -36,18 +36,7 @@ export function applySceneSettings(keyLight, fillLight, backLight, ambient) {
 }
 
 export function applySceneSkinSettings() {
-    const saved = localStorage.getItem('humanbody_scene_settings');
-    const mat = getSkinMat();
-    if (!saved || !mat) return;
-    try {
-        const s = JSON.parse(saved);
-        if (s.skin) {
-            // NOTE: skin COLOR is NOT applied from Seitenzustand.scene settings —
-            // it comes from SKIN_COLORS per ethnicity (body type).
-            if (s.skin.roughness !== undefined) mat.roughness = s.skin.roughness;
-            if (s.skin.metalness !== undefined) mat.metalness = s.skin.metalness;
-        }
-    } catch (e) { Protokoll.debug('material', 'Hauteinstellungen nicht anwendbar', e); }
+    Szeneneinstellungen.hautWerte(getSkinMat());
 }
 
 // =========================================================================

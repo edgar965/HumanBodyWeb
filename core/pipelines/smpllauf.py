@@ -34,15 +34,15 @@ from .logbeobachter import Logbeobachter
 from .videolaenge import Videolaenge
 from .videovorbereitung import Videovorbereitung
 from ..dienste.laufende_prozesse import LaufendeProzesse
-from ..models import AppSettings
 from ..pipeline_process import PipelineProzess
+from .laufbasis import Pipelinelauf
 
-MAX_ERROR_CHARS = 2000  # max stderr chars to include in error messages
 logger = logging.getLogger('core')
 
 
-class Smpllauf:
-    """Ein 3D-Lauf über `lift_3d.py` — Logdatei statt Pipe, damit er Neustarts übersteht."""
+class Smpllauf(Pipelinelauf):
+    """Ein 3D-Lauf über `lift_3d.py` — Logdatei statt Pipe, damit er Neustarts
+    übersteht."""
 
     #: Kleiner heisst: die BVH ist ein Rumpf ohne Bewegung.
     MINDESTGROESSE = 100
@@ -50,22 +50,19 @@ class Smpllauf:
     ENDE_S = 60
 
     def __init__(self, job, video_path, output_dir):
-        self.job = job
-        self.ordner = output_dir
+        super().__init__(job, video_path, output_dir)
         # GVHMR/WHAM nutzen PyAV — das kann kein WebM.
         self.video = Videovorbereitung.als_mp4(video_path, output_dir)
         self.bilder = Videolaenge.bilder(self.video)
-        stamm = job.name.rsplit('.', 1)[0]
-        self.bvh = str(output_dir / ('%s_%s.bvh' % (job.pipeline, stamm)))
+        self.bvh = str(output_dir / ('%s_%s.bvh' % (job.pipeline, self.stamm)))
         self.logdatei = output_dir / 'pipeline.log'
         self.pid_datei = output_dir / 'pipeline.pid'
 
     # ------------------------------------------------------------------ Ablauf
 
     def fahren(self):
-        einstellungen = AppSettings.load()
         self._anfangsmeldung()
-        befehl = Smplbefehl(self.job, einstellungen).bauen(
+        befehl = Smplbefehl(self.job, self.einstellungen).bauen(
             settings.WRAPPERS_DIR / 'lift_3d.py', self.video, self.bvh)
         prozess, protokoll = self._starten(befehl)
         try:
@@ -136,15 +133,14 @@ class Smpllauf:
         if (os.path.exists(self.bvh)
                 and os.path.getsize(self.bvh) > self.MINDESTGROESSE):
             return self.bvh
-        gefunden = glob.glob(str(self.ordner / '*.bvh'))
+        gefunden = glob.glob(str(self.output_dir / '*.bvh'))
         return gefunden[0] if gefunden else None
 
     def _logauszug(self):
         try:
-            return self.logdatei.read_text(encoding='utf-8',
-                                           errors='replace')[-MAX_ERROR_CHARS:]
+            return self.fehlerausschnitt(self.logdatei.read_text(
+                encoding='utf-8', errors='replace'))
         except OSError:
             logger.debug('Pipeline-Log %s nicht lesbar', self.logdatei,
                          exc_info=True)
             return ''
-

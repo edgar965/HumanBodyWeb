@@ -16,7 +16,8 @@ einem Undo wäre die erste Spur abgewählt — ohne dass etwas schiefzugehen
 scheint. Beim Abspielkopf ist `||` dagegen richtig: Bild 0 und „kein Wert"
 sollen beide 0 ergeben.
 
-Ohne `node` im Pfad wird übersprungen, nicht rot.
+FEHLT `node`, ist das ein FEHLER — node ist Werkzeug dieses Projekts,
+kein Zufall der Umgebung (siehe `Jsmodul.laufen`).
 """
 from django.test import SimpleTestCase
 
@@ -71,7 +72,6 @@ console.log(JSON.stringify({
 """
 
 
-@Jsmodul.ohne_node()
 class StudiostandTest(SimpleTestCase):
 
     @classmethod

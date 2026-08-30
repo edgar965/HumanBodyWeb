@@ -24,16 +24,15 @@ import time
 from django.conf import settings
 
 from .erkennungsfortschritt import Erkennungsfortschritt
+from .laufbasis import Pipelinelauf
 from .videolaenge import Videolaenge
 from ..dienste.laufende_prozesse import LaufendeProzesse
-from ..models import AppSettings
 from ..pipeline_process import PipelineProzess
 
-MAX_ERROR_CHARS = 2000  # max stderr chars to include in error messages
 logger = logging.getLogger('core')
 
 
-class V4Lauf:
+class V4Lauf(Pipelinelauf):
     """Ein MocapNET-v4-Lauf: Video hinein, BVH heraus, Fortschritt am Auftrag."""
 
     #: Der erste Lauf laedt Modellgewichte, dabei kommt minutenlang keine
@@ -47,13 +46,8 @@ class V4Lauf:
     ANTEIL = 98
 
     def __init__(self, job, video_path, output_dir):
-        self.job = job
-        self.video_path = video_path
-        self.output_dir = output_dir
-        self.params = job.pipeline_params or {}
-        self.einstellungen = AppSettings.load()
-        stamm = job.name.rsplit('.', 1)[0]
-        self.bvh = str(output_dir / ('v4_%s.bvh' % stamm))
+        super().__init__(job, video_path, output_dir)
+        self.bvh = str(output_dir / ('v4_%s.bvh' % self.stamm))
         #: Marke fuer den geordneten Abbruch (der Wrapper prueft die Datei).
         self.stoppmarke = str(output_dir / 'STOP_FLAG')
 
@@ -159,7 +153,7 @@ class V4Lauf:
                 return self.bvh
             fehler = ''.join(prozess.stderr_zeilen).strip()
             raise RuntimeError('MocapNET v4 failed (exit code %s):\n%s'
-                               % (code, fehler[-MAX_ERROR_CHARS:]))
+                               % (code, self.fehlerausschnitt(fehler)))
         if not os.path.exists(self.bvh):
             raise RuntimeError('BVH file not found at %s' % self.bvh)
         return self.bvh
@@ -167,4 +161,3 @@ class V4Lauf:
     def _brauchbar(self):
         return (os.path.exists(self.bvh)
                 and os.path.getsize(self.bvh) > self.MINDESTGROESSE)
-

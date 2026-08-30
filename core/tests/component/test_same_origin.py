@@ -47,7 +47,8 @@ class GleicherUrsprungTest(TestCase):
         """Das Feld setzt der Browser selbst; eine Schadseite kann es nicht fälschen."""
         for wert in ('cross-site', 'same-site'):
             with self.subTest(wert=wert):
-                a = self.client.post(self.ZIEL, data=self.RUMPF, content_type='text/plain',
+                a = self.client.post(self.ZIEL, data=self.RUMPF,
+                                     content_type='text/plain',
                                      headers={'sec-fetch-site': wert})
                 self.assertEqual(a.status_code, 403)
 
@@ -61,8 +62,10 @@ class GleicherUrsprungTest(TestCase):
     def test_eigene_oberflaeche_kommt_durch(self):
         """Antwort 400 heisst: Die Ansicht lief und mochte die Daten nicht —
         die Prüfung hat sie also durchgelassen."""
-        a = self.client.post(self.ZIEL, data=self.RUMPF, content_type='application/json',
-                             headers={'origin': self.EIGEN, 'sec-fetch-site': 'same-origin'})
+        a = self.client.post(self.ZIEL, data=self.RUMPF,
+                             content_type='application/json',
+                             headers={'origin': self.EIGEN,
+                                      'sec-fetch-site': 'same-origin'})
         self.assertEqual(a.status_code, 400)
 
     def test_ohne_browserfelder_kommt_durch(self):
@@ -70,7 +73,8 @@ class GleicherUrsprungTest(TestCase):
 
         Das ist Absicht — wer ohne Browser anfragt, sitzt schon am Rechner. Der
         Angriff braucht gerade den Browser, und der schickt die Felder immer."""
-        a = self.client.post(self.ZIEL, data=self.RUMPF, content_type='application/json')
+        a = self.client.post(self.ZIEL, data=self.RUMPF,
+                             content_type='application/json')
         self.assertEqual(a.status_code, 400)
 
     def test_lesende_anfragen_werden_nicht_geprueft(self):

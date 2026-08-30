@@ -19,12 +19,14 @@ export function _veUpdatePosInputs() {
     if (!Vertexzustand.veTargetMesh || Vertexzustand.veSelectedIndices.size === 0) return;
     const posAttr = Vertexzustand.veTargetMesh.geometry.getAttribute('position');
     let cx = 0, cy = 0, cz = 0;
-    for (const idx of Vertexzustand.veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx); cz += posAttr.getZ(idx); }
+    for (const idx of Vertexzustand.veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx);
+        cz += posAttr.getZ(idx); }
     const n = Vertexzustand.veSelectedIndices.size;
     const px = document.getElementById('ve-pos-x');
     const py = document.getElementById('ve-pos-y');
     const pz = document.getElementById('ve-pos-z');
-    if (px) px.value = (cx / n).toFixed(4); if (py) py.value = (cy / n).toFixed(4); if (pz) pz.value = (cz / n).toFixed(4);
+    if (px) px.value = (cx / n).toFixed(4); if (py) py.value = (cy / n).toFixed(4);
+        if (pz) pz.value = (cz / n).toFixed(4);
 }
 
 export function _veMoveSelectedByDelta(dx, dy, dz) {
@@ -41,7 +43,8 @@ export function _veMoveSelectedByDelta(dx, dy, dz) {
 }
 
 export function _veApplyGizmoDelta() {
-    if (!Vertexzustand.veGizmoHelper || !Vertexzustand.veTargetMesh || Vertexzustand.veSelectedIndices.size === 0) return;
+    if (!Vertexzustand.veGizmoHelper || !Vertexzustand.veTargetMesh || Vertexzustand.veSelectedIndices.size
+        === 0) return;
     const newPos = Vertexzustand.veGizmoHelper.position.clone();
     const worldDelta = newPos.clone().sub(Vertexzustand.veGizmoLastPos);
     Vertexzustand.veGizmoLastPos.copy(newPos);
@@ -60,7 +63,8 @@ export function _veUpdateGizmo() {
     }
     const posAttr = Vertexzustand.veTargetMesh.geometry.getAttribute('position');
     let cx = 0, cy = 0, cz = 0;
-    for (const idx of Vertexzustand.veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx); cz += posAttr.getZ(idx); }
+    for (const idx of Vertexzustand.veSelectedIndices) { cx += posAttr.getX(idx); cy += posAttr.getY(idx);
+        cz += posAttr.getZ(idx); }
     const n = Vertexzustand.veSelectedIndices.size;
     const localCentroid = new THREE.Vector3(cx / n, cy / n, cz / n);
     const worldCentroid = localCentroid.applyMatrix4(Vertexzustand.veTargetMesh.matrixWorld);
@@ -155,7 +159,9 @@ export function _veReset() {
     const overlayPos = Vertexzustand.vePointsOverlay.geometry.getAttribute('position');
     const indices = Vertexzustand.veSelectedIndices.size > 0 ? Vertexzustand.veSelectedIndices : null;
     if (indices) {
-        for (const idx of indices) { const x = Vertexzustand.veOrigPositions[idx*3]; const y = Vertexzustand.veOrigPositions[idx*3+1]; const z = Vertexzustand.veOrigPositions[idx*3+2]; meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
+        for (const idx of indices) { const x = Vertexzustand.veOrigPositions[idx*3];
+            const y = Vertexzustand.veOrigPositions[idx*3+1]; const z = Vertexzustand.veOrigPositions[idx*3+2];
+                meshPos.setXYZ(idx, x, y, z); overlayPos.setXYZ(idx, x, y, z); }
     } else { meshPos.array.set(Vertexzustand.veOrigPositions); overlayPos.array.set(Vertexzustand.veOrigPositions); }
     meshPos.needsUpdate = true; overlayPos.needsUpdate = true;
     Vertexzustand.veTargetMesh.geometry.computeVertexNormals();

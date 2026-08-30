@@ -6,6 +6,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { ensureSkinned } from './skinning.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Werkstofffreigabe } from '../gemeinsam/werkstofffreigabe.js';
 import { applyHairColor, findHeadBoneIndex, skinifyHairGroup }
@@ -20,22 +21,9 @@ export async function loadHairUI() {
 
         state.hairColorData = data.colors || {};
 
-        (data.hairstyles || []).forEach(h => {
-            const opt = document.createElement('option');
-            opt.value = h.url;
-            opt.textContent = h.label;
-            opt.dataset.name = h.name;
-            select.appendChild(opt);
-        });
-
-        if (colorSelect) {
-            Object.keys(state.hairColorData).forEach(name => {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
-                colorSelect.appendChild(opt);
-            });
-        }
+        Auswahlfeld.fuellen(select, (data.hairstyles || []).map(
+            (h) => ({ wert: h.url, text: h.label, daten: { name: h.name } })));
+        Auswahlfeld.ausNamen(colorSelect, Object.keys(state.hairColorData));
 
         select.addEventListener('change', () => {
             if (!select.value) { removeHair(); return; }
@@ -57,26 +45,44 @@ export function loadHair(url) {
     ensureSkinned();
 
     state.gltfLoader.load(url, (gltf) => {
-        let hairGroup = gltf.scene;
-
-        if (state.isSkinned && state.rigifySkeleton && state.skinWeightData) {
-            const headBoneIdx = _findHeadBoneIndex();
-            if (headBoneIdx >= 0) {
-                hairGroup = _skinifyHairGroup(hairGroup, headBoneIdx);
-            }
-        }
-
-        state.hairMesh = hairGroup;
         const colorSelect = document.getElementById('hair-color-select');
-        if (colorSelect && colorSelect.value) {
-            applyHairColorToObject(state.hairMesh, colorSelect.value);
-        }
-        state.scene.add(state.hairMesh);
-        Protokoll.debug('Viewer', 'Hair loaded:', url, 'skinned=' + (state.isSkinned && state.rigifySkeleton ? 'yes' : 'no'));
-        fn.updateEquippedList();
+        _einsetzen(gltf.scene, {farbe: colorSelect && colorSelect.value});
+        Protokoll.debug('Viewer', 'Hair loaded:', url, 'skinned=' + (state.isSkinned && state.rigifySkeleton ? 'yes'
+            : 'no'));
     }, undefined, (err) => {
         console.error('Failed to load hair:', err);
     });
+}
+
+/**
+ * Ein geladenes Haar-Modell an die Figur haengen.
+ *
+ * BEFUND `doppelcode` (30.08.2026): Diese sieben Zeilen standen in `loadHair`
+ * und in `refitHairToBody` — beide laden dieselbe Datei, nur einmal frisch und
+ * einmal umskaliert nach einer Koerpergroessen-Aenderung.
+ *
+ * DIE REIHENFOLGE ZAEHLT: Erst skalieren, DANN binden. Andersherum bekaeme das
+ * `SkinnedMesh` seine Bindematrix auf der alten Groesse, und das Haar sitzt bei
+ * jeder Kopfdrehung daneben — sichtbar erst in Bewegung, nicht in der Ruhelage.
+ *
+ * OHNE HAUTDATEN bleibt es eine gewoehnliche Gruppe. Sie haengt dann an der
+ * Szene statt am Kopf und bleibt stehen, wenn die Figur laeuft. Das ist kein
+ * Fehler dieser Stelle: Die Figur ist dann noch nicht gebunden.
+ */
+function _einsetzen(gruppe, {farbe, skalierung} = {}) {
+    if (skalierung) {
+        gruppe.traverse(kind => {
+            if (kind.isMesh) kind.geometry.scale(skalierung, skalierung, skalierung);
+        });
+    }
+    if (state.isSkinned && state.rigifySkeleton && state.skinWeightData) {
+        const kopf = _findHeadBoneIndex();
+        if (kopf >= 0) gruppe = _skinifyHairGroup(gruppe, kopf);
+    }
+    state.hairMesh = gruppe;
+    if (farbe) applyHairColorToObject(state.hairMesh, farbe);
+    state.scene.add(state.hairMesh);
+    fn.updateEquippedList();
 }
 
 /** Kopfknochen dieser Seite — die Suche steht in `character_core`
@@ -120,26 +126,9 @@ export function refitHairToBody() {
     removeHair();
 
     state.gltfLoader.load(hairUrl, (gltf) => {
-        let hairGroup = gltf.scene;
-
-        hairGroup.traverse(child => {
-            if (child.isMesh) {
-                child.geometry.scale(scale, scale, scale);
-            }
-        });
-
-        if (state.isSkinned && state.rigifySkeleton && state.skinWeightData) {
-            const headBoneIdx = _findHeadBoneIndex();
-            if (headBoneIdx >= 0) {
-                hairGroup = _skinifyHairGroup(hairGroup, headBoneIdx);
-            }
-        }
-
-        state.hairMesh = hairGroup;
-        if (colorName) applyHairColorToObject(state.hairMesh, colorName);
-        state.scene.add(state.hairMesh);
-        fn.updateEquippedList();
-        Protokoll.debug('Hair refit', `scale=${scale.toFixed(4)} (initial=${state.initialBodyTop.toFixed(4)}, current=${currentTop.toFixed(4)})`);
+        _einsetzen(gltf.scene, {farbe: colorName, skalierung: scale});
+        Protokoll.debug('Hair refit',
+            `scale=${scale.toFixed(4)} (initial=${state.initialBodyTop.toFixed(4)}, current=${currentTop.toFixed(4)})`);
     }, undefined, (err) => {
         console.error('[Hair refit] failed to reload:', err);
     });

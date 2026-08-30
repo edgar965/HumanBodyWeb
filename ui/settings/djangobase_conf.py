@@ -111,7 +111,15 @@ DJANGOBASE = {
         ('core', 'Character / API', 'core.log', None),
         ('pipeline', 'Video-to-BVH', 'pipeline.log', None),
         ('client', 'Client (JS)', 'client.log', None),
-        ('errors', 'Fehler (aggregiert)', 'errors.log', None),
+        # 'error.log', NICHT 'errors.log' (Befund 30.08.2026). Seit der
+        # Umstellung auf dblog.config am 28.08.2026 schreibt der Handler
+        # 'error_file' nach error.log; hier stand weiter der alte Name.
+        # Gemessen: Die Quelle zeigte 3.268 Bloecke aus einem
+        # 19-Minuten-Fenster vom 27.08. und nichts danach, waehrend die
+        # 317 Eintraege des laufenden Tages in KEINER Quelle standen.
+        # Eine Fehlerseite, die alte Fehler zeigt, ist schlimmer als eine
+        # leere - sie sieht gefuellt aus.
+        ('errors', 'Fehler (aggregiert)', 'error.log', None),
     ],
     'version_pakete': ['django', 'channels', 'daphne', 'numpy', 'scipy', 'trimesh'],
     'repos': [
@@ -158,4 +166,3 @@ DJANGOBASE = {
     'einstellungen_extra': EINSTELLUNGEN_EXTRA,
     'zugriff': 'none',   # HumanBodyWeb hat (noch) keine Auth -> Hilfe offen
 }
-

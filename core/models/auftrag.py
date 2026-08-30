@@ -55,9 +55,11 @@ class BVHJob(models.Model):
     bvh_file = models.CharField(max_length=512, blank=True)
     bvh_file_face = models.CharField(max_length=512, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    pipeline = models.CharField(max_length=30, choices=PIPELINE_CHOICES, default='hybrid_gvhmr')
+    pipeline = models.CharField(max_length=30, choices=PIPELINE_CHOICES,
+                                default='hybrid_gvhmr')
     progress = models.IntegerField(default=0)  # 0-100
-    progress_detail = models.CharField(max_length=100, blank=True)  # e.g. "150 / 20000 frames"
+    progress_detail = models.CharField(max_length=100,
+                                       blank=True)  # e.g. "150 / 20000 frames"
     error_message = models.TextField(blank=True)
     pipeline_params = models.JSONField(
         default=dict, blank=True,

@@ -4,7 +4,8 @@ import { _selectedGarmentMesh } from './garments.js';
 import { _skinifyMesh, convertInstToSkinned } from './skeleton.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
-import { state, REGION_DEFS, REGION_IDS, REGION_RADIUS } from './state.js';
+import { state, REGION_DEFS } from './state.js';
+import { Bereichsgewichte } from '../gemeinsam/bereichsgewichte.js';
 import { Kleidungszustand } from './kleidungszustand.js';
 import { Kleideranpassung } from './kleideranpassung.js';
 /**
@@ -14,30 +15,11 @@ import { Kleideranpassung } from './kleideranpassung.js';
  */
 
 
-/** Compute per-vertex cosine-blended region weights for a garment. */
+/** Die Kosinus-Gewichte der fuenf Baender — Rechnung siehe `Bereichsgewichte`. */
 export function _computeGarmentRegionWeights(inst, key) {
-    const orig = inst.garmentOrigPositions[key];
-    if (!orig) return;
-    const n = orig.length / 3;
-    let yMin = Infinity, yMax = -Infinity;
-    for (let i = 0; i < n; i++) {
-        const y = orig[i * 3 + 1];
-        if (y < yMin) yMin = y;
-        if (y > yMax) yMax = y;
-    }
-    const yRange = yMax - yMin || 1e-6;
-    const weights = {};
-    for (const def of REGION_DEFS) weights[def.id] = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-        const t = (orig[i * 3 + 1] - yMin) / yRange;
-        for (const def of REGION_DEFS) {
-            const dist = Math.abs(t - def.center);
-            if (dist < REGION_RADIUS) {
-                weights[def.id][i] = 0.5 * (1 + Math.cos(Math.PI * dist / REGION_RADIUS));
-            }
-        }
-    }
-    inst.garmentRegionWeights[key] = weights;
+    const gewichte = Bereichsgewichte.rechnen(inst.garmentOrigPositions[key]);
+    if (!gewichte) return;
+    inst.garmentRegionWeights[key] = gewichte;
 }
 
 /** Apply per-region Y-offsets to a garment mesh using cosine-blended weights. */

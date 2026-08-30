@@ -69,8 +69,10 @@ export function handleMenuAction(action) {
             const inst = fn._selectedInst();
             if (inst?.isSkinned && inst._aPoseBones) {
                 let skel = null;
-                inst.group.traverse(child => { if (!skel && child.isSkinnedMesh && child.skeleton) skel = child.skeleton; });
-                if (skel) { for (const bone of skel.bones) { const saved = inst._aPoseBones[bone.name]; if (saved) bone.quaternion.copy(saved); } }
+                inst.group.traverse(child => { if (!skel && child.isSkinnedMesh
+                    && child.skeleton) skel = child.skeleton; });
+                if (skel) { for (const bone of skel.bones) { const saved = inst._aPoseBones[bone.name];
+                    if (saved) bone.quaternion.copy(saved); } }
             }
             break;
         }
@@ -171,7 +173,8 @@ export function toggleRigVisibility() {
         if (!skel && state.rigifySkeletonData && state.skinWeightData) {
             const { buildRigifySkeleton } = fn;
             if (inst) { fn.convertInstToSkinned(inst); skel = inst.rigifySkeleton; }
-            else { state.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, state.skinWeightData); state.scene.add(state.rigifySkeleton.rootBone); skel = state.rigifySkeleton; }
+            else { state.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, state.skinWeightData);
+                state.scene.add(state.rigifySkeleton.rootBone); skel = state.rigifySkeleton; }
         }
         if (!state.skeletonHelper && skel) {
             state.skeletonHelper = Skelettanzeige.bauen(state.scene, skel.rootBone);

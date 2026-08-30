@@ -80,7 +80,8 @@ export function createBoneLabels(bones, skelKey) {
     skel.labels.forEach(lbl => lbl.parent && lbl.parent.remove(lbl));
     skel.labels = [];
 
-    const colorMap = { def: '#ff6666', cmu: '#66ff66', mixamo: '#ffaa66', mocapnet: '#6699ff', bandai: '#cc66ff', smpl: '#ffff00', openpose: '#44dddd' };
+    const colorMap = { def: '#ff6666', cmu: '#66ff66', mixamo: '#ffaa66', mocapnet: '#6699ff', bandai: '#cc66ff',
+        smpl: '#ffff00', openpose: '#44dddd' };
     const color = colorMap[skelKey] || '#ffffff';
     const showLabels = document.getElementById('toggle-labels').checked;
 
@@ -94,16 +95,11 @@ export function createBoneLabels(bones, skelKey) {
         const div = document.createElement('div');
         div.textContent = i;
         div.title = bone.name;
-        div.style.cssText = `
-            font-size: 8px;
-            font-family: monospace;
-            color: ${color};
-            background: rgba(0,0,0,0.55);
-            padding: 0px 2px;
-            border-radius: 2px;
-            line-height: 1.1;
-            pointer-events: none;
-        `;
+        // Nur die FARBE bleibt am Element: Sie sagt, zu welchem Skelett
+        // die Nummer gehoert. Alles andere steht als `.knochennummer` in
+        // `stilhelfer.css` (30.08.2026, Befund `jsbefunde`).
+        div.className = 'knochennummer';
+        div.style.color = color;
 
         const label = new CSS2DObject(div);
         label.visible = showLabels;

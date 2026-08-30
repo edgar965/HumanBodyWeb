@@ -79,7 +79,8 @@ export function _schedulePreloads(t) {
                 if (animTrack.meshActive === preset) continue;
                 if (animTrack._loadingPreset === preset) continue;
                 if (animTrack._preloadCache?.[preset]) continue;
-                _preloadPreset(animTrack, preset).catch((e) => { Protokoll.debug('vorladen', `Vorladen von ${preset} fehlgeschlagen`, e); });
+                _preloadPreset(animTrack, preset).catch((e) => { Protokoll.debug('vorladen',
+                    `Vorladen von ${preset} fehlgeschlagen`, e); });
             }
         }
     }

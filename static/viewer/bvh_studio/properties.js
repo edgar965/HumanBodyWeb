@@ -20,6 +20,7 @@ import { Bodeneigenschaften } from './eigenschaften/boden.js';
 import { Objekteigenschaften } from './eigenschaften/objekt.js';
 import { Klipeigenschaften } from './eigenschaften/klip.js';
 import { Maskenbausteine as M } from './eigenschaften/bausteine.js';
+import { Schaltknopf } from './schaltknopf.js';
 
 export class Eigenschaftsfeld {
     static neuzeichnen() {
@@ -47,17 +48,18 @@ export class Eigenschaftsfeld {
     static _kopf(track) {
         const symbol = TRACK_ICONS[track.type] || 'fa-running';
         let html = `<div class="prop-group">
-        <h3 style="font-size:0.85rem;color:var(--accent);margin-bottom:6px;"><i class="fas ${symbol}"></i> ${track.name}</h3>
+        <h3 class="spurtitel"><i class="fas ${symbol}"></i> ${track.name}</h3>
         <div class="prop-row"><label>Name:</label><input type="text" value="${track.name}" id="prop-track-name"></div>`;
         if (track.type === 'light' || track.type === 'scene_object') {
             // Licht und Szenenobjekt: An/Aus statt "Muted"
             const an = !track.muted;
             const id = track.type === 'light' ? 'prop-light-toggle' : 'prop-obj-toggle';
             html += `<div class="prop-row"><label>Sichtbar:</label>
-            <button id="${id}" style="padding:5px 16px;background:${an ? '#4caf50' : '#666'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;min-width:60px;">${an ? 'An' : 'Aus'}</button>
+            ${Schaltknopf.bauen(id, an)}
         </div>`;
         } else {
-            html += `<div class="prop-row"><label>Muted:</label><input type="checkbox" ${track.muted ? 'checked' : ''} id="prop-track-mute"></div>`;
+            html += `<div class="prop-row"><label>Muted:</label><input type="checkbox" ${track.muted ? 'checked' : ''}
+                id="prop-track-mute"></div>`;
         }
         return html + '</div>';
     }
@@ -66,30 +68,36 @@ export class Eigenschaftsfeld {
         if (track.type === 'bvh') {
             return `<div class="prop-group">
             <div class="prop-row"><label>Modell:</label><span class="marke-akzent">${track.preset}</span></div>
-            <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${track.position[0]}" id="prop-pos-x"></div>
-            <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${track.position[2]}" id="prop-pos-z"></div>
+            <div class="prop-row"><label>X:</label><input type="number" step="0.1" value="${track.position[0]}"
+                id="prop-pos-x"></div>
+            <div class="prop-row"><label>Z:</label><input type="number" step="0.1" value="${track.position[2]}"
+                id="prop-pos-z"></div>
         </div>`;
         }
         if (track.type === 'camera') {
             return `<div class="prop-group">
-            <div class="prop-row"><label>Aktiv:</label><input type="checkbox" ${track.cameraActive ? 'checked' : ''} id="prop-cam-active"></div>
+            <div class="prop-row"><label>Aktiv:</label><input type="checkbox" ${track.cameraActive ? 'checked' : ''}
+                id="prop-cam-active"></div>
             <div class="abstand-6">
-                <button id="prop-cam-add-kf" class="knopf-akzent"><i class="fas fa-key"></i> Keyframe setzen (K)</button>
+                <button id="prop-cam-add-kf" class="knopf-akzent"><i
+                    class="fas fa-key"></i> Keyframe setzen (K)</button>
             </div>
-            <div style="margin-top:4px;font-size:0.72rem;color:var(--text-muted);">Setzt aktuelle Kamera-Position als Keyframe am Playhead.</div>
+            <div class="fussnote">Setzt aktuelle Kamera-Position als Keyframe am Playhead.</div>
         </div>`;
         }
         if (track.type === 'light') return Lichteigenschaften.maske(track);
         if (track.type === 'model') {
             const verbunden = state.project.getLinkedAnimation(track);
             return `<div class="prop-group">
-            <div class="prop-row"><label>Verknüpft:</label><span class="marke-akzent">${verbunden ? verbunden.name : '(keiner)'}</span></div>
+            <div class="prop-row"><label>Verknüpft:</label><span
+                class="marke-akzent">${verbunden ? verbunden.name : '(keiner)'}</span></div>
         </div>`;
         }
         if (track.type === 'audio') {
             return `<div class="prop-group">
-            <div style="margin-bottom:6px;">
-                <button id="prop-audio-load" class="knopf-akzent"><i class="fas fa-folder-open"></i> Audio laden</button>
+            <div class="abstand-unten-6">
+                <button id="prop-audio-load" class="knopf-akzent"><i
+                    class="fas fa-folder-open"></i> Audio laden</button>
             </div>
         </div>`;
         }
@@ -107,10 +115,11 @@ export class Eigenschaftsfeld {
             const dauer = (c.type === 'camera_kf' || c.type === 'light_kf')
                 ? `F${c.startFrame}` : `${c.duration.toFixed(1)}s`;
             const gewaehlt = i === state.selectedClipIdx;
-            return `<div class="prop-clip-item" data-clip="${i}" style="font-size:0.78rem;padding:4px 6px;margin:2px 0;border-radius:3px;cursor:pointer;background:${gewaehlt ? 'rgba(124,92,191,0.3)' : 'transparent'};color:${gewaehlt ? 'var(--accent)' : 'var(--text)'};">${c.name} (${dauer})</div>`;
+            return `<div class="prop-clip-item${gewaehlt ? ' gewaehlt' : ''}"
+                data-clip="${i}">${c.name} (${dauer})</div>`;
         }).join('');
         return `<div class="prop-group">
-        <h3 style="font-size:0.85rem;color:var(--text-muted);">${titel} (${track.clips.length})</h3>
+        <h3 class="clipliste-titel">${titel} (${track.clips.length})</h3>
         ${eintraege}
     </div>`;
     }

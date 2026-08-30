@@ -12,7 +12,8 @@ from ._projekt_basis import Projektvorlagen
 
 class ProjektSzeneTests(TestCategory):
     name = 'Projekt: Szene-Roundtrip'
-    description = 'Szenenlichter, geloeschte Keyframes und der Boden im Speichern/Laden-Umlauf'
+    description = (
+        'Szenenlichter, geloeschte Keyframes und der Boden im Speichern/Laden-Umlauf')
 
     # --- Scene Light Overrides ---
     @staticmethod

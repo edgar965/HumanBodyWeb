@@ -77,7 +77,8 @@ export function syncUIFromState() {
     setSlider('back-pos-x', state.backLight.position.x * 10, 'back-pos-x-val', v => (v / 10).toFixed(1));
     setSlider('back-pos-y', state.backLight.position.y * 10, 'back-pos-y-val', v => (v / 10).toFixed(1));
     setSlider('back-pos-z', state.backLight.position.z * 10, 'back-pos-z-val', v => (v / 10).toFixed(1));
-    setSlider('ambient-intensity', state.ambientLight.intensity * 100, 'ambient-intensity-val', v => (v / 100).toFixed(1));
+    setSlider('ambient-intensity', state.ambientLight.intensity * 100, 'ambient-intensity-val',
+        v => (v / 100).toFixed(1));
     setColor('ambient-color', state.ambientLight.color);
     setSlider('exposure', state.renderer.toneMappingExposure * 100, 'exposure-val', v => (v / 100).toFixed(1));
     const tmSelect = document.getElementById('tone-mapping');
@@ -110,23 +111,31 @@ export function bindLightingUI() {
         });
     }
 
-    bindSl('key-intensity', 'key-intensity-val', v => (v / 100).toFixed(1), v => { state.keyLight.intensity = v / 100; });
-    document.getElementById('key-color').addEventListener('input', e => { state.keyLight.color.set(e.target.value); autoSave(); });
+    bindSl('key-intensity', 'key-intensity-val', v => (v / 100).toFixed(1), v => { state.keyLight.intensity = v / 100;
+        });
+    document.getElementById('key-color').addEventListener('input', e => { state.keyLight.color.set(e.target.value);
+        autoSave(); });
     bindSl('key-pos-x', 'key-pos-x-val', v => (v / 10).toFixed(1), v => { state.keyLight.position.x = v / 10; });
     bindSl('key-pos-y', 'key-pos-y-val', v => (v / 10).toFixed(1), v => { state.keyLight.position.y = v / 10; });
     bindSl('key-pos-z', 'key-pos-z-val', v => (v / 10).toFixed(1), v => { state.keyLight.position.z = v / 10; });
-    bindSl('fill-intensity', 'fill-intensity-val', v => (v / 100).toFixed(1), v => { state.fillLight.intensity = v / 100; });
-    document.getElementById('fill-color').addEventListener('input', e => { state.fillLight.color.set(e.target.value); autoSave(); });
+    bindSl('fill-intensity', 'fill-intensity-val', v => (v / 100).toFixed(1),
+        v => { state.fillLight.intensity = v / 100; });
+    document.getElementById('fill-color').addEventListener('input', e => { state.fillLight.color.set(e.target.value);
+        autoSave(); });
     bindSl('fill-pos-x', 'fill-pos-x-val', v => (v / 10).toFixed(1), v => { state.fillLight.position.x = v / 10; });
     bindSl('fill-pos-y', 'fill-pos-y-val', v => (v / 10).toFixed(1), v => { state.fillLight.position.y = v / 10; });
     bindSl('fill-pos-z', 'fill-pos-z-val', v => (v / 10).toFixed(1), v => { state.fillLight.position.z = v / 10; });
-    bindSl('back-intensity', 'back-intensity-val', v => (v / 100).toFixed(1), v => { state.backLight.intensity = v / 100; });
-    document.getElementById('back-color').addEventListener('input', e => { state.backLight.color.set(e.target.value); autoSave(); });
+    bindSl('back-intensity', 'back-intensity-val', v => (v / 100).toFixed(1),
+        v => { state.backLight.intensity = v / 100; });
+    document.getElementById('back-color').addEventListener('input', e => { state.backLight.color.set(e.target.value);
+        autoSave(); });
     bindSl('back-pos-x', 'back-pos-x-val', v => (v / 10).toFixed(1), v => { state.backLight.position.x = v / 10; });
     bindSl('back-pos-y', 'back-pos-y-val', v => (v / 10).toFixed(1), v => { state.backLight.position.y = v / 10; });
     bindSl('back-pos-z', 'back-pos-z-val', v => (v / 10).toFixed(1), v => { state.backLight.position.z = v / 10; });
-    bindSl('ambient-intensity', 'ambient-intensity-val', v => (v / 100).toFixed(1), v => { state.ambientLight.intensity = v / 100; });
-    document.getElementById('ambient-color').addEventListener('input', e => { state.ambientLight.color.set(e.target.value); autoSave(); });
+    bindSl('ambient-intensity', 'ambient-intensity-val', v => (v / 100).toFixed(1),
+        v => { state.ambientLight.intensity = v / 100; });
+    document.getElementById('ambient-color').addEventListener('input',
+        e => { state.ambientLight.color.set(e.target.value); autoSave(); });
     document.getElementById('light-preset').addEventListener('change', e => {
         const preset = LIGHT_PRESETS[e.target.value];
         if (!preset) return;
@@ -196,9 +205,12 @@ export function bindActions() {
 export function gatherSettings() {
     return {
         lighting: {
-            key: { intensity: state.keyLight.intensity, color: '#' + state.keyLight.color.getHexString(), pos: [state.keyLight.position.x, state.keyLight.position.y, state.keyLight.position.z] },
-            fill: { intensity: state.fillLight.intensity, color: '#' + state.fillLight.color.getHexString(), pos: [state.fillLight.position.x, state.fillLight.position.y, state.fillLight.position.z] },
-            back: { intensity: state.backLight.intensity, color: '#' + state.backLight.color.getHexString(), pos: [state.backLight.position.x, state.backLight.position.y, state.backLight.position.z] },
+            key: { intensity: state.keyLight.intensity, color: '#' + state.keyLight.color.getHexString(),
+                pos: [state.keyLight.position.x, state.keyLight.position.y, state.keyLight.position.z] },
+            fill: { intensity: state.fillLight.intensity, color: '#' + state.fillLight.color.getHexString(),
+                pos: [state.fillLight.position.x, state.fillLight.position.y, state.fillLight.position.z] },
+            back: { intensity: state.backLight.intensity, color: '#' + state.backLight.color.getHexString(),
+                pos: [state.backLight.position.x, state.backLight.position.y, state.backLight.position.z] },
             ambient: { intensity: state.ambientLight.intensity, color: '#' + state.ambientLight.color.getHexString() }
         },
         renderer: {

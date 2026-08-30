@@ -37,9 +37,8 @@ export class Gruppenkopf {
             + 'align-items:center;box-sizing:border-box;cursor:pointer;'
             + 'user-select:none;';
         const pfeil = reihe.collapsed ? 'fa-caret-right' : 'fa-caret-down';
-        el.innerHTML = `<i class="fas ${pfeil}" style="margin-right:6px;`
-            + `width:10px;"></i><i class="fas ${farben.bild}" `
-            + `style="margin-right:6px;"></i>${reihe.label}`;
+        el.innerHTML = `<i class="fas ${pfeil} gruppenpfeil"></i>`
+            + `<i class="fas ${farben.bild} gruppensymbol"></i>${reihe.label}`;
         el.title = 'Klick zum Ein-/Ausklappen';
         el.addEventListener('click', () => {
             if (reihe.header === 'light') {

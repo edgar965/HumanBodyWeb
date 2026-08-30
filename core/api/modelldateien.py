@@ -126,7 +126,7 @@ class Modelldateien:
     def modell(request, name):
         """Der Inhalt EINER Modellvorgabe."""
         pfad = Modellpfad.geprueft(Modelldateien._modellordner(),
-                                       name, '.json')
+                                   name, '.json')
         if pfad is None:
             return JsonResponse({'error': 'Invalid name'}, status=400)
         if not os.path.isfile(pfad):
@@ -184,7 +184,7 @@ class Modelldateien:
     def frisur_glb(request, name):
         """Die GLB-Datei EINER Frisur."""
         pfad = Modellpfad.geprueft(Modelldateien._frisurordner(),
-                                       name, '.glb')
+                                   name, '.glb')
         if pfad is None:
             return JsonResponse({'error': 'Invalid name'}, status=400)
         if not os.path.isfile(pfad):

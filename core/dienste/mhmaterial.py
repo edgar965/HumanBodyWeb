@@ -62,7 +62,8 @@ class MhMaterial:
             pfad = os.path.join(self.verzeichnis, self.texturname)
             bild = Image.open(pfad).convert('RGB').resize((self.PROBE, self.PROBE))
             punkte = list(bild.getdata())
-            self.texturfarbe = [round(sum(p[i] for p in punkte) / len(punkte) / 255.0, 3)
+            self.texturfarbe = [round(sum(p[i] for p in punkte) / len(punkte) / 255.0,
+                                      3)
                                 for i in range(3)]
         except Exception as e:                                    # noqa: BLE001
             logger.debug('Texturfarbe nicht berechenbar: %s', e)

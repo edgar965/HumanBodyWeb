@@ -11,6 +11,7 @@ import { Charakterkoerper } from './charakter_koerper.js';
 import { Morphliste } from '../gemeinsam/morphliste.js';
 import { Metaregler } from '../gemeinsam/metaregler.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 
 /** Unter diesem Betrag gilt ein Morph als aus und wird aus der Figur entfernt. */
 const MORPH_SCHWELLE = 0.005;
@@ -124,9 +125,8 @@ function populateBodyType(inst) {
     const select = document.getElementById('prop-body-type');
     select.innerHTML = '';
     if (state.morphDefs && state.morphDefs.body_types) {
-        for (const bt of state.morphDefs.body_types) {
-            const opt = document.createElement('option'); opt.value = bt; opt.textContent = bt.replace(/_/g, ' '); select.appendChild(opt);
-        }
+        Auswahlfeld.ausNamen(select, state.morphDefs.body_types,
+            (bt) => bt.replace(/_/g, ' '));
     }
     select.value = inst.bodyType;
     const newSelect = select.cloneNode(true);
@@ -140,13 +140,18 @@ async function populatePresets(inst) {
     try {
         const data = await Serverabruf.json('/api/character/charmorph-presets/');
         sel.innerHTML = '<option value="">-- Kein Preset --</option>';
-        for (const p of (data.presets || [])) { const opt = document.createElement('option'); opt.value = JSON.stringify(p); opt.textContent = p.label; sel.appendChild(opt); }
+        Auswahlfeld.fuellen(sel, (data.presets || []).map(
+            (p) => ({ wert: JSON.stringify(p), text: p.label })));
         sel._loaded = true;
         sel.addEventListener('change', () => {
             if (!sel.value || !inst) return;
             const p = JSON.parse(sel.value);
-            if (p.meta) { for (const [key, val] of Object.entries(p.meta)) { const slider = document.querySelector(`[data-meta="${key}"]`); if (slider) { slider.value = val; slider.dispatchEvent(new Event('input')); } } }
-            if (p.structural) { for (const [name, val] of Object.entries(p.structural)) { const slider = document.querySelector(`[data-morph="${name}"]`); if (slider) { slider.value = val; slider.dispatchEvent(new Event('input')); } } }
+            if (p.meta) { for (const [key,
+                val] of Object.entries(p.meta)) { const slider = document.querySelector(`[data-meta="${key}"]`);
+                    if (slider) { slider.value = val; slider.dispatchEvent(new Event('input')); } } }
+            if (p.structural) { for (const [name,
+                val] of Object.entries(p.structural)) { const slider = document.querySelector(`[data-morph="${name}"]`);
+                    if (slider) { slider.value = val; slider.dispatchEvent(new Event('input')); } } }
             serverLog('preset_applied', p.label);
         });
     } catch(e) { console.error('Failed to load presets:', e); }
@@ -263,12 +268,14 @@ export function updateEquippedList(inst) {
 }
 
 export function _updatePropContext() {
-    const bodySections = ['prop-transform-section', 'prop-equipped-section', 'prop-bodytype-section', 'prop-morphs-section'];
+    const bodySections = ['prop-transform-section', 'prop-equipped-section', 'prop-bodytype-section',
+        'prop-morphs-section'];
     const isGarment = state._selectedSubMesh && state._selectedSubMesh.type === 'cloth' && state._selectedSubMesh.key.startsWith('gar_');
     const isMH = state._selectedSubMesh && state._selectedSubMesh.type === 'cloth' && state._selectedSubMesh.key.startsWith('mh_');
     const isHair = state._selectedSubMesh && state._selectedSubMesh.type === 'hair';
     const isAsset = isGarment || isMH || isHair;
-    for (const id of bodySections) { const el = document.getElementById(id); if (el) el.style.display = isAsset ? 'none' : ''; }
+    for (const id of bodySections) { const el = document.getElementById(id); if (el) el.style.display = isAsset
+        ? 'none' : ''; }
     const gEl = document.getElementById('prop-garment-section'); if (gEl) gEl.style.display = isGarment ? '' : 'none';
     const mhEl = document.getElementById('prop-mh-section'); if (mhEl) mhEl.style.display = isMH ? '' : 'none';
     const hEl = document.getElementById('prop-hair-section'); if (hEl) hEl.style.display = isHair ? '' : 'none';

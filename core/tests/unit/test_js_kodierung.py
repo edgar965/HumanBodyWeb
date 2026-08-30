@@ -25,7 +25,8 @@ Aufrufstapel: `String.fromCharCode.apply` legt jedes Byte als eigenes Argument
 ab, ein Puffer am Stück gibt `RangeError: Maximum call stack size exceeded`.
 Das ist eine Grenze der Laufzeitumgebung, kein Rechenergebnis.
 
-Ohne `node` im Pfad wird übersprungen, nicht rot.
+FEHLT `node`, ist das ein FEHLER — node ist Werkzeug dieses Projekts,
+kein Zufall der Umgebung (siehe `Jsmodul.laufen`).
 """
 import base64
 import struct
@@ -60,7 +61,6 @@ console.log(JSON.stringify({
 """
 
 
-@Jsmodul.ohne_node()
 class KodierungTest(SimpleTestCase):
 
     @classmethod

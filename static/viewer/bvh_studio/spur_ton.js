@@ -38,7 +38,8 @@ export function startAudioPlayback() {
             if (!clip.data.audioBuffer) {
                 if (clip._needsReload && !clip._reloadWarned) {
                     clip._reloadWarned = true;
-                    Protokoll.warnung('Audio', `"${clip.data?.fileName}" nicht geladen — bitte Audio-Datei erneut hinzufügen`);
+                    Protokoll.warnung('Audio',
+                        `"${clip.data?.fileName}" nicht geladen — bitte Audio-Datei erneut hinzufügen`);
                 }
                 continue;
             }

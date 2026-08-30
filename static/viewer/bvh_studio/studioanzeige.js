@@ -30,6 +30,28 @@ export class Studioanzeige {
         el.textContent = `Projekt: ${state.project?.name || 'Untitled'}`;
     }
 
+    /**
+     * Dauer, Zeitleiste und Eigenschaften nachziehen — in dieser Reihenfolge.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Stand als `_nachtragen` zeichengleich
+     * in `clipbearbeitung.js` und `lichtschluessel.js`. Nach JEDER Aenderung an
+     * einem Clip oder einem Licht muessen dieselben drei Ansichten neu.
+     *
+     * DIE REIHENFOLGE IST NICHT BELIEBIG: Die Zeitleiste zeichnet sich auf die
+     * Gesamtdauer. Wer sie vor `updateDuration` zeichnet, bekommt eine Leiste
+     * in der alten Laenge, in der der letzte Clip abgeschnitten ist — das
+     * sieht aus wie ein verlorener Clip und ist nur eine falsche Skala.
+     *
+     * UEBER `fn` UND NICHT PER IMPORT: Die drei Funktionen liegen in Modulen,
+     * die ihrerseits Clip- und Lichtbearbeitung rufen; ein Import waere ein
+     * Ringschluss.
+     */
+    static nachtragen() {
+        fn.updateDuration();
+        fn.renderTimeline();
+        fn.updateProperties();
+    }
+
     /** Kurzmeldung zeigen (Speichern, Laden, Rueckgaengig), danach zurueck. */
     static melden(text, ms = 2500) {
         const el = Studioanzeige._feld();

@@ -4,8 +4,7 @@
 {% block title %}HumanBody · Theatre{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
+{% include "_viewerstile.html" %}
 {% comment %}Hier stand ein `.main-content`-Block mit sieben Angaben —
 WIRKUNGSLOS: Diese Seite hat gar kein Element mit dieser Klasse (nachgesehen
 im Browser, 28.08.2026). Die Basisvorlage von djangoBase benutzt
@@ -148,20 +147,14 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
         flex-shrink: 0;
     }
 
+    /* Aussehen: `stilhelfer.css`. Diese Seite hinterlegt den Reiter beim
+       Überfahren zusätzlich — das ist der einzige Unterschied. */
     .panel-tab {
         padding: 8px 10px;
         font-size: 0.75rem;
-        color: var(--text-muted);
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        transition: all 0.2s;
-        user-select: none;
     }
 
-    .panel-tab:hover {
-        color: var(--text);
-        background: rgba(255,255,255,0.03);
-    }
+    .panel-tab:hover { background: rgba(255,255,255,0.03); }
 
     .panel-tab-content {
         flex: 1;
@@ -653,6 +646,111 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 .kf-delete { background: rgba(231, 76, 60, 0.2); border: none; color: #e74c3c;
              padding: 4px 8px; border-radius: 3px; cursor: pointer;
              font-size: 0.7rem; }
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#export-custom-res {
+    display:none;
+    margin-top:4px;
+    display:flex;
+    gap:4px;
+}
+#export-crf-val {
+    font-size:0.8rem;
+    color:var(--text-muted);
+    min-width:20px;
+}
+#export-region-section {
+    margin-bottom:10px;
+    display:none;
+}
+#export-info {
+    margin-bottom:10px;
+    padding:6px 8px;
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:4px;
+    font-size:0.75rem;
+    color:var(--text-muted);
+}
+#export-start-btn {
+    flex:1;
+    justify-content:center;
+    padding:8px;
+}
+#export-progress-bar {
+    height:100%;
+    width:0%;
+    background:var(--accent);
+    transition:width 0.3s;
+}
+#export-progress-text {
+    font-size:0.75rem;
+    color:var(--text-muted);
+    margin-top:4px;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.abbruchknopf.abbruchknopf.abbruchknopf {
+    display:none;
+    flex:1;
+    justify-content:center;
+    padding:8px;
+    background:#a33;
+}
+.dialog-schmal.dialog-schmal.dialog-schmal {
+    max-width:500px;
+}
+.dialogbeschriftung.dialogbeschriftung.dialogbeschriftung {
+    display:block;
+    font-size:0.8rem;
+    color:var(--text-muted,#aaa);
+    margin-bottom:6px;
+}
+.dialogfeld.dialogfeld.dialogfeld {
+    margin-bottom:12px;
+}
+.leerhinweis-mitte.leerhinweis-mitte.leerhinweis-mitte {
+    padding:20px;
+    color:var(--text-muted);
+    font-size:0.85rem;
+    text-align:center;
+}
+.leersymbol.leersymbol.leersymbol {
+    font-size:2rem;
+    margin-bottom:10px;
+    opacity:0.3;
+}
+.menueverweis.menueverweis.menueverweis {
+    color: inherit;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.zeile-mittig.zeile-mittig.zeile-mittig {
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+.zeitanzeige.zeitanzeige.zeitanzeige {
+    font-size:0.7rem;
+    color:var(--text-muted);
+    display:flex;
+    justify-content:space-between;
+}
+.zweispalter.zweispalter.zweispalter {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:4px;
+}
+.zweispalter-weit.zweispalter-weit.zweispalter-weit {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:12px;
+}
 </style>
 {% endblock %}
 
@@ -738,7 +836,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
         </div>
     </div>
     <div class="menu-item">
-        <a href="{% url 'theatre_help' %}" target="_blank" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+        <a class="menueverweis" href="{% url 'theatre_help' %}" target="_blank">
             <i class="fas fa-question-circle"></i> Hilfe
         </a>
     </div>
@@ -811,8 +909,8 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
             <!-- Tab: Eigenschaften (Selected Object Properties) -->
             <div class="tab-pane" id="tab-properties">
                 <div id="properties-content">
-                    <div style="padding:20px;color:var(--text-muted);font-size:0.85rem;text-align:center;">
-                        <i class="fas fa-hand-pointer" style="font-size:2rem;margin-bottom:10px;opacity:0.3;"></i>
+                    <div class="leerhinweis-mitte">
+                        <i class="fas fa-hand-pointer leersymbol"></i>
                         <p>Klicke auf ein Licht-Icon in der Szene<br>um seine Eigenschaften zu bearbeiten.</p>
                     </div>
                 </div>
@@ -842,7 +940,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                         <option value="2160">4K (3840&times;2160)</option>
                         <option value="custom">Benutzerdefiniert</option>
                     </select>
-                    <div id="export-custom-res" style="display:none;margin-top:4px;display:flex;gap:4px;">
+                    <div id="export-custom-res">
                         <input type="number" id="export-width" value="1920" min="320" max="7680" class="hb-width-50"
                                placeholder="Breite">
                         <input type="number" id="export-height" value="1080" min="240" max="4320" class="hb-width-50"
@@ -874,11 +972,11 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                 <!-- Quality -->
                 <div class="hb-margin-bottom-8px">
                     <label class="hb-font-size-0-8rem-b">Qualit&auml;t (CRF):</label>
-                    <div style="display:flex;align-items:center;gap:6px;">
+                    <div class="zeile-mittig">
                         <input type="range" id="export-crf" min="0" max="51" value="18" class="hb-dehnt">
-                        <span id="export-crf-val" style="font-size:0.8rem;color:var(--text-muted);min-width:20px;">18</span>
+                        <span id="export-crf-val">18</span>
                     </div>
-                    <div style="font-size:0.7rem;color:var(--text-muted);display:flex;justify-content:space-between;">
+                    <div class="zeitanzeige">
                         <span>Beste Qualit&auml;t</span><span>Kleinste Datei</span>
                     </div>
                 </div>
@@ -886,7 +984,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                 <!-- Time Range -->
                 <div class="hb-margin-bottom-8px">
                     <label class="hb-font-size-0-8rem-b">Zeitbereich:</label>
-                    <div style="display:flex;gap:4px;align-items:center;">
+                    <div class="knopfzeile-eng">
                         <input type="number" id="export-start" value="0" min="0" step="0.1" class="hb-width-40"
                                placeholder="Start (s)">
                         <span class="hb-gedaempft-theme">&ndash;</span>
@@ -910,9 +1008,9 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                 </div>
 
                 <!-- Screen Region (Server only) -->
-                <div id="export-region-section" style="margin-bottom:10px;display:none;">
+                <div id="export-region-section">
                     <label class="hb-font-size-0-8rem-b">Bildausschnitt (px):</label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                    <div class="zweispalter">
                         <input type="number" id="export-crop-x" value="0" min="0" placeholder="X" class="hb-padding-3px">
                         <input type="number" id="export-crop-y" value="0" min="0" placeholder="Y" class="hb-padding-3px">
                         <input type="number" id="export-crop-w" value="0" min="0" placeholder="Breite (0=voll)"
@@ -924,18 +1022,18 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                 </div>
 
                 <!-- Info: current animation -->
-                <div id="export-info" style="margin-bottom:10px;padding:6px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;font-size:0.75rem;color:var(--text-muted);">
+                <div id="export-info">
                     Animation: <span id="export-anim-name">—</span><br>
                     Dauer: <span id="export-anim-dur">—</span>s
                 </div>
 
                 <!-- Export Buttons -->
-                <div style="display:flex;gap:6px;margin-top:12px;">
-                    <button id="export-start-btn" class="toolbar-btn" style="flex:1;justify-content:center;padding:8px;">
+                <div class="knopfzeile abstand-12">
+                    <button id="export-start-btn" class="toolbar-btn">
                         <i class="fas fa-video"></i> Export starten
                     </button>
-                    <button id="export-cancel-btn" class="toolbar-btn"
-                            style="display:none;flex:1;justify-content:center;padding:8px;background:#a33;">
+                    <button id="export-cancel-btn" class="toolbar-btn abbruchknopf"
+                           >
                         <i class="fas fa-stop"></i> Abbrechen
                     </button>
                 </div>
@@ -943,9 +1041,9 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                 <!-- Progress -->
                 <div id="export-progress" class="verborgen-mit-abstand">
                     <div class="fortschritt-rinne">
-                        <div id="export-progress-bar" style="height:100%;width:0%;background:var(--accent);transition:width 0.3s;"></div>
+                        <div id="export-progress-bar"></div>
                     </div>
-                    <div id="export-progress-text" style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">0%</div>
+                    <div id="export-progress-text">0%</div>
                 </div>
             </div>
         </div>
@@ -989,18 +1087,18 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
 <!-- Export MP4 Modal -->
 <div class="theatre-modal-overlay" id="modal-export-mp4">
-    <div class="theatre-modal" style="max-width:500px;">
+    <div class="theatre-modal dialog-schmal">
         <div class="theatre-modal-header">
             <h3><i class="fas fa-file-video"></i> Export MP4</h3>
             <button class="theatre-modal-close" data-close-modal>&times;</button>
         </div>
         <div class="theatre-modal-body">
-            <div style="margin-bottom:12px;">
-                <label style="display:block;font-size:0.8rem;color:var(--text-muted,#aaa);margin-bottom:6px;">Dateiname</label>
+            <div class="dialogfeld">
+                <label class="dialogbeschriftung">Dateiname</label>
                 <input type="text" class="save-modal-input hb-volle-breite" id="export-mp4-filename"
                        value="theatre-export.mp4">
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+            <div class="zweispalter-weit">
                 <div>
                     <label class="hb-display-block">Auflösung</label>
                     <select id="export-mp4-resolution" class="save-modal-input hb-width-100-2-b">

@@ -20,7 +20,10 @@ from .bvhstudio import BEREICHE as STUDIO
 from .blender import BEREICHE as BLENDER
 from .videotobvh import BEREICHE as VIDEOTOBVH
 from .kollision import BEREICHE as KOLLISION
+from .web_api import BEREICHE as WEB_API
 from .web import BEREICHE as WEB
 from .djangobase import BEREICHE as DJANGOBASE
 
-REVIEW_BEREICHE = KERN + FRONTEND + STUDIO + BLENDER + VIDEOTOBVH + KOLLISION + WEB + DJANGOBASE
+REVIEW_BEREICHE = (
+    KERN + FRONTEND + STUDIO + BLENDER + VIDEOTOBVH + KOLLISION
+    + WEB_API + WEB + DJANGOBASE)

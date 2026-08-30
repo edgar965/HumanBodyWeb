@@ -1,26 +1,55 @@
-{% extends "base.html" %}
+{% extends "einstellungsseite.html" %}
 {% block title %}SMPL Body - Einstellungen{% endblock %}
 
-{% block content %}
+{% block einstellungen_stile %}
 <style>
 
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-color-var-text-muted.hb-color-var-text-muted.hb-color-var-text-muted {
-    color:var(--text-muted);
-    font-size:0.85rem;
-    margin-bottom:1rem;
-}   /* 3x */
 .hb-display-flex-b.hb-display-flex-b.hb-display-flex-b { display:flex; gap:12px; align-items:center; }   /* 2x */
 .hb-padding-6px-0.hb-padding-6px-0.hb-padding-6px-0 { padding:6px 0; }   /* 7x */
 .hb-padding-6px-0-2.hb-padding-6px-0-2.hb-padding-6px-0-2 { padding:6px 0; color:var(--text-muted); }   /* 6x */
 .hb-untere-linie.hb-untere-linie.hb-untere-linie { border-bottom:1px solid var(--border); }   /* 6x */
-</style>
-<h1>Einstellungen — SMPL Body</h1>
 
-<form method="post">
-    {% csrf_token %}
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Je Element seine eigene Kennung als Selektor: Die gab es schon, und
+   ein ID-Selektor (1,0,0) verhaelt sich wie der Inline-Stil vorher. */
+#smpl-xoffset-val {
+    min-width:4em;
+    text-align:right;
+}
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.farbfeld.farbfeld.farbfeld {
+    width:60px;
+    height:30px;
+    border:none;
+    cursor:pointer;
+}
+.kartenknopf.kartenknopf.kartenknopf {
+    font-size:0.85rem;
+}
+.kartentext.kartentext.kartentext {
+    color:var(--text-muted);
+    font-size:0.85rem;
+}
+.szenenspalte.szenenspalte.szenenspalte {
+    padding:6px 0;
+    color:var(--text-muted);
+    width:140px;
+}
+.szenentabelle.szenentabelle.szenentabelle {
+    width:100%;
+    font-size:0.85rem;
+    border-collapse:collapse;
+}
+</style>
+{% endblock %}
+
+{% block einstellungen_titel %}Einstellungen — SMPL Body{% endblock %}
+
+{% block einstellungen_karten %}
     <div class="settings-card">
         <h2><i class="fas fa-child"></i> SMPL Body Defaults</h2>
         <p class="hb-color-var-text-muted">
@@ -34,9 +63,12 @@
             </div>
             <div class="settings-input">
                 <select name="smpl_default_gender" class="settings-select">
-                    <option value="female" {% if settings.smpl_default_gender == 'female' %}selected{% endif %}>Female</option>
-                    <option value="male" {% if settings.smpl_default_gender == 'male' %}selected{% endif %}>Male</option>
-                    <option value="neutral" {% if settings.smpl_default_gender == 'neutral' %}selected{% endif %}>Neutral</option>
+                    <option value="female"
+                         {% if settings.smpl_default_gender == 'female' %}selected{% endif %}>Female</option>
+                    <option value="male"
+                         {% if settings.smpl_default_gender == 'male' %}selected{% endif %}>Male</option>
+                    <option value="neutral"
+                         {% if settings.smpl_default_gender == 'neutral' %}selected{% endif %}>Neutral</option>
                 </select>
             </div>
         </div>
@@ -76,13 +108,16 @@
                 <small>Standardfarbe des SMPL Body.</small>
             </div>
             <div class="settings-input">
-                <input type="color" name="smpl_default_color" value="{{ settings.smpl_default_color }}"
-                       style="width:60px;height:30px;border:none;cursor:pointer;">
+                <input class="farbfeld" type="color" name="smpl_default_color" value="{{ settings.smpl_default_color }}"
+                      >
             </div>
         </div>
 
         {% include "_einstellungen_kaestchen.html" with titel="Wireframe" beschriftung="Body als Drahtgitter anzeigen." feld="smpl_default_wireframe" text="Wireframe aktivieren" an=settings.smpl_default_wireframe %}
-        </div>
+        {% comment %}Hier stand ein `</div>` zu viel — der Rest der Zeile,
+        die am 27.08.2026 durch den Baustein oben ersetzt wurde. Es schloss die
+        Karte „Display" mitten drin: Die Zeile „X Offset" darunter stand seither
+        ausserhalb der Karte, und ganz unten blieb ein `</div>` ohne Anfang stehen.{% endcomment %}
 
         <div class="settings-row">
             <div class="settings-label">
@@ -92,7 +127,7 @@
             <div class="settings-input hb-display-flex-b">
                 <input type="range" id="smpl-xoffset-range" min="-200" max="200" step="5"
                        value="{{ xoffset_pct }}" class="hb-dehnt">
-                <span id="smpl-xoffset-val" style="min-width:4em;text-align:right;">{{ settings.smpl_default_xoffset }} m</span>
+                <span id="smpl-xoffset-val">{{ settings.smpl_default_xoffset }} m</span>
                 <input type="hidden" name="smpl_default_xoffset" id="smpl-xoffset-hidden"
                        value="{{ settings.smpl_default_xoffset }}">
             </div>
@@ -113,16 +148,16 @@
             <div class="settings-input">
                 <select name="smpl_default_humanbody_preset" class="settings-select">
                     {% for preset in available_presets %}
-                    <option value="{{ preset }}" {% if settings.smpl_default_humanbody_preset == preset %}selected{% endif %}>{{ preset }}</option>
+                    <option value="{{ preset }}"
+                         {% if settings.smpl_default_humanbody_preset == preset %}selected{% endif %}>{{ preset }}</option>
                     {% endfor %}
                 </select>
             </div>
         </div>
     </div>
+{% endblock %}
 
-    {% include "_einstellungen_speichern.html" %}
-</form>
-
+{% block einstellungen_nachtrag %}
 <div class="settings-card hb-abstand-oben">
     <h2><i class="fas fa-lightbulb"></i> Szene Einstellungen</h2>
     <p class="hb-color-var-text-muted">
@@ -130,9 +165,9 @@
     </p>
     <div id="scene-settings-display">
         {% if scene_settings %}
-        <table style="width:100%;font-size:0.85rem;border-collapse:collapse;">
+        <table class="szenentabelle">
             <tr class="hb-untere-linie">
-                <td style="padding:6px 0;color:var(--text-muted);width:140px;">Key Light</td>
+                <td class="szenenspalte">Key Light</td>
                 <td class="hb-padding-6px-0">Int: {{ scene_settings.lighting.key.intensity }} &mdash; {{ scene_settings.lighting.key.color }}</td>
             </tr>
             <tr class="hb-untere-linie">
@@ -161,14 +196,14 @@
             </tr>
         </table>
         {% else %}
-        <p style="color:var(--text-muted);font-size:0.85rem;">Keine Szene-Einstellungen gespeichert. Verwende die SMPL Test-Seite um Einstellungen zu speichern.</p>
+        <p class="kartentext">Keine Szene-Einstellungen gespeichert. Verwende die SMPL Test-Seite um Einstellungen zu speichern.</p>
         {% endif %}
     </div>
     {% if scene_settings %}
     <form method="post" class="abstand-12">
         {% csrf_token %}
         <input type="hidden" name="reset_scene" value="1">
-        <button type="submit" class="btn" style="font-size:0.85rem;">
+        <button type="submit" class="btn kartenknopf">
             <i class="fas fa-undo"></i> Szene zur&uuml;cksetzen
         </button>
     </form>
@@ -194,9 +229,9 @@
 
     BETA_NAMES.forEach((name, i) => {
         const row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+        row.className = 'beta-zeile';
         const lbl = document.createElement('label');
-        lbl.style.cssText = 'font-size:0.82rem;color:var(--text-muted);min-width:90px;';
+        lbl.className = 'beta-name';
         lbl.textContent = name;
         lbl.title = '\u03B2' + i;
         const slider = document.createElement('input');
@@ -204,9 +239,9 @@
         slider.className = 'smpl-settings-beta';
         slider.min = -300; slider.max = 300; slider.step = 1;
         slider.value = Math.round(betas[i] * 100);
-        slider.style.cssText = 'flex:1;accent-color:var(--accent);';
+        slider.classList.add('beta-regler');
         const val = document.createElement('span');
-        val.style.cssText = 'font-size:0.8rem;color:var(--text-muted);min-width:3em;text-align:right;';
+        val.className = 'beta-wert';
         val.textContent = betas[i].toFixed(2);
         slider.addEventListener('input', () => {
             val.textContent = (slider.value / 100).toFixed(2);

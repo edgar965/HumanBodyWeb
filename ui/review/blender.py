@@ -63,34 +63,69 @@ BEREICHE = [
          'kollidieren kann — und was macht Blender dann daraus?',
      ]},
     {'slug': 'blender_ui', 'name': 'Blender: Bedienfelder, Timer, Handler',
-     'dateien': [{'pfad': 'HumanBodyBlender/ui.py', 'funktionen': ['HUMANBODY_OT_pick_part', '_deferred_mesh_update', '_on_depsgraph_update', 'register', 'unregister', '_draw_cloth_builder_body', '_draw_parts_body']}],
-     'hinweis': ('Blender-Bedienfelder. Zwei Dinge laufen NEBEN der Bedienung: ein Timer (bpy.app.timers.register, entprellte Morph-Aktualisierung) und ein depsgraph_update_post-Handler; beide werden in register() angehaengt. Ein Handler, der bei jeder Szenenaenderung laeuft und selbst die Szene aendert, ruft sich wieder auf. Ein Timer, der beim Deaktivieren des Addons nicht abgemeldet wird, laeuft weiter und greift auf entfernte Klassen zu. Ich kann hier NICHT ausfuehren (kein bpy ausserhalb von Blender).'),
+     'dateien': [{'pfad': 'HumanBodyBlender/ui.py',
+                  'funktionen': ['HUMANBODY_OT_pick_part', '_deferred_mesh_update',
+                                 '_on_depsgraph_update', 'register', 'unregister',
+                                 '_draw_cloth_builder_body', '_draw_parts_body']}],
+     'hinweis': ('Blender-Bedienfelder. Zwei Dinge laufen NEBEN der Bedienung: ein '
+                 'Timer (bpy.app.timers.register, entprellte Morph-Aktualisierung) und '
+                 'ein depsgraph_update_post-Handler; beide werden in register() '
+                 'angehaengt. Ein Handler, der bei jeder Szenenaenderung laeuft und '
+                 'selbst die Szene aendert, ruft sich wieder auf. Ein Timer, der beim '
+                 'Deaktivieren des Addons nicht abgemeldet wird, laeuft weiter und '
+                 'greift auf entfernte Klassen zu. Ich kann hier NICHT ausfuehren '
+                 '(kein bpy ausserhalb von Blender).'),
      'fragen': [
-         'Wird der Timer beim Deaktivieren zuverlaessig abgemeldet? Was, wenn er feuert, nachdem das Objekt geloescht oder der Modus gewechselt wurde?',
-         'Wo kann sich der depsgraph-Handler selbst ausloesen, und was kostet er bei jeder Mausbewegung?',
-         'HUMANBODY_OT_pick_part ist die laengste Funktion — welcher Zwischenzustand bleibt bei einem Fehler darin stehen?',
+         'Wird der Timer beim Deaktivieren zuverlaessig abgemeldet? Was, wenn er '
+         'feuert, nachdem das Objekt geloescht oder der Modus gewechselt wurde?',
+         'Wo kann sich der depsgraph-Handler selbst ausloesen, und was kostet er bei '
+         'jeder Mausbewegung?',
+         'HUMANBODY_OT_pick_part ist die laengste Funktion — welcher Zwischenzustand '
+         'bleibt bei einem Fehler darin stehen?',
      ]},
     {'slug': 'blender_anim', 'name': 'Blender: Animation und BVH-Import',
-     'dateien': [{'pfad': 'HumanBodyBlender/animation.py', 'funktionen': ['HUMANBODY_OT_load_bvh_native', '_load_cached_action', '_cleanup_old_anim', 'HUMANBODY_OT_load_animation', '_gen_walk']}],
-     'hinweis': ('Laedt BVH ueber Blenders eigenen Importer, legt Actions an, raeumt alte auf und erzeugt einfache Bewegungen rechnerisch. Actions und NLA-Streifen sind eigene Datenbloecke: Wer sie nicht loest, sammelt sie in der .blend-Datei. Ich kann hier NICHT ausfuehren.'),
+     'dateien': [{'pfad': 'HumanBodyBlender/animation.py',
+                  'funktionen': ['HUMANBODY_OT_load_bvh_native', '_load_cached_action',
+                                 '_cleanup_old_anim', 'HUMANBODY_OT_load_animation',
+                                 '_gen_walk']}],
+     'hinweis': ('Laedt BVH ueber Blenders eigenen Importer, legt Actions an, raeumt '
+                 'alte auf und erzeugt einfache Bewegungen rechnerisch. Actions und '
+                 'NLA-Streifen sind eigene Datenbloecke: Wer sie nicht loest, sammelt '
+                 'sie in der .blend-Datei. Ich kann hier NICHT ausfuehren.'),
      'fragen': [
-         '_cleanup_old_anim: Was wird NICHT geloescht (Actions ohne Nutzer, NLA-Streifen, Fake-User)?',
-         'Der Import laeuft ueber bpy.ops — was passiert bei einer Datei, die Blender nicht mag, und was bleibt dann in der Szene?',
+         '_cleanup_old_anim: Was wird NICHT geloescht (Actions ohne Nutzer, '
+         'NLA-Streifen, Fake-User)?',
+         'Der Import laeuft ueber bpy.ops — was passiert bei einer Datei, die Blender '
+         'nicht mag, und was bleibt dann in der Szene?',
          'Was, wenn die BVH-Frame-Zeit nicht zur Szenen-Bildrate passt?',
      ]},
     {'slug': 'blender_retarget', 'name': 'Blender: eigener Retargeter',
      'dateien': ['HumanBodyBlender/retarget.py'],
-     'hinweis': ('Der DRITTE Retargeter im Projekt (neben humanbody_core/skeleton/retarget.py und der JS-Seite). Ordnet BVH-Knochen den DEF-Knochen zu und setzt Pose-Bone-Rotationen. In Blender sind Knochendrehungen lokal in der Elternachse; matrix_basis, matrix_channel und matrix_world sind verschiedene Dinge. Fehler sehen wie eine unsaubere Animation aus, nicht wie ein Fehler.'),
+     'hinweis': ('Der DRITTE Retargeter im Projekt (neben '
+                 'humanbody_core/skeleton/retarget.py und der JS-Seite). Ordnet '
+                 'BVH-Knochen den DEF-Knochen zu und setzt Pose-Bone-Rotationen. In '
+                 'Blender sind Knochendrehungen lokal in der Elternachse; '
+                 'matrix_basis, matrix_channel und matrix_world sind verschiedene '
+                 'Dinge. Fehler sehen wie eine unsaubere Animation aus, nicht wie ein '
+                 'Fehler.'),
      'fragen': [
          'Wo wird eine Weltdrehung wie eine lokale behandelt (oder umgekehrt)?',
-         'Wo weicht dieser Retargeter inhaltlich von der Python-Kernfassung ab — gleiche Zuordnung, gleiche Richtungskorrektur, gleicher Delta-Weg?',
-         'Was passiert bei fehlenden Knochen und bei einer Armatur, die nicht im Pose-Modus ist?',
+         'Wo weicht dieser Retargeter inhaltlich von der Python-Kernfassung ab — '
+         'gleiche Zuordnung, gleiche Richtungskorrektur, gleicher Delta-Weg?',
+         'Was passiert bei fehlenden Knochen und bei einer Armatur, die nicht im '
+         'Pose-Modus ist?',
      ]},
     {'slug': 'blender_hair', 'name': 'Blender: Haare, Morphing, Charakteraufbau',
-     'dateien': ['HumanBodyBlender/hair.py', 'HumanBodyBlender/morphing.py', 'HumanBodyBlender/human_body.py'],
-     'hinweis': ('Haare als Partikel-/Kurvenobjekte, Morph-Anwendung im Addon, Aufbau des Charakters. morphing.py benutzt dieselbe Kern-Bibliothek wie die Webapp; dort ist bekannt, dass CharacterState.compute() einen INTERNEN Puffer zurueckgibt, der beim naechsten Aufruf ueberschrieben wird. Ich kann hier NICHT ausfuehren.'),
+     'dateien': ['HumanBodyBlender/hair.py', 'HumanBodyBlender/morphing.py',
+                 'HumanBodyBlender/human_body.py'],
+     'hinweis': ('Haare als Partikel-/Kurvenobjekte, Morph-Anwendung im Addon, Aufbau '
+                 'des Charakters. morphing.py benutzt dieselbe Kern-Bibliothek wie die '
+                 'Webapp; dort ist bekannt, dass CharacterState.compute() einen '
+                 'INTERNEN Puffer zurueckgibt, der beim naechsten Aufruf '
+                 'ueberschrieben wird. Ich kann hier NICHT ausfuehren.'),
      'fragen': [
-         'Wird das Ergebnis von compute() irgendwo festgehalten, obwohl es beim naechsten Aufruf ueberschrieben wird?',
+         'Wird das Ergebnis von compute() irgendwo festgehalten, obwohl es beim '
+         'naechsten Aufruf ueberschrieben wird?',
          'Haare: Was bleibt liegen, wenn ein Haar-Objekt ersetzt wird?',
          'Wo werden Vertex-Zahlen von Basisnetz und unterteiltem Netz verwechselt?',
      ]},

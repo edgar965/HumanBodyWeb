@@ -11,6 +11,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { Stoffabruf } from '../gemeinsam/stoffabruf.js';
 
 // =====================================================================
 // Cloth (templates)
@@ -20,31 +21,13 @@ export async function loadCloth(key, params, presetColor, useApiColor = false) {
     if (!state.isSkinned || !state.rigifySkeleton) return;
 
     try {
-        const qs = Object.entries(params)
-            .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-        const data = await Serverabruf.json(`/api/character/cloth/?${qs}`);
-        if (data.error) { console.error('Cloth error:', data.error); return; }
+        const stoff = await Stoffabruf.netz(params, () => removeClothRegion(key));
+        if (!stoff) return;
+        const { daten: data, geometrie: geo } = stoff;
 
-        removeClothRegion(key);
-
-        const geo = Netzgeometrie.bauen(data, THREE);
-
-        let matColor;
-        if (presetColor) {
-            matColor = new THREE.Color(presetColor);
-        } else if (useApiColor && data.color) {
-            matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
-        } else {
-            const colorPicker = document.getElementById('rc-cloth-color');
-            matColor = colorPicker
-                ? new THREE.Color(colorPicker.value)
-                : new THREE.Color(data.color[0], data.color[1], data.color[2]);
-        }
-
-        const mat = new THREE.MeshStandardMaterial({
-            color: matColor, roughness: 0.8, metalness: 0.0,
-            side: THREE.DoubleSide,
-        });
+        const mat = Stoffabruf.material(Stoffabruf.farbe(data, {
+            wunsch: presetColor, ausApi: useApiColor, farbfeld: 'rc-cloth-color',
+        }));
 
         const skInfo = (state.isSkinned && state.rigifySkeleton) ? {
             skeleton: state.rigifySkeleton.skeleton, bindMatrix: state.bodyMesh.bindMatrix

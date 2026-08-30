@@ -16,8 +16,7 @@ export class Videoueberlagerung {
         this.stift = null;
         if (!behaelter) return;
         this.leinwand = document.createElement('canvas');
-        this.leinwand.style.cssText =
-            'width:100%;height:100%;position:absolute;top:0;left:0';
+        this.leinwand.className = 'spieler-ueberlagerung';
         behaelter.appendChild(this.leinwand);
         this.stift = this.leinwand.getContext('2d');
         this.groesseAnpassen();

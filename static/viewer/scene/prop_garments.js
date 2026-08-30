@@ -36,11 +36,14 @@ export function _syncPropGarmentControls() {
     _set('prop-garment-metalness', Math.round(st.metalness * 100));
     _setV('prop-garment-metalness-val', st.metalness.toFixed(2));
     const colorEl = document.getElementById('prop-garment-color');
-    if (colorEl && st.color) colorEl.value = '#' + new THREE.Color(st.color[0], st.color[1], st.color[2]).getHexString();
+    if (colorEl && st.color) colorEl.value = '#' + new THREE.Color(st.color[0], st.color[1],
+        st.color[2]).getHexString();
     for (const rid of REGION_IDS) {
         const stKey = 'region' + rid[0].toUpperCase() + rid.slice(1);
-        const el = document.getElementById(`prop-garment-region-${rid}`); if (el) el.value = Math.round((st[stKey] || 0) * 100);
-        const valEl = document.getElementById(`prop-garment-region-${rid}-val`); if (valEl) valEl.textContent = (st[stKey] || 0).toFixed(2) + ' m';
+        const el = document.getElementById(`prop-garment-region-${rid}`); if (el) el.value = Math.round((st[stKey]
+            || 0) * 100);
+        const valEl = document.getElementById(`prop-garment-region-${rid}-val`);
+            if (valEl) valEl.textContent = (st[stKey] || 0).toFixed(2) + ' m';
     }
 }
 
@@ -54,11 +57,14 @@ export function initPropGarmentControls() {
     _bindSlider('prop-garment-roughness', 'prop-garment-roughness-val', v => (v / 100).toFixed(2));
     _bindSlider('prop-garment-metalness', 'prop-garment-metalness-val', v => (v / 100).toFixed(2));
     const roughSlider = document.getElementById('prop-garment-roughness');
-    if (roughSlider) roughSlider.addEventListener('input', () => { const sel = _selectedGarmentMesh(); if (sel) sel.mesh.material.roughness = _sliderVal('prop-garment-roughness') / 100; });
+    if (roughSlider) roughSlider.addEventListener('input', () => { const sel = _selectedGarmentMesh();
+        if (sel) sel.mesh.material.roughness = _sliderVal('prop-garment-roughness') / 100; });
     const metalSlider = document.getElementById('prop-garment-metalness');
-    if (metalSlider) metalSlider.addEventListener('input', () => { const sel = _selectedGarmentMesh(); if (sel) sel.mesh.material.metalness = _sliderVal('prop-garment-metalness') / 100; });
+    if (metalSlider) metalSlider.addEventListener('input', () => { const sel = _selectedGarmentMesh();
+        if (sel) sel.mesh.material.metalness = _sliderVal('prop-garment-metalness') / 100; });
     const colorPicker = document.getElementById('prop-garment-color');
-    if (colorPicker) colorPicker.addEventListener('input', () => { const sel = _selectedGarmentMesh(); if (sel) sel.mesh.material.color.set(colorPicker.value); });
+    if (colorPicker) colorPicker.addEventListener('input', () => { const sel = _selectedGarmentMesh();
+        if (sel) sel.mesh.material.color.set(colorPicker.value); });
     for (const rid of REGION_IDS) {
         _bindSlider(`prop-garment-region-${rid}`, `prop-garment-region-${rid}-val`, v => (v / 100).toFixed(2) + ' m');
     }
@@ -100,7 +106,8 @@ export async function _refitAllForCurrentChar() {
                 const vertBuf = Netzgeometrie.punkte(data.vertices);
                 const geo = Netzgeometrie.bauen(
                     { vertices: data.vertices, faces: data.faces }, THREE);
-                const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color[0], color[1], color[2]), roughness: gState.roughness ?? 0.8, metalness: gState.metalness ?? 0.0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnit: -1 });
+                const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color[0], color[1], color[2]),
+                    roughness: gState.roughness ?? 0.8, metalness: gState.metalness ?? 0.0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnit: -1 });
                 const mesh = _skinifyMesh(geo, mat, inst, data);
                 inst.clothMeshes[key] = mesh; inst.group.add(mesh);
                 inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
@@ -109,7 +116,8 @@ export async function _refitAllForCurrentChar() {
         }
         fn.updateEquippedList(inst); fn.updateVertexCount(); markDirty();
     } catch (e) { console.error('Refit all failed:', e); }
-    finally { state._refitting = false; if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync"></i> Garments &amp; Haare anpassen'; } }
+    finally { state._refitting = false; if (btn) { btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync"></i> Garments &amp; Haare anpassen'; } }
 }
 
 fn.initPropGarmentControls = initPropGarmentControls;

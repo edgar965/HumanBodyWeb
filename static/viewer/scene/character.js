@@ -12,7 +12,8 @@ import './garments.js';
 import './modellgenerator/zustand.js';
 import { Charakterzubehoer } from './charakter_zubehoer.js';
 import { Charakterkoerper } from './charakter_koerper.js';
-import { addCharacterFromPreset, clearAllCharacters, deleteCharacter, deselectCharacter, focusCharacter, loadDefaultCharacter, selectCharacter, setTransformMode, updateCharacterListUI, updateVertexCount } from './charakterliste.js';
+import { addCharacterFromPreset, clearAllCharacters, deleteCharacter, deselectCharacter, focusCharacter,
+    loadDefaultCharacter, selectCharacter, setTransformMode, updateCharacterListUI, updateVertexCount } from './charakterliste.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
@@ -109,11 +110,7 @@ export class CharacterInstance {
                 presetKey: this.presetKey || null,
                 bodyType: 'generated',
                 generatedConfig: this.generatedConfig,
-                transform: {
-                    position: this.group.position.toArray(),
-                    rotation: [this.group.rotation.x, this.group.rotation.y, this.group.rotation.z],
-                    scale: this.group.scale.toArray()
-                }
+                transform: this._lage(),
             };
         }
 
@@ -146,11 +143,25 @@ export class CharacterInstance {
             garments,
             mh_proxy: Object.values(this.mhProxies || {}),
             rigParams: this._rigParams || null,
-            transform: {
-                position: this.group.position.toArray(),
-                rotation: [this.group.rotation.x, this.group.rotation.y, this.group.rotation.z],
-                scale: this.group.scale.toArray()
-            }
+            transform: this._lage(),
+        };
+    }
+
+    /**
+     * Lage der Figur in der Szene — Ort, Drehung, Groesse.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Der Block stand in `toJSON` zweimal,
+     * einmal fuer erzeugte Modelle und einmal fuer alles andere. Die Drehung
+     * wird EINZELN ausgeschrieben, weil `Euler.toArray()` als viertes Feld die
+     * Achsenreihenfolge mitgibt — die kaeme beim Zurueckladen als vierte Zahl
+     * an und wuerde als Skalierungsanteil gelesen.
+     */
+    _lage() {
+        return {
+            position: this.group.position.toArray(),
+            rotation: [this.group.rotation.x, this.group.rotation.y,
+                       this.group.rotation.z],
+            scale: this.group.scale.toArray(),
         };
     }
 
@@ -184,7 +195,8 @@ export class CharacterInstance {
         if (data.transform) {
             if (data.transform.position) inst.group.position.fromArray(data.transform.position);
             if (data.transform.rotation) {
-                inst.group.rotation.set(data.transform.rotation[0], data.transform.rotation[1], data.transform.rotation[2]);
+                inst.group.rotation.set(data.transform.rotation[0], data.transform.rotation[1],
+                    data.transform.rotation[2]);
             }
             if (data.transform.scale) inst.group.scale.fromArray(data.transform.scale);
         }

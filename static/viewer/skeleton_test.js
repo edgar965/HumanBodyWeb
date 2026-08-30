@@ -169,7 +169,8 @@ export function placeBvhSkeleton(result, skelKey) {
     // Bone number labels
     createBoneLabels(bones, skelKey);
 
-    Protokoll.debug('Viewer', `${skelKey.toUpperCase()} skeleton placed: ${bones.length} bones, scale=${scale.toFixed(4)}, bvhH=${bvhHeight.toFixed(1)}, box.y=[${box.min.y.toFixed(1)},${box.max.y.toFixed(1)}], center.z=${center.z.toFixed(1)}, wrapper.z=${wrapper.position.z.toFixed(3)}`);
+    Protokoll.debug('Viewer',
+        `${skelKey.toUpperCase()} skeleton placed: ${bones.length} bones, scale=${scale.toFixed(4)}, bvhH=${bvhHeight.toFixed(1)}, box.y=[${box.min.y.toFixed(1)},${box.max.y.toFixed(1)}], center.z=${center.z.toFixed(1)}, wrapper.z=${wrapper.position.z.toFixed(3)}`);
 }
 
 

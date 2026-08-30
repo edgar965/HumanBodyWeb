@@ -19,7 +19,7 @@ export class Maskenbausteine {
     /** Abschnitt mit Ueberschrift. */
     static gruppe(titel, inhalt) {
         return `<div class="prop-group">`
-             + `<h3 style="font-size:0.85rem;color:var(--accent);">${titel}</h3>`
+             + `<h3 class="abschnittstitel-akzent">${titel}</h3>`
              + `${inhalt}</div>`;
     }
 

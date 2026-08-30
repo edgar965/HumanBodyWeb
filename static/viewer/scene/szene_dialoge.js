@@ -16,7 +16,8 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 export async function _openJsonFilePicker() {
     if (window.showOpenFilePicker) {
         try {
-            const [handle] = await window.showOpenFilePicker({ types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }], multiple: false });
+            const [handle] = await window.showOpenFilePicker({ types: [{ description: 'JSON',
+                accept: { 'application/json': ['.json'] } }], multiple: false });
             const file = await handle.getFile();
             return JSON.parse(await file.text());
         } catch (e) { if (e.name === 'AbortError') return null; throw e; }
@@ -39,7 +40,8 @@ export async function _saveJsonWithPicker(jsonData, defaultName) {
     const content = JSON.stringify(jsonData, null, 2);
     if (window.showSaveFilePicker) {
         try {
-            const handle = await window.showSaveFilePicker({ suggestedName: defaultName, types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }] });
+            const handle = await window.showSaveFilePicker({ suggestedName: defaultName, types: [{ description: 'JSON',
+                accept: { 'application/json': ['.json'] } }] });
             const writable = await handle.createWritable();
             await writable.write(content); await writable.close();
             return handle.name;
@@ -100,7 +102,8 @@ export function initCharacterDialog() {
     confirmBtn.addEventListener('click', async () => {
         if (!state._addCharSelectedPreset) return;
         closeDialog(dialog);
-        try { await fn.addCharacterFromPreset(state._addCharSelectedPreset); } catch (e) { alert(`Fehler: ${e.message}`); }
+        try { await fn.addCharacterFromPreset(state._addCharSelectedPreset);
+            } catch (e) { alert(`Fehler: ${e.message}`); }
     });
 }
 
@@ -115,14 +118,19 @@ export async function openAddCharacterDialog() {
     try {
         const data = await Serverabruf.json('/api/character/models/');
         presetList.innerHTML = '';
-        if (!data.presets || data.presets.length === 0) { presetList.innerHTML = '<li class="gedaempft">Keine Presets vorhanden.</li>'; return; }
+        if (!data.presets || data.presets.length
+            === 0) { presetList.innerHTML = '<li class="gedaempft">Keine Presets vorhanden.</li>'; return; }
         for (const p of data.presets) {
             const li = document.createElement('li'); li.textContent = p.label || p.name; li.dataset.presetName = p.name;
-            li.addEventListener('click', () => { presetList.querySelectorAll('li').forEach(x => x.classList.remove('selected')); li.classList.add('selected'); state._addCharSelectedPreset = p.name; confirmBtn.disabled = false; });
-            li.addEventListener('dblclick', async () => { state._addCharSelectedPreset = p.name; closeDialog(dialog); try { await fn.addCharacterFromPreset(p.name); } catch (e) { alert(`Fehler: ${e.message}`); } });
+            li.addEventListener('click',
+                () => { presetList.querySelectorAll('li').forEach(x => x.classList.remove('selected'));
+                    li.classList.add('selected'); state._addCharSelectedPreset = p.name; confirmBtn.disabled = false;
+                        });
+            li.addEventListener('dblclick', async () => { state._addCharSelectedPreset = p.name; closeDialog(dialog);
+                try { await fn.addCharacterFromPreset(p.name); } catch (e) { alert(`Fehler: ${e.message}`); } });
             presetList.appendChild(li);
         }
-    } catch (e) { presetList.innerHTML = `<li style="color:#ef4444">Fehler: ${e.message}</li>`; }
+    } catch (e) { presetList.innerHTML = `<li class="fehlertext">Fehler: ${e.message}</li>`; }
 }
 
 export function initSceneDialogs() {
@@ -173,16 +181,20 @@ export async function openLoadDialog() {
         const data = await Serverabruf.json('/api/character/model-files/');
         tbody.innerHTML = '';
         const files = data.files || [];
-        if (files.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="leer-hinweis-mitte">Keine Dateien.</td></tr>'; return; }
+        if (files.length
+            === 0) { tbody.innerHTML = '<tr><td colspan="3" class="leer-hinweis-mitte">Keine Dateien.</td></tr>';
+                return; }
         for (const f of files) {
             const tr = document.createElement('tr');
             const isScene = f.type === 'scene';
             const icon = isScene ? 'fa-film' : 'fa-user';
             const typeBadge = isScene ? '<span class="file-type-scene">Szene</span>' : '<span class="file-type-model">Modell</span>';
             const dateStr = f.modified ? new Date(f.modified * 1000).toLocaleDateString('de-DE') : '';
-            tr.innerHTML = `<td style="padding:4px 12px;"><i class="fas ${icon}" style="margin-right:6px;opacity:0.5;"></i>${escapeHtml(f.label || f.name)}</td><td style="padding:4px 12px;text-align:center;">${typeBadge}</td><td style="padding:4px 12px;text-align:right;color:var(--text-muted);font-size:0.7rem;">${dateStr}</td>`;
+            tr.innerHTML = `<td class="dateizelle"><i class="fas ${icon} dateisymbol"></i>${escapeHtml(f.label || f.name)}</td><td class="dateizelle mittig">${typeBadge}</td><td class="dateizelle datumszelle">${dateStr}</td>`;
             tr.style.cursor = 'pointer';
-            tr.addEventListener('click', () => { tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected')); tr.classList.add('selected'); state._selectedFileToLoad = f; loadConfirm.disabled = false; });
+            tr.addEventListener('click',
+                () => { tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+                    tr.classList.add('selected'); state._selectedFileToLoad = f; loadConfirm.disabled = false; });
             tr.addEventListener('dblclick', () => {
                 state._selectedFileToLoad = f;
                 closeDialog(loadDialog);
@@ -191,7 +203,7 @@ export async function openLoadDialog() {
             });
             tbody.appendChild(tr);
         }
-    } catch (e) { tbody.innerHTML = `<tr><td colspan="3" style="padding:12px;color:#ef4444;text-align:center;">Fehler: ${e.message}</td></tr>`; }
+    } catch (e) { tbody.innerHTML = `<tr><td colspan="3" class="leer-hinweis-mitte fehlertext">Fehler: ${e.message}</td></tr>`; }
 }
 
 export async function loadSceneListInto(listEl, onSelect) {
@@ -199,12 +211,15 @@ export async function loadSceneListInto(listEl, onSelect) {
     try {
         const data = await Serverabruf.json('/api/character/scenes/');
         listEl.innerHTML = '';
-        if (!data.scenes || data.scenes.length === 0) { listEl.innerHTML = '<li class="gedaempft">Keine Szenen.</li>'; return; }
+        if (!data.scenes || data.scenes.length === 0) { listEl.innerHTML = '<li class="gedaempft">Keine Szenen.</li>';
+            return; }
         for (const s of data.scenes) {
             const li = document.createElement('li');
             li.innerHTML = `${escapeHtml(s.label || s.name)} <span class="preset-sub">${s.character_count} Charakter(e)</span>`;
-            li.addEventListener('click', () => { listEl.querySelectorAll('li').forEach(x => x.classList.remove('selected')); li.classList.add('selected'); onSelect(s.name); });
+            li.addEventListener('click',
+                () => { listEl.querySelectorAll('li').forEach(x => x.classList.remove('selected'));
+                    li.classList.add('selected'); onSelect(s.name); });
             listEl.appendChild(li);
         }
-    } catch (e) { listEl.innerHTML = `<li style="color:#ef4444">Fehler: ${e.message}</li>`; }
+    } catch (e) { listEl.innerHTML = `<li class="fehlertext">Fehler: ${e.message}</li>`; }
 }

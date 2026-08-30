@@ -1,33 +1,35 @@
-{% extends "base.html" %}
+{% extends "einstellungsseite.html" %}
 {% load static %}
 {% block title %}Einstellungen — BVH Studio{% endblock %}
 
-{% block content %}
-<h1>BVH Studio Einstellungen</h1>
+{% block einstellungen_titel %}BVH Studio Einstellungen{% endblock %}
+{% block formular_zusatz %} id="studio-settings-form"{% endblock %}
 
-<form method="post" id="studio-settings-form">
-{% csrf_token %}
-
+{% block einstellungen_karten %}
 <div class="settings-section">
     <h3>Pfade</h3>
     <div class="settings-row">
         <label>BVH Eingabepfad:</label>
-        <input type="text" name="studio_bvh_input" id="studio_bvh_input" value="{{ prefs.studio_bvh_input }}" class="hb-dehnt">
+        <input type="text" name="studio_bvh_input" id="studio_bvh_input" value="{{ prefs.studio_bvh_input }}"
+             class="hb-dehnt">
         <span class="hint">Verzeichnis mit BVH-Dateien (Standard: HumanBody/data/animations/bvh/)</span>
     </div>
     <div class="settings-row">
         <label>BVH Ausgabepfad:</label>
-        <input type="text" name="studio_bvh_output" id="studio_bvh_output" value="{{ prefs.studio_bvh_output }}" class="hb-dehnt">
+        <input type="text" name="studio_bvh_output" id="studio_bvh_output" value="{{ prefs.studio_bvh_output }}"
+             class="hb-dehnt">
         <span class="hint">Verzeichnis f&uuml;r exportierte BVH-Dateien</span>
     </div>
     <div class="settings-row">
         <label>Video Ausgabepfad:</label>
-        <input type="text" name="studio_video_output" id="studio_video_output" value="{{ prefs.studio_video_output }}" class="hb-dehnt">
+        <input type="text" name="studio_video_output" id="studio_video_output" value="{{ prefs.studio_video_output }}"
+             class="hb-dehnt">
         <span class="hint">Verzeichnis f&uuml;r exportierte Videos (MP4)</span>
     </div>
     <div class="settings-row">
         <label>Projekt-Pfad:</label>
-        <input type="text" name="studio_project_path" id="studio_project_path" value="{{ prefs.studio_project_path }}" class="hb-dehnt">
+        <input type="text" name="studio_project_path" id="studio_project_path" value="{{ prefs.studio_project_path }}"
+             class="hb-dehnt">
         <span class="hint">Verzeichnis f&uuml;r Studio-Projektdateien (.studio.json)</span>
     </div>
 </div>
@@ -58,7 +60,8 @@
     </div>
     <div class="settings-row">
         <label>Standard Zoom:</label>
-        <input type="number" name="studio_zoom" id="studio_zoom" value="{{ prefs.studio_zoom|default:'100' }}" min="10" max="500" step="10">
+        <input type="number" name="studio_zoom" id="studio_zoom" value="{{ prefs.studio_zoom|default:'100' }}"
+             min="10" max="500" step="10">
         <span class="hint">Pixel pro Sekunde (10-500)</span>
     </div>
 </div>
@@ -67,8 +70,12 @@
     <h3>Playback</h3>
     <div class="settings-row">
         <label>Preload-Vorlauf:</label>
-        <input type="number" name="studio_preload_seconds" id="studio_preload_seconds" value="{{ prefs.studio_preload_seconds|default:'3' }}" min="0" max="30" step="0.5"> Sekunden
-        <span class="hint">Zeit-Vorlauf in Sekunden: das nächste Modell-Preset wird so viele Sekunden vor dem Model-Clip im Hintergrund geladen (0 = aus). KEIN Modell-Selektor — welches Modell geladen wird ergibt sich aus dem jeweiligen Model-Clip auf der Timeline.</span>
+        <input type="number" name="studio_preload_seconds" id="studio_preload_seconds"
+             value="{{ prefs.studio_preload_seconds|default:'3' }}" min="0" max="30" step="0.5"> Sekunden
+        <span
+             class="hint">Zeit-Vorlauf in Sekunden: das nächste Modell-Preset wird so viele Sekunden vor dem Model-Clip
+                  im Hintergrund geladen (0 = aus). KEIN Modell-Selektor — welches Modell geladen wird ergibt sich aus
+                       dem jeweiligen Model-Clip auf der Timeline.</span>
     </div>
 </div>
 
@@ -77,29 +84,43 @@
     <div class="settings-row">
         <label>Engine:</label>
         <select name="studio_cloth_engine" id="studio_cloth_engine">
-            <option value="none" {% if prefs.studio_cloth_engine|default:'none' == 'none' %}selected{% endif %}>Aus (nur Skinning)</option>
-            <option value="blender_eevee" {% if prefs.studio_cloth_engine == 'blender_eevee' %}selected{% endif %}>Blender Cloth + EEVEE (CPU Sim, GPU Render)</option>
-            <option value="warp_blender" {% if prefs.studio_cloth_engine == 'warp_blender' %}selected{% endif %}>NVIDIA Warp + Blender Render (GPU Sim, GPU Render)</option>
-            <option value="warp_only" {% if prefs.studio_cloth_engine == 'warp_only' %}selected{% endif %}>NVIDIA Warp (GPU Sim + GPU Render via Warp)</option>
+            <option value="none"
+                 {% if prefs.studio_cloth_engine|default:'none' == 'none' %}selected{% endif %}>Aus (nur
+                      Skinning)</option>
+            <option value="blender_eevee"
+                 {% if prefs.studio_cloth_engine == 'blender_eevee' %}selected{% endif %}>Blender Cloth + EEVEE (CPU
+                      Sim, GPU Render)</option>
+            <option value="warp_blender"
+                 {% if prefs.studio_cloth_engine == 'warp_blender' %}selected{% endif %}>NVIDIA Warp + Blender Render
+                      (GPU Sim, GPU Render)</option>
+            <option value="warp_only"
+                 {% if prefs.studio_cloth_engine == 'warp_only' %}selected{% endif %}>NVIDIA Warp (GPU Sim + GPU Render
+                      via Warp)</option>
         </select>
-        <span class="hint">Verhindert Durchst&ouml;&szlig;e von K&ouml;rper durch Kleidung bei Animation (z.B. Bein durch Rock)</span>
+        <span
+             class="hint">Verhindert Durchst&ouml;&szlig;e von K&ouml;rper durch Kleidung bei Animation (z.B. Bein
+                  durch Rock)</span>
     </div>
     <div class="settings-row">
         <label>Cloth-Qualit&auml;t:</label>
         <select name="studio_cloth_quality" id="studio_cloth_quality">
-            <option value="low" {% if prefs.studio_cloth_quality == 'low' %}selected{% endif %}>Niedrig (schnell)</option>
-            <option value="medium" {% if prefs.studio_cloth_quality|default:'medium' == 'medium' %}selected{% endif %}>Mittel</option>
-            <option value="high" {% if prefs.studio_cloth_quality == 'high' %}selected{% endif %}>Hoch (langsam)</option>
+            <option value="low"
+                 {% if prefs.studio_cloth_quality == 'low' %}selected{% endif %}>Niedrig (schnell)</option>
+            <option value="medium"
+                 {% if prefs.studio_cloth_quality|default:'medium' == 'medium' %}selected{% endif %}>Mittel</option>
+            <option value="high"
+                 {% if prefs.studio_cloth_quality == 'high' %}selected{% endif %}>Hoch (langsam)</option>
         </select>
         <span class="hint">Sim-Iterationen pro Frame. Hoch = stabiler, weniger Durchst&ouml;&szlig;e</span>
     </div>
     <div class="settings-row abstand-6">
-        <div style="flex:1;font-size:0.75rem;color:var(--text-muted);line-height:1.5;">
+        <div class="feldhinweis">
             <strong>Richtwerte (5s @ 30fps, RTX 3060):</strong><br>
             &bull; Aus: Render 15s (EEVEE)<br>
             &bull; Blender Cloth + EEVEE: Sim 30&ndash;75s + Render 15s = <strong>~1 min</strong><br>
             &bull; Warp + Blender Render: Sim 5&ndash;15s + Render 15s = <strong>~30s</strong><br>
-            &bull; Warp pur: Sim 5&ndash;15s + Render 5&ndash;10s = <strong>~20s</strong> (niedrigere Render-Qualit&auml;t)
+            &bull; Warp pur: Sim 5&ndash;15s + Render 5&ndash;10s = <strong>~20s</strong> (niedrigere
+                 Render-Qualit&auml;t)
         </div>
     </div>
 </div>
@@ -110,22 +131,22 @@
         <label>Video-Aufl&ouml;sung:</label>
         <select name="studio_export_resolution" id="studio_export_resolution">
             <option value="720" {% if prefs.studio_export_resolution == '720' %}selected{% endif %}>720p</option>
-            <option value="1080" {% if prefs.studio_export_resolution|default:'1080' == '1080' %}selected{% endif %}>1080p</option>
+            <option value="1080"
+                 {% if prefs.studio_export_resolution|default:'1080' == '1080' %}selected{% endif %}>1080p</option>
             <option value="1440" {% if prefs.studio_export_resolution == '1440' %}selected{% endif %}>1440p</option>
             <option value="2160" {% if prefs.studio_export_resolution == '2160' %}selected{% endif %}>4K</option>
         </select>
     </div>
     <div class="settings-row">
         <label>Video-Qualit&auml;t (CRF):</label>
-        <input type="number" name="studio_export_crf" id="studio_export_crf" value="{{ prefs.studio_export_crf|default:'18' }}" min="0" max="51">
+        <input type="number" name="studio_export_crf" id="studio_export_crf"
+             value="{{ prefs.studio_export_crf|default:'18' }}" min="0" max="51">
         <span class="hint">0 = beste Qualit&auml;t, 51 = kleinste Datei</span>
     </div>
 </div>
+{% endblock %}
 
-{% include "_einstellungen_speichern.html" %}
-
-</form>
-
+{% block einstellungen_nachtrag %}
 <style>
 .settings-section { margin-bottom: 24px; }
 .settings-section h3 {
@@ -151,6 +172,14 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
+
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+.feldhinweis.feldhinweis.feldhinweis {
+    flex:1;
+    font-size:0.75rem;
+    color:var(--text-muted);
+    line-height:1.5;
+}
 </style>
 
 {% comment %}Umbau 16.08.2026: Hier standen 50 Zeilen inline — Formular-Versand

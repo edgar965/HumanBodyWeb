@@ -96,7 +96,7 @@ class Gesichtskontur:
         if not landmarken:
             return False
         self.rahmen_erkannt = Bildrahmen.um(
-            [[l.x * self.breite, l.y * self.hoehe] for l in landmarken])
+            [[m.x * self.breite, m.y * self.hoehe] for m in landmarken])
         self.kontur = [[float(landmarken[i].x * self.breite),
                         float(landmarken[i].y * self.hoehe)]
                        for i in self.OVAL if i < len(landmarken)]

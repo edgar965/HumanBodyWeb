@@ -109,7 +109,8 @@ export function initSaveButton() {
             },
         };
         try {
-            const result = await Serverabruf.json(`${API}/model/save/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(saveData) });
+            const result = await Serverabruf.json(`${API}/model/save/`, { method: 'POST',
+                headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(saveData) });
             if (result.ok) Knopfmeldung.fertig(btn, 'Gespeichert');
         } catch (e) { console.error('Save failed:', e); }
     });

@@ -1,7 +1,9 @@
 import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Kleiderliste } from './kleiderliste.js';
+import { Kategoriewahl } from '../gemeinsam/kategoriewahl.js';
 
 /**
  * Kleiderpakete — herunterladbare Kleidungspakete anbieten und installieren.
@@ -26,12 +28,9 @@ export class Kleiderpakete {
             const daten = await Serverabruf.json(
                 '/api/character/garment/download/available/');
             wahl.innerHTML = '';
-            for (const paket of daten.packs || []) {
-                const eintrag = document.createElement('option');
-                eintrag.value = paket.name;
-                eintrag.textContent = `${paket.label} (${paket.category})`;
-                wahl.appendChild(eintrag);
-            }
+            Auswahlfeld.fuellen(wahl, (daten.packs || []).map(
+                (paket) => ({ wert: paket.name,
+                              text: `${paket.label} (${paket.category})` })));
         } catch (fehler) {
             Protokoll.warnung('kleiderpakete', 'Pakete nicht ladbar', fehler);
         }
@@ -70,17 +69,9 @@ export class Kleiderpakete {
         Kleiderliste.zeichnen();
     }
 
-    /** Die Kategorieliste neu füllen — der erste Eintrag ist „alle". */
+    /** Die Kategorieliste neu füllen — siehe `Kategoriewahl`. */
     static _kategorien(namen) {
-        const wahl = document.getElementById(Kleiderpakete.KATEGORIEWAHL);
-        if (!wahl || !namen) return;
-        while (wahl.options.length > 1) wahl.remove(1);
-        for (const name of namen) {
-            const eintrag = document.createElement('option');
-            eintrag.value = name;
-            eintrag.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-            wahl.appendChild(eintrag);
-        }
+        Kategoriewahl.fuellen(Kleiderpakete.KATEGORIEWAHL, namen);
     }
 
     static _melden(text) {

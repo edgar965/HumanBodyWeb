@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { state, MODEL_OFFSET_X, SMPLX_OFFSET_X } from './state.js';
+import { Klappbereiche } from '../gemeinsam/klappbereiche.js';
 
 export function initScene() {
     const canvas = document.getElementById('viewer-canvas');
@@ -51,12 +52,7 @@ export function initScene() {
 
     window.addEventListener('resize', onResize);
 
-    // Panel toggle
-    document.querySelectorAll('.panel-section h3').forEach(h3 => {
-        h3.addEventListener('click', () => {
-            h3.closest('.panel-section').classList.toggle('collapsed');
-        });
-    });
+    Klappbereiche.verdrahten();
 }
 
 function addModelLabel(text, xOffset) {

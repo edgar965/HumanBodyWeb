@@ -127,12 +127,7 @@ export class VideoExporter {
      */
     async stopAndDownload(filename = 'theatre-export.webm') {
         const blob = await this.stop();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
+        VideoExporter._herunterladen(blob, filename);
     }
 
     /**
@@ -152,12 +147,25 @@ export class VideoExporter {
             throw new Error(err.error || `HTTP ${resp.status}`);
         }
 
-        const mp4Blob = await resp.blob();
-        const url = URL.createObjectURL(mp4Blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
+        VideoExporter._herunterladen(await resp.blob(), filename);
+    }
+
+    /**
+     * Einen Blob als Datei herunterladen.
+     *
+     * BEFUND `doppelcode` (30.08.2026): Diese sechs Zeilen standen in
+     * `stopAndDownload` und `stopAndUpload`.
+     *
+     * `revokeObjectURL` MUSS folgen: Ein Objekt-URL haelt den Blob im Speicher,
+     * bis die Seite neu geladen wird. Bei einem Video sind das schnell
+     * mehrere hundert Megabyte je Export — und niemand sieht, woher sie kommen.
+     */
+    static _herunterladen(blob, dateiname) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = dateiname;
+        link.click();
         URL.revokeObjectURL(url);
     }
 }
