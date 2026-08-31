@@ -8,9 +8,9 @@ gleich, nur mit anderem Feldnamen. Es ist derselbe Fall wie bei
 
 Verwendung:
 
-  {% verbatim %}{% include "_einstellungen_animation.html" with
+  {% include "_einstellungen_animation.html" with
      feld="default_anim_scene" wert=settings.default_anim_scene
-     kennung="anim-sel-scene" %}{% endverbatim %}
+     kennung="anim-sel-scene" %}
 
   feld          `name` des versteckten Felds
   wert          bisher gewählter Wert
@@ -25,6 +25,6 @@ Verwendung:
         <small>{{ beschriftung|default:"Default Animation" }}</small>
     </div>
     <div class="settings-input">
-        {% include "_anim_selector.html" with field_name=feld current_value=wert selector_id=kennung wertformat=wertformat %}
+        {% include "_anim_selector.html" %}
     </div>
 </div>

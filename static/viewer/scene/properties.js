@@ -270,8 +270,12 @@ export function updateEquippedList(inst) {
 export function _updatePropContext() {
     const bodySections = ['prop-transform-section', 'prop-equipped-section', 'prop-bodytype-section',
         'prop-morphs-section'];
-    const isGarment = state._selectedSubMesh && state._selectedSubMesh.type === 'cloth' && state._selectedSubMesh.key.startsWith('gar_');
-    const isMH = state._selectedSubMesh && state._selectedSubMesh.type === 'cloth' && state._selectedSubMesh.key.startsWith('mh_');
+    // Beide Pruefungen fragen dasselbe dreimal ab; nur die Vorsilbe des
+    // Schluessels unterscheidet sie.
+    const teilnetz = state._selectedSubMesh;
+    const istStoff = Boolean(teilnetz) && teilnetz.type === 'cloth';
+    const isGarment = istStoff && teilnetz.key.startsWith('gar_');
+    const isMH = istStoff && teilnetz.key.startsWith('mh_');
     const isHair = state._selectedSubMesh && state._selectedSubMesh.type === 'hair';
     const isAsset = isGarment || isMH || isHair;
     for (const id of bodySections) { const el = document.getElementById(id); if (el) el.style.display = isAsset

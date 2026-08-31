@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { state } from '../state.js';
 import { Schaltknopf } from '../schaltknopf.js';
+import { Lichtfelder } from './lichtfelder.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { createLightHelper } from '../spur_lichter.js';
 import { Maskenbausteine as M } from './bausteine.js';
@@ -47,16 +48,14 @@ export class Lichteigenschaften {
 
         return `<div class="prop-group">
             <div
-                class="prop-row"><label>Licht-Typ:</label>${auswahl}${track._sceneLight ? '<span class="szenenmarke">(Szene)</span>' : ''}</div>
+                class="prop-row"><label>Licht-Typ:</label>${auswahl}${track._sceneLight ? '<span '
+                    + 'class="szenenmarke">(Szene)</span>' : ''}</div>
             <div class="prop-row"><label>Farbe:</label><input type="color"
                 value="${L ? '#' + L.color.getHexString() : '#ffffff'}" id="prop-light-color"></div>
             ${schieber('r', R)}${schieber('g', G)}${schieber('b', B)}
             <div class="prop-row"><label>Intensität:</label><input type="number" value="${L?.intensity || 2}"
                 id="prop-light-intensity" min="0" max="20" step="0.1"></div>
-            ${ambient ? '' : `<div class="prop-row"><label>Winkel:</label><input type="number"
-                value="${((L?.angle ?? Math.PI / 6) * 180 / Math.PI).toFixed(1)}" id="prop-light-angle" min="1" max="170" step="1"> °</div>
-            <div class="prop-row"><label>Penumbra:</label><input type="number" value="${(L?.penumbra ?? 0.3).toFixed(2)}" id="prop-light-penumbra" min="0" max="1" step="0.05"></div>
-            <div class="prop-row"><label>Reichweite:</label><input type="number" value="${(L?.distance ?? 50).toFixed(1)}" id="prop-light-distance" min="0" max="200" step="1"></div>`}
+            ${ambient ? '' : Lichtfelder.alle('prop-light', L)}
             ${!track.lightHelper ? '' : `
             <div class="prop-row"><label>Lichtkegel:</label>${knopf('prop-light-cone-toggle', track.coneVisible
                 !== false)}</div>
@@ -67,7 +66,8 @@ export class Lichteigenschaften {
             <div class="abstand-6">
                 <button id="prop-light-add-kf" class="knopf-akzent"><i class="fas fa-key"></i> Keyframe setzen</button>
             </div>
-            ${!track._sceneLight ? '' : '<div class="fussnote">Szenen-Licht — wird immer geladen, kann nicht gelöscht werden.</div>'}
+            ${!track._sceneLight ? '' : '<div class="fussnote">Szenen-Licht — wird immer geladen, kann nicht gelöscht '
+                + 'werden.</div>'}
         </div>`;
     }
 

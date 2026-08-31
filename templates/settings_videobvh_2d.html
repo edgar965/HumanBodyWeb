@@ -1,12 +1,12 @@
 {% extends "einstellungsseite.html" %}
+{% load einstellungszeile %}
 {% block title %}Video to BVH: 2D - Einstellungen{% endblock %}
 
 {% block einstellungen_stile %}
 <style>
 /* Stile dieser Seite. Angelegt am 30.08.2026, als die Inline-Stile
-   des Markups hierher gezogen wurden (Befund `jsbefunde`). */
-
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+   des Markups hierher gezogen wurden (Befund `jsbefunde`). Die Namen
+   sagen, was das Element IST — nicht, welche Eigenschaft es setzt. */
 .leerhinweis.leerhinweis.leerhinweis {
     color:#888;
     padding:0.5rem 1rem;
@@ -51,9 +51,9 @@
     <div class="settings-card hb-abstand-oben">
         <h2><i class="fas fa-eye"></i> MediaPipe <small class="hb-gedaempft">~50 AP, CPU</small></h2>
 
-        {% include "_einstellungen_zahl.html" with titel="Detection Confidence" beschriftung="Mindest-Konfidenz damit ein Pose-Ergebnis als erkannt gilt." feld="mp_min_detection_confidence" wert=settings.mp_min_detection_confidence min="0.0" max="1.0" schritt="0.05" %}
+        {% zahl "mp_min_detection_confidence" %}
 
-        {% include "_einstellungen_zahl.html" with titel="Tracking Confidence" beschriftung="Mindest-Konfidenz f&uuml;r Pose-Tracking zwischen Frames." feld="mp_min_tracking_confidence" wert=settings.mp_min_tracking_confidence min="0.0" max="1.0" schritt="0.05" %}
+        {% zahl "mp_min_tracking_confidence" %}
 
         <div class="settings-row">
             <div class="settings-label">
@@ -73,7 +73,8 @@
 
     <div class="settings-card hb-abstand-oben">
         <h2><i class="fas fa-walking"></i> OpenPose <small class="hb-gedaempft">61 AP, CUDA</small></h2>
-        <p class="leerhinweis">Keine zus&auml;tzlichen Einstellungen. OpenPose verwendet BODY_25 Standardkonfiguration.</p>
+        <p class="leerhinweis">Keine zus&auml;tzlichen Einstellungen. OpenPose verwendet BODY_25
+        Standardkonfiguration.</p>
     </div>
 
     <div class="settings-card hb-abstand-oben">

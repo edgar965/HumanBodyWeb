@@ -60,9 +60,18 @@ DJANGOBASE = {
     # Bibliothek — beides, um sie gegen die heutige Fassung zu halten. Ohne den
     # Ausschluss meldete `doppelrumpf` vier von sechs Gruppen genau dort
     # (17.08.2026). Fremdcode in der Befundliste verdeckt die eigenen Funde.
+    #
+    # `idol`, `sith`, `texformer`, `textured_smplx` (31.08.2026): vier
+    # EINGELAGERTE Forschungsprojekte unter `HumanBody/PhotoToTexture/`,
+    # zusammen 135 der 142 Python-Dateien dieses Ordners. Eigen sind dort
+    # nur die sieben Wrapper daneben (`*_wrapper.py`, `bake_texture.py`).
+    # Ohne den Ausschluss stammten die ersten vier Befunde des Werkzeugs
+    # `protokoll` aus `idol/lib/models/renderers/` und `textured_smplx/` —
+    # fremder Code, den zu aendern niemand vorhat.
     'skills_ignorieren': ['TestCharakter', 'alt', '_merge_tmp2', 'Backup',
                           'ProjektTemp', 'debug', 'tools', 'vendor', 'theatre',
-                          'theatre-studio'],
+                          'theatre-studio',
+                          'idol', 'sith', 'texformer', 'textured_smplx'],
     # WELCHE VERZEICHNISSE NUR GELESEN WERDEN DUERFEN (Werkzeug `nur-lesen`)
     # ======================================================================
     # Aus CLAUDE.md: „NEVER write to `HumanBody/data/` or

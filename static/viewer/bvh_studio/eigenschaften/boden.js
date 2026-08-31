@@ -12,6 +12,9 @@ import { Auswahlfeld } from '../../gemeinsam/auswahlfeld.js';
 /** Kleinste zulaessige Kantenlaenge in Metern. */
 const MINDESTMASS = 0.2;
 
+/** Grenzen fuer Rauheit und Metallanteil — beides ein Anteil von 0 bis 1. */
+const ANTEIL = 'min="0" max="1" step="0.05"';
+
 export class Bodeneigenschaften {
     static maske(track) {
         const mitte = track.mesh?.position || { x: 0, y: 0, z: 0 };
@@ -30,10 +33,10 @@ export class Bodeneigenschaften {
                 id="prop-floor-color"></div>
             <div class="prop-row"><label>Textur:</label><select id="prop-floor-texture" class="dehnen"><option
                 value="">(Lade...)</option></select></div>
-            <div class="prop-row"><label>Rauheit:</label><input type="number"
-                value="${(track.floorRoughness ?? 0.9).toFixed(2)}" id="prop-floor-roughness" min="0" max="1" step="0.05"></div>
-            <div class="prop-row"><label>Metall:</label><input type="number"
-                value="${(track.floorMetalness ?? 0.05).toFixed(2)}" id="prop-floor-metalness" min="0" max="1" step="0.05"></div>
+            ${M.zeile('Rauheit', M.zahl('prop-floor-roughness',
+                (track.floorRoughness ?? 0.9).toFixed(2), ANTEIL))}
+            ${M.zeile('Metall', M.zahl('prop-floor-metalness',
+                (track.floorMetalness ?? 0.05).toFixed(2), ANTEIL))}
             <h3 class="gruppentitel">Abmessungen (Mittelpunkt-bezogen)</h3>
             <div class="prop-row"><label>Breite X:</label><input type="number" value="${w.toFixed(2)}"
                 id="prop-floor-width" min="0.2" max="200" step="0.1"> m</div>

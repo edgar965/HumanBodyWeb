@@ -3,6 +3,19 @@
  */
 import { fn } from '../gemeinsam/registrierung.js';
 
+/**
+ * Ausgabeformate, die es noch nicht gibt — und was ihnen jeweils fehlt.
+ *
+ * Vorher standen dafür drei `else if`-Zweige mit je einer eigenen Meldung,
+ * die sich nur in diesem einen Halbsatz unterschieden. Wer ein viertes
+ * Format ergänzt, schreibt jetzt eine Zeile statt vier.
+ */
+const NOCH_NICHT = {
+    glb: 'Three.js GLTFExporter',
+    obj: 'ein serverseitiger Mesh-Export',
+    fbx: 'Blender als Backend',
+};
+
 export function initFinalizeTab() {
     // Export button
     document.getElementById('fin-export')?.addEventListener('click', () => {
@@ -31,14 +44,15 @@ export function initFinalizeTab() {
                 URL.revokeObjectURL(url);
                 if (fn.serverLog) fn.serverLog('export', `format=json`);
             } else {
-                alert('Scene-Daten nicht verfuegbar.');
+                alert('Szenendaten nicht verfügbar.');
             }
-        } else if (format === 'glb') {
-            alert('GLB Export ist noch in Entwicklung.\n\nFuer GLB Export wird Three.js GLTFExporter benoetigt.\nDiese Funktion wird in einem zukuenftigen Update implementiert.');
-        } else if (format === 'obj') {
-            alert('OBJ Export ist noch in Entwicklung.\n\nOBJ Export benoetigt serverseitigen Mesh-Export.\nDiese Funktion wird in einem zukuenftigen Update implementiert.');
-        } else if (format === 'fbx') {
-            alert('FBX Export ist noch in Entwicklung.\n\nFBX Export benoetigt Blender als Backend.\nDiese Funktion wird in einem zukuenftigen Update implementiert.');
+        } else if (NOCH_NICHT[format]) {
+            // Drei fast gleiche Meldungen, die sich nur im fehlenden
+            // Baustein unterschieden und alle denselben Schlusssatz
+            // sagten (Befund `doppelcode`, 30.08.2026).
+            alert(`${format.toUpperCase()}-Export ist noch in Entwicklung.`
+                + `\n\nDafür fehlt: ${NOCH_NICHT[format]}.`
+                + `\nDie Funktion kommt in einem späteren Update.`);
         }
     });
 
@@ -48,7 +62,7 @@ export function initFinalizeTab() {
         const removeUnused = document.getElementById('fin-remove-unused')?.checked;
 
         if (!collapseMorphs && !removeUnused) {
-            alert('Bitte mindestens eine Cleanup-Option auswaehlen.');
+            alert('Bitte mindestens eine Cleanup-Option auswählen.');
             return;
         }
 
@@ -70,7 +84,9 @@ export function initFinalizeTab() {
             return;
         }
 
-        alert(`Konvertierung ${inFmt.toUpperCase()} → ${outFmt.toUpperCase()}\n\nDiese Funktion ist noch in Entwicklung.\nSie wird serverseitig implementiert.`);
+        alert(`Konvertierung ${inFmt.toUpperCase()} → ${outFmt.toUpperCase()}\n\n`
+            + 'Diese Funktion ist noch in Entwicklung.\n'
+            + 'Sie wird serverseitig implementiert.');
         if (fn.serverLog) fn.serverLog('convert', `${inFmt} -> ${outFmt}`);
     });
 

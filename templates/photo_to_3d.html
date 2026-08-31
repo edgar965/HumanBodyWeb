@@ -522,7 +522,13 @@
     .wizard-footer button:hover { border-color: var(--text-muted); }
     .wizard-footer .btn-primary:hover { background: var(--accent-hover); }
     .wizard-panel::-webkit-resizer {
-        background: linear-gradient(135deg, transparent 60%, var(--text-muted) 60%, var(--text-muted) 65%, transparent 65%, transparent 75%, var(--text-muted) 75%, var(--text-muted) 80%, transparent 80%);
+        /* Zwei Striche als Anfasser: je ein 5%-Band aus
+           `--text-muted`, dazwischen und aussen durchsichtig. */
+        background: linear-gradient(135deg,
+            transparent 60%, var(--text-muted) 60%,
+            var(--text-muted) 65%, transparent 65%,
+            transparent 75%, var(--text-muted) 75%,
+            var(--text-muted) 80%, transparent 80%);
     }
     #wizard-edit-points.active {
         background: var(--accent);
@@ -609,7 +615,9 @@
     margin:0 0 12px;
 }
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .ausrichtungshinweis.ausrichtungshinweis.ausrichtungshinweis {
     font-size:0.72rem;
     color:var(--text-muted);

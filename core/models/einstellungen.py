@@ -8,13 +8,14 @@ findet die Modelle weiter ueber core/models/__init__.py — Migrationen und
 """
 
 from django.db import models
+from ..daten.einstellungsfelder import Einstellungsfelder
 
 
 class AppSettings(models.Model):
     """Singleton settings for the application."""
     progress_update_interval = models.IntegerField(
         default=10,
-        help_text="Update progress every N frames during MediaPipe/OpenPose processing",
+        help_text=Einstellungsfelder.hilfetext('progress_update_interval'),
     )
     default_model_config = models.CharField(
         max_length=200, default='femaleWithClothes', blank=True,
@@ -32,29 +33,33 @@ class AppSettings(models.Model):
         max_length=200, default='femaleWithClothes', blank=True,
         help_text="Default model preset for Process result page",
     )
-    show_rig_config = models.BooleanField(default=False,
-                                          help_text="Show rig by default on "
-                                          "Konfiguration page")
-    show_rig_scene = models.BooleanField(default=False,
-                                         help_text="Show rig by default on Szene page")
-    show_rig_animations = models.BooleanField(default=False,
-                                              help_text="Show rig by default on "
-                                              "Animationen page")
+    show_rig_config = models.BooleanField(
+        default=False,
+        help_text=Einstellungsfelder.hilfetext('show_rig_config'),
+    )
+    show_rig_scene = models.BooleanField(
+        default=False,
+        help_text=Einstellungsfelder.hilfetext('show_rig_scene'),
+    )
+    show_rig_animations = models.BooleanField(
+        default=False,
+        help_text=Einstellungsfelder.hilfetext('show_rig_animations'),
+    )
     default_anim_config = models.CharField(
         max_length=300, default='', blank=True,
-        help_text="Default animation URL for Konfiguration page",
+        help_text=Einstellungsfelder.hilfetext('default_anim_config'),
     )
     default_anim_scene = models.CharField(
         max_length=300, default='', blank=True,
-        help_text="Default animation URL for Szene page",
+        help_text=Einstellungsfelder.hilfetext('default_anim_scene'),
     )
     default_anim_animations = models.CharField(
         max_length=300, default='', blank=True,
-        help_text="Default animation URL for Animationen page",
+        help_text=Einstellungsfelder.hilfetext('default_anim_animations'),
     )
     default_anim_result = models.CharField(
         max_length=300, default='', blank=True,
-        help_text="Default animation URL for Result page",
+        help_text=Einstellungsfelder.hilfetext('default_anim_result'),
     )
     expanded_panels_config = models.CharField(
         max_length=500, default='["body_type","morphs","cloth_template"]', blank=True,
@@ -77,10 +82,12 @@ class AppSettings(models.Model):
 
     # --- Video to BVH: MediaPipe settings ---
     mp_min_detection_confidence = models.FloatField(
-        default=0.5, help_text="Pose detection confidence threshold (0.0–1.0)",
+        default=0.5,
+        help_text=Einstellungsfelder.hilfetext('mp_min_detection_confidence'),
     )
     mp_min_tracking_confidence = models.FloatField(
-        default=0.2, help_text="Pose tracking confidence (0.0–1.0)",
+        default=0.2,
+        help_text=Einstellungsfelder.hilfetext('mp_min_tracking_confidence'),
     )
     mp_model_complexity = models.IntegerField(
         default=1, help_text="0=Lite (fast), 1=Full (accurate)",
@@ -113,19 +120,24 @@ class AppSettings(models.Model):
 
     # --- Video to BVH: MocapNET v4 settings ---
     v4_hcd_iterations = models.IntegerField(
-        default=10, help_text="IK gradient descent iterations per frame (1–100)",
+        default=10,
+        help_text=Einstellungsfelder.hilfetext('v4_hcd_iterations'),
     )
     v4_hcd_epochs = models.IntegerField(
-        default=30, help_text="IK epochs per frame (1–200)",
+        default=30,
+        help_text=Einstellungsfelder.hilfetext('v4_hcd_epochs'),
     )
     v4_hcd_learning_rate = models.FloatField(
-        default=0.001, help_text="IK learning rate (0.0001–0.1)",
+        default=0.001,
+        help_text=Einstellungsfelder.hilfetext('v4_hcd_learning_rate'),
     )
     v4_smoothing_cutoff = models.FloatField(
-        default=5.0, help_text="Butterworth low-pass cutoff Hz (0.5–15.0)",
+        default=5.0,
+        help_text=Einstellungsfelder.hilfetext('v4_smoothing_cutoff'),
     )
     v4_smoothing_sampling = models.FloatField(
-        default=30.0, help_text="Butterworth sampling Hz (10.0–120.0)",
+        default=30.0,
+        help_text=Einstellungsfelder.hilfetext('v4_smoothing_sampling'),
     )
 
     # --- Video to BVH: MocapNET v4 component flags ---
@@ -145,24 +157,28 @@ class AppSettings(models.Model):
 
     # --- Video to BVH: GVHMR settings ---
     gvhmr_static_cam = models.BooleanField(
-        default=True, help_text="Skip DPVO dynamic camera estimation (static camera)",
+        default=True,
+        help_text=Einstellungsfelder.hilfetext('gvhmr_static_cam'),
     )
     gvhmr_focal_length_mm = models.FloatField(
-        default=0, help_text="Camera focal length in mm (0 = auto-detect)",
+        default=0,
+        help_text=Einstellungsfelder.hilfetext('gvhmr_focal_length_mm'),
     )
 
     # --- Video to BVH: WHAM settings ---
     wham_estimate_local_only = models.BooleanField(
         default=False,
-        help_text="Only estimate local body motion (no global trajectory)",
+        help_text=Einstellungsfelder.hilfetext('wham_estimate_local_only'),
     )
     wham_run_smplify = models.BooleanField(
-        default=False, help_text="Run SMPLify refinement (slower but more accurate)",
+        default=False,
+        help_text=Einstellungsfelder.hilfetext('wham_run_smplify'),
     )
 
     # --- Video to BVH: PromptHMR settings ---
     prompthmr_static_camera = models.BooleanField(
-        default=True, help_text="Assume static camera (recommended for most videos)",
+        default=True,
+        help_text=Einstellungsfelder.hilfetext('prompthmr_static_camera'),
     )
 
     # --- SMPL Body defaults (test-smpl page) ---
@@ -182,7 +198,8 @@ class AppSettings(models.Model):
         help_text="Default SMPL body color (hex)",
     )
     smpl_default_wireframe = models.BooleanField(
-        default=False, help_text="Default SMPL wireframe mode",
+        default=False,
+        help_text=Einstellungsfelder.hilfetext('smpl_default_wireframe'),
     )
     smpl_default_xoffset = models.FloatField(
         default=1.0, help_text="Default SMPL body X offset in meters",
@@ -203,7 +220,7 @@ class AppSettings(models.Model):
     )
     theatre_default_animation = models.CharField(
         max_length=300, default='', blank=True,
-        help_text="Default animation for Theatre page (format: category/name)",
+        help_text=Einstellungsfelder.hilfetext('theatre_default_animation'),
     )
     theatre_default_preset = models.CharField(
         max_length=50, default='ballet_stage', blank=True,

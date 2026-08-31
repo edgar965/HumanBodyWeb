@@ -61,6 +61,10 @@ media/tmp/
 *.pyproj
 *.pyproj.user
 ProjektTemp/
+# Pruefverzeichnisse, siehe djangobase/tests/wegwerfordner.py
+# (Kommentar in EIGENER Zeile: git kennt kein Inline-#, sonst waere der
+#  Text Teil des Musters und der Ordner nicht ignoriert.)
+_wegwerf/
 
 # Zustand der Hilfe-Seiten (djangoBase): Ankreuzliste der Skills-Lehren und die
 # Referenz der Endpunktprobe — pro Rechner verschieden.

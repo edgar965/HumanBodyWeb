@@ -33,7 +33,13 @@ export async function loadCharmorphHairUI() {
                 opt.value = name;
                 opt.textContent = name.replace('CY ', '');
                 const vc = _cmHairColors[name].viewport_color;
-                if (vc) opt.style.color = `rgb(${Math.round(vc[0]*255)},${Math.round(vc[1]*255)},${Math.round(vc[2]*255)})`;
+                // Die Haarfarbe des Eintrags haengt am Eintrag und
+                // laesst sich nicht als Klasse vorhalten.
+                if (vc) {
+                    const kanal = (i) => Math.round(vc[i] * 255);
+                    opt.style.color =
+                        `rgb(${kanal(0)},${kanal(1)},${kanal(2)})`;
+                }
                 colorSel.appendChild(opt);
             }
         }

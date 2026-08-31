@@ -47,8 +47,17 @@ export async function loadClothUI() {
             if (inst.clothMeshes[key]) fn._removeSubMesh({ type: 'cloth', key, meshObj: inst.clothMeshes[key],
                 charId: inst.id }); });
     const removeAll = document.getElementById('cloth-remove-all');
-    if (removeAll) removeAll.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return;
-        Object.keys(inst.clothMeshes).filter(k => k.startsWith('tpl_')).forEach(key => fn._removeSubMesh({ type: 'cloth', key, meshObj: inst.clothMeshes[key], charId: inst.id })); });
+    if (removeAll) removeAll.addEventListener('click', () => {
+        const inst = _selectedInst();
+        if (!inst) return;
+        const vorlagen = Object.keys(inst.clothMeshes)
+            .filter((k) => k.startsWith('tpl_'));
+        for (const key of vorlagen) {
+            fn._removeSubMesh({ type: 'cloth', key,
+                                meshObj: inst.clothMeshes[key],
+                                charId: inst.id });
+        }
+    });
     const bldCreate = document.getElementById('cloth-bld-create');
     if (bldCreate) bldCreate.addEventListener('click', () => { const inst = _selectedInst(); if (!inst) return;
         const region = document.getElementById('cloth-bld-region')?.value || 'TOP'; _loadClothForCharacter(inst,
@@ -65,8 +74,14 @@ function _doClothFromTemplate(isUpdate) {
     const tpl = document.getElementById('cloth-tpl-type')?.value; if (!tpl) return;
     const key = `tpl_${tpl}`;
     if (isUpdate && !inst.clothMeshes[key]) return;
-    _loadClothForCharacter(inst, key, { method: 'template', template: tpl, segments: _sliderVal('cloth-tpl-segments'),
-        tightness: _sliderVal('cloth-tpl-tightness') / 100, top_extend: _sliderVal('cloth-tpl-top-ext') / 100, bottom_extend: _sliderVal('cloth-tpl-bot-ext') / 100 });
+    _loadClothForCharacter(inst, key, {
+        method: 'template',
+        template: tpl,
+        segments: _sliderVal('cloth-tpl-segments'),
+        tightness: _sliderVal('cloth-tpl-tightness') / 100,
+        top_extend: _sliderVal('cloth-tpl-top-ext') / 100,
+        bottom_extend: _sliderVal('cloth-tpl-bot-ext') / 100,
+    });
 }
 
 export async function _loadClothForCharacter(inst, key, clothParams) {

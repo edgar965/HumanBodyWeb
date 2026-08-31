@@ -98,7 +98,9 @@
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-display-flex.hb-display-flex.hb-display-flex { display:flex; gap:6px; margin-top:6px; }
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .reglerzeile-eng.reglerzeile-eng.reglerzeile-eng {
     gap:4px;
 }

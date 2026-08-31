@@ -50,11 +50,13 @@ class SmplEinstellungen(Einstellungsseite):
             post, 'smpl_default_humanbody_preset', 'FemaleNew')
 
     def kontext(self, s):
+        szene = self._szene(s.smpl_default_scene)
         return {
             'betas': self._betas(s.smpl_default_betas),
             'opacity_pct': int(round(s.smpl_default_opacity * 100)),
             'xoffset_pct': int(round(s.smpl_default_xoffset * 100)),
-            'scene_settings': self._szene(s.smpl_default_scene),
+            'scene_settings': szene,
+            'lichter': self._lichter(szene),
             'available_presets': Modellvorlagen.namen(),
         }
 
@@ -70,6 +72,31 @@ class SmplEinstellungen(Einstellungsseite):
             except ValueError:
                 continue
         return werte
+
+    #: Die Lichter der Szene in Anzeigereihenfolge, mit ihrem Anzeigenamen.
+    #: Er gehoert hierher und nicht ins gespeicherte JSON: Dort stehen die
+    #: Schluessel, unter denen die Szene sie fuehrt (`key`, `fill`, …).
+    LICHTER = (('key', 'Key Light'), ('fill', 'Fill Light'),
+               ('back', 'Back Light'), ('ambient', 'Ambient'))
+
+    @classmethod
+    def _lichter(cls, szene):
+        """[{name, intensity, color}] — was die Szene wirklich fuehrt.
+
+        Ein Licht, das in den gespeicherten Daten fehlt, faellt aus der
+        Liste. Vorher stand dafuer eine Zeile mit zwei leeren Feldern da,
+        die aussah wie „Intensitaet 0".
+        """
+        beleuchtung = (szene or {}).get('lighting') or {}
+        raus = []
+        for schluessel, anzeige in cls.LICHTER:
+            licht = beleuchtung.get(schluessel)
+            if not isinstance(licht, dict):
+                continue
+            raus.append({'name': anzeige,
+                         'intensity': licht.get('intensity'),
+                         'color': licht.get('color')})
+        return raus
 
     @staticmethod
     def _szene(roh):

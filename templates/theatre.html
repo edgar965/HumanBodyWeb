@@ -691,7 +691,9 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
     margin-top:4px;
 }
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .abbruchknopf.abbruchknopf.abbruchknopf {
     display:none;
     flex:1;
@@ -1011,8 +1013,12 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
                 <div id="export-region-section">
                     <label class="hb-font-size-0-8rem-b">Bildausschnitt (px):</label>
                     <div class="zweispalter">
-                        <input type="number" id="export-crop-x" value="0" min="0" placeholder="X" class="hb-padding-3px">
-                        <input type="number" id="export-crop-y" value="0" min="0" placeholder="Y" class="hb-padding-3px">
+                        <input type="number" id="export-crop-x"
+                               value="0" min="0" placeholder="X"
+                               class="hb-padding-3px">
+                        <input type="number" id="export-crop-y"
+                               value="0" min="0" placeholder="Y"
+                               class="hb-padding-3px">
                         <input type="number" id="export-crop-w" value="0" min="0" placeholder="Breite (0=voll)"
                                class="hb-padding-3px">
                         <input type="number" id="export-crop-h" value="0" min="0" placeholder="H&ouml;he (0=voll)"

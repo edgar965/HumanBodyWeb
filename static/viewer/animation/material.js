@@ -48,7 +48,8 @@ export { BODY_MATERIALS } from '../gemeinsam/koerpermaterialien.js';
 
 export function getSkinMat() {
     if (!Seitenzustand.bodyMesh || !Seitenzustand.bodyMesh.material) return null;
-    return Array.isArray(Seitenzustand.bodyMesh.material) ? Seitenzustand.bodyMesh.material[0] : Seitenzustand.bodyMesh.material;
+    const werkstoff = Seitenzustand.bodyMesh.material;
+    return Array.isArray(werkstoff) ? werkstoff[0] : werkstoff;
 }
 
 export function applySkinColor() {

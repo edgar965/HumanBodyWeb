@@ -22,7 +22,9 @@ export { THREE, OrbitControls, TransformControls, BVHLoader, GLTFLoader };
 export { detectBVHFormat, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText };
 export { buildRigifySkeleton };
 export {
-    Knochengruppen, getDefaultModelConfig, computeBoneWorldTransforms, generateModelMesh, getDefaultRigConfig, generateRigBoneMesh,
+    Knochengruppen,
+    getDefaultModelConfig, computeBoneWorldTransforms,
+    generateModelMesh, getDefaultRigConfig, generateRigBoneMesh,
 };
 
 export const gltfLoader = new GLTFLoader();

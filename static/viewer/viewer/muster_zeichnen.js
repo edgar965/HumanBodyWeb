@@ -52,7 +52,9 @@ export function peRender() {
         });
         panel.vertices.forEach((v, vi) => {
             const [cx, cy] = peWorldToCanvas(v[0], v[1]);
-            const isSel = isActive && Musterzustand.peSelectedVertex && Musterzustand.peSelectedVertex.panel === name && Musterzustand.peSelectedVertex.index === vi;
+            const gewaehlt = Musterzustand.peSelectedVertex;
+    const isSel = isActive && gewaehlt && gewaehlt.panel === name
+        && gewaehlt.index === vi;
             ctx.fillStyle = isSel ? '#fff' : color;
             ctx.beginPath(); ctx.arc(cx, cy, isSel ? 5 : 3.5, 0, Math.PI * 2); ctx.fill();
         });
@@ -76,8 +78,13 @@ export function peRender() {
     });
 
     const statusEl = document.getElementById('pe-status');
-    if (statusEl) { const [wx, wy] = peCanvasToWorld(Musterzustand.peLastMouse.x, Musterzustand.peLastMouse.y);
-        statusEl.textContent = `${wx.toFixed(1)}, ${wy.toFixed(1)} cm    ${Math.round(Musterzustand.peZoom / 2 * 100)}%`; }
+    if (statusEl) {
+        const [wx, wy] = peCanvasToWorld(Musterzustand.peLastMouse.x,
+                                        Musterzustand.peLastMouse.y);
+        const zoom = Math.round(Musterzustand.peZoom / 2 * 100);
+        statusEl.textContent = `${wx.toFixed(1)}, ${wy.toFixed(1)} cm`
+            + `    ${zoom}%`;
+    }
 }
 
 export function _peMidpoint(panel, edge) { const v0 = panel.vertices[edge.endpoints[0]];

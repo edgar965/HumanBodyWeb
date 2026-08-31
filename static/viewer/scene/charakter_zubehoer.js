@@ -18,6 +18,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { Kleiderwerkstoff } from '../gemeinsam/kleiderwerkstoff.js';
 import { applyHairColor } from '../character_core.js';
 
 export class Charakterzubehoer {
@@ -162,15 +163,8 @@ export class Charakterzubehoer {
                 const geo = Netzgeometrie.bauen(
                     { vertices: data.vertices, faces: data.faces }, THREE);
 
-                const color = g.color ? new THREE.Color(g.color[0], g.color[1], g.color[2])
-                                      : new THREE.Color(0.3, 0.35, 0.5);
-                const mat = new THREE.MeshStandardMaterial({
-                    color, roughness: g.roughness ?? 0.8, metalness: g.metalness ?? 0.0,
-                    side: THREE.DoubleSide,
-                    polygonOffset: true,
-                    polygonOffsetFactor: -1,
-                    polygonOffsetUnit: -1,
-                });
+                const mat = Kleiderwerkstoff.bauen(
+                    THREE, g.color, g.roughness, g.metalness);
 
                 const mesh = _skinifyMesh(geo, mat, inst, data);
                 const key = `gar_${g.id}`;

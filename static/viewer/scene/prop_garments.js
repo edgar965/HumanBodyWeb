@@ -3,6 +3,7 @@
  * (initPropGarmentControls, _syncPropGarmentControls, _refitAllForCurrentChar)
  */
 import { THREE } from './state.js';
+import { Kleiderwerkstoff } from '../gemeinsam/kleiderwerkstoff.js';
 import { state, REGION_IDS } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _bindSlider, _sliderVal, _charQueryParams } from './utils.js';
@@ -106,8 +107,8 @@ export async function _refitAllForCurrentChar() {
                 const vertBuf = Netzgeometrie.punkte(data.vertices);
                 const geo = Netzgeometrie.bauen(
                     { vertices: data.vertices, faces: data.faces }, THREE);
-                const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color[0], color[1], color[2]),
-                    roughness: gState.roughness ?? 0.8, metalness: gState.metalness ?? 0.0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnit: -1 });
+                const mat = Kleiderwerkstoff.bauen(
+                    THREE, color, gState.roughness, gState.metalness);
                 const mesh = _skinifyMesh(geo, mat, inst, data);
                 inst.clothMeshes[key] = mesh; inst.group.add(mesh);
                 inst.garmentOrigPositions[key] = new Float32Array(vertBuf);

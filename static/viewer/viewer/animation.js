@@ -111,7 +111,11 @@ function bindPlaybackControls() {
                     const totSec = Math.floor(state.currentAnimDuration);
                     const curFrame = Math.round((time / state.currentAnimDuration) * state.currentAnimFrames);
                     const info = document.getElementById('anim-info');
-                    if (info) info.textContent = `${state.currentAnimName} \u2014 ${curSec}/${totSec}s  ${curFrame}/${state.currentAnimFrames}f`;
+                    if (info) {
+                        info.textContent = `${state.currentAnimName} \u2014 `
+                            + `${curSec}/${totSec}s  `
+                            + `${curFrame}/${state.currentAnimFrames}f`;
+                    }
                 }
             }
         });

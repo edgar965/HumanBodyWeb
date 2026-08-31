@@ -176,11 +176,12 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-color-e74c3c-c.hb-color-e74c3c-c.hb-color-e74c3c-c { color:#e74c3c; }   /* 2x */
 .hb-gedaempft-theme.hb-gedaempft-theme.hb-gedaempft-theme { color:var(--text-muted); }   /* 3x */
 .hb-padding-24px.hb-padding-24px.hb-padding-24px { padding:24px; color:var(--text-muted); }   /* 2x */
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .feldabstand.feldabstand.feldabstand {
     margin-bottom:8px;
 }
@@ -453,9 +454,11 @@ right.init();
         const hdr = document.createElement('div');
         hdr.className = 'dateikopf';
         if (source === 'CharMorphPlugin') {
-            hdr.innerHTML = '<span class="quelle-abweichend">CharMorphPlugin</span> (Original, git 69e914e) &mdash; <code>' + f.name + '</code>';
+            hdr.innerHTML = '<span class="quelle-abweichend">CharMorphPlugin</span> (Original, git 69e914e) &mdash; '
+                + '<code>' + f.name + '</code>';
         } else {
-            hdr.innerHTML = '<span class="quelle-aktuell">humanbody_core</span> (TestCharakter) &mdash; <code>' + f.name + '</code>';
+            hdr.innerHTML = '<span class="quelle-aktuell">humanbody_core</span>'
+                + ' (TestCharakter) &mdash; <code>' + f.name + '</code>';
         }
         contentEl.appendChild(hdr);
         const pre = document.createElement('pre');
@@ -472,7 +475,8 @@ right.init();
 
         html += '<div class="diag-section"><h3>L1 Body Types (Basis-Meshes)</h3>';
         if (diag.l1 && diag.l1.length) {
-            html += '<table class="diag-table"><tr><th>Name</th><th>Vertices</th><th>Shape</th><th>Size</th><th>Dtype</th></tr>';
+            html += '<table '
+                + 'class="diag-table"><tr><th>Name</th><th>Vertices</th><th>Shape</th><th>Size</th><th>Dtype</th></tr>';
             diag.l1.forEach(l => {
                 const isMale = l.name.startsWith('Male_');
                 const isCauc = l.name === 'Male_Caucasian';
@@ -482,7 +486,7 @@ right.init();
                     : '<span class="diag-tag female">Female</span>';
                 html += '<tr' + cls + '><td>' + tag + ' ' + l.name + '</td>';
                 if (l.error) {
-                    html += '<td colspan="4" class="hb-color-e74c3c-c">' + l.error + '</td>';
+                    html += '<td colspan="4" class="hb-schlecht">' + l.error + '</td>';
                 } else {
                     html += '<td>' + l.vertex_count.toLocaleString() + '</td>';
                     html += '<td>[' + l.shape.join(', ') + ']</td>';
@@ -513,7 +517,9 @@ right.init();
             html += '<td>' + formatBytes(gd.size_bytes) + '</td></tr></table>';
             if (diag.l1 && diag.l1.length) {
                 const maleCounts = diag.l1.filter(l => l.name.startsWith('Male_') && !l.error).map(l => l.vertex_count);
-                const femaleCounts = diag.l1.filter(l => l.name.startsWith('Female_') && !l.error).map(l => l.vertex_count);
+                const femaleCounts = diag.l1
+                    .filter(l => l.name.startsWith('Female_') && !l.error)
+                    .map(l => l.vertex_count);
                 if (maleCounts.length && maleCounts[0] !== gd.vertex_count) {
                     html += '<p><span class="diag-tag warn">PROBLEM</span> '
                         + 'gender_male.npy hat ' + gd.vertex_count.toLocaleString() + ' vertices, '
@@ -537,7 +543,7 @@ right.init();
                 html += '<div class="feldabstand">';
                 html += '<strong>' + p.file + '</strong>';
                 if (p.error) {
-                    html += ' <span class="hb-color-e74c3c-c">' + p.error + '</span>';
+                    html += ' <span class="hb-schlecht">' + p.error + '</span>';
                 } else {
                     html += ' — ' + p.morph_count + ' Morphs, ' + formatBytes(p.size_bytes);
                     html += '<br><span class="text-schmal">'
@@ -565,12 +571,17 @@ right.init();
         html += '<div class="diag-section"><h3>Code-Flow: Male_Caucasian</h3>';
         html += '<div class="hilfetext">';
         html += '<ol class="hilfeliste">';
-        html += '<li><code>MorphData.load()</code> — Liest alle L1/*.npy Dateien. Male_Caucasian.npy wird als Basis geladen.</li>';
-        html += '<li><code>CharacterState.set_body_type("Male_Caucasian")</code> — Setzt <code>self._basis = l1["Male_Caucasian"]</code></li>';
-        html += '<li><code>get_l2_for_type("Male_Caucasian")</code> — Lädt L2_packed/__main__.npz + L2_packed/Caucasian.npz</li>';
+        html += '<li><code>MorphData.load()</code> — Liest alle L1/*.npy Dateien. Male_Caucasian.npy wird als Basis '
+            + 'geladen.</li>';
+        html += '<li><code>CharacterState.set_body_type("Male_Caucasian")</code> — Setzt <code>self._basis = '
+            + 'l1["Male_Caucasian"]</code></li>';
+        html += '<li><code>get_l2_for_type("Male_Caucasian")</code> — Lädt L2_packed/__main__.npz + '
+            + 'L2_packed/Caucasian.npz</li>';
         html += '<li><code>compute()</code> — Startet mit <code>self._basis.copy()</code> (Male_Caucasian L1)</li>';
-        html += '<li><strong>Gender Delta</strong> — <code>gender_male.npy</code> wird addiert wenn <code>self.gender > 0</code>.<br>';
-        html += '<span class="diag-tag warn">PROBLEM</span> Wenn gender_male.npy eine andere Vertex-Anzahl hat als Male L1, crasht es oder erzeugt Mist!</li>';
+        html += '<li><strong>Gender Delta</strong> — <code>gender_male.npy</code> wird addiert wenn <code>self.gender '
+            + '> 0</code>.<br>';
+        html += '<span class="diag-tag warn">PROBLEM</span> Wenn gender_male.npy eine andere Vertex-Anzahl hat als '
+            + 'Male L1, crasht es oder erzeugt Mist!</li>';
         html += '<li><strong>L2 Morphs</strong> — Alle Slider-Deltas werden auf die Vertices addiert.</li>';
         html += '</ol>';
         html += '</div></div>';

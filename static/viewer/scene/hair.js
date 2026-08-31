@@ -9,6 +9,7 @@ import { _selectedInst } from './utils.js';
 import { convertInstToSkinned, _skinifyHairGroup } from './skeleton.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
 export async function loadHairUI() {
     try {
@@ -75,8 +76,19 @@ export function initPropHairControls() {
     _populatePropHairOptions();
     styleEl.addEventListener('change', () => {
         const inst = _selectedInst(); if (!inst) return;
-        if (!styleEl.value) { if (inst.hairMesh) { inst.group.remove(inst.hairMesh);
-            inst.hairMesh.traverse(c=>{if(c.isMesh){c.geometry.dispose();(Array.isArray(c.material)?c.material:[c.material]).forEach(m=>m.dispose());}}); inst.hairMesh=null; inst.hairStyle=null; } const a=document.getElementById('hair-style-select'); if(a) a.value=''; fn.updateEquippedList(inst); fn.updateVertexCount(); return; }
+        if (!styleEl.value) {
+            if (inst.hairMesh) {
+                inst.group.remove(inst.hairMesh);
+                Netzentsorgung.baum(inst.hairMesh);
+                inst.hairMesh = null;
+                inst.hairStyle = null;
+            }
+            const auswahl = document.getElementById('hair-style-select');
+            if (auswahl) auswahl.value = '';
+            fn.updateEquippedList(inst);
+            fn.updateVertexCount();
+            return;
+        }
         _loadHairForCharacter(inst, styleEl.value, colorEl.value || '');
         const a = document.getElementById('hair-style-select'); if(a) a.value = styleEl.value;
     });

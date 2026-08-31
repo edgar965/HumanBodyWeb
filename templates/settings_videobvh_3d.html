@@ -1,5 +1,5 @@
 {% extends "einstellungsseite.html" %}
-{% load static %}
+{% load static einstellungszeile %}
 {% block title %}Video to BVH: 3D - Einstellungen{% endblock %}
 
 {% block einstellungen_stile %}
@@ -14,9 +14,10 @@
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche
    Fassungen wurden zu einer Klasse zusammengefasst. */
-.hb-color-e74c3c-blank.hb-color-e74c3c-blank.hb-color-e74c3c-blank { color:#e74c3c; }   /* 2x */
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .auswahlgruppe.auswahlgruppe.auswahlgruppe {
     display:flex;
     flex-wrap:wrap;
@@ -133,21 +134,21 @@
         </div>
 
         {# IK Solver #}
-        {% include "_einstellungen_zahl.html" with titel="HCD Iterations" beschriftung="IK Gradient-Descent Iterationen pro Frame. Mehr = genauer aber langsamer." feld="v4_hcd_iterations" wert=settings.v4_hcd_iterations min="1" max="100" schritt="1" %}
+        {% zahl "v4_hcd_iterations" %}
 
-        {% include "_einstellungen_zahl.html" with titel="HCD Epochs" beschriftung="IK Epochen pro Frame. Mehr Epochen verbessern die Pose-Qualit&auml;t." feld="v4_hcd_epochs" wert=settings.v4_hcd_epochs min="1" max="200" schritt="1" %}
+        {% zahl "v4_hcd_epochs" %}
 
-        {% include "_einstellungen_zahl.html" with titel="HCD Learning Rate" beschriftung="Lernrate f&uuml;r den IK Gradient-Descent Solver." feld="v4_hcd_learning_rate" wert=settings.v4_hcd_learning_rate min="0.0001" max="0.1" schritt="0.0001" %}
+        {% zahl "v4_hcd_learning_rate" %}
 
         {# Smoothing #}
-        {% include "_einstellungen_zahl.html" with titel="Smoothing Cutoff (Hz)" beschriftung="Butterworth Tiefpass-Grenzfrequenz. Niedrigere Werte = gl&auml;ttere Animation." feld="v4_smoothing_cutoff" wert=settings.v4_smoothing_cutoff min="0.5" max="15.0" schritt="0.5" %}
+        {% zahl "v4_smoothing_cutoff" %}
 
-        {% include "_einstellungen_zahl.html" with titel="Smoothing Sampling (Hz)" beschriftung="Abtastfrequenz f&uuml;r den Butterworth-Filter. Sollte zur Video-FPS passen." feld="v4_smoothing_sampling" wert=settings.v4_smoothing_sampling min="10.0" max="120.0" schritt="1.0" %}
+        {% zahl "v4_smoothing_sampling" %}
 
         {# MediaPipe Detection #}
-        {% include "_einstellungen_zahl.html" with titel="MediaPipe Detection Confidence" beschriftung="Mindest-Konfidenz f&uuml;r die Pose-Erkennung (0.0&ndash;1.0)." feld="mp_min_detection_confidence" wert=settings.mp_min_detection_confidence min="0.0" max="1.0" schritt="0.05" %}
+        {% zahl "mp_min_detection_confidence" %}
 
-        {% include "_einstellungen_zahl.html" with titel="MediaPipe Tracking Confidence" beschriftung="Mindest-Konfidenz f&uuml;r das Pose-Tracking (0.0&ndash;1.0). Niedrig = weniger Redetections." feld="mp_min_tracking_confidence" wert=settings.mp_min_tracking_confidence min="0.0" max="1.0" schritt="0.05" %}
+        {% zahl "mp_min_tracking_confidence" %}
 
         <div class="settings-row">
             <div class="settings-label">
@@ -185,8 +186,8 @@
 
         {% if not smpl_models_ok %}
         <div class="warnkasten">
-            <i class="fas fa-exclamation-triangle hb-color-e74c3c-blank"></i>
-            <strong class="hb-color-e74c3c-blank">SMPL-Modelle fehlen</strong>
+            <i class="fas fa-exclamation-triangle hb-schlecht"></i>
+            <strong class="hb-schlecht">SMPL-Modelle fehlen</strong>
             <small class="warnhinweis">
                 Die SMPL .pkl Dateien werden ben&ouml;tigt. Lizenz registrieren unter
                 <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a>,
@@ -207,9 +208,9 @@
                  class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
-        {% include "_einstellungen_kaestchen.html" with titel="Static Camera" beschriftung="Statische Kamera annehmen (kein DPVO). Empfohlen f&uuml;r feste Kameraperspektive." feld="gvhmr_static_cam" text="Aktiviert" an=settings.gvhmr_static_cam %}
+        {% kaestchen "gvhmr_static_cam" %}
 
-        {% include "_einstellungen_zahl.html" with titel="Focal Length (mm)" beschriftung="Brennweite der Kamera in mm. 0 = automatische Sch&auml;tzung (empfohlen)." feld="gvhmr_focal_length_mm" wert=settings.gvhmr_focal_length_mm min="0" max="200" schritt="0.5" %}
+        {% zahl "gvhmr_focal_length_mm" %}
     </div>
 
     {# ── WHAM ── #}
@@ -223,9 +224,9 @@
                  class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
-        {% include "_einstellungen_kaestchen.html" with titel="Estimate Local Only" beschriftung="Nur lokale K&ouml;rperbewegung sch&auml;tzen (keine globale Trajektorie)." feld="wham_estimate_local_only" text="Aktiviert" an=settings.wham_estimate_local_only %}
+        {% kaestchen "wham_estimate_local_only" %}
 
-        {% include "_einstellungen_kaestchen.html" with titel="Run SMPLify" beschriftung="SMPLify-Verfeinerung ausf&uuml;hren. Langsamer aber genauer." feld="wham_run_smplify" text="Aktiviert" an=settings.wham_run_smplify %}
+        {% kaestchen "wham_run_smplify" %}
     </div>
 
     {# ── PromptHMR ── #}
@@ -239,7 +240,7 @@
                  class="fas fa-times-circle"></i></span>{% endif %}
         </h2>
 
-        {% include "_einstellungen_kaestchen.html" with titel="Static Camera" beschriftung="Statische Kamera annehmen. Empfohlen f&uuml;r die meisten Videos." feld="prompthmr_static_camera" text="Aktiviert" an=settings.prompthmr_static_camera %}
+        {% kaestchen "prompthmr_static_camera" %}
     </div>
 
     {# ── 3D Video Output ── #}

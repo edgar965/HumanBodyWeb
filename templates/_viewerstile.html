@@ -5,7 +5,7 @@ BEFUND `doppelcode` (30.08.2026): Diese beiden Zeilen standen in fünf Vorlagen
 (`animations`, `character_viewer`, `scene_config`, `skeleton_test`, `theatre`),
 jede mit ihrer eigenen `?t=`-Kennung.
 
-WARUM DAS MEHR IST ALS ORDNUNG: Die Kennung `?t={% verbatim %}{% now 'U' %}{% endverbatim %}` ist die
+WARUM DAS MEHR IST ALS ORDNUNG: Die Kennung `?t={% now 'U' %}` ist die
 Cache-Regel dieses Projekts. Sie an fünf Stellen von Hand zu wiederholen ist
 genau die Lage, in der sie beim sechsten Mal vergessen wird — und dann kommt
 eine geänderte Datei im Browser nicht an, ohne dass etwas darauf hinweist
@@ -19,7 +19,7 @@ auf allen fünfen.
 
 Verwendung, im `extra_head`-Block:
 
-  {% verbatim %}{% include "_viewerstile.html" %}{% endverbatim %}
+  {% include "_viewerstile.html" %}
 {% endcomment %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">

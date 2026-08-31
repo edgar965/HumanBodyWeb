@@ -60,7 +60,9 @@
     flex-shrink: 0;
 }
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .hilfe-abschnittstitel.hilfe-abschnittstitel.hilfe-abschnittstitel {
     color:var(--accent);
     margin:0 0 8px;
@@ -91,7 +93,9 @@
     min-width:160px;
 }
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .punkt-bandai.punkt-bandai.punkt-bandai {
     background:#bb44ff;
 }

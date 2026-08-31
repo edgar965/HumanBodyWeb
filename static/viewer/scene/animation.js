@@ -182,9 +182,15 @@ export function _initSaveAnimDialog() {
         try {
             const data = await Serverabruf.senden('/api/character/animation/save/',
                 { category, name, bvh_content: state.currentAnimBvhText });
-            if (data.ok) { dlg.classList.remove('visible');
-                state.currentAnimUrl = `/api/character/bvh/${encodeURIComponent(category)}/${encodeURIComponent(name)}/`; state.currentAnimName = name; loadAnimationUI(); }
-            else alert('Fehler: ' + (data.error || 'Unbekannt'));
+            if (!data.ok) {
+                alert('Fehler: ' + (data.error || 'Unbekannt'));
+                return;
+            }
+            dlg.classList.remove('visible');
+            state.currentAnimUrl = `/api/character/bvh/`
+                + `${encodeURIComponent(category)}/${encodeURIComponent(name)}/`;
+            state.currentAnimName = name;
+            loadAnimationUI();
         } catch (e) { alert('Speichern fehlgeschlagen: ' + e.message); }
     });
 }

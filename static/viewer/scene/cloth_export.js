@@ -119,7 +119,10 @@ export async function exportClothMP4({ engine = 'warp_only', quality = 'medium',
     Ausgabeoptionen.anhaengen(payload, {engine, quality, width, height,
                                         outputDir, filename});
     Protokoll.debug('Cloth Export',
-        `engine=${engine} quality=${quality} res=${width}x${height} frames=${payload.anim_frames} dir=${outputDir||'(default)'} file=${filename||'(auto)'}`);
+        `engine=${engine} quality=${quality} res=${width}x${height} `
+        + `frames=${payload.anim_frames} `
+        + `dir=${outputDir || '(default)'} `
+        + `file=${filename || '(auto)'}`);
     // Der Abruf WIRFT bei jedem Status außer 2xx, und diese Funktion hat keinen
     // Aufrufer im Projekt — sie hängt an `fn.`/`window.__` und wird aus der
     // Konsole oder einem Knopf gerufen. Ohne diesen Fänger wäre ein Serverfehler

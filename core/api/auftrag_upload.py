@@ -154,4 +154,9 @@ class Uploadseiten:
             'prompthmr': prompthmr,
             'hybrid_gvhmr': gvhmr and v4,
             'hybrid_prompthmr': prompthmr and v4,
+            # Die Vorlage fragte zweimal `not hybrid_gvhmr and not
+            # hybrid_prompthmr` — eine Bedingung, die in die Vorlage
+            # gewandert war und dort in EINER Zeile keinen Platz mehr hatte
+            # (ein `{% … %}` laesst sich nicht umbrechen).
+            'hybrid': (gvhmr or prompthmr) and v4,
         }

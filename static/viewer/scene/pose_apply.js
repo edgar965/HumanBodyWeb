@@ -75,7 +75,7 @@ async function renameSelectedPose() {
 
 async function deleteSelectedPose() {
     if (!_pose) return;
-    if (!confirm(`Pose "${_pose.name}" wirklich loeschen?`)) return;
+    if (!confirm(`Pose "${_pose.name}" wirklich löschen?`)) return;
     const antwort = await poseManage('delete', { category: _pose.category,
                                                 name: _pose.name });
     _nachAktion(antwort, 'Delete fehlgeschlagen');

@@ -13,10 +13,10 @@ Blockgrösse und stand trotzdem da.
         <span class="slider-val" id="garment-offset-val">0.006</span>
     </div>
 
-NICHT MEHR PER `{% verbatim %}{% include %}{% endverbatim %}` EINBINDEN (30.08.2026): Die Marke
-`{% verbatim %}{% regler %}{% endverbatim %}` (`core/templatetags/regler.py`) rendert diese Vorlage und
+NICHT MEHR PER `{% include %}` EINBINDEN (30.08.2026): Die Marke
+`{% regler %}` (`core/templatetags/regler.py`) rendert diese Vorlage und
 kommt mit Stellungsangaben aus. Der Grund ist eine Zahl: Als
-`{% verbatim %}{% include … with … %}{% endverbatim %}` war die Zeile regelmaessig 150 bis 172 Zeichen
+`{% include … with … %}` war die Zeile regelmaessig 150 bis 172 Zeichen
 lang, und umbrechen laesst sie sich NICHT — Djangos Lexer kennt kein DOTALL,
 ein Tag ueber zwei Zeilen wird STILL zu Text (genau so ist an dem Tag
 `/humanbody/scene/` kaputtgegangen). Als Marke passt dieselbe Zeile in
@@ -34,9 +34,9 @@ bewegt sich stumm weiter.
 
 Verwendung — IN EINER ZEILE (Djangos Lexer kennt kein DOTALL; ein Tag über
 zwei Zeilen wird stillschweigend zu Text, siehe `vorlagen-tags`). Oben im
-Kopf der Vorlage muss `{% verbatim %}{% load regler %}{% endverbatim %}` stehen:
+Kopf der Vorlage muss `{% load regler %}` stehen:
 
-  {% verbatim %}{% regler "garment-offset" "Offset" max=30 wert=6 anzeige="0.006" %}{% endverbatim %}
+  {% regler "garment-offset" "Offset" max=30 wert=6 anzeige="0.006" %}
 
 Die Reihenfolge der ersten beiden ist fest (Kennung, Beschriftung); alles
 Weitere wird benannt. Belegt ist der Umstieg von `Docu/umbau/regler_probe.mjs`:

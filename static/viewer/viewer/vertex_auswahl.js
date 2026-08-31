@@ -43,7 +43,9 @@ export function veHandleClick(e) {
     if (intersects.length > 0) {
         const hit = intersects[0]; const face = hit.face;
         const posAttr = Vertexzustand.veTargetMesh.geometry.getAttribute('position');
-        const hitLocal = hit.point.clone().applyMatrix4(new THREE.Matrix4().copy(Vertexzustand.veTargetMesh.matrixWorld).invert());
+        const nachLokal = new THREE.Matrix4()
+        .copy(Vertexzustand.veTargetMesh.matrixWorld).invert();
+    const hitLocal = hit.point.clone().applyMatrix4(nachLokal);
         let bestIdx = face.a, bestDist = Infinity;
         for (const vi of [face.a, face.b, face.c]) {
             const vp = new THREE.Vector3(posAttr.getX(vi), posAttr.getY(vi), posAttr.getZ(vi));

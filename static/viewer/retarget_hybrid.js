@@ -119,7 +119,9 @@ function buildClipFromRetargetData(data, rigifySkel) {
     }
 
     Protokoll.debug('RETARGET',
-        `buildClip: ${matched} matched, ${missed} missed, ${tracks.length} tracks, ${times.length} frames, duration=${data.duration}`);
+        `buildClip: ${matched} matched, ${missed} missed, `
+        + `${tracks.length} tracks, ${times.length} frames, `
+        + `duration=${data.duration}`);
     if (missedNames.length > 0) Protokoll.warnung('RETARGET', 'missed bones:', missedNames);
 
     return new THREE.AnimationClip('retargeted', data.duration, tracks);

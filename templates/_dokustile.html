@@ -7,7 +7,7 @@ wird beim Abschreiben vergessen (Regel `frontend-cache`).
 
 Verwendung:
 
-  {% verbatim %}{% block extra_head %}{% include "_dokustile.html" %}{% endblock %}{% endverbatim %}
+  {% block extra_head %}{% include "_dokustile.html" %}{% endblock %}
 {% endcomment %}
 {% load static %}
 <link rel="stylesheet" href="{% static 'css/dokuseite.css' %}?t={% now 'U' %}">

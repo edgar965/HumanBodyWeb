@@ -1,5 +1,5 @@
 {% extends "einstellungsseite.html" %}
-{% load static %}
+{% load static einstellungszeile %}
 {% block title %}Result - Einstellungen{% endblock %}
 
 {% block einstellungen_titel %}Einstellungen — Result{% endblock %}
@@ -19,7 +19,7 @@
                 </select>
             </div>
         </div>
-        {% include "_einstellungen_animation.html" with feld="default_anim_result" wert=settings.default_anim_result kennung="anim-sel-result" %}
+        {% animation "default_anim_result" "anim-sel-result" %}
     </div>
 {% endblock %}
 

@@ -83,7 +83,7 @@ export class Projektdatei {
             if (!wahl) return true;                       // abgebrochen, nicht ausweichen
             const idx = parseInt(wahl) - 1;
             if (idx < 0 || idx >= ergebnis.files.length) {
-                alert('Ungueltige Auswahl.');
+                alert('Ungültige Auswahl.');
                 return true;
             }
             return await Projektdatei._vomServer(ergebnis.files[idx].path,

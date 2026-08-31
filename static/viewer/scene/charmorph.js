@@ -7,6 +7,9 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
+/** Stand zweimal wortgleich in dieser Datei. */
+const KEIN_ASSET = 'Bitte zuerst ein Asset auswählen.';
+
 let _charmorphAssets = [];
 let _selectedAsset = null;
 
@@ -50,14 +53,17 @@ function _bindControls() {
 
     // Add button
     document.getElementById('cm-add')?.addEventListener('click', () => {
-        if (!_selectedAsset) { alert('Bitte zuerst ein Asset auswaehlen.'); return; }
+        if (!_selectedAsset) { alert(KEIN_ASSET); return; }
         serverLog('charmorph_add', _selectedAsset.name);
-        alert(`Asset "${_selectedAsset.name}" hinzufuegen.\n\nCharMorph Assets sind .blend Dateien.\nFuer Web-Anzeige muessen sie erst nach GLB exportiert werden.\n\nVerwende: Blender > File > Export > GLB`);
+        alert(`Asset "${_selectedAsset.name}" hinzufügen.`
+            + `\n\nCharMorph-Assets sind .blend-Dateien. Für die Anzeige`
+            + ` im Browser müssen sie erst nach GLB exportiert werden.`
+            + `\n\nIn Blender: File > Export > GLB`);
     });
 
     // Remove button
     document.getElementById('cm-remove')?.addEventListener('click', () => {
-        if (!_selectedAsset) { alert('Bitte zuerst ein Asset auswaehlen.'); return; }
+        if (!_selectedAsset) { alert(KEIN_ASSET); return; }
         serverLog('charmorph_remove', _selectedAsset.name);
     });
 }

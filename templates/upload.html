@@ -21,7 +21,8 @@
                     <span class="pipeline-desc">CPU, schnell, ~50 AP</span>
                 </label>
                 <label
-                     class="pipeline-option {% if not status.openpose_exe or not status.openpose_models %}disabled{% endif %}">
+                     class="pipeline-option
+                     {% if not status.openpose_exe or not status.openpose_models %}disabled{% endif %}">
                     <input type="radio" name="pipeline" value="openpose"
                         {% if default_2d == 'openpose' %}checked{% endif %}
                         {% if not status.openpose_exe or not status.openpose_models %}disabled{% endif %}>
@@ -126,7 +127,8 @@
             </tr>
         </tbody>
     </table>
-    <p class="tabellen-fussnote"><small>AP = COCO Average Precision (h&ouml;her = besser). Geschwindigkeit gesch&auml;tzt f&uuml;r RTX 3060.<br>
+    <p class="tabellen-fussnote"><small>AP = COCO Average Precision (h&ouml;her = besser). Geschwindigkeit
+    gesch&auml;tzt f&uuml;r RTX 3060.<br>
     Alle Detektoren konvertieren ihre Keypoints ins Body25 (OpenPose) Format f&uuml;r MocapNET v2.1.</small></p>
 
     <h3 class="hb-abstand-oben">Processing Steps</h3>
@@ -149,7 +151,9 @@
    Fassungen wurden zu einer Klasse zusammengefasst. */
 .hb-ohne-abstand.hb-ohne-abstand.hb-ohne-abstand { margin:0; }   /* 1x */
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .feldgruppe-abgesetzt.feldgruppe-abgesetzt.feldgruppe-abgesetzt {
     margin-top:10px;
 }

@@ -8,9 +8,9 @@ wortgleich, und genau die waren ein Fehler: Die zweite Vorlage lud
 kam dort aus dem Browser-Cache, und der Betrachter sah die alte Bewegung —
 ohne Fehler, ohne Hinweis. Beide Seiten hängen die Kennung jetzt an.
 
-Verwendung (innerhalb `{% verbatim %}{% if job.bvh_file %}{% endverbatim %}` steht schon hier):
+Verwendung (innerhalb `{% if job.bvh_file %}` steht schon hier):
 
-  {% verbatim %}{% include "_ergebnisfigur.html" %}{% endverbatim %}
+  {% include "_ergebnisfigur.html" %}
 
 Erwartet im Zusammenhang: `job` mit `id`, `name`, `fps`, `bvh_file`,
 `bvh_file_face`. Die Kennungen (`characterCanvas`, `resultVideo`,

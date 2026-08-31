@@ -47,7 +47,10 @@ export async function _ensureModelData(track) {
         const linked = state.project.getLinkedModel(track);
         preset = linked?._currentPreset;
     }
-    if (!preset) throw new Error('Kein Preset auf der Animations-Spur gefunden. Ziehe ein Modell-Preset auf die Modell-Spur oben.');
+    if (!preset) {
+        throw new Error('Kein Preset auf der Animations-Spur gefunden. '
+            + 'Ziehe ein Modell-Preset auf die Modell-Spur oben.');
+    }
     const resp = await fetch(`/api/character/model/${encodeURIComponent(preset)}/`);
     if (!resp.ok) throw new Error(`Modell-Preset "${preset}" nicht gefunden (HTTP ${resp.status}).`);
     const data = await resp.json();
@@ -160,21 +163,33 @@ export async function _buildPayload({ duration, fps }) {
     const track = _pickAnimTrack();
     if (!track) {
         _dumpTracksForDebug();
-        throw new Error('Kein Animations-Track mit Mesh + Skelett. Im BVH Studio: Animations-Spur anlegen + BVH-Clip drauf, Modell-Spur mit Preset verbinden, abspielen, dann Export. (Track-Dump in Console)');
+        throw new Error('Kein Animations-Track mit Mesh + Skelett. '
+            + 'Im BVH Studio: Animations-Spur anlegen + BVH-Clip drauf, '
+            + 'Modell-Spur mit Preset verbinden, abspielen, dann '
+            + 'Export. (Track-Dump in Console)');
     }
     const clip = _activeAnimationClip(track);
-    if (!clip
-        || !clip.animClip) throw new Error('Kein animierter Clip gefunden. Zieh eine BVH-Animation (z.B. AIST/d01_mJS3_ch07) auf einen Animations-Track.');
+    if (!clip || !clip.animClip) {
+        throw new Error('Kein animierter Clip gefunden. Zieh eine '
+            + 'BVH-Animation (z.B. AIST/d01_mJS3_ch07) auf einen '
+            + 'Animations-Track.');
+    }
 
     const modelData = await _ensureModelData(track);
     if (modelData.type !== 'generated_model') {
-        throw new Error(`Modell "${track.preset}" ist kein generiertes Rig-Modell (type="${modelData.type}"). Cloth-Sim braucht ein Modell mit bone_parts (z.B. TriadischRock).`);
+        throw new Error(`Modell "${track.preset}" ist kein generiertes Rig-Modell `
+            + `(type="${modelData.type}"). Cloth-Sim braucht ein Modell mit `
+            + `bone_parts (z.B. TriadischRock).`);
     }
 
     const mesh = track.mesh;
     const geo = mesh.geometry;
     const skel = mesh.skeleton;
-    if (!mesh.userData?.boneVertexRanges) throw new Error('boneVertexRanges fehlen auf dem Mesh — Modell muss neu geladen werden (Studio neu starten oder Track entfernen + neu anlegen).');
+    if (!mesh.userData?.boneVertexRanges) {
+        throw new Error('boneVertexRanges fehlen auf dem Mesh — Modell '
+            + 'muss neu geladen werden (Studio neu starten oder Track '
+            + 'entfernen + neu anlegen).');
+    }
 
     const positions = new Float32Array(geo.attributes.position.array);
     const faces = new Uint32Array(geo.index.array);

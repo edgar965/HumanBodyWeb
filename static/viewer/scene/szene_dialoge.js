@@ -1,4 +1,5 @@
 import { closeDialog, escapeHtml, generateCharacterId, openDialog } from './utils.js';
+import { Dateizeile } from './dateizeile.js';
 import { doSaveScene, loadModelFile, loadSceneFromData } from './save_load.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
@@ -176,25 +177,28 @@ export async function openLoadDialog() {
     openDialog(loadDialog);
     state._selectedFileToLoad = null;
     loadConfirm.disabled = true;
-    tbody.innerHTML = '<tr><td colspan="3" class="leer-hinweis-mitte"><i class="fas fa-spinner fa-spin"></i> Lade...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" class="leer-hinweis-mitte"><i class="fas fa-spinner fa-spin"></i> '
+        + 'Lade...</td></tr>';
     try {
         const data = await Serverabruf.json('/api/character/model-files/');
         tbody.innerHTML = '';
         const files = data.files || [];
-        if (files.length
-            === 0) { tbody.innerHTML = '<tr><td colspan="3" class="leer-hinweis-mitte">Keine Dateien.</td></tr>';
-                return; }
+        if (files.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="leer-hinweis-mitte">'
+                + 'Keine Dateien.</td></tr>';
+            return;
+        }
         for (const f of files) {
             const tr = document.createElement('tr');
-            const isScene = f.type === 'scene';
-            const icon = isScene ? 'fa-film' : 'fa-user';
-            const typeBadge = isScene ? '<span class="file-type-scene">Szene</span>' : '<span class="file-type-model">Modell</span>';
-            const dateStr = f.modified ? new Date(f.modified * 1000).toLocaleDateString('de-DE') : '';
-            tr.innerHTML = `<td class="dateizelle"><i class="fas ${icon} dateisymbol"></i>${escapeHtml(f.label || f.name)}</td><td class="dateizelle mittig">${typeBadge}</td><td class="dateizelle datumszelle">${dateStr}</td>`;
+            tr.innerHTML = new Dateizeile(f).html();
             tr.style.cursor = 'pointer';
-            tr.addEventListener('click',
-                () => { tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
-                    tr.classList.add('selected'); state._selectedFileToLoad = f; loadConfirm.disabled = false; });
+            tr.addEventListener('click', () => {
+                tbody.querySelectorAll('tr').forEach(
+                    (r) => r.classList.remove('selected'));
+                tr.classList.add('selected');
+                state._selectedFileToLoad = f;
+                loadConfirm.disabled = false;
+            });
             tr.addEventListener('dblclick', () => {
                 state._selectedFileToLoad = f;
                 closeDialog(loadDialog);
@@ -203,7 +207,11 @@ export async function openLoadDialog() {
             });
             tbody.appendChild(tr);
         }
-    } catch (e) { tbody.innerHTML = `<tr><td colspan="3" class="leer-hinweis-mitte fehlertext">Fehler: ${e.message}</td></tr>`; }
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="3" '
+            + `class="leer-hinweis-mitte fehlertext">Fehler: ${e.message}`
+            + '</td></tr>';
+    }
 }
 
 export async function loadSceneListInto(listEl, onSelect) {
@@ -215,7 +223,9 @@ export async function loadSceneListInto(listEl, onSelect) {
             return; }
         for (const s of data.scenes) {
             const li = document.createElement('li');
-            li.innerHTML = `${escapeHtml(s.label || s.name)} <span class="preset-sub">${s.character_count} Charakter(e)</span>`;
+            li.innerHTML = `${escapeHtml(s.label || s.name)} `
+                + `<span class="preset-sub">${s.character_count} `
+                + 'Charakter(e)</span>';
             li.addEventListener('click',
                 () => { listEl.querySelectorAll('li').forEach(x => x.classList.remove('selected'));
                     li.classList.add('selected'); onSelect(s.name); });

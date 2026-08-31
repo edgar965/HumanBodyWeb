@@ -28,11 +28,11 @@ Start-Sleep -Seconds 3
 
 # Verify server is responding
 try {
-    $response = Invoke-WebRequest -Uri "http://localhost:8081/" -UseBasicParsing -TimeoutSec 5
+    $response = Invoke-WebRequest -Uri "http://127.0.0.1:8081/" -UseBasicParsing -TimeoutSec 5
     if ($response.StatusCode -eq 200) {
-        Write-Host "Django server started successfully on http://localhost:8081/" -ForegroundColor Green
+        Write-Host "Django server started successfully on http://127.0.0.1:8081/" -ForegroundColor Green
     }
 } catch {
     Write-Host "Warning: Server may not be fully ready yet" -ForegroundColor Yellow
-    Write-Host "Check manually: http://localhost:8081/" -ForegroundColor Yellow
+    Write-Host "Check manually: http://127.0.0.1:8081/" -ForegroundColor Yellow
 }

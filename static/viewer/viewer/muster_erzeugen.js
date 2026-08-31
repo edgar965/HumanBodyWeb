@@ -27,7 +27,8 @@ export async function peRegionGenerate() {
     const grow = sliderVal('pe-region-grow');
     const looseness = (sliderVal('pe-region-looseness') / 100).toFixed(3);
         const category = document.getElementById('pe-region-category')?.value || 'custom';
-    const regionQs = `z_min=${zMin}&z_max=${zMax}&include_arms=${arms}&grow=${grow}&looseness=${looseness}&category=${category}`;
+    const regionQs = `z_min=${zMin}&z_max=${zMax}&include_arms=${arms}`
+        + `&grow=${grow}&looseness=${looseness}&category=${category}`;
     try {
         const data = await Serverabruf.json(
             `/api/character/pattern/region/generate/?${bodyQs}&${regionQs}`);
@@ -72,18 +73,34 @@ export async function peSaveToLibrary() {
         const cb = parseInt(colorHex.slice(5, 7), 16) / 255;
     const bodyQs = buildBodyQueryString();
     try {
-        const data = await Serverabruf.json(`/api/character/pattern/save/?${bodyQs}`, { method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ pattern: Musterzustand.pePattern, name, category, color: [cr, cg, cb],
-                roughness: sliderVal('pe-roughness') / 100, metalness: sliderVal('pe-metalness') / 100, wrap: document.getElementById('pe-wrap')?.checked || false, offset: (sliderVal('pe-wrap-offset') || 6) / 1000, stiffness: (sliderVal('pe-wrap-stiffness') ?? 50) / 100 }) });
-        if (data.ok) { if (statusEl) statusEl.textContent = `Saved: ${data.garment_id}`;
-            } else { if (statusEl) statusEl.textContent = `Error: ${data.error || 'Unknown'}`; }
+        const nutzlast = {
+            pattern: Musterzustand.pePattern,
+            name,
+            category,
+            color: [cr, cg, cb],
+            roughness: sliderVal('pe-roughness') / 100,
+            metalness: sliderVal('pe-metalness') / 100,
+            wrap: document.getElementById('pe-wrap')?.checked || false,
+            offset: (sliderVal('pe-wrap-offset') || 6) / 1000,
+            stiffness: (sliderVal('pe-wrap-stiffness') ?? 50) / 100,
+        };
+        const data = await Serverabruf.json(
+            `/api/character/pattern/save/?${bodyQs}`,
+            { method: 'POST', headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify(nutzlast) });
+        if (statusEl) {
+            statusEl.textContent = data.ok
+                ? `Saved: ${data.garment_id}`
+                : `Error: ${data.error || 'Unknown'}`;
+        }
     } catch (e) { if (statusEl) statusEl.textContent = `Error: ${e.message}`; }
 }
 
 export async function peLoadFromGarment(garmentId) {
     try {
-        const data = await Serverabruf.json(`/api/character/pattern/specification/?garment_id=${encodeURIComponent(garmentId)}`);
+        const data = await Serverabruf.json(
+            '/api/character/pattern/specification/'
+            + `?garment_id=${encodeURIComponent(garmentId)}`);
         if (!data.ok || !data.pattern) {
             Protokoll.warnung('muster_erzeugen', 'No specification found for', garmentId, data.error);
             return false;

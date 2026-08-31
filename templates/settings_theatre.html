@@ -1,13 +1,12 @@
 {% extends "einstellungsseite.html" %}
-{% load static %}
+{% load static einstellungszeile %}
 {% block title %}Theatre - Einstellungen{% endblock %}
 
 {% block einstellungen_stile %}
 <style>
 /* Stile dieser Seite. Angelegt am 30.08.2026, als die Inline-Stile
-   des Markups hierher gezogen wurden (Befund `jsbefunde`). */
-
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+   des Markups hierher gezogen wurden (Befund `jsbefunde`). Die Namen
+   sagen, was das Element IST — nicht, welche Eigenschaft es setzt. */
 .hinweisliste.hinweisliste.hinweisliste {
     color:var(--text-muted);
     font-size:0.85rem;
@@ -44,7 +43,7 @@
 
         {% comment %}wertformat="pfad": Theatre speichert <kat>/<name>,
         nicht die Viewer-URL — siehe Animationsauswahl.{% endcomment %}
-        {% include "_einstellungen_animation.html" with titel="Standard-Animation" beschriftung="Welche Animation automatisch beim Laden der Theatre-Seite abgespielt wird." feld="theatre_default_animation" wert=settings.theatre_default_animation kennung="anim-sel-theatre" wertformat="pfad" %}
+        {% animation "theatre_default_animation" "anim-sel-theatre" wertformat="pfad" %}
 
         <div class="settings-row">
             <div class="settings-label">
@@ -55,7 +54,8 @@
                 <select name="theatre_default_preset" class="settings-select">
                     {% for preset in available_lighting_presets %}
                     <option value="{{ preset.value }}"
-                         {% if settings.theatre_default_preset == preset.value %}selected{% endif %}>{{ preset.label }}</option>
+                         {% if settings.theatre_default_preset == preset.value %}selected{% endif %}>
+                        {{ preset.label }}</option>
                     {% endfor %}
                 </select>
             </div>

@@ -8,10 +8,10 @@ Standard-Animation.
 
 Verwendung:
 
-  {% verbatim %}{% include "_einstellungen_zahl.html" with titel="Detection Confidence"
+  {% include "_einstellungen_zahl.html" with titel="Detection Confidence"
      beschriftung="Mindest-Konfidenz …" feld="mp_min_detection_confidence"
      wert=settings.mp_min_detection_confidence min="0.0" max="1.0"
-     schritt="0.05" %}{% endverbatim %}
+     schritt="0.05" %}
 
   titel         fette Überschrift links
   beschriftung  erklärender Text darunter
@@ -29,8 +29,17 @@ Namen an. Wer hier umbenennt, muss die Ansicht mitnehmen.
         <small>{{ beschriftung }}</small>
     </div>
     <div class="settings-input">
+        {% comment %}
+        Die Bedingung prüft auf `is not None`, nicht auf Wahrheit: Die untere
+        Grenze 0 ist gültig UND falsy. Mit der Kurzform verschwand `min="0"`
+        bei `gvhmr_focal_length_mm`, und das Feld nahm danach negative
+        Brennweiten an. Gefunden hat es der Feld-für-Feld-Vergleich beim
+        Umbau aufs Register (30.08.2026), nicht der Blick auf die Seite;
+        `core/tests/component/test_einstellungsfelder.py` hält es fest.
+        {% endcomment %}
         <input type="number" name="{{ feld }}" value="{{ wert }}"
-               {% if min %}min="{{ min }}" {% endif %}{% if max %}max="{{ max }}"
-                    {% endif %}step="{{ schritt|default:'1' }}">
+               {% if min is not None %}min="{{ min }}" {% endif %}
+               {% if max is not None %}max="{{ max }}" {% endif %}
+               step="{{ schritt|default:'1' }}">
     </div>
 </div>

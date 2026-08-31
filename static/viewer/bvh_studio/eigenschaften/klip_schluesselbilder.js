@@ -8,6 +8,7 @@ import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Maskenbausteine as M } from './bausteine.js';
 import { Schaltknopf } from '../schaltknopf.js';
+import { Lichtfelder } from './lichtfelder.js';
 
 const STUFEN = ['linear', 'smooth', 'step'];
 
@@ -55,9 +56,12 @@ export class Schluesselbildeigenschaften {
             ${lage}
             ${M.zeile('Farbe', `<input type="color" value="${d.color || '#ffffff'}" id="prop-lkf-color">`)}
             ${M.zeile('Intensität', M.zahl('prop-lkf-intensity', d.intensity || 2, 'min="0" max="20" step="0.1"'))}
-            ${d.angle == null ? '' : M.zeile('Winkel', M.zahl('prop-lkf-angle', (d.angle * 180 / Math.PI).toFixed(1), 'min="1" max="170" step="1"') + ' °')}
-            ${d.penumbra == null ? '' : M.zeile('Penumbra', M.zahl('prop-lkf-penumbra', d.penumbra.toFixed(2), 'min="0" max="1" step="0.05"'))}
-            ${d.distance == null ? '' : M.zeile('Reichweite', M.zahl('prop-lkf-distance', d.distance.toFixed(1), 'min="0" max="200" step="1"'))}
+            ${d.angle == null ? ''
+                : Lichtfelder.winkel('prop-lkf', d.angle)}
+            ${d.penumbra == null ? ''
+                : Lichtfelder.penumbra('prop-lkf', d.penumbra)}
+            ${d.distance == null ? ''
+                : Lichtfelder.reichweite('prop-lkf', d.distance)}
             ${M.zeile('Licht', Schaltknopf.bauen('prop-lkf-visible', an, true))}
             ${M.zeile('Fade-Effekt', `<input type="checkbox" ${d.fade !== false ? 'checked' : ''}
                 id="prop-lkf-fade"> <span class="kaestchen-hinweis">aus = Sprung</span>`)}`);

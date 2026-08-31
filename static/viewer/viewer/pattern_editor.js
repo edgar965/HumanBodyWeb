@@ -11,6 +11,7 @@ import { Musterzustand } from './muster_zustand.js';
 import { _peHitControlPoint, _peHitEdge, _peHitVertex, peRender } from './muster_zeichnen.js';
 import { peGenerate3D, peLoadFromGarment, peRegionGenerate, peSaveToLibrary } from './muster_erzeugen.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Musterzeichenflaeche } from './muster_maus.js';
 
 export const pePreviewKey = 'pe_preview';
 export const PE_COLORS = ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c'];
@@ -112,91 +113,9 @@ export function _peAutoFit() {
         Musterzustand.pePan.y = H / 2 + cy * Musterzustand.peZoom;
 }
 
-function _peInitCanvas() {
-    const canvas = document.getElementById('pe-canvas'); if (!canvas) return;
-    canvas.addEventListener('mousedown', (e) => {
-        const cx = e.offsetX, cy = e.offsetY;
-        if (e.button === 1 || (e.button === 0 && e.ctrlKey)) { Musterzustand.pePanning = true;
-            Musterzustand.pePanStart = {x: e.clientX, y: e.clientY, px: Musterzustand.pePan.x,
-                py: Musterzustand.pePan.y}; e.preventDefault(); return; }
-        if (e.button !== 0) return;
-        if (Musterzustand.peMode === 'select') {
-            const cpHit = _peHitControlPoint(cx, cy); if (cpHit) { Musterzustand.peDragging = {type: 'cp',
-                panel: cpHit.panel, edgeIndex: cpHit.edgeIndex}; return; }
-            const vHit = _peHitVertex(cx, cy); if (vHit) { Musterzustand.peSelectedVertex = vHit;
-                Musterzustand.peSelectedEdge = null; Musterzustand.peActivePanel = vHit.panel;
-                    Musterzustand.peDragging = {type: 'vertex', panel: vHit.panel, index: vHit.index}; peRender();
-                        peUpdatePanelList(); return; }
-            const eHit = _peHitEdge(cx, cy); if (eHit) { Musterzustand.peSelectedEdge = eHit;
-                Musterzustand.peSelectedVertex = null; Musterzustand.peActivePanel = eHit.panel; peRender();
-                    peUpdatePanelList(); return; }
-            Musterzustand.peSelectedVertex = null; Musterzustand.peSelectedEdge = null; peRender();
-        } else if (Musterzustand.peMode === 'draw') {
-            if (!Musterzustand.peActivePanel || !Musterzustand.pePattern.panels[Musterzustand.peActivePanel]) return;
-            const panel = Musterzustand.pePattern.panels[Musterzustand.peActivePanel];
-            const [wx, wy] = peCanvasToWorld(cx, cy);
-            if (panel.vertices.length >= 3) { const [fx, fy] = peWorldToCanvas(...panel.vertices[0]);
-                if (Math.hypot(cx - fx, cy - fy) < 10) { panel.edges.push({endpoints: [panel.vertices.length - 1, 0],
-                    curvature: null}); panel.closed = true; Musterzustand.peMode = 'select'; _peSetModeButtons();
-                        peRender(); peUpdatePanelList(); return; } }
-            const vi = panel.vertices.length; panel.vertices.push([wx, wy]);
-                if (vi > 0) panel.edges.push({endpoints: [vi - 1, vi], curvature: null}); peRender();
-        } else if (Musterzustand.peMode === 'stitch') {
-            const eHit = _peHitEdge(cx, cy); if (!eHit) return;
-            if (!Musterzustand.peStitchFirst) {
-                Musterzustand.peStitchFirst = eHit;
-                Musterzustand.peSelectedEdge = eHit;
-                Musterzustand.peActivePanel = eHit.panel;
-                peRender();
-            }
-            else { if (eHit.panel
-                !== Musterzustand.peStitchFirst.panel) Musterzustand.pePattern.stitches.push({panelA: Musterzustand.peStitchFirst.panel, edgeA: Musterzustand.peStitchFirst.index, panelB: eHit.panel, edgeB: eHit.index}); peUpdateStitchList(); Musterzustand.peStitchFirst = null; Musterzustand.peSelectedEdge = null; peRender(); }
-        }
-    });
-    canvas.addEventListener('mousemove', (e) => {
-        const cx = e.offsetX, cy = e.offsetY; Musterzustand.peLastMouse = {x: cx, y: cy};
-        if (Musterzustand.pePanning && Musterzustand.pePanStart) {
-            Musterzustand.pePan.x = Musterzustand.pePanStart.px + (e.clientX - Musterzustand.pePanStart.x);
-            Musterzustand.pePan.y = Musterzustand.pePanStart.py + (e.clientY - Musterzustand.pePanStart.y);
-            peRender();
-            return;
-        }
-        if (Musterzustand.peDragging) { const [wx, wy] = peCanvasToWorld(cx, cy); if (Musterzustand.peDragging.type
-            === 'vertex') Musterzustand.pePattern.panels[Musterzustand.peDragging.panel].vertices[Musterzustand.peDragging.index] = [wx, wy]; else if (Musterzustand.peDragging.type === 'cp') Musterzustand.pePattern.panels[Musterzustand.peDragging.panel].edges[Musterzustand.peDragging.edgeIndex].curvature = [wx, wy]; peRender(); }
-        const statusEl = document.getElementById('pe-status'); if (statusEl) { const [wx, wy] = peCanvasToWorld(cx, cy);
-            statusEl.textContent = `${wx.toFixed(1)}, ${wy.toFixed(1)} cm    ${Math.round(Musterzustand.peZoom / 2 * 100)}%`; }
-    });
-    canvas.addEventListener('mouseup', () => { Musterzustand.peDragging = null; Musterzustand.pePanning = false;
-        Musterzustand.pePanStart = null; });
-    canvas.addEventListener('mouseleave', () => { Musterzustand.peDragging = null; Musterzustand.pePanning = false;
-        Musterzustand.pePanStart = null; });
-    canvas.addEventListener('dblclick', (e) => {
-        if (Musterzustand.peMode !== 'select') return; const cx = e.offsetX, cy = e.offsetY; const eHit = _peHitEdge(cx,
-            cy); if (eHit) {
-            const edge = Musterzustand.pePattern.panels[eHit.panel].edges[eHit.index];
-            if (edge.curvature) edge.curvature = null;
-            else { const panel = Musterzustand.pePattern.panels[eHit.panel];
-                const v0 = panel.vertices[edge.endpoints[0]]; const v1 = panel.vertices[edge.endpoints[1]];
-                    const mx = (v0[0] + v1[0]) / 2, my = (v0[1] + v1[1]) / 2;
-                        const dx = v1[0] - v0[0], dy = v1[1] - v0[1]; const len = Math.hypot(dx, dy) || 1;
-                            edge.curvature = [mx + (-dy / len) * 5, my + (dx / len) * 5]; }
-            peRender();
-        }
-    });
-    canvas.addEventListener('wheel', (e) => {
-        e.preventDefault(); const cx = e.offsetX, cy = e.offsetY; const [wx, wy] = peCanvasToWorld(cx, cy);
-        const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15; Musterzustand.peZoom = Math.max(0.5, Math.min(20,
-            Musterzustand.peZoom * factor));
-        Musterzustand.pePan.x = cx - wx * Musterzustand.peZoom;
-        Musterzustand.pePan.y = cy + wy * Musterzustand.peZoom;
-        peRender();
-    }, {passive: false});
-    canvas.addEventListener('contextmenu', e => e.preventDefault());
-}
-
 export function initPatternEditor() {
     const canvas = document.getElementById('pe-canvas'); if (!canvas) return;
-    _peInitCanvas();
+    Musterzeichenflaeche.binden(canvas);
     document.querySelectorAll('#pe-mode-btns .btn-toggle').forEach(btn => { btn.addEventListener('click',
         () => { Musterzustand.peMode = btn.dataset.mode; Musterzustand.peStitchFirst = null; _peSetModeButtons(); });
             });
@@ -221,8 +140,12 @@ export function initPatternEditor() {
         peUpdateStitchList();
         peRender();
     });
-    document.getElementById('pe-placement')?.addEventListener('change', (e) => { if (Musterzustand.peActivePanel
-        && Musterzustand.pePattern.panels[Musterzustand.peActivePanel]) { Musterzustand.pePattern.panels[Musterzustand.peActivePanel].placement = e.target.value; peUpdatePanelList(); } });
+    document.getElementById('pe-placement')?.addEventListener('change', (e) => {
+        const teil = Musterzustand.pePattern.panels[Musterzustand.peActivePanel];
+        if (!Musterzustand.peActivePanel || !teil) return;
+        teil.placement = e.target.value;
+        peUpdatePanelList();
+    });
     document.getElementById('pe-wrap')?.addEventListener('change',
         (e) => { const sliders = document.getElementById('pe-wrap-sliders');
             if (sliders) sliders.style.display = e.target.checked ? '' : 'none'; });
@@ -253,8 +176,13 @@ export function initPatternEditor() {
     ['pe-color', 'pe-roughness', 'pe-metalness'].forEach(id => {
         const el = document.getElementById(id); if (!el) return;
         el.addEventListener('input', () => {
-            let mesh = null; if (state._selectedItem && (state._selectedItem.type === 'cloth'
-                || state._selectedItem.type === 'garment')) mesh = state.clothMeshes[state._selectedItem.id] || state.garmentMeshes[state._selectedItem.id];
+            const gewaehlt = state._selectedItem;
+            let mesh = null;
+            if (gewaehlt && (gewaehlt.type === 'cloth'
+                             || gewaehlt.type === 'garment')) {
+                mesh = state.clothMeshes[gewaehlt.id]
+                    || state.garmentMeshes[gewaehlt.id];
+            }
             if (!mesh) mesh = state.clothMeshes[pePreviewKey]; if (!mesh) return;
             if (id === 'pe-color') mesh.material.color.set(el.value); else if (id
                 === 'pe-roughness') mesh.material.roughness = parseInt(el.value) / 100; else if (id
@@ -278,5 +206,12 @@ fn.peRegionGenerate = peRegionGenerate;
 fn.peGenerate3D = peGenerate3D;
 fn.peLoadFromGarment = peLoadFromGarment;
 fn.peSetMode = peSetMode;
+// Was `muster_maus.js` braucht — ueber das Register statt per Import, sonst
+// entstuende der Kreis pattern_editor -> muster_maus -> pattern_editor.
+fn.peUpdatePanelList = peUpdatePanelList;
+fn.peUpdateStitchList = peUpdateStitchList;
+fn.peSetModeButtons = _peSetModeButtons;
+fn.peCanvasToWorld = peCanvasToWorld;
+fn.peWorldToCanvas = peWorldToCanvas;
 fn.getPeMode = () => Musterzustand.peMode;
 fn.setPeMode = (v) => { Musterzustand.peMode = v; _peSetModeButtons(); };

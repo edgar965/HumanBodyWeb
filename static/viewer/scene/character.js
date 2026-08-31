@@ -12,8 +12,12 @@ import './garments.js';
 import './modellgenerator/zustand.js';
 import { Charakterzubehoer } from './charakter_zubehoer.js';
 import { Charakterkoerper } from './charakter_koerper.js';
-import { addCharacterFromPreset, clearAllCharacters, deleteCharacter, deselectCharacter, focusCharacter,
-    loadDefaultCharacter, selectCharacter, setTransformMode, updateCharacterListUI, updateVertexCount } from './charakterliste.js';
+import {
+    addCharacterFromPreset, clearAllCharacters, deleteCharacter,
+    deselectCharacter, focusCharacter, loadDefaultCharacter,
+    selectCharacter, setTransformMode, updateCharacterListUI,
+    updateVertexCount,
+} from './charakterliste.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 

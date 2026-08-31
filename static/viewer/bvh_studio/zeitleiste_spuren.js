@@ -101,7 +101,8 @@ export class Zeitleistenspuren {
             Zeitleistenflaeche.ctx.globalAlpha = 0.6;
             Zeitleistenflaeche.ctx.beginPath();
             for (let ci = 0; ci < track.clips.length; ci++) {
-                const cx = HEADER_WIDTH + (track.clips[ci].startFrame / state.project.fps) * pps - state.timelineScrollX;
+                const sekunde = track.clips[ci].startFrame / state.project.fps;
+    const cx = HEADER_WIDTH + sekunde * pps - state.timelineScrollX;
                 if (ci === 0) Zeitleistenflaeche.ctx.moveTo(cx, y + TRACK_HEIGHT / 2);
                 else Zeitleistenflaeche.ctx.lineTo(cx, y + TRACK_HEIGHT / 2);
             }

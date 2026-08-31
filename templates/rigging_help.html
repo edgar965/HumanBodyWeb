@@ -37,7 +37,8 @@
 
     <h1 class="hilfeseite-h1">Rigging &mdash; Wie Geometrie an Knochen gebunden wird</h1>
 
-    <p class="doku-untertitel">Erkl&auml;rt die drei Arten von Geometrie im Projekt und wie sie jeweils an das Skeleton gebunden werden.</p>
+    <p class="doku-untertitel">Erkl&auml;rt die drei Arten von Geometrie im Projekt und wie sie jeweils an das Skeleton
+    gebunden werden.</p>
 
     <!-- ============================================================ -->
     <!-- DAS SKELETON -->
@@ -310,11 +311,11 @@ Aktualisiert alle 176 Bone-Matrizen
         &darr;
 GPU Vertex Shader f&uuml;r JEDES SkinnedMesh:
         &darr;
-   &#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
-   &#x2502;  Body         Garments        Forms       &#x2502;
-   &#x2502;  (blended)    (vom Body)      (100%/Bone) &#x2502;
-   &#x2502;  6000+ Verts  2000+ Verts     500+ Verts  &#x2502;
-   &#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;
+   ┌──────────────────────────────────────────────────┐
+   │  Body         Garments        Forms       │
+   │  (blended)    (vom Body)      (100%/Bone) │
+   │  6000+ Verts  2000+ Verts     500+ Verts  │
+   └──────────────────────────────────────────────────┘
         &darr;
 renderer.render(scene, camera)</pre>
 
@@ -331,9 +332,12 @@ renderer.render(scene, camera)</pre>
         <h2 class="hilfeseite-kasten-h2">Zusammenfassung</h2>
         <table class="doku-abschlusstabelle">
             <tr><th></th><th>Weights</th><th>Quelle</th><th>Animiert?</th></tr>
-            <tr class="doku-body-fett"><td>Body</td><td>Blended (manuell gemalt)</td><td>Server (JSON + Morphs)</td><td>Ja</td></tr>
-            <tr class="doku-garment-fett"><td>Garment</td><td>Vom Body &uuml;bertragen (KDTree)</td><td>Server (Fitting-Pipeline)</td><td>Ja</td></tr>
-            <tr class="doku-form-fett"><td>Form</td><td>100% pro Bone</td><td>Client (Three.js Geometrie)</td><td>Ja (Rigify) / Nein (Rig)</td></tr>
+            <tr class="doku-body-fett"><td>Body</td><td>Blended (manuell gemalt)</td><td>Server (JSON +
+            Morphs)</td><td>Ja</td></tr>
+            <tr class="doku-garment-fett"><td>Garment</td><td>Vom Body &uuml;bertragen (KDTree)</td><td>Server
+            (Fitting-Pipeline)</td><td>Ja</td></tr>
+            <tr class="doku-form-fett"><td>Form</td><td>100% pro Bone</td><td>Client (Three.js Geometrie)</td><td>Ja
+            (Rigify) / Nein (Rig)</td></tr>
         </table>
     </div>
 

@@ -13,7 +13,7 @@ JavaScript beider Seiten.
 
 Verwendung:
 
-  {% verbatim %}{% include "_ergebnis_downloads.html" %}{% endverbatim %}
+  {% include "_ergebnis_downloads.html" %}
 {% endcomment %}
 {% if job.bvh_file %}
 <a href="{% url 'serve_bvh' job.id %}" class="btn btn-primary btn-sm" download title="Download BVH">

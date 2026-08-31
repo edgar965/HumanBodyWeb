@@ -1,5 +1,6 @@
 {% extends "einstellungsseite.html" %}
-{% load static %}
+{% load einstellungszeile %}
+{% load static einstellungszeile %}
 {% block title %}Szene - Einstellungen{% endblock %}
 
 {% block einstellungen_stile %}
@@ -28,7 +29,9 @@
     border-radius:4px;
 }   /* 2x */
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .kaestchenzeile.kaestchenzeile.kaestchenzeile {
     display:flex;
     align-items:center;
@@ -60,8 +63,8 @@
                 </select>
             </div>
         </div>
-        {% include "_einstellungen_kaestchen.html" with beschriftung="Anzeige mit Rig" feld="show_rig_scene" text="Rig beim Start anzeigen" an=settings.show_rig_scene %}
-        {% include "_einstellungen_animation.html" with feld="default_anim_scene" wert=settings.default_anim_scene kennung="anim-sel-scene" %}
+        {% kaestchen "show_rig_scene" %}
+        {% animation "default_anim_scene" "anim-sel-scene" %}
         <div class="settings-row">
             <div class="settings-label">
                 <small>Ausgeklappte Tabs</small>

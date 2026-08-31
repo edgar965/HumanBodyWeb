@@ -11,10 +11,10 @@ Fehlermeldung.
 
 Verwendung, je nachdem was die Seite braucht:
 
-    {% verbatim %}{% include "_importmap.html" %}{% endverbatim %}
-    {% verbatim %}{% include "_importmap.html" with subdivide=1 %}{% endverbatim %}
-    {% verbatim %}{% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}{% endverbatim %}
-    {% verbatim %}{% include "_importmap.html" with theatre=1 %}{% endverbatim %}
+    {% include "_importmap.html" %}
+    {% include "_importmap.html" with subdivide=1 %}
+    {% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
+    {% include "_importmap.html" with theatre=1 %}
 
 NICHT hier eingebunden ist `bvh_studio.html`: Die Seite lädt three.js aus
 `static/vendor/` statt vom CDN (sie muss ohne Netz laufen). Das ist eine

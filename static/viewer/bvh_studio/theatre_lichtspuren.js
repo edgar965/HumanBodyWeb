@@ -105,7 +105,9 @@ export async function _applyTheatrePresetAdditive(presetName, atFrame) {
     fn.updateProperties?.();
     fn.applyPlayhead?.();
     fn.serverLog?.('theatre_preset_added',
-        `${presetName} @f${frame}: +${added} Lichter, ${existingLights.length}× Alt-Licht ausgeschaltet (${skipped} übersprungen)`);
+        `${presetName} @f${frame}: +${added} Lichter, `
+        + `${existingLights.length}× Alt-Licht ausgeschaltet `
+        + `(${skipped} übersprungen)`);
 }
 
 export function _createLightTrackFromDef(def, presetLabel) {

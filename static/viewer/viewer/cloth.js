@@ -61,7 +61,9 @@ export async function loadCloth(key, params, color) {
         state.scene.add(mesh);
 
         Protokoll.debug('Viewer',
-            `Cloth ${key}: ${data.vertex_count} verts, ${data.face_count} tris, skinned=${mesh.isSkinnedMesh || false}`);
+            `Cloth ${key}: ${data.vertex_count} verts, `
+            + `${data.face_count} tris, `
+            + `skinned=${mesh.isSkinnedMesh || false}`);
         fn.updateEquippedList();
     } catch (e) {
         console.error('Failed to load cloth:', e);

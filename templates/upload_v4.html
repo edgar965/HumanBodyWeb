@@ -303,12 +303,13 @@
                 </div>
 
                 <!-- Hybrid (SMPL Body + MocapNET v4 Face+Hands) -->
-                <div class="pipeline-card {% if not status_3d.hybrid_gvhmr and not status_3d.hybrid_prompthmr %}disabled{% endif %}" data-pipeline="hybrid" id="hybridCard">
+                <div class="pipeline-card {% if not status_3d.hybrid %}disabled{% endif %}"
+                     data-pipeline="hybrid" id="hybridCard">
                     <label class="pipeline-card-header">
                         <input type="radio" name="pipeline" value="hybrid_gvhmr"
                             id="hybridRadio"
                             {% if default_3d == 'hybrid_gvhmr' or default_3d == 'hybrid_prompthmr' %}checked{% endif %}
-                            {% if not status_3d.hybrid_gvhmr and not status_3d.hybrid_prompthmr %}disabled{% endif %}>
+                            {% if not status_3d.hybrid %}disabled{% endif %}>
                         <span class="pipeline-card-title">Hybrid <span class="hb-color-e67e22">&starf;</span></span>
                         <span class="pipeline-card-desc">
                             SMPL Body (GPU) + MocapNET v4 H&auml;nde (CPU) + SMPLest-X Gesicht
@@ -520,7 +521,8 @@
     </p>
 
     <h3 class="hb-abstand-oben">SMPL-Lizenz</h3>
-    <p>GVHMR, WHAM und PromptHMR ben&ouml;tigen SMPL Modell-Dateien. Kostenlos beantragen: <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
+    <p>GVHMR, WHAM und PromptHMR ben&ouml;tigen SMPL Modell-Dateien. Kostenlos beantragen:
+    <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
 </div>
 {% endblock %}
 
@@ -625,7 +627,9 @@
 .hb-color-e67e22.hb-color-e67e22.hb-color-e67e22 { color:#e67e22; }   /* 3x */
 .hb-ohne-abstand.hb-ohne-abstand.hb-ohne-abstand { margin:0; }   /* 1x */
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .abschnitt-abgesetzt.abschnitt-abgesetzt.abschnitt-abgesetzt {
     margin-top:12px;
     padding-top:10px;

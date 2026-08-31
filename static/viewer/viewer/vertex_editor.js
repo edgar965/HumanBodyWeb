@@ -96,7 +96,8 @@ export function veExitEditMode() {
         Vertexzustand.veTargetMesh.raycast = Vertexzustand.veOrigRaycast;
         Vertexzustand.veOrigRaycast = null;
     }
-    if (Vertexzustand.veTargetMesh?.geometry?.disposeBoundsTree) Vertexzustand.veTargetMesh.geometry.disposeBoundsTree();
+    const netz = Vertexzustand.veTargetMesh;
+    if (netz?.geometry?.disposeBoundsTree) netz.geometry.disposeBoundsTree();
     if (Vertexzustand.veGizmo) {
         state.scene.remove(Vertexzustand.veGizmo.getHelper());
         Vertexzustand.veGizmo.detach();
@@ -130,7 +131,13 @@ export function veHandleKeydown(e) {
     if (e.key === 'a' || e.key === 'A') {
         if (Vertexzustand.veSelectedIndices.size > 0
             && Vertexzustand.vePointsOverlay) Vertexzustand.veSelectedIndices.clear();
-        else if (Vertexzustand.vePointsOverlay) { const count = Vertexzustand.vePointsOverlay.geometry.getAttribute('position').count; for (let i = 0; i < count; i++) Vertexzustand.veSelectedIndices.add(i); }
+        else if (Vertexzustand.vePointsOverlay) {
+            const punkte = Vertexzustand.vePointsOverlay.geometry
+                .getAttribute('position').count;
+            for (let i = 0; i < punkte; i++) {
+                Vertexzustand.veSelectedIndices.add(i);
+            }
+        }
         _veUpdateAllColors(); _veUpdateGizmo(); _veUpdateSelectionInfo();
     }
 }

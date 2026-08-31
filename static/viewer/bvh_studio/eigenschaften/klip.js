@@ -50,7 +50,8 @@ export class Klipeigenschaften {
                 max="100"> <span id="prop-audio-vol-label" class="reglerwert">${prozent}%</span>`)}
             ${M.zeile('Fade In', M.zahl('prop-audio-fadein', d.fadeIn || 0, 'min="0"') + f)}
             ${M.zeile('Fade Out', M.zahl('prop-audio-fadeout', d.fadeOut || 0, 'min="0"') + f)}
-            ${M.zeile('Offset', M.zahl('prop-audio-offset', d.offset || 0, 'min="0" step="0.1"') + ' <span class="winzig">s</span>')}`);
+            ${M.zeile('Offset', M.zahl('prop-audio-offset', d.offset || 0, 'min="0" step="0.1"') + ' <span '
+                + 'class="winzig">s</span>')}`);
     }
 
     static _objekt(clip) {
@@ -77,7 +78,8 @@ export class Klipeigenschaften {
     static _bvh(clip) {
         const f = ' <span class="winzig">f</span>';
         return M.gruppe(`Clip: ${clip.name}`, `
-            ${M.zeile('Start', M.zahl('prop-clip-start', clip.startFrame, 'min="0"') + ' <span class="text-winzig">frames</span>')}
+            ${M.zeile('Start', M.zahl('prop-clip-start', clip.startFrame, 'min="0"') + ' <span '
+                + 'class="text-winzig">frames</span>')}
             ${M.zeile('Trim In', M.zahl('prop-clip-trim-in', clip.trimIn, 'min="0"'))}
             ${M.zeile('Trim Out', M.zahl('prop-clip-trim-out', clip.trimOut, 'min="0"'))}
             ${M.zeile('Speed', M.zahl('prop-clip-speed', clip.speed, 'min="0.1" max="4" step="0.1"'))}

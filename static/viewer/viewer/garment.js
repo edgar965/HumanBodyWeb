@@ -50,7 +50,9 @@ export function buildBodyFitQueryString() {
     const crotchFloor = sliderVal('garment-crotch-floor');
     const lift = sliderVal('garment-lift');
     const crotchDepth = sliderVal('garment-crotch-depth');
-    qs += `&offset=${offset}&stiffness=${stiffness}&min_dist=${minDist}&crotch_floor=${crotchFloor}&lift=${lift}&crotch_depth=${crotchDepth}`;
+    qs += `&offset=${offset}&stiffness=${stiffness}&min_dist=${minDist}`
+        + `&crotch_floor=${crotchFloor}&lift=${lift}`
+        + `&crotch_depth=${crotchDepth}`;
     qs += `&color_r=${cr.toFixed(3)}&color_g=${cg.toFixed(3)}&color_b=${cb.toFixed(3)}`;
 
     document.querySelectorAll('#morphs-panel input[type="range"][data-morph]').forEach(slider => {

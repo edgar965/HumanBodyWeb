@@ -56,12 +56,16 @@ export function updateWizardUI() {
     if (wizardState.step === 0) {
         if (wizardState.data?.use_posed) {
             if (title) title.textContent = 'Posed Mesh ausrichten';
-            if (info) info.textContent = 'Ziehen = Verschieben | Mausrad = Skalieren | Rote Kontur auf die Person legen';
+            if (info) {
+            info.textContent = 'Ziehen = Verschieben | Mausrad = '
+                + 'Skalieren | Rote Kontur auf die Person legen';
+        }
             if (backBtn) backBtn.style.display = 'none';
             if (nextBtn) nextBtn.textContent = 'Textur erstellen';
         } else {
             if (title) title.textContent = 'Schritt 1: Koerper ausrichten';
-            if (info) info.textContent = 'Ziehen = Verschieben | Mausrad = Skalieren | Rote Silhouette auf die Person legen';
+            if (info) info.textContent = 'Ziehen = Verschieben | Mausrad = Skalieren | Rote Silhouette auf die Person '
+                + 'legen';
             if (backBtn) backBtn.style.display = 'none';
             if (nextBtn) nextBtn.textContent = 'Weiter';
         }

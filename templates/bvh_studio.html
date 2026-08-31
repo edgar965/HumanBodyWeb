@@ -687,7 +687,8 @@
                         <button id="tool-smooth-apply" class="hb-knopf-anwenden"><i
                              class="fas fa-wave-square"></i> Smooth anwenden</button>
                     </div>
-                    <div class="hb-margin-top-4px">Gauss-Filter auf die Rotations-Keyframes des selektierten Clips.</div>
+                    <div class="hb-margin-top-4px">Gauss-Filter auf die Rotations-Keyframes des selektierten
+                    Clips.</div>
                 </div>
                 <hr class="abschnittslinie">
                 <h3 class="hb-abschnittstitel"><i class="fas fa-shoe-prints"></i> Bodenniveau</h3>
@@ -703,7 +704,8 @@
                         <button id="tool-ground-apply" class="hb-knopf-anwenden"><i
                              class="fas fa-shoe-prints"></i> Bodenniveau anwenden</button>
                     </div>
-                    <div class="hb-margin-top-4px">Korrigiert die Y-Position pro Frame so dass der tiefste Knochen bei Abstand (Default: 3cm) liegt.</div>
+                    <div class="hb-margin-top-4px">Korrigiert die Y-Position pro Frame so dass der tiefste Knochen bei
+                    Abstand (Default: 3cm) liegt.</div>
                 </div>
             </div>
         </div>
@@ -795,7 +797,8 @@
                 <!-- Engine 1: Blender Cloth + EEVEE -->
                 <div class="engine-rahmen">
                     <div class="engine-titel-blender"><i class="fas fa-cube"></i> Blender Cloth + EEVEE</div>
-                    <div class="hb-erklaerung">CPU-Sim (Blender 5.0) + GPU-Render. Robust, stabile Physik. ~1 min f&uuml;r 5s @ 30fps.</div>
+                    <div class="hb-erklaerung">CPU-Sim (Blender 5.0) + GPU-Render. Robust, stabile Physik. ~1 min
+                    f&uuml;r 5s @ 30fps.</div>
                     <div class="prop-row hb-abstand-unten"><label class="hb-fein">Qualit&auml;t:</label>
                         <select id="cloth-quality-blender-eevee" class="hb-dehnt-fein">
                             <option value="low">Niedrig &mdash; Cloth-Steps 3, Bend 0.3, EEVEE 32 Samples</option>
@@ -816,7 +819,8 @@
                 <div class="hb-border-1px-solid-var-border">
                     <div class="engine-titel-warp"><i class="fas fa-rocket"></i> NVIDIA Warp + Blender Render <span
                          class="engine-empfehlung">(empfohlen)</span></div>
-                    <div class="hb-erklaerung">GPU-Sim (CUDA, RTX 3060) + GPU-Render (EEVEE). Beste Qualit&auml;t/Speed-Balance. ~30s f&uuml;r 5s @ 30fps.</div>
+                    <div class="hb-erklaerung">GPU-Sim (CUDA, RTX 3060) + GPU-Render (EEVEE). Beste
+                    Qualit&auml;t/Speed-Balance. ~30s f&uuml;r 5s @ 30fps.</div>
                     <div class="prop-row hb-abstand-unten"><label class="hb-fein">Qualit&auml;t:</label>
                         <select id="cloth-quality-warp-blender" class="hb-dehnt-fein">
                             <option value="low">Niedrig &mdash; Warp 16 Substeps, Stretch 5e3, EEVEE 32</option>
@@ -834,7 +838,8 @@
                 <!-- Engine 3: Warp pure -->
                 <div class="hb-border-1px-solid-var-border">
                     <div class="engine-titel-warppur"><i class="fas fa-bolt"></i> NVIDIA Warp pur (Offscreen GL)</div>
-                    <div class="hb-erklaerung">Komplett GPU, kein Blender. Schnellste Pipeline, einfacheres Rendering. ~20s f&uuml;r 5s @ 30fps.</div>
+                    <div class="hb-erklaerung">Komplett GPU, kein Blender. Schnellste Pipeline, einfacheres Rendering.
+                    ~20s f&uuml;r 5s @ 30fps.</div>
                     <div class="prop-row hb-abstand-unten"><label class="hb-fein">Qualit&auml;t:</label>
                         <select id="cloth-quality-warp-only" class="hb-dehnt-fein">
                             <option value="low">Niedrig &mdash; Warp 16 Substeps, pyrender basic</option>
@@ -1130,7 +1135,9 @@
     justify-content:center;
 }
 
-/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026). Namen nach dem, was das Element IST — nicht nach seiner Eigenschaft. */
+/* Aus Inline-Stilen dieser Vorlage (Befund `jsbefunde`, 30.08.2026).
+   Die Namen sagen, was das Element IST — nicht, welche Eigenschaft
+   es setzt. */
 .abschnittslinie.abschnittslinie.abschnittslinie {
     border-color:var(--border);
     margin:16px 0;
