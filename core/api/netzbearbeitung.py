@@ -15,11 +15,12 @@ import numpy as np
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from humanbody_core.cloth import _push_outside_body, _laplacian_smooth
+from humanbody_core.cloth import _laplacian_smooth
 
 from ..daten.netzantwort import Netzantwort
 from ..dienste.charakterdaten import Charakterdaten
 from ..daten.anfragerumpf import Anfragerumpf
+from humanbody_core.koerperabstand import Koerperabstand
 
 
 class Netzbearbeitung:
@@ -111,9 +112,9 @@ class Netzbearbeitung:
         unterteiler = Charakterdaten.unterteiler(koerper.geschlecht)
         if unterteiler is not None:
             punkte = unterteiler.subdivide(punkte)
-        geschoben = _push_outside_body(
+        geschoben = Koerperabstand.radial(
             stoff, punkte,
-            min_dist=float(rumpf.get('min_dist',
-                                     Netzbearbeitung.VORGABE_ABSTAND)))
-        return Netzbearbeitung._nur_ausgewaehlte(stoff, geschoben,
-                                                 rumpf.get('selected', []))
+            mindestabstand=float(rumpf.get(
+                'min_dist', Netzbearbeitung.VORGABE_ABSTAND)))
+        return Netzbearbeitung._nur_ausgewaehlte(
+            stoff, geschoben, rumpf.get('selected', []))

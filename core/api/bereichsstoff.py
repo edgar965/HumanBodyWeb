@@ -21,9 +21,10 @@ die ein.
 """
 
 import numpy as np
-from humanbody_core.cloth import generate_builder_custom, _push_outside_body
+from humanbody_core.cloth import generate_builder_custom
 
 from ..dienste.charakterdaten import Charakterdaten
+from humanbody_core.koerperabstand import Koerperabstand
 
 
 class Bereichsstoff:
@@ -81,6 +82,7 @@ class Bereichsstoff:
     def _herausschieben(self, ergebnis, grundlage):
         """Zweiter Schub gegen die konvexen Stellen (siehe Modul-Docstring)."""
         abstand = self.GRUNDABSTAND + self.weite * self.WEITENANTEIL
-        geschoben = _push_outside_body(ergebnis['vertices'].astype(np.float64),
-                                       grundlage, min_dist=abstand)
+        geschoben = Koerperabstand.radial(
+            ergebnis['vertices'].astype(np.float64), grundlage,
+            mindestabstand=abstand)
         return geschoben.astype(np.float32)

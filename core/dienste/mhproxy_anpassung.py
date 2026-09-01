@@ -21,6 +21,7 @@ from django.conf import settings
 
 from .charakterdaten import Charakterdaten
 from .kleidungswerkzeuge import Kleidungswerkzeuge
+from humanbody_core.koerperabstand import Koerperabstand
 
 logger = logging.getLogger('core')
 
@@ -165,11 +166,13 @@ class MhProxyAnpassung:
     def _aus_koerper_schieben(self, verts, koerper_vertices, abstand):
         if abstand <= 0.0001:
             return verts
-        from GarmentFitter.fitter import _push_outside_body, _compute_vertex_normals
+        from GarmentFitter.fitter import _compute_vertex_normals
         netz = Charakterdaten.netzdaten(self.geschlecht)
         normalen = _compute_vertex_normals(koerper_vertices, netz.faces)
-        return _push_outside_body(verts.astype(np.float64), koerper_vertices,
-                                  min_dist=abstand, body_normals=normalen)
+        return Koerperabstand.gerichtet(verts.astype(np.float64),
+                                        koerper_vertices,
+                                        mindestabstand=abstand,
+                                        normalen=normalen)
 
     # ------------------------------------------------------------------ Netz
 

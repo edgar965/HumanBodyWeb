@@ -23,6 +23,7 @@ sich selbst.
 """
 
 import numpy as np
+from humanbody_core.koerperabstand import Koerperabstand
 
 
 class Koerperhuelle:
@@ -111,28 +112,29 @@ class Koerperhuelle:
         anlegen, dann fein. Konstant grob bliebe der Stoff kantig, konstant fein
         käme er in einem Durchgang nicht weit genug.
         """
-        from GarmentFitter.fitter import (_laplacian_smooth, _push_outside_body,
-                                          _shrinkwrap)
+        from GarmentFitter.fitter import _laplacian_smooth, _shrinkwrap
         for durchgang in range(cls.SCHRUMPFEN):
             punkte = _shrinkwrap(
                 punkte, ziel, normalen, offset=offset, soft=True,
                 char_length=cls.KANTENLAENGE / (1 + durchgang * 0.3))
             punkte = _laplacian_smooth(punkte, dreiecke, iterations=2,
                                        factor=0.15)
-            punkte = _push_outside_body(punkte, ziel, min_dist=offset * 0.8)
+            punkte = Koerperabstand.gerichtet(punkte, ziel,
+                                              mindestabstand=offset * 0.8)
         return punkte
 
     @staticmethod
     def _verfeinern(punkte, ziel, dreiecke, offset, stiffness):
         """Steifigkeit: weicher Stoff wird stärker geglättet, aber seltener."""
-        from GarmentFitter.fitter import _laplacian_smooth, _push_outside_body
+        from GarmentFitter.fitter import _laplacian_smooth
         steife = max(0.0, min(1.0, stiffness))
         staerke = 0.5 - steife * 0.4
         durchgaenge = max(2, round(5 - steife * 3))
         for _ in range(durchgaenge):
             punkte = _laplacian_smooth(punkte, dreiecke, iterations=3,
                                        factor=staerke)
-            punkte = _push_outside_body(punkte, ziel, min_dist=offset * 0.8)
+            punkte = Koerperabstand.gerichtet(punkte, ziel,
+                                              mindestabstand=offset * 0.8)
         return punkte
 
     # ------------------------------------------------------- Geglättete Hülle

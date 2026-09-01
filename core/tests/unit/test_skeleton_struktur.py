@@ -20,7 +20,9 @@ Aufruf:  python manage.py test core
 """
 from django.test import SimpleTestCase
 
-from humanbody_core.skeleton.skeleton import Skeleton, SkeletonRigify, SkeletonMeta
+from humanbody_core.skeleton.skeleton import Skeleton
+from humanbody_core.skeleton.rigify import SkeletonRigify
+from humanbody_core.skeleton.meta import SkeletonMeta
 
 
 class SkeletonStrukturTest(SimpleTestCase):
@@ -41,13 +43,28 @@ class SkeletonStrukturTest(SimpleTestCase):
         """`Skeleton.__init__` war der von `object` — der eigene lief nie."""
         self.assertIsNot(Skeleton.__init__, object.__init__)
 
-    def test_modulfunktion_liegt_nicht_im_klassenkoerper(self):
-        """`_delta_normalize_bvh` muss eine Modulfunktion bleiben.
+    def test_die_delta_normalisierung_hat_ihre_eigene_datei(self):
+        """Sie war die Ursache des Einrückungsvorfalls vom 12.08.2026.
 
-        Als Attribut der Klasse wäre sie wieder an der falschen Stelle."""
+        Damals stand `_delta_normalize_bvh` OHNE Einrückung mitten in der
+        Klasse `Skeleton` und beendete sie damit; rund 300 Zeilen lagen
+        unerreichbar als lokale Funktion darin. Dieser Fall prüfte
+        seither, dass sie eine Modulfunktion in `skeleton.py` BLEIBT.
+
+        Seit dem 31.08.2026 liegt sie eine Ebene weiter draußen: als
+        `BvhNormalisierung.delta` in `skeleton/bvh_normalisierung.py`.
+        Eine Funktion, die in keiner Datei mit Klassen mehr steht, kann
+        auch in keine hineinrutschen — das ist die bessere Antwort auf
+        denselben Vorfall als ein Wächter.
+
+        Geprüft wird jetzt, dass sie dort bleibt und NICHT zurückkommt.
+        """
         from humanbody_core.skeleton import skeleton as modul
-        self.assertTrue(callable(getattr(modul, '_delta_normalize_bvh', None)),
-                        'die Modulfunktion fehlt')
+        from humanbody_core.skeleton.bvh_normalisierung import BvhNormalisierung
+
+        self.assertTrue(callable(BvhNormalisierung.delta))
+        self.assertFalse(hasattr(modul, '_delta_normalize_bvh'),
+                         'Die alte Modulfunktion ist zurück in skeleton.py')
         self.assertFalse(hasattr(Skeleton, '_delta_normalize_bvh'),
                          '_delta_normalize_bvh haengt an der Klasse — steht sie '
                          'wieder im Klassenkoerper?')

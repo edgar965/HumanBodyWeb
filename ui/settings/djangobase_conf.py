@@ -68,9 +68,16 @@ DJANGOBASE = {
     # Ohne den Ausschluss stammten die ersten vier Befunde des Werkzeugs
     # `protokoll` aus `idol/lib/models/renderers/` und `textured_smplx/` —
     # fremder Code, den zu aendern niemand vorhat.
+    # `skeleton_presets` (31.08.2026): 13 Dateien in `HumanBody/data/`, die
+    # zwar auf `.py` enden, aber kein Programm sind — Vorgabedateien fuer ein
+    # Blender-Addon, die mit `import bpy` beginnen und im ganzen Projekt
+    # NIRGENDS erwaehnt werden. Jede von ihnen ordnet dieselben Rigify-Knochen
+    # einem anderen Fremdformat zu; sie sehen sich deshalb notwendig aehnlich.
+    # `doppelcode` meldete daraus 20 von 68 Befunden — an Dateien, die unter
+    # `data/` liegen und laut CLAUDE.md ohnehin nicht angefasst werden duerfen.
     'skills_ignorieren': ['TestCharakter', 'alt', '_merge_tmp2', 'Backup',
                           'ProjektTemp', 'debug', 'tools', 'vendor', 'theatre',
-                          'theatre-studio',
+                          'theatre-studio', 'skeleton_presets',
                           'idol', 'sith', 'texformer', 'textured_smplx'],
     # WELCHE VERZEICHNISSE NUR GELESEN WERDEN DUERFEN (Werkzeug `nur-lesen`)
     # ======================================================================

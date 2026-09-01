@@ -17,12 +17,13 @@ import numpy as np
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
-from humanbody_core.cloth import generate_from_pattern, _push_outside_body
+from humanbody_core.cloth import generate_from_pattern
 
 from ..daten.stoffantwort import Stoffantwort
 from ..dienste.charakterdaten import Charakterdaten
 from .bereichsstoff import Bereichsstoff
 from ..daten.anfragerumpf import Anfragerumpf
+from humanbody_core.koerperabstand import Koerperabstand
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +81,9 @@ class Schnittmuster:
         unterteiler = Charakterdaten.unterteiler(geschlecht)
         if unterteiler is None:
             return
-        geschoben = _push_outside_body(
+        geschoben = Koerperabstand.radial(
             ergebnis['vertices'].astype(np.float64),
-            unterteiler.subdivide(punkte), min_dist=abstand)
+            unterteiler.subdivide(punkte), mindestabstand=abstand)
         ergebnis['vertices'] = geschoben.astype(np.float32)
 
     @staticmethod

@@ -47,7 +47,10 @@ BEREICHE = [
          'Wo ist die Laufzeit quadratisch, wo werden Kanten doppelt gesucht?',
      ]},
     {'slug': 'morph', 'name': 'Morph-System',
-     'dateien': ['HumanBody/humanbody_core/morphing.py',
+     # `morphing` ist seit dem 31.08.2026 ein PAKET, keine Datei mehr:
+     # 522 Zeilen, elf Klassen. Der Importpfad blieb gleich, der
+     # Dateipfad nicht — ein Verzeichnis meint alle Quelldateien darin.
+     'dateien': ['HumanBody/humanbody_core/morphing/',
                  'HumanBody/humanbody_core/character.py'],
      'hinweis': (
          'Morph-Ziele (.npy) verformen das Basisnetz über Regler. '
@@ -133,7 +136,10 @@ BEREICHE = [
          'zwischen zwei Skeletten geteilt werden kann?',
      ]},
     {'slug': 'zuordnung', 'name': 'Formaterkennung und Knochen-Zuordnung',
-     'dateien': ['HumanBody/humanbody_core/skeleton/formats.py',
+     # `formats` ist seit dem 31.08.2026 ein PAKET, keine Datei mehr: acht
+     # Formate zu 504 Zeilen lagen in einer. Der Importpfad blieb gleich,
+     # der Dateipfad nicht.
+     'dateien': ['HumanBody/humanbody_core/skeleton/formats/',
                  'HumanBody/humanbody_core/skeleton/retarget_mappings.py',
                  'HumanBody/humanbody_core/skeleton/mapping.py'],
      'hinweis': (

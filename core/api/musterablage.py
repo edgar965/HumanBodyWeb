@@ -28,10 +28,11 @@ import os
 
 import numpy as np
 from django.conf import settings
-from humanbody_core.cloth import generate_from_pattern, _push_outside_body
+from humanbody_core.cloth import generate_from_pattern
 
 from ..daten.objdatei import Objdatei
 from ..dienste.charakterdaten import Charakterdaten
+from humanbody_core.koerperabstand import Koerperabstand
 
 logger = logging.getLogger(__name__)
 
@@ -91,10 +92,10 @@ class Musterablage:
         unterteiler = Charakterdaten.unterteiler(geschlecht)
         if unterteiler is None:
             return ergebnis
-        stoff = _push_outside_body(
+        stoff = Koerperabstand.radial(
             ergebnis['vertices'].astype(np.float64),
             unterteiler.subdivide(koerper),
-            min_dist=self.abstand)
+            mindestabstand=self.abstand)
         ergebnis['vertices'] = stoff.astype(np.float32)
         return ergebnis
 

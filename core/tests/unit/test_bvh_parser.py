@@ -22,7 +22,7 @@ from pathlib import Path
 from django.conf import settings
 from django.test import TestCase
 
-from humanbody_core.skeleton.skeleton import SkeletonRigify
+from humanbody_core.skeleton.rigify import SkeletonRigify
 
 KOPF = """HIERARCHY
 ROOT Hips

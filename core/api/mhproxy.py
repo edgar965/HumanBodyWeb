@@ -27,6 +27,7 @@ from ..dienste.charakterdaten import Charakterdaten
 from ..dienste.kleidungswerkzeuge import Kleidungswerkzeuge
 from ..dienste.mhmaterial import MhMaterial
 from ..dienste.mhproxy_anpassung import MhProxyAnpassung, MhProxyFehler
+from humanbody_core.koerperabstand import Koerperabstand
 
 logger = logging.getLogger(__name__)
 
@@ -117,8 +118,7 @@ class Mhproxy:
                                 status=400)
         schiebekoerper = MhKoerper.schiebekoerper(
             koerper.vertices, request.GET.get('use_mh_body', '1') == '1')
-        from GarmentFitter.fitter import (_push_outside_body,
-                                          _compute_vertex_normals)
+        from GarmentFitter.fitter import _compute_vertex_normals
         netz = Charakterdaten.netzdaten(koerper.geschlecht)
         # Normalen nur, wenn der Schiebe-Koerper dieselbe Punktzahl hat wie das
         # Netz: Der MH-Koerper hat eine andere Topologie, seine Flaechen passen
@@ -127,9 +127,9 @@ class Mhproxy:
                     if len(schiebekoerper) == len(koerper.vertices) else None)
         weg_mm = float(request.GET.get('push_dist',
                                        Mhproxy.VORGABE_SCHIEBEWEG_MM))
-        ergebnis = _push_outside_body(punkte, schiebekoerper,
-                                      min_dist=weg_mm / 1000.0,
-                                      body_normals=normalen)
+        ergebnis = Koerperabstand.gerichtet(
+            punkte, schiebekoerper, mindestabstand=weg_mm / 1000.0,
+            normalen=normalen)
         return JsonResponse({'vertices': Netzantwort.feld(ergebnis,
                                                           'vertices')})
 
