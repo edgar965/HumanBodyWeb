@@ -108,7 +108,7 @@ class Retargetendpunkte:
             return pfad                          # fertige Fehlerantwort
         return JsonResponse(Retargetdaten(
             pfad, wahl.groesse, wahl.format, wahl.fusskorrektur,
-            wahl.delta_norm).holen())
+            wahl.delta_norm).holen().als_dict())
 
     @staticmethod
     @require_GET
@@ -161,7 +161,7 @@ class Retargetendpunkte:
         return JsonResponse(SkeletonRigify.merge_retargeted_clips(
             Retargetdaten(koerperpfad, groesse,
                           foot_correction=fusskorrektur).holen(),
-            Retargetdaten(gesichtspfad, groesse).holen()))
+            Retargetdaten(gesichtspfad, groesse).holen()).als_dict())
 
     @staticmethod
     @require_GET
@@ -190,7 +190,7 @@ class Retargetendpunkte:
             Retargetdaten(job.bvh_file, groesse,
                           foot_correction=fusskorrektur).holen(),
             Retargetdaten(job.bvh_file_face, groesse).holen(),
-            filter_noisy_face=True))
+            filter_noisy_face=True).als_dict())
 
     # -------------------------------------------------------- Bibliothek
 

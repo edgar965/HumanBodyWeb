@@ -32,11 +32,19 @@ Humanbodypfad.setzen()
 from humanbody_core.quaternion import Quat  # noqa: E402
 
 
-def _zufallsdrehungen(anzahl, keim=20260831):
-    """Reproduzierbare Einheitsquaternionen [x,y,z,w]."""
-    zufall = np.random.default_rng(keim)
-    roh = zufall.normal(size=(anzahl, 4))
-    return roh / np.linalg.norm(roh, axis=1, keepdims=True)
+class Drehungsbau:
+    u"""Baut die Zufallsdrehungen fuer diese Faelle.
+
+    Stand bis zum 02.09.2026 als freie Funktionen auf
+    Modulebene (Befund `freie-funktionen`).
+    """
+
+    @staticmethod
+    def zufallsdrehungen(anzahl, keim=20260831):
+        """Reproduzierbare Einheitsquaternionen [x,y,z,w]."""
+        zufall = np.random.default_rng(keim)
+        roh = zufall.normal(size=(anzahl, 4))
+        return roh / np.linalg.norm(roh, axis=1, keepdims=True)
 
 
 class QuatGegenScipyTest(SimpleTestCase):
@@ -44,7 +52,9 @@ class QuatGegenScipyTest(SimpleTestCase):
 
     def test_mul_entspricht_scipy_verkettung(self):
         u"""`Quat.mul(a, b)` dreht wie erst b, dann a."""
-        for a, b in zip(_zufallsdrehungen(12), _zufallsdrehungen(12, 7)):
+        eine = Drehungsbau.zufallsdrehungen(12)
+        andere = Drehungsbau.zufallsdrehungen(12, 7)
+        for a, b in zip(eine, andere):
             eigen = Quat.mul(a, b)
             fremd = (Rotation.from_quat(a) * Rotation.from_quat(b)).as_quat()
             # Über das Skalarprodukt, weil q und -q dieselbe Drehung sind.
@@ -53,8 +63,8 @@ class QuatGegenScipyTest(SimpleTestCase):
 
     def test_rotate_dreht_wie_scipy(self):
         u"""Der gedrehte Vektor ist das, was zählt — dort gibt es kein Vorzeichen."""
-        punkte = _zufallsdrehungen(8, 3)[:, :3]
-        for q, v in zip(_zufallsdrehungen(8, 11), punkte):
+        punkte = Drehungsbau.zufallsdrehungen(8, 3)[:, :3]
+        for q, v in zip(Drehungsbau.zufallsdrehungen(8, 11), punkte):
             np.testing.assert_allclose(
                 Quat.rotate(q, v), Rotation.from_quat(q).apply(v), atol=1e-12)
 
@@ -66,8 +76,8 @@ class QuatGegenScipyTest(SimpleTestCase):
         `_delta_normalize_bvh`, das sich deshalb eine eigene Kopie des
         Hamilton-Produkts schrieb.
         """
-        a = _zufallsdrehungen(1, 31)[0]
-        reihe = _zufallsdrehungen(9, 37)
+        a = Drehungsbau.zufallsdrehungen(1, 31)[0]
+        reihe = Drehungsbau.zufallsdrehungen(9, 37)
         zusammen = Quat.mul_reihe(a, reihe)
         self.assertEqual(zusammen.shape, reihe.shape,
                          'Die Form muss (N, 4) bleiben, nicht (4, N)')
@@ -81,8 +91,8 @@ class QuatGegenScipyTest(SimpleTestCase):
         aus denen des Elternknochens gebildet. Das war die sechste
         handgeschriebene Fassung des Hamilton-Produkts.
         """
-        links = _zufallsdrehungen(11, 51)
-        rechts = _zufallsdrehungen(11, 53)
+        links = Drehungsbau.zufallsdrehungen(11, 51)
+        rechts = Drehungsbau.zufallsdrehungen(11, 53)
         zusammen = Quat.mul_reihe(links, rechts)
         self.assertEqual(zusammen.shape, rechts.shape)
         for i in range(11):
@@ -91,19 +101,19 @@ class QuatGegenScipyTest(SimpleTestCase):
                                        atol=1e-12)
 
     def test_mul_reihe_laesst_die_eingabe_unberuehrt(self):
-        a = _zufallsdrehungen(1, 41)[0]
-        reihe = _zufallsdrehungen(5, 43)
+        a = Drehungsbau.zufallsdrehungen(1, 41)[0]
+        reihe = Drehungsbau.zufallsdrehungen(5, 43)
         vorher = reihe.copy()
         Quat.mul_reihe(a, reihe)
         np.testing.assert_allclose(reihe, vorher, atol=0)
 
     def test_inv_macht_die_drehung_rueckgaengig(self):
-        for q in _zufallsdrehungen(8, 5):
+        for q in Drehungsbau.zufallsdrehungen(8, 5):
             np.testing.assert_allclose(
                 Quat.mul(q, Quat.inv(q)), Quat.ID, atol=1e-12)
 
     def test_norm_liefert_einheitslaenge(self):
-        for q in _zufallsdrehungen(6, 13) * 7.5:
+        for q in Drehungsbau.zufallsdrehungen(6, 13) * 7.5:
             self.assertAlmostEqual(
                 float(np.linalg.norm(Quat.norm(q))), 1.0, places=12)
 
@@ -113,7 +123,7 @@ class QuatGegenScipyTest(SimpleTestCase):
             Quat.norm(np.zeros(4)), Quat.ID, atol=0)
 
     def test_from_unit_vectors_trifft_das_ziel(self):
-        richtungen = _zufallsdrehungen(8, 17)[:, :3]
+        richtungen = Drehungsbau.zufallsdrehungen(8, 17)[:, :3]
         richtungen /= np.linalg.norm(richtungen, axis=1, keepdims=True)
         for a, b in zip(richtungen, np.roll(richtungen, 1, axis=0)):
             np.testing.assert_allclose(Quat.rotate(Quat.from_unit_vectors(a, b), a),
@@ -131,7 +141,7 @@ class QuatGegenScipyTest(SimpleTestCase):
                                    atol=0)
 
     def test_slerp_endpunkte_und_mitte(self):
-        a, b = _zufallsdrehungen(2, 23)
+        a, b = Drehungsbau.zufallsdrehungen(2, 23)
         np.testing.assert_allclose(Quat.rotate(Quat.slerp(a, b, 0.0), [1, 0, 0]),
                                    Quat.rotate(a, [1, 0, 0]), atol=1e-10)
         np.testing.assert_allclose(Quat.rotate(Quat.slerp(a, b, 1.0), [1, 0, 0]),

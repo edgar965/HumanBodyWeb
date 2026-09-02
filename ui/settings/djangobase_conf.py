@@ -79,6 +79,20 @@ DJANGOBASE = {
                           'ProjektTemp', 'debug', 'tools', 'vendor', 'theatre',
                           'theatre-studio', 'skeleton_presets',
                           'idol', 'sith', 'texformer', 'textured_smplx'],
+    # WELCHE MODULFUNKTIONEN EIN FREMDER RAHMEN BEIM NAMEN RUFT
+    # ========================================================
+    # `freie-funktionen` meldete zehn Module des Blender-Addons, weil dort
+    # `register`/`unregister` auf Modulebene stehen — mit dem Vorschlag,
+    # sie in eine Klasse zu heben. Wer dem folgt, macht das Addon kaputt:
+    # Blender ruft genau diese beiden Namen AM MODUL auf (das Addon-
+    # Protokoll, `bpy.utils.register_class` haengt darunter), und
+    # `HumanBodyBlender/__init__.py` reicht sie an die zehn Teilmodule
+    # weiter. Als Methoden ruft sie niemand mehr.
+    #
+    # Dieselbe Fehlerklasse wie „`Command` 23x vergeben" — ein Befund, der
+    # zum Kaputtmachen auffordert. Django-Einstellungen koennen von Blender
+    # nichts wissen; deshalb steht die Angabe hier.
+    'rahmenfunktionen': ['register', 'unregister'],
     # WELCHE VERZEICHNISSE NUR GELESEN WERDEN DUERFEN (Werkzeug `nur-lesen`)
     # ======================================================================
     # Aus CLAUDE.md: „NEVER write to `HumanBody/data/` or

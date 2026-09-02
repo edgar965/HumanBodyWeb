@@ -13,8 +13,6 @@ einer Datei.
 
 Aufruf:  python manage.py test core.tests.unit.test_kollision_gemeinsam
 """
-import subprocess
-import sys
 from pathlib import Path
 
 from django.test import SimpleTestCase

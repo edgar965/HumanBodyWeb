@@ -14,6 +14,7 @@ from .character_api_tests import CharacterApiTests
 from .cloth_export_tests import ClothExportTests
 from .cloth_szene_tests import ClothSzeneTests
 from .cloth_engine_tests import ClothEngineTests
+from .cloth_licht_tests import ClothLichtTests
 from .cloth_backe_tests import ClothBackeTests
 from .kamera_keyframe_tests import KameraKeyframeTests
 from .kamera_slerp_tests import KameraSlerpTests
@@ -31,6 +32,7 @@ ALL_CATEGORIES = [
     ClothExportTests,
     ClothSzeneTests,
     ClothEngineTests,
+    ClothLichtTests,
     ClothBackeTests,
     KameraKeyframeTests,
     KameraSlerpTests,

@@ -36,41 +36,49 @@ from GarmentFitter.fitter import (Anpassungslauf, Armmaske,  # noqa: E402
                                   Koerperpolster, Schrittboden)
 
 
-def _koerper(hoehe=1.7, ringe=24, ecken=16):
-    u"""Eine stehende Röhre als Ersatzkörper: Vertices und Vierecke."""
-    winkel = np.linspace(0, 2 * np.pi, ecken, endpoint=False)
-    punkte, flaechen = [], []
-    for i in range(ringe):
-        z = hoehe * i / (ringe - 1)
-        # Etwas Taille, damit die Normalen nicht alle gleich zeigen.
-        r = 0.16 - 0.04 * np.sin(np.pi * i / (ringe - 1))
-        for w in winkel:
-            punkte.append([r * np.cos(w), r * np.sin(w), z])
-    for i in range(ringe - 1):
-        for j in range(ecken):
-            a = i * ecken + j
-            b = i * ecken + (j + 1) % ecken
-            flaechen.append([a, b, b + ecken, a + ecken])
-    return np.array(punkte, dtype=np.float64), np.array(flaechen)
+class Koerperbau:
+    u"""Baut Koerper- und Kleidernetze fuer diese Faelle.
 
+    Stand bis zum 02.09.2026 als freie Funktionen auf
+    Modulebene (Befund `freie-funktionen`).
+    """
 
-def _kleid(koerper):
-    u"""Ein grobes Netz um die untere Körperhälfte."""
-    punkte = koerper[koerper[:, 2] < 0.9].copy()
-    punkte *= np.array([1.25, 1.25, 1.0])
-    n = len(punkte)
-    flaechen = np.array([[i, (i + 1) % n, (i + 2) % n, (i + 3) % n]
-                         for i in range(0, n - 4, 2)])
-    return punkte, flaechen
+    @staticmethod
+    def koerper(hoehe=1.7, ringe=24, ecken=16):
+        u"""Eine stehende Röhre als Ersatzkörper: Vertices und Vierecke."""
+        winkel = np.linspace(0, 2 * np.pi, ecken, endpoint=False)
+        punkte, flaechen = [], []
+        for i in range(ringe):
+            z = hoehe * i / (ringe - 1)
+            # Etwas Taille, damit die Normalen nicht alle gleich zeigen.
+            r = 0.16 - 0.04 * np.sin(np.pi * i / (ringe - 1))
+            for w in winkel:
+                punkte.append([r * np.cos(w), r * np.sin(w), z])
+        for i in range(ringe - 1):
+            for j in range(ecken):
+                a = i * ecken + j
+                b = i * ecken + (j + 1) % ecken
+                flaechen.append([a, b, b + ecken, a + ecken])
+        return np.array(punkte, dtype=np.float64), np.array(flaechen)
+
+    @staticmethod
+    def kleid(koerper):
+        u"""Ein grobes Netz um die untere Körperhälfte."""
+        punkte = koerper[koerper[:, 2] < 0.9].copy()
+        punkte *= np.array([1.25, 1.25, 1.0])
+        n = len(punkte)
+        flaechen = np.array([[i, (i + 1) % n, (i + 2) % n, (i + 3) % n]
+                             for i in range(0, n - 4, 2)])
+        return punkte, flaechen
 
 
 class KoerperBleibtUnberuehrtTest(SimpleTestCase):
     u"""Der Aufrufer bekommt sein Körperarray unverändert zurück."""
 
     def _lauf(self, min_dist_mm, crotch_depth_mm):
-        body, body_faces = _koerper()
+        body, body_faces = Koerperbau.koerper()
         vorher = body.copy()
-        verts, faces = _kleid(body)
+        verts, faces = Koerperbau.kleid(body)
         Anpassungslauf(verts, faces, body, body_faces=body_faces,
                        coordinate_system='blender',
                        min_dist_mm=min_dist_mm,
@@ -94,7 +102,7 @@ class KoerperpolsterTest(SimpleTestCase):
     u"""Das Polster ist immer ein eigenes Array — auch bei Dicke 0."""
 
     def setUp(self):
-        self.body, self.faces = _koerper()
+        self.body, self.faces = Koerperbau.koerper()
 
     def test_eigenes_array_ohne_dicke(self):
         polster = Koerperpolster(self.body, self.faces,
@@ -119,7 +127,7 @@ class ArmmaskeTest(SimpleTestCase):
     u"""Die beiden Mischrichtungen sind wirklich gegenläufig."""
 
     def setUp(self):
-        self.body, _ = _koerper()
+        self.body, _ = Koerperbau.koerper()
 
     def test_leere_maske_laesst_alles_liegen(self):
         maske = Armmaske.keine(self.body)
@@ -164,7 +172,7 @@ class SchrittbodenTest(SimpleTestCase):
     u"""Boden bestimmen, anheben, halten."""
 
     def setUp(self):
-        self.body, _ = _koerper()
+        self.body, _ = Koerperbau.koerper()
 
     def test_kein_boden_ausserhalb_der_hoehenspanne(self):
         u"""Ein Stück weit über dem Körper bekommt keinen Schrittboden."""

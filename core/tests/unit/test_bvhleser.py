@@ -32,21 +32,29 @@ Humanbodypfad.setzen()
 from humanbody_core.skeleton.retarget.leser import Bvhleser  # noqa: E402
 
 
-def _mit_schleife(quats):
-    u"""Die Fassung von vor dem 31.08.2026, Zeichen für Zeichen."""
-    fnum, jnum = quats.shape[0], quats.shape[1]
-    for ji in range(jnum):
-        for f in range(1, fnum):
-            if np.dot(quats[f, ji], quats[f - 1, ji]) < 0:
-                quats[f, ji] = -quats[f, ji]
-    return quats
+class Quaternionenbau:
+    u"""Baut die Quaternionenfolgen fuer diese Faelle.
+
+    Stand bis zum 02.09.2026 als freie Funktionen auf
+    Modulebene (Befund `freie-funktionen`).
+    """
+
+    @staticmethod
+    def mit_schleife(quats):
+        u"""Die Fassung von vor dem 31.08.2026, Zeichen für Zeichen."""
+        fnum, jnum = quats.shape[0], quats.shape[1]
+        for ji in range(jnum):
+            for f in range(1, fnum):
+                if np.dot(quats[f, ji], quats[f - 1, ji]) < 0:
+                    quats[f, ji] = -quats[f, ji]
+        return quats
 
 
 class StetigkeitTest(SimpleTestCase):
     u"""Die geschlossene Rechnung liefert exakt die Schleife."""
 
     def _vergleiche(self, quats):
-        a = _mit_schleife(quats.copy())
+        a = Quaternionenbau.mit_schleife(quats.copy())
         b = quats.copy()
         Bvhleser._stetig_machen(b)
         self.assertTrue(np.array_equal(a, b),

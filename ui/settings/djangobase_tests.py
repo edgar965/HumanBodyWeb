@@ -42,6 +42,19 @@ TEST_BEFEHLE = [
      'gruppe': 'Langsam',
      'cmd': [PYTHON14, 'manage.py', 'test', 'core.tests.longrunner',
              '-v', '2']},
+    # FUENFZEHN PRUEFDATEIEN LIEFEN IN KEINEM EINTRAG (01.09.2026)
+    # ------------------------------------------------------------
+    # `HumanBody/collision/` bringt 37 Faelle mit — Szeneneingabe,
+    # Splitter, Verteiler, Warp-Renderer, die UI-Ausfuhr. Kein Eintrag
+    # hat sie je gestartet, weil alle oben auf `core.tests.*` zeigen.
+    # Folge: `test_warprender` war seit dem Buendeln der Modulfunktionen
+    # rot und niemand hat es gesehen. Django findet sie ueber den
+    # `sys.path`-Eintrag aus `settings` (`manage.py test collision`);
+    # sechzehn der Faelle ueberspringen ohne Playwright, CUDA oder
+    # vorhandene Videos — das steht dann auch so in der Ausgabe.
+    {'slug': 'collision', 'name': 'Kollision (Pipeline)',
+     'gruppe': 'Langsam',
+     'cmd': [PYTHON14, 'manage.py', 'test', 'collision', '-v', '2']},
     # `{'slug': 'core', 'name': 'Alles (core)'}` stand hier bis zum
     # 17.08.2026. Der Eintrag ist überflüssig, seit djangoBase den Reiter
     # „Alle" selbst baut: Dort steht „Alles ausführen" — EIN Lauf über alle
@@ -96,7 +109,11 @@ TEST_BEREICHE = [
          'core.tests.component.test_stoffantwort_typen',
          'core.tests.ui.test_oberflaeche.ClothExportTests',
          'core.tests.ui.test_oberflaeche.ClothSzeneTests',
-         'core.tests.ui.test_oberflaeche.ClothEngineTests']},
+         'core.tests.ui.test_oberflaeche.ClothEngineTests',
+         'core.tests.ui.test_oberflaeche.ClothLichtTests',
+         # Fehlte seit der Aufteilung vom 30.08.2026 — die Backe-Faelle
+         # liefen, standen aber in keiner Gruppe der Oberflaeche.
+         'core.tests.ui.test_oberflaeche.ClothBackeTests']},
     {'slug': 'pipeline', 'name': 'Video → BVH',
      'beschreibung': 'MocapNET, GVHMR, Fortschritt, Prozesse, Aufräumen',
      'praefixe': [

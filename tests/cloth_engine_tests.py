@@ -46,7 +46,6 @@ class ClothEngineTests(TestCategory):
     #: Urteil: Ein Testrumpf, der ein fremdes Ergebnis nur durchreicht,
     #: faellt durch `szenarien` („Der Rumpf behauptet nichts") — und zu
     #: Recht, denn dann steht der Vergleich nicht mehr im Test.
-    SEGMENTFARBE = ("seg.get('color')", "seg['color']", 'segment_color')
 
     @staticmethod
     def test_blender_export_yup_to_zup_camera_position_correct():
@@ -74,7 +73,7 @@ class ClothEngineTests(TestCategory):
         Pin-Vertices
         dem Bone nicht."""
         import collision.blender_script as bs  # type: ignore
-        src = inspect.getsource(bs.setup_cloth)
+        src = inspect.getsource(bs.Blenderstoff.setup_cloth)
         has_arm_new = "modifiers.new('Armature', 'ARMATURE')" in src
         return has_arm_new, f'armature modifier {"OK" if has_arm_new else "FEHLT"}'
 
@@ -83,7 +82,7 @@ class ClothEngineTests(TestCategory):
         """Modifier-Reihenfolge: Armature MUSS vor Cloth stehen, sonst sieht der
         Cloth-Solver die Pin-Vertices noch an der Rest-Position statt am Bone-Pose."""
         import collision.blender_script as bs  # type: ignore
-        src = inspect.getsource(bs.setup_cloth)
+        src = inspect.getsource(bs.Blenderstoff.setup_cloth)
         arm_pos = src.find("'Armature', 'ARMATURE'")
         cloth_pos = src.find("'Cloth', 'CLOTH'")
         ok = arm_pos >= 0 and cloth_pos >= 0 and arm_pos < cloth_pos
@@ -96,7 +95,7 @@ class ClothEngineTests(TestCategory):
         (z.B. 'DEF-spine'), nicht ein willkürlicher Name wie '_pin_to_bone'. Blender's
         Armature-Modifier matcht VGs über ihren Namen mit Bones."""
         import collision.blender_script as bs  # type: ignore
-        src = inspect.getsource(bs.setup_cloth)
+        src = inspect.getsource(bs.Blenderstoff.setup_cloth)
         uses_bone_name = (
             "obj.vertex_groups.new(name=bone_name)" in src
             or "vertex_groups.new(name=str(seg['bone_name']))" in src)
@@ -111,7 +110,7 @@ class ClothEngineTests(TestCategory):
         deformiert der Armature-Modifier nur die Pins während der Rest-Mesh in T-Pose
         bleibt — Federn zerreißen, Rock fällt durch Boden."""
         import collision.blender_script as bs  # type: ignore
-        src = inspect.getsource(bs.setup_cloth)
+        src = inspect.getsource(bs.Blenderstoff.setup_cloth)
         # Akzeptiere zwei Formen: list(range(n_verts)) oder all_verts Iteration
         uses_all = ('list(range(n_verts))' in src
                     or 'range(len(obj.data.vertices))' in src)
@@ -121,9 +120,15 @@ class ClothEngineTests(TestCategory):
 
     @staticmethod
     def test_blender_eevee_uses_payload_camera():
-        """blender_script.main() muss setup_camera_from_payload() aufrufen."""
+        """Der Exportlauf muss setup_camera_from_payload() aufrufen.
+
+        Gelesen wird der Ablauf (`main` plus `Blenderszene`), nicht nur
+        `main`: Seit dem Aufteilen am 01.09.2026 steht der Aufruf in
+        `Blenderszene.kamera_und_licht`, das `main` ruft.
+        """
         import collision.blender_script as bs
-        src = inspect.getsource(bs.main)
+        src = (inspect.getsource(bs.main)
+               + inspect.getsource(bs.Blenderszene))
         return (
             'setup_camera_from_payload' in src,
             'setup_camera_from_payload aufgerufen'
@@ -161,72 +166,3 @@ class ClothEngineTests(TestCategory):
             uses_payload,
             'OK' if uses_payload
             else 'HARDCODED _fit_camera — Payload-Kamera wird ignoriert')
-
-    @staticmethod
-    def test_blender_eevee_uses_payload_lights():
-        import collision.blender_script as bs
-        src = inspect.getsource(bs.main)
-        return (
-            'setup_lights_from_payload' in src,
-            'OK' if 'setup_lights_from_payload' in src else 'Lichter-Setup fehlt')
-
-    @staticmethod
-    def test_warp_blender_uses_payload_lights():
-        import collision.blender_render_from_bake as brb
-        src = inspect.getsource(brb)
-        # Entweder scene['lights'] oder 'lights_json' lesen
-        uses_payload = ('lights_json' in src
-                        or "scene['lights']" in src
-                        or "scene_data['lights']" in src)
-        return (
-            uses_payload,
-            'OK' if uses_payload
-            else 'Payload-Lichter werden ignoriert, nur default Sun')
-
-    @staticmethod
-    def test_warp_only_uses_payload_lights():
-        import collision.warp_render as wr
-        src = inspect.getsource(wr)
-        uses_payload = ('lights_json' in src
-                        or "scene['lights']" in src
-                        or "bake['lights']" in src)
-        return (
-            uses_payload, 'OK' if uses_payload else 'Payload-Lichter werden ignoriert')
-
-    @staticmethod
-    def test_warp_only_reads_segment_color_from_bake():
-        """warp_render muss pro Segment die Farbe aus dem Bake lesen (seg.get('color')),
-        nicht stur Magenta zuweisen."""
-        import collision.warp_render as wr
-        src = inspect.getsource(wr)
-        liest = any(marke in src
-                    for marke in ClothEngineTests.SEGMENTFARBE)
-        return liest, ('OK (Farbe aus bake-seg)' if liest
-                       else 'Cloth-Farbe nicht aus Bake gelesen')
-
-    @staticmethod
-    def test_warp_blender_reads_segment_color_from_bake():
-        """blender_render_from_bake muss pro Segment die Farbe aus dem Bake lesen."""
-        import collision.blender_render_from_bake as brb
-        src = inspect.getsource(brb)
-        liest = any(marke in src
-                    for marke in ClothEngineTests.SEGMENTFARBE)
-        return liest, ('OK (Farbe aus bake-seg)' if liest
-                       else 'Cloth-Farbe nicht aus Bake gelesen')
-
-    @staticmethod
-    def test_warp_blender_lights_preserved_from_payload():
-        """setup_lights_from_payload muss pro Licht ein Blender-Light-Object erstellen
-        mit passendem Typ (SPOT/SUN/POINT) — matcht sowohl Payload-Typ-Strings als auch
-        Blender-Typ-Enum-Werte."""
-        import collision.blender_render_from_bake as brb
-        src = inspect.getsource(brb)
-        has_spot = "'SPOT'" in src or '"SPOT"' in src
-        has_sun = "'SUN'" in src or '"SUN"' in src
-        has_point = "'POINT'" in src or '"POINT"' in src
-        ok = has_spot and has_sun and has_point
-        return (
-            ok,
-            'OK' if ok
-            else (f'Licht-Typen unvollständig (SPOT={has_spot} '
-                  f'SUN={has_sun} POINT={has_point})'))

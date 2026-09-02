@@ -102,7 +102,7 @@ class Auftragsdateien:
             float(werte.get('body_height', 1.68)),
             werte.get('format', None),
             werte.get('foot_correction', '').lower() in ('1', 'true'),
-        ).holen())
+        ).holen().als_dict())
 
     @classmethod
     def bvh_gesicht(cls, request, job_id):

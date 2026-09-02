@@ -36,28 +36,36 @@ from humanbody_core.skeleton.bvh_normalisierung import BvhNormalisierung  # noqa
 from humanbody_core.skeleton.retarget import BVHData  # noqa: E402
 
 
-def _bewegung(bilder=7, gelenke=4, keim=20260831):
-    u"""Eine BVH-Attrappe mit zufälligen, aber gültigen Drehungen."""
-    zufall = np.random.default_rng(keim)
-    roh = zufall.normal(size=(bilder, gelenke, 4))
-    quats = roh / np.linalg.norm(roh, axis=2, keepdims=True)
-    return BVHData(
-        names=['gelenk%d' % i for i in range(gelenke)],
-        parents=[-1] + list(range(gelenke - 1)),
-        offsets=np.zeros((gelenke, 3)),
-        quats=quats,
-        positions=zufall.normal(size=(bilder, gelenke, 3)),
-        frametime=1 / 30.0,
-        frame_count=bilder,
-        children=None,
-    )
+class Bewegungsbau:
+    u"""Baut die Bewegungsdaten fuer diese Faelle.
+
+    Stand bis zum 02.09.2026 als freie Funktionen auf
+    Modulebene (Befund `freie-funktionen`).
+    """
+
+    @staticmethod
+    def bewegung(bilder=7, gelenke=4, keim=20260831):
+        u"""Eine BVH-Attrappe mit zufälligen, aber gültigen Drehungen."""
+        zufall = np.random.default_rng(keim)
+        roh = zufall.normal(size=(bilder, gelenke, 4))
+        quats = roh / np.linalg.norm(roh, axis=2, keepdims=True)
+        return BVHData(
+            names=['gelenk%d' % i for i in range(gelenke)],
+            parents=[-1] + list(range(gelenke - 1)),
+            offsets=np.zeros((gelenke, 3)),
+            quats=quats,
+            positions=zufall.normal(size=(bilder, gelenke, 3)),
+            frametime=1 / 30.0,
+            frame_count=bilder,
+            children=None,
+        )
 
 
 class DeltaTest(SimpleTestCase):
 
     def test_bild_null_wird_die_identitaet(self):
         u"""DIE Zusicherung der Funktion — und genau die war verletzt."""
-        raus = BvhNormalisierung.delta(_bewegung())
+        raus = BvhNormalisierung.delta(Bewegungsbau.bewegung())
         for gelenk in range(raus.quats.shape[1]):
             np.testing.assert_allclose(
                 raus.quats[0, gelenk], [0.0, 0.0, 0.0, 1.0], atol=1e-12,
@@ -65,7 +73,7 @@ class DeltaTest(SimpleTestCase):
 
     def test_jedes_bild_bleibt_ein_einheitsquaternion(self):
         u"""Der Aliasing-Fehler zerstörte auch die Länge — hier fällt das auf."""
-        raus = BvhNormalisierung.delta(_bewegung(bilder=12, gelenke=5))
+        raus = BvhNormalisierung.delta(Bewegungsbau.bewegung(bilder=12, gelenke=5))
         laengen = np.linalg.norm(raus.quats, axis=2)
         np.testing.assert_allclose(laengen, np.ones_like(laengen), atol=1e-10)
 
@@ -76,7 +84,7 @@ class DeltaTest(SimpleTestCase):
         derselbe sein — sonst ist es keine Normalisierung, sondern eine
         Verzerrung.
         """
-        vorher = _bewegung(bilder=9, gelenke=3, keim=7)
+        vorher = Bewegungsbau.bewegung(bilder=9, gelenke=3, keim=7)
         nachher = BvhNormalisierung.delta(vorher)
         for bild in range(1, 9):
             for gelenk in range(3):
@@ -87,13 +95,13 @@ class DeltaTest(SimpleTestCase):
                 self.assertAlmostEqual(alt, neu, places=10)
 
     def test_die_wurzelposition_beginnt_im_ursprung(self):
-        raus = BvhNormalisierung.delta(_bewegung())
+        raus = BvhNormalisierung.delta(Bewegungsbau.bewegung())
         np.testing.assert_allclose(raus.positions[0, 0], [0.0, 0.0, 0.0],
                                    atol=1e-12)
 
     def test_die_eingabe_bleibt_unberuehrt(self):
         u"""„original untouched" steht im Docstring — also wird es geprüft."""
-        vorher = _bewegung()
+        vorher = Bewegungsbau.bewegung()
         quats = vorher.quats.copy()
         positions = vorher.positions.copy()
         BvhNormalisierung.delta(vorher)
@@ -101,13 +109,13 @@ class DeltaTest(SimpleTestCase):
         np.testing.assert_allclose(vorher.positions, positions, atol=0)
 
     def test_ohne_bilder_kommt_dasselbe_zurueck(self):
-        leer = _bewegung(bilder=0)
+        leer = Bewegungsbau.bewegung(bilder=0)
         leer.frame_count = 0
         self.assertIs(BvhNormalisierung.delta(leer), leer)
 
     def test_zweimal_normalisieren_aendert_nichts_mehr(self):
         u"""Nach dem ersten Mal IST Bild 0 die Identität — der zweite Lauf
         zieht dann die Identität ab und darf nichts bewegen."""
-        einmal = BvhNormalisierung.delta(_bewegung(keim=99))
+        einmal = BvhNormalisierung.delta(Bewegungsbau.bewegung(keim=99))
         zweimal = BvhNormalisierung.delta(einmal)
         np.testing.assert_allclose(zweimal.quats, einmal.quats, atol=1e-12)

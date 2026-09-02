@@ -38,7 +38,8 @@ class Stoffexport:
     """Die HTTP-Schale um `Stoffexportlauf`."""
 
     #: Bisherige Aufrufform — die Liste steht in `Stoffexportlauf`.
-    MOTOREN = Stoffexportlauf.MOTOREN
+    #: Weiterleitung; die Liste selbst kommt aus `collision`.
+    motoren = staticmethod(Stoffexportlauf.motoren)
 
     @staticmethod
     def _pfad_bereiten():

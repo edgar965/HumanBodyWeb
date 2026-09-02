@@ -35,44 +35,52 @@ Humanbodypfad.setzen()
 from humanbody_core.cloth.musterlauf import Musterlauf  # noqa: E402
 
 
-def _punktwolke():
-    u"""Eine grobe stehende Röhre — NUR Punkte, keine Flächen.
+class Musterbau:
+    u"""Baut die Punktwolken und Muster fuer diese Faelle.
 
-    Heisst seit dem 01.09.2026 nicht mehr `_koerper`: In
-    `test_kleidungsanpassung_lauf.py` steht ein `_koerper`, das
-    `(Punkte, Vierecke)` liefert. Zwei Namen für zwei verschiedene
-    Dinge — beim Übernehmen eines Falls in die andere Datei fällt das
-    erst als Entpack-Fehler auf.
+    Stand bis zum 02.09.2026 als freie Funktionen auf
+    Modulebene (Befund `freie-funktionen`).
     """
-    winkel = np.linspace(0, 2 * np.pi, 12, endpoint=False)
-    punkte = [[0.16 * np.cos(w), 0.16 * np.sin(w), z]
-              for z in np.linspace(0, 1.7, 10) for w in winkel]
-    return np.array(punkte, dtype=np.float64)
 
+    @staticmethod
+    def punktwolke():
+        u"""Eine grobe stehende Röhre — NUR Punkte, keine Flächen.
 
-def _rechteck(x0, y0, breite, hoehe):
-    ecken = [[x0, y0], [x0 + breite, y0],
-             [x0 + breite, y0 + hoehe], [x0, y0 + hoehe]]
-    return {'vertices': ecken,
-            'edges': [{'endpoints': [i, (i + 1) % 4]} for i in range(4)]}
+        Heisst seit dem 01.09.2026 nicht mehr `_koerper`: In
+        `test_kleidungsanpassung_lauf.py` steht ein `_koerper`, das
+        `(Punkte, Vierecke)` liefert. Zwei Namen für zwei verschiedene
+        Dinge — beim Übernehmen eines Falls in die andere Datei fällt das
+        erst als Entpack-Fehler auf.
+        """
+        winkel = np.linspace(0, 2 * np.pi, 12, endpoint=False)
+        punkte = [[0.16 * np.cos(w), 0.16 * np.sin(w), z]
+                  for z in np.linspace(0, 1.7, 10) for w in winkel]
+        return np.array(punkte, dtype=np.float64)
 
+    @staticmethod
+    def rechteck(x0, y0, breite, hoehe):
+        ecken = [[x0, y0], [x0 + breite, y0],
+                 [x0 + breite, y0 + hoehe], [x0, y0 + hoehe]]
+        return {'vertices': ecken,
+                'edges': [{'endpoints': [i, (i + 1) % 4]} for i in range(4)]}
 
-def _muster():
-    return {
-        'panels': {
-            'vorne': dict(_rechteck(-18, 90, 36, 45), placement='front'),
-            'hinten': dict(_rechteck(-18, 90, 36, 45), placement='back'),
-        },
-        'stitches': [{'panelA': 'vorne', 'edgeA': 0,
-                      'panelB': 'hinten', 'edgeB': 2}],
-    }
+    @staticmethod
+    def muster():
+        return {
+            'panels': {
+                'vorne': dict(Musterbau.rechteck(-18, 90, 36, 45), placement='front'),
+                'hinten': dict(Musterbau.rechteck(-18, 90, 36, 45), placement='back'),
+            },
+            'stitches': [{'panelA': 'vorne', 'edgeA': 0,
+                          'panelB': 'hinten', 'edgeB': 2}],
+        }
 
 
 class KantenkarteTest(SimpleTestCase):
     u"""Die Vertexnummern je Kante zeigen auf Randpunkte."""
 
     def setUp(self):
-        self.lauf = Musterlauf(_muster(), _punktwolke())
+        self.lauf = Musterlauf(Musterbau.muster(), Musterbau.punktwolke())
         self.vertices, self.dreiecke = self.lauf.bauen()
 
     def test_kein_schwerpunkt_in_einer_kantenliste(self):
@@ -121,7 +129,7 @@ class NahtTest(SimpleTestCase):
     u"""Vernähte Kanten liegen danach aufeinander."""
 
     def test_die_vernaehten_punkte_fallen_zusammen(self):
-        lauf = Musterlauf(_muster(), _punktwolke())
+        lauf = Musterlauf(Musterbau.muster(), Musterbau.punktwolke())
         vertices, _ = lauf.bauen()
         a = lauf.kantenpunkte[('vorne', 0)]
         b = lauf.kantenpunkte[('hinten', 2)]
@@ -132,10 +140,10 @@ class NahtTest(SimpleTestCase):
 
     def test_eine_naht_ins_leere_stoert_nicht(self):
         u"""Ein Stich auf ein Panel, das es nicht gibt, wird übergangen."""
-        muster = _muster()
+        muster = Musterbau.muster()
         muster['stitches'].append({'panelA': 'gibtsnicht', 'edgeA': 0,
                                    'panelB': 'hinten', 'edgeB': 0})
-        vertices, dreiecke = Musterlauf(muster, _punktwolke()).bauen()
+        vertices, dreiecke = Musterlauf(muster, Musterbau.punktwolke()).bauen()
         self.assertEqual(len(vertices), 20)
         self.assertEqual(len(dreiecke), 18)
 
@@ -144,10 +152,11 @@ class LeeresMusterTest(SimpleTestCase):
     u"""Was nicht reicht, gibt None statt einer Ausnahme."""
 
     def test_ohne_panels(self):
-        self.assertEqual(Musterlauf({}, _punktwolke()).bauen(), (None, None))
+        self.assertEqual(Musterlauf({}, Musterbau.punktwolke()).bauen(), (None, None))
 
     def test_panel_mit_zwei_ecken(self):
         muster = {'panels': {'strich': {
             'vertices': [[0, 0], [1, 0]],
             'edges': [{'endpoints': [0, 1]}]}}, 'stitches': []}
-        self.assertEqual(Musterlauf(muster, _punktwolke()).bauen(), (None, None))
+        lauf = Musterlauf(muster, Musterbau.punktwolke())
+        self.assertEqual(lauf.bauen(), (None, None))

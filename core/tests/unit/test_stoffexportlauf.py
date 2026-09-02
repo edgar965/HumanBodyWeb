@@ -25,7 +25,7 @@ class MotorwahlTest(SimpleTestCase):
     """Ein unbekannter Motorname darf nicht bis `export_mp4` durchkommen."""
 
     def test_bekannter_motor_gibt_keine_fehlerantwort(self):
-        for motor in Stoffexportlauf.MOTOREN:
+        for motor in Stoffexportlauf.motoren():
             with self.subTest(motor=motor):
                 lauf = Stoffexportlauf({'engine': motor})
                 self.assertIsNone(lauf.motorfehler())

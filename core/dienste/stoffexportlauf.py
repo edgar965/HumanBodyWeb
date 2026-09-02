@@ -12,7 +12,7 @@ DREI DINGE, DIE HIER ENTSCHIEDEN WERDEN
    und nur wenn die auf ein wirkliches Verzeichnis zeigt. Sonst
    `MEDIA_ROOT/cloth_exports` — ein Export darf nicht daran scheitern, dass in
    den Einstellungen ein Pfad von einem anderen Rechner steht.
-2. **Der Motor** (`MOTOREN`). Ein unbekannter Name wird abgelehnt, statt im
+2. **Der Motor** (`motoren()`). Ein unbekannter Name wird abgelehnt, statt im
    Unterprozess auf einen Fehler zu laufen, den niemand zuordnen kann.
 3. **Der Unterschied zwischen „Anfrage kaputt" und „Szene nicht rechenbar".**
    Ein gescheiterter MOTOR bekommt Status 200 mit dem Log: Die Anfrage war in
@@ -36,10 +36,25 @@ class Stoffexportlauf:
     """Ein Exportlauf: Motor pruefen, Szene lesen, Ziel bilden, antworten."""
 
     #: Die Motoren, die `collision.export_mp4` kennt.
-    MOTOREN = ('blender_eevee', 'warp_blender', 'warp_only', 'skinning_blender')
+    #:
+    #: DIE LISTE STAND BIS ZUM 01.09.2026 ZWEIMAL — hier und in
+    #: `collision/__init__.py`. Zwei Listen fuer dieselbe Sache heisst:
+    #: Ein fuenfter Motor wird an einer Stelle eingetragen und an der
+    #: anderen vergessen, und die Ablehnung kommt dann aus dem falschen
+    #: Grund. Jetzt fragt diese Seite die andere.
+    #:
+    #: Gelesen wird ERST BEIM PRUEFEN, nicht beim Import: `collision`
+    #: zieht numpy und die Szenenklassen nach, und der Django-Start soll
+    #: das nicht bezahlen.
     ERSATZMOTOR = 'blender_eevee'
     ERSATZGUETE = 'medium'
     ERSATZORDNER = 'cloth_exports'
+
+    @staticmethod
+    def motoren():
+        u"""Die gueltigen Motornamen — aus `collision.Motorwahl`."""
+        from collision import Motorwahl
+        return Motorwahl.namen()
 
     def __init__(self, rumpf):
         self.rumpf = rumpf
@@ -72,7 +87,7 @@ class Stoffexportlauf:
 
     def motorfehler(self):
         """Antwort, wenn der Motor unbekannt ist — sonst `None`."""
-        if self.motor in Stoffexportlauf.MOTOREN:
+        if self.motor in Stoffexportlauf.motoren():
             return None
         return JsonResponse({'ok': False,
                              'error': f'unknown engine {self.motor}'}, status=400)
