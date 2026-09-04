@@ -13,7 +13,12 @@
  * dreimal mit einem anderen Variablennamen fuer denselben Knopf (`rb`, `rb2`,
  * `rb3`), weil `const` im selben Block nicht zweimal gehen. Genau daran merkt
  * man, dass ein Block zu oft dasteht.
+ *
+ * 05.09.2026: Datei -> Exportieren -> Figur – GLB (`FigurExport`), damit
+ * Roomguest die Figur spielen kann.
  */
+import { FigurExport } from './figur_export.js';
+
 export class Seitenbefehle {
 
     /**
@@ -43,6 +48,8 @@ export class Seitenbefehle {
             'delete': () => this.dienste.gewaehltesEntfernen?.(),
             'clear-all': () => this.allesEntfernen(),
             'export-model-json': () => this.alsJsonSpeichern(),
+            'export-figur-glb': () => this.figurAblegen(),
+            'export-figur-glb-download': () => this.figurHerunterladen(),
             'reset-camera': () => this.buehne.kameraZuruecksetzen(),
             'reset-lighting': () => this.buehne.lichtZuruecksetzen(),
             'reset-scene': () => this.szeneZuruecksetzen(),
@@ -106,6 +113,25 @@ export class Seitenbefehle {
         link.download = (this.state.currentPresetName || 'model') + '.json';
         link.click();
         URL.revokeObjectURL(adresse);
+    }
+
+    /** Die Figur als GLB auf den Server — dort holt Roomguest sie ab. */
+    async figurAblegen() {
+        try {
+            const antwort = await new FigurExport(this.state).ablegen();
+            alert(`Figur abgelegt:\n${antwort.pfad}\n${antwort.bytes} Bytes`);
+        } catch (fehler) {
+            alert('GLB-Export fehlgeschlagen: ' + fehler.message);
+        }
+    }
+
+    /** Die Figur als GLB in den Browser. */
+    async figurHerunterladen() {
+        try {
+            await new FigurExport(this.state).herunterladen();
+        } catch (fehler) {
+            alert('GLB-Export fehlgeschlagen: ' + fehler.message);
+        }
     }
 
     /**

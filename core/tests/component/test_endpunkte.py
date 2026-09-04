@@ -56,12 +56,12 @@ FOTOAUFTRAG = ('/api/character/photo-job/'
 
 @override_settings(ALLOWED_HOSTS=['*'])
 class EndpunkteTest(EndpunktProbe):
-    """Alle 119 API-Routen — lesende angefahren, wirkende nur geprüft."""
+    """Alle 122 API-Routen — lesende angefahren, wirkende nur geprüft."""
 
     #: So viele Routen weisen ein GET ab. Die Zahl steht hier ausgeschrieben:
     #: Sinkt sie, hat jemand einen Methodenschutz verloren — und das ist der
     #: Fehler, der `delete_job` und `scan_bvh_files` gekostet hat.
-    NUR_POST_ANZAHL = 43
+    NUR_POST_ANZAHL = 44
 
     ENDPUNKTE = [
         (LESEN, 'animationen', '/api/animationen/probe/'),
@@ -92,6 +92,9 @@ class EndpunkteTest(EndpunktProbe):
         (WIRKUNG, 'sichern', '/api/character/cloth/presets/save/'),
         (LESEN, 'bereiche', '/api/character/cloth/regions/'),
         (WIRKUNG, 'herunterladen', '/api/character/garment/download/'),
+        (LESEN, 'liste', '/api/character/figur-glb/'),
+        (LESEN, 'datei', '/api/character/figur-glb/probe/'),
+        (WIRKUNG, 'ablegen', '/api/character/figur-glb/probe/ablegen/'),
         (WIRKUNG, 'ausgabeordner', '/api/character/garment/export/'),
         (LESEN, 'anpassen', '/api/character/garment/fit/'),
         (LESEN, 'bestand', '/api/character/garment/library/'),

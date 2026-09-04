@@ -12,6 +12,7 @@ Reihenfolge bleibt damit dieselbe wie vorher.
 from django.urls import path
 
 from .api.charmorph_bestand import CharmorphBestand
+from .api.figur_export import Figurexport
 from .api.fotoauftraege import Fotoauftraege
 from .api.kleidungsbibliothek import Kleiderendpunkte
 from .api.retarget import Retargetendpunkte
@@ -33,6 +34,11 @@ from .api.netz import Netzendpunkte
 from .api.kleidung import Kleidung
 
 CHARAKTER = [
+    # Fertige Figur als GLB (Datei -> Exportieren), Abnehmer: Roomguest.
+    path('api/character/figur-glb/', Figurexport.liste, name='figur_glb_liste'),
+    path('api/character/figur-glb/<str:name>/', Figurexport.datei, name='figur_glb'),
+    path('api/character/figur-glb/<str:name>/ablegen/', Figurexport.ablegen,
+         name='figur_glb_ablegen'),
     path('api/character/analyze-photo/', Fotoauftraege.analysieren,
          name='analyze_photo'),
     path('api/character/analyze-photo/status/', Fotoauftraege.backendzustand,

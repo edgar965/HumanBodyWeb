@@ -24,6 +24,8 @@
                 <div class="menu-item">Exportieren</div>
                 <div class="menu-submenu">
                     <div class="menu-item" data-action="export-model-json">Modell &ndash; JSON</div>
+                    <div class="menu-item" data-action="export-figur-glb">Figur &ndash; GLB f&uuml;r Roomguest ablegen</div>
+                    <div class="menu-item" data-action="export-figur-glb-download">Figur &ndash; GLB herunterladen</div>
                 </div>
             </div>
         </div>
@@ -94,6 +96,7 @@ const buttonActions = {
     'toggle-rig': 'rig-toggle',
 };
 const customActions = ['new', 'deselect', 'delete', 'clear-all', 'export-model-json',
+                       'export-figur-glb', 'export-figur-glb-download',
                        'reset-scene', 'reset-lighting', 'reset-camera'];
 
 document.querySelectorAll('.menu-item[data-action]').forEach(item => {
