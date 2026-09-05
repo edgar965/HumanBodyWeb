@@ -10,9 +10,13 @@ import { Protokoll } from './protokoll.js';
  * das ist der Normalfall und kommt mehrmals je Sekunde. Alles andere ist Text
  * und traegt eine Absicht (`reload_mesh`, `error`).
  *
- * DIE ARTEN SIND DRAHTFORMAT: `type`, `body_type`, `gender`, `message` schreibt
- * `core/consumers.py`. Wer hier einen Namen aendert, bekommt eine Nachricht,
- * die ankommt und nichts ausloest.
+ * DIE ARTEN SIND DRAHTFORMAT: `type`, `body_type`, `gender`, `message`, `bones`
+ * schreibt `core/consumers.py`. Wer hier einen Namen aendert, bekommt eine
+ * Nachricht, die ankommt und nichts ausloest.
+ *
+ * `skelett` (05.09.2026) traegt die Knochen, die dem gemorphten Koerper
+ * nachgezogen werden muessen. Sie kommt NACH dem passenden Punktepuffer und
+ * darf auch leer sein — leer heisst „alles zurueck in die Ruhelage".
  *
  * EIN UNLESBARER TEXT IST KEIN ABBRUCH: Der Kanal laeuft weiter, die Zeile
  * geht ins Protokoll. Eine geworfene Ausnahme im `onmessage` beendet nichts,
@@ -23,7 +27,7 @@ export class Netznachricht {
     /**
      * @param {MessageEvent} ereignis
      * @param {Object} behandler {punkte(ArrayBuffer), neuLaden(typ, geschlecht),
-     *     fehler(text)} — jeder Eintrag darf fehlen
+     *     fehler(text), skelett(knochen)} — jeder Eintrag darf fehlen
      */
     static verteilen(ereignis, behandler) {
         if (ereignis.data instanceof ArrayBuffer) {
@@ -43,6 +47,8 @@ export class Netznachricht {
             if (behandler.neuLaden) {
                 behandler.neuLaden(nachricht.body_type, nachricht.gender);
             }
+        } else if (nachricht.type === 'skelett') {
+            if (behandler.skelett) behandler.skelett(nachricht.bones || {});
         }
     }
 }

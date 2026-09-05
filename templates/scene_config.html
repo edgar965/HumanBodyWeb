@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static regler %}
+{% load fassung %}
 
 {% block title %}HumanBody · Szene{% endblock %}
 
@@ -2040,7 +2041,7 @@
 
 {% block extra_scripts %}
 {% include "_importmap.html" with subdivide=1 %}
-<script type="module" src="{% static 'viewer/scene/main.js' %}?t={% now 'U' %}"></script>
+<script type="module" src="{% fassungspfad 'viewer/scene/main.js' %}"></script>
 <script>
 // Panel resize handle
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,5 +1,6 @@
 {% extends "animationsseite.html" %}
 {% load static %}
+{% load fassung %}
 
 {% block title %}HumanBody · Test Animation{% endblock %}
 
@@ -45,6 +46,11 @@
         background: rgba(68,221,221,0.25);
         color: #44dddd;
         border: 1px solid rgba(68,221,221,0.4);
+    }
+    .skeleton-label.uma {
+        background: rgba(255,102,204,0.25);
+        color: #ff88cc;
+        border: 1px solid rgba(255,102,204,0.4);
     }
 
     .toggle-row {
@@ -93,6 +99,7 @@
             <div class="skeleton-label mocapnet">MocapNET v4</div>
             <div class="skeleton-label bandai">Bandai</div>
             <div class="skeleton-label smpl">SMPL</div>
+            <div class="skeleton-label uma">UMA</div>
             <div class="skeleton-label openpose">OpenPose</div>
         </div>
 {% endblock %}
@@ -137,6 +144,11 @@
                     <label for="toggle-smpl">SMPL Skeleton</label>
                 </div>
                 <div class="toggle-row">
+                    <input type="checkbox" id="toggle-uma" checked>
+                    <span class="color-dot punkt-uma"></span>
+                    <label for="toggle-uma">UMA Skeleton (Figurkatalog)</label>
+                </div>
+                <div class="toggle-row">
                     <input type="checkbox" id="toggle-openpose" checked>
                     <span class="color-dot punkt-openpose"></span>
                     <label for="toggle-openpose">OpenPose Skeleton</label>
@@ -163,5 +175,5 @@
 {% endblock %}
 
 {% block viewer_skript %}
-<script type="module" src="{% static 'viewer/skeleton_test.js' %}?t={% now "U" %}"></script>
+<script type="module" src="{% fassungspfad 'viewer/skeleton_test.js' %}"></script>
 {% endblock %}

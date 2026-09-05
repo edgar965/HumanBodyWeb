@@ -36,6 +36,8 @@ export function connectWebSocket() {
     state.ws.onmessage = (ereignis) => Netznachricht.verteilen(ereignis, {
         punkte: updateMeshVertices,
         neuLaden: (typ) => fn.reloadBodyMesh(typ),
+        // Ueber `fn` statt als Import — siehe `viewer/skinning.js`.
+        skelett: (knochen) => fn.skelettNachfuehren?.(knochen),
     });
 }
 

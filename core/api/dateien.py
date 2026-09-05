@@ -102,6 +102,7 @@ class Auftragsdateien:
             float(werte.get('body_height', 1.68)),
             werte.get('format', None),
             werte.get('foot_correction', '').lower() in ('1', 'true'),
+            ziel=werte.get('target') or Retargetdaten.ZIEL_DEF,
         ).holen().als_dict())
 
     @classmethod

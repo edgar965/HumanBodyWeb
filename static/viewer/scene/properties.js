@@ -53,10 +53,7 @@ export async function populateProperties(charId) {
     const inst = state.characters.get(charId);
     if (!inst) return;
     state.currentPropsCharId = charId;
-    document.getElementById('prop-empty').style.display = 'none';
-    document.getElementById('prop-content').style.display = '';
-    document.getElementById('assets-empty').style.display = 'none';
-    document.getElementById('assets-content').style.display = '';
+    _bereiche(true);
     try { await fetchMorphDefs(); } catch (e) { console.error('Failed to fetch morph defs:', e); return; }
     populateTransform(inst);
     updateEquippedList(inst);
@@ -73,10 +70,22 @@ export async function populateProperties(charId) {
 export function clearProperties() {
     fn.clearSubMeshSelection();
     state.currentPropsCharId = null;
-    document.getElementById('prop-empty').style.display = '';
-    document.getElementById('prop-content').style.display = 'none';
-    document.getElementById('assets-empty').style.display = '';
-    document.getElementById('assets-content').style.display = 'none';
+    _bereiche(false);
+}
+
+/**
+ * Eigenschaften- und Assets-Bereich zeigen — oder den Platzhalter
+ * „Charakter auswählen". Die Inhalte tragen seit dem Umbau vom 30.08.2026
+ * die Klasse `hb-versteckt` statt eines Inline-Stils; ein geleertes
+ * `style.display` ließ sie deshalb versteckt, und der Reiter „Eigenschaften"
+ * blieb leer, obwohl der Charakter ausgewählt war (gefunden 05.09.2026).
+ */
+function _bereiche(zeigen) {
+    const paare = [['prop-empty', 'prop-content'], ['assets-empty', 'assets-content']];
+    for (const [leer, inhalt] of paare) {
+        document.getElementById(leer).style.display = zeigen ? 'none' : '';
+        document.getElementById(inhalt).classList.toggle('hb-versteckt', !zeigen);
+    }
 }
 
 function populateTransform(inst) {

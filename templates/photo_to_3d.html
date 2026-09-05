@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load fassung %}
 
 {% block title %}Foto To 3D — HumanBody{% endblock %}
 
@@ -840,5 +841,5 @@
 
 {% block extra_scripts %}
 {% include "_importmap.html" %}
-<script type="module" src="{% static 'viewer/photo_to_3d/index.js' %}?t={% now "U" %}"></script>
+<script type="module" src="{% fassungspfad 'viewer/photo_to_3d/index.js' %}"></script>
 {% endblock %}

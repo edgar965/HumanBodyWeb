@@ -1,10 +1,9 @@
 /**
- * Skeleton Test — 6 Testzustand.skeletons for bone-mapping debugging.
+ * Skeleton Test — die Skelettspalten der Vergleichsseite (`testzustand.js`).
  *
- * Row 1: DEF (red) | CMU (green) | Mixamo (orange) | MocapNET (blue) | Bandai (purple)
- * Row 2: SMPL (orange-red, behind DEF)
+ * Reihe 1: DEF (rot) | CMU (grün) | Mixamo (orange) | MocapNET (blau) | Bandai (lila) | OpenPose
+ * Reihe 2: SMPL (gelb, hinter DEF) | UMA (rosa, hinter CMU)
  */
-import * as THREE from 'three';
 import 'three/addons/controls/OrbitControls.js';
 import 'three/addons/loaders/BVHLoader.js';
 import 'three/addons/renderers/CSS2DRenderer.js';
@@ -17,6 +16,7 @@ import { createBoneLabels, createBoneViz } from './skelett_test/knochenbild.js';
 import { init } from './skelett_test/aufbau.js';
 import { Protokoll } from './gemeinsam/protokoll.js';
 import { Anfangshaltung } from './anfangshaltung.js';
+import { Einpassung } from './skelett_test/einpassung.js';
 
 // =========================================================================
 // Global state
@@ -96,26 +96,9 @@ export function placeBvhSkeleton(result, skelKey) {
     // Was dabei je Format zu tun ist, steht in `anfangshaltung.js`.
     new Anfangshaltung(bones, result.clip).anwenden(skelKey, rootBone);
 
-    rootBone.updateWorldMatrix(true, true);
-
-    // Measure height and scale to ~1.68m
-    const box = new THREE.Box3();
-    const tmpVec = new THREE.Vector3();
-    bones.forEach(b => { b.getWorldPosition(tmpVec); box.expandByPoint(tmpVec); });
-    const bvhHeight = Math.max(box.max.y - box.min.y, 0.01);
-    const targetH = 1.68;
-    const scale = targetH / bvhHeight;
-
-    // Wrapper group for scaling + centering
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    const wrapper = new THREE.Group();
-    wrapper.scale.set(scale, scale, scale);
-    // Center skeleton horizontally and put feet on ground
-    wrapper.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
-    wrapper.add(rootBone);
-    skel.group.add(wrapper);
-    skel.wrapper = wrapper;
+    // Auf Vergleichsgröße bringen, mittig, Füße am Boden (`einpassung.js`).
+    const einpassung = new Einpassung(rootBone, bones);
+    const scale = einpassung.anwenden(skelKey);
     skel.rootBone = rootBone;
     skel.bones = bones;
 
@@ -127,10 +110,7 @@ export function placeBvhSkeleton(result, skelKey) {
 
     Protokoll.debug('Viewer',
         `${skelKey.toUpperCase()} skeleton placed: ${bones.length} bones, `
-        + `scale=${scale.toFixed(4)}, bvhH=${bvhHeight.toFixed(1)}, `
-        + `box.y=[${box.min.y.toFixed(1)},${box.max.y.toFixed(1)}], `
-        + `center.z=${center.z.toFixed(1)}, `
-        + `wrapper.z=${wrapper.position.z.toFixed(3)}`);
+        + einpassung.beschreibung());
 }
 
 

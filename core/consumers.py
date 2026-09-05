@@ -5,6 +5,7 @@ import numpy as np
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .dienste.charakterdaten import Charakterdaten
+from .dienste.skelettnachfuehrung import Skelettnachfuehrung
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,8 @@ class CharacterConsumer(AsyncWebsocketConsumer):
         self._char_state = None
         self._cc_subs = {}  # {'female': CC, 'male': CC}
         self._current_gender = 'female'
+        #: Ob zuletzt bewegte Knochen unterwegs waren — siehe `_send_skelett`.
+        self._skelett_bewegt = False
         self._init_state()
 
     def _init_state(self):
@@ -75,11 +78,47 @@ class CharacterConsumer(AsyncWebsocketConsumer):
         self._cc_subs = {}
 
     async def _send_vertices(self, vertices):
-        """Send vertices, applying CC subdivision if available."""
+        """Send vertices, applying CC subdivision if available.
+
+        Das Skelett faehrt hier mit, nicht in den fuenf Aufrufern: Es gab am
+        05.09.2026 fuenf Stellen, die Punkte schicken (`morph`, `morph_batch`,
+        `meta`, `reset`, Koerperartwechsel) — eine davon zu vergessen hiesse,
+        dass das Skelett bei genau einem Regler stehen bleibt. Genau die
+        Sorte Fehler, die niemand meldet.
+
+        REIHENFOLGE IST DRAHTFORMAT: erst die Punkte, dann die Knochen. Ein
+        WebSocket haelt die Reihenfolge, und der Browser bindet die Haut an
+        das Netz, das dazu gehoert.
+        """
         cc = self._get_cc()
+        grundnetz = vertices
         if cc is not None:
             vertices = cc.subdivide(vertices)
         await self.send(bytes_data=vertices.astype(np.float32).tobytes())
+        await self._send_skelett(grundnetz)
+
+    async def _send_skelett(self, grundnetz):
+        """Die bewegten Knochen — oder gar nichts.
+
+        Auf dem UNTERTEILTEN Netz waere das falsch: Die Gelenkanpassung merkt
+        sich Nachbarindizes des Grundnetzes (18.210 Punkte), das unterteilte
+        hat 70.851.
+
+        DIE NACHRICHT IST VOLLSTAENDIG: Was nicht drinsteht, steht in der
+        Ruhelage. Deshalb muss die LEERE Nachricht raus, sobald vorher etwas
+        bewegt war — sonst bliebe das Skelett beim Zurueckdrehen des Reglers
+        (und bei `reset`) in der letzten Groesse stehen. Nur wenn schon
+        vorher nichts bewegt war, ist Schweigen richtig; das ist der
+        Normalfall und kostet dann auch keine 8,6 kB je Regleranschlag.
+        """
+        bewegte = Skelettnachfuehrung.bewegte(self._current_gender, grundnetz)
+        if not bewegte and not self._skelett_bewegt:
+            return
+        self._skelett_bewegt = bool(bewegte)
+        await self.send(text_data=json.dumps({
+            'type': 'skelett',
+            'bones': bewegte,
+        }))
 
     async def _handle_body_type(self, body_type):
         """Koerperart wechseln und dabei einen Geschlechtswechsel erkennen.
@@ -159,12 +198,23 @@ class CharacterConsumer(AsyncWebsocketConsumer):
             await self._send_vertices(vertices)
 
         elif msg_type == 'reset':
-            body_type = msg.get('body_type', 'Female_Caucasian')
-            await self._handle_body_type(body_type)
-            self._char_state._morph_values.clear()
-            self._char_state._meta_values.clear()
-            vertices = self._char_state.compute()
-            await self._send_vertices(vertices)
+            # ERST leeren, DANN die Koerperart setzen (05.09.2026).
+            #
+            # `zuruecksetzen()` statt zweier `clear()` von aussen: Die
+            # trafen `_user_morphs` nicht, und `compute()` schreibt die
+            # Regler von dort in seiner ersten Zeile zurueck. „Neues
+            # Modell" liess den Koerper deshalb gross — gemessen 2,28 m
+            # statt 1,68 m.
+            #
+            # Und in dieser Reihenfolge, weil `_handle_body_type` selbst
+            # schickt: Vorher stand hier erst der Aufruf, dann das Leeren,
+            # dann ein zweites Senden. Der Browser bekam also einmal den
+            # ALTEN Koerper (840 kB) und gleich darauf den neuen — mit der
+            # Skelett-Nachfuehrung sichtbar als kurzes Aufblitzen des
+            # grossen Rigs. Jetzt geht eine Nachricht raus, die richtige.
+            self._char_state.zuruecksetzen()
+            await self._handle_body_type(msg.get('body_type',
+                                                 'Female_Caucasian'))
 
 
 class TestCharacterConsumer(CharacterConsumer):
@@ -181,6 +231,16 @@ class TestCharacterConsumer(CharacterConsumer):
             self._cc_subs = {'test': Testkern.unterteiler()}
         except Exception as e:
             logger.exception('Test-CharacterState nicht aufbaubar: %s', e)
+
+    async def _send_skelett(self, grundnetz):
+        """Der Testcharakter bekommt keine Nachfuehrung.
+
+        Er hat 17.996 Grundpunkte statt 18.210, und `def_skeleton.json`
+        gehoert zum Produktionsnetz. `Gelenkanpassung.passt_zu` wuerde das
+        auch abfangen — aber dann waere erst die ganze Anpassung samt
+        KD-Baum gebaut worden, fuer eine Seite, die sie nie braucht.
+        """
+        return
 
     def _get_cc(self):
         """Der Unterteiler des TESTcharakters — nicht der der Produktion.

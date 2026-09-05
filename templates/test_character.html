@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load fassung %}
 
 {% block title %}Test Charakter — Vergleich{% endblock %}
 
@@ -255,7 +256,7 @@
 <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/languages/python.min.js"></script>
 {% include "_importmap.html" %}
 <script type="module">
-import { createViewer } from '{% static "viewer/viewer_compare.js" %}';
+import { createViewer } from '{% fassungspfad "viewer/viewer_compare.js" %}';
 
 const left = createViewer({
     canvasId: 'canvas-left',

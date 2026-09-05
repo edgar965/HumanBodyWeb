@@ -18,12 +18,13 @@ Erwartet im Zusammenhang: `job` mit `id`, `name`, `fps`, `bvh_file`,
 `result_character/index.js` — sie stehen in beiden Vorlagen gleich.
 {% endcomment %}
 {% load static %}
+{% load fassung %}
 {% if job.bvh_file %}
 <script type="module">
 /** So lange bleibt der fertige Fortschrittsbalken stehen, damit „100 %" lesbar ist. */
 const BALKEN_NACHLEUCHTEN_MS = 1500;
 try {
-    const { initResultCharacter } = await import('{% static "viewer/result_character/index.js" %}?t={% now "U" %}');
+    const { initResultCharacter } = await import('{% fassungspfad "viewer/result_character/index.js" %}');
     initResultCharacter({
         canvasId: 'characterCanvas',
         videoId: 'resultVideo',

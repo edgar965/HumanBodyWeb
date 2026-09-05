@@ -136,8 +136,9 @@ function buildClipFromRetargetData(data, rigifySkel) {
  * Uses /api/retarget/?job=<id> or /api/retarget/?category=<cat>&name=<name>
  *
  * @param {Object} source - { jobId } OR { category, name } OR { bvhUrl }
- * @param {Object} rigifySkel - { rootBone, boneByName }
- * @param {Object} [opts] - { bodyHeight, footCorrection, format }
+ * @param {Object} rigifySkel - { rootBone, boneByName } — DEF oder (mit
+ *                              opts.target = 'uma') das UMA-Skelett
+ * @param {Object} [opts] - { bodyHeight, footCorrection, format, target }
  * @returns {Promise<THREE.AnimationClip>}
  */
 export async function fetchRetarget(source, rigifySkel, opts = {}) {
@@ -159,6 +160,9 @@ export async function fetchRetarget(source, rigifySkel, opts = {}) {
     if (opts.footCorrection) params.set('foot_correction', '1');
     if (opts.deltaNorm !== undefined) params.set('delta_norm', opts.deltaNorm ? '1' : '0');
     if (opts.format) params.set('format', opts.format);
+    // Zielskelett: ohne Angabe DEF; 'uma' rechnet auf die Figur aus dem
+    // Figurkatalog (05.09.2026). Die Spurnamen sind dann UMA-Namen.
+    if (opts.target) params.set('target', opts.target);
 
     const url = `/api/retarget/?${params}`;
     Protokoll.debug('RETARGET', `Fetching: ${url}`);

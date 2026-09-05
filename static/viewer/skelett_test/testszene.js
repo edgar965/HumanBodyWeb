@@ -56,8 +56,6 @@ export class Testszene {
     }
 
     static _kamera(canvas, breite, hoehe) {
-        // Weiter hinten als sonst — es stehen bis zu sieben Skelette
-        // nebeneinander.
         Testzustand.camera = new THREE.PerspectiveCamera(35, breite / hoehe,
                                                          0.01, 100);
         Testzustand.camera.position.set(0, 1.2, 7.5);

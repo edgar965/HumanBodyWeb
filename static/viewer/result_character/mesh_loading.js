@@ -15,6 +15,7 @@ import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { Hautbindung } from '../gemeinsam/hautbindung.js';
+import { Skelettnachfuehrung } from '../gemeinsam/skelettnachfuehrung.js';
 
 const ss = sharedState;
 
@@ -53,6 +54,25 @@ export function convertToRigifySkinnedMesh() {
         state.scene, state.bodyMesh, state.bodyGeometry,
         state.rigifySkeleton, THREE);
     state.isSkinned = true;
+    // Der Server schickt die Knochenlagen zum ersten Netz, gebunden wird
+    // erst danach. Ohne diese Zeile bliebe der zuletzt gemeldete Stand
+    // liegen, bis jemand einen Regler anfasst.
+    if (state.skelettBewegte) skelettNachfuehren(state.skelettBewegte);
+}
+
+/**
+ * Die neuen Knochenlagen vom Server anwenden — siehe `Skelettnachfuehrung`.
+ *
+ * @param {Object} bewegte {Knochenname: [x,y,z]} in Blender-Koordinaten
+ */
+export function skelettNachfuehren(bewegte) {
+    state.skelettBewegte = bewegte;
+    if (!state.skelettFuehrung && ss.rigifySkeletonData) {
+        state.skelettFuehrung = new Skelettnachfuehrung(ss.rigifySkeletonData);
+    }
+    if (!state.skelettFuehrung || !state.isSkinned) return false;
+    return state.skelettFuehrung.anwenden(
+        state.bodyMesh, state.rigifySkeleton, bewegte);
 }
 
 export function applySkinColor(bodyType) {
@@ -103,3 +123,7 @@ export async function reloadBodyMesh(newType) {
 
 fn.loadMesh = loadMesh;
 fn.reloadBodyMesh = reloadBodyMesh;
+
+// Ueber die Registrierung erreichbar, damit `websocket.js` ihn nicht
+// importieren muss — siehe `viewer/skinning.js`, Regression vom 05.09.2026.
+fn.skelettNachfuehren = skelettNachfuehren;

@@ -12,7 +12,8 @@ und legt sie hier ab. Unity lädt sie zur Laufzeit (glTFast).
 
     POST /api/character/figur-glb/<name>/ablegen/   Feld `glb` (multipart)
                                                      -> {name, bytes, pfad}
-    GET  /api/character/figur-glb/                   {figuren: [{name, bytes, geaendert}], ordner}
+    GET  /api/character/figur-glb/
+                       {figuren: [{name, bytes, geaendert}], ordner}
     GET  /api/character/figur-glb/<name>/            die Datei, model/gltf-binary
 
 Ablage: `settings.HUMANBODY_FIGUR_EXPORT_DIR` (HumanBody/data/figur_exports,

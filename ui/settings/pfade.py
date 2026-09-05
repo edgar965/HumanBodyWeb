@@ -70,3 +70,10 @@ HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
 # (A:\Roomguest) liest sie von hier (core/api/figur_export.py, 05.09.2026).
 HUMANBODY_FIGUR_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'figur_exports'
 HUMANBODY_SMPL_GARMENT_DIR = HUMANBODY_ROOT / 'data' / 'garment_pattern_gen'
+
+# -------------------------------------------------------------------- Figuren
+#: Der Figurkatalog für Roomguest (Vertrag: `Figuren/VERTRAG.md`): je Quelle ein
+#: Ordner (`humanbody`, `uma`, `unified`), `aktuell.json` nennt die gültige
+#: Datei. Von hier liest `core/dienste/umaskelett.py` das UMA-Skelett für die
+#: Vergleichsseite (05.09.2026).
+FIGUREN_KATALOG = TOOLS_ROOT / 'Figuren'

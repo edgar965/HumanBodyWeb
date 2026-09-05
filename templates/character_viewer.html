@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static regler %}
+{% load fassung %}
 
 {% block title %}HumanBody · Konfiguration{% endblock %}
 
@@ -663,7 +664,7 @@
 
 {% block extra_scripts %}
 {% include "_importmap.html" with subdivide=1 mesh_bvh=1 %}
-<script type="module" src="{% static 'viewer/viewer/index.js' %}?t={% now "U" %}"></script>
+<script type="module" src="{% fassungspfad 'viewer/viewer/index.js' %}"></script>
 <script>
 document.querySelectorAll('.panel-tabs .panel-tab').forEach(tab => {
     tab.addEventListener('click', () => {

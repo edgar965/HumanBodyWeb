@@ -47,7 +47,10 @@ export class Testzustand {
     static skinWeightData = null;
     static allAnimations = {};
 
-    /** Die sieben Skelettspalten: DEF vorn, SMPL dahinter. */
+    /**
+     * Die acht Skelettspalten: DEF ganz links vorn, die BVH-Formate rechts
+     * davon; in der zweiten Reihe SMPL hinter DEF und das zweite Ziel UMA.
+     */
     static skeletons = {
         def:      spalte(0xff4444, -3.0),
         cmu:      spalte(0x44ff44, -1.5),
@@ -55,6 +58,7 @@ export class Testzustand {
         mocapnet: spalte(0x4488ff, 1.5),
         bandai:   spalte(0xbb44ff, 3.0),
         smpl:     spalte(0xffff00, -3.0, -2.0),
+        uma:      spalte(0xff66cc, -1.5, -2.0),
         openpose: spalte(0x44dddd, 4.5),
     };
 }

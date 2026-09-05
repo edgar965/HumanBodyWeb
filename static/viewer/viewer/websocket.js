@@ -40,6 +40,10 @@ export function connectWebSocket() {
     state.ws.onmessage = (ereignis) => Netznachricht.verteilen(ereignis, {
         punkte: updateMeshVertices,
         neuLaden: reloadMeshForBodyType,
+        // Ueber `fn`, nicht als Import — siehe die Begruendung am Ende von
+        // `skinning.js`. Ein alter Zwischenspeicher darf die Seite nicht
+        // kosten.
+        skelett: (knochen) => fn.skelettNachfuehren?.(knochen),
         fehler: (text) => console.error('Server error:', text),
     });
 }

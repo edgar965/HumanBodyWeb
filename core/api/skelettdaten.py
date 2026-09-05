@@ -17,6 +17,7 @@ from django.views.decorators.http import require_GET
 
 from ..dienste.charakterdaten import Charakterdaten
 from ..dienste.skingewichte import Skingewichte
+from ..dienste.umaskelett import Umaskelett, UmaskelettFehlt
 
 logger = logging.getLogger(__name__)
 
@@ -81,3 +82,24 @@ class Skelettdaten:
         # Fertige Zeichenkette, deshalb HttpResponse statt JsonResponse: die
         # wuerde das Ergebnis ein zweites Mal kodieren.
         return HttpResponse(inhalt, content_type='application/json')
+
+    @staticmethod
+    @require_GET
+    def umaskelett(request):
+        """Das UMA-Skelett aus dem Figurkatalog — Y-oben, [x, y, z, w].
+
+        Anders als `def_skelett` ohne Blender-Umrechnung: Die Werte kommen
+        aus einer glTF-Datei und liegen schon so, wie Three.js sie liest
+        (`skelett_test/umaskelett.js`). Ohne GLB im Katalog eine 404 mit
+        Klartext — die Vergleichsseite zeigt ihn an der Spalte.
+        """
+        try:
+            return JsonResponse({'bones': Umaskelett.knochen(),
+                                 **Umaskelett.beschreibung()})
+        except UmaskelettFehlt as fehler:
+            return JsonResponse({'error': str(fehler)}, status=404)
+        except ValueError as fehler:
+            # Eine GLB, die kein Skelett hergibt — Klartext statt Stack.
+            logger.warning('UMA-Skelett unlesbar: %s', fehler)
+            return JsonResponse({'error': 'UMA-GLB unlesbar: %s' % fehler},
+                                status=500)

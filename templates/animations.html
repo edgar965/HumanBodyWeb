@@ -1,5 +1,6 @@
 {% extends "animationsseite.html" %}
 {% load static %}
+{% load fassung %}
 
 {% block title %}HumanBody · Animationen{% endblock %}
 
@@ -195,5 +196,5 @@
 {% block viewer_importmap %}{% include "_importmap.html" with subdivide=1 %}{% endblock %}
 
 {% block viewer_skript %}
-<script type="module" src="{% static 'viewer/animations.js' %}?t={% now "U" %}"></script>
+<script type="module" src="{% fassungspfad 'viewer/animations.js' %}"></script>
 {% endblock %}

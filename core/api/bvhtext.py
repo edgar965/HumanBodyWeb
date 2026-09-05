@@ -66,7 +66,9 @@ class Bvhtext:
                 pfad,
                 float(daten.get('body_height', Bvhtext.VORGABE_GROESSE)),
                 daten.get('format', None),
-                bool(daten.get('foot_correction', False))).holen().als_dict())
+                bool(daten.get('foot_correction', False)),
+                ziel=daten.get('target') or Retargetdaten.ZIEL_DEF,
+            ).holen().als_dict())
         finally:
             os.unlink(pfad)
 

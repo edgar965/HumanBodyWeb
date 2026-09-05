@@ -5,6 +5,7 @@ import { loadAnimationTree, bindPlaybackControls } from './animationsliste.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Sichtschalter } from './sichtschalter.js';
 import { Testszene } from './testszene.js';
+import { Umaskelett } from './umaskelett.js';
 
 /**
  * Aufbau der Vergleichsseite: Szene, Umschalter, Zeichenschleife.
@@ -47,6 +48,7 @@ export async function init() {
     window.skeletons = Testzustand.skeletons;
 
     loadRigifySkeleton();
+    Umaskelett.laden();       // zweites Ziel — fehlt die GLB, bleibt die Spalte leer
     loadAnimationTree();
 }
 

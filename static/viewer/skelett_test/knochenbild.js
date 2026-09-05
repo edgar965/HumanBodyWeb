@@ -80,9 +80,10 @@ export function createBoneLabels(bones, skelKey) {
     skel.labels.forEach(lbl => lbl.parent && lbl.parent.remove(lbl));
     skel.labels = [];
 
-    const colorMap = { def: '#ff6666', cmu: '#66ff66', mixamo: '#ffaa66', mocapnet: '#6699ff', bandai: '#cc66ff',
-        smpl: '#ffff00', openpose: '#44dddd' };
-    const color = colorMap[skelKey] || '#ffffff';
+    // Die Farbe kommt aus der Spalte (`testzustand.js`) — dieselbe wie der
+    // Punkt in der Legende. Eine zweite Tabelle hier kannte UMA nicht, und
+    // seine Nummern standen weiß da (05.09.2026).
+    const color = '#' + skel.color.toString(16).padStart(6, '0');
     const showLabels = document.getElementById('toggle-labels').checked;
 
     // Store name mapping for tooltip/console lookup

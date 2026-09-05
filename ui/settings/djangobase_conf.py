@@ -114,6 +114,12 @@ DJANGOBASE = {
         'einstellungen': ['HUMANBODY_DATA_DIR', 'HUMANBODY_BVH_DIR',
                           'BLENDER_BVH_DIR'],
     },
+    # Hilfe -> Language Server: `humanbody_core` liegt NICHT im Projekt,
+    # sondern nebenan in HumanBody, und kommt ueber `sys.path.insert` in
+    # `ui/settings/pfade.py` herein. Der Pruefer folgt dem nicht und meldete
+    # deshalb 151 `reportMissingImports` auf `humanbody_core.*` — 12 % aller
+    # Befunde, und kein einziger davon ein Fehler (gemessen 05.09.2026).
+    'ls_extra_pfade': [HUMANBODY_ROOT],
     'farben': {
         'sidebar_bg': '#1a1a2e',     # = --bg-secondary (style.css)
         'sidebar_light': '#16213e',  # = --bg-card  (Hover/Active-Fill)

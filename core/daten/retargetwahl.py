@@ -19,10 +19,13 @@ vorsieht". Ein `bool` haette den dritten Fall verschluckt.
 class Retargetwahl:
     """Was der Aufrufer am Retarget einstellen darf."""
 
-    __slots__ = ('groesse', 'format', 'fusskorrektur', 'delta_norm')
+    __slots__ = ('groesse', 'format', 'fusskorrektur', 'delta_norm', 'ziel')
 
     #: Werte, die in der Abfragezeichenkette „ja" bedeuten.
     JA = ('1', 'true')
+    #: Zielskelette (`target=`): das DEF-Skelett oder die UMA-Figur aus dem
+    #: Figurkatalog (05.09.2026). Der erste Eintrag ist die Vorgabe.
+    ZIELE = ('def', 'uma')
 
     def __init__(self, werte, vorgabe_groesse):
         self.groesse = float(werte.get('body_height', vorgabe_groesse))
@@ -30,6 +33,10 @@ class Retargetwahl:
         self.fusskorrektur = (werte.get('foot_correction', '').lower()
                               in self.JA)
         self.delta_norm = self._dreiwertig(werte.get('delta_norm', ''))
+        self.ziel = (werte.get('target') or self.ZIELE[0]).lower()
+        if self.ziel not in self.ZIELE:
+            raise ValueError('Unbekanntes Ziel %r — erlaubt: %s'
+                             % (self.ziel, ', '.join(self.ZIELE)))
 
     @staticmethod
     def _dreiwertig(roh):
@@ -42,6 +49,6 @@ class Retargetwahl:
         return None
 
     def __repr__(self):
-        return ('<Retargetwahl %.2f m, %s, Fuss=%s, Delta=%s>'
+        return ('<Retargetwahl %.2f m, %s, Fuss=%s, Delta=%s, Ziel=%s>'
                 % (self.groesse, self.format or 'erkannt', self.fusskorrektur,
-                   self.delta_norm))
+                   self.delta_norm, self.ziel))

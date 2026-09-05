@@ -17,12 +17,19 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  * 1. **Erst das alte Skelett abräumen** (Hülle, Knochenbild, Beschriftungen),
  *    dann das neue setzen. Wer nur `placeBvhSkeleton` aufruft, bekommt zwei
  *    Skelette übereinander und Beschriftungen, die niemand mehr entfernt.
- * 2. **Das DEF-Skelett muss vor dem Retarget in die Ruhelage** (`skeleton.pose()`).
+ * 2. **Die Zielskelette müssen vor dem Retarget in die Ruhelage** (`skeleton.pose()`).
  *    Sonst rechnet der Retarget-Lauf auf einer schon verdrehten Ausgangslage.
  * 3. **Ein Retarget-Fehler darf die BVH-Wiedergabe nicht mitnehmen** — deshalb der
  *    eigene Fänger: Das Original läuft dann allein, statt dass die Seite steht.
+ *
+ * Seit 05.09.2026 gibt es ZWEI Ziele: DEF und die UMA-Figur aus dem Figurkatalog
+ * (`ZIELE`). Beide werden mit derselben BVH angefragt und laufen nebeneinander —
+ * so sieht man, ob die Bewegungsbibliothek auf UMA genauso ankommt wie auf DEF.
  */
 export class Vergleichswiedergabe {
+
+    /** Die Zielskelette: Platz und Server-Kennung (`target=`); DEF ist die Vorgabe. */
+    static ZIELE = [['def', null], ['uma', 'uma']];
 
     /** Der Platz für ein Format; ohne eigenen Platz der Ersatzplatz. */
     static platz(format) {
@@ -51,8 +58,10 @@ export class Vergleichswiedergabe {
         Testzustand.currentFormat = format;
 
         const mischer = [Vergleichswiedergabe._bvhMischer(ergebnis, format)];
-        const defMischer = await Vergleichswiedergabe._defMischer(url);
-        if (defMischer) mischer.push(defMischer);
+        // Beide Ziele gleichzeitig anfragen — jedes ist ein eigener Serverlauf.
+        const ziele = await Promise.all(Vergleichswiedergabe.ZIELE.map(
+            ([platz, ziel]) => Vergleichswiedergabe._zielMischer(url, platz, ziel)));
+        mischer.push(...ziele.filter(Boolean));
 
         Testzustand.mixer = new Mischerbund(mischer);
         Testzustand.currentAction = { clip: ergebnis.clip, paused: false };
@@ -84,21 +93,20 @@ export class Vergleichswiedergabe {
         eintrag.labels = [];
     }
 
-    /** Die retargetierte Fassung auf dem DEF-Skelett — `null`, wenn sie fehlt. */
-    static async _defMischer(url) {
-        const def = Testzustand.skeletons.def;
-        if (!def.skeleton || !Testzustand.rigifySkeletonData
-                || !Testzustand.skinWeightData) {
-            return null;
-        }
+    /** Die retargetierte Fassung auf einem Zielskelett (DEF, UMA) — `null`, wenn es fehlt. */
+    static async _zielMischer(url, platz, ziel) {
+        const eintrag = Testzustand.skeletons[platz];
+        if (!eintrag.skeleton) return null;      // Skelett (noch) nicht geladen
         try {
-            def.skeleton.skeleton.pose();      // Ruhelage vor dem Retarget
-            const clip = await fetchRetargetedClipFromUrl(url, def.skeleton, {});
-            const mischer = new THREE.AnimationMixer(def.rootBone);
+            eintrag.skeleton.skeleton.pose();      // Ruhelage vor dem Retarget
+            const clip = await fetchRetargetedClipFromUrl(
+                url, eintrag.skeleton, ziel ? { target: ziel } : {});
+            const mischer = new THREE.AnimationMixer(eintrag.rootBone);
             mischer.clipAction(clip).play();
             return mischer;
         } catch (fehler) {
-            Protokoll.fehler('skelett_test', 'DEF-Retarget fehlgeschlagen', fehler);
+            Protokoll.fehler('skelett_test',
+                             `${platz.toUpperCase()}-Retarget fehlgeschlagen`, fehler);
             return null;
         }
     }
@@ -112,10 +120,11 @@ export class Vergleichswiedergabe {
         }
         Testzustand.currentAction = null;
         Testzustand.currentBvhResult = null;
-        // Das DEF-Skelett zurück in die Ruhelage: Es behält sonst die letzte
-        // Haltung der abgebrochenen Bewegung.
-        if (Testzustand.skeletons.def.skeleton) {
-            Testzustand.skeletons.def.skeleton.skeleton.pose();
+        // Die Zielskelette zurück in die Ruhelage: Sie behielten sonst die
+        // letzte Haltung der abgebrochenen Bewegung.
+        for (const [platz] of Vergleichswiedergabe.ZIELE) {
+            const eintrag = Testzustand.skeletons[platz];
+            if (eintrag.skeleton) eintrag.skeleton.skeleton.pose();
         }
         Testzustand.playing = false;
     }

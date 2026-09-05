@@ -27,6 +27,10 @@ export const state = {
     bodyGeometry: null,
     rigifySkeleton: null,
     isSkinned: false,
+    // Skelett dem gemorphten Koerper nachziehen (05.09.2026) — dieselbe
+    // Nachricht wie auf der Modellseite, derselbe Kanal.
+    skelettFuehrung: null,
+    skelettBewegte: null,
     mixer: null,
     currentAction: null,
     currentBodyType: 'Female_Caucasian',

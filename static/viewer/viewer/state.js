@@ -73,6 +73,11 @@ export const state = {
     rigifySkeletonData: null,
     rigifySkeleton: null,
     isSkinned: false,
+    // Skelett dem gemorphten Koerper nachziehen (05.09.2026).
+    // `skelettBewegte` gilt auch, BEVOR die Haut gebunden ist: Der Server
+    // schickt die Knochen zum ersten Netz, das Skinning kommt spaeter.
+    skelettFuehrung: null,
+    skelettBewegte: null,
 
     // Rig skeleton visualization
     rigVisible: false,

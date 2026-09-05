@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load fassung %}
 {% block title %}BVH Studio{% endblock %}
 
 {% block extra_head %}
@@ -1302,7 +1303,7 @@
     }
 }
 </script>
-<script type="module" src="{% static 'viewer/bvh_studio/index.js' %}?t={% now 'U' %}"></script>
+<script type="module" src="{% fassungspfad 'viewer/bvh_studio/index.js' %}"></script>
 <script>
 // Timeline splitter drag
 (function() {

@@ -36,7 +36,8 @@ class FigurexportTest(TestCase):
 
     def _ablegen(self, name='Mila 2', inhalt=GLB):
         datei = SimpleUploadedFile(name + '.glb', inhalt, content_type=TYP)
-        return self.client.post(reverse('figur_glb_ablegen', args=[name]), {'glb': datei})
+        return self.client.post(reverse('figur_glb_ablegen', args=[name]),
+                                {'glb': datei})
 
     def test_ablegen_schreibt_die_datei_und_listet_sie(self):
         antwort = self._ablegen()
@@ -64,11 +65,15 @@ class FigurexportTest(TestCase):
         self.assertEqual(antwort.status_code, 400)
 
     def test_name_darf_den_ordner_nicht_verlassen(self):
-        self.assertEqual(self.client.get(reverse('figur_glb', args=['..'])).status_code, 400)
+        self.assertEqual(
+            self.client.get(reverse('figur_glb', args=['..'])).status_code, 400)
         self.assertEqual(self._ablegen('..').status_code, 400)
 
     def test_unbekannte_figur_404(self):
-        self.assertEqual(self.client.get(reverse('figur_glb', args=['nix'])).status_code, 404)
+        self.assertEqual(
+            self.client.get(reverse('figur_glb', args=['nix'])).status_code, 404)
 
     def test_ablegen_nur_per_post(self):
-        self.assertEqual(self.client.get(reverse('figur_glb_ablegen', args=['x'])).status_code, 405)
+        self.assertEqual(
+            self.client.get(
+                reverse('figur_glb_ablegen', args=['x'])).status_code, 405)

@@ -35,14 +35,18 @@ class Retargetdaten:
     """Retarget-Ergebnis einer BVH-Datei, mit Zwischenspeicher."""
 
     ERSATZHOEHE = 1.68
+    #: Zielskelette — siehe `Retargetwahl.ZIELE`.
+    ZIEL_DEF = 'def'
+    ZIEL_UMA = 'uma'
 
     def __init__(self, bvh_pfad, body_height=ERSATZHOEHE, fmt=None,
-                 foot_correction=False, delta_norm=None):
+                 foot_correction=False, delta_norm=None, ziel=ZIEL_DEF):
         self.bvh_pfad = bvh_pfad
         self.hoehe = body_height
         self.format = fmt
         self.fusskorrektur = foot_correction
         self.delta_norm = delta_norm
+        self.ziel = ziel or self.ZIEL_DEF
 
     # ------------------------------------------------------- Zwischenspeicher
 
@@ -50,6 +54,10 @@ class Retargetdaten:
     def ablage(self):
         merkmal = (f'{self.hoehe:.4f}_{self.format}_{self.fusskorrektur}'
                    f'_{self.delta_norm}')
+        # Das DEF-Ziel bleibt ohne Zusatz: Die Ablagen von vor dem
+        # 05.09.2026 tragen genau diesen Namen und gelten weiter.
+        if self.ziel != self.ZIEL_DEF:
+            merkmal += f'_{self.ziel}'
         kuerzel = hashlib.md5(merkmal.encode()).hexdigest()[:8]
         return self.bvh_pfad.rsplit('.', 1)[0] + f'_retarget_{kuerzel}.json'
 
@@ -88,10 +96,12 @@ class Retargetdaten:
 
     def _rechnen(self):
         from humanbody_core.skeleton import Skeleton, SkeletonRigify
-        geometrie = Skelettgeometrie.holen()
         bvh = SkeletonRigify.parse_bvh(self.bvh_pfad)
         bauart = (Skeleton.get_format(self.format) if self.format
                   else Skeleton.detect_format(bvh.names))
+        if self.ziel == self.ZIEL_UMA:
+            return self._auf_uma(bvh, bauart)
+        geometrie = Skelettgeometrie.holen()
         if bauart and bauart.BONE_MAP_TO_RIGIFY:
             return bauart.retarget_to_rigify(
                 bvh, geometrie, body_height=self.hoehe,
@@ -99,3 +109,22 @@ class Retargetdaten:
         return SkeletonRigify.retarget_bvh(
             bvh, geometrie, fmt=self.format, body_height=self.hoehe,
             foot_correction=self.fusskorrektur)
+
+    def _auf_uma(self, bvh, bauart):
+        """Dasselbe Verfahren mit Ziel UMA (05.09.2026).
+
+        Geometrie aus der GLB im Figurkatalog (`Umaskelett`), die Zuordnung
+        des Formats ueber `DEF_ZU_UMA` uebersetzt — eine Tabelle fuer alle
+        Formate, siehe `formats/uma_knochen.py`. Ohne erkanntes Format
+        derselbe Rueckfall wie `SkeletonRigify.retarget_bvh`: MocapNET.
+        """
+        from humanbody_core.skeleton.formats import SkeletonMocapNet
+        from humanbody_core.skeleton.formats.uma_knochen import Umazuordnung
+        from .umaskelett import Umaskelett
+        if bauart is None or not bauart.BONE_MAP_TO_RIGIFY:
+            bauart = SkeletonMocapNet
+        return bauart.retarget_to_rigify(
+            bvh, Umaskelett.geometrie(), body_height=self.hoehe,
+            foot_correction=self.fusskorrektur, delta_norm=self.delta_norm,
+            mapping=Umazuordnung.fuer(bauart),
+            skip_bones=Umazuordnung.ausnahmen(bauart))

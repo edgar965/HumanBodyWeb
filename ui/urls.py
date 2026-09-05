@@ -15,5 +15,12 @@ urlpatterns = [
     # liefen bei JEDEM Seitenaufruf dreimal in eine 404 — ohne Fehlerseite,
     # ohne Eintrag im Fehlerlog.
     path('hilfe/', include('djangobase.urls')),
+    # Statik unter einer Adresse, die die Fassung TRAEGT
+    # (`/statik/v-<zahl>/viewer/...`). Der Grund steht in
+    # `djangobase/fassungsstatik.py`: ES-Module erben eine Fassung aus der
+    # ABFRAGE nicht an ihre relativen Importe, aus dem PFAD schon. Ohne das
+    # stand am 05.09.2026 eine frische Einstiegsdatei neben Modulen von
+    # gestern — einmal als leere Seite, einmal als stumm fehlende Funktion.
+    path('', include('djangobase.fassungsstatik')),
     path('', include('core.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

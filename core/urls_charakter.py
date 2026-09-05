@@ -76,6 +76,9 @@ CHARAKTER = [
          name='character_rigify_skeleton'),
     path('api/character/skin-weights/', Skelettdaten.hautgewichte,
          name='character_skin_weights'),
+    # UMA-Skelett aus dem Figurkatalog, fuer die Vergleichsseite (05.09.2026).
+    path('api/character/uma-skeleton/', Skelettdaten.umaskelett,
+         name='character_uma_skeleton'),
     path('api/character/retarget-config/', Retargetendpunkte.zuordnungstabellen,
          name='retarget_config'),
     path('api/character/retarget-bvh/<str:category>/<str:name>/',

@@ -90,9 +90,14 @@ class Retargetendpunkte:
         GET /api/retarget/?job=<uuid>                 → BVH des Auftrags
         GET /api/retarget/?category=<cat>&name=<name> → BVH der Bibliothek
 
-        Dazu: `body_height`, `format`, `foot_correction`, `delta_norm`.
+        Dazu: `body_height`, `format`, `foot_correction`, `delta_norm` und
+        `target` (`def` = Rigify-Skelett, `uma` = UMA-Figur aus dem
+        Figurkatalog; seit 05.09.2026).
         """
-        wahl = Retargetwahl(request.GET, cls.VORGABE_GROESSE)
+        try:
+            wahl = Retargetwahl(request.GET, cls.VORGABE_GROESSE)
+        except ValueError as fehler:
+            return JsonResponse({'error': str(fehler)}, status=400)
         auftrag = request.GET.get('job')
         kategorie = request.GET.get('category')
         name = request.GET.get('name')
@@ -108,7 +113,7 @@ class Retargetendpunkte:
             return pfad                          # fertige Fehlerantwort
         return JsonResponse(Retargetdaten(
             pfad, wahl.groesse, wahl.format, wahl.fusskorrektur,
-            wahl.delta_norm).holen().als_dict())
+            wahl.delta_norm, wahl.ziel).holen().als_dict())
 
     @staticmethod
     @require_GET

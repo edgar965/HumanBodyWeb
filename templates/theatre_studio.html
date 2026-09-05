@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load fassung %}
 
 {% comment %}
     Debugseite für Theatre.js — nicht verlinkt, nur über
@@ -97,5 +98,5 @@
 
 {% include "_importmap.html" with theatre=1 %}
 
-<script type="module" src="{% static 'viewer/theatre_studio/start.js' %}?t={% now "U" %}"></script>
+<script type="module" src="{% fassungspfad 'viewer/theatre_studio/start.js' %}"></script>
 {% endblock %}

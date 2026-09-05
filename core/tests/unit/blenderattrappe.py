@@ -24,9 +24,10 @@ was `execute()` in einer echten Szene tut, sagt sie nicht.
 Das genuegt fuer die Frage, die hier zaehlt: Laedt jedes Modul, und
 findet jeder Import sein Ziel?
 """
-import math
 import sys
 import types
+
+from ._vektorattrappe import Vektor
 
 
 class Platzhalter:
@@ -52,49 +53,6 @@ class Platzhalter:
 
     def __bool__(self):
         return False
-
-
-class Vektor(tuple):
-    u"""So viel Vektor, wie Code auf Modulebene braucht."""
-
-    def __new__(cls, werte=(0.0, 0.0, 0.0)):
-        return super().__new__(cls, tuple(float(w) for w in werte))
-
-    def __add__(self, anderer):
-        return Vektor(x + y for x, y in zip(self, anderer))
-
-    def __sub__(self, anderer):
-        return Vektor(x - y for x, y in zip(self, anderer))
-
-    def __mul__(self, faktor):
-        return Vektor(x * faktor for x in self)
-
-    __rmul__ = __mul__
-
-    @property
-    def length(self):
-        return math.sqrt(sum(x * x for x in self))
-
-    def copy(self):
-        return Vektor(self)
-
-    def normalized(self):
-        laenge = self.length
-        if laenge == 0:
-            return Vektor(self)
-        return Vektor(x / laenge for x in self)
-
-    @property
-    def x(self):
-        return self[0]
-
-    @property
-    def y(self):
-        return self[1]
-
-    @property
-    def z(self):
-        return self[2]
 
 
 class Blenderattrappe:
