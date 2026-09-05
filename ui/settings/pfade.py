@@ -77,3 +77,14 @@ HUMANBODY_SMPL_GARMENT_DIR = HUMANBODY_ROOT / 'data' / 'garment_pattern_gen'
 #: Datei. Von hier liest `core/dienste/umaskelett.py` das UMA-Skelett für die
 #: Vergleichsseite (05.09.2026).
 FIGUREN_KATALOG = TOOLS_ROOT / 'Figuren'
+
+#: Das UMA-Projekt (eigener Klon von umasteeringgroup/UMA). Von hier liest
+#: `core/dienste/umaformregler.py` NUR die Text-Assets der Form-Regler
+#: (`UMA3/DNA/`) — UMA selbst bleibt unberührt (05.09.2026).
+UMA_UMA3_ORDNER = TOOLS_ROOT / 'UMA' / 'UMAProject' / 'Assets' / 'UMA' / 'UMA3'
+
+#: Unity-Editor und UMA-Projekt für den Figurenbau auf Zuruf
+#: (`core/dienste/umabauer.py`, 06.09.2026): die Szene-Seite lässt Unity ohne
+#: Fenster eine Figur anderer Rasse in den Katalog exportieren.
+UNITY_EXE = TOOLS_ROOT.parent / 'Unity' / 'Editors' / '6000.3.23f1' / 'Editor' / 'Unity.exe'
+UMA_PROJEKT = TOOLS_ROOT / 'UMA' / 'UMAProject'

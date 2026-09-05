@@ -6,10 +6,15 @@ import { state } from './state.js';
 import { markDirty } from './undo.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Umakatalog } from './uma/umakatalog.js';
 /**
  * Die Dialoge zum Speichern, Laden und Charakter-Hinzufuegen.
  *
  * Aus save_load.js herausgeloest (Umbau 16.08.2026).
+ *
+ * Seit 05.09.2026 bietet „Charakter hinzufügen" zwei Quellen: die
+ * HumanBody-Modelle (`/api/character/models/`) und die UMA-Figuren aus dem
+ * Figurkatalog (`Umakatalog`). Ein Klick wählt, Doppelklick lädt sofort.
  */
 
 
@@ -101,11 +106,31 @@ export function initCharacterDialog() {
     const confirmBtn = document.getElementById('add-char-confirm');
     addBtn.addEventListener('click', () => openAddCharacterDialog());
     confirmBtn.addEventListener('click', async () => {
-        if (!state._addCharSelectedPreset) return;
+        if (!state._addCharSelectedPreset && !state._addCharSelectedUma) return;
         closeDialog(dialog);
-        try { await fn.addCharacterFromPreset(state._addCharSelectedPreset);
-            } catch (e) { alert(`Fehler: ${e.message}`); }
+        try {
+            if (state._addCharSelectedUma) await Umakatalog.hinzufuegen(state._addCharSelectedUma);
+            else await fn.addCharacterFromPreset(state._addCharSelectedPreset);
+        } catch (e) { alert(`Fehler: ${e.message}`); }
     });
+}
+
+/** Die UMA-Liste des Dialogs; eine Wahl hier hebt die Wahl in der anderen Liste auf. */
+function _umaListe(dialog, confirmBtn) {
+    const umaList = document.getElementById('uma-list');
+    if (!umaList) return;
+    Umakatalog.fuellen(umaList,
+        (datei) => {
+            document.getElementById('preset-list').querySelectorAll('li')
+                .forEach(x => x.classList.remove('selected'));
+            state._addCharSelectedPreset = null;
+            state._addCharSelectedUma = datei;
+            confirmBtn.disabled = false;
+        },
+        async (datei) => {
+            closeDialog(dialog);
+            try { await Umakatalog.hinzufuegen(datei); } catch (e) { alert(`Fehler: ${e.message}`); }
+        });
 }
 
 export async function openAddCharacterDialog() {
@@ -114,7 +139,9 @@ export async function openAddCharacterDialog() {
     const presetList = document.getElementById('preset-list');
     openDialog(dialog);
     state._addCharSelectedPreset = null;
+    state._addCharSelectedUma = null;
     confirmBtn.disabled = true;
+    _umaListe(dialog, confirmBtn);
     presetList.innerHTML = '<li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Presets...</li>';
     try {
         const data = await Serverabruf.json('/api/character/models/');
@@ -125,6 +152,9 @@ export async function openAddCharacterDialog() {
             const li = document.createElement('li'); li.textContent = p.label || p.name; li.dataset.presetName = p.name;
             li.addEventListener('click',
                 () => { presetList.querySelectorAll('li').forEach(x => x.classList.remove('selected'));
+                    document.getElementById('uma-list')?.querySelectorAll('li')
+                        .forEach(x => x.classList.remove('selected'));
+                    state._addCharSelectedUma = null;
                     li.classList.add('selected'); state._addCharSelectedPreset = p.name; confirmBtn.disabled = false;
                         });
             li.addEventListener('dblclick', async () => { state._addCharSelectedPreset = p.name; closeDialog(dialog);

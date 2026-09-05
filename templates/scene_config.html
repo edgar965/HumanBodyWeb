@@ -770,6 +770,7 @@
                         <div class="prop-section-title">Transform</div>
                         <div class="prop-grid" id="prop-transform"></div>
                     </div>
+                    {% include "_uma_eigenschaften.html" %}
                     <!-- Equipped Items (body context) -->
                     <div class="prop-section" id="prop-equipped-section">
                         <div class="prop-section-title">Ausstattung</div>
@@ -946,8 +947,9 @@
                         </div>
                         <div class="hb-font-size-0-72rem">Fit</div>
                         <div class="slider-row"><label>Stiffness</label>
-                            {# step=1 wie bei prop-mh-stiffness: Beide Regler zeigen denselben Wert, mit step=5 rastete
-                                 der Assets-Regler beim Spiegeln auf ein anderes Vielfaches (Umbau 16.08.2026). #}
+                            {% comment %}step=1 wie bei prop-mh-stiffness: Beide Regler zeigen denselben Wert,
+                                 mit step=5 rastete der Assets-Regler beim Spiegeln auf ein anderes Vielfaches
+                                 (Umbau 16.08.2026).{% endcomment %}
                             <input type="range" id="mh-stiffness" min="0" max="100" value="50" step="1">
                             <span class="slider-val" id="mh-stiffness-val">0.50</span>
                         </div>
@@ -1728,6 +1730,10 @@
             <button class="scene-modal-close" data-close>&times;</button>
         </div>
         <div class="scene-modal-body">
+            {% comment %}Die kurze UMA-Liste zuerst: unter 21 HumanBody-Modellen war sie
+            nicht zu finden (Edgar, 05.09.2026: „wie lade ich ein UMA modell?").{% endcomment %}
+            {% include "_uma_dialogliste.html" %}
+            <div class="dialoghinweis">HumanBody-Modelle:</div>
             <ul class="preset-list" id="preset-list">
                 <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Presets...</li>
             </ul>

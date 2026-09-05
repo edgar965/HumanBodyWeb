@@ -30,6 +30,8 @@ from .api.schnittmuster_ablage import Schnittmusterablage
 from .api.smplx_ausgabe import SmplxAusgabe
 from .api.posen import Posen
 from .api.skelettdaten import Skelettdaten
+from .api.umafigur import Umafigur
+from .api.umakleidung import Umakleidung
 from .api.netz import Netzendpunkte
 from .api.kleidung import Kleidung
 
@@ -79,6 +81,20 @@ CHARAKTER = [
     # UMA-Skelett aus dem Figurkatalog, fuer die Vergleichsseite (05.09.2026).
     path('api/character/uma-skeleton/', Skelettdaten.umaskelett,
          name='character_uma_skeleton'),
+    # UMA-Figur aus dem Figurkatalog fuer die Szene-Seite: Dateien, Zettel,
+    # Form-Regler (05.09.2026, core/api/umafigur.py).
+    # Bauen auf Zuruf (06.09.2026) — vor `uma-figur/<str:name>/`, sonst hieße die Figur „bauen".
+    path('api/character/uma-rassen/', Umafigur.rassen, name='uma_rassen'),
+    path('api/character/uma-garderobe/', Umakleidung.angebot, name='uma_garderobe'),
+    path('api/character/uma-rassen/ermitteln/', Umafigur.rassen_ermitteln, name='uma_rassen_ermitteln'),
+    path('api/character/uma-figur/bauen/', Umafigur.bauen, name='uma_figur_bauen'),
+    path('api/character/uma-figur/bauen/<str:name>/stand/', Umafigur.bau_stand,
+         name='uma_figur_bau_stand'),
+    path('api/character/uma-figur/', Umafigur.liste, name='uma_figur_liste'),
+    path('api/character/uma-figur/<str:name>/', Umafigur.datei, name='uma_figur'),
+    path('api/character/uma-figur/<str:name>/zettel/', Umafigur.zettel,
+         name='uma_figur_zettel'),
+    path('api/character/uma-regler/', Umafigur.regler, name='uma_regler'),
     path('api/character/retarget-config/', Retargetendpunkte.zuordnungstabellen,
          name='retarget_config'),
     path('api/character/retarget-bvh/<str:category>/<str:name>/',

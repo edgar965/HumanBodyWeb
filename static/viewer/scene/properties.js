@@ -12,6 +12,9 @@ import { Morphliste } from '../gemeinsam/morphliste.js';
 import { Metaregler } from '../gemeinsam/metaregler.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
+import { Umaeigenschaften } from './uma/umaeigenschaften.js';
+import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
+import { Transformfelder } from './transformfelder.js';
 
 /** Unter diesem Betrag gilt ein Morph als aus und wird aus der Figur entfernt. */
 const MORPH_SCHWELLE = 0.005;
@@ -53,9 +56,22 @@ export async function populateProperties(charId) {
     const inst = state.characters.get(charId);
     if (!inst) return;
     state.currentPropsCharId = charId;
-    _bereiche(true);
-    try { await fetchMorphDefs(); } catch (e) { console.error('Failed to fetch morph defs:', e); return; }
+    Eigenschaftenbereiche.zeigen(true);
     populateTransform(inst);
+    // Eine UMA-Figur (05.09.2026) hat Regler und Farben statt Body Type,
+    // Morphs und Ausstattung; der Assets-Reiter zeigt ihre Unity-Garderobe.
+    const uma = inst.quelle === 'uma';
+    Eigenschaftenbereiche.humanbodyTeile(!uma);
+    Eigenschaftenbereiche.umaGarderobe(uma ? inst : null);
+    if (uma) {
+        Umaeigenschaften.fuellen(inst);
+        _updatePropContext();
+        const reiter = document.querySelector('.panel-tab.active');
+        if (!reiter || reiter.dataset.tab !== 'modell') switchTab('eigenschaften');
+        return;
+    }
+    Umaeigenschaften.leeren();
+    try { await fetchMorphDefs(); } catch (e) { console.error('Failed to fetch morph defs:', e); return; }
     updateEquippedList(inst);
     populateBodyType(inst);
     populatePresets(inst);
@@ -70,64 +86,17 @@ export async function populateProperties(charId) {
 export function clearProperties() {
     fn.clearSubMeshSelection();
     state.currentPropsCharId = null;
-    _bereiche(false);
-}
-
-/**
- * Eigenschaften- und Assets-Bereich zeigen — oder den Platzhalter
- * „Charakter auswählen". Die Inhalte tragen seit dem Umbau vom 30.08.2026
- * die Klasse `hb-versteckt` statt eines Inline-Stils; ein geleertes
- * `style.display` ließ sie deshalb versteckt, und der Reiter „Eigenschaften"
- * blieb leer, obwohl der Charakter ausgewählt war (gefunden 05.09.2026).
- */
-function _bereiche(zeigen) {
-    const paare = [['prop-empty', 'prop-content'], ['assets-empty', 'assets-content']];
-    for (const [leer, inhalt] of paare) {
-        document.getElementById(leer).style.display = zeigen ? 'none' : '';
-        document.getElementById(inhalt).classList.toggle('hb-versteckt', !zeigen);
-    }
+    Eigenschaftenbereiche.zeigen(false);
+    Umaeigenschaften.leeren();
+    Eigenschaftenbereiche.umaGarderobe(null);
 }
 
 function populateTransform(inst) {
-    const grid = document.getElementById('prop-transform');
-    grid.innerHTML = '';
-    const rows = [
-        { label: 'Pos', prop: 'position', step: 0.01 },
-        { label: 'Rot', prop: 'rotation', step: 1, isDeg: true },
-        { label: 'Scale', prop: 'scale', step: 0.01 },
-    ];
-    const axes = ['x', 'y', 'z'];
-    for (const row of rows) {
-        const lbl = document.createElement('label'); lbl.textContent = row.label; grid.appendChild(lbl);
-        for (const axis of axes) {
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.step = row.step;
-            input.dataset.prop = row.prop;
-            input.dataset.axis = axis;
-            input.className = 'prop-transform-input';
-            let val = row.isDeg ? THREE.MathUtils.radToDeg(inst.group.rotation[axis]) : inst.group[row.prop][axis];
-            input.value = parseFloat(val.toFixed(3));
-            input.addEventListener('input', () => {
-                const num = parseFloat(input.value); if (isNaN(num)) return;
-                if (row.isDeg) inst.group.rotation[axis] = THREE.MathUtils.degToRad(num);
-                else inst.group[row.prop][axis] = num;
-                fn.updateCharacterListUI();
-            });
-            grid.appendChild(input);
-        }
-    }
+    Transformfelder.fuellen(inst);
 }
 
 export function syncTransformInputs() {
-    const inst = state.characters.get(state.currentPropsCharId);
-    if (!inst) return;
-    document.querySelectorAll('.prop-transform-input').forEach(input => {
-        const prop = input.dataset.prop, axis = input.dataset.axis;
-        if (!prop || !axis || document.activeElement === input) return;
-        let val = prop === 'rotation' ? THREE.MathUtils.radToDeg(inst.group.rotation[axis]) : inst.group[prop][axis];
-        input.value = parseFloat(val.toFixed(3));
-    });
+    Transformfelder.angleichen();
 }
 
 function populateBodyType(inst) {

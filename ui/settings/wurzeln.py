@@ -20,7 +20,7 @@ ersten Datenzugriff.
 import sys
 from pathlib import Path
 
-VERSION = '0.54'
+VERSION = '0.55'
 
 #: Projektwurzel (`HumanBodyWeb/`) — drei Ebenen über dieser Datei.
 BASE_DIR = Path(__file__).resolve().parents[2]

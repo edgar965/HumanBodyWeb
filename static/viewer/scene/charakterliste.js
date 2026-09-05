@@ -138,7 +138,8 @@ export function updateCharacterListUI() {
         const pos = inst.group.position;
         const posStr = `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
 
-        const icon = inst.generatedConfig ? 'fa-robot' : 'fa-user';
+        const icon = inst.quelle === 'uma' ? 'fa-user-astronaut'
+            : (inst.generatedConfig ? 'fa-robot' : 'fa-user');
         li.innerHTML = `
             <span class="character-item-icon"><i class="fas ${icon}"></i></span>
             <div class="character-item-info">

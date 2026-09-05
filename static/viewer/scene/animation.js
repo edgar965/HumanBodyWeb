@@ -12,6 +12,8 @@ import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Animationsstopp } from '../gemeinsam/animationsstopp.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
+import { Umaanimation } from './uma/umaanimation.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export function stopAnimation(destroy = false) {
     Animationsstopp.aktion(state, destroy);
@@ -21,8 +23,11 @@ export function stopAnimation(destroy = false) {
     // von der des Einzel-Viewers; alles andere kommt aus `Animationsstopp`.
     const inst = state._animatedCharId
         ? state.characters.get(state._animatedCharId) : null;
-    const skelett = inst ? inst.rigifySkeleton : state.rigifySkeleton;
-    if (inst ? (inst.isSkinned && skelett) : (state.isSkinned && skelett)) {
+    const uma = !!inst && inst.quelle === 'uma';
+    const skelett = uma ? inst.skelett : (inst ? inst.rigifySkeleton : state.rigifySkeleton);
+    if (uma) {
+        Umaanimation.anhalten(inst);     // kein `pose()`: das wäre die Bindpose der GLB
+    } else if (inst ? (inst.isSkinned && skelett) : (state.isSkinned && skelett)) {
         skelett.skeleton.pose();
     }
     Animationsstopp.hilfslinien(state);
@@ -32,6 +37,7 @@ export function stopAnimation(destroy = false) {
     state.currentAnimUrl = '';
     state.currentAnimBvhText = '';
     state.currentAnimGroundFixed = false;
+    _abspielknopf();      // auch wenn ein Regler oder ein Umschalten angehalten hat
 }
 
 export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
@@ -40,6 +46,18 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
     const groundChk = document.getElementById('scene-ground-fix');
     state.currentAnimGroundFixed = groundChk ? groundChk.checked : false;
     const inst = _selectedInst();
+    _meldung(`Retarget läuft: ${name || url} …`);
+    if (inst && inst.quelle === 'uma') {
+        try {
+            const clip = await Umaanimation.starten(inst, url, rawBvhText);
+            _meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
+        } catch (fehler) {
+            _meldung(`Fehler: ${fehler.message || fehler}`);
+            Protokoll.fehler('Umaanimation', 'Retarget auf UMA fehlgeschlagen', fehler);
+        }
+        _abspielknopf();
+        return;
+    }
     const targetMesh = inst ? inst.bodyMesh : state.bodyMesh;
     if (!targetMesh) return;
     let skel = null;
@@ -74,7 +92,11 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             state.mixer = new THREE.AnimationMixer(bMesh);
             state.currentAction = state.mixer.clipAction(clip);
             state.currentAction.play(); state.playing = true;
-        } catch (e) { console.error('[ANIM] Retarget failed:', e); }
+            _meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
+        } catch (e) {
+            _meldung(`Fehler: ${e.message || e}`);
+            console.error('[ANIM] Retarget failed:', e);
+        }
     } else {
         // Fallback BVH preview
         const handleBvhFallback = (result, text) => {
@@ -106,8 +128,22 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
                     }, undefined, (err) => { console.error('BVH load failed:', err); });
         }
     }
-    const _pb = document.getElementById('anim-play');
-    if (_pb) _pb.innerHTML = state.playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+    _abspielknopf();
+}
+
+function _abspielknopf() {
+    const knopf = document.getElementById('anim-play');
+    if (knopf) knopf.innerHTML = state.playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+}
+
+/**
+ * Die Zeile unter der Leiste: was lädt, was läuft, was scheiterte. Ein
+ * Retarget dauert bei 2.500 Bildern 9–13 s — ohne diese Zeile sah das wie
+ * ein toter Knopf aus (Edgar, 05.09.2026).
+ */
+function _meldung(text) {
+    const feld = document.getElementById('anim-info');
+    if (feld) feld.textContent = text;
 }
 
 export async function applyGroundLevelFix() {
@@ -223,7 +259,8 @@ export async function loadAnimationUI() {
         if (tree) tree.innerHTML = '<div class="leer-hinweis">Animationen nicht verf\u00fcgbar</div>'; }
     // Playback controls binding
     const playBtn = document.getElementById('anim-play');
-    if (playBtn) playBtn.addEventListener('click', () => { if (!state.currentAction) return;
+    if (playBtn) playBtn.addEventListener('click', () => {
+        if (!state.currentAction) { _meldung('Keine Animation geladen — eine aus der Bibliothek wählen.'); return; }
         state.playing = !state.playing;
             if (state.playing) { if (!state.currentAction.isRunning()) state.currentAction.play();
                 state.currentAction.paused = false; } else state.currentAction.paused = true;
@@ -254,6 +291,7 @@ export async function loadAnimationUI() {
 
 fn.loadAnimationUI = loadAnimationUI;
 fn.loadBVHAnimation = loadBVHAnimation;
+fn.stopAnimation = stopAnimation;
 fn.applyGroundLevelFix = applyGroundLevelFix;
 fn.openSaveAnimDialog = openSaveAnimDialog;
 fn._initSaveAnimDialog = _initSaveAnimDialog;

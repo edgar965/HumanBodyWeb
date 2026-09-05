@@ -3,6 +3,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { _bindSlider, _selectedInst } from './utils.js';
 import { _applyGarmentRegionOffsets } from './kleidung_anpassen.js';
 import { _doKleiderFit, _doKleiderStage1 } from './kleider_anpassen.js';
+import { Umakleider } from './uma/umakleider.js';
 import { _kleiderSelectById, _renderKleiderList,
          _selectedKleiderMesh } from './kleider_liste.js';
 import { Stueckbedienung } from './stueckbedienung.js';
@@ -84,7 +85,13 @@ export class Kleiderbedienung {
         const hinweis = document.getElementById('kleider-empty');
         const inhalt = document.getElementById('kleider-content');
         if (!hinweis || !inhalt) return;
-        const hatFigur = !!_selectedInst();
+        const figur = _selectedInst();
+        // Die Zwei-Stufen-Anpassung gilt nur für HumanBody-Figuren; eine
+        // UMA-Figur wählt hier ihre Garderobe und lässt Unity bauen (06.09.2026).
+        const uma = !!figur && figur.quelle === 'uma';
+        const hatFigur = !!figur && !uma;
+        if (uma) Umakleider.fuellen(hinweis, figur);
+        else hinweis.innerHTML = '<i class="fas fa-mouse-pointer hb-font-size-1-5rem"></i> Charakter auswählen';
         hinweis.style.display = hatFigur ? 'none' : '';
         inhalt.style.display = hatFigur ? '' : 'none';
     }

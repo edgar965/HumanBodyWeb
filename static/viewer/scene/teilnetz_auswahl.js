@@ -68,8 +68,13 @@ export function _setSubMeshEmissive(target, color) {
 
 export function _setBodyEmissive(inst, color) {
     if (!inst || !inst.bodyMesh) return;
-    const mats = Array.isArray(inst.bodyMesh.material) ? inst.bodyMesh.material : [inst.bodyMesh.material];
-    for (const mat of mats) { if (mat.emissive) mat.emissive.copy(color); }
+    // Eine UMA-Figur besteht aus mehreren Netzen (Haut je Kachel, Haar, Augen);
+    // hervorgehoben wird die ganze Figur, nicht nur eine Kachel.
+    const netze = inst.netze && inst.netze.length ? inst.netze : [inst.bodyMesh];
+    for (const netz of netze) {
+        const mats = Array.isArray(netz.material) ? netz.material : [netz.material];
+        for (const mat of mats) { if (mat && mat.emissive) mat.emissive.copy(color); }
+    }
 }
 
 export function clearSubMeshSelection() {

@@ -895,3 +895,21 @@
     margin-right: 6px;
     width: 10px;
 }
+
+/* UMA-Regler in Gruppen (scene/uma/umaeigenschaften.js, 05.09.2026) */
+.uma-gruppe.uma-gruppe.uma-gruppe { margin: 4px 0; }
+.uma-gruppe.uma-gruppe.uma-gruppe > summary {
+    cursor: pointer; font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: .04em; opacity: .8; padding: 3px 0;
+}
+
+/* UMA-Garderobe in den Platzhaltern der Reiter „Kleider" und „Assets" (05.09.2026).
+   Dreifach, weil `.prop-empty` zentriert und die Liste linksbündig stehen soll. */
+.uma-garderobe.uma-garderobe.uma-garderobe { text-align: left; font-size: 0.78rem; }
+.uma-garderobe.uma-garderobe.uma-garderobe ul { list-style: none; margin: 6px 0; padding: 0; }
+.uma-garderobe.uma-garderobe.uma-garderobe li { padding: 2px 0; border-bottom: 1px solid var(--border); }
+.uma-garderobe.uma-garderobe.uma-garderobe .uma-garderobe-platz {
+    display: inline-block; min-width: 7.5em; opacity: .7; font-size: 0.7rem; text-transform: uppercase;
+}
+.uma-garderobe.uma-garderobe.uma-garderobe .uma-garderobe-kopf { font-weight: 600; margin-bottom: 4px; }
+.uma-garderobe.uma-garderobe.uma-garderobe .uma-garderobe-fuss { margin-top: 6px; opacity: .7; font-size: 0.7rem; }
