@@ -120,9 +120,12 @@ export function bindKeyboardShortcuts() {
         }
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
         switch (e.key.toLowerCase()) {
-            case 'g': fn.setTransformMode('translate'); break;
-            case 'r': fn.setTransformMode('rotate'); break;
-            case 's': fn.setTransformMode('scale'); break;
+            // G, R und S starten das Greifen (Maus bewegen, Klick setzt ab) und
+            // stellen nebenbei das Gizmo passend. Vorher taten sie nur das
+            // Zweite — wer danach die Maus bewegte, bewegte nichts.
+            case 'g': fn.setTransformMode('translate'); fn.greifenStarten?.('translate'); break;
+            case 'r': fn.setTransformMode('rotate'); fn.greifenStarten?.('rotate'); break;
+            case 's': fn.setTransformMode('scale'); fn.greifenStarten?.('scale'); break;
             case 'delete':
                 if (state._selectedSubMesh) fn._removeSubMesh(state._selectedSubMesh);
                 else fn.deleteSelectedCharacter();

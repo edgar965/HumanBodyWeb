@@ -158,6 +158,8 @@ export const state = {
     characters: new Map(),
     selectedCharacterId: null,
     transformControls: null,
+    // Läuft gerade ein Greifen (G/R/S)? Dann gehört der Klick dem Absetzen.
+    greiftGerade: false,
     currentTransformMode: 'translate',
     transformHelper: null,
     transformDragging: false,

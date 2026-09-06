@@ -218,3 +218,37 @@ select.viewer-select {
     display: flex;
     gap: 2px;
 }
+
+/* Der Hinweis, der während des Greifens (G/R/S) im Bild steht.
+   Ohne ihn sieht man nicht, dass der Modus überhaupt läuft — genau daran
+   ist es Edgar am 06.09.2026 aufgefallen ("bei Klick auf G und dann Maus
+   tut sich nichts"). Er nimmt keine Klicks an: das Absetzen gehört dem
+   Greifen, nicht dem Hinweis. */
+.greif-hinweis {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+    padding: 7px 14px;
+    border-radius: 6px;
+    background: rgba(26, 26, 46, 0.92);
+    border: 1px solid var(--accent, #e94560);
+    color: var(--text, #eee);
+    font-size: 13px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 40;
+}
+
+.greif-hinweis .greif-wert {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.greif-hinweis .greif-hilfe {
+    color: var(--text-muted, #9aa);
+    font-size: 12px;
+}

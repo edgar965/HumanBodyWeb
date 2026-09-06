@@ -33,6 +33,7 @@ import './mh_proxy.js';
 import './rigging.js';
 import './charmorph.js';
 import './cloth_export.js';
+import './greifen.js';
 import { Szenenaufbau } from './szenenaufbau.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 

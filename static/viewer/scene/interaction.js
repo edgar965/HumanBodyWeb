@@ -24,6 +24,9 @@ export function bindCanvasClick() {
         state.mouseDownPos = null;
         if (Math.sqrt(dx * dx + dy * dy) > state.CLICK_THRESHOLD) return;
         if (state.transformDragging) return;
+        // Während des Greifens (G/R/S) setzt der Klick die Figur ab — er darf
+        // nicht zugleich als Auswahlklick gelten und die Figur abwählen.
+        if (state.greiftGerade) return;
 
         const rect = canvas.getBoundingClientRect();
         state.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
