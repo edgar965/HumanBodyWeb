@@ -15,12 +15,9 @@ usw."): EIN Knopf. Die Masse kommen aus der gewaehlten Figur und werden im
 Hintergrund geholt — sie sind Anzeige, keine Eingabe.
 {% endcomment %}
 <div class="tab-pane" id="tab-garmentcode">
-    <div class="prop-empty" id="gc-empty">
-        <i class="fas fa-mouse-pointer hb-font-size-1-5rem"></i>
-        Charakter ausw&auml;hlen
-    </div>
-
-    <div id="gc-content" class="hb-versteckt">
+    {% comment %}Der Hinweis steht IM Inhalt, nicht davor: Vorlagen und
+    Einstellungen kann man ohne Figur ansehen — nur bauen nicht.{% endcomment %}
+    <div id="gc-content">
         <div class="panel-section" data-panel-key="gc_bauen">
             <h3>Kleidung bauen <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">
@@ -33,6 +30,10 @@ Hintergrund geholt — sie sind Anzeige, keine Eingabe.
                     <button id="gc-erzeugen" class="btn-toggle hb-dehnt"><i
                          class="fas fa-cut"></i> F&uuml;r diese Figur bauen</button>
                 </div>
+                <div id="gc-empty" class="hb-hinweis hb-versteckt">
+                    Zum Bauen zuerst einen Charakter ausw&auml;hlen.
+                </div>
+                <div id="gc-fortschritt" class="hb-versteckt"></div>
                 <div id="gc-meldung" class="hb-hinweis"></div>
                 <div id="gc-vorschau"></div>
             </div>

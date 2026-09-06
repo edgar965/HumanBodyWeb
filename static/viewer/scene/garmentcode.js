@@ -15,17 +15,36 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { state } from './state.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
+import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 
 class GarmentcodeReiter {
     constructor() {
         this.laeuft = false;
         this.zustandDa = false;
         this.drapierbereit = false;
+        this.aufgeklappt = false;
         /** Für welche Figur die Maße im Panel stehen. */
         this.masseFuer = null;
     }
 
+    /**
+     * Einhängen — notfalls erst, wenn das DOM steht.
+     *
+     * `boot.js` importiert dieses Modul; je nachdem, wann das geschieht,
+     * gibt es den Reiter noch nicht. Ein `querySelector` liefert dann null,
+     * und ohne diese Weiche bräche `starten()` still ab: kein Klick-Handler,
+     * kein Zustand, ein Reiter, in dem nichts passiert.
+     */
     starten() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.einhaengen(),
+                                      { once: true });
+        } else {
+            this.einhaengen();
+        }
+    }
+
+    einhaengen() {
         const reiter = document.querySelector('.panel-tab[data-tab="garmentcode"]');
         if (!reiter) return;
         reiter.addEventListener('click', () => this.oeffnen());
@@ -40,20 +59,50 @@ class GarmentcodeReiter {
             auswahl.addEventListener('change',
                 () => garmentcodeRegler.laden(auswahl.value));
         }
+
+        // Vorlagen und Regler brauchen keine Figur — sofort holen, damit im
+        // Reiter etwas steht, bevor jemand ihn anklickt.
+        this.zustandLaden();
     }
 
-    /** Beim Öffnen: Figur prüfen, Zustand und Maße nebenher holen. */
+    /**
+     * Beim Öffnen: Inhalt zeigen, Maße nebenher holen.
+     *
+     * Der Inhalt bleibt IMMER sichtbar — Vorlagen und Einstellungen kann man
+     * ansehen, ohne eine Figur zu wählen. Ohne Figur ist nur der Bau-Knopf
+     * gesperrt, mit Hinweis daneben. (Vorher war der ganze Reiter leer,
+     * sobald `state.selectedCharacterId` nicht gesetzt war.)
+     */
     oeffnen() {
         const figur = this.figur();
-        const leer = document.getElementById('gc-empty');
         const inhalt = document.getElementById('gc-content');
-        if (leer) leer.classList.toggle('hb-versteckt', !!figur);
-        if (inhalt) inhalt.classList.toggle('hb-versteckt', !figur);
-        if (!figur) return;
+        if (inhalt) inhalt.classList.remove('hb-versteckt');
+        // Den Knopf NICHT sperren: Ein gesperrter Knopf ohne Erklärung ist
+        // das, was "tut nichts" heißt. Fehlt die Figur, sagt der Klick es.
+        const hinweis = document.getElementById('gc-empty');
+        if (hinweis) hinweis.classList.toggle('hb-versteckt', !!figur);
 
-        // Beide Abrufe laufen nebenher — der Nutzer wartet auf keinen davon.
+        this.aufklappen();
         this.zustandLaden();
-        if (this.masseFuer !== figur.id) this.masseLaden();
+        if (figur && this.masseFuer !== figur.id) this.masseLaden();
+    }
+
+    /**
+     * Beim ERSTEN Öffnen die beiden wichtigen Abschnitte aufklappen.
+     *
+     * Alle `panel-section` starten mit `collapsed` — bei einem eingeführten
+     * Reiter ist das richtig, bei einem neuen sieht man dann nur vier
+     * Überschriften und hält den Reiter für leer. Danach entscheidet wieder
+     * der Nutzer: Wer zuklappt, findet es zugeklappt wieder.
+     */
+    aufklappen() {
+        if (this.aufgeklappt) return;
+        this.aufgeklappt = true;
+        for (const schluessel of ['gc_bauen', 'gc_regler']) {
+            const bereich = document.querySelector(
+                `#tab-garmentcode [data-panel-key="${schluessel}"]`);
+            if (bereich) bereich.classList.remove('collapsed');
+        }
     }
 
     /**
@@ -127,10 +176,12 @@ class GarmentcodeReiter {
 
     async bauen() {
         if (this.laeuft) return;
-        const figur = this.figur();
         const meldung = document.getElementById('gc-meldung');
+        const figur = this.figur();
         if (!figur) {
-            meldung.textContent = 'Keine Figur gewählt.';
+            meldung.textContent = 'Keine Figur gewählt — bitte links in der '
+                + 'Charakterliste eine anklicken. Der Schnitt wird aus ihren '
+                + 'Maßen gebaut.';
             return;
         }
         const knopf = document.getElementById('gc-erzeugen');
@@ -138,8 +189,18 @@ class GarmentcodeReiter {
 
         this.laeuft = true;
         knopf.disabled = true;
-        meldung.textContent = 'Schnitt wird für diese Figur konstruiert …';
+        meldung.textContent = '';
         vorschau.innerHTML = '';
+
+        // Die Schritte im Voraus zeigen — dann weiß der Nutzer, was kommt
+        // und dass die Drapierung der lange Teil ist.
+        const schritte = [{ schluessel: 'schnitt', titel: 'Schnitt konstruieren' }];
+        if (this.drapierbereit) {
+            schritte.push({ schluessel: 'drape', titel: 'Stoff drapieren (dauert)' });
+            schritte.push({ schluessel: 'rig', titel: 'Anziehen (Knochengewichte)' });
+        }
+        garmentcodeFortschritt.starten(schritte);
+        garmentcodeFortschritt.laeuft('schnitt');
 
         try {
             const daten = this.figurdaten(figur);
@@ -148,9 +209,11 @@ class GarmentcodeReiter {
             const ergebnis = await Serverabruf.formular(
                 '/api/garmentcode/erzeugen/', daten);
             if (ergebnis.fehler) {
+                garmentcodeFortschritt.gescheitert('schnitt', 'Fehler');
                 meldung.textContent = `Fehlgeschlagen: ${ergebnis.fehler}`;
                 return;
             }
+            garmentcodeFortschritt.fertig('schnitt', ergebnis.name || 'fertig');
             const warnung = ergebnis.selbstdurchdringend
                 ? ' — Achtung: Schnitt durchdringt sich selbst' : '';
             const eigene = garmentcodeRegler.anzahl;
@@ -170,17 +233,21 @@ class GarmentcodeReiter {
             if (this.drapierbereit && ergebnis.spezifikation) {
                 await this.drapieren(figur, ergebnis.spezifikation, meldung);
             }
+            garmentcodeFortschritt.beenden();
         } catch (fehler) {
+            garmentcodeFortschritt.gescheitert('schnitt',
+                                               String(fehler.message || fehler));
             meldung.textContent = `Fehler: ${fehler.message || fehler}`;
         } finally {
             this.laeuft = false;
             knopf.disabled = false;
+            garmentcodeFortschritt.beenden();
         }
     }
 
     /** Das Schnittmuster als 3D-Netz auf den Körper legen. */
     async drapieren(figur, spezifikation, meldung) {
-        meldung.textContent = 'Schnitt fertig — Stoff wird drapiert …';
+        garmentcodeFortschritt.laeuft('drape');
         // Die Figurdaten müssen mit: aus ihnen kommen die Knochengewichte,
         // mit denen das drapierte Netz animierbar wird.
         const daten = this.figurdaten(figur);
@@ -189,16 +256,23 @@ class GarmentcodeReiter {
             const netz = await Serverabruf.formular(
                 '/api/garmentcode/drapieren/', daten);
             if (netz.fehler) {
+                garmentcodeFortschritt.gescheitert('drape', 'Fehler');
                 meldung.textContent = `Schnitt fertig, Drapierung scheiterte: `
                     + `${netz.fehler}`;
                 return;
             }
+            garmentcodeFortschritt.fertig('drape',
+                                          `${netz.punkte} Punkte, ${netz.dauer_s} s`);
+            garmentcodeFortschritt.fertig('rig', netz.rig
+                ? `${netz.rig_ohne_gewicht} ohne Gewicht` : 'kein Rig');
             const rig = netz.rig
                 ? `, angezogen (${netz.rig_ohne_gewicht} Punkte ohne Gewicht)`
                 : ', ohne Rig';
             meldung.textContent = `Fertig in 3D: ${netz.punkte} Punkte, `
                 + `${netz.dreiecke} Dreiecke in ${netz.dauer_s} s${rig}`;
         } catch (fehler) {
+            garmentcodeFortschritt.gescheitert('drape',
+                                               String(fehler.message || fehler));
             meldung.textContent = `Drapierung fehlgeschlagen: `
                 + `${fehler.message || fehler}`;
         }

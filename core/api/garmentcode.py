@@ -19,7 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 class Garmentcode:
-    """Die Endpunkte des GarmentCode-Reiters."""
+    """Die Endpunkte des GarmentCode-Reiters.
+
+    ALLE Endpunkte sind `@staticmethod`, nie `@classmethod`. Der Grund ist
+    `require_POST`/`require_GET`: Sie lesen `args[0].method`, und unter einem
+    `@classmethod` ist `args[0]` die KLASSE — der Aufruf endet in
+    `AttributeError: type object 'Garmentcode' has no attribute 'method'`
+    (06.09.2026 an drei Endpunkten gleichzeitig gemessen). Klassenbezuege
+    stehen deshalb ausgeschrieben.
+    """
 
     #: Nur diese Dateien darf die Vorschau ausliefern — der Ordnername kommt
     #: aus dem Browser, also wird der Pfad nie aus der Anfrage zusammengebaut,
@@ -41,9 +49,9 @@ class Garmentcode:
             zustand['drapierbereit'] = False
         return JsonResponse(zustand)
 
-    @classmethod
+    @staticmethod
     @require_POST
-    def drapieren(cls, request):
+    def drapieren(request):
         """Aus einem erzeugten Schnittmuster ein 3D-Netz rechnen."""
         from GarmentCode.drapierung import DrapierFehler
         spez = request.POST.get('spezifikation') or ''
@@ -51,7 +59,7 @@ class Garmentcode:
             return JsonResponse({'fehler': 'Kein Schnittmuster angegeben'},
                                 status=400)
         try:
-            anfrage = cls._anfrage(request)
+            anfrage = Garmentcode._anfrage(request)
             ergebnis = GarmentcodeDienst.drapieren(
                 spez, koerper=request.POST.get('koerper') or None,
                 geschlecht=anfrage['geschlecht'], morphs=anfrage['morphs'],
@@ -78,11 +86,11 @@ class Garmentcode:
         return JsonResponse({'vorlage': vorlage,
                              'gruppen': GarmentcodeDienst.regler(vorlage)})
 
-    @classmethod
+    @staticmethod
     @require_POST
-    def masse(cls, request):
+    def masse(request):
         """Die Masse der gewaehlten Figur — mit ihren Reglerwerten."""
-        anfrage = cls._anfrage(request)
+        anfrage = Garmentcode._anfrage(request)
         werte, herkunft = GarmentcodeDienst.masse(
             anfrage['geschlecht'], morphs=anfrage['morphs'],
             bauart=anfrage['bauart'])
@@ -119,12 +127,12 @@ class Garmentcode:
             'regler': regler if isinstance(regler, dict) else {},
         }
 
-    @classmethod
+    @staticmethod
     @require_POST
-    def erzeugen(cls, request):
+    def erzeugen(request):
         """Einen Schnitt bauen. Antwort nennt Ordner und Vorschaubild."""
         from GarmentCode.entwurf import EntwurfFehler
-        anfrage = cls._anfrage(request)
+        anfrage = Garmentcode._anfrage(request)
         try:
             ergebnis = GarmentcodeDienst.erzeugen(
                 anfrage['vorlage'], geschlecht=anfrage['geschlecht'],
@@ -147,12 +155,12 @@ class Garmentcode:
             if bild else '')
         return JsonResponse(ergebnis)
 
-    @classmethod
+    @staticmethod
     @require_GET
-    def datei(cls, request, ordner, name):
+    def datei(request, ordner, name):
         """Eine Datei aus einem Ergebnisordner ausliefern."""
         from GarmentCode.entwurf import Entwurf
-        if not name.lower().endswith(cls.ERLAUBTE_ENDUNGEN):
+        if not name.lower().endswith(Garmentcode.ERLAUBTE_ENDUNGEN):
             return JsonResponse({'fehler': 'Dateityp nicht erlaubt'}, status=400)
         wurzel = os.path.abspath(Entwurf.AUSGABE)
         pfad = os.path.abspath(os.path.join(wurzel, ordner, name))
