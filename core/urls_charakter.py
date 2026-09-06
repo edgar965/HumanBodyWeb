@@ -33,6 +33,7 @@ from .api.skelettdaten import Skelettdaten
 from .api.umafigur import Umafigur
 from .api.umakleidung import Umakleidung
 from .api.gemeinsameregler import Gemeinsameregler
+from .api.katalogverwaltung import Katalogverwaltung
 from .api.netz import Netzendpunkte
 from .api.kleidung import Kleidung
 
@@ -124,6 +125,15 @@ CHARAKTER = [
     path('api/character/scene/save/', Studioprojekte.szene_sichern, name='scene_save'),
     path('api/character/scene/<str:name>/', Studioprojekte.szene, name='scene_detail'),
     path('api/character/models/', Modelldateien.modellliste, name='character_models'),
+    # Umbenennen und Loeschen aus dem Dialog heraus (06.09.2026).
+    path('api/character/katalog/uma/umbenennen/', Katalogverwaltung.uma_umbenennen,
+         name='katalog_uma_umbenennen'),
+    path('api/character/katalog/uma/loeschen/', Katalogverwaltung.uma_loeschen,
+         name='katalog_uma_loeschen'),
+    path('api/character/katalog/modell/umbenennen/', Katalogverwaltung.modell_umbenennen,
+         name='katalog_modell_umbenennen'),
+    path('api/character/katalog/modell/loeschen/', Katalogverwaltung.modell_loeschen,
+         name='katalog_modell_loeschen'),
     path('api/character/model/save/', Modelldateien.modell_sichern,
          name='character_model_save'),
     path('api/character/model/<str:name>/', Modelldateien.modell,

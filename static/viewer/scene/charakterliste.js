@@ -7,6 +7,7 @@ import { state } from './state.js';
 import { markDirty } from './undo.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Figurmerker } from './figurmerker.js';
+import { Figurplatzierung } from './figurplatzierung.js';
 /**
  * Charakterliste der Szene: anzeigen, auswaehlen, entfernen, anfliegen.
  *
@@ -18,7 +19,7 @@ import { Figurmerker } from './figurmerker.js';
 // =========================================================================
 // Character management functions
 // =========================================================================
-export async function addCharacterFromPreset(presetName) {
+export async function addCharacterFromPreset(presetName, lage = null) {
     const resp = await fetch(`/api/character/model/${encodeURIComponent(presetName)}/`);
     if (!resp.ok) throw new Error(`Preset not found: ${presetName}`);
     const presetData = await resp.json();
@@ -26,12 +27,12 @@ export async function addCharacterFromPreset(presetName) {
     const id = generateCharacterId();
     const inst = new CharacterInstance(id, presetData);
 
-    const xOffset = state.characters.size * 0.8;
-    inst.group.position.set(xOffset, 0, 0);
-
     inst.presetKey = presetName;
     inst.presetName = presetName;
     await inst.load();
+    // Position und Größe erst nach dem Laden: vorher gibt es nichts zu messen
+    // (Edgar, 06.09.2026 — vorher stand hier ein fester Abstand von 0,8 m).
+    Figurplatzierung.anwenden(inst, lage);
     state.characters.set(id, inst);
     state.scene.add(inst.group);
 

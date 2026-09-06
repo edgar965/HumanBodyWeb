@@ -1,0 +1,40 @@
+{% comment %}
+Charakter hinzufügen: zwei Reiter (UMA / HumanBody), je Zeile umbenennen und
+löschen, darunter Position und Größe der neuen Figur.
+Edgar, 06.09.2026: „mach zwei Tabs, einmal UMA, einmal HumanBody … Position und
+Größe im Popup-Dialog einstellbar, default: gleiche Größe wie das vorhandene,
+Position 1,5 m rechts davon."
+{% endcomment %}
+<div class="scene-modal-overlay" id="add-char-dialog">
+    <div class="scene-modal">
+        <div class="scene-modal-header">
+            <h4><i class="fas fa-user-plus"></i> Charakter hinzufügen</h4>
+            <button class="scene-modal-close" data-close>&times;</button>
+        </div>
+        <div class="scene-modal-body">
+            <div class="dialogreiter" id="add-char-reiter">
+                <button class="dialogreiter-knopf active" data-quelle="uma">UMA-Figuren</button>
+                <button class="dialogreiter-knopf" data-quelle="modell">HumanBody-Modelle</button>
+            </div>
+            <ul class="preset-list" id="uma-list" data-quelle="uma">
+                <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Katalog...</li>
+            </ul>
+            <ul class="preset-list hb-versteckt" id="preset-list" data-quelle="modell">
+                <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Modelle...</li>
+            </ul>
+            <div class="dialogfelder" id="add-char-lage">
+                <label for="add-char-x">Position X</label>
+                <input type="number" id="add-char-x" step="0.1" value="1.5">
+                <span class="einheit">m</span>
+                <label class="ankreuz" for="add-char-angleichen">
+                    <input type="checkbox" id="add-char-angleichen" checked>
+                    Größe der vorhandenen Figur angleichen
+                </label>
+            </div>
+        </div>
+        <div class="scene-modal-footer">
+            <button data-close>Abbrechen</button>
+            <button class="primary" id="add-char-confirm" disabled>Hinzufügen</button>
+        </div>
+    </div>
+</div>

@@ -4,6 +4,7 @@ import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { escapeHtml, generateCharacterId } from '../utils.js';
 import { markDirty } from '../undo.js';
 import { UmaFigur } from './umafigur.js';
+import { Figurplatzierung } from '../figurplatzierung.js';
 
 /**
  * Umakatalog — die UMA-Figuren aus `Figuren/uma/` anbieten und in die Szene stellen.
@@ -20,12 +21,19 @@ export class Umakatalog {
         return daten.figuren || [];
     }
 
-    /** Eine Figur laden, in die Szene stellen und auswählen. */
-    static async hinzufuegen(datei) {
+    /**
+     * Eine Figur laden, in die Szene stellen und auswählen.
+     *
+     * `lage` kommt aus dem Dialog (`Charakterdialog.lage`); ohne sie gelten
+     * die Vorgaben: 1,5 m rechts neben der vorhandenen Figur und auf deren
+     * Höhe. Skaliert wird NACH `load()` — vorher hat die Figur keine Größe,
+     * die man messen könnte.
+     */
+    static async hinzufuegen(datei, lage = null) {
         const id = generateCharacterId();
         const figur = new UmaFigur(id, { datei });
-        figur.group.position.set(state.characters.size * 0.8, 0, 0);
         await figur.load();
+        Figurplatzierung.anwenden(figur, lage);
         state.characters.set(id, figur);
         state.scene.add(figur.group);
         fn.updateCharacterListUI();

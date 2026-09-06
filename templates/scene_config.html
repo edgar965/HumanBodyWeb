@@ -307,6 +307,91 @@
         color: var(--text-muted);
     }
 
+    /* Charakter-Dialog: zwei Reiter, Werkzeuge je Zeile, Lage der neuen Figur
+       (Edgar, 06.09.2026). */
+    .dialogreiter {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+    }
+    .dialogreiter-knopf {
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--text-muted);
+        padding: 6px 12px;
+        font-size: 0.82rem;
+        cursor: pointer;
+    }
+    .dialogreiter-knopf:hover { color: var(--text); }
+    .dialogreiter-knopf.active {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+    }
+    .preset-list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+    .preset-list li .eintragsname { display: flex; flex-direction: column; min-width: 0; }
+    .preset-list li .eintragswerkzeuge {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+        opacity: 0.5;
+        transition: opacity 0.12s;
+    }
+    .preset-list li:hover .eintragswerkzeuge,
+    .preset-list li.selected .eintragswerkzeuge { opacity: 1; }
+    .preset-list li .eintragswerkzeuge button {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        padding: 3px 7px;
+        cursor: pointer;
+    }
+    .preset-list li .eintragswerkzeuge button:hover {
+        color: var(--text);
+        border-color: var(--accent);
+    }
+    /* Die Liste scrollt fuer sich, damit Position und Groesse darunter immer
+       sichtbar bleiben — bei 55 Figuren im Katalog lagen sie sonst ausserhalb
+       des Bildes (06.09.2026 im Browser gesehen). */
+    #add-char-dialog .preset-list {
+        max-height: 46vh;
+        overflow-y: auto;
+    }
+    .dialogfelder {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+        font-size: 0.82rem;
+        color: var(--text);
+    }
+    .dialogfelder input[type="number"] {
+        width: 84px;
+        padding: 5px 8px;
+        background: var(--bg-card);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+    }
+    .dialogfelder .einheit { color: var(--text-muted); }
+    .dialogfelder .ankreuz {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        cursor: pointer;
+    }
+
     /* Scene name input in save dialog */
     .scene-name-input {
         width: 100%;
@@ -765,12 +850,12 @@
                     Charakter auswählen
                 </div>
                 <div id="prop-content" class="hb-versteckt">
+                    {% include "_gemeinsame_regler.html" %}
                     <!-- Transform (body context) -->
                     <div class="prop-section" id="prop-transform-section">
                         <div class="prop-section-title">Transform</div>
                         <div class="prop-grid" id="prop-transform"></div>
                     </div>
-                    {% include "_gemeinsame_regler.html" %}
                     {% include "_uma_eigenschaften.html" %}
                     <!-- Equipped Items (body context) -->
                     <div class="prop-section" id="prop-equipped-section">
@@ -1724,27 +1809,7 @@
 </div>
 
 <!-- Add Character Dialog -->
-<div class="scene-modal-overlay" id="add-char-dialog">
-    <div class="scene-modal">
-        <div class="scene-modal-header">
-            <h4><i class="fas fa-user-plus"></i> Charakter hinzufügen</h4>
-            <button class="scene-modal-close" data-close>&times;</button>
-        </div>
-        <div class="scene-modal-body">
-            {% comment %}Die kurze UMA-Liste zuerst: unter 21 HumanBody-Modellen war sie
-            nicht zu finden (Edgar, 05.09.2026: „wie lade ich ein UMA modell?").{% endcomment %}
-            {% include "_uma_dialogliste.html" %}
-            <div class="dialoghinweis">HumanBody-Modelle:</div>
-            <ul class="preset-list" id="preset-list">
-                <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Presets...</li>
-            </ul>
-        </div>
-        <div class="scene-modal-footer">
-            <button data-close>Abbrechen</button>
-            <button class="primary" id="add-char-confirm" disabled>Hinzufügen</button>
-        </div>
-    </div>
-</div>
+{% include "_charakter_dialog.html" %}
 
 <!-- Save Scene Dialog -->
 <div class="scene-modal-overlay" id="save-scene-dialog">

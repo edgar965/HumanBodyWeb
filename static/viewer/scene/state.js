@@ -213,7 +213,6 @@ export const state = {
     _currentPose: 'a_pose',
 
     // Add-char dialog
-    _addCharSelectedPreset: null,
     _selectedFileToLoad: null,
 };
 
