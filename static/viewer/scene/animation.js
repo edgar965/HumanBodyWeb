@@ -14,6 +14,11 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 import { Umaanimation } from './uma/umaanimation.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Abspielsteuerung } from './abspielsteuerung.js';
+import { Figurmerker } from './figurmerker.js';
+
+/** Play/Stop/Zeitleiste — und Play meint die ausgewählte Figur (Klassendoku dort). */
+const abspielsteuerung = new Abspielsteuerung(state, fn);
 
 export function stopAnimation(destroy = false) {
     Animationsstopp.aktion(state, destroy);
@@ -37,7 +42,7 @@ export function stopAnimation(destroy = false) {
     state.currentAnimUrl = '';
     state.currentAnimBvhText = '';
     state.currentAnimGroundFixed = false;
-    _abspielknopf();      // auch wenn ein Regler oder ein Umschalten angehalten hat
+    abspielsteuerung.knoepfeAngleichen();   // auch wenn ein Regler oder ein Umschalten angehalten hat
 }
 
 export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
@@ -46,20 +51,23 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
     const groundChk = document.getElementById('scene-ground-fix');
     state.currentAnimGroundFixed = groundChk ? groundChk.checked : false;
     const inst = _selectedInst();
-    _meldung(`Retarget läuft: ${name || url} …`);
+    abspielsteuerung.meldung(`Retarget läuft: ${name || url} …`);
     if (inst && inst.quelle === 'uma') {
         try {
             const clip = await Umaanimation.starten(inst, url, rawBvhText);
-            _meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
+            abspielsteuerung.meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
         } catch (fehler) {
-            _meldung(`Fehler: ${fehler.message || fehler}`);
+            abspielsteuerung.meldung(`Fehler: ${fehler.message || fehler}`);
             Protokoll.fehler('Umaanimation', 'Retarget auf UMA fehlgeschlagen', fehler);
         }
-        _abspielknopf();
+        abspielsteuerung.knoepfeAngleichen();
         return;
     }
     const targetMesh = inst ? inst.bodyMesh : state.bodyMesh;
-    if (!targetMesh) return;
+    if (!targetMesh) {
+        abspielsteuerung.meldung('Keine Figur ausgewählt — erst eine Figur anklicken.');
+        return;
+    }
     let skel = null;
     if (state.rigifySkeletonData && state.skinWeightData) {
         if (inst) { if (!inst.isSkinned) convertInstToSkinned(inst); }
@@ -92,9 +100,9 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             state.mixer = new THREE.AnimationMixer(bMesh);
             state.currentAction = state.mixer.clipAction(clip);
             state.currentAction.play(); state.playing = true;
-            _meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
+            abspielsteuerung.meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
         } catch (e) {
-            _meldung(`Fehler: ${e.message || e}`);
+            abspielsteuerung.meldung(`Fehler: ${e.message || e}`);
             console.error('[ANIM] Retarget failed:', e);
         }
     } else {
@@ -128,22 +136,24 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
                     }, undefined, (err) => { console.error('BVH load failed:', err); });
         }
     }
-    _abspielknopf();
-}
-
-function _abspielknopf() {
-    const knopf = document.getElementById('anim-play');
-    if (knopf) knopf.innerHTML = state.playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+    abspielsteuerung.knoepfeAngleichen();
 }
 
 /**
- * Die Zeile unter der Leiste: was lädt, was läuft, was scheiterte. Ein
- * Retarget dauert bei 2.500 Bildern 9–13 s — ohne diese Zeile sah das wie
- * ein toter Knopf aus (Edgar, 05.09.2026).
+ * In der Bibliothek die Animation der ausgewählten Figur hervorheben — oder
+ * keine, wenn die Figur noch keine gewählt hat. Die Markierung gehört zur
+ * Figur, nicht zur Seite (Figurmerker).
  */
-function _meldung(text) {
-    const feld = document.getElementById('anim-info');
-    if (feld) feld.textContent = text;
+export function animationMarkieren(name) {
+    const baum = document.getElementById('anim-tree');
+    if (!baum) return false;
+    let gefunden = false;
+    for (const eintrag of baum.querySelectorAll('.anim-item')) {
+        const passt = !!name && eintrag.dataset.name === name;
+        eintrag.classList.toggle('active', passt);
+        gefunden = gefunden || passt;
+    }
+    return gefunden;
 }
 
 export async function applyGroundLevelFix() {
@@ -247,51 +257,35 @@ export async function loadAnimationUI() {
                 const item = document.createElement('div'); item.className = 'anim-item';
                 item.innerHTML = `<span>${escapeHtml(anim.name)}</span><span
                     class="frames">${anim.frames || ''}f</span>`;
-                item.addEventListener('click',
-                    () => { tree.querySelectorAll('.anim-item.active').forEach(el => el.classList.remove('active'));
-                        item.classList.add('active'); state.currentAnimName = anim.name; loadBVHAnimation(anim.url,
-                            anim.name, anim.frames || 0); });
+                // Name und Adresse am Eintrag: `Abspielsteuerung.wahlFuer` liest
+                // sie, wenn Play auf einer Figur ohne gemerkte Animation gedrückt wird.
+                item.dataset.name = anim.name;
+                item.dataset.url = anim.url;
+                item.dataset.category = cat;
+                item.addEventListener('click', () => {
+                    animationMarkieren(anim.name);
+                    Figurmerker.animationMerken(state.selectedCharacterId,
+                                                { name: anim.name, url: anim.url, category: cat });
+                    state.currentAnimName = anim.name;
+                    loadBVHAnimation(anim.url, anim.name, anim.frames || 0);
+                });
                 body.appendChild(item);
             }
             tree.appendChild(catDiv);
         }
+        animationMarkieren(Figurmerker.animation(state.selectedCharacterId)?.name || null);
     } catch (e) { const tree = document.getElementById('anim-tree');
-        if (tree) tree.innerHTML = '<div class="leer-hinweis">Animationen nicht verf\u00fcgbar</div>'; }
-    // Playback controls binding
-    const playBtn = document.getElementById('anim-play');
-    if (playBtn) playBtn.addEventListener('click', () => {
-        if (!state.currentAction) { _meldung('Keine Animation geladen — eine aus der Bibliothek wählen.'); return; }
-        state.playing = !state.playing;
-            if (state.playing) { if (!state.currentAction.isRunning()) state.currentAction.play();
-                state.currentAction.paused = false; } else state.currentAction.paused = true;
-                    playBtn.innerHTML = state.playing ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
-                        });
-    const stopBtn = document.getElementById('anim-stop');
-    if (stopBtn) stopBtn.addEventListener('click', () => { stopAnimation(false);
-        if (playBtn) playBtn.innerHTML = '<i class="fas fa-play"></i>'; state.currentAnimName = ''; });
-    const timeline = document.getElementById('anim-timeline');
-    if (timeline) timeline.addEventListener('input',
-        () => { if (state.currentAction?.getClip()) { const dur = state.currentAction.getClip().duration;
-            state.currentAction.time = (parseInt(timeline.value) / 100) * dur; if (state.mixer) state.mixer.update(0);
-                } });
-    const speedSlider = document.getElementById('anim-speed');
-    const speedLabel = document.getElementById('speed-label');
-    if (speedSlider && speedLabel) speedSlider.addEventListener('input',
-        () => { const speed = parseInt(speedSlider.value) / 100; speedLabel.textContent = `Speed: ${speed.toFixed(1)}x`;
-            if (state.mixer) state.mixer.timeScale = speed; });
-    const deltaSel = document.getElementById('scene-delta-norm');
-    if (deltaSel) deltaSel.addEventListener('change', () => { const v = deltaSel.value; state._sceneDeltaNorm = v
-        === 'auto' ? undefined : v === '1'; if (state.currentAnimUrl) loadBVHAnimation(state.currentAnimUrl,
-            state.currentAnimName, 0, state.currentAnimBvhText || null); });
-    const groundChk = document.getElementById('scene-ground-fix');
-    if (groundChk) groundChk.addEventListener('change', () => { state.currentAnimGroundFixed = groundChk.checked; });
-    document.getElementById('anim-save-btn')?.addEventListener('click', () => { if (!state.currentAnimBvhText
-        && !state.currentAnimUrl) { alert('Keine Animation geladen.'); return; } openSaveAnimDialog(); });
+        if (tree) tree.innerHTML = '<div class="leer-hinweis">Animationen nicht verfügbar</div>'; }
+    // Einmal — `loadAnimationUI` läuft auch nach „Animation speichern" noch
+    // einmal; früher hingen danach zwei Zuhörer am Play-Knopf.
+    abspielsteuerung.verdrahten();
 }
 
 fn.loadAnimationUI = loadAnimationUI;
 fn.loadBVHAnimation = loadBVHAnimation;
 fn.stopAnimation = stopAnimation;
+fn.animationMarkieren = animationMarkieren;
+fn.abspielen = (ersatz) => abspielsteuerung.abspielen(ersatz);
 fn.applyGroundLevelFix = applyGroundLevelFix;
 fn.openSaveAnimDialog = openSaveAnimDialog;
 fn._initSaveAnimDialog = _initSaveAnimDialog;

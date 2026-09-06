@@ -68,8 +68,9 @@ export function bindCanvasClick() {
                 }
                 clearSubMeshSelection();
                 _clearBoneSelection();
+                // Kein `switchTab('eigenschaften')` mehr: welcher Reiter
+                // aufgeht, entscheidet der Merkzettel der Figur (Figurmerker).
                 fn.selectCharacter(charId);
-                fn.switchTab('eigenschaften');
                 fn._updatePropContext();
                 return;
             }

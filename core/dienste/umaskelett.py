@@ -46,17 +46,23 @@ class Umaskelett:
     ZEITFORMAT = '%Y-%m-%d %H:%M:%S'
 
     _schloss = threading.Lock()
-    _stand = None          # (pfad, mtime) des gelesenen Bestands
-    _knochen = None
-    _geometrie = None
+    #: Je GLB-Pfad `(mtime, knochen, geometrie)` — seit dem 06.09.2026 je
+    #: Datei, nicht nur die aus `aktuell.json`: Der Retarget-Motor braucht
+    #: das Skelett DER Figur, die in der Szene steht (`Retargetwahl.figur`).
+    _bestand = {}
 
     # -------------------------------------------------------------- Datei
 
     @classmethod
-    def glb_pfad(cls):
-        u"""Die gueltige GLB — aus dem Zeiger, sonst die juengste."""
+    def glb_pfad(cls, name=None):
+        u"""Die gueltige GLB — `name` aus dem Katalog, sonst aus dem Zeiger, sonst die juengste."""
         katalog = str(settings.FIGUREN_KATALOG)
         ordner = os.path.join(katalog, cls.QUELLE)
+        if name:
+            pfad = os.path.join(ordner, os.path.basename(name))
+            if not os.path.isfile(pfad):
+                raise UmaskelettFehlt('Keine UMA-Figur %s unter %s' % (name, ordner))
+            return pfad
         name = cls._zeiger(katalog)
         if name and os.path.isfile(os.path.join(ordner, name)):
             return os.path.join(ordner, name)
@@ -94,16 +100,14 @@ class Umaskelett:
     # ----------------------------------------------------------- Ergebnis
 
     @classmethod
-    def knochen(cls):
+    def knochen(cls, name=None):
         u"""Die Knochen in Three.js-Form — siehe `Gltfskelett.knochen`."""
-        cls._laden()
-        return cls._knochen
+        return cls._laden(name)[1]
 
     @classmethod
-    def geometrie(cls):
-        u"""`SkeletonGeometry` fuer den Retarget-Motor, Achse +Y."""
-        cls._laden()
-        return cls._geometrie
+    def geometrie(cls, name=None):
+        u"""`SkeletonGeometry` fuer den Retarget-Motor, Achse +Y — der Figur `name`, sonst der gueltigen."""
+        return cls._laden(name)[2]
 
     @classmethod
     def beschreibung(cls):
@@ -117,14 +121,17 @@ class Umaskelett:
         }
 
     @classmethod
-    def _laden(cls):
-        pfad = cls.glb_pfad()
-        stand = (pfad, os.path.getmtime(pfad))
-        if cls._stand == stand:
-            return
+    def _laden(cls, name=None):
+        u"""`(mtime, knochen, geometrie)` der Datei — aus dem Bestand oder frisch gelesen."""
+        pfad = cls.glb_pfad(name)
+        mtime = os.path.getmtime(pfad)
+        eintrag = cls._bestand.get(pfad)
+        if eintrag is not None and eintrag[0] == mtime:
+            return eintrag
         with cls._schloss:
-            if cls._stand == stand:
-                return
+            eintrag = cls._bestand.get(pfad)
+            if eintrag is not None and eintrag[0] == mtime:
+                return eintrag
             from humanbody_core.skeleton import SkeletonGeometry
             from humanbody_core.skeleton.gltfskelett import Gltfskelett
             from humanbody_core.skeleton.skelettausrichtung import Skelettausrichtung
@@ -135,10 +142,11 @@ class Umaskelett:
             geometrie = SkeletonGeometry.from_three(knochen, cls.RICHTUNGSACHSE)
             # Erst wenn beides steht, wird es sichtbar — sonst saehe ein
             # zweiter Faden die Knochen ohne die Geometrie.
-            cls._knochen, cls._geometrie, cls._stand = knochen, geometrie, stand
+            eintrag = cls._bestand[pfad] = (mtime, knochen, geometrie)
             logger.info('Umaskelett: %s gelesen, %d Knochen', pfad, len(knochen))
+            return eintrag
 
     @classmethod
     def vergessen(cls):
         u"""Den Speicher leeren — fuer Tests und nach einem Katalogwechsel."""
-        cls._stand = cls._knochen = cls._geometrie = None
+        cls._bestand = {}

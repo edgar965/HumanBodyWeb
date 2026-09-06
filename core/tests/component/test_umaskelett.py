@@ -20,7 +20,7 @@ from django.urls import reverse
 
 from core.daten.retargetwahl import Retargetwahl
 from core.dienste.retargetdaten import Retargetdaten
-from core.dienste.umaskelett import Umaskelett
+from core.dienste.umaskelett import Umaskelett, UmaskelettFehlt
 from ..unit._umaattrappe import Umaattrappe
 
 
@@ -129,3 +129,30 @@ class UmaskelettTest(TestCase):
         self.assertTrue(np.isfinite(ergebnis.tracks['LeftArm']).all())
         # Die Ablage liegt neben der BVH — im Wegwerf-Katalog, nirgends sonst.
         self.assertTrue(Path(Retargetdaten(str(bvh), ziel='uma').ablage).is_file())
+
+    def test_skelett_je_datei_nicht_nur_das_aus_dem_zeiger(self):
+        """06.09.2026: Der Zeiger nannte Roomguests `UmaKleidung_bewegt.glb`
+        (anderer Wurzelaufbau), der Motor rechnete jede Szenenfigur dagegen —
+        Hüftspur in der falschen Achse. Jetzt liefert `geometrie(name)` das
+        Skelett GENAU dieser Datei, je Datei einmal gelesen."""
+        self._glb('probe.glb')
+        self._glb('zweite.glb')
+        self._zeiger('probe.glb')
+        self.assertIsNotNone(Umaskelett.geometrie('zweite.glb'))
+        self.assertIsNotNone(Umaskelett.geometrie())
+        self.assertEqual(len(Umaskelett._bestand), 2)
+        self.assertTrue(Umaskelett.glb_pfad('zweite.glb').endswith('zweite.glb'))
+        # Dieselbe Datei ein zweites Mal: kein dritter Eintrag.
+        Umaskelett.knochen('zweite.glb')
+        self.assertEqual(len(Umaskelett._bestand), 2)
+        with self.assertRaises(UmaskelettFehlt):
+            Umaskelett.geometrie('fehlt.glb')
+        # Ein Pfad wird auf den Dateinamen gestutzt — nichts liest außerhalb des Katalogs.
+        self.assertTrue(Umaskelett.glb_pfad('../uma/zweite.glb').endswith('zweite.glb'))
+        bvh = self.katalog / 'probe.bvh'
+        bvh.write_text(Umaattrappe.bvh_text([{}, {'LeftArm': (-45, 0, 0)}]),
+                       encoding='utf-8')
+        ergebnis = Retargetdaten(str(bvh), ziel='uma', figur='zweite.glb').holen()
+        self.assertIn('LeftArm', ergebnis.mapped_bones)
+        self.assertNotEqual(Retargetdaten(str(bvh), ziel='uma', figur='zweite.glb').ablage,
+                            Retargetdaten(str(bvh), ziel='uma').ablage)

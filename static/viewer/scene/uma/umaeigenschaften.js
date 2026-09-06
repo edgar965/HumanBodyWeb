@@ -4,6 +4,7 @@ import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Umatyp } from './umatyp.js';
 import { Umamasse } from './umamasse.js';
+import { Umagarderobe } from './umagarderobe.js';
 
 /**
  * Umaeigenschaften — der Eigenschaften-Reiter für eine UMA-Figur.
@@ -116,29 +117,63 @@ export class Umaeigenschaften {
         return zeile;
     }
 
-    static _farben(inst, behaelter) {
+    /**
+     * Haut- und Haarfarbe. UMA backt die Farben in Unity in den Atlas; im
+     * Browser ist ein Farbfeld nur eine Tönung des fertigen Bildes (Edgar,
+     * 06.09.2026: „warum kann man die Hautfarbe nicht setzen"). Deshalb: Feld
+     * vorbelegt mit der GEBAUTEN Farbe (Zettel), Änderung als Vorschau-Tönung,
+     * und ein Knopf, der sie in Unity backen lässt (`Umatyp.neuBauen`).
+     */
+    static async _farben(inst, behaelter) {
         behaelter.innerHTML = '';
+        const garderobe = await Umagarderobe.lesen(inst.datei).catch(() => null);
+        const gebacken = garderobe?.farben || {};
+        const knopf = document.createElement('button');
+        knopf.className = 'btn-toggle hb-volle-breite';
+        knopf.innerHTML = '<i class="fas fa-hammer"></i> Farben in Unity bauen';
+        const stand = document.createElement('div');
+        stand.className = 'hb-font-size-0-72rem';
+        const nachziehen = () => Umaeigenschaften._farbstand(inst, gebacken, knopf, stand);
         for (const [schluessel, beschriftung] of Umaeigenschaften.FARBEN) {
             const zeile = document.createElement('div');
             zeile.className = 'slider-row';
-            const wert = inst.farben[schluessel] || Umaeigenschaften._grundfarbe(inst, schluessel);
+            const grund = () => gebacken[schluessel] || Umaeigenschaften._grundfarbe(inst, schluessel);
             zeile.innerHTML = `<label>${beschriftung}</label>`
-                + `<input type="color" class="hb-farbfeld" value="${wert}">`
-                + '<button class="btn-toggle knopf-schmal" title="Farbe aus der GLB">'
+                + `<input type="color" class="hb-farbfeld" value="${inst.farben[schluessel] || grund()}">`
+                + '<button class="btn-toggle knopf-schmal" title="Zurück auf die gebaute Farbe">'
                 + '<i class="fas fa-undo"></i></button>';
             const feld = zeile.querySelector('input');
             feld.addEventListener('input', () => {
                 inst.farben[schluessel] = feld.value;
                 inst.farbenAnwenden();
+                nachziehen();
             });
             feld.addEventListener('change', () => markDirty(`UMA-Farbe ${schluessel}`));
             zeile.querySelector('button').addEventListener('click', () => {
                 inst.farben[schluessel] = null;
                 inst.farbenAnwenden();
-                feld.value = Umaeigenschaften._grundfarbe(inst, schluessel);
+                feld.value = grund();
+                nachziehen();
                 markDirty(`UMA-Farbe ${schluessel}`);
             });
             behaelter.appendChild(zeile);
+        }
+        knopf.addEventListener('click', () => Umatyp.neuBauen(inst, { stand }));
+        behaelter.append(knopf, stand);
+        nachziehen();
+    }
+
+    /** Die Zeile unter den Farbfeldern: Tönung ist Vorschau, gebaut wird in Unity. */
+    static _farbstand(inst, gebacken, knopf, stand) {
+        const offen = Umaeigenschaften.FARBEN.map(([s]) => s)
+            .filter(s => inst.farben[s] && inst.farben[s].toLowerCase() !== (gebacken[s] || ''));
+        knopf.classList.toggle('active', offen.length > 0);
+        if (offen.length) {
+            stand.textContent = `Geändert: ${offen.join(', ')} — im Browser nur als Tönung sichtbar. `
+                + '„Farben in Unity bauen" backt sie in die Haut.';
+        } else {
+            stand.textContent = Object.keys(gebacken).length
+                ? 'Farben wie in Unity gebaut.' : 'Farben der Rasse (Unity-Vorgabe).';
         }
     }
 

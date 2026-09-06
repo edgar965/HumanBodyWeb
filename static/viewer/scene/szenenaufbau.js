@@ -150,28 +150,16 @@ export class Szenenaufbau {
 
     // ------------------------------------------------------------ Demo-Knopf
 
-    /** Der Knopf spielt eine Beispielanimation und hält sie wieder an. */
+    /**
+     * Der Knopf in der Kopfleiste: Play für die AUSGEWÄHLTE Figur
+     * (`Abspielsteuerung`, über `fn.abspielen`). Hat die Figur noch keine
+     * Animation gewählt, läuft die Beispielanimation. Vorher schaltete er nur
+     * die laufende Aktion um — egal, welche Figur ausgewählt war.
+     */
     demoknopf() {
         const knopf = document.getElementById('play-demo-anim');
         if (!knopf) return;
-        knopf.addEventListener('click', () => {
-            if (!state.currentAction) {
-                if (!fn._selectedInst() && !state.bodyMesh) return;
-                fn.loadBVHAnimation(Szenenaufbau.DEMO_URL,
-                                    Szenenaufbau.DEMO_NAME, 0);
-                return;
-            }
-            this._umschalten(knopf);
-        });
-    }
-
-    _umschalten(knopf) {
-        const laeuft = state.playing;
-        if (!laeuft && !state.currentAction.isRunning()) state.currentAction.play();
-        state.currentAction.paused = laeuft;
-        state.playing = !laeuft;
-        knopf.innerHTML = laeuft ? '<i class="fas fa-play"></i>'
-                                 : '<i class="fas fa-pause"></i>';
-        knopf.classList.toggle('active', !laeuft);
+        knopf.addEventListener('click', () => fn.abspielen(
+            { url: Szenenaufbau.DEMO_URL, name: Szenenaufbau.DEMO_NAME }));
     }
 }

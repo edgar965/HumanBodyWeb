@@ -6,6 +6,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
 import { markDirty } from './undo.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Figurmerker } from './figurmerker.js';
 /**
  * Charakterliste der Szene: anzeigen, auswaehlen, entfernen, anfliegen.
  *
@@ -110,6 +111,7 @@ export function deleteCharacter(id) {
 
     inst.dispose();
     state.characters.delete(id);
+    Figurmerker.vergessen(id);
     fn.updateCharacterListUI();
     fn.updateVertexCount();
     markDirty();

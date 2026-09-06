@@ -15,6 +15,7 @@ import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 import { Umaeigenschaften } from './uma/umaeigenschaften.js';
 import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
 import { Transformfelder } from './transformfelder.js';
+import { Figurmerker } from './figurmerker.js';
 
 /** Unter diesem Betrag gilt ein Morph als aus und wird aus der Figur entfernt. */
 const MORPH_SCHWELLE = 0.005;
@@ -23,6 +24,9 @@ export function initTabs() {
     document.querySelectorAll('.panel-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             switchTab(tab.dataset.tab);
+            // Der Reiter gehört zur Figur: beim nächsten Anklicken derselben
+            // Figur öffnet er sich wieder (Edgar, 06.09.2026).
+            Figurmerker.tabMerken(state.selectedCharacterId, tab.dataset.tab);
             if (tab.dataset.tab === 'modell') fn.initModelGenerator();
         });
     });
@@ -66,8 +70,7 @@ export async function populateProperties(charId) {
     if (uma) {
         Umaeigenschaften.fuellen(inst);
         _updatePropContext();
-        const reiter = document.querySelector('.panel-tab.active');
-        if (!reiter || reiter.dataset.tab !== 'modell') switchTab('eigenschaften');
+        _gemerktesHerstellen(charId);
         return;
     }
     Umaeigenschaften.leeren();
@@ -79,8 +82,21 @@ export async function populateProperties(charId) {
     populateMorphSliders(inst);
     fn.syncHairSelect(inst);
     _updatePropContext();
-    const activeTab = document.querySelector('.panel-tab.active');
-    if (!activeTab || activeTab.dataset.tab !== 'modell') switchTab('eigenschaften');
+    _gemerktesHerstellen(charId);
+}
+
+/**
+ * Reiter, Animation und Kleidungsstück, die diese Figur zuletzt hatte
+ * (`Figurmerker`). Früher sprang jede Auswahl auf „Eigenschaften"; wer im
+ * Animation-Reiter die Figur wechselte, musste zurückklicken. Eine Figur ohne
+ * Merkzettel lässt den Reiter, wo er ist.
+ */
+function _gemerktesHerstellen(charId) {
+    const tab = Figurmerker.tab(charId);
+    if (tab && document.querySelector(`.panel-tab[data-tab="${tab}"]`)) switchTab(tab);
+    fn.animationMarkieren?.(Figurmerker.animation(charId)?.name || null);
+    const kleid = Figurmerker.kleider(charId);
+    if (kleid) fn.kleiderSelectById?.(kleid);
 }
 
 export function clearProperties() {

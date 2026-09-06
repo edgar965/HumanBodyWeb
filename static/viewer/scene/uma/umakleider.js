@@ -2,6 +2,7 @@ import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { escapeHtml } from '../utils.js';
 import { Umagarderobe } from './umagarderobe.js';
 import { Umatyp } from './umatyp.js';
+import { Umabauerstand } from './umabauerstand.js';
 
 /**
  * Umakleider — die Kleidung einer UMA-Figur wählen und von Unity bauen lassen.
@@ -68,10 +69,13 @@ export class Umakleider {
         }
         const knopf = document.createElement('button');
         knopf.className = 'btn-toggle hb-volle-breite';
-        knopf.innerHTML = '<i class="fas fa-hammer"></i> In Unity bauen (etwa 1½ Minuten)';
+        knopf.innerHTML = '<i class="fas fa-hammer"></i> In Unity bauen';
         const stand = document.createElement('div');
         stand.className = 'uma-garderobe-fuss';
+        const bauer = document.createElement('div');
+        bauer.className = 'uma-garderobe-fuss';
         knopf.addEventListener('click', () => Umakleider.bauen(figur, rasse, kasten, stand));
+        Umabauerstand.anzeigen(bauer, { vorwaermen: true });
         // Eine geänderte Liste ändert die Figur noch nicht — das sagt die Zeile
         // unter dem Knopf, bis gebaut wird (Edgar, 06.09.2026: „Warum ändern
         // sich die Kleider nicht, wenn ich die ändere?").
@@ -86,21 +90,16 @@ export class Umakleider {
                     : '';
             });
         }
-        kasten.append(knopf, stand);
+        kasten.append(knopf, stand, bauer);
         return kasten;
     }
 
-    /** Die gewählten Rezepte bauen lassen; der Dateiname trägt Rasse und eine Kennung der Auswahl. */
+    /**
+     * Die gewählten Rezepte bauen lassen — über `Umatyp.neuBauen`, das die
+     * Farben der Figur mitnimmt und den Dateinamen aus Rasse und Auswahl bildet.
+     */
     static bauen(figur, rasse, kasten, stand) {
         const kleidung = [...kasten.querySelectorAll('select')].map(s => s.value).filter(Boolean);
-        const name = `${Umatyp.nameFuer(rasse)}_k${Umakleider.kennung(kleidung)}`;
-        return Umatyp.bauenMit(figur, { rasse, kleidung, name }, stand);
-    }
-
-    /** Kurze, feste Kennung der Auswahl (djb2 über die Namen), acht Hexzeichen. */
-    static kennung(namen) {
-        let h = 5381;
-        for (const zeichen of namen.join(',')) h = (Math.imul(h, 33) ^ zeichen.charCodeAt(0)) >>> 0;
-        return h.toString(16).padStart(8, '0');
+        return Umatyp.neuBauen(figur, { rasse, kleidung, stand });
     }
 }

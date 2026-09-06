@@ -23,6 +23,7 @@ from ..daten.retargetwahl import Retargetwahl
 from ..dienste.bvhablage import Bvhablage
 from ..dienste.bvhverwaltung import Bvhverwaltung, BvhFehler
 from ..dienste.retargetdaten import Retargetdaten
+from ..dienste.umaskelett import UmaskelettFehlt
 from ..models import BVHJob
 from ..daten.anfragerumpf import Anfragerumpf
 
@@ -111,9 +112,12 @@ class Retargetendpunkte:
                 status=400)
         if not isinstance(pfad, str):
             return pfad                          # fertige Fehlerantwort
-        return JsonResponse(Retargetdaten(
-            pfad, wahl.groesse, wahl.format, wahl.fusskorrektur,
-            wahl.delta_norm, wahl.ziel).holen().als_dict())
+        try:
+            return JsonResponse(Retargetdaten(
+                pfad, wahl.groesse, wahl.format, wahl.fusskorrektur,
+                wahl.delta_norm, wahl.ziel, figur=wahl.figur).holen().als_dict())
+        except UmaskelettFehlt as fehler:
+            return JsonResponse({'error': str(fehler)}, status=404)
 
     @staticmethod
     @require_GET

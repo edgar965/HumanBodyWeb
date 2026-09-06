@@ -1,5 +1,6 @@
 import { UmaFigur } from './umafigur.js';
 import { Umaanimation } from './umaanimation.js';
+import { state } from '../state.js';
 
 /**
  * Umamasse — Größe und Gewicht einer UMA-Figur als zwei Regler ganz oben.
@@ -13,32 +14,47 @@ import { Umaanimation } from './umaanimation.js';
 export class Umamasse {
 
     static GEWICHT = ['upperWeight', 'lowerWeight', 'belly', 'waist'];
+    // Muskeln (06.09.2026, Edgar: „hast du kein Muskeltonus?") — UMA führt sie
+    // als zwei Regler unter 22 Körperreglern; hier gemeinsam, wie das Gewicht.
+    static MUSKELN = ['upperMuscle', 'lowerMuscle'];
 
     /** `beimAendern()` rechnet die Regler auf die Knochen und gleicht die Einzelregler an. */
     static fuellen(inst, behaelter, beimAendern) {
         behaelter.innerHTML = '';
         behaelter._zeilen = null;
         if (!inst.regler || !('height' in inst.dna)) return;
-        inst._masseBasis = {
-            cm: UmaFigur.hoehe(inst.netze) * 100,
-            gelenke: Umaanimation.hoehe(inst),
-        };
+        // Nur in der Ruhelage messen: Läuft eine Animation, ist die Figur
+        // gebeugt und die Gelenkspanne kürzer — die Anzeige sagte dann 101 cm
+        // statt 168 (06.09.2026). Die alte Basis gilt dann weiter.
+        if (!inst._masseBasis || state._animatedCharId !== inst.id) {
+            inst._masseBasis = {
+                cm: UmaFigur.hoehe(inst.netze) * 100,
+                gelenke: Umaanimation.hoehe(inst),
+            };
+        }
         const groesse = Umamasse._zeile('Größe', Math.round(inst.dna.height * 100), `${Umamasse.cm(inst)} cm`);
         groesse.input.addEventListener('input', () => {
             inst.dna.height = parseInt(groesse.input.value, 10) / 100;
             beimAendern();
             groesse.wert.textContent = `${Umamasse.cm(inst)} cm`;
         });
-        const g = Umamasse.gewicht(inst);
-        const gewicht = Umamasse._zeile('Gewicht', g, g);
-        gewicht.input.addEventListener('input', () => {
-            const wert = parseInt(gewicht.input.value, 10) / 100;
-            for (const name of Umamasse.GEWICHT) if (name in inst.dna) inst.dna[name] = wert;
+        const gewicht = Umamasse._sammelzeile(inst, 'Gewicht', Umamasse.GEWICHT, beimAendern);
+        const muskeln = Umamasse._sammelzeile(inst, 'Muskeln', Umamasse.MUSKELN, beimAendern);
+        behaelter.append(groesse.zeile, gewicht.zeile, muskeln.zeile);
+        behaelter._zeilen = { groesse, gewicht, muskeln };
+    }
+
+    /** Ein Regler, der mehrere DNA-Werte gemeinsam stellt (Gewicht, Muskeln). */
+    static _sammelzeile(inst, beschriftung, namen, beimAendern) {
+        const wert = Umamasse.mittel(inst, namen);
+        const zeile = Umamasse._zeile(beschriftung, wert, wert);
+        zeile.input.addEventListener('input', () => {
+            const neu = parseInt(zeile.input.value, 10) / 100;
+            for (const name of namen) if (name in inst.dna) inst.dna[name] = neu;
             beimAendern();
-            gewicht.wert.textContent = gewicht.input.value;
+            zeile.wert.textContent = zeile.input.value;
         });
-        behaelter.append(groesse.zeile, gewicht.zeile);
-        behaelter._zeilen = { groesse, gewicht };
+        return zeile;
     }
 
     /**
@@ -49,24 +65,32 @@ export class Umamasse {
     static cm(inst) {
         const basis = inst._masseBasis;
         if (!basis || !basis.gelenke) return '?';
+        if (state._animatedCharId === inst.id) return Math.round(basis.cm);   // gebeugt misst falsch
         inst.group.updateMatrixWorld(true);
         return Math.round(basis.cm * Umaanimation.hoehe(inst) / basis.gelenke);
     }
 
-    static gewicht(inst) {
-        const werte = Umamasse.GEWICHT.filter(n => n in inst.dna).map(n => inst.dna[n]);
+    /** Mittel der genannten DNA-Werte in 0–100; 50, wenn die Rasse keinen davon kennt. */
+    static mittel(inst, namen) {
+        const werte = namen.filter(n => n in inst.dna).map(n => inst.dna[n]);
         return werte.length ? Math.round(werte.reduce((a, b) => a + b, 0) / werte.length * 100) : 50;
     }
 
-    /** Nach einer Änderung an den Einzelreglern die beiden Zeilen nachziehen. */
+    static gewicht(inst) {
+        return Umamasse.mittel(inst, Umamasse.GEWICHT);
+    }
+
+    /** Nach einer Änderung an den Einzelreglern die drei Zeilen nachziehen. */
     static angleichen(inst, behaelter) {
         const zeilen = behaelter._zeilen;
         if (!zeilen) return;
         zeilen.groesse.input.value = Math.round((inst.dna.height ?? 0.5) * 100);
         zeilen.groesse.wert.textContent = `${Umamasse.cm(inst)} cm`;
-        const g = Umamasse.gewicht(inst);
-        zeilen.gewicht.input.value = g;
-        zeilen.gewicht.wert.textContent = g;
+        for (const [name, namen] of [['gewicht', Umamasse.GEWICHT], ['muskeln', Umamasse.MUSKELN]]) {
+            const wert = Umamasse.mittel(inst, namen);
+            zeilen[name].input.value = wert;
+            zeilen[name].wert.textContent = wert;
+        }
     }
 
     static _zeile(beschriftung, wert, anzeige) {

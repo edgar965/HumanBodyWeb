@@ -90,6 +90,8 @@ CHARAKTER = [
     path('api/character/uma-figur/bauen/', Umafigur.bauen, name='uma_figur_bauen'),
     path('api/character/uma-figur/bauen/<str:name>/stand/', Umafigur.bau_stand,
          name='uma_figur_bau_stand'),
+    path('api/character/uma-figur/bauer/', Umafigur.bauer_stand, name='uma_bauer_stand'),
+    path('api/character/uma-figur/bauer/vorwaermen/', Umafigur.vorwaermen, name='uma_bauer_vorwaermen'),
     path('api/character/uma-figur/', Umafigur.liste, name='uma_figur_liste'),
     path('api/character/uma-figur/<str:name>/', Umafigur.datei, name='uma_figur'),
     path('api/character/uma-figur/<str:name>/zettel/', Umafigur.zettel,

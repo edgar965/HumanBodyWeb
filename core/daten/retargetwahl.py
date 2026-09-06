@@ -13,13 +13,21 @@ alle Stellen stillschweigend.
 `delta_norm` ist DREIWERTIG und deshalb kein `bool`: `'1'` schaltet ein, `'0'`
 aus, und alles andere (auch ein fehlender Parameter) heisst „wie das Format es
 vorsieht". Ein `bool` haette den dritten Fall verschluckt.
+
+`figur` (06.09.2026) nennt die UMA-Datei im Figurkatalog, deren Skelett das
+Ziel ist. Ohne sie gilt die Datei aus `aktuell.json` — das ist die, die
+Roomguest spielt, nicht die, die in der Szene steht.
 """
+import re
 
 
 class Retargetwahl:
     """Was der Aufrufer am Retarget einstellen darf."""
 
-    __slots__ = ('groesse', 'format', 'fusskorrektur', 'delta_norm', 'ziel')
+    __slots__ = ('groesse', 'format', 'fusskorrektur', 'delta_norm', 'ziel',
+                 'figur')
+    #: Ein Dateiname im Figurkatalog, kein Pfad (wie `Umafigur.NAME`).
+    FIGUR = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_ .\-]*\.glb$')
 
     #: Werte, die in der Abfragezeichenkette „ja" bedeuten.
     JA = ('1', 'true')
@@ -37,6 +45,14 @@ class Retargetwahl:
         if self.ziel not in self.ZIELE:
             raise ValueError('Unbekanntes Ziel %r — erlaubt: %s'
                              % (self.ziel, ', '.join(self.ZIELE)))
+        # WELCHE UMA-Figur (06.09.2026): Ohne `figur` galt die Datei aus
+        # `aktuell.json` — die Roomguest setzt, nicht die Szene. Deren
+        # `UmaKleidung_bewegt.glb` traegt einen anders gedrehten Wurzelknoten;
+        # die Hueftspur landete damit in der falschen Achse (Hoehe in X), und
+        # jede UMA-Figur der Szene lag bei `0101_Boden` flach am Boden.
+        self.figur = (werte.get('figur') or '').strip() or None
+        if self.figur and (not self.FIGUR.match(self.figur) or '..' in self.figur):
+            raise ValueError('Ungültiger Figurname %r' % (self.figur,))
 
     @staticmethod
     def _dreiwertig(roh):
@@ -49,6 +65,7 @@ class Retargetwahl:
         return None
 
     def __repr__(self):
-        return ('<Retargetwahl %.2f m, %s, Fuss=%s, Delta=%s, Ziel=%s>'
+        return ('<Retargetwahl %.2f m, %s, Fuss=%s, Delta=%s, Ziel=%s%s>'
                 % (self.groesse, self.format or 'erkannt', self.fusskorrektur,
-                   self.delta_norm, self.ziel))
+                   self.delta_norm, self.ziel,
+                   ' ' + self.figur if self.figur else ''))

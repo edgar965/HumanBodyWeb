@@ -15,8 +15,11 @@ der Vertrag (`Figuren/VERTRAG.md`) ihn beschreibt.
                                                    der Figur (oder ?geschlecht=)
     GET  /api/character/uma-rassen/               {rassen, ermittelt, figuren:[{name, rasse}]}
     POST /api/character/uma-rassen/ermitteln/     Unity schreibt die Rassenliste (202)
-    POST /api/character/uma-figur/bauen/          {rasse, name?, zeiger?} → Unity baut (202)
+    POST /api/character/uma-figur/bauen/          {rasse, name?, zeiger?, kleidung?, farben?}
+                                                  → Unity baut (202)
     GET  /api/character/uma-figur/bauen/<name>/stand/   {laeuft, exit, sekunden, datei, meldung}
+    GET  /api/character/uma-figur/bauer/          {lebt, stand, startet, seit_s, pid}
+    POST /api/character/uma-figur/bauer/vorwaermen/     Bauer starten, einmal ins Leere bauen
 
 Bauen auf Zuruf (06.09.2026): `core/dienste/umabauer.py` startet Unity ohne
 Fenster; die Seite fragt den Stand ab, bis die Datei im Katalog liegt.
@@ -34,7 +37,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.static import was_modified_since
 
-from ..dienste.umabauer import Umabauer, UmabauerBelegt, UmabauerFehlt
+from ..dienste.umabauer import Umabauer, UmabauerFehlt
 from ..dienste.umaformregler import Umaformregler, UmaformreglerFehlt
 from ..dienste.umaskelett import Umaskelett, UmaskelettFehlt
 
@@ -154,6 +157,11 @@ class Umafigur:
             return HttpResponseNotModified()
         antwort = FileResponse(open(pfad, 'rb'), content_type=Umafigur.TYP)
         antwort['Last-Modified'] = http_date(stat.st_mtime)
+        # Keine Fassung in der Adresse, also nachfragen lassen (304, solange die
+        # Datei stimmt). Ohne diese Zeile schaetzt der Browser die Frische selbst —
+        # 10 % des Dateialters — und behaelt eine neu gebaute Figur gleichen Namens
+        # (Hilfe → Cache, Regel „Zehn Prozent des Dateialters", 06.09.2026).
+        antwort['Cache-Control'] = 'no-cache'
         antwort['Content-Length'] = str(stat.st_size)
         return antwort
 
@@ -223,18 +231,30 @@ class Umafigur:
         if kleidung is not None and not isinstance(kleidung, list):
             return JsonResponse({'error': 'kleidung muss eine Liste von Rezeptnamen sein'}, status=400)
         return Umafigur._lauf(Umabauer.bauen, daten.get('rasse'), daten.get('name'),
-                              bool(daten.get('zeiger')), kleidung)
+                              bool(daten.get('zeiger')), kleidung, daten.get('farben'))
+
+    @staticmethod
+    @require_GET
+    def bauer_stand(request):
+        u"""Lebt der Unity-Bauer, startet er, oder ist er aus? — für die Anzeige."""
+        return JsonResponse(Umabauer.bauer_stand())
+
+    @staticmethod
+    @csrf_exempt
+    @require_POST
+    def vorwaermen(request):
+        u"""Den Bauer starten und einmal ins Leere bauen lassen (06.09.2026)."""
+        return Umafigur._lauf(Umabauer.vorwaermen)
 
     @staticmethod
     def _lauf(start, *args):
-        u"""Einen Unity-Lauf starten; 202 mit dem Stand, sonst 400/409/503."""
+        u"""Einen Auftrag an den Unity-Bauer geben; 202 mit dem Stand, sonst 400/503."""
         try:
             return JsonResponse(start(*args), status=202)
         except ValueError as fehler:
             return JsonResponse({'error': str(fehler)}, status=400)
-        except UmabauerBelegt as fehler:
-            return JsonResponse({'error': str(fehler)}, status=409)
         except UmabauerFehlt as fehler:
+            logger.error('Umafigur: Unity-Bauer nicht verfügbar — %s', fehler)
             return JsonResponse({'error': str(fehler)}, status=503)
 
     @staticmethod

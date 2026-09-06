@@ -40,13 +40,17 @@ class Retargetdaten:
     ZIEL_UMA = 'uma'
 
     def __init__(self, bvh_pfad, body_height=ERSATZHOEHE, fmt=None,
-                 foot_correction=False, delta_norm=None, ziel=ZIEL_DEF):
+                 foot_correction=False, delta_norm=None, ziel=ZIEL_DEF,
+                 figur=None):
         self.bvh_pfad = bvh_pfad
         self.hoehe = body_height
         self.format = fmt
         self.fusskorrektur = foot_correction
         self.delta_norm = delta_norm
         self.ziel = ziel or self.ZIEL_DEF
+        #: Dateiname der UMA-Figur, deren Skelett das Ziel ist (06.09.2026);
+        #: ohne Angabe die Datei aus `aktuell.json` — siehe `Retargetwahl`.
+        self.figur = figur
 
     # ------------------------------------------------------- Zwischenspeicher
 
@@ -58,6 +62,8 @@ class Retargetdaten:
         # 05.09.2026 tragen genau diesen Namen und gelten weiter.
         if self.ziel != self.ZIEL_DEF:
             merkmal += f'_{self.ziel}'
+        if self.figur:
+            merkmal += f'_{self.figur}'       # je Figur ein eigenes Skelett, eine eigene Ablage
         kuerzel = hashlib.md5(merkmal.encode()).hexdigest()[:8]
         return self.bvh_pfad.rsplit('.', 1)[0] + f'_retarget_{kuerzel}.json'
 
@@ -124,7 +130,7 @@ class Retargetdaten:
         if bauart is None or not bauart.BONE_MAP_TO_RIGIFY:
             bauart = SkeletonMocapNet
         return bauart.retarget_to_rigify(
-            bvh, Umaskelett.geometrie(), body_height=self.hoehe,
+            bvh, Umaskelett.geometrie(self.figur), body_height=self.hoehe,
             foot_correction=self.fusskorrektur, delta_norm=self.delta_norm,
             mapping=Umazuordnung.fuer(bauart),
             skip_bones=Umazuordnung.ausnahmen(bauart))

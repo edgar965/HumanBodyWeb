@@ -20,9 +20,11 @@ export class Umagarderobe {
     static MUSTER = /Rasse ([^,]+),\s*\d+ Kleidungsstücke:\s*(.*?)\.\s*Erzeugt/s;
     static STUECK = /^(.*?)\s*\(([^()]*)\)$/;
     static BEWEGT = /_bewegt(\.glb)$/i;
+    static FARBE = /^(Skin|Hair)=(#[0-9a-fA-F]{6})$/;
+    static FARBNAMEN = { Skin: 'haut', Hair: 'haar' };
     static _gelesen = new Map();
 
-    /** `{rasse, teile: [{rezept, platz}], stand}` aus dem Zettel — `null`, wenn er nichts sagt. */
+    /** `{rasse, teile: [{rezept, platz}], stand, farben}` aus dem Zettel — `null`, wenn er nichts sagt. */
     static parsen(zettel) {
         const treffer = Umagarderobe.MUSTER.exec(zettel?.hinweis || '');
         if (!treffer) return null;
@@ -30,7 +32,22 @@ export class Umagarderobe {
             const t = Umagarderobe.STUECK.exec(text.trim());
             return t ? { rezept: t[1], platz: t[2] } : { rezept: text.trim(), platz: '' };
         });
-        return { rasse: treffer[1].trim(), teile, stand: zettel.stand || '' };
+        return { rasse: treffer[1].trim(), teile, stand: zettel.stand || '', farben: Umagarderobe.farben(zettel) };
+    }
+
+    /** `Skin=#e0b090,Hair=#302010` aus dem Zettel → `{haut, haar}` (gebackene Farben, 06.09.2026). */
+    static farben(zettel) {
+        const farben = {};
+        for (const teil of String(zettel?.farben || '').split(',')) {
+            const t = Umagarderobe.FARBE.exec(teil.trim());
+            if (t) farben[Umagarderobe.FARBNAMEN[t[1]]] = t[2].toLowerCase();
+        }
+        return farben;
+    }
+
+    /** Den gemerkten Zettel einer Datei verwerfen — nach einem Neubau gleichen Namens. */
+    static vergessen(datei) {
+        Umagarderobe._gelesen.delete(datei);
     }
 
     /** Die Garderobe einer Figur; bewegte Fassung → Zettel der Vorlage. Einmal je Datei. */

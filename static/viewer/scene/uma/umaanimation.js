@@ -21,6 +21,7 @@ export class Umaanimation {
         state._animatedCharId = inst.id;
         const wahl = {
             target: 'uma',
+            figur: inst.datei,            // das Skelett DIESER Datei, nicht das aus aktuell.json
             bodyHeight: Umaanimation.hoehe(inst),
             deltaNorm: state._sceneDeltaNorm,
         };

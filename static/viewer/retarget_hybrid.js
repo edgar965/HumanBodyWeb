@@ -163,6 +163,10 @@ export async function fetchRetarget(source, rigifySkel, opts = {}) {
     // Zielskelett: ohne Angabe DEF; 'uma' rechnet auf die Figur aus dem
     // Figurkatalog (05.09.2026). Die Spurnamen sind dann UMA-Namen.
     if (opts.target) params.set('target', opts.target);
+    // WELCHE UMA-Figur (06.09.2026): ohne `figur` nimmt der Server die Datei
+    // aus `aktuell.json` — die kann einen anderen Wurzelaufbau haben als die
+    // Figur in der Szene (Hüftspur in der falschen Achse, Figur am Boden).
+    if (opts.figur) params.set('figur', opts.figur);
 
     const url = `/api/retarget/?${params}`;
     Protokoll.debug('RETARGET', `Fetching: ${url}`);

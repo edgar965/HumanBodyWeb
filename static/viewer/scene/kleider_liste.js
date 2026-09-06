@@ -20,6 +20,8 @@ import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Kleiderverwaltung } from './kleiderverwaltung.js';
 import { Kleiderzustand } from './kleiderzustand.js';
+import { Figurmerker } from './figurmerker.js';
+import { fn } from '../gemeinsam/registrierung.js';
 
 const zustand = new Kleiderzustand();
 const verwaltung = new Kleiderverwaltung(
@@ -57,6 +59,9 @@ function _hervorheben(liste, zeile) {
         .forEach(el => el.classList.remove('selected'));
     zeile.classList.add('selected');
     state._selectedKleiderId = zeile.dataset.kleiderId;
+    // Die Auswahl gehört zur Figur: beim nächsten Anklicken derselben Figur
+    // steht sie wieder (Figurmerker, 06.09.2026).
+    Figurmerker.kleiderMerken(state.selectedCharacterId, zeile.dataset.kleiderId);
 }
 
 function _kategorieWaehlen(ordner, id) {
@@ -189,3 +194,7 @@ function _auswahlInDenBlick(liste) {
 }
 
 export { _kleiderSelectById, _selectedKleiderMesh, _renderKleiderList };
+
+// Für `properties.js`: die gemerkte Auswahl der Figur wieder anwählen, ohne
+// diese Datei zu importieren (Ring über kleider.js → properties.js).
+fn.kleiderSelectById = _kleiderSelectById;
