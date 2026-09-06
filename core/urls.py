@@ -16,6 +16,7 @@ from .api.studio_projekt import Studioprojekte
 from .api.system import Systemendpunkte
 from .api.bibliothek import Bibliotheksendpunkte
 from .api.bvhtext import Bvhtext
+from .api.garmentcode import Garmentcode
 from .api.ui_vorgaben import Uivorgaben
 from .api.auftrag_upload import Uploadseiten
 from .api.studio_video import Theatrevideo
@@ -170,6 +171,17 @@ urlpatterns = [
     path('api/character-test/source/', Testverwaltung.quelltext,
          name='test_character_source'),
     path('api/character-test/reload/', Testverwaltung.neu_laden, name='test_reload'),
+    # GarmentCode — Kleidung aus Koerpermassen konstruieren (Reiter in der
+    # Szene-Seite). Der Lauf selbst liegt in HumanBody/GarmentCode.
+    path('api/garmentcode/zustand/', Garmentcode.zustand,
+         name='garmentcode_zustand'),
+    path('api/garmentcode/masse/', Garmentcode.masse, name='garmentcode_masse'),
+    path('api/garmentcode/erzeugen/', Garmentcode.erzeugen,
+         name='garmentcode_erzeugen'),
+    path('api/garmentcode/drapieren/', Garmentcode.drapieren,
+         name='garmentcode_drapieren'),
+    path('api/garmentcode/datei/<str:ordner>/<str:name>/', Garmentcode.datei,
+         name='garmentcode_datei'),
     path('api/character-test/switch/', Testverwaltung.figur_wechseln,
          name='test_switch_character'),
 ]

@@ -28,6 +28,7 @@ import './hair.js';
 import './cloth.js';
 import './animation.js';
 import './kleider.js';
+import './garmentcode.js';
 import './modellgenerator_ui.js';
 import './mh_proxy.js';
 import './rigging.js';

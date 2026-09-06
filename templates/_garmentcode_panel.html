@@ -1,0 +1,61 @@
+{% comment %}
+GarmentCode-Reiter: Kleidung aus Koerpermassen KONSTRUIEREN.
+
+Eigene Datei, weil `scene_config.html` mit 2.088 Zeilen laengst ueber der
+Groessengrenze liegt — neue Panele kommen als Include dazu, wie
+`_kleidungspanele.html` (Struktur-Regel, 16.08.2026).
+
+Der Gegenentwurf zum Assets-Reiter: dort wird ein fertiges Netz an den
+Koerper angepasst (und sitzt nicht — 14,3 % kollabierte Anker), hier wird
+der Schnitt aus Massen gebaut. Ein Passungsfehler kann nicht entstehen,
+wo nichts angepasst wird.
+
+BEDIENUNG (Edgar, 06.09.2026: "T-Shirt auswaehlen, bauen. Nicht Masse laden
+usw."): EIN Knopf. Die Masse kommen aus der gewaehlten Figur und werden im
+Hintergrund geholt — sie sind Anzeige, keine Eingabe.
+{% endcomment %}
+<div class="tab-pane" id="tab-garmentcode">
+    <div class="prop-empty" id="gc-empty">
+        <i class="fas fa-mouse-pointer hb-font-size-1-5rem"></i>
+        Charakter ausw&auml;hlen
+    </div>
+
+    <div id="gc-content" class="hb-versteckt">
+        <div class="panel-section" data-panel-key="gc_bauen">
+            <h3>Kleidung bauen <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body">
+                <div class="slider-row"><label>Kleidungsst&uuml;ck</label>
+                    <select id="gc-vorlage" class="viewer-select hb-dehnt-ohne-abstand">
+                        <option value="t-shirt">T-Shirt</option>
+                    </select>
+                </div>
+                <div class="hb-display-flex">
+                    <button id="gc-erzeugen" class="btn-toggle hb-dehnt"><i
+                         class="fas fa-cut"></i> F&uuml;r diese Figur bauen</button>
+                </div>
+                <div id="gc-meldung" class="hb-hinweis"></div>
+                <div id="gc-vorschau"></div>
+            </div>
+        </div>
+
+        <div class="panel-section" data-panel-key="gc_masse">
+            <h3>Ma&szlig;e dieser Figur <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body">
+                <div class="hb-font-size-0-72rem">
+                    Zentimeter, aus der gew&auml;hlten Figur gemessen.
+                    &bull; gemessen &nbsp; &deg; aus dem Referenzk&ouml;rper
+                </div>
+                <div id="gc-masse-liste" class="anim-tree hb-max-height-300px">
+                    <div class="hb-hinweis">Wird beim &Ouml;ffnen geladen&hellip;</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section" data-panel-key="gc_status">
+            <h3>Status <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body">
+                <div id="gc-status" class="hb-hinweis">&hellip;</div>
+            </div>
+        </div>
+    </div>
+</div>
