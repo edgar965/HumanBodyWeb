@@ -6,8 +6,8 @@
 
 {% block extra_head %}
 {% include "_viewerstile.html" %}
-<link rel="stylesheet" href="{% static 'css/viewer_seitenleiste.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/menueleiste.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/viewer_seitenleiste.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/menueleiste.css' %}">
 <style>
     .viewer-row {
         display: flex;

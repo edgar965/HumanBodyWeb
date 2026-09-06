@@ -1,11 +1,11 @@
 {% extends "character_viewer.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 
 {% block title %}HumanBody Szene - Modell{% endblock %}
 
 {% block extra_head %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'css/menueleiste.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/menueleiste.css' %}">
 {% endblock %}
 
 {% block viewer_menubar %}

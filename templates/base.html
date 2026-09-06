@@ -1,5 +1,5 @@
 {% extends "djangobase/base.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% comment %}
 HumanBodyWeb-Shell auf djangoBase aufgesetzt: Sidebar, Topbar, Toasts und der
 Hilfe-/Einstellungen-Bereich kommen aus djangoBase und werden über DJANGOBASE in
@@ -18,13 +18,13 @@ NACH dem djangoBase-CSS und überschreibt so dessen Variablen (z. B. --sidebar-w
 {% comment %}theme.css zuerst (Palette-SSoT: body[data-theme="X"] flippt die
 Variablen), dann style.css (Struktur + nutzt die Variablen). JS_VERSION bricht
 den Cache bei jedem Versions-Bump.{% endcomment %}
-<link rel="stylesheet" href="{% static 'css/theme.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/style.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/theme.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/style.css' %}">
 {% comment %}stilhelfer.css ZULETZT: Die Klassen darin ersetzen Inline-Stile, und
 ein Inline-Stil hat vorher jede Regel geschlagen. Bei gleicher Spezifität
 gewinnt die spätere Regel — also muss diese Datei nach style.css kommen, sonst
 sieht ein Element anders aus als vor dem Umbau (17.08.2026).{% endcomment %}
-<link rel="stylesheet" href="{% static 'css/stilhelfer.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/stilhelfer.css' %}">
 {% block extra_head %}{% endblock %}
 {% endblock %}
 

@@ -9,5 +9,5 @@ Verwendung:
 
   {% block extra_head %}{% include "_dokustile.html" %}{% endblock %}
 {% endcomment %}
-{% load static %}
-<link rel="stylesheet" href="{% static 'css/dokuseite.css' %}?t={% now 'U' %}">
+{% load static %}{% load fassung %}
+<link rel="stylesheet" href="{% fassungspfad 'css/dokuseite.css' %}">

@@ -1,4 +1,4 @@
-{% load static %}{% comment %}Auslastungs-Leiste (GPU/VRAM/Temp/CPU/RAM/Netz) für die Topbar.
+{% load static %}{% load fassung %}{% comment %}Auslastungs-Leiste (GPU/VRAM/Temp/CPU/RAM/Netz) für die Topbar.
 
 Kommt seit 12.08.2026 KOMPLETT aus djangoBase (Ansage Edgar: „ersetzt die
 GPU/CPU-Kontrollleiste mit der aus djangoBase auf allen Seiten wo die Leiste
@@ -15,7 +15,7 @@ hart verdrahtet: Der Präfix ist eine Entscheidung des Projekts, keine
 Eigenschaft des Moduls.{% endcomment %}
 <div id="hbSysStats"></div>
 <script type="module">
-    import { SystemStatsLeiste } from "{% static 'djangobase/js/system_stats.js' %}?t={% now 'U' %}";
+    import { SystemStatsLeiste } from "{% fassungspfad 'djangobase/js/system_stats.js' %}";
     SystemStatsLeiste.URL = "{% url 'djangobase:api_system_stats' %}";
     SystemStatsLeiste.binden('hbSysStats');
 </script>

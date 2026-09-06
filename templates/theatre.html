@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 
 {% block title %}HumanBody · Theatre{% endblock %}
 
@@ -1150,5 +1150,5 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 {% endblock %}
 
 {% block extra_scripts %}
-<script type="module" src="{% static 'theatre/theatre-app.js' %}?t={% now "U" %}"></script>
+<script type="module" src="{% fassungspfad 'theatre/theatre-app.js' %}"></script>
 {% endblock %}

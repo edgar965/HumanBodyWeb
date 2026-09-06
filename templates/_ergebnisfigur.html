@@ -48,7 +48,7 @@ if (btn3d) btn3d.addEventListener('click', async () => {
     const video = document.getElementById('resultVideo');
     if (!canvas || !video) return;
     const { Videoaufnahme } = await import(
-        '{% static "js/bvh_player/videoaufnahme.js" %}?t={% now "U" %}');
+        '{% fassungspfad "js/bvh_player/videoaufnahme.js" %}');
     await new Videoaufnahme({
         canvas, video, knopf: btn3d,
         fps: {{ job.fps|default:"30" }},

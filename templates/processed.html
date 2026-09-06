@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% block title %}HumanBody · Processed Videos{% endblock %}
 
 {% block content %}
@@ -102,7 +102,7 @@
 {% block extra_scripts %}
 {% comment %}Umbau 16.08.2026: 16 Zeilen inline mit fuenf `var`.{% endcomment %}
 <script type="module">
-import { Videovorschau } from "{% static 'js/auftraege/videovorschau.js' %}?t={% now 'U' %}";
+import { Videovorschau } from "{% fassungspfad 'js/auftraege/videovorschau.js' %}";
 
 Videovorschau.aufbauen();
 </script>

@@ -1,5 +1,5 @@
 {% extends "einstellungsseite.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% block title %}Einstellungen — BVH Studio{% endblock %}
 
 {% block einstellungen_titel %}BVH Studio Einstellungen{% endblock %}
@@ -188,8 +188,8 @@
 und Projektliste, mit eigener CSRF-Regex und zwei ungepruefen fetch-Aufrufen.
 Jetzt zwei Klassen unter static/js/einstellungen/.{% endcomment %}
 <script type="module">
-import { Vorgabenformular } from "{% static 'js/einstellungen/vorgabenformular.js' %}?t={% now 'U' %}";
-import { Projektfeld } from "{% static 'js/einstellungen/projektfeld.js' %}?t={% now 'U' %}";
+import { Vorgabenformular } from "{% fassungspfad 'js/einstellungen/vorgabenformular.js' %}";
+import { Projektfeld } from "{% fassungspfad 'js/einstellungen/projektfeld.js' %}";
 
 Vorgabenformular.anmelden('studio-settings-form');
 Projektfeld.fuellen('studio_default_project',

@@ -12,9 +12,9 @@ Verwendung, im `extra_head`-Block:
 
   {% include "_animationsstile.html" %}
 {% endcomment %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% include "_viewerstile.html" %}
-<link rel="stylesheet" href="{% static 'css/animationsseite.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/animationsseite.css' %}">
 {% comment %}
 Kontextmenue: `.hb-kontextmenue` / `.hb-menueeintrag` / `.hb-trennlinie` stehen
 seit dem 28.08.2026 in `stilhelfer.css` — in den beiden Seiten standen sie

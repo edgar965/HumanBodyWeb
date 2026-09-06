@@ -1,5 +1,5 @@
 {% extends "einstellungsseite.html" %}
-{% load einstellungszeile %}
+{% load einstellungszeile %}{% load fassung %}
 {% load static einstellungszeile %}
 {% block title %}Modell - Einstellungen{% endblock %}
 
@@ -91,9 +91,9 @@ Animationsauswahl lagen als Inline-Skript hier — und wortgleich noch dreimal i
 settings_result/scene/theatre. Jetzt drei ES-Module unter static/js/einstellungen/;
 hier bleiben nur die Werte, die diese Seite von den anderen unterscheiden.{% endcomment %}
 <script type="module">
-import { Modellfeld } from "{% static 'js/einstellungen/modellfeld.js' %}?t={% now 'U' %}";
-import { Tabfelder } from "{% static 'js/einstellungen/tabfelder.js' %}?t={% now 'U' %}";
-import { Animationsauswahl } from "{% static 'js/einstellungen/animationsauswahl.js' %}?t={% now 'U' %}";
+import { Modellfeld } from "{% fassungspfad 'js/einstellungen/modellfeld.js' %}";
+import { Tabfelder } from "{% fassungspfad 'js/einstellungen/tabfelder.js' %}";
+import { Animationsauswahl } from "{% fassungspfad 'js/einstellungen/animationsauswahl.js' %}";
 
 Modellfeld.fuellen('default-model-config', "{{ settings.default_model_config|escapejs }}");
 Modellfeld.fuellen('default-model-animations', "{{ settings.default_model_animations|escapejs }}");

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% block title %}Video To BVH - HumanBody{% endblock %}
 
 {% block content %}
@@ -527,7 +527,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<link rel="stylesheet" href="{% static 'css/auftragstabelle.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
 <style>
 /* Video file selector */
 .video-file-list {
@@ -670,9 +670,9 @@ sechs Klassen unter static/js/auftraege/. Die Knoepfe der Tabelle haengen an
 `data-aktion`, weil ein onclick aus einem ES-Modul keinen Namen findet.
 {% endcomment %}
 <script type="module">
-import { Pipelinewahl } from "{% static 'js/auftraege/pipelinewahl.js' %}?t={% now 'U' %}";
-import { Videowahl } from "{% static 'js/auftraege/videowahl.js' %}?t={% now 'U' %}";
-import { Auftragsliste } from "{% static 'js/auftraege/auftragsliste.js' %}?t={% now 'U' %}";
+import { Pipelinewahl } from "{% fassungspfad 'js/auftraege/pipelinewahl.js' %}";
+import { Videowahl } from "{% fassungspfad 'js/auftraege/videowahl.js' %}";
+import { Auftragsliste } from "{% fassungspfad 'js/auftraege/auftragsliste.js' %}";
 
 const wahl = Pipelinewahl.aufbauen();
 Videowahl.aufbauen(wahl);

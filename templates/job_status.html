@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% block title %}HumanBody · {{ job.name }}{% endblock %}
 
 {% block extra_head %}
@@ -136,15 +136,15 @@
 Phasenbeschriftungen ein drittes Mal (jetzt Auftragszeile.PHASEN) und das
 Statuspolling ohne ok-Pruefung.{% endcomment %}
 <script type="module">
-import { Auftragsstatus } from "{% static 'js/auftraege/auftragsstatus.js' %}?t={% now 'U' %}";
+import { Auftragsstatus } from "{% fassungspfad 'js/auftraege/auftragsstatus.js' %}";
 
 Auftragsstatus.aufbauen('{{ job.id }}');
 </script>
 {% endif %}
 
 {% if job.bvh_file %}
-<script src="{% static 'js/bvh_ersatzskelett.js' %}?t={% now "U" %}"></script>
-<script src="{% static 'js/bvh_viewer.js' %}?t={% now "U" %}"></script>
+<script src="{% fassungspfad 'js/bvh_ersatzskelett.js' %}"></script>
+<script src="{% fassungspfad 'js/bvh_viewer.js' %}"></script>
 <script>
     initBVHViewer('bvhViewer', '{{ job.bvh_file }}');
 </script>

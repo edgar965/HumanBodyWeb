@@ -1,5 +1,5 @@
 {% extends "einstellungsseite.html" %}
-{% load static einstellungszeile %}
+{% load static einstellungszeile %}{% load fassung %}
 {% block title %}Video to BVH: 3D - Einstellungen{% endblock %}
 
 {% block einstellungen_stile %}
@@ -267,7 +267,7 @@
 {% comment %}Umbau 16.08.2026: Hier stand die sechste Kopie des
 Modell-Listen-Blocks (siehe modellfeld.js), ohne ok-Pruefung.{% endcomment %}
 <script type="module">
-import { Modellfeld } from "{% static 'js/einstellungen/modellfeld.js' %}?t={% now 'U' %}";
+import { Modellfeld } from "{% fassungspfad 'js/einstellungen/modellfeld.js' %}";
 
 Modellfeld.fuellen('default-model-result', "{{ settings.default_model_result|escapejs }}");
 </script>

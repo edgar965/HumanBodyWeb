@@ -12,10 +12,10 @@ Erwartet im Zusammenhang: `job` mit `id` und `fps`. Die Kennungen
 (`resultVideo`, `skeletonCanvas`, `skeletonOverlay`) sind das Drahtformat zu
 `js/bvh_player.js`.
 {% endcomment %}
-{% load static %}
+{% load static %}{% load fassung %}
 <script type="module">
 try {
-    const { initBVHPlayer } = await import('{% static "js/bvh_player.js" %}?t={% now "U" %}');
+    const { initBVHPlayer } = await import('{% fassungspfad "js/bvh_player.js" %}');
     initBVHPlayer({
         videoId: 'resultVideo',
         canvasId: 'skeletonCanvas',
@@ -31,7 +31,7 @@ try {
     // Inline-Stil. Der Import steht IM `catch`, damit ein Fehler beim Laden
     // des Spielers die Anzeige nicht mitreisst.
     const { Startfehler } = await import(
-        '{% static "js/bvh_player/startfehler.js" %}?t={% now "U" %}');
+        '{% fassungspfad "js/bvh_player/startfehler.js" %}');
     Startfehler.zeigen('bvh_player', e);
 }
 </script>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% block title %}Photo-to-3D Jobs{% endblock %}
 
 {% comment %}
@@ -391,8 +391,8 @@
 CSRF-Token als Django-Variable im JavaScript und sieben onclick-Attributen.
 Jetzt zwei Klassen unter static/js/auftraege/.{% endcomment %}
 <script type="module">
-import { Fotoauftragsliste } from "{% static 'js/auftraege/fotoauftragsliste.js' %}?t={% now 'U' %}";
-import { Fotoauftragsdetail } from "{% static 'js/auftraege/fotoauftragsdetail.js' %}?t={% now 'U' %}";
+import { Fotoauftragsliste } from "{% fassungspfad 'js/auftraege/fotoauftragsliste.js' %}";
+import { Fotoauftragsdetail } from "{% fassungspfad 'js/auftraege/fotoauftragsdetail.js' %}";
 
 Fotoauftragsliste.aufbauen("{% url 'photo_analysis_bulk_delete' %}");
 Fotoauftragsdetail.aufbauen("{% url 'photo_to_3d' %}");

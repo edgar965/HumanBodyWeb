@@ -21,6 +21,6 @@ Verwendung, im `extra_head`-Block:
 
   {% include "_viewerstile.html" %}
 {% endcomment %}
-{% load static %}
-<link rel="stylesheet" href="{% static 'css/animationsbaum.css' %}?t={% now 'U' %}">
-<link rel="stylesheet" href="{% static 'css/viewer_huelle.css' %}?t={% now 'U' %}">
+{% load static %}{% load fassung %}
+<link rel="stylesheet" href="{% fassungspfad 'css/animationsbaum.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/viewer_huelle.css' %}">

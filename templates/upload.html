@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% block title %}2D Pipeline - HumanBody{% endblock %}
 
 {% block content %}
@@ -142,7 +142,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<link rel="stylesheet" href="{% static 'css/auftragstabelle.css' %}?t={% now 'U' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
 <style>
 /* Umbau 16.08.2026: ersetzt Inline-Stile aus dem fruehen JavaScript. */
 
@@ -167,8 +167,8 @@ mit 53 `var` und, bis auf `pipeline_params`, buchstabengleich zu upload_v4.html
 startJobPolling, addNewJobRow). Beide Seiten nutzen jetzt dieselben Klassen
 unter static/js/auftraege/.{% endcomment %}
 <script type="module">
-import { Videoablage } from "{% static 'js/auftraege/videoablage.js' %}?t={% now 'U' %}";
-import { Auftragsliste } from "{% static 'js/auftraege/auftragsliste.js' %}?t={% now 'U' %}";
+import { Videoablage } from "{% fassungspfad 'js/auftraege/videoablage.js' %}";
+import { Auftragsliste } from "{% fassungspfad 'js/auftraege/auftragsliste.js' %}";
 
 Videoablage.aufbauen();
 Auftragsliste.aufbauen();
