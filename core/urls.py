@@ -175,6 +175,8 @@ urlpatterns = [
     # Szene-Seite). Der Lauf selbst liegt in HumanBody/GarmentCode.
     path('api/garmentcode/zustand/', Garmentcode.zustand,
          name='garmentcode_zustand'),
+    path('api/garmentcode/regler/', Garmentcode.regler,
+         name='garmentcode_regler'),
     path('api/garmentcode/masse/', Garmentcode.masse, name='garmentcode_masse'),
     path('api/garmentcode/erzeugen/', Garmentcode.erzeugen,
          name='garmentcode_erzeugen'),

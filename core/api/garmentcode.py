@@ -66,6 +66,18 @@ class Garmentcode:
                 status=500)
         return JsonResponse(ergebnis)
 
+    @staticmethod
+    @require_GET
+    def regler(request):
+        """Die Feineinstellungen eines Kleidungsstuecks.
+
+        Welche Regler gelten, haengt am Stueck: eine Hose hat keinen Kragen.
+        Deshalb GET mit `vorlage`, nicht eine feste Liste.
+        """
+        vorlage = request.GET.get('vorlage', '')
+        return JsonResponse({'vorlage': vorlage,
+                             'gruppen': GarmentcodeDienst.regler(vorlage)})
+
     @classmethod
     @require_POST
     def masse(cls, request):
@@ -94,11 +106,17 @@ class Garmentcode:
         except ValueError:
             logger.warning('GarmentCode: Morphs unlesbar, nehme Grundkoerper')
             morphs = {}
+        try:
+            regler = json.loads(request.POST.get('regler') or '{}')
+        except ValueError:
+            logger.warning('GarmentCode: Reglerwerte unlesbar, nehme Vorgabe')
+            regler = {}
         return {
             'vorlage': request.POST.get('vorlage', 't-shirt'),
             'geschlecht': request.POST.get('geschlecht', 'female'),
             'bauart': request.POST.get('bauart') or None,
             'morphs': morphs if isinstance(morphs, dict) else {},
+            'regler': regler if isinstance(regler, dict) else {},
         }
 
     @classmethod
@@ -110,7 +128,8 @@ class Garmentcode:
         try:
             ergebnis = GarmentcodeDienst.erzeugen(
                 anfrage['vorlage'], geschlecht=anfrage['geschlecht'],
-                morphs=anfrage['morphs'], bauart=anfrage['bauart'])
+                morphs=anfrage['morphs'], bauart=anfrage['bauart'],
+                regler=anfrage['regler'])
         except EntwurfFehler as fehler:
             logger.warning('GarmentCode gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)

@@ -15,6 +15,17 @@ export class Greifrechnung {
     /** Kleiner Radius um die Objektmitte: dort ist der Winkel Zufall. */
     static MINDESTABSTAND = 8;
 
+    /**
+     * Waagrechter Mausweg in Bildpunkten, der die Figur verdoppelt.
+     *
+     * Die Größe hängt am WAAGRECHTEN Weg, nicht am Abstand zur Figurmitte.
+     * Gemessen am 06.09.2026: Mit dem Abstand als Maß änderten 200 Bildpunkte
+     * nach rechts die Größe um 0,2 % — die Bewegung lief auf einem Kreis um
+     * die Mitte, und dort passiert nichts. Wer „größer" will, zieht nach
+     * rechts; das ist vorhersehbar und hat keinen toten Bereich.
+     */
+    static VERDOPPLUNG_PX = 300;
+
     /** Ein Faktor darunter oder darüber ist keine Absicht mehr. */
     static KLEINSTER = 0.01;
     static GROESSTER = 100;
@@ -63,15 +74,14 @@ export class Greifrechnung {
     }
 
     /**
-     * Skalierfaktor: wie viel weiter der Zeiger jetzt von der Mitte weg ist.
-     * 1 heißt „unverändert" — auch dann, wenn nichts Brauchbares herauskommt.
+     * Skalierfaktor aus der waagrechten Mausbewegung: rechts größer, links
+     * kleiner, `VERDOPPLUNG_PX` je Verdopplung. 1 heißt „unverändert" — auch
+     * dann, wenn nichts Brauchbares herauskommt.
      */
-    static faktor(mitte, von, nach) {
-        const a = Greifrechnung._abstand(mitte, von);
-        const b = Greifrechnung._abstand(mitte, nach);
-        if (!isFinite(a) || !isFinite(b)) return 1;
-        if (a < Greifrechnung.MINDESTABSTAND) return 1;
-        const f = b / a;
+    static faktor(von, nach) {
+        const weg = Number(nach?.x) - Number(von?.x);
+        if (!isFinite(weg)) return 1;
+        const f = Math.pow(2, weg / Greifrechnung.VERDOPPLUNG_PX);
         if (!isFinite(f) || f < Greifrechnung.KLEINSTER || f > Greifrechnung.GROESSTER) return 1;
         return f;
     }

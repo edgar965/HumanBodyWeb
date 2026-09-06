@@ -26,6 +26,7 @@ GET/HEAD/OPTIONS. Geprueft, dass keine der dreizehn Vorlagen ein
 
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.generic import TemplateView
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 
 class Vorlagenseite(TemplateView):
@@ -55,7 +56,14 @@ class Vorlagenseite(TemplateView):
 # --- Charakter und Szene ----------------------------------------------------
 character_viewer = Vorlagenseite.ansicht('character_viewer.html',
                                          'character_viewer')
-scene_config = Vorlagenseite.ansicht('scene_config.html', 'scene_config')
+# Die Szene-Seite setzt das CSRF-Cookie: Ihre Endpunkte (GarmentCode) sind
+# echte POSTs, und `Serverabruf._csrfKopf()` schickt den Kopf nur, wenn ein
+# Token im Cookie steht. Ohne das kam auf `/api/garmentcode/*` ein 403 —
+# gemessen 06.09.2026: die Seite lieferte ueberhaupt kein Cookie aus.
+# Nur diese eine Seite, nicht `Vorlagenseite` insgesamt: die uebrigen zwoelf
+# Seiten arbeiten mit `csrf_exempt`-Endpunkten und brauchen es nicht.
+scene_config = ensure_csrf_cookie(
+    Vorlagenseite.ansicht('scene_config.html', 'scene_config'))
 scene_model = Vorlagenseite.ansicht('scene_model.html', 'scene_model')
 
 # --- Theatre ----------------------------------------------------------------

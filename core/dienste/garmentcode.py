@@ -121,16 +121,24 @@ class GarmentcodeDienst:
 
     # ---------------------------------------------------------------- erzeugen
 
+    @staticmethod
+    def regler(vorlage):
+        """Die Feineinstellungen eines Kleidungsstuecks."""
+        from GarmentCode.katalog import Katalog
+        if not Katalog.kennt(vorlage):
+            return []
+        return Katalog.regler(vorlage)
+
     @classmethod
     def erzeugen(cls, vorlage, geschlecht='female', morphs=None, bauart=None,
-                 name=None):
+                 name=None, regler=None):
         """Ein Kleidungsstueck fuer die gewaehlte Figur bauen."""
         from GarmentCode.entwurf import Entwurf
         masse, _ = cls.masse(geschlecht, morphs=morphs, bauart=bauart)
         name = name or ('%s_%s' % (vorlage, geschlecht))
-        logger.info('GarmentCode: erzeuge %s (%s, %d Morphs)',
-                    vorlage, geschlecht, len(morphs or {}))
-        return Entwurf(vorlage, masse).erzeugen(name=name)
+        logger.info('GarmentCode: erzeuge %s (%s, %d Morphs, %d Regler)',
+                    vorlage, geschlecht, len(morphs or {}), len(regler or {}))
+        return Entwurf(vorlage, masse, regler=regler).erzeugen(name=name)
 
     # --------------------------------------------------------------- 3D
 

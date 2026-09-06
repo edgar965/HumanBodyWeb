@@ -14,6 +14,7 @@
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { state } from './state.js';
+import { garmentcodeRegler } from './garmentcode_regler.js';
 
 class GarmentcodeReiter {
     constructor() {
@@ -31,6 +32,14 @@ class GarmentcodeReiter {
 
         const knopf = document.getElementById('gc-erzeugen');
         if (knopf) knopf.addEventListener('click', () => this.bauen());
+
+        // Ein anderes Kleidungsstück hat andere Einstellungen — eine Hose
+        // hat keinen Kragen. Deshalb bei jedem Wechsel neu holen.
+        const auswahl = document.getElementById('gc-vorlage');
+        if (auswahl) {
+            auswahl.addEventListener('change',
+                () => garmentcodeRegler.laden(auswahl.value));
+        }
     }
 
     /** Beim Öffnen: Figur prüfen, Zustand und Maße nebenher holen. */
@@ -89,25 +98,27 @@ class GarmentcodeReiter {
                 : 'nur Schnittmuster (Simulation nicht eingerichtet)';
             feld.textContent = `Bereit — ${zustand.entwuerfe.length} Vorlagen, ${dreid}.`;
             this.vorlagenFuellen(zustand.entwuerfe);
+            const auswahl = document.getElementById('gc-vorlage');
+            if (auswahl && auswahl.value) garmentcodeRegler.laden(auswahl.value);
         } catch (fehler) {
             feld.textContent = `Status nicht abrufbar: ${fehler.message || fehler}`;
         }
     }
 
     /**
-     * Gezeigt werden die Parametersätze aus `design_params` — das sind die,
-     * die `MetaGarment` direkt versteht. Die Programmnamen (`tee`, `pants`,
-     * …) sind Bausteine, kein fertiger Entwurf, und liefen ins Leere.
+     * Die Liste kommt aus `GarmentCode/katalog.py` — fertige Kombinationen
+     * der drei Bausteine (Oberteil, Bund, Unterteil), unter deutschen Namen.
+     * Die zwei Dateien in `design_params` waren nie die Auswahl, sondern nur
+     * zwei Beispiele.
      */
     vorlagenFuellen(entwuerfe) {
         const auswahl = document.getElementById('gc-vorlage');
         if (!auswahl || !entwuerfe.length) return;
-        const beschriftung = { 't-shirt': 'T-Shirt', 'default': 'Grundentwurf' };
         auswahl.innerHTML = '';
-        for (const name of entwuerfe) {
+        for (const stueck of entwuerfe) {
             const eintrag = document.createElement('option');
-            eintrag.value = name;
-            eintrag.textContent = beschriftung[name] || name;
+            eintrag.value = stueck.name;
+            eintrag.textContent = stueck.titel || stueck.name;
             auswahl.appendChild(eintrag);
         }
     }
@@ -133,16 +144,19 @@ class GarmentcodeReiter {
         try {
             const daten = this.figurdaten(figur);
             daten.append('vorlage', document.getElementById('gc-vorlage').value);
-            const ergebnis = await Serverabruf.json('/api/garmentcode/erzeugen/', {
-                method: 'POST', body: daten,
-            });
+            daten.append('regler', garmentcodeRegler.alsJson());
+            const ergebnis = await Serverabruf.formular(
+                '/api/garmentcode/erzeugen/', daten);
             if (ergebnis.fehler) {
                 meldung.textContent = `Fehlgeschlagen: ${ergebnis.fehler}`;
                 return;
             }
             const warnung = ergebnis.selbstdurchdringend
                 ? ' — Achtung: Schnitt durchdringt sich selbst' : '';
-            meldung.textContent = `Schnitt fertig: ${ergebnis.name}${warnung}`;
+            const eigene = garmentcodeRegler.anzahl;
+            const zusatz = eigene ? ` (${eigene} eigene Einstellungen)` : '';
+            meldung.textContent =
+                `Schnitt fertig: ${ergebnis.name}${zusatz}${warnung}`;
             if (ergebnis.vorschau) {
                 const bild = document.createElement('img');
                 bild.src = ergebnis.vorschau;
@@ -172,9 +186,8 @@ class GarmentcodeReiter {
         const daten = this.figurdaten(figur);
         daten.append('spezifikation', spezifikation);
         try {
-            const netz = await Serverabruf.json('/api/garmentcode/drapieren/', {
-                method: 'POST', body: daten,
-            });
+            const netz = await Serverabruf.formular(
+                '/api/garmentcode/drapieren/', daten);
             if (netz.fehler) {
                 meldung.textContent = `Schnitt fertig, Drapierung scheiterte: `
                     + `${netz.fehler}`;
@@ -199,9 +212,8 @@ class GarmentcodeReiter {
         if (!figur || !liste) return;
         liste.innerHTML = '<div class="hb-hinweis">Figur wird vermessen …</div>';
         try {
-            const antwort = await Serverabruf.json('/api/garmentcode/masse/', {
-                method: 'POST', body: this.figurdaten(figur),
-            });
+            const antwort = await Serverabruf.formular(
+                '/api/garmentcode/masse/', this.figurdaten(figur));
             this.masseFuer = figur.id;
             liste.innerHTML = '';
             for (const [name, wert] of Object.entries(antwort.masse)) {

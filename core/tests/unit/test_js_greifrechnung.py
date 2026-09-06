@@ -11,6 +11,10 @@ Three.js-Geometrie:
    nach unten) und springt am Halbkreis nicht um.
 3. Direkt auf der Figurmitte ist der Winkel Zufall: dort bleibt es bei 0, sonst
    spränge die Figur beim ersten Pixel um 180 Grad.
+3b. Die Größe hängt am WAAGRECHTEN Mausweg, nicht am Abstand zur Figurmitte.
+   Gemessen am 06.09.2026: Mit dem Abstand als Maß änderten 200 Bildpunkte nach
+   rechts die Größe um 0,2 % — die Bewegung lief auf einem Kreis um die Mitte
+   (Edgar: „auch s funktioniert nicht richtig").
 4. Ein Skalierfaktor ist nie 0, NaN oder Unendlich — ein `scale` von NaN macht
    die Figur unsichtbar, ohne einen Fehler zu werfen.
 
@@ -53,18 +57,24 @@ pruefe('andersherum', grad(Greifrechnung.winkel(m, {x: 100, y: 0}, {x: 200, y: 1
 const knapp = grad(Greifrechnung.winkel(m, {x: 200, y: 99}, {x: 200, y: 101}));
 if (Math.abs(knapp) > 5) throw new Error('Sprung am Halbkreis: ' + knapp);
 
-// --- 3. Auf der Mitte gibt es keinen Winkel und keinen Faktor ---------------
+// --- 3. Auf der Mitte gibt es keinen Winkel ---------------------------------
 pruefe('Start auf der Mitte', Greifrechnung.winkel(m, {x: 100, y: 100}, {x: 200, y: 100}), 0);
 pruefe('Ziel auf der Mitte', Greifrechnung.winkel(m, {x: 200, y: 100}, {x: 102, y: 100}), 0);
-pruefe('Faktor von der Mitte', Greifrechnung.faktor(m, {x: 101, y: 100}, {x: 200, y: 100}), 1);
 
-// --- 4. Faktoren -----------------------------------------------------------
-pruefe('doppelt', rund(Greifrechnung.faktor(m, {x: 150, y: 100}, {x: 200, y: 100})), 2);
-pruefe('halb', rund(Greifrechnung.faktor(m, {x: 200, y: 100}, {x: 150, y: 100})), 0.5);
-for (const [von, nach] of [[{x: 200, y: 100}, {x: 100, y: 100}],
-                           [{x: 200, y: 100}, {x: NaN, y: 100}],
-                           [{x: 200, y: 100}, {x: 1e9, y: 100}]]) {
-    const f = Greifrechnung.faktor(m, von, nach);
+// --- 4. Die Groesse haengt am WAAGRECHTEN Weg -------------------------------
+// 300 Bildpunkte nach rechts verdoppeln, nach links halbieren.
+pruefe('doppelt', rund(Greifrechnung.faktor({x: 100, y: 100}, {x: 400, y: 100})), 2);
+pruefe('halb', rund(Greifrechnung.faktor({x: 400, y: 100}, {x: 100, y: 100})), 0.5);
+pruefe('halber Weg', rund(Greifrechnung.faktor({x: 0, y: 0}, {x: 150, y: 0})), 1.4142);
+// Senkrecht bewegt sich nichts an der Groesse.
+pruefe('nur hoch', Greifrechnung.faktor({x: 100, y: 100}, {x: 100, y: 900}), 1);
+// Unsinn ergibt 1, nie NaN: ein `scale` von NaN macht die Figur unsichtbar.
+for (const [von, nach] of [[{x: 200, y: 100}, {x: NaN, y: 100}],
+                           [{x: NaN, y: 100}, {x: 200, y: 100}],
+                           [{x: 0, y: 0}, {x: 1e9, y: 0}],
+                           [{x: 0, y: 0}, {x: -1e9, y: 0}],
+                           [null, undefined]]) {
+    const f = Greifrechnung.faktor(von, nach);
     if (f !== 1) throw new Error('Faktor ' + f + ' statt 1');
 }
 

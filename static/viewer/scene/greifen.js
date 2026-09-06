@@ -2,6 +2,7 @@ import { THREE } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Greifrechnung } from '../gemeinsam/greifrechnung.js';
+import { Greifgeometrie } from './greifgeometrie.js';
 
 /**
  * Greifen — G, R und S so, wie die Zeile unter der Figur es verspricht.
@@ -26,18 +27,22 @@ export class Greifen {
     /** Die letzte bekannte Zeigerposition — beim Tastendruck gibt es kein Event. */
     static _zeiger = { x: 0, y: 0 };
 
-    /** Darunter zeigt die Kamera senkrecht nach unten: dann gibt es kein „weg". */
-    static MIN_WAAGRECHT = 1e-6;
-
     static laeuft() {
         return Greifen.aktiv !== null;
     }
 
-    /** Einmal beim Seitenaufbau: den Zeiger mitverfolgen. */
-    static beobachten(leinwand) {
-        leinwand.addEventListener('pointermove', (e) => {
+    /**
+     * Einmal beim Seitenaufbau: den Zeiger mitverfolgen.
+     *
+     * Auf `window`, nicht auf der Leinwand: Wer die Maus zuletzt über dem
+     * Bedienfeld hatte und dann G drückt, hätte sonst einen veralteten
+     * Startpunkt — und die Figur spränge beim ersten Wackeln meterweit
+     * (gemessen am 06.09.2026: 2,7 m).
+     */
+    static beobachten() {
+        window.addEventListener('pointermove', (e) => {
             Greifen._zeiger = { x: e.clientX, y: e.clientY };
-        }, { passive: true });
+        }, { passive: true, capture: true });
     }
 
     /**
@@ -57,7 +62,10 @@ export class Greifen {
         this.objekt = inst.group;
         this.modus = modus;
         this.achse = null;
-        this.start = Greifen._zeiger;
+        // Der Startpunkt wird erst bei der ERSTEN Bewegung gesetzt. So kann
+        // kein veralteter Zeigerstand die Figur springen lassen, egal woher
+        // die Maus kommt.
+        this.start = null;
         this.wert = modus === 'scale' ? 1 : (modus === 'rotate' ? 0 : { x: 0, y: 0, z: 0 });
 
         // Ausgangsstand, damit Escape ihn zurückholen kann.
@@ -65,13 +73,13 @@ export class Greifen {
         this.drehung = this.objekt.quaternion.clone();
         this.groesse = this.objekt.scale.clone();
 
-        this.mitte = this._mitteImBild();
+        this.mitte = Greifgeometrie.mitteImBild(this.objekt);
         // Die Bezugsebene liegt fest, wo die Figur BEIM START stand. Wandert
         // sie mit der schon verschobenen Figur mit, misst man gegen sich
         // selbst und die Bewegung geht auf null zurück (06.09.2026 gemessen).
         this.weltStart = this.objekt.getWorldPosition(new THREE.Vector3());
-        this.ebene = this._ebene();
-        this.startpunkt = this._aufDerEbene(this.start);
+        this.ebene = Greifgeometrie.ebene(this.weltStart, this.achse);
+        this.startpunkt = null;
 
         this.kameraFrei = state.controls.enabled;
         state.controls.enabled = false;
@@ -85,6 +93,11 @@ export class Greifen {
     // -- Ablauf ---------------------------------------------------------------
 
     bewegen(punkt) {
+        if (!this.start) {
+            this.start = { x: punkt.x, y: punkt.y };
+            this.startpunkt = Greifgeometrie.aufDerEbene(this.ebene, this.start);
+            return;                       // die erste Bewegung ist der Bezug
+        }
         if (this.modus === 'translate') this._verschieben(punkt);
         else if (this.modus === 'rotate') this._drehen(punkt);
         else this._skalieren(punkt);
@@ -95,7 +108,7 @@ export class Greifen {
     /** Auf eine Achse beschränken — oder die Beschränkung wieder aufheben. */
     beschraenken(achse) {
         this.achse = (this.achse === achse) ? null : achse;
-        this.bewegen(Greifen._zeiger);
+        if (this.start) this.bewegen(Greifen._zeiger);
     }
 
     bestaetigen() {
@@ -117,13 +130,13 @@ export class Greifen {
     // -- Die drei Bewegungen --------------------------------------------------
 
     _verschieben(punkt) {
-        const jetzt = this._aufDerEbene(punkt);
+        const jetzt = Greifgeometrie.aufDerEbene(this.ebene, punkt);
         if (!jetzt || !this.startpunkt) return;
         const roh = jetzt.clone().sub(this.startpunkt);
         // Y meint ausdrücklich die Höhe, alles andere den Boden.
         const d = (this.achse === 'y')
             ? Greifrechnung.maskieren({ x: roh.x, y: roh.y, z: roh.z }, 'y')
-            : Greifrechnung.maskieren(this._aufDenBoden(roh), this.achse);
+            : Greifrechnung.maskieren(Greifgeometrie.aufDenBoden(roh), this.achse);
         this.wert = d;
         this.objekt.position.set(this.position.x + d.x, this.position.y + d.y,
                                  this.position.z + d.z);
@@ -145,7 +158,7 @@ export class Greifen {
     }
 
     _skalieren(punkt) {
-        const f = Greifrechnung.faktor(this.mitte, this.start, punkt);
+        const f = Greifrechnung.faktor(this.start, punkt);
         this.wert = f;
         if (this.achse) {
             this.objekt.scale.copy(this.groesse);
@@ -154,63 +167,6 @@ export class Greifen {
             this.objekt.scale.copy(this.groesse).multiplyScalar(f);
         }
         this.objekt.updateMatrixWorld(true);
-    }
-
-    // -- Geometrie ------------------------------------------------------------
-
-    /**
-     * Die Ebene, auf der gemessen wird: quer zur Kamera, durch den Punkt, an
-     * dem die Figur beim Start stand. Sie ist immer gut zu treffen — anders
-     * als der Boden, den eine fast waagrechte Kamera erst in 34 m Entfernung
-     * schneidet (gemessen am 06.09.2026: Kamera auf 1 m, Blick-y −0,03).
-     */
-    _ebene() {
-        const normale = state.camera.getWorldDirection(new THREE.Vector3()).negate();
-        return new THREE.Plane().setFromNormalAndCoplanarPoint(normale, this.weltStart);
-    }
-
-    /**
-     * Eine Bewegung in der Bildebene auf den Boden legen: seitwärts bleibt
-     * seitwärts, hoch heißt weiter weg. Die Höhe bleibt, wie sie war.
-     *
-     * WARUM: Figuren stehen. Wer eine zur Seite schiebt, will sie nicht
-     * nebenbei ein paar Zentimeter anheben — beim ersten Versuch kamen
-     * −0,31 m heraus, weil die Kamera fast waagrecht schaut und „Maus hoch"
-     * dort geradewegs nach oben zeigt. Wer die Höhe meint, drückt Y.
-     */
-    _aufDenBoden(roh) {
-        const rechts = new THREE.Vector3().setFromMatrixColumn(state.camera.matrixWorld, 0);
-        const oben = new THREE.Vector3().setFromMatrixColumn(state.camera.matrixWorld, 1);
-        const seitlich = roh.dot(rechts), hoch = roh.dot(oben);
-        const rechtsFlach = rechts.clone().setY(0);
-        const vornFlach = state.camera.getWorldDirection(new THREE.Vector3()).setY(0);
-        if (rechtsFlach.lengthSq() < Greifen.MIN_WAAGRECHT
-            || vornFlach.lengthSq() < Greifen.MIN_WAAGRECHT) {
-            // Senkrecht von oben: die Bildebene IST schon der Boden.
-            return { x: roh.x, y: 0, z: roh.z };
-        }
-        const v = rechtsFlach.normalize().multiplyScalar(seitlich)
-            .add(vornFlach.normalize().multiplyScalar(hoch));
-        return { x: v.x, y: 0, z: v.z };
-    }
-
-    /** Wo der Zeigerstrahl die Ebene trifft; null, wenn er sie verfehlt. */
-    _aufDerEbene(punkt) {
-        const r = state.canvas.getBoundingClientRect();
-        const zeiger = new THREE.Vector2(((punkt.x - r.left) / r.width) * 2 - 1,
-                                         -((punkt.y - r.top) / r.height) * 2 + 1);
-        const strahl = new THREE.Raycaster();
-        strahl.setFromCamera(zeiger, state.camera);
-        const treffer = new THREE.Vector3();
-        return strahl.ray.intersectPlane(this.ebene, treffer) ? treffer : null;
-    }
-
-    /** Die Figurmitte in Bildschirmkoordinaten — Bezug für Drehen und Größe. */
-    _mitteImBild() {
-        const r = state.canvas.getBoundingClientRect();
-        const p = this.objekt.getWorldPosition(new THREE.Vector3()).project(state.camera);
-        return { x: r.left + (p.x * 0.5 + 0.5) * r.width,
-                 y: r.top + (-p.y * 0.5 + 0.5) * r.height };
     }
 
     // -- Bedienung ------------------------------------------------------------
@@ -272,4 +228,4 @@ export class Greifen {
 }
 
 fn.greifenStarten = (modus) => Greifen.starten(modus);
-fn.greifenBeobachten = () => Greifen.beobachten(state.canvas);
+fn.greifenBeobachten = () => Greifen.beobachten();
