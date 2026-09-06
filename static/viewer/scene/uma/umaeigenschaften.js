@@ -3,8 +3,8 @@ import { markDirty } from '../undo.js';
 import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Umatyp } from './umatyp.js';
-import { Umamasse } from './umamasse.js';
 import { Umagarderobe } from './umagarderobe.js';
+import { Gemeinsameregler } from '../gemeinsameregler.js';
 
 /**
  * Umaeigenschaften — der Eigenschaften-Reiter für eine UMA-Figur.
@@ -31,20 +31,16 @@ export class Umaeigenschaften {
         document.getElementById('prop-uma-kopf').textContent = regler
             ? `${inst.datei} · ${regler.geschlecht} · ${regler.anzahl} Regler`
             : `${inst.datei} · keine Regler (UMA-Projekt nicht gefunden)`;
-        // Typ (Rasse) und die zwei Hauptmaße zuerst — Edgar, 06.09.2026:
-        // „Wo ist der Größen-, Gewichtregler?? wo ist der Regler nach Typ?"
+        // Der Typ (Rasse) zuerst — Edgar, 06.09.2026: „wo ist der Regler nach
+        // Typ?". Größe, Gewicht und Muskeln stehen seither im gemeinsamen
+        // Block darüber (`scene/gemeinsameregler.js`), zusammen mit den
+        // HumanBody-Reglern gleichen Namens.
         Umatyp.fuellen(inst, document.getElementById('prop-uma-typ'));
-        const masse = document.getElementById('prop-uma-masse');
-        Umamasse.fuellen(inst, masse, () => {
-            Umaeigenschaften._animationAnhalten(inst);
-            inst.anwenden();
-            Umaeigenschaften._einzelreglerAngleichen(inst);
-        });
         Umaeigenschaften._farben(inst, document.getElementById('prop-uma-farben'));
         const gruppen = document.getElementById('prop-uma-gruppen');
         gruppen.innerHTML = '';
         for (const gruppe of (regler ? regler.gruppen : [])) {
-            gruppen.appendChild(Umaeigenschaften._gruppe(inst, gruppe, masse));
+            gruppen.appendChild(Umaeigenschaften._gruppe(inst, gruppe));
         }
         const reset = document.getElementById('prop-uma-reset');
         if (reset) {
@@ -72,8 +68,17 @@ export class Umaeigenschaften {
         if (bereich) bereich.classList.add('hb-versteckt');
     }
 
-    /** Nach Größe oder Gewicht die betroffenen Einzelregler nachziehen. */
-    static _einzelreglerAngleichen(inst) {
+    /**
+     * Nach einem gemeinsamen Regler die Einzelregler darunter nachziehen.
+     * Öffentlich, weil `Gemeinsameregler` sie als Rückruf bekommt.
+     */
+    static einzelreglerAngleichen(inst) {
+        Umaeigenschaften._animationAnhalten(inst);
+        inst.anwenden();
+        Umaeigenschaften._reglerNachziehen(inst);
+    }
+
+    static _reglerNachziehen(inst) {
         for (const schieber of document.querySelectorAll('#prop-uma-gruppen input[data-name]')) {
             const wert = inst.dna[schieber.dataset.name];
             if (wert === undefined) continue;
@@ -83,7 +88,7 @@ export class Umaeigenschaften {
         }
     }
 
-    static _gruppe(inst, gruppe, masse) {
+    static _gruppe(inst, gruppe) {
         const kasten = document.createElement('details');
         kasten.className = 'uma-gruppe';
         kasten.open = gruppe.name === 'Körper';
@@ -91,12 +96,12 @@ export class Umaeigenschaften {
         titel.textContent = `${gruppe.name} (${gruppe.regler.length})`;
         kasten.appendChild(titel);
         for (const regler of gruppe.regler) {
-            kasten.appendChild(Umaeigenschaften._zeile(inst, regler, masse));
+            kasten.appendChild(Umaeigenschaften._zeile(inst, regler));
         }
         return kasten;
     }
 
-    static _zeile(inst, regler, masse) {
+    static _zeile(inst, regler) {
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
         const wert = Math.round((inst.dna[regler.name] ?? regler.vorgabe) * 100);
@@ -111,7 +116,9 @@ export class Umaeigenschaften {
             inst.dna[regler.name] = parseInt(schieber.value, 10) / 100;
             anzeige.textContent = schieber.value;
             inst.anwenden();
-            if (masse) Umamasse.angleichen(inst, masse);
+            // Ein Einzelregler kann einen gemeinsamen mitbewegen (etwa
+            // `belly` das Gewicht) — den Block darüber nachziehen.
+            Gemeinsameregler.angleichen(inst);
         });
         schieber.addEventListener('change', () => markDirty(`UMA ${regler.name}`));
         return zeile;

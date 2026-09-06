@@ -127,4 +127,23 @@ export class Morphliste {
             if (jeMorph && regler.dataset.morph) jeMorph(regler.dataset.morph);
         }
     }
+
+    /**
+     * Die Regler auf den Stand der Figur nachziehen.
+     *
+     * Nötig, seit ein gemeinsamer Regler mehrere Morphs auf einmal stellt
+     * (`scene/gemeinsameregler.js`, 06.09.2026): Ohne das zeigte die Liste
+     * weiter 0, während die Figur längst gewölbt war — zwei Bedienelemente
+     * für dieselbe Zahl, die sich widersprechen.
+     *
+     * @param werte  {morphname: Bruch -1..1}
+     */
+    static angleichen(behaelter, werte) {
+        for (const regler of behaelter.querySelectorAll('input[data-morph]')) {
+            regler.value = Math.round((werte[regler.dataset.morph] || 0) * 100);
+            if (regler.nextElementSibling) {
+                regler.nextElementSibling.textContent = regler.value;
+            }
+        }
+    }
 }

@@ -8,17 +8,13 @@ import { escapeHtml } from './utils.js';
 import { markDirty } from './undo.js';
 import { _sameSubMesh, getSelectableSubMeshes } from './teilnetz_auswahl.js';
 import { Charakterkoerper } from './charakter_koerper.js';
-import { Morphliste } from '../gemeinsam/morphliste.js';
-import { Metaregler } from '../gemeinsam/metaregler.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 import { Umaeigenschaften } from './uma/umaeigenschaften.js';
 import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
 import { Transformfelder } from './transformfelder.js';
 import { Figurmerker } from './figurmerker.js';
-
-/** Unter diesem Betrag gilt ein Morph als aus und wird aus der Figur entfernt. */
-const MORPH_SCHWELLE = 0.005;
+import { Formbedienung } from './formbedienung.js';
 
 export function initTabs() {
     document.querySelectorAll('.panel-tab').forEach(tab => {
@@ -37,7 +33,7 @@ export function initTabs() {
             const inst = state.characters.get(state.currentPropsCharId);
             if (!inst) return;
             inst.morphs = {};
-            populateMorphSliders(inst);
+            Formbedienung.humanbody(inst, state.morphDefs, reloadCharacterMesh);
             reloadCharacterMesh(inst);
         });
     }
@@ -69,6 +65,10 @@ export async function populateProperties(charId) {
     Eigenschaftenbereiche.umaGarderobe(uma ? inst : null);
     if (uma) {
         Umaeigenschaften.fuellen(inst);
+        // Ein Name, zwei Übersetzungen: derselbe Block wie bei HumanBody,
+        // hier auf Knochen (Edgar, 06.09.2026).
+        await Formbedienung.uma(
+            inst, () => Umaeigenschaften.einzelreglerAngleichen(inst));
         _updatePropContext();
         _gemerktesHerstellen(charId);
         return;
@@ -78,8 +78,10 @@ export async function populateProperties(charId) {
     updateEquippedList(inst);
     populateBodyType(inst);
     populatePresets(inst);
-    populateMetaSliders(inst);
-    populateMorphSliders(inst);
+    // Metaregler, gemeinsamer Block und Einzelmorphs — sie ziehen sich
+    // gegenseitig nach (`Formbedienung`). Nach `fetchMorphDefs`, weil der
+    // gemeinsame Block die Morphnamen dieses Körpertyps braucht.
+    await Formbedienung.humanbody(inst, state.morphDefs, reloadCharacterMesh);
     fn.syncHairSelect(inst);
     _updatePropContext();
     _gemerktesHerstellen(charId);
@@ -104,6 +106,7 @@ export function clearProperties() {
     state.currentPropsCharId = null;
     Eigenschaftenbereiche.zeigen(false);
     Umaeigenschaften.leeren();
+    Formbedienung.leeren();
     Eigenschaftenbereiche.umaGarderobe(null);
 }
 
@@ -149,64 +152,6 @@ async function populatePresets(inst) {
             serverLog('preset_applied', p.label);
         });
     } catch(e) { console.error('Failed to load presets:', e); }
-}
-
-/**
- * Metaregler der Figur. Die Werte stehen in der Figur als -1..1 und im Regler
- * in ihrer Einheit — die Umrechnung kommt aus `Metaregler`, wo sie einmal
- * steht (war vorher an fünf Stellen ausgeschrieben).
- */
-function populateMetaSliders(inst) {
-    const container = document.getElementById('prop-meta-sliders');
-    container.innerHTML = '';
-    for (const [name, meta] of Object.entries(state.morphDefs?.meta_sliders || {})) {
-        const angezeigt = Math.round(
-            Metaregler.aussen(inst.meta[name] || 0, meta.min, meta.max));
-        const row = document.createElement('div');
-        row.className = 'slider-row';
-        const label = document.createElement('label');
-        label.textContent = meta.label || name;
-        const slider = document.createElement('input');
-        Object.assign(slider, { type: 'range', min: meta.min, max: meta.max,
-                                step: 1, value: angezeigt });
-        slider.dataset.meta = name;
-        const valSpan = document.createElement('span');
-        valSpan.className = 'slider-val';
-        valSpan.textContent = angezeigt;
-        slider.addEventListener('input', () => { valSpan.textContent = slider.value; });
-        // Erst beim Loslassen, weil danach das Netz neu geholt wird.
-        slider.addEventListener('change', () => {
-            inst.meta[name] = Metaregler.innen(parseFloat(slider.value),
-                                               meta.min, meta.max);
-            reloadCharacterMesh(inst);
-        });
-        row.append(label, slider, valSpan);
-        container.appendChild(row);
-    }
-}
-
-/**
- * Morphregler der Figur — dieselbe Liste wie auf den anderen Seiten, deshalb
- * aus `Morphliste`. Eigen ist hier nur: Meldung erst beim Loslassen, Pfeil vor
- * dem Kategorienamen, und Werte unter der Schwelle werden ganz entfernt, damit
- * die Figur keine Nullwerte mitschleppt.
- */
-function populateMorphSliders(inst) {
-    const container = document.getElementById('prop-morphs-panel');
-    if (!state.morphDefs?.morphs || !state.morphDefs?.categories) {
-        container.innerHTML = '';
-        return;
-    }
-    new Morphliste({
-        ereignis: 'change',
-        chevron: true,
-        startwert: name => inst.morphs[name],
-        geaendert: (name, wert) => {
-            if (Math.abs(wert) < MORPH_SCHWELLE) delete inst.morphs[name];
-            else inst.morphs[name] = wert;
-            reloadCharacterMesh(inst);
-        },
-    }).bauen(container, state.morphDefs.morphs, state.morphDefs.categories);
 }
 
 /** Ruhezeit, bevor das Netz neu geholt wird — beim Ziehen sammeln sich Werte. */

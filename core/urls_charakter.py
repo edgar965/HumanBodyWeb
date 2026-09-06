@@ -32,6 +32,7 @@ from .api.posen import Posen
 from .api.skelettdaten import Skelettdaten
 from .api.umafigur import Umafigur
 from .api.umakleidung import Umakleidung
+from .api.gemeinsameregler import Gemeinsameregler
 from .api.netz import Netzendpunkte
 from .api.kleidung import Kleidung
 
@@ -73,6 +74,9 @@ CHARAKTER = [
          name='mh_push_outside'),
     path('api/character/mesh/', Netzendpunkte.netz, name='character_mesh'),
     path('api/character/morphs/', Netzendpunkte.regler, name='character_morphs'),
+    # Die gemeinsame Reglertabelle: ein Name, zwei Uebersetzungen (06.09.2026).
+    path('api/character/regler/gemeinsam/', Gemeinsameregler.tabelle,
+         name='regler_gemeinsam'),
     path('api/character/rig/', Skelettdaten.rig, name='character_rig'),
     path('api/character/rigify-skeleton/', Skelettdaten.def_skelett,
          name='character_rigify_skeleton'),

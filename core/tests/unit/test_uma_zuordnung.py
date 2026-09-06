@@ -113,6 +113,16 @@ class EchteGlbTest(SimpleTestCase):
     def _ort(self, name):
         return self.welt[name]['world_pos']
 
+    def _spitze(self, name):
+        u"""Das Ende einer Knochenkette — mit oder ohne `_end`-Blatt.
+
+        Manche Exportlaeufe schreiben zu jedem Blattknochen einen synthetischen
+        Endpunkt `<name>_end` (232 Knoten), andere nicht (159). Beides ist
+        gueltig; der Retarget liest die Endpunkte nicht. Der Test darf davon
+        nicht abhaengen (06.09.2026: `UmaKleidung.glb` kam ohne sie zurueck).
+        """
+        return self._ort('%s_end' % name if '%s_end' % name in self.welt else name)
+
     def test_jeder_uma_name_kommt_in_der_glb_vor(self):
         namen = set(self.skelett.namen())
         fehlend = [n for n in DEF_ZU_UMA.values() if n not in namen]
@@ -129,7 +139,7 @@ class EchteGlbTest(SimpleTestCase):
         u"""Der kleine Finger: kuerzeste Kette der vier Langfinger und am
         weitesten vom Daumen entfernt."""
         def laenge(n):
-            return np.linalg.norm(self._ort('LeftHandFinger0%s_03_end' % n)
+            return np.linalg.norm(self._spitze('LeftHandFinger0%s_03' % n)
                                   - self._ort('LeftHandFinger0%s_01' % n))
         self.assertEqual(min('1234', key=laenge), '1')
         daumen = self._ort('LeftHandFinger05_01')
