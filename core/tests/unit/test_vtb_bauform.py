@@ -36,8 +36,10 @@ class EineQuelle(unittest.TestCase):
     u"""Was zweimal dastand, hat zwei Korrekturen nur halb bekommen."""
 
     #: Namen, die es im Baum genau EINMAL auf Modulebene geben darf.
+    #: `Smplskelett` steht seit dem 07.09.2026 NICHT mehr hier — siehe
+    #: `test_smplskelett_kommt_aus_dem_paket`.
     EINMALIG = ('Smplxmodell', 'Koerpermasse', 'Baum', 'Videolauf',
-                'Csvschreiber', 'Koerperpunkte', 'Smplskelett',
+                'Csvschreiber', 'Koerperpunkte',
                 'Unterlauf', 'Backendpruefung', 'Fremdlauf')
 
     def test_jede_klasse_gibt_es_nur_einmal(self):
@@ -46,6 +48,26 @@ class EineQuelle(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertEqual(len(namen.get(name, [])), 1,
                                  '%s steht in %s' % (name, namen.get(name)))
+
+    def test_smplskelett_kommt_aus_dem_paket(self):
+        u"""Die Skelettdefinition liegt in `A:\\3DTools\\SMPL`, nicht hier.
+
+        Sie ist am 07.09.2026 dorthin gezogen (Edgar: „packe den ganzen
+        SMPL code hierhin"), weil es ZWEI Klassen namens `Smplskelett` gab
+        — eine hier, eine neue in der Web-Schicht. `wrappers/smplskelett.py`
+        ist seither nur noch eine Weiterleitung, damit die Pipelines unter
+        Python 3.10 unveraendert weiterlaufen.
+
+        Der Test bleibt scharf: Wer die Klasse hier wieder AUSSCHREIBT,
+        statt sie zu importieren, baut die Dopplung neu auf.
+        """
+        namen = Wrapperquellen.modulebene()
+        self.assertEqual(namen.get('Smplskelett', []), [],
+                         'Smplskelett wieder im Wrapperbaum definiert')
+        weiter = [t for p, t in Wrapperquellen.texte()
+                  if p.name == 'smplskelett.py']
+        self.assertEqual(len(weiter), 1, 'Weiterleitung fehlt')
+        self.assertIn('from SMPL.skelett import Smplskelett', weiter[0])
 
     def test_die_masse_werden_an_einer_stelle_gerechnet(self):
         u"""Der Befund: zwei `_body_measurements` mit anderem Ergebnis."""

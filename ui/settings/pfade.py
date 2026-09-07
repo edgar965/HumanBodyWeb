@@ -16,8 +16,8 @@ Modul, und beide haben eine Vorgeschichte:
 
 import os
 
-from .wurzeln import (HUMANBODY_ROOT, MOCAPNET_ROOT, TOOLS_ROOT,
-                      VIDEOTOBVH_ROOT)
+from .wurzeln import (ASSETS_ROOT, HUMANBODY_ROOT, MOCAPNET_ROOT,
+                      TOOLS_ROOT, VIDEOTOBVH_ROOT)
 
 #: Pipeline-Python (venv mit CUDA-PyTorch, ONNX Runtime GPU).
 PIPELINE_PYTHON = str(TOOLS_ROOT / 'python10' / 'Scripts' / 'python.exe')

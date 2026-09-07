@@ -13,6 +13,7 @@ import { Animationsstopp } from '../gemeinsam/animationsstopp.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
 import { Umaanimation } from './uma/umaanimation.js';
+import { Eigenanimation } from './eigenanimation.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Abspielsteuerung } from './abspielsteuerung.js';
 import { Figurmerker } from './figurmerker.js';
@@ -29,9 +30,15 @@ export function stopAnimation(destroy = false) {
     const inst = state._animatedCharId
         ? state.characters.get(state._animatedCharId) : null;
     const uma = !!inst && inst.quelle === 'uma';
-    const skelett = uma ? inst.skelett : (inst ? inst.rigifySkeleton : state.rigifySkeleton);
+    const eigen = Eigenanimation.passt(inst);
+    const skelett = (uma || eigen) ? inst.skelett
+        : (inst ? inst.rigifySkeleton : state.rigifySkeleton);
     if (uma) {
         Umaanimation.anhalten(inst);     // kein `pose()`: das wäre die Bindpose der GLB
+    } else if (eigen) {
+        // SMPL und MakeHuman: `pose()` ist hier richtig — ihre Bindpose IST
+        // die Ruhelage, die der Server gerechnet hat (`gelenkskelett.py`).
+        Eigenanimation.anhalten(inst);
     } else if (inst ? (inst.isSkinned && skelett) : (state.isSkinned && skelett)) {
         skelett.skeleton.pose();
     }
@@ -60,6 +67,32 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
             abspielsteuerung.meldung(`Fehler: ${fehler.message || fehler}`);
             Protokoll.fehler('Umaanimation', 'Retarget auf UMA fehlgeschlagen', fehler);
         }
+        abspielsteuerung.knoepfeAngleichen();
+        return;
+    }
+    // SMPL und MakeHuman haben ihr eigenes Skelett und ihre eigenen
+    // Hautgewichte. Ohne diesen Zweig liefen sie in den DEF-Weg darunter,
+    // und der hängt ihnen das Rigify-Skelett an — 176 fremde Knochen und
+    // Hautgewichte für eine andere Topologie (07.09.2026).
+    if (Eigenanimation.passt(inst)) {
+        try {
+            const clip = await Eigenanimation.starten(inst, url, rawBvhText);
+            abspielsteuerung.meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
+        } catch (fehler) {
+            abspielsteuerung.meldung(`Fehler: ${fehler.message || fehler}`);
+            Protokoll.fehler('Eigenanimation',
+                             `Retarget auf ${inst.quelle} fehlgeschlagen`, fehler);
+        }
+        abspielsteuerung.knoepfeAngleichen();
+        return;
+    }
+    // Eine Figur mit eigener Quelle, aber OHNE Skelett (GarmentCodes eigene
+    // Körper ohne SMPL-Topologie, MakeHuman ohne Upstream) bekommt keine
+    // Ersatzknochen: Das sagt die Meldung, statt dass ein fremdes Rig
+    // stillschweigend einspringt.
+    if (inst && Eigenanimation.ZIELE[inst.quelle]) {
+        abspielsteuerung.meldung(
+            `${inst.quelle}-Figur ohne Skelett — nicht animierbar.`);
         abspielsteuerung.knoepfeAngleichen();
         return;
     }

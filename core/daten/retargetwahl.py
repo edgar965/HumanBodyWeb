@@ -25,21 +25,27 @@ class Retargetwahl:
     """Was der Aufrufer am Retarget einstellen darf."""
 
     __slots__ = ('groesse', 'format', 'fusskorrektur', 'delta_norm', 'ziel',
-                 'figur')
-    #: Ein Dateiname im Figurkatalog, kein Pfad (wie `Umafigur.NAME`).
-    FIGUR = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_ .\-]*\.glb$')
+                 'figur', 'makro', 'regler')
+    #: Ein Name ohne Pfad — bei UMA ein Dateiname im Figurkatalog (wie
+    #: `Umafigur.NAME`), bei SMPL der Koerpername aus `Smplfiguren.KOERPER`
+    #: bzw. einer Formvariante. Der Endpunkt prueft danach gegen seinen
+    #: eigenen Bestand; hier faellt nur weg, was nach Pfad aussieht.
+    FIGUR = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_ .\-]{0,120}$')
 
     #: Werte, die in der Abfragezeichenkette „ja" bedeuten.
     JA = ('1', 'true')
-    #: Zielskelette (`target=`): das DEF-Skelett oder die UMA-Figur aus dem
-    #: Figurkatalog (05.09.2026). Der erste Eintrag ist die Vorgabe.
-    ZIELE = ('def', 'uma')
+    #: Zielskelette (`target=`): das DEF-Skelett, die UMA-Figur aus dem
+    #: Figurkatalog (05.09.2026), der SMPL-Koerper oder die MakeHuman-Figur
+    #: (07.09.2026). Der erste Eintrag ist die Vorgabe.
+    ZIELE = ('def', 'uma', 'smpl', 'makehuman')
+    #: Ziele, deren `figur` ein GLB-Dateiname sein muss.
+    GLB_ZIELE = ('uma',)
 
     def __init__(self, werte, vorgabe_groesse):
         self.groesse = float(werte.get('body_height', vorgabe_groesse))
         self.format = werte.get('format', None)
-        self.fusskorrektur = (werte.get('foot_correction', '').lower()
-                              in self.JA)
+        self.fusskorrektur = str(
+            werte.get('foot_correction', '')).lower() in self.JA
         self.delta_norm = self._dreiwertig(werte.get('delta_norm', ''))
         self.ziel = (werte.get('target') or self.ZIELE[0]).lower()
         if self.ziel not in self.ZIELE:
@@ -53,6 +59,16 @@ class Retargetwahl:
         self.figur = (werte.get('figur') or '').strip() or None
         if self.figur and (not self.FIGUR.match(self.figur) or '..' in self.figur):
             raise ValueError('Ungültiger Figurname %r' % (self.figur,))
+        if (self.figur and self.ziel in self.GLB_ZIELE
+                and not self.figur.lower().endswith('.glb')):
+            raise ValueError('Ungültiger Figurname %r' % (self.figur,))
+        # Die Reglerstellung der MakeHuman-Figur (07.09.2026). Ihr Skelett
+        # sind Mittelwerte von Punkten DIESER Stellung — ohne sie stuende
+        # das Ziel in der Vorgabefigur, und die Bewegung landete auf einem
+        # anderen Koerper als dem in der Szene. 269 Regler passen in keine
+        # Abfragezeichenkette; sie kommen deshalb aus dem JSON-Rumpf.
+        self.makro = werte.get('makro') if isinstance(werte, dict) else None
+        self.regler = werte.get('regler') if isinstance(werte, dict) else None
 
     @staticmethod
     def _dreiwertig(roh):

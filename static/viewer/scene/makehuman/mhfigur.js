@@ -4,6 +4,8 @@ import { Netzgeometrie } from '../../gemeinsam/netzgeometrie.js';
 import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Mhkleidstueck } from './mhkleidstueck.js';
+import { Knochenbau } from '../../gemeinsam/knochenbau.js';
+import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
 
 /**
  * MhFigur — der MakeHuman-Basiskörper (hm08) als Figur der Szene.
@@ -80,6 +82,9 @@ export class MhFigur {
         this.selected = false;
         this.isSkinned = false;
         this.rigifySkeleton = null;
+        /** `default.mhskel` (163 Knochen) — dieselbe Form wie bei UMA,
+         *  damit `Rigauswahl` es ohne Sonderfall findet. */
+        this.skelett = null;
     }
 
     // ------------------------------------------------------------------ Körper
@@ -121,7 +126,10 @@ export class MhFigur {
         const geometrie = Netzgeometrie.bauen(daten, THREE, null, false);
         this.bodyMesh = new THREE.Mesh(geometrie, this.hautwerkstoff());
         this.bodyMesh.name = `makehuman_${this.modell}`;
-        this.group.add(this.bodyMesh);
+        // ERST das Skelett, DANN das Netz einhängen: Die Bindung braucht die
+        // Knochen in ihrer Ruhelage (`Eigenhaut.einhaengen`).
+        this._skelettBauen(daten.skelett);
+        this._hautBinden(daten.hautgewichte);
         this.hoehe = daten.hoehe || 0;
         this.punktzahl = daten.vertex_count || 0;
         this.bodyType = `MakeHuman · ${this.glatt ? 'geglättet' : 'Basisnetz'}`;
@@ -129,6 +137,37 @@ export class MhFigur {
             `${this.teile.join('+')}${this.glatt ? ' glatt' : ''}: `
             + `${this.punktzahl} Punkte, ${(this.hoehe * 100).toFixed(1)} cm`);
         return this;
+    }
+
+    /**
+     * `default.mhskel` aus der Antwort bauen — MakeHumans eigenes Rig.
+     *
+     * Zuerst abraeumen: `load()` laeuft bei JEDEM Reglerzug erneut (269
+     * Modellierregler, dazu Teileauswahl und Glättung). Ohne das hängen nach
+     * zehn Zügen zehn Skelette ineinander, und der `SkeletonHelper` zeigt
+     * die alten Stellungen mit.
+     */
+    _skelettBauen(angaben) {
+        this.skelett = Knochenbau.abraeumen(this.skelett);
+        if (!angaben) return;
+        this.skelett = Knochenbau.bauen(angaben, this.group);
+    }
+
+    /**
+     * Das Netz an MakeHumans eigenes Rig binden — sonst bleibt es beim
+     * Abspielen starr, während die Knochen sich bewegen.
+     *
+     * Die Gewichte stammen aus `default_weights.mhw` und sind durch dieselbe
+     * Catmull-Clark-Matrix gelaufen wie die Punkte (`Mhhaut`). Ohne Skelett
+     * oder ohne Gewichte hängt hier ein gewöhnliches `Mesh`.
+     */
+    _hautBinden(hautgewichte) {
+        if (this.skelett && hautgewichte) {
+            this.bodyMesh = Eigenhaut.binden(this.bodyMesh, this.skelett,
+                                             hautgewichte);
+        }
+        Eigenhaut.einhaengen(this.group, this.bodyMesh, this.skelett);
+        this.isSkinned = !!this.bodyMesh.isSkinnedMesh;
     }
 
     _altenKoerperWeg() {

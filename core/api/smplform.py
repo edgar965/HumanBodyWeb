@@ -3,7 +3,8 @@ u"""Ein SMPL-Koerper in anderer Form: Groesse und Fuelle als Regler.
 
     POST /api/character/smpl-figur/formen/
          {geschlecht: 'male'|'female', groesse: -100..100, fuelle: -100..100}
-      -> {name, geschlecht, betas, punkte, dreiecke, hoehe, masse, regler}
+      -> {name, geschlecht, betas, punkte, dreiecke, hoehe, masse,
+          regler, skelett}
 
 WARUM ES DIESEN ENDPUNKT GIBT (Edgar, 06.09.2026: „der mann in Fall 2 soll
 schlank sein, finde den Regler, dass du ihn schlank machst!"): Im
@@ -37,7 +38,9 @@ class Smplformung:
     @require_POST
     def formen(request):
         from GarmentCode.smplform import Smplform
+        from ..dienste.smplfigur import Smplfiguren
         from ..dienste.smplvarianten import Smplvarianten
+        from .smplfigur import Smplfigur
 
         try:
             anfrage = json.loads(request.body.decode('utf-8') or '{}')
@@ -65,4 +68,12 @@ class Smplformung:
             'dreiecke': daten['dreiecke'].tolist(),
             'hoehe': float(daten['hoehe']),
             'masse': {k: float(v) for k, v in daten['masse'].items()},
+            # Auch die geformte Variante bekommt ihr Skelett — sonst
+            # verschwaende die Figur ihre Knochen beim ersten Reglerzug
+            # (dieser Endpunkt loest den Netz-Endpunkt dann ab).
+            'skelett': Smplfiguren.skelett(daten['name'], punkte),
+            # Auch die Variante bekommt Hautgewichte — sonst waere
+            # ausgerechnet die geformte Figur die einzige, die beim
+            # Abspielen starr bleibt.
+            'hautgewichte': Smplfigur._hautgewichte(daten['name'], punkte),
         })

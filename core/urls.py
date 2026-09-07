@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.decorators.csrf import csrf_exempt
 from .api import einstellungen, seiten
 # Die drei Seiten MIT Logik stehen als je eine Klasse in eigenen Modulen —
 # `seiten.py` fuehrt nur noch die reinen Vorlagen (Umbau 17.08.2026).
@@ -109,7 +110,9 @@ urlpatterns = [
          name='test_animation'),
     path('humanbody/test-character/', seiten.test_character_page,
          name='test_character'),
-    path('api/retarget/', Retargetendpunkte.umsetzen, name='retarget'),
+    # POST, weil das MakeHuman-Ziel 269 Regler mitbringt (siehe `umsetzen`).
+    path('api/retarget/', csrf_exempt(Retargetendpunkte.umsetzen),
+         name='retarget'),
     path('api/log/', Systemendpunkte.browsermeldung, name='client_log'),
     path('api/retarget/smooth-bvh/', Bvhtext.glaetten, name='smooth_bvh'),
     path('api/retarget/save-bvh-effects/', Bvhtext.effekte_sichern,
@@ -172,7 +175,7 @@ urlpatterns = [
          name='test_character_source'),
     path('api/character-test/reload/', Testverwaltung.neu_laden, name='test_reload'),
     # GarmentCode — Kleidung aus Koerpermassen konstruieren (Reiter in der
-    # Szene-Seite). Der Lauf selbst liegt in HumanBody/GarmentCode.
+    # Szene-Seite). Der Lauf selbst liegt in Assets/GarmentCode.
     path('api/garmentcode/zustand/', Garmentcode.zustand,
          name='garmentcode_zustand'),
     path('api/garmentcode/regler/', Garmentcode.regler,

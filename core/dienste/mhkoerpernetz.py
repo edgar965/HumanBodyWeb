@@ -69,10 +69,37 @@ class Mhkoerpernetz:
         punkte, dreiecke, je_viereck = self._flaechen(lokale, punkte)
         hoehe = float(punkte[:, 1].max() - punkte[:, 1].min())
         dreiecke = self._maskieren(vierecke, dreiecke, je_viereck)
+        # `_neu_nummerieren` gibt die Punktnummern, die uebrig bleiben —
+        # dieselbe Auswahl muss auf die Hautgewichte, sonst zeigt jedes
+        # Gewicht auf den Nachbarpunkt (07.09.2026).
+        behalten = (Mhnetzformen.uebrige(dreiecke) if len(dreiecke)
+                    else np.zeros(0, dtype=np.int64))
         punkte, dreiecke = Mhnetzformen.verdichten(punkte, dreiecke)
         return {'punkte': punkte, 'dreiecke': dreiecke,
                 'normalen': Mhnetzformen.normalen(punkte, dreiecke),
-                'hoehe': hoehe}
+                'hoehe': hoehe,
+                'haut': self._haut(nummern, lokale, behalten)}
+
+    # -------------------------------------------------------- Hautgewichte
+
+    def _haut(self, basisnummern, lokale, behalten):
+        u"""`{knochen, index, gewicht}` fuer genau diese Punkte — oder `None`.
+
+        Ohne Gewichte bleibt die Figur beim Abspielen starr: Das Skelett
+        bewegt sich, das Netz nicht. `None` heisst „`default_weights.mhw`
+        fehlt" — dann erscheint die Figur, ist aber nicht animierbar.
+        """
+        from .mhhaut import Mhhaut
+        if not Mhhaut.vorhanden():
+            return None
+        try:
+            index, gewicht = Mhhaut.fuer_netz(basisnummern, lokale,
+                                              self.teile, self.glatt)
+        except (OSError, ValueError, KeyError) as fehler:
+            logger.warning('MakeHuman-Hautgewichte nicht baubar: %s', fehler)
+            return None
+        return {'knochen': Mhhaut.knochennamen(),
+                'index': index[behalten], 'gewicht': gewicht[behalten]}
 
     # ------------------------------------------------------------- Glaettung
 

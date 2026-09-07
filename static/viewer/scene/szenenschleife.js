@@ -2,6 +2,7 @@ import { THREE } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
+import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 
 /**
  * Szenenschleife — die Renderschleife der Szene-Seite samt Anzeigen.
@@ -76,6 +77,9 @@ export class Szenenschleife extends Zeichenschleife {
             this.zeitanzeige();
             if (state.currentAnimGroundFixed) this.aufDenBoden();
         }
+        // Neu dazugekommene Figuren bekommen ihre Knochenlinien von selbst;
+        // gedrosselt, siehe `Rigsichtbarkeit.ABGLEICH_MS`.
+        Rigsichtbarkeit.abgleichen();
         state.renderer.render(state.scene, state.camera);
         this.kameraanzeige();
         this.bildrate(dt);

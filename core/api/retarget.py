@@ -88,20 +88,28 @@ class Retargetendpunkte:
     def umsetzen(cls, request):
         """EINE Adresse fuer Auftrags- und Bibliotheks-BVH.
 
-        GET /api/retarget/?job=<uuid>                 → BVH des Auftrags
-        GET /api/retarget/?category=<cat>&name=<name> → BVH der Bibliothek
+        GET  /api/retarget/?job=<uuid>                 → BVH des Auftrags
+        GET  /api/retarget/?category=<cat>&name=<name> → BVH der Bibliothek
+        POST dieselbe Adresse, JSON-Rumpf mit denselben Feldern
 
-        Dazu: `body_height`, `format`, `foot_correction`, `delta_norm` und
+        Dazu: `body_height`, `format`, `foot_correction`, `delta_norm`,
         `target` (`def` = Rigify-Skelett, `uma` = UMA-Figur aus dem
-        Figurkatalog; seit 05.09.2026).
+        Figurkatalog, `smpl`, `makehuman`) und `figur`.
+
+        WARUM ES POST GIBT (07.09.2026): Das MakeHuman-Rig haengt an 269
+        Reglern — seine Gelenke sind Mittelwerte von Punkten DIESER
+        Stellung. Als Abfrageteil waeren das mehrere Kilobyte, und Browser
+        wie Server kuerzen so etwas irgendwann stillschweigend. Dieselbe
+        Entscheidung wie bei `Mhfigur.netz`.
         """
+        werte = cls._werte(request)
         try:
-            wahl = Retargetwahl(request.GET, cls.VORGABE_GROESSE)
+            wahl = Retargetwahl(werte, cls.VORGABE_GROESSE)
         except ValueError as fehler:
             return JsonResponse({'error': str(fehler)}, status=400)
-        auftrag = request.GET.get('job')
-        kategorie = request.GET.get('category')
-        name = request.GET.get('name')
+        auftrag = werte.get('job')
+        kategorie = werte.get('category')
+        name = werte.get('name')
         if auftrag:
             pfad = cls._auftragspfad(auftrag)
         elif kategorie and name:
@@ -115,9 +123,41 @@ class Retargetendpunkte:
         try:
             return JsonResponse(Retargetdaten(
                 pfad, wahl.groesse, wahl.format, wahl.fusskorrektur,
-                wahl.delta_norm, wahl.ziel, figur=wahl.figur).holen().als_dict())
+                wahl.delta_norm, wahl.ziel, figur=wahl.figur,
+                formung=cls._formung(wahl)).holen().als_dict())
         except UmaskelettFehlt as fehler:
             return JsonResponse({'error': str(fehler)}, status=404)
+        except ValueError as fehler:
+            # Ein unbekannter Koerper oder ein fehlender Upstream ist eine
+            # Frage des Aufrufers, kein Serverfehler — und die Meldung
+            # gehoert in die Zeile unter der Leiste, nicht ins Nichts.
+            return JsonResponse({'error': str(fehler)}, status=400)
+
+    @staticmethod
+    def _werte(request):
+        """Die Parameter — aus der Abfrage oder aus dem JSON-Rumpf.
+
+        Die Abfrage bleibt gueltig; der Rumpf sticht sie. Ein unlesbarer
+        Rumpf faellt auf die Abfrage zurueck statt die Anfrage abzuweisen:
+        Sie kann vollstaendig sein, und ein POST mit leerem Rumpf ist der
+        Normalfall bei einem Ziel ohne Regler.
+        """
+        if request.method != 'POST':
+            return request.GET
+        rumpf, fehler = Anfragerumpf.lesen(request)
+        if fehler is not None or not isinstance(rumpf, dict):
+            return request.GET
+        werte = {schluessel: request.GET[schluessel] for schluessel in request.GET}
+        werte.update(rumpf)
+        return werte
+
+    @staticmethod
+    def _formung(wahl):
+        """Die MakeHuman-Reglerstellung — nur fuer dieses Ziel."""
+        if wahl.ziel != Retargetdaten.ZIEL_MH:
+            return None
+        from ..dienste.mhformung import Mhformung
+        return Mhformung.aus_abfrage(wahl.makro, wahl.regler)
 
     @staticmethod
     @require_GET

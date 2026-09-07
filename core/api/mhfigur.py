@@ -41,6 +41,7 @@ from ..dienste.mhformung import Mhformung
 from ..dienste.mhgarderobe import Mhgarderobe
 from ..dienste.mhkleidnetz import Mhkleidnetz, MhkleidFehler
 from ..dienste.mhkoerpernetz import Mhkoerpernetz
+from ..dienste.mhskelett import Mhskelett
 from ..dienste.mhmakrowerte import Mhmakrowerte
 from ..dienste.mhmodifikatoren import Mhmodifikatoren
 from ..dienste.mhreglerplan import Mhreglerplan
@@ -104,8 +105,47 @@ class Mhfigur:
             'name': name, 'teile': list(teile), 'glatt': glatt,
             'verdeckt': list(getragen), 'hoehe': netz['hoehe'],
             'geformt': Mhzielablage.bereit() and Mhmodifikatoren.vorhanden(),
+            # Das Skelett kommt MIT dem Netz: Seine Gelenke sind Mittelwerte
+            # von Punkten DIESER Reglerstellung. Ein zweiter Endpunkt muesste
+            # die 269 Regler noch einmal uebertragen und koennte dabei
+            # danebenliegen.
+            'skelett': Mhfigur._skelett(formung),
+            # Ohne Hautgewichte bleibt die Figur beim Abspielen starr:
+            # Das Skelett bewegt sich, das Netz nicht (07.09.2026).
+            'hautgewichte': Mhfigur._hautgewichte(netz.get('haut')),
         })
         return JsonResponse(antwort)
+
+    @staticmethod
+    def _hautgewichte(haut):
+        u"""Die Gewichte base64, mit den Breiten aus `Netzantwort.TYPEN`.
+
+        Als JSON-Liste waeren es beim geglaetteten Netz 53.514 x 8 Zahlen.
+        Die Knochen stehen als NAMEN da: Ihre Nummer im `THREE.Skeleton`
+        entscheidet erst der Bauplan.
+        """
+        if not haut:
+            return None
+        return {
+            'knochen': haut['knochen'],
+            'skin_indices': Netzantwort.feld(haut['index'], 'skin_indices'),
+            'skin_weights': Netzantwort.feld(haut['gewicht'], 'skin_weights'),
+        }
+
+    @staticmethod
+    def _skelett(formung):
+        u"""`default.mhskel`, gerechnet auf dieser Reglerstellung — oder `None`.
+
+        Fehlt der Upstream-Klon, ist das kein Fehler des Netzes: Die Figur
+        erscheint dann ohne Knochen, statt dass der ganze Aufruf scheitert.
+        """
+        if not Mhskelett.vorhanden():
+            return None
+        try:
+            return Mhskelett(formung).bauen()
+        except (OSError, ValueError, KeyError) as fehler:
+            logger.warning('MakeHuman-Skelett nicht baubar: %s', fehler)
+            return None
 
     @staticmethod
     def _rumpf(request):

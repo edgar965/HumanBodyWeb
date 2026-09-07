@@ -52,6 +52,16 @@ class Mhnetzformen:
         return punkte[nummern], neu.astype(np.uint32)
 
     @staticmethod
+    def uebrige(dreiecke):
+        u"""Die Punktnummern, die `verdichten` behaelt — in derselben Folge.
+
+        Wer eine zweite Groesse je Punkt fuehrt (Hautgewichte), muss sie
+        genau so auswaehlen. Getrennt von `verdichten`, damit dort keine
+        zweite Rueckgabe entsteht, die achtzehn Aufrufer mitschleppen.
+        """
+        return np.unique(dreiecke)
+
+    @staticmethod
     def _neu_nummerieren(flaechen):
         nummern = np.unique(flaechen)
         umschluessel = np.zeros(int(nummern.max()) + 1, dtype=np.int64)

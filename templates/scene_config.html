@@ -2076,6 +2076,17 @@
     color:var(--text-muted);
     margin:8px 0 4px;
 }
+/* Untergruppen der GarmentCode-Regler (07.09.2026): `sleeve.cuff`,
+   `collar.component`, `flare-skirt.cut` und die ganze linke Seite. Sie
+   werden EINGERUECKT gezeigt, nicht ausgeklappt — bei einem T-Shirt sind
+   es 71 Regler in zwei Ebenen, und hinter Klicks waeren sie wieder
+   unsichtbar. Die Linie links macht die Schachtelung lesbar, ohne Platz
+   fuer eine zweite Spalte zu brauchen. */
+.gc-untergruppe.gc-untergruppe.gc-untergruppe {
+    margin-left:8px;
+    padding-left:8px;
+    border-left:1px solid var(--border-color, rgba(255,255,255,0.12));
+}
 .kopfzeilengruppe.kopfzeilengruppe.kopfzeilengruppe {
     display:flex;
     align-items:center;

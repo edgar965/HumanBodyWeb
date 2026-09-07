@@ -80,7 +80,7 @@ class MhProxyAnpassung:
         gerechnete Koerper (folgt den Reglern, sitzt ungenauer)."""
         if not mh_koerper:
             return koerper_vertices, self._koerperzuordnung()
-        pfad = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman',
+        pfad = os.path.join(str(settings.MAKEHUMAN_ROOT),
                             'base_vertices.npy')
         if not os.path.isfile(pfad):
             return koerper_vertices, None
@@ -96,7 +96,7 @@ class MhProxyAnpassung:
 
     @staticmethod
     def _koerperzuordnung():
-        pfad = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman',
+        pfad = os.path.join(str(settings.MAKEHUMAN_ROOT),
                             'mh_to_body_map.npy')
         return np.load(pfad) if os.path.isfile(pfad) else None
 

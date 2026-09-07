@@ -38,19 +38,25 @@ class Retargetdaten:
     #: Zielskelette — siehe `Retargetwahl.ZIELE`.
     ZIEL_DEF = 'def'
     ZIEL_UMA = 'uma'
+    ZIEL_SMPL = 'smpl'
+    ZIEL_MH = 'makehuman'
 
     def __init__(self, bvh_pfad, body_height=ERSATZHOEHE, fmt=None,
                  foot_correction=False, delta_norm=None, ziel=ZIEL_DEF,
-                 figur=None):
+                 figur=None, formung=None):
         self.bvh_pfad = bvh_pfad
         self.hoehe = body_height
         self.format = fmt
         self.fusskorrektur = foot_correction
         self.delta_norm = delta_norm
         self.ziel = ziel or self.ZIEL_DEF
-        #: Dateiname der UMA-Figur, deren Skelett das Ziel ist (06.09.2026);
-        #: ohne Angabe die Datei aus `aktuell.json` — siehe `Retargetwahl`.
+        #: Dateiname der UMA-Figur bzw. Name des SMPL-Koerpers, dessen
+        #: Skelett das Ziel ist (06.09.2026); ohne Angabe bei UMA die Datei
+        #: aus `aktuell.json` — siehe `Retargetwahl`.
         self.figur = figur
+        #: `Mhformung` der MakeHuman-Figur (07.09.2026). Ihr Skelett haengt
+        #: an 269 Reglern; ohne sie waere das Ziel die Vorgabefigur.
+        self.formung = formung
 
     # ------------------------------------------------------- Zwischenspeicher
 
@@ -64,6 +70,11 @@ class Retargetdaten:
             merkmal += f'_{self.ziel}'
         if self.figur:
             merkmal += f'_{self.figur}'       # je Figur ein eigenes Skelett, eine eigene Ablage
+        if self.formung is not None:
+            # Je Reglerstellung ein eigenes Skelett: Ohne diesen Teil im
+            # Namen laege die Bewegung der schlanken Figur in derselben
+            # Datei wie die der kraeftigen.
+            merkmal += '_' + self._formmerkmal()
         kuerzel = hashlib.md5(merkmal.encode()).hexdigest()[:8]
         return self.bvh_pfad.rsplit('.', 1)[0] + f'_retarget_{kuerzel}.json'
 
@@ -107,6 +118,10 @@ class Retargetdaten:
                   else Skeleton.detect_format(bvh.names))
         if self.ziel == self.ZIEL_UMA:
             return self._auf_uma(bvh, bauart)
+        if self.ziel == self.ZIEL_SMPL:
+            return self._auf_smpl(bvh, bauart)
+        if self.ziel == self.ZIEL_MH:
+            return self._auf_makehuman(bvh, bauart)
         geometrie = Skelettgeometrie.holen()
         if bauart and bauart.BONE_MAP_TO_RIGIFY:
             return bauart.retarget_to_rigify(
@@ -134,3 +149,55 @@ class Retargetdaten:
             foot_correction=self.fusskorrektur, delta_norm=self.delta_norm,
             mapping=Umazuordnung.fuer(bauart),
             skip_bones=Umazuordnung.ausnahmen(bauart))
+
+    # ------------------------------------------------- SMPL und MakeHuman
+
+    def _auf_smpl(self, bvh, bauart):
+        u"""Ziel ist das SMPL-Skelett der Figur in der Szene (07.09.2026).
+
+        Es braucht keine neue Zuordnungstabelle: Die 24 Gelenke heissen
+        genau so, wie der Motor SMPL schon kennt (`SkeletonAIST_SMPL`), und
+        `Smplzuordnung` kehrt dessen Tabelle um. Die Geometrie kommt aus
+        derselben Kette, aus der auch der Browser seine Knochen baut
+        (`Smplfiguren.kette`) — sonst rechnete der Motor gegen eine
+        Ruhelage, die die Figur gar nicht hat.
+        """
+        from humanbody_core.skeleton.formats.smpl_knochen import Smplzuordnung
+        from .smplfigur import Smplfiguren
+        kette = Smplfiguren.kette(self.figur)
+        if kette is None:
+            raise ValueError('Kein SMPL-Skelett fuer %r' % (self.figur,))
+        return self._auf_kette(bvh, bauart, kette.geometrie(), Smplzuordnung)
+
+    def _auf_makehuman(self, bvh, bauart):
+        u"""Ziel ist das MakeHuman-Rig (`default.mhskel`) DIESER Reglerstellung."""
+        from humanbody_core.skeleton.formats.mh_zuordnung import Mhzuordnung
+        from .mhskelett import Mhskelett
+        if not Mhskelett.vorhanden():
+            raise ValueError('MakeHuman-Upstream fehlt — siehe MakeHuman/HERKUNFT.md')
+        return self._auf_kette(bvh, bauart,
+                               Mhskelett(self.formung).kette().geometrie(),
+                               Mhzuordnung)
+
+    def _auf_kette(self, bvh, bauart, geometrie, zuordnung):
+        u"""Dasselbe Verfahren, anderes Zielskelett — wie `_auf_uma`.
+
+        Ohne erkanntes Format derselbe Rueckfall wie
+        `SkeletonRigify.retarget_bvh`: MocapNET.
+        """
+        from humanbody_core.skeleton.formats import SkeletonMocapNet
+        if bauart is None or not bauart.BONE_MAP_TO_RIGIFY:
+            bauart = SkeletonMocapNet
+        return bauart.retarget_to_rigify(
+            bvh, geometrie, body_height=self.hoehe,
+            foot_correction=self.fusskorrektur, delta_norm=self.delta_norm,
+            mapping=zuordnung.fuer(bauart),
+            skip_bones=zuordnung.ausnahmen(bauart))
+
+    def _formmerkmal(self):
+        u"""Ein kurzes Kennzeichen der Reglerstellung fuer den Ablagenamen."""
+        try:
+            roh = self.formung.fingerabdruck()
+        except AttributeError:
+            roh = repr(self.formung)
+        return hashlib.md5(roh.encode('utf-8')).hexdigest()[:8]

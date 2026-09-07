@@ -13,15 +13,19 @@ Position 1,5 m rechts davon."
         </div>
         <div class="scene-modal-body">
             <div class="dialogreiter" id="add-char-reiter">
-                <button class="dialogreiter-knopf active" data-quelle="uma">UMA-Figuren</button>
-                <button class="dialogreiter-knopf" data-quelle="modell">HumanBody-Modelle</button>
-                <button class="dialogreiter-knopf" data-quelle="smpl">GarmentCode-Körper</button>
+                {% comment %}Reihenfolge und Namen nach Ansage (Edgar, 07.09.2026):
+                HumanBody, SMPL, MakeHuman, UMA. Der erste Reiter traegt `active`
+                und muss zu `Charakterdialog._quelle` passen — sonst zeigt der
+                Dialog eine Liste, deren Reiter nicht hervorgehoben ist.{% endcomment %}
+                <button class="dialogreiter-knopf active" data-quelle="modell">HumanBody</button>
+                <button class="dialogreiter-knopf" data-quelle="smpl">SMPL</button>
                 <button class="dialogreiter-knopf" data-quelle="makehuman">MakeHuman</button>
+                <button class="dialogreiter-knopf" data-quelle="uma">UMA</button>
             </div>
-            <ul class="preset-list" id="uma-list" data-quelle="uma">
+            <ul class="preset-list hb-versteckt" id="uma-list" data-quelle="uma">
                 <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Katalog...</li>
             </ul>
-            <ul class="preset-list hb-versteckt" id="preset-list" data-quelle="modell">
+            <ul class="preset-list" id="preset-list" data-quelle="modell">
                 <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Modelle...</li>
             </ul>
             {% comment %}SMPL-Referenzkörper von GarmentCode (06.09.2026) — Maße

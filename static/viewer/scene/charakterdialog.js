@@ -51,7 +51,10 @@ export class Charakterdialog {
         modell: (name, lage) => fn.addCharacterFromPreset(name, lage),
     };
 
-    static _quelle = 'uma';
+    /** Der Reiter, mit dem der Dialog aufgeht — muss zum `active`-Knopf
+     *  in `_charakter_dialog.html` passen (Edgar, 07.09.2026:
+     *  HumanBody, SMPL, MakeHuman, UMA). */
+    static _quelle = 'modell';
     static _gewaehlt = null;
 
     static verdrahten() {

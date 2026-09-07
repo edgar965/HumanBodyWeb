@@ -6,6 +6,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { closeAllDialogs } from './utils.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
+import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 
 export function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
@@ -168,28 +169,33 @@ export function toggleModelVisibility() {
     state.characters.forEach(c => { if (c.bodyMesh) c.bodyMesh.visible = state.modelVisible; });
 }
 
+/**
+ * Rig aller sichtbaren Figuren ein- und ausblenden.
+ *
+ * BIS 07.09.2026 galt der Schalter genau EINER Figur: Er nahm
+ * `_selectedInst()` und verwaltete einen einzigen `state.skeletonHelper`.
+ * Edgar: „das blendet das aber nur für HumanBody ein/aus. das soll für alle
+ * Modelle sein die sichtbar sind." Die Verwaltung steht jetzt in
+ * `Rigsichtbarkeit`, die Auswahl in `gemeinsam/rigauswahl.js`.
+ *
+ * Der Sonderweg ohne Figur (`state.rigifySkeleton` als Szenen-Skelett) bleibt:
+ * Auf der Seite kann ein Rig auch ohne Figurinstanz stehen.
+ */
 export function toggleRigVisibility() {
-    state.rigVisible = !state.rigVisible;
-    if (state.rigVisible) {
-        const inst = fn._selectedInst();
-        let skel = (inst && inst.rigifySkeleton) ? inst.rigifySkeleton : state.rigifySkeleton;
-        if (!skel && state.rigifySkeletonData && state.skinWeightData) {
-            const { buildRigifySkeleton } = fn;
-            if (inst) { fn.convertInstToSkinned(inst); skel = inst.rigifySkeleton; }
-            else { state.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, state.skinWeightData);
-                state.scene.add(state.rigifySkeleton.rootBone); skel = state.rigifySkeleton; }
+    if (!state.characters?.size && state.rigifySkeletonData && state.skinWeightData
+        && !state.rigifySkeleton) {
+        state.rigifySkeleton = fn.buildRigifySkeleton(
+            state.rigifySkeletonData, state.skinWeightData);
+        state.scene.add(state.rigifySkeleton.rootBone);
+    }
+    Rigsichtbarkeit.umschalten();
+    if (!Rigsichtbarkeit._anzeigen.size && state.rigifySkeleton) {
+        // Kein Trägernetz in der Szene — dann das Szenen-Skelett zeigen.
+        if (!state.skeletonHelper) {
+            state.skeletonHelper = Skelettanzeige.bauen(
+                state.scene, state.rigifySkeleton.rootBone, state.rigVisible);
         }
-        if (!state.skeletonHelper && skel) {
-            state.skeletonHelper = Skelettanzeige.bauen(state.scene, skel.rootBone);
-            state.skeletonHelper.material.transparent = true;
-            state.skeletonHelper.material.color.set(0x00ffaa);
-            state.skeletonHelper.material.linewidth = 2;
-            state.skeletonHelper.renderOrder = 999;
-            state.scene.add(state.skeletonHelper);
-        }
-        if (state.skeletonHelper) state.skeletonHelper.visible = true;
-    } else {
-        if (state.skeletonHelper) state.skeletonHelper.visible = false;
+        state.skeletonHelper.visible = state.rigVisible;
     }
 }
 

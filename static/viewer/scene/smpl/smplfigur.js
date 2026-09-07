@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
+import { Knochenbau } from '../../gemeinsam/knochenbau.js';
+import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
 
 /**
  * SmplFigur — ein Referenzkörper von GarmentCode als Figur der Szene.
@@ -63,6 +65,9 @@ export class SmplFigur {
         this.selected = false;
         this.isSkinned = false;
         this.rigifySkeleton = null;
+        /** Das SMPL-Skelett (24 Gelenke) — dieselbe Form wie bei UMA,
+         *  damit `Rigauswahl` es ohne Sonderfall findet. */
+        this.skelett = null;
     }
 
     async load() {
@@ -84,7 +89,10 @@ export class SmplFigur {
         }
         this.bodyMesh = SmplFigur._netz(punkte, dreiecke);
         this.bodyMesh.name = `garmentcode_koerper_${this.koerper}`;
-        this.group.add(this.bodyMesh);
+        // ERST das Skelett, DANN das Netz einhängen: Die Bindung braucht
+        // die Knochen in ihrer Ruhelage (`Eigenhaut.einhaengen`).
+        this._skelettBauen(daten.skelett);
+        this._hautBinden(daten.hautgewichte);
         this.geschlecht = daten.geschlecht || this.geschlecht;
         this.masse = daten.masse || {};
         this.hoehe = daten.hoehe || 0;
@@ -92,6 +100,42 @@ export class SmplFigur {
         Protokoll.debug('SmplFigur',
             `${this.koerper}: ${punkte.length} Punkte, ${dreiecke.length} Dreiecke, ${this.hoehe.toFixed(2)} m`);
         return this;
+    }
+
+    /**
+     * Das SMPL-Skelett aus der Antwort bauen.
+     *
+     * `null` ist eine gueltige Antwort und keine Panne: GarmentCodes eigene
+     * Koerper (`mean_all`, `mean_female`, `mean_male`) sind keine SMPL-Netze
+     * und haben keines. Die Figur bekommt dann keine Knochen — der
+     * Rig-Schalter laesst sie schlicht aus.
+     *
+     * Das alte Skelett wird ZUERST abgeraeumt: Die Formregler holen das Netz
+     * bei jedem Zug neu, und ohne das haengen nach zehn Zuegen zehn Skelette
+     * ineinander.
+     */
+    _skelettBauen(angaben) {
+        this.skelett = Knochenbau.abraeumen(this.skelett);
+        if (!angaben) return;
+        this.skelett = Knochenbau.bauen(angaben, this.group);
+    }
+
+    /**
+     * Das Netz an das eigene Skelett binden — sonst bleibt es beim Abspielen
+     * starr, während die Knochen sich bewegen.
+     *
+     * Die Gewichte stammen aus dem SMPL-Modell selbst (`weights`, 6890 × 24);
+     * für GarmentCodes eigene Körper (23.752 Punkte) sind sie über den
+     * nächstgelegenen SMPL-Punkt übertragen. Ohne Skelett oder ohne Gewichte
+     * hängt hier ein gewöhnliches `Mesh` — die Figur ist dann sichtbar, aber
+     * nicht animierbar.
+     */
+    _hautBinden(haut) {
+        if (this.skelett && haut) {
+            this.bodyMesh = Eigenhaut.binden(this.bodyMesh, this.skelett, haut);
+        }
+        Eigenhaut.einhaengen(this.group, this.bodyMesh, this.skelett);
+        this.isSkinned = !!this.bodyMesh.isSkinnedMesh;
     }
 
     static _netz(punkte, dreiecke) {

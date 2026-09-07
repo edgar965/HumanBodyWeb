@@ -28,7 +28,8 @@ logger = logging.getLogger('core')
 class Garmentcodemessung:
     u"""Zugang zu den abgelegten Messreihen."""
 
-    #: Wo die Messreihen liegen — unter `HumanBody/GarmentCode/test/`.
+    #: Wo die Messreihen liegen — unter `Assets/GarmentCode/test/`
+    #: (bis zum 07.09.2026 `HumanBody/GarmentCode/test/`).
     UNTERORDNER = ('GarmentCode', 'test')
 
     #: Die Reihen, die die Hilfeseite zeigt.
@@ -40,7 +41,7 @@ class Garmentcodemessung:
 
     @classmethod
     def wurzel(cls):
-        return os.path.join(str(settings.HUMANBODY_ROOT), *cls.UNTERORDNER)
+        return os.path.join(str(settings.ASSETS_ROOT), *cls.UNTERORDNER)
 
     @classmethod
     def pfad(cls, reihe):

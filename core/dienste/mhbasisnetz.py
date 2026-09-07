@@ -27,7 +27,7 @@ Nachbarschaftsmittelung ab.
 
 WAS IN DER DATEI STEHT
 ======================
-`HumanBody/MakeHuman/base.obj` (CC0, MakeHuman-Community) — 19.158 Punkte,
+`MakeHuman/base.obj` (CC0, MakeHuman-Community) — 19.158 Punkte,
 18.486 VIERECKE, 139 Gruppen:
 
     body            13.378 Vierecke, Punkte 0..13.379, 1,666 m hoch
@@ -67,7 +67,6 @@ __all__ = ['Mhbasisnetz']
 class Mhbasisnetz:
     u"""Punkte und Flaechengruppen des MakeHuman-Basisnetzes."""
 
-    ORDNER = 'MakeHuman'
     DATEI = 'base.obj'
     #: MakeHuman rechnet in Dezimetern; Y ist schon oben.
     MASSSTAB = 0.1
@@ -118,7 +117,7 @@ class Mhbasisnetz:
 
     @classmethod
     def pfad(cls):
-        return os.path.join(str(settings.HUMANBODY_ROOT), cls.ORDNER, cls.DATEI)
+        return os.path.join(str(settings.MAKEHUMAN_ROOT), cls.DATEI)
 
     @classmethod
     def vorhanden(cls):

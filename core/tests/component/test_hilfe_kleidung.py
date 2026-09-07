@@ -98,10 +98,18 @@ class MessungTest(SimpleTestCase):
     def test_fehlende_datei_gibt_none(self):
         u"""Nicht `{}`: Eine leere Tabelle sieht aus wie „nichts gefunden",
         nicht wie „nie gemessen"."""
+        # ASSETS_ROOT, nicht HUMANBODY_ROOT: Die Messreihen liegen seit
+        # dem 07.09.2026 unter `Assets/GarmentCode/test/`. Die alte
+        # Umleitung traf nach dem Umzug ins Leere — der Test las die
+        # ECHTEN Messreihen und wurde rot, statt still durchzulaufen.
+        # (~/.claude/rules/test-isolation.md)
         with tempfile.TemporaryDirectory() as ordner:
-            with override_settings(HUMANBODY_ROOT=ordner):
+            with override_settings(ASSETS_ROOT=ordner):
                 self.assertIsNone(Garmentcodemessung.matrix('humanbody'))
                 self.assertEqual(Garmentcodemessung.koerper(), [])
+                # Gegenprobe: Die Umleitung muss auch wirklich greifen.
+                self.assertTrue(Garmentcodemessung.wurzel().startswith(ordner),
+                                'Umleitung greift ins Leere')
 
     def test_matrix_wenn_vorhanden(self):
         if not os.path.isfile(Garmentcodemessung.pfad('humanbody')):

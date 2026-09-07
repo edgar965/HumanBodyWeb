@@ -41,6 +41,20 @@ HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody'
 if str(HUMANBODY_ROOT) not in sys.path:
     sys.path.insert(0, str(HUMANBODY_ROOT))
 
+#: Das Paket `SMPL` liegt seit dem 07.09.2026 direkt unter A:\\3DTools
+#: (Edgar: „packe den ganzen SMPL code hierhin"). TOOLS_ROOT muss deshalb
+#: im Pfad stehen — `from SMPL.koerper import Smplkoerper`.
+if str(TOOLS_ROOT) not in sys.path:
+    sys.path.insert(0, str(TOOLS_ROOT))
+
+#: `GarmentCode` liegt seit dem 07.09.2026 unter A:\\3DTools\\Assets
+#: (Edgar: „verschiebe A:\\3DTools\\HumanBody\\GarmentCode nach
+#: A:\\3DTools\\Assets\\GarmentCode"). Der Importname bleibt `GarmentCode`,
+#: deshalb kommt der ELTERNORDNER in den Pfad, nicht das Paket selbst.
+ASSETS_ROOT = TOOLS_ROOT / 'Assets'
+if str(ASSETS_ROOT) not in sys.path:
+    sys.path.insert(0, str(ASSETS_ROOT))
+
 #: `assetCreator` bringt den GarmentFitter mit.
 _ASSET_CREATOR = str(HUMANBODY_ROOT / 'assetCreator')
 if _ASSET_CREATOR not in sys.path:

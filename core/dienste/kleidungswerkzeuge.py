@@ -53,7 +53,7 @@ class Kleidungswerkzeuge:
         mit Z nach oben. Danach werden die Fuesse auf die Hoehe des
         Koerpers gelegt, sonst schwebt die ganze Verschiebung.
         """
-        pfad = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman',
+        pfad = os.path.join(str(settings.MAKEHUMAN_ROOT),
                             'base_vertices.npy')
         if not os.path.isfile(pfad):
             logger.error('[T→A] No MH base_vertices.npy')
@@ -76,7 +76,7 @@ class Kleidungswerkzeuge:
         Beide Netze haben dieselbe Topologie; eine Nachbarsuche hier
         wuerde nur Artefakte einbauen.
         """
-        pfad = os.path.join(str(settings.HUMANBODY_ROOT), 'MakeHuman',
+        pfad = os.path.join(str(settings.MAKEHUMAN_ROOT),
                             'mh_base_apose.npy')
         if not os.path.isfile(pfad):
             logger.error('[T→A] No mh_base_apose.npy — skipping displacement')

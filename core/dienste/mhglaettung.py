@@ -84,3 +84,15 @@ class Mhglaettung:
         u"""Die feinen Punkte zu diesen Grundpunkten (0,017 s)."""
         return self._unterteiler.subdivide(
             np.asarray(grundpunkte, dtype=np.float64)).astype(np.float32)
+
+    def verteilen(self, matrix):
+        u"""Eine Groesse je Grundpunkt auf die feinen Punkte verteilen.
+
+        DIESELBE Matrix wie fuer die Punkte, und das ist der Grund, warum es
+        stimmt: Ein feiner Punkt, der geometrisch zu 25 % aus einem
+        Grundpunkt entsteht, gehoert auch zu 25 % zu dessen Knochen. Fuer
+        Hautgewichte (`Mhhaut`) — mit einer anderen Rechnung liefe die
+        Verformung an der Glaettung vorbei, und die Figur risse an den
+        Kanten auf.
+        """
+        return self._unterteiler._weights @ np.asarray(matrix, dtype=np.float64)

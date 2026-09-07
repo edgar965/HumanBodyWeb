@@ -35,7 +35,6 @@ logger = logging.getLogger(__name__)
 class MhKoerper:
     """Lädt den MakeHuman-Körper und bringt ihn auf die Lage der eigenen Figur."""
 
-    ORDNER = 'MakeHuman'
     APOSE = 'mh_base_apose.npy'
     ROHDATEN = 'base_vertices.npy'
     #: MakeHuman rechnet in Dezimetern.
@@ -43,7 +42,7 @@ class MhKoerper:
 
     @classmethod
     def pfad(cls, name):
-        return os.path.join(str(settings.HUMANBODY_ROOT), cls.ORDNER, name)
+        return os.path.join(str(settings.MAKEHUMAN_ROOT), name)
 
     @classmethod
     def schiebekoerper(cls, eigene_punkte, mh_benutzen=True):

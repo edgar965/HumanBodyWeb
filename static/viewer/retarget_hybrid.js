@@ -170,8 +170,22 @@ export async function fetchRetarget(source, rigifySkel, opts = {}) {
 
     const url = `/api/retarget/?${params}`;
     Protokoll.debug('RETARGET', `Fetching: ${url}`);
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`Retarget API error: ${resp.status} ${resp.statusText}`);
+    // MakeHuman braucht seine 269 Regler mit — die passen in keine
+    // Abfragezeichenkette (siehe `Retargetendpunkte.umsetzen`), also POST.
+    // Alles andere bleibt GET, damit die Antwort weiter aus dem Zwischen-
+    // speicher des Browsers kommen kann.
+    const rumpf = (opts.makro || opts.regler)
+        ? { makro: opts.makro || null, regler: opts.regler || null } : null;
+    const resp = rumpf
+        ? await fetch(url, { method: 'POST',
+                             headers: { 'Content-Type': 'application/json' },
+                             body: JSON.stringify(rumpf) })
+        : await fetch(url);
+    if (!resp.ok) {
+        const meldung = await resp.json().catch(() => null);
+        throw new Error(meldung?.error
+            || `Retarget API error: ${resp.status} ${resp.statusText}`);
+    }
     const data = await resp.json();
     Protokoll.debug('RETARGET',
         `${data.mapped_bones?.length || 0} bones, ${data.frame_count} frames, ${data.duration?.toFixed(2)}s`);
