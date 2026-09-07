@@ -37,12 +37,12 @@ TOOLS = Projektquellen.TOOLS
 #: aussen vor: Dort liegen eingelagerte Fremdprojekte (MB-Lab, GVHMR,
 #: WHAM, MocapNET) — deren Warnungen gehen dieses Projekt nichts an.
 BAEUME = ('HumanBody/humanbody_core', 'Assets/assetCreator',
-          'HumanBody/collision', 'Assets/PhotoToTexture',
+          'HumanBody/collision', 'Assets/PhotoToTexture', 'MakeHuman',
           'HumanBodyWeb/core', 'HumanBodyWeb/ui', 'Docu')
 
 #: Ordner ohne eigenen Quelltext oder mit fremdem.
 AUS = ('__pycache__', 'convert', 'kbs_retarget', 'node_modules',
-       'TestCharakter', 'alt', 'migrations')
+       'TestCharakter', 'alt', 'migrations', 'makehuman', 'buildscripts')
 
 
 class JedeEigeneDatei(unittest.TestCase):

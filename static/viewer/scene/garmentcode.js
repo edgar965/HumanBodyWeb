@@ -16,7 +16,9 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 import { GarmentcodeDrapierung } from './garmentcode_drapieren.js';
+import { GarmentcodeSchnitt } from './garmentcode_schnitt.js';
 import { GarmentcodeFigur } from './garmentcode_figur.js';
+import { GarmentcodeMasse } from './garmentcode_masse.js';
 
 class GarmentcodeReiter {
     constructor() {
@@ -52,6 +54,11 @@ class GarmentcodeReiter {
 
         const knopf = document.getElementById('gc-erzeugen');
         if (knopf) knopf.addEventListener('click', () => this.bauen());
+        // Nur der 2D-Teil (Edgar, 07.09.2026). Gemessen 6,12 s gegen 31 s
+        // fuer den ganzen Weg — wer am Schnitt schraubt, wartet ein
+        // Fuenftel.
+        const nur2d = document.getElementById('gc-schnitt');
+        if (nur2d) nur2d.addEventListener('click', () => this.bauen(true));
 
         // Ein anderes Kleidungsstück hat andere Einstellungen — eine Hose
         // hat keinen Kragen. Deshalb bei jedem Wechsel neu holen.
@@ -161,7 +168,15 @@ class GarmentcodeReiter {
 
     // ---------------------------------------------------------------- bauen
 
-    async bauen() {
+    /**
+     * Bauen — mit `nurSchnitt` endet es beim Schnittmuster.
+     *
+     * Der 2D-Knopf ist kein zweiter Weg, sondern derselbe ohne die beiden
+     * langen Schritte: Der Balken zeigt dann nur „Schnitt konstruieren",
+     * und `spezifikation` bleibt stehen, sodass ein anschliessendes
+     * „Fuer diese Figur bauen" ohne Neubau weitermachen koennte.
+     */
+    async bauen(nurSchnitt = false) {
         if (this.laeuft) return;
         const meldung = document.getElementById('gc-meldung');
         const figur = this.figur();
@@ -171,81 +186,25 @@ class GarmentcodeReiter {
                 + 'Maßen gebaut.';
             return;
         }
-        const knopf = document.getElementById('gc-erzeugen');
-        const vorschau = document.getElementById('gc-vorschau');
+        const knoepfe = [document.getElementById('gc-erzeugen'),
+                         document.getElementById('gc-schnitt')].filter(Boolean);
 
         this.laeuft = true;
-        knopf.disabled = true;
+        knoepfe.forEach(k => { k.disabled = true; });
         meldung.textContent = '';
-        vorschau.innerHTML = '';
         // Gesagt, nicht verhindert: Ein Grundkörper ist auch eine Figur.
         this.ohneMorphs = GarmentcodeFigur.ohneMorphs(figur);
-
-        // Alle Schritte im Voraus zeigen — dann weiß der Nutzer, was kommt
-        // und dass die Drapierung der lange Teil ist. Die erwarteten Dauern
-        // sind gemessene Werte (06.09.2026) und gewichten den Balken.
-        const schritte = [
-            { schluessel: 'schnitt', titel: 'Schnitt konstruieren', erwartet: 4 },
-        ];
-        if (this.drapierbereit) {
-            // 19 s im Browser gemessen (06.09.2026, T-Shirt auf der
-            // eigenen Figur) — die frühere Erwartung von 40 s stammte noch
-            // vom Lauf auf dem Vorgabekörper.
-            schritte.push({ schluessel: 'drape', erwartet: 22,
-                            titel: 'Stoff drapieren' });
-            schritte.push({ schluessel: 'rig', erwartet: 3,
-                            titel: 'Anziehen' });
-        }
-        garmentcodeFortschritt.starten(schritte);
-        garmentcodeFortschritt.laeuft('schnitt');
+        garmentcodeFortschritt.starten(this.schritte(nurSchnitt));
 
         try {
-            const daten = this.figurdaten(figur);
-            daten.append('vorlage', document.getElementById('gc-vorlage').value);
-            daten.append('regler', garmentcodeRegler.alsJson());
-            const ergebnis = await Serverabruf.formular(
-                '/api/garmentcode/erzeugen/', daten);
-            if (ergebnis.fehler) {
+            const ergebnis = await GarmentcodeSchnitt.bauen(this, figur, meldung);
+            if (!ergebnis) {
                 garmentcodeFortschritt.entfallen('drape');
                 garmentcodeFortschritt.entfallen('rig');
-                garmentcodeFortschritt.gescheitert('schnitt', 'Fehler');
-                meldung.textContent = `Fehlgeschlagen: ${ergebnis.fehler}`;
                 return;
             }
-            garmentcodeFortschritt.fertig('schnitt', ergebnis.name || 'fertig');
-            const warnung = ergebnis.selbstdurchdringend
-                ? ' — Achtung: Schnitt durchdringt sich selbst' : '';
-            const eigene = garmentcodeRegler.anzahl;
-            const zusatz = eigene ? ` (${eigene} eigene Einstellungen)` : '';
-            const grundkoerper = this.ohneMorphs
-                ? ' — Achtung: Figur ohne Morphs, vermessen wurde der Grundkörper'
-                : '';
-            meldung.textContent =
-                `Schnitt fertig: ${ergebnis.name}${zusatz}${warnung}${grundkoerper}`;
-            if (ergebnis.vorschau) {
-                const bild = document.createElement('img');
-                bild.src = ergebnis.vorschau;
-                bild.alt = 'Schnittmuster';
-                bild.style.maxWidth = '100%';
-                vorschau.appendChild(bild);
-            }
-            // Und jetzt ohne weiteres Zutun an die Figur (Edgar,
-            // 06.09.2026: „bei Bauen soll das Garment gleich auf den Körper
-            // gebracht werden, ohne extra Klick"). Der frühere zweite Knopf
-            // ist damit entfallen.
             this.spezifikation = ergebnis.spezifikation || null;
-            if (this.drapierbereit && this.spezifikation) {
-                await GarmentcodeDrapierung.drapieren(
-                    this, figur, this.spezifikation, meldung,
-                    document.getElementById('gc-vorlage').value);
-            } else {
-                garmentcodeFortschritt.entfallen('drape');
-                garmentcodeFortschritt.entfallen('rig');
-                if (!this.drapierbereit) {
-                    meldung.textContent += ' — nur Schnittmuster, die '
-                        + 'Simulationsumgebung fehlt.';
-                }
-            }
+            await this.dreid(nurSchnitt, figur, meldung);
             garmentcodeFortschritt.beenden();
         } catch (fehler) {
             garmentcodeFortschritt.gescheitert('schnitt',
@@ -253,36 +212,61 @@ class GarmentcodeReiter {
             meldung.textContent = `Fehler: ${fehler.message || fehler}`;
         } finally {
             this.laeuft = false;
-            knopf.disabled = false;
+            knoepfe.forEach(k => { k.disabled = false; });
             garmentcodeFortschritt.beenden();
+        }
+    }
+
+    /**
+     * Die Schritte im Voraus — dann weiss der Nutzer, was kommt und dass die
+     * Drapierung der lange Teil ist. Die erwarteten Dauern sind gemessene
+     * Werte (06.09.2026: Schnitt 4 s, Drapierung 22 s im Browser, Anziehen
+     * 3 s) und gewichten den Balken.
+     */
+    schritte(nurSchnitt) {
+        const schritte = [
+            { schluessel: 'schnitt', titel: 'Schnitt konstruieren', erwartet: 4 },
+        ];
+        if (this.drapierbereit && !nurSchnitt) {
+            schritte.push({ schluessel: 'drape', erwartet: 22,
+                            titel: 'Stoff drapieren' });
+            schritte.push({ schluessel: 'rig', erwartet: 3,
+                            titel: 'Anziehen' });
+        }
+        return schritte;
+    }
+
+    /**
+     * Und jetzt ohne weiteres Zutun an die Figur (Edgar, 06.09.2026: „bei
+     * Bauen soll das Garment gleich auf den Körper gebracht werden, ohne
+     * extra Klick").
+     */
+    async dreid(nurSchnitt, figur, meldung) {
+        if (nurSchnitt) {
+            meldung.textContent += ' — nur der Schnitt. „Für diese Figur '
+                + 'bauen" legt ihn auf die Figur.';
+            return;
+        }
+        if (this.drapierbereit && this.spezifikation) {
+            await GarmentcodeDrapierung.drapieren(
+                this, figur, this.spezifikation, meldung,
+                document.getElementById('gc-vorlage').value);
+            return;
+        }
+        garmentcodeFortschritt.entfallen('drape');
+        garmentcodeFortschritt.entfallen('rig');
+        if (!this.drapierbereit) {
+            meldung.textContent += ' — nur Schnittmuster, die '
+                + 'Simulationsumgebung fehlt.';
         }
     }
 
 
     // --------------------------------------------------------------- Maße
 
+    /** Die Maßliste steht in `garmentcode_masse.js`. */
     async masseLaden() {
-        const figur = this.figur();
-        const liste = document.getElementById('gc-masse-liste');
-        if (!figur || !liste) return;
-        liste.innerHTML = '<div class="hb-hinweis">Figur wird vermessen …</div>';
-        try {
-            const antwort = await Serverabruf.formular(
-                '/api/garmentcode/masse/', this.figurdaten(figur));
-            this.masseFuer = figur.id;
-            liste.innerHTML = '';
-            for (const [name, wert] of Object.entries(antwort.masse)) {
-                const zeile = document.createElement('div');
-                zeile.className = 'slider-row';
-                const woher = antwort.herkunft[name] === 'gemessen' ? '•' : '°';
-                zeile.innerHTML = `<label>${woher} ${name}</label>`
-                    + `<span class="slider-val">${wert}</span>`;
-                liste.appendChild(zeile);
-            }
-        } catch (fehler) {
-            liste.innerHTML = '<div class="hb-hinweis">Nicht abrufbar: '
-                + `${fehler.message || fehler}</div>`;
-        }
+        return GarmentcodeMasse.laden(this);
     }
 }
 

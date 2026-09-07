@@ -19,7 +19,7 @@ import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
  * HumanBody-Figur ist ihr Sitz eine Näherung mit sieben Reglern
  * (`mhproxy_anpassen.js`); hier ist er die Rechnung selbst — es gibt keinen
  * Fit-Regler, weil es nichts zu justieren gibt. Zahlen und Herkunft:
- * `core/dienste/mhbasisnetz.py`.
+ * `MakeHuman/basisnetz.py`.
  *
  * Das Netz kommt in Metern mit Y oben — MakeHumans Achsen sind die von
  * Three.js, es wird nur skaliert. Deshalb `drehen = false`; ein zweites Drehen
@@ -92,7 +92,7 @@ export class MhFigur {
     /**
      * Kleidung zuerst, Körper zuletzt — und das ist keine Geschmacksfrage:
      * Welche Haut ausgeblendet wird, hängt an den getragenen Stücken
-     * (`delete_verts`, siehe `core/dienste/mhloeschmaske.py`). Andersherum
+     * (`delete_verts`, siehe `MakeHuman/loeschmaske.py`). Andersherum
      * käme der Körper ungemaskt und stünde durch den Stoff.
      */
     async load() {
@@ -168,6 +168,45 @@ export class MhFigur {
         }
         Eigenhaut.einhaengen(this.group, this.bodyMesh, this.skelett);
         this.isSkinned = !!this.bodyMesh.isSkinnedMesh;
+        this._kleiderBinden();
+    }
+
+    /**
+     * Die getragenen Stücke an das FRISCHE Skelett binden.
+     *
+     * WARUM NACHTRÄGLICH (Edgar, 07.09.2026: „Kleider von MakeHuman
+     * animieren immer noch nicht"): `load()` zieht die Kleidung ZUERST an —
+     * die Löschmaske des Körpers hängt daran (oben begründet). Zu diesem
+     * Zeitpunkt gibt es das Skelett noch nicht, `Mhkleidstueck.anlegen`
+     * findet `figur.skelett === null` und lässt ein starres `Mesh` hängen.
+     * Im Browser gemessen: `isSkinnedMesh false`, kein `skinIndex` — der
+     * Körper lief, der Anzug blieb stehen. Am Server lag es nicht, der
+     * schickte die Gewichte mit (163 Knochennamen, keiner davon fehlte im
+     * Skelett).
+     *
+     * Der zweite Grund ist `_skelettBauen`: Es räumt bei JEDEM Aufruf ab
+     * und baut neu. Eine Bindung von vorher zeigte danach auf Knochen, die
+     * nicht mehr in der Szene hängen — deshalb wird hier IMMER neu
+     * gebunden, aus den Rohgewichten am Netz, nicht aus den Attributen der
+     * Geometrie: Deren Knochennummern gehören zum alten Skelett.
+     */
+    _kleiderBinden() {
+        if (!this.skelett) return;
+        for (const [schluessel, altes] of Object.entries(this.clothMeshes)) {
+            const haut = altes?.userData?.hautgewichte;
+            if (!haut) continue;
+            // NUR aushaengen, nicht entsorgen: `Netzentsorgung.entfernen`
+            // gibt Geometrie UND Material frei, und beide werden gleich
+            // wiederverwendet.
+            this.group.remove(altes);
+            const roh = new THREE.Mesh(altes.geometry, altes.material);
+            roh.name = altes.name;
+            roh.visible = altes.visible;
+            roh.userData = altes.userData;
+            const neues = Eigenhaut.binden(roh, this.skelett, haut);
+            this.clothMeshes[schluessel] = neues;
+            Eigenhaut.einhaengen(this.group, neues, this.skelett);
+        }
     }
 
     _altenKoerperWeg() {

@@ -17,7 +17,7 @@ u"""MakeHuman-Figur fuer die Szene: Basisnetz, Garderobe, Texturen.
     GET  /api/character/mh-figur/garderobe/<kategorie>/<stueck>/textur/<datei>/
 
 Warum es diese Figur gibt und warum die Kleidung darauf exakt sitzt:
-`core/dienste/mhbasisnetz.py`.
+`MakeHuman/basisnetz.py`.
 
 Die Texturen kommen aus der Bibliothek selbst und nicht aus
 `garment_library/.cache` wie bei `Kleiderendpunkte.textur`: Der
@@ -36,16 +36,16 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from ..daten.netzantwort import Netzantwort
 from ..daten.pfadvergleich import Pfadvergleich
-from ..dienste.mhbasisnetz import Mhbasisnetz
-from ..dienste.mhformung import Mhformung
-from ..dienste.mhgarderobe import Mhgarderobe
-from ..dienste.mhkleidnetz import Mhkleidnetz, MhkleidFehler
-from ..dienste.mhkoerpernetz import Mhkoerpernetz
-from ..dienste.mhskelett import Mhskelett
-from ..dienste.mhmakrowerte import Mhmakrowerte
-from ..dienste.mhmodifikatoren import Mhmodifikatoren
-from ..dienste.mhreglerplan import Mhreglerplan
-from ..dienste.mhzielablage import Mhzielablage
+from MakeHuman.basisnetz import Mhbasisnetz
+from MakeHuman.formung import Mhformung
+from MakeHuman.garderobe import Mhgarderobe
+from MakeHuman.kleidnetz import Mhkleidnetz, MhkleidFehler
+from MakeHuman.koerpernetz import Mhkoerpernetz
+from MakeHuman.skelett import Mhskelett
+from MakeHuman.makrowerte import Mhmakrowerte
+from MakeHuman.modifikatoren import Mhmodifikatoren
+from MakeHuman.reglerplan import Mhreglerplan
+from MakeHuman.zielablage import Mhzielablage
 
 logger = logging.getLogger('core')
 

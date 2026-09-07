@@ -29,10 +29,10 @@ import sys
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from core.dienste.mhmakrowerte import Mhmakrowerte
-from core.dienste.mhmodifikatoren import Mhmodifikatoren
-from core.dienste.mhzielablage import Mhzielablage
-from core.dienste.mhzielbaum import Mhzielbaum
+from MakeHuman.makrowerte import Mhmakrowerte
+from MakeHuman.modifikatoren import Mhmodifikatoren
+from MakeHuman.zielablage import Mhzielablage
+from MakeHuman.zielbaum import Mhzielbaum
 
 
 class MhmodellierenTest(SimpleTestCase):

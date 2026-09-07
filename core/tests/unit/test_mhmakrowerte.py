@@ -18,7 +18,7 @@ ein bisschen falsch ist — und nirgends erkennbar.
 
 import unittest
 
-from core.dienste.mhmakrowerte import Mhmakrowerte
+from MakeHuman.makrowerte import Mhmakrowerte
 
 
 class MhmakrowerteTest(unittest.TestCase):

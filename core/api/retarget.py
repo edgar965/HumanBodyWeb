@@ -156,7 +156,7 @@ class Retargetendpunkte:
         """Die MakeHuman-Reglerstellung — nur fuer dieses Ziel."""
         if wahl.ziel != Retargetdaten.ZIEL_MH:
             return None
-        from ..dienste.mhformung import Mhformung
+        from MakeHuman.formung import Mhformung
         return Mhformung.aus_abfrage(wahl.makro, wahl.regler)
 
     @staticmethod

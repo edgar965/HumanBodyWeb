@@ -25,8 +25,8 @@ from ..daten.anpassungsregler import Anpassungsregler
 from ..daten.netzantwort import Netzantwort
 from ..dienste.charakterdaten import Charakterdaten
 from ..dienste.kleidungswerkzeuge import Kleidungswerkzeuge
-from ..dienste.mhmaterial import MhMaterial
-from ..dienste.mhproxy_anpassung import MhProxyAnpassung, MhProxyFehler
+from MakeHuman.material import MhMaterial
+from MakeHuman.proxy_anpassung import MhProxyAnpassung, MhProxyFehler
 from humanbody_core.koerperabstand import Koerperabstand
 
 logger = logging.getLogger(__name__)
@@ -102,12 +102,12 @@ class Mhproxy:
     def herausschieben(request):
         """Stoffpunkte aus dem Koerpernetz schieben (Punkte als base64).
 
-        Der Schiebe-Koerper kommt aus `dienste/mhkoerper.MhKoerper`:
+        Der Schiebe-Koerper kommt aus `MakeHuman.koerper.MhKoerper`:
         MakeHuman-Stuecke werden gegen den MakeHuman-Koerper geschoben, nicht
         gegen den eigenen (sonst Beulen an Stellen, an denen der Stoff nicht
         anliegt).
         """
-        from ..dienste.mhkoerper import MhKoerper
+        from MakeHuman.koerper import MhKoerper
         koerper = Charakterdaten.koerper_aus(request.GET)
         if koerper.vertices is None:
             return JsonResponse({'error': 'Body compute failed'}, status=500)

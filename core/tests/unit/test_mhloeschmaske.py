@@ -19,7 +19,7 @@ dagegen steht dieser Test.
 
 import unittest
 
-from core.dienste.mhloeschmaske import Mhloeschmaske
+from MakeHuman.loeschmaske import Mhloeschmaske
 
 
 class MhloeschmaskeTest(unittest.TestCase):

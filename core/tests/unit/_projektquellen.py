@@ -44,14 +44,18 @@ class Projektquellen:
     #: (Edgar: „verschiebe auch die alle nach A:\3DTools\Assets").
     BAEUME = ('HumanBodyBlender',
               'HumanBody/humanbody_core', 'HumanBody/collision',
-              'Assets/assetCreator', 'Assets/PhotoToTexture')
+              'Assets/assetCreator', 'Assets/PhotoToTexture', 'MakeHuman')
 
     #: Fremde Addons und eingelagerte Fremdprojekte. `convert/retarget_bvh`
     #: und `kbs_retarget` stammen von anderen Urhebern; `data` und `cache`
     #: tragen keinen Quelltext.
+    #: `makehuman` und `buildscripts` (klein geschrieben) sind der
+    #: MakeHuman-UPSTREAM unter `MakeHuman/` — 147 MB fremder Code unter
+    #: AGPL. Der Baum darueber (gross geschrieben) traegt seit dem
+    #: 07.09.2026 unsere 20 eigenen Module.
     AUS = ('__pycache__', 'retarget_bvh', 'kbs_retarget', 'data', 'cache',
            'idol', 'sith', 'texformer', 'textured_smplx', 'TestCharakter',
-           'alt')
+           'alt', 'makehuman', 'buildscripts')
 
     @classmethod
     def dateien(cls, baeume=None, aus=None):

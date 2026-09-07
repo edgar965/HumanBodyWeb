@@ -46,7 +46,8 @@ class Skriptbaum:
     #: Nur eigene Pakete werden aufgeloest. Fremdbibliotheken haengen an
     #: der Umgebung (torch, bpy) und sind kein Befund dieses Projekts.
     EIGEN = ('humanbody_core', 'collision', 'assetCreator', 'core', 'ui',
-             'djangobase', 'GarmentFitter', 'PhotoToTexture')
+             'djangobase', 'GarmentFitter', 'PhotoToTexture', 'MakeHuman',
+             'SMPL', 'UMA', 'GarmentCode')
 
     @classmethod
     def dateien(cls):

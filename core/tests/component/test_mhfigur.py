@@ -28,7 +28,7 @@ import json
 import numpy as np
 from django.test import SimpleTestCase
 
-from core.dienste.mhbasisnetz import Mhbasisnetz
+from MakeHuman.basisnetz import Mhbasisnetz
 
 
 def _feld(b64, typ, breite):

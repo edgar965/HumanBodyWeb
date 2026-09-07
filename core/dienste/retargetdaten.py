@@ -172,7 +172,7 @@ class Retargetdaten:
     def _auf_makehuman(self, bvh, bauart):
         u"""Ziel ist das MakeHuman-Rig (`default.mhskel`) DIESER Reglerstellung."""
         from humanbody_core.skeleton.formats.mh_zuordnung import Mhzuordnung
-        from .mhskelett import Mhskelett
+        from MakeHuman.skelett import Mhskelett
         if not Mhskelett.vorhanden():
             raise ValueError('MakeHuman-Upstream fehlt — siehe MakeHuman/HERKUNFT.md')
         return self._auf_kette(bvh, bauart,

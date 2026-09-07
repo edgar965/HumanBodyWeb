@@ -42,7 +42,14 @@ class Humanbodybaum:
     #: `humanbody_core` blieb in `HumanBody/`. Beide Wurzeln stehen im
     #: `sys.path` (`ui/settings/wurzeln.py`), sonst laedt kein Modul.
     BAEUME = (('HUMANBODY_ROOT', 'humanbody_core'),
-              ('ASSETS_ROOT', 'assetCreator/GarmentFitter'))
+              ('ASSETS_ROOT', 'assetCreator/GarmentFitter'),
+              ('TOOLS_ROOT', 'MakeHuman'))
+
+    #: Was innerhalb eines Baums NICHT geprueft wird. `makehuman` und
+    #: `buildscripts` sind der MakeHuman-Upstream (147 MB, AGPL) — sie
+    #: hier mitzulesen hiesse, fremden Code zu importieren, und `rglob`
+    #: liefe ueber tausende Dateien.
+    AUS = ('__pycache__', 'makehuman', 'buildscripts')
 
     @classmethod
     def wurzel(cls, einstellung='HUMANBODY_ROOT'):
@@ -53,10 +60,11 @@ class Humanbodybaum:
     @classmethod
     def paare(cls):
         u"""(Wurzel, Pfad) je Datei — die Wurzel traegt den Importnamen."""
+        verboten = set(cls.AUS)
         for einstellung, baum in cls.BAEUME:
             wurzel = cls.wurzel(einstellung)
             for pfad in sorted((wurzel / baum).rglob('*.py')):
-                if '__pycache__' not in pfad.parts:
+                if not set(pfad.parts) & verboten:
                     yield wurzel, pfad
 
     @classmethod

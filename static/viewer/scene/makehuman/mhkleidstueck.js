@@ -84,6 +84,12 @@ export class Mhkleidstueck {
         // Abspielen stehen, während der Träger davonläuft (07.09.2026).
         // Die Gewichte kommen aus derselben `.mhclo`-Zuordnung, an der der
         // Stoff ohnehin hängt.
+        // Die Rohgewichte bleiben am Netz. `load()` zieht die Kleidung
+        // ZUERST an — da gibt es das Skelett noch nicht —, und jeder
+        // Reglerzug baut es neu. `MhFigur._kleiderBinden` bindet daraus
+        // nach (Edgar, 07.09.2026: „Kleider von MakeHuman animieren immer
+        // noch nicht").
+        netz.userData.hautgewichte = daten.hautgewichte || null;
         if (this.figur.skelett && daten.hautgewichte) {
             netz = Eigenhaut.binden(netz, this.figur.skelett, daten.hautgewichte);
         }

@@ -3,7 +3,7 @@ u"""`manage.py mh_ziele_bauen` — die MakeHuman-Ziele kompilieren.
 
 Liest die 1.280 `.target`-Dateien des Upstreams und legt sie als
 `MakeHuman/ziele/mh_ziele.npz` ab. Warum das noetig ist und was drin steht:
-`core/dienste/mhzielablage.py`.
+`MakeHuman/zielablage.py`.
 
 Der Lauf dauert gemessene 13,7 s und ist nur
 nach einem Wechsel des Upstreams noetig. Er schreibt NICHT nach
@@ -14,8 +14,8 @@ import time
 
 from django.core.management.base import BaseCommand, CommandError
 
-from core.dienste.mhzielablage import Mhzielablage
-from core.dienste.mhzielbaum import Mhzielbaum
+from MakeHuman.zielablage import Mhzielablage
+from MakeHuman.zielbaum import Mhzielbaum
 
 
 class Command(BaseCommand):

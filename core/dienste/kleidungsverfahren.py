@@ -59,7 +59,7 @@ class Kleidungsverfahren:
             'simulation': 'Nein',
             'messung': 'Hautabstand: Anzug 8,2 mm, Schuhe 7,5 mm, '
                        'Kleid 13,5 mm',
-            'code': 'core/dienste/mhkleidnetz.py, mhloeschmaske.py',
+            'code': 'MakeHuman/kleidnetz.py, loeschmaske.py',
             'beleg': 'CLAUDE.md, Abschnitt „Kleidung auf der '
                      'MakeHuman-Figur" (06.09.2026)',
             'katalog': '181 Stücke mit .mhclo',
@@ -78,7 +78,7 @@ class Kleidungsverfahren:
             'simulation': 'Nein',
             'messung': '14,3 % der Anker fallen auf EINEN Körpervertex; '
                        'Shrinkwrap liefert bis 36 % Punkte im Körper',
-            'code': 'core/dienste/mhproxy_anpassung.py, '
+            'code': 'MakeHuman/proxy_anpassung.py, '
                     'static/viewer/…/mhproxy_anpassen.js',
             'beleg': 'core/dienste/garmentcode.py, Modulkopf (06.09.2026)',
             'katalog': 'dieselben 181 Stücke',

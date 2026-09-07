@@ -74,7 +74,7 @@ class MhzuordnungTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from core.dienste.mhskelett import Mhskelett
+        from MakeHuman.skelett import Mhskelett
         if not Mhskelett.vorhanden():
             raise unittest.SkipTest('default.mhskel fehlt')
         cls.rig = set(Mhskelett.rig()['bones'])
@@ -164,8 +164,8 @@ class MhhautTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from core.dienste.mhhaut import Mhhaut
-        from core.dienste.mhbasisnetz import Mhbasisnetz
+        from MakeHuman.haut import Mhhaut
+        from MakeHuman.basisnetz import Mhbasisnetz
         if not Mhhaut.vorhanden() or not Mhbasisnetz.vorhanden():
             raise unittest.SkipTest('MakeHuman-Upstream fehlt')
         cls.Mhhaut = Mhhaut
@@ -176,13 +176,13 @@ class MhhautTest(unittest.TestCase):
         Sonst fehlte ausgerechnet `root` die Spalte, an die ein Punkt ohne
         jedes Gewicht gehaengt wird — er landete auf `breast.L`.
         """
-        from core.dienste.mhskelett import Mhskelett
+        from MakeHuman.skelett import Mhskelett
         namen = self.Mhhaut.knochennamen()
         self.assertEqual(set(namen), set(Mhskelett.rig()['bones']))
         self.assertIn('root', namen)
 
     def test_jeder_punkt_traegt_gewicht_eins(self):
-        from core.dienste.mhkoerpernetz import Mhkoerpernetz
+        from MakeHuman.koerpernetz import Mhkoerpernetz
         netz = Mhkoerpernetz(('koerper',), False).bauen()
         haut = netz['haut']
         self.assertEqual(len(haut['index']), len(netz['punkte']))
@@ -195,15 +195,15 @@ class MhhautTest(unittest.TestCase):
         Ohne dieselbe Matrix wie fuer die Punkte zeigt jedes Gewicht auf
         einen anderen Punkt — die Figur bewegt sich, nur verkehrt.
         """
-        from core.dienste.mhkoerpernetz import Mhkoerpernetz
+        from MakeHuman.koerpernetz import Mhkoerpernetz
         netz = Mhkoerpernetz(('koerper',), True).bauen()
         self.assertEqual(len(netz['haut']['index']), len(netz['punkte']))
         self.assertGreater(len(netz['punkte']), 13380)
 
     def test_die_loeschmaske_zieht_die_gewichte_mit(self):
         u"""Nach dem Verdichten muss dieselbe Auswahl auf den Gewichten liegen."""
-        from core.dienste.mhgarderobe import Mhgarderobe
-        from core.dienste.mhkoerpernetz import Mhkoerpernetz
+        from MakeHuman.garderobe import Mhgarderobe
+        from MakeHuman.koerpernetz import Mhkoerpernetz
         stuecke = [s['id'] for s in Mhgarderobe.liste()]
         if not stuecke:
             raise unittest.SkipTest('keine MakeHuman-Garderobe')

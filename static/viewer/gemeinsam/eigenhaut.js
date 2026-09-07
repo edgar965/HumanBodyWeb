@@ -63,6 +63,11 @@ export class Eigenhaut {
         gebunden.frustumCulled = false;
         gebunden.castShadow = netz.castShadow;
         gebunden.receiveShadow = netz.receiveShadow;
+        // `userData` MUSS mit: Dort liegen die Rohgewichte, aus denen ein
+        // Stueck nach einem Skelettneubau wieder gebunden wird
+        // (`MhFigur._kleiderBinden`). Ohne sie ist die zweite Bindung
+        // nicht mehr moeglich, und das Stueck bleibt still starr.
+        gebunden.userData = netz.userData;
         return gebunden;
     }
 

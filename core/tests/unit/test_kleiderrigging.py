@@ -38,9 +38,9 @@ class MhkleidHautTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from core.dienste.mhgarderobe import Mhgarderobe
-        from core.dienste.mhhaut import Mhhaut
-        from core.dienste.mhbasisnetz import Mhbasisnetz
+        from MakeHuman.garderobe import Mhgarderobe
+        from MakeHuman.haut import Mhhaut
+        from MakeHuman.basisnetz import Mhbasisnetz
         if not (Mhhaut.vorhanden() and Mhbasisnetz.vorhanden()):
             raise unittest.SkipTest('MakeHuman-Upstream fehlt')
         cls.stuecke = [s['id'] for s in Mhgarderobe.liste()]
@@ -48,7 +48,7 @@ class MhkleidHautTest(unittest.TestCase):
             raise unittest.SkipTest('keine MakeHuman-Garderobe')
 
     def _netz(self, kennung):
-        from core.dienste.mhkleidnetz import Mhkleidnetz
+        from MakeHuman.kleidnetz import Mhkleidnetz
         return Mhkleidnetz(kennung).netz()
 
     def test_je_stoffpunkt_ein_gewicht(self):
@@ -65,7 +65,7 @@ class MhkleidHautTest(unittest.TestCase):
 
     def test_die_knochen_sind_die_des_rigs(self):
         u"""Der Browser loest NAMEN auf — ein fremder Name bindet gar nicht."""
-        from core.dienste.mhskelett import Mhskelett
+        from MakeHuman.skelett import Mhskelett
         netz = self._netz(self.stuecke[0])
         self.assertEqual(set(netz['haut']['knochen']),
                          set(Mhskelett.rig()['bones']))
@@ -76,7 +76,7 @@ class MhkleidHautTest(unittest.TestCase):
         Nachgerechnet gegen die Grundmatrix — waere hier eine Suche nach dem
         naechsten Punkt eingebaut, faellt es auf.
         """
-        from core.dienste.mhhaut import Mhhaut
+        from MakeHuman.haut import Mhhaut
         grund = Mhhaut.grundmatrix()
         v = np.array([[10, 20, 30]])
         a = np.array([[0.5, 0.3, 0.2]])
@@ -95,7 +95,7 @@ class MhkleidHautTest(unittest.TestCase):
         beide Zahlen auseinander, damit niemand das eine fuer das andere
         haelt.
         """
-        from core.dienste.mhkleidnetz import Mhkleidnetz
+        from MakeHuman.kleidnetz import Mhkleidnetz
         mit, ohne, kaputt = 0, 0, 0
         for kennung in self.stuecke:
             try:

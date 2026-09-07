@@ -26,7 +26,14 @@ Hintergrund geholt — sie sind Anzeige, keine Eingabe.
                         <option value="t-shirt">T-Shirt</option>
                     </select>
                 </div>
+                {% comment %}Zwei Knoepfe, ein Weg: „2D" haelt nach dem
+                Schnitt an. Gemessen 6,12 s gegen 31 s fuer den ganzen Weg
+                (Edgar, 07.09.2026: „das sollte ja relativ schnell gehen,
+                oder?"). Wer an den 71 Reglern des T-Shirts schraubt, sieht
+                das Muster damit in einem Fuenftel der Zeit.{% endcomment %}
                 <div class="hb-display-flex">
+                    <button id="gc-schnitt" class="btn-toggle hb-fest"><i
+                         class="fas fa-drafting-compass"></i> 2D</button>
                     <button id="gc-erzeugen" class="btn-toggle hb-dehnt"><i
                          class="fas fa-cut"></i> F&uuml;r diese Figur bauen</button>
                 </div>

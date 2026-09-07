@@ -25,9 +25,9 @@ import unittest
 
 from django.conf import settings
 
-from core.dienste.mhbasisnetz import Mhbasisnetz
-from core.dienste.mhformung import Mhformung
-from core.dienste.mhskelett import Mhskelett
+from MakeHuman.basisnetz import Mhbasisnetz
+from MakeHuman.formung import Mhformung
+from MakeHuman.skelett import Mhskelett
 
 
 class MhskelettTest(unittest.TestCase):
@@ -104,7 +104,7 @@ class MhskelettTest(unittest.TestCase):
 
     def test_knochen_liegen_im_koerper(self):
         u"""Fuesse auf 0, Scheitel bei der Netzhoehe — nicht im Boden."""
-        from core.dienste.mhkoerpernetz import Mhkoerpernetz
+        from MakeHuman.koerpernetz import Mhkoerpernetz
         netz = Mhkoerpernetz(('koerper',)).bauen()
         knochen = Mhskelett().bauen()['knochen']
         hoehen = [k['kopf'][1] for k in knochen]
