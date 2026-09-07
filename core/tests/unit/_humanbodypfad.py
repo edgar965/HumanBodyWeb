@@ -25,7 +25,17 @@ class Humanbodypfad:
     @staticmethod
     def setzen():
         u"""Die HumanBody-Wurzel voranstellen. Gibt den Pfad zurueck (oder '')."""
-        wurzel = str(getattr(settings, 'HUMANBODY_ROOT', ''))
+        return Humanbodypfad._voranstellen('HUMANBODY_ROOT')
+
+    @staticmethod
+    def assets():
+        u"""Dasselbe fuer `Assets/` — dort liegen `assetCreator` und
+        `GarmentCode` seit dem 07.09.2026."""
+        return Humanbodypfad._voranstellen('ASSETS_ROOT')
+
+    @staticmethod
+    def _voranstellen(einstellung):
+        wurzel = str(getattr(settings, einstellung, ''))
         if wurzel and wurzel not in sys.path:
             sys.path.insert(0, wurzel)
         return wurzel

@@ -135,15 +135,22 @@ class EinzigeFassungTest(SimpleTestCase):
     u"""Der Name darf nicht wieder in die Bibliotheken zurückwandern."""
 
     def test_kein_push_outside_body_mehr_in_den_bibliotheken(self):
+        u"""Die beiden Bibliotheken liegen seit dem 07.09.2026 GETRENNT:
+        `humanbody_core` in `HumanBody/`, `assetCreator` in `Assets/`.
+        Ein `rglob` auf den alten Ort wirft nicht — er findet nur nichts.
+        """
         from pathlib import Path
 
-        import humanbody_core
+        from django.conf import settings
 
-        wurzel = Path(humanbody_core.__file__).parent.parent
+        ordner = [Path(str(settings.HUMANBODY_ROOT)) / 'humanbody_core',
+                  Path(str(settings.ASSETS_ROOT)) / 'assetCreator']
+        for ordner_pfad in ordner:
+            self.assertTrue(ordner_pfad.is_dir(), ordner_pfad)
         treffer = []
-        for unter in ('humanbody_core', 'assetCreator'):
-            for pfad in (wurzel / unter).rglob('*.py'):
-                if '__pycache__' in pfad.parts or 'PhotoToTexture' in pfad.parts:
+        for ordner_pfad in ordner:
+            for pfad in ordner_pfad.rglob('*.py'):
+                if '__pycache__' in pfad.parts:
                     continue
                 for nummer, zeile in enumerate(
                         pfad.read_text(encoding='utf-8',

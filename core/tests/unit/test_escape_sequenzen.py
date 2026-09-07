@@ -36,8 +36,8 @@ TOOLS = Projektquellen.TOOLS
 #: Die Baeume mit eigenem Code. `tools/` und `VideoToBVH/` bleiben
 #: aussen vor: Dort liegen eingelagerte Fremdprojekte (MB-Lab, GVHMR,
 #: WHAM, MocapNET) — deren Warnungen gehen dieses Projekt nichts an.
-BAEUME = ('HumanBody/humanbody_core', 'HumanBody/assetCreator',
-          'HumanBody/collision', 'HumanBody/PhotoToTexture',
+BAEUME = ('HumanBody/humanbody_core', 'Assets/assetCreator',
+          'HumanBody/collision', 'Assets/PhotoToTexture',
           'HumanBodyWeb/core', 'HumanBodyWeb/ui', 'Docu')
 
 #: Ordner ohne eigenen Quelltext oder mit fremdem.
@@ -61,6 +61,15 @@ class JedeEigeneDatei(unittest.TestCase):
     def test_es_werden_ueberhaupt_dateien_geprueft(self):
         u"""Sabotageschutz: Eine leere Menge bestuende jeden Test."""
         self.assertGreater(len(list(Projektquellen.dateien(BAEUME, AUS))), 200)
+
+    def test_jeder_baum_liegt_da_wo_er_steht(self):
+        u"""Ein verschobener Ordner faellt sonst STILL aus der Pruefung.
+
+        `Projektquellen.dateien` uebergeht, was es nicht gibt — beim
+        Umzug von `assetCreator` und `PhotoToTexture` nach `Assets/`
+        (07.09.2026) waere die Zahl oben trotzdem ueber 200 geblieben.
+        """
+        self.assertEqual(Projektquellen.fehlende(BAEUME), [])
 
 
 class EineSabotageInDerZeichenkette(unittest.TestCase):

@@ -15,7 +15,7 @@ from pathlib import Path
 
 from django.conf import settings
 
-from humanbody_core.uma import Formregler, UnityYaml
+from UMA import Formregler, UnityYaml
 from ._umareglerattrappe import Umareglerattrappe
 
 

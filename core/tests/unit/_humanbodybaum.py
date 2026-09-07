@@ -35,23 +35,46 @@ __all__ = ['Humanbodybaum']
 class Humanbodybaum:
     u"""Findet die Dateien und sagt, welche davon Skripte sind."""
 
-    #: Die Baeume, die geprueft werden.
-    BAEUME = ('humanbody_core', 'assetCreator/GarmentFitter')
+    #: Je Baum die Wurzel, unter der er liegt — und die ist zugleich der
+    #: Bezug fuer den Importnamen (`module()`). Seit dem 07.09.2026 sind
+    #: es ZWEI: `assetCreator` wanderte nach `Assets/` (Edgar:
+    #: „verschiebe auch die alle nach A:\3DTools\Assets"),
+    #: `humanbody_core` blieb in `HumanBody/`. Beide Wurzeln stehen im
+    #: `sys.path` (`ui/settings/wurzeln.py`), sonst laedt kein Modul.
+    BAEUME = (('HUMANBODY_ROOT', 'humanbody_core'),
+              ('ASSETS_ROOT', 'assetCreator/GarmentFitter'))
 
     @classmethod
-    def wurzel(cls):
-        u"""`settings.HUMANBODY_ROOT` — nie ein fester Pfad."""
+    def wurzel(cls, einstellung='HUMANBODY_ROOT'):
+        u"""Die Wurzel aus den Einstellungen — nie ein fester Pfad."""
         from pathlib import Path
-        return Path(str(settings.HUMANBODY_ROOT))
+        return Path(str(getattr(settings, einstellung)))
+
+    @classmethod
+    def paare(cls):
+        u"""(Wurzel, Pfad) je Datei — die Wurzel traegt den Importnamen."""
+        for einstellung, baum in cls.BAEUME:
+            wurzel = cls.wurzel(einstellung)
+            for pfad in sorted((wurzel / baum).rglob('*.py')):
+                if '__pycache__' not in pfad.parts:
+                    yield wurzel, pfad
 
     @classmethod
     def dateien(cls):
         u"""Jede `.py`-Datei der geprueften Baeume, sortiert."""
-        wurzel = cls.wurzel()
-        for baum in cls.BAEUME:
-            for pfad in sorted((wurzel / baum).rglob('*.py')):
-                if '__pycache__' not in pfad.parts:
-                    yield pfad
+        for _, pfad in cls.paare():
+            yield pfad
+
+    @classmethod
+    def fehlende(cls):
+        u"""Baeume, die es unter ihrer Wurzel gar nicht gibt.
+
+        `rglob` auf einen Ordner, den es nicht mehr gibt, wirft NICHT —
+        es kommt nur nichts zurueck. Ein verschobener Baum faellt damit
+        still aus jeder Pruefung hier (`~/.claude/rules/projektpfade.md`).
+        """
+        return ['%s/%s' % (e, b) for e, b in cls.BAEUME
+                if not (cls.wurzel(e) / b).is_dir()]
 
     @staticmethod
     def ist_skript(baum):
@@ -86,8 +109,7 @@ class Humanbodybaum:
         Mit `nur_importierbare` fallen Skripte und unlesbare Dateien
         weg — Letztere meldet `unlesbare()`, nicht diese Suche.
         """
-        wurzel = cls.wurzel()
-        for pfad in cls.dateien():
+        for wurzel, pfad in cls.paare():
             if nur_importierbare:
                 baum = cls._baum(pfad)
                 if baum is None or cls.ist_skript(baum):

@@ -7,7 +7,7 @@ import { Protokoll } from '../../gemeinsam/protokoll.js';
  *
  * WARUM (05.09.2026): UMA formt über Knochen (skalieren, verschieben, drehen,
  * Posen). Die Definitionen kommen fertig übersetzt vom Server
- * (`/api/character/uma-regler/`, `humanbody_core.uma.Formregler`); hier steht
+ * (`/api/character/uma-regler/`, `UMA.Formregler`); hier steht
  * nur die Rechnung aus `DNAEffect_*.cs` und `UMASkeleton.Morph`.
  *
  * RELATIV ZUR EXPORTIERTEN RUHELAGE: Die GLB enthält das Skelett, wie Unity

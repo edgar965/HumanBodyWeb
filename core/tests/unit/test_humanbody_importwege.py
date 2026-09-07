@@ -73,9 +73,9 @@ class JedesModulLaedtTest(SimpleTestCase):
 
     def test_skripte_werden_erkannt(self):
         u"""`download_all.py` MUSS als Skript gelten — sonst lädt es los."""
+        pfad = (Humanbodybaum.wurzel('ASSETS_ROOT') / 'assetCreator'
+                / 'GarmentFitter' / 'download_all.py')
         wurzel = Humanbodybaum.wurzel()
-        pfad = (wurzel / 'assetCreator' / 'GarmentFitter'
-                / 'download_all.py')
         self.assertTrue(pfad.exists(), pfad)
         self.assertTrue(
             self._ist_skript(pfad),
@@ -119,7 +119,6 @@ class HumanbodyLokaleImporteTest(SimpleTestCase):
 
     def _ins_leere(self, dateien):
         kaputt = []
-        wurzel = Humanbodybaum.wurzel()
         for pfad in dateien:
             baum = ast.parse(pfad.read_text(encoding='utf-8'))
             for knoten in ast.walk(baum):
@@ -131,8 +130,8 @@ class HumanbodyLokaleImporteTest(SimpleTestCase):
                         continue
                     if not self._loesbar(pfad, innen):
                         kaputt.append('%s:%d  from %s%s'
-                                      % (pfad.relative_to(wurzel),
-                                         innen.lineno, '.' * innen.level,
+                                      % (pfad.name, innen.lineno,
+                                         '.' * innen.level,
                                          innen.module or ''))
         return kaputt
 
@@ -185,3 +184,13 @@ class DateienLesbarTest(SimpleTestCase):
     def test_die_pruefung_findet_ueberhaupt_dateien(self):
         u"""Ein leerer Baum wuerde sonst als „alles lesbar" durchgehen."""
         self.assertGreater(len(list(Humanbodybaum.dateien())), 50)
+
+    def test_jeder_baum_liegt_unter_seiner_wurzel(self):
+        u"""Ein verschobener Baum faellt still aus jeder Pruefung.
+
+        Die Zahl oben faengt das nicht: `humanbody_core` allein bringt
+        weit mehr als 50 Dateien mit. Beim Umzug von `assetCreator` nach
+        `Assets/` (07.09.2026) waere `GarmentFitter` also lautlos aus
+        `test_jedes_modul_laedt` gefallen.
+        """
+        self.assertEqual(Humanbodybaum.fehlende(), [])

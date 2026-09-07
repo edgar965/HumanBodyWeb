@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-u"""`humanbody_core.uma.Garderobe` gegen einen kleinen Rezeptbaum unter ProjektTemp (06.09.2026)."""
+u"""`UMA.Garderobe` gegen einen kleinen Rezeptbaum unter ProjektTemp (06.09.2026)."""
 import shutil
 import tempfile
 import unittest
@@ -7,7 +7,7 @@ from pathlib import Path
 
 from django.conf import settings
 
-from humanbody_core.uma import Garderobe
+from UMA import Garderobe
 
 REZEPT = u'''%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:

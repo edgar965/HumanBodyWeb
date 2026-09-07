@@ -24,7 +24,7 @@ from django.test import SimpleTestCase
 
 from ._humanbodypfad import Humanbodypfad
 
-Humanbodypfad.setzen()
+Humanbodypfad.assets()
 
 from assetCreator.GarmentFitter.smpl_library.objleser import Objleser  # noqa: E402
 

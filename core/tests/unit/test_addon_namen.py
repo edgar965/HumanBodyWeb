@@ -85,6 +85,14 @@ class JederGeleseneName(unittest.TestCase):
         u"""Sabotageschutz: Eine leere Menge bestuende jeden Test."""
         self.assertGreater(len(list(Projektquellen.dateien())), 180)
 
+    def test_jeder_baum_liegt_da_wo_er_steht(self):
+        u"""Die Zahl oben faellt bei einem verschobenen Ordner nicht auf.
+
+        Sie prueft eine Untergrenze; wer 49 Dateien verliert, bleibt
+        darueber. `fehlende()` nennt den Ordner beim Namen.
+        """
+        self.assertEqual(Projektquellen.fehlende(), [])
+
 
 class EineSabotageAmNamen(unittest.TestCase):
     u"""Die Gegenprobe: Der Test muss rot werden koennen."""

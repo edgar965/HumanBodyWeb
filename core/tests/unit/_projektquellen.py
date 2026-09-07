@@ -39,10 +39,12 @@ class Projektquellen:
     #: Das Blender-Addon.
     ADDON = TOOLS / 'HumanBodyBlender'
 
-    #: Die Baeume mit eigenem Code (Addon-Sicht).
+    #: Die Baeume mit eigenem Code (Addon-Sicht). `assetCreator` und
+    #: `PhotoToTexture` liegen seit dem 07.09.2026 unter `Assets/`
+    #: (Edgar: „verschiebe auch die alle nach A:\3DTools\Assets").
     BAEUME = ('HumanBodyBlender',
               'HumanBody/humanbody_core', 'HumanBody/collision',
-              'HumanBody/assetCreator', 'HumanBody/PhotoToTexture')
+              'Assets/assetCreator', 'Assets/PhotoToTexture')
 
     #: Fremde Addons und eingelagerte Fremdprojekte. `convert/retarget_bvh`
     #: und `kbs_retarget` stammen von anderen Urhebern; `data` und `cache`
@@ -63,6 +65,20 @@ class Projektquellen:
             for pfad in sorted(wurzel.rglob('*.py')):
                 if not set(pfad.parts) & verboten:
                     yield pfad
+
+    @classmethod
+    def fehlende(cls, baeume=None):
+        u"""Baeume aus der Liste, die es gar nicht gibt.
+
+        DAS `continue` OBEN IST STILL, und das ist die eigentliche Falle:
+        Ein verschobener Ordner faellt einfach aus der Suche, die Pruefung
+        laeuft ueber weniger Dateien und meldet gruen. Beim Umzug von
+        `assetCreator` und `PhotoToTexture` nach `Assets/` (07.09.2026)
+        waeren so 49 Dateien lautlos aus der Pruefung gefallen —
+        `~/.claude/rules/projektpfade.md`.
+        """
+        return [baum for baum in (cls.BAEUME if baeume is None else baeume)
+                if not (cls.TOOLS / baum).is_dir()]
 
     @classmethod
     def baeume(cls, baeume=None, aus=None):

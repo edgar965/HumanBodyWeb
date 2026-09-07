@@ -55,7 +55,12 @@ ASSETS_ROOT = TOOLS_ROOT / 'Assets'
 if str(ASSETS_ROOT) not in sys.path:
     sys.path.insert(0, str(ASSETS_ROOT))
 
-#: `assetCreator` bringt den GarmentFitter mit.
-_ASSET_CREATOR = str(HUMANBODY_ROOT / 'assetCreator')
+#: `assetCreator` bringt den GarmentFitter mit. Er liegt seit dem 07.09.2026
+#: ebenfalls unter `Assets/` (Edgar: „verschiebe auch die alle nach
+#: A:\3DTools\Assets"). Der Ordner selbst kommt in den Pfad, weil die
+#: Importe `from GarmentFitter import ...` lauten — `assetCreator` ist nur
+#: die Klammer darum (und ueber ASSETS_ROOT als Namensraumpaket erreichbar,
+#: `from assetCreator.GarmentFitter... import` im Test).
+_ASSET_CREATOR = str(ASSETS_ROOT / 'assetCreator')
 if _ASSET_CREATOR not in sys.path:
     sys.path.insert(0, _ASSET_CREATOR)

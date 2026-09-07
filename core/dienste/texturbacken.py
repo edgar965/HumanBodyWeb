@@ -15,7 +15,6 @@ die Textur zu Konfetti.
 """
 import logging
 import os
-import sys
 
 import numpy as np
 from django.conf import settings
@@ -132,16 +131,15 @@ class Texturbacken:
             if ausrichtung.get('face_transform'):
                 argumente['face_transform'] = ausrichtung['face_transform']
 
-        verzeichnis = os.path.join(str(settings.BASE_DIR), '..', 'HumanBody',
-                                   'PhotoToTexture')
-        sys.path.insert(0, verzeichnis)
-        try:
-            from bake_texture import bake_with_backend
-            return bake_with_backend(backend, vertices, faces, self.foto,
-                                     **argumente)
-        finally:
-            if verzeichnis in sys.path:
-                sys.path.remove(verzeichnis)
+        # ALS PAKET, nicht als Datei. `bake_texture` holt seine Hilfsklasse
+        # relativ (`from .uvkarte import Uvkarte`); mit dem Ordner im
+        # `sys.path` und `from bake_texture import ...` bricht das mit
+        # „attempted relative import with no known parent package" — und
+        # zwar erst beim ersten echten Texturlauf, nicht beim Start.
+        # `ASSETS_ROOT` steht ohnehin im Pfad (`ui/settings/wurzeln.py`).
+        from PhotoToTexture.bake_texture import bake_with_backend
+        return bake_with_backend(backend, vertices, faces, self.foto,
+                                 **argumente)
 
     # ----------------------------------------------------------------- ablegen
 

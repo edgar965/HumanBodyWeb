@@ -126,7 +126,7 @@ class Kleidungsverfahren:
             'simulation': 'Nein',
             'messung': 'nicht gemessen',
             'code': 'core/api/umakleidung.py, core/dienste/umabauer.py, '
-                    'humanbody_core/uma/',
+                    'UMA/',
             'beleg': 'CLAUDE.md, Abschnitt „UMA-Figur auf Zuruf bauen"',
             'katalog': 'Rezepte je Rasse und Platz',
         },

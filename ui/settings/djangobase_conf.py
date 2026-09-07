@@ -14,8 +14,8 @@ from .protokoll import LOG_DIR
 from .djangobase_menue import EINSTELLUNGEN_EXTRA, HILFE_EXTRA, MENUE
 from .djangobase_tests import TEST_BEFEHLE, TEST_BEREICHE
 from ..review import REVIEW_BEREICHE
-from .wurzeln import (BASE_DIR, HUMANBODY_ROOT, TOOLS_ROOT, VERSION,
-                      VIDEOTOBVH_ROOT)
+from .wurzeln import (ASSETS_ROOT, BASE_DIR, HUMANBODY_ROOT, TOOLS_ROOT,
+                      VERSION, VIDEOTOBVH_ROOT)
 
 # djangoBase — wiederverwendbare Infra (Sidebar-Layout, Hilfe: Logs/Versionen/
 # Tests, Einstellungen). Installiert als editable Package aus A:\shared\djangoBase.
@@ -62,7 +62,8 @@ DJANGOBASE = {
     # (17.08.2026). Fremdcode in der Befundliste verdeckt die eigenen Funde.
     #
     # `idol`, `sith`, `texformer`, `textured_smplx` (31.08.2026): vier
-    # EINGELAGERTE Forschungsprojekte unter `HumanBody/PhotoToTexture/`,
+    # EINGELAGERTE Forschungsprojekte unter `Assets/PhotoToTexture/`
+    # (bis zum 07.09.2026 `HumanBody/PhotoToTexture/`),
     # zusammen 135 der 142 Python-Dateien dieses Ordners. Eigen sind dort
     # nur die sieben Wrapper daneben (`*_wrapper.py`, `bake_texture.py`).
     # Ohne den Ausschluss stammten die ersten vier Befunde des Werkzeugs
@@ -116,10 +117,17 @@ DJANGOBASE = {
     },
     # Hilfe -> Language Server: `humanbody_core` liegt NICHT im Projekt,
     # sondern nebenan in HumanBody, und kommt ueber `sys.path.insert` in
-    # `ui/settings/pfade.py` herein. Der Pruefer folgt dem nicht und meldete
+    # `ui/settings/wurzeln.py` herein. Der Pruefer folgt dem nicht und meldete
     # deshalb 151 `reportMissingImports` auf `humanbody_core.*` — 12 % aller
     # Befunde, und kein einziger davon ein Fehler (gemessen 05.09.2026).
-    'ls_extra_pfade': [HUMANBODY_ROOT],
+    #
+    # Die drei anderen Wurzeln stehen aus demselben Grund dabei: `SMPL` und
+    # `MakeHuman` liegen direkt unter `A:DTools` (TOOLS_ROOT), `GarmentCode`,
+    # `assetCreator/GarmentFitter` und `PhotoToTexture` unter `Assets/`
+    # (07.09.2026). `assetCreator` selbst zusaetzlich, weil die Importe
+    # `from GarmentFitter import ...` lauten.
+    'ls_extra_pfade': [HUMANBODY_ROOT, TOOLS_ROOT, ASSETS_ROOT,
+                       ASSETS_ROOT / 'assetCreator'],
     'farben': {
         'sidebar_bg': '#1a1a2e',     # = --bg-secondary (style.css)
         'sidebar_light': '#16213e',  # = --bg-card  (Hover/Active-Fill)
