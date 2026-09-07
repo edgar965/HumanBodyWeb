@@ -98,10 +98,37 @@ class Mhkleidnetz:
             'dreiecke': dreiecke,
             'normalen': Mhnetzformen.normalen(punkte, dreiecke),
             'uvs': uvs,
+            # Ohne Hautgewichte bleibt der Stoff beim Abspielen stehen,
+            # waehrend der Traeger davonlaeuft (07.09.2026).
+            'haut': self._haut(ecken),
         }
         logger.debug('MakeHuman-Kleid %s: %d Punkte, %d Dreiecke',
                      self.kennung, len(punkte), len(dreiecke))
         return MhMaterial(self.verzeichnis).in_antwort(antwort)
+
+    def _haut(self, ecken):
+        u"""`{knochen, index, gewicht}` je Stoffpunkt — oder `None`.
+
+        Aus DERSELBEN Zuordnung, an der der Stoff schon haengt: Die `.mhclo`
+        nennt je Punkt drei Koerperpunkte mit Gewichten
+        (`MHCLOProxy.mappings`), und dieselbe Mischung gilt fuer die
+        Knochen. `ecken` ist die Liste der alten Punktnummern in der neuen
+        Reihenfolge (die UV-Aufteilung kopiert Punkte) — sie muss auf die
+        Gewichte, sonst zeigt jeder Wert auf einen anderen Punkt.
+        """
+        from .mhhaut import Mhhaut
+        zuordnung = getattr(self.proxy, 'mappings', None)
+        if not Mhhaut.vorhanden() or zuordnung is None or not len(zuordnung):
+            return None
+        try:
+            index, gewicht = Mhhaut.fuer_kleidung(
+                np.asarray(zuordnung)[:, :3], np.asarray(zuordnung)[:, 3:6])
+        except (OSError, ValueError, KeyError, IndexError) as fehler:
+            logger.warning('MakeHuman-Kleid %s ohne Hautgewichte: %s',
+                           self.kennung, fehler)
+            return None
+        return {'knochen': Mhhaut.knochennamen(),
+                'index': index[ecken], 'gewicht': gewicht[ecken]}
 
     @staticmethod
     def _nach_three(blender, boden):

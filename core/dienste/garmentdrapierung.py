@@ -74,7 +74,7 @@ class Garmentdrapierung:
             ergebnis['drapierkoerper'] = koerper
             ergebnis['auf_figur'] = False
             try:
-                ergebnis.update(cls._netz_ablegen(ergebnis))
+                ergebnis.update(cls._anziehen_smpl(ergebnis, koerper))
             except Exception:
                 logger.exception('GarmentCode: Netz nicht ablegbar')
                 ergebnis['rig'] = ''
@@ -109,16 +109,26 @@ class Garmentdrapierung:
         from .smplvarianten import Smplvarianten
         return Smplvarianten.ordner() if Smplvarianten.vorhanden(koerper) else None
 
-    # ------------------------------------------------- Referenzkoerper: nur Netz
+    # -------------------------------------- Referenzkoerper: Netz UND Skinning
 
-    @staticmethod
-    def _netz_ablegen(ergebnis):
-        """Das drapierte Netz ohne Rig ablegen — fuer den Referenzkoerper.
+    @classmethod
+    def _anziehen_smpl(cls, ergebnis, koerper):
+        """Das drapierte Netz ablegen — mit den Gewichten des SMPL-Koerpers.
 
-        Dieselbe Datei wie beim Anziehen (`*_sim_rig.json`), nur ohne
-        Gewichte und Anker: Der Browser haengt es dann als starres Netz ein.
-        Bewusst KEINE Stoffkorrektur — das hier ist die Messlatte, und die
-        darf nichts enthalten, was das Tool nicht auch tut.
+        WARUM (Edgar, 07.09.2026: „bei SMPL verschwinden die Kleider beim
+        Abspielen einer Animation"): Bis dahin lag hier nur das Netz, ohne
+        Gewichte und ohne Anker — der Browser haengte es als starres `Mesh`
+        ein. Beim Abspielen bewegte sich der Koerper und das Stueck blieb
+        stehen; von vorn sieht das aus, als sei es verschwunden.
+
+        Uebertragen wird ueber DAS NAECHSTE DREIECK, nicht ueber den
+        naechsten Punkt (`Gewichtsuebertragung`): Zwei benachbarte
+        Stoffpunkte koennen sonst an verschiedenen Knochen haengen, und der
+        Stoff reisst beim Heben des Arms.
+
+        Die STOFFKORREKTUR bleibt weg. Der Referenzkoerper ist die
+        Messlatte, und die darf nichts enthalten, was das Online-Tool nicht
+        auch tut.
         """
         from GarmentCode.anziehen import Anziehen
         netzdatei = ergebnis.get('netz') or ''
@@ -126,9 +136,54 @@ class Garmentdrapierung:
             return {'rig': ''}
         punkte, dreiecke = Anziehen.netz_lesen(netzdatei, aus_garmentcode=True)
         ziel = os.path.splitext(netzdatei)[0] + '_rig.json'
-        Anziehen.ablegen(ziel, punkte, dreiecke, None, [])
+        traeger = cls._smpl_traeger(koerper)
+        if traeger is None:
+            Anziehen.ablegen(ziel, punkte, dreiecke, None, [])
+            return {'rig': ziel, 'rig_datei': os.path.basename(ziel),
+                    'rig_punkte': len(punkte),
+                    'rig_ohne_gewicht': len(punkte)}
+        anzieher = Anziehen(traeger['punkte'], traeger['dreiecke'],
+                            traeger['gewichte'], traeger['knochen'])
+        rig = anzieher.anziehen(punkte)
+        Anziehen.ablegen(ziel, punkte, dreiecke, rig, traeger['knochen'])
+        logger.info('GarmentCode: auf %s angezogen — %d Punkte, %d ohne '
+                    'Gewicht', koerper, rig['punkte'], rig['ohne_gewicht'])
         return {'rig': ziel, 'rig_datei': os.path.basename(ziel),
-                'rig_punkte': len(punkte), 'rig_ohne_gewicht': len(punkte)}
+                'rig_punkte': rig['punkte'],
+                'rig_ohne_gewicht': rig['ohne_gewicht']}
+
+    @staticmethod
+    def _smpl_traeger(koerper):
+        """Punkte, Dreiecke und Gewichte des Traegers — oder `None`.
+
+        In PROJEKTkoordinaten (m, Z oben), denn genau so liest
+        `Anziehen.netz_lesen(..., aus_garmentcode=True)` das Stoffnetz. Die
+        Figur liegt in Three-Achsen (m, Y oben); ohne die Drehung laege der
+        Traeger um 90 Grad gekippt neben dem Stoff, und die Projektion
+        traefe irgendetwas.
+        """
+        import numpy as np
+        from .smplfigur import Smplfiguren
+        try:
+            punkte, dreiecke = Smplfiguren.netz(koerper)
+            haut = Smplfiguren.haut(koerper, punkte)
+        except (OSError, ValueError, KeyError):
+            logger.exception('GarmentCode: kein SMPL-Traeger fuer %s', koerper)
+            return None
+        if not haut:
+            logger.warning('GarmentCode: %s ohne Hautgewichte — Stueck bleibt '
+                           'starr', koerper)
+            return None
+        drei = np.asarray(punkte, dtype=np.float64)
+        return {
+            'punkte': np.column_stack([drei[:, 0], -drei[:, 2], drei[:, 1]]),
+            'dreiecke': np.asarray(dreiecke, dtype=np.int64),
+            'gewichte': [[[int(i), float(w)] for i, w in zip(zeile, werte)
+                          if w > 0]
+                         for zeile, werte in zip(haut['index'],
+                                                 haut['gewicht'])],
+            'knochen': haut['knochen'],
+        }
 
     # ------------------------------------------------------------- anziehen
 

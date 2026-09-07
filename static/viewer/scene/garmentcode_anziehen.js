@@ -74,7 +74,6 @@ export class GarmentcodeAnziehen {
         if (zuordnung && zuordnung.treffer && gewichte.length) {
             GarmentcodeAnziehen._gewichte(geometrie, gewichte, zuordnung.index);
             netz = new THREE.SkinnedMesh(geometrie, GarmentcodeAnziehen._stoff());
-            netz.bind(skelett, new THREE.Matrix4());
         } else {
             netz = new THREE.Mesh(geometrie, GarmentcodeAnziehen._stoff());
             // Ohne Gewichte in der Datei ist das kein Mangel, sondern der
@@ -89,6 +88,15 @@ export class GarmentcodeAnziehen {
         netz.name = GarmentcodeAnziehen.name(stueck);
         netz.frustumCulled = false;      // das Netz verlässt beim Posieren die Box
         figur.group.add(netz);
+        // Gebunden wird in der Lage der FIGURGRUPPE, nicht der Welt — so
+        // wie der Körper (`Eigenhaut.einhaengen`) und wie die Umkehrmatrizen
+        // des Skeletts (`Knochenbau.ruhelagen`). Mit der Weltmatrix wäre
+        // ein Stück, das gebunden wird, während die Figur schon 90 cm
+        // weiter steht, um genau diese 90 cm doppelt verrechnet.
+        if (netz.isSkinnedMesh) {
+            netz.updateMatrix();
+            netz.bind(skelett, netz.matrix);
+        }
         return {
             punkte: geometrie.attributes.position.count,
             dreiecke: (daten.dreiecke || []).length,

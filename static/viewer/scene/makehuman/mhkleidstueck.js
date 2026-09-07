@@ -3,6 +3,7 @@ import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { Netzgeometrie } from '../../gemeinsam/netzgeometrie.js';
 import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
+import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
 
 /**
  * Mhkleidstueck — ein MakeHuman-Kleidungsstück an der MakeHuman-Figur.
@@ -77,10 +78,17 @@ export class Mhkleidstueck {
         if (daten.fehler) throw new Error(daten.fehler);
         this.altesNetzWeg();
         const geometrie = Netzgeometrie.bauen(daten, THREE, null, false);
-        const netz = new THREE.Mesh(geometrie, this.werkstoff(daten));
+        let netz = new THREE.Mesh(geometrie, this.werkstoff(daten));
         netz.name = this.schluessel;
+        // An MakeHumans eigenes Rig binden — sonst bleibt der Stoff beim
+        // Abspielen stehen, während der Träger davonläuft (07.09.2026).
+        // Die Gewichte kommen aus derselben `.mhclo`-Zuordnung, an der der
+        // Stoff ohnehin hängt.
+        if (this.figur.skelett && daten.hautgewichte) {
+            netz = Eigenhaut.binden(netz, this.figur.skelett, daten.hautgewichte);
+        }
         this.figur.clothMeshes[this.schluessel] = netz;
-        this.figur.group.add(netz);
+        Eigenhaut.einhaengen(this.figur.group, netz, this.figur.skelett);
         // Die WIRKLICH gesetzte Farbe merken: Sie kann aus der `.mhmat`
         // kommen. Sonst zeigte das Farbfeld im Panel eine andere Farbe als
         // das Stück in der Szene.

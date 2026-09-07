@@ -99,6 +99,7 @@ class Mhhaut:
     def vergessen(cls):
         cls._roh = None
         cls._fein = {}
+        cls._grund = None
 
     # --------------------------------------------------------------- rechnen
 
@@ -140,6 +141,49 @@ class Mhhaut:
             matrix = np.asarray(glaettung.verteilen(matrix),
                                 dtype=np.float64)
         return cls._vier(matrix)
+
+    @classmethod
+    def fuer_kleidung(cls, v_indizes, anteile):
+        u"""``(index, gewicht)`` je Stoffpunkt aus seiner `.mhclo`-Zuordnung.
+
+        WARUM (Edgar, 07.09.2026: „Kleider werden nicht gerigged bei
+        MakeHuman"): Eine `.mhclo` haengt jeden Stoffpunkt an DREI
+        Koerperpunkte::
+
+            Punkt = w1·K[v1] + w2·K[v2] + w3·K[v3] + Versatz
+
+        Dieselbe Rechnung gilt fuer die Gewichte. Es wird also nichts
+        genaehert und nichts gesucht — der Stoff bekommt genau die Knochen
+        des Koerpers, an dem er ohnehin haengt. Das ist der Unterschied zum
+        GarmentCode-Weg, wo ueber das naechste Dreieck projiziert werden
+        muss, weil es keine Zuordnung gibt.
+
+        @param v_indizes (N, 3) Punktnummern des VOLLEN Basisnetzes
+        @param anteile   (N, 3) ihre Gewichte
+        """
+        grund = cls.grundmatrix()
+        v = np.clip(np.asarray(v_indizes, dtype=np.int64), 0, len(grund) - 1)
+        a = np.asarray(anteile, dtype=np.float64)
+        matrix = (grund[v[:, 0]] * a[:, 0:1] + grund[v[:, 1]] * a[:, 1:2]
+                  + grund[v[:, 2]] * a[:, 2:3])
+        return cls._vier(matrix)
+
+    _grund = None
+
+    @classmethod
+    def grundmatrix(cls):
+        u"""(19158, K) — je Punkt des VOLLEN Basisnetzes und Knochen ein Anteil.
+
+        Einmal je Prozess: Die Gewichte stehen je Vertexnummer und aendern
+        sich durch keinen Modellierregler.
+        """
+        if cls._grund is None:
+            with cls._schloss:
+                if cls._grund is None:
+                    from .mhbasisnetz import Mhbasisnetz
+                    anzahl = len(Mhbasisnetz.holen().punkte)
+                    cls._grund = cls._matrix(np.arange(anzahl))
+        return cls._grund
 
     @classmethod
     def _matrix(cls, basisnummern):

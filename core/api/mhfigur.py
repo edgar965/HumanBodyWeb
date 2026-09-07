@@ -243,11 +243,13 @@ class Mhfigur:
             logger.warning('MakeHuman-Kleid %s nicht ladbar: %s', kennung,
                            fehler)
             return JsonResponse({'fehler': str(fehler)}, status=500)
+        haut = daten.pop('haut', None)
         antwort = Netzantwort.aus(daten.pop('punkte'),
                                   faces=daten.pop('dreiecke'),
                                   normals=daten.pop('normalen'),
                                   uvs=daten.pop('uvs'))
         antwort.update(daten)
+        antwort['hautgewichte'] = Mhfigur._hautgewichte(haut)
         return JsonResponse(antwort)
 
     @staticmethod

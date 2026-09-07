@@ -92,18 +92,25 @@ export class Eigenhaut {
     }
 
     /**
-     * Das gebundene Netz an die Figur hängen und binden.
+     * Das Netz an die Figur hängen und binden.
      *
-     * Erst in die Gruppe, DANN `bind`: `bindMatrix` ist die Weltmatrix des
-     * Netzes zum Zeitpunkt der Bindung, und die entsteht erst, wenn es
-     * irgendwo hängt. Mit einer Einheitsmatrix säße die Figur bei jeder
-     * Verschiebung doppelt verschoben da.
+     * `bindMatrix` ist die Lage des Netzes IN DER FIGURGRUPPE, nicht in der
+     * Welt: Die Umkehrmatrizen des Skeletts stehen ebenfalls dort
+     * (`Knochenbau.ruhelagen`), und beide müssen im selben Bezug liegen.
+     * Mit der Weltmatrix wäre ein Stück, das gebunden wird, während die
+     * Figur schon 90 cm weiter steht, um genau diese 90 cm doppelt
+     * verrechnet — gemessen 1,92 m weit wandernde Stoffpunkte, im Bild ein
+     * zerrissenes Kleidungsstück (07.09.2026).
+     *
+     * `netz.matrix` und nicht die Einheitsmatrix: Ein Netz mit eigener
+     * Verschiebung in der Gruppe soll sie behalten. Bei den Körper- und
+     * Kleidernetzen hier ist sie die Einheit.
      */
     static einhaengen(gruppe, netz, skelett) {
         gruppe.add(netz);
         if (!netz.isSkinnedMesh) return netz;
-        gruppe.updateMatrixWorld(true);
-        netz.bind(skelett.skeleton, netz.matrixWorld);
+        netz.updateMatrix();
+        netz.bind(skelett.skeleton, netz.matrix);
         return netz;
     }
 }

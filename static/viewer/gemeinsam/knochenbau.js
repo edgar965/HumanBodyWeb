@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Knochenkette } from './knochenkette.js';
+import { Ruhematrix } from './ruhematrix.js';
 
 /**
  * Knochenbau — aus der Knochenliste des Servers ein echtes Three.js-Skelett.
@@ -53,12 +54,37 @@ export class Knochenbau {
         rootBone.updateMatrixWorld(true);
 
         return {
-            skeleton: new THREE.Skeleton(bones),
+            skeleton: new THREE.Skeleton(bones, Knochenbau.ruhelagen(plan)),
             rootBone,
             bones,
             boneByName: Object.fromEntries(bones.map(k => [k.name, k])),
             quelle: angaben?.name || null,
         };
+    }
+
+    /**
+     * Die `boneInverses` in der Lage der FIGURGRUPPE, nicht der Welt.
+     *
+     * WARUM (Edgar, 07.09.2026: „bei SMPL verschwinden die Kleider beim
+     * Abspielen"): `THREE.Skeleton` rechnet die Umkehrmatrizen sonst aus
+     * `bone.matrixWorld` — also aus der Lage, in der die Figur GERADE
+     * steht. Wer danach ein Kleidungsstück bindet (der Bau eines
+     * GarmentCode-Stücks dauert 16 s, die Figur steht längst woanders),
+     * bekommt eine `bindMatrix` aus einer anderen Welt als die
+     * Umkehrmatrizen. Gemessen: Bei einer Figur bei x = 0,9 m wanderten
+     * Stoffpunkte bis zu 1,92 m — im Bild ein zerrissenes Stück mit
+     * meterlangen Zacken. Der Körper blieb heil, weil er noch im Ursprung
+     * gebunden wurde.
+     *
+     * Hier wird die Ruhelage deshalb aus dem Bauplan selbst gerechnet
+     * (`ruhematrix.js`, ohne Three.js und damit prüfbar). Sie hängt an
+     * nichts, was sich später bewegt — und `Eigenhaut.einhaengen` bindet
+     * zur selben Bezugslage, wann immer das Stück dazukommt.
+     */
+    static ruhelagen(plan) {
+        const kette = Ruhematrix.kette(plan);
+        return plan.map(eintrag => new THREE.Matrix4()
+            .fromArray(kette.get(eintrag.name)).invert());
     }
 
     /**
