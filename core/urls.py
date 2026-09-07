@@ -18,6 +18,7 @@ from .api.system import Systemendpunkte
 from .api.bibliothek import Bibliotheksendpunkte
 from .api.bvhtext import Bvhtext
 from .api.garmentcode import Garmentcode
+from .api.schnittvorschau import Schnittvorschauendpunkte
 from .api.ui_vorgaben import Uivorgaben
 from .api.auftrag_upload import Uploadseiten
 from .api.studio_video import Theatrevideo
@@ -185,6 +186,8 @@ urlpatterns = [
          name='garmentcode_erzeugen'),
     path('api/garmentcode/drapieren/', Garmentcode.drapieren,
          name='garmentcode_drapieren'),
+    path('api/garmentcode/schnittnetz/', Schnittvorschauendpunkte.netz,
+         name='garmentcode_schnittnetz'),
     path('api/garmentcode/datei/<str:ordner>/<str:name>/', Garmentcode.datei,
          name='garmentcode_datei'),
     path('api/character-test/switch/', Testverwaltung.figur_wechseln,

@@ -14,11 +14,9 @@
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
-import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
-import { GarmentcodeDrapierung } from './garmentcode_drapieren.js';
-import { GarmentcodeSchnitt } from './garmentcode_schnitt.js';
 import { GarmentcodeFigur } from './garmentcode_figur.js';
 import { GarmentcodeMasse } from './garmentcode_masse.js';
+import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
 
 class GarmentcodeReiter {
     constructor() {
@@ -53,12 +51,14 @@ class GarmentcodeReiter {
         reiter.addEventListener('click', () => this.oeffnen());
 
         const knopf = document.getElementById('gc-erzeugen');
-        if (knopf) knopf.addEventListener('click', () => this.bauen());
+        if (knopf) knopf.addEventListener('click', () => this.bauen('komplett'));
         // Nur der 2D-Teil (Edgar, 07.09.2026). Gemessen 6,12 s gegen 31 s
         // fuer den ganzen Weg — wer am Schnitt schraubt, wartet ein
         // Fuenftel.
         const nur2d = document.getElementById('gc-schnitt');
-        if (nur2d) nur2d.addEventListener('click', () => this.bauen(true));
+        if (nur2d) nur2d.addEventListener('click', () => this.bauen('2d'));
+        const nur3d = document.getElementById('gc-drapieren');
+        if (nur3d) nur3d.addEventListener('click', () => this.bauen('3d'));
 
         // Ein anderes Kleidungsstück hat andere Einstellungen — eine Hose
         // hat keinen Kragen. Deshalb bei jedem Wechsel neu holen.
@@ -168,97 +168,11 @@ class GarmentcodeReiter {
 
     // ---------------------------------------------------------------- bauen
 
-    /**
-     * Bauen — mit `nurSchnitt` endet es beim Schnittmuster.
-     *
-     * Der 2D-Knopf ist kein zweiter Weg, sondern derselbe ohne die beiden
-     * langen Schritte: Der Balken zeigt dann nur „Schnitt konstruieren",
-     * und `spezifikation` bleibt stehen, sodass ein anschliessendes
-     * „Fuer diese Figur bauen" ohne Neubau weitermachen koennte.
-     */
-    async bauen(nurSchnitt = false) {
-        if (this.laeuft) return;
-        const meldung = document.getElementById('gc-meldung');
-        const figur = this.figur();
-        if (!figur) {
-            meldung.textContent = 'Keine Figur gewählt — bitte links in der '
-                + 'Charakterliste eine anklicken. Der Schnitt wird aus ihren '
-                + 'Maßen gebaut.';
-            return;
-        }
-        const knoepfe = [document.getElementById('gc-erzeugen'),
-                         document.getElementById('gc-schnitt')].filter(Boolean);
+    // ---------------------------------------------------------------- bauen
 
-        this.laeuft = true;
-        knoepfe.forEach(k => { k.disabled = true; });
-        meldung.textContent = '';
-        // Gesagt, nicht verhindert: Ein Grundkörper ist auch eine Figur.
-        this.ohneMorphs = GarmentcodeFigur.ohneMorphs(figur);
-        garmentcodeFortschritt.starten(this.schritte(nurSchnitt));
-
-        try {
-            const ergebnis = await GarmentcodeSchnitt.bauen(this, figur, meldung);
-            if (!ergebnis) {
-                garmentcodeFortschritt.entfallen('drape');
-                garmentcodeFortschritt.entfallen('rig');
-                return;
-            }
-            this.spezifikation = ergebnis.spezifikation || null;
-            await this.dreid(nurSchnitt, figur, meldung);
-            garmentcodeFortschritt.beenden();
-        } catch (fehler) {
-            garmentcodeFortschritt.gescheitert('schnitt',
-                                               String(fehler.message || fehler));
-            meldung.textContent = `Fehler: ${fehler.message || fehler}`;
-        } finally {
-            this.laeuft = false;
-            knoepfe.forEach(k => { k.disabled = false; });
-            garmentcodeFortschritt.beenden();
-        }
-    }
-
-    /**
-     * Die Schritte im Voraus — dann weiss der Nutzer, was kommt und dass die
-     * Drapierung der lange Teil ist. Die erwarteten Dauern sind gemessene
-     * Werte (06.09.2026: Schnitt 4 s, Drapierung 22 s im Browser, Anziehen
-     * 3 s) und gewichten den Balken.
-     */
-    schritte(nurSchnitt) {
-        const schritte = [
-            { schluessel: 'schnitt', titel: 'Schnitt konstruieren', erwartet: 4 },
-        ];
-        if (this.drapierbereit && !nurSchnitt) {
-            schritte.push({ schluessel: 'drape', erwartet: 22,
-                            titel: 'Stoff drapieren' });
-            schritte.push({ schluessel: 'rig', erwartet: 3,
-                            titel: 'Anziehen' });
-        }
-        return schritte;
-    }
-
-    /**
-     * Und jetzt ohne weiteres Zutun an die Figur (Edgar, 06.09.2026: „bei
-     * Bauen soll das Garment gleich auf den Körper gebracht werden, ohne
-     * extra Klick").
-     */
-    async dreid(nurSchnitt, figur, meldung) {
-        if (nurSchnitt) {
-            meldung.textContent += ' — nur der Schnitt. „Für diese Figur '
-                + 'bauen" legt ihn auf die Figur.';
-            return;
-        }
-        if (this.drapierbereit && this.spezifikation) {
-            await GarmentcodeDrapierung.drapieren(
-                this, figur, this.spezifikation, meldung,
-                document.getElementById('gc-vorlage').value);
-            return;
-        }
-        garmentcodeFortschritt.entfallen('drape');
-        garmentcodeFortschritt.entfallen('rig');
-        if (!this.drapierbereit) {
-            meldung.textContent += ' — nur Schnittmuster, die '
-                + 'Simulationsumgebung fehlt.';
-        }
+    /** Der Ablauf steht in `garmentcode_ablauf.js`. */
+    async bauen(modus = 'komplett') {
+        return GarmentcodeAblauf.bauen(this, modus);
     }
 
 

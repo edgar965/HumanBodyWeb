@@ -115,14 +115,42 @@ class GarmentcodeZweiDTest(SimpleTestCase):
         zeile = [z for z in quelle.splitlines() if 'id="gc-schnitt"' in z][0]
         self.assertIn('hb-fest', zeile)
 
-    def test_beide_knoepfe_sind_verdrahtet(self):
+    def test_alle_drei_knoepfe_sind_verdrahtet(self):
+        u"""Edgar, 07.09.2026: „insgesamt dann 3 Buttons"."""
         _, quelle = _lesen('static', 'viewer', 'scene', 'garmentcode.js')
-        self.assertIn("getElementById('gc-schnitt')", quelle)
-        self.assertIn('this.bauen(true)', quelle)
+        for kennung, modus in (('gc-schnitt', "'2d'"),
+                               ('gc-drapieren', "'3d'"),
+                               ('gc-erzeugen', "'komplett'")):
+            self.assertIn("getElementById('%s')" % kennung, quelle)
+            self.assertIn('this.bauen(%s)' % modus, quelle)
 
-    def test_nur_der_schnitt_haelt_vor_der_drapierung_an(self):
-        _, quelle = _lesen('static', 'viewer', 'scene', 'garmentcode.js')
-        rumpf = re.search(r'async dreid\(nurSchnitt, figur, meldung\)\s*\{(.*?)\n    \}',
-                          quelle, re.S)
-        self.assertIsNotNone(rumpf, 'dreid() fehlt')
-        self.assertIn('if (nurSchnitt)', rumpf.group(1))
+    def test_der_ablauf_kennt_die_drei_moden(self):
+        _, quelle = _lesen('static', 'viewer', 'scene',
+                           'garmentcode_ablauf.js')
+        anfang = quelle.index('static async dreid(')
+        rumpf = quelle[anfang:]
+        self.assertIn("if (modus === '2d')", rumpf)
+        self.assertIn('GarmentcodePanels.zeigen', rumpf)
+        self.assertIn('GarmentcodePanels.entfernen', rumpf)
+
+    def test_3d_prueft_ob_der_schnitt_zur_figur_gehoert(self):
+        u"""Sonst drapiert „3D" nach einem Figurwechsel den Schnitt der
+        vorigen — dieselbe Falle wie am 06.09.2026, als ein Bau ohne
+        Morphs den Ergebnisordner ueberschrieb und eine Stunde Messlaeufe
+        auf dem falschen Schnitt rechneten.
+        """
+        _, quelle = _lesen('static', 'viewer', 'scene',
+                           'garmentcode_ablauf.js')
+        self.assertIn('schnittPasst(reiter, figur, vorlage)', quelle)
+        anfang = quelle.index('static schnittPasst(')
+        ende = quelle.index(chr(10) + '    }', anfang)
+        rumpf = quelle[anfang:ende]
+        self.assertIn('reiter.schnittVon.figur === figur.id', rumpf)
+        self.assertIn('reiter.schnittVon.vorlage === vorlage', rumpf)
+
+    def test_die_schmalen_knoepfe_tragen_hb_fest(self):
+        _, quelle = _lesen('templates', '_garmentcode_panel.html')
+        for kennung in ('gc-schnitt', 'gc-drapieren'):
+            zeile = [z for z in quelle.splitlines()
+                     if 'id="%s"' % kennung in z][0]
+            self.assertIn('hb-fest', zeile, kennung)
