@@ -11,6 +11,8 @@ import { Charakterkoerper } from './charakter_koerper.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 import { Umaeigenschaften } from './uma/umaeigenschaften.js';
+import { Smpleigenschaften } from './smpl/smpleigenschaften.js';
+import { Mheigenschaften } from './makehuman/mheigenschaften.js';
 import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
 import { Transformfelder } from './transformfelder.js';
 import { Figurmerker } from './figurmerker.js';
@@ -61,8 +63,34 @@ export async function populateProperties(charId) {
     // Eine UMA-Figur (05.09.2026) hat Regler und Farben statt Body Type,
     // Morphs und Ausstattung; der Assets-Reiter zeigt ihre Unity-Garderobe.
     const uma = inst.quelle === 'uma';
-    Eigenschaftenbereiche.humanbodyTeile(!uma);
+    const smpl = inst.quelle === 'smpl';
+    const makehuman = inst.quelle === 'makehuman';
+    Eigenschaftenbereiche.humanbodyTeile(!uma && !smpl && !makehuman);
     Eigenschaftenbereiche.umaGarderobe(uma ? inst : null);
+    // Eine MakeHuman-Figur (06.09.2026) bringt ihre eigene Garderobe mit —
+    // die 181 .mhclo-Stücke sitzen auf ihr ohne Fit-Regler. Body Type,
+    // Morphs und Ausstattung des HumanBody-Körpers hat sie nicht.
+    if (makehuman) {
+        Umaeigenschaften.leeren();
+        Smpleigenschaften.leeren();
+        Formbedienung.leeren();
+        await Mheigenschaften.fuellen(inst);
+        _updatePropContext();
+        _gemerktesHerstellen(charId);
+        return;
+    }
+    Mheigenschaften.leeren();
+    // Ein SMPL-Referenzkörper (06.09.2026) hat nur Geschlecht und die
+    // vorgegebenen Maße — keine Morphs, keine Regler, kein Skelett.
+    if (smpl) {
+        Umaeigenschaften.leeren();
+        Formbedienung.leeren();
+        Smpleigenschaften.fuellen(inst);
+        _updatePropContext();
+        _gemerktesHerstellen(charId);
+        return;
+    }
+    Smpleigenschaften.leeren();
     if (uma) {
         Umaeigenschaften.fuellen(inst);
         // Ein Name, zwei Übersetzungen: derselbe Block wie bei HumanBody,
@@ -106,6 +134,8 @@ export function clearProperties() {
     state.currentPropsCharId = null;
     Eigenschaftenbereiche.zeigen(false);
     Umaeigenschaften.leeren();
+    Smpleigenschaften.leeren();
+    Mheigenschaften.leeren();
     Formbedienung.leeren();
     Eigenschaftenbereiche.umaGarderobe(null);
 }

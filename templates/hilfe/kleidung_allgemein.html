@@ -1,0 +1,159 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kleidung -> Allgemein.
+
+Sechs Verfahren nebeneinander, und darunter die Frage, um die es
+eigentlich geht: Was macht GarmentCode grundlegend anders? Die Daten
+kommen aus `core/dienste/kleidungsverfahren.py` — eine Zahl im HTML ist
+eine Behauptung, die niemand mehr nachrechnet.
+
+AUFTEILUNG IN TABELLE UND KARTEN (07.09.2026): Alle neun Angaben je
+Verfahren in EINE Tabelle zu setzen ergab sechs Textspalten auf rund
+1.000 Bildpunkten — die letzte Spalte („Gemessen", die wichtigste) lag
+ausserhalb des Bildes, und „Prinzip" brach auf zehn Zeilen um. Die
+Tabelle fuehrt jetzt die vier vergleichbaren Groessen, die Fliesstexte
+stehen als Karte darunter.
+{% endcomment %}
+
+{% block title %}Kleidung — Übersicht{% endblock %}
+{% block topbar_title %}Kleidung — Übersicht aller Verfahren{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>Kleidung: sechs Wege an denselben Körper</h1>
+
+  <p>
+    In diesem Projekt sind über die Zeit sechs Verfahren entstanden, ein
+    Kleidungsstück an eine Figur zu bringen. Sie unterscheiden sich nicht in
+    Kleinigkeiten, sondern im Prinzip: <strong>Fünf davon nehmen ein fertig
+    modelliertes Netz</strong> und bringen es an einen Körper.
+    <strong>Eines konstruiert das Stück aus Körpermaßen</strong> und lässt es
+    dann in einer Stoffsimulation fallen.
+  </p>
+
+  <div class="info-box info-box-purple">
+    Wer die Verfahren vergleicht, vergleicht deshalb zwei verschiedene Fragen.
+    Bei den fünf lautet sie: <em>Wie ähnlich ist dieser Körper dem, für den
+    das Stück entworfen wurde?</em> Bei GarmentCode: <em>Wie gut sind die Maße
+    dieses Körpers gemessen?</em>
+  </div>
+
+  <h2>Auf einen Blick</h2>
+
+  <table class="doku kleidung-verfahren">
+    <thead>
+      <tr>
+        <th>Verfahren</th>
+        <th>Träger</th>
+        <th>Bestand</th>
+        <th>Simulation</th>
+        <th>Gemessen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in verfahren %}
+      <tr {% if v.schluessel == 'garmentcode' %}class="kv-heraus"{% endif %}>
+        <td class="kv-name"><a href="#v-{{ v.schluessel }}">{{ v.name }}</a></td>
+        <td>{{ v.traeger }}</td>
+        <td>{{ v.katalog }}</td>
+        <td>{{ v.simulation }}</td>
+        <td class="kv-messung {% if v.messung == 'nicht gemessen' %}kv-ungemessen{% endif %}">
+          {{ v.messung }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="info-box info-box-orange">
+    <strong>„nicht gemessen" heißt nicht „schlecht".</strong> Es heißt, dass
+    für dieses Verfahren keine Messreihe vorliegt. Eine leere Zelle sähe aus
+    wie eine Null; deshalb steht es ausgeschrieben da.
+  </div>
+
+  <h2>Die Verfahren im Einzelnen</h2>
+
+  {% for v in verfahren %}
+  <div class="kleidung-karte {% if v.schluessel == 'garmentcode' %}kk-heraus{% endif %}"
+       id="v-{{ v.schluessel }}">
+    <h3>{{ v.name }}</h3>
+    <dl class="kleidung-liste">
+      <dt>Träger</dt><dd>{{ v.traeger }}</dd>
+      <dt>Woher das Stück kommt</dt><dd>{{ v.herkunft }} — {{ v.katalog }}</dd>
+      <dt>Prinzip</dt><dd>{{ v.prinzip }}</dd>
+      <dt>Folgt es den Reglern?</dt><dd>{{ v.morphs }}</dd>
+      <dt>Simulation</dt><dd>{{ v.simulation }}</dd>
+      <dt>Gemessen</dt>
+      <dd class="{% if v.messung == 'nicht gemessen' %}kv-ungemessen{% endif %}">
+        {{ v.messung }}<br>
+        <span class="kv-code">Beleg: {{ v.beleg }}</span>
+      </dd>
+      <dt>Code</dt><dd class="kv-code">{{ v.code }}</dd>
+    </dl>
+  </div>
+  {% endfor %}
+
+  <h2>Was GarmentCode grundlegend anders macht</h2>
+
+  <p>
+    Die folgende Gegenüberstellung ist der Kern des Unterschieds. Links steht,
+    was die fünf anpassenden Verfahren tun, rechts, was GarmentCode tut.
+  </p>
+
+  <table class="doku kleidung-gegenueber">
+    <thead>
+      <tr>
+        <th>Frage</th>
+        <th>Die fünf anpassenden Verfahren</th>
+        <th>GarmentCode</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for frage, andere, gc in unterschied %}
+      <tr>
+        <td><strong>{{ frage }}</strong></td>
+        <td>{{ andere }}</td>
+        <td>{{ gc }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Wann welches Verfahren</h2>
+
+  <div class="info-box info-box-green">
+    <p>
+      <strong>Ein Stück aus der Bibliothek auf der MakeHuman-Figur</strong> —
+      dort ist die <code>.mhclo</code> keine Näherung, sondern die Definition.
+      Kein Regler nötig, Hautabstand 7,5 bis 13,5 mm.
+    </p>
+    <p>
+      <strong>Dasselbe Stück auf der HumanBody-Figur</strong> — geht, braucht
+      aber sieben Nacharbeitsschritte. 14,3 % der Anker fallen dabei auf einen
+      einzigen Körperpunkt, weil der Träger ein anderer ist als der
+      Entwurfskörper.
+    </p>
+    <p>
+      <strong>Etwas, das es als Netz gar nicht gibt</strong> — dafür ist
+      GarmentCode da. Es kostet rund 20 Sekunden je Stück und liefert einen
+      Schnitt, der zu genau diesem Körper gehört.
+    </p>
+    <p>
+      <strong>Eine UMA-Figur</strong> — die zieht sich in Unity an, nicht im
+      Browser. Der Bauer bekommt die Rezeptnamen und liefert eine fertige GLB.
+    </p>
+  </div>
+
+  <p class="doku-abschluss">
+    Einzelheiten und alle Testfälle zum konstruierenden Verfahren:
+    <a href="/hilfe/kleidung/garmentcode/">Kleidung → GarmentCode</a>
+  </p>
+
+</div>
+{% endblock %}

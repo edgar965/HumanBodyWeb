@@ -8,6 +8,7 @@ import { markDirty } from './undo.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Figurmerker } from './figurmerker.js';
 import { Figurplatzierung } from './figurplatzierung.js';
+import { Figurarten } from './figurarten.js';
 /**
  * Charakterliste der Szene: anzeigen, auswaehlen, entfernen, anfliegen.
  *
@@ -141,8 +142,7 @@ export function updateCharacterListUI() {
         const pos = inst.group.position;
         const posStr = `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`;
 
-        const icon = inst.quelle === 'uma' ? 'fa-user-astronaut'
-            : (inst.generatedConfig ? 'fa-robot' : 'fa-user');
+        const icon = Figurarten.symbol(inst);
         li.innerHTML = `
             <span class="character-item-icon"><i class="fas ${icon}"></i></span>
             <div class="character-item-info">

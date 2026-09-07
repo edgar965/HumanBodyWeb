@@ -13,9 +13,10 @@
  * das Kleidungsstück wählt. Sie sind Anzeige, keine Eingabe.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
-import { state } from './state.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
+import { GarmentcodeDrapierung } from './garmentcode_drapieren.js';
+import { GarmentcodeFigur } from './garmentcode_figur.js';
 
 class GarmentcodeReiter {
     constructor() {
@@ -105,28 +106,14 @@ class GarmentcodeReiter {
         }
     }
 
-    /**
-     * Die gewählte Figur aus der Szene. Ohne sie würde der Grundkörper
-     * gemessen — der Schnitt passte dann zu einer Figur, die niemand sieht.
-     */
+    /** Die gewählte Figur — Entscheidung in `GarmentcodeFigur`. */
     figur() {
-        const id = state.selectedCharacterId || state.currentPropsCharId;
-        if (!id || !state.characters) return null;
-        const inst = state.characters.get(id);
-        return inst ? { id, inst } : null;
+        return GarmentcodeFigur.gewaehlt();
     }
 
-    /** Geschlecht, Bauart und Morphs der Figur als Formulardaten. */
+    /** Was der Server über die Figur bekommt — je Quelle verschieden. */
     figurdaten(figur) {
-        const inst = figur.inst;
-        const daten = new FormData();
-        const bauart = inst.bodyType || inst.body_type || '';
-        daten.append('geschlecht',
-            bauart.toLowerCase().startsWith('m') ? 'male'
-                : (inst.gender || 'female'));
-        if (bauart) daten.append('bauart', bauart);
-        daten.append('morphs', JSON.stringify(inst.morphs || {}));
-        return daten;
+        return GarmentcodeFigur.formulardaten(figur);
     }
 
     // ------------------------------------------------------------- Zustand
@@ -191,13 +178,23 @@ class GarmentcodeReiter {
         knopf.disabled = true;
         meldung.textContent = '';
         vorschau.innerHTML = '';
+        // Gesagt, nicht verhindert: Ein Grundkörper ist auch eine Figur.
+        this.ohneMorphs = GarmentcodeFigur.ohneMorphs(figur);
 
-        // Die Schritte im Voraus zeigen — dann weiß der Nutzer, was kommt
-        // und dass die Drapierung der lange Teil ist.
-        const schritte = [{ schluessel: 'schnitt', titel: 'Schnitt konstruieren' }];
+        // Alle Schritte im Voraus zeigen — dann weiß der Nutzer, was kommt
+        // und dass die Drapierung der lange Teil ist. Die erwarteten Dauern
+        // sind gemessene Werte (06.09.2026) und gewichten den Balken.
+        const schritte = [
+            { schluessel: 'schnitt', titel: 'Schnitt konstruieren', erwartet: 4 },
+        ];
         if (this.drapierbereit) {
-            schritte.push({ schluessel: 'drape', titel: 'Stoff drapieren (dauert)' });
-            schritte.push({ schluessel: 'rig', titel: 'Anziehen (Knochengewichte)' });
+            // 19 s im Browser gemessen (06.09.2026, T-Shirt auf der
+            // eigenen Figur) — die frühere Erwartung von 40 s stammte noch
+            // vom Lauf auf dem Vorgabekörper.
+            schritte.push({ schluessel: 'drape', erwartet: 22,
+                            titel: 'Stoff drapieren' });
+            schritte.push({ schluessel: 'rig', erwartet: 3,
+                            titel: 'Anziehen' });
         }
         garmentcodeFortschritt.starten(schritte);
         garmentcodeFortschritt.laeuft('schnitt');
@@ -209,6 +206,8 @@ class GarmentcodeReiter {
             const ergebnis = await Serverabruf.formular(
                 '/api/garmentcode/erzeugen/', daten);
             if (ergebnis.fehler) {
+                garmentcodeFortschritt.entfallen('drape');
+                garmentcodeFortschritt.entfallen('rig');
                 garmentcodeFortschritt.gescheitert('schnitt', 'Fehler');
                 meldung.textContent = `Fehlgeschlagen: ${ergebnis.fehler}`;
                 return;
@@ -218,8 +217,11 @@ class GarmentcodeReiter {
                 ? ' — Achtung: Schnitt durchdringt sich selbst' : '';
             const eigene = garmentcodeRegler.anzahl;
             const zusatz = eigene ? ` (${eigene} eigene Einstellungen)` : '';
+            const grundkoerper = this.ohneMorphs
+                ? ' — Achtung: Figur ohne Morphs, vermessen wurde der Grundkörper'
+                : '';
             meldung.textContent =
-                `Schnitt fertig: ${ergebnis.name}${zusatz}${warnung}`;
+                `Schnitt fertig: ${ergebnis.name}${zusatz}${warnung}${grundkoerper}`;
             if (ergebnis.vorschau) {
                 const bild = document.createElement('img');
                 bild.src = ergebnis.vorschau;
@@ -227,11 +229,22 @@ class GarmentcodeReiter {
                 bild.style.maxWidth = '100%';
                 vorschau.appendChild(bild);
             }
-            // Zweiter Schritt: der Stoff fällt auf den Körper. Das dauert
-            // deutlich länger als der Schnitt, deshalb erst danach und mit
-            // eigener Meldung — der Nutzer sieht das Schnittmuster sofort.
-            if (this.drapierbereit && ergebnis.spezifikation) {
-                await this.drapieren(figur, ergebnis.spezifikation, meldung);
+            // Und jetzt ohne weiteres Zutun an die Figur (Edgar,
+            // 06.09.2026: „bei Bauen soll das Garment gleich auf den Körper
+            // gebracht werden, ohne extra Klick"). Der frühere zweite Knopf
+            // ist damit entfallen.
+            this.spezifikation = ergebnis.spezifikation || null;
+            if (this.drapierbereit && this.spezifikation) {
+                await GarmentcodeDrapierung.drapieren(
+                    this, figur, this.spezifikation, meldung,
+                    document.getElementById('gc-vorlage').value);
+            } else {
+                garmentcodeFortschritt.entfallen('drape');
+                garmentcodeFortschritt.entfallen('rig');
+                if (!this.drapierbereit) {
+                    meldung.textContent += ' — nur Schnittmuster, die '
+                        + 'Simulationsumgebung fehlt.';
+                }
             }
             garmentcodeFortschritt.beenden();
         } catch (fehler) {
@@ -245,38 +258,6 @@ class GarmentcodeReiter {
         }
     }
 
-    /** Das Schnittmuster als 3D-Netz auf den Körper legen. */
-    async drapieren(figur, spezifikation, meldung) {
-        garmentcodeFortschritt.laeuft('drape');
-        // Die Figurdaten müssen mit: aus ihnen kommen die Knochengewichte,
-        // mit denen das drapierte Netz animierbar wird.
-        const daten = this.figurdaten(figur);
-        daten.append('spezifikation', spezifikation);
-        try {
-            const netz = await Serverabruf.formular(
-                '/api/garmentcode/drapieren/', daten);
-            if (netz.fehler) {
-                garmentcodeFortschritt.gescheitert('drape', 'Fehler');
-                meldung.textContent = `Schnitt fertig, Drapierung scheiterte: `
-                    + `${netz.fehler}`;
-                return;
-            }
-            garmentcodeFortschritt.fertig('drape',
-                                          `${netz.punkte} Punkte, ${netz.dauer_s} s`);
-            garmentcodeFortschritt.fertig('rig', netz.rig
-                ? `${netz.rig_ohne_gewicht} ohne Gewicht` : 'kein Rig');
-            const rig = netz.rig
-                ? `, angezogen (${netz.rig_ohne_gewicht} Punkte ohne Gewicht)`
-                : ', ohne Rig';
-            meldung.textContent = `Fertig in 3D: ${netz.punkte} Punkte, `
-                + `${netz.dreiecke} Dreiecke in ${netz.dauer_s} s${rig}`;
-        } catch (fehler) {
-            garmentcodeFortschritt.gescheitert('drape',
-                                               String(fehler.message || fehler));
-            meldung.textContent = `Drapierung fehlgeschlagen: `
-                + `${fehler.message || fehler}`;
-        }
-    }
 
     // --------------------------------------------------------------- Maße
 

@@ -6,7 +6,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { szenenteile } from './szenenteile.js';
 import { Szenenzustand } from './szenenzustand.js';
-import { UmaFigur } from './uma/umafigur.js';
+import { Figurarten } from './figurarten.js';
 
 // =========================================================================
 // Save session state to sessionStorage
@@ -43,12 +43,11 @@ export async function restoreSessionState() {
             fn.clearAllCharacters();
             for (const charData of data.characters) {
                 try {
-                    // Eine UMA-Figur (05.09.2026) lädt ihre GLB, kein
+                    // Welche Klasse zu `quelle` gehört, steht in
+                    // `figurarten.js`: Eine UMA-Figur lädt ihre GLB, kein
                     // HumanBody-Netz — sonst fragte `CharacterInstance` den
                     // Server nach dem Körpertyp „UMA" und bekam eine 500.
-                    const inst = charData.quelle === UmaFigur.QUELLE
-                        ? await UmaFigur.fromJSON(charData)
-                        : await fn.CharacterInstance.fromJSON(charData);
+                    const inst = await Figurarten.ausJSON(charData);
                     state.characters.set(inst.id, inst);
                     state.scene.add(inst.group);
                 } catch (e) {

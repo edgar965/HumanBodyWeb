@@ -1,0 +1,212 @@
+/* Hilfe -> Kleidung: Vergleichstabellen und die Messmatrix.
+ *
+ * Eigene Datei statt Inline-Stilen: Die Doku-Seiten dieses Projekts
+ * fuehren ihre Stile ausnahmslos als Klassen (siehe css/dokuseite.css,
+ * wo dieselbe Entscheidung mit rund 30 `.doku-*`-Klassen umgesetzt ist).
+ */
+
+/* Volle Breite statt der 960 px aus `dokuseite.css`.
+ *
+ * Die Regel des Nutzers ist eindeutig („immer Seiten, die den ganzen
+ * Bereich rechts ausfuellen"), und diese beiden Seiten brauchen sie:
+ * Die Messmatrix hat sechs Zahlenspalten, der Verfahrensvergleich fuenf.
+ * Geaendert wird NUR fuer diese Seiten — `rigging_help` und
+ * `theatre_help` sind Fliesstext und bleiben, wie sie sind.
+ */
+.doku-seite.kleidung-breit {
+    max-width: none;
+}
+
+/* --- Verfahrensvergleich ------------------------------------------- */
+
+.kleidung-verfahren th {
+    vertical-align: top;
+}
+
+.kleidung-verfahren td {
+    vertical-align: top;
+    font-size: 0.92em;
+}
+
+.kleidung-verfahren .kv-name {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.kleidung-verfahren .kv-code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+.kleidung-verfahren .kv-messung {
+    font-weight: 600;
+}
+
+.kleidung-verfahren .kv-ungemessen {
+    opacity: 0.55;
+    font-style: italic;
+    font-weight: 400;
+}
+
+/* Die eine Zeile, um die es geht: GarmentCode faellt aus der Reihe. */
+.kleidung-verfahren .kv-heraus {
+    background: rgba(124, 92, 191, 0.14);
+}
+
+/* --- Gegenueberstellung: die anderen fuenf gegen GarmentCode -------- */
+
+.kleidung-gegenueber td:nth-child(2) {
+    opacity: 0.85;
+}
+
+.kleidung-gegenueber td:nth-child(3) {
+    border-left: 3px solid #bb9af7;
+}
+
+/* --- Messmatrix ----------------------------------------------------- */
+
+/*
+ * Die Matrix wird NICHT auf die volle Seitenbreite gezogen: Sechs
+ * Zahlenspalten auf 2.170 Bildpunkten trennen Ueberschrift und Wert so
+ * weit, dass man die Spalte mit dem Finger sucht. `width: auto` laesst
+ * sie so breit werden, wie ihr Inhalt braucht; die SEITE bleibt voll
+ * breit (Regel „volle Breite" gilt der Seite, nicht jeder Tabelle).
+ */
+.doku-seite table.kleidung-matrix {
+    font-variant-numeric: tabular-nums;
+    width: auto;
+    min-width: 46em;
+}
+
+.doku-seite table.kleidung-matrix td,
+.doku-seite table.kleidung-matrix th {
+    text-align: right;
+    white-space: nowrap;
+    padding-left: 1.6em;
+}
+
+.doku-seite table.kleidung-matrix td:first-child,
+.doku-seite table.kleidung-matrix th:first-child {
+    text-align: left;
+    padding-left: 12px;
+    width: 14em;
+}
+
+.doku-seite table.kleidung-matrix .zelle-gut {
+    color: #73daca;
+}
+
+.doku-seite table.kleidung-matrix .zelle-warnung {
+    color: #ff9940;
+    font-weight: 600;
+}
+
+.doku-seite table.kleidung-matrix .zelle-fehler {
+    color: #ff6b81;
+    font-weight: 600;
+}
+
+.doku-seite table.kleidung-matrix .zelle-leer {
+    opacity: 0.4;
+}
+
+/* --- Schrittfolge ---------------------------------------------------- */
+
+.kleidung-schritt {
+    margin: 14px 0;
+    padding: 10px 14px;
+    border-left: 4px solid #7c5cbf;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.kleidung-schritt h4 {
+    margin: 0 0 6px 0;
+}
+
+.kleidung-schritt .ks-nummer {
+    display: inline-block;
+    min-width: 1.6em;
+    opacity: 0.6;
+}
+
+.kleidung-schritt .ks-wo {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85em;
+    opacity: 0.75;
+}
+
+.kleidung-schritt .ks-falle {
+    margin-top: 6px;
+    padding-left: 10px;
+    border-left: 3px solid #ff9940;
+    font-size: 0.92em;
+}
+
+/* --- Steckbriefe der Testkoerper ------------------------------------ */
+
+.kleidung-koerper td {
+    font-variant-numeric: tabular-nums;
+}
+
+.kleidung-koerper .kk-regler {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+.kleidung-fehlt {
+    padding: 10px 14px;
+    border-left: 4px solid #ff9940;
+    background: rgba(255, 153, 64, 0.08);
+}
+
+
+/* --- Karten je Verfahren -------------------------------------------- */
+/*
+ * Die Fliesstexte stehen als Definitionsliste, nicht als Tabellenspalte:
+ * Sechs Textspalten auf rund 1.000 Bildpunkten schoben die wichtigste
+ * Spalte aus dem Bild (07.09.2026).
+ */
+
+.kleidung-karte {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border-left: 4px solid #7c5cbf;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.kleidung-karte h3 {
+    margin-top: 0;
+}
+
+.kleidung-karte.kk-heraus {
+    border-left-color: #bb9af7;
+    background: rgba(124, 92, 191, 0.10);
+}
+
+.kleidung-liste {
+    display: grid;
+    grid-template-columns: minmax(9em, 14em) 1fr;
+    gap: 4px 16px;
+    margin: 0;
+}
+
+.kleidung-liste dt {
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.kleidung-liste dd {
+    margin: 0;
+}
+
+/* Auf schmalen Fenstern untereinander statt nebeneinander. */
+@media (max-width: 900px) {
+    .kleidung-liste {
+        grid-template-columns: 1fr;
+    }
+    .kleidung-liste dt {
+        margin-top: 8px;
+    }
+}

@@ -61,9 +61,10 @@ class Garmentcode:
         try:
             anfrage = Garmentcode._anfrage(request)
             ergebnis = GarmentcodeDienst.drapieren(
-                spez, koerper=request.POST.get('koerper') or None,
+                spez, koerper=anfrage['koerper'],
                 geschlecht=anfrage['geschlecht'], morphs=anfrage['morphs'],
-                bauart=anfrage['bauart'])
+                bauart=anfrage['bauart'], smpl=anfrage['smpl'],
+                meta=anfrage['meta'])
         except DrapierFehler as fehler:
             logger.warning('Drapierung gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)
@@ -72,6 +73,18 @@ class Garmentcode:
             return JsonResponse(
                 {'fehler': '%s: %s' % (type(fehler).__name__, fehler)},
                 status=500)
+        # Die Adresse, unter der der Browser die Rig-Datei holen kann. Ohne
+        # sie bleibt das drapierte Netz auf der Platte liegen (Edgar,
+        # 06.09.2026: „nach dem Bauen sollte die Kleidung am ausgewaehlten
+        # HumanBody liegen").
+        # Die Korrektur-Bilanz ist ein dict und gehoert nicht als Ganzes in
+        # die Antwort — die eine Zahl, die zaehlt, schon.
+        korrektur = ergebnis.pop('korrektur', None) or {}
+        ergebnis['aus_der_haut'] = korrektur.get('eingesunken', 0)
+        ordner = os.path.basename(ergebnis.get('ordner') or '')
+        datei = ergebnis.get('rig_datei')
+        if ordner and datei:
+            ergebnis['rig_url'] = '/api/garmentcode/datei/%s/%s/' % (ordner, datei)
         return JsonResponse(ergebnis)
 
     @staticmethod
@@ -93,7 +106,8 @@ class Garmentcode:
         anfrage = Garmentcode._anfrage(request)
         werte, herkunft = GarmentcodeDienst.masse(
             anfrage['geschlecht'], morphs=anfrage['morphs'],
-            bauart=anfrage['bauart'])
+            bauart=anfrage['bauart'], koerper=anfrage['koerper'],
+            meta=anfrage['meta'])
         return JsonResponse({
             'masse': {name: round(float(wert), 2)
                       for name, wert in sorted(werte.items())
@@ -119,12 +133,26 @@ class Garmentcode:
         except ValueError:
             logger.warning('GarmentCode: Reglerwerte unlesbar, nehme Vorgabe')
             regler = {}
+        try:
+            meta = json.loads(request.POST.get('meta') or '{}')
+        except ValueError:
+            logger.warning('GarmentCode: Metaregler unlesbar, nehme keine')
+            meta = {}
+        # `koerper`: ein Referenzkoerper von GarmentCode statt der Figur —
+        # Masse aus dessen YAML, Drapierung auf ihm (06.09.2026). Ob er die
+        # SMPL-Segmentierung braucht, weiss der Server selbst; der Browser
+        # muss es nicht mitschicken.
+        from ..dienste.smplfigur import Smplfiguren
+        koerper = request.POST.get('koerper') or None
         return {
             'vorlage': request.POST.get('vorlage', 't-shirt'),
             'geschlecht': request.POST.get('geschlecht', 'female'),
             'bauart': request.POST.get('bauart') or None,
             'morphs': morphs if isinstance(morphs, dict) else {},
             'regler': regler if isinstance(regler, dict) else {},
+            'meta': meta if isinstance(meta, dict) else {},
+            'koerper': koerper,
+            'smpl': bool(koerper) and Smplfiguren.ist_smpl(koerper),
         }
 
     @staticmethod
@@ -137,7 +165,8 @@ class Garmentcode:
             ergebnis = GarmentcodeDienst.erzeugen(
                 anfrage['vorlage'], geschlecht=anfrage['geschlecht'],
                 morphs=anfrage['morphs'], bauart=anfrage['bauart'],
-                regler=anfrage['regler'])
+                regler=anfrage['regler'], koerper=anfrage['koerper'],
+                meta=anfrage['meta'])
         except EntwurfFehler as fehler:
             logger.warning('GarmentCode gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)

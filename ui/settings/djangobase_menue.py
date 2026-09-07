@@ -59,3 +59,22 @@ EINSTELLUNGEN_EXTRA = [
     {'label': 'Theatre', 'url': '/settings/theatre/', 'icon': 'bi-mask'},
     {'label': 'BVH Studio', 'url': '/settings/bvh-studio/', 'icon': 'bi-scissors'},
 ]
+
+
+# ----- Hilfe: eigene Seiten NEBEN denen von djangoBase --------------------
+# `hilfe_extra` haengt Punkte in djangoBases Hilfe-Gruppe ein, statt sie
+# nachzubauen. Wer die Gruppe selbst baut, verliert die mitgelieferten
+# Seiten — genau das ist CamTrack passiert (djangoBase-Konfiguration,
+# 24.08.2026).
+#
+# Die Adressen kommen aus `core/urls_hilfe.py` und stehen in `ui/urls.py`
+# VOR dem djangoBase-include.
+HILFE_EXTRA = [
+    {'label': 'Kleidung', 'icon': 'bi-bag', 'untermenu': [
+        {'label': 'Allgemein', 'icon': 'bi-list-columns',
+         'url': '/hilfe/kleidung/', 'aktiv': 'hilfe_kleidung'},
+        {'label': 'GarmentCode', 'icon': 'bi-rulers',
+         'url': '/hilfe/kleidung/garmentcode/',
+         'aktiv': 'hilfe_kleidung_garmentcode'},
+    ]},
+]

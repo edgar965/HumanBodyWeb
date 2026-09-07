@@ -349,7 +349,13 @@
 .hb-dehnt-ohne-abstand.hb-dehnt-ohne-abstand.hb-dehnt-ohne-abstand { margin-bottom:0; flex:1; }   /* aus 3 Vorlagen */
 .hb-dehnt.hb-dehnt.hb-dehnt { flex:1; }   /* aus 10 Vorlagen */
 .hb-farbfeld.hb-farbfeld.hb-farbfeld { width:40px; height:24px; border:none; cursor:pointer; }   /* aus 4 Vorlagen */
-.hb-fest.hb-fest.hb-fest { flex:0 0 auto; padding:6px 10px; }   /* aus 3 Vorlagen */
+/* `width:auto` seit 07.09.2026: `.btn-toggle` setzt `width:100%`, und mit
+   `flex-basis:auto` ist das die Grundbreite — der Symbolknopf nahm die GANZE
+   Zeile, der Knopf daneben (`hb-dehnt`) wurde auf 89 von 272 px gequetscht
+   und sein Text brach dreizeilig um. Gemessen an „Auf Modell anwenden" +
+   Papierkorb; dieselbe Zeile gibt es zwölfmal (Kleider, Garment, Cloth,
+   SMPL-Test). `flex:0 0 auto` und `width:100%` widersprechen sich ohnehin. */
+.hb-fest.hb-fest.hb-fest { flex:0 0 auto; width:auto; padding:6px 10px; }
 .hb-font-size-0-72rem.hb-font-size-0-72rem.hb-font-size-0-72rem {
     font-size:0.72rem;
     text-transform:uppercase;

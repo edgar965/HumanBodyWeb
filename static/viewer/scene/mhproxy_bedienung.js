@@ -1,12 +1,10 @@
 import { state } from './state.js';
-import { fn } from '../gemeinsam/registrierung.js';
 import { _selectedInst, _selectedMHMesh, _bindSlider } from './utils.js';
 import { _doMHProxyFit } from './mhproxy_anpassen.js';
 import { _renderMHList } from './mhproxy_liste.js';
 import { Mhverformung } from './mhproxy_verformung.js';
 import { Kleiderkatalog } from './kleiderkatalog.js';
 import { Materialregler } from './materialregler.js';
-import { Stueckbedienung } from './stueckbedienung.js';
 
 /**
  * MhProxyBedienung — das Bedienfeld für MakeHuman-Kleidung verdrahten.
@@ -34,12 +32,11 @@ export class MhProxyBedienung {
         ['mh-roughness', wert => (wert / 100).toFixed(2)],
         ['mh-metalness', wert => (wert / 100).toFixed(2)],
         ['mh-opacity', wert => (wert / 100).toFixed(2)],
-        ['mh-push-dist', wert => wert + ' mm'],
     ];
 
     /** Diese Regler lösen eine Neuanpassung am Server aus. */
     static REFIT_REGLER = ['mh-stiffness', 'mh-offset', 'mh-scale',
-                           'mh-y-offset', 'mh-push-dist'];
+                           'mh-y-offset'];
     /** Diese wirken sofort auf die Vertices. */
     static VERFORM_REGLER = ['mh-offset', 'mh-scale', 'mh-y-offset'];
 
@@ -122,26 +119,20 @@ export class MhProxyBedienung {
 
     // ------------------------------------------------------------------ Knöpfe
 
+    /**
+     * Nur noch die Kategoriewahl.
+     *
+     * DIE SECHS ANDEREN KNÖPFE SIND AM 07.09.2026 ENTFALLEN (Edgar: „entferne
+     * die überflüssigen knöpfe"). Anwenden und Abnehmen stehen oben im Panel
+     * (`scene/makehuman/mhanwenden.js`), Push Outside im Eigenschaften-Reiter.
+     * Ihre Verdrahtung hier mitzunehmen war Pflicht und kein Aufräumen:
+     * `getElementById('mh-create')?.addEventListener` bleibt ohne Element
+     * stumm — eine tote Zeile, die aussieht, als täte sie etwas. Genau so
+     * standen im Projekt schon einmal vier Kontextmenü-Aktionen ins Leere
+     * (Befund 17.08.2026, `Kleiderendpunkte.verwalten`).
+     */
     _knoepfe() {
         document.getElementById('mh-category')
             ?.addEventListener('change', () => _renderMHList());
-        document.getElementById('mh-create')
-            ?.addEventListener('click', () => _doMHProxyFit());
-        document.getElementById('mh-remove')?.addEventListener('click', () => {
-            if (state._selectedMHId && state._selectedSubMesh) {
-                fn._removeSubMesh(state._selectedSubMesh);
-            }
-        });
-        document.getElementById('mh-push')
-            ?.addEventListener('click', () => this.verformung.herausdruecken());
-        document.getElementById('mh-push-undo')
-            ?.addEventListener('click', () => this.verformung.zuruecknehmen());
-        document.getElementById('mh-remove-all')
-            ?.addEventListener('click', () => this.alleEntfernen());
-    }
-
-    /** Alle MakeHuman-Stuecke abnehmen — siehe `Stueckbedienung`. */
-    alleEntfernen() {
-        Stueckbedienung.alleMitVorsilbe('mh_');
     }
 }

@@ -31,6 +31,8 @@ import './kleider.js';
 import './garmentcode.js';
 import './modellgenerator_ui.js';
 import './mh_proxy.js';
+import './makehuman/mhkatalog.js';
+import './makehuman/mhanwenden.js';
 import './rigging.js';
 import './charmorph.js';
 import './cloth_export.js';

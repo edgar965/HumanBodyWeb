@@ -34,6 +34,7 @@ export class Szenenaufbau {
         'greifenBeobachten',
         'initSubMeshInteraction', 'initTabs', 'bindVisibilityToggles',
         'initPropGarmentControls', '_initPropMHControls', 'initPropHairControls',
+        'mhAnwendenVerdrahten',
         'loadPoseUI', 'loadMHProxyUI', 'loadGarmentUI', 'loadKleiderUI',
         'loadHairUI', 'loadClothUI', 'loadAnimationUI', 'loadCharmorphAssets',
     ];

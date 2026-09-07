@@ -1,0 +1,25 @@
+{% comment %}Eigenschaften eines GarmentCode-Referenzkörpers — `scene/smpl/smpleigenschaften.js`{% endcomment %}
+<div class="prop-section hb-versteckt" id="prop-smpl-section">
+    <div class="prop-section-header">
+        <h4>GarmentCode-Körper</h4>
+    </div>
+    <div id="prop-smpl-kopf" class="hb-font-size-0-72rem"></div>
+    <div class="hb-font-size-0-72rem">
+        Körper und Maße von GarmentCode, wie das Online-Tool sie nimmt
+        (<code>mean_all</code> ist dessen Körper). Die Maße werden nicht
+        gemessen, sondern sind vorgegeben — mit ihnen baut der
+        GarmentCode-Reiter den Schnitt.
+    </div>
+    <div id="prop-smpl-geschlecht"></div>
+    {% comment %}Form der Figur — die zwei Regler aus `scene/smpl/smplformregler.js`.
+    Das Online-Tool hat sie nicht: sein 3D-Körper bleibt bei jedem Maß derselbe
+    (gemessen 06.09.2026, siehe GarmentCode/smplform.py).{% endcomment %}
+    <details class="uma-gruppe" open>
+        <summary>Form (SMPL-Blendshapes)</summary>
+        <div id="prop-smpl-form" class="anim-tree"></div>
+    </details>
+    <details class="uma-gruppe" open>
+        <summary>Vorgegebene Maße (cm, Grad)</summary>
+        <div id="prop-smpl-masse" class="anim-tree hb-max-height-300px"></div>
+    </details>
+</div>

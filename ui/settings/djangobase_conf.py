@@ -11,7 +11,7 @@ Grund, und der steht neben dem Eintrag, nicht in einer Datei daneben.
 """
 
 from .protokoll import LOG_DIR
-from .djangobase_menue import EINSTELLUNGEN_EXTRA, MENUE
+from .djangobase_menue import EINSTELLUNGEN_EXTRA, HILFE_EXTRA, MENUE
 from .djangobase_tests import TEST_BEFEHLE, TEST_BEREICHE
 from ..review import REVIEW_BEREICHE
 from .wurzeln import (BASE_DIR, HUMANBODY_ROOT, TOOLS_ROOT, VERSION,
@@ -200,5 +200,7 @@ DJANGOBASE = {
     'hilfe_menu': True,
     'benutzer_verwaltung': False,
     'einstellungen_extra': EINSTELLUNGEN_EXTRA,
+    # Hilfe -> Kleidung (Allgemein + GarmentCode). Siehe djangobase_menue.py.
+    'hilfe_extra': HILFE_EXTRA,
     'zugriff': 'none',   # HumanBodyWeb hat (noch) keine Auth -> Hilfe offen
 }

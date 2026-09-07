@@ -3,7 +3,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { szenenteile } from './szenenteile.js';
-import { UmaFigur } from './uma/umafigur.js';
+import { Figurarten } from './figurarten.js';
 
 /**
  * Szenenzustand — eine Szene einsammeln und wieder herstellen.
@@ -94,9 +94,7 @@ export class Szenenzustand {
         if (!figuren) return;
         for (const daten of figuren) {
             try {
-                const figur = daten.quelle === UmaFigur.QUELLE
-                    ? await UmaFigur.fromJSON(daten)
-                    : await fn.CharacterInstance.fromJSON(daten);
+                const figur = await Figurarten.ausJSON(daten);
                 state.characters.set(figur.id, figur);
                 state.scene.add(figur.group);
             } catch (fehler) {

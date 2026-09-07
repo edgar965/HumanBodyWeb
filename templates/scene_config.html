@@ -283,6 +283,24 @@
     }
     .scene-modal-footer button:hover { border-color: var(--accent); }
     .scene-modal-footer button.primary:hover { opacity: 0.9; }
+    /* Ein gesperrter Knopf muss gesperrt AUSSEHEN (07.09.2026). Ohne diese
+       Regel sah „Hinzufügen" auch ohne gewählten Eintrag voll aktiv aus, tat
+       auf den Klick aber nichts — ohne Meldung und ohne Zeile im Log. Genau
+       so ist das Hinzufügen einer MakeHuman-Figur „nicht gegangen": Der
+       Reiter hat EINEN Eintrag, und dass man den erst anklicken muss, sah
+       man dem Dialog nicht an. */
+    .scene-modal-footer button:disabled,
+    .scene-modal-footer button.primary:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .scene-modal-footer button:disabled:hover { border-color: var(--border); }
+    .scene-modal-footer .dialoghinweis {
+        margin-right: auto;
+        align-self: center;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
 
     /* Preset / Scene list inside modal */
     .preset-list {
@@ -858,6 +876,8 @@
                         <div class="prop-grid" id="prop-transform"></div>
                     </div>
                     {% include "_uma_eigenschaften.html" %}
+                    {% include "_smpl_eigenschaften.html" %}
+                    {% include "_makehuman_eigenschaften.html" %}
                     <!-- Equipped Items (body context) -->
                     <div class="prop-section" id="prop-equipped-section">
                         <div class="prop-section-title">Ausstattung</div>
@@ -1024,6 +1044,20 @@
                 <div class="panel-section" data-panel-key="mh_proxy_fit">
                     <h3>MakeHuman <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="mh-proxy-panel">
+                        {% comment %}Ganz oben, weil es die eine Frage ist (Edgar,
+                        07.09.2026): gewähltes Stück auf gewählte Figur. Welcher Weg
+                        dahinter läuft, entscheidet `scene/makehuman/mhanwenden.js`
+                        nach der Figurart — auf einer MakeHuman-Figur lief der
+                        Proxy-Fit darunter in einen 500er, stumm.{% endcomment %}
+                        <div class="hb-display-flex">
+                            <button id="mh-anwenden" class="btn-toggle primary hb-dehnt">
+                                <i class="fas fa-tshirt"></i> Auf Modell anwenden
+                            </button>
+                            <button id="mh-abnehmen" class="btn-toggle hb-fest"
+                                    title="Alle MakeHuman-Stücke von dieser Figur abnehmen"><i
+                                 class="fas fa-trash"></i></button>
+                        </div>
+                        <div id="mh-anwenden-stand" class="hb-font-size-0-72rem"></div>
                         <div class="slider-row"><label>Kategorie</label>
                             <select id="mh-category" class="viewer-select hb-dehnt-ohne-abstand">
                                 <option value="">Alle</option>
@@ -1032,7 +1066,7 @@
                         <div id="mh-list" class="anim-tree hb-max-height-300px">
                             <div class="hb-hinweis">Lade MakeHuman Library...</div>
                         </div>
-                        <div class="hb-font-size-0-72rem">Fit</div>
+                        <div class="hb-font-size-0-72rem">Feinschliff (HumanBody-Figur)</div>
                         <div class="slider-row"><label>Stiffness</label>
                             {% comment %}step=1 wie bei prop-mh-stiffness: Beide Regler zeigen denselben Wert,
                                  mit step=5 rastete der Assets-Regler beim Spiegeln auf ein anderes Vielfaches
@@ -1050,22 +1084,27 @@
                         {% regler "mh-roughness" "Roughness" max="100" wert="80" anzeige="0.80" %}
                         {% regler "mh-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
                         {% regler "mh-opacity" "Opacity" min="10" max="100" wert="100" anzeige="1.00" %}
-                        <div class="hb-display-flex">
-                            <button id="mh-create" class="btn-toggle hb-dehnt"><i
-                                 class="fas fa-magic"></i> 1. Erzeuge (Proxy)</button>
-                            <button id="mh-remove" class="btn-toggle hb-fest" title="Entfernen"><i
-                                 class="fas fa-times"></i></button>
-                            <button id="mh-remove-all" class="btn-toggle hb-fest" title="Alle entfernen"><i
-                                 class="fas fa-trash"></i></button>
-                        </div>
-                        <div class="gruppentitel-klein">Schritt 2: Push Outside</div>
-                        {% regler "mh-push-dist" "Max. Abstand" min="1" max="200" wert="3" anzeige="3 mm" %}
-                        <div class="hb-display-flex-eng">
-                            <button id="mh-push" class="btn-toggle hb-dehnt"><i
-                                 class="fas fa-expand-arrows-alt"></i> 2. Push Outside</button>
-                            <button id="mh-push-undo" class="btn-toggle hb-fest" title="Push r&uuml;ckg&auml;ngig"><i
-                                 class="fas fa-undo"></i></button>
-                        </div>
+                        {% comment %}HIER STANDEN SECHS KNÖPFE (raus am 07.09.2026,
+                        Edgar: „entferne die überflüssigen knöpfe"). Jeder hatte
+                        anderswo schon ein Gegenstück:
+
+                          1. Erzeuge (Proxy)   -> „Auf Modell anwenden" oben
+                          Entfernen (×)        -> das × je Zeile in Eigenschaften →
+                                                  Ausstattung
+                          Alle entfernen       -> steht jetzt oben neben dem
+                                                  Anwenden-Knopf (und nimmt dort
+                                                  AUCH die Stücke einer
+                                                  MakeHuman-Figur ab — mit der
+                                                  alten Fassung ging das nicht,
+                                                  sie kannte nur `mh_`)
+                          Schritt 2: Push Outside, Max. Abstand, Rückgängig
+                                               -> Eigenschaften-Reiter, wenn ein
+                                                  MakeHuman-Stück gewählt ist
+                                                  (`prop-mh-push*`)
+
+                        Die gleich aussehenden Knöpfe der anderen Asset-Panels
+                        (Garment Fit, Kleider, Cloth, Haare) bleiben: dort gibt es
+                        keinen Anwenden-Knopf, der sie ersetzt.{% endcomment %}
                     </div>
                 </div>
                 <!-- Garment Fit -->

@@ -1,0 +1,240 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kleidung -> GarmentCode.
+
+Der Weg in sieben Schritten, die drei Kennzahlen mit ihrer Definition,
+die Testkoerper, die Messmatrizen und die Grenzen, die gemessen und
+NICHT behoben sind.
+
+Die Matrizen kommen bei jedem Aufruf frisch aus den YAML-Dateien
+(`core/dienste/garmentcodemessung.py`). Fehlt eine, sagt die Seite das —
+eine leere Tabelle saehe aus wie „alles gut".
+{% endcomment %}
+
+{% block title %}Kleidung — GarmentCode{% endblock %}
+{% block topbar_title %}Kleidung — GarmentCode im Einzelnen{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>GarmentCode: Kleidung, die konstruiert wird</h1>
+
+  <p>
+    GarmentCode nimmt kein fertiges Netz. Es baut aus 26 Körpermaßen ein
+    zweidimensionales Schnittmuster — Vorder- und Rückenteil, Ärmel, Kragen,
+    Bund, Abnäher —, vernäht es und lässt es in einer Stoffsimulation auf den
+    Körper fallen. Ein anderer Körper ergibt dadurch nicht dasselbe Stück
+    anders verformt, sondern ein anderes Schnittmuster.
+  </p>
+
+  <div class="info-box info-box-blue">
+    <strong>Der Upstream misst nicht.</strong> Das Online-Werkzeug
+    <code>garmentcode.ethz.ch</code> drapiert immer auf demselben Körper
+    (<code>mean_all</code>); die hochgeladenen Maße wirken ausschließlich auf
+    das 2D-Schnittmuster. Belegt im Code (<code>gui_pattern.py</code>,
+    <code>drape_3d</code>), im laufenden Werkzeug gemessen (der Körper bleibt
+    Punkt für Punkt derselbe) und in den Bildern (zwei Fälle mit 11 cm
+    Größenunterschied sind zu 0,00 % verschieden). Hier wird gemessen und auf
+    dem gemessenen Körper drapiert — das ist der Unterschied, aus dem alles
+    Weitere folgt.
+  </div>
+
+  <h2>Der Weg in sieben Schritten</h2>
+
+  {% for s in schritte %}
+  <div class="kleidung-schritt">
+    <h4><span class="ks-nummer">{{ s.nr }}.</span> {{ s.titel }}</h4>
+    <p>{{ s.was }}</p>
+    <p class="ks-wo">{{ s.wo }}</p>
+    <p class="ks-falle"><strong>Falle:</strong> {{ s.falle }}</p>
+  </div>
+  {% endfor %}
+
+  <h2>Die drei Kennzahlen — und was sie bedeuten</h2>
+
+  {% for k in kennzahlen %}
+  <div class="info-box info-box-blue">
+    <h4>{{ k.name }}</h4>
+    <p><strong>Frage:</strong> {{ k.frage }}</p>
+    <p><strong>Gemessen wird:</strong> {{ k.wie }}</p>
+    <p><strong>Warum so:</strong> {{ k.warum }}</p>
+    <p><strong>Gegenprobe:</strong> {{ k.probe }}</p>
+  </div>
+  {% endfor %}
+
+  <h2>Die fünf HumanBody-Testfiguren</h2>
+
+  <p>
+    Sie bilden dieselben Typen ab wie die SMPL-Testfälle, damit sich beide
+    Tabellen nebeneinander lesen lassen. Die Reglerwerte sind gemessen, nicht
+    geschätzt.
+  </p>
+
+  {% if testkoerper %}
+  <table class="doku kleidung-koerper">
+    <thead>
+      <tr>
+        <th>Fall</th><th>Beschreibung</th><th>Bauart</th><th>Regler</th>
+        <th>Größe</th><th>Brust</th><th>Taille</th><th>Hüfte</th>
+        <th>Armlänge</th><th>Nicht gemessen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for k in testkoerper %}
+      <tr>
+        <td><strong>{{ k.schluessel }}</strong></td>
+        <td>{{ k.etikett }}</td>
+        <td class="kk-regler">{{ k.bauart }}</td>
+        <td class="kk-regler">{{ k.meta_text }}</td>
+        <td>{{ k.hoehe_cm }} cm</td>
+        <td>{{ k.bust }}</td>
+        <td>{{ k.waist }}</td>
+        <td>{{ k.hips }}</td>
+        <td>{{ k.arm_length }}</td>
+        <td class="kk-regler">
+          {% if k.nicht_gemessen %}{{ k.nicht_gemessen|join:", " }}{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>
+    „Nicht gemessen" nennt die Maße, die aus der Bändigung kommen statt vom
+    Netz. Sie stehen hier, weil ein gebändigtes Maß aussieht wie ein
+    gemessenes — und genau daran sind am 07.09.2026 zehn von fünfundsiebzig
+    Läufen gescheitert.
+  </p>
+  {% else %}
+  <p class="kleidung-fehlt">
+    Keine Steckbriefe gefunden. Sie entstehen beim Messlauf
+    (<code>ProjektTemp/hb_alle_stuecke.py</code>).
+  </p>
+  {% endif %}
+
+  <h2>Testfälle: alle 15 Stücke auf allen Körpern</h2>
+
+  <p>
+    Jede Zelle ist ein vollständiger Lauf: Maße messen, Schnitt bauen,
+    drapieren, korrigieren, messen, rendern. Die Zahl ist der Durchstich in
+    Prozent nach der Stoffkorrektur; der Mauszeiger zeigt Rohwert,
+    Hautabstand, Knick und Dauer.
+  </p>
+
+  <h3>HumanBody-Figuren</h3>
+
+  {% if matrix_hb %}
+  <p>
+    {{ matrix_hb.anzahl }} Kombinationen, davon {{ matrix_hb.gelungen }}
+    gelungen{% if matrix_hb.fehlgeschlagen %},
+    {{ matrix_hb.fehlgeschlagen }} nicht baubar{% endif %}.
+    {% if matrix_hb.kennzahlen.durchstich %}
+    Durchstich Median {{ matrix_hb.kennzahlen.durchstich.median }} %,
+    höchstens {{ matrix_hb.kennzahlen.durchstich.max }} %;
+    {% endif %}
+    {% if matrix_hb.kennzahlen.haut %}
+    Hautabstand Median {{ matrix_hb.kennzahlen.haut.median }} mm;
+    {% endif %}
+    {% if matrix_hb.kennzahlen.zeit %}
+    {{ matrix_hb.kennzahlen.zeit.median }} s je Stück.
+    {% endif %}
+  </p>
+
+  <table class="doku kleidung-matrix">
+    <thead>
+      <tr>
+        <th>Stück</th>
+        {% for k in matrix_hb.koerper %}<th>{{ k }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for zeile in matrix_hb.zeilen %}
+      <tr>
+        <td>{{ zeile.stueck }}</td>
+        {% for z in zeile.zellen %}
+        <td class="zelle-{{ z.zustand }}" title="{{ z.titel }}">{{ z.text }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="kleidung-fehlt">
+    Noch keine Messreihe abgelegt. Sie entsteht mit
+    <code>ProjektTemp/hb_alle_stuecke.py</code> und landet in
+    <code>GarmentCode/test/HumanBody_local/messung_alle_stuecke.yaml</code>.
+  </p>
+  {% endif %}
+
+  <h3>SMPL-Körper</h3>
+
+  <p>
+    Dieselben 15 Stücke auf den fünf geformten SMPL-Varianten und auf
+    <code>mean_all</code> — dem einzigen Körper, den das Online-Werkzeug
+    drapieren kann. Diese Reihe ist die Messlatte: Auf ihr laufen Schnitt und
+    Simulation ohne unsere Messung, ohne Stoffkorrektur und ohne Rig.
+  </p>
+
+  {% if matrix_smpl %}
+  <p>
+    {{ matrix_smpl.anzahl }} Kombinationen, davon {{ matrix_smpl.gelungen }}
+    gelungen{% if matrix_smpl.fehlgeschlagen %},
+    {{ matrix_smpl.fehlgeschlagen }} nicht baubar{% endif %}.
+    {% if matrix_smpl.kennzahlen.durchstich %}
+    Durchstich Median {{ matrix_smpl.kennzahlen.durchstich.median }} %,
+    höchstens {{ matrix_smpl.kennzahlen.durchstich.max }} %.
+    {% endif %}
+  </p>
+
+  <table class="doku kleidung-matrix">
+    <thead>
+      <tr>
+        <th>Stück</th>
+        {% for k in matrix_smpl.koerper %}<th>{{ k }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for zeile in matrix_smpl.zeilen %}
+      <tr>
+        <td>{{ zeile.stueck }}</td>
+        {% for z in zeile.zellen %}
+        <td class="zelle-{{ z.zustand }}" title="{{ z.titel }}">{{ z.text }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="kleidung-fehlt">
+    Noch keine SMPL-Messreihe abgelegt
+    (<code>ProjektTemp/smpl_nachbewerten_stoff.py</code>).
+  </p>
+  {% endif %}
+
+  <h2>Grenzen — gemessen und nicht behoben</h2>
+
+  <p>
+    Was hier steht, ist kein offener Fehler, sondern eine Feststellung mit
+    Messung dahinter. Der Unterschied zählt: Ein Befund ohne Zahl wird
+    irgendwann zu einer Vermutung, die niemand mehr prüft.
+  </p>
+
+  {% for g in grenzen %}
+  <div class="info-box info-box-orange">
+    <h4>{{ g.was }}</h4>
+    <p><strong>Gemessen:</strong> {{ g.messung }}</p>
+    <p><strong>Schluss:</strong> {{ g.schluss }}</p>
+  </div>
+  {% endfor %}
+
+  <p class="doku-abschluss">
+    Der Vergleich mit den anderen fünf Verfahren:
+    <a href="/hilfe/kleidung/">Kleidung → Allgemein</a>
+  </p>
+
+</div>
+{% endblock %}

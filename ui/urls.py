@@ -14,6 +14,13 @@ urlpatterns = [
     # mitgelieferte JS-Module riefen fest `/hilfe/tests/aufzeichnung/` und
     # liefen bei JEDEM Seitenaufruf dreimal in eine 404 — ohne Fehlerseite,
     # ohne Eintrag im Fehlerlog.
+    # Projekteigene Hilfeseiten. Sie stehen VOR dem djangoBase-include,
+    # obwohl das nicht noetig ist: Django setzt die Suche fort, wenn in
+    # einem `include` nichts passt (nachgeprueft am 07.09.2026 — die
+    # Seiten antworten in beiden Reihenfolgen mit 200). Die Reihenfolge
+    # ist Vorsorge fuer den Tag, an dem djangoBase ein Auffangmuster
+    # bekommt; dann waere der eigene Pfad sonst stumm verdeckt.
+    path('hilfe/kleidung/', include('core.urls_hilfe')),
     path('hilfe/', include('djangobase.urls')),
     # Statik unter einer Adresse, die die Fassung TRAEGT
     # (`/statik/v-<zahl>/viewer/...`). Der Grund steht in

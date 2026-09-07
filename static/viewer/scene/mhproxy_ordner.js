@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { Bildnachlader } from '../gemeinsam/bildnachlader.js';
 import { Mhproxystand } from './mhproxy_stand.js';
 
@@ -118,5 +119,8 @@ export class Mhproxyordner {
         liste.querySelectorAll('.anim-item')
              .forEach(el => el.classList.remove('selected'));
         zeile.classList.add('selected');
+        // Der Knopf „Auf Modell anwenden" nennt das gewählte Stück beim Namen
+        // (`scene/makehuman/mhanwenden.js`).
+        fn.mhAuswahlGeaendert?.();
     }
 }

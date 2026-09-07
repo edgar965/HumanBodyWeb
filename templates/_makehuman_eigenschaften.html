@@ -1,0 +1,55 @@
+{% comment %}Eigenschaften einer MakeHuman-Figur — `scene/makehuman/mheigenschaften.js`.
+
+Edgar, 06.09.2026: „Implementiere auch das Hinzufügen eines MakeHuman Modells …
+mit allen Eigenschaften zum Konfigurieren des MakeHuman links bei Eigenschaften,
+unter anderem gibt es garments für MakeHuman, die sollten dann perfekt
+funktionieren."
+
+Die Kleidung sitzt hier exakt, weil der Träger der Körper IST, für den die
+`.mhclo`-Zuordnungen geschrieben sind — deshalb hat dieser Bereich keinen
+einzigen Fit-Regler. Zahlen und Begründung: `core/dienste/mhbasisnetz.py`.
+{% endcomment %}
+<div class="prop-section hb-versteckt" id="prop-makehuman-section">
+    <div class="prop-section-header">
+        <h4>MakeHuman</h4>
+    </div>
+    <div id="prop-mh-figur-kopf" class="hb-font-size-0-72rem"></div>
+    <div class="hb-font-size-0-72rem">
+        MakeHumans Basisnetz <code>hm08</code> (CC0) mit 13.380 Punkten,
+        modelliert über MakeHumans eigene 269 Regler. Die Kleidung wird über
+        ihre <code>.mhclo</code>-Zuordnung gerechnet und sitzt deshalb ohne
+        Nacharbeit — es gibt hier keine Fit-Regler, weil es nichts zu
+        justieren gibt.
+    </div>
+    <details class="uma-gruppe" open>
+        <summary>Netz und Größe</summary>
+        <div id="prop-mh-figur-teile"></div>
+    </details>
+    {% comment %}MakeHumans eigene Modellierregler (06.09.2026) — 269 Stück aus
+    `MakeHuman/makehuman/data/modifiers/`, gegliedert wie in MakeHuman selbst.
+    Gebaut wird erst beim Aufklappen (`scene/makehuman/mhmodellierer.js`).{% endcomment %}
+    <details class="uma-gruppe">
+        <summary>Modellieren (MakeHuman-Regler)</summary>
+        <div id="prop-mh-figur-modellieren"></div>
+    </details>
+    <details class="uma-gruppe">
+        <summary>Haut</summary>
+        <div id="prop-mh-figur-haut"></div>
+    </details>
+    <details class="uma-gruppe" open>
+        <summary>Angezogen</summary>
+        <div id="prop-mh-figur-getragen"></div>
+    </details>
+    <details class="uma-gruppe" open>
+        <summary>Garderobe (MakeHuman-Bibliothek)</summary>
+        <div id="prop-mh-figur-katalog" class="anim-tree hb-max-height-300px"></div>
+    </details>
+    <div class="hb-font-size-0-72rem">
+        Die Modellierregler rechnen mit MakeHumans eigenen
+        <code>.target</code>-Dateien (1.280 Stück, 6,1 Mio. Punktverschiebungen)
+        aus dem Upstream unter <code>A:\3DTools\MakeHuman</code>. Die Kleidung
+        wird bei jeder Reglerbewegung mitgerechnet — ihre
+        <code>.mhclo</code>-Zuordnung hängt an den Körperpunkten, die sich
+        gerade bewegt haben.
+    </div>
+</div>

@@ -71,6 +71,17 @@ HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
 HUMANBODY_FIGUR_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'figur_exports'
 HUMANBODY_SMPL_GARMENT_DIR = HUMANBODY_ROOT / 'data' / 'garment_pattern_gen'
 
+# ------------------------------------------------------------------ MakeHuman
+#: Der MakeHuman-Upstream (1.3.0, geholt 06.09.2026) — Modellierziele und
+#: Modifier-Definitionen. Herkunft, Lizenzen und Wiederaufbau:
+#: `MakeHuman/HERKUNFT.md`. Nicht im Git (siehe `.gitignore`).
+MAKEHUMAN_ROOT = TOOLS_ROOT / 'MakeHuman'
+MAKEHUMAN_DATA_DIR = MAKEHUMAN_ROOT / 'makehuman' / 'data'
+MAKEHUMAN_ZIELE_DIR = MAKEHUMAN_ROOT / 'makehuman' / 'data' / 'targets'
+MAKEHUMAN_MODIFIER_DIR = MAKEHUMAN_ROOT / 'makehuman' / 'data' / 'modifiers'
+#: Die kompilierte Zielablage (30,4 MB) — `manage.py mh_ziele_bauen`.
+MAKEHUMAN_ZIELABLAGE = MAKEHUMAN_ROOT / 'ziele' / 'mh_ziele.npz' 
+
 # -------------------------------------------------------------------- Figuren
 #: Der Figurkatalog für Roomguest (Vertrag: `Figuren/VERTRAG.md`): je Quelle ein
 #: Ordner (`humanbody`, `uma`, `unified`), `aktuell.json` nennt die gültige

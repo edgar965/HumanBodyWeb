@@ -23,6 +23,7 @@ from .api.kleidungsvorlagen import Kleidungsvorlagen
 from .api.bvhtext import Bvhtext
 from .api.bvhdateien import Bvhauslieferung
 from .api.fotoabgleich import Fotoabgleich
+from .api.mhfigur import Mhfigur
 from .api.mhproxy import Mhproxy
 from .api.netzbearbeitung import Netzbearbeitung
 from .api.schnittmuster import Schnittmuster
@@ -30,6 +31,8 @@ from .api.schnittmuster_ablage import Schnittmusterablage
 from .api.smplx_ausgabe import SmplxAusgabe
 from .api.posen import Posen
 from .api.skelettdaten import Skelettdaten
+from .api.smplfigur import Smplfigur
+from .api.smplform import Smplformung
 from .api.umafigur import Umafigur
 from .api.umakleidung import Umakleidung
 from .api.gemeinsameregler import Gemeinsameregler
@@ -97,6 +100,25 @@ CHARAKTER = [
          name='uma_figur_bau_stand'),
     path('api/character/uma-figur/bauer/', Umafigur.bauer_stand, name='uma_bauer_stand'),
     path('api/character/uma-figur/bauer/vorwaermen/', Umafigur.vorwaermen, name='uma_bauer_vorwaermen'),
+    # SMPL-Referenzkoerper von GarmentCode (06.09.2026, core/api/smplfigur.py).
+    path('api/character/smpl-figur/', Smplfigur.liste, name='smpl_figur_liste'),
+    path('api/character/smpl-figur/formen/', Smplformung.formen,
+         name='smpl_figur_formen'),
+    path('api/character/smpl-figur/<str:name>/netz/', Smplfigur.netz,
+         name='smpl_figur_netz'),
+    # MakeHuman-Basiskoerper (06.09.2026, core/api/mhfigur.py). Die Garderobe
+    # steht VOR `<str:name>/netz/`, sonst hiesse das Modell „garderobe".
+    path('api/character/mh-figur/', Mhfigur.liste, name='mh_figur_liste'),
+    path('api/character/mh-figur/regler/', Mhfigur.regler,
+         name='mh_figur_regler'),
+    path('api/character/mh-figur/garderobe/', Mhfigur.garderobe,
+         name='mh_figur_garderobe'),
+    path('api/character/mh-figur/garderobe/<str:kategorie>/<str:stueck>/netz/',
+         Mhfigur.kleidnetz, name='mh_figur_kleidnetz'),
+    path('api/character/mh-figur/garderobe/<str:kategorie>/<str:stueck>/'
+         'textur/<str:datei>/', Mhfigur.textur, name='mh_figur_textur'),
+    path('api/character/mh-figur/<str:name>/netz/', Mhfigur.netz,
+         name='mh_figur_netz'),
     path('api/character/uma-figur/', Umafigur.liste, name='uma_figur_liste'),
     path('api/character/uma-figur/<str:name>/', Umafigur.datei, name='uma_figur'),
     path('api/character/uma-figur/<str:name>/zettel/', Umafigur.zettel,

@@ -51,8 +51,35 @@ class MhMaterial:
                     logger.debug('diffuseColor unlesbar: %r', zeile)
         elif zeile.startswith('diffuseTexture') and not self.texturname:
             name = zeile.split(None, 1)[1].strip() if ' ' in zeile else ''
-            if name and os.path.isfile(os.path.join(self.verzeichnis, name)):
+            if name and self._ist_bild(os.path.join(self.verzeichnis, name)):
                 self.texturname = name
+
+    #: Die ersten Bytes eines echten PNG bzw. JPEG.
+    BILDKENNUNGEN = (b'\x89PNG\r\n\x1a\n', b'\xff\xd8\xff')
+
+    @classmethod
+    def _ist_bild(cls, pfad):
+        """Steht dort wirklich ein Bild — oder nur ein Git-LFS-Zeiger?
+
+        GEFUNDEN AM 06.09.2026: `female_casualsuit01_diffuse.png` ist 135 Bytes
+        gross und enthaelt Text::
+
+            version https://git-lfs.github.com/spec/v1
+            oid sha256:414d46af…
+            size 3019656
+
+        Der LFS-Inhalt wurde nie geholt. `os.path.isfile` sagt trotzdem ja, die
+        Antwort meldete `has_texture`, und der Browser faerbt das Material
+        daraufhin WEISS, damit die Textur nicht doppelt einfaerbt. Die Textur
+        kam dann nie — das Kleidungsstueck blieb weiss, und die Farbe aus der
+        `.mhmat` wurde nicht einmal versucht. Ein Fehler ohne Fehlermeldung.
+        """
+        try:
+            with open(pfad, 'rb') as datei:
+                kopf = datei.read(8)
+        except OSError:
+            return False
+        return any(kopf.startswith(k) for k in cls.BILDKENNUNGEN)
 
     def _texturfarbe_mitteln(self):
         """Mittlere Farbe der Textur — fuer die Vorschau, wenn kein Bild geladen

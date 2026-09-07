@@ -1,3 +1,5 @@
+import { Fortschrittsrechnung } from '../gemeinsam/fortschrittsrechnung.js';
+
 /**
  * Fortschrittsanzeige für den GarmentCode-Reiter.
  *
@@ -8,10 +10,11 @@
  * passiert.
  *
  * Echten Fortschritt vom Server gibt es nicht: Die Simulation läuft in einem
- * eigenen Prozess und meldet sich erst am Ende. Deshalb zeigt diese Anzeige,
- * WAS gerade läuft und WIE LANGE schon — keine erfundene Prozentzahl.
+ * eigenen Prozess und meldet sich erst am Ende. Der Balken schätzt deshalb
+ * aus den gemessenen Dauern (`Fortschrittsrechnung`) und läuft nie voll,
+ * bevor der Schritt es wirklich ist. Darunter steht weiter, WAS gerade
+ * läuft und wie lange schon — das ist die Angabe, die nicht schätzt.
  */
-
 class GarmentcodeFortschritt {
     constructor() {
         this.schritte = [];
@@ -27,7 +30,9 @@ class GarmentcodeFortschritt {
         this.beginn = Date.now();
         ziel.classList.remove('hb-versteckt');
         this.zeichnen();
-        this.uhr = setInterval(() => this.zeichnen(), 1000);
+        // Jede halbe Sekunde: Der Balken soll sichtbar kriechen, nicht
+        // im Sekundentakt springen.
+        this.uhr = setInterval(() => this.zeichnen(), 500);
     }
 
     /** Einen Schritt als laufend markieren. */
@@ -65,16 +70,54 @@ class GarmentcodeFortschritt {
         this.beenden();
     }
 
+    /** Schritte, die nicht mehr kommen, aus der Anzeige nehmen. */
+    entfallen(schluessel) {
+        this.schritte = this.schritte.filter((s) => s.schluessel !== schluessel);
+        this.zeichnen();
+    }
+
     beenden() {
         if (this.uhr) { clearInterval(this.uhr); this.uhr = null; }
         this.zeichnen();
     }
 
+    // ------------------------------------------------------------- zeichnen
+
+    /** Die Schritte so, wie die Rechnung sie erwartet. */
+    stand() {
+        const jetzt = Date.now();
+        return this.schritte.map((s) => ({
+            stand: s.stand,
+            erwartet: s.erwartet,
+            verstrichen: s.seit ? (jetzt - s.seit) / 1000 : 0,
+        }));
+    }
+
     zeichnen() {
         const ziel = document.getElementById('gc-fortschritt');
         if (!ziel) return;
+        const stand = this.stand();
+        const anteil = Fortschrittsrechnung.gesamt(stand);
+        const laufend = this.schritte.find((s) => s.stand === 'laeuft');
+        const rest = this.uhr ? Fortschrittsrechnung.rest(stand) : null;
+        const gesamt = Math.round((Date.now() - this.beginn) / 1000);
+
+        ziel.innerHTML = `
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:${(anteil * 100).toFixed(1)}%"></div>
+            </div>
+            <div class="slider-row hb-font-size-0-72rem">
+                <label>${laufend ? laufend.titel : (this.uhr ? '…' : 'fertig')}</label>
+                <span class="slider-val">${Math.round(anteil * 100)} %${
+                    rest !== null ? ` · noch ~${Fortschrittsrechnung.zeit(rest)}` : ''}</span>
+            </div>
+            ${this.zeilen()}
+            <div class="hb-font-size-0-72rem">Gesamt: ${Fortschrittsrechnung.zeit(gesamt)}</div>`;
+    }
+
+    zeilen() {
         const zeichen = { wartet: '·', laeuft: '▸', fertig: '✓', fehler: '✕' };
-        const zeilen = this.schritte.map((schritt) => {
+        return this.schritte.map((schritt) => {
             let rechts = schritt.text || '';
             if (schritt.stand === 'laeuft' && schritt.seit) {
                 rechts = `${Math.round((Date.now() - schritt.seit) / 1000)} s …`;
@@ -85,10 +128,7 @@ class GarmentcodeFortschritt {
             return `<div class="slider-row"><label>${zeichen[schritt.stand]} `
                 + `${schritt.titel}</label>`
                 + `<span class="slider-val">${rechts}</span></div>`;
-        });
-        const gesamt = Math.round((Date.now() - this.beginn) / 1000);
-        ziel.innerHTML = zeilen.join('')
-            + `<div class="hb-font-size-0-72rem">Gesamt: ${gesamt} s</div>`;
+        }).join('');
     }
 }
 
