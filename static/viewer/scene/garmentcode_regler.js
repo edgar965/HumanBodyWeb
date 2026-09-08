@@ -37,6 +37,7 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { GarmentcodeLive } from './garmentcode_live.js';
 import { garmentcodePreset } from './garmentcode_preset.js';
+import { GarmentcodePassform } from './garmentcode_passform.js';
 import { garmentcodeReglerhilfe } from './garmentcode_reglerhilfe.js';
 
 class GarmentcodeRegler {
@@ -72,7 +73,9 @@ class GarmentcodeRegler {
             this.vorgaben = {};
             this.nachziehen = {};
             this.fuerVorlage = vorlage;
-            garmentcodePreset.setzen(antwort.presets || []);
+            GarmentcodePassform.uebernehmen(
+                antwort, (werte) => this.mehrereSetzen(werte),
+                (pfad) => this.wertVon(pfad));
             this.zeichnen(ziel, antwort.gruppen || []);
         } catch (fehler) {
             ziel.innerHTML = '<div class="hb-hinweis">Einstellungen nicht '

@@ -4,6 +4,7 @@ import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Knochenbau } from '../../gemeinsam/knochenbau.js';
 import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
+import { GarmentcodeAblage } from '../garmentcode_ablage.js';
 
 /**
  * SmplFigur — ein Referenzkörper von GarmentCode als Figur der Szene.
@@ -175,6 +176,8 @@ export class SmplFigur {
             koerper: this.koerper,
             geschlecht: this.geschlecht,
             form: { groesse: this.form.groesse, fuelle: this.form.fuelle },
+            // GarmentCode-Stuecke ueberleben das Speichern (08.09.2026).
+            [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
             transform: {
                 position: this.group.position.toArray(),
                 rotation: [this.group.rotation.x, this.group.rotation.y, this.group.rotation.z],
@@ -192,6 +195,7 @@ export class SmplFigur {
             if (lage.rotation) figur.group.rotation.set(lage.rotation[0], lage.rotation[1], lage.rotation[2]);
             if (lage.scale) figur.group.scale.fromArray(lage.scale);
         }
+        await GarmentcodeAblage.laden(figur, daten[GarmentcodeAblage.FELD]);
         return figur;
     }
 }

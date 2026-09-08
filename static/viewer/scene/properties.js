@@ -18,10 +18,14 @@ import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
 import { Transformfelder } from './transformfelder.js';
 import { Figurmerker } from './figurmerker.js';
 import { Formbedienung } from './formbedienung.js';
+import { Reiterfreigabe } from './reiterfreigabe.js';
 
 export function initTabs() {
     document.querySelectorAll('.panel-tab').forEach(tab => {
         tab.addEventListener('click', () => {
+            // Ein ausgegrauter Reiter muss auch wirklich gesperrt sein
+            // (08.09.2026) — sonst ist das Grau eine Behauptung.
+            if (!Reiterfreigabe.frei(tab.dataset.tab)) return;
             switchTab(tab.dataset.tab);
             // Der Reiter gehört zur Figur: beim nächsten Anklicken derselben
             // Figur öffnet er sich wieder (Edgar, 06.09.2026).

@@ -12,6 +12,7 @@ import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Animationsstopp } from '../gemeinsam/animationsstopp.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
+import { Animationsmenue } from './animationsmenue.js';
 import { Umaanimation } from './uma/umaanimation.js';
 import { Eigenanimation } from './eigenanimation.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
@@ -59,6 +60,8 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
     state.currentAnimGroundFixed = groundChk ? groundChk.checked : false;
     const inst = _selectedInst();
     abspielsteuerung.meldung(`Retarget läuft: ${name || url} …`);
+    // Der Knopf quittiert den Klick sofort — das Laden dauert Sekunden.
+    abspielsteuerung.ladeanzeige();
     if (inst && inst.quelle === 'uma') {
         try {
             const clip = await Umaanimation.starten(inst, url, rawBvhText);
@@ -302,6 +305,13 @@ export async function loadAnimationUI() {
                     state.currentAnimName = anim.name;
                     loadBVHAnimation(anim.url, anim.name, anim.frames || 0);
                 });
+                // Rechtsklick: umbenennen oder loeschen (08.09.2026).
+                // Nach der Aktion wird der Baum neu geholt — die Datei
+                // heisst dann anders oder ist weg, und ein Eintrag, der
+                // auf nichts mehr zeigt, laedt beim naechsten Klick ins
+                // Leere.
+                Animationsmenue.binden(item, cat, anim.name,
+                                       () => loadAnimationUI());
                 body.appendChild(item);
             }
             tree.appendChild(catDiv);

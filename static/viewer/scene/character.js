@@ -19,6 +19,7 @@ import {
     updateVertexCount,
 } from './charakterliste.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { GarmentcodeAblage } from './garmentcode_ablage.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
 // =========================================================================
@@ -146,6 +147,10 @@ export class CharacterInstance {
             hair_style: this.hairStyle,
             garments,
             mh_proxy: Object.values(this.mhProxies || {}),
+            // GarmentCode fuehrt eine eigene Liste (08.09.2026): Die Stuecke
+            // hingen nur als Netz in der Gruppe, und beim Speichern sah sie
+            // niemand an — beim Laden stand die Figur nackt da.
+            [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
             rigParams: this._rigParams || null,
             transform: this._lage(),
         };
@@ -205,6 +210,10 @@ export class CharacterInstance {
             if (data.transform.scale) inst.group.scale.fromArray(data.transform.scale);
         }
         if (data.rigParams) inst._rigParams = data.rigParams;
+        // NACH `load()` und nach der Lage: Gebunden wird in der Lage der
+        // Figurgruppe (`GarmentcodeAnziehen`), und `load()` baut das
+        // Skelett — ein Stueck, das vorher kommt, haengt starr da.
+        await GarmentcodeAblage.laden(inst, data[GarmentcodeAblage.FELD]);
         return inst;
     }
 }

@@ -10,6 +10,7 @@
  * Charakter ausgewählt war (gefunden und behoben 05.09.2026).
  */
 import { Umagarderobe } from './uma/umagarderobe.js';
+import { Reiterfreigabe } from './reiterfreigabe.js';
 
 export class Eigenschaftenbereiche {
 
@@ -22,6 +23,11 @@ export class Eigenschaftenbereiche {
             document.getElementById(leer).style.display = zeigen ? 'none' : '';
             document.getElementById(inhalt).classList.toggle('hb-versteckt', !zeigen);
         }
+        // HIER und nicht in `selectCharacter`/`deselectCharacter`: Diese
+        // Methode wird auf BEIDEN Wegen gerufen (`populateProperties` mit
+        // `true`, `clearProperties` mit `false`) — es gibt nur eine Stelle,
+        // die den Zustand kennt.
+        Reiterfreigabe.anwenden(!!zeigen);
     }
 
     /** Die HumanBody-Abschnitte (Ausstattung, Body Type, Morphs) zeigen oder verbergen. */

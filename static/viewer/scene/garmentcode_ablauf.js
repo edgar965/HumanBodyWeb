@@ -5,6 +5,7 @@ import { GarmentcodePanels } from './garmentcode_panels.js';
 import { GarmentcodeVorschau3d } from './garmentcode_vorschau3d.js';
 import { GarmentcodeFigur } from './garmentcode_figur.js';
 import { Laufwache } from '../gemeinsam/laufwache.js';
+import { garmentcodeRegler } from './garmentcode_regler.js';
 
 /**
  * GarmentcodeAblauf — was auf einen Knopfdruck hin passiert.
@@ -72,8 +73,8 @@ export class GarmentcodeAblauf {
         // der vorigen Figur drapiert — die Falle vom 06.09.2026.
         if (GarmentcodeAblauf.NUR3D.includes(modus)
                 && !GarmentcodeAblauf.schnittPasst(reiter, figur, vorlage)) {
-            meldung.textContent = 'Für diese Figur und dieses Stück liegt '
-                + 'kein Schnitt bereit — erst „2D", dann „3D".';
+            meldung.textContent = GarmentcodeAblauf.warumNicht(reiter, figur,
+                                                               vorlage);
             return;
         }
         const knoepfe = ['gc-vorschau-2d', 'gc-vorschau-3d',
@@ -113,6 +114,25 @@ export class GarmentcodeAblauf {
         } finally {
             GarmentcodeAblauf.beenden(reiter, knoepfe, lauf);
         }
+    }
+
+    /**
+     * Warum der vorhandene Schnitt nicht genommen wird.
+     *
+     * Der veraltete Schnitt ist der häufigere Fall und braucht eine andere
+     * Auskunft als „gar keiner da" — sonst sucht man den Fehler bei der
+     * Figur, während nur ein Regler seit dem letzten Schnitt bewegt wurde.
+     */
+    static warumNicht(reiter, figur, vorlage) {
+        if (reiter.spezifikation && reiter.schnittVon
+                && reiter.schnittVon.figur === figur.id
+                && reiter.schnittVon.vorlage === vorlage) {
+            return 'Die Einstellungen haben sich seit dem letzten Schnitt '
+                + 'geändert — erst „2D", dann „3D". (Sonst würde der alte '
+                + 'Schnitt drapiert.)';
+        }
+        return 'Für diese Figur und dieses Stück liegt kein Schnitt bereit '
+            + '— erst „2D", dann „3D".';
     }
 
     /**
@@ -172,15 +192,44 @@ export class GarmentcodeAblauf {
         // eine Datei, der Ordner enthaelt auch das Boxmesh.
         reiter.ordner = ergebnis.ordner || '';
         // Woher der Schnitt stammt — die Probe für den 3D-Knopf.
-        reiter.schnittVon = { figur: figur.id, vorlage };
+        reiter.schnittVon = { figur: figur.id, vorlage,
+                              regler: GarmentcodeAblauf.reglerstand() };
         return true;
     }
 
-    /** Gehört der gemerkte Schnitt zu dieser Figur und diesem Stück? */
+    /**
+     * Gehört der gemerkte Schnitt zu dieser Figur, diesem Stück UND diesen
+     * Reglerwerten?
+     *
+     * Der dritte Teil kam am 08.09.2026 dazu (Edgar: „ich habe das T-shirt
+     * länger eingestellt, warum wird es in 3D nicht länger gemacht, im 2D
+     * war es länger?"). Der Schnitt liegt als Ordner auf der Platte, und
+     * „3D" baut ihn nicht neu. Normalerweise zieht `GarmentcodeLive` bei
+     * jedem Reglerzug nach — aber nicht, während ein Bau läuft: Dann wird
+     * der Zug verworfen (`angestossen` steigt bei `reiter.laeuft` aus), und
+     * der Ordner enthält weiter den Schnitt von vorher. Wer danach „3D"
+     * drückt, drapiert die alte Länge, ohne dass irgendwo ein Fehler
+     * entsteht — die Panels im Bild zeigen längst die neue.
+     */
     static schnittPasst(reiter, figur, vorlage) {
         return Boolean(reiter.spezifikation && reiter.schnittVon
             && reiter.schnittVon.figur === figur.id
-            && reiter.schnittVon.vorlage === vorlage);
+            && reiter.schnittVon.vorlage === vorlage
+            && reiter.schnittVon.regler === GarmentcodeAblauf.reglerstand());
+    }
+
+    /**
+     * Ein Fingerabdruck der eingestellten Reglerwerte.
+     *
+     * Verglichen wird die Zeichenkette, nicht Wert für Wert: Sie ist billig
+     * zu bilden und zu speichern, und ein Unterschied irgendwo genügt schon
+     * als Antwort. Sortiert, weil die Reihenfolge der Schlüssel sonst zwei
+     * gleiche Stände verschieden aussehen liesse.
+     */
+    static reglerstand() {
+        const werte = garmentcodeRegler.werte || {};
+        return Object.keys(werte).sort()
+            .map((pfad) => `${pfad}=${werte[pfad]}`).join('|');
     }
 
     /**

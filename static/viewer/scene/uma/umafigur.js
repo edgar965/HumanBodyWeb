@@ -3,6 +3,7 @@ import { gltfLoader } from '../state.js';
 import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Umaregler } from './umaregler.js';
+import { GarmentcodeAblage } from '../garmentcode_ablage.js';
 
 /**
  * UmaFigur — eine UMA-Figur aus dem Figurkatalog als Figur der Szene.
@@ -202,6 +203,8 @@ export class UmaFigur {
             datei: this.datei,
             dna: this.dna,
             farben: this.farben,
+            // GarmentCode-Stuecke ueberleben das Speichern (08.09.2026).
+            [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
             transform: {
                 position: this.group.position.toArray(),
                 rotation: [this.group.rotation.x, this.group.rotation.y, this.group.rotation.z],
@@ -219,6 +222,7 @@ export class UmaFigur {
             if (lage.rotation) figur.group.rotation.set(lage.rotation[0], lage.rotation[1], lage.rotation[2]);
             if (lage.scale) figur.group.scale.fromArray(lage.scale);
         }
+        await GarmentcodeAblage.laden(figur, daten[GarmentcodeAblage.FELD]);
         return figur;
     }
 }

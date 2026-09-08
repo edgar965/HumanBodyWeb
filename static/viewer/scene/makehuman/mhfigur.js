@@ -6,6 +6,7 @@ import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Mhkleidstueck } from './mhkleidstueck.js';
 import { Knochenbau } from '../../gemeinsam/knochenbau.js';
 import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
+import { GarmentcodeAblage } from '../garmentcode_ablage.js';
 
 /**
  * MhFigur — der MakeHuman-Basiskörper (hm08) als Figur der Szene.
@@ -314,6 +315,8 @@ export class MhFigur {
             makro: { ...this.makro },
             regler: { ...this.regler },
             kleidung: { ...this.kleidung },
+            // GarmentCode-Stuecke ueberleben das Speichern (08.09.2026).
+            [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
             transform: {
                 position: this.group.position.toArray(),
                 rotation: [this.group.rotation.x, this.group.rotation.y,
@@ -335,6 +338,7 @@ export class MhFigur {
             }
             if (lage.scale) figur.group.scale.fromArray(lage.scale);
         }
+        await GarmentcodeAblage.laden(figur, daten[GarmentcodeAblage.FELD]);
         return figur;
     }
 }

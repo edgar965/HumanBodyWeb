@@ -103,7 +103,13 @@ class Garmentcode:
             # MIT den Gruppen, nicht ueber einen zweiten Aufruf: Ein Preset
             # gehoert zu genau diesen Reglern, und ein getrennter Abruf
             # koennte auf ein anderes Stueck treffen.
-            'presets': GarmentcodeDienst.presets(vorlage)})
+            'presets': GarmentcodeDienst.presets(vorlage),
+            # Und die Voreinstellungen fuer das ganze Stueck, die oben im
+            # Reiter stehen (Edgar, 08.09.2026: „oben im Tab, nach dem
+            # Farben bereich"). Sie haengen zusaetzlich an den
+            # meta-Feldern, weil die Rumpfweite nur beim ungefitteten
+            # `Shirt` existiert.
+            'passform': GarmentcodeDienst.passform(vorlage)})
 
     @staticmethod
     @require_POST

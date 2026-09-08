@@ -49,6 +49,9 @@ export function handleMenuAction(action) {
         case 'load': fn.loadFromFilePicker(); break;
         case 'save': fn.quickSave(); break;
         case 'save-as': fn.openSaveDialog(); break;
+        // Modell und Szene sind zwei Dinge — `Speichernmenue` (08.09.2026).
+        case 'save-model': fn.saveModelToCatalog(); break;
+        case 'save-model-as': fn.saveModelToCatalogAs(); break;
         case 'default-scene':
             sessionStorage.removeItem(SESSION_KEY);
             window.location.reload();

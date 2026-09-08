@@ -27,6 +27,7 @@ export class Abspielsteuerung {
 
     static PAUSE = '<i class="fas fa-pause"></i>';
     static PLAY = '<i class="fas fa-play"></i>';
+    static LAEDT = '<i class="fas fa-spinner fa-spin"></i>';
     static KNOEPFE = ['anim-play', 'play-demo-anim'];
 
     constructor(state, fn) {
@@ -95,6 +96,28 @@ export class Abspielsteuerung {
             if (!knopf) continue;
             knopf.innerHTML = laeuft ? Abspielsteuerung.PAUSE : Abspielsteuerung.PLAY;
             if (kennung === 'play-demo-anim') knopf.classList.toggle('active', laeuft);
+        }
+    }
+
+    /**
+     * Der Knopf zeigt, dass geladen wird.
+     *
+     * Edgar, 08.09.2026: „bei klicke auf eine Animation im Tab soll die
+     * gleich anfangen zu animieren (und der Play button soll zum Pause
+     * mutieren)". Das Abspielen und die Umschaltung auf Pause standen
+     * schon — was fehlte, war die Zeit dazwischen: Ein Retarget kostet
+     * gemessen 5,5 bis 7,0 s (`/api/retarget/` im Serverlog), und solange
+     * blieb der Knopf unverändert auf Play. Wer klickt und nichts sieht,
+     * klickt noch einmal.
+     *
+     * Der Spinner wird von `knoepfeAngleichen` überschrieben, sobald das
+     * Laden fertig ist — der Aufruf steht am Ende von `loadBVHAnimation`,
+     * auch im Fehlerfall.
+     */
+    ladeanzeige() {
+        for (const kennung of Abspielsteuerung.KNOEPFE) {
+            const knopf = document.getElementById(kennung);
+            if (knopf) knopf.innerHTML = Abspielsteuerung.LAEDT;
         }
     }
 

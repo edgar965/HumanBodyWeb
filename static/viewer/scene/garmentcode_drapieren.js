@@ -2,7 +2,11 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 import { Stoffvorschau } from './stoffvorschau.js';
+import { GarmentcodeAblage } from './garmentcode_ablage.js';
 import { Charakterkoerper } from './charakter_koerper.js';
+import { GarmentcodeMaterial } from './garmentcode_material.js';
+import { fn } from '../gemeinsam/registrierung.js';
+import { GarmentcodeBilanz } from './garmentcode_bilanz.js';
 
 /**
  * GarmentcodeDrapierung — den Stoff auf den Körper fallen lassen und ihn
@@ -19,17 +23,6 @@ import { Charakterkoerper } from './charakter_koerper.js';
  * wirklich anliegt (vorher: Median 27,4 mm, 31 % der Punkte über 5 cm).
  */
 export class GarmentcodeDrapierung {
-
-    /**
-     * Ab hier sitzt ein Stück nicht mehr — dann sagt es die Meldung.
-     *
-     * 40 mm, nicht enger: Eine weite Hose kommt auf 21 mm und ist völlig
-     * in Ordnung (06.09.2026 gemessen, Bundweite 1,0 und Ausstellung 1,0);
-     * mit einer engeren Schwelle liest sich jeder weite Schnitt wie ein
-     * Fehler. Auf dem falschen Körper lag der Wert bei 27 mm MEDIAN mit
-     * 31 % der Punkte über 50 mm — das trifft diese Schwelle sicher.
-     */
-    static ABSTAND_WARNUNG_MM = 40;
 
     /** Das Schnittmuster als 3D-Netz auf den Körper legen und anziehen. */
     static async drapieren(reiter, figur, spezifikation, meldung,
@@ -65,6 +58,20 @@ export class GarmentcodeDrapierung {
     /** Das gerechnete Netz an die Figur hängen und Bilanz ziehen. */
     static async anziehen(figur, netz, meldung, stueck) {
         garmentcodeFortschritt.laeuft('rig');
+        // ERST DAS SKELETT (Edgar, 08.09.2026: „warum denn der hinweistext:
+        // Figur hat kein Skelett?? die hat doch skelett").
+        //
+        // Er hat recht: Die Rigify-Daten liegen seit dem Seitenaufbau bereit
+        // (`szenenaufbau.js`), nur wurde das Skelett bisher erst gebaut, wenn
+        // eine Animation lud (`convertInstToSkinned`) oder Haare dazukamen
+        // (`hair.js`). Wer ein Stück davor baute, bekam ein starres Netz und
+        // eine Meldung, die nach einem Mangel der Figur klang.
+        //
+        // Dieselbe Zeile wie in `hair.js:50`, mit denselben Bedingungen —
+        // eine erzeugte Figur (`generatedConfig`) hat kein DEF-Rig, dort
+        // kehrt `convertInstToSkinned` von selbst um.
+        const inst = figur?.inst || figur;
+        if (inst && !inst.isSkinned) fn.convertInstToSkinned?.(inst);
         let getragen = null;
         if (netz.rig_url) {
             try {
@@ -85,13 +92,27 @@ export class GarmentcodeDrapierung {
         // Frisch simuliert: Die Vorschauzeile gilt erst wieder, wenn ein
         // Regler bewegt wird.
         Stoffvorschau.hinweisAus();
+        // In die Ablage der Figur, damit „Speichern" es findet
+        // (08.09.2026: „beim neu laden sind die Garment Code items weg").
+        GarmentcodeAblage.merken(figur?.inst || figur, stueck, netz);
+        // Das frisch eingehängte Stück bekommt ein neues Material mit den
+        // Vorgabewerten. Ohne diesen Schritt spränge die eingestellte Farbe
+        // bei jedem Bau zurück (08.09.2026).
+        // `false`: Das frisch gebaute Stueck bekommt den Stand,
+        // gleich was gerade ausgewaehlt ist.
+        GarmentcodeMaterial.anwenden(figur, false);
         GarmentcodeDrapierung.vorschauBinden(figur, netz, stueck);
         garmentcodeFortschritt.fertig('rig', getragen
             ? (getragen.angezogen
                 ? `${getragen.zugeordnet} Knochen zugeordnet`
                 : 'sichtbar, ohne Skinning')
             : 'nicht eingehängt');
-        meldung.textContent = GarmentcodeDrapierung.bilanz(netz, getragen);
+        // Kurz sichtbar, ausführlich im Tooltip (Edgar, 08.09.2026: „mach
+        // die vielen Texte aus dem Garment Code weg"). Die Zahlen sind die
+        // Probe darauf, dass etwas anliegt — sie verschwinden nicht, sie
+        // stehen nur nicht mehr im Weg.
+        meldung.textContent = GarmentcodeBilanz.kurzbilanz(netz, getragen);
+        meldung.title = GarmentcodeBilanz.bilanz(netz, getragen);
     }
 
     /**
@@ -109,41 +130,5 @@ export class GarmentcodeDrapierung {
         if (!gehaengt) return false;
         return Stoffvorschau.binden(stueck, netz.ordner, gehaengt,
                                     Charakterkoerper.stellung(inst));
-    }
-
-    /**
-     * Was die Figur JETZT trägt — nicht, was gerechnet wurde.
-     *
-     * Der Hautabstand steht mit drin, weil er die einzige Zahl ist, die
-     * „liegt an" belegt. Ein T-Shirt kommt auf wenige Millimeter; wird
-     * daraus eine zweistellige Zahl, drapiert etwas auf dem falschen
-     * Körper, ohne dass ein Fehler auftritt.
-     */
-    static bilanz(netz, getragen) {
-        if (!getragen) {
-            return `Drapiert (${netz.punkte} Punkte, ${netz.dauer_s} s), `
-                + `aber NICHT an der Figur`;
-        }
-        const abstand = Number(netz.hautabstand_mm);
-        const sitz = !isFinite(abstand) ? ''
-            : (abstand <= GarmentcodeDrapierung.ABSTAND_WARNUNG_MM
-                ? `, ${abstand.toFixed(0)} mm zur Haut`
-                : `, steht ${abstand.toFixed(0)} mm ab — sitzt nicht`);
-        // Auf einem SMPL-Referenzkörper (06.09.2026) gibt es weder Skelett
-        // noch Korrektur — das ist der Weg des Online-Tools, und so heißt
-        // es auch. „Unbeweglich" wäre dort keine Einschränkung, sondern
-        // die Messlatte.
-        const beweglich = netz.auf_figur === false
-            ? `, auf dem Referenzkörper ${netz.drapierkoerper || ''} wie das Online-Tool`
-            : (getragen.angezogen
-                ? `, beweglich über ${getragen.zugeordnet} Knochen`
-                : ', aber unbeweglich (Figur hat kein Skelett)');
-        // Wie viele Punkte in der Haut steckten und herausgeholt wurden.
-        // Ohne die Zahl bliebe unsichtbar, dass dieser Schritt überhaupt
-        // stattfindet — und wie viel er zu tun hatte.
-        const geholt = Number(netz.aus_der_haut) > 0
-            ? `, ${netz.aus_der_haut} Punkte aus der Haut geholt` : '';
-        return `Fertig: ${netz.punkte} Punkte, ${netz.dreiecke} Dreiecke `
-            + `in ${netz.dauer_s} s${sitz}${geholt}${beweglich}`;
     }
 }

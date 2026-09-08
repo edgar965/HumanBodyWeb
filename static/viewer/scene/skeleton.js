@@ -11,6 +11,7 @@ import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
 import { findHeadBoneIndex, skinifyHairGroup }
     from '../character_core.js';
 import { Hautbindung } from '../gemeinsam/hautbindung.js';
+import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 
 export async function loadRigifySkeleton() {
     try {
@@ -65,6 +66,12 @@ export function convertInstToSkinned(inst) {
         inst.group.remove(inst.hairMesh);
         fn.charakterHaare?.(inst);
     }
+
+    // Die Kleidung muss MIT (Edgar, 08.09.2026: „die kleider werden nicht
+    // animiert"). GarmentCode-Stücke werden fast immer VOR der ersten
+    // Animation gebaut — dann gab es hier noch kein Skelett, und sie hängen
+    // als starres Netz. Jetzt gibt es eines.
+    GarmentcodeAnziehen.nachbinden(inst);
 }
 
 /**

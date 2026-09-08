@@ -5,6 +5,7 @@ import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Knochenbau } from '../../gemeinsam/knochenbau.js';
 import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
 import { Umapythonnetz } from './umapythonnetz.js';
+import { GarmentcodeAblage } from '../garmentcode_ablage.js';
 
 /**
  * UmapythonFigur — eine echte UMA-Figur, in Python gebaut.
@@ -210,6 +211,8 @@ export class UmapythonFigur {
             bodyType: this.bodyType,
             rasse: this.rasse,
             dna: { ...this.dna },
+            // GarmentCode-Stuecke ueberleben das Speichern (08.09.2026).
+            [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
             transform: {
                 position: this.group.position.toArray(),
                 rotation: [this.group.rotation.x, this.group.rotation.y,
@@ -228,6 +231,7 @@ export class UmapythonFigur {
             figur.group.rotation.set(...(lage.rotation || [0, 0, 0]));
             figur.group.scale.fromArray(lage.scale || [1, 1, 1]);
         }
+        await GarmentcodeAblage.laden(figur, daten[GarmentcodeAblage.FELD]);
         return figur;
     }
 }

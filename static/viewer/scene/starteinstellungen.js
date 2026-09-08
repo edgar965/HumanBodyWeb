@@ -1,6 +1,7 @@
 import { THREE } from './state.js';
 import { state } from './state.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Bereichsgedaechtnis } from './bereichsgedaechtnis.js';
 
 /**
  * Starteinstellungen — was die Szene beim Laden aus den Servereinstellungen
@@ -68,14 +69,25 @@ export class Starteinstellungen {
      */
     bereicheOeffnen(offene) {
         if (!Array.isArray(offene)) return;
+        // Gespeichert werden nur die OFFENEN. Ein Bereich, den es beim
+        // letzten Speichern noch nicht gab, stand also nie in der Liste und
+        // wurde zugeklappt — dauerhaft (08.09.2026: die Passform-
+        // Voreinstellungen waren deshalb unauffindbar). `Bereichsgedaechtnis`
+        // trennt „war zu" von „ist neu".
+        const gesehen = Bereichsgedaechtnis.gesehen();
+        const namen = [];
         for (const bereich of document.querySelectorAll(
                 '.panel-section[data-panel-key]')) {
             if (bereich.closest('#tab-modell') || bereich.closest('#tab-kleider')) {
                 continue;
             }
-            bereich.classList.toggle('collapsed',
-                                     !offene.includes(bereich.dataset.panelKey));
+            const name = bereich.dataset.panelKey;
+            namen.push(name);
+            bereich.classList.toggle(
+                'collapsed',
+                Bereichsgedaechtnis.zuklappen(name, offene, gesehen));
         }
+        Bereichsgedaechtnis.merken(namen);
     }
 
     /** Helligkeit, mit der Auswahl und Zeigen unter der Maus leuchten. */

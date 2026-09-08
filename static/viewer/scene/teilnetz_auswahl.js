@@ -2,6 +2,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { markDirty } from './undo.js';
 import { state } from './state.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { GarmentcodeAblage } from './garmentcode_ablage.js';
 /**
  * Teilnetze eines Charakters auswaehlen und entfernen.
  *
@@ -127,7 +128,12 @@ export function _removeSubMesh(target) {
         case 'cloth': {
             if (Netzentsorgung.ausAblage(inst.group, inst.clothMeshes,
                                          target.key)) {
-                if (target.key.startsWith('gar_')) {
+                if (target.key.startsWith('gc_')) {
+                    // GarmentCode fuehrt seine eigene Ablage; ohne diese
+                    // Zeile kaeme ein geloeschtes Stueck beim naechsten
+                    // Laden der Szene zurueck.
+                    GarmentcodeAblage.vergessen(inst, target.key);
+                } else if (target.key.startsWith('gar_')) {
                     const garId = target.key.slice(4);
                     inst.garments = (inst.garments || []).filter(g => g.id !== garId);
                     delete inst.garmentState[target.key];

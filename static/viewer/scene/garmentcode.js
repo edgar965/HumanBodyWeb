@@ -18,6 +18,7 @@ import { GarmentcodeFigur } from './garmentcode_figur.js';
 import { GarmentcodeMasse } from './garmentcode_masse.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
 import { GarmentcodeLive } from './garmentcode_live.js';
+import { GarmentcodeMaterial } from './garmentcode_material.js';
 
 class GarmentcodeReiter {
     constructor() {
@@ -83,6 +84,12 @@ class GarmentcodeReiter {
 
         // Die Regler formen das 2D-Modell, sobald eines steht (08.09.2026).
         GarmentcodeLive.einhaengen(this);
+
+        // Farbe, Rauheit und Metallgrad (08.09.2026). Das Material kennt den
+        // Reiter nicht — es fragt über diesen Geber nach der Figur, sonst
+        // hinge es an der Bedienung und wäre nicht für sich prüfbar.
+        GarmentcodeMaterial.figurgeber = () => this.figur();
+        GarmentcodeMaterial.einhaengen();
 
         // Vorlagen und Regler brauchen keine Figur — sofort holen, damit im
         // Reiter etwas steht, bevor jemand ihn anklickt.

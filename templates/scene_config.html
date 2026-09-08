@@ -731,8 +731,14 @@
                 <div class="menu-dropdown">
                     <div class="menu-item" data-action="new">Neu <span class="shortcut">Ctrl+N</span></div>
                     <div class="menu-item" data-action="load">Laden... <span class="shortcut">Ctrl+O</span></div>
-                    <div class="menu-item" data-action="save">Speichern <span class="shortcut">Ctrl+S</span></div>
-                    <div class="menu-item" data-action="save-as">Speichern unter... <span
+                    {# „Speichern" hiess bis zum 08.09.2026 immer die SZENE. Modell
+                       und Szene sind zwei Dinge, und das war nicht zu sehen —
+                       Edgar: „Bei Menue Speichern soll «Modell» oder Szene kommen". #}
+                    <div class="menu-item" data-action="save-model">Modell speichern</div>
+                    <div class="menu-item" data-action="save-model-as">Modell speichern unter...</div>
+                    <div class="menu-sep"></div>
+                    <div class="menu-item" data-action="save">Szene speichern <span class="shortcut">Ctrl+S</span></div>
+                    <div class="menu-item" data-action="save-as">Szene speichern unter... <span
                          class="shortcut">Ctrl+Shift+S</span></div>
                     <div class="menu-sep"></div>
                     <div class="menu-item" data-action="default-scene">Default Szene</div>

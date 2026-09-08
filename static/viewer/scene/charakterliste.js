@@ -9,6 +9,8 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Figurmerker } from './figurmerker.js';
 import { Figurplatzierung } from './figurplatzierung.js';
 import { Figurarten } from './figurarten.js';
+import { GarmentcodeAblage } from './garmentcode_ablage.js';
+import { Speichernmenue } from './speichernmenue.js';
 /**
  * Charakterliste der Szene: anzeigen, auswaehlen, entfernen, anfliegen.
  *
@@ -34,6 +36,9 @@ export async function addCharacterFromPreset(presetName, lage = null) {
     // Position und Größe erst nach dem Laden: vorher gibt es nichts zu messen
     // (Edgar, 06.09.2026 — vorher stand hier ein fester Abstand von 0,8 m).
     Figurplatzierung.anwenden(inst, lage);
+    // Nach `load()` und nach der Platzierung: GarmentCode bindet in der Lage
+    // der Figurgruppe, und das Skelett entsteht in `load()`.
+    await GarmentcodeAblage.laden(inst, presetData[GarmentcodeAblage.FELD]);
     state.characters.set(id, inst);
     state.scene.add(inst.group);
 
@@ -170,6 +175,9 @@ export function updateCharacterListUI() {
             e.stopPropagation();
             deleteCharacter(id);
         });
+
+        // Rechtsklick auf die Modellzeile: Speichern (Edgar, 08.09.2026).
+        Speichernmenue.binden(li, id);
 
         list.appendChild(li);
     });

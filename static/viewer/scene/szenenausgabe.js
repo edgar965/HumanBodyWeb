@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _saveJsonWithPicker } from './szene_dialoge.js';
 import { Szenenzustand } from './szenenzustand.js';
+import { GarmentcodeAblage } from './garmentcode_ablage.js';
 
 /**
  * Szenenausgabe — Szene oder Figur als JSON-Datei schreiben.
@@ -36,12 +37,30 @@ export class Szenenausgabe {
         }
         const figur = state.characters.get(state.selectedCharacterId);
         if (!figur) return;
-        const daten = figur.generatedConfig
-            ? Szenenausgabe._erzeugt(figur)
-            : Szenenausgabe._zusammengestellt(figur);
+        const daten = Szenenausgabe.modelldaten(figur);
         const name = await _saveJsonWithPicker(
             daten, (figur.presetName || 'model') + '.json');
         if (name) Szenenausgabe._umbenennen(figur, name);
+    }
+
+    /**
+     * Die Beschreibung EINER Figur — fuer Datei und Server gleich.
+     *
+     * Herausgezogen am 08.09.2026, als „Modell speichern" in den
+     * Serverkatalog dazukam (`Speichernmenue`). Zwei Fassungen dieser
+     * Fallunterscheidung hiessen: Wer eine Datei speichert, bekommt etwas
+     * anderes als wer in den Katalog speichert — und niemand sieht, welche.
+     */
+    static modelldaten(figur) {
+        const daten = figur.generatedConfig
+            ? Szenenausgabe._erzeugt(figur)
+            : Szenenausgabe._zusammengestellt(figur);
+        // HIER und nicht in einem der beiden Zweige: Eine erzeugte Figur
+        // kann genauso ein GarmentCode-Stueck tragen (08.09.2026: „habe
+        // gerade das Modell gespeichert mit GarmentCode, neu laden
+        // funktioniert nicht").
+        daten[GarmentcodeAblage.FELD] = GarmentcodeAblage.toJSON(figur);
+        return daten;
     }
 
     static _erzeugt(figur) {

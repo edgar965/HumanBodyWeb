@@ -105,6 +105,15 @@ export class GarmentcodeAnziehen {
                     : 'Kleidung als starres Netz eingehängt (Referenzkörper, ohne Rig)');
         }
         netz.name = GarmentcodeAnziehen.name(stueck);
+        // Die Rohdaten bleiben AM NETZ. Ein HumanBody-Körper bekommt sein
+        // Rigify-Skelett erst beim Animieren (`convertInstToSkinned`); ein
+        // Stück, das vorher eingehängt wurde, hängt bis dahin als starres
+        // Mesh und muss danach neu gebunden werden. Aus den Attributen der
+        // Geometrie geht das nicht — deren Knochennummern gehören zu einem
+        // Skelett, das es zu dem Zeitpunkt noch nicht gab (dieselbe Falle
+        // wie bei MakeHuman, 07.09.2026).
+        netz.userData.gcRig = daten;
+        netz.userData.gcStueck = stueck;
         netz.frustumCulled = false;      // das Netz verlässt beim Posieren die Box
         // Die Beschriftung fürs Auswahlmenü — sonst stünde dort `gc_kleid`.
         netz.userData.beschriftung = `${stueck || 'Kleidung'} (GarmentCode)`;
@@ -130,6 +139,37 @@ export class GarmentcodeAnziehen {
             zugeordnet: zuordnung ? zuordnung.treffer : 0,
             name: netz.name,
         };
+    }
+
+    /**
+     * Alle Stücke einer Figur neu binden — nachdem ein Skelett entstanden ist.
+     *
+     * Edgar, 08.09.2026: „die kleider werden nicht animiert". Der Grund war
+     * die Reihenfolge: Ein HumanBody-Körper ist in der Szene ein gewöhnliches
+     * `Mesh`; sein Rigify-Skelett baut `convertInstToSkinned` erst, wenn eine
+     * Animation geladen wird. Wer vorher ein Stück gebaut hat — der Normalfall
+     * —, bekam ein starres Netz, und dabei blieb es: Die Entscheidung
+     * SkinnedMesh oder Mesh fällt beim Einhängen und wurde nie revidiert.
+     *
+     * @returns Anzahl der neu gebundenen Stücke
+     */
+    static nachbinden(figur) {
+        const inst = figur?.inst || figur;
+        if (!inst || !GarmentcodeAnziehen._skelett(inst)) return 0;
+        const bestand = inst.clothMeshes || {};
+        let gebunden = 0;
+        for (const schluessel of Object.keys(bestand)) {
+            if (!schluessel.startsWith('gc_')) continue;
+            const netz = bestand[schluessel];
+            // Schon gehäutet: nichts zu tun. Ohne Rohdaten geht es nicht —
+            // das ist kein Fehler, sondern ein Stück aus einer Sitzung vor
+            // dieser Änderung.
+            if (!netz || netz.isSkinnedMesh || !netz.userData?.gcRig) continue;
+            const ergebnis = GarmentcodeAnziehen.einhaengen(
+                inst, netz.userData.gcRig, netz.userData.gcStueck);
+            if (ergebnis.angezogen) gebunden += 1;
+        }
+        return gebunden;
     }
 
     /**

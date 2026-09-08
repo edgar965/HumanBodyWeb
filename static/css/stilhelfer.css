@@ -934,3 +934,13 @@
     font-size: 0.72rem;
     opacity: 0.75;
 }
+
+/* Gesperrter Reiter (08.09.2026, Edgar: „Wenn kein Modell angeklickt ist,
+ * sollen auch die nicht aktiven Eintraege im Menue links ausgegraut sein").
+ * `pointer-events:none` allein waere zu wenig — der Klickhoerer haengt an
+ * der Reiterleiste und wird zusaetzlich in `initTabs` geprueft. */
+.hb-gesperrt.hb-gesperrt.hb-gesperrt {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
