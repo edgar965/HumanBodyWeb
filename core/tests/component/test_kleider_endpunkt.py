@@ -11,7 +11,7 @@ Frontend sie riefen: vier tote Kontextmenue-Punkte in zwei Listen.
 
 Die Tests laufen ausschliesslich in einem Wegwerfverzeichnis unter ProjektTemp
 (MEDIA_ROOT/tmp) — nicht im System-Temp auf C:, und nicht in der echten
-Bibliothek unter `HumanBody/data/garment_library`.
+Bibliothek unter `3DObjects/garment_library`.
 """
 import shutil
 from pathlib import Path

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Bvhverzeichnis — eine Sicht auf `HumanBody/data/animations/bvh/`.
+"""Bvhverzeichnis — eine Sicht auf `3DObjects/animations/bvh/`.
 
 Zwei Dienste lesen denselben Baum: `Animationsauswahl` fuellt die Auswahlfelder
 der Einstellungsseiten, `Animationsliste` beantwortet
@@ -49,8 +49,11 @@ class Bvhverzeichnis:
     def wurzel(self):
         if self._wurzel is not None:
             return str(self._wurzel)
-        return os.path.join(str(settings.HUMANBODY_ROOT),
-                            'data', 'animations', 'bvh')
+        # Seit 08.09.2026 unter `A:/3DTools/3DObjects` statt
+        # `HumanBody/data` (Edgar: „verschiebe den kompletten Ordner …
+        # der nicht direkt zu HumanBody gehoert").
+        return os.path.join(str(settings.OBJECTS_ROOT),
+                            'animations', 'bvh')
 
     def kategorienamen(self):
         """Namen der Unterordner, alphabetisch. Leere Liste, wenn es sie nicht gibt."""

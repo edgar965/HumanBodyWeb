@@ -17,7 +17,7 @@ Modul, und beide haben eine Vorgeschichte:
 import os
 
 from .wurzeln import (ASSETS_ROOT, HUMANBODY_ROOT, MOCAPNET_ROOT,
-                      TOOLS_ROOT, VIDEOTOBVH_ROOT)
+                      OBJECTS_ROOT, TOOLS_ROOT, VIDEOTOBVH_ROOT)
 
 #: Pipeline-Python (venv mit CUDA-PyTorch, ONNX Runtime GPU).
 PIPELINE_PYTHON = str(TOOLS_ROOT / 'python10' / 'Scripts' / 'python.exe')
@@ -39,7 +39,7 @@ MOCAPNET_EXE = MOCAPNET_ROOT / 'MocapNET2CSV.exe'
 MEDIAPIPE_SCRIPT = (MOCAPNET_ROOT / 'src' / 'python' / 'mediapipe'
                     / 'mediapipeHolistic2CSV.py')
 BVH_OUTPUT_DIR = MOCAPNET_ROOT / 'output'
-BLENDER_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'
+BLENDER_BVH_DIR = OBJECTS_ROOT / 'animations' / 'bvh' / 'MocapNET'
 MOCAPNET_V4_ROOT = VIDEOTOBVH_ROOT / 'MocapNET_v4'
 MOCAPNET_V4_SCRIPT = MOCAPNET_V4_ROOT / 'run_v4_pipeline.py'
 
@@ -59,12 +59,16 @@ SMPL_MODELS_DIR = VIDEOTOBVH_ROOT / 'models' / 'smpl'
 # ------------------------------------------------------------------ HumanBody
 HUMANBODY_DATA_DIR = HUMANBODY_ROOT / 'data' / 'humanBody'
 HUMANBODY_MODELS_DIR = HUMANBODY_ROOT / 'data' / 'models'
-HUMANBODY_ASSETS_DIR = HUMANBODY_ROOT / 'data' / 'assets'
-HUMANBODY_ASSETS_GLB_DIR = HUMANBODY_ROOT / 'data' / 'assets_glb'
 HUMANBODY_ASSETS_INSTANCE_DIR = HUMANBODY_ROOT / 'data' / 'assetsInstance'
-HUMANBODY_BVH_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'MocapNET'
-BVH_RESULTS_DIR = HUMANBODY_ROOT / 'data' / 'animations' / 'bvh' / 'Results'
-HUMANBODY_GARMENT_LIBRARY_DIR = HUMANBODY_ROOT / 'data' / 'garment_library'
+# Die vier grossen Inhaltsordner liegen seit dem 08.09.2026 unter
+# `A:/3DTools/3DObjects` (siehe `wurzeln.OBJECTS_ROOT`). Die Namen der
+# Konstanten bleiben, damit kein Aufrufer angefasst werden muss — nur die
+# Wurzel wechselt.
+HUMANBODY_ASSETS_DIR = OBJECTS_ROOT / 'assets'
+HUMANBODY_ASSETS_GLB_DIR = OBJECTS_ROOT / 'assets_glb'
+HUMANBODY_BVH_DIR = OBJECTS_ROOT / 'animations' / 'bvh' / 'MocapNET'
+BVH_RESULTS_DIR = OBJECTS_ROOT / 'animations' / 'bvh' / 'Results'
+HUMANBODY_GARMENT_LIBRARY_DIR = OBJECTS_ROOT / 'garment_library'
 HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
 # Fertige Figuren als GLB (Datei -> Exportieren -> Figur - GLB); Roomguest
 # (A:\Roomguest) liest sie von hier (core/api/figur_export.py, 05.09.2026).

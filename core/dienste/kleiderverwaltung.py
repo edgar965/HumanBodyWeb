@@ -23,7 +23,7 @@ WARUM „LÖSCHEN" NICHT LÖSCHT: `delete` verschiebt das Verzeichnis nach
 `<bibliothek>/.trash/<kategorie>__<name>/`. Der Bibliotheks-Scanner überspringt
 Ordner, die mit einem Punkt beginnen — für die Oberfläche ist das Kleid damit
 weg, auf der Platte bleibt es. Diese Bibliothek liegt unter
-`HumanBody/data/garment_library`, also in den Produktivdaten; ein `rmtree` dort
+`3DObjects/garment_library`, also in den Produktivdaten; ein `rmtree` dort
 ist unumkehrbar, und ein Fehlklick im Kontextmenü wäre nicht zu heilen. Wer
 wirklich Platz braucht, leert `.trash` von Hand.
 """

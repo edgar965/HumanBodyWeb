@@ -37,6 +37,24 @@ VIDEOTOBVH_ROOT = TOOLS_ROOT / 'VideoToBVH'
 MOCAPNET_ROOT = VIDEOTOBVH_ROOT / 'MocapNET'
 HUMANBODY_ROOT = TOOLS_ROOT / 'HumanBody'
 
+#: Die 3D-Inhalte liegen seit dem 08.09.2026 NICHT mehr unter `HumanBody/data`
+#: (Edgar: „verschiebe den kompletten Ordner … der nicht direkt zu HumanBody
+#: gehört in: A:\\3DTools\\3DObjects"). Verschoben sind die vier grossen:
+#: `animations` (2,2 GB BVH), `garment_library` (1,5 GB MakeHuman-Kleidung),
+#: `assets` (296 MB Haare und Zubehoer) und `photoTo3D` (86 MB).
+#:
+#: In `HumanBody/data` bleibt, was `humanbody_core` SELBST liest —
+#: `humanBody`, `humanBody_male`, `poseData` — und was die Web-App als
+#: Projektdaten fuehrt. Das Kriterium ist der Zugriff, nicht der Name:
+#: `posenlader.py` etwa greift ueber `Path(__file__).parent.parent.parent /
+#: 'data' / 'poseData'` zu, also relativ zum Modul; ein Umzug braeche ihn
+#: still.
+#:
+#: `3DObjects/` steht in der `.gitignore` der Wurzel und ist damit bewusst
+#: NICHT versioniert (Edgars Entscheidung) — 9.253 der Dateien lagen vorher
+#: im HumanBody-Repo.
+OBJECTS_ROOT = TOOLS_ROOT / '3DObjects'
+
 #: `humanbody_core` liegt in `HumanBody/` und wird von hier aus importiert.
 if str(HUMANBODY_ROOT) not in sys.path:
     sys.path.insert(0, str(HUMANBODY_ROOT))

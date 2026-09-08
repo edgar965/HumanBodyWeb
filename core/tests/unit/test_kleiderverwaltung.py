@@ -14,7 +14,7 @@ Adress-Literale des Frontends gegen Djangos URL-Konfiguration. Von 94 Adressen
 war genau diese eine unbekannt.
 
 Die Tests laufen ausschliesslich in einem Wegwerfverzeichnis. An die echte
-Bibliothek unter `HumanBody/data/garment_library` fasst hier nichts.
+Bibliothek unter `3DObjects/garment_library` fasst hier nichts.
 
 Die HTTP-Schale (Route, Statuscodes) steht seit dem 17.08.2026 daneben in
 `core/tests/component/test_kleider_endpunkt.py` — zwei eigenstaendige Klassen in

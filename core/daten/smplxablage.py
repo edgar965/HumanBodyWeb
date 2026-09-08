@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Smplxablage — wo die SMPL-X-Ergebnisse eines Fotoauftrags liegen.
 
-`HumanBody/data/photoTo3D/SMPLX/<auftrag>.npz` (und `.json`) wurde an VIER
+`3DObjects/photoTo3D/SMPLX/<auftrag>.npz` (und `.json`) wurde an VIER
 Stellen einzeln zusammengesetzt (`api/fotoabgleich`, `api/fotoauftraege`,
 `dienste/smplx_archiv`, `dienste/texturbacken`). Beim Loeschen eines Auftrags
 raeumt die eine Stelle, beim Lesen sucht die naechste — laufen sie auseinander,
@@ -33,7 +33,11 @@ class Smplxablage:
 
     @classmethod
     def verzeichnis(cls):
-        return os.path.join(str(settings.BASE_DIR), '..', 'HumanBody', 'data',
+        # Seit dem 08.09.2026 unter `A:/3DTools/3DObjects` statt
+        # `HumanBody/data` (Edgar). Ueber `OBJECTS_ROOT`, nicht ueber eine
+        # `..`-Kette ab BASE_DIR — die zeigt beim naechsten Umzug wieder
+        # woanders hin (`~/.claude/rules/projektpfade.md`).
+        return os.path.join(str(settings.OBJECTS_ROOT),
                             cls.ORDNER, cls.UNTERORDNER)
 
     @classmethod

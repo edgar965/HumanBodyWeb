@@ -27,7 +27,7 @@ BVH = 'Aist/01001_ArmeSeitlich.bvh'
 
 
 def _bvh():
-    pfad = Path(settings.HUMANBODY_ROOT) / 'data' / 'animations' / 'bvh' / BVH
+    pfad = Path(settings.OBJECTS_ROOT) / 'animations' / 'bvh' / BVH
     if not pfad.is_file():
         raise unittest.SkipTest('BVH fehlt: %s' % pfad)
     return pfad

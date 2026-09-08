@@ -29,7 +29,7 @@ from .bvhverzeichnis import Bvhverzeichnis
 
 
 class Animationsauswahl:
-    """Sicht auf `HumanBody/data/animations/bvh/` — Kategorien und Eintraege."""
+    """Sicht auf `3DObjects/animations/bvh/` — Kategorien und Eintraege."""
 
     #: Wertformat fuer die Viewer-Seiten (Model, Result, Szene).
     ALS_URL = 'url'

@@ -19,6 +19,7 @@ from django.conf import settings
 from django.test import TestCase, override_settings
 
 from core.dienste.animationsauswahl import Animationsauswahl
+from core.dienste.bvhverzeichnis import Bvhverzeichnis
 
 
 class AnimationsBaum:
@@ -30,7 +31,7 @@ class AnimationsBaum:
     def anlegen(wurzel, inhalt):
         """{Kategorie: [Dateiname]} als Verzeichnisbaum auf die Platte."""
         for kategorie, dateien in inhalt.items():
-            ordner = Path(wurzel) / 'data' / 'animations' / 'bvh' / kategorie
+            ordner = Path(wurzel) / 'animations' / 'bvh' / kategorie
             ordner.mkdir(parents=True, exist_ok=True)
             for datei in dateien:
                 (ordner / datei).write_text('HIERARCHY\n', encoding='utf-8')
@@ -48,7 +49,7 @@ class AnimationsBaum:
             'Leer': [],
             'KeineBvh': [],
         })
-        (Path(cls.wurzel) / 'data' / 'animations' / 'bvh' / 'KeineBvh'
+        (Path(cls.wurzel) / 'animations' / 'bvh' / 'KeineBvh'
          / 'liesmich.txt').write_text('x', encoding='utf-8')
 
     @classmethod
@@ -57,7 +58,14 @@ class AnimationsBaum:
         super().tearDownClass()
 
     def setUp(self):
-        self.ueberschrieben = override_settings(HUMANBODY_ROOT=self.wurzel)
+        # UMGELEITET WIRD `OBJECTS_ROOT`, nicht mehr `HUMANBODY_ROOT`:
+        # Die Animationen liegen seit dem 08.09.2026 unter
+        # `A:/3DTools/3DObjects`. Mit der alten Umleitung liefe dieser
+        # Test gegen die ECHTEN 7.070 BVH-Dateien und waere trotzdem
+        # gruen — genau die Fehlerklasse aus
+        # `~/.claude/rules/test-isolation.md`. Die Gegenprobe dazu
+        # steht als eigener Fall unten.
+        self.ueberschrieben = override_settings(OBJECTS_ROOT=self.wurzel)
         self.ueberschrieben.enable()
         self.addCleanup(self.ueberschrieben.disable)
 
@@ -94,7 +102,11 @@ class AnimationsauswahlTest(AnimationsBaum, TestCase):
             self.assertEqual(Animationsauswahl().eintraege(versuch), [])
 
     def test_fehlende_wurzel_wirft_nicht(self):
-        with override_settings(HUMANBODY_ROOT=self.wurzel + '_weg'):
+        # Auch hier `OBJECTS_ROOT` (08.09.2026): Mit `HUMANBODY_ROOT`
+        # zeigte die Umleitung ins Leere, die echte Wurzel blieb stehen —
+        # und der Fall wurde rot. Er ist damit der Beleg, dass die
+        # Umleitung der ganzen Klasse wirklich greift.
+        with override_settings(OBJECTS_ROOT=self.wurzel + '_weg'):
             self.assertEqual(Animationsauswahl().kategorien(), [])
 
     def test_unbekanntes_wertformat_faellt_auf_url_zurueck(self):
@@ -177,3 +189,33 @@ class EinstellungsseitenTest(AnimationsBaum, TestCase):
     def test_viewer_seiten_bekommen_das_url_wertformat(self):
         inhalt = self.client.get('/settings/model/').content
         self.assertIn(b'data-wertformat="url"', inhalt)
+
+
+class UmleitungGreiftTest(AnimationsBaum, TestCase):
+    u"""Greift die Umleitung wirklich — oder lesen wir die echten Daten?
+
+    Am 08.09.2026 sind die Animationen von `HumanBody/data/animations` nach
+    `A:/3DTools/3DObjects/animations` gezogen. Die Umleitung dieser Tests
+    setzte bis dahin `HUMANBODY_ROOT`; nach dem Umzug hätte sie ins Leere
+    gegriffen, und die Fälle oben wären gegen die ECHTEN 7.070 BVH-Dateien
+    gelaufen — grün, aber ohne Aussage
+    (`~/.claude/rules/test-isolation.md`).
+
+    Dieser Fall prüft die Umleitung SELBST: Der Testbaum führt genau vier
+    Kategorien; kämen die echten Daten durch, stünden dort „Mixamo",
+    „Walk" und ein Dutzend weitere.
+    """
+
+    def test_die_kategorien_kommen_aus_dem_testbaum(self):
+        namen = [k['name'] for k in Animationsauswahl().kategorien()]
+        self.assertEqual(namen, ['Aist', 'Bandai 1'])
+        for echt in ('Mixamo', 'Walk', 'Bandai 2', 'MocapNET'):
+            self.assertNotIn(echt, namen,
+                             u'%s stammt aus den echten Daten — die '
+                             u'Umleitung greift nicht.' % echt)
+
+    def test_die_wurzel_liegt_im_testordner(self):
+        u"""Die scharfe Probe: der gelesene Pfad selbst."""
+        wurzel = Bvhverzeichnis().wurzel()
+        self.assertIn('animauswahl_', wurzel,
+                      u'Gelesen wird %s — das ist nicht der Testbaum.' % wurzel)

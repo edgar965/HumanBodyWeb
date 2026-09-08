@@ -2,7 +2,7 @@
 """SmplxArchiv — Rohdaten einer Fotoanalyse dauerhaft ablegen.
 
 Aus `analyze_photo` herausgeloest (Umbau 15.08.2026). Je Auftrag entstehen zwei
-Dateien unter HumanBody/data/photoTo3D/SMPLX:
+Dateien unter 3DObjects/photoTo3D/SMPLX:
 
     <job>.json   Parameter, Masse, Kameraangaben — lesbar
     <job>.npz    Netz, Gelenke, Gewichte, optional die posierten Vertices

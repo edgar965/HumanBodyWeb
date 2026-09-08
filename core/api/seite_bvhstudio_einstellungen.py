@@ -43,7 +43,7 @@ class BvhStudioEinstellungenSeite(TemplateView):
     @staticmethod
     def _pfadvorgaben():
         """Vorgabepfade aus den Einstellungen — nicht eingetippt, abgeleitet."""
-        bvh = Path(settings.TOOLS_ROOT) / 'HumanBody' / 'data' / 'animations' / 'bvh'
+        bvh = Path(settings.OBJECTS_ROOT) / 'animations' / 'bvh'
         return {
             'studio_bvh_input': str(bvh),
             'studio_bvh_output': str(bvh / 'Results'),

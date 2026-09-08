@@ -4,7 +4,7 @@
 WARUM (17.08.2026)
 =================
 `pattern_save` war 99 Zeilen und schrieb in die Kleidungsbibliothek unter
-`HumanBody/data/garment_library/` — also in Produktivdaten. Ungedeckt war dabei
+`3DObjects/garment_library/` — also in Produktivdaten. Ungedeckt war dabei
 beides, was wirklich weh tut:
 
 * **Die Namensprüfung.** Der Name wird zu einem Ordnernamen. Ein `..` oder ein
