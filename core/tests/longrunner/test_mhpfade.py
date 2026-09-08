@@ -22,7 +22,7 @@ Gleichheit, nicht Existenz — wo der Bestand liegt, ist eine andere Frage
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from ._humanbodypfad import Humanbodypfad
+from ..unit._humanbodypfad import Humanbodypfad
 
 Humanbodypfad.assets()
 

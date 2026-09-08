@@ -38,7 +38,28 @@ TEST_BEFEHLE = [
     {'slug': 'performance', 'name': 'Ladezeiten', 'gruppe': 'Messen',
      'cmd': [PYTHON14, 'manage.py', 'test', 'core.tests.performance',
              '-v', '2']},
-    {'slug': 'longrunner', 'name': 'Longrunner (Netzkette)',
+    # WAS HIER LANDET, IST GEMESSEN (08.09.2026, Edgar: „strukturiere die
+    # testsuite um - alles was länger dauert, weg in die Kategorie
+    # LongRunner"). Je Modul einzeln gestoppt; über 15 Sekunden ging es
+    # hierher:
+    #
+    #     test_kleiderrigging   66,7 s    test_umafigur          10,9 s
+    #     test_umabauer         39,5 s    test_uma_gegenprobe    10,7 s
+    #     test_mhpfade          21,1 s    test_hilfe_kleidung     8,8 s
+    #     test_charakterkanal   19,7 s    test_pipeline_process   8,6 s
+    #                                     test_umatexturen        7,8 s
+    #                                     test_endpunkte          7,4 s
+    #                                     test_uma_gegenprobe_lauf 5,7 s
+    #
+    # Elf Module, 2 % der Dateien — und zwei Drittel der Wartezeit.
+    # „Unit" und „Component" liefen zusammen 266 s, jetzt 98 s.
+    #
+    # SIE LAUFEN NICHT MEHR BEI JEDEM SAMMELLAUF. Das Paket entscheidet
+    # das selbst (`core/tests/longrunner/__init__.py`, `load_tests`):
+    # Ohne „longrunner" im Aufruf und ohne `LONGRUNNER=1` kommt eine
+    # leere Suite. Dieser Eintrag hier nennt das Ziel und fährt sie
+    # deshalb. Geprüft in `test_longrunner_auswahl`.
+    {'slug': 'longrunner', 'name': 'Longrunner (über 5 s je Modul)',
      'gruppe': 'Langsam',
      'cmd': [PYTHON14, 'manage.py', 'test', 'core.tests.longrunner',
              '-v', '2']},
