@@ -37,7 +37,11 @@ class Retargetwahl:
     #: Zielskelette (`target=`): das DEF-Skelett, die UMA-Figur aus dem
     #: Figurkatalog (05.09.2026), der SMPL-Koerper oder die MakeHuman-Figur
     #: (07.09.2026). Der erste Eintrag ist die Vorgabe.
-    ZIELE = ('def', 'uma', 'smpl', 'makehuman')
+    #: `umapython` (08.09.2026) ist die in Python gebaute UMA-Figur —
+    #: dieselben Knochennamen wie `uma`, aber das Skelett kommt aus dem
+    #: Bau, nicht aus einer GLB. Deshalb ein eigenes Ziel und KEIN
+    #: Dateiname: `figur` traegt hier den Rassennamen.
+    ZIELE = ('def', 'uma', 'smpl', 'makehuman', 'umapython')
     #: Ziele, deren `figur` ein GLB-Dateiname sein muss.
     GLB_ZIELE = ('uma',)
 

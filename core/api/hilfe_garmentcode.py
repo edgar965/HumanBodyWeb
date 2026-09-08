@@ -13,7 +13,7 @@ Tabelle zu zeigen, die wie „alles gut" aussieht.
 
 from django.views.generic import TemplateView
 
-from ..dienste.garmentcodemessung import Garmentcodemessung
+from GarmentCode.messreihen import Garmentcodemessung
 
 
 class KleidungGarmentcode(TemplateView):

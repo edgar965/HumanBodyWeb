@@ -2,6 +2,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { UmaFigur } from './uma/umafigur.js';
 import { SmplFigur } from './smpl/smplfigur.js';
 import { MhFigur } from './makehuman/mhfigur.js';
+import { UmapythonFigur } from './umapython/umapythonfigur.js';
 
 /**
  * Figurarten — welche Klasse zu einer gespeicherten Figur gehört.
@@ -31,6 +32,7 @@ export class Figurarten {
         [UmaFigur.QUELLE]: UmaFigur,
         [SmplFigur.QUELLE]: SmplFigur,
         [MhFigur.QUELLE]: MhFigur,
+        [UmapythonFigur.QUELLE]: UmapythonFigur,
     };
 
     /** Eine gespeicherte Figur wieder aufbauen. */
@@ -50,5 +52,8 @@ export class Figurarten {
         [UmaFigur.QUELLE]: 'fa-user-astronaut',
         [SmplFigur.QUELLE]: 'fa-cube',
         [MhFigur.QUELLE]: 'fa-child',
+        // Seit dem 08.09.2026 baut der Reiter eine echte UMA-Figur,
+        // kein Kleidungspaar mehr — deshalb kein Hemd.
+        [UmapythonFigur.QUELLE]: 'fa-dna',
     };
 }

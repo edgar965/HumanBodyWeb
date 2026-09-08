@@ -40,6 +40,7 @@ class Retargetdaten:
     ZIEL_UMA = 'uma'
     ZIEL_SMPL = 'smpl'
     ZIEL_MH = 'makehuman'
+    ZIEL_UMAPY = 'umapython'
 
     def __init__(self, bvh_pfad, body_height=ERSATZHOEHE, fmt=None,
                  foot_correction=False, delta_norm=None, ziel=ZIEL_DEF,
@@ -122,6 +123,8 @@ class Retargetdaten:
             return self._auf_smpl(bvh, bauart)
         if self.ziel == self.ZIEL_MH:
             return self._auf_makehuman(bvh, bauart)
+        if self.ziel == self.ZIEL_UMAPY:
+            return self._auf_umapython(bvh, bauart)
         geometrie = Skelettgeometrie.holen()
         if bauart and bauart.BONE_MAP_TO_RIGIFY:
             return bauart.retarget_to_rigify(
@@ -179,6 +182,30 @@ class Retargetdaten:
                                Mhskelett(self.formung).kette().geometrie(),
                                Mhzuordnung)
 
+    def _auf_umapython(self, bvh, bauart):
+        u"""Ziel ist die in Python gebaute UMA-Figur (08.09.2026).
+
+        Es braucht keine neue Zuordnungstabelle: Die Knochen heissen
+        genau wie in der GLB aus Unity — beide Wege bauen dasselbe
+        UMA-Rig. `Umazuordnung` (05.09.2026) gilt deshalb unveraendert,
+        und ein Fehler darin ist auf beiden Wegen einer.
+
+        Die Geometrie kommt aus derselben Kette, aus der auch der
+        Browser seine Knochen baut (`Umagelenke.kette`). Waere es eine
+        zweite Rechnung, rechnete der Motor gegen eine Ruhelage, die
+        die Figur gar nicht hat — der Befund vom 07.09.2026 bei SMPL.
+
+        `self.figur` traegt hier den RASSENNAMEN, keinen Dateinamen.
+        """
+        from humanbody_core.skeleton.formats.uma_knochen import Umazuordnung
+        from UMA_Python.gelenke import Umagelenke
+        from .umapythonfiguren import Umapythonfiguren
+        if not self.figur:
+            raise ValueError('Kein Rassenname fuer das UMA-Python-Ziel')
+        gebaut = Umapythonfiguren.bauen(self.figur)
+        kette = Umagelenke(gebaut, self.formung).kette()
+        return self._auf_kette(bvh, bauart, kette.geometrie(), Umazuordnung)
+
     def _auf_kette(self, bvh, bauart, geometrie, zuordnung):
         u"""Dasselbe Verfahren, anderes Zielskelett — wie `_auf_uma`.
 
@@ -195,9 +222,20 @@ class Retargetdaten:
             skip_bones=zuordnung.ausnahmen(bauart))
 
     def _formmerkmal(self):
-        u"""Ein kurzes Kennzeichen der Reglerstellung fuer den Ablagenamen."""
-        try:
-            roh = self.formung.fingerabdruck()
-        except AttributeError:
-            roh = repr(self.formung)
+        u"""Ein kurzes Kennzeichen der Reglerstellung fuer den Ablagenamen.
+
+        Ein Woerterbuch wird SORTIERT verschriftet (UMA Python schickt
+        seine DNA so). `repr` eines dict folgt der Einfuegereihenfolge —
+        dieselbe Stellung, zweimal anders getippt, ergaebe zwei Ablagen,
+        und beide waeren gueltig. Ein Ablagename, der von der
+        Tippreihenfolge abhaengt, ist keiner.
+        """
+        if isinstance(self.formung, dict):
+            roh = repr(sorted((str(k), round(float(v), 6))
+                              for k, v in self.formung.items()))
+        else:
+            try:
+                roh = self.formung.fingerabdruck()
+            except AttributeError:
+                roh = repr(self.formung)
         return hashlib.md5(roh.encode('utf-8')).hexdigest()[:8]

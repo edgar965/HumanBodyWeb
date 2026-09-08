@@ -4,7 +4,7 @@ u"""Umaformregler — UMAs Form-Regler, je Geschlecht einmal gelesen.
 WARUM (05.09.2026): Die Szene-Seite zeigt zur UMA-Figur ihre 62 Regler
 (Körper, Gesicht, Pose) und rechnet sie im Browser auf die Knochen der GLB.
 Die Definitionen kommen aus den Text-Assets des UMA-Projekts
-(`UMA.Formregler`); das Lesen läuft über rund 100 kleine
+(`UMA_Python.Formregler`); das Lesen läuft über rund 100 kleine
 YAML-Dateien und eine Kennungskarte — einmal je Prozess reicht.
 
 Welches Geschlecht gilt, sagt der Beipackzettel der Figur (`hinweis`:
@@ -16,7 +16,7 @@ import threading
 
 from django.conf import settings
 
-from UMA import Formregler
+from UMA_Python import Formregler
 
 logger = logging.getLogger('core')
 

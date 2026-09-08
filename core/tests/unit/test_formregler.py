@@ -15,7 +15,8 @@ from pathlib import Path
 
 from django.conf import settings
 
-from UMA import Formregler, UnityYaml
+from UMA_Python import Formregler
+from UMA_Python.unity.yaml_kopf import UnityYaml
 from ._umareglerattrappe import Umareglerattrappe
 
 
@@ -123,7 +124,25 @@ class FormreglerTest(unittest.TestCase):
 
     def test_drehung_spiegeln_ist_selbstinvers(self):
         q = [0.1, 0.2, 0.3, 0.9]
-        self.assertEqual(Formregler.spiegeln_drehung(Formregler.spiegeln_drehung(q)), q)
+        self.assertEqual(
+            self.leser.spiegeln_drehung(self.leser.spiegeln_drehung(q)), q)
+
+    def test_ohne_spiegelung_bleibt_alles_wie_in_unity(self):
+        u"""Seit dem 08.09.2026 ist die Spiegelung abschaltbar.
+
+        Sie dreht Unitys linkshändiges System in glTFs rechtshändiges —
+        richtig für den Browser an der exportierten GLB, FALSCH für
+        `UMA_Python.figur`, das die Unity-Rohdaten liest. Wer den falschen
+        Wert nimmt, schiebt seitenverkehrt, ohne dass ein Fehler entsteht.
+        """
+        roh = Formregler(self.leser.ordner, spiegeln=False)
+        punkt, achse = [1.0, 2.0, 3.0], [0.0, 1.0, 0.0]
+        self.assertEqual(roh.spiegeln_punkt(punkt), punkt)
+        self.assertEqual(roh.spiegeln_achse(achse), achse)
+        self.assertEqual(roh.spiegeln_drehung([0.1, 0.2, 0.3, 0.9]),
+                         [0.1, 0.2, 0.3, 0.9])
+        # Gegenprobe: MIT Spiegelung ist es nicht dasselbe.
+        self.assertNotEqual(self.leser.spiegeln_punkt(punkt), punkt)
 
 
 class EchterBestandTest(unittest.TestCase):

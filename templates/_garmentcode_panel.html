@@ -26,35 +26,68 @@ Hintergrund geholt — sie sind Anzeige, keine Eingabe.
                         <option value="t-shirt">T-Shirt</option>
                     </select>
                 </div>
-                {% comment %}Drei Knoepfe, ein Ablauf (Edgar, 07.09.2026:
-                „insgesamt dann 3 Buttons: Einmal 2D, einmal 3D und einmal
-                alles komplett"). „2D" konstruiert den Schnitt und legt die
-                flachen Panels an die Figur — wie die Online-Fassung vor der
-                Simulation; „3D" nimmt sie wieder weg und drapiert den
-                Stoff. Gemessen: 4,6 s gegen 31 s fuer den ganzen Weg.
+                {% comment %}Vier Knoepfe in zwei Zeilen. Erst waren es
+                fuenf (Edgar, 08.09.2026: Vorschau 2D und 3D neben Bauen
+                2D, 3D und 2D+3D), am selben Tag fiel die 2D-Vorschau
+                wieder weg: "Die ist ja jetzt im Modell vorhanden."
 
-                `hb-fest` bei den schmalen: `.btn-toggle` setzt
-                `width:100%`, und mit `flex-basis:auto` ist das die
-                Grundbreite. Ohne sie nahm „2D" 198,9 px und quetschte den
-                Nachbarn auf 65,4 px, dessen Text vierzeilig
-                umbrach.{% endcomment %}
+                VORSCHAU rechnet keine Physik. Sie zieht die Panels an die
+                Haut heran und hebt sie um die Stoffdicke ab (0,4 s beim
+                T-Shirt, 1,0 s beim Jumpsuit) - das ist der portierte
+                UMA-Konformer, `Assets/GarmentCode/vorschau3d.py`. Was
+                dabei fehlt, ist der Faltenwurf: Ein Rocksaum liegt am Bein
+                an, statt zu fallen.
+
+                BAUEN rechnet wirklich. "3D" ist die Warp-Simulation und
+                kostet gemessen 23 s, davon 15,7 s reine Simulation; daran
+                ist nichts zu holen (drei Wege geprueft und verworfen,
+                Hilfe -> Kleidung).{% endcomment %}
                 <div class="hb-display-flex">
-                    <button id="gc-schnitt" class="btn-toggle hb-fest"
-                            title="Nur das Schnittmuster — und die Panels an die Figur legen"><i
+                    {% comment %}Die beiden Vorschau-Knoepfe bleiben; was
+                    am 08.09.2026 entfallen ist, ist das SCHNITTMUSTERBILD
+                    unter ihnen (Edgar: "Der soll doch bleiben, aber die
+                    Vorschau NUR rechts im Modell machen, nicht im tab").
+                    Die Panels liegen seither am Koerper; das Bild daneben
+                    zeigte dasselbe ein zweites Mal.{% endcomment %}
+                    <span class="gc-knopfgruppe">Vorschau</span>
+                    <button id="gc-vorschau-2d" class="btn-toggle hb-fest"
+                            title="Schnitt konstruieren und die Panels an die Figur legen &mdash; rund 0,4 s"><i
                          class="fas fa-drafting-compass"></i> 2D</button>
-                    <button id="gc-drapieren" class="btn-toggle hb-fest"
-                            title="Den vorhandenen Schnitt drapieren und anziehen"><i
+                    <button id="gc-vorschau-3d" class="btn-toggle hb-fest"
+                            title="Die Panels an den Koerper legen, ohne Simulation &mdash; 0,4 bis 1,0 s, ohne Faltenwurf"><i
+                         class="fas fa-eye"></i> 3D</button>
+                </div>
+                <div class="hb-display-flex">
+                    <span class="gc-knopfgruppe">Bauen</span>
+                    <button id="gc-bauen-2d" class="btn-toggle hb-fest"
+                            title="Schnittmuster mit allen Dateien (Muster, SVG, druckbare PDF)"><i
+                         class="fas fa-drafting-compass"></i> 2D</button>
+                    <button id="gc-bauen-3d" class="btn-toggle hb-fest"
+                            title="Den vorhandenen Schnitt wirklich drapieren und anziehen &mdash; rund 23 s"><i
                          class="fas fa-tshirt"></i> 3D</button>
-                    <button id="gc-erzeugen" class="btn-toggle hb-dehnt"
-                            title="Schnitt, Drapierung und Anziehen in einem Zug"><i
+                    <button id="gc-bauen-beides" class="btn-toggle hb-dehnt"
+                            title="Schnitt, Drapierung und Anziehen in einem Zug &mdash; das echte Ergebnis"><i
                          class="fas fa-cut"></i> 2D + 3D</button>
+                </div>
+                {% comment %}Warum die Vorschauzeile (Edgar, 08.09.2026:
+                „vielleicht zweistufig - erst der schnelle MakeHuman nachbau,
+                dann das «echte» genaue Bauen?"): Nach einer Drapierung folgt
+                der Stoff den Reglern, ohne neu zu simulieren &mdash; gemessen
+                8,4 ms je Zug gegen 24,5 s fuer eine echte Drapierung. Er
+                verschiebt sich dabei nur mit der Haut, er rechnet keine neue
+                Physik. Diese Zeile sagt, dass gerade eine Vorschau zu sehen
+                ist; ohne sie haelt man sie fuer das Ergebnis.{% endcomment %}
+                <div id="gc-vorschau-hinweis" class="hb-hinweis hb-versteckt">
+                    <i class="fas fa-bolt"></i>
+                    <span id="gc-vorschau-text">Vorschau: Der Stoff folgt den
+                    Reglern, ohne neu zu rechnen.</span>
+                    &bdquo;Finalize&ldquo; simuliert wirklich.
                 </div>
                 <div id="gc-empty" class="hb-hinweis hb-versteckt">
                     Zum Bauen zuerst einen Charakter ausw&auml;hlen.
                 </div>
                 <div id="gc-fortschritt" class="hb-versteckt"></div>
                 <div id="gc-meldung" class="hb-hinweis"></div>
-                <div id="gc-vorschau"></div>
                 {% comment %}
                 Der frühere zweite Knopf „Stoff drapieren" ist entfallen
                 (Edgar, 06.09.2026: „bei Bauen soll das Garment gleich auf

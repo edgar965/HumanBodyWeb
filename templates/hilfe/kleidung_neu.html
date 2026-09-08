@@ -1,0 +1,230 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kleidung -> Neu: fuenf Welten, eine Figur.
+
+Die Analyse zu Edgars Frage vom 08.09.2026 („mach doch einen Vorschlag wie
+du das beste aus allen holst? Evtl. neuer AssetTyp bei Tab Assets:
+Unified?").
+
+Alle Zahlen kommen aus `kleidung.vergleich.Vergleich`, keine steht hier.
+Der Farbpunkt je Welt ist KEINE Zierde: Er ordnet die Zeilen der vier
+Tabellen einander zu, ohne dass der Name jedes Mal ausgeschrieben werden
+muss.
+{% endcomment %}
+
+{% block title %}Kleidung — Neu{% endblock %}
+{% block topbar_title %}Kleidung — fünf Welten, eine Figur{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>Fünf Welten, eine Figur</h1>
+
+  <p>
+    Im Projekt stehen fünf Systeme nebeneinander, die eine Figur beschreiben
+    können — und sie sind <strong>nicht zusammenzuführen, indem man ihre
+    Netze verschmilzt</strong>. Sie haben unverträgliche Topologien
+    (18.210 / 16.277 / 13.380 / 6.890 Punkte) und zwei grundverschiedene
+    Arten zu formen. Zusammenführbar ist die <strong>Schicht darüber</strong>
+    — und seit dem 08.09.2026 auch die Schicht darunter, weil UMAs Konformer
+    in Python vorliegt.
+  </p>
+
+  <h2>Was heute da ist</h2>
+  <p>
+    Gemessen an dem, was wirklich auf der Platte liegt — nicht an dem, was
+    die Projekte versprechen.
+  </p>
+
+  <table class="doku kleidung-welten">
+    <thead>
+      <tr>
+        <th>Welt</th><th>Körper formen über</th><th>Regler</th>
+        <th>Netz</th><th>Kleidung</th><th>Bestand</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for w in welten %}
+      <tr>
+        <td class="welt-name">
+          <span class="welt-punkt welt-{{ w.kuerzel }}"></span>{{ w.name }}
+        </td>
+        <td>{{ w.formt }}</td>
+        <td class="zahl">{{ w.regler }}</td>
+        <td class="zahl">{{ w.netz }}</td>
+        <td>{{ w.kleidung }}</td>
+        <td class="zahl">{{ w.bestand }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Knochen oder Punkte — die eine Trennlinie</h2>
+  <p>
+    Alles andere ist Geschmack. Diese Trennlinie entscheidet, was ein System
+    kann und was es nie können wird.
+  </p>
+
+  <div class="vergleich-paar">
+    <div class="info-box info-box-orange">
+      <strong>Knochen bewegen die Form.</strong> UMA. Ein Regler skaliert,
+      verschiebt oder dreht einen Knochen; das Skinning verformt Körper
+      <em>und</em> Kleidung mit derselben Zeile. Ein Passungsfehler kann
+      nicht entstehen, weil nichts angepasst wird. <em>Preis:</em> Volumen
+      und Falten sind über Knochen kaum auszudrücken.
+    </div>
+    <div class="info-box info-box-green">
+      <strong>Punkte bewegen die Form.</strong> HumanBody, MakeHuman, SMPL.
+      Jeder Morph verschiebt Vertices direkt — Bauch, Brust, Falten,
+      Gesichtszüge, alles exakt modellierbar. <em>Preis:</em> Das Skelett
+      folgt nicht mit; Kleidung muss angepasst werden, und genau da
+      entstehen die Fehler.
+    </div>
+  </div>
+
+  <h3>Wieviel von einem Morph lässt sich über Knochen ausdrücken?</h3>
+  <table class="doku kleidung-balken">
+    <tbody>
+      {% for z in knochen_morph %}
+      <tr>
+        <td class="balken-name">{{ z.was }}</td>
+        <td class="balken-bahn">
+          <span class="balken-fuell {% if z.gut %}balken-gut{% else %}balken-warn{% endif %}"
+                style="width: {{ z.anteil }}%"></span>
+        </td>
+        <td class="zahl balken-wert">{{ z.anteil }}&nbsp;%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="doku-quelle">
+    Gemessen 06.09.2026, <code>ProjektTemp/knochen_vs_morph.py</code>.
+  </p>
+
+  <p>
+    Deshalb wird HumanBody <strong>nicht</strong> auf Knochenformung
+    umgestellt — die Entscheidung steht seit dem 06.09.2026 und bleibt
+    richtig. Und deshalb ist UMAs eigener Ausweg für den Punkte-Fall,
+    <code>UMAClothingConformer</code>, genau das Stück, das dieses Projekt
+    brauchte.
+  </p>
+
+  <h2>Sieben Wege für ein Kleidungsstück</h2>
+  <p>
+    Sechs nehmen ein <strong>fertiges Netz</strong> und bringen es an einen
+    Körper. Eines <strong>konstruiert</strong> das Stück aus Maßen und lässt
+    es fallen. Das ist kein Unterschied im Detail, sondern im Prinzip.
+  </p>
+
+  <table class="doku kleidung-welten">
+    <thead>
+      <tr>
+        <th>Verfahren</th><th>Bindung</th><th>Dauer</th>
+        <th>Sitzt auf</th><th>Fehlerbild</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for w in wege %}
+      <tr{% if w.stark %} class="weg-stark"{% endif %}>
+        <td class="welt-name">
+          <span class="welt-punkt welt-{{ w.kuerzel }}"></span>{{ w.name }}
+        </td>
+        <td>{{ w.bindung }}</td>
+        <td class="zahl">{{ w.dauer }}</td>
+        <td>{{ w.sitzt }}</td>
+        <td>{{ w.fehler }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="info-box info-box-blue">
+    <strong>Die zwei hervorgehobenen Zeilen sind die Antwort.</strong> Der
+    <em>Konformer</em> bringt jedes fertige Netz an jede Oberfläche — er löst
+    „ich habe ein Stück, aber den falschen Körper". <em>GarmentCode</em>
+    konstruiert aus Maßen — es löst „für diesen Körper gibt es das Stück gar
+    nicht". Zusammen decken die beiden den ganzen Raum ab, und beide liegen
+    als Python-Bibliotheken unter <code>Assets/</code>.
+  </div>
+
+  <h2>„Unified" ist eine Schicht, kein Netz</h2>
+  <p>
+    Ein gemeinsames <em>Modell</em> im Sinne eines verschmolzenen Netzes wäre
+    ein Rückschritt: Es müsste eine Topologie wählen und damit die Morphs,
+    Targets, Slots und Rezepte der vier anderen Welten wegwerfen. Der
+    gemeinsame Nenner liegt woanders.
+  </p>
+
+  <div class="schicht-drei">
+    {% for s in schicht %}
+    <div class="schicht-karte">
+      <h4>{{ s.wo }}</h4>
+      <p>{{ s.text }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h3>Wie eine Figurbeschreibung aussähe</h3>
+  <table class="doku">
+    <thead><tr><th>Feld</th><th>Inhalt</th><th>Wer setzt es um</th></tr></thead>
+    <tbody>
+      {% for b in beschreibung %}
+      <tr>
+        <td><code>{{ b.feld }}</code></td>
+        <td>{{ b.inhalt }}</td>
+        <td>{{ b.wer }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Drei Stufen, jede für sich nützlich</h2>
+  <p>
+    Die Reihenfolge ist keine Gliederung, sondern eine Abhängigkeit: Stufe 2
+    braucht Stufe 1 nicht, aber Stufe 3 braucht beide.
+  </p>
+
+  <ol class="stufen-liste">
+    {% for s in stufen %}
+    <li>
+      <h4>{{ s.titel }}</h4>
+      <p>{{ s.text }}</p>
+      <p class="stufe-aufwand">{{ s.aufwand }}</p>
+    </li>
+    {% endfor %}
+  </ol>
+
+  <h2>Was ausdrücklich nicht vorgeschlagen wird</h2>
+  <ul class="doku-liste">
+    {% for titel, text in nicht %}
+    <li><strong>{{ titel }}</strong> {{ text }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Was daran unsicher ist</h2>
+  <ul class="doku-liste">
+    {% for titel, text in unsicher %}
+    <li><strong>{{ titel }}</strong> {{ text }}</li>
+    {% endfor %}
+  </ul>
+
+  <p class="doku-quelle">
+    Bestände: <code>UMA_Python.Katalog</code> (912 Assets),
+    <code>MakeHuman/makehuman/data/targets</code> (1.280),
+    <code>HumanBody/data/garment_library</code> (347 <code>.mhclo</code>),
+    <code>GarmentCode.Katalog.STUECKE</code> (15).
+    Reglerzahlen: <code>Mhmodifikatoren.holen()</code> (269),
+    <code>Formregler.gruppen('weiblich')</code> (22 + 39 + 1),
+    <code>humanbody_core.regler.reglerdaten.REGLER</code> (63).
+    Konformer: <code>test_umakonformer.py</code>,
+    <code>test_umaabdeckung.py</code>. Figurbau:
+    <code>test_umafigur.py</code> (Ruhe-Probe 0,000323 mm).
+  </p>
+
+</div>
+{% endblock %}

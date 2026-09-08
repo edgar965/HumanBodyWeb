@@ -18,6 +18,12 @@ import { Protokoll } from './protokoll.js';
  * nachgezogen werden muessen. Sie kommt NACH dem passenden Punktepuffer und
  * darf auch leer sein — leer heisst „alles zurueck in die Ruhelage".
  *
+ * `stoff` (08.09.2026) kuendigt ein Binaerpaket an, das NICHT der Koerper
+ * ist, sondern ein drapiertes Kleidungsstueck, das den Reglern folgt. Die
+ * Ankuendigung gilt fuer genau ein Paket. Wer keinen `zustand` uebergibt,
+ * bekommt sie nicht — und damit auch keinen Stoff, statt ihn versehentlich
+ * als Koerper einzusetzen.
+ *
  * EIN UNLESBARER TEXT IST KEIN ABBRUCH: Der Kanal laeuft weiter, die Zeile
  * geht ins Protokoll. Eine geworfene Ausnahme im `onmessage` beendet nichts,
  * sie landet nur als „Unhandled" in der Konsole — und der naechste Puffer
@@ -29,8 +35,18 @@ export class Netznachricht {
      * @param {Object} behandler {punkte(ArrayBuffer), neuLaden(typ, geschlecht),
      *     fehler(text), skelett(knochen)} — jeder Eintrag darf fehlen
      */
-    static verteilen(ereignis, behandler) {
+    static verteilen(ereignis, behandler, zustand = null) {
         if (ereignis.data instanceof ArrayBuffer) {
+            // Ein angekuendigtes Stoffpaket geht an den Stoff, nicht an den
+            // Koerper — siehe `stoff` unten. Die Ankuendigung gilt fuer
+            // GENAU EIN Paket und wird sofort verbraucht; bliebe sie
+            // stehen, landeten die naechsten Koerperpunkte im Stoffnetz.
+            const stueck = zustand && zustand.stoffErwartet;
+            if (stueck) {
+                zustand.stoffErwartet = null;
+                if (behandler.stoff) behandler.stoff(ereignis.data, stueck);
+                return;
+            }
             if (behandler.punkte) behandler.punkte(ereignis.data);
             return;
         }
@@ -49,6 +65,19 @@ export class Netznachricht {
             }
         } else if (nachricht.type === 'skelett') {
             if (behandler.skelett) behandler.skelett(nachricht.bones || {});
+        } else if (nachricht.type === 'stoff') {
+            // Kuendigt das naechste Binaerpaket an. Ohne `zustand` (die
+            // alten Aufrufer) wird es schlicht ignoriert — dann kommt das
+            // Paket als Koerperpunkte an, und DAS waere falsch. Deshalb
+            // merkt sich der Verteiler die Ankuendigung nur, wenn ihm ein
+            // Zustand gegeben wurde; wer Stoff empfangen will, muss ihn
+            // fuehren.
+            if (zustand) {
+                zustand.stoffErwartet = nachricht.stueck || 'kleidung';
+                if (behandler.stoffStand) behandler.stoffStand(nachricht);
+            }
+        } else if (nachricht.type === 'stoff_bindung') {
+            if (behandler.stoffBindung) behandler.stoffBindung(nachricht);
         }
     }
 }

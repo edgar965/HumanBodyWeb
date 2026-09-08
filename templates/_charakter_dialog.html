@@ -21,6 +21,7 @@ Position 1,5 m rechts davon."
                 <button class="dialogreiter-knopf" data-quelle="smpl">SMPL</button>
                 <button class="dialogreiter-knopf" data-quelle="makehuman">MakeHuman</button>
                 <button class="dialogreiter-knopf" data-quelle="uma">UMA</button>
+                <button class="dialogreiter-knopf" data-quelle="umapython">UMA Python</button>
             </div>
             <ul class="preset-list hb-versteckt" id="uma-list" data-quelle="uma">
                 <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Katalog...</li>
@@ -37,6 +38,12 @@ Position 1,5 m rechts davon."
             .mhclo-Stücke der Kleiderbibliothek ohne Nacharbeit.{% endcomment %}
             <ul class="preset-list hb-versteckt" id="mh-figur-list" data-quelle="makehuman">
                 <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade MakeHuman...</li>
+            </ul>
+            {% comment %}Der portierte UMA-Konformer (08.09.2026) — ein Koerper
+            und ein darauf drapiertes Stueck, angepasst von `UMA_Python`. Zum
+            Pruefen, ob die Portierung nicht nur rechnet, sondern sitzt.{% endcomment %}
+            <ul class="preset-list hb-versteckt" id="umapython-list" data-quelle="umapython">
+                <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Testpaare...</li>
             </ul>
             <div class="dialogfelder" id="add-char-lage">
                 <label for="add-char-x">Position X</label>

@@ -42,9 +42,16 @@ class Projektquellen:
     #: Die Baeume mit eigenem Code (Addon-Sicht). `assetCreator` und
     #: `PhotoToTexture` liegen seit dem 07.09.2026 unter `Assets/`
     #: (Edgar: „verschiebe auch die alle nach A:\3DTools\Assets").
+    #: Seit dem 08.09.2026 kommen die drei Kleidungspakete dazu (Edgar:
+    #: "alles was mit Garments zu tun hat soll direkt A:\3DTools\Assets
+    #: hier kommen"). `Assets/GarmentCode` lag seit dem 07.09.2026 hier,
+    #: stand aber in KEINER dieser Listen — die sechs Dienste, die an
+    #: diesem Tag dorthin zogen, waeren damit still aus jeder Pruefung
+    #: gefallen.
     BAEUME = ('HumanBodyBlender',
               'HumanBody/humanbody_core', 'HumanBody/collision',
-              'Assets/assetCreator', 'Assets/PhotoToTexture', 'MakeHuman')
+              'Assets/assetCreator', 'Assets/PhotoToTexture', 'MakeHuman',
+              'Assets/GarmentCode', 'Assets/UMA_Python', 'Assets/kleidung')
 
     #: Fremde Addons und eingelagerte Fremdprojekte. `convert/retarget_bvh`
     #: und `kbs_retarget` stammen von anderen Urhebern; `data` und `cache`
@@ -53,9 +60,12 @@ class Projektquellen:
     #: MakeHuman-UPSTREAM unter `MakeHuman/` — 147 MB fremder Code unter
     #: AGPL. Der Baum darueber (gross geschrieben) traegt seit dem
     #: 07.09.2026 unsere 20 eigenen Module.
+    #: `upstream` (62 Dateien) und `warp_fork` (391) sind der
+    #: GarmentCode-Upstream und Nvidias Warp-Fork — fremder Code unter
+    #: `Assets/GarmentCode/`, gezaehlt am 08.09.2026.
     AUS = ('__pycache__', 'retarget_bvh', 'kbs_retarget', 'data', 'cache',
            'idol', 'sith', 'texformer', 'textured_smplx', 'TestCharakter',
-           'alt', 'makehuman', 'buildscripts')
+           'alt', 'makehuman', 'buildscripts', 'upstream', 'warp_fork')
 
     @classmethod
     def dateien(cls, baeume=None, aus=None):

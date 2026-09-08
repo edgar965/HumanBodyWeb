@@ -6,6 +6,7 @@ import { Figurplatzierung } from './figurplatzierung.js';
 import { Umakatalog } from './uma/umakatalog.js';
 import { Smplkatalog } from './smpl/smplkatalog.js';
 import { Mhkatalog } from './makehuman/mhkatalog.js';
+import { Umapythonkatalog } from './umapython/umapythonkatalog.js';
 
 /**
  * Charakterdialog — „Charakter hinzufügen", ein Reiter je Figurart.
@@ -35,6 +36,13 @@ export class Charakterdialog {
         // MakeHuman-Basiskörper (06.09.2026): eine Datei des Projekts, deshalb
         // ebenfalls ohne Umbenennen und Löschen.
         makehuman: { liste: 'mh-figur-list', leer: 'MakeHuman/base.obj fehlt.', pflege: false },
+        // Testpaare des portierten UMA-Konformers (08.09.2026): vorhandene
+        // Drapierergebnisse auf GarmentCode-Referenzkoerpern. Erzeugt hier
+        // niemand, deshalb ohne Pflege.
+        // UMAs eigene Rassen, in Python gebaut (08.09.2026). Ohne Pflege:
+        // Sie gehoeren dem Unity-Projekt, und das bleibt unberuehrt.
+        umapython: { liste: 'umapython-list', pflege: false,
+                     leer: 'Kein UMA-Katalog gefunden (UMA_PROJEKT).' },
     };
 
     /**
@@ -49,6 +57,7 @@ export class Charakterdialog {
         smpl: (name, lage) => Smplkatalog.hinzufuegen(name, lage),
         makehuman: (name, lage) => Mhkatalog.hinzufuegen(name, lage),
         modell: (name, lage) => fn.addCharacterFromPreset(name, lage),
+        umapython: (name, lage) => Umapythonkatalog.hinzufuegen(name, lage),
     };
 
     /** Der Reiter, mit dem der Dialog aufgeht — muss zum `active`-Knopf
@@ -77,7 +86,8 @@ export class Charakterdialog {
         Charakterdialog._waehlen(null);
         Charakterdialog._lageVorbelegen();
         await Promise.all([Charakterdialog._umaFuellen(), Charakterdialog._modelleFuellen(),
-                           Charakterdialog._smplFuellen(), Charakterdialog._mhFuellen()]);
+                           Charakterdialog._smplFuellen(), Charakterdialog._mhFuellen(),
+                           Charakterdialog._umapythonFuellen()]);
     }
 
     // -- Reiter ---------------------------------------------------------------
@@ -209,6 +219,36 @@ export class Charakterdialog {
                 unterzeile: `${f.punkte.toLocaleString()} Punkte · `
                     + `${(f.hoehe * 100).toFixed(1)} cm · `
                     + 'Kleidung sitzt ohne Nacharbeit',
+            }));
+        });
+    }
+
+    /**
+     * Die Testpaare des portierten UMA-Konformers.
+     *
+     * Ein Paar ist ein GarmentCode-Referenzkoerper und ein Stueck, das darauf
+     * drapiert wurde. Erkannt wird es am Ordnernamen (`kleid_mean_all` gehoert
+     * zu `mean_all.obj`) — der Ergebnisordner nennt den Koerper sonst nirgends,
+     * und ein falsch zugeordnetes Paar saehe aus wie ein schlechter Konformer.
+     */
+    /**
+     * UMAs Rassen (Edgar, 08.09.2026: „Ich möchte doch ein Male, Female,
+     * Elf usw. auswählen, genau so wie UMA das macht!").
+     *
+     * Der Reiter zeigte bis dahin Testpaare des Konformers. Jetzt stehen
+     * hier die 20 Rassen des Katalogs; „Human Male 3.0", „Human Female 3.0"
+     * und „Elf Male" kommen zuerst — das sind die drei, die als Beispiel
+     * auf der Platte liegen.
+     */
+    static async _umapythonFuellen() {
+        const liste = document.getElementById('umapython-list');
+        if (!liste) return;
+        await Charakterdialog._fuellen(liste, 'umapython', async () => {
+            const rassen = await Umapythonkatalog.liste();
+            return rassen.map(name => ({
+                name,
+                anzeige: name,
+                unterzeile: 'UMA-Rasse, in Python gebaut — ohne Unity',
             }));
         });
     }

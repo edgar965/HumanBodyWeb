@@ -19,6 +19,9 @@ from .api.bibliothek import Bibliotheksendpunkte
 from .api.bvhtext import Bvhtext
 from .api.garmentcode import Garmentcode
 from .api.schnittvorschau import Schnittvorschauendpunkte
+from .api.umafigurbau import Umafigurbau
+from .api.umapython import Umapythonendpunkte
+from .api.garmentvorschau import Garmentvorschauendpunkte
 from .api.ui_vorgaben import Uivorgaben
 from .api.auftrag_upload import Uploadseiten
 from .api.studio_video import Theatrevideo
@@ -188,10 +191,24 @@ urlpatterns = [
          name='garmentcode_drapieren'),
     path('api/garmentcode/schnittnetz/', Schnittvorschauendpunkte.netz,
          name='garmentcode_schnittnetz'),
+    # Vorschau 3D (08.09.2026): der Schnitt am Koerper, ohne Simulation.
+    path('api/garmentcode/vorschau3d/', Garmentvorschauendpunkte.vorschau3d,
+         name='garmentcode_vorschau3d'),
     path('api/garmentcode/datei/<str:ordner>/<str:name>/', Garmentcode.datei,
          name='garmentcode_datei'),
     path('api/character-test/switch/', Testverwaltung.figur_wechseln,
          name='test_switch_character'),
+    # Der portierte UMA-Konformer (08.09.2026) - Reiter "UMA Python" im
+    # Dialog "Charakter hinzufuegen".
+    path('api/umapython/paare/', Umapythonendpunkte.paare,
+         name='umapython_paare'),
+    path('api/umapython/anpassen/', Umapythonendpunkte.anpassen,
+         name='umapython_anpassen'),
+    # Der Figurbau: Rasse waehlen und wirklich bauen (08.09.2026).
+    path('api/umapython/rassen/', Umafigurbau.rassen,
+         name='umapython_rassen'),
+    path('api/umapython/figur/', Umafigurbau.figur,
+         name='umapython_figur'),
 ]
 
 # Die Charakter- und SMPL-Routen stehen in `urls_charakter.py` —

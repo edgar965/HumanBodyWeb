@@ -33,8 +33,6 @@ export class GarmentcodeSchnitt {
      *          (die Meldung steht dann schon im Feld)
      */
     static async bauen(reiter, figur, meldung) {
-        const vorschau = document.getElementById('gc-vorschau');
-        vorschau.innerHTML = '';
         garmentcodeFortschritt.laeuft('schnitt');
 
         const daten = reiter.figurdaten(figur);
@@ -50,7 +48,6 @@ export class GarmentcodeSchnitt {
         }
         garmentcodeFortschritt.fertig('schnitt', ergebnis.name || 'fertig');
         meldung.textContent = GarmentcodeSchnitt.text(ergebnis, reiter);
-        GarmentcodeSchnitt.vorschau(ergebnis, vorschau);
         return ergebnis;
     }
 
@@ -75,13 +72,4 @@ export class GarmentcodeSchnitt {
         return `Schnitt fertig: ${ergebnis.name}${zusatz}${warnung}${grundkoerper}`;
     }
 
-    /** Das Schnittmuster als Bild darunter. */
-    static vorschau(ergebnis, behaelter) {
-        if (!ergebnis.vorschau) return;
-        const bild = document.createElement('img');
-        bild.src = ergebnis.vorschau;
-        bild.alt = 'Schnittmuster';
-        bild.style.maxWidth = '100%';
-        behaelter.appendChild(bild);
-    }
 }

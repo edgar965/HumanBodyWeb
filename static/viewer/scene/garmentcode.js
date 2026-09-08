@@ -17,10 +17,16 @@ import { garmentcodeRegler } from './garmentcode_regler.js';
 import { GarmentcodeFigur } from './garmentcode_figur.js';
 import { GarmentcodeMasse } from './garmentcode_masse.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
+import { GarmentcodeLive } from './garmentcode_live.js';
 
 class GarmentcodeReiter {
     constructor() {
+        // Der Laufzustand, den `Laufwache` fuehrt: besetzt, seit wann, und
+        // die laufende Nummer. Ohne `laeuftSeit` koennte ein haengender Bau
+        // nie als verloren erkannt werden.
         this.laeuft = false;
+        this.laeuftSeit = 0;
+        this.laufnummer = 0;
         this.zustandDa = false;
         this.drapierbereit = false;
         this.aufgeklappt = false;
@@ -45,20 +51,27 @@ class GarmentcodeReiter {
         }
     }
 
+    /** Knopf-Kennung -> Modus von `GarmentcodeAblauf.bauen`. */
+    static KNOEPFE = {
+        'gc-vorschau-2d': 'vorschau2d',
+        'gc-vorschau-3d': 'vorschau3d',
+        'gc-bauen-2d': '2d',
+        'gc-bauen-3d': '3d',
+        'gc-bauen-beides': 'komplett',
+    };
+
     einhaengen() {
         const reiter = document.querySelector('.panel-tab[data-tab="garmentcode"]');
         if (!reiter) return;
         reiter.addEventListener('click', () => this.oeffnen());
 
-        const knopf = document.getElementById('gc-erzeugen');
-        if (knopf) knopf.addEventListener('click', () => this.bauen('komplett'));
-        // Nur der 2D-Teil (Edgar, 07.09.2026). Gemessen 6,12 s gegen 31 s
-        // fuer den ganzen Weg — wer am Schnitt schraubt, wartet ein
-        // Fuenftel.
-        const nur2d = document.getElementById('gc-schnitt');
-        if (nur2d) nur2d.addEventListener('click', () => this.bauen('2d'));
-        const nur3d = document.getElementById('gc-drapieren');
-        if (nur3d) nur3d.addEventListener('click', () => this.bauen('3d'));
+        // Fuenf Knoepfe, zwei Zeilen (Edgar, 08.09.2026). Die Tabelle
+        // statt einzelner Zeilen: Bei der dritten Aenderung stand hier
+        // dreimal dasselbe Muster mit je einem anderen Namen.
+        for (const [kennung, modus] of Object.entries(GarmentcodeReiter.KNOEPFE)) {
+            document.getElementById(kennung)?.addEventListener(
+                'click', () => this.bauen(modus));
+        }
 
         // Ein anderes Kleidungsstück hat andere Einstellungen — eine Hose
         // hat keinen Kragen. Deshalb bei jedem Wechsel neu holen.
@@ -67,6 +80,9 @@ class GarmentcodeReiter {
             auswahl.addEventListener('change',
                 () => garmentcodeRegler.laden(auswahl.value));
         }
+
+        // Die Regler formen das 2D-Modell, sobald eines steht (08.09.2026).
+        GarmentcodeLive.einhaengen(this);
 
         // Vorlagen und Regler brauchen keine Figur — sofort holen, damit im
         // Reiter etwas steht, bevor jemand ihn anklickt.

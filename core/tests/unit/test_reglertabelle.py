@@ -17,7 +17,7 @@ from django.test import SimpleTestCase
 
 from humanbody_core import MorphData, CharacterState
 from humanbody_core.regler import Reglertabelle
-from UMA.formregler import Formregler
+from UMA_Python.formregler import Formregler
 
 from core.dienste.charakterdaten import Charakterdaten
 

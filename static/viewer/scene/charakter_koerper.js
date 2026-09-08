@@ -14,6 +14,7 @@ import { generateModelMesh, generateRigBoneMesh } from './state.js';
 import { Modellbauzustand } from './modellgenerator/zustand.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { Stoffvorschau } from './stoffvorschau.js';
 
 export class Charakterkoerper {
 
@@ -44,6 +45,27 @@ export class Charakterkoerper {
             }
             await inst.load();
         }
+        // Drapierte Kleidung geht mit — HIER, nicht bei den Reglern selbst:
+        // Es gibt mehrere Wege, die den Koerper aendern (Morphs, Metaregler,
+        // Bauartwechsel, Voreinstellungen), und sie alle enden an dieser
+        // Stelle. Einen davon zu vergessen hiesse, dass der Stoff bei genau
+        // einem Regler stehen bleibt.
+        Stoffvorschau.nachziehen(Charakterkoerper.stellung(inst));
+    }
+
+    /**
+     * Die Stellung der Figur, wie der Stoffkanal sie braucht.
+     *
+     * VOLLSTAENDIG, nicht nur das Geaenderte: Der Server setzt seinen
+     * Zustand daraus komplett neu. Wer nur Aenderungen schickt, liegt nach
+     * dem ersten verlorenen Paket daneben, ohne dass es auffaellt.
+     */
+    static stellung(inst) {
+        return {
+            bauart: inst.bodyType || inst.body_type || 'Female_Caucasian',
+            morphs: inst.morphs || {},
+            meta: inst.meta || {},
+        };
     }
 
     static async ausKonfiguration(inst) {

@@ -76,5 +76,7 @@ HILFE_EXTRA = [
         {'label': 'GarmentCode', 'icon': 'bi-rulers',
          'url': '/hilfe/kleidung/garmentcode/',
          'aktiv': 'hilfe_kleidung_garmentcode'},
+        {'label': 'Neu', 'icon': 'bi-diagram-3',
+         'url': '/hilfe/kleidung/neu/', 'aktiv': 'hilfe_kleidung_neu'},
     ]},
 ]

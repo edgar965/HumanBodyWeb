@@ -20,7 +20,7 @@ ersten Datenzugriff.
 import sys
 from pathlib import Path
 
-VERSION = '0.56'
+VERSION = '0.57'
 
 #: Projektwurzel (`HumanBodyWeb/`) — drei Ebenen über dieser Datei.
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -51,6 +51,11 @@ if str(TOOLS_ROOT) not in sys.path:
 #: (Edgar: „verschiebe A:\\3DTools\\HumanBody\\GarmentCode nach
 #: A:\\3DTools\\Assets\\GarmentCode"). Der Importname bleibt `GarmentCode`,
 #: deshalb kommt der ELTERNORDNER in den Pfad, nicht das Paket selbst.
+#: Seit dem 08.09.2026 liegen dort auch `UMA_Python` (der portierte
+#: UMA-Konformer) und `kleidung` (was ueber die Verfahren hinweg gilt) —
+#: Edgar: „alles was mit Garments zu tun hat soll direkt A:\3DTools\Assets
+#: hier kommen … nur die Websteuerung kann im A:\3DTools\HumanBodyWeb
+#: bleiben". Alle drei Pakete werden ueber DIESEN Eintrag gefunden.
 ASSETS_ROOT = TOOLS_ROOT / 'Assets'
 if str(ASSETS_ROOT) not in sys.path:
     sys.path.insert(0, str(ASSETS_ROOT))

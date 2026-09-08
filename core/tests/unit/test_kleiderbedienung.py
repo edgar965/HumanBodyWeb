@@ -97,41 +97,58 @@ class MakehumanKleiderbindungTest(SimpleTestCase):
 class GarmentcodeZweiDTest(SimpleTestCase):
 
     databases = []
+    #: Die fuenf Knoepfe (Edgar, 08.09.2026: Vorschau 2D und 3D
+    #: neben Bauen 2D, 3D und 2D+3D). Vorher waren es drei
+    #: (`gc-schnitt`, `gc-drapieren`, `gc-erzeugen`). Am selben Tag
+    #: fiel das SCHNITTMUSTERBILD im Reiter weg, nicht der Knopf.
+    KNOEPFE = {
+        'gc-vorschau-2d': "'vorschau2d'",
+        'gc-vorschau-3d': "'vorschau3d'",
+        'gc-bauen-2d': "'2d'",
+        'gc-bauen-3d': "'3d'",
+        'gc-bauen-beides': "'komplett'",
+    }
 
-    def test_die_vorlage_fuehrt_beide_knoepfe(self):
+    def test_die_vorlage_fuehrt_alle_knoepfe(self):
         _, quelle = _lesen('templates', '_garmentcode_panel.html')
-        self.assertIn('id="gc-schnitt"', quelle)
-        self.assertIn('id="gc-erzeugen"', quelle)
+        for kennung in GarmentcodeZweiDTest.KNOEPFE:
+            self.assertIn('id="%s"' % kennung, quelle)
 
-    def test_der_2d_knopf_dehnt_sich_nicht(self):
-        u"""`.btn-toggle` setzt `width:100%`; ohne `hb-fest` nimmt der
-        schmale Knopf die ganze Zeile und quetscht den Nachbarn.
-
-        Im DOM gemessen: 198,9 px fuer „2D", 65,4 px fuer „Fuer diese Figur
-        bauen", dessen Text vierzeilig umbrach. Mit `hb-fest`: 54,2 und
-        210,0 px, beide einzeilig.
-        """
+    def test_vorschau_und_bauen_sind_beschriftet(self):
+        u"""Edgar suchte die „Vorschau"-Knoepfe und fand sie nicht — sie
+        hiessen nur „2D" und „3D". Die Gruppennamen stehen deshalb im
+        Markup, nicht nur im Titel-Attribut."""
         _, quelle = _lesen('templates', '_garmentcode_panel.html')
-        zeile = [z for z in quelle.splitlines() if 'id="gc-schnitt"' in z][0]
-        self.assertIn('hb-fest', zeile)
+        self.assertIn('gc-knopfgruppe">Vorschau<', quelle)
+        self.assertIn('gc-knopfgruppe">Bauen<', quelle)
 
-    def test_alle_drei_knoepfe_sind_verdrahtet(self):
-        u"""Edgar, 07.09.2026: „insgesamt dann 3 Buttons"."""
+    def test_alle_fuenf_knoepfe_sind_verdrahtet(self):
         _, quelle = _lesen('static', 'viewer', 'scene', 'garmentcode.js')
-        for kennung, modus in (('gc-schnitt', "'2d'"),
-                               ('gc-drapieren', "'3d'"),
-                               ('gc-erzeugen', "'komplett'")):
-            self.assertIn("getElementById('%s')" % kennung, quelle)
-            self.assertIn('this.bauen(%s)' % modus, quelle)
+        for kennung, modus in GarmentcodeZweiDTest.KNOEPFE.items():
+            self.assertIn("'%s': %s," % (kennung, modus), quelle)
+        self.assertIn('GarmentcodeReiter.KNOEPFE', quelle)
 
-    def test_der_ablauf_kennt_die_drei_moden(self):
+    def test_der_ablauf_kennt_alle_moden(self):
         _, quelle = _lesen('static', 'viewer', 'scene',
                            'garmentcode_ablauf.js')
         anfang = quelle.index('static async dreid(')
         rumpf = quelle[anfang:]
-        self.assertIn("if (modus === '2d')", rumpf)
+        self.assertIn("modus === 'vorschau3d'", rumpf)
+        self.assertIn("modus === '2d' || modus === 'vorschau2d'", rumpf)
         self.assertIn('GarmentcodePanels.zeigen', rumpf)
         self.assertIn('GarmentcodePanels.entfernen', rumpf)
+        self.assertIn('GarmentcodeVorschau3d.zeigen', rumpf)
+        # Das Vorschaunetz muss beim Drapieren weichen — sonst liegen zwei
+        # Stuecke an derselben Stelle.
+        self.assertIn('GarmentcodeVorschau3d.entfernen', rumpf)
+
+    def test_beide_dreid_wege_verlangen_einen_schnitt(self):
+        u"""`vorschau3d` liest den Ergebnisordner; ohne die Wache liefe sie
+        auf dem Schnitt der vorigen Figur — dieselbe Falle wie bei „3D"."""
+        _, quelle = _lesen('static', 'viewer', 'scene',
+                           'garmentcode_ablauf.js')
+        self.assertIn("static NUR3D = ['3d', 'vorschau3d'];", quelle)
+        self.assertIn('GarmentcodeAblauf.NUR3D.includes(modus)', quelle)
 
     def test_3d_prueft_ob_der_schnitt_zur_figur_gehoert(self):
         u"""Sonst drapiert „3D" nach einem Figurwechsel den Schnitt der
@@ -149,8 +166,17 @@ class GarmentcodeZweiDTest(SimpleTestCase):
         self.assertIn('reiter.schnittVon.vorlage === vorlage', rumpf)
 
     def test_die_schmalen_knoepfe_tragen_hb_fest(self):
+        u"""`.btn-toggle` setzt `width:100%`; ohne `hb-fest` nimmt der
+        schmale Knopf die ganze Zeile und quetscht den Nachbarn.
+
+        Im DOM gemessen (07.09.2026): 198,9 px fuer „2D", 65,4 px fuer den
+        Nachbarn, dessen Text vierzeilig umbrach. Mit `hb-fest` sitzen die
+        fuenf Knoepfe bei 54, 56, 54, 58 und 97 px, alle einzeilig
+        (nachgemessen 08.09.2026).
+        """
         _, quelle = _lesen('templates', '_garmentcode_panel.html')
-        for kennung in ('gc-schnitt', 'gc-drapieren'):
+        for kennung in ('gc-vorschau-2d', 'gc-vorschau-3d',
+                        'gc-bauen-2d', 'gc-bauen-3d'):
             zeile = [z for z in quelle.splitlines()
                      if 'id="%s"' % kennung in z][0]
             self.assertIn('hb-fest', zeile, kennung)

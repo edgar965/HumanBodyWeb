@@ -150,6 +150,68 @@ stehen als Karte darunter.
     </p>
   </div>
 
+  {% comment %}Warum MakeHuman so schnell ist (Edgar, 08.09.2026: „Sieh dir
+  die Assets aus makeHuman an, und lerne daraus, die sind rasend schnell." —
+  dann: „schreibe das über makeHuman hier hinein"). Alle Zahlen kommen aus
+  `Kleidungstempo`, keine steht im HTML.{% endcomment %}
+  <h2 id="tempo">Warum MakeHuman in Millisekunden anzieht — und GarmentCode
+      in Sekunden</h2>
+
+  <p>
+    Der Unterschied ist keine Optimierung, sondern ein anderes Verfahren:
+    <strong>MakeHuman rechnet keine Physik.</strong>
+  </p>
+
+  <table class="doku">
+    <thead>
+      <tr><th>Frage</th><th>MakeHuman (.mhclo)</th><th>GarmentCode</th></tr>
+    </thead>
+    <tbody>
+      {% for frage, mh, gc in tempo_vergleich %}
+      <tr><td><strong>{{ frage }}</strong></td><td>{{ mh }}</td><td>{{ gc }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Wohin die {{ tempo_summe }} s einer Drapierung gehen</h3>
+  <p class="gedaempft">{{ tempo_rechner }}.</p>
+
+  <table class="doku">
+    <thead>
+      <tr><th>Phase</th><th>Sekunden</th><th>Anteil</th><th>Was dort passiert</th></tr>
+    </thead>
+    <tbody>
+      {% for name, dauer, anteil, was in tempo_phasen %}
+      <tr><td>{{ name }}</td><td>{{ dauer }}</td><td>{{ anteil }}&nbsp;%</td>
+          <td>{{ was }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Was geprüft und verworfen wurde</h3>
+  <p>
+    Das ist der teuerste Teil des Wissens: drei naheliegende Ideen, die
+    gemessen nichts bringen.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Idee</th><th>Befund</th></tr></thead>
+    <tbody>
+      {% for idee, befund in tempo_verworfen %}
+      <tr><td><strong>{{ idee }}</strong></td><td>{{ befund }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Was daraus folgt: zwei Stufen</h3>
+  <div class="doku-karten">
+    {% for titel, text in tempo_loesung %}
+    <div class="doku-karte">
+      <h4>{{ titel }}</h4>
+      <p>{{ text }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
   <p class="doku-abschluss">
     Einzelheiten und alle Testfälle zum konstruierenden Verfahren:
     <a href="/hilfe/kleidung/garmentcode/">Kleidung → GarmentCode</a>

@@ -23,11 +23,14 @@ die alte Fehler zeigte).
 import os
 import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
-from django.test import Client, SimpleTestCase, override_settings
+from django.test import Client, SimpleTestCase
 
-from core.dienste.garmentcodemessung import Garmentcodemessung
-from core.dienste.kleidungsverfahren import Kleidungsverfahren
+from GarmentCode.messreihen import Garmentcodemessung
+from kleidung.verfahren import Kleidungsverfahren
+from kleidung.tempo import Kleidungstempo
 
 
 class SeitenTest(SimpleTestCase):
@@ -97,19 +100,31 @@ class MessungTest(SimpleTestCase):
 
     def test_fehlende_datei_gibt_none(self):
         u"""Nicht `{}`: Eine leere Tabelle sieht aus wie „nichts gefunden",
-        nicht wie „nie gemessen"."""
-        # ASSETS_ROOT, nicht HUMANBODY_ROOT: Die Messreihen liegen seit
-        # dem 07.09.2026 unter `Assets/GarmentCode/test/`. Die alte
-        # Umleitung traf nach dem Umzug ins Leere — der Test las die
-        # ECHTEN Messreihen und wurde rot, statt still durchzulaufen.
-        # (~/.claude/rules/test-isolation.md)
+        nicht wie „nie gemessen".
+
+        ZUM ZWEITEN MAL UMGELEITET, ZUM ZWEITEN MAL DIESELBE FALLE
+        ==========================================================
+        07.09.2026: Die Umleitung stand auf `HUMANBODY_ROOT`, die Reihen
+        zogen nach `Assets/` — der Test las die echten Messreihen.
+        08.09.2026: Die Umleitung stand auf `ASSETS_ROOT`, und
+        `Garmentcodemessung` rechnet seinen Ordner seither aus der eigenen
+        Lage (`Gcpfade`), nicht mehr aus den Settings — wieder ins Leere.
+
+        Beide Male wurde der Test rot, weil er auf `None` prüft. Prüfte er
+        auf „leer", wäre er still falsch geblieben. Die Gegenprobe steht
+        deshalb jetzt VOR der eigentlichen Behauptung: erst zeigen, dass
+        die Umleitung greift, dann messen
+        (`~/.claude/rules/test-isolation.md`).
+        """
+        from GarmentCode.pfade import Gcpfade
         with tempfile.TemporaryDirectory() as ordner:
-            with override_settings(ASSETS_ROOT=ordner):
-                self.assertIsNone(Garmentcodemessung.matrix('humanbody'))
-                self.assertEqual(Garmentcodemessung.koerper(), [])
-                # Gegenprobe: Die Umleitung muss auch wirklich greifen.
+            with mock.patch.object(Gcpfade, 'PAKET', Path(ordner)):
+                # Gegenprobe zuerst — sonst schlägt die Behauptung an, und
+                # niemand sieht, dass gar nicht umgeleitet wurde.
                 self.assertTrue(Garmentcodemessung.wurzel().startswith(ordner),
                                 'Umleitung greift ins Leere')
+                self.assertIsNone(Garmentcodemessung.matrix('humanbody'))
+                self.assertEqual(Garmentcodemessung.koerper(), [])
 
     def test_matrix_wenn_vorhanden(self):
         if not os.path.isfile(Garmentcodemessung.pfad('humanbody')):
@@ -142,3 +157,54 @@ class MessungTest(SimpleTestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class KleidungTempoTest(SimpleTestCase):
+    u"""Die Tempo-Erklaerung steht auf der Seite — mit ihren Zahlen.
+
+    WARUM (Edgar, 08.09.2026: „schreibe das ueber makeHuman hier hinein"):
+    Die Frage „warum ist MakeHuman so viel schneller" beantwortet man sonst
+    nur durch Lesen von vier Modulen. Die Antwort ist nicht Optimierung,
+    sondern ein anderes Verfahren — und drei naheliegende Beschleunigungen
+    sind gemessen und verworfen. Genau das soll die Seite festhalten.
+    """
+
+    databases = []
+
+    def test_seite_zeigt_den_vergleich(self):
+        antwort = self.client.get('/hilfe/kleidung/')
+        self.assertEqual(antwort.status_code, 200)
+        text = antwort.content.decode('utf-8')
+        for frage, _, _ in Kleidungstempo.vergleich():
+            self.assertIn(frage, text)
+
+    def test_seite_zeigt_die_gemessenen_phasen(self):
+        u"""Jede Phase MIT ihrer Dauer — eine Tabelle ohne Zahlen erklaert nichts."""
+        text = self.client.get('/hilfe/kleidung/').content.decode('utf-8')
+        for name, dauer, _, _ in Kleidungstempo.phasen():
+            self.assertIn(name, text)
+            self.assertIn(str(dauer), text)
+
+    def test_seite_nennt_was_verworfen_wurde(self):
+        u"""Der teuerste Teil des Wissens: was NICHT hilft."""
+        text = self.client.get('/hilfe/kleidung/').content.decode('utf-8')
+        for idee, _ in Kleidungstempo.verworfen():
+            self.assertIn(idee, text)
+
+    def test_summe_kommt_aus_den_phasen(self):
+        u"""Nicht danebengeschrieben: sonst laufen Tabelle und Summe
+        auseinander, sobald jemand eine Zahl nachmisst."""
+        self.assertAlmostEqual(
+            Kleidungstempo.summe_s(),
+            sum(d for _, d, _, _ in Kleidungstempo.PHASEN), places=2)
+
+    def test_die_simulation_ist_der_groesste_posten(self):
+        u"""Die Kernaussage der Seite, gegen die Daten geprueft.
+
+        Faende jemand eine Beschleunigung von `run_sim`, muesste diese
+        Tabelle mitwachsen — und dieser Test faellt auf, wenn sie es nicht
+        tut.
+        """
+        groesster = max(Kleidungstempo.PHASEN, key=lambda z: z[1])
+        self.assertIn('run_sim', groesster[0])
+        self.assertGreater(groesster[2], 50)

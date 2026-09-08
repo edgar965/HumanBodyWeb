@@ -38,6 +38,25 @@ export class GarmentcodeAnziehen {
         return GarmentcodeAnziehen.STAMM + rein;
     }
 
+    /**
+     * Der Schlüssel in `inst.clothMeshes` — und warum er dort stehen MUSS.
+     *
+     * BEFUND (Edgar, 08.09.2026: „Kleid GarmentCode auswählen als Objekt und
+     * löschen funktioniert nicht - das ganze Modell wird gelöscht"). Das Stück
+     * hing nur über `group.add()` an der Figur. `getSelectableSubMeshes` liest
+     * aber `inst.clothMeshes`; was dort fehlt, ist kein Teilnetz. Ein Klick
+     * darauf fiel deshalb in `interaction.js` auf `fn.selectCharacter(charId)`
+     * durch — ausgewählt war die FIGUR, und Entf löschte sie mitsamt allem.
+     *
+     * Der Präfix ist eigen: `gar_`, `bld_`, `prim_` und `tpl_` haben in
+     * `_removeSubMesh` je eigene Aufräumzweige, die Listen führen, die es
+     * hier nicht gibt.
+     */
+    static schluessel(stueck) {
+        const rein = String(stueck || 'kleidung').replace(/[^a-z0-9_-]/gi, '_');
+        return `gc_${rein}`;
+    }
+
     /** Three.js erlaubt vier Knochen je Punkt. */
     static KNOCHEN_JE_PUNKT = 4;
 
@@ -87,7 +106,14 @@ export class GarmentcodeAnziehen {
         }
         netz.name = GarmentcodeAnziehen.name(stueck);
         netz.frustumCulled = false;      // das Netz verlässt beim Posieren die Box
+        // Die Beschriftung fürs Auswahlmenü — sonst stünde dort `gc_kleid`.
+        netz.userData.beschriftung = `${stueck || 'Kleidung'} (GarmentCode)`;
         figur.group.add(netz);
+        // Erst DAMIT ist das Stück ein eigenes Objekt: auswählbar,
+        // hervorhebbar, einzeln löschbar (siehe `schluessel`).
+        if (figur.clothMeshes) {
+            figur.clothMeshes[GarmentcodeAnziehen.schluessel(stueck)] = netz;
+        }
         // Gebunden wird in der Lage der FIGURGRUPPE, nicht der Welt — so
         // wie der Körper (`Eigenhaut.einhaengen`) und wie die Umkehrmatrizen
         // des Skeletts (`Knochenbau.ruhelagen`). Mit der Weltmatrix wäre
@@ -106,8 +132,16 @@ export class GarmentcodeAnziehen {
         };
     }
 
-    /** Ein früher eingehängtes Stück derselben Art wieder abnehmen. */
+    /**
+     * Ein früher eingehängtes Stück derselben Art wieder abnehmen.
+     *
+     * Der Eintrag in `clothMeshes` muss MIT weg. Bliebe er stehen, zeigte
+     * die Teilnetz-Auswahl ein Stück an, das es nicht mehr gibt — und
+     * `dispose()` liefe später über ein bereits freigegebenes Netz.
+     */
     static entfernen(figur, stueck) {
+        const schluessel = GarmentcodeAnziehen.schluessel(stueck);
+        if (figur?.clothMeshes) delete figur.clothMeshes[schluessel];
         const alt = figur?.group?.getObjectByName(
             GarmentcodeAnziehen.name(stueck));
         if (!alt) return false;

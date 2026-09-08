@@ -1,6 +1,8 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
+import { Stoffvorschau } from './stoffvorschau.js';
+import { Charakterkoerper } from './charakter_koerper.js';
 
 /**
  * GarmentcodeDrapierung — den Stoff auf den Körper fallen lassen und ihn
@@ -76,12 +78,37 @@ export class GarmentcodeDrapierung {
                 return;
             }
         }
+        // Ab jetzt folgt das Stueck den Reglern, ohne neue Simulation
+        // (Edgar, 08.09.2026: „mach mir auch einen 3D Vorschau der schnell
+        // ist und synchron mit Regler geht"). Gebunden wird an GENAU den
+        // Koerper, auf dem drapiert wurde — deshalb hier und nicht spaeter.
+        // Frisch simuliert: Die Vorschauzeile gilt erst wieder, wenn ein
+        // Regler bewegt wird.
+        Stoffvorschau.hinweisAus();
+        GarmentcodeDrapierung.vorschauBinden(figur, netz, stueck);
         garmentcodeFortschritt.fertig('rig', getragen
             ? (getragen.angezogen
                 ? `${getragen.zugeordnet} Knochen zugeordnet`
                 : 'sichtbar, ohne Skinning')
             : 'nicht eingehängt');
         meldung.textContent = GarmentcodeDrapierung.bilanz(netz, getragen);
+    }
+
+    /**
+     * Das Stück an den Körper binden, damit es den Reglern folgt.
+     *
+     * Nur für HumanBody-Figuren: Ein SMPL-Referenzkörper hat keine Morphs,
+     * da gibt es nichts nachzuziehen. Und nur, wenn der Server einen
+     * Ergebnisordner gemeldet hat — ohne ihn findet er das Netz nicht.
+     */
+    static vorschauBinden(figur, netz, stueck) {
+        const inst = figur?.inst;
+        if (!inst || inst.quelle === 'smpl' || !netz.ordner) return false;
+        const gehaengt = inst.group?.getObjectByName(
+            GarmentcodeAnziehen.name(stueck));
+        if (!gehaengt) return false;
+        return Stoffvorschau.binden(stueck, netz.ordner, gehaengt,
+                                    Charakterkoerper.stellung(inst));
     }
 
     /**

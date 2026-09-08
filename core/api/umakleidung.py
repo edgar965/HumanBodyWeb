@@ -6,7 +6,7 @@ u"""UMA-Kleidung: was es je Rasse anzuziehen gibt.
     GET /api/character/uma-garderobe/?figur=<name>.glb    Rasse aus dem Zettel
 
 Die Rezepte kommen aus den Text-Assets des UMA-Projekts
-(`UMA.Garderobe`, einmal je Prozess gelesen); angezogen wird
+(`UMA_Python.Garderobe`, einmal je Prozess gelesen); angezogen wird
 in Unity (`core/dienste/umabauer.py`, Argument `-kleidung`). 06.09.2026.
 """
 import threading
@@ -15,7 +15,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 
-from UMA import Garderobe
+from UMA_Python import Garderobe
 
 from ..dienste.umabauer import Umabauer
 from .umafigur import Umafigur

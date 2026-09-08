@@ -13,7 +13,7 @@ import os
 from django.http import FileResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
-from ..dienste.garmentcode import GarmentcodeDienst
+from GarmentCode.dienst import GarmentcodeDienst
 
 logger = logging.getLogger(__name__)
 

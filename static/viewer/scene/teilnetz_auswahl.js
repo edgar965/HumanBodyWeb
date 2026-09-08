@@ -18,7 +18,11 @@ export function getSelectableSubMeshes(charId) {
     const targets = [];
     for (const [key, mesh] of Object.entries(inst.clothMeshes)) {
         if (mesh) {
-            targets.push({ type: 'cloth', key, label: key, meshObj: mesh, charId });
+            // `beschriftung` schlaegt den Schluessel: Ein GarmentCode-Stueck
+            // hiesse sonst `gc_kleid` statt „kleid (GarmentCode)".
+            targets.push({ type: 'cloth', key,
+                           label: mesh.userData?.beschriftung || key,
+                           meshObj: mesh, charId });
         }
     }
     if (inst.hairMesh) {

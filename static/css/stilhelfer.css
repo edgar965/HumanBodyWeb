@@ -919,3 +919,18 @@
 }
 .uma-garderobe.uma-garderobe.uma-garderobe .uma-garderobe-kopf { font-weight: 600; margin-bottom: 4px; }
 .uma-garderobe.uma-garderobe.uma-garderobe .uma-garderobe-fuss { margin-top: 6px; opacity: .7; font-size: 0.7rem; }
+
+/* Beschriftung einer Knopfgruppe im GarmentCode-Reiter (08.09.2026).
+   Edgar suchte die „Vorschau"-Knoepfe und fand sie nicht — sie hiessen nur
+   „2D" und „3D". Der Gruppenname steht deshalb links daneben, in der Zeile,
+   und nicht nur im Titel-Attribut, das man erst beim Hovern sieht.
+   `flex:0 0 auto` wie bei `.hb-fest`: Die Beschriftung darf den Knoepfen
+   keinen Platz nehmen. */
+.gc-knopfgruppe {
+    flex: 0 0 auto;
+    align-self: center;
+    min-width: 60px;
+    padding-right: 4px;
+    font-size: 0.72rem;
+    opacity: 0.75;
+}

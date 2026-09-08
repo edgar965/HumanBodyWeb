@@ -1,0 +1,30 @@
+{% comment %}Eigenschaften einer UMA-Python-Figur —
+`scene/umapython/umapythoneigenschaften.js`.
+
+Edgar, 08.09.2026: „Ich möchte doch ein Male, Female, Elf usw. auswählen,
+genau so wie UMA das macht!" Vorher standen hier zwei geometrische Regler
+(Umfang, Länge) an einem GarmentCode-Referenzkörper — ein Prüfstand für den
+Konformer, kein UMA-Modell.
+
+Die Regler kommen vom Server: Nicht jede Rasse kennt jeden DNA-Namen
+(gemessen 62 bei einer weiblichen, 58 bei einer männlichen Rasse). Eine
+feste Liste im Browser zeigte Regler, die nichts bewirken.{% endcomment %}
+<div class="prop-section hb-versteckt" id="prop-umapython-section">
+    <div class="prop-section-header">
+        <h4>UMA Python</h4>
+    </div>
+    <div id="prop-umapython-kopf" class="hb-font-size-0-72rem"></div>
+    <div class="hb-font-size-0-72rem">
+        Rasse, Netz, Skelett und Form kommen aus UMAs eigenen Assets &mdash;
+        gelesen in Python, ohne Unity. UMA formt &uuml;ber
+        <strong>Knochen</strong>: Ein Regler skaliert, verschiebt oder dreht
+        einen, und die Haut folgt. Herkunft und Lizenz stehen in
+        <code>UMA_Python/HERKUNFT.md</code>, die Portierung im Einzelnen in
+        <code>abdeckung.py</code>.
+    </div>
+    <details class="uma-gruppe" open>
+        <summary>DNA dieser Rasse</summary>
+        <div id="prop-umapython-form" class="anim-tree"></div>
+        <div id="prop-umapython-bilanz" class="hb-font-size-0-72rem"></div>
+    </details>
+</div>

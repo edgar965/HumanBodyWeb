@@ -30,8 +30,17 @@ import { fetchRetarget } from '../retarget_hybrid.js';
  */
 export class Eigenanimation {
 
-    /** Welche Figurart auf welches Zielskelett des Servers zeigt. */
-    static ZIELE = { smpl: 'smpl', makehuman: 'makehuman' };
+    /**
+     * Welche Figurart auf welches Zielskelett des Servers zeigt.
+     *
+     * `umapython` (08.09.2026) ist die in Python gebaute UMA-Figur. Sie
+     * bekommt ein EIGENES Ziel, obwohl ihre Knochen genauso heißen wie die
+     * der GLB-Figur: Die Zuordnungstabelle ist dieselbe
+     * (`formats/uma_knochen.py`), das Skelett aber kommt aus dem Bau und
+     * nicht aus einer Datei — und es hängt an den DNA-Reglern.
+     */
+    static ZIELE = { smpl: 'smpl', makehuman: 'makehuman',
+                     umapython: 'umapython' };
 
     /** Trifft diese Figur zu — hat sie ein eigenes Skelett zum Bespielen? */
     static passt(inst) {
@@ -65,6 +74,10 @@ export class Eigenanimation {
             wahl.makro = inst.makro || null;
             wahl.regler = inst.regler || null;
         }
+        // UMA Python: Der Regler stellt einen KNOCHEN — das Skelett dieser
+        // Stellung ist das Ziel, nicht das der Vorgabefigur. Dieselbe
+        // Überlegung wie bei MakeHuman.
+        if (inst.quelle === 'umapython') wahl.regler = inst.dna || {};
         // Bearbeiteter BVH-Text (Boden richten, Effekte) geht denselben Weg
         // wie beim DEF-Ziel: über den Text-Endpunkt. Der kennt nur DEF —
         // deshalb bleibt es hier bei der Datei, und der Rohtext dient nur
@@ -75,6 +88,7 @@ export class Eigenanimation {
     /** Der Name, unter dem der Server das Skelett dieser Figur nachbaut. */
     static figurname(inst) {
         if (inst.quelle === 'smpl') return inst.koerper;
+        if (inst.quelle === 'umapython') return inst.rasse;
         return inst.modell || 'basis';
     }
 

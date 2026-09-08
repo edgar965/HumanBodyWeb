@@ -24,6 +24,7 @@
  * hätte den Wert stumm verworfen.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { GarmentcodeLive } from './garmentcode_live.js';
 
 class GarmentcodeRegler {
     /** Was `null` in einer Auswahl anzeigt — „nichts davon". */
@@ -121,8 +122,10 @@ class GarmentcodeRegler {
         const feldchen = document.createElement('input');
         feldchen.type = 'checkbox';
         feldchen.checked = !!feld.wert;
-        feldchen.addEventListener('change',
-            () => { this.werte[schluessel] = feldchen.checked; });
+        feldchen.addEventListener('change', () => {
+            this.werte[schluessel] = feldchen.checked;
+            GarmentcodeLive.angestossen();
+        });
         return feldchen;
     }
 
@@ -147,6 +150,7 @@ class GarmentcodeRegler {
             // Leer heißt `null`, nicht die Zeichenkette "": Der Server
             // prüft gegen den Wertebereich, und "" steht dort nicht.
             this.werte[schluessel] = auswahl.value === '' ? null : auswahl.value;
+            GarmentcodeLive.angestossen();
         });
         return auswahl;
     }
@@ -180,6 +184,10 @@ class GarmentcodeRegler {
             const wert = Number(schieber.value) / faktor;
             this.werte[schluessel] = ganz ? Math.round(wert) : wert;
             zeigen(wert);
+            // Der Schnitt folgt, sobald der Regler kurz ruht (Edgar,
+            // 08.09.2026). `GarmentcodeLive` entprellt selbst — hier darf
+            // kein Zeitgeber stehen, sonst hat jede Reglerart einen eigenen.
+            GarmentcodeLive.angestossen();
         });
         return [schieber, anzeige];
     }

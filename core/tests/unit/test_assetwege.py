@@ -26,6 +26,7 @@ Deshalb prueft dieser Fall den ganzen Weg und nicht nur, ob die Datei da
 liegt: Ein Dateitest waere in genau diesem Fall gruen geblieben.
 """
 import importlib
+import sys
 import unittest
 
 from django.conf import settings
@@ -70,12 +71,30 @@ class ImportwegeTest(SimpleTestCase):
     databases = []
 
     #: (Modul, Name) — genau die Schreibweisen aus dem Produktivcode.
+    #:
+    #: `UMA_Python` STATT `UMA` seit dem 08.09.2026: Die vier Lesemodule
+    #: lagen im Unity-Klon und sind in den Port gezogen (Edgar: „portiere
+    #: den gesamten UMA code"). Der Klon selbst bleibt unberührt — dort
+    #: steht jetzt nur noch `HERKUNFT.md`.
     WEGE = (('GarmentFitter', 'fit_garment'),
             ('GarmentFitter.fitter', '_compute_vertex_normals'),
             ('GarmentFitter.obj_io', 'ObjIo'),
             ('assetCreator.GarmentFitter.smpl_library.objleser', 'Objleser'),
-            ('UMA', 'Garderobe'),
-            ('UMA.formregler', 'Formregler'))
+            ('UMA_Python', 'Garderobe'),
+            ('UMA_Python', 'Formregler'),
+            ('UMA_Python', 'Figur'),
+            ('UMA_Python.formregler', 'Formregler'),
+            ('UMA_Python.unity', 'Serialisiert'),
+            ('UMA_Python.unity.yaml_kopf', 'UnityYaml'),
+            ('GarmentCode.dienst', 'GarmentcodeDienst'),
+            ('GarmentCode.drapierdienst', 'Garmentdrapierung'),
+            ('GarmentCode.koerperdienst', 'Garmentkoerper'),
+            ('GarmentCode.vorschau3d', 'Garmentvorschau3d'),
+            ('GarmentCode.nachfuehrung', 'Stoffnachfuehrung'),
+            ('GarmentCode.messreihen', 'Garmentcodemessung'),
+            ('GarmentCode.pfade', 'Gcpfade'),
+            ('kleidung.verfahren', 'Kleidungsverfahren'),
+            ('kleidung.tempo', 'Kleidungstempo'))
 
     def test_jeder_weg_traegt(self):
         kaputt = []
@@ -87,6 +106,20 @@ class ImportwegeTest(SimpleTestCase):
                 kaputt.append('%s: %s: %s'
                               % (modul, type(fehler).__name__, fehler))
         self.assertEqual(kaputt, [], '; '.join(kaputt))
+
+    def test_der_alte_uma_weg_traegt_nicht_mehr(self):
+        u"""GEGENPROBE zum Umzug: `UMA.Garderobe` DARF nicht mehr gehen.
+
+        Ohne sie prüfte der Test darüber nichts — beide Wege gleichzeitig
+        zu haben (der alte über eine liegengebliebene Kopie) ist genau der
+        Zustand, in dem eine Änderung an einer der beiden Fassungen
+        wirkungslos bleibt. Dieselbe Gegenprobe wie bei `PhotoToTexture`
+        am 07.09.2026.
+        """
+        for name in ('UMA', 'UMA.formregler', 'UMA.garderobe'):
+            sys.modules.pop(name, None)
+        with self.assertRaises(ImportError):
+            importlib.import_module('UMA.formregler')
 
     def test_photototexture_nur_als_paket(self):
         u"""Der Fall vom 07.09.2026, in beide Richtungen.

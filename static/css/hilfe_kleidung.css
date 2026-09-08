@@ -210,3 +210,58 @@
         margin-top: 8px;
     }
 }
+
+/* --- Kleidung -> Neu: fuenf Welten ----------------------------------- */
+/* Der Farbpunkt je Welt ordnet die Zeilen der vier Tabellen einander zu,
+   ohne den Namen jedes Mal auszuschreiben. Die ersten beiden Farben
+   stammen aus `Docu/unified_model_fahrplan.html` (05.09.2026) — dort steht
+   das Farbsystem dieses Themas schon. */
+.doku-seite .welt-punkt {
+    display: inline-block;
+    width: .55rem; height: .55rem; border-radius: 50%;
+    margin-right: .45rem; vertical-align: .04em;
+}
+.doku-seite .welt-hb   { background: #1F7A6D; }
+.doku-seite .welt-uma  { background: #B4571F; }
+.doku-seite .welt-mh   { background: #5E4B8B; }
+.doku-seite .welt-smpl { background: #6B7A3A; }
+.doku-seite .welt-gc   { background: #2A5C8A; }
+.doku-seite table.kleidung-welten .welt-name { white-space: nowrap; font-weight: 600; }
+.doku-seite table.kleidung-welten td { vertical-align: top; }
+.doku-seite table.kleidung-welten tr.weg-stark td { font-weight: 500; }
+
+/* Balken: gezeichnet zur Skala, damit die Breite die Zahl IST und nicht
+   nur neben ihr steht. */
+.doku-seite table.kleidung-balken { width: 100%; max-width: 40rem; }
+.doku-seite table.kleidung-balken td { border: none; padding: .3rem .6rem .3rem 0; }
+.doku-seite .balken-name { width: 14rem; }
+.doku-seite .balken-bahn {
+    position: relative; height: .8rem; border-radius: 2px;
+    background: rgba(128, 138, 152, .18); min-width: 8rem;
+}
+.doku-seite .balken-fuell {
+    position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px;
+}
+.doku-seite .balken-gut  { background: #1F7A6D; }
+.doku-seite .balken-warn { background: #8A5A00; }
+.doku-seite .balken-wert { width: 4rem; text-align: right; }
+
+/* Die drei Ebenen nebeneinander, solange Platz ist. */
+.doku-seite .schicht-drei,
+.doku-seite .vergleich-paar {
+    display: grid; gap: 1rem; margin: 1rem 0;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+.doku-seite .schicht-karte {
+    border: 1px solid rgba(128, 138, 152, .3); border-radius: 6px;
+    padding: .9rem 1rem;
+}
+.doku-seite .schicht-karte h4 { margin: 0 0 .4rem; font-size: 1rem; }
+.doku-seite .schicht-karte p  { margin: 0; font-size: .9rem; }
+
+.doku-seite ol.stufen-liste > li { margin-bottom: 1rem; }
+.doku-seite ol.stufen-liste h4 { margin: 0 0 .3rem; font-size: 1.02rem; }
+.doku-seite ol.stufen-liste p { margin: 0 0 .3rem; }
+.doku-seite .stufe-aufwand { font-size: .87rem; opacity: .78; }
+.doku-seite ul.doku-liste > li { margin-bottom: .5rem; }
+.doku-seite .doku-quelle { font-size: .85rem; opacity: .78; }

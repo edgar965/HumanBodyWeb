@@ -6,6 +6,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 from .dienste.charakterdaten import Charakterdaten
 from .dienste.skelettnachfuehrung import Skelettnachfuehrung
+from .stoffkanal import Stoffkanal
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class ProgressConsumer(AsyncWebsocketConsumer):
         }))
 
 
-class CharacterConsumer(AsyncWebsocketConsumer):
+class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
     """WebSocket consumer for live character morphing."""
 
     async def connect(self):
@@ -43,6 +44,9 @@ class CharacterConsumer(AsyncWebsocketConsumer):
         self._current_gender = 'female'
         #: Ob zuletzt bewegte Knochen unterwegs waren — siehe `_send_skelett`.
         self._skelett_bewegt = False
+        #: Drapierte Kleidung, die den Reglern folgt (`_send_stoff`).
+        from GarmentCode.nachfuehrung import Stoffnachfuehrung
+        self._stoff = Stoffnachfuehrung()
         self._init_state()
 
     def _init_state(self):
@@ -76,6 +80,7 @@ class CharacterConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         self._char_state = None
         self._cc_subs = {}
+        self._stoff.loesen()
 
     async def _send_vertices(self, vertices):
         """Send vertices, applying CC subdivision if available.
@@ -96,6 +101,7 @@ class CharacterConsumer(AsyncWebsocketConsumer):
             vertices = cc.subdivide(vertices)
         await self.send(bytes_data=vertices.astype(np.float32).tobytes())
         await self._send_skelett(grundnetz)
+        await self._send_stoff(grundnetz)
 
     async def _send_skelett(self, grundnetz):
         """Die bewegten Knochen — oder gar nichts.
@@ -196,6 +202,12 @@ class CharacterConsumer(AsyncWebsocketConsumer):
             self._char_state.set_meta(msg['name'], float(msg['value']))
             vertices = self._char_state.compute()
             await self._send_vertices(vertices)
+
+        elif msg_type == 'stoff_binden':
+            await self._handle_stoff_binden(msg)
+
+        elif msg_type == 'stoff_loesen':
+            self._stoff.loesen(msg.get('stueck'))
 
         elif msg_type == 'reset':
             # ERST leeren, DANN die Koerperart setzen (05.09.2026).

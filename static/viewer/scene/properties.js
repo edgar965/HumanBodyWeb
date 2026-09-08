@@ -12,6 +12,7 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
 import { Umaeigenschaften } from './uma/umaeigenschaften.js';
 import { Smpleigenschaften } from './smpl/smpleigenschaften.js';
+import { Umapythoneigenschaften } from './umapython/umapythoneigenschaften.js';
 import { Mheigenschaften } from './makehuman/mheigenschaften.js';
 import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
 import { Transformfelder } from './transformfelder.js';
@@ -65,7 +66,8 @@ export async function populateProperties(charId) {
     const uma = inst.quelle === 'uma';
     const smpl = inst.quelle === 'smpl';
     const makehuman = inst.quelle === 'makehuman';
-    Eigenschaftenbereiche.humanbodyTeile(!uma && !smpl && !makehuman);
+    const umapython = inst.quelle === 'umapython';
+    Eigenschaftenbereiche.humanbodyTeile(!uma && !smpl && !makehuman && !umapython);
     Eigenschaftenbereiche.umaGarderobe(uma ? inst : null);
     // Eine MakeHuman-Figur (06.09.2026) bringt ihre eigene Garderobe mit —
     // die 181 .mhclo-Stücke sitzen auf ihr ohne Fit-Regler. Body Type,
@@ -80,6 +82,19 @@ export async function populateProperties(charId) {
         return;
     }
     Mheigenschaften.leeren();
+    // Eine UMA-Python-Figur (08.09.2026) ist Koerper plus angepasstes
+    // Kleidungsstueck; geformt wird ueber zwei geometrische Regler, den
+    // Stoff zieht der portierte Konformer nach.
+    if (umapython) {
+        Umaeigenschaften.leeren();
+        Smpleigenschaften.leeren();
+        Formbedienung.leeren();
+        Umapythoneigenschaften.fuellen(inst);
+        _updatePropContext();
+        _gemerktesHerstellen(charId);
+        return;
+    }
+    Umapythoneigenschaften.leeren();
     // Ein SMPL-Referenzkörper (06.09.2026) hat nur Geschlecht und die
     // vorgegebenen Maße — keine Morphs, keine Regler, kein Skelett.
     if (smpl) {

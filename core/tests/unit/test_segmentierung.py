@@ -157,8 +157,8 @@ class EchteNetzeTest(SimpleTestCase):
         Vorher lag der Schritt des 183-cm-Mannes bei 0,507 m — auf
         Kniehoehe, 28 % der Koerperhoehe.
         """
-        from core.dienste.garmentcode import GarmentcodeDienst
-        from core.dienste.garmentkoerper import Garmentkoerper
+        from GarmentCode.dienst import GarmentcodeDienst
+        from GarmentCode.koerperdienst import Garmentkoerper
         if not os.path.isdir(self.wurzel + '_male'):
             self.skipTest('keine maennliche Datenlage')
         punkte = GarmentcodeDienst.figurnetz('male', None, 'Male_Caucasian',
@@ -180,7 +180,7 @@ class EchteNetzeTest(SimpleTestCase):
     def test_beide_netze_haben_inneres_gesicht(self):
         u"""`face_internal` darf in keiner Datenlage leer sein — sonst
         haengt der Stoff an Zaehnen und Zunge."""
-        from core.dienste.garmentkoerper import Garmentkoerper
+        from GarmentCode.koerperdienst import Garmentkoerper
         for geschlecht in ('female', 'male'):
             if geschlecht == 'male' and not os.path.isdir(self.wurzel + '_male'):
                 continue
@@ -203,7 +203,7 @@ class GrundnetzTest(SimpleTestCase):
 
     def test_je_bauart_die_eigene_punktzahl(self):
         from core.dienste.charakterdaten import Charakterdaten
-        from core.dienste.garmentcode import GarmentcodeDienst
+        from GarmentCode.dienst import GarmentcodeDienst
         morphdaten = Charakterdaten.morphdaten()
         for bauart in ('Female_Caucasian', 'Male_Caucasian'):
             if bauart not in morphdaten.l1:

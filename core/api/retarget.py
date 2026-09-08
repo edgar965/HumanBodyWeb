@@ -153,7 +153,15 @@ class Retargetendpunkte:
 
     @staticmethod
     def _formung(wahl):
-        """Die MakeHuman-Reglerstellung — nur fuer dieses Ziel."""
+        """Die Reglerstellung der Figur — je Ziel eine andere Sorte.
+
+        MakeHuman: `Mhformung` aus 269 Reglern. UMA Python: schlicht das
+        DNA-Woerterbuch, denn dort stellt der Regler einen KNOCHEN — das
+        Skelett DIESER Stellung ist das Ziel, nicht das der Vorgabefigur
+        (dieselbe Ueberlegung wie bei MakeHuman, 07.09.2026).
+        """
+        if wahl.ziel == Retargetdaten.ZIEL_UMAPY:
+            return wahl.regler if isinstance(wahl.regler, dict) else None
         if wahl.ziel != Retargetdaten.ZIEL_MH:
             return None
         from MakeHuman.formung import Mhformung

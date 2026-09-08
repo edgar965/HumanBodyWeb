@@ -43,12 +43,20 @@ class Humanbodybaum:
     #: `sys.path` (`ui/settings/wurzeln.py`), sonst laedt kein Modul.
     BAEUME = (('HUMANBODY_ROOT', 'humanbody_core'),
               ('ASSETS_ROOT', 'assetCreator/GarmentFitter'),
-              ('TOOLS_ROOT', 'MakeHuman'))
+              ('TOOLS_ROOT', 'MakeHuman'),
+              ('ASSETS_ROOT', 'UMA_Python'),
+              ('ASSETS_ROOT', 'kleidung'))
 
     #: Was innerhalb eines Baums NICHT geprueft wird. `makehuman` und
     #: `buildscripts` sind der MakeHuman-Upstream (147 MB, AGPL) — sie
     #: hier mitzulesen hiesse, fremden Code zu importieren, und `rglob`
     #: liefe ueber tausende Dateien.
+    #: `GarmentCode` steht bewusst NICHT in `BAEUME`: Seine Module
+    #: importieren `pygarment` und `warp`, und die liegen in der zweiten
+    #: Umgebung (`python10_Garment`), nicht in der von Django. Ein
+    #: Ladetest dort meldete nur, dass das Paket fehlt — nichts ueber die
+    #: Importwege. Gegen stilles Verschwinden schuetzt dort
+    #: `Projektquellen` (Syntax, Namen, Escape-Sequenzen).
     AUS = ('__pycache__', 'makehuman', 'buildscripts')
 
     @classmethod

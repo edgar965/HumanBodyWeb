@@ -121,7 +121,7 @@ class SmplTraegerTest(unittest.TestCase):
         if not os.path.isfile(os.path.join(str(settings.SMPL_MODELS_DIR),
                                            'SMPL_FEMALE.npz')):
             raise unittest.SkipTest('SMPL-Modelle fehlen')
-        from core.dienste.garmentdrapierung import Garmentdrapierung
+        from GarmentCode.drapierdienst import Garmentdrapierung
         cls.traeger = Garmentdrapierung._smpl_traeger('mean_all')
         if cls.traeger is None:
             raise unittest.SkipTest('GarmentCode-Koerper nicht lesbar')
