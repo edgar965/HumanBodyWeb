@@ -13,6 +13,7 @@ Grund, und der steht neben dem Eintrag, nicht in einer Datei daneben.
 from .protokoll import LOG_DIR
 from .djangobase_menue import EINSTELLUNGEN_EXTRA, HILFE_EXTRA, MENUE
 from .djangobase_tests import TEST_BEFEHLE, TEST_BEREICHE
+from .versionsliste import MANUELLE_FASSUNGEN
 from ..review import REVIEW_BEREICHE
 from .wurzeln import (ASSETS_ROOT, BASE_DIR, HUMANBODY_ROOT, TOOLS_ROOT,
                       VERSION, VIDEOTOBVH_ROOT)
@@ -28,6 +29,12 @@ DJANGOBASE = {
     # hier an: `wurzeln.VERSION` war gesetzt, die Sidebar zeigte trotzdem
     # nichts (Konformitätsprüfung `test_version_ist_gesetzt`).
     'version': VERSION,
+    # Hilfe -> Versionen liest die HISTORIE aus den Commit-Betreffs, nicht aus
+    # `VERSION`. Was dort ohne Marke steht, gilt als ungebumpt und bekommt das
+    # Etikett der vermuteten naechsten Fassung (`v0.58-dev` bei laufender
+    # 0.57). Diese Liste traegt nach, was ein Betreff versaeumt hat — Warum und
+    # Messwerte in `versionsliste.py`.
+    'manual_versions': MANUELLE_FASSUNGEN,
     # Ziehgriff an der Seitenleiste. djangoBase bringt ihn fertig mit; ohne
     # den Schalter ließ sich die Leiste nicht in der Breite ziehen.
     'resizable_sidebar': True,
@@ -106,6 +113,12 @@ DJANGOBASE = {
     # SEHR WOHL fuellt: gespeicherte Figuren, die BVH-Bibliothek, Studio-
     # Projekte, Foto-Ergebnisse, Posen, Kleider. Ohne diese Liste meldete das
     # Werkzeug jeden Speichern-Knopf des Projekts.
+    # `3DObjects/` steht seit dem 08.09.2026 NICHT in den Wurzeln: Dort
+    # liegen die grossen Inhalte (animations, garment_library, assets,
+    # photoTo3D), die der Benutzer ueber die Oberflaeche veraendert — der
+    # Ordner ist gerade KEIN Nur-Lesen-Bereich. Die Namen bleiben trotzdem
+    # in `ausser` stehen: `HumanBodyBlender/data` fuehrt eigene Ordner
+    # gleichen Namens.
     'daten_nur_lesen': {
         'wurzeln': ['HumanBody/data', 'HumanBodyBlender/data'],
         'ausser': ['models', 'animations', 'studio_projects', 'assetsInstance',
