@@ -51,7 +51,7 @@ class Projektquellen:
     BAEUME = ('HumanBodyBlender',
               'HumanBody/humanbody_core', 'HumanBody/collision',
               'Assets/assetCreator', 'Assets/PhotoToTexture', 'MakeHuman',
-              'Assets/GarmentCode', 'Assets/UMA_Python', 'Assets/kleidung')
+              'Assets/GarmentCode', 'UMA_Python', 'Assets/kleidung')
 
     #: Fremde Addons und eingelagerte Fremdprojekte. `convert/retarget_bvh`
     #: und `kbs_retarget` stammen von anderen Urhebern; `data` und `cache`

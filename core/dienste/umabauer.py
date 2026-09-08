@@ -106,20 +106,44 @@ class Umabauer:
 
     # ------------------------------------------------------------ Aufträge
 
+    #: Roomguests Zeichen fuer „an diesem Platz nichts". Als ganze
+    #: `-kleidung` heisst es: nackt bleiben. Derselbe Wert wie
+    #: `UmaFigurExport.OhneKleidung` drueben.
+    OHNE_KLEIDUNG = '-'
+
     @classmethod
     def bauen(cls, rasse, name=None, zeiger=False, kleidung=None, farben=None):
-        u"""Figur der Rasse bauen; `kleidung` = Rezeptnamen (sonst UMAs Vorgabe je
-        Platz), `farben` = `{'haut': '#rrggbb', 'haar': '#rrggbb'}` (sonst die der Rasse)."""
+        u"""Figur der Rasse bauen.
+
+        `kleidung` kennt DREI Faelle, und der dritte ist der, der lange
+        gefehlt hat (Edgar, 08.09.2026: „wenn ich einer UMA figur ALLE
+        kleider wegtue, dann erscheinen ploetzlich wieder alle"):
+
+            None   nicht angegeben -> UMAs Vorgabe je Platz
+            [...]  genau diese Rezepte
+            []     ausdruecklich NICHTS -> nackt
+
+        Bis dahin fielen die letzten beiden Faelle zusammen: `if kleidung`
+        ist bei einer leeren Liste falsch, der Auftrag bekam kein Feld,
+        und drueben schaltet `loadDefaultRecipes = IsNullOrEmpty(...)` auf
+        UMAs Vorgabe. Wer alles abwaehlte, bekam alles zurueck — kein
+        Fehler, keine Meldung, das genaue Gegenteil der Eingabe.
+
+        `farben` = `{'haut': '#rrggbb', 'haar': '#rrggbb'}` (sonst die der
+        Rasse).
+        """
         if not rasse or not rasse.strip():
             raise ValueError('Keine Rasse angegeben')
         name = name or cls.name_fuer(rasse)
         if not cls.NAME.match(name):
             raise ValueError('Ungültiger Name: %r' % (name,))
         auftrag = {'rasse': rasse, 'name': name, 'zeiger': 1 if zeiger else 0}
-        if kleidung:
+        if kleidung is not None:
             if any(',' in r for r in kleidung):
                 raise ValueError('Rezeptnamen dürfen kein Komma enthalten')
-            auftrag['kleidung'] = ','.join(r.strip() for r in kleidung if r.strip())
+            gewaehlt = [r.strip() for r in kleidung if r.strip()]
+            auftrag['kleidung'] = (','.join(gewaehlt) if gewaehlt
+                                   else cls.OHNE_KLEIDUNG)
         farbtext = cls._farbtext(farben)
         if farbtext:
             auftrag['farben'] = farbtext

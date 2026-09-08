@@ -20,6 +20,7 @@ from .api.bvhtext import Bvhtext
 from .api.garmentcode import Garmentcode
 from .api.schnittvorschau import Schnittvorschauendpunkte
 from .api.umafigurbau import Umafigurbau
+from .api.umatextur import Umatextur
 from .api.umapython import Umapythonendpunkte
 from .api.garmentvorschau import Garmentvorschauendpunkte
 from .api.ui_vorgaben import Uivorgaben
@@ -209,6 +210,8 @@ urlpatterns = [
          name='umapython_rassen'),
     path('api/umapython/figur/', Umafigurbau.figur,
          name='umapython_figur'),
+    path('api/umapython/textur/<str:rasse>/<str:slot>/<str:art>/',
+         Umatextur.bild, name='umapython_textur'),
 ]
 
 # Die Charakter- und SMPL-Routen stehen in `urls_charakter.py` —

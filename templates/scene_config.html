@@ -354,20 +354,25 @@
         gap: 8px;
     }
     .preset-list li .eintragsname { display: flex; flex-direction: column; min-width: 0; }
+    /* SICHTBAR, NICHT NUR VORHANDEN (Edgar, 08.09.2026: „mach
+       funktionalität zum Umbenennen, löschen der Modelle") — es gab sie
+       längst. Gemessen: 30 px breite Knöpfe mit opacity 0,5, Textfarbe
+       #888 und Rahmen #2a2a4a auf dunklem Grund; auf 21 Zeilen
+       untereinander sieht man sie erst, wenn man weiß, dass sie da sind. */
     .preset-list li .eintragswerkzeuge {
         display: flex;
         gap: 4px;
         flex-shrink: 0;
-        opacity: 0.5;
+        opacity: 0.85;
         transition: opacity 0.12s;
     }
     .preset-list li:hover .eintragswerkzeuge,
     .preset-list li.selected .eintragswerkzeuge { opacity: 1; }
     .preset-list li .eintragswerkzeuge button {
-        background: none;
-        border: 1px solid var(--border);
+        background: var(--bg-elevated, rgba(255, 255, 255, 0.05));
+        border: 1px solid var(--border-strong, #3d3d63);
         border-radius: 4px;
-        color: var(--text-muted);
+        color: var(--text, #ddd);
         padding: 3px 7px;
         cursor: pointer;
     }

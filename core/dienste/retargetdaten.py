@@ -191,7 +191,7 @@ class Retargetdaten:
         und ein Fehler darin ist auf beiden Wegen einer.
 
         Die Geometrie kommt aus derselben Kette, aus der auch der
-        Browser seine Knochen baut (`Umagelenke.kette`). Waere es eine
+        Browser seine Knochen baut (`Umagelenke.bauplan`). Waere es eine
         zweite Rechnung, rechnete der Motor gegen eine Ruhelage, die
         die Figur gar nicht hat — der Befund vom 07.09.2026 bei SMPL.
 
@@ -203,8 +203,8 @@ class Retargetdaten:
         if not self.figur:
             raise ValueError('Kein Rassenname fuer das UMA-Python-Ziel')
         gebaut = Umapythonfiguren.bauen(self.figur)
-        kette = Umagelenke(gebaut, self.formung).kette()
-        return self._auf_kette(bvh, bauart, kette.geometrie(), Umazuordnung)
+        gelenke = Umagelenke(gebaut, self.formung)
+        return self._auf_kette(bvh, bauart, gelenke.geometrie(), Umazuordnung)
 
     def _auf_kette(self, bvh, bauart, geometrie, zuordnung):
         u"""Dasselbe Verfahren, anderes Zielskelett — wie `_auf_uma`.

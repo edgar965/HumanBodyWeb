@@ -18,6 +18,24 @@ import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
  * Materialien, nicht mehrere Netze: Die Punkte gehören zusammen, und beim
  * Häuten muss die Bindung dieselbe bleiben.
  *
+ * DIE TEXTUREN KOMMEN ALS EIGENE ADRESSEN (08.09.2026)
+ * =====================================================
+ * Edgar: „UMA und UMA Python sehen noch leicht unterschiedlich aus, z.B.
+ * bei der Haut." Die Geometrie war da längst deckungsgleich mit Unitys
+ * eigenem Bau — es fehlte das Bild darauf.
+ *
+ * UMA legt seine Texturen als Dateien im Projekt ab, ein Overlay je Slot.
+ * Die Antwort nennt nur die ARTEN (`gruppe.texturen`), das Bild kommt über
+ * `/api/umapython/textur/…`: Fünf bis acht PNG base64 in derselben Antwort
+ * wie das Netz brächten sie auf ein Vielfaches der jetzigen 3,9 MB, und
+ * einzeln geladen liegen sie danach im Zwischenspeicher des Browsers.
+ *
+ * Ein ATLAS ist nicht nötig — anders als in Unity, wo ein Renderer
+ * möglichst wenige Materialien haben soll. Hier gibt es ohnehin je Slot
+ * eine Materialgruppe, und die UV liegen je Slot in [0,1] (gemessen über
+ * alle acht: u 0,001..0,996). Die Namen UDIM1001..1005 sind also nur
+ * Namen; einen Kachelversatz abzuziehen wäre falsch.
+ *
  * DIE NORMALEN KOMMEN VOM SERVER
  * ==============================
  * `computeVertexNormals()` mittelt nur über Punkte, die sich einen Index
@@ -43,7 +61,7 @@ export class Umapythonnetz {
      * @param netz  `{punkte, normalen, dreiecke, gruppen}` vom Server
      * @returns {THREE.Mesh}
      */
-    static bauen(netz, name, beschriftung) {
+    static bauen(netz, name, beschriftung, rasse = null) {
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position',
             new THREE.Float32BufferAttribute(netz.punkte, 3));
@@ -53,8 +71,12 @@ export class Umapythonnetz {
         } else {
             geo.computeVertexNormals();
         }
+        if (netz.uv?.length) {
+            geo.setAttribute('uv',
+                new THREE.Float32BufferAttribute(netz.uv, 2));
+        }
         geo.setIndex(netz.dreiecke);
-        const material = Umapythonnetz._materialien(geo, netz.gruppen);
+        const material = Umapythonnetz._materialien(geo, netz.gruppen, rasse);
         const mesh = new THREE.Mesh(geo, material);
         mesh.name = name;
         mesh.userData.beschriftung = beschriftung;
@@ -67,24 +89,71 @@ export class Umapythonnetz {
      * Ohne Gruppen (ältere Antwort) bleibt es beim Hautmaterial: Die Figur
      * sieht dann aus wie vorher, statt dass gar nichts kommt.
      */
-    static _materialien(geo, gruppen) {
-        const haut = Umapythonnetz._haut();
-        if (!Array.isArray(gruppen) || !gruppen.length) return haut;
-        const liste = [haut];
+    static _materialien(geo, gruppen, rasse) {
+        if (!Array.isArray(gruppen) || !gruppen.length) {
+            return Umapythonnetz._haut();
+        }
+        // JE GRUPPE EIN EIGENES MATERIAL, auch für die Haut: Die fünf
+        // Körperslots tragen verschiedene Texturen (UDIM1001..1005), und
+        // ein gemeinsames Material könnte nur eine davon zeigen.
+        const liste = [];
         for (const gruppe of gruppen) {
             const sonder = Umapythonnetz.SONDER[gruppe.name];
-            let nummer = 0;
-            if (sonder) {
-                nummer = liste.length;
-                liste.push(new THREE.MeshStandardMaterial({
+            const material = sonder
+                ? new THREE.MeshStandardMaterial({
                     roughness: 0.6, metalness: 0.0, side: THREE.DoubleSide,
-                    transparent: sonder.opacity !== undefined,
-                    ...sonder,
-                }));
-            }
-            geo.addGroup(gruppe.index_ab, gruppe.index_anzahl, nummer);
+                    transparent: sonder.opacity !== undefined, ...sonder })
+                : Umapythonnetz._haut();
+            geo.addGroup(gruppe.index_ab, gruppe.index_anzahl, liste.length);
+            liste.push(material);
+            Umapythonnetz._texturen(material, gruppe, rasse, !!sonder);
         }
         return liste;
+    }
+
+    /**
+     * Die Texturen des Slots nachladen und einhängen.
+     *
+     * NACHLADEN, NICHT WARTEN: Die Figur steht sofort in ihrem Hautton da
+     * und wird schärfer, sobald die Bilder kommen. Andersherum sähe der
+     * Nutzer sekundenlang nichts.
+     *
+     * `colorSpace` MUSS gesetzt sein: Eine Albedo-Textur ohne sRGB kommt
+     * in Three.js zu hell und flau heraus — sie sieht dann aus wie ein
+     * Fehler der Textur und ist einer der Farbraumangabe.
+     *
+     * `flipY` BLEIBT AUF DEM STANDARD (true). Der erste Versuch setzte es
+     * auf false — der Reflex aus dem glTF-Umfeld, wo der Exporter die UV
+     * schon gedreht hat. Hier kommen sie roh aus Unity, und dort läuft v
+     * wie in WebGL. Gemessen am Bild: mit false saß ein roter Fleck
+     * mitten auf der Stirn, dazu rötliche Bahnen an Oberarmen und
+     * Oberschenkeln; mit true sitzen Brustwarzen, Nabel, Fingernägel und
+     * Augenbrauen dort, wo sie hingehören. Die Textur lädt in beiden
+     * Fällen fehlerfrei — der Unterschied ist nur im Bild zu sehen.
+     */
+    static _texturen(material, gruppe, rasse, istSonder) {
+        const arten = gruppe.texturen || [];
+        if (!rasse || !arten.length) return;
+        const lader = new THREE.TextureLoader();
+        const adresse = art => '/api/umapython/textur/'
+            + `${encodeURIComponent(rasse)}/${encodeURIComponent(gruppe.name)}`
+            + `/${art}/`;
+        if (arten.includes('albedo')) {
+            lader.load(adresse('albedo'), bild => {
+                bild.colorSpace = THREE.SRGBColorSpace;
+                material.map = bild;
+                // Die Hautfarbe ist jetzt im Bild; ein zweiter Farbton
+                // darüber machte es dunkler als in Unity.
+                if (!istSonder) material.color.setHex(0xffffff);
+                material.needsUpdate = true;
+            }, undefined, () => {});
+        }
+        if (arten.includes('normalen')) {
+            lader.load(adresse('normalen'), bild => {
+                material.normalMap = bild;
+                material.needsUpdate = true;
+            }, undefined, () => {});
+        }
     }
 
     static _haut() {

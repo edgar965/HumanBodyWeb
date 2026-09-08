@@ -137,7 +137,7 @@ export class UmapythonFigur {
         if (!netz || !netz.punkte?.length) return;
         const name = `umapython_koerper_${this.id}`;
         Umapythonnetz.entfernen(this.group, name);
-        const roh = Umapythonnetz.bauen(netz, name, this.rasse);
+        const roh = Umapythonnetz.bauen(netz, name, this.rasse, this.rasse);
         const gebunden = this.skelett
             ? Eigenhaut.binden(roh, this.skelett, haut) : roh;
         // `einhaengen` bindet mit `netz.matrix`, also in der Lage der

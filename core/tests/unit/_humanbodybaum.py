@@ -44,7 +44,7 @@ class Humanbodybaum:
     BAEUME = (('HUMANBODY_ROOT', 'humanbody_core'),
               ('ASSETS_ROOT', 'assetCreator/GarmentFitter'),
               ('TOOLS_ROOT', 'MakeHuman'),
-              ('ASSETS_ROOT', 'UMA_Python'),
+              ('TOOLS_ROOT', 'UMA_Python'),
               ('ASSETS_ROOT', 'kleidung'))
 
     #: Was innerhalb eines Baums NICHT geprueft wird. `makehuman` und

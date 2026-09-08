@@ -38,7 +38,7 @@ TOOLS = Projektquellen.TOOLS
 #: WHAM, MocapNET) — deren Warnungen gehen dieses Projekt nichts an.
 BAEUME = ('HumanBody/humanbody_core', 'Assets/assetCreator',
           'HumanBody/collision', 'Assets/PhotoToTexture', 'MakeHuman',
-          'Assets/GarmentCode', 'Assets/UMA_Python', 'Assets/kleidung',
+          'Assets/GarmentCode', 'UMA_Python', 'Assets/kleidung',
           'HumanBodyWeb/core', 'HumanBodyWeb/ui', 'Docu')
 
 #: Ordner ohne eigenen Quelltext oder mit fremdem.
