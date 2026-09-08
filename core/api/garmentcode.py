@@ -96,8 +96,14 @@ class Garmentcode:
         Deshalb GET mit `vorlage`, nicht eine feste Liste.
         """
         vorlage = request.GET.get('vorlage', '')
-        return JsonResponse({'vorlage': vorlage,
-                             'gruppen': GarmentcodeDienst.regler(vorlage)})
+        return JsonResponse({
+            'vorlage': vorlage,
+            'gruppen': GarmentcodeDienst.regler(vorlage),
+            # Fertige Kombinationen zum Anhaken (08.09.2026). Sie kommen
+            # MIT den Gruppen, nicht ueber einen zweiten Aufruf: Ein Preset
+            # gehoert zu genau diesen Reglern, und ein getrennter Abruf
+            # koennte auf ein anderes Stueck treffen.
+            'presets': GarmentcodeDienst.presets(vorlage)})
 
     @staticmethod
     @require_POST

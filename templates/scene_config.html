@@ -2093,6 +2093,71 @@
     padding-left:8px;
     border-left:1px solid var(--border-color, rgba(255,255,255,0.12));
 }
+/* Hover-Hilfe der GarmentCode-Regler (08.09.2026, Edgar: „ich verstehe das
+   UI nicht: mach mir hover wenn ich darueber gehe ueber alle Einstellungen").
+   Die Karte haengt am `body`, nicht in der Zeile: Das Bedienfeld scrollt und
+   hat `overflow`, eine Karte darin waere am Rand abgeschnitten. `position:
+   fixed` statt `absolute`, weil die Lage aus `clientX/clientY` kommt — mit
+   `absolute` wanderte sie beim Scrollen weg. */
+.gc-hilfekarte.gc-hilfekarte.gc-hilfekarte {
+    position:fixed;
+    z-index:4000;
+    max-width:330px;
+    padding:9px 11px;
+    border-radius:6px;
+    border:1px solid var(--border-color, rgba(255,255,255,0.18));
+    background:var(--panel-bg, #1b1b2e);
+    color:var(--text-color, #e8e8f0);
+    box-shadow:0 6px 22px rgba(0,0,0,0.45);
+    font-size:12px;
+    line-height:1.45;
+    pointer-events:none;   /* sonst faengt die Karte den Zeiger und flackert */
+}
+.gc-hilfe-titel { font-weight:600; margin-bottom:3px; }
+.gc-hilfe-text { opacity:0.92; }
+/* Der Warnhinweis nennt die Bedingung, unter der ein Regler NICHTS tut —
+   genau der Fall, an dem Edgar haengengeblieben ist. Er muss sich vom
+   Erklaerungstext abheben, sonst liest man darueber hinweg. */
+.gc-hilfe-warnung {
+    margin-top:5px;
+    padding-left:7px;
+    border-left:2px solid #e0a63a;
+    color:#f0c674;
+}
+.gc-hilfe-original {
+    margin-top:5px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size:11px;
+    opacity:0.6;
+}
+/* Regler mit einer solchen Bedingung: ein dezenter Hinweis schon in der
+   Liste, damit man nicht erst hovern muss, um es zu ahnen. Bewusst KEIN
+   Ausgrauen — die Bedingung kann ja erfuellt sein. */
+.slider-row.gc-bedingt > label::after {
+    content:'\00a0*';
+    color:#e0a63a;
+}
+/* Voreinstellungen (Edgar, 08.09.2026: „kannst du mir ein preset machen bei
+   den aermeln (checkbox) dafuer?"). Sie stehen ueber den Schiebern der
+   Gruppe, abgesetzt durch die gestrichelte Linie. */
+.gc-presets.gc-presets.gc-presets {
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px 12px;
+    margin:2px 0 7px;
+    padding-bottom:6px;
+    border-bottom:1px dashed var(--border-color, rgba(255,255,255,0.14));
+}
+.gc-preset.gc-preset.gc-preset {
+    display:flex;
+    align-items:center;
+    gap:5px;
+    margin:0;
+    font-size:12px;
+    cursor:pointer;
+    white-space:nowrap;
+}
+.gc-preset input { margin:0; cursor:pointer; }
 .kopfzeilengruppe.kopfzeilengruppe.kopfzeilengruppe {
     display:flex;
     align-items:center;

@@ -18,6 +18,17 @@
  * Online-Werkzeug es als aufklappbare Karte tut
  * (`upstream/gui/callbacks.py`, `def_flat_design_subtab`).
  *
+ * HILFE UND VOREINSTELLUNGEN (Edgar, 08.09.2026: „ich verstehe das UI
+ * nicht … kannst du eine deutsche Übersetzung und Hilfe machen?")
+ * ==================================================================
+ * Jede Zeile trägt eine Hover-Karte (`garmentcode_reglerhilfe.js`) mit
+ * dem, was der Regler tut, und — wichtiger — wann er NICHTS tut. Zwei
+ * Ärmelregler des Upstream sind unter Bedingungen wirkungslos, ohne
+ * dass die Oberfläche das zeigte. Auswahllisten stehen jetzt auf
+ * Deutsch (`ArmholeCurve` → „Rundung"), der Originalname steht in der
+ * Karte. Fertige Kombinationen hängen als Kästchen über der Gruppe
+ * (`garmentcode_preset.js`).
+ *
  * DER SCHLÜSSEL IST DER PFAD DES SERVERS, NICHT SELBST ZUSAMMENGESETZT.
  * Früher stand hier `${gruppe}.${feld}`; bei `sleeve.cuff.cuff_len` ergäbe
  * das `sleeve.cuff_len` — ein Regler, den es nicht gibt, und der Server
@@ -25,6 +36,8 @@
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { GarmentcodeLive } from './garmentcode_live.js';
+import { garmentcodePreset } from './garmentcode_preset.js';
+import { garmentcodeReglerhilfe } from './garmentcode_reglerhilfe.js';
 
 class GarmentcodeRegler {
     /** Was `null` in einer Auswahl anzeigt — „nichts davon". */
@@ -35,6 +48,12 @@ class GarmentcodeRegler {
         this.fuerVorlage = null;
         /** Vom Nutzer geänderte Werte: {"sleeve.cuff.cuff_len": 0.4}. */
         this.werte = {};
+        /** Startwert je Pfad, wie der Server ihn geliefert hat. */
+        this.vorgaben = {};
+        /** Wie ein Pfad sichtbar nachgezogen wird — je Regler eine
+         *  Funktion. Ohne sie setzte ein Preset nur die Zahlen im
+         *  Speicher, und die Schieber blieben stehen, wo sie waren. */
+        this.nachziehen = {};
     }
 
     /** Die Regler eines Kleidungsstücks holen und zeichnen. */
@@ -50,7 +69,10 @@ class GarmentcodeRegler {
             // Ein Wechsel des Kleidungsstücks verwirft die alten Werte: Sie
             // gehören zu Gruppen, die es jetzt vielleicht nicht mehr gibt.
             this.werte = {};
+            this.vorgaben = {};
+            this.nachziehen = {};
             this.fuerVorlage = vorlage;
+            garmentcodePreset.setzen(antwort.presets || []);
             this.zeichnen(ziel, antwort.gruppen || []);
         } catch (fehler) {
             ziel.innerHTML = '<div class="hb-hinweis">Einstellungen nicht '
@@ -86,6 +108,16 @@ class GarmentcodeRegler {
         titel.title = gruppe.pfad || gruppe.gruppe;
         kasten.appendChild(titel);
 
+        // Voreinstellungen zuerst: Wer eine fertige Kombination will,
+        // soll sie nicht unter dreissig Schiebern suchen.
+        if (!tiefe) {
+            const presets = garmentcodePreset.kasten(
+                gruppe.gruppe,
+                (werte) => this.mehrereSetzen(werte),
+                (pfad) => this.wertVon(pfad));
+            if (presets) kasten.appendChild(presets);
+        }
+
         for (const feld of (gruppe.felder || [])) {
             kasten.appendChild(this.zeile(feld));
         }
@@ -100,11 +132,21 @@ class GarmentcodeRegler {
         const schluessel = feld.pfad;
         const zeile = document.createElement('div');
         zeile.className = 'slider-row';
+        // Der Pfad am Element: Zwei Zeilen koennen gleich HEISSEN — beim
+        // T-Shirt tragen `sleeve.end_width` und `left.sleeve.end_width`
+        // beide „Aermelweite unten". Ohne diese Kennung ist im DOM nicht
+        // zu unterscheiden, welche gemeint ist (und eine Messung, die nach
+        // Beschriftung sucht, liest die falsche).
+        zeile.dataset.pfad = schluessel;
+
+        this.vorgaben[schluessel] = feld.wert;
 
         const beschriftung = document.createElement('label');
         beschriftung.textContent = feld.titel;
-        beschriftung.title = schluessel;      // der echte Name im Tooltip
         zeile.appendChild(beschriftung);
+        // Die Karte hängt an der ganzen Zeile, nicht nur an der
+        // Beschriftung: Edgar fährt über den Regler, nicht über das Wort.
+        garmentcodeReglerhilfe.anhaengen(zeile, feld.titel, feld.hilfe);
 
         if (feld.typ === 'bool') {
             zeile.appendChild(this.kaestchen(schluessel, feld));
@@ -122,9 +164,10 @@ class GarmentcodeRegler {
         const feldchen = document.createElement('input');
         feldchen.type = 'checkbox';
         feldchen.checked = !!feld.wert;
+        this.nachziehen[schluessel] = (wert) => { feldchen.checked = !!wert; };
         feldchen.addEventListener('change', () => {
             this.werte[schluessel] = feldchen.checked;
-            GarmentcodeLive.angestossen();
+            this.vonHand(schluessel);
         });
         return feldchen;
     }
@@ -137,20 +180,33 @@ class GarmentcodeRegler {
     liste(schluessel, feld) {
         const auswahl = document.createElement('select');
         auswahl.className = 'viewer-select hb-dehnt-ohne-abstand';
-        for (const wert of feld.bereich) {
+        // Die deutschen Namen kommen NACH STELLE gepaart, nicht nach Wert
+        // (`wertetitel[i]` gehört zu `bereich[i]`): `null` taugt nicht als
+        // Schlüssel eines Wörterbuchs, ist hier aber ein gültiger Wert.
+        const namen = feld.wertetitel || [];
+        feld.bereich.forEach((wert, i) => {
             const eintrag = document.createElement('option');
             const leer = (wert === null || wert === undefined);
             eintrag.value = leer ? '' : wert;
-            eintrag.textContent = leer ? GarmentcodeRegler.LEER : wert;
+            eintrag.textContent = leer ? GarmentcodeRegler.LEER
+                                       : (namen[i] || wert);
+            // Der Originalname bleibt erreichbar — er ist es, was im
+            // Online-Werkzeug und im Upstream-Code steht.
+            if (!leer && namen[i] && namen[i] !== String(wert)) {
+                eintrag.title = String(wert);
+            }
             eintrag.selected = (wert === feld.wert)
                 || (leer && (feld.wert === null || feld.wert === undefined));
             auswahl.appendChild(eintrag);
-        }
+        });
+        this.nachziehen[schluessel] = (wert) => {
+            auswahl.value = (wert === null || wert === undefined) ? '' : wert;
+        };
         auswahl.addEventListener('change', () => {
             // Leer heißt `null`, nicht die Zeichenkette "": Der Server
             // prüft gegen den Wertebereich, und "" steht dort nicht.
             this.werte[schluessel] = auswahl.value === '' ? null : auswahl.value;
-            GarmentcodeLive.angestossen();
+            this.vonHand(schluessel);
         });
         return auswahl;
     }
@@ -180,6 +236,16 @@ class GarmentcodeRegler {
         };
         zeigen(Number(feld.wert));
 
+        // Nachziehen OHNE `input`-Ereignis: Ein Preset setzt die Werte
+        // selbst und stösst den Bau EINMAL an — feuerte jeder Schieber
+        // dabei sein Ereignis, liefe der Schnitt vier Mal.
+        this.nachziehen[schluessel] = (wert) => {
+            const zahl = Number(wert);
+            if (!Number.isFinite(zahl)) return;
+            schieber.value = String(Math.round(zahl * faktor));
+            zeigen(zahl);
+        };
+
         schieber.addEventListener('input', () => {
             const wert = Number(schieber.value) / faktor;
             this.werte[schluessel] = ganz ? Math.round(wert) : wert;
@@ -187,9 +253,40 @@ class GarmentcodeRegler {
             // Der Schnitt folgt, sobald der Regler kurz ruht (Edgar,
             // 08.09.2026). `GarmentcodeLive` entprellt selbst — hier darf
             // kein Zeitgeber stehen, sonst hat jede Reglerart einen eigenen.
-            GarmentcodeLive.angestossen();
+            this.vonHand(schluessel);
         });
         return [schieber, anzeige];
+    }
+
+    /**
+     * Eine Änderung von Hand: Preset-Häkchen prüfen, dann bauen lassen.
+     *
+     * Getrennt von `mehrereSetzen`, weil ein Preset seine eigenen Werte
+     * setzt — dort dürfen die Häkchen nicht wieder abfallen.
+     */
+    vonHand(pfad) {
+        garmentcodePreset.pruefen(pfad, (p) => this.wertVon(p));
+        GarmentcodeLive.angestossen();
+    }
+
+    /** Der geltende Wert eines Pfades: geändert, sonst Vorgabe des Servers. */
+    wertVon(pfad) {
+        return (pfad in this.werte) ? this.werte[pfad] : this.vorgaben[pfad];
+    }
+
+    /**
+     * Mehrere Werte auf einmal setzen — für die Voreinstellungen.
+     *
+     * Die Schieber werden sichtbar nachgezogen, und der Bau läuft EINMAL
+     * am Ende: `GarmentcodeLive` entprellt, aber vier Anstösse wären vier
+     * Läufe in der Warteschlange.
+     */
+    mehrereSetzen(werte) {
+        for (const [pfad, wert] of Object.entries(werte || {})) {
+            this.werte[pfad] = wert;
+            if (this.nachziehen[pfad]) this.nachziehen[pfad](wert);
+        }
+        GarmentcodeLive.angestossen();
     }
 
     /** Die geänderten Werte als JSON für den Server. */
