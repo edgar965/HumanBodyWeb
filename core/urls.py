@@ -18,6 +18,8 @@ from .api.system import Systemendpunkte
 from .api.bibliothek import Bibliotheksendpunkte
 from .api.bvhtext import Bvhtext
 from .api.garmentcode import Garmentcode
+from .api.garmentgemeinsam import Garmentgemeinsamendpunkte
+from .api.garmentvorbilder import Garmentvorbilder
 from .api.schnittvorschau import Schnittvorschauendpunkte
 from .api.umafigurbau import Umafigurbau
 from .api.umatextur import Umatextur
@@ -185,11 +187,17 @@ urlpatterns = [
          name='garmentcode_zustand'),
     path('api/garmentcode/regler/', Garmentcode.regler,
          name='garmentcode_regler'),
+    path('api/garmentcode/vorbilder/', Garmentvorbilder.vorbilder,
+         name='garmentcode_vorbilder'),
     path('api/garmentcode/masse/', Garmentcode.masse, name='garmentcode_masse'),
     path('api/garmentcode/erzeugen/', Garmentcode.erzeugen,
          name='garmentcode_erzeugen'),
     path('api/garmentcode/drapieren/', Garmentcode.drapieren,
          name='garmentcode_drapieren'),
+    # Mehrere Stuecke in EINEM Lauf (09.09.2026) — nur so kennen sie
+    # einander, siehe `api/garmentgemeinsam.py`.
+    path('api/garmentcode/gemeinsam/', Garmentgemeinsamendpunkte.gemeinsam,
+         name='garmentcode_gemeinsam'),
     path('api/garmentcode/schnittnetz/', Schnittvorschauendpunkte.netz,
          name='garmentcode_schnittnetz'),
     # Vorschau 3D (08.09.2026): der Schnitt am Koerper, ohne Simulation.

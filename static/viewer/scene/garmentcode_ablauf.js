@@ -23,24 +23,7 @@ import { GarmentcodeSchritte } from './garmentcode_schritte.js';
 export class GarmentcodeAblauf {
 
     /**
-     * Drei Wege, ein Ablauf (Edgar, 07.09.2026: „insgesamt dann 3 Buttons:
-     * Einmal 2D, einmal 3D und einmal alles komplett (2d + 3d)").
-     *
-     *     '2d'        Schnitt konstruieren und die Panels an die Figur legen
-     *     '3d'        den vorhandenen Schnitt drapieren, Panels wieder weg
-     *     'komplett'  beides hintereinander
-     *
-     * `'3d'` baut den Schnitt NICHT neu. Es prüft aber, ob der vorhandene
-     * zu dieser Figur und dieser Vorlage gehört: Ein Schnitt liegt als
-     * Ordner auf der Platte, und wer die Figur wechselt und dann 3D
-     * drückt, drapierte sonst den Schnitt der vorigen — dieselbe Falle wie
-     * am 06.09.2026, als ein Bau ohne Morphs den Ergebnisordner
-     * überschrieb und eine Stunde Messläufe auf dem falschen Schnitt
-     * rechneten.
-     */
-    /**
-     * Die fuenf Wege (Edgar, 08.09.2026: fuenf Knoepfe, Vorschau 2D
-     * und 3D neben Bauen 2D, 3D und 2D+3D).
+     * Die fuenf Wege, mit ihren gemessenen Dauern (08.09.2026):
      *
      *   vorschau2d   Schnitt, Panels an die Figur gelegt     ~0,4 s
      *   vorschau3d   Panels an den Koerper gelegt            0,4-1,0 s
@@ -48,20 +31,34 @@ export class GarmentcodeAblauf {
      *   3d           echte Warp-Simulation                    ~23 s
      *   komplett     2d + 3d                                  ~31 s
      *
-     * Gemessen ist der 2D-Schritt mit 364-391 ms schon Vorschau-
-     * Geschwindigkeit. Genau deshalb ist der Vorschau-Knopf dafuer
-     * wieder entfallen: Zwei Knoepfe fuer dieselbe Rechnung, die sich
-     * nur darin unterscheiden, was danach gezeigt wird, sind einer zu
-     * viel.
-     */
-    /**
-     * EINE Quelle: `GarmentcodeSchritte` entscheidet ebenfalls daran, ob ein
-     * Schnittschritt in den Plan kommt. Zwei Listen desselben Inhalts laufen
-     * beim naechsten neuen Modus auseinander — dann baut der eine Weg einen
-     * Schnitt, den der andere nicht erwartet.
+     * Der 2D-Schritt IST mit 364-391 ms schon Vorschau-Geschwindigkeit —
+     * deshalb ist der eigene Vorschau-Knopf dafuer wieder entfallen: Zwei
+     * Knoepfe fuer dieselbe Rechnung, die sich nur darin unterscheiden,
+     * was danach gezeigt wird, sind einer zu viel.
+     *
+     * BEIDE 3D-WEGE BAUEN DEN SCHNITT NICHT NEU, sie pruefen ihn: Ein
+     * Schnitt liegt als Ordner auf der Platte, und wer die Figur wechselt
+     * und dann 3D drueckt, drapierte sonst den der vorigen — die Falle vom
+     * 06.09.2026, als ein Bau ohne Morphs den Ergebnisordner ueberschrieb
+     * und eine Stunde Messlaeufe auf dem falschen Schnitt rechneten.
+     *
+     * `NUR3D` kommt aus `GarmentcodeSchritte`, damit es EINE Quelle bleibt:
+     * Der Schrittplan entscheidet daran ebenfalls, ob ein Schnittschritt in
+     * den Plan kommt. Zwei Listen desselben Inhalts laufen beim naechsten
+     * neuen Modus auseinander.
      */
     static NUR3D = GarmentcodeSchritte.NUR3D;
     static VORSCHAU = ['vorschau2d', 'vorschau3d'];
+
+    /**
+     * Alle Knoepfe, die waehrend eines Laufs grau sind — EINE Liste.
+     *
+     * `gc-kombi-bauen` gehoert dazu (09.09.2026): Der gemeinsame Lauf
+     * benutzt dieselbe `Laufwache`, und ein Knopf, der klickbar aussieht,
+     * verspricht etwas, das erst die Wache abweist.
+     */
+    static KNOEPFE = ['gc-vorschau-2d', 'gc-vorschau-3d', 'gc-bauen-2d',
+                      'gc-bauen-3d', 'gc-bauen-beides', 'gc-kombi-bauen'];
 
     static async bauen(reiter, modus = 'komplett') {
         const meldung = document.getElementById('gc-meldung');
@@ -84,9 +81,7 @@ export class GarmentcodeAblauf {
                                                                vorlage);
             return;
         }
-        const knoepfe = ['gc-vorschau-2d', 'gc-vorschau-3d',
-                         'gc-bauen-2d', 'gc-bauen-3d',
-                         'gc-bauen-beides']
+        const knoepfe = GarmentcodeAblauf.KNOEPFE
             .map(k => document.getElementById(k)).filter(Boolean);
 
         // Der Lauf wird SOFORT abgesichert: Zwischen dem Setzen von

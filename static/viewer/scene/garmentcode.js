@@ -20,6 +20,7 @@ import { GarmentcodeMasse } from './garmentcode_masse.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
 import { GarmentcodeLive } from './garmentcode_live.js';
 import { GarmentcodeMaterial } from './garmentcode_material.js';
+import { garmentcodeKombi } from './garmentcode_kombi.js';
 
 class GarmentcodeReiter {
     constructor() {
@@ -91,6 +92,11 @@ class GarmentcodeReiter {
         // hinge es an der Bedienung und wäre nicht für sich prüfbar.
         GarmentcodeMaterial.figurgeber = () => this.figur();
         GarmentcodeMaterial.einhaengen();
+
+        // Mehrere Stuecke in EINEM Lauf (09.09.2026). Die Liste haengt
+        // sich selbst ein und stellt her, was zuletzt darin stand; ohne
+        // Knoepfe im DOM kehrt sie von selbst um.
+        garmentcodeKombi.einhaengen(this);
 
         // Vorlagen und Regler brauchen keine Figur — sofort holen, damit im
         // Reiter etwas steht, bevor jemand ihn anklickt.

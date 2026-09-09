@@ -61,6 +61,43 @@ export class GarmentcodeDrapierung {
     /** Das gerechnete Netz an die Figur hängen und Bilanz ziehen. */
     static async anziehen(figur, netz, meldung, stueck) {
         garmentcodeFortschritt.laeuft('rig');
+        let getragen = null;
+        try {
+            getragen = await GarmentcodeDrapierung.einhaengen(figur, netz,
+                                                             stueck);
+        } catch (fehler) {
+            garmentcodeFortschritt.gescheitert('rig',
+                String(fehler.message || fehler));
+            meldung.textContent = `Drapiert, aber nicht angezogen: `
+                + `${fehler.message || fehler}`;
+            return;
+        }
+        garmentcodeFortschritt.fertig('rig', getragen
+            ? (getragen.angezogen
+                ? `${getragen.zugeordnet} Knochen zugeordnet`
+                : 'sichtbar, ohne Skinning')
+            : 'nicht eingehängt');
+        // Kurz sichtbar, ausführlich im Tooltip (Edgar, 08.09.2026: „mach
+        // die vielen Texte aus dem Garment Code weg"). Die Zahlen sind die
+        // Probe darauf, dass etwas anliegt — sie verschwinden nicht, sie
+        // stehen nur nicht mehr im Weg.
+        meldung.textContent = GarmentcodeBilanz.kurzbilanz(netz, getragen);
+        meldung.title = GarmentcodeBilanz.bilanz(netz, getragen);
+    }
+
+    /**
+     * Ein fertiges Stück an die Figur hängen — der Teil ohne Anzeige.
+     *
+     * HERAUSGELÖST AM 09.09.2026 für den gemeinsamen Lauf: Der bringt
+     * mehrere Stücke aus EINER Simulation mit und hängt sie in einer
+     * Schleife ein. Mit dem Fortschritt und der Meldung darin würde jedes
+     * Stück die Zeile des vorigen überschreiben, und der Schritt „Anziehen"
+     * ginge mehrfach auf und zu.
+     *
+     * Wirft bei einem Fehler weiter — der Aufrufer entscheidet, ob das den
+     * ganzen Lauf beendet.
+     */
+    static async einhaengen(figur, netz, stueck) {
         // ERST DAS SKELETT (Edgar, 08.09.2026: „warum denn der hinweistext:
         // Figur hat kein Skelett?? die hat doch skelett").
         //
@@ -77,16 +114,8 @@ export class GarmentcodeDrapierung {
         if (inst && !inst.isSkinned) fn.convertInstToSkinned?.(inst);
         let getragen = null;
         if (netz.rig_url) {
-            try {
-                getragen = await GarmentcodeAnziehen.anziehen(
-                    figur.inst, netz.rig_url, stueck);
-            } catch (fehler) {
-                garmentcodeFortschritt.gescheitert('rig',
-                    String(fehler.message || fehler));
-                meldung.textContent = `Drapiert, aber nicht angezogen: `
-                    + `${fehler.message || fehler}`;
-                return;
-            }
+            getragen = await GarmentcodeAnziehen.anziehen(
+                figur.inst, netz.rig_url, stueck);
         }
         // Ab jetzt folgt das Stueck den Reglern, ohne neue Simulation
         // (Edgar, 08.09.2026: „mach mir auch einen 3D Vorschau der schnell
@@ -105,17 +134,7 @@ export class GarmentcodeDrapierung {
         // gleich was gerade ausgewaehlt ist.
         GarmentcodeMaterial.anwenden(figur, false);
         GarmentcodeDrapierung.vorschauBinden(figur, netz, stueck);
-        garmentcodeFortschritt.fertig('rig', getragen
-            ? (getragen.angezogen
-                ? `${getragen.zugeordnet} Knochen zugeordnet`
-                : 'sichtbar, ohne Skinning')
-            : 'nicht eingehängt');
-        // Kurz sichtbar, ausführlich im Tooltip (Edgar, 08.09.2026: „mach
-        // die vielen Texte aus dem Garment Code weg"). Die Zahlen sind die
-        // Probe darauf, dass etwas anliegt — sie verschwinden nicht, sie
-        // stehen nur nicht mehr im Weg.
-        meldung.textContent = GarmentcodeBilanz.kurzbilanz(netz, getragen);
-        meldung.title = GarmentcodeBilanz.bilanz(netz, getragen);
+        return getragen;
     }
 
     /**

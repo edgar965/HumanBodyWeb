@@ -88,6 +88,18 @@
     border-color: var(--accent);
 }
 
+/* Vorbild-Knoepfe: Bild und Name linksbuendig (Edgar, 09.09.2026 - „mach die
+   Icons linksbuendig"). Ein `<button>` zentriert seinen Inhalt von Haus aus;
+   bei gleich grossen Vorschaubildern wandert der Name dadurch je nach Laenge
+   nach links oder rechts, und die Bilder stehen auf keiner gemeinsamen Kante.
+   Den Abstand zum Text bringt `.kleidungsbild` (margin-right) schon mit -
+   ein `gap` daneben ergaebe 12 px statt 6. */
+.btn-toggle.vorbild-knopf {
+    display: flex;
+    align-items: center;
+    text-align: left;
+}
+
 /* 3x */
 .hb-margin-top-6px.hb-margin-top-6px.hb-margin-top-6px { margin-top:6px; }
 

@@ -33,6 +33,12 @@ export class Assetsbedienung {
 
         document.getElementById('garment-create')
             ?.addEventListener('click', () => _doGarmentFit());
+        // Der Vergleichsknopf (09.09.2026): dasselbe Stueck, aber ueber UMAs
+        // Konformer statt ueber `fit_garment`. Er steht da, damit man die
+        // beiden Wege am selben Stueck sehen kann - welcher besser sitzt,
+        // haengt gemessen vom Stueck ab (siehe _wegwerf/konformer_vergleich.py).
+        document.getElementById('garment-create-konformer')
+            ?.addEventListener('click', () => _doGarmentFit('uma_conformer'));
         await this.teile.katalogLaden();
         return this;
     }

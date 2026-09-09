@@ -30,6 +30,12 @@ class Kleidungsregler:
     #: `rig_hull` legt das Stueck um eine Huelle statt um den Koerper.
     HUELLE = 'rig_hull'
 
+    #: `uma_conformer` legt es mit UMAs Konformer an - derselbe Weg, den der
+    #: GarmentCode-Reiter fuer seine Schnittteile nimmt (09.09.2026, Frage
+    #: Edgar „ob du die Logik von «Garment Code» anwenden kannst fuer das
+    #: Fitten"). Siehe `dienste/konformeranpassung.py`.
+    KONFORMER = 'uma_conformer'
+
     def __init__(self, abstand, steifigkeit, farbe, verfahren='',
                  mindestabstand_mm=None, schrittboden_mm=None,
                  anheben_mm=None, schritttiefe_mm=None):
@@ -83,6 +89,10 @@ class Kleidungsregler:
     @property
     def um_huelle(self):
         return self.verfahren == self.HUELLE
+
+    @property
+    def mit_konformer(self):
+        return self.verfahren == self.KONFORMER
 
     def als_argumente(self, koordinatensystem):
         """Die Schlüsselwortargumente fuer `GarmentFitter.fit_garment`."""

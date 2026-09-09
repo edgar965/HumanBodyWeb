@@ -25,6 +25,7 @@ import numpy as np
 
 from ..daten.anpassungsergebnis import Anpassungsergebnis
 from .koerperhuelle import Koerperhuelle
+from .konformeranpassung import Konformeranpassung
 
 logger = logging.getLogger('core')
 
@@ -51,6 +52,21 @@ class Kleidungsanpassung:
         """Vertices/Faces/Normalen der angepassten Kleidung, oder None."""
         from GarmentFitter import fit_garment
 
+        if regler.mit_konformer:
+            # DER DRITTE WEG (09.09.2026): derselbe Konformer, mit dem der
+            # GarmentCode-Reiter seine Schnittteile anlegt. Scheitert er,
+            # bleibt es dabei - ein stiller Rückfall auf `fit_garment` würde
+            # den Vergleich wertlos machen, um dessentwillen es ihn gibt.
+            gelegt, grund = Konformeranpassung.legen(
+                self._vorlage_im_koerperraum(), self.vorlage.faces,
+                self.koerper.vertices, self.koerper.faces,
+                zusatzabstand_m=regler.abstand)
+            if gelegt is None:
+                logger.warning('Konformer-Anpassung gescheitert: %s', grund)
+                return None
+            gelegt['color'] = regler.farbe
+            self.ergebnis = Anpassungsergebnis.aus_dict(gelegt)
+            return self.ergebnis
         if regler.um_huelle:
             huelle = (huelle_vertices if huelle_vertices is not None
                       else Koerperhuelle.glatt(self.koerper.vertices,
@@ -67,6 +83,31 @@ class Kleidungsanpassung:
                 **regler.als_argumente(self.koordinatensystem))
         self.ergebnis = Anpassungsergebnis.aus_dict(roh)
         return self.ergebnis
+
+    def _vorlage_im_koerperraum(self):
+        """Die Vorlagenpunkte in der Lage des Koerpers (Meter, Z oben).
+
+        OHNE DIESEN SCHRITT FINDET DER KONFORMER NICHTS (gemessen 09.09.2026):
+        Die Bibliotheksstuecke liegen als `makehuman-assets` in Dezimetern mit
+        Y oben, der Koerper in Metern mit Z oben —
+
+            Koerper   min [-0,74  -0,23  -0,00]   max [0,74  0,10  1,68]
+            Vorlage   min [-5,69   1,21   0,22]   max [5,69  4,11  3,78]
+
+        — und die Bindung meldete folgerichtig „Nur 0 von 2.268 Stoffpunkten
+        fanden Koerperflaeche". `fit_garment` rechnet das intern selbst um
+        (Argument `coordinate_system`); der Konformer erwartet beide Netze
+        fertig im selben Raum.
+        """
+        from GarmentFitter.fitter.koordinaten import Quellsystem
+
+        punkte = np.asarray(self.vorlage.vertices, dtype=np.float64)
+        system = self.koordinatensystem
+        if system == 'auto':
+            system = Quellsystem.erkennen(punkte)
+        if system == 'blender':
+            return punkte
+        return Quellsystem.nach_blender(punkte, system)
 
     # ------------------------------------------------------------------ Antwort
 

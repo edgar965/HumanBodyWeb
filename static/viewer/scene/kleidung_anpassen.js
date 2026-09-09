@@ -99,14 +99,19 @@ export function _syncGarmentSliders() {
  * `inst.garments` (fuer das Speichern der Szene) und stellt die Auswahl des
  * Teilnetzes wieder her, wenn genau dieses Stueck gewaehlt war.
  */
-export async function _doGarmentFit() {
+export async function _doGarmentFit(modus = '') {
     const kennung = state._selectedGarmentId;
     if (!kennung) return null;
     const vorherGewaehlt = state._selectedSubMesh?.key;
+    // `modus` geht als `fit_mode` an den Server (siehe Kleideranpassung.
+    // serverfrage). Leer = der gewohnte Weg ueber `fit_garment`;
+    // `uma_conformer` legt das Stueck mit UMAs Konformer an - derselbe,
+    // den der GarmentCode-Reiter fuer seine Schnittteile nimmt.
     return new Kleideranpassung({
         vorsilbe: 'garment',
         schluessel: 'gar_',
         kennung,
+        modus,
         danach: (figur, schluessel, zustand, netz) => {
             figur.garments = figur.garments.filter(g => g.id !== kennung);
             figur.garments.push({ id: kennung, ...zustand.zuJson() });

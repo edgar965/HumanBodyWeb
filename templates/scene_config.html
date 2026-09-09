@@ -1133,8 +1133,13 @@
                 <div class="panel-section" data-panel-key="garment_fit">
                     <h3>Garment Fit <span class="chevron">&#9660;</span></h3>
                     <div class="panel-body" id="garment-panel">
-                        {% include "_kleiderpassung.html" with offset_max="15" %}
-                        {% include "_kleiderregionen.html" %}
+                        {% comment %}DIE KNOPFZEILE STEHT OBEN (Edgar, 09.09.2026:
+                        „verschiebe den «Erzeuge» Bereich nach oben"). Dieselbe
+                        Begründung wie beim MakeHuman-Panel darüber: Das Erzeugen
+                        ist die eine Frage dieses Bereichs, die Regler darunter
+                        sind der Feinschliff. Vorher lag der Knopf hinter
+                        Passung und Regionen — zwei Blöcken, die man erst
+                        vorbeiscrollen musste.{% endcomment %}
                         <div class="hb-display-flex">
                             <button id="garment-create" class="btn-toggle hb-dehnt"><i
                                  class="fas fa-tshirt"></i> Erzeuge</button>
@@ -1143,6 +1148,32 @@
                             <button id="garment-remove-all" class="btn-toggle hb-fest"
                                  title="Alle Garments entfernen"><i class="fas fa-trash"></i></button>
                         </div>
+                        {% comment %}DER ZWEITE WEG ZUM VERGLEICHEN (Edgar,
+                        09.09.2026: „Überlege, ob du die Logik von «Garment
+                        Code» anwenden kannst für das Fitten … damit man das
+                        testen kann"). Er legt dasselbe Stück mit UMAs
+                        Konformer an — dem, mit dem der GarmentCode-Reiter
+                        seine Schnittteile anlegt.
+
+                        ER IST KEIN ERSATZ, und das ist gemessen (38 Stücke,
+                        `_wegwerf/konformer_vergleich.py`, Anteil Punkte IM
+                        Körper):
+
+                            fit_garment   Median 0,30 %   schlechtestes 6,0 %
+                                          über 2 %: 5 von 38
+                            Konformer     Median 0,00 %   schlechtestes 67,5 %
+                                          über 2 %: 16 von 38
+
+                        Er trifft also öfter perfekt und geht öfter daneben.
+                        Deshalb steht er als zweiter Knopf daneben, nicht
+                        anstelle des ersten.{% endcomment %}
+                        <div class="hb-display-flex">
+                            <button id="garment-create-konformer" class="btn-toggle hb-dehnt"
+                                 title="Dasselbe Stück mit UMAs Konformer anlegen (der Weg des GarmentCode-Reiters). Gemessen an 38 Stücken: öfter ganz ohne Durchstich, aber auch öfter deutlich daneben — zum Vergleichen gedacht."><i
+                                 class="fas fa-vials"></i> Mit Konformer (Test)</button>
+                        </div>
+                                                {% include "_kleiderpassung.html" with offset_max="15" %}
+                        {% include "_kleiderregionen.html" %}
                     </div>
                 </div>
 

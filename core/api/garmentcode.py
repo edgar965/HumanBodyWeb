@@ -53,18 +53,23 @@ class Garmentcode:
     @require_POST
     def drapieren(request):
         """Aus einem erzeugten Schnittmuster ein 3D-Netz rechnen."""
+        from GarmentCode.baufeineinstellung import Baufeineinstellung
         from GarmentCode.drapierung import DrapierFehler
         spez = request.POST.get('spezifikation') or ''
         if not spez:
             return JsonResponse({'fehler': 'Kein Schnittmuster angegeben'},
                                 status=400)
+        # Die beiden Regler unter „Bauen" (Edgar, 09.09.2026). Sie gehoeren
+        # nur hierher, nicht in `aus_anfrage` — das Erzeugen eines Schnitts
+        # kennt weder Haut noch Simulation.
+        fein = Baufeineinstellung.aus_anfrage(request.POST)
         try:
-            anfrage = Garmentcode._anfrage(request)
+            anfrage = Garmentcode.aus_anfrage(request)
             ergebnis = GarmentcodeDienst.drapieren(
                 spez, koerper=anfrage['koerper'],
                 geschlecht=anfrage['geschlecht'], morphs=anfrage['morphs'],
                 bauart=anfrage['bauart'], smpl=anfrage['smpl'],
-                meta=anfrage['meta'])
+                meta=anfrage['meta'], fein=fein)
         except DrapierFehler as fehler:
             logger.warning('Drapierung gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)
@@ -81,6 +86,9 @@ class Garmentcode:
         # die Antwort — die eine Zahl, die zaehlt, schon.
         korrektur = ergebnis.pop('korrektur', None) or {}
         ergebnis['aus_der_haut'] = korrektur.get('eingesunken', 0)
+        # Womit gebaut wurde, gehoert in die Antwort: Sonst laesst sich ein
+        # Ergebnis spaeter nicht mehr einer Reglerstellung zuordnen.
+        ergebnis['feineinstellung'] = fein.als_dict()
         ordner = os.path.basename(ergebnis.get('ordner') or '')
         datei = ergebnis.get('rig_datei')
         if ordner and datei:
@@ -115,7 +123,7 @@ class Garmentcode:
     @require_POST
     def masse(request):
         """Die Masse der gewaehlten Figur — mit ihren Reglerwerten."""
-        anfrage = Garmentcode._anfrage(request)
+        anfrage = Garmentcode.aus_anfrage(request)
         werte, herkunft = GarmentcodeDienst.masse(
             anfrage['geschlecht'], morphs=anfrage['morphs'],
             bauart=anfrage['bauart'], koerper=anfrage['koerper'],
@@ -129,7 +137,7 @@ class Garmentcode:
         })
 
     @staticmethod
-    def _anfrage(request):
+    def aus_anfrage(request):
         """Geschlecht, Bauart und Morphs aus dem Rumpf der Anfrage.
 
         Die Morphs kommen als JSON, weil es Dutzende sind und sie sonst
@@ -172,7 +180,7 @@ class Garmentcode:
     def erzeugen(request):
         """Einen Schnitt bauen. Antwort nennt Ordner und Vorschaubild."""
         from GarmentCode.entwurf import EntwurfFehler
-        anfrage = Garmentcode._anfrage(request)
+        anfrage = Garmentcode.aus_anfrage(request)
         try:
             ergebnis = GarmentcodeDienst.erzeugen(
                 anfrage['vorlage'], geschlecht=anfrage['geschlecht'],

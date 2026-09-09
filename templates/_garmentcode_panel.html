@@ -88,6 +88,30 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
                             title="Schnitt, Drapierung und Anziehen in einem Zug &mdash; das echte Ergebnis"><i
                          class="fas fa-cut"></i> 2D + 3D</button>
                 </div>
+                {% comment %}Zwei Stellschrauben des Bauens, bis zum
+                09.09.2026 Konstanten im Code (Edgar: „die 3 mm Mindestabstand
+                oder mehr sollen einstellbar sein, unter «Bauen» mach einen
+                Regler dafuer" und „mach den Slider auch gleich unter dem
+                «Bauen» Bereich").
+
+                HAUTABSTAND: `Stoffkorrektur.ABSTAND_MM` schiebt nach der
+                Simulation jeden Stoffpunkt so weit vor die Haut. 6,0 mm
+                stammen vom 08.09.2026 (Befund „haut geht durch die hose
+                hindurch") und sind der Grund, warum ein T-Shirt an der
+                Brustspitze 6,5 mm absteht &mdash; gemessen 09.09.2026.
+
+                AUFLOESUNG: `resolution_scale` bestimmt, wie fein das
+                Stoffnetz vernaeht wird. Feiner heisst mehr Falten und
+                weniger Durchstich (bei 1,0 ist das Netz am Oberschenkel
+                rund 1 cm grob), kostet aber Rechenzeit.
+
+                Beide stehen auf den bisherigen Werten: Wer sie nicht
+                anfasst, baut wie vorher.{% endcomment %}
+                <div class="hb-abstand-oben"
+                     title="Zwei Stellschrauben der Drapierung. Sie wirken beim naechsten Bau mit 3D, nicht auf ein fertiges Stueck.">
+                    {% regler "gc-hautabstand" "Abstand zur Haut" min="0" max="15" wert="6" schritt="0.5" anzeige="6,0 mm" %}
+                    {% regler "gc-aufloesung" "Netzfeinheit" min="0.5" max="3" wert="1" schritt="0.1" anzeige="1,0&times;" %}
+                </div>
                 {% comment %}Warum die Vorschauzeile (Edgar, 08.09.2026:
                 „vielleicht zweistufig - erst der schnelle MakeHuman nachbau,
                 dann das «echte» genaue Bauen?"): Nach einer Drapierung folgt
@@ -115,6 +139,42 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
             </div>
         </div>
 
+{% comment %}MEHRERE STUECKE IN EINEM LAUF (Edgar, 09.09.2026:
+        „GarmentCode soll simulieren und die anderen kennen", dann „mach
+        das gleichzeitige Anziehen mehrere Stuecke, dann brauche ich aber
+        auch ein UI dafuer").
+
+        Zwei getrennt drapierte Stuecke wissen nichts voneinander: Der
+        Stoff-gegen-Stoff-Kontakt des Upstream gilt innerhalb EINES
+        simulierten Netzes. Im Bild stand der Hosenbund durch das T-Shirt
+        hindurch. Gemessen im Ueberlappungsband, radial um die
+        Koerperachse: getrennt liegt die Hose in 23,8 % der Faecher weiter
+        aussen als das T-Shirt (bis 32,5 mm), gemeinsam in 0,2 % (bis
+        3,2 mm).
+
+        WARUM EINE LISTE UND KEINE MEHRFACHAUSWAHL: Der Reiter zeigt die
+        Feineinstellungen von genau EINEM Stueck (beim T-Shirt 71 Regler).
+        Also erst einstellen, dann uebernehmen, dann das naechste.{% endcomment %}
+        <div class="panel-section" data-panel-key="gc_kombi">
+            <h3 title="Mehrere Stücke in EINER Simulation — nur so verdrängen sie sich gegenseitig, statt sich zu durchdringen. Getrennt gebaut steht der Hosenbund durch das T-Shirt.">Mehrere St&uuml;cke gemeinsam <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body">
+                <div class="hb-display-flex">
+                    <button id="gc-kombi-hinzu" class="btn-toggle hb-dehnt"
+                            title="Das oben gewählte Kleidungsstück mit seinen jetzigen Feineinstellungen in die Kombination nehmen. Spätere Reglerzüge ändern den Eintrag nicht mehr."><i
+                         class="fas fa-plus"></i> St&uuml;ck &uuml;bernehmen</button>
+                    <button id="gc-kombi-leeren" class="btn-toggle hb-fest"
+                            title="Die Kombination leeren"><i
+                         class="fas fa-trash"></i></button>
+                </div>
+                <div id="gc-kombi-liste" class="anim-tree hb-max-height-300px"></div>
+                <div class="hb-display-flex">
+                    <button id="gc-kombi-bauen" class="btn-toggle hb-dehnt"
+                            title="Alle Stücke der Liste bauen und in EINER Simulation gemeinsam auf die Figur legen. Dauert rund eine Minute je Stück."><i
+                         class="fas fa-layer-group"></i> Gemeinsam anziehen</button>
+                </div>
+            </div>
+        </div>
+
 {% comment %}Voreinstellungen fuer die Passform (Edgar, 08.09.2026:
         „Mach mir die Voreinstellungen fuer die Kleider, oben im Tab, nach
         dem Farben bereich, mit Voreinstellungen fuer eng anliegend, und 2
@@ -132,6 +192,30 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
                      title="Fertige Kombinationen. Ein Häkchen stellt mehrere Regler; Abhaken nimmt sie zurück. Was jedes Preset bewirkt, steht beim Überfahren seines Namens.">
                     <div class="hb-hinweis">Wird beim &Ouml;ffnen geladen&hellip;</div>
                 </div>
+                {% comment %}NACH VORBILD AUS DER KLEIDERBIBLIOTHEK
+                (Edgar, 09.09.2026: „Mach doch stattdessen neue buttons unter
+                den Checkboxen mit «Eng anliegend», «weit fallend» mit den
+                Namen der Garment Fit items. Bei Klick darauf werden die
+                eingestellt und später gebaut?").
+
+                Ein Bibliotheksstück IST ein Satz Reglerwerte mit einem Namen
+                — genau das, was ein Preset ist. „Eng anliegend" setzt vier
+                Regler, „Dress Camisole Full Skirt" sieben. Deshalb steht es
+                hier und nicht in einem eigenen Bereich: dieselbe Frage, also
+                derselbe Ort.
+
+                Gemessen (`werkzeug/vorbilder_messen.py`, 09.09.2026): 121 von
+                181 Bibliotheksstücken lassen sich deuten, verteilt auf sieben
+                Kleidungsstücke — 29 T-Shirts, 24 Hosen, 21 Bleistiftröcke,
+                20 Jumpsuits, 17 Kleider, 7 Sommerkleider, 3 Kreisröcke. Die
+                übrigen 60 kann der Schnittkatalog nicht: 40 Schuhe und
+                Strümpfe, 16 Handschuhe und Ärmlinge, 4 Kapuzen.
+
+                Sie erscheinen nur beim passenden Kleidungsstück — ein als
+                Kreisrock gedeutetes Vorbild unter „Hose" setzte Regler, die
+                es dort nicht gibt.{% endcomment %}
+                <div id="gc-vorbilder" class="hb-abstand-oben"
+                     title="Bibliotheksstücke als Vorlage: Ein Klick stellt die Regler auf die gemessenen Maße dieses Stücks. Gebaut wird danach wie immer mit „Bauen 2D + 3D&quot;. Übernommen wird die Silhouette — Länge, Weite, Ärmel —, nicht Muster und Rüschen."></div>
             </div>
         </div>
 
