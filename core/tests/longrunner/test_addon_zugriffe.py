@@ -40,8 +40,8 @@ BDD - GEGEBEN / DANN
 import ast
 import unittest
 
-from ._methodenzugriffe import Methodenzugriffe
-from ._projektquellen import Projektquellen
+from ..unit._methodenzugriffe import Methodenzugriffe
+from ..unit._projektquellen import Projektquellen
 
 #: Die Wurzel, unter der die vier Repos liegen.
 #: Wurzel, Baeume und Ausschluesse stehen in `Projektquellen`.

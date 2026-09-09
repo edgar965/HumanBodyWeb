@@ -1,4 +1,4 @@
-import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Fristabruf } from '../gemeinsam/fristabruf.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 import { Stoffvorschau } from './stoffvorschau.js';
@@ -33,7 +33,10 @@ export class GarmentcodeDrapierung {
         const daten = reiter.figurdaten(figur);
         daten.append('spezifikation', spezifikation);
         try {
-            const netz = await Serverabruf.formular(
+            // MIT FRIST (09.09.2026): Eine Drapierung, deren Antwort nie
+            // kommt, liess den Reiter besetzt und alle Knoepfe grau —
+            // Begruendung und Logauszug in `gemeinsam/fristabruf.js`.
+            const netz = await Fristabruf.formular(
                 '/api/garmentcode/drapieren/', daten);
             if (netz.fehler) {
                 garmentcodeFortschritt.entfallen('rig');

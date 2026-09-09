@@ -55,6 +55,23 @@ class GcAblageTest(SimpleTestCase):
             self.assertIn('[GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(',
                           quelle, '%s speichert keine GarmentCode-Stuecke' % name)
 
+    def test_beide_zweige_der_humanbody_figur_schreiben_die_liste(self):
+        u"""`CharacterInstance.toJSON` hat ZWEI Rueckgaben.
+
+        Eine erzeugte Figur (`generatedConfig`) kehrt frueher zurueck. Der
+        Zweig fuehrte das Feld bis zum 09.09.2026 nicht — wer eine
+        generierte Figur in eine Szene speicherte, fand sie beim Laden
+        nackt wieder. Aufgefallen ist es nur beim Nachlesen: Der Fall
+        `test_jede_figurart_schreibt_die_liste` oben genuegt sich mit EINEM
+        Vorkommen je Datei, und das zweite stand ja da.
+        """
+        quelle = _quelle('scene/character.js')
+        rumpf = quelle.split('    toJSON() {')[1]
+        rumpf = rumpf.split('    static ')[0]
+        self.assertEqual(rumpf.count('[GarmentcodeAblage.FELD]'), 2,
+                         u'Ein Rueckgabezweig von toJSON fuehrt die Liste '
+                         u'nicht.')
+
     def test_jede_figurart_laedt_die_liste(self):
         u"""Speichern ohne Laden ist der haeufigere halbe Umbau."""
         for name, pfad in ARTEN.items():
@@ -88,6 +105,39 @@ class GcAblageTest(SimpleTestCase):
             self.assertGreater(laden, aufbau,
                                '%s zieht an, bevor die Figur steht' % name)
 
+    def test_jeder_ladeweg_geht_ueber_die_gemeinsame_kette(self):
+        u"""Drei Wege bauen eine Figur aus Modelldaten — einer zog an.
+
+        BEFUND (Edgar, 09.09.2026): „Ueber Datei - Modell Importieren
+        funktioniert das Modell ‘Female GarmentCode’ nicht, keine Kleider.
+        ueber den + Button im UI funktioniert das."
+
+        `addCharacterFromPreset` (der „+"-Knopf) hatte
+        `GarmentcodeAblage.laden`; „Datei -> Laden..." mit einer
+        Modelldatei und „Datei -> Modell importieren..." bauten die Figur
+        selbst zusammen — ohne die Stuecke und noch mit dem festen
+        Abstand von 0,8 m, den `Figurplatzierung` am 06.09.2026 ersetzt
+        hat. Seither gibt es `charakterAusModelldaten` als einzigen Weg.
+        """
+        dialoge = _quelle('scene/szene_dialoge.js')
+        self.assertEqual(dialoge.count('charakterAusModelldaten'), 2,
+                         u'Beide Dateiwege muessen die gemeinsame Kette '
+                         u'rufen.')
+        # Und keiner darf sich seine Figur weiter selbst zusammenbauen.
+        self.assertNotIn('new fn.CharacterInstance(', dialoge,
+                         u'Ein eigener Aufbau umgeht die Kette — genau so '
+                         u'sind die Kleider verloren gegangen.')
+
+    def test_die_gemeinsame_kette_zieht_die_stuecke_an(self):
+        quelle = _quelle('scene/charakterliste.js')
+        rumpf = quelle.split('export async function charakterAusModelldaten')[1]
+        rumpf = rumpf.split('export async function')[0]
+        for erwartet in ('await inst.load()', 'Figurplatzierung.anwenden(',
+                         'GarmentcodeAblage.laden('):
+            self.assertIn(erwartet, rumpf, erwartet)
+        # Die Reihenfolge ist der Grund, warum es eine Kette ist.
+        self.assertLess(rumpf.index('await inst.load()'),
+                        rumpf.index('GarmentcodeAblage.laden('))
     def test_geloeschtes_stueck_kommt_nicht_zurueck(self):
         u"""Der Loeschzweig muss die Ablage mitnehmen.
 

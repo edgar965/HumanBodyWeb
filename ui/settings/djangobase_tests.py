@@ -54,12 +54,22 @@ TEST_BEFEHLE = [
     # Elf Module, 2 % der Dateien — und zwei Drittel der Wartezeit.
     # „Unit" und „Component" liefen zusammen 266 s, jetzt 98 s.
     #
+    # ZWEITER DURCHGANG (09.09.2026, Edgar: „alles was mehr als 1 s dauert
+    # soll in die Longrunner hinein, das dauert mir alles zu lange"). Die
+    # Schwelle liegt seither bei 1 Sekunde je Modul; gemessen mit
+    # `manage.py test --durations 3000`, je Modul aufsummiert. Neunzehn
+    # weitere Module sind umgezogen, und die beiden Arten „Grundabsicherung"
+    # (31,8 s in 6 Fällen) und „Ladezeiten" (26,5 s in 2 Fällen) bekamen
+    # denselben Wächter — verschieben ließen sie sich nicht, ihre Klassen
+    # kommen aus djangoBase (`core/tests/nurgemeint.py`). Der Sammellauf
+    # ging damit von 113 s auf 19,9 s.
+    #
     # SIE LAUFEN NICHT MEHR BEI JEDEM SAMMELLAUF. Das Paket entscheidet
     # das selbst (`core/tests/longrunner/__init__.py`, `load_tests`):
     # Ohne „longrunner" im Aufruf und ohne `LONGRUNNER=1` kommt eine
     # leere Suite. Dieser Eintrag hier nennt das Ziel und fährt sie
     # deshalb. Geprüft in `test_longrunner_auswahl`.
-    {'slug': 'longrunner', 'name': 'Longrunner (über 5 s je Modul)',
+    {'slug': 'longrunner', 'name': 'Longrunner (über 1 s je Modul)',
      'gruppe': 'Langsam',
      'cmd': [PYTHON14, 'manage.py', 'test', 'core.tests.longrunner',
              '-v', '2']},
@@ -85,9 +95,11 @@ TEST_BEFEHLE = [
 ]
 # Die 127 Oberflächenfälle liefen bis zum 17.08.2026 über einen eigenen
 # Läufer (eigene API, eigene Seite). Sie sind jetzt reguläre Django-Tests
-# der Art „ui" (`core/tests/ui/test_oberflaeche.py` macht aus jeder
-# Kategorie eine TestCase-Klasse) und laufen damit über den `ui`-Eintrag
-# oben mit — samt Laufzeit-Historie und Deckungsprüfung von djangoBase.
+# der Art „ui" (der Adapter macht aus jeder Kategorie eine
+# TestCase-Klasse) — samt Laufzeit-Historie und Deckungsprüfung von
+# djangoBase. Seit dem 09.09.2026 liegt er als
+# `core/tests/longrunner/test_oberflaeche.py` bei den langsamen Modulen
+# (3,94 s); über den `ui`-Eintrag läuft noch `test_seiten`.
 # Die Testfälle, die djangoBase selbst mitbringt (Grundtests, Endpunktprobe,
 # Leistungstests), stehen hier MIT in der Liste: Sie laufen in diesem Projekt
 # wirklich mit (`core/tests/automated/test_grund.py` und
@@ -114,7 +126,7 @@ TEST_BEREICHE = [
          'core.tests.unit.test_skeleton_struktur',
          'core.tests.unit.test_js_hautgewichte',
          'core.tests.component.test_testcharakter_wechsel',
-         'core.tests.ui.test_oberflaeche.CharacterApiTests',
+         'core.tests.longrunner.test_oberflaeche.CharacterApiTests',
          'core.tests.longrunner.test_netzkette']},
     {'slug': 'kleidung', 'name': 'Kleidung & Stoff',
      'beschreibung': 'Bibliothek, Anpassung, Schnittmuster, Cloth-Export',
@@ -128,17 +140,17 @@ TEST_BEREICHE = [
          'core.tests.component.test_kleider_download',
          'core.tests.component.test_kleider_endpunkt',
          'core.tests.component.test_stoffantwort_typen',
-         'core.tests.ui.test_oberflaeche.ClothExportTests',
-         'core.tests.ui.test_oberflaeche.ClothSzeneTests',
-         'core.tests.ui.test_oberflaeche.ClothEngineTests',
-         'core.tests.ui.test_oberflaeche.ClothLichtTests',
+         'core.tests.longrunner.test_oberflaeche.ClothExportTests',
+         'core.tests.longrunner.test_oberflaeche.ClothSzeneTests',
+         'core.tests.longrunner.test_oberflaeche.ClothEngineTests',
+         'core.tests.longrunner.test_oberflaeche.ClothLichtTests',
          # Fehlte seit der Aufteilung vom 30.08.2026 — die Backe-Faelle
          # liefen, standen aber in keiner Gruppe der Oberflaeche.
-         'core.tests.ui.test_oberflaeche.ClothBackeTests']},
+         'core.tests.longrunner.test_oberflaeche.ClothBackeTests']},
     {'slug': 'pipeline', 'name': 'Video → BVH',
      'beschreibung': 'MocapNET, GVHMR, Fortschritt, Prozesse, Aufräumen',
      'praefixe': [
-         'core.tests.unit.test_hybridlauf', 'core.tests.unit.test_v4lauf',
+         'core.tests.unit.test_hybridlauf', 'core.tests.longrunner.test_v4lauf',
          'core.tests.unit.test_smplbefehl',
          'core.tests.unit.test_logbeobachter',
          'core.tests.unit.test_startaufraeumen',
@@ -163,20 +175,20 @@ TEST_BEREICHE = [
          'core.tests.component.test_bvhbibliothek',
          'core.tests.component.test_bibliothek_aktionen',
          'core.tests.component.test_bvh_bearbeitung_pfade',
-         'core.tests.ui.test_oberflaeche.RetargetTests']},
+         'core.tests.longrunner.test_oberflaeche.RetargetTests']},
     {'slug': 'studio', 'name': 'Studio & Szene',
      'beschreibung': 'Zeitleiste, Kamera, Licht, Projekt-Roundtrip, Objekte',
      'praefixe': [
          'core.tests.unit.test_js_schluesselpaar',
-         'core.tests.ui.test_oberflaeche.TheatreTests',
-         'core.tests.ui.test_oberflaeche.FloorTests',
-         'core.tests.ui.test_oberflaeche.SceneObjectTests',
-         'core.tests.ui.test_oberflaeche.BundleUploadTests',
-         'core.tests.ui.test_oberflaeche.BundleMtlTests',
-         'core.tests.ui.test_oberflaeche.ProjektLichtTests',
-         'core.tests.ui.test_oberflaeche.ProjektSzeneTests',
-         'core.tests.ui.test_oberflaeche.KameraKeyframeTests',
-         'core.tests.ui.test_oberflaeche.KameraSlerpTests']},
+         'core.tests.longrunner.test_oberflaeche.TheatreTests',
+         'core.tests.longrunner.test_oberflaeche.FloorTests',
+         'core.tests.longrunner.test_oberflaeche.SceneObjectTests',
+         'core.tests.longrunner.test_oberflaeche.BundleUploadTests',
+         'core.tests.longrunner.test_oberflaeche.BundleMtlTests',
+         'core.tests.longrunner.test_oberflaeche.ProjektLichtTests',
+         'core.tests.longrunner.test_oberflaeche.ProjektSzeneTests',
+         'core.tests.longrunner.test_oberflaeche.KameraKeyframeTests',
+         'core.tests.longrunner.test_oberflaeche.KameraSlerpTests']},
     {'slug': 'foto', 'name': 'Foto → 3D',
      'beschreibung': 'Ausrichtung, Silhouette, SMPL-X',
      'praefixe': ['core.tests.unit.test_fotoausrichtung',
@@ -190,11 +202,11 @@ TEST_BEREICHE = [
          'core.tests.component.test_endpunkte',
          'core.tests.component.test_same_origin',
          'core.tests.ui.test_seiten',
-         'core.tests.ui.test_oberflaeche.UiPrefsTests',
-         'core.tests.ui.test_oberflaeche.ClientLogTests',
+         'core.tests.longrunner.test_oberflaeche.UiPrefsTests',
+         'core.tests.longrunner.test_oberflaeche.ClientLogTests',
          # Der Adapter, der aus den Oberflächenkategorien Django-Tests macht
          # — er prüft sich selbst und gehört zur Infrastruktur.
-         'core.tests.ui.test_oberflaeche.AdapterTest',
+         'core.tests.longrunner.test_oberflaeche.AdapterTest',
          'core.tests.automated', 'core.tests.performance',
          # Die SAMMELBEFEHLE (ein Eintrag je Art) tragen kein Modul, nur das
          # Ziel. Ohne diese vier Präfixe stehen sie als „Core" in der Spalte.

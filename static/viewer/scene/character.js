@@ -13,7 +13,8 @@ import './modellgenerator/zustand.js';
 import { Charakterzubehoer } from './charakter_zubehoer.js';
 import { Charakterkoerper } from './charakter_koerper.js';
 import {
-    addCharacterFromPreset, clearAllCharacters, deleteCharacter,
+    addCharacterFromPreset, charakterAusModelldaten,
+    clearAllCharacters, deleteCharacter,
     deselectCharacter, focusCharacter, loadDefaultCharacter,
     selectCharacter, setTransformMode, updateCharacterListUI,
     updateVertexCount,
@@ -116,6 +117,14 @@ export class CharacterInstance {
                 bodyType: 'generated',
                 generatedConfig: this.generatedConfig,
                 transform: this._lage(),
+                // Auch eine ERZEUGTE Figur kann ein GarmentCode-Stueck
+                // tragen. Dieser Zweig fuehrte es bis zum 09.09.2026 nicht
+                // — wer eine generierte Figur in eine Szene speicherte,
+                // fand sie beim Laden nackt wieder, ohne Fehler und ohne
+                // Meldung. `Szenenausgabe.modelldaten` hat das Feld fuer
+                // BEIDE Zweige, seit dem 08.09.2026 mit derselben
+                // Begruendung — hier fehlte es noch.
+                [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
             };
         }
 
@@ -231,6 +240,10 @@ export class CharacterInstance {
 // Register
 fn.CharacterInstance = CharacterInstance;
 fn.addCharacterFromPreset = addCharacterFromPreset;
+// Der gemeinsame Weg „Modelldaten -> Figur in der Szene". Die Dialoge
+// erreichen ihn ueber die Registrierung, weil `szene_dialoge.js` sonst
+// `charakterliste.js` importieren muesste und damit das halbe Seitengeruest.
+fn.charakterAusModelldaten = charakterAusModelldaten;
 fn.loadDefaultCharacter = loadDefaultCharacter;
 fn.selectCharacter = selectCharacter;
 fn.deselectCharacter = deselectCharacter;

@@ -27,8 +27,8 @@ BDD - GEGEBEN / DANN
 """
 import unittest
 
-from ._projektquellen import Projektquellen
-from ._syntaxwarnungen import Syntaxwarnungen
+from ..unit._projektquellen import Projektquellen
+from ..unit._syntaxwarnungen import Syntaxwarnungen
 
 #: Die Wurzel ueber allen Repos.
 TOOLS = Projektquellen.TOOLS

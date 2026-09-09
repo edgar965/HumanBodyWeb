@@ -56,8 +56,8 @@ import importlib
 
 from django.test import SimpleTestCase
 
-from ._humanbodybaum import Humanbodybaum
-from ._humanbodypfad import Humanbodypfad
+from ..unit._humanbodybaum import Humanbodybaum
+from ..unit._humanbodypfad import Humanbodypfad
 
 Humanbodypfad.setzen()
 

@@ -144,11 +144,22 @@ class GarmentcodeZweiDTest(SimpleTestCase):
 
     def test_beide_dreid_wege_verlangen_einen_schnitt(self):
         u"""`vorschau3d` liest den Ergebnisordner; ohne die Wache liefe sie
-        auf dem Schnitt der vorigen Figur — dieselbe Falle wie bei „3D"."""
+        auf dem Schnitt der vorigen Figur — dieselbe Falle wie bei „3D".
+
+        Die Liste selbst steht seit dem 09.09.2026 in
+        `garmentcode_schritte.js` — dort haengt ebenfalls daran, ob ein
+        Schnittschritt in den Plan kommt. Der Ablauf VERWEIST darauf; zwei
+        Listen desselben Inhalts liefen beim naechsten neuen Modus
+        auseinander, und dann baut der eine Weg einen Schnitt, den der
+        andere nicht erwartet. Genau das haelt dieser Fall fest.
+        """
         _, quelle = _lesen('static', 'viewer', 'scene',
                            'garmentcode_ablauf.js')
-        self.assertIn("static NUR3D = ['3d', 'vorschau3d'];", quelle)
+        self.assertIn('static NUR3D = GarmentcodeSchritte.NUR3D;', quelle)
         self.assertIn('GarmentcodeAblauf.NUR3D.includes(modus)', quelle)
+        _, plan = _lesen('static', 'viewer', 'scene',
+                         'garmentcode_schritte.js')
+        self.assertIn("static NUR3D = ['3d', 'vorschau3d'];", plan)
 
     def test_3d_prueft_ob_der_schnitt_zur_figur_gehoert(self):
         u"""Sonst drapiert „3D" nach einem Figurwechsel den Schnitt der

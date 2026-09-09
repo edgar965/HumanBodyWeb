@@ -13,6 +13,7 @@
  * das Kleidungsstück wählt. Sie sind Anzeige, keine Eingabe.
  */
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { fn } from '../gemeinsam/registrierung.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 import { GarmentcodeFigur } from './garmentcode_figur.js';
 import { GarmentcodeMasse } from './garmentcode_masse.js';
@@ -208,7 +209,40 @@ class GarmentcodeReiter {
     async masseLaden() {
         return GarmentcodeMasse.laden(this);
     }
+
+    /**
+     * Eine Vorlage im Reiter wählen — wie ein Klick des Nutzers.
+     *
+     * WARUM ÜBER DAS EREIGNIS: Am `change` des Auswahlfeldes hängen ZWEI
+     * Hörer — das Nachladen der Regler und das `Reitergedaechtnis`. Der
+     * Klick auf ein Kleidungsstück in der Szene IST eine Wahl des
+     * Nutzers; sie soll beim nächsten Aufruf wieder dastehen.
+     *
+     * ANDERSWO GILT DAS GEGENTEIL, und das ist gemessen (09.09.2026):
+     * `Garmentdeutung` setzt seine Auswahl weiter still. Sie leitet die
+     * Vorlage aus einem Bibliotheksstück AB — über diesen Weg gemerkt,
+     * stand sie danach in einem fremden Tab, denn der `localStorage` ist
+     * über alle Tabs derselben Herkunft geteilt.
+     *
+     * @returns `true`, wenn es diese Vorlage in der Liste gibt
+     */
+    vorlageZeigen(vorlage) {
+        const auswahl = document.getElementById('gc-vorlage');
+        if (!auswahl || !vorlage) return false;
+        const gibtes = [...auswahl.options].some(o => o.value === vorlage);
+        if (!gibtes) return false;
+        if (auswahl.value === vorlage) return true;
+        auswahl.value = vorlage;
+        auswahl.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+    }
 }
 
 export const garmentcodeReiter = new GarmentcodeReiter();
 garmentcodeReiter.starten();
+
+// Der Klick auf ein Kleidungsstueck in der Szene waehlt seine Vorlage
+// (`teilnetz_auswahl.js`). Ueber die Registrierung, damit die Auswahl
+// nicht den ganzen Reiter importieren muss.
+fn.garmentcodeVorlageZeigen = (vorlage) =>
+    garmentcodeReiter.vorlageZeigen(vorlage);

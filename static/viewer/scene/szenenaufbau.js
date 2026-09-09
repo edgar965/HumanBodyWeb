@@ -5,6 +5,8 @@ import { initFinalizeTab } from './finalize.js';
 import { Szenenbuehne } from './szenenbuehne.js';
 import { Szenenschleife } from './szenenschleife.js';
 import { Starteinstellungen } from './starteinstellungen.js';
+import { Reitergedaechtnis } from './reitergedaechtnis.js';
+import { Reiterfreigabe } from './reiterfreigabe.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Klappbereiche } from '../gemeinsam/klappbereiche.js';
@@ -100,6 +102,25 @@ export class Szenenaufbau {
         fn.captureInitial?.();
         await this._pose(einstellungen);
         this._vorgabekleidung(einstellungen, hatSitzung);
+        this._reitergedaechtnis();
+    }
+
+    /**
+     * Die letzten Einstellungen der Reiter zurueckholen (09.09.2026).
+     *
+     * ZULETZT in der Startsequenz: Die Reiterfreigabe haengt daran, ob eine
+     * Figur steht (`Reiterfreigabe.frei`), und ein Reiter, der beim Start
+     * ausgegraut ist, darf auch nicht aufgehen. Die GarmentCode-Regler
+     * bekommen ihre Werte NICHT hier, sondern wenn sie entstehen
+     * (`Garmentcodegedaechtnis`) — zu diesem Zeitpunkt gibt es sie noch
+     * nicht.
+     */
+    _reitergedaechtnis() {
+        const gesetzt = Reitergedaechtnis.starten();
+        const reiter = Reitergedaechtnis.letzterReiter();
+        if (reiter && Reiterfreigabe.frei(reiter)) fn.switchTab?.(reiter);
+        Protokoll.debug('Reiter', `${gesetzt} Einstellungen wiederhergestellt`,
+                        reiter ? `zuletzt offen: ${reiter}` : '');
     }
 
     async _pose(einstellungen) {

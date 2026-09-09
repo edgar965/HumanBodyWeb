@@ -3,6 +3,7 @@ import { markDirty } from './undo.js';
 import { state } from './state.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
+import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
 /**
  * Teilnetze eines Charakters auswaehlen und entfernen.
  *
@@ -96,6 +97,25 @@ export function clearSubMeshSelection() {
     if (tooltip) tooltip.style.display = 'none';
 }
 
+/**
+ * Den Reiter aufschlagen, der zu dem angeklickten Teilnetz gehört.
+ *
+ * Bei einem GarmentCode-Stück wird zusätzlich SEINE Vorlage im Reiter
+ * gewählt: Ein Reiter, der die Regler eines anderen Stücks zeigt, ist keine
+ * Hilfe — und genau daraus entstand am 09.09.2026 ein Bau, der „sommerkleid"
+ * erzeugte, während die Figur eine Hose tragen sollte.
+ *
+ * Die Zuordnung selbst steht in `Reiterzuordnung` (ohne DOM, prüfbar). Wird
+ * ein Teilnetz ABgewählt (`ziel === null`), bleibt es beim Vorgabereiter —
+ * so war es auch vorher.
+ */
+function _reiterZeigen(ziel) {
+    const reiter = Reiterzuordnung.fuer(ziel?.key);
+    fn.switchTab(reiter);
+    const vorlage = Reiterzuordnung.vorlageVon(ziel?.key);
+    if (vorlage) fn.garmentcodeVorlageZeigen?.(vorlage);
+}
+
 export function _doSubMeshClick(hitTarget) {
     const inst = state.characters.get(hitTarget.charId);
     if (_sameSubMesh(state._selectedSubMesh, hitTarget)) {
@@ -109,7 +129,7 @@ export function _doSubMeshClick(hitTarget) {
         if (inst) _setBodyEmissive(inst, state._ZERO_EMISSIVE);
     }
     fn._syncGarmentSliders();
-    fn.switchTab('eigenschaften');
+    _reiterZeigen(state._selectedSubMesh);
     fn._updatePropContext();
     if (state._selectedSubMesh && state._selectedSubMesh.type === 'cloth') {
         fn._syncPropGarmentControls();

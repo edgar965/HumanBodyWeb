@@ -166,45 +166,97 @@ export class Posenanwendung {
     // ----------------------------------------------------------------- Ablauf
 
     /**
+     * Taugt diese Figur für eine Pose? — `{ok}` oder `{ok: false, grund}`.
+     *
+     * Posen sind Deltas auf RIGIFY-Knochennamen (`DEF-thigh.L`). Eine SMPL-,
+     * MakeHuman- oder UMA-Figur führt ihr EIGENES Skelett mit eigenen Namen
+     * (`Pelvis`, `Spine1`); dort trifft kein einziger Name, `anwenden` setzt
+     * null Knochen, und die Figur bleibt stehen — ohne Fehler und ohne
+     * Meldung. Die HumanBody-Figur ist die einzige ohne `quelle`.
+     */
+    static pruefen(figur) {
+        if (!figur) {
+            return { ok: false, grund: 'Keine Figur gewählt.' };
+        }
+        if (figur.quelle) {
+            return { ok: false,
+                     grund: 'Posen gelten für HumanBody-Figuren; diese Figur '
+                            + `kommt von ${figur.quelle}.` };
+        }
+        return { ok: true };
+    }
+
+    /**
      * Eine Pose vom Server holen und anwenden.
      *
-     * Ohne Fänger endet ein Serverfehler in einer stillen „Unhandled promise
-     * rejection" — die Figur bleibt stehen, und niemand weiß warum. Der Aufruf
-     * kommt aus dem Menü, aus dem Doppelklick und aus dem Szenenaufbau.
+     * Liefert `{ok, grund, gesetzt}`: **jeder** Ausstieg nennt seinen Grund.
+     * Bis zum 09.09.2026 kehrte die Methode an fünf Stellen wortlos zurück
+     * (keine Figur, nicht gehäutet, Serverfehler, kein Skelett, kein Treffer)
+     * — im Bild sieht das genauso aus wie ein Knopf, der nicht funktioniert.
+     *
+     * Ohne Fänger um den Abruf endet ein Serverfehler in einer stillen
+     * „Unhandled promise rejection". Der Aufruf kommt aus der Liste, aus dem
+     * Kontextmenü, aus dem Hauptmenü und aus dem Szenenaufbau.
      */
     static async vomServer(poseId) {
         const figur = _selectedInst();
-        if (!figur) return;
+        const befund = Posenanwendung.pruefen(figur);
+        if (!befund.ok) return befund;
         if (!figur.isSkinned && state.rigifySkeletonData && state.skinWeightData) {
             convertInstToSkinned(figur);
         }
-        if (!figur.isSkinned) return;
-        const daten = await Posenanwendung._holen(poseId);
-        if (!daten?.bones) return;
+        if (!figur.isSkinned) {
+            return { ok: false, grund: 'Figur hat kein Skelett zum Stellen.' };
+        }
+        const antwort = await Posenanwendung._holen(poseId);
+        if (antwort.grund) return { ok: false, grund: antwort.grund };
+        if (!antwort.daten?.bones) {
+            return { ok: false, grund: 'Die Pose führt keine Knochen.' };
+        }
+        return Posenanwendung._stellen(figur, poseId, antwort.daten);
+    }
+
+    /** Die geholte Pose auf die Figur legen. */
+    static _stellen(figur, poseId, daten) {
         const anwendung = new Posenanwendung(figur);
-        if (!anwendung.skelett) return;
+        if (!anwendung.skelett) {
+            return { ok: false, grund: 'Kein gehäutetes Netz an dieser Figur.' };
+        }
         const gesetzt = anwendung.anwenden(daten.threejs || {});
         const beine = anwendung.oberschenkelGeradeStellen(poseId);
-        Protokoll.debug('Pose',
-                        `Applied ${poseId}: ${gesetzt} bones `
-                        + `(${beine} leg corrections)`);
+        Protokoll.debug('Pose', `${poseId}: ${gesetzt} Knochen, `
+                        + `${beine} Beinkorrekturen`);
+        if (!gesetzt) {
+            return { ok: false,
+                     grund: 'Kein Knochen der Pose passt zu diesem Skelett.' };
+        }
+        return { ok: true, gesetzt, beine };
     }
 
     static async _holen(poseId) {
         try {
-            return await Serverabruf.json(`/api/character/pose/${poseId}/`);
+            return { daten: await Serverabruf.json(
+                `/api/character/pose/${poseId}/`) };
         } catch (fehler) {
             Protokoll.fehler('Pose', poseId, fehler);
-            alert('Pose nicht ladbar: ' + fehler.message);
-            return null;
+            return { grund: 'Pose nicht ladbar: ' + fehler.message };
         }
     }
 
     /** Die Figur zurück in die gesicherte Ruhelage. */
     static zuruecksetzen() {
         const figur = _selectedInst();
-        if (!figur?.isSkinned || !figur._aPoseBones) return;
+        const befund = Posenanwendung.pruefen(figur);
+        if (!befund.ok) return befund;
+        if (!figur.isSkinned || !figur._aPoseBones) {
+            return { ok: false,
+                     grund: 'Noch keine Pose gestellt — nichts zurückzunehmen.' };
+        }
         const anwendung = new Posenanwendung(figur);
-        if (anwendung.skelett) anwendung.ruhelageHerstellen();
+        if (!anwendung.skelett) {
+            return { ok: false, grund: 'Kein gehäutetes Netz an dieser Figur.' };
+        }
+        anwendung.ruhelageHerstellen();
+        return { ok: true };
     }
 }

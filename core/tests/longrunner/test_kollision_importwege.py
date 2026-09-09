@@ -36,7 +36,7 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
-from ._humanbodypfad import Humanbodypfad
+from ..unit._humanbodypfad import Humanbodypfad
 
 
 class ImportwegeTest(SimpleTestCase):

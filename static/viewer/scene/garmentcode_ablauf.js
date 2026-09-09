@@ -6,6 +6,7 @@ import { GarmentcodeVorschau3d } from './garmentcode_vorschau3d.js';
 import { GarmentcodeFigur } from './garmentcode_figur.js';
 import { Laufwache } from '../gemeinsam/laufwache.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
+import { GarmentcodeSchritte } from './garmentcode_schritte.js';
 
 /**
  * GarmentcodeAblauf — was auf einen Knopfdruck hin passiert.
@@ -53,7 +54,13 @@ export class GarmentcodeAblauf {
      * nur darin unterscheiden, was danach gezeigt wird, sind einer zu
      * viel.
      */
-    static NUR3D = ['3d', 'vorschau3d'];
+    /**
+     * EINE Quelle: `GarmentcodeSchritte` entscheidet ebenfalls daran, ob ein
+     * Schnittschritt in den Plan kommt. Zwei Listen desselben Inhalts laufen
+     * beim naechsten neuen Modus auseinander — dann baut der eine Weg einen
+     * Schnitt, den der andere nicht erwartet.
+     */
+    static NUR3D = GarmentcodeSchritte.NUR3D;
     static VORSCHAU = ['vorschau2d', 'vorschau3d'];
 
     static async bauen(reiter, modus = 'komplett') {
@@ -88,9 +95,18 @@ export class GarmentcodeAblauf {
         // ohne dass je ein `finally` liefe.
         const lauf = GarmentcodeAblauf.beginnen(reiter, knoepfe);
         try {
+            // WAS gebaut wird, steht ab jetzt im Reiter (09.09.2026). An
+            // diesem Tag hat der Server „sommerkleid" gebaut, waehrend Edgar
+            // eine Hose erwartete: Die Deutung eines Bibliotheksstuecks hatte
+            // die Auswahl still umgestellt. Der Name im Meldungsfeld macht
+            // einen solchen Zustand sofort sichtbar — vorher stand dort bis
+            // zum Ende des Schnitts gar nichts.
+            //
             // Der Hinweis auf einen VERLORENEN Vorlauf bleibt stehen — er ist
             // das einzige Wort darueber, dass hier etwas haengengeblieben war.
-            if (wache.grund !== 'verloren') meldung.textContent = '';
+            if (wache.grund !== 'verloren') {
+                meldung.textContent = `Baue „${GarmentcodeAblauf.titel(vorlage)}" …`;
+            }
             // Gesagt, nicht verhindert: Ein Grundkoerper ist auch eine Figur.
             reiter.ohneMorphs = GarmentcodeFigur.ohneMorphs(figur);
             garmentcodeFortschritt.starten(
@@ -114,6 +130,14 @@ export class GarmentcodeAblauf {
         } finally {
             GarmentcodeAblauf.beenden(reiter, knoepfe, lauf);
         }
+    }
+
+    /** Die Beschriftung der Vorlage — der Nutzer kennt „Hose", nicht `hose`. */
+    static titel(vorlage) {
+        const auswahl = document.getElementById('gc-vorlage');
+        const eintrag = [...(auswahl?.options || [])]
+            .find((o) => o.value === vorlage);
+        return eintrag ? eintrag.textContent.trim() : vorlage;
     }
 
     /**
@@ -232,34 +256,9 @@ export class GarmentcodeAblauf {
             .map((pfad) => `${pfad}=${werte[pfad]}`).join('|');
     }
 
-    /**
-     * Die Schritte im Voraus — dann weiss der Nutzer, was kommt und dass die
-     * Drapierung der lange Teil ist. Die erwarteten Dauern sind gemessene
-     * Werte (Schnitt 4 s und Panels unter 1 s am 07.09.2026, Drapierung
-     * 22 s im Browser und Anziehen 3 s am 06.09.2026).
-     */
+    /** Der Schrittplan steht in `garmentcode_schritte.js`. */
     static schritte(reiter, modus) {
-        const schritte = [];
-        if (modus === 'vorschau3d') {
-            return [{ schluessel: 'vorschau3d', erwartet: 1,
-                      titel: 'Am Körper anlegen' }];
-        }
-        if (!GarmentcodeAblauf.NUR3D.includes(modus)) {
-            schritte.push({ schluessel: 'schnitt', erwartet: 4,
-                            titel: 'Schnitt konstruieren' });
-        }
-        if (modus === '2d' || modus === 'vorschau2d') {
-            schritte.push({ schluessel: 'panels', erwartet: 1,
-                            titel: 'Panels an die Figur' });
-        }
-        if (reiter.drapierbereit && modus !== '2d'
-                && modus !== 'vorschau2d') {
-            schritte.push({ schluessel: 'drape', erwartet: 22,
-                            titel: 'Stoff drapieren' });
-            schritte.push({ schluessel: 'rig', erwartet: 3,
-                            titel: 'Anziehen' });
-        }
-        return schritte;
+        return GarmentcodeSchritte.fuer(reiter, modus);
     }
 
     /**

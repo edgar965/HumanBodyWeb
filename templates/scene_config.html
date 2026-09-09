@@ -731,9 +731,19 @@
                 <div class="menu-dropdown">
                     <div class="menu-item" data-action="new">Neu <span class="shortcut">Ctrl+N</span></div>
                     <div class="menu-item" data-action="load">Laden... <span class="shortcut">Ctrl+O</span></div>
-                    {# „Speichern" hiess bis zum 08.09.2026 immer die SZENE. Modell
-                       und Szene sind zwei Dinge, und das war nicht zu sehen —
-                       Edgar: „Bei Menue Speichern soll «Modell» oder Szene kommen". #}
+                    {% comment %}„Speichern" hiess bis zum 08.09.2026 immer
+                    die SZENE. Modell und Szene sind zwei Dinge, und das war
+                    nicht zu sehen — Edgar: „Bei Menue Speichern soll
+                    «Modell» oder Szene kommen".
+
+                    UND DESHALB EIN comment-BLOCK: Die Kurzform mit
+                    Doppelkreuz ist EINZEILIG. Ueber drei Zeilen erkennt
+                    Django sie nicht als Kommentar, und der Text stand
+                    sichtbar im Datei-Menue — zwischen „Laden..." und
+                    „Modell speichern" (Edgar, 09.09.2026: „fixe den
+                    Kommentar im UI"). Geprueft von
+                    `test_vorlagenkommentare`.
+                    {% endcomment %}
                     <div class="menu-item" data-action="save-model">Modell speichern</div>
                     <div class="menu-item" data-action="save-model-as">Modell speichern unter...</div>
                     <div class="menu-sep"></div>
@@ -860,13 +870,13 @@
 
         <!-- Tab bar -->
         <div class="panel-tabs">
-            <div class="panel-tab active" data-tab="eigenschaften">Eigenschaften</div>
+            <div class="panel-tab active" data-tab="eigenschaften">Modell</div>
             <div class="panel-tab" data-tab="kleider">Kleider</div>
             <div class="panel-tab" data-tab="assets">Assets</div>
             <div class="panel-tab" data-tab="garmentcode">GarmentCode</div>
             <div class="panel-tab" data-tab="animation">Animation</div>
             <div class="panel-tab" data-tab="szene">Szene</div>
-            <div class="panel-tab" data-tab="modell">Modell</div>
+            <div class="panel-tab" data-tab="modell">Skeleton</div>
             <div class="panel-tab" data-tab="rigging">Rigging</div>
             <div class="panel-tab" data-tab="finalize">Finalize</div>
         </div>
@@ -1736,6 +1746,7 @@
                             >
                             <div class="hb-hinweis">Lade Poses...</div>
                         </div>
+                        <div id="pose-status" class="hb-hinweis"></div>
                         <div class="hb-display-flex">
                             <button id="pose-reset" class="btn-toggle hb-dehnt"><i
                                  class="fas fa-undo"></i> A-Pose (Reset)</button>

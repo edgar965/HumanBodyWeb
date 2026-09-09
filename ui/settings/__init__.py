@@ -49,6 +49,10 @@ INSTALLED_APPS = [
 # Der Zweck bleibt also erfuellt — eine geaenderte Datei kommt an —, nur
 # ohne den Preis.
 MIDDLEWARE = [
+    # GANZ VORNE: Wer ueber `localhost` kommt, wird auf 127.0.0.1 geschickt,
+    # bevor irgendetwas gerechnet wird. Der Grund ist gemessen (12,7 s gegen
+    # 0,4 s beim ersten Aufruf) und steht in `ui/schnelleadresse.py`.
+    'ui.schnelleadresse.Schnelleadresse',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -60,6 +64,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Daten nie aus dem Zwischenspeicher des Browsers (09.09.2026). Ohne
+    # sie lieferte Chrome das Modell-JSON von VOR dem Speichern, und die
+    # Figur kam ohne ihre GarmentCode-Stuecke zurueck — Begruendung und
+    # Messung in `ui/datenfrische.py`.
+    'ui.datenfrische.Datenfrische',
 ]
 
 ROOT_URLCONF = 'ui.urls'

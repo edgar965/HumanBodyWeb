@@ -34,7 +34,7 @@ import ast
 
 from django.test import SimpleTestCase
 
-from ._importsuche import WURZEL, Lokalerimport, Modulsuche
+from ..unit._importsuche import WURZEL, Lokalerimport, Modulsuche
 
 
 class LokaleImporteTest(SimpleTestCase):

@@ -49,8 +49,8 @@ BDD - GEGEBEN / DANN
 """
 import unittest
 
-from ._namensbindung import Namensbindung
-from ._projektquellen import Projektquellen
+from ..unit._namensbindung import Namensbindung
+from ..unit._projektquellen import Projektquellen
 
 
 #: Die Wurzel, unter der die vier Repos liegen.

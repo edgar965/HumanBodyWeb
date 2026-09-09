@@ -1,13 +1,23 @@
 # -*- coding: utf-8 -*-
-u"""LongRunner — Tests über 5 Sekunden je Modul.
+u"""LongRunner — Tests ueber 1 Sekunde je Modul.
 
-WARUM SIE HIER LIEGEN (Edgar, 08.09.2026: „strukturiere die testsuite um -
-alles was länger dauert, weg in die Kategorie LongRunner", und genauer:
-„alle tests die länger als 5 s brauchen kriegen die Kategorie LongRunner
-und werden nicht jedes Mal ausgeführt bei einer automatischen Suite")
-=====================================================================
-Je Modul einzeln gestoppt (`ProjektTemp/testzeiten.txt`, 175 Module).
-Elf lagen über 5 Sekunden und stehen jetzt hier:
+WARUM SIE HIER LIEGEN
+=====================
+Edgar, 08.09.2026: „alle tests die laenger als 5 s brauchen kriegen die
+Kategorie LongRunner und werden nicht jedes Mal ausgefuehrt bei einer
+automatischen Suite" — und am 09.09.2026, nach dem naechsten Sammellauf:
+„baue die automatische Testsuite um, alles was mehr als 1 s dauert soll in
+die Longrunner hinein, das dauert mir alles zu lange".
+
+Die Schwelle liegt seither bei 1 Sekunde je Modul.
+
+WAS HIER LANDET, IST GEMESSEN
+=============================
+`manage.py test --durations 3000`, die Zeiten je Testfall nach Modul
+aufsummiert (`ProjektTemp/dauern.txt`). Der Lauf brauchte 113 s fuer 1.667
+Faelle; ueber 1 Sekunde lagen 21 Module mit zusammen 108,6 s.
+
+Beim ersten Durchgang (08.09.2026, Schwelle 5 s) kamen elf Module hierher:
 
     test_kleiderrigging   66,7 s     test_umafigur          10,9 s
     test_umabauer         39,5 s     test_uma_gegenprobe    10,7 s
@@ -17,67 +27,58 @@ Elf lagen über 5 Sekunden und stehen jetzt hier:
                                      test_endpunkte          7,4 s
                                      test_uma_gegenprobe_lauf 5,7 s
 
-Gemessen vorher und nachher: „Unit" und „Component" liefen zusammen
-**266 s**, jetzt **98 s** — bei 1.505 statt 1.534 Fällen. Die elf Module
-sind 2 % der Dateien und waren zwei Drittel der Wartezeit.
+Beim zweiten (09.09.2026, Schwelle 1 s) neunzehn weitere:
+
+    test_passform          5,94 s    test_escape_sequenzen   2,33 s
+    test_oberflaeche       3,94 s    test_formregler         2,26 s
+    test_garmentregler     3,94 s    test_hilfe_neu          2,17 s
+    test_lokale_importe    3,81 s    test_v4lauf             1,57 s
+    test_reglerhilfe       3,37 s    test_humanbody_importwege 1,41 s
+    test_mhfigur           3,27 s    test_kollision_importwege 1,25 s
+    test_addon_namen       3,22 s    test_umafigurkatalog    1,24 s
+    test_addon_zugriffe    2,97 s    test_mhmodellieren      1,18 s
+    test_halstreue         2,81 s    test_smplgelenke        1,01 s
+    test_koerpermasse      2,57 s
+
+`test_umafigurkatalog` hiess in `component` noch `test_umafigur` — hier
+liegt unter dem Namen schon der Python-Figurbau. Zwei Dateien gleichen
+Namens in einem Paket gehen nicht, und der zweite haette den ersten
+verdeckt.
+
+Die verschobenen Module holen ihre Helfer weiter aus `unit`
+(`from ..unit._projektquellen import Projektquellen`) — die Hilfsdateien
+mit `_`-Praefix bleiben dort, sie sind selbst keine Tests.
 
 SIE LAUFEN NUR, WENN SIE GEMEINT SIND
 =====================================
 `manage.py test` ohne Ziel entdeckt sonst auch dieses Paket — und der
-Sammellauf „Alles" in Hilfe → Tests ruft genau das (`djangobase/
-testkategorien.py`: `sammel(python, "alles", …, [])` mit leerer
-Zielliste). Deshalb entscheidet dieses Paket selbst, ob seine Tests
-eingesammelt werden: über das `load_tests`-Protokoll, das unittest bei
-einem Paket mit dieser Funktion aufruft, statt selbst zu suchen.
-
-Angefordert ist es, wenn `longrunner` in der Befehlszeile steht oder
-`LONGRUNNER=1` gesetzt ist. Sonst kommt eine LEERE Suite zurück — und
-das wird gemeldet, nicht verschwiegen: Ein Paket, das still nichts
-liefert, sieht aus wie ein Paket ohne Tests
-(`~/.claude/rules/analysewerkzeuge.md`: ein Prüfer, der nichts findet
-und Entwarnung meldet, ist der teuerste).
+Sammellauf „Alles" in Hilfe -> Tests ruft genau das
+(`djangobase/testkategorien.py`: `sammel(python, "alles", …, [])` mit
+leerer Zielliste). Die Entscheidung steht in
+:class:`core.tests.nurgemeint.Nurgemeint`; `core/tests/automated` und
+`core/tests/performance` benutzen denselben Waechter.
 
 DJANGOBASE BLEIBT UNBERUEHRT. Es ist in sechs Projekten als editable
-Install eingebunden; eine Ausnahme für dieses Projekt dort einzubauen
+Install eingebunden; eine Ausnahme fuer dieses Projekt dort einzubauen
 wirkte sofort in allen (`A:/shared/djangoBase/CLAUDE.md`).
 """
-import logging
 import os
-import sys
-import unittest
 
-logger = logging.getLogger('core')
+from ..nurgemeint import Nurgemeint
 
-#: Das Wort, an dem ein ausdrücklicher Aufruf zu erkennen ist.
+#: Das Wort, an dem ein ausdruecklicher Aufruf zu erkennen ist. Bleibt als
+#: Modulname stehen: `test_longrunner_auswahl` prueft die Entscheidung
+#: darueber, und `ui/settings/djangobase_tests.py` nennt dasselbe Ziel.
 MARKE = 'longrunner'
+SCHALTER = Nurgemeint.SCHALTER
 
-#: Damit lässt sich das Paket auch ohne Ziel im Aufruf einschalten —
-#: etwa in einem nächtlichen Lauf, der wirklich alles fahren soll.
-SCHALTER = 'LONGRUNNER'
+WAECHTER = Nurgemeint(MARKE, os.path.dirname(__file__), dauer='250 s')
 
 
 def angefordert(argumente=None, umgebung=None):
-    u"""Sind die LongRunner ausdrücklich gemeint?
-
-    Als Funktion mit Parametern, damit ein Test sie ohne echtes `sys.argv`
-    prüfen kann — sonst wäre gerade diese Entscheidung die einzige im
-    Paket, die niemand nachrechnet.
-    """
-    argumente = sys.argv if argumente is None else argumente
-    umgebung = os.environ if umgebung is None else umgebung
-    if str(umgebung.get(SCHALTER, '')).strip() in ('1', 'true', 'ja'):
-        return True
-    return any(MARKE in str(a) for a in argumente[1:])
+    u"""Sind die LongRunner ausdruecklich gemeint?"""
+    return WAECHTER.angefordert(argumente, umgebung)
 
 
 def load_tests(loader, standard_tests, pattern):
-    u"""Das `load_tests`-Protokoll: Wir sammeln selbst — oder eben nicht."""
-    if not angefordert():
-        logger.info(
-            'LongRunner uebersprungen (%d Module, rund 190 s). Zum Fahren: '
-            'manage.py test core.tests.longrunner  oder  %s=1',
-            len([n for n in os.listdir(os.path.dirname(__file__))
-                 if n.startswith('test_')]), SCHALTER)
-        return unittest.TestSuite()
-    return loader.discover(os.path.dirname(__file__),
-                           pattern=pattern or 'test*.py')
+    return WAECHTER.sammeln(loader, pattern)

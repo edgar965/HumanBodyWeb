@@ -17,7 +17,7 @@ from django.conf import settings
 
 from UMA_Python import Formregler
 from UMA_Python.unity.yaml_kopf import UnityYaml
-from ._umareglerattrappe import Umareglerattrappe
+from ..unit._umareglerattrappe import Umareglerattrappe
 
 
 class UnityYamlTest(unittest.TestCase):

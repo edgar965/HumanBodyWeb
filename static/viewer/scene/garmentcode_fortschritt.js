@@ -120,7 +120,16 @@ class GarmentcodeFortschritt {
         return this.schritte.map((schritt) => {
             let rechts = schritt.text || '';
             if (schritt.stand === 'laeuft' && schritt.seit) {
-                rechts = `${Math.round((Date.now() - schritt.seit) / 1000)} s …`;
+                const bisher = Math.round((Date.now() - schritt.seit) / 1000);
+                // WENN ES LÄNGER DAUERT, SAGEN WIE VIEL LÄNGER (09.09.2026,
+                // Edgar: „danach war das UI nicht mehr bedienbar"). Sein Lauf
+                // stand bei 105 s gegen 22 s erwartet: Der Balken war bei
+                // seinen 97 % gedeckelt, daneben stand nur „105 s …", und
+                // das sieht nach einem Stillstand aus. Es lief noch — der
+                // Serverlog zeigt die Simulation bis Sekunde 118.
+                rechts = (schritt.erwartet && bisher > 2 * schritt.erwartet)
+                    ? `${bisher} s … (erwartet ${schritt.erwartet} s)`
+                    : `${bisher} s …`;
             } else if (schritt.stand === 'fertig' && schritt.dauer !== null
                        && !schritt.text) {
                 rechts = `${schritt.dauer} s`;

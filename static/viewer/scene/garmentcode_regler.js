@@ -39,6 +39,7 @@ import { GarmentcodeLive } from './garmentcode_live.js';
 import { garmentcodePreset } from './garmentcode_preset.js';
 import { GarmentcodePassform } from './garmentcode_passform.js';
 import { garmentcodeReglerhilfe } from './garmentcode_reglerhilfe.js';
+import { Garmentcodegedaechtnis } from './garmentcode_gedaechtnis.js';
 
 class GarmentcodeRegler {
     /** Was `null` in einer Auswahl anzeigt — „nichts davon". */
@@ -77,6 +78,14 @@ class GarmentcodeRegler {
                 antwort, (werte) => this.mehrereSetzen(werte),
                 (pfad) => this.wertVon(pfad));
             this.zeichnen(ziel, antwort.gruppen || []);
+            // Was beim letzten Mal an DIESER Vorlage eingestellt war
+            // (Edgar, 09.09.2026: „merke dir die letzten Einstellungen auf
+            // allen Tabs, z.B. GarmentCode, so dass sie beim naechsten
+            // Aufruf angeklickt sind"). Erst NACH dem Zeichnen: `nachziehen`
+            // entsteht dort, und ohne die Schieber blieben die Zahlen nur
+            // im Speicher stehen. Je Vorlage getrennt, weil ein Pfad wie
+            // `sleeve.cuff.cuff_len` bei einem Rock gar nicht existiert.
+            Garmentcodegedaechtnis.anwenden(this, vorlage);
         } catch (fehler) {
             ziel.innerHTML = '<div class="hb-hinweis">Einstellungen nicht '
                 + `abrufbar: ${fehler.message || fehler}</div>`;
@@ -269,7 +278,13 @@ class GarmentcodeRegler {
      */
     vonHand(pfad) {
         garmentcodePreset.pruefen(pfad, (p) => this.wertVon(p));
+        this.merken();
         GarmentcodeLive.angestossen();
+    }
+
+    /** Den Stand dieser Vorlage merken — Ablage in `Garmentcodegedaechtnis`. */
+    merken() {
+        Garmentcodegedaechtnis.merken(this);
     }
 
     /** Der geltende Wert eines Pfades: geändert, sonst Vorgabe des Servers. */
@@ -289,6 +304,7 @@ class GarmentcodeRegler {
             this.werte[pfad] = wert;
             if (this.nachziehen[pfad]) this.nachziehen[pfad](wert);
         }
+        this.merken();
         GarmentcodeLive.angestossen();
     }
 

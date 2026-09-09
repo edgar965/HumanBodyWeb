@@ -22,6 +22,29 @@ function _auswaehlen(zeile, pose) {
     zeile.classList.add('pose-gewaehlt');
 }
 
+/**
+ * Die Statuszeile unter der Liste.
+ *
+ * WARUM (Edgar, 09.09.2026: „wenn ich da auf eine Pose klicke, wird die nicht
+ * angewandt"): Ein Klick, der nichts bewirkt, muss SAGEN warum. Die
+ * Rechenklasse liefert dazu `{ok, grund}`; hier steht der Text.
+ */
+function _status(text, ok = true) {
+    const zeile = document.getElementById('pose-status');
+    if (!zeile) return;
+    zeile.textContent = text || '';
+    zeile.classList.toggle('fehlertext', !ok);
+}
+
+/** Eine Pose anwenden und das Ergebnis melden. */
+async function _anwenden(pose) {
+    if (!pose) return;
+    const befund = await Posenanwendung.vomServer(pose.id);
+    _status(befund.ok
+            ? `„${pose.name}" liegt an (${befund.gesetzt} Knochen).`
+            : befund.grund, befund.ok);
+}
+
 /* ── Kontextmenü ── */
 const _menue = () => document.getElementById('pose-ctx-menu');
 
@@ -101,7 +124,7 @@ function _menueBinden() {
     document.addEventListener('click', _menueVerbergen);
     const menue = _menue();
     if (!menue) return;
-    const aktionen = { apply: () => Posenanwendung.vomServer(_pose?.id),
+    const aktionen = { apply: () => _anwenden(_pose),
                        rename: renameSelectedPose,
                        delete: deleteSelectedPose };
     menue.querySelectorAll('.pose-ctx-item').forEach(eintrag => {
@@ -152,7 +175,11 @@ export async function loadPoseUI() {
         liste.innerHTML = '<div class="leer-hinweis">Poses nicht verfügbar</div>';
     }
     document.getElementById('pose-reset')
-        ?.addEventListener('click', () => Posenanwendung.zuruecksetzen());
+        ?.addEventListener('click', () => {
+            const befund = Posenanwendung.zuruecksetzen();
+            _status(befund.ok ? 'Ruhelage hergestellt.' : befund.grund,
+                    befund.ok);
+        });
 }
 
 /**
@@ -188,9 +215,14 @@ function _zeileBauen(kategorie, pose) {
     const zeile = document.createElement('div');
     zeile.className = 'anim-item pose-zeile';
     zeile.textContent = pose.name;
-    zeile.addEventListener('click', () => _auswaehlen(zeile, angabe));
-    zeile.addEventListener('dblclick',
-                           () => Posenanwendung.vomServer(pose.id));
+    // Ein Klick wählt UND wendet an. Bis zum 09.09.2026 brauchte es dafür
+    // einen Doppelklick — nirgends sonst im Projekt: die beiden
+    // Animationsbäume (`animation/baum.js`, `skelett_test/animationsbaum.js`)
+    // laden beim einfachen Klick.
+    zeile.addEventListener('click', () => {
+        _auswaehlen(zeile, angabe);
+        _anwenden(angabe);
+    });
     zeile.addEventListener('contextmenu', ereignis => {
         ereignis.preventDefault();
         _auswaehlen(zeile, angabe);
@@ -199,8 +231,12 @@ function _zeileBauen(kategorie, pose) {
     return zeile;
 }
 
+/** Der Weg aus dem Hauptmenü (T-Pose/A-Pose) und aus dem Szenenaufbau. */
 export async function applyPoseFromServer(poseId) {
-    return Posenanwendung.vomServer(poseId);
+    const befund = await Posenanwendung.vomServer(poseId);
+    _status(befund.ok ? `Pose liegt an (${befund.gesetzt} Knochen).`
+                      : befund.grund, befund.ok);
+    return befund;
 }
 
 // Register

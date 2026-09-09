@@ -22,23 +22,40 @@ import { Speichernmenue } from './speichernmenue.js';
 // =========================================================================
 // Character management functions
 // =========================================================================
-export async function addCharacterFromPreset(presetName, lage = null) {
-    const resp = await fetch(`/api/character/model/${encodeURIComponent(presetName)}/`);
-    if (!resp.ok) throw new Error(`Preset not found: ${presetName}`);
-    const presetData = await resp.json();
-
+/**
+ * Eine HumanBody-Figur aus MODELLDATEN aufbauen und in die Szene setzen.
+ *
+ * WARUM ES DIESE FUNKTION GIBT (Edgar, 09.09.2026: „Über Datei - Modell
+ * Importieren funktioniert das Modell ‘Female GarmentCode’ nicht, keine
+ * Kleider. über den + Button im UI funktioniert das")
+ * ==================================================================
+ * Es gab DREI Wege, die aus Modelldaten eine Figur bauen — der Katalog
+ * („+"), „Datei → Laden..." mit einer Modelldatei und „Datei → Modell
+ * importieren...". Nur der erste zog die GarmentCode-Stücke an; die beiden
+ * Dateiwege hatten `GarmentcodeAblage.laden` nie bekommen und setzten die
+ * Figur noch mit dem festen Abstand von 0,8 m ab, den `Figurplatzierung`
+ * am 06.09.2026 ersetzt hat.
+ *
+ * Deshalb steht die Kette jetzt EINMAL hier. Ein vierter Weg, der sie nicht
+ * benutzt, fällt im Test auf (`test_gcablage`).
+ *
+ * @param daten  der Inhalt einer Modelldatei (`body_type`, `morphs`, …)
+ * @param wahl   `{lage, name}` — Lage wie im Dialog, Name für den Katalog
+ */
+export async function charakterAusModelldaten(daten, wahl = {}) {
     const id = generateCharacterId();
-    const inst = new CharacterInstance(id, presetData);
-
-    inst.presetKey = presetName;
-    inst.presetName = presetName;
+    const inst = new CharacterInstance(id, daten);
+    if (wahl.name) {
+        inst.presetKey = wahl.name;
+        inst.presetName = wahl.name;
+    }
     await inst.load();
     // Position und Größe erst nach dem Laden: vorher gibt es nichts zu messen
     // (Edgar, 06.09.2026 — vorher stand hier ein fester Abstand von 0,8 m).
-    Figurplatzierung.anwenden(inst, lage);
+    Figurplatzierung.anwenden(inst, wahl.lage || null);
     // Nach `load()` und nach der Platzierung: GarmentCode bindet in der Lage
     // der Figurgruppe, und das Skelett entsteht in `load()`.
-    await GarmentcodeAblage.laden(inst, presetData[GarmentcodeAblage.FELD]);
+    await GarmentcodeAblage.laden(inst, daten[GarmentcodeAblage.FELD]);
     state.characters.set(id, inst);
     state.scene.add(inst.group);
 
@@ -48,6 +65,14 @@ export async function addCharacterFromPreset(presetName, lage = null) {
     markDirty();
 
     return inst;
+}
+
+export async function addCharacterFromPreset(presetName, lage = null) {
+    const resp = await fetch(`/api/character/model/${encodeURIComponent(presetName)}/`);
+    if (!resp.ok) throw new Error(`Preset not found: ${presetName}`);
+    const presetData = await resp.json();
+    return charakterAusModelldaten(presetData,
+                                   { lage, name: presetName });
 }
 
 export async function loadDefaultCharacter() {

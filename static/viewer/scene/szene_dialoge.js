@@ -1,9 +1,8 @@
-import { closeDialog, escapeHtml, generateCharacterId, openDialog } from './utils.js';
+import { closeDialog, escapeHtml, openDialog } from './utils.js';
 import { Dateizeile } from './dateizeile.js';
 import { doSaveScene, loadModelFile, loadSceneFromData } from './save_load.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
-import { markDirty } from './undo.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Charakterdialog } from './charakterdialog.js';
@@ -75,11 +74,10 @@ export async function loadFromFilePicker() {
             await loadSceneFromData(data, data.name || '');
         } else if (data.body_type) {
             fn.clearAllCharacters(); state.currentSceneName = '';
-            const id = generateCharacterId();
-            const inst = new fn.CharacterInstance(id, data);
-            await inst.load();
-            state.characters.set(id, inst); state.scene.add(inst.group);
-            fn.updateCharacterListUI(); fn.updateVertexCount(); fn.selectCharacter(id);
+            // Ueber den gemeinsamen Weg: Er zieht auch die GarmentCode-
+            // Stuecke an und setzt die Figur nach `Figurplatzierung` ab
+            // (09.09.2026 - hier stand eine eigene, halbe Kette).
+            await fn.charakterAusModelldaten(data);
         } else { alert('Unbekanntes JSON-Format.'); }
     } catch (e) { alert(`Fehler beim Laden: ${e.message}`); }
 }
@@ -89,12 +87,11 @@ export async function importModelFromFilePicker() {
         const data = await _openJsonFilePicker();
         if (!data) return;
         if (!data.body_type) { alert('Ung\u00fcltiges Modell-JSON.'); return; }
-        const id = generateCharacterId();
-        const inst = new fn.CharacterInstance(id, data);
-        inst.group.position.set(state.characters.size * 0.8, 0, 0);
-        await inst.load();
-        state.characters.set(id, inst); state.scene.add(inst.group);
-        fn.updateCharacterListUI(); fn.updateVertexCount(); fn.selectCharacter(id); markDirty();
+        // DIESER WEG VERLOR DIE KLEIDER (Edgar, 09.09.2026: „Ueber Datei
+        // - Modell Importieren funktioniert das Modell nicht, keine
+        // Kleider. ueber den + Button im UI funktioniert das"). Er baute
+        // die Figur selbst zusammen und kannte `GarmentcodeAblage` nicht.
+        await fn.charakterAusModelldaten(data, { name: data.name || null });
     } catch (e) { alert(`Fehler: ${e.message}`); }
 }
 

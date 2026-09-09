@@ -139,6 +139,39 @@ class GarmentcodePreset {
         }
     }
 
+    /**
+     * Welche Voreinstellungen gerade angehakt sind — für das Gedaechtnis.
+     *
+     * Als Feld und nicht als `Set`: Es geht so, wie es ist, in den
+     * `localStorage` und wieder heraus.
+     */
+    aktiveListe() {
+        return Array.from(this.aktiv);
+    }
+
+    /**
+     * Häkchen setzen, ohne Werte zu ändern.
+     *
+     * Beim Wiederherstellen stehen die Werte schon (`Garmentcodegedaechtnis`);
+     * hier fehlt nur das Kaestchen. `davor` bleibt LEER: Es haelt die Werte,
+     * die vor dem Anhaken galten, damit ein Abhaken sie zuruecknimmt. Nach
+     * einem Seitenstart gibt es kein „davor" mehr — ein Abhaken laesst die
+     * Regler dann stehen, statt sie auf einen erfundenen Stand zu ziehen.
+     */
+    anhaken(namen) {
+        if (!Array.isArray(namen)) return 0;
+        let gesetzt = 0;
+        for (const schluessel of namen) {
+            if (!this.liste.some((p) => p.schluessel === schluessel)) continue;
+            this.aktiv.add(schluessel);
+            const kaestchen = document.querySelector(
+                `input[data-preset="${schluessel}"]`);
+            if (kaestchen) kaestchen.checked = true;
+            gesetzt += 1;
+        }
+        return gesetzt;
+    }
+
     /** Zahlen kommen als Schieberwert zurück — auf zwei Stellen vergleichen. */
     _gleich(a, b) {
         if (typeof a === 'number' && typeof b === 'number') {

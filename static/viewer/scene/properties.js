@@ -17,6 +17,7 @@ import { Mheigenschaften } from './makehuman/mheigenschaften.js';
 import { Eigenschaftenbereiche } from './eigenschaftenbereiche.js';
 import { Transformfelder } from './transformfelder.js';
 import { Figurmerker } from './figurmerker.js';
+import { Reitergedaechtnis } from './reitergedaechtnis.js';
 import { Formbedienung } from './formbedienung.js';
 import { Reiterfreigabe } from './reiterfreigabe.js';
 
@@ -30,6 +31,10 @@ export function initTabs() {
             // Der Reiter gehört zur Figur: beim nächsten Anklicken derselben
             // Figur öffnet er sich wieder (Edgar, 06.09.2026).
             Figurmerker.tabMerken(state.selectedCharacterId, tab.dataset.tab);
+            // Zusaetzlich ohne Figurbezug: `Figurmerker` liegt im
+            // sessionStorage und gilt fuer die Figuren DIESER Sitzung.
+            // „Beim naechsten Aufruf" heisst neues Fenster (09.09.2026).
+            Reitergedaechtnis.reiterMerken(tab.dataset.tab);
             if (tab.dataset.tab === 'modell') fn.initModelGenerator();
         });
     });
