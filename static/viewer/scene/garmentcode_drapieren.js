@@ -7,6 +7,8 @@ import { Charakterkoerper } from './charakter_koerper.js';
 import { GarmentcodeMaterial } from './garmentcode_material.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { GarmentcodeBilanz } from './garmentcode_bilanz.js';
+import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
+import { GarmentcodeSimulation } from './garmentcode_simulation.js';
 
 /**
  * GarmentcodeDrapierung — den Stoff auf den Körper fallen lassen und ihn
@@ -32,6 +34,13 @@ export class GarmentcodeDrapierung {
         // drapiert wird, und die Knochengewichte fürs Anziehen.
         const daten = reiter.figurdaten(figur);
         daten.append('spezifikation', spezifikation);
+        // Hautabstand und Netzfeinheit aus den Reglern unter „Bauen"
+        // (09.09.2026). Sie betreffen nur die Drapierung — deshalb hier und
+        // nicht in `figurdaten`, das auch das Erzeugen eines Schnitts nutzt.
+        GarmentcodeBauregler.anhaengen(daten);
+        // Und die 42 Regler aus dem aufklappbaren Bereich darunter — davon
+        // nur, was von der Vorgabe abweicht.
+        GarmentcodeSimulation.anhaengen(daten);
         try {
             // MIT FRIST (09.09.2026): Eine Drapierung, deren Antwort nie
             // kommt, liess den Reiter besetzt und alle Knoepfe grau —

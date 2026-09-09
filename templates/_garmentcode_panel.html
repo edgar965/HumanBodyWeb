@@ -111,6 +111,13 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
                      title="Zwei Stellschrauben der Drapierung. Sie wirken beim naechsten Bau mit 3D, nicht auf ein fertiges Stueck.">
                     {% regler "gc-hautabstand" "Abstand zur Haut" min="0" max="15" wert="6" schritt="0.5" anzeige="6,0 mm" %}
                     {% regler "gc-aufloesung" "Netzfeinheit" min="0.5" max="3" wert="1" schritt="0.1" anzeige="1,0&times;" %}
+                    {% comment %}Alle uebrigen Simulationswerte, aufklappbar
+                    (Edgar, 09.09.2026: „mach alle an den Regler … in einem
+                    aufklappbaren Bereich unter Bauen"). Der Inhalt kommt
+                    aus `Simulationsfelder` ueber
+                    `/api/garmentcode/simulationsregler/` — 42 Felder, die
+                    sonst an zwei Stellen zu pflegen waeren.{% endcomment %}
+                    <div id="gc-simulation"></div>
                 </div>
                 {% comment %}Warum die Vorschauzeile (Edgar, 08.09.2026:
                 „vielleicht zweistufig - erst der schnelle MakeHuman nachbau,

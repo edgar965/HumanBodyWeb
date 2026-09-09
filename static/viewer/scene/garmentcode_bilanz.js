@@ -1,3 +1,5 @@
+import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
+
 /**
  * Was die Figur nach einem Bau wirklich trägt — als Text.
  *
@@ -47,7 +49,11 @@ export class GarmentcodeBilanz {
         const haut = isFinite(abstand) ? `, ${abstand.toFixed(0)} mm zur Haut` : '';
         const starr = (netz.auf_figur !== false && !getragen.angezogen)
             ? ' — unbeweglich' : '';
-        return `Fertig in ${netz.dauer_s} s${haut}${starr}`;
+        // Abweichende Reglerstellung nennen (09.09.2026): Ohne sie liesse
+        // sich ein Ergebnis später nicht mehr der Einstellung zuordnen, mit
+        // der es entstanden ist. Steht alles auf Vorgabe, bleibt es leer.
+        const fein = GarmentcodeBauregler.zusatz(netz.feineinstellung);
+        return `Fertig in ${netz.dauer_s} s${haut}${fein}${starr}`;
     }
 
     /**

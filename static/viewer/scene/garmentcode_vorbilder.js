@@ -83,7 +83,12 @@ export class GarmentcodeVorbilder {
                 + '</div>';
             return 0;
         }
-        ziel.appendChild(GarmentcodeVorbilder._ueberschrift(liste.length));
+        // AUFKLAPPBAR SEIT 09.09.2026 (Edgar: „Der Bereich «Nach Vorbild der
+        // Kleiderbibliothek» soll «Kleiderbibliothek» heissen und auf-
+        // zuklappbar werden"). Beim T-Shirt sind es 29 Knoepfe — offen
+        // schieben sie alles darunter aus dem Bild.
+        const kasten = document.createElement('details');
+        kasten.appendChild(GarmentcodeVorbilder._ueberschrift(liste.length));
         // OHNE eigene Klasse: `hb-knopfreihe` gab es nicht — eine erfundene
         // Klasse wirkt nicht und faellt niemandem auf. Die Knoepfe stapeln
         // sich untereinander, und das ist bei Namen wie „Dress Strapless
@@ -92,14 +97,20 @@ export class GarmentcodeVorbilder {
         for (const vorbild of liste) {
             reihe.appendChild(GarmentcodeVorbilder._knopf(vorbild));
         }
-        ziel.appendChild(reihe);
+        kasten.appendChild(reihe);
+        ziel.appendChild(kasten);
         return liste.length;
     }
 
     static _ueberschrift(anzahl) {
-        const kopf = document.createElement('div');
+        const kopf = document.createElement('summary');
         kopf.className = 'hb-font-size-0-72rem';
-        kopf.textContent = `Nach Vorbild aus der Kleiderbibliothek (${anzahl})`;
+        kopf.textContent = `Kleiderbibliothek (${anzahl})`;
+        kopf.title = 'Bibliotheksstücke als Vorlage. Ein Klick stellt die '
+            + 'Regler auf die gemessenen Maße dieses Stücks und übernimmt '
+            + 'Farbe und Glanz; gebaut wird danach wie immer mit „Bauen '
+            + '2D + 3D". Übernommen wird die Silhouette — Länge, Weite, '
+            + 'Ärmel —, nicht Muster und Rüschen.';
         return kopf;
     }
 

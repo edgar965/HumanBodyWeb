@@ -63,13 +63,17 @@ class Garmentcode:
         # nur hierher, nicht in `aus_anfrage` — das Erzeugen eines Schnitts
         # kennt weder Haut noch Simulation.
         fein = Baufeineinstellung.aus_anfrage(request.POST)
+        # Die Simulationsregler aus dem aufklappbaren Bereich darunter. Sie
+        # kommen mit der Vorsilbe `sim_` und nur, soweit sie abweichen.
+        from GarmentCode.simulationsregler import Simulationsregler
+        sim = Simulationsregler.aus_anfrage(request.POST)
         try:
             anfrage = Garmentcode.aus_anfrage(request)
             ergebnis = GarmentcodeDienst.drapieren(
                 spez, koerper=anfrage['koerper'],
                 geschlecht=anfrage['geschlecht'], morphs=anfrage['morphs'],
                 bauart=anfrage['bauart'], smpl=anfrage['smpl'],
-                meta=anfrage['meta'], fein=fein)
+                meta=anfrage['meta'], fein=fein, sim=sim)
         except DrapierFehler as fehler:
             logger.warning('Drapierung gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)
@@ -89,6 +93,7 @@ class Garmentcode:
         # Womit gebaut wurde, gehoert in die Antwort: Sonst laesst sich ein
         # Ergebnis spaeter nicht mehr einer Reglerstellung zuordnen.
         ergebnis['feineinstellung'] = fein.als_dict()
+        ergebnis['simulationswerte'] = sim.als_dict()
         ordner = os.path.basename(ergebnis.get('ordner') or '')
         datei = ergebnis.get('rig_datei')
         if ordner and datei:

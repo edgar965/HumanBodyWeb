@@ -20,6 +20,7 @@ from .api.bvhtext import Bvhtext
 from .api.garmentcode import Garmentcode
 from .api.garmentgemeinsam import Garmentgemeinsamendpunkte
 from .api.garmentvorbilder import Garmentvorbilder
+from .api.garmentsimulation import Garmentsimulation
 from .api.schnittvorschau import Schnittvorschauendpunkte
 from .api.umafigurbau import Umafigurbau
 from .api.umatextur import Umatextur
@@ -189,6 +190,8 @@ urlpatterns = [
          name='garmentcode_regler'),
     path('api/garmentcode/vorbilder/', Garmentvorbilder.vorbilder,
          name='garmentcode_vorbilder'),
+    path('api/garmentcode/simulationsregler/', Garmentsimulation.regler,
+         name='garmentcode_simulationsregler'),
     path('api/garmentcode/masse/', Garmentcode.masse, name='garmentcode_masse'),
     path('api/garmentcode/erzeugen/', Garmentcode.erzeugen,
          name='garmentcode_erzeugen'),

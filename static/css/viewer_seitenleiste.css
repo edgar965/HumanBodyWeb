@@ -100,6 +100,25 @@
     text-align: left;
 }
 
+/* Die 42 Simulationsregler (09.09.2026). Ihre Beschriftungen sind laenger
+   als die uebrigen im Reiter („Hoechstgeschwindigkeit", „Flaechensteifigkeit")
+   und schoben die Wertspalte aus dem Panel: Im Bild stand „0,2" statt 0,25
+   und „40" statt 400. Das Label bekommt deshalb eine feste Spalte und
+   kuerzt mit Auslassungspunkten — der ganze Text steht ohnehin im `title`.
+   `min-width:0` am Schieber ist noetig, damit Flex ihn ueberhaupt
+   schrumpfen laesst; ohne das gewinnt seine Standardbreite. */
+#gc-simulation .slider-row label {
+    flex: 0 0 42%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#gc-simulation .slider-row input[type="range"] { min-width: 0; }
+
+/* Platz fuer fuenfstellige Werte wie 50000 und fuer „0,05". */
+#gc-simulation .slider-row .slider-val { min-width: 46px; }
+
 /* 3x */
 .hb-margin-top-6px.hb-margin-top-6px.hb-margin-top-6px { margin-top:6px; }
 
