@@ -67,18 +67,23 @@ class RetargetfassungTest(SimpleTestCase):
         das ein Anlass nachzumessen (`ProjektTemp/halshaltung.py`) — und
         `REGELFASSUNG` zu erhoehen.
         """
+        hals = richtungsausnahmen.HALS_UND_KOPF
         fuesse = richtungsausnahmen.FUESSE_UND_KOPF
-        # AIST nimmt Fuesse und Kopf aus - und ist das einzige Format,
-        # bei dem der Hals unauffaellig ist.
+        # AIST nimmt Fuesse und Kopf aus.
         self.assertEqual(list(SkeletonAIST_SMPL.SKIP_DIR_CORRECTION),
                          list(fuesse))
-        # CMU, MIXAMO und BANDAI korrigieren ueberall. Das ist am
-        # 09.09.2026 nachgemessen und ABSICHTLICH so geblieben: Fuenf
-        # Fassungen des Masses gaben fuenf verschiedene Antworten, und
-        # die einzige unabhaengig bestaetigte sagt, dass CMUs
-        # A_Pose-Dateien mit Ausnahmeliste schlechter werden
-        # (11,0 -> 25,3 Grad). Begruendung in `richtungsausnahmen`.
-        for klasse in (SkeletonCMU, SkeletonMixamo, SkeletonBandai):
+        # Mixamo: nur Hals und Kopf. Der Hals steht damit bei 31,1 Grad
+        # gegen die Brustachse (Ruhelage 31,3), ohne die Liste bei 14,7
+        # — der Schwanenhals. Die Fuesse wuerden mit Korrektur
+        # schlechter (`DEF-foot.R` 20,92 -> 32,95 Grad).
+        self.assertEqual(list(SkeletonMixamo.SKIP_DIR_CORRECTION),
+                         list(hals))
+        # CMU UND BANDAI BLEIBEN LEER, und das ist gemessen: Bei CMU
+        # ueberschiesst die Grundhaltung mit Liste (59,0 statt 18,1
+        # Grad bei 31,3 Ruhelage), bei Bandai verschlechtert sie die
+        # Beugung von 0,1 auf 8,9 Grad. Begruendung in
+        # `richtungsausnahmen`, Eichfall in `test_halstreue`.
+        for klasse in (SkeletonCMU, SkeletonBandai):
             self.assertEqual(list(klasse.SKIP_DIR_CORRECTION), [],
                              klasse.FORMAT)
 
