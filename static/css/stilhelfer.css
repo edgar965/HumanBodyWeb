@@ -944,3 +944,16 @@
     cursor: not-allowed;
     pointer-events: none;
 }
+
+/* Ein Bereich ohne Ueberschrift (Edgar, 09.09.2026: „mach die Überschrift
+   «Passform» weg, die nimmt nur Platz"). `.panel-section` bringt einen
+   Abstand nach oben mit, der unter der Ueberschrift des Vorgaengers
+   sitzt — ohne eigene Ueberschrift entsteht daraus eine Luecke, also
+   genau der Platz, der gespart werden sollte. */
+.panel-section.hb-ohne-kopf {
+    margin-top: 0;
+    border-top: none;
+}
+.panel-section.hb-ohne-kopf > .panel-body {
+    padding-top: 0;
+}

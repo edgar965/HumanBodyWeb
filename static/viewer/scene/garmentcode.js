@@ -129,7 +129,10 @@ class GarmentcodeReiter {
     aufklappen() {
         if (this.aufgeklappt) return;
         this.aufgeklappt = true;
-        for (const schluessel of ['gc_bauen', 'gc_regler']) {
+        // `gc_bauen` und `gc_passform` stehen seit dem 09.09.2026
+        // ohne Ueberschrift und damit immer offen; hier bleibt
+        // nur, was sich noch zuklappen laesst.
+        for (const schluessel of ['gc_regler']) {
             const bereich = document.querySelector(
                 `#tab-garmentcode [data-panel-key="${schluessel}"]`);
             if (bereich) bereich.classList.remove('collapsed');

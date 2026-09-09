@@ -15,17 +15,23 @@ Drehungen Identitaet, nur der Hals um einen vorgegebenen Winkel
 gebeugt. Damit ist die Wahrheit bekannt, und die Frage ist nicht mehr
 „welche Variante ist besser", sondern „kommt die Beugung an".
 
-Gemessen wurde damit unter anderem, dass OpenPose den Hals gar nicht
-bewegte (0,0 von 30 Grad) — er war auf `neck1` zugeordnet, das 19 von
-29 Dateien nicht fuehren.
+WAS DIESE FAELLE FESTHALTEN
+==========================
+Der Eichfall hat zwei offene Punkte SICHTBAR gemacht, und beide sind
+noch offen:
 
-DER EICHFALL ENTSCHEIDET NICHT ALLEIN. Er prueft die BEUGUNG, nicht
-die Grundhaltung. Bei CMU kaeme die Beugung mit `SKIP_DIR_CORRECTION`
-exakt an (1,6 -> 0,0 Grad), die Grundhaltung ueberschiesst dann aber:
-Der Hals steht bei 59,0 statt 18,1 Grad, waehrend seine Ruhelage 31,3
-ist — im Bild ein nach vorn haengender Kopf. Deshalb bleibt CMU bei
-`[]` und traegt seine 1,6 Grad; bei Mixamo ist es umgekehrt (31,1
-statt 14,7 Grad, Ruhe 31,3).
+  * OpenPose bewegt den Hals ueberhaupt nicht (0,0 von 30 Grad).
+    `DEF-spine.004` haengt dort an `neck1`, das 19 von 29 Dateien nicht
+    fuehren; unzuordenbare Namen werden still uebersprungen.
+  * CMU traegt 1,6 Grad Beugungsfehler.
+
+Ein Versuch, beides zu beheben, wurde am 09.09.2026 zurueckgenommen:
+Edgar sah danach eine schlechtere A-Pose und verdrehte SCHULTERN. Der
+Eichfall prueft nur den Hals — er reicht als Beleg nicht aus, und ein
+Beleg, der die Schultern mitprueft, fehlt noch.
+
+Die Faelle halten deshalb den IST-Zustand fest, nicht den Wunsch. Wer
+den Retarget verbessert, dreht sie um.
 
 WARUM DIE BEUGEACHSE GERECHNET WIRD
 ===================================
@@ -269,10 +275,15 @@ class HalstreueTest(SimpleTestCase):
         if not geprueft:
             self.skipTest('keine BVH-Datei unter OBJECTS_ROOT')
 
+    #: Formate, deren Beugung heute ankommt.
+    TRAGEND = ('CMU', 'MIXAMO', 'MOCAPNET')
+
     def test_die_beugung_kommt_am_ziel_an(self):
-        u"""Die Kernaussage: Vorgabe rein, dieselbe Beugung raus."""
+        u"""Vorgabe rein, dieselbe Beugung raus — wo das heute gilt."""
         geprueft = 0
         for name in DATEIEN:
+            if name not in self.TRAGEND:
+                continue
             pfad = _pfad(name)
             if not pfad:
                 continue
@@ -286,6 +297,33 @@ class HalstreueTest(SimpleTestCase):
             geprueft += 1
         if not geprueft:
             self.skipTest('keine BVH-Datei unter OBJECTS_ROOT')
+
+    def test_openpose_bewegt_den_hals_nicht(self):
+        u"""EIN OFFENER PUNKT, hier festgehalten statt verschwiegen.
+
+        `DEF-spine.004` ist bei OpenPose auf `neck1` zugeordnet, und 19
+        von 29 Dateien fuehren das nicht — der Halsknochen bleibt
+        unzugeordnet und steht in jedem Bild in der Ruhelage. Am
+        Eichfall kommen 0,0 von 30 Grad an.
+
+        Die Behebung (`neck` als zweiter Traeger) war am 09.09.2026
+        eingebaut und wurde mit dem uebrigen Retarget-Umbau
+        zurueckgenommen, weil Edgar danach verdrehte Schultern sah.
+
+        FAELLT DIESER FALL, ist der Fehler behoben — dann gehoert er
+        umgedreht und OpenPose in `TRAGEND`.
+        """
+        pfad = _pfad('OPENPOSE')
+        if not pfad:
+            self.skipTest('OpenPose-Datei fehlt')
+        reihe = eichlauf(pfad)
+        schlimmster = max(abs(ziel - soll)
+                          for (_, ziel), soll in zip(reihe, GRADE))
+        self.assertGreater(
+            schlimmster, 10.0,
+            'OpenPose beugt den Hals jetzt (%.2f Grad Abweichung). Wenn '
+            'das gewollt ist: diesen Fall umdrehen und OPENPOSE in '
+            'TRAGEND aufnehmen.' % schlimmster)
 
     def test_auch_bei_gebeugtem_rumpf(self):
         u"""Der Hals erbt die Korrektur des Rumpfes.
@@ -332,20 +370,12 @@ class HalstreueTest(SimpleTestCase):
                               '%s ordnet %s niemandem zu'
                               % (klasse.FORMAT, knochen))
 
-    def test_gegenprobe_ein_unzugeordneter_hals_faellt_auf(self):
-        u"""Sabotage: Zeigt die Halszuordnung ins Leere, MUSS es auffallen.
+    def test_gegenprobe_die_reparatur_wuerde_wirken(self):
+        u"""Sabotage in die andere Richtung: `neck` als zweiter Traeger.
 
-        Genau das war bis zum 09.09.2026 der Zustand bei OpenPose —
-        `neck1` gibt es in 19 von 29 Dateien nicht, und `DEF-spine.004`
-        stand in jedem Bild in der Ruhelage. Hier wird der Zustand
-        nachgestellt: Die Beugung muss dann 0,0 statt 30,0 Grad
-        ankommen. Ohne diesen Fall koennte die Schwelle so weit sein,
-        dass sie alles durchlaesst (`~/.claude/rules/analysewerkzeuge.md`).
-
-        Mixamo taugt dafuer NICHT: Dort ist die Beugung mit und ohne
-        Ausnahmeliste exakt gleich (gemessen 4,6e-14 Grad Unterschied) —
-        die Liste wirkt dort auf die Grundhaltung, nicht auf die
-        Beugung.
+        Damit ist belegt, dass der Fall oben eine ECHTE Ursache misst
+        und nicht bloss eine zu enge Schwelle: Mit der Zuordnung kommt
+        die Beugung an, ohne sie nicht.
         """
         from unittest import mock
         from humanbody_core.skeleton.formats.openpose import (
@@ -353,22 +383,18 @@ class HalstreueTest(SimpleTestCase):
         pfad = _pfad('OPENPOSE')
         if not pfad:
             self.skipTest('OpenPose-Datei fehlt')
-
-        # Erst der Ist-Zustand: die Beugung kommt an.
-        reihe = eichlauf(pfad)
-        heute = max(abs(ziel - soll)
-                    for (_, ziel), soll in zip(reihe, GRADE))
-        self.assertLess(heute, self.SCHWELLE, heute)
-
-        # Und jetzt mit der alten, ins Leere zeigenden Zuordnung.
-        kaputt = dict(SkeletonOpenPose.BONE_MAP_TO_RIGIFY)
-        kaputt['neck'] = None
+        heil = {}
+        for bvh_name, ziel in SkeletonOpenPose.BONE_MAP_TO_RIGIFY.items():
+            heil[bvh_name] = ('DEF-spine.004' if bvh_name == 'neck'
+                              else ziel)
         with mock.patch.object(SkeletonOpenPose, 'BONE_MAP_TO_RIGIFY',
-                               kaputt):
+                               heil),              mock.patch.object(SkeletonOpenPose, 'MEHRERE_SCHREIBWEISEN',
+                               True):
             reihe = eichlauf(pfad)
             schlimmster = max(abs(ziel - soll)
                               for (_, ziel), soll in zip(reihe, GRADE))
-        self.assertGreater(
-            schlimmster, 10.0,
-            'Mit unzugeordnetem Hals liegt die Beugung nur %.2f Grad '
-            'daneben — dann prueft der Test oben nichts.' % schlimmster)
+        self.assertLess(
+            schlimmster, self.SCHWELLE,
+            'Auch mit zugeordnetem Hals liegt die Beugung %.2f Grad '
+            'daneben — dann ist die Zuordnung nicht die Ursache.'
+            % schlimmster)

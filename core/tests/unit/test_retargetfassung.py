@@ -67,23 +67,17 @@ class RetargetfassungTest(SimpleTestCase):
         das ein Anlass nachzumessen (`ProjektTemp/halshaltung.py`) — und
         `REGELFASSUNG` zu erhoehen.
         """
-        hals = richtungsausnahmen.HALS_UND_KOPF
         fuesse = richtungsausnahmen.FUESSE_UND_KOPF
-        # AIST nimmt Fuesse und Kopf aus.
+        # AIST nimmt Fuesse und Kopf aus — und ist das einzige Format,
+        # bei dem der Hals unauffaellig steht.
         self.assertEqual(list(SkeletonAIST_SMPL.SKIP_DIR_CORRECTION),
                          list(fuesse))
-        # Mixamo: nur Hals und Kopf. Der Hals steht damit bei 31,1 Grad
-        # gegen die Brustachse (Ruhelage 31,3), ohne die Liste bei 14,7
-        # — der Schwanenhals. Die Fuesse wuerden mit Korrektur
-        # schlechter (`DEF-foot.R` 20,92 -> 32,95 Grad).
-        self.assertEqual(list(SkeletonMixamo.SKIP_DIR_CORRECTION),
-                         list(hals))
-        # CMU UND BANDAI BLEIBEN LEER, und das ist gemessen: Bei CMU
-        # ueberschiesst die Grundhaltung mit Liste (59,0 statt 18,1
-        # Grad bei 31,3 Ruhelage), bei Bandai verschlechtert sie die
-        # Beugung von 0,1 auf 8,9 Grad. Begruendung in
-        # `richtungsausnahmen`, Eichfall in `test_halstreue`.
-        for klasse in (SkeletonCMU, SkeletonBandai):
+        # CMU, MIXAMO und BANDAI korrigieren ueberall. Ein Versuch, das
+        # am 09.09.2026 zu aendern, wurde zurueckgenommen: Edgar sah
+        # danach eine schlechtere A-Pose und verdrehte Schultern. Der
+        # Befund und die Messungen stehen in CLAUDE.md; die Behebung
+        # braucht einen Beleg, der die Schultern mitprueft.
+        for klasse in (SkeletonCMU, SkeletonMixamo, SkeletonBandai):
             self.assertEqual(list(klasse.SKIP_DIR_CORRECTION), [],
                              klasse.FORMAT)
 

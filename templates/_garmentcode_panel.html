@@ -23,52 +23,22 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
     {% comment %}Der Hinweis steht IM Inhalt, nicht davor: Vorlagen und
     Einstellungen kann man ohne Figur ansehen — nur bauen nicht.{% endcomment %}
     <div id="gc-content">
-        {% comment %}Farbe und Material stehen GANZ OBEN (Edgar, 08.09.2026:
-        „mach noch einstellungen im Garment Code fuer die Farbe, metallness,
-        roughess (ganz oben im Tab), so wie das bei Garment Fit ist").
+                {% comment %}REIHENFOLGE UND UEBERSCHRIFTEN (Edgar, 09.09.2026):
+        „mach die Überschrift «Passform» weg, die nimmt nur Platz, die
+        Einstellungen zur Passform soll bleiben. Überschrift «Kleidung
+        bauen» auch weg. Erster Eintrag die Einstellungen die bei
+        «Kleidung bauen» waren, danach die Passform, danach die Farben /
+        Material (hier soll die Überschrift bleiben), danach
+        «Feineinstellungen»".
 
-        Dieselben drei Regler wie im Kleider-Reiter, mit denselben
-        Kennungen-Endungen (`-color`, `-roughness`, `-metalness`), damit der
-        vorhandene `Materialregler` sie ohne Sonderfall bedient. Die Werte
-        sind die, mit denen `GarmentcodeAnziehen` ein Stueck einhaengt:
-        #dcd8d0, Rauheit 0,85, Metallgrad 0.{% endcomment %}
-        <div class="panel-section" data-panel-key="gc_material">
-            <h3 title="Gilt für das angeklickte Stück; ohne Auswahl für alle GarmentCode-Stücke dieser Figur und die, die danach gebaut werden.">Farbe / Material <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body">
-                {% comment %}Der Erklaertext ist weg (Edgar, 08.09.2026:
-                „mach die vielen Texte aus dem Garment Code weg"). Was die
-                Regler treffen, steht als `title` an der Ueberschrift —
-                nachlesbar, aber nicht im Weg.{% endcomment %}
-                <div class="slider-row"><label>Farbe</label>
-                    <input type="color" id="gc-color" value="#dcd8d0"
-                           class="hb-farbfeld">
-                </div>
-                {% regler "gc-roughness" "Roughness" max="100" wert="85" anzeige="0.85" %}
-                {% regler "gc-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
-            </div>
-        </div>
-
-        {% comment %}Voreinstellungen fuer die Passform (Edgar, 08.09.2026:
-        „Mach mir die Voreinstellungen fuer die Kleider, oben im Tab, nach
-        dem Farben bereich, mit Voreinstellungen fuer eng anliegend, und 2
-        anderen").
-
-        Welche hier stehen, entscheidet der Server: Die Rumpfweite gibt es
-        nur beim ungefitteten `Shirt`, an einem taillierten Kleid bleibt vom
-        Preset nur der Aermelteil (`Assets/GarmentCode/passform.py`). Eine
-        Hose bekommt gar keines — dort waere jeder dieser Werte
-        wirkungslos.{% endcomment %}
-        <div class="panel-section" data-panel-key="gc_passform">
-            <h3 title="Fertige Kombinationen. Ein Häkchen stellt mehrere Regler; Abhaken nimmt sie zurück. Was jedes Preset bewirkt, steht beim Überfahren seines Namens.">Passform <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body">
-                <div id="gc-passform">
-                    <div class="hb-hinweis">Wird beim &Ouml;ffnen geladen&hellip;</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="panel-section" data-panel-key="gc_bauen">
-            <h3>Kleidung bauen <span class="chevron">&#9660;</span></h3>
+        Die beiden vorderen Bloecke tragen deshalb weder <h3> noch
+        `data-panel-key`: Ohne Ueberschrift gibt es nichts zum Zuklappen,
+        und ohne Schluessel fasst `Starteinstellungen.bereicheOeffnen` sie
+        nicht an — sie stehen immer offen. Was frueher im `title` der
+        Ueberschrift stand, haengt jetzt an den Bedienelementen selbst,
+        damit die Erklaerung nicht verlorengeht.{% endcomment %}
+        <div class="panel-section hb-ohne-kopf">
+            
             <div class="panel-body">
                 <div class="slider-row"><label>Kleidungsst&uuml;ck</label>
                     <select id="gc-vorlage" class="viewer-select hb-dehnt-ohne-abstand">
@@ -142,6 +112,51 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
                 jetzt durch bis zur angezogenen Figur; wie weit er ist, sagt
                 der Balken darüber.
                 {% endcomment %}
+            </div>
+        </div>
+
+{% comment %}Voreinstellungen fuer die Passform (Edgar, 08.09.2026:
+        „Mach mir die Voreinstellungen fuer die Kleider, oben im Tab, nach
+        dem Farben bereich, mit Voreinstellungen fuer eng anliegend, und 2
+        anderen").
+
+        Welche hier stehen, entscheidet der Server: Die Rumpfweite gibt es
+        nur beim ungefitteten `Shirt`, an einem taillierten Kleid bleibt vom
+        Preset nur der Aermelteil (`Assets/GarmentCode/passform.py`). Eine
+        Hose bekommt gar keines — dort waere jeder dieser Werte
+        wirkungslos.{% endcomment %}
+        <div class="panel-section hb-ohne-kopf">
+            
+            <div class="panel-body">
+                <div id="gc-passform"
+                     title="Fertige Kombinationen. Ein Häkchen stellt mehrere Regler; Abhaken nimmt sie zurück. Was jedes Preset bewirkt, steht beim Überfahren seines Namens.">
+                    <div class="hb-hinweis">Wird beim &Ouml;ffnen geladen&hellip;</div>
+                </div>
+            </div>
+        </div>
+
+{% comment %}Farbe und Material stehen GANZ OBEN (Edgar, 08.09.2026:
+        „mach noch einstellungen im Garment Code fuer die Farbe, metallness,
+        roughess (ganz oben im Tab), so wie das bei Garment Fit ist").
+
+        Dieselben drei Regler wie im Kleider-Reiter, mit denselben
+        Kennungen-Endungen (`-color`, `-roughness`, `-metalness`), damit der
+        vorhandene `Materialregler` sie ohne Sonderfall bedient. Die Werte
+        sind die, mit denen `GarmentcodeAnziehen` ein Stueck einhaengt:
+        #dcd8d0, Rauheit 0,85, Metallgrad 0.{% endcomment %}
+        <div class="panel-section" data-panel-key="gc_material">
+            <h3 title="Gilt für das angeklickte Stück; ohne Auswahl für alle GarmentCode-Stücke dieser Figur und die, die danach gebaut werden.">Farbe / Material <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body">
+                {% comment %}Der Erklaertext ist weg (Edgar, 08.09.2026:
+                „mach die vielen Texte aus dem Garment Code weg"). Was die
+                Regler treffen, steht als `title` an der Ueberschrift —
+                nachlesbar, aber nicht im Weg.{% endcomment %}
+                <div class="slider-row"><label>Farbe</label>
+                    <input type="color" id="gc-color" value="#dcd8d0"
+                           class="hb-farbfeld">
+                </div>
+                {% regler "gc-roughness" "Roughness" max="100" wert="85" anzeige="0.85" %}
+                {% regler "gc-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
             </div>
         </div>
 
