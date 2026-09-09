@@ -27,6 +27,7 @@ import os
 
 from .skelettgeometrie import Skelettgeometrie
 from humanbody_core.skeleton.bewegungsspuren import Bewegungsspuren
+from humanbody_core.skeleton.retarget.fassung import REGELFASSUNG
 
 logger = logging.getLogger('core')
 
@@ -63,10 +64,12 @@ class Retargetdaten:
 
     @property
     def ablage(self):
-        merkmal = (f'{self.hoehe:.4f}_{self.format}_{self.fusskorrektur}'
-                   f'_{self.delta_norm}')
-        # Das DEF-Ziel bleibt ohne Zusatz: Die Ablagen von vor dem
-        # 05.09.2026 tragen genau diesen Namen und gelten weiter.
+        # DIE FASSUNG DER REGELN GEHOERT IN DEN NAMEN (09.09.2026): Ohne
+        # sie liefern vorhandene Ablagen nach einer Regelaenderung
+        # weiter das alte Ergebnis — still, und die Aenderung kommt
+        # nirgends an. Begruendung in `retarget/fassung.py`.
+        merkmal = (f'v{REGELFASSUNG}_{self.hoehe:.4f}_{self.format}'
+                   f'_{self.fusskorrektur}_{self.delta_norm}')
         if self.ziel != self.ZIEL_DEF:
             merkmal += f'_{self.ziel}'
         if self.figur:
