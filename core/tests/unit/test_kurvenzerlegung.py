@@ -101,7 +101,6 @@ class KurvenzerlegungTest(SimpleTestCase):
 
     def test_anzahl_und_raender(self):
         u"""Ohne Anfang und Ende — wie beim Upstream."""
-        Z = _zerlegung()
         for n in (1, 4, 9, 20):
             stellen = _zerlegung().teilstellen(
                 Kurve(lambda t: complex(t, 0.0)), n)

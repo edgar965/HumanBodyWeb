@@ -1,4 +1,5 @@
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
+import { Garmentstoff } from './garmentcode_stoff.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { fn } from '../gemeinsam/registrierung.js';
 
@@ -147,22 +148,18 @@ export class GarmentcodeAblage {
 
     // -- Material -------------------------------------------------------------
 
+    /** Als Text in der Szenendatei — `#rrggbb` liest sich beim Nachsehen. */
     static _material(netz) {
-        const m = netz?.material;
-        if (!m) return null;
+        const werte = Garmentstoff.werte(netz);
+        if (!werte) return null;
         return {
-            farbe: m.color ? `#${m.color.getHexString()}` : null,
-            rauheit: typeof m.roughness === 'number' ? m.roughness : null,
-            metall: typeof m.metalness === 'number' ? m.metalness : null,
+            ...werte,
+            farbe: werte.farbe === null ? null
+                : `#${werte.farbe.toString(16).padStart(6, '0')}`,
         };
     }
 
     static _materialSetzen(netz, werte) {
-        const m = netz?.material;
-        if (!m || !werte) return false;
-        if (werte.farbe) m.color?.set(werte.farbe);
-        if (typeof werte.rauheit === 'number') m.roughness = werte.rauheit;
-        if (typeof werte.metall === 'number') m.metalness = werte.metall;
-        return true;
+        return Garmentstoff.auflegen(netz, werte) === 1;
     }
 }

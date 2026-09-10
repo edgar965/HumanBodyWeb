@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { _sliderVal } from './utils.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
+import { Garmentstoff } from './garmentcode_stoff.js';
 
 /**
  * Farbe und Material der GarmentCode-Stücke.
@@ -12,9 +13,20 @@ import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
  * =================
  * Auf das ANGEKLICKTE Stück, wie im Kleider-Reiter — ein GarmentCode-Stück
  * ist seit dem 08.09.2026 ein eigenes Objekt in `clothMeshes` und damit
- * auswählbar. Ist keines ausgewählt, gelten sie für alle `gc_*`-Netze der
- * Figur; dann heisst die Einstellung „so soll GarmentCode-Stoff hier
- * aussehen".
+ * auswählbar. Ist keines ausgewählt, wird der Stand nur GEMERKT: Er gilt
+ * dann für das nächste Stück, das gebaut wird, und fasst nichts an, was
+ * schon hängt.
+ *
+ * BIS ZUM 09.09.2026 GALT ER OHNE AUSWAHL FÜR ALLE `gc_*`-NETZE, und das
+ * war der Fehler hinter zwei Befunden Edgars („Farben … setzen die Farben
+ * von allen Garments statt einem" und „modell gespeichert (farbe rot des
+ * T-Shirt), neu geladen — Farbe ist weg"). Denn das Reitergedächtnis
+ * stellt beim Seitenstart `gc-color` wieder her und feuert dabei `input`
+ * (`reitergedaechtnis.js`) — zu diesem Zeitpunkt ist nie etwas ausgewählt.
+ * Im Browser gemessen: Ein einziges solches `input` schrieb das aus der
+ * Szene geladene Material (#dcd8d0, Rauheit 0,85) auf den Reglerstand
+ * (#ff0000, Rauheit 1,0) um. Die gespeicherte Farbe war damit weg, bevor
+ * sie jemand sehen konnte — ohne Fehler und ohne Meldung.
  *
  * Der vorhandene `Materialregler` passt trotzdem nicht: Er kennt nur den
  * Fall mit Auswahl und hält keinen Stand, den ein späterer Bau erben
@@ -45,7 +57,8 @@ export class GarmentcodeMaterial {
     }
 
     /**
-     * Den eingestellten Stand auflegen — auf das GEWÄHLTE Stück.
+     * Den eingestellten Stand auflegen — auf das GEWÄHLTE Stück, sonst auf
+     * KEINES.
      *
      * BEFUND (Edgar, 08.09.2026): „Änderung der Farbe ändert ALLE farben
      * aller GarmentCode Items, obwohl nur einer ausgewählt ist." Die erste
@@ -54,40 +67,37 @@ export class GarmentcodeMaterial {
      * 08.09.2026 ein eigenes Objekt, das man anklicken kann — wenn eines
      * gewählt ist, gilt die Auswahl.
      *
-     * Ohne Auswahl bleibt es beim alten Verhalten: Dann meint die
-     * Einstellung „so soll GarmentCode-Stoff hier aussehen", und der
-     * nächste Bau übernimmt sie (der Aufruf am Ende des Anziehens).
+     * OHNE AUSWAHL WIRD NICHTS ANGEFASST (09.09.2026). Der Stand steht
+     * bereits in `GarmentcodeMaterial.stand`; von dort holt ihn das nächste
+     * gebaute Stück (`aufStueck`). Ein Rückgriff auf alle hängenden Stücke
+     * kann nur schaden — er trifft auch die, die ihre Farbe aus der
+     * gespeicherten Szene mitgebracht haben. Siehe Modulkopf: Genau daran
+     * ist die gespeicherte Farbe beim Laden verlorengegangen.
      */
-    static anwenden(figur, nurGewaehltes = true) {
+    static anwenden(figur) {
         const inst = figur?.inst || figur;
-        const gewaehlt = nurGewaehltes
-            ? GarmentcodeMaterial.gewaehltesStueck(inst) : null;
-        const netze = gewaehlt
-            ? [gewaehlt] : GarmentcodeMaterial.stuecke(inst);
-        for (const netz of netze) {
-            const material = netz.material;
-            if (!material) continue;
-            material.color?.set(GarmentcodeMaterial.stand.farbe);
-            material.roughness = GarmentcodeMaterial.stand.rauheit;
-            material.metalness = GarmentcodeMaterial.stand.metall;
-        }
-        return netze.length;
+        const gewaehlt = GarmentcodeMaterial.gewaehltesStueck(inst);
+        if (!gewaehlt) return 0;
+        return GarmentcodeMaterial._auflegen(gewaehlt);
     }
 
     /**
-     * Alle GarmentCode-Stücke einer Figur.
+     * Den Stand auf GENAU EIN Stück legen — für ein frisch gebautes.
      *
-     * Gelesen wird aus `clothMeshes` mit dem `gc_`-Präfix, nicht über den
-     * Szenengraphen: Dort hängen auch Körper, Haare und die Stücke der
-     * anderen Verfahren, und ein Namensvergleich am Netz träfe irgendwann
-     * eines davon mit.
+     * `GarmentcodeAnziehen` hängt jedes Stück mit einem neuen Material ein;
+     * ohne diesen Schritt spränge die eingestellte Farbe bei jedem Bau auf
+     * die Vorgabe zurück (08.09.2026). Gezielt, nicht über alle: Der Bau
+     * eines zweiten Stücks darf die Farbe des ersten nicht mitziehen.
      */
-    static stuecke(inst) {
-        const bestand = inst?.clothMeshes || {};
-        return Object.keys(bestand)
-            .filter((k) => k.startsWith('gc_'))
-            .map((k) => bestand[k])
-            .filter(Boolean);
+    static aufStueck(figur, stueck) {
+        const inst = figur?.inst || figur;
+        const netz = inst?.clothMeshes?.[
+            GarmentcodeAnziehen.schluessel(stueck)];
+        return netz ? GarmentcodeMaterial._auflegen(netz) : 0;
+    }
+
+    static _auflegen(netz) {
+        return Garmentstoff.auflegen(netz, GarmentcodeMaterial.stand);
     }
 
     /**

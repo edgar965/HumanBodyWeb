@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Garmentstoff } from './garmentcode_stoff.js';
 
 /**
  * GarmentcodeAnziehen — das drapierte Kleidungsstück an die Figur hängen.
@@ -60,15 +61,13 @@ export class GarmentcodeAnziehen {
     /** Three.js erlaubt vier Knochen je Punkt. */
     static KNOCHEN_JE_PUNKT = 4;
 
-    /** Stoff-Farbe, solange GarmentCode keine mitgibt. */
-    static FARBE = 0xdcd8d0;
-
     /**
      * Holt die Rig-Datei und hängt das Stück an die Figur.
      *
      * @param figur  Instanz aus `state.characters`
      * @param url    Adresse der `*_sim_rig.json`
-     * @returns {punkte, dreiecke, angezogen, zugeordnet} — oder wirft
+     * @returns Objekt mit punkte, dreiecke, angezogen, zugeordnet —
+     *          oder wirft
      */
     static async anziehen(figur, url, stueck) {
         const daten = await fetch(url, { cache: 'no-store' }).then(a => {
@@ -81,6 +80,10 @@ export class GarmentcodeAnziehen {
     /** Derselbe Schritt mit schon geladenen Daten — so ist er prüfbar. */
     static einhaengen(figur, daten, stueck) {
         const geometrie = GarmentcodeAnziehen.geometrie(daten);
+        // Das bisherige Aussehen überlebt das Neu-Einhängen — diese Methode
+        // läuft auch aus `nachbinden` (`garmentcode_stoff.js`, 09.09.2026).
+        const bisher = Garmentstoff.werte(
+            figur?.clothMeshes?.[GarmentcodeAnziehen.schluessel(stueck)]);
         GarmentcodeAnziehen.entfernen(figur, stueck);
 
         const skelett = GarmentcodeAnziehen._skelett(figur);
@@ -92,9 +95,9 @@ export class GarmentcodeAnziehen {
         let netz;
         if (zuordnung && zuordnung.treffer && gewichte.length) {
             GarmentcodeAnziehen._gewichte(geometrie, gewichte, zuordnung.index);
-            netz = new THREE.SkinnedMesh(geometrie, GarmentcodeAnziehen._stoff());
+            netz = new THREE.SkinnedMesh(geometrie, Garmentstoff.neu(bisher));
         } else {
-            netz = new THREE.Mesh(geometrie, GarmentcodeAnziehen._stoff());
+            netz = new THREE.Mesh(geometrie, Garmentstoff.neu(bisher));
             // Ohne Gewichte in der Datei ist das kein Mangel, sondern der
             // Referenzkörper-Weg (06.09.2026) — dort gibt es bewusst kein
             // Rig. Gewarnt wird nur, wenn Gewichte da sind und das Skelett
@@ -271,14 +274,5 @@ export class GarmentcodeAnziehen {
             if (!skelett && o.isSkinnedMesh && o.skeleton) skelett = o.skeleton;
         });
         return skelett;
-    }
-
-    static _stoff() {
-        return new THREE.MeshStandardMaterial({
-            color: GarmentcodeAnziehen.FARBE,
-            roughness: 0.85,
-            metalness: 0.0,
-            side: THREE.DoubleSide,
-        });
     }
 }

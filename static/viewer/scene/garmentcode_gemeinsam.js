@@ -5,6 +5,7 @@ import { GarmentcodePanels } from './garmentcode_panels.js';
 import { GarmentcodeVorschau3d } from './garmentcode_vorschau3d.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
 import { Laufwache } from '../gemeinsam/laufwache.js';
+import { GarmentcodeBilanz } from './garmentcode_bilanz.js';
 
 /**
  * GarmentcodeGemeinsam — mehrere Stücke in EINEM Lauf anziehen.
@@ -162,11 +163,14 @@ export class GarmentcodeGemeinsam {
     /** Kurz im Reiter — der Hautabstand ist die Probe, dass etwas anliegt. */
     static kurzbilanz(antwort, berichte) {
         const gescheitert = berichte.filter((b) => !b.ok);
+        // Das engste Viertel je Stück, nicht der Median (10.09.2026):
+        // dieselbe Größe wie im Einzelbau, siehe `garmentcode_bilanz.js`.
         const abstaende = berichte
-            .filter((b) => b.ok && b.stueck.hautabstand_mm != null)
-            .map((b) => Math.round(b.stueck.hautabstand_mm));
+            .filter((b) => b.ok && b.stueck.hautabstand_eng_mm != null)
+            .map((b) => Math.round(b.stueck.hautabstand_eng_mm));
         const haut = abstaende.length
-            ? `, ${Math.min(...abstaende)}–${Math.max(...abstaende)} mm zur Haut`
+            ? `, liegt mit ${Math.min(...abstaende)}–`
+                + `${Math.max(...abstaende)} mm an`
             : '';
         if (gescheitert.length) {
             return `${berichte.length - gescheitert.length} von `
@@ -206,8 +210,13 @@ export class GarmentcodeGemeinsam {
     static stueckzeile(bericht) {
         if (!bericht.ok) return bericht.grund;
         const abstand = Number(bericht.stueck.hautabstand_mm);
-        const haut = isFinite(abstand)
-            ? `, ${abstand.toFixed(0)} mm zur Haut` : '';
+        const eng = Number(bericht.stueck.hautabstand_eng_mm);
+        const haut = isFinite(eng)
+            ? `, ${GarmentcodeBilanz.mm(eng)} mm im engsten Viertel`
+                + (isFinite(abstand)
+                    ? `, ${GarmentcodeBilanz.mm(abstand)} mm im Mittel` : '')
+            : (isFinite(abstand)
+                ? `, ${GarmentcodeBilanz.mm(abstand)} mm zur Haut` : '');
         const beweglich = bericht.getragen?.angezogen
             ? `, beweglich über ${bericht.getragen.zugeordnet} Knochen`
             : ', unbeweglich';

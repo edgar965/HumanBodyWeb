@@ -123,8 +123,12 @@ export class GarmentcodeDrapierung {
         if (inst && !inst.isSkinned) fn.convertInstToSkinned?.(inst);
         let getragen = null;
         if (netz.rig_url) {
+            // `inst`, nicht `figur.inst`: Die Zeile oben löst beide Formen
+            // auf (Reiter-Wrapper `{id, inst}` ODER die Instanz selbst).
+            // Mit `figur.inst` fiel der zweite Fall um — `undefined.group`
+            // in `GarmentcodeAnziehen.einhaengen`, gemessen 09.09.2026.
             getragen = await GarmentcodeAnziehen.anziehen(
-                figur.inst, netz.rig_url, stueck);
+                inst, netz.rig_url, stueck);
         }
         // Ab jetzt folgt das Stueck den Reglern, ohne neue Simulation
         // (Edgar, 08.09.2026: „mach mir auch einen 3D Vorschau der schnell
@@ -135,13 +139,16 @@ export class GarmentcodeDrapierung {
         Stoffvorschau.hinweisAus();
         // In die Ablage der Figur, damit „Speichern" es findet
         // (08.09.2026: „beim neu laden sind die Garment Code items weg").
-        GarmentcodeAblage.merken(figur?.inst || figur, stueck, netz);
+        GarmentcodeAblage.merken(inst, stueck, netz);
         // Das frisch eingehängte Stück bekommt ein neues Material mit den
         // Vorgabewerten. Ohne diesen Schritt spränge die eingestellte Farbe
         // bei jedem Bau zurück (08.09.2026).
-        // `false`: Das frisch gebaute Stueck bekommt den Stand,
-        // gleich was gerade ausgewaehlt ist.
-        GarmentcodeMaterial.anwenden(figur, false);
+        //
+        // GENAU DIESES STÜCK, nicht alle (09.09.2026): Vorher stand hier
+        // `anwenden(figur, false)`, und damit zog der Bau eines zweiten
+        // Stücks die Farbe des ersten mit — auch die, die aus einer
+        // gespeicherten Szene kam.
+        GarmentcodeMaterial.aufStueck(figur, stueck);
         GarmentcodeDrapierung.vorschauBinden(figur, netz, stueck);
         return getragen;
     }
@@ -154,7 +161,9 @@ export class GarmentcodeDrapierung {
      * Ergebnisordner gemeldet hat — ohne ihn findet er das Netz nicht.
      */
     static vorschauBinden(figur, netz, stueck) {
-        const inst = figur?.inst;
+        // Beide Formen, wie in `einhaengen` — sonst bindet die Vorschau
+        // stumm nicht, wenn die Instanz selbst hereingereicht wird.
+        const inst = figur?.inst || figur;
         if (!inst || inst.quelle === 'smpl' || !netz.ordner) return false;
         const gehaengt = inst.group?.getObjectByName(
             GarmentcodeAnziehen.name(stueck));

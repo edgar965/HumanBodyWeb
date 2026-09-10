@@ -14,6 +14,15 @@ import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
  * Punkte über 5 cm, auf der Figur bei 13 mm. Verschwiegen wäre er ein Fehler,
  * der beim nächsten Mal wieder eine Stunde kostet.
  *
+ * SEIT DEM 10.09.2026 SIND ES ZWEI: Der Median allein hat Edgar dreimal
+ * „funktioniert immer noch nicht" schreiben lassen — er meldete 9,4 mm,
+ * während der Stoff an der Brust auf 2,7 mm anlag, weil Dekolleté, Achsel
+ * und frei fallender Saum mitzählen. Das engste Viertel (`hautabstand_eng_mm`)
+ * beschreibt, was wirklich am Körper ankommt; der Median, wie weit das Stück
+ * insgesamt absteht. Warum ein Quartil und keine Kontaktschwelle, steht in
+ * `Assets/GarmentCode/hautabstand.py` — gemessen gibt es kein Tal in der
+ * Verteilung, an dem sich eine Schwelle festmachen ließe.
+ *
  * `garmentcode_drapieren.js` lag bei 156 Zeilen und wäre mit den zwei
  * Fassungen auf 204 gewachsen — der angefasste Teil wird abgeteilt
  * (`~/.claude/rules/struktur.md`).
@@ -21,15 +30,30 @@ import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
 export class GarmentcodeBilanz {
 
     /**
-     * Ab hier sitzt ein Stück nicht mehr — dann sagt es die Meldung.
+     * Millimeter für deutsche Augen: Komma statt Punkt, und eine
+     * Nachkommastelle nur, solange sie etwas sagt.
      *
-     * 40 mm, nicht enger: Eine weite Hose kommt auf 21 mm und ist völlig
-     * in Ordnung (06.09.2026 gemessen, Bundweite 1,0 und Ausstellung 1,0);
-     * mit einer engeren Schwelle liest sich jeder weite Schnitt wie ein
-     * Fehler. Auf dem falschen Körper lag der Wert bei 27 mm MEDIAN mit
-     * 31 % der Punkte über 50 mm — das trifft diese Schwelle sicher.
+     * `toFixed` liefert „2.4" und „4" — das erste ist im Deutschen falsch
+     * geschrieben, das zweite verschenkt bei einem einstelligen Wert genau
+     * die Stelle, um die es hier geht (4 gegen 4,3 mm).
      */
-    static ABSTAND_WARNUNG_MM = 40;
+    static mm(wert) {
+        const zahl = Number(wert);
+        if (!isFinite(zahl)) return '';
+        return zahl.toLocaleString('de-DE', {
+            minimumFractionDigits: zahl < 10 ? 1 : 0,
+            maximumFractionDigits: zahl < 10 ? 1 : 0,
+        });
+    }
+
+    /**
+     * Die Schwelle steht NICHT mehr hier (10.09.2026).
+     *
+     * Der Server entscheidet über `hautabstand_sitzt`, weil er beide Grenzen
+     * kennt — engstes Viertel und Median — und weil eine Zahl, die an zwei
+     * Stellen gepflegt wird, irgendwann an einer davon veraltet.
+     * `Assets/GarmentCode/hautabstand.Hautabstand` führt sie.
+     */
 
     /**
      * Eine Zeile, die in den Reiter passt.
@@ -40,13 +64,33 @@ export class GarmentcodeBilanz {
      * ausdrücklich.
      */
     static kurzbilanz(netz, getragen) {
+        // Ein ABSTURZ der Simulation zuerst, vor allem anderen (09.09.2026):
+        // Vorher kam er als „Fertig, steht aber 166 mm ab — sitzt nicht"
+        // heraus, also als schlechtes Ergebnis statt als Fehler. Wer das
+        // liest, dreht an den Reglern und sucht an der falschen Stelle.
+        if (netz.abgestuerzt) {
+            return 'Die Stoffsimulation ist abgestürzt — das gezeigte Netz '
+                + 'ist unfertig. Meist liegt es an einem Reglerwert im '
+                + 'Bereich „Simulation".';
+        }
         if (!getragen) return `Drapiert, aber nicht an der Figur (${netz.dauer_s} s)`;
         const abstand = Number(netz.hautabstand_mm);
-        if (isFinite(abstand)
-                && abstand > GarmentcodeBilanz.ABSTAND_WARNUNG_MM) {
-            return `Fertig, steht aber ${abstand.toFixed(0)} mm ab — sitzt nicht`;
+        const eng = Number(netz.hautabstand_eng_mm);
+        if (netz.hautabstand_sitzt === false) {
+            return `Fertig, sitzt aber nicht — ${GarmentcodeBilanz.mm(eng)} mm `
+                + `selbst an den engsten Stellen, `
+                + `${GarmentcodeBilanz.mm(abstand)} mm im Mittel`;
         }
-        const haut = isFinite(abstand) ? `, ${abstand.toFixed(0)} mm zur Haut` : '';
+        // „liegt mit X an" zuerst: Das ist die Frage, die beim Ansehen
+        // gestellt wird. Der Median steht daneben, weil ein weit fallender
+        // Schnitt dort zweistellig sein DARF (Kreisrock: 8 mm eng, 27 mm
+        // Median — beides richtig).
+        const haut = isFinite(eng)
+            ? `, liegt mit ${GarmentcodeBilanz.mm(eng)} mm an`
+                + (isFinite(abstand)
+                    ? ` (Median ${GarmentcodeBilanz.mm(abstand)} mm)` : '')
+            : (isFinite(abstand)
+                ? `, ${GarmentcodeBilanz.mm(abstand)} mm zur Haut` : '');
         const starr = (netz.auf_figur !== false && !getragen.angezogen)
             ? ' — unbeweglich' : '';
         // Abweichende Reglerstellung nennen (09.09.2026): Ohne sie liesse
@@ -70,10 +114,16 @@ export class GarmentcodeBilanz {
                 + `aber NICHT an der Figur`;
         }
         const abstand = Number(netz.hautabstand_mm);
+        const eng = Number(netz.hautabstand_eng_mm);
         const sitz = !isFinite(abstand) ? ''
-            : (abstand <= GarmentcodeBilanz.ABSTAND_WARNUNG_MM
-                ? `, ${abstand.toFixed(0)} mm zur Haut`
-                : `, steht ${abstand.toFixed(0)} mm ab — sitzt nicht`);
+            : (netz.hautabstand_sitzt !== false
+                ? `, ${GarmentcodeBilanz.mm(eng)} mm im engsten Viertel der `
+                    + `Stoffpunkte (das ist, was am Körper ankommt), `
+                    + `${GarmentcodeBilanz.mm(abstand)} mm im Mittel über alle — `
+                    + `Dekolleté, Achsel und frei fallender Saum zählen da mit`
+                : `, steht ${GarmentcodeBilanz.mm(abstand)} mm ab und selbst das `
+                    + `engste Viertel liegt bei ${GarmentcodeBilanz.mm(eng)} mm `
+                    + `— sitzt nicht`);
         // Auf einem SMPL-Referenzkörper (06.09.2026) gibt es weder Skelett
         // noch Korrektur — das ist der Weg des Online-Tools, und so heißt
         // es auch. „Unbeweglich" wäre dort keine Einschränkung, sondern

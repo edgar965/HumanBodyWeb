@@ -1,0 +1,10 @@
+{# Kunstbeispiel fuer den Bedienelemente-Pruefer. Vier Faelle, drei davon
+   duerfen NICHT gemeldet werden. #}
+<script type="module" src="{% fassungspfad 'probe.js' %}"></script>
+<form method="post">
+  <input type="text" name="probe_pfad" id="probe-pfad">
+  <button id="probe-mit-hoerer">Mit Hoerer</button>
+  <button id="probe-ueber-klasse" class="probe-sammel">Ueber Klasse</button>
+  <input type="range" id="probe-mit-vorsilbe-rauheit">
+  <button id="probe-ohne-hoerer">Tut nichts</button>
+</form>

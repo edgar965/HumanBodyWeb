@@ -138,6 +138,7 @@ class GcAblageTest(SimpleTestCase):
         # Die Reihenfolge ist der Grund, warum es eine Kette ist.
         self.assertLess(rumpf.index('await inst.load()'),
                         rumpf.index('GarmentcodeAblage.laden('))
+
     def test_geloeschtes_stueck_kommt_nicht_zurueck(self):
         u"""Der Loeschzweig muss die Ablage mitnehmen.
 

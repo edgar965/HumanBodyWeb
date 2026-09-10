@@ -21,9 +21,9 @@ import numpy as np
 import sys
 sys.path.insert(0, r'A:\3DTools\HumanBody')
 
-from django.conf import settings
+from django.conf import settings  # noqa: E402
 
-from GarmentCode.smplkoerper import Smplkoerper
+from GarmentCode.smplkoerper import Smplkoerper  # noqa: E402
 
 
 def _bodies():
@@ -87,7 +87,6 @@ class SmplkoerperTest(unittest.TestCase):
                            'A-Haltung senkt die Arme nicht')
         hoehe = lambda v: float(v[:, 1].max() - v[:, 1].min())    # noqa: E731
         self.assertAlmostEqual(hoehe(rest), hoehe(a40), delta=0.02)
-
 
 
 class ArmlaengeTest(unittest.TestCase):

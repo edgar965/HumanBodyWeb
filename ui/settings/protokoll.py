@@ -98,3 +98,22 @@ LOGGING = dblog.config(
     file_max_bytes=GROESSE,
     file_backup_count=SICHERUNGEN,
 )
+
+#: Ein Testlauf schreibt nicht in die fünf Produktivdateien.
+#:
+#: Gemessen am 10.09.2026: 1.661 der 2.799 Fehlerzeilen in `error.log`
+#: stammten aus Tests, die absichtlich Fehler erzeugen (`kein CUDA`,
+#: `Bild nicht gefunden`, `BVH-Wurzel nicht bestimmbar` mit dem Pfad, den
+#: `test_safe_paths` selbst setzt). Der Reiter „Exceptions" in Hilfe → Logs
+#: soll ECHTE Fehler zeigen; zu 59 % gefüllt mit gewollten ist er so
+#: unbrauchbar wie leer. Begründung und Erkennung: `ui/protokollfilter.py`.
+#:
+#: Die Konsole bleibt ungefiltert — wer einen Testlauf ansieht, will seine
+#: Meldungen sehen.
+LOGGING.setdefault('filters', {})['nicht_im_testlauf'] = {
+    '()': 'ui.protokollfilter.Testlauf',
+}
+for _name, _handler in LOGGING['handlers'].items():
+    if _name != 'console':
+        _handler['filters'] = list(_handler.get('filters', [])) \
+            + ['nicht_im_testlauf']

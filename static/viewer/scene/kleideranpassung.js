@@ -34,6 +34,7 @@ export class Kleideranpassung {
     static VORGABE_FARBE = '#4d5980';
 
     /**
+     * @param {object} wahl
      * @param wahl.vorsilbe    Reglervorsilbe, etwa 'kleider'
      * @param wahl.schluessel  Schlüsselvorsilbe, etwa 'kld_'
      * @param wahl.kennung     id des Stücks
@@ -72,7 +73,13 @@ export class Kleideranpassung {
             fn.updateVertexCount();
             return netz;
         } catch (fehler) {
-            console.error('Anpassen fehlgeschlagen:', fehler);
+            // INS PROTOKOLL, nicht nur auf die Konsole (09.09.2026): Der
+            // `ReferenceError` in `netzEinsetzen` stand ein Dutzend Tage lang
+            // ausschliesslich dort. Das Stück hing sichtbar an der Figur, also
+            // sah alles richtig aus — bis zum Speichern. Über `Protokoll`
+            // landet so ein Fehler in Hilfe → Logs.
+            Protokoll.fehler('kleideranpassung',
+                `„${this.kennung}" nicht angepasst`, fehler);
             return null;
         } finally {
             state._refitting = false;
@@ -128,7 +135,19 @@ export class Kleideranpassung {
         figur.clothMeshes[schluessel] = netz;
         figur.group.add(netz);
         // Die Regionsregler verschieben später von diesen Punkten aus.
-        figur.garmentOrigPositions[schluessel] = new Float32Array(punkte);
+        //
+        // `punkte` war seit dem 28.08.2026 UNDEFINIERT (Commit 1b430d4,
+        // „Eine Netzgeometrie statt neun"): Die Zeile, die es füllte
+        // (`const punkte = base64ToFloat32(daten.vertices)`), ist mit dem
+        // alten Import weggefallen, ihre Verwendung blieb stehen. Jedes
+        // Anpassen warf hier einen ReferenceError — NACH `group.add`, also
+        // hing das Stück sichtbar an der Figur, während `ausfuehren` in den
+        // `catch` sprang und `danach` nie lief. Damit blieb `inst.garments`
+        // leer, und beim Speichern fehlte das Stück (Edgar, 09.09.2026:
+        // „Modell mit Schuhen gespeichert, beim Neuladen waren die Schuhe
+        // weg"). Der Fehler stand nur auf der Browserkonsole.
+        figur.garmentOrigPositions[schluessel] =
+            Netzgeometrie.punkte(daten.vertices);
         return netz;
     }
 

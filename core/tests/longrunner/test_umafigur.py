@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(settings.ASSETS_ROOT)))
 
 from UMA_Python import Figur                                   # noqa: E402
 from UMA_Python.haut import Haut                               # noqa: E402
-from UMA_Python.skelett import Skelett
+from UMA_Python.skelett import Skelett  # noqa: E402
 from UMA_Python.verschmelzen import Verschmelzen                         # noqa: E402
 from UMA_Python.unity import Assetdatei, Serialisiert          # noqa: E402
 

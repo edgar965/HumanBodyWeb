@@ -95,7 +95,9 @@ class JederWertLandetImRichtigenAbschnitt(TestCase):
     def setUp(self):
         self.regler = Simulationsregler.aus_anfrage({
             'sim_garment_edge_ke': '50',
-            'sim_body_collision_thickness': '0.05',
+            # NICHT 0.05 — das ist seit dem 09.09.2026 die Vorgabe, und
+            # Vorgabewerte werden absichtlich uebergangen.
+            'sim_body_collision_thickness': '0.30',
             'sim_max_sim_steps': '4000',
             'sim_umkreis_cm': '8',
         })
@@ -106,7 +108,7 @@ class JederWertLandetImRichtigenAbschnitt(TestCase):
 
     def test_optionen_bekommt_nur_optionen(self):
         self.assertEqual(self.regler.fuer('optionen'),
-                         {'body_collision_thickness': 0.05})
+                         {'body_collision_thickness': 0.30})
 
     def test_konfig_bekommt_nur_konfig(self):
         self.assertEqual(self.regler.fuer('konfig'), {'max_sim_steps': 4000.0})
@@ -167,6 +169,35 @@ class WerteAusDemNetzWerdenGeprueft(TestCase):
     def test_ein_schalter_auf_der_vorgabe_kommt_nicht_mit(self):
         aus = Simulationsregler.aus_anfrage({'sim_enable_body_smoothing': 'false'})
         self.assertTrue(aus.leer)
+
+    def test_schrittzahlen_kommen_als_ganze_zahl_an(self):
+        """BELEGT (09.09.2026): `max_sim_steps: 8000.0` liess die Simulation
+        abstürzen — `stats.fails.crashes` gesetzt, `fin_frame: -1`. Nach
+        aussen sah das nach einem schlechten Ergebnis aus („steht 166 mm
+        ab"), nicht nach einem Absturz."""
+        werte = Simulationsregler.aus_anfrage(
+            {'sim_max_sim_steps': '8000', 'sim_attachment_frames': '200',
+             'sim_zero_gravity_steps': '20'})
+        self.assertIsInstance(werte.fuer('konfig')['max_sim_steps'], int)
+        for name in ('attachment_frames', 'zero_gravity_steps'):
+            wert = werte.fuer('optionen').get(name,
+                                              werte.fuer('konfig').get(name))
+            self.assertIsInstance(wert, int, name)
+
+    def test_kommazahlen_bleiben_kommazahlen(self):
+        """Die Ruheschwelle 0,003 als `int` wäre 0 — und damit ein Lauf,
+        der nie zur Ruhe kommt."""
+        wert = Simulationsregler.aus_anfrage(
+            {'sim_static_threshold': '0.003'}).fuer('konfig')['static_threshold']
+        self.assertIsInstance(wert, float)
+        self.assertEqual(wert, 0.003)
+
+    def test_jedes_ganzzahlige_feld_gibt_es_auch(self):
+        """Ein Tippfehler in der Liste bliebe sonst folgenlos — und der
+        Wert ginge weiter als Float hinaus."""
+        vorhanden = {f['schluessel'] for f in Simulationsfelder.alle()}
+        for name in Simulationsfelder.GANZZAHLIG:
+            self.assertIn(name, vorhanden)
 
     def test_die_ankersteifigkeit_wird_zur_liste(self):
         """Die Simulation erwartet dort einen Wert je Ankerart."""

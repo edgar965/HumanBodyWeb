@@ -3,6 +3,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { _saveJsonWithPicker } from './szene_dialoge.js';
 import { Szenenzustand } from './szenenzustand.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
+import { Garderobenstand } from './garderobenstand.js';
 
 /**
  * Szenenausgabe — Szene oder Figur als JSON-Datei schreiben.
@@ -83,7 +84,7 @@ export class Szenenausgabe {
             meta: figur.meta || {},
             cloth: figur.cloth || [],
             hair_style: figur.hairStyle || null,
-            garments: figur.garments || [],
+            garments: Garderobenstand.liste(figur),
             mh_proxy: Object.values(figur.mhProxies || {}),
         };
     }

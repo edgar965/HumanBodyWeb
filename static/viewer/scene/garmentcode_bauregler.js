@@ -10,12 +10,14 @@
  * ===============================
  * Beide standen als Konstante im Code. Der Hautabstand
  * (`Stoffkorrektur.ABSTAND_MM`) wurde am 08.09.2026 von 3,0 auf 6,0 mm
- * gesetzt, weil die Haut durch die Hose schien — und genau diese 6,0 mm sind
- * der Grund, warum ein T-Shirt an der Brustspitze 6,5 mm absteht (gemessen
- * 09.09.2026: Brustspitze 6,5 mm, Dekolleté 21,4 mm, unter der Brust
- * 46,6 mm). Edgars Einordnung dazu: „Bei der Hose war das ein Bug, weil der
- * Abstand negativ war." Eine Konstante, die einen Bug zudeckt, gehört an
- * einen Regler.
+ * gesetzt, weil die Haut durch die Hose schien. Edgars Einordnung dazu: „Bei
+ * der Hose war das ein Bug, weil der Abstand negativ war." Eine Konstante,
+ * die einen Bug zudeckt, gehört an einen Regler.
+ *
+ * Nachgemessen steht er seit dem 09.09.2026 auf 1,0 mm: Die 6,0 räumten bei
+ * der Hose — dem Stück, für das sie eingeführt wurden — 5 von 92
+ * durchstehenden Punkten mehr weg als 1,0 und kosteten dafür überall 2,5 mm
+ * Abstand.
  *
  * SIE WIRKEN BEIM NÄCHSTEN BAU MIT 3D, nicht auf ein fertiges Stück: Der
  * Hautabstand greift nach der Simulation, die Netzfeinheit davor. Ein
@@ -27,7 +29,7 @@ export class GarmentcodeBauregler {
     static AUFLOESUNG = 'gc-aufloesung';
 
     /** Vorgaben — dieselben Zahlen wie in `Baufeineinstellung`. */
-    static HAUTABSTAND_VORGABE = 6.0;
+    static HAUTABSTAND_VORGABE = 1.0;
     static AUFLOESUNG_VORGABE = 1.0;
 
     /**
@@ -44,12 +46,13 @@ export class GarmentcodeBauregler {
             + 'liegen soll. Höher: kein Durchscheinen der Haut, aber das '
             + 'Stück steht sichtbar ab. Niedriger: liegt enger an, dafür '
             + 'können Brustwarze, Nabel oder Knie durch den Stoff stoßen. '
-            + '6,0 mm ist der Wert seit dem 08.09.2026 („Haut geht durch die '
-            + 'Hose hindurch"). Kostet keine Rechenzeit — die Korrektur '
-            + 'läuft nach der Simulation. Achtung: Unter 3 mm regiert nicht '
-            + 'mehr dieser Regler, sondern der Kollisionsabstand der '
-            + 'Simulation (im Bereich „Simulation" darunter) — gemessen '
-            + 'bleibt der engste Abstand dann bei rund 2,8 mm stehen.',
+            + 'Kostet keine Rechenzeit — die Korrektur läuft nach der '
+            + 'Simulation. 1,0 mm ist die Vorgabe: Gemessen an drei Stücken '
+            + 'räumt sie genauso viele durchstehende Stellen weg wie die '
+            + '6,0 mm von vorher, ohne deren 2,5 mm Aufschlag. Achtung: Wie '
+            + 'eng es überhaupt werden KANN, entscheidet nicht dieser '
+            + 'Regler, sondern der Kollisionsabstand der Simulation (im '
+            + 'Bereich „Simulation" darunter, Vorgabe 0,05 cm).',
         'gc-aufloesung':
             'Wie fein das Stoffnetz für die Simulation vernäht wird — die '
             + 'Zahl der Stoffpunkte, nicht die Bildauflösung. Höher: feinere '

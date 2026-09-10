@@ -387,9 +387,9 @@ class HalstreueTest(SimpleTestCase):
         for bvh_name, ziel in SkeletonOpenPose.BONE_MAP_TO_RIGIFY.items():
             heil[bvh_name] = ('DEF-spine.004' if bvh_name == 'neck'
                               else ziel)
-        with mock.patch.object(SkeletonOpenPose, 'BONE_MAP_TO_RIGIFY',
-                               heil),              mock.patch.object(SkeletonOpenPose, 'MEHRERE_SCHREIBWEISEN',
-                               True):
+        with mock.patch.object(SkeletonOpenPose, 'BONE_MAP_TO_RIGIFY', heil), \
+             mock.patch.object(SkeletonOpenPose,
+                               'MEHRERE_SCHREIBWEISEN', True):
             reihe = eichlauf(pfad)
             schlimmster = max(abs(ziel - soll)
                               for (_, ziel), soll in zip(reihe, GRADE))

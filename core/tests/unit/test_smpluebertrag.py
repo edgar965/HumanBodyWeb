@@ -133,5 +133,5 @@ class NetzuebertragTest(unittest.TestCase):
         mit = Netzuebertrag._naechste(Netzuebertrag._normiert(a),
                                       Netzuebertrag._normiert(b))
         ohne = Netzuebertrag._naechste_blockweise(Netzuebertrag._normiert(a),
-                                                 Netzuebertrag._normiert(b))
+                                                  Netzuebertrag._normiert(b))
         self.assertTrue(np.array_equal(np.asarray(mit[0]), np.asarray(ohne[0])))

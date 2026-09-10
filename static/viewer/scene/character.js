@@ -21,6 +21,7 @@ import {
 } from './charakterliste.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
+import { Garderobenstand } from './garderobenstand.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 
 // =========================================================================
@@ -128,23 +129,11 @@ export class CharacterInstance {
             };
         }
 
-        const garments = (this.garments || []).map(g => {
-            const key = `gar_${g.id}`;
-            const st = this.garmentState[key];
-            if (!st) return g;
-            return {
-                id: g.id,
-                offset: st.offset,
-                stiffness: st.stiffness,
-                minDist: st.minDist,
-                crotchFloor: st.crotchFloor,
-                lift: st.lift,
-                crotchDepth: st.crotchDepth,
-                color: st.color,
-                roughness: st.roughness,
-                metalness: st.metalness,
-            };
-        });
+        // Farbe, Material und Regionen leben im `garmentState`, nicht in
+        // der Liste — `Garderobenstand` fuehrt beides zusammen. Bis zum
+        // 09.09.2026 stand die Rechnung nur hier, waehrend „Modell
+        // speichern" die rohe Liste nahm und jede Farbaenderung verlor.
+        const garments = Garderobenstand.liste(this);
         return {
             id: this.id,
             presetName: this.presetName,

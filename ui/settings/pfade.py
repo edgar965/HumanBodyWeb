@@ -84,7 +84,7 @@ MAKEHUMAN_DATA_DIR = MAKEHUMAN_ROOT / 'makehuman' / 'data'
 MAKEHUMAN_ZIELE_DIR = MAKEHUMAN_ROOT / 'makehuman' / 'data' / 'targets'
 MAKEHUMAN_MODIFIER_DIR = MAKEHUMAN_ROOT / 'makehuman' / 'data' / 'modifiers'
 #: Die kompilierte Zielablage (30,4 MB) — `manage.py mh_ziele_bauen`.
-MAKEHUMAN_ZIELABLAGE = MAKEHUMAN_ROOT / 'ziele' / 'mh_ziele.npz' 
+MAKEHUMAN_ZIELABLAGE = MAKEHUMAN_ROOT / 'ziele' / 'mh_ziele.npz'
 
 # -------------------------------------------------------------------- Figuren
 #: Der Figurkatalog für Roomguest (Vertrag: `Figuren/VERTRAG.md`): je Quelle ein

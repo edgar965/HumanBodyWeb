@@ -11,7 +11,8 @@
 import * as THREE from 'three';
 import { state, gltfLoader } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { _computeGarmentRegionWeights } from './kleidung_anpassen.js';
+import { _applyGarmentRegionOffsets,
+         _computeGarmentRegionWeights } from './kleidung_anpassen.js';
 import { Kleidungszustand } from './kleidungszustand.js';
 import { _skinifyHairGroup, _skinifyMesh, convertInstToSkinned } from './skeleton.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
@@ -19,6 +20,7 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Netzgeometrie } from '../gemeinsam/netzgeometrie.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { Kleiderwerkstoff } from '../gemeinsam/kleiderwerkstoff.js';
+import { Kleiderfrage } from '../gemeinsam/kleiderfrage.js';
 import { applyHairColor } from '../character_core.js';
 
 export class Charakterzubehoer {
@@ -114,7 +116,7 @@ export class Charakterzubehoer {
                 inst.clothMeshes[key] = mesh;
                 inst.group.add(mesh);
             } catch (e) {
-                console.error('Failed to load cloth piece:', e);
+                Protokoll.fehler('charakter_zubehoer', 'Stoff nicht angelegt', e);
             }
         }
     }
@@ -130,30 +132,21 @@ export class Charakterzubehoer {
         params.set('body_type', inst.bodyType);
         Charakterzubehoer.morphparameter(inst, params);
 
-        for (const g of inst.garments) {
-            try {
-                const p = new URLSearchParams(params);
-                p.set('garment_id', g.id);
-                p.set('offset', (g.offset || 0).toFixed(4));
-                p.set('stiffness', (g.stiffness || 0.5).toFixed(2));
-                p.set('min_dist', g.minDist !== undefined ? g.minDist : 3);
-                p.set('crotch_floor', g.crotchFloor !== undefined ? g.crotchFloor : 0);
-                p.set('lift', g.lift !== undefined ? g.lift : 0);
-                p.set('crotch_depth', g.crotchDepth !== undefined ? g.crotchDepth : 0);
-                if (g.color) {
-                    let cr, cg, cb;
-                    if (Array.isArray(g.color)) {
-                        [cr, cg, cb] = g.color;
-                    } else {
-                        const tc = new THREE.Color(g.color);
-                        cr = tc.r; cg = tc.g; cb = tc.b;
-                    }
-                    p.set('color_r', cr.toFixed(3));
-                    p.set('color_g', cg.toFixed(3));
-                    p.set('color_b', cb.toFixed(3));
-                }
+        // NEBENEINANDER (09.09.2026, Edgar: „laden der Szene dauert sehr
+        // lange, bis zu 10 s"): Jede Anpassung ist ein eigener Serverlauf und
+        // liegt auf dem kritischen Pfad — die Figur erscheint erst mit der
+        // letzten. Gemessen, drei Stücke, je zwei Läufe im Wechsel:
+        // nacheinander 1,85 / 2,00 s, nebeneinander 1,08 / 1,73 s.
+        const antworten = await Promise.all(inst.garments.map(
+            (g) => Serverabruf.json(
+                `/api/character/garment/fit/?${
+                    Kleiderfrage.fuer(params, g, THREE.Color)}`)
+                .then((daten) => ({ g, daten }))
+                .catch((fehler) => ({ g, fehler }))));
 
-                const data = await Serverabruf.json(`/api/character/garment/fit/?${p}`);
+        for (const { g, daten: data, fehler } of antworten) {
+            try {
+                if (fehler) throw fehler;
                 if (data.error) {
                     Protokoll.warnung('charakter_zubehoer', 'Garment load error:', data.error);
                     continue;
@@ -170,17 +163,18 @@ export class Charakterzubehoer {
                 const key = `gar_${g.id}`;
                 inst.clothMeshes[key] = mesh;
                 inst.group.add(mesh);
-
                 inst.garmentOrigPositions[key] = new Float32Array(vertBuf);
+                // Hier stand `[color.r, color.g, color.b]` mit einer
+                // Variablen `color`, die es nicht gibt (09.09.2026).
+                inst.garmentState[key] = Kleidungszustand.ausJson({ ...g });
+                // Zustand, Gewichte, Verschiebung — in dieser Reihenfolge;
+                // ohne die letzte Zeile lag das Netz unverschoben da
+                // (gemessen 09.09.2026: 0 statt 70 mm).
                 _computeGarmentRegionWeights(inst, key);
-
-                // Die Vorgabewerte stehen in `Kleidungszustand.VORGABEN` —
-                // vorher stand die Feldliste hier ein viertes Mal.
-                inst.garmentState[key] = Kleidungszustand.ausJson({
-                    ...g, color: g.color || [color.r, color.g, color.b],
-                });
+                _applyGarmentRegionOffsets(inst, key);
             } catch (e) {
-                console.error('Failed to load garment:', g.id, e);
+                Protokoll.fehler('charakter_zubehoer',
+                                 `„${g.id}" nicht angezogen`, e);
             }
         }
     }
@@ -209,10 +203,10 @@ export class Charakterzubehoer {
                                state.hairColorData);
 
                 inst.group.add(inst.hairMesh);
-                resolve();
+                resolve(undefined);
             }, undefined, (err) => {
                 Protokoll.warnung('charakter_zubehoer', 'Failed to load hair:', err);
-                resolve();
+                resolve(undefined);
             });
         });
     }

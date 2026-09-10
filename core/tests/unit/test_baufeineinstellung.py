@@ -12,11 +12,16 @@ from GarmentCode.baufeineinstellung import Baufeineinstellung
 
 
 class VorgabenBleibenDieAltenWerte(TestCase):
-    """Wer nichts anfasst, baut wie vor dem 09.09.2026."""
+    """Wer nichts anfasst, baut mit den Werten aus dem Code.
+
+    Die Zahlen stehen hier absichtlich ausgeschrieben: Wer eine Vorgabe
+    aendert, soll den Test brechen sehen und beide Stellen nachziehen —
+    Konstante und Reglerbeschriftung. Der Hautabstand ging am 09.09.2026
+    von 6,0 auf 1,0 mm (Messreihe in `stoffkorrektur.py`)."""
 
     def test_ohne_angabe_gelten_die_alten_konstanten(self):
         fein = Baufeineinstellung()
-        self.assertEqual(fein.hautabstand_mm, 6.0)
+        self.assertEqual(fein.hautabstand_mm, 1.0)
         self.assertEqual(fein.aufloesung, 1.0)
 
     def test_die_vorgabe_ist_der_wert_der_stoffkorrektur(self):
@@ -27,7 +32,7 @@ class VorgabenBleibenDieAltenWerte(TestCase):
 
     def test_leeres_formularfeld_gilt_als_keine_angabe(self):
         fein = Baufeineinstellung(hautabstand_mm='', aufloesung='')
-        self.assertEqual(fein.hautabstand_mm, 6.0)
+        self.assertEqual(fein.hautabstand_mm, 1.0)
         self.assertEqual(fein.aufloesung, 1.0)
 
     def test_auf_der_vorgabe_gilt_nichts_als_abweichend(self):
@@ -47,14 +52,14 @@ class WerteAusDemNetzWerdenGeprueft(TestCase):
 
     def test_unlesbarer_wert_faellt_auf_die_vorgabe(self):
         fein = Baufeineinstellung(hautabstand_mm='viel', aufloesung='fein')
-        self.assertEqual(fein.hautabstand_mm, 6.0)
+        self.assertEqual(fein.hautabstand_mm, 1.0)
         self.assertEqual(fein.aufloesung, 1.0)
 
     def test_nan_faellt_auf_die_vorgabe(self):
         """`float('nan')` ist lesbar und trotzdem unbrauchbar — es vergleicht
         sich mit nichts, und jede Klemmung liesse es durch."""
         fein = Baufeineinstellung(hautabstand_mm=float('nan'))
-        self.assertEqual(fein.hautabstand_mm, 6.0)
+        self.assertEqual(fein.hautabstand_mm, 1.0)
 
     def test_zu_gross_wird_geklemmt(self):
         fein = Baufeineinstellung(hautabstand_mm=500, aufloesung=99)
@@ -86,7 +91,7 @@ class WerteAusDemNetzWerdenGeprueft(TestCase):
 
     def test_aus_anfrage_ohne_felder_nimmt_die_vorgaben(self):
         fein = Baufeineinstellung.aus_anfrage({})
-        self.assertEqual(fein.hautabstand_mm, 6.0)
+        self.assertEqual(fein.hautabstand_mm, 1.0)
         self.assertEqual(fein.aufloesung, 1.0)
 
     def test_als_dict_nennt_beide_werte(self):

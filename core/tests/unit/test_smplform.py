@@ -12,7 +12,7 @@ import unittest
 import sys
 sys.path.insert(0, r'A:\3DTools\HumanBody')
 
-from GarmentCode.smplform import Smplform
+from GarmentCode.smplform import Smplform  # noqa: E402
 
 
 class SmplformTest(unittest.TestCase):

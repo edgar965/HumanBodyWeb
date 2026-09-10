@@ -4,6 +4,7 @@ import { GarmentcodeFigur } from './garmentcode_figur.js';
 import { GarmentcodePanels } from './garmentcode_panels.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { GarmentcodeBilanz } from './garmentcode_bilanz.js';
 
 /**
  * GarmentcodeVorschau3d — der Schnitt am Körper, ohne Simulation.
@@ -42,8 +43,11 @@ export class GarmentcodeVorschau3d {
         const anzahl = GarmentcodeVorschau3d._anlegen(figur, antwort, vorlage);
         garmentcodeFortschritt.fertig('vorschau3d', `${anzahl} Punkte`);
 
+        // Dieselbe Größe wie nach dem Bau (10.09.2026) — sonst vergleicht
+        // man Vorschau und Ergebnis mit zwei verschiedenen Zahlen.
         meldung.textContent = `Vorschau: ${anzahl} Punkte am Körper, `
-            + `${antwort.hautabstand_mm} mm zur Haut`
+            + `liegt mit ${GarmentcodeBilanz.mm(antwort.hautabstand_eng_mm)} `
+            + `mm an`
             + (antwort.ungebunden
                 ? `, ${antwort.ungebunden} Punkte ohne Fläche` : '')
             + ' — ohne Faltenwurf. „Bauen 3D" simuliert den Stoff.';

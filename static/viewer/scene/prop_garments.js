@@ -6,7 +6,8 @@ import { THREE } from './state.js';
 import { Kleiderwerkstoff } from '../gemeinsam/kleiderwerkstoff.js';
 import { state, REGION_IDS } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { _bindSlider, _sliderVal, _charQueryParams } from './utils.js';
+import { _bindSlider, _charQueryParams } from './utils.js';
+import { Materialmerker } from './materialmerker.js';
 import { _selectedGarmentMesh } from './garments.js';
 import { _computeGarmentRegionWeights, _applyGarmentRegionOffsets } from './kleidung_anpassen.js';
 import { _skinifyMesh } from './skeleton.js';
@@ -57,15 +58,10 @@ export function initPropGarmentControls() {
     _bindSlider('prop-garment-crotch-depth', 'prop-garment-crotch-depth-val', v => v + ' mm');
     _bindSlider('prop-garment-roughness', 'prop-garment-roughness-val', v => (v / 100).toFixed(2));
     _bindSlider('prop-garment-metalness', 'prop-garment-metalness-val', v => (v / 100).toFixed(2));
-    const roughSlider = document.getElementById('prop-garment-roughness');
-    if (roughSlider) roughSlider.addEventListener('input', () => { const sel = _selectedGarmentMesh();
-        if (sel) sel.mesh.material.roughness = _sliderVal('prop-garment-roughness') / 100; });
-    const metalSlider = document.getElementById('prop-garment-metalness');
-    if (metalSlider) metalSlider.addEventListener('input', () => { const sel = _selectedGarmentMesh();
-        if (sel) sel.mesh.material.metalness = _sliderVal('prop-garment-metalness') / 100; });
-    const colorPicker = document.getElementById('prop-garment-color');
-    if (colorPicker) colorPicker.addEventListener('input', () => { const sel = _selectedGarmentMesh();
-        if (sel) sel.mesh.material.color.set(colorPicker.value); });
+    // Farbe, Rauheit und Metallgrad wirken nicht nur auf das Bild, sondern
+    // gehen in den Zustand des Stuecks — sonst speichert die Szene die alte
+    // Farbe (Edgar, 09.09.2026: „farbe der Schuhe wird nicht gespeichert").
+    new Materialmerker('prop-garment').verdrahten();
     for (const rid of REGION_IDS) {
         _bindSlider(`prop-garment-region-${rid}`, `prop-garment-region-${rid}-val`, v => (v / 100).toFixed(2) + ' m');
     }

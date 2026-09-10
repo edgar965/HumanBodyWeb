@@ -165,6 +165,7 @@ class KoerpermasseTest(SimpleTestCase):
         k.masse()
         self.assertEqual(k.herkunft()['bust'], 'ungetrennt')
 
+
 class DuenneScheibeTest(SimpleTestCase):
     u"""Eine Scheibe mit wenigen Punkten darf keine Messhoehe werden.
 
@@ -246,6 +247,7 @@ class DuenneScheibeTest(SimpleTestCase):
         self.assertAlmostEqual(hoehen['huefte'], 0.92, delta=0.015)
         self.assertAlmostEqual(hoehen['taille'], 1.08, delta=0.015)
         self.assertAlmostEqual(hoehen['brust'], 1.24, delta=0.015)
+
 
 class ArmlochtiefeTest(SimpleTestCase):
     u"""`armscye_depth` haengt am Oberkoerper, nicht an der Koerperhoehe.
