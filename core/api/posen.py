@@ -113,6 +113,10 @@ class Posen:
             'threejs': Absatzpose.to_threejs(knochen),    # {DEF-Name: [x,y,z,w]}
             'absatz': absatz.beschreibung() if absatz else None,
             'hebung_m': absatz.hebung_m if absatz else 0.0,
+            # Die reinen Fussdeltas, damit der Betrachter sie bei einer
+            # laufenden Animation je Bild nachmischt (`posenabsatz.js`).
+            'absatz_deltas': (Absatzpose.to_threejs(absatz.deltas())
+                              if absatz else {}),
         })
 
     # ----------------------------------------------------------- Verwalten

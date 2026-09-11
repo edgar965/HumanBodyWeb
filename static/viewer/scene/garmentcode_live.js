@@ -75,7 +75,11 @@ export class GarmentcodeLive {
         try {
             reiter.ohneMorphs = GarmentcodeFigur.ohneMorphs(figur);
             const ergebnis = await GarmentcodeSchnitt.bauen(reiter, figur, meldung);
-            if (ergebnis) {
+            // Hat inzwischen ein echter Bau begonnen (Häkchen gesetzt, gleich
+            // „Bauen 2D + 3D" gedrückt), bleiben die Panels weg: Der Bau
+            // hat sie schon entfernt, und sie kämen sonst als rosa Flächen
+            // neben den fertigen Schuh zurück (gesehen 11.09.2026).
+            if (ergebnis && !reiter.laeuft) {
                 reiter.spezifikation = ergebnis.spezifikation || reiter.spezifikation;
                 reiter.schnittVon = { figur: figur.id, vorlage };
                 await GarmentcodePanels.zeigen(figur, reiter.spezifikation, vorlage);

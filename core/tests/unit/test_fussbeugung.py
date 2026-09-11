@@ -275,6 +275,7 @@ class GarmentabsatzvorschauTest(SimpleTestCase):
         'foot_length': 24.41, 'foot_heel_width': 7.08, 'foot_ball_width': 9.14,
         'toe_height': 2.99, 'foot_instep': 21.83, 'instep_angle': 19.63,
         'foot_x': 21.55, 'foot_toe_z': 23.19, 'foot_heel_z': -1.22,
+        'foot_heel_x': 20.61, 'foot_ball_x': 20.69, 'foot_toe_x': 18.66,
         'foot_yaw': 0.04, 'ankle_circ': 19.23, 'ankle_height': 13.78,
         'calf_circ': 37.8, 'calf_height': 46.64, 'knee_circ': 34.73,
         'knee_height': 53.1, 'shin_circ_25': 24.4, 'shin_circ_50': 35.45,

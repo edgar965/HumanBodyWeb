@@ -231,6 +231,7 @@ export class Posenanwendung {
         const gesetzt = anwendung.anwenden(daten.threejs || {});
         const beine = anwendung.oberschenkelGeradeStellen(poseId);
         Posenabsatz.heben(figur, daten.hebung_m || 0);
+        Posenabsatz.deltasMerken(figur, daten.absatz_deltas);
         Protokoll.debug('Pose', `${poseId}: ${gesetzt} Knochen, `
                         + `${beine} Beinkorrekturen`);
         if (!gesetzt) {

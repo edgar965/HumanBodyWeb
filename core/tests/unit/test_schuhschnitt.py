@@ -49,6 +49,7 @@ class SchuhschnittTest(SimpleTestCase):
         'foot_length': 24.41, 'foot_heel_width': 7.08, 'foot_ball_width': 9.14,
         'toe_height': 2.99, 'foot_instep': 21.83, 'instep_angle': 19.63,
         'foot_x': 21.55, 'foot_toe_z': 23.19, 'foot_heel_z': -1.22,
+        'foot_heel_x': 20.61, 'foot_ball_x': 20.69, 'foot_toe_x': 18.66,
         'foot_yaw': 0.04, 'ankle_circ': 19.23, 'ankle_height': 13.78,
         'calf_circ': 37.8, 'calf_height': 46.64, 'knee_circ': 34.73,
         'knee_height': 53.1,
@@ -102,7 +103,9 @@ class SchuhschnittTest(SimpleTestCase):
     def test_ein_halbschuh_hat_vier_panels_je_seite(self):
         muster = self._bauen('Halbschuh').assembly()
         self.assertEqual(len(muster.pattern['panels']), 8)
-        self.assertEqual(len(muster.pattern['stitches']), 22)
+        # 24 seit die Sohle der Fussmitte folgt (11.09.2026): die Zehen-
+        # kurven sind ungleich lang, die Blattnaht teilt sich anders auf.
+        self.assertEqual(len(muster.pattern['stitches']), 24)
 
     def test_ein_stiefel_hat_acht_je_seite(self):
         muster = self._bauen('Stiefel').assembly()

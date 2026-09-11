@@ -4,6 +4,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
 import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 import { Weichgewebe } from './weichgewebe.js';
+import { Posenabsatz } from './posenabsatz.js';
 
 /**
  * Szenenschleife — die Renderschleife der Szene-Seite samt Anzeigen.
@@ -75,6 +76,11 @@ export class Szenenschleife extends Zeichenschleife {
         state.controls.update();
         if (state.mixer && state.playing) {
             state.mixer.update(dt);
+            // Der Absatzschuh bleibt Teil der Pose, auch wenn eine
+            // Animation die Füsse stellt (`posenabsatz.js`, wie
+            // MakeHumans Fusspose) — NACH dem Mixer, der die Knochen
+            // dieses Bildes gesetzt hat.
+            Posenabsatz.takt();
             this.zeitanzeige();
             if (state.currentAnimGroundFixed) this.aufDenBoden();
         }
