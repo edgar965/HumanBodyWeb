@@ -186,6 +186,27 @@ class SchuhschnittTest(SimpleTestCase):
         self.assertNotIn('rist', halbschuh.quartier_a.interfaces)
         self.assertEqual(len(halbschuh.interfaces['oben'].edges), 3)
 
+    def test_mit_absatz_ist_die_sohle_zweiteilig_und_die_ferse_oben(self):
+        u"""Pumps mit 7 cm Absatz: die Vordersohle liegt flach am Boden, die
+        Hintersohle steigt zur Ferse, das Blatt liegt steiler, und das
+        Ergebnis meldet Winkel und Hebung für den Betrachter."""
+        from GarmentCode.schuh.halbschuh import Halbschuh
+        g = self._bauen('Halbschuh', **{'shoe.heel': 7.0})
+        s = g.links
+        self.assertTrue(s.beugung.aktiv)
+        self.assertEqual(len(g.assembly().pattern['panels']), 10)
+        vorn, hinten = s.sohle_vorn.bbox3D(), s.sohle.bbox3D()
+        self.assertAlmostEqual(vorn[1][1], -Halbschuh.SOHLE_UNTER_FUSS,
+                               delta=0.05)                   # flach
+        self.assertGreater(hinten[1][1], 6.0)                # die Ferse oben
+        self.assertLess(hinten[0][2], vorn[0][2])            # hinten liegt hinten
+        beschreibung = s.beugung.beschreibung()
+        self.assertAlmostEqual(beschreibung['absatz_cm'], 7.0)
+        self.assertGreater(beschreibung['hebung_cm'], 4.0)
+        # Ohne Absatz bleibt die Sohle ein Panel.
+        flach = self._bauen('Halbschuh').links
+        self.assertFalse(hasattr(flach, 'sohle_vorn'))
+
     def test_der_schaft_folgt_dem_regler(self):
         niedrig = self._bauen('Stiefel', **{'boot.height': 0.1})
         hoch = self._bauen('Stiefel', **{'boot.height': 0.9})
