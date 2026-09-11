@@ -4,9 +4,10 @@ u"""GEM-SMPL im VideoToBVH-Baum — der Teil ohne Grafikkarte (11.09.2026).
 Der Lauf selbst braucht den 5,5-GB-Checkpoint und CUDA; was sich hier
 pruefen laesst, ist alles davor und danach:
 
-* **Der Befehl** an `demo_smpl_hpe.py`: fester Checkpoint-Pfad, `--static_cam`
-  nur auf Wunsch, `--no_render` als Vorgabe (das Rendern braucht Open3D und
-  beendet den Prozess mit `os._exit`).
+* **Der Befehl** an `gem_vorhersage.py` (die Kommandozeile von
+  `demo_smpl_hpe.py`): fester Checkpoint-Pfad, `--static_cam` nur auf Wunsch,
+  `--no_render` als Vorgabe (das Rendern braucht Open3D und beendet den
+  Prozess mit `os._exit`).
 * **Die Ergebnisumformung**: `smpl_params.pt` traegt `body_params_incam`,
   `Bvhbau` und `Bildpunkte` erwarten `smpl_params_incam`. Ein Schluessel
   daneben, und der Lauf bricht NACH zwei Minuten Rechnen ab.
@@ -38,7 +39,9 @@ class DerGemBefehl(unittest.TestCase):
     def test_vorgabe_feste_kamera_ohne_rendern(self):
         befehl = self._lauf().befehl('aus')
         self.assertEqual(befehl[0], sys.executable)
-        self.assertTrue(befehl[1].endswith('demo_smpl_hpe.py'))
+        # Seit dem 12.09.2026 `gem_vorhersage.py` statt `demo_smpl_hpe.py`
+        # (gleiche Kommandozeile, siehe test_vtb_vorstufe).
+        self.assertTrue(befehl[1].endswith('gem_vorhersage.py'))
         self.assertIn('--static_cam', befehl)
         self.assertIn('--no_render', befehl)
         self.assertEqual(befehl[befehl.index('--ckpt_path') + 1], Gemlauf.CHECKPOINT)

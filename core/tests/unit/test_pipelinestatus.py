@@ -93,3 +93,11 @@ class EinRechnerMitPipelines(unittest.TestCase):
         for schluessel in ('v4', 'gvhmr', 'wham', 'prompthmr',
                            'hybrid_gvhmr', 'hybrid_prompthmr'):
             self.assertIn(schluessel, s)
+
+    def test_slam_steht_daneben(self):
+        u"""Die Kamerabahn (DPVO/DROID-SLAM) ist keine Pipeline, sondern
+        eine Zutat — hier ohne Räder falsch, mit `Slamstatus` wahr."""
+        self.assertFalse(self._status(True, True, True, True)['slam'])
+        with patch('core.api.auftrag_upload.Slamstatus.verfuegbar',
+                   return_value=True):
+            self.assertTrue(self._status(True, True, True, True)['slam'])

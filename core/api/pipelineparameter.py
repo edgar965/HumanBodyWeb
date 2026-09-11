@@ -62,6 +62,12 @@ class Pipelineparameter:
             'static_cam': post.get('gvhmr_static_cam') == 'on',
             'focal_length_mm': float(post.get('gvhmr_focal_length_mm', 0)),
             'device': post.get('gvhmr_device', 'cuda'),
+            # Die vier standen seit dem Formularbau im HTML, kamen aber nie
+            # im Auftrag an (12.09.2026) — `Smplbefehl` kannte sie schon.
+            'use_dpvo': post.get('gvhmr_use_dpvo') == 'on',
+            'verbose': post.get('gvhmr_verbose') == 'on',
+            'smooth_sigma': float(post.get('gvhmr_smooth_sigma', 2.0)),
+            'joint_limits': post.get('gvhmr_joint_limits') == 'on',
         }
         ordner = post.get('gvhmr_video_output_dir', '').strip()
         if ordner:

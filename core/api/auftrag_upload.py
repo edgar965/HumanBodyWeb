@@ -23,6 +23,7 @@ from ..dienste.auftragsanlage import Auftragsanlage
 from ..dienste.systemzustand import Systemzustand
 from ..dienste.videoauswahl import Videoauswahl
 from ..models import BVHJob, AppSettings
+from ..pipelines.slamstatus import Slamstatus
 from .auftraege import PIPELINES_2D, PIPELINES_3D
 
 
@@ -153,6 +154,11 @@ class Uploadseiten:
             'wham': Path(settings.WHAM_ROOT).is_dir(),
             'prompthmr': prompthmr,
             'gem': Path(settings.GEM_ROOT).is_dir(),
+            # Kamerabahn (DPVO fuer GVHMR/WHAM, DROID-SLAM fuer PromptHMR):
+            # die Kaestchen gibt es seit je, die Raeder erst seit 12.09.2026.
+            'slam': Slamstatus.verfuegbar(settings.PIPELINE_PYTHON,
+                                          settings.GVHMR_ROOT,
+                                          settings.PROMPTHMR_ROOT),
             'hybrid_gvhmr': gvhmr and v4,
             'hybrid_prompthmr': prompthmr and v4,
             # Die Vorlage fragte zweimal `not hybrid_gvhmr and not

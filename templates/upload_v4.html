@@ -149,8 +149,8 @@
                         <div class="settings-list">
                             <div class="setting-item">
                                 <div class="setting-label">Statische Kamera <span
-                                     class="setting-hint">&Uuml;berspringt DPVO Kamera-Tracking &mdash; empfohlen
-                                          f&uuml;r feste Kamera</span></div>
+                                     class="setting-hint">Keine Kamerabahn &mdash; empfohlen f&uuml;r feste
+                                          Kamera; ohne H&auml;kchen SimpleVO (oder DPVO, siehe unten)</span></div>
                                 <input type="checkbox" name="gvhmr_static_cam"
                                      {% if defaults.gvhmr_static_cam %}checked{% endif %}>
                             </div>
@@ -176,7 +176,7 @@
                             <div class="setting-item">
                                 <div class="setting-label">DPVO <span
                                      class="setting-hint">DPVO statt SimpleVO (genauer, langsamer, braucht mehr
-                                          VRAM)</span></div>
+                                          VRAM) &mdash; {% if status_3d.slam %}installiert{% else %}nicht installiert{% endif %}</span></div>
                                 <input type="checkbox" name="gvhmr_use_dpvo">
                             </div>
                             <div class="setting-item">
@@ -232,7 +232,8 @@
                             <div class="setting-item">
                                 <div class="setting-label">Nur lokale Bewegung <span
                                      class="setting-hint">Keine globale Trajektorie sch&auml;tzen &mdash; nur
-                                          K&ouml;rperbewegung relativ zur Kamera</span></div>
+                                          K&ouml;rperbewegung relativ zur Kamera; ohne H&auml;kchen Kamerabahn
+                                          per DPVO ({% if status_3d.slam %}installiert{% else %}nicht installiert{% endif %})</span></div>
                                 <input type="checkbox" name="wham_local_only"
                                      {% if defaults.wham_local_only %}checked{% endif %}>
                             </div>
@@ -282,7 +283,8 @@
                             <div class="setting-item">
                                 <div class="setting-label">Statische Kamera <span
                                      class="setting-hint">Empfohlen f&uuml;r feste Kamera &mdash; deaktivieren bei
-                                          Handy-Videos mit Bewegung</span></div>
+                                          Handy-Videos mit Bewegung: Kamerabahn per DROID-SLAM + Metric3D
+                                          ({% if status_3d.slam %}installiert{% else %}nicht installiert{% endif %})</span></div>
                                 <input type="checkbox" name="prompthmr_static_cam"
                                      {% if defaults.prompthmr_static_cam %}checked{% endif %}>
                             </div>
@@ -418,7 +420,7 @@
                                 >
                                 <div class="setting-item">
                                     <div class="setting-label">Statische Kamera <span
-                                         class="setting-hint">DPVO Kamera-Tracking &uuml;berspringen</span></div>
+                                         class="setting-hint">Keine Kamerabahn (sonst SimpleVO)</span></div>
                                     <input type="checkbox" name="hybrid_gvhmr_static_cam"
                                          {% if defaults.hybrid_gvhmr_static_cam %}checked{% endif %}>
                                 </div>
