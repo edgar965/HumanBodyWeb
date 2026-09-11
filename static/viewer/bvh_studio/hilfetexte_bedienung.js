@@ -10,19 +10,23 @@ export const HILFE_BEDIENUNG = {
         title: 'Tastenkürzel',
         body: `
 <table class="hilfe-tabelle doku">
-<tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd class="hilfe-taste">Space</kbd></td><td>Play / Pause</td></tr>
+<tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd class="hilfe-taste">Space</kbd></td><td>Play / Pause
+    (Abspielleiste unten links bei der BVH Bibliothek; <b>Endlos</b> lässt das Video am Ende der letzten
+    Animation von vorn laufen, sonst hält es dort an)</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd class="hilfe-taste">&#8592;</kbd> <kbd
     class="hilfe-taste">&#8594;</kbd></td><td>Frame vor / zurück</td></tr>
+<tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd class="hilfe-taste">Pos1</kbd> <kbd
+    class="hilfe-taste">Ende</kbd></td><td>Zum Anfang / zum Ende der letzten Animation springen</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd
     class="hilfe-taste">S</kbd></td><td>Clip splitten am Playhead</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd
     class="hilfe-taste">Del</kbd></td><td>Ausgewählten Clip löschen</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd
     class="hilfe-taste">K</kbd></td><td>Kamera/Licht Keyframe setzen</td></tr>
-<tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd
+<tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd class="hilfe-taste">Ctrl+Z</kbd> <kbd
     class="hilfe-taste">Ctrl+Shift+U</kbd></td><td>Undo (bis zu 20 Schritte)</td></tr>
-<tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd
-    class="hilfe-taste">Redo</kbd></td><td>Redo (nur per Button)</td></tr>
+<tr class="hilfe-trennlinie"><td class="hilfe-feld"><kbd class="hilfe-taste">Ctrl+Y</kbd> <kbd
+    class="hilfe-taste">Ctrl+Shift+Z</kbd></td><td>Redo</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><b>Mausrad</b></td><td>Timeline scrollen</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><b>Ctrl + Mausrad</b></td><td>Timeline zoomen</td></tr>
 <tr class="hilfe-trennlinie"><td class="hilfe-feld"><b>Mittlere Maustaste</b></td><td>Timeline pannen</td></tr>

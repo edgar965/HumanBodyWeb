@@ -39,6 +39,7 @@ export const state = {
     playheadFrame: 0,
     playing: false,
     playbackSpeed: 1,
+    endlos: false,        // „Endlos": am Ende der letzten Animation von vorn (Endlosschalter)
     timelineZoom: 100,  // pixels per second
     timelineScrollX: 0,
 

@@ -87,6 +87,7 @@ export class Zeitleistenmenue {
         const rect = Zeitleistenflaeche.canvas.getBoundingClientRect();
         Zeitleistenmenue.mausX = e.clientX - rect.left;
         const my = e.clientY - rect.top;
+        if (my - Zeitleistenflaeche.oben <= RULER_HEIGHT) return;   // das Lineal hat kein Menü
         const treffer = Zeitleistentreffer.clipBei(Zeitleistenmenue.mausX, my);
         const reihe = Reihen.beiY(my);
         const spurNr = reihe?.trackIdx ?? -1;

@@ -28,7 +28,7 @@ import { THREE } from './state.js';
 import { Hautmaske } from '../gemeinsam/hautmaske.js';
 import { Stueckereignis } from './garmentcode_stueckereignis.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Hauteinzug } from './hauteinzug.js';
+import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
 
 export class Hautverdeckung {
 

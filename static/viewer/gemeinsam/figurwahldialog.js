@@ -48,11 +48,12 @@ export class Figurwahldialog {
      *   knopf     Text des Bestätigen-Knopfs
      *   symbol    Font-Awesome-Klasse im Kopf
      *   lage      false = ohne Lage-Felder; `lage()` liefert dann `vorgaben()`
+     *   angleichen false = Position X ohne das Kästchen „Größe angleichen"
      *   kennung   Präfix aller IDs (zwei Dialoge je Seite brauchen zwei)
      */
     constructor({ lader, quellen = null, vorgaben = null, pflege = null,
                   titel = 'Charakter hinzufügen', knopf = 'Hinzufügen',
-                  symbol = 'fa-user-plus', lage = true,
+                  symbol = 'fa-user-plus', lage = true, angleichen = true,
                   kennung = Figurwahldialog.ID } = {}) {
         this.lader = lader || {};
         this.quellen = (quellen || Figurkataloge.REIHENFOLGE)
@@ -63,7 +64,8 @@ export class Figurwahldialog {
         this.knopf = knopf;
         this.symbol = symbol;
         this.kennung = kennung;
-        this.lagefelder = lage ? new Figurlagefelder(kennung, this.vorgaben) : null;
+        this.lagefelder = lage
+            ? new Figurlagefelder(kennung, this.vorgaben, { angleichen }) : null;
         this.quelle = this.quellen[0] || null;
         this.gewaehlt = null;
         this.element = null;

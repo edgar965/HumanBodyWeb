@@ -28,6 +28,7 @@ class EinstellungenAttrappe:
     wham_estimate_local_only = True
     wham_run_smplify = False
     prompthmr_static_camera = True
+    gem_static_cam = True
 
 
 class SmplbefehlTest(SimpleTestCase):
@@ -86,6 +87,20 @@ class SmplbefehlTest(SimpleTestCase):
         befehl = self.befehl('prompthmr')
         self.assertIn('--static_camera', befehl)
         self.assertNotIn('--static_cam', befehl)
+
+    def test_gem_teilt_glaettung_mit_gvhmr_aber_nicht_die_brennweite(self):
+        """GEM (11.09.2026): --static_cam, --smooth_sigma, Gelenkgrenzen wie
+        GVHMR; --focal_length_mm kennt es nicht, --render nur auf Wunsch."""
+        befehl = self.befehl('gem', smooth_sigma=1.5)
+        self.assertIn('--static_cam', befehl)
+        self.assertEqual(befehl[befehl.index('--smooth_sigma') + 1], '1.5')
+        self.assertNotIn('--focal_length_mm', befehl)
+        self.assertNotIn('--render', befehl)
+        self.assertNotIn('--no_joint_limits', befehl)
+        mit = self.befehl('gem', static_cam=False, render=True, joint_limits=False)
+        self.assertNotIn('--static_cam', mit)
+        self.assertIn('--render', mit)
+        self.assertIn('--no_joint_limits', mit)
 
     def test_unbekannte_pipeline_bekommt_nur_das_grundgeruest(self):
         befehl = self.befehl('smplest_x')

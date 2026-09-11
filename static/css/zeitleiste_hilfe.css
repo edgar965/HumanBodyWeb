@@ -1,0 +1,23 @@
+/* Schwebehilfe der Zeitleiste im BVH Studio — zeitleiste_hilfe.js (11.09.2026).
+   Ein fester Kasten über dem Mauszeiger; `pointer-events: none`, damit er nie
+   einen Klick auf die Zeitleiste abfängt. */
+.zeitleiste-hilfe {
+    position: fixed;
+    z-index: 1000;
+    max-width: 340px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+    font-size: 0.76rem;
+    line-height: 1.45;
+    pointer-events: none;
+}
+.zeitleiste-hilfe[hidden] { display: none; }
+.zeitleiste-hilfe-titel {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--accent);
+}

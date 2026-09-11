@@ -29,6 +29,8 @@ class Pipelineparameter:
                 'static_cam': post.get('prompthmr_static_cam') == 'on',
                 'device': post.get('prompthmr_device', 'cuda'),
             }
+        if pipeline == 'gem':
+            return Pipelineparameter._gem(post)
         if pipeline.startswith('hybrid_'):
             return Pipelineparameter._hybrid(post)
         return {}
@@ -65,6 +67,17 @@ class Pipelineparameter:
         if ordner:
             p['video_output_dir'] = ordner
         return p
+
+    @staticmethod
+    def _gem(post):
+        """GEM-SMPL (11.09.2026): feste Kamera, Glaettung, Gelenkgrenzen, Geraet."""
+        return {
+            'static_cam': post.get('gem_static_cam') == 'on',
+            'smooth_sigma': float(post.get('gem_smooth_sigma', 2.0)),
+            'joint_limits': post.get('gem_joint_limits') == 'on',
+            'render': post.get('gem_render') == 'on',
+            'device': post.get('gem_device', 'cuda'),
+        }
 
     @staticmethod
     def _hybrid(post):
@@ -114,6 +127,8 @@ class Pipelineparameter:
             'wham_device': s.smpl_device,
             'prompthmr_static_cam': s.prompthmr_static_camera,
             'prompthmr_device': s.smpl_device,
+            'gem_static_cam': s.gem_static_cam,
+            'gem_device': s.smpl_device,
             # Hybrid greift auf dieselben Einstellungen zurueck
             'hybrid_body_device': s.smpl_device,
             'hybrid_gvhmr_static_cam': s.gvhmr_static_cam,

@@ -5,7 +5,7 @@ Aus `_run_processing` herausgeloest (Umbau 15.08.2026, 302 Zeilen in EINER
 Funktion). Vier Wege fuehren zum BVH:
 
     hybrid_*                   Koerper und Gesicht getrennt, dann zusammen
-    gvhmr | wham | prompthmr   ein Schritt, SMPL-basiert
+    gvhmr | wham | prompthmr | gem   ein Schritt, SMPL-basiert
     v4                         ein Schritt, MocapNET v4
     alles andere               2D-Erkennung -> CSV -> MocapNET (C++)
 
@@ -34,7 +34,7 @@ logger = logging.getLogger('core')
 class Auftragslauf:
     """Fuehrt einen BVH-Auftrag aus und haelt seinen Zustand nach."""
 
-    SMPL_PIPELINES = ('gvhmr', 'wham', 'prompthmr')
+    SMPL_PIPELINES = ('gvhmr', 'wham', 'prompthmr', 'gem')
     NEUE_2D_ERKENNER = ('rtmpose', 'vitpose', 'yolo11')
     #: MocapNET laedt beim Start seine TensorFlow-Modelle und meldet danach jede
     #: Frame. Es holt nichts aus dem Netz — deshalb kuerzer als bei den

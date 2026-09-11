@@ -66,6 +66,15 @@ export class Zeitleistenziehen {
         }
         if (e.button !== 0) return;
 
+        // Das Lineal hängt am sichtbaren Rand und liegt ÜBER den Reihen —
+        // ein Klick darauf trifft keinen Clip, der darunter durchläuft.
+        if (mx > HEADER_WIDTH && my - Zeitleistenflaeche.oben <= RULER_HEIGHT) {
+            Zeitleistenziehen.art = 'scrub';
+            Zeitleistenziehen.startX = mx;
+            Zeitleistenziehen.abspielkopfSetzen(mx);
+            e.preventDefault();
+            return;
+        }
         const treffer = Zeitleistentreffer.clipBei(mx, my);
         // Auswahl in der Bibliothek loeschen, sobald in der Leiste geklickt wird.
         document.querySelectorAll('.lib-item.selected')
@@ -78,13 +87,7 @@ export class Zeitleistenziehen {
             return;
         }
         if (mx <= HEADER_WIDTH) return;
-        if (my <= RULER_HEIGHT) {
-            Zeitleistenziehen.art = 'scrub';
-            Zeitleistenziehen.startX = mx;
-            Zeitleistenziehen.abspielkopfSetzen(mx);
-        } else {
-            Zeitleistenziehen._reiheWaehlen(my);
-        }
+        Zeitleistenziehen._reiheWaehlen(my);
         e.preventDefault();
     }
 

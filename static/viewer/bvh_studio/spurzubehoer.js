@@ -196,13 +196,13 @@ export class Spurzubehoer {
 
     /** Mit Gewichten als SkinnedMesh anhängen, ohne als einfaches Mesh. */
     _anhaengen(geo, stoff, indizesB64, gewichteB64) {
-        if (!indizesB64 || !gewichteB64 || !this.spur.skeleton) {
-            this.spur.group.add(new THREE.Mesh(geo, stoff));
-            return;
-        }
-        this.spur.group.add(this._binden(geo, stoff,
-                                        base64ToFloat32(indizesB64),
-                                        base64ToFloat32(gewichteB64)));
+        const netz = (!indizesB64 || !gewichteB64 || !this.spur.skeleton)
+            ? new THREE.Mesh(geo, stoff)
+            : this._binden(geo, stoff, base64ToFloat32(indizesB64),
+                           base64ToFloat32(gewichteB64));
+        // Ein Stück, kein Haar: Die Hautmaske (`Spurhaut`) sammelt daran.
+        netz.userData.isGarment = true;
+        this.spur.group.add(netz);
     }
 
     /**

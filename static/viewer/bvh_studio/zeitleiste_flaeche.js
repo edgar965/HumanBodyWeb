@@ -28,6 +28,15 @@ export class Zeitleistenflaeche {
         return !!(this.canvas && this.ctx);
     }
 
+    /**
+     * Wie weit der Rahmen nach unten geblättert ist — dort hängt das Lineal
+     * (Edgar, 11.09.2026: „diese Spaltenüberschrift soll immer sichtbar
+     * bleiben, auch beim blättern"). Leinwand-y = sichtbares y + `oben`.
+     */
+    static get oben() {
+        return this.rahmen ? this.rahmen.scrollTop : 0;
+    }
+
     static get breite() {
         return this.canvas ? this.canvas.width : 0;
     }

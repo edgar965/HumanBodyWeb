@@ -37,9 +37,12 @@ export function renderTimeline() {
     const pps = state.timelineZoom;      // Pixel je Sekunde beim aktuellen Zoom
 
     Zeitleistenflaeche.ctx.clearRect(0, 0, breite, hoehe);
-    Zeitleistenlineal.zeichnen(breite, pps);
     _reihen(breite, pps);
-    Abspielkopf.zeichnen(hoehe, pps);
+    // Das Lineal NACH den Reihen und am sichtbaren Rand: Es bleibt beim
+    // Blättern stehen, die Reihen laufen darunter durch (11.09.2026).
+    const oben = Zeitleistenflaeche.oben;
+    Zeitleistenlineal.zeichnen(breite, pps, oben);
+    Abspielkopf.zeichnen(hoehe, pps, oben);
     Abspielkopf.bildanzeige();
 }
 

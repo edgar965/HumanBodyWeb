@@ -40,11 +40,16 @@ export class Pipelinefelder {
         prompthmr: [
             ['static_cam', 'bool'], ['device', 'text'],
         ],
+        gem: [
+            ['static_cam', 'bool'], ['smooth_sigma', 'float'],
+            ['joint_limits', 'bool'], ['render', 'bool'], ['device', 'text'],
+        ],
     };
 
     /** Vorsilbe der Feldnamen im Formular. */
     static VORSILBE = {
         v4: 'v4_', gvhmr: 'gvhmr_', wham: 'wham_', prompthmr: 'prompthmr_',
+        gem: 'gem_',
     };
 
     /** Ankreuzgruppe "Koerperteile" der v4-Pipeline. */
@@ -52,7 +57,7 @@ export class Pipelinefelder {
 
     /**
      * Werte einer Pipeline aus dem Formular lesen.
-     * @param {string} pipeline  'v4' | 'gvhmr' | 'wham' | 'prompthmr'
+     * @param {string} pipeline  'v4' | 'gvhmr' | 'wham' | 'prompthmr' | 'gem'
      *                           oder 'hybrid_<backend>'
      */
     static sammeln(pipeline) {

@@ -6,6 +6,7 @@ import { Spurzubehoer } from './spurzubehoer.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
+import { Spurhaut } from './spurhaut.js';
 
 /**
  * Spurfigur — die Figur einer Spur im BVH-Studio aufbauen: Netz der
@@ -42,6 +43,8 @@ export class Spurfigur {
             this._einsetzen(netz);
             if (vorgabe.garments || vorgabe.hair_style || vorgabe.garmentcode) {
                 await new Spurzubehoer(this.spur, vorgabe).laden();
+                // Haut unter dem Stoff nicht zeichnen (11.09.2026, wie die Szene).
+                Spurhaut.anwenden(this.spur);
             }
             Protokoll.debug('BVH Studio', `Figur geladen: ${this.spur.preset} `
                         + `für ${this.spur.name}`);

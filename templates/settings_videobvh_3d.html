@@ -87,6 +87,9 @@
                     <option value="gvhmr"
                          {% if settings.lifter_3d_default == 'gvhmr' %}selected{% endif %}>GVHMR (SMPL, GPU, 36 mm,
                               empfohlen)</option>
+                    <option value="gem"
+                         {% if settings.lifter_3d_default == 'gem' %}selected{% endif %}>GEM-SMPL (SMPL, GPU, 35 mm,
+                              Weltraum 74 mm)</option>
                 </select>
             </div>
         </div>
@@ -174,7 +177,7 @@
         <div class="settings-row">
             <div class="settings-label">
                 <strong>Device</strong>
-                <small>GPU (CUDA) oder CPU f&uuml;r GVHMR, WHAM und PromptHMR.</small>
+                <small>GPU (CUDA) oder CPU f&uuml;r GVHMR, WHAM, PromptHMR und GEM.</small>
             </div>
             <div class="settings-input">
                 <select name="smpl_device" class="settings-select">
@@ -241,6 +244,21 @@
         </h2>
 
         {% kaestchen "prompthmr_static_camera" %}
+    </div>
+
+    {# ── GEM-SMPL (11.09.2026) ── #}
+    <div class="settings-card hb-abstand-oben">
+        <h2>
+            <i class="fas fa-gem"></i> GEM-SMPL
+            <small class="hb-gedaempft">NVIDIA ICCV 2025 &mdash; EMDB-2 Weltraum 74 mm (GVHMR 111), nur
+                nicht-kommerziell</small>
+            {% if gem_installed %}<span class="hb-color-27ae60" title="Installiert"><i
+                 class="fas fa-check-circle"></i></span>
+            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i
+                 class="fas fa-times-circle"></i></span>{% endif %}
+        </h2>
+
+        {% kaestchen "gem_static_cam" %}
     </div>
 
     {# ── 3D Video Output ── #}

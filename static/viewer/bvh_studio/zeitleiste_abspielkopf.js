@@ -18,7 +18,7 @@ export class Abspielkopf {
      * @param {number} hoehe Leinwandhöhe
      * @param {number} pps Pixel je Sekunde
      */
-    static zeichnen(hoehe, pps) {
+    static zeichnen(hoehe, pps, oben = 0) {
         const x = HEADER_WIDTH
             + (state.playheadFrame / state.project.fps) * pps
             - state.timelineScrollX;
@@ -33,9 +33,10 @@ export class Abspielkopf {
         ctx.stroke();
         ctx.fillStyle = '#ef4444';
         ctx.beginPath();
-        ctx.moveTo(x - Abspielkopf.GRIFF_BREITE, 0);
-        ctx.lineTo(x + Abspielkopf.GRIFF_BREITE, 0);
-        ctx.lineTo(x, Abspielkopf.GRIFF_HOEHE);
+        // Der Griff sitzt im Lineal, und das hängt am sichtbaren Rand (`oben`).
+        ctx.moveTo(x - Abspielkopf.GRIFF_BREITE, oben);
+        ctx.lineTo(x + Abspielkopf.GRIFF_BREITE, oben);
+        ctx.lineTo(x, oben + Abspielkopf.GRIFF_HOEHE);
         ctx.fill();
     }
 

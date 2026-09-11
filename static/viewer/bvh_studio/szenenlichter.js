@@ -116,6 +116,10 @@ export class Szenenlichter {
 
     static _spurwerte(spur, werte) {
         spur.lightVisible = werte.visible ?? false;
+        // Lichtkegel: gespeichert seit je (`Projektdaten._lichter`), gelesen
+        // erst seit dem 11.09.2026 (Edgar: „Lichtkegel (aus) gesetzt und
+        // projekt gespeichert, beim neu laden war der alte Status").
+        spur.coneVisible = werte.coneVisible ?? true;
         spur.muted = werte.muted ?? false;
         spur.light.visible = !spur.muted;
         if (spur.lightHelper) {

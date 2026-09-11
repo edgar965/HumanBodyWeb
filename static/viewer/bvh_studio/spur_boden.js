@@ -76,6 +76,46 @@ export function createFloorTrack() {
     return track;
 }
 
+/**
+ * Gespeicherte Bodenwerte auf die BESTEHENDE Bodenspur legen.
+ *
+ * BEFUND (11.09.2026, Edgar: „auch boden größe wird nicht gespeichert"):
+ * Gespeichert wurde sie (`Projektdaten._boden`), gelesen nur beim SEITENSTART
+ * (`createFloorTrack` über `_pendingSceneOverrides`). Beim Laden zur Laufzeit
+ * (Datei → Laden, Rückgängig) bleibt der Boden stehen — `Spurabbau` schützt
+ * Szenen-Elemente —, und `createFloorTrack` kehrt beim vorhandenen Boden um,
+ * ohne die Werte anzufassen. Im Browser gemessen: 9 × 4 m gespeichert, nach
+ * dem Laden 6 × 6.
+ */
+export function applyFloorOverride(override) {
+    const track = state.project.tracks.find(t => t._sceneItem === 'floor');
+    if (!track?.mesh || !override) return false;
+    const legacySize = override.size;
+    setFloorGeometry(track, override.width ?? legacySize ?? 6,
+                     override.length ?? legacySize ?? 6,
+                     override.centerX ?? 0, override.centerZ ?? 0);
+    track.floorColor = override.color ?? track.floorColor;
+    track.floorRoughness = override.roughness ?? track.floorRoughness;
+    track.floorMetalness = override.metalness ?? track.floorMetalness;
+    updateFloorMaterial(track);
+    track.muted = override.muted || false;
+    if (override.gridVisible !== undefined) {
+        state.gridVisible = !!override.gridVisible;
+        state.scene?.traverse(o => {
+            if (o.type === 'GridHelper' || o.isGridHelper) o.visible = state.gridVisible;
+        });
+    }
+    const textur = override.texture || 'none';
+    if (textur !== track.floorTexture) {
+        if (textur === 'none') applyFloorTexture(track, '');
+        else getFloorTextures().then(list => {
+            const found = list?.find(x => x.name === textur);
+            if (found?.url) applyFloorTexture(track, found.url);
+        });
+    }
+    return true;
+}
+
 export function updateFloorMaterial(track) {
     if (!track?.mesh || !track.mesh.material) return;
     const m = track.mesh.material;
@@ -143,4 +183,5 @@ export async function getFloorTextures() {
 fn.updateFloorMaterial = updateFloorMaterial;
 fn.applyFloorTexture = applyFloorTexture;
 fn.setFloorGeometry = setFloorGeometry;
+fn.applyFloorOverride = applyFloorOverride;
 fn.getFloorTextures = getFloorTextures;

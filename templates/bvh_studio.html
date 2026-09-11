@@ -4,6 +4,9 @@
 {% block title %}BVH Studio{% endblock %}
 
 {% block extra_head %}
+{% comment %}Figurwahl-Dialog („Modell hinzufügen"), geteilt mit Szene und Theatre (11.09.2026){% endcomment %}
+<link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/zeitleiste_hilfe.css' %}">
 <style>
     .main-content {
         padding: 0 !important;
@@ -128,17 +131,21 @@
     .timeline-canvas-wrap { flex: 1; position: relative; overflow-y: auto; overflow-x: hidden; }
     #timeline-canvas { display: block; cursor: default; }
 
-    /* Playback bar */
+    /* Abspielleiste — unten in der Seitenleiste (280 px): Knöpfe in der ersten
+       Zeile, Zeit und Tempo in der zweiten (`.playback-zeile` bricht um). */
     .studio-playback {
-        height: 32px; background: var(--bg-card); border-top: 1px solid var(--border);
-        display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0;
+        background: var(--bg-card); border-top: 1px solid var(--border);
+        display: flex; flex-wrap: wrap; align-items: center; padding: 6px 8px; gap: 4px;
+        flex-shrink: 0;
     }
     .studio-playback button {
-        padding: 4px 8px; background: transparent; border: 1px solid var(--border);
+        padding: 4px 6px; background: transparent; border: 1px solid var(--border);
         border-radius: 4px; color: var(--text); cursor: pointer; font-size: 0.8rem;
     }
     .studio-playback button:hover { background: var(--accent); color: #fff; }
-    .playback-time { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); }
+    .studio-playback .pb-schalter.an { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .playback-zeile { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .playback-time { font-family: monospace; font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
 
     /* Properties panel */
     .studio-properties {
@@ -582,6 +589,34 @@
         <div class="lib-tree" id="lib-tree">
             <div class="hb-hinweis">Lade...</div>
         </div>
+
+        <!-- Abspielleiste — seit 11.09.2026 hier links bei den Animationen (Edgar),
+             vorher unter der Zeitleiste. „Endlos": am Ende der letzten Animation von vorn. -->
+        <div class="studio-playback" id="studio-playback">
+            <button id="pb-start" title="Zum Anfang springen (Pos1)"><i class="fas fa-fast-backward"></i></button>
+            <button id="pb-prev" title="Vorheriger Frame"><i class="fas fa-step-backward"></i></button>
+            <button id="pb-play" title="Play/Pause (Leertaste)"><i class="fas fa-play" id="pb-play-icon"></i></button>
+            <button id="pb-stop" title="Stop"><i class="fas fa-stop"></i></button>
+            <button id="pb-next" title="Nächster Frame"><i class="fas fa-step-forward"></i></button>
+            <button id="pb-end" title="Zum Ende der letzten Animation springen (Ende)"><i class="fas fa-fast-forward"></i></button>
+            <div class="hb-dehnt"></div>
+            <button id="pb-loop" class="pb-schalter" aria-pressed="false"
+                    title="Endlos: Ist die letzte Animation zu Ende, läuft das Video von vorn. Aus: es hält am Ende an."><i
+                 class="fas fa-redo"></i> Endlos</button>
+            <div class="playback-zeile">
+                <span class="playback-time" id="pb-time">00:00.00</span>
+                <span class="playback-time" id="pb-frame">F: 0</span>
+                <span class="playback-time">/</span>
+                <span class="playback-time" id="pb-duration">00:00.00</span>
+                <div class="hb-dehnt"></div>
+                <select id="pb-speed" title="Geschwindigkeit">
+                    <option value="0.25">0.25x</option>
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="2">2x</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <!-- Library context menus -->
@@ -633,26 +668,6 @@
             </div>
         </div>
 
-        <!-- Playback -->
-        <div class="studio-playback">
-            <button id="pb-prev" title="Vorheriger Frame"><i class="fas fa-step-backward"></i></button>
-            <button id="pb-play" title="Play/Pause"><i class="fas fa-play" id="pb-play-icon"></i></button>
-            <button id="pb-stop" title="Stop"><i class="fas fa-stop"></i></button>
-            <button id="pb-next" title="Nächster Frame"><i class="fas fa-step-forward"></i></button>
-            <div class="sep leistentrenner"></div>
-            <span class="playback-time" id="pb-time">00:00.00</span>
-            <span class="playback-time" id="pb-frame">F: 0</span>
-            <span class="playback-time">/</span>
-            <span class="playback-time" id="pb-duration">00:00.00</span>
-            <div class="hb-dehnt"></div>
-            <label class="leistenbeschriftung">Speed:</label>
-            <select id="pb-speed">
-                <option value="0.25">0.25x</option>
-                <option value="0.5">0.5x</option>
-                <option value="1" selected>1x</option>
-                <option value="2">2x</option>
-            </select>
-        </div>
     </div>
 
     <!-- Properties Panel -->

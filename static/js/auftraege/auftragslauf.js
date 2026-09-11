@@ -168,7 +168,7 @@ export class Auftragslauf {
 
     /** Pipelines im Auswahlfeld einer neuen Zeile. */
     static PIPELINES = [['v4', 'v4'], ['gvhmr', 'GVHMR'], ['wham', 'WHAM'],
-                        ['prompthmr', 'PromptHMR'],
+                        ['prompthmr', 'PromptHMR'], ['gem', 'GEM-SMPL'],
                         ['hybrid_gvhmr', 'Hybrid (GVHMR)'],
                         ['hybrid_prompthmr', 'Hybrid (PromptHMR)']];
 

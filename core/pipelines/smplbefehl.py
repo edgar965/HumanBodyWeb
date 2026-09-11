@@ -3,7 +3,7 @@
 
 Herausgelöst aus `smpllauf._run_smpl_pipeline` (95 Zeilen). Der Aufbau des
 Befehls war der längste Teil und der einzige, der ohne Grafikkarte prüfbar ist:
-Drei Pipelines mit je eigenen Schaltern, jeder Wert entweder aus dem Auftrag oder
+Vier Pipelines mit je eigenen Schaltern, jeder Wert entweder aus dem Auftrag oder
 aus den Einstellungen.
 
 DIE REGEL, DIE ÜBERALL GILT
@@ -30,7 +30,13 @@ class Smplbefehl:
         'wham': (('local_only', 'wham_estimate_local_only', '--estimate_local_only'),
                  ('smplify', 'wham_run_smplify', '--run_smplify')),
         'prompthmr': (('static_cam', 'prompthmr_static_camera', '--static_camera'),),
+        # GEM-SMPL (11.09.2026): feste Kamera wie GVHMR, dazu die Demo-Videos.
+        'gem': (('static_cam', 'gem_static_cam', '--static_cam'),
+                ('render', None, '--render')),
     }
+
+    #: Pipelines, die Glaettung und Gelenkgrenzen von `Bvhbau` kennen.
+    MIT_GLAETTUNG = ('gvhmr', 'gem')
 
     def __init__(self, job, einstellungen):
         self.job = job
@@ -56,6 +62,8 @@ class Smplbefehl:
         teile = list(self._schalter())
         if self.job.pipeline == 'gvhmr':
             teile += self._gvhmr_werte()
+        if self.job.pipeline in self.MIT_GLAETTUNG:
+            teile += self._glaettung()
         return teile
 
     def _schalter(self):
@@ -65,13 +73,15 @@ class Smplbefehl:
                 yield argument
 
     def _gvhmr_werte(self):
-        """Zahlenwerte und der umgekehrte Gelenkgrenzen-Schalter."""
+        """Die Brennweite — nur GVHMR nimmt sie entgegen."""
         s, p = self.einstellungen, self.params
-        werte = [
-            '--focal_length_mm',
-            str(p.get('focal_length_mm', s.gvhmr_focal_length_mm)),
-            '--smooth_sigma', str(p.get('smooth_sigma', 2.0)),
-        ]
+        return ['--focal_length_mm',
+                str(p.get('focal_length_mm', s.gvhmr_focal_length_mm))]
+
+    def _glaettung(self):
+        """Glaettung und der umgekehrte Gelenkgrenzen-Schalter (GVHMR, GEM)."""
+        p = self.params
+        werte = ['--smooth_sigma', str(p.get('smooth_sigma', 2.0))]
         if not p.get('joint_limits', True):
             werte.append('--no_joint_limits')
         return werte

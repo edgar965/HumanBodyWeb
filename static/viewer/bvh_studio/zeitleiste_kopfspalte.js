@@ -27,9 +27,12 @@ export function updateTrackHeaders() {
     if (Zeitleistenflaeche.canvas) {
         behaelter.style.height = Zeitleistenflaeche.canvas.height + 'px';
     }
+    // Das Gegenstück zum Lineal der Leinwand — klebt wie dieses am oberen
+    // Rand, wenn geblättert wird (11.09.2026).
     const lineal = document.createElement('div');
     lineal.style.cssText =
-        `height:${RULER_HEIGHT}px;border-bottom:1px solid var(--border);`;
+        `height:${RULER_HEIGHT}px;border-bottom:1px solid var(--border);`
+        + 'position:sticky;top:0;z-index:3;background:var(--bg-secondary);';
     behaelter.appendChild(lineal);
 
     const neuzeichnen = () => { updateTrackHeaders(); renderTimeline(); };

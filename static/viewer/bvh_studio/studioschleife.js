@@ -1,7 +1,8 @@
 import { state } from './state.js';
 import { renderTimeline } from './zeitleiste_zeichnen.js';
-import { applyPlayhead, updatePlaybackUI,
-         syncLightVisibility } from './playback.js';
+import { applyPlayhead, updatePlaybackUI, syncLightVisibility,
+         abspielende, pausePlayback } from './playback.js';
+import { Abspielende } from './abspielende.js';
 import { updateDebugPanel } from './debug.js';
 import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
 import { Figurmarkierung } from './figurmarkierung.js';
@@ -10,9 +11,11 @@ import { Figurmarkierung } from './figurmarkierung.js';
  * Studioschleife — die Renderschleife des BVH-Studios.
  *
  * Aus `index.js animate()` herausgeloest (Umbau 16.08.2026). Der Kern bleibt
- * gleich: Beim Abspielen läuft der Abspielkopf mit der Bildrate weiter und
- * springt am Ende auf 0 zurück; ohne Abspielen wird nur die Sichtbarkeit der
- * Lichter nachgezogen.
+ * gleich: Beim Abspielen läuft der Abspielkopf mit der Bildrate weiter; am
+ * Ende der letzten Animation hält er an oder springt mit „Endlos" auf 0
+ * (`Abspielende`, 11.09.2026 — vorher immer auf 0, und erst am Ende der
+ * Projektdauer). Ohne Abspielen wird nur die Sichtbarkeit der Lichter
+ * nachgezogen.
  */
 export class Studioschleife extends Zeichenschleife {
 
@@ -32,9 +35,9 @@ export class Studioschleife extends Zeichenschleife {
     abspielen(dt) {
         const bilder = state.project.fps;
         state.playheadFrame += Math.round(dt * bilder * state.playbackSpeed);
-        if (state.playheadFrame >= state.project.duration * bilder) {
-            state.playheadFrame = 0;   // von vorn
-        }
+        const naechstes = Abspielende.naechstes(state.playheadFrame, abspielende(), state.endlos);
+        state.playheadFrame = naechstes.bild;
+        if (naechstes.anhalten) pausePlayback();
         applyPlayhead();
         renderTimeline();
         updatePlaybackUI();

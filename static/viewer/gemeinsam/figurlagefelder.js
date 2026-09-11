@@ -9,6 +9,10 @@
  * Die Vorgabe der Szene-Seite: `ABSTAND_M` rechts neben der vorhandenen
  * Figur, Größe angeglichen. Der Aufrufer liefert über `vorgaben()` die
  * echte Lage — ohne Angabe gilt diese Vorgabe.
+ *
+ * `angleichen: false` lässt das Kästchen weg (BVH Studio, 11.09.2026): Dort
+ * bestimmt die Bewegung die Größe der Figur, ein Kästchen ohne Wirkung wäre
+ * eine Behauptung. `lage()` liefert dann die Vorgabe des Aufrufers.
  */
 export class Figurlagefelder {
 
@@ -18,10 +22,12 @@ export class Figurlagefelder {
     /**
      * @param {string} kennung   Präfix der IDs (die des Dialogs)
      * @param {Function} vorgaben  () => ({x, angleichen, vorbildHoehe})
+     * @param {Object} wahl      { angleichen: false } = ohne das Kästchen
      */
-    constructor(kennung, vorgaben = null) {
+    constructor(kennung, vorgaben = null, { angleichen = true } = {}) {
         this.kennung = kennung;
         this.vorgaben = vorgaben || Figurlagefelder.vorgabe;
+        this.mitAngleichen = angleichen;
         this.wurzel = null;
     }
 
@@ -31,15 +37,16 @@ export class Figurlagefelder {
 
     html() {
         const k = this.kennung;
+        const kaestchen = this.mitAngleichen ? `
+                <label class="ankreuz" for="${k}-angleichen">
+                    <input type="checkbox" id="${k}-angleichen" checked>
+                    Größe der vorhandenen Figur angleichen
+                </label>` : '';
         return `
             <div class="dialogfelder" id="${k}-lage">
                 <label for="${k}-x">Position X</label>
                 <input type="number" id="${k}-x" step="0.1" value="${Figurlagefelder.ABSTAND_M}">
-                <span class="einheit">m</span>
-                <label class="ankreuz" for="${k}-angleichen">
-                    <input type="checkbox" id="${k}-angleichen" checked>
-                    Größe der vorhandenen Figur angleichen
-                </label>
+                <span class="einheit">m</span>${kaestchen}
             </div>`;
     }
 

@@ -17,6 +17,7 @@ import { renderTimeline } from './zeitleiste_zeichnen.js';
 import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { Zeitleistenziehen } from './zeitleiste_ziehen.js';
 import { Zeitleistenmenue } from './zeitleiste_menue.js';
+import { Zeitleistenhilfe } from './zeitleiste_hilfe.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /** Grenzen des Zooms in Bildpunkten je Sekunde. */
@@ -41,6 +42,7 @@ export function setupTimeline() {
     _zoomAnbinden();
     Zeitleistenziehen.anbinden();
     Zeitleistenmenue.anbinden();
+    Zeitleistenhilfe.anbinden();
     _ablegenAnbinden();
     _scrollenAnbinden();
 }
@@ -87,6 +89,8 @@ function _ablegenAnbinden() {
 }
 
 function _scrollenAnbinden() {
+    // Senkrechtes Blättern (Rollbalken): das Lineal hängt am sichtbaren Rand.
+    Zeitleistenflaeche.rahmen?.addEventListener('scroll', () => renderTimeline());
     Zeitleistenflaeche.canvas.addEventListener('wheel', (e) => {
         if (e.ctrlKey) {
             const schritt = e.deltaY > 0 ? -ZOOM_SCHRITT : ZOOM_SCHRITT;

@@ -50,6 +50,10 @@ export class Projektwiederherstellung {
         await Promise.all(wartend);
 
         Projektwiederherstellung._modellspurenVerlinken();
+        // Zur Laufzeit steht der Boden schon (Szenen-Element, nicht löschbar):
+        // die gespeicherten Werte darauf legen. Beim Seitenstart gibt es ihn
+        // noch nicht, dann greift `createFloorTrack` über die Vorgaben.
+        fn.applyFloorOverride?.(data.sceneFloor);
         state._undoSuppressed = false;
 
         fn.updateDuration();
@@ -90,6 +94,7 @@ export class Projektwiederherstellung {
             track._linkedAnimIdx = (gespeichert >= 0 && neueNummer[gespeichert] != null)
                 ? neueNummer[gespeichert] : -1;
             track._currentPreset = td._currentPreset || null;
+            track.zugeklappt = Boolean(td.zugeklappt);
         } else {
             track = fn.addSpecialTrack(art, td.name);
         }

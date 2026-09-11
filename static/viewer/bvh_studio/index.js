@@ -45,8 +45,15 @@ fn.serverLog = serverLog;
 
 /**
  * Tastenkürzel, in der Erfassungsphase angemeldet.
- * Chrome auf QWERTZ schluckt Strg+Z/Y/M — deshalb gibt es Strg+Shift+U als
- * zweiten Weg zum Rückgängigmachen.
+ *
+ * BEFUND (11.09.2026, Edgar: „kamera spur gelöscht - Undo funktioniert
+ * nicht"): Hier stand `ereignis.code === 'KeyZ'`. `code` ist die PHYSISCHE
+ * Taste in US-Lage — auf einer deutschen Tastatur liegt das Z dort, wo im
+ * US-Layout Y ist, also meldet Strg+Z `code = 'KeyY'` und löste REDO aus;
+ * Strg+Y (physisch KeyZ) machte rückgängig. Der frühere Kommentar „Chrome
+ * auf QWERTZ schluckt Strg+Z/Y" beschrieb genau diese Verwechslung und
+ * gab ihr mit Strg+Shift+U einen Umweg. Jetzt `key` — die Taste, die auf
+ * der Kappe steht. Strg+Shift+U bleibt als zweiter Weg.
  */
 window.addEventListener('keydown', ereignis => {
     if (!ereignis.ctrlKey) return;
@@ -57,15 +64,16 @@ window.addEventListener('keydown', ereignis => {
         ereignis.preventDefault();
         ereignis.stopImmediatePropagation();
     };
-    if (ereignis.shiftKey && ereignis.code === 'KeyU') { halt(); undo(); return; }
+    const taste = String(ereignis.key || '').toLowerCase();
+    if (ereignis.shiftKey && taste === 'u') { halt(); undo(); return; }
     // In Eingabefeldern gehören Z und Y dem Feld.
-    if (!inEingabe && ereignis.code === 'KeyZ') {
+    if (!inEingabe && taste === 'z') {
         halt();
         if (ereignis.shiftKey) redo();
         else undo();
         return;
     }
-    if (!inEingabe && ereignis.code === 'KeyY') { halt(); redo(); return; }
+    if (!inEingabe && taste === 'y') { halt(); redo(); return; }
     if (ereignis.code === 'KeyS') { ereignis.preventDefault(); Projektdatei.speichern(); return; }
     if (ereignis.code === 'KeyO') { ereignis.preventDefault(); Projektdatei.laden(); }
 }, true);

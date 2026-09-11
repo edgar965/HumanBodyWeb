@@ -10,19 +10,18 @@
  * neben den Clip. Genau darum stehen sie jetzt in einer Klasse.
  */
 import { state, TRACK_HEIGHT, RULER_HEIGHT } from './state.js';
+import { Modellgruppen } from './modellgruppen.js';
 
 export class Reihen {
     /**
-     * Anzeigereihen: erst die Nutzerspuren, dann die Gruppe „Licht", dann die
-     * Gruppe „Szene". Jede Reihe ist entweder { trackIdx } oder { header, label }.
+     * Anzeigereihen: erst die Nutzerspuren (eine verknüpfte Animation
+     * eingerückt unter ihrer Modellspur, `Modellgruppen`), dann die Gruppe
+     * „Licht", dann die Gruppe „Szene". Jede Reihe ist entweder { trackIdx }
+     * oder { header, label }.
      */
     static liste() {
-        const reihen = [];
         const spuren = state.project.tracks;
-        for (let i = 0; i < spuren.length; i++) {
-            const t = spuren[i];
-            if (t.type !== 'light' && t.type !== 'scene_object') reihen.push({ trackIdx: i });
-        }
+        const reihen = Modellgruppen.reihen(spuren);
         this._gruppe(reihen, spuren, 'light', 'Licht', state.lightGroupCollapsed);
         this._gruppe(reihen, spuren, 'scene_object', 'Szene', state.sceneGroupCollapsed);
         return reihen;

@@ -1,5 +1,5 @@
 import { Pipelinefelder } from './pipelinefelder.js';
-import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
 
 /**
  * Pipelinevorgaben — die drei Qualitaetsstufen (Schnell, Standard, Maximum)
@@ -64,6 +64,14 @@ export class Pipelinevorgaben {
             fast: { prompthmr_static_cam: true, prompthmr_device: 'cuda' },
             standard: { prompthmr_static_cam: true, prompthmr_device: 'cuda' },
             max: { prompthmr_static_cam: false, prompthmr_device: 'cuda' },
+        },
+        gem: {
+            fast: { gem_static_cam: true, gem_smooth_sigma: 4.0,
+                    gem_joint_limits: true, gem_render: false, gem_device: 'cuda' },
+            standard: { gem_static_cam: true, gem_smooth_sigma: 2.0,
+                        gem_joint_limits: true, gem_render: false, gem_device: 'cuda' },
+            max: { gem_static_cam: true, gem_smooth_sigma: 1.0,
+                   gem_joint_limits: true, gem_render: true, gem_device: 'cuda' },
         },
         hybrid: {
             fast: {

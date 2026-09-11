@@ -152,6 +152,7 @@ class Uploadseiten:
             'gvhmr': gvhmr,
             'wham': Path(settings.WHAM_ROOT).is_dir(),
             'prompthmr': prompthmr,
+            'gem': Path(settings.GEM_ROOT).is_dir(),
             'hybrid_gvhmr': gvhmr and v4,
             'hybrid_prompthmr': prompthmr and v4,
             # Die Vorlage fragte zweimal `not hybrid_gvhmr and not

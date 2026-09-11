@@ -90,6 +90,7 @@ export class Projektdaten {
         if (t.type === 'model') {
             td._linkedAnimIdx = t._linkedAnimIdx;
             td._currentPreset = t._currentPreset;
+            td.zugeklappt = Boolean(t.zugeklappt);
         }
         if (t.type === 'camera') td.cameraActive = t.cameraActive;
         if (t.type === 'light' && t.light) Projektdaten._licht(td, t);

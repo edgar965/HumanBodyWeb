@@ -8,12 +8,17 @@ import { _schedulePreloads } from './vorladen.js';
 import { applyAudioTrack } from './spur_ton.js';
 import { applyBvhTrack, applyCameraTrack, applyLightTrack, applyModelTrack,
     applySceneObjectTrack } from './spur_anwenden.js';
+import { Abspielende } from './abspielende.js';
+import { Endlosschalter } from './endlosschalter.js';
 
 export function setupPlayback() {
     document.getElementById('pb-play')?.addEventListener('click', togglePlay);
+    Endlosschalter.binden();
     document.getElementById('pb-stop')?.addEventListener('click', stopPlayback);
     document.getElementById('pb-prev')?.addEventListener('click', () => stepFrame(-1));
     document.getElementById('pb-next')?.addEventListener('click', () => stepFrame(1));
+    document.getElementById('pb-start')?.addEventListener('click', () => springen(0));
+    document.getElementById('pb-end')?.addEventListener('click', () => springen(abspielende()));
     document.getElementById('pb-speed')?.addEventListener('change', (e) => {
         state.playbackSpeed = parseFloat(e.target.value);
     });
@@ -26,6 +31,8 @@ export function setupPlayback() {
         if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
         if (e.code === 'ArrowLeft') { e.preventDefault(); stepFrame(-1); }
         if (e.code === 'ArrowRight') { e.preventDefault(); stepFrame(1); }
+        if (e.code === 'Home') { e.preventDefault(); springen(0); }
+        if (e.code === 'End') { e.preventDefault(); springen(abspielende()); }
         if (e.code === 'Delete' || e.code === 'Backspace') {
             e.preventDefault();
             // Priorität: Clip-Selektion → Library-Selektion → Track-Selektion
@@ -72,6 +79,8 @@ export function togglePlay() {
     const icon = document.getElementById('pb-play-icon');
     if (icon) icon.className = state.playing ? 'fas fa-pause' : 'fas fa-play';
     if (state.playing) {
+        // Am Ende angehalten (ohne „Endlos"): von vorn, sonst hielte es sofort wieder.
+        state.playheadFrame = Abspielende.startbild(state.playheadFrame, abspielende());
         // Diagnose-Snapshot: was ist der Zustand beim Play-Start?
         const summary = state.project.tracks.map((tr, i) => {
             const link = tr.type === 'model' ? `→${tr._linkedAnimIdx}` : '';
@@ -94,6 +103,20 @@ export function togglePlay() {
     }
 }
 
+/** Das Bild, an dem die letzte Animation endet — siehe `Abspielende`. */
+export function abspielende() {
+    return Abspielende.bild(state.project.tracks, state.project.fps, state.project.duration);
+}
+
+/** Anhalten, ohne den Abspielkopf zu bewegen (Ende ohne „Endlos"). */
+export function pausePlayback() {
+    state.playing = false;
+    const icon = document.getElementById('pb-play-icon');
+    if (icon) icon.className = 'fas fa-play';
+    stopAllAudio();
+    state.controls.enabled = true;
+}
+
 export function stopPlayback() {
     state.playing = false;
     state.playheadFrame = 0;
@@ -107,7 +130,12 @@ export function stopPlayback() {
 }
 
 export function stepFrame(delta) {
-    state.playheadFrame = Math.max(0, state.playheadFrame + delta);
+    springen(state.playheadFrame + delta);
+}
+
+/** Den Abspielkopf auf ein Bild setzen (Anfang, Ende, Schritt) — Abspielen läuft weiter. */
+export function springen(bild) {
+    state.playheadFrame = Math.max(0, Math.round(bild) || 0);
     applyPlayhead();
     fn.renderTimeline();
     updatePlaybackUI();

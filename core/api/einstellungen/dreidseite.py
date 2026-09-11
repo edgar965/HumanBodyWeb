@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Einstellungen der 3D-Pipelines (MocapNET v4, GVHMR, WHAM, PromptHMR)."""
+"""Einstellungen der 3D-Pipelines (MocapNET v4, GVHMR, WHAM, PromptHMR, GEM)."""
 
 from pathlib import Path
 
@@ -33,12 +33,13 @@ class DreiDEinstellungen(Einstellungsseite):
         'v4_enable_body', 'v4_enable_face', 'v4_enable_hands',
         'v4_enable_mouth', 'v4_enable_eyes',
         'gvhmr_static_cam', 'wham_estimate_local_only', 'wham_run_smplify',
-        'prompthmr_static_camera',
+        'prompthmr_static_camera', 'gem_static_cam',
     )
 
     AUSWAHLEN = (
         ('lifter_3d_default',
-         ('v4', 'gvhmr', 'wham', 'prompthmr', 'hybrid_gvhmr', 'hybrid_prompthmr'),
+         ('v4', 'gvhmr', 'wham', 'prompthmr', 'gem', 'hybrid_gvhmr',
+          'hybrid_prompthmr'),
          'hybrid_gvhmr'),
         ('smpl_device', ('cuda', 'cpu'), 'cuda'),
     )
@@ -62,6 +63,7 @@ class DreiDEinstellungen(Einstellungsseite):
             'gvhmr_installed': Path(settings.GVHMR_ROOT).is_dir(),
             'wham_installed': Path(settings.WHAM_ROOT).is_dir(),
             'prompthmr_installed': Path(settings.PROMPTHMR_ROOT).is_dir(),
+            'gem_installed': Path(settings.GEM_ROOT).is_dir(),
             'smpl_models_ok': self._smpl_modelle_da(),
         }
 

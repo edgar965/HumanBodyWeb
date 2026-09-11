@@ -22,7 +22,10 @@ export const HILFE_SPUREN = {
 </ul>
 <h4 class="hilfe-untertitel hilfe-modell"><i class="fas fa-user"></i> Modell</h4>
 <ul>
-<li>Wird automatisch mit einem Animations-Track erstellt</li>
+<li><b>Hinzufügen &rarr; Spur &rarr; Modell</b> öffnet den Dialog der Szene-Seite: Modell wählen,
+    Position X (Vorgabe 1,5 m rechts neben der letzten Figur) &mdash; die Spur wird mit einer
+    Animationsspur verknüpft und trägt sofort einen Modell-Clip</li>
+<li>Die verknüpfte Animation steht als aufklappbarer Unterbereich unter der Modellspur</li>
 <li>Steuert welches 3D-Modell (Preset) für die Animation verwendet wird</li>
 <li>Modell-Clips können verschiedene Presets haben (z.B. FemaleGarment, Rig2)</li>
 </ul>

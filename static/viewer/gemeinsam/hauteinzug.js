@@ -24,10 +24,13 @@
  * Das Weichgewebe klont dasselbe Material später (`Shaderpatch.klonen`
  * nimmt den Einzug mit); ohne den gemeinsamen `Shaderpatch` löschte der
  * zweite Eingriff den ersten.
+ *
+ * Liegt in `gemeinsam/`, weil das BVH Studio dieselbe Maske braucht
+ * (`bvh_studio/spurhaut.js`, 11.09.2026).
  */
-import { THREE } from './state.js';
-import { Shaderpatch } from '../gemeinsam/shaderpatch.js';
-import { Hautmaskegeometrie } from '../gemeinsam/hautmaskegeometrie.js';
+import * as THREE from 'three';
+import { Shaderpatch } from './shaderpatch.js';
+import { Hautmaskegeometrie } from './hautmaskegeometrie.js';
 
 export class Hauteinzug {
 

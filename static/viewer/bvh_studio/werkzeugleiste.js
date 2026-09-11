@@ -8,6 +8,7 @@ import { _fixedPos, applyFixedPositionAll,
          restoreFixedPositionAll } from './werkzeug_position.js';
 import { groundFixSelectedClip, saveBvhWithEffects } from './werkzeug_boden.js';
 import { Hilfefenster } from './hilfefenster.js';
+import { Modellwahl } from './modellwahl.js';
 
 /**
  * Werkzeugleiste — die obere Leiste des BVH-Studios: Menüs, Knöpfe,
@@ -35,7 +36,8 @@ export class Werkzeugleiste {
             ['dd-add-camera', () => fn.addSpecialTrack('camera')],
             ['dd-add-light', () => fn.addSpecialTrack('light')],
             ['dd-add-audio', () => fn.addSpecialTrack('audio')],
-            ['dd-add-model', () => fn.addModelTrack()],
+            // Modell: Dialog mit Modell und Lage, wie in der Szene (11.09.2026).
+            ['dd-add-model', () => Modellwahl.oeffnen()],
         ]],
         ['btn-file', 'file-dropdown', [
             ['dd-file-save', () => fn.saveProject()],

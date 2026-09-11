@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _swapToPreloaded } from './vorladen.js';
+import { Modellzustaendigkeit } from './modellzustaendigkeit.js';
 
 /**
  * Modellspur — welche Figur (welches Preset) am Abspielkopf gilt.
@@ -27,6 +28,11 @@ export class Modellspur {
     static anwenden(spur, zeit) {
         const bewegung = state.project.getLinkedAnimation(spur);
         if (!bewegung) return;
+        // Nur EINE Modellspur je Animation darf die Figur setzen — zwei
+        // (eine davon leer) versteckten sie abwechselnd und luden das Preset
+        // je Bild neu (11.09.2026, siehe Modellzustaendigkeit).
+        if (Modellzustaendigkeit.spur(state.project.tracks, state.project.indexOf(bewegung),
+                                      zeit, state.project.fps) !== spur) return;
         const preset = Modellspur.aktives(spur, zeit);
         if (bewegung._loadingPreset) {
             // Warten: Die alte Figur darf nicht auftauchen.
@@ -47,14 +53,7 @@ export class Modellspur {
 
     /** Das Preset des Clips, der `zeit` enthält — oder `null`. */
     static aktives(spur, zeit) {
-        for (const clip of spur.clips) {
-            if (clip.type !== 'model') continue;
-            const beginn = clip.startFrame / state.project.fps;
-            if (zeit >= beginn && zeit < beginn + clip.duration) {
-                return clip.data?.preset || null;
-            }
-        }
-        return null;
+        return Modellzustaendigkeit.preset(spur, zeit, state.project.fps);
     }
 
     static _laden(bewegung, preset) {

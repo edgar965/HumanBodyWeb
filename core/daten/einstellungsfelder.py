@@ -119,6 +119,13 @@ class Einstellungsfelder:
         'prompthmr_static_camera': F(
             u'Static Camera',
             u'Statische Kamera annehmen. Empfohlen für die meisten Videos'),
+
+        # ----------------------------------------------------------- GEM-SMPL
+        'gem_static_cam': F(
+            u'Static Camera',
+            u'Statische Kamera annehmen. Das Video-Demo von GEM verfolgt die '
+            u'Kamera ohnehin nicht; der Schalter setzt nur die Kamera-Maske '
+            u'des Modells'),
     }
 
     @classmethod

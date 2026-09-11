@@ -115,7 +115,7 @@ class AppSettings(models.Model):
     lifter_3d_default = models.CharField(
         max_length=20, default='hybrid_gvhmr',
         help_text="Default 3D pipeline "
-        "(v4/gvhmr/wham/prompthmr/hybrid_gvhmr/hybrid_prompthmr)",
+        "(v4/gvhmr/wham/prompthmr/gem/hybrid_gvhmr/hybrid_prompthmr)",
     )
 
     # --- Video to BVH: MocapNET v4 settings ---
@@ -179,6 +179,12 @@ class AppSettings(models.Model):
     prompthmr_static_camera = models.BooleanField(
         default=True,
         help_text=Einstellungsfelder.hilfetext('prompthmr_static_camera'),
+    )
+
+    # --- Video to BVH: GEM-SMPL settings (11.09.2026) ---
+    gem_static_cam = models.BooleanField(
+        default=True,
+        help_text=Einstellungsfelder.hilfetext('gem_static_cam'),
     )
 
     # --- SMPL Body defaults (test-smpl page) ---

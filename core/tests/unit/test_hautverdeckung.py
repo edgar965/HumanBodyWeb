@@ -62,7 +62,7 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
     def test_einzug_und_lagenverdeckung_haengen_daran(self):
         self.assertIn('Hauteinzug.setzen(inst.bodyMesh, maske, voll.index);', self.modul)
         self.assertIn('Hauteinzug.setzen(inst.bodyMesh, null, null);', self.modul)
-        einzug = _lies('scene', 'hauteinzug.js')
+        einzug = _lies('gemeinsam', 'hauteinzug.js')
         self.assertIn("Shaderpatch.hinterInclude(shader, 'begin_vertex', 'transformed += einzug;')", einzug)
         self.assertIn("import './lagenverdeckung.js';", _lies('scene', 'boot.js'))
         lagen = _lies('scene', 'lagenverdeckung.js')
@@ -74,7 +74,7 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         self.assertIn('Shaderpatch.klonen(alt)', aufbau)
         self.assertIn("Shaderpatch.anhaengen(mat, 'weichgewebe'", aufbau)
         self.assertNotIn('mat.onBeforeCompile =', aufbau)
-        self.assertNotIn('onBeforeCompile =', _lies('scene', 'hauteinzug.js'))
+        self.assertNotIn('onBeforeCompile =', _lies('gemeinsam', 'hauteinzug.js'))
 
     def test_die_gruppen_werden_neu_gesetzt(self):
         u"""`addGroup` zaehlt Indexeintraege; ohne `clearGroups` laegen alte

@@ -9,10 +9,14 @@ import { Spurkontextmenue } from './zeitleiste_kontextmenue.js';
  *
  * Aus zeitleiste_kopfspalte.js herausgelöst (Umbau 27.08.2026, Befund
  * `jsfunktionen`).
+ *
+ * Eine Modellspur mit verknüpfter Animation (`reihe.unterreihe`, siehe
+ * `Modellgruppen`) trägt vorn den Pfeil der Gruppenköpfe; der Klick darauf
+ * klappt die Unterreihe zu oder auf, ohne die Spur zu wählen (11.09.2026).
  */
 export class Spurkopf {
     /**
-     * @param {{trackIdx: number, indent: boolean}} reihe
+     * @param {{trackIdx: number, indent: boolean, unterreihe: number, collapsed: boolean}} reihe
      * @returns {HTMLElement}
      */
     static element(reihe) {
@@ -23,9 +27,16 @@ export class Spurkopf {
             + (index === state.selectedTrackIdx ? ' selected' : '')
             + (reihe.indent ? ' spur-eingerueckt' : '');
         const bild = TRACK_ICONS[spur.type] || 'fa-running';
-        el.innerHTML = `<i class="fas ${bild}" style="color:${spur.color};`
+        el.innerHTML = Spurkopf._pfeil(reihe)
+            + `<i class="fas ${bild}" style="color:${spur.color};`
             + 'margin-right:6px;font-size:0.75rem;width:14px;'
             + `text-align:center;"></i>${spur.name}`;
+        el.querySelector('.gruppenpfeil')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            spur.zugeklappt = !spur.zugeklappt;
+            fn.updateTrackHeaders();
+            fn.renderTimeline();
+        });
         el.addEventListener('click', () => fn.selectTrack(index));
         el.addEventListener('contextmenu', (e) => {
             e.preventDefault();
@@ -34,6 +45,15 @@ export class Spurkopf {
         });
         Spurkopf._ablageziel(el, index);
         return el;
+    }
+
+    /** Der Klapp-Pfeil — nur an einer Modellspur mit Unterreihe. */
+    static _pfeil(reihe) {
+        if (reihe.unterreihe === undefined) return '';
+        const richtung = reihe.collapsed ? 'fa-caret-right' : 'fa-caret-down';
+        const tipp = reihe.collapsed ? 'Verknüpfte Animation zeigen'
+                                     : 'Verknüpfte Animation zuklappen';
+        return `<i class="fas ${richtung} gruppenpfeil" title="${tipp}"></i>`;
     }
 
     /** Bewegungen aus der Bibliothek lassen sich auf die Spur ziehen. */
