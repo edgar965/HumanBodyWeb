@@ -2,7 +2,8 @@
 """Absatz — was der Betrachter über einen gebauten Schuh wissen muss.
 
     GET /api/garmentcode/absatz/?stueck=pumps
-      -> {stueck, name, absatz_cm, plateau_cm, winkel_grad, hebung_cm}
+      -> {stueck, name, absatz_cm, plateau_cm, winkel_grad, hebung_cm,
+          sprengung_grad}
 
 WARUM EIN EIGENER ENDPUNKT (11.09.2026, Edgar: „mach das: Absatz/Plateau
 braucht einen gebeugten Fuss"): Ein Schuh mit Absatz wird auf dem
@@ -38,7 +39,7 @@ class Garmentabsatz:
     AUSGABE = None
     #: Was der Betrachter braucht, mit Vorgabe für einen flachen Schuh.
     FELDER = (('absatz_cm', 0.0), ('plateau_cm', 0.0), ('winkel_grad', 0.0),
-              ('hebung_cm', 0.0))
+              ('hebung_cm', 0.0), ('sprengung_grad', 0.0))
 
     @classmethod
     def ausgabe(cls):

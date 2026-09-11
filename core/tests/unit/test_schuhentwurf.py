@@ -84,8 +84,18 @@ class SchuhkatalogTest(SimpleTestCase):
 
     def test_die_zehenformen_haben_deutsche_namen(self):
         for wert, titel in (('round', u'Rund'), ('pointed', u'Spitz'),
-                            ('square', u'Eckig')):
+                            ('square', u'Eckig'), ('block', u'Block'),
+                            ('stiletto', u'Stiletto')):
             self.assertEqual(Reglerhilfe.wert(wert), titel)
+
+    def test_pumps_stehen_auf_stiletto_mit_sprengung(self):
+        pumps = Katalog.entwurf('pumps')
+        self.assertEqual(Schuhentwurf.absatzform(pumps), 'stiletto')
+        self.assertEqual(pumps['shoe']['toe_spring']['v'], 8.0)
+        self.assertEqual(Schuhentwurf.absatzform(Katalog.entwurf('ballerina')),
+                         'block')
+        self.assertEqual(Katalog.entwurf('ballerina')['shoe']['toe_spring']['v'],
+                         0.0)
 
     def test_die_werte_der_yaml_liegen_in_ihren_bereichen(self):
         u"""Ein Vorgabewert ausserhalb des Bereichs klemmt am Anschlag."""
@@ -188,6 +198,9 @@ class SchuhstoffTest(SimpleTestCase):
         Schuhentwurf.stoff_vermerken(self.pfad, Katalog.entwurf('stiefel'))
         self.assertEqual(Schuhentwurf.stoff(self.pfad),
                          Schuhentwurf.STOFFE['leather'])
+        self.assertEqual(Schuhentwurf.vermerk(self.pfad)['absatzform'], 'block')
+        Schuhentwurf.stoff_vermerken(self.pfad, Katalog.entwurf('pumps'))
+        self.assertEqual(Schuhentwurf.vermerk(self.pfad)['absatzform'], 'stiletto')
         self.assertGreater(Schuhentwurf.stoff(self.pfad)['garment_edge_ke'],
                            1000.0)
         # Und die Spezifikation bleibt lesbar wie vorher.

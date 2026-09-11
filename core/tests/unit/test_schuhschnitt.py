@@ -207,6 +207,18 @@ class SchuhschnittTest(SimpleTestCase):
         flach = self._bauen('Halbschuh').links
         self.assertFalse(hasattr(flach, 'sohle_vorn'))
 
+    def test_die_sprengung_kippt_die_vordersohle_und_hebt_die_spitze(self):
+        u"""`shoe.toe_spring`: der vordere Sohlenteil steigt zur Zehe hin,
+        das Blatt setzt höher an — auch ohne Absatz."""
+        flach = self._bauen('Halbschuh').links
+        s = self._bauen('Halbschuh', **{'shoe.toe_spring': 10.0}).links
+        self.assertTrue(s.beugung.aktiv)
+        self.assertEqual(s.beugung.winkel_grad, 0.0)
+        vorn = s.sohle_vorn.bbox3D()
+        self.assertGreater(vorn[1][1], 0.8)                 # die Spitze über dem Boden
+        self.assertGreater(s.blatt.bbox3D()[0][1], flach.blatt.bbox3D()[0][1] + 0.8)
+        self.assertEqual(s.beugung.beschreibung()['sprengung_grad'], 10.0)
+
     def test_der_schaft_folgt_dem_regler(self):
         niedrig = self._bauen('Stiefel', **{'boot.height': 0.1})
         hoch = self._bauen('Stiefel', **{'boot.height': 0.9})

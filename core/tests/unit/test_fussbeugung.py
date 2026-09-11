@@ -13,7 +13,10 @@ Fuss und ein starres Absatzteil — beides gibt es im Stoffmodell nicht.")
 * Die Abbildung darf sich nicht falten (Jacobi-Determinante > 0) —
   sonst hat die Umkehrung zwei Urbilder. Mit 2 cm Mischzone faltete sie
   sich an 994 Gitterpunkten hinter dem Knöchel.
-* `Absatzblock` hängt Klotz und Platte als Dreiecksnetz an eine OBJ.
+* Die Sprengung (`shoe.toe_spring`) hebt die Zehenspitze um die
+  Ballenachse — auch bei flachem Schuh; Ballen und Ferse bleiben.
+* `Absatzblock` hängt Klotz und Platte als Dreiecksnetz an eine OBJ; der
+  Stiletto steht als 1-cm-Stift unter der Fersenmitte.
 * `Garmentabsatz` liefert dem Betrachter Winkel und Hebung aus dem Vermerk.
 """
 import json
@@ -77,15 +80,33 @@ class FussbeugungTest(SimpleTestCase):
         self.assertLess(halb.winkel_grad,
                         Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, 9.0).winkel_grad)
 
+    def test_die_sprengung_hebt_die_zehenspitze_und_sonst_nichts(self):
+        b = Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, 0.0, sprengung_grad=10.0)
+        self.assertTrue(b.aktiv)
+        self.assertEqual(b.winkel_grad, 0.0)
+        spitze = b.beugen([[21.5, 2.0, 23.0]])[0]
+        self.assertAlmostEqual(spitze[1] - 2.0, 7.6 * np.sin(np.radians(10.0)),
+                               delta=0.15)                # 7,6 cm vor dem Ballen
+        self.assertLess(spitze[2], 23.0)                   # und etwas zurück
+        for punkt in ([21.5, 0.0, FERSE_Z], [21.5, 2.0, 15.4], [21.5, 50.0, 0.0]):
+            np.testing.assert_allclose(b.beugen([punkt])[0], punkt, atol=1e-9)
+        # Mit Absatz kommt sie dazu, die Ferse steigt wie ohne.
+        beides = Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, 7.0, sprengung_grad=10.0)
+        self.assertAlmostEqual(beides.winkel_grad,
+                               Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, 7.0).winkel_grad)
+        np.testing.assert_allclose(beides.beugen([[21.5, 2.0, 23.0]])[0], spitze)
+
     def test_die_umkehrung_ist_exakt_fuer_drei_absaetze(self):
-        for absatz in (3.0, 7.0, 10.0):
-            b = Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, absatz)
+        for absatz, sprengung in ((3.0, 0.0), (7.0, 8.0), (10.0, 15.0)):
+            b = Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, absatz,
+                            sprengung_grad=sprengung)
             p = self._huelle()
             rest = np.abs(b.strecken(b.beugen(p)) - p).max() * 10.0
             self.assertLess(rest, 0.01, 'Absatz %.0f cm: Rest %.4f mm' % (absatz, rest))
 
     def test_die_abbildung_faltet_sich_nicht(self):
-        b = Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, 10.0)
+        b = Fussbeugung(BALLEN, KNOECHEL, FERSE_Z, 10.0,
+                        sprengung_grad=Fussbeugung.SPRENGUNG_MAX_GRAD)
         y, z = np.meshgrid(np.linspace(-0.5, 25, 103), np.linspace(-5, 26, 125))
         p = np.column_stack([np.zeros(y.size), y.ravel(), z.ravel()])
         h = 0.01
@@ -99,9 +120,10 @@ class FussbeugungTest(SimpleTestCase):
 
     def test_der_vermerk_stellt_dieselbe_beugung_wieder_her(self):
         fuss = Fussvorgabe({'height': 168.0})
-        b = Fussbeugung.aus_fuss(fuss, 6.0, 1.0)
+        b = Fussbeugung.aus_fuss(fuss, 6.0, 1.0, 8.0)
         wieder = Fussbeugung.aus_vermerk(json.loads(json.dumps(b.beschreibung())))
         self.assertAlmostEqual(wieder.winkel_grad, b.winkel_grad, places=2)
+        self.assertAlmostEqual(wieder.sprengung_grad, 8.0)
         p = self._huelle(500)
         np.testing.assert_allclose(wieder.beugen(p), b.beugen(p), atol=1e-3)
 
@@ -143,13 +165,32 @@ class AbsatzblockTest(SimpleTestCase):
                                                        'plateau_cm': 4.0}).netz()
         self.assertGreater(len(punkte), 8)
         self.assertGreater(len(dreiecke), 8)
-        # Der Klotz reicht bis zum Boden (-Plateau), die Platte bis
-        # Plateau unter die Vordersohle; nichts steht über der Sohle.
-        self.assertAlmostEqual(float(punkte[:, 1].min()), -4.4, delta=0.01)
+        # Klotz und Platte reichen bis zum Boden (-Plateau); nichts
+        # steht über der Sohle.
+        self.assertAlmostEqual(float(punkte[:, 1].min()), -4.0, delta=0.01)
         self.assertLess(float(punkte[:, 1].max()), 9.0)
         # Jedes Dreieck hat drei verschiedene, gültige Ecken.
         self.assertTrue((dreiecke < len(punkte)).all())
         self.assertTrue((dreiecke[:, 0] != dreiecke[:, 1]).all())
+
+    def test_der_stiletto_steht_als_stift_unter_der_fersenmitte(self):
+        block, _ = Absatzblock(self._spez(), {'absatz_cm': 7.0}).netz()
+        stift, dreiecke = Absatzblock(self._spez(), {'absatz_cm': 7.0,
+                                                     'absatzform': 'stiletto'}).netz()
+        # Drei Ringe statt zwei, dieselbe Deckfläche.
+        self.assertEqual(len(stift), len(block) // 2 * 3)
+        n = len(block) // 2
+        np.testing.assert_allclose(stift[:n], block[:n])
+        # Der Stift: alle Bodenpunkte binnen 0,5 cm um die Fersenmitte,
+        # senkrecht über dem Hals, auf dem Boden.
+        mitte = block[:n].mean(axis=0)
+        boden = stift[2 * n:]
+        self.assertTrue((np.abs(boden[:, [0, 2]] - mitte[[0, 2]]) <= 0.5 + 1e-9).all())
+        np.testing.assert_allclose(boden[:, 1], 0.0, atol=1e-9)
+        np.testing.assert_allclose(stift[n:2 * n][:, [0, 2]], boden[:, [0, 2]])
+        self.assertTrue((dreiecke < len(stift)).all())
+        # Und der Block ist breit: Bodenpunkte weiter als 2 cm von der Mitte.
+        self.assertGreater(float(np.abs(block[n:, 0] - mitte[0]).max()), 2.0)
 
     def test_ohne_absatz_und_plateau_bleibt_es_leer(self):
         punkte, dreiecke = Absatzblock(self._spez(), {}).netz()
@@ -192,11 +233,13 @@ class GarmentabsatzTest(SimpleTestCase):
 
     def test_der_juengste_bau_eines_stuecks_liefert_winkel_und_hebung(self):
         self._bau('pumps_female', {'material': 'leather', 'absatz_cm': 7.0,
-                                   'winkel_grad': 24.9, 'hebung_cm': 4.9})
+                                   'winkel_grad': 24.9, 'hebung_cm': 4.9,
+                                   'sprengung_grad': 8.0})
         antwort = Garmentabsatz.lesen('pumps')
         self.assertEqual(antwort['name'], 'pumps_female')
         self.assertAlmostEqual(antwort['winkel_grad'], 24.9)
         self.assertAlmostEqual(antwort['hebung_cm'], 4.9)
+        self.assertAlmostEqual(antwort['sprengung_grad'], 8.0)
         self.assertEqual(antwort['plateau_cm'], 0.0)
 
     def test_ein_flacher_schuh_und_ein_unbekanntes_stueck_sind_flach(self):

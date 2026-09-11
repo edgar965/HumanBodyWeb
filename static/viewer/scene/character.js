@@ -191,10 +191,18 @@ export class CharacterInstance {
      * wird EINZELN ausgeschrieben, weil `Euler.toArray()` als viertes Feld die
      * Achsenreihenfolge mitgibt — die kaeme beim Zurueckladen als vierte Zahl
      * an und wuerde als Skalierungsanteil gelesen.
+     *
+     * Ohne den Absatz: `garmentcode_absatz.js` hebt die Figur auf ihren
+     * Schuh und merkt sich den Hub in `group.userData.absatzHub`. Der Hub
+     * gehoert nicht in die gespeicherte Lage — nach dem Laden stellt das
+     * Modul die Figur erneut auf den Absatz, und der gespeicherte Hub
+     * kaeme dazu (gemessen 11.09.2026: 4,9 -> 9,8 -> 14,7 cm je Neuladen).
      */
     _lage() {
+        const position = this.group.position.toArray();
+        position[1] -= this.group.userData.absatzHub || 0;
         return {
-            position: this.group.position.toArray(),
+            position,
             rotation: [this.group.rotation.x, this.group.rotation.y,
                        this.group.rotation.z],
             scale: this.group.scale.toArray(),
