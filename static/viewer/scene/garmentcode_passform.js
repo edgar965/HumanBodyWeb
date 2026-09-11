@@ -34,7 +34,29 @@ export class GarmentcodePassform {
     static uebernehmen(antwort, setzt, liest, zuruecksetzt = null) {
         garmentcodePreset.setzen([...(antwort.presets || []),
                                   ...(antwort.passform || [])]);
-        return GarmentcodePassform.zeichnen(setzt, liest, zuruecksetzt);
+        const gezeichnet = GarmentcodePassform.zeichnen(setzt, liest, zuruecksetzt);
+        // Die FORM, die gerade gilt, bekommt ihr Häkchen (Rock: Bleistift-
+        // rock, 11.09.2026) — erst im nächsten Umlauf, wenn das Gedächtnis
+        // die gemerkten Werte dieser Vorlage eingetragen hat.
+        setTimeout(() => GarmentcodePassform.formHaken(antwort.passform || [], liest), 0);
+        return gezeichnet;
+    }
+
+    /**
+     * Welche Form gilt? Die, deren Werte alle anliegen — oder die
+     * Vorgabe des Stücks (`gehakt`), wenn kein Bausteinfeld gesetzt ist.
+     * Nur, wenn noch keine Form gehakt ist (das Gedächtnis war zuerst).
+     */
+    static formHaken(presets, liest) {
+        const formen = presets.filter((p) => p.form);
+        if (!formen.length || formen.some((p) => garmentcodePreset.aktiv.has(p.schluessel))) {
+            return null;
+        }
+        const passt = (p) => Object.entries(p.werte).every(([pfad, wert]) => liest(pfad) === wert);
+        const leer = (p) => Object.keys(p.werte).every((pfad) => liest(pfad) === undefined);
+        const treffer = formen.find(passt) || formen.find((p) => p.gehakt && leer(p));
+        if (treffer) garmentcodePreset.anhaken([treffer.schluessel]);
+        return treffer ? treffer.schluessel : null;
     }
 
     /**

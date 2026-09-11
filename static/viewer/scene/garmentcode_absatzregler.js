@@ -45,10 +45,15 @@ export class GarmentcodeAbsatzregler {
         document.addEventListener('change', (e) => this._bewegt(e));
     }
 
-    /** Ein Regler wurde bewegt — nur die drei Absatzregler zählen. */
+    /**
+     * Ein Regler wurde bewegt — nur die drei Absatzregler zählen. Oder ein
+     * Preset gehakt (Pumps): Das setzt die Regler ohne DOM-Ereignis, sein
+     * Kästchen meldet sich aber; die Werte stehen dann schon.
+     */
     _bewegt(ereignis) {
         const zeile = ereignis.target?.closest?.('#gc-regler .slider-row[data-pfad]');
-        if (zeile && zeile.dataset.pfad in GarmentcodeAbsatzregler.PFADE) {
+        if ((zeile && zeile.dataset.pfad in GarmentcodeAbsatzregler.PFADE)
+            || ereignis.target?.dataset?.preset) {
             this.anstossen();
             return;
         }
@@ -85,6 +90,10 @@ export class GarmentcodeAbsatzregler {
         }
         const figur = GarmentcodeFigur.gewaehlt();
         if (!figur) return;
+        // Ein Preset an einem Rock: keine Schuhregler, also kein Absatz.
+        if (!document.querySelector('#gc-regler .slider-row[data-pfad="shoe.heel"]')) {
+            return this.zuruecknehmen();
+        }
         this.laeuft = true;
         try {
             const daten = GarmentcodeFigur.formulardaten(figur);

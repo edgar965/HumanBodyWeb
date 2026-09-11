@@ -43,10 +43,28 @@ class SchuhkatalogTest(SimpleTestCase):
 
     databases = []
 
-    def test_der_katalog_fuehrt_die_fuenf_schuhe(self):
+    def test_der_katalog_fuehrt_einen_schuh_und_die_alten_namen_als_formen(self):
+        u"""Edgar, 11.09.2026: „alle Schuhe zu einem, und z.B: Slipper und
+        die anderen als Presets (mit Checkbox)"."""
         namen = {eintrag['name'] for eintrag in Katalog.liste()}
+        self.assertIn('schuh', namen)
         for schuh in SCHUHE:
-            self.assertIn(schuh, namen)
+            self.assertNotIn(schuh, namen)
+            self.assertTrue(Katalog.kennt(schuh), schuh)      # als Alias
+        formen = [p for p in Katalog.passform('schuh') if p.get('form')]
+        self.assertEqual([p['titel'] for p in formen],
+                         ['Ballerina', 'Slipper', 'Pumps', 'Plateauschuh',
+                          'Stiefelette', 'Stiefel', 'Socke'])
+        # Jede Form setzt den Baustein; was sie nicht setzt, geht zurueck.
+        pumps = next(p for p in formen if p['titel'] == 'Pumps')
+        self.assertEqual(pumps['werte']['meta.feet'], 'Halbschuh')
+        self.assertEqual(pumps['werte']['shoe.heel'], 7.0)
+        self.assertIn('boot.height', pumps['zurueck'])
+        self.assertNotIn('shoe.heel', pumps['zurueck'])
+        # Ueber das Alias kommt derselbe Entwurf wie ueber die Form.
+        self.assertEqual(Katalog.entwurf('pumps')['shoe']['heel']['v'], 7.0)
+        self.assertEqual(Schuhentwurf.baustein(Katalog.entwurf('stiefel')), 'Stiefel')
+        self.assertEqual(Schuhentwurf.baustein(Katalog.entwurf('schuh')), 'Halbschuh')
 
     def test_jeder_schuh_traegt_den_vierten_baustein(self):
         for schuh in SCHUHE:
@@ -65,15 +83,17 @@ class SchuhkatalogTest(SimpleTestCase):
         self.assertNotIn('shoe', gruppen)
         self.assertNotIn('boot', gruppen)
 
-    def test_die_reglergruppen_folgen_dem_schaft(self):
-        ohne = [g['gruppe'] for g in Katalog.regler('ballerina')]
-        mit = [g['gruppe'] for g in Katalog.regler('stiefel')]
-        self.assertEqual(ohne, ['shoe'])
-        self.assertEqual(mit, ['shoe', 'boot'])
+    def test_der_schuh_zeigt_schuh_und_schaftregler(self):
+        u"""Die Gruppen aller Formen — der Reiter kann sie beim Anhaken
+        einer Form nicht neu holen."""
+        self.assertEqual([g['gruppe'] for g in Katalog.regler('schuh')],
+                         ['shoe', 'boot'])
+        entwurf = Katalog.entwurf('ballerina')
+        self.assertEqual([g['gruppe'] for g in Regler.fuer(entwurf)], ['shoe'])
 
     def test_die_schuhregler_sind_vollstaendig_beschriftet(self):
         u"""Titel UND Hilfetext für jedes Feld — englische Reste fallen auf."""
-        for gruppe in Katalog.regler('stiefel'):
+        for gruppe in Katalog.regler('schuh'):
             self.assertNotEqual(Reglertitel.gruppe(gruppe['gruppe']),
                                 gruppe['gruppe'])
             for feld in gruppe['felder']:

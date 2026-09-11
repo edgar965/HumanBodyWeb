@@ -233,10 +233,12 @@ export class Posenanwendung {
         Posenabsatz.heben(figur, daten.hebung_m || 0);
         Protokoll.debug('Pose', `${poseId}: ${gesetzt} Knochen, `
                         + `${beine} Beinkorrekturen`);
-        // Die Ruhelage ohne Absatz führt zu Recht keinen Knochen.
-        if (!gesetzt && Object.keys(daten.threejs || {}).length) {
-            return { ok: false,
-                     grund: 'Kein Knochen der Pose passt zu diesem Skelett.' };
+        if (!gesetzt) {
+            // Die Ruhelage ohne Absatz führt zu Recht keinen Knochen.
+            if (Object.keys(daten.threejs || {}).length) {
+                return { ok: false,
+                         grund: 'Kein Knochen der Pose passt zu diesem Skelett.' };
+            }
         }
         return { ok: true, gesetzt, beine };
     }

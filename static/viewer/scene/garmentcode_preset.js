@@ -94,7 +94,10 @@ class GarmentcodePreset {
 
     _anhaken(preset, setzt, liest) {
         const vorher = {};
-        for (const pfad of Object.keys(preset.werte)) vorher[pfad] = liest(pfad);
+        // Auch `zurueck` merken: Ballerina nimmt den Absatz der Pumps auf
+        // die Vorgabe — abgehakt soll er wiederkommen, nicht nur der Einstieg.
+        const pfade = [...Object.keys(preset.werte), ...(preset.zurueck || [])];
+        for (const pfad of pfade) vorher[pfad] = liest(pfad);
         this.davor[preset.schluessel] = vorher;
         this.aktiv.add(preset.schluessel);
         // `zurueck` (11.09.2026): Pfade, die das Preset auf die Vorgabe
