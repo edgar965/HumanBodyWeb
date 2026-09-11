@@ -31,6 +31,8 @@ class Pipelineparameter:
             }
         if pipeline == 'gem':
             return Pipelineparameter._gem(post)
+        if pipeline == 'duomo':
+            return Pipelineparameter._duomo(post)
         if pipeline.startswith('hybrid_'):
             return Pipelineparameter._hybrid(post)
         return {}
@@ -86,6 +88,16 @@ class Pipelineparameter:
         }
 
     @staticmethod
+    def _duomo(post):
+        """DuoMo (12.09.2026): feste Kamera, Glaettung, Gelenkgrenzen, Geraet."""
+        return {
+            'static_cam': post.get('duomo_static_cam') == 'on',
+            'smooth_sigma': float(post.get('duomo_smooth_sigma', 2.0)),
+            'joint_limits': post.get('duomo_joint_limits') == 'on',
+            'device': post.get('duomo_device', 'cuda'),
+        }
+
+    @staticmethod
     def _hybrid(post):
         koerper = post.get('hybrid_body_backend', 'gvhmr')
         p = {
@@ -135,6 +147,9 @@ class Pipelineparameter:
             'prompthmr_device': s.smpl_device,
             'gem_static_cam': s.gem_static_cam,
             'gem_device': s.smpl_device,
+            # DuoMo hat keine Einstellung: ohne Kamerabahn ist es ohnehin fest.
+            'duomo_static_cam': True,
+            'duomo_device': s.smpl_device,
             # Hybrid greift auf dieselben Einstellungen zurueck
             'hybrid_body_device': s.smpl_device,
             'hybrid_gvhmr_static_cam': s.gvhmr_static_cam,

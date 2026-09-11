@@ -73,6 +73,14 @@ export class Pipelinevorgaben {
             max: { gem_static_cam: true, gem_smooth_sigma: 1.0,
                    gem_joint_limits: true, gem_render: true, gem_device: 'cuda' },
         },
+        duomo: {
+            fast: { duomo_static_cam: true, duomo_smooth_sigma: 4.0,
+                    duomo_joint_limits: true, duomo_device: 'cuda' },
+            standard: { duomo_static_cam: true, duomo_smooth_sigma: 2.0,
+                        duomo_joint_limits: true, duomo_device: 'cuda' },
+            max: { duomo_static_cam: false, duomo_smooth_sigma: 1.0,
+                   duomo_joint_limits: true, duomo_device: 'cuda' },
+        },
         hybrid: {
             fast: {
                 hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true,

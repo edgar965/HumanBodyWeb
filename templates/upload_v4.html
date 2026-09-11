@@ -365,6 +365,8 @@
                     </div>
                 </div>
 
+                {% include "_pipeline_duomo.html" %}
+
                 <!-- Hybrid (SMPL Body + MocapNET v4 Face+Hands) -->
                 <div class="pipeline-card {% if not status_3d.hybrid %}disabled{% endif %}"
                      data-pipeline="hybrid" id="hybridCard">

@@ -102,6 +102,17 @@ class SmplbefehlTest(SimpleTestCase):
         self.assertIn('--render', mit)
         self.assertIn('--no_joint_limits', mit)
 
+    def test_duomo_ist_fest_nur_auf_wunsch_und_glaettet_wie_gvhmr(self):
+        """DuoMo (12.09.2026): kein Einstellungsfeld — `static_cam` kommt
+        nur aus dem Auftrag; Glaettung und Gelenkgrenzen wie GVHMR."""
+        ohne = self.befehl('duomo', smooth_sigma=1.5)
+        self.assertNotIn('--static_cam', ohne)
+        self.assertEqual(ohne[ohne.index('--smooth_sigma') + 1], '1.5')
+        self.assertNotIn('--focal_length_mm', ohne)
+        mit = self.befehl('duomo', static_cam=True, joint_limits=False)
+        self.assertIn('--static_cam', mit)
+        self.assertIn('--no_joint_limits', mit)
+
     def test_unbekannte_pipeline_bekommt_nur_das_grundgeruest(self):
         befehl = self.befehl('smplest_x')
         self.assertEqual([a for a in befehl if a.startswith('--')],

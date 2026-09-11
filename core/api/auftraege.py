@@ -56,7 +56,7 @@ pipeline_logger = logging.getLogger('core.pipeline')
 PIPELINES_2D = ('mediapipe', 'openpose', 'rtmpose', 'vitpose', 'yolo11')
 
 #: Pipelines der 3D-Uploadseite.
-PIPELINES_3D = ('v4', 'gvhmr', 'wham', 'prompthmr', 'gem',
+PIPELINES_3D = ('v4', 'gvhmr', 'wham', 'prompthmr', 'gem', 'duomo',
                 'hybrid_gvhmr', 'hybrid_prompthmr')
 
 #: Zustaende, in denen ein Auftrag die Sperre haelt. EINE Quelle: `Haenger`

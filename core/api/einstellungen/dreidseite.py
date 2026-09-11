@@ -38,7 +38,7 @@ class DreiDEinstellungen(Einstellungsseite):
 
     AUSWAHLEN = (
         ('lifter_3d_default',
-         ('v4', 'gvhmr', 'wham', 'prompthmr', 'gem', 'hybrid_gvhmr',
+         ('v4', 'gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'hybrid_gvhmr',
           'hybrid_prompthmr'),
          'hybrid_gvhmr'),
         ('smpl_device', ('cuda', 'cpu'), 'cuda'),

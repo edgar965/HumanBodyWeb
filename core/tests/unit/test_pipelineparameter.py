@@ -43,6 +43,14 @@ class GvhmrFormularTest(SimpleTestCase):
         self.assertFalse(p['verbose'])
         self.assertEqual(p['smooth_sigma'], 2.0)
 
+    def test_duomo_liest_seine_vier_felder(self):
+        p = Pipelineparameter.lesen(
+            {'duomo_static_cam': 'on', 'duomo_smooth_sigma': '3',
+             'duomo_joint_limits': 'on', 'duomo_device': 'cpu'}, 'duomo')
+        self.assertEqual(p, {'static_cam': True, 'smooth_sigma': 3.0,
+                             'joint_limits': True, 'device': 'cpu'})
+        self.assertFalse(Pipelineparameter.lesen({}, 'duomo')['static_cam'])
+
     def test_der_befehl_traegt_die_schalter_weiter(self):
         p = Pipelineparameter.lesen(
             {'gvhmr_use_dpvo': 'on', 'gvhmr_smooth_sigma': '1.5',

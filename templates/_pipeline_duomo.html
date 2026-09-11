@@ -1,0 +1,54 @@
+{# DuoMo (Meta, CVPR 2026) — 12.09.2026. Eigene Datei: upload_v4.html ist längst über der Grenze. #}
+                <div class="pipeline-card {% if not status_3d.duomo %}disabled{% endif %}"
+                     data-pipeline="duomo">
+                    <label class="pipeline-card-header">
+                        <input type="radio" name="pipeline" value="duomo"
+                            {% if default_3d == 'duomo' %}checked{% endif %}
+                            {% if not status_3d.duomo %}disabled{% endif %}>
+                        <span class="pipeline-card-title">DuoMo</span>
+                        <span class="pipeline-card-desc">
+                            {% if status_3d.duomo %}SMPL-X, GPU, Meta CVPR 2026 &mdash; Weltraum RICH 81 mm
+                                 (GVHMR 126), EMDB-2 172 mm (GVHMR 277){% else %}nicht installiert{% endif %}
+                        </span>
+                    </label>
+                    <div class="pipeline-settings" id="settings-duomo">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" data-vorgabe="duomo:fast">Schnell</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="duomo:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="duomo:max">Maximum</button>
+                        </div>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Statische Kamera <span
+                                     class="setting-hint">DuoMo bringt kein SLAM mit &mdash; ohne H&auml;kchen wird
+                                          eine Kamerabahn erwartet, sonst gilt ohnehin die feste Kamera</span></div>
+                                <input type="checkbox" name="duomo_static_cam"
+                                     {% if defaults.duomo_static_cam %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Temporal Smoothing <span
+                                     class="setting-hint">Gaussian-Gl&auml;ttung (0=aus, 2=Standard,
+                                          4+=stark)</span></div>
+                                <input type="number" name="duomo_smooth_sigma" min="0" max="10" step="0.5" value="2.0">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Joint Limits <span
+                                     class="setting-hint">Anatomische Grenzen f&uuml;r
+                                          Knie/Ellbogen/H&uuml;fte</span></div>
+                                <input type="checkbox" name="duomo_joint_limits" checked>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Device <span
+                                     class="setting-hint">GPU (CUDA); eigene Umgebung python10duomo, 2,6 GB
+                                          Checkpoints plus PromptHMR-Bildmerkmale</span></div>
+                                <select name="duomo_device">
+                                    <option value="cuda"
+                                         {% if defaults.duomo_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.duomo_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>

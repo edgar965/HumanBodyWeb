@@ -33,10 +33,14 @@ class Smplbefehl:
         # GEM-SMPL (11.09.2026): feste Kamera wie GVHMR, dazu die Demo-Videos.
         'gem': (('static_cam', 'gem_static_cam', '--static_cam'),
                 ('render', None, '--render')),
+        # DuoMo (12.09.2026): keine Einstellung dahinter — das Formular
+        # schickt `duomo_static_cam` (Vorgabe an); DuoMo ist ohne Kamerabahn
+        # ohnehin fest.
+        'duomo': (('static_cam', None, '--static_cam'),),
     }
 
     #: Pipelines, die Glaettung und Gelenkgrenzen von `Bvhbau` kennen.
-    MIT_GLAETTUNG = ('gvhmr', 'gem')
+    MIT_GLAETTUNG = ('gvhmr', 'gem', 'duomo')
 
     def __init__(self, job, einstellungen):
         self.job = job
