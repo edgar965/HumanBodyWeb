@@ -35,6 +35,11 @@ logger = logging.getLogger('core')
 class Posen:
     """Die Posendateien unter `poseData/<kategorie>/<name>.json`."""
 
+    #: Die A-Pose ohne Datei — nur mit Absatz traegt sie Knochen.
+    RUHELAGE = 'ruhelage'
+    #: Wie `Skelettdaten.VORGABE_KOERPERTYP`.
+    VORGABE_KOERPERTYP = 'Female_Caucasian'
+
     @staticmethod
     def wurzel():
         return Path(str(settings.HUMANBODY_DATA_DIR)).parent / 'poseData'
@@ -77,17 +82,37 @@ class Posen:
         Mehrheit der Endpunkte stellt die Sache vor die Taetigkeit
         (`studio_project_list`, `cloth_preset_list`), also gilt die. Der
         URL-PFAD bleibt unveraendert, das Frontend ruft ihn direkt auf.
+
+        MIT ABSATZ (11.09.2026, Edgar: „das Programm soll die Pose
+        ändern"): `?winkel_grad=&sprengung_grad=&hebung_cm=&plateau_cm=`
+        rechnet die Fussbeugung eines Absatzschuhs in die Pose ein
+        (`dienste/absatzpose.py`), `body_type` waehlt das Skelett. Die
+        Pose `ruhelage` ist die A-Pose ohne Datei — mit Absatz traegt sie
+        nur die Fuesse. `hebung_m` sagt dem Betrachter, wie hoch die Figur
+        dafuer steht; eine Pose selbst kennt keine Verschiebung.
         """
         from humanbody_core.pose import load_pose
-        try:
-            geladen = load_pose(pose_id)
-        except FileNotFoundError:
-            return JsonResponse({'error': 'Pose not found: %s' % pose_id},
-                                status=404)
+        from ..dienste.absatzpose import Absatzpose
+        from ..dienste.charakterdaten import Charakterdaten
+        if pose_id == Posen.RUHELAGE:
+            knochen = {}
+        else:
+            try:
+                knochen = load_pose(pose_id).def_bones
+            except FileNotFoundError:
+                return JsonResponse({'error': 'Pose not found: %s' % pose_id},
+                                    status=404)
+        geschlecht = Charakterdaten.geschlecht_zu(
+            request.GET.get('body_type', Posen.VORGABE_KOERPERTYP))
+        absatz = Absatzpose.aus_anfrage(request.GET, geschlecht)
+        if absatz is not None:
+            knochen = absatz.einrechnen(knochen)
         return JsonResponse({
-            'pose_id': geladen.pose_id,
-            'bones': geladen.def_bones,       # {DEF-Name: [w,x,y,z]}
-            'threejs': geladen.to_threejs(),  # {DEF-Name: [x,y,z,w]}
+            'pose_id': pose_id,
+            'bones': knochen,                             # {DEF-Name: [w,x,y,z]}
+            'threejs': Absatzpose.to_threejs(knochen),    # {DEF-Name: [x,y,z,w]}
+            'absatz': absatz.beschreibung() if absatz else None,
+            'hebung_m': absatz.hebung_m if absatz else 0.0,
         })
 
     # ----------------------------------------------------------- Verwalten

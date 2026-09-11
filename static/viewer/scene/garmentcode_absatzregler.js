@@ -1,6 +1,7 @@
 import { garmentcodeAbsatz } from './garmentcode_absatz.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 import { GarmentcodeFigur } from './garmentcode_figur.js';
+import { Posenanwendung } from './posenanwendung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
@@ -13,8 +14,9 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  * der Fuss erst, wenn der gebaute Schuh angezogen war — Schnitt plus
  * Simulation, eine halbe Minute. Jetzt fragt jeder Zug am Regler den
  * Server nach der Beugung für DIESE Figur (`/api/garmentcode/absatz/
- * vorschau/`, dieselbe Rechnung wie beim Bau, 0,2 s) und gibt sie an
- * `garmentcodeAbsatz.vorschau` — Fuss und Zehen drehen, die Figur steigt.
+ * vorschau/`, dieselbe Rechnung wie beim Bau, 0,2 s) und gibt sie der
+ * Posenanwendung (`absatzSetzen`) — die holt die Pose der Figur neu, mit
+ * der Beugung darin; der Betrachter dreht nichts selbst.
  *
  * ANGEHÄNGT AM DOKUMENT, NICHT AM REGLER: Die Reglerzeilen baut
  * `garmentcode_regler.js` bei jedem Vorlagenwechsel neu; ein Zuhörer am
@@ -61,7 +63,10 @@ export class GarmentcodeAbsatzregler {
     zuruecknehmen() {
         clearTimeout(this.uhr);
         const figur = GarmentcodeFigur.gewaehlt();
-        if (figur) garmentcodeAbsatz.vorschau(figur.inst, null);
+        if (figur?.inst?.absatz?.quelle === 'regler') {
+            garmentcodeAbsatz.vomSchuh(figur.inst).catch((fehler) =>
+                Protokoll.warnung('GarmentCode', `Absatz: ${fehler.message}`));
+        }
     }
 
     /** Die aktuellen Reglerwerte, wie sie an den Server gehen. */
@@ -86,7 +91,7 @@ export class GarmentcodeAbsatzregler {
             for (const [name, wert] of Object.entries(this.werte())) daten.append(name, wert);
             const info = await Serverabruf.formular(GarmentcodeAbsatzregler.ADRESSE, daten);
             if (info.hinweise?.length) Protokoll.debug('GarmentCode', info.hinweise.join(' · '));
-            await garmentcodeAbsatz.vorschau(figur.inst, info);
+            await Posenanwendung.absatzSetzen(figur.inst, { ...info, quelle: 'regler' });
         } catch (fehler) {
             Protokoll.warnung('GarmentCode', `Absatzvorschau: ${fehler.message}`);
         } finally {

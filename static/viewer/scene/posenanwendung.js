@@ -3,6 +3,7 @@ import { _selectedInst } from './utils.js';
 import { convertInstToSkinned } from './skeleton.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Posenabsatz } from './posenabsatz.js';
 
 /**
  * Posenanwendung — eine gespeicherte Pose auf die ausgewählte Figur legen.
@@ -22,6 +23,10 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  * 4. **T-Pose richtet die Oberschenkel gerade nach unten.** MB-Labs T-Pose
  *    spreizt die Beine weniger als Rigify; ohne diese Korrektur stehen sie
  *    schräg (siehe `leg_multiplier` im Kern).
+ * 5. **Ein Absatzschuh ist Teil der Pose** (11.09.2026): Jede Pose wird
+ *    mit `figur.absatz` geholt (`Posenabsatz.abfrage`), der Server rechnet
+ *    die Fussbeugung hinein, und `hebung_m` hebt die Figur. Die Pose
+ *    `ruhelage` ist die A-Pose ohne Datei — mit Absatz nur die Füsse.
  */
 export class Posenanwendung {
 
@@ -198,8 +203,7 @@ export class Posenanwendung {
      * „Unhandled promise rejection". Der Aufruf kommt aus der Liste, aus dem
      * Kontextmenü, aus dem Hauptmenü und aus dem Szenenaufbau.
      */
-    static async vomServer(poseId) {
-        const figur = _selectedInst();
+    static async vomServer(poseId, figur = _selectedInst()) {
         const befund = Posenanwendung.pruefen(figur);
         if (!befund.ok) return befund;
         if (!figur.isSkinned && state.rigifySkeletonData && state.skinWeightData) {
@@ -208,12 +212,14 @@ export class Posenanwendung {
         if (!figur.isSkinned) {
             return { ok: false, grund: 'Figur hat kein Skelett zum Stellen.' };
         }
-        const antwort = await Posenanwendung._holen(poseId);
+        const antwort = await Posenanwendung._holen(poseId, figur);
         if (antwort.grund) return { ok: false, grund: antwort.grund };
         if (!antwort.daten?.bones) {
             return { ok: false, grund: 'Die Pose führt keine Knochen.' };
         }
-        return Posenanwendung._stellen(figur, poseId, antwort.daten);
+        const ergebnis = Posenanwendung._stellen(figur, poseId, antwort.daten);
+        if (ergebnis.ok) figur.poseId = poseId;
+        return ergebnis;
     }
 
     /** Die geholte Pose auf die Figur legen. */
@@ -224,19 +230,21 @@ export class Posenanwendung {
         }
         const gesetzt = anwendung.anwenden(daten.threejs || {});
         const beine = anwendung.oberschenkelGeradeStellen(poseId);
+        Posenabsatz.heben(figur, daten.hebung_m || 0);
         Protokoll.debug('Pose', `${poseId}: ${gesetzt} Knochen, `
                         + `${beine} Beinkorrekturen`);
-        if (!gesetzt) {
+        // Die Ruhelage ohne Absatz führt zu Recht keinen Knochen.
+        if (!gesetzt && Object.keys(daten.threejs || {}).length) {
             return { ok: false,
                      grund: 'Kein Knochen der Pose passt zu diesem Skelett.' };
         }
         return { ok: true, gesetzt, beine };
     }
 
-    static async _holen(poseId) {
+    static async _holen(poseId, figur) {
         try {
             return { daten: await Serverabruf.json(
-                `/api/character/pose/${poseId}/`) };
+                `/api/character/pose/${poseId}/${Posenabsatz.abfrage(figur)}`) };
         } catch (fehler) {
             Protokoll.fehler('Pose', poseId, fehler);
             return { grund: 'Pose nicht ladbar: ' + fehler.message };
@@ -257,6 +265,20 @@ export class Posenanwendung {
             return { ok: false, grund: 'Kein gehäutetes Netz an dieser Figur.' };
         }
         anwendung.ruhelageHerstellen();
+        Posenabsatz.heben(figur, 0);
+        figur.poseId = 'ruhelage';
+        // Mit Absatz ist die Ruhelage die gebeugte: der Schuh bleibt an —
+        // die Pose dazu kommt vom Server, gleich hinterher.
+        if (Posenabsatz.aktiv(figur)) {
+            Posenanwendung.vomServer('ruhelage', figur).then((befund) => {
+                if (!befund.ok) Protokoll.warnung('Pose', befund.grund);
+            });
+        }
         return { ok: true };
+    }
+
+    /** Den Absatz einer Figur setzen (null: keiner) — die Pose folgt. */
+    static absatzSetzen(figur, info) {
+        return Posenabsatz.setzen(figur, info, Posenanwendung.vomServer);
     }
 }

@@ -192,7 +192,7 @@ export class CharacterInstance {
      * Achsenreihenfolge mitgibt — die kaeme beim Zurueckladen als vierte Zahl
      * an und wuerde als Skalierungsanteil gelesen.
      *
-     * Ohne den Absatz: `garmentcode_absatz.js` hebt die Figur auf ihren
+     * Ohne den Absatz: `Posenabsatz.heben` stellt die Figur auf ihren
      * Schuh und merkt sich den Hub in `group.userData.absatzHub`. Der Hub
      * gehoert nicht in die gespeicherte Lage — nach dem Laden stellt das
      * Modul die Figur erneut auf den Absatz, und der gespeicherte Hub

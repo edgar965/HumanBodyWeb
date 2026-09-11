@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Garmentstoff } from './garmentcode_stoff.js';
 import { GarmentcodeGeometrie } from './garmentcode_geometrie.js';
+import { Stueckereignis } from './garmentcode_stueckereignis.js';
 
 /**
  * GarmentcodeAnziehen — das drapierte Kleidungsstück an die Figur hängen.
@@ -140,6 +141,7 @@ export class GarmentcodeAnziehen {
             netz.updateMatrix();
             netz.bind(skelett, netz.matrix);
         }
+        Stueckereignis.melden(figur, stueck, true);
         return {
             punkte: geometrie.attributes.position.count,
             dreiecke: (daten.dreiecke || []).length,
@@ -196,6 +198,7 @@ export class GarmentcodeAnziehen {
         alt.geometry?.dispose();
         alt.material?.dispose();
         alt.removeFromParent();
+        Stueckereignis.melden(figur, stueck, false);
         return true;
     }
 
