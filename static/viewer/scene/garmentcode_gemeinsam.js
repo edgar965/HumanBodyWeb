@@ -106,7 +106,7 @@ export class GarmentcodeGemeinsam {
         }
         garmentcodeFortschritt.fertig(
             'gemeinsam', `${antwort.punkte} Punkte, ${antwort.dauer_s} s`);
-        await GarmentcodeGemeinsam._einhaengen(figur, antwort, meldung);
+        await GarmentcodeGemeinsam._einhaengen(figur, antwort, meldung, liste);
     }
 
     /**
@@ -116,7 +116,7 @@ export class GarmentcodeGemeinsam {
      * Skelett der Figur, falls es noch keines gibt. Zwei Aufrufe zugleich
      * bauten es zweimal.
      */
-    static async _einhaengen(figur, antwort, meldung) {
+    static async _einhaengen(figur, antwort, meldung, liste = null) {
         garmentcodeFortschritt.laeuft('einhaengen');
         // Was vom Einzelbau noch an der Figur hängt, weicht: Panels und
         // Vorschaunetz liegen an derselben Stelle wie der simulierte Stoff.
@@ -124,7 +124,12 @@ export class GarmentcodeGemeinsam {
         GarmentcodeVorschau3d.entfernen(figur);
         const berichte = [];
         for (const stueck of antwort.stuecke || []) {
-            berichte.push(await GarmentcodeGemeinsam._eines(figur, stueck));
+            // `nummer` ist die Stelle in der Wunschliste — dort steht das
+            // Material, mit dem das Stück übernommen wurde (11.09.2026:
+            // „es wurde nur 1 Farbe genommen"). Ohne Eintrag gilt der Stand.
+            const eintrag = liste?.eintraege?.[stueck.nummer] || null;
+            berichte.push(await GarmentcodeGemeinsam._eines(
+                figur, stueck, eintrag?.material || null));
         }
         garmentcodeFortschritt.fertig(
             'einhaengen', `${berichte.filter((b) => b.ok).length} von `
@@ -135,7 +140,7 @@ export class GarmentcodeGemeinsam {
     }
 
     /** Ein einzelnes Stück; ein Fehler stoppt die anderen nicht. */
-    static async _eines(figur, stueck) {
+    static async _eines(figur, stueck, material = null) {
         if (stueck.fehler || !stueck.rig_url) {
             return { ok: false, stueck,
                      grund: stueck.fehler || 'kein Netz geliefert' };
@@ -143,6 +148,7 @@ export class GarmentcodeGemeinsam {
         try {
             const getragen = await GarmentcodeDrapierung.einhaengen(
                 figur, stueck, stueck.stueck);
+            if (material) GarmentcodeMaterial.aufStueck(figur, stueck.stueck, material);
             return { ok: true, stueck, getragen };
         } catch (fehler) {
             return { ok: false, stueck,

@@ -67,13 +67,16 @@ class Garmentcode:
         # kommen mit der Vorsilbe `sim_` und nur, soweit sie abweichen.
         from GarmentCode.simulationsregler import Simulationsregler
         sim = Simulationsregler.aus_anfrage(request.POST)
+        # Die Stuecke, die die Figur schon traegt (11.09.2026): Der Koerper
+        # wird um sie erweitert, das neue Stueck legt sich darueber.
+        getragen = Garmentcode.getragene(request.POST.get('getragen'))
         try:
             anfrage = Garmentcode.aus_anfrage(request)
             ergebnis = GarmentcodeDienst.drapieren(
                 spez, koerper=anfrage['koerper'],
                 geschlecht=anfrage['geschlecht'], morphs=anfrage['morphs'],
                 bauart=anfrage['bauart'], smpl=anfrage['smpl'],
-                meta=anfrage['meta'], fein=fein, sim=sim)
+                meta=anfrage['meta'], fein=fein, sim=sim, getragen=getragen)
         except DrapierFehler as fehler:
             logger.warning('Drapierung gescheitert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=400)
@@ -208,6 +211,34 @@ class Garmentcode:
             '/api/garmentcode/datei/%s/%s/' % (os.path.basename(ordner), bild)
             if bild else '')
         return JsonResponse(ergebnis)
+
+    @staticmethod
+    def getragene(roh):
+        """Rig-Dateien getragener Stuecke aus dem Formular — nur unterhalb
+        des Ausgabeordners, nur `*_rig.json`, nur was es gibt.
+
+        Kommt als JSON-Liste `[{ordner, rig_datei}, …]`; ein Eintrag mit
+        einem Pfad ausserhalb der Wurzel wird uebergangen, nicht gemeldet —
+        dieselbe Pruefung wie `datei`.
+        """
+        from GarmentCode.entwurf import Entwurf
+        try:
+            liste = json.loads(roh or '[]')
+        except ValueError:
+            return []
+        wurzel = os.path.abspath(Entwurf.AUSGABE)
+        pfade = []
+        for eintrag in liste if isinstance(liste, list) else []:
+            if not isinstance(eintrag, dict):
+                continue
+            ordner = os.path.basename(str(eintrag.get('ordner') or ''))
+            name = str(eintrag.get('rig_datei') or '')
+            if not ordner or not name.endswith('_rig.json'):
+                continue
+            pfad = os.path.abspath(os.path.join(wurzel, ordner, name))
+            if pfad.startswith(wurzel + os.sep) and os.path.isfile(pfad):
+                pfade.append(pfad)
+        return pfade
 
     @staticmethod
     @require_GET

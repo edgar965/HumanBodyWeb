@@ -58,6 +58,26 @@ export class GarmentcodeAblage {
         return true;
     }
 
+    /**
+     * Die getragenen Stücke für den nächsten Bau — ohne das, das gerade
+     * neu gebaut wird (11.09.2026, Edgar: „die neuen Garments ÜBER den
+     * alten"). `rig_datei` und `ordner` reichen dem Server, die Datei liegt
+     * bei ihm; `rig_url` heißt `/api/garmentcode/datei/<ordner>/<datei>/`.
+     */
+    static getragen(inst, ausser = null) {
+        const bestand = inst?.gcStuecke || {};
+        const liste = [];
+        for (const [schluessel, eintrag] of Object.entries(bestand)) {
+            if (ausser && schluessel === GarmentcodeAnziehen.schluessel(ausser)) continue;
+            if (!GarmentcodeAblage._netzVon(inst, eintrag)) continue;
+            const teile = String(eintrag.rig_url || '').split('/').filter(Boolean);
+            const datei = teile[teile.length - 1];
+            const ordner = teile[teile.length - 2];
+            if (datei && ordner) liste.push({ stueck: eintrag.stueck, ordner, rig_datei: datei });
+        }
+        return liste;
+    }
+
     /** Ein gelöschtes Stück aus der Ablage nehmen. */
     static vergessen(inst, schluessel) {
         if (!inst?.gcStuecke) return false;

@@ -65,6 +65,14 @@ pruefe('prop im erlaubten Reiter', Gedaechtniswahl.merkbar(
     {reiter: 'garmentcode', kennung: 'prop-garment-color', art: 'color'}),
     false);
 
+// --- 3b. Die Bauregler laufen JE VORLAGE, nicht global (11.09.2026) -------
+for (const kennung of ['gc-hautabstand', 'gc-aufloesung', 'gc-anliegen']) {
+    pruefe('je Vorlage ' + kennung, Gedaechtniswahl.merkbar(
+        {reiter: 'garmentcode', kennung, art: 'range'}), false);
+}
+pruefe('andere gc-Felder bleiben', Gedaechtniswahl.merkbar(
+    {reiter: 'garmentcode', kennung: 'gc-vorlage', art: 'select-one'}), true);
+
 // --- 4. Feldarten, die nicht gehen ---------------------------------------
 for (const art of ['file', 'search', 'password', 'hidden', 'submit',
                    'button', 'reset']) {

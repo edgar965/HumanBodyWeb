@@ -119,6 +119,13 @@
 /* Platz fuer fuenfstellige Werte wie 50000 und fuer „0,05". */
 #gc-simulation .slider-row .slider-val { min-width: 46px; }
 
+/* Kombiliste: die Farbe, mit der ein Stueck uebernommen wurde (11.09.2026). */
+.gc-kombi-farbe {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 5px; vertical-align: middle;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
 /* 3x */
 .hb-margin-top-6px.hb-margin-top-6px.hb-margin-top-6px { margin-top:6px; }
 

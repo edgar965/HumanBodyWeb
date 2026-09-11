@@ -116,6 +116,14 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
                     `stoffanlegen.py`. 0 = aus; die Voreinstellung „Leggings"
                     setzt ihn ueber `bau.anliegen_mm`.{% endcomment %}
                     {% regler "gc-anliegen" "An die Haut ziehen" min="0" max="10" wert="0" schritt="0.5" anzeige="aus" %}
+                    {% comment %}11.09.2026 (Edgar: „die neuen Garments ÜBER den
+                    alten baut"): Der Server erweitert den Koerper um die
+                    Stuecke, die die Figur schon traegt —
+                    `koerpermitstoff.py`.{% endcomment %}
+                    <label class="hb-font-size-0-75rem-b"
+                           title="Die Stücke, die die Figur schon trägt, zählen bei der Simulation als Körper: Das neue Stück legt sich darüber, wo es sie überlappt. Ohne Häkchen wird nur gegen die Haut simuliert — wie bis zum 11.09.2026. Das Stück, das gerade neu gebaut wird, ersetzt sein altes und zählt nicht.">
+                        <input type="checkbox" id="gc-ueber-getragene" checked> Über die getragenen Stücke bauen
+                    </label>
                     {% comment %}Alle uebrigen Simulationswerte, aufklappbar
                     (Edgar, 09.09.2026: „mach alle an den Regler … in einem
                     aufklappbaren Bereich unter Bauen"). Der Inhalt kommt

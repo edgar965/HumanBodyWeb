@@ -66,6 +66,10 @@ export class Garmentcodegedaechtnis {
             if (regler.nachziehen[pfad]) regler.nachziehen[pfad](wert);
             gesetzt += 1;
         }
+        // Die Bauwerte DIESER Vorlage (gemerkt oder Vorgabe), bevor ein
+        // Preset seine darüberlegt — sonst blieben die der vorigen Vorlage
+        // stehen (`garmentcode_baugedaechtnis.js`, 11.09.2026).
+        GarmentcodeBauregler.herstellen(vorlage);
         const namen = Reitergedaechtnis.holen(
             Garmentcodegedaechtnis.presetSchluessel(vorlage), []);
         garmentcodePreset.anhaken(namen);

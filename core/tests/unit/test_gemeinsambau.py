@@ -56,6 +56,19 @@ pruefe('gesichert', liste.sichern(speicher), true);
 const neu = new Kombiliste();
 pruefe('geladen', neu.laden(speicher), true);
 pruefe('Bau ueberlebt', neu.fuerServer()[0].bau.anliegen_mm, 2);
+// --- Material je Stueck (11.09.2026: „es wurde nur 1 Farbe genommen")
+const stand = { farbe: '#ff0000', rauheit: 0.9, metall: 0, gewebe: { art: 'koeper', faeden: 6 } };
+const mitFarbe = new Kombiliste();
+mitFarbe.hinzufuegen('hose', 'Hose', {}, {}, stand);
+stand.farbe = '#00ff00'; stand.gewebe.art = 'satin';       // naechstes Stueck
+mitFarbe.hinzufuegen('t-shirt', 'T-Shirt', {}, {}, stand);
+pruefe('Farbe eingefroren', mitFarbe.eintraege[0].material.farbe, '#ff0000');
+pruefe('Gewebe tief kopiert', mitFarbe.eintraege[0].material.gewebe.art, 'koeper');
+pruefe('zweites Stueck eigene Farbe', mitFarbe.eintraege[1].material.farbe, '#00ff00');
+pruefe('Material bleibt im Browser', 'material' in mitFarbe.fuerServer()[0], false);
+pruefe('gesichert', mitFarbe.sichern(speicher), true);
+const wieder = new Kombiliste(); wieder.laden(speicher);
+pruefe('Material ueberlebt', wieder.eintraege[1].material.farbe, '#00ff00');
 console.log(JSON.stringify({ok: true}));
 """
 
@@ -73,9 +86,20 @@ class KombilisteBauTest(SimpleTestCase):
 
     def test_uebernehmen_gibt_die_bauregler_mit(self):
         kombi = _lies('static', 'viewer', 'scene', 'garmentcode_kombi.js')
-        self.assertIn('GarmentcodeBauregler.werte()', kombi)
+        self.assertIn('GarmentcodeBauregler.werte(), GarmentcodeMaterial.stand', kombi)
         bauregler = _lies('static', 'viewer', 'scene', 'garmentcode_bauregler.js')
         self.assertIn('static werte()', bauregler)
+
+    def test_jedes_stueck_bekommt_sein_material(self):
+        u"""Der gemeinsame Weg legt nach dem Einhaengen das Material des
+        Listeneintrags auf — ueber `nummer`, die Stelle in der Wunschliste."""
+        gemeinsam = _lies('static', 'viewer', 'scene', 'garmentcode_gemeinsam.js')
+        self.assertIn('liste?.eintraege?.[stueck.nummer]', gemeinsam)
+        self.assertIn('GarmentcodeMaterial.aufStueck(figur, stueck.stueck, material)',
+                      gemeinsam)
+        material = _lies('static', 'viewer', 'scene', 'garmentcode_material.js')
+        self.assertIn('static aufStueck(figur, stueck, werte = null)', material)
+        self.assertIn('werte || GarmentcodeMaterial.stand', material)
 
 
 class EndpunktBauTest(SimpleTestCase):
@@ -94,6 +118,10 @@ class EndpunktBauTest(SimpleTestCase):
         self.assertIsInstance(gewaehlt[0]['fein'], Baufeineinstellung)
         self.assertEqual(gewaehlt[0]['fein'].anliegen_mm, 2.0)
         self.assertIsNone(gewaehlt[1]['fein'].anliegen_mm)
+        # `nummer` = Stelle in der Wunschliste — auch ueber Luecken hinweg
+        self.assertEqual([e['nummer'] for e in gewaehlt], [0, 1])
+        mit_luecke = self._stuecke([{'vorlage': 'hose'}, 'muell', {'vorlage': 't-shirt'}])
+        self.assertEqual([e['nummer'] for e in mit_luecke], [0, 2])
 
     def test_unsinn_im_bau_faellt_auf_die_vorgabe(self):
         gewaehlt = self._stuecke([{'vorlage': 'hose', 'bau': 'quatsch'},
@@ -115,6 +143,12 @@ class DienstBauTest(SimpleTestCase):
         self.assertIs(gewaehlt[0]['fein'], fein)
         self.assertIsInstance(gewaehlt[1]['fein'], Baufeineinstellung)
         self.assertIsNone(gewaehlt[1]['fein'].anliegen_mm)
+        # und die Nummer geht bis in den Bericht je Stueck
+        gewaehlt = Garmentgemeinsam._pruefen([
+            {'vorlage': 'hose', 'nummer': 3}, {'vorlage': 't-shirt', 'nummer': 0}])
+        self.assertEqual([e['nummer'] for e in gewaehlt], [3, 0])
+        ablage = _lies_assets('gemeinsamablage.py')
+        self.assertIn("'nummer': schnitt.get('nummer')", ablage)
 
     def test_die_simulation_nimmt_die_werte_des_ersten_stuecks(self):
         erstes = Baufeineinstellung(hautabstand_mm=4.0, aufloesung=1.5)

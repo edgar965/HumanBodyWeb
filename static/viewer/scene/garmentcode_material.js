@@ -92,15 +92,17 @@ export class GarmentcodeMaterial {
      * die Vorgabe zurück (08.09.2026). Gezielt, nicht über alle: Der Bau
      * eines zweiten Stücks darf die Farbe des ersten nicht mitziehen.
      */
-    static aufStueck(figur, stueck) {
+    static aufStueck(figur, stueck, werte = null) {
         const inst = figur?.inst || figur;
         const netz = inst?.clothMeshes?.[
             GarmentcodeAnziehen.schluessel(stueck)];
-        return netz ? GarmentcodeMaterial._auflegen(netz) : 0;
+        return netz ? GarmentcodeMaterial._auflegen(netz, werte) : 0;
     }
 
-    static _auflegen(netz) {
-        return Garmentstoff.auflegen(netz, GarmentcodeMaterial.stand);
+    /** `werte` statt des Stands: das Material, das ein Stück der
+     *  Kombiliste mitbringt (`garmentcode_gemeinsam.js`, 11.09.2026). */
+    static _auflegen(netz, werte = null) {
+        return Garmentstoff.auflegen(netz, werte || GarmentcodeMaterial.stand);
     }
 
     /**

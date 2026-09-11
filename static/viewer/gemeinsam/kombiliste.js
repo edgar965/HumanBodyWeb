@@ -27,7 +27,8 @@ export class Kombiliste {
     static SCHLUESSEL = 'hb_gc_kombination';
 
     constructor() {
-        /** @type {{vorlage: string, titel: string, regler: object, bau: object}[]} */
+        /** @type {{vorlage: string, titel: string, regler: object, bau: object,
+         *           material: object|null}[]} */
         this.eintraege = [];
     }
 
@@ -43,7 +44,7 @@ export class Kombiliste {
      *
      * @returns {{ok: boolean, grund?: string}}
      */
-    hinzufuegen(vorlage, titel, regler, bau = null) {
+    hinzufuegen(vorlage, titel, regler, bau = null, material = null) {
         if (!vorlage) return { ok: false, grund: 'Kein Kleidungsstück gewählt.' };
         if (this.eintraege.length >= Kombiliste.HOECHSTZAHL) {
             return { ok: false, grund: `Höchstens ${Kombiliste.HOECHSTZAHL} `
@@ -59,6 +60,12 @@ export class Kombiliste {
             // zum Stück wie seine Schnittwerte: Die Leggings brauchen ihr
             // Anliegen, das T-Shirt darüber nicht (11.09.2026).
             bau: { ...(bau || {}) },
+            // Farbe, Rauheit, Metall, Gewebe — je Stück, tief kopiert (das
+            // Gewebe ist ein Objekt). Bleibt im Browser: Der Server baut
+            // Geometrie, das Material legt `garmentcode_gemeinsam.js` auf.
+            // Ohne das bekam jedes Stück die zuletzt eingestellte Farbe
+            // (Edgar, 11.09.2026: „es wurde nur 1 Farbe genommen").
+            material: material ? JSON.parse(JSON.stringify(material)) : null,
         });
         return { ok: true };
     }
@@ -135,7 +142,9 @@ export class Kombiliste {
                                regler: (e.regler && typeof e.regler === 'object')
                                    ? e.regler : {},
                                bau: (e.bau && typeof e.bau === 'object')
-                                   ? e.bau : {} }));
+                                   ? e.bau : {},
+                               material: (e.material && typeof e.material === 'object')
+                                   ? e.material : null }));
             return true;
         } catch (fehler) {
             return false;

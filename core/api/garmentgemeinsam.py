@@ -87,13 +87,15 @@ class Garmentgemeinsamendpunkte:
         if not isinstance(roh, list):
             return []
         gewaehlt = []
-        for eintrag in roh:
+        for nummer, eintrag in enumerate(roh):
             if not isinstance(eintrag, dict) or not eintrag.get('vorlage'):
                 continue
             regler = eintrag.get('regler')
             bau = eintrag.get('bau')
             bau = bau if isinstance(bau, dict) else {}
-            gewaehlt.append({'vorlage': eintrag['vorlage'],
+            # `nummer` = Stelle in der Wunschliste des Browsers: Dort steht
+            # das Material, das nach dem Einhaengen auf das Stueck kommt.
+            gewaehlt.append({'vorlage': eintrag['vorlage'], 'nummer': nummer,
                              'regler': regler if isinstance(regler, dict)
                              else {},
                              'fein': Baufeineinstellung(**{

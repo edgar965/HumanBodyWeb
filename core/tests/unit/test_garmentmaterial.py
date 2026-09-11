@@ -103,7 +103,7 @@ class MaterialBeimBauenTest(SimpleTestCase):
         u"""Über `clothMeshes` und den `gc_`-Schlüssel — nicht über den Namen
         im Szenengraphen, wo auch Körper und Haare hängen."""
         quelle = _material()
-        self.assertIn('static aufStueck(figur, stueck)', quelle)
+        self.assertIn('static aufStueck(figur, stueck, werte = null)', quelle)
         self.assertIn('GarmentcodeAnziehen.schluessel(stueck)', quelle)
 
 

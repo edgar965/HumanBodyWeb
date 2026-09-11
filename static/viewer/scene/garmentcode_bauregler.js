@@ -24,7 +24,7 @@
  * fertiges Netz nachträglich zu verschieben hiesse, die Falten mitzuziehen.
  */
 import { garmentcodePreset } from './garmentcode_preset.js';
-import { Reitergedaechtnis } from './reitergedaechtnis.js';
+import { GarmentcodeBaugedaechtnis } from './garmentcode_baugedaechtnis.js';
 import { BAUREGLER_HINWEISE } from './garmentcode_bauregler_hinweise.js';
 
 export class GarmentcodeBauregler {
@@ -47,6 +47,14 @@ export class GarmentcodeBauregler {
      */
     static PFADE = { 'bau.anliegen_mm': 'gc-anliegen' };
 
+    /** Die drei Werte, wie sie `Baufeineinstellung` heißen → Feld. */
+    static FELDER = { hautabstand_mm: 'gc-hautabstand',
+                      aufloesung: 'gc-aufloesung',
+                      anliegen_mm: 'gc-anliegen' };
+
+    /** Anzeigeformat je Feld — steht nach `verdrahten`. */
+    static _formate = {};
+
     /** Die Hover-Texte, je Kennung (`garmentcode_bauregler_hinweise.js`). */
     static HINWEISE = BAUREGLER_HINWEISE;
 
@@ -65,8 +73,56 @@ export class GarmentcodeBauregler {
         document.getElementById(GarmentcodeBauregler.ANLIEGEN)
             ?.addEventListener('input', () => garmentcodePreset.pruefen(
                 'bau.anliegen_mm', (p) => GarmentcodeBauregler.wert(p)));
+        // Jeder Zug merkt die drei Werte für DIESE Vorlage
+        // (`garmentcode_baugedaechtnis.js`, 11.09.2026).
+        for (const kennung of Object.values(GarmentcodeBauregler.FELDER)) {
+            document.getElementById(kennung)
+                ?.addEventListener('input', () => GarmentcodeBauregler.merken());
+        }
         GarmentcodeBauregler._beschriften();
         return a && b && c;
+    }
+
+    /** Die drei Werte für die gewählte Vorlage merken. */
+    static merken() {
+        return GarmentcodeBaugedaechtnis.merken(GarmentcodeBauregler.werte());
+    }
+
+    /**
+     * Die Bauwerte DIESER Vorlage in die Felder — gemerkt oder Vorgabe.
+     *
+     * Beim Vorlagenwechsel, VOR den Presets: Ein Preset legt seine Werte
+     * dann darüber. Ohne diesen Schritt blieben die Werte der vorigen
+     * Vorlage stehen (das angelegte T-Shirt, 11.09.2026). Ohne `input`,
+     * ohne Merken — es ist der gemerkte Stand, der gerade gelesen wird.
+     */
+    static herstellen(vorlage) {
+        const gemerkt = GarmentcodeBaugedaechtnis.holen(vorlage);
+        const vorgaben = GarmentcodeBauregler.vorgaben();
+        let gesetzt = 0;
+        for (const [name, kennung] of Object.entries(GarmentcodeBauregler.FELDER)) {
+            const wert = Number.isFinite(Number(gemerkt[name]))
+                ? Number(gemerkt[name]) : vorgaben[name];
+            if (GarmentcodeBauregler._stellen(kennung, wert)) gesetzt += 1;
+        }
+        return gesetzt;
+    }
+
+    static vorgaben() {
+        return { hautabstand_mm: GarmentcodeBauregler.HAUTABSTAND_VORGABE,
+                 aufloesung: GarmentcodeBauregler.AUFLOESUNG_VORGABE,
+                 anliegen_mm: GarmentcodeBauregler.ANLIEGEN_VORGABE };
+    }
+
+    /** Feld und Anzeige stellen, ohne Ereignis. */
+    static _stellen(kennung, wert) {
+        const feld = document.getElementById(kennung);
+        if (!feld) return false;
+        feld.value = String(wert);
+        const anzeige = document.getElementById(`${kennung}-val`);
+        const format = GarmentcodeBauregler._formate[kennung];
+        if (anzeige && format) anzeige.textContent = format(Number(wert));
+        return true;
     }
 
     static _anliegenText(wert) {
@@ -85,10 +141,11 @@ export class GarmentcodeBauregler {
      * Pseudo-Pfade setzen — Schieber und Anzeige nachziehen, OHNE
      * `input`-Ereignis: Das würde `pruefen` rufen und das Häkchen, das
      * gerade gesetzt wird, gleich wieder wegnehmen. Gemerkt wird der Wert
-     * trotzdem, DIREKT: Das Reitergedächtnis hört nur auf Ereignisse, und
-     * ohne diesen Aufruf stand „An die Haut ziehen" nach jedem Neuladen
-     * wieder auf 0, während die Schnittwerte der Leggings zurückkamen — die
-     * Hose baute weit (Edgar, 11.09.2026: „das ist eine regression!").
+     * trotzdem, DIREKT — je Vorlage (`GarmentcodeBauregler.merken`): Das
+     * Gedächtnis hört nur auf Ereignisse, und ohne diesen Aufruf stand
+     * „An die Haut ziehen" nach jedem Neuladen wieder auf 0, während die
+     * Schnittwerte der Leggings zurückkamen — die Hose baute weit (Edgar,
+     * 11.09.2026: „das ist eine regression!").
      * `merken = false` für ein Vorbild der Kleiderbibliothek — das ist eine
      * Ableitung, keine Einstellung, und merkt auch seine Schnittwerte nicht.
      */
@@ -96,14 +153,9 @@ export class GarmentcodeBauregler {
         let gesetzt = 0;
         for (const [pfad, wert] of Object.entries(werte || {})) {
             const kennung = GarmentcodeBauregler.PFADE[pfad];
-            const feld = kennung && document.getElementById(kennung);
-            if (!feld) continue;
-            feld.value = String(wert);
-            const anzeige = document.getElementById(`${kennung}-val`);
-            if (anzeige) anzeige.textContent = GarmentcodeBauregler._anliegenText(Number(wert));
-            if (merken) Reitergedaechtnis.feldMerken(feld);
-            gesetzt += 1;
+            if (kennung && GarmentcodeBauregler._stellen(kennung, wert)) gesetzt += 1;
         }
+        if (merken && gesetzt) GarmentcodeBauregler.merken();
         return gesetzt;
     }
 
@@ -198,6 +250,7 @@ export class GarmentcodeBauregler {
     static _binden(kennung, format) {
         const feld = document.getElementById(kennung);
         if (!feld) return false;
+        GarmentcodeBauregler._formate[kennung] = format;
         const anzeige = document.getElementById(`${kennung}-val`);
         const nachziehen = () => {
             const wert = parseFloat(feld.value);

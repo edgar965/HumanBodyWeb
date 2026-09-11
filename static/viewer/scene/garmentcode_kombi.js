@@ -1,6 +1,7 @@
 import { Kombiliste } from '../gemeinsam/kombiliste.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
 import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
+import { GarmentcodeMaterial } from './garmentcode_material.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
 import { GarmentcodeGemeinsam } from './garmentcode_gemeinsam.js';
 
@@ -58,7 +59,7 @@ class GarmentcodeKombi {
         const vorlage = auswahl ? auswahl.value : '';
         const stand = this.liste.hinzufuegen(
             vorlage, GarmentcodeAblauf.titel(vorlage), garmentcodeRegler.werte,
-            GarmentcodeBauregler.werte());
+            GarmentcodeBauregler.werte(), GarmentcodeMaterial.stand);
         const wieviel = this.liste.anzahl === 1
             ? 'ein Stück' : `${this.liste.anzahl} Stücke`;
         this.melden(stand.ok
@@ -109,10 +110,16 @@ class GarmentcodeKombi {
         // nur als Ordnungszahl da und nicht als „Schicht".
         name.textContent = `${nummer + 1}. ${eintrag.titel}`;
         name.title = GarmentcodeKombi._reglertext(eintrag);
+        // Die Farbe des Stücks als Punkt — sichtbar, nicht nur im Tooltip.
+        if (eintrag.material?.farbe) {
+            const punkt = document.createElement('span');
+            punkt.className = 'gc-kombi-farbe';
+            punkt.style.background = eintrag.material.farbe;
+            name.prepend(punkt);
+        }
         const rechts = document.createElement('span');
         rechts.className = 'slider-val';
-        const anzahl = Object.keys(eintrag.regler || {}).length;
-        rechts.textContent = anzahl ? `${anzahl} eigene` : 'Vorgaben';
+        rechts.textContent = GarmentcodeKombi._kurztext(eintrag);
         const weg = document.createElement('button');
         weg.className = 'btn-toggle hb-fest';
         weg.title = 'Aus der Kombination nehmen';
@@ -120,6 +127,17 @@ class GarmentcodeKombi {
         weg.addEventListener('click', () => this.entfernen(nummer));
         zeile.append(name, rechts, weg);
         return zeile;
+    }
+
+    /** „3 eigene · 2,0 mm anliegend" — was die Zeile über den Bau sagt. */
+    static _kurztext(eintrag) {
+        const anzahl = Object.keys(eintrag.regler || {}).length;
+        const teile = [anzahl ? `${anzahl} eigene` : 'Vorgaben'];
+        const anliegen = Number(eintrag.bau?.anliegen_mm);
+        if (Number.isFinite(anliegen) && anliegen >= GarmentcodeBauregler.ANLIEGEN_MIN) {
+            teile.push(`${anliegen.toFixed(1).replace('.', ',')} mm anliegend`);
+        }
+        return teile.join(' · ');
     }
 
     /** Was an dem Eintrag eingestellt war — als Tooltip, nicht als Liste. */

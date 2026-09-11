@@ -64,6 +64,15 @@ export class Gedaechtniswahl {
     /** Kennungen, die trotz erlaubtem Reiter Objektzustand tragen. */
     static KENNUNG_AUS = ['prop-'];
 
+    /**
+     * Felder, die JE VORLAGE gemerkt werden (`garmentcode_baugedaechtnis.js`)
+     * und deshalb hier nicht noch einmal global — zwei Buchführungen für
+     * dieselbe Zahl liefen auseinander (11.09.2026: „An die Haut ziehen"
+     * blieb beim Wechsel von den Leggings auf das T-Shirt auf 2 mm stehen,
+     * und das T-Shirt sah aus wie eine Leggings).
+     */
+    static JE_VORLAGE = ['gc-hautabstand', 'gc-aufloesung', 'gc-anliegen'];
+
     /** Trennzeichen im Ablageschlüssel. */
     static TRENNER = '/';
 
@@ -78,6 +87,7 @@ export class Gedaechtniswahl {
         if (!reiter || !kennung) return false;
         if (!Gedaechtniswahl.REITER.includes(reiter)) return false;
         if (Gedaechtniswahl.ARTEN_AUS.includes(art)) return false;
+        if (Gedaechtniswahl.JE_VORLAGE.includes(kennung)) return false;
         return !Gedaechtniswahl.KENNUNG_AUS.some((p) => kennung.startsWith(p));
     }
 

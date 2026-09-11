@@ -116,8 +116,17 @@ class ReitergedaechtnisTest(SimpleTestCase):
         quelle = _quelle('scene/garmentcode_bauregler.js')
         stelle = quelle.index('static setzen(werte, merken = true) {')
         block = quelle[stelle:quelle.index('return gesetzt;', stelle)]
-        self.assertIn('if (merken) Reitergedaechtnis.feldMerken(feld)', block)
+        # Seit dem Nachmittag JE VORLAGE (`garmentcode_baugedaechtnis.js`):
+        # Der Bauwert der Leggings gehoert nicht zum T-Shirt.
+        self.assertIn('if (merken && gesetzt) GarmentcodeBauregler.merken()', block)
         self.assertNotIn("new Event('input'", block)
+        self.assertNotIn('Reitergedaechtnis', quelle)
+        # Beim Vorlagenwechsel werden die Bauwerte DIESER Vorlage hergestellt,
+        # bevor ein Preset seine darueberlegt.
+        gedaechtnis = _quelle('scene/garmentcode_gedaechtnis.js')
+        anwenden = gedaechtnis.index('static anwenden(regler, vorlage)')
+        her = gedaechtnis.index('GarmentcodeBauregler.herstellen(vorlage)', anwenden)
+        self.assertLess(her, gedaechtnis.index('garmentcodePreset.anhaken(namen)', anwenden))
         # Ein Vorbild der Bibliothek ist eine Ableitung und merkt nichts —
         # auch den Bauwert nicht, wie seine Schnittwerte.
         vorbilder = _quelle('scene/garmentcode_vorbilder.js')

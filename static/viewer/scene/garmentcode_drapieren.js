@@ -41,6 +41,13 @@ export class GarmentcodeDrapierung {
         // Und die 42 Regler aus dem aufklappbaren Bereich darunter — davon
         // nur, was von der Vorgabe abweicht.
         GarmentcodeSimulation.anhaengen(daten);
+        // Über die getragenen Stücke bauen (11.09.2026): Der Server
+        // erweitert den Körper um sie. Das Stück, das gerade neu entsteht,
+        // bleibt aussen vor — es ersetzt sein altes.
+        if (document.getElementById('gc-ueber-getragene')?.checked !== false) {
+            daten.append('getragen', JSON.stringify(
+                GarmentcodeAblage.getragen(figur?.inst || figur, stueck)));
+        }
         try {
             // MIT FRIST (09.09.2026): Eine Drapierung, deren Antwort nie
             // kommt, liess den Reiter besetzt und alle Knoepfe grau —
