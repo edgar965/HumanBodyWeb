@@ -72,6 +72,11 @@ class PassformTest(SimpleTestCase):
         self.assertTrue(presets, 'Hose ohne Passform-Voreinstellung')
         for preset in presets:
             for pfad in preset['werte']:
+                # `bau.*` sind Bauwerte (Leggings: an die Haut ziehen), keine
+                # Schnittwerte — erlaubt, wenn in `BAU_PFADE` angemeldet.
+                if pfad.startswith('bau.'):
+                    self.assertIn(pfad, Passformpresets.BAU_PFADE)
+                    continue
                 self.assertTrue(pfad.startswith('pants.'), pfad)
 
     def test_traegertop_bekommt_keine(self):
@@ -115,6 +120,8 @@ class PassformTest(SimpleTestCase):
                 continue
             for preset in Katalog.passform(vorlage):
                 for pfad in preset['werte']:
+                    if pfad in Passformpresets.BAU_PFADE:
+                        continue
                     self.assertIn(pfad, pfade,
                                   '%s: %s gibt es nicht' % (vorlage, pfad))
 

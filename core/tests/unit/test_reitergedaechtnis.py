@@ -105,3 +105,47 @@ class ReitergedaechtnisTest(SimpleTestCase):
         preset = _quelle('scene/garmentcode_preset.js')
         self.assertIn('anhaken(namen) {', preset)
         self.assertIn('aktiveListe() {', preset)
+
+    def test_die_bauregler_eines_presets_werden_gemerkt(self):
+        u"""Ein Preset setzt „An die Haut ziehen" OHNE `input`-Ereignis
+        (sonst naehme `pruefen` das Haekchen gleich wieder weg) — das
+        Gedaechtnis hoert aber nur auf Ereignisse. Ohne den direkten
+        Aufruf stand der Regler nach jedem Neuladen auf 0, waehrend die
+        Schnittwerte der Leggings zurueckkamen: Die Hose baute weit
+        (Edgar, 11.09.2026: „das ist eine regression!")."""
+        quelle = _quelle('scene/garmentcode_bauregler.js')
+        stelle = quelle.index('static setzen(werte, merken = true) {')
+        block = quelle[stelle:quelle.index('return gesetzt;', stelle)]
+        self.assertIn('if (merken) Reitergedaechtnis.feldMerken(feld)', block)
+        self.assertNotIn("new Event('input'", block)
+        # Ein Vorbild der Bibliothek ist eine Ableitung und merkt nichts —
+        # auch den Bauwert nicht, wie seine Schnittwerte.
+        vorbilder = _quelle('scene/garmentcode_vorbilder.js')
+        self.assertIn('GarmentcodeBauregler.setzen({ [pfad]: wert }, false)', vorbilder)
+
+    def test_ein_angehaktes_preset_gilt_in_seiner_heutigen_fassung(self):
+        u"""Die gemerkten Werte stammen von der Fassung beim letzten Klick.
+        Als die Leggings ihr Ruesche-Buendchen verloren (11.09.2026), trug
+        das Reitergedaechtnis es weiter — am Knoechel schien die Haut durch.
+        Beim Wiederherstellen werden deshalb `zurueck` und `werte` des
+        Presets angelegt, wie es HEUTE definiert ist."""
+        quelle = _quelle('scene/garmentcode_gedaechtnis.js')
+        rumpf = quelle.split('static anwenden(')[1]
+        self.assertIn('garmentcodePreset.preset(schluessel)', rumpf)
+        self.assertIn('regler.zuruecksetzen(preset.zurueck || [])', rumpf)
+        self.assertIn('GarmentcodeBauregler.setzen(bau)', rumpf)
+        preset = _quelle('scene/garmentcode_preset.js')
+        self.assertIn('this.zuruecksetzt(preset.zurueck)', preset)
+        # Der Passform-Kasten reicht den Ruecksetzer durch — sonst bliebe
+        # er `null`, weil er NACH den Gruppen gezeichnet wird.
+        self.assertIn('if (zuruecksetzt) this.zuruecksetzt = zuruecksetzt', preset)
+        self.assertIn("kasten('passform', setzt, liest, zuruecksetzt)",
+                      _quelle('scene/garmentcode_passform.js'))
+
+    def test_ein_vorbild_setzt_alle_schnittregler_zurueck(self):
+        u"""Ein Vorbild ist eine ganze Silhouette; Reste eines anderen
+        Standes (die Ruesche der alten Leggings) widersprechen ihr."""
+        quelle = _quelle('scene/garmentcode_vorbilder.js')
+        rumpf = quelle.split('static _reglerStellen(')[1]
+        self.assertIn('garmentcodeRegler.zuruecksetzen(alt)', rumpf)
+        self.assertIn('garmentcodePreset.pruefen(pfad', rumpf)

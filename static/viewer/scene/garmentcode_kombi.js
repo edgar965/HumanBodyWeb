@@ -1,5 +1,6 @@
 import { Kombiliste } from '../gemeinsam/kombiliste.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
+import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
 import { GarmentcodeGemeinsam } from './garmentcode_gemeinsam.js';
 
@@ -56,7 +57,8 @@ class GarmentcodeKombi {
         const auswahl = document.getElementById('gc-vorlage');
         const vorlage = auswahl ? auswahl.value : '';
         const stand = this.liste.hinzufuegen(
-            vorlage, GarmentcodeAblauf.titel(vorlage), garmentcodeRegler.werte);
+            vorlage, GarmentcodeAblauf.titel(vorlage), garmentcodeRegler.werte,
+            GarmentcodeBauregler.werte());
         const wieviel = this.liste.anzahl === 1
             ? 'ein Stück' : `${this.liste.anzahl} Stücke`;
         this.melden(stand.ok
@@ -124,9 +126,11 @@ class GarmentcodeKombi {
     static _reglertext(eintrag) {
         const werte = eintrag.regler || {};
         const pfade = Object.keys(werte).sort();
-        if (!pfade.length) return `${eintrag.titel}: alles auf Vorgabe`;
+        const bau = Object.entries(eintrag.bau || {})
+            .map(([name, wert]) => `bau.${name} = ${wert}`);
+        if (!pfade.length && !bau.length) return `${eintrag.titel}: alles auf Vorgabe`;
         return `${eintrag.titel}\n`
-            + pfade.map((p) => `${p} = ${werte[p]}`).join('\n');
+            + pfade.map((p) => `${p} = ${werte[p]}`).concat(bau).join('\n');
     }
 
     static _hinweis(text) {

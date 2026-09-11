@@ -89,12 +89,13 @@ pruefe('daneben negativ', liste.entfernen(-1), false);
 liste.leeren();
 pruefe('geleert', liste.anzahl, 0);
 
-// --- 7. Der Server bekommt nur Vorlage und Regler ------------------------
-// Titel und Zaehler sind Sache der Oberflaeche.
+// --- 7. Der Server bekommt Vorlage, Regler und Bauwerte ------------------
+// Titel und Zaehler sind Sache der Oberflaeche. `bau` seit 11.09.2026
+// (`test_gemeinsambau`), ohne Angabe leer.
 liste = new Kombiliste();
 liste.hinzufuegen('hose', 'Hose', {'pants.flare': 0.5});
 pruefe('fuerServer', liste.fuerServer(),
-       [{vorlage: 'hose', regler: {'pants.flare': 0.5}}]);
+       [{vorlage: 'hose', regler: {'pants.flare': 0.5}, bau: {}}]);
 
 // --- 8. Merken und Wiederherstellen --------------------------------------
 // Eine Attrappe statt `localStorage`: Der Test laeuft in node.

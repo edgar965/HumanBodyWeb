@@ -31,7 +31,9 @@ export class Videoaufnahme {
     static VORLAUF = 10;
 
     constructor(anzeige) {
-        this.anzeige = anzeige;     // { zeigen(text, anteil), melden(text, fehler), fertig(url) }
+        // { zeigen(text, anteil), melden(text, fehler),
+        //   fertig({url, pfad}, info), ablage() → {ablage, dateiname, figur, animation} }
+        this.anzeige = anzeige;
         this.laeuft = false;
     }
 
@@ -51,8 +53,8 @@ export class Videoaufnahme {
         try {
             const bilder = await this._aufnehmen(inst, mm, sekunden);
             this.anzeige.zeigen('Sende an Server für ffmpeg …', 0.97);
-            const url = await this._kodieren(bilder, mm);
-            this.anzeige.fertig(url, { bilder: bilder.length, mm });
+            const antwort = await this._kodieren(bilder, mm);
+            this.anzeige.fertig(antwort, { bilder: bilder.length, mm });
         } catch (fehler) {
             this.anzeige.melden(`Aufnahme fehlgeschlagen: ${fehler.message}`, true);
         } finally {
@@ -156,14 +158,18 @@ export class Videoaufnahme {
         return Math.min((mm / 1000) / max, 3.0);
     }
 
-    /** Bilder an den Server, MP4 landet unter `media/figurvideos/` — wie Weg 1. */
+    /** Bilder an den Server, MP4 landet unter `media/figurvideos/` — wie
+     *  der Server-Weg — und als Kopie in der gewählten Ablage. */
     async _kodieren(aufnahmen, mm) {
         const daten = new FormData();
         aufnahmen.forEach((bild, i) => daten.append('frames', bild, `${String(i).padStart(6, '0')}.png`));
         daten.append('fps', Videoaufnahme.FPS);
         daten.append('physik_mm', mm);
+        for (const [name, wert] of Object.entries(this.anzeige.ablage?.() || {})) {
+            daten.append(name, wert);
+        }
         const ergebnis = await Serverabruf.formular('/api/animation/video/aufnahme/', daten);
         if (ergebnis.fehler) throw new Error(ergebnis.fehler);
-        return `${ergebnis.video_url}?t=${Date.now()}`;
+        return { url: `${ergebnis.video_url}?t=${Date.now()}`, pfad: ergebnis.pfad };
     }
 }

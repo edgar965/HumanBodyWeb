@@ -1,18 +1,21 @@
 /**
- * Figurvideo — „Video" im Animations-Reiter, der Server-Weg.
+ * Figurvideo — „Video" im Animations-Reiter.
  *
- * Sammelt, was der Server braucht — die gewählte Figur mit ihren Morphs und
- * allen gehäuteten Kleidungsstücken (`figurvideo_stuecke.js`), die laufende
- * Animation, Länge und Weichgewebe —, startet den Lauf und fragt den Stand
- * ab, bis das MP4 da ist.
+ * EIN Knopf, „Video erzeugen". Wo gerechnet wird, sagt die Auswahl
+ * `figurvideo-weg`: „in dieser Szene" zeichnet die Leinwand Bild für Bild
+ * auf (`videoaufnahme.js`), „auf dem Server" schickt Figur, Kleider und
+ * Animation nach Python (`core/dienste/figurvideo.py`) und fragt den Stand
+ * ab, bis das MP4 da ist. Balken, Meldung und Ergebnis teilen sich beide
+ * (`figurvideo_anzeige.js`).
  *
- * Der Browser-Weg (Aufzeichnen der Leinwand) steht in `videoaufnahme.js`;
- * beide teilen sich die Bedienelemente und diese Klasse verdrahtet sie.
+ * Die Kleidung geht als Binärpaket mit (`figurvideo_stuecke.js`), das
+ * fertige Video wird in den gewählten Ordner kopiert (`figurvideoablage.py`).
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _selectedInst } from './utils.js';
 import { Figurvideostuecke } from './figurvideo_stuecke.js';
+import { Figurvideoanzeige as Anzeige } from './figurvideo_anzeige.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Weichgewebe } from './weichgewebe.js';
@@ -40,47 +43,70 @@ export class Figurvideo {
                 `${sekunden.value} s`;
         };
         physik.addEventListener('input', anzeigen);
-        // Der Regler wirkt LIVE auf die gewählte Figur — Weg 2. Der
-        // Server-Weg liest denselben Wert beim Start.
+        // Der Regler wirkt LIVE auf die gewählte Figur. Der Server-Weg
+        // liest denselben Wert beim Start.
         physik.addEventListener('input', () => {
             const inst = _selectedInst();
             if (inst?.isSkinned) Weichgewebe.setzen(inst, Number(physik.value));
         });
         sekunden.addEventListener('input', anzeigen);
         anzeigen();
-        document.getElementById('figurvideo-server')
-            ?.addEventListener('click', () => this.serverStarten());
-        // Weg 2: die Szene selbst, Bild für Bild (`videoaufnahme.js`).
-        // Teilt sich Balken, Meldung und Ergebnisfeld mit dem Server-Weg.
+        const weg = document.getElementById('figurvideo-weg');
+        weg?.addEventListener('change', () => Anzeige.hinweisZeigen(weg.value));
+        Anzeige.hinweisZeigen(weg?.value || 'szene');
+        this.ablageVorgabe();
         this.aufnahme = new Videoaufnahme({
-            zeigen: (text, anteil) => this.zeigen(text, anteil),
-            melden: (text, fehler) => this.melden(text, fehler),
-            fertig: (url, info) => this.browserFertig(url, info),
+            zeigen: (text, anteil) => Anzeige.zeigen(text, anteil),
+            melden: (text, fehler) => Anzeige.melden(text, fehler),
+            fertig: (antwort, info) => this.browserFertig(antwort, info),
+            ablage: () => this.ablage(),
         });
-        document.getElementById('figurvideo-browser')
-            ?.addEventListener('click', () => this.aufnahme.starten());
+        document.getElementById('figurvideo-start')
+            ?.addEventListener('click', () => this.starten());
+        document.getElementById('figurvideo-abspielen')
+            ?.addEventListener('click', () => Anzeige.abspielen());
+        document.getElementById('figurvideo-pfad')
+            ?.addEventListener('click', () => Anzeige.pfadKopieren());
     }
 
-    /** Das MP4 des Browser-Wegs — kommt als Blob-Adresse, nicht vom Server. */
-    browserFertig(url, info) {
-        const ergebnis = document.getElementById('figurvideo-ergebnis');
-        const video = document.getElementById('figurvideo-video');
-        const laden = document.getElementById('figurvideo-laden');
-        video.src = url;
-        laden.href = url;
-        laden.download = `figur_szene_${Date.now()}.mp4`;
-        ergebnis.classList.remove('hb-versteckt');
-        const bilanz = document.getElementById('figurvideo-bilanz');
-        if (bilanz) {
-            bilanz.textContent = `${info.bilder} Bilder · Weichgewebe ${info.mm} mm · aus der Szene`;
-            bilanz.title = 'Aufgezeichnet aus der Szene, Bild für Bild, mit Kamera, '
-                + 'Licht und Texturen wie hier zu sehen.';
+    /** Der Vorgabeordner steht als Platzhalter im Feld — so sieht man,
+     *  wohin ein Video geht, wenn man nichts einträgt. */
+    async ablageVorgabe() {
+        const feld = document.getElementById('figurvideo-ablage');
+        if (!feld) return;
+        try {
+            const antwort = await Serverabruf.json('/api/animation/video/ablage/');
+            if (antwort.ordner) feld.placeholder = antwort.ordner;
+        } catch (fehler) {
+            Protokoll.warnen?.(`Figurvideo: Vorgabeordner nicht lesbar (${fehler.message})`);
         }
-        this.zeigen('Fertig', 1);
-        this.aufraeumen();
+    }
+
+    /** Je nach Auswahl: die Szene selbst oder der Server. */
+    starten() {
+        const weg = document.getElementById('figurvideo-weg')?.value || 'szene';
+        if (weg === 'server') this.serverStarten();
+        else this.aufnahme.starten();
     }
 
     // ------------------------------------------------------------ Eingabe
+
+    /** Ordner, Dateiname, Figur und Animation — für die Kopie des Videos. */
+    ablage() {
+        const inst = _selectedInst();
+        return {
+            ablage: document.getElementById('figurvideo-ablage')?.value.trim() || '',
+            dateiname: document.getElementById('figurvideo-datei')?.value.trim() || '',
+            figur: inst?.presetName || inst?.id || '',
+            animation: Figurvideo.animationsname(state.currentAnimUrl),
+        };
+    }
+
+    /** `/api/character/bvh/Walk/136_28/` → `Walk_136_28`. */
+    static animationsname(url) {
+        const teile = String(url || '').split('/').filter(Boolean);
+        return teile.slice(-2).join('_');
+    }
 
     /** Was der Server braucht, aus der Szene gelesen — oder ein Grund. */
     anfrage() {
@@ -100,10 +126,11 @@ export class Figurvideo {
         // dieses Stück ankommt.
         const { stuecke, starre } = Figurvideostuecke.sammeln(inst);
         if (starre.length) {
-            this.melden(`${starre.length} Kleidungsstück(e) hängen starr `
+            Anzeige.melden(`${starre.length} Kleidungsstück(e) hängen starr `
                 + `(${starre.join(', ')}) und kommen nicht ins Video.`, false);
         }
         return {
+            ...this.ablage(),
             body_type: inst.bodyType,
             morphs: inst.morphs || {},
             stuecke,
@@ -124,10 +151,10 @@ export class Figurvideo {
         if (this.kennung) return;             // ein Lauf zur Zeit
         const daten = this.anfrage();
         if (daten.fehler) {
-            this.melden(daten.fehler, true);
+            Anzeige.melden(daten.fehler, true);
             return;
         }
-        this.zeigen('Start …', 0);
+        Anzeige.zeigen('Start …', 0);
         try {
             // Als Formular (Auftrag als JSON, je Stück ein Binärpaket), über
             // `Serverabruf.formular` — das schickt das CSRF-Token mit. Ohne
@@ -143,7 +170,7 @@ export class Figurvideo {
             this.kennung = ergebnis.kennung;
             this.uhr = setInterval(() => this.abfragen(), Figurvideo.ABFRAGE_MS);
         } catch (fehler) {
-            this.melden(`Start fehlgeschlagen: ${fehler.message}`, true);
+            Anzeige.melden(`Start fehlgeschlagen: ${fehler.message}`, true);
             this.aufraeumen();
         }
     }
@@ -161,96 +188,51 @@ export class Figurvideo {
             return;
         }
         if (stand.fehler) {
-            this.melden(`Abgebrochen: ${stand.fehler.split('\n')[0]}`, true);
+            Anzeige.melden(`Abgebrochen: ${stand.fehler.split('\n')[0]}`, true);
             this.aufraeumen();
             return;
         }
-        this.zeigen(`${stand.phase} · ${Math.round(stand.sekunden || 0)} s`,
-                    stand.anteil || 0);
+        Anzeige.zeigen(`${stand.phase} · ${Math.round(stand.sekunden || 0)} s`,
+                       stand.anteil || 0);
         if (stand.fertig) {
-            this.fertig(stand);
+            this.serverFertig(stand);
             this.aufraeumen();
         }
     }
 
-    // ------------------------------------------------------------ Anzeige
+    // ----------------------------------------------------------- Ergebnis
 
-    zeigen(text, anteil) {
-        const kasten = document.getElementById('figurvideo-stand');
-        kasten?.classList.remove('hb-versteckt');
-        const balken = document.getElementById('figurvideo-anteil');
-        if (balken) balken.style.width = `${Math.round(anteil * 100)}%`;
-        const phase = document.getElementById('figurvideo-phase');
-        if (phase) phase.textContent = text;
-        Figurvideo._sperren(true);
-    }
-
-    static _sperren(zu) {
-        for (const id of ['figurvideo-server', 'figurvideo-browser']) {
-            const k = document.getElementById(id);
-            if (k) k.disabled = zu;
-        }
-    }
-
-    melden(text, fehler = false) {
-        this.zeigen(text, 0);
-        const phase = document.getElementById('figurvideo-phase');
-        if (phase) phase.style.color = fehler ? 'var(--danger, #d44)' : '';
-        if (fehler) Figurvideo._sperren(false);
-    }
-
-    /** Das MP4 einbetten, die Messwerte als Tooltip daneben. */
-    fertig(stand) {
-        const ergebnis = document.getElementById('figurvideo-ergebnis');
-        const video = document.getElementById('figurvideo-video');
-        const laden = document.getElementById('figurvideo-laden');
+    serverFertig(stand) {
         // `?t=` an der DATENadresse, nicht an Statik: dieselbe Kennung
         // liefert nach einem zweiten Lauf ein anderes Video.
         const url = `${stand.video_url}?t=${Date.now()}`;
-        video.src = url;
-        laden.href = url;
-        laden.download = `figur_${this.kennung}.mp4`;
-        ergebnis.classList.remove('hb-versteckt');
-        const bilanz = document.getElementById('figurvideo-bilanz');
-        if (bilanz && stand.bilanz) {
-            bilanz.textContent = Figurvideo.kurz(stand.bilanz);
-            bilanz.title = Figurvideo.lang(stand.bilanz);
-        }
-        this.zeigen(`Fertig in ${Math.round(stand.sekunden || 0)} s`, 1);
+        Anzeige.ergebnis({
+            url, download: `figur_${this.kennung}.mp4`,
+            pfad: stand.pfad, ablageFehler: stand.ablage_fehler,
+            kurz: stand.bilanz ? Anzeige.kurz(stand.bilanz) : '',
+            lang: stand.bilanz ? Anzeige.lang(stand.bilanz) : '',
+        });
+        Anzeige.zeigen(`Fertig in ${Math.round(stand.sekunden || 0)} s`, 1);
     }
 
-    static kurz(b) {
-        const koerper = b.teile?.[0];
-        const stuecke = (b.teile || []).slice(1);
-        const teile = [`${b.bilder} Bilder`];
-        if (koerper?.zuschlag_mm) teile.push(`Weichgewebe ${koerper.zuschlag_mm} mm`);
-        // Die Stueckzahl IMMER, auch null: „nur Koerper" ist ein Befund,
-        // den man sehen muss.
-        teile.push(stuecke.length === 1 ? '1 Stück' : `${stuecke.length} Stücke`);
-        return teile.join(' · ');
-    }
-
-    static lang(b) {
-        const zeilen = [`Wurzelweg ${(b.wurzelweg_m || 0).toFixed(2)} m, `
-            + `Quelle ${Math.round(b.quell_fps || 0)} fps, Zeitschritt ${b.schritt}`];
-        for (const t of b.teile || []) {
-            let z = `${t.name}: ${t.punkte} Punkte, Ruheprobe ${t.ruheprobe_mm} mm`;
-            if (t.sitz_mm != null) z += `, Sitz ${t.sitz_mm} mm`;
-            if (t.gleichlauf_mm) z += `, zur Haut ${t.gleichlauf_mm.join(' / ')} mm`;
-            if (t.zuschlag_mm != null) z += `, Zuschlag ${t.zuschlag_mm} mm`;
-            if (t.stoff_im_koerper_prozent != null) {
-                z += `, im Körper ${t.stoff_im_koerper_prozent} %`;
-            }
-            zeilen.push(z);
-        }
-        return zeilen.join('\n');
+    /** Der Szenen-Weg: das MP4 liegt schon unter `media/figurvideos/`. */
+    browserFertig(antwort, info) {
+        Anzeige.ergebnis({
+            url: antwort.url, download: `figur_szene_${Date.now()}.mp4`,
+            pfad: antwort.pfad,
+            kurz: `${info.bilder} Bilder · Weichgewebe ${info.mm} mm · aus der Szene`,
+            lang: 'Aufgezeichnet aus der Szene, Bild für Bild, mit Kamera, '
+                + 'Licht und Texturen wie hier zu sehen.',
+        });
+        Anzeige.zeigen('Fertig', 1);
+        this.aufraeumen();
     }
 
     aufraeumen() {
         if (this.uhr) clearInterval(this.uhr);
         this.uhr = null;
         this.kennung = null;
-        Figurvideo._sperren(false);
+        Anzeige.sperren(false);
     }
 }
 

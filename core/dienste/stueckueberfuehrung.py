@@ -66,15 +66,58 @@ class Stueckueberfuehrung:
         werte = gemessen.als_dict(masse['shoulder_w'], cls._achsel_cm(masse),
                                   cls._huefte_cm(masse))
         try:
-            stueck, regler, bericht = Schnittdeutung(werte, masse,
-                                                     kategorie).deuten()
-        except Unuebersetzbar as grund:
+            if cls._ist_schuh(gemessen, masse, kategorie):
+                stueck, regler, bericht = cls._schuh(punkte, masse)
+            else:
+                stueck, regler, bericht = Schnittdeutung(werte, masse,
+                                                         kategorie).deuten()
+        except (Unuebersetzbar, ValueError) as grund:
             logger.info('Deutung %s abgelehnt: %s', garment_id, grund)
             return None, str(grund)
         logger.info('Deutung %s -> %s (%d Regler)',
                     garment_id, stueck, len(regler))
         return {'garment_id': garment_id, 'vorlage': stueck,
                 'regler': regler, 'bericht': bericht}, None
+
+    #: Wann ein Stück den Schuhweg nimmt (11.09.2026) — die Kategorie führt,
+    #: die Geometrie springt ein, wie bei Hose/Rock in `Schnittdeutung`:
+    #:
+    #: * Ordner `shoes`: alles, was unter diesem Anteil der Körperhöhe endet.
+    #:   Der höchste Stiefel (`heroine_boots_1`) endet bei 85 cm (0,51);
+    #:   `elvs_crude_bootyshorts` liegt fälschlich in `shoes` und endet bei
+    #:   94 cm (0,56) — die Grenze trennt beide.
+    #: * Jeder andere Ordner: nur, was unter `SCHUH_FREMD_BIS` endet. Drei
+    #:   Ballerinas (6 cm) und die Wasserstiefel (44 cm) stehen unter
+    #:   `tops`; Strümpfe reichen bis zur Hüfte und bleiben Kleidung. Ein
+    #:   einheitlicher Wert von 0,55 zog 22 Miniröcke und Shorts mit.
+    SCHUH_BIS_ANTEIL = 0.55
+    SCHUH_FREMD_BIS = 0.40
+
+    @classmethod
+    def _ist_schuh(cls, gemessen, masse, kategorie=''):
+        grenze = (cls.SCHUH_BIS_ANTEIL if (kategorie or '').lower() == 'shoes'
+                  else cls.SCHUH_FREMD_BIS)
+        return gemessen.oben_cm < grenze * float(masse['height'])
+
+    @classmethod
+    def _schuh(cls, punkte, masse):
+        u"""Der Schuhweg (`GarmentCode.schuhdeutung`, seit 11.09.2026).
+
+        Die Fussmasse kommen mit den Körpermassen (`Koerpermasse` misst sie
+        seit demselben Tag); `Fussvorgabe` fällt ohne sie auf Anteile der
+        Körperhöhe zurück und sagt das im Bericht.
+        """
+        from GarmentCode.schuh.fussvorgabe import Fussvorgabe
+        from GarmentCode.schuhdeutung import Schuhdeutung
+        fuss = Fussvorgabe(masse)
+        deutung = Schuhdeutung(punkte, fuss)
+        deutung.hinweise.extend(fuss.hinweise)
+        stueck, regler, bericht = deutung.deuten()
+        # Dieselben Schlüssel wie bei `Schnittdeutung`, damit der Messlauf
+        # (`werkzeug/vorbilder_messen.py`) beide gleich behandelt.
+        bericht['stueck'].setdefault('unten_cm', 0.0)
+        bericht['stueck'].setdefault('oben_cm', bericht['stueck']['schaft_cm'])
+        return stueck, regler, bericht
 
     @staticmethod
     def _achsel_cm(masse):

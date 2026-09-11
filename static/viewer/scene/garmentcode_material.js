@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { _sliderVal } from './utils.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 import { Garmentstoff } from './garmentcode_stoff.js';
+import { GarmentcodeGewebe } from './garmentcode_gewebe.js';
 
 /**
  * Farbe und Material der GarmentCode-Stücke.
@@ -41,10 +42,12 @@ import { Garmentstoff } from './garmentcode_stoff.js';
 export class GarmentcodeMaterial {
 
     /** Die Vorgabe ist die, mit der `GarmentcodeAnziehen` einhängt. */
-    static stand = { farbe: '#dcd8d0', rauheit: 0.85, metall: 0.0 };
+    static stand = { farbe: '#dcd8d0', rauheit: 0.85, metall: 0.0,
+                     gewebe: { ...Garmentstoff.GEWEBE } };
 
-    /** Die drei Bedienelemente verdrahten. */
+    /** Die Bedienelemente verdrahten — dazu das Gewebe (11.09.2026). */
     static einhaengen() {
+        GarmentcodeGewebe.einhaengen(GarmentcodeMaterial);
         GarmentcodeMaterial._feld('gc-color', (wert) => {
             GarmentcodeMaterial.stand.farbe = wert;
         });

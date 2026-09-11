@@ -52,7 +52,10 @@ class GarmentcodePreset {
      * Reglerbereich; `liest` liefert den aktuell geltenden Wert eines
      * Pfades, damit das Abhaken ihn zurückgeben kann.
      */
-    kasten(gruppe, setzt, liest) {
+    kasten(gruppe, setzt, liest, zuruecksetzt = null) {
+        // Nicht mit `null` ueberschreiben: Der Passform-Kasten wird nach den
+        // Gruppen gezeichnet und reicht den Ruecksetzer eigens durch.
+        if (zuruecksetzt) this.zuruecksetzt = zuruecksetzt;
         const presets = this.fuerGruppe(gruppe);
         if (!presets.length) return null;
         const kasten = document.createElement('div');
@@ -94,6 +97,11 @@ class GarmentcodePreset {
         for (const pfad of Object.keys(preset.werte)) vorher[pfad] = liest(pfad);
         this.davor[preset.schluessel] = vorher;
         this.aktiv.add(preset.schluessel);
+        // `zurueck` (11.09.2026): Pfade, die das Preset auf die Vorgabe
+        // nimmt — die Leggings das Bündchen, das eine frühere Fassung oder
+        // „Eng anliegend" hinterlassen hat. Vor `setzt`, weil das den Bau
+        // anstößt und die Werte merkt.
+        if (this.zuruecksetzt && preset.zurueck?.length) this.zuruecksetzt(preset.zurueck);
         setzt(preset.werte);
         this._andereAbhaken(preset);
     }
@@ -170,6 +178,11 @@ class GarmentcodePreset {
             gesetzt += 1;
         }
         return gesetzt;
+    }
+
+    /** Das gezeichnete Preset zu einem Schlüssel — oder `null`. */
+    preset(schluessel) {
+        return this.liste.find((p) => p.schluessel === schluessel) || null;
     }
 
     /** Zahlen kommen als Schieberwert zurück — auf zwei Stellen vergleichen. */

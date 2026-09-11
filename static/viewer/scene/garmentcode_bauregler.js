@@ -23,47 +23,32 @@
  * Hautabstand greift nach der Simulation, die Netzfeinheit davor. Ein
  * fertiges Netz nachträglich zu verschieben hiesse, die Falten mitzuziehen.
  */
+import { garmentcodePreset } from './garmentcode_preset.js';
+import { Reitergedaechtnis } from './reitergedaechtnis.js';
+import { BAUREGLER_HINWEISE } from './garmentcode_bauregler_hinweise.js';
+
 export class GarmentcodeBauregler {
 
     static HAUTABSTAND = 'gc-hautabstand';
     static AUFLOESUNG = 'gc-aufloesung';
+    static ANLIEGEN = 'gc-anliegen';
 
     /** Vorgaben — dieselben Zahlen wie in `Baufeineinstellung`. */
     static HAUTABSTAND_VORGABE = 1.0;
     static AUFLOESUNG_VORGABE = 1.0;
+    /** 0 = aus; unter 0,5 mm gilt als aus (`Baufeineinstellung.ANLIEGEN_MIN`). */
+    static ANLIEGEN_VORGABE = 0.0;
+    static ANLIEGEN_MIN = 0.5;
 
     /**
-     * Was die Regler tun — im Klartext, nicht als Parametername.
-     *
-     * Edgar, 09.09.2026: „die Hover texte verständlich, z.B. bei Netzfeinheit
-     * die Info was das ist, und Auswirkung auf Rechenzeit usw." Jeder Text
-     * sagt dasselbe in derselben Reihenfolge: WAS es ist, was HOCH bewirkt,
-     * was RUNTER bewirkt, was es KOSTET.
+     * Pseudo-Pfade der Voreinstellungen (`passform.py`, `BAU_PFADE`) →
+     * Regler. Ein Preset wie „Leggings" setzt neben Schnittwerten auch
+     * diesen Bauwert; `garmentcode_regler.js` leitet `bau.*` hierher.
      */
-    static HINWEISE = {
-        'gc-hautabstand':
-            'Wie weit der Stoff nach der Simulation mindestens vor der Haut '
-            + 'liegen soll. Höher: kein Durchscheinen der Haut, aber das '
-            + 'Stück steht sichtbar ab. Niedriger: liegt enger an, dafür '
-            + 'können Brustwarze, Nabel oder Knie durch den Stoff stoßen. '
-            + 'Kostet keine Rechenzeit — die Korrektur läuft nach der '
-            + 'Simulation. 1,0 mm ist die Vorgabe: Gemessen an drei Stücken '
-            + 'räumt sie genauso viele durchstehende Stellen weg wie die '
-            + '6,0 mm von vorher, ohne deren 2,5 mm Aufschlag. Achtung: Wie '
-            + 'eng es überhaupt werden KANN, entscheidet nicht dieser '
-            + 'Regler, sondern der Kollisionsabstand der Simulation (im '
-            + 'Bereich „Simulation" darunter, Vorgabe 0,05 cm).',
-        'gc-aufloesung':
-            'Wie fein das Stoffnetz für die Simulation vernäht wird — die '
-            + 'Zahl der Stoffpunkte, nicht die Bildauflösung. Höher: feinere '
-            + 'Falten und weniger Durchstich, weil eine Wölbung von 2,5 mm '
-            + 'nicht mehr zwischen zwei Stoffpunkten verschwindet (bei 1,0 '
-            + 'ist das Netz am Oberschenkel rund 1 cm grob). Niedriger: '
-            + 'gröber und schneller. Kostet Rechenzeit: Ein T-Shirt braucht '
-            + 'bei 1,0 gemessen rund 17 bis 23 s, und die Zeit wächst mit '
-            + 'der Zahl der Punkte. Bei hohen Werten muss „Netzbau '
-            + 'höchstens (s)" darunter mitwachsen, sonst bricht der Bau ab.',
-    };
+    static PFADE = { 'bau.anliegen_mm': 'gc-anliegen' };
+
+    /** Die Hover-Texte, je Kennung (`garmentcode_bauregler_hinweise.js`). */
+    static HINWEISE = BAUREGLER_HINWEISE;
 
     /** Beide Anzeigen nachziehen; ohne Regler im DOM passiert nichts. */
     static verdrahten() {
@@ -73,8 +58,53 @@ export class GarmentcodeBauregler {
         const b = GarmentcodeBauregler._binden(
             GarmentcodeBauregler.AUFLOESUNG,
             (wert) => `${wert.toFixed(1).replace('.', ',')}×`);
+        const c = GarmentcodeBauregler._binden(
+            GarmentcodeBauregler.ANLIEGEN, GarmentcodeBauregler._anliegenText);
+        // Von Hand bewegt: Ein Preset, das diesen Wert setzt („Leggings"),
+        // gilt dann nicht mehr — sein Häkchen geht weg wie bei jedem Regler.
+        document.getElementById(GarmentcodeBauregler.ANLIEGEN)
+            ?.addEventListener('input', () => garmentcodePreset.pruefen(
+                'bau.anliegen_mm', (p) => GarmentcodeBauregler.wert(p)));
         GarmentcodeBauregler._beschriften();
-        return a && b;
+        return a && b && c;
+    }
+
+    static _anliegenText(wert) {
+        return wert < GarmentcodeBauregler.ANLIEGEN_MIN
+            ? 'aus' : `${wert.toFixed(1).replace('.', ',')} mm`;
+    }
+
+    /** Der Wert eines Pseudo-Pfades (`bau.anliegen_mm`), für die Presets. */
+    static wert(pfad) {
+        const kennung = GarmentcodeBauregler.PFADE[pfad];
+        if (!kennung) return undefined;
+        return GarmentcodeBauregler._zahl(kennung, GarmentcodeBauregler.ANLIEGEN_VORGABE);
+    }
+
+    /**
+     * Pseudo-Pfade setzen — Schieber und Anzeige nachziehen, OHNE
+     * `input`-Ereignis: Das würde `pruefen` rufen und das Häkchen, das
+     * gerade gesetzt wird, gleich wieder wegnehmen. Gemerkt wird der Wert
+     * trotzdem, DIREKT: Das Reitergedächtnis hört nur auf Ereignisse, und
+     * ohne diesen Aufruf stand „An die Haut ziehen" nach jedem Neuladen
+     * wieder auf 0, während die Schnittwerte der Leggings zurückkamen — die
+     * Hose baute weit (Edgar, 11.09.2026: „das ist eine regression!").
+     * `merken = false` für ein Vorbild der Kleiderbibliothek — das ist eine
+     * Ableitung, keine Einstellung, und merkt auch seine Schnittwerte nicht.
+     */
+    static setzen(werte, merken = true) {
+        let gesetzt = 0;
+        for (const [pfad, wert] of Object.entries(werte || {})) {
+            const kennung = GarmentcodeBauregler.PFADE[pfad];
+            const feld = kennung && document.getElementById(kennung);
+            if (!feld) continue;
+            feld.value = String(wert);
+            const anzeige = document.getElementById(`${kennung}-val`);
+            if (anzeige) anzeige.textContent = GarmentcodeBauregler._anliegenText(Number(wert));
+            if (merken) Reitergedaechtnis.feldMerken(feld);
+            gesetzt += 1;
+        }
+        return gesetzt;
     }
 
     /**
@@ -101,9 +131,24 @@ export class GarmentcodeBauregler {
      */
     static anhaengen(daten) {
         if (!daten || typeof daten.append !== 'function') return false;
-        daten.append('hautabstand_mm', String(GarmentcodeBauregler.hautabstand()));
-        daten.append('aufloesung', String(GarmentcodeBauregler.aufloesung()));
+        for (const [name, wert] of Object.entries(GarmentcodeBauregler.werte())) {
+            daten.append(name, String(wert));
+        }
         return true;
+    }
+
+    /** Die drei Werte als Objekt — für die Kombiliste, die sie je Stück kopiert. */
+    static werte() {
+        return {
+            hautabstand_mm: GarmentcodeBauregler.hautabstand(),
+            aufloesung: GarmentcodeBauregler.aufloesung(),
+            anliegen_mm: GarmentcodeBauregler.anliegen(),
+        };
+    }
+
+    static anliegen() {
+        return GarmentcodeBauregler._zahl(GarmentcodeBauregler.ANLIEGEN,
+                                          GarmentcodeBauregler.ANLIEGEN_VORGABE);
     }
 
     static hautabstand() {
@@ -134,6 +179,10 @@ export class GarmentcodeBauregler {
         if (Number.isFinite(feinheit)
             && feinheit !== GarmentcodeBauregler.AUFLOESUNG_VORGABE) {
             teile.push(`Netzfeinheit ${feinheit.toFixed(1).replace('.', ',')}×`);
+        }
+        const anliegen = Number(feineinstellung.anliegen_mm);
+        if (feineinstellung.anliegen_mm != null && Number.isFinite(anliegen)) {
+            teile.push(`an die Haut gezogen (${anliegen.toFixed(1).replace('.', ',')} mm)`);
         }
         return teile.length ? `, ${teile.join(', ')}` : '';
     }

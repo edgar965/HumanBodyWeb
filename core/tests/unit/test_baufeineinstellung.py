@@ -94,9 +94,31 @@ class WerteAusDemNetzWerdenGeprueft(TestCase):
         self.assertEqual(fein.hautabstand_mm, 1.0)
         self.assertEqual(fein.aufloesung, 1.0)
 
-    def test_als_dict_nennt_beide_werte(self):
+    def test_als_dict_nennt_alle_werte(self):
         werte = Baufeineinstellung(hautabstand_mm=3, aufloesung=2).als_dict()
-        self.assertEqual(werte, {'hautabstand_mm': 3.0, 'aufloesung': 2.0})
+        self.assertEqual(werte, {'hautabstand_mm': 3.0, 'aufloesung': 2.0,
+                                 'anliegen_mm': None})
+
+    # --- Anliegen (Leggings, 11.09.2026) --------------------------------
+
+    def test_anliegen_ist_ohne_angabe_aus(self):
+        self.assertIsNone(Baufeineinstellung().anliegen_mm)
+        self.assertIsNone(Baufeineinstellung.aus_anfrage({}).anliegen_mm)
+        self.assertFalse(Baufeineinstellung().abweichend)
+
+    def test_anliegen_null_und_unter_dem_minimum_ist_aus(self):
+        self.assertIsNone(Baufeineinstellung(anliegen_mm='0').anliegen_mm)
+        self.assertIsNone(Baufeineinstellung(anliegen_mm=0.3).anliegen_mm)
+
+    def test_anliegen_aus_dem_formular(self):
+        fein = Baufeineinstellung.aus_anfrage({'anliegen_mm': '2'})
+        self.assertEqual(fein.anliegen_mm, 2.0)
+        self.assertTrue(fein.abweichend)
+        self.assertEqual(fein.als_dict()['anliegen_mm'], 2.0)
+
+    def test_anliegen_wird_geklemmt(self):
+        self.assertEqual(Baufeineinstellung(anliegen_mm=99).anliegen_mm, 15.0)
+        self.assertIsNone(Baufeineinstellung(anliegen_mm=-3).anliegen_mm)
 
 
 class DieKetteReichtDieWerteDurch(TestCase):
@@ -144,7 +166,13 @@ class DieKetteReichtDieWerteDurch(TestCase):
         quelle = self._ohne_kommentare(
             self._quelle('Assets', 'GarmentCode', 'drapierdienst.py'))
         self.assertIn('aufloesung=fein.aufloesung', quelle)
-        self.assertIn('abstand_mm=hautabstand_mm', quelle)
+        self.assertIn('anliegen_mm=fein.anliegen_mm', quelle)
+        # Korrektur und Anlegen laufen seit dem 11.09.2026 in
+        # `stoffnacharbeit.py` — dort muss der Hautabstand ankommen.
+        nacharbeit = self._ohne_kommentare(
+            self._quelle('Assets', 'GarmentCode', 'stoffnacharbeit.py'))
+        self.assertIn('abstand_mm=hautabstand_mm', nacharbeit)
+        self.assertIn('.anlegen(punkte, anliegen_mm)', nacharbeit)
 
     def test_das_js_haengt_beide_werte_an_die_anfrage(self):
         quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'scene',
@@ -156,6 +184,7 @@ class DieKetteReichtDieWerteDurch(TestCase):
                               '_garmentcode_panel.html')
         self.assertIn('gc-hautabstand', quelle)
         self.assertIn('gc-aufloesung', quelle)
+        self.assertIn('gc-anliegen', quelle)
 
     def test_js_und_python_kennen_dieselben_vorgaben(self):
         """Zwei Vorgaben, die auseinanderlaufen, zeigen einen Wert an und

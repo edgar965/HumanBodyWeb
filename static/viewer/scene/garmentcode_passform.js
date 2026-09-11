@@ -31,10 +31,10 @@ export class GarmentcodePassform {
      * @param setzt    (werte) => void
      * @param liest    (pfad) => wert
      */
-    static uebernehmen(antwort, setzt, liest) {
+    static uebernehmen(antwort, setzt, liest, zuruecksetzt = null) {
         garmentcodePreset.setzen([...(antwort.presets || []),
                                   ...(antwort.passform || [])]);
-        return GarmentcodePassform.zeichnen(setzt, liest);
+        return GarmentcodePassform.zeichnen(setzt, liest, zuruecksetzt);
     }
 
     /**
@@ -43,11 +43,11 @@ export class GarmentcodePassform {
      * @param setzt  (werte) => void — trägt die Werte in den Reglerbereich
      * @param liest  (pfad) => wert — der aktuell geltende Wert eines Pfades
      */
-    static zeichnen(setzt, liest) {
+    static zeichnen(setzt, liest, zuruecksetzt = null) {
         const ziel = document.getElementById('gc-passform');
         if (!ziel) return false;
         ziel.innerHTML = '';
-        const kasten = garmentcodePreset.kasten('passform', setzt, liest);
+        const kasten = garmentcodePreset.kasten('passform', setzt, liest, zuruecksetzt);
         if (kasten) {
             ziel.appendChild(kasten);
             return true;

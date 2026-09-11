@@ -66,9 +66,19 @@ class Garmentgemeinsamendpunkte:
                 status=500)
         return JsonResponse(Garmentgemeinsamendpunkte._antwort(ergebnis))
 
+    #: Was ein Stueck an Bauwerten mitbringen darf — dieselben Felder wie
+    #: beim Einzelbau (`Baufeineinstellung.aus_anfrage`), hier je Stueck.
+    BAUFELDER = ('hautabstand_mm', 'aufloesung', 'anliegen_mm')
+
     @staticmethod
     def _stuecke(request):
-        """Die Wunschliste aus dem Formular: [{vorlage, regler}, …]."""
+        """Die Wunschliste aus dem Formular: [{vorlage, regler, fein}, …].
+
+        `bau` je Stueck (11.09.2026): Die Kombiliste kopiert beim
+        Uebernehmen auch die Bauregler — ohne sie baute die Leggings im
+        gemeinsamen Lauf weit, weil `anliegen_mm` nie ankam.
+        """
+        from GarmentCode.baufeineinstellung import Baufeineinstellung
         try:
             roh = json.loads(request.POST.get('stuecke') or '[]')
         except ValueError:
@@ -81,9 +91,14 @@ class Garmentgemeinsamendpunkte:
             if not isinstance(eintrag, dict) or not eintrag.get('vorlage'):
                 continue
             regler = eintrag.get('regler')
+            bau = eintrag.get('bau')
+            bau = bau if isinstance(bau, dict) else {}
             gewaehlt.append({'vorlage': eintrag['vorlage'],
                              'regler': regler if isinstance(regler, dict)
-                             else {}})
+                             else {},
+                             'fein': Baufeineinstellung(**{
+                                 f: bau.get(f) for f in
+                                 Garmentgemeinsamendpunkte.BAUFELDER})})
         return gewaehlt
 
     @staticmethod

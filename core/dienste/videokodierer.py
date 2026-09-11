@@ -25,6 +25,8 @@ class Videokodierer:
     """Baut und fuehrt die ffmpeg-Aufrufe des Studios aus."""
 
     ZEITGRENZE = 600
+    #: Rundet Breite und Hoehe auf gerade Zahlen ab (ein Pixel Rand).
+    GERADE = 'scale=trunc(iw/2)*2:trunc(ih/2)*2'
     VORGABE_CRF = 18
     VORGABE_FPS = 30
 
@@ -44,6 +46,12 @@ class Videokodierer:
                   '-i', os.path.join(str(ordner), '%06d.png')]
         if breite > 0 and hoehe > 0:
             befehl += ['-vf', 'scale=%d:%d' % (breite, hoehe)]
+        else:
+            # x264 mit yuv420p verlangt GERADE Masse. Die Leinwand der
+            # Szene-Seite hat sie nicht immer (gemessen 11.09.2026:
+            # 3185x1849) — ohne diesen Filter bricht ffmpeg mit „width not
+            # divisible by 2" ab, und das Video fehlt.
+            befehl += ['-vf', cls.GERADE]
         befehl += cls._kodierschalter(format, crf)
         befehl.append(str(ziel))
         return befehl

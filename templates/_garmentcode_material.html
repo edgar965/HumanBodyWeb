@@ -1,0 +1,49 @@
+{% load regler %}
+{% comment %}Farbe / Material des GarmentCode-Reiters — herausgeloest aus
+`_garmentcode_panel.html` (11.09.2026), als die Gewebe-Auswahl dazukam und
+die Vorlage ueber 300 Zeilen ging. Eingebunden mit include; der
+Tag `regler` wird hier eigens geladen.{% endcomment %}
+{% comment %}Farbe und Material stehen GANZ OBEN (Edgar, 08.09.2026:
+        „mach noch einstellungen im Garment Code fuer die Farbe, metallness,
+        roughess (ganz oben im Tab), so wie das bei Garment Fit ist").
+
+        Dieselben drei Regler wie im Kleider-Reiter, mit denselben
+        Kennungen-Endungen (`-color`, `-roughness`, `-metalness`), damit der
+        vorhandene `Materialregler` sie ohne Sonderfall bedient. Die Werte
+        sind die, mit denen `GarmentcodeAnziehen` ein Stueck einhaengt:
+        #dcd8d0, Rauheit 0,85, Metallgrad 0.{% endcomment %}
+        <div class="panel-section" data-panel-key="gc_material">
+            <h3 title="Gilt für das angeklickte Stück; ohne Auswahl für alle GarmentCode-Stücke dieser Figur und die, die danach gebaut werden.">Farbe / Material <span class="chevron">&#9660;</span></h3>
+            <div class="panel-body">
+                {% comment %}Der Erklaertext ist weg (Edgar, 08.09.2026:
+                „mach die vielen Texte aus dem Garment Code weg"). Was die
+                Regler treffen, steht als `title` an der Ueberschrift —
+                nachlesbar, aber nicht im Weg.{% endcomment %}
+                <div class="slider-row"><label>Farbe</label>
+                    <input type="color" id="gc-color" value="#dcd8d0"
+                           class="hb-farbfeld">
+                </div>
+                {% regler "gc-roughness" "Roughness" max="100" wert="85" anzeige="0.85" %}
+                {% regler "gc-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
+                {% comment %}Gewebe (Edgar, 11.09.2026: „kannst du
+                auswahlmoeglichkeiten fuer Textur bei dem Bereich
+                Farbe/Material hinzufuegen"). Die Arten stehen in
+                `gemeinsam/gewebearten.js`; die Liste hier muss dieselben
+                Werte fuehren (`test_gewebeauswahl`). Vor den Schiebern, weil
+                das Reitergedaechtnis in DOM-Reihenfolge herstellt: erst die
+                Art (setzt Vorgaben), dann die gemerkten Feinwerte.{% endcomment %}
+                <div class="slider-row"><label>Gewebe</label>
+                    <select id="gc-gewebe" class="viewer-select hb-dehnt-ohne-abstand"
+                            title="Bindung des Stoffs — als Struktur gerechnet, keine Bilddatei. Ein Wechsel setzt Fäden und Struktur auf die Vorgabe der Art; danach frei verstellbar.">
+                        <option value="leinwand">Leinwand</option>
+                        <option value="koeper">Köper (Denim)</option>
+                        <option value="jersey">Jersey (Strick)</option>
+                        <option value="satin">Satin</option>
+                        <option value="glatt">Glatt (ohne Gewebe)</option>
+                    </select>
+                </div>
+                {% regler "gc-faeden" "Fäden je cm" min="2" max="12" wert="4" anzeige="4" %}
+                {% regler "gc-struktur" "Struktur" max="100" wert="45" anzeige="45 %" %}
+            </div>
+        </div>
+

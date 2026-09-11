@@ -3,8 +3,9 @@
 
     POST /api/animation/video/            startet, gibt {kennung}
     POST /api/animation/video/aufnahme/   Bildfolge aus der Szene -> MP4
+    GET  /api/animation/video/ablage/     Vorgabeordner fuer die Kopie
     GET  /api/animation/video/<kennung>/  Stand: phase, anteil, fertig,
-                                          fehler, video_url, bilanz
+                                          fehler, video_url, bilanz, pfad
 
 Der Start kommt als FORMULAR: Feld `auftrag` mit dem JSON (Morphs,
 Stueckliste, Knochennamen) und je Stueck eine Binaerdatei
@@ -20,6 +21,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.anfragerumpf import Anfragerumpf
 from ..dienste.figurvideo import Figurvideo
+from ..dienste.figurvideoablage import Figurvideoablage
 
 logger = logging.getLogger('core')
 
@@ -62,10 +64,17 @@ class Figurvideoendpunkte:
         bilder = request.FILES.getlist('frames')
         if not bilder:
             return JsonResponse({'fehler': 'Keine Bilder empfangen.'}, status=400)
+        felder = request.POST
+        ablage = {'ordner': felder.get('ablage') or '',
+                  'name': felder.get('dateiname') or '',
+                  'figur': felder.get('figur') or '',
+                  'animation': felder.get('animation') or ''}
         try:
-            kennung, url = Figurvideo.aus_bildfolge(
-                bilder, fps=request.POST.get('fps') or 24,
-                physik_mm=request.POST.get('physik_mm') or 0)
+            kennung, url, pfad = Figurvideo.aus_bildfolge(
+                bilder, fps=felder.get('fps') or 24,
+                physik_mm=felder.get('physik_mm') or 0, ablage=ablage)
+        except ValueError as fehler:
+            return JsonResponse({'fehler': str(fehler)}, status=400)
         except VideoFehler as fehler:
             return JsonResponse({'fehler': str(fehler)}, status=500)
         except Exception as fehler:                              # noqa: BLE001
@@ -74,7 +83,13 @@ class Figurvideoendpunkte:
                 {'fehler': '%s: %s' % (type(fehler).__name__, fehler)},
                 status=500)
         return JsonResponse({'kennung': kennung, 'video_url': url,
-                             'bilder': len(bilder)})
+                             'bilder': len(bilder), 'pfad': pfad})
+
+    @staticmethod
+    @require_GET
+    def ablage(request):
+        """Der Ordner, in den Videos ohne eigene Angabe kopiert werden."""
+        return JsonResponse({'ordner': Figurvideoablage.vorgabe_ordner()})
 
     @staticmethod
     @require_GET

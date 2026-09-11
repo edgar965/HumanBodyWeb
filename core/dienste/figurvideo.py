@@ -21,6 +21,7 @@ Ablage je Auftrag unter MEDIA_ROOT/figurvideos/<kennung>/:
     fortschritt.json  Phase, Anteil, Fehler
     video.mp4         das Ergebnis
     video.mp4.json    die Messwerte dazu (Ruheprobe, Gleichlauf, Zuschlag)
+    ablage.json       wohin die Kopie fuer den Nutzer ging (`figurvideoablage.py`)
 """
 import json
 import logging
@@ -32,6 +33,7 @@ from django.conf import settings
 
 from .figurvideostuecke import Figurvideostuecke
 from .laufende_prozesse import LaufendeProzesse
+from .figurvideoablage import Figurvideoablage
 
 logger = logging.getLogger('core')
 
@@ -107,6 +109,14 @@ class Figurvideo:
             'sekunden': sekunden, 'fps': 24.0, 'physik_mm': physik,
             'ziel': os.path.join(ordner, 'video.mp4'),
             'fortschritt': os.path.join(ordner, 'fortschritt.json'),
+            # Wohin die Kopie fuer den Nutzer geht — beim Start geprueft,
+            # damit ein falsches Laufwerk nicht erst nach Minuten auffaellt.
+            'ablage': {
+                'ordner': Figurvideoablage.ordner_pruefen(daten.get('ablage')),
+                'name': Figurvideoablage.dateiname(daten.get('dateiname'),
+                                              daten.get('figur'),
+                                              daten.get('animation')),
+            },
         }
 
     @staticmethod
@@ -154,19 +164,27 @@ class Figurvideo:
             if os.path.isfile(bilanz):
                 with open(bilanz, encoding='utf-8') as datei:
                     stand['bilanz'] = json.load(datei)
+            try:
+                stand['pfad'] = Figurvideoablage.fuer_auftrag(ordner)
+            except (OSError, ValueError) as fehler:
+                # Das Video IST fertig — nur die Kopie ging nicht. Das
+                # steht dann daneben, statt das Ergebnis zu verstecken.
+                stand['ablage_fehler'] = str(fehler)
             LaufendeProzesse.entfernen('figurvideo_' + kennung)
         return stand
 
     # ------------------------------------------------ Browser-Bildfolge
 
     @classmethod
-    def aus_bildfolge(cls, bilder, fps=24, physik_mm=0.0):
+    def aus_bildfolge(cls, bilder, fps=24, physik_mm=0.0, ablage=None):
         """PNG-Bilder aus der Szene -> MP4 unter derselben Ablage wie Weg 1.
 
         Der Browser-Weg rendert selbst (Kamera, Licht, Texturen der Szene)
         und schickt die Bilder; kodiert wird hier mit ffmpeg, und das
         Ergebnis liegt neben den Server-Videos — mit fester Adresse statt
-        einer Blob-URL, die mit dem Tab stirbt.
+        einer Blob-URL, die mit dem Tab stirbt. `ablage` = {ordner, name,
+        figur, animation}: dorthin geht die Kopie fuer den Nutzer.
+        Rueckgabe: (kennung, video_url, pfad der Kopie oder None).
         """
         from ..daten.hochgeladen import Hochgeladen
         from .videokodierer import Videokodierer
@@ -188,12 +206,19 @@ class Figurvideo:
                 json.dump({'quelle': 'szene', 'bilder': len(bilder),
                            'fps': int(fps), 'physik_mm': float(physik_mm)},
                           datei, indent=1)
+            pfad = None
+            if ablage:
+                pfad = Figurvideoablage.ablegen(
+                    ziel, ablage.get('ordner'),
+                    Figurvideoablage.dateiname(ablage.get('name'),
+                                          ablage.get('figur'),
+                                          ablage.get('animation')))
         finally:
             # Die Einzelbilder sind nach dem Kodieren nur noch Platz —
             # 48 Bilder à 300 KB je Lauf, und niemand raeumt sie sonst weg.
             shutil.rmtree(bilderordner, ignore_errors=True)
-        return kennung, '%sfigurvideos/%s/video.mp4' % (settings.MEDIA_URL,
-                                                        kennung)
+        return (kennung, '%sfigurvideos/%s/video.mp4'
+                % (settings.MEDIA_URL, kennung), pfad)
 
     @staticmethod
     def _sicher(kennung):

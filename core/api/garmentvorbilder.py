@@ -3,6 +3,7 @@
 
     GET /api/garmentcode/vorbilder/?vorlage=sommerkleid
       -> {vorlage, vorbilder: [{schluessel, titel, hinweis, werte}], gesamt}
+    GET /api/garmentcode/vorbildbild/<name>/   Icon eines eigenen Vorbilds
 
 WARUM EIN EIGENER ENDPUNKT (09.09.2026, Edgar: „Mach doch stattdessen neue
 buttons unter den Checkboxen … mit den Namen der Garment Fit items"): Die
@@ -48,3 +49,19 @@ class Garmentvorbilder:
                 status=500)
         return JsonResponse({'vorlage': vorlage, 'vorbilder': liste,
                              'gesamt': gesamt})
+
+    @staticmethod
+    @require_GET
+    def vorbildbild(request, name):
+        """Das Icon eines EIGENEN Vorbilds (`eigenevorbilder.py`).
+
+        Die Bibliotheksstuecke haben ihr `.thumb` beim Kleider-Endpunkt;
+        ein eigenes Vorbild (Leggings, 11.09.2026) bringt sein Bild als
+        Datei unter `Assets/GarmentCode/vorbilder/` mit.
+        """
+        from django.http import FileResponse, HttpResponseNotFound
+        from GarmentCode.vorbildpresets import Vorbildpresets
+        pfad = Vorbildpresets.bildpfad(name)
+        if not pfad:
+            return HttpResponseNotFound('Kein Bild')
+        return FileResponse(open(pfad, 'rb'), content_type='image/png')

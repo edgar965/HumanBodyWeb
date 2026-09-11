@@ -40,11 +40,10 @@ import { garmentcodePreset } from './garmentcode_preset.js';
 import { GarmentcodePassform } from './garmentcode_passform.js';
 import { garmentcodeReglerhilfe } from './garmentcode_reglerhilfe.js';
 import { Garmentcodegedaechtnis } from './garmentcode_gedaechtnis.js';
+import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
+import { GarmentcodeReglerfelder } from './garmentcode_reglerfelder.js';
 
 class GarmentcodeRegler {
-    /** Was `null` in einer Auswahl anzeigt — „nichts davon". */
-    static LEER = '—';
-
     constructor() {
         /** Für welches Kleidungsstück die Regler gerade stehen. */
         this.fuerVorlage = null;
@@ -76,7 +75,8 @@ class GarmentcodeRegler {
             this.fuerVorlage = vorlage;
             GarmentcodePassform.uebernehmen(
                 antwort, (werte) => this.mehrereSetzen(werte),
-                (pfad) => this.wertVon(pfad));
+                (pfad) => this.wertVon(pfad),
+                (pfade) => this.zuruecksetzen(pfade));
             this.zeichnen(ziel, antwort.gruppen || []);
             // Was beim letzten Mal an DIESER Vorlage eingestellt war
             // (Edgar, 09.09.2026: „merke dir die letzten Einstellungen auf
@@ -126,7 +126,8 @@ class GarmentcodeRegler {
             const presets = garmentcodePreset.kasten(
                 gruppe.gruppe,
                 (werte) => this.mehrereSetzen(werte),
-                (pfad) => this.wertVon(pfad));
+                (pfad) => this.wertVon(pfad),
+                (pfade) => this.zuruecksetzen(pfade));
             if (presets) kasten.appendChild(presets);
         }
 
@@ -161,113 +162,15 @@ class GarmentcodeRegler {
         garmentcodeReglerhilfe.anhaengen(zeile, feld.titel, feld.hilfe);
 
         if (feld.typ === 'bool') {
-            zeile.appendChild(this.kaestchen(schluessel, feld));
+            zeile.appendChild(GarmentcodeReglerfelder.kaestchen(this, schluessel, feld));
         } else if (feld.typ === 'select' || feld.typ === 'select_null') {
-            zeile.appendChild(this.liste(schluessel, feld));
+            zeile.appendChild(GarmentcodeReglerfelder.liste(this, schluessel, feld));
         } else {
-            const [schieber, anzeige] = this.schieber(schluessel, feld);
+            const [schieber, anzeige] = GarmentcodeReglerfelder.schieber(this, schluessel, feld);
             zeile.appendChild(schieber);
             zeile.appendChild(anzeige);
         }
         return zeile;
-    }
-
-    kaestchen(schluessel, feld) {
-        const feldchen = document.createElement('input');
-        feldchen.type = 'checkbox';
-        feldchen.checked = !!feld.wert;
-        this.nachziehen[schluessel] = (wert) => { feldchen.checked = !!wert; };
-        feldchen.addEventListener('change', () => {
-            this.werte[schluessel] = feldchen.checked;
-            this.vonHand(schluessel);
-        });
-        return feldchen;
-    }
-
-    /**
-     * Auswahlliste. `null` ist bei `select_null` ein gültiger Wert und
-     * bedeutet „keine Manschette", „kein Kragenaufbau" — er bekommt einen
-     * eigenen Eintrag, weil ein leerer Listeneintrag wie ein Fehler aussieht.
-     */
-    liste(schluessel, feld) {
-        const auswahl = document.createElement('select');
-        auswahl.className = 'viewer-select hb-dehnt-ohne-abstand';
-        // Die deutschen Namen kommen NACH STELLE gepaart, nicht nach Wert
-        // (`wertetitel[i]` gehört zu `bereich[i]`): `null` taugt nicht als
-        // Schlüssel eines Wörterbuchs, ist hier aber ein gültiger Wert.
-        const namen = feld.wertetitel || [];
-        feld.bereich.forEach((wert, i) => {
-            const eintrag = document.createElement('option');
-            const leer = (wert === null || wert === undefined);
-            eintrag.value = leer ? '' : wert;
-            eintrag.textContent = leer ? GarmentcodeRegler.LEER
-                                       : (namen[i] || wert);
-            // Der Originalname bleibt erreichbar — er ist es, was im
-            // Online-Werkzeug und im Upstream-Code steht.
-            if (!leer && namen[i] && namen[i] !== String(wert)) {
-                eintrag.title = String(wert);
-            }
-            eintrag.selected = (wert === feld.wert)
-                || (leer && (feld.wert === null || feld.wert === undefined));
-            auswahl.appendChild(eintrag);
-        });
-        this.nachziehen[schluessel] = (wert) => {
-            auswahl.value = (wert === null || wert === undefined) ? '' : wert;
-        };
-        auswahl.addEventListener('change', () => {
-            // Leer heißt `null`, nicht die Zeichenkette "": Der Server
-            // prüft gegen den Wertebereich, und "" steht dort nicht.
-            this.werte[schluessel] = auswahl.value === '' ? null : auswahl.value;
-            this.vonHand(schluessel);
-        });
-        return auswahl;
-    }
-
-    /**
-     * Schieber für float/int. HTML-Schieber kennen nur ganze Schritte, die
-     * Bereiche hier sind aber oft 0,1 bis 1,15 — deshalb wird intern in
-     * Hundertsteln gerechnet und beim Lesen zurückgerechnet.
-     */
-    schieber(schluessel, feld) {
-        const [unten, oben] = feld.bereich.length === 2
-            ? feld.bereich.map(Number) : [0, 1];
-        const ganz = (feld.typ === 'int');
-        const faktor = ganz ? 1 : 100;
-
-        const schieber = document.createElement('input');
-        schieber.type = 'range';
-        schieber.min = String(Math.round(unten * faktor));
-        schieber.max = String(Math.round(oben * faktor));
-        schieber.step = '1';
-        schieber.value = String(Math.round(Number(feld.wert) * faktor));
-
-        const anzeige = document.createElement('span');
-        anzeige.className = 'slider-val';
-        const zeigen = (wert) => {
-            anzeige.textContent = ganz ? String(wert) : wert.toFixed(2);
-        };
-        zeigen(Number(feld.wert));
-
-        // Nachziehen OHNE `input`-Ereignis: Ein Preset setzt die Werte
-        // selbst und stösst den Bau EINMAL an — feuerte jeder Schieber
-        // dabei sein Ereignis, liefe der Schnitt vier Mal.
-        this.nachziehen[schluessel] = (wert) => {
-            const zahl = Number(wert);
-            if (!Number.isFinite(zahl)) return;
-            schieber.value = String(Math.round(zahl * faktor));
-            zeigen(zahl);
-        };
-
-        schieber.addEventListener('input', () => {
-            const wert = Number(schieber.value) / faktor;
-            this.werte[schluessel] = ganz ? Math.round(wert) : wert;
-            zeigen(wert);
-            // Der Schnitt folgt, sobald der Regler kurz ruht (Edgar,
-            // 08.09.2026). `GarmentcodeLive` entprellt selbst — hier darf
-            // kein Zeitgeber stehen, sonst hat jede Reglerart einen eigenen.
-            this.vonHand(schluessel);
-        });
-        return [schieber, anzeige];
     }
 
     /**
@@ -287,8 +190,10 @@ class GarmentcodeRegler {
         Garmentcodegedaechtnis.merken(this);
     }
 
-    /** Der geltende Wert eines Pfades: geändert, sonst Vorgabe des Servers. */
+    /** Der geltende Wert eines Pfades: geändert, sonst Vorgabe des Servers.
+     *  `bau.*` sind keine Schnittwerte, sondern die Regler unter „Bauen". */
     wertVon(pfad) {
+        if (pfad.startsWith('bau.')) return GarmentcodeBauregler.wert(pfad);
         return (pfad in this.werte) ? this.werte[pfad] : this.vorgaben[pfad];
     }
 
@@ -300,12 +205,34 @@ class GarmentcodeRegler {
      * Läufe in der Warteschlange.
      */
     mehrereSetzen(werte) {
+        const bau = {};
         for (const [pfad, wert] of Object.entries(werte || {})) {
+            // `bau.*` geht an die Regler unter „Bauen" (Leggings: „An die
+            // Haut ziehen") — NICHT in `this.werte`, das als Regler-JSON
+            // zum Schnitt geht und diesen Pfad dort nicht kennt.
+            if (pfad.startsWith('bau.')) { bau[pfad] = wert; continue; }
             this.werte[pfad] = wert;
             if (this.nachziehen[pfad]) this.nachziehen[pfad](wert);
         }
+        GarmentcodeBauregler.setzen(bau);
         this.merken();
         GarmentcodeLive.angestossen();
+    }
+
+    /**
+     * Pfade auf die Vorgabe des Servers zurücknehmen — ohne Bau, ohne
+     * Merken: Wer merkt und baut, entscheidet der Aufrufer (ein Preset
+     * merkt, ein Vorbild nicht — `garmentcode_vorbilder.js`).
+     */
+    zuruecksetzen(pfade) {
+        let anzahl = 0;
+        for (const pfad of pfade || []) {
+            if (!(pfad in this.werte)) continue;
+            delete this.werte[pfad];
+            if (this.nachziehen[pfad]) this.nachziehen[pfad](this.vorgaben[pfad]);
+            anzahl += 1;
+        }
+        return anzahl;
     }
 
     /** Die geänderten Werte als JSON für den Server. */

@@ -111,6 +111,11 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
                      title="Zwei Stellschrauben der Drapierung. Sie wirken beim naechsten Bau mit 3D, nicht auf ein fertiges Stueck.">
                     {% regler "gc-hautabstand" "Abstand zur Haut" min="0" max="15" wert="1" schritt="0.5" anzeige="1,0 mm" %}
                     {% regler "gc-aufloesung" "Netzfeinheit" min="0.5" max="3" wert="1" schritt="0.1" anzeige="1,0&times;" %}
+                    {% comment %}Leggings (11.09.2026): zieht das fertige Stueck
+                    nach der Simulation auf diesen Abstand an die Haut —
+                    `stoffanlegen.py`. 0 = aus; die Voreinstellung „Leggings"
+                    setzt ihn ueber `bau.anliegen_mm`.{% endcomment %}
+                    {% regler "gc-anliegen" "An die Haut ziehen" min="0" max="10" wert="0" schritt="0.5" anzeige="aus" %}
                     {% comment %}Alle uebrigen Simulationswerte, aufklappbar
                     (Edgar, 09.09.2026: „mach alle an den Regler … in einem
                     aufklappbaren Bereich unter Bauen"). Der Inhalt kommt
@@ -226,31 +231,7 @@ eigenstaendig uebersetzt, und ohne diese Zeile bricht die ganze Seite mit
             </div>
         </div>
 
-{% comment %}Farbe und Material stehen GANZ OBEN (Edgar, 08.09.2026:
-        „mach noch einstellungen im Garment Code fuer die Farbe, metallness,
-        roughess (ganz oben im Tab), so wie das bei Garment Fit ist").
-
-        Dieselben drei Regler wie im Kleider-Reiter, mit denselben
-        Kennungen-Endungen (`-color`, `-roughness`, `-metalness`), damit der
-        vorhandene `Materialregler` sie ohne Sonderfall bedient. Die Werte
-        sind die, mit denen `GarmentcodeAnziehen` ein Stueck einhaengt:
-        #dcd8d0, Rauheit 0,85, Metallgrad 0.{% endcomment %}
-        <div class="panel-section" data-panel-key="gc_material">
-            <h3 title="Gilt für das angeklickte Stück; ohne Auswahl für alle GarmentCode-Stücke dieser Figur und die, die danach gebaut werden.">Farbe / Material <span class="chevron">&#9660;</span></h3>
-            <div class="panel-body">
-                {% comment %}Der Erklaertext ist weg (Edgar, 08.09.2026:
-                „mach die vielen Texte aus dem Garment Code weg"). Was die
-                Regler treffen, steht als `title` an der Ueberschrift —
-                nachlesbar, aber nicht im Weg.{% endcomment %}
-                <div class="slider-row"><label>Farbe</label>
-                    <input type="color" id="gc-color" value="#dcd8d0"
-                           class="hb-farbfeld">
-                </div>
-                {% regler "gc-roughness" "Roughness" max="100" wert="85" anzeige="0.85" %}
-                {% regler "gc-metalness" "Metalness" max="100" wert="0" anzeige="0.00" %}
-            </div>
-        </div>
-
+        {% include "_garmentcode_material.html" %}
         <div class="panel-section" data-panel-key="gc_regler">
             <h3 title="Gelten für das gewählte Stück. Was hier nicht verändert wird, bleibt bei GarmentCodes Voreinstellung.">Feineinstellungen <span class="chevron">&#9660;</span></h3>
             <div class="panel-body">

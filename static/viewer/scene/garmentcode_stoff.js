@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Gewebe } from '../gemeinsam/gewebe.js';
+import { GEWEBE_VORGABE, gewebeart } from '../gemeinsam/gewebearten.js';
 
 /**
  * Garmentstoff — wie ein GarmentCode-Stück aussieht.
@@ -44,6 +45,14 @@ import { Gewebe } from '../gemeinsam/gewebe.js';
  * es neu baut, bekommt beides. Die Karte wird nur gesetzt, wenn UVs da
  * sind: Three.js meldet eine wirkungslose Normalkarte nicht, sie wäre
  * stumm nichts.
+ *
+ * SEIT DEM 11.09.2026 IST DIE BINDUNG WÄHLBAR (Edgar: „kannst du
+ * auswahlmöglichkeiten für Textur bei dem Bereich Farbe/Material
+ * hinzufügen"): `gewebe = {art, faeden, staerke}` — die Art aus
+ * `gewebearten.js`, Fäden je cm, Stärke der Normalkarte. Die Angabe hängt am
+ * Material (`userData.gewebe`), geht mit `werte()` in die Szenendatei und
+ * kommt mit `auflegen()` zurück — derselbe Weg wie Farbe und Rauheit, damit
+ * ein gespeichertes Stück mit SEINEM Gewebe wieder erscheint.
  */
 export class Garmentstoff {
 
@@ -66,17 +75,18 @@ export class Garmentstoff {
     static GLANZ_STREUUNG = 0.8;
     static GLANZ_FARBE = 0xffffff;
 
-    /**
-     * Wie stark die Bindung sich abzeichnet.
-     *
-     * 0,45 ist bewusst zurückhaltend: Die Kachel läuft rund fünfzigmal über
-     * ein T-Shirt, und bei voller Stärke liest sich das aus der Entfernung
-     * als Rauschen statt als Gewebe.
-     */
-    static GEWEBE_STAERKE = 0.45;
+    // Wie stark die Bindung sich abzeichnet, steht seit dem 11.09.2026 je
+    // Art in `gewebearten.js` (Leinwand 0,45 — bewusst zurückhaltend: Die
+    // Kachel läuft rund fünfzigmal über ein T-Shirt, und bei voller Stärke
+    // liest sich das aus der Entfernung als Rauschen statt als Gewebe).
 
-    /** Die gerechnete Kachel — einmal je Sitzung, dann geteilt. */
-    static _kachel = null;
+    /** Die gerechneten Kacheln, je Gewebeart eine — dann geteilt. */
+    static _kacheln = {};
+
+    /** Das Gewebe eines Stücks ohne Angabe: Leinwand mit ihren Vorgaben. */
+    static GEWEBE = { art: GEWEBE_VORGABE,
+                      faeden: gewebeart(GEWEBE_VORGABE).faedenJeCm,
+                      staerke: gewebeart(GEWEBE_VORGABE).staerke };
 
     /**
      * Ein Material für ein Stück; `bisher` sind die Werte, die es schon
@@ -97,7 +107,12 @@ export class Garmentstoff {
             // ein Ärmel im Durchblick.
             side: THREE.DoubleSide,
         });
-        if (angaben?.hatUv) Garmentstoff.gewebeAuflegen(material, angaben.uvMeter);
+        // Wo die Kachel herkommt, merkt sich das Material selbst: Ein
+        // späterer Wechsel der Gewebeart (`auflegen`) braucht das Stoffmaß.
+        material.userData.hatUv = !!angaben?.hatUv;
+        material.userData.uvMeter = angaben?.uvMeter;
+        Garmentstoff.gewebeAuflegen(material, angaben?.uvMeter,
+                                    bisher?.gewebe, !!angaben?.hatUv);
         return material;
     }
 
@@ -110,24 +125,35 @@ export class Garmentstoff {
      * eine Hose bräuchte eine andere als ein T-Shirt (1,70 gegen 1,07 Meter
      * Stoff je UV-Einheit).
      */
-    static gewebeAuflegen(material, uvMeter) {
-        const karte = Garmentstoff.kachel().clone();
-        const wie_oft = Gewebe.wiederholung(uvMeter);
+    static gewebeAuflegen(material, uvMeter, gewebe = null, hatUv = true) {
+        const wahl = { ...Garmentstoff.GEWEBE, ...(gewebe || {}) };
+        const art = gewebeart(wahl.art);
+        material.userData.gewebe = wahl;
+        material.sheenRoughness = art.glanzstreuung;
+        // Ohne UV oder ohne Struktur („glatt", Stärke 0): keine Karte.
+        if (!hatUv || !art.hoehe || !(wahl.staerke > 0)) {
+            material.normalMap = null;
+            material.needsUpdate = true;
+            return 0;
+        }
+        const karte = Garmentstoff.kachel(wahl.art).clone();
+        const wie_oft = Gewebe.wiederholung(
+            uvMeter, Gewebe.kachelmeter(wahl.faeden, art.faedenJeKachel));
         karte.repeat.set(wie_oft, wie_oft);
         karte.needsUpdate = true;
         material.normalMap = karte;
-        material.normalScale = new THREE.Vector2(Garmentstoff.GEWEBE_STAERKE,
-                                                 Garmentstoff.GEWEBE_STAERKE);
+        material.normalScale = new THREE.Vector2(wahl.staerke, wahl.staerke);
         material.needsUpdate = true;
         return wie_oft;
     }
 
-    /** Die Kachel als Three.js-Textur — gerechnet, einmal. */
-    static kachel() {
-        if (Garmentstoff._kachel) return Garmentstoff._kachel;
+    /** Die Kachel einer Gewebeart als Three.js-Textur — gerechnet, einmal. */
+    static kachel(artname = GEWEBE_VORGABE) {
+        if (Garmentstoff._kacheln[artname]) return Garmentstoff._kacheln[artname];
+        const art = gewebeart(artname);
         const karte = new THREE.DataTexture(
-            Gewebe.normalfeld(), Gewebe.GROESSE, Gewebe.GROESSE,
-            THREE.RGBAFormat);
+            Gewebe.normalfeld(Gewebe.GROESSE, art.faedenJeKachel, Gewebe.STAERKE, art.hoehe),
+            Gewebe.GROESSE, Gewebe.GROESSE, THREE.RGBAFormat);
         karte.wrapS = THREE.RepeatWrapping;
         karte.wrapT = THREE.RepeatWrapping;
         // Ohne Mipmaps flimmert die Kachel bei fünfzig Wiederholungen; ohne
@@ -139,7 +165,7 @@ export class Garmentstoff {
         karte.magFilter = THREE.LinearFilter;
         karte.anisotropy = 16;
         karte.needsUpdate = true;
-        Garmentstoff._kachel = karte;
+        Garmentstoff._kacheln[artname] = karte;
         return karte;
     }
 
@@ -156,6 +182,7 @@ export class Garmentstoff {
             farbe: m.color ? m.color.getHex() : null,
             rauheit: typeof m.roughness === 'number' ? m.roughness : null,
             metall: typeof m.metalness === 'number' ? m.metalness : null,
+            gewebe: m.userData?.gewebe ? { ...m.userData.gewebe } : null,
         };
     }
 
@@ -168,6 +195,10 @@ export class Garmentstoff {
         }
         if (typeof werte.rauheit === 'number') m.roughness = werte.rauheit;
         if (typeof werte.metall === 'number') m.metalness = werte.metall;
+        if (werte.gewebe && typeof werte.gewebe === 'object') {
+            Garmentstoff.gewebeAuflegen(m, m.userData?.uvMeter, werte.gewebe,
+                                        !!m.userData?.hatUv);
+        }
         return 1;
     }
 }

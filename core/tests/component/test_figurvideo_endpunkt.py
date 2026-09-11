@@ -7,14 +7,24 @@ durchreichen: das JSON aus dem Feld `auftrag` und `request.FILES`. Der
 Lauf selbst (Unterprozess, Minuten) wird hier durch eine Attrappe ersetzt,
 die festhaelt, was bei ihr ankam — ein Endpunkt, der die Dateien vergisst,
 faellt so auf, ohne dass ein Video entsteht.
+
+Dazu der Browser-Weg (`aufnahme`): Ablageordner, Dateiname, Figur und
+Animation muessen bei `aus_bildfolge` ankommen und der Pfad der Kopie in
+der Antwort stehen.
 """
 import json
+import os
 from unittest import mock
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase
 from django.urls import reverse
 
 from core.api import figurvideo as endpunkt
+
+ORDNER = 'A:' + os.sep + 'v'
+PFAD = os.path.join(ORDNER, 'a.mp4')
+PNG = b'\x89PNG'
 
 
 class FigurvideoEndpunktTest(SimpleTestCase):
@@ -32,7 +42,6 @@ class FigurvideoEndpunktTest(SimpleTestCase):
                    'stuecke': [{'name': 'Hose', 'datei': 'stueck_0',
                                 'punkte': 3, 'dreiecke': 1}],
                    'knochen': ['DEF-spine']}
-        from django.core.files.uploadedfile import SimpleUploadedFile
         antwort, attrappe = self._starten(
             auftrag=json.dumps(auftrag),
             stueck_0=SimpleUploadedFile('stueck_0.bin', b'\x00' * 12))
@@ -73,3 +82,35 @@ class FigurvideoEndpunktTest(SimpleTestCase):
                 {'auftrag': json.dumps({'bvh_url': '/x/y/'})})
         self.assertEqual(antwort.status_code, 400)
         self.assertIn('ohne Daten', antwort.json()['fehler'])
+
+    # ------------------------------------------------------ Browser-Weg
+
+    def test_aufnahme_reicht_ablage_durch(self):
+        with mock.patch.object(endpunkt.Figurvideo, 'aus_bildfolge',
+                               return_value=('k1', '/media/x.mp4',
+                                             PFAD)) as attrappe:
+            antwort = self.client.post(
+                reverse('figurvideo_aufnahme'),
+                {'frames': SimpleUploadedFile('000000.png', PNG),
+                 'fps': '24', 'physik_mm': '25', 'ablage': ORDNER,
+                 'dateiname': 'a', 'figur': 'F', 'animation': 'Walk_1'})
+        self.assertEqual(antwort.status_code, 200, antwort.content)
+        self.assertEqual(antwort.json()['pfad'], PFAD)
+        self.assertEqual(attrappe.call_args.kwargs['ablage'],
+                         {'ordner': ORDNER, 'name': 'a', 'figur': 'F',
+                          'animation': 'Walk_1'})
+
+    def test_aufnahme_falsche_ablage_400(self):
+        with mock.patch.object(endpunkt.Figurvideo, 'aus_bildfolge',
+                               side_effect=ValueError('vollständiger Pfad')):
+            antwort = self.client.post(
+                reverse('figurvideo_aufnahme'),
+                {'frames': SimpleUploadedFile('000000.png', PNG),
+                 'ablage': 'relativ'})
+        self.assertEqual(antwort.status_code, 400)
+        self.assertIn('Pfad', antwort.json()['fehler'])
+
+    def test_ablage_vorgabe(self):
+        antwort = self.client.get(reverse('figurvideo_ablage'))
+        self.assertEqual(antwort.status_code, 200)
+        self.assertTrue(antwort.json()['ordner'].endswith('figurvideos'))

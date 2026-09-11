@@ -41,21 +41,26 @@ class DasNetzBekommtSeineUvTest(SimpleTestCase):
     databases = []
 
     def setUp(self):
+        # Die Geometrie liegt seit dem 11.09.2026 in `garmentcode_geometrie.js`
+        # (herausgeloest, als die Koerpernormalen dazukamen); das Material
+        # weiter in `garmentcode_anziehen.js`.
+        self.geometrie = _lies('scene', 'garmentcode_geometrie.js')
         self.quelle = _lies('scene', 'garmentcode_anziehen.js')
 
     def test_das_uv_attribut_wird_gesetzt(self):
-        self.assertIn("geometrie.setAttribute('uv'", self.quelle)
+        self.assertIn("geometrie.setAttribute('uv'", self.geometrie)
+        self.assertIn("GarmentcodeGeometrie.aus(daten)", self.quelle)
 
     def test_die_laenge_wird_gegen_die_punkte_geprueft(self):
         u"""Eine UV-Liste anderer Länge gehört nicht an dieses Netz."""
-        self.assertIn('uv.length === punkte.length', self.quelle)
+        self.assertIn('uv.length === punkte.length', self.geometrie)
 
     def test_die_uv_wird_nicht_in_three_achsen_gedreht(self):
         u"""Die Punkte werden von Z-oben auf Y-oben gedreht; eine UV ist eine
         Lage im flachen Schnittmuster und davon unberührt. Wer sie mitdreht,
         legt das Gewebe quer."""
-        stelle = self.quelle.index("setAttribute('uv'")
-        block = self.quelle[stelle - 400:stelle]
+        stelle = self.geometrie.index("setAttribute('uv'")
+        block = self.geometrie[stelle - 400:stelle]
         self.assertIn('flaeche[i * 2] = uv[i][0]', block)
         self.assertIn('flaeche[i * 2 + 1] = uv[i][1]', block)
 
@@ -83,7 +88,10 @@ class DasMaterialIstStoffTest(SimpleTestCase):
             self.assertIn(feld, self.quelle, feld)
 
     def test_die_karte_kommt_nur_mit_uv(self):
-        self.assertIn('if (angaben?.hatUv)', self.quelle)
+        # Seit dem 11.09.2026 entscheidet `gewebeAuflegen` selbst: ohne UV,
+        # ohne Hoehenfunktion („glatt") oder ohne Staerke keine Karte.
+        self.assertIn("if (!hatUv || !art.hoehe || !(wahl.staerke > 0))", self.quelle)
+        self.assertIn('material.normalMap = null', self.quelle)
 
     def test_je_stueck_eine_eigene_textur(self):
         self.assertIn('.clone()', self.quelle)
@@ -92,8 +100,8 @@ class DasMaterialIstStoffTest(SimpleTestCase):
     def test_die_kachel_wird_nur_einmal_gerechnet(self):
         u"""128×128 RGBA je Stück neu zu rechnen wäre Verschwendung — und
         vier Texturen statt einer im Speicher."""
-        self.assertIn('if (Garmentstoff._kachel) return Garmentstoff._kachel',
-                      self.quelle)
+        self.assertIn('if (Garmentstoff._kacheln[artname]) '
+                      'return Garmentstoff._kacheln[artname]', self.quelle)
 
     def test_die_kachel_wiederholt_sich(self):
         u"""Ohne `RepeatWrapping` läuft die Kachel EINMAL über das Stück, und

@@ -27,7 +27,7 @@ export class Kombiliste {
     static SCHLUESSEL = 'hb_gc_kombination';
 
     constructor() {
-        /** @type {{vorlage: string, titel: string, regler: object}[]} */
+        /** @type {{vorlage: string, titel: string, regler: object, bau: object}[]} */
         this.eintraege = [];
     }
 
@@ -43,7 +43,7 @@ export class Kombiliste {
      *
      * @returns {{ok: boolean, grund?: string}}
      */
-    hinzufuegen(vorlage, titel, regler) {
+    hinzufuegen(vorlage, titel, regler, bau = null) {
         if (!vorlage) return { ok: false, grund: 'Kein Kleidungsstück gewählt.' };
         if (this.eintraege.length >= Kombiliste.HOECHSTZAHL) {
             return { ok: false, grund: `Höchstens ${Kombiliste.HOECHSTZAHL} `
@@ -55,6 +55,10 @@ export class Kombiliste {
             // Flache Kopie genügt: Die Werte sind Zahlen, Zeichenketten
             // und Wahrheitswerte, keine verschachtelten Objekte.
             regler: { ...(regler || {}) },
+            // Die Bauregler (Hautabstand, Netzfeinheit, Anliegen) gehören
+            // zum Stück wie seine Schnittwerte: Die Leggings brauchen ihr
+            // Anliegen, das T-Shirt darüber nicht (11.09.2026).
+            bau: { ...(bau || {}) },
         });
         return { ok: true };
     }
@@ -72,7 +76,8 @@ export class Kombiliste {
     /** Was der Server bekommt — Titel bleiben im Browser. */
     fuerServer() {
         return this.eintraege.map((e) => ({ vorlage: e.vorlage,
-                                            regler: e.regler }));
+                                            regler: e.regler,
+                                            bau: e.bau || {} }));
     }
 
     /**
@@ -128,7 +133,9 @@ export class Kombiliste {
                 .slice(0, Kombiliste.HOECHSTZAHL)
                 .map((e) => ({ vorlage: e.vorlage, titel: e.titel || e.vorlage,
                                regler: (e.regler && typeof e.regler === 'object')
-                                   ? e.regler : {} }));
+                                   ? e.regler : {},
+                               bau: (e.bau && typeof e.bau === 'object')
+                                   ? e.bau : {} }));
             return true;
         } catch (fehler) {
             return false;

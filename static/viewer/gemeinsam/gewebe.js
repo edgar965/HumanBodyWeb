@@ -22,6 +22,9 @@
  */
 export class Gewebe {
 
+    // Weitere Bindungen (Köper, Jersey, Satin) stehen in `gewebearten.js`
+    // und geben `hoehenfeld`/`normalfeld` ihr eigenes `hoehe` mit.
+
     /** Kantenlänge der Kachel in Bildpunkten. Zweierpotenz wegen Mipmaps. */
     static GROESSE = 128;
 
@@ -66,12 +69,13 @@ export class Gewebe {
      * @param {number} faeden Fäden je Kante
      * @returns {Float32Array} groesse*groesse Werte in 0..1
      */
-    static hoehenfeld(groesse = Gewebe.GROESSE, faeden = Gewebe.FAEDEN) {
+    static hoehenfeld(groesse = Gewebe.GROESSE, faeden = Gewebe.FAEDEN,
+                      hoehe = Gewebe.hoehe) {
         const feld = new Float32Array(groesse * groesse);
         const breite = groesse / faeden;         // Bildpunkte je Faden
         for (let y = 0; y < groesse; y++) {
             for (let x = 0; x < groesse; x++) {
-                feld[y * groesse + x] = Gewebe.hoehe(x, y, breite);
+                feld[y * groesse + x] = hoehe(x, y, breite);
             }
         }
         return feld;
@@ -129,8 +133,8 @@ export class Gewebe {
      * @returns {Uint8Array} groesse*groesse*4 Bytes
      */
     static normalfeld(groesse = Gewebe.GROESSE, faeden = Gewebe.FAEDEN,
-                      staerke = Gewebe.STAERKE) {
-        const hoehen = Gewebe.hoehenfeld(groesse, faeden);
+                      staerke = Gewebe.STAERKE, hoehe = Gewebe.hoehe) {
+        const hoehen = Gewebe.hoehenfeld(groesse, faeden, hoehe);
         const bytes = new Uint8Array(groesse * groesse * 4);
         // Die Steigung wird auf die Fadenbreite bezogen, nicht auf einen
         // Bildpunkt: Sonst hinge die Wirkung an der Auflösung der Kachel,
@@ -197,6 +201,16 @@ export class Gewebe {
 
     /** Ohne Maßangabe: eine Zahl, die für die üblichen Stücke passt. */
     static WIEDERHOLUNG_OHNE_MASS = 90;
+
+    /**
+     * Kantenlänge einer Kachel in Metern aus der Feinheit (Fäden je cm) und
+     * der Fadenzahl je Kachel — 4 Fäden je cm bei 8 je Kachel sind die 2 cm
+     * von `KACHEL_M`. Die Feinheit ist seit dem 11.09.2026 einstellbar.
+     */
+    static kachelmeter(faedenJeCm, faedenJeKachel = Gewebe.FAEDEN) {
+        if (!(faedenJeCm > 0) || !(faedenJeKachel > 0)) return Gewebe.KACHEL_M;
+        return faedenJeKachel / (faedenJeCm * 100);
+    }
 
     static _wickeln(wert, groesse) {
         return ((wert % groesse) + groesse) % groesse;

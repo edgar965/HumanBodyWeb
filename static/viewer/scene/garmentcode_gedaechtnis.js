@@ -1,5 +1,6 @@
 import { Reitergedaechtnis } from './reitergedaechtnis.js';
 import { garmentcodePreset } from './garmentcode_preset.js';
+import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
 
 /**
  * Was im GarmentCode-Reiter zuletzt eingestellt war.
@@ -65,8 +66,28 @@ export class Garmentcodegedaechtnis {
             if (regler.nachziehen[pfad]) regler.nachziehen[pfad](wert);
             gesetzt += 1;
         }
-        garmentcodePreset.anhaken(Reitergedaechtnis.holen(
-            Garmentcodegedaechtnis.presetSchluessel(vorlage), []));
+        const namen = Reitergedaechtnis.holen(
+            Garmentcodegedaechtnis.presetSchluessel(vorlage), []);
+        garmentcodePreset.anhaken(namen);
+        // Ein angehaktes Preset gilt in seiner HEUTIGEN Fassung (11.09.2026):
+        // Die gemerkten Werte stammen von der Fassung beim letzten Klick —
+        // die Leggings trugen so eine Rüsche weiter, die es im Preset nicht
+        // mehr gab, und am Knöchel schien die Haut durch. Direkt gesetzt
+        // wie oben — kein Bau beim Seitenstart.
+        for (const schluessel of Array.isArray(namen) ? namen : []) {
+            const preset = garmentcodePreset.preset(schluessel);
+            if (!preset) continue;
+            regler.zuruecksetzen(preset.zurueck || []);
+            const bau = {};
+            for (const [pfad, wert] of Object.entries(preset.werte || {})) {
+                if (pfad.startsWith('bau.')) { bau[pfad] = wert; continue; }
+                if (!(pfad in regler.vorgaben)) continue;
+                regler.werte[pfad] = wert;
+                if (regler.nachziehen[pfad]) regler.nachziehen[pfad](wert);
+            }
+            GarmentcodeBauregler.setzen(bau);
+        }
+        regler.merken();
         return gesetzt;
     }
 }

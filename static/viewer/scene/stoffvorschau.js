@@ -131,7 +131,8 @@ export class Stoffvorschau {
         }
         lage.array.set(neu);
         lage.needsUpdate = true;
-        netz.geometry.computeVertexNormals();
+        // Mitgelieferte Körpernormalen bleiben (`garmentcode_anziehen.js`).
+        if (!netz.geometry.userData.festeNormalen) netz.geometry.computeVertexNormals();
         netz.geometry.computeBoundingSphere();
     }
 

@@ -97,8 +97,11 @@ class Filmlauf:
             film.rechnen()
             pfad, zahl = film.schreiben(self.auftrag['ziel'], fps=fps,
                                         schleifen=1)
-            self._melden(u'Fertig', 1.0, fertig=True)
+            # ERST die Bilanz, DANN „Fertig": Der Server liest beim naechsten
+            # Stand `video.mp4.json` — kam „Fertig" 70 ms davor (gemessen
+            # 11.09.2026), stand das Ergebnis ohne Messwerte da.
             self._bilanz(film, proben, zahl)
+            self._melden(u'Fertig', 1.0, fertig=True)
             return 0
         except Exception as fehler:                              # noqa: BLE001
             import traceback

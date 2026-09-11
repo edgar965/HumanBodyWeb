@@ -195,6 +195,8 @@ urlpatterns = [
          name='garmentcode_regler'),
     path('api/garmentcode/vorbilder/', Garmentvorbilder.vorbilder,
          name='garmentcode_vorbilder'),
+    path('api/garmentcode/vorbildbild/<str:name>/', Garmentvorbilder.vorbildbild,
+         name='garmentcode_vorbildbild'),
     path('api/garmentcode/simulationsregler/', Garmentsimulation.regler,
          name='garmentcode_simulationsregler'),
     path('api/garmentcode/masse/', Garmentcode.masse, name='garmentcode_masse'),
@@ -219,6 +221,9 @@ urlpatterns = [
          name='figurvideo_starten'),
     path('api/animation/video/aufnahme/', Figurvideoendpunkte.aufnahme,
          name='figurvideo_aufnahme'),
+    # VOR `<kennung>/` — sonst hielte der Stand „ablage" fuer eine Kennung.
+    path('api/animation/video/ablage/', Figurvideoendpunkte.ablage,
+         name='figurvideo_ablage'),
     path('api/animation/video/<str:kennung>/', Figurvideoendpunkte.stand,
          name='figurvideo_stand'),
     path('api/character-test/switch/', Testverwaltung.figur_wechseln,

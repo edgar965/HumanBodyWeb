@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Garmentstoff } from './garmentcode_stoff.js';
+import { GarmentcodeGeometrie } from './garmentcode_geometrie.js';
 
 /**
  * GarmentcodeAnziehen — das drapierte Kleidungsstück an die Figur hängen.
@@ -79,7 +80,7 @@ export class GarmentcodeAnziehen {
 
     /** Derselbe Schritt mit schon geladenen Daten — so ist er prüfbar. */
     static einhaengen(figur, daten, stueck) {
-        const geometrie = GarmentcodeAnziehen.geometrie(daten);
+        const geometrie = GarmentcodeGeometrie.aus(daten);
         // Das bisherige Aussehen überlebt das Neu-Einhängen — diese Methode
         // läuft auch aus `nachbinden` (`garmentcode_stoff.js`, 09.09.2026).
         const bisher = Garmentstoff.werte(
@@ -199,51 +200,6 @@ export class GarmentcodeAnziehen {
     }
 
     // -- Bausteine ------------------------------------------------------------
-
-    /** Punkte und Dreiecke zu einer Geometrie. */
-    static geometrie(daten) {
-        const punkte = daten?.punkte || [];
-        const dreiecke = daten?.dreiecke || [];
-        if (!punkte.length || !dreiecke.length) {
-            throw new Error('Rig-Datei ohne Netz');
-        }
-        // Z OBEN → Y OBEN. Die Rig-Datei steht in Projektkoordinaten
-        // (`Anziehen.aus_garmentcode`: „cm, Y oben" → „m, Z oben", also
-        // Blender-Konvention), die Szene rechnet wie Three.js mit Y oben.
-        // Ohne diese Drehung lag das Kleidungsstück flach am Boden neben der
-        // Figur: gemessen y −0,14…0,14 bei einem Körper von 0…1,68
-        // (06.09.2026). Dieselbe Umstellung wie `to_threejs()` bei den Posen.
-        const lage = new Float32Array(punkte.length * 3);
-        for (let i = 0; i < punkte.length; i++) {
-            lage[i * 3] = punkte[i][0];
-            lage[i * 3 + 1] = punkte[i][2];
-            lage[i * 3 + 2] = -punkte[i][1];
-        }
-        const felder = new Uint32Array(dreiecke.length * 3);
-        for (let i = 0; i < dreiecke.length; i++) {
-            felder[i * 3] = dreiecke[i][0];
-            felder[i * 3 + 1] = dreiecke[i][1];
-            felder[i * 3 + 2] = dreiecke[i][2];
-        }
-        const geometrie = new THREE.BufferGeometry();
-        geometrie.setAttribute('position', new THREE.BufferAttribute(lage, 3));
-        geometrie.setIndex(new THREE.BufferAttribute(felder, 1));
-        // UV je Punkt, wenn die Rig-Datei sie führt (seit 10.09.2026). Sie
-        // stehen NICHT in Three-Achsen: Eine UV ist eine Lage im flach
-        // ausgebreiteten Schnittmuster und von der Achswandlung oben
-        // unberührt.
-        const uv = daten?.uv;
-        if (Array.isArray(uv) && uv.length === punkte.length) {
-            const flaeche = new Float32Array(uv.length * 2);
-            for (let i = 0; i < uv.length; i++) {
-                flaeche[i * 2] = uv[i][0];
-                flaeche[i * 2 + 1] = uv[i][1];
-            }
-            geometrie.setAttribute('uv', new THREE.BufferAttribute(flaeche, 2));
-        }
-        geometrie.computeVertexNormals();
-        return geometrie;
-    }
 
     /**
      * Knochenindex der Rig-Datei → Index im Skelett der Figur.

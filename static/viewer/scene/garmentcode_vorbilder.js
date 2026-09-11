@@ -1,5 +1,7 @@
 import { Serverabruf } from '/static/djangobase/js/serverabruf.js';
+import { GarmentcodeBauregler } from './garmentcode_bauregler.js';
 import { garmentcodeRegler } from './garmentcode_regler.js';
+import { garmentcodePreset } from './garmentcode_preset.js';
 
 /**
  * Vorbilder — die Bibliotheksstücke als Knöpfe unter den Voreinstellungen.
@@ -127,7 +129,9 @@ export class GarmentcodeVorbilder {
         knopf.className = 'btn-toggle vorbild-knopf';
         knopf.title = vorbild.hinweis || '';
         knopf.dataset.schluessel = vorbild.schluessel;
-        if (vorbild.bild) knopf.appendChild(GarmentcodeVorbilder._bild(vorbild));
+        if (vorbild.bild || vorbild.bildadresse) {
+            knopf.appendChild(GarmentcodeVorbilder._bild(vorbild));
+        }
         knopf.appendChild(document.createTextNode(vorbild.titel));
         knopf.addEventListener('click',
                                () => GarmentcodeVorbilder._anwenden(knopf, vorbild));
@@ -149,7 +153,10 @@ export class GarmentcodeVorbilder {
      */
     static _bild(vorbild) {
         const bild = document.createElement('img');
-        bild.src = `/api/character/garment/thumb/${vorbild.bild}/`;
+        // Ein EIGENES Vorbild (Leggings, 11.09.2026) bringt seine Adresse
+        // mit; ein gemessenes nennt die Kennung des Bibliotheksstücks.
+        bild.src = vorbild.bildadresse
+            || `/api/character/garment/thumb/${vorbild.bild}/`;
         bild.alt = '';
         bild.loading = 'lazy';
         bild.className = 'kleidungsbild';
@@ -212,10 +219,29 @@ export class GarmentcodeVorbilder {
         return `#${teil(farbe[0])}${teil(farbe[1])}${teil(farbe[2])}`;
     }
 
-    /** Werte in die Regler schreiben — ohne sie zu merken (siehe Kopf). */
+    /**
+     * Werte in die Regler schreiben — ohne sie zu merken (siehe Kopf).
+     *
+     * VORHER ALLES AUF DIE VORGABE (11.09.2026): Ein Vorbild ist eine ganze
+     * Silhouette; was von einem anderen Stand übrig bleibt, widerspricht
+     * ihr. Gemessen an den Leggings: Die Rüsche eines früheren Presets
+     * blieb in den Reglern, der Bau bekam sie mit, am Knöchel schien die
+     * Haut durch. Häkchen, deren Werte damit weg sind, nimmt `pruefen`.
+     */
     static _reglerStellen(werte) {
         let gesetzt = 0;
+        const alt = Object.keys(garmentcodeRegler.werte);
+        garmentcodeRegler.zuruecksetzen(alt);
+        for (const pfad of alt) {
+            garmentcodePreset.pruefen(pfad, (p) => garmentcodeRegler.wertVon(p));
+        }
         for (const [pfad, wert] of Object.entries(werte)) {
+            // `bau.*` gehört zu den Reglern unter „Bauen" (Leggings: „An
+            // die Haut ziehen"), nicht zum Schnitt.
+            if (pfad.startsWith('bau.')) {
+                gesetzt += GarmentcodeBauregler.setzen({ [pfad]: wert }, false);
+                continue;
+            }
             // Nur Pfade, die es in DIESER Vorlage gibt. Ein Pfad ohne Regler
             // ginge stumm an den Server und würde dort verworfen.
             if (!(pfad in garmentcodeRegler.vorgaben)) continue;
