@@ -65,8 +65,8 @@ export class Speichernmenue {
         inst.presetName = name;
         inst.presetKey = name;
         fn.updateCharacterListUI?.();
-        // Die Liste im Dialog „Charakter hinzufügen" ist jetzt veraltet.
-        fn.refreshModelList?.();
+        // Der Dialog „Charakter hinzufügen" holt seine Listen bei jedem Öffnen
+        // neu (`Charakterdialog.oeffnen`) — ein `fn.refreshModelList` gab es nie.
         return true;
     }
 

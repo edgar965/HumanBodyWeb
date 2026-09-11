@@ -3,6 +3,7 @@ import { markDirty } from './undo.js';
 import { state } from './state.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
+import { Stueckereignis } from './garmentcode_stueckereignis.js';
 import { Reiterzuordnung } from '../gemeinsam/reiterzuordnung.js';
 /**
  * Teilnetze eines Charakters auswaehlen und entfernen.
@@ -153,6 +154,10 @@ export function _removeSubMesh(target) {
                     // Zeile kaeme ein geloeschtes Stueck beim naechsten
                     // Laden der Szene zurueck.
                     GarmentcodeAblage.vergessen(inst, target.key);
+                    // Wer auf das Ereignis hoert (Absatz, Hautverdeckung),
+                    // erfaehrt es sonst nur beim Einhaengen — hier geht das
+                    // Stueck an `GarmentcodeAnziehen.entfernen` vorbei.
+                    Stueckereignis.melden(inst, target.key.slice(3), false);
                 } else if (target.key.startsWith('gar_')) {
                     const garId = target.key.slice(4);
                     inst.garments = (inst.garments || []).filter(g => g.id !== garId);

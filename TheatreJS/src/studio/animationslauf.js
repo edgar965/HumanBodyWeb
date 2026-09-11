@@ -4,6 +4,7 @@ import { fetchBVH } from '../scene-manager.js';
 import { fetchRetargetedClip }
     from '../../../static/viewer/retarget_hybrid.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Animationsspur } from './animationsspur.js';
 
 /**
  * Animationslauf — eine BVH-Animation auf die gewählte Figur legen.
@@ -18,6 +19,11 @@ import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
  *  1. Ist eine Figur gewaehlt, wird sie zum SkinnedMesh gemacht und der Clip
  *     serverseitig auf ihr Skelett umgezielt.
  *  2. Sonst der Rueckfallweg: die BVH-Datei als reines Knochengerippe laden.
+ *
+ * DIE ZEIT FÜHRT THEATRE (11.09.2026): Nach dem Laden bekommt der Clip eine
+ * Spur „Animation" in der Zeitleiste (`studio/animationsspur.js`); deren
+ * Wert `zeit` stellt den Mixer. Die Bildschleife dreht den Mixer nur noch
+ * selbst, solange `spur.aktiv` false ist.
  */
 export class Animationslauf {
 
@@ -38,6 +44,7 @@ export class Animationslauf {
         this.mixer = null;
         this.aktion = null;
         this.name = '';
+        this.spur = new Animationsspur(buehne.sheet);
     }
 
     /**
@@ -54,6 +61,7 @@ export class Animationslauf {
             this.mixer.stopAllAction();
             this.mixer = null;
         }
+        if (entfernen) this.spur.loesen();
         // Netz in die Bindehaltung zuruecksetzen, sonst bleibt die letzte
         // Pose der alten Animation stehen.
         const figur = this.auswahl.figur;
@@ -80,6 +88,7 @@ export class Animationslauf {
             this.abspieler.dauerSetzen(dauer);
             this.abspieler.zeit = 0;
             this._sequenzlaengeSetzen(dauer);
+            this.spur.anlegen(this.name, dauer, zeit => this.abspieler.zeitSetzen(zeit));
             this._weiterlaufen(liefVorher);
             Protokoll.debug('animationslauf', 'Animation geladen:', kategorie, name, dauer);
             return dauer;

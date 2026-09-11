@@ -67,13 +67,46 @@ class StoffhochziehenTest(SimpleTestCase):
         schritt = neu[-1]
         self.assertAlmostEqual(schritt[2], 0.80, delta=0.005, msg=schritt)
         self.assertAlmostEqual(bilanz['hochgezogen_mm'], 150.0, delta=5)
-        # Der Bund bleibt, wo die Simulation ihn liess (`AUSLAUF_M` darueber).
+        # Die Oberkante bleibt, wo die Simulation sie liess.
         self.assertAlmostEqual(neu[:, 2].max(), 1.10, delta=1e-6)
         # Die Hoehe bleibt monoton: kein Punkt ueberholt einen anderen.
         reihe = np.argsort(hose[:, 2])
         self.assertTrue((np.diff(neu[reihe, 2]) >= -1e-9).all())
         # x und y unveraendert — nur die Hoehe wird umgerechnet.
         np.testing.assert_allclose(neu[:, :2], hose[:, :2])
+
+    def test_der_bund_bleibt_wo_die_simulation_ihn_liess(self):
+        u"""Bund 25 cm ueber dem Hosenschritt (rise 0,5): mit Maske bleibt der
+        GANZE Bund, der Zug laeuft an seiner Unterkante aus; ohne Maske
+        bleibt die Oberkante. Mit dem festen Auslauf von 45 cm wanderte der
+        Bund um 44 % des Zugs mit (11.09.2026)."""
+        teile = [_zylinder(x0, 0.10, -0.04, 0.65) for x0 in (-0.12, 0.12)]
+        teile.append(_zylinder(0.0, 0.26, 0.65, 0.85))                   # Rumpfstoff
+        bund = _zylinder(0.0, 0.26, 0.90, 0.95, reihen=6)                # der Bund
+        teile.append(bund)
+        teile.append(np.array([[0.0, 0.0, 0.65]]))
+        hose = np.vstack(teile)
+        fest = np.zeros(len(hose), dtype=bool)
+        fest[len(hose) - len(bund) - 1:len(hose) - 1] = True
+        neu, bilanz = self.hoch.anwenden(hose, fest)
+        self.assertEqual(bilanz['bund_fest'], len(bund))
+        np.testing.assert_allclose(neu[fest], hose[fest])               # Bund unveraendert
+        self.assertAlmostEqual(neu[-1, 2], 0.80, delta=0.005)           # Schritt am Schritt
+        # knapp unter dem Bund: fast kein Versatz mehr; in der Mitte etwa die Haelfte
+        # Der Zug laeuft an der BUNDUNTERKANTE (0,90) aus, nicht an der
+        # Oberkante (0,95): 25 cm Strecke, nicht 30. In der Mitte (12,5 cm
+        # ueber dem Schritt) bleibt die Haelfte, 5 cm unter dem Bund ein
+        # Fuenftel — mit 30 cm waeren es 58 % und 33 %.
+        for hoehe, anteil in ((0.775, 0.5), (0.85, 0.2)):
+            dort = np.isclose(hose[:, 2], hoehe, atol=0.006) & ~fest
+            self.assertTrue(dort.any(), hoehe)
+            self.assertAlmostEqual(float(np.median(neu[dort, 2] - hose[dort, 2])),
+                                   0.15 * anteil, delta=0.004, msg=hoehe)
+        # ohne Maske: die Oberkante bleibt, die Bundunterkante geht mit
+        ohne, _ = self.hoch.anwenden(hose)
+        self.assertAlmostEqual(ohne[:, 2].max(), 0.95, delta=1e-6)
+        unterkante = np.isclose(hose[:, 2], 0.90)
+        self.assertGreater(float(ohne[unterkante, 2].min()), 0.91)
 
     def test_saum_kommt_auf_den_knoechel(self):
         neu, bilanz = self.hoch.anwenden(_hose())

@@ -106,7 +106,7 @@ export class GarmentcodeVorbilder {
 
     static _ueberschrift(anzahl) {
         const kopf = document.createElement('summary');
-        kopf.className = 'hb-font-size-0-72rem';
+        kopf.className = 'aufklappkopf';    // wie die Panelköpfe, `viewer_huelle.css`
         kopf.textContent = `Kleiderbibliothek (${anzahl})`;
         kopf.title = 'Bibliotheksstücke als Vorlage. Ein Klick stellt die '
             + 'Regler auf die gemessenen Maße dieses Stücks und übernimmt '

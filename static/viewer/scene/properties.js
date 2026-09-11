@@ -280,8 +280,12 @@ export function _updatePropContext() {
     const isAsset = isGarment || isMH || isHair;
     for (const id of bodySections) { const el = document.getElementById(id); if (el) el.style.display = isAsset
         ? 'none' : ''; }
-    const gEl = document.getElementById('prop-garment-section'); if (gEl) gEl.style.display = isGarment ? '' : 'none';
-    const mhEl = document.getElementById('prop-mh-section'); if (mhEl) mhEl.style.display = isMH ? '' : 'none';
+    // Klasse UND Stil wie beim Haar darunter — sonst bleibt `hb-versteckt`
+    // aus der Vorlage stehen (seit 17.08., 11.09.2026).
+    const gEl = document.getElementById('prop-garment-section');
+    if (gEl) { gEl.classList.toggle('hb-versteckt', !isGarment); gEl.style.display = isGarment ? '' : 'none'; }
+    const mhEl = document.getElementById('prop-mh-section');
+    if (mhEl) { mhEl.classList.toggle('hb-versteckt', !isMH); mhEl.style.display = isMH ? '' : 'none'; }
     const hEl = document.getElementById('prop-hair-section');
     // Klasse UND Stil — die Vorlage versteckt den Abschnitt per `hb-versteckt`.
     if (hEl) { hEl.classList.toggle('hb-versteckt', !isHair); hEl.style.display = isHair ? '' : 'none'; }

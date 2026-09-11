@@ -22,30 +22,43 @@ export function pushUndo(label) {
     }
 }
 
+/**
+ * BEFUND 11.09.2026 (Edgar: „implementier Undo — ich habe gerade eine Audio
+ * spur gelöscht"): Seit dem 28.08.2026 (9647ac2) stand in der Erfolgsmeldung
+ * `snap.label` statt `stand.label` — ReferenceError NACH der Wiederherstellung.
+ * Der erste Undo klappte noch, aber `_undoInProgress` blieb true, und jeder
+ * weitere Undo und jeder Redo meldete leise „laeuft schon". Deshalb `finally`.
+ */
 export async function undo() {
     if (state._undoInProgress) { Protokoll.debug('Undo', 'laeuft schon'); return; }
     if (undoStack.length === 0) { Protokoll.debug('Undo', 'nichts zurueckzunehmen'); return; }
     state._undoInProgress = true;
     Protokoll.debug('Undo', `beginnt — ${undoStack.length} Schritte, oben: ${undoStack[undoStack.length - 1].label}`);
-    // Save current state to redo
     try {
-        redoStack.push(Studiostand.jetzt('redo', state, fn));
-    } catch (e) { Protokoll.warnung('Undo', 'Redo snapshot failed:', e); }
-    const stand = undoStack.pop();
-    await stand.herstellen(state, fn);
-    fn.flashStudioInfo?.(`Undo: ${stand.label}`);
-    Protokoll.info('Undo', `zurueckgenommen: ${snap.label} (${undoStack.length} verbleiben)`);
-    state._undoInProgress = false;
+        // Save current state to redo
+        try {
+            redoStack.push(Studiostand.jetzt('redo', state, fn));
+        } catch (e) { Protokoll.warnung('Undo', 'Redo snapshot failed:', e); }
+        const stand = undoStack.pop();
+        await stand.herstellen(state, fn);
+        fn.flashStudioInfo?.(`Undo: ${stand.label}`);
+        Protokoll.info('Undo', `zurueckgenommen: ${stand.label} (${undoStack.length} verbleiben)`);
+    } finally {
+        state._undoInProgress = false;
+    }
 }
 
 export async function redo() {
     if (state._undoInProgress) return;
     if (redoStack.length === 0) { Protokoll.debug('Redo', 'nichts wiederherzustellen'); return; }
     state._undoInProgress = true;
-    undoStack.push(Studiostand.jetzt('undo', state, fn));
-    const stand = redoStack.pop();
-    await stand.herstellen(state, fn);
-    fn.flashStudioInfo?.(`Redo`);
-    Protokoll.info('Redo', `wiederhergestellt (${redoStack.length} verbleiben)`);
-    state._undoInProgress = false;
+    try {
+        undoStack.push(Studiostand.jetzt('undo', state, fn));
+        const stand = redoStack.pop();
+        await stand.herstellen(state, fn);
+        fn.flashStudioInfo?.(`Redo`);
+        Protokoll.info('Redo', `wiederhergestellt (${redoStack.length} verbleiben)`);
+    } finally {
+        state._undoInProgress = false;
+    }
 }

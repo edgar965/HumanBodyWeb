@@ -106,6 +106,23 @@ export class GarmentcodeMaterial {
     }
 
     /**
+     * Das Aussehen, das ein getragenes Stück GERADE hat — oder `null`.
+     *
+     * Das ist die Farbe, die der Nutzer sieht und die er dem Stück gegeben
+     * hat (Klick auf das Stück, dann der Farbwähler). `stand` dagegen ist
+     * nur der letzte Wert im Panel — und der gilt für alle Stücke gleich.
+     * Wer ein Stück neu baut, das schon hängt, nimmt dessen Aussehen mit
+     * (Edgar, 11.09.2026: „verschiedene Farben vorgegeben, es wurde nur
+     * 1 Farbe genommen").
+     */
+    static getragen(figur, stueck) {
+        const inst = figur?.inst || figur;
+        const netz = inst?.clothMeshes?.[
+            GarmentcodeAnziehen.schluessel(stueck)];
+        return netz ? Garmentstoff.werte(netz) : null;
+    }
+
+    /**
      * Das angeklickte GarmentCode-Stück dieser Figur — oder `null`.
      *
      * Gelesen wie im Kleider-Reiter (`_selectedGarmentMesh`): über

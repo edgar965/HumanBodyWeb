@@ -29,7 +29,7 @@ export function _veUpdateSelectionInfo() {
     const n = Vertexzustand.veSelectedIndices.size;
     if (n === 0) { info.textContent = 'No vertices selected'; if (posFields) posFields.style.display = 'none'; }
     else { info.textContent = `${n} ${n === 1 ? 'vertex' : 'vertices'} selected`;
-        if (posFields) { posFields.style.display = ''; _veUpdatePosInputs(); } }
+        if (posFields) { posFields.style.display = 'block'; _veUpdatePosInputs(); } }   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
 }
 
 export function veHandleClick(e) {
@@ -67,7 +67,9 @@ export function veBoxSelectStart(e) {
     const rect = canvas.getBoundingClientRect();
     Vertexzustand.veBoxSelecting = true;
     Vertexzustand.veBoxStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-        Vertexzustand.veBoxEnd = { ...veBoxStart };
+    // `veBoxStart` ohne `Vertexzustand.` warf seit f434a5e (16.08.2026) einen
+    // ReferenceError — Kastenauswahl im Vertex-Editor startete nie (11.09.2026).
+    Vertexzustand.veBoxEnd = { ...Vertexzustand.veBoxStart };
     const boxEl = document.getElementById('ve-box-select');
     if (boxEl) {
         boxEl.style.display = 'block';

@@ -102,8 +102,11 @@ async function startExport() {
  * Meldung das Einzige, was dem Nutzer sagt, warum.
  */
 function _laufAnzeigen(felder, laeuft) {
-    if (felder.rahmen) felder.rahmen.style.display = laeuft ? '' : 'none';
-    if (felder.abbruch) felder.abbruch.style.display = laeuft ? '' : 'none';
+    // 'block'/'inline-block', nicht '': #export-progress und #export-cancel
+    // stehen per ID-Regel auf display:none — mit '' erschien seit dem
+    // 17.08.2026 weder Balken noch Abbrechen (11.09.2026).
+    if (felder.rahmen) felder.rahmen.style.display = laeuft ? 'block' : 'none';
+    if (felder.abbruch) felder.abbruch.style.display = laeuft ? 'inline-block' : 'none';
     if (!felder.start) return;
     felder.start.disabled = laeuft;
     felder.start.classList.toggle('knopf-gesperrt', laeuft);

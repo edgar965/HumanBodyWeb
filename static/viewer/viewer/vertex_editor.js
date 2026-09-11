@@ -80,7 +80,7 @@ export function veEnterEditMode() {
     Vertexzustand.veGizmo.addEventListener('objectChange', () => { _veApplyGizmoDelta(); });
 
     const editCtrl = document.getElementById('pe-edit-controls');
-    if (editCtrl) editCtrl.style.display = '';
+    if (editCtrl) editCtrl.style.display = 'block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
     const patternCtrl = document.getElementById('pe-pattern-controls');
     if (patternCtrl) patternCtrl.style.display = 'none';
     const regionCtrl = document.getElementById('pe-region-controls');

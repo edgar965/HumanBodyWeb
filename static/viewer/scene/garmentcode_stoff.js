@@ -53,6 +53,21 @@ import { GEWEBE_VORGABE, gewebeart } from '../gemeinsam/gewebearten.js';
  * Material (`userData.gewebe`), geht mit `werte()` in die Szenendatei und
  * kommt mit `auflegen()` zurück — derselbe Weg wie Farbe und Rauheit, damit
  * ein gespeichertes Stück mit SEINEM Gewebe wieder erscheint.
+ *
+ * DER GLANZSAUM TRÄGT DIE STOFFFARBE (11.09.2026, abends). Edgar, mit
+ * Bild einer schwarzen Satin-Leggings in Bewegung: „bei einer animation
+ * kommt der Körper durch die Kleidung hindurch" — helle Flecken an Schritt,
+ * Gesäß und Oberschenkeln. Es war keine Haut: Mit AUSGEBLENDETEM Körper
+ * blieben die Flecken stehen, mit `sheen = 0` waren sie weg. Der Saum war
+ * weiß, der Stoff #212121 — linear 0,015, als Lambert 0,005 je Einheit
+ * Bestrahlung; der Charlie-Saum liefert bei Streuung 0,3 (Satin) und
+ * 0,6 Weiß rund 0,08 — sechzehnmal so hell wie der Stoff darunter, in
+ * Blobs dort, wo die Normale schräg zum Halbvektor steht, und die wandern
+ * mit der Pose. Auf hellem Stoff fällt derselbe Saum nicht auf; auf
+ * schwarzem sieht er aus wie Haut. Seither ist der Saum gefärbt wie der
+ * Stoff: Gefärbte Fasern streuen gefärbtes Licht; auf Weiß bleibt er weiß,
+ * auf Schwarz verschwindet er. `faerben()` setzt beides zusammen — wer nur
+ * `color` setzt, bekäme den weißen Saum zurück.
  */
 export class Garmentstoff {
 
@@ -64,16 +79,15 @@ export class Garmentstoff {
     static METALL = 0.0;
 
     /**
-     * Glanzsaum: Anteil, Streuung und Farbe.
+     * Glanzsaum: Anteil und Streuung. Die Farbe ist die des Stoffs
+     * (`faerben`, Modulkopf) — ein weißer Saum stand als Hautfleck auf
+     * schwarzer Leggings.
      *
      * Die Streuung ist hoch (0,8), weil ein Gewebe den Saum breit und weich
      * zeichnet — ein niedriger Wert ergibt den harten Schimmer von Satin.
-     * Die Farbe bleibt weiß: Die Fasern streuen unabhängig davon, wie der
-     * Stoff gefärbt ist.
      */
     static GLANZ = 0.6;
     static GLANZ_STREUUNG = 0.8;
-    static GLANZ_FARBE = 0xffffff;
 
     // Wie stark die Bindung sich abzeichnet, steht seit dem 11.09.2026 je
     // Art in `gewebearten.js` (Leinwand 0,45 — bewusst zurückhaltend: Die
@@ -97,16 +111,16 @@ export class Garmentstoff {
      */
     static neu(bisher = null, angaben = null) {
         const material = new THREE.MeshPhysicalMaterial({
-            color: bisher?.farbe ?? Garmentstoff.FARBE,
             roughness: bisher?.rauheit ?? Garmentstoff.RAUHEIT,
             metalness: bisher?.metall ?? Garmentstoff.METALL,
             sheen: Garmentstoff.GLANZ,
             sheenRoughness: Garmentstoff.GLANZ_STREUUNG,
-            sheenColor: new THREE.Color(Garmentstoff.GLANZ_FARBE),
+            sheenColor: new THREE.Color(Garmentstoff.FARBE),
             // Stoff wird von beiden Seiten gesehen — ein Rock von innen,
             // ein Ärmel im Durchblick.
             side: THREE.DoubleSide,
         });
+        Garmentstoff.faerben(material, bisher?.farbe ?? Garmentstoff.FARBE);
         // Wo die Kachel herkommt, merkt sich das Material selbst: Ein
         // späterer Wechsel der Gewebeart (`auflegen`) braucht das Stoffmaß.
         material.userData.hatUv = !!angaben?.hatUv;
@@ -114,6 +128,14 @@ export class Garmentstoff {
         Garmentstoff.gewebeAuflegen(material, angaben?.uvMeter,
                                     bisher?.gewebe, !!angaben?.hatUv);
         return material;
+    }
+
+    /** Stofffarbe UND Glanzfarbe setzen — die beiden gehören zusammen. */
+    static faerben(material, farbe) {
+        if (!material?.color) return false;
+        material.color.set(farbe);
+        if (material.sheenColor) material.sheenColor.copy(material.color);
+        return true;
     }
 
     /**
@@ -191,7 +213,7 @@ export class Garmentstoff {
         const m = netz?.material;
         if (!m || !werte) return 0;
         if (werte.farbe !== null && werte.farbe !== undefined) {
-            m.color?.set(werte.farbe);
+            Garmentstoff.faerben(m, werte.farbe);
         }
         if (typeof werte.rauheit === 'number') m.roughness = werte.rauheit;
         if (typeof werte.metall === 'number') m.metalness = werte.metall;

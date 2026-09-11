@@ -90,7 +90,11 @@ export class Stueckbedienung {
             if (state._syncingSliders) return;
             const auswahl = this.gewaehlt();
             if (!auswahl) return;
-            auswahl.mesh.material.color.set(farbfeld.value);
+            const material = auswahl.mesh.material;
+            material.color.set(farbfeld.value);
+            // Ein GarmentCode-Stueck traegt den Glanzsaum in Stofffarbe
+            // (`Garmentstoff.faerben`); die Farbe allein liesse ihn stehen.
+            material.sheenColor?.copy(material.color);
             merken();
         });
     }

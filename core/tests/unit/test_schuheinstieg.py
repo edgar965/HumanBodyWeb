@@ -135,6 +135,25 @@ class SchuheinstiegTest(SimpleTestCase):
             self.assertAlmostEqual(messung['instep_arc_%d' % round(anteil * 100)],
                                    soll, delta=0.08 * soll, msg=str(anteil))
 
+    def test_der_oberschenkel_im_band_der_vamplinie_hebt_den_rist_nicht_an(self):
+        u"""Das Bein reicht bis zur Hüfte, und an der Figur „FemaleWithHair"
+        lagen drei Oberschenkelpunkte (69–75 cm hoch) im Band der Vamplinie:
+        `vamp_height` wurde 74,9 cm, der Ristbogen unmessbar, der Ballerina
+        stand 5,2 cm vom Fuss ab (Edgar, 11.09.2026: „rechts und links ist
+        ein abstand von > 5 cm"). Was über dem Knöchel liegt, ist kein Rist."""
+        from GarmentCode.fusseinstieg import Fusseinstieg
+        r, laenge = 0.03, 0.24
+        winkel = np.linspace(0, 2 * np.pi, 120, endpoint=False)
+        ys = np.linspace(-laenge, 0.0, 121)
+        fuss = [[r * np.sin(w), y, r + r * np.cos(w)] for y in ys for w in winkel]
+        y_vamp = -Fusseinstieg.VAMP_BEI * laenge
+        schenkel = [[0.145, y_vamp + dy, z] for dy in (-0.004, 0.0, 0.004)
+                    for z in (0.69, 0.717, 0.749)]
+        messung = Fusseinstieg(np.asarray(fuss + schenkel), 0.0, -laenge, 0.0,
+                               2 * r * 100.0).masse()
+        self.assertAlmostEqual(messung['vamp_height'], 2 * r * 100.0, delta=0.2)
+        self.assertIn('instep_arc_50', messung)
+
     def test_zu_wenige_punkte_ergeben_keine_messung(self):
         from GarmentCode.fusseinstieg import Fusseinstieg
         punkte = np.zeros((5, 3))

@@ -7,7 +7,9 @@ import * as THREE from 'three';
  * zwei davon sind nicht offensichtlich:
  *
  * 1. **Die Animation weiterdrehen** — mit dem Tempo des Abspielers, und am
- *    Ende zurück auf 0 (die Bühne läuft in Schleife).
+ *    Ende zurück auf 0 (die Bühne läuft in Schleife). Seit dem 11.09.2026
+ *    nur noch als Rückfall: Normalerweise führt die Theatre-Spur „Animation"
+ *    die Zeit (`studio/animationsspur.js`).
  * 2. **Das Licht seinem Symbol nachziehen.** Gezogen wird das SYMBOL (nur das
  *    ist anklickbar); die Lichtquelle selbst muss hinterher.
  * 3. `controls.update()`.
@@ -46,9 +48,13 @@ export class Buehnenschleife {
     _animation(dauer) {
         const lauf = this.animationslauf;
         if (!lauf.mixer || !this.abspieler.laeuft) return;
-        lauf.mixer.update(dauer * this.abspieler.tempo);
-        if (lauf.aktion && lauf.aktion.time >= this.abspieler.dauer) {
-            lauf.aktion.time = 0;
+        // Führt Theatre die Zeit (Spur „Animation"), stellt die Sequenz den
+        // Mixer — die Uhr darf ihn nicht zusätzlich weiterdrehen.
+        if (!lauf.spur?.aktiv) {
+            lauf.mixer.update(dauer * this.abspieler.tempo);
+            if (lauf.aktion && lauf.aktion.time >= this.abspieler.dauer) {
+                lauf.aktion.time = 0;
+            }
         }
         this.abspieler.zeitVerfolgen();
     }

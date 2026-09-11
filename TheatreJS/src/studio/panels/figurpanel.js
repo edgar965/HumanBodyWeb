@@ -58,7 +58,7 @@ export class Figurpanel {
         const grad = Figurpanel.GRAD;
 
         ziel.innerHTML = `<div class="pnl-inhalt">
-            ${Panel.kopf('fa-user', name)}
+            ${Panel.kopf('fa-user', name, 'Rechtsklick: Modell austauschen')}
             <div class="pnl-zeile"><span class="pnl-achse">Body Type:</span>
                 <span class="pnl-wert">${art}</span></div>
 

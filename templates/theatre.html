@@ -5,6 +5,7 @@
 
 {% block extra_head %}
 {% include "_viewerstile.html" %}
+<link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
 {% comment %}Hier stand ein `.main-content`-Block mit sieben Angaben —
 WIRKUNGSLOS: Diese Seite hat gar kein Element mit dieser Klasse (nachgesehen
 im Browser, 28.08.2026). Die Basisvorlage von djangoBase benutzt
@@ -90,12 +91,30 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
     /* ── Right Panel (Tabs) ── */
     .theatre-right-panel {
-        width: 300px;
+        width: var(--theatre-panel-breite, 300px);
+        flex-shrink: 0;
+        position: relative;           /* der Griff sitzt am linken Rand */
         background: var(--bg-secondary);
         border-left: 1px solid var(--border);
         display: flex;
         flex-direction: column;
         padding-top: 230px;  /* space for Theatre.js Studio toolbar */
+    }
+    /* Griff zum Ziehen der Leiste (gemeinsam/bereichsgriff.js) — 6 px breit,
+       ueber dem Rand, damit er auch bei 1 px Rahmen zu treffen ist. */
+    .bereichsgriff {
+        position: absolute;
+        top: 0;
+        left: -3px;
+        width: 6px;
+        height: 100%;
+        cursor: col-resize;
+        z-index: 10;
+    }
+    .bereichsgriff:hover,
+    .bereichsgriff.aktiv {
+        background: var(--accent);
+        opacity: 0.5;
     }
 
     /* Toolbar above tabs */
@@ -337,7 +356,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
        and playback controls bar at the bottom. */
     #theatrejs-studio-root {
         top: 40px !important;
-        right: 320px !important;
+        right: calc(var(--theatre-panel-breite, 300px) + 20px) !important;
         bottom: 160px !important;
         left: 220px !important;
         z-index: 900 !important;
@@ -812,6 +831,21 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
         </div>
     </div>
     <div class="menu-item">
+        Bearbeiten
+        <div class="menu-dropdown">
+            <div class="menu-action" id="menu-rueckgaengig" title="Strg+Z">
+                <i class="fas fa-undo"></i> R&uuml;ckg&auml;ngig
+            </div>
+            <div class="menu-action" id="menu-wiederholen" title="Strg+Y">
+                <i class="fas fa-redo"></i> Wiederholen
+            </div>
+            <div class="menu-separator"></div>
+            <div class="menu-action" id="menu-auswahl-entfernen" title="Entf">
+                <i class="fas fa-trash hb-color-e74c3c"></i> Auswahl entfernen
+            </div>
+        </div>
+    </div>
+    <div class="menu-item">
         Kamera
         <div class="menu-dropdown">
             <div class="menu-action" id="menu-cam-set">
@@ -853,6 +887,7 @@ Theatre-Studio-Seite sie wirklich braucht.{% endcomment %}
 
     <!-- Right Panel (Tabs) -->
     <div class="theatre-right-panel">
+        <div class="bereichsgriff" id="theatre-panel-griff" title="Ziehen: Breite der Leiste · Doppelklick: Vorgabe"></div>
         <!-- Toolbar -->
         <div class="panel-toolbar">
             <button class="toolbar-btn active" id="btn-translate-mode" title="Bewegen-Modus">

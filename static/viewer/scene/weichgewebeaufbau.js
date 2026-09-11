@@ -21,6 +21,7 @@ import { Weichgewebekoerper } from '../gemeinsam/weichgewebekoerper.js';
 import { Knochentempo } from '../gemeinsam/knochentempo.js';
 import { Stoffgrenze } from '../gemeinsam/stoffgrenze.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Shaderpatch } from '../gemeinsam/shaderpatch.js';
 
 export class Weichgewebeaufbau {
 
@@ -83,7 +84,10 @@ export class Weichgewebeaufbau {
     static grenze(koerpernetz, stoffRuhe) {
         const geo = koerpernetz.geometry;
         const punkte = geo.getAttribute('position').array;
-        let dreiecke = geo.index ? geo.index.array : null;
+        // Der VOLLE Index: `Hautverdeckung` blendet die Dreiecke unter dem
+        // Stoff aus, und genau dort haengt der Stoff — ohne sie haetten
+        // diese Koerperpunkte keine Normale.
+        let dreiecke = geo.userData?.indexVoll?.index || (geo.index ? geo.index.array : null);
         if (!dreiecke) {
             // Nicht indizierte Geometrie: jedes Tripel ist ein Dreieck.
             dreiecke = new Uint32Array(punkte.length / 3);
@@ -122,22 +126,17 @@ export class Weichgewebeaufbau {
 
     static patchen(alt) {
         if (!alt) return alt;
-        if (alt.userData?.weichgewebe) return alt;
+        if (Shaderpatch.hat(alt, 'weichgewebe')) return alt;
         // Eigenes Material: Das des Körpers ist womöglich geteilt, und ein
         // Netz ohne `zuschlag`-Attribut bekäme im Shader undefinierte Werte.
-        const mat = alt.clone();
-        mat.userData = { ...(alt.userData || {}), weichgewebe: true };
-        mat.onBeforeCompile = (shader) => {
-            shader.vertexShader = shader.vertexShader
-                .replace('#include <common>', '#include <common>\nattribute vec3 zuschlag;')
-                .replace('#include <skinning_vertex>',
-                         '#include <skinning_vertex>\ntransformed += zuschlag;');
-        };
-        // Eigener Programmschlüssel: Three.js teilt kompilierte Programme
-        // zwischen gleichartigen Materialien; ohne den Schlüssel bekäme ein
-        // ungepatchtes Material dasselbe Programm — oder umgekehrt.
-        mat.customProgramCacheKey = () => 'weichgewebe';
-        mat.needsUpdate = true;
+        // `Shaderpatch.klonen` nimmt die Eingriffe mit, die schon daran
+        // hängen (der Einzug der Hautverdeckung) — `Material.clone()` allein
+        // ließe sie fallen.
+        const mat = Shaderpatch.klonen(alt);
+        Shaderpatch.anhaengen(mat, 'weichgewebe', (shader) => {
+            Shaderpatch.hinterInclude(shader, 'common', 'attribute vec3 zuschlag;');
+            Shaderpatch.hinterInclude(shader, 'skinning_vertex', 'transformed += zuschlag;');
+        });
         return mat;
     }
 }

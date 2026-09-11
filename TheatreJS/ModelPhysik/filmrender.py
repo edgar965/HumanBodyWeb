@@ -10,6 +10,8 @@ import os
 
 import numpy as np
 
+from filmmasken import Filmmasken
+
 
 class Filmrender:
     u"""Rendert die Teile eines `Hbfilm` Bild fuer Bild."""
@@ -104,7 +106,6 @@ class Filmrender:
         return aus
 
     def bilder_rendern(self, breite=720, hoehe=900):
-        import trimesh
         import pyrender
         drehung = self.DREHUNG
         kamera = pyrender.PerspectiveCamera(yfov=np.deg2rad(36.0))
@@ -127,11 +128,15 @@ class Filmrender:
                     bg_color=list(self.HINTERGRUND) + [1.0],
                     ambient_light=[0.40, 0.40, 0.42])
                 for teil, werkstoff in zip(self.teile, stoffe):
-                    netz = trimesh.Trimesh(
-                        vertices=teil['haut'].folge[nummer] @ drehung.T,
-                        faces=teil['dreiecke'], process=False)
-                    szene.add(pyrender.Mesh.from_trimesh(
-                        netz, smooth=True, material=werkstoff))
+                    # Ohne die Dreiecke unter Stoff, Randecken eingezogen;
+                    # Normalen fertig mitgeliefert (kein trimesh je Bild —
+                    # das kostete 2,8 s je Bild beim 70K-Netz).
+                    punkte, dreiecke, normalen = Filmmasken.gerendert(teil, nummer)
+                    szene.add(pyrender.Mesh(primitives=[pyrender.Primitive(
+                        positions=np.ascontiguousarray(punkte @ drehung.T, dtype=np.float32),
+                        normals=np.ascontiguousarray(normalen @ drehung.T, dtype=np.float32),
+                        indices=np.ascontiguousarray(dreiecke, dtype=np.uint32),
+                        material=werkstoff, mode=4)]))
                 szene.add(kamera, pose=self._blicken(lage, blick))
                 lichtlage = np.array(lage)
                 lichtlage[:3, 3] = lage[:3, 3] + np.array(

@@ -4,6 +4,8 @@ import { base64ToFloat32 } from '../gemeinsam/kodierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
+import { Garmentcodestueck } from '../gemeinsam/garmentcodestueck.js';
+import { Garmentcodebindung } from '../gemeinsam/garmentcodebindung.js';
 
 /**
  * Spurzubehoer — Kleidung und Haare einer Modellvorgabe an die Figur einer
@@ -14,6 +16,13 @@ import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
  * Server anpassen lassen und eine Frisur als GLTF laden. Beide endeten mit
  * demselben Muster: Skinning-Attribute setzen, `SkinnedMesh` binden, sonst ein
  * einfaches `Mesh`. Das steht jetzt einmal in `_anhaengen()`.
+ *
+ * GARMENTCODE (11.09.2026, Edgar: „Female1 lädt nicht die GarmentCode"): Die
+ * Vorgabe führt seit dem 08.09.2026 neben `garments` (MakeHuman, per Server
+ * angepasst) die Liste `garmentcode` (`{stueck, rig_url, material}`), und
+ * `Female1.json` hat NUR die. Geladen wird die fertige Rig-Datei
+ * (`gemeinsam/garmentcodestueck.js`), gebunden mit der Knochenzuordnung
+ * (`gemeinsam/garmentcodebindung.js`) — dieselben Klassen wie im Theatre.
  */
 export class Spurzubehoer {
 
@@ -49,8 +58,27 @@ export class Spurzubehoer {
         for (const kleid of this.vorgabe.garments || []) {
             await this.kleidungsstueck(kleid);
         }
+        await this.garmentcode();
         await this.frisur();
         return this;
+    }
+
+    // ------------------------------------------------------------- GarmentCode
+
+    /** Gespeicherte GarmentCode-Stücke holen und ans Skelett binden. */
+    async garmentcode() {
+        const eintraege = this.vorgabe.garmentcode || [];
+        for (const eintrag of eintraege) {
+            try {
+                this.spur.group.add(await Garmentcodestueck.laden(eintrag));
+            } catch (fehler) {
+                Protokoll.warnung('BVH Studio', `GarmentCode „${eintrag.stueck}":`, fehler.message);
+            }
+        }
+        if (!eintraege.length || !this.spur.skeleton || !this.spur.mesh) return;
+        const gebunden = new Garmentcodebindung(this.spur.skeleton)
+            .binden(this.spur.group, this.spur.mesh);
+        Protokoll.debug('BVH Studio', `GarmentCode: ${gebunden}/${eintraege.length} gebunden`);
     }
 
     // ---------------------------------------------------------------- Kleidung

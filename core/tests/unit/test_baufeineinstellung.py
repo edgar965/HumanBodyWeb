@@ -172,7 +172,7 @@ class DieKetteReichtDieWerteDurch(TestCase):
         nacharbeit = self._ohne_kommentare(
             self._quelle('Assets', 'GarmentCode', 'stoffnacharbeit.py'))
         self.assertIn('abstand_mm=hautabstand_mm', nacharbeit)
-        self.assertIn('.anlegen(punkte, anliegen_mm)', nacharbeit)
+        self.assertIn('.anlegen(punkte, anliegen_mm, fest)', nacharbeit)
 
     def test_das_js_haengt_beide_werte_an_die_anfrage(self):
         quelle = self._quelle('HumanBodyWeb', 'static', 'viewer', 'scene',

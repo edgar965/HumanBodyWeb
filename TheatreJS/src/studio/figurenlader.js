@@ -43,8 +43,8 @@ export class Figurenlader {
      * auswaehlen und ans Skelett binden. Der gemeinsame Weg aller drei
      * frueheren Fundstellen.
      */
-    async ausVorgabe(vorgabe, name) {
-        const figur = await loadCharacterFromPreset(this.scene, vorgabe, name);
+    async ausVorgabe(vorgabe, name, lage = null) {
+        const figur = await loadCharacterFromPreset(this.scene, vorgabe, name, lage);
         figur.userData.isCharacter = true;
         figur.userData.presetName = name;
         figur.userData.bodyType = vorgabe.body_type || Figurenlader.UNBEKANNT;
@@ -54,9 +54,13 @@ export class Figurenlader {
         return figur;
     }
 
-    /** Eine gespeicherte Vorgabe holen und laden. */
-    async modell(name) {
-        return this.ausVorgabe(await fetchModel(name), name);
+    /**
+     * Eine gespeicherte Vorgabe holen und laden.
+     * @param {Object} lage  {x, angleichen, vorbildHoehe} aus dem
+     *        Figurwahl-Dialog; ohne Angabe steht die Figur im Ursprung.
+     */
+    async modell(name, lage = null) {
+        return this.ausVorgabe(await fetchModel(name), name, lage);
     }
 
     /** Alle Figuren einer gespeicherten Szene laden. */

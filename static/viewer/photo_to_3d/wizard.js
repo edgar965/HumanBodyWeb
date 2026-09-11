@@ -72,7 +72,7 @@ export function updateWizardUI() {
     } else {
         if (title) title.textContent = 'Schritt 2: Gesicht ausrichten';
         if (info) info.textContent = 'Ziehen = Verschieben | Mausrad = Skalieren | Lila Kontur auf das Gesicht legen';
-        if (backBtn) backBtn.style.display = '';
+        if (backBtn) backBtn.style.display = 'inline-block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
         if (nextBtn) nextBtn.textContent = 'Textur erstellen';
     }
 }

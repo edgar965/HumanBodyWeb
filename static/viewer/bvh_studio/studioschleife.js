@@ -4,6 +4,7 @@ import { applyPlayhead, updatePlaybackUI,
          syncLightVisibility } from './playback.js';
 import { updateDebugPanel } from './debug.js';
 import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
+import { Figurmarkierung } from './figurmarkierung.js';
 
 /**
  * Studioschleife — die Renderschleife des BVH-Studios.
@@ -23,6 +24,7 @@ export class Studioschleife extends Zeichenschleife {
         if (state.playing) this.abspielen(dt);
         else syncLightVisibility();
         if (!this.kameraspurAktiv()) state.controls.update();
+        Figurmarkierung.nachziehen();   // Rahmen um die gewählte Figur
         state.renderer.render(state.scene, state.camera);
         updateDebugPanel();
     }

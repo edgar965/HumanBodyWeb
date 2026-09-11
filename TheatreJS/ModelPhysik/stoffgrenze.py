@@ -16,6 +16,18 @@ wegschwingt, soll das duerfen.
 
 Gemessen wird gegen den KOERPER DESSELBEN BILDES, nicht gegen die
 Ruhelage — beim Gehen wandert die Haut unter dem Stoff.
+
+DER KOERPER KOMMT AUCH VON INNEN (Edgar, 11.09.2026, mit Bild: „bei einer
+animation kommt der Koerper durch die Kleidung hindurch"). Die erste
+Fassung kuerzte nur den EINWAERTS gerichteten Anteil des Stoffzuschlags;
+bekam der Koerper selbst einen groesseren Zuschlag als der Stoff darueber,
+stand die Haut durch — bei 13 mm Hautabstand (T-Shirt) nie sichtbar, bei
+einer Leggings auf 2 mm sofort. Gemessen in der Szene (Dance1, Sprung aus
+der T-Pose): Koerperzuschlag 188 mm, Stoff 109 mm, 6,3 % der Leggings-
+punkte im Koerper. Deshalb gilt jetzt ein SOLLABSTAND je Punkt: sein
+Ruheabstand, hoechstens `MINDESTABSTAND` — und wer darunter liegt, wird
+auf ihn gehoben, gleich ob der Stoff nach innen oder der Koerper nach
+aussen gegangen ist.
 """
 import numpy as np
 
@@ -58,37 +70,58 @@ class Stoffgrenze:
     def _aussen(self, normalen):
         u"""+1 oder -1 — zeigen die Normalen nach aussen?
 
-        Nicht angenommen, sondern geprueft: die Mehrheit gegen den
-        Schwerpunkt. Ein nach innen gewickeltes Netz kehrte sonst die
-        ganze Grenze um, und der Stoff wuerde in den Koerper GEZOGEN.
+        Ueber das SIGNIERTE VOLUMEN, nicht die Mehrheit gegen den
+        Schwerpunkt: Die Grenze wird je Bild aus dem POSIERTEN Koerper
+        gebaut, und die Mehrheit kippte in Dance1 bei 32 % (11.09.2026,
+        feines 70K-Netz) — der Stoff wurde in den Koerper GEZOGEN, im Bild
+        lag die Leggings innen. Das Volumen haengt an der Wicklung, und die
+        aendert keine Pose. `normalen` bleibt in der Signatur, damit die
+        Browser-Fassung (`stoffgrenze.js`) denselben Aufruf traegt.
         """
-        mitte = self.punkte.mean(axis=0)
-        nach_aussen = self.punkte - mitte
-        zeichen = np.sum(np.sum(nach_aussen * normalen, axis=1) > 0)
-        return 1.0 if zeichen * 2 >= len(self.punkte) else -1.0
+        a = self.punkte[self.dreiecke[:, 0]]
+        b = self.punkte[self.dreiecke[:, 1]]
+        c = self.punkte[self.dreiecke[:, 2]]
+        vol = float(np.einsum('ij,ij->i', a, np.cross(b, c)).sum())
+        return 1.0 if vol >= 0 else -1.0
 
-    def kuerzen(self, stoffpunkte, versatz):
+    def abstand(self, stoffpunkte):
+        u"""Der vorzeichenbehaftete Abstand je Stoffpunkt (positiv = aussen)."""
+        _abstand, naechster = self.baum.query(stoffpunkte)
+        rest = stoffpunkte - self.punkte[naechster]
+        return np.sum(rest * self.normalen[naechster], axis=1)
+
+    def sollabstand(self, stoffruhe):
+        u"""Je Stoffpunkt: sein Ruheabstand, hoechstens `MINDESTABSTAND`.
+
+        Auf dieser Grenze (aus der RUHELAGE gerechnet) haelt `kuerzen`
+        jeden Punkt — eine Leggings auf 2 mm bleibt auf 2 mm, ein T-Shirt
+        auf 13 mm wird nicht naeher als 6 mm gelassen.
+        """
+        return np.minimum(self.abstand(stoffruhe), self.MINDESTABSTAND)
+
+    def kuerzen(self, stoffpunkte, versatz, soll=None):
         u"""Der erlaubte Teil des Zuschlags, je Punkt.
 
-        Rueckgabe ist der gekuerzte Versatz und die Zahl der Punkte, bei
-        denen gekuerzt wurde.
+        `soll` ist der Sollabstand je Punkt (`sollabstand`); ohne ihn gilt
+        `MINDESTABSTAND` fuer alle. Rueckgabe ist der gekuerzte Versatz und
+        die Zahl der Punkte, bei denen gekuerzt wurde.
         """
         _abstand, naechster = self.baum.query(stoffpunkte)
         normale = self.normalen[naechster]
         rest = stoffpunkte - self.punkte[naechster]
         # Der vorzeichenbehaftete Abstand: positiv = ausserhalb.
         aussen = np.sum(rest * normale, axis=1)
-        # Wieviel darf der Punkt nach INNEN? Nur so weit, wie er ueber
-        # dem Mindestabstand liegt.
-        spielraum = np.maximum(aussen - self.MINDESTABSTAND, 0.0)
         nach_innen = -np.sum(versatz * normale, axis=1)
-        zuviel = nach_innen > spielraum
+        # Wo der Punkt MIT Versatz laege, gegen das, was ihm zusteht.
+        ist = aussen - nach_innen
+        ziel = self.MINDESTABSTAND if soll is None else np.asarray(soll)
+        zuviel = ist < ziel
         if not zuviel.any():
             return versatz, 0
         gekuerzt = np.array(versatz)
-        # Nur den EINWAERTS gerichteten Anteil kuerzen, den Rest lassen:
-        # Ein Stueck, das seitlich mitschwingt, soll das weiter tun.
-        ueberschuss = (nach_innen - spielraum)[zuviel]
+        # Nur ENTLANG DER NORMALE anheben, den Rest lassen: Ein Stueck, das
+        # seitlich mitschwingt, soll das weiter tun.
+        ueberschuss = (ziel - ist)[zuviel]
         gekuerzt[zuviel] += ueberschuss[:, None] * normale[zuviel]
         return gekuerzt, int(zuviel.sum())
 

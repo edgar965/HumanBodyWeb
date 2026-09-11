@@ -58,7 +58,10 @@ export class Materialregler {
         feld?.addEventListener('input', () => {
             if (state._syncingSliders) return;
             const auswahl = this.gewaehlt();
-            if (auswahl) auswahl.mesh.material.color.set(feld.value);
+            if (!auswahl) return;
+            const material = auswahl.mesh.material;
+            material.color.set(feld.value);
+            material.sheenColor?.copy(material.color);   // Glanzsaum in Stofffarbe
         });
         return this;
     }

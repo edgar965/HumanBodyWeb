@@ -102,6 +102,23 @@
     font-size: 0.7rem;
 }
 
+/* Ein aufklappbarer Kopf, der KEINE Panelueberschrift ist (11.09.2026,
+   Edgar: „mach «Kleiderbibliothek» in der gleichen Farbe und font wie die
+   anderen aufklappbaren Eintraege"): das `<summary>` im GarmentCode-Reiter
+   trug `hb-font-size-0-72rem` und stand damit grau und kleiner als
+   „Feineinstellungen" darunter. Dieselbe Schrift wie `.panel-section h3`
+   — ohne `display:flex`, das nimmt einem `<summary>` das Dreieck. */
+.aufklappkopf {
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    cursor: pointer;
+    user-select: none;
+    margin: 6px 0 4px;
+}
+
 .panel-section.collapsed .panel-body { display: none; }
 
 .panel-section.collapsed h3 .chevron { transform: rotate(-90deg); }

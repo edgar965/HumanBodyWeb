@@ -41,7 +41,7 @@ class Schnittvorschauendpunkte:
             return JsonResponse(
                 {'fehler': 'Keine gültige Spezifikation angegeben'}, status=400)
         try:
-            netz = Schnittvorschau(pfad).netz()
+            netz = Schnittvorschau(pfad).netz(bund_senken=True)
         except Exception as fehler:                       # noqa: BLE001
             logger.exception('Schnittvorschau: %s', pfad)
             return JsonResponse(

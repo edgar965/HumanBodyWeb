@@ -16,6 +16,8 @@ import sys
 
 import numpy as np
 
+from feinkoerper import Feinkoerper
+
 sys.path.insert(0, os.path.join('A:', os.sep, '3DTools',
                                 'VelocitySkinning_Python'))
 
@@ -66,6 +68,18 @@ class Filmphysik:
             teil['physik']['staerke'] = motor.staerke
             teil['physik']['ziel_mm'] = ziel
 
+    def _grenze(self, koerper, nummer):
+        u"""Die Grenze eines Bildes — EINMAL je Bild fuer alle Stuecke
+        (Baum und Normalen ueber 70.851 Punkte kosten je 0,2 s)."""
+        from stoffgrenze import Stoffgrenze
+        if not hasattr(self, '_grenzen'):
+            self._grenzen = {}
+        if nummer not in self._grenzen:
+            # Gegen das SICHTBARE Netz — an das ist der Stoff angelegt.
+            self._grenzen[nummer] = Stoffgrenze(Feinkoerper.bild(koerper, nummer),
+                                                Feinkoerper.dreiecke(koerper))
+        return self._grenzen[nummer]
+
     def _stoff_mit_grenze(self, teil, motor, koerper):
         u"""Zuschlag fuer ein Kleidungsstueck, aus dem Koerper gehalten.
 
@@ -79,12 +93,15 @@ class Filmphysik:
         folge = np.array(haut.folge)
         gekuerzt_gesamt, vorher, nachher = 0, [], []
         motor.zuschlag = np.zeros(len(folge))
+        # Der Sollabstand je Punkt aus der RUHELAGE: Eine Leggings auf 2 mm
+        # bleibt auf 2 mm, auch wenn der Koerper darunter nach aussen geht.
+        soll = Stoffgrenze(Feinkoerper.ruhe(koerper),
+                           Feinkoerper.dreiecke(koerper)).sollabstand(haut.punkte)
         for nummer in range(len(folge)):
-            grenze = Stoffgrenze(koerper['haut'].folge[nummer],
-                                 koerper['dreiecke'])
+            grenze = self._grenze(koerper, nummer)
             versatz = motor.verschiebung(nummer, folge[nummer])
             vorher.append(grenze.durchdringung(folge[nummer] + versatz)[0])
-            versatz, zahl = grenze.kuerzen(folge[nummer], versatz)
+            versatz, zahl = grenze.kuerzen(folge[nummer], versatz, soll)
             gekuerzt_gesamt += zahl
             folge[nummer] = folge[nummer] + versatz
             nachher.append(grenze.durchdringung(folge[nummer])[0])

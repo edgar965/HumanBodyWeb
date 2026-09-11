@@ -1,6 +1,9 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Koerperfrage } from './koerperfrage.js';
 import { Kleidungsnetz } from './kleidungsnetz.js';
+import { Garmentcodestueck }
+    from '../../../static/viewer/gemeinsam/garmentcodestueck.js';
+import { Figurlage } from './figurlage.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 
 /**
@@ -33,8 +36,10 @@ export class Vorgabefigur {
      * @param {THREE.Scene} scene
      * @param {Object} vorgabe
      * @param {string} name  Anzeigename fuer Theatre
+     * @param {Object} lage  {x, angleichen, vorbildHoehe} aus dem Figurwahl-
+     *        Dialog, oder null — dann bleibt die Figur im Ursprung
      */
-    async laden(scene, vorgabe, name) {
+    async laden(scene, vorgabe, name, lage = null) {
         const gruppe = vorgabe.type === 'generated_model'
             ? await this.werkzeuge.erzeugtesModell(vorgabe)
             : this.werkzeuge.netzBauen(await this._netzdaten(vorgabe));
@@ -44,8 +49,14 @@ export class Vorgabefigur {
         if (vorgabe.type !== 'generated_model') {
             await this._haare(gruppe, vorgabe);
             await this._kleidung(gruppe, vorgabe);
+            await this._garmentcode(gruppe, vorgabe);
         }
-        this.werkzeuge.inTheatre(gruppe, name);
+        // Lage VOR der Anmeldung: Theatre.js nimmt die Position als Startwert.
+        Figurlage.anwenden(gruppe, lage);
+        // Das Theatre-Objekt bleibt an der Gruppe (Schlüssel in
+        // `userData.theatreSchluessel`): Wer die Figur entfernt, meldet es
+        // darüber ab (`studio/figurentfernen.js`).
+        gruppe.userData.theatreObjekt = this.werkzeuge.inTheatre(gruppe, name);
         return gruppe;
     }
 
@@ -93,6 +104,29 @@ export class Vorgabefigur {
                 Protokoll.debug('vorgabefigur', '✓ Kleidung geladen:', kleid.id);
             } catch (fehler) {
                 console.error('Kleidung nicht ladbar:', kleid.id, fehler);
+            }
+        }
+    }
+
+    /**
+     * Die GarmentCode-Stücke der Vorgabe (Feld `garmentcode`, seit 08.09.2026).
+     *
+     * Edgar, 11.09.2026: „laden des Female1 Modells lädt nicht die Kleider
+     * (GarmentCode) des Modells" — die Liste wurde hier schlicht nicht
+     * gelesen. Nacheinander, nicht parallel, damit die Reihenfolge der
+     * Stücke der der Datei entspricht; ein fehlendes Stück hält die
+     * anderen nicht auf.
+     */
+    async _garmentcode(gruppe, vorgabe) {
+        if (!Array.isArray(vorgabe.garmentcode)) return;
+        for (const eintrag of vorgabe.garmentcode) {
+            if (!eintrag?.stueck || !eintrag?.rig_url) continue;
+            try {
+                gruppe.add(await Garmentcodestueck.laden(eintrag));
+                Protokoll.debug('vorgabefigur', '✓ GarmentCode geladen:', eintrag.stueck);
+            } catch (fehler) {
+                Protokoll.warnung('vorgabefigur',
+                    `GarmentCode „${eintrag.stueck}" nicht ladbar: ${fehler.message || fehler}`);
             }
         }
     }

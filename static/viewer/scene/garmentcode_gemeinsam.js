@@ -1,6 +1,7 @@
 import { Fristabruf } from '../gemeinsam/fristabruf.js';
 import { garmentcodeFortschritt } from './garmentcode_fortschritt.js';
 import { GarmentcodeDrapierung } from './garmentcode_drapieren.js';
+import { GarmentcodeMaterial } from './garmentcode_material.js';
 import { GarmentcodePanels } from './garmentcode_panels.js';
 import { GarmentcodeVorschau3d } from './garmentcode_vorschau3d.js';
 import { GarmentcodeAblauf } from './garmentcode_ablauf.js';
@@ -146,9 +147,15 @@ export class GarmentcodeGemeinsam {
                      grund: stueck.fehler || 'kein Netz geliefert' };
         }
         try {
+            // Das Aussehen des Stücks, das gerade ersetzt wird, geht VOR
+            // dem Eintrag: Es ist die Farbe, die der Nutzer am Stück sieht
+            // und ihm gegeben hat. Der Eintrag gilt, wenn das Stück neu ist;
+            // ohne beides bleibt der Panel-Stand aus `einhaengen`.
+            const bisher = GarmentcodeMaterial.getragen(figur, stueck.stueck);
             const getragen = await GarmentcodeDrapierung.einhaengen(
                 figur, stueck, stueck.stueck);
-            if (material) GarmentcodeMaterial.aufStueck(figur, stueck.stueck, material);
+            const werte = bisher || material;
+            if (werte) GarmentcodeMaterial.aufStueck(figur, stueck.stueck, werte);
             return { ok: true, stueck, getragen };
         } catch (fehler) {
             return { ok: false, stueck,

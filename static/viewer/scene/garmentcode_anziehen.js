@@ -99,7 +99,7 @@ export class GarmentcodeAnziehen {
 
         let netz;
         if (zuordnung && zuordnung.treffer && gewichte.length) {
-            GarmentcodeAnziehen._gewichte(geometrie, gewichte, zuordnung.index);
+            GarmentcodeAnziehen.gewichte(geometrie, gewichte, zuordnung.index);
             netz = new THREE.SkinnedMesh(geometrie,
                                         Garmentstoff.neu(bisher, stoff));
         } else {
@@ -224,7 +224,12 @@ export class GarmentcodeAnziehen {
         return { index, treffer: index.filter(i => i >= 0).length };
     }
 
-    static _gewichte(geometrie, gewichte, zuordnung) {
+    /**
+     * skinIndex/skinWeight aus den Paaren der Rig-Datei füllen — öffentlich,
+     * weil das Theatre dieselben Rig-Dateien an sein eigenes Skelett bindet
+     * (`TheatreJS/src/studio/garmentcodebindung.js`, 11.09.2026).
+     */
+    static gewichte(geometrie, gewichte, zuordnung) {
         const anzahl = geometrie.attributes.position.count;
         const je = GarmentcodeAnziehen.KNOCHEN_JE_PUNKT;
         const indizes = new Uint16Array(anzahl * je);

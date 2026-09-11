@@ -77,12 +77,26 @@ class Filmlauf:
         # KOPIE, nicht der Puffer: `CharacterState.compute()` gibt dasselbe
         # Feld zurueck, das der naechste Reglerzug ueberschreibt (CLAUDE.md,
         # 08.09.2026, „Zwei Stufen statt einer").
-        return np.array(koerper.vertices, dtype=np.float64), koerper.geschlecht
+        punkte = np.array(koerper.vertices, dtype=np.float64)
+        return punkte, koerper.geschlecht, self._feines_netz(punkte,
+                                                             koerper.geschlecht)
+
+    @staticmethod
+    def _feines_netz(punkte, geschlecht):
+        u"""Unterteiler und Basisflaechen fuer das SICHTBARE Netz der Szene
+        (`Feinkoerper`) — oder None, wenn es keinen Unterteiler gibt (dann
+        bleibt die 18K-Aussenhaut)."""
+        from core.dienste.charakterdaten import Charakterdaten
+        unterteiler = Charakterdaten.unterteiler(geschlecht)
+        netz = Charakterdaten.netzdaten(geschlecht)
+        if unterteiler is None or getattr(netz, 'faces', None) is None:
+            return None
+        return unterteiler, np.asarray(netz.faces)
 
     def laufen(self):
         from hbfilm import Hbfilm
         try:
-            punkte, geschlecht = self._figurpunkte()
+            punkte, geschlecht, fein = self._figurpunkte()
             fps = float(self.auftrag.get('fps') or 24.0)
             bilder = int(round(float(self.auftrag.get('sekunden') or 5.0)
                                * fps))
@@ -91,7 +105,7 @@ class Filmlauf:
                 ab_sekunden=float(self.auftrag.get('ab_sekunden') or 0.0),
                 stuecke=self.auftrag.get('stuecke') or [],
                 physik=float(self.auftrag.get('physik_mm') or 0.0),
-                geschlecht=geschlecht, figurpunkte=punkte,
+                geschlecht=geschlecht, figurpunkte=punkte, figurfein=fein,
                 melder=self._melden)
             proben = film.proben()
             film.rechnen()

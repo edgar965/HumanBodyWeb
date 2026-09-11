@@ -127,9 +127,26 @@ for (const roh of ['kein json', '"text"', '42', '[1, 2, 3]', '[{}]',
 // Eine gemerkte Liste, die zu lang ist, wird gekappt.
 const zuviele = new Kombiliste();
 zuviele.laden({ getItem: () => JSON.stringify(
-    Array.from({length: 9}, () => ({vorlage: 'x', regler: {}}))),
+    { fassung: Kombiliste.FASSUNG,
+      eintraege: Array.from({length: 9}, () => ({vorlage: 'x', regler: {}})) }),
     setItem() {} });
 pruefe('gekappt', zuviele.anzahl, Kombiliste.HOECHSTZAHL);
+
+// --- 9b. Eine Ablage aus einer aelteren Fassung wird VERWORFEN und gesagt --
+// (11.09.2026: Edgars Liste trug ein `bau` aus der Stunde, in der „An die
+// Haut ziehen" global galt — drei Laeufe lang lag das T-Shirt auf 2 mm.)
+for (const alt of [JSON.stringify([{vorlage: 'hose', regler: {}}]),
+                   JSON.stringify({ fassung: 1, eintraege: [{vorlage: 'hose'}] }),
+                   JSON.stringify({ eintraege: [{vorlage: 'hose'}] })]) {
+    const k = new Kombiliste();
+    pruefe('alte Fassung abgelehnt', k.laden({ getItem: () => alt, setItem() {} }), false);
+    pruefe('alte Fassung leer', k.anzahl, 0);
+    pruefe('alte Fassung gesagt', k.verworfen, true);
+    k.hinzufuegen('hose', 'Hose', {});
+    pruefe('Hinweis weg, sobald etwas Neues kommt', k.verworfen, false);
+}
+const frisch = new Kombiliste();
+pruefe('ohne Ablage nichts verworfen', frisch.verworfen, false);
 
 // --- 10. Eine werfende Ablage darf nicht durchschlagen -------------------
 const boese = { getItem() { throw new Error('nope'); },

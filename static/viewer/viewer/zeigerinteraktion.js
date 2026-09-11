@@ -182,7 +182,7 @@ export class Zeigerinteraktion {
         state._selectedItem = neu;
         if (neu) this.leuchten(neu, state._SELECT_EMISSIVE);
         if (this.entfernenKnopf) {
-            this.entfernenKnopf.style.display = neu ? '' : 'none';
+            this.entfernenKnopf.style.display = neu ? 'inline-block' : 'none';   // 'inline-block', nicht '' (Klasse hb-versteckt)
         }
         if (!this.gleich(vorher, neu)) this.gewechselt(neu);
     }

@@ -26,10 +26,24 @@ export class Kombiliste {
     /** Ablage im Browser — je Herkunft, überlebt das Schliessen. */
     static SCHLUESSEL = 'hb_gc_kombination';
 
+    /**
+     * Fassung der Ablage. Ein Eintrag trägt seit dem 11.09.2026 `bau` und
+     * `material`; eine Liste, die vorher gemerkt wurde, hat beides nicht —
+     * oder, schlimmer, ein `bau` aus der Stunde, in der „An die Haut
+     * ziehen" noch global galt (Edgars T-Shirt lag auf 2 mm, drei Läufe
+     * hintereinander, und die Zeile sah aus wie immer). Aus den Feldern
+     * allein ist das nicht zu erkennen. Deshalb steht die Fassung daneben,
+     * und was ohne sie oder mit einer älteren kommt, wird VERWORFEN und
+     * gesagt (`verworfen`), statt still weitergebaut.
+     */
+    static FASSUNG = 2;
+
     constructor() {
         /** @type {{vorlage: string, titel: string, regler: object, bau: object,
          *           material: object|null}[]} */
         this.eintraege = [];
+        /** Beim Laden eine ältere Ablage gefunden und weggeworfen. */
+        this.verworfen = false;
     }
 
     get anzahl() {
@@ -50,6 +64,7 @@ export class Kombiliste {
             return { ok: false, grund: `Höchstens ${Kombiliste.HOECHSTZAHL} `
                      + 'Stücke auf einmal.' };
         }
+        this.verworfen = false;
         this.eintraege.push({
             vorlage,
             titel: titel || vorlage,
@@ -114,14 +129,20 @@ export class Kombiliste {
         if (!speicher) return false;
         try {
             speicher.setItem(Kombiliste.SCHLUESSEL,
-                             JSON.stringify(this.eintraege));
+                             JSON.stringify({ fassung: Kombiliste.FASSUNG,
+                                              eintraege: this.eintraege }));
             return true;
         } catch (fehler) {
             return false;
         }
     }
 
-    /** Die gemerkte Liste holen; unbrauchbarer Inhalt wird übergangen. */
+    /**
+     * Die gemerkte Liste holen; unbrauchbarer Inhalt wird übergangen.
+     *
+     * Eine Ablage ohne oder mit älterer Fassung wird verworfen (siehe
+     * `FASSUNG`); `verworfen` sagt es dem Aufrufer.
+     */
     laden(ablage) {
         const speicher = ablage || Kombiliste._speicher();
         if (!speicher) return false;
@@ -134,8 +155,14 @@ export class Kombiliste {
         if (!roh) return false;
         try {
             const gelesen = JSON.parse(roh);
-            if (!Array.isArray(gelesen)) return false;
-            this.eintraege = gelesen
+            if (!gelesen || typeof gelesen !== 'object'
+                || !(Number(gelesen.fassung) >= Kombiliste.FASSUNG)
+                || !Array.isArray(gelesen.eintraege)) {
+                this.eintraege = [];
+                this.verworfen = true;
+                return false;
+            }
+            this.eintraege = gelesen.eintraege
                 .filter((e) => e && typeof e.vorlage === 'string')
                 .slice(0, Kombiliste.HOECHSTZAHL)
                 .map((e) => ({ vorlage: e.vorlage, titel: e.titel || e.vorlage,

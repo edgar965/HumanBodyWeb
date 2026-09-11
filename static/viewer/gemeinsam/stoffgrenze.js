@@ -7,13 +7,23 @@
  * Stärke schob ein 25-mm-Zuschlag das T-Shirt mit 13 mm Hautabstand durch
  * die Haut. Dieselbe Rechnung wie in Python, je Punkt:
  *
- *     aussen     = <stoff − körper, n>          (positiv = außerhalb)
- *     spielraum  = max(aussen − MINDESTABSTAND, 0)
- *     nachInnen  = −<versatz, n>
- *     zuviel     → versatz += (nachInnen − spielraum) · n
+ *     aussen     = <stoff − körper', n>         (körper' = Körper + sein Zuschlag)
+ *     ist        = aussen − (−<versatz, n>)      (wo der Punkt MIT Zuschlag läge)
+ *     soll       = min(Ruheabstand, MINDESTABSTAND)
+ *     ist < soll → versatz += (soll − ist) · n
  *
- * Nur der EINWÄRTS gerichtete Anteil wird gekürzt; ein Stück, das seitlich
+ * Angehoben wird nur ENTLANG DER NORMALE; ein Stück, das seitlich
  * mitschwingt, darf das weiter tun.
+ *
+ * DER KÖRPER KOMMT AUCH VON INNEN (Edgar, 11.09.2026, mit Bild: „bei einer
+ * animation kommt der Körper durch die Kleidung hindurch"). Die erste
+ * Fassung kürzte nur den einwärts gerichteten Anteil des STOFFzuschlags;
+ * bekam der Körper einen größeren Zuschlag als der Stoff darüber, stand die
+ * Haut durch — bei 13 mm Hautabstand (T-Shirt) nie sichtbar, bei einer
+ * Leggings auf 2 mm sofort. Gemessen (Dance1, Sprung aus der T-Pose):
+ * Körperzuschlag 188 mm, Stoff 109 mm, 6,3 % der Leggingspunkte im Körper.
+ * Deshalb der SOLLABSTAND je Punkt aus der Ruhelage: eine Leggings bleibt
+ * auf ihren 2 mm, ein T-Shirt wird nicht näher als 6 mm gelassen.
  *
  * EINE NÄHERUNG gegenüber Python, wegen der Bildrate: Welcher Körperpunkt
  * der nächste ist, wird EINMAL in Ruhe bestimmt (`Punktgitter`), nicht je
@@ -49,7 +59,24 @@ export class Stoffgrenze {
         this.normalen = new Float64Array(this.benutzt.length * 3);
         this._normalen(koerperRuhe, null);
         this.aussen = this._aussen(koerperRuhe);
+        this.soll = this._sollabstand(koerperRuhe, stoffRuhe);
         this.gekuerzt = 0;
+    }
+
+    /** Je Stoffpunkt: sein Ruheabstand zur Haut, höchstens MINDESTABSTAND. */
+    _sollabstand(koerperRuhe, stoffRuhe) {
+        const n = this.normalen, vz = this.aussen, MIN = Stoffgrenze.MINDESTABSTAND;
+        const soll = new Float64Array(this.nS).fill(MIN);
+        for (let i = 0; i < this.nS; i++) {
+            const s = this.platz[i];
+            if (s < 0) continue;
+            const j = this.benutzt[s];
+            const a = (stoffRuhe[3 * i] - koerperRuhe[3 * j]) * vz * n[3 * s]
+                + (stoffRuhe[3 * i + 1] - koerperRuhe[3 * j + 1]) * vz * n[3 * s + 1]
+                + (stoffRuhe[3 * i + 2] - koerperRuhe[3 * j + 2]) * vz * n[3 * s + 2];
+            soll[i] = Math.min(a, MIN);
+        }
+        return soll;
     }
 
     /** Die BENUTZTEN Körperpunkte und je Punkt seine Dreiecke (CSR). */
@@ -102,20 +129,25 @@ export class Stoffgrenze {
         }
     }
 
-    /** +1 oder −1: zeigen die Normalen nach außen? Mehrheit gegen die Mitte. */
+    /**
+     * +1 oder −1: zeigen die Normalen nach außen? Über das SIGNIERTE
+     * VOLUMEN des ganzen Körpers, nicht die Mehrheit gegen die Mitte: Die
+     * Mehrheit kippt in manchen Posen (gemessen 11.09.2026 am Server-Weg,
+     * der die Grenze je Bild neu baute — der Stoff wurde dann in den Körper
+     * GEZOGEN, im Bild lag die Leggings innen). Das Volumen hängt an der
+     * Wicklung, und die ändert keine Pose.
+     */
     _aussen(koerper) {
-        let mx = 0, my = 0, mz = 0;
-        for (let i = 0; i < this.nK; i++) { mx += koerper[3 * i]; my += koerper[3 * i + 1]; mz += koerper[3 * i + 2]; }
-        mx /= this.nK; my /= this.nK; mz /= this.nK;
-        let dafuer = 0;
-        for (let s = 0; s < this.benutzt.length; s++) {
-            const j = this.benutzt[s];
-            const skalar = (koerper[3 * j] - mx) * this.normalen[3 * s]
-                + (koerper[3 * j + 1] - my) * this.normalen[3 * s + 1]
-                + (koerper[3 * j + 2] - mz) * this.normalen[3 * s + 2];
-            if (skalar > 0) dafuer += 1;
+        const d = this.dreiecke;
+        let vol = 0;
+        for (let t = 0; t + 2 < d.length; t += 3) {
+            const a = d[t], b = d[t + 1], c = d[t + 2];
+            const ax = koerper[3 * a], ay = koerper[3 * a + 1], az = koerper[3 * a + 2];
+            const bx = koerper[3 * b], by = koerper[3 * b + 1], bz = koerper[3 * b + 2];
+            const cx = koerper[3 * c], cy = koerper[3 * c + 1], cz = koerper[3 * c + 2];
+            vol += ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
         }
-        return dafuer * 2 >= this.benutzt.length ? 1 : -1;
+        return vol >= 0 ? 1 : -1;
     }
 
     /**
@@ -126,7 +158,7 @@ export class Stoffgrenze {
      */
     kuerzen(stoff, versatz, koerper, zuschlag) {
         this._normalen(koerper, zuschlag);
-        const n = this.normalen, MIN = Stoffgrenze.MINDESTABSTAND, vz = this.aussen;
+        const n = this.normalen, soll = this.soll, vz = this.aussen;
         let zahl = 0;
         for (let i = 0; i < this.nS; i++) {
             const s = this.platz[i];
@@ -137,10 +169,10 @@ export class Stoffgrenze {
             const ky = koerper[3 * j + 1] + (zuschlag ? zuschlag[3 * j + 1] : 0);
             const kz = koerper[3 * j + 2] + (zuschlag ? zuschlag[3 * j + 2] : 0);
             const aussen = (stoff[3 * i] - kx) * nx + (stoff[3 * i + 1] - ky) * ny + (stoff[3 * i + 2] - kz) * nz;
-            const spielraum = Math.max(aussen - MIN, 0);
             const nachInnen = -(versatz[3 * i] * nx + versatz[3 * i + 1] * ny + versatz[3 * i + 2] * nz);
-            if (nachInnen > spielraum) {
-                const u = nachInnen - spielraum;
+            const ist = aussen - nachInnen;
+            if (ist < soll[i]) {
+                const u = soll[i] - ist;
                 versatz[3 * i] += u * nx; versatz[3 * i + 1] += u * ny; versatz[3 * i + 2] += u * nz;
                 zahl += 1;
             }

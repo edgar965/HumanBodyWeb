@@ -26,7 +26,9 @@ export class Spurkontextmenue {
         _populateTrackAddSubmenu(spur, index, menue);
         Spurkontextmenue._stummschrift(spur);
         Spurkontextmenue._verknuepfung(spur, menue);
-        menue.style.display = '';
+        // `block`, nicht '' — die Klasse `.hb-kontextmenue` versteckt sonst
+        // weiter (siehe `Zeitleistenmenue._zeigen`).
+        menue.style.display = 'block';
         menue.style.left = e.clientX + 'px';
         const hoehe = menue.offsetHeight || Spurkontextmenue.ERSATZHOEHE;
         menue.style.top = Math.min(
@@ -49,7 +51,7 @@ export class Spurkontextmenue {
             if (abschnitt) abschnitt.style.display = 'none';
             return;
         }
-        abschnitt.style.display = '';
+        abschnitt.style.display = 'block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
         liste.innerHTML = '';
         state.project.animations.forEach(anim => {
             liste.appendChild(

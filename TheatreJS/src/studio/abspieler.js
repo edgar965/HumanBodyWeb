@@ -67,7 +67,7 @@ export class Abspieler {
             this.zeitSetzen(zeit);
             // Die Theatre-Sequenz mitziehen, sonst laufen Kamera- und
             // Lichtspuren gegen die Figur.
-            this.sequenz.position = zeit;
+            this.springen(zeit);
         });
         document.querySelectorAll('.speed-btn').forEach(knopf => {
             knopf.addEventListener('click', () => {
@@ -110,6 +110,21 @@ export class Abspieler {
             aktion.paused = false;
             aktion.play();
         }
+        this._sequenzStarten();
+    }
+
+    /**
+     * Die Theatre-Sequenz auf eine Zeit stellen. Der Setter von `position`
+     * PAUSIERT die Sequenz (Theatre-Core) — lief sie, muss sie danach wieder
+     * anlaufen, sonst stehen Kamera, Lichter und seit dem 11.09.2026 auch die
+     * Figur still, während der Abspieler „läuft" anzeigt.
+     */
+    springen(zeit) {
+        this.sequenz.position = Math.max(0, zeit);
+        if (this.laeuft) this._sequenzStarten();
+    }
+
+    _sequenzStarten() {
         this.sequenz.play({ iterationCount: Infinity, rate: this.tempo,
                             range: [0, this._sequenzlaenge()] });
     }
@@ -149,10 +164,7 @@ export class Abspieler {
         const mixer = this.animation.mixer();
         if (mixer) mixer.timeScale = faktor;
         // Läuft es gerade, muss die Sequenz mit dem neuen Tempo neu anlaufen.
-        if (this.laeuft) {
-            this.sequenz.play({ iterationCount: Infinity, rate: faktor,
-                                range: [0, this._sequenzlaenge()] });
-        }
+        if (this.laeuft) this._sequenzStarten();
     }
 
     /** Neue Animationslänge übernehmen (nach dem Laden einer BVH-Datei). */

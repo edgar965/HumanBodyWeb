@@ -45,20 +45,49 @@ class Hautbahn:
     # ----------------------------------------------------------- Rechnung
 
     def _lbs(self, lage):
-        u"""Ein Bild: jeder Punkt gewichtet ueber seine Knochen."""
+        u"""Ein Bild: jeder Punkt gewichtet ueber seine Knochen.
+
+        DUENN BESETZT (11.09.2026): Ein Punkt haengt an hoechstens vier
+        Knochen, die Matrix ist n x 176. Dicht gerechnet (je Knochen das
+        ganze Netz) brauchte das sichtbare Netz mit 70.851 Punkten 2 s je
+        Bild; ueber die Nicht-Null-Eintraege sind es Millisekunden.
+        Erst werden alle Knochenmatrizen gebaut (176 x 3 x 3 und 176 x 3),
+        dann jeder Eintrag (Punkt, Knochen, Gewicht) auf einmal.
+        """
+        if not hasattr(self, '_nnz'):
+            zeilen, spalten = np.nonzero(self.gewichte > 0)
+            self._nnz = (zeilen, spalten, self.gewichte[zeilen, spalten])
+        zeilen, spalten, werte = self._nnz
+        R, t = self._matrizen(lage)
+        bewegt = np.einsum('kij,kj->ki', R[spalten], self.punkte[zeilen]) + t[spalten]
         ziel = np.zeros_like(self.punkte)
-        summe = np.zeros((len(self.punkte), 1))
+        summe = np.zeros(len(self.punkte))
+        np.add.at(ziel, zeilen, werte[:, None] * bewegt)
+        np.add.at(summe, zeilen, werte)
+        return ziel / np.maximum(summe, 1e-9)[:, None]
+
+    def _matrizen(self, lage):
+        u"""Alle Knochenmatrizen eines Bildes (b x 3 x 3, b x 3) — EINMAL je
+        Bild, an der Bahn gemerkt: Koerper und jedes Stueck laufen ueber
+        dieselben Lagen, und die 176 Drehungen kosten mehr als das LBS
+        eines Stuecks."""
+        merker = self.bahn.__dict__.setdefault('_lbs_matrizen', {})
+        schluessel = (id(lage), tuple(self.namen))
+        if schluessel in merker:
+            return merker[schluessel]
+        b = len(self.namen)
+        R = np.zeros((b, 3, 3))
+        t = np.zeros((b, 3))
         for spalte, name in enumerate(self.namen):
-            w = self.gewichte[:, spalte:spalte + 1]
-            if not w.any():
+            if name not in lage:
                 continue
             punkt, quat = lage[name]
             dreh = self.bahn.dreh(quat)
             rum, tum = self.bahn.ruhe_um[name]
-            ziel += w * ((self.punkte @ rum.T + tum) @ dreh.T
-                         + np.asarray(punkt))
-            summe += w
-        return ziel / np.maximum(summe, 1e-9)
+            R[spalte] = dreh @ rum
+            t[spalte] = dreh @ np.asarray(tum) + np.asarray(punkt)
+        merker[schluessel] = (R, t)
+        return R, t
 
     def ruheprobe(self):
         u"""Groesste Abweichung, wenn die Ruhelage eingesetzt wird."""

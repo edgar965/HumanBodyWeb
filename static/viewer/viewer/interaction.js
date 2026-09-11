@@ -123,7 +123,8 @@ function _buildEquippedList() {
             if (!fresh) return;
             state._selectedItem = fresh;
             _setEmissiveOnItem(state._selectedItem, state._SELECT_EMISSIVE);
-            const rb = document.getElementById('selection-remove-btn'); if (rb) rb.style.display = '';
+            const rb = document.getElementById('selection-remove-btn');
+            if (rb) rb.style.display = 'inline-block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
         });
         const rmBtn = document.createElement('button');
         rmBtn.className = 'equipped-item-remove';

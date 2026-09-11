@@ -57,9 +57,14 @@ class GarmentcodeKombi {
     uebernehmen() {
         const auswahl = document.getElementById('gc-vorlage');
         const vorlage = auswahl ? auswahl.value : '';
+        // Das Aussehen: vom getragenen Stück dieser Vorlage, wenn es eines
+        // gibt — das ist die Farbe, die der Nutzer ihm gegeben hat. Sonst
+        // der Stand des Panels (11.09.2026: „es wurde nur 1 Farbe genommen").
+        const material = GarmentcodeMaterial.getragen(
+            GarmentcodeMaterial.figur(), vorlage) || GarmentcodeMaterial.stand;
         const stand = this.liste.hinzufuegen(
             vorlage, GarmentcodeAblauf.titel(vorlage), garmentcodeRegler.werte,
-            GarmentcodeBauregler.werte(), GarmentcodeMaterial.stand);
+            GarmentcodeBauregler.werte(), material);
         const wieviel = this.liste.anzahl === 1
             ? 'ein Stück' : `${this.liste.anzahl} Stücke`;
         this.melden(stand.ok
@@ -89,9 +94,12 @@ class GarmentcodeKombi {
         if (!ziel) return;
         ziel.innerHTML = '';
         if (!this.liste.anzahl) {
-            ziel.appendChild(GarmentcodeKombi._hinweis(
-                'Noch nichts übernommen. Stück einstellen, dann '
-                + '„Übernehmen" — ab zwei Stücken kann gebaut werden.'));
+            ziel.appendChild(GarmentcodeKombi._hinweis(this.liste.verworfen
+                ? 'Die gemerkte Kombination stammt aus einer älteren Fassung '
+                  + '(ohne Farbe und Bauwerte je Stück) und wurde verworfen — '
+                  + 'die Stücke bitte neu übernehmen.'
+                : 'Noch nichts übernommen. Stück einstellen, dann '
+                  + '„Übernehmen" — ab zwei Stücken kann gebaut werden.'));
         }
         this.liste.eintraege.forEach((eintrag, nummer) => {
             ziel.appendChild(this._zeile(eintrag, nummer));
@@ -111,10 +119,17 @@ class GarmentcodeKombi {
         name.textContent = `${nummer + 1}. ${eintrag.titel}`;
         name.title = GarmentcodeKombi._reglertext(eintrag);
         // Die Farbe des Stücks als Punkt — sichtbar, nicht nur im Tooltip.
-        if (eintrag.material?.farbe) {
+        // Vom getragenen Stück, wenn es eines gibt (das gewinnt beim Bau),
+        // sonst vom Eintrag. `Garmentstoff.werte` liefert die Farbe als
+        // Zahl, der Farbwähler als `#rrggbb` — beides wird zu CSS.
+        const farbe = GarmentcodeKombi._css(
+            GarmentcodeMaterial.getragen(GarmentcodeMaterial.figur(),
+                                         eintrag.vorlage)?.farbe
+            ?? eintrag.material?.farbe);
+        if (farbe) {
             const punkt = document.createElement('span');
             punkt.className = 'gc-kombi-farbe';
-            punkt.style.background = eintrag.material.farbe;
+            punkt.style.background = farbe;
             name.prepend(punkt);
         }
         const rechts = document.createElement('span');
@@ -149,6 +164,14 @@ class GarmentcodeKombi {
         if (!pfade.length && !bau.length) return `${eintrag.titel}: alles auf Vorgabe`;
         return `${eintrag.titel}\n`
             + pfade.map((p) => `${p} = ${werte[p]}`).concat(bau).join('\n');
+    }
+
+    /** Eine Farbe als CSS: Zahl (`0x212121`) oder Zeichenkette (`#212121`). */
+    static _css(farbe) {
+        if (typeof farbe === 'number' && Number.isFinite(farbe)) {
+            return `#${farbe.toString(16).padStart(6, '0')}`;
+        }
+        return (typeof farbe === 'string' && farbe) ? farbe : null;
     }
 
     static _hinweis(text) {

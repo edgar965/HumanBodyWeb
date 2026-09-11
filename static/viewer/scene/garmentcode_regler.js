@@ -62,11 +62,20 @@ class GarmentcodeRegler {
         const ziel = document.getElementById('gc-regler');
         if (!ziel || !vorlage) return;
         if (this.fuerVorlage === vorlage) return;
+        // Nur die JÜNGSTE Anfrage darf zeichnen. Beim Seitenstart laufen
+        // zwei zugleich (die Vorgabe und die gemerkte Vorlage), und wer
+        // schnell umschaltet, hat zwei in der Luft. Kam die ältere Antwort
+        // zuletzt, zeichnete sie die falschen Regler — und ihr Preset
+        // merkte seine Bauwerte unter der Vorlage, die im Feld steht:
+        // „An die Haut ziehen" der Leggings landete beim T-Shirt
+        // (11.09.2026), und blieb dort, bei jedem Wechsel wiederhergestellt.
+        const meine = (this.laufnummer = (this.laufnummer || 0) + 1);
 
         ziel.innerHTML = '<div class="hb-hinweis">Einstellungen werden geholt …</div>';
         try {
             const antwort = await Serverabruf.json(
                 `/api/garmentcode/regler/?vorlage=${encodeURIComponent(vorlage)}`);
+            if (meine !== this.laufnummer) return;
             // Ein Wechsel des Kleidungsstücks verwirft die alten Werte: Sie
             // gehören zu Gruppen, die es jetzt vielleicht nicht mehr gibt.
             this.werte = {};

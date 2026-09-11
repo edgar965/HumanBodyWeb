@@ -213,7 +213,7 @@ export class Smplkoerper {
             abschnitt.style.display = 'none';
             return;
         }
-        abschnitt.style.display = '';
+        abschnitt.style.display = 'block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
         const geometrie = state.smplBodyMesh.geometry;
         const punkte = geometrie.getAttribute('position').count;
         const flaechen = geometrie.index ? geometrie.index.count / 3 : 0;

@@ -78,8 +78,12 @@ const { Stoffgrenze } = await import(MODUL);
 const F = JSON.parse((await import('node:fs')).readFileSync(FIXTURE, 'utf-8'));
 const f32 = (l) => Float32Array.from(l.flat());
 const f64 = (l) => Float64Array.from(l.flat());
-const grenze = new Stoffgrenze(f32(F.koerper), Uint32Array.from(F.dreiecke.flat()), f32(F.stoff));
+// Ruhelage in f64: Der Sollabstand je Punkt wird daraus gerechnet und muss Python auf 1e-9 treffen.
+const grenze = new Stoffgrenze(f64(F.koerper), Uint32Array.from(F.dreiecke.flat()), f64(F.stoff));
 if (grenze.aussen !== 1) throw new Error('Wickelrichtung: ' + grenze.aussen);
+for (let i = 0; i < F.soll.length; i++) {
+    if (Math.abs(grenze.soll[i] - F.soll[i]) > 1e-9) throw new Error(`Sollabstand ${i}: ${grenze.soll[i]} statt ${F.soll[i]}`);
+}
 let geprueft = 0, geaendert = 0;
 for (const fall of F.faelle) {
     const koerper = f64(fall.koerper), stoff = f64(fall.stoff);
@@ -143,11 +147,22 @@ class StoffgrenzeJsTest(SimpleTestCase):
         mitte = (0.0, 1.0, 0.0)
         koerper, dreiecke = _kugel(mitte=mitte)
         stoff = _stoff(zufall, 300, 0.3, mitte)
+        ruhe = Stoffgrenze(koerper, dreiecke)
+        # Der Sollabstand je Punkt aus der Ruhelage — so rechnet die
+        # JS-Fassung im Konstruktor (11.09.2026).
+        soll = ruhe.sollabstand(stoff)
         faelle = []
         for name, schub in ((u'Ruhe', np.zeros(3)),
                             (u'verschoben', np.array([0.5, -0.2, 0.3])),
-                            (u'eingedrueckt', np.zeros(3))):
+                            (u'eingedrueckt', np.zeros(3)),
+                            (u'koerper_aussen', np.zeros(3))):
             k, s = koerper + schub, stoff + schub
+            if name == u'koerper_aussen':
+                # Der KOERPER geht 12 mm nach aussen (sein eigener
+                # Weichgewebe-Zuschlag), der Stoff hat keinen Versatz. Die
+                # alte Fassung kuerzte hier nichts (kein einwaerts gerichteter
+                # Stoffversatz) — und die Haut stand durch die Leggings.
+                k = koerper + 0.012 * ruhe.normalen
             grenze = Stoffgrenze(k, dreiecke)
             _abstand, naechster = grenze.baum.query(s)
             if name == u'eingedrueckt':
@@ -157,9 +172,13 @@ class StoffgrenzeJsTest(SimpleTestCase):
                 tiefe = zufall.uniform(0.0, 0.020, size=(len(s), 1))
                 versatz = -grenze.normalen[naechster] * tiefe
                 ergebnis, zahl = np.zeros_like(versatz), 0
+            elif name == u'koerper_aussen':
+                versatz = np.zeros_like(s)
+                ohne_grenze = grenze.durchdringung(s)[0]
+                ergebnis, zahl = grenze.kuerzen(s, versatz, soll)
             else:
                 versatz = zufall.normal(scale=0.012, size=s.shape)
-                ergebnis, zahl = grenze.kuerzen(s, versatz)
+                ergebnis, zahl = grenze.kuerzen(s, versatz, soll)
             # Die Durchdringung MIT DER BINDUNG DER RUHELAGE — so misst die
             # JS-Fassung. Pythons `durchdringung()` sucht je Aufruf neu und
             # findet fuer einen seitlich verschobenen Punkt womoeglich einen
@@ -181,10 +200,12 @@ class StoffgrenzeJsTest(SimpleTestCase):
                 'tiefe_python_mm': grenze.durchdringung(rest)[1],
             })
         return {'koerper': koerper.tolist(), 'dreiecke': dreiecke.tolist(),
-                'stoff': stoff.tolist(), 'faelle': faelle}
+                'stoff': stoff.tolist(), 'soll': soll.tolist(), 'faelle': faelle,
+                'koerper_aussen_ohne_grenze': ohne_grenze}
 
     def test_js_kuerzt_wie_python(self):
         fixture = self._fixture()
+        from stoffgrenze import Stoffgrenze      # nach `_fixture`: setzt den Pfad
         # Der Fall muss etwas zu kuerzen haben — sonst prueft er nichts.
         self.assertGreater(fixture['faelle'][0]['gekuerzt'], 20)
         self.assertLess(fixture['faelle'][0]['gekuerzt'], 300)
@@ -195,12 +216,28 @@ class StoffgrenzeJsTest(SimpleTestCase):
         # bei einem Millimeter.
         self.assertGreater(mess['tiefe_python_mm'], 10.0)
         self.assertAlmostEqual(mess['tiefe_python_mm'], mess['durchdringung'][1], places=6)
+        # Der Koerper von innen: OHNE Stoffversatz muss angehoben werden —
+        # jeder Punkt, dessen Ruheabstand unter 12 mm + Soll liegt. Danach
+        # steckt nur noch im Koerper, was schon in RUHE darin stand (der
+        # Kunstkoerper ist facettiert; ein Punkt ueber der Flaechenmitte
+        # misst gegen die Punktnormale bis 1,6 mm „innen"). Mit der alten
+        # Fassung war hier `gekuerzt` 0 (Sabotage-Gegenprobe gemacht).
+        aussen = fixture['faelle'][3]
+        soll = np.asarray(fixture['soll'])
+        self.assertGreater(fixture['koerper_aussen_ohne_grenze'], 30.0)
+        self.assertGreater(aussen['gekuerzt'], 100)
+        in_ruhe_drin = 100.0 * float((soll < -Stoffgrenze.TOLERANZ).mean())
+        self.assertLessEqual(aussen['durchdringung'][0], in_ruhe_drin)
+        self.assertLess(aussen['durchdringung'][0], 2.0)
+        # Eine Leggings auf 2 mm bekommt 2 mm als Soll, nicht 6.
+        self.assertLess(soll.min(), 0.0025)
+        self.assertAlmostEqual(soll.max(), 0.006, places=9)
         with Pruefablage.datei(json.dumps(fixture), '.json',
                                'stoffgrenze_') as pfad:
             skript = SKRIPT.replace('FIXTURE,', json.dumps(pfad) + ',', 1)
             ausgabe = MODUL.laufen(skript)
         self.assertTrue(ausgabe.get('ok'), ausgabe)
-        self.assertEqual(ausgabe['geprueft'], 3 * 300 * 3)
+        self.assertEqual(ausgabe['geprueft'], 4 * 300 * 3)
         self.assertGreater(ausgabe['geaendert'], 0)
 
     def test_gitter_findet_den_naechsten(self):

@@ -28,7 +28,9 @@ import sys
 
 import numpy as np
 
+from feinkoerper import Feinkoerper
 from figurnetze import Figurnetze
+from filmmasken import Filmmasken
 from filmphysik import Filmphysik
 from filmrender import Filmrender
 from hautbahn import Hautbahn
@@ -61,16 +63,21 @@ class Hbfilm:
 
     def __init__(self, bvh=BVH, bilder=120, ziel_fps=24.0, ab=AB_BILD,
                  stuecke=None, physik=0.0, geschlecht='female',
-                 figurpunkte=None, melder=None, ab_sekunden=None):
+                 figurpunkte=None, melder=None, ab_sekunden=None,
+                 figurfein=None):
         u"""`figurpunkte` sind ALLE Basispunkte der Figur (mit Morphs);
-        ohne sie kommt die unverformte Grundfigur. `melder(phase, anteil)`
-        bekommt den Fortschritt — der Videoweg im UI zeigt ihn an."""
+        ohne sie kommt die unverformte Grundfigur. `figurfein` =
+        (Unterteiler, Basisflaechen): Dann laufen LBS und Physik auf ALLEN
+        Basispunkten und der Film rendert das unterteilte Netz der Szene
+        (`Feinkoerper`); ohne bleibt es bei der 18K-Aussenhaut. `melder(phase,
+        anteil)` bekommt den Fortschritt — der Videoweg im UI zeigt ihn an."""
         from bvh_nach_anim import Animschreiber
         from figur_nach_cody import Codyfigur
 
         self.melder = melder or (lambda phase, anteil: None)
         self.melder(u'Figur laden', 0.0)
         figur = Codyfigur(geschlecht, mit_fingern=True)
+        alle = None
         if figurpunkte is not None:
             # Die Morphs verschieben Punkte, nicht die Topologie: Dieselben
             # Aussenhaut-Indizes, dieselben Dreiecke, dieselben Gewichte.
@@ -90,7 +97,7 @@ class Hbfilm:
         self.physik = float(physik)
         self.netze = Figurnetze(figur)
         self.teile = []
-        self._koerper()
+        self._koerper(figurfein if alle is not None else None, alle)
         for eintrag in (stuecke if stuecke is not None else STUECKE):
             if isinstance(eintrag, dict):
                 self._stueck(eintrag['name'], eintrag.get('pfad'),
@@ -99,12 +106,22 @@ class Hbfilm:
                 name, ordner, farbe = eintrag
                 self._stueck(name, os.path.join(
                     AUSGABE, ordner, ordner + '_sim_rig.json'), farbe)
+        # Haut unter Stoff und Stoff unter Stoff werden nicht gerendert —
+        # in Ruhelage entschieden, wie in der Szene.
+        Filmmasken.anwenden(self.teile, self.melder)
 
-    def _koerper(self):
-        punkte, dreiecke, gewichte = self.netze.koerper()
-        haut = Hautbahn(punkte, gewichte, self.netze.namen, self.bahn)
-        self.teile.append({'name': u'Koerper', 'haut': haut,
-                           'dreiecke': dreiecke, 'farbe': self.HAUT})
+    def _koerper(self, fein=None, alle=None):
+        teil = {'name': u'Koerper', 'farbe': self.HAUT}
+        if fein is not None:
+            unterteiler, vierecke = fein
+            punkte, dreiecke, gewichte = self.netze.koerper_basis(alle, vierecke)
+            teil['unterteiler'] = unterteiler
+            teil['fein_dreiecke'] = np.asarray(unterteiler.triangles, dtype=np.int64)
+        else:
+            punkte, dreiecke, gewichte = self.netze.koerper()
+        teil['haut'] = Hautbahn(punkte, gewichte, self.netze.namen, self.bahn)
+        teil['dreiecke'] = dreiecke
+        self.teile.append(teil)
 
     def _stueck(self, name, pfad, farbe):
         if not pfad or not os.path.exists(pfad):
@@ -115,7 +132,7 @@ class Hbfilm:
         self.teile.append({'name': name, 'haut': haut, 'dreiecke': dreiecke,
                            'farbe': farbe,
                            'sitz': Figurnetze.sitzprobe(
-                               punkte, self.teile[0]['haut'].punkte)})
+                               punkte, Feinkoerper.ruhe(self.teile[0]))})
 
     # -------------------------------------------------------------- Proben
 
@@ -147,12 +164,13 @@ class Hbfilm:
         Gesamt-Bewegungszahl nicht zeigt.
         """
         from scipy.spatial import cKDTree
-        koerper = self.teile[0]['haut'].folge
+        zahl = len(self.teile[0]['haut'].folge)
         aus = []
         for teil in self.teile[1:]:
             werte = []
-            for nummer in (0, len(koerper) // 2, len(koerper) - 1):
-                baum = cKDTree(koerper[nummer])
+            for nummer in (0, zahl // 2, zahl - 1):
+                # Gegen das SICHTBARE Netz — dort liegt der Stoff an.
+                baum = cKDTree(Feinkoerper.bild(self.teile[0], nummer))
                 abstand, _ = baum.query(teil['haut'].folge[nummer])
                 werte.append(float(np.median(abstand)) * 1000.0)
             aus.append((teil['name'], werte))

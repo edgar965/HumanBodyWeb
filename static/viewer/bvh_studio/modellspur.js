@@ -27,7 +27,7 @@ export class Modellspur {
     static anwenden(spur, zeit) {
         const bewegung = state.project.getLinkedAnimation(spur);
         if (!bewegung) return;
-        const preset = Modellspur._aktives(spur, zeit);
+        const preset = Modellspur.aktives(spur, zeit);
         if (bewegung._loadingPreset) {
             // Warten: Die alte Figur darf nicht auftauchen.
             if (bewegung.group) bewegung.group.visible = false;
@@ -46,7 +46,7 @@ export class Modellspur {
     }
 
     /** Das Preset des Clips, der `zeit` enthält — oder `null`. */
-    static _aktives(spur, zeit) {
+    static aktives(spur, zeit) {
         for (const clip of spur.clips) {
             if (clip.type !== 'model') continue;
             const beginn = clip.startFrame / state.project.fps;

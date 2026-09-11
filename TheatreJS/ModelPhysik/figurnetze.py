@@ -43,6 +43,34 @@ class Figurnetze:
                 np.asarray(self.figur.dreiecke, dtype=np.int64),
                 aus / np.maximum(summe, 1e-9))
 
+    def koerper_basis(self, punkte, vierecke):
+        u"""ALLE Basispunkte der Figur (18.210) mit ihren Gewichten — das
+        Steuernetz, aus dem `Feinkoerper` je Bild das sichtbare Netz
+        unterteilt.
+
+        WARUM (11.09.2026): Der Film renderte die 18K-Aussenhaut, an der
+        die Leggings (an das 70K-Netz auf 2 mm angelegt) schon in Ruhe zu
+        7,4 % innen lag — im Video kam die Haut durch, obwohl die Szene
+        sauber war. Physik und LBS auf 70.851 Punkten kosteten 1,7 s je
+        Bild; die Unterteilung ist LINEAR, also laeuft beides auf der Basis
+        und das feine Netz folgt als `W @ basis` in Millisekunden.
+        `vierecke` sind die Basisflaechen (17.288 x 4).
+        """
+        tabelle = json.load(
+            open(os.path.join(self.figur.wurzel, 'skin_weights_base.json')))
+        knochennamen, roh = tabelle['bone_names'], tabelle['weights']
+        aus = np.zeros((len(punkte), len(self.namen)))
+        for zeile in range(min(len(punkte), len(roh))):
+            for name, wert in self.figur._paare(roh[zeile], knochennamen):
+                ziel = self.spalte.get(name)
+                if ziel is not None:
+                    aus[zeile, ziel] += float(wert)
+        summe = aus.sum(axis=1, keepdims=True)
+        q = np.asarray(vierecke, dtype=np.int64)
+        dreiecke = np.vstack([q[:, [0, 1, 2]], q[:, [0, 2, 3]]])
+        return (np.asarray(punkte, dtype=np.float64), dreiecke,
+                aus / np.maximum(summe, 1e-9))
+
     # ------------------------------------------------------------ Kleidung
 
     def stueck(self, pfad):

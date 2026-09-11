@@ -65,8 +65,17 @@ export class Zeitleistenmenue {
         }
     }
 
+    /**
+     * Sichtbar wird ein Menü nur mit `display: block` INLINE: Seit dem
+     * 17.08.2026 (6fbaa7e) versteckt eine Klasse (`.hb-kontextmenue`,
+     * `.hb-display-none`) die Menüs statt eines Inline-Stils, und ein leeres
+     * `style.display` hebt eine Klassenregel nicht auf. Vom 17.08. bis zum
+     * 11.09.2026 öffnete darum KEIN Kontextmenü der Zeitleiste — Clip, Modell
+     * (Vorlagenwahl), Spurkopf (Edgar: „Es waren doch auch Kontext Menüs
+     * verfügbar").
+     */
     static _zeigen(menue, e) {
-        menue.style.display = '';
+        menue.style.display = 'block';
         menue.style.left = e.clientX + 'px';
         const hoehe = menue.offsetHeight || 200;
         menue.style.top =

@@ -42,8 +42,10 @@ export class Panel {
 
     // ------------------------------------------------------- Markup-Bausteine
 
-    static kopf(symbol, titel) {
-        return `<h3 class="pnl-kopf"><i class="fas ${symbol}"></i> ${titel}</h3>`;
+    /** @param {string} tipp  Mauszeiger-Hinweis, z.B. auf einen Rechtsklick */
+    static kopf(symbol, titel, tipp = '') {
+        const hinweis = tipp ? ` title="${tipp}"` : '';
+        return `<h3 class="pnl-kopf"${hinweis}><i class="fas ${symbol}"></i> ${titel}</h3>`;
     }
 
     static zahlfeld(id, wert, schritt = 0.1) {

@@ -6,6 +6,8 @@ import { fetchRetargetedClipFromText }
 import { Skelettanzeige } from '../../../static/viewer/gemeinsam/skelettanzeige.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
 import { Haarbindung } from './haarbindung.js';
+import { Garmentcodebindung }
+    from '../../../static/viewer/gemeinsam/garmentcodebindung.js';
 
 /**
  * Skinner — Skelett, Hautgewichte und die Umwandlung zu SkinnedMesh.
@@ -149,6 +151,9 @@ export class Skinner {
         }
 
         this._kleiderBinden(figur, netz);
+        // GarmentCode-Stücke kommen starr in die Bühne und tragen ihre
+        // Rig-Datei — gebunden werden sie erst hier, mit dem frischen Skelett.
+        new Garmentcodebindung(this.skelett).binden(figur, netz);
         new Haarbindung(this.skelett, this.gewichte)
             .binden(figur, netz);
         Protokoll.debug('skinner', '✓ SkinnedMesh erstellt:', this.skelett.skeleton.bones.length,

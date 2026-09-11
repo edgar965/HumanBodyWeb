@@ -3,11 +3,18 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
 
 /**
- * Linksklick in der 3D-Ansicht: wählt den Lichthelfer oder das Szenenobjekt
- * unter dem Zeiger aus.
+ * Linksklick in der 3D-Ansicht: wählt den Lichthelfer, das Szenenobjekt oder
+ * die Figur unter dem Zeiger aus.
  *
  * Gesammelt werden ALLE Kandidaten, ausgewählt wird der NÄCHSTE — sonst
  * gewinnt ein Lichtkegel weit hinten gegen den Boden direkt vor der Kamera.
+ *
+ * FIGUREN (11.09.2026, Edgar: „wenn ich auf ein Modell in der Szene klicke,
+ * soll es in der Timeline ausgewählt werden"): Getroffen wird die Gruppe der
+ * Animationsspur (Netz, Kleidung, Haar); ausgewählt wird die MODELLSPUR, die
+ * diese Figur stellt — sie ist in der Zeitleiste „das Modell", und Entf nimmt
+ * sie samt Figur aus dem Bild. Ohne Modellspur die Animationsspur selbst.
+ * Den Rahmen im Bild zeichnet `Figurmarkierung`.
  *
  * Aus szenenmenue.js herausgelöst (Umbau 27.08.2026, Befund `jsfunktionen`).
  */
@@ -31,7 +38,16 @@ export class Szenenauswahl {
         this.strahl.setFromCamera(this.zeiger, state.camera);
 
         const naechste = this._naechsteSpur();
-        if (naechste !== null) fn.selectTrack?.(naechste);
+        if (naechste !== null) fn.selectTrack?.(Szenenauswahl.zielspur(naechste));
+    }
+
+    /** Für eine getroffene Figur die Modellspur, die sie stellt — sonst die Spur selbst. */
+    static zielspur(index) {
+        const spuren = state.project.tracks;
+        if (spuren[index]?.type !== 'bvh') return index;
+        const modell = spuren.findIndex(
+            s => s.type === 'model' && s._linkedAnimIdx === index);
+        return modell >= 0 ? modell : index;
     }
 
     /** @returns {number|null} Stelle der nächstgelegenen getroffenen Spur */
@@ -55,6 +71,10 @@ export class Szenenauswahl {
         }
         if (spur.type === 'scene_object' && spur.mesh) {
             const treffer = this._treffer(spur.mesh);
+            return treffer.length > 0 ? treffer[0].distance : null;
+        }
+        if (spur.type === 'bvh' && spur.group && spur.mesh) {
+            const treffer = this._treffer(spur.group);
             return treffer.length > 0 ? treffer[0].distance : null;
         }
         return null;

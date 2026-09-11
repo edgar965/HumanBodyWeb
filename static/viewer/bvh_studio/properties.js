@@ -21,6 +21,7 @@ import { Objekteigenschaften } from './eigenschaften/objekt.js';
 import { Klipeigenschaften } from './eigenschaften/klip.js';
 import { Maskenbausteine as M } from './eigenschaften/bausteine.js';
 import { Schaltknopf } from './schaltknopf.js';
+import { Modellspur } from './modellspur.js';
 
 export class Eigenschaftsfeld {
     static neuzeichnen() {
@@ -88,9 +89,14 @@ export class Eigenschaftsfeld {
         if (track.type === 'light') return Lichteigenschaften.maske(track);
         if (track.type === 'model') {
             const verbunden = state.project.getLinkedAnimation(track);
+            const preset = Modellspur.aktives(track, state.playheadFrame / state.project.fps);
             return `<div class="prop-group">
+            <div class="prop-row"><label>Modell:</label><span
+                class="marke-akzent">${preset || '(keins am Abspielkopf)'}</span></div>
             <div class="prop-row"><label>Verknüpft:</label><span
                 class="marke-akzent">${verbunden ? verbunden.name : '(keiner)'}</span></div>
+            <div class="fussnote">Rechtsklick auf die Modellspur in der Zeitleiste: Modell wählen.
+                Entf entfernt die Spur samt Figur.</div>
         </div>`;
         }
         if (track.type === 'audio') {

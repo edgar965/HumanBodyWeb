@@ -97,7 +97,11 @@ export class Formregler {
     static gruppeZeigen(form) {
         for (const [id, zuForm] of FELDGRUPPEN) {
             const el = document.getElementById(id);
-            if (el) el.style.display = (form === zuForm) ? '' : 'none';
+            if (!el) continue;
+            // Klasse statt Stil: `slider-row` ist flex, die Gruppen sind block —
+            // ein leerer Stil hob `hb-versteckt` nicht auf (seit 17.08., 11.09.2026).
+            el.classList.toggle('hb-versteckt', form !== zuForm);
+            el.style.display = '';
         }
     }
 }

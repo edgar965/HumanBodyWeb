@@ -14,6 +14,9 @@
  *     studio/studiovorgaben.js       Startvorgaben aus den Einstellungen
  *     studio/buehnenschleife.js      Bildschleife
  *     studio/exportreiter.js         Reiter „Export"
+ *     studio/figurentfernen.js       Entf, Rückgängig, Wiederholen (11.09.2026)
+ *     studio/figurwahl.js            „Modell laden" → Figurwahl-Dialog (11.09.2026)
+ *     studio/figurtausch.js          Rechtsklick auf die Figur → Modell austauschen (11.09.2026)
  *
  * Was hier bleibt, ist die Reihenfolge: Erst die Bühne, dann Theatre.js, dann
  * die Bedienung — und der Abspieler VOR dem Animationslauf.
@@ -46,6 +49,10 @@ import { Videoaufnahme } from './studio/videoaufnahme.js';
 import { Studiovorgaben } from './studio/studiovorgaben.js';
 import { Buehnenschleife } from './studio/buehnenschleife.js';
 import { Exportreiter } from './studio/exportreiter.js';
+import { Figurentfernen } from './studio/figurentfernen.js';
+import { Figurwahl } from './studio/figurwahl.js';
+import { Figurtausch } from './studio/figurtausch.js';
+import { Bereichsgriff } from '../../static/viewer/gemeinsam/bereichsgriff.js';
 import { PRESETS, applyPreset } from './presets.js';
 import { Protokoll } from '../../static/viewer/gemeinsam/protokoll.js';
 
@@ -136,6 +143,20 @@ window.addEventListener('DOMContentLoaded', () => {
         { PRESETS, applyPreset, camera, lights, controls }).verdrahten();
     window.bedienleiste = bedienleiste;
     new Studioknoepfe(skinner, studio).verdrahten();
+    // Entf nimmt das Gewählte, Strg+Z holt es zurück (Menü „Bearbeiten").
+    window.figurentfernen = new Figurentfernen(
+        { scene, figuren: loadedCharacters, auswahl }).verdrahten();
+    // „Datei → Modell laden": derselbe Dialog wie auf der Szene-Seite.
+    window.figurwahl = new Figurwahl(
+        { scene, figuren: loadedCharacters, figurenlader, auswahl }).verdrahten();
+    // Die rechte Leiste lässt sich am linken Rand ziehen; das Studio-Overlay
+    // folgt über die CSS-Variable.
+    new Bereichsgriff({
+        griff: document.getElementById('theatre-panel-griff'),
+        bereich: document.querySelector('.theatre-right-panel'),
+        seite: 'links', min: 240, max: 720, vorgabe: 300,
+        schluessel: 'theatre_panel_breite', variable: '--theatre-panel-breite',
+    }).verdrahten();
 
     // Kamera-Keyframes: studio/kamerabahn.js. Vorher 94 Zeilen in drei
     // Menue-Zuhoerern — dreimal derselbe Menue-Vorspann, zweimal dieselbe
@@ -171,6 +192,12 @@ window.addEventListener('DOMContentLoaded', () => {
     window.animationslauf = animationslauf;
     // Animationsbaum aufbauen — braucht `animationslauf` von der Zeile darueber.
     listen.animationen();
+
+    // Rechtsklick auf den Figurkopf im Eigenschaften-Feld: Modell austauschen.
+    // Braucht den Animationslauf, deshalb erst hier.
+    window.figurtausch = new Figurtausch(
+        { auswahl, figurenlader, figurentfernen: window.figurentfernen,
+          animationslauf, figurpanel }).verdrahten();
 
     new Buehnenzugaben({ scene, camera, lights, controls, sheet }).verdrahten();
     new Videoaufnahme(exporter, { renderer, camera }).verdrahten();

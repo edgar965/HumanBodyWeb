@@ -93,7 +93,10 @@ export class Kleiderbedienung {
         if (uma) Umakleider.fuellen(hinweis, figur);
         else hinweis.innerHTML = '<i class="fas fa-mouse-pointer hb-font-size-1-5rem"></i> Charakter auswählen';
         hinweis.style.display = hatFigur ? 'none' : '';
-        inhalt.style.display = hatFigur ? '' : 'none';
+        // Klasse mit: `#kleider-content` trägt `hb-versteckt`, ein leerer
+        // Stil zeigte es seit dem 17.08.2026 nicht (11.09.2026).
+        inhalt.classList.toggle('hb-versteckt', !hatFigur);
+        inhalt.style.display = '';
     }
 
     _sichtbarkeit() {

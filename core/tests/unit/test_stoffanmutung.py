@@ -115,6 +115,30 @@ class DasMaterialIstStoffTest(SimpleTestCase):
         self.assertIn('generateMipmaps = true', self.quelle)
         self.assertIn('anisotropy', self.quelle)
 
+    def test_der_glanzsaum_traegt_die_stofffarbe(self):
+        u"""Ein weißer Saum auf schwarzer Satin-Leggings stand in der
+        Animation als helle Flecken — Edgar hielt sie für Haut (11.09.2026).
+        Mit ausgeblendetem Körper blieben sie, mit `sheen = 0` waren sie
+        weg. Deshalb gehen Farbe und Glanzfarbe nur noch ZUSAMMEN über
+        `faerben`; eine feste weiße Glanzfarbe darf es nicht mehr geben."""
+        self.assertIn('static faerben(material, farbe)', self.quelle)
+        self.assertIn('material.sheenColor.copy(material.color)', self.quelle)
+        self.assertNotIn('GLANZ_FARBE', self.quelle)
+        self.assertNotIn('0xffffff', self.quelle)
+        # `neu` und `auflegen` setzen die Farbe über `faerben`, nie allein.
+        self.assertIn('Garmentstoff.faerben(material, bisher?.farbe', self.quelle)
+        self.assertIn('Garmentstoff.faerben(m, werte.farbe)', self.quelle)
+        self.assertNotIn('m.color?.set(werte.farbe)', self.quelle)
+
+    def test_auch_die_kleiderregler_ziehen_den_glanzsaum_nach(self):
+        u"""Der Assets-Reiter greift jedes `cloth`-Teilnetz, also auch ein
+        GarmentCode-Stück; sein Farbfeld darf den weißen Saum nicht
+        zurückbringen."""
+        for teile in (('scene', 'stueckbedienung.js'), ('scene', 'materialregler.js')):
+            quelle = _lies(*teile)
+            self.assertIn('material.sheenColor?.copy(material.color)', quelle, teile)
+            self.assertNotIn('auswahl.mesh.material.color.set(', quelle, teile)
+
     def test_die_rechnung_liegt_ausserhalb(self):
         u"""`gemeinsam/gewebe.js` kennt weder DOM noch Three.js — nur so ist
         sie in node prüfbar."""

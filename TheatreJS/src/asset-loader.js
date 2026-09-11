@@ -72,14 +72,14 @@ export async function loadCharacterModel(scene) {
  * fuer das Haarladen). Diese Fassade bleibt, damit die rund zwanzig
  * Aufrufstellen im Projekt unveraendert weiterlaufen.
  */
-export async function loadCharacterFromPreset(scene, preset, presetName) {
+export async function loadCharacterFromPreset(scene, preset, presetName, lage = null) {
     const figur = new Vorgabefigur({
         netzBauen: daten => Figurnetz.bauen(daten),
         erzeugtesModell: vorschrift => Figurnetz.erzeugtesModell(vorschrift),
         inTheatre: (gruppe, name) =>
             Theatreanmeldung.anmelden(gruppe, name, 'Character'),
     });
-    return figur.laden(scene, preset, presetName);
+    return figur.laden(scene, preset, presetName, lage);
 }
 
 /** BVH-Text lesen und als Skelett in die Buehne haengen. */

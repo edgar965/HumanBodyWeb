@@ -5,6 +5,7 @@ import { generateRigBoneMesh } from '../modellbau/rignetz.js';
 import { Spurzubehoer } from './spurzubehoer.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 
 /**
  * Spurfigur — die Figur einer Spur im BVH-Studio aufbauen: Netz der
@@ -39,7 +40,7 @@ export class Spurfigur {
             const netz = await this._netz(vorgabe);
             if (!netz) return null;
             this._einsetzen(netz);
-            if (vorgabe.garments || vorgabe.hair_style) {
+            if (vorgabe.garments || vorgabe.hair_style || vorgabe.garmentcode) {
                 await new Spurzubehoer(this.spur, vorgabe).laden();
             }
             Protokoll.debug('BVH Studio', `Figur geladen: ${this.spur.preset} `

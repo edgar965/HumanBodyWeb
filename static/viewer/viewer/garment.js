@@ -111,7 +111,7 @@ export async function loadGarment(garmentId) {
         state._selectedItem = { root: mesh, type: 'garment', id: garmentId, label: garmentId.split('/').pop() };
         fn._setEmissiveOnItem(state._selectedItem, state._SELECT_EMISSIVE);
         const rb = document.getElementById('selection-remove-btn');
-        if (rb) rb.style.display = '';
+        if (rb) rb.style.display = 'inline-block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
 
         fn.updateEquippedList();
     } catch (e) {
