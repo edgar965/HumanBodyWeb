@@ -221,8 +221,14 @@ class SchuhstoffTest(SimpleTestCase):
         self.assertEqual(Schuhentwurf.vermerk(self.pfad)['absatzform'], 'block')
         Schuhentwurf.stoff_vermerken(self.pfad, Katalog.entwurf('pumps'))
         self.assertEqual(Schuhentwurf.vermerk(self.pfad)['absatzform'], 'stiletto')
-        self.assertGreater(Schuhentwurf.stoff(self.pfad)['garment_edge_ke'],
-                           1000.0)
+        # Leder am HALBSCHUH ist weicher als am Stiefel — mit 50.000 blieb
+        # der Schuh ein Kasten (gemessen 11.09.2026: +4,5 cm breiter als
+        # der Fuss, mit 1.000 +1,4).
+        self.assertEqual(Schuhentwurf.vermerk(self.pfad)['baustein'], 'Halbschuh')
+        self.assertEqual(Schuhentwurf.stoff(self.pfad),
+                         Schuhentwurf.HALBSCHUH_STEIFE)
+        self.assertLess(Schuhentwurf.stoff(self.pfad)['garment_edge_ke'],
+                        Schuhentwurf.STOFFE['leather']['garment_edge_ke'])
         # Und die Spezifikation bleibt lesbar wie vorher.
         self.assertTrue(Schuhentwurf.ist_schuhschnitt(self.pfad))
 

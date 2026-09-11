@@ -18,8 +18,8 @@
  *
  * ZWEI PRESETS SCHLIESSEN SICH AUS, solange sie dieselben Regler anfassen:
  * „Eng anliegend, lang" und „Weit fallend" beide zu haken hätte keinen
- * definierten Zustand. Beim Anhaken wird deshalb jedes andere Preset mit
- * gemeinsamen Reglern abgehakt.
+ * definierten Zustand — beim Anhaken wird jedes andere mit gemeinsamen
+ * Reglern abgehakt, VOR dem Setzen (das Setzen merkt die aktive Liste).
  */
 import { garmentcodeReglerhilfe } from './garmentcode_reglerhilfe.js';
 
@@ -105,8 +105,8 @@ class GarmentcodePreset {
         // „Eng anliegend" hinterlassen hat. Vor `setzt`, weil das den Bau
         // anstößt und die Werte merkt.
         if (this.zuruecksetzt && preset.zurueck?.length) this.zuruecksetzt(preset.zurueck);
+        this._andereAbhaken(preset);         // vor `setzt` — siehe Modulkopf
         setzt(preset.werte);
-        this._andereAbhaken(preset);
     }
 
     _abhaken(preset, setzt) {

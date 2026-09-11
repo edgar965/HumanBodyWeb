@@ -279,6 +279,12 @@ class GarmentabsatzvorschauTest(SimpleTestCase):
         'calf_circ': 37.8, 'calf_height': 46.64, 'knee_circ': 34.73,
         'knee_height': 53.1, 'shin_circ_25': 24.4, 'shin_circ_50': 35.45,
         'shin_circ_75': 36.51, 'height': 168.0,
+        # Der Einstieg (`fusseinstieg.py`, 11.09.2026): Risthöhe an der
+        # Vamplinie, Weg um die Ferse auf 25/50/75 % der Knöchelhöhe, Bogen
+        # über den Rist ab 30/50/70 % der Risthöhe.
+        'vamp_height': 5.81, 'heel_girth_25': 32.16, 'heel_girth_50': 29.42,
+        'heel_girth_75': 21.88, 'instep_arc_30': 12.42, 'instep_arc_50': 9.88,
+        'instep_arc_70': 7.36,
     }
 
     def test_rechnen_liefert_die_zahlen_des_baus(self):

@@ -97,5 +97,6 @@ class FormpresetsTest(SimpleTestCase):
         self.assertNotIn('shoe.opening', ballerina['zurueck'])
         # Werte einer Form greifen ueber `Regler.anwenden`, auch `meta.feet`.
         entwurf = Katalog.entwurf('schuh')
-        self.assertEqual(Regler.anwenden(entwurf, Formpresets.werte('form_stiefel')), 3)
+        # Baustein, Schafthöhe, Weite, Fersenhöhe (der Stiefel braucht 0,6).
+        self.assertEqual(Regler.anwenden(entwurf, Formpresets.werte('form_stiefel')), 4)
         self.assertEqual(entwurf['meta']['feet']['v'], 'Stiefel')
