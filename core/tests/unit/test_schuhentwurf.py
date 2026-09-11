@@ -151,3 +151,53 @@ class SchuhschnittErkennungTest(SimpleTestCase):
     def test_eine_fehlende_datei_ist_keiner(self):
         self.assertFalse(Schuhentwurf.ist_schuhschnitt(
             os.path.join(self.ordner, 'gibtsnicht.json')))
+
+
+class SchuhstoffTest(SimpleTestCase):
+    u"""Der Stoff steht in der Spezifikation, die Drapierung liest ihn.
+
+    Gemessen (11.09.2026, `_wegwerf/schuh_steif.py`): Mit Stoff sackte
+    der Stiefelschaft auf 54 % seiner Höhe, mit Leder (Biegesteifigkeit
+    50.000) steht er bei 92 %. Die Ballerina aus Leder stand dagegen
+    15 mm vom Fuss ab, aus Stoff 7,7 mm — deshalb hat jedes Katalogstück
+    seinen eigenen Stoff."""
+
+    databases = []
+
+    def setUp(self):
+        self.ordner = os.path.join(settings.BASE_DIR, '_wegwerf',
+                                   'test_schuhstoff')
+        os.makedirs(self.ordner, exist_ok=True)
+        self.pfad = os.path.join(self.ordner, 'x_specification.json')
+        with open(self.pfad, 'w', encoding='utf-8') as datei:
+            json.dump({'pattern': {'panels': {'p_sohle': {}}}}, datei)
+
+    def tearDown(self):
+        shutil.rmtree(self.ordner, ignore_errors=True)
+
+    def test_stiefel_aus_leder_socke_und_ballerina_aus_stoff(self):
+        self.assertEqual(Schuhentwurf.stoffname(Katalog.entwurf('stiefel')),
+                         'leather')
+        self.assertEqual(Schuhentwurf.stoffname(Katalog.entwurf('stiefelette')),
+                         'leather')
+        for stueck in ('socke', 'ballerina', 'slipper'):
+            self.assertEqual(Schuhentwurf.stoffname(Katalog.entwurf(stueck)),
+                             'cloth', stueck)
+
+    def test_der_vermerk_kommt_als_materialwerte_zurueck(self):
+        Schuhentwurf.stoff_vermerken(self.pfad, Katalog.entwurf('stiefel'))
+        self.assertEqual(Schuhentwurf.stoff(self.pfad),
+                         Schuhentwurf.STOFFE['leather'])
+        self.assertGreater(Schuhentwurf.stoff(self.pfad)['garment_edge_ke'],
+                           1000.0)
+        # Und die Spezifikation bleibt lesbar wie vorher.
+        self.assertTrue(Schuhentwurf.ist_schuhschnitt(self.pfad))
+
+    def test_stoff_heisst_keine_werte(self):
+        Schuhentwurf.stoff_vermerken(self.pfad, Katalog.entwurf('socke'))
+        self.assertEqual(Schuhentwurf.stoff(self.pfad), {})
+
+    def test_ohne_vermerk_keine_werte(self):
+        self.assertEqual(Schuhentwurf.stoff(self.pfad), {})
+        self.assertEqual(Schuhentwurf.stoff(
+            os.path.join(self.ordner, 'gibtsnicht.json')), {})

@@ -52,6 +52,7 @@ class SchuhschnittTest(SimpleTestCase):
         'foot_yaw': 0.04, 'ankle_circ': 19.23, 'ankle_height': 13.78,
         'calf_circ': 37.8, 'calf_height': 46.64, 'knee_circ': 34.73,
         'knee_height': 53.1,
+        'shin_circ_25': 24.4, 'shin_circ_50': 35.45, 'shin_circ_75': 36.51,
     }
 
     @classmethod
@@ -97,9 +98,9 @@ class SchuhschnittTest(SimpleTestCase):
         self.assertEqual(len(muster.pattern['panels']), 8)
         self.assertEqual(len(muster.pattern['stitches']), 22)
 
-    def test_ein_stiefel_hat_sechs(self):
+    def test_ein_stiefel_hat_acht_je_seite(self):
         muster = self._bauen('Stiefel').assembly()
-        self.assertEqual(len(muster.pattern['panels']), 12)
+        self.assertEqual(len(muster.pattern["panels"]), 16)
 
     def test_kein_panel_durchdringt_sich(self):
         for art in ('Halbschuh', 'Stiefel'):
@@ -156,6 +157,34 @@ class SchuhschnittTest(SimpleTestCase):
             self.assertEqual(len(regel.int1.edges), len(regel.int2.edges))
 
     # ------------------------------------------------------------- Regler
+
+    def test_der_schaft_ist_nirgends_enger_als_das_bein(self):
+        u"""Die Wade setzt früh an: Linear zwischen Knöchel und Wade war
+        der Schaft auf 32–38 cm so eng wie das Bein, und die Simulation
+        drückte ihn auf 57 % seiner Höhe (11.09.2026, `schuh_steif.py`)."""
+        g = self._bauen('Stiefel', **{'boot.height': 0.6, 'boot.ease': 1.2})
+        s = g.links
+        unten = 4 * s.schaft_vi.interfaces['unten'].edges.length()
+        oben = 4 * s.schaft_vi.interfaces['oben'].edges.length()
+        for schritt in range(0, 11):
+            t = schritt / 10.0
+            hoehe = s.ring_hinten + t * s.schafthoehe
+            self.assertGreaterEqual(unten + t * (oben - unten) + 0.5,
+                                    s.fuss.beinumfang(hoehe) * 1.2,
+                                    'Höhe %.1f cm' % hoehe)
+
+    def test_die_quartiere_schliessen_ueber_dem_rist(self):
+        u"""Beim Stiefel ist der Einstieg des Blatts an die Ristkanten
+        genäht, der Ring für den Schaft besteht nur aus den Oberkanten —
+        beim Halbschuh bleibt der Einstieg frei."""
+        stiefel = self._bauen('Stiefel').links
+        self.assertIn('rist', stiefel.quartier_a.interfaces)
+        self.assertLess(stiefel.ring_vorn, stiefel.ring_hinten)
+        self.assertAlmostEqual(stiefel.ring_hinten,
+                               self.FUSS['ankle_height'], delta=0.5)
+        halbschuh = self._bauen('Halbschuh').links
+        self.assertNotIn('rist', halbschuh.quartier_a.interfaces)
+        self.assertEqual(len(halbschuh.interfaces['oben'].edges), 3)
 
     def test_der_schaft_folgt_dem_regler(self):
         niedrig = self._bauen('Stiefel', **{'boot.height': 0.1})
