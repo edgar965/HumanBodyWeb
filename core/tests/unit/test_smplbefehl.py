@@ -113,6 +113,16 @@ class SmplbefehlTest(SimpleTestCase):
         self.assertIn('--static_cam', mit)
         self.assertIn('--no_joint_limits', mit)
 
+    def test_gemx_glaettet_und_kennt_keine_brennweite(self):
+        """GEM-X (12.09.2026): `--static_cam` nur aus dem Auftrag, Glaettung
+        wie GVHMR; der Gelenkgrenzen-Schalter wird gesendet, der Wrapper
+        ignoriert ihn (SOMA-Gelenke sind keine SMPL-Indizes)."""
+        befehl = self.befehl('gemx', static_cam=True, smooth_sigma=3.0)
+        self.assertIn('--static_cam', befehl)
+        self.assertEqual(befehl[befehl.index('--smooth_sigma') + 1], '3.0')
+        self.assertNotIn('--focal_length_mm', befehl)
+        self.assertNotIn('--static_cam', self.befehl('gemx'))
+
     def test_unbekannte_pipeline_bekommt_nur_das_grundgeruest(self):
         befehl = self.befehl('smplest_x')
         self.assertEqual([a for a in befehl if a.startswith('--')],

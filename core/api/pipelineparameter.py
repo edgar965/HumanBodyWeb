@@ -33,6 +33,8 @@ class Pipelineparameter:
             return Pipelineparameter._gem(post)
         if pipeline == 'duomo':
             return Pipelineparameter._duomo(post)
+        if pipeline == 'gemx':
+            return Pipelineparameter._gemx(post)
         if pipeline.startswith('hybrid_'):
             return Pipelineparameter._hybrid(post)
         return {}
@@ -98,6 +100,16 @@ class Pipelineparameter:
         }
 
     @staticmethod
+    def _gemx(post):
+        """GEM-X (12.09.2026): feste Kamera, Glaettung, Geraet — keine
+        Gelenkgrenzen (SOMA hat 77 Gelenke, die Grenzen sind SMPL-Indizes)."""
+        return {
+            'static_cam': post.get('gemx_static_cam') == 'on',
+            'smooth_sigma': float(post.get('gemx_smooth_sigma', 2.0)),
+            'device': post.get('gemx_device', 'cuda'),
+        }
+
+    @staticmethod
     def _hybrid(post):
         koerper = post.get('hybrid_body_backend', 'gvhmr')
         p = {
@@ -150,6 +162,8 @@ class Pipelineparameter:
             # DuoMo hat keine Einstellung: ohne Kamerabahn ist es ohnehin fest.
             'duomo_static_cam': True,
             'duomo_device': s.smpl_device,
+            'gemx_static_cam': True,
+            'gemx_device': s.smpl_device,
             # Hybrid greift auf dieselben Einstellungen zurueck
             'hybrid_body_device': s.smpl_device,
             'hybrid_gvhmr_static_cam': s.gvhmr_static_cam,

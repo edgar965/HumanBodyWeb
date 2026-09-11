@@ -48,12 +48,15 @@ export class Pipelinefelder {
             ['static_cam', 'bool'], ['smooth_sigma', 'float'],
             ['joint_limits', 'bool'], ['device', 'text'],
         ],
+        gemx: [
+            ['static_cam', 'bool'], ['smooth_sigma', 'float'], ['device', 'text'],
+        ],
     };
 
     /** Vorsilbe der Feldnamen im Formular. */
     static VORSILBE = {
         v4: 'v4_', gvhmr: 'gvhmr_', wham: 'wham_', prompthmr: 'prompthmr_',
-        gem: 'gem_', duomo: 'duomo_',
+        gem: 'gem_', duomo: 'duomo_', gemx: 'gemx_',
     };
 
     /** Ankreuzgruppe "Koerperteile" der v4-Pipeline. */

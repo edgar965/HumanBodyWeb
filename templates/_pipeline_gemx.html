@@ -1,0 +1,48 @@
+{# GEM-X (NVIDIA, SOMA mit Händen) — 12.09.2026. Eigene Datei: upload_v4.html ist längst über der Grenze. #}
+                <div class="pipeline-card {% if not status_3d.gemx %}disabled{% endif %}"
+                     data-pipeline="gemx">
+                    <label class="pipeline-card-header">
+                        <input type="radio" name="pipeline" value="gemx"
+                            {% if default_3d == 'gemx' %}checked{% endif %}
+                            {% if not status_3d.gemx %}disabled{% endif %}>
+                        <span class="pipeline-card-title">GEM-X (mit H&auml;nden)</span>
+                        <span class="pipeline-card-desc">
+                            {% if status_3d.gemx %}SOMA, 77 Gelenke inkl. Finger, GPU, NVIDIA &mdash; BVH mit
+                                 Mixamo-Namen, kommerziell nutzbar{% else %}nicht installiert{% endif %}
+                        </span>
+                    </label>
+                    <div class="pipeline-settings" id="settings-gemx">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" data-vorgabe="gemx:fast">Schnell</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="gemx:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="gemx:max">Maximum</button>
+                        </div>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Statische Kamera <span
+                                     class="setting-hint">GEM-X verfolgt die Kamera nicht; der Schalter setzt nur
+                                          die Kamera-Maske des Modells</span></div>
+                                <input type="checkbox" name="gemx_static_cam"
+                                     {% if defaults.gemx_static_cam %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Temporal Smoothing <span
+                                     class="setting-hint">Gaussian-Gl&auml;ttung &uuml;ber alle 77 Gelenke
+                                          (0=aus, 2=Standard, 4+=stark)</span></div>
+                                <input type="number" name="gemx_smooth_sigma" min="0" max="10" step="0.5" value="2.0">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Device <span
+                                     class="setting-hint">GPU (CUDA); Gewichte 6,7 GB von Hugging Face
+                                          (GEM, SAM-3D-Body, MHR, ViTPose)</span></div>
+                                <select name="gemx_device">
+                                    <option value="cuda"
+                                         {% if defaults.gemx_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.gemx_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>

@@ -51,6 +51,11 @@ class GvhmrFormularTest(SimpleTestCase):
                              'joint_limits': True, 'device': 'cpu'})
         self.assertFalse(Pipelineparameter.lesen({}, 'duomo')['static_cam'])
 
+    def test_gemx_liest_seine_drei_felder(self):
+        p = Pipelineparameter.lesen(
+            {'gemx_static_cam': 'on', 'gemx_smooth_sigma': '1'}, 'gemx')
+        self.assertEqual(p, {'static_cam': True, 'smooth_sigma': 1.0, 'device': 'cuda'})
+
     def test_der_befehl_traegt_die_schalter_weiter(self):
         p = Pipelineparameter.lesen(
             {'gvhmr_use_dpvo': 'on', 'gvhmr_smooth_sigma': '1.5',

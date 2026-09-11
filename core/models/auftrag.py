@@ -45,6 +45,7 @@ class BVHJob(models.Model):
         ('prompthmr', 'PromptHMR'),
         ('gem', 'GEM-SMPL'),
         ('duomo', 'DuoMo'),
+        ('gemx', 'GEM-X (mit Händen)'),
         # Hybrid Pipelines (SMPL Body + MocapNET v4 Face+Hands)
         ('hybrid_gvhmr', 'Hybrid (GVHMR + MocapNET v4)'),
         ('hybrid_prompthmr', 'Hybrid (PromptHMR + MocapNET v4)'),

@@ -95,7 +95,7 @@ class Auftragssteuerung:
     def _anfangszustand(pipeline):
         if pipeline == 'v4':
             return 'v4_processing'
-        if (pipeline in ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo')
+        if (pipeline in ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx')
                 or pipeline.startswith('hybrid_')):
             return 'processing'
         if pipeline in ('rtmpose', 'vitpose', 'yolo11'):

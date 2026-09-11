@@ -155,6 +155,7 @@ class Uploadseiten:
             'prompthmr': prompthmr,
             'gem': Path(settings.GEM_ROOT).is_dir(),
             'duomo': Path(settings.DUOMO_ROOT).is_dir(),
+            'gemx': Path(settings.GEMX_ROOT).is_dir(),
             # Kamerabahn (DPVO fuer GVHMR/WHAM, DROID-SLAM fuer PromptHMR):
             # die Kaestchen gibt es seit je, die Raeder erst seit 12.09.2026.
             'slam': Slamstatus.verfuegbar(settings.PIPELINE_PYTHON,

@@ -37,10 +37,13 @@ class Smplbefehl:
         # schickt `duomo_static_cam` (Vorgabe an); DuoMo ist ohne Kamerabahn
         # ohnehin fest.
         'duomo': (('static_cam', None, '--static_cam'),),
+        # GEM-X (12.09.2026): wie GEM-SMPL ohne Rendern; Glaettung ueber
+        # `_glaettung`, die Gelenkgrenzen nimmt der Wrapper an und ignoriert sie.
+        'gemx': (('static_cam', None, '--static_cam'),),
     }
 
     #: Pipelines, die Glaettung und Gelenkgrenzen von `Bvhbau` kennen.
-    MIT_GLAETTUNG = ('gvhmr', 'gem', 'duomo')
+    MIT_GLAETTUNG = ('gvhmr', 'gem', 'duomo', 'gemx')
 
     def __init__(self, job, einstellungen):
         self.job = job
