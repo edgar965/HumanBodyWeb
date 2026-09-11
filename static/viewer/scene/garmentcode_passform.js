@@ -43,8 +43,10 @@ export class GarmentcodePassform {
     }
 
     /**
-     * Welche Form gilt? Die, deren Werte alle anliegen — oder die
-     * Vorgabe des Stücks (`gehakt`), wenn kein Bausteinfeld gesetzt ist.
+     * Welche Form gilt? Die, deren Regler alle anliegen. Ein Bausteinfeld
+     * (`meta.*`) ist kein Regler und liest sich als `undefined`: Es zählt
+     * als Treffer nur für die Vorgabe des Stücks (`gehakt`) — ein Kleid
+     * mit Ärmel 0,3 ist das Kleid, nicht das Sommerkleid (11.09.2026).
      * Nur, wenn noch keine Form gehakt ist (das Gedächtnis war zuerst).
      */
     static formHaken(presets, liest) {
@@ -52,9 +54,12 @@ export class GarmentcodePassform {
         if (!formen.length || formen.some((p) => garmentcodePreset.aktiv.has(p.schluessel))) {
             return null;
         }
-        const passt = (p) => Object.entries(p.werte).every(([pfad, wert]) => liest(pfad) === wert);
-        const leer = (p) => Object.keys(p.werte).every((pfad) => liest(pfad) === undefined);
-        const treffer = formen.find(passt) || formen.find((p) => p.gehakt && leer(p));
+        const passt = (p) => Object.entries(p.werte).every(([pfad, wert]) => {
+            const ist = liest(pfad);
+            if (ist === undefined) return pfad.startsWith('meta.') && p.gehakt;
+            return ist === wert;
+        });
+        const treffer = formen.find(passt);
         if (treffer) garmentcodePreset.anhaken([treffer.schluessel]);
         return treffer ? treffer.schluessel : null;
     }

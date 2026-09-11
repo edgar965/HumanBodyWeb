@@ -36,7 +36,10 @@ class PassformTest(SimpleTestCase):
     def test_tshirt_bekommt_rumpf_und_aermel(self):
         u"""Beim ungefitteten Shirt wirken beide Weiteregler."""
         presets = Katalog.passform('t-shirt')
-        eng = [p for p in presets if p['schluessel'] == 'passform_eng']
+        # Seit dem 11.09.2026 ein Oberteil mit Formen: „Eng anliegend" des
+        # geraden Shirts und das des taillierten verschmelzen zu einem
+        # Kaestchen (`passform_eng+passform_eng_fitted`).
+        eng = [p for p in presets if 'passform_eng' in p['schluessel'].split('+')]
         self.assertEqual(len(eng), 1, 'Eng anliegend fehlt beim T-Shirt')
         self.assertIn('shirt.flare', eng[0]['werte'])
         self.assertIn('sleeve.end_width', eng[0]['werte'])
@@ -48,17 +51,33 @@ class PassformTest(SimpleTestCase):
         flare 1,6 ergibt Saum 108,3 cm und Hautabstand 6,6 mm — dieselben
         Werte wie die Vorgabe.
         """
-        for vorlage in ('kleid', 'hemd', 'jumpsuit'):
+        from GarmentCode.regler import Regler
+        # Am Anzug (nur FittedShirt) fehlen sie ganz; Kleid und Oberteil
+        # fuehren sie seit dem 11.09.2026 fuer ihre Shirt-Formen
+        # (Sommerkleid, T-Shirt) mit — ohne die Formen nicht.
+        for vorlage in ('anzug', 'jumpsuit'):
             for preset in Katalog.passform(vorlage):
+                self.assertNotIn('shirt.width', preset['werte'], vorlage)
+                self.assertNotIn('shirt.flare', preset['werte'], vorlage)
+        for vorlage in ('kleid', 'hemd'):
+            for preset in Regler.passform(Katalog.entwurf(vorlage)):
                 self.assertNotIn('shirt.width', preset['werte'], vorlage)
                 self.assertNotIn('shirt.flare', preset['werte'], vorlage)
 
     def test_aermelloses_stueck_bekommt_keine_aermelwerte(self):
-        u"""Am Traegertop laeuft jeder Aermelregler ins Leere."""
-        for preset in Katalog.passform('traegertop'):
+        u"""An der Unterwaesche (BH ohne Aermel) laeuft jeder Aermelregler
+        ins Leere. Das Traegertop ist seit dem 11.09.2026 eine FORM des
+        Oberteils, und das Oberteil fuehrt die Passform aller seiner Formen
+        — der Reiter zeichnet sie einmal je Stueck."""
+        for preset in Katalog.passform('unterwaesche'):
+            if preset.get('form'):
+                continue
             for pfad in preset['werte']:
                 self.assertFalse(pfad.startswith('sleeve.'),
-                                 'Aermelwert am aermellosen Top: %s' % pfad)
+                                 'Aermelwert am aermellosen Stueck: %s' % pfad)
+        top = next(p for p in Katalog.passform('oberteil') if p['titel'] == u'Trägertop')
+        self.assertTrue(top['werte']['sleeve.sleeveless'])
+        self.assertIn('sleeve.length', top['zurueck'])
 
     def test_hose_bekommt_ihre_eigenen(self):
         u"""Seit dem 08.09.2026 hat jedes Stueck welche.
@@ -83,9 +102,13 @@ class PassformTest(SimpleTestCase):
         u"""Ein aermelloses, tailliertes Top hat keine Weiteregler.
 
         Das ist der Fall, in dem „keine" die richtige Antwort ist: Rumpf
-        aus den Massen (`FittedShirt`), kein Aermel. Die Seite sagt es.
+        aus den Massen (`FittedShirt`), kein Aermel. Seit dem 11.09.2026
+        ist das Traegertop eine Form des Oberteils; ohne die Formen und
+        ohne die Varianten der anderen Formen bleibt nichts.
         """
-        self.assertEqual(Katalog.passform('traegertop'), [])
+        from GarmentCode.regler import Regler
+        self.assertEqual(Regler.passform(Katalog.entwurf('traegertop')), [])
+        self.assertTrue(any(p.get('form') for p in Katalog.passform('traegertop')))
 
     def test_kleid_fasst_oberteil_und_rock_zusammen(self):
         u"""Ein Titel, ein Kaestchen — auch wenn zwei Presets zutreffen.
@@ -121,6 +144,10 @@ class PassformTest(SimpleTestCase):
             for preset in Katalog.passform(vorlage):
                 for pfad in preset['werte']:
                     if pfad in Passformpresets.BAU_PFADE:
+                        continue
+                    # Die Bausteinfelder einer Form (`meta.*`) sind keine
+                    # Regler — `Regler.anwenden` kennt sie trotzdem.
+                    if pfad.startswith('meta.'):
                         continue
                     self.assertIn(pfad, pfade,
                                   '%s: %s gibt es nicht' % (vorlage, pfad))

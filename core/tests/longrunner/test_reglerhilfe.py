@@ -50,7 +50,23 @@ def _alle_pfade():
     """
     aus = set()
     for name in Katalog.STUECKE:
+        # Mit den Gruppen aller FORMEN des Stuecks (11.09.2026): Der
+        # Kreisrock ist eine Form des Rocks, der Stiefel eine des Schuhs.
         aus.update(_pfade(Katalog.entwurf(name)))
+        aus.update(_pfade_der_bloecke(Katalog.regler(name)))
+    return aus
+
+
+def _pfade_der_bloecke(bloecke):
+    aus = []
+
+    def gehen(bloecke):
+        for block in bloecke:
+            for feld in block['felder']:
+                aus.append(feld['pfad'])
+            gehen(block['untergruppen'])
+
+    gehen(bloecke)
     return aus
 
 
