@@ -41,10 +41,18 @@ class SzeneEinstellungen(Einstellungsseite):
             prefs[name] = F.text(post, name)
         prefs['mh_tpose_displacement'] = (
             '1' if post.get('mh_tpose_displacement') else '0')
+        # Vorgabe AN: Wer nichts einstellt, bekommt die schnelle Seite
+        # (`core/dienste/modulbuendel.py`). Ausgeschaltet liegt jedes der
+        # 230 Module wieder einzeln im Browser — das braucht man beim
+        # Suchen eines JavaScript-Fehlers.
+        prefs['module_buendeln'] = (
+            '1' if post.get('module_buendeln') else '0')
         return prefs
 
     def kontext(self, s):
+        prefs = s.ui_prefs or {}
         return {
             'selection_opacity_pct': int(round(s.selection_opacity * 100)),
+            'module_buendeln': str(prefs.get('module_buendeln', '1')) != '0',
             **Animationsauswahl().seitenteil([s.default_anim_scene]),
         }

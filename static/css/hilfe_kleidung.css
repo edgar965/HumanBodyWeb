@@ -265,3 +265,40 @@
 .doku-seite .stufe-aufwand { font-size: .87rem; opacity: .78; }
 .doku-seite ul.doku-liste > li { margin-bottom: .5rem; }
 .doku-seite .doku-quelle { font-size: .85rem; opacity: .78; }
+
+/* Kleiderphysik (10.09.2026): Messzeilen — hielt der Kollider oder nicht */
+.physik-gut td:last-child { color: var(--gruen, #3a9d5d); }
+.physik-schlecht td:last-child { color: var(--rot, #c0392b); }
+
+/* Koerperphysik (10.09.2026)
+   ------------------------------------------------------------------
+   `.doku-kasten` gibt es nur in Sondervarianten (`-export`, `-studio`,
+   `-szene`), nicht als Grundform — ein Kasten ohne eigene Klasse saehe
+   deshalb aus wie gewoehnlicher Text. Die Fallen-Kaesten und der
+   Standhinweis brauchen aber genau die Absetzung: Auf dieser Seite steht,
+   was NICHT laeuft, und das darf nicht im Fliesstext untergehen.
+   Die dreifache Klasse folgt dem Muster der Nachbarregeln (Spezifitaet
+   gegen die Grundregeln von `dokuseite.css`).                          */
+.doku-seite .doku-kasten.doku-kasten {
+    background: #1e1e2e;
+    padding: 18px 20px;
+    border-radius: 8px;
+    margin: 16px 0;
+    border-left: 4px solid #7aa2f7;
+}
+.doku-seite .doku-kasten.doku-kasten h3 { margin-top: 0; }
+.doku-seite .doku-kasten.doku-kasten p:last-child { margin-bottom: 0; }
+
+/* Der Standhinweis ganz oben: gelb, weil er eine Einschraenkung nennt. */
+.doku-seite .doku-warnung.doku-warnung.doku-warnung {
+    border-left-color: #e0af68;
+    background: #2a2419;
+}
+
+/* Statuszeilen der Stand-Tabelle. `physik-gut`/`-schlecht` faerben die
+   LETZTE Spalte; hier ist die aussagekraeftige die ZWEITE.            */
+.doku-seite tr.physik-gut td:nth-child(2) { color: var(--gruen, #3a9d5d); }
+.doku-seite tr.physik-schlecht td:nth-child(2) {
+    color: var(--rot, #f7768e);
+    font-weight: 600;
+}

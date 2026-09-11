@@ -152,6 +152,16 @@ class Modelldateien:
         os.makedirs(ordner, exist_ok=True)
         # Das Feld `name` in der Datei muss zum Dateinamen passen.
         daten['name'] = sauber
+        # Die drapierten Netze in eine szenengebundene Ablage kopieren
+        # (10.09.2026, Edgar: „FemaleGarmentCode hatte ein langes T-Shirt,
+        # beim Laden ist das T-Shirt kurz"). Ohne das zeigt die Szene auf
+        # eine Datei, die der naechste Bau desselben Stuecktyps ueberschreibt
+        # — gleiche Adresse, anderer Inhalt, keine Meldung.
+        # Begruendung in `Assets/GarmentCode/szenenstuecke.py`.
+        if daten.get('garmentcode'):
+            from GarmentCode.szenenstuecke import Szenenstuecke
+            daten['garmentcode'] = Szenenstuecke.sichern(
+                sauber, daten['garmentcode'])
         with open(pfad, 'w', encoding='utf-8') as datei:
             json.dump(daten, datei, indent=2, ensure_ascii=False)
         return JsonResponse({'ok': True, 'filename': '%s.json' % sauber})

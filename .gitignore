@@ -8,6 +8,8 @@ db.sqlite3
 *.log
 media/uploads/
 media/output/
+# Videos der Figur (11.09.2026): je Lauf ein MP4, Weg 1 und Weg 2.
+media/figurvideos/
 
 # Node
 node_modules/
@@ -80,3 +82,14 @@ _wegwerf/
 #   output/  Renderergebnisse und Exporte
 .cache/
 output/
+
+# Gebuendeltes Szene-Skript (wird bei Bedarf gebaut, siehe core/dienste/modulbuendel.py)
+_buendel/
+
+# Körperphysik (10./11.09.2026): erzeugte Bakes, fast-cody-Exporte und der
+# Warp-Kernelcache der Proben — Ergebnisse, kein Quelltext.
+TheatreJS/ModelPhysik/warp_cache/
+TheatreJS/ModelPhysik/cody/
+TheatreJS/ModelPhysik/figur/
+TheatreJS/kleiderPhysik/film/
+TheatreJS/kleiderPhysik/*.npz

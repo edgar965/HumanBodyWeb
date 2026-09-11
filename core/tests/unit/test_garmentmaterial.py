@@ -135,7 +135,9 @@ class MaterialUeberlebtNeuEinhaengenTest(SimpleTestCase):
 
     def test_das_neue_material_erbt_die_bisherigen_werte(self):
         quelle = self._anziehen()
-        self.assertIn('Garmentstoff.neu(bisher)', quelle)
+        # Seit dem 10.09.2026 kommen die Stoffangaben als zweites Argument
+        # dazu (UV und Massstab fuer das Gewebe) — geerbt wird weiter.
+        self.assertIn('Garmentstoff.neu(bisher, stoff)', quelle)
         self.assertNotIn('GarmentcodeAnziehen._stoff()', quelle)
 
     def test_der_stoff_hat_eine_eigene_quelle(self):
@@ -145,7 +147,7 @@ class MaterialUeberlebtNeuEinhaengenTest(SimpleTestCase):
         """
         stoff = _quelle('static', 'viewer', 'scene', 'garmentcode_stoff.js')
         self.assertIn('static FARBE = 0xdcd8d0;', stoff)
-        self.assertIn('static neu(bisher = null)', stoff)
+        self.assertIn('static neu(bisher = null, angaben = null)', stoff)
         self.assertIn('static werte(netz)', stoff)
         for datei in ('garmentcode_anziehen.js', 'garmentcode_ablage.js',
                       'garmentcode_material.js'):

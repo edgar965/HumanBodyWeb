@@ -57,5 +57,16 @@ class Modellablage:
         if not os.path.isfile(pfad):
             raise Ablagefehler(u'Modell nicht gefunden: %s' % name)
         os.remove(pfad)
+        # Die drapierten Netze dieser Szene liegen in einem eigenen Ordner
+        # (seit 10.09.2026, `GarmentCode/szenenstuecke.py`). Ohne diesen
+        # Schritt bliebe je gelöschter Szene ein Ordner mit ein paar Megabyte
+        # liegen, den niemand mehr zuordnen kann.
+        try:
+            from GarmentCode.szenenstuecke import Szenenstuecke
+            Szenenstuecke.entfernen(name)
+        except Exception:                                     # noqa: BLE001
+            # Ein Modell gilt als gelöscht, auch wenn die Netze bleiben —
+            # die Datei ist weg, und daran hängt die Anzeige.
+            logger.exception(u'Netze der Szene %s nicht entfernt', name)
         logger.info(u'Modell gelöscht: %s', name)
         return True

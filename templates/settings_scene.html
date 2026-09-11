@@ -159,6 +159,27 @@
                 </label>
             </div>
         </div>
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>JavaScript gebündelt laden</strong>
+                <small>Die Szene-Seite besteht aus 230 einzelnen JS-Modulen. Jede
+                     Anfrage kostet diesen Server 10–12&nbsp;ms, und er beantwortet
+                     sie nacheinander — im Vordergrund gemessen 3,3 bis 6,0&nbsp;s,
+                     bevor die erste Zeile eigener Code läuft. Gebündelt ist es
+                     EINE Anfrage. Der Server klebt das Bündel selbst neu zusammen,
+                     sobald sich eine Datei geändert hat (einmalig rund eine
+                     Sekunde), es kann also nie veraltet sein.
+                     <br>Zum Suchen eines JavaScript-Fehlers ausschalten: dann liegt
+                     jedes Modul wieder einzeln und unter seinem Namen im Browser.</small>
+            </div>
+            <div class="settings-input">
+                <label class="kaestchenzeile">
+                    <input type="checkbox" name="module_buendeln" id="module-buendeln" value="1"
+                        {% if module_buendeln %}checked{% endif %}>
+                    Aktiviert
+                </label>
+            </div>
+        </div>
     </div>
 {% endblock %}
 

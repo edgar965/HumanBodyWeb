@@ -9,7 +9,9 @@ import { Reitergedaechtnis } from './reitergedaechtnis.js';
 import { Reiterfreigabe } from './reiterfreigabe.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Startmessung } from '../gemeinsam/startmessung.js';
 import { Klappbereiche } from '../gemeinsam/klappbereiche.js';
+import { Reiterinhalt } from './reiterinhalt.js';
 
 /**
  * Szenenaufbau — der Start der Szene-Seite: Bühne, Bedienung verdrahten,
@@ -37,8 +39,12 @@ export class Szenenaufbau {
         'initSubMeshInteraction', 'initTabs', 'bindVisibilityToggles',
         'initPropGarmentControls', '_initPropMHControls', 'initPropHairControls',
         'mhAnwendenVerdrahten',
-        'loadPoseUI', 'loadMHProxyUI', 'loadGarmentUI', 'loadKleiderUI',
-        'loadHairUI', 'loadClothUI', 'loadAnimationUI', 'loadCharmorphAssets',
+        // ACHT WEITERE STANDEN HIER (bis 10.09.2026): `loadPoseUI`,
+        // `loadMHProxyUI`, `loadGarmentUI`, `loadKleiderUI`, `loadHairUI`,
+        // `loadClothUI`, `loadAnimationUI`, `loadCharmorphAssets`. Sie
+        // fuellen Reiter, von denen einer offen ist, und kosteten zusammen
+        // 4,5 Sekunden. Jetzt baut sie `Reiterinhalt`, wenn ihr Reiter
+        // aufgeht — dort stehen die Messwerte.
     ];
 
     /** Vorgabe-Animation des Demo-Knopfs. */
@@ -48,20 +54,35 @@ export class Szenenaufbau {
     static KLEIDUNG_VERZOEGERUNG_MS = 3000;
 
     async starten() {
-        new Szenenbuehne().bauen();
-        this._bereicheKlappbar();
+        // JEDER SCHRITT EINZELN GEMESSEN (10.09.2026, Edgar: „mehr als 10 s
+        // bis das UI ohne Modell aufgebaut wird"). Von aussen war nicht zu
+        // sehen, welcher Schritt die Zeit verbraucht — Server, Module und
+        // DOM-Aufbau waren alle gemessen schnell. Begruendung und
+        // Messwerte in `gemeinsam/startmessung.js`.
+        const M = Startmessung;
+        M.um('Buehne bauen', () => new Szenenbuehne().bauen());
+        M.um('Bereiche klappbar', () => this._bereicheKlappbar());
         // Die Einstellungen laufen parallel zum Verdrahten — sie werden erst
         // in der Startsequenz gebraucht.
         const einstellungen = Starteinstellungen.holen();
         this.verdrahten();
-        fn.initRiggingTab(fn.toggleRigVisibility);
-        loadCharmorphHairUI();
-        initFinalizeTab();
-        this.demoknopf();
-        fn.loadSettings();
+        // Der SICHTBARE Reiter bekommt seinen Inhalt sofort — die acht
+        // uebrigen erst, wenn sie aufgehen. Vorgabe ist „Eigenschaften",
+        // der keinen dieser Aufbauten braucht; kostet also nichts. Steht
+        // ein anderer im Reitergedaechtnis, baut ihn `switchTab` am Ende
+        // der Startsequenz.
+        Reiterinhalt.offenen();
+        M.um('Rigging-Reiter', () => fn.initRiggingTab(fn.toggleRigVisibility));
+        M.um('Charmorph-Haare', () => loadCharmorphHairUI());
+        M.um('Finalize-Reiter', () => initFinalizeTab());
+        M.um('Demoknopf', () => this.demoknopf());
+        M.um('Einstellungen lesen', () => fn.loadSettings());
         window.addEventListener('beforeunload', () => fn.saveSessionState());
-        new Szenenschleife().starten();
-        await this.startsequenz(await einstellungen);
+        M.um('Renderschleife', () => new Szenenschleife().starten());
+        await M.umAsync('Startsequenz (Figur, Pose, Kleidung)',
+                        async () => this.startsequenz(await einstellungen));
+        // NICHT hier berichten: Die `async`-Aufbauten laufen noch.
+        M.berichtWennRuhig();
         return this;
     }
 
@@ -72,7 +93,10 @@ export class Szenenaufbau {
                 Protokoll.warnung('Scene', 'Aufbau fehlt:', name);
                 continue;
             }
-            aufruf();
+            // Einzeln gemessen: Diese Schleife baut die Panels, darunter den
+            // Animationsbaum mit 21.299 Elementen. Ohne Messung je Aufruf
+            // waere nicht zu sehen, welcher davon teuer ist.
+            Startmessung.um(name, aufruf);
         }
     }
 
@@ -88,21 +112,45 @@ export class Szenenaufbau {
      * Vorgabekleidung anziehen.
      */
     async startsequenz(einstellungen) {
-        await Promise.all([this._hautfarben(), this._haarfarben(),
-                           fn.loadRigifySkeleton(), fn.loadSkinWeights()]);
+        // JEDER TEIL EINZELN (10.09.2026): Als Block gemessen waren es 3.277
+        // von 6.201 ms — welcher Teil davon, sagte die Zahl nicht.
+        const M = Startmessung;
+        // NUR DIE HAUTFARBEN HALTEN DIE FIGUR AUF (10.09.2026, Edgar: „Lade
+        // asynchron, ich will ganz schnell das Modell sehen").
+        //
+        // Vorher wartete die Startsequenz auf alle vier, bevor die Figur
+        // ueberhaupt begann. Einzeln gemessen: Hautfarben 69 ms (20 KB),
+        // Haarfarben 41 ms (1 KB), Skelett 31 ms (28 KB), Hautgewichte
+        // 71 ms (2.444 KB). Der Koerper braucht davon genau eines — die
+        // Hautfarben, fuer `Charakterkoerper.hautfarbe`. Skelett und
+        // Gewichte braucht erst das ZUBEHOER; es wartet in
+        // `CharacterInstance.load` auf `state.grunddatenBereit`.
+        const grunddaten = M.umAsync('  Haarfarben, Skelett, Gewichte', () =>
+            Promise.all([this._haarfarben(), fn.loadRigifySkeleton(),
+                         fn.loadSkinWeights()]));
+        state.grunddatenBereit = grunddaten;
+        await M.umAsync('  Hautfarben', () => this._hautfarben());
         const hatSitzung = !!sessionStorage.getItem(SESSION_KEY);
-        if (hatSitzung) await fn.restoreSessionState();
+        if (hatSitzung) {
+            await M.umAsync('  Sitzung wiederherstellen',
+                            () => fn.restoreSessionState());
+        }
         if (state.characters.size === 0) {
             try {
-                await fn.loadDefaultCharacter();
+                await M.umAsync('  Vorgabefigur laden',
+                                () => fn.loadDefaultCharacter());
             } catch (fehler) {
                 Protokoll.warnung('Scene', 'Vorgabefigur nicht ladbar:', fehler);
             }
         }
-        fn.captureInitial?.();
-        await this._pose(einstellungen);
-        this._vorgabekleidung(einstellungen, hatSitzung);
-        this._reitergedaechtnis();
+        M.um('  Anfangszustand merken', () => fn.captureInitial?.());
+        await M.umAsync('  Pose setzen', () => this._pose(einstellungen));
+        M.um('  Vorgabekleidung anstossen',
+             () => this._vorgabekleidung(einstellungen, hatSitzung));
+        M.um('  Reitergedaechtnis', () => this._reitergedaechtnis());
+        // Zum Schluss abwarten, damit ein Fehler in den Grunddaten gemeldet
+        // wird und nicht als unbehandelte Ablehnung endet.
+        await M.umAsync('  Grunddaten abschliessen', () => grunddaten);
     }
 
     /**

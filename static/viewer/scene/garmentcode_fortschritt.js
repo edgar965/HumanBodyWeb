@@ -101,6 +101,20 @@ class GarmentcodeFortschritt {
         const laufend = this.schritte.find((s) => s.stand === 'laeuft');
         const rest = this.uhr ? Fortschrittsrechnung.rest(stand) : null;
         const gesamt = Math.round((Date.now() - this.beginn) / 1000);
+        // KEINE RESTZEIT MEHR, WENN DER LAUFENDE SCHRITT SIE SCHON
+        // ÜBERZOGEN HAT (10.09.2026, Edgar: „hose bauen funktionierte
+        // gerade nicht, die 2D vorschau bleibt sichtbar").
+        //
+        // Es funktionierte — es dauerte nur laenger, als die Anzeige sagte.
+        // Nachgemessen: Die Drapierung einer Hose braucht 35,1 s, erwartet
+        // sind 22 s (`garmentcode_schritte.js`). `Fortschrittsrechnung.rest`
+        // rechnet einen ueberzogenen Schritt mit `Math.max(0, …)`, also mit
+        // NULL — dadurch stand ueber dem Balken „84 % · noch ~3 s", waehrend
+        // in Wahrheit noch 40 s zu tun waren. Wer das sieht, haelt den Bau
+        // fuer haengengeblieben und bricht ab. Lieber gar keine Zahl als
+        // eine falsche (`~/.claude/rules/keine-unbelegten-zahlen.md`).
+        const ueberzogen = !!(laufend?.erwartet && laufend.seit
+            && (Date.now() - laufend.seit) / 1000 > laufend.erwartet);
 
         ziel.innerHTML = `
             <div class="progress-bar">
@@ -109,7 +123,9 @@ class GarmentcodeFortschritt {
             <div class="slider-row hb-font-size-0-72rem">
                 <label>${laufend ? laufend.titel : (this.uhr ? '…' : 'fertig')}</label>
                 <span class="slider-val">${Math.round(anteil * 100)} %${
-                    rest !== null ? ` · noch ~${Fortschrittsrechnung.zeit(rest)}` : ''}</span>
+                    ueberzogen ? ' · dauert länger als erwartet'
+                    : (rest !== null
+                        ? ` · noch ~${Fortschrittsrechnung.zeit(rest)}` : '')}</span>
             </div>
             ${this.zeilen()}
             <div class="hb-font-size-0-72rem">Gesamt: ${Fortschrittsrechnung.zeit(gesamt)}</div>`;

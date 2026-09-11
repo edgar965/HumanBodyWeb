@@ -181,21 +181,53 @@ export function skinifyHairGroup(gltfScene, headBoneIdx, skeleton, bindMatrix) {
 
 /**
  * Apply hair color to all meshes in a hair object.
+ *
+ * HAAR IST KEIN METALL (10.09.2026, Edgar: „warum ist das Haar der Female1
+ * jetzt plötzlich grau?"). Gemessen im Browser: Das Material trug
+ * `metalness = 1` bei `roughness = 1`. Ein vollmetallisches Material hat
+ * keine diffuse Reflexion — es zeigt nur, was sich darin spiegelt, und die
+ * Szene hat keine Umgebungskarte (`scene.environment` ist null). Übrig
+ * bleibt ein flaches Grau, gleich welche Farbe daraufliegt: „Silken Black"
+ * ergab #272727, „Dark Brown" #503827 — beide sahen gleich grau aus.
+ *
+ * Die Ursache liegt in den Daten: Alle drei Frisuren
+ * (`data/humanBody/hairstyles/*.glb`, Blender-Export) führen `materials:
+ * null`, und ihr Primitiv nennt kein Material. Für diesen Fall schreibt die
+ * glTF-Spezifikation ein Standardmaterial vor — mit `metallicFactor 1.0`
+ * und `roughnessFactor 1.0`. Three.js hält sich daran, und niemand hat es
+ * je überschrieben.
+ *
+ * Deshalb wird `metalness` HIER gesetzt und nicht in der GLB: Die Dateien
+ * liegen unter `HumanBody/data` (Produktivdaten, nur lesen), und dieselbe
+ * Funktion versorgt alle vier Seiten, die Haare aufsetzen.
+ *
+ * `metalness` wird auch ohne bekannte Farbe gesetzt — sonst bliebe genau der
+ * Fall metallisch, in dem eine Frisur ohne Farbeintrag geladen wird.
+ *
  * @param {THREE.Object3D} obj - Hair mesh/group
  * @param {string} colorName - Key into hairColorData
  * @param {Object} hairColors - hairColorData map {name: [r,g,b]}
  */
 export function applyHairColor(obj, colorName, hairColors) {
-    const rgb = hairColors[colorName];
-    if (!rgb) return;
-    const color = new THREE.Color(rgb[0], rgb[1], rgb[2]);
+    const rgb = (hairColors || {})[colorName];
+    const color = rgb ? new THREE.Color(rgb[0], rgb[1], rgb[2]) : null;
     obj.traverse(child => {
         if (child.isMesh && child.material) {
             const mats = Array.isArray(child.material) ? child.material : [child.material];
-            mats.forEach(m => { m.color.copy(color); });
+            mats.forEach(m => {
+                if (typeof m.metalness === 'number') m.metalness = HAAR_METALL;
+                if (color) m.color.copy(color);
+            });
         }
     });
 }
+
+/**
+ * Metallanteil eines Haarmaterials. Null, und das ist keine Einstellung
+ * zum Drehen: Haar ist dielektrisch. Die Rauheit bleibt, wie die Datei sie
+ * mitbringt — sie ändert die Farbe nicht, nur den Glanz.
+ */
+const HAAR_METALL = 0.0;
 
 // =========================================================================
 // Skinify Mesh (for cloth/garment with server-provided weights)

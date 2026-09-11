@@ -1,0 +1,54 @@
+{% comment %}
+Video der animierten, angezogenen Figur — zwei Wege (11.09.2026).
+
+Weg 1 „Server": rechnet Bewegung und Weichgewebe in Python und rendert
+mit pyrender; dauert zwei bis drei Minuten und zeigt die Figur ohne
+Texturen, aber mit geprüfter Physik. Weg 2 „Browser": zeichnet die Leinwand
+auf, wie sie hier steht — mit Texturen, Kamera und Licht der Szene; das
+Weichgewebe rechnet dafür `scene/weichgewebe.js` live.
+
+Der Regler steht in MILLIMETERN: wie weit das weichste Gewebe höchstens
+nachgibt. Eine Kennzahl ohne Einheit könnte sich niemand vorstellen.
+{% endcomment %}
+<div class="abschnitt-abgesetzt" id="figurvideo-bereich">
+    <div class="abschnittstitel-fett"
+         title="Ein Video der gewählten Figur mit der laufenden Animation und ihren Kleidern. Das Weichgewebe (Velocity Skinning, Rohmer et al. 2021) kommt als Zuschlag auf die Bewegung — bei 0 mm ist es aus.">Video</div>
+    <div class="reglerzeile">
+        <label class="reglerbeschriftung" for="figurvideo-physik"
+               title="Wie weit das weichste Gewebe höchstens nachgibt. 0 = aus. Gemessen an der Grundfigur: 25 mm sind sichtbar und behutsam, ab 50 mm wirkt es übertrieben.">Weichgewebe:</label>
+        <input type="range" id="figurvideo-physik" min="0" max="60" value="25" step="1"
+               class="hb-dehnt">
+        <span id="figurvideo-physik-wert">25 mm</span>
+    </div>
+    <div class="reglerzeile">
+        <label class="reglerbeschriftung" for="figurvideo-sekunden"
+               title="Länge des Videos. Der Server braucht je Sekunde Video etwa 25 bis 35 Sekunden.">Länge:</label>
+        <input type="range" id="figurvideo-sekunden" min="1" max="20" value="5" step="1"
+               class="hb-dehnt">
+        <span id="figurvideo-sekunden-wert">5 s</span>
+    </div>
+    <label class="hb-font-size-0-75rem-b"
+           title="Nur Browser-Weg: Die Kamera fährt der Figur in der Bodenebene nach, wie ein Kamerawagen — die Höhe bleibt, sonst wippt das Bild mit jedem Schritt. Ohne Häkchen läuft eine gehende Figur nach zwei Sekunden aus dem Bild. Der Server-Weg hat seine Kamera immer an der Figur.">
+        <input type="checkbox" id="figurvideo-kamera" checked> Kamera folgt der Figur
+    </label>
+    <div class="hb-display-flex-eng">
+        <button id="figurvideo-server" class="viewer-btn hb-font-size-0-75rem-b"
+                title="Rechnet auf dem Server: Figur, Kleider und Weichgewebe in Python, Rendering ohne Texturen. Zwei bis drei Minuten je 5 Sekunden."><i
+                class="fas fa-server"></i> Server</button>
+        <button id="figurvideo-browser" class="viewer-btn hb-font-size-0-75rem-b"
+                title="Zeichnet die Leinwand auf, wie sie hier steht — mit Texturen, Kamera und Licht der Szene. So lang wie die Animation."><i
+                class="fas fa-video"></i> Browser</button>
+    </div>
+    <div id="figurvideo-stand" class="hb-versteckt hb-font-size-0-75rem-b">
+        <div class="figurvideo-balken"><div id="figurvideo-anteil"></div></div>
+        <div id="figurvideo-phase"></div>
+    </div>
+    <div id="figurvideo-ergebnis" class="hb-versteckt">
+        <video id="figurvideo-video" controls loop class="figurvideo-video"></video>
+        <div class="hb-display-flex-eng">
+            <a id="figurvideo-laden" class="viewer-btn hb-font-size-0-75rem-b" download><i
+                class="fas fa-download"></i> Herunterladen</a>
+            <span id="figurvideo-bilanz" class="hb-font-size-0-75rem-b"></span>
+        </div>
+    </div>
+</div>

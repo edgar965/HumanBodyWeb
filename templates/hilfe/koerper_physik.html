@@ -1,0 +1,224 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kleidung -> Koerperphysik: Muskeln, Falten, Weichgewebe.
+
+Edgar, 10.09.2026: „schreibe alle Erkenntnisse und das ganze Know how der
+Koerperphysik auf in Hilfe - Kleidung - Koerperphysik. auch wie ich das
+bedienen kann, performance usw"
+
+Alle Zahlen kommen aus `koerper.physik` und `koerper.fpskette`, keine steht hier.
+{% endcomment %}
+
+{% block title %}Kleidung — Körperphysik{% endblock %}
+{% block topbar_title %}Körperphysik — Muskeln, Falten, Weichgewebe{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>Körperphysik: was sich am Körper selbst bewegt</h1>
+
+  <p>
+    Wie sich am Kleid beim Gehen Falten bilden, ändert sich auch am Körper
+    etwas: Muskeln wölben sich, Haut legt sich in Falten, Fettgewebe schwingt
+    nach. Nichts davon kann lineares Blend-Skinning (LBS) — das Verfahren,
+    mit dem die Figur im Browser bewegt wird. Diese Seite sagt, <strong>was
+    genau fehlt</strong>, <strong>welcher offene Code es kann</strong> und
+    <strong>wie der Weg bedient wird</strong>, der hier gebaut ist.
+  </p>
+
+  <div class="doku-kasten doku-warnung">
+    <strong>Stand:</strong> Die Kette läuft von der Figur bis zur gerechneten
+    Ablage. Rumpf, Becken und Beine bewegen sich sauber; <strong>die Arme
+    zerreißen noch</strong>. Die Ursache ist benannt (siehe „Wie man prüft"
+    und „Stand"), behoben ist sie nicht. Nichts davon ist an die Szene
+    angebunden — es ist ein Werkzeugweg auf der Kommandozeile.
+  </div>
+
+  <h2>Drei Dinge, die oft in einen Topf geworfen werden</h2>
+  <p>
+    Sie klingen ähnlich und brauchen verschiedene Lösungen. Wer A behebt, hat
+    von B und C nichts.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Baustelle</th><th>Was gemeint ist</th><th>Ist-Zustand hier</th><th>Was es löst</th></tr></thead>
+    <tbody>
+      {% for b in baustellen %}
+      <tr>
+        <td><strong>{{ b.name }}</strong></td>
+        <td>{{ b.was }}</td>
+        <td>{{ b.ist }}</td>
+        <td>{{ b.loeser }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="doku-quelle">
+    Gemessen an der weiblichen Figur: Der Oberarm verliert bei 89 Grad Beugung
+    <strong>{{ armverlust }} %</strong> seines Umfangs — aus {{ armumfang_ruhe }} cm
+    in Ruhe wird deutlich weniger, ohne dass irgendwo Volumen hingeht.
+    Netzauflösung im Median {{ aufloesung_mm }} mm ({{ aufloesung_fein_mm }} mm nach
+    einer Unterteilung): Feine Hautfalten sind darin geometrisch nicht
+    darstellbar, gleich mit welchem Verfahren.
+  </p>
+
+  <h2>Kandidaten, geprüft</h2>
+  <p>
+    Nachgelesen in den Repositorien (Adressen unten), nicht aus dem Gedächtnis.
+    „Läuft hier" heißt: auf dieser Maschine gebaut und gestartet.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Code</th><th>Lizenz</th><th>Läuft hier?</th><th>Braucht</th><th>Kann</th><th>Urteil</th></tr></thead>
+    <tbody>
+      {% for k in kandidaten %}
+      <tr><td>{{ k.name }}</td><td>{{ k.lizenz }}</td><td>{{ k.laeuft }}</td>
+          <td>{{ k.braucht }}</td><td>{{ k.kann }}</td><td>{{ k.urteil }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p>
+    <strong>Gewählt ist FastProjectiveSkinning</strong>, und der Grund ist
+    seine Eingabe: Es braucht nur ein geschlossenes Dreiecksnetz und eine
+    Gelenkliste. Hautgewichte und Tetraedernetz baut es selbst — genau die
+    beiden Dinge, an denen jeder andere Weg Handarbeit gekostet hätte. Das
+    Paper ist von 2019; seither ist vor allem <em>Spring Decomposed
+    Skinning</em> (2025, MIT) dazugekommen, das ohne Tetraedernetz auskommt
+    und damit die Fallen 2 bis 4 weiter unten komplett umgeht — aber nur
+    Nachschwingen liefert, keine Muskelwölbung.
+  </p>
+
+  <h2>Wie man es bedient</h2>
+  <p>
+    Vier Schritte auf der Kommandozeile. Der Code liegt in
+    <code>{{ ordner }}</code>, der Klon der Bibliothek in
+    <code>{{ klon }}</code> (außerhalb der vier Repos, weil GPL).
+  </p>
+  <table class="doku">
+    <thead><tr><th>#</th><th>Schritt</th><th>Befehl</th><th>Was er tut</th><th>Ergibt</th><th>Dauer</th></tr></thead>
+    <tbody>
+      {% for s in schritte %}
+      <tr>
+        <td>{{ s.nr }}</td>
+        <td><strong>{{ s.titel }}</strong></td>
+        <td><code>{{ s.befehl }}</code><br><span class="doku-quelle">{{ s.wahl }}</span></td>
+        <td>{{ s.macht }}</td>
+        <td><code>{{ s.ergibt }}</code></td>
+        <td>{{ s.dauer }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Performance</h2>
+  <table class="doku">
+    <thead><tr><th>Größe</th><th>Wert</th><th>Bemerkung</th></tr></thead>
+    <tbody>
+      <tr><td>Simulationsnetz</td><td>{{ punkte }} Punkte, {{ dreiecke }} Dreiecke</td>
+          <td>Aus {{ punkte_voll }} Punkten der Außenhaut dezimiert. Die Autoren
+              empfehlen 3.000–5.000 simulierte Punkte.</td></tr>
+      <tr><td>Gelenke</td><td>{{ gelenke }}</td>
+          <td>Hauptkette ohne Finger. Mit Fingern wären es {{ gelenke_finger }} —
+              dann stürzt der Löser ab (Falle 4).</td></tr>
+      <tr><td>Rechenzeit</td><td>{{ sekunden_je_bild }} s je Bild</td>
+          <td>{{ sekunden_60 }} s für 60 Bilder, mit Kollisionen, auf der CPU.</td></tr>
+      <tr><td>Zehn Sekunden Animation</td><td>rund {{ minuten_je_10s }} Minuten</td>
+          <td>Bei 60 Bildern je Sekunde. Das ist ein Offline-Weg, keine
+              Echtzeit — deshalb der fensterlose Bake-Modus.</td></tr>
+      <tr><td>Ablage</td><td>{{ kb_je_bild }} KB je Bild</td>
+          <td>Punkte als <code>float32</code>, Format <code>FPSBAKE1</code>.</td></tr>
+      <tr><td>GPU</td><td>nicht verfügbar</td>
+          <td>CUDA baut auf dieser Maschine nicht (siehe „Was am fremden Code
+              geändert wurde"). Die GPU-Fassung der Autoren ist rund zehnmal
+              schneller.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Wie man prüft, ob es stimmt</h2>
+  <p>
+    Jede Probe steht hier mit ihrer <strong>Gegenprobe</strong> — eine Prüfung,
+    die immer „gut" sagt, ist keine.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Frage</th><th>Wie geprüft</th><th>Soll</th><th>Ist</th><th>Gegenprobe</th></tr></thead>
+    <tbody>
+      {% for p in pruefen %}
+      <tr><td><strong>{{ p.was }}</strong></td><td>{{ p.wie }}</td>
+          <td>{{ p.soll }}</td><td>{{ p.ist }}</td><td>{{ p.gegenprobe }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Sechs Fallen — das eigentliche Know-how</h2>
+  <p>
+    Jede davon hat zugeschlagen, und <strong>jede war still</strong>: kein
+    Fehler, keine Warnung, nur NaN oder ein Absturz. Sie stehen hier, damit
+    sie kein zweites Mal Zeit kosten.
+  </p>
+  {% for f in fallen %}
+  <div class="doku-kasten">
+    <h3>{{ f.nr }}. {{ f.titel }}</h3>
+    <p>{{ f.was }}</p>
+    <p><strong>Gemessen:</strong> {{ f.zahl }}</p>
+    <p><strong>Warum es still bleibt:</strong> {{ f.warum_still }}</p>
+    <p><strong>Lehre:</strong> {{ f.lehre }}</p>
+  </div>
+  {% endfor %}
+
+  <h2>Was am fremden Code geändert wurde</h2>
+  <p>
+    Am <em>Verfahren</em> nichts. Geändert sind zwei Baufehler und ein
+    Zusatzprogramm, das denselben Ablauf ohne Fenster fährt.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Wo</th><th>Was</th><th>Warum</th></tr></thead>
+    <tbody>
+      {% for a in aenderungen %}
+      <tr><td><code>{{ a.wo }}</code></td><td>{{ a.was }}</td><td>{{ a.warum }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Stand: was läuft und was nicht</h2>
+  <table class="doku">
+    <thead><tr><th>Teil</th><th>Stand</th><th>Beleg</th></tr></thead>
+    <tbody>
+      {% for teil, wie, beleg in stand %}
+      <tr class="{% if wie == 'laeuft' %}physik-gut{% elif wie == 'FEHLER' %}physik-schlecht{% endif %}">
+        <td>{{ teil }}</td>
+        <td>{% if wie == 'laeuft' %}läuft{% else %}{{ wie }}{% endif %}</td>
+        <td>{{ beleg }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Was ausdrücklich nicht vorgeschlagen wird</h2>
+  <ul class="doku-liste">
+    {% for n in nicht %}
+    <li><strong>{{ n.was }}:</strong> {{ n.warum }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Offene Entscheidungen</h2>
+  <ul class="doku-liste">
+    {% for o in offen %}
+    <li><strong>{{ o.frage }}:</strong> {{ o.lage }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Quellen</h2>
+  <table class="doku">
+    <thead><tr><th>Was</th><th>Adresse</th></tr></thead>
+    <tbody>
+      {% for name, adresse in quellen %}
+      <tr><td>{{ name }}</td><td><code>{{ adresse }}</code></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

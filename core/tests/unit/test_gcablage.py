@@ -99,7 +99,13 @@ class GcAblageTest(SimpleTestCase):
         for name, pfad in ARTEN.items():
             quelle = _quelle(pfad)
             laden = quelle.index('GarmentcodeAblage.laden(')
-            aufbau = max((m.end() for m in re.finditer(r'\.load\(\)', quelle)),
+            # `\.load\(` statt `\.load\(\)`: Seit dem 10.09.2026 nimmt
+            # `load` einen Rueckruf entgegen, mit dem die Figur auf die
+            # Buehne kommt, sobald ihr KOERPER steht — Haare und Kleidung
+            # laden danach weiter (`character.js`). Die Aussage dieses
+            # Tests aendert sich dadurch nicht: Angezogen wird immer noch
+            # erst, wenn `load` durch ist.
+            aufbau = max((m.end() for m in re.finditer(r'\.load\(', quelle)),
                          default=-1)
             self.assertGreater(aufbau, 0, '%s ruft kein load()' % name)
             self.assertGreater(laden, aufbau,
@@ -132,11 +138,11 @@ class GcAblageTest(SimpleTestCase):
         quelle = _quelle('scene/charakterliste.js')
         rumpf = quelle.split('export async function charakterAusModelldaten')[1]
         rumpf = rumpf.split('export async function')[0]
-        for erwartet in ('await inst.load()', 'Figurplatzierung.anwenden(',
+        for erwartet in ('await inst.load(', 'Figurplatzierung.anwenden(',
                          'GarmentcodeAblage.laden('):
             self.assertIn(erwartet, rumpf, erwartet)
         # Die Reihenfolge ist der Grund, warum es eine Kette ist.
-        self.assertLess(rumpf.index('await inst.load()'),
+        self.assertLess(rumpf.index('await inst.load('),
                         rumpf.index('GarmentcodeAblage.laden('))
 
     def test_geloeschtes_stueck_kommt_nicht_zurueck(self):

@@ -114,11 +114,17 @@ function _populatePropHairOptions() {
 export function _syncPropHairControls() {
     const inst = _selectedInst();
     const sec = document.getElementById('prop-hair-section');
-    if (!inst || !state._selectedSubMesh || state._selectedSubMesh.type !== 'hair') {
-        if (sec) sec.style.display = 'none';
-        return;
+    const haar = !!(inst && state._selectedSubMesh && state._selectedSubMesh.type === 'hair');
+    // Der Abschnitt traegt seit dem 17.08.2026 die Klasse `hb-versteckt`
+    // (Vorlage), und die schlaegt jedes geleerte `style.display` — der
+    // Haar-Abschnitt ging seither nie auf (Edgar, 10.09.2026: „wenn ich das
+    // Haar anklicke, werden mir nicht die Eigenschaften des Haars
+    // angezeigt"). Dieselbe Falle wie in `eigenschaftenbereiche.js`.
+    if (sec) {
+        sec.classList.toggle('hb-versteckt', !haar);
+        sec.style.display = haar ? '' : 'none';
     }
-    if (sec) sec.style.display = '';
+    if (!haar) return;
     _populatePropHairOptions();
     const styleEl = document.getElementById('prop-hair-style');
     const colorEl = document.getElementById('prop-hair-color');

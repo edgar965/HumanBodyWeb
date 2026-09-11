@@ -27,6 +27,7 @@ import './pose_apply.js';
 import './hair.js';
 import './cloth.js';
 import './animation.js';
+import './figurvideo.js';
 import './kleider.js';
 import './garmentcode.js';
 import './garmentcode_vorbilder.js';

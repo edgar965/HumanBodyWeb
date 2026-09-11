@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
 import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
+import { Weichgewebe } from './weichgewebe.js';
 
 /**
  * Szenenschleife — die Renderschleife der Szene-Seite samt Anzeigen.
@@ -77,6 +78,9 @@ export class Szenenschleife extends Zeichenschleife {
             this.zeitanzeige();
             if (state.currentAnimGroundFixed) this.aufDenBoden();
         }
+        // Weichgewebe (11.09.2026): der Zuschlag auf das Skinning — NACH dem
+        // Mixer, damit die Knochen dieses Bildes gelesen werden.
+        Weichgewebe.takt(dt);
         // Neu dazugekommene Figuren bekommen ihre Knochenlinien von selbst;
         // gedrosselt, siehe `Rigsichtbarkeit.ABGLEICH_MS`.
         Rigsichtbarkeit.abgleichen();

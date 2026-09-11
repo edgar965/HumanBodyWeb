@@ -6,6 +6,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { state } from './state.js';
 import { markDirty } from './undo.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Startmessung } from '../gemeinsam/startmessung.js';
 import { Figurmerker } from './figurmerker.js';
 import { Figurplatzierung } from './figurplatzierung.js';
 import { Figurarten } from './figurarten.js';
@@ -49,15 +50,34 @@ export async function charakterAusModelldaten(daten, wahl = {}) {
         inst.presetKey = wahl.name;
         inst.presetName = wahl.name;
     }
-    await inst.load();
-    // Position und Größe erst nach dem Laden: vorher gibt es nichts zu messen
-    // (Edgar, 06.09.2026 — vorher stand hier ein fester Abstand von 0,8 m).
-    Figurplatzierung.anwenden(inst, wahl.lage || null);
+    // DIE FIGUR KOMMT AUF DIE BUEHNE, SOBALD DER KOERPER STEHT (10.09.2026,
+    // Edgar: „Lade asynchron, ich will ganz schnell das Modell sehen").
+    // Vorher lief die ganze Kette — Netz, Stoff, Haare, Kleidung, Proxys —
+    // durch, bevor `scene.add` ueberhaupt aufgerufen wurde; bis dahin war
+    // die Buehne leer.
+    //
+    // Platziert wird ebenfalls hier, und das ist nicht nur schneller,
+    // sondern richtiger: `Figurplatzierung` gleicht die Hoehen zweier
+    // Figuren an und misst dafuer die Huelle. Die Hoehe einer Figur ist ihre
+    // KOERPERgroesse — eine Frisur oder ein Hut wuerde sie sonst kleiner
+    // skalieren als eine barhaeuptige Figur derselben Groesse.
+    const zeigen = () => {
+        if (state.characters.has(id)) return;
+        Figurplatzierung.anwenden(inst, wahl.lage || null);
+        state.characters.set(id, inst);
+        state.scene.add(inst.group);
+        // Die Zahl, um die es geht: seit Navigationsbeginn bis zu dem
+        // Augenblick, in dem etwas auf der Buehne steht.
+        Startmessung.eintragen('== FIGUR SICHTBAR ==', performance.now());
+    };
+    await inst.load(zeigen);
     // Nach `load()` und nach der Platzierung: GarmentCode bindet in der Lage
     // der Figurgruppe, und das Skelett entsteht in `load()`.
     await GarmentcodeAblage.laden(inst, daten[GarmentcodeAblage.FELD]);
-    state.characters.set(id, inst);
-    state.scene.add(inst.group);
+    // Sicherheitsnetz, falls `load()` den Rueckruf nicht erreicht hat — etwa
+    // weil eine Figurart ihn nicht kennt. `zeigen` tut beim zweiten Mal
+    // nichts.
+    zeigen();
 
     fn.updateCharacterListUI();
     fn.updateVertexCount();

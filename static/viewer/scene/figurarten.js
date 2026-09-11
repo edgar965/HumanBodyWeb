@@ -35,11 +35,20 @@ export class Figurarten {
         [UmapythonFigur.QUELLE]: UmapythonFigur,
     };
 
-    /** Eine gespeicherte Figur wieder aufbauen. */
-    static async ausJSON(daten) {
+    /**
+     * Eine gespeicherte Figur wieder aufbauen.
+     *
+     * `beiKoerper` wird gerufen, sobald der Körper steht — damit die Figur
+     * auf die Bühne kann, bevor Haare und Kleidung geladen sind (10.09.2026,
+     * Edgar: „Lade asynchron, ich will ganz schnell das Modell sehen").
+     * Klassen, die den Rückruf nicht kennen, ignorieren ihn einfach; ihre
+     * Figuren erscheinen dann wie bisher am Ende. Ein zusätzlicher Parameter
+     * bricht keine der fünf `fromJSON`-Fassungen.
+     */
+    static async ausJSON(daten, beiKoerper = null) {
         const klasse = Figurarten.KLASSEN[daten?.quelle];
-        return klasse ? klasse.fromJSON(daten)
-                      : fn.CharacterInstance.fromJSON(daten);
+        return klasse ? klasse.fromJSON(daten, beiKoerper)
+                      : fn.CharacterInstance.fromJSON(daten, beiKoerper);
     }
 
     /** Das Symbol der Figur in der Charakterliste. */

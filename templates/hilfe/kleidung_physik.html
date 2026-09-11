@@ -1,0 +1,116 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Kleidung -> Kleiderphysik: Stoffdynamik auf dem bewegten Koerper.
+
+Edgar, 10.09.2026: „Kleiderphysik - schreib das rein in eine neuen Seite
+Hilfe - Kleider - Kleiderphysik. blenderCloth nutze ich nicht, garmentCode
+ist bisher am besten, passen den Vorschlag dafuer an."
+
+Alle Zahlen kommen aus `kleidung.physik.Kleiderphysik`, keine steht hier.
+{% endcomment %}
+
+{% block title %}Kleidung — Kleiderphysik{% endblock %}
+{% block topbar_title %}Kleidung — Stoff auf dem bewegten Körper{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>Kleiderphysik: Falten, die beim Gehen entstehen</h1>
+
+  <p>
+    Ein GarmentCode-Stück sitzt in Ruhe gut; beim Abspielen folgt es dem
+    Körper nur über die Hautgewichte (LBS) — Stoff, der sich wie Haut
+    verhält. Diese Seite beantwortet, <strong>welcher offene Code den Stoff
+    auf einem gehenden Körper rechnen kann</strong>, für den MP4-Export des
+    Theatre-Moduls, nicht in Echtzeit. GarmentCode bleibt dabei der Anfang:
+    Es liefert das Stück in Ruhelage, und das ist Bild 0 jeder Dynamik.
+  </p>
+
+  <h2>Was im Projekt schon liegt</h2>
+  <table class="doku">
+    <thead><tr><th>Baustein</th><th>Wo</th><th>Trägt es?</th><th>Urteil</th></tr></thead>
+    <tbody>
+      {% for b in bestand %}
+      <tr><td>{{ b.was }}</td><td><code>{{ b.wo }}</code></td><td>{{ b.traegt }}</td><td>{{ b.urteil }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Kandidaten, geprüft</h2>
+  <p>
+    Nachgelesen in den Repositorien (Adressen unten), nicht aus dem Gedächtnis.
+    „Läuft hier" heißt: auf dieser Maschine installiert und importiert.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Code</th><th>Lizenz</th><th>Läuft hier?</th><th>Bewegter, verformter Körper</th><th>Stand</th><th>Urteil</th></tr></thead>
+    <tbody>
+      {% for k in kandidaten %}
+      <tr><td>{{ k.name }}</td><td>{{ k.lizenz }}</td><td>{{ k.laeuft }}</td><td>{{ k.koerper }}</td><td>{{ k.stand }}</td><td>{{ k.urteil }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Gemessen auf dieser Maschine</h2>
+  <p>{{ messaufbau }}</p>
+  <table class="doku">
+    <thead><tr><th>Motor</th><th>Weg</th><th>Zeit je 60-Hz-Bild</th><th>Stoff im Kollider</th></tr></thead>
+    <tbody>
+      {% for m in messung %}
+      <tr class="{% if m.gut %}physik-gut{% else %}physik-schlecht{% endif %}">
+        <td>{{ m.motor }}</td><td>{{ m.weg }}</td>
+        <td>{% if m.ms %}{{ m.ms }} ms{% else %}—{% endif %}</td>
+        <td>{{ m.ergebnis }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="doku-quelle">
+    Newtons Kernelbau beim ersten Lauf: {{ kernelbau_s }} s, danach aus dem
+    Cache. Zehn Sekunden Animation mit Style3D bei {{ style3d_ms }} ms je
+    Bild: rund {{ minuten_je_10s }} Minuten. Ablage: {{ kb_je_bild }} KB je
+    Bild. Skripte und Protokolle: <code>HumanBodyWeb/TheatreJS/kleiderPhysik/proben/</code>.
+  </p>
+  <ul class="doku-liste">
+    {% for satz in deutung %}<li>{{ satz }}</li>{% endfor %}
+  </ul>
+
+  <h2>Die Kette: GarmentCode bleibt der Anfang</h2>
+  <ol class="stufen-liste">
+    {% for titel, text in kette %}
+    <li><strong>{{ titel }}.</strong> {{ text }}</li>
+    {% endfor %}
+  </ol>
+  <p>
+    <strong>Abbruchkriterium nach Schritt 3:</strong> Bewegung bei
+    <code>Walk/01_01</code> sichtbar besser als LBS und zehn Sekunden
+    Animation unter zehn Minuten Rechenzeit. Sonst steht der Preis, und das
+    ist auch ein Ergebnis.
+  </p>
+
+  <h2>Was ausdrücklich nicht vorgeschlagen wird</h2>
+  <ul class="doku-liste">
+    {% for titel, text in nicht %}<li><strong>{{ titel }}:</strong> {{ text }}</li>{% endfor %}
+  </ul>
+
+  <h2>Was daran offen ist</h2>
+  <ul class="doku-liste">
+    {% for titel, text in offen %}<li><strong>{{ titel }}:</strong> {{ text }}</li>{% endfor %}
+  </ul>
+
+  <h2>Quellen</h2>
+  <table class="doku">
+    <thead><tr><th>Was</th><th>Adresse</th><th>Belegt</th></tr></thead>
+    <tbody>
+      {% for name, adresse, was in quellen %}
+      <tr><td>{{ name }}</td><td><code>{{ adresse }}</code></td><td>{{ was }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

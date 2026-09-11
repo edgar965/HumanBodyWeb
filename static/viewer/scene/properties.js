@@ -20,6 +20,7 @@ import { Figurmerker } from './figurmerker.js';
 import { Reitergedaechtnis } from './reitergedaechtnis.js';
 import { Formbedienung } from './formbedienung.js';
 import { Reiterfreigabe } from './reiterfreigabe.js';
+import { Reiterinhalt } from './reiterinhalt.js';
 
 export function initTabs() {
     document.querySelectorAll('.panel-tab').forEach(tab => {
@@ -56,6 +57,12 @@ export function initTabs() {
 export function switchTab(tabName) {
     document.querySelectorAll('.panel-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `tab-${tabName}`));
+    // Der Inhalt entsteht erst hier (10.09.2026) — Begruendung und Messwerte
+    // in `reiterinhalt.js`. Bewusst OHNE `await`: Der Reiter schaltet sofort
+    // um, seine Liste kommt nach. Und bewusst in `switchTab` statt im
+    // Klick-Zuhoerer: Das Reitergedaechtnis schaltet beim Start
+    // programmatisch um, und so ein Reiter braucht denselben Inhalt.
+    Reiterinhalt.bauen(tabName);
 }
 
 export async function fetchMorphDefs() {
@@ -275,7 +282,9 @@ export function _updatePropContext() {
         ? 'none' : ''; }
     const gEl = document.getElementById('prop-garment-section'); if (gEl) gEl.style.display = isGarment ? '' : 'none';
     const mhEl = document.getElementById('prop-mh-section'); if (mhEl) mhEl.style.display = isMH ? '' : 'none';
-    const hEl = document.getElementById('prop-hair-section'); if (hEl) hEl.style.display = isHair ? '' : 'none';
+    const hEl = document.getElementById('prop-hair-section');
+    // Klasse UND Stil — die Vorlage versteckt den Abschnitt per `hb-versteckt`.
+    if (hEl) { hEl.classList.toggle('hb-versteckt', !isHair); hEl.style.display = isHair ? '' : 'none'; }
     if (isMH) fn._syncPropMHControls();
 }
 

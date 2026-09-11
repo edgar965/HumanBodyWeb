@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static regler %}
+{% load szenenskript %}
 {% load fassung %}
 
 {% block title %}HumanBody · Szene{% endblock %}
@@ -1285,6 +1286,7 @@
                                      title="Animation speichern"><i class="fas fa-save"></i> Speichern</button>
                             </div>
                         </div>
+                        {% include "_figurvideo.html" %}
                     </div>
                 </div>
             </div><!-- /tab-animation -->
@@ -2019,6 +2021,29 @@
     color:var(--text-muted);
     margin:4px 0;
 }
+/* Video der Figur (11.09.2026): Balken und Vorschau, `_figurvideo.html`. */
+.figurvideo-balken {
+    height:6px;
+    background:var(--bg-darker);
+    border:1px solid var(--border);
+    border-radius:3px;
+    overflow:hidden;
+    margin:6px 0 2px;
+}
+#figurvideo-anteil {
+    height:100%;
+    width:0;
+    background:var(--accent, #4a8fd9);
+    transition:width 0.4s;
+}
+#figurvideo-phase { color:var(--text-muted); }
+.figurvideo-video {
+    width:100%;
+    max-height:320px;
+    background:#000;
+    border-radius:4px;
+    margin:6px 0;
+}
 #scene-delta-norm {
     font-size:0.75rem;
     padding:2px 4px;
@@ -2284,7 +2309,8 @@
 
 {% block extra_scripts %}
 {% include "_importmap.html" with subdivide=1 %}
-<script type="module" src="{% fassungspfad 'viewer/scene/main.js' %}"></script>
+{# Eine Anfrage statt 230; abschaltbar unter Einstellungen -> Szene. Siehe core/dienste/modulbuendel.py #}
+<script type="module" src="{% szenenskript %}"></script>
 <script>
 // Panel resize handle
 document.addEventListener('DOMContentLoaded', () => {

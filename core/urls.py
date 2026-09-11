@@ -1,6 +1,6 @@
 from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
-from .api import einstellungen, seiten
+from .api import einstellungen, seiten, buendel
 # Die drei Seiten MIT Logik stehen als je eine Klasse in eigenen Modulen —
 # `seiten.py` fuehrt nur noch die reinen Vorlagen (Umbau 17.08.2026).
 from .api import (seite_bvhstudio_einstellungen, seite_fotoauftraege,
@@ -29,6 +29,7 @@ from .api.garmentvorschau import Garmentvorschauendpunkte
 from .api.ui_vorgaben import Uivorgaben
 from .api.auftrag_upload import Uploadseiten
 from .api.studio_video import Theatrevideo
+from .api.figurvideo import Figurvideoendpunkte
 from .urls_charakter import CHARAKTER
 
 urlpatterns = [
@@ -75,6 +76,10 @@ urlpatterns = [
     path('settings/model/', einstellungen.app_settings_model, name='settings_model'),
     path('settings/result/', einstellungen.app_settings_result, name='settings_result'),
     path('settings/scene/', einstellungen.app_settings_scene, name='settings_scene'),
+    # Das gebuendelte Szene-Skript. Die Fassung im Pfad wirkt wie bei der
+    # uebrigen Statik: neue Fassung = neue Adresse = kein alter Stand.
+    path('buendel/<str:fassung>/scene.js', buendel.buendel_datei,
+         name='buendel_scene'),
     path('settings/video-to-bvh/', Webseiten.einstellungen_videobvh,
          name='settings_videobvh'),
     path('settings/video-to-bvh-2d/', einstellungen.app_settings_videobvh_2d,
@@ -208,6 +213,14 @@ urlpatterns = [
          name='garmentcode_vorschau3d'),
     path('api/garmentcode/datei/<str:ordner>/<str:name>/', Garmentcode.datei,
          name='garmentcode_datei'),
+    # Video der animierten, angezogenen Figur (11.09.2026) — Unterprozess,
+    # der Stand kommt aus einer Datei; siehe `dienste/figurvideo.py`.
+    path('api/animation/video/', Figurvideoendpunkte.starten,
+         name='figurvideo_starten'),
+    path('api/animation/video/aufnahme/', Figurvideoendpunkte.aufnahme,
+         name='figurvideo_aufnahme'),
+    path('api/animation/video/<str:kennung>/', Figurvideoendpunkte.stand,
+         name='figurvideo_stand'),
     path('api/character-test/switch/', Testverwaltung.figur_wechseln,
          name='test_switch_character'),
     # Der portierte UMA-Konformer (08.09.2026) - Reiter "UMA Python" im

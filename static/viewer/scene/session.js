@@ -4,6 +4,7 @@
 import { state, SESSION_KEY } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Startmessung } from '../gemeinsam/startmessung.js';
 import { szenenteile } from './szenenteile.js';
 import { Szenenzustand } from './szenenzustand.js';
 import { Figurarten } from './figurarten.js';
@@ -47,9 +48,28 @@ export async function restoreSessionState() {
                     // `figurarten.js`: Eine UMA-Figur lädt ihre GLB, kein
                     // HumanBody-Netz — sonst fragte `CharacterInstance` den
                     // Server nach dem Körpertyp „UMA" und bekam eine 500.
-                    const inst = await Figurarten.ausJSON(charData);
-                    state.characters.set(inst.id, inst);
-                    state.scene.add(inst.group);
+                    // Jede Figur kommt auf die Buehne, sobald ihr Koerper
+                    // steht — nicht erst, wenn auch Haare und Kleidung da
+                    // sind. Bei mehreren Figuren zaehlt das doppelt: Sie
+                    // werden nacheinander wiederhergestellt, und vorher
+                    // wartete die erste auf ihr eigenes Zubehoer, bevor die
+                    // zweite ueberhaupt begann.
+                    // Beim zweiten Aufruf (dem Sicherheitsnetz unten)
+                    // passiert nichts mehr — sonst stuende die Marke
+                    // zweimal im Bericht und man wuesste nicht, welche
+                    // gilt.
+                    const zeigen = (fertig) => {
+                        if (state.characters.has(fertig.id)) return;
+                        state.characters.set(fertig.id, fertig);
+                        state.scene.add(fertig.group);
+                        Startmessung.eintragen('== FIGUR SICHTBAR ==',
+                                               performance.now());
+                    };
+                    const inst = await Figurarten.ausJSON(charData, zeigen);
+                    // Auch fuer die Figurarten, die den Rueckruf nicht
+                    // kennen; Map und Gruppe nehmen denselben Eintrag nur
+                    // einmal.
+                    zeigen(inst);
                 } catch (e) {
                     console.error(`Failed to restore character ${charData.presetName}:`, e);
                 }

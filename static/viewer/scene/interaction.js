@@ -78,8 +78,23 @@ export function bindCanvasClick() {
                 return;
             }
         }
+        // EIN KLICK INS LEERE WÄHLT NICHTS AB (Edgar, 10.09.2026: „wenn ich
+        // aufs leere klicke soll mir nicht diese komische auswahl angezeigt
+        // werden"). Vorher stand hier `fn.deselectCharacter()`: Damit fielen
+        // alle sechs Figur-Reiter weg (`Reiterfreigabe`), und die Seite sprang
+        // auf „Szene" — wer neben das Kleid klickte, sah statt seiner Regler
+        // Beleuchtung und Kamera. Abwählen geht weiter über Escape und das
+        // Menü „Bearbeiten". Was ein Leerklick löst, ist nur die Markierung:
+        // Knochen und Teilnetz; die Figur behält Auswahl, Reiter und Gizmo.
         _clearBoneSelection();
-        fn.deselectCharacter();
+        const gewaehlt = state.characters.get(state.selectedCharacterId);
+        if (state._selectedSubMesh) {
+            clearSubMeshSelection();
+            if (gewaehlt) {
+                _setBodyEmissive(gewaehlt, state._SELECT_EMISSIVE);
+                fn.updateEquippedList?.(gewaehlt);
+            }
+        }
     });
 }
 

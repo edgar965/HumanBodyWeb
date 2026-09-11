@@ -84,6 +84,9 @@ export class GarmentcodeAnziehen {
         // läuft auch aus `nachbinden` (`garmentcode_stoff.js`, 09.09.2026).
         const bisher = Garmentstoff.werte(
             figur?.clothMeshes?.[GarmentcodeAnziehen.schluessel(stueck)]);
+        // Woraus das Gewebe seine Kachelgröße nimmt (10.09.2026).
+        const stoff = { hatUv: !!geometrie.attributes.uv,
+                        uvMeter: daten.uv_meter };
         GarmentcodeAnziehen.entfernen(figur, stueck);
 
         const skelett = GarmentcodeAnziehen._skelett(figur);
@@ -95,9 +98,10 @@ export class GarmentcodeAnziehen {
         let netz;
         if (zuordnung && zuordnung.treffer && gewichte.length) {
             GarmentcodeAnziehen._gewichte(geometrie, gewichte, zuordnung.index);
-            netz = new THREE.SkinnedMesh(geometrie, Garmentstoff.neu(bisher));
+            netz = new THREE.SkinnedMesh(geometrie,
+                                        Garmentstoff.neu(bisher, stoff));
         } else {
-            netz = new THREE.Mesh(geometrie, Garmentstoff.neu(bisher));
+            netz = new THREE.Mesh(geometrie, Garmentstoff.neu(bisher, stoff));
             // Ohne Gewichte in der Datei ist das kein Mangel, sondern der
             // Referenzkörper-Weg (06.09.2026) — dort gibt es bewusst kein
             // Rig. Gewarnt wird nur, wenn Gewichte da sind und das Skelett
@@ -224,6 +228,19 @@ export class GarmentcodeAnziehen {
         const geometrie = new THREE.BufferGeometry();
         geometrie.setAttribute('position', new THREE.BufferAttribute(lage, 3));
         geometrie.setIndex(new THREE.BufferAttribute(felder, 1));
+        // UV je Punkt, wenn die Rig-Datei sie führt (seit 10.09.2026). Sie
+        // stehen NICHT in Three-Achsen: Eine UV ist eine Lage im flach
+        // ausgebreiteten Schnittmuster und von der Achswandlung oben
+        // unberührt.
+        const uv = daten?.uv;
+        if (Array.isArray(uv) && uv.length === punkte.length) {
+            const flaeche = new Float32Array(uv.length * 2);
+            for (let i = 0; i < uv.length; i++) {
+                flaeche[i * 2] = uv[i][0];
+                flaeche[i * 2 + 1] = uv[i][1];
+            }
+            geometrie.setAttribute('uv', new THREE.BufferAttribute(flaeche, 2));
+        }
         geometrie.computeVertexNormals();
         return geometrie;
     }

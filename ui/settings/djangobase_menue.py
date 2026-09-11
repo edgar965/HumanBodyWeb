@@ -78,5 +78,10 @@ HILFE_EXTRA = [
          'aktiv': 'hilfe_kleidung_garmentcode'},
         {'label': 'Neu', 'icon': 'bi-diagram-3',
          'url': '/hilfe/kleidung/neu/', 'aktiv': 'hilfe_kleidung_neu'},
+        {'label': 'Kleiderphysik', 'icon': 'bi-wind',
+         'url': '/hilfe/kleidung/physik/', 'aktiv': 'hilfe_kleidung_physik'},
+        {'label': 'Körperphysik', 'icon': 'bi-person-arms-up',
+         'url': '/hilfe/kleidung/koerperphysik/',
+         'aktiv': 'hilfe_koerper_physik'},
     ]},
 ]
