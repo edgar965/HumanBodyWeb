@@ -21,6 +21,7 @@ from .api.garmentcode import Garmentcode
 from .api.garmentgemeinsam import Garmentgemeinsamendpunkte
 from .api.garmentvorbilder import Garmentvorbilder
 from .api.garmentabsatz import Garmentabsatz
+from .api.garmentabsatzvorschau import Garmentabsatzvorschau
 from .api.garmentsimulation import Garmentsimulation
 from .api.schnittvorschau import Schnittvorschauendpunkte
 from .api.umafigurbau import Umafigurbau
@@ -198,6 +199,8 @@ urlpatterns = [
          name='garmentcode_vorbilder'),
     path('api/garmentcode/absatz/', Garmentabsatz.absatz,
          name='garmentcode_absatz'),
+    path('api/garmentcode/absatz/vorschau/', Garmentabsatzvorschau.vorschau,
+         name='garmentcode_absatz_vorschau'),
     path('api/garmentcode/vorbildbild/<str:name>/', Garmentvorbilder.vorbildbild,
          name='garmentcode_vorbildbild'),
     path('api/garmentcode/simulationsregler/', Garmentsimulation.regler,

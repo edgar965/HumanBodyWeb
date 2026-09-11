@@ -17,7 +17,11 @@ Fuss und ein starres Absatzteil — beides gibt es im Stoffmodell nicht.")
   Ballenachse — auch bei flachem Schuh; Ballen und Ferse bleiben.
 * `Absatzblock` hängt Klotz und Platte als Dreiecksnetz an eine OBJ; der
   Stiletto steht als 1-cm-Stift unter der Fersenmitte.
-* `Garmentabsatz` liefert dem Betrachter Winkel und Hebung aus dem Vermerk.
+* `Garmentabsatz` liefert dem Betrachter Winkel und Hebung aus dem Vermerk;
+  `Garmentabsatzvorschau` dieselben Zahlen zu Reglerwerten, ohne Bau —
+  damit der Regler die Figur sofort auf den Absatz stellt.
+* `Absatzblock.maske` benennt die Blockpunkte einer OBJ — „An die Haut
+  ziehen" zog den Stilettostift sonst 39 mm an die Ferse (gemessen).
 """
 import json
 import os
@@ -35,6 +39,7 @@ from GarmentCode.schuh.fussbeugung import Fussbeugung        # noqa: E402
 from GarmentCode.schuh.fussvorgabe import Fussvorgabe        # noqa: E402
 
 from core.api.garmentabsatz import Garmentabsatz             # noqa: E402
+from core.api.garmentabsatzvorschau import Garmentabsatzvorschau  # noqa: E402
 
 #: Die Gelenke der Vorgabefigur (`Fussvorgabe`, aus dem Rig): (y, z) cm.
 BALLEN = (2.0, 15.4)
@@ -201,7 +206,12 @@ class AbsatzblockTest(SimpleTestCase):
         pfad = os.path.join(self.ordner, 'x_sim.obj')
         with open(pfad, 'w', encoding='utf-8') as datei:
             datei.write('v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1/1 2/2 3/3\n')
+        self.assertFalse(Absatzblock.maske(pfad, 3).any())      # noch kein Block
         n = Absatzblock.anhaengen(self._spez(), {'absatz_cm': 7.0}, pfad)
+        maske = Absatzblock.maske(pfad, 3 + n)
+        self.assertEqual(int(maske.sum()), n)
+        self.assertFalse(maske[:3].any())
+        self.assertFalse(Absatzblock.maske(pfad + '.fehlt', 5).any())
         with open(pfad, encoding='utf-8') as datei:
             zeilen = datei.read().splitlines()
         self.assertEqual(sum(1 for z in zeilen if z.startswith('v ')), 3 + n)
@@ -253,3 +263,46 @@ class GarmentabsatzTest(SimpleTestCase):
         antwort = self.client.get('/api/garmentcode/absatz/?stueck=pumps')
         self.assertEqual(antwort.status_code, 200)
         self.assertEqual(antwort.json()['stueck'], 'pumps')
+
+
+class GarmentabsatzvorschauTest(SimpleTestCase):
+    u"""Der Regler stellt die Figur sofort — dieselbe Rechnung wie der Bau."""
+
+    databases = []
+
+    #: Die Fussmasse der Vorgabefigur (`test_schuhschnitt.FUSS`).
+    FUSS = {
+        'foot_length': 24.41, 'foot_heel_width': 7.08, 'foot_ball_width': 9.14,
+        'toe_height': 2.99, 'foot_instep': 21.83, 'instep_angle': 19.63,
+        'foot_x': 21.55, 'foot_toe_z': 23.19, 'foot_heel_z': -1.22,
+        'foot_yaw': 0.04, 'ankle_circ': 19.23, 'ankle_height': 13.78,
+        'calf_circ': 37.8, 'calf_height': 46.64, 'knee_circ': 34.73,
+        'knee_height': 53.1, 'shin_circ_25': 24.4, 'shin_circ_50': 35.45,
+        'shin_circ_75': 36.51, 'height': 168.0,
+    }
+
+    def test_rechnen_liefert_die_zahlen_des_baus(self):
+        antwort = Garmentabsatzvorschau.rechnen(self.FUSS, 7.0, 0.0, 8.0)
+        self.assertAlmostEqual(antwort['winkel_grad'], 24.943, places=2)
+        self.assertAlmostEqual(antwort['hebung_cm'], 4.884, places=2)
+        self.assertEqual(antwort['sprengung_grad'], 8.0)
+        self.assertEqual(antwort['hinweise'], [])
+        flach = Garmentabsatzvorschau.rechnen(self.FUSS, 0.0, 0.0, 0.0)
+        self.assertEqual(flach['winkel_grad'], 0.0)
+
+    def test_der_endpunkt_nimmt_die_regler_als_formular(self):
+        from unittest.mock import patch
+        from GarmentCode.dienst import GarmentcodeDienst
+        with patch.object(GarmentcodeDienst, 'masse', return_value=(self.FUSS, {})):
+            antwort = self.client.post('/api/garmentcode/absatz/vorschau/',
+                                       {'geschlecht': 'female', 'morphs': '{}',
+                                        'heel': '9', 'platform': '4',
+                                        'toe_spring': '5'})
+        self.assertEqual(antwort.status_code, 200)
+        daten = antwort.json()
+        self.assertAlmostEqual(daten['absatz_cm'], 9.0)
+        self.assertAlmostEqual(daten['plateau_cm'], 4.0)
+        self.assertGreater(daten['winkel_grad'], 10.0)
+        self.assertLess(daten['winkel_grad'],
+                        Garmentabsatzvorschau.rechnen(self.FUSS, 9.0, 0.0, 0.0)['winkel_grad'])
+        self.assertEqual(self.client.get('/api/garmentcode/absatz/vorschau/').status_code, 405)

@@ -20,6 +20,15 @@ import { Absatzdrehung } from './garmentcode_absatzdrehung.js';
  * zeigt nach oben, auch bei flachem Schuh). Die Drehung selbst rechnet
  * `Absatzdrehung` (`garmentcode_absatzdrehung.js`).
  *
+ * ZWEI QUELLEN, EINE VORRANGIG: Die Regler des Reiters
+ * (`garmentcode_absatzregler.js`, `vorschau()`) stellen die Figur sofort
+ * auf den Absatz, den sie zeigen — vor jedem Bau (Edgar, 11.09.2026:
+ * „ein Regler, der auch gleich die Pose ändert"). Ohne Vorschau gilt der
+ * getragene Schuh. Was gerade steht, trägt einen Schlüssel aus Winkel,
+ * Sprengung und Hub; ändert sich das Ziel, wird abgesetzt und neu
+ * gestellt — sonst bliebe ein Regler ohne Wirkung, solange die Figur
+ * schon auf irgendeinem Absatz steht.
+ *
  * WIE ES DAS STÜCK FINDET: Die Stücke hängen als `gc_<vorlage>` in
  * `inst.clothMeshes` (`garmentcode_anziehen.js`); die Zahlen kommen vom
  * Server (`/api/garmentcode/absatz/`), nicht aus der Rig-Datei — die
@@ -38,13 +47,17 @@ export class GarmentcodeAbsatz {
     static TAKT_STAU_MS = 30000;
 
     constructor() {
-        /** inst -> {netz, drehungen: [[knochen, quat]], hub} */
+        /** inst -> {schluessel, drehungen: [[knochen, quat]], hub} */
         this.stand = new Map();
+        /** inst -> info aus den Reglern (Vorrang vor dem getragenen Schuh) */
+        this.vorschauen = new Map();
         /** netz -> Promise der Serverantwort */
         this.antworten = new WeakMap();
         this.takt = null;
         /** Beginn des laufenden Takts, 0 = keiner. */
         this.seit = 0;
+        /** Kam während eines Takts eine Vorschau, läuft danach gleich einer. */
+        this.nachholen = false;
     }
 
     starten() {
@@ -61,6 +74,10 @@ export class GarmentcodeAbsatz {
             Protokoll.warnung('GarmentCode', `Absatz: ${fehler.message}`);
         } finally {
             this.seit = 0;
+            if (this.nachholen) {
+                this.nachholen = false;
+                this._takt();
+            }
         }
     }
 
@@ -68,15 +85,38 @@ export class GarmentcodeAbsatz {
 
     async pruefen() {
         for (const inst of state.characters.values()) {
-            const schuh = await this._absatzschuh(inst);
+            const info = this.vorschauen.has(inst)
+                ? this.vorschauen.get(inst)
+                : (await this._absatzschuh(inst))?.info;
+            const ziel = info && (info.winkel_grad > 0 || info.sprengung_grad > 0)
+                ? info : null;
             const bisher = this.stand.get(inst);
-            if (bisher && (!schuh || bisher.netz !== schuh.netz)) {
+            if (bisher && (!ziel || bisher.schluessel !== this.schluessel(ziel))) {
                 this.absetzen(inst);
             }
-            if (schuh && !this.stand.has(inst)) {
-                this.anstellen(inst, schuh);
+            if (ziel && !this.stand.has(inst)) {
+                this.anstellen(inst, ziel);
             }
         }
+    }
+
+    /**
+     * Die Regler zeigen einen Absatz: sofort so stellen. `info` wie vom
+     * Server (`winkel_grad`, `hebung_cm`, `sprengung_grad`, `plateau_cm`),
+     * null nimmt die Vorschau zurück — dann gilt wieder der Schuh.
+     */
+    vorschau(inst, info) {
+        if (info) this.vorschauen.set(inst, info);
+        else this.vorschauen.delete(inst);
+        if (this.seit) this.nachholen = true;
+        return this._takt();
+    }
+
+    /** Woran sich ein Stand von einem anderen unterscheidet. */
+    schluessel(info) {
+        return [info.winkel_grad, info.sprengung_grad || 0,
+                info.hebung_cm, info.plateau_cm || 0]
+            .map((z) => Number(z).toFixed(3)).join('|');
     }
 
     /** Das erste getragene GarmentCode-Stück mit Absatz — oder null. */
@@ -102,7 +142,7 @@ export class GarmentcodeAbsatz {
 
     // ------------------------------------------------------------ Anstellen
 
-    anstellen(inst, { netz, info }) {
+    anstellen(inst, info) {
         const skelett = Posenanwendung.skelett(inst);
         if (!skelett) {
             Protokoll.debug('GarmentCode', 'Absatz: Figur ohne Skelett, noch nicht gestellt');
@@ -116,7 +156,7 @@ export class GarmentcodeAbsatz {
         // Speichern ab, sonst käme er mit jedem Laden noch einmal dazu.
         inst.group.position.y += hub;
         inst.group.userData.absatzHub = hub;
-        this.stand.set(inst, { netz, drehungen, hub });
+        this.stand.set(inst, { schluessel: this.schluessel(info), drehungen, hub });
         Protokoll.info('GarmentCode',
             `Absatz ${info.absatz_cm} cm: Fuss um ${info.winkel_grad.toFixed(1)}° `
             + `gebeugt, Zehen um ${(info.sprengung_grad || 0).toFixed(1)}° gehoben, `

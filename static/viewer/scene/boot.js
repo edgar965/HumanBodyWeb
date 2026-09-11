@@ -32,6 +32,7 @@ import './kleider.js';
 import './garmentcode.js';
 import './garmentcode_vorbilder.js';
 import './garmentcode_absatz.js';
+import './garmentcode_absatzregler.js';
 import './modellgenerator_ui.js';
 import './mh_proxy.js';
 import './makehuman/mhkatalog.js';
