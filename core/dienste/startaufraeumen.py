@@ -5,8 +5,11 @@ Herausgelöst aus `core/apps.CoreConfig.ready` (92 Zeilen). In einer `ready()`
 gehört möglichst wenig: Sie läuft beim Start jedes Serverprozesses, und was dort
 scheitert, verhindert den Start.
 
-DREI FÄLLE, IN DIESER REIHENFOLGE
+VIER FÄLLE, IN DIESER REIHENFOLGE
 =================================
+0. **Der Arbeitsprozess lebt** (`auftrag.pid`, seit 12.09.2026): Der Auftrag
+   rechnet in einem eigenen Prozess weiter und bucht sein Ergebnis selbst.
+   Nichts zu tun.
 1. **Es gibt schon eine BVH.** Der Unterprozess ist während des Neustarts fertig
    geworden. Der Auftrag gilt als fertig — die Datei ist das Ergebnis, unabhängig
    davon, ob noch ein Prozess lebt.
@@ -53,6 +56,11 @@ class Startaufraeumen:
         return zaehler
 
     def _einordnen(self, auftrag):
+        from .auftragsarbeiter import Auftragsarbeiter
+        if Auftragsarbeiter.lebt(auftrag.id):
+            logger.info('Job %s: Arbeitsprozess %s laeuft weiter',
+                        auftrag.id, Auftragsarbeiter.pid(auftrag.id))
+            return 'weiter'
         ordner = Path(settings.MEDIA_ROOT) / 'output' / str(auftrag.id)
         fertige = self._bvh(ordner)
         if fertige:

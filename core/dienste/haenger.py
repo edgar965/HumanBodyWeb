@@ -74,6 +74,9 @@ class Haenger:
         prozess = LaufendeProzesse.holen(jid)
         if prozess and prozess.poll() is None:
             return True
+        from .auftragsarbeiter import Auftragsarbeiter
+        if Auftragsarbeiter.lebt(jid):
+            return True
         pid_datei = Path(settings.MEDIA_ROOT) / 'output' / jid / 'pipeline.pid'
         if not pid_datei.exists():
             return False

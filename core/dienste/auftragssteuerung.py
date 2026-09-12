@@ -96,7 +96,7 @@ class Auftragssteuerung:
     def _anfangszustand(pipeline):
         if pipeline == 'v4':
             return 'v4_processing'
-        if (pipeline in ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx')
+        if (pipeline in ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx', 'smplx')
                 or pipeline.startswith('hybrid_')):
             return 'processing'
         if pipeline in ('rtmpose', 'vitpose', 'yolo11'):
@@ -105,7 +105,14 @@ class Auftragssteuerung:
 
     @staticmethod
     def _faden_starten(job_id):
-        """Hintergrundfaden mit Absturzsicherung."""
+        """Den Lauf anwerfen — als eigener Prozess (`Auftragsarbeiter`), den ein
+        Neustart des Servers nicht mitreisst (12.09.2026: vier Auftraege an
+        einem Tag „Server was restarted while job was running"). Mit
+        `AUFTRAG_IM_SERVER = True` in den Einstellungen wie frueher als Faden."""
+        if not getattr(settings, 'AUFTRAG_IM_SERVER', False):
+            from ..dienste.auftragsarbeiter import Auftragsarbeiter
+            Auftragsarbeiter.starten(job_id)
+            return
         from ..pipelines.auftragslauf import Auftragslauf
 
         def _sicher(jid):
