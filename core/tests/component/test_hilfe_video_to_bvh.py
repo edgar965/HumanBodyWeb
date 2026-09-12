@@ -57,10 +57,12 @@ class DieSeite(SimpleTestCase):
                     for f in ('dauer_s', 'ueberlagerung_px', 'ruhe_wurzel'))
         self.assertEqual('nicht gemessen' in text, fehlt)
 
-    def test_jeder_rang_steht_in_der_tabelle(self):
+    def test_jeder_rang_steht_in_der_tabelle_und_ohne_rang_heisst_so(self):
         text = self._text()
-        for e in Pipelinevergleich.alle():
+        for e in Pipelinevergleich.mit_rang():
             self.assertIn('data-sort="%d"' % e['rang'], text)
+        ohne = len(Pipelinevergleich.alle()) - len(Pipelinevergleich.mit_rang())
+        self.assertEqual(text.count('>ohne Rang<'), ohne)
 
     def test_der_menuepunkt_zeigt_auf_die_seite(self):
         self.assertIn('href="/hilfe/video-to-bvh/"', self._text())

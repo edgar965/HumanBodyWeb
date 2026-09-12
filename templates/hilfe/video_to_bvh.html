@@ -19,6 +19,12 @@ HTML ist eine Behauptung, die niemand mehr nachrechnet.
 {% block topbar_title %}Video to BVH — alle Pipelines im Vergleich{% endblock %}
 
 {% block extra_head %}{{ block.super }}
+{% comment %}Das Zellgitter aller djangoBase-Tabellen (weiße Rahmen, Ansage
+11.08.2026) kommt aus `tabellen.css` — `_tabelle.html` bindet es selbst ein,
+die Doku-Seiten laden es nicht, und `dokuseite.css` setzt `border: none`.
+Ohne diese Zeile stand die Tabelle ohne Spaltenrahmen da (Edgar, 12.09.2026:
+„mach die spalten mit rahmen").{% endcomment %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css">
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_video_to_bvh.css' %}">
 {% endblock %}
 
@@ -39,10 +45,11 @@ HTML ist eine Behauptung, die niemand mehr nachrechnet.
   </p>
 
   <div class="info-box info-box-purple">
-    <strong>Rang</strong> — nach fünf Kriterien in dieser Reihenfolge:
-    läuft überhaupt; Deckung mit dem Video (Abstand zu ViTPose);
-    Ruhe der Pose; Vollständigkeit (Hände, Gesicht); Dauer.
-    Die Begründung je Pipeline steht unter der Tabelle.
+    <strong>Rang 1 bis 10</strong> bekommen die zehn Pipelines, die ein BVH
+    liefern — nach vier Kriterien in dieser Reihenfolge: Deckung mit dem
+    Video (Abstand zu ViTPose); Ruhe der Pose; Vollständigkeit (Hände,
+    Gesicht); Dauer. Die vier ohne Ergebnis haben keinen Rang und stehen
+    am Ende. Die Begründung je Pipeline steht unter der Tabelle.
   </div>
 
   <div class="db-tabelle-rahmen">
@@ -71,7 +78,9 @@ HTML ist eine Behauptung, die niemand mehr nachrechnet.
     <tbody>
       {% for e in eintraege %}
       <tr class="vtb-zeile-{{ e.zustand }}">
-        <td class="num" data-sort="{{ e.rang }}"><span class="vtb-rang">{{ e.rang }}</span></td>
+        <td class="num" data-sort="{{ e.rang|default_if_none:'' }}">
+          {% if e.rang is not None %}<span class="vtb-rang">{{ e.rang }}</span>{% else %}<span class="vtb-fehlt">–</span>{% endif %}
+        </td>
         <td data-sort="{{ e.name }}">
           <span class="vtb-name">{{ e.name }}</span><br>
           <span class="vtb-kennung">{{ e.schluessel }}</span>
@@ -122,7 +131,7 @@ HTML ist eine Behauptung, die niemand mehr nachrechnet.
   <ol class="vtb-karten">
     {% for e in eintraege %}
     <li class="vtb-karte vtb-karte-{{ e.zustand }}">
-      <h3><span class="vtb-rang">{{ e.rang }}</span> {{ e.name }}
+      <h3>{% if e.rang is not None %}<span class="vtb-rang">{{ e.rang }}</span>{% else %}<span class="vtb-fehlt">ohne Rang</span>{% endif %} {{ e.name }}
         <span class="vtb-zustand vtb-zustand-{{ e.zustand }}">{{ e.zustand_text }}</span></h3>
       <p>{{ e.begruendung }}</p>
       {% if e.zustand_grund %}<p class="vtb-grund">{{ e.zustand_grund }}</p>{% endif %}

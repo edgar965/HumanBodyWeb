@@ -65,7 +65,7 @@ class Pipelines2d:
          'nachteile': ['Schlechteste Deckung (113 px im Mittel, Median 22), Hüftweg 27 m',
                        'Unruhigste Wurzel (5,9 cm/Bild²)', BILDRATE, LIFTER],
          'begruendung': 'Schnell, aber der Lifter macht aus guten 2D-Punkten die unruhigste Bahn.'},
-        {'schluessel': 'openpose', 'art': '2D + Lifter', 'rang': 12,
+        {'schluessel': 'openpose', 'art': '2D + Lifter', 'rang': None,
          'verfahren': 'OpenPose (CMU, Cao u. a.) als Programm → JSON → CSV → MocapNET v2.1.',
          'gelenke': None, 'haende': False, 'gesicht': False, 'kamera': 'statisch (MocapNET-Kamera)',
          'dauer_s': 155, 'ueberlagerung_px': None, 'ruhe_wurzel': None, 'ruhe_pose': None,
@@ -75,5 +75,5 @@ class Pipelines2d:
                           'nicht für Blackwell (sm_120).',
          'vorteile': ['Der klassische Erkenner, JSON je Bild'],
          'nachteile': ['Läuft auf dieser GPU nicht'],
-         'begruendung': 'Kein Ergebnis — der Rang sagt nur: liefert nichts.'},
+         'begruendung': 'Kein Ergebnis, deshalb kein Rang.'},
     ]

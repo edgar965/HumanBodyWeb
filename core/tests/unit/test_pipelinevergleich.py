@@ -20,13 +20,20 @@ class DerVergleich(unittest.TestCase):
         self.assertEqual(sorted(Pipelinevergleich.schluessel()), erwartet)
         self.assertEqual(len(Pipelinevergleich.schluessel()), len(set(erwartet)))
 
-    def test_raenge_sind_eins_bis_n_ohne_luecke(self):
-        raenge = sorted(e['rang'] for e in Pipelinevergleich.alle())
+    def test_raenge_sind_eins_bis_n_ohne_luecke_nur_fuer_die_mit_ergebnis(self):
+        u"""Rang 1..10 fuer die, die ein BVH liefern; die anderen haben keinen
+        (Edgar, 12.09.2026: „das ranking von 1-10")."""
+        raenge = sorted(e['rang'] for e in Pipelinevergleich.mit_rang())
         self.assertEqual(raenge, list(range(1, len(raenge) + 1)))
+        for e in Pipelinevergleich.alle():
+            with self.subTest(pipeline=e['schluessel']):
+                self.assertEqual(e['rang'] is None, e['zustand'] != 'laeuft')
 
-    def test_rangfolge_ist_nach_rang_sortiert(self):
+    def test_rangfolge_ist_nach_rang_sortiert_und_ohne_rang_am_ende(self):
         folge = [e['rang'] for e in Pipelinevergleich.rangfolge()]
-        self.assertEqual(folge, sorted(folge))
+        mit = [r for r in folge if r is not None]
+        self.assertEqual(mit, sorted(mit))
+        self.assertEqual(folge[len(mit):], [None] * (len(folge) - len(mit)))
 
     def test_jeder_eintrag_traegt_alle_felder(self):
         for e in Pipelinevergleich.alle():

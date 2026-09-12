@@ -73,7 +73,16 @@ class Pipelinevergleich:
 
     @classmethod
     def rangfolge(cls):
-        return sorted(cls.alle(), key=lambda e: e['rang'])
+        u"""Nach Rang; wer keinen hat (kein Ergebnis), steht am Ende.
+
+        Rang 1 bis 10 bekommen nur die zehn, die ein BVH liefern (Edgar,
+        12.09.2026: „das ranking von 1-10") — ein Rang fuer „liefert nichts"
+        sagt nichts."""
+        return sorted(cls.alle(), key=lambda e: (e['rang'] is None, e['rang'] or 0))
+
+    @classmethod
+    def mit_rang(cls):
+        return [e for e in cls.alle() if e['rang'] is not None]
 
     @classmethod
     def nicht_gelaufen(cls):

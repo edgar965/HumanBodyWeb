@@ -107,7 +107,7 @@ class Pipelines3d:
                        'Native IK überlief unter Windows den Stack — Fix nur lokal im Klon'],
          'begruendung': 'Schnell und vollständig, aber die Pose zittert; die Deckung ist im Mittel '
                         'schlechter als bei SMPL (31,6 px), im Median gleich.'},
-        {'schluessel': 'hybrid_prompthmr', 'art': 'Hybrid', 'rang': 11,
+        {'schluessel': 'hybrid_prompthmr', 'art': 'Hybrid', 'rang': None,
          'verfahren': 'Körper aus PromptHMR, Gesicht und Hände aus MocapNET v4.',
          'gelenke': None, 'haende': True, 'gesicht': True,
          'kamera': 'statisch oder bewegt (DROID-SLAM)',
@@ -117,8 +117,8 @@ class Pipelines3d:
                           'das Gesicht aus MocapNET v4 („partial").',
          'vorteile': ['Wäre die vollständige Ausgabe mit PromptHMRs Körper'],
          'nachteile': ['Läuft hier nur zur Hälfte: kein Körper'],
-         'begruendung': 'Ohne Körper kein Vergleich; Rang nur vor den beiden, die gar nichts liefern.'},
-        {'schluessel': 'prompthmr', 'art': '3D', 'rang': 13,
+         'begruendung': 'Ohne Körper kein Vergleich, deshalb kein Rang.'},
+        {'schluessel': 'prompthmr', 'art': '3D', 'rang': None,
          'verfahren': 'PromptHMR (2025) — promptbare Körperschätzung (Boxen, Text), Kamera aus DROID-SLAM.',
          'gelenke': None, 'haende': False, 'gesicht': False,
          'kamera': 'statisch oder bewegt (DROID-SLAM)',
@@ -127,8 +127,8 @@ class Pipelines3d:
          'zustand_grund': 'Bricht nach 21 s ab: das Modul `gloss` (gloss-rs) fehlt in python10.',
          'vorteile': ['Liefert dem DuoMo-Weg den Bildkodierer (Checkpoint vorhanden)'],
          'nachteile': ['Läuft hier nicht'],
-         'begruendung': 'Kein Ergebnis — der Rang sagt nur: liefert nichts.'},
-        {'schluessel': 'wham', 'art': '3D', 'rang': 14,
+         'begruendung': 'Kein Ergebnis, deshalb kein Rang.'},
+        {'schluessel': 'wham', 'art': '3D', 'rang': None,
          'verfahren': 'WHAM (Shin u. a., CVPR 2024) — 2D-Spur + Bildmerkmale, SMPL in Weltkoordinaten '
                       'mit Fußkontakt.',
          'gelenke': None, 'haende': False, 'gesicht': False,
@@ -139,5 +139,5 @@ class Pipelines3d:
                           '(„dtype size changed"), und die Checkpoints fehlen.',
          'vorteile': ['Fußkontakt und Weltbahn — auf dem Papier'],
          'nachteile': ['Läuft hier nicht'],
-         'begruendung': 'Kein Ergebnis — der Rang sagt nur: liefert nichts.'},
+         'begruendung': 'Kein Ergebnis, deshalb kein Rang.'},
     ]
