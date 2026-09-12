@@ -16,6 +16,8 @@ import os
 
 import numpy as np
 
+from streusumme import Streusumme
+
 
 class Figurnetze:
     u"""Haut und Kleidung derselben Figur, mit denselben Knochenspalten."""
@@ -110,12 +112,15 @@ class Figurnetze:
         return punkte, dreiecke, aus / np.maximum(summe, 1e-9)
 
     def _szenenstueck(self, pfad):
-        daten = np.load(pfad)
-        punkte = np.asarray(daten['punkte'], dtype=np.float64)
-        dreiecke = np.asarray(daten['dreiecke'], dtype=np.int64)
-        namen = [str(n) for n in daten['knochen']]
+        # `with`, nicht nur `np.load`: die `.npz` bleibt sonst bis zum
+        # Aufraeumen des Objekts offen — unter Windows liess das jeden
+        # Pruefordner mit dem Stueck darin stehen (60 Ordner, 12.09.2026).
+        with np.load(pfad) as daten:
+            punkte = np.asarray(daten['punkte'], dtype=np.float64)
+            dreiecke = np.asarray(daten['dreiecke'], dtype=np.int64)
+            namen = [str(n) for n in daten['knochen']]
+            nummern, gewichte = daten['skin_index'], daten['skin_weight']
         umsetzung = np.array([self.spalte.get(n, -1) for n in namen])
-        nummern, gewichte = daten['skin_index'], daten['skin_weight']
         aus = np.zeros((len(punkte), len(self.namen)))
         unbekannt = set()
         for spalte in range(nummern.shape[1]):
@@ -125,8 +130,10 @@ class Figurnetze:
             if fremd.any():
                 unbekannt.update(namen[k] for k in nummern[fremd, spalte])
             treffer = gilt & (ziel >= 0)
-            np.add.at(aus, (np.nonzero(treffer)[0], ziel[treffer]),
-                      gewichte[treffer, spalte])
+            # Zweidimensionaler Index als flacher: Zeile * Breite + Spalte.
+            flach = np.nonzero(treffer)[0] * aus.shape[1] + ziel[treffer]
+            aus += Streusumme.zeilen(flach, gewichte[treffer, spalte],
+                                     aus.size).reshape(aus.shape)
         if unbekannt:
             raise ValueError(u'%d Knochen des Stuecks fehlen im Skelett: %s'
                              % (len(unbekannt),
@@ -145,5 +152,5 @@ class Figurnetze:
         """
         from scipy.spatial import cKDTree
         baum = cKDTree(koerper)
-        abstand, _ = baum.query(stoff)
+        abstand, _ = baum.query(stoff, workers=-1)
         return float(np.median(abstand)) * 1000.0

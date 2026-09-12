@@ -128,7 +128,8 @@ async function _runClothExport(engine) {
     // Cancel-Button sichtbar machen + AbortController verbinden
     _clothAbort = new AbortController();
     const cancelBtn = document.getElementById('cloth-export-cancel');
-    if (cancelBtn) cancelBtn.style.display = 'inline-block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+    // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+    if (cancelBtn) cancelBtn.style.display = 'inline-block';
     try {
         // Kein `Serverabruf.senden`: Der Abbruch-Knopf braucht das `signal`.
         const data = await Serverabruf.json('/api/cloth/export/', {

@@ -41,7 +41,7 @@ Humanbodypfad.assets()
 class AssetsLiegenDaTest(SimpleTestCase):
     u"""Die Ordner selbst."""
 
-    databases = []
+    databases = set()
 
     #: Was unter `Assets/` liegen muss, und woran man es erkennt.
     ORDNER = (('assetCreator', 'GarmentFitter/__init__.py'),
@@ -68,7 +68,7 @@ class AssetsLiegenDaTest(SimpleTestCase):
 class ImportwegeTest(SimpleTestCase):
     u"""Die Importe, die der Code wirklich schreibt."""
 
-    databases = []
+    databases = set()
 
     #: (Modul, Name) — genau die Schreibweisen aus dem Produktivcode.
     #:

@@ -47,6 +47,7 @@ def _betreff_fassungen():
             capture_output=True, text=True, timeout=10,
             encoding="utf-8", errors="replace",
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    # stumm gewollt: ohne git gibt es keine Historie — die Pruefung sagt das unten mit skipTest
     except (OSError, subprocess.TimeoutExpired):
         return set()
     if lauf.returncode != 0:

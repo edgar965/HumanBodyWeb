@@ -53,7 +53,7 @@ TOOLS = Projektquellen.TOOLS
 class KeinZugriffAufEineMethode(unittest.TestCase):
     u"""Kein Modul liest ein Attribut, das eine Funktion nicht hat."""
 
-    databases = []
+    databases = set()
 
     def test_keiner_greift_auf_eine_methode_zu(self):
         gelesen = list(Projektquellen.baeume())
@@ -77,7 +77,7 @@ class KeinZugriffAufEineMethode(unittest.TestCase):
 class EineSabotageAmZugriff(unittest.TestCase):
     u"""Die Gegenprobe: Der Test muss rot werden koennen."""
 
-    databases = []
+    databases = set()
 
     def test_der_echte_fall_wird_erkannt(self):
         u"""Genau die Zeile aus `convertDazPoseBvhToBlender.py`."""

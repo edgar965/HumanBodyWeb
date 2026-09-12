@@ -197,7 +197,7 @@ export class Werkzeugleiste {
                               || Werkzeugleiste.SIGMA_VORGABE;
                 const anzeige = document.getElementById('tool-smooth-radius');
                 if (anzeige) {
-                    anzeige.textContent = Math.ceil(sigma * Werkzeugleiste.SIGMA_RADIUS);
+                    anzeige.textContent = String(Math.ceil(sigma * Werkzeugleiste.SIGMA_RADIUS));
                 }
             });
     }

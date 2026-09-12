@@ -22,7 +22,7 @@ export class Netzpunkte {
     /**
      * Punkte und Normalen in ein bestehendes Netz schreiben.
      *
-     * @param {THREE.Mesh} netz  Netz mit vorhandener Geometrie
+     * @param {import('three').Mesh} netz  Netz mit vorhandener Geometrie
      * @param {Object} daten     Antwort des Netz-Endpunkts
      * @param {Function} nachbearbeiten
      *        Wird auf den Punktpuffer angewandt, NACHDEM aus
@@ -64,7 +64,7 @@ export class Netzpunkte {
      * erst ab dem ersten Reglerzug. Das sieht nach einem Fehler des Reglers
      * aus und ist einer des Puffers.
      *
-     * @param {THREE.BufferGeometry} geometrie Geometrie des Körpers
+     * @param {import('three').BufferGeometry} geometrie Geometrie des Körpers
      * @param {ArrayBuffer} puffer Float32-Punkte in Blender-Koordinaten
      * @returns {boolean} false, wenn es nichts zu schreiben gab
      */

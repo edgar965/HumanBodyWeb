@@ -20,12 +20,13 @@ class Einstellungen(SimpleNamespace):
 
     def __init__(self):
         super().__init__(smpl_device='cuda', gvhmr_static_cam=True,
-                         gvhmr_focal_length_mm=0)
+                         gvhmr_focal_length_mm=0, gvhmr_smooth_sigma=2.0,
+                         gvhmr_joint_limits=True)
 
 
 class GvhmrFormularTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_vier_schalter_kommen_im_auftrag_an(self):
         p = Pipelineparameter.lesen(

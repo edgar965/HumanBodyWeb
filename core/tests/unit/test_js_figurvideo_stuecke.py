@@ -73,7 +73,7 @@ console.log(JSON.stringify({ ok: true, bytes: roh.length }));
 
 class FigurvideoStueckeJsTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_paket_byte_fuer_byte(self):
         ausgabe = MODUL.laufen(SKRIPT)

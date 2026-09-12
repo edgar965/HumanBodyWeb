@@ -31,7 +31,10 @@ function _auswaehlen(zeile, pose) {
  */
 function _status(text, ok = true) {
     const zeile = document.getElementById('pose-status');
-    if (!zeile) return;
+    if (!zeile) {
+        (ok ? Protokoll.info : Protokoll.fehler)('pose_apply', text || '');
+        return;
+    }
     zeile.textContent = text || '';
     zeile.classList.toggle('fehlertext', !ok);
 }

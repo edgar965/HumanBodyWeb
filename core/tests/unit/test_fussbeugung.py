@@ -49,7 +49,7 @@ FERSE_Z = -1.22
 
 class FussbeugungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _huelle(self, n=4000):
         u"""Zufallspunkte in der Hülle von Fuss und Bein — auch beide Seiten."""
@@ -141,7 +141,7 @@ class FussbeugungTest(SimpleTestCase):
 
 class AbsatzblockTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.ordner = os.path.join(settings.BASE_DIR, '_wegwerf', 'test_absatzblock')
@@ -223,7 +223,7 @@ class AbsatzblockTest(SimpleTestCase):
 
 class GarmentabsatzTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.ordner = os.path.join(settings.BASE_DIR, '_wegwerf', 'test_garmentabsatz')
@@ -268,7 +268,7 @@ class GarmentabsatzTest(SimpleTestCase):
 class GarmentabsatzvorschauTest(SimpleTestCase):
     u"""Der Regler stellt die Figur sofort — dieselbe Rechnung wie der Bau."""
 
-    databases = []
+    databases = set()
 
     #: Die Fussmasse der Vorgabefigur (`test_schuhschnitt.FUSS`).
     FUSS = {

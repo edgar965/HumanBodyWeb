@@ -139,5 +139,5 @@ class Konformeranpassung:
         except ImportError:                                    # noqa: BLE001
             logger.info('Konformer: ohne scipy kein Hautabstand')
             return None
-        abstand, _ = cKDTree(koerper).query(gelegt)
+        abstand, _ = cKDTree(koerper).query(gelegt, workers=-1)
         return round(float(np.median(abstand)) * 1000.0, 1)

@@ -23,7 +23,7 @@ HTML = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 
 class Weiterleitung(TestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.werk = RequestFactory()

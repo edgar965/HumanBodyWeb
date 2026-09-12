@@ -31,6 +31,8 @@ aussen gegangen ist.
 """
 import numpy as np
 
+from streusumme import Streusumme
+
 
 class Stoffgrenze:
     u"""Kuerzt Verschiebungen, die in den Koerper hineinzeigen."""
@@ -62,7 +64,7 @@ class Stoffgrenze:
         flaeche = np.cross(b - a, c - a)
         aus = np.zeros_like(self.punkte)
         for spalte in range(3):
-            np.add.at(aus, self.dreiecke[:, spalte], flaeche)
+            Streusumme.dazu(aus, self.dreiecke[:, spalte], flaeche)
         laengen = np.linalg.norm(aus, axis=1, keepdims=True)
         aus = aus / np.maximum(laengen, 1e-12)
         return aus * self._aussen(aus)
@@ -86,7 +88,7 @@ class Stoffgrenze:
 
     def abstand(self, stoffpunkte):
         u"""Der vorzeichenbehaftete Abstand je Stoffpunkt (positiv = aussen)."""
-        _abstand, naechster = self.baum.query(stoffpunkte)
+        _abstand, naechster = self.baum.query(stoffpunkte, workers=-1)
         rest = stoffpunkte - self.punkte[naechster]
         return np.sum(rest * self.normalen[naechster], axis=1)
 
@@ -106,7 +108,7 @@ class Stoffgrenze:
         `MINDESTABSTAND` fuer alle. Rueckgabe ist der gekuerzte Versatz und
         die Zahl der Punkte, bei denen gekuerzt wurde.
         """
-        _abstand, naechster = self.baum.query(stoffpunkte)
+        _abstand, naechster = self.baum.query(stoffpunkte, workers=-1)
         normale = self.normalen[naechster]
         rest = stoffpunkte - self.punkte[naechster]
         # Der vorzeichenbehaftete Abstand: positiv = ausserhalb.
@@ -141,7 +143,7 @@ class Stoffgrenze:
         offene Saeume spielen keine Rolle (CLAUDE.md, 07.09.2026, nachdem
         der Messer viermal falsch herum stand).
         """
-        _abstand, naechster = self.baum.query(stoffpunkte)
+        _abstand, naechster = self.baum.query(stoffpunkte, workers=-1)
         rest = stoffpunkte - self.punkte[naechster]
         aussen = np.sum(rest * self.normalen[naechster], axis=1)
         drin = aussen < -self.TOLERANZ

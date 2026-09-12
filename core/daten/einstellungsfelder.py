@@ -106,6 +106,16 @@ class Einstellungsfelder:
             u'Focal Length (mm)',
             u'Brennweite der Kamera in mm. 0 = automatisch schätzen '
             u'(empfohlen)', min=0, max=200, schritt='0.5'),
+        'gvhmr_smooth_sigma': F(
+            u'Temporal Smoothing',
+            u'Gaußsche Glättung der Gelenkwinkel im BVH (0 = aus, 2 = Standard, '
+            u'4 und mehr = stark). Vorgabe für die Karte auf der Uploadseite; '
+            u'gilt auch für den Körper-Durchlauf des Hybrid-Laufs',
+            min=0, max=10, schritt='0.5'),
+        'gvhmr_joint_limits': F(
+            u'Joint Limits',
+            u'Anatomische Grenzen für Knie, Ellbogen und Hüfte im BVH anwenden. '
+            u'Vorgabe für die Karte auf der Uploadseite'),
 
         # --------------------------------------------------------------- WHAM
         'wham_estimate_local_only': F(
@@ -126,6 +136,42 @@ class Einstellungsfelder:
             u'Statische Kamera annehmen. Das Video-Demo von GEM verfolgt die '
             u'Kamera ohnehin nicht; der Schalter setzt nur die Kamera-Maske '
             u'des Modells'),
+        'gem_smooth_sigma': F(
+            u'Temporal Smoothing',
+            u'Gaußsche Glättung der Gelenkwinkel im BVH (0 = aus, 2 = Standard, '
+            u'4 und mehr = stark). Vorgabe für die Karte auf der Uploadseite',
+            min=0, max=10, schritt='0.5'),
+        'gem_joint_limits': F(
+            u'Joint Limits',
+            u'Anatomische Grenzen für Knie, Ellbogen und Hüfte im BVH anwenden. '
+            u'Vorgabe für die Karte auf der Uploadseite'),
+
+        # -------------------------------------------------------------- DuoMo
+        'duomo_static_cam': F(
+            u'Static Camera',
+            u'Statische Kamera annehmen. DuoMo liefert ohne Kamerabahn ohnehin '
+            u'eine feste Kamera; der Schalter ist die Vorgabe der Karte'),
+        'duomo_smooth_sigma': F(
+            u'Temporal Smoothing',
+            u'Gaußsche Glättung der Gelenkwinkel im BVH (0 = aus, 2 = Standard, '
+            u'4 und mehr = stark). Vorgabe für die Karte auf der Uploadseite',
+            min=0, max=10, schritt='0.5'),
+        'duomo_joint_limits': F(
+            u'Joint Limits',
+            u'Anatomische Grenzen für Knie, Ellbogen und Hüfte im BVH anwenden. '
+            u'Vorgabe für die Karte auf der Uploadseite'),
+
+        # -------------------------------------------------------------- GEM-X
+        'gemx_static_cam': F(
+            u'Static Camera',
+            u'Statische Kamera annehmen — wie bei GEM-SMPL nur die Kamera-Maske '
+            u'des Modells. Vorgabe für die Karte auf der Uploadseite'),
+        'gemx_smooth_sigma': F(
+            u'Temporal Smoothing',
+            u'Gaußsche Glättung der Gelenkwinkel im BVH (0 = aus, 2 = Standard, '
+            u'4 und mehr = stark). Gelenkgrenzen gibt es für GEM-X nicht: SOMA '
+            u'hat 77 Gelenke, die Grenzen sind SMPL-Indizes',
+            min=0, max=10, schritt='0.5'),
     }
 
     @classmethod

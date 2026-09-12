@@ -38,7 +38,7 @@ export class Kleiderwerkstoff {
             // Gegen das Flimmern auf der Haut — siehe oben.
             polygonOffset: true,
             polygonOffsetFactor: -1,
-            polygonOffsetUnit: -1,
+            polygonOffsetUnits: -1,
         });
     }
 }

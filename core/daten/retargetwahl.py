@@ -51,28 +51,40 @@ class Retargetwahl:
         self.fusskorrektur = str(
             werte.get('foot_correction', '')).lower() in self.JA
         self.delta_norm = self._dreiwertig(werte.get('delta_norm', ''))
-        self.ziel = (werte.get('target') or self.ZIELE[0]).lower()
-        if self.ziel not in self.ZIELE:
-            raise ValueError('Unbekanntes Ziel %r — erlaubt: %s'
-                             % (self.ziel, ', '.join(self.ZIELE)))
-        # WELCHE UMA-Figur (06.09.2026): Ohne `figur` galt die Datei aus
-        # `aktuell.json` — die Roomguest setzt, nicht die Szene. Deren
-        # `UmaKleidung_bewegt.glb` traegt einen anders gedrehten Wurzelknoten;
-        # die Hueftspur landete damit in der falschen Achse (Hoehe in X), und
-        # jede UMA-Figur der Szene lag bei `0101_Boden` flach am Boden.
-        self.figur = (werte.get('figur') or '').strip() or None
-        if self.figur and (not self.FIGUR.match(self.figur) or '..' in self.figur):
-            raise ValueError('Ungültiger Figurname %r' % (self.figur,))
-        if (self.figur and self.ziel in self.GLB_ZIELE
-                and not self.figur.lower().endswith('.glb')):
-            raise ValueError('Ungültiger Figurname %r' % (self.figur,))
+        self.ziel = self._ziel(werte.get('target'))
+        self.figur = self._figur(werte.get('figur'), self.ziel)
         # Die Reglerstellung der MakeHuman-Figur (07.09.2026). Ihr Skelett
         # sind Mittelwerte von Punkten DIESER Stellung — ohne sie stuende
         # das Ziel in der Vorgabefigur, und die Bewegung landete auf einem
         # anderen Koerper als dem in der Szene. 269 Regler passen in keine
         # Abfragezeichenkette; sie kommen deshalb aus dem JSON-Rumpf.
-        self.makro = werte.get('makro') if isinstance(werte, dict) else None
-        self.regler = werte.get('regler') if isinstance(werte, dict) else None
+        rumpf = werte if isinstance(werte, dict) else {}
+        self.makro = rumpf.get('makro')
+        self.regler = rumpf.get('regler')
+
+    @classmethod
+    def _ziel(cls, roh):
+        ziel = (roh or cls.ZIELE[0]).lower()
+        if ziel not in cls.ZIELE:
+            raise ValueError('Unbekanntes Ziel %r — erlaubt: %s'
+                             % (ziel, ', '.join(cls.ZIELE)))
+        return ziel
+
+    @classmethod
+    def _figur(cls, roh, ziel):
+        """WELCHE UMA-Figur (06.09.2026): Ohne `figur` galt die Datei aus
+        `aktuell.json` — die Roomguest setzt, nicht die Szene. Deren
+        `UmaKleidung_bewegt.glb` traegt einen anders gedrehten Wurzelknoten;
+        die Hueftspur landete damit in der falschen Achse (Hoehe in X), und
+        jede UMA-Figur der Szene lag bei `0101_Boden` flach am Boden."""
+        figur = (roh or '').strip() or None
+        if figur is None:
+            return None
+        if not cls.FIGUR.match(figur) or '..' in figur:
+            raise ValueError('Ungültiger Figurname %r' % (figur,))
+        if ziel in cls.GLB_ZIELE and not figur.lower().endswith('.glb'):
+            raise ValueError('Ungültiger Figurname %r' % (figur,))
+        return figur
 
     @staticmethod
     def _dreiwertig(roh):

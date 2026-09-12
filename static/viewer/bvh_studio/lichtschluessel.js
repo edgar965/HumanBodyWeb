@@ -38,8 +38,9 @@ export class Lichtschluessel {
      * @param spur         die Lichtspur
      * @param bild         Startbild
      * @param name         Anzeigename
-     * @param mitVorgaben  echte Vorgabewerte statt `null` (siehe Klassendoku)
-     * @param zusatz       weitere Felder für `data` (z. B. `trackPosition`)
+     * @param {Object<string, any>} [wahl]  `mitVorgaben`: echte Vorgabewerte statt
+     *               `null` (siehe Klassendoku); alles Weitere geht als Feld in
+     *               `data` (z. B. `trackPosition`)
      */
     static bauen(spur, bild, name, { mitVorgaben = true, ...zusatz } = {}) {
         const licht = spur.light;

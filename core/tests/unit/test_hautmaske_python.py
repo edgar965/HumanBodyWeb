@@ -10,24 +10,19 @@ Sabotage-Gegenprobe: `groesse_frei < groesste` entfernt (`maskeninseln`)
 macht die Insel rot; `t >= -tiefe` → `t >= 0` macht den Browser-Vergleich rot.
 """
 import numpy as np
-from django.conf import settings
 from django.test import SimpleTestCase
+from ._modelphysik import Modelphysik
 
 from ._kunstkoerper import zylinder
 
 
 def _modul():
-    import importlib
-    import sys
-    ordner = str(settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik')
-    if ordner not in sys.path:
-        sys.path.insert(0, ordner)
-    return importlib.import_module('hautmaske')
+    return Modelphysik.modul('hautmaske')
 
 
 class HautmaskePythonTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.hm = _modul()

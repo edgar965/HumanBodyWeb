@@ -13,6 +13,8 @@ plausibel aus.
 """
 import numpy as np
 
+from streusumme import Streusumme
+
 
 class Hautbahn:
     u"""Lineares Blend-Skinning eines Netzes ueber eine Bildfolge."""
@@ -60,10 +62,9 @@ class Hautbahn:
         zeilen, spalten, werte = self._nnz
         R, t = self._matrizen(lage)
         bewegt = np.einsum('kij,kj->ki', R[spalten], self.punkte[zeilen]) + t[spalten]
-        ziel = np.zeros_like(self.punkte)
-        summe = np.zeros(len(self.punkte))
-        np.add.at(ziel, zeilen, werte[:, None] * bewegt)
-        np.add.at(summe, zeilen, werte)
+        anzahl = len(self.punkte)
+        ziel = Streusumme.zeilen(zeilen, werte[:, None] * bewegt, anzahl)
+        summe = Streusumme.zeilen(zeilen, werte, anzahl)
         return ziel / np.maximum(summe, 1e-9)[:, None]
 
     def _matrizen(self, lage):

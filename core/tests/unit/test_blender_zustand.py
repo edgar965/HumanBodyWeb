@@ -27,7 +27,6 @@ BDD - GEGEBEN / DANN
 """
 import ast
 import importlib
-import unittest
 from pathlib import Path
 
 from ._addonbasis import Addonbasis, ADDON

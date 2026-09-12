@@ -33,7 +33,7 @@ from SMPL.skelett import Smplskelett
 
 class SmplzuordnungTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def test_jeder_name_steht_im_skelett(self):
         u"""Sonst bekaeme der Knochen keine Spur und bliebe stehen."""
@@ -70,7 +70,7 @@ class SmplzuordnungTest(unittest.TestCase):
 
 class MhzuordnungTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):
@@ -112,7 +112,7 @@ class MhzuordnungTest(unittest.TestCase):
 
 class SmplhautTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):
@@ -160,7 +160,7 @@ class SmplhautTest(unittest.TestCase):
 
 class MhhautTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

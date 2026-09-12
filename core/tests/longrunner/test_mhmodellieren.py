@@ -37,7 +37,7 @@ from MakeHuman.zielbaum import Mhzielbaum
 
 class MhmodellierenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         if not Mhzielbaum.vorhanden() or not Mhmodifikatoren.vorhanden():

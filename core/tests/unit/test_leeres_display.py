@@ -18,9 +18,10 @@ Stil das Zurücksetzen, nicht das Einblenden.
 import re
 from pathlib import Path
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
-WURZEL = Path(__file__).resolve().parents[3]
+WURZEL = Path(settings.BASE_DIR)
 JS_ORDNER = [WURZEL / 'static' / 'viewer', WURZEL / 'static' / 'js']
 HTML = list((WURZEL / 'templates').rglob('*.html'))
 CSS = list((WURZEL / 'static' / 'css').rglob('*.css')) + HTML
@@ -33,7 +34,7 @@ REICHWEITE = 3   # Zeilen davor/danach, in denen eine Klassen-Umschaltung zählt
 
 class LeeresDisplayTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

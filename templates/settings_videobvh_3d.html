@@ -206,66 +206,8 @@
         {% endif %}
     </div>
 
-    {# ── GVHMR ── #}
-    <div class="settings-card hb-abstand-oben">
-        <h2>
-            <i class="fas fa-walking"></i> GVHMR
-            <small class="hb-gedaempft">36 mm, GPU &mdash; Empfohlen</small>
-            {% if gvhmr_installed %}<span class="hb-color-27ae60" title="Installiert"><i
-                 class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i
-                 class="fas fa-times-circle"></i></span>{% endif %}
-        </h2>
-
-        {% kaestchen "gvhmr_static_cam" %}
-
-        {% zahl "gvhmr_focal_length_mm" %}
-    </div>
-
-    {# ── WHAM ── #}
-    <div class="settings-card hb-abstand-oben">
-        <h2>
-            <i class="fas fa-globe"></i> WHAM
-            <small class="hb-gedaempft">37 mm, GPU, World-Koordinaten</small>
-            {% if wham_installed %}<span class="hb-color-27ae60" title="Installiert"><i
-                 class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i
-                 class="fas fa-times-circle"></i></span>{% endif %}
-        </h2>
-
-        {% kaestchen "wham_estimate_local_only" %}
-
-        {% kaestchen "wham_run_smplify" %}
-    </div>
-
-    {# ── PromptHMR ── #}
-    <div class="settings-card hb-abstand-oben">
-        <h2>
-            <i class="fas fa-comment-dots"></i> PromptHMR
-            <small class="hb-gedaempft">37 mm, GPU &mdash; Beste per-frame</small>
-            {% if prompthmr_installed %}<span class="hb-color-27ae60" title="Installiert"><i
-                 class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i
-                 class="fas fa-times-circle"></i></span>{% endif %}
-        </h2>
-
-        {% kaestchen "prompthmr_static_camera" %}
-    </div>
-
-    {# ── GEM-SMPL (11.09.2026) ── #}
-    <div class="settings-card hb-abstand-oben">
-        <h2>
-            <i class="fas fa-gem"></i> GEM-SMPL
-            <small class="hb-gedaempft">NVIDIA ICCV 2025 &mdash; EMDB-2 Weltraum 74 mm (GVHMR 111), nur
-                nicht-kommerziell</small>
-            {% if gem_installed %}<span class="hb-color-27ae60" title="Installiert"><i
-                 class="fas fa-check-circle"></i></span>
-            {% else %}<span class="hb-color-e74c3c-b" title="Nicht installiert"><i
-                 class="fas fa-times-circle"></i></span>{% endif %}
-        </h2>
-
-        {% kaestchen "gem_static_cam" %}
-    </div>
+    {# ── Die SMPL-Lifter: GVHMR, WHAM, PromptHMR, GEM-SMPL, DuoMo, GEM-X ── #}
+    {% include "_einstellungen_lifter.html" %}
 
     {# ── 3D Video Output ── #}
     <div class="settings-card hb-abstand-oben">

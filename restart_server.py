@@ -85,6 +85,7 @@ class Serverneustart:
                         and verbindung.laddr.port == cls.PORT
                         and verbindung.pid):
                     pids.add(verbindung.pid)
+        # stumm gewollt: Skript ohne Logger — die Meldung geht auf die Konsole, der zweite Weg folgt
         except (psutil.AccessDenied, PermissionError, OSError):
             print(u'  (Verbindungen nicht lesbar — nehme den zweiten Weg)')
         return pids
@@ -130,6 +131,7 @@ class Serverneustart:
         u"""Läuft der Prozess aus unserem Projektverzeichnis?"""
         try:
             return Path(prozess.cwd()).resolve() == cls.WURZEL
+        # stumm gewollt: ein Prozess, dessen Ordner nicht lesbar ist, gehoert nicht zu uns
         except (psutil.AccessDenied, psutil.NoSuchProcess, OSError, ValueError):
             return False
 
@@ -140,12 +142,14 @@ class Serverneustart:
         for pid in pids:
             try:
                 eltern = psutil.Process(pid).parent()
+            # stumm gewollt: wer gerade verschwunden ist, braucht keinen Elternprozess mehr
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
             if eltern is None or not cls._hier(eltern):
                 continue
             try:
                 teile = eltern.cmdline() or []
+            # stumm gewollt: ein fremder oder verschwundener Elternprozess bleibt unangetastet
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
             if cls._ist_runserver(teile):
@@ -174,6 +178,7 @@ class Serverneustart:
                 prozess = psutil.Process(pid)
                 print(u'  beende %d: %s' % (pid, ' '.join(prozess.cmdline())))
                 prozess.terminate()
+            # stumm gewollt: Skript ohne Logger — die Meldung steht auf der Konsole
             except (psutil.NoSuchProcess, psutil.AccessDenied) as fehler:
                 print(u'  %d nicht beendbar: %s' % (pid, fehler))
         lebende = [psutil.Process(p) for p in pids if psutil.pid_exists(p)]
@@ -182,6 +187,7 @@ class Serverneustart:
             try:
                 print(u'  %d reagiert nicht — harter Abbruch' % prozess.pid)
                 prozess.kill()
+            # stumm gewollt: wer beim harten Abbruch schon weg ist, ist erledigt
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
         return len(pids)
@@ -217,6 +223,7 @@ class Serverneustart:
         try:
             with socket.create_connection(('127.0.0.1', cls.PORT), frist_s):
                 return True
+        # stumm gewollt: keine Verbindung heisst der Server ist (noch) nicht da — genau die Frage
         except OSError:
             return False
 

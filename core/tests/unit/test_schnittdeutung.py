@@ -41,7 +41,7 @@ class SchnittdeutungTest(unittest.TestCase):
     u"""Rechnet die Deutung die Regler richtig zurueck?"""
 
     #: Keine Datenbank - die Deutung rechnet nur (Regel `tests-und-produktivdaten`).
-    databases = []
+    databases = set()
 
     #: Die Masse der Vorgabefigur, gemessen am 09.09.2026. Aus ihnen folgen
     #: Schulter 142,2 cm, Taille 109,9 cm und Huefte 84,9 cm ueber dem Boden.
@@ -177,7 +177,7 @@ class SchnittdeutungTest(unittest.TestCase):
 class StueckmasseTest(unittest.TestCase):
     u"""Misst `Stueckmasse` die Geometrie, die die Deutung erwartet?"""
 
-    databases = []
+    databases = set()
 
     @staticmethod
     def _koerper():

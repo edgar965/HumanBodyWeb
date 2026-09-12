@@ -20,7 +20,8 @@ export class Knochenauswahl {
         Knochenbaum.hervorheben(name);
 
         const abschnitt = document.getElementById('mg-bone-props-section');
-        if (abschnitt) abschnitt.style.display = 'block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        if (abschnitt) abschnitt.style.display = 'block';
         const anzeige = document.getElementById('mg-bone-name');
         if (anzeige) anzeige.textContent = name;
 

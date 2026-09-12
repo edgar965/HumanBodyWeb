@@ -33,8 +33,6 @@ BDD - GEGEBEN / DANN
 """
 import importlib
 import sys
-import unittest
-
 from ._addonbasis import Addonbasis
 from .blenderattrappe import Blenderattrappe
 

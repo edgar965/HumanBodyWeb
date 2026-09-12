@@ -38,14 +38,15 @@ export class Stueckbedienung {
                            'lift', 'crotch-depth'];
 
     /**
-     * @param wahl.vorsilbe    'kleider' oder 'garment'
-     * @param wahl.schluessel  'kld_' oder 'gar_'
-     * @param wahl.gewaehlt    () => { inst, key, mesh } | null
-     * @param wahl.anpassen    () => Neuanpassung am Server
-     * @param wahl.kennungMerken (kennung) => void — welche id angepasst wird
-     * @param wahl.nachMaterial () => void — nach einer Materialänderung
-     * @param wahl.regionen    (inst, key) => Verschiebungen anwenden
-     * @param wahl.listeZeichnen () => void
+     * @param {object} wahl
+     * @param [wahl.vorsilbe]    'kleider' oder 'garment'
+     * @param [wahl.schluessel]  'kld_' oder 'gar_'
+     * @param [wahl.gewaehlt]    () => { inst, key, mesh } | null
+     * @param [wahl.anpassen]    () => Neuanpassung am Server
+     * @param [wahl.kennungMerken] (kennung) => void — welche id angepasst wird
+     * @param [wahl.nachMaterial] () => void — nach einer Materialänderung
+     * @param [wahl.regionen]    (inst, key) => Verschiebungen anwenden
+     * @param [wahl.listeZeichnen] () => void
      */
     constructor(wahl) {
         Object.assign(this, wahl);

@@ -46,7 +46,7 @@ def zylinder(radius, hoehe=1.0, ringe=24, stufen=16):
 
 class Bindenprobe(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.koerper, self.k_tri = zylinder(0.20)
@@ -118,7 +118,7 @@ class Bindenprobe(unittest.TestCase):
 class SchutzGegenFalscheBindung(unittest.TestCase):
     u"""Die Prüfungen, die verhindern, dass etwas stumm falsch läuft."""
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.koerper, self.k_tri = zylinder(0.20)
@@ -170,7 +170,7 @@ class SchutzGegenFalscheBindung(unittest.TestCase):
 
 class KollisionUndNaehte(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def test_eingesunkener_punkt_kommt_heraus(self):
         koerper, k_tri = zylinder(0.20)

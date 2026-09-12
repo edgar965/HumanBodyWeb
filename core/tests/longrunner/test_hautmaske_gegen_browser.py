@@ -14,8 +14,8 @@ Vergleich rot (3 mm in der Haut); `groesse_frei < groesste` entfernt macht
 die Insel rot.
 """
 import numpy as np
-from django.conf import settings
 from django.test import SimpleTestCase
+from ..unit._modelphysik import Modelphysik
 
 from ..jsmodul import Jsmodul
 from ..unit._kunstkoerper import zylinder
@@ -62,17 +62,12 @@ console.log(JSON.stringify({ hose: als(e.get('hose').maske), shirt: als(e.get('s
 
 
 def _modul():
-    import importlib
-    import sys
-    ordner = str(settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik')
-    if ordner not in sys.path:
-        sys.path.insert(0, ordner)
-    return importlib.import_module('hautmaske')
+    return Modelphysik.modul('hautmaske')
 
 
 class HautmaskeGegenBrowserTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.hm = _modul()
@@ -110,8 +105,10 @@ class HautmaskeGegenBrowserTest(SimpleTestCase):
         P, T = self.koerper
         hose = zylinder(0.102, 0.10, 0.70, 61, 36)
         shirt = zylinder(0.115, 0.50, 0.90, 41, 36)
-        aus = self.hm.Lagenmaske.verdeckt(P, T, [('hose', hose[0], hose[1]),
-                                                 ('shirt', shirt[0], shirt[1])])
+        # Seit dem 12.09.2026 eine eigene Datei (`lagenmaske.py`).
+        Lagenmaske = Modelphysik.modul('lagenmaske').Lagenmaske
+        aus = Lagenmaske.verdeckt(P, T, [('hose', hose[0], hose[1]),
+                                         ('shirt', shirt[0], shirt[1])])
         self.assertEqual(aus['hose'][1], ['shirt'])
         self.assertEqual(js['ueber'], ['shirt'])
         py = ''.join('1' if v else '0' for v in aus['hose'][0])

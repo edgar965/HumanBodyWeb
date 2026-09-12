@@ -124,7 +124,8 @@ class Mhproxy:
         # Netz: Der MH-Koerper hat eine andere Topologie, seine Flaechen passen
         # nicht.
         normalen = (_compute_vertex_normals(schiebekoerper, netz.faces)
-                    if len(schiebekoerper) == len(koerper.vertices) else None)
+                    if netz.faces is not None
+                    and len(schiebekoerper) == len(koerper.vertices) else None)
         weg_mm = float(request.GET.get('push_dist',
                                        Mhproxy.VORGABE_SCHIEBEWEG_MM))
         ergebnis = Koerperabstand.gerichtet(

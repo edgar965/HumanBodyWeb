@@ -79,7 +79,7 @@ export class Formbedienung {
             schieber.dataset.meta = name;
             const feld = document.createElement('span');
             feld.className = 'slider-val';
-            feld.textContent = angezeigt;
+            feld.textContent = String(angezeigt);
             schieber.addEventListener('input', () => { feld.textContent = schieber.value; });
             // Erst beim Loslassen, weil danach das Netz neu geholt wird.
             schieber.addEventListener('change', () => {

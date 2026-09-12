@@ -20,7 +20,7 @@ from .test_schuhschnitt import SchuhschnittTest
 
 class SchuheinstiegTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
     FUSS = SchuhschnittTest.FUSS
 
     @classmethod

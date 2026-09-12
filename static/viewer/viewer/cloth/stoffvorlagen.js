@@ -117,7 +117,7 @@ export class Stoffvorlagen {
             const daten = await Serverabruf.json(
                 `/api/character/cloth/presets/?category=${this.kategorie()}`);
             // Den ersten Eintrag („bitte wählen") stehen lassen.
-            while (this.vorgabenfeld.options.length > 1) this.vorgabenfeld.remove(1);
+            while (this.vorgabenfeld.options.length > 1) this.vorgabenfeld.options.remove(1);
             for (const vorgabe of (daten.presets || [])) {
                 this.vorgabenfeld.appendChild(new Option(vorgabe.name, vorgabe.name));
             }

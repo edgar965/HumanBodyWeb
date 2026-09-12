@@ -54,7 +54,7 @@ def kugel(radius=0.5, feinheit=16):
 class StoffkorrekturTest(SimpleTestCase):
     u"""Die Korrektur an einem Fall, dessen Antwort ausrechenbar ist."""
 
-    databases = []
+    databases = set()
     RADIUS = 0.5
 
     def setUp(self):

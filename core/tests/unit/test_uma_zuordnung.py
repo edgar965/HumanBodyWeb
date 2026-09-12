@@ -38,7 +38,7 @@ UMA_GLB = os.path.join(str(settings.FIGUREN_KATALOG), 'uma', 'UmaKleidung.glb')
 
 class TabelleTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_jeder_def_name_existiert(self):
         knochen = Zuordnungspruefung().knochen
@@ -65,7 +65,7 @@ class TabelleTest(SimpleTestCase):
 
 class AbleitungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_mixamo_landet_auf_denselben_namen(self):
         zuordnung = Umazuordnung.fuer(SkeletonMixamo)
@@ -98,7 +98,7 @@ class AbleitungTest(SimpleTestCase):
 class EchteGlbTest(SimpleTestCase):
     u"""Gegen die Datei, die Unity exportiert hat — nur lesend."""
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

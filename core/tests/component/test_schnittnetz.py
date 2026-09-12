@@ -33,7 +33,7 @@ def _spezifikation():
 
 class SchnittnetzTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.klient = Client()

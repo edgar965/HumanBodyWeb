@@ -18,9 +18,10 @@ entsprechende Zeile im Code rot werden.
 """
 import json
 import os
-import tempfile
 
 from django.test import SimpleTestCase
+
+from ._pruefablage import Pruefablage
 
 from GarmentCode.schnittvereinigung import (Schnittvereinigung,
                                             VereinigungsFehler)
@@ -48,17 +49,13 @@ def _schnitt(panels, naehte, einheiten=100):
 
 class SchnittvereinigungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
-        self.ordner = tempfile.TemporaryDirectory(
-            dir=os.path.join(os.path.dirname(os.path.dirname(
-                os.path.dirname(os.path.dirname(
-                    os.path.abspath(__file__))))), 'ProjektTemp'))
-        self.addCleanup(self.ordner.cleanup)
+        self.ordner = self.enterContext(Pruefablage.ordner('vereinigung_'))
 
     def _ablegen(self, name, spez):
-        pfad = os.path.join(self.ordner.name, '%s_specification.json' % name)
+        pfad = os.path.join(self.ordner, '%s_specification.json' % name)
         with open(pfad, 'w', encoding='utf-8') as datei:
             json.dump(spez, datei)
         return {'name': name, 'spezifikation': pfad}
@@ -75,7 +72,7 @@ class SchnittvereinigungTest(SimpleTestCase):
         return hose, shirt
 
     def _vereint(self):
-        ziel = os.path.join(self.ordner.name, 'gem_specification.json')
+        ziel = os.path.join(self.ordner, 'gem_specification.json')
         bericht = Schnittvereinigung(list(self._paar())).vereinen(ziel)
         with open(ziel, 'r', encoding='utf-8') as quelle:
             return bericht, json.load(quelle)
@@ -137,7 +134,7 @@ class SchnittvereinigungTest(SimpleTestCase):
         vereinte Schnitt haette stumm nur eines gehabt.
         """
         hose, _ = self._paar()
-        ziel = os.path.join(self.ordner.name, 'zwei_specification.json')
+        ziel = os.path.join(self.ordner, 'zwei_specification.json')
         bericht = Schnittvereinigung([hose, dict(hose)]).vereinen(ziel)
         self.assertEqual([s['name'] for s in bericht['stuecke']],
                          ['hose', 'hose_2'])
@@ -156,14 +153,14 @@ class SchnittvereinigungTest(SimpleTestCase):
             json.dump(_schnitt(['x'], [], einheiten=1), datei)
         with self.assertRaises(VereinigungsFehler) as fall:
             Schnittvereinigung([hose, shirt]).vereinen(
-                os.path.join(self.ordner.name, 'k_specification.json'))
+                os.path.join(self.ordner, 'k_specification.json'))
         self.assertIn('units_in_meter', str(fall.exception))
 
     def test_ein_einzelnes_stueck_wird_abgelehnt(self):
         hose, _ = self._paar()
         with self.assertRaises(VereinigungsFehler):
             Schnittvereinigung([hose]).vereinen(
-                os.path.join(self.ordner.name, 'e_specification.json'))
+                os.path.join(self.ordner, 'e_specification.json'))
 
     def test_altes_parameterformat_wird_abgelehnt(self):
         u"""Die `influence`-Listen nennen PANELNAMEN.
@@ -178,7 +175,7 @@ class SchnittvereinigungTest(SimpleTestCase):
             json.dump(spez, datei)
         with self.assertRaises(VereinigungsFehler) as fall:
             Schnittvereinigung([hose, shirt]).vereinen(
-                os.path.join(self.ordner.name, 'p_specification.json'))
+                os.path.join(self.ordner, 'p_specification.json'))
         self.assertIn('Parameterformat', str(fall.exception))
 
     def test_fehlende_datei_wird_gemeldet(self):
@@ -186,7 +183,7 @@ class SchnittvereinigungTest(SimpleTestCase):
         with self.assertRaises(VereinigungsFehler):
             Schnittvereinigung(
                 [hose, {'name': 'x', 'spezifikation': 'gibtsnicht.json'}]
-            ).vereinen(os.path.join(self.ordner.name, 'f_specification.json'))
+            ).vereinen(os.path.join(self.ordner, 'f_specification.json'))
 
     # --------------------------------------------------------------- teilen
 
@@ -196,14 +193,14 @@ class SchnittvereinigungTest(SimpleTestCase):
         Punkt 2 ist ein NAHTpunkt der Hose: In der Segmentierung steht
         dort nur `stitch_0`, das Stueck ergibt sich aus der Naht.
         """
-        ziel = os.path.join(self.ordner.name, 'gem_specification.json')
+        ziel = os.path.join(self.ordner, 'gem_specification.json')
         Schnittvereinigung(list(self._paar())).vereinen(ziel)
-        netz = os.path.join(self.ordner.name, 'gem_sim.obj')
+        netz = os.path.join(self.ordner, 'gem_sim.obj')
         with open(netz, 'w', encoding='utf-8') as datei:
             for nummer in range(8):
                 datei.write('v %d 0 0\n' % nummer)
             datei.write('f 1 2 3\nf 2 3 4\nf 5 6 7\nf 6 7 8\n')
-        seg = os.path.join(self.ordner.name, 'gem_sim_segmentation.txt')
+        seg = os.path.join(self.ordner, 'gem_sim_segmentation.txt')
         with open(seg, 'w', encoding='utf-8') as datei:
             datei.write('hose__wb_front\nhose__wb_front\nstitch_0\n'
                         'hose__wb_back\n')
@@ -266,7 +263,7 @@ class SchnittvereinigungTest(SimpleTestCase):
         ein Netz, das laedt und falsche Dreiecke hat."""
         ziel, netz, seg = self._netz_und_segmentierung()
         teile = Stoffteilung(ziel).teilen(netz, seg)
-        pfad = os.path.join(self.ordner.name, 'hose_sim.obj')
+        pfad = os.path.join(self.ordner, 'hose_sim.obj')
         Stoffteilung.netz_schreiben(pfad, teile['hose']['punkte'],
                                     teile['hose']['dreiecke'])
         punkte, dreiecke = Stoffteilung.netz_lesen(pfad)

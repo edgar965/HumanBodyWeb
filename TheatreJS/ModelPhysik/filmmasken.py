@@ -11,10 +11,16 @@ dem gekuerzten Index und dem Einzug der verdeckten Ecken.
 Die Physik (`Filmphysik`, `Stoffgrenze`) rechnet weiter mit dem VOLLEN
 Index — die verdeckten Punkte sind genau die, an denen der Stoff haengt.
 """
+import logging
+
 import numpy as np
 
 from feinkoerper import Feinkoerper
-from hautmaske import Geometrie, Hautmaske, Lagenmaske
+from hautmaske import Hautmaske
+from lagenmaske import Lagenmaske
+from maskengeometrie import Geometrie
+
+logger = logging.getLogger(__name__)
 
 
 class Filmmasken:
@@ -26,35 +32,41 @@ class Filmmasken:
         if not teile:
             return []
         koerper = teile[0]
-        kp, kd = Feinkoerper.ruhe(koerper), Feinkoerper.dreiecke(koerper)
         stoffe = [(t['name'], t['haut'].punkte, t['dreiecke']) for t in teile[1:]]
-        bericht = []
-        if stoffe:
-            if melder:
-                melder(u'Hautmaske', 0.08)
-            maske = Hautmaske.verdeckt(kp, kd, [(p, d) for _n, p, d in stoffe])
-            cls._eintragen(koerper, maske)
-            bericht.append((koerper['name'], int(maske.sum()),
-                            len(kd) - len(koerper['dreiecke_sichtbar']),
-                            [n for n, _p, _d in stoffe]))
-            lagen = Lagenmaske.verdeckt(kp, kd, stoffe) if len(stoffe) > 1 else {}
-            for teil in teile[1:]:
-                maske, ueber = lagen.get(teil['name'], (None, []))
-                if maske is not None and ueber:
-                    cls._eintragen(teil, maske)
-                    bericht.append((teil['name'], int(maske.sum()),
-                                    len(teil['dreiecke']) - len(teil['dreiecke_sichtbar']),
-                                    ueber))
-        for name, punkte, dreiecke, unter in bericht:
-            print(u'Maske: %s — %d Punkte unter %s, %d Dreiecke nicht gerendert'
-                  % (name, punkte, u', '.join(unter), dreiecke))
+        if not stoffe:
+            return []
+        if melder:
+            melder(u'Hautmaske', 0.08)
+        kp, kd = Feinkoerper.ruhe(koerper), Feinkoerper.dreiecke(koerper)
+        maske = Hautmaske.verdeckt(kp, kd, [(p, d) for _n, p, d in stoffe])
+        bericht = [cls._eintragen(koerper, maske, [n for n, _p, _d in stoffe])]
+        lagen = Lagenmaske.verdeckt(kp, kd, stoffe) if len(stoffe) > 1 else {}
+        for teil in teile[1:]:
+            maske, ueber = lagen.get(teil['name'], (None, []))
+            if ueber:
+                bericht.append(cls._eintragen(teil, maske, ueber))
+        cls._melden(bericht)
         return bericht
 
     @staticmethod
-    def _eintragen(teil, maske):
+    def _melden(bericht):
+        u"""Ins Log UND auf die Konsole: `filmlauf.py` laeuft als Unterprozess,
+        dessen Ausgabe die `lauf.log` des Auftrags ist."""
+        for name, punkte, dreiecke, unter in bericht:
+            zeile = (u'Maske: %s — %d Punkte unter %s, %d Dreiecke nicht gerendert'
+                     % (name, punkte, u', '.join(unter), dreiecke))
+            logger.info(zeile)
+            print(zeile)
+
+    @staticmethod
+    def _eintragen(teil, maske, unter):
+        u"""Maske und gekuerzten Index am Teil ablegen; eine Berichtszeile
+        (Name, verdeckte Punkte, nicht gerenderte Dreiecke, Stuecke darueber)."""
         teil['maske'] = maske
-        teil['dreiecke_sichtbar'], _weg = Hautmaske.index_ohne(
-            Feinkoerper.dreiecke(teil), maske)
+        dreiecke = Feinkoerper.dreiecke(teil)
+        teil['dreiecke_sichtbar'], _weg = Hautmaske.index_ohne(dreiecke, maske)
+        return (teil['name'], int(maske.sum()),
+                len(dreiecke) - len(teil['dreiecke_sichtbar']), unter)
 
     @staticmethod
     def gerendert(teil, nummer):

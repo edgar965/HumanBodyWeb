@@ -21,7 +21,6 @@ Hoehen, dazu zwei Arme, die im Segment als Arme markiert sind.
 """
 import json
 import os
-import tempfile
 
 import numpy as np
 from django.test import SimpleTestCase
@@ -30,6 +29,7 @@ from GarmentCode.armhaltung import Armhaltung
 from GarmentCode.koerpermasse import Koerpermasse
 from GarmentCode.koerperprofil import Koerperprofil
 from GarmentCode.schulterneigung import Schulterneigung
+from ..unit._pruefablage import Pruefablage
 
 VORLAGE = {
     'height': 166.0, 'head_l': 25.0, 'bust': 97.0, 'underbust': 80.0,
@@ -85,7 +85,7 @@ def kunstkoerper(punkte_je_ring=48):
 
 class KoerperprofilTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.v, self.seg = kunstkoerper()
@@ -129,7 +129,7 @@ class KoerperprofilTest(SimpleTestCase):
 
 class KoerpermasseTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.v, self.seg = kunstkoerper()
@@ -186,7 +186,7 @@ class DuenneScheibeTest(SimpleTestCase):
     ueber der Huefte, dessen Huelle kleiner ist als die echte Taille.
     """
 
-    databases = []
+    databases = set()
 
     #: Hoehe des kuenstlich ausgeduennten Rings — zwischen Huefte (0,92)
     #: und Taille (1,08), also mitten im Suchbereich.
@@ -269,7 +269,7 @@ class ArmlochtiefeTest(SimpleTestCase):
     Uebernommen wird deshalb das VERHAELTNIS der Vorlage.
     """
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         v, seg = kunstkoerper()
@@ -354,7 +354,7 @@ class ArmhaltungTest(SimpleTestCase):
     Arm 32,67 Grad, Ärmelachse 17 bis 22 Grad — der Ärmel stand nach oben ab.
     """
 
-    databases = []
+    databases = set()
 
     def test_bekannter_winkel_wird_getroffen(self):
         u"""Der Arbeitsbereich: T-Pose (0) bis A-Haltung (45)."""
@@ -438,7 +438,7 @@ class SchulterneigungTest(SimpleTestCase):
     `mean_female.yaml`, das Schlüsselbein der Figur liegt bei 11,5.
     """
 
-    databases = []
+    databases = set()
 
     def skelett(self, hals, gelenk):
         u"""Ein Minimalskelett mit zwei Knochen an bekannten Orten."""
@@ -460,7 +460,7 @@ class SchulterneigungTest(SimpleTestCase):
         u"""Ein Schlüsselbein, das auf 0,10 m Länge um 0,10 m fällt,
         steht 45 Grad geneigt — Z ist oben."""
         for dz, soll in ((0.0, 0.0), (-0.10, 45.0), (-0.0577, 30.0)):
-            with tempfile.TemporaryDirectory() as ordner:
+            with Pruefablage.ordner() as ordner:
                 pfad = self.schreiben(ordner, self.skelett(
                     (0.03, 0.0, 1.37), (0.13, 0.0, 1.37 + dz)))
                 self.assertAlmostEqual(Schulterneigung(pfad).grad(), soll,
@@ -477,7 +477,7 @@ class SchulterneigungTest(SimpleTestCase):
             {'name': Schulterneigung.GELENK, 'parent': Schulterneigung.HALS,
              'local_position': [0.10, 0.0, -0.10], 'local_quaternion': [1, 0, 0, 0]},
         ]}
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             pfad = self.schreiben(ordner, daten)
             messer = Schulterneigung(pfad)
             self.assertAlmostEqual(messer.grad(), 45.0, delta=0.2)
@@ -488,7 +488,7 @@ class SchulterneigungTest(SimpleTestCase):
 
     def test_fehlendes_skelett_gibt_none(self):
         u"""Kein Skelett heißt: Vorlagenwert behalten, nicht raten."""
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             self.assertIsNone(Schulterneigung.aus_datenordner(ordner))
 
     def test_echtes_skelett_liegt_bei_elf_grad(self):

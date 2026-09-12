@@ -149,6 +149,6 @@ export class Auftragsliste {
         const knopf = document.getElementById('bulk-delete-btn');
         const zaehler = document.getElementById('bulk-count');
         if (knopf) knopf.disabled = anzahl === 0;
-        if (zaehler) zaehler.textContent = anzahl;
+        if (zaehler) zaehler.textContent = String(anzahl);
     }
 }

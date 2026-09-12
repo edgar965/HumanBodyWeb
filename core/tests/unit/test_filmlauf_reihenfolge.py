@@ -12,7 +12,7 @@ from django.test import SimpleTestCase
 
 class FilmlaufReihenfolgeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_bilanz_vor_fertig(self):
         pfad = settings.BASE_DIR / 'TheatreJS' / 'ModelPhysik' / 'filmlauf.py'

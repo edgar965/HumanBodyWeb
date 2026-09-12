@@ -53,7 +53,7 @@ console.log(JSON.stringify({ok: true}));
 
 class ModellzustaendigkeitTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_eine_spur_je_animation(self):
         ausgabe = MODUL.laufen(SKRIPT)

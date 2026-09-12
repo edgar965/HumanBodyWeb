@@ -38,7 +38,8 @@ function _peSetRegionMode(active) {
     if (active) {
         if (patternControls) patternControls.style.display = 'none';
         if (wrapSection) wrapSection.style.display = 'none';
-        if (regionControls) regionControls.style.display = 'block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        if (regionControls) regionControls.style.display = 'block';
     }
     else { if (patternControls) patternControls.style.display = 'block'; if (wrapSection) wrapSection.style.display = 'block';
         if (regionControls) regionControls.style.display = 'none'; }

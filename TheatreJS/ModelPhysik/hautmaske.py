@@ -21,55 +21,18 @@ Fassungen am selben Kunstkoerper aneinander):
 * Ein Dreieck faellt weg, wenn alle drei Ecken verdeckt sind; die
   verdeckten Ecken der Randdreiecke ziehen sich beim Rendern `EINZUG_M`
   nach innen (`Filmrender`).
-* Stoff unter Stoff (`Lagenmaske`): Wer aussen liegt, wird gezaehlt; die
+* Stoff unter Stoff (`lagenmaske.py`): Wer aussen liegt, wird gezaehlt; die
   Normalen kommen von der Haut, nie vom Stoffnetz.
+
+Seit dem 12.09.2026 je Klasse eine Datei: `maskengeometrie.py` (Normalen,
+Strahl), `maskeninseln.py`, `lagenmaske.py`.
 """
 import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix, identity
-from scipy.sparse.csgraph import connected_components
 from scipy.spatial import cKDTree
 
-
-class Geometrie:
-    u"""Normalen und Strahltests — reine Rechnung."""
-
-    @staticmethod
-    def normalen(P, T):
-        u"""Punktnormalen nach aussen (Vorzeichen ueber das signierte Volumen)."""
-        P = np.asarray(P, dtype=np.float64)
-        T = np.asarray(T, dtype=np.int64).reshape(-1, 3)
-        a, b, c = P[T[:, 0]], P[T[:, 1]], P[T[:, 2]]
-        fn = np.cross(b - a, c - a)
-        vol = float(np.einsum('ij,ij->i', a, np.cross(b, c)).sum())
-        N = np.zeros_like(P)
-        for k in range(3):
-            np.add.at(N, T[:, k], fn)
-        N *= 1.0 if vol >= 0 else -1.0
-        laenge = np.linalg.norm(N, axis=1, keepdims=True)
-        return N / np.maximum(laenge, 1e-12)
-
-    @staticmethod
-    def strahl_dreiecke(P, T, kandidaten, p, r):
-        u"""Moeller-Trumbore fuer (M, K) Kandidaten je Strahl — t oder NaN.
-
-        `kandidaten` traegt -1 als Fuellwert. Beidseitig, `r` normiert."""
-        gueltig = kandidaten >= 0
-        kk = np.where(gueltig, kandidaten, 0)
-        a = P[T[kk, 0]]
-        e1 = P[T[kk, 1]] - a
-        e2 = P[T[kk, 2]] - a
-        rr = r[:, None, :]
-        h = np.cross(rr, e2)
-        det = np.einsum('mkj,mkj->mk', e1, h)
-        gut = gueltig & (np.abs(det) > 1e-12)
-        f = 1.0 / np.where(gut, det, 1.0)
-        s = p[:, None, :] - a
-        u = f * np.einsum('mkj,mkj->mk', s, h)
-        q = np.cross(s, e1)
-        v = f * np.einsum('mkj,mkj->mk', rr, q)
-        t = f * np.einsum('mkj,mkj->mk', e2, q)
-        innen = gut & (u >= 0) & (u <= 1) & (v >= 0) & (u + v <= 1)
-        return np.where(innen, t, np.nan)
+from maskengeometrie import Geometrie
+from maskeninseln import Maskeninseln
 
 
 class Hautmaske:
@@ -87,12 +50,8 @@ class Hautmaske:
                  randringe=None, eng=None, normalen=None, suchweite=None,
                  inseln=None):
         u"""Bool je Koerperpunkt. `stoffe`: Liste von (punkte, dreiecke)."""
-        abstand = cls.ABSTAND_M if abstand is None else abstand
-        tiefe = cls.TIEFE_M if tiefe is None else tiefe
-        ringe = cls.RANDRINGE if randringe is None else randringe
-        eng = cls.ENG_M if eng is None else eng
-        suchweite = max(abstand, tiefe) if suchweite is None else suchweite
-        inseln = cls.INSEL_MAX if inseln is None else inseln
+        w = cls.werte(abstand=abstand, tiefe=tiefe, randringe=randringe,
+                      eng=eng, suchweite=suchweite, inseln=inseln)
         koerper = np.asarray(koerper, dtype=np.float64)
         if normalen is None:
             normalen = Geometrie.normalen(koerper, dreiecke)
@@ -100,15 +59,36 @@ class Hautmaske:
         baum = cKDTree(koerper)
         maske = np.zeros(len(koerper), dtype=bool)
         for punkte, tris in stoffe:
-            if punkte is None or tris is None or not len(punkte) or not len(tris):
+            if cls._leer(punkte, tris):
                 continue
             cls._ein_stueck(koerper, normalen, baum, maske,
                             np.asarray(punkte, dtype=np.float64),
                             np.asarray(tris, dtype=np.int64).reshape(-1, 3),
-                            abstand, tiefe, ringe, eng, suchweite)
-        if inseln > 0 and dreiecke is not None:
-            Maskeninseln.schliessen(maske, dreiecke, inseln)
+                            w['abstand'], w['tiefe'], w['randringe'], w['eng'],
+                            w['suchweite'])
+        if w['inseln'] > 0 and dreiecke is not None:
+            Maskeninseln.schliessen(maske, dreiecke, w['inseln'])
         return maske
+
+    @classmethod
+    def werte(cls, **wahl):
+        u"""Die Masse der Maske: `None` heisst Klassenkonstante; die Suchweite
+        folgt ohne Angabe dem groesseren von Abstand und Tiefe."""
+        vorgaben = {'abstand': cls.ABSTAND_M, 'tiefe': cls.TIEFE_M,
+                    'randringe': cls.RANDRINGE, 'eng': cls.ENG_M,
+                    'inseln': cls.INSEL_MAX}
+        w = {name: (vorgabe if wahl.get(name) is None else wahl[name])
+             for name, vorgabe in vorgaben.items()}
+        suchweite = wahl.get('suchweite')
+        w['suchweite'] = (max(w['abstand'], w['tiefe']) if suchweite is None
+                          else suchweite)
+        return w
+
+    @staticmethod
+    def _leer(punkte, tris):
+        u"""Ein Stueck ohne Punkte oder ohne Dreiecke verdeckt nichts."""
+        return (punkte is None or tris is None
+                or not len(punkte) or not len(tris))
 
     @classmethod
     def _ein_stueck(cls, koerper, normalen, baum, maske, P, T,
@@ -118,7 +98,7 @@ class Hautmaske:
         gesperrt = cls.ringe_um(locker, nachbarn, ringe)
         ok = ~gesperrt[T].any(axis=1)
         umkreis = cls.dreiecke_im_umkreis(T, len(P), ok, nachbarn)
-        d, j = cKDTree(P).query(koerper, distance_upper_bound=suchweite)
+        d, j = cKDTree(P).query(koerper, distance_upper_bound=suchweite, workers=-1)
         kand = np.where(~maske & np.isfinite(d))[0]
         if not len(kand):
             return
@@ -156,7 +136,7 @@ class Hautmaske:
         wo = np.where(rand)[0]
         if not len(wo):
             return locker
-        d, i = baum.query(P[wo], distance_upper_bound=0.09)
+        d, i = baum.query(P[wo], distance_upper_bound=0.09, workers=-1)
         weit = ~np.isfinite(d)
         i = np.where(weit, 0, i)
         tief = np.einsum('ij,ij->i', P[wo] - koerper[i], normalen[i])
@@ -211,79 +191,4 @@ class Hautmaske:
         aus = np.array(punkte, dtype=np.float64)
         N = Geometrie.normalen(aus, dreiecke)
         aus[maske] -= betrag * N[maske]
-        return aus
-
-
-class Maskeninseln:
-    u"""Freie Inseln im Verdeckten schliessen (Achselfalte)."""
-
-    @staticmethod
-    def schliessen(maske, dreiecke, hoechstens):
-        T = np.asarray(dreiecke, dtype=np.int64).reshape(-1, 3)
-        n = len(maske)
-        kanten = np.vstack([T[:, [0, 1]], T[:, [1, 2]], T[:, [2, 0]]])
-        frei = ~maske[kanten].any(axis=1)
-        kanten = kanten[frei]
-        graph = coo_matrix((np.ones(len(kanten), dtype=np.int8),
-                            (kanten[:, 0], kanten[:, 1])), shape=(n, n))
-        anzahl, marke = connected_components(graph, directed=False)
-        groesse = np.bincount(marke, minlength=anzahl)
-        groesse_frei = np.where(np.bincount(marke, weights=~maske,
-                                            minlength=anzahl) > 0, groesse, 0)
-        groesste = groesse_frei.max() if len(groesse_frei) else 0
-        insel = (groesse_frei <= hoechstens) & (groesse_frei < groesste) \
-            & (groesse_frei > 0)
-        neu = ~maske & insel[marke]
-        maske[neu] = True
-        return int(neu.sum())
-
-
-class Lagenmaske:
-    u"""Welche Punkte eines Stuecks unter einem anderen liegen."""
-
-    MINDEST_M = 0.001
-
-    @classmethod
-    def verdeckt(cls, koerper, koerperdreiecke, stoffe, **optionen):
-        u"""`stoffe`: Liste von (name, punkte, dreiecke). Liefert
-        {name: (maske, [namen der Stuecke darueber])}."""
-        koerper = np.asarray(koerper, dtype=np.float64)
-        N = Geometrie.normalen(koerper, koerperdreiecke)
-        baum = cKDTree(koerper)
-        normalen = [cls.normalen_von_haut(np.asarray(p, dtype=np.float64), N, baum)
-                    for _n, p, _t in stoffe]
-        aus = {name: (np.zeros(len(p), dtype=bool), [])
-               for name, p, _t in stoffe}
-        for a in range(len(stoffe)):
-            for b in range(a + 1, len(stoffe)):
-                lage = cls.lage(stoffe[a], normalen[a], stoffe[b], normalen[b],
-                                **optionen)
-                if lage == 0:
-                    continue
-                innen, aussen, n_innen = ((stoffe[a], stoffe[b], normalen[a])
-                                          if lage > 0 else
-                                          (stoffe[b], stoffe[a], normalen[b]))
-                m = Hautmaske.verdeckt(innen[1], innen[2], [(aussen[1], aussen[2])],
-                                       normalen=n_innen, **optionen)
-                aus[innen[0]][0][:] |= m
-                aus[innen[0]][1].append(aussen[0])
-        return aus
-
-    @classmethod
-    def lage(cls, A, nA, B, nB, **optionen):
-        o = dict(optionen)
-        o.update(tiefe=-cls.MINDEST_M, randringe=0, inseln=0,
-                 suchweite=optionen.get('abstand', Hautmaske.ABSTAND_M))
-        b_ueber_a = int(Hautmaske.verdeckt(A[1], None, [(B[1], B[2])], normalen=nA, **o).sum())
-        a_ueber_b = int(Hautmaske.verdeckt(B[1], None, [(A[1], A[2])], normalen=nB, **o).sum())
-        if not b_ueber_a and not a_ueber_b:
-            return 0
-        return 1 if b_ueber_a >= a_ueber_b else -1
-
-    @staticmethod
-    def normalen_von_haut(P, N, baum):
-        d, i = baum.query(P, distance_upper_bound=0.09)
-        aus = np.zeros_like(P)
-        nah = np.isfinite(d)
-        aus[nah] = N[i[nah]]
         return aus

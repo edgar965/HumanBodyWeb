@@ -15,9 +15,10 @@ versteckt, wird im Skript mit einem WERT eingeblendet, nicht mit ''.
 import re
 from pathlib import Path
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
-WURZEL = Path(__file__).resolve().parents[3]
+WURZEL = Path(settings.BASE_DIR)
 VORLAGE = WURZEL / 'templates' / 'bvh_studio.html'
 STUDIO = WURZEL / 'static' / 'viewer' / 'bvh_studio'
 
@@ -28,7 +29,7 @@ VERSTECKKLASSEN = ('hb-kontextmenue', 'hb-display-none')
 
 class KontextmenueSichtbarTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_menues_werden_per_klasse_versteckt(self):
         """Die Voraussetzung des Fehlers: Verstecken über eine Klasse."""

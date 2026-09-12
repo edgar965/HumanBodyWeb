@@ -28,6 +28,8 @@ import sys
 
 import numpy as np
 
+from videoschreiber import Videoschreiber
+
 from bakedatei import Bakedatei
 from figur_nach_cody import Codyfigur
 
@@ -83,17 +85,36 @@ class Angezogen:
         figur.VORLAUF = 0
         daten = Animschreiber('hb_female').spuren(bvh_pfad)
         namen = list(self.stoff['knochen'])
-        # Die Gewichte liegen DUENNBESETZT je Punkt: [[knochennummer,
-        # wert], ...] — bis zu vier Eintraege. Als dichte Matrix ist das
-        # 7290 x 176 und damit klein genug.
+        gewichte = self._gewichtsmatrix(namen)
+        ruhe = figur._welt()
+        ruhe_um = self._ruhe_um(ruhe, namen)
+        orte = self._orte(daten)
+        bahn = np.zeros((self.bilder, len(self.s_punkte), 3))
+        for nummer in range(self.bilder):
+            quelle = Codyfigur.ERSTES_BILD + nummer
+            ort = None if orte is None else orte[quelle] - orte[Codyfigur.ERSTES_BILD]
+            welt = figur._welt(daten.tracks, quelle, ort)
+            bahn[nummer] = self._lbs(namen, gewichte, ruhe_um, welt)
+        self.stoffbahn = bahn
+        # DIE PROBE: Skinning in der RUHELAGE muss den Stoff unveraendert
+        # lassen. Faellt sie durch, stimmt eine Konvention nicht — und in
+        # Bewegung sieht auch ein falsches Skinning plausibel aus.
+        self.ruheprobe = float(np.abs(self._lbs(namen, gewichte, ruhe_um, ruhe)
+                                      - self.s_punkte).max())
+
+    def _gewichtsmatrix(self, namen):
+        u"""Die Gewichte liegen DUENNBESETZT je Punkt: [[knochennummer,
+        wert], ...] — bis zu vier Eintraege. Als dichte Matrix ist das
+        7290 x 176 und damit klein genug."""
         gewichte = np.zeros((len(self.s_punkte), len(namen)))
         for zeile, eintraege in enumerate(self.stoff['gewichte']):
             for nummer, wert in eintraege:
                 gewichte[zeile, int(nummer)] = float(wert)
+        return gewichte
 
-        # Die Ruhelage jedes Knochens — und ihre Umkehrung. Ohne die waere
-        # es keine Verformung, sondern ein Versetzen in den Weltursprung.
-        ruhe = figur._welt()
+    def _ruhe_um(self, ruhe, namen):
+        u"""Die Umkehrung der Ruhelage jedes Knochens. Ohne sie waere es
+        keine Verformung, sondern ein Versetzen in den Weltursprung."""
         ruhe_um = {}
         for name in namen:
             if name not in ruhe:
@@ -101,51 +122,28 @@ class Angezogen:
             punkt, quat = ruhe[name]
             dreh = self._dreh(quat)
             ruhe_um[name] = (dreh.T, -dreh.T @ np.asarray(punkt))
+        return ruhe_um
 
-        bahn = np.zeros((self.bilder, len(self.s_punkte), 3))
-        ort0 = None
-        if daten.position_track:
-            roh = np.asarray(daten.position_track['values'],
-                             dtype=np.float64).reshape(-1, 3)
-            orte = np.column_stack([roh[:, 0], -roh[:, 2], roh[:, 1]])
-            ort0 = orte[Codyfigur.ERSTES_BILD]
-        for nummer in range(self.bilder):
-            quelle = Codyfigur.ERSTES_BILD + nummer
-            ort = None if ort0 is None else orte[quelle] - ort0
-            welt = figur._welt(daten.tracks, quelle, ort)
-            ziel = np.zeros_like(self.s_punkte)
-            summe = np.zeros((len(self.s_punkte), 1))
-            for spalte, name in enumerate(namen):
-                if name not in ruhe_um or name not in welt:
-                    continue
-                w = gewichte[:, spalte:spalte + 1]
-                if not w.any():
-                    continue
-                punkt, quat = welt[name]
-                dreh = self._dreh(quat)
-                rum, tum = ruhe_um[name]
-                ziel += w * ((self.s_punkte @ rum.T + tum) @ dreh.T
-                             + np.asarray(punkt))
-                summe += w
-            bahn[nummer] = ziel / np.maximum(summe, 1e-9)
-        self.stoffbahn = bahn
-        self.ruheprobe = float(np.abs(self._lbs_ruhe(namen, gewichte, ruhe,
-                                                     ruhe_um)
-                                      - self.s_punkte).max())
+    @staticmethod
+    def _orte(daten):
+        u"""Die Wurzelorte der BVH (Y-oben -> Z-oben), oder None ohne Spur."""
+        if not daten.position_track:
+            return None
+        roh = np.asarray(daten.position_track['values'],
+                         dtype=np.float64).reshape(-1, 3)
+        return np.column_stack([roh[:, 0], -roh[:, 2], roh[:, 1]])
 
-    def _lbs_ruhe(self, namen, gewichte, ruhe, ruhe_um):
-        u"""DIE PROBE: Skinning in der RUHELAGE muss den Stoff unveraendert
-        lassen. Faellt sie durch, stimmt eine Konvention nicht — und in
-        Bewegung sieht auch ein falsches Skinning plausibel aus."""
+    def _lbs(self, namen, gewichte, ruhe_um, welt):
+        u"""Ein Bild: jeder Stoffpunkt gewichtet ueber seine Knochen."""
         ziel = np.zeros_like(self.s_punkte)
         summe = np.zeros((len(self.s_punkte), 1))
         for spalte, name in enumerate(namen):
-            if name not in ruhe_um:
+            if name not in ruhe_um or name not in welt:
                 continue
             w = gewichte[:, spalte:spalte + 1]
             if not w.any():
                 continue
-            punkt, quat = ruhe[name]
+            punkt, quat = welt[name]
             dreh = self._dreh(quat)
             rum, tum = ruhe_um[name]
             ziel += w * ((self.s_punkte @ rum.T + tum) @ dreh.T
@@ -155,9 +153,8 @@ class Angezogen:
 
     @staticmethod
     def _dreh(quat):
-        from anim_umsetzung import Animumsetzung
-        return np.column_stack([Animumsetzung.drehen(quat, e)
-                                for e in np.eye(3)])
+        from skelettbahn import Skelettbahn
+        return Skelettbahn.dreh(quat)
 
     # ------------------------------------------------------------- Ausgabe
 
@@ -205,21 +202,7 @@ class Angezogen:
             werk.delete()
 
     def schreiben(self, ziel, fps=20, schleifen=2):
-        import cv2
-        os.makedirs(os.path.dirname(ziel) or '.', exist_ok=True)
-        gesammelt = list(self.bilder_rendern())
-        h, b = gesammelt[0].shape[:2]
-        schreiber = cv2.VideoWriter(ziel, cv2.VideoWriter_fourcc(*'mp4v'),
-                                    float(fps), (b, h))
-        if not schreiber.isOpened():
-            raise SystemExit(u'VideoWriter liess sich nicht oeffnen.')
-        try:
-            for _ in range(max(1, int(schleifen))):
-                for bild in gesammelt:
-                    schreiber.write(cv2.cvtColor(bild, cv2.COLOR_RGB2BGR))
-        finally:
-            schreiber.release()
-        return ziel, len(gesammelt) * max(1, int(schleifen))
+        return Videoschreiber.schreiben(self.bilder_rendern(), ziel, fps, schleifen)
 
 
 def main():

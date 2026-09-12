@@ -55,7 +55,7 @@ def _drapieren():
 
 class MaterialOhneAuswahlTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_ohne_auswahl_wird_nichts_angefasst(self):
         u"""Der Kern: kein gewähltes Stück, kein Zugriff auf ein Material."""
@@ -91,7 +91,7 @@ class MaterialOhneAuswahlTest(SimpleTestCase):
 
 class MaterialBeimBauenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_bau_faerbt_genau_sein_stueck(self):
         u"""Sonst zieht das zweite Stück die Farbe des ersten mit."""
@@ -121,7 +121,7 @@ class MaterialUeberlebtNeuEinhaengenTest(SimpleTestCase):
     als „neu geladen - Farbe ist weg".
     """
 
-    databases = []
+    databases = set()
 
     def _anziehen(self):
         return _quelle('static', 'viewer', 'scene', 'garmentcode_anziehen.js')
@@ -160,7 +160,7 @@ class EinhaengenNimmtBeideFormenTest(SimpleTestCase):
     dann auch benutzen. Mit `figur.inst` fiel der zweite Fall um
     (`undefined.group`), gemessen am 09.09.2026."""
 
-    databases = []
+    databases = set()
 
     def test_kein_direkter_zugriff_auf_figur_inst_mehr(self):
         quelle = _quelle('static', 'viewer', 'scene',
@@ -173,7 +173,7 @@ class EinhaengenNimmtBeideFormenTest(SimpleTestCase):
 
 class MaterialAusDerSzeneTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_ablage_setzt_das_gespeicherte_material(self):
         u"""Die andere Hälfte des Befundes: Beim Laden muss das Material aus

@@ -1,5 +1,6 @@
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { escapeHtml } from '../utils.js';
+import { Protokoll } from '../../gemeinsam/protokoll.js';
 
 /**
  * Umagarderobe — was eine UMA-Figur trägt: Rasse und Kleidungsstücke aus dem
@@ -78,7 +79,7 @@ export class Umagarderobe {
         try {
             garderobe = await Umagarderobe.lesen(figur.datei);
         } catch (fehler) {
-            console.warn('Umagarderobe: Zettel nicht lesbar:', fehler);
+            Protokoll.warnung('Umagarderobe', 'Zettel nicht lesbar:', fehler);
         }
         element.innerHTML = Umagarderobe.html(figur, garderobe);
     }

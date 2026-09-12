@@ -151,21 +151,6 @@ class Garmentcode:
         Die Morphs kommen als JSON, weil es Dutzende sind und sie sonst
         einzeln im Formular staenden.
         """
-        try:
-            morphs = json.loads(request.POST.get('morphs') or '{}')
-        except ValueError:
-            logger.warning('GarmentCode: Morphs unlesbar, nehme Grundkoerper')
-            morphs = {}
-        try:
-            regler = json.loads(request.POST.get('regler') or '{}')
-        except ValueError:
-            logger.warning('GarmentCode: Reglerwerte unlesbar, nehme Vorgabe')
-            regler = {}
-        try:
-            meta = json.loads(request.POST.get('meta') or '{}')
-        except ValueError:
-            logger.warning('GarmentCode: Metaregler unlesbar, nehme keine')
-            meta = {}
         # `koerper`: ein Referenzkoerper von GarmentCode statt der Figur —
         # Masse aus dessen YAML, Drapierung auf ihm (06.09.2026). Ob er die
         # SMPL-Segmentierung braucht, weiss der Server selbst; der Browser
@@ -176,12 +161,22 @@ class Garmentcode:
             'vorlage': request.POST.get('vorlage', 't-shirt'),
             'geschlecht': request.POST.get('geschlecht', 'female'),
             'bauart': request.POST.get('bauart') or None,
-            'morphs': morphs if isinstance(morphs, dict) else {},
-            'regler': regler if isinstance(regler, dict) else {},
-            'meta': meta if isinstance(meta, dict) else {},
+            'morphs': Garmentcode._woerterbuch(request.POST, 'morphs', 'Morphs unlesbar, nehme Grundkoerper'),
+            'regler': Garmentcode._woerterbuch(request.POST, 'regler', 'Reglerwerte unlesbar, nehme Vorgabe'),
+            'meta': Garmentcode._woerterbuch(request.POST, 'meta', 'Metaregler unlesbar, nehme keine'),
             'koerper': koerper,
             'smpl': bool(koerper) and Smplfiguren.ist_smpl(koerper),
         }
+
+    @staticmethod
+    def _woerterbuch(felder, name, warnung):
+        """Ein JSON-Feld des Formulars als dict; unlesbar oder keins -> leer, mit Warnung."""
+        try:
+            wert = json.loads(felder.get(name) or '{}')
+        except ValueError:
+            logger.warning('GarmentCode: %s', warnung)
+            return {}
+        return wert if isinstance(wert, dict) else {}
 
     @staticmethod
     @require_POST
@@ -224,21 +219,28 @@ class Garmentcode:
         from GarmentCode.entwurf import Entwurf
         try:
             liste = json.loads(roh or '[]')
+        # stumm gewollt: kaputtes JSON aus dem Browser heisst 'keine getragenen Stuecke'
         except ValueError:
             return []
         wurzel = os.path.abspath(Entwurf.AUSGABE)
-        pfade = []
-        for eintrag in liste if isinstance(liste, list) else []:
-            if not isinstance(eintrag, dict):
-                continue
-            ordner = os.path.basename(str(eintrag.get('ordner') or ''))
-            name = str(eintrag.get('rig_datei') or '')
-            if not ordner or not name.endswith('_rig.json'):
-                continue
-            pfad = os.path.abspath(os.path.join(wurzel, ordner, name))
-            if pfad.startswith(wurzel + os.sep) and os.path.isfile(pfad):
-                pfade.append(pfad)
-        return pfade
+        eintraege = liste if isinstance(liste, list) else []
+        pfade = (Garmentcode._rigpfad(wurzel, eintrag) for eintrag in eintraege)
+        return [pfad for pfad in pfade if pfad]
+
+    @staticmethod
+    def _rigpfad(wurzel, eintrag):
+        """Der Pfad eines Eintrags `{ordner, rig_datei}` — oder None, wenn er
+        nicht die Form hat, aus der Wurzel fuehrt oder nicht existiert."""
+        if not isinstance(eintrag, dict):
+            return None
+        ordner = os.path.basename(str(eintrag.get('ordner') or ''))
+        name = str(eintrag.get('rig_datei') or '')
+        if not ordner or not name.endswith('_rig.json'):
+            return None
+        pfad = os.path.abspath(os.path.join(wurzel, ordner, name))
+        if pfad.startswith(wurzel + os.sep) and os.path.isfile(pfad):
+            return pfad
+        return None
 
     @staticmethod
     @require_GET

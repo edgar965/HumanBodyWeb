@@ -9,14 +9,12 @@ und die Module, in denen die genannten Dinge stehen.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
-from pathlib import Path
 
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-WURZEL = Path(__file__).resolve().parents[3]
-STUDIO = WURZEL / 'static' / 'viewer' / 'bvh_studio'
+STUDIO = Jsmodul.VIEWER / 'bvh_studio'
 MODUL = Jsmodul('bvh_studio', 'hilfetexte_zeitleiste.js')
 
 SKRIPT = """
@@ -56,7 +54,7 @@ BELEGE = {
 
 class HilfetexteZeitleisteTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

@@ -20,14 +20,14 @@ Geprüft am Quelltext (die Rechnung selbst prüfen `test_js_hautmaske`,
 
 Sabotage-Gegenprobe: Aufruf in `Spurfigur` entfernt → Fall 1 rot.
 """
-from pathlib import Path
 
 from django.test import SimpleTestCase
 
-WURZEL = Path(__file__).resolve().parents[3]
-STUDIO = WURZEL / 'static' / 'viewer' / 'bvh_studio'
-GEMEINSAM = WURZEL / 'static' / 'viewer' / 'gemeinsam'
-SZENE = WURZEL / 'static' / 'viewer' / 'scene'
+from ..jsmodul import Jsmodul
+
+STUDIO = Jsmodul.VIEWER / 'bvh_studio'
+GEMEINSAM = Jsmodul.VIEWER / 'gemeinsam'
+SZENE = Jsmodul.VIEWER / 'scene'
 
 
 def _lies(ordner, name):
@@ -36,7 +36,7 @@ def _lies(ordner, name):
 
 class SpurhautTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_figur_wird_nach_dem_zubehoer_maskiert(self):
         figur = _lies(STUDIO, 'spurfigur.js')

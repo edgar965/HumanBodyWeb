@@ -106,7 +106,7 @@ export async function loadGarment(garmentId, opts = {}) {
             side: THREE.DoubleSide,
             polygonOffset: true,
             polygonOffsetFactor: -1,
-            polygonOffsetUnit: -1,
+            polygonOffsetUnits: -1,
         });
 
         const skInfo = (state.isSkinned && state.rigifySkeleton) ? {

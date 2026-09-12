@@ -21,7 +21,7 @@ from django.test import SimpleTestCase
 
 class SmplfigurTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_liste(self):
         antwort = self.client.get('/api/character/smpl-figur/')

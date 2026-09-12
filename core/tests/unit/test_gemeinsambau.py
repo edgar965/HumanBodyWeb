@@ -79,7 +79,7 @@ def _lies(*teile):
 
 class KombilisteBauTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_liste_traegt_die_bauwerte_je_stueck(self):
         self.assertTrue(MODUL.laufen(SKRIPT).get('ok'))
@@ -132,7 +132,7 @@ class KombilisteBauTest(SimpleTestCase):
 
 class EndpunktBauTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _stuecke(self, liste):
         anfrage = RequestFactory().post('/x/', {'stuecke': json.dumps(liste)})
@@ -162,7 +162,7 @@ class EndpunktBauTest(SimpleTestCase):
 
 class DienstBauTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_pruefen_reicht_fein_durch_und_setzt_sonst_die_vorgabe(self):
         fein = Baufeineinstellung(anliegen_mm=2.0)
@@ -191,7 +191,7 @@ class DienstBauTest(SimpleTestCase):
 
 class AblageBauTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_ohne_anliegen_bleibt_alles_wie_es_ist(self):
         punkte = [[0.0, 0.0, 0.0]]

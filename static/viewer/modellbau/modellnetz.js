@@ -25,7 +25,7 @@ import { Skinnetz } from './skinnetz.js';
  * @param {Object} skelData - Raw skeleton data {bones: [{name, local_position, local_quaternion, parent}]}
  * @param {Object} swData   - Skin weight data {bone_names: [...], weights: [...]}
  * @param {Object} config   - Model config {bone_parts, segments, default_color, default_radius}
- * @returns {{ mesh: THREE.SkinnedMesh, skeleton: {skeleton, rootBone, bones, boneByName} }}
+ * @returns Objekt mit mesh (SkinnedMesh) und skeleton (skeleton, rootBone, bones, boneByName)
  */
 export function generateModelMesh(skelData, swData, config) {
     const segments = config.segments || 8;

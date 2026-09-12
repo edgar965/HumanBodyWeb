@@ -28,7 +28,7 @@ from GarmentCode.pfade import Gcpfade
 
 class GcpfadeGegenSettings(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_assets_ist_dieselbe_wurzel(self):
         self.assertEqual(Gcpfade.assets(), Path(str(settings.ASSETS_ROOT)))

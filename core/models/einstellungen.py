@@ -9,10 +9,16 @@ findet die Modelle weiter ueber core/models/__init__.py — Migrationen und
 
 from django.db import models
 from ..daten.einstellungsfelder import Einstellungsfelder
+from .lifter_einstellungen import LifterEinstellungen
 
 
-class AppSettings(models.Model):
-    """Singleton settings for the application."""
+class AppSettings(LifterEinstellungen):
+    """Singleton settings for the application.
+
+    Die Felder der SMPL-Pipelines (GVHMR, WHAM, PromptHMR, GEM-SMPL, DuoMo,
+    GEM-X) stehen in `LifterEinstellungen` — abstrakte Basis, dieselbe
+    Tabelle (12.09.2026).
+    """
     progress_update_interval = models.IntegerField(
         default=10,
         help_text=Einstellungsfelder.hilfetext('progress_update_interval'),
@@ -148,44 +154,6 @@ class AppSettings(models.Model):
     v4_enable_mouth = models.BooleanField(default=True,
                                           help_text="Enable mouth tracking")
     v4_enable_eyes = models.BooleanField(default=False, help_text="Enable eye tracking")
-
-    # --- Video to BVH: SMPL pipeline settings ---
-    smpl_device = models.CharField(
-        max_length=10, default='cuda',
-        help_text="Device for SMPL pipelines (cuda/cpu)",
-    )
-
-    # --- Video to BVH: GVHMR settings ---
-    gvhmr_static_cam = models.BooleanField(
-        default=True,
-        help_text=Einstellungsfelder.hilfetext('gvhmr_static_cam'),
-    )
-    gvhmr_focal_length_mm = models.FloatField(
-        default=0,
-        help_text=Einstellungsfelder.hilfetext('gvhmr_focal_length_mm'),
-    )
-
-    # --- Video to BVH: WHAM settings ---
-    wham_estimate_local_only = models.BooleanField(
-        default=False,
-        help_text=Einstellungsfelder.hilfetext('wham_estimate_local_only'),
-    )
-    wham_run_smplify = models.BooleanField(
-        default=False,
-        help_text=Einstellungsfelder.hilfetext('wham_run_smplify'),
-    )
-
-    # --- Video to BVH: PromptHMR settings ---
-    prompthmr_static_camera = models.BooleanField(
-        default=True,
-        help_text=Einstellungsfelder.hilfetext('prompthmr_static_camera'),
-    )
-
-    # --- Video to BVH: GEM-SMPL settings (11.09.2026) ---
-    gem_static_cam = models.BooleanField(
-        default=True,
-        help_text=Einstellungsfelder.hilfetext('gem_static_cam'),
-    )
 
     # --- SMPL Body defaults (test-smpl page) ---
     smpl_default_gender = models.CharField(

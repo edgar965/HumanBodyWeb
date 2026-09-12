@@ -21,7 +21,7 @@ from ._pruefablage import Pruefablage
 
 class VideokodiererTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_befehl_rundet_ohne_feste_groesse(self):
         befehl = Videokodierer.aus_bildfolge('ordner', 'ziel.mp4', fps=24)
@@ -35,6 +35,7 @@ class VideokodiererTest(SimpleTestCase):
         try:
             import numpy as np
             import cv2
+        # stumm gewollt: ohne cv2 wird uebersprungen, und das steht im Lauf
         except ImportError:                                  # pragma: no cover
             self.skipTest('cv2 fehlt')
         with Pruefablage.ordner('videokodierer_') as ordner:

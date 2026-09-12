@@ -52,7 +52,7 @@ class AnimationAufBeiden(unittest.TestCase):
     der DAUMEN.
     """
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):
@@ -104,7 +104,7 @@ class KleidungAufBeiden(unittest.TestCase):
     mit denselben Knochen und denselben Bindeposen — deshalb sitzt es.
     """
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

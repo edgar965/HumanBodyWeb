@@ -34,8 +34,8 @@ export class Szeneneinstellungen {
     static SCHLUESSEL = 'humanbody_scene_settings';
 
     /**
-     * @param teile {keyLight, fillLight, backLight, ambient, renderer, scene,
-     *               camera, controls, tonwerte, woher} — jedes Stueck darf
+     * @param teile keyLight, fillLight, backLight, ambient, renderer, scene,
+     *               camera, controls, tonwerte, woher — jedes Stueck darf
      *               fehlen; was fehlt, wird uebergangen statt zu werfen.
      */
     constructor(teile) {

@@ -42,7 +42,7 @@ def _upstream_laden():
 
 class SchuhschnittTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     #: Die Fussmasse der Vorgabefigur (11.09.2026, `fussmasse.py`).
     FUSS = {

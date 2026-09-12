@@ -62,7 +62,7 @@ export class Metawerte {
             const anzeigewert = Math.round(werte[name] * halb + mitte);
             regler.value = anzeigewert;
             const anzeige = document.getElementById(`meta-${name}-val`);
-            if (anzeige) anzeige.textContent = anzeigewert;
+            if (anzeige) anzeige.textContent = String(anzeigewert);
             gesetzt.push([name, werte[name]]);
         }
         return gesetzt;

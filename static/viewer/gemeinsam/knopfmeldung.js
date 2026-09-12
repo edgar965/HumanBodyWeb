@@ -26,7 +26,7 @@ export class Knopfmeldung {
      *
      * @param knopf   das Element
      * @param text    was gemeldet wird, etwa 'Gespeichert!'
-     * @param wahl    { symbol, dauer, farbe }
+     * @param wahl    symbol, dauer, farbe
      */
     static zeigen(knopf, text, wahl = {}) {
         if (!knopf) { Protokoll.warnung('knopfmeldung', text); return; }

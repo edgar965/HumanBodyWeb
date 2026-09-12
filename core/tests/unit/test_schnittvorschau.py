@@ -40,7 +40,7 @@ from GarmentCode.schnittvorschau import Schnittvorschau     # noqa: E402
 
 class OhrschnittTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     QUADRAT = [[0, 0], [10, 0], [10, 10], [0, 10]]
 
@@ -76,7 +76,7 @@ class OhrschnittTest(SimpleTestCase):
 
 class SchnittvorschauTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):
@@ -113,7 +113,7 @@ class SchnittvorschauTest(SimpleTestCase):
         identisch, an den Aermeln nicht.
         """
         soll = Schnittvorschau.drehmatrix([0, 30, 45])
-        a, b, c = np.deg2rad([0, 30, 45])
+        _a, b, c = np.deg2rad([0, 30, 45])
         dy = np.array([[np.cos(b), 0, np.sin(b)], [0, 1, 0],
                        [-np.sin(b), 0, np.cos(b)]])
         dz = np.array([[np.cos(c), -np.sin(c), 0],

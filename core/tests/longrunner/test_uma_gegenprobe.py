@@ -67,7 +67,7 @@ def _bauen(kleidung=None):
 class NetzGegenUnity(unittest.TestCase):
     u"""Fall 1 — dieselbe Rasse, nackt: Netz gegen Netz."""
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):
@@ -119,7 +119,7 @@ class NetzGegenUnity(unittest.TestCase):
 class SkelettGegenUnity(unittest.TestCase):
     u"""Fall 2 — dasselbe Skelett auf beiden Wegen."""
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

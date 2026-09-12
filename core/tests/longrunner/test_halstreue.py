@@ -152,20 +152,9 @@ def eichlauf(pfad, skip=None, rumpfgrad=0.0):
     anzahl = len(GRADE) + 1
     quats = np.zeros((anzahl, len(bvh.names), 4))
     quats[:, :, 3] = 1.0
-    if abs(rumpfgrad) > 1e-9 and q_ra in bvh.names:
-        rachse = _beugeachse(bvh, bvh.names.index(q_ra))
-        if rachse is not None:
-            halb = np.radians(rumpfgrad) / 2.0
-            q = np.zeros(4)
-            q[:3] = rachse * np.sin(halb)
-            q[3] = np.cos(halb)
-            quats[:, bvh.names.index(q_ra)] = q
+    _rumpf_vorbeugen(bvh, quats, q_ra, rumpfgrad)
     for i, grad in enumerate(GRADE, start=1):
-        halb = np.radians(grad) / 2.0
-        q = np.zeros(4)
-        q[:3] = achse * np.sin(halb)
-        q[3] = np.cos(halb)
-        quats[i, nummer] = q
+        quats[i, nummer] = _achsdrehung(achse, grad)
     bvh.quats = quats
     bvh.frame_count = anzahl
     # `positions` ist (Bilder, Knochen, 3) — mit (Bilder, 3) bricht
@@ -195,6 +184,25 @@ def eichlauf(pfad, skip=None, rumpfgrad=0.0):
             for i in range(1, anzahl)]
 
 
+def _achsdrehung(achse, grad):
+    u"""Quaternion [x, y, z, w] fuer `grad` um `achse`."""
+    halb = np.radians(grad) / 2.0
+    q = np.zeros(4)
+    q[:3] = achse * np.sin(halb)
+    q[3] = np.cos(halb)
+    return q
+
+
+def _rumpf_vorbeugen(bvh, quats, q_ra, rumpfgrad):
+    u"""Alle Bilder um `rumpfgrad` am Rumpfknochen vorbeugen — falls
+    gewuenscht und der Knochen eine Beugeachse hat."""
+    if abs(rumpfgrad) <= 1e-9 or q_ra not in bvh.names:
+        return
+    rachse = _beugeachse(bvh, bvh.names.index(q_ra))
+    if rachse is not None:
+        quats[:, bvh.names.index(q_ra)] = _achsdrehung(rachse, rumpfgrad)
+
+
 def _pfad(format_name):
     rel = DATEIEN.get(format_name)
     if not rel:
@@ -221,7 +229,7 @@ def fehlende():
 
 class HalstreueTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     #: Wie weit die Beugung danebenliegen darf. Mixamo, MocapNET und
     #: OpenPose liefern gemessen exakt 0,0 — die Schwelle ist Luft

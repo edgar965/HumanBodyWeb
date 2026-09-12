@@ -35,7 +35,7 @@ from core.tests.nurgemeint import Nurgemeint
 
 class Auswahl(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def test_ausdruecklich_genannt_laeuft(self):
         self.assertTrue(angefordert(
@@ -87,7 +87,7 @@ class Auswahl(unittest.TestCase):
 class WeitereWaechter(unittest.TestCase):
     u"""`automated` und `performance` — je eigene Marke, gleicher Mechanismus."""
 
-    databases = []
+    databases = set()
 
     #: Paket -> Marke. Absichtlich hier ausgeschrieben: Nimmt ein Paket die
     #: falsche Marke, laeuft es nie und alles bleibt grün.
@@ -158,7 +158,7 @@ class DiscoveryMitPaketnamen(unittest.TestCase):
     aufgefallen ist.
     """
 
-    databases = []
+    databases = set()
 
     def _laden(self, muster):
         from core.tests.longrunner import WAECHTER

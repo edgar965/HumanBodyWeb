@@ -68,7 +68,7 @@ leben('beendet')
 class UmabauerTest(SimpleTestCase):
     u"""Dienst und Endpunkte gegen die Attrappe."""
 
-    databases = []
+    databases = set()
     WARTE_S = 20
 
     def setUp(self):

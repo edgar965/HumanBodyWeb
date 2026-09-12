@@ -31,7 +31,7 @@ def _lies(*teile):
 
 class HautverdeckungVerdrahtungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.modul = _lies('scene', 'hautverdeckung.js')

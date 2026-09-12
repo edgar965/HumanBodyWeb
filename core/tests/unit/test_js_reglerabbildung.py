@@ -87,7 +87,7 @@ console.log(JSON.stringify({ok: true}));
 
 class ReglerabbildungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_umrechnung_und_filter(self):
         ausgabe = MODUL.laufen(SKRIPT)

@@ -49,7 +49,7 @@ def _skelett(ordner):
 
 class AbsatzposeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

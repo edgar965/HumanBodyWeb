@@ -24,12 +24,13 @@ Sabotage-Gegenprobe: `type !== 'bvh'` entfernt → Fall 1 rot.
 """
 from pathlib import Path
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-WURZEL = Path(__file__).resolve().parents[3]
-STUDIO = WURZEL / 'static' / 'viewer' / 'bvh_studio'
+WURZEL = Path(settings.BASE_DIR)
+STUDIO = Jsmodul.VIEWER / 'bvh_studio'
 
 MODUL = Jsmodul('bvh_studio', 'abspielende.js')
 
@@ -63,16 +64,16 @@ console.log(JSON.stringify({ok: true}));
 
 class AbspielendeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_ende_und_endlos(self):
         ausgabe = MODUL.laufen(SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)
 
 
-class VerdrahtungTest(SimpleTestCase):
+class AbspielendeVerdrahtungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_leiste_steht_in_der_seitenleiste(self):
         html = (WURZEL / 'templates' / 'bvh_studio.html').read_text(encoding='utf-8')

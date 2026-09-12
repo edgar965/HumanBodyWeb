@@ -4,11 +4,10 @@
 Sie kommen aus einem Formular, also als Text und aus dem Netz — geprüft wird
 deshalb nicht nur der gute Fall, sondern auch Unsinn, Leere und Grenzen.
 """
-import os
-import re
 from unittest import TestCase
 
 from GarmentCode.baufeineinstellung import Baufeineinstellung
+from ._quelltext import Quelltext
 
 
 class VorgabenBleibenDieAltenWerte(TestCase):
@@ -128,29 +127,8 @@ class DieKetteReichtDieWerteDurch(TestCase):
     dauert über 20 s und braucht ein Körpernetz.
     """
 
-    @staticmethod
-    def _quelle(*teile):
-        """Eine Quelldatei, benannt relativ zum Projektstamm `A:\\3dTools`.
-
-        Über `settings.BASE_DIR` (das ist `HumanBodyWeb`) und dessen
-        Elternordner — die Kette läuft über beide Projekte, `GarmentCode`
-        liegt daneben und nicht darunter.
-        """
-        from django.conf import settings
-        stamm = os.path.dirname(os.path.abspath(str(settings.BASE_DIR)))
-        with open(os.path.join(stamm, *teile), 'r', encoding='utf-8') as datei:
-            return datei.read()
-
-    @classmethod
-    def _ohne_kommentare(cls, quelle):
-        """Ohne Docstrings und `#`-Zeilen.
-
-        Sonst findet der Test seine eigenen Begriffe in der Begründung, die
-        erklärt, warum sie NICHT benutzt werden (Regel `analysewerkzeuge`).
-        """
-        ohne = re.sub(r'"""..*?"""', '', quelle, flags=re.S)
-        ohne = re.sub(r"'''..*?'''", '', ohne, flags=re.S)
-        return re.sub(r'#.*', '', ohne)
+    _quelle = staticmethod(Quelltext.lesen)
+    _ohne_kommentare = staticmethod(Quelltext.ohne_kommentare)
 
     def test_die_view_liest_die_feineinstellung(self):
         quelle = self._ohne_kommentare(

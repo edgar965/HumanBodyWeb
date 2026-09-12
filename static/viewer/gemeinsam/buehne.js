@@ -46,11 +46,12 @@ export class Buehne {
 
     /**
      * @param leinwand   die <canvas>
-     * @param wahl.masse 'leinwand' (Vorgabe) oder 'rahmen' — woher Breite und
+     * @param {object} wahl
+     * @param [wahl.masse] 'leinwand' (Vorgabe) oder 'rahmen' — woher Breite und
      *                   Höhe kommen
-     * @param wahl.stil  true: `setSize` setzt auch die CSS-Größe
-     * @returns { renderer, scene, camera, controls, keyLight, fillLight,
-     *            backLight, ambient, grid }
+     * @param [wahl.stil]  true: `setSize` setzt auch die CSS-Größe
+     * @returns Objekt mit renderer, scene, camera, controls, keyLight,
+     *          fillLight, backLight, ambient, grid
      */
     static bauen(leinwand, wahl = {}) {
         const { masse = 'leinwand', stil = false } = wahl;

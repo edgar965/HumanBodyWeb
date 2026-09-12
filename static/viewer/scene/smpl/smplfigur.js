@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
-import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Knochenbau } from '../../gemeinsam/knochenbau.js';
 import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
-import { GarmentcodeAblage } from '../garmentcode_ablage.js';
+import { Figurbasis } from '../figurbasis.js';
 
 /**
  * SmplFigur — ein Referenzkörper von GarmentCode als Figur der Szene.
@@ -22,7 +21,7 @@ import { GarmentcodeAblage } from '../garmentcode_ablage.js';
  * Dieselben Felder wie `CharacterInstance` und `UmaFigur`, damit Liste,
  * Auswahl, Zählung und Speichern nicht je Quelle unterscheiden müssen.
  */
-export class SmplFigur {
+export class SmplFigur extends Figurbasis {
 
     static QUELLE = 'smpl';
     static ADRESSE = '/api/character/smpl-figur/';
@@ -32,11 +31,9 @@ export class SmplFigur {
     static FARBE = 0x9a9a9a;
 
     constructor(id, daten) {
-        this.id = id;
-        this.quelle = SmplFigur.QUELLE;
+        super(id, SmplFigur.QUELLE);
         this.koerper = daten.koerper || 'mean_all';
         this.presetName = daten.presetName || `GarmentCode · ${this.koerper}`;
-        this.presetKey = null;
         this.bodyType = 'GarmentCode';
         this.geschlecht = daten.geschlecht || null;
         this.masse = daten.masse || {};
@@ -49,26 +46,6 @@ export class SmplFigur {
             fuelle: Number(daten.form?.fuelle) || 0,
         };
         this.betas = daten.betas || [];
-        this.group = new THREE.Group();
-        this.group.userData.characterId = id;
-        this.bodyMesh = null;
-        // Felder der HumanBody-Figur, hier leer (siehe Kopf).
-        this.clothMeshes = {};
-        this.hairMesh = null;
-        this.garments = [];
-        this.garmentState = {};
-        this.morphs = {};
-        this.meta = {};
-        this.cloth = [];
-        this.hairStyle = null;
-        this.mhProxies = {};
-        this.generatedConfig = null;
-        this.selected = false;
-        this.isSkinned = false;
-        this.rigifySkeleton = null;
-        /** Das SMPL-Skelett (24 Gelenke) — dieselbe Form wie bei UMA,
-         *  damit `Rigauswahl` es ohne Sonderfall findet. */
-        this.skelett = null;
     }
 
     async load() {
@@ -161,41 +138,16 @@ export class SmplFigur {
         }));
     }
 
-    dispose() {
-        Netzentsorgung.baum(this.group);
-        if (this.group.parent) this.group.parent.remove(this.group);
-    }
-
     toJSON() {
         return {
-            id: this.id,
-            quelle: this.quelle,
-            presetName: this.presetName,
-            presetKey: null,
-            bodyType: this.bodyType,
+            ...this.grunddaten(),
             koerper: this.koerper,
             geschlecht: this.geschlecht,
             form: { groesse: this.form.groesse, fuelle: this.form.fuelle },
-            // GarmentCode-Stuecke ueberleben das Speichern (08.09.2026).
-            [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
-            transform: {
-                position: this.group.position.toArray(),
-                rotation: [this.group.rotation.x, this.group.rotation.y, this.group.rotation.z],
-                scale: this.group.scale.toArray(),
-            },
         };
     }
 
-    static async fromJSON(daten) {
-        const figur = new SmplFigur(daten.id, daten);
-        await figur.load();
-        const lage = daten.transform;
-        if (lage) {
-            if (lage.position) figur.group.position.fromArray(lage.position);
-            if (lage.rotation) figur.group.rotation.set(lage.rotation[0], lage.rotation[1], lage.rotation[2]);
-            if (lage.scale) figur.group.scale.fromArray(lage.scale);
-        }
-        await GarmentcodeAblage.laden(figur, daten[GarmentcodeAblage.FELD]);
-        return figur;
+    static fromJSON(daten) {
+        return Figurbasis.ausJSON(SmplFigur, daten);
     }
 }

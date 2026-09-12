@@ -36,7 +36,7 @@ from SMPL.uebertrag import Netzuebertrag
 
 class NetzuebertragTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

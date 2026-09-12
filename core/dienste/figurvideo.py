@@ -74,16 +74,18 @@ class Figurvideo:
         auftrag_pfad = os.path.join(ordner, 'auftrag.json')
         with open(auftrag_pfad, 'w', encoding='utf-8') as datei:
             json.dump(auftrag, datei, indent=1, ensure_ascii=False)
-        protokoll = open(os.path.join(ordner, 'lauf.log'), 'w',
-                         encoding='utf-8')
         # Derselbe Python wie der Server: pyrender, trimesh und cv2 liegen
         # in python14. KEIN Fenster (`CREATE_NO_WINDOW`), auch wenn der
-        # Server aus einer Konsole laeuft.
+        # Server aus einer Konsole laeuft. Das Protokoll wird nach `Popen`
+        # geschlossen — das Kind haelt ein eigenes Handle darauf; offen
+        # bliebe im Server ein Deskriptor je Lauf (Befund `offene-datei`).
         flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
-        prozess = subprocess.Popen(
-            [cls._python(), cls._skript(), auftrag_pfad],
-            stdout=protokoll, stderr=subprocess.STDOUT,
-            cwd=os.path.dirname(cls._skript()), creationflags=flags)
+        with open(os.path.join(ordner, 'lauf.log'), 'w',
+                  encoding='utf-8') as protokoll:
+            prozess = subprocess.Popen(
+                [cls._python(), cls._skript(), auftrag_pfad],
+                stdout=protokoll, stderr=subprocess.STDOUT,
+                cwd=os.path.dirname(cls._skript()), creationflags=flags)
         LaufendeProzesse.eintragen('figurvideo_' + kennung, prozess)
         logger.info('Figurvideo %s gestartet: %d Stuecke, %.1f s, %.0f mm',
                     kennung, len(auftrag['stuecke']), auftrag['sekunden'],
@@ -169,6 +171,7 @@ class Figurvideo:
             except (OSError, ValueError) as fehler:
                 # Das Video IST fertig — nur die Kopie ging nicht. Das
                 # steht dann daneben, statt das Ergebnis zu verstecken.
+                logger.warning('Figurvideo %s: Ablage nicht kopiert: %s', kennung, fehler)
                 stand['ablage_fehler'] = str(fehler)
             LaufendeProzesse.entfernen('figurvideo_' + kennung)
         return stand

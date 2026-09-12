@@ -84,13 +84,13 @@ class Schuhmass:
     def randabstand_mm(self):
         u"""(median, 90 %) des Abstands Einstiegsrand -> Haut, Millimeter."""
         from scipy.spatial import cKDTree
-        abstand, _ = cKDTree(self.koerper).query(self.rand())
+        abstand, _ = cKDTree(self.koerper).query(self.rand(), workers=-1)
         return float(np.median(abstand)) * 10.0, float(np.quantile(abstand, 0.9)) * 10.0
 
 
 class SchuhformTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     FORMEN = ('slipper', 'ballerina')
     #: Schuhbreite minus Fussbreite, höchstens (cm) — Schmetterling +6,5.

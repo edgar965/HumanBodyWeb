@@ -29,7 +29,7 @@ PNG = b'\x89PNG'
 
 class FigurvideoEndpunktTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _starten(self, **felder):
         with mock.patch.object(endpunkt.Figurvideo, 'starten',
@@ -70,7 +70,7 @@ class FigurvideoEndpunktTest(SimpleTestCase):
         self.assertFalse(attrappe.called)
 
     def test_kaputtes_json_400(self):
-        antwort, attrappe = self._starten(auftrag='{nicht json')
+        antwort, _attrappe = self._starten(auftrag='{nicht json')
         self.assertEqual(antwort.status_code, 400)
         self.assertIn('JSON', antwort.json()['fehler'])
 

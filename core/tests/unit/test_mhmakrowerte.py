@@ -23,7 +23,7 @@ from MakeHuman.makrowerte import Mhmakrowerte
 
 class MhmakrowerteTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def _faktoren(self, **werte):
         return Mhmakrowerte(werte).faktoren()

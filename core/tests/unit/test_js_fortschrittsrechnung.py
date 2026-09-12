@@ -90,7 +90,7 @@ console.log(JSON.stringify({ok: true}));
 class FortschrittsrechnungTest(SimpleTestCase):
     u"""Der Balken schätzt — hier steht, was die Schätzung zusagt."""
 
-    databases = []
+    databases = set()
 
     def test_fortschrittsrechnung(self):
         ausgabe = MODUL.laufen(SKRIPT)

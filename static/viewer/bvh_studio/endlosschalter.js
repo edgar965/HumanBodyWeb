@@ -39,6 +39,7 @@ export class Endlosschalter {
 
     static merken(an) {
         try { localStorage.setItem(Endlosschalter.SCHLUESSEL, an ? '1' : '0'); }
-        catch (fehler) { /* privates Fenster: nur für diese Sitzung */ }
+        // stumm gewollt: privates Fenster wirft beim Schreiben, der Stand gilt dann nur für diese Sitzung
+        catch (fehler) { }
     }
 }

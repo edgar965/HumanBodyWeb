@@ -50,7 +50,7 @@ AUS = ('__pycache__', 'convert', 'kbs_retarget', 'node_modules',
 class JedeEigeneDatei(unittest.TestCase):
     u"""Keine Datei traegt eine ungueltige Escape-Sequenz."""
 
-    databases = []
+    databases = set()
 
     def test_kein_syntaxwarning(self):
         schlecht = []
@@ -77,7 +77,7 @@ class JedeEigeneDatei(unittest.TestCase):
 class EineSabotageInDerZeichenkette(unittest.TestCase):
     u"""Die Gegenprobe: Der Test muss rot werden koennen."""
 
-    databases = []
+    databases = set()
 
     def test_eine_erfundene_sequenz_wird_erkannt(self):
         quelle = 'u"""Pfad: A:%s3DTools%spython14"""%s' % (

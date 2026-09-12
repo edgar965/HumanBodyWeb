@@ -25,9 +25,10 @@ Fassungsadresse nichts, was der Platte entspricht.
 import re
 from pathlib import Path
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
-STATIK = Path(__file__).resolve().parents[3] / 'static'
+STATIK = Path(settings.BASE_DIR) / 'static'
 AUSGENOMMEN = ('node_modules', 'theatre')   # gebaute Bündel, keine Quellen
 IMPORT = re.compile(r"""(?:^|\n)\s*(?:import|export)\b[^'"\n]*?\bfrom\s*['"]([^'"]+)['"]"""
                     r"""|import\(\s*['"]([^'"]+)['"]""")
@@ -73,7 +74,7 @@ class Statikimporte:
 
 class KeinImportVerlaesstDenStatikstamm(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_alle_relativen_importe_bleiben_unter_static(self):
         befunde = Statikimporte.befunde()

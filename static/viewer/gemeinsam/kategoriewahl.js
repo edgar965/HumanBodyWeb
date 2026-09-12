@@ -30,7 +30,7 @@ export class Kategoriewahl {
         const wahl = document.getElementById(feldKennung);
         if (!wahl || !namen) return 0;
         if (aufraeumen) {
-            while (wahl.options.length > 1) wahl.remove(1);
+            while (wahl.options.length > 1) wahl.options.remove(1);
         }
         return Auswahlfeld.ausNamen(wahl, namen,
             (name) => name.charAt(0).toUpperCase() + name.slice(1));

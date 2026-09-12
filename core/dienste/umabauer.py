@@ -28,6 +28,8 @@ import time
 
 from django.conf import settings
 
+from .umalaufstand import Umalaufstand
+
 logger = logging.getLogger('core')
 
 __all__ = ['Umabauer', 'UmabauerFehlt']
@@ -139,15 +141,19 @@ class Umabauer:
             raise ValueError('Ungültiger Name: %r' % (name,))
         auftrag = {'rasse': rasse, 'name': name, 'zeiger': 1 if zeiger else 0}
         if kleidung is not None:
-            if any(',' in r for r in kleidung):
-                raise ValueError('Rezeptnamen dürfen kein Komma enthalten')
-            gewaehlt = [r.strip() for r in kleidung if r.strip()]
-            auftrag['kleidung'] = (','.join(gewaehlt) if gewaehlt
-                                   else cls.OHNE_KLEIDUNG)
+            auftrag['kleidung'] = cls._kleidungstext(kleidung)
         farbtext = cls._farbtext(farben)
         if farbtext:
             auftrag['farben'] = farbtext
         return cls._auftrag(name, auftrag, rasse=rasse)
+
+    @classmethod
+    def _kleidungstext(cls, kleidung):
+        u"""Rezeptnamen mit Komma getrennt, wie der Exporter sie liest; leer → `-`."""
+        if any(',' in r for r in kleidung):
+            raise ValueError('Rezeptnamen dürfen kein Komma enthalten')
+        gewaehlt = [r.strip() for r in kleidung if r.strip()]
+        return ','.join(gewaehlt) if gewaehlt else cls.OHNE_KLEIDUNG
 
     @classmethod
     def _farbtext(cls, farben):
@@ -177,7 +183,7 @@ class Umabauer:
         darf bei jedem Öffnen der UMA-Eigenschaften kommen.
         """
         cls.pruefen()
-        if cls.bauer_lebt() or (cls._prozess is not None and cls._prozess.poll() is None):
+        if cls.bauer_lebt() or cls.startet():
             return {'gestartet': False, 'bauer': cls.bauer_stand()}
         cls._auftrag(cls.WARMNAME, {
             'rasse': cls.WARMRASSE, 'name': cls.WARMNAME, 'zeiger': 0,
@@ -190,7 +196,7 @@ class Umabauer:
         u"""`{'lebt', 'stand', 'startet', 'seit_s', 'pid'}` — was der Browser anzeigt."""
         zeichen = cls.bauer() or {}
         lebt = cls.bauer_lebt()
-        startet = not lebt and cls._prozess is not None and cls._prozess.poll() is None
+        startet = not lebt and cls.startet()
         return {
             'lebt': lebt,
             'stand': (zeichen.get('stand') or 'aus') if lebt else ('startet' if startet else 'aus'),
@@ -241,7 +247,7 @@ class Umabauer:
         lauf = {'name': name, 'rasse': rasse, 'start': time.time(),
                 'log': os.path.join(cls.logordner(), cls.BAUERLOG), 'gestartet': gestartet}
         cls._laeufe[name] = lauf
-        cls._merken(lauf)
+        Umalaufstand.merken(cls, lauf)
         logger.info('Umabauer: Auftrag %s abgelegt (%s)', name,
                     'Bauer neu gestartet' if gestartet else 'Bauer lebt')
         return cls.stand(name)
@@ -274,8 +280,14 @@ class Umabauer:
         try:
             with open(pfad, encoding='utf-8') as datei:
                 return json.load(datei)
+        # stumm gewollt: kein Lebenszeichen heisst kein Bauer laeuft, der Normalfall
         except (OSError, ValueError):
             return None
+
+    @classmethod
+    def startet(cls):
+        u"""Der eigene Unity-Prozess ist gestartet und noch nicht durch."""
+        return cls._prozess is not None and cls._prozess.poll() is None
 
     @classmethod
     def bauer_lebt(cls):
@@ -308,78 +320,6 @@ class Umabauer:
     # ------------------------------------------------------------ Stand
 
     @classmethod
-    def _merken(cls, lauf):
-        u"""Den Lauf neben dem Log ablegen: der Dev-Server lädt sich bei jeder
-        Codeänderung neu und vergisst `_laeufe`, der Bauer arbeitet aber weiter."""
-        pfad = os.path.join(cls.logordner(), 'unity_%s.json' % lauf['name'])
-        with open(pfad, 'w', encoding='utf-8') as datei:
-            json.dump({k: lauf[k] for k in ('name', 'rasse', 'start', 'log', 'gestartet')}, datei)
-
-    @classmethod
-    def _erinnern(cls, name):
-        pfad = os.path.join(cls.logordner(), 'unity_%s.json' % name)
-        if not os.path.isfile(pfad):
-            return None
-        with open(pfad, encoding='utf-8') as datei:
-            return json.load(datei)
-
-    @classmethod
     def stand(cls, name):
-        u"""`None`, wenn kein Lauf dieses Namens bekannt ist."""
-        lauf = cls._laeufe.get(name) or cls._erinnern(name)
-        if not lauf:
-            return None
-        ordner = cls.auftragsordner()
-        ergebnis = cls._ergebnis(os.path.join(ordner, name + '.ergebnis.json'), lauf['start'])
-        wartet = os.path.isfile(os.path.join(ordner, name + '.auftrag.json'))
-        bauer = cls.bauer() or {}
-        if ergebnis is not None:
-            laeuft, exit_code = False, int(ergebnis.get('exit', 1))
-            meldung = ergebnis.get('zeiten') or cls._letzte_meldung(lauf['log'])
-        elif cls.bauer_lebt() or (cls._prozess is not None and cls._prozess.poll() is None):
-            laeuft, exit_code = True, None
-            if wartet:
-                meldung = 'wartet auf den Bauer (%s)' % (bauer.get('stand') or 'startet')
-            else:
-                meldung = 'Bauer %s · %s' % (bauer.get('stand') or 'startet',
-                                             cls._letzte_meldung(lauf['log']))
-        else:
-            laeuft, exit_code = False, -1
-            meldung = 'Unity läuft nicht (mehr) — ' + (cls._letzte_meldung(lauf['log']) or 'kein Log')
-        datei = os.path.join(cls.katalog(), name + '.glb')
-        fertig = (exit_code == 0 and os.path.isfile(datei)
-                  and os.path.getmtime(datei) >= lauf['start'] - 1)
-        return {
-            'name': name,
-            'rasse': lauf['rasse'],
-            'laeuft': laeuft,
-            'wartet': wartet,
-            'exit': exit_code,
-            'sekunden': int(time.time() - lauf['start']),
-            'datei': name + '.glb' if fertig else None,
-            'log': os.path.basename(lauf['log']),
-            'meldung': meldung,
-        }
-
-    @staticmethod
-    def _ergebnis(pfad, start):
-        u"""Das Ergebnis dieses Laufs — ein älteres gleichen Namens zählt nicht."""
-        if not os.path.isfile(pfad) or os.path.getmtime(pfad) < start - 1:
-            return None
-        try:
-            with open(pfad, encoding='utf-8') as datei:
-                return json.load(datei)
-        except (OSError, ValueError):
-            return None
-
-    @staticmethod
-    def _letzte_meldung(log):
-        u"""Die letzte Roomguest-Zeile aus Unitys Log — was der Exporter zuletzt sagte."""
-        try:
-            with open(log, encoding='utf-8', errors='replace') as datei:
-                # „Roomguest:" mit Doppelpunkt — so beginnen die Meldungen des
-                # Exporters; ohne ihn träfe auch Unitys Bauzeile der DLL.
-                zeilen = [z.strip() for z in datei if 'Roomguest:' in z]
-        except OSError:
-            return ''
-        return zeilen[-1][:200] if zeilen else ''
+        u"""`None`, wenn kein Lauf dieses Namens bekannt ist (`Umalaufstand`)."""
+        return Umalaufstand.stand(cls, name)

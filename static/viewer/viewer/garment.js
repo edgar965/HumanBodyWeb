@@ -86,7 +86,7 @@ export async function loadGarment(garmentId) {
         const matColor = new THREE.Color(data.color[0], data.color[1], data.color[2]);
         const mat = new THREE.MeshStandardMaterial({
             color: matColor, roughness: 0.8, metalness: 0.0, side: THREE.DoubleSide,
-            polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnit: -1,
+            polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
         });
 
         const mesh = Hautnetz.bauen(geo, mat, state, data);
@@ -111,7 +111,8 @@ export async function loadGarment(garmentId) {
         state._selectedItem = { root: mesh, type: 'garment', id: garmentId, label: garmentId.split('/').pop() };
         fn._setEmissiveOnItem(state._selectedItem, state._SELECT_EMISSIVE);
         const rb = document.getElementById('selection-remove-btn');
-        if (rb) rb.style.display = 'inline-block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        if (rb) rb.style.display = 'inline-block';
 
         fn.updateEquippedList();
     } catch (e) {

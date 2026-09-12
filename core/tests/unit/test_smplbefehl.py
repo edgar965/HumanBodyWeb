@@ -25,10 +25,21 @@ class EinstellungenAttrappe:
     smpl_device = 'cuda'
     gvhmr_static_cam = True
     gvhmr_focal_length_mm = 35.0
+    gvhmr_smooth_sigma = 1.5
+    gvhmr_joint_limits = False
     wham_estimate_local_only = True
     wham_run_smplify = False
     prompthmr_static_camera = True
     gem_static_cam = True
+    # Vorgaben der neuen Pipelines (12.09.2026) — absichtlich NICHT die
+    # Modellvorgaben, damit ein Rueckfall auf 2.0 / True / False auffaellt.
+    gem_smooth_sigma = 3.5
+    gem_joint_limits = True
+    duomo_static_cam = True
+    duomo_smooth_sigma = 2.0
+    duomo_joint_limits = False
+    gemx_static_cam = False
+    gemx_smooth_sigma = 2.0
 
 
 class SmplbefehlTest(SimpleTestCase):
@@ -73,9 +84,13 @@ class SmplbefehlTest(SimpleTestCase):
         self.assertEqual(befehl[befehl.index('--smooth_sigma') + 1], '1.5')
 
     def test_gelenkgrenzen_sind_umgekehrt(self):
-        self.assertNotIn('--no_joint_limits', self.befehl('gvhmr'))
+        """Grenzen AN heisst: kein Schalter. Die Attrappe hat sie fuer GVHMR
+        ausgeschaltet — der Auftrag darf sie wieder einschalten."""
+        self.assertNotIn('--no_joint_limits',
+                         self.befehl('gvhmr', joint_limits=True))
         self.assertIn('--no_joint_limits',
                       self.befehl('gvhmr', joint_limits=False))
+        self.assertIn('--no_joint_limits', self.befehl('gvhmr'))
 
     def test_wham_hat_eigene_schalter(self):
         befehl = self.befehl('wham')
@@ -102,26 +117,58 @@ class SmplbefehlTest(SimpleTestCase):
         self.assertIn('--render', mit)
         self.assertIn('--no_joint_limits', mit)
 
-    def test_duomo_ist_fest_nur_auf_wunsch_und_glaettet_wie_gvhmr(self):
-        """DuoMo (12.09.2026): kein Einstellungsfeld — `static_cam` kommt
-        nur aus dem Auftrag; Glaettung und Gelenkgrenzen wie GVHMR."""
-        ohne = self.befehl('duomo', smooth_sigma=1.5)
-        self.assertNotIn('--static_cam', ohne)
+    def test_duomo_feste_kamera_aus_der_einstellung_auftrag_schlaegt_sie(self):
+        """DuoMo (12.09.2026): `duomo_static_cam` ist die Vorgabe (hier an),
+        der Auftrag darf sie abwaehlen; Glaettung und Gelenkgrenzen wie GVHMR."""
+        ohne = self.befehl('duomo', smooth_sigma=1.5, joint_limits=True)
+        self.assertIn('--static_cam', ohne)
         self.assertEqual(ohne[ohne.index('--smooth_sigma') + 1], '1.5')
         self.assertNotIn('--focal_length_mm', ohne)
-        mit = self.befehl('duomo', static_cam=True, joint_limits=False)
-        self.assertIn('--static_cam', mit)
+        mit = self.befehl('duomo', static_cam=False, joint_limits=False)
+        self.assertNotIn('--static_cam', mit)
         self.assertIn('--no_joint_limits', mit)
 
     def test_gemx_glaettet_und_kennt_keine_brennweite(self):
-        """GEM-X (12.09.2026): `--static_cam` nur aus dem Auftrag, Glaettung
-        wie GVHMR; der Gelenkgrenzen-Schalter wird gesendet, der Wrapper
-        ignoriert ihn (SOMA-Gelenke sind keine SMPL-Indizes)."""
+        """GEM-X (12.09.2026): `gemx_static_cam` ist die Vorgabe (hier aus),
+        Glaettung wie GVHMR; der Gelenkgrenzen-Schalter wird gesendet, der
+        Wrapper ignoriert ihn (SOMA-Gelenke sind keine SMPL-Indizes)."""
         befehl = self.befehl('gemx', static_cam=True, smooth_sigma=3.0)
         self.assertIn('--static_cam', befehl)
         self.assertEqual(befehl[befehl.index('--smooth_sigma') + 1], '3.0')
         self.assertNotIn('--focal_length_mm', befehl)
         self.assertNotIn('--static_cam', self.befehl('gemx'))
+
+    def test_glaettung_faellt_auf_die_einstellung_der_pipeline_zurueck(self):
+        """Ohne Auftragswert gilt `<pipeline>_smooth_sigma` und
+        `<pipeline>_joint_limits` (12.09.2026) — auch fuer GVHMR und damit
+        fuer den Koerper-Durchlauf des Hybrid-Laufs, dessen Karte keine
+        Glaettung anbietet. GEM-X hat keine Gelenkgrenzen: nie `--no_…`."""
+        gem = self.befehl('gem')
+        self.assertEqual(gem[gem.index('--smooth_sigma') + 1], '3.5')
+        self.assertNotIn('--no_joint_limits', gem)
+        duomo = self.befehl('duomo')
+        self.assertEqual(duomo[duomo.index('--smooth_sigma') + 1], '2.0')
+        self.assertIn('--no_joint_limits', duomo)
+        gvhmr = self.befehl('gvhmr')
+        self.assertEqual(gvhmr[gvhmr.index('--smooth_sigma') + 1], '1.5')
+        self.assertIn('--no_joint_limits', gvhmr)
+        self.assertNotIn('--no_joint_limits', self.befehl('gemx'))
+
+    def test_jedes_einstellungsfeld_der_schalter_steht_im_modell(self):
+        """Die Attrappe prueft den Aufrufer, nicht das Modell: Ein Feldname in
+        `SCHALTER`, den `AppSettings` nicht hat, faellt erst im Betrieb auf."""
+        from core.models import AppSettings
+        felder = {f.name for f in AppSettings._meta.get_fields()}
+        for pipeline, schalter in Smplbefehl.SCHALTER.items():
+            for _schluessel, feld, _argument in schalter:
+                if feld:
+                    self.assertIn(feld, felder, '%s: %s' % (pipeline, feld))
+                    self.assertTrue(hasattr(EinstellungenAttrappe, feld),
+                                    'Attrappe ohne %s' % feld)
+        for name in Smplbefehl.MIT_GLAETTUNG:
+            self.assertIn(name + '_smooth_sigma', felder, name)
+            self.assertTrue(hasattr(EinstellungenAttrappe, name + '_smooth_sigma'),
+                            'Attrappe ohne %s_smooth_sigma' % name)
 
     def test_unbekannte_pipeline_bekommt_nur_das_grundgeruest(self):
         befehl = self.befehl('smplest_x')

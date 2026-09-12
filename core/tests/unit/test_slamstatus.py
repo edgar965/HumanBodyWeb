@@ -12,7 +12,7 @@ from core.pipelines.slamstatus import Slamstatus
 
 class SlamstatusTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.ordner = os.path.join(settings.BASE_DIR, '_wegwerf', 'test_slamstatus')

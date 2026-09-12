@@ -48,7 +48,6 @@ class Filmphysik:
         """
         from kalibrierung import Kalibrierung
         from skinning import Velocityskinning
-        from stoffgrenze import Stoffgrenze
         koerper = self.teile[0]
         # Der Koerper zuerst — die Stuecke werden gegen SEINE bereits
         # verformte Lage begrenzt, nicht gegen die rohe LBS-Lage.
@@ -113,4 +112,3 @@ class Filmphysik:
         bilanz['durchstich_ohne_grenze'] = float(np.mean(vorher))
         bilanz['durchstich'] = float(np.mean(nachher))
         return bilanz
-

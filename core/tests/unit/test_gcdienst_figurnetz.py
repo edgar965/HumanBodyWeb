@@ -21,7 +21,7 @@ from GarmentCode.dienst import GarmentcodeDienst
 
 class FigurnetzMorphsTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_morph_veraendert_das_netz(self):
         grund = np.asarray(GarmentcodeDienst.figurnetz('female', {}, None))

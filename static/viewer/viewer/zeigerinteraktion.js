@@ -24,12 +24,13 @@ export class Zeigerinteraktion {
     static HINWEIS_VERSATZ = [14, -10];
 
     /**
-     * @param wahl.ziele     () => Liste auswählbarer Objekte
-     * @param wahl.finden    (objekt, ziele) => Eintrag oder null
-     * @param wahl.gleich    (a, b) => boolean
-     * @param wahl.leuchten  (eintrag, farbe) => void
-     * @param wahl.entfernen () => gewähltes Objekt entfernen
-     * @param wahl.gewechselt (eintrag) => Auswahl hat sich geändert
+     * @param {object} wahl
+     * @param [wahl.ziele]     () => Liste auswählbarer Objekte
+     * @param [wahl.finden]    (objekt, ziele) => Eintrag oder null
+     * @param [wahl.gleich]    (a, b) => boolean
+     * @param [wahl.leuchten]  (eintrag, farbe) => void
+     * @param [wahl.entfernen] () => gewähltes Objekt entfernen
+     * @param [wahl.gewechselt] (eintrag) => Auswahl hat sich geändert
      */
     constructor(wahl) {
         Object.assign(this, wahl);
@@ -182,7 +183,8 @@ export class Zeigerinteraktion {
         state._selectedItem = neu;
         if (neu) this.leuchten(neu, state._SELECT_EMISSIVE);
         if (this.entfernenKnopf) {
-            this.entfernenKnopf.style.display = neu ? 'inline-block' : 'none';   // 'inline-block', nicht '' (Klasse hb-versteckt)
+            // 'inline-block', nicht '' (Klasse hb-versteckt)
+            this.entfernenKnopf.style.display = neu ? 'inline-block' : 'none';
         }
         if (!this.gleich(vorher, neu)) this.gewechselt(neu);
     }

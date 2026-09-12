@@ -20,7 +20,7 @@ RASSE = 'Human Male 3.0'
 
 class Texturen(unittest.TestCase):
 
-    databases = []
+    databases = set()
     gebaut = None
     figur = None
 

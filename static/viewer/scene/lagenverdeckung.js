@@ -50,7 +50,10 @@ export class Lagenverdeckung {
             Lagenverdeckung._einzug(netz, ueber.length ? maske : null, koerper);
             let verdeckt = 0;
             for (let i = 0; i < maske.length; i++) verdeckt += maske[i];
-            if (ueber.length) stand.stuecke.push({ stueck: s.schluessel, unter: ueber, verdeckt, dreiecke: neu.entfernt });
+            if (ueber.length) {
+                stand.stuecke.push({ stueck: s.schluessel, unter: ueber, verdeckt,
+                                     dreiecke: neu.entfernt });
+            }
         }
         stand.ms = Math.round(performance.now() - t0);
         for (const e of stand.stuecke) {

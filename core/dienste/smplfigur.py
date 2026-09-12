@@ -265,6 +265,7 @@ class Smplfiguren:
         try:
             wert = cls.masse(name).get('arm_pose_angle')
             return float(wert) if wert is not None else cls.ARMWINKEL_VORGABE
+        # stumm gewollt: ohne lesbare YAML gilt der Winkel der Vorgabe — die Figur laedt trotzdem
         except (OSError, ValueError, KeyError, TypeError):
             return cls.ARMWINKEL_VORGABE
 

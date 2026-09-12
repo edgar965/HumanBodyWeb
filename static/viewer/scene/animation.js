@@ -3,12 +3,11 @@
  * NOTE: Full implementation migrated from scene_config.js lines 2799-6992.
  * Contains loadAnimationUI, loadBVHAnimation, stopAnimation, applyGroundLevelFix, etc.
  */
-import { THREE, fetchRetargetedClipFromUrl, fetchRetargetedClipFromText } from './state.js';
+import { THREE } from './state.js';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { escapeHtml, _selectedInst } from './utils.js';
 import { convertToRigifySkinnedMesh, convertInstToSkinned } from './skeleton.js';
-import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Animationsstopp } from '../gemeinsam/animationsstopp.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
@@ -18,6 +17,7 @@ import { Eigenanimation } from './eigenanimation.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Abspielsteuerung } from './abspielsteuerung.js';
 import { Figurmerker } from './figurmerker.js';
+import { Bvhladen } from './bvhladen.js';
 
 /** Play/Stop/Zeitleiste — und Play meint die ausgewählte Figur (Klassendoku dort). */
 const abspielsteuerung = new Abspielsteuerung(state, fn);
@@ -110,67 +110,14 @@ export async function loadBVHAnimation(url, name, fc, rawBvhText = null) {
         else { if (!state.isSkinned) convertToRigifySkinnedMesh(); }
         skel = inst ? inst.rigifySkeleton : state.rigifySkeleton;
     }
+    // Die beiden HumanBody-Wege stehen in `bvhladen.js`: Retarget auf das
+    // Rigify-Skelett, sonst die nackte Skelettvorschau.
+    const quelle = { url, name, rawBvhText };
     if (skel) {
-        const bMesh = inst ? inst.bodyMesh : state.bodyMesh;
-        state._animatedCharId = inst ? inst.id : null;
-        let bodyH = 1.68;
-        const bb = new THREE.Box3().setFromObject(bMesh);
-        if (!bb.isEmpty()) bodyH = bb.max.y - bb.min.y;
-        try {
-            let clip;
-            const wahl = { bodyHeight: bodyH, deltaNorm: state._sceneDeltaNorm };
-            if (rawBvhText) {
-                clip = await fetchRetargetedClipFromText(rawBvhText, skel, wahl);
-                state.currentAnimBvhText = rawBvhText;
-            } else {
-                clip = await fetchRetargetedClipFromUrl(url, skel, wahl);
-                // Der Rohtext wird fuer "Boden richten" und den Export
-                // gebraucht; ohne ihn bleiben beide Knoepfe wirkungslos.
-                state.currentAnimBvhText = await Serverabruf.text(
-                    url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now())
-                    .catch(() => '');
-            }
-            if (!state.skeletonHelper) {
-                state.skeletonHelper = Skelettanzeige.bauen(state.scene, skel.rootBone, state.rigVisible);
-            }
-            state.mixer = new THREE.AnimationMixer(bMesh);
-            state.currentAction = state.mixer.clipAction(clip);
-            state.currentAction.play(); state.playing = true;
-            abspielsteuerung.meldung(`${name || url} · ${clip.tracks.length} Spuren · ${clip.duration.toFixed(1)} s`);
-        } catch (e) {
-            abspielsteuerung.meldung(`Fehler: ${e.message || e}`);
-            console.error('[ANIM] Retarget failed:', e);
-        }
+        await Bvhladen.retarget(inst, skel, quelle,
+                                (text) => abspielsteuerung.meldung(text));
     } else {
-        // Fallback BVH preview
-        const handleBvhFallback = (result, text) => {
-            state.currentAnimBvhText = text;
-            const bvhBones = result.skeleton.bones; if (bvhBones.length === 0) return;
-            const rootBone = bvhBones[0]; rootBone.updateWorldMatrix(true, true);
-            const skelBox = new THREE.Box3(); const tmpVec = new THREE.Vector3();
-            bvhBones.forEach(b => { b.updateWorldMatrix(true, false); b.getWorldPosition(tmpVec);
-                skelBox.expandByPoint(tmpVec); });
-            let bodyHeight = 1.75; if (targetMesh) { const bb = new THREE.Box3().setFromObject(targetMesh);
-                if (!bb.isEmpty()) bodyHeight = bb.max.y - bb.min.y; }
-            const scale = bodyHeight / Math.max(skelBox.max.y - skelBox.min.y, 0.01);
-            state.skelWrapper = new THREE.Group();
-            state.skelWrapper.scale.set(scale, scale, scale);
-            state.skelWrapper.add(rootBone);
-            if (inst) state.skelWrapper.position.copy(inst.group.position);
-            state.scene.add(state.skelWrapper);
-            if (state.skeletonHelper) state.scene.remove(state.skeletonHelper);
-            state.skeletonHelper = Skelettanzeige.bauen(state.scene, rootBone, state.rigVisible);
-            state.mixer = new THREE.AnimationMixer(rootBone);
-            state.currentAction = state.mixer.clipAction(result.clip);
-            state.currentAction.play(); state.playing = true; state._animatedCharId = inst ? inst.id : null;
-        };
-        if (rawBvhText) { handleBvhFallback(state.bvhLoader.parse(rawBvhText), rawBvhText); }
-        else {
-            const fileLoader = new THREE.FileLoader(state.bvhLoader.manager);
-            fileLoader.load(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now(),
-                (text) => { handleBvhFallback(state.bvhLoader.parse(text), text);
-                    }, undefined, (err) => { console.error('BVH load failed:', err); });
-        }
+        Bvhladen.vorschau(inst, targetMesh, quelle);
     }
     abspielsteuerung.knoepfeAngleichen();
 }

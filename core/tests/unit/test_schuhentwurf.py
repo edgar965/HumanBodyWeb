@@ -41,7 +41,7 @@ SCHUHE = ('ballerina', 'slipper', 'stiefelette', 'stiefel', 'socke')
 
 class SchuhkatalogTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_katalog_fuehrt_einen_schuh_und_die_alten_namen_als_formen(self):
         u"""Edgar, 11.09.2026: „alle Schuhe zu einem, und z.B: Slipper und
@@ -133,7 +133,7 @@ class SchuhkatalogTest(SimpleTestCase):
 
 class SchuhentwurfTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_mischen_ergaenzt_nur_was_fehlt(self):
         entwurf = {'meta': {'upper': {'v': 'Shirt'}},
@@ -154,7 +154,7 @@ class SchuhentwurfTest(SimpleTestCase):
 
 class SchuhschnittErkennungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.ordner = os.path.join(settings.BASE_DIR, '_wegwerf',
@@ -192,7 +192,7 @@ class SchuhstoffTest(SimpleTestCase):
     15 mm vom Fuss ab, aus Stoff 7,7 mm — deshalb hat jedes Katalogstück
     seinen eigenen Stoff."""
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.ordner = os.path.join(settings.BASE_DIR, '_wegwerf',

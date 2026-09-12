@@ -52,7 +52,7 @@ console.log(JSON.stringify({ ok: true, erg, gehakt }));
 
 class FormhakenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_vorgabe_bekommt_ihr_haekchen_und_sonst_nur_die_passende_form(self):
         daten = MODUL.laufen(SKRIPT)

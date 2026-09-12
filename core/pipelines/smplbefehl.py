@@ -33,13 +33,12 @@ class Smplbefehl:
         # GEM-SMPL (11.09.2026): feste Kamera wie GVHMR, dazu die Demo-Videos.
         'gem': (('static_cam', 'gem_static_cam', '--static_cam'),
                 ('render', None, '--render')),
-        # DuoMo (12.09.2026): keine Einstellung dahinter — das Formular
-        # schickt `duomo_static_cam` (Vorgabe an); DuoMo ist ohne Kamerabahn
-        # ohnehin fest.
-        'duomo': (('static_cam', None, '--static_cam'),),
+        # DuoMo (12.09.2026): ohne Kamerabahn ohnehin fest; die Einstellung
+        # ist die Vorgabe der Karte.
+        'duomo': (('static_cam', 'duomo_static_cam', '--static_cam'),),
         # GEM-X (12.09.2026): wie GEM-SMPL ohne Rendern; Glaettung ueber
         # `_glaettung`, die Gelenkgrenzen nimmt der Wrapper an und ignoriert sie.
-        'gemx': (('static_cam', None, '--static_cam'),),
+        'gemx': (('static_cam', 'gemx_static_cam', '--static_cam'),),
     }
 
     #: Pipelines, die Glaettung und Gelenkgrenzen von `Bvhbau` kennen.
@@ -86,9 +85,17 @@ class Smplbefehl:
                 str(p.get('focal_length_mm', s.gvhmr_focal_length_mm))]
 
     def _glaettung(self):
-        """Glaettung und der umgekehrte Gelenkgrenzen-Schalter (GVHMR, GEM)."""
-        p = self.params
-        werte = ['--smooth_sigma', str(p.get('smooth_sigma', 2.0))]
-        if not p.get('joint_limits', True):
+        """Glaettung und der umgekehrte Gelenkgrenzen-Schalter.
+
+        Rueckfall sind die Einstellungen der Pipeline (`gvhmr_smooth_sigma`,
+        `duomo_joint_limits`, …, seit 12.09.2026) — ohne stille Vorgabe:
+        Fehlt das Feld, fliegt der AttributeError, den der Waechter in
+        `test_smplbefehl` vorher findet. GEM-X hat keine Gelenkgrenzen.
+        """
+        s, p, name = self.einstellungen, self.params, self.job.pipeline
+        sigma = p.get('smooth_sigma', getattr(s, name + '_smooth_sigma'))
+        werte = ['--smooth_sigma', str(sigma)]
+        grenzen = getattr(s, name + '_joint_limits', True)
+        if not p.get('joint_limits', grenzen):
             werte.append('--no_joint_limits')
         return werte

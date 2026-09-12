@@ -77,7 +77,7 @@ export class Panelbreiten {
         this.zieht = false;
         this.griff.classList.remove('dragging');
         try {
-            localStorage.setItem(this.schluessel, parseInt(this.panel.style.width));
+            localStorage.setItem(this.schluessel, String(parseInt(this.panel.style.width)));
         } catch (fehler) {
             Protokoll.debug('library', 'Panelbreite nicht merkbar', fehler);
         }

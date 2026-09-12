@@ -36,7 +36,7 @@ console.log(JSON.stringify({ok: true}));
 
 class FigurwahlzeileTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_markup(self):
         ausgabe = MODUL.laufen(SKRIPT)

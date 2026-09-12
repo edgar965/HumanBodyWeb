@@ -36,7 +36,7 @@ class KleiderzuordnungTest(unittest.TestCase):
     u"""Die gemeinsame Zuordnung — ohne Datenbank, ohne Produktivdaten."""
 
     #: Liest nur NumPy-Felder aus dem Testfall (Regel ``testlauf-blockiert-server``).
-    databases = []
+    databases = set()
 
     def test_naechster_punkt_wird_getroffen(self):
         koerper = np.array([[0., 0., 0.], [1., 0., 0.], [2., 0., 0.]])

@@ -29,7 +29,7 @@ from kleidung.vergleich import Vergleich                     # noqa: E402
 
 class SeiteNeu(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.antwort = Client().get(reverse('hilfe_kleidung_neu'))
@@ -79,7 +79,7 @@ class SeiteNeu(SimpleTestCase):
 class DatenStehenInPython(unittest.TestCase):
     u"""Die Stammdaten — geprüft ohne Django, weil sie ohne auskommen."""
 
-    databases = []
+    databases = set()
 
     def test_jede_welt_ist_vollstaendig(self):
         felder = ('kuerzel', 'name', 'formt', 'regler', 'netz', 'kleidung',

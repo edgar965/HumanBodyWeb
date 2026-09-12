@@ -26,13 +26,14 @@ Sabotage-Gegenprobe gemacht: `traeger` immer -1 → Fälle 2 rot;
 """
 from pathlib import Path
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
 from ..jsmodul import Jsmodul
 
-WURZEL = Path(__file__).resolve().parents[3]
-STUDIO = WURZEL / 'static' / 'viewer' / 'bvh_studio'
-GEMEINSAM = WURZEL / 'static' / 'viewer' / 'gemeinsam'
+WURZEL = Path(settings.BASE_DIR)
+STUDIO = Jsmodul.VIEWER / 'bvh_studio'
+GEMEINSAM = Jsmodul.VIEWER / 'gemeinsam'
 
 PLATZ = Jsmodul('bvh_studio', 'modellplatz.js')
 GRUPPEN = Jsmodul('bvh_studio', 'modellgruppen.js')
@@ -108,7 +109,7 @@ console.log(JSON.stringify({ok: true}));
 
 class ModellplatzTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_lage_und_traegerspur(self):
         ausgabe = PLATZ.laufen(PLATZ_SKRIPT)
@@ -117,16 +118,16 @@ class ModellplatzTest(SimpleTestCase):
 
 class ModellgruppenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_animation_unter_ihrer_modellspur(self):
         ausgabe = GRUPPEN.laufen(GRUPPEN_SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)
 
 
-class VerdrahtungTest(SimpleTestCase):
+class ModellwahlVerdrahtungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_menuepunkt_oeffnet_den_dialog(self):
         leiste = (STUDIO / 'werkzeugleiste.js').read_text(encoding='utf-8')

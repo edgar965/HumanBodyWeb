@@ -32,6 +32,7 @@ und braucht keine eigene Ausnahmeklasse, die jeder Endpunkt fangen muesste.
 """
 
 import json
+from typing import Any
 
 from django.http import JsonResponse
 
@@ -48,7 +49,7 @@ class Anfragerumpf:
                             status=400)
 
     @staticmethod
-    def lesen(request, meldung=None):
+    def lesen(request, meldung=None) -> tuple[Any, JsonResponse | None]:
         """Der geparste Rumpf.
 
         ``ValueError`` steht bewusst im ``except``: ``json.JSONDecodeError``
@@ -65,7 +66,8 @@ class Anfragerumpf:
             return None, Anfragerumpf._fehler(meldung)
 
     @staticmethod
-    def feld(request, name, vorgabe=None, meldung=None):
+    def feld(request, name, vorgabe=None,
+             meldung=None) -> tuple[Any, JsonResponse | None]:
         """EIN Feld aus dem Rumpf — auch wenn der gar kein Objekt ist.
 
         ``json.loads('[1,2]').get('ids')`` wirft ``AttributeError``; genau
@@ -81,7 +83,8 @@ class Anfragerumpf:
         return rumpf.get(name, vorgabe), None
 
     @staticmethod
-    def name_und_daten(request, meldung=None):
+    def name_und_daten(request,
+                       meldung=None) -> tuple[str, Any, JsonResponse | None]:
         """Die Paarung ``name`` + ``data``, wie sie drei Endpunkte speichern.
 
         ``kleidungsvorlagen``, ``modelldateien`` und ``studio_projekt``

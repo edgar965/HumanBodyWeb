@@ -150,6 +150,8 @@ class Pipelineparameter:
             'v4_eyes': s.v4_enable_eyes,
             'gvhmr_static_cam': s.gvhmr_static_cam,
             'gvhmr_focal_length_mm': s.gvhmr_focal_length_mm,
+            'gvhmr_smooth_sigma': s.gvhmr_smooth_sigma,
+            'gvhmr_joint_limits': s.gvhmr_joint_limits,
             'gvhmr_device': s.smpl_device,
             'gvhmr_video_output_dir': s.video_output_dir,
             'wham_local_only': s.wham_estimate_local_only,
@@ -157,12 +159,18 @@ class Pipelineparameter:
             'wham_device': s.smpl_device,
             'prompthmr_static_cam': s.prompthmr_static_camera,
             'prompthmr_device': s.smpl_device,
+            # GEM-SMPL, DuoMo, GEM-X: Vorgaben aus `LifterEinstellungen`
+            # (12.09.2026) — Karte und Einstellungsseite sagen dasselbe.
             'gem_static_cam': s.gem_static_cam,
+            'gem_smooth_sigma': s.gem_smooth_sigma,
+            'gem_joint_limits': s.gem_joint_limits,
             'gem_device': s.smpl_device,
-            # DuoMo hat keine Einstellung: ohne Kamerabahn ist es ohnehin fest.
-            'duomo_static_cam': True,
+            'duomo_static_cam': s.duomo_static_cam,
+            'duomo_smooth_sigma': s.duomo_smooth_sigma,
+            'duomo_joint_limits': s.duomo_joint_limits,
             'duomo_device': s.smpl_device,
-            'gemx_static_cam': True,
+            'gemx_static_cam': s.gemx_static_cam,
+            'gemx_smooth_sigma': s.gemx_smooth_sigma,
             'gemx_device': s.smpl_device,
             # Hybrid greift auf dieselben Einstellungen zurueck
             'hybrid_body_device': s.smpl_device,

@@ -32,7 +32,7 @@ from humanbody_core.skeleton.zuordnungspruefung import (          # noqa: E402
 class ZuordnungstabellenTest(SimpleTestCase):
     u"""Tippfehler, doppelte Ziele und vertauschte Seiten."""
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

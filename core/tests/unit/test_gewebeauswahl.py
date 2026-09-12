@@ -103,7 +103,7 @@ def _lies(*teile):
 
 class GewebeartenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_kacheln_und_muster(self):
         ausgabe = MODUL.laufen(SKRIPT)

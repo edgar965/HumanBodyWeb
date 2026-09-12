@@ -29,7 +29,7 @@ console.log(JSON.stringify({ hinweise: Object.keys(A.HINWEIS).sort(), kurz, lang
 
 class FigurvideoAnzeigeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_jeder_weg_hat_einen_hinweis(self):
         vorlage = (settings.BASE_DIR / 'templates' / '_figurvideo.html')

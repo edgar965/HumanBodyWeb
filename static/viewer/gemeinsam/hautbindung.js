@@ -35,7 +35,7 @@ export class Hautbindung {
      * @param szene die Szene, in der das Netz hängt
      * @param netz das bisherige (nicht gebundene) Netz
      * @param geometrie die Geometrie MIT `skinIndex`/`skinWeight`
-     * @param skelett {rootBone, skeleton} aus `buildRigifySkeleton`
+     * @param skelett rootBone und skeleton aus `buildRigifySkeleton`
      * @param THREE die Three.js-Instanz der Seite
      * @returns das neue SkinnedMesh
      */

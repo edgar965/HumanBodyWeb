@@ -86,6 +86,7 @@ class Umapythonendpunkte:
         und jede Flächennormale undefiniert werden."""
         try:
             zahl = float(wert)
+        # stumm gewollt: ein unlesbarer Reglerwert aus dem Browser faellt auf 1,0
         except (TypeError, ValueError):
             return 1.0
         return max(unten, min(oben, zahl))

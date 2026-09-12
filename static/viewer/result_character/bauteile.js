@@ -31,7 +31,7 @@ export class Ziehgriff {
     /**
      * @param griff    Element, an dem gezogen wird
      * @param ziehen   (dx, dy) — Abstand zum Druckpunkt
-     * @param wahl     { beginn, ausser, stoppen } — Startwerte merken, ein
+     * @param wahl     beginn, ausser, stoppen — Startwerte merken, ein
      *                 Auswahlpfad, der nicht zieht (etwa ein Schließknopf),
      *                 und ob das Ereignis nicht weiterlaufen soll
      */

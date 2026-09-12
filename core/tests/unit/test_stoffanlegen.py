@@ -47,7 +47,7 @@ def _streifen(radien, n=48):
 
 class StoffanlegenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _abstand(self, punkte, radius=0.10):
         return np.linalg.norm(punkte, axis=1) - radius

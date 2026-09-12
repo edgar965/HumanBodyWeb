@@ -1,0 +1,25 @@
+# Ausschlussliste dieses Projekts — was KEIN Prüfwerkzeug ansehen soll.
+#
+# Ein Muster je Zeile, '#' ist ein Kommentar. Gepflegt wird die Datei über
+# Hilfe → Werkzeug Language Server; sie gehört ins Repository.
+#
+#   sicherung            ein Name ohne Schrägstrich gilt in jeder Tiefe
+#   werkzeug/netz_*.py   ein Pfad gilt ab der Projektwurzel
+#   **/*.min.js          Glob-Muster werden durchgereicht
+#
+# Nackte Namen wirken zusätzlich in den Werkzeugen unter Hilfe → Skills;
+# Muster mit Schrägstrich oder Stern gelten nur für den Language Server.
+
+# Wegwerf-Skripte (nicht versioniert, siehe .gitignore)
+_wegwerf
+# esbuild-Bündel der Szene (erzeugt, nicht versioniert)
+_buendel
+# CharMorph-Referenz (Fremdcode, braucht bpy) und die Vergleichskopie des Kerns
+charmorph_ref
+TestCharakter/humanbody_core
+# Vite-Bündel der Theatre-Seite (erzeugt aus TheatreJS/src, `npm run build`)
+static/theatre
+# Klassische Skripte der Auftragsseite: `THREE` kommt als Global vom CDN
+# (three.js r128), tsc kennt es nicht — 17 Meldungen ohne Befund
+static/js/bvh_viewer.js
+static/js/bvh_ersatzskelett.js

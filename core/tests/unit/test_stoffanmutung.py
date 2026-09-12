@@ -38,7 +38,7 @@ def _lies(*teile):
 
 class DasNetzBekommtSeineUvTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         # Die Geometrie liegt seit dem 11.09.2026 in `garmentcode_geometrie.js`
@@ -72,7 +72,7 @@ class DasNetzBekommtSeineUvTest(SimpleTestCase):
 
 class DasMaterialIstStoffTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.quelle = _lies('scene', 'garmentcode_stoff.js')

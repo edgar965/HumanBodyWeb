@@ -80,7 +80,8 @@ export function veEnterEditMode() {
     Vertexzustand.veGizmo.addEventListener('objectChange', () => { _veApplyGizmoDelta(); });
 
     const editCtrl = document.getElementById('pe-edit-controls');
-    if (editCtrl) editCtrl.style.display = 'block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+    // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+    if (editCtrl) editCtrl.style.display = 'block';
     const patternCtrl = document.getElementById('pe-pattern-controls');
     if (patternCtrl) patternCtrl.style.display = 'none';
     const regionCtrl = document.getElementById('pe-region-controls');
@@ -164,7 +165,7 @@ export function initVertexEditorBindings() {
     const veSizeVal = document.getElementById('ve-point-size-val');
     if (veSizeSlider) {
         veSizeSlider.addEventListener('input', () => {
-            const sz = parseInt(veSizeSlider.value); if (veSizeVal) veSizeVal.textContent = sz;
+            const sz = parseInt(veSizeSlider.value); if (veSizeVal) veSizeVal.textContent = String(sz);
             if (Vertexzustand.vePointsOverlay) Vertexzustand.vePointsOverlay.material.size = sz;
         });
     }

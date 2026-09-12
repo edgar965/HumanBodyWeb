@@ -13,6 +13,7 @@ import json
 import os
 import shutil
 import tempfile
+from pathlib import Path
 
 from django.test import SimpleTestCase
 
@@ -153,7 +154,7 @@ class NiemandKommtAusDerWurzelHeraus(AblageAufProbe):
     def test_eine_gueltige_adresse_loest_auf(self):
         pfad = Szenenstuecke._quellpfad(
             '/api/garmentcode/datei/t-shirt_female/x_rig.json/')
-        self.assertTrue(pfad.startswith(os.path.abspath(self.wurzel)))
+        self.assertTrue(Path(pfad).resolve().is_relative_to(Path(self.wurzel).resolve()), pfad)
 
 
 class DerOrdnernameVertraegtAllesAusDemNamensfeld(AblageAufProbe):

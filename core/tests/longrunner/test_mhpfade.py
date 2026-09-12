@@ -31,7 +31,7 @@ from MakeHuman.pfade import Mhpfade                        # noqa: E402
 
 class MhpfadeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     #: (Methode von `Mhpfade`, Name der Einstellung)
     PAARE = (('wurzel', 'MAKEHUMAN_ROOT'),

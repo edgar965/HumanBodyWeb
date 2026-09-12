@@ -1,6 +1,9 @@
 /**
  * Was `Startmessung` gesammelt hat, lesbar machen und aufheben.
  *
+ * Konsolenausgabe dauerhaft gewollt: Der Bericht ist die Antwort auf die Frage,
+ * warum der Start so lange dauert, und muss auch ohne Debug-Schalter erscheinen.
+ *
  * AUS `startmessung.js` HERAUSGELÖST (10.09.2026): Die Datei war auf 288
  * Zeilen gewachsen. Messen und Berichten sind auch zwei Aufgaben — die eine
  * läuft während des Seitenstarts und muss billig sein, die andere einmal

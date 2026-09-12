@@ -119,7 +119,7 @@ console.log(JSON.stringify({ok: true, rand: rand, innen: innen, geneigt: geneigt
 
 class GewebeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_kachel_bindung_und_normalen(self):
         ausgabe = MODUL.laufen(SKRIPT)

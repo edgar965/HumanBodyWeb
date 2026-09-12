@@ -58,7 +58,7 @@ export class Bildschleife extends Zeichenschleife {
         this.zeitkonto += dt;
         if (this.zeitkonto < Bildschleife.FPS_FENSTER_S) return;
         const anzeige = document.getElementById('fps-display');
-        if (anzeige) anzeige.textContent = this.bilder;
+        if (anzeige) anzeige.textContent = String(this.bilder);
         this.bilder = 0;
         this.zeitkonto = 0;
     }

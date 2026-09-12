@@ -127,6 +127,7 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
             return
         try:
             msg = json.loads(text_data)
+        # stumm gewollt: kaputtes JSON aus dem Browser ist eine fremde Eingabe, kein Serverfehler (wie CharacterConsumer)
         except json.JSONDecodeError:
             return
         art = msg.get('type')
@@ -150,6 +151,9 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
         nachhalten — und liegt nach dem ersten verlorenen Paket daneben,
         ohne dass es auffaellt.
         """
+        zustand = self._char_state
+        if zustand is None:          # `receive` prueft das schon; hier fuer sich
+            return
         bauart = msg.get('bauart') or 'Female_Caucasian'
         self._current_gender = ('male' if str(bauart).lower().startswith('m')
                                 else 'female')
@@ -157,15 +161,17 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
         # `CharacterConsumer.receive` bei `reset`: `compute()` schreibt die
         # Regler aus `_user_morphs` zurueck, ein spaeteres Leeren traefe sie
         # nicht.
-        self._char_state.zuruecksetzen()
-        self._char_state.set_body_type(bauart)
+        zustand.zuruecksetzen()
+        zustand.set_body_type(bauart)
         for name, wert in (msg.get('morphs') or {}).items():
             try:
-                self._char_state.set_morph(name, float(wert))
+                zustand.set_morph(name, float(wert))
+            # stumm gewollt: ein unbrauchbarer Reglerwert aus dem Browser wird uebergangen
             except (TypeError, ValueError):
                 continue
         for name, wert in (msg.get('meta') or {}).items():
             try:
-                self._char_state.set_meta(name, float(wert))
+                zustand.set_meta(name, float(wert))
+            # stumm gewollt: ein unbrauchbarer Metawert aus dem Browser wird uebergangen
             except (TypeError, ValueError):
                 continue

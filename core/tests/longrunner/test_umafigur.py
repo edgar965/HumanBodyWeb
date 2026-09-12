@@ -52,7 +52,7 @@ def _da():
 class UnityFormat(unittest.TestCase):
     u"""Der Leser für Unitys binäres Assetformat."""
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         if not _da():
@@ -111,7 +111,7 @@ class UnityFormat(unittest.TestCase):
 class Figurbau(unittest.TestCase):
     u"""Der ganze Weg, an der Rasse `Human Female 3.0`."""
 
-    databases = []
+    databases = set()
     gebaut = None
 
     @classmethod
@@ -256,7 +256,7 @@ class Figurbau(unittest.TestCase):
 class SkelettRechnung(unittest.TestCase):
     u"""Die Bausteine ohne Assets — laufen auch ohne UMA-Klon."""
 
-    databases = []
+    databases = set()
 
     def test_zerlegen_ist_die_umkehrung_von_matrix(self):
         u"""Beide Richtungen, an einer Matrix mit Drehung UND Skala."""

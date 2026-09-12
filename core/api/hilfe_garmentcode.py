@@ -11,15 +11,16 @@ Die Messwerte kommen bei jedem Aufruf frisch aus den YAML-Dateien
 Tabelle zu zeigen, die wie „alles gut" aussieht.
 """
 
-from django.views.generic import TemplateView
+from .hilfeseite import Hilfeseite
 
 from GarmentCode.messreihen import Garmentcodemessung
 
 
-class KleidungGarmentcode(TemplateView):
+class KleidungGarmentcode(Hilfeseite):
     u"""Der GarmentCode-Weg mit allen Testfaellen."""
 
     template_name = 'hilfe/kleidung_garmentcode.html'
+    AKTIV = 'hilfe_kleidung_garmentcode'
 
     #: Der Weg vom Koerper zum angezogenen Stueck. Je Schritt: was
     #: passiert, wo es steht, und was dabei schon schiefgegangen ist.
@@ -153,21 +154,12 @@ class KleidungGarmentcode(TemplateView):
                     'da ist; solange sagt die Meldung „aber unbeweglich".'},
     ]
 
-    def get_context_data(self, **kwargs):
-        kontext = super().get_context_data(**kwargs)
-        kontext.update({
-            'aktiv': 'hilfe_kleidung_garmentcode',
+    def kontext(self):
+        return {
             'schritte': self.SCHRITTE,
             'kennzahlen': self.KENNZAHLEN,
             'grenzen': self.GRENZEN,
             'matrix_hb': Garmentcodemessung.matrix('humanbody'),
             'matrix_smpl': Garmentcodemessung.matrix('smpl'),
             'testkoerper': Garmentcodemessung.koerper(),
-        })
-        return kontext
-
-    @classmethod
-    def ansicht(cls):
-        ansicht = cls.as_view()
-        ansicht.__name__ = 'hilfe_kleidung_garmentcode'
-        return ansicht
+        }

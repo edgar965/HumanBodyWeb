@@ -47,7 +47,9 @@ export class Figurarten {
      */
     static async ausJSON(daten, beiKoerper = null) {
         const klasse = Figurarten.KLASSEN[daten?.quelle];
-        return klasse ? klasse.fromJSON(daten, beiKoerper)
+        // Die eigenen Figurarten kennen den Rueckruf nicht (session.js ruft
+        // ihn danach selbst) — ihn mitzugeben taeuschte eine Wirkung vor.
+        return klasse ? klasse.fromJSON(daten)
                       : fn.CharacterInstance.fromJSON(daten, beiKoerper);
     }
 

@@ -65,17 +65,15 @@ class Figurvideoendpunkte:
         if not bilder:
             return JsonResponse({'fehler': 'Keine Bilder empfangen.'}, status=400)
         felder = request.POST
-        ablage = {'ordner': felder.get('ablage') or '',
-                  'name': felder.get('dateiname') or '',
-                  'figur': felder.get('figur') or '',
-                  'animation': felder.get('animation') or ''}
         try:
             kennung, url, pfad = Figurvideo.aus_bildfolge(
                 bilder, fps=felder.get('fps') or 24,
-                physik_mm=felder.get('physik_mm') or 0, ablage=ablage)
+                physik_mm=felder.get('physik_mm') or 0,
+                ablage=Figurvideoendpunkte._ablagewunsch(felder))
         except ValueError as fehler:
             return JsonResponse({'fehler': str(fehler)}, status=400)
         except VideoFehler as fehler:
+            logger.error('Figurvideo: Bildfolge nicht kodiert: %s', fehler)
             return JsonResponse({'fehler': str(fehler)}, status=500)
         except Exception as fehler:                              # noqa: BLE001
             logger.exception('Figurvideo: Bildfolge fehlgeschlagen')
@@ -84,6 +82,15 @@ class Figurvideoendpunkte:
                 status=500)
         return JsonResponse({'kennung': kennung, 'video_url': url,
                              'bilder': len(bilder), 'pfad': pfad})
+
+    #: Formularfeld -> Schluessel der Ablage (Ordner, Dateiname, Figur, Animation).
+    ABLAGEFELDER = (('ordner', 'ablage'), ('name', 'dateiname'),
+                    ('figur', 'figur'), ('animation', 'animation'))
+
+    @classmethod
+    def _ablagewunsch(cls, felder):
+        """Wohin das fertige Video kopiert wird — leer heisst Vorgabe."""
+        return {name: felder.get(feld) or '' for name, feld in cls.ABLAGEFELDER}
 
     @staticmethod
     @require_GET

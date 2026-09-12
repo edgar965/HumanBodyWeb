@@ -31,7 +31,7 @@ from core.api.auftrag_upload import Uploadseiten
 class EinRechnerMitPipelines(unittest.TestCase):
     u"""Gegeben: bestimmte Verzeichnisse liegen da, andere nicht."""
 
-    databases = []
+    databases = set()
 
     #: Reihenfolge, in der `_pipelines_verfuegbar` die Pfade abfragt.
     EINSTELLUNGEN = ('MOCAPNET_V4_SCRIPT', 'GVHMR_ROOT', 'WHAM_ROOT',

@@ -101,4 +101,4 @@ class AtomarSchreiber:
                 letzter = e
                 time.sleep(cls.PAUSE_S * (versuch + 1))
         logger.error('AtomarSchreiber: %s liess sich nicht ersetzen: %s', ziel, letzter)
-        raise letzter
+        raise letzter if letzter is not None else PermissionError(str(ziel))

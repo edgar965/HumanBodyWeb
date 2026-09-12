@@ -181,7 +181,7 @@ export function focusCharacter(id) {
 export function updateCharacterListUI() {
     const list = document.getElementById('character-list');
     const countEl = document.getElementById('char-count');
-    if (countEl) countEl.textContent = state.characters.size;
+    if (countEl) countEl.textContent = String(state.characters.size);
 
     list.innerHTML = '';
     state.characters.forEach((inst, id) => {

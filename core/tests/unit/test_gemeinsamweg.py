@@ -37,7 +37,7 @@ def _quelle(*teile):
 
 class GemeinsamDienstTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_zwei_kombinationen_bekommen_verschiedene_marken(self):
         eine = Garmentgemeinsam._marke(
@@ -105,7 +105,7 @@ class GemeinsamDienstTest(SimpleTestCase):
 
 class GemeinsamEndpunktTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_endpunkt_ist_eingetragen(self):
         self.assertEqual(reverse('garmentcode_gemeinsam'),
@@ -134,7 +134,7 @@ class GemeinsamEndpunktTest(SimpleTestCase):
 class GemeinsamVerdrahtungTest(SimpleTestCase):
     u"""Was nur am Quelltext zu pruefen ist."""
 
-    databases = []
+    databases = set()
 
     def test_die_vorlage_fuehrt_die_drei_bedienelemente(self):
         vorlage = _quelle('templates', '_garmentcode_panel.html')

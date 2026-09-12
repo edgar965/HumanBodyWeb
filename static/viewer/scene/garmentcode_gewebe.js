@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { Schieberegler } from '../gemeinsam/schieberegler.js';
 import { gewebeart } from '../gemeinsam/gewebearten.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
  * Die Gewebe-Auswahl unter „Farbe / Material": Art, Fäden je cm, Struktur.
@@ -66,7 +67,10 @@ export class GarmentcodeGewebe {
 
     static _stellen(kennung, wert) {
         const feld = document.getElementById(kennung);
-        if (!feld) return;
+        if (!feld) {
+            Protokoll.warnung('garmentcode_gewebe', 'Feld fehlt in der Vorlage:', kennung);
+            return;
+        }
         feld.value = String(wert);
         feld.dispatchEvent(new Event('input', { bubbles: true }));
     }

@@ -45,7 +45,7 @@ def _anpassung():
 
 class AusgangspunkteTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_ausgangspunkte_kommen_aus_den_serverdaten(self):
         u"""Kein Rückgriff mehr auf eine Variable, die es nicht gibt."""
@@ -69,7 +69,7 @@ class FehlerWirdProtokolliertTest(SimpleTestCase):
     u"""Ein Fehler, der nur auf der Konsole steht, ist keiner, den jemand
     sieht — er hat hier zwölf Tage überlebt."""
 
-    databases = []
+    databases = set()
 
     def test_der_fang_schreibt_ins_protokoll(self):
         quelle = _anpassung()
@@ -91,7 +91,7 @@ class ZweiterFehlerDerselbenArtTest(SimpleTestCase):
     Regler zeigten für dieses Stück die Vorgaben statt seiner Werte.
     """
 
-    databases = []
+    databases = set()
 
     def _zubehoer(self):
         return _quelle('static', 'viewer', 'scene', 'charakter_zubehoer.js')
@@ -117,7 +117,7 @@ class KleiderLaufenNebeneinanderTest(SimpleTestCase):
     Wechsel: nacheinander 1,85 / 2,00 s, nebeneinander 1,08 / 1,73 s.
     """
 
-    databases = []
+    databases = set()
 
     def test_die_anfragen_starten_zusammen(self):
         quelle = _quelle('static', 'viewer', 'scene', 'charakter_zubehoer.js')
@@ -138,7 +138,7 @@ class KleiderLaufenNebeneinanderTest(SimpleTestCase):
 class ListeWirdGepflegtTest(SimpleTestCase):
     u"""Die Kette, an deren Ende das Speichern hängt."""
 
-    databases = []
+    databases = set()
 
     def test_der_assets_weg_traegt_das_stueck_in_die_liste_ein(self):
         quelle = _quelle('static', 'viewer', 'scene', 'kleidung_anpassen.js')

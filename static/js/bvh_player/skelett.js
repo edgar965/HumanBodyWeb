@@ -94,7 +94,7 @@ export class Spielerskelett {
         this.aktion = this.mischer.clipAction(klip);
         // Einmal abspielen und am Ende stehenbleiben — sonst springt die
         // Bewegung am Klipende sichtbar zurueck.
-        this.aktion.setLoop(THREE.LoopOnce);
+        this.aktion.setLoop(THREE.LoopOnce, 1);
         this.aktion.clampWhenFinished = true;
         this.aktion.play();
         this.klipdauer = klip.duration;

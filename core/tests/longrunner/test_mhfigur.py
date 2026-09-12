@@ -37,7 +37,7 @@ def _feld(b64, typ, breite):
 
 class MhfigurTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     #: Ein Stueck mit Textur-Zeiger statt Textur und mit `delete_verts`.
     ANZUG = 'tops/female_casualsuit01'
@@ -179,5 +179,5 @@ class MhfigurTest(SimpleTestCase):
     def _naechster_abstand(stoff, haut):
         u"""Je Stoffpunkt der Abstand zur naechsten Hautstelle, in Metern."""
         from scipy.spatial import cKDTree
-        abstand, _ = cKDTree(haut).query(stoff)
+        abstand, _ = cKDTree(haut).query(stoff, workers=-1)
         return abstand

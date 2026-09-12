@@ -4,12 +4,11 @@
 Ein Wert im falschen Abschnitt kommt in der Simulation nicht an und meldet
 auch nichts — deshalb prüft das meiste hier die Zuordnung, nicht die Zahl.
 """
-import os
-import re
 from unittest import TestCase
 
 from GarmentCode.simulationsfelder import Simulationsfelder
 from GarmentCode.simulationsregler import Simulationsregler
+from ._quelltext import Quelltext
 
 
 class DieAngabenSindVollstaendigUndWiderspruchsfrei(TestCase):
@@ -209,18 +208,8 @@ class WerteAusDemNetzWerdenGeprueft(TestCase):
 
 class DieKetteReichtBisInDieSimulation(TestCase):
 
-    @staticmethod
-    def _quelle(*teile):
-        from django.conf import settings
-        stamm = os.path.dirname(os.path.abspath(str(settings.BASE_DIR)))
-        with open(os.path.join(stamm, *teile), 'r', encoding='utf-8') as datei:
-            return datei.read()
-
-    @classmethod
-    def _ohne_kommentare(cls, quelle):
-        ohne = re.sub(r'"""..*?"""', '', quelle, flags=re.S)
-        ohne = re.sub(r"'''..*?'''", '', ohne, flags=re.S)
-        return re.sub(r'#.*', '', ohne)
+    _quelle = staticmethod(Quelltext.lesen)
+    _ohne_kommentare = staticmethod(Quelltext.ohne_kommentare)
 
     def test_der_dienst_reicht_alle_drei_abschnitte_durch(self):
         quelle = self._ohne_kommentare(

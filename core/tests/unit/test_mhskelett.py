@@ -23,7 +23,6 @@ baut eine Hierarchie mit Loechern.
 """
 import unittest
 
-from django.conf import settings
 
 from MakeHuman.basisnetz import Mhbasisnetz
 from MakeHuman.formung import Mhformung
@@ -32,7 +31,7 @@ from MakeHuman.skelett import Mhskelett
 
 class MhskelettTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

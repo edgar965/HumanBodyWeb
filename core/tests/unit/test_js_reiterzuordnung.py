@@ -63,7 +63,7 @@ console.log(JSON.stringify({ok: true}));
 
 class Zuordnung(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_zuordnung_stimmt(self):
         ausgabe = MODUL.laufen(SKRIPT)

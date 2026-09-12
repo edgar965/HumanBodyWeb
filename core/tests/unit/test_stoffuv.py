@@ -23,11 +23,11 @@ Die drei Stellen, an denen es still schiefgehen kann:
    Faktor 100 und damit eine Kachel, die über das ganze Stück läuft.
 """
 import os
-import tempfile
 
 from django.test import SimpleTestCase
 
 from GarmentCode.stoffuv import Stoffuv
+from ._pruefablage import Pruefablage
 
 
 def _schreiben(inhalt, ordner):
@@ -75,10 +75,10 @@ f 1 2 3
 
 class DieUvKommtJePunktTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_ein_paar_je_punkt(self):
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
         self.assertEqual(len(uv), 4)
         self.assertEqual(uv.als_liste()[1], [1.0, 0.0])
@@ -86,14 +86,14 @@ class DieUvKommtJePunktTest(SimpleTestCase):
 
     def test_an_einer_naht_gewinnt_die_erste_angabe(self):
         u"""Und die Stelle wird gezählt — sonst bliebe sie unbemerkt."""
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             uv = Stoffuv.aus_obj(_schreiben(MIT_NAHT, ordner))
         self.assertEqual(len(uv), 4)
         self.assertEqual(uv.als_liste()[2], [1.0, 1.0])
         self.assertEqual(uv.mehrfach, 1)
 
     def test_ohne_uv_gibt_es_nichts(self):
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             self.assertIsNone(Stoffuv.aus_obj(_schreiben(OHNE_UV, ordner)))
 
     def test_eine_fehlende_datei_wirft_nicht(self):
@@ -105,10 +105,10 @@ class DieListeMussZumNetzPassenTest(SimpleTestCase):
     u"""Die Gegenprobe zu „es kommt schon irgendwas": Eine UV-Liste vom
     falschen Netz legt das Gewebe verdreht auf den Stoff, ohne Fehler."""
 
-    databases = []
+    databases = set()
 
     def test_falsche_punktzahl_liefert_nichts(self):
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             pfad = _schreiben(QUADRAT, ordner)
             self.assertIsNone(Stoffuv.aus_obj(pfad, punktzahl=99))
             self.assertIsNotNone(Stoffuv.aus_obj(pfad, punktzahl=4))
@@ -116,19 +116,19 @@ class DieListeMussZumNetzPassenTest(SimpleTestCase):
 
 class DerMassstabIstInMeternTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_zehn_zentimeter_je_uv_einheit(self):
         u"""Die Kante ist 10 Einheiten lang, das OBJ steht in Zentimetern —
         also 0,1 m je UV-Einheit. Ohne die Umrechnung stünde dort 10."""
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
         self.assertAlmostEqual(uv.meter_je_uv, 0.1, places=6)
 
     def test_ein_groesseres_netz_hat_einen_groesseren_massstab(self):
         gross = QUADRAT.replace('v 10 0 0', 'v 20 0 0') \
                        .replace('v 10 10 0', 'v 20 10 0')
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             uv = Stoffuv.aus_obj(_schreiben(gross, ordner))
         self.assertGreater(uv.meter_je_uv, 0.1)
 
@@ -137,17 +137,17 @@ class DieTeilungBehaeltDenMassstabTest(SimpleTestCase):
     u"""Ein gemeinsam simuliertes Netz wird nach Stücken zerlegt; jedes Teil
     ist ein Ausschnitt DESSELBEN Schnittmusters."""
 
-    databases = []
+    databases = set()
 
     def test_ausschnitt(self):
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
         teil = uv.teil([2, 0])
         self.assertEqual(teil.als_liste(), [[1.0, 1.0], [0.0, 0.0]])
         self.assertEqual(teil.meter_je_uv, uv.meter_je_uv)
 
     def test_nummern_ausserhalb_des_netzes_liefern_nichts(self):
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
         self.assertIsNone(uv.teil([0, 99]))
 
@@ -155,12 +155,12 @@ class DieTeilungBehaeltDenMassstabTest(SimpleTestCase):
 class DieRigDateiFuehrtDieUvTest(SimpleTestCase):
     u"""`Anziehen.ablegen` schreibt sie — sonst käme sie nie im Browser an."""
 
-    databases = []
+    databases = set()
 
     def test_uv_und_massstab_stehen_in_der_datei(self):
         import json
         from GarmentCode.anziehen import Anziehen
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             uv = Stoffuv.aus_obj(_schreiben(QUADRAT, ordner))
             ziel = os.path.join(ordner, 'probe_sim_rig.json')
             Anziehen.ablegen(ziel, [[0, 0, 0]] * 4, [[0, 1, 2]], None, [],
@@ -175,7 +175,7 @@ class DieRigDateiFuehrtDieUvTest(SimpleTestCase):
         leeres Feld dastehen, an dem der Browser eine Karte aufhängt."""
         import json
         from GarmentCode.anziehen import Anziehen
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             ziel = os.path.join(ordner, 'probe_sim_rig.json')
             Anziehen.ablegen(ziel, [[0, 0, 0]] * 3, [[0, 1, 2]], None, [])
             with open(ziel, encoding='utf-8') as datei:

@@ -32,7 +32,7 @@ export function animate() {
     Seitenzustand.frameCount++;
     Seitenzustand.fpsAccum += dt;
     if (Seitenzustand.fpsAccum >= 1.0) {
-        document.getElementById('fps-display').textContent = Seitenzustand.frameCount;
+        document.getElementById('fps-display').textContent = String(Seitenzustand.frameCount);
         Seitenzustand.frameCount = 0;
         Seitenzustand.fpsAccum = 0;
     }

@@ -32,7 +32,7 @@ from assetCreator.GarmentFitter.smpl_library.objleser import Objleser  # noqa: E
 class ObjleserTest(SimpleTestCase):
     u"""Zerlegung, Umrechnung und Normalen."""
 
-    databases = []
+    databases = set()
 
     #: Zwei Dreiecke als ein Viereck, ein Punkt bei 100 cm.
     TEXT = '\n'.join([

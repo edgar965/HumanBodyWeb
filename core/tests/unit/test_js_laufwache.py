@@ -92,7 +92,7 @@ console.log(JSON.stringify({ok: true}));
 class LaufwacheTest(SimpleTestCase):
     u"""Ein besetzter Reiter sagt es — und gibt sich irgendwann selbst frei."""
 
-    databases = []
+    databases = set()
 
     def test_laufwache(self):
         ausgabe = MODUL.laufen(SKRIPT)

@@ -39,7 +39,7 @@ ARM = kette(
 
 class GelenkskelettTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     # ------------------------------------------------------- die Gegenprobe
 

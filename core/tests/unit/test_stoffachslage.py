@@ -56,7 +56,7 @@ def _gebundene_nachfuehrung(tmpdatei):
 
 class StoffvorschauLiefertSzenenlage(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         import os

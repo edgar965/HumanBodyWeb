@@ -85,7 +85,7 @@ console.log(JSON.stringify({ ok: true, geprueft, deckel }));
 
 class VelocityskinningJsTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_fixture_liegt_vor(self):
         self.assertTrue(

@@ -34,7 +34,7 @@ from koerper.physik import Koerperphysik                     # noqa: E402
 
 class SeiteKoerperphysik(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.antwort = Client().get(reverse('hilfe_koerper_physik'))
@@ -82,7 +82,7 @@ class SeiteKoerperphysik(SimpleTestCase):
 
 class DatenStehenInPython(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_drei_baustellen_sind_getrennt(self):
         u"""A, B und C brauchen verschiedene Lösungen — deshalb stehen sie

@@ -139,7 +139,7 @@ export class Lichteigenschaften {
             const regler = document.getElementById(`prop-light-${kanal}`);
             if (regler) regler.value = wert;
             const zahl = document.getElementById(`prop-light-${kanal}-val`);
-            if (zahl) zahl.textContent = wert;
+            if (zahl) zahl.textContent = String(wert);
         }
         const feld = document.getElementById('prop-light-color');
         if (feld) feld.value = '#' + c.getHexString();

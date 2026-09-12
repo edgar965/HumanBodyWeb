@@ -76,7 +76,7 @@ export function animate() {
     Testzustand.frameCount++;
     Testzustand.fpsAccum += dt;
     if (Testzustand.fpsAccum >= 1.0) {
-        document.getElementById('fps-display').textContent = Testzustand.frameCount;
+        document.getElementById('fps-display').textContent = String(Testzustand.frameCount);
         Testzustand.frameCount = 0;
         Testzustand.fpsAccum = 0;
     }

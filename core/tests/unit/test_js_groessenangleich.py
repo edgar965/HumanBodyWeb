@@ -64,7 +64,7 @@ console.log(JSON.stringify({ok: true}));
 
 class GroessenangleichTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_faktor_gleicht_aus_ohne_zu_zappeln(self):
         ausgabe = MODUL.laufen(SKRIPT)

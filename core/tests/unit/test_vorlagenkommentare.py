@@ -46,7 +46,7 @@ def _vorlagen():
 
 class VorlagenkommentareTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_keine_vorlage_hat_einen_mehrzeiligen_kurzkommentar(self):
         befunde = []

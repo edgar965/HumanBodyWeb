@@ -162,7 +162,7 @@ console.log(JSON.stringify({ ok: true, unter, frei, entfernt: neu.entfernt }));
 
 class HautmaskeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_rohr_abstand_tiefe_wicklung_und_index(self):
         ausgabe = MODUL.laufen(SKRIPT)

@@ -57,7 +57,7 @@ GEWICHTE = [[0.75, 0.25, 0, 0], [1.0, 0, 0, 0], [0.5, 0.5, 0, 0]]
 
 class FigurvideostueckeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _ablegen(self, ordner, paket=None, knochen=PAKET_KNOCHEN, **meta):
         roh = paket if paket is not None else _paket(PUNKTE, DREIECKE,
@@ -73,11 +73,12 @@ class FigurvideostueckeTest(SimpleTestCase):
             aus = self._ablegen(ordner)
             self.assertEqual(aus[0]['name'], 'Hose')
             self.assertEqual(aus[0]['farbe'], [1.0, 128 / 255.0, 0.0])
-            daten = np.load(aus[0]['pfad'])
-            np.testing.assert_allclose(daten['punkte'][0], [0.1, 0.3, 1.2],
-                                       atol=1e-6)
-            np.testing.assert_array_equal(daten['dreiecke'], DREIECKE)
-            self.assertEqual(list(daten['knochen']), PAKET_KNOCHEN)
+            # `with`: sonst haelt die offene .npz den Pruefordner fest (Windows).
+            with np.load(aus[0]['pfad']) as daten:
+                np.testing.assert_allclose(daten['punkte'][0], [0.1, 0.3, 1.2],
+                                           atol=1e-6)
+                np.testing.assert_array_equal(daten['dreiecke'], DREIECKE)
+                self.assertEqual(list(daten['knochen']), PAKET_KNOCHEN)
 
     def test_gewichte(self):
         u"""Ueber den NAMEN umgesetzt, nicht ueber die Nummer."""
@@ -87,7 +88,7 @@ class FigurvideostueckeTest(SimpleTestCase):
         with Pruefablage.ordner('figurvideo_') as ordner:
             aus = self._ablegen(ordner)
             netze = Figurnetze(_Figur())
-            punkte, dreiecke, gewichte = netze.stueck(aus[0]['pfad'])
+            punkte, _dreiecke, gewichte = netze.stueck(aus[0]['pfad'])
         self.assertEqual(punkte.shape, (3, 3))
         self.assertEqual(gewichte.shape, (3, 5))
         spalte = netze.spalte

@@ -109,7 +109,7 @@ class Filmlauf:
                 melder=self._melden)
             proben = film.proben()
             film.rechnen()
-            pfad, zahl = film.schreiben(self.auftrag['ziel'], fps=fps,
+            _pfad, zahl = film.schreiben(self.auftrag['ziel'], fps=fps,
                                         schleifen=1)
             # ERST die Bilanz, DANN „Fertig": Der Server liest beim naechsten
             # Stand `video.mp4.json` — kam „Fertig" 70 ms davor (gemessen
@@ -117,6 +117,7 @@ class Filmlauf:
             self._bilanz(film, proben, zahl)
             self._melden(u'Fertig', 1.0, fertig=True)
             return 0
+        # stumm gewollt: der Traceback geht in die Standdatei (`_melden`), die der Server liest und anzeigt
         except Exception as fehler:                              # noqa: BLE001
             import traceback
             self._melden(u'Abgebrochen', 0.0,

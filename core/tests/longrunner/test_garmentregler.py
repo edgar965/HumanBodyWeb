@@ -52,7 +52,7 @@ def pfade(block, aus=None):
 
 class ReglerdeckungTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):
@@ -109,7 +109,7 @@ class ReglerdeckungTest(unittest.TestCase):
 
 class ReglerwerteTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def entwurf(self, werte):
         return Katalog.entwurf('t-shirt', werte)
@@ -189,7 +189,7 @@ class ReglerwerteTest(unittest.TestCase):
 
 class ReglertitelTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def test_gleicher_name_verschiedene_bedeutung(self):
         u"""`cuff` heisst am Aermel Manschette, an der Hose Aufschlag."""

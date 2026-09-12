@@ -58,6 +58,7 @@ class Absatzpose:
         def zahl(name):
             try:
                 return float(werte.get(name) or 0.0)
+            # stumm gewollt: ein unlesbarer Abfrageparameter heisst 'kein Absatz'
             except (TypeError, ValueError):
                 return 0.0
         pose = cls(*[zahl(name) for name in cls.FELDER], geschlecht=geschlecht)

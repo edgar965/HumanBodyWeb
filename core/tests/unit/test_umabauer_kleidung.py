@@ -20,7 +20,7 @@ from core.dienste.umabauer import Umabauer
 
 class Kleidungsauftrag(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def _auftrag(self, kleidung):
         with mock.patch.object(Umabauer, '_auftrag',

@@ -78,8 +78,8 @@ export class Hautmaske {
      *
      * @param koerper      Float32Array/Float64Array, Punkte in Ruhelage (xyz)
      * @param dreiecke     Index des Körpers (drei Einträge je Dreieck)
-     * @param stoffe       [{punkte, dreiecke}] — jedes Stück in derselben Lage
-     * @param optionen     {abstand, tiefe, randringe, eng, normalen, suchweite, inseln}
+     * @param stoffe       Liste von Stücken (punkte, dreiecke), jedes in derselben Lage
+     * @param optionen     abstand, tiefe, randringe, eng, normalen, suchweite, inseln
      *                     `normalen`: fertige Punktnormalen des Körpers
      *                     (die Lagenmaske gibt einem Stoff die der Haut mit);
      *                     `suchweite`: Umkreis für den nächsten Stoffpunkt

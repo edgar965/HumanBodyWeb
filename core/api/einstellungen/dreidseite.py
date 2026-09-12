@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Einstellungen der 3D-Pipelines (MocapNET v4, GVHMR, WHAM, PromptHMR, GEM)."""
+"""Einstellungen der 3D-Pipelines (MocapNET v4, GVHMR, WHAM, PromptHMR,
+GEM-SMPL, DuoMo, GEM-X)."""
 
 from pathlib import Path
 
@@ -26,14 +27,21 @@ class DreiDEinstellungen(Einstellungsseite):
         ('mp_min_tracking_confidence', 0.2, 0.0, 1.0, False),
         ('mp_model_complexity', 1, 0, 1, True),
         ('gvhmr_focal_length_mm', 0, 0.0, 200.0, False),
+        ('gvhmr_smooth_sigma', 2.0, 0.0, 10.0, False),
+        # Glaettung (`Bvhbau`) der neuen Pipelines — Vorgaben der Karten (12.09.2026)
+        ('gem_smooth_sigma', 2.0, 0.0, 10.0, False),
+        ('duomo_smooth_sigma', 2.0, 0.0, 10.0, False),
+        ('gemx_smooth_sigma', 2.0, 0.0, 10.0, False),
     )
 
     #: Bestandteile, die v4 berechnen soll, und die Schalter der Lifter.
     SCHALTER = (
         'v4_enable_body', 'v4_enable_face', 'v4_enable_hands',
         'v4_enable_mouth', 'v4_enable_eyes',
-        'gvhmr_static_cam', 'wham_estimate_local_only', 'wham_run_smplify',
-        'prompthmr_static_camera', 'gem_static_cam',
+        'gvhmr_static_cam', 'gvhmr_joint_limits',
+        'wham_estimate_local_only', 'wham_run_smplify',
+        'prompthmr_static_camera', 'gem_static_cam', 'gem_joint_limits',
+        'duomo_static_cam', 'duomo_joint_limits', 'gemx_static_cam',
     )
 
     AUSWAHLEN = (
@@ -64,6 +72,8 @@ class DreiDEinstellungen(Einstellungsseite):
             'wham_installed': Path(settings.WHAM_ROOT).is_dir(),
             'prompthmr_installed': Path(settings.PROMPTHMR_ROOT).is_dir(),
             'gem_installed': Path(settings.GEM_ROOT).is_dir(),
+            'duomo_installed': Path(settings.DUOMO_ROOT).is_dir(),
+            'gemx_installed': Path(settings.GEMX_ROOT).is_dir(),
             'smpl_models_ok': self._smpl_modelle_da(),
         }
 

@@ -39,7 +39,7 @@ class ClothExportTests(TestCategory):
     def test_cloth_export_api_registers_all_three_engines():
         """blender_eevee / warp_blender / warp_only sind im Dispatcher eingetragen."""
         for eng in ('blender_eevee', 'warp_blender', 'warp_only'):
-            code, body = Netzruf.senden('/api/cloth/export/', method='POST',
+            _code, body = Netzruf.senden('/api/cloth/export/', method='POST',
                                         data={'engine': eng, 'quality': 'low'})
             err = str(body.get('error', ''))
             if 'unknown engine' in err.lower():

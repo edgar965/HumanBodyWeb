@@ -24,7 +24,7 @@ from GarmentCode.vorbildpresets import Vorbildpresets
 
 class EigeneVorbilderTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _leggings(self):
         liste = Vorbildpresets.fuer('hose')
@@ -111,7 +111,7 @@ class LeggingsOhneBuendchenTest(SimpleTestCase):
     beim Anhaken auch weg (`zurueck`), weil das Reitergedaechtnis die
     alte Fassung sonst weitertraegt."""
 
-    databases = []
+    databases = set()
 
     def test_keine_ruesche_in_beiden_voreinstellungen(self):
         for eintrag in EIGENE['hose']:

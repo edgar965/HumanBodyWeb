@@ -163,13 +163,22 @@ class Kleidungswerkzeuge:
     @staticmethod
     def knochenindizes(garment_verts, body_verts, gender='female', ref_body=None):
         """Compute skin indices for garment by nearest-body-vertex transfer."""
-        si, _sw = Skingewichte.arrays(gender)
+        si, _sw = Kleidungswerkzeuge._gewichtsfelder(gender)
         nearest = Kleidungswerkzeuge._zuordnung(garment_verts, body_verts, ref_body)
         return si[nearest].astype(np.float32).tobytes()
 
     @staticmethod
     def knochengewichte(garment_verts, body_verts, gender='female', ref_body=None):
         """Compute skin weights for garment by nearest-body-vertex transfer."""
-        _si, sw = Skingewichte.arrays(gender)
+        _si, sw = Kleidungswerkzeuge._gewichtsfelder(gender)
         nearest = Kleidungswerkzeuge._zuordnung(garment_verts, body_verts, ref_body)
         return sw[nearest].astype(np.float32).tobytes()
+
+    @staticmethod
+    def _gewichtsfelder(gender):
+        """(indices, weights) — oder ein benannter Fehler statt „cannot unpack
+        non-iterable NoneType" tief im Aufrufer (LS-Befund 12.09.2026)."""
+        felder = Skingewichte.arrays(gender)
+        if felder is None:
+            raise LookupError('Keine Hautgewichte fuer %s' % gender)
+        return felder

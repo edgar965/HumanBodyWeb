@@ -16,6 +16,9 @@ import { Fortschrittsrechnung } from '../gemeinsam/fortschrittsrechnung.js';
  * läuft und wie lange schon — das ist die Angabe, die nicht schätzt.
  */
 class GarmentcodeFortschritt {
+
+    /** Jede halbe Sekunde: sichtbar kriechen, nicht im Sekundentakt springen. */
+    static TAKT_MS = 500;
     constructor() {
         this.schritte = [];
         this.uhr = null;
@@ -30,9 +33,7 @@ class GarmentcodeFortschritt {
         this.beginn = Date.now();
         ziel.classList.remove('hb-versteckt');
         this.zeichnen();
-        // Jede halbe Sekunde: Der Balken soll sichtbar kriechen, nicht
-        // im Sekundentakt springen.
-        this.uhr = setInterval(() => this.zeichnen(), 500);
+        this.uhr = setInterval(() => this.zeichnen(), GarmentcodeFortschritt.TAKT_MS);
     }
 
     /** Einen Schritt als laufend markieren. */

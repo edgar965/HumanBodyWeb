@@ -49,7 +49,7 @@ def _vorlage(name):
 
 class KlickAufEinStueck(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_kein_fester_reiter_mehr(self):
         quelle = _js('scene', 'teilnetz_auswahl.js')
@@ -100,7 +100,7 @@ class KlickAufEinStueck(SimpleTestCase):
 
 class Reiternamen(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     #: Kennung -> sichtbare Beschriftung (Edgar, 09.09.2026).
     NAMEN = {'eigenschaften': 'Modell', 'modell': 'Skeleton'}
@@ -125,7 +125,7 @@ class Reiternamen(SimpleTestCase):
 
 class Fristen(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     #: Datei -> die Anfrage, die eine Frist braucht.
     LANGE_ANFRAGEN = {

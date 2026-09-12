@@ -116,11 +116,8 @@ class Fallbau:
 #: Je Kategorie eine Klasse im Modul-Namensraum — Djangos Discovery findet sie
 #: darüber. `globals()` ist hier der Punkt: Eine Klasse, die nur in einer Liste
 #: steht, wird nicht gefunden.
-for _kategorie in ALL_CATEGORIES:
-    globals()[_kategorie.__name__] = Fallbau.klasse(_kategorie)
-
-#: Aufräumen, damit die Schleifenvariable nicht als Modulname stehen bleibt.
-del _kategorie
+globals().update({_kategorie.__name__: Fallbau.klasse(_kategorie)
+                  for _kategorie in ALL_CATEGORIES})
 
 
 class AdapterTest(unittest.TestCase):

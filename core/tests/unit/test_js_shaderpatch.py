@@ -64,7 +64,7 @@ console.log(JSON.stringify({ ok: true, schluessel: Shaderpatch.schluessel(k) }))
 
 class ShaderpatchTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_zwei_eingriffe_klonen_und_schluessel(self):
         ausgabe = MODUL.laufen(SKRIPT)

@@ -13,6 +13,7 @@ Ergebnis sehen, auch wenn das Archiv gerade nicht schreibbar ist.
 import json
 import logging
 import os
+from typing import Any
 
 import numpy as np
 from ..daten.smplxablage import Smplxablage
@@ -57,7 +58,7 @@ class SmplxArchiv:
         except SmplxNetzFehler as e:
             logger.warning('Kein SMPL-X-Netz fuer %s: %s', job.id, e)
             return
-        inhalt = dict(
+        inhalt: dict[str, Any] = dict(
             vertices=netz['vertices'], faces=netz['faces'],
             joints=netz['joints'],
             parents=np.array(netz['parents'], dtype=np.int32),

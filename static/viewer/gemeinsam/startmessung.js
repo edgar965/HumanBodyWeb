@@ -33,6 +33,9 @@ import { Startbericht } from './startbericht.js';
  */
 export class Startmessung {
 
+    /** Abstand zweier Nachfragen, ob die Seite zur Ruhe gekommen ist. */
+    static TAKT_MS = 200;
+
     /** @type {{name: string, ms: number, wartend?: boolean}[]} */
     static _abschnitte = [];
 
@@ -130,9 +133,9 @@ export class Startmessung {
                 Startmessung.bericht();
                 return;
             }
-            setTimeout(pruefen, 200);
+            setTimeout(pruefen, Startmessung.TAKT_MS);
         };
-        setTimeout(pruefen, 200);
+        setTimeout(pruefen, Startmessung.TAKT_MS);
     }
 
     static _stand() {

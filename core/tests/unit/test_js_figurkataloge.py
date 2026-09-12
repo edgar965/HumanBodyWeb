@@ -67,7 +67,7 @@ console.log(JSON.stringify({ok: true}));
 
 class FigurkatalogeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_zeilen_je_quelle(self):
         ausgabe = MODUL.laufen(SKRIPT)

@@ -1,5 +1,6 @@
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { escapeHtml } from '../utils.js';
+import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Umagarderobe } from './umagarderobe.js';
 import { Umatyp } from './umatyp.js';
 import { Umabauerstand } from './umabauerstand.js';
@@ -24,7 +25,7 @@ export class Umakleider {
         try {
             garderobe = await Umagarderobe.lesen(figur.datei);
         } catch (fehler) {
-            console.warn('Umakleider: Zettel nicht lesbar:', fehler);
+            Protokoll.warnung('Umakleider', 'Zettel nicht lesbar:', fehler);
         }
         const rasse = garderobe?.rasse;
         if (!rasse) {

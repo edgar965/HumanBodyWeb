@@ -16,6 +16,7 @@ von Django abhaengt.
 """
 
 import json
+from typing import Any
 
 from django.http import JsonResponse
 
@@ -40,7 +41,7 @@ class Fotoauftragszugriff:
         return JsonResponse({'ok': False, 'error': 'Job not found'}, status=404)
 
     @staticmethod
-    def mit_rumpf(request, job_id):
+    def mit_rumpf(request, job_id) -> tuple[Any, Any, JsonResponse | None]:
         """Auftrag UND JSON-Rumpf — oder die fertige Fehlerantwort.
 
         WARUM ZUSAMMEN (Befund `doppelcode`, 28.08.2026): Diese acht Zeilen

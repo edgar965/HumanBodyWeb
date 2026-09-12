@@ -98,6 +98,7 @@ class Figurvideostuecke:
             farbe = str(wert or '').lstrip('#')
             if len(farbe) == 6:
                 return [int(farbe[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
+        # stumm gewollt: ein unlesbarer Farbwert aus dem Browser faellt auf die Standardfarbe
         except (TypeError, ValueError):
             pass
         return list(cls.FARBE)

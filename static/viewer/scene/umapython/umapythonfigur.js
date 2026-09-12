@@ -1,11 +1,9 @@
-import * as THREE from 'three';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
-import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Knochenbau } from '../../gemeinsam/knochenbau.js';
 import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
 import { Umapythonnetz } from './umapythonnetz.js';
-import { GarmentcodeAblage } from '../garmentcode_ablage.js';
+import { Figurbasis } from '../figurbasis.js';
 
 /**
  * UmapythonFigur — eine echte UMA-Figur, in Python gebaut.
@@ -30,7 +28,7 @@ import { GarmentcodeAblage } from '../garmentcode_ablage.js';
  * Die Felder sind dieselben wie bei `SmplFigur` und `UmaFigur`, damit Liste,
  * Auswahl, Zählung und Speichern nicht je Quelle unterscheiden.
  */
-export class UmapythonFigur {
+export class UmapythonFigur extends Figurbasis {
 
     static QUELLE = 'umapython';
     static ADRESSE = '/api/umapython/figur/';
@@ -40,11 +38,9 @@ export class UmapythonFigur {
     static FARBE = 0xc9a086;
 
     constructor(id, daten) {
-        this.id = id;
-        this.quelle = UmapythonFigur.QUELLE;
+        super(id, UmapythonFigur.QUELLE);
         this.rasse = daten.rasse || 'Human Female 3.0';
         this.presetName = daten.presetName || `UMA Python · ${this.rasse}`;
-        this.presetKey = null;
         this.bodyType = this.rasse;
         /** Reglerstellungen, die vom Rezept abweichen. */
         this.dna = { ...(daten.dna || {}) };
@@ -52,24 +48,6 @@ export class UmapythonFigur {
         this.regler = [];
         this.bilanz = null;
         this.hoehe = 0;
-        this.group = new THREE.Group();
-        this.group.userData.characterId = id;
-        this.bodyMesh = null;
-        // Felder der HumanBody-Figur, hier leer.
-        this.clothMeshes = {};
-        this.hairMesh = null;
-        this.garments = [];
-        this.garmentState = {};
-        this.morphs = {};
-        this.meta = {};
-        this.cloth = [];
-        this.hairStyle = null;
-        this.mhProxies = {};
-        this.generatedConfig = null;
-        this.selected = false;
-        this.isSkinned = false;
-        this.rigifySkeleton = null;
-        this.skelett = null;
     }
 
     /** Die Rassen des Katalogs — Male, Female, Elf stehen vorn. */
@@ -179,12 +157,10 @@ export class UmapythonFigur {
     }
 
     dispose() {
-        for (const kind of [...this.group.children]) {
-            this.group.remove(kind);
-            Netzentsorgung.entfernen(kind);
-        }
-        this.bodyMesh = null;
+        // Erst das Skelett abhaengen, dann Netze und Gruppe (Figurbasis).
         this.skelett = Knochenbau.abraeumen(this.skelett);
+        super.dispose();
+        this.bodyMesh = null;
         this.clothMeshes = {};
     }
 
@@ -204,34 +180,13 @@ export class UmapythonFigur {
      */
     toJSON() {
         return {
-            id: this.id,
-            quelle: this.quelle,
-            presetName: this.presetName,
-            presetKey: null,
-            bodyType: this.bodyType,
+            ...this.grunddaten(),
             rasse: this.rasse,
             dna: { ...this.dna },
-            // GarmentCode-Stuecke ueberleben das Speichern (08.09.2026).
-            [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
-            transform: {
-                position: this.group.position.toArray(),
-                rotation: [this.group.rotation.x, this.group.rotation.y,
-                           this.group.rotation.z],
-                scale: this.group.scale.toArray(),
-            },
         };
     }
 
-    static async fromJSON(daten) {
-        const figur = new UmapythonFigur(daten.id, daten);
-        await figur.load();
-        const lage = daten.transform;
-        if (lage) {
-            figur.group.position.fromArray(lage.position || [0, 0, 0]);
-            figur.group.rotation.set(...(lage.rotation || [0, 0, 0]));
-            figur.group.scale.fromArray(lage.scale || [1, 1, 1]);
-        }
-        await GarmentcodeAblage.laden(figur, daten[GarmentcodeAblage.FELD]);
-        return figur;
+    static fromJSON(daten) {
+        return Figurbasis.ausJSON(UmapythonFigur, daten);
     }
 }

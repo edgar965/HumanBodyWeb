@@ -33,7 +33,7 @@ export class Smplxregler {
     ];
 
     /**
-     * @param beschriftungen { SMPLX_BETA_LABELS, SMPLX_EXPR_LABELS }
+     * @param beschriftungen SMPLX_BETA_LABELS und SMPLX_EXPR_LABELS
      * @param geaendert      () => Netz neu rechnen
      */
     constructor(beschriftungen, geaendert) {

@@ -95,7 +95,7 @@ console.log(JSON.stringify({ ok: true }));
 
 class LagenmaskeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_lage_ueberlappung_und_kanten(self):
         ausgabe = MODUL.laufen(SKRIPT)

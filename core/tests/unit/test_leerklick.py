@@ -29,7 +29,7 @@ def _code(quelle):
 
 class DerLeerklickBehaeltDieFigurTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.quelle = _lies('scene', 'interaction.js')
@@ -48,7 +48,7 @@ class DerLeerklickBehaeltDieFigurTest(SimpleTestCase):
 
 class DasAbwaehlenBleibtErreichbarTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_escape_und_menue_waehlen_weiter_ab(self):
         menue = _lies('scene', 'menubar.js')

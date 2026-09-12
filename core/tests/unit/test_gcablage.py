@@ -21,6 +21,13 @@ bei UMA (05.09.2026).
 
 Ein Quelltexttest ist hier scharf genug: Fehlt der Aufruf, ist er nicht da.
 Die Gegenprobe unten sabotiert den Suchbegriff und muss rot werden.
+
+SEIT 12.09.2026 (Befund `doppelcode`) fuehren die vier Arten neben HumanBody
+`toJSON`/`fromJSON` nicht mehr selbst: Sie erben von `scene/figurbasis.js`,
+und dort steht der Weg EINMAL. Gemessen wird deshalb an der Datei, die den
+Weg TRAEGT — die Art selbst, oder ihre Basis, wenn sie `extends Figurbasis`
+sagt. Eine Art, die die Basis verlaesst, faellt damit wieder auf die
+eigene Datei zurueck und muss den Weg selbst fuehren.
 """
 import io
 import re
@@ -39,19 +46,30 @@ ARTEN = {
 }
 
 
+BASIS = 'scene/figurbasis.js'
+
+
 def _quelle(pfad):
     voll = settings.BASE_DIR / 'static' / 'viewer' / pfad
     return io.open(voll, encoding='utf-8').read()
 
 
+def _traeger(pfad):
+    u"""Die Quelle, die Speichern und Laden fuer diese Art fuehrt."""
+    quelle = _quelle(pfad)
+    if ' extends Figurbasis {' in quelle:
+        return _quelle(BASIS)
+    return quelle
+
+
 class GcAblageTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_jede_figurart_schreibt_die_liste(self):
         u"""Ohne den Eintrag in `toJSON` ist das Stueck nach dem Laden weg."""
         for name, pfad in ARTEN.items():
-            quelle = _quelle(pfad)
+            quelle = _traeger(pfad)
             self.assertIn('[GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(',
                           quelle, '%s speichert keine GarmentCode-Stuecke' % name)
 
@@ -75,14 +93,14 @@ class GcAblageTest(SimpleTestCase):
     def test_jede_figurart_laedt_die_liste(self):
         u"""Speichern ohne Laden ist der haeufigere halbe Umbau."""
         for name, pfad in ARTEN.items():
-            quelle = _quelle(pfad)
+            quelle = _traeger(pfad)
             self.assertIn('GarmentcodeAblage.laden(', quelle,
                           '%s stellt die Stuecke nicht wieder her' % name)
 
     def test_jede_figurart_importiert_die_ablage(self):
         u"""Ein fehlender Import ist ein Laufzeitfehler beim Speichern."""
         for name, pfad in ARTEN.items():
-            quelle = _quelle(pfad)
+            quelle = _traeger(pfad)
             self.assertRegex(
                 quelle,
                 r"import \{ GarmentcodeAblage \} from '\.{1,2}/garmentcode_ablage\.js';",
@@ -97,7 +115,7 @@ class GcAblageTest(SimpleTestCase):
         07.09.2026: „Kleider von MakeHuman animieren immer noch nicht").
         """
         for name, pfad in ARTEN.items():
-            quelle = _quelle(pfad)
+            quelle = _traeger(pfad)
             laden = quelle.index('GarmentcodeAblage.laden(')
             # `\.load\(` statt `\.load\(\)`: Seit dem 10.09.2026 nimmt
             # `load` einen Rueckruf entgegen, mit dem die Figur auf die
@@ -168,8 +186,22 @@ class GcAblageTest(SimpleTestCase):
         oben gruen halten (`~/.claude/rules/analysewerkzeuge.md`).
         """
         for pfad in ARTEN.values():
-            self.assertNotIn('GarmentcodeAblage.gibtsNicht(', _quelle(pfad))
+            self.assertNotIn('GarmentcodeAblage.gibtsNicht(', _traeger(pfad))
         # Und der echte Begriff steht in ALLEN, nicht nur in einer:
-        treffer = sum('GarmentcodeAblage.laden(' in _quelle(p)
+        treffer = sum('GarmentcodeAblage.laden(' in _traeger(p)
                       for p in ARTEN.values())
         self.assertEqual(treffer, len(ARTEN), treffer)
+
+    def test_die_vier_arten_erben_wirklich_von_der_basis(self):
+        u"""`_traeger` darf nicht ins Leere greifen: Wer `extends Figurbasis`
+        sagt, ruft auch deren `ausJSON` und `grunddaten` — sonst haette
+        die Art ein eigenes `toJSON` ohne die Liste, und die Basis wuerde
+        fuer sie buergen."""
+        for name, pfad in ARTEN.items():
+            quelle = _quelle(pfad)
+            if ' extends Figurbasis {' not in quelle:
+                self.assertEqual(name, 'HumanBody')
+                continue
+            self.assertIn('...this.grunddaten(),', quelle, name)
+            self.assertIn('return Figurbasis.ausJSON(', quelle, name)
+            self.assertNotIn('transform:', quelle, name)

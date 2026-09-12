@@ -94,7 +94,7 @@ export function createBoneLabels(bones, skelKey) {
         skel.boneIndex.push(bone.name);
 
         const div = document.createElement('div');
-        div.textContent = i;
+        div.textContent = String(i);
         div.title = bone.name;
         // Nur die FARBE bleibt am Element: Sie sagt, zu welchem Skelett
         // die Nummer gehoert. Alles andere steht als `.knochennummer` in

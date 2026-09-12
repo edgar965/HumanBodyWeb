@@ -11,21 +11,20 @@ Die Daten kommen aus `koerper.physik` und `koerper.fpskette`, nicht aus der
 Vorlage — dieselbe Regel wie bei der Kleiderphysik.
 """
 
-from django.views.generic import TemplateView
+from .hilfeseite import Hilfeseite
 
 from koerper.fpskette import Fpskette
 from koerper.physik import Koerperphysik
 
 
-class KoerperPhysik(TemplateView):
+class KoerperPhysik(Hilfeseite):
     u"""Baustellen, Kandidaten, Kette, Messwerte, Fallen, Stand."""
 
     template_name = 'hilfe/koerper_physik.html'
+    AKTIV = 'hilfe_koerper_physik'
 
-    def get_context_data(self, **kwargs):
-        kontext = super().get_context_data(**kwargs)
-        kontext.update({
-            'aktiv': 'hilfe_koerper_physik',
+    def kontext(self):
+        return {
             'baustellen': Koerperphysik.baustellen(),
             'kandidaten': Koerperphysik.kandidaten(),
             'nicht': Koerperphysik.nicht(),
@@ -51,16 +50,4 @@ class KoerperPhysik(TemplateView):
             'kb_je_bild': Fpskette.kb_je_bild(),
             'ordner': Fpskette.ORDNER,
             'klon': Fpskette.KLON,
-        })
-        return kontext
-
-    @classmethod
-    def ansicht(cls):
-        u"""Die fertige Ansicht mit sprechendem Namen.
-
-        `View.as_view()` liefert eine Funktion namens `view`; im Fehlerlog
-        und in `manage.py show_urls` staende sonst mehrfach dasselbe.
-        """
-        ansicht = cls.as_view()
-        ansicht.__name__ = 'hilfe_koerper_physik'
-        return ansicht
+        }

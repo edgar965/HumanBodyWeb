@@ -139,7 +139,7 @@ console.log(JSON.stringify({ok: true}));
 
 class KnochenketteTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_bauplan(self):
         ausgabe = MODUL.laufen(SKRIPT)

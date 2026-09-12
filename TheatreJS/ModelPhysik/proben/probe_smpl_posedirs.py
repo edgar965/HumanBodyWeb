@@ -21,56 +21,63 @@ MODELLE = r'A:\3DTools\VideoToBVH\models\smpl'
 ELLBOGEN_L, KNIE_L, SCHULTER_L = 18, 4, 16
 
 
-def ohne_posedirs(k, v_rest, drehungen):
-    u"""Dieselbe Rechnung, nur ohne die Pose-Blendshapes."""
-    sicherung = k.posedirs
-    k.posedirs = np.zeros_like(sicherung)
-    try:
-        return k.posieren(v_rest, drehungen)
-    finally:
-        k.posedirs = sicherung
+class Posedirsprobe:
+    u"""Mit gegen ohne `posedirs`, je Gelenk und Winkel, fuer beide Modelle."""
 
+    #: (Beschriftung, Gelenk, Achse mit Vorzeichen) — was gebeugt wird.
+    BEUGUNGEN = (('Ellbogen', ELLBOGEN_L, (0.0, 0.0, -1.0), (30, 60, 90, 120)),
+                 ('Knie', KNIE_L, (-1.0, 0.0, 0.0), (45, 90)),
+                 ('Schulter', SCHULTER_L, (0.0, 0.0, -1.0), (45, 90)))
 
-def volumen(punkte, flaechen):
-    u"""Netzvolumen ueber das Divergenztheorem (Liter)."""
-    a = punkte[flaechen[:, 0]]
-    b = punkte[flaechen[:, 1]]
-    c = punkte[flaechen[:, 2]]
-    return abs(np.einsum('ij,ij->i', a, np.cross(b, c)).sum() / 6.0) * 1000.0
+    @staticmethod
+    def ohne_posedirs(k, v_rest, drehungen):
+        u"""Dieselbe Rechnung, nur ohne die Pose-Blendshapes."""
+        sicherung = k.posedirs
+        k.posedirs = np.zeros_like(sicherung)
+        try:
+            return k.posieren(v_rest, drehungen)
+        finally:
+            k.posedirs = sicherung
 
+    @staticmethod
+    def volumen(punkte, flaechen):
+        u"""Netzvolumen ueber das Divergenztheorem (Liter)."""
+        a = punkte[flaechen[:, 0]]
+        b = punkte[flaechen[:, 1]]
+        c = punkte[flaechen[:, 2]]
+        return abs(np.einsum('ij,ij->i', a, np.cross(b, c)).sum() / 6.0) * 1000.0
 
-def messen(name, k, drehungen):
-    v_rest = k.formen(None)
-    mit = k.posieren(v_rest, drehungen)
-    ohne = ohne_posedirs(k, v_rest, drehungen)
-    weg = np.linalg.norm(mit - ohne, axis=1) * 1000.0        # mm
-    betroffen = weg > 1.0
-    print('%-22s  Punkte ueber 1 mm: %5d von %d (%.1f %%)'
-          % (name, betroffen.sum(), len(weg), 100.0 * betroffen.mean()))
-    print('%-22s  Median %5.2f mm   p99 %6.2f mm   max %6.2f mm'
-          % ('', np.median(weg[betroffen]) if betroffen.any() else 0.0,
-             np.percentile(weg, 99), weg.max()))
-    print('%-22s  Volumen mit %7.3f l   ohne %7.3f l   Rest %7.3f l'
-          % ('', volumen(mit, k.faces), volumen(ohne, k.faces),
-             volumen(v_rest, k.faces)))
-    return weg
+    @classmethod
+    def messen(cls, name, k, drehungen):
+        v_rest = k.formen(None)
+        mit = k.posieren(v_rest, drehungen)
+        ohne = cls.ohne_posedirs(k, v_rest, drehungen)
+        weg = np.linalg.norm(mit - ohne, axis=1) * 1000.0        # mm
+        betroffen = weg > 1.0
+        print('%-22s  Punkte ueber 1 mm: %5d von %d (%.1f %%)'
+              % (name, betroffen.sum(), len(weg), 100.0 * betroffen.mean()))
+        print('%-22s  Median %5.2f mm   p99 %6.2f mm   max %6.2f mm'
+              % ('', np.median(weg[betroffen]) if betroffen.any() else 0.0,
+                 np.percentile(weg, 99), weg.max()))
+        print('%-22s  Volumen mit %7.3f l   ohne %7.3f l   Rest %7.3f l'
+              % ('', cls.volumen(mit, k.faces), cls.volumen(ohne, k.faces),
+                 cls.volumen(v_rest, k.faces)))
+        return weg
+
+    @classmethod
+    def laufen(cls):
+        for geschlecht in ('FEMALE', 'MALE'):
+            k = Smplkoerper.laden(geschlecht, MODELLE)
+            print('\n=== SMPL %s: %d Punkte, posedirs %s ==='
+                  % (geschlecht, len(k.v_template), k.posedirs.shape))
+            for name, gelenk, achse, winkel in cls.BEUGUNGEN:
+                for grad in winkel:
+                    drehung = np.radians(grad) * np.array(achse)
+                    cls.messen('%s %d Grad' % (name, grad), k, {gelenk: drehung})
 
 
 def main():
-    for geschlecht in ('FEMALE', 'MALE'):
-        k = Smplkoerper.laden(geschlecht, MODELLE)
-        print('\n=== SMPL %s: %d Punkte, posedirs %s ==='
-              % (geschlecht, len(k.v_template), k.posedirs.shape))
-        for grad in (30, 60, 90, 120):
-            w = np.radians(grad)
-            messen('Ellbogen %d Grad' % grad, k,
-                   {ELLBOGEN_L: np.array([0.0, 0.0, -w])})
-        for grad in (45, 90):
-            w = np.radians(grad)
-            messen('Knie %d Grad' % grad, k,
-                   {KNIE_L: np.array([-w, 0.0, 0.0])})
-            messen('Schulter %d Grad' % grad, k,
-                   {SCHULTER_L: np.array([0.0, 0.0, -w])})
+    Posedirsprobe.laufen()
 
 
 if __name__ == '__main__':

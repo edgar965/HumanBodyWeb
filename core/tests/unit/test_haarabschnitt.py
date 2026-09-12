@@ -22,7 +22,7 @@ def _lies(*teile):
 
 class DerHaarabschnittGehtAufTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_hair_js_schaltet_die_klasse(self):
         quelle = _lies('scene', 'hair.js')

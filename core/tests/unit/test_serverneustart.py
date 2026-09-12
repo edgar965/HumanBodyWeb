@@ -28,9 +28,10 @@ import importlib.util
 from pathlib import Path
 from unittest import mock
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
-WURZEL = Path(__file__).resolve().parents[3]
+WURZEL = Path(settings.BASE_DIR)
 
 
 def _laden():

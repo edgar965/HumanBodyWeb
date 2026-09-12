@@ -51,7 +51,8 @@ export class Spurkontextmenue {
             if (abschnitt) abschnitt.style.display = 'none';
             return;
         }
-        abschnitt.style.display = 'block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        abschnitt.style.display = 'block';
         liste.innerHTML = '';
         state.project.animations.forEach(anim => {
             liste.appendChild(

@@ -15,6 +15,7 @@ die Textur zu Konfetti.
 """
 import logging
 import os
+from typing import Any
 
 import numpy as np
 from django.conf import settings
@@ -119,8 +120,9 @@ class Texturbacken:
         """Textur erzeugen — wirft die Ausnahme des Backends weiter."""
         projektion, aus_pose = self.posierte_projektion(len(vertices))
         ausrichtung = self.daten.get('alignment_data') or {}
-        argumente = dict(job_data=self.daten, texture_size=self.GROESSE,
-                         bg_color=hintergrund, region=region)
+        argumente: dict[str, Any] = dict(
+            job_data=self.daten, texture_size=self.GROESSE,
+            bg_color=hintergrund, region=region)
         if projektion is not None:
             argumente['proj_2d'] = self.versatz_anwenden(
                 projektion, ausrichtung.get('proj_2d_offset'))

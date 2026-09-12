@@ -20,7 +20,8 @@ export function _syncPropGarmentControls() {
     const sel = _selectedGarmentMesh();
     const sec = document.getElementById('prop-garment-section');
     if (!sel || !sel.key.startsWith('gar_')) { if (sec) sec.style.display = 'none'; return; }
-    if (sec) sec.style.display = 'block';   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+    // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+    if (sec) sec.style.display = 'block';
     const st = sel.inst.garmentState[sel.key]; if (!st) return;
     const _set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     const _setV = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };

@@ -97,7 +97,7 @@ export class Modellvorgabe {
                 const wert = werte[regler.dataset.morph];
                 const anzeige = wert !== undefined ? Math.round(wert * 100) : 0;
                 regler.value = anzeige;
-                regler.nextElementSibling.textContent = anzeige;
+                regler.nextElementSibling.textContent = String(anzeige);
                 if (wert !== undefined) stapel[regler.dataset.morph] = wert;
             });
         if (Object.keys(stapel).length > 0) {

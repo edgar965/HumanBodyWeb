@@ -1,6 +1,7 @@
 import { closeDialog, escapeHtml, openDialog } from './utils.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Figurkataloge } from '../gemeinsam/figurkataloge.js';
+import { Figurwahlzeile } from '../gemeinsam/figurwahlzeile.js';
 import { Katalogpflege } from './katalogpflege.js';
 import { Figurplatzierung } from './figurplatzierung.js';
 import { Umakatalog } from './uma/umakatalog.js';
@@ -18,31 +19,24 @@ import { Umapythonkatalog } from './umapython/umapythonkatalog.js';
  * in den Ordner. Aus zwei Reitern sind am selben Tag vier geworden:
  * GarmentCode-Körper und MakeHuman kamen dazu.
  *
- * Was je Reiter anders ist, steht in ZWEI Tabellen — `QUELLEN` (Liste,
- * Leertext, Pflege) und `LADER` (wer die Figur in die Szene stellt). Der Rest
- * des Dialogs kennt die Figurarten nicht.
+ * Was je Reiter anders ist, steht in ZWEI Tabellen — `Figurkataloge.QUELLEN`
+ * (Abruf, Zeilen, Leertext, Pflege; seit dem 12.09.2026 mit dem Theatre
+ * geteilt, vorher fünf eigene Kopien hier) und `LADER` (wer die Figur in
+ * die Szene stellt). `LISTEN` nennt nur noch das Element je Reiter. Der
+ * Rest des Dialogs kennt die Figurarten nicht.
  *
  * Dazu Position und Größe der neuen Figur, mit den Vorgaben aus
  * `Figurplatzierung`: 1,5 m rechts neben der vorhandenen und auf deren Höhe.
  */
 export class Charakterdialog {
 
-    static QUELLEN = {
-        uma: { liste: 'uma-list', leer: 'Keine UMA-Figur im Katalog (Figuren/uma/).' },
-        modell: { liste: 'preset-list', leer: 'Keine Modelle vorhanden.' },
-        // SMPL-Referenzkörper von GarmentCode (06.09.2026): Upstream-Dateien,
-        // deshalb ohne Umbenennen und Löschen.
-        smpl: { liste: 'smpl-list', leer: 'Keine SMPL-Körper im GarmentCode-Klon.', pflege: false },
-        // MakeHuman-Basiskörper (06.09.2026): eine Datei des Projekts, deshalb
-        // ebenfalls ohne Umbenennen und Löschen.
-        makehuman: { liste: 'mh-figur-list', leer: 'MakeHuman/base.obj fehlt.', pflege: false },
-        // Testpaare des portierten UMA-Konformers (08.09.2026): vorhandene
-        // Drapierergebnisse auf GarmentCode-Referenzkoerpern. Erzeugt hier
-        // niemand, deshalb ohne Pflege.
-        // UMAs eigene Rassen, in Python gebaut (08.09.2026). Ohne Pflege:
-        // Sie gehoeren dem Unity-Projekt, und das bleibt unberuehrt.
-        umapython: { liste: 'umapython-list', pflege: false,
-                     leer: 'Kein UMA-Katalog gefunden (UMA_PROJEKT).' },
+    /** Das Listenelement je Reiter in `_charakter_dialog.html`. */
+    static LISTEN = {
+        modell: 'preset-list',
+        smpl: 'smpl-list',
+        makehuman: 'mh-figur-list',
+        uma: 'uma-list',
+        umapython: 'umapython-list',
     };
 
     /**
@@ -85,9 +79,8 @@ export class Charakterdialog {
         openDialog(dialog);
         Charakterdialog._waehlen(null);
         Charakterdialog._lageVorbelegen();
-        await Promise.all([Charakterdialog._umaFuellen(), Charakterdialog._modelleFuellen(),
-                           Charakterdialog._smplFuellen(), Charakterdialog._mhFuellen(),
-                           Charakterdialog._umapythonFuellen()]);
+        await Promise.all(Object.keys(Charakterdialog.LISTEN)
+            .map(quelle => Charakterdialog._fuellen(quelle)));
     }
 
     // -- Reiter ---------------------------------------------------------------
@@ -97,8 +90,8 @@ export class Charakterdialog {
         for (const knopf of document.querySelectorAll('#add-char-reiter .dialogreiter-knopf')) {
             knopf.classList.toggle('active', knopf.dataset.quelle === quelle);
         }
-        for (const [name, angaben] of Object.entries(Charakterdialog.QUELLEN)) {
-            document.getElementById(angaben.liste)
+        for (const [name, element] of Object.entries(Charakterdialog.LISTEN)) {
+            document.getElementById(element)
                 ?.classList.toggle('hb-versteckt', name !== quelle);
         }
         // Die Wahl gehört zum Reiter: wer umschaltet, wählt neu.
@@ -122,8 +115,7 @@ export class Charakterdialog {
      * schnellen Klick die falsche Figur.
      */
     static _einzelnenVorwaehlen(quelle) {
-        const liste = document.getElementById(
-            Charakterdialog.QUELLEN[quelle]?.liste);
+        const liste = document.getElementById(Charakterdialog.LISTEN[quelle]);
         const zeilen = liste ? liste.querySelectorAll('li[data-name]') : [];
         if (zeilen.length !== 1) return;
         Charakterdialog._waehlen({ quelle, name: zeilen[0].dataset.name });
@@ -170,101 +162,20 @@ export class Charakterdialog {
 
     // -- Listen ---------------------------------------------------------------
 
-    static async _umaFuellen() {
-        const liste = document.getElementById('uma-list');
+    static async _fuellen(quelle) {
+        const liste = document.getElementById(Charakterdialog.LISTEN[quelle]);
         if (!liste) return;
-        await Charakterdialog._fuellen(liste, 'uma', async () => {
-            const figuren = await Umakatalog.liste();
-            return figuren.map(f => ({
-                name: f.name,
-                anzeige: f.name.replace(/\.glb$/i, ''),
-                unterzeile: `${f.geschlecht} · ${(f.bytes / 1048576).toFixed(1)} MB · ${f.stand}`,
-            }));
-        });
-    }
-
-    static async _modelleFuellen() {
-        const liste = document.getElementById('preset-list');
-        if (!liste) return;
-        await Charakterdialog._fuellen(liste, 'modell', async () => {
-            const daten = await Serverabruf.json('/api/character/models/');
-            return (daten.presets || []).map(p => ({
-                name: p.name, anzeige: p.label || p.name, unterzeile: '',
-            }));
-        });
-    }
-
-    static async _smplFuellen() {
-        const liste = document.getElementById('smpl-list');
-        if (!liste) return;
-        await Charakterdialog._fuellen(liste, 'smpl', async () => {
-            const figuren = await Smplkatalog.liste();
-            return figuren.map(f => ({
-                name: f.name,
-                anzeige: f.anzeige || f.name,
-                unterzeile: `${f.geschlecht} · ${f.smpl ? 'SMPL' : 'GarmentCode-Modell'} · `
-                    + (f.masse_vorhanden ? 'Maße vorgegeben' : 'ohne Maße'),
-            }));
-        });
-    }
-
-    static async _mhFuellen() {
-        const liste = document.getElementById('mh-figur-list');
-        if (!liste) return;
-        await Charakterdialog._fuellen(liste, 'makehuman', async () => {
-            const figuren = await Mhkatalog.liste();
-            return figuren.map(f => ({
-                name: f.name,
-                anzeige: f.anzeige || f.name,
-                unterzeile: `${f.punkte.toLocaleString()} Punkte · `
-                    + `${(f.hoehe * 100).toFixed(1)} cm · `
-                    + 'Kleidung sitzt ohne Nacharbeit',
-            }));
-        });
-    }
-
-    /**
-     * Die Testpaare des portierten UMA-Konformers.
-     *
-     * Ein Paar ist ein GarmentCode-Referenzkoerper und ein Stueck, das darauf
-     * drapiert wurde. Erkannt wird es am Ordnernamen (`kleid_mean_all` gehoert
-     * zu `mean_all.obj`) — der Ergebnisordner nennt den Koerper sonst nirgends,
-     * und ein falsch zugeordnetes Paar saehe aus wie ein schlechter Konformer.
-     */
-    /**
-     * UMAs Rassen (Edgar, 08.09.2026: „Ich möchte doch ein Male, Female,
-     * Elf usw. auswählen, genau so wie UMA das macht!").
-     *
-     * Der Reiter zeigte bis dahin Testpaare des Konformers. Jetzt stehen
-     * hier die 20 Rassen des Katalogs; „Human Male 3.0", „Human Female 3.0"
-     * und „Elf Male" kommen zuerst — das sind die drei, die als Beispiel
-     * auf der Platte liegen.
-     */
-    static async _umapythonFuellen() {
-        const liste = document.getElementById('umapython-list');
-        if (!liste) return;
-        await Charakterdialog._fuellen(liste, 'umapython', async () => {
-            const rassen = await Umapythonkatalog.liste();
-            return rassen.map(name => ({
-                name,
-                anzeige: name,
-                unterzeile: 'UMA-Rasse, in Python gebaut — ohne Unity',
-            }));
-        });
-    }
-
-    static async _fuellen(liste, quelle, holen) {
         liste.innerHTML = '<li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade …</li>';
         let eintraege;
         try {
-            eintraege = await holen();
+            eintraege = await Figurkataloge.liste(quelle);
         } catch (fehler) {
             liste.innerHTML = `<li class="fehlertext">Fehler: ${escapeHtml(fehler.message)}</li>`;
             return;
         }
         liste.innerHTML = '';
         if (!eintraege.length) {
-            liste.innerHTML = `<li class="gedaempft">${Charakterdialog.QUELLEN[quelle].leer}</li>`;
+            liste.innerHTML = `<li class="gedaempft">${Figurkataloge.QUELLEN[quelle].leer}</li>`;
             return;
         }
         for (const eintrag of eintraege) {
@@ -278,34 +189,15 @@ export class Charakterdialog {
     }
 
     static _zeile(eintrag, quelle) {
-        const li = document.createElement('li');
-        li.dataset.name = eintrag.name;
-        const pflege = Charakterdialog.QUELLEN[quelle]?.pflege !== false;
-        li.innerHTML = `<span class="eintragsname">${escapeHtml(eintrag.anzeige)}`
-            + (eintrag.unterzeile
-                ? `<span class="preset-sub">${escapeHtml(eintrag.unterzeile)}</span>` : '')
-            + '</span>'
-            + (pflege
-                ? '<span class="eintragswerkzeuge">'
-                  + '<button class="knopf-schmal" data-tun="umbenennen" title="Umbenennen">'
-                  + '<i class="fas fa-pen"></i></button>'
-                  + '<button class="knopf-schmal" data-tun="loeschen" title="Löschen">'
-                  + '<i class="fas fa-trash"></i></button></span>'
-                : '');
-        li.addEventListener('click', (ereignis) => {
-            if (ereignis.target.closest('[data-tun]')) return;   // Werkzeug, keine Wahl
-            Charakterdialog._waehlen({ quelle, name: eintrag.name });
+        const pflege = Figurkataloge.QUELLEN[quelle].pflege;
+        return Figurwahlzeile.bauen(eintrag, {
+            waehlen: () => Charakterdialog._waehlen({ quelle, name: eintrag.name }),
+            laden: async () => {
+                closeDialog(document.getElementById('add-char-dialog'));
+                await Charakterdialog._laden({ quelle, name: eintrag.name });
+            },
+            pflegen: pflege ? (was) => Charakterdialog._pflegen(quelle, eintrag.name, was) : null,
         });
-        li.addEventListener('dblclick', async (ereignis) => {
-            if (ereignis.target.closest('[data-tun]')) return;
-            closeDialog(document.getElementById('add-char-dialog'));
-            await Charakterdialog._laden({ quelle, name: eintrag.name });
-        });
-        li.querySelector('[data-tun="umbenennen"]')?.addEventListener(
-            'click', () => Charakterdialog._pflegen(quelle, eintrag.name, 'umbenennen'));
-        li.querySelector('[data-tun="loeschen"]')?.addEventListener(
-            'click', () => Charakterdialog._pflegen(quelle, eintrag.name, 'loeschen'));
-        return li;
     }
 
     // -- Umbenennen, Löschen, Laden -------------------------------------------
@@ -315,8 +207,7 @@ export class Charakterdialog {
             const geschehen = await Katalogpflege[was](quelle, name);
             if (!geschehen) return;
             Charakterdialog._waehlen(null);
-            await (quelle === 'uma'
-                ? Charakterdialog._umaFuellen() : Charakterdialog._modelleFuellen());
+            await Charakterdialog._fuellen(quelle);
         } catch (fehler) {
             alert(`Fehler: ${fehler.message}`);
         }

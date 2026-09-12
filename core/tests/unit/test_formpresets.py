@@ -32,7 +32,7 @@ ROECKE = {'bleistiftrock': ('PencilSkirt', 'FittedWB'),
 
 class FormpresetsTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_katalog_fuehrt_einen_rock_und_die_alten_namen_als_aliase(self):
         namen = [e['name'] for e in Katalog.liste()]
@@ -123,11 +123,15 @@ class FormpresetsTest(SimpleTestCase):
             formen = [p for p in Katalog.passform(stueck) if p.get('form')]
             self.assertEqual([p['titel'] for p in formen], titel, stueck)
             self.assertEqual(sum(1 for p in formen if p['gehakt']), 1, stueck)
-        # Die alten Namen sind Aliase und bauen denselben Entwurf wie vorher.
+
+    def test_die_alten_namen_sind_aliase(self):
+        namen = [e['name'] for e in Katalog.liste()]
         for alt in ('t-shirt', 't-shirt-anliegend', 'hemd', 'traegertop',
                     'sommerkleid', 'abendkleid', 'jumpsuit'):
             self.assertNotIn(alt, namen)
             self.assertTrue(Katalog.kennt(alt), alt)
+
+    def test_die_aliase_bauen_denselben_entwurf_wie_vorher(self):
         hemd = Katalog.entwurf('hemd')
         self.assertEqual(hemd['meta']['upper']['v'], 'FittedShirt')
         self.assertEqual(hemd['collar']['f_collar']['v'], 'VNeckHalf')
@@ -168,12 +172,16 @@ class FormpresetsTest(SimpleTestCase):
         self.assertEqual(Vorbildgruppen.ziel('kleid', 'Dress Shift'),
                          ('kleid', 'form_kleid', ()))
         self.assertEqual(Vorbildgruppen.ziel('hose', 'Stockings')[0], 'hose')
-        # Der BH bekommt die Länge der Form, nicht die der Deutung (1,0).
+
+    def test_der_bh_bekommt_die_laenge_der_form(self):
+        u"""Nicht die der Deutung (1,0) — die kennt nur die Oberkante."""
+        from GarmentCode.vorbildgruppen import Vorbildgruppen
         werte = Vorbildgruppen.werte('t-shirt', 'Sport-Bra01',
                                      {'shirt.length': 1.0, 'sleeve.sleeveless': True})
         self.assertEqual(werte['shirt.length'], 0.5)
         self.assertEqual(werte['meta.upper'], 'FittedShirt')
-        # Jedes gemessene Vorbild erscheint genau einmal im Katalog.
+
+    def test_jedes_gemessene_vorbild_erscheint_genau_einmal(self):
         alle = Vorbildpresets.alle()
         if not alle:
             self.fail('vorbilder.json fehlt — Messlauf noetig')

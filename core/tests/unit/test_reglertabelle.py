@@ -24,7 +24,7 @@ from core.dienste.charakterdaten import Charakterdaten
 
 class TabelleTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_tabelle_ist_nicht_leer_und_in_drei_gruppen(self):
         gruppen = Reglertabelle.gruppen()
@@ -62,7 +62,7 @@ class TabelleTest(SimpleTestCase):
 
 class UmrechnungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_mitte_laesst_beide_welten_unveraendert(self):
         self.assertEqual(Reglertabelle.uma_werte('bauch', 0), {'belly': 0.5})
@@ -115,7 +115,7 @@ class UmrechnungTest(SimpleTestCase):
 class EchteNamenTest(SimpleTestCase):
     u"""Gegen die echten Listen beider Welten — nur lesend."""
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

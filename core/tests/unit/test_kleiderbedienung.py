@@ -39,7 +39,7 @@ def _lesen(*teile):
 
 class MakehumanKleiderbindungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.pfad, self.quelle = _lesen('static', 'viewer', 'scene',
@@ -96,7 +96,7 @@ class MakehumanKleiderbindungTest(SimpleTestCase):
 
 class GarmentcodeZweiDTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
     #: Die fuenf Knoepfe (Edgar, 08.09.2026: Vorschau 2D und 3D
     #: neben Bauen 2D, 3D und 2D+3D). Vorher waren es drei
     #: (`gc-schnitt`, `gc-drapieren`, `gc-erzeugen`). Am selben Tag

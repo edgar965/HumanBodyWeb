@@ -112,6 +112,7 @@ class Umafigurbau:
         for name, wert in roh.items():
             try:
                 werte[str(name)] = min(1.0, max(0.0, float(wert)))
+            # stumm gewollt: fremde Reglerwerte aus dem Browser, ein unbrauchbarer wird uebergangen
             except (TypeError, ValueError):
                 continue
         return werte

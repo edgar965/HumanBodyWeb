@@ -72,14 +72,18 @@ class Umafigur:
         return pfad
 
     @classmethod
-    def _pfad_oder_antwort(cls, name):
-        u"""`(pfad, None)` — oder `(None, JsonResponse)` mit 400/404."""
+    def _pfad_oder_antwort(cls, name) -> tuple[str, JsonResponse | None]:
+        u"""`(pfad, None)` — oder `('', JsonResponse)` mit 400/404.
+
+        Im Fehlerfall ein leerer Pfad statt None: Die Aufrufer geben die
+        Antwort zurueck und fassen den Pfad nie an; ein `str` haelt den Typ
+        auf dem Erfolgsweg eindeutig (LS-Befund 12.09.2026)."""
         try:
             return cls._pfad(name), None
         except ValueError as fehler:
-            return None, JsonResponse({'error': str(fehler)}, status=400)
+            return '', JsonResponse({'error': str(fehler)}, status=400)
         except FileNotFoundError:
-            return None, JsonResponse({'error': 'Keine UMA-Figur %s' % name}, status=404)
+            return '', JsonResponse({'error': 'Keine UMA-Figur %s' % name}, status=404)
 
     @staticmethod
     def _zettel(glb_pfad):

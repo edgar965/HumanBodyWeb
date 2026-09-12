@@ -53,7 +53,7 @@ def _gitter(y, x0=-0.4, x1=0.4, n=17):
 
 class HautmitstoffTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):
@@ -152,7 +152,7 @@ class HautmitstoffTest(SimpleTestCase):
 
 class NacharbeitTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_nacharbeit_nimmt_getragene_rig_dateien(self):
         koerper, flaechen = _kasten()
@@ -189,7 +189,7 @@ class NacharbeitTest(SimpleTestCase):
 
 class GemeinsamTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_je_stueck_gehoeren_die_anderen_zur_haut(self):
         koerper, flaechen = _kasten()

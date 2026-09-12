@@ -1,9 +1,6 @@
-import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
-import { generateCharacterId } from '../utils.js';
-import { markDirty } from '../undo.js';
 import { UmapythonFigur } from './umapythonfigur.js';
-import { Figurplatzierung } from '../figurplatzierung.js';
+import { Figuraufnahme } from '../figuraufnahme.js';
 
 /**
  * Umapythonkatalog — UMAs Rassen anbieten und eine davon in die Szene bauen.
@@ -23,18 +20,9 @@ export class Umapythonkatalog {
         return UmapythonFigur.rassen();
     }
 
-    static async hinzufuegen(rasse, lage = null) {
-        const id = generateCharacterId();
-        const figur = new UmapythonFigur(id, { rasse });
-        await figur.load();
-        Figurplatzierung.anwenden(figur, lage);
-        state.characters.set(id, figur);
-        state.scene.add(figur.group);
-        fn.updateCharacterListUI();
-        fn.updateVertexCount();
-        fn.selectCharacter(id);
-        markDirty();
-        return figur;
+    static hinzufuegen(rasse, lage = null) {
+        const figur = new UmapythonFigur(Figuraufnahme.kennung(), { rasse });
+        return Figuraufnahme.inDieSzene(figur, lage);
     }
 }
 

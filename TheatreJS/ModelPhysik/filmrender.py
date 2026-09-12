@@ -6,9 +6,10 @@ gemessen, nicht angenommen: Ein fester Versatz stand bei `136_12` hinter
 der Figur, und die LAUFRICHTUNG taugt nicht als Blickrichtung, weil die
 Person dort rueckwaerts geht (Zehen 170 Grad gegen die Bewegung).
 """
-import os
 
 import numpy as np
+
+from videoschreiber import Videoschreiber
 
 from filmmasken import Filmmasken
 
@@ -148,19 +149,5 @@ class Filmrender:
             werk.delete()
 
     def schreiben(self, ziel, fps=24, schleifen=2):
-        import cv2
-        os.makedirs(os.path.dirname(ziel) or '.', exist_ok=True)
-        gesammelt = list(self.bilder_rendern())
-        h, b = gesammelt[0].shape[:2]
-        schreiber = cv2.VideoWriter(ziel, cv2.VideoWriter_fourcc(*'mp4v'),
-                                    float(fps), (b, h))
-        if not schreiber.isOpened():
-            raise SystemExit(u'VideoWriter liess sich nicht oeffnen.')
-        try:
-            for _ in range(max(1, int(schleifen))):
-                for bild in gesammelt:
-                    schreiber.write(cv2.cvtColor(bild, cv2.COLOR_RGB2BGR))
-        finally:
-            schreiber.release()
-        return ziel, len(gesammelt) * max(1, int(schleifen))
+        return Videoschreiber.schreiben(self.bilder_rendern(), ziel, fps, schleifen)
 

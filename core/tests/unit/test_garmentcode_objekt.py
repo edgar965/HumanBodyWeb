@@ -29,7 +29,7 @@ from django.test import SimpleTestCase
 
 class GarmentcodeObjektTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.quelle = settings.BASE_DIR.joinpath(

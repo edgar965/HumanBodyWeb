@@ -80,7 +80,10 @@ export class Mhanwenden {
 
     static _stand(text, fehler = false) {
         const zeile = document.getElementById(Mhanwenden.STAND);
-        if (!zeile) return;
+        if (!zeile) {
+            (fehler ? Protokoll.fehler : Protokoll.warnung)('mhanwenden', text);
+            return;
+        }
         zeile.className = fehler ? 'fehlertext' : 'hb-font-size-0-72rem';
         zeile.textContent = text;
     }

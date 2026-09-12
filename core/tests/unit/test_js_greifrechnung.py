@@ -92,7 +92,7 @@ console.log(JSON.stringify({ok: true}));
 
 class GreifrechnungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_achse_winkel_und_faktor(self):
         ausgabe = MODUL.laufen(SKRIPT)

@@ -79,7 +79,7 @@ class Jsimporte:
 
 class JsimporteTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     WURZEL = settings.BASE_DIR / 'static' / 'viewer'
 

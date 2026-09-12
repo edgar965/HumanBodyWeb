@@ -102,7 +102,7 @@ console.log(JSON.stringify({ ok: true, hand_mm: hand * 1000, abweichung: groesst
 
 class WeichgewebekoerperJsTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_inline_rechnet_wie_die_formeln(self):
         ausgabe = MODUL.laufen(SKRIPT)

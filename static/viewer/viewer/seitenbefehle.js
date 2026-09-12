@@ -23,7 +23,7 @@ export class Seitenbefehle {
 
     /**
      * @param {Object} state
-     * @param {Buehne} buehne
+     * @param {import('../gemeinsam/buehne.js').Buehne} buehne
      * @param {Object} dienste  { auswahlFarbeSetzen, ausstattungAktualisieren,
      *        alleGarnituren, alleKleider, haareEntfernen, modellzustand,
      *        gewaehltesEntfernen }

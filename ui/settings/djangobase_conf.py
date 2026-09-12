@@ -139,8 +139,15 @@ DJANGOBASE = {
     # `assetCreator/GarmentFitter` und `PhotoToTexture` unter `Assets/`
     # (07.09.2026). `assetCreator` selbst zusaetzlich, weil die Importe
     # `from GarmentFitter import ...` lauten.
+    # Skriptordner, die ihre Nachbarn flach importieren (`from hbfilm import …`):
+    # Python legt das Skriptverzeichnis in sys.path, der Language Server nicht
+    # (12.09.2026: 143 „Import, den es nicht gibt", keiner ein Fehler).
     'ls_extra_pfade': [HUMANBODY_ROOT, TOOLS_ROOT, ASSETS_ROOT,
-                       ASSETS_ROOT / 'assetCreator'],
+                       ASSETS_ROOT / 'assetCreator',
+                       ASSETS_ROOT / 'GarmentCode' / 'upstream',
+                       VIDEOTOBVH_ROOT / 'wrappers',
+                       BASE_DIR / 'TheatreJS' / 'ModelPhysik',
+                       BASE_DIR / 'TheatreJS' / 'kleiderPhysik'],
     'farben': {
         'sidebar_bg': '#1a1a2e',     # = --bg-secondary (style.css)
         'sidebar_light': '#16213e',  # = --bg-card  (Hover/Active-Fill)

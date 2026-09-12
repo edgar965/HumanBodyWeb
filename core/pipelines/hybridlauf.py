@@ -53,7 +53,7 @@ class Hybridlauf(Pipelinelauf):
         self.koerper = self._koerperauftrag()
         self.gesicht = self._gesichtsauftrag()
         self.ergebnis = {'koerper': None, 'gesicht': None}
-        self.fehler = {'koerper': None, 'gesicht': None}
+        self.fehler: dict[str, str | None] = {'koerper': None, 'gesicht': None}
 
     # ------------------------------------------------------------------ Ablauf
 

@@ -21,7 +21,6 @@ die alte Fehler zeigte).
 """
 
 import os
-import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -31,12 +30,13 @@ from django.test import Client, SimpleTestCase
 from GarmentCode.messreihen import Garmentcodemessung
 from kleidung.verfahren import Kleidungsverfahren
 from kleidung.tempo import Kleidungstempo
+from ..unit._pruefablage import Pruefablage
 
 
 class SeitenTest(SimpleTestCase):
     u"""Beide Seiten antworten und tragen ihren Inhalt."""
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.client = Client()
@@ -72,7 +72,7 @@ class SeitenTest(SimpleTestCase):
 class MenueTest(SimpleTestCase):
     u"""Die Punkte haengen in djangoBases Hilfe-Gruppe."""
 
-    databases = []
+    databases = set()
 
     def test_hilfe_extra_ist_gesetzt(self):
         from django.conf import settings
@@ -96,7 +96,7 @@ class MenueTest(SimpleTestCase):
 class MessungTest(SimpleTestCase):
     u"""`Garmentcodemessung` liest die Messreihen — oder sagt, dass sie fehlen."""
 
-    databases = []
+    databases = set()
 
     def test_fehlende_datei_gibt_none(self):
         u"""Nicht `{}`: Eine leere Tabelle sieht aus wie „nichts gefunden",
@@ -117,7 +117,7 @@ class MessungTest(SimpleTestCase):
         (`~/.claude/rules/test-isolation.md`).
         """
         from GarmentCode.pfade import Gcpfade
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             with mock.patch.object(Gcpfade, 'PAKET', Path(ordner)):
                 # Gegenprobe zuerst — sonst schlägt die Behauptung an, und
                 # niemand sieht, dass gar nicht umgeleitet wurde.
@@ -169,7 +169,7 @@ class KleidungTempoTest(SimpleTestCase):
     sind gemessen und verworfen. Genau das soll die Seite festhalten.
     """
 
-    databases = []
+    databases = set()
 
     def test_seite_zeigt_den_vergleich(self):
         antwort = self.client.get('/hilfe/kleidung/')

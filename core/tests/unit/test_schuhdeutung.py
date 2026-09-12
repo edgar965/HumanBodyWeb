@@ -46,7 +46,7 @@ def _quader(x0, x1, y0, y1, z0, z1, n=9):
 
 class FussmasseTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _figur(self):
         u"""Ein Bein als Säule, darunter ein Fuss als Quader — links (x > 0)."""
@@ -81,7 +81,7 @@ class FussmasseTest(SimpleTestCase):
 
 class FussvorgabeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_gemessene_werte_gehen_vor(self):
         f = Fussvorgabe({'height': 168.0, 'foot_length': 30.0})
@@ -105,7 +105,7 @@ class FussvorgabeTest(SimpleTestCase):
 
 class SchuhdeutungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.fuss = Fussvorgabe(dict(height=168.0, foot_length=24.41,
@@ -117,7 +117,7 @@ class SchuhdeutungTest(SimpleTestCase):
         return _quader(0.17, 0.17 + breite, -laenge, 0.0, 0.0, hoehe, n=13)
 
     def test_ein_flacher_schuh_wird_zur_ballerina(self):
-        name, regler, bericht = Schuhdeutung(self._schuh(0.25, 0.095, 0.05),
+        name, regler, _bericht = Schuhdeutung(self._schuh(0.25, 0.095, 0.05),
                                              self.fuss).deuten()
         self.assertEqual(name, 'ballerina')
         self.assertAlmostEqual(regler['shoe.length'], 25.0 / 24.41, places=2)
@@ -125,7 +125,7 @@ class SchuhdeutungTest(SimpleTestCase):
         self.assertNotIn('boot.height', regler)
 
     def test_ein_kniehoher_schuh_wird_zum_stiefel(self):
-        name, regler, bericht = Schuhdeutung(self._schuh(0.27, 0.10, 0.45),
+        name, regler, _bericht = Schuhdeutung(self._schuh(0.27, 0.10, 0.45),
                                              self.fuss).deuten()
         self.assertEqual(name, 'stiefel')
         erwartet = (45.0 - 13.78) / (53.1 - 13.78)
@@ -161,7 +161,7 @@ class SchuhdeutungTest(SimpleTestCase):
         vorn[:, 2] += 0.03
         hinten = _quader(0.17, 0.265, -0.08, 0.0, 0.0, 0.16, n=13)
         deutung = Schuhdeutung(np.vstack([vorn, hinten]), self.fuss)
-        name, regler, bericht = deutung.deuten()
+        _name, regler, bericht = deutung.deuten()
         self.assertTrue(any('Absatz' in h for h in bericht['hinweise']))
         self.assertNotIn('absatz', ' '.join(regler))
 
@@ -172,7 +172,7 @@ class SchuhdeutungTest(SimpleTestCase):
 
 class SchuhwegTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     class _Gemessen:
         def __init__(self, oben_cm):

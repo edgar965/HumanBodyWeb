@@ -51,7 +51,7 @@ class _Koerper:
 
 class VereinenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _mit(self, stoff, dreiecke=((0, 1, 2),)):
         k = Koerpermitstoff('female', _Koerper.punkte, _Koerper.flaechen,
@@ -115,7 +115,7 @@ class VereinenTest(SimpleTestCase):
 
 class EndpunktTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_nur_rig_dateien_unterhalb_des_ausgabeordners(self):
         from GarmentCode.entwurf import Entwurf
@@ -149,7 +149,7 @@ class EndpunktTest(SimpleTestCase):
 
 class BrowserTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_browser_schickt_die_getragenen_ohne_das_neue(self):
         drapieren = _lies('static', 'viewer', 'scene', 'garmentcode_drapieren.js')

@@ -47,7 +47,7 @@ def _hose():
 
 class StoffhochziehenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.hoch = Stoffhochziehen(_koerper())

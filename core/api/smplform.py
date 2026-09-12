@@ -44,6 +44,7 @@ class Smplformung:
 
         try:
             anfrage = json.loads(request.body.decode('utf-8') or '{}')
+        # stumm gewollt: kaputtes JSON aus dem Browser heisst 'keine Angaben'
         except ValueError:
             anfrage = {}
         geschlecht = 'male' if str(anfrage.get('geschlecht')) == 'male' else 'female'

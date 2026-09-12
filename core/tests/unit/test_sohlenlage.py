@@ -27,7 +27,7 @@ from ._schuhbau import Schuhbau
 
 class SohlenlageTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
     # Als Modul importiert, nicht die Klasse: Sonst liefe deren Suite hier
     # ein zweites Mal mit.
     FUSS = _schnitt.SchuhschnittTest.FUSS

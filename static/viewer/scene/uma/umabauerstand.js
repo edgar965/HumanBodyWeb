@@ -78,7 +78,8 @@ export class Umabauerstand {
         const ende = Date.now() + Umabauerstand.HOECHSTENS_MS;
         const tick = async () => {
             let stand = null;
-            try { stand = await Umabauerstand.holen(); } catch (fehler) { /* nächster Takt */ }
+            // stumm gewollt: ein verpasster Takt wird vom nächsten nachgeholt, der Stand bleibt sichtbar
+            try { stand = await Umabauerstand.holen(); } catch (fehler) { }
             if (stand) Umabauerstand._zeigen(element, stand, beiAenderung);
             if (stand?.lebt || Date.now() > ende) { Umabauerstand._laeuft = false; return; }
             setTimeout(tick, Umabauerstand.TAKT_MS);

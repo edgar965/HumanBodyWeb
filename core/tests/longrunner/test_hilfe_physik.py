@@ -29,7 +29,7 @@ from kleidung.physik import Kleiderphysik                    # noqa: E402
 
 class SeitePhysik(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.antwort = Client().get(reverse('hilfe_kleidung_physik'))
@@ -74,7 +74,7 @@ class SeitePhysik(SimpleTestCase):
 
 class DatenStehenInPython(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def test_jeder_kandidat_ist_vollstaendig(self):
         felder = ('name', 'lizenz', 'laeuft', 'koerper', 'stand', 'urteil')

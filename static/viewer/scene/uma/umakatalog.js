@@ -1,10 +1,8 @@
-import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
-import { escapeHtml, generateCharacterId } from '../utils.js';
-import { markDirty } from '../undo.js';
+import { escapeHtml } from '../utils.js';
 import { UmaFigur } from './umafigur.js';
-import { Figurplatzierung } from '../figurplatzierung.js';
+import { Figuraufnahme } from '../figuraufnahme.js';
 
 /**
  * Umakatalog — die UMA-Figuren aus `Figuren/uma/` anbieten und in die Szene stellen.
@@ -29,18 +27,9 @@ export class Umakatalog {
      * Höhe. Skaliert wird NACH `load()` — vorher hat die Figur keine Größe,
      * die man messen könnte.
      */
-    static async hinzufuegen(datei, lage = null) {
-        const id = generateCharacterId();
-        const figur = new UmaFigur(id, { datei });
-        await figur.load();
-        Figurplatzierung.anwenden(figur, lage);
-        state.characters.set(id, figur);
-        state.scene.add(figur.group);
-        fn.updateCharacterListUI();
-        fn.updateVertexCount();
-        fn.selectCharacter(id);
-        markDirty();
-        return figur;
+    static hinzufuegen(datei, lage = null) {
+        const figur = new UmaFigur(Figuraufnahme.kennung(), { datei });
+        return Figuraufnahme.inDieSzene(figur, lage);
     }
 
     /** Die Liste im Dialog füllen; `beimWaehlen(datei)` bei Klick, Doppelklick lädt sofort. */

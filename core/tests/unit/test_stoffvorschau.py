@@ -63,7 +63,7 @@ def _vorschau():
 
 class StoffvorschauTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_stoff_folgt_dem_koerper(self):
         u"""Der Kern: Koerper wird breiter, der Stoff geht mit."""

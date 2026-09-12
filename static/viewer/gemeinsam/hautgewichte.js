@@ -64,9 +64,9 @@ export class Hautgewichte {
     /**
      * Setzt `skinIndex` und `skinWeight` an einer Three.js-Geometrie.
      *
-     * @param {THREE.BufferGeometry} geometrie muss `position` haben
+     * @param {import('three').BufferGeometry} geometrie muss `position` haben
      * @param {object} daten Rohgewichte vom Server
-     * @param {typeof THREE.BufferAttribute} Attribut Three.js-Klasse (die Seiten
+     * @param {typeof import('three').BufferAttribute} Attribut Three.js-Klasse (die Seiten
      *        bringen ihre eigene Three-Instanz mit; ein Import hier würde eine
      *        ZWEITE Fassung laden — siehe `_importmap.html`)
      */

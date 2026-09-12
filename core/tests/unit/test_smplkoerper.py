@@ -43,7 +43,7 @@ def _obj_punkte(pfad):
 
 class SmplkoerperTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):
@@ -99,7 +99,7 @@ class ArmlaengeTest(unittest.TestCase):
     langen Aermel, wo 16 cm gemeint sind.
     """
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

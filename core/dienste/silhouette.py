@@ -108,6 +108,8 @@ class Silhouette:
 
     def maske(self, cv2):
         """Binaere Maske der Vorderseite, `MASKE` x `MASKE` Bildpunkte."""
+        if self.projektion is None or self.vorderseiten is None:
+            raise RuntimeError('Silhouette: erst projizieren, dann rastern')
         sx, sy = self.MASKE / self.breite, self.MASKE / self.hoehe
         maske = np.zeros((self.MASKE, self.MASKE), dtype=np.uint8)
         if self.posiert and self.anzahl_posiert < len(self.vertices):
@@ -122,7 +124,7 @@ class Silhouette:
         Die Topologien passen nicht zueinander (6.890 gegen 10.475 Vertices);
         gerasterte Dreiecke ergaeben ein Flickenmuster. Deshalb werden die
         Punkte gesetzt und morphologisch geschlossen."""
-        gueltig = self.projektion[:self.anzahl_posiert]
+        gueltig = self._projektion()[:self.anzahl_posiert]
         gueltig = gueltig[~np.isnan(gueltig).any(axis=1)]
         px = (gueltig[:, 0] * sx).astype(np.int32)
         py = (gueltig[:, 1] * sy).astype(np.int32)
@@ -134,9 +136,15 @@ class Silhouette:
         _, fertig = cv2.threshold(weich, 127, 255, cv2.THRESH_BINARY)
         maske[:] = fertig
 
+    def _projektion(self):
+        """Die Projektion — gesetzt von `projizieren`; vorher ist Rastern ein Fehler."""
+        if self.projektion is None:
+            raise RuntimeError('Silhouette: erst projizieren, dann rastern')
+        return self.projektion
+
     def _dreiecke_fuellen(self, cv2, maske, sx, sy):
-        proj = self.projektion
-        for fi in self.vorderseiten:
+        proj = self._projektion()
+        for fi in (self.vorderseiten if self.vorderseiten is not None else ()):
             i0, i1, i2 = self.faces[fi]
             punkte = np.array([
                 [proj[i0, 0] * sx, proj[i0, 1] * sy],

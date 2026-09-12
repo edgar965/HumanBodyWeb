@@ -33,7 +33,7 @@ ADDON = Projektquellen.ADDON
 class Addonbasis(unittest.TestCase):
     u"""Legt die Pfade so, wie Blender sie dem Addon gibt."""
 
-    databases = []
+    databases = set()
 
     #: Fremde Addons — Urheber siehe Kopf.
     FREMD = ('convert', 'kbs_retarget')

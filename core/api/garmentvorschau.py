@@ -65,6 +65,7 @@ class Garmentvorschauendpunkte:
         if request.content_type and 'json' in request.content_type:
             try:
                 return json.loads(request.body or b'{}')
+            # stumm gewollt: kaputtes JSON aus dem Browser heisst 'keine Angaben'
             except ValueError:
                 return {}
         roh = request.POST.dict()
@@ -72,6 +73,7 @@ class Garmentvorschauendpunkte:
             if roh.get(feld):
                 try:
                     roh[feld] = json.loads(roh[feld])
+                # stumm gewollt: ein unlesbares Feld aus dem Formular gilt als leer
                 except ValueError:
                     roh[feld] = {}
         return roh
@@ -83,32 +85,34 @@ class Garmentvorschauendpunkte:
         Zwei Wege, dieselben wie beim Drapieren: ein Referenzkörper von
         GarmentCode (`koerper` gesetzt) oder die Figur der Szene.
         """
-        from GarmentCode.dienst import GarmentcodeDienst
-        from GarmentCode.koerperdienst import Garmentkoerper
         from UMA_Python.paare import Umapythonpaare
 
         name = str(wunsch.get('koerper') or '').strip()
         if name:
-            from GarmentCode.drapierung import Drapierung
             pfad = Garmentvorschauendpunkte._referenz(name)
             if pfad is None:
                 raise ValueError('Referenzkörper %r nicht gefunden' % name)
-            del Drapierung
             return Umapythonpaare.obj_lesen(pfad)
+        return Umapythonpaare.obj_lesen(
+            Garmentvorschauendpunkte._figurkoerper(wunsch))
+
+    @staticmethod
+    def _figurkoerper(wunsch):
+        u"""Die OBJ der Szenenfigur: Netz aus Morphs, vermessen, abgelegt."""
+        from GarmentCode.dienst import GarmentcodeDienst
+        from GarmentCode.koerperdienst import Garmentkoerper
 
         geschlecht = str(wunsch.get('geschlecht') or 'female')
         bauart = wunsch.get('bauart') or None
-        netz = GarmentcodeDienst.figurnetz(
-            geschlecht, wunsch.get('morphs') or {}, bauart,
-            wunsch.get('meta') or {})
-        masse, _ = GarmentcodeDienst.masse(geschlecht,
-                                           morphs=wunsch.get('morphs') or {},
+        morphs = wunsch.get('morphs') or {}
+        netz = GarmentcodeDienst.figurnetz(geschlecht, morphs, bauart,
+                                           wunsch.get('meta') or {})
+        masse, _ = GarmentcodeDienst.masse(geschlecht, morphs=morphs,
                                            bauart=bauart, netz=netz)
         ablage = Garmentkoerper.bereitstellen(geschlecht, netz, masse)
         if not ablage or not ablage.get('ordner'):
             raise ValueError('Der Figurkörper liess sich nicht ablegen')
-        pfad = os.path.join(ablage['ordner'], '%s.obj' % ablage['name'])
-        return Umapythonpaare.obj_lesen(pfad)
+        return os.path.join(ablage['ordner'], '%s.obj' % ablage['name'])
 
     @staticmethod
     def _referenz(name):

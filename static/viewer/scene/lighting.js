@@ -168,7 +168,7 @@ export function bindCameraUI() {
     const fovVal = document.getElementById('camera-fov-val');
     fovSlider.addEventListener('input', () => {
         const v = parseInt(fovSlider.value);
-        fovVal.textContent = v;
+        fovVal.textContent = String(v);
         state.camera.fov = v;
         state.camera.updateProjectionMatrix();
         autoSave();

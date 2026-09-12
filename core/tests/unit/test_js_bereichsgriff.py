@@ -51,7 +51,7 @@ console.log(JSON.stringify({ok: true}));
 
 class BereichsgriffTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_breite_aus_mausweg(self):
         ausgabe = MODUL.laufen(SKRIPT)

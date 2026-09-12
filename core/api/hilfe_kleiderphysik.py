@@ -11,20 +11,19 @@ dieser Maschine gemessen wurde. Die Daten kommen aus
 `kleidung.physik.Kleiderphysik`, nicht aus der Vorlage.
 """
 
-from django.views.generic import TemplateView
+from .hilfeseite import Hilfeseite
 
 from kleidung.physik import Kleiderphysik
 
 
-class KleidungPhysik(TemplateView):
+class KleidungPhysik(Hilfeseite):
     u"""Bestand, Kandidaten, Messung, Kette."""
 
     template_name = 'hilfe/kleidung_physik.html'
+    AKTIV = 'hilfe_kleidung_physik'
 
-    def get_context_data(self, **kwargs):
-        kontext = super().get_context_data(**kwargs)
-        kontext.update({
-            'aktiv': 'hilfe_kleidung_physik',
+    def kontext(self):
+        return {
             'bestand': Kleiderphysik.bestand(),
             'kandidaten': Kleiderphysik.kandidaten(),
             'messaufbau': Kleiderphysik.messaufbau(),
@@ -38,16 +37,4 @@ class KleidungPhysik(TemplateView):
             'style3d_ms': Kleiderphysik.STYLE3D_MS_JE_BILD,
             'minuten_je_10s': Kleiderphysik.minuten_je_10s(),
             'kb_je_bild': Kleiderphysik.KB_JE_BILD,
-        })
-        return kontext
-
-    @classmethod
-    def ansicht(cls):
-        u"""Die fertige Ansicht mit sprechendem Namen.
-
-        `View.as_view()` liefert eine Funktion namens `view`; im Fehlerlog
-        und in `manage.py show_urls` staende sonst mehrfach dasselbe.
-        """
-        ansicht = cls.as_view()
-        ansicht.__name__ = 'hilfe_kleidung_physik'
-        return ansicht
+        }

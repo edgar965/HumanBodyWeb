@@ -171,7 +171,7 @@ class Hbfilm:
             for nummer in (0, zahl // 2, zahl - 1):
                 # Gegen das SICHTBARE Netz — dort liegt der Stoff an.
                 baum = cKDTree(Feinkoerper.bild(self.teile[0], nummer))
-                abstand, _ = baum.query(teil['haut'].folge[nummer])
+                abstand, _ = baum.query(teil['haut'].folge[nummer], workers=-1)
                 werte.append(float(np.median(abstand)) * 1000.0)
             aus.append((teil['name'], werte))
         return aus

@@ -41,6 +41,8 @@ export function applySceneObjectTrack(track, t) {
 }
 
 export function applyBvhTrack(track, t) { Bvhspur.anwenden(track, t); }
-export function applyCameraTrack(track, t) { Kameraspur.anwenden(track, t); }
-export function applyLightTrack(track, t) { Lichtspurwerte.anwenden(track, t); }
+// Kamera und Licht lesen die Zeit selbst aus `state` — das zweite Argument
+// bleibt fuer die einheitliche Aufrufform der Spurarten (LS-Befund 12.09.2026).
+export function applyCameraTrack(track, _t) { Kameraspur.anwenden(track); }
+export function applyLightTrack(track, _t) { Lichtspurwerte.anwenden(track); }
 export function applyModelTrack(track, t) { Modellspur.anwenden(track, t); }

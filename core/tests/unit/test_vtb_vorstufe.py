@@ -19,10 +19,10 @@ hier pruefen laesst:
 import os
 import re
 import sys
-import tempfile
 import unittest
 
 from ._wrappersuchpfad import TOOLS, Wrappersuchpfad
+from ._pruefablage import Pruefablage
 
 Wrappersuchpfad.setzen()
 
@@ -76,7 +76,7 @@ class DieKommandozeile(unittest.TestCase):
 class DieDateien(unittest.TestCase):
 
     def test_fehlende_werden_genannt_slam_nur_mit_verfolgung(self):
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             ohne = Vorstufe('tanz.mp4', ordner)
             self.assertEqual(sorted(ohne.fehlende()),
                              ['bbx', 'vit_features', 'vitpose'])
@@ -108,7 +108,7 @@ class DieDateien(unittest.TestCase):
         self.assertRegex(text, r'bbx\.pt.*\n(.*\n){0,4}.*return torch\.load')
 
     def test_gem_vorhersage_bricht_ohne_vorstufe_ab(self):
-        with tempfile.TemporaryDirectory() as ordner:
+        with Pruefablage.ordner() as ordner:
             with self.assertRaises(SystemExit):
                 Gemvorhersage('tanz.mp4', ordner, 'x.ckpt').vorstufe_laden()
 

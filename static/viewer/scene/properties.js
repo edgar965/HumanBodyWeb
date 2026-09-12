@@ -6,7 +6,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { escapeHtml } from './utils.js';
 import { markDirty } from './undo.js';
-import { _sameSubMesh, getSelectableSubMeshes } from './teilnetz_auswahl.js';
+import { Getragenliste } from './getragenliste.js';
 import { Charakterkoerper } from './charakter_koerper.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Auswahlfeld } from '../gemeinsam/auswahlfeld.js';
@@ -21,6 +21,7 @@ import { Reitergedaechtnis } from './reitergedaechtnis.js';
 import { Formbedienung } from './formbedienung.js';
 import { Reiterfreigabe } from './reiterfreigabe.js';
 import { Reiterinhalt } from './reiterinhalt.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export function initTabs() {
     document.querySelectorAll('.panel-tab').forEach(tab => {
@@ -212,7 +213,7 @@ async function populatePresets(inst) {
                     if (slider) { slider.value = val; slider.dispatchEvent(new Event('input')); } } }
             serverLog('preset_applied', p.label);
         });
-    } catch(e) { console.error('Failed to load presets:', e); }
+    } catch (e) { Protokoll.fehler('properties', 'Presets nicht geladen', e); }
 }
 
 /** Ruhezeit, bevor das Netz neu geholt wird — beim Ziehen sammeln sich Werte. */
@@ -228,43 +229,13 @@ export async function reloadCharacterMesh(inst) {
             if (state.currentPropsCharId === inst.id) updateEquippedList(inst);
             markDirty();
         } catch (fehler) {
-            console.error('Netz nicht neu ladbar:', fehler);
+            Protokoll.fehler('properties', 'Netz nicht neu ladbar', fehler);
         }
     }, NEULADEN_RUHE_MS);
 }
 
 export function updateEquippedList(inst) {
-    const list = document.getElementById('prop-equipped-list');
-    if (!list) return;
-    list.innerHTML = '';
-    if (!inst) { list.innerHTML = '<li class="equipped-empty">Keine Objekte</li>'; return; }
-    const targets = getSelectableSubMeshes(inst.id);
-    if (targets.length === 0) { list.innerHTML = '<li class="equipped-empty">Keine Objekte</li>'; return; }
-    for (const t of targets) {
-        const li = document.createElement('li'); li.className = 'equipped-item';
-        const nameSpan = document.createElement('span'); nameSpan.className = 'equipped-item-name';
-        if (_sameSubMesh(state._selectedSubMesh, t)) nameSpan.classList.add('selected');
-        nameSpan.textContent = t.label;
-        nameSpan.addEventListener('click', () => {
-            if (state._selectedSubMesh) fn._setSubMeshEmissive(state._selectedSubMesh, state._ZERO_EMISSIVE);
-            const fresh = getSelectableSubMeshes(inst.id).find(x => x.type === t.type && x.key === t.key);
-            if (!fresh) return;
-            state._selectedSubMesh = fresh;
-            fn._setSubMeshEmissive(state._selectedSubMesh, state._SELECT_EMISSIVE);
-            fn._setBodyEmissive(inst, state._ZERO_EMISSIVE);
-            fn._syncGarmentSliders();
-            _updatePropContext();
-            if (fresh.type === 'cloth') fn._syncPropGarmentControls();
-            else if (fresh.type === 'hair') fn._syncPropHairControls();
-            updateEquippedList(inst);
-        });
-        const rmBtn = document.createElement('button');
-        rmBtn.className = 'equipped-item-remove';
-        rmBtn.innerHTML = '&#10005;';
-        rmBtn.title = 'Entfernen';
-        rmBtn.addEventListener('click', (e) => { e.stopPropagation(); fn._removeSubMesh(t); });
-        li.appendChild(nameSpan); li.appendChild(rmBtn); list.appendChild(li);
-    }
+    Getragenliste.fuellen(inst);
 }
 
 export function _updatePropContext() {

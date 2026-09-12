@@ -126,7 +126,8 @@ export class Knochenregler {
         const bild = document.getElementById('mg-bone-texture-thumb');
         const rahmen = document.getElementById('mg-bone-texture-preview');
         if (bild) bild.src = datenUrl || '';
-        if (rahmen) rahmen.style.display = datenUrl ? 'block' : 'none';   // 'block': #mg-bone-texture-preview hat display:none per ID-Regel
+        // 'block': #mg-bone-texture-preview hat display:none per ID-Regel
+        if (rahmen) rahmen.style.display = datenUrl ? 'block' : 'none';
     }
 
     /** Alle Bedienelemente auf ein Knochenteil nachziehen. */

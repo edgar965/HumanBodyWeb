@@ -62,7 +62,7 @@ TOOLS = Projektquellen.TOOLS
 class JederGeleseneName(unittest.TestCase):
     u"""Kein Modul liest einen Namen, den es nicht gibt."""
 
-    databases = []
+    databases = set()
 
     def test_keiner_ist_unbekannt(self):
         schlecht = []
@@ -97,7 +97,7 @@ class JederGeleseneName(unittest.TestCase):
 class EineSabotageAmNamen(unittest.TestCase):
     u"""Die Gegenprobe: Der Test muss rot werden koennen."""
 
-    databases = []
+    databases = set()
 
     def test_ein_erfundener_name_wird_erkannt(self):
         quelle = 'def f():\n    return _gibtesnicht\n'

@@ -154,6 +154,7 @@ class Mhfigur:
             return {}
         try:
             daten = json.loads(request.body.decode('utf-8') or '{}')
+        # stumm gewollt: kaputtes JSON aus dem Browser heisst 'keine Angaben'
         except (ValueError, UnicodeDecodeError):
             return {}
         return daten if isinstance(daten, dict) else {}

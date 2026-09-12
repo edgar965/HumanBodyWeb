@@ -237,8 +237,7 @@ class Retargetdaten:
             roh = repr(sorted((str(k), round(float(v), 6))
                               for k, v in self.formung.items()))
         else:
-            try:
-                roh = self.formung.fingerabdruck()
-            except AttributeError:
-                roh = repr(self.formung)
+            fingerabdruck = getattr(self.formung, 'fingerabdruck', None)
+            roh = (fingerabdruck() if callable(fingerabdruck)
+                   else repr(self.formung))
         return hashlib.md5(roh.encode('utf-8')).hexdigest()[:8]

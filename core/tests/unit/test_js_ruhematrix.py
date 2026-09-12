@@ -90,7 +90,7 @@ console.log(JSON.stringify({ok: true}));
 
 class RuhematrixTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_ruhelage(self):
         ausgabe = MODUL.laufen(SKRIPT)

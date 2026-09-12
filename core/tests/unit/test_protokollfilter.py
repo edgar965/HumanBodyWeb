@@ -29,7 +29,7 @@ def _satz():
 
 class ImTestlaufStummTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_testumgebung_wird_erkannt(self):
         u"""Djangos eigener Schalter: `setup_test_environment` hängt `outbox`
@@ -45,7 +45,7 @@ class AusserhalbSchreibtEsTest(SimpleTestCase):
     u"""Die Gegenprobe — ohne sie wäre „schreibt nichts" nicht von
     „schreibt nie" zu unterscheiden."""
 
-    databases = []
+    databases = set()
 
     def test_ausserhalb_eines_testlaufs_wird_geschrieben(self):
         gemerkt = mail.outbox
@@ -59,7 +59,7 @@ class AusserhalbSchreibtEsTest(SimpleTestCase):
 
 class DieHandlerFuehrenIhnTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_alle_dateihandler_tragen_den_filter(self):
         for name, handler in settings.LOGGING['handlers'].items():

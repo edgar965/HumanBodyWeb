@@ -23,7 +23,7 @@ import json
 import sys
 
 import numpy as np
-from scipy.spatial import cKDTree, ConvexHull
+from scipy.spatial import cKDTree
 
 sys.path.insert(0, r'A:\3DTools')
 sys.path.insert(0, r'A:\3DTools\HumanBodyWeb\TheatreJS\ModelPhysik\proben')
@@ -68,7 +68,7 @@ def main():
           % (unser_hoehe, smpl_hoehe, massstab))
 
     baum = cKDTree(smpl_rest)
-    abstand, zuordnung = baum.query(unser_gleich)
+    abstand, zuordnung = baum.query(unser_gleich, workers=-1)
     print('Zuordnung: Median %.1f mm, p90 %.1f mm, max %.1f mm'
           % (np.median(abstand) * 1000, np.percentile(abstand, 90) * 1000,
              abstand.max() * 1000))

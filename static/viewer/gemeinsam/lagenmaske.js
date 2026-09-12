@@ -41,8 +41,8 @@ export class Lagenmaske {
      * Je Stück: `{maske, ueber}` — `maske` je Punkt 1, wenn ein anderes Stück
      * darüber liegt; `ueber` die Schlüssel dieser Stücke.
      *
-     * @param koerper  {punkte, dreiecke} — die Haut in Ruhelage
-     * @param stoffe   [{schluessel, punkte, dreiecke}] — in derselben Lage
+     * @param koerper  punkte und dreiecke — die Haut in Ruhelage
+     * @param stoffe   Liste von Stücken (schluessel, punkte, dreiecke) in derselben Lage
      * @param optionen wie bei `Hautmaske.verdeckt` (abstand, tiefe, randringe, eng)
      * @return Map schluessel → {maske, ueber}
      */
@@ -50,7 +50,8 @@ export class Lagenmaske {
         const N = G.normalen(koerper.punkte, koerper.dreiecke);
         const gitter = G.punktgitter(koerper.punkte, G.ZELLE_M);
         const normalen = stoffe.map((s) => Lagenmaske.normalenVonHaut(s.punkte, koerper.punkte, N, gitter));
-        const ergebnis = new Map(stoffe.map((s) => [s.schluessel, { maske: new Uint8Array(s.punkte.length / 3), ueber: [] }]));
+        const ergebnis = new Map(stoffe.map((s) => [
+            s.schluessel, { maske: new Uint8Array(s.punkte.length / 3), ueber: [] }]));
         for (let a = 0; a < stoffe.length; a++) {
             for (let b = a + 1; b < stoffe.length; b++) {
                 const lage = Lagenmaske.lage(stoffe[a], normalen[a], stoffe[b], normalen[b], optionen);

@@ -36,7 +36,7 @@ def _durch(pfad, antwort=None):
 
 class DatenfrischeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_api_antwort_wird_nicht_gespeichert(self):
         antwort = _durch('/api/character/model/Figur/')

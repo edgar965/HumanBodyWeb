@@ -127,7 +127,7 @@ class Bedienelemente:
             if '${' in wert:
                 # `${vorsilbe}-roughness` -> Suffix; `prop-region-${rid}` ->
                 # Präfix. Beides zugleich ist möglich.
-                kopf, _, rest = wert.partition('${')
+                kopf = wert.partition('${')[0]
                 if kopf:
                     praefixe.add(kopf.rstrip('-'))
                 hinten = wert.rsplit('}', 1)[-1]

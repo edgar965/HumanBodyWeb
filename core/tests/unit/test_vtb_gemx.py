@@ -153,6 +153,26 @@ class DasSomaBvh(unittest.TestCase):
         self.assertIn('Frames: 3', text)
         self.assertIn('End Site', text)
 
+    def test_kameraraum_wird_wie_bei_bvhbau_nach_y_oben_gedreht(self):
+        # GEM-X liefert im Kameraraum (y unten, z nach vorn): eine stehende
+        # Person traegt dort global_orient = pi um x, die Huefte liegt bei
+        # y < 0. Nach der Drehung steht sie aufrecht bei y > 0, wie bei
+        # GVHMR/DuoMo ueber `Bvhbau` (Vergleich 12.09.2026: 180 Grad verdreht).
+        import bvh as bvh_util
+        import quat
+        tpose = [[0, 1.0, 0], [0, 1.3, 0], [0, 1.6, 0], [0.1, 0.9, 0]]
+        params = self._params(tpose)
+        params['raum'] = np.asarray('incam')
+        params['global_orient'][:] = [np.pi, 0, 0]
+        params['transl'][:] = [0.2, -1.0, 5.0]
+        ziel = os.path.join(self.ordner, 'probe_incam.bvh')
+        Somabvh(bilder=25.0, sigma=0).bauen(params, ziel)
+        daten = bvh_util.load(ziel)
+        rot = quat.from_euler(np.radians(daten['rotations']), order=daten['order'])
+        _, pos = quat.fk(rot, daten['positions'], daten['parents'])
+        np.testing.assert_allclose(pos[0, 0], [20, 100, -500], atol=1e-3)   # Huefte
+        np.testing.assert_allclose(pos[0, 2], [20, 160, -500], atol=1e-3)   # Kopf oben
+
     def test_hochachse_z_wird_auf_y_gedreht(self):
         tpose = [[0, 0, 1.0], [0, 0, 1.3], [0, 0, 1.6], [0.1, 0, 0.9]]   # Kopf in +z
         ziel = os.path.join(self.ordner, 'probe_z.bvh')

@@ -162,7 +162,7 @@ console.log(JSON.stringify({ok: true}));
 
 class KombilisteTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_liste_haelt_sich_an_die_regeln(self):
         ausgabe = MODUL.laufen(SKRIPT)

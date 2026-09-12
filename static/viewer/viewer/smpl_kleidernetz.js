@@ -32,7 +32,7 @@ export class Smplkleidernetz {
         return new THREE.MeshStandardMaterial({
             color: farbe, roughness: rauheit, metalness: 0.0,
             side: THREE.DoubleSide,
-            polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnit: -1,
+            polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
         });
     }
 

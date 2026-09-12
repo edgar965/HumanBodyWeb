@@ -10,11 +10,12 @@ Anlagehoehe um `(1 - min(rise + bundbreite, 1)) * hips_line`.
 import io
 import json
 import os
-import tempfile
 
 import yaml
 from django.conf import settings
 from django.test import SimpleTestCase
+
+from ._pruefablage import Pruefablage
 
 from GarmentCode.bundhoehe import Bundhoehe
 from GarmentCode.bundmaske import Bundmaske
@@ -61,7 +62,7 @@ def _spezifikation():
 
 class VersatzTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_rise_eins_aendert_nichts(self):
         self.assertEqual(Bundhoehe.versatz_cm(_entwurf(), 1.0, HIPS_LINE), 0.0)
@@ -92,18 +93,14 @@ class VersatzTest(SimpleTestCase):
 
 class DateienTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
-        self.ordner = tempfile.TemporaryDirectory(
-            dir=os.path.join(os.path.dirname(os.path.dirname(
-                os.path.dirname(os.path.dirname(
-                    os.path.abspath(__file__))))), 'ProjektTemp'))
-        self.addCleanup(self.ordner.cleanup)
-        self.spez = os.path.join(self.ordner.name, 'probe_specification.json')
+        self.ordner = self.enterContext(Pruefablage.ordner('bundhoehe_'))
+        self.spez = os.path.join(self.ordner, 'probe_specification.json')
         with io.open(self.spez, 'w', encoding='utf-8') as datei:
             json.dump(_spezifikation(), datei)
-        self.koerper = os.path.join(self.ordner.name, 'figur.yaml')
+        self.koerper = os.path.join(self.ordner, 'figur.yaml')
         with io.open(self.koerper, 'w', encoding='utf-8') as datei:
             yaml.safe_dump({'body': {'height': 168.0, 'head_l': 25.8,
                                      'waist_line': 32.3, 'hips_line': HIPS_LINE}},
@@ -124,14 +121,14 @@ class DateienTest(SimpleTestCase):
 
     def test_anwenden_senkt_die_spezifikation_im_ordner(self):
         koerper = {'hips_line': HIPS_LINE}
-        versatz = Bundhoehe.anwenden(self.ordner.name, _entwurf(),
+        versatz = Bundhoehe.anwenden(self.ordner, _entwurf(),
                                      _Stueck(_Unterteil(0.5)), koerper)
         self.assertAlmostEqual(versatz, 6.7, places=6)
         self.assertAlmostEqual(Bundhoehe.vermerk(self.spez)['versatz_cm'], 6.7, places=3)
         # rise 1: nichts angefasst
         with io.open(self.spez, 'w', encoding='utf-8') as datei:
             json.dump(_spezifikation(), datei)
-        self.assertEqual(Bundhoehe.anwenden(self.ordner.name, _entwurf(),
+        self.assertEqual(Bundhoehe.anwenden(self.ordner, _entwurf(),
                                             _Stueck(_Unterteil(1.0)), koerper), 0.0)
         self.assertEqual(Bundhoehe.vermerk(self.spez), {})
 
@@ -141,7 +138,7 @@ class DateienTest(SimpleTestCase):
         Bundhoehe.senken(self.spez, 6.7, rise=0.5)
         ziel = Bundhoehe.koerperdatei(self.spez, self.koerper)
         self.assertEqual(os.path.basename(str(ziel)), 'probe_koerper_anlage.yaml')
-        self.assertEqual(os.path.dirname(str(ziel)), self.ordner.name)
+        self.assertEqual(os.path.dirname(str(ziel)), self.ordner)
         werte = yaml.safe_load(io.open(str(ziel), encoding='utf-8'))['body']
         # wie garment.py rechnet: height - head_l - waist_line = 109,9
         self.assertAlmostEqual(werte['_waist_level'], 109.9 - 6.7, places=6)
@@ -162,16 +159,12 @@ class DateienTest(SimpleTestCase):
 class BundmaskeTest(SimpleTestCase):
     u"""Der Bund bleibt beim Hochziehen — die Maske kommt aus der Segmentierung."""
 
-    databases = []
+    databases = set()
 
     def setUp(self):
-        self.ordner = tempfile.TemporaryDirectory(
-            dir=os.path.join(os.path.dirname(os.path.dirname(
-                os.path.dirname(os.path.dirname(
-                    os.path.abspath(__file__))))), 'ProjektTemp'))
-        self.addCleanup(self.ordner.cleanup)
-        self.netz = os.path.join(self.ordner.name, 'probe_sim.obj')
-        with io.open(os.path.join(self.ordner.name, 'probe_sim_segmentation.txt'),
+        self.ordner = self.enterContext(Pruefablage.ordner('bundhoehe_'))
+        self.netz = os.path.join(self.ordner, 'probe_sim.obj')
+        with io.open(os.path.join(self.ordner, 'probe_sim_segmentation.txt'),
                      'w', encoding='utf-8') as datei:
             datei.write('\n'.join(['pant_f_r', 'wb_front', 'stitch_3',
                                    'hose__wb_back,stitch_1', 'shirt__ftorso', '']))
@@ -188,12 +181,12 @@ class BundmaskeTest(SimpleTestCase):
         self.assertEqual(maske.tolist(), [False, True, False, True, False])
         # fehlende Datei oder falsche Punktzahl: keine Maske, kein Absturz
         self.assertIsNone(Bundmaske.neben_netz(self.netz, 4))
-        self.assertIsNone(Bundmaske.neben_netz(os.path.join(self.ordner.name, 'x_sim.obj')))
+        self.assertIsNone(Bundmaske.neben_netz(os.path.join(self.ordner, 'x_sim.obj')))
         self.assertIsNone(Bundmaske.neben_netz(None))
 
     def test_eintragen_je_teilnetz(self):
         teile = {'hose': {'indizes': [0, 1, 3]}, 'shirt': {'indizes': [4]}, 'leer': {}}
-        Bundmaske.eintragen(teile, os.path.join(self.ordner.name, 'probe_sim_segmentation.txt'))
+        Bundmaske.eintragen(teile, os.path.join(self.ordner, 'probe_sim_segmentation.txt'))
         self.assertEqual(teile['hose']['bund'].tolist(), [False, True, True])
         self.assertEqual(teile['shirt']['bund'].tolist(), [False])
         self.assertIsNone(teile['leer']['bund'])
@@ -201,7 +194,7 @@ class BundmaskeTest(SimpleTestCase):
 
 class VerdrahtungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _quelle(self, *teile):
         return io.open(os.path.join(settings.ASSETS_ROOT, 'GarmentCode', *teile),

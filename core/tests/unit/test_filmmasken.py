@@ -48,7 +48,7 @@ class _Unterteiler:
 
 class FilmmaskenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.fm = _modul('filmmasken')

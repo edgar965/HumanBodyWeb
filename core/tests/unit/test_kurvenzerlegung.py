@@ -46,7 +46,7 @@ def _zerlegung():
 
 class KurvenzerlegungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_gerade_trifft_exakt(self):
         u"""Auf einer Geraden sind Bogenlaenge und Parameter dasselbe."""

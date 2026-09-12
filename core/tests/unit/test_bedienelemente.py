@@ -55,7 +55,7 @@ class KunstbeispielTest(SimpleTestCase):
     „alles in Ordnung" heisst oder „der Prüfer ist blind geworden".
     """
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.stumm = [k for k, _, _ in _pruefer(BEISPIEL).ohne_hoerer('probe.html')]
@@ -84,7 +84,7 @@ class KunstbeispielTest(SimpleTestCase):
 
 class AlleSeitenTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

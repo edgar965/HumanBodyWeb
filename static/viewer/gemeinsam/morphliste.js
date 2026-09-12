@@ -19,13 +19,14 @@ export class Morphliste {
     static SCHRITT = 1;
 
     /**
-     * @param wahl.praefix   CSS-Präfix ('' oder 'rc-')
-     * @param wahl.startwert (morphname) => Bruch -1..1, Vorgabe 0
-     * @param wahl.geaendert (morphname, bruch) => void
-     * @param wahl.ereignis  'input' (sofort) oder 'change' (erst beim
+     * @param {object} wahl
+     * @param [wahl.praefix]   CSS-Präfix ('' oder 'rc-')
+     * @param [wahl.startwert] (morphname) => Bruch -1..1, Vorgabe 0
+     * @param [wahl.geaendert] (morphname, bruch) => void
+     * @param [wahl.ereignis]  'input' (sofort) oder 'change' (erst beim
      *                       Loslassen — für Seiten, die dabei das Netz neu
      *                       laden; die Anzeige läuft trotzdem mit)
-     * @param wahl.chevron   Pfeil vor dem Kategorienamen
+     * @param [wahl.chevron]   Pfeil vor dem Kategorienamen
      */
     constructor(wahl = {}) {
         this.praefix = wahl.praefix || '';
@@ -94,7 +95,7 @@ export class Morphliste {
         Object.assign(regler, { type: 'range', min: Morphliste.VON,
                                 max: Morphliste.BIS, step: Morphliste.SCHRITT });
         regler.dataset.morph = morph.name;
-        regler.value = Math.round((this.startwert(morph.name) || 0) * 100);
+        regler.value = String(Math.round((this.startwert(morph.name) || 0) * 100));
 
         const anzeige = document.createElement('span');
         anzeige.className = this.praefix + 'slider-val';
@@ -136,7 +137,7 @@ export class Morphliste {
      * weiter 0, während die Figur längst gewölbt war — zwei Bedienelemente
      * für dieselbe Zahl, die sich widersprechen.
      *
-     * @param werte  {morphname: Bruch -1..1}
+     * @param werte  Abbildung morphname → Bruch -1..1
      */
     static angleichen(behaelter, werte) {
         for (const regler of behaelter.querySelectorAll('input[data-morph]')) {

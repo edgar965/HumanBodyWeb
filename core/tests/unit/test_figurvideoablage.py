@@ -25,7 +25,7 @@ from ._pruefablage import Pruefablage
 
 class FigurvideoablageNameTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_automatischer_name(self):
         zeit = datetime(2026, 9, 11, 11, 42)
@@ -49,7 +49,7 @@ class FigurvideoablageNameTest(SimpleTestCase):
 
 class FigurvideoablageOrdnerTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_leer_ist_vorgabe(self):
         self.assertEqual(Figurvideoablage.ordner_pruefen(''),
@@ -71,7 +71,7 @@ class FigurvideoablageOrdnerTest(SimpleTestCase):
 
 class FigurvideoablageKopieTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _quelle(self, ordner, inhalt=b'mp4'):
         pfad = os.path.join(ordner, 'video.mp4')

@@ -19,14 +19,20 @@ djangoBase-Import landet im falschen Ordner — der Lauf bricht dann mit
 import shutil
 from pathlib import Path
 
+from django.conf import settings
+
 from djangobase.testhelfer import Webmodul
 
-#: Die Projektwurzel (der Ordner mit `manage.py`).
-WURZEL = Path(__file__).resolve().parents[2]
+#: Die Projektwurzel (der Ordner mit `manage.py`) — aus den Settings, nicht
+#: aus einer `.parent`-Kette (`~/.claude/rules/projektpfade.md`).
+WURZEL = Path(settings.BASE_DIR)
 
 
 class Jsmodul:
     """Ein Modul unter `static/viewer/` — samt der Wurzeln für seine Importe."""
+
+    #: `static/viewer/` — die Tests greifen von hier auf ihre Ordner zu.
+    VIEWER = WURZEL / 'static' / 'viewer'
 
     #: Reihenfolge zählt: die LÄNGERE Vorsilbe muss zuerst passen.
     WURZELN = {
@@ -37,7 +43,7 @@ class Jsmodul:
 
     def __init__(self, *teile):
         """@param teile Pfad unter `static/viewer/`, z.B. ('gemeinsam', 'x.js')"""
-        self.pfad = WURZEL.joinpath('static', 'viewer', *teile)
+        self.pfad = self.VIEWER.joinpath(*teile)
 
     def laufen(self, skript):
         """Das Skript in Node ausführen; `MODUL` zeigt darin auf dieses Modul.

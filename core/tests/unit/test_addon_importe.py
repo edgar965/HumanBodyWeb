@@ -63,7 +63,7 @@ ADDON = Addonimporte.WURZEL
 class JederRelativeImport(unittest.TestCase):
     u"""Kein Import zeigt auf ein Modul, das es nicht gibt."""
 
-    databases = []
+    databases = set()
 
     def test_keiner_zeigt_ins_leere(self):
         schlecht = Addonimporte.ins_leere()
@@ -77,7 +77,7 @@ class JederRelativeImport(unittest.TestCase):
 class EineSabotageAmImport(unittest.TestCase):
     u"""Die Gegenprobe: Der Test muss rot werden koennen."""
 
-    databases = []
+    databases = set()
 
     @staticmethod
     def _zeigt_auf_etwas(datei, knoten):

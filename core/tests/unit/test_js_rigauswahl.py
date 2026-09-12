@@ -113,7 +113,7 @@ console.log(JSON.stringify({ok: true}));
 
 class RigauswahlTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_auswahl(self):
         ausgabe = MODUL.laufen(SKRIPT)

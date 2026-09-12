@@ -27,11 +27,13 @@ export class Animationslader {
 
     /**
      * @param zustand      state bzw. Seitenzustand
-     * @param wahl.beschriften (name, bilder, dauer) => Text der Info-Zeile
-     * @param wahl.anhalten    (zerstoeren) => laufende Animation beenden
-     * @param wahl.skinnen     (gewichte) => Netz in ein SkinnedMesh wandeln
-     * @param wahl.umzielen    (url, skelett, wahl) => Clip vom Server
-     * @param wahl.merken      (name, bilder, dauer) => Zusatzfelder pflegen
+     * @param {object} wahl
+     * @param [wahl.bvhLader]    BVHLoader der Seite (sonst `zustand.bvhLoader`)
+     * @param [wahl.beschriften] (name, bilder, dauer) => Text der Info-Zeile
+     * @param [wahl.anhalten]    (zerstoeren) => laufende Animation beenden
+     * @param [wahl.skinnen]     (gewichte) => Netz in ein SkinnedMesh wandeln
+     * @param [wahl.umzielen]    (url, skelett, wahl) => Clip vom Server
+     * @param [wahl.merken]      (name, bilder, dauer) => Zusatzfelder pflegen
      */
     constructor(zustand, wahl) {
         this.zustand = zustand;

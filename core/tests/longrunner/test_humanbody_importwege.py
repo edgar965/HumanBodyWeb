@@ -92,7 +92,7 @@ class JedesModulLaedtTest(SimpleTestCase):
 
     def test_jedes_modul_laedt(self):
         kaputt = []
-        for name, pfad in Humanbodybaum.module(nur_importierbare=True):
+        for name, _pfad in Humanbodybaum.module(nur_importierbare=True):
             try:
                 importlib.import_module(name)
             except ImportError as fehler:
@@ -173,7 +173,7 @@ class DateienLesbarTest(SimpleTestCase):
     kaputt der Baum ist. Jetzt sucht er selbst.
     """
 
-    databases = []
+    databases = set()
 
     def test_alle_dateien_lesbar(self):
         kaputt = Humanbodybaum.unlesbare()

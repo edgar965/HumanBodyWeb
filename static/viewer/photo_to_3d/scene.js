@@ -94,7 +94,7 @@ export function animate() {
     state.fpsAccum += state.clock.getDelta();
     if (state.fpsAccum >= 1.0) {
         const el = document.getElementById('fps-display');
-        if (el) el.textContent = state.frameCount;
+        if (el) el.textContent = String(state.frameCount);
         state.frameCount = 0;
         state.fpsAccum = 0;
     }

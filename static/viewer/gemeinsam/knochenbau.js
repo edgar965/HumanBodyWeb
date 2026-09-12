@@ -22,7 +22,7 @@ export class Knochenbau {
     /**
      * @param angaben  `{name, knochen:[{name, eltern, kopf, schwanz, pos, quat}]}`
      * @param gruppe   die Gruppe der Figur (THREE.Object3D)
-     * @returns {skeleton, rootBone, bones, boneByName} oder null
+     * @returns Objekt mit skeleton, rootBone, bones, boneByName — oder null
      *
      * DIE RUHEDREHUNG WIRD MITGESETZT (07.09.2026). Ohne sie stünde das
      * Skelett zwar richtig da — der Helper braucht nur Punkte —, aber jede

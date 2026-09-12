@@ -84,7 +84,7 @@ export class Stoffvorschau {
      * @param stueck   Name des Kleidungsstücks
      * @param ordner   Ergebnisordner der Drapierung (der Server prüft ihn)
      * @param netz     das THREE-Netz, dessen Punkte nachgezogen werden
-     * @param stellung {bauart, morphs, meta} der Figur
+     * @param stellung bauart, morphs und meta der Figur
      */
     static binden(stueck, ordner, netz, stellung) {
         if (!stueck || !ordner || !netz) return false;

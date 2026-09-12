@@ -30,7 +30,7 @@ def _quelle(pfad):
 
 class ReitergedaechtnisTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_start_holt_die_einstellungen(self):
         quelle = _quelle('scene/szenenaufbau.js')

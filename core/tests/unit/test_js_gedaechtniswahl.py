@@ -112,7 +112,7 @@ console.log(JSON.stringify({ok: true}));
 
 class GedaechtniswahlTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_wahl_haelt_sich_an_die_regeln(self):
         ausgabe = MODUL.laufen(SKRIPT)

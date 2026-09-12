@@ -211,24 +211,35 @@ def main():
           % (', '.join(fehlend) if fehlend else 'keines'))
 
     pfad, bilder = schreiber.schreiben(bewegung, werte.name, werte.bilder)
-    schlimmster, wo, erstes = schreiber.pruefen(bewegung, bilder)
     print(u'Datei    %s (%d Bilder)' % (os.path.basename(pfad), bilder))
+    _probe(schreiber, bewegung, bilder)
+    ini = _ini_ergaenzen(werte.stamm, werte.name)
+    print(u'         %s ergaenzt' % os.path.basename(ini))
+    return 0
+
+
+def _probe(schreiber, bewegung, bilder):
+    u"""Die Gelenkprobe — und ihre Sabotage-Gegenprobe."""
+    schlimmster, wo, erstes = schreiber.pruefen(bewegung, bilder)
     print(u'Probe    groesste Abweichung der Gelenke: %.2f mm bei %s'
           % (schlimmster, wo))
     print(u'         (Bild 0: %.2f mm)' % erstes)
-
     # Sabotage-Gegenprobe: ohne das Delta gegen die Ruhelage MUSS die Probe
     # ausschlagen. Eine Probe, die immer 0,00 meldet, ist keine.
     kaputt, _wo, _erst = schreiber.pruefen(bewegung, bilder, roh=True)
     print(u'         Sabotage (Rigify-Drehung roh): %.1f mm — %s'
           % (kaputt, u'Probe greift' if kaputt > 10.0 else u'PROBE IST BLIND'))
 
-    ini = os.path.join(ZIEL, werte.stamm + '.ini')
-    zeilen = [z for z in open(ini).read().splitlines() if not z.startswith('ANIMATION')]
-    zeilen.append('ANIMATION   %s%s.anim %s' % (werte.stamm, werte.name, werte.stamm))
-    open(ini, 'w').write('\n'.join(zeilen) + '\n')
-    print(u'         %s ergaenzt' % os.path.basename(ini))
-    return 0
+
+def _ini_ergaenzen(stamm, name):
+    u"""Die ANIMATION-Zeile der `.ini` auf diese Datei setzen."""
+    ini = os.path.join(ZIEL, stamm + '.ini')
+    with open(ini, encoding='utf-8') as datei:
+        zeilen = [z for z in datei.read().splitlines() if not z.startswith('ANIMATION')]
+    zeilen.append('ANIMATION   %s%s.anim %s' % (stamm, name, stamm))
+    with open(ini, 'w', encoding='utf-8') as datei:
+        datei.write('\n'.join(zeilen) + '\n')
+    return ini
 
 
 if __name__ == '__main__':

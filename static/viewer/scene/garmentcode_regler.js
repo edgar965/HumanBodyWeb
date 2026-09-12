@@ -54,6 +54,7 @@ class GarmentcodeRegler {
         /** Wie ein Pfad sichtbar nachgezogen wird — je Regler eine
          *  Funktion. Ohne sie setzte ein Preset nur die Zahlen im
          *  Speicher, und die Schieber blieben stehen, wo sie waren. */
+        /** @type {Object<string, (wert: any) => void>} */
         this.nachziehen = {};
     }
 
@@ -80,6 +81,7 @@ class GarmentcodeRegler {
             // gehören zu Gruppen, die es jetzt vielleicht nicht mehr gibt.
             this.werte = {};
             this.vorgaben = {};
+            /** @type {Object<string, (wert: any) => void>} */
             this.nachziehen = {};
             this.fuerVorlage = vorlage;
             GarmentcodePassform.uebernehmen(

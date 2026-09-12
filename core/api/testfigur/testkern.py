@@ -20,6 +20,7 @@ sauber getrennten Zwischenständen, sonst zeigt die Konfigurationsseite plötzli
 die Testdaten.
 """
 
+import importlib.machinery
 import importlib.util
 import json
 import logging
@@ -72,8 +73,8 @@ class Testkern:
                 'python TestCharakter/download_version.py <commit>')
         if cls.WURZEL not in sys.path:
             sys.path.insert(0, cls.WURZEL)
-        spec = importlib.util.spec_from_file_location(
-            cls.MODULNAME, anfang, submodule_search_locations=[ordner])
+        spec = cls._spec(cls.MODULNAME, anfang,
+                         submodule_search_locations=[ordner])
         modul = importlib.util.module_from_spec(spec)
         sys.modules[cls.MODULNAME] = modul
         cls._laden_mit_ersatznamen(spec, modul)
@@ -188,11 +189,30 @@ class Testkern:
                     '(%s fehlt) — die Antwort bleibt beim Grundnetz',
                     cls.WURZEL, os.path.basename(pfad))
             return None
-        spec = importlib.util.spec_from_file_location(
-            cls.MODULNAME + '.catmull_clark', pfad)
+        spec = cls._spec(cls.MODULNAME + '.catmull_clark', pfad)
         modul = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(modul)
+        cls._ausfuehren(spec, modul)
         return modul.CatmullClarkSubdivider
+
+    @staticmethod
+    def _spec(name, pfad, **argumente) -> importlib.machinery.ModuleSpec:
+        """Die Modulspezifikation — mit Lader, sonst ein benannter Fehler.
+
+        `spec_from_file_location` liefert None (und einen Spec ohne Lader) fuer
+        Pfade, die es nicht als Modul erkennt; `module_from_spec(None)` stuerbe
+        an einem AttributeError ohne Pfadangabe (LS-Befund 12.09.2026)."""
+        spec = importlib.util.spec_from_file_location(name, pfad, **argumente)
+        if spec is None or spec.loader is None:
+            raise ImportError('%s: kein Python-Modul unter %s' % (name, pfad))
+        return spec
+
+    @staticmethod
+    def _ausfuehren(spec, modul):
+        """`spec.loader.exec_module` — der Lader ist da (`_spec` prueft es)."""
+        lader = spec.loader
+        if lader is None:
+            raise ImportError('%s: kein Lader' % spec.name)
+        lader.exec_module(modul)
 
     @classmethod
     def _referenznormalen(cls):
@@ -201,9 +221,10 @@ class Testkern:
         if not typ:
             return
         punkte = cls.zustand(typ).compute()
-        if punkte is None:
+        unterteiler = cls._unterteiler
+        if punkte is None or unterteiler is None:
             return
-        cls._unterteiler.compute_quad_normals(cls._unterteiler.subdivide(punkte))
+        unterteiler.compute_quad_normals(unterteiler.subdivide(punkte))
         logger.info('Test-Unterteiler: Referenznormalen aus %s', typ)
 
     # ---------------------------------------------------------------- Gewichte

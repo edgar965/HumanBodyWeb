@@ -156,7 +156,7 @@ class DasFortschrittsprotokoll(unittest.TestCase):
         u"""Gegenprobe zur vorigen Zusicherung."""
         baum = ast.parse("print('PROGRESS:%d/%d' % (1, 2))\n"
                          "print('TOTAL:%d' % 3, flush=True)\n")
-        ohne = [k for k, a in Wrapperquellen.druckaufrufe(baum)
+        ohne = [k for k, _a in Wrapperquellen.druckaufrufe(baum)
                 if not any(w.arg == 'flush' for w in k.keywords)]
         self.assertEqual(len(ohne), 1)
         self.assertEqual(ohne[0].lineno, 1)

@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { gltfLoader } from '../state.js';
-import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Umaregler } from './umaregler.js';
-import { GarmentcodeAblage } from '../garmentcode_ablage.js';
+import { Figurbasis } from '../figurbasis.js';
 
 /**
  * UmaFigur — eine UMA-Figur aus dem Figurkatalog als Figur der Szene.
@@ -24,7 +23,7 @@ import { GarmentcodeAblage } from '../garmentcode_ablage.js';
  * morphs …), damit Liste, Auswahl, Zählung und Speichern nicht je Quelle
  * unterscheiden müssen — sie sind hier nur leer.
  */
-export class UmaFigur {
+export class UmaFigur extends Figurbasis {
 
     static QUELLE = 'uma';
     static ADRESSE = '/api/character/uma-figur/';
@@ -37,36 +36,17 @@ export class UmaFigur {
     static ZIELHOEHE = 1.68;
 
     constructor(id, daten) {
-        this.id = id;
-        this.quelle = UmaFigur.QUELLE;
+        super(id, UmaFigur.QUELLE);
         this.datei = daten.datei;
         this.presetName = daten.presetName || `UMA · ${(daten.datei || '').replace(/\.glb$/i, '')}`;
-        this.presetKey = null;
         this.bodyType = 'UMA';
         this.dna = { ...(daten.dna || {}) };
         this.farben = { haut: null, haar: null, ...(daten.farben || {}) };
-        this.group = new THREE.Group();
-        this.group.userData.characterId = id;
-        this.bodyMesh = null;
         this.netze = [];
-        this.skelett = null;
         this.ruhelage = null;
         this.regler = null;
         this.geschlecht = null;
-        // Felder der HumanBody-Figur, hier leer (siehe Kopf).
-        this.clothMeshes = {};
-        this.hairMesh = null;
-        this.garments = [];
-        this.garmentState = {};
-        this.morphs = {};
-        this.meta = {};
-        this.cloth = [];
-        this.hairStyle = null;
-        this.mhProxies = {};
-        this.generatedConfig = null;
-        this.selected = false;
         this.isSkinned = true;
-        this.rigifySkeleton = null;
     }
 
     async load() {
@@ -188,41 +168,16 @@ export class UmaFigur {
         }
     }
 
-    dispose() {
-        Netzentsorgung.baum(this.group);
-        if (this.group.parent) this.group.parent.remove(this.group);
-    }
-
     toJSON() {
         return {
-            id: this.id,
-            quelle: this.quelle,
-            presetName: this.presetName,
-            presetKey: null,
-            bodyType: this.bodyType,
+            ...this.grunddaten(),
             datei: this.datei,
             dna: this.dna,
             farben: this.farben,
-            // GarmentCode-Stuecke ueberleben das Speichern (08.09.2026).
-            [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
-            transform: {
-                position: this.group.position.toArray(),
-                rotation: [this.group.rotation.x, this.group.rotation.y, this.group.rotation.z],
-                scale: this.group.scale.toArray(),
-            },
         };
     }
 
-    static async fromJSON(daten) {
-        const figur = new UmaFigur(daten.id, daten);
-        await figur.load();
-        const lage = daten.transform;
-        if (lage) {
-            if (lage.position) figur.group.position.fromArray(lage.position);
-            if (lage.rotation) figur.group.rotation.set(lage.rotation[0], lage.rotation[1], lage.rotation[2]);
-            if (lage.scale) figur.group.scale.fromArray(lage.scale);
-        }
-        await GarmentcodeAblage.laden(figur, daten[GarmentcodeAblage.FELD]);
-        return figur;
+    static fromJSON(daten) {
+        return Figurbasis.ausJSON(UmaFigur, daten);
     }
 }

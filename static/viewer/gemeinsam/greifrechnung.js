@@ -41,7 +41,7 @@ export class Greifrechnung {
 
     /**
      * Eine Verschiebung auf eine Achse beschränken.
-     * @param delta  {x, y, z} in Weltkoordinaten
+     * @param delta  Vektor (x, y, z) in Weltkoordinaten
      * @param achse  'x' | 'y' | 'z' | null
      */
     static maskieren(delta, achse) {

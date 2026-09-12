@@ -26,11 +26,11 @@ export class Transformfelder {
             for (const axis of Transformfelder.ACHSEN) {
                 const input = document.createElement('input');
                 input.type = 'number';
-                input.step = row.step;
+                input.step = String(row.step);
                 input.dataset.prop = row.prop;
                 input.dataset.axis = axis;
                 input.className = 'prop-transform-input';
-                input.value = parseFloat(Transformfelder._wert(inst, row.prop, axis).toFixed(3));
+                input.value = Transformfelder._wert(inst, row.prop, axis).toFixed(3);
                 input.addEventListener('input', () => {
                     const num = parseFloat(input.value); if (isNaN(num)) return;
                     if (row.isDeg) inst.group.rotation[axis] = THREE.MathUtils.degToRad(num);

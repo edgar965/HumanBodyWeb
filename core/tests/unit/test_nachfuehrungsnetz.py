@@ -30,6 +30,7 @@ import os
 import tempfile
 
 import numpy as np
+from django.conf import settings
 from django.test import SimpleTestCase
 
 
@@ -40,7 +41,7 @@ def _nachfuehrung():
 
 class NachfuehrungsnetzTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         # Der Ordner muss UNTERHALB des Ausgabeordners liegen — `netzpfad`
@@ -91,7 +92,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
 
     def test_ordner_ausserhalb_des_ausgabebaums_wird_verworfen(self):
         u"""Der Pfad kommt aus dem Browser — die Pruefung bleibt scharf."""
-        self.assertIsNone(_nachfuehrung().netzpfad(tempfile.gettempdir()))
+        self.assertIsNone(_nachfuehrung().netzpfad(str(settings.BASE_DIR)))
 
     # -- Deutung der Lage -----------------------------------------------------
 

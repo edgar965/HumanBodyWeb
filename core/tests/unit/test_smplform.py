@@ -17,7 +17,7 @@ from GarmentCode.smplform import Smplform  # noqa: E402
 
 class SmplformTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def test_mitte_ist_der_durchschnittskoerper(self):
         self.assertEqual(Smplform.betas('male', 0, 0)[:2], [0.0, 0.0])

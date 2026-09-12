@@ -9,21 +9,21 @@ Die Daten kommen aus `Kleidungsverfahren`, nicht aus der Vorlage. Eine Zahl
 im HTML ist eine Behauptung, die niemand mehr nachrechnet.
 """
 
-from django.views.generic import TemplateView
+from .hilfeseite import Hilfeseite
 
 from kleidung.verfahren import Kleidungsverfahren
 from kleidung.tempo import Kleidungstempo
 
 
-class KleidungAllgemein(TemplateView):
+class KleidungAllgemein(Hilfeseite):
     u"""Uebersicht und Vergleich aller Kleidungsverfahren."""
 
     template_name = 'hilfe/kleidung_allgemein.html'
+    AKTIV = 'hilfe_kleidung'
+    NAME = 'hilfe_kleidung_allgemein'
 
-    def get_context_data(self, **kwargs):
-        kontext = super().get_context_data(**kwargs)
-        kontext.update({
-            'aktiv': 'hilfe_kleidung',
+    def kontext(self):
+        return {
             'verfahren': Kleidungsverfahren.alle(),
             'unterschied': Kleidungsverfahren.unterschied(),
             # Warum MakeHuman in Millisekunden anzieht und GarmentCode in
@@ -35,16 +35,4 @@ class KleidungAllgemein(TemplateView):
             'tempo_summe': Kleidungstempo.summe_s(),
             'tempo_verworfen': Kleidungstempo.verworfen(),
             'tempo_loesung': Kleidungstempo.loesung(),
-        })
-        return kontext
-
-    @classmethod
-    def ansicht(cls):
-        u"""Die fertige Ansicht mit sprechendem Namen — wie `Vorlagenseite`.
-
-        `View.as_view()` liefert eine Funktion namens `view`; im Fehlerlog
-        und in `manage.py show_urls` steht dann sechsmal dasselbe.
-        """
-        ansicht = cls.as_view()
-        ansicht.__name__ = 'hilfe_kleidung_allgemein'
-        return ansicht
+        }

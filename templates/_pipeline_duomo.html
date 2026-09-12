@@ -30,13 +30,15 @@
                                 <div class="setting-label">Temporal Smoothing <span
                                      class="setting-hint">Gaussian-Gl&auml;ttung (0=aus, 2=Standard,
                                           4+=stark)</span></div>
-                                <input type="number" name="duomo_smooth_sigma" min="0" max="10" step="0.5" value="2.0">
+                                <input type="number" name="duomo_smooth_sigma" min="0" max="10" step="0.5"
+                                     value="{{ defaults.duomo_smooth_sigma }}">
                             </div>
                             <div class="setting-item">
                                 <div class="setting-label">Joint Limits <span
                                      class="setting-hint">Anatomische Grenzen f&uuml;r
                                           Knie/Ellbogen/H&uuml;fte</span></div>
-                                <input type="checkbox" name="duomo_joint_limits" checked>
+                                <input type="checkbox" name="duomo_joint_limits"
+                                     {% if defaults.duomo_joint_limits %}checked{% endif %}>
                             </div>
                             <div class="setting-item">
                                 <div class="setting-label">Device <span

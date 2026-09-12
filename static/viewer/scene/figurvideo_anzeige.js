@@ -10,6 +10,9 @@
  */
 export class Figurvideoanzeige {
 
+    /** So lange steht die Meldung Pfad kopiert statt des Pfads. */
+    static KOPIERT_MS = 1200;
+
     /** Klartext je Rechenweg — steht UNTER der Auswahl, nicht im Tooltip.
      *  Edgar (11.09.2026): „da steht Server und Browser?? Mach das eindeutig". */
     static HINWEIS = {
@@ -91,8 +94,10 @@ export class Figurvideoanzeige {
             await navigator.clipboard.writeText(pfad);
             const war = feld.textContent;
             feld.textContent = 'Pfad kopiert.';
-            setTimeout(() => { feld.textContent = war; }, 1200);
-        } catch { /* ohne Berechtigung bleibt der Text stehen */ }
+            setTimeout(() => { feld.textContent = war; }, Figurvideoanzeige.KOPIERT_MS);
+        } catch {
+            // stumm gewollt: ohne Zwischenablage-Berechtigung bleibt der Pfad sichtbar stehen, der Nutzer kopiert von Hand
+        }
     }
 
     // ------------------------------------------------------ Bilanztexte

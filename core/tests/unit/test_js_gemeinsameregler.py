@@ -166,7 +166,7 @@ console.log(JSON.stringify({ok: true}));
 
 class GemeinsamereglerTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_derselbe_regler_stellt_knochen_oder_punkte(self):
         ausgabe = MODUL.laufen(SKRIPT)

@@ -137,7 +137,7 @@ console.log(JSON.stringify({ ok: true, anfragen: m, zelle: gitter.zelle, zellen:
 
 class StoffgrenzeJsTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _fixture(self):
         if MODELPHYSIK not in sys.path:
@@ -152,6 +152,7 @@ class StoffgrenzeJsTest(SimpleTestCase):
         # JS-Fassung im Konstruktor (11.09.2026).
         soll = ruhe.sollabstand(stoff)
         faelle = []
+        ohne_grenze = None
         for name, schub in ((u'Ruhe', np.zeros(3)),
                             (u'verschoben', np.array([0.5, -0.2, 0.3])),
                             (u'eingedrueckt', np.zeros(3)),

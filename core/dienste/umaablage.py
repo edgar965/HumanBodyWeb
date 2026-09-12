@@ -101,6 +101,7 @@ class Umaablage:
         try:
             with open(pfad, encoding='utf-8') as datei:
                 return json.load(datei)
+        # stumm gewollt: ohne aktuell.json gibt es keinen Zeiger — das ist ein gueltiger Stand
         except (OSError, ValueError):
             return {}
 

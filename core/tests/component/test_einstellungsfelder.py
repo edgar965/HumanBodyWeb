@@ -40,8 +40,12 @@ SEITEN = {
         'v4_smoothing_cutoff', 'v4_smoothing_sampling',
         'mp_min_detection_confidence', 'mp_min_tracking_confidence',
         'gvhmr_static_cam', 'gvhmr_focal_length_mm',
+        'gvhmr_smooth_sigma', 'gvhmr_joint_limits',
         'wham_estimate_local_only', 'wham_run_smplify',
-        'prompthmr_static_camera'),
+        'prompthmr_static_camera',
+        'gem_static_cam', 'gem_smooth_sigma', 'gem_joint_limits',
+        'duomo_static_cam', 'duomo_smooth_sigma', 'duomo_joint_limits',
+        'gemx_static_cam', 'gemx_smooth_sigma'),
 }
 
 

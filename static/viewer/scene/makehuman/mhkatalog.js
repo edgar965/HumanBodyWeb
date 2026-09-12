@@ -1,10 +1,7 @@
-import { state } from '../state.js';
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
-import { generateCharacterId } from '../utils.js';
-import { markDirty } from '../undo.js';
 import { MhFigur } from './mhfigur.js';
-import { Figurplatzierung } from '../figurplatzierung.js';
+import { Figuraufnahme } from '../figuraufnahme.js';
 
 /**
  * Mhkatalog — den MakeHuman-Basiskörper anbieten und in die Szene stellen.
@@ -31,18 +28,9 @@ export class Mhkatalog {
      * Den Körper laden, in die Szene stellen und auswählen — derselbe Ablauf
      * wie bei UMA und SMPL: Lage erst nach `load()`, vorher gibt es keine Größe.
      */
-    static async hinzufuegen(modell, lage = null) {
-        const id = generateCharacterId();
-        const figur = new MhFigur(id, { modell });
-        await figur.load();
-        Figurplatzierung.anwenden(figur, lage);
-        state.characters.set(id, figur);
-        state.scene.add(figur.group);
-        fn.updateCharacterListUI();
-        fn.updateVertexCount();
-        fn.selectCharacter(id);
-        markDirty();
-        return figur;
+    static hinzufuegen(modell, lage = null) {
+        const figur = new MhFigur(Figuraufnahme.kennung(), { modell });
+        return Figuraufnahme.inDieSzene(figur, lage);
     }
 }
 

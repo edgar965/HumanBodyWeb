@@ -60,7 +60,7 @@ def _linear(kanal):
 
 class DerZustandBekommtDieFarbeTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_reiter_verdrahtet_den_merker(self):
         quelle = _prop()
@@ -98,7 +98,7 @@ class OhneAuswahlPassiertNichtsTest(SimpleTestCase):
     u"""Dieselbe Vorsicht wie bei den GarmentCode-Farben am selben Tag: Ein
     Feld, das ohne gewähltes Stück feuert, darf nichts anfassen."""
 
-    databases = []
+    databases = set()
 
     def test_ohne_stueck_wird_nichts_geschrieben(self):
         self.assertIn('if (!zustand) return false;', _merker())
@@ -109,7 +109,7 @@ class OhneAuswahlPassiertNichtsTest(SimpleTestCase):
 
 class DerBefundIstBelegtTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_die_gespeicherte_farbe_war_die_vorgabe(self):
         u"""#4d5980 in linear — auf drei Stellen genau der gespeicherte Wert.
@@ -139,7 +139,7 @@ class DieKetteZumSpeichernTest(SimpleTestCase):
     [0.0742, 0.0999, 0.2159]. Beide nehmen jetzt `Garderobenstand`.
     """
 
-    databases = []
+    databases = set()
 
     def test_beide_speicherwege_rechnen_den_zustand_ein(self):
         charakter = _quelle('static', 'viewer', 'scene', 'character.js')
@@ -178,7 +178,7 @@ class DieRegionsverschiebungKommtAnTest(SimpleTestCase):
     `inst.garmentState[key]`, das vorher erst DANACH gesetzt wurde.
     """
 
-    databases = []
+    databases = set()
 
     def _zubehoer(self):
         return _quelle('static', 'viewer', 'scene', 'charakter_zubehoer.js')

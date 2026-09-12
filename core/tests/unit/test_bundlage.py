@@ -30,7 +30,7 @@ def _naht(a, b):
 
 class BundlageTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_der_bund_faellt_auf_die_oberkante_der_hose(self):
         # Wie Edgars Hose: Hose bis 1,00 m, Bund ab 1,05 m — 5 cm Luft.

@@ -62,7 +62,7 @@ console.log(JSON.stringify({ ok: true }));
 
 class KamerafolgeJsTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def test_kamera_faehrt_in_der_bodenebene_mit(self):
         ausgabe = MODUL.laufen(SKRIPT)

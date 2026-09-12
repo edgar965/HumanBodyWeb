@@ -144,7 +144,10 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         Koerperart, und der Wechsel ergibt sich aus dem Vergleich mit dem
         bisher gemerkten Wert — genau dafuer gibt es `self._current_gender`.
         """
-        self._char_state.set_body_type(body_type)
+        zustand = self._char_state
+        if zustand is None:          # `receive` prueft das schon; hier fuer sich
+            return
+        zustand.set_body_type(body_type)
         new_gender = Charakterdaten.geschlecht_zu(body_type)
         gender_changed = new_gender != self._current_gender
         self._current_gender = new_gender
@@ -159,7 +162,7 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
             return
 
         # Same gender — just send updated vertices
-        vertices = self._char_state.compute()
+        vertices = zustand.compute()
         await self._send_vertices(vertices)
 
     async def receive(self, text_data=None, bytes_data=None):
@@ -181,52 +184,63 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
             }))
             return
 
-        msg_type = msg.get('type')
+        handler = self.NACHRICHTEN.get(msg.get('type'))
+        if handler is not None:
+            await handler(self, msg)
 
-        if msg_type == 'body_type':
-            await self._handle_body_type(msg['value'])
+    # Die Handler je Nachrichtentyp — `NACHRICHTEN` unten ordnet sie zu.
 
-        elif msg_type == 'morph':
-            self._char_state.set_morph(msg['key'], float(msg['value']))
-            vertices = self._char_state.compute()
-            await self._send_vertices(vertices)
+    async def _neu_senden(self):
+        await self._send_vertices(self._char_state.compute())
 
-        elif msg_type == 'morph_batch':
-            # Apply multiple morphs at once
-            for key, val in msg.get('morphs', {}).items():
-                self._char_state.set_morph(key, float(val))
-            vertices = self._char_state.compute()
-            await self._send_vertices(vertices)
+    async def _bei_body_type(self, msg):
+        await self._handle_body_type(msg['value'])
 
-        elif msg_type == 'meta':
-            self._char_state.set_meta(msg['name'], float(msg['value']))
-            vertices = self._char_state.compute()
-            await self._send_vertices(vertices)
+    async def _bei_morph(self, msg):
+        self._char_state.set_morph(msg['key'], float(msg['value']))
+        await self._neu_senden()
 
-        elif msg_type == 'stoff_binden':
-            await self._handle_stoff_binden(msg)
+    async def _bei_morph_batch(self, msg):
+        # Apply multiple morphs at once
+        for key, val in msg.get('morphs', {}).items():
+            self._char_state.set_morph(key, float(val))
+        await self._neu_senden()
 
-        elif msg_type == 'stoff_loesen':
-            self._stoff.loesen(msg.get('stueck'))
+    async def _bei_meta(self, msg):
+        self._char_state.set_meta(msg['name'], float(msg['value']))
+        await self._neu_senden()
 
-        elif msg_type == 'reset':
-            # ERST leeren, DANN die Koerperart setzen (05.09.2026).
-            #
-            # `zuruecksetzen()` statt zweier `clear()` von aussen: Die
-            # trafen `_user_morphs` nicht, und `compute()` schreibt die
-            # Regler von dort in seiner ersten Zeile zurueck. „Neues
-            # Modell" liess den Koerper deshalb gross — gemessen 2,28 m
-            # statt 1,68 m.
-            #
-            # Und in dieser Reihenfolge, weil `_handle_body_type` selbst
-            # schickt: Vorher stand hier erst der Aufruf, dann das Leeren,
-            # dann ein zweites Senden. Der Browser bekam also einmal den
-            # ALTEN Koerper (840 kB) und gleich darauf den neuen — mit der
-            # Skelett-Nachfuehrung sichtbar als kurzes Aufblitzen des
-            # grossen Rigs. Jetzt geht eine Nachricht raus, die richtige.
-            self._char_state.zuruecksetzen()
-            await self._handle_body_type(msg.get('body_type',
-                                                 'Female_Caucasian'))
+    async def _bei_stoff_loesen(self, msg):
+        self._stoff.loesen(msg.get('stueck'))
+
+    async def _bei_reset(self, msg):
+        # ERST leeren, DANN die Koerperart setzen (05.09.2026).
+        #
+        # `zuruecksetzen()` statt zweier `clear()` von aussen: Die
+        # trafen `_user_morphs` nicht, und `compute()` schreibt die
+        # Regler von dort in seiner ersten Zeile zurueck. „Neues
+        # Modell" liess den Koerper deshalb gross — gemessen 2,28 m
+        # statt 1,68 m.
+        #
+        # Und in dieser Reihenfolge, weil `_handle_body_type` selbst
+        # schickt: Vorher stand hier erst der Aufruf, dann das Leeren,
+        # dann ein zweites Senden. Der Browser bekam also einmal den
+        # ALTEN Koerper (840 kB) und gleich darauf den neuen — mit der
+        # Skelett-Nachfuehrung sichtbar als kurzes Aufblitzen des
+        # grossen Rigs. Jetzt geht eine Nachricht raus, die richtige.
+        self._char_state.zuruecksetzen()
+        await self._handle_body_type(msg.get('body_type',
+                                             'Female_Caucasian'))
+
+    NACHRICHTEN = {
+        'body_type': _bei_body_type,
+        'morph': _bei_morph,
+        'morph_batch': _bei_morph_batch,
+        'meta': _bei_meta,
+        'stoff_binden': Stoffkanal._handle_stoff_binden,
+        'stoff_loesen': _bei_stoff_loesen,
+        'reset': _bei_reset,
+    }
 
 
 class TestCharacterConsumer(CharacterConsumer):

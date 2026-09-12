@@ -30,8 +30,8 @@ import sys
 
 import numpy as np
 
-import figur_nach_fps
-from figur_nach_fps import Hautnetz, KETTE, ERSATZELTERN, _HAND_KETTE
+from figur_nach_fps import KETTE, ERSATZELTERN, _HAND_KETTE
+from hautnetz import HAUT, Hautnetz
 
 ORDNER = os.path.dirname(os.path.abspath(__file__))
 WURZEL = {'female': r'A:\3DTools\HumanBody\data\humanBody',
@@ -69,7 +69,7 @@ class Codyfigur:
             gewaehlt = np.ones(len(netz.vierecke), dtype=bool)
         else:
             nummern = [i for i, n in enumerate(netz.materialien)
-                       if n in figur_nach_fps.HAUT]
+                       if n in HAUT]
             gewaehlt = np.isin(netz.flaechenmaterial, nummern)
         q = netz.vierecke[gewaehlt]
         return np.unique(np.vstack([q[:, [0, 1, 2]], q[:, [0, 2, 3]]]))

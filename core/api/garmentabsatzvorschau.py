@@ -38,14 +38,13 @@ class Garmentabsatzvorschau:
         from GarmentCode.schuh.fussvorgabe import Fussvorgabe
         fuss = Fussvorgabe(masse)
         beugung = Fussbeugung.aus_fuss(fuss, heel, platform, toe_spring)
-        antwort = beugung.beschreibung()
-        antwort['hinweise'] = list(fuss.hinweise)
-        return antwort
+        return {**beugung.beschreibung(), 'hinweise': list(fuss.hinweise)}
 
     @staticmethod
     def _zahl(request, name, vorgabe):
         try:
             return float(request.POST.get(name) or vorgabe)
+        # stumm gewollt: ein unlesbarer Reglerwert aus dem Browser faellt auf die Vorgabe
         except ValueError:
             return vorgabe
 

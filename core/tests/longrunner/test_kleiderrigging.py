@@ -34,7 +34,7 @@ from django.conf import settings
 
 class MhkleidHautTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):
@@ -83,7 +83,7 @@ class MhkleidHautTest(unittest.TestCase):
         index, gewicht = Mhhaut.fuer_kleidung(v, a)
         soll = (grund[10] * 0.5 + grund[20] * 0.3 + grund[30] * 0.2)
         # Die vier staerksten Anteile, normiert — genau das liefert `_vier`.
-        for spalte, wert in zip(index[0], gewicht[0]):
+        for spalte, _wert in zip(index[0], gewicht[0]):
             self.assertGreater(soll[spalte] + 1e-12, 0.0)
         self.assertAlmostEqual(float(gewicht[0].sum()), 1.0, places=5)
 
@@ -100,6 +100,7 @@ class MhkleidHautTest(unittest.TestCase):
         for kennung in self.stuecke:
             try:
                 netz = Mhkleidnetz(kennung).netz()
+            # stumm gewollt: die Pruefung ZAEHLT die Stuecke, deren Netz nicht baut (bekannter Altbefund, 19 Stuecke)
             except Exception:
                 kaputt += 1
                 continue
@@ -114,7 +115,7 @@ class MhkleidHautTest(unittest.TestCase):
 
 class SmplTraegerTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     @classmethod
     def setUpClass(cls):

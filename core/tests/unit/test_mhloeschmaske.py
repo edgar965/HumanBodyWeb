@@ -24,7 +24,7 @@ from MakeHuman.loeschmaske import Mhloeschmaske
 
 class MhloeschmaskeTest(unittest.TestCase):
 
-    databases = []
+    databases = set()
 
     def test_einzelne_zahlen(self):
         self.assertEqual(Mhloeschmaske.nummern(['3', '7', '9']), {3, 7, 9})

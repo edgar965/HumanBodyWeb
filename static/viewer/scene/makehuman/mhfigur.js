@@ -6,7 +6,7 @@ import { Protokoll } from '../../gemeinsam/protokoll.js';
 import { Mhkleidstueck } from './mhkleidstueck.js';
 import { Knochenbau } from '../../gemeinsam/knochenbau.js';
 import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
-import { GarmentcodeAblage } from '../garmentcode_ablage.js';
+import { Figurbasis } from '../figurbasis.js';
 
 /**
  * MhFigur — der MakeHuman-Basiskörper (hm08) als Figur der Szene.
@@ -37,7 +37,7 @@ import { GarmentcodeAblage } from '../garmentcode_ablage.js';
  * gehen bei JEDER Netzanfrage mit — deshalb POST statt GET: 269 Werte
  * passen in keine Adresse.
  */
-export class MhFigur {
+export class MhFigur extends Figurbasis {
 
     static QUELLE = 'makehuman';
     static ADRESSE = '/api/character/mh-figur/';
@@ -46,11 +46,9 @@ export class MhFigur {
     static HAUT = { farbe: '#c8a48a', rauheit: 65, metall: 0, deckkraft: 100 };
 
     constructor(id, daten = {}) {
-        this.id = id;
-        this.quelle = MhFigur.QUELLE;
+        super(id, MhFigur.QUELLE);
         this.modell = daten.modell || 'basis';
         this.presetName = daten.presetName || 'MakeHuman-Basiskörper';
-        this.presetKey = null;
         this.bodyType = 'MakeHuman';
         /** Welche Netzteile sichtbar sind (`koerper`, `helfer`, `gelenke`). */
         this.teile = Array.isArray(daten.teile) && daten.teile.length
@@ -66,26 +64,6 @@ export class MhFigur {
         this.kleidung = { ...(daten.kleidung || {}) };
         this.hoehe = 0;
         this.punktzahl = 0;
-        this.group = new THREE.Group();
-        this.group.userData.characterId = id;
-        this.bodyMesh = null;
-        // Felder der HumanBody-Figur, hier leer (siehe Kopf).
-        this.clothMeshes = {};
-        this.hairMesh = null;
-        this.garments = [];
-        this.garmentState = {};
-        this.morphs = {};
-        this.meta = {};
-        this.cloth = [];
-        this.hairStyle = null;
-        this.mhProxies = {};
-        this.generatedConfig = null;
-        this.selected = false;
-        this.isSkinned = false;
-        this.rigifySkeleton = null;
-        /** `default.mhskel` (163 Knochen) — dieselbe Form wie bei UMA,
-         *  damit `Rigauswahl` es ohne Sonderfall findet. */
-        this.skelett = null;
     }
 
     // ------------------------------------------------------------------ Körper
@@ -296,18 +274,9 @@ export class MhFigur {
 
     // ------------------------------------------------------------------ Rest
 
-    dispose() {
-        Netzentsorgung.baum(this.group);
-        if (this.group.parent) this.group.parent.remove(this.group);
-    }
-
     toJSON() {
         return {
-            id: this.id,
-            quelle: this.quelle,
-            presetName: this.presetName,
-            presetKey: null,
-            bodyType: this.bodyType,
+            ...this.grunddaten(),
             modell: this.modell,
             teile: [...this.teile],
             glatt: this.glatt,
@@ -315,30 +284,10 @@ export class MhFigur {
             makro: { ...this.makro },
             regler: { ...this.regler },
             kleidung: { ...this.kleidung },
-            // GarmentCode-Stuecke ueberleben das Speichern (08.09.2026).
-            [GarmentcodeAblage.FELD]: GarmentcodeAblage.toJSON(this),
-            transform: {
-                position: this.group.position.toArray(),
-                rotation: [this.group.rotation.x, this.group.rotation.y,
-                           this.group.rotation.z],
-                scale: this.group.scale.toArray(),
-            },
         };
     }
 
-    static async fromJSON(daten) {
-        const figur = new MhFigur(daten.id, daten);
-        await figur.load();
-        const lage = daten.transform;
-        if (lage) {
-            if (lage.position) figur.group.position.fromArray(lage.position);
-            if (lage.rotation) {
-                figur.group.rotation.set(lage.rotation[0], lage.rotation[1],
-                                         lage.rotation[2]);
-            }
-            if (lage.scale) figur.group.scale.fromArray(lage.scale);
-        }
-        await GarmentcodeAblage.laden(figur, daten[GarmentcodeAblage.FELD]);
-        return figur;
+    static fromJSON(daten) {
+        return Figurbasis.ausJSON(MhFigur, daten);
     }
 }

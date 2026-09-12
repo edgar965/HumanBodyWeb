@@ -29,7 +29,7 @@ from UMA_Python.glaettung import Glaettung                  # noqa: E402
 class UmaOriginalfaelle(unittest.TestCase):
     u"""Die vier Fälle aus UMAs eigener NUnit-Suite."""
 
-    databases = []
+    databases = set()
 
     def test_mapping_haelt_den_normalabstand_nach_einer_koerperaenderung(self):
         u"""`MappingRoundTripPreservesSurfaceNormalOffsetAfterBodyDelta`."""
@@ -86,7 +86,7 @@ class ZweiteFassungDesselbenAlgorithmus(unittest.TestCase):
     (Ericson 5.1.5), unabhängig geschrieben. Weichen sie ab, hat eine der
     beiden einen Fehler."""
 
-    databases = []
+    databases = set()
 
     def test_beide_ericson_fassungen_liefern_denselben_fusspunkt(self):
         from assetCreator.GarmentFitter.dreiecksprojektion import DreiecksProjektion
@@ -107,7 +107,7 @@ class ZweiteFassungDesselbenAlgorithmus(unittest.TestCase):
 class RelativeEntartungsschwelle(unittest.TestCase):
     u"""Die Abweichung vom Original, die am meisten bewirkt hat."""
 
-    databases = []
+    databases = set()
 
     @staticmethod
     def _feines_dreieck(kante_m):
@@ -147,7 +147,7 @@ class GlaettungHaeltDieGroesse(unittest.TestCase):
     u"""Laplace schrumpft, Taubin und HC nicht — der Grund, warum es drei
     Verfahren gibt."""
 
-    databases = []
+    databases = set()
 
     @staticmethod
     def _kugel(n=200):

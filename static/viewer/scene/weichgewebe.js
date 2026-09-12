@@ -25,6 +25,7 @@
 import { state } from './state.js';
 import { Weichgewebekoerper } from '../gemeinsam/weichgewebekoerper.js';
 import { Weichgewebeaufbau } from './weichgewebeaufbau.js';
+import { Protokoll } from '../gemeinsam/protokoll.js';
 
 export class Weichgewebe {
     /** Anteil je Bild, mit dem die Stärke dem Ziel folgt — gedämpft, sonst
@@ -94,7 +95,7 @@ export class Weichgewebe {
                 eintrag.gemeldet = true;
                 let paare = 0;
                 for (const teil of eintrag.netze) for (const p of teil.koerper.punkteJeKnochen) paare += p.idx.length;
-                console.info(`Weichgewebe: ${eintrag.netze.length} Netze, ${eintrag.b} Knochen, `
+                Protokoll.info('Weichgewebe', `${eintrag.netze.length} Netze, ${eintrag.b} Knochen, `
                     + `${paare} Punkt-Knochen-Paare, erstes Bild ${dauer.toFixed(0)} ms`);
             }
         }

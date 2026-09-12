@@ -34,7 +34,7 @@ BVH = r'A:/3DTools/3DObjects/animations/bvh/Walk/01_01.bvh'
 
 class RetargetfassungTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def _ablage(self, fassungsnummer):
         with mock.patch.object(fassung, 'REGELFASSUNG', fassungsnummer):

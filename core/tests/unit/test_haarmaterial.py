@@ -25,7 +25,7 @@ from ..jsmodul import Jsmodul
 
 class DasHaarmaterialIstDielektrischTest(SimpleTestCase):
 
-    databases = []
+    databases = set()
 
     def setUp(self):
         self.quelle = Jsmodul('character_core.js').pfad.read_text(
@@ -49,7 +49,7 @@ class DasHaarmaterialIstDielektrischTest(SimpleTestCase):
 class DieFrisurdateienFuehrenKeinMaterialTest(SimpleTestCase):
     u"""Die Gegenprobe an den echten Daten (nur lesend)."""
 
-    databases = []
+    databases = set()
 
     def test_jede_frisur_ueberlaesst_das_material_der_spezifikation(self):
         ordner = settings.HUMANBODY_ROOT / 'data' / 'humanBody' / 'hairstyles'
