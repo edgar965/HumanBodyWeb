@@ -38,9 +38,24 @@ class DerDuomoBefehl(unittest.TestCase):
         befehl = self._lauf().befehl()
         self.assertTrue(befehl[0].lower().endswith(
             os.path.join('python10duomo', 'scripts', 'python.exe')))
-        self.assertEqual(befehl[1], os.path.join('scripts', 'inference.py'))
+        # Der Starter vertritt DuoMos Skript: gleiche Argumente, aber ohne
+        # xformers' Hopper-Kern (Blackwell) und ohne EGL-Rendern.
+        self.assertEqual(befehl[1], Duomolauf.STARTER)
         self.assertEqual(befehl[2:4], ['--video_path', 'tanz.mp4'])
         self.assertNotIn('--camera_param', befehl)
+
+    def test_starter_liegt_neben_dem_lauf_und_rendert_nicht(self):
+        self.assertTrue(os.path.isfile(Duomolauf.STARTER))
+        self.assertEqual(os.path.basename(Duomolauf.STARTER), 'duomo_start.py')
+        import duomo_start
+        self.assertTrue(callable(duomo_start.flash3_abschalten))
+        self.assertTrue(callable(duomo_start.vorhersagen))
+        quelle = open(Duomolauf.STARTER, encoding='utf-8').read()
+        self.assertIn('flash3.FwOp.is_available', quelle)
+        self.assertIn('render_output=False', quelle)
+        # Dieselben Argumente wie DuoMos `scripts/inference.py`.
+        for argument in ('--video_path', '--camera_param', '--boxes'):
+            self.assertIn("'%s'" % argument, quelle)
 
     def test_kamerabahn_nur_bei_bewegter_kamera(self):
         mit = self._lauf(static_cam=False, kamera_pt='kamera.pt').befehl()
