@@ -187,8 +187,9 @@ class Einstellungsfelder:
             u'des Modells. Vorgabe für die Karte auf der Uploadseite'),
         'gemx_smooth_sigma': F(
             u'Temporal Smoothing',
-            u'Gaußsche Glättung der Gelenkwinkel im BVH (0 = aus, 2 = Standard, '
-            u'4 und mehr = stark). Gelenkgrenzen gibt es für GEM-X nicht: SOMA '
+            u'Gaußsche Glättung der Gelenkwinkel im BVH (0 = aus, 4 = Standard seit '
+            u'12.09.2026: gemessen halbiert sie das Körperzittern von GEM-X bei '
+            u'gleicher Deckung; 2 = weniger). Gelenkgrenzen gibt es für GEM-X nicht: SOMA '
             u'hat 77 Gelenke, die Grenzen sind SMPL-Indizes',
             min=0, max=10, schritt='0.5'),
     }

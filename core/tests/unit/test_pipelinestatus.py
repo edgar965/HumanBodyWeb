@@ -35,12 +35,13 @@ class EinRechnerMitPipelines(unittest.TestCase):
 
     #: Reihenfolge, in der `_pipelines_verfuegbar` die Pfade abfragt.
     EINSTELLUNGEN = ('MOCAPNET_V4_SCRIPT', 'GVHMR_ROOT', 'WHAM_ROOT',
-                     'PROMPTHMR_ROOT')
+                     'PROMPTHMR_ROOT', 'GEM_ROOT')
 
-    def _status(self, v4, gvhmr, wham, prompthmr):
+    def _status(self, v4, gvhmr, wham, prompthmr, gem=False):
         u"""`status_3d`, als lägen genau diese Verzeichnisse vor."""
         vorhanden = {'MOCAPNET_V4_SCRIPT': v4, 'GVHMR_ROOT': gvhmr,
-                     'WHAM_ROOT': wham, 'PROMPTHMR_ROOT': prompthmr}
+                     'WHAM_ROOT': wham, 'PROMPTHMR_ROOT': prompthmr,
+                     'GEM_ROOT': gem}
 
         class Pfadattrappe:
             def __init__(self, roh):
@@ -85,6 +86,17 @@ class EinRechnerMitPipelines(unittest.TestCase):
         u"""PromptHMR allein — der zweite Weg zum selben Ziel."""
         s = self._status(True, False, False, True)
         self.assertTrue(s['hybrid'])
+
+    def test_v4_mit_gem_genuegt(self):
+        u"""GEM-SMPL — der dritte Weg (12.09.2026)."""
+        s = self._status(True, False, False, False, gem=True)
+        self.assertTrue(s['hybrid'])
+        self.assertTrue(s['hybrid_gem'])
+        self.assertFalse(s['hybrid_gvhmr'])
+
+    def test_gem_ohne_v4_kein_hybrid_gem(self):
+        s = self._status(False, False, False, False, gem=True)
+        self.assertFalse(s['hybrid_gem'])
 
     def test_die_einzelnen_bleiben_erhalten(self):
         u"""`hybrid` tritt NEBEN die beiden — das Formular schickt weiter

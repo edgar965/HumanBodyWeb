@@ -104,8 +104,13 @@ export class Pipelinefelder {
     }
 
     /**
-     * Hybrid: Koerper von GVHMR oder PromptHMR, Gesicht und Haende von v4.
-     * Die Feldnamen tragen zusaetzlich die Vorsilbe `hybrid_`.
+     * Hybrid: Koerper von GVHMR, PromptHMR oder GEM-SMPL, Gesicht von v4,
+     * Haende von v4 oder GEM-X. Die Feldnamen tragen zusaetzlich die Vorsilbe
+     * `hybrid_`.
+     *
+     * `hands_source`/`face_source` fehlten hier bis zum 12.09.2026: Die
+     * Formular-POST-Haelfte (`Pipelineparameter._hybrid`) las beide, der Weg
+     * ueber „Pipeline starten" schickte sie nicht — die Auswahl blieb wirkungslos.
      */
     static _hybrid() {
         const backend = Pipelinefelder.wert('hybrid_body_backend', 'text')
@@ -113,6 +118,8 @@ export class Pipelinefelder {
         const werte = {
             body_backend: backend,
             body_device: Pipelinefelder.wert('hybrid_body_device', 'text'),
+            hands_source: Pipelinefelder.wert('hybrid_hands_source', 'text'),
+            face_source: Pipelinefelder.wert('hybrid_face_source', 'text'),
             static_cam: Pipelinefelder.wert(
                 `hybrid_${backend}_static_cam`, 'bool'),
             v4_hcd_iterations: Pipelinefelder.wert(
@@ -126,6 +133,10 @@ export class Pipelinefelder {
         if (backend === 'gvhmr') {
             werte.focal_length_mm = Pipelinefelder.wert(
                 'hybrid_gvhmr_focal_length_mm', 'float');
+        }
+        if (backend === 'gem') {
+            werte.smooth_sigma = Pipelinefelder.wert('hybrid_gem_smooth_sigma', 'float');
+            werte.joint_limits = Pipelinefelder.wert('hybrid_gem_joint_limits', 'bool');
         }
         return Object.assign(werte,
                              Pipelinefelder.teile('hybrid_v4_parts', 'v4_'));

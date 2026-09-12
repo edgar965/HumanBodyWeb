@@ -86,6 +86,9 @@ class Auftragslauf:
         if gesicht_bvh:
             Ergebnisablage.kopieren(gesicht_bvh, self.job.name,
                                     self.job.pipeline + '_face')
+        if self.job.bvh_file_hands:
+            Ergebnisablage.kopieren(self.job.bvh_file_hands, self.job.name,
+                                    self.job.pipeline + '_hands')
         if self.job.pipeline == 'hybrid_gvhmr' and koerper_bvh:
             GvhmrAusgabe(self.job, self.ausgabeordner / 'body').kopieren()
 

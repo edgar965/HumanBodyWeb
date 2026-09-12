@@ -57,7 +57,7 @@ PIPELINES_2D = ('mediapipe', 'openpose', 'rtmpose', 'vitpose', 'yolo11')
 
 #: Pipelines der 3D-Uploadseite.
 PIPELINES_3D = ('v4', 'gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx',
-                'hybrid_gvhmr', 'hybrid_prompthmr')
+                'hybrid_gvhmr', 'hybrid_prompthmr', 'hybrid_gem')
 
 #: Zustaende, in denen ein Auftrag die Sperre haelt. EINE Quelle: `Haenger`
 #: braucht dieselbe Liste, um die Sperre wieder freizugeben.
@@ -96,6 +96,8 @@ class Auftragsendpunkte:
         }
         if job.bvh_file_face:
             daten['bvh_file_face'] = job.bvh_file_face
+        if job.bvh_file_hands:
+            daten['bvh_file_hands'] = job.bvh_file_hands
         return JsonResponse(daten)
 
     # -------------------------------------------------------------- Starten

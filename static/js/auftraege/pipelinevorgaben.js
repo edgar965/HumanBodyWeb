@@ -82,15 +82,20 @@ export class Pipelinevorgaben {
                    duomo_joint_limits: true, duomo_device: 'cuda' },
         },
         gemx: {
+            // sigma 4 = Standard seit dem 12.09.2026 (gemessen: Koerperzittern
+            // 0,31 -> 0,21 cm/Bild^2 bei gleicher Deckung); „Maximum" glaettet
+            // weniger, nicht besser.
             fast: { gemx_static_cam: true, gemx_smooth_sigma: 4.0, gemx_device: 'cuda' },
-            standard: { gemx_static_cam: true, gemx_smooth_sigma: 2.0, gemx_device: 'cuda' },
-            max: { gemx_static_cam: true, gemx_smooth_sigma: 1.0, gemx_device: 'cuda' },
+            standard: { gemx_static_cam: true, gemx_smooth_sigma: 4.0, gemx_device: 'cuda' },
+            max: { gemx_static_cam: true, gemx_smooth_sigma: 2.0, gemx_device: 'cuda' },
         },
         hybrid: {
             fast: {
                 hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true,
                 hybrid_gvhmr_focal_length_mm: 0,
                 hybrid_prompthmr_static_cam: true,
+                hybrid_gem_static_cam: true, hybrid_gem_smooth_sigma: 4.0,
+                hybrid_gem_joint_limits: true,
                 hybrid_hands_source: 'v4', hybrid_face_source: 'smplest_x',
                 hybrid_v4_hcd_iterations: 3, hybrid_v4_hcd_epochs: 10,
                 hybrid_v4_mp_detection: 0.3, hybrid_v4_mp_tracking: 0.1,
@@ -101,6 +106,8 @@ export class Pipelinevorgaben {
                 hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true,
                 hybrid_gvhmr_focal_length_mm: 0,
                 hybrid_prompthmr_static_cam: true,
+                hybrid_gem_static_cam: true, hybrid_gem_smooth_sigma: 2.0,
+                hybrid_gem_joint_limits: true,
                 hybrid_hands_source: 'v4', hybrid_face_source: 'smplest_x',
                 hybrid_v4_hcd_iterations: 10, hybrid_v4_hcd_epochs: 30,
                 hybrid_v4_mp_detection: 0.5, hybrid_v4_mp_tracking: 0.2,
@@ -111,6 +118,8 @@ export class Pipelinevorgaben {
                 hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: false,
                 hybrid_gvhmr_focal_length_mm: 0,
                 hybrid_prompthmr_static_cam: false,
+                hybrid_gem_static_cam: true, hybrid_gem_smooth_sigma: 1.0,
+                hybrid_gem_joint_limits: true,
                 hybrid_hands_source: 'v4', hybrid_face_source: 'smplest_x',
                 hybrid_v4_hcd_iterations: 30, hybrid_v4_hcd_epochs: 80,
                 hybrid_v4_mp_detection: 0.7, hybrid_v4_mp_tracking: 0.5,

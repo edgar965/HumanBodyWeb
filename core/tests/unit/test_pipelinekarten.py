@@ -39,13 +39,14 @@ class DieKarten(SimpleTestCase):
         self.assertEqual(raenge[len(mit):], [None] * (len(raenge) - len(mit)))
         self.assertTrue(mit, 'keine Karte mit Rang')
 
-    def test_die_hybrid_karte_steht_bei_ihrer_besseren_haelfte(self):
-        u"""hybrid_gvhmr hat einen Rang, hybrid_prompthmr keinen — die eine
-        Karte steht beim Rang, nicht am Ende."""
+    def test_die_hybrid_karte_steht_bei_ihrer_besten_pipeline(self):
+        u"""Drei Pipelines auf einer Karte (hybrid_gem, hybrid_gvhmr,
+        hybrid_prompthmr ohne Rang): die Karte traegt den besten Rang
+        und steht nicht bei den ranglosen am Ende."""
         folge = Pipelinekarten.reihenfolge()
-        self.assertEqual(Pipelinekarten.rang('hybrid'),
-                         next(e['rang'] for e in Pipelinevergleich.mit_rang()
-                              if e['schluessel'] == 'hybrid_gvhmr'))
+        raenge = [e['rang'] for e in Pipelinevergleich.mit_rang()
+                  if Pipelinekarten.karte(e['schluessel']) == 'hybrid']
+        self.assertEqual(Pipelinekarten.rang('hybrid'), min(raenge))
         self.assertLess(folge.index('hybrid'), len(folge) - 1)
 
     def test_jede_karte_hat_eine_vorlage(self):

@@ -25,6 +25,7 @@ import time
 
 from django.conf import settings
 
+from .hybridhaende import Hybridhaende
 from .mocapnet4 import V4Lauf
 from .smpllauf import Smpllauf
 from .teilauftrag import Teilauftrag
@@ -43,17 +44,23 @@ class Hybridlauf(Pipelinelauf):
     TAKT = 2
     #: Frist für den Stapel-Lauf der Gesichtsausdrücke (SMPLest-X).
     AUSDRUCK_FRIST = 1200
+    #: Pipeline-Name -> Körper-Rückgrat. GEM-SMPL seit dem 12.09.2026 (Edgar:
+    #: „können die NACH der GEM_SMPL pipeline aufsetzen") — dieselbe
+    #: Bvhbau-BVH wie GVHMR, also derselbe Retarget-Weg.
+    RUECKGRAT = {'hybrid_gvhmr': 'gvhmr', 'hybrid_prompthmr': 'prompthmr',
+                 'hybrid_gem': 'gem'}
 
     def __init__(self, job, video_path, output_dir):
         super().__init__(job, video_path, output_dir)
-        #: Der Körper-Rücken hängt am Pipeline-Namen: `hybrid_gvhmr` -> GVHMR,
-        #: alles andere -> PromptHMR.
-        self.koerper_rueckgrat = ('gvhmr' if job.pipeline == 'hybrid_gvhmr'
-                                  else 'prompthmr')
+        #: Der Körper-Rücken hängt am Pipeline-Namen; unbekannt -> PromptHMR.
+        self.koerper_rueckgrat = self.RUECKGRAT.get(job.pipeline, 'prompthmr')
         self.koerper = self._koerperauftrag()
         self.gesicht = self._gesichtsauftrag()
-        self.ergebnis = {'koerper': None, 'gesicht': None}
-        self.fehler: dict[str, str | None] = {'koerper': None, 'gesicht': None}
+        #: Finger aus GEM-X — nur wenn bestellt (`hands_source: gemx`).
+        self.haende = Hybridhaende(job, self.params, self.einstellungen).auftrag()
+        self.ergebnis = {'koerper': None, 'gesicht': None, 'haende': None}
+        self.fehler: dict[str, str | None] = {'koerper': None, 'gesicht': None,
+                                              'haende': None}
 
     # ------------------------------------------------------------------ Ablauf
 
@@ -113,15 +120,16 @@ class Hybridlauf(Pipelinelauf):
         gesicht = self.output_dir / 'face'
         koerper.mkdir(parents=True, exist_ok=True)
         gesicht.mkdir(parents=True, exist_ok=True)
+        if self.haende:
+            (self.output_dir / Hybridhaende.ORDNER).mkdir(parents=True, exist_ok=True)
         return koerper, gesicht
 
     # ------------------------------------------------------ Parallel und Takt
 
     def _starten(self, koerper_ordner, gesicht_ordner):
         laeufe = [
-            threading.Thread(target=self._lauf, daemon=True,
-                             args=('koerper', Smpllauf, self.koerper,
-                                   koerper_ordner)),
+            threading.Thread(target=self._koerper_dann_haende, daemon=True,
+                             args=(koerper_ordner,)),
             threading.Thread(target=self._lauf, daemon=True,
                              args=('gesicht', V4Lauf, self.gesicht,
                                    gesicht_ordner)),
@@ -129,6 +137,14 @@ class Hybridlauf(Pipelinelauf):
         for lauf in laeufe:
             lauf.start()
         return laeufe
+
+    def _koerper_dann_haende(self, koerper_ordner):
+        """Körper, und danach im selben Faden die GEM-X-Finger: beide auf der
+        GPU, nacheinander (siehe `hybridhaende.py`)."""
+        self._lauf('koerper', Smpllauf, self.koerper, koerper_ordner)
+        if self.haende:
+            self._lauf('haende', Smpllauf, self.haende,
+                       self.output_dir / Hybridhaende.ORDNER)
 
     def _lauf(self, welcher, pipelineklasse, auftrag, ordner):
         """Ein Unterlauf im eigenen Thread — Fehler bleiben in `self.fehler`.
@@ -155,18 +171,20 @@ class Hybridlauf(Pipelinelauf):
         erst, wenn beide fertig sind — ein Mittelwert würde 100 % anzeigen,
         während eine Hälfte noch rechnet.
         """
-        hoechststand = {'koerper': 0, 'gesicht': 0}
+        teile = [('koerper', 'Body', self.koerper), ('gesicht', 'Face+Hands', self.gesicht)]
+        if self.haende:
+            teile.append(('haende', 'Fingers (GEM-X)', self.haende))
+        hoechststand = {welcher: 0 for welcher, _, _ in teile}
         while any(lauf.is_alive() for lauf in laeufe):
             time.sleep(self.TAKT)
-            for welcher, auftrag in (('koerper', self.koerper),
-                                     ('gesicht', self.gesicht)):
+            for welcher, _, auftrag in teile:
                 hoechststand[welcher] = max(hoechststand[welcher],
                                             auftrag.progress or 0)
             self._melden(
                 min(hoechststand.values()),
-                'Body: %s | Face+Hands: %s'
-                % (self.koerper.progress_detail or '%d%%' % hoechststand['koerper'],
-                   self.gesicht.progress_detail or '%d%%' % hoechststand['gesicht']))
+                ' | '.join('%s: %s' % (name, auftrag.progress_detail
+                                       or '%d%%' % hoechststand[welcher])
+                           for welcher, name, auftrag in teile))
         for lauf in laeufe:
             lauf.join(timeout=5)
 
@@ -186,6 +204,8 @@ class Hybridlauf(Pipelinelauf):
                                                 self.fehler['koerper']))
         if self.fehler['gesicht']:
             meldungen.append('Face+Hands (v4): %s' % self.fehler['gesicht'])
+        if self.fehler['haende']:
+            meldungen.append('Fingers (GEM-X): %s' % self.fehler['haende'])
         if meldungen and not any(self.ergebnis.values()):
             raise RuntimeError('Hybrid pipeline failed:\n' + '\n'.join(meldungen))
         return meldungen
@@ -196,6 +216,8 @@ class Hybridlauf(Pipelinelauf):
             self.job.bvh_file = self.ergebnis['koerper']
         if self.ergebnis['gesicht']:
             self.job.bvh_file_face = self.ergebnis['gesicht']
+        if self.ergebnis['haende']:
+            self.job.bvh_file_hands = self.ergebnis['haende']
 
     def _gesichtsausdruecke(self):
         """SMPL-X-Ausdrücke nachziehen — sie ersetzen die unruhigen v4-Knochen.

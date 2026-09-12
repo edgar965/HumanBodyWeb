@@ -22,6 +22,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ..daten.retargetwahl import Retargetwahl
 from ..dienste.bvhablage import Bvhablage
 from ..dienste.bvhverwaltung import Bvhverwaltung, BvhFehler
+from ..dienste.handspuren import Handspuren
 from ..dienste.retargetdaten import Retargetdaten
 from ..dienste.umaskelett import UmaskelettFehlt
 from ..models import BVHJob
@@ -234,8 +235,8 @@ class Retargetendpunkte:
             return HttpResponseNotFound('Job has no body BVH file')
         if not job.bvh_file_face:
             return HttpResponseNotFound('Job has no face BVH file')
-        for pfad in (job.bvh_file, job.bvh_file_face):
-            if not os.path.isfile(pfad):
+        for pfad in (job.bvh_file, job.bvh_file_face, job.bvh_file_hands):
+            if pfad and not os.path.isfile(pfad):
                 return HttpResponseNotFound('BVH file not found: %s' % pfad)
         groesse = float(request.GET.get('body_height',
                                         Retargetendpunkte.VORGABE_GROESSE))
@@ -243,11 +244,16 @@ class Retargetendpunkte:
                          in ('1', 'true'))
         # Die v4-BVH wird IMMER umgesetzt (sie fuehrt die Handknochen); beim
         # Mischen fallen die unruhigen v4-Gesichtsknochen heraus.
-        return JsonResponse(SkeletonRigify.merge_retargeted_clips(
+        gemischt = SkeletonRigify.merge_retargeted_clips(
             Retargetdaten(job.bvh_file, groesse,
                           foot_correction=fusskorrektur).holen(),
             Retargetdaten(job.bvh_file_face, groesse).holen(),
-            filter_noisy_face=True).als_dict())
+            filter_noisy_face=True)
+        # Finger aus der dritten Quelle (GEM-X, 12.09.2026) ueber das Gemisch.
+        if job.bvh_file_hands:
+            gemischt = Handspuren.mischen(
+                gemischt, Retargetdaten(job.bvh_file_hands, groesse).holen())
+        return JsonResponse(gemischt.als_dict())
 
     # -------------------------------------------------------- Bibliothek
 

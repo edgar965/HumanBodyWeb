@@ -113,7 +113,11 @@ class LifterEinstellungen(models.Model):
         default=True,
         help_text=Einstellungsfelder.hilfetext('gemx_static_cam'),
     )
+    # 4 statt 2 seit dem 12.09.2026 (Edgar: „behebe: GEM-X ist unruhiger"):
+    # gemessen auf 001_ShyrinKurz, Körperzittern 0,31 -> 0,21 cm/Bild² bei
+    # gleicher Deckung (25,0 -> 25,1 px). Migration 0039 zieht die
+    # gespeicherte 2,0 nach.
     gemx_smooth_sigma = models.FloatField(
-        default=2.0,
+        default=4.0,
         help_text=Einstellungsfelder.hilfetext('gemx_smooth_sigma'),
     )

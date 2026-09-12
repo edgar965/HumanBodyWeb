@@ -49,6 +49,9 @@ class BVHJob(models.Model):
         # Hybrid Pipelines (SMPL Body + MocapNET v4 Face+Hands)
         ('hybrid_gvhmr', 'Hybrid (GVHMR + MocapNET v4)'),
         ('hybrid_prompthmr', 'Hybrid (PromptHMR + MocapNET v4)'),
+        # 12.09.2026 (Edgar: „können die NACH der GEM_SMPL pipeline aufsetzen"):
+        # der beste Körper des Vergleichs als drittes Rückgrat.
+        ('hybrid_gem', 'Hybrid (GEM-SMPL + MocapNET v4)'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -57,6 +60,10 @@ class BVHJob(models.Model):
     csv_file = models.CharField(max_length=512, blank=True)
     bvh_file = models.CharField(max_length=512, blank=True)
     bvh_file_face = models.CharField(max_length=512, blank=True)
+    #: Finger aus einer dritten Quelle (GEM-X), wenn der Hybrid sie so
+    #: bestellt hat (`hands_source: gemx`, 12.09.2026); die Zusammenführung
+    #: legt ihre Fingerknochen über Körper und v4-Gesicht.
+    bvh_file_hands = models.CharField(max_length=512, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     pipeline = models.CharField(max_length=30, choices=PIPELINE_CHOICES,
                                 default='hybrid_gvhmr')

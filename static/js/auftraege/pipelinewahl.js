@@ -17,6 +17,9 @@ export class Pipelinewahl {
 
     /** Der Hybrid-Zweig hat mehrere Backends; der Wert traegt sie als Suffix. */
     static HYBRID = 'hybrid';
+    /** Die Koerper-Rueckgrate des Hybrids — je eines mit eigenem Reglerblock
+     *  `hybrid-<name>-settings`. GEM-SMPL seit dem 12.09.2026. */
+    static BACKENDS = ['gvhmr', 'prompthmr', 'gem'];
 
     static aufbauen() {
         return new Pipelinewahl().aufbauen();
@@ -69,7 +72,7 @@ export class Pipelinewahl {
         const backend = feld.value;
         const radio = document.getElementById('hybridRadio');
         if (radio) radio.value = Pipelinewahl.HYBRID + '_' + backend;
-        for (const name of ['gvhmr', 'prompthmr']) {
+        for (const name of Pipelinewahl.BACKENDS) {
             document.getElementById(`hybrid-${name}-settings`)
                 ?.classList.toggle('hb-versteckt', backend !== name);
         }

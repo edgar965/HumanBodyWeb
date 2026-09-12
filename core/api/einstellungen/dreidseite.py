@@ -31,7 +31,7 @@ class DreiDEinstellungen(Einstellungsseite):
         # Glaettung (`Bvhbau`) der neuen Pipelines — Vorgaben der Karten (12.09.2026)
         ('gem_smooth_sigma', 2.0, 0.0, 10.0, False),
         ('duomo_smooth_sigma', 2.0, 0.0, 10.0, False),
-        ('gemx_smooth_sigma', 2.0, 0.0, 10.0, False),
+        ('gemx_smooth_sigma', 4.0, 0.0, 10.0, False),   # 4 seit 12.09.2026, gemessen
     )
 
     #: Bestandteile, die v4 berechnen soll, und die Schalter der Lifter.
@@ -49,7 +49,7 @@ class DreiDEinstellungen(Einstellungsseite):
     AUSWAHLEN = (
         ('lifter_3d_default',
          ('v4', 'gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx',
-          'hybrid_gvhmr', 'hybrid_prompthmr'),
+          'hybrid_gvhmr', 'hybrid_prompthmr', 'hybrid_gem'),
          'hybrid_gvhmr'),
         ('smpl_device', ('cuda', 'cpu'), 'cuda'),
     )

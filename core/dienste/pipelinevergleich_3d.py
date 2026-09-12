@@ -6,6 +6,12 @@ ueber die Web-API: Dauer = updated_at - created_at des Auftrags; Ruhe/Boden aus
 `_wegwerf/vergleich_001/vergleich.py` (vergleich.md); Delta ViTPose aus
 `skelettvideos.py` (ueberlagerung.json). `None` heisst: nicht gemessen —
 die Seite schreibt das aus. Felder siehe `Pipelinevergleich.FELDER`.
+
+NEUBEWERTUNG 12.09.2026 (Edgar: „Mach auch eine neubewertung der Pipelines, vor
+allem GEM-X"): GEM-X mit Glaettung 4 (Standard seit dem Tag), zwei neue
+Hybride auf dem GEM-SMPL-Koerper. Ein Eintrag mit `variante` ist dieselbe
+Pipeline mit anderer Bestellung (hier `hands_source: gemx`) — eigene Zeile,
+eigener Rang, gleicher Schluessel. Raenge 1..12 fuer alles mit BVH.
 """
 
 
@@ -13,7 +19,39 @@ class Pipelines3d:
 
     # Dictionary gewollt: geht ueber `Pipelinevergleich.alle()` in die Vorlage.
     EINTRAEGE = [
-        {'schluessel': 'gem', 'art': '3D', 'rang': 1,
+        {'schluessel': 'hybrid_gem', 'art': 'Hybrid', 'rang': 1, 'variante': 'Finger aus GEM-X',
+         'variante_kennung': 'hands_source: gemx',
+         'verfahren': 'Körper aus GEM-SMPL, danach GEM-X (SOMA, 77 Gelenke) für die Finger und '
+                      'MocapNET v4 für das Gesicht (Ausdrücke aus SMPLest-X); drei BVH-Dateien, '
+                      'zusammengeführt auf dem Rig (`Handspuren`). Neu am 12.09.2026.',
+         'gelenke': 24, 'haende': True, 'gesicht': True, 'kamera': 'statisch (Kameraraum)',
+         'dauer_s': 348, 'ueberlagerung_px': 24.3, 'ruhe_wurzel': 3.1, 'ruhe_pose': 0.20,
+         'boden_cm': -103, 'zustand': 'laeuft', 'zustand_grund': '',
+         'vorteile': ['Der GEM-SMPL-Körper (24,3 px, Pose 0,20) plus 30 Fingerspuren aus derselben '
+                      'NVIDIA-Familie — gemessen: Fingerzittern 0,28 cm/Bild² (GEM-X, σ 4)',
+                      'Gesicht als SMPLest-X-Ausdrücke wie bei jedem Hybrid',
+                      'Beide Zugaben abschaltbar (Hände-Quelle, Gesicht-Quelle auf der Karte)'],
+         'nachteile': ['Langsamste Pipeline: drei Läufe, GEM und GEM-X nacheinander auf der GPU (348 s)',
+                       'Finger sitzen an GEMs Handgelenk, gerechnet hat sie GEM-X an seinem eigenen — '
+                       'die Handgelenke der beiden weichen um die Deckungsdifferenz voneinander ab',
+                       'Wurzel und Boden wie GEM-SMPL; Lizenz NVIDIA OneWay'],
+         'begruendung': 'Derselbe Körper wie GEM-SMPL (Deckung und Ruhe gleich), dazu Finger, deren '
+                        'Güte gemessen ist, und ein Gesicht. Nach den vier Kriterien Rang 1 — die '
+                        'Dauer zählt zuletzt.'},
+        {'schluessel': 'hybrid_gem', 'art': 'Hybrid', 'rang': 4,
+         'verfahren': 'Körper aus GEM-SMPL, daneben MocapNET v4 für Gesicht und Hände; zwei '
+                      'BVH-Dateien, die der Viewer zusammenführt. Neu am 12.09.2026.',
+         'gelenke': 24, 'haende': True, 'gesicht': True, 'kamera': 'statisch (Kameraraum)',
+         'dauer_s': 171, 'ueberlagerung_px': 24.5, 'ruhe_wurzel': 3.1, 'ruhe_pose': 0.25,
+         'boden_cm': -103, 'zustand': 'laeuft', 'zustand_grund': '',
+         'vorteile': ['Der GEM-SMPL-Körper (24,5 px) plus Gesicht und Hände',
+                      'v4 läuft parallel auf der CPU — nur 60 s länger als GEM-SMPL allein'],
+         'nachteile': ['Hände aus MocapNET v4 (MediaPipe) — hier nicht gemessen (keine Referenz)',
+                       'Wurzel und Boden wie GEM-SMPL; Lizenz NVIDIA OneWay'],
+         'begruendung': 'Wie GEM-SMPL plus Gesicht und Hände, aber die Hände sind ungemessen — '
+                        'deshalb hinter GEM-X, dessen Finger gemessen sind, und hinter dem '
+                        'Hybrid mit GEM-X-Fingern.'},
+        {'schluessel': 'gem', 'art': '3D', 'rang': 2,
          'verfahren': 'GEM (NVIDIA, ICCV 2025, vormals GENMO) — auf dem GVHMR-Code aufgebaut, '
                       'dieselbe Vorstufe (YOLO-Spur, ViTPose, HMR2-Merkmale), rund 0,5 Mrd. Parameter; '
                       'Paperwerte EMDB-2 74,3 mm gegen GVHMR 111,0 mm (WA-MPJPE).',
@@ -29,7 +67,7 @@ class Pipelines3d:
                        'Lizenz NVIDIA OneWay: nicht-kommerziell'],
          'begruendung': 'Gleiche Deckung wie GVHMR, aber die ruhigere Pose und ein Drittel '
                         'weniger Zeit. Was GVHMR kann, kann GEM-SMPL hier auch — nur schneller.'},
-        {'schluessel': 'gvhmr', 'art': '3D', 'rang': 2,
+        {'schluessel': 'gvhmr', 'art': '3D', 'rang': 5,
          'verfahren': 'GVHMR (Shen u. a., SIGGRAPH Asia 2024) — ViTPose + HMR2-Merkmale, Transformer '
                       'über die Sequenz, SMPL in Kamera- und schwerkraftausgerichteten Weltkoordinaten.',
          'gelenke': 24, 'haende': False, 'gesicht': False,
@@ -43,8 +81,9 @@ class Pipelines3d:
                        'Boden nicht bei y = 0',
                        'Langsamste laufende 3D-Pipeline (159 s)', 'Keine Hände, kein Gesicht'],
          'begruendung': 'Die Referenz: beste Deckung, robust, mit Kameraverfolgung. Hinter GEM-SMPL '
-                        'nur wegen der etwas unruhigeren Pose und der längeren Laufzeit.'},
-        {'schluessel': 'hybrid_gvhmr', 'art': 'Hybrid', 'rang': 3,
+                        'wegen der etwas unruhigeren Pose und der längeren Laufzeit, hinter GEM-X '
+                        '(σ 4) wegen der Finger bei gleicher Ruhe.'},
+        {'schluessel': 'hybrid_gvhmr', 'art': 'Hybrid', 'rang': 6,
          'verfahren': 'Körper aus GVHMR, danach MocapNET v4 für Gesicht und Hände; zwei BVH-Dateien, '
                       'die der Viewer zusammenführt.',
          'gelenke': 24, 'haende': True, 'gesicht': True,
@@ -58,22 +97,25 @@ class Pipelines3d:
                        'Wurzel und Boden wie GVHMR'],
          'begruendung': 'Derselbe Körper wie GVHMR plus Gesicht und Hände. Hinter GVHMR, weil die '
                         'Zugabe aus MocapNET v4 stammt und ihre Güte hier niemand gemessen hat.'},
-        {'schluessel': 'gemx', 'art': '3D', 'rang': 4,
+        {'schluessel': 'gemx', 'art': '3D', 'rang': 3,
          'verfahren': 'GEM-X (NVIDIA, Gewichte `nvidia/GEM-X`, 6,7 GB) — GEM mit dem SOMA-'
                       'Körpermodell (77 Gelenke mit Fingern), Mixamo-Namen im BVH; Kameraraum '
-                      'um x gedreht wie bei GVHMR.',
+                      'um x gedreht wie bei GVHMR. Glättung σ 4 (Standard seit 12.09.2026).',
          'gelenke': 77, 'haende': True, 'gesicht': False, 'kamera': 'statisch (Kameraraum)',
-         'dauer_s': 135, 'ueberlagerung_px': 25.0, 'ruhe_wurzel': 3.6, 'ruhe_pose': 0.37,
+         'dauer_s': 149, 'ueberlagerung_px': 25.1, 'ruhe_wurzel': 3.6, 'ruhe_pose': 0.25,
          'boden_cm': -98, 'zustand': 'laeuft', 'zustand_grund': '',
-         'vorteile': ['Finger im BVH (77 Gelenke), Retarget legt sie auf die DEF-Knochen',
-                      'Deckung wie die SMPL-Familie (25,0 px, Median 18,8)'],
-         'nachteile': ['Unruhigste Pose der SMPL-Familie (0,37)',
+         'vorteile': ['Finger im BVH (77 Gelenke, 38 davon Finger), Retarget legt sie auf 30 DEF-Knochen',
+                      'Deckung wie die SMPL-Familie (25,1 px, Median 19,3)',
+                      'Mit σ 4 so ruhig wie GVHMR: Körpergelenke 0,21 cm/Bild² (GEM 0,20, GVHMR 0,23), '
+                      'Finger 0,28 — bei σ 2 waren es 0,31 und 0,42, die Deckung blieb (25,0 → 25,1 px)'],
+         'nachteile': ['„Ruhe Pose" 0,25 mittelt über alle 77 Gelenke, die Finger zittern mit',
                        'Geglättete Weltbahn (ayfz-Rahmen) bleibt ungenutzt — Kameraraum, Wurzel zittert',
-                       '135 s, kein Gesicht, 6,7 GB Gewichte',
+                       '149 s, kein Gesicht, 6,7 GB Gewichte',
                        'Lizenz NVIDIA OneWay: nicht-kommerziell'],
-         'begruendung': 'Die einzige SMPL-Pipeline mit Fingern, bei gleicher Deckung — aber die Pose '
-                        'zittert anderthalbmal so stark wie bei GEM-SMPL.'},
-        {'schluessel': 'duomo', 'art': '3D', 'rang': 5,
+         'begruendung': 'Die einzige eigenständige SMPL-Pipeline mit Fingern; seit σ 4 ist der '
+                        'Körper so ruhig wie GEM-SMPL und GVHMR bei gleicher Deckung. Hinter GEM-SMPL '
+                        'nur wegen 0,6 px weniger Deckung und 40 s mehr; vor GVHMR wegen der Finger.'},
+        {'schluessel': 'duomo', 'art': '3D', 'rang': 7,
          'verfahren': 'DuoMo (Meta, CVPR 2026) — Diffusionsmodell über die Bewegung mit PromptHMR-'
                       'Bildmerkmalen und dichten 2D-Punkten; Netz (LOD6) in Kamera- und Weltraum, '
                       'daraus SMPL-X, daraus SMPL.',
@@ -89,10 +131,10 @@ class Pipelines3d:
                        '2,3-GB-PromptHMR-Checkpoint nur über den angemeldeten Browser (Drive-Quota)',
                        'Blackwell-Sonderwege: xformers-Kernel abschalten, kein Rendern unter Windows',
                        'Keine Hände, kein Gesicht'],
-         'begruendung': 'Nach den Kriterien dieser Messung Rang 5, weil die Deckung mit dem Video '
+         'begruendung': 'Nach den Kriterien dieser Messung Rang 7, weil die Deckung mit dem Video '
                         'am schlechtesten ist. Wer eine ruhige Weltbahn mit Bodenkontakt braucht, '
                         'nimmt trotzdem DuoMo — das kann hier sonst keine.'},
-        {'schluessel': 'v4', 'art': '3D', 'rang': 6,
+        {'schluessel': 'v4', 'art': '3D', 'rang': 8,
          'verfahren': 'MocapNET v4 (Qammaz & Argyros, FORTH) — MediaPipe Holistic, Ensemble kleiner '
                       'Netze (ONNX), native IK (HCD) gegen die 2D-Punkte; volles Rig mit Gesicht, '
                       'Händen und Zehen.',

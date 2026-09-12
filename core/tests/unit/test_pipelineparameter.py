@@ -9,6 +9,7 @@ Windows endlich lief und das Häkchen nichts tat.
 """
 from types import SimpleNamespace
 
+from django.http import QueryDict
 from django.test import SimpleTestCase, override_settings
 
 from core.api.pipelineparameter import Pipelineparameter
@@ -57,6 +58,32 @@ class GvhmrFormularTest(SimpleTestCase):
         p = Pipelineparameter.lesen(
             {'gemx_static_cam': 'on', 'gemx_smooth_sigma': '1'}, 'gemx')
         self.assertEqual(p, {'static_cam': True, 'smooth_sigma': 1.0, 'device': 'cuda'})
+
+    def test_gemx_ohne_feld_glaettet_mit_vier(self):
+        u"""Vorgabe 4 seit dem 12.09.2026 (gemessen, Edgar: „behebe")."""
+        self.assertEqual(Pipelineparameter.lesen({}, 'gemx')['smooth_sigma'], 4.0)
+
+    def test_hybrid_gem_liest_die_drei_gem_regler(self):
+        u"""GEM-SMPL als Rückgrat (12.09.2026): feste Kamera, Glättung,
+        Gelenkgrenzen — wie seine eigene Karte, ohne Rendern."""
+        p = Pipelineparameter.lesen(QueryDict(
+            'hybrid_body_backend=gem&hybrid_gem_static_cam=on'
+            '&hybrid_gem_smooth_sigma=3&hybrid_hands_source=gemx'), 'hybrid_gem')
+        self.assertEqual(p['body_backend'], 'gem')
+        self.assertTrue(p['static_cam'])
+        self.assertEqual(p['smooth_sigma'], 3.0)
+        self.assertFalse(p['joint_limits'])
+        self.assertEqual(p['hands_source'], 'gemx')
+        self.assertNotIn('focal_length_mm', p)
+
+    def test_hybrid_gem_vorgaben_kommen_aus_den_gem_einstellungen(self):
+        class Spiegel:
+            def __getattr__(self, name):
+                return name
+        v = Pipelineparameter.vorgaben(Spiegel())
+        self.assertEqual(v['hybrid_gem_static_cam'], 'gem_static_cam')
+        self.assertEqual(v['hybrid_gem_smooth_sigma'], 'gem_smooth_sigma')
+        self.assertEqual(v['hybrid_gem_joint_limits'], 'gem_joint_limits')
 
     def test_der_befehl_traegt_die_schalter_weiter(self):
         p = Pipelineparameter.lesen(

@@ -67,6 +67,13 @@ class Pipelinevergleich:
             # Dictionary gewollt: geht so in die Vorlage.
             eintrag = dict(roh)
             eintrag['name'] = namen[eintrag['schluessel']]
+            eintrag['kennung'] = eintrag['schluessel']
+            # Eine Variante (12.09.2026): dieselbe Pipeline mit anderer
+            # Bestellung, eigene Zeile — Name und Kennung sagen, welche.
+            eintrag.setdefault('variante', '')
+            if eintrag['variante']:
+                eintrag['name'] += ' · ' + eintrag['variante']
+                eintrag['kennung'] += ' · ' + eintrag.get('variante_kennung', '')
             eintrag['zustand_text'] = cls.ZUSTAND[eintrag['zustand']]
             eintraege.append(eintrag)
         return eintraege
@@ -75,9 +82,9 @@ class Pipelinevergleich:
     def rangfolge(cls):
         u"""Nach Rang; wer keinen hat (kein Ergebnis), steht am Ende.
 
-        Rang 1 bis 10 bekommen nur die zehn, die ein BVH liefern (Edgar,
-        12.09.2026: „das ranking von 1-10") — ein Rang fuer „liefert nichts"
-        sagt nichts."""
+        Einen Rang bekommen nur die, die ein BVH liefern (Edgar, 12.09.2026:
+        „das ranking von 1-10"; seit der Neubewertung 1-12) — ein Rang fuer
+        „liefert nichts" sagt nichts."""
         return sorted(cls.alle(), key=lambda e: (e['rang'] is None, e['rang'] or 0))
 
     @classmethod
@@ -90,4 +97,10 @@ class Pipelinevergleich:
 
     @classmethod
     def schluessel(cls):
-        return [e['schluessel'] for e in cls.alle()]
+        u"""Jede Pipeline einmal, Varianten nicht doppelt."""
+        return list(dict.fromkeys(e['schluessel'] for e in cls.alle()))
+
+    @classmethod
+    def grundeintraege(cls):
+        u"""Die Eintraege ohne Variante — genau einer je Pipeline."""
+        return [e for e in cls.alle() if not e['variante']]

@@ -15,10 +15,24 @@ from core.models import BVHJob
 
 class DerVergleich(unittest.TestCase):
 
-    def test_jede_pipeline_des_modells_hat_genau_einen_eintrag(self):
+    def test_jede_pipeline_des_modells_hat_genau_einen_grundeintrag(self):
+        u"""Varianten (12.09.2026, `hybrid_gem` mit GEM-X-Fingern) sind
+        Zusatzzeilen — der Grundeintrag je Pipeline bleibt genau einer."""
         erwartet = sorted(wahl[0] for wahl in BVHJob.PIPELINE_CHOICES)
         self.assertEqual(sorted(Pipelinevergleich.schluessel()), erwartet)
-        self.assertEqual(len(Pipelinevergleich.schluessel()), len(set(erwartet)))
+        grund = sorted(e['schluessel'] for e in Pipelinevergleich.grundeintraege())
+        self.assertEqual(grund, erwartet)
+
+    def test_eine_variante_traegt_namen_und_kennung_ihrer_bestellung(self):
+        varianten = [e for e in Pipelinevergleich.alle() if e['variante']]
+        self.assertTrue(varianten)
+        for e in varianten:
+            with self.subTest(pipeline=e['schluessel']):
+                self.assertIn(' · ' + e['variante'], e['name'])
+                self.assertIn(e['variante_kennung'], e['kennung'])
+                self.assertNotEqual(e['rang'], next(
+                    g['rang'] for g in Pipelinevergleich.grundeintraege()
+                    if g['schluessel'] == e['schluessel']))
 
     def test_raenge_sind_eins_bis_n_ohne_luecke_nur_fuer_die_mit_ergebnis(self):
         u"""Rang 1..10 fuer die, die ein BVH liefern; die anderen haben keinen
@@ -56,9 +70,12 @@ class DerVergleich(unittest.TestCase):
                     self.assertTrue(e['zustand_grund'])
 
     def test_namen_kommen_aus_dem_modell(self):
+        u"""Eine Variante haengt ihren Zusatz an den Modellnamen an."""
         namen = dict(BVHJob.PIPELINE_CHOICES)
         for e in Pipelinevergleich.alle():
-            self.assertEqual(e['name'], namen[e['schluessel']])
+            self.assertTrue(e['name'].startswith(namen[e['schluessel']]), e['name'])
+            if not e['variante']:
+                self.assertEqual(e['name'], namen[e['schluessel']])
 
     def test_nicht_gelaufen_nennt_nur_die_ohne_bvh(self):
         for e in Pipelinevergleich.nicht_gelaufen():

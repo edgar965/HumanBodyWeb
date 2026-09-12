@@ -152,12 +152,13 @@ class Uploadseiten:
         v4 = Path(settings.MOCAPNET_V4_SCRIPT).exists()
         gvhmr = Path(settings.GVHMR_ROOT).is_dir()
         prompthmr = Path(settings.PROMPTHMR_ROOT).is_dir()
+        gem = Path(settings.GEM_ROOT).is_dir()
         return {
             'v4': v4,
             'gvhmr': gvhmr,
             'wham': Path(settings.WHAM_ROOT).is_dir(),
             'prompthmr': prompthmr,
-            'gem': Path(settings.GEM_ROOT).is_dir(),
+            'gem': gem,
             'duomo': Path(settings.DUOMO_ROOT).is_dir(),
             'gemx': Path(settings.GEMX_ROOT).is_dir(),
             # Kamerabahn (DPVO fuer GVHMR/WHAM, DROID-SLAM fuer PromptHMR):
@@ -167,9 +168,10 @@ class Uploadseiten:
                                           settings.PROMPTHMR_ROOT),
             'hybrid_gvhmr': gvhmr and v4,
             'hybrid_prompthmr': prompthmr and v4,
+            'hybrid_gem': gem and v4,
             # Die Vorlage fragte zweimal `not hybrid_gvhmr and not
             # hybrid_prompthmr` — eine Bedingung, die in die Vorlage
             # gewandert war und dort in EINER Zeile keinen Platz mehr hatte
             # (ein `{% … %}` laesst sich nicht umbrechen).
-            'hybrid': (gvhmr or prompthmr) and v4,
+            'hybrid': (gvhmr or prompthmr or gem) and v4,
         }

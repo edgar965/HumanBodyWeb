@@ -45,11 +45,12 @@ Ohne diese Zeile stand die Tabelle ohne Spaltenrahmen da (Edgar, 12.09.2026:
   </p>
 
   <div class="info-box info-box-purple">
-    <strong>Rang 1 bis 10</strong> bekommen die zehn Pipelines, die ein BVH
+    <strong>Rang 1 bis {{ rang_von }}</strong> bekommen die Läufe, die ein BVH
     liefern — nach vier Kriterien in dieser Reihenfolge: Deckung mit dem
     Video (Abstand zu ViTPose); Ruhe der Pose; Vollständigkeit (Hände,
-    Gesicht); Dauer. Die vier ohne Ergebnis haben keinen Rang und stehen
-    am Ende. Die Begründung je Pipeline steht unter der Tabelle.
+    Gesicht); Dauer. Die {{ nicht_gelaufen|length }} ohne Ergebnis haben keinen Rang und stehen
+    am Ende. Eine Zeile mit „·" ist dieselbe Pipeline mit anderer Bestellung
+    (etwa Finger aus GEM-X). Die Begründung je Lauf steht unter der Tabelle.
   </div>
 
   <div class="db-tabelle-rahmen">
@@ -83,7 +84,7 @@ Ohne diese Zeile stand die Tabelle ohne Spaltenrahmen da (Edgar, 12.09.2026:
         </td>
         <td data-sort="{{ e.name }}">
           <span class="vtb-name">{{ e.name }}</span><br>
-          <span class="vtb-kennung">{{ e.schluessel }}</span>
+          <span class="vtb-kennung">{{ e.kennung }}</span>
         </td>
         <td>{{ e.art }}</td>
         <td class="vtb-verfahren">{{ e.verfahren }}</td>

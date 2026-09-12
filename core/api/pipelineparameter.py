@@ -107,7 +107,7 @@ class Pipelineparameter:
         Gelenkgrenzen (SOMA hat 77 Gelenke, die Grenzen sind SMPL-Indizes)."""
         return {
             'static_cam': post.get('gemx_static_cam') == 'on',
-            'smooth_sigma': float(post.get('gemx_smooth_sigma', 2.0)),
+            'smooth_sigma': float(post.get('gemx_smooth_sigma', 4.0)),
             'device': post.get('gemx_device', 'cuda'),
         }
 
@@ -127,6 +127,12 @@ class Pipelineparameter:
         if koerper == 'gvhmr':
             p['static_cam'] = post.get('hybrid_gvhmr_static_cam') == 'on'
             p['focal_length_mm'] = float(post.get('hybrid_gvhmr_focal_length_mm', 0))
+        elif koerper == 'gem':
+            # GEM-SMPL als Rueckgrat (12.09.2026): dieselben drei Regler wie
+            # seine eigene Karte, ohne Rendern.
+            p['static_cam'] = post.get('hybrid_gem_static_cam') == 'on'
+            p['smooth_sigma'] = float(post.get('hybrid_gem_smooth_sigma', 2.0))
+            p['joint_limits'] = post.get('hybrid_gem_joint_limits') == 'on'
         else:
             p['static_cam'] = post.get('hybrid_prompthmr_static_cam') == 'on'
         for teil, an in Pipelineparameter._teile(
@@ -183,6 +189,9 @@ class Pipelineparameter:
             'hybrid_gvhmr_static_cam': s.gvhmr_static_cam,
             'hybrid_gvhmr_focal_length_mm': s.gvhmr_focal_length_mm,
             'hybrid_prompthmr_static_cam': s.prompthmr_static_camera,
+            'hybrid_gem_static_cam': s.gem_static_cam,
+            'hybrid_gem_smooth_sigma': s.gem_smooth_sigma,
+            'hybrid_gem_joint_limits': s.gem_joint_limits,
             'hybrid_v4_face': s.v4_enable_face,
             'hybrid_v4_hands': s.v4_enable_hands,
             'hybrid_v4_mouth': s.v4_enable_mouth,

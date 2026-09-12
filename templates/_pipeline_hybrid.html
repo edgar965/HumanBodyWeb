@@ -6,7 +6,7 @@
                         <label class="pipeline-card-wahl">
                             <input type="radio" name="pipeline" value="hybrid_gvhmr"
                                 id="hybridRadio"
-                                {% if default_3d == 'hybrid_gvhmr' or default_3d == 'hybrid_prompthmr' %}checked{% endif %}
+                                {% if default_3d == 'hybrid_gvhmr' or default_3d == 'hybrid_prompthmr' or default_3d == 'hybrid_gem' %}checked{% endif %}
                                 {% if not status_3d.hybrid %}disabled{% endif %}>
                             {% include "_pipeline_rang.html" %}
                             <span class="pipeline-card-title">Hybrid <span class="hb-color-e67e22">&starf;</span></span>
@@ -31,9 +31,17 @@
                                 <div class="setting-label">Body-Backend <span
                                      class="setting-hint">SMPL-Pipeline f&uuml;r K&ouml;rper-Tracking (GPU)</span></div>
                                 <select name="hybrid_body_backend" id="hybridBodyBackend">
-                                    <option value="gvhmr" {% if not status_3d.gvhmr %}disabled{% endif %}>GVHMR</option>
+                                    <option value="gvhmr" {% if not status_3d.gvhmr %}disabled{% endif %}
+                                         {% if default_3d == 'hybrid_gvhmr' %}selected{% endif %}>GVHMR</option>
                                     <option value="prompthmr"
-                                         {% if not status_3d.prompthmr %}disabled{% endif %}>PromptHMR</option>
+                                         {% if not status_3d.prompthmr %}disabled{% endif %}
+                                         {% if default_3d == 'hybrid_prompthmr' %}selected{% endif %}>PromptHMR</option>
+                                    {% comment %}GEM-SMPL, Rang 1 des Vergleichs, als drittes R&uuml;ckgrat
+                                    (12.09.2026, Edgar: „k&ouml;nnen die NACH der GEM_SMPL pipeline
+                                    aufsetzen&ldquo;).{% endcomment %}
+                                    <option value="gem"
+                                         {% if not status_3d.gem %}disabled{% endif %}
+                                         {% if default_3d == 'hybrid_gem' %}selected{% endif %}>GEM-SMPL (Rang 1)</option>
                                 </select>
                             </div>
                             <div class="setting-item">
@@ -41,6 +49,8 @@
                                      class="setting-hint">Finger-Tracking Methode</span></div>
                                 <select name="hybrid_hands_source" id="hybridHandsSource">
                                     <option value="v4" selected>MocapNET v4 (Finger-Detail)</option>
+                                    <option value="gemx" {% if not status_3d.gemx %}disabled{% endif %}>GEM-X
+                                         (NVIDIA, 38 Fingergelenke, eigener GPU-Lauf nach dem K&ouml;rper)</option>
                                     <option value="smplest_x">SMPLest-X (konsistenter)</option>
                                     <option value="none">Keine (neutral)</option>
                                 </select>
@@ -74,6 +84,29 @@
                             </div>
                         </div>
                         <!-- PromptHMR body settings -->
+                        <!-- GEM-SMPL body settings (12.09.2026) -->
+                        <div id="hybrid-gem-settings" class="hybrid-body-settings hb-versteckt">
+                            <div class="settings-list untergruppe-blau">
+                                <div class="setting-item">
+                                    <div class="setting-label">Statische Kamera <span
+                                         class="setting-hint">Nur die Kamera-Maske des Modells (wie die GEM-SMPL-Karte)</span></div>
+                                    <input type="checkbox" name="hybrid_gem_static_cam"
+                                         {% if defaults.hybrid_gem_static_cam %}checked{% endif %}>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">Temporal Smoothing <span
+                                         class="setting-hint">Gaussian-Gl&auml;ttung (0=aus, 2=Standard)</span></div>
+                                    <input type="number" name="hybrid_gem_smooth_sigma" min="0" max="10" step="0.5"
+                                         value="{{ defaults.hybrid_gem_smooth_sigma }}">
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">Joint Limits <span
+                                         class="setting-hint">Anatomische Grenzen f&uuml;r Knie/Ellbogen/H&uuml;fte</span></div>
+                                    <input type="checkbox" name="hybrid_gem_joint_limits"
+                                         {% if defaults.hybrid_gem_joint_limits %}checked{% endif %}>
+                                </div>
+                            </div>
+                        </div>
                         <div id="hybrid-prompthmr-settings" class="hybrid-body-settings hb-versteckt">
                             <div class="settings-list untergruppe-orange"
                                 >

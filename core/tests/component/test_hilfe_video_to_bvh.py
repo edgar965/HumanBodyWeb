@@ -62,6 +62,7 @@ class DieSeite(SimpleTestCase):
         for e in Pipelinevergleich.mit_rang():
             self.assertIn('data-sort="%d"' % e['rang'], text)
         ohne = len(Pipelinevergleich.alle()) - len(Pipelinevergleich.mit_rang())
+        self.assertIn('Rang 1 bis %d' % len(Pipelinevergleich.mit_rang()), text)
         self.assertEqual(text.count('>ohne Rang<'), ohne)
 
     def test_der_menuepunkt_zeigt_auf_die_seite(self):

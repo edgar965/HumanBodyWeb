@@ -23,7 +23,8 @@ class Pipelinekarten:
     u"""Kartennamen und Vorlagen der 3D-Seite, nach Rang."""
 
     #: Pipeline -> Karte, wo es nicht dieselbe ist.
-    KARTE = {'hybrid_gvhmr': 'hybrid', 'hybrid_prompthmr': 'hybrid'}
+    KARTE = {'hybrid_gvhmr': 'hybrid', 'hybrid_prompthmr': 'hybrid',
+             'hybrid_gem': 'hybrid'}
 
     VORLAGE = '_pipeline_%s.html'
 
@@ -33,8 +34,9 @@ class Pipelinekarten:
 
     @classmethod
     def dreid(cls):
-        u"""Die Pipelines der 3D-Seite — die Eintraege des 3D-Vergleichs."""
-        return [e['schluessel'] for e in Pipelines3d.EINTRAEGE]
+        u"""Die Pipelines der 3D-Seite — die Eintraege des 3D-Vergleichs,
+        jede einmal (Varianten nicht doppelt)."""
+        return list(dict.fromkeys(e['schluessel'] for e in Pipelines3d.EINTRAEGE))
 
     @classmethod
     def reihenfolge(cls):

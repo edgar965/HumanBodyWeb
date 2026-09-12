@@ -27,4 +27,5 @@ class VideoToBvhVergleich(Hilfeseite):
             'messung': Pipelinevergleich.MESSUNG,
             'spalten': Pipelinevergleich.SPALTEN,
             'nicht_gelaufen': Pipelinevergleich.nicht_gelaufen(),
+            'rang_von': len(Pipelinevergleich.mit_rang()),
         }

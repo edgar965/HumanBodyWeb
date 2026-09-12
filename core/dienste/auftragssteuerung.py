@@ -84,6 +84,7 @@ class Auftragssteuerung:
         job.error_message = ''
         job.bvh_file = ''
         job.bvh_file_face = ''
+        job.bvh_file_hands = ''
         bilder = Videolaenge.bilder(
             Path(settings.MEDIA_ROOT) / str(job.video_file))
         job.progress_detail = f'0 / {bilder} frames' if bilder else 'Starting...'
@@ -201,8 +202,9 @@ class Auftragssteuerung:
 
     @staticmethod
     def _teilprozesse_beenden(jid, ordner):
-        """Hybridlaeufe haben je einen Prozess fuer Koerper und Gesicht."""
-        for teil in ('body', 'face'):
+        """Hybridlaeufe haben je einen Prozess fuer Koerper und Gesicht —
+        und seit dem 12.09.2026 einen dritten fuer die Finger (GEM-X)."""
+        for teil in ('body', 'face', 'hands'):
             prozess = LaufendeProzesse.entfernen(f'{jid}_{teil}')
             if prozess and prozess.poll() is None:
                 prozess.kill()
@@ -217,7 +219,7 @@ class Auftragssteuerung:
     def _stoppmarken_schreiben(job, ordner):
         ziele = [ordner]
         if job.pipeline.startswith('hybrid_'):
-            ziele += [ordner / 'body', ordner / 'face']
+            ziele += [ordner / 'body', ordner / 'face', ordner / 'hands']
         for ziel in ziele:
             marke = ziel / 'STOP_FLAG'
             try:
