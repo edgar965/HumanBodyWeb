@@ -97,7 +97,7 @@ export function handleMenuAction(action) {
         case 'reset-lighting': fn.resetLighting(); break;
         case 'reset-camera': fn.resetCamera(); break;
         case 'anim-ground-fix': fn.applyGroundLevelFix(); break;
-        case 'anim-origin-fix': Ursprungsfix.anwenden(); break;
+        case 'anim-origin-fix': Ursprungsfix.fragen(); break;
         case 'anim-save': fn.openSaveAnimDialog(); break;
     }
 }

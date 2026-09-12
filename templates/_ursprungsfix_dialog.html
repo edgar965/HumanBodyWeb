@@ -1,0 +1,24 @@
+{# Szene → Animation → „Animation immer auf Ursprungspunkt“: den Radius erfragen (scene/ursprungsfix.js) #}
+<div class="scene-modal-overlay" id="ursprungsfix-dialog">
+    <div class="scene-modal">
+        <div class="scene-modal-header">
+            <h4><i class="fas fa-map-pin"></i> Animation immer auf Ursprungspunkt</h4>
+            <button class="scene-modal-close" data-close>&times;</button>
+        </div>
+        <div class="scene-modal-body">
+            <div class="hb-font-size-0-75rem-gedaempft">Die Wurzel bleibt in jedem Bild innerhalb dieses
+                Radius um ihren Startpunkt (Bild 0). Wer weiter läuft, wird auf den Rand gezogen; kleine
+                Schritte bleiben. 0 cm hält sie genau auf dem Startpunkt.</div>
+            <div class="hb-font-size-0-75rem-gedaempft">Max. Radius</div>
+            <div class="hb-display-flex-eng hb-align-items-center">
+                <input class="hb-flex-1-d" type="range" id="ursprungsfix-radius" min="0" max="200" step="5" value="50">
+                <span class="hb-font-size-0-8rem" id="ursprungsfix-radius-val">50 cm</span></div>
+            <div class="hb-font-size-0-75rem-gedaempft">Die Datei der Bibliothek wird geändert und neu
+                geladen — wie bei „Animation immer auf Bodenniveau“.</div>
+        </div>
+        <div class="scene-modal-footer">
+            <button data-close>Abbrechen</button>
+            <button class="primary" id="ursprungsfix-confirm">Anwenden</button>
+        </div>
+    </div>
+</div>

@@ -114,9 +114,14 @@ class BvhDatei:
     # ------------------------------------------------------- Wurzel festhalten
 
     def wurzel_festhalten(self, radius_m):
-        """Die Wurzel innerhalb eines Kreises halten (X/Z, in Metern)."""
+        """Die Wurzel innerhalb eines Kreises halten (X/Z, in Metern).
+
+        Radius 0 haelt sie genau auf dem Startpunkt (Bild 0) — seit die Szene
+        den Radius erfragt (12.09.2026); vorher hiess 0 „nichts tun".
+        Negativ bleibt „nichts tun".
+        """
         radius = float(radius_m) * self.CM_JE_METER
-        if radius <= 0:
+        if radius < 0:
             return self
         p = self.bvh.positions
         anker_x, anker_z = p[0, 0, 0], p[0, 0, 2]

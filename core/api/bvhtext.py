@@ -189,7 +189,7 @@ class Bvhtext:
             bvh = BvhDatei(pfad)
             if sigma:
                 bvh.glaetten(sigma)
-            if radius:
+            if radius is not None:
                 bvh.wurzel_festhalten(radius)
             if not bvh.angewandt:
                 return JsonResponse({'error': 'No effects to apply'},

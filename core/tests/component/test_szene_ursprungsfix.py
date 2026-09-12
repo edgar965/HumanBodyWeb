@@ -4,8 +4,9 @@ u"""Szene → Animation → „Animation immer auf Ursprungspunkt".
 Edgar (12.09.2026): „es gab eine Funktion: Animation immer auf Ursprungspunkt,
 findest du die noch? ich brauche die in /humanbody/scene/ im Menü Animation".
 Das war „Feste Position" im BVH Studio (Werkzeuge): die Wurzel bleibt in
-jedem Bild innerhalb von 0,5 m um ihren Startpunkt. Die Szene ruft dafür
-denselben Server-Weg wie das Studio beim Speichern mit Effekten
+jedem Bild innerhalb eines Radius um ihren Startpunkt — Vorgabe 0,5 m, seit
+„mach den Radius einstellbar" (Edgar, 12.09.2026) im Dialog wählbar, 0 = genau
+auf dem Startpunkt. Die Szene ruft dafür denselben Server-Weg wie das Studio beim Speichern mit Effekten
 (`/api/retarget/save-bvh-effects/`, `BvhDatei.wurzel_festhalten`) und lädt
 die Datei neu — wie „Animation immer auf Bodenniveau".
 
@@ -75,12 +76,17 @@ class DerUrsprungsfix(TestCase):
         self.enterContext(override_settings(HUMANBODY_BVH_DIR=str(self.wurzel / 'MocapNET')))
         self.client = Client()
 
-    def anwenden(self):
+    def anwenden(self, radius_m=RADIUS_M):
         antwort = self.client.post(self.URL, data={
-            'category': 'Test', 'name': 'probe', 'fixed_radius': RADIUS_M},
+            'category': 'Test', 'name': 'probe', 'fixed_radius': radius_m},
             content_type='application/json')
         self.assertEqual(antwort.status_code, 200, antwort.content[:200])
         return antwort.json()
+
+    def abstaende(self):
+        u"""Abstand jedes Bildes zu Bild 0 in der Bodenebene (BVH-Zentimeter)."""
+        b = bilder(self.datei.read_text(encoding='utf-8'))
+        return [math.hypot(x[0] - b[0][0], x[2] - b[0][2]) for x in b]
 
     def test_die_wurzel_bleibt_im_kreis_um_bild_null(self):
         vorher = bilder(self.datei.read_text(encoding='utf-8'))
@@ -97,6 +103,19 @@ class DerUrsprungsfix(TestCase):
         self.assertAlmostEqual(math.hypot(nachher[-1][0], nachher[-1][2]), 50.0, places=2)
         self.assertGreater(nachher[-1][0], 0)
         self.assertLess(nachher[-1][2], 0)
+
+    def test_ein_anderer_radius_gilt_wie_gewaehlt(self):
+        daten = self.anwenden(1.0)
+        self.assertIn('fixed r=1.00m', daten['applied'])
+        abstaende = self.abstaende()
+        self.assertLessEqual(max(abstaende), 100.0 + 1e-3)
+        self.assertAlmostEqual(abstaende[-1], 100.0, places=2)
+
+    def test_radius_null_haelt_die_wurzel_auf_bild_null(self):
+        u"""0 hieß auf dem Server „nichts tun" — jetzt ist es der engste Radius."""
+        daten = self.anwenden(0)
+        self.assertIn('fixed r=0.00m', daten['applied'])
+        self.assertEqual(max(self.abstaende()), 0.0)
 
     def test_hoehe_und_drehungen_bleiben(self):
         vorher = bilder(self.datei.read_text(encoding='utf-8'))
@@ -136,12 +155,24 @@ class DasDrahtformat(TestCase):
 
     def test_der_dispatch_ruft_den_ursprungsfix(self):
         text = self.quelle('static', 'viewer', 'scene', 'menubar.js')
-        self.assertIn("case 'anim-origin-fix': Ursprungsfix.anwenden(); break;", text)
+        self.assertIn("case 'anim-origin-fix': Ursprungsfix.fragen(); break;", text)
         self.assertIn("import { Ursprungsfix } from './ursprungsfix.js';", text)
 
-    def test_das_modul_nimmt_den_radius_des_studios(self):
+    def test_die_vorgabe_ist_der_radius_des_studios(self):
         text = self.quelle('static', 'viewer', 'scene', 'ursprungsfix.js')
-        self.assertIn('static RADIUS_M = 0.5;', text)
+        self.assertIn('static VORGABE_CM = 50;', text)
         self.assertIn("ENDPUNKT = '/api/retarget/save-bvh-effects/'", text)
         studio = self.quelle('static', 'viewer', 'bvh_studio', 'werkzeug_position.js')
         self.assertIn('radius: 0.5', studio)
+
+    def test_der_dialog_fragt_den_radius_von_null_an(self):
+        u"""Regler, Anzeige und Knopf des Dialogs heißen so, wie das Modul sie ruft."""
+        self.assertIn('{% include "_ursprungsfix_dialog.html" %}',
+                      self.quelle('templates', 'scene_config.html'))
+        dialog = self.quelle('templates', '_ursprungsfix_dialog.html')
+        modul = self.quelle('static', 'viewer', 'scene', 'ursprungsfix.js')
+        self.assertIn('id="ursprungsfix-radius" min="0" max="200"', dialog)
+        for kennung in ('ursprungsfix-dialog', 'ursprungsfix-radius',
+                        'ursprungsfix-radius-val', 'ursprungsfix-confirm'):
+            self.assertIn('id="%s"' % kennung, dialog)
+            self.assertIn("getElementById('%s')" % kennung, modul)
