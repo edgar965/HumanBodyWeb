@@ -34,7 +34,7 @@ logger = logging.getLogger('core')
 class Auftragslauf:
     """Fuehrt einen BVH-Auftrag aus und haelt seinen Zustand nach."""
 
-    SMPL_PIPELINES = ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx')
+    SMPL_PIPELINES = ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx', 'smplx')
     NEUE_2D_ERKENNER = ('rtmpose', 'vitpose', 'yolo11')
     #: MocapNET laedt beim Start seine TensorFlow-Modelle und meldet danach jede
     #: Frame. Es holt nichts aus dem Netz — deshalb kuerzer als bei den

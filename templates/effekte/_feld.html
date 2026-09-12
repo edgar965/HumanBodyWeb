@@ -1,0 +1,27 @@
+{% comment %}
+Eine Einstellung der Effekte-Seite — eine Zeile: Beschriftung | Regler | Wert.
+
+Edgar, 12.09.2026: „mach für alle Einstellungen slider, alle einstellungen
+untereinander". Zahlen als Schieberegler (`.effekt-schieber`, rastet in
+`f.schritt` aus `Parametersatz.schritt`) mit Zahlenfeld daneben; das
+Zahlenfeld traegt `name`, `id` und `data-parameter` — es ist der Wert, den
+`Effektformular.lesen()` schickt, der Regler ist nur die Hand daran
+(`schieber.js` haelt beide gleich). Schalter bleiben Kontrollkaestchen.
+
+Erwartet: `f` (Eintrag aus `Parametersatz.karte()`), `praefix` ('effekt' oder 'figur').
+{% endcomment %}
+<div class="form-group effekt-feld {% if f.typ == 'bool' %}effekt-feld-schalter{% else %}effekt-feld-zahl{% endif %}">
+    <label for="{{ praefix }}_{{ f.name }}">{{ f.beschriftung }}
+        <span class="effekt-hinweis">{{ f.hinweis }}</span></label>
+    {% if f.typ == 'bool' %}
+    <input type="checkbox" id="{{ praefix }}_{{ f.name }}" name="{{ f.name }}" data-parameter="bool"
+           {% if f.vorgabe %}checked{% endif %}>
+    {% else %}
+    <input type="range" class="effekt-schieber" data-fuer="{{ praefix }}_{{ f.name }}"
+           value="{{ f.vorgabe }}" min="{{ f.min }}" max="{{ f.max }}" step="{{ f.schritt }}"
+           aria-label="{{ f.beschriftung }} (Regler)">
+    <input type="number" class="effekt-wert" id="{{ praefix }}_{{ f.name }}" name="{{ f.name }}"
+           data-parameter="{{ f.typ }}" value="{{ f.vorgabe }}" min="{{ f.min }}" max="{{ f.max }}"
+           step="{{ f.schritt }}">
+    {% endif %}
+</div>

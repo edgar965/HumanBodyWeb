@@ -209,12 +209,27 @@ class Auftragsdateien:
                                % (selbst.job.pipeline,
                                   Path(selbst.job.name).stem))
 
+    #: Was die SMPL-X-Pipeline neben ihr BVH legt: das Netz ueber dem Video.
+    NETZVIDEO = '_smplx.mp4'
+
     @classmethod
     def ueberlagerungsvideo(cls, request, job_id):
-        """Das Video mit dem Skelett darueber."""
+        """Das Video mit dem Skelett darueber — bei der SMPL-X-Pipeline das
+        Netz-Video, das der Lauf selbst gerendert hat (Koerper, Finger,
+        Gesicht; 12.09.2026, Edgar: „erstelle mir ein output video")."""
         selbst = cls(request, job_id)
+        netz = selbst._netzvideo()
+        if netz:
+            return Videoauslieferung.mit_bereich(request, netz)
         return selbst._rendern(True, '%s_skeleton.mp4'
                                % Path(selbst.job.name).stem)
+
+    def _netzvideo(self):
+        """`<stamm>_smplx.mp4` neben dem BVH, wenn es da ist — sonst None."""
+        if not self.job.bvh_file:
+            return None
+        pfad = os.path.splitext(str(self.job.bvh_file))[0] + self.NETZVIDEO
+        return pfad if os.path.isfile(pfad) else None
 
     def _rendern(self, ueberlagern, dateiname):
         """Video rendern, in den Ausgabeordner legen und herunterladen."""

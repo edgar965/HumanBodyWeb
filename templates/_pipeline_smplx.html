@@ -1,0 +1,143 @@
+{# SMPL-X, die eigene Pipeline (12.09.2026): Körper aus GEM-SMPL/GVHMR/DuoMo, Hände aus SMPLest-X/GEM-X, Gesicht aus SMPLest-X, gemischt im Parameterraum, EIN BVH mit Fingern plus Netz-Video. Reihenfolge und Klappe: `Pipelinekarten`, `kartenklappe.js`. #}
+                <!-- SMPL-X (eigene Pipeline) — 12.09.2026 -->
+                <div class="pipeline-card {% if not status_3d.smplx %}disabled{% endif %}"
+                     data-pipeline="smplx">
+                    <div class="pipeline-card-header">
+                        <label class="pipeline-card-wahl">
+                            <input type="radio" name="pipeline" value="smplx"
+                                {% if default_3d == 'smplx' %}checked{% endif %}
+                                {% if not status_3d.smplx %}disabled{% endif %}>
+                            {% include "_pipeline_rang.html" %}
+                            <span class="pipeline-card-title">SMPL-X (eigen)</span>
+                            <span class="pipeline-card-desc">
+                                {% if status_3d.smplx %}SMPL-X als R&uuml;ckgrat: K&ouml;rper (GEM-SMPL, GVHMR oder DuoMo),
+                                     Finger (GEM-X oder SMPLest-X) und Gesicht (SMPLest-X), gemischt VOR dem
+                                     Retarget &mdash; ein BVH mit 54 Gelenken, Ausdr&uuml;cke und ein Netz-Video{% else %}nicht installiert (braucht GEM und SMPLest-X){% endif %}
+                            </span>
+                        </label>
+                        <button type="button" class="pipeline-card-klappe" aria-expanded="false"
+                                aria-controls="settings-smplx" title="Einstellungen ein- oder ausklappen">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="pipeline-settings" id="settings-smplx">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" data-vorgabe="smplx:fast">Schnell</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="smplx:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="smplx:max">Maximum</button>
+                        </div>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Statische Kamera <span
+                                     class="setting-hint">Kamera-Maske des K&ouml;rpermodells (feste Kamera)</span></div>
+                                <input type="checkbox" name="smplx_static_cam"
+                                     {% if defaults.smplx_static_cam %}checked{% endif %}>
+                            </div>
+                            {% comment %}Die vier Quellen (12.09.2026, Edgar: „in der pipeline fehlen
+                            die H&auml;nde und das Gesicht"): jede Stufe w&auml;hlbar, nicht installierte
+                            Quellen sind abgeblendet. Werte: `Smplxlauf`, Vorgaben: `Smplbefehl.SMPLX_QUELLEN`.{% endcomment %}
+                            <div class="setting-item">
+                                <div class="setting-label">K&ouml;rper <span
+                                     class="setting-hint">Wurzel, 21 Gelenke, Verschiebung, Betas &mdash; die
+                                          zeitlich modellierte Quelle</span></div>
+                                <select name="smplx_body_source">
+                                    <option value="gem" {% if not status_3d.gem %}disabled{% endif %}
+                                         {% if defaults.smplx_body_source == 'gem' %}selected{% endif %}>GEM-SMPL (Rang 1)</option>
+                                    <option value="gvhmr" {% if not status_3d.gvhmr %}disabled{% endif %}
+                                         {% if defaults.smplx_body_source == 'gvhmr' %}selected{% endif %}>GVHMR</option>
+                                    <option value="duomo" {% if not status_3d.duomo %}disabled{% endif %}
+                                         {% if defaults.smplx_body_source == 'duomo' %}selected{% endif %}>DuoMo (ohne Kamera: Video nur gesch&auml;tzt)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">H&auml;nde <span
+                                     class="setting-hint">SMPLest-X sch&auml;tzt je Bild; GEM-X modelliert
+                                          zeitlich (SOMA-Finger, ohne Retarget &uuml;bertragen)</span></div>
+                                <select name="smplx_hands_source">
+                                    {% comment %}Vorgabe GEM-X (offene Finger, weniger Zittern); ohne GEM-X
+                                    ist SMPLest-X vorgewaehlt, sonst staende ein abgeblendeter Eintrag im Feld.{% endcomment %}
+                                    <option value="smplestx"
+                                         {% if defaults.smplx_hands_source == 'smplestx' or not status_3d.gemx %}selected{% endif %}>SMPLest-X</option>
+                                    <option value="gemx" {% if not status_3d.gemx %}disabled{% endif %}
+                                         {% if defaults.smplx_hands_source == 'gemx' and status_3d.gemx %}selected{% endif %}>GEM-X (Vorgabe)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Gesicht <span
+                                     class="setting-hint">Kiefer und zehn Ausdruckswerte &mdash; nur SMPLest-X
+                                          liefert sie als SMPL-X</span></div>
+                                <select name="smplx_face_source">
+                                    <option value="smplestx"
+                                         {% if defaults.smplx_face_source == 'smplestx' %}selected{% endif %}>SMPLest-X</option>
+                                    <option value="keins"
+                                         {% if defaults.smplx_face_source == 'keins' %}selected{% endif %}>keins</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Handgelenk <span
+                                     class="setting-hint">Handfl&auml;che wie die Handquelle sie sah (Weltdrehung
+                                          unter dem Unterarm des K&ouml;rpers) oder wie der K&ouml;rper</span></div>
+                                <select name="smplx_wrist_source">
+                                    <option value="hand"
+                                         {% if defaults.smplx_wrist_source == 'hand' %}selected{% endif %}>aus SMPLest-X</option>
+                                    <option value="koerper"
+                                         {% if defaults.smplx_wrist_source == 'koerper' %}selected{% endif %}>aus dem K&ouml;rper</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Fu&szlig;kontakt <span
+                                     class="setting-hint">Wurzel an den Standbildern auf den Boden und
+                                          still &mdash; nur die Verschiebung, nie die Pose</span></div>
+                                <input type="checkbox" name="smplx_ground"
+                                     {% if defaults.smplx_ground %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Video <span
+                                     class="setting-hint">das SMPL-X-Netz &uuml;ber dem Original
+                                          (<code>&lt;name&gt;_smplx.mp4</code>, ca. 10 Bilder/s)</span></div>
+                                <input type="checkbox" name="smplx_video"
+                                     {% if defaults.smplx_video %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Gl&auml;ttung K&ouml;rper <span
+                                     class="setting-hint">Gaussian &uuml;ber die Zeit in Bildern (0=aus,
+                                          2=Standard)</span></div>
+                                <input type="number" name="smplx_smooth_sigma" min="0" max="10" step="0.5"
+                                     value="{{ defaults.smplx_smooth_sigma }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Gl&auml;ttung Finger <span
+                                     class="setting-hint">SMPLest-X sch&auml;tzt je Bild; die Finger werden
+                                          als Drehungen gegl&auml;ttet (Bilder)</span></div>
+                                <input type="number" name="smplx_hand_sigma" min="0" max="10" step="0.5"
+                                     value="{{ defaults.smplx_hand_sigma }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Gl&auml;ttung Gesicht <span
+                                     class="setting-hint">Kiefer und die zehn Ausdruckswerte
+                                          (Bilder)</span></div>
+                                <input type="number" name="smplx_face_sigma" min="0" max="10" step="0.5"
+                                     value="{{ defaults.smplx_face_sigma }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Joint Limits <span
+                                     class="setting-hint">Anatomische Grenzen f&uuml;r
+                                          Knie/Ellbogen/H&uuml;fte (nur K&ouml;rper)</span></div>
+                                <input type="checkbox" name="smplx_joint_limits"
+                                     {% if defaults.smplx_joint_limits %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Device <span
+                                     class="setting-hint">GPU (CUDA); GEM und SMPLest-X laufen
+                                          nacheinander</span></div>
+                                <select name="smplx_device">
+                                    <option value="cuda"
+                                         {% if defaults.smplx_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.smplx_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>

@@ -35,6 +35,8 @@ class Pipelineparameter:
             return Pipelineparameter._duomo(post)
         if pipeline == 'gemx':
             return Pipelineparameter._gemx(post)
+        if pipeline == 'smplx':
+            return Pipelineparameter._smplx(post)
         if pipeline.startswith('hybrid_'):
             return Pipelineparameter._hybrid(post)
         return {}
@@ -112,6 +114,25 @@ class Pipelineparameter:
         }
 
     @staticmethod
+    def _smplx(post):
+        """SMPL-X, die eigene Pipeline (12.09.2026): Koerper-, Hand-, Gesichts-
+        und Handgelenkquelle, die Glaettungen, Bodenkontakt und Video."""
+        from ..pipelines.smplbefehl import Smplbefehl
+        p = {
+            'static_cam': post.get('smplx_static_cam') == 'on',
+            'smooth_sigma': float(post.get('smplx_smooth_sigma', 2.0)),
+            'joint_limits': post.get('smplx_joint_limits') == 'on',
+            'hand_sigma': float(post.get('smplx_hand_sigma', 2.0)),
+            'face_sigma': float(post.get('smplx_face_sigma', 2.0)),
+            'ground': post.get('smplx_ground') == 'on',
+            'video': post.get('smplx_video') == 'on',
+            'device': post.get('smplx_device', 'cuda'),
+        }
+        for name, vorgabe in Smplbefehl.SMPLX_QUELLEN.items():
+            p[name] = post.get('smplx_' + name, vorgabe)
+        return p
+
+    @staticmethod
     def _hybrid(post):
         koerper = post.get('hybrid_body_backend', 'gvhmr')
         p = {
@@ -143,6 +164,7 @@ class Pipelineparameter:
     @staticmethod
     def vorgaben(s):
         """Vorbelegung der Formularfelder aus den Anwendungseinstellungen."""
+        from ..pipelines.smplbefehl import Smplbefehl
         return {
             'v4_hcd_iterations': s.v4_hcd_iterations,
             'v4_hcd_epochs': s.v4_hcd_epochs,
@@ -184,6 +206,20 @@ class Pipelineparameter:
             'gemx_static_cam': s.gemx_static_cam,
             'gemx_smooth_sigma': s.gemx_smooth_sigma,
             'gemx_device': s.smpl_device,
+            # SMPL-X (12.09.2026): der Koerper ist GEM, also GEMs Vorgaben;
+            # Finger und Gesicht mit der Vorgabe aus `Smplbefehl`.
+            'smplx_static_cam': s.gem_static_cam,
+            'smplx_smooth_sigma': s.gem_smooth_sigma,
+            'smplx_joint_limits': s.gem_joint_limits,
+            'smplx_hand_sigma': Smplbefehl.SMPLX_HAND_SIGMA,
+            'smplx_face_sigma': Smplbefehl.SMPLX_FACE_SIGMA,
+            'smplx_body_source': Smplbefehl.SMPLX_QUELLEN['body_source'],
+            'smplx_hands_source': Smplbefehl.SMPLX_QUELLEN['hands_source'],
+            'smplx_face_source': Smplbefehl.SMPLX_QUELLEN['face_source'],
+            'smplx_wrist_source': Smplbefehl.SMPLX_QUELLEN['wrist_source'],
+            'smplx_ground': True,
+            'smplx_video': True,
+            'smplx_device': s.smpl_device,
             # Hybrid greift auf dieselben Einstellungen zurueck
             'hybrid_body_device': s.smpl_device,
             'hybrid_gvhmr_static_cam': s.gvhmr_static_cam,

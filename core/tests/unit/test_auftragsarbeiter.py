@@ -52,8 +52,11 @@ class DerArbeiter(AufraeumenBasis):
     def test_abgeloest_heisst_eigene_gruppe_ohne_konsole(self):
         u"""Windows — hier laeuft der Server; anderswo sind die Flags 0."""
         flags = Auftragsarbeiter.flags()
-        self.assertTrue(flags & subprocess.DETACHED_PROCESS)
+        self.assertTrue(flags & subprocess.CREATE_NO_WINDOW)
         self.assertTrue(flags & subprocess.CREATE_NEW_PROCESS_GROUP)
+        # DETACHED_PROCESS liesse jedes Konsolenkind ein Fenster oeffnen —
+        # und hebt CREATE_NO_WINDOW auf (Windows ignoriert es dann).
+        self.assertFalse(flags & subprocess.DETACHED_PROCESS)
 
     def test_ohne_pid_datei_lebt_niemand(self):
         job = self.auftrag()

@@ -62,6 +62,7 @@ class RegistryTest(SimpleTestCase):
         'MIXAMO': 'SkeletonMixamo',
         'MOCAPNET': 'SkeletonMocapNet',
         'AIST': 'SkeletonAIST_SMPL',
+        'SMPLX': 'SkeletonSMPLX',
         'OPENPOSE': 'SkeletonOpenPose',
         'BANDAI': 'SkeletonBandai',
         'SMPL': 'SkeletonSMPL',

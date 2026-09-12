@@ -1,4 +1,5 @@
 import { Morphliste } from '../gemeinsam/morphliste.js';
+import { Morphgruppen } from '../gemeinsam/morphgruppen.js';
 import { Metaregler } from '../gemeinsam/metaregler.js';
 import { Gemeinsameregler } from './gemeinsameregler.js';
 import { Umamasse } from './uma/umamasse.js';
@@ -93,18 +94,17 @@ export class Formbedienung {
     }
 
     /**
-     * Morphregler der Figur — dieselbe Liste wie auf den anderen Seiten,
-     * deshalb aus `Morphliste`. Eigen ist hier nur: Meldung erst beim
-     * Loslassen, Pfeil vor dem Kategorienamen, und Werte unter der Schwelle
-     * werden ganz entfernt, damit die Figur keine Nullwerte mitschleppt.
+     * Morphregler der Figur — dieselben Kategorien wie auf den anderen Seiten,
+     * deshalb aus `Morphliste`; hier in drei klappbaren Bereichen (Gesicht,
+     * Körper, Fantasie — `Morphgruppen`, 12.09.2026). Eigen ist: Meldung
+     * erst beim Loslassen, Pfeil vor dem Kategorienamen, und Werte unter der
+     * Schwelle werden ganz entfernt, damit die Figur keine Nullwerte mitschleppt.
      */
     static _morphs(inst, morphDefs, neuLaden) {
         const behaelter = document.getElementById('prop-morphs-panel');
-        if (!morphDefs?.morphs || !morphDefs?.categories) {
-            behaelter.innerHTML = '';
-            return;
-        }
-        new Morphliste({
+        behaelter.innerHTML = '';
+        if (!morphDefs?.morphs || !morphDefs?.categories) return;
+        const liste = new Morphliste({
             ereignis: 'change',
             chevron: true,
             startwert: name => inst.morphs[name],
@@ -115,6 +115,14 @@ export class Formbedienung {
                 Gemeinsameregler.angleichen(inst);
                 neuLaden(inst);
             },
-        }).bauen(behaelter, morphDefs.morphs, morphDefs.categories);
+        });
+        const nach = Morphliste.nachKategorie(morphDefs.morphs, morphDefs.categories);
+        for (const [bereich, namen] of Morphgruppen.aufteilen(nach.map(([n]) => n))) {
+            const eintraege = nach.filter(([n]) => namen.includes(n));
+            const anzahl = eintraege.reduce((summe, [, morphs]) => summe + morphs.length, 0);
+            const { block, koerper } = Morphgruppen.bereich(bereich, anzahl);
+            for (const [name, morphs] of eintraege) koerper.appendChild(liste.kategorie(name, morphs));
+            behaelter.appendChild(block);
+        }
     }
 }

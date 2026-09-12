@@ -181,10 +181,24 @@ class SmplbefehlTest(SimpleTestCase):
                     self.assertIn(feld, felder, '%s: %s' % (pipeline, feld))
                     self.assertTrue(hasattr(EinstellungenAttrappe, feld),
                                     'Attrappe ohne %s' % feld)
-        for name in Smplbefehl.MIT_GLAETTUNG:
+        for pipeline in Smplbefehl.MIT_GLAETTUNG:
+            name = Smplbefehl.einstellungsname(pipeline)
             self.assertIn(name + '_smooth_sigma', felder, name)
             self.assertTrue(hasattr(EinstellungenAttrappe, name + '_smooth_sigma'),
                             'Attrappe ohne %s_smooth_sigma' % name)
+
+    def test_smplx_faehrt_gems_koerpereinstellungen_und_eigene_glaettungen(self):
+        """SMPL-X (12.09.2026): feste Kamera und Koerperglaettung aus den
+        GEM-Feldern (kein eigener Feldsatz), Finger/Gesicht mit eigener Sigma —
+        Vorgabe ohne Auftragswert, der Auftrag schlaegt sie."""
+        befehl = self.befehl('smplx')
+        self.assertIn('--static_cam', befehl)
+        self.assertEqual(befehl[befehl.index('--smooth_sigma') + 1], '3.5')
+        self.assertEqual(befehl[befehl.index('--hand_sigma') + 1], '2.0')
+        self.assertEqual(befehl[befehl.index('--face_sigma') + 1], '2.0')
+        eigen = self.befehl('smplx', hand_sigma=4.0, static_cam=False)
+        self.assertNotIn('--static_cam', eigen)
+        self.assertEqual(eigen[eigen.index('--hand_sigma') + 1], '4.0')
 
     def test_unbekannte_pipeline_bekommt_nur_das_grundgeruest(self):
         befehl = self.befehl('smplest_x')

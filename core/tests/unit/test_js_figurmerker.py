@@ -69,6 +69,22 @@ pruefe('a animation bleibt', Figurmerker.animation('a').name, 'Walk');
 Figurmerker.animationMerken('a', {name: 'kaputt'});
 pruefe('ohne url = null', Figurmerker.animation('a'), null);
 
+// --- eine geloeschte Animation verschwindet von ALLEN Figuren (12.09.2026) --
+Figurmerker.animationMerken('a', {name: 'Walk', url: '/api/character/bvh/Walk/01_01/', category: 'Walk'});
+Figurmerker.animationMerken('b', {name: 'Walk', url: '/api/character/bvh/Walk/01_01/', category: 'Walk'});
+Figurmerker.animationMerken('c', {name: 'Run', url: '/api/character/bvh/Run/02/', category: 'Run'});
+const vorher = geschrieben.length;
+pruefe('zwei vergessen', Figurmerker.animationVergessen('/api/character/bvh/Walk/01_01/'), 2);
+pruefe('a Animation weg', Figurmerker.animation('a'), null);
+pruefe('b Animation weg', Figurmerker.animation('b'), null);
+pruefe('c bleibt', Figurmerker.animation('c').name, 'Run');
+pruefe('a Reiter bleibt', Figurmerker.tab('a'), 'kleider');
+pruefe('einmal geschrieben', geschrieben.length, vorher + 1);
+pruefe('unbekannt = 0, nichts geschrieben', Figurmerker.animationVergessen('/nix/'), 0);
+pruefe('leer = 0', Figurmerker.animationVergessen(''), 0);
+pruefe('nicht geschrieben', geschrieben.length, vorher + 1);
+Figurmerker.vergessen('c');
+
 // --- vergessen trifft nur die eine Figur -----------------------------------
 Figurmerker.vergessen('a');
 pruefe('a weg', Figurmerker.tab('a'), null);
@@ -77,7 +93,7 @@ pruefe('b bleibt', Figurmerker.tab('b'), 'kleider');
 // --- der Zettel liegt im sessionStorage und kommt von dort zurueck ----------
 pruefe('Schluessel', geschrieben[geschrieben.length - 1], Figurmerker.SCHLUESSEL);
 const roh = JSON.parse(sessionStorage.getItem(Figurmerker.SCHLUESSEL));
-pruefe('gespeichert', roh, {b: {tab: 'kleider'}});
+pruefe('gespeichert', roh, {b: {tab: 'kleider', animation: null}});   // null = Walk vergessen
 Figurmerker._zettel = null;                      // wie nach einem Reload
 pruefe('nach Reload', Figurmerker.tab('b'), 'kleider');
 

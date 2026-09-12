@@ -3,6 +3,7 @@ import { _sliderVal } from './utils.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
 import { Garmentstoff } from './garmentcode_stoff.js';
 import { GarmentcodeGewebe } from './garmentcode_gewebe.js';
+import { Materialziel } from './materialziel.js';
 
 /**
  * Farbe und Material der GarmentCode-Stücke.
@@ -14,20 +15,27 @@ import { GarmentcodeGewebe } from './garmentcode_gewebe.js';
  * =================
  * Auf das ANGEKLICKTE Stück, wie im Kleider-Reiter — ein GarmentCode-Stück
  * ist seit dem 08.09.2026 ein eigenes Objekt in `clothMeshes` und damit
- * auswählbar. Ist keines ausgewählt, wird der Stand nur GEMERKT: Er gilt
- * dann für das nächste Stück, das gebaut wird, und fasst nichts an, was
- * schon hängt.
+ * auswählbar. Ist keines ausgewählt, wirkt ein Regler, den der NUTZER
+ * bedient, auf alle GarmentCode-Stücke der Figur (12.09.2026, Edgar:
+ * „ändere ich das Gewebe, oder andere Einstellungen, tut sich nichts" —
+ * die Überschrift versprach es, der Code tat es nicht). Der Stand wird
+ * dazu GEMERKT und gilt für das nächste Stück, das gebaut wird.
  *
- * BIS ZUM 09.09.2026 GALT ER OHNE AUSWAHL FÜR ALLE `gc_*`-NETZE, und das
- * war der Fehler hinter zwei Befunden Edgars („Farben … setzen die Farben
- * von allen Garments statt einem" und „modell gespeichert (farbe rot des
- * T-Shirt), neu geladen — Farbe ist weg"). Denn das Reitergedächtnis
- * stellt beim Seitenstart `gc-color` wieder her und feuert dabei `input`
- * (`reitergedaechtnis.js`) — zu diesem Zeitpunkt ist nie etwas ausgewählt.
- * Im Browser gemessen: Ein einziges solches `input` schrieb das aus der
- * Szene geladene Material (#dcd8d0, Rauheit 0,85) auf den Reglerstand
- * (#ff0000, Rauheit 1,0) um. Die gespeicherte Farbe war damit weg, bevor
- * sie jemand sehen konnte — ohne Fehler und ohne Meldung.
+ * VOM 09. BIS 12.09.2026 FASSTE ER OHNE AUSWAHL NICHTS AN, davor galt er
+ * ohne Auswahl für alle `gc_*`-Netze — und das war der Fehler hinter zwei
+ * Befunden Edgars („Farben … setzen die Farben von allen Garments statt
+ * einem" und „modell gespeichert (farbe rot des T-Shirt), neu geladen —
+ * Farbe ist weg"). Denn das Reitergedächtnis stellt beim Seitenstart
+ * `gc-color` wieder her und feuert dabei `input` (`reitergedaechtnis.js`)
+ * — zu diesem Zeitpunkt ist nie etwas ausgewählt. Im Browser gemessen: Ein
+ * einziges solches `input` schrieb das aus der Szene geladene Material
+ * (#dcd8d0, Rauheit 0,85) auf den Reglerstand (#ff0000, Rauheit 1,0) um.
+ * Die gespeicherte Farbe war damit weg, bevor sie jemand sehen konnte.
+ *
+ * Die Grenze liegt deshalb nicht bei der Auswahl, sondern beim URHEBER:
+ * `isTrusted` unterscheidet den Nutzer am Feld von `dispatchEvent` aus dem
+ * Code (Reitergedächtnis, Vorbild, Gewebe-Vorgaben). Nur der Nutzer wirkt
+ * breit; die Entscheidung steht in `Materialziel` (in Node geprüft).
  *
  * Der vorhandene `Materialregler` passt trotzdem nicht: Er kennt nur den
  * Fall mit Auswahl und hält keinen Stand, den ein späterer Bau erben
@@ -50,38 +58,44 @@ export class GarmentcodeMaterial {
         GarmentcodeGewebe.einhaengen(GarmentcodeMaterial);
         GarmentcodeMaterial._feld('gc-color', (wert) => {
             GarmentcodeMaterial.stand.farbe = wert;
+            return { farbe: wert };
         });
         GarmentcodeMaterial._schieber('gc-roughness', (wert) => {
             GarmentcodeMaterial.stand.rauheit = wert / 100;
+            return { rauheit: wert / 100 };
         });
         GarmentcodeMaterial._schieber('gc-metalness', (wert) => {
             GarmentcodeMaterial.stand.metall = wert / 100;
+            return { metall: wert / 100 };
         });
     }
 
     /**
-     * Den eingestellten Stand auflegen — auf das GEWÄHLTE Stück, sonst auf
-     * KEINES.
+     * Den eingestellten Stand auflegen — auf das GEWÄHLTE Stück; ohne
+     * Auswahl auf alle GarmentCode-Stücke der Figur, aber NUR wenn der
+     * Nutzer das Feld bedient hat (`nutzer`), sonst auf keines.
      *
      * BEFUND (Edgar, 08.09.2026): „Änderung der Farbe ändert ALLE farben
-     * aller GarmentCode Items, obwohl nur einer ausgewählt ist." Die erste
-     * Fassung wirkte bewusst auf alle, damit ein später gebautes Stück die
-     * Farbe erbt. Das war falsch gedacht: Ein Stück ist seit dem
-     * 08.09.2026 ein eigenes Objekt, das man anklicken kann — wenn eines
-     * gewählt ist, gilt die Auswahl.
+     * aller GarmentCode Items, obwohl nur einer ausgewählt ist." — wenn
+     * eines gewählt ist, gilt die Auswahl. Was ohne Auswahl geschieht,
+     * entscheidet `Materialziel`; die Begründung steht im Modulkopf.
      *
-     * OHNE AUSWAHL WIRD NICHTS ANGEFASST (09.09.2026). Der Stand steht
-     * bereits in `GarmentcodeMaterial.stand`; von dort holt ihn das nächste
-     * gebaute Stück (`aufStueck`). Ein Rückgriff auf alle hängenden Stücke
-     * kann nur schaden — er trifft auch die, die ihre Farbe aus der
-     * gespeicherten Szene mitgebracht haben. Siehe Modulkopf: Genau daran
-     * ist die gespeicherte Farbe beim Laden verlorengegangen.
+     * `werte`: NUR die Eigenschaft, die der Nutzer gerade bewegt hat (ein
+     * Gewebewechsel bringt nicht die Farbe des Feldes mit — ohne Auswahl
+     * tragen die Stücke ihre eigenen Farben, gemessen: ein Wechsel auf
+     * Köper färbte beide Stücke der Figur auf das Farbfeld um). Ohne
+     * `werte` der ganze Stand, wie beim Bau.
      */
-    static anwenden(figur) {
+    static anwenden(figur, nutzer = false, werte = null) {
         const inst = figur?.inst || figur;
-        const gewaehlt = GarmentcodeMaterial.gewaehltesStueck(inst);
-        if (!gewaehlt) return 0;
-        return GarmentcodeMaterial._auflegen(gewaehlt);
+        const netze = Materialziel.netze({
+            gewaehlt: GarmentcodeMaterial.gewaehltesStueck(inst),
+            stuecke: inst?.clothMeshes, nutzer });
+        let gesetzt = 0;
+        for (const netz of netze) {
+            gesetzt += GarmentcodeMaterial._auflegen(netz, werte);
+        }
+        return gesetzt;
     }
 
     /**
@@ -139,23 +153,27 @@ export class GarmentcodeMaterial {
         return traeger?.clothMeshes?.[wahl.key] || null;
     }
 
+    /** `tun(wert)` schreibt den Stand und liefert die geänderte Eigenschaft. */
     static _feld(id, tun) {
         const feld = document.getElementById(id);
-        feld?.addEventListener('input', () => {
+        feld?.addEventListener('input', (ereignis) => {
             // Dieselbe Sperre wie im `Materialregler`: Das Nachziehen der
             // Anzeige löst selbst ein `input` aus und dürfte sonst den
             // Stand überschreiben, den es gerade anzeigt.
             if (state._syncingSliders) return;
-            tun(feld.value);
-            GarmentcodeMaterial.anwenden(GarmentcodeMaterial.figur());
+            const werte = tun(feld.value);
+            // `isTrusted`: der Nutzer am Feld, nicht `dispatchEvent`.
+            GarmentcodeMaterial.anwenden(GarmentcodeMaterial.figur(),
+                                         ereignis.isTrusted, werte);
         });
     }
 
     static _schieber(id, tun) {
-        document.getElementById(id)?.addEventListener('input', () => {
+        document.getElementById(id)?.addEventListener('input', (ereignis) => {
             if (state._syncingSliders) return;
-            tun(_sliderVal(id));
-            GarmentcodeMaterial.anwenden(GarmentcodeMaterial.figur());
+            const werte = tun(_sliderVal(id));
+            GarmentcodeMaterial.anwenden(GarmentcodeMaterial.figur(),
+                                         ereignis.isTrusted, werte);
         });
     }
 

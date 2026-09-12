@@ -5,6 +5,7 @@ import { Garmentcodestueck }
     from '../../../static/viewer/gemeinsam/garmentcodestueck.js';
 import { Figurlage } from './figurlage.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
+import { Koerperdetails } from '../../../static/viewer/gemeinsam/koerperdetails.js';
 
 /**
  * Vorgabefigur — eine Figur samt Haaren und Kleidung aus einer Vorgabe laden.
@@ -47,6 +48,8 @@ export class Vorgabefigur {
         this._kennzeichnen(gruppe, vorgabe, name);
 
         if (vorgabe.type !== 'generated_model') {
+            // Iris, Wimpern, Nägel wie in der Szene gespeichert (Feld `details`).
+            Koerperdetails.anwenden(gruppe.children[0], Koerperdetails.aus(vorgabe));
             await this._haare(gruppe, vorgabe);
             await this._kleidung(gruppe, vorgabe);
             await this._garmentcode(gruppe, vorgabe);

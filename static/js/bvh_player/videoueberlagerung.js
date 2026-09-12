@@ -4,6 +4,8 @@
  * Aus bvh_player.js herausgeloest (Umbau 16.08.2026).
  */
 
+import { Rigueberlagerung } from './rigueberlagerung.js';
+
 /** Ab welcher Zuverlaessigkeit ein Gelenk gezeichnet wird. */
 const MINDESTGUETE = 0.3;
 
@@ -14,6 +16,8 @@ export class Videoueberlagerung {
         this.daten = daten;
         this.leinwand = null;
         this.stift = null;
+        /** Das HumanBody-Rig, sobald der Spieler es gebaut hat (`Humanbodyrig`). */
+        this.rig = null;
         if (!behaelter) return;
         this.leinwand = document.createElement('canvas');
         this.leinwand.className = 'spieler-ueberlagerung';
@@ -73,6 +77,9 @@ export class Videoueberlagerung {
         const { rw, rh, ox, oy } = this._bildbereich(cw, ch);
         this._verbindungen(bild, rw, rh, ox, oy);
         this._gelenke(bild, rw, rh, ox, oy, format, nummernZeigen);
+        if (this.rig?.gruppe.visible) {
+            Rigueberlagerung.zeichnen(this.stift, this.rig, bild, { rw, rh, ox, oy });
+        }
     }
 
     _verbindungen(bild, rw, rh, ox, oy) {

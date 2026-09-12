@@ -21,7 +21,7 @@ class Pipelines2d:
 
     # Dictionary gewollt: geht ueber `Pipelinevergleich.alle()` in die Vorlage.
     EINTRAEGE = [
-        {'schluessel': 'mediapipe', 'art': '2D + Lifter', 'rang': 9,
+        {'schluessel': 'mediapipe', 'art': '2D + Lifter', 'rang': 10,
          'verfahren': 'MediaPipe Holistic (Google) → CSV → MocapNET v2.1; der Standardweg der 2D-Seite.',
          'gelenke': 165, 'haende': True, 'gesicht': True, 'kamera': 'statisch (MocapNET-Kamera)',
          'dauer_s': 53, 'ueberlagerung_px': 30.6, 'ruhe_wurzel': 0.63, 'ruhe_pose': 4.5,
@@ -34,7 +34,7 @@ class Pipelines2d:
                        BILDRATE, LIFTER],
          'begruendung': 'Bester der 2D-Wege in dieser Messung — und trotzdem hinter v4: derselbe '
                         'Erkenner mit dem älteren Lifter zittert viermal so stark.'},
-        {'schluessel': 'rtmpose', 'art': '2D + Lifter', 'rang': 10,
+        {'schluessel': 'rtmpose', 'art': '2D + Lifter', 'rang': 11,
          'verfahren': 'RTMPose (OpenMMLab, 2023, über rtmlib) → CSV → MocapNET v2.1.',
          'gelenke': 165, 'haende': False, 'gesicht': False, 'kamera': 'statisch (MocapNET-Kamera)',
          'dauer_s': 164, 'ueberlagerung_px': 78.1, 'ruhe_wurzel': 3.57, 'ruhe_pose': 3.08,
@@ -45,7 +45,7 @@ class Pipelines2d:
                        'Langsamster laufender 2D-Weg (164 s)', BILDRATE, LIFTER],
          'begruendung': 'Im Median genau, im Mittel nicht — der Lifter verliert die Person in '
                         'einzelnen Bildern, und die Ausreißer sind groß.'},
-        {'schluessel': 'vitpose', 'art': '2D + Lifter', 'rang': 11,
+        {'schluessel': 'vitpose', 'art': '2D + Lifter', 'rang': 12,
          'verfahren': 'Heißt ViTPose, fährt RTMPose (`vitpose_det.py`, seit 01.09.2026 dokumentiert) '
                       '→ CSV → MocapNET v2.1.',
          'gelenke': 165, 'haende': False, 'gesicht': False, 'kamera': 'statisch (MocapNET-Kamera)',
@@ -56,7 +56,7 @@ class Pipelines2d:
                        BILDRATE, LIFTER],
          'begruendung': 'Dasselbe Ergebnis wie RTMPose, weil es derselbe Erkenner ist; ein Rang '
                         'dahinter, weil der Name etwas anderes verspricht.'},
-        {'schluessel': 'yolo11', 'art': '2D + Lifter', 'rang': 12,
+        {'schluessel': 'yolo11', 'art': '2D + Lifter', 'rang': 13,
          'verfahren': 'YOLO11-Pose (Ultralytics, 2024) → CSV → MocapNET v2.1.',
          'gelenke': 165, 'haende': False, 'gesicht': False, 'kamera': 'statisch (MocapNET-Kamera)',
          'dauer_s': 48, 'ueberlagerung_px': 113.2, 'ruhe_wurzel': 5.94, 'ruhe_pose': 4.06,

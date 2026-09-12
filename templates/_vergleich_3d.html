@@ -1,0 +1,57 @@
+{% comment %}
+Vergleich 3D Pipelines — unten auf der 3D-Uploadseite (`upload_v4.html`).
+
+Edgar (12.09.2026): „passe den Bereich Vergleich 3D Pipelines an aufgrund
+der empfohlenen Pipelines, nutze auch Hilfe → Video to BVH". Bis dahin stand
+hier eine Tabelle von Hand: Paperwerte (PA-MPJPE auf 3DPW), geschätzte FPS
+für eine RTX 3060 und „GVHMR ★ Empfohlen" — während die Karten darüber
+längst nach der Messung geordnet waren (Rang 1 Hybrid GEM-SMPL + GEM-X).
+Jetzt kommen die Zeilen aus `Pipelinevergleich.dreid_rangfolge()`, derselben
+Quelle wie die Hilfeseite und die Rang-Abzeichen der Karten.
+
+Erwartet: `vergleich_3d` (Einträge mit rang, name, kennung, ueberlagerung_px,
+ruhe_wurzel, ruhe_pose, haende, gesicht, dauer_s, begruendung), `messung`.
+{% endcomment %}
+<div class="info-box">
+    <h3>Vergleich 3D Pipelines</h3>
+    <p class="hb-color-var-text-muted">
+        Gemessen am {{ messung.datum }} auf <code>{{ messung.video }}</code>
+        ({{ messung.beschreibung }}, {{ messung.bilder }} Bilder, {{ messung.masse }}) — dieselbe Messung,
+        nach der die Karten oben geordnet sind. Rang 1 ist die Vorgabe.
+    </p>
+    <table class="compare-table doku">
+        <thead>
+            <tr>
+                <th>Rang</th>
+                <th>Pipeline</th>
+                <th title="Mittlerer Pixelabstand des projizierten Skeletts zu den ViTPose-Punkten, kleiner ist besser">Δ ViTPose (px)</th>
+                <th title="Zittern von Wurzel / Pose in cm je Bild², kleiner ist besser">Ruhe Wurzel / Pose</th>
+                <th>Hände · Gesicht</th>
+                <th title="Wanduhrzeit des Auftrags, 298 Bilder, RTX PRO 4500">Dauer (s)</th>
+                <th>Empfehlung</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in vergleich_3d %}
+            <tr{% if e.rang == 1 %} class="zeile-hervor"{% endif %}>
+                <td class="num">{{ e.rang }}</td>
+                <td><strong>{{ e.name }}</strong><br><small class="hb-color-var-text-muted"><code>{{ e.kennung }}</code></small></td>
+                <td class="num">{% if e.ueberlagerung_px is not None %}{{ e.ueberlagerung_px }}{% else %}—{% endif %}</td>
+                <td class="num">{% if e.ruhe_wurzel is not None %}{{ e.ruhe_wurzel }} / {{ e.ruhe_pose }}{% else %}—{% endif %}</td>
+                <td>{% if e.haende %}Hände{% else %}—{% endif %} · {% if e.gesicht %}Gesicht{% else %}—{% endif %}</td>
+                <td class="num">{% if e.dauer_s is not None %}{{ e.dauer_s }}{% else %}—{% endif %}</td>
+                <td>{% if e.rang == 1 %}<span class="hb-gut">&starf; Empfohlen — Vorgabe der Karte</span><br>{% endif %}<small>{{ e.begruendung }}</small></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="tabellen-fussnote">
+        <small>Was die Spalten bedeuten, die 2D-Pipelines, Vor- und Nachteile je Pipeline und die
+        Skelettvideos der Läufe: <a href="{% url 'hilfe_video_to_bvh' %}" class="akzent-verweis">Hilfe → Video to BVH</a>.</small>
+    </p>
+
+    <h3 class="hb-abstand-oben">SMPL-Lizenz</h3>
+    <p>GVHMR, GEM-SMPL, GEM-X, WHAM und PromptHMR ben&ouml;tigen SMPL-Modelldateien. Kostenlos beantragen:
+    <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a>;
+    GEM-SMPL und GEM-X stehen unter NVIDIA OneWay (nicht-kommerziell).</p>
+</div>

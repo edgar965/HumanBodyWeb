@@ -16,7 +16,7 @@ Modul, und beide haben eine Vorgeschichte:
 
 import os
 
-from .wurzeln import (HUMANBODY_ROOT, MOCAPNET_ROOT, OBJECTS_ROOT,
+from .wurzeln import (BASE_DIR, HUMANBODY_ROOT, MOCAPNET_ROOT, OBJECTS_ROOT,
                       TOOLS_ROOT, VIDEOTOBVH_ROOT)
 
 #: Pipeline-Python (venv mit CUDA-PyTorch, ONNX Runtime GPU).
@@ -77,6 +77,22 @@ HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
 # (A:\Roomguest) liest sie von hier (core/api/figur_export.py, 05.09.2026).
 HUMANBODY_FIGUR_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'figur_exports'
 HUMANBODY_SMPL_GARMENT_DIR = HUMANBODY_ROOT / 'data' / 'garment_pattern_gen'
+
+# ------------------------------------------------------------------- Effekte
+# Pipeline „Kleid + Wind" (Process Videos -> Effekte, 12.09.2026): das
+# Blender-Skript liegt im Projekt, die Ergebnisse (MP4, .blend, .json, Log)
+# unter media/effekte/<auftrag>/ — nie in System-Temp.
+EFFEKTE_SKRIPT = BASE_DIR / 'effekte' / 'blender' / 'kleidwind.py'
+EFFEKTE_AUSGABE_DIR = BASE_DIR / 'media' / 'effekte'
+#: Pipeline „HumanBody-Figur (DEF-Skelett)": python14-Unterprozess (12.09.2026).
+EFFEKTE_FIGUR_SKRIPT = BASE_DIR / 'effekte' / 'figur' / 'figurfilm.py'
+#: Stoffdynamik der Figur-Pipeline: Newton 1.5.1 (warp 1.17) in seiner eigenen
+#: Umgebung (Kleiderphysik, 10.09.2026) und der Kernelcache im Projekt — nie auf C:.
+EFFEKTE_NEWTON_PYTHON = os.environ.get('EFFEKTE_NEWTON_PYTHON') or str(
+    TOOLS_ROOT / 'ProjektTemp' / 'kleiderphysik' / 'venv_newton' / 'Scripts' / 'python.exe')
+EFFEKTE_NEWTON_SKRIPT = BASE_DIR / 'effekte' / 'figur' / 'stoffnewton.py'
+EFFEKTE_WARP_CACHE = TOOLS_ROOT / 'ProjektTemp' / 'kleiderphysik' / 'warp_cache'
+EFFEKTE_KLEIDER_DIR = HUMANBODY_GARMENT_LIBRARY_DIR / 'dresses'
 
 # ------------------------------------------------------------------ MakeHuman
 #: Der MakeHuman-Upstream (1.3.0, geholt 06.09.2026) — Modellierziele und

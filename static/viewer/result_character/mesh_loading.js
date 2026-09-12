@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import {
     base64ToFloat32, base64ToUint32, blenderToThreeCoords,
     sharedState, BODY_MATERIALS,
@@ -12,6 +13,7 @@ import {
 } from '../character_core.js';
 import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
+import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { Hautbindung } from '../gemeinsam/hautbindung.js';
@@ -33,6 +35,7 @@ export async function loadMesh(bodyType) {
         state.scene.add(state.bodyMesh);
 
         fn.applySceneSkinSettings(state.bodyMesh);
+        if (state.details) Koerperdetails.anwenden(state.bodyMesh, state.details);
         return true;
     } catch (e) {
         console.error('[result_character] Failed to load mesh:', e);
@@ -47,6 +50,11 @@ export function convertToRigifySkinnedMesh() {
     state.bodyGeometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
     state.bodyGeometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
     state.rigifySkeleton = buildRigifySkeleton(ss.rigifySkeletonData, ss.skinWeightData);
+    // Rig-Vorgabe AN (12.09.2026): Der Helfer entstand nur beim Kippen des
+    // Knopfs — steht der Schalter schon auf an, gehoert er hier dazu.
+    if (state.rigVisible && !state.skeletonHelper) {
+        state.skeletonHelper = Skelettanzeige.bauen(state.scene, state.rigifySkeleton.rootBone);
+    }
     // NEU MIT `visible` (28.08.2026): Diese Fassung hat die Sichtbarkeit
     // als einzige nicht mitgenommen — ein ausgeblendeter Koerper kam beim
     // Zuschalten des Skeletts zurueck, ohne dass der Schalter umsprang.

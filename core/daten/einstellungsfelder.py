@@ -65,6 +65,28 @@ class Einstellungsfelder:
             u'Standard-Animation',
             u'Welche Animation beim Laden der Theatre-Seite abgespielt wird'),
 
+        # ------------------------------------------------- Effekte (12.09.2026)
+        # Edgar: „erstelle eine Seite Einstellungen - Effekte wo man das
+        # Standard Modell auswählen kann … standard: Female2 sowie andere
+        # settings". Die Zahlen sind die Startwerte der Regler auf der
+        # Effekte-Seite; die Grenzen sind die der `Figurparameter`-Felder.
+        'effekte_default_animation': F(
+            u'Standard-Animation',
+            u'Welche Animation die Effekte-Seite beim Laden vorwählt; ohne '
+            u'Angabe die neueste passende aus „Process Videos"'),
+        'effekte_video_fps': F(
+            u'Bildrate', u'Bilder je Sekunde des Videos; bei 60-fps-BVHs gibt '
+            u'30 den Schritt 1, 24 gäbe Zeitlupe', min=10, max=60, schritt=1),
+        'effekte_video_width': F(
+            u'Breite (px)', u'Videobreite — Vorgabe des Reglers auf der Effekte-Seite',
+            min=320, max=3840, schritt=1),
+        'effekte_video_height': F(
+            u'Höhe (px)', u'Videohöhe — Vorgabe des Reglers auf der Effekte-Seite',
+            min=240, max=2160, schritt=1),
+        'effekte_wind': F(
+            u'Wind (m/s)', u'Windstärke der Stoffdynamik (HumanBody-Figur); '
+            u'0 = kein Wind', min=0, max=30, schritt=0.1),
+
         # --------------------------------------------- MediaPipe (2D UND 3D)
         'mp_min_detection_confidence': F(
             u'MediaPipe Detection Confidence',

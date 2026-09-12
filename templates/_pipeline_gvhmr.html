@@ -7,9 +7,10 @@
                                 {% if default_3d == 'gvhmr' %}checked{% endif %}
                                 {% if not status_3d.gvhmr %}disabled{% endif %}>
                             {% include "_pipeline_rang.html" %}
-                            <span class="pipeline-card-title">GVHMR <span class="hb-gut">&starf;</span></span>
+                            {# Kein Stern mehr (12.09.2026): der Rang kommt aus der Messung (`_pipeline_rang.html`), GVHMR steht dort auf 6 — „beste Qualität" war der Paperwert. #}
+                            <span class="pipeline-card-title">GVHMR</span>
                             <span class="pipeline-card-desc">
-                                {% if status_3d.gvhmr %}SMPL, GPU, beste Qualit&auml;t, 36 mm{% else %}nicht
+                                {% if status_3d.gvhmr %}SMPL, GPU, Kamera statisch oder bewegt (DPVO) &mdash; Basis von GEM-SMPL{% else %}nicht
                                      installiert{% endif %}
                             </span>
                         </label>

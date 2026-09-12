@@ -24,13 +24,17 @@ Hier wird die Entscheidung geprüft, WAS als „unter dem Stoff" gilt:
 6. Eine freie Insel im Verdeckten (Haut unter einem Loch im Stoff, ringsum
    verdeckt) wird geschlossen (`Maskeninseln`); mit `inseln: 0` bleibt sie —
    der Fall der Achselfalte, in der die Hautnormale keinen Stoff trifft.
+7. Ein kleines Teil OHNE Küste — an keiner Kante an Verdecktes grenzend,
+   wie die 136 Wimpernstreifen des HumanBody-Netzes — bleibt frei
+   (12.09.2026, Edgar: „die Wimperneinstellung funktioniert nicht": mit
+   Kleidung waren alle 3.672 Wimpernecken „verdeckt", Gruppe 2 leer).
 
 Sabotage-Gegenprobe: `t >= -tiefe` → `true` in `_einStueck` macht Fall 3 rot;
 `Math.abs(d) > eng` → `true` in `lockereRandpunkte` macht Fall 1 rot (Streifen
 am anliegenden Rohr); `vol >= 0 ? 1 : -1` → `1` (`hautmaskegeometrie.js`)
 macht Fall 4 rot; `maske[a] && maske[b] && maske[c]` → `maske[a] || ...`
 macht Fall 5 rot; `g <= hoechstens && g < groesste` → `false` (`maskeninseln.js`)
-macht Fall 6 rot.
+macht Fall 6 rot; `kueste.has(r)` weggelassen macht Fall 7 rot.
 
 FEHLT `node`, ist das ein FEHLER — siehe `Jsmodul.laufen`.
 """
@@ -154,6 +158,23 @@ if (ohne.gruppen.length !== 0 || ohne.index.length !== neu.index.length) fehl('o
     for (let i = 0; i < roh.length; i++) { const y = yVon(koerper, i); if (y > 0.35 && y < 0.65) { if (!roh[i]) frei++; if (!roh[i] && zu[i]) geschlossen++; } }
     if (frei === 0) fehl('Kunstloch laesst keine Haut frei');
     if (geschlossen !== frei) fehl('Insel nicht geschlossen: ' + geschlossen + ' von ' + frei);
+}
+
+// --- 7. Ein Teil ohne Kueste (Wimpernstreifen) bleibt frei ---------------
+{
+    const { Maskeninseln } = await import(MODUL.replace('hautmaske.js', 'maskeninseln.js'));
+    // Koerper: Streifen 0..5 (verdeckt bis auf die Insel 4,5 mit Kueste zu 3),
+    // ein loses Dreieck 6,7,8 ohne Kante zu Verdecktem (die „Wimper"), und
+    // die freie Haut 9..20 als groesste Gruppe — sonst waere das lose Teil
+    // selbst die groesste und schon deshalb ausgenommen.
+    const T7 = [0, 1, 2, 1, 2, 3, 2, 3, 4, 3, 4, 5, 6, 7, 8];
+    for (let i = 9; i + 2 <= 20; i++) T7.push(i, i + 1, i + 2);
+    const m = new Uint8Array(21); for (let i = 0; i < 4; i++) m[i] = 1;
+    const zu = Maskeninseln.schliessen(m, Uint32Array.from(T7), 200);
+    if (m[4] !== 1 || m[5] !== 1) fehl('Insel mit Kueste nicht geschlossen');
+    if (m[6] !== 0 || m[7] !== 0 || m[8] !== 0) fehl('loses Teil ohne Kueste wurde verdeckt');
+    if (m[9] !== 0 || m[20] !== 0) fehl('freie Haut verdeckt');
+    if (zu !== 2) fehl('geschlossen: ' + zu + ' statt 2');
 }
 
 console.log(JSON.stringify({ ok: true, unter, frei, entfernt: neu.entfernt }));

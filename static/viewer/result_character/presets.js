@@ -13,6 +13,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { sharedState, applyHairColor } from '../character_core.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { GarmentcodeStuecke } from './garmentcode_stuecke.js';
+import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
 
 const ss = sharedState;
 
@@ -74,6 +75,11 @@ export function loadPresetClothAndHair(preset) {
 
     // 4. GarmentCode-Stücke: fertige Rig-Dateien, ans Skelett gebunden.
     GarmentcodeStuecke.laden(preset.garmentcode || []);
+
+    // 5. Iris, Wimpern, Nägel (Feld `details`, Szene 12.09.2026) — gemerkt,
+    // damit ein Körperwechsel und der Morph-Strom sie wieder anlegen.
+    state.details = Koerperdetails.aus(preset);
+    if (state.bodyMesh) Koerperdetails.anwenden(state.bodyMesh, state.details);
 }
 
 /**

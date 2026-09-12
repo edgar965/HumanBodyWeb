@@ -4,6 +4,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Garmentcodestueck } from '../gemeinsam/garmentcodestueck.js';
 import { Garmentcodebindung } from '../gemeinsam/garmentcodebindung.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
+import { Figurhaut } from '../gemeinsam/figurhaut.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
@@ -24,6 +25,14 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  * `Garmentcodebindung.binden` tauscht die Kinder der übergebenen Gruppe aus,
  * so trifft es nicht die Bühne selbst. Kleidung ausblenden (`Knopfleiste`)
  * und der Wechsel des Körpertyps (`reloadBodyMesh`) fassen die Gruppe mit an.
+ *
+ * DIE HAUT UNTER DEN STÜCKEN WIRD NICHT GEZEICHNET (Edgar, 12.09.2026: „bei
+ * einer animation mit Female2 scheint die Haut durch das Kleid"): Nach dem
+ * Binden läuft `Figurhaut.anwenden` — dieselbe Maske wie in der Szene und
+ * im Studio (`gemeinsam/figurhaut.js`, Befund vom 11.09.2026 dort). Zwei
+ * Flächen, die Millimeter auseinanderliegen und getrennt gehäutet werden,
+ * kommen sich an jedem Gelenk nahe; was nicht gezeichnet wird, kommt nicht
+ * durch. Gehen die Stücke (`entfernen`), kommt der volle Index zurück.
  */
 export class GarmentcodeStuecke {
 
@@ -52,7 +61,22 @@ export class GarmentcodeStuecke {
         gruppe.visible = state.clothesVisible;
         Protokoll.debug('result_character',
                         `GarmentCode: ${gebunden}/${eintraege.length} gebunden`);
+        GarmentcodeStuecke.hautMaskieren();
         return gebunden;
+    }
+
+    /** Die Figur, wie `Figurhaut` sie liest: Körper plus Gruppe der Stücke. */
+    static figur() {
+        return { mesh: state.bodyMesh, group: state.garmentcodeGroup, name: 'Ergebnis' };
+    }
+
+    static hautMaskieren() {
+        try {
+            return Figurhaut.anwenden(GarmentcodeStuecke.figur());
+        } catch (fehler) {
+            Protokoll.warnung('result_character', 'Hautmaske:', fehler.message);
+            return null;
+        }
     }
 
     /** Die Gruppe in der Bühne — angelegt beim ersten Stück. */
@@ -71,6 +95,7 @@ export class GarmentcodeStuecke {
         for (const netz of [...gruppe.children]) {
             Netzentsorgung.entfernen(gruppe, netz);
         }
+        Figurhaut.aufheben(GarmentcodeStuecke.figur());
     }
 
     /** Mit der übrigen Kleidung ein- und ausblenden. */

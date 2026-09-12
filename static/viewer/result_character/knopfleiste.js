@@ -31,7 +31,7 @@ export class Knopfleiste {
         { text: 'Model', symbol: 'fa-user', an: true,
           kippen: () => Knopfleiste._netzKippen(state.bodyMesh),
           steht: () => state.bodyMesh?.visible },
-        { text: 'Rig', symbol: 'fa-bone', an: false,
+        { text: 'Rig', symbol: 'fa-bone', an: true,
           kippen: () => Knopfleiste._rigKippen(),
           steht: () => state.rigVisible },
         { text: 'Kleider', symbol: 'fa-tshirt', an: true,
@@ -61,7 +61,20 @@ export class Knopfleiste {
             kippen();
             knopf.classList.toggle('active', !!steht());
         });
+        if (text === 'Rig') Knopfleiste._rigVonAussen(knopf, kippen, steht);
         return knopf;
+    }
+
+    /**
+     * Der Rig-Knopf des Spielers (`btnHumanbodyRig`, 12.09.2026) schaltet das
+     * Rig der 3D-Figur mit — ueber diesen Haken, damit der Knopf hier den
+     * Stand anzeigt, statt ihn nur zu kippen.
+     */
+    static _rigVonAussen(knopf, kippen, steht) {
+        window.setCharacterRigVisible = (an) => {
+            if (!!steht() !== !!an) kippen();
+            knopf.classList.toggle('active', !!steht());
+        };
     }
 
     static _netzKippen(netz) {

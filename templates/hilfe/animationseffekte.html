@@ -1,0 +1,149 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Animationseffekte: Mimik, Haare, Kleidung, Wind.
+
+Edgar, 12.09.2026: „wie machen die Animationsstudios diese Sondereffekte,
+mit Mimik, Wind in den Haaren, bewegung der Kleider / Haare wenn sich die
+Person bewegt? gibt es open Source dinger, die ich testen / anwenden
+koennte?" — „schreibe schon mal alles hinein in Hilfe - Animationseffekte"
+
+Alle Texte kommen aus `core.dienste.animationseffekte` und
+`core.dienste.effektkandidaten`, keiner steht hier.
+{% endcomment %}
+
+{% block title %}Animationseffekte{% endblock %}
+{% block topbar_title %}Animationseffekte — Mimik, Haare, Kleidung, Wind{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_kleidung.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite kleidung-breit">
+
+  <h1>Animationseffekte: was sich außer dem Körper bewegt</h1>
+
+  <p>
+    Ein Video liefert hier die Körperbewegung als BVH. Was in einem
+    Animationsfilm darüber hinaus lebt — das Gesicht, die Haare im Wind, der
+    Rock beim Drehen — sind <strong>drei getrennte Schichten</strong> über
+    dieser Bewegung. Das Wichtige daran: <strong>Haare und Kleider werden
+    nicht animiert, sondern simuliert.</strong> Der bewegte Körper ist die
+    Kollisionsfläche; die Bewegung von Stoff und Strähnen ergibt sich daraus
+    von selbst. Nur die Mimik ist eine eigene Aufnahme.
+  </p>
+
+  <div class="doku-kasten doku-warnung">
+    <strong>Stand:</strong> Die Tabelle „Wie die Studios es machen" ist
+    Erklärung, keine Messung. Der Bestand ist im Code nachgesehen; die
+    Kandidaten sind an ihren Quellen geprüft (Lizenz, Stand) — <strong>gelaufen
+    sind hier nur MPFB, der BVH Retargeter und Blender Cloth</strong>, in der
+    Effekte-Pipeline (Zahlen unten). Stoffdynamik für das Theatre ist bereits
+    entschieden und gemessen:
+    <a href="{% url 'hilfe_kleidung_physik' %}">Kleiderphysik</a>.
+  </div>
+
+  <h2>Wie die Studios es machen</h2>
+  <table class="doku">
+    <thead><tr><th>Schicht</th><th>Verfahren</th><th>Eingabe</th><th>Werkzeuge dort</th><th>Hier</th></tr></thead>
+    <tbody>
+      {% for s in schichten %}
+      <tr>
+        <td><strong>{{ s.schicht }}</strong></td>
+        <td>{{ s.verfahren }}</td>
+        <td>{{ s.eingabe }}</td>
+        <td>{{ s.werkzeuge }}</td>
+        <td>{{ s.hier }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Was im Projekt schon liegt</h2>
+  <table class="doku">
+    <thead><tr><th>Was</th><th>Wo</th><th>Stand</th><th>Bemerkung</th></tr></thead>
+    <tbody>
+      {% for b in bestand %}
+      <tr><td><strong>{{ b.was }}</strong></td><td><code>{{ b.wo }}</code></td><td>{{ b.stand }}</td><td>{{ b.bemerkung }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="doku-quelle">
+    Körperphysik (Muskeln, Nachschwingen) hat ihre eigene Seite:
+    <a href="{% url 'hilfe_koerper_physik' %}">Körperphysik</a>. Der
+    Pipelinevergleich für die Körperbewegung steht unter
+    <a href="{% url 'hilfe_video_to_bvh' %}">Video to BVH</a>.
+  </p>
+
+  <h2>Quelloffen, testbar</h2>
+  <p>
+    Lizenz und Stand aus den Quellen unten. Blender ist hier in Fassung
+    {{ blender_hier }} installiert; die neue Haar- und Stoffdynamik kam mit
+    {{ blender_neu }}.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Code</th><th>Schicht</th><th>Lizenz</th><th>Läuft hier?</th><th>Liefert</th><th>Urteil</th></tr></thead>
+    <tbody>
+      {% for k in kandidaten %}
+      <tr><td>{{ k.name }}</td><td>{{ k.schicht }}</td><td>{{ k.lizenz }}</td>
+          <td>{{ k.laeuft }}</td><td>{{ k.liefert }}</td><td>{{ k.urteil }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Die Effekte-Pipeline, gemessen</h2>
+  <p>
+    Der Versuch aus dem Auftrag — BVH aus HumanBodyWeb in Blender, MPFB-Figur
+    mit Kleid, Windfeld, 300 Bilder — läuft als Seite
+    <a href="{% url 'effekte' %}">Process Videos → Effekte</a>. Lauf:
+    {{ effektlauf }}.
+  </p>
+  <table class="doku">
+    <thead><tr><th>Was</th><th>Befund</th></tr></thead>
+    <tbody>
+      {% for was, befund in effekte %}
+      <tr><td><strong>{{ was }}</strong></td><td>{{ befund }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Der Weg, der hier passt</h2>
+  <p>
+    Der Face Landmarker liefert je Bild {{ mimik_punkte }} Punkte und
+    {{ mimik_werte }} Verformungswerte — er liegt schon im Projekt und wird
+    bisher nur für den Gesichtsumriss gefragt.
+  </p>
+  {% for titel, text in weg %}
+  <div class="doku-kasten">
+    <h3>{{ titel }}</h3>
+    <p>{{ text }}</p>
+  </div>
+  {% endfor %}
+
+  <h2>Was ausdrücklich nicht vorgeschlagen wird</h2>
+  <ul class="doku-liste">
+    {% for was, warum in nicht %}
+    <li><strong>{{ was }}:</strong> {{ warum }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Offene Entscheidungen</h2>
+  <ul class="doku-liste">
+    {% for frage, lage in offen %}
+    <li><strong>{{ frage }}</strong> {{ lage }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Quellen</h2>
+  <table class="doku">
+    <thead><tr><th>Was</th><th>Adresse</th></tr></thead>
+    <tbody>
+      {% for name, adresse in quellen %}
+      <tr><td>{{ name }}</td><td><a href="{{ adresse }}" target="_blank" rel="noopener">{{ adresse }}</a></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

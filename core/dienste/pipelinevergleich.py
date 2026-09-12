@@ -94,6 +94,19 @@ class Pipelinevergleich:
     def mit_rang(cls):
         return [e for e in cls.alle() if e['rang'] is not None]
 
+    #: Die Arten, die auf der 3D-Uploadseite zur Wahl stehen.
+    ARTEN_3D = ('3D', 'Hybrid')
+
+    @classmethod
+    def dreid_rangfolge(cls):
+        u"""Die 3D- und Hybrid-Pipelines mit Rang, in Rangfolge — der
+        Vergleich unten auf der 3D-Uploadseite (Edgar, 12.09.2026: „passe den
+        Bereich Vergleich 3D Pipelines an aufgrund der empfohlenen
+        Pipelines"). Vorher stand dort eine Tabelle von Hand mit
+        Paperwerten und einer Empfehlung, die der Messung widersprach."""
+        return [e for e in cls.rangfolge()
+                if e['rang'] is not None and e['art'] in cls.ARTEN_3D]
+
     @classmethod
     def nicht_gelaufen(cls):
         return [e for e in cls.rangfolge() if e['zustand'] != 'laeuft']

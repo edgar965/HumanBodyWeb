@@ -29,8 +29,18 @@ aus einer anderen Quelle kommt als das Material des Netzes.
 
 Die Fälle prüfen den Quelltext, nicht das Verhalten im Browser: Das Modul
 hängt an `three` und ist in node nicht ladbar. Sie halten deshalb genau
-die zwei Zusagen fest, die den Befund beheben — dass es ohne Auswahl
-aussteigt und dass der Bau ein einzelnes Stück meint.
+die Zusagen fest, die den Befund beheben — und die vom 12.09.2026.
+
+NACHTRAG (12.09.2026, Edgar: „ändere ich das Gewebe, oder andere
+Einstellungen, tut sich nichts"): „Ohne Auswahl nichts" war zu viel des
+Guten — die Überschrift des Bereichs versprach „ohne Auswahl für alle
+GarmentCode-Stücke dieser Figur", und wer ihr folgte, sah nichts. Die
+Grenze liegt jetzt beim URHEBER, nicht bei der Auswahl: Ein Ereignis vom
+Nutzer (`isTrusted`) wirkt ohne Auswahl auf alle `gc_*`-Stücke der Figur;
+eines aus `dispatchEvent` (Reitergedächtnis, Vorbild) nur auf ein
+gewähltes. Die Entscheidung liegt in `materialziel.js` und wird in Node
+geprüft (`test_js_materialziel`); hier steht, dass die Handler den
+Urheber durchreichen.
 """
 import io
 import re
@@ -57,30 +67,46 @@ class MaterialOhneAuswahlTest(SimpleTestCase):
 
     databases = set()
 
-    def test_ohne_auswahl_wird_nichts_angefasst(self):
-        u"""Der Kern: kein gewähltes Stück, kein Zugriff auf ein Material."""
+    def test_die_ziele_kommen_aus_materialziel(self):
+        u"""Der Kern: WELCHE Netze den Stand bekommen, entscheidet die
+        geprüfte Klasse — nicht eine Schleife im Modul."""
         quelle = _material()
-        self.assertIn('const gewaehlt = GarmentcodeMaterial.gewaehltesStueck',
-                      quelle)
-        self.assertIn('if (!gewaehlt) return 0;', quelle)
+        self.assertIn("import { Materialziel } from './materialziel.js';", quelle)
+        self.assertIn('Materialziel.netze({', quelle)
+        self.assertIn('gewaehlt: GarmentcodeMaterial.gewaehltesStueck(inst)', quelle)
+        self.assertNotIn(".filter((k) => k.startsWith('gc_'))", quelle)
 
-    def test_anwenden_nimmt_keinen_alle_schalter_mehr(self):
-        u"""`anwenden(figur, false)` war der Weg in den Fehler.
-
-        Solange die Signatur ihn anbietet, kann ihn jemand wieder benutzen —
-        dieselbe Falle wie die Konstante `GLAETTUNG` am selben Tag.
-        """
+    def test_anwenden_kennt_den_urheber(self):
+        u"""`anwenden(figur, nutzer)`: breit nur, wenn der Nutzer es war."""
         quelle = _material()
-        self.assertNotIn('nurGewaehltes', quelle)
         unterschrift = re.search(r'static anwenden\(([^)]*)\)', quelle)
         self.assertIsNotNone(unterschrift)
-        self.assertEqual(unterschrift.group(1).strip(), 'figur')
+        self.assertEqual(unterschrift.group(1).strip(),
+                         'figur, nutzer = false, werte = null')
 
-    def test_es_gibt_keinen_sammler_ueber_alle_stuecke_mehr(self):
-        u"""Ohne Sammelliste kann der Stand nicht mehr breit wirken."""
+    def test_ein_regler_bringt_nur_seine_eigenschaft_mit(self):
+        u"""Gemessen: ein Gewebewechsel ohne Auswahl färbte beide Stücke
+        der Figur auf das Farbfeld um. Jeder Handler liefert deshalb nur
+        die Eigenschaft, die er bewegt hat."""
         quelle = _material()
-        self.assertNotIn('static stuecke(', quelle)
-        self.assertNotIn(".filter((k) => k.startsWith('gc_'))", quelle)
+        self.assertIn('return { farbe: wert };', quelle)
+        self.assertIn('return { rauheit: wert / 100 };', quelle)
+        self.assertIn('return { metall: wert / 100 };', quelle)
+        self.assertEqual(quelle.count('ereignis.isTrusted, werte);'), 2)
+        gewebe = _modultext('static', 'viewer', 'scene', 'garmentcode_gewebe.js')
+        self.assertEqual(gewebe.count('return { gewebe: material.stand.gewebe };'), 2)
+        self.assertIn('{ gewebe: material.stand.gewebe });', gewebe)
+
+    def test_die_handler_reichen_istrusted_durch(self):
+        u"""Reitergedächtnis und Vorbild schreiben per `dispatchEvent` —
+        das darf nie breit wirken. Der Nutzer am Feld schon."""
+        quelle = _material()
+        self.assertEqual(quelle.count('ereignis.isTrusted, werte);'), 2,
+                         '_feld und _schieber')
+        gewebe = _modultext('static', 'viewer', 'scene', 'garmentcode_gewebe.js')
+        self.assertIn('material.anwenden(material.figur(), ereignis.isTrusted,',
+                      gewebe)
+        self.assertNotIn('material.anwenden(material.figur());', gewebe)
 
     def test_der_befund_steht_im_modulkopf(self):
         u"""Die gemessenen Werte, damit die nächste Fassung sie kennt."""

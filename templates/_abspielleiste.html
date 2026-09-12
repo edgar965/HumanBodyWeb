@@ -64,7 +64,12 @@ Drahtformat zum JavaScript der jeweiligen Seite — sie bleiben, wie sie sind.
     <button class="speed-btn active" data-speed="1">1x</button>
     <button class="speed-btn" data-speed="2">2x</button>
     {% if mit_idx %}<button class="speed-btn" id="btnToggleIdx"
-         title="Toggle bone index numbers on 3D skeleton">Idx</button>{% endif %}
+         title="Toggle bone index numbers on 3D skeleton">Idx</button>
+    {% comment %}HumanBody-Rig (12.09.2026, Edgar: „kannst du das HumanBody Rig anzeigen auf
+    allen views?"): das umgezielte DEF-Rig mit Händen, Füßen und Gesicht im Skelettfenster,
+    auf dem Video und an der 3D-Figur — `bvh_player/humanbodyrig.js`.{% endcomment %}
+    <button class="speed-btn" id="btnHumanbodyRig"
+         title="HumanBody-Rig (DEF, 176 Knochen: Hände, Füße, Gesicht) auf allen Ansichten">Rig</button>{% endif %}
     <span class="rechts-grau">
         <kbd class="marke-dunkel">Space</kbd> Play/Pause
         {% if not ohne_frametaste %}<kbd class="tastenkappe">&larr;&rarr;</kbd> Frame{% endif %}

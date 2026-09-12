@@ -13,12 +13,15 @@ spitzen Klammern maskiert ankommt.
 import datetime
 import re
 import uuid
+from pathlib import Path
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
 from core.dienste.auftragstabelle import Auftragstabelle
 
 PIPELINES = [('v4', 'MocapNET v4'), ('gem', 'GEM-SMPL')]
+JS = Path(settings.BASE_DIR) / 'static' / 'js' / 'auftraege' / 'auftragszeile.js'
 
 
 class Auftragsattrappe:
@@ -118,6 +121,12 @@ class DieZeile(SimpleTestCase):
         job, fertig = self.zeile(status='complete')
         self.assertIn('/process/%s/result/' % job.id, fertig['html'])
         self.assertIn('Ergebnis', fertig['html'])
+        # Ergebnis in einem neuen Tab (Edgar, 12.09.2026) — auch im JS
+        # (`Auftragszeile._fertig`, `_ergebnislink`), das den Knopf nachträgt
+        self.assertIn('target="_blank"', fertig['html'])
+        js = JS.read_text(encoding='utf-8')
+        self.assertEqual(js.count("target=\"_blank\""), 1, 'Knopf nach dem Lauf')
+        self.assertEqual(js.count("link.target = '_blank'"), 1, 'Link in der Zeile')
         job, gescheitert = self.zeile(status='failed')
         self.assertIn('href="/process/%s/"' % job.id, gescheitert['html'])
         self.assertIn('> Status</a>', gescheitert['html'])

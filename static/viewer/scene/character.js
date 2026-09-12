@@ -4,7 +4,7 @@
 import { THREE, BODY_MATERIALS, state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, _getBodyTop } from './utils.js';
-import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
+import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
 import './skeleton.js';
 import './undo.js';
 import './garments.js';
@@ -37,6 +37,8 @@ export class CharacterInstance {
         this.cloth = presetData.cloth || [];
         this.hairStyle = presetData.hair_style || null;
         this.garments = presetData.garments || [];
+        // Iris, Wimpern, Nägel: Farben und Längen (12.09.2026), Feld `details`.
+        this.details = Koerperdetails.aus(presetData);
         this.group = new THREE.Group();
         this.group.userData.characterId = id;
         this.bodyMesh = null;
@@ -90,11 +92,10 @@ export class CharacterInstance {
         // Puffer, Normalen, Materialgruppen: siehe `Koerpernetz`. Diese dreißig
         // Zeilen standen fünfmal im Projekt (Befund `doppelcode`, 17.08.2026).
         Startmessung.um('    Körper aufbauen', () => {
-            this.bodyMesh = Koerpernetz.netz(data, THREE);
-            const materials = Array.isArray(this.bodyMesh.material)
-                ? this.bodyMesh.material : [this.bodyMesh.material];
-            Charakterkoerper.hautfarbe(this, materials);
+            // Lippengruppe und Hautfarbe: `Charakterkoerper.netz` (12.09.2026).
+            this.bodyMesh = Charakterkoerper.netz(this, data);
             this.group.add(this.bodyMesh);
+            Charakterkoerper.details(this);
             this.initialBodyTop = _getBodyTop(this);
         });
 
@@ -135,6 +136,7 @@ export class CharacterInstance {
             Netzentsorgung.netz(netz);
         }
         Netzentsorgung.baum(this.hairMesh);
+        Charakterkoerper.detailsWeg(this);
         if (this.group.parent) this.group.parent.remove(this.group);
     }
 
@@ -173,6 +175,7 @@ export class CharacterInstance {
             cloth: this.cloth,
             hair_style: this.hairStyle,
             garments,
+            [Koerperdetails.FELD]: this.details,
             mh_proxy: Object.values(this.mhProxies || {}),
             // GarmentCode fuehrt eine eigene Liste (08.09.2026): Die Stuecke
             // hingen nur als Netz in der Gruppe, und beim Speichern sah sie
@@ -234,6 +237,7 @@ export class CharacterInstance {
                 hair_style: data.hair_style || null,
                 garments: data.garments || [],
                 mh_proxy: data.mh_proxy || [],
+                [Koerperdetails.FELD]: data[Koerperdetails.FELD] || null,
             };
         }
 

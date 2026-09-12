@@ -1,0 +1,104 @@
+{% load regler %}
+{% comment %}Haut · Augen · Augenbrauen · Mund · Nägel (Edgar, 12.09.2026): Farben und Glanz
+der Materialgruppen, Längen, und die Formmorphs, die zum Bereich gehören. Was wo steht,
+ist die Tabelle `scene/detailbereiche.js`; Bedienung `scene/detailbedienung.js`, Rechnung
+`gemeinsam/koerperdetails.js` + `gemeinsam/detailfarben.js`. Die Lippen sind eine
+abgespaltene Materialgruppe (`gemeinsam/lippengruppe.js`), die Brauen ein eigenes Netz
+(`gemeinsam/augenbrauen.js`) — das Körpernetz hat beides nicht.
+
+KLAPPBAR wie die Bereiche der anderen Reiter (`panel-section` + `h3` + `panel-body`,
+`Klappbereiche`; Edgar: „Mach den Bereich Auf- Zuklappbar" — „FORMAT des Zuklappbaren
+Bereichs wie bei Augen/Wimpern … für alle"). OHNE `data-panel-key`: Damit hinge der Bereich
+an `expanded_panels_scene` der Einstellungsseite, die ihn nicht kennt — ab dem zweiten Laden
+stünde er dauerhaft zu. Die Bereiche starten ZU (`collapsed`), sonst wäre der Reiter drei
+Bildschirme lang. Der Reset-Knopf steht im Körper, nicht im Kopf — ein Knopf im `h3`
+klappte beim Klick zugleich den Bereich; `data-bereich` sagt, was er zurücknimmt.{% endcomment %}
+<div id="prop-details-section">
+    <div class="panel-section prop-section collapsed" id="prop-details-haut">
+        <h3>Haut <span class="chevron">&#9660;</span></h3>
+        <div class="panel-body">
+            <div class="zeile-verteilt">
+                <small class="hb-gedaempft">Reset = Farbe der Körperart</small>
+                <button class="btn-reset-morphs prop-detail-reset" data-bereich="haut" type="button"
+                        title="Hautfarbe und Glanz auf die Vorgabe">Reset</button>
+            </div>
+            <div class="slider-row"><label>Farbe</label>
+                <input type="color" id="prop-detail-haut" value="#d4a574" class="hb-farbfeld"></div>
+            {% regler "prop-detail-haut-glanz" "Glanz" min="0" max="100" wert="45" anzeige="45 %" %}
+        </div>
+    </div>
+    <div class="panel-section prop-section collapsed" id="prop-details-augen">
+        <h3>Augen · Wimpern <span class="chevron">&#9660;</span></h3>
+        <div class="panel-body">
+            <div class="zeile-verteilt">
+                <small class="hb-gedaempft">Farben, Länge, Lider</small>
+                <button class="btn-reset-morphs prop-detail-reset" data-bereich="augen" type="button"
+                        title="Augenfarben, Wimpern und Lidform auf die Vorgabe">Reset</button>
+            </div>
+            <div class="slider-row"><label>Iris</label>
+                <input type="color" id="prop-detail-iris" value="#4a7a9b" class="hb-farbfeld"></div>
+            <div class="slider-row"><label>Augapfel</label>
+                <input type="color" id="prop-detail-sklera" value="#f4f0e8" class="hb-farbfeld"></div>
+            <div class="slider-row"><label>Wimpern</label>
+                <input type="color" id="prop-detail-wimpern" value="#111111" class="hb-farbfeld"></div>
+            {% regler "prop-detail-wimpern-laenge" "Wimpernlänge" min="50" max="300" wert="100" anzeige="100 %" %}
+            {% comment %}Morphs — Kennungen `prop-detail-morph-<Name>`, Liste in `Detailbereiche`.{% endcomment %}
+            <div class="prop-section-title unterabschnittstitel">Augenlider</div>
+            {% regler "prop-detail-morph-Eyelids_SizeZ" "Lidhöhe" min="-100" max="100" wert="0" anzeige="0" %}
+            {% regler "prop-detail-morph-Eyelids_Crease" "Lidfalte" min="-100" max="100" wert="0" anzeige="0" %}
+            {% regler "prop-detail-morph-Eyelids_Angle" "Lidwinkel" min="-100" max="100" wert="0" anzeige="0" %}
+            {% regler "prop-detail-morph-Eyelids_LowerCurve" "Unterlid" min="-100" max="100" wert="0" anzeige="0" %}
+        </div>
+    </div>
+    <div class="panel-section prop-section collapsed" id="prop-details-brauen">
+        <h3>Augenbrauen <span class="chevron">&#9660;</span></h3>
+        <div class="panel-body">
+            <div class="zeile-verteilt">
+                <small class="hb-gedaempft">Farbe, Stärke, Form</small>
+                <button class="btn-reset-morphs prop-detail-reset" data-bereich="brauen" type="button"
+                        title="Brauenfarbe, Stärke und Form auf die Vorgabe">Reset</button>
+            </div>
+            <div class="slider-row"><label>Farbe</label>
+                <input type="color" id="prop-detail-brauen" value="#3a2a1e" class="hb-farbfeld"></div>
+            {% regler "prop-detail-brauen-staerke" "Stärke" min="50" max="250" wert="100" anzeige="100 %" %}
+            <div class="prop-section-title unterabschnittstitel">Form</div>
+            {% regler "prop-detail-morph-Eyebrows_PosZ" "Höhe" min="-100" max="100" wert="0" anzeige="0" %}
+            {% regler "prop-detail-morph-Eyebrows_Angle" "Winkel" min="-100" max="100" wert="0" anzeige="0" %}
+            {% regler "prop-detail-morph-Eyebrows_Ridge" "Wölbung" min="-100" max="100" wert="0" anzeige="0" %}
+            {% regler "prop-detail-morph-Eyebrows_Droop" "Außen fallend" min="-100" max="100" wert="0" anzeige="0" %}
+        </div>
+    </div>
+    <div class="panel-section prop-section collapsed" id="prop-details-mund">
+        <h3>Mund · Lippen <span class="chevron">&#9660;</span></h3>
+        <div class="panel-body">
+            <div class="zeile-verteilt">
+                <small class="hb-gedaempft">Lippen, Zähne, Zunge</small>
+                <button class="btn-reset-morphs prop-detail-reset" data-bereich="mund" type="button"
+                        title="Lippen, Zähne und Zunge auf die Vorgabe">Reset</button>
+            </div>
+            <div class="slider-row"><label>Lippen</label>
+                <input type="color" id="prop-detail-lippen" value="#b5707a" class="hb-farbfeld"></div>
+            {% regler "prop-detail-lippen-glanz" "Lippenglanz" min="0" max="100" wert="60" anzeige="60 %" %}
+            <div class="slider-row"><label>Zähne</label>
+                <input type="color" id="prop-detail-zaehne" value="#f0ece0" class="hb-farbfeld"></div>
+            <div class="slider-row"><label>Zunge</label>
+                <input type="color" id="prop-detail-zunge" value="#b55a6a" class="hb-farbfeld"></div>
+        </div>
+    </div>
+    <div class="panel-section prop-section collapsed" id="prop-details-naegel">
+        <h3>Nägel <span class="chevron">&#9660;</span></h3>
+        <div class="panel-body">
+            <div class="zeile-verteilt">
+                <small class="hb-gedaempft">Finger und Füße</small>
+                <button class="btn-reset-morphs prop-detail-reset" data-bereich="naegel" type="button"
+                        title="Nagelfarben und Längen auf die Vorgabe">Reset</button>
+            </div>
+            <div class="slider-row"><label>Fingernägel</label>
+                <input type="color" id="prop-detail-naegel-hand" value="#e0a88a" class="hb-farbfeld"></div>
+            {% regler "prop-detail-morph-Hands_NailsLength" "Fingernägel (Länge)" min="-100" max="100" wert="0" anzeige="0" %}
+            <div class="slider-row"><label>Fußnägel</label>
+                <input type="color" id="prop-detail-naegel-fuss" value="#e0a88a" class="hb-farbfeld"></div>
+            {% regler "prop-detail-naegel-fuss-laenge" "Fußnägel (Länge)" min="50" max="300" wert="100" anzeige="100 %" %}
+        </div>
+    </div>
+</div>

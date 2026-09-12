@@ -68,64 +68,7 @@
 {% include "_auftragstabelle.html" with auftraege=v4_jobs sortier="videoauftraege-3d" pipelines=pipelines %}
 {% endif %}
 
-<div class="info-box">
-    <h3>Vergleich 3D Pipelines</h3>
-    <table class="compare-table doku">
-        {% include "_vergleichskopf.html" with spalte="Pipeline" %}
-        <tbody>
-            <tr>
-                <td><strong>MocapNET v4</strong></td>
-                <td>~75 mm MPJPE*</td>
-                <td>~30 FPS (CPU!)</td>
-                <td>0&ndash;2 GB</td>
-                <td>~2&ndash;4 GB</td>
-                <td>Kein GPU n&ouml;tig, 165 Bones</td>
-            </tr>
-            <tr>
-                <td><strong>WHAM</strong></td>
-                <td>37 mm PA-MPJPE</td>
-                <td>~5&ndash;8 FPS</td>
-                <td>6&ndash;8 GB</td>
-                <td>~8&ndash;16 GB</td>
-                <td>World-Koordinaten</td>
-            </tr>
-            <tr>
-                <td><strong>PromptHMR</strong></td>
-                <td>37 mm PA-MPJPE</td>
-                <td>~10&ndash;20 FPS</td>
-                <td>6&ndash;8 GB</td>
-                <td>~8&ndash;12 GB</td>
-                <td><span class="hb-color-e67e22">&starf; Beste Qualit&auml;t (per-frame)</span></td>
-            </tr>
-            <tr class="zeile-hervor">
-                <td><strong>GVHMR</strong></td>
-                <td>36 mm PA-MPJPE</td>
-                <td>~5&ndash;10 FPS</td>
-                <td>6&ndash;8 GB</td>
-                <td>~8&ndash;16 GB</td>
-                <td><span class="hb-gut">&starf; Empfohlen</span></td>
-            </tr>
-            <tr class="zeile-hervorgehoben">
-                <td><strong>Hybrid</strong></td>
-                <td>36 mm + Face+Hands</td>
-                <td>~60s (parallel)</td>
-                <td>6&ndash;8 GB</td>
-                <td>~10&ndash;16 GB</td>
-                <td><span class="hb-color-e67e22">&starf; SMPL Body + v4 Gesicht+Finger</span></td>
-            </tr>
-        </tbody>
-    </table>
-    <p class="tabellen-fussnote">
-        <small>PA-MPJPE = Procrustes-Aligned Mean Per Joint Position Error auf 3DPW (niedriger = besser).<br>
-        *MocapNET v4 nutzt H3.6M und ein eigenes Skelett &mdash; nicht direkt vergleichbar mit SMPL-Methoden.<br>
-        Geschwindigkeit gesch&auml;tzt f&uuml;r RTX 3060. GVHMR/WHAM/PromptHMR ben&ouml;tigen mindestens 6 GB
-             VRAM.</small>
-    </p>
-
-    <h3 class="hb-abstand-oben">SMPL-Lizenz</h3>
-    <p>GVHMR, WHAM und PromptHMR ben&ouml;tigen SMPL Modell-Dateien. Kostenlos beantragen:
-    <a href="https://smpl.is.tue.mpg.de" target="_blank">smpl.is.tue.mpg.de</a></p>
-</div>
+{% include "_vergleich_3d.html" %}
 {% endblock %}
 
 {% block extra_scripts %}

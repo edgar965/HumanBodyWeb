@@ -19,6 +19,7 @@ import { Transformfelder } from './transformfelder.js';
 import { Figurmerker } from './figurmerker.js';
 import { Reitergedaechtnis } from './reitergedaechtnis.js';
 import { Formbedienung } from './formbedienung.js';
+import { Detailbedienung } from './detailbedienung.js';
 import { Reiterfreigabe } from './reiterfreigabe.js';
 import { Reiterinhalt } from './reiterinhalt.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
@@ -142,6 +143,7 @@ export async function populateProperties(charId) {
     // gegenseitig nach (`Formbedienung`). Nach `fetchMorphDefs`, weil der
     // gemeinsame Block die Morphnamen dieses Körpertyps braucht.
     await Formbedienung.humanbody(inst, state.morphDefs, reloadCharacterMesh);
+    Detailbedienung.fuellen(inst, reloadCharacterMesh);
     fn.syncHairSelect(inst);
     _updatePropContext();
     _gemerktesHerstellen(charId);
@@ -240,7 +242,7 @@ export function updateEquippedList(inst) {
 
 export function _updatePropContext() {
     const bodySections = ['prop-transform-section', 'prop-equipped-section', 'prop-bodytype-section',
-        'prop-morphs-section'];
+        'prop-details-section', 'prop-morphs-section'];
     // Beide Pruefungen fragen dasselbe dreimal ab; nur die Vorsilbe des
     // Schluessels unterscheidet sie.
     const teilnetz = state._selectedSubMesh;

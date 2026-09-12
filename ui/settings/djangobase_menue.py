@@ -27,6 +27,7 @@ MENUE = [
         {'label': '2D', 'icon': 'bi-upload', 'url': '/process/'},
         {'label': '3D', 'icon': 'bi-magic', 'url': '/process/VideoToBVH/'},
         {'label': 'Verarbeitet', 'icon': 'bi-list-ul', 'url': '/process/list/'},
+        {'label': 'Effekte', 'icon': 'bi-stars', 'url': '/process/effekte/'},
     ]},
     {'label': 'Test', 'icon': 'bi-eyedropper', 'untermenu': [
         {'label': 'MocapNET', 'icon': 'bi-gear', 'url': '/test/mocapnet/'},
@@ -58,6 +59,7 @@ EINSTELLUNGEN_EXTRA = [
     {'label': 'SMPL Body', 'url': '/settings/smpl/', 'icon': 'bi-person-standing'},
     {'label': 'Theatre', 'url': '/settings/theatre/', 'icon': 'bi-mask'},
     {'label': 'BVH Studio', 'url': '/settings/bvh-studio/', 'icon': 'bi-scissors'},
+    {'label': 'Effekte', 'url': '/settings/effekte/', 'icon': 'bi-wind'},
 ]
 
 
@@ -74,6 +76,11 @@ HILFE_EXTRA = [
     # „auf einer neuen Seite Hilfe - Video to BVH").
     {'label': 'Video to BVH', 'icon': 'bi-camera-video',
      'url': '/hilfe/video-to-bvh/', 'aktiv': 'hilfe_video_to_bvh'},
+    # Mimik, Haare, Kleidung, Wind — wie Studios es machen und welcher
+    # offene Code in Frage kommt (Edgar, 12.09.2026: „schreibe schon mal
+    # alles hinein in Hilfe - Animationseffekte").
+    {'label': 'Animationseffekte', 'icon': 'bi-stars',
+     'url': '/hilfe/animationseffekte/', 'aktiv': 'hilfe_animationseffekte'},
     {'label': 'Kleidung', 'icon': 'bi-bag', 'untermenu': [
         {'label': 'Allgemein', 'icon': 'bi-list-columns',
          'url': '/hilfe/kleidung/', 'aktiv': 'hilfe_kleidung'},

@@ -11,7 +11,7 @@ NEUBEWERTUNG 12.09.2026 (Edgar: „Mach auch eine neubewertung der Pipelines, vo
 allem GEM-X"): GEM-X mit Glaettung 4 (Standard seit dem Tag), zwei neue
 Hybride auf dem GEM-SMPL-Koerper. Ein Eintrag mit `variante` ist dieselbe
 Pipeline mit anderer Bestellung (hier `hands_source: gemx`) — eigene Zeile,
-eigener Rang, gleicher Schluessel. Raenge 1..12 fuer alles mit BVH.
+eigener Rang, gleicher Schluessel. Raenge 1..13 fuer alles mit BVH (seit 12.09.2026 abends mit `smplx`).
 """
 
 
@@ -40,7 +40,7 @@ class Pipelines3d:
          'begruendung': 'Derselbe Körper wie GEM-SMPL (Deckung und Ruhe gleich), dazu Finger, deren '
                         'Güte gemessen ist, und ein Gesicht. Nach den vier Kriterien Rang 1 — die '
                         'Dauer zählt zuletzt.'},
-        {'schluessel': 'hybrid_gem', 'art': 'Hybrid', 'rang': 4,
+        {'schluessel': 'hybrid_gem', 'art': 'Hybrid', 'rang': 5,
          'verfahren': 'Körper aus GEM-SMPL, daneben MocapNET v4 für Gesicht und Hände; zwei '
                       'BVH-Dateien, die der Viewer zusammenführt. Neu am 12.09.2026.',
          'gelenke': 24, 'haende': True, 'gesicht': True, 'kamera': 'statisch (Kameraraum)',
@@ -55,7 +55,7 @@ class Pipelines3d:
          'begruendung': 'Wie GEM-SMPL plus Gesicht und Hände, aber die Hände sind ungemessen — '
                         'deshalb hinter GEM-X, dessen Finger gemessen sind, und hinter dem '
                         'Hybrid mit GEM-X-Fingern.'},
-        {'schluessel': 'gem', 'art': '3D', 'rang': 2,
+        {'schluessel': 'gem', 'art': '3D', 'rang': 3,
          'verfahren': 'GEM (NVIDIA, ICCV 2025, vormals GENMO) — auf dem GVHMR-Code aufgebaut, '
                       'dieselbe Vorstufe (YOLO-Spur, ViTPose, HMR2-Merkmale), rund 0,5 Mrd. Parameter; '
                       'Paperwerte EMDB-2 74,3 mm gegen GVHMR 111,0 mm (WA-MPJPE).',
@@ -71,7 +71,7 @@ class Pipelines3d:
                        'Lizenz NVIDIA OneWay: nicht-kommerziell'],
          'begruendung': 'Gleiche Deckung wie GVHMR, aber die ruhigere Pose und ein Drittel '
                         'weniger Zeit. Was GVHMR kann, kann GEM-SMPL hier auch — nur schneller.'},
-        {'schluessel': 'gvhmr', 'art': '3D', 'rang': 5,
+        {'schluessel': 'gvhmr', 'art': '3D', 'rang': 6,
          'verfahren': 'GVHMR (Shen u. a., SIGGRAPH Asia 2024) — ViTPose + HMR2-Merkmale, Transformer '
                       'über die Sequenz, SMPL in Kamera- und schwerkraftausgerichteten Weltkoordinaten.',
          'gelenke': 24, 'haende': False, 'gesicht': False,
@@ -87,7 +87,7 @@ class Pipelines3d:
          'begruendung': 'Die Referenz: beste Deckung, robust, mit Kameraverfolgung. Hinter GEM-SMPL '
                         'wegen der etwas unruhigeren Pose und der längeren Laufzeit, hinter GEM-X '
                         '(σ 4) wegen der Finger bei gleicher Ruhe.'},
-        {'schluessel': 'hybrid_gvhmr', 'art': 'Hybrid', 'rang': 6,
+        {'schluessel': 'hybrid_gvhmr', 'art': 'Hybrid', 'rang': 7,
          'verfahren': 'Körper aus GVHMR, danach MocapNET v4 für Gesicht und Hände; zwei BVH-Dateien, '
                       'die der Viewer zusammenführt.',
          'gelenke': 24, 'haende': True, 'gesicht': True,
@@ -103,7 +103,7 @@ class Pipelines3d:
                        'Wurzel und Boden wie GVHMR'],
          'begruendung': 'Derselbe Körper wie GVHMR plus Gesicht und Hände. Hinter GVHMR, weil die '
                         'Zugabe aus MocapNET v4 stammt und ihre Güte hier niemand gemessen hat.'},
-        {'schluessel': 'gemx', 'art': '3D', 'rang': 3, 'video': 'gemx_s4_skelett.mp4',
+        {'schluessel': 'gemx', 'art': '3D', 'rang': 4, 'video': 'gemx_s4_skelett.mp4',
          'verfahren': 'GEM-X (NVIDIA, Gewichte `nvidia/GEM-X`, 6,7 GB) — GEM mit dem SOMA-'
                       'Körpermodell (77 Gelenke mit Fingern), Mixamo-Namen im BVH; Kameraraum '
                       'um x gedreht wie bei GVHMR. Glättung σ 4 (Standard seit 12.09.2026).',
@@ -121,7 +121,39 @@ class Pipelines3d:
          'begruendung': 'Die einzige eigenständige SMPL-Pipeline mit Fingern; seit σ 4 ist der '
                         'Körper so ruhig wie GEM-SMPL und GVHMR bei gleicher Deckung. Hinter GEM-SMPL '
                         'nur wegen 0,6 px weniger Deckung und 40 s mehr; vor GVHMR wegen der Finger.'},
-        {'schluessel': 'duomo', 'art': '3D', 'rang': 7,
+        {'schluessel': 'smplx', 'art': '3D', 'rang': 2,
+         'verfahren': 'Die eigene Pipeline (12.09.2026): SMPL-X als Rückgrat, jede Stufe wählbar. '
+                      'Körper aus GEM-SMPL (oder GVHMR, DuoMo), Finger aus GEM-X (SOMA → SMPL-X '
+                      'ohne Retarget; oder SMPLest-X je Bild), Kiefer und Ausdruck aus SMPLest-X, '
+                      'Handgelenk als Weltdrehung aus SMPLest-X unter GEMs Unterarm, Bodenkontakt '
+                      'an der Wurzel — im Parameterraum gemischt und geglättet: EIN BVH mit 54 '
+                      'Gelenken (Format SMPLX) plus Ausdrucksdatei und Netz-Video; das Ergebnis '
+                      'ist `<lauf>_smplx.npz`.',
+         'gelenke': 54, 'haende': True, 'gesicht': True, 'kamera': 'statisch (Kameraraum)',
+         'dauer_s': 431, 'ueberlagerung_px': 24.3, 'ruhe_wurzel': 3.11, 'ruhe_pose': 0.39,
+         'boden_cm': -103, 'zustand': 'laeuft', 'zustand_grund': '',
+         'vorteile': ['Der GEM-SMPL-Körper: Deckung 24,3 px wie GEM, Körper-Ruhe 0,187 cm/Bild² '
+                      '(GEM 0,198) — die 0,39 der Tabelle zählen die 30 Finger mit',
+                      'Ein Parametersatz für Körper, Hände und Gesicht — die Naht liegt VOR dem '
+                      'Retarget, nicht auf dem Rig; ein BVH, ein Retarget',
+                      'Finger aus GEM-X: offen, wo das Video sie offen zeigt (SMPLest-X beugt zur '
+                      'Faust), Zittern im Handgelenkrahmen 0,0069 cm/Bild² wie GEM-X selbst',
+                      'Handfläche wie der Handschätzer sie sah: GEMs Handgelenk lag im Median 35/46° '
+                      'daneben; Sichtprobe auf fünf Bildern für SMPLest-X',
+                      'Netz-Video über dem Original (Körper, Finger, Kiefer) als Sichtprüfung; '
+                      'Teilergebnisse werden bei Wiederholung nicht neu gerechnet'],
+         'nachteile': ['431 s mit GEM-X-Fingern und Video (240 s mit SMPLest-X-Fingern ohne '
+                       'GEM-X-Lauf); der Hybrid mit GEM-X-Fingern braucht 348 s',
+                       'Gegenprobe Körper gegen Körper: GEM und SMPLest-X liegen im Mittel 18° je '
+                       'Gelenk auseinander',
+                       'Bodenkontakt greift nur bei ≥ 5 % Standbildern — beim Ballett (4 von 298) '
+                       'gar nicht; Wurzel und Boden wie GEM-SMPL (Kameraraum)',
+                       'Lizenz NVIDIA OneWay für Körper und Finger'],
+         'begruendung': 'Derselbe Körper wie GEM-SMPL, dieselben Finger wie der Hybrid mit GEM-X, '
+                        'dazu Gesicht und Handgelenk in einer Datei — nach den Zahlen mit dem '
+                        'Hybrid gleichauf oder davor; Rang 2 bleibt, bis Edgars Sichtprüfung im '
+                        'Viewer das Umstellen der Uploadseite (Rang 1 = Vorgabe) rechtfertigt.'},
+        {'schluessel': 'duomo', 'art': '3D', 'rang': 8,
          'verfahren': 'DuoMo (Meta, CVPR 2026) — Diffusionsmodell über die Bewegung mit PromptHMR-'
                       'Bildmerkmalen und dichten 2D-Punkten; Netz (LOD6) in Kamera- und Weltraum, '
                       'daraus SMPL-X, daraus SMPL.',
@@ -140,7 +172,7 @@ class Pipelines3d:
          'begruendung': 'Nach den Kriterien dieser Messung Rang 7, weil die Deckung mit dem Video '
                         'am schlechtesten ist. Wer eine ruhige Weltbahn mit Bodenkontakt braucht, '
                         'nimmt trotzdem DuoMo — das kann hier sonst keine.'},
-        {'schluessel': 'v4', 'art': '3D', 'rang': 8,
+        {'schluessel': 'v4', 'art': '3D', 'rang': 9,
          'verfahren': 'MocapNET v4 (Qammaz & Argyros, FORTH) — MediaPipe Holistic, Ensemble kleiner '
                       'Netze (ONNX), native IK (HCD) gegen die 2D-Punkte; volles Rig mit Gesicht, '
                       'Händen und Zehen.',

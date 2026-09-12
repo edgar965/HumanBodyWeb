@@ -44,9 +44,7 @@
 
 .anim-category:last-child { border-bottom: none; }
 
-.anim-category-body {
-    display: none;
-}
+/* Zugeklappt (`display: none`) kommt aus `animationsbaum.css`. */
 
 .anim-speed {
     display: flex;

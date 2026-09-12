@@ -9,15 +9,16 @@ findet die Modelle weiter ueber core/models/__init__.py — Migrationen und
 
 from django.db import models
 from ..daten.einstellungsfelder import Einstellungsfelder
+from .effekt_einstellungen import EffektEinstellungen
 from .lifter_einstellungen import LifterEinstellungen
 
 
-class AppSettings(LifterEinstellungen):
+class AppSettings(LifterEinstellungen, EffektEinstellungen):
     """Singleton settings for the application.
 
     Die Felder der SMPL-Pipelines (GVHMR, WHAM, PromptHMR, GEM-SMPL, DuoMo,
-    GEM-X) stehen in `LifterEinstellungen` — abstrakte Basis, dieselbe
-    Tabelle (12.09.2026).
+    GEM-X) stehen in `LifterEinstellungen`, die der Effekte-Seite in
+    `EffektEinstellungen` — abstrakte Basen, dieselbe Tabelle (12.09.2026).
     """
     progress_update_interval = models.IntegerField(
         default=10,

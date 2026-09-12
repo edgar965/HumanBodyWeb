@@ -1,0 +1,76 @@
+{% comment %}
+Hilfe -> Video to BVH, Abschnitt „Eigene Pipeline: SMPL-X als Rückgrat"
+(12.09.2026). Daten aus `core/dienste/eigenepipeline.Eigenepipeline`; die
+Vorlage zeichnet nur. Eingebunden von `video_to_bvh.html`.
+{% endcomment %}
+  <h2 id="eigene">Eigene Pipeline: SMPL-X als Rückgrat</h2>
+  <p>
+    Edgar (12.09.2026): „irgendwie nervt diese 3D to bvh pipeline, mit GVHMR usw. …
+    Kann ich die pipeline nicht selber implementieren / verbessern?" — und:
+    „kann man das nicht mit meinem DEF rig machen, oder zumindest mit einem
+    SMPL rig mit hand und gesicht?" Die Antwort in drei Teilen: was da wirklich
+    läuft, welche Stufen von „selber machen" es gibt, und was gebaut wurde.
+  </p>
+
+  <h3>Was da wirklich läuft</h3>
+  <div class="vtb-scroll">
+  <table class="db-tabelle doku vtb-eigene">
+    <thead><tr><th>Teil</th><th>Herkunft</th><th>Größe</th><th>was er tut</th></tr></thead>
+    <tbody>
+    {% for z in eigene.ist %}
+    <tr><td>{{ z.teil }}</td><td>{{ z.herkunft }}</td><td>{{ z.groesse }}</td><td>{{ z.tut }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p>
+    Die Uni-HW-Prämisse stimmt nur halb: Das GVHMR-Modell wurde auf 2 × RTX 4090
+    trainiert, auf vorberechneten HMR2-Merkmalen mit eingefrorenen Backbones — eine
+    32-GB-Karte ist je GPU stärker. Die Qualität steckt aber zum großen Teil in
+    den Backbones (ViTPose-H, HMR2), die aus deutlich größeren Trainings kommen;
+    GEM/GEM-X ist NVIDIA mit rund 0,5 Mrd. Parametern. Was nervt, ist die
+    Verpackung, nicht die Wissenschaft.
+  </p>
+
+  <h3>Drei Stufen von „selber machen"</h3>
+  <ol class="vtb-stufen">
+    {% for s in eigene.stufen %}
+    <li><strong>{{ s.name }}</strong> <span class="vtb-kennung">{{ s.aufwand }}</span><br>{{ s.text }}</li>
+    {% endfor %}
+  </ol>
+
+  <h3>Warum nicht direkt das DEF-Rig</h3>
+  <p>{{ eigene.def_rig }}</p>
+
+  <h3>SMPL-X als Zwischenformat: die Quellen</h3>
+  <p>
+    Kein Modell kann Körper, Hände und Gesicht über die Zeit gut — deshalb
+    Spezialisten, gemischt VOR dem Retarget (der Hybrid mischt drei BVH-Dateien
+    NACH drei Retargets auf dem Rig).
+  </p>
+  <div class="vtb-scroll">
+  <table class="db-tabelle doku vtb-eigene">
+    <thead><tr><th>Teil</th><th>läuft hier</th><th>Kandidat</th><th>Anmerkung</th></tr></thead>
+    <tbody>
+    {% for q in eigene.quellen %}
+    <tr><td>{{ q.teil }}</td><td>{{ q.laeuft }}</td><td>{{ q.kandidat }}</td><td>{{ q.anmerkung }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Der Plan — und was davon steht</h3>
+  <ol class="vtb-plan">
+    {% for titel, text, stand in eigene.plan %}
+    <li><strong>{{ titel }}</strong> <span class="vtb-zustand vtb-zustand-{% if stand == 'gebaut' %}laeuft{% else %}teilweise{% endif %}">{{ stand }}</span><br>{{ text }}</li>
+    {% endfor %}
+  </ol>
+  <p>
+    Die Pipeline heißt auf der Seite „Process Videos" <strong>SMPL-X (eigen)</strong>
+    (Schlüssel <code>smplx</code>): Vorstufe und GEM-SMPL für den Körper, SMPLest-X
+    über alle Bilder für Hände und Gesicht, `Smplxmischung`, dann ein BVH mit
+    54 Gelenken (Format SMPLX) plus Ausdrucksdatei — das eigentliche Ergebnis ist
+    <code>&lt;lauf&gt;_smplx.npz</code>. Ihre Messwerte stehen oben in der Tabelle,
+    sobald sie auf dem Vergleichsvideo gelaufen ist.
+  </p>
+  <p>{{ eigene.grenze }}</p>

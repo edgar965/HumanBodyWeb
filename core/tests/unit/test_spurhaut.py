@@ -42,12 +42,29 @@ class SpurhautTest(SimpleTestCase):
         self.assertLess(zubehoer, maske, 'die Maske muss NACH dem Zubehör laufen')
 
     def test_spurhaut_rechnet_wie_die_szene(self):
-        haut = SpurhautTest._lies_modul(STUDIO, 'spurhaut.js')
+        u"""Die Rechnung liegt seit dem 12.09.2026 in `gemeinsam/figurhaut.js`
+        (die Ergebnisseite braucht dieselbe Maske); `Spurhaut` erbt sie."""
+        haut = SpurhautTest._lies_modul(GEMEINSAM, 'figurhaut.js')
         for baustein in ('Hautmaske.verdeckt(', 'Hautmaske.indexOhne(',
                          'Lagenmaske.verdeckt(', 'Hauteinzug.setzen(', 'Hauteinzug.patchen(',
                          'userData.indexVoll', 'userData?.isGarment'):
             self.assertIn(baustein, haut, baustein)
-        self.assertIn("from '../gemeinsam/hauteinzug.js'", haut)
+        self.assertIn("from './hauteinzug.js'", haut)
+        spur = SpurhautTest._lies_modul(STUDIO, 'spurhaut.js')
+        self.assertIn("import { Figurhaut } from '../gemeinsam/figurhaut.js';", spur)
+        self.assertIn('export class Spurhaut extends Figurhaut {}', spur)
+
+    def test_die_ergebnisseite_maskiert_nach_dem_binden(self):
+        u"""Edgar, 12.09.2026: „bei einer animation mit Female2 scheint die
+        Haut durch das Kleid" — dieselbe Lücke wie im Studio am 11.09."""
+        stuecke = SpurhautTest._lies_modul(Jsmodul.VIEWER / 'result_character',
+                                           'garmentcode_stuecke.js')
+        self.assertIn("import { Figurhaut } from '../gemeinsam/figurhaut.js';", stuecke)
+        binden = stuecke.index('.binden(gruppe, state.bodyMesh)')
+        maske = stuecke.index('GarmentcodeStuecke.hautMaskieren();')
+        self.assertLess(binden, maske, 'die Maske muss NACH dem Binden laufen')
+        self.assertIn('Figurhaut.anwenden(GarmentcodeStuecke.figur())', stuecke)
+        self.assertIn('Figurhaut.aufheben(GarmentcodeStuecke.figur())', stuecke)
 
     def test_makehuman_stuecke_tragen_isgarment_haare_nicht(self):
         zubehoer = SpurhautTest._lies_modul(STUDIO, 'spurzubehoer.js')

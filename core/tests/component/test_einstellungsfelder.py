@@ -47,6 +47,8 @@ SEITEN = {
         'gem_static_cam', 'gem_smooth_sigma', 'gem_joint_limits',
         'duomo_static_cam', 'duomo_smooth_sigma', 'duomo_joint_limits',
         'gemx_static_cam', 'gemx_smooth_sigma'),
+    '/settings/effekte/': ('effekte_video_fps', 'effekte_video_width',
+                           'effekte_video_height', 'effekte_wind'),
 }
 
 
@@ -122,6 +124,7 @@ class EinstellungsfelderTest(TestCase):
         import re
         for weg, erwartet in (('/settings/model/', 2), ('/settings/scene/', 1),
                               ('/settings/theatre/', 1),
+                              ('/settings/effekte/', 1),
                               ('/settings/result/', 1)):
             antwort = self.client.get(weg)
             self.assertEqual(antwort.status_code, 200, weg)

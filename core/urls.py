@@ -3,8 +3,8 @@ from django.views.decorators.csrf import csrf_exempt
 from .api import einstellungen, seiten, buendel
 # Die drei Seiten MIT Logik stehen als je eine Klasse in eigenen Modulen —
 # `seiten.py` fuehrt nur noch die reinen Vorlagen (Umbau 17.08.2026).
-from .api import (seite_bvhstudio_einstellungen, seite_fotoauftraege,
-                  seite_theatre_einstellungen)
+from .api import (seite_bvhstudio_einstellungen, seite_effekte_einstellungen,
+                  seite_fotoauftraege, seite_theatre_einstellungen)
 from .cloth_export_api import Stoffexport
 from .api.testfigur import Testendpunkte, Testverwaltung
 from .api.dateien import Auftragsdateien
@@ -32,6 +32,7 @@ from .api.ui_vorgaben import Uivorgaben
 from .api.auftrag_upload import Uploadseiten
 from .api.studio_video import Theatrevideo
 from .api.figurvideo import Figurvideoendpunkte
+from .api.effekte import Effektendpunkte
 from .urls_charakter import CHARAKTER
 
 urlpatterns = [
@@ -42,6 +43,16 @@ urlpatterns = [
     path('process/', Uploadseiten.zweid, name='upload'),
     path('process/VideoToBVH/', Uploadseiten.dreid, name='upload_v4'),
     path('process/list/', Webseiten.fertigliste, name='processed'),
+    # Effekte (Kleid + Wind auf einer BVH, Blender) — Edgar, 12.09.2026.
+    path('process/effekte/', Effektendpunkte.seite, name='effekte'),
+    path('api/effekte/quellen/', Effektendpunkte.quellen, name='effekte_quellen'),
+    path('api/effekte/start/', Effektendpunkte.starten, name='effekte_start'),
+    path('api/effekte/<uuid:auftrag_id>/status/', Effektendpunkte.zustand,
+         name='effekte_status'),
+    path('api/effekte/<uuid:auftrag_id>/stop/', Effektendpunkte.anhalten,
+         name='effekte_stop'),
+    path('api/effekte/<uuid:auftrag_id>/video/', Effektendpunkte.video,
+         name='effekte_video'),
     path('process/result/', Webseiten.ergebnisauswahl, name='standalone_result'),
     path('process/<uuid:job_id>/', Webseiten.auftragsseite, name='job_status'),
     path('process/<uuid:job_id>/start/', Auftragsendpunkte.starten_formular,
@@ -93,6 +104,8 @@ urlpatterns = [
          name='settings_theatre'),
     path('settings/bvh-studio/', seite_bvhstudio_einstellungen.bvh_studio_settings_page,
          name='settings_bvh_studio'),
+    path('settings/effekte/', seite_effekte_einstellungen.effekte_settings_page,
+         name='settings_effekte'),
     path('api/job/<uuid:job_id>/start/', Auftragsendpunkte.starten,
          name='api_start_processing'),
     path('api/job/<uuid:job_id>/stop/', Auftragsendpunkte.anhalten,

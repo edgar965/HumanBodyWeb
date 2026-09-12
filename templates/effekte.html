@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% load fassung %}
+{% comment %}
+Process Videos -> Effekte: eine BVH auf eine Figur, ein Video heraus.
+
+Edgar, 12.09.2026: „mach dafuer eine Seite Process Video - Effekte mit einer
+Pipeline dazu (BVH / Modell laden, Pipeline auswaehlen mit Parameter, z.B.
+aufloesung usw., Pfad der Ausgabedatei) und oben den Ausgabe screen wo man
+das ergebnis sieht" — und spaeter: „mach mir einen Browser wo ich meine
+Animationen waehlen kann und ein Modell auswahl dialog … ich brauche was, wo
+ich auch mein HumanBody Modell mit meinem DEF skeleton nutzen kann".
+
+Zwei Pipelines: „Kleid + Wind" (Blender, MPFB-Figur, Kleid aus der
+MakeHuman-Bibliothek) und „HumanBody-Figur" (gespeichertes Modell der Szene
+mit DEF-Skelett, Server-Videoweg). Die Animation kommt aus dem
+Animationsbrowser (Auftraege aus „Process Videos" und die BVH-Bibliothek),
+das Modell aus dem Figurwahldialog der Szene-Seite.
+
+Die Parameterfelder kommen aus `Effektparameter.FELDER` bzw.
+`Figurparameter.FELDER` — dieselben Listen, die die Unterprozesse lesen.
+Auftrags-BVHs und Modelle stehen als JSON in der Seite (`json_script`),
+die Bibliothek holt der Browser von /api/character/animations/.
+{% endcomment %}
+
+{% block title %}Effekte - HumanBody{% endblock %}
+
+{% block content %}
+<h1>Effekte <small class="hb-gedaempft">(BVH auf eine Figur, Video heraus)</small></h1>
+
+<section class="effekt-schirm" id="effektSchirm"
+         data-auftrag="{% if laufender %}{{ laufender.id }}{% elif zuletzt %}{{ zuletzt.id }}{% endif %}"
+         data-status="{% if laufender %}{{ laufender.status }}{% elif zuletzt %}complete{% endif %}">
+    <div class="effekt-video">
+        <video id="effektVideo" controls loop muted playsinline
+               {% if zuletzt and not laufender %}src="/api/effekte/{{ zuletzt.id }}/video/"{% else %}hidden{% endif %}></video>
+        <div class="effekt-leer" id="effektLeer" {% if zuletzt and not laufender %}hidden{% endif %}>
+            <i class="bi bi-stars"></i>
+            <span id="effektLeerText">{% if laufender %}Lauf „{{ laufender.name }}" läuft …{% else %}Noch kein Ergebnis — unten Animation und Figur wählen und starten.{% endif %}</span>
+        </div>
+    </div>
+    <div class="effekt-stand">
+        <div class="effekt-kopf">
+            <span class="badge badge-{% if laufender %}{{ laufender.status }}{% elif zuletzt %}complete{% else %}pending{% endif %}" id="effektAbzeichen">
+                {% if laufender %}{{ laufender.get_status_display }}{% elif zuletzt %}Fertig{% else %}Bereit{% endif %}</span>
+            <strong id="effektName">{% if laufender %}{{ laufender.name }}{% elif zuletzt %}{{ zuletzt.name }}{% endif %}</strong>
+            <button type="button" class="btn btn-danger btn-sm" id="effektStopp" {% if not laufender %}hidden{% endif %}>
+                <i class="bi bi-stop-fill"></i> Anhalten</button>
+        </div>
+        <div class="progress-bar large" id="effektBalken" {% if not laufender %}hidden{% endif %}>
+            <div class="progress-fill" id="effektFuellung" style="width: {% if laufender %}{{ laufender.progress }}{% else %}0{% endif %}%">
+                <span id="effektProzent">{% if laufender %}{{ laufender.progress }}{% else %}0{% endif %}%</span>
+            </div>
+        </div>
+        <p class="hb-gedaempft" id="effektDetail">{% if laufender %}{{ laufender.progress_detail }}{% endif %}</p>
+        <pre class="effekt-fehler" id="effektFehler" hidden></pre>
+        <dl class="effekt-bericht" id="effektBericht" {% if not zuletzt or laufender %}hidden{% endif %}>
+            {% if zuletzt and not laufender %}
+            <dt>Pipeline</dt><dd>{{ zuletzt.get_pipeline_display }}{% if zuletzt.modell %} — {{ zuletzt.modell }}{% endif %}</dd>
+            <dt>Ausgabe</dt><dd><code>{{ zuletzt.ausgabe }}</code></dd>
+            <dt>Bilder</dt><dd>{{ zuletzt.bericht.bilder }} bei {{ zuletzt.bericht.bildrate }} fps{% if zuletzt.bericht.stoffpunkte %}, Stoff {{ zuletzt.bericht.stoffpunkte }} Punkte{% endif %}</dd>
+            <dt>Dauer</dt><dd>{{ zuletzt.bericht.sekunden.gesamt }} s{% if zuletzt.bericht.sekunden.simulation %} (Simulation {{ zuletzt.bericht.sekunden.simulation }} s, Rendern {{ zuletzt.bericht.sekunden.rendern }} s){% elif zuletzt.bericht.sekunden.rendern %} (Rendern {{ zuletzt.bericht.sekunden.rendern }} s){% endif %}</dd>
+            {% endif %}
+        </dl>
+    </div>
+</section>
+
+{{ bvh_dateien|json_script:"effektAuftraegeBvh" }}
+{{ modelle|json_script:"effektModelle" }}
+
+<section class="effekt-formular">
+    {% comment %}`data-vorgabe-*`: Startwahlen aus Einstellungen → Effekte (`Effektvorgaben`), `effektseite.js` wendet sie beim Aufbau an.{% endcomment %}
+    <form id="effektFormular" data-ausgabe-basis="{{ ausgabe_basis }}"
+          data-video-ausgabe="{{ video_ausgabe }}" data-mit-modell="{{ mit_modell|join:' ' }}"
+          data-vorgabe-pipeline="{{ vorgabe_pipeline }}" data-vorgabe-modell="{{ vorgabe_modell }}"
+          data-vorgabe-animation="{{ vorgabe_animation }}" data-vorgabe-windrichtung="{{ vorgabe_windrichtung }}">
+        {% csrf_token %}
+        <div class="effekt-zeile effekt-zeile-kopf">
+            <div class="form-group">
+                <label for="effektPipeline">Pipeline</label>
+                <select id="effektPipeline" name="pipeline">
+                    {% for wert, titel in pipelines %}<option value="{{ wert }}">{{ titel }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="effekt-wahlen">
+            {% comment %}Animation: Auftraege aus „Process Videos" und die BVH-Bibliothek — der Browser (`animationsbrowser.js`) setzt `data-wert`/`data-name`.{% endcomment %}
+            <div class="effekt-wahl" id="effektAnimation" data-wert="" data-name="" data-format="" data-passt="">
+                <div class="effekt-wahl-kopf">
+                    <span class="effekt-wahl-titel">Animation</span>
+                    <button type="button" class="btn btn-sm" id="effektAnimationKnopf">
+                        <i class="bi bi-folder2-open"></i> Animation wählen …</button>
+                </div>
+                <strong class="effekt-wahl-name" id="effektAnimationName">— keine gewählt —</strong>
+                <span class="effekt-wahl-meta" id="effektAnimationMeta"></span>
+                <span class="effekt-wahl-pfad" id="effektAnimationPfad"></span>
+            </div>
+
+            {% comment %}Modell (nur HumanBody-Figur): der Figurwahldialog der Szene-Seite, Reiter „HumanBody".{% endcomment %}
+            <div class="effekt-wahl" id="effektModell" data-name="" data-pipeline="figur_def" hidden>
+                <div class="effekt-wahl-kopf">
+                    <span class="effekt-wahl-titel">Modell <span class="hb-gedaempft">(HumanBody, DEF-Skelett)</span></span>
+                    <button type="button" class="btn btn-sm" id="effektModellKnopf">
+                        <i class="bi bi-person"></i> Modell wählen …</button>
+                </div>
+                <strong class="effekt-wahl-name" id="effektModellName">— keins gewählt —</strong>
+                <span class="effekt-wahl-meta" id="effektModellMeta"></span>
+            </div>
+        </div>
+
+        {% comment %}Alle Einstellungen untereinander, Zahlen als Schieberegler (Edgar, 12.09.2026) — eine Zeile je Feld aus `effekte/_feld.html`.{% endcomment %}
+        <div class="effekt-parameter" data-pipeline="kleid_wind">
+            <div class="form-group effekt-feld effekt-feld-wahl">
+                <label for="effektKleid">Kleid <span class="effekt-hinweis">Kleiderbibliothek, .mhclo</span></label>
+                <select id="effektKleid" name="kleid">
+                    {% for k in kleider %}<option value="{{ k.pfad }}" data-name="{{ k.name }}">{{ k.titel }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="form-group effekt-feld effekt-feld-wahl">
+                <label for="effektGeschlecht">Figur</label>
+                <select id="effektGeschlecht" name="geschlecht" data-parameter="text">
+                    {% for g in geschlechter %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="form-group effekt-feld effekt-feld-wahl">
+                <label for="effektRenderer">Renderer</label>
+                <select id="effektRenderer" name="renderer" data-parameter="text">
+                    {% for r in renderer %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+                </select>
+            </div>
+            {% for f in felder %}{% include "effekte/_feld.html" with praefix="effekt" %}{% endfor %}
+        </div>
+        <div class="effekt-parameter" data-pipeline="figur_def" hidden>
+            <div class="form-group effekt-feld effekt-feld-wahl">
+                <label for="figur_windrichtung">Windrichtung
+                    <span class="effekt-hinweis">relativ zur Blickrichtung der Figur in Ruhelage</span></label>
+                <select id="figur_windrichtung" name="windrichtung" data-parameter="text">
+                    {% for w in windrichtungen %}<option value="{{ w }}"{% if w == vorgabe_windrichtung %} selected{% endif %}>{{ w }}</option>{% endfor %}
+                </select>
+            </div>
+            {% for f in figur_felder %}{% include "effekte/_feld.html" with praefix="figur" %}{% endfor %}
+        </div>
+
+        <div class="form-group">
+            <label for="effektAusgabe">Ausgabedatei (MP4) <span class="hb-gedaempft" id="effektAusgabeHinweis">— daneben entstehen .json und .log</span></label>
+            <input type="text" id="effektAusgabe" name="ausgabe" class="effekt-pfad" value="">
+        </div>
+
+        <button type="button" class="btn btn-lg btn-primary startknopf" id="effektStart" {% if laufender %}disabled{% endif %}>
+            <i class="bi bi-play-fill"></i> Effekt rechnen
+        </button>
+        <p class="effekt-meldung" id="effektMeldung" hidden></p>
+    </form>
+</section>
+
+{% if auftraege %}
+<section class="effekt-verlauf">
+    <h2>Letzte Läufe</h2>
+    {% comment %}djangoBase-Tabelle: `sortable` + `data-sort-key` — Sortierung
+    und ziehbare Spaltenbreiten bindet `tabellen_auto.js` von selbst; die
+    Konformitätsprüfung (`test_tabellen`) verlangt beides.{% endcomment %}
+    <div class="db-tabelle-rahmen">
+    <table class="db-tabelle sortable effekt-tabelle" data-sort-key="effekte-laeufe">
+        <thead><tr><th>Name</th><th>Pipeline</th><th>Figur</th><th>Zustand</th><th class="num">Bilder</th><th class="num">Dauer</th><th>Angelegt</th><th data-sort-aus="1"></th></tr></thead>
+        <tbody>
+        {% for a in auftraege %}
+            <tr data-auftrag="{{ a.id }}">
+                <td>{{ a.name }}</td>
+                <td>{{ a.get_pipeline_display }}</td>
+                <td>{% if a.modell %}{{ a.modell }}{% else %}MPFB{% endif %}</td>
+                <td><span class="badge badge-{{ a.status }}">{{ a.get_status_display }}</span></td>
+                <td class="num">{% if a.bericht.bilder %}{{ a.bericht.bilder }}{% elif a.parameter.bilder %}{{ a.parameter.bilder }}{% endif %}</td>
+                <td class="num" data-sort="{{ a.bericht.sekunden.gesamt|default:0 }}">{% if a.bericht.sekunden.gesamt %}{{ a.bericht.sekunden.gesamt }} s{% endif %}</td>
+                <td data-sort="{{ a.created_at|date:'U' }}">{{ a.created_at|date:"d.m.Y H:i" }}</td>
+                <td>{% if a.fertig %}<button type="button" class="btn btn-sm" data-zeigen="{{ a.id }}" data-name="{{ a.name }}">Zeigen</button>{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
+<link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/animationsbaum.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/effekte.css' %}">
+<script type="module">
+import { Effektseite } from "{% fassungspfad 'js/effekte/effektseite.js' %}";
+Effektseite.aufbauen();
+</script>
+{% endblock %}

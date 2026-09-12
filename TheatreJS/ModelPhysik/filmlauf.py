@@ -109,8 +109,7 @@ class Filmlauf:
                 melder=self._melden)
             proben = film.proben()
             film.rechnen()
-            _pfad, zahl = film.schreiben(self.auftrag['ziel'], fps=fps,
-                                         schleifen=1)
+            _pfad, zahl = self._video(film, fps)
             # ERST die Bilanz, DANN „Fertig": Der Server liest beim naechsten
             # Stand `video.mp4.json` — kam „Fertig" 70 ms davor (gemessen
             # 11.09.2026), stand das Ergebnis ohne Messwerte da.
@@ -124,6 +123,11 @@ class Filmlauf:
             self._melden(u'Abgebrochen', 0.0,
                          fehler=u'%s\n%s' % (fehler, traceback.format_exc()))
             return 1
+
+    def _video(self, film, fps):
+        u"""Das MP4 schreiben. Die Effekte-Pipeline (`effekte/figur/figurfilm.py`)
+        ueberschreibt das: eigene Bildgroesse, H.264 statt mp4v."""
+        return film.schreiben(self.auftrag['ziel'], fps=fps, schleifen=1)
 
     def _bilanz(self, film, proben, bilder):
         u"""Die Messwerte neben das Video — sie sind der Beleg."""

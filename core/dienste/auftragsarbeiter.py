@@ -47,8 +47,17 @@ class Auftragsarbeiter:
     @staticmethod
     def flags():
         u"""Abgelöst vom Server: eigene Gruppe, kein Fenster, wenn möglich
-        aus dem Job-Objekt des Servers heraus (Windows); sonst 0."""
-        return (getattr(subprocess, 'DETACHED_PROCESS', 0)
+        aus dem Job-Objekt des Servers heraus (Windows); sonst 0.
+
+        `CREATE_NO_WINDOW`, NICHT `DETACHED_PROCESS` (12.09.2026): Ein
+        abgelöster Prozess hat gar keine Konsole — und `sys.executable` ist
+        der venv-Starter, der den echten Interpreter als Kind startet. Ein
+        Konsolenkind eines konsolenlosen Vaters bekommt eine NEUE, sichtbare
+        Konsole: das cmd-Fenster beim Start jedes Auftrags. Mit
+        `CREATE_NO_WINDOW` bekommt der Arbeiter eine eigene unsichtbare
+        Konsole, die Interpreter, Wrapper und GEM erben (gemessen:
+        `ProjektTemp/fensterprobe.py`)."""
+        return (getattr(subprocess, 'CREATE_NO_WINDOW', 0)
                 | getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)
                 | getattr(subprocess, 'CREATE_BREAKAWAY_FROM_JOB', 0))
 

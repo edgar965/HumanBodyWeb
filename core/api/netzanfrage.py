@@ -30,6 +30,7 @@ from humanbody_core import CharacterState
 from ..daten.materialgruppen import Materialgruppen
 from ..daten.netzantwort import Netzantwort
 from ..dienste.charakterdaten import Charakterdaten
+from ..dienste.lippenmaske import Lippenmaske
 from ..models import AppSettings
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,9 @@ class Netzanfrage:
                        'material_names': self.netz.material_names or []}
             if cc.uvs is not None:
                 weitere['uvs'] = cc.uvs
+            # Die Lippen als Punktliste (12.09.2026): Der Browser macht daraus
+            # eine eigene Materialgruppe — das Netz selbst hat keine.
+            weitere['lippen'] = Lippenmaske.indizes(self.geschlecht, cc.uvs)
         antwort = Netzantwort.aus(
             feine, normals=cc.compute_quad_normals(feine),
             faces=None if self.nur_punkte else cc.triangles, **weitere)
@@ -144,4 +148,5 @@ class Netzanfrage:
             antwort['faces'] = Netzantwort.feld(dreiecke, 'faces')
         if self.netz.uvs is not None and not self.nur_punkte:
             antwort['uvs'] = Netzantwort.feld(self.netz.uvs, 'uvs')
+            antwort['lippen'] = Lippenmaske.indizes(self.geschlecht, self.netz.uvs)
         return antwort

@@ -23,6 +23,11 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  * (`isTrusted` false); dort dürfen die Schieber nicht auf die Vorgabe
  * fallen, sonst wären die gemerkten Feinwerte im selben Atemzug weg.
  *
+ * Und der echte Klick legt den Stand danach EINMAL breit auf (12.09.2026):
+ * Die synthetischen `input` der beiden Schieber gelten als Code, nicht als
+ * Nutzer (`Materialziel`) — ohne den Aufruf am Ende bliebe ein Wechsel der
+ * Art ohne Auswahl unsichtbar, genau Edgars „tut sich nichts".
+ *
  * Nebenbei bekommen Rauheit und Metallgrad hier ihre Wertanzeige: Die beiden
  * Schieber zeigten bis dahin den Startwert, gleich wo sie standen.
  */
@@ -41,15 +46,17 @@ export class GarmentcodeGewebe {
             material.stand.gewebe = { ...material.stand.gewebe, art: auswahl.value };
             if (ereignis.isTrusted) {
                 GarmentcodeGewebe.vorgabenSetzen(auswahl.value);
-            } else {
-                material.anwenden(material.figur());
             }
+            material.anwenden(material.figur(), ereignis.isTrusted,
+                              { gewebe: material.stand.gewebe });
         });
         material._schieber(GarmentcodeGewebe.FAEDEN, (wert) => {
             material.stand.gewebe = { ...material.stand.gewebe, faeden: wert };
+            return { gewebe: material.stand.gewebe };
         });
         material._schieber(GarmentcodeGewebe.STRUKTUR, (wert) => {
             material.stand.gewebe = { ...material.stand.gewebe, staerke: wert / 100 };
+            return { gewebe: material.stand.gewebe };
         });
         GarmentcodeGewebe._anzeige(GarmentcodeGewebe.FAEDEN, GarmentcodeGewebe.faedenText);
         GarmentcodeGewebe._anzeige(GarmentcodeGewebe.STRUKTUR, GarmentcodeGewebe.prozentText);

@@ -39,3 +39,15 @@ class Modellvorlagen:
             return []
         return [f.stem for f in sorted(ordner.glob('*.json'))
                 if not f.name.endswith(cls.SZENE)]
+
+    @classmethod
+    def pfad(cls, name):
+        """Die Datei zu einem Namen aus `namen()` — oder `None`.
+
+        Ueber die Liste, nicht ueber den Namen zusammengesetzt: Der Name
+        kommt aus dem Browser (Effekte-Seite, 12.09.2026), und ein Name mit
+        `..` soll nicht aus dem Modellordner hinausfuehren.
+        """
+        if name not in cls.namen():
+            return None
+        return cls.ordner() / ('%s.json' % name)

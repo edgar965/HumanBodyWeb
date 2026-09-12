@@ -23,7 +23,11 @@ export class Animationsmenue {
     static ENDPUNKT = '/api/character/bvh-manage/';
     static KENNUNG = 'anim-ctx';
 
-    /** Das Menü an eine Baumzeile hängen. */
+    /**
+     * Das Menü an eine Baumzeile hängen. `danach(aktion)` läuft nach
+     * `rename`, `move` oder `delete` — das Löschen braucht mehr als einen
+     * neuen Baum (`Animationsentfernung`).
+     */
     static binden(zeile, kategorie, name, danach) {
         zeile.addEventListener('contextmenu', (ereignis) => {
             ereignis.preventDefault();
@@ -72,7 +76,7 @@ export class Animationsmenue {
                 category: kategorie, name, new_name: neu })) {
             return false;
         }
-        if (danach) danach();
+        if (danach) danach('rename');
         return true;
     }
 
@@ -96,7 +100,7 @@ export class Animationsmenue {
                 category: kategorie, name, new_category: ziel })) {
             return false;
         }
-        if (danach) danach();
+        if (danach) danach('move');
         return true;
     }
 
@@ -110,7 +114,7 @@ export class Animationsmenue {
                                            { category: kategorie, name })) {
             return false;
         }
-        if (danach) danach();
+        if (danach) danach('delete');
         return true;
     }
 

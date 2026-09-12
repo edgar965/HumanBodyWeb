@@ -40,7 +40,7 @@ class Gelenkquelle:
     EIGENE_CSV = ('rtmpose', 'vitpose', 'yolo11')
     #: Pipelines, die über SMPL laufen — dort ist die MediaPipe-CSV die bessere
     #: Quelle als die Kameraprojektion (die kann versetzt sein).
-    SMPL = ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx', 'hybrid_gvhmr',
+    SMPL = ('gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx', 'smplx', 'hybrid_gvhmr',
             'hybrid_prompthmr', 'hybrid_gem')
     #: Rohe MediaPipe-Koordinaten. `2dJoints_v4.csv` ist fürs
     #: Seitenverhältnis korrigiert (MocapNET-Eingabe) und taugt NICHT zur

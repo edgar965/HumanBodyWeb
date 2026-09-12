@@ -1,0 +1,115 @@
+{% extends "einstellungsseite.html" %}
+{% load static einstellungszeile %}{% load fassung %}
+{% block title %}Effekte - Einstellungen{% endblock %}
+{% comment %}
+Einstellungen → Effekte (Edgar, 12.09.2026: „ähnlich aufgebaut wie die Seite
+Einstellungen - Theatre"). Die Werte sind die Startwahlen und Reglerstellungen
+der Seite Process Videos → Effekte (`Effektvorgaben`); die Zahlenzeilen kommen
+aus dem Register (`{% templatetag openblock %} zahl {% templatetag closeblock %}`), Grenzen inklusive.
+{% endcomment %}
+
+{% block einstellungen_stile %}
+<style>
+.hinweisliste.hinweisliste.hinweisliste {
+    color:var(--text-muted);
+    font-size:0.85rem;
+    line-height:1.6;
+}
+</style>
+{% endblock %}
+
+{% block einstellungen_titel %}Einstellungen — Effekte{% endblock %}
+
+{% block einstellungen_karten %}
+    <div class="settings-card">
+        <h2><i class="fas fa-wind"></i> Effekte-Vorgaben</h2>
+        <p class="hb-color-var-text-muted">
+            Diese Werte wählt die Seite Process Videos → Effekte beim Laden vor.
+        </p>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Standard-Pipeline</strong>
+                <small>Welche Pipeline beim Laden gewählt ist — Blender mit MPFB-Figur oder das eigene HumanBody-Modell mit DEF-Skelett.</small>
+            </div>
+            <div class="settings-input">
+                <select name="effekte_default_pipeline" class="settings-select">
+                    {% for wert, titel in pipelines %}
+                    <option value="{{ wert }}"
+                         {% if settings.effekte_default_pipeline == wert %}selected{% endif %}>{{ titel }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Standard-Modell</strong>
+                <small>Welches HumanBody-Modell (Pipeline „HumanBody-Figur") beim Laden vorgewählt ist. Ein Modell, das es nicht mehr gibt, bleibt unbesetzt.</small>
+            </div>
+            <div class="settings-input">
+                <select name="effekte_default_model" class="settings-select">
+                    <option value=""
+                         {% if not settings.effekte_default_model %}selected{% endif %}>(Kein Modell vorwählen)</option>
+                    {% for name in available_models %}
+                    <option value="{{ name }}"
+                         {% if settings.effekte_default_model == name %}selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        {% animation "effekte_default_animation" "anim-sel-effekte" %}
+    </div>
+
+    <div class="settings-card hb-abstand-oben">
+        <h2><i class="fas fa-file-video"></i> Video</h2>
+        <p class="hb-color-var-text-muted">
+            Startstellung der Regler Bildrate, Breite und Höhe — auf der Effekte-Seite je Lauf änderbar.
+        </p>
+        {% zahl "effekte_video_fps" %}
+        {% zahl "effekte_video_width" %}
+        {% zahl "effekte_video_height" %}
+    </div>
+
+    <div class="settings-card hb-abstand-oben">
+        <h2><i class="fas fa-fan"></i> Wind</h2>
+        <p class="hb-color-var-text-muted">
+            Stoffdynamik der Pipeline „HumanBody-Figur" (Newton): Windstärke und Richtung beim Laden.
+        </p>
+        {% zahl "effekte_wind" %}
+        <div class="settings-row">
+            <div class="settings-label">
+                <strong>Windrichtung</strong>
+                <small>Relativ zur Blickrichtung der Figur in Ruhelage.</small>
+            </div>
+            <div class="settings-input">
+                <select name="effekte_windrichtung" class="settings-select">
+                    {% for w in windrichtungen %}
+                    <option value="{{ w }}"
+                         {% if settings.effekte_windrichtung == w %}selected{% endif %}>{{ w }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block einstellungen_speichern %}
+     {% include "_einstellungen_speichern.html" with weiter_route="effekte" weiter_text="Zur Effekte-Seite" weiter_icon="fa-wind" %}{% endblock %}
+
+{% block einstellungen_nachtrag %}
+<div class="settings-card hb-abstand-oben">
+    <h2><i class="fas fa-question-circle"></i> Hinweise</h2>
+    <ul class="hinweisliste">
+        <li>Das <strong>Standard-Modell</strong> gilt für die Pipeline „HumanBody-Figur (DEF-Skelett)"; im Modelldialog der Effekte-Seite lässt sich jederzeit ein anderes wählen.</li>
+        <li>Ohne <strong>Standard-Animation</strong> wählt die Seite die neueste passende Animation aus „Process Videos" vor.</li>
+        <li>Die übrigen Regler (Stoffgewicht, Steifigkeit, Teilschritte …) starten mit den Vorgaben der Pipeline — siehe <a href="{% url 'hilfe_animationseffekte' %}" class="akzent-verweis">Hilfe → Animationseffekte</a>.</li>
+    </ul>
+</div>
+
+<script type="module">
+import { Animationsauswahl } from "{% fassungspfad 'js/einstellungen/animationsauswahl.js' %}";
+Animationsauswahl.alleStarten();
+</script>
+{% endblock %}

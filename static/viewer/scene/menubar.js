@@ -171,7 +171,10 @@ export function bindVisibilityToggles() {
 
 export function toggleModelVisibility() {
     state.modelVisible = !state.modelVisible;
-    state.characters.forEach(c => { if (c.bodyMesh) c.bodyMesh.visible = state.modelVisible; });
+    state.characters.forEach(c => {
+        if (c.bodyMesh) c.bodyMesh.visible = state.modelVisible;
+        if (c.augenbrauen) c.augenbrauen.visible = state.modelVisible;
+    });
 }
 
 /**

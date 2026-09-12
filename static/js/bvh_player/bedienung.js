@@ -21,6 +21,20 @@ export class Spielerbedienung {
         this.zeitAnzeige = document.getElementById('timeCurrent');
         this.dauerAnzeige = document.getElementById('timeDuration');
         this.tempoknoepfe = document.querySelectorAll('.speed-btn');
+        /** Abspielen erlaubt? `Rigstart` sperrt, solange das HumanBody-Rig laedt. */
+        this.bereit = true;
+    }
+
+    /** Play-Knopf und Leertaste sperren oder freigeben; gesperrt zeigt der Knopf den Spinner. */
+    bereitschaft(an) {
+        this.bereit = an;
+        const knopf = document.getElementById('btnPlayPause');
+        if (knopf) {
+            knopf.disabled = !an;
+            knopf.title = an ? '' : 'HumanBody-Rig wird geladen …';
+        }
+        if (!an && this.abspielsymbol) this.abspielsymbol.className = 'fas fa-spinner fa-spin';
+        if (an && !this.zustand.laeuft) this._symbol(false);
     }
 
     anbinden() {
@@ -30,6 +44,7 @@ export class Spielerbedienung {
         this._tastatur();
         this._videoereignisse();
         this._nummernknopf();
+        this._rigknopf();
     }
 
     _an(id, tun) {
@@ -58,6 +73,9 @@ export class Spielerbedienung {
 
     _tempo() {
         this.tempoknoepfe.forEach(knopf => {
+            // `Idx` und `Rig` tragen dieselbe Klasse, aber kein Tempo — ein
+            // Klick dort setzte sonst NaN als Tempo (12.09.2026).
+            if (!knopf.dataset.speed) return;
             knopf.addEventListener('click',
                 () => this.tempoSetzen(parseFloat(knopf.dataset.speed)));
         });
@@ -88,6 +106,24 @@ export class Spielerbedienung {
         knopf.classList.add('active');          // Nummern sind zunaechst an
         knopf.addEventListener('click', () => {
             knopf.classList.toggle('active', this.spieler.nummernUmschalten());
+        });
+    }
+
+    /** Den Knopfstand nachziehen, wenn der Spieler das Rig selbst einschaltet. */
+    rigStandZeigen(an) {
+        document.getElementById('btnHumanbodyRig')?.classList.toggle('active', !!an);
+    }
+
+    _rigknopf() {
+        const knopf = document.getElementById('btnHumanbodyRig');
+        if (!knopf) return;
+        knopf.addEventListener('click', async () => {
+            knopf.disabled = true;               // waehrend das Rig laedt
+            try {
+                knopf.classList.toggle('active', await this.spieler.rigUmschalten());
+            } finally {
+                knopf.disabled = false;
+            }
         });
     }
 
@@ -123,6 +159,7 @@ export class Spielerbedienung {
     }
 
     umschalten() {
+        if (!this.bereit) return;               // das Rig kommt noch
         if (this.zustand.videoBrauchbar) {
             // Der Zustand kommt ueber die play/pause-Ereignisse zurueck.
             if (this.video.paused) {
@@ -155,6 +192,7 @@ export class Spielerbedienung {
         if (this.zustand.videoBrauchbar) this.video.playbackRate = wert;
         this.spieler.skelett.tempo(wert);
         this.tempoknoepfe.forEach(knopf => {
+            if (!knopf.dataset.speed) return;   // `Idx`/`Rig` behalten ihren Stand
             knopf.classList.toggle('active',
                                    parseFloat(knopf.dataset.speed) === wert);
         });

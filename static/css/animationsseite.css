@@ -23,10 +23,8 @@
 /* Nur das Polster weicht ab — der Rest steht in `animationsbaum.css`. */
 .anim-category-header { --anim-kopf-polster: 10px 16px; }
 
-.anim-category-body {
-    display: none;
-    padding: 0;
-}
+/* Zugeklappt (`display: none`) kommt aus `animationsbaum.css`. */
+.anim-category-body { padding: 0; }
 
 /* Nur das Polster weicht ab — der Rest steht in `animationsbaum.css`. */
 .anim-item { --anim-eintrag-polster: 6px 16px 6px 36px; }

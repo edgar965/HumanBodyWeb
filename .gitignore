@@ -8,6 +8,7 @@ db.sqlite3
 *.log
 media/uploads/
 media/output/
+media/effekte/
 # Videos der Figur (11.09.2026): je Lauf ein MP4, Weg 1 und Weg 2.
 media/figurvideos/
 

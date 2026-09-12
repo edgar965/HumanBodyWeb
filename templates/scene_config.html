@@ -894,20 +894,25 @@
                 <div id="prop-content" class="hb-versteckt">
                     {% include "_gemeinsame_regler.html" %}
                     <!-- Transform (body context) -->
-                    <div class="prop-section" id="prop-transform-section">
-                        <div class="prop-section-title">Transform</div>
-                        <div class="prop-grid" id="prop-transform"></div>
+                    <div class="panel-section prop-section" id="prop-transform-section">
+                        <h3>Transform <span class="chevron">&#9660;</span></h3>
+                        <div class="panel-body"><div class="prop-grid" id="prop-transform"></div></div>
                     </div>
                     {% include "_uma_eigenschaften.html" %}
                     {% include "_smpl_eigenschaften.html" %}
                     {% include "_umapython_eigenschaften.html" %}
                     {% include "_makehuman_eigenschaften.html" %}
                     <!-- Equipped Items (body context) -->
-                    <div class="prop-section" id="prop-equipped-section">
-                        <div class="prop-section-title">Ausstattung</div>
-                        <ul id="prop-equipped-list">
-                            <li class="equipped-empty">Keine Objekte</li>
-                        </ul>
+                    {% comment %}Alle Bereiche dieses Reiters klappen wie „Augen · Wimpern"
+                    (Edgar, 12.09.2026: „FORMAT des Zuklappbaren bereichs … für alle, also
+                    auch Körper, gesicht usw"): `panel-section` + `h3` + `panel-body`.{% endcomment %}
+                    <div class="panel-section prop-section" id="prop-equipped-section">
+                        <h3>Ausstattung <span class="chevron">&#9660;</span></h3>
+                        <div class="panel-body">
+                            <ul id="prop-equipped-list">
+                                <li class="equipped-empty">Keine Objekte</li>
+                            </ul>
+                        </div>
                     </div>
                     <!-- Garment Properties (garment context) -->
                     <div class="prop-section hb-versteckt" id="prop-garment-section">
@@ -945,19 +950,22 @@
                         </div>
                     </div>
                     <!-- Body Type + Meta (body context) -->
-                    <div class="prop-section" id="prop-bodytype-section">
-                        <div class="prop-section-title">Body Type</div>
-                        <select id="prop-body-type" class="viewer-select"></select>
-                        <div class="prop-section-title abstand-8">Preset</div>
-                        <select id="prop-preset" class="viewer-select">
-                            <option value="">-- Kein Preset --</option>
-                        </select>
-                        <div id="prop-meta-sliders"></div>
-                        <button id="prop-refit-btn" class="btn-reset-morphs breit-abstand"
-                                title="Garments &amp; Haare an aktuelle Morphs anpassen">
-                            <i class="fas fa-sync"></i> Garments &amp; Haare anpassen
-                        </button>
+                    <div class="panel-section prop-section" id="prop-bodytype-section">
+                        <h3>Body Type <span class="chevron">&#9660;</span></h3>
+                        <div class="panel-body">
+                            <select id="prop-body-type" class="viewer-select"></select>
+                            <div class="prop-section-title abstand-8">Preset</div>
+                            <select id="prop-preset" class="viewer-select">
+                                <option value="">-- Kein Preset --</option>
+                            </select>
+                            <div id="prop-meta-sliders"></div>
+                            <button id="prop-refit-btn" class="btn-reset-morphs breit-abstand"
+                                    title="Garments &amp; Haare an aktuelle Morphs anpassen">
+                                <i class="fas fa-sync"></i> Garments &amp; Haare anpassen
+                            </button>
+                        </div>
                     </div>
+                    {% include "_szene_details.html" %}
                     <!-- MakeHuman Garment Properties -->
                     <div class="prop-section hb-versteckt" id="prop-mh-section">
                         <div class="prop-section-title">MakeHuman Eigenschaften</div>
@@ -982,13 +990,19 @@
                         </div>
                     </div>
                     <!-- Morphs (body context) -->
-                    <div class="prop-section" id="prop-morphs-section">
-                        <div class="prop-section-title zeile-verteilt"
-                            >
-                            Morphs
-                            <button class="btn-reset-morphs" id="prop-reset-morphs">Reset</button>
+                    {% comment %}Die Morphs in Gesicht, Körper und Fantasie (`Morphgruppen`), jede
+                    Gruppe ein klappbarer Bereich wie dieser, darin die Kategorien. Der Reset steht
+                    im Körper — im Kopf klappte er beim Klick zugleich den Bereich.{% endcomment %}
+                    <div class="panel-section prop-section collapsed" id="prop-morphs-section">
+                        <h3>Morphs <span class="chevron">&#9660;</span></h3>
+                        <div class="panel-body">
+                            <div class="zeile-verteilt">
+                                <small class="hb-gedaempft">Gesicht · Körper · Fantasie</small>
+                                <button class="btn-reset-morphs" id="prop-reset-morphs" type="button"
+                                        title="Alle Morphs auf 0">Reset</button>
+                            </div>
+                            <div id="prop-morphs-panel"></div>
                         </div>
-                        <div id="prop-morphs-panel"></div>
                     </div>
                 </div>
             </div>

@@ -1,13 +1,21 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% block title %}{{ job.name }} - Result{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/ergebnisvideo.css' %}">
 {% include "_importmap.html" %}
 <style>
 /* Stile dieser Seite. Angelegt am 30.08.2026, als die Inline-Stile
    des Markups hierher gezogen wurden (Befund `jsbefunde`). Die Namen
    sagen, was das Element IST — nicht, welche Eigenschaft es setzt. */
+.bvh-pfad {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    overflow-wrap: anywhere;
+}
+.bvh-pfad code { color: var(--text); user-select: all; }
 .knochenausgabe.knochenausgabe.knochenausgabe {
     flex:1;
     overflow:auto;
@@ -33,6 +41,14 @@
 {% endblock %}
 
 {% block content %}
+{% comment %}Ganz oben: wo das BVH liegt und wie es heißt (Edgar, 12.09.2026:
+„schreibe … wo sich das BVH befindet und unter welchem Namen, direkt ganz oben").
+Der volle Pfad, damit man ihn in den Explorer kopieren kann.{% endcomment %}
+{% if job.bvh_file %}
+<div class="bvh-pfad" id="bvhPfad" title="Pfad der BVH-Datei dieses Auftrags">
+    <i class="fas fa-file-alt"></i> BVH: <code>{{ job.bvh_file }}</code>
+</div>
+{% endif %}
 <div class="result-header">
     <h1>{{ job.name }}</h1>
     <div class="result-header-actions">

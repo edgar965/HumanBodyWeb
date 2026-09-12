@@ -68,6 +68,11 @@ class EinRechnerMitPipelines(unittest.TestCase):
                 alt = s['hybrid_gvhmr'] or s['hybrid_prompthmr']
                 self.assertEqual(s['hybrid'], alt)
 
+    def test_smplx_braucht_gem(self):
+        u"""Die eigene SMPL-X-Pipeline (12.09.2026) faehrt GEMs Koerper — ohne
+        GEM keine Karte, gleich ob SMPLest-X daliegt."""
+        self.assertFalse(self._status(True, True, True, True, gem=False)['smplx'])
+
     def test_ohne_v4_kein_hybrid(self):
         u"""Beide Hybridwege brauchen MocapNET v4 für Hände und Gesicht."""
         s = self._status(False, True, True, True)

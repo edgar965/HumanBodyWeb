@@ -12,6 +12,7 @@ Sortierung und ziehbare Spaltenbreiten bindet `tabellen_auto.js` von
 selbst, sobald die Klasse dasteht.
 """
 from .hilfeseite import Hilfeseite
+from ..dienste.eigenepipeline import Eigenepipeline
 from ..dienste.pipelinevergleich import Pipelinevergleich
 
 
@@ -28,4 +29,6 @@ class VideoToBvhVergleich(Hilfeseite):
             'spalten': Pipelinevergleich.SPALTEN,
             'nicht_gelaufen': Pipelinevergleich.nicht_gelaufen(),
             'rang_von': len(Pipelinevergleich.mit_rang()),
+            # Abschnitt „Eigene Pipeline: SMPL-X als Rueckgrat" (12.09.2026)
+            'eigene': Eigenepipeline.kontext(),
         }

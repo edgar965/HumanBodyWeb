@@ -46,6 +46,9 @@ class BVHJob(models.Model):
         ('gem', 'GEM-SMPL'),
         ('duomo', 'DuoMo'),
         ('gemx', 'GEM-X (mit Händen)'),
+        # 12.09.2026, die eigene Pipeline: SMPL-X als Rückgrat — Körper aus
+        # GEM-SMPL, Hände und Gesicht aus SMPLest-X, EIN BVH mit Fingern.
+        ('smplx', 'SMPL-X (eigen: Körper, Hände, Gesicht)'),
         # Hybrid Pipelines (SMPL Body + MocapNET v4 Face+Hands)
         ('hybrid_gvhmr', 'Hybrid (GVHMR + MocapNET v4)'),
         ('hybrid_prompthmr', 'Hybrid (PromptHMR + MocapNET v4)'),

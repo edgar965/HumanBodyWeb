@@ -12,6 +12,7 @@ import { findHeadBoneIndex, skinifyHairGroup }
     from '../character_core.js';
 import { Hautbindung } from '../gemeinsam/hautbindung.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
+import { Augenbrauenbau } from './augenbrauenbau.js';
 
 export async function loadRigifySkeleton() {
     try {
@@ -54,6 +55,8 @@ export function convertInstToSkinned(inst) {
     inst.bodyMesh.bind(inst.rigifySkeleton.skeleton);
     inst.group.add(inst.bodyMesh);
     inst.isSkinned = true;
+    // Die Brauen hängen am selben Skelett (Gewichte der Wurzelpunkte).
+    Augenbrauenbau.sicher(inst);
 
     // FEHLER bis 16.08.2026: Hier stand `inst._loadHair()` — eine Methode, die
     // `CharacterInstance` nicht (mehr) hat; das Laden der Haare wurde beim

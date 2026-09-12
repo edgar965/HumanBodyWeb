@@ -1,8 +1,9 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static %}{% load fassung %}
 {% block title %}Result{% endblock %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{% fassungspfad 'css/ergebnisvideo.css' %}">
 <style>.main-content { max-width: none !important; padding: 1rem 2rem; }
 /* Umbau 16.08.2026: aus Inline-Stilen dieser Vorlage.
    Erzeugt von Docu/umbau/stil_zu_klassen.py — gleiche

@@ -160,7 +160,8 @@ class Auftragstabelle:
         teile = []
         if job.status == 'complete':
             teile.append(format_html(
-                '<a class="btn btn-sm btn-primary" href="{}">'
+                '<a class="btn btn-sm btn-primary" href="{}" '
+                'target="_blank" rel="noopener">'
                 '<i class="fas fa-eye"></i> Ergebnis</a>',
                 reverse('job_result', args=[job.id])))
         elif job.status != 'pending':

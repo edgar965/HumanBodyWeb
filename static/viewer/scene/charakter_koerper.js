@@ -5,9 +5,13 @@
  * Aus character.js herausgeloest (Umbau 16.08.2026).
  */
 
-import { state } from './state.js';
+import { state, THREE } from './state.js';
 import { base64ToFloat32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
 import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
+import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
+import { Augenbrauenbau } from './augenbrauenbau.js';
+import { Lippenbau } from './lippenbau.js';
+import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
 import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
 import { _charQueryParams } from './utils.js';
 import { generateModelMesh, generateRigBoneMesh } from './state.js';
@@ -17,6 +21,41 @@ import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { Stoffvorschau } from './stoffvorschau.js';
 
 export class Charakterkoerper {
+
+    /**
+     * Farben und Längen der Details aufs Netz UND die Augenbrauen darauf
+     * setzen (12.09.2026) — eine Stelle für den Bau, die frischen
+     * Morphpunkte (`neue`, vor dem Schreiben ins Attribut) und die Regler.
+     */
+    static details(inst, neue = null) {
+        if (!inst?.bodyMesh || !inst.details) return 0;
+        // Haut ohne eigene Farbe trägt die der Körperart — auch wieder, wenn
+        // der Nutzer sein Farbfeld zurücknimmt (`Detailfarben`, 12.09.2026).
+        if (!inst.details.haut) Charakterkoerper.hautfarbe(inst, Charakterkoerper.materialien(inst));
+        Koerperdetails.anwenden(inst.bodyMesh, inst.details, neue);
+        return Augenbrauenbau.sicher(inst, neue);
+    }
+
+    static materialien(inst) {
+        const m = inst.bodyMesh?.material;
+        return Array.isArray(m) ? m : [m];
+    }
+
+    /**
+     * Das Körpernetz aus der Antwort von `/api/character/mesh/` — mit der
+     * Lippengruppe (12.09.2026, `Lippenbau`) und der Hautfarbe der Körperart.
+     * Stand in `character.js`; die Datei darf nicht wachsen.
+     */
+    static netz(inst, data) {
+        const netz = Koerpernetz.netz(data, THREE);
+        Lippenbau.abspalten(netz, data.lippen);
+        Charakterkoerper.hautfarbe(inst, Array.isArray(netz.material) ? netz.material : [netz.material]);
+        return netz;
+    }
+
+    static detailsWeg(inst) {
+        Augenbrauenbau.entfernen(inst);
+    }
 
     /**
      * Körpernetz zu den aktuellen Reglerständen neu holen.
@@ -38,7 +77,10 @@ export class Charakterkoerper {
             `/api/character/mesh/?${_charQueryParams(inst)}&nur_punkte=1`);
         if (data.error) throw new Error(data.error);
 
-        if (!Netzpunkte.aktualisieren(inst.bodyMesh, data)) {
+        // Die Längen der Details (Wimpern, Fußnägel) auf die frisch gelieferten
+        // Punkte — vor dem Schreiben ins Attribut, nie auf schon gestreckte.
+        const details = (neue) => Charakterkoerper.details(inst, neue);
+        if (!Netzpunkte.aktualisieren(inst.bodyMesh, data, inst.details ? details : null)) {
             if (inst.bodyMesh) {
                 Netzentsorgung.entfernen(inst.group, inst.bodyMesh);
                 inst.bodyMesh = null;

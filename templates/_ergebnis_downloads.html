@@ -21,9 +21,11 @@ Verwendung:
 </a>
 {% endif %}
 {% if job.status == 'complete' %}
+{% comment %}Bei der SMPL-X-Pipeline liefert dieselbe Adresse das Netz-Video des Laufs
+(Körper, Finger, Gesicht über dem Original) — `Auftragsdateien.ueberlagerungsvideo`.{% endcomment %}
 <a href="{% url 'save_overlay_video' job.id %}" class="btn btn-secondary btn-sm" download
-     title="Download Video + Skeleton">
-    <i class="fas fa-download"></i> Video + Skeleton
+     title="{% if job.pipeline == 'smplx' %}Download Video + SMPL-X-Netz{% else %}Download Video + Skeleton{% endif %}">
+    <i class="fas fa-download"></i> {% if job.pipeline == 'smplx' %}Video + Netz{% else %}Video + Skeleton{% endif %}
 </a>
 <a href="{% url 'save_rig_video' job.id %}" class="btn btn-secondary btn-sm" download title="Download Nur Skeleton">
     <i class="fas fa-download"></i> Nur Skeleton

@@ -59,6 +59,25 @@ export class Figurmerker {
         Figurmerker._setzen(id, 'kleider', kennung || null);
     }
 
+    /**
+     * Eine gelöschte Animation von ALLEN Figuren nehmen (12.09.2026) — sonst
+     * lädt Play auf einer Figur, die sie einmal gewählt hatte, ins Leere.
+     * Liefert, wie viele Figuren sie gemerkt hatten.
+     */
+    static animationVergessen(url) {
+        if (!url) return 0;
+        const alle = Figurmerker._alle();
+        let anzahl = 0;
+        for (const eintrag of Object.values(alle)) {
+            if (eintrag.animation && eintrag.animation.url === url) {
+                eintrag.animation = null;
+                anzahl += 1;
+            }
+        }
+        if (anzahl) Figurmerker._speichern();
+        return anzahl;
+    }
+
     /** Beim Löschen der Figur — sonst wächst der Zettel mit jeder Sitzung. */
     static vergessen(id) {
         if (!id) return;

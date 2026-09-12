@@ -3,6 +3,7 @@
  */
 import { state } from './state.js';
 import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
+import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
 import { Morphdrossel } from '../gemeinsam/morphdrossel.js';
@@ -51,6 +52,12 @@ export function sendMorphThrottled(key, value) {
 
 function updateMeshVertices(float32Buffer) {
     Netzpunkte.ausPuffer(state.bodyGeometry, float32Buffer);
+    // Frische Punkte vom Server: Wimpern- und Fußnagellängen neu anlegen
+    // (der Puffer ist die neue Basis, nichts wird aufsummiert).
+    if (state.details && state.bodyMesh) {
+        Koerperdetails.anwenden(state.bodyMesh, state.details,
+                                state.bodyGeometry.attributes.position.array);
+    }
 }
 
 fn.wsSend = wsSend;

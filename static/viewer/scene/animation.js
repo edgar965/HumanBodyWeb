@@ -17,6 +17,7 @@ import { Eigenanimation } from './eigenanimation.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Abspielsteuerung } from './abspielsteuerung.js';
 import { Figurmerker } from './figurmerker.js';
+import { Animationsentfernung } from './animationsentfernung.js';
 import { Bvhladen } from './bvhladen.js';
 
 /** Play/Stop/Zeitleiste — und Play meint die ausgewählte Figur (Klassendoku dort). */
@@ -228,6 +229,9 @@ export async function loadAnimationUI() {
     try {
         const data = await Serverabruf.json('/api/character/animations/');
         const tree = document.getElementById('anim-tree'); if (!tree) return;
+        // Offene Ordner bleiben offen — der Neubau (nach Umbenennen, Löschen,
+        // Speichern) klappte sonst alles zu (Edgar, 12.09.2026).
+        const offen = Animationsentfernung.offeneOrdner(tree);
         tree.innerHTML = '';
         const categories = data.categories || {};
         const catNames = Object.keys(categories).sort();
@@ -235,7 +239,7 @@ export async function loadAnimationUI() {
         for (const cat of catNames) {
             const anims = categories[cat];
             const {kasten: catDiv, koerper: body} =
-                Kategoriekasten.bauen(cat, anims.length);
+                Kategoriekasten.bauen(cat, anims.length, { offen: offen.has(cat) });
             for (const anim of anims) {
                 const item = document.createElement('div'); item.className = 'anim-item';
                 item.innerHTML = `<span>${escapeHtml(anim.name)}</span><span
@@ -252,13 +256,19 @@ export async function loadAnimationUI() {
                     state.currentAnimName = anim.name;
                     loadBVHAnimation(anim.url, anim.name, anim.frames || 0);
                 });
-                // Rechtsklick: umbenennen oder loeschen (08.09.2026).
+                // Rechtsklick: umbenennen, verschieben, loeschen (08.09.2026).
                 // Nach der Aktion wird der Baum neu geholt — die Datei
-                // heisst dann anders oder ist weg, und ein Eintrag, der
-                // auf nichts mehr zeigt, laedt beim naechsten Klick ins
-                // Leere.
-                Animationsmenue.binden(item, cat, anim.name,
-                                       () => loadAnimationUI());
+                // heisst dann anders oder ist weg. Das Loeschen stoppt
+                // dazu die laufende Animation und waehlt den Nachfolger
+                // (`Animationsentfernung`, 12.09.2026).
+                Animationsmenue.binden(item, cat, anim.name, (aktion) => (
+                    aktion === 'delete'
+                        ? Animationsentfernung.nach(anim, cat, {
+                            eintraege: Animationsentfernung.eintraege(tree),
+                            state, fn, merker: Figurmerker,
+                            baumNeu: loadAnimationUI,
+                            meldung: (text) => abspielsteuerung.meldung(text) })
+                        : loadAnimationUI()));
                 body.appendChild(item);
             }
             tree.appendChild(catDiv);

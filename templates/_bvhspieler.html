@@ -24,6 +24,7 @@ try {
         overlayId: 'skeletonOverlay',
         detectionUrl: '{% url "serve_detection" job.id %}?t={% now "U" %}',
         keypointsUrl: '{% url "serve_keypoints" job.id %}?t={% now "U" %}',
+        jobId: '{{ job.id }}',
     });
 } catch(e) {
     // Der Balken kommt aus `Startfehler` (28.08.2026, Befund `doppelcode`):

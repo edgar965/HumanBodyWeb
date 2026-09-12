@@ -111,10 +111,29 @@ class Retargetdaten:
         """Das Ergebnis — aus der Ablage oder frisch gerechnet."""
         gemerkt = self.gemerkt()
         if gemerkt is not None:
-            return gemerkt
+            return self._gesicht_dazu(gemerkt)
         ergebnis = self._rechnen()
         self.merken(ergebnis)
-        return ergebnis
+        return self._gesicht_dazu(ergebnis)
+
+    #: Die Marke der eigenen SMPL-X-Pipeline neben ihrem BVH (12.09.2026).
+    SMPLX_MARKE = '_smplx.npz'
+
+    def _gesicht_dazu(self, ergebnis):
+        """Das Gesicht der SMPL-X-Pipeline auf das DEF-Ergebnis legen.
+
+        Ihr BVH traegt Koerper und Finger; Kiefer und Ausdruck liegen daneben
+        als `<stamm>_blendshapes.json` (dieselbe Datei wie beim Hybrid). Gemischt
+        wird NACH der Ablage, damit die Ablage die reine Knochenumsetzung bleibt.
+        Nur fuer Dateien, neben denen die SMPL-X-Bahn liegt — die Gesichts-BVH des
+        Hybrids (v4) hat dieselbe Nachbardatei und wird in `retarget_job_merge`
+        gemischt, nicht hier.
+        """
+        stamm = self.bvh_pfad.rsplit('.', 1)[0]
+        if self.ziel != self.ZIEL_DEF or not os.path.isfile(stamm + self.SMPLX_MARKE):
+            return ergebnis
+        from .gesichtsspuren import Gesichtsspuren
+        return Gesichtsspuren.mischen(ergebnis, Gesichtsspuren.laden(self.bvh_pfad))
 
     def _rechnen(self):
         from humanbody_core.skeleton import Skeleton, SkeletonRigify

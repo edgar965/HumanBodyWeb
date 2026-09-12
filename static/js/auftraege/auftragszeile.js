@@ -158,7 +158,8 @@ export class Auftragszeile {
         const aktionen = document.getElementById('detail-actions-' + this.id);
         if (aktionen) {
             aktionen.innerHTML =
-                `<a class="btn btn-sm btn-primary" href="/process/${this.id}/result/">`
+                `<a class="btn btn-sm btn-primary" href="/process/${this.id}/result/"`
+                + ' target="_blank" rel="noopener">'
                 + '<i class="fas fa-eye"></i> Ergebnis</a>'
                 + (daten.bvh_file
                     ? ` <a class="btn btn-sm btn-secondary" href="/api/bvh/${this.id}/"`
@@ -174,6 +175,8 @@ export class Auftragszeile {
         const link = document.createElement('a');
         link.className = 'btn btn-sm btn-primary';
         link.href = `/process/${this.id}/result/`;
+        link.target = '_blank';
+        link.rel = 'noopener';
         link.innerHTML = '<i class="fas fa-eye"></i> Ergebnis';
         zelle.insertBefore(link, zelle.firstChild);
     }

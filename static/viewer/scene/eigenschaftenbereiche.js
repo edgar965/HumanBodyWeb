@@ -15,7 +15,8 @@ import { Reiterfreigabe } from './reiterfreigabe.js';
 export class Eigenschaftenbereiche {
 
     static PAARE = [['prop-empty', 'prop-content'], ['assets-empty', 'assets-content']];
-    static HUMANBODY = ['prop-equipped-section', 'prop-bodytype-section', 'prop-morphs-section'];
+    static HUMANBODY = ['prop-equipped-section', 'prop-bodytype-section',
+                        'prop-details-section', 'prop-morphs-section'];
 
     /** Inhalt zeigen (`true`) oder den Platzhalter „Charakter auswählen". */
     static zeigen(zeigen) {

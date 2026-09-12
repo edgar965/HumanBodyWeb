@@ -11,6 +11,7 @@ Methoden von `Uploadseiten`. Beide Seiten holten ihre Auftragsliste mit
 demselben Dreizeiler — das steht jetzt einmal in `_auftraege`.
 """
 
+import os
 from pathlib import Path
 
 from django.conf import settings
@@ -21,6 +22,7 @@ from ..api.pipelineparameter import Pipelineparameter
 from ..daten.dateigroessen import Dateigroessen
 from ..dienste.auftragsanlage import Auftragsanlage
 from ..dienste.pipelinekarten import Pipelinekarten
+from ..dienste.pipelinevergleich import Pipelinevergleich
 from ..dienste.systemzustand import Systemzustand
 from ..dienste.videoauswahl import Videoauswahl
 from ..models import BVHJob, AppSettings
@@ -142,6 +144,9 @@ class Uploadseiten:
             # Kartenfolge und Rang-Abzeichen (Hilfe -> Video to BVH), 12.09.2026.
             'pipeline_karten': Pipelinekarten.eintraege(),
             'rang_von': Pipelinekarten.rang_von(),
+            # Der Vergleich unten: dieselbe Messung wie Hilfe -> Video to BVH.
+            'vergleich_3d': Pipelinevergleich.dreid_rangfolge(),
+            'messung': Pipelinevergleich.MESSUNG,
             'status_3d': Uploadseiten._pipelines_verfuegbar(),
             'default_3d': vorgabe,
             'defaults': Pipelineparameter.vorgaben(gespeichert),
@@ -164,6 +169,10 @@ class Uploadseiten:
             'gem': gem,
             'duomo': Path(settings.DUOMO_ROOT).is_dir(),
             'gemx': Path(settings.GEMX_ROOT).is_dir(),
+            # Die eigene SMPL-X-Pipeline (12.09.2026) braucht GEM (Koerper)
+            # und SMPLest-X (Haende, Gesicht); der Klon liegt neben den anderen.
+            'smplx': gem and Path(os.path.join(str(settings.VIDEOTOBVH_ROOT),
+                                               'SMPLest-X')).is_dir(),
             # Kamerabahn (DPVO fuer GVHMR/WHAM, DROID-SLAM fuer PromptHMR):
             # die Kaestchen gibt es seit je, die Raeder erst seit 12.09.2026.
             'slam': Slamstatus.verfuegbar(settings.PIPELINE_PYTHON,

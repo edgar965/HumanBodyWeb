@@ -45,6 +45,13 @@
     margin-left: auto;
 }
 
+/* ZUGEKLAPPT IST DER GRUNDZUSTAND (12.09.2026, Edgar: „auf-/zuklappen der
+ * Ordner funktioniert nicht, die sollen zugeklappt sein standard"): Diese
+ * Datei kannte nur `.open`; das `display: none` lieferten die Seiten selbst
+ * (`viewer_seitenleiste.css`, `animationsseite.css`). Die Effekte-Seite tat
+ * das nicht — der Pfeil drehte sich, die Liste blieb offen. Der Grundzustand
+ * gehoert zur Komponente (`Kategoriekasten`), nicht zu jeder Seite. */
+.anim-category-body { display: none; }
 .anim-category.open .anim-category-body { display: block; }
 
 /* Ein Eintrag im Animationsbaum (28.08.2026, Befund `doppelcode`).

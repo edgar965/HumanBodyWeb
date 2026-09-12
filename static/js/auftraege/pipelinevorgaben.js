@@ -89,6 +89,29 @@ export class Pipelinevorgaben {
             standard: { gemx_static_cam: true, gemx_smooth_sigma: 4.0, gemx_device: 'cuda' },
             max: { gemx_static_cam: true, gemx_smooth_sigma: 2.0, gemx_device: 'cuda' },
         },
+        smplx: {
+            // Koerper wie GEM; Finger und Gesicht kommen je Bild und werden
+            // ueber die Zeit geglaettet — „Maximum" glaettet weniger, nicht besser.
+            // Koerper GEM, Gesicht SMPLest-X, Handgelenk aus der Hand in allen
+            // drei; „Schnell" nimmt die Haende aus SMPLest-X (spart den GEM-X-Lauf,
+            // ca. 150 s) und laesst das Netz-Video weg (ca. 30 s je 300 Bilder).
+            // Standard und Maximum: Haende aus GEM-X (offene Finger, weniger Zittern).
+            fast: { smplx_static_cam: true, smplx_smooth_sigma: 4.0, smplx_joint_limits: true,
+                    smplx_hand_sigma: 4.0, smplx_face_sigma: 4.0, smplx_device: 'cuda',
+                    smplx_body_source: 'gem', smplx_hands_source: 'smplestx',
+                    smplx_face_source: 'smplestx', smplx_wrist_source: 'hand',
+                    smplx_ground: true, smplx_video: false },
+            standard: { smplx_static_cam: true, smplx_smooth_sigma: 2.0, smplx_joint_limits: true,
+                        smplx_hand_sigma: 2.0, smplx_face_sigma: 2.0, smplx_device: 'cuda',
+                        smplx_body_source: 'gem', smplx_hands_source: 'gemx',
+                        smplx_face_source: 'smplestx', smplx_wrist_source: 'hand',
+                        smplx_ground: true, smplx_video: true },
+            max: { smplx_static_cam: true, smplx_smooth_sigma: 1.0, smplx_joint_limits: true,
+                   smplx_hand_sigma: 1.0, smplx_face_sigma: 1.0, smplx_device: 'cuda',
+                   smplx_body_source: 'gem', smplx_hands_source: 'gemx',
+                   smplx_face_source: 'smplestx', smplx_wrist_source: 'hand',
+                   smplx_ground: true, smplx_video: true },
+        },
         hybrid: {
             fast: {
                 hybrid_body_device: 'cuda', hybrid_gvhmr_static_cam: true,

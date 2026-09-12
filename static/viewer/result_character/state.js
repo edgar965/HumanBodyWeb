@@ -37,7 +37,7 @@ export const state = {
     currentPresetName: '',
     bvhClipDuration: 0,
     skeletonHelper: null,
-    rigVisible: false,
+    rigVisible: true,               // Vorgabe AN (12.09.2026): das Rig auf allen Ansichten
     clothesVisible: true,
     enableFootCorrection: false,
     deltaNormMode: undefined,

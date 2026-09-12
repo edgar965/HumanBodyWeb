@@ -52,12 +52,22 @@ export class Pipelinefelder {
         gemx: [
             ['static_cam', 'bool'], ['smooth_sigma', 'float'], ['device', 'text'],
         ],
+        // SMPL-X, die eigene Pipeline (12.09.2026): Koerper wie GEM, dazu die
+        // Glaettung der je Bild geschaetzten Finger und des Gesichts.
+        smplx: [
+            ['static_cam', 'bool'], ['smooth_sigma', 'float'],
+            ['joint_limits', 'bool'], ['hand_sigma', 'float'],
+            ['face_sigma', 'float'], ['device', 'text'],
+            ['body_source', 'text'], ['hands_source', 'text'],
+            ['face_source', 'text'], ['wrist_source', 'text'],
+            ['ground', 'bool'], ['video', 'bool'],
+        ],
     };
 
     /** Vorsilbe der Feldnamen im Formular. */
     static VORSILBE = {
         v4: 'v4_', gvhmr: 'gvhmr_', wham: 'wham_', prompthmr: 'prompthmr_',
-        gem: 'gem_', duomo: 'duomo_', gemx: 'gemx_',
+        gem: 'gem_', duomo: 'duomo_', gemx: 'gemx_', smplx: 'smplx_',
     };
 
     /** Ankreuzgruppe "Koerperteile" der v4-Pipeline. */
