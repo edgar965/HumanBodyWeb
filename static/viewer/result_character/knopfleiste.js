@@ -3,6 +3,7 @@ import '../gemeinsam/registrierung.js';
 import { el, Ziehgriff } from './bauteile.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Videofenster } from './videofenster.js';
+import { GarmentcodeStuecke } from './garmentcode_stuecke.js';
 
 /**
  * Knopfleiste der Ergebnisseite — Umschalter für Modell, Rig, Kleidung, Haar,
@@ -89,6 +90,7 @@ export class Knopfleiste {
                             ...Object.values(state.garmentMeshes)]) {
             if (netz) netz.visible = state.clothesVisible;
         }
+        GarmentcodeStuecke.sichtbar(state.clothesVisible);
     }
 
     // ------------------------------------------------------- Größe der Ansicht

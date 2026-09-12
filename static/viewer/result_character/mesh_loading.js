@@ -99,6 +99,8 @@ export async function reloadBodyMesh(newType) {
     fn.removeAllCloth();
     fn.removeAllGarments();
     fn.removeHair();
+    // GarmentCode-Stücke hängen am alten Skelett (`GarmentcodeStuecke`).
+    fn.removeAllGarmentcode?.();
 
     try {
         await Promise.all([

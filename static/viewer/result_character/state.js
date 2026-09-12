@@ -51,6 +51,9 @@ export const state = {
     // Garment meshes
     garmentMeshes: {},
 
+    // GarmentCode-Stücke der Vorgabe, als Gruppe (`garmentcode_stuecke.js`).
+    garmentcodeGroup: null,
+
     // Current morph/meta state
     currentMorphs: {},
     currentMeta: {},

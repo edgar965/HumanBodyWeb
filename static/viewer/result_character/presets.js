@@ -1,20 +1,29 @@
 /**
  * Result Character — Preset loading and switching.
+ *
+ * Eine Vorgabe führt je Verfahren eine Liste: `cloth` (Schnittvorlagen),
+ * `garments` (MakeHuman, per Server angepasst) und seit dem 08.09.2026
+ * `garmentcode` (fertig drapierte Stücke, `GarmentcodeStuecke`). Die dritte
+ * fehlte hier bis zum 12.09.2026 (Edgar: „im unteren 3D Modellbereich werden
+ * keine GarmentCode zum Modell geladen") — wie zuvor im Theatre und im BVH
+ * Studio (11.09.2026).
  */
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { sharedState, applyHairColor } from '../character_core.js';
 import { Zeiten } from '../gemeinsam/zeiten.js';
+import { GarmentcodeStuecke } from './garmentcode_stuecke.js';
 
 const ss = sharedState;
 
 /**
- * Load cloth, hair, and garments from a preset data object.
+ * Load cloth, hair, garments and GarmentCode pieces from a preset data object.
  */
 export function loadPresetClothAndHair(preset) {
     fn.removeAllCloth();
     fn.removeAllGarments();
     fn.removeHair();
+    GarmentcodeStuecke.entfernen();
 
     // 1. Load cloth templates
     if (preset.cloth && preset.cloth.length > 0) {
@@ -62,6 +71,9 @@ export function loadPresetClothAndHair(preset) {
         };
         setTimeout(() => loadGarments(), Zeiten.NACHLADEN_MS);
     }
+
+    // 4. GarmentCode-Stücke: fertige Rig-Dateien, ans Skelett gebunden.
+    GarmentcodeStuecke.laden(preset.garmentcode || []);
 }
 
 /**
@@ -106,6 +118,7 @@ export async function reloadForPreset(presetName) {
             fn.removeAllCloth();
             fn.removeAllGarments();
             fn.removeHair();
+            GarmentcodeStuecke.entfernen();
         }
 
         // Send morphs + meta to server
