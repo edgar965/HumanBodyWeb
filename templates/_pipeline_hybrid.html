@@ -1,0 +1,148 @@
+{# Hybrid (SMPL Body + MocapNET v4 Face+Hands) — 12.09.2026 aus upload_v4.html ausgegliedert (761 Zeilen); Reihenfolge und Klappe: `Pipelinekarten`, `kartenklappe.js`. #}
+                <!-- Hybrid (SMPL Body + MocapNET v4 Face+Hands) -->
+                <div class="pipeline-card {% if not status_3d.hybrid %}disabled{% endif %}"
+                     data-pipeline="hybrid" id="hybridCard">
+                    <div class="pipeline-card-header">
+                        <label class="pipeline-card-wahl">
+                            <input type="radio" name="pipeline" value="hybrid_gvhmr"
+                                id="hybridRadio"
+                                {% if default_3d == 'hybrid_gvhmr' or default_3d == 'hybrid_prompthmr' %}checked{% endif %}
+                                {% if not status_3d.hybrid %}disabled{% endif %}>
+                            <span class="pipeline-card-title">Hybrid <span class="hb-color-e67e22">&starf;</span></span>
+                            <span class="pipeline-card-desc">
+                                SMPL Body (GPU) + MocapNET v4 H&auml;nde (CPU) + SMPLest-X Gesicht
+                            </span>
+                        </label>
+                        <button type="button" class="pipeline-card-klappe" aria-expanded="false"
+                                aria-controls="settings-hybrid" title="Einstellungen ein- oder ausklappen">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="pipeline-settings" id="settings-hybrid">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" data-vorgabe="hybrid:fast">Schnell</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="hybrid:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="hybrid:max">Maximum</button>
+                        </div>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Body-Backend <span
+                                     class="setting-hint">SMPL-Pipeline f&uuml;r K&ouml;rper-Tracking (GPU)</span></div>
+                                <select name="hybrid_body_backend" id="hybridBodyBackend">
+                                    <option value="gvhmr" {% if not status_3d.gvhmr %}disabled{% endif %}>GVHMR</option>
+                                    <option value="prompthmr"
+                                         {% if not status_3d.prompthmr %}disabled{% endif %}>PromptHMR</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">H&auml;nde-Quelle <span
+                                     class="setting-hint">Finger-Tracking Methode</span></div>
+                                <select name="hybrid_hands_source" id="hybridHandsSource">
+                                    <option value="v4" selected>MocapNET v4 (Finger-Detail)</option>
+                                    <option value="smplest_x">SMPLest-X (konsistenter)</option>
+                                    <option value="none">Keine (neutral)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Gesicht-Quelle <span
+                                     class="setting-hint">Gesichtsausdruck-Tracking</span></div>
+                                <select name="hybrid_face_source" id="hybridFaceSource">
+                                    <option value="smplest_x" selected>SMPLest-X Expression</option>
+                                    <option value="v4">MocapNET v4 (noisy)</option>
+                                    <option value="none">Keine (neutral)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- GVHMR body settings -->
+                        <div id="hybrid-gvhmr-settings" class="hybrid-body-settings">
+                            <div class="settings-list untergruppe-blau"
+                                >
+                                <div class="setting-item">
+                                    <div class="setting-label">Statische Kamera <span
+                                         class="setting-hint">Keine Kamerabahn (sonst SimpleVO)</span></div>
+                                    <input type="checkbox" name="hybrid_gvhmr_static_cam"
+                                         {% if defaults.hybrid_gvhmr_static_cam %}checked{% endif %}>
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">Brennweite (mm) <span
+                                         class="setting-hint">0 = automatisch</span></div>
+                                    <input type="number" name="hybrid_gvhmr_focal_length_mm" min="0" max="200"
+                                         step="1" value="{{ defaults.hybrid_gvhmr_focal_length_mm }}">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- PromptHMR body settings -->
+                        <div id="hybrid-prompthmr-settings" class="hybrid-body-settings hb-versteckt">
+                            <div class="settings-list untergruppe-orange"
+                                >
+                                <div class="setting-item">
+                                    <div class="setting-label">Statische Kamera <span
+                                         class="setting-hint">Empfohlen f&uuml;r feste Kamera</span></div>
+                                    <input type="checkbox" name="hybrid_prompthmr_static_cam"
+                                         {% if defaults.hybrid_prompthmr_static_cam %}checked{% endif %}>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Shared body device -->
+                        <div class="settings-list abstand-8">
+                            <div class="setting-item">
+                                <div class="setting-label">Body Device <span
+                                     class="setting-hint">GPU (CUDA) f&uuml;r SMPL-Pipeline</span></div>
+                                <select name="hybrid_body_device">
+                                    <option value="cuda"
+                                         {% if defaults.hybrid_body_device == 'cuda' %}selected{% endif %}>CUDA
+                                              (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.hybrid_body_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- v4 Face+Hands settings -->
+                        <div class="abschnitt-abgesetzt">
+                            <div class="abschnittstitel-orange">Face+Hands (MocapNET v4, CPU)</div>
+                            <div class="settings-row">
+                                <label>Parts:</label>
+                                <div class="checkbox-group">
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="face"
+                                         {% if defaults.hybrid_v4_face %}checked{% endif %}> Face</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="hands"
+                                         {% if defaults.hybrid_v4_hands %}checked{% endif %}> Hands</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="mouth"
+                                         {% if defaults.hybrid_v4_mouth %}checked{% endif %}> Mouth</label>
+                                    <label><input type="checkbox" name="hybrid_v4_parts" value="eyes"
+                                         {% if defaults.hybrid_v4_eyes %}checked{% endif %}> Eyes</label>
+                                </div>
+                            </div>
+                            <div class="settings-list abstand-6">
+                                <div class="setting-item">
+                                    <div class="setting-label">IK Iterations <span
+                                         class="setting-hint">Gradient-Descent Iterationen pro Frame</span></div>
+                                    <input type="number" name="hybrid_v4_hcd_iterations" min="1" max="100" step="1"
+                                         value="{{ defaults.hybrid_v4_hcd_iterations }}">
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">IK Epochs <span
+                                         class="setting-hint">Epochen pro Frame</span></div>
+                                    <input type="number" name="hybrid_v4_hcd_epochs" min="1" max="200" step="1"
+                                         value="{{ defaults.hybrid_v4_hcd_epochs }}">
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">MP Detection <span
+                                         class="setting-hint">MediaPipe Pose-Erkennung (0.0&ndash;1.0)</span></div>
+                                    <input type="number" name="hybrid_v4_mp_detection" min="0" max="1" step="0.05"
+                                         value="{{ defaults.hybrid_v4_mp_detection }}">
+                                </div>
+                                <div class="setting-item">
+                                    <div class="setting-label">MP Tracking <span
+                                         class="setting-hint">MediaPipe Tracking (0.0&ndash;1.0)</span></div>
+                                    <input type="number" name="hybrid_v4_mp_tracking" min="0" max="1" step="0.05"
+                                         value="{{ defaults.hybrid_v4_mp_tracking }}">
+                                </div>
+                            </div>
+                        </div>
+                        <p class="setting-note"><i
+                             class="fas fa-info-circle"></i> Body (GPU) und Face+Hands (CPU) laufen parallel &mdash;
+                                  Gesamtdauer = l&auml;ngere der beiden Pipelines.</p>
+                    </div>
+                </div>

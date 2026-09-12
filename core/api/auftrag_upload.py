@@ -20,6 +20,7 @@ from django.shortcuts import render, redirect
 from ..api.pipelineparameter import Pipelineparameter
 from ..daten.dateigroessen import Dateigroessen
 from ..dienste.auftragsanlage import Auftragsanlage
+from ..dienste.pipelinekarten import Pipelinekarten
 from ..dienste.systemzustand import Systemzustand
 from ..dienste.videoauswahl import Videoauswahl
 from ..models import BVHJob, AppSettings
@@ -135,6 +136,8 @@ class Uploadseiten:
         return render(request, 'upload_v4.html', {
             'v4_jobs': auftraege,
             'pipelines': Uploadseiten._pipelinewahl(PIPELINES_3D),
+            # Kartenfolge nach Rang (Hilfe -> Video to BVH), 12.09.2026.
+            'pipeline_karten': Pipelinekarten.vorlagen(),
             'status_3d': Uploadseiten._pipelines_verfuegbar(),
             'default_3d': vorgabe,
             'defaults': Pipelineparameter.vorgaben(gespeichert),

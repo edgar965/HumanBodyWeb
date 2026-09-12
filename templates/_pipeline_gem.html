@@ -1,0 +1,70 @@
+{# GEM-SMPL (NVIDIA, ICCV 2025) — 12.09.2026 aus upload_v4.html ausgegliedert (761 Zeilen); Reihenfolge und Klappe: `Pipelinekarten`, `kartenklappe.js`. #}
+                <!-- GEM-SMPL (NVIDIA, ICCV 2025) — 11.09.2026 -->
+                <div class="pipeline-card {% if not status_3d.gem %}disabled{% endif %}"
+                     data-pipeline="gem">
+                    <div class="pipeline-card-header">
+                        <label class="pipeline-card-wahl">
+                            <input type="radio" name="pipeline" value="gem"
+                                {% if default_3d == 'gem' %}checked{% endif %}
+                                {% if not status_3d.gem %}disabled{% endif %}>
+                            <span class="pipeline-card-title">GEM-SMPL</span>
+                            <span class="pipeline-card-desc">
+                                {% if status_3d.gem %}SMPL, GPU, NVIDIA ICCV 2025, 35 mm &mdash; EMDB-2 Weltraum 74 mm
+                                     (GVHMR 111){% else %}nicht installiert{% endif %}
+                            </span>
+                        </label>
+                        <button type="button" class="pipeline-card-klappe" aria-expanded="false"
+                                aria-controls="settings-gem" title="Einstellungen ein- oder ausklappen">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="pipeline-settings" id="settings-gem">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" data-vorgabe="gem:fast">Schnell</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="gem:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="gem:max">Maximum</button>
+                        </div>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Statische Kamera <span
+                                     class="setting-hint">Das Video-Demo verfolgt die Kamera nicht; der Schalter setzt
+                                          nur die Kamera-Maske des Modells</span></div>
+                                <input type="checkbox" name="gem_static_cam"
+                                     {% if defaults.gem_static_cam %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Temporal Smoothing <span
+                                     class="setting-hint">Gaussian-Gl&auml;ttung (0=aus, 2=Standard,
+                                          4+=stark)</span></div>
+                                <input type="number" name="gem_smooth_sigma" min="0" max="10" step="0.5"
+                                     value="{{ defaults.gem_smooth_sigma }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Joint Limits <span
+                                     class="setting-hint">Anatomische Grenzen f&uuml;r
+                                          Knie/Ellbogen/H&uuml;fte</span></div>
+                                <input type="checkbox" name="gem_joint_limits"
+                                     {% if defaults.gem_joint_limits %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Demo-Videos rendern <span
+                                     class="setting-hint">Kamera-, Welt- und Vergleichsvideo (Open3D, dauert
+                                          l&auml;nger)</span></div>
+                                <input type="checkbox" name="gem_render"
+                                     {% if defaults.gem_render %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Device <span
+                                     class="setting-hint">GPU (CUDA), braucht ~3 GB VRAM plus 5,5 GB
+                                          Checkpoint</span></div>
+                                <select name="gem_device">
+                                    <option value="cuda"
+                                         {% if defaults.gem_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.gem_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>

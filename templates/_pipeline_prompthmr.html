@@ -1,0 +1,51 @@
+{# PromptHMR — 12.09.2026 aus upload_v4.html ausgegliedert (761 Zeilen); Reihenfolge und Klappe: `Pipelinekarten`, `kartenklappe.js`. #}
+                <!-- PromptHMR -->
+                <div class="pipeline-card {% if not status_3d.prompthmr %}disabled{% endif %}"
+                     data-pipeline="prompthmr">
+                    <div class="pipeline-card-header">
+                        <label class="pipeline-card-wahl">
+                            <input type="radio" name="pipeline" value="prompthmr"
+                                {% if default_3d == 'prompthmr' %}checked{% endif %}
+                                {% if not status_3d.prompthmr %}disabled{% endif %}>
+                            <span class="pipeline-card-title">PromptHMR</span>
+                            <span class="pipeline-card-desc">
+                                {% if status_3d.prompthmr %}SMPL, GPU, CVPR 2025, 37 mm{% else %}nicht
+                                     installiert{% endif %}
+                            </span>
+                        </label>
+                        <button type="button" class="pipeline-card-klappe" aria-expanded="false"
+                                aria-controls="settings-prompthmr" title="Einstellungen ein- oder ausklappen">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="pipeline-settings" id="settings-prompthmr">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" data-vorgabe="prompthmr:fast">Schnell</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="prompthmr:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="prompthmr:max">Maximum</button>
+                        </div>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Statische Kamera <span
+                                     class="setting-hint">Empfohlen f&uuml;r feste Kamera &mdash; deaktivieren bei
+                                          Handy-Videos mit Bewegung: Kamerabahn per DROID-SLAM + Metric3D
+                                          ({% if status_3d.slam %}installiert{% else %}nicht installiert{% endif %})</span></div>
+                                <input type="checkbox" name="prompthmr_static_cam"
+                                     {% if defaults.prompthmr_static_cam %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Device <span
+                                     class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB
+                                          VRAM</span></div>
+                                <select name="prompthmr_device">
+                                    <option value="cuda"
+                                         {% if defaults.prompthmr_device == 'cuda' %}selected{% endif %}>CUDA
+                                              (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.prompthmr_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>

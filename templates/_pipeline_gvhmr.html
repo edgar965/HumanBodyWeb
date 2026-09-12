@@ -1,0 +1,99 @@
+{# GVHMR — 12.09.2026 aus upload_v4.html ausgegliedert (761 Zeilen); Reihenfolge und Klappe: `Pipelinekarten`, `kartenklappe.js`. #}
+                <!-- GVHMR -->
+                <div class="pipeline-card {% if not status_3d.gvhmr %}disabled{% endif %}" data-pipeline="gvhmr">
+                    <div class="pipeline-card-header">
+                        <label class="pipeline-card-wahl">
+                            <input type="radio" name="pipeline" value="gvhmr"
+                                {% if default_3d == 'gvhmr' %}checked{% endif %}
+                                {% if not status_3d.gvhmr %}disabled{% endif %}>
+                            <span class="pipeline-card-title">GVHMR <span class="hb-gut">&starf;</span></span>
+                            <span class="pipeline-card-desc">
+                                {% if status_3d.gvhmr %}SMPL, GPU, beste Qualit&auml;t, 36 mm{% else %}nicht
+                                     installiert{% endif %}
+                            </span>
+                        </label>
+                        <button type="button" class="pipeline-card-klappe" aria-expanded="false"
+                                aria-controls="settings-gvhmr" title="Einstellungen ein- oder ausklappen">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="pipeline-settings" id="settings-gvhmr">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" data-vorgabe="gvhmr:fast">Schnell</button>
+                            <button type="button" class="preset-btn active"
+                                 data-vorgabe="gvhmr:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="gvhmr:max">Maximum</button>
+                        </div>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">Statische Kamera <span
+                                     class="setting-hint">Keine Kamerabahn &mdash; empfohlen f&uuml;r feste
+                                          Kamera; ohne H&auml;kchen SimpleVO (oder DPVO, siehe unten)</span></div>
+                                <input type="checkbox" name="gvhmr_static_cam"
+                                     {% if defaults.gvhmr_static_cam %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Brennweite (mm) <span
+                                     class="setting-hint">Kamera-Brennweite in mm &mdash; 0 = automatische
+                                          Sch&auml;tzung (Standard: 26mm)</span></div>
+                                <input type="number" name="gvhmr_focal_length_mm" min="0" max="200" step="1"
+                                     value="{{ defaults.gvhmr_focal_length_mm }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Temporal Smoothing <span
+                                     class="setting-hint">Gaussian-Gl&auml;ttung (0=aus, 2=Standard,
+                                          4+=stark)</span></div>
+                                <input type="number" name="gvhmr_smooth_sigma" min="0" max="10" step="0.5"
+                                     value="{{ defaults.gvhmr_smooth_sigma }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Joint Limits <span
+                                     class="setting-hint">Anatomische Grenzen f&uuml;r
+                                          Knie/Ellbogen/H&uuml;fte</span></div>
+                                <input type="checkbox" name="gvhmr_joint_limits"
+                                     {% if defaults.gvhmr_joint_limits %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">DPVO <span
+                                     class="setting-hint">DPVO statt SimpleVO (genauer, langsamer, braucht mehr
+                                          VRAM) &mdash; {% if status_3d.slam %}installiert{% else %}nicht installiert{% endif %}</span></div>
+                                <input type="checkbox" name="gvhmr_use_dpvo"
+                                     {% if defaults.gvhmr_use_dpvo %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Verbose <span
+                                     class="setting-hint">Debug-Visualisierungen ausgeben</span></div>
+                                <input type="checkbox" name="gvhmr_verbose"
+                                     {% if defaults.gvhmr_verbose %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Demo-Videos rendern <span
+                                     class="setting-hint">Kamera-, Welt- und Vergleichsvideo (pytorch3d) &mdash; bei
+                                          langen Videos die H&auml;lfte der Laufzeit</span></div>
+                                <input type="checkbox" name="gvhmr_render"
+                                     {% if defaults.gvhmr_render %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Device <span
+                                     class="setting-hint">GPU (CUDA) ist ~5x schneller, braucht 6&ndash;8 GB
+                                          VRAM</span></div>
+                                <select name="gvhmr_device">
+                                    <option value="cuda"
+                                         {% if defaults.gvhmr_device == 'cuda' %}selected{% endif %}>CUDA (GPU)</option>
+                                    <option value="cpu"
+                                         {% if defaults.gvhmr_device == 'cpu' %}selected{% endif %}>CPU</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Video-Output Verzeichnis <span
+                                     class="setting-hint">Ordner f&uuml;r SMPL-Render-Videos (In-Camera Overlay, Global
+                                          3D, Combined)</span></div>
+                                <input class="pfadfeld" type="text" name="gvhmr_video_output_dir"
+                                     value="{{ defaults.gvhmr_video_output_dir }}">
+                            </div>
+                        </div>
+                        <p class="setting-note"><i
+                             class="fas fa-info-circle"></i> GVHMR erzeugt automatisch 3 Render-Videos: In-Camera SMPL
+                                  Overlay, Global 3D Ansicht, und Combined.</p>
+                    </div>
+                </div>

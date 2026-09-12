@@ -2,8 +2,10 @@ import { Pipelinevorgaben } from './pipelinevorgaben.js';
 
 /**
  * Pipelinewahl — die Karten oben auf der Seite: welche Pipeline gewaehlt ist,
- * welcher Einstellungsblock sichtbar ist, welches Koerper-Backend der
- * Hybrid-Zweig nutzt, und die drei Qualitaetsknoepfe je Karte.
+ * welches Koerper-Backend der Hybrid-Zweig nutzt, und die drei
+ * Qualitaetsknoepfe je Karte. Auf- und Zuklappen der Einstellungen ist seit
+ * dem 12.09.2026 Sache von `Kartenklappe` — bis dahin klappte die Wahl den
+ * Block auf, und beim Laden stand die zuletzt gewaehlte Karte offen.
  *
  * Herausgeloest aus templates/upload_v4.html (Umbau 16.08.2026):
  * `updatePipelineCards`, `updateHybridBackend` und die 15 `onclick`-Attribute
@@ -44,7 +46,7 @@ export class Pipelinewahl {
                || '';
     }
 
-    /** Gewaehlte Karte hervorheben, ihren Einstellungsblock einblenden. */
+    /** Gewaehlte Karte hervorheben (blauer Rahmen); aufgeklappt wird nichts. */
     kartenZeigen() {
         const wert = this.gewaehlt();
         const istHybrid = wert.startsWith(Pipelinewahl.HYBRID + '_');
@@ -53,8 +55,6 @@ export class Pipelinewahl {
             const passt = (istHybrid && name === Pipelinewahl.HYBRID)
                           || name === wert;
             karte.classList.toggle('selected', passt);
-            document.getElementById('settings-' + name)
-                ?.classList.toggle('visible', passt);
         });
     }
 

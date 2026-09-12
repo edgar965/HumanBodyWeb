@@ -1,0 +1,87 @@
+/* Pipelinekarten der 3D-Uploadseite (/process/VideoToBVH/).
+   12.09.2026 aus dem <style>-Block von upload_v4.html herausgeloest, als die
+   Karten ihre Klappe bekamen (Edgar: "alle sollen per default eingeklappt
+   sein"). Waehlen (Radio, blauer Rahmen) und Aufklappen (Pfeil rechts im
+   Kopf) sind seither getrennt; `kartenklappe.js` schaltet `.visible`. */
+
+/* Pipeline cards */
+.pipeline-cards { display: flex; flex-direction: column; gap: 8px; }
+.pipeline-card {
+    border: 2px solid var(--border, #333);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.pipeline-card.selected { border-color: #3498db; }
+.pipeline-card.disabled { opacity: 0.5; }
+.pipeline-card-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; cursor: pointer;
+    background: var(--bg-card, #1e1e2e);
+}
+.pipeline-card-header input[type="radio"] { margin: 0; flex-shrink: 0; }
+.pipeline-card-title { font-weight: 600; font-size: 1.05rem; white-space: nowrap; }
+.pipeline-card-desc { color: var(--text-muted, #888); font-size: 0.85rem; margin-left: auto; }
+
+/* Pipeline settings */
+.pipeline-settings {
+    display: none;
+    padding: 10px 16px 14px;
+    background: var(--bg-darker, #181825);
+    border-top: 1px solid var(--border, #333);
+}
+.pipeline-settings.visible { display: block; }
+.settings-list { display: flex; flex-direction: column; gap: 8px; }
+.setting-item { display: flex; align-items: center; gap: 12px; min-height: 34px; }
+.setting-label { flex: 1; font-size: 0.9rem; color: var(--text, #ddd); }
+.setting-hint { display: block; font-size: 0.75rem; color: var(--text-muted, #888); margin-top: 1px; }
+.setting-item input[type="number"] { width: 100px; text-align: right; }
+.setting-item input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; }
+.setting-item select { min-width: 120px; }
+.setting-item input[type="text"] { padding: 4px 8px; }
+.setting-note { margin: 8px 0 0; font-size: 0.8rem; color: var(--text-muted, #888); }
+.settings-row { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.settings-row label { font-size: 0.85rem; color: var(--text-muted, #aaa); min-width: 160px; white-space: nowrap; }
+.checkbox-group { display: flex; gap: 12px; flex-wrap: wrap; }
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted, #aaa);
+    cursor: pointer;
+    min-width: auto;
+}
+
+/* Quality preset bar */
+.preset-bar {
+    display: flex; gap: 4px; margin-bottom: 10px;
+    background: var(--bg-card, #1e1e2e); border-radius: 8px; padding: 3px;
+    border: 1px solid var(--border, #333);
+}
+.preset-btn {
+    flex: 1; padding: 6px 12px; border: none; border-radius: 6px;
+    background: transparent; color: var(--text-muted, #888);
+    font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+.preset-btn:hover { background: rgba(52,152,219,0.15); color: var(--text, #ddd); }
+.preset-btn.active { background: #3498db; color: #fff; }
+
+/* Kopf: links die Wahl (Radio, Titel, Beschreibung), rechts die Klappe.
+   Der Knopf steht NEBEN dem <label>, nicht darin — ein Klick auf ihn soll
+   die Pipeline nicht waehlen. */
+.pipeline-card-header { padding: 0; align-items: stretch; cursor: default; }
+.pipeline-card-wahl {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; cursor: pointer;
+}
+.pipeline-card-wahl input[type="radio"] { margin: 0; flex-shrink: 0; }
+.pipeline-card-klappe {
+    border: none; border-left: 1px solid var(--border, #333);
+    background: transparent; color: var(--text-muted, #888);
+    padding: 0 16px; cursor: pointer; font-size: 0.9rem;
+}
+.pipeline-card-klappe:hover,
+.pipeline-card-klappe:focus-visible { color: var(--text, #ddd); background: rgba(52,152,219,0.12); }
+.pipeline-card-klappe i { transition: transform 0.2s; }
+.pipeline-card-klappe[aria-expanded="true"] i { transform: rotate(180deg); }

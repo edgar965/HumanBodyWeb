@@ -1,0 +1,92 @@
+{# MocapNET v4 — 12.09.2026 aus upload_v4.html ausgegliedert (761 Zeilen); Reihenfolge und Klappe: `Pipelinekarten`, `kartenklappe.js`. #}
+                <!-- MocapNET v4 -->
+                <div class="pipeline-card {% if not status_3d.v4 %}disabled{% endif %}" data-pipeline="v4">
+                    <div class="pipeline-card-header">
+                        <label class="pipeline-card-wahl">
+                            <input type="radio" name="pipeline" value="v4"
+                                {% if default_3d == 'v4' %}checked{% endif %}
+                                {% if not status_3d.v4 %}disabled{% endif %}>
+                            <span class="pipeline-card-title">MocapNET v4</span>
+                            <span class="pipeline-card-desc">
+                                {% if status_3d.v4 %}ONNX, CPU, 165 Bones, ~75 mm{% else %}nicht verf&uuml;gbar{% endif %}
+                            </span>
+                        </label>
+                        <button type="button" class="pipeline-card-klappe" aria-expanded="false"
+                                aria-controls="settings-v4" title="Einstellungen ein- oder ausklappen">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="pipeline-settings" id="settings-v4">
+                        <div class="preset-bar">
+                            <button type="button" class="preset-btn" data-vorgabe="v4:fast">Schnell</button>
+                            <button type="button" class="preset-btn active" data-vorgabe="v4:standard">Standard</button>
+                            <button type="button" class="preset-btn" data-vorgabe="v4:max">Maximum</button>
+                        </div>
+                        <div class="settings-row">
+                            <label>Body Parts:</label>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" name="v4_parts" value="body"
+                                     {% if defaults.v4_body %}checked{% endif %}> Body</label>
+                                <label><input type="checkbox" name="v4_parts" value="hands"
+                                     {% if defaults.v4_hands %}checked{% endif %}> Hands</label>
+                                <label><input type="checkbox" name="v4_parts" value="face"
+                                     {% if defaults.v4_face %}checked{% endif %}> Face</label>
+                                <label><input type="checkbox" name="v4_parts" value="mouth"
+                                     {% if defaults.v4_mouth %}checked{% endif %}> Mouth</label>
+                                <label><input type="checkbox" name="v4_parts" value="eyes"
+                                     {% if defaults.v4_eyes %}checked{% endif %}> Eyes</label>
+                            </div>
+                        </div>
+                        <div class="settings-list">
+                            <div class="setting-item">
+                                <div class="setting-label">IK Iterations <span
+                                     class="setting-hint">Gradient-Descent Iterationen pro Frame
+                                          (1&ndash;100)</span></div>
+                                <input type="number" name="v4_hcd_iterations" min="1" max="100" step="1"
+                                     value="{{ defaults.v4_hcd_iterations }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">IK Epochs <span
+                                     class="setting-hint">Epochen pro Frame &mdash; h&ouml;her = genauer, langsamer
+                                          (1&ndash;200)</span></div>
+                                <input type="number" name="v4_hcd_epochs" min="1" max="200" step="1"
+                                     value="{{ defaults.v4_hcd_epochs }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">IK Learning Rate <span
+                                     class="setting-hint">Schrittweite f&uuml;r IK-Optimierung
+                                          (0.0001&ndash;0.1)</span></div>
+                                <input type="number" name="v4_hcd_learning_rate" min="0.0001" max="0.1" step="0.0001"
+                                     value="{{ defaults.v4_hcd_learning_rate }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Smoothing Cutoff <span
+                                     class="setting-hint">Butterworth Tiefpass-Frequenz in Hz &mdash; niedriger =
+                                          glatter (0.5&ndash;15.0)</span></div>
+                                <input type="number" name="v4_smoothing_cutoff" min="0.5" max="15" step="0.5"
+                                     value="{{ defaults.v4_smoothing_cutoff }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Smoothing Sampling <span
+                                     class="setting-hint">Abtastrate in Hz f&uuml;r Butterworth-Filter &mdash; sollte
+                                          FPS entsprechen (10&ndash;120)</span></div>
+                                <input type="number" name="v4_smoothing_sampling" min="10" max="120" step="1"
+                                     value="{{ defaults.v4_smoothing_sampling }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">MP Detection Confidence <span
+                                     class="setting-hint">MediaPipe Pose-Erkennung Schwellwert
+                                          (0.0&ndash;1.0)</span></div>
+                                <input type="number" name="v4_mp_detection" min="0" max="1" step="0.05"
+                                     value="{{ defaults.v4_mp_detection }}">
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">MP Tracking Confidence <span
+                                     class="setting-hint">MediaPipe Tracking-Schwellwert &mdash; niedriger = stabileres
+                                          Tracking (0.0&ndash;1.0)</span></div>
+                                <input type="number" name="v4_mp_tracking" min="0" max="1" step="0.05"
+                                     value="{{ defaults.v4_mp_tracking }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
