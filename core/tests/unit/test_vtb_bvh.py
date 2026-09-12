@@ -15,24 +15,14 @@ Kamera bleibt. Gemessen an einem Skelett bekannter Groesse (1,7 m in
 1080er-Video war die Ueberlagerung ein Fleck von einem Prozent
 Bildhoehe — sichtbar, aber offenbar nie als Fehler gemeldet.
 
-DIE HARTE ZUSICHERUNG
-=====================
-Statt Pixelzahlen zu vergleichen, prueft `DasBecken`, wo das
-Wurzelgelenk landet: Es MUSS im Kameraraum genau auf `transl` liegen,
-das ist die Bedeutung dieses Wertes. Dieser Vergleich haengt an keiner
-Bildgroesse und an keiner Brennweite.
-
-WAS DIESE PRUEFUNG NICHT IST
-============================
-Sie startet GVHMR nicht. Ob die Posenschaetzung stimmt, sagt sie nicht
-— sie sagt, dass die Umrechnung dazwischen stimmt.
+Die Lage des Beckens prueft seit dem 12.09.2026 `test_vtb_becken.py` —
+mit der Messung, die die alte Zusicherung hier widerlegt hat.
 
 BDD - GEGEBEN / DANN
 ====================
     DasSkelett          ... haelt 24 Gelenke in einer Ordnung
     DieGelenkgrenzen    ... fangen ein ueberstrecktes Knie ein
     DieGlaettung        ... springt nicht am Vorzeichenwechsel
-    DasBecken           ... landet auf der Kameraverschiebung
     DieBildpunkte       ... liegen im Bild und folgen der Bewegung
 """
 import unittest
@@ -157,74 +147,6 @@ class DieGlaettung(unittest.TestCase):
         spur = np.zeros((4, 4))
         aus = Drehungsglaettung.normieren(spur, np)
         self.assertFalse(np.any(np.isnan(aus)))
-
-
-class DasBecken(unittest.TestCase):
-    u"""Die Wurzel muss im Kameraraum auf `transl` liegen."""
-
-    #: Die Ruhehoehe des Beckens im BVH — sie ist keine Bewegung.
-    RUHEHOEHE_CM = 35.070
-
-    def _bvh(self, verschiebung):
-        u"""Ein BVH-Datensatz ohne Drehungen, nur mit Wurzelbewegung."""
-        anzahl = len(verschiebung)
-        offsets = np.array(Smplskelett.OFFSETS, dtype=np.float64)
-        positionen = np.tile(offsets, (anzahl, 1, 1))
-        # So baut `Bvhbau`: Y und Z gespiegelt, in Zentimetern.
-        gespiegelt = verschiebung.copy()
-        gespiegelt[:, 1] *= -1
-        gespiegelt[:, 2] *= -1
-        positionen[:, 0] += gespiegelt * Smplskelett.CM_JE_M
-        return {'names': list(Smplskelett.NAMEN),
-                'parents': list(Smplskelett.ELTERN),
-                'offsets': offsets, 'order': 'zyx',
-                'rotations': np.zeros((anzahl, 24, 3)),
-                'positions': positionen}
-
-    def _kameraraum(self, bvh, bild):
-        from scipy.spatial.transform import Rotation
-        eltern = [int(p) for p in bvh['parents']]
-        offsets = np.asarray(bvh['offsets'], dtype=np.float64)
-        welt = Bildpunkte._vorwaerts(bvh, bild, eltern, offsets, Rotation, np)
-        rueck = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=np.float64)
-        return ((rueck @ (welt - offsets[0]).T).T / Smplskelett.CM_JE_M)
-
-    def test_die_wurzel_sitzt_auf_der_verschiebung(self):
-        verschiebung = np.array([[0.0, 0.0, 3.0], [0.5, -0.2, 2.5],
-                                 [-0.3, 0.1, 4.0]])
-        bvh = self._bvh(verschiebung)
-        for bild in range(len(verschiebung)):
-            with self.subTest(bild=bild):
-                becken = self._kameraraum(bvh, bild)[0]
-                self.assertTrue(np.allclose(becken, verschiebung[bild],
-                                            atol=1e-6),
-                                '%s != %s' % (becken, verschiebung[bild]))
-
-    def test_ohne_abzug_haengt_das_skelett_zu_hoch(self):
-        u"""Die Gegenprobe: Wer den Ruheoffset nicht abzieht, irrt um 35 cm."""
-        verschiebung = np.array([[0.0, 0.0, 3.0]])
-        bvh = self._bvh(verschiebung)
-        from scipy.spatial.transform import Rotation
-        eltern = [int(p) for p in bvh['parents']]
-        offsets = np.asarray(bvh['offsets'], dtype=np.float64)
-        welt = Bildpunkte._vorwaerts(bvh, 0, eltern, offsets, Rotation, np)
-        rueck = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=np.float64)
-        ohne_abzug = (rueck @ welt[0]) / Smplskelett.CM_JE_M
-        abstand = float(np.max(np.abs(ohne_abzug - verschiebung[0])))
-        self.assertAlmostEqual(abstand, self.RUHEHOEHE_CM / 100, places=3)
-
-    def test_die_kette_ist_zusammenhaengend(self):
-        u"""Kein Gelenk liegt weiter als einen Knochen vom Elter weg."""
-        bvh = self._bvh(np.array([[0.0, 0.0, 3.0]]))
-        punkte = self._kameraraum(bvh, 0)
-        for kind, elter in enumerate(Smplskelett.ELTERN):
-            if elter < 0:
-                continue
-            laenge = float(np.linalg.norm(punkte[kind] - punkte[elter]))
-            soll = float(np.linalg.norm(
-                np.array(Smplskelett.OFFSETS[kind]))) / 100
-            with self.subTest(gelenk=Smplskelett.NAMEN[kind]):
-                self.assertAlmostEqual(laenge, soll, places=6)
 
 
 class DieBildpunkte(unittest.TestCase):

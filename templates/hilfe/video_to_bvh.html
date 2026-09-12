@@ -1,0 +1,162 @@
+{% extends "dokuseite.html" %}
+{% load fassung %}
+{% comment %}
+Hilfe -> Video to BVH: alle Pipelines in einer sortierbaren Tabelle.
+
+Auftrag Edgar (12.09.2026): „tabellarischer Vergleich aller, mit Vor,
+Nachteile und Ranking … die tabelle nach djangoBase vorbild, mit sortierbaren
+Spalten". Die Tabelle traegt `db-tabelle sortable` und einen
+`data-sort-key`; `tabellen_auto.js` (djangoBase, ueber die Middleware auf
+jeder Seite) bindet Sortierung und ziehbare Spaltenbreiten von selbst.
+Zahlenzellen tragen `data-sort` mit dem Rohwert, die Listen-Spalten sind
+mit `data-sort-aus` von der Sortierung ausgenommen.
+
+Die Daten kommen aus `core/dienste/pipelinevergleich*.py` — eine Zahl im
+HTML ist eine Behauptung, die niemand mehr nachrechnet.
+{% endcomment %}
+
+{% block title %}Video to BVH — Vergleich{% endblock %}
+{% block topbar_title %}Video to BVH — alle Pipelines im Vergleich{% endblock %}
+
+{% block extra_head %}{{ block.super }}
+<link rel="stylesheet" href="{% fassungspfad 'css/hilfe_video_to_bvh.css' %}">
+{% endblock %}
+
+{% block doku_inhalt %}
+<div class="doku-seite vtb-breit">
+
+  <h1>Video to BVH: {{ eintraege|length }} Pipelines im Vergleich</h1>
+
+  <p>
+    Alle Pipelines der Seite „Process Videos" liefen auf demselben Video:
+    <strong>{{ messung.video }}</strong> ({{ messung.beschreibung }},
+    {{ messung.bilder }} Bilder, {{ messung.fps }} fps, {{ messung.masse }}),
+    gestartet am {{ messung.datum }} über die Web-API — genau der Weg des
+    Knopfs „Process". Die Zahlen unten sind Messwerte dieses einen Laufs;
+    ohne Ground Truth sind sie eine <em>Einordnung</em>, keine
+    Genauigkeitsaussage. Wo eine Pipeline nicht lief, steht das da,
+    statt einer leeren Zelle.
+  </p>
+
+  <div class="info-box info-box-purple">
+    <strong>Rang</strong> — nach fünf Kriterien in dieser Reihenfolge:
+    läuft überhaupt; Deckung mit dem Video (Abstand zu ViTPose);
+    Ruhe der Pose; Vollständigkeit (Hände, Gesicht); Dauer.
+    Die Begründung je Pipeline steht unter der Tabelle.
+  </div>
+
+  <div class="db-tabelle-rahmen">
+  <table class="db-tabelle sortable vtb-tabelle" id="vtbVergleich"
+         data-sort-key="hilfe-video-to-bvh">
+    <thead>
+      <tr>
+        <th class="num">Rang</th>
+        <th>Pipeline</th>
+        <th>Art</th>
+        <th>Verfahren</th>
+        <th class="num">Gelenke</th>
+        <th>Hände</th>
+        <th>Gesicht</th>
+        <th>Kamera</th>
+        <th class="num">Dauer (s)</th>
+        <th class="num">Δ ViTPose (px)</th>
+        <th class="num">Ruhe Wurzel</th>
+        <th class="num">Ruhe Pose</th>
+        <th class="num">Boden (cm)</th>
+        <th>Zustand</th>
+        <th data-sort-aus="1">Vorteile</th>
+        <th data-sort-aus="1">Nachteile</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in eintraege %}
+      <tr class="vtb-zeile-{{ e.zustand }}">
+        <td class="num" data-sort="{{ e.rang }}"><span class="vtb-rang">{{ e.rang }}</span></td>
+        <td data-sort="{{ e.name }}">
+          <span class="vtb-name">{{ e.name }}</span><br>
+          <span class="vtb-kennung">{{ e.schluessel }}</span>
+        </td>
+        <td>{{ e.art }}</td>
+        <td class="vtb-verfahren">{{ e.verfahren }}</td>
+        <td class="num" data-sort="{{ e.gelenke|default_if_none:'' }}">
+          {% if e.gelenke is not None %}{{ e.gelenke }}{% else %}<span class="vtb-fehlt">–</span>{% endif %}
+        </td>
+        <td data-sort="{% if e.haende %}1{% else %}0{% endif %}">{% if e.haende %}ja{% else %}nein{% endif %}</td>
+        <td data-sort="{% if e.gesicht %}1{% else %}0{% endif %}">{% if e.gesicht %}ja{% else %}nein{% endif %}</td>
+        <td>{{ e.kamera }}</td>
+        <td class="num" data-sort="{{ e.dauer_s|default_if_none:'' }}">
+          {% if e.dauer_s is not None %}{{ e.dauer_s }}{% else %}<span class="vtb-fehlt">nicht gemessen</span>{% endif %}
+        </td>
+        <td class="num" data-sort="{{ e.ueberlagerung_px|default_if_none:'' }}">
+          {% if e.ueberlagerung_px is not None %}{{ e.ueberlagerung_px|floatformat:1 }}{% else %}<span class="vtb-fehlt">nicht gemessen</span>{% endif %}
+        </td>
+        <td class="num" data-sort="{{ e.ruhe_wurzel|default_if_none:'' }}">
+          {% if e.ruhe_wurzel is not None %}{{ e.ruhe_wurzel|floatformat:2 }}{% else %}<span class="vtb-fehlt">nicht gemessen</span>{% endif %}
+        </td>
+        <td class="num" data-sort="{{ e.ruhe_pose|default_if_none:'' }}">
+          {% if e.ruhe_pose is not None %}{{ e.ruhe_pose|floatformat:2 }}{% else %}<span class="vtb-fehlt">nicht gemessen</span>{% endif %}
+        </td>
+        <td class="num" data-sort="{{ e.boden_cm|default_if_none:'' }}">
+          {% if e.boden_cm is not None %}{{ e.boden_cm }}{% else %}<span class="vtb-fehlt">nicht gemessen</span>{% endif %}
+        </td>
+        <td data-sort="{{ e.zustand }}">
+          <span class="vtb-zustand vtb-zustand-{{ e.zustand }}">{{ e.zustand_text }}</span>
+        </td>
+        <td><ul class="vtb-liste">{% for v in e.vorteile %}<li>{{ v }}</li>{% endfor %}</ul></td>
+        <td><ul class="vtb-liste">{% for n in e.nachteile %}<li>{{ n }}</li>{% endfor %}</ul></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Was die Spalten bedeuten</h2>
+  <dl class="vtb-spalten">
+    {% for name, bedeutung in spalten %}
+    <dt>{{ name }}</dt>
+    <dd>{{ bedeutung }}</dd>
+    {% endfor %}
+  </dl>
+
+  <h2>Rangfolge und Begründung</h2>
+  <ol class="vtb-karten">
+    {% for e in eintraege %}
+    <li class="vtb-karte vtb-karte-{{ e.zustand }}">
+      <h3><span class="vtb-rang">{{ e.rang }}</span> {{ e.name }}
+        <span class="vtb-zustand vtb-zustand-{{ e.zustand }}">{{ e.zustand_text }}</span></h3>
+      <p>{{ e.begruendung }}</p>
+      {% if e.zustand_grund %}<p class="vtb-grund">{{ e.zustand_grund }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+
+  {% if nicht_gelaufen %}
+  <h2>Was nicht lief</h2>
+  <ul>
+    {% for e in nicht_gelaufen %}
+    <li><strong>{{ e.name }}</strong> — {{ e.zustand_grund }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <h2>Wie gemessen wurde</h2>
+  <p>
+    Ergebnisse, Vergleich und Overlay-Videos liegen unter
+    <code>{{ messung.ordner }}</code>: je Pipeline <code>&lt;pipeline&gt;.bvh</code>
+    und <code>&lt;pipeline&gt;_skelett.mp4</code> (das BVH-Skelett auf dem
+    Originalvideo, projiziert mit der Kamera des jeweiligen Laufs), dazu
+    <code>vergleich.md</code>, <code>ueberlagerung.json</code> und
+    <code>ergebnis.json</code>. Die Skripte stehen in
+    <code>{{ messung.skripte }}</code>.
+  </p>
+  <p>
+    Der Abstand zu ViTPose ist selbst eine Schätzung gegen eine Schätzung:
+    ViTPose (COCO-17, aus der GVHMR-Vorstufe) ist die beste 2D-Referenz,
+    die ohne Handarbeit vorliegt, aber keine Ground Truth. Für DuoMo, das
+    in einem Weltraum rechnet, wurde eine statische Kamera über alle Bilder
+    angepasst; sein Wert enthält deshalb auch die Abweichung seiner
+    Weltbahn von der Kamerabahn.
+  </p>
+
+</div>
+{% endblock %}

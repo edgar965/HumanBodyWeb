@@ -70,6 +70,10 @@ EINSTELLUNGEN_EXTRA = [
 # Die Adressen kommen aus `core/urls_hilfe.py` und stehen in `ui/urls.py`
 # VOR dem djangoBase-include.
 HILFE_EXTRA = [
+    # Vergleich aller Video-nach-BVH-Pipelines (Edgar, 12.09.2026:
+    # „auf einer neuen Seite Hilfe - Video to BVH").
+    {'label': 'Video to BVH', 'icon': 'bi-camera-video',
+     'url': '/hilfe/video-to-bvh/', 'aktiv': 'hilfe_video_to_bvh'},
     {'label': 'Kleidung', 'icon': 'bi-bag', 'untermenu': [
         {'label': 'Allgemein', 'icon': 'bi-list-columns',
          'url': '/hilfe/kleidung/', 'aktiv': 'hilfe_kleidung'},

@@ -21,6 +21,7 @@ urlpatterns = [
     # ist Vorsorge fuer den Tag, an dem djangoBase ein Auffangmuster
     # bekommt; dann waere der eigene Pfad sonst stumm verdeckt.
     path('hilfe/kleidung/', include('core.urls_hilfe')),
+    path('hilfe/video-to-bvh/', include('core.urls_hilfe_video')),
     path('hilfe/', include('djangobase.urls')),
     # Statik unter einer Adresse, die die Fassung TRAEGT
     # (`/statik/v-<zahl>/viewer/...`). Der Grund steht in

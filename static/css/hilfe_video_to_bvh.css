@@ -1,0 +1,130 @@
+/* Hilfe -> Video to BVH: die Vergleichstabelle aller Pipelines.
+ *
+ * Eigene Datei statt Inline-Stilen, wie `hilfe_kleidung.css`. Die Tabelle
+ * selbst ist eine djangoBase-Tabelle (`db-tabelle sortable`, Stile aus
+ * djangobase/css/tabellen.css); hier stehen nur die Zugaben dieser Seite.
+ */
+
+/* Volle Breite: sechzehn Spalten passen nicht in 960 px. */
+.doku-seite.vtb-breit {
+    max-width: none;
+}
+
+.vtb-tabelle td {
+    vertical-align: top;
+    font-size: 0.9em;
+}
+
+.vtb-tabelle .vtb-verfahren {
+    min-width: 14em;
+}
+
+.vtb-name {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.vtb-kennung {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85em;
+    opacity: 0.75;
+}
+
+.vtb-liste {
+    margin: 0;
+    padding-left: 1.1em;
+    min-width: 14em;
+}
+
+.vtb-liste li {
+    margin-bottom: 0.2em;
+}
+
+.vtb-fehlt {
+    opacity: 0.6;
+    font-style: italic;
+    white-space: nowrap;
+}
+
+.vtb-rang {
+    display: inline-block;
+    min-width: 1.9em;
+    padding: 0.05em 0.4em;
+    border-radius: 1em;
+    text-align: center;
+    font-weight: 700;
+    color: #fff;
+    background: #4a6fa5;
+}
+
+/* Zustand als Farbe UND Wort — die Farbe allein reicht nicht. */
+.vtb-zustand {
+    display: inline-block;
+    padding: 0.1em 0.5em;
+    border-radius: 0.4em;
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+
+/* Mitteltoene, die auf dem dunklen UND dem hellen Grund lesbar bleiben
+ * (gesehen 12.09.2026: dunkles Gruen auf dunklem Grund war unlesbar). */
+.vtb-zustand-laeuft {
+    background: rgba(63, 185, 80, 0.2);
+    color: #3fb950;
+    border: 1px solid rgba(63, 185, 80, 0.5);
+}
+
+.vtb-zustand-teilweise {
+    background: rgba(227, 179, 65, 0.2);
+    color: #d29922;
+    border: 1px solid rgba(227, 179, 65, 0.5);
+}
+
+.vtb-zustand-gescheitert {
+    background: rgba(248, 81, 73, 0.18);
+    color: #f85149;
+    border: 1px solid rgba(248, 81, 73, 0.5);
+}
+
+.vtb-zeile-gescheitert td {
+    opacity: 0.8;
+}
+
+.vtb-spalten dt {
+    font-weight: 600;
+    margin-top: 0.5em;
+}
+
+.vtb-spalten dd {
+    margin-left: 1.5em;
+}
+
+.vtb-karten {
+    padding-left: 0;
+    list-style: none;
+}
+
+.vtb-karte {
+    margin: 0.6em 0;
+    padding: 0.6em 0.9em;
+    border-left: 4px solid #4a6fa5;
+    background: rgba(74, 111, 165, 0.06);
+}
+
+.vtb-karte h3 {
+    margin: 0 0 0.3em 0;
+    font-size: 1.05em;
+}
+
+.vtb-karte-gescheitert {
+    border-left-color: #a32222;
+}
+
+.vtb-karte-teilweise {
+    border-left-color: #d69614;
+}
+
+.vtb-grund {
+    font-size: 0.92em;
+    opacity: 0.85;
+}
