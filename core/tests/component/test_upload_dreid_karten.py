@@ -59,6 +59,18 @@ class DieSeite(TestCase):
         self.assertEqual(len(radios), len(Pipelinekarten.reihenfolge()))
         self.assertEqual(sum('checked' in r for r in radios), 1)
 
+    def test_die_vorgewaehlte_karte_ist_rang_eins_mit_seiner_bestellung(self):
+        u"""Edgar (12.09.2026): „stelle die Seite so um, dass das Beste
+        herauskommt" — ohne Umstellen laeuft der Rang-1-Lauf: Hybrid auf
+        GEM-SMPL mit GEM-X-Fingern und SMPLest-X-Gesicht. Vorher stand die
+        Karte auf GVHMR + v4-Haenden (Rang 6), vorgewaehlt war v4 (Rang 8)."""
+        radio = next(r for r in self.RADIO.findall(self.text) if 'checked' in r)
+        self.assertIn('id="hybridRadio"', radio)
+        self.assertRegex(self.text, r'<option value="gem"[^>]*\bselected\b[^>]*>GEM-SMPL')
+        self.assertRegex(self.text, r'<option value="gemx"[^>]*\bselected\b[^>]*>GEM-X')
+        self.assertRegex(self.text, r'<option value="smplest_x"[^>]*\bselected\b[^>]*>SMPLest-X \(Ausdr')
+        self.assertNotRegex(self.text, r'<option value="gvhmr"[^>]*\bselected')
+
     def test_jede_karte_traegt_ihr_rang_abzeichen_vor_dem_titel(self):
         u"""Edgar (12.09.2026): „mach das Rang abzeichen" — der Rang wie auf
         der Hilfeseite, ohne Rang ein Strich, in der Wahl vor dem Titel."""

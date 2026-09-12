@@ -118,10 +118,15 @@ class AppSettings(LifterEinstellungen):
     )
 
     # --- Video to BVH: 3D Pipeline defaults ---
+    # Vorgabe = Rang 1 des Vergleichs (Hilfe -> Video to BVH): Hybrid auf
+    # GEM-SMPL mit GEM-X-Fingern (Edgar, 12.09.2026: „stelle die Seite so
+    # um, dass das Beste herauskommt"). Migration 0041 zieht gespeicherte
+    # Altvorgaben (v4, hybrid_gvhmr) nach.
     lifter_3d_default = models.CharField(
-        max_length=20, default='hybrid_gvhmr',
+        max_length=20, default='hybrid_gem',
         help_text="Default 3D pipeline "
-        "(v4/gvhmr/wham/prompthmr/gem/hybrid_gvhmr/hybrid_prompthmr)",
+        "(v4/gvhmr/wham/prompthmr/gem/gemx/duomo/hybrid_gvhmr/"
+        "hybrid_prompthmr/hybrid_gem)",
     )
 
     # --- Video to BVH: MocapNET v4 settings ---

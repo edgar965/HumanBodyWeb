@@ -50,7 +50,7 @@ class DreiDEinstellungen(Einstellungsseite):
         ('lifter_3d_default',
          ('v4', 'gvhmr', 'wham', 'prompthmr', 'gem', 'duomo', 'gemx',
           'hybrid_gvhmr', 'hybrid_prompthmr', 'hybrid_gem'),
-         'hybrid_gvhmr'),
+         'hybrid_gem'),
         ('smpl_device', ('cuda', 'cpu'), 'cuda'),
     )
 

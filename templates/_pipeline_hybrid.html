@@ -11,7 +11,8 @@
                             {% include "_pipeline_rang.html" %}
                             <span class="pipeline-card-title">Hybrid <span class="hb-color-e67e22">&starf;</span></span>
                             <span class="pipeline-card-desc">
-                                SMPL Body (GPU) + MocapNET v4 H&auml;nde (CPU) + SMPLest-X Gesicht
+                                GEM-SMPL K&ouml;rper (GPU) + GEM-X Finger (GPU) + SMPLest-X Gesicht &mdash; Rang 1;
+                                K&ouml;rper und H&auml;nde w&auml;hlbar
                             </span>
                         </label>
                         <button type="button" class="pipeline-card-klappe" aria-expanded="false"
@@ -31,8 +32,10 @@
                                 <div class="setting-label">Body-Backend <span
                                      class="setting-hint">SMPL-Pipeline f&uuml;r K&ouml;rper-Tracking (GPU)</span></div>
                                 <select name="hybrid_body_backend" id="hybridBodyBackend">
+                                    {% comment %}Vorgewaehlt ist GEM-SMPL (Rang 1) — GVHMR/PromptHMR nur, wenn
+                                    die gespeicherte Vorgabe sie nennt oder GEM fehlt (12.09.2026).{% endcomment %}
                                     <option value="gvhmr" {% if not status_3d.gvhmr %}disabled{% endif %}
-                                         {% if default_3d == 'hybrid_gvhmr' %}selected{% endif %}>GVHMR</option>
+                                         {% if default_3d == 'hybrid_gvhmr' or not status_3d.gem %}selected{% endif %}>GVHMR</option>
                                     <option value="prompthmr"
                                          {% if not status_3d.prompthmr %}disabled{% endif %}
                                          {% if default_3d == 'hybrid_prompthmr' %}selected{% endif %}>PromptHMR</option>
@@ -41,16 +44,16 @@
                                     aufsetzen&ldquo;).{% endcomment %}
                                     <option value="gem"
                                          {% if not status_3d.gem %}disabled{% endif %}
-                                         {% if default_3d == 'hybrid_gem' %}selected{% endif %}>GEM-SMPL (Rang 1)</option>
+                                         {% if status_3d.gem and default_3d != 'hybrid_gvhmr' and default_3d != 'hybrid_prompthmr' %}selected{% endif %}>GEM-SMPL (Rang 1)</option>
                                 </select>
                             </div>
                             <div class="setting-item">
                                 <div class="setting-label">H&auml;nde-Quelle <span
                                      class="setting-hint">Finger-Tracking Methode</span></div>
                                 <select name="hybrid_hands_source" id="hybridHandsSource">
-                                    <option value="v4" selected>MocapNET v4 (Finger-Detail)</option>
-                                    <option value="gemx" {% if not status_3d.gemx %}disabled{% endif %}>GEM-X
-                                         (NVIDIA, 38 Fingergelenke, eigener GPU-Lauf nach dem K&ouml;rper)</option>
+                                    <option value="v4" {% if not status_3d.gemx %}selected{% endif %}>MocapNET v4 (Finger-Detail)</option>
+                                    <option value="gemx" {% if not status_3d.gemx %}disabled{% else %}selected{% endif %}>GEM-X
+                                         (NVIDIA, 38 Fingergelenke, eigener GPU-Lauf nach dem K&ouml;rper &mdash; Rang 1)</option>
                                     <option value="smplest_x">SMPLest-X (konsistenter)</option>
                                     <option value="none">Keine (neutral)</option>
                                 </select>
