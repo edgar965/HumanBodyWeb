@@ -15,9 +15,22 @@ setzt den gemessenen Kiefer ein (`Kieferspuren`); der Mischer legt sie über
 das Gemisch — nur die Knochen, die die Ausdrücke wirklich stellen, und ohne
 den Gesichtsfilter, der hier die falsche Quelle träfe. Fehlt die Datei,
 bleibt das Gesicht, wie es war (neutral).
+
+DIE AUSDRÜCKE SIND DELTAS, DER PLAYER WILL LAGEN (Befund Edgar, 12.09.2026,
+„das Gesicht ist zermatscht"): `blendshapes_to_bone_tracks` liefert je
+Knochen eine kleine Drehung RELATIV zur Ruhelage — so hat sie
+`photo_to_3d/facial_expression.js` immer benutzt (`ruhe.multiply(drehung)`).
+Der Retarget-Player setzt eine Spur aber ABSOLUT auf `bone.quaternion`
+(`QuaternionKeyframeTrack`), wie die Körper- und Fingerspuren des Motors.
+Gemessen am ersten SMPL-X-Lauf: DEF-jaw Ruhelage 89°, Spur 2°; DEF-lip.T.L
+Ruhelage 175°, Spur 1° — jeder Gesichtsknochen sprang auf die Einheitslage.
+Deshalb legt `auf_ruhelage` vor dem Mischen die Ruhelage des DEF-Skeletts
+unter jede Spur: `q = ruhe · delta`, dieselbe Reihenfolge wie im JS.
 """
 import json
 import os
+
+import numpy as np
 
 
 class Gesichtsspuren:
@@ -40,13 +53,37 @@ class Gesichtsspuren:
             daten = json.load(datei)
         return Gesichtsformen.blendshapes_to_bone_tracks(daten)
 
+    @staticmethod
+    def auf_ruhelage(spuren, geometrie):
+        u"""Aus Deltas absolute Lagen: je Knochen und Bild `ruhe · delta`.
+
+        `geometrie` ist das Zielskelett (`SkeletonGeometry`); ein Knochen,
+        den es dort nicht gibt, bleibt, wie er ist — der Mischer lässt ihn
+        ohnehin fallen. Ändert `spuren` an Ort und Stelle und gibt sie zurück.
+        """
+        from humanbody_core.quaternion import Quat
+        for name, werte in spuren.tracks.items():
+            knochen = geometrie.bones.get(name)
+            if knochen is None:
+                continue
+            deltas = np.asarray(werte, dtype=float).reshape(-1, 4)
+            lagen = Quat.mul_reihe(knochen.rest_local_quat, deltas)
+            spuren.tracks[name] = lagen.reshape(-1).tolist()
+        return spuren
+
     @classmethod
-    def mischen(cls, gemischt, ausdruecke):
+    def mischen(cls, gemischt, ausdruecke, geometrie=None):
         u"""`gemischt` (Körper + v4 [+ Finger]) mit den Gesichtsknochen aus
-        `ausdruecke` — beides `Bewegungsspuren`."""
+        `ausdruecke` — beides `Bewegungsspuren`. Die Ausdrücke sind Deltas
+        und werden hier auf die Ruhelage des DEF-Skeletts gelegt (`geometrie`,
+        sonst `Skelettgeometrie.holen()`)."""
         if ausdruecke is None or ausdruecke.frame_count == 0:
             return gemischt
         from humanbody_core.skeleton.retarget.zusammenfuegen import merge_retargeted
-        knochen = {name.replace('.', '_') for name in ausdruecke.tracks}
-        return merge_retargeted(gemischt, ausdruecke, face_hand_bones=knochen,
+        if geometrie is None:
+            from .skelettgeometrie import Skelettgeometrie
+            geometrie = Skelettgeometrie.holen()
+        lagen = cls.auf_ruhelage(ausdruecke, geometrie)
+        knochen = {name.replace('.', '_') for name in lagen.tracks}
+        return merge_retargeted(gemischt, lagen, face_hand_bones=knochen,
                                 filter_noisy_face=False)

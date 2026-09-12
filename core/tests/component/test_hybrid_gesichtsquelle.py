@@ -85,7 +85,15 @@ class DieGesichtsquelle(TestCase):
         with Pruefablage.ordner() as ordner:
             tracks = self._antwort(ordner, 'smplest_x', mit_ausdruecken=True)
         self.assertNotEqual(tracks['DEF-jaw'], V4 * 2)
-        self.assertAlmostEqual(tracks['DEF-jaw'][0], 0.1987, places=3)   # sin(0,4/2)
+        # Seit dem Abend des 12.09.2026 liegt die Spur auf der Ruhelage des
+        # DEF-Kiefers (89°); der Ausdruck ist das Delta dazu: 0,4 rad um X.
+        import math
+        import numpy as np
+        from core.dienste.skelettgeometrie import Skelettgeometrie
+        from humanbody_core.quaternion import Quat
+        ruhe = Skelettgeometrie.holen().bones['DEF-jaw'].rest_local_quat
+        delta = Quat.mul(Quat.inv(ruhe), np.asarray(tracks['DEF-jaw'][:4]))
+        self.assertAlmostEqual(2.0 * math.asin(delta[0]), 0.4, places=3)
         self.assertIn('DEF-brow.T.L', tracks)
 
     def test_smplest_x_ohne_datei_bleibt_neutral(self):
