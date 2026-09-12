@@ -244,12 +244,15 @@ class Retargetendpunkte:
         fusskorrektur = (request.GET.get('foot_correction', '').lower()
                          in ('1', 'true'))
         # Die v4-BVH wird IMMER umgesetzt (sie fuehrt die Handknochen); beim
-        # Mischen fallen die unruhigen v4-Gesichtsknochen heraus.
+        # Mischen fallen die unruhigen v4-Gesichtsknochen heraus — ausser der
+        # Auftrag hat sie als Gesicht-Quelle bestellt (`face_source: v4`; bis
+        # zum 12.09.2026 war die Wahl wirkungslos gleich „Keine").
+        gesicht_v4 = (job.pipeline_params or {}).get('face_source') == 'v4'
         gemischt = SkeletonRigify.merge_retargeted_clips(
             Retargetdaten(job.bvh_file, groesse,
                           foot_correction=fusskorrektur).holen(),
             Retargetdaten(job.bvh_file_face, groesse).holen(),
-            filter_noisy_face=True)
+            filter_noisy_face=not gesicht_v4)
         # Finger aus der dritten Quelle (GEM-X, 12.09.2026) ueber das Gemisch.
         if job.bvh_file_hands:
             gemischt = Handspuren.mischen(
