@@ -7,6 +7,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { closeAllDialogs } from './utils.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
 import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
+import { Ursprungsfix } from './ursprungsfix.js';
 
 export function closeAllMenus() {
     document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
@@ -96,6 +97,7 @@ export function handleMenuAction(action) {
         case 'reset-lighting': fn.resetLighting(); break;
         case 'reset-camera': fn.resetCamera(); break;
         case 'anim-ground-fix': fn.applyGroundLevelFix(); break;
+        case 'anim-origin-fix': Ursprungsfix.anwenden(); break;
         case 'anim-save': fn.openSaveAnimDialog(); break;
     }
 }

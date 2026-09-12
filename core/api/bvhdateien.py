@@ -10,6 +10,7 @@ Methoden von `Bvhauslieferung`. Die Wurzel der Bibliothek wurde dreimal aus
 
 import os
 import re
+from pathlib import Path
 
 from django.conf import settings
 from django.http import JsonResponse, FileResponse, HttpResponseNotFound
@@ -18,6 +19,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from ..daten.pfadvergleich import Pfadvergleich
 from ..daten.anfragerumpf import Anfragerumpf
+from ..dienste.bvhablage import Bvhablage
 
 
 class Bvhauslieferung:
@@ -56,10 +58,12 @@ class Bvhauslieferung:
                                              '%s.bvh' % name))
         if not Pfadvergleich.liegt_unter(pfad, wurzel):
             return HttpResponseNotFound('Invalid path')
-        if not os.path.isfile(pfad):
+        # Auch nach einer Ordner-Umbenennung (12.09.2026, `Bvhablage.finden`).
+        gefunden = Bvhablage.finden(Path(pfad))
+        if not gefunden:
             return HttpResponseNotFound('BVH not found: %s/%s'
                                         % (category, name))
-        return Bvhauslieferung._ausliefern(pfad, name)
+        return Bvhauslieferung._ausliefern(str(gefunden), name)
 
     @staticmethod
     @csrf_exempt

@@ -72,9 +72,11 @@ class Retargetendpunkte:
                                           / ('%s.bvh' % schluessel))
         if not geprueft:
             return HttpResponseNotFound('Invalid path: %s' % schluessel)
-        if not geprueft.is_file():
+        # Auch nach einer Ordner-Umbenennung (12.09.2026, `Bvhablage.finden`).
+        gefunden = Bvhablage.finden(geprueft)
+        if not gefunden:
             return HttpResponseNotFound('BVH not found: %s' % schluessel)
-        return str(geprueft)
+        return str(gefunden)
 
     @staticmethod
     def _auftragspfad(job_id):

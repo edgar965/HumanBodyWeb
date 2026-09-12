@@ -55,3 +55,32 @@ class Bvhablage:
         except PfadAbgelehnt as e:
             logger.warning('BVH-Pfad abgelehnt: %s', e)
             return None
+
+    @classmethod
+    def finden(cls, geprueft):
+        """Die Datei — oder dieselbe in einem anderen Kategorieordner.
+
+        EIN UMBENANNTER ORDNER LIESS JEDES PROJEKT STUMM (12.09.2026, Edgar:
+        „animation abspielen funktioniert nicht"): `Results` hiess seit 22:20
+        `A_Results`, das Studio-Projekt nannte seinen Clip weiter
+        `Results/00001_Dance1`, der Retarget antwortete 404, und die Figur
+        stand. Die Bibliothek bietet das Umbenennen selbst an
+        (`Bvhverwaltung._ordner_umbenennen`) — gespeicherte Projekte muessen
+        das ueberleben.
+
+        Nur zum LESEN: Liegt `<name>.bvh` in genau einem anderen Ordner, ist
+        das die Datei (mit Vermerk im Protokoll). In mehreren: `None`, denn
+        raten waere die falsche Bewegung ohne Fehler. Schreibende Endpunkte
+        (`bvhtext`, `sichern`) nehmen weiter nur den genannten Pfad.
+        """
+        if geprueft is None:
+            return None
+        if geprueft.is_file():
+            return geprueft
+        treffer = [ordner / geprueft.name for ordner in cls.wurzel().iterdir()
+                   if ordner.is_dir() and (ordner / geprueft.name).is_file()]
+        if len(treffer) != 1:
+            return None
+        logger.info('BVH %s/%s liegt jetzt unter %s', geprueft.parent.name,
+                    geprueft.name, treffer[0].parent.name)
+        return treffer[0]
