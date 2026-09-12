@@ -67,6 +67,9 @@ class Uploadseiten:
         auftrag = Auftragsanlage.anlegen(
             video, pipeline,
             parameter(request.POST, pipeline) if parameter else None)
+        # Das neue Video ist danach das gewaehlte (12.09.2026) — vorher
+        # blieb der Haken auf dem Video des letzten Pipelinestarts.
+        Videoauswahl.merken(auftrag)
         messages.success(request, 'Uploaded %s (%.1f fps).'
                                   % (video.name, auftrag.fps))
         return redirect(ziel)
