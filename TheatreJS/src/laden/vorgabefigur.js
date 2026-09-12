@@ -33,7 +33,7 @@ export class Vorgabefigur {
 
     /**
      * Figur laden und in die Szene setzen.
-     * @param {THREE.Scene} scene
+     * @param {import('three').Scene} scene
      * @param {Object} vorgabe
      * @param {string} name  Anzeigename fuer Theatre
      * @param {Object} lage  {x, angleichen, vorbildHoehe} aus dem Figurwahl-

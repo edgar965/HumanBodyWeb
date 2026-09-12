@@ -55,7 +55,8 @@ class Umaskelett:
 
     @classmethod
     def glb_pfad(cls, name=None):
-        u"""Die gueltige GLB — `name` aus dem Katalog, sonst aus dem Zeiger, sonst die juengste."""
+        u"""Die gueltige GLB — `name` aus dem Katalog, sonst aus dem Zeiger, sonst
+        die juengste."""
         katalog = str(settings.FIGUREN_KATALOG)
         ordner = os.path.join(katalog, cls.QUELLE)
         if name:
@@ -106,7 +107,8 @@ class Umaskelett:
 
     @classmethod
     def geometrie(cls, name=None):
-        u"""`SkeletonGeometry` fuer den Retarget-Motor, Achse +Y — der Figur `name`, sonst der gueltigen."""
+        u"""`SkeletonGeometry` fuer den Retarget-Motor, Achse +Y — der Figur `name`,
+        sonst der gueltigen."""
         return cls._laden(name)[2]
 
     @classmethod
@@ -122,7 +124,8 @@ class Umaskelett:
 
     @classmethod
     def _laden(cls, name=None):
-        u"""`(mtime, knochen, geometrie)` der Datei — aus dem Bestand oder frisch gelesen."""
+        u"""`(mtime, knochen, geometrie)` der Datei — aus dem Bestand oder frisch
+        gelesen."""
         pfad = cls.glb_pfad(name)
         mtime = os.path.getmtime(pfad)
         eintrag = cls._bestand.get(pfad)

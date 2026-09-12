@@ -116,8 +116,9 @@ class FussbeugungTest(SimpleTestCase):
         p = np.column_stack([np.zeros(y.size), y.ravel(), z.ravel()])
         h = 0.01
         q = b.beugen(p)
-        dy = p.copy(); dy[:, 1] += h
-        dz = p.copy(); dz[:, 2] += h
+        dy, dz = p.copy(), p.copy()
+        dy[:, 1] += h
+        dz[:, 2] += h
         jy = (b.beugen(dy) - q)[:, 1:3] / h
         jz = (b.beugen(dz) - q)[:, 1:3] / h
         det = jy[:, 0] * jz[:, 1] - jz[:, 0] * jy[:, 1]
@@ -166,8 +167,8 @@ class AbsatzblockTest(SimpleTestCase):
         }}}
 
     def test_klotz_und_platte_stehen_zwischen_sohle_und_boden(self):
-        punkte, dreiecke = Absatzblock(self._spez(), {'absatz_cm': 7.0,
-                                                       'plateau_cm': 4.0}).netz()
+        punkte, dreiecke = Absatzblock(
+            self._spez(), {'absatz_cm': 7.0, 'plateau_cm': 4.0}).netz()
         self.assertGreater(len(punkte), 8)
         self.assertGreater(len(dreiecke), 8)
         # Klotz und Platte reichen bis zum Boden (-Plateau); nichts

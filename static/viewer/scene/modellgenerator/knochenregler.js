@@ -10,14 +10,20 @@ import { fn } from '../../gemeinsam/registrierung.js';
 import { Modellbauzustand } from './zustand.js';
 import { Teilbindung } from './teilbindung.js';
 
-/** [Kennung, Eigenschaft, Vorgabe, Stellen, Baumeintrag auffrischen] */
+/**
+ * [Kennung, Eigenschaft, Vorgabe, Stellen, Baumeintrag auffrischen]
+ * @type {Array<[string, string, number, number, boolean]>}
+ */
 const SCHIEBER = [
     ['mg-bone-radius', 'radius', 0.03, 3, true],
     ['mg-bone-overlap', 'overlap', 0.5, 2, false],
     ['mg-axial-scale', 'axialScale', 1.0, 2, false],
 ];
 
-/** [Kennung, Eigenschaft, Vorgabe] — Ankreuzfelder. */
+/**
+ * [Kennung, Eigenschaft, Vorgabe] — Ankreuzfelder.
+ * @type {Array<[string, string, boolean]>}
+ */
 const SCHALTER = [
     ['mg-plane-doublesided', 'planeDoubleSided', true],
     ['mg-spiral-skirt', 'spiralSkirt', false],

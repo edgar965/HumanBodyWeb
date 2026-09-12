@@ -78,6 +78,7 @@ export class Mhkleidstueck {
         if (daten.fehler) throw new Error(daten.fehler);
         this.altesNetzWeg();
         const geometrie = Netzgeometrie.bauen(daten, THREE, null, false);
+        /** @type {THREE.Mesh|THREE.SkinnedMesh} */
         let netz = new THREE.Mesh(geometrie, this.werkstoff(daten));
         netz.name = this.schluessel;
         // An MakeHumans eigenes Rig binden — sonst bleibt der Stoff beim

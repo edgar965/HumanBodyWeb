@@ -32,7 +32,7 @@ export class Stoffabruf {
      * @param {Object} params Abfrageparameter (`region`, `offset`, …)
      * @param {Function} entfernen wird gerufen, SOBALD die Daten da sind —
      *     hier räumt die Seite ihr altes Stück weg
-     * @returns {Object|null} {daten, geometrie} — null bei Fehler
+     * @returns {Promise<Object|null>} {daten, geometrie} — null bei Fehler
      */
     static async netz(params, entfernen) {
         const frage = Object.entries(params)

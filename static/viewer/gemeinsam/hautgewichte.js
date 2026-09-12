@@ -101,9 +101,9 @@ export class Hautgewichte {
      * `viewer/hair.js`) — mit der stillen Falle, dass ein FEHLENDES Gewicht
      * (alle vier 0) das Teil im Ursprung zusammenfallen lässt.
      *
-     * @param {THREE.BufferGeometry} geometrie
+     * @param {import('three').BufferGeometry} geometrie
      * @param {number} knochen Index im Skelett
-     * @param {typeof THREE.BufferAttribute} Attribut
+     * @param {typeof import('three').BufferAttribute} Attribut
      */
     static anEinenKnochen(geometrie, knochen, Attribut) {
         const punkte = geometrie.attributes.position.count;

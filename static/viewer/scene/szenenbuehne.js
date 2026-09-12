@@ -58,7 +58,7 @@ export class Szenenbuehne {
         // Während des Ziehens darf die Kamera nicht mitdrehen.
         werkzeug.addEventListener('dragging-changed', ereignis => {
             state.controls.enabled = !ereignis.value;
-            state.transformDragging = ereignis.value;
+            state.transformDragging = Boolean(ereignis.value);
         });
         werkzeug.addEventListener('objectChange', () => {
             fn.updateCharacterListUI();

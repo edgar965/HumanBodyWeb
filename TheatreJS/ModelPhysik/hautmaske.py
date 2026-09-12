@@ -162,7 +162,7 @@ class Hautmaske:
         spalten = np.concatenate([okT, okT, okT])
         B = csr_matrix((np.ones(len(zeilen), dtype=np.int8), (zeilen, spalten)),
                        shape=(n, nT))
-        R = identity(n, dtype=np.int8, format='csr') + nachbarn
+        R = identity(n, dtype='int8', format='csr') + nachbarn
         R = R + R @ nachbarn
         C = (R @ B).tocsr()
         C.sum_duplicates()

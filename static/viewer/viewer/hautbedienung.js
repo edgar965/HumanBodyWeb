@@ -9,7 +9,10 @@ import { getSkinMat, syncSkinUI } from './scene_settings.js';
  */
 export class Hautbedienung {
 
-    /** Regler: Kennung, Materialfeld, Vorgabestellung in Prozent. */
+    /**
+     * Regler: Kennung, Materialfeld, Vorgabestellung in Prozent.
+     * @type {Array<[string, string, number]>}
+     */
     static REGLER = [
         ['skin-roughness-viewer', 'roughness', 55],
         ['skin-metalness-viewer', 'metalness', 0],

@@ -175,12 +175,14 @@ class LbsProbe:
 
     def scheiben_bestimmen(self):
         u"""Die Messscheiben werden EINMAL in der Ruhelage bestimmt."""
-        print('Netz %d Punkte, davon Arm links %d' % (len(self.punkte), len(self.auswahl)))
+        print('Netz %d Punkte, davon Arm links %d'
+              % (len(self.punkte), len(self.auswahl)))
         print('Ellbogen bei %s, Ruhewinkel Ober-/Unterarm %.1f Grad'
               % (np.round(self.ursprung, 3), self.ruhewinkel))
         for hoehe, wo in self.SCHEIBEN:
             achse = self._ruheachse(hoehe)
-            nummern = Armmass.scheibe(self.punkte, self.auswahl, self.ursprung, achse, hoehe)
+            nummern = Armmass.scheibe(self.punkte, self.auswahl, self.ursprung,
+                                      achse, hoehe)
             self.scheiben[wo] = (nummern, hoehe)
             print('  Ruhe %-20s dem Ellbogen: %5.2f cm (%d Punkte)'
                   % (wo, Armmass.umfang(self.punkte, nummern, achse), len(nummern)))
@@ -198,7 +200,8 @@ class LbsProbe:
         return aus
 
     def _posieren(self, achse, grad):
-        pose = self.skelett.welt({'DEF-forearm.L': Armmass.achsdrehung(achse, np.radians(grad))})
+        drehung = Armmass.achsdrehung(achse, np.radians(grad))
+        pose = self.skelett.welt({'DEF-forearm.L': drehung})
         return pose, Armmass.haeuten(self.punkte, self.gewichte, self.ruhe, pose)
 
     def beugen(self):
@@ -211,15 +214,18 @@ class LbsProbe:
             teile = ['%s %5.2f -> %5.2f (%+6.1f %%)' % (wo.split()[0][:8], u0, u1, d)
                      for wo, u0, u1, d in self.bericht(pose, neu)
                      if '3 cm' in wo]
-            print('  %3d Grad (echt %+5.1f):  %s   %s' % (grad, echt, teile[0], teile[1]))
+            print('  %3d Grad (echt %+5.1f):  %s   %s'
+                  % (grad, echt, teile[0], teile[1]))
 
     def verdrehen(self):
         print('')
         print('--- Verdrehen um die Laengsachse (Candy-Wrapper) ---')
         for grad in (45, 90, 135, 180):
             pose, neu = self._posieren([0, 1, 0], grad)
-            teile = ['%s %5.2f -> %5.2f (%+6.1f %%)' % (wo.split()[2] + ' cm', u0, u1, d)
-                     for wo, u0, u1, d in self.bericht(pose, neu) if wo.startswith('Unterarm')]
+            teile = ['%s %5.2f -> %5.2f (%+6.1f %%)'
+                     % (wo.split()[2] + ' cm', u0, u1, d)
+                     for wo, u0, u1, d in self.bericht(pose, neu)
+                     if wo.startswith('Unterarm')]
             print('  %3d Grad:  Unterarm %s   %s' % (grad, teile[0], teile[1]))
 
     def laufen(self):

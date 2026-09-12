@@ -44,7 +44,8 @@ class Testlauf(logging.Filter):
         u"""Ist Djangos Testumgebung gerade aufgebaut?"""
         try:
             from django.core import mail
-        # stumm gewollt: ohne Django-Mail gibt es keine Testumgebung — dann filtert der Filter nicht
+        # stumm gewollt: ohne Django-Mail gibt es keine Testumgebung — dann filtert
+        # der Filter nicht
         except Exception:                      # pragma: no cover
             return False
         return hasattr(mail, 'outbox')

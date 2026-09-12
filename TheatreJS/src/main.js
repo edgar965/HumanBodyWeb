@@ -63,7 +63,7 @@ Studiostart.hochfahren(studio);
 const AUTOSTART_MS = 3000;
 
 window.addEventListener('DOMContentLoaded', () => {
-    const canvas = document.getElementById('theatre-canvas');
+    const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('theatre-canvas'));
     if (!canvas) {
         Protokoll.fehler('main', 'theatre-canvas nicht gefunden');
         return;

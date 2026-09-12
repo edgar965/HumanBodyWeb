@@ -115,9 +115,9 @@ class Figurvideo:
             # damit ein falsches Laufwerk nicht erst nach Minuten auffaellt.
             'ablage': {
                 'ordner': Figurvideoablage.ordner_pruefen(daten.get('ablage')),
-                'name': Figurvideoablage.dateiname(daten.get('dateiname'),
-                                              daten.get('figur'),
-                                              daten.get('animation')),
+                'name': Figurvideoablage.dateiname(
+                    daten.get('dateiname'), daten.get('figur'),
+                    daten.get('animation')),
             },
         }
 
@@ -171,7 +171,8 @@ class Figurvideo:
             except (OSError, ValueError) as fehler:
                 # Das Video IST fertig — nur die Kopie ging nicht. Das
                 # steht dann daneben, statt das Ergebnis zu verstecken.
-                logger.warning('Figurvideo %s: Ablage nicht kopiert: %s', kennung, fehler)
+                logger.warning('Figurvideo %s: Ablage nicht kopiert: %s',
+                               kennung, fehler)
                 stand['ablage_fehler'] = str(fehler)
             LaufendeProzesse.entfernen('figurvideo_' + kennung)
         return stand
@@ -213,9 +214,9 @@ class Figurvideo:
             if ablage:
                 pfad = Figurvideoablage.ablegen(
                     ziel, ablage.get('ordner'),
-                    Figurvideoablage.dateiname(ablage.get('name'),
-                                          ablage.get('figur'),
-                                          ablage.get('animation')))
+                    Figurvideoablage.dateiname(
+                        ablage.get('name'), ablage.get('figur'),
+                        ablage.get('animation')))
         finally:
             # Die Einzelbilder sind nach dem Kodieren nur noch Platz —
             # 48 Bilder à 300 KB je Lauf, und niemand raeumt sie sonst weg.

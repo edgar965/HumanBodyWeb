@@ -120,8 +120,8 @@ class Uebertragprobe:
         smpl_gelenke_t = self.k.J_regressor @ self.smpl_rest_t
         ziel = np.array([smpl_gelenke_t[i] for i in self.nummern])
         self.r, self.massstab, self.versatz = Smplraum.procrustes(self.unsere, ziel)
-        rest = np.linalg.norm((self.massstab * (self.r @ self.unsere.T).T + self.versatz)
-                              - ziel, axis=1)
+        gepasst = self.massstab * (self.r @ self.unsere.T).T + self.versatz
+        rest = np.linalg.norm(gepasst - ziel, axis=1)
         print('Gelenkpassung: %d Paare, Median %.1f mm, max %.1f mm, Massstab %.4f'
               % (len(ziel), np.median(rest) * 1000, rest.max() * 1000, self.massstab))
 
@@ -129,7 +129,8 @@ class Uebertragprobe:
         u"""3. Jeden unserer Punkte an den naechsten SMPL-Punkt."""
         unser_im_smpl = (self.massstab * (self.r @ Smplraum.hin(self.punkte).T).T
                          + self.versatz)
-        abstand, self.zuordnung = cKDTree(self.smpl_rest_t).query(unser_im_smpl, workers=-1)
+        abstand, self.zuordnung = cKDTree(self.smpl_rest_t).query(unser_im_smpl,
+                                                                  workers=-1)
         print('Zuordnung: Median %.1f mm, p90 %.1f mm, max %.1f mm'
               % (np.median(abstand) * 1000, np.percentile(abstand, 90) * 1000,
                  abstand.max() * 1000))
@@ -160,7 +161,8 @@ class Uebertragprobe:
         u0 = Armmass.umfang(self.punkte, messpunkte, achse_ober)
         for grad in (30, 60, 90, 120):
             wk = np.radians(grad)
-            pose = self.skelett.welt({'DEF-forearm.L': Armmass.achsdrehung([1, 0, 0], wk)})
+            drehung = Armmass.achsdrehung([1, 0, 0], wk)
+            pose = self.skelett.welt({'DEF-forearm.L': drehung})
             lbs = Armmass.haeuten(self.punkte, self.gewichte, self.ruhe, pose)
             mit = Armmass.haeuten(self.punkte + self._korrektur(wk), self.gewichte,
                                   self.ruhe, pose)

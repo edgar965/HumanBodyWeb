@@ -104,5 +104,6 @@ UMA_UMA3_ORDNER = TOOLS_ROOT / 'UMA' / 'UMAProject' / 'Assets' / 'UMA' / 'UMA3'
 #: Unity-Editor und UMA-Projekt für den Figurenbau auf Zuruf
 #: (`core/dienste/umabauer.py`, 06.09.2026): die Szene-Seite lässt Unity ohne
 #: Fenster eine Figur anderer Rasse in den Katalog exportieren.
-UNITY_EXE = TOOLS_ROOT.parent / 'Unity' / 'Editors' / '6000.3.23f1' / 'Editor' / 'Unity.exe'
+UNITY_EXE = (TOOLS_ROOT.parent / 'Unity' / 'Editors' / '6000.3.23f1'
+             / 'Editor' / 'Unity.exe')
 UMA_PROJEKT = TOOLS_ROOT / 'UMA' / 'UMAProject'

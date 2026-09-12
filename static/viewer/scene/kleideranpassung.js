@@ -38,9 +38,9 @@ export class Kleideranpassung {
      * @param wahl.vorsilbe    Reglervorsilbe, etwa 'kleider'
      * @param wahl.schluessel  Schlüsselvorsilbe, etwa 'kld_'
      * @param wahl.kennung     id des Stücks
-     * @param wahl.huelle      true: die Hülle aus Stufe 1 mitsenden
+     * @param [wahl.huelle]    true: die Hülle aus Stufe 1 mitsenden
      * @param wahl.modus       Anpassmodus für den Server
-     * @param wahl.danach      (figur, schluessel, zustand, netz) => void
+     * @param [wahl.danach]    (figur, schluessel, zustand, netz) => void
      */
     constructor(wahl) {
         Object.assign(this, wahl);

@@ -32,7 +32,8 @@ class Umakleidung:
     @classmethod
     def garderobe(cls):
         with cls._schloss:
-            if cls._garderobe is None or cls._garderobe.ordner != str(settings.UMA_UMA3_ORDNER):
+            ordner = str(settings.UMA_UMA3_ORDNER)
+            if cls._garderobe is None or cls._garderobe.ordner != ordner:
                 cls._garderobe = Garderobe(settings.UMA_UMA3_ORDNER)
             return cls._garderobe
 

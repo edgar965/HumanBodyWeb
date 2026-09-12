@@ -40,6 +40,7 @@ export class Mhproxynetz {
     static ENDPUNKT = '/api/character/mh-proxy-fit/';
 
     /** Reglerwert -> Serverwert: (Feldname, Teiler, Stellen, Vorgabe). */
+    /** @type {Array<[string, number, number, number]>} */
     static UMRECHNUNG = [
         ['offset', 1000, 4, 0],
         ['stiffness', 100, 2, 50],

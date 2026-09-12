@@ -73,7 +73,8 @@ class Retargetdaten:
         if self.ziel != self.ZIEL_DEF:
             merkmal += f'_{self.ziel}'
         if self.figur:
-            merkmal += f'_{self.figur}'       # je Figur ein eigenes Skelett, eine eigene Ablage
+            # je Figur ein eigenes Skelett, eine eigene Ablage
+            merkmal += f'_{self.figur}'
         if self.formung is not None:
             # Je Reglerstellung ein eigenes Skelett: Ohne diesen Teil im
             # Namen laege die Bewegung der schlanken Figur in derselben

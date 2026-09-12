@@ -203,7 +203,7 @@ def _rumpf_vorbeugen(bvh, quats, q_ra, rumpfgrad):
         quats[:, bvh.names.index(q_ra)] = _achsdrehung(rachse, rumpfgrad)
 
 
-def _pfad(format_name):
+def _bvh_pfad(format_name):
     rel = DATEIEN.get(format_name)
     if not rel:
         return None
@@ -224,7 +224,7 @@ def fehlende():
     Fehlen ALLE, ist das kein Fehler — dann steht `OBJECTS_ROOT` in
     einem Testbaum, und die Faelle ueberspringen sich mit Meldung.
     """
-    return sorted(name for name in DATEIEN if _pfad(name) is None)
+    return sorted(name for name in DATEIEN if _bvh_pfad(name) is None)
 
 
 class HalstreueTest(SimpleTestCase):
@@ -270,7 +270,7 @@ class HalstreueTest(SimpleTestCase):
         """
         geprueft = 0
         for name in DATEIEN:
-            pfad = _pfad(name)
+            pfad = _bvh_pfad(name)
             if not pfad:
                 continue
             reihe = eichlauf(pfad)
@@ -292,7 +292,7 @@ class HalstreueTest(SimpleTestCase):
         for name in DATEIEN:
             if name not in self.TRAGEND:
                 continue
-            pfad = _pfad(name)
+            pfad = _bvh_pfad(name)
             if not pfad:
                 continue
             reihe = eichlauf(pfad)
@@ -321,7 +321,7 @@ class HalstreueTest(SimpleTestCase):
         FAELLT DIESER FALL, ist der Fehler behoben — dann gehoert er
         umgedreht und OpenPose in `TRAGEND`.
         """
-        pfad = _pfad('OPENPOSE')
+        pfad = _bvh_pfad('OPENPOSE')
         if not pfad:
             self.skipTest('OpenPose-Datei fehlt')
         reihe = eichlauf(pfad)
@@ -339,7 +339,7 @@ class HalstreueTest(SimpleTestCase):
         Mit einem Rumpf in Ruhelage prueft der Eichfall nur den halben
         Weg — deshalb dieselbe Messung ueber vier Rumpfhaltungen.
         """
-        pfad = _pfad('CMU')
+        pfad = _bvh_pfad('CMU')
         if not pfad:
             self.skipTest('CMU-Datei fehlt')
         for rumpf in (-20.0, 20.0, 40.0):
@@ -388,7 +388,7 @@ class HalstreueTest(SimpleTestCase):
         from unittest import mock
         from humanbody_core.skeleton.formats.openpose import (
             SkeletonOpenPose)
-        pfad = _pfad('OPENPOSE')
+        pfad = _bvh_pfad('OPENPOSE')
         if not pfad:
             self.skipTest('OpenPose-Datei fehlt')
         heil = {}

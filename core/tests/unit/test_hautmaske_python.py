@@ -16,7 +16,7 @@ from ._modelphysik import Modelphysik
 from ._kunstkoerper import zylinder
 
 
-def _modul():
+def _hautmaske_modul():
     return Modelphysik.modul('hautmaske')
 
 
@@ -25,7 +25,7 @@ class HautmaskePythonTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.hm = _modul()
+        self.hm = _hautmaske_modul()
         self.koerper = zylinder(0.10, 0.0, 1.0, 51, 36)
 
     def _maske(self, stoff, **optionen):

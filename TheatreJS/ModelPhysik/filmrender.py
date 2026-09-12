@@ -134,8 +134,10 @@ class Filmrender:
                     # das kostete 2,8 s je Bild beim 70K-Netz).
                     punkte, dreiecke, normalen = Filmmasken.gerendert(teil, nummer)
                     szene.add(pyrender.Mesh(primitives=[pyrender.Primitive(
-                        positions=np.ascontiguousarray(punkte @ drehung.T, dtype=np.float32),
-                        normals=np.ascontiguousarray(normalen @ drehung.T, dtype=np.float32),
+                        positions=np.ascontiguousarray(punkte @ drehung.T,
+                                                       dtype=np.float32),
+                        normals=np.ascontiguousarray(normalen @ drehung.T,
+                                                     dtype=np.float32),
                         indices=np.ascontiguousarray(dreiecke, dtype=np.uint32),
                         material=werkstoff, mode=4)]))
                 szene.add(kamera, pose=self._blicken(lage, blick))
@@ -150,4 +152,3 @@ class Filmrender:
 
     def schreiben(self, ziel, fps=24, schleifen=2):
         return Videoschreiber.schreiben(self.bilder_rendern(), ziel, fps, schleifen)
-

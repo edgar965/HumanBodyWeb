@@ -25,11 +25,11 @@ export class Figurenlader {
     static UNBEKANNT = 'Unknown';
 
     /**
-     * @param {THREE.Scene} scene
+     * @param {import('three').Scene} scene
      * @param {Array} figuren   Liste aller geladenen Figuren (dieselbe, die
      *        main.js und der Raycaster benutzen)
-     * @param {Skinner} skinner
-     * @param {Auswahl} auswahl
+     * @param {import('./skinner.js').Skinner} skinner
+     * @param {import('./auswahl.js').Auswahl} auswahl
      */
     constructor(scene, figuren, skinner, auswahl) {
         this.scene = scene;

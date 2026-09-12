@@ -8,8 +8,8 @@ den Helfer gegen das Original auf Zufallsdaten, eindimensional, mit Spalten
 und mit dem flachen Zweifach-Index aus `figurnetze.py`; dazu die
 Verdrahtung: in den vier Modulen steht kein `np.add.at` mehr.
 """
-# Lehre gilt hier nicht: `np.add.at` ist hier das ORIGINAL, gegen das der
-# Helfer geprueft wird — die Gegenprobe braucht es.
+# Lehre gilt hier nicht ("bincount-statt-add-at"): `np.add.at` ist hier das
+# ORIGINAL, gegen das der Helfer geprueft wird — die Gegenprobe braucht es.
 import numpy as np
 from django.test import SimpleTestCase
 

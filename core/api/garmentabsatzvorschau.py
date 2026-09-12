@@ -44,7 +44,8 @@ class Garmentabsatzvorschau:
     def _zahl(request, name, vorgabe):
         try:
             return float(request.POST.get(name) or vorgabe)
-        # stumm gewollt: ein unlesbarer Reglerwert aus dem Browser faellt auf die Vorgabe
+        # stumm gewollt: ein unlesbarer Reglerwert aus dem Browser faellt auf
+        # die Vorgabe
         except ValueError:
             return vorgabe
 

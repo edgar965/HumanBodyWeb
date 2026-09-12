@@ -13,13 +13,18 @@ der Vertrag (`Figuren/VERTRAG.md`) ihn beschreibt.
     GET /api/character/uma-figur/<name>/zettel/   der Beipackzettel
     GET /api/character/uma-regler/?figur=<name>   Regler-Gruppen fürs Geschlecht
                                                    der Figur (oder ?geschlecht=)
-    GET  /api/character/uma-rassen/               {rassen, ermittelt, figuren:[{name, rasse}]}
+    GET  /api/character/uma-rassen/               {rassen, ermittelt,
+                                                   figuren:[{name, rasse}]}
     POST /api/character/uma-rassen/ermitteln/     Unity schreibt die Rassenliste (202)
-    POST /api/character/uma-figur/bauen/          {rasse, name?, zeiger?, kleidung?, farben?}
+    POST /api/character/uma-figur/bauen/          {rasse, name?, zeiger?,
+                                                   kleidung?, farben?}
                                                   → Unity baut (202)
-    GET  /api/character/uma-figur/bauen/<name>/stand/   {laeuft, exit, sekunden, datei, meldung}
+    GET  /api/character/uma-figur/bauen/<name>/stand/
+                                                  {laeuft, exit, sekunden, datei,
+                                                   meldung}
     GET  /api/character/uma-figur/bauer/          {lebt, stand, startet, seit_s, pid}
-    POST /api/character/uma-figur/bauer/vorwaermen/     Bauer starten, einmal ins Leere bauen
+    POST /api/character/uma-figur/bauer/vorwaermen/
+                                                  Bauer starten, einmal ins Leere bauen
 
 Bauen auf Zuruf (06.09.2026): `core/dienste/umabauer.py` startet Unity ohne
 Fenster; die Seite fragt den Stand ab, bis die Datei im Katalog liegt.
@@ -105,7 +110,8 @@ class Umafigur:
 
     @classmethod
     def _rasse_der_datei(cls, pfad):
-        u"""Rasse aus dem Zettel — eine bewegte Fassung (`…_bewegt.glb`) erbt sie von ihrer Vorlage."""
+        u"""Rasse aus dem Zettel — eine bewegte Fassung (`…_bewegt.glb`) erbt sie
+        von ihrer Vorlage."""
         rasse = cls._rasse(cls._zettel(pfad))
         if rasse is None and pfad.lower().endswith('_bewegt.glb'):
             rasse = cls._rasse(cls._zettel(pfad[:-len('_bewegt.glb')] + '.glb'))
@@ -129,7 +135,8 @@ class Umafigur:
         ordner = cls._ordner()
         if not os.path.isdir(ordner):
             return []
-        pfade = [os.path.join(ordner, n) for n in os.listdir(ordner) if n.lower().endswith('.glb')]
+        pfade = [os.path.join(ordner, n) for n in os.listdir(ordner)
+                 if n.lower().endswith('.glb')]
         pfade.sort(key=os.path.getmtime, reverse=True)
         return pfade
 
@@ -157,7 +164,8 @@ class Umafigur:
         if antwort:
             return antwort
         stat = os.stat(pfad)
-        if not was_modified_since(request.META.get('HTTP_IF_MODIFIED_SINCE'), stat.st_mtime):
+        if not was_modified_since(request.META.get('HTTP_IF_MODIFIED_SINCE'),
+                                  stat.st_mtime):
             return HttpResponseNotModified()
         antwort = FileResponse(open(pfad, 'rb'), content_type=Umafigur.TYP)
         antwort['Last-Modified'] = http_date(stat.st_mtime)
@@ -177,7 +185,8 @@ class Umafigur:
             return antwort
         zettel = Umafigur._zettel(pfad)
         if zettel is None:
-            return JsonResponse({'error': 'Kein Beipackzettel zu %s' % name}, status=404)
+            return JsonResponse({'error': 'Kein Beipackzettel zu %s' % name},
+                                status=404)
         return JsonResponse(zettel)
 
     @staticmethod
@@ -213,9 +222,11 @@ class Umafigur:
     def rassen(request):
         u"""Rassen aus Unitys Liste und die Figuren im Katalog mit ihrer Rasse."""
         rassen = Umabauer.rassen()
-        figuren = [{'name': os.path.basename(pfad), 'rasse': Umafigur._rasse_der_datei(pfad)}
+        figuren = [{'name': os.path.basename(pfad),
+                    'rasse': Umafigur._rasse_der_datei(pfad)}
                    for pfad in Umafigur._pfade()]
-        return JsonResponse({'rassen': rassen or [], 'ermittelt': rassen is not None, 'figuren': figuren})
+        return JsonResponse({'rassen': rassen or [], 'ermittelt': rassen is not None,
+                             'figuren': figuren})
 
     @staticmethod
     @csrf_exempt
@@ -233,7 +244,8 @@ class Umafigur:
             return JsonResponse({'error': 'Kein JSON'}, status=400)
         kleidung = daten.get('kleidung')
         if kleidung is not None and not isinstance(kleidung, list):
-            return JsonResponse({'error': 'kleidung muss eine Liste von Rezeptnamen sein'}, status=400)
+            return JsonResponse(
+                {'error': 'kleidung muss eine Liste von Rezeptnamen sein'}, status=400)
         return Umafigur._lauf(Umabauer.bauen, daten.get('rasse'), daten.get('name'),
                               bool(daten.get('zeiger')), kleidung, daten.get('farben'))
 

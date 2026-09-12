@@ -30,7 +30,7 @@ def _js(*teile):
             ).joinpath(*teile).read_text(encoding='utf-8')
 
 
-def _da(*teile):
+def _quelltext(*teile):
     u"""Liegt diese Datei (schon) im Baum?
 
     `garmentdeutung.js` gehoert zu einer parallelen Sitzung und ist zum
@@ -42,7 +42,7 @@ def _da(*teile):
             .joinpath(*teile).exists())
 
 
-def _vorlage(name):
+def _vorlagentext(name):
     return (Path(settings.BASE_DIR) / 'templates' / name
             ).read_text(encoding='utf-8')
 
@@ -69,7 +69,7 @@ class KlickAufEinStueck(SimpleTestCase):
         self.assertIn('fn.garmentcodeVorlageZeigen',
                       _js('scene', 'garmentcode.js'))
 
-    @skipUnless(_da('scene', 'garmentdeutung.js'),
+    @skipUnless(_quelltext('scene', 'garmentdeutung.js'),
                 u'garmentdeutung.js liegt noch nicht im Baum (parallele '
                 u'Sitzung, 09.09.2026).')
     def test_die_deutung_setzt_die_auswahl_STILL(self):
@@ -106,7 +106,7 @@ class Reiternamen(SimpleTestCase):
     NAMEN = {'eigenschaften': 'Modell', 'modell': 'Skeleton'}
 
     def test_die_beschriftungen_stehen_so_da(self):
-        seite = _vorlage('scene_config.html')
+        seite = _vorlagentext('scene_config.html')
         for kennung, name in Reiternamen.NAMEN.items():
             self.assertIn('data-tab="%s">%s</div>' % (kennung, name), seite,
                           u'Reiter „%s" heisst nicht „%s".' % (kennung, name))
@@ -118,7 +118,7 @@ class Reiternamen(SimpleTestCase):
         zwar still: Ein unbekannter Reitername faellt einfach auf die
         Vorgabe zurueck.
         """
-        seite = _vorlage('scene_config.html')
+        seite = _vorlagentext('scene_config.html')
         for kennung in ('eigenschaften', 'modell'):
             self.assertIn('id="tab-%s"' % kennung, seite)
 

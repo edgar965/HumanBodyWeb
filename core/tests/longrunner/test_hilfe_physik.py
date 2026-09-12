@@ -72,7 +72,7 @@ class SeitePhysik(SimpleTestCase):
             self.assertEqual(Client().get(pfad).status_code, 200, pfad)
 
 
-class DatenStehenInPython(unittest.TestCase):
+class KleiderphysikDatenStehenInPython(unittest.TestCase):
 
     databases = set()
 

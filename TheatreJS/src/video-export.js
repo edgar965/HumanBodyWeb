@@ -13,8 +13,8 @@ export class VideoExporter {
     /**
      * Start recording.
      * @param {Object} options
-     * @param {number}  options.fps       Frames per second (default 30)
-     * @param {number}  options.bitrate   Bits per second (default 8_000_000)
+     * @param {number}  [options.fps]     Frames per second (default 30)
+     * @param {number}  [options.bitrate] Bits per second (default 8_000_000)
      * @param {number}  [options.width]   Export width (overrides canvas size)
      * @param {number}  [options.height]  Export height (overrides canvas size)
      * @param {Object}  [options.renderer] Three.js renderer (needed for resolution override)

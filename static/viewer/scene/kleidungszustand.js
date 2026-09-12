@@ -33,7 +33,10 @@ export class Kleidungszustand {
     };
     static VORGABE_FARBE = [0.3, 0.35, 0.5];
 
-    /** Anpasswerte: Feldname → Reglerkennung ohne Vorsilbe und Teiler. */
+    /**
+     * Anpasswerte: Feldname → Reglerkennung ohne Vorsilbe und Teiler.
+     * @type {Array<[string, string, number]>}
+     */
     static ANPASSWERTE = [
         ['offset', 'offset', 1000],
         ['stiffness', 'stiffness', 100],
@@ -43,7 +46,10 @@ export class Kleidungszustand {
         ['crotchDepth', 'crotch-depth', 1],
     ];
 
-    /** Materialwerte: Feldname → Reglerkennung, immer durch 100. */
+    /**
+     * Materialwerte: Feldname → Reglerkennung, immer durch 100.
+     * @type {Array<[string, string]>}
+     */
     static MATERIALWERTE = [['roughness', 'roughness'], ['metalness', 'metalness']];
 
     constructor(werte = {}) {

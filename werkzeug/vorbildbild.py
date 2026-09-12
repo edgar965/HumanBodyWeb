@@ -59,17 +59,21 @@ class Vorbildbild:
         d = self.DREHUNG
         szene = pyrender.Scene(bg_color=[0, 0, 0, 0], ambient_light=[0.45, 0.45, 0.47])
         haut = pyrender.MetallicRoughnessMaterial(
-            baseColorFactor=list(self.HAUT) + [1.0], metallicFactor=0.0, roughnessFactor=0.8)
+            baseColorFactor=list(self.HAUT) + [1.0], metallicFactor=0.0,
+            roughnessFactor=0.8)
         stoffwerk = pyrender.MetallicRoughnessMaterial(
             baseColorFactor=list(farbe) + [1.0], metallicFactor=0.0,
             roughnessFactor=0.7, doubleSided=True)
-        szene.add(pyrender.Mesh.from_trimesh(trimesh.Trimesh(
-            self.koerper @ d.T, np.asarray(self.flaechen), process=False), smooth=True, material=haut))
+        koerpernetz = trimesh.Trimesh(self.koerper @ d.T, np.asarray(self.flaechen),
+                                      process=False)
+        szene.add(pyrender.Mesh.from_trimesh(koerpernetz, smooth=True, material=haut))
         # Koerpernormalen der Rig-Datei (Leggings, 11.09.2026) — wie der Browser.
         stoffnetz = trimesh.Trimesh(stoff @ d.T, dreiecke, process=False)
         if daten.get('normalen'):
-            stoffnetz.vertex_normals = np.asarray(daten['normalen'], dtype=np.float64) @ d.T
-        szene.add(pyrender.Mesh.from_trimesh(stoffnetz, smooth=True, material=stoffwerk))
+            normalen = np.asarray(daten['normalen'], dtype=np.float64)
+            stoffnetz.vertex_normals = normalen @ d.T
+        szene.add(pyrender.Mesh.from_trimesh(stoffnetz, smooth=True,
+                                             material=stoffwerk))
         # Kamera: von schraeg vorn auf die Mitte des Stuecks, so nah, dass
         # das Stueck das Bild fuellt (yfov 30 Grad, Rand 15 %).
         s = stoff @ d.T
@@ -85,7 +89,8 @@ class Vorbildbild:
         licht = np.eye(4)
         licht[:3, 3] = mitte + abstand * np.array([0.6, 0.9, 0.8])
         licht[:3, :3] = self._blick(licht[:3, 3], mitte)
-        szene.add(pyrender.DirectionalLight(color=np.ones(3), intensity=3.2), pose=licht)
+        szene.add(pyrender.DirectionalLight(color=np.ones(3), intensity=3.2),
+                  pose=licht)
         werk = pyrender.OffscreenRenderer(groesse, groesse)
         try:
             bild, _ = werk.render(szene, flags=pyrender.RenderFlags.RGBA)

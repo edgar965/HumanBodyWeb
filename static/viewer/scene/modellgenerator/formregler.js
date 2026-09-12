@@ -15,7 +15,10 @@ import { fn } from '../../gemeinsam/registrierung.js';
 import { Modellbauzustand } from './zustand.js';
 import { Teilbindung } from './teilbindung.js';
 
-/** [Kennung, Eigenschaft, Vorgabewert, Nachkommastellen] */
+/**
+ * [Kennung, Eigenschaft, Vorgabewert, Nachkommastellen]
+ * @type {Array<[string, string, number, number]>}
+ */
 export const FORMREGLER = [
     // Tutu
     ['mg-tutu-thickness', 'tutuThickness', 0.01, 3],

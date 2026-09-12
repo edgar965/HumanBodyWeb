@@ -20,18 +20,25 @@ export class Buehne {
     static NAH = 0.01;
     static FERN = 100;
     static BELICHTUNG = 1.6;
+    /** @type {[number, number, number]} */
     static KAMERA_START = [0, 1.0, 3.5];
+    /** @type {[number, number, number]} */
     static BLICKZIEL = [0, 0.9, 0];
     static ABSTAND_MIN = 0.5;
     static ABSTAND_MAX = 15;
 
-    /** Die drei gerichteten Lichter: Name, Farbe, Stärke, Position. */
+    /**
+     * Die drei gerichteten Lichter: Name, Farbe, Stärke, Position.
+     * @type {Array<[string, number, number, [number, number, number]]>}
+     */
     static LICHTER = [
         ['keyLight', 0xffffff, 3.0, [2, 4, -5]],
         ['fillLight', 0xeeeeff, 2.0, [-3, 3, -4]],
         ['backLight', 0xffeedd, 2.5, [0, 4, 5]],
     ];
+    /** @type {[number, number]} */
     static UMGEBUNG = [0xffffff, 0.8];
+    /** @type {[number, number, number, number]} */
     static GITTER = [4, 20, 0x333355, 0x222244];
 
     /**

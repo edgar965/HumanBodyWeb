@@ -45,7 +45,7 @@ PROJEKT = Path(str(settings.TOOLS_ROOT)) / 'UMA' / 'UMAProject'
 RASSE = 'Human Female 3.0'
 
 
-def _da():
+def _figuren_da():
     return (PROJEKT / 'Assets' / 'UMA').is_dir()
 
 
@@ -55,7 +55,7 @@ class UnityFormat(unittest.TestCase):
     databases = set()
 
     def setUp(self):
-        if not _da():
+        if not _figuren_da():
             self.skipTest(u'UMA-Klon nicht vorhanden (%s)' % PROJEKT)
 
     def test_ein_binaeres_slotasset_liest_sich(self):
@@ -116,7 +116,7 @@ class Figurbau(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if not _da():
+        if not _figuren_da():
             return
         # EINMAL bauen: Der Lauf kostet gemessen 6–14 s (acht Slots, davon
         # fünf über 2 MB). Je Testfall neu zu bauen hiesse, dieselbe Datei

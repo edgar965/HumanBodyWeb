@@ -48,7 +48,8 @@ class Smplvarianten:
         b = np.zeros(10)
         betas = np.asarray(betas or [], dtype=np.float64)
         b[:min(10, len(betas))] = betas[:10]
-        kennung = hashlib.sha1(np.round(b, 3).astype(np.float32).tobytes()).hexdigest()[:12]
+        rohbytes = np.round(b, 3).astype(np.float32).tobytes()
+        kennung = hashlib.sha1(rohbytes).hexdigest()[:12]
         return 'smpl_%s_%s' % (geschlecht[0], kennung)
 
     @classmethod

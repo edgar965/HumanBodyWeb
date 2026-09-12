@@ -158,7 +158,8 @@ export function findHeadBoneIndex(skinWD) {
  * @param {number} headBoneIdx - Index of head bone in skeleton
  * @param {Object} skeleton - {skeleton: THREE.Skeleton} from buildRigifySkeleton
  * @param {THREE.Matrix4} bindMatrix - bodyMesh.bindMatrix
- * @returns {THREE.Group} Group of SkinnedMesh children
+ * @returns {THREE.Object3D} Group of SkinnedMesh children (or the
+ *     scene itself, when there is no head bone)
  */
 export function skinifyHairGroup(gltfScene, headBoneIdx, skeleton, bindMatrix) {
     if (headBoneIdx < 0) return gltfScene;

@@ -163,8 +163,8 @@ export class Videoaufnahme {
     async _kodieren(aufnahmen, mm) {
         const daten = new FormData();
         aufnahmen.forEach((bild, i) => daten.append('frames', bild, `${String(i).padStart(6, '0')}.png`));
-        daten.append('fps', Videoaufnahme.FPS);
-        daten.append('physik_mm', mm);
+        daten.append('fps', String(Videoaufnahme.FPS));
+        daten.append('physik_mm', String(mm));
         for (const [name, wert] of Object.entries(this.anzeige.ablage?.() || {})) {
             daten.append(name, wert);
         }

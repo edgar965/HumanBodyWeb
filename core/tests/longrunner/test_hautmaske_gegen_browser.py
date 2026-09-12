@@ -61,7 +61,7 @@ console.log(JSON.stringify({ hose: als(e.get('hose').maske), shirt: als(e.get('s
 """
 
 
-def _modul():
+def _hautmaske_modul():
     return Modelphysik.modul('hautmaske')
 
 
@@ -70,7 +70,7 @@ class HautmaskeGegenBrowserTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.hm = _modul()
+        self.hm = _hautmaske_modul()
         self.koerper = zylinder(0.10, 0.0, 1.0, 51, 36)
 
     def _maske(self, stoff, **optionen):

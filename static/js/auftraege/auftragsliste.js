@@ -47,7 +47,8 @@ export class Auftragsliste {
         // Sortiert wird von djangoBase (`tabellen_auto.js` bindet jede
         // `table.sortable` von selbst an). Hier bleibt nur, was djangoBase
         // nicht wissen kann: dass eine Detailzeile ihrer Hauptzeile folgt.
-        Detailzeilen.binden(document.getElementById('jobTable'));
+        Detailzeilen.binden(
+            /** @type {HTMLTableElement} */ (document.getElementById('jobTable')));
         Auftragslauf.laufendeVerfolgen();
         return this;
     }

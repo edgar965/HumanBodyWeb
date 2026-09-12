@@ -40,6 +40,7 @@ export class Spurzubehoer {
     static KOPFKNOCHEN = 'spine_006';
 
     /** Anpassparameter der Kleidung: Feld in der Vorgabe → Name in der Frage. */
+    /** @type {Array<[string, string, number]>} */
     static KLEIDERWERTE = [
         ['offset', 'offset', 0],
         ['stiffness', 'stiffness', 0.5],
@@ -108,7 +109,7 @@ export class Spurzubehoer {
             body_type: this.spur.bodyType || Spurzubehoer.VORGABE_KOERPERART,
         });
         for (const [feld, name, ersatz] of Spurzubehoer.KLEIDERWERTE) {
-            frage.set(name, kleid[feld] ?? ersatz);
+            frage.set(name, String(kleid[feld] ?? ersatz));
         }
         // Das Stück muss auf DIESE Figur passen, nicht auf den Grundkörper.
         for (const [name, wert] of Object.entries(this.vorgabe.morphs || {})) {

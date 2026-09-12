@@ -168,7 +168,7 @@ export class Skinner {
             bvhText, this.skelett, { bodyHeight: this.koerperhoehe(netz) });
         const mixer = new THREE.AnimationMixer(netz);
         const aktion = mixer.clipAction(clip);
-        aktion.setLoop(THREE.LoopRepeat);
+        aktion.setLoop(THREE.LoopRepeat, Infinity);
         aktion.play();
         aktion.paused = true;
         const dauer = clip.duration || 1;

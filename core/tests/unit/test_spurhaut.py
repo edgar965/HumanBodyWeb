@@ -30,7 +30,7 @@ GEMEINSAM = Jsmodul.VIEWER / 'gemeinsam'
 SZENE = Jsmodul.VIEWER / 'scene'
 
 
-def _lies(ordner, name):
+def _lies_modul(ordner, name):
     return (ordner / name).read_text(encoding='utf-8')
 
 
@@ -39,14 +39,14 @@ class SpurhautTest(SimpleTestCase):
     databases = set()
 
     def test_die_figur_wird_nach_dem_zubehoer_maskiert(self):
-        figur = _lies(STUDIO, 'spurfigur.js')
+        figur = _lies_modul(STUDIO, 'spurfigur.js')
         self.assertIn("import { Spurhaut } from './spurhaut.js';", figur)
         zubehoer = figur.index('new Spurzubehoer(this.spur, vorgabe).laden()')
         maske = figur.index('Spurhaut.anwenden(this.spur)')
         self.assertLess(zubehoer, maske, 'die Maske muss NACH dem Zubehör laufen')
 
     def test_spurhaut_rechnet_wie_die_szene(self):
-        haut = _lies(STUDIO, 'spurhaut.js')
+        haut = _lies_modul(STUDIO, 'spurhaut.js')
         for baustein in ('Hautmaske.verdeckt(', 'Hautmaske.indexOhne(',
                          'Lagenmaske.verdeckt(', 'Hauteinzug.setzen(', 'Hauteinzug.patchen(',
                          'userData.indexVoll', 'userData?.isGarment'):
@@ -54,20 +54,20 @@ class SpurhautTest(SimpleTestCase):
         self.assertIn("from '../gemeinsam/hauteinzug.js'", haut)
 
     def test_makehuman_stuecke_tragen_isgarment_haare_nicht(self):
-        zubehoer = _lies(STUDIO, 'spurzubehoer.js')
+        zubehoer = _lies_modul(STUDIO, 'spurzubehoer.js')
         anhaengen = zubehoer[zubehoer.index('_anhaengen(geo, stoff'):]
         anhaengen = anhaengen[:anhaengen.index('_binden(geo, stoff, indizes')]
         self.assertIn('netz.userData.isGarment = true', anhaengen)
         haar = zubehoer[zubehoer.index('_haarteil(geo, stoff)'):zubehoer.index('_kopfknochenNummer()')]
         self.assertNotIn('isGarment', haar)
-        stueck = _lies(GEMEINSAM, 'garmentcodestueck.js')
+        stueck = _lies_modul(GEMEINSAM, 'garmentcodestueck.js')
         self.assertIn('isGarment: true', stueck)
 
     def test_hauteinzug_liegt_in_gemeinsam_ohne_szenenzustand(self):
         self.assertFalse((SZENE / 'hauteinzug.js').exists())
-        einzug = _lies(GEMEINSAM, 'hauteinzug.js')
+        einzug = _lies_modul(GEMEINSAM, 'hauteinzug.js')
         self.assertIn("import * as THREE from 'three';", einzug)
         self.assertNotIn("from './state.js'", einzug)
         self.assertNotIn("from '../scene/", einzug)
         for name in ('hautverdeckung.js', 'lagenverdeckung.js'):
-            self.assertIn("from '../gemeinsam/hauteinzug.js'", _lies(SZENE, name), name)
+            self.assertIn("from '../gemeinsam/hauteinzug.js'", _lies_modul(SZENE, name), name)

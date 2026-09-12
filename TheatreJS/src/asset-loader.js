@@ -21,8 +21,8 @@ const gltfLoader = new GLTFLoader();
 /**
  * Eine GLB-Datei von einer Adresse laden und in die Szene haengen.
  * @param {string} url
- * @param {THREE.Scene} scene
- * @returns {Promise<THREE.Group>}
+ * @param {import('three').Scene} scene
+ * @returns {Promise<import('three').Group>}
  */
 export async function loadGLBAsset(url, scene) {
     const gltf = await gltfLoader.loadAsync(url);
@@ -42,7 +42,7 @@ export async function loadGLBAsset(url, scene) {
 /**
  * Eine GLB aus einer lokalen Datei laden.
  * @param {File} file
- * @param {THREE.Scene} scene
+ * @param {import('three').Scene} scene
  */
 export async function loadGLBFromFile(file, scene) {
     const adresse = URL.createObjectURL(file);

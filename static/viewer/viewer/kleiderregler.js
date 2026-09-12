@@ -20,7 +20,10 @@ import { state } from './state.js';
  */
 export class Kleiderregler {
 
-    /** Zustandsfeld, Regler-Kennung, Teiler, Anzeigeform, Vorgabe (Reglereinheit). */
+    /**
+     * Zustandsfeld, Regler-Kennung, Teiler, Anzeigeform, Vorgabe (Reglereinheit).
+     * @type {Array<[string, string, number, (w: number) => string, number|null]>}
+     */
     static SCHIEBER = [
         ['offset', 'garment-offset', 1000, w => (w / 1000).toFixed(3), null],
         ['stiffness', 'garment-stiffness', 100, w => (w / 100).toFixed(2), null],

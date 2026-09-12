@@ -18,6 +18,7 @@ export function loadHair(url) {
     if (!state.isSkinned || !state.rigifySkeleton || !ss.skinWeightData) return;
 
     gltfLoader.load(url, (gltf) => {
+        /** @type {import('three').Object3D} */
         let hairGroup = gltf.scene;
         const headBoneIdx = findHeadBoneIndex(ss.skinWeightData);
         if (headBoneIdx >= 0) {

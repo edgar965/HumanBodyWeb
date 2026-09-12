@@ -82,10 +82,15 @@ class SmplkoerperTest(unittest.TestCase):
         modell = Smplkoerper.laden('male', self.modelle)
         rest = modell.formen(None)
         a40 = modell.a40(None)
-        spanne = lambda v: float(v[:, 0].max() - v[:, 0].min())   # noqa: E731
+
+        def spanne(v):
+            return float(v[:, 0].max() - v[:, 0].min())
+
+        def hoehe(v):
+            return float(v[:, 1].max() - v[:, 1].min())
+
         self.assertGreater(spanne(rest) - spanne(a40), 0.15,
                            'A-Haltung senkt die Arme nicht')
-        hoehe = lambda v: float(v[:, 1].max() - v[:, 1].min())    # noqa: E731
         self.assertAlmostEqual(hoehe(rest), hoehe(a40), delta=0.02)
 
 

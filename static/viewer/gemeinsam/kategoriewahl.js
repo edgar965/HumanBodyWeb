@@ -22,8 +22,8 @@ export class Kategoriewahl {
     /**
      * @param {string} feldKennung Kennung des `<select>`
      * @param {Array} namen Kategorienamen vom Server
-     * @param {boolean} aufraeumen Vorhandene Einträge (außer dem ersten)
-     *     vorher entfernen. Vorgabe: ja.
+     * @param {{aufraeumen?: boolean}} [wahl] `aufraeumen`: Vorhandene Einträge
+     *     (außer dem ersten) vorher entfernen. Vorgabe: ja.
      * @returns {number} wie viele Einträge angehängt wurden
      */
     static fuellen(feldKennung, namen, { aufraeumen = true } = {}) {

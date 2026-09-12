@@ -42,6 +42,7 @@ export class Modellvorgabe {
      * schlug sie auf den Vorgabewert durch (`g.offset || 0.006`). Ein Stück mit
      * Abstand 0 bekommt also weiterhin 6 mm — geändert wird das hier nicht,
      * sonst sehen gespeicherte Modelle nach dem Umbau anders aus.
+     * @type {Array<[string, string, number, number, boolean]>}
      */
     static KLEIDERREGLER = [
         ['garment-offset', 'offset', 1000, 0.006, false],

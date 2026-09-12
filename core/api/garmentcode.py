@@ -161,16 +161,20 @@ class Garmentcode:
             'vorlage': request.POST.get('vorlage', 't-shirt'),
             'geschlecht': request.POST.get('geschlecht', 'female'),
             'bauart': request.POST.get('bauart') or None,
-            'morphs': Garmentcode._woerterbuch(request.POST, 'morphs', 'Morphs unlesbar, nehme Grundkoerper'),
-            'regler': Garmentcode._woerterbuch(request.POST, 'regler', 'Reglerwerte unlesbar, nehme Vorgabe'),
-            'meta': Garmentcode._woerterbuch(request.POST, 'meta', 'Metaregler unlesbar, nehme keine'),
+            'morphs': Garmentcode._woerterbuch(
+                request.POST, 'morphs', 'Morphs unlesbar, nehme Grundkoerper'),
+            'regler': Garmentcode._woerterbuch(
+                request.POST, 'regler', 'Reglerwerte unlesbar, nehme Vorgabe'),
+            'meta': Garmentcode._woerterbuch(
+                request.POST, 'meta', 'Metaregler unlesbar, nehme keine'),
             'koerper': koerper,
             'smpl': bool(koerper) and Smplfiguren.ist_smpl(koerper),
         }
 
     @staticmethod
     def _woerterbuch(felder, name, warnung):
-        """Ein JSON-Feld des Formulars als dict; unlesbar oder keins -> leer, mit Warnung."""
+        """Ein JSON-Feld des Formulars als dict; unlesbar oder keins -> leer,
+        mit Warnung."""
         try:
             wert = json.loads(felder.get(name) or '{}')
         except ValueError:

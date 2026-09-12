@@ -39,8 +39,8 @@ class Animschreiber:
 
     def __init__(self, stamm='hb_female'):
         self.stamm = stamm
-        self.knochen = {b['name']: b for b in
-                        json.load(open(os.path.join(DATEN, 'def_skeleton.json')))['bones']}
+        with open(os.path.join(DATEN, 'def_skeleton.json')) as datei:
+            self.knochen = {b['name']: b for b in json.load(datei)['bones']}
         self.gelenke, self.punkte = self._skel_lesen()
         self.umsetzung = Animumsetzung(self.knochen, self.gelenke,
                                        self._knochenlaengen(),
@@ -179,13 +179,37 @@ class Animschreiber:
         in_meter = np.linalg.norm(self.knochen[b]['local_position'])
         return in_fps / in_meter
 
+    @staticmethod
+    def erste_bvh():
+        u"""Die erste BVH unter `Walk` — der Vorgabelauf ohne `--bvh`."""
+        for wurzel, _ordner, dateien in os.walk(os.path.join(BVH_ORDNER, 'Walk')):
+            for datei in sorted(dateien):
+                if datei.lower().endswith('.bvh'):
+                    return os.path.join(wurzel, datei)
+        return None
 
-def _erste_bvh():
-    for wurzel, _ordner, dateien in os.walk(os.path.join(BVH_ORDNER, 'Walk')):
-        for datei in sorted(dateien):
-            if datei.lower().endswith('.bvh'):
-                return os.path.join(wurzel, datei)
-    return None
+    def probe(self, bewegung, bilder):
+        u"""Die Gelenkprobe — und ihre Sabotage-Gegenprobe."""
+        schlimmster, wo, erstes = self.pruefen(bewegung, bilder)
+        print(u'Probe    groesste Abweichung der Gelenke: %.2f mm bei %s'
+              % (schlimmster, wo))
+        print(u'         (Bild 0: %.2f mm)' % erstes)
+        # Sabotage-Gegenprobe: ohne das Delta gegen die Ruhelage MUSS die Probe
+        # ausschlagen. Eine Probe, die immer 0,00 meldet, ist keine.
+        kaputt, _wo, _erst = self.pruefen(bewegung, bilder, roh=True)
+        print(u'         Sabotage (Rigify-Drehung roh): %.1f mm — %s'
+              % (kaputt, u'Probe greift' if kaputt > 10.0 else u'PROBE IST BLIND'))
+
+    def ini_ergaenzen(self, name):
+        u"""Die ANIMATION-Zeile der `.ini` auf diese Datei setzen."""
+        ini = os.path.join(ZIEL, self.stamm + '.ini')
+        with open(ini, encoding='utf-8') as datei:
+            zeilen = [z for z in datei.read().splitlines()
+                      if not z.startswith('ANIMATION')]
+        zeilen.append('ANIMATION   %s%s.anim %s' % (self.stamm, name, self.stamm))
+        with open(ini, 'w', encoding='utf-8') as datei:
+            datei.write('\n'.join(zeilen) + '\n')
+        return ini
 
 
 def main():
@@ -196,7 +220,7 @@ def main():
     zerleger.add_argument('--stamm', default='hb_female')
     werte = zerleger.parse_args()
 
-    bvh = werte.bvh or _erste_bvh()
+    bvh = werte.bvh or Animschreiber.erste_bvh()
     if not bvh or not os.path.exists(bvh):
         raise SystemExit(u'Keine BVH gefunden — bitte --bvh angeben')
     print(u'BVH      %s' % bvh)
@@ -212,34 +236,10 @@ def main():
 
     pfad, bilder = schreiber.schreiben(bewegung, werte.name, werte.bilder)
     print(u'Datei    %s (%d Bilder)' % (os.path.basename(pfad), bilder))
-    _probe(schreiber, bewegung, bilder)
-    ini = _ini_ergaenzen(werte.stamm, werte.name)
+    schreiber.probe(bewegung, bilder)
+    ini = schreiber.ini_ergaenzen(werte.name)
     print(u'         %s ergaenzt' % os.path.basename(ini))
     return 0
-
-
-def _probe(schreiber, bewegung, bilder):
-    u"""Die Gelenkprobe — und ihre Sabotage-Gegenprobe."""
-    schlimmster, wo, erstes = schreiber.pruefen(bewegung, bilder)
-    print(u'Probe    groesste Abweichung der Gelenke: %.2f mm bei %s'
-          % (schlimmster, wo))
-    print(u'         (Bild 0: %.2f mm)' % erstes)
-    # Sabotage-Gegenprobe: ohne das Delta gegen die Ruhelage MUSS die Probe
-    # ausschlagen. Eine Probe, die immer 0,00 meldet, ist keine.
-    kaputt, _wo, _erst = schreiber.pruefen(bewegung, bilder, roh=True)
-    print(u'         Sabotage (Rigify-Drehung roh): %.1f mm — %s'
-          % (kaputt, u'Probe greift' if kaputt > 10.0 else u'PROBE IST BLIND'))
-
-
-def _ini_ergaenzen(stamm, name):
-    u"""Die ANIMATION-Zeile der `.ini` auf diese Datei setzen."""
-    ini = os.path.join(ZIEL, stamm + '.ini')
-    with open(ini, encoding='utf-8') as datei:
-        zeilen = [z for z in datei.read().splitlines() if not z.startswith('ANIMATION')]
-    zeilen.append('ANIMATION   %s%s.anim %s' % (stamm, name, stamm))
-    with open(ini, 'w', encoding='utf-8') as datei:
-        datei.write('\n'.join(zeilen) + '\n')
-    return ini
 
 
 if __name__ == '__main__':

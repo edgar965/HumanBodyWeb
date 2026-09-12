@@ -23,3 +23,9 @@ static/theatre
 # (three.js r128), tsc kennt es nicht — 17 Meldungen ohne Befund
 static/js/bvh_viewer.js
 static/js/bvh_ersatzskelett.js
+# Vite-Konfiguration: läuft in Node (`__dirname`, `path`), nicht im Browser
+TheatreJS/vite.config.js
+# Playwright-Skript im Projektstamm (nicht versioniert, `test_*.js`)
+test_anim_debug.js
+# Probe für den Bedienelemente-Test: `tun` ist dort ABSICHTLICH unbekannt
+core/tests/unit/beispiele/bedienung/static/probe.js

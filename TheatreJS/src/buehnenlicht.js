@@ -57,9 +57,9 @@ export class Buehnenlicht {
         const kugel = new THREE.Mesh(
             new THREE.SphereGeometry(0.35, 32, 32),
             new THREE.MeshBasicMaterial({
-                color: new THREE.Color(1, 1, 1),   // weiß, nicht Lichtfarbe
-                emissive: farbe,
-                emissiveIntensity: 2.0,
+                // Weiß, nicht Lichtfarbe. Ein Basismaterial kennt kein
+                // `emissive` — Three.js übergeht den Eintrag stumm.
+                color: new THREE.Color(1, 1, 1),
                 transparent: true,
                 opacity: 1.0,
                 depthTest: false,

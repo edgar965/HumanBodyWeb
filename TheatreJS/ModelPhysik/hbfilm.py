@@ -182,7 +182,7 @@ class Hbfilm:
         return Filmrender(self.teile, self.bahn,
                           self.melder).bilder_rendern(breite, hoehe)
 
-    def schreiben(self, ziel, fps=24, schleifen=2):
+    def schreiben(self, ziel, fps=24.0, schleifen=2):
         return Filmrender(self.teile, self.bahn,
                           self.melder).schreiben(ziel, fps, schleifen)
 

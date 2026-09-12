@@ -133,7 +133,7 @@ export class Umapythoneigenschaften {
     /** −100…+100 statt 0…1 — dieselbe Skala wie bei den gemeinsamen
      *  Reglern (`humanbody_core/regler`), damit die Mitte sichtbar 0 ist. */
     static _text(wert) {
-        return Math.round((wert - 0.5) * 200);
+        return String(Math.round((wert - 0.5) * 200));
     }
 
     static _mehrKnopf(behaelter, anzahl) {

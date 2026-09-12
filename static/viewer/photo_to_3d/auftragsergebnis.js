@@ -57,8 +57,10 @@ function _fotoZeigen(adresse) {
         bild.src = adresse;
         bild.style.display = 'block';
     }
-    for (const [id, sichtbar] of [['upload-zone', false], ['photo-preview', true],
-                                  ['photo-actions', true]]) {
+    /** @type {Array<[string, boolean]>} */
+    const felder = [['upload-zone', false], ['photo-preview', true],
+                    ['photo-actions', true]];
+    for (const [id, sichtbar] of felder) {
         const knoten = document.getElementById(id);
         if (knoten) knoten.style.display = sichtbar ? 'block' : 'none';
     }

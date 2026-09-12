@@ -188,26 +188,33 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         if handler is not None:
             await handler(self, msg)
 
+    @property
+    def zustand(self):
+        """Der Figurzustand — `receive` weist Nachrichten ohne ihn ab."""
+        if self._char_state is None:
+            raise RuntimeError('CharacterState not initialized')
+        return self._char_state
+
     # Die Handler je Nachrichtentyp — `NACHRICHTEN` unten ordnet sie zu.
 
     async def _neu_senden(self):
-        await self._send_vertices(self._char_state.compute())
+        await self._send_vertices(self.zustand.compute())
 
     async def _bei_body_type(self, msg):
         await self._handle_body_type(msg['value'])
 
     async def _bei_morph(self, msg):
-        self._char_state.set_morph(msg['key'], float(msg['value']))
+        self.zustand.set_morph(msg['key'], float(msg['value']))
         await self._neu_senden()
 
     async def _bei_morph_batch(self, msg):
         # Apply multiple morphs at once
         for key, val in msg.get('morphs', {}).items():
-            self._char_state.set_morph(key, float(val))
+            self.zustand.set_morph(key, float(val))
         await self._neu_senden()
 
     async def _bei_meta(self, msg):
-        self._char_state.set_meta(msg['name'], float(msg['value']))
+        self.zustand.set_meta(msg['name'], float(msg['value']))
         await self._neu_senden()
 
     async def _bei_stoff_loesen(self, msg):
@@ -228,7 +235,7 @@ class CharacterConsumer(Stoffkanal, AsyncWebsocketConsumer):
         # ALTEN Koerper (840 kB) und gleich darauf den neuen — mit der
         # Skelett-Nachfuehrung sichtbar als kurzes Aufblitzen des
         # grossen Rigs. Jetzt geht eine Nachricht raus, die richtige.
-        self._char_state.zuruecksetzen()
+        self.zustand.zuruecksetzen()
         await self._handle_body_type(msg.get('body_type',
                                              'Female_Caucasian'))
 

@@ -91,7 +91,7 @@ export class Videoaufnahme {
 
     /** Bis das Video zu Ende ist — oder der Nutzer es anhält. */
     _bisZumEnde(aufnehmer) {
-        return new Promise(loslassen => {
+        return /** @type {Promise<void>} */ (new Promise(loslassen => {
             this.video.onended = loslassen;
             this.video.onpause = () => {
                 // Eine halbe Sekunde Spielraum: Der Browser meldet `pause`
@@ -101,7 +101,7 @@ export class Videoaufnahme {
                     loslassen();
                 }
             };
-        });
+        }));
     }
 
     async _ablegen(blob, balken) {

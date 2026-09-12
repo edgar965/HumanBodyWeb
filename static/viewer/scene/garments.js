@@ -45,6 +45,7 @@ export function _renderGarmentList() {
         return;
     }
 
+    /** @type {Object<string, any[]>} */
     const byCategory = {};
     for (const g of filtered) {
         const cat = g._category || 'Other';

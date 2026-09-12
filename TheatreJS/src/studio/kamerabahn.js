@@ -27,7 +27,7 @@ export class Kamerabahn {
     /**
      * @param {Object} sequenz  sheet.sequence
      * @param {Object} kameraObjekt  das Theatre-Objekt der Kamera
-     * @param {THREE.Camera} kamera
+     * @param {import('three').Camera} kamera
      * @param {Object} studio  das Theatre-Studio (fuer transaction)
      */
     constructor(sequenz, kameraObjekt, kamera, studio) {

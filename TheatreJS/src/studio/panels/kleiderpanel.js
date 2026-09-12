@@ -26,6 +26,7 @@ import { Panel } from './panel.js';
 export class Kleiderpanel {
 
     /** Schieber, die nur anzeigen — mit Beschriftung und Einheit. */
+    /** @type {Array<[string, string, number, number, number, (v: number) => string]>} */
     static NOCH_OHNE_WIRKUNG = [
         ['garment-min-dist', 'Min. Abstand', -0, 15, 3, v => v + ' mm'],
         ['garment-crotch-floor', 'Schritt-Boden', -40, 40, 0, v => v + ' mm'],

@@ -76,7 +76,7 @@ class SeiteNeu(SimpleTestCase):
             self.assertEqual(Client().get(pfad).status_code, 200, pfad)
 
 
-class DatenStehenInPython(unittest.TestCase):
+class NeuigkeitenStehenInPython(unittest.TestCase):
     u"""Die Stammdaten — geprüft ohne Django, weil sie ohne auskommen."""
 
     databases = set()

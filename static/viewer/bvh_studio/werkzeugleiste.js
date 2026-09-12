@@ -53,6 +53,7 @@ export class Werkzeugleiste {
     static WERKZEUGMENUE = ['btn-tools', 'tools-dropdown'];
 
     /** Einfache Knöpfe der Leiste. */
+    /** @type {Array<[string, () => void]>} */
     static KNOEPFE = [
         ['btn-undo', () => undo()],
         ['btn-redo', () => redo()],

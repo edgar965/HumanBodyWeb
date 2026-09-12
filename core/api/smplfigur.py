@@ -46,7 +46,8 @@ class Smplfigur:
             'smpl': Smplfiguren.ist_smpl(name),
             'punkte': punkte.tolist(),
             'dreiecke': dreiecke.tolist(),
-            'hoehe': float(punkte[:, 1].max() - punkte[:, 1].min()) if len(punkte) else 0.0,
+            'hoehe': (float(punkte[:, 1].max() - punkte[:, 1].min())
+                      if len(punkte) else 0.0),
             'masse': {k: (float(v) if isinstance(v, (int, float)) else v)
                       for k, v in masse.items()},
             # Das Skelett kommt MIT dem Netz, nicht ueber einen zweiten

@@ -39,9 +39,11 @@ export class Knochenkette {
     /**
      * Die Bauliste: Eltern stehen immer vor ihren Kindern.
      *
-     * @param knochen [{name, eltern, kopf, schwanz, pos, quat, ende}]
-     * @returns [{name, eltern, pos:[x,y,z], quat:[x,y,z,w], welt:[x,y,z],
-     *           ende:boolean}] — `pos`/`quat` lokal, `welt` absolut.
+     * @param {Array<object>} knochen [{name, eltern, kopf, schwanz, pos, quat, ende}]
+     * @returns {Array<{name: string, eltern: string|null,
+     *     pos: [number, number, number], quat: [number, number, number, number],
+     *     welt: [number, number, number], ende: boolean}>}
+     *     — `pos`/`quat` lokal, `welt` absolut.
      */
     static bauplan(knochen) {
         const liste = (knochen || []).filter(k => k && k.name && Array.isArray(k.kopf));

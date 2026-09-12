@@ -56,7 +56,8 @@ class Umaformregler:
                 return daten
             ordner = cls.ordner()
             if not os.path.isdir(os.path.join(ordner, 'DNA')):
-                raise UmaformreglerFehlt('Kein UMA-Projekt mit DNA-Ordner unter %s' % ordner)
+                raise UmaformreglerFehlt(
+                    'Kein UMA-Projekt mit DNA-Ordner unter %s' % ordner)
             leser = Formregler(ordner)
             gruppen = leser.gruppen(geschlecht)
             daten = {

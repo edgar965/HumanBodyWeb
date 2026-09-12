@@ -41,16 +41,16 @@ from django.test import SimpleTestCase
 WURZEL = settings.BASE_DIR
 
 
-def _quelle(*teile):
+def _modultext(*teile):
     return io.open(WURZEL.joinpath(*teile), encoding='utf-8').read()
 
 
 def _material():
-    return _quelle('static', 'viewer', 'scene', 'garmentcode_material.js')
+    return _modultext('static', 'viewer', 'scene', 'garmentcode_material.js')
 
 
 def _drapieren():
-    return _quelle('static', 'viewer', 'scene', 'garmentcode_drapieren.js')
+    return _modultext('static', 'viewer', 'scene', 'garmentcode_drapieren.js')
 
 
 class MaterialOhneAuswahlTest(SimpleTestCase):
@@ -124,7 +124,7 @@ class MaterialUeberlebtNeuEinhaengenTest(SimpleTestCase):
     databases = set()
 
     def _anziehen(self):
-        return _quelle('static', 'viewer', 'scene', 'garmentcode_anziehen.js')
+        return _modultext('static', 'viewer', 'scene', 'garmentcode_anziehen.js')
 
     def test_das_bisherige_material_wird_vor_dem_entfernen_gelesen(self):
         u"""`entfernen` gibt das Material frei — danach ist nichts zu holen."""
@@ -145,14 +145,14 @@ class MaterialUeberlebtNeuEinhaengenTest(SimpleTestCase):
 
         Vorher an dreien — und zwei davon sind auseinandergelaufen.
         """
-        stoff = _quelle('static', 'viewer', 'scene', 'garmentcode_stoff.js')
+        stoff = _modultext('static', 'viewer', 'scene', 'garmentcode_stoff.js')
         self.assertIn('static FARBE = 0xdcd8d0;', stoff)
         self.assertIn('static neu(bisher = null, angaben = null)', stoff)
         self.assertIn('static werte(netz)', stoff)
         for datei in ('garmentcode_anziehen.js', 'garmentcode_ablage.js',
                       'garmentcode_material.js'):
             self.assertIn("from './garmentcode_stoff.js'",
-                          _quelle('static', 'viewer', 'scene', datei), datei)
+                          _modultext('static', 'viewer', 'scene', datei), datei)
 
 
 class EinhaengenNimmtBeideFormenTest(SimpleTestCase):
@@ -163,8 +163,8 @@ class EinhaengenNimmtBeideFormenTest(SimpleTestCase):
     databases = set()
 
     def test_kein_direkter_zugriff_auf_figur_inst_mehr(self):
-        quelle = _quelle('static', 'viewer', 'scene',
-                         'garmentcode_drapieren.js')
+        quelle = _modultext('static', 'viewer', 'scene',
+                            'garmentcode_drapieren.js')
         self.assertIn('const inst = figur?.inst || figur;', quelle)
         self.assertIn('GarmentcodeAnziehen.anziehen(\n                inst,',
                       quelle)
@@ -179,11 +179,11 @@ class MaterialAusDerSzeneTest(SimpleTestCase):
         u"""Die andere Hälfte des Befundes: Beim Laden muss das Material aus
         der Szenendatei ankommen. Es kam an — und wurde danach überschrieben.
         """
-        ablage = _quelle('static', 'viewer', 'scene', 'garmentcode_ablage.js')
+        ablage = _modultext('static', 'viewer', 'scene', 'garmentcode_ablage.js')
         self.assertIn('GarmentcodeAblage._materialSetzen(', ablage)
         self.assertIn('eintrag.material', ablage)
 
     def test_die_ablage_liest_das_material_am_netz(self):
         u"""Gespeichert wird, was am Netz steht — nicht der Reglerstand."""
-        ablage = _quelle('static', 'viewer', 'scene', 'garmentcode_ablage.js')
+        ablage = _modultext('static', 'viewer', 'scene', 'garmentcode_ablage.js')
         self.assertIn('material: GarmentcodeAblage._material(netz)', ablage)

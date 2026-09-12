@@ -156,9 +156,9 @@ export const PRESETS = {
 /**
  * Apply a preset to the scene (lights + camera).
  * @param {Object} preset Preset object from PRESETS
- * @param {THREE.Camera} camera Three.js camera
+ * @param {import('three').Camera} camera Three.js camera
  * @param {Object} lights { spotLeft, spotRight, backLight }
- * @param {OrbitControls} controls OrbitControls instance
+ * @param {import('three/addons/controls/OrbitControls.js').OrbitControls} controls
  */
 export function applyPreset(preset, camera, lights, controls) {
     Protokoll.debug('Preset', `Applying: ${preset.name}`);

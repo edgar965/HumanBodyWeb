@@ -127,7 +127,8 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
             return
         try:
             msg = json.loads(text_data)
-        # stumm gewollt: kaputtes JSON aus dem Browser ist eine fremde Eingabe, kein Serverfehler (wie CharacterConsumer)
+        # stumm gewollt: kaputtes JSON aus dem Browser ist eine fremde Eingabe,
+        # kein Serverfehler (wie CharacterConsumer)
         except json.JSONDecodeError:
             return
         art = msg.get('type')
@@ -166,7 +167,8 @@ class StoffConsumer(Stoffkanal, AsyncWebsocketConsumer):
         for name, wert in (msg.get('morphs') or {}).items():
             try:
                 zustand.set_morph(name, float(wert))
-            # stumm gewollt: ein unbrauchbarer Reglerwert aus dem Browser wird uebergangen
+            # stumm gewollt: ein unbrauchbarer Reglerwert aus dem Browser wird
+            # uebergangen
             except (TypeError, ValueError):
                 continue
         for name, wert in (msg.get('meta') or {}).items():

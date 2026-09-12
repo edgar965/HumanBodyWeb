@@ -41,7 +41,9 @@ export const state = {
 
     // --- Morph state (HumanBody) ---
     currentBodyType: 'Female_Caucasian',
+    /** @type {Object<string, number>} */
     morphValues: {},
+    /** @type {Object<string, number>} */
     metaValues: {},
     skinColors: {},
     morphsData: null,

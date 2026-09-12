@@ -35,7 +35,7 @@ GITTER = Jsmodul('gemeinsam', 'punktgitter.js')
 MODELPHYSIK = os.path.join(str(settings.BASE_DIR), 'TheatreJS', 'ModelPhysik')
 
 
-def _kugel(ringe=14, segmente=18, radius=0.3, mitte=(0.0, 1.0, 0.0)):
+def _kugelnetz(ringe=14, segmente=18, radius=0.3, mitte=(0.0, 1.0, 0.0)):
     u"""Geschlossene Kugel, Dreiecke NACH AUSSEN gewickelt."""
     punkte = [np.array(mitte) + [0, radius, 0]]
     for r in range(1, ringe):
@@ -145,7 +145,7 @@ class StoffgrenzeJsTest(SimpleTestCase):
         from stoffgrenze import Stoffgrenze
         zufall = np.random.default_rng(3)
         mitte = (0.0, 1.0, 0.0)
-        koerper, dreiecke = _kugel(mitte=mitte)
+        koerper, dreiecke = _kugelnetz(mitte=mitte)
         stoff = _stoff(zufall, 300, 0.3, mitte)
         ruhe = Stoffgrenze(koerper, dreiecke)
         # Der Sollabstand je Punkt aus der Ruhelage — so rechnet die

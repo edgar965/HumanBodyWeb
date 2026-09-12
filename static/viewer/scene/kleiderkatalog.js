@@ -48,7 +48,9 @@ export class Kleiderkatalog {
     async _holen() {
         try {
             const daten = await Serverabruf.json('/api/character/garment/library/');
-            for (const [kategorie, kleider] of Object.entries(daten.garments || {})) {
+            /** @type {Object<string, any[]>} */
+            const kategorien = daten.garments || {};
+            for (const [kategorie, kleider] of Object.entries(kategorien)) {
                 for (const kleid of kleider) {
                     kleid._category = kategorie;
                     if (!state._garmentCatalog.find(k => k.id === kleid.id)) {

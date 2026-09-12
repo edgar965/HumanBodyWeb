@@ -104,7 +104,7 @@ export class Kleidungsnetz {
             // Ohne den Versatz flackert das Kleid gegen die Haut darunter.
             polygonOffset: true,
             polygonOffsetFactor: -1,
-            polygonOffsetUnit: -1,
+            polygonOffsetUnits: -1,
         });
     }
 

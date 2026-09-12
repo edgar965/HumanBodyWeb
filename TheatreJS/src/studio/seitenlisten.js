@@ -15,7 +15,7 @@ import { fetchAnimationList } from '../scene-manager.js';
 export class Seitenlisten {
 
     /**
-     * @param {Figurenlader} lader
+     * @param {import('./figurenlader.js').Figurenlader} lader
      * @param {Function} animationLaden  (kategorie, name) => Promise
      */
     constructor(lader, animationLaden) {

@@ -24,7 +24,7 @@ export class Mhproxymenue {
      * @param {number} x
      * @param {number} y
      * @param {Object} stueck
-     * @param {Function} neuzeichnen
+     * @param {() => void} neuzeichnen
      */
     static zeigen(x, y, stueck, neuzeichnen) {
         Mhproxymenue.ziel = stueck;

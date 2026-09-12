@@ -19,7 +19,10 @@ export class Smpleinstellungen {
     static ENDPUNKT = '/api/settings/smpl/';
     static SPEICHERN = '/api/settings/smpl/save/';
 
-    /** Feld im Stand, Regler-Kennung, Teiler, Anzeigeform. */
+    /**
+     * Feld im Stand, Regler-Kennung, Teiler, Anzeigeform.
+     * @type {Array<[string, string, number, (wert: number) => string]>}
+     */
     static REGLER = [
         ['opacity', 'smpl-body-opacity', 100, wert => wert.toFixed(2)],
         ['xoffset', 'smpl-body-xoffset', 100, wert => wert.toFixed(2) + ' m'],

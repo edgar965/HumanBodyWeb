@@ -38,7 +38,8 @@ class Bakedatei:
             if kennung == self.KENNUNG:
                 zahl = int(np.frombuffer(datei.read(4), dtype='<u4')[0])
                 self.dreiecke = np.frombuffer(
-                    datei.read(zahl * 12), dtype='<u4').reshape(zahl, 3).astype(np.int64)
+                    datei.read(zahl * 12), dtype='<u4'
+                ).reshape(zahl, 3).astype(np.int64)
             roh = np.frombuffer(datei.read(), dtype='<f4')
         erwartet = self.bilder * self.punkte * 3
         if roh.size != erwartet:

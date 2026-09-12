@@ -18,7 +18,7 @@ from GarmentCode.bundlage import Bundlage
 from GarmentCode.schnittvorschau import Schnittvorschau
 
 
-def _rechteck(name, x0, x1, y0, y1, z=0.0):
+def _panel(name, x0, x1, y0, y1, z=0.0):
     return {'name': name, 'label': name,
             'punkte': np.array([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]]),
             'dreiecke': np.array([[0, 1, 2], [0, 2, 3]])}
@@ -34,10 +34,10 @@ class BundlageTest(SimpleTestCase):
 
     def test_der_bund_faellt_auf_die_oberkante_der_hose(self):
         # Wie Edgars Hose: Hose bis 1,00 m, Bund ab 1,05 m — 5 cm Luft.
-        panels = [_rechteck('pant_f_r', -0.2, 0.0, 0.08, 1.00, 0.25),
-                  _rechteck('pant_b_r', -0.2, 0.0, 0.08, 1.00, -0.2),
-                  _rechteck('wb_front', -0.18, 0.18, 1.05, 1.108, 0.2),
-                  _rechteck('wb_back', -0.15, 0.15, 1.05, 1.108, -0.15)]
+        panels = [_panel('pant_f_r', -0.2, 0.0, 0.08, 1.00, 0.25),
+                  _panel('pant_b_r', -0.2, 0.0, 0.08, 1.00, -0.2),
+                  _panel('wb_front', -0.18, 0.18, 1.05, 1.108, 0.2),
+                  _panel('wb_back', -0.15, 0.15, 1.05, 1.108, -0.15)]
         naehte = [_naht('wb_front', 'pant_f_r'), _naht('wb_back', 'pant_b_r'),
                   _naht('wb_front', 'wb_back')]
         hub = Bundlage.senken(panels, naehte)
@@ -50,17 +50,17 @@ class BundlageTest(SimpleTestCase):
     def test_ein_bund_ueber_dem_rumpf_wird_nicht_an_den_rumpf_gezogen(self):
         u"""Kleid: der Bund haengt oben am Rumpf UND unten am Rock. Er faellt
         auf den Rock, nicht an den Rumpf (der liegt ueber ihm)."""
-        panels = [_rechteck('ftorso', -0.2, 0.2, 1.10, 1.40),
-                  _rechteck('skirt_f', -0.2, 0.2, 0.60, 1.02),
-                  _rechteck('wb_front', -0.2, 0.2, 1.05, 1.10)]
+        panels = [_panel('ftorso', -0.2, 0.2, 1.10, 1.40),
+                  _panel('skirt_f', -0.2, 0.2, 0.60, 1.02),
+                  _panel('wb_front', -0.2, 0.2, 1.05, 1.10)]
         naehte = [_naht('wb_front', 'ftorso'), _naht('wb_front', 'skirt_f')]
         hub = Bundlage.senken(panels, naehte)
         self.assertAlmostEqual(hub, 0.03, places=6)
         self.assertEqual(Bundlage.partner_unten(panels, naehte), {'wb_front': {'skirt_f'}})
 
     def test_ohne_luecke_oder_ohne_naehte_passiert_nichts(self):
-        panels = [_rechteck('pant_f_r', -0.2, 0.0, 0.08, 1.06),
-                  _rechteck('wb_front', -0.18, 0.18, 1.05, 1.108)]
+        panels = [_panel('pant_f_r', -0.2, 0.0, 0.08, 1.06),
+                  _panel('wb_front', -0.18, 0.18, 1.05, 1.108)]
         self.assertEqual(Bundlage.senken(panels, [_naht('wb_front', 'pant_f_r')]), 0.0)
         self.assertEqual(Bundlage.senken(panels, []), 0.0)
         self.assertEqual(Bundlage.senken(panels, [['muell'], [{'x': 1}]]), 0.0)

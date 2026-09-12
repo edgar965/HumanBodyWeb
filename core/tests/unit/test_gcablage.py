@@ -49,16 +49,16 @@ ARTEN = {
 BASIS = 'scene/figurbasis.js'
 
 
-def _quelle(pfad):
+def _dateitext(pfad):
     voll = settings.BASE_DIR / 'static' / 'viewer' / pfad
     return io.open(voll, encoding='utf-8').read()
 
 
 def _traeger(pfad):
     u"""Die Quelle, die Speichern und Laden fuer diese Art fuehrt."""
-    quelle = _quelle(pfad)
+    quelle = _dateitext(pfad)
     if ' extends Figurbasis {' in quelle:
-        return _quelle(BASIS)
+        return _dateitext(BASIS)
     return quelle
 
 
@@ -83,7 +83,7 @@ class GcAblageTest(SimpleTestCase):
         `test_jede_figurart_schreibt_die_liste` oben genuegt sich mit EINEM
         Vorkommen je Datei, und das zweite stand ja da.
         """
-        quelle = _quelle('scene/character.js')
+        quelle = _dateitext('scene/character.js')
         rumpf = quelle.split('    toJSON() {')[1]
         rumpf = rumpf.split('    static ')[0]
         self.assertEqual(rumpf.count('[GarmentcodeAblage.FELD]'), 2,
@@ -143,7 +143,7 @@ class GcAblageTest(SimpleTestCase):
         Abstand von 0,8 m, den `Figurplatzierung` am 06.09.2026 ersetzt
         hat. Seither gibt es `charakterAusModelldaten` als einzigen Weg.
         """
-        dialoge = _quelle('scene/szene_dialoge.js')
+        dialoge = _dateitext('scene/szene_dialoge.js')
         self.assertEqual(dialoge.count('charakterAusModelldaten'), 2,
                          u'Beide Dateiwege muessen die gemeinsame Kette '
                          u'rufen.')
@@ -153,7 +153,7 @@ class GcAblageTest(SimpleTestCase):
                          u'sind die Kleider verloren gegangen.')
 
     def test_die_gemeinsame_kette_zieht_die_stuecke_an(self):
-        quelle = _quelle('scene/charakterliste.js')
+        quelle = _dateitext('scene/charakterliste.js')
         rumpf = quelle.split('export async function charakterAusModelldaten')[1]
         rumpf = rumpf.split('export async function')[0]
         for erwartet in ('await inst.load(', 'Figurplatzierung.anwenden(',
@@ -170,13 +170,13 @@ class GcAblageTest(SimpleTestCase):
         haengt beim naechsten Laden der Szene wieder an der Figur — ein
         Loeschen, das nur bis zum Speichern haelt.
         """
-        quelle = _quelle('scene/teilnetz_auswahl.js')
+        quelle = _dateitext('scene/teilnetz_auswahl.js')
         self.assertIn("target.key.startsWith('gc_')", quelle)
         self.assertIn('GarmentcodeAblage.vergessen(', quelle)
 
     def test_gebaute_stuecke_landen_in_der_ablage(self):
         u"""Gemerkt wird beim Anziehen — sonst ist die Liste immer leer."""
-        quelle = _quelle('scene/garmentcode_drapieren.js')
+        quelle = _dateitext('scene/garmentcode_drapieren.js')
         self.assertIn('GarmentcodeAblage.merken(', quelle)
 
     def test_gegenprobe_der_suchbegriff_trifft_wirklich(self):
@@ -198,7 +198,7 @@ class GcAblageTest(SimpleTestCase):
         die Art ein eigenes `toJSON` ohne die Liste, und die Basis wuerde
         fuer sie buergen."""
         for name, pfad in ARTEN.items():
-            quelle = _quelle(pfad)
+            quelle = _dateitext(pfad)
             if ' extends Figurbasis {' not in quelle:
                 self.assertEqual(name, 'HumanBody')
                 continue

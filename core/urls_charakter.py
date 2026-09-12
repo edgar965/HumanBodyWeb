@@ -91,15 +91,19 @@ CHARAKTER = [
          name='character_uma_skeleton'),
     # UMA-Figur aus dem Figurkatalog fuer die Szene-Seite: Dateien, Zettel,
     # Form-Regler (05.09.2026, core/api/umafigur.py).
-    # Bauen auf Zuruf (06.09.2026) — vor `uma-figur/<str:name>/`, sonst hieße die Figur „bauen".
+    # Bauen auf Zuruf (06.09.2026) — vor `uma-figur/<str:name>/`, sonst hieße
+    # die Figur „bauen".
     path('api/character/uma-rassen/', Umafigur.rassen, name='uma_rassen'),
     path('api/character/uma-garderobe/', Umakleidung.angebot, name='uma_garderobe'),
-    path('api/character/uma-rassen/ermitteln/', Umafigur.rassen_ermitteln, name='uma_rassen_ermitteln'),
+    path('api/character/uma-rassen/ermitteln/', Umafigur.rassen_ermitteln,
+         name='uma_rassen_ermitteln'),
     path('api/character/uma-figur/bauen/', Umafigur.bauen, name='uma_figur_bauen'),
     path('api/character/uma-figur/bauen/<str:name>/stand/', Umafigur.bau_stand,
          name='uma_figur_bau_stand'),
-    path('api/character/uma-figur/bauer/', Umafigur.bauer_stand, name='uma_bauer_stand'),
-    path('api/character/uma-figur/bauer/vorwaermen/', Umafigur.vorwaermen, name='uma_bauer_vorwaermen'),
+    path('api/character/uma-figur/bauer/', Umafigur.bauer_stand,
+         name='uma_bauer_stand'),
+    path('api/character/uma-figur/bauer/vorwaermen/', Umafigur.vorwaermen,
+         name='uma_bauer_vorwaermen'),
     # SMPL-Referenzkoerper von GarmentCode (06.09.2026, core/api/smplfigur.py).
     path('api/character/smpl-figur/', Smplfigur.liste, name='smpl_figur_liste'),
     path('api/character/smpl-figur/formen/', Smplformung.formen,
@@ -152,8 +156,8 @@ CHARAKTER = [
          name='katalog_uma_umbenennen'),
     path('api/character/katalog/uma/loeschen/', Katalogverwaltung.uma_loeschen,
          name='katalog_uma_loeschen'),
-    path('api/character/katalog/modell/umbenennen/', Katalogverwaltung.modell_umbenennen,
-         name='katalog_modell_umbenennen'),
+    path('api/character/katalog/modell/umbenennen/',
+         Katalogverwaltung.modell_umbenennen, name='katalog_modell_umbenennen'),
     path('api/character/katalog/modell/loeschen/', Katalogverwaltung.modell_loeschen,
          name='katalog_modell_loeschen'),
     path('api/character/model/save/', Modelldateien.modell_sichern,

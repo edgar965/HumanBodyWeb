@@ -130,7 +130,7 @@ export class Gewebe {
      * von -1..1 auf 0..255 gelegt. Die Steigung entsteht aus der zentralen
      * Differenz der Nachbarpunkte, über den Rand hinweg gewickelt.
      *
-     * @returns {Uint8Array} groesse*groesse*4 Bytes
+     * @returns {Uint8Array<ArrayBuffer>} groesse*groesse*4 Bytes
      */
     static normalfeld(groesse = Gewebe.GROESSE, faeden = Gewebe.FAEDEN,
                       staerke = Gewebe.STAERKE, hoehe = Gewebe.hoehe) {

@@ -117,16 +117,16 @@ class SchuhdeutungTest(SimpleTestCase):
         return _quader(0.17, 0.17 + breite, -laenge, 0.0, 0.0, hoehe, n=13)
 
     def test_ein_flacher_schuh_wird_zur_ballerina(self):
-        name, regler, _bericht = Schuhdeutung(self._schuh(0.25, 0.095, 0.05),
-                                             self.fuss).deuten()
+        name, regler, _bericht = Schuhdeutung(
+            self._schuh(0.25, 0.095, 0.05), self.fuss).deuten()
         self.assertEqual(name, 'ballerina')
         self.assertAlmostEqual(regler['shoe.length'], 25.0 / 24.41, places=2)
         self.assertAlmostEqual(regler['shoe.width'], 9.5 / 9.14, places=2)
         self.assertNotIn('boot.height', regler)
 
     def test_ein_kniehoher_schuh_wird_zum_stiefel(self):
-        name, regler, _bericht = Schuhdeutung(self._schuh(0.27, 0.10, 0.45),
-                                             self.fuss).deuten()
+        name, regler, _bericht = Schuhdeutung(
+            self._schuh(0.27, 0.10, 0.45), self.fuss).deuten()
         self.assertEqual(name, 'stiefel')
         erwartet = (45.0 - 13.78) / (53.1 - 13.78)
         self.assertAlmostEqual(regler['boot.height'], erwartet, places=2)

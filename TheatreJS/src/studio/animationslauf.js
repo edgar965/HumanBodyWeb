@@ -32,9 +32,9 @@ export class Animationslauf {
 
     /**
      * @param {Object} buehne  { scene, sheet, studio }
-     * @param {Skinner} skinner
-     * @param {Auswahl} auswahl
-     * @param {Abspieler} abspieler
+     * @param {import('./skinner.js').Skinner} skinner
+     * @param {import('./auswahl.js').Auswahl} auswahl
+     * @param {import('./abspieler.js').Abspieler} abspieler
      */
     constructor(buehne, skinner, auswahl, abspieler) {
         this.buehne = buehne;
@@ -115,7 +115,7 @@ export class Animationslauf {
                                                { bodyHeight: this._hoehe(netz) });
         this.mixer = new THREE.AnimationMixer(netz);
         this.aktion = this.mixer.clipAction(clip);
-        this.aktion.setLoop(THREE.LoopRepeat);
+        this.aktion.setLoop(THREE.LoopRepeat, Infinity);
         this.aktion.play();
         this.aktion.paused = true;
 

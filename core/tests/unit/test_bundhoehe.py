@@ -51,13 +51,14 @@ def _rechteck(tx, ty, tz, breite, hoehe):
 
 def _spezifikation():
     u"""Wie Edgars Hose: Bund 104,9..110,6, Hose bis 99,9 (5 cm Luecke)."""
-    return {'pattern': {
+    muster = {
         'panels': {'pant_f_r': _rechteck(-20, 11, 25, 20, 88.9),
                    'wb_front': _rechteck(-18, 104.9, 20, 36, 5.8)},
         'panel_order': ['pant_f_r', 'wb_front'],
         'stitches': [[{'panel': 'wb_front', 'edge': 0},
-                      {'panel': 'pant_f_r', 'edge': 2}]]},
-        'parameters': {}, 'parameter_order': [], 'properties': {}}
+                      {'panel': 'pant_f_r', 'edge': 2}]]}
+    return {'pattern': muster, 'parameters': {}, 'parameter_order': [],
+            'properties': {}}
 
 
 class VersatzTest(SimpleTestCase):

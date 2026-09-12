@@ -28,6 +28,7 @@ import time
 
 from django.conf import settings
 
+from ..pipelines.prozesspruefung import Prozesspruefung
 from .umalaufstand import Umalaufstand
 
 logger = logging.getLogger('core')
@@ -80,7 +81,8 @@ class Umabauer:
     @staticmethod
     def logordner():
         u"""`settings.UMA_BAU_LOGS`, sonst `logs/` des Projekts — Tests legen ihn um."""
-        ordner = str(getattr(settings, 'UMA_BAU_LOGS', '') or os.path.join(str(settings.BASE_DIR), 'logs'))
+        ordner = str(getattr(settings, 'UMA_BAU_LOGS', '')
+                     or os.path.join(str(settings.BASE_DIR), 'logs'))
         os.makedirs(ordner, exist_ok=True)
         return ordner
 
@@ -157,7 +159,8 @@ class Umabauer:
 
     @classmethod
     def _farbtext(cls, farben):
-        u"""`{'haut': '#e0b090'}` → `Skin=#e0b090`, wie der Exporter es liest; leer → ''."""
+        u"""`{'haut': '#e0b090'}` → `Skin=#e0b090`, wie der Exporter es liest;
+        leer → ''."""
         if not farben:
             return ''
         if not isinstance(farben, dict):
@@ -193,32 +196,39 @@ class Umabauer:
 
     @classmethod
     def bauer_stand(cls):
-        u"""`{'lebt', 'stand', 'startet', 'seit_s', 'pid'}` — was der Browser anzeigt."""
+        u"""`{'lebt', 'stand', 'startet', 'seit_s', 'pid'}` — was der Browser
+        anzeigt."""
         zeichen = cls.bauer() or {}
         lebt = cls.bauer_lebt()
         startet = not lebt and cls.startet()
         return {
             'lebt': lebt,
-            'stand': (zeichen.get('stand') or 'aus') if lebt else ('startet' if startet else 'aus'),
+            'stand': ((zeichen.get('stand') or 'aus') if lebt
+                      else ('startet' if startet else 'aus')),
             'startet': startet,
-            'seit_s': int(time.time() - float(zeichen.get('zeit') or time.time())) if lebt else None,
+            'seit_s': (int(time.time() - float(zeichen.get('zeit') or time.time()))
+                       if lebt else None),
             'pid': zeichen.get('pid') if lebt else None,
         }
 
     @classmethod
     def rassen_ermitteln(cls):
-        u"""Unity schreibt die Rassen (Name + verträgliche Rassen) nach `rassen.json`."""
-        return cls._auftrag(cls.RASSENLAUF, {'name': cls.RASSENLAUF, 'rassenliste': cls.rassenpfad()})
+        u"""Unity schreibt die Rassen (Name + verträgliche Rassen) nach
+        `rassen.json`."""
+        return cls._auftrag(cls.RASSENLAUF, {'name': cls.RASSENLAUF,
+                                             'rassenliste': cls.rassenpfad()})
 
     @classmethod
     def rassen(cls):
-        u"""Rassennamen aus dem Katalog — `None`, solange Unity die Liste nicht geschrieben hat."""
+        u"""Rassennamen aus dem Katalog — `None`, solange Unity die Liste nicht
+        geschrieben hat."""
         details = cls.rassen_details()
         return None if details is None else list(details)
 
     @classmethod
     def rassen_details(cls):
-        u"""`{name: [verträgliche Rassen]}` aus `rassen.json`; die alte Fassung (nur Namen) gilt weiter."""
+        u"""`{name: [verträgliche Rassen]}` aus `rassen.json`; die alte Fassung
+        (nur Namen) gilt weiter."""
         pfad = cls.rassenpfad()
         if not os.path.isfile(pfad):
             return None
@@ -227,7 +237,8 @@ class Umabauer:
         details = {}
         for eintrag in eintraege:
             if isinstance(eintrag, dict):
-                details[eintrag['name']] = [str(r) for r in eintrag.get('kompatibel') or []]
+                details[eintrag['name']] = [str(r) for r
+                                            in eintrag.get('kompatibel') or []]
             else:
                 details[str(eintrag)] = []
         return details
@@ -240,12 +251,14 @@ class Umabauer:
         os.makedirs(cls.katalog(), exist_ok=True)
         ergebnis = os.path.join(ordner, name + '.ergebnis.json')
         if os.path.isfile(ergebnis):
-            os.remove(ergebnis)                         # ein alter Erfolg zählt nicht für diesen Lauf
-        with open(os.path.join(ordner, name + '.auftrag.json'), 'w', encoding='utf-8') as datei:
+            os.remove(ergebnis)         # ein alter Erfolg zählt nicht für diesen Lauf
+        auftragspfad = os.path.join(ordner, name + '.auftrag.json')
+        with open(auftragspfad, 'w', encoding='utf-8') as datei:
             json.dump(auftrag, datei, ensure_ascii=False)
         gestartet = cls._bauer_sicherstellen()
         lauf = {'name': name, 'rasse': rasse, 'start': time.time(),
-                'log': os.path.join(cls.logordner(), cls.BAUERLOG), 'gestartet': gestartet}
+                'log': os.path.join(cls.logordner(), cls.BAUERLOG),
+                'gestartet': gestartet}
         cls._laeufe[name] = lauf
         Umalaufstand.merken(cls, lauf)
         logger.info('Umabauer: Auftrag %s abgelegt (%s)', name,
@@ -254,11 +267,12 @@ class Umabauer:
 
     @classmethod
     def _bauer_sicherstellen(cls):
-        u"""Lebt ein Bauer (Lebenszeichen frisch) oder startet gerade einer? Sonst Unity starten."""
+        u"""Lebt ein Bauer (Lebenszeichen frisch) oder startet gerade einer?
+        Sonst Unity starten."""
         if cls.bauer_lebt():
             return False
         if cls._prozess is not None and cls._prozess.poll() is None:
-            return False                                # startet noch, Lebenszeichen kommt gleich
+            return False                    # startet noch, Lebenszeichen kommt gleich
         log = os.path.join(cls.logordner(), cls.BAUERLOG)
         # `-leerlauf 0`: Der Editor bleibt offen (Edgar, 06.09.2026: „du kannst
         # den UnityEditor offen lassen") — sonst zahlt jede Pause den Neustart.
@@ -268,7 +282,8 @@ class Umabauer:
                   '-executeMethod', cls.METHODE, '-logFile', log,
                   '-auftraege', cls.auftragsordner(), '-leerlauf', str(leerlauf)]
         cls._prozess = subprocess.Popen(befehl)
-        logger.info('Umabauer: Unity-Bauer gestartet (pid %s): %s', cls._prozess.pid, ' '.join(befehl))
+        logger.info('Umabauer: Unity-Bauer gestartet (pid %s): %s',
+                    cls._prozess.pid, ' '.join(befehl))
         return True
 
     # ------------------------------------------------------------ Bauer
@@ -296,26 +311,9 @@ class Umabauer:
             return False
         if time.time() - float(zeichen.get('zeit') or 0) > cls.FRISCH_S:
             return False
-        return cls._prozess_lebt(zeichen.get('pid'))
-
-    @staticmethod
-    def _prozess_lebt(pid):
-        u"""Windows: läuft der Prozess noch? (`GetExitCodeProcess` → 259 = STILL_ACTIVE)"""
-        if not pid:
-            return False
-        import ctypes
-        from ctypes import wintypes
-        oeffnen = ctypes.windll.kernel32.OpenProcess
-        oeffnen.restype = wintypes.HANDLE
-        handle = oeffnen(0x1000, False, int(pid))       # PROCESS_QUERY_LIMITED_INFORMATION
-        if not handle:
-            return False
-        try:
-            code = wintypes.DWORD()
-            ctypes.windll.kernel32.GetExitCodeProcess(handle, ctypes.byref(code))
-            return code.value == 259
-        finally:
-            ctypes.windll.kernel32.CloseHandle(handle)
+        # `Prozesspruefung` fragt auch den Exitcode: `OpenProcess` gelingt fuer
+        # einen beendeten Prozess, solange `cls._prozess` sein Handle haelt.
+        return Prozesspruefung.lebt(zeichen.get('pid'))
 
     # ------------------------------------------------------------ Stand
 

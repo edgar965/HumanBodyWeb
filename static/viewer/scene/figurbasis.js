@@ -33,6 +33,7 @@ export class Figurbasis {
         this.skelett = null;
         // Felder der HumanBody-Figur, hier leer: `charakterliste`,
         // `properties` und die Auswahl fragen sie an jeder Figur ab.
+        /** @type {Object<string, any>} */
         this.clothMeshes = {};
         this.hairMesh = null;
         this.garments = [];

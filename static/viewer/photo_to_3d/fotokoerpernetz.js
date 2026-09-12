@@ -86,10 +86,14 @@ export class Fotokoerpernetz {
     adresse() {
         const frage = new URLSearchParams({ body_type: this.koerperart });
         for (const [name, wert] of Object.entries(state.morphValues)) {
-            if (Math.abs(wert) > Fotokoerpernetz.SCHWELLE) frage.set(`morph_${name}`, wert);
+            if (Math.abs(wert) > Fotokoerpernetz.SCHWELLE) {
+                frage.set(`morph_${name}`, String(wert));
+            }
         }
         for (const [name, wert] of Object.entries(state.metaValues)) {
-            if (Math.abs(wert) > Fotokoerpernetz.SCHWELLE) frage.set(`meta_${name}`, wert);
+            if (Math.abs(wert) > Fotokoerpernetz.SCHWELLE) {
+                frage.set(`meta_${name}`, String(wert));
+            }
         }
         return `${API}/mesh/?${frage}`;
     }

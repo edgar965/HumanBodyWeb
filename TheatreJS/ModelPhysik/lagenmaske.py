@@ -49,8 +49,10 @@ class Lagenmaske:
         o = dict(optionen)
         o.update(tiefe=-cls.MINDEST_M, randringe=0, inseln=0,
                  suchweite=optionen.get('abstand', Hautmaske.ABSTAND_M))
-        b_ueber_a = int(Hautmaske.verdeckt(A[1], None, [(B[1], B[2])], normalen=nA, **o).sum())
-        a_ueber_b = int(Hautmaske.verdeckt(B[1], None, [(A[1], A[2])], normalen=nB, **o).sum())
+        b_ueber_a = int(Hautmaske.verdeckt(A[1], None, [(B[1], B[2])],
+                                           normalen=nA, **o).sum())
+        a_ueber_b = int(Hautmaske.verdeckt(B[1], None, [(A[1], A[2])],
+                                           normalen=nB, **o).sum())
         if not b_ueber_a and not a_ueber_b:
             return 0
         return 1 if b_ueber_a >= a_ueber_b else -1

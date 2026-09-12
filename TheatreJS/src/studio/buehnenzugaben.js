@@ -98,6 +98,7 @@ export class Buehnenzugaben {
         return licht;
     }
 
+    /** @returns {[number, number, number]} */
     static _platz() {
         const raum = Buehnenzugaben.RAUM;
         return [(Math.random() - 0.5) * raum.breite,

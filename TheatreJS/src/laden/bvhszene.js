@@ -35,7 +35,7 @@ export class Bvhszene {
         szene.add(helfer);
         const mixer = new THREE.AnimationMixer(wurzel);
         const aktion = mixer.clipAction(ergebnis.clip);
-        aktion.setLoop(THREE.LoopRepeat);
+        aktion.setLoop(THREE.LoopRepeat, Infinity);
         aktion.play();
         aktion.paused = true;      // der Abspieler startet sie
         Theatreanmeldung.anmelden(wurzel, name, 'BVH');

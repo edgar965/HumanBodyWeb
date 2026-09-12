@@ -26,8 +26,8 @@ class VideokodiererTest(SimpleTestCase):
     def test_befehl_rundet_ohne_feste_groesse(self):
         befehl = Videokodierer.aus_bildfolge('ordner', 'ziel.mp4', fps=24)
         self.assertIn(Videokodierer.GERADE, befehl)
-        fest = Videokodierer.aus_bildfolge('ordner', 'ziel.mp4', breite=1920,
-                                          hoehe=1080)
+        fest = Videokodierer.aus_bildfolge('ordner', 'ziel.mp4',
+                                           breite=1920, hoehe=1080)
         self.assertNotIn(Videokodierer.GERADE, fest)
         self.assertIn('scale=1920:1080', fest)
 

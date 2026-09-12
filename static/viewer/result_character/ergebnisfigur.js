@@ -40,7 +40,7 @@ export class Ergebnisfigur {
     static ERSATZFRISUR = 'ballerina';
 
     constructor(werte) {
-        this.canvas = document.getElementById(werte.canvasId);
+        this.canvas = /** @type {HTMLCanvasElement} */ (document.getElementById(werte.canvasId));
         this.video = document.getElementById(werte.videoId);
         this.ladeanzeige = document.getElementById('characterLoading');
         this.feld = werte.panelId ? document.getElementById(werte.panelId) : null;

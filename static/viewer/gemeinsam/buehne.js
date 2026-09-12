@@ -27,13 +27,18 @@ export class Buehne {
     static SICHTFELD = 35;
     static NAH = 0.01;
     static FERN = 100;
+    /** @type {[number, number, number]} */
     static KAMERAPLATZ = [0, 1.0, 3.5];
+    /** @type {[number, number, number]} */
     static KAMERAZIEL = [0, 0.9, 0];
     static ABSTAND_MIN = 0.5;
     static ABSTAND_MAX = 15;
     static DAEMPFUNG = 0.08;
 
-    /** Licht: Name im Ergebnis, Farbe, Stärke, Platz. */
+    /**
+     * Licht: Name im Ergebnis, Farbe, Stärke, Platz.
+     * @type {Array<[string, number, number, [number, number, number]]>}
+     */
     static LICHTER = [
         ['keyLight', 0xffffff, 3.0, [2, 4, -5]],
         ['fillLight', 0xeeeeff, 2.0, [-3, 3, -4]],
@@ -41,7 +46,10 @@ export class Buehne {
     ];
     static UMGEBUNGSLICHT = [0xffffff, 0.8];
 
-    /** Gitter: Größe, Teilungen, Hauptfarbe, Nebenfarbe. */
+    /**
+     * Gitter: Größe, Teilungen, Hauptfarbe, Nebenfarbe.
+     * @type {[number, number, number, number]}
+     */
     static GITTER = [4, 20, 0x333355, 0x222244];
 
     /**

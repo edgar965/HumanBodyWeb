@@ -187,7 +187,7 @@ class FormpresetsTest(SimpleTestCase):
             self.fail('vorbilder.json fehlt — Messlauf noetig')
         gezaehlt = sum(len([p for p in Vorbildpresets.fuer(e['name'])
                             if p['bild']]) for e in Katalog.liste())
-        self.assertEqual(gezaehlt, sum(len(l) for l in alle.values()))
+        self.assertEqual(gezaehlt, sum(len(liste) for liste in alle.values()))
         titel = [p['titel'] for p in Vorbildpresets.fuer('unterwaesche')]
         for erwartet in ('Sport-Bra01', 'Female Panties 01', 'String2', 'Frenchbra'):
             self.assertIn(erwartet, titel)

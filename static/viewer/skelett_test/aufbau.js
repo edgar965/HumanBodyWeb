@@ -35,7 +35,7 @@ export async function init() {
         return;
     }
 
-    Testszene.aufbauen(document.getElementById('viewer-canvas'));
+    Testszene.aufbauen(/** @type {HTMLCanvasElement} */ (document.getElementById('viewer-canvas')));
     window.addEventListener('resize', onResize);
     Sichtschalter.binden();
     bindPlaybackControls();

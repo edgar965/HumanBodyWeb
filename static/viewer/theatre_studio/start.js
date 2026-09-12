@@ -54,7 +54,7 @@ window.project = projekt;
 window.sheet = blatt;
 Studiozustand.benennen('Studio Debug', 'Main', Theatreobjekte.ANZAHL);
 
-const szene = new Probeszene(document.getElementById('studio-canvas'));
+const szene = new Probeszene(/** @type {HTMLCanvasElement} */ (document.getElementById('studio-canvas')));
 new Theatreobjekte(blatt, szene);
 
 /** Theatres Bedienoberfläche hängt sich selbst in den Seitenrumpf. */

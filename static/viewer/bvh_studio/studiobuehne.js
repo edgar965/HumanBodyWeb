@@ -18,7 +18,8 @@ export class Studiobuehne {
     static MAX_SCHRITT_S = 0.1;
 
     bauen() {
-        const teile = createSceneSetup(document.getElementById('studio-canvas'));
+        const teile = createSceneSetup(
+            /** @type {HTMLCanvasElement} */ (document.getElementById('studio-canvas')));
         state.renderer = teile.renderer;
         state.scene = teile.scene;
         state.camera = teile.camera;

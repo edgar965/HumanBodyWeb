@@ -51,7 +51,7 @@ export async function exportServerFfmpeg(offRenderer, offCanvas, fromFrame, toFr
         const blob = await new Promise(r => offCanvas.toBlob(r, 'image/png'));
         frames.push(blob);
 
-        const pct = ((f - fromFrame) / totalFrames * 100).toFixed(0);
+        const pct = Math.round((f - fromFrame) / totalFrames * 100);
         statusText.textContent = `Aufnahme: Frame ${f - fromFrame + 1}/${totalFrames} (${pct}%)`;
         progressBar.style.width = `${pct * 0.8}%`;  // 80% for capture, 20% for encoding
 

@@ -101,6 +101,7 @@ export function buildRigifySkeleton() {
     if (!skelett.rootBone) return;
 
     // Ruhedrehungen fuer die Mimik: die Ausdruecke kommen als Differenz dazu.
+    /** @type {Object<string, any>} */
     const restQuats = {};
     for (const [name, bone] of Object.entries(skelett.boneByName)) {
         restQuats[name] = bone.quaternion.clone();

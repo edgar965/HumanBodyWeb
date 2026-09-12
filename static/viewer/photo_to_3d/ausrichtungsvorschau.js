@@ -21,6 +21,7 @@ export class Ausrichtungsvorschau {
      * Umrisse: Datenfeld, Füllfarbe, Strichfarbe, Strichbreite als Anteil der
      * Grundbreite.
      */
+    /** @type {Array<[string, string, string, number]>} */
     static UMRISSE = [
         ['body_contour', 'rgba(233, 69, 96, 0.2)', 'rgba(233, 69, 96, 0.7)', 1.0],
         ['face_contour', 'rgba(155, 89, 182, 0.15)', 'rgba(155, 89, 182, 0.6)', 0.8],
@@ -30,6 +31,8 @@ export class Ausrichtungsvorschau {
      * Rahmen: Datenfeld, Farbe, Beschriftung, Strichbreitenanteil,
      * Strichmuster (Vielfache der Grundbreite), Schrift [Mindestgröße, Anteil].
      */
+    /** @type {Array<[string, string, string, number, [number, number],
+     *     [number, number], [number, number]]>} */
     static RAHMEN = [
         ['mesh_bbox', 'rgba(0, 102, 255, ', 'SMPL-X Mesh', 0.7, [3, 2],
          [14, 0.025], [4, 6]],

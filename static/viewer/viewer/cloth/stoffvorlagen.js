@@ -29,6 +29,7 @@ export class Stoffvorlagen {
     /**
      * Die vier Regler: Feld-Kennung, Schlüssel in der Vorgabe, Faktor,
      * Anzeigeform. Diese Tabelle ersetzt vier ausgeschriebene Bloecke.
+     * @type {Array<[string, string, number, (wert: number) => string]>}
      */
     static REGLER = [
         ['cloth-tpl-segments', 'segments', 1, wert => String(wert)],

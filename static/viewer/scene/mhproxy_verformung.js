@@ -139,7 +139,7 @@ export class Mhverformung {
             blender[i + 2] = threePunkte[i + 1];
         }
         const frage = _charQueryParams(figur);
-        frage.set('push_dist', _sliderVal(`${this.vorsilbe}-push-dist`));
+        frage.set('push_dist', String(_sliderVal(`${this.vorsilbe}-push-dist`)));
         frage.set('use_mh_body', '0');
         const b64 = btoa(String.fromCharCode(...new Uint8Array(blender.buffer)));
         const daten = await Serverabruf.json(`/api/character/mh-push-outside/?${frage}`, {

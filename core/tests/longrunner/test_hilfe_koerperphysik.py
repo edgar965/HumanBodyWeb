@@ -80,7 +80,7 @@ class SeiteKoerperphysik(SimpleTestCase):
             self.assertEqual(Client().get(pfad).status_code, 200, pfad)
 
 
-class DatenStehenInPython(unittest.TestCase):
+class KoerperphysikDatenStehenInPython(unittest.TestCase):
 
     databases = set()
 
