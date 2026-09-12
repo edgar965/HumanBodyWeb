@@ -20,7 +20,7 @@ class Pipelines3d:
     # Dictionary gewollt: geht ueber `Pipelinevergleich.alle()` in die Vorlage.
     EINTRAEGE = [
         {'schluessel': 'hybrid_gem', 'art': 'Hybrid', 'rang': 1, 'variante': 'Finger aus GEM-X',
-         'variante_kennung': 'hands_source: gemx',
+         'variante_kennung': 'hands_source: gemx', 'video': 'hybrid_gem_gemx_skelett.mp4',
          'verfahren': 'Körper aus GEM-SMPL, danach GEM-X (SOMA, 77 Gelenke) für die Finger und '
                       'MocapNET v4 für das Gesicht (Ausdrücke aus SMPLest-X); drei BVH-Dateien, '
                       'zusammengeführt auf dem Rig (`Handspuren`). Neu am 12.09.2026.',
@@ -29,11 +29,13 @@ class Pipelines3d:
          'boden_cm': -103, 'zustand': 'laeuft', 'zustand_grund': '',
          'vorteile': ['Der GEM-SMPL-Körper (24,3 px, Pose 0,20) plus 30 Fingerspuren aus derselben '
                       'NVIDIA-Familie — gemessen: Fingerzittern 0,28 cm/Bild² (GEM-X, σ 4)',
-                      'Gesicht als SMPLest-X-Ausdrücke wie bei jedem Hybrid',
+                      'Sichtprüfung (Edgar, 12.09.2026): das bessere der beiden Hybrid-Videos',
+                      'Gesicht aus SMPLest-X (seit 12.09.2026 wieder auf dem Rig): Kiefer als gemessene Drehung (hier max 2,8°, der Mund bleibt zu), 72 Marken im Video (gelb)',
                       'Beide Zugaben abschaltbar (Hände-Quelle, Gesicht-Quelle auf der Karte)'],
          'nachteile': ['Langsamste Pipeline: drei Läufe, GEM und GEM-X nacheinander auf der GPU (348 s)',
                        'Finger sitzen an GEMs Handgelenk, gerechnet hat sie GEM-X an seinem eigenen — '
                        'die Handgelenke der beiden weichen um die Deckungsdifferenz voneinander ab',
+                       'Gesicht 37 px hoch im 720p-Bild — die zehn Ausdruckswerte drehen die Knochen um höchstens 0,9°, im Viewer kaum sichtbar',
                        'Wurzel und Boden wie GEM-SMPL; Lizenz NVIDIA OneWay'],
          'begruendung': 'Derselbe Körper wie GEM-SMPL (Deckung und Ruhe gleich), dazu Finger, deren '
                         'Güte gemessen ist, und ein Gesicht. Nach den vier Kriterien Rang 1 — die '
@@ -45,8 +47,10 @@ class Pipelines3d:
          'dauer_s': 171, 'ueberlagerung_px': 24.5, 'ruhe_wurzel': 3.1, 'ruhe_pose': 0.25,
          'boden_cm': -103, 'zustand': 'laeuft', 'zustand_grund': '',
          'vorteile': ['Der GEM-SMPL-Körper (24,5 px) plus Gesicht und Hände',
-                      'v4 läuft parallel auf der CPU — nur 60 s länger als GEM-SMPL allein'],
+                      'v4 läuft parallel auf der CPU — nur 60 s länger als GEM-SMPL allein',
+                      'Gesicht aus SMPLest-X (seit 12.09.2026 wieder auf dem Rig): Kiefer als gemessene Drehung (hier max 2,8°, der Mund bleibt zu), 72 Marken im Video (gelb)'],
          'nachteile': ['Hände aus MocapNET v4 (MediaPipe) — hier nicht gemessen (keine Referenz)',
+                       'Gesicht 37 px hoch im 720p-Bild — die zehn Ausdruckswerte drehen die Knochen um höchstens 0,9°, im Viewer kaum sichtbar',
                        'Wurzel und Boden wie GEM-SMPL; Lizenz NVIDIA OneWay'],
          'begruendung': 'Wie GEM-SMPL plus Gesicht und Hände, aber die Hände sind ungemessen — '
                         'deshalb hinter GEM-X, dessen Finger gemessen sind, und hinter dem '
@@ -91,13 +95,15 @@ class Pipelines3d:
          'dauer_s': 145, 'ueberlagerung_px': 23.4, 'ruhe_wurzel': 3.4, 'ruhe_pose': 0.26,
          'boden_cm': -103, 'zustand': 'laeuft', 'zustand_grund': '',
          'vorteile': ['Vollständigste Ausgabe: Körper, Gesicht, Hände',
-                      'Körper ist bitgleich GVHMR (23,4 px)'],
+                      'Körper ist bitgleich GVHMR (23,4 px)',
+                      'Gesicht aus SMPLest-X wie bei jedem Hybrid (Kiefer gemessen; seit 12.09.2026 '
+                      'wieder auf dem Rig — davor stand jeder Hybrid mit starrem Gesicht da)'],
          'nachteile': ['Zwei Läufe hintereinander (145 s)',
-                       'Gesicht und Hände kommen aus MocapNET v4 — hier nicht gemessen (keine Referenz)',
+                       'Hände kommen aus MocapNET v4 — hier nicht gemessen (keine Referenz)',
                        'Wurzel und Boden wie GVHMR'],
          'begruendung': 'Derselbe Körper wie GVHMR plus Gesicht und Hände. Hinter GVHMR, weil die '
                         'Zugabe aus MocapNET v4 stammt und ihre Güte hier niemand gemessen hat.'},
-        {'schluessel': 'gemx', 'art': '3D', 'rang': 3,
+        {'schluessel': 'gemx', 'art': '3D', 'rang': 3, 'video': 'gemx_s4_skelett.mp4',
          'verfahren': 'GEM-X (NVIDIA, Gewichte `nvidia/GEM-X`, 6,7 GB) — GEM mit dem SOMA-'
                       'Körpermodell (77 Gelenke mit Fingern), Mixamo-Namen im BVH; Kameraraum '
                       'um x gedreht wie bei GVHMR. Glättung σ 4 (Standard seit 12.09.2026).',

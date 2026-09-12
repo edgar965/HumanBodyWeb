@@ -239,9 +239,15 @@ class Hybridlauf(Pipelinelauf):
         try:
             self._melden(self.job.progress,
                          'Extracting face expressions (SMPLest-X batch)...')
-            subprocess.run([settings.PIPELINE_PYTHON, skript,
-                            str(self.video_path), ziel],
-                           check=True, timeout=self.AUSDRUCK_FRIST)
+            lauf = subprocess.run([settings.PIPELINE_PYTHON, skript,
+                                   str(self.video_path), ziel],
+                                  capture_output=True, text=True,
+                                  encoding='utf-8', errors='replace',
+                                  timeout=self.AUSDRUCK_FRIST)
+            if lauf.returncode:
+                # Der Runner meldet seinen Grund als JSON auf stdout; ohne
+                # ihn stand hier vier Monate lang nur „exit status 1".
+                raise RuntimeError((lauf.stdout or lauf.stderr).strip()[-600:])
             logger.info('Face expressions extracted: %s', ziel)
         except Exception as fehler:                                # noqa: BLE001
             logger.warning('Face expression extraction failed: %s', fehler)

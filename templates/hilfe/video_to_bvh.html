@@ -135,6 +135,7 @@ Ohne diese Zeile stand die Tabelle ohne Spaltenrahmen da (Edgar, 12.09.2026:
       <h3>{% if e.rang is not None %}<span class="vtb-rang">{{ e.rang }}</span>{% else %}<span class="vtb-fehlt">ohne Rang</span>{% endif %} {{ e.name }}
         <span class="vtb-zustand vtb-zustand-{{ e.zustand }}">{{ e.zustand_text }}</span></h3>
       <p>{{ e.begruendung }}</p>
+      {% if e.rang is not None %}<p class="vtb-video">Video: <code>{{ e.video }}</code></p>{% endif %}
       {% if e.zustand_grund %}<p class="vtb-grund">{{ e.zustand_grund }}</p>{% endif %}
     </li>
     {% endfor %}
@@ -157,7 +158,21 @@ Ohne diese Zeile stand die Tabelle ohne Spaltenrahmen da (Edgar, 12.09.2026:
     Originalvideo, projiziert mit der Kamera des jeweiligen Laufs), dazu
     <code>vergleich.md</code>, <code>ueberlagerung.json</code> und
     <code>ergebnis.json</code>. Die Skripte stehen in
-    <code>{{ messung.skripte }}</code>.
+    <code>{{ messung.skripte }}</code>. Welches Video zu welcher Zeile
+    gehört, steht oben bei der Begründung — Varianten und Nachmessungen
+    tragen ihren eigenen Namen (<code>hybrid_gem_gemx_skelett.mp4</code>,
+    <code>gemx_s4_skelett.mp4</code>).
+  </p>
+  <p>
+    <strong>Gesicht in den Hybrid-Videos:</strong> gelbe Punkte sind die 72
+    Gesichtsmarken, die SMPLest-X je Bild sah — die Quelle der
+    Gesichtsausdrücke auf dem Rig (Kiefer als gemessene Drehung, die zehn
+    Ausdruckswerte als kleine Knochendrehungen). Die rohen
+    v4-Gesichtsgelenke werden nicht gezeichnet; die Zusammenführung
+    verwirft sie, weil sie zittern. Bis zum 12.09.2026 hatte kein Hybrid ein
+    Gesicht: Die Ausdrucksdatei wurde seit dem 05.04. geschrieben, aber
+    nicht mehr gelesen, und seit dem 08.05. konnte SMPLest-X seine
+    SMPL-X-Modelle nicht finden (ins Archiv verschoben).
   </p>
   <p>
     Der Abstand zu ViTPose ist selbst eine Schätzung gegen eine Schätzung:

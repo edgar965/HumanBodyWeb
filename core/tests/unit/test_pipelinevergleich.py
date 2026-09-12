@@ -34,6 +34,21 @@ class DerVergleich(unittest.TestCase):
                     g['rang'] for g in Pipelinevergleich.grundeintraege()
                     if g['schluessel'] == e['schluessel']))
 
+    def test_jeder_lauf_mit_rang_nennt_sein_skelettvideo(self):
+        u"""Edgar (12.09.2026): „ist das auch im ranking gekennzeichnet?" —
+        das bessere Video `hybrid_gem_gemx_skelett.mp4` gehoert zur
+        Variante auf Rang 1, nicht zum Grundeintrag `hybrid_gem`."""
+        videos = {e['name']: e['video'] for e in Pipelinevergleich.mit_rang()}
+        for name, video in videos.items():
+            with self.subTest(lauf=name):
+                self.assertTrue(video.endswith('_skelett.mp4'), video)
+        erster = next(e for e in Pipelinevergleich.mit_rang() if e['rang'] == 1)
+        self.assertEqual(erster['video'], 'hybrid_gem_gemx_skelett.mp4')
+        grund = next(e for e in Pipelinevergleich.grundeintraege()
+                     if e['schluessel'] == 'hybrid_gem')
+        self.assertEqual(grund['video'], 'hybrid_gem_skelett.mp4')
+        self.assertEqual(len(set(videos.values())), len(videos), 'zwei Laeufe, ein Video')
+
     def test_raenge_sind_eins_bis_n_ohne_luecke_nur_fuer_die_mit_ergebnis(self):
         u"""Rang 1..10 fuer die, die ein BVH liefern; die anderen haben keinen
         (Edgar, 12.09.2026: „das ranking von 1-10")."""

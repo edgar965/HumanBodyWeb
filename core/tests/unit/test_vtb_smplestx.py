@@ -68,6 +68,31 @@ class DerBefund(unittest.TestCase):
     def test_der_ausdruck_kommt_als_liste(self):
         self.assertEqual(self._befund().ausdruck(), [0.125, 0.25])
 
+    def test_der_kiefer_kommt_als_achse_winkel(self):
+        ausgabe = self._ausgabe()
+        ausgabe[Smplestxbefund.KIEFER] = Tensorattrappe([[0.25, 0.0, -0.1]])
+        self.assertEqual(Smplestxbefund(ausgabe).kiefer(), [0.25, 0.0, -0.1])
+
+    def test_ohne_kiefer_eine_leere_liste(self):
+        self.assertEqual(self._befund().kiefer(), [])
+
+    def test_die_gesichtsmarken_landen_im_originalbild(self):
+        u"""`smplx_joint_proj` liegt im Heizkartenraster (16 hoch, 12
+        breit); der Ausschnitt (links 100, oben 50, 120 breit, 160 hoch)
+        bringt es ins Bild. Die ersten 65 Gelenke sind Koerper und
+        Haende und fallen weg."""
+        ausgabe = self._ausgabe()
+        punkte = [[0.0, 0.0]] * Smplestxbefund.GESICHT_AB + [[6.0, 8.0], [12.0, 16.0]]
+        ausgabe[Smplestxbefund.GELENKBILD] = Tensorattrappe([punkte])
+        befund = Smplestxbefund(ausgabe, [100, 50, 120, 160], [100, 50, 120, 160], 0.9)
+        self.assertEqual(befund.gesichtspunkte((16, 16, 12)),
+                         [[160.0, 130.0], [220.0, 210.0]])
+
+    def test_ohne_ausschnitt_keine_marken(self):
+        ausgabe = self._ausgabe()
+        ausgabe[Smplestxbefund.GELENKBILD] = Tensorattrappe([[[1.0, 1.0]] * 70])
+        self.assertEqual(Smplestxbefund(ausgabe).gesichtspunkte((16, 16, 12)), [])
+
     def test_die_kameraverschiebung_kommt_mit(self):
         self.assertEqual(self._befund().kameraverschiebung(), [0.0, 0.0, 3.0])
 
@@ -128,6 +153,38 @@ class DasBild(unittest.TestCase):
     def test_der_groesste_kasten_gewinnt_nicht_der_sicherste(self):
         u"""Ein sicher erkannter Passant im Hintergrund zaehlt nicht."""
         self.assertEqual(Smplestxbild.groesste(np.array(self.KAESTEN)), 1)
+
+    def test_im_video_gewinnt_der_kasten_neben_dem_vorigen(self):
+        u"""001_ShyrinKurz (12.09.2026): In 25 von 295 Bildern war der
+        groesste Kasten eine sitzende Nebentaenzerin. Mit dem Kasten des
+        vorigen Bildes bleibt die Wahl bei der Person, die gemeint ist."""
+        kaesten = np.array([[500.0, 100.0, 560.0, 300.0],     # die Haupttaenzerin, klein
+                            [100.0, 300.0, 400.0, 480.0]])    # eine Sitzende, grosser Kasten
+        self.assertEqual(Smplestxbild.wahl(kaesten), 1)
+        self.assertEqual(Smplestxbild.wahl(kaesten, vorher=[505.0, 95.0, 565.0, 305.0]), 0)
+
+    def test_zu_weit_weg_ist_die_person_verloren(self):
+        u"""Fehlt die Verfolgte im Bild, darf nicht die naechste Fremde
+        gewinnen — sonst klebt die Wahl an ihr (8 Bilder, 12.09.2026)."""
+        kaesten = np.array([[100.0, 300.0, 400.0, 480.0]])   # nur eine Sitzende, 340 px entfernt
+        vorher = [505.0, 95.0, 565.0, 305.0]                  # 210 px hoch → Sprung bis 84 px
+        self.assertIsNone(Smplestxbild.wahl(kaesten, vorher))
+        self.assertEqual(Smplestxbild.wahl(kaesten, [110.0, 290.0, 410.0, 470.0]), 0)
+
+    def test_die_verlorene_person_ist_ein_eigener_grund(self):
+        bild = self._bild(kaesten=[[100.0, 300.0, 400.0, 480.0]], guete=[0.9])
+        befund = bild.auswerten(self._rgb(), vorher=[505.0, 95.0, 565.0, 305.0])
+        self.assertEqual(befund.grund, Smplestxbefund.PERSON_VERLOREN)
+
+    def test_der_befund_traegt_den_gewaehlten_kasten_fuer_das_naechste_bild(self):
+        bild = self._bild()
+        bild.ausschnitt = lambda *args: np.array([0.0, 0.0, 10.0, 10.0])
+        bild.netzeingabe = lambda *args: 'eingabe'
+        bild.durchrechnen = lambda eingabe: {
+            Smplestxbefund.FORM: Tensorattrappe([[1.0]])}
+        befund = bild.auswerten(self._rgb(), vorher=[0.0, 0.0, 12.0, 12.0])
+        self.assertEqual(list(befund.kasten), self.KAESTEN[0])
+        self.assertAlmostEqual(befund.guete, 0.99, places=5)
 
     def test_die_einstellungen_werden_gelesen(self):
         bild = self._bild()
@@ -252,13 +309,30 @@ class DieAusdrucksreihe(unittest.TestCase):
         reihe.dazu(range(50))
         self.assertEqual({len(z) for z in reihe.bilder}, {10})
 
-    def test_das_woerterbuch_traegt_die_vier_felder(self):
+    def test_das_woerterbuch_traegt_die_sechs_felder(self):
         reihe = Ausdrucksreihe(24.0)
         reihe.leer()
         self.assertEqual(reihe.als_dict(),
                          {'fps': 24.0, 'frame_count': 1,
                           'expression_frames': [[0.0] * 10],
+                          'jaw_frames': [[0.0] * 3],
+                          'face_points': [[]],
                           'detected_count': 0})
+
+    def test_kiefer_und_marken_stehen_je_bild_daneben(self):
+        u"""Ein Bild ohne Person traegt drei Nullen und keine Marken —
+        die Zeilen bleiben zu den Ausdruecken deckungsgleich."""
+        reihe = Ausdrucksreihe(24.0)
+        reihe.dazu(range(10), [0.3, 0.0, 0.1], [(10.5, 20.0), (11.0, 21.5)])
+        reihe.leer()
+        self.assertEqual(reihe.kiefer, [[0.3, 0.0, 0.1], [0.0, 0.0, 0.0]])
+        self.assertEqual(reihe.marken, [[[10.5, 20.0], [11.0, 21.5]], []])
+        self.assertEqual(len(reihe.kiefer), len(reihe.bilder))
+
+    def test_ein_kurzer_kiefer_wird_aufgefuellt(self):
+        reihe = Ausdrucksreihe(24.0)
+        reihe.dazu(range(10), [0.5])
+        self.assertEqual(reihe.kiefer, [[0.5, 0.0, 0.0]])
 
     def test_die_datei_ist_lesbares_json(self):
         reihe = Ausdrucksreihe(30.0)

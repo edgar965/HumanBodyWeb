@@ -22,6 +22,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ..daten.retargetwahl import Retargetwahl
 from ..dienste.bvhablage import Bvhablage
 from ..dienste.bvhverwaltung import Bvhverwaltung, BvhFehler
+from ..dienste.gesichtsspuren import Gesichtsspuren
 from ..dienste.handspuren import Handspuren
 from ..dienste.retargetdaten import Retargetdaten
 from ..dienste.umaskelett import UmaskelettFehlt
@@ -253,6 +254,10 @@ class Retargetendpunkte:
         if job.bvh_file_hands:
             gemischt = Handspuren.mischen(
                 gemischt, Retargetdaten(job.bvh_file_hands, groesse).holen())
+        # Das Gesicht aus den SMPLest-X-Ausdruecken neben der v4-BVH — seit
+        # dem 05.04.2026 geschrieben, seit dem 12.09.2026 wieder gelesen.
+        gemischt = Gesichtsspuren.mischen(
+            gemischt, Gesichtsspuren.laden(job.bvh_file_face))
         return JsonResponse(gemischt.als_dict())
 
     # -------------------------------------------------------- Bibliothek

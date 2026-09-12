@@ -74,6 +74,9 @@ class Pipelinevergleich:
             if eintrag['variante']:
                 eintrag['name'] += ' · ' + eintrag['variante']
                 eintrag['kennung'] += ' · ' + eintrag.get('variante_kennung', '')
+            # Das Skelettvideo des Laufs im Vergleichsordner — Varianten und
+            # Nachmessungen (gemx_s4) nennen ihres selbst.
+            eintrag.setdefault('video', '%s_skelett.mp4' % eintrag['schluessel'])
             eintrag['zustand_text'] = cls.ZUSTAND[eintrag['zustand']]
             eintraege.append(eintrag)
         return eintraege

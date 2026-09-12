@@ -65,5 +65,12 @@ class DieSeite(SimpleTestCase):
         self.assertIn('Rang 1 bis %d' % len(Pipelinevergleich.mit_rang()), text)
         self.assertEqual(text.count('>ohne Rang<'), ohne)
 
+    def test_jeder_rang_nennt_sein_video_und_das_gesicht_ist_erklaert(self):
+        text = self._text()
+        for e in Pipelinevergleich.mit_rang():
+            self.assertIn('<code>%s</code>' % e['video'], text)
+        self.assertIn('72', text)
+        self.assertIn('SMPLest-X', text)
+
     def test_der_menuepunkt_zeigt_auf_die_seite(self):
         self.assertIn('href="/hilfe/video-to-bvh/"', self._text())

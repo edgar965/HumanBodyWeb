@@ -68,7 +68,7 @@ class HybridBasis(TestCase):
 
         def lauf(befehl, **kw):
             self.aufrufe['ausdruck'] = befehl
-            return None
+            return Runnerergebnis(0)
 
         self._alt = (hybridlauf.Smpllauf, hybridlauf.V4Lauf,
                      hybridlauf.subprocess.run, Hybridlauf.TAKT)
@@ -150,6 +150,15 @@ class HybridTeilergebnisTest(HybridBasis):
         self.assertIn('Hybrid pipeline failed', str(gefangen.exception))
 
 
+class Runnerergebnis:
+    u"""Was `subprocess.run` mit `capture_output` zurückgibt — verkürzt."""
+
+    def __init__(self, returncode, stdout='', stderr=''):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
 class HybridAusdrueckeTest(HybridBasis):
 
     def test_ausdruecke_werden_gezogen(self):
@@ -175,3 +184,14 @@ class HybridAusdrueckeTest(HybridBasis):
         auftrag, ergebnis = self.fahren()
         self.assertEqual(ergebnis, ('body.bvh', 'face.bvh'))
         self.assertEqual(auftrag.progress_detail, 'Done')
+
+    def test_der_grund_des_runners_steht_im_log(self):
+        u"""Der Runner meldet seinen Grund als JSON auf stdout. Vom 08.05. bis
+        zum 12.09.2026 stand im Log nur „exit status 1", während die
+        SMPL-X-Modelle fehlten — vier Monate ohne Gesicht, unbemerkt."""
+        grund = '{"error": "SMPL-X-Modell fehlt unter human_model_files/smplx"}'
+        hybridlauf.subprocess.run = lambda befehl, **kw: Runnerergebnis(1, stdout=grund)
+        with self.assertLogs('core.pipeline', level='WARNING') as protokoll:
+            auftrag, ergebnis = self.fahren()
+        self.assertEqual(ergebnis, ('body.bvh', 'face.bvh'))
+        self.assertIn('SMPL-X-Modell fehlt', ' '.join(protokoll.output))
