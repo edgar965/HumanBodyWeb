@@ -99,6 +99,14 @@ class DerDuomoBefehl(unittest.TestCase):
         for _schluessel, _feld, argument in Smplbefehl.SCHALTER['duomo']:
             self.assertIn(argument, argumente)
 
+    def test_umgebung_laesst_xformers_nicht_nach_triton_suchen(self):
+        # Ohne den Schalter stand xformers' Triton-Traceback als
+        # Fortschrittstext im Formular (Auftrag f33496c4, 12.09.2026).
+        umgebung = self._lauf(geraet='cuda').umgebung()
+        self.assertEqual(umgebung['XFORMERS_FORCE_DISABLE_TRITON'], '1')
+        self.assertIn('CUDA_VISIBLE_DEVICES', umgebung)
+        self.assertIn('PATH', umgebung, 'die Prozessumgebung bleibt erhalten')
+
     def test_umrechner_liegt_neben_dem_lauf(self):
         self.assertTrue(os.path.isfile(Duomolauf.UMRECHNER))
         self.assertEqual(os.path.basename(Duomolauf.UMRECHNER), 'duomo_smplx.py')
