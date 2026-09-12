@@ -116,6 +116,20 @@ class Einstellungsfelder:
             u'Joint Limits',
             u'Anatomische Grenzen für Knie, Ellbogen und Hüfte im BVH anwenden. '
             u'Vorgabe für die Karte auf der Uploadseite'),
+        'gvhmr_use_dpvo': F(
+            u'DPVO',
+            u'Kamerabahn mit DPVO statt SimpleVO schätzen (genauer, langsamer, '
+            u'mehr VRAM). Wirkt nur ohne statische Kamera. Vorgabe für die Karte'),
+        'gvhmr_verbose': F(
+            u'Verbose',
+            u'Debug-Videos der Vorstufen ausgeben (Personenkästen, ViTPose-'
+            u'Skelett) — liest das Video dafür komplett in den Speicher. '
+            u'Vorgabe für die Karte'),
+        'gvhmr_render': F(
+            u'Demo-Videos rendern',
+            u'Kamera-, Welt- und Vergleichsvideo erzeugen (pytorch3d). Bei '
+            u'7.538 Bildern die Hälfte der Laufzeit; ohne sie bleibt das BVH. '
+            u'Die Videos kopiert „3D Video Output" in den Ausgabeordner'),
 
         # --------------------------------------------------------------- WHAM
         'wham_estimate_local_only': F(
@@ -145,6 +159,11 @@ class Einstellungsfelder:
             u'Joint Limits',
             u'Anatomische Grenzen für Knie, Ellbogen und Hüfte im BVH anwenden. '
             u'Vorgabe für die Karte auf der Uploadseite'),
+        'gem_render': F(
+            u'Demo-Videos rendern',
+            u'Kamera-, Welt- und Vergleichsvideo mit Open3D erzeugen (dauert '
+            u'länger, liest das Video komplett in den Speicher). Vorgabe für '
+            u'die Karte'),
 
         # -------------------------------------------------------------- DuoMo
         'duomo_static_cam': F(

@@ -179,12 +179,21 @@
                                 <div class="setting-label">DPVO <span
                                      class="setting-hint">DPVO statt SimpleVO (genauer, langsamer, braucht mehr
                                           VRAM) &mdash; {% if status_3d.slam %}installiert{% else %}nicht installiert{% endif %}</span></div>
-                                <input type="checkbox" name="gvhmr_use_dpvo">
+                                <input type="checkbox" name="gvhmr_use_dpvo"
+                                     {% if defaults.gvhmr_use_dpvo %}checked{% endif %}>
                             </div>
                             <div class="setting-item">
                                 <div class="setting-label">Verbose <span
                                      class="setting-hint">Debug-Visualisierungen ausgeben</span></div>
-                                <input type="checkbox" name="gvhmr_verbose">
+                                <input type="checkbox" name="gvhmr_verbose"
+                                     {% if defaults.gvhmr_verbose %}checked{% endif %}>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-label">Demo-Videos rendern <span
+                                     class="setting-hint">Kamera-, Welt- und Vergleichsvideo (pytorch3d) &mdash; bei
+                                          langen Videos die H&auml;lfte der Laufzeit</span></div>
+                                <input type="checkbox" name="gvhmr_render"
+                                     {% if defaults.gvhmr_render %}checked{% endif %}>
                             </div>
                             <div class="setting-item">
                                 <div class="setting-label">Device <span
@@ -352,7 +361,8 @@
                                 <div class="setting-label">Demo-Videos rendern <span
                                      class="setting-hint">Kamera-, Welt- und Vergleichsvideo (Open3D, dauert
                                           l&auml;nger)</span></div>
-                                <input type="checkbox" name="gem_render">
+                                <input type="checkbox" name="gem_render"
+                                     {% if defaults.gem_render %}checked{% endif %}>
                             </div>
                             <div class="setting-item">
                                 <div class="setting-label">Device <span

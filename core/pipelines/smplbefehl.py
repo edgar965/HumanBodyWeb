@@ -25,14 +25,14 @@ class Smplbefehl:
     #: `None` als Feld heißt: nur der Auftrag entscheidet, Vorgabe aus.
     SCHALTER = {
         'gvhmr': (('static_cam', 'gvhmr_static_cam', '--static_cam'),
-                  ('use_dpvo', None, '--use_dpvo'),
-                  ('verbose', None, '--verbose')),
+                  ('use_dpvo', 'gvhmr_use_dpvo', '--use_dpvo'),
+                  ('verbose', 'gvhmr_verbose', '--verbose')),
         'wham': (('local_only', 'wham_estimate_local_only', '--estimate_local_only'),
                  ('smplify', 'wham_run_smplify', '--run_smplify')),
         'prompthmr': (('static_cam', 'prompthmr_static_camera', '--static_camera'),),
         # GEM-SMPL (11.09.2026): feste Kamera wie GVHMR, dazu die Demo-Videos.
         'gem': (('static_cam', 'gem_static_cam', '--static_cam'),
-                ('render', None, '--render')),
+                ('render', 'gem_render', '--render')),
         # DuoMo (12.09.2026): ohne Kamerabahn ohnehin fest; die Einstellung
         # ist die Vorgabe der Karte.
         'duomo': (('static_cam', 'duomo_static_cam', '--static_cam'),),
@@ -79,10 +79,15 @@ class Smplbefehl:
                 yield argument
 
     def _gvhmr_werte(self):
-        """Die Brennweite — nur GVHMR nimmt sie entgegen."""
+        """Die Brennweite — nur GVHMR nimmt sie entgegen — und der
+        umgekehrte Render-Schalter: Das Demo rendert von sich aus, `--no_render`
+        laesst die drei Videos weg (12.09.2026)."""
         s, p = self.einstellungen, self.params
-        return ['--focal_length_mm',
-                str(p.get('focal_length_mm', s.gvhmr_focal_length_mm))]
+        werte = ['--focal_length_mm',
+                 str(p.get('focal_length_mm', s.gvhmr_focal_length_mm))]
+        if not p.get('render', s.gvhmr_render):
+            werte.append('--no_render')
+        return werte
 
     def _glaettung(self):
         """Glaettung und der umgekehrte Gelenkgrenzen-Schalter.

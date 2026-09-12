@@ -21,7 +21,8 @@ class Einstellungen(SimpleNamespace):
     def __init__(self):
         super().__init__(smpl_device='cuda', gvhmr_static_cam=True,
                          gvhmr_focal_length_mm=0, gvhmr_smooth_sigma=2.0,
-                         gvhmr_joint_limits=True)
+                         gvhmr_joint_limits=True, gvhmr_use_dpvo=False,
+                         gvhmr_verbose=False, gvhmr_render=True)
 
 
 class GvhmrFormularTest(SimpleTestCase):

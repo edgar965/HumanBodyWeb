@@ -38,9 +38,11 @@ class DreiDEinstellungen(Einstellungsseite):
     SCHALTER = (
         'v4_enable_body', 'v4_enable_face', 'v4_enable_hands',
         'v4_enable_mouth', 'v4_enable_eyes',
-        'gvhmr_static_cam', 'gvhmr_joint_limits',
+        'gvhmr_static_cam', 'gvhmr_joint_limits', 'gvhmr_use_dpvo',
+        'gvhmr_verbose', 'gvhmr_render',
         'wham_estimate_local_only', 'wham_run_smplify',
         'prompthmr_static_camera', 'gem_static_cam', 'gem_joint_limits',
+        'gem_render',
         'duomo_static_cam', 'duomo_joint_limits', 'gemx_static_cam',
     )
 

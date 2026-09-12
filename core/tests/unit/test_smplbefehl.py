@@ -27,6 +27,9 @@ class EinstellungenAttrappe:
     gvhmr_focal_length_mm = 35.0
     gvhmr_smooth_sigma = 1.5
     gvhmr_joint_limits = False
+    gvhmr_use_dpvo = False
+    gvhmr_verbose = True
+    gvhmr_render = True
     wham_estimate_local_only = True
     wham_run_smplify = False
     prompthmr_static_camera = True
@@ -35,6 +38,7 @@ class EinstellungenAttrappe:
     # Modellvorgaben, damit ein Rueckfall auf 2.0 / True / False auffaellt.
     gem_smooth_sigma = 3.5
     gem_joint_limits = True
+    gem_render = False
     duomo_static_cam = True
     duomo_smooth_sigma = 2.0
     duomo_joint_limits = False
@@ -70,11 +74,14 @@ class SmplbefehlTest(SimpleTestCase):
         """Der Fall, der ohne Test durchfällt: ausdrücklich ABGEWÄHLT."""
         self.assertNotIn('--static_cam', self.befehl('gvhmr', static_cam=False))
 
-    def test_schalter_ohne_einstellung_sind_aus(self):
+    def test_dpvo_und_verbose_folgen_der_einstellung_auftrag_schlaegt(self):
+        """Seit 12.09.2026 mit Einstellungsfeld (Attrappe: DPVO aus, Verbose
+        an); vorher galten beide ohne Auftragswert als aus."""
         befehl = self.befehl('gvhmr')
         self.assertNotIn('--use_dpvo', befehl)
-        self.assertNotIn('--verbose', befehl)
+        self.assertIn('--verbose', befehl)
         self.assertIn('--use_dpvo', self.befehl('gvhmr', use_dpvo=True))
+        self.assertNotIn('--verbose', self.befehl('gvhmr', verbose=False))
 
     # ---------------------------------------------------------- Je Pipeline
 
@@ -82,6 +89,15 @@ class SmplbefehlTest(SimpleTestCase):
         befehl = self.befehl('gvhmr', focal_length_mm=50.0, smooth_sigma=1.5)
         self.assertEqual(befehl[befehl.index('--focal_length_mm') + 1], '50.0')
         self.assertEqual(befehl[befehl.index('--smooth_sigma') + 1], '1.5')
+
+    def test_gvhmr_rendert_von_sich_aus_no_render_nur_bei_abwahl(self):
+        """Der Lifter rendert wie das Demo; `--no_render` geht nur mit, wenn
+        Auftrag oder Einstellung (Attrappe: an) es abwaehlen (12.09.2026).
+        Der Hybrid-Lauf schickt keinen Wert und bekommt die Einstellung."""
+        self.assertNotIn('--no_render', self.befehl('gvhmr'))
+        self.assertNotIn('--render', self.befehl('gvhmr'))
+        self.assertIn('--no_render', self.befehl('gvhmr', render=False))
+        self.assertNotIn('--no_render', self.befehl('gem'))
 
     def test_gelenkgrenzen_sind_umgekehrt(self):
         """Grenzen AN heisst: kein Schalter. Die Attrappe hat sie fuer GVHMR

@@ -31,7 +31,8 @@ export class Pipelinefelder {
         gvhmr: [
             ['static_cam', 'bool'], ['focal_length_mm', 'float'],
             ['smooth_sigma', 'float'], ['joint_limits', 'bool'],
-            ['use_dpvo', 'bool'], ['verbose', 'bool'], ['device', 'text'],
+            ['use_dpvo', 'bool'], ['verbose', 'bool'], ['render', 'bool'],
+            ['device', 'text'],
             ['video_output_dir', 'text?'],
         ],
         wham: [

@@ -24,7 +24,7 @@ HTML ist eine Behauptung, die niemand mehr nachrechnet.
 die Doku-Seiten laden es nicht, und `dokuseite.css` setzt `border: none`.
 Ohne diese Zeile stand die Tabelle ohne Spaltenrahmen da (Edgar, 12.09.2026:
 „mach die spalten mit rahmen").{% endcomment %}
-<link rel="stylesheet" href="/static/djangobase/css/tabellen.css">
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
 <link rel="stylesheet" href="{% fassungspfad 'css/hilfe_video_to_bvh.css' %}">
 {% endblock %}
 

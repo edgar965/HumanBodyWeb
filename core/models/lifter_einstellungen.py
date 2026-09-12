@@ -46,6 +46,18 @@ class LifterEinstellungen(models.Model):
         default=True,
         help_text=Einstellungsfelder.hilfetext('gvhmr_joint_limits'),
     )
+    gvhmr_use_dpvo = models.BooleanField(
+        default=False,
+        help_text=Einstellungsfelder.hilfetext('gvhmr_use_dpvo'),
+    )
+    gvhmr_verbose = models.BooleanField(
+        default=False,
+        help_text=Einstellungsfelder.hilfetext('gvhmr_verbose'),
+    )
+    gvhmr_render = models.BooleanField(
+        default=True,
+        help_text=Einstellungsfelder.hilfetext('gvhmr_render'),
+    )
 
     # --- Video to BVH: WHAM settings ---
     wham_estimate_local_only = models.BooleanField(
@@ -75,6 +87,10 @@ class LifterEinstellungen(models.Model):
     gem_joint_limits = models.BooleanField(
         default=True,
         help_text=Einstellungsfelder.hilfetext('gem_joint_limits'),
+    )
+    gem_render = models.BooleanField(
+        default=False,
+        help_text=Einstellungsfelder.hilfetext('gem_render'),
     )
 
     # --- Video to BVH: DuoMo settings (12.09.2026) ---
