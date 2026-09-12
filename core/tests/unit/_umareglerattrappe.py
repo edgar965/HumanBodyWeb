@@ -89,6 +89,7 @@ class Umareglerattrappe:
                  '  - bone: Weg\n    hash: 3\n    position: {x: 1, y: 1, z: 1}\n'
                  '    rotation: {x: 0, y: 0, z: 0, w: 1}\n    scale: {x: 1, y: 1, z: 1}\n'
                  '    category: \n    enabled: 0\n')
+        # Dictionary gewollt: Dateipfad zu Dateiinhalt, wie ein Ordner auf der Platte.
         return {
             'DNA/FemaleBody.asset': cls.gruppe('FemaleBody', 'Body', ['height', 'legSeparation']),
             'DNA/MaleBody.asset': cls.gruppe('MaleBody', 'Body', ['height']),

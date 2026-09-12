@@ -41,8 +41,11 @@ function _peSetRegionMode(active) {
         // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
         if (regionControls) regionControls.style.display = 'block';
     }
-    else { if (patternControls) patternControls.style.display = 'block'; if (wrapSection) wrapSection.style.display = 'block';
-        if (regionControls) regionControls.style.display = 'none'; }
+    else {
+        if (patternControls) patternControls.style.display = 'block';
+        if (wrapSection) wrapSection.style.display = 'block';
+        if (regionControls) regionControls.style.display = 'none';
+    }
 }
 
 export function _peSetModeButtons() {
@@ -149,7 +152,11 @@ export function initPatternEditor() {
     });
     document.getElementById('pe-wrap')?.addEventListener('change',
         (e) => { const sliders = document.getElementById('pe-wrap-sliders');
-            if (sliders) { sliders.classList.toggle('hb-versteckt', !e.target.checked); sliders.style.display = ''; } });   // Klasse mit — die Vorlage versteckt per `hb-versteckt` (11.09.2026)
+            // Klasse mit — die Vorlage versteckt per `hb-versteckt` (11.09.2026)
+            if (sliders) {
+                sliders.classList.toggle('hb-versteckt', !e.target.checked);
+                sliders.style.display = '';
+            } });
     bindSlider('pe-wrap-offset', 'pe-wrap-offset-val', v => v); bindSlider('pe-wrap-stiffness', 'pe-wrap-stiffness-val',
         v => (v / 100).toFixed(2));
     bindSlider('pe-region-zmin', 'pe-region-zmin-val', v => (v / 100).toFixed(2)); bindSlider('pe-region-zmax',

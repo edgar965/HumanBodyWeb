@@ -40,6 +40,7 @@ def zylinder(radius, hoehe=1.0, ringe=24, stufen=16):
             b = stufe * ringe + (ring + 1) % ringe
             c = a + ringe
             d = b + ringe
+            # in der Schleife gewollt: `+=` auf einer Liste ist `extend`, kopiert nichts
             dreiecke += [[a, b, c], [b, d, c]]
     return punkte, np.array(dreiecke, dtype=np.int64)
 

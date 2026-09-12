@@ -138,6 +138,7 @@ class Blenderattrappe:
         bpy = self.bpy()
         mathutils = self.mathutils()
         extras, batch = self.gpu_extras()
+        # Dictionary gewollt: geht so in `sys.modules` — Modulname zu Modul.
         return {
             'bpy': bpy,
             'bpy.types': bpy.types,

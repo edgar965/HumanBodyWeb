@@ -127,11 +127,8 @@ class Angezogen:
     @staticmethod
     def _orte(daten):
         u"""Die Wurzelorte der BVH (Y-oben -> Z-oben), oder None ohne Spur."""
-        if not daten.position_track:
-            return None
-        roh = np.asarray(daten.position_track['values'],
-                         dtype=np.float64).reshape(-1, 3)
-        return np.column_stack([roh[:, 0], -roh[:, 2], roh[:, 1]])
+        from skelettbahn import Skelettbahn
+        return Skelettbahn.wurzelbahn(daten)
 
     def _lbs(self, namen, gewichte, ruhe_um, welt):
         u"""Ein Bild: jeder Stoffpunkt gewichtet ueber seine Knochen."""

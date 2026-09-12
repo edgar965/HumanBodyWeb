@@ -62,7 +62,7 @@ export async function restoreSessionState() {
                         if (state.characters.has(fertig.id)) return;
                         state.characters.set(fertig.id, fertig);
                         state.scene.add(fertig.group);
-                        Startmessung.eintragen('== FIGUR SICHTBAR ==',
+                        Startmessung.eintragen('FIGUR SICHTBAR',
                                                performance.now());
                     };
                     const inst = await Figurarten.ausJSON(charData, zeigen);

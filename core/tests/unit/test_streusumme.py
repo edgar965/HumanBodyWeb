@@ -18,16 +18,12 @@ from ._modelphysik import Modelphysik
 ORDNER = Modelphysik.ORDNER
 
 
-def _modul():
-    return Modelphysik.modul('streusumme').Streusumme
-
-
 class StreusummeTest(SimpleTestCase):
 
     databases = set()
 
     def setUp(self):
-        self.S = _modul()
+        self.S = StreusummeTest._modul()
         self.zufall = np.random.default_rng(7)
 
     def test_eindimensional_wie_add_at(self):
@@ -76,3 +72,7 @@ class StreusummeTest(SimpleTestCase):
             text = (ORDNER / (name + '.py')).read_text(encoding='utf-8')
             self.assertNotIn('np.add.at', text, name)
             self.assertIn('Streusumme', text, name)
+
+    @staticmethod
+    def _modul():
+        return Modelphysik.modul('streusumme').Streusumme

@@ -16,21 +16,17 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 
 
-def _lies(*teile):
-    return Jsmodul(*teile).pfad.read_text(encoding='utf-8')
-
-
 class DerHaarabschnittGehtAufTest(SimpleTestCase):
 
     databases = set()
 
     def test_hair_js_schaltet_die_klasse(self):
-        quelle = _lies('scene', 'hair.js')
+        quelle = DerHaarabschnittGehtAufTest._lies('scene', 'hair.js')
         stelle = quelle.index('function _syncPropHairControls')
         self.assertIn("classList.toggle('hb-versteckt', !haar)", quelle[stelle:])
 
     def test_properties_js_schaltet_die_klasse(self):
-        quelle = _lies('scene', 'properties.js')
+        quelle = DerHaarabschnittGehtAufTest._lies('scene', 'properties.js')
         stelle = quelle.index("getElementById('prop-hair-section')")
         self.assertIn("classList.toggle('hb-versteckt', !isHair)",
                       quelle[stelle:stelle + 400])
@@ -42,3 +38,7 @@ class DerHaarabschnittGehtAufTest(SimpleTestCase):
         vorlage = (settings.BASE_DIR / 'templates' / 'scene_config.html')
         text = vorlage.read_text(encoding='utf-8')
         self.assertIn('class="prop-section hb-versteckt" id="prop-hair-section"', text)
+
+    @staticmethod
+    def _lies(*teile):
+        return Jsmodul(*teile).pfad.read_text(encoding='utf-8')

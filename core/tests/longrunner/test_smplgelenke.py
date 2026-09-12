@@ -37,16 +37,6 @@ from SMPL.koerper import Smplkoerper
 from SMPL.skelett import Smplskelett
 
 
-def rodrigues(rv):
-    laenge = np.linalg.norm(rv)
-    if laenge < 1e-12:
-        return np.eye(3)
-    k = rv / laenge
-    kreuz = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
-    return (np.eye(3) + np.sin(laenge) * kreuz
-            + (1 - np.cos(laenge)) * (kreuz @ kreuz))
-
-
 class SmplgelenkeTest(unittest.TestCase):
 
     #: Gemessen am 07.09.2026, beide Modelle, drei Formen. Grosszuegig
@@ -186,10 +176,20 @@ class SmplgelenkeTest(unittest.TestCase):
         for i in range(len(j_rest)):
             eltern = int(modell.parents[i])
             lokal = np.eye(4)
-            lokal[:3, :3] = rodrigues(drehungen.get(i, np.zeros(3)))
+            lokal[:3, :3] = SmplgelenkeTest.rodrigues(drehungen.get(i, np.zeros(3)))
             lokal[:3, 3] = j_rest[i] - (j_rest[eltern] if eltern >= 0
                                         else np.zeros(3))
             welt[i] = lokal if eltern < 0 else welt[eltern] @ lokal
         wahr = np.array([w[:3, 3] for w in welt])
         wahr[:, 1] -= versatz
         return np.linalg.norm(wahr - gelenke.gelenke(v), axis=1) * 1000
+
+    @staticmethod
+    def rodrigues(rv):
+        laenge = np.linalg.norm(rv)
+        if laenge < 1e-12:
+            return np.eye(3)
+        k = rv / laenge
+        kreuz = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
+        return (np.eye(3) + np.sin(laenge) * kreuz
+                + (1 - np.cos(laenge)) * (kreuz @ kreuz))

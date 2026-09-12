@@ -17,7 +17,7 @@ import numpy as np
 from django.conf import settings
 from django.test import SimpleTestCase
 
-from ._kunstkoerper import zylinder
+from ._kunstkoerper import Kunstkoerper
 
 
 def _pfad(name):
@@ -53,8 +53,8 @@ class FilmmaskenTest(SimpleTestCase):
     def setUp(self):
         self.fm = _modul('filmmasken')
         self.fk = _modul('feinkoerper')
-        kp, kt = zylinder(0.10, 0.0, 1.0, 51, 36)
-        sp, st = zylinder(0.102, 0.30, 0.70, 41, 36)
+        kp, kt = Kunstkoerper.zylinder(0.10, 0.0, 1.0, 51, 36)
+        sp, st = Kunstkoerper.zylinder(0.102, 0.30, 0.70, 41, 36)
         self.koerper = {'name': u'Koerper', 'haut': _Haut(kp), 'dreiecke': kt}
         self.rohr = {'name': u'rohr', 'haut': _Haut(sp), 'dreiecke': st}
 

@@ -192,5 +192,4 @@ export class Mhanwenden {
     }
 }
 
-fn.mhAnwenden = Mhanwenden.anwenden;
 fn.mhAnwendenVerdrahten = Mhanwenden.verdrahten;

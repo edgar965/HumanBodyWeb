@@ -12,7 +12,7 @@ class Videoschreiber:
     u"""Eine Bildfolge (RGB, uint8) in eine MP4-Datei."""
 
     @staticmethod
-    def schreiben(bilder, ziel, fps=24, schleifen=2):
+    def schreiben(bilder, ziel, fps=24.0, schleifen=2):
         u"""Gibt `(ziel, geschriebene Bilder)` zurueck."""
         import cv2
         os.makedirs(os.path.dirname(ziel) or '.', exist_ok=True)

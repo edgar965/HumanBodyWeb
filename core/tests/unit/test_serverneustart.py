@@ -34,19 +34,10 @@ from django.test import SimpleTestCase
 WURZEL = Path(settings.BASE_DIR)
 
 
-def _laden():
-    u"""`restart_server.py` liegt in der Projektwurzel, nicht im Paket."""
-    pfad = WURZEL / 'restart_server.py'
-    spec = importlib.util.spec_from_file_location('restart_server', pfad)
-    modul = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(modul)
-    return modul.Serverneustart
-
-
 class ServerneustartTest(SimpleTestCase):
 
     def setUp(self):
-        self.neustart = _laden()
+        self.neustart = ServerneustartTest._laden()
 
     # --------------------------------------------- Was als Server gilt
 
@@ -110,3 +101,12 @@ class ServerneustartTest(SimpleTestCase):
             self.neustart.erreichbar()
         adresse, _ = verbindung.call_args[0]
         self.assertEqual(adresse[0], '127.0.0.1')
+
+    @staticmethod
+    def _laden():
+        u"""`restart_server.py` liegt in der Projektwurzel, nicht im Paket."""
+        pfad = WURZEL / 'restart_server.py'
+        spec = importlib.util.spec_from_file_location('restart_server', pfad)
+        modul = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(modul)
+        return modul.Serverneustart

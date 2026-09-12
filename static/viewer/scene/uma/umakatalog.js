@@ -1,4 +1,3 @@
-import { fn } from '../../gemeinsam/registrierung.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { escapeHtml } from '../utils.js';
 import { UmaFigur } from './umafigur.js';
@@ -64,5 +63,3 @@ export class Umakatalog {
         }
     }
 }
-
-fn.addUmaFigur = Umakatalog.hinzufuegen;

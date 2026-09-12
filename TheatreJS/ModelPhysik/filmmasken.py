@@ -12,6 +12,7 @@ Die Physik (`Filmphysik`, `Stoffgrenze`) rechnet weiter mit dem VOLLEN
 Index — die verdeckten Punkte sind genau die, an denen der Stoff haengt.
 """
 import logging
+from collections import namedtuple
 
 import numpy as np
 
@@ -21,6 +22,11 @@ from lagenmaske import Lagenmaske
 from maskengeometrie import Geometrie
 
 logger = logging.getLogger(__name__)
+
+
+#: Eine Berichtszeile je maskiertem Teil: Name, verdeckte Punkte, nicht
+#: gerenderte Dreiecke, die Stuecke darueber.
+Maskenzeile = namedtuple('Maskenzeile', 'name punkte dreiecke unter')
 
 
 class Filmmasken:
@@ -52,9 +58,9 @@ class Filmmasken:
     def _melden(bericht):
         u"""Ins Log UND auf die Konsole: `filmlauf.py` laeuft als Unterprozess,
         dessen Ausgabe die `lauf.log` des Auftrags ist."""
-        for name, punkte, dreiecke, unter in bericht:
+        for z in bericht:
             zeile = (u'Maske: %s — %d Punkte unter %s, %d Dreiecke nicht gerendert'
-                     % (name, punkte, u', '.join(unter), dreiecke))
+                     % (z.name, z.punkte, u', '.join(z.unter), z.dreiecke))
             logger.info(zeile)
             print(zeile)
 
@@ -65,8 +71,8 @@ class Filmmasken:
         teil['maske'] = maske
         dreiecke = Feinkoerper.dreiecke(teil)
         teil['dreiecke_sichtbar'], _weg = Hautmaske.index_ohne(dreiecke, maske)
-        return (teil['name'], int(maske.sum()),
-                len(dreiecke) - len(teil['dreiecke_sichtbar']), unter)
+        return Maskenzeile(teil['name'], int(maske.sum()),
+                           len(dreiecke) - len(teil['dreiecke_sichtbar']), unter)
 
     @staticmethod
     def gerendert(teil, nummer):

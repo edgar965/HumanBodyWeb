@@ -22,31 +22,6 @@ from django.test import SimpleTestCase, override_settings
 from core.dienste.absatzpose import Absatzpose
 
 
-def _skelett(ordner):
-    u"""Ein Kunstskelett: Bein senkrecht, Fuss um 90° nach vorn gekippt,
-    Zehen daran — mit ECHTEN Ruhedrehungen, damit die Umbasierung zählt."""
-    def um_x(grad):
-        h = math.radians(grad) / 2.0
-        return [math.cos(h), math.sin(h), 0.0, 0.0]
-    knochen = [
-        {'name': 'DEF-spine', 'parent': None, 'local_position': [0, 0, 0.8],
-         'local_quaternion': um_x(90.0)},
-        {'name': 'DEF-shin.L', 'parent': 'DEF-spine', 'local_position': [0, 0.4, 0],
-         'local_quaternion': um_x(-30.0)},
-        {'name': 'DEF-foot.L', 'parent': 'DEF-shin.L', 'local_position': [0, 0.4, 0],
-         'local_quaternion': um_x(75.0)},
-        {'name': 'DEF-toe.L', 'parent': 'DEF-foot.L', 'local_position': [0, 0.15, 0],
-         'local_quaternion': um_x(-20.0)},
-        {'name': 'DEF-foot.R', 'parent': 'DEF-spine', 'local_position': [0, 0.8, 0],
-         'local_quaternion': um_x(45.0)},
-        {'name': 'DEF-toe.R', 'parent': 'DEF-foot.R', 'local_position': [0, 0.15, 0],
-         'local_quaternion': um_x(-20.0)},
-    ]
-    os.makedirs(ordner, exist_ok=True)
-    with open(os.path.join(ordner, 'def_skeleton.json'), 'w', encoding='utf-8') as datei:
-        json.dump({'bone_count': len(knochen), 'bones': knochen}, datei)
-
-
 class AbsatzposeTest(SimpleTestCase):
 
     databases = set()
@@ -55,7 +30,7 @@ class AbsatzposeTest(SimpleTestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.ordner = os.path.join(settings.BASE_DIR, '_wegwerf', 'test_absatzpose')
-        _skelett(cls.ordner)
+        AbsatzposeTest._skelett(cls.ordner)
         cls._settings = override_settings(HUMANBODY_DATA_DIR=cls.ordner)
         cls._settings.enable()
         Absatzpose._skelette.clear()
@@ -121,3 +96,28 @@ class AbsatzposeTest(SimpleTestCase):
         self.assertAlmostEqual(mit['hebung_m'], 0.049)
         self.assertEqual(mit['absatz']['winkel_grad'], 25.0)
         self.assertEqual(self.client.get('/api/character/pose/gibtsnicht/').status_code, 404)
+
+    @staticmethod
+    def _skelett(ordner):
+        u"""Ein Kunstskelett: Bein senkrecht, Fuss um 90° nach vorn gekippt,
+        Zehen daran — mit ECHTEN Ruhedrehungen, damit die Umbasierung zählt."""
+        def um_x(grad):
+            h = math.radians(grad) / 2.0
+            return [math.cos(h), math.sin(h), 0.0, 0.0]
+        knochen = [
+            {'name': 'DEF-spine', 'parent': None, 'local_position': [0, 0, 0.8],
+             'local_quaternion': um_x(90.0)},
+            {'name': 'DEF-shin.L', 'parent': 'DEF-spine', 'local_position': [0, 0.4, 0],
+             'local_quaternion': um_x(-30.0)},
+            {'name': 'DEF-foot.L', 'parent': 'DEF-shin.L', 'local_position': [0, 0.4, 0],
+             'local_quaternion': um_x(75.0)},
+            {'name': 'DEF-toe.L', 'parent': 'DEF-foot.L', 'local_position': [0, 0.15, 0],
+             'local_quaternion': um_x(-20.0)},
+            {'name': 'DEF-foot.R', 'parent': 'DEF-spine', 'local_position': [0, 0.8, 0],
+             'local_quaternion': um_x(45.0)},
+            {'name': 'DEF-toe.R', 'parent': 'DEF-foot.R', 'local_position': [0, 0.15, 0],
+             'local_quaternion': um_x(-20.0)},
+        ]
+        os.makedirs(ordner, exist_ok=True)
+        with open(os.path.join(ordner, 'def_skeleton.json'), 'w', encoding='utf-8') as datei:
+            json.dump({'bone_count': len(knochen), 'bones': knochen}, datei)

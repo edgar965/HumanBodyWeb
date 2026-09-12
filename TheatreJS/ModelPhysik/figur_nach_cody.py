@@ -27,6 +27,7 @@ import argparse
 import json
 import os
 import sys
+from collections import namedtuple
 
 import numpy as np
 
@@ -37,6 +38,11 @@ ORDNER = os.path.dirname(os.path.abspath(__file__))
 WURZEL = {'female': r'A:\3DTools\HumanBody\data\humanBody',
           'male': r'A:\3DTools\HumanBody\data\humanBody_male'}
 ZIEL = os.path.join(ORDNER, 'cody')
+
+
+#: Was `Codyfigur.schreiben` ablegt: die zwei Dateipfade (`anim` ist
+#: `None` ohne Bewegung), die Gewichtsmatrix und die Punkte ohne Gewicht.
+Codyausgabe = namedtuple('Codyausgabe', 'rig anim gewichte leer')
 
 
 class Codyfigur:
@@ -284,7 +290,7 @@ class Codyfigur:
             with open(anim, 'w') as datei:
                 json.dump({'P': self.bahn(spuren, bilder, orte).tolist()},
                           datei)
-        return rig, anim, gewichte, leer
+        return Codyausgabe(rig, anim, gewichte, leer)
 
 
 def main():

@@ -150,7 +150,8 @@ export class Videoaufnahme {
             const g = Weichgewebe.bildErzwingen(inst, dt, 1.0);
             if (n >= 0 && n % 4 === 0) max = Math.max(max, g);
             if (n % 12 === 0) {
-                this.anzeige.zeigen(`Kalibrierung ${Math.max(n, 0)} / ${zahl}`, 0.3 * (n + Videoaufnahme.VORLAUF) / (zahl + Videoaufnahme.VORLAUF));
+                const anteil = (n + Videoaufnahme.VORLAUF) / (zahl + Videoaufnahme.VORLAUF);
+                this.anzeige.zeigen(`Kalibrierung ${Math.max(n, 0)} / ${zahl}`, 0.3 * anteil);
                 await new Promise((weiter) => setTimeout(weiter, 0));
             }
         }

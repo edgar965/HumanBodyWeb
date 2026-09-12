@@ -33,10 +33,7 @@ import numpy as np
 from django.conf import settings
 from django.test import SimpleTestCase
 
-
-def _nachfuehrung():
-    from GarmentCode.nachfuehrung import Stoffnachfuehrung
-    return Stoffnachfuehrung
+from ._kunstkoerper import Kunstkoerper
 
 
 class NachfuehrungsnetzTest(SimpleTestCase):
@@ -76,7 +73,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         u"""Liegen beide da, gilt die korrigierte."""
         self._obj([[0, 0, 0]])
         self._rig([[0, 0, 0]])
-        pfad = _nachfuehrung().netzpfad(self.wurzel)
+        pfad = NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel)
         self.assertTrue(pfad.endswith('_sim_rig.json'), pfad)
 
     def test_ohne_rigdatei_bleibt_die_obj(self):
@@ -87,12 +84,12 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         sich nicht bewegt.
         """
         self._obj([[0, 0, 0]])
-        pfad = _nachfuehrung().netzpfad(self.wurzel)
+        pfad = NachfuehrungsnetzTest._nachfuehrung().netzpfad(self.wurzel)
         self.assertTrue(pfad.endswith('_sim.obj'), pfad)
 
     def test_ordner_ausserhalb_des_ausgabebaums_wird_verworfen(self):
         u"""Der Pfad kommt aus dem Browser — die Pruefung bleibt scharf."""
-        self.assertIsNone(_nachfuehrung().netzpfad(str(settings.BASE_DIR)))
+        self.assertIsNone(NachfuehrungsnetzTest._nachfuehrung().netzpfad(str(settings.BASE_DIR)))
 
     # -- Deutung der Lage -----------------------------------------------------
 
@@ -104,13 +101,13 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         klein im Ursprung: eine Bindung, die „sitzt" meldet und nichts
         bewegt (der Fehler vom 08.09.2026).
         """
-        punkte, korrigiert = _nachfuehrung().stoffpunkte(
+        punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(
             self._rig([[0.1, 1.2, -0.3]]))
         self.assertTrue(korrigiert)
         self.assertAlmostEqual(float(punkte[0][1]), 1.2, places=6)
 
     def test_objpunkte_gelten_als_unkorrigiert(self):
-        punkte, korrigiert = _nachfuehrung().stoffpunkte(
+        punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(
             self._obj([[10.0, 120.0, -30.0]]))
         self.assertFalse(korrigiert)
         # Roh gelesen, in Zentimetern — umgerechnet wird erst im Konstruktor.
@@ -126,7 +123,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         kaputt = os.path.join(self.wurzel, 'x_sim_rig.json')
         with io.open(kaputt, 'w', encoding='utf-8') as datei:
             datei.write(u'{kein json')
-        punkte, korrigiert = _nachfuehrung().stoffpunkte(kaputt)
+        punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(kaputt)
         self.assertFalse(korrigiert)
         self.assertEqual(len(punkte), 1)
 
@@ -138,7 +135,7 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         (`~/.claude/rules/test-isolation.md`).
         """
         self.assertIn('pruef_', str(self.wurzel))
-        punkte, korrigiert = _nachfuehrung().stoffpunkte(
+        punkte, korrigiert = NachfuehrungsnetzTest._nachfuehrung().stoffpunkte(
             os.path.join(self.wurzel, 'gibtsnicht_sim.obj'))
         self.assertIsNone(punkte)
         self.assertFalse(korrigiert)
@@ -152,12 +149,11 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         Einheit oder Achse. Gemessen an der echten Hose: 0,0000 mm Median
         und 0,0000 mm Maximum.
         """
-        from core.tests.unit.test_stoffvorschau import _wuerfel
-        kv_yoben, kf = _wuerfel(8)
+        kv_yoben, kf = Kunstkoerper.wuerfel(8)
         # Der Aufrufer liefert Z oben (`CharacterState.compute()`).
         kv = np.column_stack([kv_yoben[:, 0], -kv_yoben[:, 2], kv_yoben[:, 1]])
         stoff = kv[:40] * 1.05          # etwas ausserhalb, in Projektlage
-        nach = _nachfuehrung()()
+        nach = NachfuehrungsnetzTest._nachfuehrung()()
         bilanz = nach.binden('probe', self._rig(stoff), kv, kf)
         self.assertNotIn('fehler', bilanz)
         self.assertTrue(bilanz['korrigiert'])
@@ -174,11 +170,10 @@ class NachfuehrungsnetzTest(SimpleTestCase):
         hundertfach zu klein im Ursprung, die Bindung sitzt NICHT mehr auf
         dem Wuerfel.
         """
-        from core.tests.unit.test_stoffvorschau import _wuerfel
-        kv_yoben, kf = _wuerfel(8)
+        kv_yoben, kf = Kunstkoerper.wuerfel(8)
         kv = np.column_stack([kv_yoben[:, 0], -kv_yoben[:, 2], kv_yoben[:, 1]])
         stoff = kv[:40] * 1.05
-        nach = _nachfuehrung()()
+        nach = NachfuehrungsnetzTest._nachfuehrung()()
         bilanz = nach.binden('probe', self._obj(stoff), kv, kf)
         self.assertFalse(bilanz.get('korrigiert'))
         if 'fehler' not in bilanz:
@@ -186,3 +181,8 @@ class NachfuehrungsnetzTest(SimpleTestCase):
             weg = np.linalg.norm(neu - stoff, axis=1)
             self.assertGreater(float(weg.max()), 1e-3,
                                'Die OBJ-Deutung muesste hier abweichen')
+
+    @staticmethod
+    def _nachfuehrung():
+        from GarmentCode.nachfuehrung import Stoffnachfuehrung
+        return Stoffnachfuehrung

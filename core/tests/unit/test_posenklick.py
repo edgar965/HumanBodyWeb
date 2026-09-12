@@ -37,21 +37,11 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 
-def _quelle(pfad):
-    voll = settings.BASE_DIR / 'static' / 'viewer' / pfad
-    return io.open(voll, encoding='utf-8').read()
-
-
-def _vorlage():
-    voll = settings.BASE_DIR / 'templates' / 'scene_config.html'
-    return io.open(voll, encoding='utf-8').read()
-
-
 class PosenklickTest(SimpleTestCase):
     u"""Der Klick loest aus, nicht der Doppelklick."""
 
     def test_die_zeile_wendet_beim_klick_an(self):
-        quelle = _quelle('scene/pose_apply.js')
+        quelle = PosenklickTest._quelle('scene/pose_apply.js')
         # Der Klickhoerer der Zeile steht in `_zeileBauen`; er muss neben der
         # Auswahl auch das Anwenden rufen.
         block = quelle.split('function _zeileBauen')[1]
@@ -68,12 +58,12 @@ class PosenklickTest(SimpleTestCase):
         Bei einem Doppelklick feuert `click` zweimal UND `dblclick` — das
         waeren drei Serverabrufe und dreimal dieselbe Rechnung.
         """
-        quelle = _quelle('scene/pose_apply.js')
+        quelle = PosenklickTest._quelle('scene/pose_apply.js')
         self.assertNotIn('dblclick', quelle)
 
     def test_jeder_ausstieg_nennt_seinen_grund(self):
         u"""`vomServer` und `zuruecksetzen` duerfen nicht schweigen."""
-        quelle = _quelle('scene/posenanwendung.js')
+        quelle = PosenklickTest._quelle('scene/posenanwendung.js')
         koepfe = {'vomServer': 'static async vomServer(',
                   'zuruecksetzen': 'static zuruecksetzen('}
         for name, kopf in koepfe.items():
@@ -88,7 +78,7 @@ class PosenklickTest(SimpleTestCase):
 
     def test_fremde_figurarten_werden_erkannt(self):
         u"""Die Pruefung schaut auf `quelle` — das Merkmal der Figurart."""
-        quelle = _quelle('scene/posenanwendung.js')
+        quelle = PosenklickTest._quelle('scene/posenanwendung.js')
         pruefung = quelle.split('static pruefen(')[1].split('\n    }')[0]
         self.assertIn('figur.quelle', pruefung,
                       u'Nur die HumanBody-Figur hat kein `quelle`; alle '
@@ -102,18 +92,28 @@ class PosenklickTest(SimpleTestCase):
         Der Fall, der bei SMPL/MakeHuman/UMA eintritt, wenn die Pruefung
         einmal durchgelassen wuerde: `anwenden` laeuft durch und setzt nichts.
         """
-        quelle = _quelle('scene/posenanwendung.js')
+        quelle = PosenklickTest._quelle('scene/posenanwendung.js')
         stellen = quelle.split('static _stellen(')[1].split('\n    }')[0]
         self.assertIn('if (!gesetzt)', stellen)
 
     def test_die_statuszeile_gibt_es(self):
-        self.assertIn('id="pose-status"', _vorlage())
+        self.assertIn('id="pose-status"', PosenklickTest._vorlage())
         self.assertIn("getElementById('pose-status')",
-                      _quelle('scene/pose_apply.js'))
+                      PosenklickTest._quelle('scene/pose_apply.js'))
 
     def test_auch_der_weg_aus_dem_hauptmenue_meldet(self):
         u"""T-Pose/A-Pose kommen aus `menubar.js` ueber diese Funktion."""
-        quelle = _quelle('scene/pose_apply.js')
+        quelle = PosenklickTest._quelle('scene/pose_apply.js')
         rumpf = quelle.split('export async function applyPoseFromServer')[1]
         rumpf = rumpf.split('\n}')[0]
         self.assertIn('_status', rumpf)
+
+    @staticmethod
+    def _quelle(pfad):
+        voll = settings.BASE_DIR / 'static' / 'viewer' / pfad
+        return io.open(voll, encoding='utf-8').read()
+
+    @staticmethod
+    def _vorlage():
+        voll = settings.BASE_DIR / 'templates' / 'scene_config.html'
+        return io.open(voll, encoding='utf-8').read()

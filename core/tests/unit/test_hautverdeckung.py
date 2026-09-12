@@ -25,24 +25,20 @@ from django.test import SimpleTestCase
 from ..jsmodul import Jsmodul
 
 
-def _lies(*teile):
-    return Jsmodul(*teile).pfad.read_text(encoding='utf-8')
-
-
 class HautverdeckungVerdrahtungTest(SimpleTestCase):
 
     databases = set()
 
     def setUp(self):
-        self.modul = _lies('scene', 'hautverdeckung.js')
+        self.modul = HautverdeckungVerdrahtungTest._lies('scene', 'hautverdeckung.js')
 
     def test_wird_geladen_und_hoert_auf_das_stueckereignis(self):
-        self.assertIn("import './hautverdeckung.js';", _lies('scene', 'boot.js'))
+        self.assertIn("import './hautverdeckung.js';", HautverdeckungVerdrahtungTest._lies('scene', 'boot.js'))
         self.assertIn('Stueckereignis.hoeren(', self.modul)
         self.assertIn('Hautverdeckung.einhaengen();', self.modul)
 
     def test_die_teilnetz_auswahl_meldet_das_entfernen(self):
-        quelle = _lies('scene', 'teilnetz_auswahl.js')
+        quelle = HautverdeckungVerdrahtungTest._lies('scene', 'teilnetz_auswahl.js')
         self.assertIn("import { Stueckereignis } from './garmentcode_stueckereignis.js';", quelle)
         self.assertIn("Stueckereignis.melden(inst, target.key.slice(3), false);", quelle)
 
@@ -52,7 +48,7 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         # Jede Maske rechnet vom vollen Index, nie vom gekuerzten.
         self.assertIn('Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe)', self.modul)
         self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, maske)', self.modul)
-        aufbau = _lies('scene', 'weichgewebeaufbau.js')
+        aufbau = HautverdeckungVerdrahtungTest._lies('scene', 'weichgewebeaufbau.js')
         self.assertIn('geo.userData?.indexVoll?.index ||', aufbau)
 
     def test_ohne_stuecke_kommt_der_volle_index_zurueck(self):
@@ -62,22 +58,26 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
     def test_einzug_und_lagenverdeckung_haengen_daran(self):
         self.assertIn('Hauteinzug.setzen(inst.bodyMesh, maske, voll.index);', self.modul)
         self.assertIn('Hauteinzug.setzen(inst.bodyMesh, null, null);', self.modul)
-        einzug = _lies('gemeinsam', 'hauteinzug.js')
+        einzug = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hauteinzug.js')
         self.assertIn("Shaderpatch.hinterInclude(shader, 'begin_vertex', 'transformed += einzug;')", einzug)
-        self.assertIn("import './lagenverdeckung.js';", _lies('scene', 'boot.js'))
-        lagen = _lies('scene', 'lagenverdeckung.js')
+        self.assertIn("import './lagenverdeckung.js';", HautverdeckungVerdrahtungTest._lies('scene', 'boot.js'))
+        lagen = HautverdeckungVerdrahtungTest._lies('scene', 'lagenverdeckung.js')
         self.assertIn('Stueckereignis.hoeren(', lagen)
         self.assertIn('Lagenmaske.verdeckt(koerper, stoffe)', lagen)
 
     def test_weichgewebe_und_einzug_teilen_sich_das_material(self):
-        aufbau = _lies('scene', 'weichgewebeaufbau.js')
+        aufbau = HautverdeckungVerdrahtungTest._lies('scene', 'weichgewebeaufbau.js')
         self.assertIn('Shaderpatch.klonen(alt)', aufbau)
         self.assertIn("Shaderpatch.anhaengen(mat, 'weichgewebe'", aufbau)
         self.assertNotIn('mat.onBeforeCompile =', aufbau)
-        self.assertNotIn('onBeforeCompile =', _lies('gemeinsam', 'hauteinzug.js'))
+        self.assertNotIn('onBeforeCompile =', HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hauteinzug.js'))
 
     def test_die_gruppen_werden_neu_gesetzt(self):
         u"""`addGroup` zaehlt Indexeintraege; ohne `clearGroups` laegen alte
         und neue Gruppen uebereinander."""
         self.assertIn('geo.clearGroups();', self.modul)
         self.assertIn('geo.addGroup(g.start, g.count, g.materialIndex)', self.modul)
+
+    @staticmethod
+    def _lies(*teile):
+        return Jsmodul(*teile).pfad.read_text(encoding='utf-8')

@@ -115,8 +115,9 @@ export class Smpleigenschaften {
             const wert = inst.masse[name];
             const zeile = document.createElement('div');
             zeile.className = 'slider-row';
+            const text = typeof wert === 'number' ? String(+wert.toFixed(2)) : String(wert);
             zeile.innerHTML = `<label>${escapeHtml(name)}</label>`
-                + `<span class="slider-val">${escapeHtml(typeof wert === 'number' ? String(+wert.toFixed(2)) : String(wert))}</span>`;
+                + `<span class="slider-val">${escapeHtml(text)}</span>`;
             behaelter.appendChild(zeile);
         }
     }

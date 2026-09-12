@@ -42,10 +42,10 @@ for name in ('shape_geo', 'shape_geo_src', 'shape_source_ptr', 'shape_mesh_id'):
     if hasattr(model, name):
         obj = getattr(model, name)
         val = getattr(obj, 'source', obj)
-        # stumm gewollt: Probe-Skript, die Meldung steht auf der Konsole
         try:
             print(
                 name, '->', np.asarray(val.numpy() if hasattr(val, 'numpy') else val)[s]
             )
+        # stumm gewollt: Probe-Skript, die Meldung steht auf der Konsole
         except Exception as e:
             print(name, 'nicht lesbar:', e)

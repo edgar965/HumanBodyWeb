@@ -79,7 +79,10 @@ export class Weichgewebe {
             // Physik, bis mindestens `d / BUDGET_ANTEIL` ms vergangen sind.
             const jetzt = performance.now();
             if (eintrag.messung) eintrag.messung.bilder += 1;
-            if (jetzt < (eintrag.naechstes || 0)) { eintrag.dtAngesammelt = (eintrag.dtAngesammelt || 0) + dt; continue; }
+            if (jetzt < (eintrag.naechstes || 0)) {
+                eintrag.dtAngesammelt = (eintrag.dtAngesammelt || 0) + dt;
+                continue;
+            }
             const dtGesamt = (eintrag.dtAngesammelt || 0) + dt;
             eintrag.dtAngesammelt = 0;
             const t0 = performance.now();

@@ -201,6 +201,7 @@ class Umabauer:
         zeichen = cls.bauer() or {}
         lebt = cls.bauer_lebt()
         startet = not lebt and cls.startet()
+        # Dictionary gewollt: geht unveraendert als JSON an die Seite.
         return {
             'lebt': lebt,
             'stand': ((zeichen.get('stand') or 'aus') if lebt

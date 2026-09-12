@@ -1,4 +1,3 @@
-import { fn } from '../../gemeinsam/registrierung.js';
 import { UmapythonFigur } from './umapythonfigur.js';
 import { Figuraufnahme } from '../figuraufnahme.js';
 
@@ -25,5 +24,3 @@ export class Umapythonkatalog {
         return Figuraufnahme.inDieSzene(figur, lage);
     }
 }
-
-fn.addUmapythonFigur = Umapythonkatalog.hinzufuegen;

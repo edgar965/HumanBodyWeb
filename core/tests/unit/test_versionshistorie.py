@@ -38,41 +38,13 @@ MARKE = re.compile(r"(?:^|[\s\(\[\+,—\-])(?:v|Version\s+)(\d+\.\d+(?:\.\d+)?)\
 TIEFE = 100
 
 
-def _betreff_fassungen():
-    u"""Fassungsnummern aus den letzten Commit-Betreffs dieses Repos."""
-    try:
-        lauf = subprocess.run(
-            ["git", "-C", str(settings.BASE_DIR), "log", "-%d" % TIEFE,
-             "--pretty=format:%s"],
-            capture_output=True, text=True, timeout=10,
-            encoding="utf-8", errors="replace",
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    # stumm gewollt: ohne git gibt es keine Historie — die Pruefung sagt das unten mit skipTest
-    except (OSError, subprocess.TimeoutExpired):
-        return set()
-    if lauf.returncode != 0:
-        return set()
-    gefunden = set()
-    for zeile in lauf.stdout.splitlines():
-        treffer = MARKE.search(zeile.strip())
-        if treffer:
-            gefunden.add(treffer.group(1))
-    return gefunden
-
-
-def _manuelle_fassungen():
-    eintraege = (getattr(settings, "DJANGOBASE", {}) or {}).get(
-        "manual_versions") or []
-    return {str(e.get("version", "")).lstrip("v").strip() for e in eintraege}
-
-
 class VersionshistorieTest(SimpleTestCase):
     u"""Was das UI zeigt, muss die Versionsseite auch kennen."""
 
     def test_laufende_fassung_ist_in_der_historie_vertreten(self):
         laufend = str(settings.VERSION).lstrip("v").strip()
-        betreffe = _betreff_fassungen()
-        manuell = _manuelle_fassungen()
+        betreffe = VersionshistorieTest._betreff_fassungen()
+        manuell = VersionshistorieTest._manuelle_fassungen()
         self.assertIn(
             laufend, betreffe | manuell,
             u"Fassung %s steht im UI, aber Hilfe → Versionen kennt sie nicht: "
@@ -90,9 +62,9 @@ class VersionshistorieTest(SimpleTestCase):
         UND jemand die manuelle Liste als Sammelbecken benutzt — die Bedingung
         würde nur noch von der Liste getragen, ohne dass es auffällt.
         """
-        if not _betreff_fassungen():
+        if not VersionshistorieTest._betreff_fassungen():
             self.skipTest(u"Kein Git-Repo erreichbar — nur manuelle Liste.")
-        self.assertTrue(_betreff_fassungen(),
+        self.assertTrue(VersionshistorieTest._betreff_fassungen(),
                         u"Die Betreff-Erkennung findet in 100 Commits keine "
                         u"einzige Fassung — dann prüft der Test oben nichts.")
 
@@ -107,6 +79,34 @@ class VersionshistorieTest(SimpleTestCase):
             treffer = MARKE.search(zeile)
             self.assertEqual(treffer.group(1) if treffer else None, erwartet,
                              u"Betreff %r wurde falsch eingestuft" % zeile)
+
+    @staticmethod
+    def _betreff_fassungen():
+        u"""Fassungsnummern aus den letzten Commit-Betreffs dieses Repos."""
+        try:
+            lauf = subprocess.run(
+                ["git", "-C", str(settings.BASE_DIR), "log", "-%d" % TIEFE,
+                 "--pretty=format:%s"],
+                capture_output=True, text=True, timeout=10,
+                encoding="utf-8", errors="replace",
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        # stumm gewollt: ohne git gibt es keine Historie — die Pruefung sagt das unten mit skipTest
+        except (OSError, subprocess.TimeoutExpired):
+            return set()
+        if lauf.returncode != 0:
+            return set()
+        gefunden = set()
+        for zeile in lauf.stdout.splitlines():
+            treffer = MARKE.search(zeile.strip())
+            if treffer:
+                gefunden.add(treffer.group(1))
+        return gefunden
+
+    @staticmethod
+    def _manuelle_fassungen():
+        eintraege = (getattr(settings, "DJANGOBASE", {}) or {}).get(
+            "manual_versions") or []
+        return {str(e.get("version", "")).lstrip("v").strip() for e in eintraege}
 
 
 if __name__ == "__main__":

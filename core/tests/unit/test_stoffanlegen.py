@@ -19,32 +19,6 @@ from django.test import SimpleTestCase
 from GarmentCode.stoffanlegen import Stoffanlegen
 
 
-def _kugel(radius=0.10):
-    import trimesh
-    k = trimesh.creation.icosphere(subdivisions=4, radius=radius)
-    return np.asarray(k.vertices), np.asarray(k.faces)
-
-
-def _ring(radius, hoehe=0.0, n=48):
-    w = np.linspace(0, 2 * np.pi, n, endpoint=False)
-    return np.column_stack([radius * np.cos(w), radius * np.sin(w),
-                            np.full(n, hoehe)])
-
-
-def _streifen(radien, n=48):
-    u"""Ringe uebereinander als Dreiecksstreifen — mit offenem oberem und
-    unterem Rand, wie ein Hosenbein."""
-    punkte = np.vstack([_ring(r, h) for r, h in radien])
-    dreiecke = []
-    for reihe in range(len(radien) - 1):
-        a, b = reihe * n, (reihe + 1) * n
-        for i in range(n):
-            j = (i + 1) % n
-            dreiecke.append([a + i, a + j, b + i])
-            dreiecke.append([a + j, b + j, b + i])
-    return punkte, np.asarray(dreiecke)
-
-
 class StoffanlegenTest(SimpleTestCase):
 
     databases = set()
@@ -53,8 +27,8 @@ class StoffanlegenTest(SimpleTestCase):
         return np.linalg.norm(punkte, axis=1) - radius
 
     def test_abstehender_stoff_kommt_heran(self):
-        kv, kf = _kugel()
-        stoff, dreiecke = _streifen([(0.15, -0.02), (0.15, 0.0), (0.15, 0.02)])
+        kv, kf = StoffanlegenTest._kugel()
+        stoff, dreiecke = StoffanlegenTest._streifen([(0.15, -0.02), (0.15, 0.0), (0.15, 0.02)])
         neu, bilanz = Stoffanlegen.aus_netz(kv, kf, dreiecke).anlegen(stoff, 3.0)
         abstand = self._abstand(neu) * 1000
         self.assertLess(np.abs(abstand - 3.0).max(), 0.6, abstand)
@@ -62,25 +36,25 @@ class StoffanlegenTest(SimpleTestCase):
         self.assertGreater(bilanz['median_weg_mm'], 40)
 
     def test_eingesunkener_stoff_kommt_heraus(self):
-        kv, kf = _kugel()
-        stoff, dreiecke = _streifen([(0.09, -0.02), (0.09, 0.0), (0.09, 0.02)])
+        kv, kf = StoffanlegenTest._kugel()
+        stoff, dreiecke = StoffanlegenTest._streifen([(0.09, -0.02), (0.09, 0.0), (0.09, 0.02)])
         neu, _ = Stoffanlegen.aus_netz(kv, kf, dreiecke).anlegen(stoff, 2.0)
         abstand = self._abstand(neu) * 1000
         self.assertGreater(abstand.min(), 1.4)
         self.assertLess(np.abs(abstand - 2.0).max(), 0.6)
 
     def test_weit_entfernter_stoff_bleibt(self):
-        kv, kf = _kugel()
-        stoff, dreiecke = _streifen([(0.40, -0.02), (0.40, 0.0), (0.40, 0.02)])
+        kv, kf = StoffanlegenTest._kugel()
+        stoff, dreiecke = StoffanlegenTest._streifen([(0.40, -0.02), (0.40, 0.0), (0.40, 0.02)])
         neu, bilanz = Stoffanlegen.aus_netz(kv, kf, dreiecke).anlegen(stoff, 2.0)
         np.testing.assert_allclose(neu, stoff)
         self.assertEqual(bilanz['angelegt'], 0)
 
     def test_offener_rand_wandert_nicht(self):
         u"""Der Saum liegt an, bleibt aber auf seiner Hoehe."""
-        kv, kf = _kugel()
-        stoff, dreiecke = _streifen([(0.14, -0.03), (0.14, -0.01),
-                                     (0.14, 0.01), (0.14, 0.03)])
+        kv, kf = StoffanlegenTest._kugel()
+        stoff, dreiecke = StoffanlegenTest._streifen(
+            [(0.14, -0.03), (0.14, -0.01), (0.14, 0.01), (0.14, 0.03)])
         neu, _ = Stoffanlegen.aus_netz(kv, kf, dreiecke).anlegen(stoff, 2.0)
         rand = np.arange(48)                       # unterster Ring
         # Tangentiale Lage: Winkel um die z-Achse bis auf die Schraege der
@@ -151,8 +125,34 @@ class StoffanlegenTest(SimpleTestCase):
         self.assertGreater(neu[:, 2].min(), 0.03)
 
     def test_bilanz_nennt_den_hautabstand(self):
-        kv, kf = _kugel()
-        stoff, dreiecke = _streifen([(0.13, -0.01), (0.13, 0.01)])
+        kv, kf = StoffanlegenTest._kugel()
+        stoff, dreiecke = StoffanlegenTest._streifen([(0.13, -0.01), (0.13, 0.01)])
         _, bilanz = Stoffanlegen.aus_netz(kv, kf, dreiecke).anlegen(stoff, 2.5)
         self.assertAlmostEqual(bilanz['haut_median_mm'], 2.5, delta=0.3)
         self.assertEqual(bilanz['abstand_mm'], 2.5)
+
+    @staticmethod
+    def _kugel(radius=0.10):
+        import trimesh
+        k = trimesh.creation.icosphere(subdivisions=4, radius=radius)
+        return np.asarray(k.vertices), np.asarray(k.faces)
+
+    @staticmethod
+    def _ring(radius, hoehe=0.0, n=48):
+        w = np.linspace(0, 2 * np.pi, n, endpoint=False)
+        return np.column_stack([radius * np.cos(w), radius * np.sin(w),
+                                np.full(n, hoehe)])
+
+    @staticmethod
+    def _streifen(radien, n=48):
+        u"""Ringe uebereinander als Dreiecksstreifen — mit offenem oberem und
+        unterem Rand, wie ein Hosenbein."""
+        punkte = np.vstack([StoffanlegenTest._ring(r, h) for r, h in radien])
+        dreiecke = []
+        for reihe in range(len(radien) - 1):
+            a, b = reihe * n, (reihe + 1) * n
+            for i in range(n):
+                j = (i + 1) % n
+                dreiecke.append([a + i, a + j, b + i])
+                dreiecke.append([a + j, b + j, b + i])
+        return punkte, np.asarray(dreiecke)

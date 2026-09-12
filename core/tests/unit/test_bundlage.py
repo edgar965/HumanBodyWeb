@@ -18,28 +18,18 @@ from GarmentCode.bundlage import Bundlage
 from GarmentCode.schnittvorschau import Schnittvorschau
 
 
-def _panel(name, x0, x1, y0, y1, z=0.0):
-    return {'name': name, 'label': name,
-            'punkte': np.array([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]]),
-            'dreiecke': np.array([[0, 1, 2], [0, 2, 3]])}
-
-
-def _naht(a, b):
-    return [{'panel': a, 'edge': 0}, {'panel': b, 'edge': 0}]
-
-
 class BundlageTest(SimpleTestCase):
 
     databases = set()
 
     def test_der_bund_faellt_auf_die_oberkante_der_hose(self):
         # Wie Edgars Hose: Hose bis 1,00 m, Bund ab 1,05 m — 5 cm Luft.
-        panels = [_panel('pant_f_r', -0.2, 0.0, 0.08, 1.00, 0.25),
-                  _panel('pant_b_r', -0.2, 0.0, 0.08, 1.00, -0.2),
-                  _panel('wb_front', -0.18, 0.18, 1.05, 1.108, 0.2),
-                  _panel('wb_back', -0.15, 0.15, 1.05, 1.108, -0.15)]
-        naehte = [_naht('wb_front', 'pant_f_r'), _naht('wb_back', 'pant_b_r'),
-                  _naht('wb_front', 'wb_back')]
+        panels = [BundlageTest._panel('pant_f_r', -0.2, 0.0, 0.08, 1.00, 0.25),
+                  BundlageTest._panel('pant_b_r', -0.2, 0.0, 0.08, 1.00, -0.2),
+                  BundlageTest._panel('wb_front', -0.18, 0.18, 1.05, 1.108, 0.2),
+                  BundlageTest._panel('wb_back', -0.15, 0.15, 1.05, 1.108, -0.15)]
+        naehte = [BundlageTest._naht('wb_front', 'pant_f_r'), BundlageTest._naht('wb_back', 'pant_b_r'),
+                  BundlageTest._naht('wb_front', 'wb_back')]
         hub = Bundlage.senken(panels, naehte)
         self.assertAlmostEqual(hub, 0.05, places=6)
         self.assertAlmostEqual(float(panels[2]['punkte'][:, 1].min()), 1.00, places=6)
@@ -50,18 +40,18 @@ class BundlageTest(SimpleTestCase):
     def test_ein_bund_ueber_dem_rumpf_wird_nicht_an_den_rumpf_gezogen(self):
         u"""Kleid: der Bund haengt oben am Rumpf UND unten am Rock. Er faellt
         auf den Rock, nicht an den Rumpf (der liegt ueber ihm)."""
-        panels = [_panel('ftorso', -0.2, 0.2, 1.10, 1.40),
-                  _panel('skirt_f', -0.2, 0.2, 0.60, 1.02),
-                  _panel('wb_front', -0.2, 0.2, 1.05, 1.10)]
-        naehte = [_naht('wb_front', 'ftorso'), _naht('wb_front', 'skirt_f')]
+        panels = [BundlageTest._panel('ftorso', -0.2, 0.2, 1.10, 1.40),
+                  BundlageTest._panel('skirt_f', -0.2, 0.2, 0.60, 1.02),
+                  BundlageTest._panel('wb_front', -0.2, 0.2, 1.05, 1.10)]
+        naehte = [BundlageTest._naht('wb_front', 'ftorso'), BundlageTest._naht('wb_front', 'skirt_f')]
         hub = Bundlage.senken(panels, naehte)
         self.assertAlmostEqual(hub, 0.03, places=6)
         self.assertEqual(Bundlage.partner_unten(panels, naehte), {'wb_front': {'skirt_f'}})
 
     def test_ohne_luecke_oder_ohne_naehte_passiert_nichts(self):
-        panels = [_panel('pant_f_r', -0.2, 0.0, 0.08, 1.06),
-                  _panel('wb_front', -0.18, 0.18, 1.05, 1.108)]
-        self.assertEqual(Bundlage.senken(panels, [_naht('wb_front', 'pant_f_r')]), 0.0)
+        panels = [BundlageTest._panel('pant_f_r', -0.2, 0.0, 0.08, 1.06),
+                  BundlageTest._panel('wb_front', -0.18, 0.18, 1.05, 1.108)]
+        self.assertEqual(Bundlage.senken(panels, [BundlageTest._naht('wb_front', 'pant_f_r')]), 0.0)
         self.assertEqual(Bundlage.senken(panels, []), 0.0)
         self.assertEqual(Bundlage.senken(panels, [['muell'], [{'x': 1}]]), 0.0)
         self.assertAlmostEqual(float(panels[1]['punkte'][:, 1].min()), 1.05, places=6)
@@ -78,7 +68,7 @@ class BundlageTest(SimpleTestCase):
                              'edges': [{'endpoints': [0, 1]}, {'endpoints': [1, 2]},
                                        {'endpoints': [2, 3]}, {'endpoints': [3, 0]}]}},
             'panel_order': ['pant_f_r', 'wb_front'],
-            'stitches': [_naht('wb_front', 'pant_f_r')]}}
+            'stitches': [BundlageTest._naht('wb_front', 'pant_f_r')]}}
         roh = Schnittvorschau(spez).netz()
         gesenkt = Schnittvorschau(spez).netz(bund_senken=True)
         bund_roh = roh['punkte'][roh['panels'][1]['ab']:, 1]
@@ -89,3 +79,13 @@ class BundlageTest(SimpleTestCase):
         quelle = io.open(settings.BASE_DIR / 'core' / 'api' / 'schnittvorschau.py',
                          encoding='utf-8').read()
         self.assertIn('.netz(bund_senken=True)', quelle)
+
+    @staticmethod
+    def _panel(name, x0, x1, y0, y1, z=0.0):
+        return {'name': name, 'label': name,
+                'punkte': np.array([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]]),
+                'dreiecke': np.array([[0, 1, 2], [0, 2, 3]])}
+
+    @staticmethod
+    def _naht(a, b):
+        return [{'panel': a, 'edge': 0}, {'panel': b, 'edge': 0}]

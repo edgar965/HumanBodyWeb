@@ -106,6 +106,7 @@ class DasSomaBvh(unittest.TestCase):
         shutil.rmtree(self.ordner, ignore_errors=True)
 
     def _params(self, tpose, bilder=3):
+        # Dictionary gewollt: dieselben Schluessel wie SOMAs `smpl_params.pt`.
         return {
             'names': np.asarray(self.NAMEN), 'parents': np.asarray(self.ELTERN),
             'tpose': np.asarray(tpose, dtype=np.float32),

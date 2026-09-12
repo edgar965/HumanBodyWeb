@@ -19,18 +19,6 @@ from django.conf import settings
 from django.test import Client, SimpleTestCase
 
 
-def _spezifikation():
-    u"""Irgendein fertiger Lauf im Ausgabeordner, oder None."""
-    wurzel = os.path.join(str(settings.ASSETS_ROOT), 'GarmentCode', 'ausgabe')
-    if not os.path.isdir(wurzel):
-        return None
-    for ordner in sorted(os.listdir(wurzel)):
-        pfad = os.path.join(wurzel, ordner, '%s_specification.json' % ordner)
-        if os.path.isfile(pfad):
-            return pfad
-    return None
-
-
 class SchnittnetzTest(SimpleTestCase):
 
     databases = set()
@@ -40,7 +28,7 @@ class SchnittnetzTest(SimpleTestCase):
         self.adresse = '/api/garmentcode/schnittnetz/'
 
     def test_ein_fertiger_schnitt_liefert_panels(self):
-        spez = _spezifikation()
+        spez = SchnittnetzTest._spezifikation()
         if not spez:
             raise unittest.SkipTest('kein fertiger GarmentCode-Lauf')
         antwort = self.klient.post(self.adresse, {'spezifikation': spez})
@@ -68,7 +56,7 @@ class SchnittnetzTest(SimpleTestCase):
             self.assertEqual(antwort.status_code, 400, pfad)
 
     def test_nur_json(self):
-        spez = _spezifikation()
+        spez = SchnittnetzTest._spezifikation()
         if not spez:
             raise unittest.SkipTest('kein fertiger GarmentCode-Lauf')
         anders = spez.replace('_specification.json', '_boxmesh.obj')
@@ -77,3 +65,15 @@ class SchnittnetzTest(SimpleTestCase):
 
     def test_nur_post(self):
         self.assertEqual(self.klient.get(self.adresse).status_code, 405)
+
+    @staticmethod
+    def _spezifikation():
+        u"""Irgendein fertiger Lauf im Ausgabeordner, oder None."""
+        wurzel = os.path.join(str(settings.ASSETS_ROOT), 'GarmentCode', 'ausgabe')
+        if not os.path.isdir(wurzel):
+            return None
+        for ordner in sorted(os.listdir(wurzel)):
+            pfad = os.path.join(wurzel, ordner, '%s_specification.json' % ordner)
+            if os.path.isfile(pfad):
+                return pfad
+        return None

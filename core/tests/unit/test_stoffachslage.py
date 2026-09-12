@@ -30,28 +30,7 @@ Grenze zum Browser.
 import numpy as np
 from django.test import SimpleTestCase
 
-from core.tests.unit.test_stoffvorschau import _wuerfel
-
-
-def _gebundene_nachfuehrung(tmpdatei):
-    u"""Eine Nachführung mit einem Stück, das 5 cm über dem Würfel liegt."""
-    from GarmentCode.nachfuehrung import Stoffnachfuehrung
-    from GarmentCode.stoffvorschau import Stoffvorschau
-
-    koerper_yoben, dreiecke = _wuerfel()
-    # Das Grundnetz kommt aus `CharacterState.compute()` — Z oben.
-    koerper_zoben = Stoffvorschau.nach_zoben(koerper_yoben)
-
-    # Stoff: die Oberseite des Würfels, 5 cm darüber, in Zentimetern (so legt
-    # GarmentCode `*_sim.obj` ab).
-    oben = koerper_yoben[np.isclose(koerper_yoben[:, 1], 1.0)]
-    stoff_cm = (oben + np.array([0.0, 0.05, 0.0])) * 100.0
-    tmpdatei.write_text(
-        '\n'.join('v %f %f %f' % tuple(p) for p in stoff_cm), encoding='utf-8')
-
-    fuehrung = Stoffnachfuehrung()
-    bilanz = fuehrung.binden('probe', str(tmpdatei), koerper_zoben, dreiecke)
-    return fuehrung, koerper_zoben, bilanz
+from ._kunstkoerper import Kunstkoerper
 
 
 class StoffvorschauLiefertSzenenlage(SimpleTestCase):
@@ -79,7 +58,7 @@ class StoffvorschauLiefertSzenenlage(SimpleTestCase):
         u"""Die scharfe Probe: Der Würfel ist 1 m hoch, der Stoff liegt oben
         darüber. In Szenenlage muss die y-Ausdehnung gross und die
         z-Ausdehnung klein sein — vertauscht war es genau andersherum."""
-        fuehrung, koerper_zoben, bilanz = _gebundene_nachfuehrung(self.datei)
+        fuehrung, koerper_zoben, bilanz = StoffvorschauLiefertSzenenlage._gebundene_nachfuehrung(self.datei)
         self.assertNotIn('fehler', bilanz)
 
         punkte = fuehrung.punkte(koerper_zoben)['probe']
@@ -92,7 +71,7 @@ class StoffvorschauLiefertSzenenlage(SimpleTestCase):
     def test_der_stoff_folgt_dem_koerper_in_szenenlage(self):
         u"""Wird der Körper höher, wandert der Stoff auf der y-Achse mit —
         nicht auf der z-Achse."""
-        fuehrung, koerper_zoben, _ = _gebundene_nachfuehrung(self.datei)
+        fuehrung, koerper_zoben, _ = StoffvorschauLiefertSzenenlage._gebundene_nachfuehrung(self.datei)
         vorher = fuehrung.punkte(koerper_zoben)['probe'].copy()
 
         # In `CharacterState`-Lage (Z oben) ist die Höhe die z-Achse.
@@ -110,6 +89,27 @@ class StoffvorschauLiefertSzenenlage(SimpleTestCase):
         Körper muss der Abstand ~0 sein; mit der alten Z-oben-Erwartung kam
         dort ein zweistelliger Zentimeterwert heraus — eine Zahl, die
         „Finalize drücken" gesagt hätte, obwohl nichts passiert war."""
-        fuehrung, koerper_zoben, _ = _gebundene_nachfuehrung(self.datei)
+        fuehrung, koerper_zoben, _ = StoffvorschauLiefertSzenenlage._gebundene_nachfuehrung(self.datei)
         punkte = fuehrung.punkte(koerper_zoben)['probe']
         self.assertLess(fuehrung.abstand_mm('probe', punkte), 1.0)
+
+    @staticmethod
+    def _gebundene_nachfuehrung(tmpdatei):
+        u"""Eine Nachführung mit einem Stück, das 5 cm über dem Würfel liegt."""
+        from GarmentCode.nachfuehrung import Stoffnachfuehrung
+        from GarmentCode.stoffvorschau import Stoffvorschau
+
+        koerper_yoben, dreiecke = Kunstkoerper.wuerfel()
+        # Das Grundnetz kommt aus `CharacterState.compute()` — Z oben.
+        koerper_zoben = Stoffvorschau.nach_zoben(koerper_yoben)
+
+        # Stoff: die Oberseite des Würfels, 5 cm darüber, in Zentimetern (so legt
+        # GarmentCode `*_sim.obj` ab).
+        oben = koerper_yoben[np.isclose(koerper_yoben[:, 1], 1.0)]
+        stoff_cm = (oben + np.array([0.0, 0.05, 0.0])) * 100.0
+        tmpdatei.write_text(
+            '\n'.join('v %f %f %f' % tuple(p) for p in stoff_cm), encoding='utf-8')
+
+        fuehrung = Stoffnachfuehrung()
+        bilanz = fuehrung.binden('probe', str(tmpdatei), koerper_zoben, dreiecke)
+        return fuehrung, koerper_zoben, bilanz

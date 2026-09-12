@@ -56,6 +56,7 @@ class DieFrisurdateienFuehrenKeinMaterialTest(SimpleTestCase):
         dateien = sorted(ordner.glob('*.glb'))
         self.assertTrue(dateien, u'Keine Frisur gefunden: %s' % ordner)
         for pfad in dateien:
+            # in der Schleife gewollt: je Durchlauf eine andere GLB, ihr Kopf
             with open(pfad, 'rb') as datei:
                 datei.read(12)
                 laenge, _art = struct.unpack('<II', datei.read(8))

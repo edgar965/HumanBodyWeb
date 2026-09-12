@@ -69,6 +69,7 @@ class Bedienelemente:
             if not pfad.is_file() or name in gesehen:
                 continue
             gesehen.append(name)
+            # in der Schleife gewollt: je Durchlauf eine andere Vorlage
             text = io.open(pfad, encoding='utf-8').read()
             offen.extend(re.findall(r'{%\s*include\s+"([^"]+)"', text))
         return gesehen

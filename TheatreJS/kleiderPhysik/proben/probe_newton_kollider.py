@@ -66,6 +66,7 @@ class Kolliderprobe:
                 b = i * n_lon + (j + 1) % n_lon
                 c = (i + 1) * n_lon + j
                 d = (i + 1) * n_lon + (j + 1) % n_lon
+                # in der Schleife gewollt: `+=` auf einer Liste ist `extend`, kopiert nichts
                 f += [[a, c, b], [b, c, d]]
         return np.array(v, dtype=np.float32), np.array(f, dtype=np.int32)
 

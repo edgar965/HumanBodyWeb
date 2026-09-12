@@ -52,7 +52,7 @@ class Skelettbahn:
             self.folge = [n - (self.folge[-1] - letztes) for n in self.folge]
         self.folge = [max(self.ERSTES_BILD, min(n, letztes))
                       for n in self.folge]
-        self.orte = self._wurzelbahn(daten)
+        self.orte = self.wurzelbahn(daten)
         self.ruhe = self._welt(None, 0, None)
         self.ruhe_um = self._umkehrungen(self.ruhe)
         self.lagen = [self._bild(n) for n in self.folge]
@@ -71,8 +71,9 @@ class Skelettbahn:
             return 30.0
         return float(daten.frame_count) / dauer
 
-    def _wurzelbahn(self, daten):
-        u"""Die Ortsbewegung der Wurzel, in der Lage des Rigs.
+    @staticmethod
+    def wurzelbahn(daten):
+        u"""Die Ortsbewegung der Wurzel, in der Lage des Rigs — `None` ohne Spur.
 
         Die Spur kommt in Three.js-Lage (y oben), das Rig steht in
         Blender-Lage (z oben): (x, y, z) -> (x, -z, y). Ohne diese Zeile

@@ -29,16 +29,7 @@ from GarmentCode.reglertexte import Reglertexte
 
 def _pfade(entwurf):
     u"""Alle Reglerpfade eines Entwurfs, flach."""
-    aus = []
-
-    def gehen(bloecke):
-        for block in bloecke:
-            for feld in block['felder']:
-                aus.append(feld['pfad'])
-            gehen(block['untergruppen'])
-
-    gehen(Regler.fuer(entwurf))
-    return aus
+    return _pfade_der_bloecke(Regler.fuer(entwurf))
 
 
 def _alle_pfade():

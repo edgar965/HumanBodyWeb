@@ -68,7 +68,7 @@ export async function charakterAusModelldaten(daten, wahl = {}) {
         state.scene.add(inst.group);
         // Die Zahl, um die es geht: seit Navigationsbeginn bis zu dem
         // Augenblick, in dem etwas auf der Buehne steht.
-        Startmessung.eintragen('== FIGUR SICHTBAR ==', performance.now());
+        Startmessung.eintragen('FIGUR SICHTBAR', performance.now());
     };
     await inst.load(zeigen);
     // Nach `load()` und nach der Platzierung: GarmentCode bindet in der Lage

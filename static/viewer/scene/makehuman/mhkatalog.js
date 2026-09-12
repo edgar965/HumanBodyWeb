@@ -1,4 +1,3 @@
-import { fn } from '../../gemeinsam/registrierung.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { MhFigur } from './mhfigur.js';
 import { Figuraufnahme } from '../figuraufnahme.js';
@@ -33,5 +32,3 @@ export class Mhkatalog {
         return Figuraufnahme.inDieSzene(figur, lage);
     }
 }
-
-fn.addMhFigur = Mhkatalog.hinzufuegen;

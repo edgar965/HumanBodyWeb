@@ -28,25 +28,6 @@ from GarmentCode.schnittvereinigung import (Schnittvereinigung,
 from GarmentCode.stoffteilung import Stoffteilung, TeilungsFehler
 
 
-def _schnitt(panels, naehte, einheiten=100):
-    """Eine minimale, gueltige Spezifikation."""
-    return {
-        'pattern': {
-            'panels': {name: {'translation': [0, 0, 0], 'rotation': [0, 0, 0],
-                              'vertices': [[0, 0], [1, 0], [1, 1]],
-                              'edges': [], 'label': name}
-                       for name in panels},
-            'stitches': naehte,
-            'panel_order': list(panels),
-        },
-        'parameters': {}, 'parameter_order': [],
-        'properties': {'curvature_coords': 'relative',
-                       'normalize_panel_translation': False,
-                       'normalized_edge_loops': True,
-                       'units_in_meter': einheiten},
-    }
-
-
 class SchnittvereinigungTest(SimpleTestCase):
 
     databases = set()
@@ -61,11 +42,11 @@ class SchnittvereinigungTest(SimpleTestCase):
         return {'name': name, 'spezifikation': pfad}
 
     def _paar(self):
-        hose = self._ablegen('hose', _schnitt(
+        hose = self._ablegen('hose', SchnittvereinigungTest._schnitt(
             ['wb_front', 'wb_back'],
             [[{'panel': 'wb_front', 'edge': 6},
               {'panel': 'wb_back', 'edge': 0}]]))
-        shirt = self._ablegen('t-shirt', _schnitt(
+        shirt = self._ablegen('t-shirt', SchnittvereinigungTest._schnitt(
             ['left_ftorso', 'left_btorso'],
             [[{'panel': 'left_ftorso', 'edge': 1},
               {'panel': 'left_btorso', 'edge': 2}]]))
@@ -150,7 +131,7 @@ class SchnittvereinigungTest(SimpleTestCase):
         """
         hose, shirt = self._paar()
         with open(shirt['spezifikation'], 'w', encoding='utf-8') as datei:
-            json.dump(_schnitt(['x'], [], einheiten=1), datei)
+            json.dump(SchnittvereinigungTest._schnitt(['x'], [], einheiten=1), datei)
         with self.assertRaises(VereinigungsFehler) as fall:
             Schnittvereinigung([hose, shirt]).vereinen(
                 os.path.join(self.ordner, 'k_specification.json'))
@@ -169,7 +150,7 @@ class SchnittvereinigungTest(SimpleTestCase):
         waere ein anderer als der gemeinte.
         """
         hose, shirt = self._paar()
-        spez = _schnitt(['x'], [])
+        spez = SchnittvereinigungTest._schnitt(['x'], [])
         spez['parameters'] = {'length': {'value': 1, 'influence': {}}}
         with open(shirt['spezifikation'], 'w', encoding='utf-8') as datei:
             json.dump(spez, datei)
@@ -270,3 +251,22 @@ class SchnittvereinigungTest(SimpleTestCase):
         self.assertEqual(punkte, teile['hose']['punkte'])
         self.assertEqual(dreiecke, teile['hose']['dreiecke'])
         self.assertEqual(max(max(d) for d in dreiecke), len(punkte) - 1)
+
+    @staticmethod
+    def _schnitt(panels, naehte, einheiten=100):
+        """Eine minimale, gueltige Spezifikation."""
+        return {
+            'pattern': {
+                'panels': {name: {'translation': [0, 0, 0], 'rotation': [0, 0, 0],
+                                  'vertices': [[0, 0], [1, 0], [1, 1]],
+                                  'edges': [], 'label': name}
+                           for name in panels},
+                'stitches': naehte,
+                'panel_order': list(panels),
+            },
+            'parameters': {}, 'parameter_order': [],
+            'properties': {'curvature_coords': 'relative',
+                           'normalize_panel_translation': False,
+                           'normalized_edge_loops': True,
+                           'units_in_meter': einheiten},
+        }

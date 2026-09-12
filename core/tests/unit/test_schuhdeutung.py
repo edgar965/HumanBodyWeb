@@ -32,14 +32,17 @@ def _quader(x0, x1, y0, y1, z0, z1, n=9):
     u"""Die Oberfläche eines Quaders als Punktwolke (Meter)."""
     xs, ys, zs = (np.linspace(a, b, n) for a, b in ((x0, x1), (y0, y1), (z0, z1)))
     punkte = []
+    # in der Schleife gewollt: `+=` auf einer Liste ist `extend`, kopiert nichts
     for x in xs:
         for y in ys:
             punkte += [[x, y, z0], [x, y, z1]]
     for x in xs:
         for z in zs:
+            # in der Schleife gewollt: `+=` auf einer Liste ist `extend`, kopiert nichts
             punkte += [[x, y0, z], [x, y1, z]]
     for y in ys:
         for z in zs:
+            # in der Schleife gewollt: `+=` auf einer Liste ist `extend`, kopiert nichts
             punkte += [[x0, y, z], [x1, y, z]]
     return np.asarray(punkte, dtype=np.float64)
 

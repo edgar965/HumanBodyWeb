@@ -13,11 +13,7 @@ import numpy as np
 from django.test import SimpleTestCase
 from ._modelphysik import Modelphysik
 
-from ._kunstkoerper import zylinder
-
-
-def _hautmaske_modul():
-    return Modelphysik.modul('hautmaske')
+from ._kunstkoerper import Kunstkoerper
 
 
 class HautmaskePythonTest(SimpleTestCase):
@@ -25,8 +21,8 @@ class HautmaskePythonTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.hm = _hautmaske_modul()
-        self.koerper = zylinder(0.10, 0.0, 1.0, 51, 36)
+        self.hm = HautmaskePythonTest._hautmaske_modul()
+        self.koerper = Kunstkoerper.zylinder(0.10, 0.0, 1.0, 51, 36)
 
     def _maske(self, stoff, **optionen):
         P, T = self.koerper
@@ -34,18 +30,18 @@ class HautmaskePythonTest(SimpleTestCase):
 
     def test_die_anliegende_kante_wird_bis_zum_rand_verdeckt(self):
         P, _T = self.koerper
-        m = self._maske(zylinder(0.102, 0.30, 0.70, 41, 36))
+        m = self._maske(Kunstkoerper.zylinder(0.102, 0.30, 0.70, 41, 36))
         y = P[:, 1]
         self.assertTrue(m[(y > 0.305) & (y < 0.695)].all())
         self.assertFalse(m[(y < 0.295) | (y > 0.705)].any())
         # locker: zwei Ringe (2 cm) frei
-        m = self._maske(zylinder(0.110, 0.30, 0.70, 41, 36))
+        m = self._maske(Kunstkoerper.zylinder(0.110, 0.30, 0.70, 41, 36))
         self.assertTrue(m[(y > 0.325) & (y < 0.675)].all())
         self.assertFalse(m[(y < 0.315) | (y > 0.685)].any())
 
     def test_insel_und_index(self):
         P, T = self.koerper
-        stoff_p, stoff_t = zylinder(0.102, 0.30, 0.70, 41, 36)
+        stoff_p, stoff_t = Kunstkoerper.zylinder(0.102, 0.30, 0.70, 41, 36)
         mitte = 20 * 36 + 7
         loch = stoff_t[~(stoff_t == mitte).any(axis=1)]
         roh = self.hm.Hautmaske.verdeckt(P, T, [(stoff_p, loch)], inseln=0)
@@ -63,3 +59,7 @@ class HautmaskePythonTest(SimpleTestCase):
         r = np.linalg.norm(innen[:, [0, 2]], axis=1)
         self.assertTrue(np.allclose(r[~zu], 0.10, atol=1e-6))
         self.assertTrue(np.allclose(r[zu], 0.10 - 0.010, atol=1e-6))
+
+    @staticmethod
+    def _hautmaske_modul():
+        return Modelphysik.modul('hautmaske')

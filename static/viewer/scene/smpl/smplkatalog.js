@@ -1,4 +1,3 @@
-import { fn } from '../../gemeinsam/registrierung.js';
 import { Serverabruf } from '../../gemeinsam/serverabruf.js';
 import { SmplFigur } from './smplfigur.js';
 import { Figuraufnahme } from '../figuraufnahme.js';
@@ -26,5 +25,3 @@ export class Smplkatalog {
         return Figuraufnahme.inDieSzene(figur, lage);
     }
 }
-
-fn.addSmplFigur = Smplkatalog.hinzufuegen;

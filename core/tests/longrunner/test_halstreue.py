@@ -77,156 +77,6 @@ DATEIEN = {
 }
 
 
-def _neigung(brust, hals):
-    brust = brust / max(np.linalg.norm(brust), 1e-12)
-    hals = hals / max(np.linalg.norm(hals), 1e-12)
-    grad = float(np.degrees(np.arccos(np.clip(brust @ hals, -1, 1))))
-    quer = hals - (hals @ brust) * brust
-    return grad if float(quer @ VORN) >= 0 else -grad
-
-
-def _beugeachse(bvh, nummer):
-    kinder = [k for k in range(len(bvh.names))
-              if int(bvh.parents[k]) == nummer]
-    if not kinder:
-        return None
-    richtung = np.asarray(bvh.offsets[kinder[0]], dtype=float)
-    laenge = np.linalg.norm(richtung)
-    if laenge < 1e-9:
-        return None
-    achse = np.cross(richtung / laenge, VORN)
-    laenge = np.linalg.norm(achse)
-    return achse / laenge if laenge > 1e-9 else None
-
-
-def _bvh_lagen(bvh, bild):
-    wq, wp = {}, {}
-    for i in range(len(bvh.names)):
-        e = int(bvh.parents[i])
-        lokal = np.asarray(bvh.quats[bild][i], dtype=float)
-        versatz = np.asarray(bvh.offsets[i], dtype=float)
-        if e < 0:
-            wq[i], wp[i] = lokal, versatz
-        else:
-            wq[i] = Quat.mul(wq[e], lokal)
-            wp[i] = wp[e] + Quat.rotate(wq[e], versatz)
-    return {bvh.names[i]: wp[i] for i in range(len(bvh.names))}
-
-
-def _ziel_lagen(skel, quats, bild):
-    wq, wp = {}, {}
-    for name in skel.bone_order:
-        bone = skel.bones[name]
-        spur = quats.get(name)
-        lokal = (np.asarray(spur[bild * 4:bild * 4 + 4], dtype=float)
-                 if spur is not None else bone.rest_local_quat)
-        oben = bone.parent_name
-        if oben and oben in wq:
-            wq[name] = Quat.norm(Quat.mul(wq[oben], lokal))
-            wp[name] = wp[oben] + Quat.rotate(wq[oben], bone.local_pos)
-        else:
-            wq[name] = Quat.norm(np.asarray(lokal, dtype=float))
-            wp[name] = np.asarray(bone.local_pos, dtype=float)
-    return wp
-
-
-def eichlauf(pfad, skip=None, rumpfgrad=0.0):
-    u"""``(quellwinkel, zielwinkel)`` je Vorgabe, als Aenderung zu Bild 0.
-
-    `skip=None` nimmt die Liste des Formats — also den Zustand, der
-    wirklich laeuft.
-    """
-    bvh = SkeletonRigify.parse_bvh(pfad)
-    bauart = Skeleton.detect_format(bvh.names)
-    eich = EICHKNOCHEN.get(bauart.FORMAT)
-    if not eich:
-        return None
-    hals, q_ra, q_rb, q_ha, q_hb = eich
-    if hals not in bvh.names:
-        return None
-    nummer = bvh.names.index(hals)
-    achse = _beugeachse(bvh, nummer)
-    if achse is None:
-        return None
-
-    anzahl = len(GRADE) + 1
-    quats = np.zeros((anzahl, len(bvh.names), 4))
-    quats[:, :, 3] = 1.0
-    _rumpf_vorbeugen(bvh, quats, q_ra, rumpfgrad)
-    for i, grad in enumerate(GRADE, start=1):
-        quats[i, nummer] = _achsdrehung(achse, grad)
-    bvh.quats = quats
-    bvh.frame_count = anzahl
-    # `positions` ist (Bilder, Knochen, 3) — mit (Bilder, 3) bricht
-    # `Wurzelspur.spur` mit einem matmul-Fehler ab.
-    if getattr(bvh, 'positions', None) is not None:
-        bvh.positions = np.zeros((anzahl, len(bvh.names), 3))
-
-    skel = Skelettgeometrie.holen()
-    liste = list(bauart.SKIP_DIR_CORRECTION) if skip is None else list(skip)
-    spuren = Retargetlauf(
-        bvh, skel, mapping=bauart.BONE_MAP_TO_RIGIFY, skip_bones=liste,
-        body_height=1.68,
-        use_delta=getattr(bauart, 'USE_DELTA', False),
-        use_delta_dir=getattr(bauart, 'USE_DELTA_DIR', False)).fahren()
-    quatspuren = spuren.als_dict()['tracks']
-
-    def quelle(bild):
-        p = _bvh_lagen(bvh, bild)
-        return _neigung(p[q_rb] - p[q_ra], p[q_hb] - p[q_ha])
-
-    def ziel(bild):
-        p = _ziel_lagen(skel, quatspuren, bild)
-        return _neigung(p[ZIEL[1]] - p[ZIEL[0]], p[ZIEL[3]] - p[ZIEL[2]])
-
-    q0, z0 = quelle(0), ziel(0)
-    return [(quelle(i) - q0, ziel(i) - z0)
-            for i in range(1, anzahl)]
-
-
-def _achsdrehung(achse, grad):
-    u"""Quaternion [x, y, z, w] fuer `grad` um `achse`."""
-    halb = np.radians(grad) / 2.0
-    q = np.zeros(4)
-    q[:3] = achse * np.sin(halb)
-    q[3] = np.cos(halb)
-    return q
-
-
-def _rumpf_vorbeugen(bvh, quats, q_ra, rumpfgrad):
-    u"""Alle Bilder um `rumpfgrad` am Rumpfknochen vorbeugen — falls
-    gewuenscht und der Knochen eine Beugeachse hat."""
-    if abs(rumpfgrad) <= 1e-9 or q_ra not in bvh.names:
-        return
-    rachse = _beugeachse(bvh, bvh.names.index(q_ra))
-    if rachse is not None:
-        quats[:, bvh.names.index(q_ra)] = _achsdrehung(rachse, rumpfgrad)
-
-
-def _bvh_pfad(format_name):
-    rel = DATEIEN.get(format_name)
-    if not rel:
-        return None
-    voll = os.path.join(str(settings.OBJECTS_ROOT), *rel.split('/'))
-    return voll if os.path.isfile(voll) else None
-
-
-def fehlende():
-    u"""Eingetragene Dateien, die es nicht gibt.
-
-    WARUM DAS GEPRUEFT WIRD: Der erste Lauf trug
-    `MocapNET/01_01.bvh` ein — die Datei existiert nicht, der Eintrag
-    wurde still uebersprungen, und der Test meldete trotzdem GRUEN.
-    Ein Prueferr, der nichts findet und gruen sagt, ist die teuerste
-    Sorte Fehlalarm (`~/.claude/rules/analysewerkzeuge.md`;
-    `Humanbodybaum.fehlende` gibt es aus demselben Grund).
-
-    Fehlen ALLE, ist das kein Fehler — dann steht `OBJECTS_ROOT` in
-    einem Testbaum, und die Faelle ueberspringen sich mit Meldung.
-    """
-    return sorted(name for name in DATEIEN if _bvh_pfad(name) is None)
-
-
 class HalstreueTest(SimpleTestCase):
 
     databases = set()
@@ -248,8 +98,8 @@ class HalstreueTest(SimpleTestCase):
                 else self.SCHWELLE)
 
     def test_jede_eingetragene_datei_gibt_es(self):
-        u"""Eine fehlende Datei faellt auf, statt still zu fehlen."""
-        fehlt = fehlende()
+        u"""Eine HalstreueTest.fehlende Datei faellt auf, statt still zu fehlen."""
+        fehlt = HalstreueTest.fehlende()
         if len(fehlt) == len(DATEIEN):
             self.skipTest('OBJECTS_ROOT fuehrt keine der Dateien '
                           '(Testbaum) — dann greift keiner der Faelle')
@@ -270,10 +120,10 @@ class HalstreueTest(SimpleTestCase):
         """
         geprueft = 0
         for name in DATEIEN:
-            pfad = _bvh_pfad(name)
+            pfad = HalstreueTest._bvh_pfad(name)
             if not pfad:
                 continue
-            reihe = eichlauf(pfad)
+            reihe = HalstreueTest.eichlauf(pfad)
             self.assertIsNotNone(reihe, name)
             for (quelle, _), soll in zip(reihe, GRADE):
                 self.assertAlmostEqual(quelle, soll, delta=1.5,
@@ -292,10 +142,10 @@ class HalstreueTest(SimpleTestCase):
         for name in DATEIEN:
             if name not in self.TRAGEND:
                 continue
-            pfad = _bvh_pfad(name)
+            pfad = HalstreueTest._bvh_pfad(name)
             if not pfad:
                 continue
-            reihe = eichlauf(pfad)
+            reihe = HalstreueTest.eichlauf(pfad)
             self.assertIsNotNone(reihe, name)
             for (_, ziel), soll in zip(reihe, GRADE):
                 self.assertAlmostEqual(
@@ -321,10 +171,10 @@ class HalstreueTest(SimpleTestCase):
         FAELLT DIESER FALL, ist der Fehler behoben — dann gehoert er
         umgedreht und OpenPose in `TRAGEND`.
         """
-        pfad = _bvh_pfad('OPENPOSE')
+        pfad = HalstreueTest._bvh_pfad('OPENPOSE')
         if not pfad:
             self.skipTest('OpenPose-Datei fehlt')
-        reihe = eichlauf(pfad)
+        reihe = HalstreueTest.eichlauf(pfad)
         schlimmster = max(abs(ziel - soll)
                           for (_, ziel), soll in zip(reihe, GRADE))
         self.assertGreater(
@@ -339,11 +189,11 @@ class HalstreueTest(SimpleTestCase):
         Mit einem Rumpf in Ruhelage prueft der Eichfall nur den halben
         Weg — deshalb dieselbe Messung ueber vier Rumpfhaltungen.
         """
-        pfad = _bvh_pfad('CMU')
+        pfad = HalstreueTest._bvh_pfad('CMU')
         if not pfad:
             self.skipTest('CMU-Datei fehlt')
         for rumpf in (-20.0, 20.0, 40.0):
-            reihe = eichlauf(pfad, rumpfgrad=rumpf)
+            reihe = HalstreueTest.eichlauf(pfad, rumpfgrad=rumpf)
             for (_, ziel), soll in zip(reihe, GRADE):
                 self.assertAlmostEqual(
                     ziel, soll, delta=self.SCHWELLE_CMU,
@@ -388,7 +238,7 @@ class HalstreueTest(SimpleTestCase):
         from unittest import mock
         from humanbody_core.skeleton.formats.openpose import (
             SkeletonOpenPose)
-        pfad = _bvh_pfad('OPENPOSE')
+        pfad = HalstreueTest._bvh_pfad('OPENPOSE')
         if not pfad:
             self.skipTest('OpenPose-Datei fehlt')
         heil = {}
@@ -398,7 +248,7 @@ class HalstreueTest(SimpleTestCase):
         with mock.patch.object(SkeletonOpenPose, 'BONE_MAP_TO_RIGIFY', heil), \
              mock.patch.object(SkeletonOpenPose,
                                'MEHRERE_SCHREIBWEISEN', True):
-            reihe = eichlauf(pfad)
+            reihe = HalstreueTest.eichlauf(pfad)
             schlimmster = max(abs(ziel - soll)
                               for (_, ziel), soll in zip(reihe, GRADE))
         self.assertLess(
@@ -406,3 +256,153 @@ class HalstreueTest(SimpleTestCase):
             'Auch mit zugeordnetem Hals liegt die Beugung %.2f Grad '
             'daneben — dann ist die Zuordnung nicht die Ursache.'
             % schlimmster)
+
+    @staticmethod
+    def _neigung(brust, hals):
+        brust = brust / max(np.linalg.norm(brust), 1e-12)
+        hals = hals / max(np.linalg.norm(hals), 1e-12)
+        grad = float(np.degrees(np.arccos(np.clip(brust @ hals, -1, 1))))
+        quer = hals - (hals @ brust) * brust
+        return grad if float(quer @ VORN) >= 0 else -grad
+
+    @staticmethod
+    def _beugeachse(bvh, nummer):
+        kinder = [k for k in range(len(bvh.names))
+                  if int(bvh.parents[k]) == nummer]
+        if not kinder:
+            return None
+        richtung = np.asarray(bvh.offsets[kinder[0]], dtype=float)
+        laenge = np.linalg.norm(richtung)
+        if laenge < 1e-9:
+            return None
+        achse = np.cross(richtung / laenge, VORN)
+        laenge = np.linalg.norm(achse)
+        return achse / laenge if laenge > 1e-9 else None
+
+    @staticmethod
+    def _bvh_lagen(bvh, bild):
+        wq, wp = {}, {}
+        for i in range(len(bvh.names)):
+            e = int(bvh.parents[i])
+            lokal = np.asarray(bvh.quats[bild][i], dtype=float)
+            versatz = np.asarray(bvh.offsets[i], dtype=float)
+            if e < 0:
+                wq[i], wp[i] = lokal, versatz
+            else:
+                wq[i] = Quat.mul(wq[e], lokal)
+                wp[i] = wp[e] + Quat.rotate(wq[e], versatz)
+        return {bvh.names[i]: wp[i] for i in range(len(bvh.names))}
+
+    @staticmethod
+    def _ziel_lagen(skel, quats, bild):
+        wq, wp = {}, {}
+        for name in skel.bone_order:
+            bone = skel.bones[name]
+            spur = quats.get(name)
+            lokal = (np.asarray(spur[bild * 4:bild * 4 + 4], dtype=float)
+                     if spur is not None else bone.rest_local_quat)
+            oben = bone.parent_name
+            if oben and oben in wq:
+                wq[name] = Quat.norm(Quat.mul(wq[oben], lokal))
+                wp[name] = wp[oben] + Quat.rotate(wq[oben], bone.local_pos)
+            else:
+                wq[name] = Quat.norm(np.asarray(lokal, dtype=float))
+                wp[name] = np.asarray(bone.local_pos, dtype=float)
+        return wp
+
+    @staticmethod
+    def eichlauf(pfad, skip=None, rumpfgrad=0.0):
+        u"""``(quellwinkel, zielwinkel)`` je Vorgabe, als Aenderung zu Bild 0.
+
+        `skip=None` nimmt die Liste des Formats — also den Zustand, der
+        wirklich laeuft.
+        """
+        bvh = SkeletonRigify.parse_bvh(pfad)
+        bauart = Skeleton.detect_format(bvh.names)
+        eich = EICHKNOCHEN.get(bauart.FORMAT)
+        if not eich:
+            return None
+        hals, q_ra, q_rb, q_ha, q_hb = eich
+        if hals not in bvh.names:
+            return None
+        nummer = bvh.names.index(hals)
+        achse = HalstreueTest._beugeachse(bvh, nummer)
+        if achse is None:
+            return None
+
+        anzahl = len(GRADE) + 1
+        quats = np.zeros((anzahl, len(bvh.names), 4))
+        quats[:, :, 3] = 1.0
+        HalstreueTest._rumpf_vorbeugen(bvh, quats, q_ra, rumpfgrad)
+        for i, grad in enumerate(GRADE, start=1):
+            quats[i, nummer] = HalstreueTest._achsdrehung(achse, grad)
+        bvh.quats = quats
+        bvh.frame_count = anzahl
+        # `positions` ist (Bilder, Knochen, 3) — mit (Bilder, 3) bricht
+        # `Wurzelspur.spur` mit einem matmul-Fehler ab.
+        if getattr(bvh, 'positions', None) is not None:
+            bvh.positions = np.zeros((anzahl, len(bvh.names), 3))
+
+        skel = Skelettgeometrie.holen()
+        liste = list(bauart.SKIP_DIR_CORRECTION) if skip is None else list(skip)
+        spuren = Retargetlauf(
+            bvh, skel, mapping=bauart.BONE_MAP_TO_RIGIFY, skip_bones=liste,
+            body_height=1.68,
+            use_delta=getattr(bauart, 'USE_DELTA', False),
+            use_delta_dir=getattr(bauart, 'USE_DELTA_DIR', False)).fahren()
+        quatspuren = spuren.als_dict()['tracks']
+
+        def quelle(bild):
+            p = HalstreueTest._bvh_lagen(bvh, bild)
+            return HalstreueTest._neigung(p[q_rb] - p[q_ra], p[q_hb] - p[q_ha])
+
+        def ziel(bild):
+            p = HalstreueTest._ziel_lagen(skel, quatspuren, bild)
+            return HalstreueTest._neigung(p[ZIEL[1]] - p[ZIEL[0]], p[ZIEL[3]] - p[ZIEL[2]])
+
+        q0, z0 = quelle(0), ziel(0)
+        return [(quelle(i) - q0, ziel(i) - z0)
+                for i in range(1, anzahl)]
+
+    @staticmethod
+    def _achsdrehung(achse, grad):
+        u"""Quaternion [x, y, z, w] fuer `grad` um `achse`."""
+        halb = np.radians(grad) / 2.0
+        q = np.zeros(4)
+        q[:3] = achse * np.sin(halb)
+        q[3] = np.cos(halb)
+        return q
+
+    @staticmethod
+    def _rumpf_vorbeugen(bvh, quats, q_ra, rumpfgrad):
+        u"""Alle Bilder um `rumpfgrad` am Rumpfknochen vorbeugen — falls
+        gewuenscht und der Knochen eine Beugeachse hat."""
+        if abs(rumpfgrad) <= 1e-9 or q_ra not in bvh.names:
+            return
+        rachse = HalstreueTest._beugeachse(bvh, bvh.names.index(q_ra))
+        if rachse is not None:
+            quats[:, bvh.names.index(q_ra)] = HalstreueTest._achsdrehung(rachse, rumpfgrad)
+
+    @staticmethod
+    def _bvh_pfad(format_name):
+        rel = DATEIEN.get(format_name)
+        if not rel:
+            return None
+        voll = os.path.join(str(settings.OBJECTS_ROOT), *rel.split('/'))
+        return voll if os.path.isfile(voll) else None
+
+    @staticmethod
+    def fehlende():
+        u"""Eingetragene Dateien, die es nicht gibt.
+
+        WARUM DAS GEPRUEFT WIRD: Der erste Lauf trug
+        `MocapNET/01_01.bvh` ein — die Datei existiert nicht, der Eintrag
+        wurde still uebersprungen, und der Test meldete trotzdem GRUEN.
+        Ein Prueferr, der nichts findet und gruen sagt, ist die teuerste
+        Sorte Fehlalarm (`~/.claude/rules/analysewerkzeuge.md`;
+        `Humanbodybaum.fehlende` gibt es aus demselben Grund).
+
+        Fehlen ALLE, ist das kein Fehler — dann steht `OBJECTS_ROOT` in
+        einem Testbaum, und die Faelle ueberspringen sich mit Meldung.
+        """
+        return sorted(name for name in DATEIEN if HalstreueTest._bvh_pfad(name) is None)

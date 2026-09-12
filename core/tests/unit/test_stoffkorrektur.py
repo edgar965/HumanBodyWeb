@@ -32,25 +32,6 @@ sys.path.insert(0, str(settings.HUMANBODY_ROOT)) if hasattr(
 from GarmentCode.stoffkorrektur import Stoffkorrektur      # noqa: E402
 
 
-def kugel(radius=0.5, feinheit=16):
-    u"""Eine Kugel als Koerper: Punkte, Vierecke, Normalen nach aussen."""
-    theta = np.linspace(0.001, np.pi - 0.001, feinheit)
-    phi = np.linspace(0, 2 * np.pi, feinheit, endpoint=False)
-    t, p = np.meshgrid(theta, phi, indexing='ij')
-    punkte = np.stack([np.sin(t) * np.cos(p), np.sin(t) * np.sin(p),
-                       np.cos(t)], axis=-1).reshape(-1, 3) * radius
-    flaechen = []
-    for i in range(feinheit - 1):
-        for j in range(feinheit):
-            a = i * feinheit + j
-            b = i * feinheit + (j + 1) % feinheit
-            # Wickelrichtung nach AUSSEN: `[a, b, b+n, a+n]` ergaebe
-            # e_phi x e_theta = -e_r, also Normalen nach innen — daran ist
-            # die erste Fassung dieses Tests gescheitert.
-            flaechen.append([a, a + feinheit, b + feinheit, b])
-    return punkte, np.array(flaechen)
-
-
 class StoffkorrekturTest(SimpleTestCase):
     u"""Die Korrektur an einem Fall, dessen Antwort ausrechenbar ist."""
 
@@ -58,7 +39,7 @@ class StoffkorrekturTest(SimpleTestCase):
     RADIUS = 0.5
 
     def setUp(self):
-        self.koerper, self.flaechen = kugel(self.RADIUS)
+        self.koerper, self.flaechen = StoffkorrekturTest.kugel(self.RADIUS)
 
     def _korrektur(self, stoffpunkte, dreiecke):
         return Stoffkorrektur.aus_netz(self.koerper, self.flaechen, dreiecke)
@@ -78,7 +59,7 @@ class StoffkorrekturTest(SimpleTestCase):
         """
         punkte, dreiecke = self._drei_punkte(0.008)
         neu, bilanz = self._korrektur(punkte, dreiecke).anwenden(
-            neu_punkte(punkte))
+            StoffkorrekturTest.neu_punkte(punkte))
 
         self.assertGreaterEqual(bilanz['eingesunken'], 1,
                                 'der eingesunkene Punkt wurde nicht erkannt')
@@ -96,7 +77,7 @@ class StoffkorrekturTest(SimpleTestCase):
         wurden 35 mm).
         """
         punkte, dreiecke = self._drei_punkte(0.020)
-        neu, _ = self._korrektur(punkte, dreiecke).anwenden(neu_punkte(punkte))
+        neu, _ = self._korrektur(punkte, dreiecke).anwenden(StoffkorrekturTest.neu_punkte(punkte))
         vorher = self.RADIUS - float(np.linalg.norm(punkte[0]))
         nachher = self.RADIUS - float(np.linalg.norm(neu[0]))
         self.assertLess(nachher, vorher,
@@ -114,11 +95,11 @@ class StoffkorrekturTest(SimpleTestCase):
         versehentlich falsch gewickelt war.
         """
         # Dieselbe Kugel, Wickelrichtung umgedreht.
-        punkte_k, flaechen = kugel(self.RADIUS)
+        punkte_k, flaechen = StoffkorrekturTest.kugel(self.RADIUS)
         verdreht = flaechen[:, ::-1]
         punkte, dreiecke = self._drei_punkte(0.008)
         korrektur = Stoffkorrektur.aus_netz(punkte_k, verdreht, dreiecke)
-        neu, _ = korrektur.anwenden(neu_punkte(punkte))
+        neu, _ = korrektur.anwenden(StoffkorrekturTest.neu_punkte(punkte))
         abstand = np.linalg.norm(neu[0]) - self.RADIUS
         self.assertGreater(abstand, 0,
                            'bei umgekehrter Wickelrichtung schiebt die '
@@ -128,7 +109,7 @@ class StoffkorrekturTest(SimpleTestCase):
         u"""Was weit weg haengt, wird nicht angefasst — sonst Falten weg."""
         frei = np.array([[0.0, 0.0, self.RADIUS + 0.30]])
         dreiecke = np.zeros((0, 3), dtype=int)
-        neu, _ = self._korrektur(frei, dreiecke).anwenden(neu_punkte(frei))
+        neu, _ = self._korrektur(frei, dreiecke).anwenden(StoffkorrekturTest.neu_punkte(frei))
         self.assertLess(float(np.linalg.norm(neu[0] - frei[0])), 1e-9)
 
     def test_niemand_wandert_weiter_als_der_deckel(self):
@@ -136,7 +117,7 @@ class StoffkorrekturTest(SimpleTestCase):
         tief = np.array([[0.0, 0.0, 0.0],                 # Mittelpunkt
                          [0.0, 0.0, self.RADIUS + 0.01]])
         dreiecke = np.zeros((0, 3), dtype=int)
-        neu, bilanz = self._korrektur(tief, dreiecke).anwenden(neu_punkte(tief))
+        neu, bilanz = self._korrektur(tief, dreiecke).anwenden(StoffkorrekturTest.neu_punkte(tief))
         weg = np.linalg.norm(neu - tief, axis=1) * 1000
         self.assertLessEqual(float(weg.max()),
                              Stoffkorrektur.HUB_MAX_MM + 1e-6)
@@ -154,13 +135,32 @@ class StoffkorrekturTest(SimpleTestCase):
         dreiecke = np.array([[i, i + 1, (i + 2) % len(punkte)]
                              for i in range(len(punkte) - 2)])
         vorher = np.linalg.norm(np.diff(punkte, axis=0), axis=1)
-        neu, _ = self._korrektur(punkte, dreiecke).anwenden(neu_punkte(punkte))
+        neu, _ = self._korrektur(punkte, dreiecke).anwenden(StoffkorrekturTest.neu_punkte(punkte))
         nachher = np.linalg.norm(np.diff(neu, axis=0), axis=1)
         # Keine Kante darf sich mehr als verdoppeln.
         self.assertLess(float((nachher / vorher).max()), 2.0,
                         'die Korrektur reisst das Netz auseinander')
 
+    @staticmethod
+    def kugel(radius=0.5, feinheit=16):
+        u"""Eine Kugel als Koerper: Punkte, Vierecke, Normalen nach aussen."""
+        theta = np.linspace(0.001, np.pi - 0.001, feinheit)
+        phi = np.linspace(0, 2 * np.pi, feinheit, endpoint=False)
+        t, p = np.meshgrid(theta, phi, indexing='ij')
+        punkte = np.stack([np.sin(t) * np.cos(p), np.sin(t) * np.sin(p),
+                           np.cos(t)], axis=-1).reshape(-1, 3) * radius
+        flaechen = []
+        for i in range(feinheit - 1):
+            for j in range(feinheit):
+                a = i * feinheit + j
+                b = i * feinheit + (j + 1) % feinheit
+                # Wickelrichtung nach AUSSEN: `[a, b, b+n, a+n]` ergaebe
+                # e_phi x e_theta = -e_r, also Normalen nach innen — daran ist
+                # die erste Fassung dieses Tests gescheitert.
+                flaechen.append([a, a + feinheit, b + feinheit, b])
+        return punkte, np.array(flaechen)
 
-def neu_punkte(a):
-    u"""Kopie, damit ein Test die Vorlage des naechsten nicht veraendert."""
-    return np.asarray(a, dtype=np.float64).copy()
+    @staticmethod
+    def neu_punkte(a):
+        u"""Kopie, damit ein Test die Vorlage des naechsten nicht veraendert."""
+        return np.asarray(a, dtype=np.float64).copy()

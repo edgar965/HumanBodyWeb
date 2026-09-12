@@ -24,41 +24,7 @@ DIE DREI FALLEN, DIE HIER WIRKLICH ZUGESCHLAGEN HABEN
 import numpy as np
 from django.test import SimpleTestCase
 
-
-def _wuerfel(n=6):
-    u"""Ein geschlossener Quader 1 m, Y oben — je Seite `n` x `n` Felder.
-
-    UNTERTEILT, nicht mit 12 Dreiecken: `DreiecksProjektion` fragt den
-    KD-Baum nach `KANDIDATEN = 32` Nachbarn. Ein Netz mit weniger Dreiecken
-    laeuft dort aus dem Feld (IndexError). Koerpernetze haben 17.288
-    Dreiecke; ein zu grobes Testnetz prueft also einen Fall, den es nicht
-    gibt.
-    """
-    punkte, dreiecke = [], []
-    # Sechs Seiten, jede als Gitter. `achse` ist die feste Richtung.
-    seiten = [(0, -.5), (0, .5), (1, 0.), (1, 1.), (2, -.5), (2, .5)]
-    for achse, wert in seiten:
-        ab = len(punkte)
-        frei = [i for i in range(3) if i != achse]
-        for a in range(n + 1):
-            for b in range(n + 1):
-                p = [0.0, 0.0, 0.0]
-                p[achse] = wert
-                p[frei[0]] = -.5 + a / n if frei[0] != 1 else a / n
-                p[frei[1]] = -.5 + b / n if frei[1] != 1 else b / n
-                punkte.append(p)
-        for a in range(n):
-            for b in range(n):
-                i = ab + a * (n + 1) + b
-                j = i + (n + 1)
-                dreiecke.append([i, j, i + 1])
-                dreiecke.append([i + 1, j, j + 1])
-    return np.asarray(punkte, dtype=float), np.asarray(dreiecke, dtype=int)
-
-
-def _vorschau():
-    from GarmentCode.stoffvorschau import Stoffvorschau
-    return Stoffvorschau
+from ._kunstkoerper import Kunstkoerper
 
 
 class StoffvorschauTest(SimpleTestCase):
@@ -67,8 +33,8 @@ class StoffvorschauTest(SimpleTestCase):
 
     def test_stoff_folgt_dem_koerper(self):
         u"""Der Kern: Koerper wird breiter, der Stoff geht mit."""
-        S = _vorschau()
-        punkte, dreiecke = _wuerfel()
+        S = StoffvorschauTest._vorschau()
+        punkte, dreiecke = Kunstkoerper.wuerfel()
         # Stoff dicht ueber der Seitenflaeche x = +0.5
         stoff = np.array([[.52, .3, 0.], [.52, .6, .2], [.52, .5, -.2]])
         v = S(punkte, dreiecke, stoff)
@@ -83,8 +49,8 @@ class StoffvorschauTest(SimpleTestCase):
 
     def test_unveraenderter_koerper_laesst_den_stoff_stehen(self):
         u"""Die Gegenprobe: ohne Verformung darf sich nichts bewegen."""
-        S = _vorschau()
-        punkte, dreiecke = _wuerfel()
+        S = StoffvorschauTest._vorschau()
+        punkte, dreiecke = Kunstkoerper.wuerfel()
         stoff = np.array([[.52, .3, 0.], [.52, .6, .2]])
         v = S(punkte, dreiecke, stoff)
         gleich = v.punkte(punkte.copy())
@@ -97,8 +63,8 @@ class StoffvorschauTest(SimpleTestCase):
         Wer es nur ansieht statt zu kopieren, bindet an einen Bezug, der
         sich mitveraendert — und misst danach immer 0,0 mm.
         """
-        S = _vorschau()
-        punkte, dreiecke = _wuerfel()
+        S = StoffvorschauTest._vorschau()
+        punkte, dreiecke = Kunstkoerper.wuerfel()
         stoff = np.array([[.52, .3, 0.]])
         v = S(punkte, dreiecke, stoff)
         punkte[:, 0] *= 5.0                    # der Aufrufer schreibt weiter
@@ -110,7 +76,7 @@ class StoffvorschauTest(SimpleTestCase):
 
     def test_achsen_hin_und_zurueck(self):
         u"""Falle 2: Z oben <-> Y oben, und die Umkehrung muss treffen."""
-        S = _vorschau()
+        S = StoffvorschauTest._vorschau()
         zoben = np.array([[1., 2., 3.], [-4., 5., -6.]])
         yoben = S.nach_yoben(zoben)
         # (x, y, z) -> (x, z, -y)
@@ -119,8 +85,8 @@ class StoffvorschauTest(SimpleTestCase):
 
     def test_aus_drapierung_rechnet_zentimeter_um(self):
         u"""Der Stoff kommt in cm, der Koerper in m mit Z oben."""
-        S = _vorschau()
-        punkte, dreiecke = _wuerfel()
+        S = StoffvorschauTest._vorschau()
+        punkte, dreiecke = Kunstkoerper.wuerfel()
         koerper_zoben = S.nach_zoben(punkte)          # so kaeme er aus der Szene
         stoff_cm = np.array([[52., 30., 0.]])         # dieselbe Stelle in cm
         v = S.aus_drapierung(koerper_zoben, dreiecke, stoff_cm)
@@ -135,8 +101,8 @@ class StoffvorschauTest(SimpleTestCase):
         falscher Einheit meterweit daneben, meldet `sitzt()` das — statt
         eine Vorschau zu liefern, die nur nichts bewegt.
         """
-        S = _vorschau()
-        punkte, dreiecke = _wuerfel()
+        S = StoffvorschauTest._vorschau()
+        punkte, dreiecke = Kunstkoerper.wuerfel()
         nah = S(punkte, dreiecke, np.array([[.52, .3, 0.], [.52, .6, .2]]))
         self.assertTrue(nah.sitzt()['sitzt'])
         self.assertLess(nah.sitzt()['median_mm'], 50.0)
@@ -148,16 +114,16 @@ class StoffvorschauTest(SimpleTestCase):
 
     def test_falsche_punktzahl_wird_gemeldet(self):
         u"""Ein Koerper anderer Bauart passt nicht — und das muss knallen."""
-        S = _vorschau()
-        punkte, dreiecke = _wuerfel()
+        S = StoffvorschauTest._vorschau()
+        punkte, dreiecke = Kunstkoerper.wuerfel()
         v = S(punkte, dreiecke, np.array([[.52, .3, 0.]]))
         with self.assertRaises(ValueError):
             v.punkte(np.zeros((5, 3)))
 
     def test_quads_werden_geteilt(self):
         u"""Die Netze des Projekts kommen teils als Vierecke."""
-        S = _vorschau()
-        punkte, dreiecke = _wuerfel()
+        S = StoffvorschauTest._vorschau()
+        punkte, dreiecke = Kunstkoerper.wuerfel()
         # Aus je zwei Dreiecken wieder ein Viereck bauen — so kommen die
         # Netze des Projekts (`netz.faces`) teilweise an.
         quads = np.array([[d1[0], d1[1], d2[1], d2[2]]
@@ -166,3 +132,8 @@ class StoffvorschauTest(SimpleTestCase):
         v = S(punkte, quads, np.array([[0., .5, .52]]))
         self.assertEqual(v.projektion.dreiecke.shape[1], 3)
         self.assertEqual(len(v.projektion.dreiecke), 2 * len(quads))
+
+    @staticmethod
+    def _vorschau():
+        from GarmentCode.stoffvorschau import Stoffvorschau
+        return Stoffvorschau

@@ -27,19 +27,12 @@ from django.test import Client, RequestFactory, SimpleTestCase
 from ui.datenfrische import Datenfrische
 
 
-def _durch(pfad, antwort=None):
-    u"""Die Middleware mit einer Attrappen-Antwort durchlaufen."""
-    anfrage = RequestFactory().get(pfad)
-    schicht = Datenfrische(lambda r: antwort or JsonResponse({'a': 1}))
-    return schicht(anfrage)
-
-
 class DatenfrischeTest(SimpleTestCase):
 
     databases = set()
 
     def test_api_antwort_wird_nicht_gespeichert(self):
-        antwort = _durch('/api/character/model/Figur/')
+        antwort = DatenfrischeTest._durch('/api/character/model/Figur/')
         self.assertEqual(antwort['Cache-Control'], Datenfrische.WERT)
         self.assertEqual(antwort['Pragma'], 'no-cache')
         self.assertEqual(antwort['Expires'], '0')
@@ -49,14 +42,14 @@ class DatenfrischeTest(SimpleTestCase):
         dieselbe Antwort waeren eine Quelle fuer Widersprueche."""
         for pfad in ('/humanbody/scene/', '/statik/v-1/viewer/scene/state.js',
                      '/hilfe/tests/'):
-            antwort = _durch(pfad, HttpResponse('x'))
+            antwort = DatenfrischeTest._durch(pfad, HttpResponse('x'))
             self.assertFalse(antwort.has_header('Cache-Control'), pfad)
 
     def test_eine_eigene_angabe_bleibt_stehen(self):
         u"""Ein Endpunkt, der seine Frische selbst regelt, behaelt sie."""
         eigen = JsonResponse({'a': 1})
         eigen['Cache-Control'] = 'public, max-age=600'
-        antwort = _durch('/api/garmentcode/datei/x/y.json/', eigen)
+        antwort = DatenfrischeTest._durch('/api/garmentcode/datei/x/y.json/', eigen)
         self.assertEqual(antwort['Cache-Control'], 'public, max-age=600')
 
     def test_die_middleware_haengt_in_der_kette(self):
@@ -72,3 +65,10 @@ class DatenfrischeTest(SimpleTestCase):
         u"""Ohne diesen Fall koennte `PRAEFIXE` leer sein und alles gruen."""
         self.assertTrue(Datenfrische.PRAEFIXE)
         self.assertIn('/api/', Datenfrische.PRAEFIXE)
+
+    @staticmethod
+    def _durch(pfad, antwort=None):
+        u"""Die Middleware mit einer Attrappen-Antwort durchlaufen."""
+        anfrage = RequestFactory().get(pfad)
+        schicht = Datenfrische(lambda r: antwort or JsonResponse({'a': 1}))
+        return schicht(anfrage)

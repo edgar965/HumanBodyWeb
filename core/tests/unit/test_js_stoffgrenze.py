@@ -35,42 +35,6 @@ GITTER = Jsmodul('gemeinsam', 'punktgitter.js')
 MODELPHYSIK = os.path.join(str(settings.BASE_DIR), 'TheatreJS', 'ModelPhysik')
 
 
-def _kugelnetz(ringe=14, segmente=18, radius=0.3, mitte=(0.0, 1.0, 0.0)):
-    u"""Geschlossene Kugel, Dreiecke NACH AUSSEN gewickelt."""
-    punkte = [np.array(mitte) + [0, radius, 0]]
-    for r in range(1, ringe):
-        phi = np.pi * r / ringe
-        for s in range(segmente):
-            theta = 2 * np.pi * s / segmente
-            punkte.append(np.array(mitte) + radius * np.array(
-                [np.sin(phi) * np.cos(theta), np.cos(phi),
-                 np.sin(phi) * np.sin(theta)]))
-    punkte.append(np.array(mitte) - [0, radius, 0])
-    unten = len(punkte) - 1
-    dreiecke = []
-    for s in range(segmente):
-        dreiecke.append([0, 1 + (s + 1) % segmente, 1 + s])
-    for r in range(ringe - 2):
-        a = 1 + r * segmente
-        b = a + segmente
-        for s in range(segmente):
-            s2 = (s + 1) % segmente
-            dreiecke.append([a + s, a + s2, b + s])
-            dreiecke.append([a + s2, b + s2, b + s])
-    a = 1 + (ringe - 2) * segmente
-    for s in range(segmente):
-        dreiecke.append([unten, a + s, a + (s + 1) % segmente])
-    return np.array(punkte, dtype=np.float64), np.array(dreiecke, dtype=np.int64)
-
-
-def _stoff(zufall, zahl, radius, mitte):
-    richtung = zufall.normal(size=(zahl, 3))
-    richtung /= np.linalg.norm(richtung, axis=1, keepdims=True)
-    # Abstand zur Haut zwischen 1 und 30 mm — einige nahe, einige weit.
-    abstand = zufall.uniform(0.001, 0.030, size=(zahl, 1))
-    return np.array(mitte) + richtung * (radius + abstand)
-
-
 SKRIPT = """
 const { Stoffgrenze } = await import(MODUL);
 // Die Fixture kommt aus einer Datei: 130 KB passen nicht in die
@@ -145,8 +109,8 @@ class StoffgrenzeJsTest(SimpleTestCase):
         from stoffgrenze import Stoffgrenze
         zufall = np.random.default_rng(3)
         mitte = (0.0, 1.0, 0.0)
-        koerper, dreiecke = _kugelnetz(mitte=mitte)
-        stoff = _stoff(zufall, 300, 0.3, mitte)
+        koerper, dreiecke = StoffgrenzeJsTest._kugelnetz(mitte=mitte)
+        stoff = StoffgrenzeJsTest._stoff(zufall, 300, 0.3, mitte)
         ruhe = Stoffgrenze(koerper, dreiecke)
         # Der Sollabstand je Punkt aus der Ruhelage — so rechnet die
         # JS-Fassung im Konstruktor (11.09.2026).
@@ -200,6 +164,7 @@ class StoffgrenzeJsTest(SimpleTestCase):
                 # 11.09.2026: `.max()` auf negativen Werten).
                 'tiefe_python_mm': grenze.durchdringung(rest)[1],
             })
+        # Dictionary gewollt: geht als JSON an das Node-Skript.
         return {'koerper': koerper.tolist(), 'dreiecke': dreiecke.tolist(),
                 'stoff': stoff.tolist(), 'soll': soll.tolist(), 'faelle': faelle,
                 'koerper_aussen_ohne_grenze': ohne_grenze}
@@ -245,3 +210,39 @@ class StoffgrenzeJsTest(SimpleTestCase):
         ausgabe = GITTER.laufen(GITTER_SKRIPT)
         self.assertTrue(ausgabe.get('ok'), ausgabe)
         self.assertEqual(ausgabe['anfragen'], 600)
+
+    @staticmethod
+    def _kugelnetz(ringe=14, segmente=18, radius=0.3, mitte=(0.0, 1.0, 0.0)):
+        u"""Geschlossene Kugel, Dreiecke NACH AUSSEN gewickelt."""
+        punkte = [np.array(mitte) + [0, radius, 0]]
+        for r in range(1, ringe):
+            phi = np.pi * r / ringe
+            for s in range(segmente):
+                theta = 2 * np.pi * s / segmente
+                punkte.append(np.array(mitte) + radius * np.array(
+                    [np.sin(phi) * np.cos(theta), np.cos(phi),
+                     np.sin(phi) * np.sin(theta)]))
+        punkte.append(np.array(mitte) - [0, radius, 0])
+        unten = len(punkte) - 1
+        dreiecke = []
+        for s in range(segmente):
+            dreiecke.append([0, 1 + (s + 1) % segmente, 1 + s])
+        for r in range(ringe - 2):
+            a = 1 + r * segmente
+            b = a + segmente
+            for s in range(segmente):
+                s2 = (s + 1) % segmente
+                dreiecke.append([a + s, a + s2, b + s])
+                dreiecke.append([a + s2, b + s2, b + s])
+        a = 1 + (ringe - 2) * segmente
+        for s in range(segmente):
+            dreiecke.append([unten, a + s, a + (s + 1) % segmente])
+        return np.array(punkte, dtype=np.float64), np.array(dreiecke, dtype=np.int64)
+
+    @staticmethod
+    def _stoff(zufall, zahl, radius, mitte):
+        richtung = zufall.normal(size=(zahl, 3))
+        richtung /= np.linalg.norm(richtung, axis=1, keepdims=True)
+        # Abstand zur Haut zwischen 1 und 30 mm — einige nahe, einige weit.
+        abstand = zufall.uniform(0.001, 0.030, size=(zahl, 1))
+        return np.array(mitte) + richtung * (radius + abstand)

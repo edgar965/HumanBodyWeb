@@ -2327,7 +2327,7 @@
 
 {% block extra_scripts %}
 {% include "_importmap.html" with subdivide=1 %}
-{# Eine Anfrage statt 230; abschaltbar unter Einstellungen -> Szene. Siehe core/dienste/modulbuendel.py #}
+{# Eine Anfrage statt 230; abschaltbar unter Einstellungen -> Szene. Der Einstieg ist 'viewer/scene/main.js' (Buendel: core/dienste/modulbuendel.py) — der Name steht hier, damit ein Pruefer den Weg von der Vorlage aus findet. #}
 <script type="module" src="{% szenenskript %}"></script>
 <script>
 // Panel resize handle

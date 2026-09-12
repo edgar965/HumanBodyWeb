@@ -29,7 +29,8 @@ export function _veUpdateSelectionInfo() {
     const n = Vertexzustand.veSelectedIndices.size;
     if (n === 0) { info.textContent = 'No vertices selected'; if (posFields) posFields.style.display = 'none'; }
     else { info.textContent = `${n} ${n === 1 ? 'vertex' : 'vertices'} selected`;
-        if (posFields) { posFields.style.display = 'block'; _veUpdatePosInputs(); } }   // 'block'/'inline-block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        // 'block' statt '': die Vorlage versteckt per Klasse (11.09.2026)
+        if (posFields) { posFields.style.display = 'block'; _veUpdatePosInputs(); } }
 }
 
 export function veHandleClick(e) {

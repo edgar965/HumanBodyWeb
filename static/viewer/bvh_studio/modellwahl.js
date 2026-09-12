@@ -95,5 +95,3 @@ export class Modellwahl {
         return modell;
     }
 }
-
-fn.modellHinzufuegen = () => Modellwahl.oeffnen();
