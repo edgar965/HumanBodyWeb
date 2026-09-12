@@ -7,6 +7,7 @@
  * dieser Stelle 216 Zeilen in einer Funktion.
  */
 import { Ergebnisfigur } from './ergebnisfigur.js';
+import { Klipquelle } from '../gemeinsam/klipquelle.js';
 
 /**
  * @param {Object} werte
@@ -17,5 +18,13 @@ import { Ergebnisfigur } from './ergebnisfigur.js';
  * @param {string} werte.modelSelectId  — id der Modellauswahl in der Kopfzeile
  */
 export async function initResultCharacter(werte) {
-    return new Ergebnisfigur(werte).starten();
+    try {
+        return await new Ergebnisfigur(werte).starten();
+    } finally {
+        // Das Skelettfenster oben wartet auf den Clip der Figur (`Klipquelle`,
+        // 12.09.2026) — kommt hier keiner, darf es nicht ewig warten.
+        if (!Klipquelle.gemeldet) {
+            Klipquelle.scheitern(new Error('Die 3D-Figur liefert keinen Clip'));
+        }
+    }
 }

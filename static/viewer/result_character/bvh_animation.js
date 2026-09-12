@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { fetchRetargetedClipForJob, fetchMergedClipForJob } from '../retarget_hybrid.js';
+import { Klipquelle } from '../gemeinsam/klipquelle.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /**
@@ -52,6 +53,9 @@ async function _abspielen(holen, woher) {
     });
     Protokoll.debug('result_character', woher, 'clip:', clip.duration, 'sec,',
                     clip.tracks.length, 'tracks');
+    // Derselbe Clip fuer das Skelettfenster und die Videoueberlagerung
+    // (12.09.2026) — ein Abruf, eine Hoehe, oben wie unten.
+    Klipquelle.melden(clip);
 
     state.mixer = new THREE.AnimationMixer(state.bodyMesh);
     state.currentAction = state.mixer.clipAction(clip);
@@ -124,6 +128,7 @@ export async function loadBVH() {
         positionCameraAfterRetarget();
     } catch (err) {
         console.error('[result_character] BVH retarget error:', err);
+        Klipquelle.scheitern(err);              // das Skelettfenster wartet sonst
         if (state.loadingEl) {
             state.loadingEl.style.display = '';
             state.loadingEl.innerHTML = '<span class="fehlertext"><i class="fas fa-exclamation-triangle"></i> '
