@@ -2,10 +2,18 @@ import { Serverabruf } from '../../viewer/gemeinsam/serverabruf.js';
 import { Auftragslauf } from './auftragslauf.js';
 import { Protokoll } from '../../viewer/gemeinsam/protokoll.js';
 import { Detailzeilen } from './detailzeilen.js';
+import { Zeilenwahl } from './zeilenwahl.js';
+import { Auftragszeile } from './auftragszeile.js';
 
 /**
  * Auftragsliste — die Tabelle der Auftraege: auswaehlen, loeschen und die
  * Knoepfe je Zeile.
+ *
+ * DIE TABELLE RENDERT SEIT DEM 12.09.2026 `djangobase/_tabelle.html`
+ * (`core.dienste.auftragstabelle`). Sie hat deshalb keine `id` mehr — der
+ * Anker ist der Abschnitt `#auftragsliste`, die Zeilen tragen `data-id`
+ * (so sieht es die Vorlage vor), nicht mehr `id="row-<auftrag>"`. Die
+ * Auswahl (Kaestchen, Shift-Bereich, Kopfkaestchen) macht `Zeilenwahl`.
  *
  * SORTIERT WIRD SEIT DEM 28.08.2026 VON djangoBase. Hier stand eine eigene
  * Fassung (Klick auf `th[data-sort]`, Zeilen umhaengen) — dieselbe Aufgabe
@@ -31,24 +39,23 @@ export class Auftragsliste {
     }
 
     constructor() {
-        this.koerper = document.getElementById('jobTableBody');
+        this.abschnitt = document.getElementById('auftragsliste');
+        /** @type {HTMLTableElement|null} */
+        this.tabelle = this.abschnitt?.querySelector('table') || null;
+        this.koerper = this.tabelle?.tBodies[0] || null;
+        this.wahl = new Zeilenwahl(this.tabelle, () => this.knopfstand());
     }
 
     aufbauen() {
         if (!this.koerper) return this;
         this.koerper.addEventListener('click', ereignis => this._klick(ereignis));
-        this.koerper.addEventListener('change', ereignis => {
-            if (ereignis.target.classList.contains('job-check')) this.knopfstand();
-        });
-        document.getElementById('select-all')
-            ?.addEventListener('change', feld => this.alleWaehlen(feld.target));
+        this.wahl.binden();
         document.getElementById('bulk-delete-btn')
             ?.addEventListener('click', () => this.massenloeschen());
         // Sortiert wird von djangoBase (`tabellen_auto.js` bindet jede
         // `table.sortable` von selbst an). Hier bleibt nur, was djangoBase
         // nicht wissen kann: dass eine Detailzeile ihrer Hauptzeile folgt.
-        Detailzeilen.binden(
-            /** @type {HTMLTableElement} */ (document.getElementById('jobTable')));
+        Detailzeilen.binden(this.tabelle);
         Auftragslauf.laufendeVerfolgen();
         return this;
     }
@@ -82,7 +89,7 @@ export class Auftragsliste {
                 `${Auftragsliste.LOESCHEN}${auftragId}/delete/`, {});
             if (!daten.ok) throw new Error(daten.error || 'Unbekannter Fehler');
             this._zeileEntfernen(auftragId);
-            this.knopfstand();
+            this.wahl.nachziehen();
             this._leerPruefen();
         } catch (fehler) {
             if (knopf) knopf.disabled = false;
@@ -91,8 +98,7 @@ export class Auftragsliste {
     }
 
     async massenloeschen() {
-        const kennungen = [...document.querySelectorAll('.job-check:checked')]
-            .map(feld => feld.value);
+        const kennungen = this.wahl.kennungen();
         if (!kennungen.length) return;
         if (!confirm(`${kennungen.length} Auftrag/Aufträge löschen?`)) return;
         const knopf = document.getElementById('bulk-delete-btn');
@@ -105,27 +111,27 @@ export class Auftragsliste {
                 Auftragsliste.MASSENLOESCHEN, { ids: kennungen });
             if (!daten.ok) throw new Error(daten.error || 'Unbekannter Fehler');
             (daten.deleted || []).forEach(id => this._zeileEntfernen(id));
-            const alle = document.getElementById('select-all');
-            if (alle) alle.checked = false;
             this._leerPruefen();
         } catch (fehler) {
             alert('Löschen fehlgeschlagen: ' + fehler.message);
         } finally {
             this._knopfBeschriften();
-            this.knopfstand();
+            this.wahl.nachziehen();
         }
     }
 
     _knopfBeschriften() {
         const knopf = document.getElementById('bulk-delete-btn');
         if (!knopf) return;
-        knopf.innerHTML = '<i class="fas fa-trash"></i> Auswahl löschen '
-            + '(<span id="bulk-count">0</span>)';
+        // Dieselbe Form wie in `_auftragstabelle.html`: Text in EINER Hülle,
+        // sonst setzt der Flex-Abstand des Knopfs Lücken um die Zahl.
+        knopf.innerHTML = '<i class="fas fa-trash"></i><span>Auswahl löschen '
+            + '(<span id="bulk-count">0</span>)</span>';
     }
 
     _zeileEntfernen(auftragId) {
         document.getElementById('detail-' + auftragId)?.remove();
-        document.getElementById('row-' + auftragId)?.remove();
+        new Auftragszeile(auftragId).zeile()?.remove();
     }
 
     /** Ist die Tabelle leer, verschwindet der ganze Abschnitt. */
@@ -137,16 +143,9 @@ export class Auftragsliste {
             ?.classList.add('hb-versteckt');
     }
 
-    alleWaehlen(feld) {
-        document.querySelectorAll('.job-check').forEach(kaestchen => {
-            kaestchen.checked = feld.checked;
-        });
-        this.knopfstand();
-    }
-
     /** Der Massenlösch-Knopf zeigt die Zahl der Häkchen. */
     knopfstand() {
-        const anzahl = document.querySelectorAll('.job-check:checked').length;
+        const anzahl = this.wahl.anzahl();
         const knopf = document.getElementById('bulk-delete-btn');
         const zaehler = document.getElementById('bulk-count');
         if (knopf) knopf.disabled = anzahl === 0;

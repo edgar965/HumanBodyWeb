@@ -157,7 +157,9 @@ export class Auftragslauf {
 
     /** Alle Auftraege, die beim Laden der Seite schon laufen, weiterverfolgen. */
     static laufendeVerfolgen() {
-        document.querySelectorAll('tr[id^="row-"]').forEach(zeile => {
+        // `data-id` je Zeile: die Zeilenform von `djangobase/_tabelle.html`
+        // (Auftragstabelle seit 12.09.2026), vorher `id="row-<auftrag>"`.
+        document.querySelectorAll('#auftragsliste tr[data-id]').forEach(zeile => {
             const zelle = zeile.querySelector('td[id^="status-"]');
             if (!zelle?.querySelector('.inline-progress')) return;
             const lauf = new Auftragslauf(zelle.id.replace('status-', ''));
@@ -175,8 +177,8 @@ export class Auftragslauf {
 
     /** Zeile fuer einen neu angelegten Auftrag oben in die Tabelle setzen. */
     static zeileEinfuegen(neueId, pipeline, anzeigename, quelleId) {
-        const quelle = document.getElementById('row-' + quelleId);
-        const koerper = document.getElementById('jobTableBody');
+        const quelle = new Auftragszeile(quelleId).zeile();
+        const koerper = quelle?.parentNode;
         if (!quelle || !koerper) return;
         // Maskieren: Der Dateiname kommt aus dem Upload. Ein Video mit dem
         // Namen `<img src=x onerror=…>.mp4` fuehrte hier fremdes JavaScript
@@ -187,8 +189,9 @@ export class Auftragslauf {
             quelle.querySelector('td:nth-child(5)').textContent);
         const anzeige = Htmltext.maskieren(anzeigename);
         const zeile = document.createElement('tr');
-        zeile.id = 'row-' + neueId;
-        zeile.innerHTML = '<td></td>'
+        zeile.dataset.id = neueId;
+        zeile.innerHTML = '<td class="kaestchen"><input type="checkbox" '
+            + `class="job-check" value="${neueId}"></td>`
             + `<td>${name}</td>`
             + `<td><span class="badge badge-${pipeline}">${anzeige}</span></td>`
             + `<td id="status-${neueId}"><span class="hb-laeuft">`

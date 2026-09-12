@@ -75,9 +75,7 @@
 </div>
 
 {% if v21_jobs %}
-<div class="job-list-section">
-    {% include "_auftragstabelle.html" with auftraege=v21_jobs sortier="videoauftraege-2d" pipelines=pipelines %}
-</div>
+{% include "_auftragstabelle.html" with auftraege=v21_jobs sortier="videoauftraege-2d" pipelines=pipelines %}
 {% endif %}
 
 <div class="info-box">
@@ -142,6 +140,9 @@
 {% endblock %}
 
 {% block extra_scripts %}
+{% comment %}`tabellen.css` (djangoBase) vor `auftragstabelle.css` — Zellgitter
+der Auftragstabelle, siehe upload_v4.html.{% endcomment %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
 <style>
 /* Umbau 16.08.2026: ersetzt Inline-Stile aus dem fruehen JavaScript. */

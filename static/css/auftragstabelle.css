@@ -5,9 +5,30 @@
  * gleich, keine einzige Abweichung. Die beiden Seiten sind ohnehin
  * Zwillinge: Am 16.08.2026 sind schon 362 Zeilen inline-JavaScript von hier
  * ausgezogen, weil sie „bis auf `pipeline_params` buchstabengleich" waren.
+ *
+ * SEIT 12.09.2026 RENDERT `djangobase/_tabelle.html` DIE TABELLE. Hier standen
+ * zwei Regeln aus der Zeit der eigenen Sortierung:
+ *
+ *     .sortable { cursor: pointer; user-select: none; }
+ *     .sortable:hover { color: #3498db; }
+ *
+ * `sortable` trägt aber die ganze `<table>` — die Regeln machten jede Zelle
+ * unmarkierbar (kein Kopieren eines Dateinamens) und färbten beim Überfahren
+ * die GANZE Tabelle blau. Was der Kopf braucht (Zeiger, Pfeile), bringt
+ * `tabellen.css` mit; hier bleibt nur das Eigene.
  */
-.sortable { cursor: pointer; user-select: none; }
-.sortable:hover { color: #3498db; }
+
+/* Kästchenspalte schmal und mittig; die gewählte Zeile hebt sich ab
+   (`Zeilenwahl` setzt `gewaehlt`). Farbe über die Akzent-Variable, damit
+   sie in jeder Palette passt. */
+.auftragstabelle td.kaestchen, .auftragstabelle th[data-key="wahl"] {
+    width: 2.2rem; text-align: center; vertical-align: middle;
+}
+.auftragstabelle tr.gewaehlt td {
+    background: rgba(var(--accent-rgb, 96 165 250), 0.14);
+}
+.auftragstabelle td { vertical-align: middle; }
+.auftragswahl-hinweis { margin-left: auto; font-size: 0.8rem; }
 .inline-progress { display: flex; align-items: center; gap: 6px; min-width: 180px; }
 .inline-progress .status-text { font-size: 0.82rem; white-space: nowrap; color: #3498db; }
 .progress-bar-mini { flex: 1; height: 6px; background: #2a2a3e; border-radius: 3px; overflow: hidden; min-width: 60px; }

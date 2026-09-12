@@ -65,9 +65,7 @@
 </div>
 
 {% if v4_jobs %}
-<div class="job-list-section">
-    {% include "_auftragstabelle.html" with auftraege=v4_jobs sortier="videoauftraege-3d" pipelines=pipelines mit_zahl=1 %}
-</div>
+{% include "_auftragstabelle.html" with auftraege=v4_jobs sortier="videoauftraege-3d" pipelines=pipelines %}
 {% endif %}
 
 <div class="info-box">
@@ -131,6 +129,11 @@
 {% endblock %}
 
 {% block extra_scripts %}
+{% comment %}Das Zellgitter der djangoBase-Tabellen kommt aus `tabellen.css`;
+`_tabelle.html` bindet es nicht selbst ein. Bis 12.09.2026 fehlte die Zeile —
+die Auftragstabelle stand ohne Rahmen da. `auftragstabelle.css` DANACH, es
+ergänzt (Kästchenspalte, gewählte Zeile).{% endcomment %}
+<link rel="stylesheet" href="/static/djangobase/css/tabellen.css?v={{ djangobase.statik_v }}">
 <link rel="stylesheet" href="{% fassungspfad 'css/auftragstabelle.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/pipelinekarten.css' %}">
 <style>

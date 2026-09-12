@@ -15,9 +15,8 @@
  * beruhen, nachziehen können" (Kommentar in `tabellen_sortierung.js`).
  */
 export class Detailzeilen {
-    /** Vorsatz der Hauptzeilen-Kennung: `row-<auftrag>`. */
-    static ZEILE = 'row-';
-    /** Vorsatz der Detailzeile: `detail-<auftrag>`. */
+    /** Vorsatz der Detailzeile: `detail-<auftrag>`. Die Hauptzeile trägt die
+     *  Kennung als `data-id` (Zeilenform von `djangobase/_tabelle.html`). */
     static DETAIL = 'detail-';
 
     /**
@@ -36,8 +35,8 @@ export class Detailzeilen {
         const koerper = tabelle.tBodies[0];
         if (!koerper) return;
         for (const zeile of [...koerper.rows]) {
-            if (!zeile.id.startsWith(Detailzeilen.ZEILE)) continue;
-            const kennung = zeile.id.slice(Detailzeilen.ZEILE.length);
+            const kennung = zeile.dataset.id;
+            if (!kennung) continue;
             const detail = document.getElementById(
                 Detailzeilen.DETAIL + kennung);
             // `after` und nicht `appendChild`: Die Detailzeile gehört UNTER

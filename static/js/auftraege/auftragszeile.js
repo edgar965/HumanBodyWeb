@@ -26,9 +26,15 @@ export class Auftragszeile {
         this.id = auftragId;
     }
 
-    /** Zeile des Auftrags in der Tabelle. */
+    /**
+     * Zeile des Auftrags in der Tabelle.
+     *
+     * Seit 12.09.2026 über `data-id`: So kennzeichnet `djangobase/_tabelle.html`
+     * eine Zeile („für Bedienelemente IN der Zeile, die wissen müssen, worauf
+     * sie sich beziehen"). Vorher `id="row-<auftrag>"` aus eigenem Markup.
+     */
     zeile() {
-        return document.getElementById('row-' + this.id);
+        return document.querySelector(`tr[data-id="${this.id}"]`);
     }
 
     /** Detailzeile, bei Bedarf angelegt. */
