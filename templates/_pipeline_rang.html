@@ -1,0 +1,8 @@
+{% comment %}Rang-Abzeichen im Kartenkopf (12.09.2026, Edgar „mach das Rang
+abzeichen"): der Rang aus Hilfe -> Video to BVH wie dort im blauen Kreis, ohne
+Rang ein Strich. Kontext: `rang` je Karte (Schleife in upload_v4.html) und
+`rang_von` (Uploadseiten.dreid).{% endcomment %}
+{% if rang %}<span class="pipeline-card-rang"
+    title="Rang {{ rang }} von {{ rang_von }} im Vergleich aller Pipelines (Hilfe &rarr; Video to BVH)">{{ rang }}</span>
+{% else %}<span class="pipeline-card-rang pipeline-card-rang-ohne"
+    title="Ohne Rang: im Vergleich kein Ergebnis (Hilfe &rarr; Video to BVH)">&ndash;</span>{% endif %}

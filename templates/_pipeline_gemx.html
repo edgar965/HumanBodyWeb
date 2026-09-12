@@ -6,6 +6,7 @@
                             <input type="radio" name="pipeline" value="gemx"
                                 {% if default_3d == 'gemx' %}checked{% endif %}
                                 {% if not status_3d.gemx %}disabled{% endif %}>
+                            {% include "_pipeline_rang.html" %}
                             <span class="pipeline-card-title">GEM-X (mit H&auml;nden)</span>
                             <span class="pipeline-card-desc">
                                 {% if status_3d.gemx %}SOMA, 77 Gelenke inkl. Finger, GPU, NVIDIA &mdash; BVH mit

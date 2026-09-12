@@ -44,8 +44,9 @@
                 und alle eingeklappt: `Pipelinekarten` (12.09.2026, Edgar:
                 „ordne die pipelines nach der Ranking, alle sollen per
                 default eingeklappt sein"). Je Karte eine Datei
-                `_pipeline_<karte>.html`; hier standen 500 Zeilen.{% endcomment %}
-                {% for vorlage in pipeline_karten %}{% include vorlage %}
+                `_pipeline_<karte>.html` mit Rang-Abzeichen (`_pipeline_rang.html`);
+                hier standen 500 Zeilen.{% endcomment %}
+                {% for k in pipeline_karten %}{% include k.vorlage with rang=k.rang %}
                 {% endfor %}
             </div>
         </div>

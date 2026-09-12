@@ -52,3 +52,17 @@ class DieKarten(SimpleTestCase):
         for vorlage in Pipelinekarten.vorlagen():
             with self.subTest(vorlage=vorlage):
                 get_template(vorlage)
+
+    def test_eintraege_tragen_karte_vorlage_und_rang_in_kartenfolge(self):
+        eintraege = Pipelinekarten.eintraege()
+        self.assertEqual([e['karte'] for e in eintraege],
+                         Pipelinekarten.reihenfolge())
+        for e in eintraege:
+            with self.subTest(karte=e['karte']):
+                self.assertEqual(e['vorlage'], Pipelinekarten.VORLAGE % e['karte'])
+                self.assertEqual(e['rang'], Pipelinekarten.rang(e['karte']))
+
+    def test_rang_von_ist_der_hoechste_rang_des_vergleichs(self):
+        raenge = [e['rang'] for e in Pipelinevergleich.mit_rang()]
+        self.assertEqual(Pipelinekarten.rang_von(), len(raenge))
+        self.assertEqual(Pipelinekarten.rang_von(), max(raenge))

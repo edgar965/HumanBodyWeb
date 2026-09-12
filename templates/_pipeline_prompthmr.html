@@ -7,6 +7,7 @@
                             <input type="radio" name="pipeline" value="prompthmr"
                                 {% if default_3d == 'prompthmr' %}checked{% endif %}
                                 {% if not status_3d.prompthmr %}disabled{% endif %}>
+                            {% include "_pipeline_rang.html" %}
                             <span class="pipeline-card-title">PromptHMR</span>
                             <span class="pipeline-card-desc">
                                 {% if status_3d.prompthmr %}SMPL, GPU, CVPR 2025, 37 mm{% else %}nicht

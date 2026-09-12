@@ -7,6 +7,7 @@
                             <input type="radio" name="pipeline" value="gem"
                                 {% if default_3d == 'gem' %}checked{% endif %}
                                 {% if not status_3d.gem %}disabled{% endif %}>
+                            {% include "_pipeline_rang.html" %}
                             <span class="pipeline-card-title">GEM-SMPL</span>
                             <span class="pipeline-card-desc">
                                 {% if status_3d.gem %}SMPL, GPU, NVIDIA ICCV 2025, 35 mm &mdash; EMDB-2 Weltraum 74 mm

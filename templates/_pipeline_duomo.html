@@ -6,6 +6,7 @@
                             <input type="radio" name="pipeline" value="duomo"
                                 {% if default_3d == 'duomo' %}checked{% endif %}
                                 {% if not status_3d.duomo %}disabled{% endif %}>
+                            {% include "_pipeline_rang.html" %}
                             <span class="pipeline-card-title">DuoMo</span>
                             <span class="pipeline-card-desc">
                                 {% if status_3d.duomo %}SMPL-X, GPU, Meta CVPR 2026 &mdash; Weltraum RICH 81 mm

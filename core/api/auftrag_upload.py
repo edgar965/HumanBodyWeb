@@ -136,8 +136,9 @@ class Uploadseiten:
         return render(request, 'upload_v4.html', {
             'v4_jobs': auftraege,
             'pipelines': Uploadseiten._pipelinewahl(PIPELINES_3D),
-            # Kartenfolge nach Rang (Hilfe -> Video to BVH), 12.09.2026.
-            'pipeline_karten': Pipelinekarten.vorlagen(),
+            # Kartenfolge und Rang-Abzeichen (Hilfe -> Video to BVH), 12.09.2026.
+            'pipeline_karten': Pipelinekarten.eintraege(),
+            'rang_von': Pipelinekarten.rang_von(),
             'status_3d': Uploadseiten._pipelines_verfuegbar(),
             'default_3d': vorgabe,
             'defaults': Pipelineparameter.vorgaben(gespeichert),

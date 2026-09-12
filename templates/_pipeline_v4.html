@@ -6,6 +6,7 @@
                             <input type="radio" name="pipeline" value="v4"
                                 {% if default_3d == 'v4' %}checked{% endif %}
                                 {% if not status_3d.v4 %}disabled{% endif %}>
+                            {% include "_pipeline_rang.html" %}
                             <span class="pipeline-card-title">MocapNET v4</span>
                             <span class="pipeline-card-desc">
                                 {% if status_3d.v4 %}ONNX, CPU, 165 Bones, ~75 mm{% else %}nicht verf&uuml;gbar{% endif %}

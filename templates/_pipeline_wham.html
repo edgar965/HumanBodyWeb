@@ -6,6 +6,7 @@
                             <input type="radio" name="pipeline" value="wham"
                                 {% if default_3d == 'wham' %}checked{% endif %}
                                 {% if not status_3d.wham %}disabled{% endif %}>
+                            {% include "_pipeline_rang.html" %}
                             <span class="pipeline-card-title">WHAM</span>
                             <span class="pipeline-card-desc">
                                 {% if status_3d.wham %}SMPL, GPU, World-Koordinaten, 37 mm{% else %}nicht

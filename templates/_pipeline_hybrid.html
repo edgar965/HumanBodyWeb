@@ -8,6 +8,7 @@
                                 id="hybridRadio"
                                 {% if default_3d == 'hybrid_gvhmr' or default_3d == 'hybrid_prompthmr' %}checked{% endif %}
                                 {% if not status_3d.hybrid %}disabled{% endif %}>
+                            {% include "_pipeline_rang.html" %}
                             <span class="pipeline-card-title">Hybrid <span class="hb-color-e67e22">&starf;</span></span>
                             <span class="pipeline-card-desc">
                                 SMPL Body (GPU) + MocapNET v4 H&auml;nde (CPU) + SMPLest-X Gesicht

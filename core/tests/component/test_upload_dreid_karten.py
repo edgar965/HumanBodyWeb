@@ -20,6 +20,7 @@ class DieSeite(TestCase):
     KARTE = re.compile(r'class="pipeline-card[^"]*"[^>]*data-pipeline="(\w+)"')
     RADIO = re.compile(r'<input type="radio" name="pipeline"[^>]*>')
     KNOPF = re.compile(r'<button[^>]*class="pipeline-card-klappe"[^>]*>')
+    ABZEICHEN = re.compile(r'class="pipeline-card-rang[^"]*"[^>]*>([^<]*)<')
 
     def setUp(self):
         self.client = Client()
@@ -57,3 +58,16 @@ class DieSeite(TestCase):
         radios = self.RADIO.findall(self.text)
         self.assertEqual(len(radios), len(Pipelinekarten.reihenfolge()))
         self.assertEqual(sum('checked' in r for r in radios), 1)
+
+    def test_jede_karte_traegt_ihr_rang_abzeichen_vor_dem_titel(self):
+        u"""Edgar (12.09.2026): „mach das Rang abzeichen" — der Rang wie auf
+        der Hilfeseite, ohne Rang ein Strich, in der Wahl vor dem Titel."""
+        erwartet = [str(e['rang']) if e['rang'] else '&ndash;'
+                    for e in Pipelinekarten.eintraege()]
+        self.assertEqual([t.strip() for t in self.ABZEICHEN.findall(self.text)],
+                         erwartet)
+        self.assertIn('von %d im Vergleich' % Pipelinekarten.rang_von(), self.text)
+        for titel in re.finditer('class="pipeline-card-title"', self.text):
+            davor = self.text[:titel.start()]
+            self.assertGreater(davor.rfind('class="pipeline-card-rang'),
+                               davor.rfind('<label class="pipeline-card-wahl">'))

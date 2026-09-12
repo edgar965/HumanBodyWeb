@@ -85,3 +85,17 @@
 .pipeline-card-klappe:focus-visible { color: var(--text, #ddd); background: rgba(52,152,219,0.12); }
 .pipeline-card-klappe i { transition: transform 0.2s; }
 .pipeline-card-klappe[aria-expanded="true"] i { transform: rotate(180deg); }
+
+/* Rang-Abzeichen (12.09.2026, Edgar "mach das Rang abzeichen"): derselbe
+   blaue Kreis wie `.vtb-rang` auf der Hilfeseite; ohne Rang ein gedaempfter
+   Strich im Ring. Die Zahl ist der Rang im Vergleich ALLER Pipelines. */
+.pipeline-card-rang {
+    display: inline-block; min-width: 1.9em; padding: 0.05em 0.4em;
+    border-radius: 1em; text-align: center; font-weight: 700;
+    font-size: 0.85rem; line-height: 1.5; color: #fff; background: #4a6fa5;
+    flex-shrink: 0;
+}
+.pipeline-card-rang-ohne {
+    background: transparent; color: var(--text-muted, #888);
+    border: 1px solid var(--border, #333); font-weight: 400;
+}

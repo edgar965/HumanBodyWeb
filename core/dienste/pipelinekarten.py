@@ -56,5 +56,21 @@ class Pipelinekarten:
 
     @classmethod
     def vorlagen(cls):
-        u"""Die Vorlagennamen in Kartenfolge — so geht es in die Seite."""
+        u"""Die Vorlagennamen in Kartenfolge."""
         return [cls.VORLAGE % karte for karte in cls.reihenfolge()]
+
+    @classmethod
+    def rang_von(cls):
+        u"""Wie viele Pipelines im Vergleich einen Rang haben — der Nenner
+        im Abzeichen („Rang 2 von 10")."""
+        return len(Pipelinevergleich.mit_rang())
+
+    @classmethod
+    def eintraege(cls):
+        u"""Karte, Vorlage und Rang je Karte in Kartenfolge — so geht es in
+        die Seite; `_pipeline_rang.html` zeigt den Rang im Kartenkopf
+        (Edgar, 12.09.2026: „mach das Rang abzeichen")."""
+        # Dictionary gewollt: geht so in die Vorlage.
+        return [{'karte': karte, 'vorlage': cls.VORLAGE % karte,
+                 'rang': cls.rang(karte)}
+                for karte in cls.reihenfolge()]
