@@ -84,6 +84,7 @@ export class Zeitleistenmenue {
      * verfügbar").
      */
     static _zeigen(menue, e) {
+        Untermenuelage.alleSchliessen(menue);
         menue.style.display = 'block';
         const breite = menue.offsetWidth || 180;
         menue.style.left =

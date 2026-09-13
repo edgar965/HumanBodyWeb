@@ -1020,7 +1020,11 @@
     padding:4px 0; min-width:200px; max-height:400px; overflow-y:auto;
     box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10000;
 }
-.ctx-item.has-submenu:hover > .ctx-submenu { display:block; }
+.ctx-item.has-submenu:hover > .ctx-submenu:not(.ctx-submenu-fixed) { display:block; }
+/* Ein gelegtes Untermenü (`ctx-submenu-fixed`) zeigt allein `offen` — gesetzt von
+   `Untermenuelage` beim Eintritt, gehalten über die Karenzzeit nach dem Verlassen
+   (Rollbalken zwischen Eintrag und Liste); `:hover` allein zeigte es ungelegt. */
+.ctx-item.has-submenu > .ctx-submenu.offen { display:block; }
 /* Nested submenus inside a scrollable parent (z.B. Animation-Ordner > Animationen)
    use position:fixed via JS so they aren't clipped by the parent's overflow. */
 .ctx-item.has-submenu > .ctx-submenu.ctx-submenu-fixed {

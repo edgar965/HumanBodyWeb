@@ -13,11 +13,22 @@
  * wollte, verließ das Menü, und es klappte zu. Nach rechts dasselbe: drei
  * Ebenen brauchen rund 700 Pixel.
  *
- * Gelegt wird beim Überfahren des Elternteils (`mouseenter`) — dann ist das
- * Untermenü über `:hover` schon sichtbar und messbar. Reicht der Platz
+ * Gelegt wird beim Überfahren des Elternteils (`mouseenter`): erst `offen`
+ * (macht es sichtbar und damit messbar), dann messen und legen. Reicht der Platz
  * rechts nicht, kommt es links neben den Eintrag; reicht er unten nicht,
  * rutscht es hoch, und die Höhe bleibt unter der Fensterhöhe (die Liste
  * rollt dann in sich).
+ *
+ * KARENZZEIT (Edgar, 13.09.2026, zweiter Anlauf: „sobald ich zum Menü rechts
+ * wechseln möchte um einzufügen, verschwindet das Kontext Menü"): Zwischen
+ * dem Ordnereintrag und seiner Animationsliste liegt der Rollbalken der
+ * Ordnerliste. Fährt die Maus darüber, verlässt sie den Eintrag, `:hover`
+ * endet, die Liste ist weg, bevor die Maus sie erreicht. Deshalb hält die
+ * Klasse `offen` ein Untermenü nach `mouseleave` noch `VERZOEGERUNG` ms —
+ * ein Wiedereintritt (auch in die Liste selbst, sie ist ein Kind des
+ * Eintrags) bricht das ab. Und ein Geschwister öffnet sich erst, wenn die Maus
+ * `EINTRITT` ms auf ihm bleibt — wer schräg von „A_Results" zu dessen zweitem
+ * Eintrag fährt, streift „Aist", ohne dass dessen Liste die alte verdrängt.
  *
  * `rechnen` ist reine Arithmetik ohne DOM — `test_js_untermenuelage.py`.
  */
@@ -29,15 +40,54 @@ export class Untermenuelage {
     static VERSATZ_Y = 5;
     /** Höher als das wird ein Untermenü nie (wie die CSS-Regel). */
     static HOECHSTENS = 400;
+    /** So lange bleibt ein Untermenü offen, nachdem die Maus den Eintrag verließ. */
+    static VERZOEGERUNG = 350;
+    /** So lange muss die Maus auf einem Geschwister bleiben, bis dessen Untermenü das offene ersetzt. */
+    static EINTRITT = 150;
 
     /**
-     * Das Untermenü `feld` bei jedem Überfahren von `elternteil` legen.
-     * Setzt `ctx-submenu-fixed`, damit `left`/`top` als Fensterkoordinaten
-     * gelten (siehe die CSS-Regel in `bvh_studio.html`).
+     * Das Untermenü `feld` bei jedem Überfahren von `elternteil` legen und
+     * mit Karenzzeit offen halten. Setzt `ctx-submenu-fixed`, damit
+     * `left`/`top` als Fensterkoordinaten gelten (CSS in `bvh_studio.html`).
      */
     static anbinden(elternteil, feld) {
         feld.classList.add('ctx-submenu-fixed');
-        elternteil.addEventListener('mouseenter', () => Untermenuelage.legen(elternteil, feld));
+        let schliesser = null;
+        let oeffner = null;
+        elternteil.addEventListener('mouseenter', () => {
+            clearTimeout(schliesser);
+            clearTimeout(oeffner);
+            if (Untermenuelage._geschwister(elternteil, feld).length) {
+                oeffner = setTimeout(() => Untermenuelage.oeffnen(elternteil, feld),
+                                     Untermenuelage.EINTRITT);
+            } else {
+                Untermenuelage.oeffnen(elternteil, feld);
+            }
+        });
+        elternteil.addEventListener('mouseleave', () => {
+            clearTimeout(oeffner);
+            clearTimeout(schliesser);
+            schliesser = setTimeout(() => feld.classList.remove('offen'),
+                                    Untermenuelage.VERZOEGERUNG);
+        });
+    }
+
+    /** Öffnen, Geschwister zu. */
+    static oeffnen(elternteil, feld) {
+        Untermenuelage._geschwister(elternteil, feld).forEach(anderes => anderes.classList.remove('offen'));
+        feld.classList.add('offen');
+        Untermenuelage.legen(elternteil, feld);
+    }
+
+    /** Offene Untermenüs, die nicht `feld` sind und `elternteil` nicht enthalten (Vorfahren bleiben). */
+    static _geschwister(elternteil, feld) {
+        return [...document.querySelectorAll('.ctx-submenu.offen')]
+            .filter(anderes => anderes !== feld && !anderes.contains(elternteil));
+    }
+
+    /** Alle Untermenüs unter `wurzel` zu — beim Öffnen eines Kontextmenüs. */
+    static alleSchliessen(wurzel) {
+        wurzel?.querySelectorAll('.ctx-submenu.offen').forEach(feld => feld.classList.remove('offen'));
     }
 
     /** Alle Untermenüs unter `wurzel` (Einträge `.has-submenu` mit `.ctx-submenu`). */
