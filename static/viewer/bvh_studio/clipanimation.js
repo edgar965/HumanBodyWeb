@@ -5,6 +5,8 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { sharedState } from '../character_core.js';
 import { loadTrackCharacter } from './spur_charakter.js';
+import { Clipfehlt } from './clipfehlt.js';
+import { Studioanzeige } from './studioanzeige.js';
 
 /**
  * Clipanimation — die retargetete Bewegung eines Clips holen und einhängen.
@@ -61,8 +63,16 @@ export class Clipanimation {
         try {
             return await Serverabruf.json(adresse);
         } catch (fehler) {
-            // Der Clip bleibt in der Zeitleiste, aber als fehlerhaft markiert —
-            // so sieht der Nutzer, WELCHER Clip nicht geladen hat.
+            if (fehler.status === 404) {
+                // Die Datei gibt es nicht mehr (verschoben, gelöscht): Der Clip
+                // fliegt aus der Zeitleiste, mit Meldung (Edgar, 13.09.2026).
+                Protokoll.warnung('BVH Studio',
+                                  `${clip.category}/${clip.name} gibt es nicht mehr — Clip entfernt`);
+                Clipfehlt.verschwunden(clip, state, fn, text => Studioanzeige.melden(text, 8000));
+                return null;
+            }
+            // Ein anderer Fehler (Server, Netz): Der Clip bleibt, als fehlerhaft
+            // markiert — so sieht der Nutzer, WELCHER Clip nicht geladen hat.
             Protokoll.fehler('BVH Studio',
                              `Retarget failed for ${clip.category}/${clip.name}`,
                              fehler);

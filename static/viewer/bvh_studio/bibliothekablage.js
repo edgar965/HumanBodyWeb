@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Clipfehlt } from './clipfehlt.js';
 
 /**
  * Bibliothekablage — Dateioperationen auf der BVH-Bibliothek.
@@ -21,7 +22,8 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  * `clipsEntfernen` räumt die Zeitleiste auf. Eine gelöschte BVH, deren Clip
  * stehen bleibt, ist der übelste Fall: Der Clip zeigt weiter Bewegung an, beim
  * nächsten Laden ist er leer — und der Mixer hält die Animation im Speicher.
- * Deshalb auch `uncacheClip`.
+ * Das Räumen selbst liegt seit 13.09.2026 in `Clipfehlt` — denselben Weg
+ * geht ein Clip, dessen Datei beim Laden fehlt (Retarget 404).
  */
 export class Bibliothekablage {
 
@@ -46,47 +48,11 @@ export class Bibliothekablage {
      * Rückgabe: Anzahl der entfernten Clips.
      */
     static clipsEntfernen(kategorie, name) {
-        let entfernt = 0;
-        for (const spur of state.project.tracks) {
-            if (spur.type !== 'bvh') continue;
-            entfernt += Bibliothekablage._spurRaeumen(spur, kategorie, name);
-            if (spur.clips.length === 0 && spur.group) spur.group.visible = false;
-            spur._activeClip = null;
-            spur._activeAction = null;
-        }
-        if (entfernt > 0) Bibliothekablage._nachtragen(kategorie, name, entfernt);
-        return entfernt;
-    }
-
-    static _spurRaeumen(spur, kategorie, name) {
-        let entfernt = 0;
-        // Von hinten: Ein `splice` beim Vorwaertslaufen ueberspringt den Nachbarn.
-        for (let i = spur.clips.length - 1; i >= 0; i--) {
-            const clip = spur.clips[i];
-            if (clip.category !== kategorie || clip.name !== name) continue;
-            if (spur.mixer) {
-                spur.mixer.stopAllAction();
-                // Ohne `uncacheClip` bleibt die Animation im Speicher des Mixers.
-                if (clip.animClip) spur.mixer.uncacheClip(clip.animClip);
-            }
-            spur.clips.splice(i, 1);
-            entfernt++;
+        const entfernt = Clipfehlt.entfernen(kategorie, name, state, fn);
+        if (entfernt > 0) {
+            Protokoll.debug('BVH Studio',
+                            `Removed ${entfernt} clip(s) of ${kategorie}/${name} from tracks`);
         }
         return entfernt;
-    }
-
-    static _nachtragen(kategorie, name, entfernt) {
-        state.selectedClipIdx = -1;
-        const nochClips = state.project.tracks.some(spur => spur.clips.length > 0);
-        if (!nochClips && state.playing) {
-            state.playing = false;
-            const zeichen = document.getElementById('pb-play-icon');
-            if (zeichen) zeichen.className = 'fas fa-play';
-        }
-        fn.updateDuration();
-        fn.renderTimeline();
-        fn.updateProperties();
-        Protokoll.debug('BVH Studio',
-                        `Removed ${entfernt} clip(s) of ${kategorie}/${name} from tracks`);
     }
 }

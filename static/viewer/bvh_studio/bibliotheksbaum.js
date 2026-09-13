@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Menueanimationen } from './menue_animationen.js';
 
 /**
  * Bibliotheksbaum — der Ordnerbaum der BVH-Bibliothek in der Seitenleiste.
@@ -46,9 +47,18 @@ export class Bibliotheksbaum {
 
     // -------------------------------------------------------------------- Laden
 
-    /** Baum neu aufbauen. `nachher` wählt einen Eintrag danach aus. */
+    /**
+     * Baum neu aufbauen. `nachher` wählt einen Eintrag danach aus.
+     *
+     * Mit jedem Neubau vergisst auch das Menü „Clip hinzufügen" seine Liste
+     * (Edgar, 13.09.2026: „bei jedem Refresh soll der Ordner neu refresht
+     * werden, so dass ich nicht auf eine Animation klicken kann die es nicht
+     * gibt") — es merkte sie sich seit dem ersten Öffnen für die ganze Sitzung,
+     * auch über Umbenennen, Verschieben und Löschen in der Bibliothek hinweg.
+     */
     async laden(nachher) {
         if (nachher) this.auswahl = nachher;
+        Menueanimationen.vergessen();
         try {
             this.offeneMerken();
             const daten = await Serverabruf.json(Bibliotheksbaum.QUELLE);
