@@ -4,6 +4,7 @@ import { Clip } from './models.js';
 import { pushUndo } from './undo.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Studioanzeige } from './studioanzeige.js';
+import { Cliplaenge } from './cliplaenge.js';
 
 /**
  * Clipbearbeitung — Clips duplizieren, löschen, kürzen, teilen.
@@ -203,8 +204,38 @@ export class Clipbearbeitung {
         return zweite;
     }
 
+    // ------------------------------------------------------------------ Länge
+
+    /**
+     * Länge des gewählten Clips setzen — `art` 'prozent' oder 'sekunden';
+     * ohne `wert` fragt ein Dialog, vorbelegt mit dem Stand (Edgar, 13.09.2026:
+     * „keine Längenvorgaben! … Kontextmenüs, wo man die Länge setzen kann").
+     */
+    static laenge(art, wert = null) {
+        const wahl = Clipbearbeitung.auswahl();
+        if (!wahl || !['bvh', 'audio'].includes(wahl.clip.type)) return;
+        const clip = wahl.clip;
+        const vorher = Cliplaenge.stand(clip);
+        if (wert == null) {
+            const frage = art === 'prozent'
+                ? `Länge in Prozent der ganzen Animation (jetzt ${vorher.prozent.toFixed(0)} %):`
+                : `Länge in Sekunden (jetzt ${vorher.sekunden.toFixed(1)} s, ganz ${vorher.ganz.toFixed(1)} s):`;
+            const vorgabe = art === 'prozent' ? vorher.prozent.toFixed(0) : vorher.sekunden.toFixed(1);
+            wert = Cliplaenge.zahl(prompt(frage, vorgabe));
+            if (wert == null) return;
+        }
+        pushUndo('Clip-Länge');
+        const stand = art === 'prozent' ? Cliplaenge.prozent(clip, wert) : Cliplaenge.sekunden(clip, wert);
+        Clipbearbeitung._nachtragen();
+        Studioanzeige.melden(`${clip.name}: ${stand.sekunden.toFixed(1)} s (${stand.prozent.toFixed(0)} %)`);
+        Protokoll.debug('BVH Studio', `Länge ${art} ${wert}: ${stand.sekunden.toFixed(2)} s, `
+                        + `trimOut=${clip.trimOut}`);
+    }
+
     /** Dauer, Zeitleiste, Eigenschaften — siehe `Studioanzeige`. */
     static _nachtragen() {
         Studioanzeige.nachtragen();
     }
 }
+
+fn.clipLaenge = (art, wert) => Clipbearbeitung.laenge(art, wert);

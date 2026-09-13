@@ -28,8 +28,6 @@ import { Menuelicht } from './menue_licht.js';
 import { Audiospur } from './audiospur.js';
 import { fn } from '../gemeinsam/registrierung.js';
 
-export const DEFAULT_CLIP_SECONDS = 10;
-
 export class Spurmenue {
 
     /** Symbol und Farbe je Spurtyp. */
@@ -56,7 +54,6 @@ export class Spurmenue {
         this.nummer = nummer;
         this.ctx = ctx;
         this.fps = state.project.fps;
-        this.vorgabebilder = DEFAULT_CLIP_SECONDS * this.fps;
         this.bild = (zielbild != null) ? zielbild : state.playheadFrame;
         this.ziel = null;
     }
@@ -151,15 +148,24 @@ export class Spurmenue {
         this.ziel.appendChild(this.spureintrag(text, beiKlick));
     }
 
-    /** Ton: Auswahl öffnen, Clip auf die Vorgabelänge begrenzen. */
+    /** Ton: Auswahl öffnen, der Clip kommt in voller Länge. */
     _ton() {
         this._einzeleintrag('Audio-Datei wählen...', () =>
             Audiospur.dateiWaehlen(this.nummer, {
                 startbild: this.bild,
-                bilder: this.vorgabebilder,
-                hoechstdauer: DEFAULT_CLIP_SECONDS,
                 undoText: 'Audio-Clip hinzufügen',
             }));
+    }
+
+    /**
+     * Bilder für einen Clip ohne eigene Länge (Modell): bis zum Ende des
+     * Projekts, mindestens eine Sekunde. Keine feste Vorgabe mehr (Edgar,
+     * 13.09.2026: „keine Längenvorgaben!") — die Länge lässt sich im
+     * Kontextmenü des Clips setzen.
+     */
+    get bilderBisProjektende() {
+        const ende = Math.ceil(state.project.duration * this.fps);
+        return Math.max(this.fps, ende - this.bild);
     }
 }
 

@@ -46,7 +46,7 @@ export class Menuemodelle {
     _einfuegen(vorgabe) {
         pushUndo('Modell-Clip hinzufügen');
         const clip = new Clip(null, vorgabe.label || vorgabe.name,
-                              this.menue.vorgabebilder, this.menue.fps);
+                              this.menue.bilderBisProjektende, this.menue.fps);
         clip.type = 'model';
         clip.startFrame = this.menue.bild;
         clip.data = { preset: vorgabe.name,

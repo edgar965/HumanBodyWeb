@@ -45,7 +45,7 @@ export class Audiospur {
     /**
      * @param {Object} spur   die Audiospur
      * @param {File} datei    die gewählte Datei
-     * @param {Object} wahl   {startbild, bilder, hoechstdauer, undoText}
+     * @param {Object} wahl   {startbild, undoText}
      */
     static async einlegen(spur, datei, wahl = {}) {
         if (!datei) return;
@@ -68,16 +68,18 @@ export class Audiospur {
     }
 
     static async _clip(datei, puffer, wahl) {
-        const bilder = wahl.bilder
-            ?? Math.round(puffer.duration * state.project.fps);
+        // Voll ausgeschnitten — keine Längenvorgabe (Edgar, 13.09.2026); die
+        // ganze Dauer bleibt als `audioVoll` gemerkt, damit „Länge in %" weiß,
+        // wovon.
+        const bilder = Math.round(puffer.duration * state.project.fps);
         const clip = new Clip(null, datei.name, bilder, state.project.fps);
         clip.type = 'audio';
         clip.startFrame = wahl.startbild ?? state.playheadFrame;
         clip.data = {
             fileName: datei.name,
             audioBuffer: puffer,
-            audioDuration: wahl.hoechstdauer
-                ? Math.min(wahl.hoechstdauer, puffer.duration) : puffer.duration,
+            audioDuration: puffer.duration,
+            audioVoll: puffer.duration,
             volume: 1.0, fadeIn: 0, fadeOut: 0, offset: 0,
         };
         clip.data.audioUrl = await Audiospur._hochladen(datei);

@@ -29,6 +29,9 @@ const CLIPBEFEHLE = {
     'ctx-trim-start': () => fn.trimSelectedClip('start', 10),
     'ctx-trim-end': () => fn.trimSelectedClip('end', 10),
     'ctx-trim-reset': () => fn.trimSelectedClip('reset'),
+    // Länge in Prozent (Untermenü mit festem `data-wert`) oder per Eingabe.
+    'ctx-laenge-prozent': (eintrag) => fn.clipLaenge('prozent', Number(eintrag.dataset.wert) || null),
+    'ctx-laenge-sekunden': () => fn.clipLaenge('sekunden'),
 };
 
 export class Zeitleistenmenue {
@@ -51,7 +54,7 @@ export class Zeitleistenmenue {
             eintrag.addEventListener('click', () => {
                 Zeitleistenmenue.schliessen();
                 const befehl = CLIPBEFEHLE[eintrag.dataset.action];
-                if (befehl) befehl();
+                if (befehl) befehl(eintrag);
                 else if (eintrag.dataset.action === 'ctx-playhead') {
                     Zeitleistenziehen.abspielkopfSetzen(Zeitleistenmenue.mausX);
                 }
