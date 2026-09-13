@@ -105,7 +105,7 @@ export class Hautmaske {
             if (!stoff?.punkte?.length || !stoff?.dreiecke?.length) continue;
             Hautmaske._einStueck(basis, maske, stoff, abstand, tiefe, ringe, eng, suchweite);
         }
-        if (inseln > 0 && dreiecke) Maskeninseln.schliessen(maske, dreiecke, inseln);
+        if (inseln > 0 && dreiecke) Maskeninseln.schliessen(maske, dreiecke, inseln, koerper);
         return maske;
     }
 

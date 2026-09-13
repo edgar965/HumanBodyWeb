@@ -23,6 +23,7 @@ Hier wird die Entscheidung geprüft, WAS als „unter dem Stoff" gilt:
    die Materialgruppen nach — Start, Anzahl und Materialnummer.
 6. Eine freie Insel im Verdeckten (Haut unter einem Loch im Stoff, ringsum
    verdeckt) wird geschlossen (`Maskeninseln`); mit `inseln: 0` bleibt sie —
+   und Naht-Kopien gleicher Lage (Fall 8) trennen keine Gruppe —
    der Fall der Achselfalte, in der die Hautnormale keinen Stoff trifft.
 7. Ein kleines Teil OHNE Küste — an keiner Kante an Verdecktes grenzend,
    wie die 136 Wimpernstreifen des HumanBody-Netzes — bleibt frei
@@ -175,6 +176,27 @@ if (ohne.gruppen.length !== 0 || ohne.index.length !== neu.index.length) fehl('o
     if (m[6] !== 0 || m[7] !== 0 || m[8] !== 0) fehl('loses Teil ohne Kueste wurde verdeckt');
     if (m[9] !== 0 || m[20] !== 0) fehl('freie Haut verdeckt');
     if (zu !== 2) fehl('geschlossen: ' + zu + ' statt 2');
+}
+
+// --- 8. Naht-Kopien (gleiche Lage, eigener Index) zaehlen als ein Punkt ---
+{
+    const { Maskeninseln } = await import(MODUL.replace('hautmaske.js', 'maskeninseln.js'));
+    // Freie Haut 0..11 (groesste Gruppe), verdeckt 12..14, und eine kleine
+    // freie Gruppe 15,16,17 mit Kueste zu 14 — verbunden mit der freien Haut
+    // NUR ueber die Kopie 18 von Punkt 11 (gleiche Lage). Ohne Lagen ist sie
+    // eine Insel und wird geschlossen; mit Lagen gehoert sie zur freien Haut.
+    const T8 = [];
+    for (let i = 0; i + 2 <= 11; i++) T8.push(i, i + 1, i + 2);
+    T8.push(12, 13, 14, 14, 15, 16, 15, 16, 17, 17, 16, 18);
+    const P8 = new Float32Array(19 * 3);
+    for (let i = 0; i < 19; i++) { P8[3 * i] = i; P8[3 * i + 1] = 0.5 * i; P8[3 * i + 2] = 0.25; }
+    P8.set([11, 5.5, 0.25], 3 * 18);                      // 18 liegt auf 11
+    const ohne = new Uint8Array(19); for (const i of [12, 13, 14]) ohne[i] = 1;
+    const mit = Uint8Array.from(ohne);
+    const zuOhne = Maskeninseln.schliessen(ohne, Uint32Array.from(T8), 200);
+    const zuMit = Maskeninseln.schliessen(mit, Uint32Array.from(T8), 200, P8);
+    if (zuOhne !== 4) fehl('ohne Lagen: ' + zuOhne + ' geschlossen statt 4');
+    if (zuMit !== 0) fehl('mit Lagen: Naht-Kopie trennt die freie Haut (' + zuMit + ' geschlossen)');
 }
 
 console.log(JSON.stringify({ ok: true, unter, frei, entfernt: neu.entfernt }));

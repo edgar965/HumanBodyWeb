@@ -26,6 +26,11 @@ markiert: Sie sind hinter der Haut verborgen, und an der Mundlinie
 schließen sie die Lippen nach innen ab. „Vorn" heißt: nicht mehr als
 `TIEFE` hinter dem vordersten Punkt seiner Nachbarschaft in der Ansicht von
 vorn — die Normalen taugen dafür nicht, am Mund zeigen sie nach innen.
+Aber nur bis `HOEHLE` dahinter: Der NACKEN liegt in derselben Ansicht im
+Umriss der Linse, 100 mm hinter den Lippen, und trug die Lippenfarbe als
+rosa Fleck (Edgar, 13.09.2026, Bild vom Nacken). Gemessen am Basiskörper:
+verborgene Hautpunkte der Mundhöhle liegen höchstens 5 mm hinter der
+Lippenfront, die 28 Nackenpunkte über 100 mm; dazwischen nur Zunge und Zähne.
 
 `abstand` liefert je Punkt den VORZEICHENABSTAND zum Linsenrand in
 Millimetern (innen positiv). Der Browser legt ihn als Attribut ans Netz und
@@ -51,6 +56,8 @@ class Lippenlinse:
     #: 3×3-Nachbarschaft noch „vorn" gilt (m) — 2 mm verkraften die schrägen Mundwinkel.
     ZELLE = 0.001
     TIEFE = 0.002
+    #: Bis hierhin (m) hinter der Front gilt ein verborgener Punkt im Umriss noch als Mundhöhle.
+    HOEHLE = 0.025
     #: Breite der Mittellinie und Höhe des Bandes um die Mundlinie (m).
     MITTE = 0.0015
     BAND = 0.002
@@ -81,7 +88,8 @@ class Lippenlinse:
         if p.ndim != 2 or p.shape[0] != maske.shape[0] or maske.sum() < 50:
             return roh
         x, hoch, vorn = p[:, 0], p[:, 2], -p[:, 1]
-        front = cls.vorderseite(x, hoch, vorn)
+        tiefe = cls.tiefe(x, hoch, vorn)
+        front = tiefe <= cls.TIEFE
         kand = maske & front
         linse = cls.linse(x[kand], hoch[kand], vorn[kand])
         if linse is None:
@@ -91,10 +99,11 @@ class Lippenlinse:
         # Maske: An den Mundwinkeln lugte sonst die Innenseite der Lippe als
         # hautfarbener Zipfel hervor. Jenseits des Umrisses bleiben sie Haut:
         # Die kleinen Lappen der Mundhöhle neben den Winkeln fallen hautfarben
-        # weniger auf als rot.
+        # weniger auf als rot. Und nur bis HOEHLE dahinter — sonst der Nacken.
         aus = np.full(len(x), cls.AUSSEN)
         hinten = ~front
-        aus[hinten] = np.where(cls.rand(x[hinten], hoch[hinten], linse) > 0, cls.INNEN, cls.AUSSEN)
+        hoehle = (cls.rand(x[hinten], hoch[hinten], linse) > 0) & (tiefe[hinten] <= cls.HOEHLE)
+        aus[hinten] = np.where(hoehle, cls.INNEN, cls.AUSSEN)
         aus[front] = cls.rand(x[front], hoch[front], linse)
         logger.info('Lippenlinse: Mundwinkel ±%.1f mm, Mundlinie %.4f m, Lippen %d Punkte vorn (Maske %d)',
                     1000 * linse['xc'], linse['ym'], int((aus[front] > 0).sum()), int(kand.sum()))
@@ -102,7 +111,12 @@ class Lippenlinse:
 
     @classmethod
     def vorderseite(cls, x, hoch, vorn):
-        """Vorn ist, wer nicht weiter als TIEFE hinter dem vordersten Punkt seiner Nachbarschaft liegt.
+        """Vorn ist, wer nicht weiter als TIEFE hinter dem vordersten Punkt seiner Nachbarschaft liegt."""
+        return cls.tiefe(x, hoch, vorn) <= cls.TIEFE
+
+    @classmethod
+    def tiefe(cls, x, hoch, vorn):
+        """Je Punkt, wie weit (m) er hinter dem vordersten Punkt seiner Nachbarschaft liegt.
 
         Nachbarschaft = die eigene 1-mm-Zelle (x, hoch) und ihre acht Nachbarn.
         Die eigene Zelle allein reicht nicht: Die Haut hat nur alle ~1 mm einen
@@ -120,7 +134,7 @@ class Lippenlinse:
             for dy in (-1, 0, 1):
                 umgebung[1:-1, 1:-1] = np.maximum(
                     umgebung[1:-1, 1:-1], raster[1 + dx:raster.shape[0] - 1 + dx, 1 + dy:raster.shape[1] - 1 + dy])
-        return vorn >= umgebung[zx, zy] - cls.TIEFE
+        return umgebung[zx, zy] - vorn
 
     @classmethod
     def linse(cls, x, hoch, vorn):

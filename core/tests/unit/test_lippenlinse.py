@@ -6,7 +6,8 @@ Die Maske reicht an den Mundwinkeln als Keil in die Wange, und je Dreieck
 gefärbt wurde daraus ein Zickzack. Geprüft an einem Kunstgesicht — eine
 Hautfläche aus Punkten im 1-mm-Raster (vorn bei 0,14 m), darin eine
 Mundlinie als 1,5 mm tiefe Rinne von x = −20 bis +20 mm auf Höhe 1,500 m,
-dahinter Punkte der Mundhöhle (0,12 m). Die Maske ist ein Rechteck
+dahinter Punkte der Mundhöhle (0,12 m) und 10 cm dahinter der Nacken
+(0,04 m). Die Maske ist ein Rechteck
 ±32 mm × (1,490..1,510) — an der Mundlinie selbst aber nur ±20 mm breit,
 wie die echte: Die Keile sitzen über und unter den Winkeln.
 
@@ -15,7 +16,9 @@ wie die echte: Die Keile sitzen über und unter den Winkeln.
 2. Die Keile fallen weg: (27 mm, 1,506 m) ist nicht Lippe, obwohl die Maske
    dort weiß ist; die Mitte oben (0, 1,508 m) bleibt Lippe.
 3. Der Abstand ist innen positiv, außen negativ und nimmt zum Rand hin ab.
-4. Verborgene Punkte (Mundhöhle) im Umriss sind INNEN, außerhalb AUSSEN.
+4. Verborgene Punkte (Mundhöhle) im Umriss sind INNEN, außerhalb AUSSEN —
+   und der Nacken im Umriss, 10 cm dahinter, ist AUSSEN (Edgar, 13.09.2026:
+   rosa Fleck im Nacken).
 5. Ohne genug Maskenpunkte bleibt die Maske roh.
 
 Sabotage-Gegenprobe: `np.abs(t) <= 1` weg in `rand` → Fall 2 rot.
@@ -37,9 +40,9 @@ def kunstgesicht():
     vorn[mund] = 0.1385                                  # die Rinne der Mundlinie (1,5 mm)
     # Mundhöhle: dieselben Lagen 2 cm dahinter, nur um den Mund herum
     hinten = (np.abs(x) < 0.030) & (np.abs(hoch - 1.500) < 0.012)
-    px = np.concatenate([x, x[hinten]])
-    ph = np.concatenate([hoch, hoch[hinten]])
-    pv = np.concatenate([vorn, np.full(hinten.sum(), 0.12)])
+    px = np.concatenate([x, x[hinten], x[hinten]])
+    ph = np.concatenate([hoch, hoch[hinten], hoch[hinten]])
+    pv = np.concatenate([vorn, np.full(hinten.sum(), 0.12), np.full(hinten.sum(), 0.04)])
     punkte = np.column_stack([px, -pv, ph])
     maske = (np.abs(px) <= 0.032) & (ph >= 1.490) & (ph <= 1.510)
     maske &= ~((np.abs(ph - 1.500) < 0.0025) & (np.abs(px) > 0.020))   # an der Linie nur bis zum Winkel
@@ -85,6 +88,10 @@ class LippenlinseTest(SimpleTestCase):
     def test_verborgene_punkte_im_umriss_sind_innen(self):
         self.assertEqual(self.abstand[self.wo(0.0, 1.500, vorn=0.12)], Lippenlinse.INNEN)
         self.assertEqual(self.abstand[self.wo(0.028, 1.500, vorn=0.12)], Lippenlinse.AUSSEN)
+
+    def test_der_nacken_im_umriss_bleibt_haut(self):
+        self.assertEqual(self.abstand[self.wo(0.0, 1.500, vorn=0.04)], Lippenlinse.AUSSEN)
+        self.assertEqual(self.abstand[self.wo(0.01, 1.505, vorn=0.04)], Lippenlinse.AUSSEN)
 
     def test_ohne_genug_maske_bleibt_sie_roh(self):
         wenig = np.zeros(len(self.punkte), dtype=bool)

@@ -29,13 +29,20 @@ export class Maskeninseln {
      * Insel im Sinne der Achselfalte hat eine Küste aus verdeckten Punkten;
      * ein Stück ohne jede solche Kante ist keine Insel, sondern ein Teil
      * für sich (Wimpern, Zähne, Zunge, Augäpfel).
+     *
+     * PUNKTE GLEICHER LAGE SIND EIN PUNKT (13.09.2026, Nähte): Der Server
+     * trennt Nahtpunkte für die Textur in Kopien (`Nahtteilung`), die im
+     * Index nicht mehr verbunden sind — der Censor wäre so eine eigene
+     * Insel von 173 Punkten und am Bikinirand „geschlossen". Mit `koerper`
+     * (Punktlagen) werden Kopien zuerst mit ihrem Original vereint.
      */
-    static schliessen(maske, dreiecke, hoechstens) {
+    static schliessen(maske, dreiecke, hoechstens, koerper = null) {
         const n = maske.length;
         const wurzel = new Int32Array(n);
         for (let i = 0; i < n; i++) wurzel[i] = i;
         const finde = (i) => { while (wurzel[i] !== i) { wurzel[i] = wurzel[wurzel[i]]; i = wurzel[i]; } return i; };
         const vereine = (a, b) => { const ra = finde(a), rb = finde(b); if (ra !== rb) wurzel[ra] = rb; };
+        if (koerper) Maskeninseln.gleicheLage(koerper, n, (a, b) => { if (maske[a] === maske[b]) vereine(a, b); });
         for (let k = 0; k + 2 < dreiecke.length; k += 3) {
             const a = dreiecke[k], b = dreiecke[k + 1], c = dreiecke[k + 2];
             if (!maske[a] && !maske[b]) vereine(a, b);
@@ -63,5 +70,26 @@ export class Maskeninseln {
             if (g <= hoechstens && g < groesste && kueste.has(r)) { maske[i] = 1; geschlossen += 1; }
         }
         return geschlossen;
+    }
+
+    /**
+     * Paare von Punkten mit bitgleicher Lage an `paar(a, b)` melden.
+     * Zahlenschlüssel aus den Float-Bits statt Zeichenketten — bei 74.000
+     * Punkten sind Zeichenketten der teuerste Teil (`kodierung.js`).
+     */
+    static gleicheLage(koerper, n, paar) {
+        const bits = new Uint32Array(koerper.buffer, koerper.byteOffset, n * 3);
+        const erste = new Map();
+        for (let i = 0; i < n; i++) {
+            const schluessel = ((bits[3 * i] * 31 + bits[3 * i + 1]) * 31 + bits[3 * i + 2]) >>> 0;
+            const kandidaten = erste.get(schluessel);
+            if (!kandidaten) { erste.set(schluessel, [i]); continue; }
+            let gefunden = false;
+            for (const j of kandidaten) {
+                if (bits[3 * j] === bits[3 * i] && bits[3 * j + 1] === bits[3 * i + 1]
+                    && bits[3 * j + 2] === bits[3 * i + 2]) { paar(i, j); gefunden = true; break; }
+            }
+            if (!gefunden) kandidaten.push(i);
+        }
     }
 }

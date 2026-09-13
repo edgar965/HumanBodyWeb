@@ -156,10 +156,12 @@ class Charakterdaten:
             return None
         cc = CatmullClarkSubdivider(mesh.faces,
                                     face_materials=mesh.face_materials,
-                                    uvs=mesh.uvs, levels=1)
-        logger.info('CC-Unterteiler (%s): %d Basis- -> %d Untervertices, '
-                    '%d Dreiecke', geschlecht, mesh.faces.max() + 1,
-                    cc.sub_vertex_count, len(cc.triangles))
+                                    uvs=mesh.uvs, levels=1,
+                                    uv_loops=getattr(mesh, 'uv_loops', None))
+        logger.info('CC-Unterteiler (%s): %d Basis- -> %d Untervertices '
+                    '(davon %d Textur-Kopien an Naehten), %d Dreiecke',
+                    geschlecht, mesh.faces.max() + 1, cc.sub_vertex_count,
+                    cc.naht_kopien, len(cc.triangles))
         cls._referenznormalen(cc, geschlecht)
         # Erst mit fertigen Referenznormalen sichtbar machen.
         cls._cc_subdivider[geschlecht] = cc
