@@ -16,7 +16,7 @@ FASSUNG = {
         "UMA-Python erben davon. BVH Studio, Theatre, Ergebnis-, Animations- "
         "und Modellseite und die Szene bauen keine Figur mehr selbst — Lippen, "
         "Brauen, Nägel, GarmentCode und Hautmaske kommen überall gleich an.\n"
-        "- **Modell-Reiter**: Haut · Augen · Brauen · Mund · Nägel als klappbare "
+        "- Modell-Reiter: Haut · Augen · Brauen · Mund · Nägel als klappbare "
         "Bereiche, Lippen aus der MB-Lab-Maske, Brauen mit Anker; in der Szene "
         "Lippen mit glattem Rand, Brauen mit Dichte/Dicke/Lage, "
         "MB-Lab-Hauttextur, Nähte in der Hauttextur weg.\n"
