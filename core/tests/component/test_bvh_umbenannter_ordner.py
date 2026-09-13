@@ -10,6 +10,8 @@ stand. Die Bibliothek bietet das Umbenennen selbst an
 Umzug verkraften: `Bvhablage.finden` nimmt die Datei aus einem anderen
 Ordner, wenn es genau einen mit diesem Namen gibt.
 
+Auch ein UNTERORDNER zählt (13.09.2026, dieselbe Meldung noch einmal, jetzt
+mit `A_Results/alt/00001_Dance1.bvh`): die Suche geht über den ganzen Baum.
 Mehrdeutig (zwei Ordner mit derselben Datei) bleibt 404 — raten wäre die
 falsche Bewegung ohne Fehler. Schreibende Endpunkte (`save-bvh-text`,
 `save-bvh-effects`) folgen NICHT: Sie schreiben nur, wo sie sollen.
@@ -66,6 +68,15 @@ class DerUmzug(TestCase):
     def test_der_umgezogene_ordner_wird_gefunden(self):
         gefunden = Bvhablage.finden(self.geprueft('Results', 'tanz'))
         self.assertEqual(gefunden, (self.wurzel / 'A_Results' / 'tanz.bvh').resolve())
+
+    def test_die_datei_in_einem_unterordner_wird_gefunden(self):
+        alt = self.wurzel / 'A_Results' / 'alt'
+        alt.mkdir()
+        (self.wurzel / 'A_Results' / 'tanz.bvh').rename(alt / 'tanz.bvh')
+        self.assertEqual(Bvhablage.finden(self.geprueft('Results', 'tanz')), (alt / 'tanz.bvh').resolve())
+        self.assertEqual(Bvhablage.finden(self.geprueft('A_Results', 'tanz')), (alt / 'tanz.bvh').resolve())
+        antwort = self.client.get('/api/retarget/?category=Results&name=tanz&body_height=1.68')
+        self.assertEqual(antwort.status_code, 200, antwort.content[:200])
 
     def test_was_es_nirgends_gibt_bleibt_none(self):
         self.assertIsNone(Bvhablage.finden(self.geprueft('Results', 'gibtsnicht')))

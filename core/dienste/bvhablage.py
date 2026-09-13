@@ -72,15 +72,21 @@ class Bvhablage:
         das die Datei (mit Vermerk im Protokoll). In mehreren: `None`, denn
         raten waere die falsche Bewegung ohne Fehler. Schreibende Endpunkte
         (`bvhtext`, `sichern`) nehmen weiter nur den genannten Pfad.
+
+        AUCH IN UNTERORDNERN (13.09.2026, Edgar: „Animation funktioniert
+        nicht … schau in aktuelle Logs nach"): `00001_Dance1.bvh` und
+        `002_Dance_gem.bvh` lagen seit 23:44 des Vortags in `A_Results/alt/`;
+        die erste Fassung sah nur die Kategorieordner selbst, der Retarget
+        antwortete wieder 404, TechnoDance stand.
         """
         if geprueft is None:
             return None
         if geprueft.is_file():
             return geprueft
-        treffer = [ordner / geprueft.name for ordner in cls.wurzel().iterdir()
-                   if ordner.is_dir() and (ordner / geprueft.name).is_file()]
+        wurzel = cls.wurzel()
+        treffer = [p for p in wurzel.rglob(geprueft.name) if p.is_file()]
         if len(treffer) != 1:
             return None
         logger.info('BVH %s/%s liegt jetzt unter %s', geprueft.parent.name,
-                    geprueft.name, treffer[0].parent.name)
+                    geprueft.name, treffer[0].parent.relative_to(wurzel).as_posix())
         return treffer[0]
