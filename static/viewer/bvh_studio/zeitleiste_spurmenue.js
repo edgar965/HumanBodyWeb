@@ -56,7 +56,6 @@ export class Spurmenue {
         this.nummer = nummer;
         this.ctx = ctx;
         this.fps = state.project.fps;
-        this.vorgabesekunden = DEFAULT_CLIP_SECONDS;
         this.vorgabebilder = DEFAULT_CLIP_SECONDS * this.fps;
         this.bild = (zielbild != null) ? zielbild : state.playheadFrame;
         this.ziel = null;

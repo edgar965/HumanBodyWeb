@@ -7,11 +7,14 @@ import { Serverabruf } from '../gemeinsam/serverabruf.js';
  *
  * Herausgelöst aus `zeitleiste_spurmenue.js` (372 Zeilen). Zwei Eigenheiten:
  *
- * 1. **Die Animationsliste wird gemerkt** (`_gemerkt`). Sie hat über 7.000
- *    Einträge; jeder Rechtsklick würde sie sonst neu holen.
- * 2. **Ein eingefügter Clip wird auf zehn Sekunden beschnitten** — über
- *    `trimOut`, nicht durch Kürzen der Daten. Ein 40-Sekunden-Clip würde sonst
- *    die halbe Zeitleiste füllen; ziehen kann man ihn danach wieder auf.
+ * 1. **Die Animationsliste wird gemerkt** (`_gemerkt`), bis der Bibliotheksbaum
+ *    neu gebaut wird (Seitenaufruf, ↻, Dateioperation — `Bibliotheksbaum.laden`
+ *    ruft `vergessen`). Sie hat über 7.000 Einträge; jeder Rechtsklick würde
+ *    sie sonst neu holen.
+ * 2. **Ein eingefügter Clip kommt in voller Länge.** Bis 13.09.2026 wurde er
+ *    auf zehn Sekunden beschnitten (`trimOut`), damit ein 40-Sekunden-Clip
+ *    nicht die halbe Zeitleiste füllt — Edgar: „wird nicht die ganze
+ *    Animationslänge hinzugefügt". Kürzen kann man ihn danach am Rand.
  */
 export class Menueanimationen {
 
@@ -80,10 +83,6 @@ export class Menueanimationen {
         const spur = state.project.tracks[this.menue.nummer];
         const clip = spur.clips[spur.clips.length - 1];
         if (!clip) return;
-        // Vorgabe sind zehn Sekunden — laengere Animationen werden beschnitten,
-        // kuerzere bleiben, wie sie sind.
-        const grenze = Math.round(this.menue.vorgabesekunden * clip.fps);
-        if (clip.totalFrames > grenze) clip.trimOut = clip.totalFrames - grenze;
         clip.startFrame = this.menue.bild;
         fn.updateDuration();
         fn.renderTimeline();
