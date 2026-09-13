@@ -16,6 +16,12 @@
  * kostet Speicher und spielt womöglich weiter — deshalb `uncacheClip`. Und
  * ist kein Clip mehr übrig, hält die Wiedergabe an.
  *
+ * AUF ALLEN SPUREN (13.09.2026): Bewegungsclips lagen auch auf Kamera-, Ton-
+ * und Modellspuren (`addClipToTrack` nahm jede Spur); dort fand die erste
+ * Fassung sie nicht — „A_Results/002_Dance_gem gibt es nicht mehr — 0 Clips
+ * entfernt", und der Clip blieb. Gesucht wird darum überall, gemeint sind
+ * nur Bewegungsclips (`type === 'bvh'`).
+ *
  * Ohne Import von `state.js` (das zieht Three.js nach): `state` und `fn`
  * kommen als Parameter, damit das Modul in Node prüfbar ist
  * (`test_js_clipfehlt.py`).
@@ -23,14 +29,14 @@
 export class Clipfehlt {
 
     /**
-     * Alle Clips der BVH `kategorie/name` aus allen Bewegungsspuren nehmen.
+     * Alle Bewegungsclips der BVH `kategorie/name` aus allen Spuren nehmen.
      * @returns {number} Anzahl der entfernten Clips
      */
     static entfernen(kategorie, name, state, fn) {
         let entfernt = 0;
         for (const spur of state.project.tracks) {
-            if (spur.type !== 'bvh') continue;
             entfernt += Clipfehlt._spurRaeumen(spur, kategorie, name);
+            if (spur.type !== 'bvh') continue;
             if (spur.clips.length === 0 && spur.group) spur.group.visible = false;
             spur._activeClip = null;
             spur._activeAction = null;
@@ -58,7 +64,7 @@ export class Clipfehlt {
         // Von hinten: Ein `splice` beim Vorwärtslaufen überspringt den Nachbarn.
         for (let i = spur.clips.length - 1; i >= 0; i--) {
             const clip = spur.clips[i];
-            if (clip.category !== kategorie || clip.name !== name) continue;
+            if (clip.type !== 'bvh' || clip.category !== kategorie || clip.name !== name) continue;
             if (spur.mixer) {
                 spur.mixer.stopAllAction();
                 // Ohne `uncacheClip` bleibt die Animation im Speicher des Mixers.

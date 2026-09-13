@@ -14,6 +14,7 @@ import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { Zeitleistentreffer } from './zeitleiste_treffer.js';
 import { Zeitleistenziehen } from './zeitleiste_ziehen.js';
 import { Modellmenue } from './zeitleiste_modellmenue.js';
+import { Untermenuelage } from './untermenuelage.js';
 
 /** Abstand, den ein Menue zum unteren Fensterrand haelt. */
 const RAND = 10;
@@ -50,6 +51,11 @@ export class Zeitleistenmenue {
         Zeitleistenflaeche.canvas.addEventListener(
             'contextmenu', Zeitleistenmenue._oeffnen);
         document.addEventListener('click', Zeitleistenmenue.schliessen);
+        // Untermenüs („Hinzufügen", „Länge") bleiben im Fenster.
+        for (const menue of [Zeitleistenmenue.clipmenue, Zeitleistenmenue.spurmenue,
+                             Modellmenue.menue]) {
+            Untermenuelage.alleAnbinden(menue);
+        }
         Zeitleistenmenue.clipmenue?.querySelectorAll('.ctx-item').forEach(eintrag => {
             eintrag.addEventListener('click', () => {
                 Zeitleistenmenue.schliessen();
@@ -79,7 +85,9 @@ export class Zeitleistenmenue {
      */
     static _zeigen(menue, e) {
         menue.style.display = 'block';
-        menue.style.left = e.clientX + 'px';
+        const breite = menue.offsetWidth || 180;
+        menue.style.left =
+            Math.max(RAND, Math.min(e.clientX, window.innerWidth - breite - RAND)) + 'px';
         const hoehe = menue.offsetHeight || 200;
         menue.style.top =
             Math.min(e.clientY, window.innerHeight - hoehe - RAND) + 'px';

@@ -10,7 +10,7 @@
  *   zeitleiste_ziehen.js   verschieben, kuerzen, scrubben, Ansicht schieben
  *   zeitleiste_menue.js    die drei Kontextmenues
  */
-import { state, TRACK_HEIGHT, RULER_HEIGHT } from './state.js';
+import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Reihen } from './zeitleiste_reihen.js';
 import { renderTimeline } from './zeitleiste_zeichnen.js';
@@ -72,8 +72,10 @@ function _ablegenAnbinden() {
         e.preventDefault();
         try {
             const daten = JSON.parse(e.dataTransfer.getData('application/json'));
-            const y = e.clientY - leinwand.getBoundingClientRect().top - RULER_HEIGHT;
-            const spurNr = Math.floor(y / TRACK_HEIGHT);
+            // Die Reihe unter der Maus — mit Gruppen ist `y / TRACK_HEIGHT`
+            // nicht mehr die Spurnummer (Kontextmenü: `Zeitleistenmenue._oeffnen`).
+            const reihe = Reihen.beiY(e.clientY - leinwand.getBoundingClientRect().top);
+            const spurNr = reihe?.trackIdx ?? -1;
             if (spurNr >= 0 && spurNr < state.project.tracks.length) {
                 fn.addClipToTrack(spurNr, daten.category, daten.name, daten.frames);
             } else {

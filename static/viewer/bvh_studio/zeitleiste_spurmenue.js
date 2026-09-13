@@ -26,6 +26,7 @@ import { Menueanimationen } from './menue_animationen.js';
 import { Menuemodelle } from './menue_modelle.js';
 import { Menuelicht } from './menue_licht.js';
 import { Audiospur } from './audiospur.js';
+import { Untermenuelage } from './untermenuelage.js';
 import { fn } from '../gemeinsam/registrierung.js';
 
 export class Spurmenue {
@@ -40,8 +41,6 @@ export class Spurmenue {
         light: ['fa-lightbulb', '#ffc107'],
     };
     static ORDNER_FARBE = 'var(--text-muted)';
-    /** Ein Untermenü sitzt fünf Pixel höher als sein Elternteil. */
-    static VERSATZ_Y = 5;
 
     /**
      * @param {Object} spur       die Spur aus dem Projekt
@@ -128,16 +127,13 @@ export class Spurmenue {
      * Ein Untermenü anhängen, das beim Überfahren neben seinem Elternteil
      * erscheint. `position: fixed` ist noetig, weil das Menue der ersten Ebene
      * `overflow: auto` hat und das Untermenue sonst abgeschnitten wuerde.
+     * Wo es liegt, entscheidet `Untermenuelage` — im Fenster, nie darunter.
      */
     untermenue(elternteil) {
         const feld = document.createElement('div');
-        feld.className = 'ctx-submenu ctx-submenu-fixed';
+        feld.className = 'ctx-submenu';
         elternteil.appendChild(feld);
-        elternteil.addEventListener('mouseenter', () => {
-            const rahmen = elternteil.getBoundingClientRect();
-            feld.style.left = rahmen.right + 'px';
-            feld.style.top = (rahmen.top - Spurmenue.VERSATZ_Y) + 'px';
-        });
+        Untermenuelage.anbinden(elternteil, feld);
         return feld;
     }
 

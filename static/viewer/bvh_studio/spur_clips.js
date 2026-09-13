@@ -20,23 +20,28 @@ import { addTrack } from './tracks.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Clipanimation } from './clipanimation.js';
 import { Clipbearbeitung } from './clipbearbeitung.js';
+import { Studioanzeige } from './studioanzeige.js';
 
 /**
  * Einen Bibliotheks-Clip auf eine Spur legen — hinter den letzten.
  *
  * Ohne Spur wird eine angelegt: Ein Doppelklick in der Bibliothek soll auch im
  * leeren Projekt etwas bewirken.
+ *
+ * NUR AUF EINE BEWEGUNGSSPUR (13.09.2026): Bis dahin nahm jede Spur den Clip —
+ * über die Bibliothek (Doppelklick, „Hinzufügen") landete er auf der gerade
+ * AUSGEWÄHLTEN Spur, über die Ablage auf der Zeitleiste in der Reihe
+ * `y / TRACK_HEIGHT`, die seit den Gruppen nicht mehr die Spurnummer ist.
+ * Im Projekt TechnoDance lagen so Bewegungsclips auf der Kamera-, der Ton-
+ * und einer Modellspur; dort spielt sie nichts, und `Clipfehlt` fand sie
+ * nicht („0 Clips entfernt").
  */
 export async function addClipToTrack(trackIdx, category, name, frames) {
     pushUndo('Clip hinzufügen');
     Protokoll.debug('BVH Studio',
                     `addClipToTrack: trackIdx=${trackIdx}, ${category}/${name}, `
                     + `existingTracks=${state.project.tracks.length}`);
-    if (trackIdx < 0 || !state.project.tracks[trackIdx]) {
-        if (state.project.tracks.length === 0) addTrack();
-        trackIdx = state.project.tracks.length - 1;
-    }
-    const spur = state.project.tracks[trackIdx];
+    const spur = _bewegungsspur(trackIdx);
     if (!spur) {
         Protokoll.fehler('BVH Studio', 'addClipToTrack: keine Spur');
         return;
@@ -59,6 +64,28 @@ export async function addClipToTrack(trackIdx, category, name, frames) {
                     `addClipToTrack done: clips=${spur.clips.length}, `
                     + `hasMixer=${!!spur.mixer}, hasSkeleton=${!!spur.skeleton}`);
     fn.updateProperties();
+}
+
+/**
+ * Die Bewegungsspur für einen neuen Clip: die gewünschte, wenn sie eine ist;
+ * sonst die ausgewählte oder die erste Bewegungsspur (mit Meldung); ohne
+ * eine solche eine neue.
+ */
+function _bewegungsspur(trackIdx) {
+    const spuren = state.project.tracks;
+    const gewuenscht = spuren[trackIdx];
+    if (gewuenscht?.type === 'bvh') return gewuenscht;
+    const ersatz = [spuren[state.selectedTrackIdx], ...spuren]
+        .find(spur => spur?.type === 'bvh');
+    if (ersatz) {
+        if (gewuenscht) {
+            Studioanzeige.melden(`Bewegungsclips gehören auf eine Animationsspur — `
+                                 + `auf „${ersatz.name}" gelegt`, 5000);
+        }
+        return ersatz;
+    }
+    addTrack();
+    return spuren[spuren.length - 1];
 }
 
 export async function loadClipAnimation(track, clip) {
