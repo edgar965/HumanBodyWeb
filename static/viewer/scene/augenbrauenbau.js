@@ -1,5 +1,5 @@
 import { THREE } from './state.js';
-import { Augenbrauen } from '../gemeinsam/augenbrauen.js';
+import { Augenbrauenform } from '../gemeinsam/augenbrauenform.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
@@ -43,9 +43,8 @@ export class Augenbrauenbau {
         const index = geo.userData?.indexVoll?.index || geo.index?.array;
         const gruppen = geo.userData?.indexVoll?.gruppen || geo.groups;
         if (!index || !gruppen?.length) return 0;
-        const roh = Augenbrauen.bauen(punkte || geo.attributes.position.array, index, gruppen,
-                                      inst.details.brauen_staerke ?? 1,
-                                      Augenbrauenbau.anker(inst, geo));
+        const roh = Augenbrauenform.bauen(punkte || geo.attributes.position.array, index, gruppen,
+                                          inst.details, Augenbrauenbau.anker(inst, geo));
         geo.userData.brauenanker = roh.anker;
         Augenbrauenbau.entfernen(inst);
         if (!roh.haare) return 0;

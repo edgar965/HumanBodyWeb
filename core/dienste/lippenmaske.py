@@ -14,6 +14,12 @@ Die Punkte werden je Geschlecht einmal bestimmt und gemerkt; der Browser
 spaltet daraus eine eigene Materialgruppe ab (`gemeinsam/lippengruppe.js`),
 damit die Lippen Farbe und Glanz für sich bekommen.
 
+Seit 13.09.2026 („die Lippen sind fehlerhaft") wird die weiche MB-Lab-Fläche
+am Basiskörper auf die Lippenform beschnitten (`Lippenlinse`): Die Maske
+allein reichte an den Mundwinkeln als Keil 15 mm in die Wange. Dafür
+braucht es die Punkte des Basiskörpers zu genau diesen UVs — beim
+Unterteiler dessen `subdivide(basis)`, sonst die Basispunkte selbst.
+
 Nur lesen: Weder `HumanBody/data` noch die MB-Lab-Texturen werden
 geschrieben.
 """
@@ -22,6 +28,8 @@ from pathlib import Path
 
 import numpy as np
 from django.conf import settings
+
+from .lippenlinse import Lippenlinse
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +43,11 @@ class Lippenmaske:
     #: Ab diesem Maskenwert (0..255) gilt ein Punkt als Lippe.
     SCHWELLE = 128
 
+    #: Saum um den Linsenrand (mm), der als Abstand mitgeht — innerhalb mischt der Browser.
+    SAUM_MM = 6.0
+
     _gemerkt = {}
+    _saum = {}
 
     @classmethod
     def ordner(cls):
@@ -43,21 +55,25 @@ class Lippenmaske:
         return Path(settings.TOOLS_ROOT) / 'tools' / 'MB-Lab' / 'data' / 'textures'
 
     @classmethod
-    def indizes(cls, geschlecht, uvs):
+    def indizes(cls, geschlecht, uvs, unterteiler=None):
         """Die Lippenpunkte (Indizes ins Netz) — gemerkt je Geschlecht.
 
         `uvs` sind die UVs GENAU des Netzes, das der Browser bekommt (beim
-        Unterteiler dessen `cc.uvs`). Fehlt Maske oder UV, kommt eine leere
-        Liste — die Lippen bleiben dann Haut, ohne Fehler.
+        Unterteiler dessen `cc.uvs` — dann kommt er als `unterteiler` mit,
+        damit die Linse den Basiskörper in derselben Unterteilung sieht).
+        Fehlt Maske oder UV, kommt eine leere Liste — die Lippen bleiben dann
+        Haut, ohne Fehler.
         """
         if geschlecht in cls._gemerkt:
             return cls._gemerkt[geschlecht]
         aus = []
+        cls._saum[geschlecht] = None
         datei = cls.ordner() / cls.DATEI.get(geschlecht, '')
         if uvs is not None and datei.is_file():
-            aus = cls.aus_uvs(np.asarray(uvs), cls.maske(datei)).tolist()
-            logger.info('Lippenmaske (%s): %d Punkte aus %s', geschlecht,
-                        len(aus), datei.name)
+            roh = cls.aus_uvs(np.asarray(uvs), cls.maske(datei))
+            aus = cls.beschnitten(roh, len(uvs), geschlecht, unterteiler)
+            logger.info('Lippenmaske (%s): %d Punkte aus %s (roh %d)', geschlecht,
+                        len(aus), datei.name, len(roh))
         else:
             logger.warning('Lippenmaske (%s): keine Maske unter %s oder '
                            'keine UVs', geschlecht, datei)
@@ -84,5 +100,55 @@ class Lippenmaske:
         return np.flatnonzero(maske[w, u] > cls.SCHWELLE)
 
     @classmethod
+    def lippen(cls, geschlecht, uvs, unterteiler=None):
+        """Das Feld `lippen` der Netzantwort: Punkte und der Saum mit Abständen.
+
+        `{'punkte': [...], 'saum': {'punkte': [...], 'abstand': [...mm]}}` —
+        ohne Linse (rohe Maske) fehlt der Saum, der Browser färbt dann wie
+        vorher je Dreieck.
+        """
+        punkte = cls.indizes(geschlecht, uvs, unterteiler)
+        aus = {'punkte': punkte}
+        if cls._saum.get(geschlecht):
+            aus['saum'] = cls._saum[geschlecht]
+        return aus
+
+    @classmethod
+    def beschnitten(cls, roh, anzahl, geschlecht, unterteiler):
+        """Die rohen Maskenpunkte auf die Lippenlinse des Basiskörpers beschneiden.
+
+        Ohne Basiskörper (kein Morph-Datenbestand, Punktzahl passt nicht)
+        bleibt die rohe Maske — mit Vermerk im Protokoll. Sonst wird auch der
+        Saum gemerkt: alle Punkte näher als SAUM_MM am Linsenrand, mit Abstand.
+        """
+        punkte = cls.basispunkte(geschlecht, unterteiler)
+        if punkte is None or len(punkte) != anzahl:
+            logger.warning('Lippenmaske (%s): kein passender Basiskörper (%s zu %d UVs), '
+                           'Maske bleibt roh', geschlecht,
+                           None if punkte is None else len(punkte), anzahl)
+            return roh.tolist()
+        maske = np.zeros(anzahl, dtype=bool)
+        maske[roh] = True
+        abstand = Lippenlinse.abstand(maske, punkte)
+        saum = np.flatnonzero(np.abs(abstand) < cls.SAUM_MM)
+        cls._saum[geschlecht] = {'punkte': saum.tolist(),
+                                 'abstand': np.round(abstand[saum], 2).tolist()}
+        return np.flatnonzero(abstand > 0).tolist()
+
+    @classmethod
+    def basispunkte(cls, geschlecht, unterteiler=None):
+        """Die Punkte des Basiskörpers dieses Geschlechts — unterteilt, wenn ein Unterteiler mitkommt."""
+        from humanbody_core import CharacterState
+        from .charakterdaten import Charakterdaten
+        zustand = CharacterState(Charakterdaten.morphdaten(),
+                                 Charakterdaten.voreinstellungen())
+        zustand.set_body_type('Male_Caucasian' if geschlecht == 'male' else 'Female_Caucasian')
+        punkte = zustand.compute()
+        if punkte is None or unterteiler is None:
+            return punkte
+        return unterteiler.subdivide(punkte)
+
+    @classmethod
     def vergessen(cls):
         cls._gemerkt.clear()
+        cls._saum.clear()

@@ -48,7 +48,7 @@ class SzeneDetails(TestCase):
         felder = self._kennungen('felder')
         self.assertGreaterEqual(len(felder), 15)
         for kennung in felder:
-            muster = r'<input type="(color|range)" id="%s"' % kennung
+            muster = r'<(input type="(color|range)"|select) id="%s"' % kennung
             self.assertRegex(self.text, muster, kennung)
         morphe = self._kennungen('morphe')
         self.assertGreaterEqual(len(morphe), 9)

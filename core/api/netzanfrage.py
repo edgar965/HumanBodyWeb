@@ -123,9 +123,10 @@ class Netzanfrage:
                        'material_names': self.netz.material_names or []}
             if cc.uvs is not None:
                 weitere['uvs'] = cc.uvs
-            # Die Lippen als Punktliste (12.09.2026): Der Browser macht daraus
-            # eine eigene Materialgruppe — das Netz selbst hat keine.
-            weitere['lippen'] = Lippenmaske.indizes(self.geschlecht, cc.uvs)
+            # Die Lippen (12.09.2026): Punkte für die eigene Materialgruppe des
+            # Browsers — das Netz selbst hat keine — und seit 13.09.2026 der
+            # Saum mit Abständen zum Rand, damit die Farbe glatt ausläuft.
+            weitere['lippen'] = Lippenmaske.lippen(self.geschlecht, cc.uvs, cc)
         antwort = Netzantwort.aus(
             feine, normals=cc.compute_quad_normals(feine),
             faces=None if self.nur_punkte else cc.triangles, **weitere)
@@ -148,5 +149,5 @@ class Netzanfrage:
             antwort['faces'] = Netzantwort.feld(dreiecke, 'faces')
         if self.netz.uvs is not None and not self.nur_punkte:
             antwort['uvs'] = Netzantwort.feld(self.netz.uvs, 'uvs')
-            antwort['lippen'] = Lippenmaske.indizes(self.geschlecht, self.netz.uvs)
+            antwort['lippen'] = Lippenmaske.lippen(self.geschlecht, self.netz.uvs)
         return antwort

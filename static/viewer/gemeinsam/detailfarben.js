@@ -16,7 +16,11 @@
  *
  * Ohne Three.js: die Materialien kommen als Objekte mit `color.set` und
  * `roughness` herein — so läuft es in Node (`test_js_koerperdetails.py`).
+ * Die Lippenwerte holt `Lippenhaut.nachziehen` danach in den Hautshader,
+ * der den Lippenrand glatt mischt (13.09.2026).
  */
+import { Lippenhaut } from './lippenhaut.js';
+
 export class Detailfarben {
 
     /** Vorgaben = die festen Farben aus `koerpermaterialien.js`; Haut leer = Körperart. */
@@ -63,6 +67,7 @@ export class Detailfarben {
                 if (materialien[g]) materialien[g].roughness = 1 - glanz;
             }
         }
+        Lippenhaut.nachziehen(materialien);
         return gesetzt;
     }
 }

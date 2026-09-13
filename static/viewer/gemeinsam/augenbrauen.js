@@ -39,7 +39,7 @@ export class Augenbrauen {
     static BOGEN = {
         innenX: -0.014,     // Braueninnenseite: 14 mm NASENWÄRTS der Augenmitte (m)
         aussenX: 0.026,     // Außenseite: 26 mm schläfenwärts
-        hoehe: 0.022,       // Bogenhöhe über der Augenmitte, innen
+        hoehe: 0.016,       // Bogenhöhe über der Augenmitte, innen (22 mm saß auf der Stirn, Edgar 13.09.2026)
         woelbung: 0.006,    // zusätzliche Höhe am Scheitel (bei 55 % der Länge)
         abfall: 0.004,      // so viel tiefer liegt das äußere Ende
         haare: 30,          // Streifen je Braue — dicht genug für einen Strich, nicht eine Punktreihe

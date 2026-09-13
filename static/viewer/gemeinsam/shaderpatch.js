@@ -40,6 +40,12 @@ export class Shaderpatch {
         return Shaderpatch._register.get(material)?.has(schluessel) ?? false;
     }
 
+    /** Der Eingriff selbst (die Funktion) — oder undefined. Ein Eingriff darf
+     *  seine Uniforms daran hängen; so findet er sie auch am Klon wieder. */
+    static eingriff(material, schluessel) {
+        return Shaderpatch._register.get(material)?.get(schluessel);
+    }
+
     /** Die Namen der Eingriffe, sortiert. */
     static schluessel(material) {
         return Array.from(Shaderpatch._register.get(material)?.keys() ?? []).sort();

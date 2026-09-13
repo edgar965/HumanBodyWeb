@@ -40,6 +40,13 @@ export class Detailbedienung {
         for (const [kennung, feld] of Detailbereiche.prozent()) {
             Detailbedienung._reglerSetzen(kennung, Math.round(inst.details[feld] * 100), '%');
         }
+        for (const [kennung, feld] of Detailbereiche.millimeter()) {
+            Detailbedienung._reglerSetzen(kennung, Math.round(inst.details[feld] * 1000), 'mm');
+        }
+        for (const [kennung, feld] of Detailbereiche.auswahl()) {
+            const wahl = document.getElementById(kennung);
+            if (wahl) wahl.value = inst.details[feld] || '';
+        }
         for (const name of Detailbereiche.morphe()) {
             Detailbedienung._reglerSetzen(Detailbereiche.morphKennung(name),
                                           Math.round((inst.morphs?.[name] || 0) * 100), '');
@@ -76,6 +83,18 @@ export class Detailbedienung {
                 Detailbedienung._aendern(feld, Number(regler.value) / 100);
             });
         }
+        for (const [kennung, feld] of Detailbereiche.millimeter()) {
+            const regler = document.getElementById(kennung);
+            regler?.addEventListener('input', () => {
+                Detailbedienung._reglerSetzen(kennung, regler.value, 'mm');
+                Detailbedienung._aendern(feld, Number(regler.value) / 1000);
+            });
+        }
+        for (const [kennung, feld] of Detailbereiche.auswahl()) {
+            document.getElementById(kennung)?.addEventListener('change', (e) => {
+                Detailbedienung._aendern(feld, e.target.value);
+            });
+        }
         for (const name of Detailbereiche.morphe()) {
             Detailbedienung._morphregler(Detailbereiche.morphKennung(name), name);
         }
@@ -108,7 +127,7 @@ export class Detailbedienung {
     static anwenden(inst, feld = null) {
         if (!inst.bodyMesh) return;
         if (feld === 'brauen') { Augenbrauenbau.faerben(inst); return; }
-        if (feld === null || feld === 'brauen_staerke') { Charakterkoerper.details(inst); return; }
+        if (Detailbereiche.neubau(feld)) { Charakterkoerper.details(inst); return; }
         if (!inst.details.haut) Charakterkoerper.hautfarbe(inst, Charakterkoerper.materialien(inst));
         Koerperdetails.anwenden(inst.bodyMesh, inst.details);
     }

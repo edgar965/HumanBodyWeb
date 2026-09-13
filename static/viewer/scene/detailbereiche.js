@@ -10,18 +10,21 @@
  * hier je Bereich, was zu ihm gehört; `Detailbedienung` läuft darüber. Die
  * Kennungen sind der Vertrag mit der Vorlage (`test_szene_details`).
  *
- * Felder heißen wie in `Koerperdetails.VORGABE`; `_laenge`/`_staerke` sind
- * Faktoren (Regler 50–300 %), `_glanz` liegt in 0..1 (Regler 0–100 %),
- * Morphs in −1..1 (Regler −100..100). Kennung eines Morphreglers:
+ * Felder heißen wie in `Koerperdetails.VORGABE`; `_laenge`/`_staerke`/
+ * `_dicke`/`_dichte` sind Faktoren (Regler 25–300 %), `_glanz` liegt in 0..1
+ * (Regler 0–100 %), `_lage` in Metern (Regler in mm, `millimeter`), Morphs
+ * in −1..1 (Regler −100..100). Kennung eines Morphreglers:
  * `prop-detail-morph-<Name>`.
  */
 export class Detailbereiche {
 
-    /** @type {Record<string, {farben: string[][], prozent: string[][], morphe: string[]}>} */
+    /** @type {Record<string, {farben: string[][], prozent: string[][], millimeter?: string[][],
+     *                          auswahl?: string[][], morphe: string[]}>} */
     static ALLE = {
         haut: {
             farben: [['prop-detail-haut', 'haut']],
             prozent: [['prop-detail-haut-glanz', 'haut_glanz']],
+            auswahl: [['prop-detail-haut-textur', 'haut_textur']],
             morphe: [],
         },
         augen: {
@@ -32,7 +35,9 @@ export class Detailbereiche {
         },
         brauen: {
             farben: [['prop-detail-brauen', 'brauen']],
-            prozent: [['prop-detail-brauen-staerke', 'brauen_staerke']],
+            prozent: [['prop-detail-brauen-staerke', 'brauen_staerke'], ['prop-detail-brauen-dicke', 'brauen_dicke'],
+                      ['prop-detail-brauen-dichte', 'brauen_dichte']],
+            millimeter: [['prop-detail-brauen-lage', 'brauen_lage']],
             morphe: ['Eyebrows_PosZ', 'Eyebrows_Angle', 'Eyebrows_Ridge', 'Eyebrows_Droop'],
         },
         mund: {
@@ -65,12 +70,28 @@ export class Detailbereiche {
         return Detailbereiche.bereiche(name).flatMap(b => b.prozent);
     }
 
+    /** Regler in Millimetern (Feld in Metern). */
+    static millimeter(name = null) {
+        return Detailbereiche.bereiche(name).flatMap(b => b.millimeter || []);
+    }
+
+    /** Auswahlfelder (`<select>`, Wert = Text). */
+    static auswahl(name = null) {
+        return Detailbereiche.bereiche(name).flatMap(b => b.auswahl || []);
+    }
+
+    /** Felder, deren Änderung die Brauen neu baut (alles an den Brauen außer der Farbe). */
+    static neubau(feld) {
+        return feld === null || (feld.startsWith('brauen_'));
+    }
+
     static morphe(name = null) {
         return Detailbereiche.bereiche(name).flatMap(b => b.morphe);
     }
 
-    /** Alle Detailfelder (Farben und Prozente) eines Bereichs — für den Reset. */
+    /** Alle Detailfelder (Farben, Prozente, Millimeter, Auswahl) eines Bereichs — für den Reset. */
     static felder(name = null) {
-        return [...Detailbereiche.farben(name), ...Detailbereiche.prozent(name)].map(([, feld]) => feld);
+        return [...Detailbereiche.farben(name), ...Detailbereiche.prozent(name),
+                ...Detailbereiche.millimeter(name), ...Detailbereiche.auswahl(name)].map(([, feld]) => feld);
     }
 }

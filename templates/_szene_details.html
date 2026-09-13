@@ -18,13 +18,26 @@ klappte beim Klick zugleich den Bereich; `data-bereich` sagt, was er zurücknimm
         <h3>Haut <span class="chevron">&#9660;</span></h3>
         <div class="panel-body">
             <div class="zeile-verteilt">
-                <small class="hb-gedaempft">Reset = Farbe der Körperart</small>
+                <small class="hb-gedaempft">Farbe, Glanz, MB-Lab-Textur · Reset = Farbe der Körperart</small>
                 <button class="btn-reset-morphs prop-detail-reset" data-bereich="haut" type="button"
                         title="Hautfarbe und Glanz auf die Vorgabe">Reset</button>
             </div>
             <div class="slider-row"><label>Farbe</label>
                 <input type="color" id="prop-detail-haut" value="#d4a574" class="hb-farbfeld"></div>
             {% regler "prop-detail-haut-glanz" "Glanz" min="0" max="100" wert="45" anzeige="45 %" %}
+            {% comment %}MB-Lab-Texturen (Albedo, Bump, Rauheit), Liste `Hauttextur.WAHL`.{% endcomment %}
+            <div class="slider-row"><label>Textur</label>
+                <select id="prop-detail-haut-textur" class="viewer-select">
+                    <option value="">Keine (Farbe der Körperart)</option>
+                    <option value="hum_f_cauc">Frau – Europäisch</option>
+                    <option value="hum_f_asian">Frau – Asiatisch</option>
+                    <option value="hum_f_afro">Frau – Afrikanisch</option>
+                    <option value="hum_f_latino">Frau – Lateinamerikanisch</option>
+                    <option value="hum_m_cauc">Mann – Europäisch</option>
+                    <option value="hum_m_asian">Mann – Asiatisch</option>
+                    <option value="hum_m_afro">Mann – Afrikanisch</option>
+                    <option value="hum_m_latino">Mann – Lateinamerikanisch</option>
+                </select></div>
         </div>
     </div>
     <div class="panel-section prop-section collapsed" id="prop-details-augen">
@@ -54,14 +67,17 @@ klappte beim Klick zugleich den Bereich; `data-bereich` sagt, was er zurücknimm
         <h3>Augenbrauen <span class="chevron">&#9660;</span></h3>
         <div class="panel-body">
             <div class="zeile-verteilt">
-                <small class="hb-gedaempft">Farbe, Stärke, Form</small>
+                <small class="hb-gedaempft">Farbe, Länge, Dicke, Dichte, Lage, Form</small>
                 <button class="btn-reset-morphs prop-detail-reset" data-bereich="brauen" type="button"
                         title="Brauenfarbe, Stärke und Form auf die Vorgabe">Reset</button>
             </div>
             <div class="slider-row"><label>Farbe</label>
                 <input type="color" id="prop-detail-brauen" value="#3a2a1e" class="hb-farbfeld"></div>
-            {% regler "prop-detail-brauen-staerke" "Stärke" min="50" max="250" wert="100" anzeige="100 %" %}
-            <div class="prop-section-title unterabschnittstitel">Form</div>
+            {% regler "prop-detail-brauen-staerke" "Länge" min="25" max="300" wert="100" anzeige="100 %" %}
+            {% regler "prop-detail-brauen-dicke" "Dicke" min="25" max="300" wert="100" anzeige="100 %" %}
+            {% regler "prop-detail-brauen-dichte" "Dichte" min="25" max="300" wert="100" anzeige="100 %" %}
+            {% regler "prop-detail-brauen-lage" "Lage (höher/tiefer)" min="-20" max="20" wert="0" anzeige="0 mm" %}
+            <div class="prop-section-title unterabschnittstitel">Form (Haut)</div>
             {% regler "prop-detail-morph-Eyebrows_PosZ" "Höhe" min="-100" max="100" wert="0" anzeige="0" %}
             {% regler "prop-detail-morph-Eyebrows_Angle" "Winkel" min="-100" max="100" wert="0" anzeige="0" %}
             {% regler "prop-detail-morph-Eyebrows_Ridge" "Wölbung" min="-100" max="100" wert="0" anzeige="0" %}

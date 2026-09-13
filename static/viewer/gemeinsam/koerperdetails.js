@@ -30,10 +30,10 @@
  * Punkte als Float32Array — so läuft die Rechnung auch in Node (Test).
  *
  * Die Farben (Haut, Augen, Lippen, Zähne, Zunge, Nägel) und der Glanz stehen
- * seit 12.09.2026 in `detailfarben.js`; hier bleiben Vorgabe, Prüfung und die
- * Längen.
+ * seit 12.09.2026 in `detailfarben.js`; hier bleiben Vorgabe, Prüfung, Längen.
  */
 import { Detailfarben } from './detailfarben.js';
+import { Hauttextur } from './hauttextur.js';
 
 export class Koerperdetails {
 
@@ -44,15 +44,16 @@ export class Koerperdetails {
     static GRUPPE = { haut: 0, wimpern: 2, sklera: 4, iris: 6, naegelHand: 9, naegelFuss: 10 };
 
     /** Vorgaben: Farben und Glanz aus `Detailfarben`, Längen 1 = wie geliefert.
-     *  `brauen_staerke`: die gebauten Augenbrauen (`gemeinsam/augenbrauen.js`,
-     *  12.09.2026) — das Netz hat keine, sie sind ein eigenes Netz je Figur. */
+     *  `brauen_*`: die gebauten Augenbrauen (`gemeinsam/augenbrauenform.js`) —
+     *  Stärke = Länge, Dicke, Dichte (Faktoren) und Lage (m, + = höher). */
     static VORGABE = Object.freeze({
-        ...Detailfarben.VORGABE,
-        wimpern_laenge: 1.0, naegel_fuss_laenge: 1.0, brauen_staerke: 1.0,
+        ...Detailfarben.VORGABE, wimpern_laenge: 1.0, naegel_fuss_laenge: 1.0,
+        brauen_staerke: 1.0, brauen_dicke: 1.0, brauen_dichte: 1.0, brauen_lage: 0.0, haut_textur: '',
     });
 
-    /** Grenzen der Längenfaktoren; Glanz liegt in 0..1. */
-    static LAENGE = { min: 0.5, max: 3.0 };
+    /** Grenzen der Faktoren (`_laenge`, `_staerke`, `_dicke`, `_dichte`) und der Lage (m); Glanz 0..1. */
+    static LAENGE = { min: 0.25, max: 3.0 };
+    static LAGE = 0.02;
 
     /** Die Details aus Modelldaten — unbekannte Schlüssel fallen weg, Lücken füllt die Vorgabe. */
     static aus(daten) {
@@ -61,12 +62,16 @@ export class Koerperdetails {
         for (const [name, wert] of Object.entries(roh)) {
             if (!(name in aus)) continue;
             const zahl = Number(wert);
-            if (name.endsWith('_laenge') || name.endsWith('_staerke')) {
+            if (/_(laenge|staerke|dicke|dichte)$/.test(name)) {
                 if (Number.isFinite(zahl)) {
                     aus[name] = Math.min(Koerperdetails.LAENGE.max, Math.max(Koerperdetails.LAENGE.min, zahl));
                 }
+            } else if (name.endsWith('_lage')) {
+                if (Number.isFinite(zahl)) aus[name] = Math.min(Koerperdetails.LAGE, Math.max(-Koerperdetails.LAGE, zahl));
             } else if (name.endsWith('_glanz')) {
                 if (Number.isFinite(zahl)) aus[name] = Math.min(1, Math.max(0, zahl));
+            } else if (name.endsWith('_textur')) {
+                if (Hauttextur.WAHL.some(([w]) => w === wert)) aus[name] = wert;
             } else if (Detailfarben.istFarbe(wert)) {
                 aus[name] = String(wert).toLowerCase();
             }
@@ -231,13 +236,11 @@ export class Koerperdetails {
     }
 
     static _abstand2(p, i, j) {
-        const dx = p[3 * i] - p[3 * j], dy = p[3 * i + 1] - p[3 * j + 1], dz = p[3 * i + 2] - p[3 * j + 2];
-        return dx * dx + dy * dy + dz * dz;
+        return Koerperdetails._abstand2Punkte([p[3 * i], p[3 * i + 1], p[3 * i + 2]], [p[3 * j], p[3 * j + 1], p[3 * j + 2]]);
     }
 
     static _abstand2Punkte(a, b) {
-        const dx = a[0] - b[0], dy = a[1] - b[1], dz = a[2] - b[2];
-        return dx * dx + dy * dy + dz * dz;
+        return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
     }
 
     // ---------------------------------------------------- Three.js-Netz
@@ -253,19 +256,12 @@ export class Koerperdetails {
     /** Die ungestreckten Lagen der betroffenen Ecken merken (aus `punkte`). */
     static _basisMerken(punkte, ecken) {
         const werte = new Float32Array(ecken.length * 3);
-        for (let i = 0; i < ecken.length; i++) {
-            const e = ecken[i];
-            werte[3 * i] = punkte[3 * e]; werte[3 * i + 1] = punkte[3 * e + 1]; werte[3 * i + 2] = punkte[3 * e + 2];
-        }
+        ecken.forEach((e, i) => werte.set(punkte.subarray(3 * e, 3 * e + 3), 3 * i));
         return { ecken, werte };
     }
 
-    static _basisZurueck(punkte, basis) {
-        const { ecken, werte } = basis;
-        for (let i = 0; i < ecken.length; i++) {
-            const e = ecken[i];
-            punkte[3 * e] = werte[3 * i]; punkte[3 * e + 1] = werte[3 * i + 1]; punkte[3 * e + 2] = werte[3 * i + 2];
-        }
+    static _basisZurueck(punkte, { ecken, werte }) {
+        ecken.forEach((e, i) => punkte.set(werte.subarray(3 * i, 3 * i + 3), 3 * e));
     }
 
     /**
@@ -276,13 +272,14 @@ export class Koerperdetails {
      * der Geometrie gemerkt, ebenso die UNGESTRECKTEN Lagen dieser Ecken
      * (`detailbasis`): Ein Regler kann dann ohne Serverlauf neu strecken —
      * erst zurück auf die Basis, dann mit dem neuen Faktor. `punkte` ist der
-     * frisch gelieferte Puffer (Haken in `Netzpunkte.aktualisieren`); dann
-     * ist ER die neue Basis. Ohne `punkte` gilt das Attribut als Basis, wenn
-     * noch keine gemerkt ist — also nur direkt nach dem Bau.
+     * frisch gelieferte Puffer (Haken in `Netzpunkte.aktualisieren`); dann ist
+     * ER die Basis. Ohne `punkte` gilt das Attribut, solange keine gemerkt ist.
+     * Die Hauttextur (`Hauttextur`) geht asynchron nebenher.
      */
     static anwenden(netz, details, punkte = null) {
         if (!netz?.geometry || !details) return { farben: 0, bewegt: 0 };
         const farben = Koerperdetails.faerben(netz.material, details);
+        Hauttextur.anwenden(netz, details).catch(f => console.warn('Hauttextur:', f));
         const geo = netz.geometry;
         const index = geo.userData?.indexVoll?.index || geo.index?.array;
         const gruppen = geo.userData?.indexVoll?.gruppen || geo.groups;
