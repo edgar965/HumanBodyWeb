@@ -109,34 +109,8 @@ export class Skinner {
         }
         if (figur.userData.isSkinnedMesh) return figur.userData.skinnedMesh;
 
-        const koerper = figur.children.find(
-            k => k.isMesh && !k.userData.isHair && !k.userData.isGarment);
-        if (!koerper) {
-            Protokoll.warnung('skinner', 'Kein Koerpernetz in der Figur gefunden');
-            return null;
-        }
-
-        // Geometrie klonen: Die urspruengliche haelt WebGL-Zustand aus dem
-        // Rendern OHNE Skinning, was nach dem Binden zu Fehlern fuehrt.
-        const geo = koerper.geometry.clone();
-        this._gewichtefelder(geo);
-
-        // Skelett IMMER neu bauen: Ein bereits animiertes Skelett bringt
-        // veraltete Weltmatrizen und boneInverses mit, die nicht zum neuen
-        // Bindezustand passen.
-        this.skelett = buildRigifySkeleton(this.skelettdaten, this.gewichte);
-
-        const netz = new THREE.SkinnedMesh(geo, koerper.material);
-        netz.position.copy(koerper.position);
-        netz.rotation.copy(koerper.rotation);
-        netz.scale.copy(koerper.scale);
-        netz.castShadow = true;
-        netz.receiveShadow = true;
-        netz.add(this.skelett.rootBone);
-        netz.bind(this.skelett.skeleton);
-
-        figur.remove(koerper);
-        figur.add(netz);
+        const netz = this._koerperHaeuten(figur);
+        if (!netz) return null;
         figur.userData.isSkinnedMesh = true;
         figur.userData.skinnedMesh = netz;
         figur.userData.skeleton = this.skelett.skeleton;
@@ -157,7 +131,54 @@ export class Skinner {
         new Haarbindung(this.skelett, this.gewichte)
             .binden(figur, netz);
         Protokoll.debug('skinner', '✓ SkinnedMesh erstellt:', this.skelett.skeleton.bones.length,
-            'Knochen, skinIndex:', !!geo.attributes.skinIndex);
+            'Knochen, skinIndex:', !!netz.geometry.attributes.skinIndex);
+        return netz;
+    }
+
+    /**
+     * Den Koerper der Figur haeuten. Eine Figur aus `HumanbodyModell`
+     * (`userData.modell`, seit 13.09.2026) haeutet sich selbst — Geometrie
+     * geklont, SkinnedMesh an derselben Stelle, Brauen mit gehaeutet — und
+     * bringt ihr eigenes Skelett mit. Sonst der alte Weg von Hand.
+     *
+     * Skelett IMMER neu bauen: Ein bereits animiertes Skelett bringt
+     * veraltete Weltmatrizen und boneInverses mit, die nicht zum neuen
+     * Bindezustand passen.
+     */
+    _koerperHaeuten(figur) {
+        const modell = figur.userData.modell;
+        if (modell?.haeuten) {
+            const netz = modell.haeuten(this.skelettdaten, this.gewichte);
+            if (!netz?.isSkinnedMesh) {
+                Protokoll.warnung('skinner', 'Modell liess sich nicht haeuten');
+                return null;
+            }
+            netz.castShadow = true;
+            netz.receiveShadow = true;
+            this.skelett = modell.skelett;
+            return netz;
+        }
+        const koerper = figur.children.find(
+            k => k.isMesh && !k.userData.isHair && !k.userData.isGarment);
+        if (!koerper) {
+            Protokoll.warnung('skinner', 'Kein Koerpernetz in der Figur gefunden');
+            return null;
+        }
+        // Geometrie klonen: Die urspruengliche haelt WebGL-Zustand aus dem
+        // Rendern OHNE Skinning, was nach dem Binden zu Fehlern fuehrt.
+        const geo = koerper.geometry.clone();
+        this._gewichtefelder(geo);
+        this.skelett = buildRigifySkeleton(this.skelettdaten, this.gewichte);
+        const netz = new THREE.SkinnedMesh(geo, koerper.material);
+        netz.position.copy(koerper.position);
+        netz.rotation.copy(koerper.rotation);
+        netz.scale.copy(koerper.scale);
+        netz.castShadow = true;
+        netz.receiveShadow = true;
+        netz.add(this.skelett.rootBone);
+        netz.bind(this.skelett.skeleton);
+        figur.remove(koerper);
+        figur.add(netz);
         return netz;
     }
 

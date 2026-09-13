@@ -1,13 +1,9 @@
 /**
  * Viewer — GPU Skinning: 176-bone DEF skeleton + BVH retargeting.
  */
-import * as THREE from 'three';
 import { state, API } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
-import { Hautbindung } from '../gemeinsam/hautbindung.js';
 import { Skelettnachfuehrung } from '../gemeinsam/skelettnachfuehrung.js';
 
 export async function loadSkinWeights() {
@@ -35,17 +31,12 @@ export async function loadRigifySkeleton() {
  * Convert bodyMesh to SkinnedMesh using DEF skeleton.
  */
 export function convertToRigifySkinnedMesh(rigifySkel, swData) {
-    if (state.isSkinned || !state.bodyMesh || !state.bodyGeometry) return;
-
-    state.bodyGeometry = state.bodyGeometry.clone();
-
-    Hautgewichte.anGeometrie(state.bodyGeometry, swData, THREE.Float32BufferAttribute);
-
-    state.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, swData);
-
-    state.bodyMesh = Hautbindung.ersetzen(
-        state.scene, state.bodyMesh, state.bodyGeometry,
-        state.rigifySkeleton, THREE);
+    if (state.isSkinned || !state.modell?.bodyMesh) return;
+    // Häutung samt Brauen: `HumanbodyModell.haeuten` (13.09.2026).
+    state.modell.haeuten(state.rigifySkeletonData, swData);
+    state.bodyMesh = state.modell.bodyMesh;
+    state.bodyGeometry = state.bodyMesh.geometry;
+    state.rigifySkeleton = state.modell.skelett;
     state.isSkinned = true;
     // Die Knochenlagen sind meist schon da, bevor gebunden wird: Der Server
     // schickt sie zum ersten Netz, das Skinning wartet auf die Gewichte.

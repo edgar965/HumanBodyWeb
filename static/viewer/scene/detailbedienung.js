@@ -1,6 +1,6 @@
 import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
 import { Morphliste } from '../gemeinsam/morphliste.js';
-import { Augenbrauenbau } from './augenbrauenbau.js';
+import { Augenbrauenbau } from '../gemeinsam/augenbrauenbau.js';
 import { Charakterkoerper } from './charakter_koerper.js';
 import { Detailbereiche } from './detailbereiche.js';
 import { markDirty } from './undo.js';

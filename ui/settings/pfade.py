@@ -70,7 +70,10 @@ HUMANBODY_ASSETS_INSTANCE_DIR = HUMANBODY_ROOT / 'data' / 'assetsInstance'
 HUMANBODY_ASSETS_DIR = OBJECTS_ROOT / 'assets'
 HUMANBODY_ASSETS_GLB_DIR = OBJECTS_ROOT / 'assets_glb'
 HUMANBODY_BVH_DIR = OBJECTS_ROOT / 'animations' / 'bvh' / 'MocapNET'
-BVH_RESULTS_DIR = OBJECTS_ROOT / 'animations' / 'bvh' / 'Results'
+# Der Ergebnisordner der Pipelines heisst seit dem 12.09.2026 `A_Results` (Edgar hat
+# ihn in der Bibliothek umbenannt, damit er in der Animationsliste oben steht); der
+# alte Name liess die Ablage einen leeren `Results` neu anlegen.
+BVH_RESULTS_DIR = OBJECTS_ROOT / 'animations' / 'bvh' / 'A_Results'
 HUMANBODY_GARMENT_LIBRARY_DIR = OBJECTS_ROOT / 'garment_library'
 HUMANBODY_GARMENT_EXPORT_DIR = HUMANBODY_ROOT / 'data' / 'garment_exports'
 # Fertige Figuren als GLB (Datei -> Exportieren -> Figur - GLB); Roomguest

@@ -42,8 +42,10 @@ class MakehumanKleiderbindungTest(SimpleTestCase):
     databases = set()
 
     def setUp(self):
-        self.pfad, self.quelle = _lesen('static', 'viewer', 'scene',
-                                        'makehuman', 'mhfigur.js')
+        # Seit 13.09.2026 `MakehumanModell` in `gemeinsam/` (die Szene erbt
+        # als `MhFigur` nur das Speichern).
+        self.pfad, self.quelle = _lesen('static', 'viewer', 'gemeinsam',
+                                        'makehumanmodell.js')
 
     def test_hautbinden_ruft_kleiderbinden(self):
         u"""Der Aufruf steht IM Rumpf von `_hautBinden`, nicht irgendwo."""
@@ -82,8 +84,7 @@ class MakehumanKleiderbindungTest(SimpleTestCase):
         self.assertIn('this.group.remove(altes)', code)
 
     def test_das_stueck_hebt_seine_rohgewichte_auf(self):
-        _, quelle = _lesen('static', 'viewer', 'scene', 'makehuman',
-                           'mhkleidstueck.js')
+        _, quelle = _lesen('static', 'viewer', 'gemeinsam', 'mhkleidstueck.js')
         self.assertIn('netz.userData.hautgewichte = daten.hautgewichte',
                       quelle)
 

@@ -97,7 +97,7 @@ export class Umatyp {
         Umagarderobe.vergessen(datei);           // ein neuer Bau, ein neuer Zettel
         const neu = new UmaFigur(inst.id, daten);
         try {
-            await neu.load();
+            await neu.bauen();
         } catch (fehler) {
             stand.textContent = `Fehler: ${fehler.message}`;
             return;

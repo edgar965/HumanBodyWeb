@@ -28,7 +28,7 @@
  *
  * Alles in Metern, im Raum des Körpernetzes (Three.js: y hoch, z nach vorn).
  * Ohne Three.js und ohne DOM — prüfbar in Node (`test_js_augenbrauen.py`);
- * die Netzseite steht in `scene/augenbrauenbau.js`.
+ * die Netzseite steht in `augenbrauenbau.js` (daneben).
  */
 export class Augenbrauen {
 

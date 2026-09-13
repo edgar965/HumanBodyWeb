@@ -98,17 +98,36 @@ class PassformTest(SimpleTestCase):
                     continue
                 self.assertTrue(pfad.startswith('pants.'), pfad)
 
-    def test_traegertop_bekommt_keine(self):
+    def test_traegertop_bekommt_nur_das_anlegen(self):
         u"""Ein aermelloses, tailliertes Top hat keine Weiteregler.
 
-        Das ist der Fall, in dem „keine" die richtige Antwort ist: Rumpf
-        aus den Massen (`FittedShirt`), kein Aermel. Seit dem 11.09.2026
-        ist das Traegertop eine Form des Oberteils; ohne die Formen und
-        ohne die Varianten der anderen Formen bleibt nichts.
+        Rumpf aus den Massen (`FittedShirt`), kein Aermel — an den Schnitt
+        gibt es hier nichts zu stellen. Seit dem 11.09.2026 ist das
+        Traegertop eine Form des Oberteils; ohne die Formen und ohne die
+        Varianten der anderen Formen bleibt vom Schnitt nichts. Was bleibt,
+        ist der BAU: „Eng anliegend" legt das fertige Stueck auf 2 mm an
+        die Haut (13.09.2026, `passform_eng_haut`) — das wirkt an jedem
+        Oberteil ohne Rock, auch an diesem.
         """
         from GarmentCode.regler import Regler
-        self.assertEqual(Regler.passform(Katalog.entwurf('traegertop')), [])
+        presets = Regler.passform(Katalog.entwurf('traegertop'))
+        self.assertEqual([p['schluessel'] for p in presets], ['passform_eng_haut'])
+        self.assertEqual(presets[0]['werte'], {'bau.anliegen_mm': 2.0})
         self.assertTrue(any(p.get('form') for p in Katalog.passform('traegertop')))
+
+    def test_kleid_bekommt_kein_anlegen(self):
+        u"""Am Kleid zoege das Anlegen den Rock an die Beine — `bottom: None`.
+
+        (Der Anzug fuehrt es ueber das Leggings-Preset seiner Hose — das
+        ist gewollt und nicht Gegenstand hier.)
+        """
+        for vorlage in ('kleid', 'sommerkleid'):
+            for preset in Katalog.passform(vorlage):
+                self.assertNotIn('bau.anliegen_mm', preset['werte'], vorlage)
+        eng = [p for p in Katalog.passform('t-shirt')
+               if 'passform_eng_haut' in p['schluessel'].split('+')]
+        self.assertEqual(len(eng), 1)
+        self.assertEqual(eng[0]['werte'].get('bau.anliegen_mm'), 2.0)
 
     def test_kleid_fasst_oberteil_und_rock_zusammen(self):
         u"""Ein Titel, ein Kaestchen — auch wenn zwei Presets zutreffen.

@@ -1,35 +1,28 @@
 /**
  * Netz und Skelett der Animationsseite laden.
  *
- * Aus animations.js herausgeloest (Umbau 15.08.2026).
+ * Aus animations.js herausgeloest (Umbau 15.08.2026). Seit 13.09.2026 baut
+ * `HumanbodyModell` (`gemeinsam/humanbodymodell.js`) den Körper — wie auf
+ * jeder Seite; hier bleiben Seitenzustand, Punktzahl und die Häutung
+ * (`haeuten`, sobald Skelett und Gewichte da sind).
  */
 
-import * as THREE from 'three';
-import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
-import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
+import { HumanbodyModell } from '../gemeinsam/humanbodymodell.js';
 import { Seitenzustand } from './seitenzustand.js';
-import { BODY_MATERIALS, applySceneSkinSettings, applySkinColor } from './material.js';
+import { applySceneSkinSettings, applySkinColor } from './material.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
-import { Hautgewichte } from '../gemeinsam/hautgewichte.js';
 
 
 export async function loadMesh() {
     try {
-        const data = await Serverabruf.json('/api/character/mesh/');
-        if (data.error) { Protokoll.fehler('Netz', data.error); return; }
-
-        document.getElementById('vertex-count').textContent =
-            data.vertex_count.toLocaleString();
-
-        // Puffer, Normalen, Materialgruppen: siehe `Koerpernetz`. Diese dreißig
-        // Zeilen standen fünfmal im Projekt (Befund `doppelcode`, 17.08.2026).
-        Seitenzustand.bodyMesh = Koerpernetz.netz(data, THREE);
+        const modell = new HumanbodyModell('animation', {});
+        await modell.koerper();
+        Seitenzustand.modell = modell;
+        Seitenzustand.bodyMesh = modell.bodyMesh;
         const geo = Seitenzustand.bodyMesh.geometry;
-
         Seitenzustand.bodyGeometry = geo;
-        Seitenzustand.scene.add(Seitenzustand.bodyMesh);
+        Seitenzustand.scene.add(modell.group);
 
         document.getElementById('vertex-count').textContent =
             geo.attributes.position.count.toLocaleString();
@@ -57,26 +50,12 @@ export async function loadSkinWeights() {
 }
 
 export function convertToRigifySkinnedMesh(rigifySkel, swData) {
-    if (Seitenzustand.isSkinned || !Seitenzustand.bodyMesh || !Seitenzustand.bodyGeometry) return;
-
-    Seitenzustand.bodyGeometry = Seitenzustand.bodyGeometry.clone();
-
-
-    Hautgewichte.anGeometrie(Seitenzustand.bodyGeometry, swData, THREE.Float32BufferAttribute);
-
-    Seitenzustand.rigifySkeleton = buildRigifySkeleton(Seitenzustand.rigifySkeletonData, swData);
-
-    const mat = Seitenzustand.bodyMesh.material;
-    const pos = Seitenzustand.bodyMesh.position.clone();
-    const vis = Seitenzustand.bodyMesh.visible;
-    Seitenzustand.scene.remove(Seitenzustand.bodyMesh);
-
-    Seitenzustand.bodyMesh = new THREE.SkinnedMesh(Seitenzustand.bodyGeometry, mat);
-    Seitenzustand.bodyMesh.position.copy(pos);
-    Seitenzustand.bodyMesh.visible = vis;
-    Seitenzustand.bodyMesh.add(Seitenzustand.rigifySkeleton.rootBone);
-    Seitenzustand.bodyMesh.bind(Seitenzustand.rigifySkeleton.skeleton);
-    Seitenzustand.scene.add(Seitenzustand.bodyMesh);
+    const modell = Seitenzustand.modell;
+    if (Seitenzustand.isSkinned || !modell?.bodyMesh) return;
+    modell.haeuten(Seitenzustand.rigifySkeletonData, swData);
+    Seitenzustand.bodyMesh = modell.bodyMesh;
+    Seitenzustand.bodyGeometry = modell.bodyMesh.geometry;
+    Seitenzustand.rigifySkeleton = modell.skelett;
     Seitenzustand.isSkinned = true;
     Protokoll.debug('Netz', 'SkinnedMesh gebaut,',
                     Seitenzustand.rigifySkeleton.skeleton.bones.length, 'Knochen');

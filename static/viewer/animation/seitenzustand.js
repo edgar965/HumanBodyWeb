@@ -22,6 +22,8 @@ export class Seitenzustand {
     static controls = null;
 
     // ----- Koerper
+    /** Die Figur — ein `HumanbodyModell` (13.09.2026); `bodyMesh` ist ihr Körper. */
+    static modell = null;
     static bodyMesh = null;
     static bodyGeometry = null;
     static isSkinned = false;

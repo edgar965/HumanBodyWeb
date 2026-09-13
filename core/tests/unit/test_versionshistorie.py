@@ -22,6 +22,15 @@ werden, sobald einmal etwas durchgerutscht ist.
 
 Der Test liest `git log` aus dem Arbeitsverzeichnis; ohne Repo (Auslieferung
 ohne `.git`) zählt nur die manuelle Liste, und das genügt ihm.
+
+SEIT 13.09.2026 DAZU: JEDE FASSUNG HAT EINEN CHANGELOG-EINTRAG
+==============================================================
+Edgar: „update /hilfe/versionen/, da ist v0.57 nach v0.60 und viele Commits
+fehlen" — der Block „Handgepflegter Changelog" zeigte nur 0.57, obwohl 0.58
+und 0.59 sauber im Betreff standen. Der Block ist das, was man als Changelog
+liest; also braucht die laufende Fassung UND jede Fassung ab 0.57, die ein
+Betreff nennt, ein Modul `ui/settings/fassungen/v0NN.py`. Sabotage: `v060`
+aus `fassungen.ALLE` nehmen → beide neuen Fälle rot.
 """
 import re
 import subprocess
@@ -36,6 +45,9 @@ MARKE = re.compile(r"(?:^|[\s\(\[\+,—\-])(?:v|Version\s+)(\d+\.\d+(?:\.\d+)?)\
 
 #: So viele Betreffs reichen: Ein Bump liegt nie hundert Commits zurück.
 TIEFE = 100
+
+#: Ab hier gibt es den Changelog-Block; ältere Fassungen tragen nur die Repos.
+ERSTE_MIT_EINTRAG = (0, 57)
 
 
 class VersionshistorieTest(SimpleTestCase):
@@ -54,6 +66,32 @@ class VersionshistorieTest(SimpleTestCase):
             u"die manuelle Liste." % (laufend,
                                       ", ".join(sorted(betreffe)) or "keine",
                                       ", ".join(sorted(manuell)) or "keine"))
+
+    def test_die_laufende_fassung_hat_einen_changelog_eintrag(self):
+        laufend = str(settings.VERSION).lstrip("v").strip()
+        self.assertIn(
+            laufend, VersionshistorieTest._manuelle_fassungen(),
+            u"Fassung %s steht im UI, aber der Changelog-Block auf Hilfe → "
+            u"Versionen kennt sie nicht: ui/settings/fassungen/v%s.py fehlt."
+            % (laufend, laufend.replace(".", "")))
+
+    def test_jede_fassung_seit_057_hat_einen_changelog_eintrag(self):
+        betreffe = VersionshistorieTest._betreff_fassungen()
+        if not betreffe:
+            self.skipTest(u"Kein Git-Repo erreichbar — nur manuelle Liste.")
+        manuell = VersionshistorieTest._manuelle_fassungen()
+        fehlend = sorted(f for f in betreffe
+                         if VersionshistorieTest._nummer(f) >= ERSTE_MIT_EINTRAG
+                         and f not in manuell)
+        self.assertEqual(
+            fehlend, [],
+            u"Diese Fassungen nennt ein Commit-Betreff, der Changelog-Block "
+            u"kennt sie nicht: %s — je ein Modul ui/settings/fassungen/v0NN.py."
+            % ", ".join(fehlend))
+
+    @staticmethod
+    def _nummer(fassung):
+        return tuple(int(t) for t in fassung.split("."))
 
     def test_die_erkennung_findet_wirklich_etwas(self):
         u"""Gegenprobe: Ein Prüfer, der nie etwas findet, meldet immer Erfolg.

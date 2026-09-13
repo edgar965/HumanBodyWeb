@@ -1,5 +1,5 @@
 import { Panel } from './panel.js';
-import { Koerperfrage } from '../../laden/koerperfrage.js';
+import { Koerperfrage } from '../../../../static/viewer/gemeinsam/koerperfrage.js';
 import { Kodierung } from '../../../../static/viewer/gemeinsam/kodierung.js';
 import { Protokoll } from '../../../../static/viewer/gemeinsam/protokoll.js';
 
@@ -209,6 +209,9 @@ export class Figurpanel {
             }
             const punkte = Kodierung.blenderNachThree(
                 Kodierung.zuFloat32(daten.vertices));
+            // Wimpern-/Nagellaengen und Brauen auf die FRISCHEN Punkte
+            // (`HumanbodyModell`, 13.09.2026) — vor dem Schreiben ins Attribut.
+            figur.userData.modell?.detailsAnwenden?.(punkte);
             koerper.geometry.attributes.position.array.set(punkte);
             koerper.geometry.attributes.position.needsUpdate = true;
 
@@ -228,7 +231,7 @@ export class Figurpanel {
     /**
      * Anfrage aus Körpertyp, Morphs und Meta-Werten — dieselbe, die auch das
      * Laden einer Vorgabe und das Anpassen von Kleidung brauchen. Sie stand
-     * dreimal im Projekt und liegt jetzt in laden/koerperfrage.js.
+     * dreimal im Projekt und liegt jetzt in gemeinsam/koerperfrage.js.
      */
     _frage(figur) {
         const frage = new Koerperfrage(figur.userData).felder();

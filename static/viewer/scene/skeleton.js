@@ -12,7 +12,6 @@ import { findHeadBoneIndex, skinifyHairGroup }
     from '../character_core.js';
 import { Hautbindung } from '../gemeinsam/hautbindung.js';
 import { GarmentcodeAnziehen } from './garmentcode_anziehen.js';
-import { Augenbrauenbau } from './augenbrauenbau.js';
 
 export async function loadRigifySkeleton() {
     try {
@@ -43,20 +42,9 @@ export function convertToRigifySkinnedMesh() {
 export function convertInstToSkinned(inst) {
     if (inst.isSkinned || !inst.bodyMesh || !state.skinWeightData || !state.rigifySkeletonData) return;
     if (inst.generatedConfig) return;
-    const geo = inst.bodyMesh.geometry.clone();
-    Hautgewichte.anGeometrie(geo, state.skinWeightData, THREE.Float32BufferAttribute);
-    inst.rigifySkeleton = buildRigifySkeleton(state.rigifySkeletonData, state.skinWeightData);
-    const mat = inst.bodyMesh.material;
-    const vis = inst.bodyMesh.visible;
-    inst.group.remove(inst.bodyMesh);
-    inst.bodyMesh = new THREE.SkinnedMesh(geo, mat);
-    inst.bodyMesh.visible = vis;
-    inst.bodyMesh.add(inst.rigifySkeleton.rootBone);
-    inst.bodyMesh.bind(inst.rigifySkeleton.skeleton);
-    inst.group.add(inst.bodyMesh);
-    inst.isSkinned = true;
-    // Die Brauen hängen am selben Skelett (Gewichte der Wurzelpunkte).
-    Augenbrauenbau.sicher(inst);
+    // Häutung samt Brauen: `HumanbodyModell.haeuten` (13.09.2026) — die
+    // Geometrie wird geklont, das SkinnedMesh tritt an die Stelle des Körpers.
+    inst.haeuten(state.rigifySkeletonData, state.skinWeightData);
 
     // FEHLER bis 16.08.2026: Hier stand `inst._loadHair()` — eine Methode, die
     // `CharacterInstance` nicht (mehr) hat; das Laden der Haare wurde beim

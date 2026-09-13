@@ -51,7 +51,9 @@ class DieRigvorgabe(SimpleTestCase):
 
     def test_der_helfer_entsteht_mit_dem_skelett(self):
         js = lesen(FIGUR / 'mesh_loading.js')
-        skelett = js.index('state.rigifySkeleton = buildRigifySkeleton(')
+        # Seit 13.09.2026 haeutet `HumanbodyModell` (`haeuten`), das Skelett
+        # kommt aus dem Modell.
+        skelett = js.index('state.rigifySkeleton = state.modell.skelett;')
         self.assertIn('if (state.rigVisible && !state.skeletonHelper)',
                       js[skelett:skelett + 600])
         self.assertIn("import { Skelettanzeige }", js)

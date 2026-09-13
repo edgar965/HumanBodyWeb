@@ -19,6 +19,11 @@ unabhaengig von Morphdaten und Netzdateien.
        Umkreis fielen.
     4. Die Korrektur laesst das Netz zusammenhaengend: Nachbarpunkte duerfen
        nicht auseinanderreissen (dagegen glaettet `_verteilen`).
+    5. Nackte Haut NEBEN einer offenen Kante hebt die Kante nicht (13.09.2026,
+       Edgar: „beim Hals noch ein Teil zu weit weg vom Koerper"): Ein Ring um
+       einen kleinen „Hals" — Halspunkte ueber dem Ring haben den Ring als
+       naechsten Stoff und ihn hinter ihrer Normale; vorher hob das den Ring
+       bis 5,9 mm. Sabotage: `fehlt[seitlich > …] = 0` weg -> rot.
 """
 import sys
 
@@ -140,6 +145,29 @@ class StoffkorrekturTest(SimpleTestCase):
         # Keine Kante darf sich mehr als verdoppeln.
         self.assertLess(float((nachher / vorher).max()), 2.0,
                         'die Korrektur reisst das Netz auseinander')
+
+    def test_nackte_haut_neben_der_kante_hebt_sie_nicht(self):
+        u"""Ein Ring 3,5 mm um einen Hals von 5 cm Radius bleibt liegen.
+
+        Die Halspunkte 60–70 Grad ueber dem Ring liegen 21–26 mm seitlich
+        von ihrem naechsten Ringpunkt — mehr als eine Stoffkante (17 mm).
+        Vorher (13.09.2026) hob der Koerperseiten-Schritt den Ring hier um
+        1,8–5,9 mm; am T-Shirt war es der Kragen mit 13,9 mm.
+        """
+        radius = 0.05
+        koerper, flaechen = StoffkorrekturTest.kugel(radius, feinheit=32)
+        winkel = np.linspace(0, 2 * np.pi, 24, endpoint=False)
+        innen = np.stack([np.cos(winkel), np.sin(winkel), np.zeros_like(winkel)], -1) * (radius + 0.0035)
+        aussen = np.stack([np.cos(winkel), np.sin(winkel), np.zeros_like(winkel)], -1) * (radius + 0.02)
+        punkte = np.vstack([innen, aussen])
+        n = len(winkel)
+        dreiecke = np.array([[i, (i + 1) % n, n + i] for i in range(n)]
+                            + [[(i + 1) % n, n + (i + 1) % n, n + i] for i in range(n)])
+        korrektur = Stoffkorrektur.aus_netz(koerper, flaechen, dreiecke)
+        neu, bilanz = korrektur.anwenden(StoffkorrekturTest.neu_punkte(punkte))
+        self.assertLess(bilanz['groesster_weg_mm'], 0.5,
+                        'nackte Haut neben dem Ring hebt ihn: %s' % bilanz)
+        np.testing.assert_allclose(neu, punkte, atol=5e-4)
 
     @staticmethod
     def kugel(radius=0.5, feinheit=16):

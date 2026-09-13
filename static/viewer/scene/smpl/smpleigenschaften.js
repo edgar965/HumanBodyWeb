@@ -84,7 +84,7 @@ export class Smpleigenschaften {
         if (koerper === inst.koerper) return;
         const neu = new SmplFigur(inst.id, { koerper });
         try {
-            await neu.load();
+            await neu.bauen();
         } catch (fehler) {
             alert(`Körper nicht ladbar: ${fehler.message}`);
             return;

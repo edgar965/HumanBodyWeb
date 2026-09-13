@@ -40,3 +40,16 @@
     width: 100% !important;
     height: 100% !important;
 }
+
+/* Der BVH-Pfad ganz oben (`_bvh_pfad.html`, 13.09.2026): Ordner, Datei,
+   Bibliothekskopie — der Text markiert sich mit einem Klick, der Knopf
+   daneben legt ihn in die Zwischenablage. */
+.bvh-pfad { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
+.bvh-pfad-zeile { display: flex; align-items: center; gap: 0.4rem; overflow-wrap: anywhere; }
+.bvh-pfad code { color: var(--text); user-select: all; }
+.bvh-kopieren {
+    background: transparent; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 0 0.4rem;
+}
+.bvh-kopieren:hover { color: var(--accent); border-color: var(--accent); }
+

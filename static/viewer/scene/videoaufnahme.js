@@ -18,10 +18,11 @@
  * ersten müsste die Stärke geraten werden — und 700 mm statt 25 waren beim
  * Server-Weg das Ergebnis einer geratenen.
  */
-import { state } from './state.js';
+import { state, THREE } from './state.js';
 import { _selectedInst } from './utils.js';
 import { Weichgewebe } from './weichgewebe.js';
 import { Kamerafolge } from './kamerafolge.js';
+import { Bodenstand } from './bodenstand.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 
 export class Videoaufnahme {
@@ -35,6 +36,7 @@ export class Videoaufnahme {
         //   fertig({url, pfad}, info), ablage() → {ablage, dateiname, figur, animation} }
         this.anzeige = anzeige;
         this.laeuft = false;
+        this._arbeitsvektor = new THREE.Vector3();
     }
 
     async starten() {
@@ -63,10 +65,14 @@ export class Videoaufnahme {
         }
     }
 
-    /** Animation auf eine Zeit setzen — ohne Abspielen. */
+    /**
+     * Animation auf eine Zeit setzen — ohne Abspielen. Der Bodenfix gehört
+     * dazu: Die Schleife stellt ihn nur bei Wiedergabe, hier steht sie.
+     */
     _zeit(t) {
         state.mixer.setTime(t);
         state.mixer.update(0);
+        if (state.currentAnimGroundFixed) Bodenstand.richten(state, this._arbeitsvektor);
     }
 
     async _aufnehmen(inst, mm, sekunden) {

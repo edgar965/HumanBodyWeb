@@ -3,16 +3,19 @@
  *
  * UMBAU 18.08.2026: 318 Zeilen. Herausgeloest wurden:
  *
- *     laden/figurnetz.js         Netz aus Serverdaten / erzeugtem Modell
  *     laden/bvhszene.js          BVH-Text als Skelett in die Buehne
- *     laden/skelettdaten.js      Skelett, Hautgewichte, Rig-Knochen (gemerkt)
+ *     gemeinsam/skelettdaten.js  Skelett, Hautgewichte, Rig-Knochen (gemerkt)
  *     laden/theatreanmeldung.js  Objekt als Theatre-Objekt anmelden (war 4x)
  *
  * Hier bleiben die Fassaden, die rund zwanzig Aufrufstellen benutzen.
+ *
+ * SEIT 13.09.2026 baut die Figur `HumanbodyModell` (`gemeinsam/`), fuer alle
+ * Seiten gleich; `laden/figurnetz.js` und `laden/kleidungsnetz.js` sind weg.
  */
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Vorgabefigur } from './laden/vorgabefigur.js';
-import { Figurnetz } from './laden/figurnetz.js';
+import { HumanbodyModell }
+    from '../../static/viewer/gemeinsam/humanbodymodell.js';
 import { Bvhszene } from './laden/bvhszene.js';
 import { Theatreanmeldung } from './laden/theatreanmeldung.js';
 
@@ -53,16 +56,12 @@ export async function loadGLBFromFile(file, scene) {
     }
 }
 
-/** Die HumanBody-Figur mit den Vorgabewerten ueber die Django-API laden. */
+/** Die HumanBody-Figur mit den Vorgabewerten (Grundkoerper, ohne Zubehoer). */
 export async function loadCharacterModel(scene) {
-    const antwort = await fetch('/api/character/mesh/');
-    if (!antwort.ok) {
-        throw new Error(`Character mesh API error: ${antwort.status}`);
-    }
-    const gruppe = Figurnetz.bauen(await antwort.json());
-    scene.add(gruppe);
-    Theatreanmeldung.anmelden(gruppe, 'Character');
-    return gruppe;
+    const modell = await new HumanbodyModell('Character', {}).bauen({ zubehoer: false });
+    scene.add(modell.group);
+    Theatreanmeldung.anmelden(modell.group, 'Character');
+    return modell.group;
 }
 
 /**
@@ -74,8 +73,6 @@ export async function loadCharacterModel(scene) {
  */
 export async function loadCharacterFromPreset(scene, preset, presetName, lage = null) {
     const figur = new Vorgabefigur({
-        netzBauen: daten => Figurnetz.bauen(daten),
-        erzeugtesModell: vorschrift => Figurnetz.erzeugtesModell(vorschrift),
         inTheatre: (gruppe, name) =>
             Theatreanmeldung.anmelden(gruppe, name, 'Character'),
     });

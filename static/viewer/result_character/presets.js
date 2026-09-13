@@ -79,7 +79,10 @@ export function loadPresetClothAndHair(preset) {
     // 5. Iris, Wimpern, Nägel (Feld `details`, Szene 12.09.2026) — gemerkt,
     // damit ein Körperwechsel und der Morph-Strom sie wieder anlegen.
     state.details = Koerperdetails.aus(preset);
-    if (state.bodyMesh) Koerperdetails.anwenden(state.bodyMesh, state.details);
+    if (state.modell) {
+        state.modell.details = state.details;
+        state.modell.detailsAnwenden();
+    }
 }
 
 /**

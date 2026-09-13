@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { Serverabruf } from '../../gemeinsam/serverabruf.js';
-import { Protokoll } from '../../gemeinsam/protokoll.js';
+import { Serverabruf } from './serverabruf.js';
+import { Protokoll } from './protokoll.js';
 
 /**
  * Umaregler — UMAs Form-Regler auf die Knochen der geladenen GLB rechnen.

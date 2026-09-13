@@ -29,18 +29,23 @@ class DieDeckung(SimpleTestCase):
     THEATRE = os.path.join(WURZEL, 'TheatreJS', 'src')
 
     #: Wer die Vorgabe anzieht — und in welcher Datei die Stuecke geladen werden.
+    #: Theatre und BVH Studio ziehen seit 13.09.2026 ueber `HumanbodyModell` +
+    #: `Modellzubehoer` an (gemeinsam/), die Ergebnisseite noch selbst.
     ANZIEHER = (
-        (os.path.join(THEATRE, 'laden', 'vorgabefigur.js'),
-         os.path.join(THEATRE, 'laden', 'vorgabefigur.js')),
-        (os.path.join(VIEWER, 'bvh_studio', 'spurzubehoer.js'),
-         os.path.join(VIEWER, 'bvh_studio', 'spurzubehoer.js')),
+        (os.path.join(VIEWER, 'gemeinsam', 'modellzubehoer.js'),
+         os.path.join(VIEWER, 'gemeinsam', 'modellzubehoer.js')),
         (os.path.join(VIEWER, 'result_character', 'presets.js'),
          os.path.join(VIEWER, 'result_character', 'garmentcode_stuecke.js')),
+    )
+    #: Wer das gemeinsame Zubehoer nimmt (statt eigener Lader).
+    NUTZER = (
+        os.path.join(THEATRE, 'laden', 'vorgabefigur.js'),
+        os.path.join(VIEWER, 'bvh_studio', 'spurfigur.js'),
     )
     #: Wo gebunden wird (das Theatre bindet im Skinner, nicht beim Laden).
     BINDER = (
         os.path.join(THEATRE, 'studio', 'skinner.js'),
-        os.path.join(VIEWER, 'bvh_studio', 'spurzubehoer.js'),
+        os.path.join(VIEWER, 'gemeinsam', 'modellzubehoer.js'),
         os.path.join(VIEWER, 'result_character', 'garmentcode_stuecke.js'),
     )
 
@@ -56,6 +61,9 @@ class DieDeckung(SimpleTestCase):
                 self.assertIn('.garments', quelle)
                 self.assertIn('.garmentcode', quelle)
                 self.assertIn('Garmentcodestueck', self._quelle(lader))
+        for nutzer in self.NUTZER:
+            with self.subTest(datei=os.path.basename(nutzer)):
+                self.assertIn('HumanbodyModell', self._quelle(nutzer))
 
     def test_gebunden_wird_ueberall_mit_derselben_klasse(self):
         for binder in self.BINDER:

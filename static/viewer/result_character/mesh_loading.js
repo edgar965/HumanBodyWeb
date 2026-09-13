@@ -1,41 +1,36 @@
 /**
- * Result Character — Mesh loading, skeleton conversion, skin color.
+ * Result Character — Körper, Häutung, Hautfarbe.
+ *
+ * SEIT 13.09.2026 BAUT DIE SEITE DEN KÖRPER NICHT MEHR SELBST (Edgar: „Alle
+ * HTML-Seiten … sollen die Figur NICHT selber bauen, sondern eine globale
+ * Klasse nutzen"): `HumanbodyModell` (`gemeinsam/humanbodymodell.js`) holt
+ * das Netz, spaltet die Lippen ab, färbt die Haut, häutet nachträglich
+ * (`haeuten`, sobald Skelett und Gewichte da sind — sie laden parallel zum
+ * Netz) und trägt die Details samt Brauen. Der Morph-Strom (WebSocket) und
+ * das Zubehör (Kleidung, Frisur, GarmentCode mit ihren Bedienfeldern)
+ * bleiben Sache dieser Seite; `state.modell` ist die Figur.
  */
-import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Skelettanzeige } from '../gemeinsam/skelettanzeige.js';
-import {
-    base64ToFloat32, base64ToUint32, blenderToThreeCoords,
-    sharedState, BODY_MATERIALS,
-    loadRigifySkeleton, loadSkinWeights,
-    computeSkinAttributes, applySkinColorToMaterials,
-} from '../character_core.js';
-import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
-import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
-import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
-import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { sharedState, loadSkinWeights } from '../character_core.js';
+import { HumanbodyModell } from '../gemeinsam/humanbodymodell.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
-import { Hautbindung } from '../gemeinsam/hautbindung.js';
 import { Skelettnachfuehrung } from '../gemeinsam/skelettnachfuehrung.js';
 
 const ss = sharedState;
 
 export async function loadMesh(bodyType) {
     try {
-        const data = await Serverabruf.json('/api/character/mesh/?body_type=' + encodeURIComponent(bodyType));
-        if (data.error) { console.error('[result_character] mesh error:', data.error); return false; }
-
-        // Puffer, Normalen, Materialgruppen: siehe `Koerpernetz`. Diese dreissig
-        // Zeilen standen fuenfmal im Projekt (Befund `doppelcode`, 17.08.2026).
-        state.bodyMesh = Koerpernetz.netz(data, THREE);
-        const geo = state.bodyMesh.geometry;
-
-        state.bodyGeometry = geo;
-        state.scene.add(state.bodyMesh);
-
+        const modell = new HumanbodyModell('ergebnis', { body_type: bodyType });
+        if (state.details) modell.details = state.details;
+        // Ungehäutet: Skelett und Gewichte laden gerade nebenher; `haeuten` folgt.
+        await modell.koerper(null, null, ss.skinColors);
+        state.modell = modell;
+        state.bodyMesh = modell.bodyMesh;
+        state.bodyGeometry = modell.bodyMesh.geometry;
+        state.scene.add(modell.group);
         fn.applySceneSkinSettings(state.bodyMesh);
-        if (state.details) Koerperdetails.anwenden(state.bodyMesh, state.details);
         return true;
     } catch (e) {
         console.error('[result_character] Failed to load mesh:', e);
@@ -44,23 +39,16 @@ export async function loadMesh(bodyType) {
 }
 
 export function convertToRigifySkinnedMesh() {
-    if (state.isSkinned || !state.bodyMesh || !state.bodyGeometry) return;
-    state.bodyGeometry = state.bodyGeometry.clone();
-    const { skinIndices, skinWeights } = computeSkinAttributes(state.bodyGeometry, ss.skinWeightData);
-    state.bodyGeometry.setAttribute('skinIndex', new THREE.Float32BufferAttribute(skinIndices, 4));
-    state.bodyGeometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
-    state.rigifySkeleton = buildRigifySkeleton(ss.rigifySkeletonData, ss.skinWeightData);
+    if (state.isSkinned || !state.modell?.bodyMesh) return;
+    state.modell.haeuten(ss.rigifySkeletonData, ss.skinWeightData);
+    state.bodyMesh = state.modell.bodyMesh;
+    state.bodyGeometry = state.bodyMesh.geometry;
+    state.rigifySkeleton = state.modell.skelett;
     // Rig-Vorgabe AN (12.09.2026): Der Helfer entstand nur beim Kippen des
     // Knopfs — steht der Schalter schon auf an, gehoert er hier dazu.
     if (state.rigVisible && !state.skeletonHelper) {
         state.skeletonHelper = Skelettanzeige.bauen(state.scene, state.rigifySkeleton.rootBone);
     }
-    // NEU MIT `visible` (28.08.2026): Diese Fassung hat die Sichtbarkeit
-    // als einzige nicht mitgenommen — ein ausgeblendeter Koerper kam beim
-    // Zuschalten des Skeletts zurueck, ohne dass der Schalter umsprang.
-    state.bodyMesh = Hautbindung.ersetzen(
-        state.scene, state.bodyMesh, state.bodyGeometry,
-        state.rigifySkeleton, THREE);
     state.isSkinned = true;
     // Der Server schickt die Knochenlagen zum ersten Netz, gebunden wird
     // erst danach. Ohne diese Zeile bliebe der zuletzt gemeldete Stand
@@ -84,9 +72,9 @@ export function skelettNachfuehren(bewegte) {
 }
 
 export function applySkinColor(bodyType) {
-    if (!state.bodyMesh) return;
-    const mats = Array.isArray(state.bodyMesh.material) ? state.bodyMesh.material : [state.bodyMesh.material];
-    applySkinColorToMaterials(mats, bodyType, ss.skinColors);
+    if (!state.modell) return;
+    state.modell.bodyType = bodyType;
+    state.modell.hautfarbe(ss.skinColors);
 }
 
 export async function reloadBodyMesh(newType) {
@@ -95,8 +83,9 @@ export async function reloadBodyMesh(newType) {
 
     if (state.mixer) { state.mixer.stopAllAction(); state.mixer = null; state.currentAction = null; }
 
-    if (state.bodyMesh) {
-        Netzentsorgung.entfernen(state.scene, state.bodyMesh);
+    if (state.modell) {
+        Netzentsorgung.entfernen(state.scene, state.modell.group);
+        state.modell = null;
         state.bodyMesh = null;
     }
     state.bodyGeometry = null;

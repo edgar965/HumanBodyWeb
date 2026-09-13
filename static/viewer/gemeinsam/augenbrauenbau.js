@@ -1,7 +1,7 @@
-import { THREE } from './state.js';
-import { Augenbrauenform } from '../gemeinsam/augenbrauenform.js';
-import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
-import { Protokoll } from '../gemeinsam/protokoll.js';
+import * as THREE from 'three';
+import { Augenbrauenform } from './augenbrauenform.js';
+import { Netzentsorgung } from './netzentsorgung.js';
+import { Protokoll } from './protokoll.js';
 
 /**
  * Augenbrauenbau — die Brauen einer Figur als eigenes Netz in ihrer Gruppe.
@@ -24,6 +24,11 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
  * vom Auge aus gilt. Steht einer, bleibt der gemerkte Anker, und die Streifen
  * folgen der gehobenen, gewölbten oder gekippten Haut. Ohne das stand die
  * Braue bei jedem Regler wieder an derselben Stelle (Edgar, 12.09.2026).
+ *
+ * DIE FIGUR (`inst`) ist ein Objekt mit `bodyMesh`, `group`, `details`,
+ * `morphs` und dem Feld `augenbrauen` für das gebaute Netz — in der Szene
+ * die `CharacterInstance`, im BVH Studio `Spurdetails` (13.09.2026; seither
+ * hier in `gemeinsam/` statt in `scene/`).
  */
 export class Augenbrauenbau {
 

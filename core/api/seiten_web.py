@@ -17,6 +17,7 @@ import os
 from django.shortcuts import render, redirect, get_object_or_404
 
 from ..dienste.systemzustand import Systemzustand
+from ..dienste.ergebnisablage import Ergebnisablage
 from ..models import BVHJob
 
 
@@ -56,8 +57,10 @@ class Webseiten:
     @classmethod
     def ergebnisseite(cls, request, job_id):
         """Ergebnis-Ansicht mit Video und BVH-Skelett."""
+        auftrag = cls._auftrag(job_id)
         return render(request, 'job_result.html',
-                      {'job': cls._auftrag(job_id)})
+                      {'job': auftrag,
+                       'bibliothekskopie': Ergebnisablage.kopie_von(auftrag)})
 
     # -------------------------------------------------------------- Listen
 
@@ -72,7 +75,8 @@ class Webseiten:
         elif fertige.exists():
             auftrag = fertige.first()
         return render(request, 'standalone_result.html',
-                      {'job': auftrag, 'jobs': fertige})
+                      {'job': auftrag, 'jobs': fertige,
+                       'bibliothekskopie': Ergebnisablage.kopie_von(auftrag)})
 
     @staticmethod
     def fertigliste(request):

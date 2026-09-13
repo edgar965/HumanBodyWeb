@@ -1,12 +1,14 @@
 /**
  * Viewer — Mesh loading, body materials, vertex updates.
+ *
+ * Seit 13.09.2026 baut `HumanbodyModell` (`gemeinsam/humanbodymodell.js`)
+ * den Körper — wie auf jeder Seite; `state.modell` ist die Figur, die
+ * Häutung läuft über `modell.haeuten` (`skinning.js`).
  */
-import * as THREE from 'three';
 import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
-import { state, API, BODY_MATERIALS } from './state.js';
+import { state, API } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { base64ToFloat32, base64ToUint32 } from './utils.js';
-import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
+import { HumanbodyModell } from '../gemeinsam/humanbodymodell.js';
 import { applySceneSkinSettings, applySkinColor } from './scene_settings.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
@@ -31,30 +33,21 @@ export function updateMeshVertices(float32Buffer) {
 }
 
 /**
- * Aus der Netz-Antwort das Körpernetz bauen und in die Szene stellen.
+ * Den Körper über `HumanbodyModell` bauen und in die Szene stellen.
  *
- * WARUM ALS EIGENER SCHRITT (28.08.2026, Befund `doppelcode`): Diese elf
- * Zeilen standen zweimal in DIESER Datei — in `loadMesh` und in
- * `reloadMeshForBodyType`. Sie hängen zusammen und müssen in dieser
- * Reihenfolge laufen.
- *
- * DIE PUNKTZAHL WIRD ZWEIMAL GESCHRIEBEN — einmal aus der Antwort
- * (`vertex_count`) und einmal aus der fertigen Geometrie. Beide Aufrufe
- * standen schon vorher da und bleiben, weil sie unterschiedliche Quellen
- * haben; ob sie je auseinandergehen, ist NICHT gemessen. Auf der Modellseite
- * liefern sie denselben Wert (70.851, gemessen 28.08.2026) — die Probe kann
- * die beiden deshalb nicht unterscheiden und behauptet es auch nicht.
+ * WARUM ALS EIGENER SCHRITT (28.08.2026, Befund `doppelcode`): Dieser
+ * Ablauf stand zweimal in DIESER Datei — in `loadMesh` und in
+ * `reloadMeshForBodyType`.
  */
-function _netzAufbauen(data) {
-    state.vertexCount = data.vertex_count;
-    _punktzahlZeigen(state.vertexCount);
-
-    // Puffer, Normalen, Materialgruppen: siehe `Koerpernetz`. Diese dreissig
-    // Zeilen standen fuenfmal im Projekt (Befund `doppelcode`, 17.08.2026).
-    state.bodyMesh = Koerpernetz.netz(data, THREE);
+async function _netzAufbauen(bodyType) {
+    const modell = new HumanbodyModell('modellseite', bodyType ? { body_type: bodyType } : {});
+    await modell.koerper();
+    state.modell = modell;
+    state.bodyMesh = modell.bodyMesh;
     state.bodyGeometry = state.bodyMesh.geometry;
-    state.scene.add(state.bodyMesh);
-    _punktzahlZeigen(state.bodyGeometry.attributes.position.count);
+    state.vertexCount = state.bodyGeometry.attributes.position.count;
+    state.scene.add(modell.group);
+    _punktzahlZeigen(state.vertexCount);
 
     applySceneSkinSettings();
     applySkinColor();
@@ -68,10 +61,7 @@ function _punktzahlZeigen(anzahl) {
 
 export async function loadMesh() {
     try {
-        const data = await Serverabruf.json(`${API}/mesh/`);
-        if (data.error) { console.error(data.error); return; }
-
-        _netzAufbauen(data);
+        await _netzAufbauen(null);
         if (state.initialBodyTop === null) state.initialBodyTop = _getBodyTop();
         fn.onResize();
     } catch (e) {
@@ -81,9 +71,10 @@ export async function loadMesh() {
 
 export async function reloadMeshForBodyType(bodyType, gender) {
     Protokoll.debug('Viewer', 'Reloading mesh for', bodyType, '(gender:', gender, ')');
-    if (state.bodyMesh) {
-        state.scene.remove(state.bodyMesh);
-        state.bodyMesh.geometry?.dispose();
+    if (state.modell) {
+        state.scene.remove(state.modell.group);
+        state.modell.dispose();
+        state.modell = null;
         state.bodyMesh = null;
         state.bodyGeometry = null;
     }
@@ -93,10 +84,7 @@ export async function reloadMeshForBodyType(bodyType, gender) {
     state.initialBodyTop = null;
 
     try {
-        const data = await Serverabruf.json(`${API}/mesh/?body_type=${encodeURIComponent(bodyType)}`);
-        if (data.error) { console.error(data.error); return; }
-
-        _netzAufbauen(data);
+        await _netzAufbauen(bodyType);
         state.initialBodyTop = _getBodyTop();
 
         state.skinWeightData = await Serverabruf.json(

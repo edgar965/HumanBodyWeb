@@ -1,35 +1,38 @@
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Koerperfrage } from './koerperfrage.js';
-import { Kleidungsnetz } from './kleidungsnetz.js';
-import { Garmentcodestueck }
-    from '../../../static/viewer/gemeinsam/garmentcodestueck.js';
+import { HumanbodyModell }
+    from '../../../static/viewer/gemeinsam/humanbodymodell.js';
+import { Koerperfrage } from '../../../static/viewer/gemeinsam/koerperfrage.js';
 import { Figurlage } from './figurlage.js';
 import { Protokoll } from '../../../static/viewer/gemeinsam/protokoll.js';
-import { Koerperdetails } from '../../../static/viewer/gemeinsam/koerperdetails.js';
 
 /**
- * Vorgabefigur — eine Figur samt Haaren und Kleidung aus einer Vorgabe laden.
+ * Vorgabefigur — eine Figur samt Haaren und Kleidung aus einer Vorgabe in die
+ * Bühne des Theatre stellen.
  *
- * Aus asset-loader.js herausgeloest (Umbau 16.08.2026): `loadCharacterFromPreset`
- * hatte 105 Zeilen und tat fuenf Dinge — Sonderweg fuer erzeugte Modelle, Frage
- * aufbauen, Netz holen, Haare laden, Kleidung laden. Die Frage nach Morphs und
- * Meta-Werten (34 Zeilen) war dabei die dritte Kopie im Projekt; sie steckt
- * jetzt in Koerperfrage.
+ * SEIT 13.09.2026 BAUT DAS THEATRE NICHTS MEHR SELBST (Edgar: „Alle HTML-
+ * Seiten … sollen die Figur NICHT selber bauen, sondern eine globale Klasse
+ * nutzen"): Netz, Lippen, Details, Haare, Kleidung und GarmentCode kommen
+ * aus `HumanbodyModell.bauen()` (`gemeinsam/humanbodymodell.js`). Vorher
+ * standen hier Netzbau (`figurnetz.js`), Kleidung (`kleidungsnetz.js`) und
+ * Haare noch einmal — und das Theatre hatte weder Lippen noch Brauen.
+ *
+ * UNGEHÄUTET: Das Theatre bindet seine Figuren erst, wenn Skelett und
+ * Gewichte da sind (`studio/skinner.js`, `autoUmwandeln`) — Kleidung kommt
+ * darum als `SkinnedMesh` mit `needsBinding`, GarmentCode-Stücke starr mit
+ * ihrer Rig-Datei, Haare als `Mesh`; der Skinner bindet alle drei.
+ *
+ * Was das Theatre an der Gruppe erwartet (`userData`): `presetName`,
+ * `bodyType`, `morphs`, `meta` (Figurpanel, Nachladen), bei erzeugten
+ * Modellen `isGeneratedModel`, `isSkinnedMesh`, `skinnedMesh`, `skeleton`,
+ * `rootBone`, `rigifySkelObj` (Animationssystem). Dazu `modell` — die
+ * Figur selbst, damit das Figurpanel nach Morphs die Details nachzieht.
  */
 export class Vorgabefigur {
 
-    static HAAR_ZU_HELL = 0.9;
-    /** Ersatzfarbe fuer Haare, die als reines Weiss aus der GLB kommen. */
-    static HAARFARBE = [0.1, 0.08, 0.06];
-    static MESH_ENDPUNKT = '/api/character/mesh/';
-
     /**
-     * @param {Object} werkzeuge  { netzBauen, erzeugtesModell, inTheatre }
-     *        — die drei Dinge, die aus asset-loader.js gebraucht werden.
+     * @param {Object} werkzeuge  { inTheatre } — das Anmelden bei Theatre.js
      */
     constructor(werkzeuge) {
         this.werkzeuge = werkzeuge;
-        this.lader = new GLTFLoader();
     }
 
     /**
@@ -41,126 +44,53 @@ export class Vorgabefigur {
      *        Dialog, oder null — dann bleibt die Figur im Ursprung
      */
     async laden(scene, vorgabe, name, lage = null) {
-        const gruppe = vorgabe.type === 'generated_model'
-            ? await this.werkzeuge.erzeugtesModell(vorgabe)
-            : this.werkzeuge.netzBauen(await this._netzdaten(vorgabe));
+        const modell = new HumanbodyModell(name, vorgabe);
+        await modell.bauen({ zubehoer: true });
+        const gruppe = modell.group;
+        gruppe.traverse(teil => {
+            if (teil.isMesh) {
+                teil.castShadow = true;
+                teil.receiveShadow = true;
+            }
+        });
         scene.add(gruppe);
-        this._kennzeichnen(gruppe, vorgabe, name);
-
-        if (vorgabe.type !== 'generated_model') {
-            // Iris, Wimpern, Nägel wie in der Szene gespeichert (Feld `details`).
-            Koerperdetails.anwenden(gruppe.children[0], Koerperdetails.aus(vorgabe));
-            await this._haare(gruppe, vorgabe);
-            await this._kleidung(gruppe, vorgabe);
-            await this._garmentcode(gruppe, vorgabe);
-        }
+        this._kennzeichnen(gruppe, modell, vorgabe, name);
         // Lage VOR der Anmeldung: Theatre.js nimmt die Position als Startwert.
         Figurlage.anwenden(gruppe, lage);
         // Das Theatre-Objekt bleibt an der Gruppe (Schlüssel in
         // `userData.theatreSchluessel`): Wer die Figur entfernt, meldet es
         // darüber ab (`studio/figurentfernen.js`).
         gruppe.userData.theatreObjekt = this.werkzeuge.inTheatre(gruppe, name);
+        Protokoll.debug('vorgabefigur', '✓ Figur gebaut:', name,
+                        `${gruppe.children.length} Teile`);
         return gruppe;
     }
 
-    async _netzdaten(vorgabe) {
-        const antwort = await fetch(
-            Vorgabefigur.MESH_ENDPUNKT + '?' + Koerperfrage.text(vorgabe));
-        if (!antwort.ok) throw new Error('Netz-API: ' + antwort.status);
-        return antwort.json();
-    }
-
     /** Werte, die spaeter fuers Nachladen und die Panels gebraucht werden. */
-    _kennzeichnen(gruppe, vorgabe, name) {
+    _kennzeichnen(gruppe, modell, vorgabe, name) {
+        gruppe.userData.modell = modell;
         gruppe.userData.presetName = name;
-        gruppe.userData.bodyType = vorgabe.type === 'generated_model'
+        gruppe.userData.bodyType = modell.generatedConfig
             ? 'generated' : (vorgabe.body_type || Koerperfrage.VORGABE_KOERPER);
-        if (vorgabe.type === 'generated_model') return;
+        if (modell.generatedConfig) {
+            gruppe.userData.isGeneratedModel = true;
+            Vorgabefigur._skelettMerken(gruppe, modell);
+            return;
+        }
         gruppe.userData.morphs = Koerperfrage.morphs(vorgabe);
         gruppe.userData.meta = { ...(vorgabe.meta || {}) };
     }
 
-    async _haare(gruppe, vorgabe) {
-        const haare = vorgabe.hair_style;
-        if (!haare?.url) return;
-        try {
-            const geladen = await this.haareLaden(haare.url);
-            geladen.userData.isHair = true;
-            geladen.traverse(kind => {
-                if (kind.isMesh) kind.userData.isHair = true;
-            });
-            gruppe.add(geladen);
-            Protokoll.debug('vorgabefigur', '✓ Haare geladen:', haare.name);
-        } catch (fehler) {
-            console.error('Haare nicht ladbar:', fehler);
-        }
-    }
-
-    async _kleidung(gruppe, vorgabe) {
-        if (!Array.isArray(vorgabe.garments)) return;
-        for (const kleid of vorgabe.garments) {
-            try {
-                const netz = await Kleidungsnetz.laden(
-                    kleid, vorgabe.body_type, vorgabe);
-                netz.userData.isGarment = true;
-                gruppe.add(netz);
-                Protokoll.debug('vorgabefigur', '✓ Kleidung geladen:', kleid.id);
-            } catch (fehler) {
-                console.error('Kleidung nicht ladbar:', kleid.id, fehler);
-            }
-        }
-    }
-
-    /**
-     * Die GarmentCode-Stücke der Vorgabe (Feld `garmentcode`, seit 08.09.2026).
-     *
-     * Edgar, 11.09.2026: „laden des Female1 Modells lädt nicht die Kleider
-     * (GarmentCode) des Modells" — die Liste wurde hier schlicht nicht
-     * gelesen. Nacheinander, nicht parallel, damit die Reihenfolge der
-     * Stücke der der Datei entspricht; ein fehlendes Stück hält die
-     * anderen nicht auf.
-     */
-    async _garmentcode(gruppe, vorgabe) {
-        if (!Array.isArray(vorgabe.garmentcode)) return;
-        for (const eintrag of vorgabe.garmentcode) {
-            if (!eintrag?.stueck || !eintrag?.rig_url) continue;
-            try {
-                gruppe.add(await Garmentcodestueck.laden(eintrag));
-                Protokoll.debug('vorgabefigur', '✓ GarmentCode geladen:', eintrag.stueck);
-            } catch (fehler) {
-                Protokoll.warnung('vorgabefigur',
-                    `GarmentCode „${eintrag.stueck}" nicht ladbar: ${fehler.message || fehler}`);
-            }
-        }
-    }
-
-    /**
-     * Haare als GLB laden. Manche Dateien bringen reinweisses Material mit —
-     * dann waeren die Haare in der Szene ein weisser Klumpen. Solche Faelle
-     * bekommen eine dunkle Ersatzfarbe.
-     */
-    haareLaden(url) {
-        return new Promise((fertig, fehlgeschlagen) => {
-            this.lader.load(url, (gltf) => {
-                gltf.scene.traverse(kind => {
-                    if (!kind.isMesh) return;
-                    kind.castShadow = true;
-                    kind.receiveShadow = true;
-                    this._haarmaterial(kind.material);
-                });
-                fertig(gltf.scene);
-            }, undefined, fehlgeschlagen);
+    /** Das Animationssystem sucht diese vier Angaben an der Gruppe. */
+    static _skelettMerken(gruppe, modell) {
+        if (!modell.skelett || !modell.bodyMesh?.isSkinnedMesh) return;
+        Object.assign(gruppe.userData, {
+            isSkinnedMesh: true,
+            skinnedMesh: modell.bodyMesh,
+            skeleton: modell.skelett.skeleton,
+            rootBone: modell.skelett.rootBone,
+            // Vollstaendiges Rigify-Objekt fuer das Retarget (boneByName usw.)
+            rigifySkelObj: modell.skelett,
         });
-    }
-
-    _haarmaterial(stoff) {
-        if (!stoff) return;
-        const farbe = stoff.color;
-        const grenze = Vorgabefigur.HAAR_ZU_HELL;
-        if (farbe && farbe.r > grenze && farbe.g > grenze && farbe.b > grenze) {
-            farbe.setRGB(...Vorgabefigur.HAARFARBE);
-        }
-        if (stoff.roughness === undefined) stoff.roughness = 0.8;
-        if (stoff.metalness === undefined) stoff.metalness = 0.0;
     }
 }

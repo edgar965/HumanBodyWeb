@@ -1,0 +1,33 @@
+{% load fassung %}
+{% comment %}Wo die BVH dieses Auftrags liegt — ganz oben auf jeder Ergebnisseite (Edgar,
+12.09.2026: „schreibe … wo sich das BVH befindet und unter welchem Namen, direkt ganz
+oben"; 13.09.: „sollte immer der Pfad der BVH kommen, so dass ich das Verzeichnis kopieren
+kann"). Ordner und Datei stehen getrennt, jeder Knopf legt seinen Pfad in die Zwischenablage
+(`viewer/gemeinsam/bvhpfad.js`); der Text selbst ist mit einem Klick markiert (`user-select: all`).
+Dazu die Kopie in der BVH-Bibliothek (`A_Results`, `Ergebnisablage`), wenn sie liegt.
+Erwartet: `job.bvh_file`, optional `bibliothekskopie`.{% endcomment %}
+{% if job.bvh_file %}
+<div class="bvh-pfad" id="bvhPfad" data-pfad="{{ job.bvh_file }}">
+    <div class="bvh-pfad-zeile" title="Ordner des Auftrags">
+        <i class="fas fa-folder"></i> Ordner: <code id="bvhOrdner"></code>
+        <button type="button" class="bvh-kopieren" data-kopie="ordner" title="Ordner kopieren">
+            <i class="fas fa-copy"></i></button>
+    </div>
+    <div class="bvh-pfad-zeile" title="Pfad der BVH-Datei dieses Auftrags">
+        <i class="fas fa-file-alt"></i> BVH: <code id="bvhDatei">{{ job.bvh_file }}</code>
+        <button type="button" class="bvh-kopieren" data-kopie="datei" title="Pfad kopieren">
+            <i class="fas fa-copy"></i></button>
+    </div>
+    {% if bibliothekskopie %}
+    <div class="bvh-pfad-zeile" title="Kopie in der BVH-Bibliothek (Animationsliste der Szene)">
+        <i class="fas fa-book"></i> Bibliothek: <code id="bvhKopie">{{ bibliothekskopie }}</code>
+        <button type="button" class="bvh-kopieren" data-kopie="kopie" title="Pfad der Kopie kopieren">
+            <i class="fas fa-copy"></i></button>
+    </div>
+    {% endif %}
+</div>
+<script type="module">
+    const { Bvhpfad } = await import('{% fassungspfad "viewer/gemeinsam/bvhpfad.js" %}');
+    Bvhpfad.verdrahten(document.getElementById('bvhPfad'));
+</script>
+{% endif %}

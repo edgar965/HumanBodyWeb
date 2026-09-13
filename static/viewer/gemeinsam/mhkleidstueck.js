@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { Serverabruf } from '../../gemeinsam/serverabruf.js';
-import { Netzgeometrie } from '../../gemeinsam/netzgeometrie.js';
-import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
-import { Protokoll } from '../../gemeinsam/protokoll.js';
-import { Eigenhaut } from '../../gemeinsam/eigenhaut.js';
+import { Serverabruf } from './serverabruf.js';
+import { Netzgeometrie } from './netzgeometrie.js';
+import { Netzentsorgung } from './netzentsorgung.js';
+import { Protokoll } from './protokoll.js';
+import { Eigenhaut } from './eigenhaut.js';
 
 /**
  * Mhkleidstueck — ein MakeHuman-Kleidungsstück an der MakeHuman-Figur.

@@ -44,6 +44,8 @@ export const state = {
     backLight: null,
     ambient: null,
 
+    /** Die Figur — ein `HumanbodyModell` (13.09.2026); `bodyMesh` ist ihr Körper. */
+    modell: null,
     bodyMesh: null,
     bodyGeometry: null,
     vertexCount: 0,

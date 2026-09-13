@@ -9,16 +9,19 @@ spiele die Animation ab"): Die Hautmaske vom selben Tag hing am
 Geprüft am Quelltext (die Rechnung selbst prüfen `test_js_hautmaske`,
 `test_js_lagenmaske`, `test_hautverdeckung`):
 
-1. `Spurfigur` ruft `Spurhaut.anwenden` NACH dem Zubehör — vorher gäbe es
+1. `Modellzubehoer` (seit 13.09.2026 das Zubehör JEDER Seite, Studio wie
+   Theatre) ruft `Figurhaut.anwenden` NACH dem Zubehör — vorher gäbe es
    keine Stücke, und die Maske wäre leer, ohne Fehler.
-2. `Spurhaut` rechnet mit denselben Bausteinen wie die Szene (Hautmaske,
-   Lagenmaske, Hauteinzug) und liest die Stücke an `isGarment`.
+2. `Figurhaut` rechnet mit denselben Bausteinen wie die Szene (Hautmaske,
+   Lagenmaske, Hauteinzug) und liest die Stücke an `isGarment`; das
+   Studio baut über `HumanbodyModell`, das dieses Zubehör nimmt.
 3. MakeHuman-Stücke tragen `isGarment` (GarmentCode-Stücke tun es schon);
    Haare nicht — sie sind kein Stoff.
 4. `Hauteinzug` liegt in `gemeinsam/` und holt Three.js direkt, nicht über
    den Szene-Zustand — sonst zöge das Studio die halbe Szene-Seite mit.
 
-Sabotage-Gegenprobe: Aufruf in `Spurfigur` entfernt → Fall 1 rot.
+Sabotage-Gegenprobe: `Figurhaut.anwenden` in `Modellzubehoer.laden` vor
+`this.haare()` → Fall 1 rot.
 """
 
 from django.test import SimpleTestCase
@@ -35,11 +38,18 @@ class SpurhautTest(SimpleTestCase):
     databases = set()
 
     def test_die_figur_wird_nach_dem_zubehoer_maskiert(self):
+        zubehoer = SpurhautTest._lies_modul(GEMEINSAM, 'modellzubehoer.js')
+        self.assertIn("import { Figurhaut } from './figurhaut.js';", zubehoer)
+        laden = zubehoer.index('async laden() {')
+        rumpf = zubehoer[laden:zubehoer.index('return this;', laden)]
+        maske = rumpf.index('Figurhaut.anwenden(')
+        for schritt in ('this.kleidungsstueck(', 'this.garmentcode()', 'this.haare()'):
+            self.assertLess(rumpf.index(schritt), maske,
+                            'die Maske muss NACH dem Zubehör laufen: ' + schritt)
         figur = SpurhautTest._lies_modul(STUDIO, 'spurfigur.js')
-        self.assertIn("import { Spurhaut } from './spurhaut.js';", figur)
-        zubehoer = figur.index('new Spurzubehoer(this.spur, vorgabe).laden()')
-        maske = figur.index('Spurhaut.anwenden(this.spur)')
-        self.assertLess(zubehoer, maske, 'die Maske muss NACH dem Zubehör laufen')
+        self.assertIn("import { HumanbodyModell } "
+                      "from '../gemeinsam/humanbodymodell.js';", figur)
+        self.assertIn('await modell.bauen({', figur)
 
     def test_spurhaut_rechnet_wie_die_szene(self):
         u"""Die Rechnung liegt seit dem 12.09.2026 in `gemeinsam/figurhaut.js`
@@ -50,9 +60,10 @@ class SpurhautTest(SimpleTestCase):
                          'userData.indexVoll', 'userData?.isGarment'):
             self.assertIn(baustein, haut, baustein)
         self.assertIn("from './hauteinzug.js'", haut)
-        spur = SpurhautTest._lies_modul(STUDIO, 'spurhaut.js')
-        self.assertIn("import { Figurhaut } from '../gemeinsam/figurhaut.js';", spur)
-        self.assertIn('export class Spurhaut extends Figurhaut {}', spur)
+        modell = SpurhautTest._lies_modul(GEMEINSAM, 'humanbodymodell.js')
+        self.assertIn('new Modellzubehoer(this, haarfarben).laden()', modell)
+        self.assertFalse((STUDIO / 'spurhaut.js').exists())
+        self.assertFalse((STUDIO / 'spurzubehoer.js').exists())
 
     def test_die_ergebnisseite_maskiert_nach_dem_binden(self):
         u"""Edgar, 12.09.2026: „bei einer animation mit Female2 scheint die
@@ -67,12 +78,14 @@ class SpurhautTest(SimpleTestCase):
         self.assertIn('Figurhaut.aufheben(GarmentcodeStuecke.figur())', stuecke)
 
     def test_makehuman_stuecke_tragen_isgarment_haare_nicht(self):
-        zubehoer = SpurhautTest._lies_modul(STUDIO, 'spurzubehoer.js')
-        anhaengen = zubehoer[zubehoer.index('_anhaengen(geo, stoff'):]
-        anhaengen = anhaengen[:anhaengen.index('_binden(geo, stoff, indizes')]
-        self.assertIn('netz.userData.isGarment = true', anhaengen)
-        haar = zubehoer[zubehoer.index('_haarteil(geo, stoff)'):zubehoer.index('_kopfknochenNummer()')]
+        zubehoer = SpurhautTest._lies_modul(GEMEINSAM, 'modellzubehoer.js')
+        von = zubehoer.index('async kleidungsstueck(kleid) {')
+        stueck = zubehoer[von:zubehoer.index('async garmentcode() {')]
+        self.assertIn('netz.userData.isGarment = true', stueck)
+        von = zubehoer.index('async haare() {')
+        haar = zubehoer[von:zubehoer.index('_kopfknochen() {')]
         self.assertNotIn('isGarment', haar)
+        self.assertIn('isHair = true', haar)
         stueck = SpurhautTest._lies_modul(GEMEINSAM, 'garmentcodestueck.js')
         self.assertIn('isGarment: true', stueck)
 

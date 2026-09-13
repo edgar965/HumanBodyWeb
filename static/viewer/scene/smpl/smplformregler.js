@@ -86,7 +86,7 @@ export class Smplformregler {
             koerper: inst.koerper, geschlecht: inst.geschlecht, form,
         });
         try {
-            await neu.load();
+            await neu.bauen();
         } catch (fehler) {
             if (stand) stand.textContent = `Fehler: ${fehler.message}`;
             return;

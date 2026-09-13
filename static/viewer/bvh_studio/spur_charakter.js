@@ -1,24 +1,15 @@
 /**
  * Figur einer Spur laden — Anmeldung.
  *
- * Der Aufbau steckt in `Spurfigur` (spurfigur.js), Kleidung und Haare in
- * `Spurzubehoer`. Vorher standen hier zwei Funktionen mit je 113 Zeilen, die
- * beide Netzdaten holten, ein SkinnedMesh bauten und banden.
+ * Der Aufbau steckt in `Spurfigur` (spurfigur.js), und die baut seit dem
+ * 13.09.2026 nichts mehr selbst: Sie setzt ein `HumanbodyModell`
+ * (`gemeinsam/humanbodymodell.js`) in die Spur. Vorher standen hier zwei
+ * Funktionen mit je 113 Zeilen, die beide Netzdaten holten, ein SkinnedMesh
+ * bauten und banden.
  */
-import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
-import { computeSkinAttributes } from '../character_core.js';
 import { _sanitizeBoneNames } from './spur_clips.js';
-import { Spurzubehoer } from './spurzubehoer.js';
 import { Spurfigur } from './spurfigur.js';
 
-export async function _loadPresetAccessories(track, modelData) {
-    return new Spurzubehoer(track, modelData).laden();
-}
-
 export async function loadTrackCharacter(track) {
-    return new Spurfigur(track, {
-        skelettBauen: buildRigifySkeleton,
-        gewichteBauen: computeSkinAttributes,
-        namenSaeubern: _sanitizeBoneNames,
-    }).laden();
+    return new Spurfigur(track, { namenSaeubern: _sanitizeBoneNames }).laden();
 }

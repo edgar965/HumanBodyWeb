@@ -23,6 +23,8 @@ export const state = {
     camera: null,
     controls: null,
 
+    /** Die Figur — ein `HumanbodyModell` (13.09.2026); `bodyMesh` ist ihr Körper. */
+    modell: null,
     bodyMesh: null,
     bodyGeometry: null,
     rigifySkeleton: null,

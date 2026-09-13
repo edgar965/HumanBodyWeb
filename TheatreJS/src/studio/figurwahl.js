@@ -1,4 +1,4 @@
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { UmaModell } from '../../../static/viewer/gemeinsam/umamodell.js';
 import { Figurwahldialog }
     from '../../../static/viewer/gemeinsam/figurwahldialog.js';
 import { Katalogpflege } from '../../../static/viewer/scene/katalogpflege.js';
@@ -18,10 +18,12 @@ import { Theatreanmeldung } from '../laden/theatreanmeldung.js';
  *
  * WELCHE REITER DAS THEATRE ZEIGT: nur die Figurarten, die es auch tragen
  * kann. HumanBody-Modelle gehen den vollen Weg (Skelett, Animation, Kleidung,
- * GarmentCode); UMA-Figuren kommen als GLB und stehen still — auswählbar,
- * verschiebbar, entfernbar. SMPL, MakeHuman und UMA Python bräuchten die
- * Netz- und Häutungswege der Szene-Seite, die es hier nicht gibt; ein Reiter,
- * der lädt und dann nichts zeigt, wäre schlechter als keiner.
+ * GarmentCode); UMA-Figuren baut `UmaModell` (`gemeinsam/umamodell.js`, seit
+ * 13.09.2026 dieselbe Klasse wie in der Szene: Skelett unter der Gruppe,
+ * nach +Z gedreht, auf 1,68 m) und stehen still — auswählbar, verschiebbar,
+ * entfernbar. SMPL, MakeHuman und UMA Python bräuchten die Animationswege
+ * der Szene-Seite, die es hier nicht gibt; ein Reiter, der lädt und dann
+ * nichts zeigt, wäre schlechter als keiner.
  *
  * DIE LAGE: wie in der Szene 1,5 m rechts neben der zuletzt geladenen Figur,
  * auf deren Höhe; ohne Figur im Ursprung.
@@ -29,7 +31,6 @@ import { Theatreanmeldung } from '../laden/theatreanmeldung.js';
 export class Figurwahl {
 
     static ABSTAND_M = Figurwahldialog.ABSTAND_M;
-    static UMA_ADRESSE = '/api/character/uma-figur/';
 
     /**
      * @param {Object} teile { scene, figuren, figurenlader, auswahl }
@@ -73,11 +74,10 @@ export class Figurwahl {
         return figur;
     }
 
-    /** Eine UMA-Figur als GLB — still, aber als Figur der Bühne. */
+    /** Eine UMA-Figur über `UmaModell` — still, aber als Figur der Bühne. */
     async uma(name, lage) {
-        const gltf = await new GLTFLoader().loadAsync(
-            Figurwahl.UMA_ADRESSE + encodeURIComponent(name) + '/');
-        const gruppe = gltf.scene;
+        const modell = await new UmaModell(`uma_${Date.now()}`, { datei: name }).bauen();
+        const gruppe = modell.group;
         gruppe.traverse(teil => {
             if (teil.isMesh) {
                 teil.castShadow = true;
@@ -86,7 +86,7 @@ export class Figurwahl {
         });
         const anzeige = String(name).replace(/\.glb$/i, '');
         Object.assign(gruppe.userData, {
-            isCharacter: true, presetName: `UMA · ${anzeige}`, bodyType: 'UMA',
+            isCharacter: true, presetName: modell.presetName, bodyType: modell.bodyType, modell,
             // Kein Rigify-Netz: Der Skinner soll nicht versuchen, es umzuwandeln.
             isSkinnedMesh: true,
         });

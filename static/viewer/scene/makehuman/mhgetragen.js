@@ -1,5 +1,5 @@
 import { markDirty } from '../undo.js';
-import { Mhkleidstueck } from './mhkleidstueck.js';
+import { Mhkleidstueck } from '../../gemeinsam/mhkleidstueck.js';
 import { Mhreglerzeile } from './mhreglerzeile.js';
 
 /**

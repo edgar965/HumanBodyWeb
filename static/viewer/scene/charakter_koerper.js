@@ -5,16 +5,11 @@
  * Aus character.js herausgeloest (Umbau 16.08.2026).
  */
 
-import { state, THREE } from './state.js';
-import { base64ToFloat32, blenderToThreeCoords } from '../gemeinsam/kodierung.js';
+import { state } from './state.js';
 import { Netzpunkte } from '../gemeinsam/netzpunkte.js';
-import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
-import { Augenbrauenbau } from './augenbrauenbau.js';
-import { Lippenbau } from './lippenbau.js';
-import { Koerpernetz } from '../gemeinsam/koerpernetz.js';
-import { Hautfarbe } from '../gemeinsam/hautfarbe.js';
+import { Augenbrauenbau } from '../gemeinsam/augenbrauenbau.js';
+import { HumanbodyModell } from '../gemeinsam/humanbodymodell.js';
 import { _charQueryParams } from './utils.js';
-import { generateModelMesh, generateRigBoneMesh } from './state.js';
 import { Modellbauzustand } from './modellgenerator/zustand.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
@@ -24,33 +19,19 @@ export class Charakterkoerper {
 
     /**
      * Farben und Längen der Details aufs Netz UND die Augenbrauen darauf
-     * setzen (12.09.2026) — eine Stelle für den Bau, die frischen
-     * Morphpunkte (`neue`, vor dem Schreiben ins Attribut) und die Regler.
+     * setzen (12.09.2026) — die Rechnung steht seit 13.09.2026 in
+     * `HumanbodyModell.detailsAnwenden` (frische Morphpunkte `neue` vor dem
+     * Schreiben ins Attribut, Regler, Häutung); hier bleibt der Name, den
+     * die Szene ruft, samt der Hautfarbtabelle der Seite.
      */
     static details(inst, neue = null) {
         if (!inst?.bodyMesh || !inst.details) return 0;
-        // Haut ohne eigene Farbe trägt die der Körperart — auch wieder, wenn
-        // der Nutzer sein Farbfeld zurücknimmt (`Detailfarben`, 12.09.2026).
-        if (!inst.details.haut) Charakterkoerper.hautfarbe(inst, Charakterkoerper.materialien(inst));
-        Koerperdetails.anwenden(inst.bodyMesh, inst.details, neue);
-        return Augenbrauenbau.sicher(inst, neue);
+        if (!inst.hautfarben && Object.keys(state.skinColors).length) inst.hautfarben = state.skinColors;
+        return inst.detailsAnwenden(neue);
     }
 
     static materialien(inst) {
-        const m = inst.bodyMesh?.material;
-        return Array.isArray(m) ? m : [m];
-    }
-
-    /**
-     * Das Körpernetz aus der Antwort von `/api/character/mesh/` — mit der
-     * Lippengruppe (12.09.2026, `Lippenbau`) und der Hautfarbe der Körperart.
-     * Stand in `character.js`; die Datei darf nicht wachsen.
-     */
-    static netz(inst, data) {
-        const netz = Koerpernetz.netz(data, THREE);
-        Lippenbau.abspalten(netz, data.lippen);
-        Charakterkoerper.hautfarbe(inst, Array.isArray(netz.material) ? netz.material : [netz.material]);
-        return netz;
+        return HumanbodyModell.materialien(inst.bodyMesh);
     }
 
     static detailsWeg(inst) {
@@ -110,42 +91,20 @@ export class Charakterkoerper {
         };
     }
 
+    /**
+     * Ein erzeugtes Modell (Rig1–4) — die Basis baut es (`Erzeugtesmodell`);
+     * die Rig-Knochen des Generators werden vorher geladen, damit
+     * `Modellbauzustand` sie für die Bearbeitung hat.
+     */
     static async ausKonfiguration(inst) {
-        const skelType = inst.generatedConfig.skeleton_type || 'def';
-        let result;
-
-        if (skelType === 'rig') {
+        if ((inst.generatedConfig.skeleton_type || 'def') === 'rig') {
             await Modellbauzustand.rigKnochenLaden();
-            if (!Modellbauzustand.rigKnochen) {
-                throw new Error('Rig bones data not loaded');
-            }
-            result = generateRigBoneMesh(Modellbauzustand.rigKnochen, inst.generatedConfig, state.rigifySkeletonData,
-                state.skinWeightData);
-            if (result.skeleton) {
-                inst.rigifySkeleton = result.skeleton;
-                inst.isSkinned = true;
-            }
-        } else {
-            if (!state.rigifySkeletonData || !state.skinWeightData) {
-                throw new Error('Skeleton data not loaded');
-            }
-            result = generateModelMesh(state.rigifySkeletonData, state.skinWeightData, inst.generatedConfig);
-            if (result.skeleton) {
-                inst.rigifySkeleton = result.skeleton;
-                inst.isSkinned = true;
-            }
         }
-
-        if (!result) throw new Error('No visible bones in generated model config');
-
-        inst.bodyMesh = result.mesh;
-        inst.group.add(inst.bodyMesh);
+        await inst._erzeugt(state.rigifySkeletonData, state.skinWeightData);
         return inst;
     }
 
     static hautfarbe(inst, materials) {
-        if (!Object.keys(state.skinColors).length) return;
-        Hautfarbe.ausKoerperart(materials[0], inst.bodyType, state.skinColors,
-                                { zweites: materials[1], mitErsatz: true });
+        return inst.hautfarbe(state.skinColors, materials);
     }
 }

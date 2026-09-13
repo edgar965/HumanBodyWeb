@@ -13,7 +13,7 @@
  *
  * Ohne Three.js: Index und Gruppen als Felder herein, neue heraus — prüfbar
  * in Node (`test_js_lippengruppe.py`). Die Netzseite (Material, `setIndex`)
- * steht in `scene/lippenbau.js`.
+ * steht in `lippenbau.js` (daneben).
  */
 export class Lippengruppe {
 

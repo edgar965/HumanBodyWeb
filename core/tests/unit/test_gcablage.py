@@ -23,11 +23,13 @@ Ein Quelltexttest ist hier scharf genug: Fehlt der Aufruf, ist er nicht da.
 Die Gegenprobe unten sabotiert den Suchbegriff und muss rot werden.
 
 SEIT 12.09.2026 (Befund `doppelcode`) fuehren die vier Arten neben HumanBody
-`toJSON`/`fromJSON` nicht mehr selbst: Sie erben von `scene/figurbasis.js`,
-und dort steht der Weg EINMAL. Gemessen wird deshalb an der Datei, die den
-Weg TRAEGT — die Art selbst, oder ihre Basis, wenn sie `extends Figurbasis`
-sagt. Eine Art, die die Basis verlaesst, faellt damit wieder auf die
-eigene Datei zurueck und muss den Weg selbst fuehren.
+den Weg nicht mehr selbst; seit 13.09.2026 liegt der Bau der Figuren als
+`Modell`-Unterklassen in `gemeinsam/` (`UmaModell`, `MakehumanModell`, …),
+und die Szene-Unterklassen (`UmaFigur` …) rufen fuer `toJSON`/`fromJSON`
+`scene/figurablage.js` — dort steht der Weg EINMAL. Gemessen wird deshalb
+an der Datei, die den Weg TRAEGT: die Art selbst, oder `Figurablage`, wenn
+die Art `Figurablage.grunddaten(this)` schreibt. Eine Art, die die Ablage
+verlaesst, faellt damit wieder auf die eigene Datei zurueck.
 """
 import io
 import re
@@ -46,7 +48,10 @@ ARTEN = {
 }
 
 
-BASIS = 'scene/figurbasis.js'
+BASIS = 'scene/figurablage.js'
+#: Womit eine Szene-Art den gemeinsamen Weg ruft.
+ABLAGE_SCHREIBT = '...Figurablage.grunddaten(this),'
+ABLAGE_LIEST = 'return Figurablage.ausJSON('
 
 
 class GcAblageTest(SimpleTestCase):
@@ -94,7 +99,7 @@ class GcAblageTest(SimpleTestCase):
                 '%s importiert die Ablage nicht' % name)
 
     def test_geladen_wird_nach_dem_aufbau(self):
-        u"""Die Reihenfolge zaehlt: erst `load()`, dann anziehen.
+        u"""Die Reihenfolge zaehlt: erst `bauen()` (frueher `load()`), dann anziehen.
 
         `GarmentcodeAnziehen` sucht das Skelett der Figur und bindet in der
         Lage der Figurgruppe. Ein Stueck, das VOR `load()` kommt, findet
@@ -110,9 +115,9 @@ class GcAblageTest(SimpleTestCase):
             # laden danach weiter (`character.js`). Die Aussage dieses
             # Tests aendert sich dadurch nicht: Angezogen wird immer noch
             # erst, wenn `load` durch ist.
-            aufbau = max((m.end() for m in re.finditer(r'\.load\(', quelle)),
+            aufbau = max((m.end() for m in re.finditer(r'\.(load|bauen)\(', quelle)),
                          default=-1)
-            self.assertGreater(aufbau, 0, '%s ruft kein load()' % name)
+            self.assertGreater(aufbau, 0, '%s ruft kein bauen()' % name)
             self.assertGreater(laden, aufbau,
                                '%s zieht an, bevor die Figur steht' % name)
 
@@ -179,18 +184,19 @@ class GcAblageTest(SimpleTestCase):
                       for p in ARTEN.values())
         self.assertEqual(treffer, len(ARTEN), treffer)
 
-    def test_die_vier_arten_erben_wirklich_von_der_basis(self):
-        u"""`GcAblageTest._traeger` darf nicht ins Leere greifen: Wer `extends Figurbasis`
-        sagt, ruft auch deren `ausJSON` und `grunddaten` — sonst haette
-        die Art ein eigenes `toJSON` ohne die Liste, und die Basis wuerde
-        fuer sie buergen."""
+    def test_die_vier_arten_nutzen_wirklich_die_ablage(self):
+        u"""`GcAblageTest._traeger` darf nicht ins Leere greifen: Wer die
+        Ablage schreibt, laedt auch ueber sie und erbt von einem `Modell`
+        aus `gemeinsam/` — sonst haette die Art ein eigenes `toJSON` ohne
+        die Liste, und die Ablage wuerde fuer sie buergen."""
         for name, pfad in ARTEN.items():
             quelle = GcAblageTest._dateitext(pfad)
-            if ' extends Figurbasis {' not in quelle:
+            if ABLAGE_SCHREIBT not in quelle:
                 self.assertEqual(name, 'HumanBody')
                 continue
-            self.assertIn('...this.grunddaten(),', quelle, name)
-            self.assertIn('return Figurbasis.ausJSON(', quelle, name)
+            self.assertIn(ABLAGE_LIEST, quelle, name)
+            self.assertRegex(quelle, r'extends \w+Modell \{', name)
+            self.assertIn("from '../figurablage.js'", quelle, name)
             self.assertNotIn('transform:', quelle, name)
 
     @staticmethod
@@ -202,6 +208,6 @@ class GcAblageTest(SimpleTestCase):
     def _traeger(pfad):
         u"""Die Quelle, die Speichern und Laden fuer diese Art fuehrt."""
         quelle = GcAblageTest._dateitext(pfad)
-        if ' extends Figurbasis {' in quelle:
+        if ABLAGE_SCHREIBT in quelle:
             return GcAblageTest._dateitext(BASIS)
         return quelle

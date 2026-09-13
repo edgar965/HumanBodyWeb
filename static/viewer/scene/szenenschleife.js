@@ -1,10 +1,10 @@
 import { THREE } from './state.js';
 import { state } from './state.js';
-import { fn } from '../gemeinsam/registrierung.js';
 import { Zeichenschleife } from '../gemeinsam/zeichenschleife.js';
 import { Rigsichtbarkeit } from './rigsichtbarkeit.js';
 import { Weichgewebe } from './weichgewebe.js';
 import { Posenabsatz } from './posenabsatz.js';
+import { Bodenstand } from './bodenstand.js';
 
 /**
  * Szenenschleife — die Renderschleife der Szene-Seite samt Anzeigen.
@@ -43,6 +43,8 @@ export class Szenenschleife extends Zeichenschleife {
         super();
         this.anzeigen = null;
         this._arbeitsvektor = new THREE.Vector3();
+        /** Zeit der Animation beim letzten Bodenfix — für den Zeitregler bei Pause. */
+        this._bodenZeit = null;
     }
 
     /**
@@ -82,8 +84,8 @@ export class Szenenschleife extends Zeichenschleife {
             // dieses Bildes gesetzt hat.
             Posenabsatz.takt();
             this.zeitanzeige();
-            if (state.currentAnimGroundFixed) this.aufDenBoden();
         }
+        this.aufDenBoden();
         // Weichgewebe (11.09.2026): der Zuschlag auf das Skinning — NACH dem
         // Mixer, damit die Knochen dieses Bildes gelesen werden.
         Weichgewebe.takt(dt);
@@ -117,21 +119,18 @@ export class Szenenschleife extends Zeichenschleife {
     }
 
     /**
-     * Bei bodenfixierten Animationen den tiefsten Knochen auf y=0 ziehen —
-     * sonst schwebt oder versinkt die Figur.
+     * Bei bodenfixierten Animationen die animierte Figur mit ihrem tiefsten
+     * Punkt auf y=0 ziehen — sonst schwebt oder versinkt sie (`bodenstand.js`,
+     * `koerpertiefe.js`; Edgar 12./13.09.2026). Läuft bei Wiedergabe in jedem
+     * Bild, bei Pause nur, wenn der Zeitregler die Animation verstellt hat —
+     * der Mixer setzt die Wurzel dann roh, ohne diesen Takt.
      */
     aufDenBoden() {
-        const figur = fn._selectedInst ? fn._selectedInst() : null;
-        const skelett = figur ? figur.rigifySkeleton : state.rigifySkeleton;
-        const wurzel = skelett?.rootBone;
-        if (!wurzel) return;
-        let tiefste = Infinity;
-        wurzel.traverse(knochen => {
-            if (!knochen.isBone) return;
-            knochen.getWorldPosition(this._arbeitsvektor);
-            if (this._arbeitsvektor.y < tiefste) tiefste = this._arbeitsvektor.y;
-        });
-        if (isFinite(tiefste)) wurzel.position.y -= tiefste;
+        if (!state.currentAnimGroundFixed || !state.mixer) return;
+        const zeit = state.currentAction?.time ?? null;
+        if (!state.playing && zeit === this._bodenZeit) return;
+        this._bodenZeit = zeit;
+        Bodenstand.richten(state, this._arbeitsvektor);
     }
 
     kameraanzeige() {

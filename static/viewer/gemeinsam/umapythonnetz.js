@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Netzentsorgung } from '../../gemeinsam/netzentsorgung.js';
+import { Netzentsorgung } from './netzentsorgung.js';
 
 /**
  * Umapythonnetz — das Körpernetz einer UMA-Python-Figur bauen.

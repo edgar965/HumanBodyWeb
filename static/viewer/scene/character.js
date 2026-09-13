@@ -1,10 +1,18 @@
 /**
  * Scene Editor -- CharacterInstance class + character management.
+ *
+ * SEIT 13.09.2026 ERBT DIE FIGUR VON `HumanbodyModell` (`gemeinsam/
+ * humanbodymodell.js`; Edgar: „Alle HTML-Seiten … sollen die Figur NICHT
+ * selber bauen, sondern eine globale Klasse nutzen"): Netz, Lippen,
+ * Hautfarbe und Details kommen aus `koerper()` der Basis; hier bleibt, was
+ * die Szene ausmacht — Zubehör mit Regionen und Proxys (`Charakterzubehoer`,
+ * gehäutet erst bei Bedarf), Speichern und Laden mit GarmentCode-Stücken.
  */
-import { THREE, BODY_MATERIALS, state } from './state.js';
+import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
-import { base64ToFloat32, base64ToUint32, blenderToThreeCoords, _getBodyTop } from './utils.js';
+import { _getBodyTop } from './utils.js';
 import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
+import { HumanbodyModell } from '../gemeinsam/humanbodymodell.js';
 import './skeleton.js';
 import './undo.js';
 import './garments.js';
@@ -19,7 +27,6 @@ import {
     selectCharacter, setTransformMode, updateCharacterListUI,
     updateVertexCount,
 } from './charakterliste.js';
-import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { GarmentcodeAblage } from './garmentcode_ablage.js';
 import { Garderobenstand } from './garderobenstand.js';
 import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
@@ -27,37 +34,21 @@ import { Netzentsorgung } from '../gemeinsam/netzentsorgung.js';
 // =========================================================================
 // CharacterInstance
 // =========================================================================
-export class CharacterInstance {
+export class CharacterInstance extends HumanbodyModell {
     constructor(id, presetData) {
-        this.id = id;
-        this.presetName = presetData.name || presetData.label || 'Unnamed';
-        this.bodyType = presetData.body_type || 'Female_Caucasian';
+        super(id, presetData);
+        // Die Szene hält Morphs und Meta ALS REFERENZ der Vorgabe (Regler
+        // schreiben hinein); die Basis kopiert — hier gilt die Referenz.
         this.morphs = presetData.morphs || {};
         this.meta = presetData.meta || {};
-        this.cloth = presetData.cloth || [];
-        this.hairStyle = presetData.hair_style || null;
-        this.garments = presetData.garments || [];
-        // Iris, Wimpern, Nägel: Farben und Längen (12.09.2026), Feld `details`.
-        this.details = Koerperdetails.aus(presetData);
-        this.group = new THREE.Group();
-        this.group.userData.characterId = id;
-        this.bodyMesh = null;
-        this.clothMeshes = {};
         this.garmentState = {};
         this.garmentOrigPositions = {};
         this.garmentRegionWeights = {};
-        this.hairMesh = null;
         this.initialBodyTop = 0;
-        this.selected = false;
-        this.isSkinned = false;
-        this.rigifySkeleton = null;
-        this.generatedConfig = presetData.type === 'generated_model' ? presetData : null;
-        this.mhProxies = {};
-        this._pendingMHProxies = Array.isArray(presetData.mh_proxy) ? presetData.mh_proxy : [];
     }
 
     /**
-     * Die Figur laden — erst der Körper, dann das Zubehör.
+     * Die Figur bauen — erst der Körper (Basis), dann das Zubehör der Szene.
      *
      * DER KÖRPER WIRD GEMELDET, SOBALD ER STEHT (10.09.2026, Edgar: „Lade
      * asynchron, ich will ganz schnell das Modell sehen"). Vorher gab diese
@@ -69,35 +60,18 @@ export class CharacterInstance {
      *
      * @param beiKoerper wird gerufen, sobald der Körper in der Gruppe hängt
      */
-    async load(beiKoerper = null) {
+    async bauen({ beiKoerper = null } = {}) {
         if (this.generatedConfig) {
             const fertig = await Charakterkoerper.ausKonfiguration(this);
             beiKoerper?.(this);
             return fertig;
         }
 
-        const params = new URLSearchParams();
-        params.set('body_type', this.bodyType);
-        for (const [k, v] of Object.entries(this.morphs)) {
-            if (v !== 0) params.set(`morph_${k}`, v);
-        }
-        for (const [k, v] of Object.entries(this.meta)) {
-            if (v !== 0) params.set(`meta_${k}`, v);
-        }
-
-        const data = await Startmessung.umAsync('    Körpernetz holen',
-            () => Serverabruf.json(`/api/character/mesh/?${params}`));
-        if (data.error) throw new Error(data.error);
-
-        // Puffer, Normalen, Materialgruppen: siehe `Koerpernetz`. Diese dreißig
-        // Zeilen standen fünfmal im Projekt (Befund `doppelcode`, 17.08.2026).
-        Startmessung.um('    Körper aufbauen', () => {
-            // Lippengruppe und Hautfarbe: `Charakterkoerper.netz` (12.09.2026).
-            this.bodyMesh = Charakterkoerper.netz(this, data);
-            this.group.add(this.bodyMesh);
-            Charakterkoerper.details(this);
-            this.initialBodyTop = _getBodyTop(this);
-        });
+        // Netz, Lippengruppe, Hautfarbe, Details, Brauen: `HumanbodyModell.koerper`.
+        // Ungehäutet — die Szene häutet erst mit dem Zubehör (`convertInstToSkinned`).
+        await Startmessung.umAsync('    Körper holen und aufbauen',
+            () => this.koerper(null, null, state.skinColors));
+        this.initialBodyTop = _getBodyTop(this);
 
         // HIER IST DIE FIGUR SICHTBAR. Alles Weitere kommt dazu, während sie
         // schon auf der Bühne steht.
@@ -119,12 +93,10 @@ export class CharacterInstance {
         return this;
     }
 
-
-
-
-
-
-
+    /** Der bisherige Name des Ladens — ruft `bauen`. */
+    async load(beiKoerper = null) {
+        return this.bauen({ beiKoerper });
+    }
 
     dispose() {
         Netzentsorgung.netz(this.bodyMesh);
@@ -137,6 +109,9 @@ export class CharacterInstance {
         }
         Netzentsorgung.baum(this.hairMesh);
         Charakterkoerper.detailsWeg(this);
+        this.bodyMesh = null;
+        this.clothMeshes = {};
+        this.hairMesh = null;
         if (this.group.parent) this.group.parent.remove(this.group);
     }
 
@@ -269,16 +244,6 @@ export class CharacterInstance {
         if (transform.scale) inst.group.scale.fromArray(transform.scale);
     }
 }
-
-
-
-
-
-
-
-
-
-
 
 // Register
 fn.CharacterInstance = CharacterInstance;
