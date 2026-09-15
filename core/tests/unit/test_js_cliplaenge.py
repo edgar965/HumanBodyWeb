@@ -2,7 +2,10 @@
 u"""`Cliplaenge`: die Länge eines Clips in Sekunden oder Prozent setzen.
 
 Edgar (13.09.2026, BVH Studio): „keine Längenvorgaben! mach kontextmenüs wo
-man die Länge der Clips setzen kann (in s oder in %)".
+man die Länge der Clips setzen kann (in s oder in %)". Und am selben Tag:
+„Länge einstellen soll auch beim Modell-Eintrag als Kontextmenü kommen" —
+ein Modellclip hat keine Quelle, Sekunden setzen `totalFrames` (auch länger
+als vorher), Prozent beziehen sich auf die Projektdauer (`bezug`).
 
 1. Bewegungsclip 1004 Bilder bei 60 fps: 5 s → 300 Bilder (trimOut 704);
    50 % → 502; 100 % → trimOut 0. Der Anfang (`trimIn`) bleibt: mit
@@ -69,7 +72,26 @@ const tonPuffer = { type: 'audio', speed: 1, data: { audioDuration: 20, audioBuf
 Cliplaenge.prozent(tonPuffer, 100);
 nah(tonPuffer.data.audioDuration, 40, 'Ton ganz aus dem Puffer');
 
-// --- 5. zahl ---------------------------------------------------------------
+// --- 5. Modellclip: keine Quelle, Sekunden auch laenger, Prozent auf die Projektdauer
+const modell = () => ({ type: 'model', name: 'Female1', totalFrames: 300, fps: 30, speed: 1, trimIn: 0, trimOut: 0 });
+let m = modell();
+s = Cliplaenge.sekunden(m, 20, 900);          // Projekt 30 s = 900 Bilder
+if (m.totalFrames !== 600 || m.trimOut !== 0) fehl('Modell 20 s: ' + JSON.stringify(m));
+nah(s.sekunden, 20, 'Modell 20 s Stand'); nah(s.prozent, 100 * 600 / 900, 'Modell Prozent der Projektdauer');
+nah(s.ganz, 30, 'Modell ganz = Projektdauer');
+s = Cliplaenge.prozent(m, 50, 900);
+if (m.totalFrames !== 450) fehl('Modell 50 %: ' + m.totalFrames);
+s = Cliplaenge.prozent(m, 100, 900);
+if (m.totalFrames !== 900) fehl('Modell 100 %: ' + m.totalFrames);
+s = Cliplaenge.sekunden(m, 0.001, 900);
+if (m.totalFrames !== 1 || s.bilder !== 1) fehl('Modell unter einem Bild: ' + m.totalFrames);
+m = modell(); m.trimIn = 10;
+Cliplaenge.sekunden(m, 5, 900);
+if (m.totalFrames !== 160 || m.trimIn !== 10) fehl('Modell mit trimIn: ' + JSON.stringify(m));
+s = Cliplaenge.stand(modell());
+nah(s.prozent, 100, 'Modell ohne Bezug: 100 %');
+
+// --- 6. zahl ---------------------------------------------------------------
 if (Cliplaenge.zahl('12,5 s') !== 12.5) fehl('zahl 12,5 s: ' + Cliplaenge.zahl('12,5 s'));
 if (Cliplaenge.zahl('75 %') !== 75) fehl('zahl 75 %');
 for (const e of ['', 'abc', '-3', null, undefined, '0']) if (Cliplaenge.zahl(e) !== null) fehl('zahl(' + e + ') nicht null');

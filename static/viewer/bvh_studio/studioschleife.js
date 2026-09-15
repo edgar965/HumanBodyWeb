@@ -1,4 +1,7 @@
-import { state } from './state.js';
+import { state, HEADER_WIDTH } from './state.js';
+import { Zeitleistenfolge } from './zeitleiste_folgen.js';
+import { Bildtakt } from './bildtakt.js';
+import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { renderTimeline } from './zeitleiste_zeichnen.js';
 import { applyPlayhead, updatePlaybackUI, syncLightVisibility,
          abspielende, pausePlayback } from './playback.js';
@@ -11,16 +14,22 @@ import { Figurmarkierung } from './figurmarkierung.js';
  * Studioschleife — die Renderschleife des BVH-Studios.
  *
  * Aus `index.js animate()` herausgeloest (Umbau 16.08.2026). Der Kern bleibt
- * gleich: Beim Abspielen läuft der Abspielkopf mit der Bildrate weiter; am
+ * gleich: Beim Abspielen läuft der Abspielkopf mit der Bildrate weiter
+ * (`Bildtakt` führt den Bruchteil mit — die Rundung je Schritt band das
+ * Tempo an den Monitor, 13.09.2026); am
  * Ende der letzten Animation hält er an oder springt mit „Endlos" auf 0
  * (`Abspielende`, 11.09.2026 — vorher immer auf 0, und erst am Ende der
- * Projektdauer). Ohne Abspielen wird nur die Sichtbarkeit der Lichter
- * nachgezogen.
+ * Projektdauer). Die Zeitleiste blättert mit, sobald der Kopf den sichtbaren
+ * Bereich verlässt (`Zeitleistenfolge`, 13.09.2026). Ohne Abspielen wird
+ * nur die Sichtbarkeit der Lichter nachgezogen.
  */
 export class Studioschleife extends Zeichenschleife {
 
     /** Größter Zeitschritt — nach einem Tabwechsel sonst ein Sprung. */
     static MAX_SCHRITT_S = 0.1;
+
+    /** Bruchteile eines Bildes zwischen zwei Schritten. */
+    takt = new Bildtakt();
 
     schritt() {
         const dt = Math.min(state.clock.getDelta(), Studioschleife.MAX_SCHRITT_S);
@@ -33,12 +42,12 @@ export class Studioschleife extends Zeichenschleife {
     }
 
     abspielen(dt) {
-        const bilder = state.project.fps;
-        state.playheadFrame += Math.round(dt * bilder * state.playbackSpeed);
+        state.playheadFrame += this.takt.bilder(dt, state.project.fps, state.playbackSpeed);
         const naechstes = Abspielende.naechstes(state.playheadFrame, abspielende(), state.endlos);
         state.playheadFrame = naechstes.bild;
         if (naechstes.anhalten) pausePlayback();
         applyPlayhead();
+        Zeitleistenfolge.nachziehen(state, Zeitleistenflaeche.breite - HEADER_WIDTH);
         renderTimeline();
         updatePlaybackUI();
     }

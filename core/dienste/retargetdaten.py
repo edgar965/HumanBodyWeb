@@ -111,10 +111,18 @@ class Retargetdaten:
         """Das Ergebnis — aus der Ablage oder frisch gerechnet."""
         gemerkt = self.gemerkt()
         if gemerkt is not None:
-            return self._gesicht_dazu(gemerkt)
+            return self._mimik_dazu(self._gesicht_dazu(gemerkt))
         ergebnis = self._rechnen()
         self.merken(ergebnis)
-        return self._gesicht_dazu(ergebnis)
+        return self._mimik_dazu(self._gesicht_dazu(ergebnis))
+
+    def _mimik_dazu(self, ergebnis):
+        """Die im Studio eingerechnete Mimik (`<stamm>_mimik.json`, 14.09.2026)
+        auf das DEF-Ergebnis legen — nach der Ablage, wie das Gesicht."""
+        if self.ziel != self.ZIEL_DEF:
+            return ergebnis
+        from .mimikspuren import Mimikspuren
+        return Mimikspuren.mischen(ergebnis, self.bvh_pfad)
 
     #: Die Marke der eigenen SMPL-X-Pipeline neben ihrem BVH (12.09.2026).
     SMPLX_MARKE = '_smplx.npz'

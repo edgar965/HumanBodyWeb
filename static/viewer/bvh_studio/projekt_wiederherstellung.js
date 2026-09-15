@@ -41,8 +41,10 @@ export class Projektwiederherstellung {
 
         const neueNummer = Projektwiederherstellung._indexTabelle(data.tracks || []);
         const wartend = [];
+        const angelegt = [];
         for (const td of eingang) {
             const track = Projektwiederherstellung._spurAnlegen(td, neueNummer);
+            angelegt.push(track);
             for (const cd of (td.clips || [])) {
                 Projektwiederherstellung._klipAnlegen(track, td, cd, wartend);
             }
@@ -50,6 +52,7 @@ export class Projektwiederherstellung {
         await Promise.all(wartend);
 
         Projektwiederherstellung._modellspurenVerlinken();
+        Projektwiederherstellung._mimikZuordnen(eingang, angelegt);
         // Zur Laufzeit steht der Boden schon (Szenen-Element, nicht löschbar):
         // die gespeicherten Werte darauf legen. Beim Seitenstart gibt es ihn
         // noch nicht, dann greift `createFloorTrack` über die Vorgaben.
@@ -103,6 +106,7 @@ export class Projektwiederherstellung {
         track.position = td.position || [0, 0, 0];
         if (track.group) track.group.position.set(track.position[0], 0, track.position[2]);
         if (art === 'camera') track.cameraActive = td.cameraActive ?? true;
+        if (art === 'mimik' && td.lebendigkeit) track.lebendigkeit = td.lebendigkeit;
         if (art === 'light' && track.light && td.lightPosition) {
             Projektwiederherstellung._lichtUebernehmen(track, td);
         }
@@ -174,6 +178,20 @@ export class Projektwiederherstellung {
      * (alte Saves, bei denen die Verknuepfung durch eingefuegte Szenenlichter
      * verrutscht ist).
      */
+    /**
+     * Mimikspuren an ihre Modellspur hängen — über die Stelle im gespeicherten
+     * Feld (`_modellIdx` beim Speichern), nicht über Laufzeit-Indizes: Vor den
+     * Nutzerspuren stehen zur Laufzeit Boden und Szenenlichter (14.09.2026).
+     */
+    static _mimikZuordnen(eingang, angelegt) {
+        eingang.forEach((td, i) => {
+            if (td.type !== 'mimik') return;
+            const modell = angelegt[td._modellIdx ?? -1];
+            angelegt[i]._modellIdx = modell?.type === 'model'
+                ? state.project.tracks.indexOf(modell) : -1;
+        });
+    }
+
     static _modellspurenVerlinken() {
         const erste = state.project.tracks.findIndex(t => t.type === 'bvh');
         if (erste < 0) return;

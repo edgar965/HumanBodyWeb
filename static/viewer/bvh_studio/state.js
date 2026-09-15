@@ -15,6 +15,7 @@ export const TRACK_COLORS = {
     light: '#ffc107',
     audio: '#4caf50',
     model: '#e91e63',
+    mimik: '#ff8a65',
 };
 
 export const TRACK_ICONS = {
@@ -23,6 +24,7 @@ export const TRACK_ICONS = {
     light: 'fa-lightbulb',
     audio: 'fa-music',
     model: 'fa-user',
+    mimik: 'fa-smile',
 };
 
 export const state = {

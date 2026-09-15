@@ -70,6 +70,8 @@ export class Projektdaten {
                 texture: t.floorTexture || 'none',
                 roughness: t.floorRoughness ?? 0.9,
                 metalness: t.floorMetalness ?? 0.05,
+                transparenz: t.floorTransparenz ?? 0,
+                tiefe: t.floorTiefe ?? 10,
                 width: w,
                 length: l,
                 centerX: t.mesh?.position?.x ?? 0,
@@ -93,6 +95,13 @@ export class Projektdaten {
             td.zugeklappt = Boolean(t.zugeklappt);
         }
         if (t.type === 'camera') td.cameraActive = t.cameraActive;
+        if (t.type === 'mimik') {
+            // Stelle der Modellspur im GESPEICHERTEN Feld (ohne Szene-Elemente) —
+            // Laufzeit-Indizes verschieben sich beim Laden um Boden und Szenenlichter.
+            const gespeichert = state.project.tracks.filter(x => !x._sceneLight && !x._sceneItem);
+            td._modellIdx = gespeichert.indexOf(state.project.tracks[t._modellIdx]);
+            td.lebendigkeit = t.lebendigkeit;
+        }
         if (t.type === 'light' && t.light) Projektdaten._licht(td, t);
         if (t.type === 'scene_object' && t.subtype === 'custom' && t.mesh) {
             td.objectTint = t.objectTint || '#ffffff';
@@ -129,7 +138,7 @@ export class Projektdaten {
             smoothSigma: c.smoothSigma, groundFix: c.groundFix,
             blendIn: c.blendIn, blendOut: c.blendOut,
         };
-        if (c.type === 'camera_kf' || c.type === 'light_kf') {
+        if (c.type === 'camera_kf' || c.type === 'light_kf' || c.type === 'mimik_kf') {
             cd.data = c.data;
         } else if (c.type === 'model') {
             cd.data = { preset: c.data.preset, bodyType: c.data.bodyType };

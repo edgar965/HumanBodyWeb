@@ -49,7 +49,8 @@ export class Zeitleistenhilfe {
 
     /** Schlüssel des Hilfetexts für eine Stelle der Leinwand — oder null. */
     static schluesselBei(mx, my) {
-        if (my < RULER_HEIGHT) return mx > HEADER_WIDTH ? 'lineal' : null;
+        // Das Lineal klebt am sichtbaren Rand — Leinwand-y minus `oben` (13.09.2026).
+        if (my - Zeitleistenflaeche.oben < RULER_HEIGHT) return mx > HEADER_WIDTH ? 'lineal' : null;
         const reihe = Reihen.beiY(my);
         if (!reihe) return null;
         if (reihe.header) return 'gruppe';

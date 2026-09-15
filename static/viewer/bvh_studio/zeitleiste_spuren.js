@@ -95,7 +95,8 @@ export class Zeitleistenspuren {
     /** Verbindungslinien ueber den Balken. */
     static linien(track, y, pps) {
         // Draw interpolation lines for camera/light keyframe tracks (über Balken gelegt)
-        if ((track.type === 'camera' || track.type === 'light') && track.clips.length > 1) {
+        if ((track.type === 'camera' || track.type === 'light' || track.type === 'mimik')
+            && track.clips.length > 1) {
             Zeitleistenflaeche.ctx.strokeStyle = track.color;
             Zeitleistenflaeche.ctx.lineWidth = 1.5;
             Zeitleistenflaeche.ctx.globalAlpha = 0.6;
@@ -128,7 +129,7 @@ export class Zeitleistenspuren {
                 - state.timelineScrollX;
             const gewaehlt = (ti === state.selectedTrackIdx
                               && ci === state.selectedClipIdx);
-            if (clip.type === 'camera_kf' || clip.type === 'light_kf') {
+            if (clip.type === 'camera_kf' || clip.type === 'light_kf' || clip.type === 'mimik_kf') {
                 Zeitleistenspuren._marker(clip, track, x, y, gewaehlt);
             } else {
                 Zeitleistenspuren._rechteck(clip, track, x, y, pps, gewaehlt);

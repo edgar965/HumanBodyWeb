@@ -12,6 +12,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Track } from './models.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Bodenuntergrund } from './bodenuntergrund.js';
 
 let _cachedFloorTextures = null;
 const _textureLoader = new THREE.TextureLoader();
@@ -53,6 +54,10 @@ export function createFloorTrack() {
     track.floorColor = color;
     track.floorRoughness = roughness;
     track.floorMetalness = metalness;
+    // Durchsichtiger Boden mit Platte darunter (13.09.2026, `Bodenuntergrund`).
+    track.floorTransparenz = override?.transparenz ?? Bodenuntergrund.TRANSPARENZ;
+    track.floorTiefe = override?.tiefe ?? Bodenuntergrund.TIEFE_CM;
+    Bodenuntergrund.nachziehen(track);
     track.muted = override?.muted || false;
     state.project.addTrack(track);
     // Grid-Sichtbarkeit aus Save wiederherstellen
@@ -97,6 +102,8 @@ export function applyFloorOverride(override) {
     track.floorColor = override.color ?? track.floorColor;
     track.floorRoughness = override.roughness ?? track.floorRoughness;
     track.floorMetalness = override.metalness ?? track.floorMetalness;
+    track.floorTransparenz = override.transparenz ?? Bodenuntergrund.TRANSPARENZ;
+    track.floorTiefe = override.tiefe ?? Bodenuntergrund.TIEFE_CM;
     updateFloorMaterial(track);
     track.muted = override.muted || false;
     if (override.gridVisible !== undefined) {
@@ -123,6 +130,7 @@ export function updateFloorMaterial(track) {
     m.roughness = track.floorRoughness ?? 0.9;
     m.metalness = track.floorMetalness ?? 0.05;
     m.needsUpdate = true;
+    Bodenuntergrund.nachziehen(track);
 }
 
 export async function applyFloorTexture(track, textureUrl) {
@@ -162,6 +170,7 @@ export function setFloorGeometry(track, width, length, centerX, centerZ) {
     track.floorWidth = w;
     track.floorLength = l;
     track.floorSize = Math.max(w, l);
+    Bodenuntergrund.nachziehen(track);        // die Platte teilt die Geometrie
 }
 
 // Legacy-Wrapper (setFloorSize) — quadratisch, Mittelpunkt unverändert

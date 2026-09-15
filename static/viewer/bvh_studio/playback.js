@@ -9,6 +9,7 @@ import { applyAudioTrack } from './spur_ton.js';
 import { applyBvhTrack, applyCameraTrack, applyLightTrack, applyModelTrack,
     applySceneObjectTrack } from './spur_anwenden.js';
 import { Abspielende } from './abspielende.js';
+import { Mimikanwendung } from './mimikanwendung.js';
 import { Endlosschalter } from './endlosschalter.js';
 
 export function setupPlayback() {
@@ -224,6 +225,9 @@ export function applyPlayhead() {
         else if (track.type === 'audio') applyAudioTrack(track, t);
         else if (track.type === 'scene_object') applySceneObjectTrack(track, t);
     }
+    // Die Mimik NACH allen Bewegungsspuren: sie überschreibt die Gesichtsknochen,
+    // die der Mischer der Körperanimation gerade gesetzt hat (14.09.2026).
+    Mimikanwendung.alle(t);
 }
 
 export function updatePlaybackUI() {

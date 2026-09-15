@@ -1,0 +1,47 @@
+/* Mimik-Dialog („Pose setzen") — `viewer/bvh_studio/mimikdialog.js`.
+ *
+ * Nutzt den Modalrahmen aus `figurwahldialog.css` (`.scene-modal-overlay`,
+ * `.scene-modal`, Kopf, Fuß) und legt seinen Körper an: links die zehn
+ * Gruppen, rechts die Kacheln der Posen, unten Stärke, Übergang, Halten. */
+
+.mimik-dialog { width: 760px; max-height: 84vh; }
+.mimik-koerper { display: flex; gap: 0; padding: 0; min-height: 360px; }
+.mimik-gruppen {
+    width: 170px; flex-shrink: 0; border-right: 1px solid var(--border);
+    padding: 8px 0; overflow-y: auto;
+}
+.mimik-gruppe {
+    padding: 7px 14px; cursor: pointer; font-size: 0.82rem; color: var(--text-muted);
+    display: flex; justify-content: space-between; gap: 8px;
+}
+.mimik-gruppe:hover { background: rgba(255, 255, 255, 0.04); color: var(--text); }
+.mimik-gruppe.aktiv { background: rgba(124, 92, 191, 0.25); color: var(--text); }
+.mimik-gruppe .zaehler { color: var(--text-muted); font-size: 0.72rem; }
+.mimik-kacheln {
+    flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 8px; padding: 12px; overflow-y: auto; align-content: start;
+}
+.mimik-kachel {
+    border: 1px solid var(--border); border-radius: 6px; padding: 6px; cursor: pointer;
+    text-align: center; font-size: 0.74rem; color: var(--text); background: var(--bg-card);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.mimik-kachel:hover { border-color: var(--accent); }
+.mimik-kachel.aktiv { border-color: var(--accent); background: rgba(124, 92, 191, 0.25); }
+.mimik-kachel img { width: 88px; height: 88px; object-fit: cover; border-radius: 4px; background: #1a1a2e; }
+.mimik-kachel .ohne-bild[hidden] { display: none; }
+.mimik-kachel .ohne-bild {
+    width: 88px; height: 88px; border-radius: 4px; background: #1a1a2e;
+    display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 1.6rem;
+}
+.mimik-mischen { flex: 1; padding: 12px; overflow-y: auto; }
+.mimik-mischen .prop-row label { width: 150px; }
+.mimik-mischen input[type="range"] { flex: 1; }
+.mimik-mischer-knoepfe { gap: 8px; }
+.mimik-mischer-knoepfe button { flex: 1; }
+.mimik-regler { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 0.8rem; }
+.mimik-regler label { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+.mimik-regler input[type="range"] { width: 120px; }
+.mimik-regler select, .mimik-regler input[type="number"] {
+    background: var(--bg-card); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px;
+}

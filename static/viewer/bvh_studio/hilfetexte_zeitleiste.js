@@ -19,7 +19,8 @@ export const HILFE_ZEITLEISTE = {
         titel: 'Zeitlineal',
         text: 'Klick oder Ziehen setzt den Abspielkopf. <b>Leertaste</b> Play/Pause, '
             + '<b>←</b> / <b>→</b> ein Bild vor oder zurück. <b>Alt+Ziehen</b> oder die '
-            + 'mittlere Maustaste schiebt die Ansicht, der Regler oben zoomt.',
+            + 'mittlere Maustaste schiebt die Ansicht, der Regler oben zoomt. Beim '
+            + 'Abspielen blättert die Leiste mit, sobald der Kopf den Rand erreicht.',
     },
     gruppe: {
         titel: 'Gruppe',
@@ -86,6 +87,19 @@ export const HILFE_ZEITLEISTE = {
         text: 'Klick wählt sie: rechts stehen Position, Rotation, FOV und Interpolation; '
             + '„Aktuelle Ansicht übernehmen" schreibt die jetzige Ansicht hinein. Ziehen '
             + 'verschiebt, <b>Entf</b> löscht.',
+    },
+    mimik: {
+        titel: 'Mimik',
+        text: 'Gesichtsposen für die Figur der Modellspur. <b>Rechtsklick</b> → „Pose setzen…“: '
+            + 'der Dialog mit zehn Gruppen (Freude, Trauer, Ärger, … Phoneme, Eigene); zwischen zwei '
+            + 'Posen wird weich überblendet, die letzte bleibt. „Lebendigkeit…“ (Blinzeln, Blick, '
+            + 'Atmen, Variation, Zucken, Schlucken) rechts unter Eigenschaften. „Mimik einrechnen“ '
+            + 'legt sie zur BVH, dann hat jede Seite sie.',
+    },
+    clip_mimik_kf: {
+        titel: 'Mimik-Schlüsselbild',
+        text: 'Klick wählt es: rechts Pose, Bild, Stärke, Übergang und Haltezeit. Ziehen '
+            + 'verschiebt, <b>Rechtsklick</b> → Pose ändern oder löschen.',
     },
     clip_light_kf: {
         titel: 'Licht-Keyframe',

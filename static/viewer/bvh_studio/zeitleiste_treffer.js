@@ -40,7 +40,8 @@ export class Zeitleistentreffer {
                 const clip = spur.clips[ci];
                 const cx = HEADER_WIDTH
                     + (clip.startFrame / state.project.fps) * pps - state.timelineScrollX;
-                const treffer = (clip.type === 'camera_kf' || clip.type === 'light_kf')
+                const treffer = (clip.type === 'camera_kf' || clip.type === 'light_kf'
+                                 || clip.type === 'mimik_kf')
                     ? Zeitleistentreffer._schluesselbild(clip, mx, my, cx, y)
                     : Zeitleistentreffer._clip(clip, mx, my, cx, y, pps);
                 if (treffer) return { trackIdx: ti, clipIdx: ci, ...treffer };

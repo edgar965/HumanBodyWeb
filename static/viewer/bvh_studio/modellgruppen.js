@@ -42,6 +42,8 @@ export class Modellgruppen {
             const spur = spuren[i];
             if (Modellgruppen.GRUPPIERT.includes(spur.type)) continue;
             if (spur.type === 'bvh' && Modellgruppen.traeger(spuren, i) >= 0) continue;
+            // Mimikspuren stehen unter ihrer Modellspur (14.09.2026), nicht oben.
+            if (spur.type === 'mimik' && spuren[spur._modellIdx]?.type === 'model') continue;
             const reihe = { trackIdx: i };
             const unter = spur.type === 'model' ? Modellgruppen._unterreihe(spuren, i) : -1;
             if (unter >= 0) {
@@ -50,6 +52,11 @@ export class Modellgruppen {
             }
             reihen.push(reihe);
             if (unter >= 0 && !reihe.collapsed) reihen.push({ trackIdx: unter, indent: true });
+            if (spur.type === 'model' && !reihe.collapsed) {
+                spuren.forEach((s, j) => {
+                    if (s.type === 'mimik' && s._modellIdx === i) reihen.push({ trackIdx: j, indent: true });
+                });
+            }
         }
         return reihen;
     }

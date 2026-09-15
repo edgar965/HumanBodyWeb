@@ -181,15 +181,30 @@ export async function fetchRetarget(source, rigifySkel, opts = {}) {
                              headers: { 'Content-Type': 'application/json' },
                              body: JSON.stringify(rumpf) })
         : await fetch(url);
-    if (!resp.ok) {
-        const meldung = await resp.json().catch(() => null);
-        throw new Error(meldung?.error
-            || `Retarget API error: ${resp.status} ${resp.statusText}`);
-    }
+    if (!resp.ok) throw await retargetFehler(resp);
     const data = await resp.json();
     Protokoll.debug('RETARGET',
         `${data.mapped_bones?.length || 0} bones, ${data.frame_count} frames, ${data.duration?.toFixed(2)}s`);
     return buildClipFromRetargetData(data, rigifySkel);
+}
+
+/**
+ * Fehler aus einer Retarget-Antwort: Text der Antwort (JSON `error` oder der
+ * kurze Klartext eines 404 wie `BVH not found: Results/nussie1`), dazu
+ * `status`, damit ein Aufrufer „gibt es nicht mehr" (404) von einem
+ * Serverfehler unterscheiden kann (Theatre, 15.09.2026).
+ */
+async function retargetFehler(resp) {
+    const text = await resp.text().catch(() => '');
+    let meldung = null;
+    try { meldung = JSON.parse(text)?.error; } catch (_) {
+        // Kein JSON: den Klartext nehmen, aber keine HTML-Fehlerseite.
+        if (text && text.length < 200 && !text.includes('<')) meldung = text;
+    }
+    const fehler = new Error(meldung
+        || `Retarget API error: ${resp.status} ${resp.statusText}`);
+    fehler.status = resp.status;
+    return fehler;
 }
 
 // Legacy wrappers (for existing callers — will be removed)

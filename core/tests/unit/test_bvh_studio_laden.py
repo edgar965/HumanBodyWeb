@@ -87,19 +87,27 @@ class LadenTest(SimpleTestCase):
 
 class LinealTest(SimpleTestCase):
     u"""Das Lineal bleibt beim Blättern sichtbar (Edgar, 11.09.2026: „diese
-    Spaltenüberschrift soll immer sichtbar bleiben, auch beim blättern")."""
+    Spaltenüberschrift soll immer sichtbar bleiben, auch beim blättern"; und
+    13.09.2026: „die Überschrift mit der Zeit und dem Playhead immer sichtbar,
+    auch beim Scrollen" — seither eine eigene klebende Leinwand statt des
+    Versatzes um `scrollTop`, siehe `test_js_fortschritt`)."""
 
     databases = set()
 
-    def test_lineal_haengt_am_sichtbaren_rand_und_liegt_ueber_den_reihen(self):
+    def test_lineal_und_griff_liegen_auf_der_klebenden_leinwand(self):
         zeichnen = _studio('zeitleiste_zeichnen.js')
         reihen = zeichnen.index('_reihen(breite, pps);')
-        lineal = zeichnen.index('Zeitleistenlineal.zeichnen(breite, pps, oben)')
-        self.assertLess(reihen, lineal, 'das Lineal muss NACH den Reihen gezeichnet werden')
-        self.assertIn('Abspielkopf.zeichnen(hoehe, pps, oben)', zeichnen)
+        lineal = zeichnen.index('Zeitleistenlineal.zeichnen(breite, pps)')
+        self.assertLess(reihen, lineal)
+        self.assertIn('Abspielkopf.zeichnen(hoehe, pps)', zeichnen)
+        self.assertNotIn('oben', zeichnen.split('export function renderTimeline')[1]
+                         .split('function _reihen')[0])
         self.assertIn('static get oben()', _studio('zeitleiste_flaeche.js'))
-        self.assertIn('ctx.translate(0, oben)', _studio('zeitleiste_lineal.js'))
-        self.assertIn("addEventListener('scroll', () => renderTimeline())", _studio('timeline.js'))
+        self.assertIn('Zeitleistenflaeche.linealCtx', _studio('zeitleiste_lineal.js'))
+        self.assertNotIn('ctx.translate(0, oben)', _studio('zeitleiste_lineal.js'))
+        # Senkrechtes Blättern zeichnet nicht mehr neu — der Browser hält die Leinwand.
+        self.assertNotIn("addEventListener('scroll', () => renderTimeline())",
+                         _studio('timeline.js'))
 
     def test_treffer_im_lineal_rechnen_mit_dem_geblaetterten_anteil(self):
         ziehen = _studio('zeitleiste_ziehen.js')

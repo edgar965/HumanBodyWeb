@@ -8,6 +8,7 @@
 import { fn } from '../../gemeinsam/registrierung.js';
 import { Maskenbausteine as M } from './bausteine.js';
 import { Schluesselbildeigenschaften } from './klip_schluesselbilder.js';
+import { Mimikeigenschaften } from './mimik.js';
 
 /** Vorgabelaenge, wenn ein Dauerfeld leer gelassen wird. */
 const VORGABE_BILDER = 300;
@@ -17,6 +18,7 @@ export class Klipeigenschaften {
         if (clip.type === 'camera_kf' || clip.type === 'light_kf') {
             return Schluesselbildeigenschaften.maske(clip);
         }
+        if (clip.type === 'mimik_kf') return Mimikeigenschaften.schluesselMaske(clip);
         if (clip.type === 'audio') return Klipeigenschaften._ton(clip);
         if (clip.type === 'object_clip') return Klipeigenschaften._objekt(clip);
         if (clip.type === 'model') return Klipeigenschaften._modell(clip);
@@ -27,6 +29,8 @@ export class Klipeigenschaften {
         const art = clip.type || 'bvh';
         if (art === 'camera_kf' || art === 'light_kf') {
             Schluesselbildeigenschaften.binden(track, clip);
+        } else if (art === 'mimik_kf') {
+            Mimikeigenschaften.schluesselBinden(track, clip);
         } else if (art === 'audio') {
             Klipeigenschaften._tonBinden(clip);
         } else if (art === 'object_clip') {

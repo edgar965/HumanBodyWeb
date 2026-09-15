@@ -22,8 +22,10 @@ const { HILFE_ZEITLEISTE } = await import(MODUL);
 console.log(JSON.stringify(HILFE_ZEITLEISTE));
 """
 
-SPURARTEN = ('bvh', 'model', 'camera', 'light', 'audio', 'scene_object', 'floor')
-CLIPARTEN = ('bvh', 'model', 'camera_kf', 'light_kf', 'audio', 'object_clip')
+SPURARTEN = ('bvh', 'model', 'camera', 'light', 'audio', 'scene_object', 'floor',
+             'mimik')
+CLIPARTEN = ('bvh', 'model', 'camera_kf', 'light_kf', 'audio', 'object_clip',
+             'mimik_kf')
 
 #: Was ein Text nennt → wo es im Studio steht: (Wort im Text, Datei, Suchtext).
 BELEGE = {
@@ -47,6 +49,11 @@ BELEGE = {
                  ('Trim', 'zeitleiste_ziehen.js', "'trim-left'")],
     'clip_camera_kf': [('„Aktuelle Ansicht übernehmen"', 'eigenschaften/klip_schluesselbilder.js',
                         'Aktuelle Ansicht übernehmen')],
+    'mimik': [('„Pose setzen…“', '../../../templates/bvh_studio.html', 'Pose setzen…'),
+              ('„Lebendigkeit…“', '../../../templates/bvh_studio.html', 'Lebendigkeit…'),
+              ('„Mimik einrechnen“', '../../../templates/bvh_studio.html',
+               'Mimik einrechnen (zur BVH)'),
+              ('zehn Gruppen', 'mimikdialog.js', 'mimik-gruppe')],
     'lineal': [('<b>Leertaste</b>', 'playback.js', "e.code === 'Space'"),
                ('<b>Alt+Ziehen</b>', 'zeitleiste_ziehen.js', "e.button === 0 && e.altKey")],
 }

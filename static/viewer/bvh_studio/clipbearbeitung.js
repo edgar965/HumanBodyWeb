@@ -213,23 +213,43 @@ export class Clipbearbeitung {
      */
     static laenge(art, wert = null) {
         const wahl = Clipbearbeitung.auswahl();
-        if (!wahl || !['bvh', 'audio'].includes(wahl.clip.type)) return;
+        if (!wahl || !['bvh', 'audio', 'model'].includes(wahl.clip.type)) return;
         const clip = wahl.clip;
-        const vorher = Cliplaenge.stand(clip);
+        const bezug = clip.type === 'model' ? Clipbearbeitung._modellbezug(clip) : null;
+        const vorher = Cliplaenge.stand(clip, bezug);
         if (wert == null) {
+            const ganzes = clip.type === 'model' ? 'des Projektendes (ohne diesen Clip)' : 'der ganzen Animation';
             const frage = art === 'prozent'
-                ? `Länge in Prozent der ganzen Animation (jetzt ${vorher.prozent.toFixed(0)} %):`
+                ? `Länge in Prozent ${ganzes} (jetzt ${vorher.prozent.toFixed(0)} %):`
                 : `Länge in Sekunden (jetzt ${vorher.sekunden.toFixed(1)} s, ganz ${vorher.ganz.toFixed(1)} s):`;
             const vorgabe = art === 'prozent' ? vorher.prozent.toFixed(0) : vorher.sekunden.toFixed(1);
             wert = Cliplaenge.zahl(prompt(frage, vorgabe));
             if (wert == null) return;
         }
         pushUndo('Clip-Länge');
-        const stand = art === 'prozent' ? Cliplaenge.prozent(clip, wert) : Cliplaenge.sekunden(clip, wert);
+        const stand = art === 'prozent' ? Cliplaenge.prozent(clip, wert, bezug)
+                                        : Cliplaenge.sekunden(clip, wert, bezug);
         Clipbearbeitung._nachtragen();
         Studioanzeige.melden(`${clip.name}: ${stand.sekunden.toFixed(1)} s (${stand.prozent.toFixed(0)} %)`);
         Protokoll.debug('BVH Studio', `Länge ${art} ${wert}: ${stand.sekunden.toFixed(2)} s, `
                         + `trimOut=${clip.trimOut}`);
+    }
+
+    /**
+     * Woran sich die Prozent eines Modellclips messen: am Ende der ANDEREN
+     * Clips. Die Projektdauer selbst taugt nicht — sie ist das Ende des
+     * längsten Clips, oft dieses Modellclips: 50 % hätten die Dauer halbiert,
+     * und 100 % danach wären die halbe geblieben (gemessen 13.09.2026: 5520 →
+     * 2760 → 2760). Ohne andere Clips zählt seine bisherige Länge.
+     */
+    static _modellbezug(clip) {
+        let ende = 0;
+        for (const spur of state.project.tracks) {
+            for (const anderer of spur.clips) {
+                if (anderer !== clip && anderer.endFrame > ende) ende = anderer.endFrame;
+            }
+        }
+        return ende > 0 ? ende : clip.totalFrames;
     }
 
     /** Dauer, Zeitleiste, Eigenschaften — siehe `Studioanzeige`. */

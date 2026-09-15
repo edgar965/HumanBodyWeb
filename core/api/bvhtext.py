@@ -185,6 +185,16 @@ class Bvhtext:
         sigma = (daten.get('sigma', Bvhtext.VORGABE_SIGMA) if nur_glaetten
                  else daten.get('sigma'))
         radius = None if nur_glaetten else daten.get('fixed_radius')
+        if not nur_glaetten and 'mimik' in daten:
+            # Die Mimik des Studios (14.09.2026) ist ein Effekt NEBEN der BVH:
+            # `<stamm>_mimik.json`, gelesen beim Retarget (`Mimikspuren`). Die
+            # BVH selbst bleibt unangetastet — eine Quell-BVH hat kein Gesicht.
+            from core.dienste.mimikspuren import Mimikspuren
+            nebendatei = Mimikspuren.schreiben(pfad, daten['mimik'])
+            bilder = len((daten['mimik'] or {}).get('bilder') or [])
+            logger.info('Mimik zur BVH %s/%s: %d Bilder', kategorie, name, bilder)
+            return JsonResponse({'ok': True, 'frames': bilder, 'applied': ['mimik'],
+                                 'datei': os.path.basename(nebendatei)})
         try:
             bvh = BvhDatei(pfad)
             if sigma:

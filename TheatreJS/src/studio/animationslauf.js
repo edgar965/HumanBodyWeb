@@ -91,12 +91,38 @@ export class Animationslauf {
             this.spur.anlegen(this.name, dauer, zeit => this.abspieler.zeitSetzen(zeit));
             this._weiterlaufen(liefVorher);
             Protokoll.debug('animationslauf', 'Animation geladen:', kategorie, name, dauer);
+            document.getElementById('anim-fehlt')?.remove();
             return dauer;
         } catch (fehler) {
+            if (fehler.status === 404) {
+                // Die Datei gibt es nicht mehr (verschoben, gelöscht) — meist die
+                // gemerkte Animation aus den Einstellungen beim Öffnen der Seite.
+                // Kein blockierender `alert` beim Seitenstart; der Hinweis steht
+                // in der Animationsliste (Edgar, 13.09.2026: keine Suche in
+                // anderen Ordnern, was es nicht gibt, fliegt raus).
+                Animationslauf.fehltMelden(`${kategorie}/${name}`);
+                return 0;
+            }
             console.error('Animation nicht ladbar:', fehler);
             alert('Animation laden fehlgeschlagen: ' + fehler.message);
             return 0;
         }
+    }
+
+    /** Hinweiszeile über der BVH-Bibliothek: welche Animation es nicht mehr gibt. */
+    static fehltMelden(angabe) {
+        const text = `${angabe} gibt es nicht mehr — bitte eine andere Animation wählen`;
+        Protokoll.warnung('animationslauf', text);
+        const liste = document.getElementById('anim-tree');
+        if (!liste) return;
+        let zeile = document.getElementById('anim-fehlt');
+        if (!zeile) {
+            zeile = document.createElement('div');
+            zeile.id = 'anim-fehlt';
+            zeile.className = 'hb-hinweis fehlertext';
+            liste.parentNode.insertBefore(zeile, liste);
+        }
+        zeile.textContent = text;
     }
 
     // ------------------------------------------------------------------ intern

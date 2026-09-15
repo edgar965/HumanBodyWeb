@@ -102,7 +102,7 @@ export class Timeline {
 export class Track {
     constructor(name, preset = 'FemaleGarment', bodyType = 'Female_Caucasian') {
         this.name = name;
-        this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio' | 'model'
+        this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio' | 'model' | 'mimik'
         this.preset = preset;
         this.bodyType = bodyType;
         this.clips = [];
@@ -135,7 +135,7 @@ export class Track {
 // =========================================================================
 export class Clip {
     constructor(category, name, totalFrames, fps) {
-        this.type = 'bvh';      // 'bvh' | 'camera_kf' | 'light_kf' | 'audio' | 'model'
+        this.type = 'bvh';      // 'bvh' | 'camera_kf' | 'light_kf' | 'audio' | 'model' | 'mimik_kf'
         this.category = category;
         this.name = name;
         this.totalFrames = totalFrames;

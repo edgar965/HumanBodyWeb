@@ -8,12 +8,16 @@ import { fn } from '../../gemeinsam/registrierung.js';
 import { Maskenbausteine as M } from './bausteine.js';
 import { Schaltknopf } from '../schaltknopf.js';
 import { Auswahlfeld } from '../../gemeinsam/auswahlfeld.js';
+import { Bodenuntergrund } from '../bodenuntergrund.js';
 
 /** Kleinste zulaessige Kantenlaenge in Metern. */
 const MINDESTMASS = 0.2;
 
 /** Grenzen fuer Rauheit und Metallanteil — beides ein Anteil von 0 bis 1. */
 const ANTEIL = 'min="0" max="1" step="0.05"';
+
+/** Bis zu so vielen Zentimetern unter dem Boden bleibt die Figur sichtbar. */
+const TIEFE_MAX_CM = 50;
 
 export class Bodeneigenschaften {
     static maske(track) {
@@ -37,6 +41,11 @@ export class Bodeneigenschaften {
                 (track.floorRoughness ?? 0.9).toFixed(2), ANTEIL))}
             ${M.zeile('Metall', M.zahl('prop-floor-metalness',
                 (track.floorMetalness ?? 0.05).toFixed(2), ANTEIL))}
+            <h3 class="gruppentitel">Durchsicht (versunkene Füße bleiben sichtbar)</h3>
+            ${Bodeneigenschaften._regler('prop-floor-transparenz', 'Transparenz',
+                track.floorTransparenz ?? Bodenuntergrund.TRANSPARENZ, 100, '%')}
+            ${Bodeneigenschaften._regler('prop-floor-tiefe', 'Sichtbar bis',
+                track.floorTiefe ?? Bodenuntergrund.TIEFE_CM, TIEFE_MAX_CM, 'cm')}
             <h3 class="gruppentitel">Abmessungen (Mittelpunkt-bezogen)</h3>
             <div class="prop-row"><label>Breite X:</label><input type="number" value="${w.toFixed(2)}"
                 id="prop-floor-width" min="0.2" max="200" step="0.1"> m</div>
@@ -67,6 +76,16 @@ export class Bodeneigenschaften {
         });
         M.an('prop-floor-roughness', 'change', material('floorRoughness', 0.9));
         M.an('prop-floor-metalness', 'change', material('floorMetalness', 0.05));
+        // Die Regler wirken beim Ziehen, die Zahl daneben läuft mit.
+        for (const [id, feld] of [['prop-floor-transparenz', 'floorTransparenz'],
+                                  ['prop-floor-tiefe', 'floorTiefe']]) {
+            M.an(id, 'input', (e) => {
+                track[feld] = parseFloat(e.target.value) || 0;
+                const anzeige = document.getElementById(`${id}-wert`);
+                if (anzeige) anzeige.textContent = e.target.value;
+                fn.updateFloorMaterial?.(track);
+            });
+        }
 
         // Breite/Laenge wachsen zentriert um den aktuellen Mittelpunkt.
         M.an('prop-floor-width', 'change', (e) => {
@@ -92,6 +111,13 @@ export class Bodeneigenschaften {
             fn.updateProperties();
         });
         Bodeneigenschaften._texturlisteFuellen(track);
+    }
+
+    /** Schieberegler mit Wertanzeige, ganze Schritte von 0 bis `max`. */
+    static _regler(id, beschriftung, wert, max, einheit) {
+        return `<div class="prop-row"><label>${beschriftung}:</label><input type="range"
+            id="${id}" min="0" max="${max}" step="1" value="${wert}" class="dehnen">
+            <span id="${id}-wert" class="reglerwert">${wert}</span> ${einheit}</div>`;
     }
 
     /**

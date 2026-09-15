@@ -18,6 +18,7 @@ import { Zeitleistenspuren } from './zeitleiste_spuren.js';
 import { Zeitleistenlineal } from './zeitleiste_lineal.js';
 import { Gruppenzeile } from './zeitleiste_gruppenzeile.js';
 import { Abspielkopf } from './zeitleiste_abspielkopf.js';
+import { Fortschrittsbalken } from './zeitleiste_fortschritt.js';
 
 
 export function renderTimeline() {
@@ -38,12 +39,12 @@ export function renderTimeline() {
 
     Zeitleistenflaeche.ctx.clearRect(0, 0, breite, hoehe);
     _reihen(breite, pps);
-    // Das Lineal NACH den Reihen und am sichtbaren Rand: Es bleibt beim
-    // Blättern stehen, die Reihen laufen darunter durch (11.09.2026).
-    const oben = Zeitleistenflaeche.oben;
-    Zeitleistenlineal.zeichnen(breite, pps, oben);
-    Abspielkopf.zeichnen(hoehe, pps, oben);
+    // Lineal und Griff liegen auf der klebenden Leinwand, die Kopflinie auf
+    // den Spuren; der Fortschrittsbalken unter dem Rahmen (13.09.2026).
+    Zeitleistenlineal.zeichnen(breite, pps);
+    Abspielkopf.zeichnen(hoehe, pps);
     Abspielkopf.bildanzeige();
+    Fortschrittsbalken.zeichnen();
 }
 
 /** Spuren und Klips — nach Anzeigereihen, damit Gruppenzeilen mitkommen. */

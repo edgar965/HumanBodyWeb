@@ -11,11 +11,16 @@
 export class Zeitleistenflaeche {
     static canvas = null;
     static ctx = null;
+    /** Die klebende Lineal-Leinwand über den Spuren (13.09.2026). */
+    static lineal = null;
+    static linealCtx = null;
 
     /** Beim Aufbau der Zeitleiste einmal setzen. */
-    static setzen(canvas) {
+    static setzen(canvas, lineal = null) {
         this.canvas = canvas;
         this.ctx = canvas ? canvas.getContext('2d') : null;
+        this.lineal = lineal;
+        this.linealCtx = lineal ? lineal.getContext('2d') : null;
         return this.ctx;
     }
 
@@ -29,9 +34,9 @@ export class Zeitleistenflaeche {
     }
 
     /**
-     * Wie weit der Rahmen nach unten geblättert ist — dort hängt das Lineal
-     * (Edgar, 11.09.2026: „diese Spaltenüberschrift soll immer sichtbar
-     * bleiben, auch beim blättern"). Leinwand-y = sichtbares y + `oben`.
+     * Wie weit der Rahmen nach unten geblättert ist. Leinwand-y = sichtbares
+     * y + `oben`; darunter (die ersten RULER_HEIGHT sichtbaren Pixel) liegt
+     * die klebende Lineal-Leinwand, dort wird gescrubbt statt geklickt.
      */
     static get oben() {
         return this.rahmen ? this.rahmen.scrollTop : 0;

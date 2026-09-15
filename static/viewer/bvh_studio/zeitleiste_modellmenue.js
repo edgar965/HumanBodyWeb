@@ -35,6 +35,9 @@ export class Modellmenue {
         Modellmenue._vorlagenListe(spurNr);
         Modellmenue._aktuelleHervorheben(
             menue, treffer ? spur.clips[treffer.clipIdx]?.data?.preset : null);
+        // „Länge“ gilt dem getroffenen Clip (Edgar, 13.09.2026: „Länge einstellen
+        // soll auch beim Modell-Eintrag als Kontextmenü kommen“).
+        menue.querySelector('#model-ctx-laenge')?.classList.toggle('hb-versteckt', !treffer);
         Modellmenue._befehleBinden(menue);
         anzeigen(menue, e);
     }
@@ -50,6 +53,7 @@ export class Modellmenue {
     static _befehleBinden(menue) {
         menue.querySelectorAll('.ctx-item[data-action]').forEach(eintrag => {
             eintrag.onclick = () => {
+                if (eintrag.dataset.action === 'ctx-laenge') return;   // öffnet nur das Untermenü
                 menue.style.display = 'none';
                 const aktion = eintrag.dataset.action;
                 if (aktion === 'ctx-playhead') {
@@ -58,6 +62,12 @@ export class Modellmenue {
                     fn.splitClipAtPlayhead();
                 } else if (aktion === 'ctx-delete') {
                     fn.deleteSelectedClip();
+                } else if (aktion === 'ctx-laenge-prozent') {
+                    fn.clipLaenge('prozent', Number(eintrag.dataset.wert) || null);
+                } else if (aktion === 'ctx-laenge-sekunden') {
+                    fn.clipLaenge('sekunden');
+                } else if (aktion === 'ctx-mimik-track') {
+                    fn.addMimikTrack(state.selectedTrackIdx);
                 }
             };
         });

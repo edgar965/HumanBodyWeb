@@ -7,6 +7,7 @@
 {% comment %}Figurwahl-Dialog („Modell hinzufügen"), geteilt mit Szene und Theatre (11.09.2026){% endcomment %}
 <link rel="stylesheet" href="{% fassungspfad 'css/figurwahldialog.css' %}">
 <link rel="stylesheet" href="{% fassungspfad 'css/zeitleiste_hilfe.css' %}">
+<link rel="stylesheet" href="{% fassungspfad 'css/mimikdialog.css' %}">
 <style>
     .main-content {
         padding: 0 !important;
@@ -130,6 +131,17 @@
        und bleiben beim Scrollen deshalb richtig. */
     .timeline-canvas-wrap { flex: 1; position: relative; overflow-y: auto; overflow-x: hidden; }
     #timeline-canvas { display: block; cursor: default; }
+    /* Das Lineal ist eine eigene Leinwand, die am oberen Rand des Rahmens
+       KLEBT (Edgar, 13.09.2026: „die Überschrift mit der Zeit und dem Playhead
+       immer sichtbar, auch beim Scrollen“). Vorher wurde es auf die Spuren-
+       leinwand um `scrollTop` versetzt gezeichnet — beim Blättern hing es
+       einen Bildaufbau hinterher. Höhe und negativer Rand kommen aus
+       RULER_HEIGHT (timeline.js); Mausereignisse gehen durch zur Spurenleinwand,
+       deren Lineal-Streifen darunter liegt (Scrubben, Schwebehilfe). */
+    #timeline-lineal { display: block; position: sticky; top: 0; z-index: 3; pointer-events: none; }
+    /* Fortschrittsbalken unter allen Spuren, außerhalb des Rahmens: immer sichtbar. */
+    .timeline-fortschritt-wrap { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--bg-card); }
+    #timeline-fortschritt { display: block; cursor: pointer; }
 
     /* Abspielleiste — unten in der Seitenleiste (280 px): Knöpfe in der ersten
        Zeile, Zeit und Tempo in der zweiten (`.playback-zeile` bricht um). */
@@ -663,8 +675,12 @@
                 <span id="tl-frame-info">Frame 0 / 0</span>
             </div>
             <div class="timeline-canvas-wrap">
+                <canvas id="timeline-lineal"></canvas>
                 <div class="track-headers" id="track-headers"></div>
                 <canvas id="timeline-canvas"></canvas>
+            </div>
+            <div class="timeline-fortschritt-wrap">
+                <canvas id="timeline-fortschritt"></canvas>
             </div>
         </div>
 
@@ -970,8 +986,37 @@
         <!-- Populated dynamically -->
     </div>
     <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-mimik-track"><i class="fas fa-smile hb-symbolspalte"></i> Mimikspur hinzufügen</div>
+    <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut hb-symbolspalte"></i> Split an Playhead</div>
+    <div class="ctx-item has-submenu" id="model-ctx-laenge" data-action="ctx-laenge">
+        <i class="fas fa-ruler-horizontal hb-symbolspalte"></i> Länge
+        <i class="fas fa-caret-right hb-kuerzel"></i>
+        <div id="model-ctx-laenge-submenu" class="ctx-submenu">
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="25">25 %</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="50">50 %</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="75">75 %</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="100">100 % (Projektende)</div>
+            <div class="hb-trennlinie"></div>
+            <div class="ctx-item" data-action="ctx-laenge-sekunden"><i
+                 class="fas fa-clock hb-symbolspalte"></i> Sekunden eingeben…</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent"><i
+                 class="fas fa-percent hb-symbolspalte"></i> Prozent eingeben…</div>
+        </div>
+    </div>
     <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
+</div>
+
+<!-- Mimik Context Menu (Gesichtsspur, 14.09.2026) -->
+<div id="mimik-context-menu" class="hb-kontextmenue">
+    <div class="ctx-item" data-action="ctx-mimik-pose"><i class="fas fa-smile hb-symbolspalte"></i> Pose setzen…</div>
+    <div class="ctx-item" data-action="ctx-mimik-neutral"><i class="fas fa-meh hb-symbolspalte"></i> Neutral setzen</div>
+    <div class="ctx-item" data-action="ctx-mimik-loeschen"><i class="fas fa-trash hb-symbolspalte"></i> Schlüsselbild löschen</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt hb-symbolspalte"></i> Playhead hierher</div>
+    <div class="ctx-item" data-action="ctx-mimik-lebendigkeit"><i class="fas fa-heartbeat hb-symbolspalte"></i> Lebendigkeit…</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-mimik-einrechnen"><i class="fas fa-file-export hb-symbolspalte"></i> Mimik einrechnen (zur BVH)</div>
 </div>
 
 <!-- Viewport Context Menu (right-click in 3D scene when Light track selected) -->

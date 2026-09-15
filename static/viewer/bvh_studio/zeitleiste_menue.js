@@ -14,6 +14,7 @@ import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { Zeitleistentreffer } from './zeitleiste_treffer.js';
 import { Zeitleistenziehen } from './zeitleiste_ziehen.js';
 import { Modellmenue } from './zeitleiste_modellmenue.js';
+import { Mimikmenue } from './zeitleiste_mimikmenue.js';
 import { Untermenuelage } from './untermenuelage.js';
 
 /** Abstand, den ein Menue zum unteren Fensterrand haelt. */
@@ -53,7 +54,7 @@ export class Zeitleistenmenue {
         document.addEventListener('click', Zeitleistenmenue.schliessen);
         // Untermenüs („Hinzufügen", „Länge") bleiben im Fenster.
         for (const menue of [Zeitleistenmenue.clipmenue, Zeitleistenmenue.spurmenue,
-                             Modellmenue.menue]) {
+                             Modellmenue.menue, Mimikmenue.menue]) {
             Untermenuelage.alleAnbinden(menue);
         }
         Zeitleistenmenue.clipmenue?.querySelectorAll('.ctx-item').forEach(eintrag => {
@@ -69,7 +70,7 @@ export class Zeitleistenmenue {
     }
 
     static schliessen() {
-        for (const m of [Zeitleistenmenue.clipmenue, Modellmenue.menue]) {
+        for (const m of [Zeitleistenmenue.clipmenue, Modellmenue.menue, Mimikmenue.menue]) {
             if (m) m.style.display = 'none';
         }
     }
@@ -112,6 +113,15 @@ export class Zeitleistenmenue {
             renderTimeline();
         }
         const klickbild = Zeitleistentreffer.bildBei(Zeitleistenmenue.mausX);
+        // Die Mimikspur hat ihr eigenes Menü — auch ohne Treffer, vor dem
+        // Spurmenü („Hinzufügen" gehört nicht auf die Gesichtsspur).
+        if (spur && spur.type === 'mimik') {
+            Zeitleistenmenue.clipmenue.style.display = 'none';
+            if (Zeitleistenmenue.spurmenue) Zeitleistenmenue.spurmenue.style.display = 'none';
+            Mimikmenue.mausX = Zeitleistenmenue.mausX;
+            Mimikmenue.zeigen(e, spur, spurNr, treffer, klickbild, Zeitleistenmenue._zeigen);
+            return;
+        }
 
         if (!treffer && spur && my > RULER_HEIGHT
             && Zeitleistenmenue.mausX > HEADER_WIDTH

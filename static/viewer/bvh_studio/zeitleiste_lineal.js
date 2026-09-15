@@ -7,11 +7,11 @@ import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
  * Aus zeitleiste_zeichnen.js herausgelöst (Umbau 27.08.2026, Befund
  * `jsfunktionen`: `renderTimeline()` hatte 95 Zeilen).
  *
- * SEIT 11.09.2026 BLEIBT ES SICHTBAR: Es wird um `oben` (den geblätterten
- * Anteil des Rahmens) verschoben und NACH den Reihen gezeichnet — es liegt
- * also immer am oberen Rand des sichtbaren Ausschnitts, über den Reihen,
- * die darunter durchlaufen. Die Reihen selbst behalten ihre Leinwand-Lage
- * (`Reihen`), nur das Lineal wandert mit.
+ * SEIT 11.09.2026 BLEIBT ES SICHTBAR, seit 13.09.2026 ohne Nachziehen: Es hat
+ * eine eigene Leinwand (`Zeitleistenflaeche.lineal`, `position: sticky`),
+ * die der Browser am oberen Rand des Rahmens hält — die Spurenleinwand
+ * läuft darunter durch. Vorher wurde es um `scrollTop` versetzt auf die
+ * Spurenleinwand gezeichnet und hing beim Blättern einen Bildaufbau nach.
  */
 export class Zeitleistenlineal {
     /** Angestrebter Abstand zweier Marken in Pixeln. */
@@ -23,12 +23,11 @@ export class Zeitleistenlineal {
      * @param {number} breite Leinwandbreite
      * @param {number} pps Pixel je Sekunde beim aktuellen Zoom
      */
-    static zeichnen(breite, pps, oben = 0) {
-        const ctx = Zeitleistenflaeche.ctx;
-        ctx.save();
-        ctx.translate(0, oben);
+    static zeichnen(breite, pps) {
+        const ctx = Zeitleistenflaeche.linealCtx;
+        if (!ctx) return;
+        ctx.clearRect(0, 0, breite, RULER_HEIGHT);
         Zeitleistenlineal._streifen(ctx, breite, pps);
-        ctx.restore();
     }
 
     static _streifen(ctx, breite, pps) {

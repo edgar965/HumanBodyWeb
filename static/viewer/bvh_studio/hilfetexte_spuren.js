@@ -46,6 +46,20 @@ export const HILFE_SPUREN = {
 <li>Audio-Datei (MP3/WAV/OGG) laden und zur Timeline synchronisieren</li>
 <li>Lautstärke, Fade In/Out und Offset konfigurierbar</li>
 </ul>
+<h4 class="hilfe-untertitel"><i class="fas fa-smile"></i> Mimik</h4>
+<ul>
+<li><b>Rechtsklick auf die Modellspur &rarr; Mimikspur hinzufügen</b>: die Gesichtsspur steht
+    eingerückt unter der Modellspur</li>
+<li><b>Rechtsklick auf die Mimikspur &rarr; Pose setzen…</b>: Dialog mit zehn Gruppen (Freude, Trauer,
+    Ärger, Überraschung/Angst, Abneigung, Aufmerksamkeit, Augen, Mund, Phoneme, Eigene) — 76 Posen aus
+    MB-Lab, dazu eigene Mischungen; Stärke, Übergang (weich/linear) und Haltezeit je Schlüsselbild</li>
+<li>Zwischen zwei Schlüsselbildern wird überblendet, vor dem ersten ist das Gesicht neutral, die
+    letzte Pose bleibt bis zum Ende</li>
+<li><b>Lebendigkeit</b> (rechts unter Eigenschaften): Blinzeln, Blick, Atmen, Variation um die Pose,
+    Zucken, Schlucken — je An/Aus, Stärke, Abstand; feste Saat, also wiederholbar</li>
+<li><b>Mimik einrechnen (zur BVH)</b>: legt <code>&lt;name&gt;_mimik.json</code> neben die
+    Bewegungsclips der Figur — danach trägt die Animation die Mimik auf jeder Seite</li>
+</ul>
 <p class="hilfe-abstand"><b>Hinzufügen:</b> Klick auf "+ Hinzufügen" in der Toolbar, dann Typ wählen.</p>
 <p><b>Löschen:</b> Track auswählen, dann Papierkorb-Button.</p>
 `},

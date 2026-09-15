@@ -1,0 +1,943 @@
+{
+ "gruppen": [
+  {
+   "id": "freude",
+   "name": "Freude"
+  },
+  {
+   "id": "trauer",
+   "name": "Trauer"
+  },
+  {
+   "id": "aerger",
+   "name": "Ärger"
+  },
+  {
+   "id": "ueberraschung",
+   "name": "Überraschung / Angst"
+  },
+  {
+   "id": "abneigung",
+   "name": "Abneigung"
+  },
+  {
+   "id": "aufmerksamkeit",
+   "name": "Aufmerksamkeit"
+  },
+  {
+   "id": "augen",
+   "name": "Augen"
+  },
+  {
+   "id": "mund",
+   "name": "Mund"
+  },
+  {
+   "id": "phoneme",
+   "name": "Phoneme"
+  },
+  {
+   "id": "eigene",
+   "name": "Eigene"
+  }
+ ],
+ "posen": [
+  {
+   "id": "excited01",
+   "name": "Aufgeregt",
+   "gruppe": "freude",
+   "gewichte": {
+    "browOutVertL": 1.0,
+    "mouthSmileOpen": 1.0,
+    "browOutVertR": 0.66,
+    "browsMidVert": 1.0
+   }
+  },
+  {
+   "id": "flirty01",
+   "name": "Flirtend",
+   "gruppe": "freude",
+   "gewichte": {
+    "cheekSneerL": 0.3,
+    "mouthHoriz": 0.24,
+    "browOutVertR": 0.78,
+    "eyesVert": 0.36,
+    "mouthClosed": 0.72,
+    "browOutVertL": 0.9,
+    "mouthSmile": 0.24,
+    "browsMidVert": 0.6,
+    "mouthSmileL": 0.48
+   }
+  },
+  {
+   "id": "grin01",
+   "name": "Grinsen",
+   "gruppe": "freude",
+   "gewichte": {
+    "mouthSmileOpen2": 1.0,
+    "eyesVert": -0.2,
+    "browsMidVert": 0.6
+   }
+  },
+  {
+   "id": "happy01",
+   "name": "Glücklich",
+   "gruppe": "freude",
+   "gewichte": {
+    "cheekSneerL": 0.1,
+    "browOutVertR": 0.42,
+    "cheekSneerR": 0.1,
+    "eyeSquintL": 0.4,
+    "mouthSmile": 1.0,
+    "eyeSquintR": 0.4,
+    "mouthSmileL": 0.18
+   }
+  },
+  {
+   "id": "kiss01",
+   "name": "Kuss",
+   "gruppe": "freude",
+   "gewichte": {
+    "mouthOpenLarge": -1.0,
+    "eyesVert": -0.2,
+    "browsMidVert": 0.6
+   }
+  },
+  {
+   "id": "peaceful01",
+   "name": "Friedlich",
+   "gruppe": "freude",
+   "gewichte": {
+    "mouthSmile": 0.24,
+    "eyeClosedR": 1.0,
+    "eyeClosedL": 1.0,
+    "mouthSmileL": 0.12
+   }
+  },
+  {
+   "id": "serene01",
+   "name": "Gelassen",
+   "gruppe": "freude",
+   "gewichte": {
+    "mouthSmile": 0.24,
+    "eyeClosedR": 0.04,
+    "eyeClosedL": 0.1,
+    "mouthSmileL": 0.12
+   }
+  },
+  {
+   "id": "crying01",
+   "name": "Weinend",
+   "gruppe": "trauer",
+   "gewichte": {
+    "eyesHoriz": -0.42,
+    "browOutVertR": -1.0,
+    "eyeClosedL": 0.2,
+    "eyeClosedPressureL": 0.42,
+    "browOutVertL": -0.36,
+    "eyeSquintL": 0.12,
+    "eyeSquintR": 0.12,
+    "mouthBite": -0.36,
+    "eyeClosedR": 0.18,
+    "browSqueezeL": 1.0,
+    "eyeClosedPressureR": 0.42,
+    "mouthOpen": -0.18,
+    "mouthLowerOut": -0.36,
+    "browsMidVert": 1.0,
+    "browSqueezeR": 1.0,
+    "eyesVert": -0.42
+   }
+  },
+  {
+   "id": "crying02",
+   "name": "Weinend 2",
+   "gruppe": "trauer",
+   "gewichte": {
+    "cheekSneerL": 1.0,
+    "mouthOpenAggr": 0.52,
+    "eyeClosedPressureR": 1.0,
+    "browSqueezeL": 1.0,
+    "eyeClosedPressureL": 1.0,
+    "cheekSneerR": 1.0,
+    "mouthSmile": -0.6,
+    "browSqueezeR": 1.0,
+    "browsMidVert": -1.0
+   }
+  },
+  {
+   "id": "drained01",
+   "name": "Erschöpft",
+   "gruppe": "trauer",
+   "gewichte": {
+    "mouthClosed": -1.0,
+    "eyeClosedR": 0.42,
+    "eyeClosedL": 0.48
+   }
+  },
+  {
+   "id": "sad01",
+   "name": "Traurig",
+   "gruppe": "trauer",
+   "gewichte": {
+    "eyeSquintL": -0.24,
+    "mouthSmile": -0.24,
+    "eyeSquintR": -0.3
+   }
+  },
+  {
+   "id": "sad02",
+   "name": "Traurig 2",
+   "gruppe": "trauer",
+   "gewichte": {
+    "mouthSmileOpen2": -0.06,
+    "mouthSmileOpen": -0.12,
+    "browOutVertR": 0.4,
+    "eyesVert": 0.2,
+    "eyeClosedL": -0.66,
+    "mouthClosed": 0.24,
+    "browOutVertL": 0.36,
+    "mouthSmile": -0.18,
+    "browsMidVert": 1.0,
+    "eyeClosedR": -0.66
+   }
+  },
+  {
+   "id": "tired01",
+   "name": "Müde",
+   "gruppe": "trauer",
+   "gewichte": {
+    "browOutVertL": 0.18,
+    "eyeClosedR": 0.42,
+    "eyeClosedL": 0.48
+   }
+  },
+  {
+   "id": "very_sad01",
+   "name": "Sehr traurig",
+   "gruppe": "trauer",
+   "gewichte": {
+    "mouthSmileOpen2": -0.06,
+    "mouthSmileOpen": -0.12,
+    "browOutVertR": 0.4,
+    "eyesVert": 0.2,
+    "eyeClosedL": -0.66,
+    "mouthClosed": 0.24,
+    "browOutVertL": 0.36,
+    "mouthSmile": -0.9,
+    "browsMidVert": 1.0,
+    "eyeClosedR": -0.66
+   }
+  },
+  {
+   "id": "angry01",
+   "name": "Wütend",
+   "gruppe": "aerger",
+   "gewichte": {
+    "cheekSneerL": 1.0,
+    "mouthOpenAggr": -0.56,
+    "browSqueezeL": 1.0,
+    "cheekSneerR": 1.0,
+    "browSqueezeR": 1.0,
+    "browsMidVert": -1.0
+   }
+  },
+  {
+   "id": "annoyed01",
+   "name": "Genervt",
+   "gruppe": "aerger",
+   "gewichte": {
+    "browSqueezeL": 0.96,
+    "jawHoriz": 0.12,
+    "browOutVertR": 0.66,
+    "eyesVert": 0.6,
+    "mouthOpenO": 0.36,
+    "eyesHoriz": 0.66,
+    "browsMidVert": -0.36
+   }
+  },
+  {
+   "id": "evil01",
+   "name": "Böse",
+   "gruppe": "aerger",
+   "gewichte": {
+    "cheekSneerL": 0.18,
+    "browOutVertR": 1.0,
+    "eyesVert": 0.12,
+    "mouthClosed": 0.72,
+    "cheekSneerR": 0.18,
+    "browsMidVert": -0.48,
+    "eyeSquintL": 0.48,
+    "eyeSquintR": 0.12,
+    "mouthSmileL": 0.6
+   }
+  },
+  {
+   "id": "evil02",
+   "name": "Böse 2",
+   "gruppe": "aerger",
+   "gewichte": {
+    "cheekSneerL": 1.0,
+    "mouthSmileOpen2": 1.0,
+    "eyesVert": 0.48,
+    "browSqueezeL": 1.0,
+    "cheekSneerR": 1.0,
+    "browSqueezeR": 1.0,
+    "browsMidVert": -1.0
+   }
+  },
+  {
+   "id": "furious01",
+   "name": "Zornig",
+   "gruppe": "aerger",
+   "gewichte": {
+    "cheekSneerL": 1.0,
+    "mouthOpenAggr": 1.0,
+    "browSqueezeL": 1.0,
+    "cheekSneerR": 1.0,
+    "browSqueezeR": 1.0,
+    "browsMidVert": -1.0
+   }
+  },
+  {
+   "id": "furious02",
+   "name": "Zornig 2",
+   "gruppe": "aerger",
+   "gewichte": {
+    "cheekSneerL": 1.0,
+    "mouthOpenAggr": 1.0,
+    "browSqueezeL": 1.0,
+    "cheekSneerR": 1.0,
+    "browSqueezeR": 1.0,
+    "browsMidVert": -1.0
+   }
+  },
+  {
+   "id": "furious03",
+   "name": "Zornig 3",
+   "gruppe": "aerger",
+   "gewichte": {
+    "cheekSneerL": 1.0,
+    "browSqueezeL": 1.0,
+    "mouthOpen": 1.0,
+    "cheekSneerR": 1.0,
+    "browSqueezeR": 1.0,
+    "browsMidVert": -1.0
+   }
+  },
+  {
+   "id": "irritated01",
+   "name": "Gereizt",
+   "gruppe": "aerger",
+   "gewichte": {
+    "cheekSneerL": 0.36,
+    "jawHoriz": -0.24,
+    "browSqueezeL": 0.84,
+    "browOutVertL": 0.24,
+    "cheekSneerR": 0.18,
+    "eyeSquintL": 0.48,
+    "mouthSmile": -0.36,
+    "browsMidVert": -0.42,
+    "browSqueezeR": 1.0,
+    "eyeSquintR": 0.42
+   }
+  },
+  {
+   "id": "offended01",
+   "name": "Beleidigt",
+   "gruppe": "aerger",
+   "gewichte": {
+    "mouthOpenAggr": -0.42,
+    "jawHoriz": 0.3,
+    "eyesVert": 0.24,
+    "mouthClosed": -0.42,
+    "browOutVertL": 0.3,
+    "browsMidVert": 1.0
+   }
+  },
+  {
+   "id": "anxious01",
+   "name": "Ängstlich",
+   "gruppe": "ueberraschung",
+   "gewichte": {
+    "browSqueezeL": 0.76,
+    "browOutVertR": -0.24,
+    "eyesVert": -0.54,
+    "eyeClosedL": 0.3,
+    "browOutVertL": -0.3,
+    "browsMidVert": 0.3,
+    "eyesHoriz": -0.48,
+    "eyeClosedR": 0.3,
+    "mouthBite": -1.0,
+    "browSqueezeR": 0.42
+   }
+  },
+  {
+   "id": "scared01",
+   "name": "Erschrocken",
+   "gruppe": "ueberraschung",
+   "gewichte": {
+    "cheekSneerL": 0.36,
+    "mouthOpenAggr": -0.36,
+    "eyeClosedL": -0.78,
+    "browSqueezeL": 1.0,
+    "browsMidVert": 0.24,
+    "eyesHoriz": 0.9,
+    "eyeClosedR": -0.96,
+    "browSqueezeR": 0.96,
+    "mouthSmileL": 0.12
+   }
+  },
+  {
+   "id": "shocked01",
+   "name": "Schockiert",
+   "gruppe": "ueberraschung",
+   "gewichte": {
+    "browSqueezeL": 1.0,
+    "eyeClosedL": -0.6,
+    "mouthOpenAggr": -0.24,
+    "mouthClosed": -1.0,
+    "eyeClosedR": -1.0,
+    "browSqueezeR": 0.54
+   }
+  },
+  {
+   "id": "surprise01",
+   "name": "Überrascht",
+   "gruppe": "ueberraschung",
+   "gewichte": {
+    "browOutVertR": 0.12,
+    "eyesVert": -0.2,
+    "eyeClosedL": -0.6,
+    "browOutVertL": 0.18,
+    "mouthOpenO": 0.24,
+    "browsMidVert": 0.72,
+    "eyeClosedR": -0.6
+   }
+  },
+  {
+   "id": "surprise02",
+   "name": "Überrascht 2",
+   "gruppe": "ueberraschung",
+   "gewichte": {
+    "mouthSmileOpen2": 0.48,
+    "browOutVertR": 0.12,
+    "eyesVert": -0.2,
+    "eyeClosedL": -0.6,
+    "browOutVertL": 0.18,
+    "browsMidVert": 0.72,
+    "eyeClosedR": -0.6
+   }
+  },
+  {
+   "id": "surprise03",
+   "name": "Überrascht 3",
+   "gruppe": "ueberraschung",
+   "gewichte": {
+    "browOutVertR": 0.54,
+    "eyeClosedL": -0.42,
+    "browOutVertL": 0.36,
+    "mouthOpenO": -0.54,
+    "browsMidVert": 0.72,
+    "eyeClosedR": -0.6
+   }
+  },
+  {
+   "id": "bored01",
+   "name": "Gelangweilt",
+   "gruppe": "abneigung",
+   "gewichte": {
+    "eyeClosedR": -0.54,
+    "browOutVertR": 0.72,
+    "eyeClosedL": -0.72,
+    "browOutVertL": 0.78,
+    "mouthOpenO": -0.48,
+    "browsMidVert": 0.84,
+    "mouthInflated": 1.0
+   }
+  },
+  {
+   "id": "disgusted",
+   "name": "Angeekelt",
+   "gruppe": "abneigung",
+   "gewichte": {
+    "cheekSneerL": 0.42,
+    "browSqueezeL": 0.72,
+    "mouthHoriz": 0.18,
+    "browOutVertR": 0.18,
+    "mouthOpenAggr": -0.96,
+    "eyeSquintL": 0.3,
+    "browsMidVert": -0.3
+   }
+  },
+  {
+   "id": "lazy01",
+   "name": "Faul",
+   "gruppe": "abneigung",
+   "gewichte": {
+    "eyeClosedR": 0.18,
+    "eyeClosedL": 0.18
+   }
+  },
+  {
+   "id": "sarcastic01",
+   "name": "Sarkastisch",
+   "gruppe": "abneigung",
+   "gewichte": {
+    "cheekSneerL": 0.54,
+    "browOutVertR": 1.0,
+    "mouthClosed": 1.0,
+    "browOutVertL": 0.84,
+    "eyeSquintL": 0.12,
+    "mouthSmile": 0.3,
+    "eyeSquintR": 0.12,
+    "mouthSmileL": 0.72,
+    "eyeClosedR": 0.06,
+    "eyeClosedL": 0.06,
+    "cheekSneerR": 0.42,
+    "browsMidVert": 1.0
+   }
+  },
+  {
+   "id": "attentive01",
+   "name": "Aufmerksam",
+   "gruppe": "aufmerksamkeit",
+   "gewichte": {
+    "browSqueezeL": 0.6,
+    "mouthChew": -1.0,
+    "browSqueezeR": 0.06,
+    "browsMidVert": -0.36
+   }
+  },
+  {
+   "id": "confused01",
+   "name": "Verwirrt",
+   "gruppe": "aufmerksamkeit",
+   "gewichte": {
+    "cheekSneerL": 0.36,
+    "browSqueezeL": 1.0,
+    "eyeSquintL": 0.18,
+    "eyeClosedR": 0.06,
+    "mouthOpenAggr": -0.36,
+    "eyeClosedPressureL": 0.06,
+    "browsMidVert": 0.24,
+    "eyesHoriz": 0.9,
+    "eyeSquintR": 0.12,
+    "browSqueezeR": 0.96,
+    "mouthSmileL": 0.12
+   }
+  },
+  {
+   "id": "confused02",
+   "name": "Verwirrt 2",
+   "gruppe": "aufmerksamkeit",
+   "gewichte": {
+    "cheekSneerL": 0.36,
+    "browSqueezeL": 1.0,
+    "eyeClosedPressureL": 0.06,
+    "mouthSmileL": 0.12,
+    "mouthClosed": -0.78,
+    "browsMidVert": 0.96,
+    "eyeSquintL": 0.18,
+    "eyesHoriz": 0.9,
+    "eyeSquintR": 0.12,
+    "browSqueezeR": 0.96,
+    "eyeClosedR": 0.06
+   }
+  },
+  {
+   "id": "curious01",
+   "name": "Neugierig",
+   "gruppe": "aufmerksamkeit",
+   "gewichte": {
+    "eyeClosedR": -0.36,
+    "mouthChew": 0.54,
+    "browOutVertR": 0.66,
+    "eyeClosedL": -0.78,
+    "browsMidVert": 0.42,
+    "mouthSmileL": 0.12
+   }
+  },
+  {
+   "id": "embarrassed01",
+   "name": "Verlegen",
+   "gruppe": "aufmerksamkeit",
+   "gewichte": {
+    "eyesVert": -0.72,
+    "eyeClosedL": 0.36,
+    "browOutVertL": -0.3,
+    "eyesHoriz": -0.66,
+    "browsMidVert": 0.72,
+    "mouthBite": 1.0,
+    "eyeClosedR": 0.36
+   }
+  },
+  {
+   "id": "pain01",
+   "name": "Schmerz",
+   "gruppe": "aufmerksamkeit",
+   "gewichte": {
+    "cheekSneerL": 1.0,
+    "browSqueezeL": 1.0,
+    "browOutVertR": -1.0,
+    "eyeClosedPressureR": 1.0,
+    "browOutVertL": -1.0,
+    "eyeClosedPressureL": 1.0,
+    "mouthOpen": -1.0,
+    "browSqueezeR": 1.0,
+    "cheekSneerR": 1.0,
+    "browsMidVert": -1.0
+   }
+  },
+  {
+   "id": "posing01",
+   "name": "Posieren",
+   "gruppe": "aufmerksamkeit",
+   "gewichte": {
+    "browOutVertR": 1.0,
+    "eyesVert": -0.2,
+    "eyeClosedL": -0.66,
+    "browOutVertL": 0.9,
+    "mouthOpenLarge": -0.54,
+    "browsMidVert": 1.0,
+    "eyeClosedR": -0.66
+   }
+  },
+  {
+   "id": "shy01",
+   "name": "Schüchtern",
+   "gruppe": "aufmerksamkeit",
+   "gewichte": {
+    "mouthOpen": -0.94,
+    "eyesHoriz": -0.66,
+    "eyeClosedR": 0.36,
+    "eyeClosedL": 0.36,
+    "eyesVert": -0.72
+   }
+  },
+  {
+   "id": "eyes_rot_down",
+   "name": "Blick nach unten",
+   "gruppe": "augen",
+   "gewichte": {
+    "eyesVert": -1.0
+   }
+  },
+  {
+   "id": "eyes_rot_left",
+   "name": "Blick nach links",
+   "gruppe": "augen",
+   "gewichte": {
+    "eyesHoriz": -1.0
+   }
+  },
+  {
+   "id": "eyes_rot_right",
+   "name": "Blick nach rechts",
+   "gruppe": "augen",
+   "gewichte": {
+    "eyesHoriz": 1.0
+   }
+  },
+  {
+   "id": "eyes_rot_up",
+   "name": "Blick nach oben",
+   "gruppe": "augen",
+   "gewichte": {
+    "eyesVert": 1.0
+   }
+  },
+  {
+   "id": "sleep01",
+   "name": "Schlafend",
+   "gruppe": "augen",
+   "gewichte": {
+    "mouthClosed": -0.24,
+    "eyeClosedR": 1.0,
+    "eyeClosedL": 1.0
+   }
+  },
+  {
+   "id": "wink01",
+   "name": "Zwinkern",
+   "gruppe": "augen",
+   "gewichte": {
+    "mouthSmileL": 0.12,
+    "eyeClosedPressureR": 1.0,
+    "cheekSneerR": 0.48,
+    "mouthSmileR": 0.72,
+    "eyeSquintL": 0.3,
+    "browsMidVert": -0.6,
+    "browSqueezeR": 0.3
+   }
+  },
+  {
+   "id": "deglutition01",
+   "name": "Schlucken",
+   "gruppe": "mund",
+   "gewichte": {
+    "deglutition": 1.0
+   }
+  },
+  {
+   "id": "deglutition02",
+   "name": "Schlucken 2",
+   "gruppe": "mund",
+   "gewichte": {
+    "deglutition": -1.0
+   }
+  },
+  {
+   "id": "phoneme_a_01",
+   "name": "Laut „A“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthSmileOpen2": 0.36,
+    "mouthOpen": 0.06
+   }
+  },
+  {
+   "id": "phoneme_a_02",
+   "name": "Laut „A“ 2",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": 0.36,
+    "mouthSmileOpen2": 0.54,
+    "mouthLowerOut": -0.12,
+    "mouthOpen": 0.12
+   }
+  },
+  {
+   "id": "phoneme_b_01",
+   "name": "Laut „B“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthLowerOut": -0.12,
+    "mouthOpen": -0.18,
+    "mouthOpenO": 0.06
+   }
+  },
+  {
+   "id": "phoneme_b_02",
+   "name": "Laut „B“ 2",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthOpen": -0.6,
+    "mouthChew": 0.24
+   }
+  },
+  {
+   "id": "phoneme_c_01",
+   "name": "Laut „C“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": -0.48,
+    "mouthOpenAggr": -0.18,
+    "mouthLowerOut": 0.06
+   }
+  },
+  {
+   "id": "phoneme_c_02",
+   "name": "Laut „C“ 2",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": -0.36,
+    "mouthOpenLarge": -0.18,
+    "mouthOpenTeethClosed": -0.42
+   }
+  },
+  {
+   "id": "phoneme_d_01",
+   "name": "Laut „D“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": -0.84,
+    "tongueOutPressure": 0.42
+   }
+  },
+  {
+   "id": "phoneme_e_01",
+   "name": "Laut „E“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthOpenHalf": 0.12,
+    "mouthLowerOut": -0.12,
+    "mouthSmileOpen": 0.18
+   }
+  },
+  {
+   "id": "phoneme_f_01",
+   "name": "Laut „F“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthLowerOut": -0.48
+   }
+  },
+  {
+   "id": "phoneme_g_01",
+   "name": "Laut „G“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthOpenTeethClosed": -0.36
+   }
+  },
+  {
+   "id": "phoneme_i_01",
+   "name": "Laut „I“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthSmileOpen2": 0.36,
+    "mouthOpen": 0.06
+   }
+  },
+  {
+   "id": "phoneme_i_02",
+   "name": "Laut „I“ 2",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": 0.36,
+    "mouthLowerOut": -0.12,
+    "mouthOpen": 0.12,
+    "mouthSmileOpen2": 0.54
+   }
+  },
+  {
+   "id": "phoneme_k_01",
+   "name": "Laut „K“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "cheekSneerL": 0.12,
+    "mouthClosed": -0.48,
+    "mouthOpenAggr": -0.42,
+    "cheekSneerR": 0.12,
+    "mouthLowerOut": 0.06
+   }
+  },
+  {
+   "id": "phoneme_l_01",
+   "name": "Laut „L“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "tongueTipUp": 0.48,
+    "mouthOpen": 0.24
+   }
+  },
+  {
+   "id": "phoneme_m_01",
+   "name": "Laut „M“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": -0.18,
+    "mouthOpen": -0.6
+   }
+  },
+  {
+   "id": "phoneme_n_01",
+   "name": "Laut „N“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "tongueTipUp": 0.06,
+    "mouthOpenHalf": 0.18,
+    "mouthSmileOpen": 0.12,
+    "tongueOutPressure": 0.04
+   }
+  },
+  {
+   "id": "phoneme_o_01",
+   "name": "Laut „O“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": -1.0,
+    "mouthOpenO": 0.12
+   }
+  },
+  {
+   "id": "phoneme_o_02",
+   "name": "Laut „O“ 2",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthOpenO": 0.84
+   }
+  },
+  {
+   "id": "phoneme_p_01",
+   "name": "Laut „P“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthOpen": -0.78,
+    "mouthChew": 0.24
+   }
+  },
+  {
+   "id": "phoneme_q_01",
+   "name": "Laut „Q“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthOpenO": -0.84
+   }
+  },
+  {
+   "id": "phoneme_r_01",
+   "name": "Laut „R“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "tongueTipUp": 0.36,
+    "mouthOpenO": 0.24
+   }
+  },
+  {
+   "id": "phoneme_r_02",
+   "name": "Laut „R“ 2",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "tongueTipUp": 0.36,
+    "mouthSmileOpen2": 0.24,
+    "mouthOpenO": 0.24
+   }
+  },
+  {
+   "id": "phoneme_s_01",
+   "name": "Laut „S“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": -0.84,
+    "tongueTipUp": 0.36
+   }
+  },
+  {
+   "id": "phoneme_t_01",
+   "name": "Laut „T“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": -0.72,
+    "tongueTipUp": 0.26
+   }
+  },
+  {
+   "id": "phoneme_u_01",
+   "name": "Laut „U“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": -0.12,
+    "mouthOpenO": -0.6
+   }
+  },
+  {
+   "id": "phoneme_w_01",
+   "name": "Laut „W“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthOpenO": -0.84
+   }
+  },
+  {
+   "id": "phoneme_z_01",
+   "name": "Laut „Z“",
+   "gruppe": "phoneme",
+   "gewichte": {
+    "mouthClosed": -0.6,
+    "tongueTipUp": 0.36,
+    "mouthSmile": 0.12
+   }
+  }
+ ]
+}

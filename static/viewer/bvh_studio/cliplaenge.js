@@ -12,6 +12,10 @@
  * er ist. Sekunden meinen die Zeitleiste (also mit `speed`), Prozent die
  * ganze Quelle (100 % = alle Bilder ab `trimIn`).
  *
+ * Modellclips (`model`, 13.09.2026): Sie haben keine Quelle, die begrenzt —
+ * Sekunden setzen `totalFrames` (auch länger), Prozent beziehen sich auf
+ * `bezug` (die Projektdauer in Bildern, vom Aufrufer mitgegeben).
+ *
  * Tonclips (`audio`): Die Länge ist `data.audioDuration` Sekunden; ganz ist
  * `data.audioVoll` (beim Laden gemerkt), sonst die längste bekannte Dauer.
  *
@@ -25,7 +29,7 @@ export class Cliplaenge {
     static MINDESTSEKUNDEN = 0.1;
 
     /** Wie lang der Clip jetzt ist: `{sekunden, prozent, bilder, ganz}` (ganz = Sekunden ungekürzt). */
-    static stand(clip) {
+    static stand(clip, bezug = null) {
         if (clip.type === 'audio') {
             const ganz = Cliplaenge._tonGanz(clip);
             const sekunden = (clip.data?.audioDuration || 0) / (clip.speed || 1);
@@ -34,12 +38,17 @@ export class Cliplaenge {
         }
         const bilder = clip.totalFrames - (clip.trimIn || 0) - (clip.trimOut || 0);
         const teiler = (clip.fps || 30) * (clip.speed || 1);
+        if (clip.type === 'model') {
+            const ganz = bezug || clip.totalFrames;
+            return { sekunden: bilder / teiler, prozent: 100 * bilder / ganz,
+                     bilder, ganz: ganz / teiler };
+        }
         return { sekunden: bilder / teiler, prozent: 100 * bilder / clip.totalFrames,
                  bilder, ganz: (clip.totalFrames - (clip.trimIn || 0)) / teiler };
     }
 
     /** Länge in Sekunden der Zeitleiste setzen. Rückgabe: die gesetzte Länge (`stand`). */
-    static sekunden(clip, sekunden) {
+    static sekunden(clip, sekunden, bezug = null) {
         if (clip.type === 'audio') {
             const ganz = Cliplaenge._tonGanz(clip);
             const roh = sekunden * (clip.speed || 1);
@@ -47,17 +56,28 @@ export class Cliplaenge {
             return Cliplaenge.stand(clip);
         }
         const teiler = (clip.fps || 30) * (clip.speed || 1);
+        if (clip.type === 'model') return Cliplaenge.modell(clip, sekunden * teiler, bezug);
         return Cliplaenge.bilder(clip, Math.round(sekunden * teiler));
     }
 
     /** Länge in Prozent der ganzen Quelle setzen. */
-    static prozent(clip, prozent) {
+    static prozent(clip, prozent, bezug = null) {
         if (clip.type === 'audio') {
             const ganz = Cliplaenge._tonGanz(clip);
             clip.data.audioDuration = Math.max(Cliplaenge.MINDESTSEKUNDEN, Math.min(ganz, ganz * prozent / 100));
             return Cliplaenge.stand(clip);
         }
+        if (clip.type === 'model') {
+            return Cliplaenge.modell(clip, (bezug || clip.totalFrames) * prozent / 100, bezug);
+        }
         return Cliplaenge.bilder(clip, Math.round(clip.totalFrames * prozent / 100));
+    }
+
+    /** Bilder eines Modellclips setzen — er hat keine Quelle, `totalFrames` IST die Länge. */
+    static modell(clip, bilder, bezug = null) {
+        clip.trimOut = 0;
+        clip.totalFrames = (clip.trimIn || 0) + Math.max(Cliplaenge.MINDESTBILDER, Math.round(bilder));
+        return Cliplaenge.stand(clip, bezug);
     }
 
     /** Sichtbare Bilder eines Bewegungsclips setzen — über `trimOut`, der Anfang bleibt. */

@@ -10,7 +10,7 @@
  *   zeitleiste_ziehen.js   verschieben, kuerzen, scrubben, Ansicht schieben
  *   zeitleiste_menue.js    die drei Kontextmenues
  */
-import { state } from './state.js';
+import { state, RULER_HEIGHT } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Reihen } from './zeitleiste_reihen.js';
 import { renderTimeline } from './zeitleiste_zeichnen.js';
@@ -18,6 +18,7 @@ import { Zeitleistenflaeche } from './zeitleiste_flaeche.js';
 import { Zeitleistenziehen } from './zeitleiste_ziehen.js';
 import { Zeitleistenmenue } from './zeitleiste_menue.js';
 import { Zeitleistenhilfe } from './zeitleiste_hilfe.js';
+import { Fortschrittsbalken } from './zeitleiste_fortschritt.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
 /** Grenzen des Zooms in Bildpunkten je Sekunde. */
@@ -28,12 +29,26 @@ const ZOOM_SCHRITT = 10;
 export function setupTimeline() {
     const flaeche = document.getElementById('timeline-canvas');
     if (!flaeche) return;
-    Zeitleistenflaeche.setzen(flaeche);
+    const lineal = document.getElementById('timeline-lineal');
+    Zeitleistenflaeche.setzen(flaeche, lineal);
+    Fortschrittsbalken.anbinden(document.getElementById('timeline-fortschritt'));
 
     const rahmen = Zeitleistenflaeche.canvas.parentElement;
     const anpassen = () => {
         Zeitleistenflaeche.canvas.width = rahmen.clientWidth;
         Zeitleistenflaeche.canvas.height = Reihen.noetigeHoehe(rahmen);
+        if (lineal) {
+            // Klebt oben und nimmt keinen Platz: die Spurenleinwand behält
+            // ihren Lineal-Streifen (RULER_HEIGHT) darunter, alle Reihen-
+            // und Treffer-Rechnungen bleiben, wie sie sind.
+            lineal.width = rahmen.clientWidth;
+            lineal.height = RULER_HEIGHT;
+            lineal.style.marginBottom = `-${RULER_HEIGHT}px`;
+        }
+        // Der Balken liegt unter dem Rahmen und ist so breit wie sein eigener
+        // Behälter — der Rahmen verliert beim Rollbalken 15 px, der Balken nicht.
+        Fortschrittsbalken.breiteSetzen(Fortschrittsbalken.canvas?.parentElement?.clientWidth
+                                        || rahmen.clientWidth);
         renderTimeline();
     };
     anpassen();
@@ -91,8 +106,8 @@ function _ablegenAnbinden() {
 }
 
 function _scrollenAnbinden() {
-    // Senkrechtes Blättern (Rollbalken): das Lineal hängt am sichtbaren Rand.
-    Zeitleistenflaeche.rahmen?.addEventListener('scroll', () => renderTimeline());
+    // Senkrechtes Blättern braucht kein Neuzeichnen mehr: das Lineal klebt
+    // als eigene Leinwand (13.09.2026).
     Zeitleistenflaeche.canvas.addEventListener('wheel', (e) => {
         if (e.ctrlKey) {
             const schritt = e.deltaY > 0 ? -ZOOM_SCHRITT : ZOOM_SCHRITT;

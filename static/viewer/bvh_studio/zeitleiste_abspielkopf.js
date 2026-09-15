@@ -18,7 +18,7 @@ export class Abspielkopf {
      * @param {number} hoehe Leinwandhöhe
      * @param {number} pps Pixel je Sekunde
      */
-    static zeichnen(hoehe, pps, oben = 0) {
+    static zeichnen(hoehe, pps) {
         const x = HEADER_WIDTH
             + (state.playheadFrame / state.project.fps) * pps
             - state.timelineScrollX;
@@ -31,13 +31,15 @@ export class Abspielkopf {
         ctx.moveTo(x, 0);
         ctx.lineTo(x, hoehe);
         ctx.stroke();
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath();
-        // Der Griff sitzt im Lineal, und das hängt am sichtbaren Rand (`oben`).
-        ctx.moveTo(x - Abspielkopf.GRIFF_BREITE, oben);
-        ctx.lineTo(x + Abspielkopf.GRIFF_BREITE, oben);
-        ctx.lineTo(x, oben + Abspielkopf.GRIFF_HOEHE);
-        ctx.fill();
+        // Der Griff sitzt auf der klebenden Lineal-Leinwand (13.09.2026).
+        const griff = Zeitleistenflaeche.linealCtx;
+        if (!griff) return;
+        griff.fillStyle = '#ef4444';
+        griff.beginPath();
+        griff.moveTo(x - Abspielkopf.GRIFF_BREITE, 0);
+        griff.lineTo(x + Abspielkopf.GRIFF_BREITE, 0);
+        griff.lineTo(x, Abspielkopf.GRIFF_HOEHE);
+        griff.fill();
     }
 
     /** „Bild 42 / 300" unter der Leiste. */

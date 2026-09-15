@@ -19,6 +19,7 @@ import { Lichteigenschaften } from './eigenschaften/licht.js';
 import { Bodeneigenschaften } from './eigenschaften/boden.js';
 import { Objekteigenschaften } from './eigenschaften/objekt.js';
 import { Klipeigenschaften } from './eigenschaften/klip.js';
+import { Mimikeigenschaften } from './eigenschaften/mimik.js';
 import { Maskenbausteine as M } from './eigenschaften/bausteine.js';
 import { Schaltknopf } from './schaltknopf.js';
 import { Modellspur } from './modellspur.js';
@@ -87,6 +88,7 @@ export class Eigenschaftsfeld {
         </div>`;
         }
         if (track.type === 'light') return Lichteigenschaften.maske(track);
+        if (track.type === 'mimik') return Mimikeigenschaften.maske(track);
         if (track.type === 'model') {
             const verbunden = state.project.getLinkedAnimation(track);
             const preset = Modellspur.aktives(track, state.playheadFrame / state.project.fps);
@@ -115,10 +117,10 @@ export class Eigenschaftsfeld {
     }
 
     static _klipliste(track) {
-        const titel = (track.type === 'camera' || track.type === 'light')
+        const titel = (track.type === 'camera' || track.type === 'light' || track.type === 'mimik')
             ? 'Keyframes' : 'Clips';
         const eintraege = track.clips.map((c, i) => {
-            const dauer = (c.type === 'camera_kf' || c.type === 'light_kf')
+            const dauer = (c.type === 'camera_kf' || c.type === 'light_kf' || c.type === 'mimik_kf')
                 ? `F${c.startFrame}` : `${c.duration.toFixed(1)}s`;
             const gewaehlt = i === state.selectedClipIdx;
             return `<div class="prop-clip-item${gewaehlt ? ' gewaehlt' : ''}"
