@@ -47,6 +47,9 @@ class Smplbefehl:
 
     #: Pipelines, die Glaettung und Gelenkgrenzen von `Bvhbau` kennen.
     MIT_GLAETTUNG = ('gvhmr', 'gem', 'duomo', 'gemx', 'smplx')
+    #: Pipelines mit einem BVH je Person (14.09.2026): `--persons n` ab 2 —
+    #: nur der Auftrag entscheidet, die Vorgabe ist eine Person wie bisher.
+    MIT_PERSONEN = ('gvhmr', 'gem')
 
     #: Pipeline -> Name, unter dem ihre Einstellungen im Modell stehen, wo er
     #: vom Pipelinenamen abweicht. SMPL-X faehrt GEMs Koerper und nimmt dessen
@@ -97,7 +100,18 @@ class Smplbefehl:
             teile += self._glaettung()
         if self.job.pipeline == 'smplx':
             teile += self._smplx_werte()
+        if self.job.pipeline in self.MIT_PERSONEN:
+            teile += self._personen()
         return teile
+
+    def _personen(self):
+        """`--persons n` nur ab zwei — mit einer Person bleibt der Befehl der
+        von bisher."""
+        try:
+            personen = int(self.params.get('persons', 1) or 1)
+        except (TypeError, ValueError):
+            personen = 1
+        return ['--persons', str(personen)] if personen > 1 else []
 
     @classmethod
     def einstellungsname(cls, pipeline):

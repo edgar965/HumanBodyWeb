@@ -42,6 +42,14 @@ class Pipelineparameter:
         return {}
 
     @staticmethod
+    def _personen(post, feld):
+        """Die Personenzahl eines Laufs: ganze Zahl ab 1, sonst 1."""
+        try:
+            return max(1, int(post.get(feld, 1) or 1))
+        except (TypeError, ValueError):
+            return 1
+
+    @staticmethod
     def _teile(post, feld, namen):
         """Angekreuzte Koerperteile als einzelne Wahrheitswerte."""
         gewaehlt = post.getlist(feld)
@@ -76,6 +84,8 @@ class Pipelineparameter:
             'joint_limits': post.get('gvhmr_joint_limits') == 'on',
             # Die drei Demo-Videos: Vorgabe an, wie das Demo (12.09.2026).
             'render': post.get('gvhmr_render') == 'on',
+            # Ein BVH je Person (14.09.2026), Vorgabe eine.
+            'persons': Pipelineparameter._personen(post, 'gvhmr_persons'),
         }
         ordner = post.get('gvhmr_video_output_dir', '').strip()
         if ordner:
@@ -91,6 +101,7 @@ class Pipelineparameter:
             'joint_limits': post.get('gem_joint_limits') == 'on',
             'render': post.get('gem_render') == 'on',
             'device': post.get('gem_device', 'cuda'),
+            'persons': Pipelineparameter._personen(post, 'gem_persons'),
         }
 
     @staticmethod
@@ -187,6 +198,7 @@ class Pipelineparameter:
             'gvhmr_render': s.gvhmr_render,
             'gvhmr_device': s.smpl_device,
             'gvhmr_video_output_dir': s.video_output_dir,
+            'gvhmr_persons': 1,
             'wham_local_only': s.wham_estimate_local_only,
             'wham_smplify': s.wham_run_smplify,
             'wham_device': s.smpl_device,
@@ -199,6 +211,7 @@ class Pipelineparameter:
             'gem_joint_limits': s.gem_joint_limits,
             'gem_render': s.gem_render,
             'gem_device': s.smpl_device,
+            'gem_persons': 1,
             'duomo_static_cam': s.duomo_static_cam,
             'duomo_smooth_sigma': s.duomo_smooth_sigma,
             'duomo_joint_limits': s.duomo_joint_limits,

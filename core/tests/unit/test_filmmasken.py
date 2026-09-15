@@ -4,7 +4,10 @@ unter dem Stoff nicht — und zwar am SICHTBAREN Netz.
 
 Am Kunstkörper (Zylinder mit anliegendem Rohr): Der Körper bekommt eine
 Maske und einen gekürzten Index, das Rohr (allein) keine; beim Rendern
-wandern die verdeckten Ecken nach innen, die Dreiecke sind die gekürzten.
+wandern die verdeckten Ecken nach innen — außer die Ecken gezeichneter
+Randdreiecke am Rohrrand: die enden AN der Rohrkante (`saumschnitt.py`,
+13.09.2026: Höhe der Kante, 1 mm unter der Haut), die Dreiecke sind die
+gekürzten.
 Dazu `Feinkoerper`: Trägt ein Teil einen Unterteiler, kommen Ruhe und Bild
 aus `subdivide(...)`, sonst aus der Bahn selbst; die Bildablage fällt,
 wenn die Bahn ersetzt wird (Physik).
@@ -66,10 +69,18 @@ class FilmmaskenTest(SimpleTestCase):
         self.assertNotIn('maske', self.rohr)
         punkte, dreiecke, normalen = self.fm.Filmmasken.gerendert(self.koerper, 1)
         self.assertEqual(len(dreiecke), len(self.koerper['dreiecke_sichtbar']))
-        maske = self.koerper['maske']
+        maske = self.koerper['maske'].copy()
+        saum = self.koerper['saum']
+        self.assertGreater(len(saum), 0)
         r = np.linalg.norm(punkte[:, [0, 2]], axis=1)
+        # Die Randecken: an der Rohrkante (Bild 1 ist um 1 mm gehoben),
+        # 1 mm unter der Haut — nicht 10 mm.
+        y = punkte[saum.ecken, 1]
+        self.assertTrue(np.all(np.minimum(np.abs(y - 0.301), np.abs(y - 0.701)) < 1e-6), y)
+        self.assertTrue(np.allclose(r[saum.ecken], 0.10 - 0.001, atol=3e-4))
+        maske[saum.ecken] = False
         self.assertTrue(np.allclose(r[maske], 0.10 - 0.010, atol=1e-6))
-        self.assertTrue(np.allclose(r[~maske], 0.10, atol=1e-6))
+        self.assertTrue(np.allclose(r[~self.koerper['maske']], 0.10, atol=1e-6))
         self.assertEqual(normalen.shape, punkte.shape)
 
     def test_feinkoerper_ohne_unterteiler_ist_die_bahn(self):

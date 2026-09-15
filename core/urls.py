@@ -8,6 +8,7 @@ from .api import (seite_bvhstudio_einstellungen, seite_effekte_einstellungen,
 from .cloth_export_api import Stoffexport
 from .api.testfigur import Testendpunkte, Testverwaltung
 from .api.dateien import Auftragsdateien
+from .api.personendateien import Personendateien
 from .api.auftraege import Auftragsendpunkte
 from .api.seiten_web import Webseiten
 from .api.retarget import Retargetendpunkte
@@ -65,6 +66,8 @@ urlpatterns = [
     path('api/bvh/<uuid:job_id>/', Auftragsdateien.bvh, name='serve_bvh'),
     path('api/bvh-face/<uuid:job_id>/', Auftragsdateien.bvh_gesicht,
          name='serve_bvh_face'),
+    path('api/bvh/<uuid:job_id>/person/<int:person>/', Personendateien.bvh,
+         name='serve_bvh_person'),
     path('api/video/<uuid:job_id>/', Auftragsdateien.video, name='serve_video'),
     path('api/thumbnail/<uuid:job_id>/', Auftragsdateien.vorschaubild,
          name='video_thumbnail'),

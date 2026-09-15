@@ -48,7 +48,9 @@
  * der bessere Tausch.
  *
  * Ein Dreieck des Körpers fällt aus dem Index, wenn ALLE drei Ecken verdeckt
- * sind; die Materialgruppen (Haut, Augen, Zähne, …) werden nachgezogen —
+ * sind — und seit dem 13.09.2026 jenseits des `Saumband`s liegen, das hinter
+ * jeder Maskengrenze versenkte Haut stehen lässt (`indexOhne` bekommt dann
+ * dessen Maske `weg`); die Materialgruppen (Haut, Augen, Zähne, …) werden nachgezogen —
  * ohne das läge das Material des Innenmunds über dem Bauch (dieselbe Falle
  * wie bei UMA am 08.09.2026, `addGroup` zählt Indexeinträge).
  *

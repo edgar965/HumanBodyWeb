@@ -31,6 +31,7 @@ class AuftragsAttrappe:
         self.bvh_file = ''
         self.bvh_file_face = ''
         self.bvh_file_hands = ''
+        self.bvh_file_personen = []
         #: Wie oft `save()` gerufen wurde. Mehrere Prüfungen hängen daran.
         self.speicherungen = 0
 

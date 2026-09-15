@@ -32,7 +32,7 @@ export class Pipelinefelder {
             ['static_cam', 'bool'], ['focal_length_mm', 'float'],
             ['smooth_sigma', 'float'], ['joint_limits', 'bool'],
             ['use_dpvo', 'bool'], ['verbose', 'bool'], ['render', 'bool'],
-            ['device', 'text'],
+            ['device', 'text'], ['persons', 'int'],
             ['video_output_dir', 'text?'],
         ],
         wham: [
@@ -41,9 +41,11 @@ export class Pipelinefelder {
         prompthmr: [
             ['static_cam', 'bool'], ['device', 'text'],
         ],
+        // `persons` (14.09.2026): ein BVH je Person, GVHMR und GEM-SMPL.
         gem: [
             ['static_cam', 'bool'], ['smooth_sigma', 'float'],
             ['joint_limits', 'bool'], ['render', 'bool'], ['device', 'text'],
+            ['persons', 'int'],
         ],
         duomo: [
             ['static_cam', 'bool'], ['smooth_sigma', 'float'],

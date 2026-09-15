@@ -13,7 +13,11 @@ export class Hautmaskegeometrie {
     static ZELLE_M = 0.03;
 
     /** Punktnormalen aus den Dreiecken; nach außen über das signierte Volumen
-     *  (die Mehrheit gegen den Schwerpunkt kippt in manchen Posen). */
+     *  (die Mehrheit gegen den Schwerpunkt kippt in manchen Posen).
+     *  DECKUNGSGLEICHE PUNKTE TEILEN SICH EINE NORMALE (13.09.2026): Der
+     *  Körper hat Nähte mit doppelten Punkten (Rückenmitte); jeder sieht
+     *  nur seinen halben Fächer, die Normalen kippen auseinander — und der
+     *  Einzug zog die Zwillinge 1 mm auseinander: ein Spalt über dem Bund. */
     static normalen(P, T) {
         const n = P.length / 3, N = new Float64Array(n * 3);
         let vol = 0;
@@ -27,12 +31,31 @@ export class Hautmaskegeometrie {
             vol += ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
             for (const i of [a, b, c]) { N[3 * i] += nx; N[3 * i + 1] += ny; N[3 * i + 2] += nz; }
         }
+        Hautmaskegeometrie._naehteVereinen(P, N);
         const vz = vol >= 0 ? 1 : -1;
         for (let i = 0; i < n; i++) {
             const l = Math.hypot(N[3 * i], N[3 * i + 1], N[3 * i + 2]) || 1;
             N[3 * i] = vz * N[3 * i] / l; N[3 * i + 1] = vz * N[3 * i + 1] / l; N[3 * i + 2] = vz * N[3 * i + 2] / l;
         }
         return N;
+    }
+
+    /** Die Summen deckungsgleicher Punkte zusammenlegen (vor dem Normieren). */
+    static _naehteVereinen(P, N) {
+        const erste = new Map();
+        const gruppe = new Int32Array(P.length / 3).fill(-1);
+        for (let i = 0; i < P.length / 3; i++) {
+            const s = `${P[3 * i]},${P[3 * i + 1]},${P[3 * i + 2]}`;
+            const j = erste.get(s);
+            if (j === undefined) { erste.set(s, i); continue; }
+            gruppe[i] = j;
+            N[3 * j] += N[3 * i]; N[3 * j + 1] += N[3 * i + 1]; N[3 * j + 2] += N[3 * i + 2];
+        }
+        for (let i = 0; i < gruppe.length; i++) {
+            const j = gruppe[i];
+            if (j < 0) continue;
+            N[3 * i] = N[3 * j]; N[3 * i + 1] = N[3 * j + 1]; N[3 * i + 2] = N[3 * j + 2];
+        }
     }
 
     /** Achsenparallele Hülle der Punkte, um `rand` erweitert. */

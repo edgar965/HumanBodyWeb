@@ -25,41 +25,87 @@
  * nimmt den Einzug mit); ohne den gemeinsamen `Shaderpatch` löschte der
  * zweite Eingriff den ersten.
  *
+ * AN DER STOFFKANTE NICHT NACH INNEN, SONDERN UNTER DIE KANTE (13.09.2026,
+ * Edgar: „der Innensaum der Kleider ist eckig"): Der Einzug nach innen
+ * kippt jedes Randdreieck in den Körper — von oben gesehen zeigt es seine
+ * Rückseite, und am Bund stand ein Zahn je Dreieck. Verdeckte Ecken eines
+ * gezeichneten Randdreiecks nahe einer Stoffkante wandern deshalb entlang
+ * der Haut unter die Kante (`Saumschnitt`); der Einzug nach innen bleibt
+ * für alles, was keine Kante in Reichweite hat (lockere Säume, Maskengrenzen
+ * im Stoffinneren).
+ *
+ * HINTER DER KANTE BLEIBT EIN BAND HAUT (13.09.2026, Edgar mit Bild vom
+ * Ärmel: „Offenbar wird kein Skin erzeugt unter dem T-Shirt, dann kommt
+ * der Ärmel von der anderen Körperseite durch"): Verdeckte Haut bis
+ * `Saumband.BAND_M` neben der gezeichneten bleibt gezeichnet, versenkt mit
+ * dem Abstand — erst dahinter fallen Dreiecke aus dem Index. `setzen` gibt
+ * dafür die Maske `weg` zurück, mit der der Index gekürzt wird.
+ *
  * Liegt in `gemeinsam/`, weil das BVH Studio dieselbe Maske braucht
  * (`bvh_studio/spurhaut.js`, 11.09.2026).
  */
 import * as THREE from 'three';
 import { Shaderpatch } from './shaderpatch.js';
 import { Hautmaskegeometrie } from './hautmaskegeometrie.js';
+import { Saumschnitt } from './saumschnitt.js';
+import { Saumband } from './saumband.js';
 
 export class Hauteinzug {
 
-    /** Einzug der verdeckten Ecken nach innen (Meter). */
-    static EINZUG_M = 0.010;
+    /** Einzug der verdeckten Ecken nach innen (Meter) — die Tiefe des Saumbands. */
+    static EINZUG_M = Saumband.TIEFE_M;
 
     /**
-     * Das `einzug`-Attribut aus der Maske setzen (alle Punkte, verdeckte
-     * mit −EINZUG_M · Normale) und die Materialien des Netzes patchen.
+     * Das `einzug`-Attribut aus der Maske setzen und die Materialien des
+     * Netzes patchen. Verdeckte Punkte: −Tiefe · Normale, die Tiefe nach
+     * `Saumband.tiefe` mit dem Abstand zur gezeichneten Haut — außer Ecken
+     * gezeichneter Randdreiecke nahe einer Stoffkante (`optionen.kanten`,
+     * Strecken): die wandern unter die Kante. `optionen.normalen` ersetzt
+     * die eigenen Ruhenormalen (ein Stoff unter Stoff nimmt die der Haut).
      * `maske` null oder leer: kein Einzug, Attribut auf null.
+     *
+     * @returns {{gesetzt, geschnappt, band, weg}} — `weg`: je Punkt 1, wenn
+     *   er verdeckt und jenseits des Saumbands liegt (für `indexOhne`);
+     *   null ohne Maske.
      */
-    static setzen(netz, maske, dreiecke) {
+    static setzen(netz, maske, dreiecke, optionen = {}) {
         const geo = netz.geometry;
         const pos = geo.attributes.position.array;
         const n = pos.length / 3;
         const werte = new Float32Array(n * 3);
-        let gesetzt = 0;
+        const stand = { gesetzt: 0, geschnappt: 0, band: 0, weg: null };
         if (maske && dreiecke) {
             // Ruhenormalen nach außen (signiertes Volumen) — das
             // `normal`-Attribut des Körpers zeigt im Browser nach innen.
-            const N = Hautmaskegeometrie.normalen(pos, dreiecke);
+            const N = optionen.normalen || Hautmaskegeometrie.normalen(pos, dreiecke);
+            const kanten = optionen.kanten?.length ? optionen.kanten : null;
+            const gitter = kanten
+                ? Hautmaskegeometrie.punktgitter(Saumschnitt.mitten(kanten), Saumschnitt.ZELLE_M) : null;
+            const ecken = kanten ? Saumschnitt.randecken(maske, dreiecke) : null;
+            const abstaende = Saumband.abstaende(pos, maske, dreiecke);
             for (let i = 0; i < n; i++) {
                 if (!maske[i]) continue;
-                werte[3 * i] = -Hauteinzug.EINZUG_M * N[3 * i];
-                werte[3 * i + 1] = -Hauteinzug.EINZUG_M * N[3 * i + 1];
-                werte[3 * i + 2] = -Hauteinzug.EINZUG_M * N[3 * i + 2];
-                gesetzt += 1;
+                const nx = N[3 * i], ny = N[3 * i + 1], nz = N[3 * i + 2];
+                const schnapp = (ecken && ecken[i])
+                    ? Saumschnitt.verschiebung(pos[3 * i], pos[3 * i + 1], pos[3 * i + 2],
+                                               nx, ny, nz, kanten, gitter)
+                    : null;
+                if (schnapp) {
+                    werte[3 * i] = schnapp[0]; werte[3 * i + 1] = schnapp[1]; werte[3 * i + 2] = schnapp[2];
+                    stand.geschnappt += 1;
+                } else {
+                    const tiefe = Saumband.tiefe(abstaende[i]);
+                    werte[3 * i] = -tiefe * nx;
+                    werte[3 * i + 1] = -tiefe * ny;
+                    werte[3 * i + 2] = -tiefe * nz;
+                }
+                if (abstaende[i] <= Saumband.BAND_M) stand.band += 1;
+                stand.gesetzt += 1;
             }
+            stand.weg = Saumband.weg(maske, abstaende);
         }
+        geo.userData.saumschnitt = stand.geschnappt;
+        geo.userData.saumband = stand.band;
         const bisher = geo.getAttribute('einzug');
         if (bisher && bisher.array.length === werte.length) {
             bisher.array.set(werte);
@@ -68,7 +114,7 @@ export class Hauteinzug {
             geo.setAttribute('einzug', new THREE.BufferAttribute(werte, 3));
         }
         Hauteinzug.patchen(netz);
-        return gesetzt;
+        return stand;
     }
 
     /** Die Materialien des Netzes (eines oder ein Feld) um den Einzug ergänzen. */

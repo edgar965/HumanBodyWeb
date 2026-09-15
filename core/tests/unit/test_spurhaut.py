@@ -56,7 +56,7 @@ class SpurhautTest(SimpleTestCase):
         (die Ergebnisseite braucht dieselbe Maske); `Spurhaut` erbt sie."""
         haut = SpurhautTest._lies_modul(GEMEINSAM, 'figurhaut.js')
         for baustein in ('Hautmaske.verdeckt(', 'Hautmaske.indexOhne(',
-                         'Lagenmaske.verdeckt(', 'Hauteinzug.setzen(', 'Hauteinzug.patchen(',
+                         'Lagenmaske.verdeckt(', 'Hauteinzug.setzen(', 'Saumschnitt.kanten(',
                          'userData.indexVoll', 'userData?.isGarment'):
             self.assertIn(baustein, haut, baustein)
         self.assertIn("from './hauteinzug.js'", haut)

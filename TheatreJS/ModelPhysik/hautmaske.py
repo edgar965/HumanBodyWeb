@@ -18,9 +18,10 @@ Fassungen am selben Kunstkoerper aneinander):
   Rand — der Bund der 2-mm-Leggings war sonst genau die Haut, die herauskam.
 * Freie Inseln im Verdeckten (bis `INSEL_MAX` Punkte) gelten als verdeckt
   (Achselfalte: die Normale trifft dort keinen Stoff).
-* Ein Dreieck faellt weg, wenn alle drei Ecken verdeckt sind; die
-  verdeckten Ecken der Randdreiecke ziehen sich beim Rendern `EINZUG_M`
-  nach innen (`Filmrender`).
+* Ein Dreieck faellt weg, wenn alle drei Ecken verdeckt sind und jenseits
+  des `Saumband`s liegen (`saumband.py`, 13.09.2026); die verdeckten Punkte
+  im Band ziehen sich beim Rendern mit dem Abstand nach innen, hoechstens
+  `EINZUG_M` (`Filmmasken.gerendert`).
 * Stoff unter Stoff (`lagenmaske.py`): Wer aussen liegt, wird gezaehlt; die
   Normalen kommen von der Haut, nie vom Stoffnetz.
 

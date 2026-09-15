@@ -102,11 +102,16 @@ class Auftragslauf:
     def _route_smpl(self):
         from .smpllauf import Smpllauf
         from .gvhmr_ausgabe import GvhmrAusgabe
+        from .personenergebnisse import Personenergebnisse
 
         bvh = Smpllauf(self.job, self.videopfad,
                        self.ausgabeordner).fahren()
         if self.job.pipeline == 'gvhmr':
             GvhmrAusgabe(self.job, self.ausgabeordner).kopieren()
+        # Weitere Personen (`--persons n`, 14.09.2026): `<stamm>_p2.bvh` …
+        # neben dem ersten — am Auftrag, in der Ablage, in der Bibliothek.
+        Personenergebnisse.eintragen(self.job, bvh, self.job.pipeline,
+                                     self._bibliothekseintrag)
         self._fertigmelden(bvh, self.job.pipeline)
 
     def _route_v4(self):

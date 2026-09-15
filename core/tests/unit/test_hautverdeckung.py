@@ -47,7 +47,9 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         self.assertIn('index: geo.index.array.slice()', self.modul)
         # Jede Maske rechnet vom vollen Index, nie vom gekuerzten.
         self.assertIn('Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe)', self.modul)
-        self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, maske)', self.modul)
+        # Seit dem 13.09.2026 mit `weg` aus dem Einzug: hinter der Maskengrenze
+        # bleibt ein Band versenkter Haut (`Saumband`).
+        self.assertIn('Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg)', self.modul)
         aufbau = HautverdeckungVerdrahtungTest._lies('scene', 'weichgewebeaufbau.js')
         self.assertIn('geo.userData?.indexVoll?.index ||', aufbau)
 
@@ -56,7 +58,10 @@ class HautverdeckungVerdrahtungTest(SimpleTestCase):
         self.assertIn('Hautverdeckung.indexSetzen(geo, voll.index, voll.gruppen);', self.modul)
 
     def test_einzug_und_lagenverdeckung_haengen_daran(self):
-        self.assertIn('Hauteinzug.setzen(inst.bodyMesh, maske, voll.index);', self.modul)
+        # Seit dem 13.09.2026 mit den Stoffkanten: Randecken wandern unter die
+        # Kante statt nach innen (`Saumschnitt`).
+        self.assertIn('Hauteinzug.setzen(inst.bodyMesh, maske, voll.index, '
+                      '{ kanten: Saumschnitt.kanten(stoffe) });', self.modul)
         self.assertIn('Hauteinzug.setzen(inst.bodyMesh, null, null);', self.modul)
         einzug = HautverdeckungVerdrahtungTest._lies('gemeinsam', 'hauteinzug.js')
         self.assertIn("Shaderpatch.hinterInclude(shader, 'begin_vertex', 'transformed += einzug;')", einzug)

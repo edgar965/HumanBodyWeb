@@ -67,6 +67,10 @@ class BVHJob(models.Model):
     #: bestellt hat (`hands_source: gemx`, 12.09.2026); die Zusammenführung
     #: legt ihre Fingerknochen über Körper und v4-Gesicht.
     bvh_file_hands = models.CharField(max_length=512, blank=True)
+    #: Die BVHs der weiteren Personen (14.09.2026, Edgar: „bei mehreren
+    #: Personen brauche ich mehrere BVHs, die aber synchron sein sollen"):
+    #: Pfade in Reihenfolge der Personen 2, 3, …; `bvh_file` bleibt Person 1.
+    bvh_file_personen = models.JSONField(default=list, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     pipeline = models.CharField(max_length=30, choices=PIPELINE_CHOICES,
                                 default='hybrid_gvhmr')

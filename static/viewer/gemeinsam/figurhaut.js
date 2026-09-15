@@ -3,6 +3,7 @@ import { Hautmaske } from './hautmaske.js';
 import { Lagenmaske } from './lagenmaske.js';
 import { Hautmaskegeometrie } from './hautmaskegeometrie.js';
 import { Hauteinzug } from './hauteinzug.js';
+import { Saumschnitt } from './saumschnitt.js';
 import { Protokoll } from './protokoll.js';
 
 /**
@@ -44,11 +45,13 @@ export class Figurhaut {
         const t0 = performance.now();
         const voll = geo.userData.indexVoll;
         const maske = Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe);
-        const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, maske);
-        Figurhaut.indexSetzen(geo, neu.index, neu.gruppen);
         geo.userData.hautVerdeckt = maske;
-        Hauteinzug.setzen(koerper, maske, voll.index);
-        const stand = { verdeckt: Figurhaut._anzahl(maske), dreiecke: neu.entfernt,
+        // Erst der Einzug (er kennt das Saumband), dann der Index ohne das,
+        // was jenseits des Bands liegt — wie `scene/hautverdeckung.js`.
+        const einzug = Hauteinzug.setzen(koerper, maske, voll.index, { kanten: Saumschnitt.kanten(stoffe) });
+        const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg);
+        Figurhaut.indexSetzen(geo, neu.index, neu.gruppen);
+        const stand = { verdeckt: Figurhaut._anzahl(maske), band: einzug.band, dreiecke: neu.entfernt,
                         stuecke: stoffe.length, lagen: [] };
         if (stoffe.length > 1) stand.lagen = Figurhaut._lagen(geo, stoffe);
         stand.ms = Math.round(performance.now() - t0);
@@ -81,27 +84,25 @@ export class Figurhaut {
             const { maske, ueber } = ergebnis.get(s.schluessel);
             if (!ueber.length) continue;
             const voll = s.netz.geometry.userData.indexVoll;
-            const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, maske);
-            Figurhaut.indexSetzen(s.netz.geometry, neu.index, neu.gruppen);
             s.netz.geometry.userData.lagenVerdeckt = maske;
-            Figurhaut._einzug(s.netz, maske, koerper, N, gitter);
+            const einzug = Figurhaut._einzug(s.netz, maske, koerper, N, gitter,
+                                             stoffe.filter((a) => ueber.includes(a.schluessel)));
+            const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg);
+            Figurhaut.indexSetzen(s.netz.geometry, neu.index, neu.gruppen);
             lagen.push({ stueck: s.schluessel, unter: ueber, verdeckt: Figurhaut._anzahl(maske),
                          dreiecke: neu.entfernt });
         }
         return lagen;
     }
 
-    /** Einzug entlang der HAUTnormale — wie `Lagenverdeckung._einzug`. */
-    static _einzug(netz, maske, koerper, N, gitter) {
+    /** Einzug entlang der HAUTnormale — wie `Lagenverdeckung._einzug`;
+     *  nahe der Kante des Stücks darüber unter diese Kante (`Saumschnitt`),
+     *  dahinter das versenkte `Saumband`. Gibt den Stand mit `weg` zurück. */
+    static _einzug(netz, maske, koerper, N, gitter, darueber = []) {
         const P = netz.geometry.attributes.position.array;
         const NS = Lagenmaske.normalenVonHaut(P, koerper.punkte, N, gitter);
-        const werte = new Float32Array(P.length);
-        for (let i = 0; i < maske.length; i++) {
-            if (!maske[i]) continue;
-            for (let k = 0; k < 3; k++) werte[3 * i + k] = -Hauteinzug.EINZUG_M * NS[3 * i + k];
-        }
-        netz.geometry.setAttribute('einzug', new THREE.BufferAttribute(werte, 3));
-        Hauteinzug.patchen(netz);
+        return Hauteinzug.setzen(netz, maske, netz.geometry.userData.indexVoll.index,
+                                 { normalen: NS, kanten: Saumschnitt.kanten(darueber) });
     }
 
     /** Die Stücke der Figur — Netze mit `isGarment`, direkt in der Gruppe. */

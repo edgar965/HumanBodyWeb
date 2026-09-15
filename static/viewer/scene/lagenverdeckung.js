@@ -17,12 +17,12 @@
  * Hautverdeckung. Mit weniger als zwei Stücken werden alle Indizes
  * wiederhergestellt.
  */
-import { THREE } from './state.js';
 import { Lagenmaske } from '../gemeinsam/lagenmaske.js';
 import { Hautmaske } from '../gemeinsam/hautmaske.js';
 import { Hautmaskegeometrie } from '../gemeinsam/hautmaskegeometrie.js';
 import { Hautverdeckung } from './hautverdeckung.js';
 import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
+import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
 import { Stueckereignis } from './garmentcode_stueckereignis.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 
@@ -44,10 +44,11 @@ export class Lagenverdeckung {
             const netz = inst.clothMeshes[s.schluessel];
             const { maske, ueber } = ergebnis.get(s.schluessel);
             const voll = netz.geometry.userData.indexVoll;
-            const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, maske);
-            Hautverdeckung.indexSetzen(netz.geometry, neu.index, neu.gruppen);
             netz.geometry.userData.lagenVerdeckt = ueber.length ? maske : null;
-            Lagenverdeckung._einzug(netz, ueber.length ? maske : null, koerper);
+            const einzug = Lagenverdeckung._einzug(netz, ueber.length ? maske : null, koerper,
+                                                   stoffe.filter((a) => ueber.includes(a.schluessel)));
+            const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg || maske);
+            Hautverdeckung.indexSetzen(netz.geometry, neu.index, neu.gruppen);
             let verdeckt = 0;
             for (let i = 0; i < maske.length; i++) verdeckt += maske[i];
             if (ueber.length) {
@@ -78,27 +79,21 @@ export class Lagenverdeckung {
     /**
      * Einzug der verdeckten Ecken entlang der HAUTnormale — die Normale des
      * Stoffnetzes taugt nicht (Wicklung eines Schnitts), und die Maske ist
-     * mit derselben Hautnormale gerechnet.
+     * mit derselben Hautnormale gerechnet. Nahe der Kante des darüber
+     * liegenden Stücks wandern sie unter diese Kante (`Saumschnitt`), wie
+     * die Haut unter den Bund; dahinter bleibt ein versenktes Band
+     * (`Saumband`). Gibt den Stand von `Hauteinzug.setzen` zurück — mit
+     * `weg` wird der Index gekürzt.
      */
-    static _einzug(netz, maske, koerper) {
+    static _einzug(netz, maske, koerper, darueber = []) {
         const geo = netz.geometry;
+        if (!maske || !koerper) return Hauteinzug.setzen(netz, null, null);
         const P = geo.attributes.position.array;
-        const werte = new Float32Array(P.length);
-        if (maske && koerper) {
-            const N = Hautmaskegeometrie.normalen(koerper.punkte, koerper.dreiecke);
-            const gitter = Hautmaskegeometrie.punktgitter(koerper.punkte, Hautmaskegeometrie.ZELLE_M);
-            const NS = Lagenmaske.normalenVonHaut(P, koerper.punkte, N, gitter);
-            for (let i = 0; i < maske.length; i++) {
-                if (!maske[i]) continue;
-                werte[3 * i] = -Hauteinzug.EINZUG_M * NS[3 * i];
-                werte[3 * i + 1] = -Hauteinzug.EINZUG_M * NS[3 * i + 1];
-                werte[3 * i + 2] = -Hauteinzug.EINZUG_M * NS[3 * i + 2];
-            }
-        }
-        const bisher = geo.getAttribute('einzug');
-        if (bisher && bisher.array.length === werte.length) { bisher.array.set(werte); bisher.needsUpdate = true; }
-        else geo.setAttribute('einzug', new THREE.BufferAttribute(werte, 3));
-        Hauteinzug.patchen(netz);
+        const N = Hautmaskegeometrie.normalen(koerper.punkte, koerper.dreiecke);
+        const gitter = Hautmaskegeometrie.punktgitter(koerper.punkte, Hautmaskegeometrie.ZELLE_M);
+        const NS = Lagenmaske.normalenVonHaut(P, koerper.punkte, N, gitter);
+        return Hauteinzug.setzen(netz, maske, Hautverdeckung.vollerIndex(geo),
+                                 { normalen: NS, kanten: Saumschnitt.kanten(darueber) });
     }
 
     static _ausstehend = new Set();

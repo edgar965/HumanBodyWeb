@@ -85,6 +85,7 @@ class Auftragssteuerung:
         job.bvh_file = ''
         job.bvh_file_face = ''
         job.bvh_file_hands = ''
+        job.bvh_file_personen = []
         bilder = Videolaenge.bilder(
             Path(settings.MEDIA_ROOT) / str(job.video_file))
         job.progress_detail = f'0 / {bilder} frames' if bilder else 'Starting...'

@@ -98,6 +98,8 @@ class Auftragsendpunkte:
             daten['bvh_file_face'] = job.bvh_file_face
         if job.bvh_file_hands:
             daten['bvh_file_hands'] = job.bvh_file_hands
+        if job.bvh_file_personen:
+            daten['bvh_file_personen'] = job.bvh_file_personen
         return JsonResponse(daten)
 
     # -------------------------------------------------------------- Starten

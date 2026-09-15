@@ -16,7 +16,9 @@
  *
  * DIE RANDDREIECKE (eine oder zwei Ecken verdeckt) bleiben im Index, sonst
  * stünde jenseits jeder Stoffkante ein Loch von einer Dreieckslänge; ihre
- * verdeckten Ecken zieht `Hauteinzug` im Shader unter den Stoff.
+ * verdeckten Ecken zieht `Hauteinzug` im Shader unter den Stoff. Seit dem
+ * 13.09.2026 bleibt dahinter ein Band versenkter Haut (`Saumband`) — wer in
+ * eine Ärmelöffnung sieht, sieht den Arm, nicht die andere Ärmelwand.
  *
  * WANN: bei jedem `Stueckereignis` (GarmentCode-Stück kommt oder geht,
  * auch beim Nachbinden nach dem Skelettbau — der Körper ist dann ein
@@ -29,6 +31,7 @@ import { Hautmaske } from '../gemeinsam/hautmaske.js';
 import { Stueckereignis } from './garmentcode_stueckereignis.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Hauteinzug } from '../gemeinsam/hauteinzug.js';
+import { Saumschnitt } from '../gemeinsam/saumschnitt.js';
 
 export class Hautverdeckung {
 
@@ -42,18 +45,20 @@ export class Hautverdeckung {
         const voll = geo.userData.indexVoll;
         const t0 = performance.now();
         const maske = Hautmaske.verdeckt(geo.attributes.position.array, voll.index, stoffe);
-        const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, maske);
-        Hautverdeckung.indexSetzen(geo, neu.index, neu.gruppen);
         geo.userData.hautVerdeckt = maske;
-        // Die Randdreiecke (eine oder zwei Ecken verdeckt) bleiben gezeichnet;
-        // ihre verdeckten Ecken tauchen im Shader unter den Stoff.
-        Hauteinzug.setzen(inst.bodyMesh, maske, voll.index);
+        // Verdeckte Haut neben der gezeichneten bleibt versenkt gezeichnet
+        // (`Saumband`); die Randecken wandern im Shader unter die Stoffkante
+        // (`Saumschnitt`). Aus dem Index fällt nur, was jenseits des Bands liegt.
+        const einzug = Hauteinzug.setzen(inst.bodyMesh, maske, voll.index, { kanten: Saumschnitt.kanten(stoffe) });
+        const neu = Hautmaske.indexOhne(voll.index, voll.gruppen, einzug.weg);
+        Hautverdeckung.indexSetzen(geo, neu.index, neu.gruppen);
         let verdeckt = 0;
         for (let i = 0; i < maske.length; i++) verdeckt += maske[i];
-        const stand = { verdeckt, dreiecke: neu.entfernt, stuecke: stoffe.length,
+        const stand = { verdeckt, band: einzug.band, dreiecke: neu.entfernt, stuecke: stoffe.length,
                         ms: Math.round(performance.now() - t0) };
         Protokoll.debug('Hautverdeckung', `${verdeckt} Körperpunkte unter ${stoffe.length} `
-            + `Stücken, ${neu.entfernt} Dreiecke ausgeblendet, ${stand.ms} ms`);
+            + `Stücken, ${einzug.band} davon im Saumband, ${neu.entfernt} Dreiecke ausgeblendet, `
+            + `${stand.ms} ms`);
         return stand;
     }
 
