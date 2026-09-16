@@ -6,7 +6,7 @@ import { Lippenbau } from './lippenbau.js';
 import { Hautfarbe } from './hautfarbe.js';
 import { Hautgewichte } from './hautgewichte.js';
 import { Koerperdetails } from './koerperdetails.js';
-import { Augenbrauenbau } from './augenbrauenbau.js';
+import { Brauenhaut } from './brauenhaut.js';
 import { Koerperfrage } from './koerperfrage.js';
 import { Modellzubehoer } from './modellzubehoer.js';
 import { Erzeugtesmodell } from './erzeugtesmodell.js';
@@ -33,8 +33,8 @@ import { buildRigifySkeleton } from '../rigify_skeleton_builder.js';
  *      knochen als Kind, `bind`. Ohne beides bleibt ein `Mesh` — die Szene
  *      häutet erst bei Bedarf (`convertInstToSkinned`).
  *   4. Körper in die Gruppe, dann die Details: Farben auf die Gruppen,
- *      Längen auf die Punkte, die Brauen als eigenes Netz in der Gruppe
- *      (`Augenbrauenbau` — gehäutet, wenn der Körper es ist).
+ *      Längen auf die Punkte, die Brauen als Zeichnung im Hautshader
+ *      (`Brauenhaut`, 16.09.2026 — vorher ein eigenes Netz, `Augenbrauenbau`).
  *   5. Zubehör (`Modellzubehoer`): Kleidung nebeneinander, GarmentCode,
  *      Haare, Hautmaske — nur mit `zubehoer: true`; die Szene hat dafür
  *      ihren eigenen Weg mit Regionen und Proxys (`Charakterzubehoer`).
@@ -67,8 +67,6 @@ export class HumanbodyModell extends Modell {
         this.details = Koerperdetails.aus(vorgabe);
         this.generatedConfig = vorgabe.type === 'generated_model' ? vorgabe : null;
         this._pendingMHProxies = Array.isArray(vorgabe.mh_proxy) ? vorgabe.mh_proxy : [];
-        /** Das Brauennetz (`Augenbrauenbau`). */
-        this.augenbrauen = null;
         /** Die Hautfarbtabelle der Seite, sobald sie einmal angewendet wurde. */
         this.hautfarben = null;
     }
@@ -194,14 +192,17 @@ export class HumanbodyModell extends Modell {
     /**
      * Farben, Längen und Brauen aus `details` — beim Bau, nach frischen
      * Morphpunkten (`neue`, vor dem Schreiben ins Attribut) und nach einem
-     * Regler. Haut ohne eigene Farbe trägt wieder die der Körperart.
-     * @returns Zahl der Brauenstreifen
+     * Regler. Haut ohne eigene Farbe trägt wieder die der Körperart. Die
+     * Braue kommt asynchron als Karte in den Hautshader (`Brauenhaut`).
+     * @returns true, wenn Details angewendet wurden
      */
     detailsAnwenden(neue = null) {
-        if (!this.bodyMesh || !this.details) return 0;
+        if (!this.bodyMesh || !this.details) return false;
         if (!this.details.haut && this.hautfarben) this.hautfarbe(this.hautfarben);
         Koerperdetails.anwenden(this.bodyMesh, this.details, neue);
-        return Augenbrauenbau.sicher(this, neue);
+        Brauenhaut.anwenden(this.bodyMesh, this.details, this.bodyType)
+            .catch(f => console.warn('Brauenhaut:', f));
+        return true;
     }
 
     static materialien(netz) {
@@ -210,7 +211,6 @@ export class HumanbodyModell extends Modell {
     }
 
     dispose() {
-        Augenbrauenbau.entfernen(this);
         super.dispose();
         this.bodyMesh = null;
         this.clothMeshes = {};

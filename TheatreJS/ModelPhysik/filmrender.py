@@ -133,11 +133,18 @@ class Filmrender:
                     # Normalen fertig mitgeliefert (kein trimesh je Bild —
                     # das kostete 2,8 s je Bild beim 70K-Netz).
                     punkte, dreiecke, normalen = Filmmasken.gerendert(teil, nummer)
+                    ecken = np.ascontiguousarray(punkte @ drehung.T, dtype=np.float32)
+                    senkrechten = np.ascontiguousarray(normalen @ drehung.T,
+                                                       dtype=np.float32)
+                    haut = teil.get('filmhaut')
+                    if haut is not None:
+                        # Haut mit Textur und Braue, Augen, Wimpern, Lippen —
+                        # je Gruppe ihr Material (`filmhaut.py`, 17.09.2026).
+                        for netz in haut.netze(ecken, senkrechten, dreiecke):
+                            szene.add(netz)
+                        continue
                     szene.add(pyrender.Mesh(primitives=[pyrender.Primitive(
-                        positions=np.ascontiguousarray(punkte @ drehung.T,
-                                                       dtype=np.float32),
-                        normals=np.ascontiguousarray(normalen @ drehung.T,
-                                                     dtype=np.float32),
+                        positions=ecken, normals=senkrechten,
                         indices=np.ascontiguousarray(dreiecke, dtype=np.uint32),
                         material=werkstoff, mode=4)]))
                 szene.add(kamera, pose=self._blicken(lage, blick))

@@ -12,6 +12,7 @@ bricht ihn sauber ab, statt eine halbe Antwort zu hinterlassen.
 
 Auftrag (JSON):
     body_type, morphs {name: wert}          die Figur
+    details {haut, haut_textur, iris, …}    Farben, Textur, Braue (`Filmhaut`)
     stuecke [{name, pfad, farbe}]           `*_sim_rig.json` je Stueck
     bvh                                     Pfad der Bewegungsdatei
     sekunden, fps                           Laenge und Bildrate des Videos
@@ -106,6 +107,8 @@ class Filmlauf:
                 stuecke=self.auftrag.get('stuecke') or [],
                 physik=float(self.auftrag.get('physik_mm') or 0.0),
                 geschlecht=geschlecht, figurpunkte=punkte, figurfein=fein,
+                details=self.auftrag.get('details') or {},
+                body_type=self.auftrag.get('body_type') or 'Female_Caucasian',
                 melder=self._melden)
             proben = film.proben()
             film.rechnen()

@@ -133,6 +133,9 @@ export class Figurvideo {
             ...this.ablage(),
             body_type: inst.bodyType,
             morphs: inst.morphs || {},
+            // Farben, Hauttextur und Braue der Figur — der Film baut daraus
+            // Haut, Augen, Wimpern und Lippen (`ModelPhysik/filmhaut.py`).
+            details: inst.details || {},
             stuecke,
             bvh_url: state.currentAnimUrl,
             // Ab HIER: wo die Animation in der Szene gerade steht. Bild 0

@@ -1,6 +1,6 @@
 import { Koerperdetails } from '../gemeinsam/koerperdetails.js';
 import { Morphliste } from '../gemeinsam/morphliste.js';
-import { Augenbrauenbau } from '../gemeinsam/augenbrauenbau.js';
+import { Brauenvorlagen } from '../gemeinsam/brauenvorlagen.js';
 import { Charakterkoerper } from './charakter_koerper.js';
 import { Detailbereiche } from './detailbereiche.js';
 import { markDirty } from './undo.js';
@@ -16,7 +16,7 @@ import { markDirty } from './undo.js';
  * Was welcher Bereich enthält, steht in `Detailbereiche`. Farben, Glanz und
  * die Längen von Wimpern und Fußnägeln wirken sofort im Browser
  * (`Koerperdetails.anwenden`, Feld `inst.details` des Modells); die Brauen
- * sind ein eigenes Netz (`Augenbrauenbau`: Farbe sofort, Stärke = Neubau).
+ * sind eine Zeichnung im Hautshader (`Brauenhaut`, 16.09.2026: jeder Regler zeichnet neu).
  * Fingernägel, Lider und Brauenform gehen über MORPHS (`Hands_NailsLength`,
  * `Eyelids_*`, `Eyebrows_*`) — wie jeder Morph über den Server (`neuLaden`),
  * und der Regler im Bereich „Morphs" zieht mit (`Morphliste.angleichen`).
@@ -47,6 +47,7 @@ export class Detailbedienung {
             const wahl = document.getElementById(kennung);
             if (wahl) wahl.value = inst.details[feld] || '';
         }
+        Detailbedienung._vorlageZeigen(inst.details);
         for (const name of Detailbereiche.morphe()) {
             Detailbedienung._reglerSetzen(Detailbereiche.morphKennung(name),
                                           Math.round((inst.morphs?.[name] || 0) * 100), '');
@@ -95,12 +96,37 @@ export class Detailbedienung {
                 Detailbedienung._aendern(feld, e.target.value);
             });
         }
+        Detailbedienung._vorlagenVerdrahten();
         for (const name of Detailbereiche.morphe()) {
             Detailbedienung._morphregler(Detailbereiche.morphKennung(name), name);
         }
         for (const knopf of document.querySelectorAll('.prop-detail-reset')) {
             knopf.addEventListener('click', () => Detailbedienung.zuruecksetzen(knopf.dataset.bereich || null));
         }
+    }
+
+    static VORLAGE = 'prop-detail-brauen-vorlage';
+
+    /** Die Brauenvorlagen ins Auswahlfeld; eine Wahl setzt die Brauenfelder. */
+    static _vorlagenVerdrahten() {
+        const wahl = document.getElementById(Detailbedienung.VORLAGE);
+        if (!wahl) return;
+        wahl.innerHTML = Brauenvorlagen.ALLE.map(([k, name]) => `<option value="${k}">${name}</option>`).join('')
+            + '<option value="eigene">Eigene Werte</option>';
+        wahl.addEventListener('change', () => {
+            const inst = Detailbedienung._figur;
+            if (!inst || wahl.value === 'eigene') return;
+            const neu = Brauenvorlagen.anwenden(inst.details, wahl.value, Koerperdetails.VORGABE);
+            inst.details = Koerperdetails.aus({ [Koerperdetails.FELD]: neu });
+            Detailbedienung.fuellen(inst, Detailbedienung._neuLaden);
+            Detailbedienung.anwenden(inst, 'brauen');
+            markDirty();
+        });
+    }
+
+    static _vorlageZeigen(details) {
+        const wahl = document.getElementById(Detailbedienung.VORLAGE);
+        if (wahl) wahl.value = Brauenvorlagen.erkennen(details, Koerperdetails.VORGABE) ?? 'eigene';
     }
 
     /** Ein Morph-Regler: Anzeige beim Ziehen, Serverlauf beim Loslassen. */
@@ -122,11 +148,11 @@ export class Detailbedienung {
 
     /**
      * Sofort aufs Netz — ohne Serverlauf (`Koerperdetails` merkt die Basis).
-     * Brauen: Farbe am Material, Stärke = Neubau; alles (`null`) = Neubau.
+     * Brauen (`brauen*`): der Server zeichnet die Karte neu (`Brauenhaut`,
+     * 0,2 s); alles (`null`) = Neubau.
      */
     static anwenden(inst, feld = null) {
         if (!inst.bodyMesh) return;
-        if (feld === 'brauen') { Augenbrauenbau.faerben(inst); return; }
         if (Detailbereiche.neubau(feld)) { Charakterkoerper.details(inst); return; }
         if (!inst.details.haut) Charakterkoerper.hautfarbe(inst, Charakterkoerper.materialien(inst));
         Koerperdetails.anwenden(inst.bodyMesh, inst.details);

@@ -24,6 +24,7 @@ from .api.bvhtext import Bvhtext
 from .api.bvhdateien import Bvhauslieferung
 from .api.fotoabgleich import Fotoabgleich
 from .api.hauttexturen import Hauttexturen
+from .api.brauen import Brauenendpunkte
 from .api.mhfigur import Mhfigur
 from .api.mhproxy import Mhproxy
 from .api.netzbearbeitung import Netzbearbeitung
@@ -80,6 +81,10 @@ CHARAKTER = [
     path('api/character/mesh/', Netzendpunkte.netz, name='character_mesh'),
     # MB-Lab-Hauttexturen fuer die Figur, nur lesend (13.09.2026).
     path('api/character/textur/<str:name>/', Hauttexturen.datei, name='character_textur'),
+    # Die gezeichnete Augenbraue (`Brauendecal`, 16.09.2026).
+    path('api/character/brauen/fenster/', Brauenendpunkte.fenster,
+         name='brauen_fenster'),
+    path('api/character/brauen/bild/', Brauenendpunkte.bild, name='brauen_bild'),
     path('api/character/morphs/', Netzendpunkte.regler, name='character_morphs'),
     # Die gemeinsame Reglertabelle: ein Name, zwei Uebersetzungen (06.09.2026).
     path('api/character/regler/gemeinsam/', Gemeinsameregler.tabelle,

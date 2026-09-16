@@ -72,6 +72,24 @@ class Auftragsabschluss:
         logger.info('Job %s: BVH gefunden, als fertig vermerkt', auftrag.id)
 
     @classmethod
+    def fertig_mit_vorrat(cls, auftrag, meldung=None):
+        """Das Ende eines Laufs: erst der Retarget neben jedes BVH des
+        Auftrags (`Retargetvorrat`, 16.09.2026 — sonst rechnet ihn der erste
+        Abruf, 43 s bei 7.538 Bildern; solange steht der Zwischenstand in
+        `progress_detail`), dann „complete". `bvh_file` setzt der Aufrufer."""
+        from .retargetvorrat import Retargetvorrat
+
+        def melden(text):
+            auftrag.progress_detail = text
+            auftrag.save(update_fields=['progress_detail', 'updated_at'])
+        Retargetvorrat.anlegen(auftrag, melden)
+        auftrag.status = 'complete'
+        auftrag.progress = 100
+        if meldung:
+            auftrag.progress_detail = meldung
+        auftrag.save()
+
+    @classmethod
     def als_gescheitert(cls, auftrag, grund=None):
         auftrag.status = 'failed'
         auftrag.error_message = grund or cls.NEUSTART_HINWEIS

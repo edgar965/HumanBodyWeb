@@ -87,7 +87,9 @@ export class Hauttextur {
 
     /** Eine Textur laden — einmal je Datei; Albedo in sRGB, Karten linear. */
     static async laden(datei, farbig) {
-        const adresse = Hauttextur.ADRESSE + datei + '/';
+        // Albedos ohne die gemalten Brauen — die Figur zeichnet ihre eigenen
+        // (`Brauenhaut`, 16.09.2026); die Abfrage ist Teil der Adresse.
+        const adresse = Hauttextur.ADRESSE + datei + '/' + (farbig ? '?brauen=ohne' : '');
         if (Hauttextur._geladen.has(adresse)) return Hauttextur._geladen.get(adresse);
         const THREE = await import('three');
         Hauttextur._lader ??= new THREE.TextureLoader();

@@ -36,8 +36,13 @@ export class Detailbereiche {
         brauen: {
             farben: [['prop-detail-brauen', 'brauen']],
             prozent: [['prop-detail-brauen-staerke', 'brauen_staerke'], ['prop-detail-brauen-dicke', 'brauen_dicke'],
-                      ['prop-detail-brauen-dichte', 'brauen_dichte']],
-            millimeter: [['prop-detail-brauen-lage', 'brauen_lage']],
+                      ['prop-detail-brauen-dichte', 'brauen_dichte'],
+                      ['prop-detail-brauen-bogen-laenge', 'brauen_bogen_laenge'],
+                      ['prop-detail-brauen-deckkraft', 'brauen_deckkraft']],
+            millimeter: [['prop-detail-brauen-lage', 'brauen_lage'],
+                         ['prop-detail-brauen-hoehe-innen', 'brauen_hoehe_innen'],
+                         ['prop-detail-brauen-hoehe-aussen', 'brauen_hoehe_aussen'],
+                         ['prop-detail-brauen-woelbung', 'brauen_woelbung']],
             morphe: ['Eyebrows_PosZ', 'Eyebrows_Angle', 'Eyebrows_Ridge', 'Eyebrows_Droop'],
         },
         mund: {
@@ -82,7 +87,7 @@ export class Detailbereiche {
 
     /** Felder, deren Änderung die Brauen neu baut (alles an den Brauen außer der Farbe). */
     static neubau(feld) {
-        return feld === null || (feld.startsWith('brauen_'));
+        return feld === null || feld.startsWith('brauen');
     }
 
     static morphe(name = null) {

@@ -30,6 +30,7 @@ import numpy as np
 
 from feinkoerper import Feinkoerper
 from figurnetze import Figurnetze
+from filmhaut import Filmhaut
 from filmmasken import Filmmasken
 from filmphysik import Filmphysik
 from filmrender import Filmrender
@@ -64,13 +65,16 @@ class Hbfilm:
     def __init__(self, bvh=BVH, bilder=120, ziel_fps=24.0, ab=AB_BILD,
                  stuecke=None, physik=0.0, geschlecht='female',
                  figurpunkte=None, melder=None, ab_sekunden=None,
-                 figurfein=None):
+                 figurfein=None, details=None, body_type=None):
         u"""`figurpunkte` sind ALLE Basispunkte der Figur (mit Morphs);
         ohne sie kommt die unverformte Grundfigur. `figurfein` =
         (Unterteiler, Basisflaechen): Dann laufen LBS und Physik auf ALLEN
         Basispunkten und der Film rendert das unterteilte Netz der Szene
         (`Feinkoerper`); ohne bleibt es bei der 18K-Aussenhaut. `melder(phase,
-        anteil)` bekommt den Fortschritt — der Videoweg im UI zeigt ihn an."""
+        anteil)` bekommt den Fortschritt — der Videoweg im UI zeigt ihn an.
+        `details` (Farben, Textur, Braue der Szene) und `body_type` geben dem
+        unterteilten Koerper seine Materialgruppen (`Filmhaut`); None = die
+        Flaeche wie bis zum 17.09.2026."""
         from bvh_nach_anim import Animschreiber
         from figur_nach_cody import Codyfigur
 
@@ -98,6 +102,9 @@ class Hbfilm:
         self.netze = Figurnetze(figur)
         self.teile = []
         self._koerper(figurfein if alle is not None else None, alle)
+        if details is not None:
+            self.melder(u'Haut und Augen', 0.06)
+            Filmhaut.anlegen(self.teile[0], details, geschlecht, body_type)
         for eintrag in (stuecke if stuecke is not None else STUECKE):
             if isinstance(eintrag, dict):
                 self._stueck(eintrag['name'], eintrag.get('pfad'),

@@ -65,11 +65,24 @@ export class Clipanimation {
         const adresse = `${Clipanimation.ENDPUNKT}?category=`
             + `${encodeURIComponent(clip.category)}&name=`
             + `${encodeURIComponent(clip.name)}` + Retargetziel.abfrage(ziel);
+        // Der erste Abruf je Figur und Ablageort rechnet den Retarget neu —
+        // 43 s bei 7.538 Bildern (16.09.2026, „keine Animation zu sehen …
+        // erst jetzt, nach ca. 1 Minute"). Solange steht es oben rechts.
+        const bilder = clip.totalFrames ? ` (${clip.totalFrames} Bilder)` : '';
+        Studioanzeige.melden(`Bewegung „${clip.name}" wird umgesetzt${bilder} …`,
+                             10 * 60 * 1000);
+        const start = performance.now();
         try {
             // MakeHuman und UMA Python schicken ihre Regler im Rumpf (POST).
-            return ziel.rumpf ? await Serverabruf.senden(adresse, ziel.rumpf)
-                              : await Serverabruf.json(adresse);
+            const daten = ziel.rumpf ? await Serverabruf.senden(adresse, ziel.rumpf)
+                                     : await Serverabruf.json(adresse);
+            const sekunden = (performance.now() - start) / 1000;
+            Studioanzeige.melden(`Bewegung „${clip.name}" geladen`
+                                 + ` (${daten?.frame_count || '?'} Bilder, `
+                                 + `${sekunden.toFixed(1)} s)`, 4000);
+            return daten;
         } catch (fehler) {
+            Studioanzeige.melden(`Bewegung „${clip.name}" nicht geladen`, 4000);
             if (fehler.status === 404) {
                 // Die Datei gibt es nicht mehr (verschoben, gelöscht): Der Clip
                 // fliegt aus der Zeitleiste, mit Meldung (Edgar, 13.09.2026).

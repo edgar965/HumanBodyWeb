@@ -44,11 +44,11 @@ export class Koerperdetails {
     static GRUPPE = { haut: 0, wimpern: 2, sklera: 4, iris: 6, naegelHand: 9, naegelFuss: 10 };
 
     /** Vorgaben: Farben und Glanz aus `Detailfarben`, Längen 1 = wie geliefert.
-     *  `brauen_*`: die gebauten Augenbrauen (`gemeinsam/augenbrauenform.js`) —
-     *  Stärke = Länge, Dicke, Dichte (Faktoren) und Lage (m, + = höher). */
+     *  `brauen_*`: die gezeichnete Braue (`brauenhaut.js`) — Faktoren um 1, mm-Werte in m. */
     static VORGABE = Object.freeze({
-        ...Detailfarben.VORGABE, wimpern_laenge: 1.0, naegel_fuss_laenge: 1.0,
-        brauen_staerke: 1.0, brauen_dicke: 1.0, brauen_dichte: 1.0, brauen_lage: 0.0, haut_textur: '',
+        ...Detailfarben.VORGABE, wimpern_laenge: 1.0, naegel_fuss_laenge: 1.0, haut_textur: '',
+        brauen_staerke: 1.0, brauen_dicke: 1.0, brauen_dichte: 1.0, brauen_bogen_laenge: 1.0,
+        brauen_deckkraft: 1.0, brauen_lage: 0.0, brauen_hoehe_innen: 0.0, brauen_hoehe_aussen: 0.0, brauen_woelbung: 0.0,
     });
 
     /** Grenzen der Faktoren (`_laenge`, `_staerke`, `_dicke`, `_dichte`) und der Lage (m); Glanz 0..1. */
@@ -66,9 +66,9 @@ export class Koerperdetails {
                 if (Number.isFinite(zahl)) {
                     aus[name] = Math.min(Koerperdetails.LAENGE.max, Math.max(Koerperdetails.LAENGE.min, zahl));
                 }
-            } else if (name.endsWith('_lage')) {
+            } else if (/_(lage|hoehe_innen|hoehe_aussen|woelbung)$/.test(name)) {
                 if (Number.isFinite(zahl)) aus[name] = Math.min(Koerperdetails.LAGE, Math.max(-Koerperdetails.LAGE, zahl));
-            } else if (name.endsWith('_glanz')) {
+            } else if (/_(glanz|deckkraft)$/.test(name)) {
                 if (Number.isFinite(zahl)) aus[name] = Math.min(1, Math.max(0, zahl));
             } else if (name.endsWith('_textur')) {
                 if (Hauttextur.WAHL.some(([w]) => w === wert)) aus[name] = wert;

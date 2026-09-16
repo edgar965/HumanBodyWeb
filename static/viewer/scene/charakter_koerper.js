@@ -35,7 +35,9 @@ export class Charakterkoerper {
     }
 
     static detailsWeg(inst) {
-        Augenbrauenbau.entfernen(inst);
+        // Die Braue hängt seit dem 16.09.2026 am Hautmaterial (`Brauenhaut`)
+        // und geht mit ihm; hier bleibt der Name, den `character.js` ruft.
+        return !!inst;
     }
 
     /**

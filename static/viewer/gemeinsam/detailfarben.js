@@ -31,7 +31,7 @@ export class Detailfarben {
         naegel_hand: '#e0a88a', naegel_fuss: '#e0a88a',
     });
 
-    /** Farbfeld → Materialgruppen. `brauen` fehlt: eigenes Netz (`augenbrauenbau.js`). */
+    /** Farbfeld → Materialgruppen. `brauen` fehlt: Zeichnung im Hautshader (`brauenhaut.js`). */
     static FARBEN = [
         ['haut', [0, 1]], ['wimpern', [2]], ['sklera', [4]], ['iris', [6]], ['zunge', [7]],
         ['zaehne', [8]], ['naegel_hand', [9]], ['naegel_fuss', [10]], ['lippen', [11]],

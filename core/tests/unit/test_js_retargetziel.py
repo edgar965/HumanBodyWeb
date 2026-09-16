@@ -114,6 +114,11 @@ class RetargetzielTest(SimpleTestCase):
         self.assertIn('clip._animZiel = ziel.schluessel;', clip)
         self.assertIn('ziel.rumpf ? await Serverabruf.senden(adresse, ziel.rumpf)',
                       clip)
+        # Der erste Abruf rechnet den Retarget (43 s bei 7.538 Bildern, 16.09.2026:
+        # „keine Animation zu sehen … erst jetzt, nach ca. 1 Minute") — solange
+        # steht es oben rechts, danach Bildzahl und gemessene Dauer.
+        self.assertLess(clip.index('wird umgesetzt${bilder} …`'), clip.index('try {'))
+        self.assertIn('${sekunden.toFixed(1)} s)`, 4000);', clip)
         bvh = _text(STUDIO / 'bvhspur.js')
         self.assertIn("clip._animZiel !== ziel) Bvhspur._neuHolen(spur, clip);",
                       bvh)

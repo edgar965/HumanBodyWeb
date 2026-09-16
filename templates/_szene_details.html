@@ -3,8 +3,8 @@
 der Materialgruppen, Längen, und die Formmorphs, die zum Bereich gehören. Was wo steht,
 ist die Tabelle `scene/detailbereiche.js`; Bedienung `scene/detailbedienung.js`, Rechnung
 `gemeinsam/koerperdetails.js` + `gemeinsam/detailfarben.js`. Die Lippen sind eine
-abgespaltene Materialgruppe (`gemeinsam/lippengruppe.js`), die Brauen ein eigenes Netz
-(`gemeinsam/augenbrauen.js`) — das Körpernetz hat beides nicht.
+abgespaltene Materialgruppe (`gemeinsam/lippengruppe.js`), die Brauen eine Zeichnung im
+Hautshader (`gemeinsam/brauenhaut.js`, 16.09.2026) — das Körpernetz hat beides nicht.
 
 KLAPPBAR wie die Bereiche der anderen Reiter (`panel-section` + `h3` + `panel-body`,
 `Klappbereiche`; Edgar: „Mach den Bereich Auf- Zuklappbar" — „FORMAT des Zuklappbaren
@@ -67,16 +67,24 @@ klappte beim Klick zugleich den Bereich; `data-bereich` sagt, was er zurücknimm
         <h3>Augenbrauen <span class="chevron">&#9660;</span></h3>
         <div class="panel-body">
             <div class="zeile-verteilt">
-                <small class="hb-gedaempft">Farbe, Länge, Dicke, Dichte, Lage, Form</small>
+                <small class="hb-gedaempft">Gezeichnet in der Haut: Vorlage, Farbe, Bogen, Härchen</small>
                 <button class="btn-reset-morphs prop-detail-reset" data-bereich="brauen" type="button"
-                        title="Brauenfarbe, Stärke und Form auf die Vorgabe">Reset</button>
+                        title="Brauenfarbe, Bogen und Härchen auf die Vorgabe">Reset</button>
             </div>
+            {% comment %}Vorlagen füllt `Brauenvorlagen` (gemeinsam/brauenvorlagen.js).{% endcomment %}
+            <div class="slider-row"><label>Vorlage</label>
+                <select id="prop-detail-brauen-vorlage" class="viewer-select"></select></div>
             <div class="slider-row"><label>Farbe</label>
                 <input type="color" id="prop-detail-brauen" value="#3a2a1e" class="hb-farbfeld"></div>
-            {% regler "prop-detail-brauen-staerke" "Länge" min="25" max="300" wert="100" anzeige="100 %" %}
+            {% regler "prop-detail-brauen-hoehe-innen" "Höhe innen" min="-15" max="15" wert="0" anzeige="0 mm" %}
+            {% regler "prop-detail-brauen-hoehe-aussen" "Höhe außen" min="-15" max="15" wert="0" anzeige="0 mm" %}
+            {% regler "prop-detail-brauen-woelbung" "Wölbung" min="-8" max="10" wert="0" anzeige="0 mm" %}
+            {% regler "prop-detail-brauen-lage" "Lage (höher/tiefer)" min="-20" max="20" wert="0" anzeige="0 mm" %}
+            {% regler "prop-detail-brauen-bogen-laenge" "Länge" min="25" max="300" wert="100" anzeige="100 %" %}
             {% regler "prop-detail-brauen-dicke" "Dicke" min="25" max="300" wert="100" anzeige="100 %" %}
             {% regler "prop-detail-brauen-dichte" "Dichte" min="25" max="300" wert="100" anzeige="100 %" %}
-            {% regler "prop-detail-brauen-lage" "Lage (höher/tiefer)" min="-20" max="20" wert="0" anzeige="0 mm" %}
+            {% regler "prop-detail-brauen-staerke" "Härchenlänge" min="25" max="300" wert="100" anzeige="100 %" %}
+            {% regler "prop-detail-brauen-deckkraft" "Deckkraft" min="0" max="100" wert="100" anzeige="100 %" %}
             <div class="prop-section-title unterabschnittstitel">Form (Haut)</div>
             {% regler "prop-detail-morph-Eyebrows_PosZ" "Höhe" min="-100" max="100" wert="0" anzeige="0" %}
             {% regler "prop-detail-morph-Eyebrows_Angle" "Winkel" min="-100" max="100" wert="0" anzeige="0" %}

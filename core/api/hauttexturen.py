@@ -45,6 +45,11 @@ class Hauttexturen:
         if not pfad.is_file():
             logger.warning('Hauttextur fehlt: %s', pfad)
             return HttpResponseNotFound('Textur nicht vorhanden: %s' % name)
+        if request.GET.get('brauen') == 'ohne' and name.endswith('_albedo.png'):
+            # Die gemalten Brauen weg — die Figur zeichnet ihre eigenen
+            # (`Brauendecal`, 16.09.2026). Einmal 14 s je Textur, dann Ablage.
+            from ..dienste.brauenretusche import Brauenretusche
+            pfad = Brauenretusche.fuer(pfad)
         antwort = FileResponse(open(pfad, 'rb'), content_type='image/png')
         antwort['Cache-Control'] = Hauttexturen.CACHE
         return antwort

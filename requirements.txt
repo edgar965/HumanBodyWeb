@@ -24,9 +24,14 @@ numpy==2.4.4
 scipy==1.17.1
 trimesh==4.11.5
 
-# --- Offscreen-Render für Vorschaubilder ---
+# --- Offscreen-Render für Vorschaubilder und den Figurfilm ---
 pyrender==0.1.45
-PyOpenGL==3.1.0
+# pyrender pinnt PyOpenGL 3.1.0 (2014); unter Python 3.14 scheitert dort jede
+# Textur (`glGenTextures`: „No array-type handler for type _ctypes.type"),
+# Netze ohne Textur gingen. 3.1.10 rendert beides (17.09.2026, Figurfilm mit
+# Haut, Braue, Augen) — pip meldet den Konflikt, er ist gewollt.
+PyOpenGL==3.1.10
+PyOpenGL_accelerate==3.1.10
 pyglet==2.1.14
 pillow==12.2.0
 

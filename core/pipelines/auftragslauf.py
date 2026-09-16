@@ -91,10 +91,7 @@ class Auftragslauf:
                                     self.job.pipeline + '_hands')
         if self.job.pipeline == 'hybrid_gvhmr' and koerper_bvh:
             GvhmrAusgabe(self.job, self.ausgabeordner / 'body').kopieren()
-
-        self.job.status = 'complete'
-        self.job.progress = 100
-        self.job.save()
+        self._abschliessen()
         if koerper_bvh:
             self._bibliothekseintrag(koerper_bvh, self.job.pipeline,
                                      namenszusatz='_body')
@@ -257,13 +254,15 @@ class Auftragslauf:
         from ..dienste.ergebnisablage import Ergebnisablage
         ergebnispfad = Ergebnisablage.kopieren(bvh, self.job.name, quelle)
         self.job.bvh_file = bvh
-        self.job.status = 'complete'
-        self.job.progress = 100
-        self.job.progress_detail = ('Done (partial — stopped early)'
-                                    if self.teilweise else 'Done')
-        self.job.save()
+        self._abschliessen('Done (partial — stopped early)' if self.teilweise
+                           else 'Done')
         self._bibliothekseintrag(ergebnispfad, quelle_bibliothek or quelle)
         return ergebnispfad
+
+    def _abschliessen(self, meldung=None):
+        """Retarget neben jedes BVH, dann „complete" (`Auftragsabschluss`)."""
+        from ..dienste.auftragsabschluss import Auftragsabschluss
+        Auftragsabschluss.fertig_mit_vorrat(self.job, meldung)
 
     def _bibliothekseintrag(self, pfad, quelle, namenszusatz=''):
         self.BVHFile.objects.get_or_create(
@@ -291,10 +290,7 @@ class Auftragslauf:
                            exc_info=True)
             ergebnispfad = angefangen
         self.job.bvh_file = angefangen
-        self.job.status = 'complete'
-        self.job.progress = 100
-        self.job.progress_detail = 'Done (partial — stopped early)'
-        self.job.save()
+        self._abschliessen('Done (partial — stopped early)')
         self._bibliothekseintrag(ergebnispfad, self.job.pipeline)
 
     def _angefangenes_bvh(self):
