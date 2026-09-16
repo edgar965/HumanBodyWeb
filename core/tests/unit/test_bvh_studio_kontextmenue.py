@@ -75,6 +75,6 @@ class ModellLaengeTest(SimpleTestCase):
         self.assertIn("aktion === 'ctx-laenge-sekunden'", modellmenue)
         self.assertIn("classList.toggle('hb-versteckt', !treffer)", modellmenue)
         bearbeitung = (STUDIO / 'clipbearbeitung.js').read_text(encoding='utf-8')
-        self.assertIn("['bvh', 'audio', 'model'].includes(wahl.clip.type)", bearbeitung)
+        self.assertIn("['bvh', 'audio', 'model', 'script'].includes(wahl.clip.type)", bearbeitung)
         # Prozent messen sich am Ende der ANDEREN Clips, nie am eigenen.
         self.assertIn('anderer !== clip && anderer.endFrame > ende', bearbeitung)

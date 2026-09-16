@@ -15,6 +15,7 @@ import { Zeitleistentreffer } from './zeitleiste_treffer.js';
 import { Zeitleistenziehen } from './zeitleiste_ziehen.js';
 import { Modellmenue } from './zeitleiste_modellmenue.js';
 import { Mimikmenue } from './zeitleiste_mimikmenue.js';
+import { Scriptmenue } from './zeitleiste_scriptmenue.js';
 import { Untermenuelage } from './untermenuelage.js';
 
 /** Abstand, den ein Menue zum unteren Fensterrand haelt. */
@@ -54,7 +55,7 @@ export class Zeitleistenmenue {
         document.addEventListener('click', Zeitleistenmenue.schliessen);
         // Untermenüs („Hinzufügen", „Länge") bleiben im Fenster.
         for (const menue of [Zeitleistenmenue.clipmenue, Zeitleistenmenue.spurmenue,
-                             Modellmenue.menue, Mimikmenue.menue]) {
+                             Modellmenue.menue, Mimikmenue.menue, Scriptmenue.menue]) {
             Untermenuelage.alleAnbinden(menue);
         }
         Zeitleistenmenue.clipmenue?.querySelectorAll('.ctx-item').forEach(eintrag => {
@@ -70,7 +71,8 @@ export class Zeitleistenmenue {
     }
 
     static schliessen() {
-        for (const m of [Zeitleistenmenue.clipmenue, Modellmenue.menue, Mimikmenue.menue]) {
+        for (const m of [Zeitleistenmenue.clipmenue, Modellmenue.menue, Mimikmenue.menue,
+                         Scriptmenue.menue]) {
             if (m) m.style.display = 'none';
         }
     }
@@ -122,7 +124,30 @@ export class Zeitleistenmenue {
             Mimikmenue.zeigen(e, spur, spurNr, treffer, klickbild, Zeitleistenmenue._zeigen);
             return;
         }
+        if (spur && spur.type === 'script') {
+            Zeitleistenmenue.clipmenue.style.display = 'none';
+            if (Zeitleistenmenue.spurmenue) Zeitleistenmenue.spurmenue.style.display = 'none';
+            Scriptmenue.mausX = Zeitleistenmenue.mausX;
+            Scriptmenue.zeigen(e, spur, spurNr, treffer, klickbild, Zeitleistenmenue._zeigen);
+            return;
+        }
 
+        // Die Modellspur hat ihr Menü auch ohne Clip unter der Maus (Edgar,
+        // 15.09.2026: „Hinzufügen zweigeteilt … Modell, Animation") — nicht das
+        // Spurmenü einer leeren Spur.
+        if (spur && spur.type === 'model') {
+            Zeitleistenmenue.clipmenue.style.display = 'none';
+            if (Zeitleistenmenue.spurmenue) Zeitleistenmenue.spurmenue.style.display = 'none';
+            if (!treffer) {
+                state.selectedTrackIdx = spurNr;
+                state.selectedClipIdx = -1;
+                fn.updateProperties();
+            }
+            Modellmenue.mausX = Zeitleistenmenue.mausX;
+            Modellmenue.zeigen(e, spur, spurNr, treffer, klickbild,
+                               Zeitleistenmenue._zeigen);
+            return;
+        }
         if (!treffer && spur && my > RULER_HEIGHT
             && Zeitleistenmenue.mausX > HEADER_WIDTH
             && Zeitleistenmenue._leereSpur(e, spur, spurNr, klickbild)) {
@@ -130,13 +155,6 @@ export class Zeitleistenmenue {
         }
         if (Zeitleistenmenue.spurmenue) {
             Zeitleistenmenue.spurmenue.style.display = 'none';
-        }
-        if (spur && spur.type === 'model') {
-            Zeitleistenmenue.clipmenue.style.display = 'none';
-            Modellmenue.mausX = Zeitleistenmenue.mausX;
-            Modellmenue.zeigen(e, spur, spurNr, treffer, klickbild,
-                               Zeitleistenmenue._zeigen);
-            return;
         }
         Zeitleistenmenue._clipspur(e, spur, spurNr, treffer, klickbild);
     }

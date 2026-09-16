@@ -58,6 +58,10 @@ DUOMO_ROOT = VIDEOTOBVH_ROOT / 'DuoMo'
 GEMX_ROOT = VIDEOTOBVH_ROOT / 'GEM-X'
 WRAPPERS_DIR = VIDEOTOBVH_ROOT / 'wrappers'
 SMPL_MODELS_DIR = VIDEOTOBVH_ROOT / 'models' / 'smpl'
+# SMPL-X (15.09.2026): dieselben Dateien wie die Video-Pipeline
+# (`VideoToBVH/wrappers/baum.py`, `SMPLX_ORTE`) — Netz, Skelett und Haut der
+# SMPL-Figur kommen seither von hier (`core/dienste/smplxrig.py`).
+SMPLX_MODELS_DIR = OBJECTS_ROOT / 'Archiv' / 'SMPL-X'
 
 # ------------------------------------------------------------------ HumanBody
 HUMANBODY_DATA_DIR = HUMANBODY_ROOT / 'data' / 'humanBody'

@@ -3,8 +3,8 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Track, Clip } from './models.js';
 import { pushUndo } from './undo.js';
 import { Spurauswahl } from './spurauswahl.js';
-import { Lebendigkeit } from './lebendigkeit.js';
 import { Mimikbasis } from './mimikbasis.js';
+import { Scriptspur } from './scriptspur.js';
 
 /**
  * Mimikspur — die Gesichtsspur einer Modellspur: anlegen, Schlüsselbilder setzen.
@@ -15,7 +15,8 @@ import { Mimikbasis } from './mimikbasis.js';
  * Animation. Ein Schlüsselbild ist ein Clip `mimik_kf` mit
  * `data = {pose, gewichte, staerke, uebergang, halten}`; „Neutral" ist ein
  * Schlüsselbild ohne Gewichte. Lebendigkeit ist bei einer neuen Spur an
- * (`Lebendigkeit.VORGABE`) und in den Eigenschaften einstellbar.
+ * (Edgar, 13.09.2026) — seit 15.09.2026 als Script-Clip auf der Script-Spur
+ * des Modells, die mit der ersten Mimikspur entsteht (`Scriptspur`).
  */
 export class Mimikspur {
 
@@ -33,12 +34,16 @@ export class Mimikspur {
         spur.type = 'mimik';
         spur.color = TRACK_COLORS.mimik;
         spur._modellIdx = modellIdx;
-        spur.lebendigkeit = Lebendigkeit.vorgabe();
         state.project.addTrack(spur);
         Mimikbasis.laden().then(() => fn.applyPlayhead());
         fn.updateTrackHeaders();
         fn.renderTimeline();
         Spurauswahl.waehlen(state.project.tracks.length - 1);
+        // Lebendigkeit an bei neuer Spur: ein Script von 0 bis zum Projektende.
+        if (!Scriptspur.zuModell(modellIdx)) {
+            Scriptspur.clipSetzen(Scriptspur.anlegen(modellIdx), 0);
+            Spurauswahl.waehlen(state.project.tracks.indexOf(spur));
+        }
         return spur;
     }
 

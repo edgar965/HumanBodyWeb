@@ -69,11 +69,17 @@ export class Timeline {
     removeTrackAt(idx) {
         if (idx < 0 || idx >= this._allTracks.length) return null;
         const removed = this._allTracks.splice(idx, 1)[0];
-        // Fix _linkedAnimIdx references on model tracks
+        // Verweise nachziehen: Modell → Animation, Mimik/Script → Modell
+        // (letzteres fehlte bis 15.09.2026 — nach dem Löschen einer Spur davor
+        // zeigte die Mimikspur auf die falsche Spur).
         for (const t of this._allTracks) {
             if (t.type === 'model' && t._linkedAnimIdx >= 0) {
                 if (t._linkedAnimIdx === idx) t._linkedAnimIdx = -1;
                 else if (t._linkedAnimIdx > idx) t._linkedAnimIdx--;
+            }
+            if ((t.type === 'mimik' || t.type === 'script') && t._modellIdx >= 0) {
+                if (t._modellIdx === idx) t._modellIdx = -1;
+                else if (t._modellIdx > idx) t._modellIdx--;
             }
         }
         return removed;
@@ -102,8 +108,9 @@ export class Timeline {
 export class Track {
     constructor(name, preset = 'FemaleGarment', bodyType = 'Female_Caucasian') {
         this.name = name;
-        this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio' | 'model' | 'mimik'
+        this.type = 'bvh';       // 'bvh' | 'camera' | 'light' | 'audio' | 'model' | 'mimik' | 'script'
         this.preset = preset;
+        this.quelle = 'modell';   // Figurart: modell (HumanBody) | uma | makehuman | smpl | umapython
         this.bodyType = bodyType;
         this.clips = [];
         this.muted = false;
@@ -135,7 +142,7 @@ export class Track {
 // =========================================================================
 export class Clip {
     constructor(category, name, totalFrames, fps) {
-        this.type = 'bvh';      // 'bvh' | 'camera_kf' | 'light_kf' | 'audio' | 'model' | 'mimik_kf'
+        this.type = 'bvh';      // 'bvh' | 'camera_kf' | 'light_kf' | 'audio' | 'model' | 'mimik_kf' | 'script'
         this.category = category;
         this.name = name;
         this.totalFrames = totalFrames;

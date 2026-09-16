@@ -5,6 +5,11 @@ Der Kern dieser Pruefung ist das VORZEICHEN von beta0. Es ist je Geschlecht
 verschieden (gemessen: male b0 -1 => +7,8 cm; female b0 +1 => +7,0 cm), und
 ein falsches Vorzeichen faellt nirgends auf — der Groessen-Regler laeuft
 dann bei jeder zweiten Figur rueckwaerts, ohne Fehler, ohne Warnung.
+
+SMPL-X (15.09.2026): beta0 wie bei SMPL, beta1 UMGEKEHRT — b1 groesser
+heisst jetzt fuelliger (gemessen: weiblich 80 -> 102,4 cm Taille bei
+Fuelle +100, maennlich 80 -> 98,1). Die Messung am Modell selbst steht in
+`longrunner/test_smplx_modell.py`; hier nur, dass die Konstante das sagt.
 """
 
 import unittest
@@ -35,12 +40,12 @@ class SmplformTest(unittest.TestCase):
 
     def test_schlank_ist_bei_beiden_dasselbe(self):
         u"""Fuer die Fuelle gilt bei beiden Geschlechtern dasselbe Vorzeichen
-        (b1 groesser = schlanker) — auch das gemessen."""
+        (SMPL-X: b1 groesser = fuelliger) — auch das gemessen."""
         for geschlecht in ('male', 'female'):
             schlank = Smplform.betas(geschlecht, 0, -100)
             kraeftig = Smplform.betas(geschlecht, 0, 100)
-            self.assertGreater(schlank[1], 0, geschlecht)
-            self.assertLess(kraeftig[1], 0, geschlecht)
+            self.assertLess(schlank[1], 0, geschlecht)
+            self.assertGreater(kraeftig[1], 0, geschlecht)
 
     def test_voller_ausschlag_sind_zwei_beta(self):
         self.assertAlmostEqual(abs(Smplform.betas('male', 100, 0)[0]), 2.0)

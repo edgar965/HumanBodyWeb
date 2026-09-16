@@ -63,7 +63,9 @@ export class Modellspur {
             return;
         }
         bewegung._loadingPreset = preset;
-        bewegung.preset = preset;
+        const teile = Modellzustaendigkeit.zerlegen(preset);
+        bewegung.preset = teile.preset;
+        bewegung.quelle = teile.quelle;
         if (bewegung.group) bewegung.group.visible = false;
         fn.serverLog('preset_load_start',
                      `track=${bewegung.name} preset=${preset}`);

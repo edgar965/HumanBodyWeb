@@ -6,17 +6,24 @@ import { Eigenhaut } from './eigenhaut.js';
 import { Modell } from './modell.js';
 
 /**
- * SmplModell — ein Referenzkörper von GarmentCode, als `Modell` für jede Seite.
+ * SmplModell — ein Referenzkörper von GarmentCode oder ein SMPL-X-Körper,
+ * als `Modell` für jede Seite.
  *
  * WARUM (Edgar, 06.09.2026: „keine experimente, baue erstmal das Online tool
  * nach!"): Das Online-Tool drapiert auf `mean_all` mit dessen vorgegebenen
  * Maßen. Für diese Körper (mean_all, mean_female, mean_male, die zwei
- * SMPL-Durchschnitte) kennt GarmentCode Maße und Segmentierung — der
+ * SMPL-X-Durchschnitte) kennt GarmentCode Maße und Segmentierung — der
  * GarmentCode-Reiter läuft auf ihnen exakt wie das Tool. Das ist die
  * Messlatte für die HumanBody-Figur.
  *
+ * SEIT 15.09.2026 SMPL-X (Edgar: „die SMPL Modelle auf SMPL-X umstellen (also
+ * inkl. Gesichtsknochen)"): Netz 10.475 Punkte, Skelett 55 Gelenke — Körper,
+ * Kiefer (`Jaw`), Augen (`Left_eye`/`Right_eye`), 30 Finger — und die
+ * Hautgewichte des Modells; alles vom Server (`core/dienste/smplxrig.py`).
+ * GarmentCodes eigene Körper bekommen dasselbe Skelett übertragen.
+ *
  * Das Netz kommt vom Server in Metern mit Y oben — so rechnet GarmentCode,
- * und so rechnet Three.js; nichts wird gedreht. Kein Skelett, keine Morphs.
+ * und so rechnet Three.js; nichts wird gedreht. Keine Morphs.
  *
  * Dieselben Felder wie `CharacterInstance` und `UmaFigur`, damit Liste,
  * Auswahl, Zählung und Speichern nicht je Quelle unterscheiden müssen.
@@ -83,11 +90,10 @@ export class SmplModell extends Modell {
     }
 
     /**
-     * Das SMPL-Skelett aus der Antwort bauen.
+     * Das SMPL-X-Skelett aus der Antwort bauen.
      *
-     * `null` ist eine gueltige Antwort und keine Panne: GarmentCodes eigene
-     * Koerper (`mean_all`, `mean_female`, `mean_male`) sind keine SMPL-Netze
-     * und haben keines. Die Figur bekommt dann keine Knochen — der
+     * `null` ist eine gueltige Antwort und keine Panne: Ohne Modelldateien
+     * gibt es keines. Die Figur bekommt dann keine Knochen — der
      * Rig-Schalter laesst sie schlicht aus.
      *
      * Das alte Skelett wird ZUERST abgeraeumt: Die Formregler holen das Netz
@@ -104,9 +110,10 @@ export class SmplModell extends Modell {
      * Das Netz an das eigene Skelett binden — sonst bleibt es beim Abspielen
      * starr, während die Knochen sich bewegen.
      *
-     * Die Gewichte stammen aus dem SMPL-Modell selbst (`weights`, 6890 × 24);
-     * für GarmentCodes eigene Körper (23.752 Punkte) sind sie über den
-     * nächstgelegenen SMPL-Punkt übertragen. Ohne Skelett oder ohne Gewichte
+     * Die Gewichte stammen aus dem SMPL-X-Modell selbst (`weights`, 10475 × 55,
+     * je Punkt die vier größten); für GarmentCodes eigene Körper (23.752
+     * Punkte) sind sie über den nächstgelegenen SMPL-X-Punkt übertragen.
+     * Ohne Skelett oder ohne Gewichte
      * hängt hier ein gewöhnliches `Mesh` — die Figur ist dann sichtbar, aber
      * nicht animierbar.
      */

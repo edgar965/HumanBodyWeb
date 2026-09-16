@@ -36,15 +36,33 @@ export class Modellzustaendigkeit {
             || verknuepft[0] || null;
     }
 
-    /** Das Preset des Modell-Clips, der `zeit` enthält — oder null. */
+    /**
+     * Der Schlüssel des Modell-Clips, der `zeit` enthält — oder null.
+     * Seit 15.09.2026 trägt ein Clip die Figurart (`quelle`): HumanBody bleibt
+     * der nackte Name, alles andere `quelle:name` — ein UMA-„Female" ist nicht
+     * das HumanBody-„Female".
+     */
     static preset(spur, zeit, fps) {
         for (const clip of spur.clips || []) {
             if (clip.type !== 'model') continue;
             const beginn = clip.startFrame / fps;
             if (zeit >= beginn && zeit < beginn + clip.duration) {
-                return clip.data?.preset || null;
+                return Modellzustaendigkeit.schluessel(clip.data);
             }
         }
         return null;
+    }
+
+    static schluessel(daten) {
+        if (!daten?.preset) return null;
+        const quelle = daten.quelle || 'modell';
+        return quelle === 'modell' ? daten.preset : `${quelle}:${daten.preset}`;
+    }
+
+    /** `{quelle, preset}` aus einem Schlüssel. */
+    static zerlegen(schluessel) {
+        const stelle = String(schluessel || '').indexOf(':');
+        if (stelle < 0) return { quelle: 'modell', preset: schluessel };
+        return { quelle: schluessel.slice(0, stelle), preset: schluessel.slice(stelle + 1) };
     }
 }

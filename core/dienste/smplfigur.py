@@ -6,16 +6,22 @@ nach!"): Das Online-Tool (garmentcode.ethz.ch, `upstream/gui/gui_pattern.py`)
 drapiert auf `mean_all` — GarmentCodes eigenem Durchschnittskoerper — mit den
 handvermessenen Massen aus `mean_all.yaml` und der Segmentierung
 `ggg_body_segmentation.json`. Nichts wird gemessen. Genau diese Koerper
-werden hier angeboten, `mean_all` voran; dazu die SMPL-Durchschnittskoerper
-(`f_/m_smpl_average_A40`), fuer die GarmentCode ebenfalls Masse und eine
-eigene Segmentierung (`smpl_vert_segmentation.json`) mitbringt.
+werden hier angeboten, `mean_all` voran.
 
-Damit laeuft der GarmentCode-Reiter auf dieser Figur exakt so wie das Tool:
-Schnitt aus den vorgegebenen Massen, Drapierung mit der zum Koerper
-gehoerenden Segmentierung, keine Messung, keine Nachkorrektur. Was dabei
-herauskommt, ist der Massstab fuer alles andere.
+SMPL-X STATT SMPL (Edgar, 15.09.2026: „kannst du die SMPL Modelle auf SMPL-X
+umstellen (also inkl. Gesichtsknochen)?"): Die beiden SMPL-Durchschnitte
+des Tools (`f_/m_smpl_average_A40`, 6.890 Punkte, 24 Gelenke) sind aus dem
+Katalog genommen; an ihrer Stelle stehen die SMPL-X-Durchschnittskoerper
+(`smplx_female`, `smplx_male`: 10.475 Punkte, 55 Gelenke — Kiefer, Augen,
+Finger), gebaut aus dem Modell in derselben A-Haltung (40 Grad,
+`SMPL/xkoerper.py`) und abgelegt wie jede Variante (`Smplvarianten`).
+Die Masse bleiben die der Tool-YAML — bei Betas 0 exakt, sonst relativ
+dazu (`SMPL/masse.py`).
 
-Die Koerper liegen im Upstream-Klon und werden nur gelesen.
+Die alten Namen bleiben LADBAR (gespeicherte Szenen und Projekte): Sie
+bekommen das SMPL-X-Skelett uebertragen wie GarmentCodes eigene Koerper.
+
+Skelett und Haut: `core/dienste/smplxrig.py`.
 """
 
 import logging
@@ -25,12 +31,13 @@ logger = logging.getLogger('core')
 
 
 class Smplfiguren:
-    u"""Lesender Zugang zu GarmentCodes Referenzkoerpern."""
+    u"""Lesender Zugang zu GarmentCodes Referenzkoerpern und den SMPL-X-Koerpern."""
 
-    #: Name -> Geschlecht, Segmentierung, Anzeige. `smpl` sagt, ob die
+    #: Die Koerper des Dialogs, in seiner Reihenfolge. `smpl` sagt, ob die
     #: Drapierung `smpl_vert_segmentation.json` braucht (SMPL-Topologie,
-    #: 6.890 Punkte) oder `ggg_body_segmentation.json` (GarmentCodes eigenes
-    #: Koerpermodell, 23.752 Punkte). Reihenfolge = Reihenfolge im Dialog.
+    #: fuer SMPL-X in der uebertragenen Fassung) oder
+    #: `ggg_body_segmentation.json` (GarmentCodes eigenes Koerpermodell,
+    #: 23.752 Punkte).
     KOERPER = {
         'mean_all': {'geschlecht': 'female', 'smpl': False,
                      'anzeige': 'mean_all — Körper des Online-Tools'},
@@ -38,10 +45,23 @@ class Smplfiguren:
                         'anzeige': 'mean_female (GarmentCode)'},
         'mean_male': {'geschlecht': 'male', 'smpl': False,
                       'anzeige': 'mean_male (GarmentCode)'},
-        'f_smpl_average_A40': {'geschlecht': 'female', 'smpl': True,
-                               'anzeige': 'SMPL weiblich (Durchschnitt, A-Pose 40°)'},
-        'm_smpl_average_A40': {'geschlecht': 'male', 'smpl': True,
-                               'anzeige': 'SMPL männlich (Durchschnitt, A-Pose 40°)'},
+        'smplx_female': {'geschlecht': 'female', 'smpl': True,
+                         'anzeige': 'SMPL-X weiblich (Durchschnitt, A-Pose 40°)'},
+        'smplx_male': {'geschlecht': 'male', 'smpl': True,
+                       'anzeige': 'SMPL-X männlich (Durchschnitt, A-Pose 40°)'},
+    }
+
+    #: Fassung des Skeletts, das `kette` liefert — steht im Namen der
+    #: Retarget-Ablage (`Retargetdaten.ablage`). 1 = SMPL, 24 Gelenke (bis
+    #: 14.09.2026); 2 = SMPL-X, 55 Gelenke, Kopf zeigt weiter wie der Hals.
+    #: Ohne die Nummer faenden alte Ablagen mit 24 Gelenken weiter Verwendung.
+    SKELETTFASSUNG = 2
+
+    #: Die SMPL-Durchschnitte des Tools: nicht mehr im Dialog, aber ladbar —
+    #: und ihre YAML ist die Massvorlage der SMPL-X-Koerper.
+    VERSTECKT = {
+        'f_smpl_average_A40': {'geschlecht': 'female', 'smpl': True},
+        'm_smpl_average_A40': {'geschlecht': 'male', 'smpl': True},
     }
 
     @staticmethod
@@ -52,39 +72,50 @@ class Smplfiguren:
     @classmethod
     def kennt(cls, name):
         from .smplvarianten import Smplvarianten
-        return name in cls.KOERPER or Smplvarianten.vorhanden(name)
+        return (name in cls.KOERPER or name in cls.VERSTECKT
+                or Smplvarianten.vorhanden(name))
 
     @classmethod
     def ist_smpl(cls, name):
         u"""Braucht dieser Koerper die SMPL-Segmentierung?"""
         from .smplvarianten import Smplvarianten
         if Smplvarianten.ist_variante(name):
-            return True          # Varianten sind SMPL-Netze, immer.
-        return bool(cls.KOERPER.get(name, {}).get('smpl'))
+            return True          # Varianten sind SMPL-X-Netze, immer.
+        angaben = cls.KOERPER.get(name) or cls.VERSTECKT.get(name, {})
+        return bool(angaben.get('smpl'))
 
     @classmethod
     def geschlecht(cls, name):
         from .smplvarianten import Smplvarianten
         if Smplvarianten.ist_variante(name):
             return Smplvarianten.geschlecht(name)
-        return cls.KOERPER.get(name, {}).get('geschlecht', 'female')
+        angaben = cls.KOERPER.get(name) or cls.VERSTECKT.get(name, {})
+        return angaben.get('geschlecht', 'female')
 
     @classmethod
     def liste(cls):
         u"""Die verfuegbaren Koerper mit dem, was die Seite zum Anzeigen braucht."""
+        from .smplvarianten import Smplvarianten
+        from .smplxrig import Smplxrig
         aus = []
         for name, angaben in cls.KOERPER.items():
-            obj = os.path.join(cls.ordner(), name + '.obj')
-            yaml_datei = os.path.join(cls.ordner(), name + '.yaml')
-            if not os.path.isfile(obj):
-                continue
+            if angaben['smpl']:
+                if not Smplxrig.vorhanden(angaben['geschlecht']):
+                    continue
+                groesse = Smplvarianten.groesse(name)
+            else:
+                obj = os.path.join(cls.ordner(), name + '.obj')
+                if not os.path.isfile(obj):
+                    continue
+                groesse = os.path.getsize(obj)
             aus.append({
                 'name': name,
                 'anzeige': angaben['anzeige'],
                 'geschlecht': angaben['geschlecht'],
                 'smpl': angaben['smpl'],
-                'bytes': os.path.getsize(obj),
-                'masse_vorhanden': os.path.isfile(yaml_datei),
+                'bytes': groesse,
+                'masse_vorhanden': True if angaben['smpl'] else os.path.isfile(
+                    os.path.join(cls.ordner(), name + '.yaml')),
             })
         return aus
 
@@ -113,21 +144,20 @@ class Smplfiguren:
             os.path.join(cls.ordner(), name + '.obj'), aus_garmentcode=False)
         return punkte, dreiecke
 
+    # --------------------------------------------------------- Skelett, Haut
+
     @classmethod
     def skelett(cls, name, punkte):
-        u"""Das SMPL-Skelett zu diesem Netz — oder `None`.
+        u"""Das SMPL-X-Skelett zu diesem Netz — oder `None`.
 
-        `None` ist hier eine Antwort, keine Panne: GarmentCodes eigene
-        Koerper (`mean_all`, `mean_female`, `mean_male`) sind keine
-        SMPL-Netze (23.752 statt 6.890 Punkte). Fuer sie wird das Skelett
-        UEBERTRAGEN (`_uebertragen`); scheitert auch das, gibt es keines,
-        und eines zu raten waere schlimmer.
+        `None` ist eine Antwort, keine Panne: Ohne Modelldatei gibt es
+        keines, und eines zu raten waere schlimmer. Fremde Topologie
+        (GarmentCodes eigene Koerper, die alten SMPL-Koerper) wird
+        uebertragen (`Smplxrig`).
         """
-        kette = cls._kette(name, punkte)
-        if kette is None:
-            return None
-        return {'name': cls._skelettname(name, punkte),
-                'knochen': kette.bauplan()}
+        from .smplxrig import Smplxrig
+        return Smplxrig.skelett(name, punkte, cls.geschlecht(name),
+                                cls._armwinkel(name))
 
     #: Je Koerpername das fertige `Gelenkskelett`. Der Retarget-Motor
     #: braucht dasselbe Skelett wie der Browser, und es entsteht sonst bei
@@ -144,124 +174,41 @@ class Smplfiguren:
         unveraenderlich im Upstream, und eine Formvariante traegt einen
         Fingerabdruck ihrer Betas im Namen (`Smplvarianten`).
         """
+        from .smplxrig import Smplxrig
         if not name:
-            raise ValueError('Ohne Koerpernamen kein SMPL-Skelett')
+            raise ValueError('Ohne Koerpernamen kein SMPL-X-Skelett')
         if name in cls._ketten:
             return cls._ketten[name]
         cls._pruefen(name)
         punkte, _ = cls.netz(name)
-        cls._ketten[name] = cls._kette(name, punkte)
+        cls._ketten[name] = Smplxrig.kette(name, punkte, cls.geschlecht(name),
+                                           cls._armwinkel(name))
         return cls._ketten[name]
 
     @classmethod
     def haut(cls, name, punkte):
         u"""Hautgewichte fuer dieses Netz — oder `None`.
 
-        `{knochen: [Namen], index: (N,4), gewicht: (N,4)}` — die beiden
-        Felder als numpy, damit der Endpunkt sie base64-kodiert ausliefern
-        kann (23.752 Punkte x 8 Zahlen sind als JSON-Liste 1,5 MB). Die
-        Knochen stehen als NAMEN da: Ihre Nummer im `THREE.Skeleton` haengt
-        an der Reihenfolge des Bauplans, und die soll sich aendern duerfen,
-        ohne dass die Gewichte still verrutschen.
-
-        Ohne Gewichte bleibt die Figur ein starres Netz — sichtbar erst
-        beim Abspielen, wenn das Skelett sich bewegt und die Haut nicht.
+        `{knochen: [Namen], index: (N,4), gewicht: (N,4)}`, die Felder als
+        numpy (base64 im Endpunkt). Knochen als NAMEN: Ihre Nummer im
+        `THREE.Skeleton` haengt an der Reihenfolge des Bauplans.
         """
-        from django.conf import settings
-        from SMPL.gelenke import Smplgelenke
-        from SMPL.haut import Smplhaut
-        try:
-            gewichte = Smplhaut.aus_modell(cls.geschlecht(name),
-                                           str(settings.SMPL_MODELS_DIR))
-            zuordnung = (None if Smplgelenke.passt(punkte)
-                         else cls._hautzuordnung(name, punkte))
-            index, anteil = gewichte.fuer_punkte(len(punkte), zuordnung)
-        except (OSError, KeyError, ValueError) as fehler:
-            logger.warning('SMPL-Hautgewichte fuer %s nicht baubar: %s',
-                           name, fehler)
-            return None
-        return {'knochen': Smplhaut.knochennamen(),
-                'index': index, 'gewicht': anteil}
-
-    @classmethod
-    def _hautzuordnung(cls, name, punkte):
-        u"""Je Punkt des fremden Netzes der naechste SMPL-Punkt.
-
-        Die UMGEKEHRTE Richtung zu `_zuordnung`: Dort wird je SMPL-Punkt ein
-        fremder gesucht (6.890 Eintraege, Eingabe des Regressors), hier je
-        fremdem Punkt ein SMPL-Punkt (23.752 Eintraege, ein Gewicht je
-        Punkt des angezeigten Netzes). Wer die eine fuer die andere haelt,
-        legt 6.890 Gewichte auf 23.752 Punkte — die Figur zerrisse beim
-        ersten Bild.
-        """
-        from django.conf import settings
-        from SMPL.koerper import Smplkoerper
-        from SMPL.uebertrag import Netzuebertrag
-        modell = Smplkoerper.laden(cls.geschlecht(name),
-                                   str(settings.SMPL_MODELS_DIR))
-        referenz = modell.a40(None, grad=cls._armwinkel(name))
-        uebertrag = Netzuebertrag.bauen(punkte, referenz)
-        guete = uebertrag.guete
-        logger.info('SMPL-Hautgewichte uebertragen auf %s: Zuordnung Median '
-                    '%.4f, p90 %.4f der Koerperhoehe',
-                    name, guete['median'], guete['p90'])
-        return uebertrag.zuordnung
+        from .smplxrig import Smplxrig
+        return Smplxrig.hautgewichte(name, punkte, cls.geschlecht(name),
+                                     cls._armwinkel(name))
 
     @classmethod
     def ketten_vergessen(cls):
         u"""Den Speicher leeren — fuer Tests und nach einem Datenwechsel."""
         cls._ketten = {}
 
-    @classmethod
-    def _kette(cls, name, punkte):
-        from django.conf import settings
-        from SMPL.gelenke import Smplgelenke
-        try:
-            gelenke = Smplgelenke.aus_modell(cls.geschlecht(name),
-                                             str(settings.SMPL_MODELS_DIR))
-            if Smplgelenke.passt(punkte):
-                return gelenke.kette(punkte)
-            return gelenke.kette_uebertragen(
-                punkte, cls._zuordnung(name, punkte, gelenke))
-        except (OSError, KeyError, ValueError) as fehler:
-            logger.warning('SMPL-Skelett fuer %s nicht baubar: %s', name, fehler)
-            return None
-
-    @classmethod
-    def _skelettname(cls, name, punkte):
-        from SMPL.gelenke import Smplgelenke
-        return ('SMPL (24 Gelenke)' if Smplgelenke.passt(punkte)
-                else 'SMPL (24 Gelenke, uebertragen)')
-
-    @classmethod
-    def _zuordnung(cls, name, punkte, gelenke):
-        u"""Der `Netzuebertrag` fuer GarmentCodes eigene Koerper (GGG-Topologie).
-
-        `mean_all`, `mean_female` und `mean_male` haben 23.752 Punkte, der
-        Regressor 6.890 Spalten. Zugeordnet wird ueber einen SMPL-Koerper
-        IN DERSELBEN HALTUNG: `arm_pose_angle` steht in der YAML des
-        Koerpers (mean_all: 45,483 Grad, die SMPL-Koerper stehen bei 40).
-        Wer das ueberspringt, verzieht Schulter und Ellbogen.
-        """
-        from django.conf import settings
-        from SMPL.koerper import Smplkoerper
-        haltung = cls._armwinkel(name)
-        modell = Smplkoerper.laden(cls.geschlecht(name),
-                                   str(settings.SMPL_MODELS_DIR))
-        referenz = modell.a40(None, grad=haltung)
-        uebertrag = gelenke.uebertragen(punkte, referenz)
-        guete = uebertrag.guete
-        logger.info('SMPL-Skelett uebertragen auf %s (%d Punkte, %.1f Grad): '
-                    'Zuordnung Median %.4f, p90 %.4f der Koerperhoehe',
-                    name, len(punkte), haltung, guete['median'], guete['p90'])
-        return uebertrag
-
     #: Ohne Angabe in der YAML die A-Haltung der SMPL-Koerper.
     ARMWINKEL_VORGABE = 40.0
 
     @classmethod
     def _armwinkel(cls, name):
-        u"""`arm_pose_angle` des Koerpers in Grad."""
+        u"""`arm_pose_angle` des Koerpers in Grad — die Haltung, in der ein
+        Uebertrag auf fremde Topologie gerechnet wird."""
         try:
             wert = cls.masse(name).get('arm_pose_angle')
             return float(wert) if wert is not None else cls.ARMWINKEL_VORGABE

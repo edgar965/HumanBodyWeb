@@ -22,12 +22,10 @@ der zehn Funktionen faedelten `(request, job_id)` durch und begannen mit
 `get_object_or_404`. Der Auftrag ist der geteilte Zustand — er steht jetzt im
 Konstruktor.
 
-DIE FORMULAR-EINSTIEGE SIND `@staticmethod`, NICHT `@classmethod`
-=================================================================
-`@classmethod` uebergibt der umschlossenen Funktion die Klasse als erstes
-Argument. `@require_POST` prueft aber `args[0].method` — es bekaeme die Klasse
-statt der Anfrage und liefe in einen `AttributeError`. Wo ein Django-Dekorator
-im Spiel ist, steht deshalb `@staticmethod`.
+Die Formularfassungen (Seite → weiterleiten, Meldung setzen) stehen seit dem
+16.09.2026 in `api/auftragsformulare.py`: Sie laufen ueber die
+`Auftragskennung` (`/process/<kennung>/start/` …), die AJAX-Fassungen hier
+weiter ueber die UUID (`/api/job/<uuid>/start/` …).
 """
 
 import json
@@ -35,22 +33,18 @@ import logging
 from pathlib import Path
 
 from django.conf import settings
-from django.contrib import messages
 from django.http import JsonResponse
-from django.shortcuts import redirect, get_object_or_404
-from django.views.decorators.http import require_POST
+from django.shortcuts import get_object_or_404
 
 from ..dienste.auftragsanlage import Auftragsanlage
 from ..dienste.auftragssteuerung import Auftragssteuerung
 from ..dienste.auftragsstart import Auftragsstart
 from ..dienste.haenger import Haenger
-from ..logging_utils import Auftragskontext
 from ..models import BVHJob
 from ..safe_paths import PfadAbgelehnt, SafePath
 from ..daten.anfragerumpf import Anfragerumpf
 
 logger = logging.getLogger('core')
-pipeline_logger = logging.getLogger('core.pipeline')
 
 #: Pipelines der 2D-Uploadseite.
 PIPELINES_2D = ('mediapipe', 'openpose', 'rtmpose', 'vitpose', 'yolo11')
@@ -67,9 +61,8 @@ LAEUFT = Haenger.LAEUFT
 class Auftragsendpunkte:
     """Ein Auftrag: Zustand melden, starten, anhalten, loeschen.
 
-    Zu jedem Vorgang gibt es zwei Fassungen — eine fuer das HTML-Formular
-    (leitet auf eine Seite weiter, setzt eine Meldung) und eine fuer AJAX
-    (antwortet JSON). Beide arbeiten auf demselben Auftrag.
+    Die AJAX-Fassungen der Vorgaenge (antworten JSON); die Formularfassungen
+    stehen in `Auftragsformulare`. Beide arbeiten auf demselben Auftrag.
     """
 
     def __init__(self, job_id):
@@ -88,6 +81,7 @@ class Auftragsendpunkte:
         job = cls(job_id).job
         Haenger.erkennen(job)
         daten = {
+            'kennung': job.kennung,
             'status': job.status,
             'progress': job.progress,
             'progress_detail': job.progress_detail,
@@ -103,25 +97,6 @@ class Auftragsendpunkte:
         return JsonResponse(daten)
 
     # -------------------------------------------------------------- Starten
-
-    @staticmethod
-    @require_POST
-    def starten_formular(request, job_id):
-        """Auftrag starten oder neu starten (Formularfassung).
-
-        `require_POST` seit 13.08.2026: Diese Ansicht startet eine Pipeline auf
-        der Grafikkarte und war per GET ausloesbar — ein
-        `<img src=".../start/">` auf einer fremden Seite haette gereicht. Das
-        Template schickt ohnehin POST.
-        """
-        job = Auftragsendpunkte(job_id).job
-        if job.status in ('pending', 'complete', 'failed'):
-            with Auftragskontext.mit_auftrag(str(job.id)):
-                pipeline_logger.info('start_processing pipeline=%s name=%s',
-                                     job.pipeline, job.name)
-                Auftragssteuerung.starten(job)
-            messages.info(request, 'Processing started.')
-        return redirect('job_status', job_id=job.id)
 
     @classmethod
     def starten(cls, request, job_id):
@@ -162,20 +137,6 @@ class Auftragsendpunkte:
 
     # ------------------------------------------------------------- Anhalten
 
-    @staticmethod
-    @require_POST
-    def anhalten_formular(request, job_id):
-        """Laufenden Auftrag abbrechen (Formularfassung).
-
-        `require_POST` seit 13.08.2026, aus demselben Grund wie bei
-        `starten_formular`: Ein Abbruch ist eine Zustandsaenderung und war per
-        GET ausloesbar.
-        """
-        job = Auftragsendpunkte(job_id).job
-        Auftragssteuerung.anhalten(job, herkunft='form')
-        messages.info(request, 'Processing stopped.')
-        return redirect('job_status', job_id=job.id)
-
     @classmethod
     def anhalten(cls, request, job_id):
         """Laufenden Auftrag per AJAX abbrechen."""
@@ -185,35 +146,6 @@ class Auftragsendpunkte:
         return JsonResponse({'ok': True})
 
     # ------------------------------------------------------------- Loeschen
-
-    @staticmethod
-    @require_POST
-    def loeschen_formular(request, job_id):
-        """Auftrag samt Dateien loeschen (Formularfassung).
-
-        NUR POST (17.08.2026). Diese Ansicht hat **auf ein GET hin geloescht** —
-        Auftrag und Dateien. In `processed.html` stand dafuer ein `<a href>` mit
-        einem `onclick="return confirm(…)"`, und das schuetzt genau einen Fall:
-        den menschlichen Klick. Ein Vorschau-Abruf des Browsers, ein Prefetch,
-        ein Lesezeichen oder ein `<img src>` auf einer fremden Seite haetten
-        gereicht.
-
-        Die AJAX-Fassung `loeschen` daneben prueft die Methode seit langem
-        selbst; diese hier war die letzte ungeschuetzte Loeschroute. Aufgefallen
-        ist sie einem neuen Component-Test, der 405 erwartete und 404 bekam —
-        also „Ansicht lief los und suchte den Auftrag".
-
-        Die Aufrufstelle ist deshalb auf ein POST-Formular umgestellt; die
-        Rueckfrage haengt jetzt am `submit`.
-        """
-        job = Auftragsendpunkte(job_id).job
-        name = job.name
-        logger.info('delete_job id=%s name=%s pipeline=%s',
-                    job_id, name, job.pipeline)
-        Auftragssteuerung.dateien_entfernen(job)
-        job.delete()
-        messages.success(request, 'Deleted %s.' % name)
-        return redirect('processed')
 
     @classmethod
     def loeschen(cls, request, job_id):

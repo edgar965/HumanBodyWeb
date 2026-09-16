@@ -32,7 +32,7 @@ class ErgebnisseiteBvhpfad(TestCase):
         return antwort.content.decode('utf-8')
 
     def test_auftragsseite_zeigt_ordner_datei_und_knoepfe_vor_dem_inhalt(self):
-        text = self._seite('/process/%s/result/' % self.job.id)
+        text = self._seite('/process/%s/result/' % self.job.kennung)
         self.assertIn('id="bvhPfad" data-pfad="A:\\irgendwo\\ausgabe\\smplx_probe.bvh"',
                       text)
         self.assertIn('<code id="bvhOrdner"></code>', text)
@@ -48,7 +48,7 @@ class ErgebnisseiteBvhpfad(TestCase):
         self.addCleanup(ablage.__exit__, None, None, None)
         (ordner / 'probe_smplx.bvh').write_text('HIERARCHY\n', encoding='utf-8')
         with override_settings(BVH_RESULTS_DIR=str(ordner)):
-            text = self._seite('/process/%s/result/' % self.job.id)
+            text = self._seite('/process/%s/result/' % self.job.kennung)
         self.assertIn('<code id="bvhKopie">%s</code>' % (ordner / 'probe_smplx.bvh'),
                       text)
         self.assertEqual(text.count('class="bvh-kopieren"'), 3)

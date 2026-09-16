@@ -14,11 +14,11 @@ Position 1,5 m rechts davon."
         <div class="scene-modal-body">
             <div class="dialogreiter" id="add-char-reiter">
                 {% comment %}Reihenfolge und Namen nach Ansage (Edgar, 07.09.2026):
-                HumanBody, SMPL, MakeHuman, UMA. Der erste Reiter traegt `active`
+                HumanBody, SMPL (seit 15.09.2026 SMPL-X), MakeHuman, UMA. Der erste Reiter traegt `active`
                 und muss zu `Charakterdialog._quelle` passen — sonst zeigt der
                 Dialog eine Liste, deren Reiter nicht hervorgehoben ist.{% endcomment %}
                 <button class="dialogreiter-knopf active" data-quelle="modell">HumanBody</button>
-                <button class="dialogreiter-knopf" data-quelle="smpl">SMPL</button>
+                <button class="dialogreiter-knopf" data-quelle="smpl">SMPL-X</button>
                 <button class="dialogreiter-knopf" data-quelle="makehuman">MakeHuman</button>
                 <button class="dialogreiter-knopf" data-quelle="uma">UMA</button>
                 <button class="dialogreiter-knopf" data-quelle="umapython">UMA Python</button>
@@ -29,10 +29,11 @@ Position 1,5 m rechts davon."
             <ul class="preset-list" id="preset-list" data-quelle="modell">
                 <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade Modelle...</li>
             </ul>
-            {% comment %}SMPL-Referenzkörper von GarmentCode (06.09.2026) — Maße
-            vorgegeben, der GarmentCode-Reiter läuft darauf wie das Online-Tool.{% endcomment %}
+            {% comment %}Referenzkörper von GarmentCode (06.09.2026) und die SMPL-X-
+            Durchschnitte (15.09.2026) — Maße vorgegeben, der GarmentCode-Reiter
+            läuft darauf wie das Online-Tool.{% endcomment %}
             <ul class="preset-list hb-versteckt" id="smpl-list" data-quelle="smpl">
-                <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade SMPL-Körper...</li>
+                <li class="gedaempft"><i class="fas fa-spinner fa-spin"></i> Lade SMPL-X-Körper...</li>
             </ul>
             {% comment %}MakeHuman-Basiskörper (06.09.2026) — auf ihm sitzen die 181
             .mhclo-Stücke der Kleiderbibliothek ohne Nacharbeit.{% endcomment %}

@@ -21,7 +21,7 @@ import { SmplFigur } from './smplfigur.js';
  * (`GarmentCode/smplform.py`).
  *
  * Losgelassen wird der Regler, nicht gezogen: Jeder Bau rechnet ein
- * SMPL-Netz mit 6.890 Punkten und legt es ab. Bei jedem Pixel neu zu bauen
+ * SMPL-X-Netz mit 10.475 Punkten und legt es ab. Bei jedem Pixel neu zu bauen
  * hieße hunderte Läufe für eine Bewegung.
  */
 export class Smplformregler {

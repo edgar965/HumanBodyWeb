@@ -7,6 +7,8 @@ die Hautgewichte in Drehungen der 49 DEF-Gesichtsknochen um
 
     static/mimik/basis.json     Einheit → Knochendrehungen (+1 / −1)
     static/mimik/posen.json     78 Posen mit Namen, Gruppe und Gewichten
+    static/mimik/smplx_basis.json  Einheit → Netzverschiebung des SMPL-X-Kopfes
+                                (16.09.2026, `core/dienste/mimiksmplx.py`)
     static/mimik/vorschau/      Kopfbilder je Pose (mit --vorschau)
 
 Die Dateien sind versioniert; der Lauf ist nur nach einem Wechsel der
@@ -50,6 +52,19 @@ class Command(BaseCommand):
         self.stdout.write(u'%d Einheiten, %d Posen, %d Gesichtsknochen bewegt, %.1f s'
                           % (len(basis), len(posen), len(knochen),
                              time.perf_counter() - start))
+        from core.dienste.mimiksmplx import Mimiksmplx
+        if Mimiksmplx.vorhanden():
+            start = time.perf_counter()
+            bericht = Mimiksmplx.schreiben(ausdruecke.einheiten(), daten, ziel)
+            self.stdout.write(
+                u'SMPL-X: %d Einheiten, bis %d Punkte je Feld, Landmarken %.2f mm, '
+                u'Zuordnung Median %.1f / p90 %.1f mm, %d Punkte ohne Quelle, %.1f s'
+                % (bericht['einheiten'], bericht['punkte'],
+                   bericht['landmarken_rest_mm'], bericht['abstand_median_mm'],
+                   bericht['abstand_p90_mm'], bericht['ohne_quelle'],
+                   time.perf_counter() - start))
+        else:
+            self.stdout.write(u'SMPL-X-Modell fehlt — smplx_basis.json nicht gebaut')
         if optionen.get('vorschau'):
             from core.dienste.mimikvorschau import Mimikvorschau
             anzahl = Mimikvorschau(ausdruecke, daten, ziel / 'vorschau').alle(posen)

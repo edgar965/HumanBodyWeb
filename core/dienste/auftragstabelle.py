@@ -163,12 +163,12 @@ class Auftragstabelle:
                 '<a class="btn btn-sm btn-primary" href="{}" '
                 'target="_blank" rel="noopener">'
                 '<i class="fas fa-eye"></i> Ergebnis</a>',
-                reverse('job_result', args=[job.id])))
+                reverse('job_result', args=[job.kennung])))
         elif job.status != 'pending':
             teile.append(format_html(
                 '<a class="btn btn-sm btn-secondary" href="{}">'
                 '<i class="fas fa-info-circle"></i> Status</a>',
-                reverse('job_status', args=[job.id])))
+                reverse('job_status', args=[job.kennung])))
         teile.append(format_html(
             '<button class="btn btn-sm btn-danger" data-aktion="delete" '
             'data-auftrag="{}" title="löschen"><i class="fas fa-trash"></i>'

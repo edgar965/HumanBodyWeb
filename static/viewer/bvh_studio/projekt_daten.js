@@ -86,21 +86,22 @@ export class Projektdaten {
 
     static _spur(t) {
         const td = {
-            name: t.name, type: t.type, preset: t.preset, bodyType: t.bodyType,
+            name: t.name, type: t.type, preset: t.preset, quelle: t.quelle, bodyType: t.bodyType,
             color: t.color, muted: t.muted, position: t.position,
         };
         if (t.type === 'model') {
-            td._linkedAnimIdx = t._linkedAnimIdx;
+            // Stelle im GESPEICHERTEN Feld, wie bei `_modellIdx` (15.09.2026): Der
+            // Laufzeit-Index zählt Boden und Szenenlichter mit, das gespeicherte Feld
+            // nicht — ein zweites Modell zeigte nach dem Laden auf die erste Animation.
+            td._linkedAnimIdx = Projektdaten._stelle(t._linkedAnimIdx);
             td._currentPreset = t._currentPreset;
             td.zugeklappt = Boolean(t.zugeklappt);
         }
         if (t.type === 'camera') td.cameraActive = t.cameraActive;
-        if (t.type === 'mimik') {
+        if (t.type === 'mimik' || t.type === 'script') {
             // Stelle der Modellspur im GESPEICHERTEN Feld (ohne Szene-Elemente) —
             // Laufzeit-Indizes verschieben sich beim Laden um Boden und Szenenlichter.
-            const gespeichert = state.project.tracks.filter(x => !x._sceneLight && !x._sceneItem);
-            td._modellIdx = gespeichert.indexOf(state.project.tracks[t._modellIdx]);
-            td.lebendigkeit = t.lebendigkeit;
+            td._modellIdx = Projektdaten._stelle(t._modellIdx);
         }
         if (t.type === 'light' && t.light) Projektdaten._licht(td, t);
         if (t.type === 'scene_object' && t.subtype === 'custom' && t.mesh) {
@@ -111,6 +112,12 @@ export class Projektdaten {
         }
         td.clips = t.clips.map(Projektdaten._klip);
         return td;
+    }
+
+    /** Laufzeit-Index einer Spur → ihre Stelle im gespeicherten Feld (ohne Szene-Elemente). */
+    static _stelle(laufzeitIdx) {
+        const gespeichert = state.project.tracks.filter(x => !x._sceneLight && !x._sceneItem);
+        return gespeichert.indexOf(state.project.tracks[laufzeitIdx]);
     }
 
     static _licht(td, t) {
@@ -138,10 +145,12 @@ export class Projektdaten {
             smoothSigma: c.smoothSigma, groundFix: c.groundFix,
             blendIn: c.blendIn, blendOut: c.blendOut,
         };
-        if (c.type === 'camera_kf' || c.type === 'light_kf' || c.type === 'mimik_kf') {
+        if (c.type === 'camera_kf' || c.type === 'light_kf' || c.type === 'mimik_kf'
+            || c.type === 'script') {
             cd.data = c.data;
         } else if (c.type === 'model') {
-            cd.data = { preset: c.data.preset, bodyType: c.data.bodyType };
+            cd.data = { preset: c.data.preset, bodyType: c.data.bodyType,
+                        quelle: c.data.quelle || 'modell' };
         } else if (c.type === 'audio') {
             cd.data = {
                 fileName: c.data.fileName, audioUrl: c.data.audioUrl,

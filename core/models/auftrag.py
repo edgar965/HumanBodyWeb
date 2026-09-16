@@ -11,6 +11,7 @@ import uuid
 
 from django.db import models
 
+from ..daten.auftragskennung import Auftragskennung
 from ..daten.fehlerkurzfassung import Fehlerkurzfassung
 
 
@@ -58,6 +59,10 @@ class BVHJob(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    #: Datum und Uhrzeit der Anlage, `2026.09.16.22.00.12` — die Adresse der
+    #: Auftragsseiten (Edgar, 16.09.2026); siehe `Auftragskennung`.
+    kennung = models.CharField(max_length=Auftragskennung.LAENGE, unique=True,
+                               editable=False)
     name = models.CharField(max_length=255)
     video_file = models.FileField(upload_to='uploads/')
     csv_file = models.CharField(max_length=512, blank=True)
@@ -95,6 +100,11 @@ class BVHJob(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        if not self.kennung:
+            self.kennung = Auftragskennung.fuer(self)
+        super().save(*args, **kwargs)
 
     @property
     def error_summary(self):

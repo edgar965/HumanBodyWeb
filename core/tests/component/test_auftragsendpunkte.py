@@ -147,13 +147,13 @@ class AuftragsendpunkteTest(TestCase):
         # Vor dem 17.08.2026 löschte `loeschen_formular` auf ein GET hin.
         job = self._auftrag()
         for name in ('start_processing', 'stop_processing', 'delete_job'):
-            antwort = self.client.get(reverse(name, args=[job.id]))
+            antwort = self.client.get(reverse(name, args=[job.kennung]))
             self.assertEqual(antwort.status_code, 405, name)
         self.assertTrue(BVHJob.objects.filter(id=job.id).exists())
 
     def test_loeschen_formular_leitet_auf_die_liste(self):
         job = self._auftrag()
-        antwort = self.client.post(reverse('delete_job', args=[job.id]))
+        antwort = self.client.post(reverse('delete_job', args=[job.kennung]))
         self.assertEqual(antwort.status_code, 302)
         self.assertEqual(antwort['Location'], reverse('processed'))
         self.assertFalse(BVHJob.objects.filter(id=job.id).exists())

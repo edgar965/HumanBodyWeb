@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
+import { Retargetziel } from './retargetziel.js';
+import { Spurfigurarten } from './spurfigurarten.js';
 
 /**
  * Bvhspur — den passenden Bewegungsclip am Abspielkopf laufen lassen.
@@ -33,7 +35,9 @@ export class Bvhspur {
 
     /** Den Clip finden, der `zeit` enthält, und ihn spielen. */
     static _laufen(spur, zeit) {
+        const ziel = Retargetziel.wahl(spur.modell, spur.figurHoehe).schluessel;
         for (const clip of spur.clips) {
+            if (clip.animClip && clip._animZiel !== ziel) Bvhspur._neuHolen(spur, clip);
             if (!clip.animClip) {
                 Bvhspur._ohneAnimation(spur, clip);
                 continue;
@@ -75,6 +79,23 @@ export class Bvhspur {
         fn.serverLog('bvh_action_resume', `track=${spur.name} clip=${clip.name}`);
     }
 
+    /**
+     * Der Clip ist auf ein anderes Skelett gebaut (die Figur hat die Art
+     * gewechselt, 15.09.2026): Spuren nennen Knochen beim Namen, also neu
+     * holen — einmal, nicht je Bild.
+     */
+    static _neuHolen(spur, clip) {
+        if (spur._activeClip === clip) {
+            spur.mixer.stopAllAction();
+            spur._activeClip = null;
+            spur._activeAction = null;
+        }
+        clip.animClip = null;
+        clip._noAnimClipLogged = false;
+        fn.serverLog('bvh_clip_retarget_again', `track=${spur.name} clip=${clip.name}`);
+        fn.loadClipAnimation(spur, clip);
+    }
+
     static _ohneAnimation(spur, clip) {
         if (clip._noAnimClipLogged) return;
         clip._noAnimClipLogged = true;
@@ -89,7 +110,7 @@ export class Bvhspur {
             const alter = spur._activeClip;
             spur._activeClip = null;
             spur._activeAction = null;
-            if (spur.skeleton) spur.skeleton.skeleton.pose();
+            Spurfigurarten.ruhelage(spur);
             fn.serverLog('bvh_action_stop',
                          `track=${spur.name} clip=${alter.name} `
                          + `t=${zeit.toFixed(2)}s (out of range)`);

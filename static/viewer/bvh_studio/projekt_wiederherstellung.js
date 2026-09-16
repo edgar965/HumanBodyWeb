@@ -12,6 +12,7 @@ import { Clip } from './models.js';
 import { Studioanzeige } from './studioanzeige.js';
 import { Projektnachladen } from './projekt_nachladen.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Scriptspur } from './scriptspur.js';
 
 export class Projektwiederherstellung {
     static async uebernehmen(data) {
@@ -51,8 +52,8 @@ export class Projektwiederherstellung {
         }
         await Promise.all(wartend);
 
+        Projektwiederherstellung._zuordnen(eingang, angelegt);
         Projektwiederherstellung._modellspurenVerlinken();
-        Projektwiederherstellung._mimikZuordnen(eingang, angelegt);
         // Zur Laufzeit steht der Boden schon (Szenen-Element, nicht löschbar):
         // die gespeicherten Werte darauf legen. Beim Seitenstart gibt es ihn
         // noch nicht, dann greift `createFloorTrack` über die Vorgaben.
@@ -90,6 +91,7 @@ export class Projektwiederherstellung {
             if (name && /^Track \d+$/.test(name)) name = name.replace('Track', 'Animation');
             track = fn.addTrack(name, true);  // Automodellspur beim Laden ueberspringen
             track.preset = td.preset || 'FemaleGarment';
+            track.quelle = td.quelle || 'modell';
             track.bodyType = td.bodyType || 'Female_Caucasian';
         } else if (art === 'model') {
             track = fn.addModelTrack(td.name);
@@ -106,7 +108,6 @@ export class Projektwiederherstellung {
         track.position = td.position || [0, 0, 0];
         if (track.group) track.group.position.set(track.position[0], 0, track.position[2]);
         if (art === 'camera') track.cameraActive = td.cameraActive ?? true;
-        if (art === 'mimik' && td.lebendigkeit) track.lebendigkeit = td.lebendigkeit;
         if (art === 'light' && track.light && td.lightPosition) {
             Projektwiederherstellung._lichtUebernehmen(track, td);
         }
@@ -179,16 +180,39 @@ export class Projektwiederherstellung {
      * verrutscht ist).
      */
     /**
-     * Mimikspuren an ihre Modellspur hängen — über die Stelle im gespeicherten
-     * Feld (`_modellIdx` beim Speichern), nicht über Laufzeit-Indizes: Vor den
-     * Nutzerspuren stehen zur Laufzeit Boden und Szenenlichter (14.09.2026).
+     * Verweise zwischen Spuren über die Stelle im GESPEICHERTEN Feld auflösen,
+     * nicht über Laufzeit-Indizes: Vor den Nutzerspuren steht zur Laufzeit der
+     * Boden (14.09.2026 für Mimik/Script → Modell; 15.09.2026 auch Modell →
+     * Animation — ein zweites Modell zeigte nach dem Laden auf die erste
+     * Animation, `neueNummer` zählte ohne den Boden).
      */
-    static _mimikZuordnen(eingang, angelegt) {
+    static _zuordnen(eingang, angelegt) {
         eingang.forEach((td, i) => {
-            if (td.type !== 'mimik') return;
+            if (td.type === 'model') {
+                const ziel = angelegt[td._linkedAnimIdx ?? -1];
+                angelegt[i]._linkedAnimIdx = ziel?.type === 'bvh'
+                    ? state.project.tracks.indexOf(ziel) : -1;
+            }
+            if (td.type !== 'mimik' && td.type !== 'script') return;
             const modell = angelegt[td._modellIdx ?? -1];
             angelegt[i]._modellIdx = modell?.type === 'model'
                 ? state.project.tracks.indexOf(modell) : -1;
+        });
+        Projektwiederherstellung._alteLebendigkeit(eingang, angelegt);
+    }
+
+    /**
+     * Projekte vom 14.09.2026 trugen die Lebendigkeit als Einstellung an der
+     * Mimikspur. Seit 15.09. ist sie ein Script-Clip: Was eingeschaltet war,
+     * wird ein Script von 0 bis zum Projektende auf der Script-Spur des Modells.
+     */
+    static _alteLebendigkeit(eingang, angelegt) {
+        eingang.forEach((td, i) => {
+            if (td.type !== 'mimik' || !td.lebendigkeit?.an) return;
+            const modellIdx = angelegt[i]._modellIdx;
+            if (modellIdx < 0 || Scriptspur.zuModell(modellIdx)) return;
+            Scriptspur.clipSetzen(Scriptspur.anlegen(modellIdx), 0, td.lebendigkeit);
+            Protokoll.debug('Restore', `Lebendigkeit der Mimikspur "${td.name}" → Script-Clip`);
         });
     }
 

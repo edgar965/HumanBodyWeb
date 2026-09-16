@@ -7,6 +7,7 @@ import { sharedState } from '../character_core.js';
 import { loadTrackCharacter } from './spur_charakter.js';
 import { Clipfehlt } from './clipfehlt.js';
 import { Studioanzeige } from './studioanzeige.js';
+import { Retargetziel } from './retargetziel.js';
 
 /**
  * Clipanimation — die retargetete Bewegung eines Clips holen und einhängen.
@@ -36,8 +37,12 @@ export class Clipanimation {
 
     /** Bewegung laden, glätten, einhängen. */
     static async laden(spur, clip) {
-        const daten = await Clipanimation._holen(clip);
+        // Die Figur der Spur bestimmt das Zielskelett (15.09.2026): HumanBody →
+        // DEF, sonst UMA/SMPL/MakeHuman/UMA Python mit ihren Namen.
+        const ziel = Retargetziel.wahl(spur.modell, spur.figurHoehe);
+        const daten = await Clipanimation._holen(clip, ziel);
         if (!daten) return;
+        clip._animZiel = ziel.schluessel;
         if (!daten.tracks || !daten.frame_count) {
             Protokoll.warnung('BVH Studio', `No animation data for ${clip.name}`);
             return;
@@ -56,12 +61,14 @@ export class Clipanimation {
         fn.renderTimeline();
     }
 
-    static async _holen(clip) {
+    static async _holen(clip, ziel = Retargetziel.wahl(null)) {
         const adresse = `${Clipanimation.ENDPUNKT}?category=`
             + `${encodeURIComponent(clip.category)}&name=`
-            + `${encodeURIComponent(clip.name)}`;
+            + `${encodeURIComponent(clip.name)}` + Retargetziel.abfrage(ziel);
         try {
-            return await Serverabruf.json(adresse);
+            // MakeHuman und UMA Python schicken ihre Regler im Rumpf (POST).
+            return ziel.rumpf ? await Serverabruf.senden(adresse, ziel.rumpf)
+                              : await Serverabruf.json(adresse);
         } catch (fehler) {
             if (fehler.status === 404) {
                 // Die Datei gibt es nicht mehr (verschoben, gelöscht): Der Clip

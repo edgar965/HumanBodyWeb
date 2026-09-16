@@ -158,23 +158,31 @@ export class Auftragszeile {
         const aktionen = document.getElementById('detail-actions-' + this.id);
         if (aktionen) {
             aktionen.innerHTML =
-                `<a class="btn btn-sm btn-primary" href="/process/${this.id}/result/"`
+                `<a class="btn btn-sm btn-primary" href="${this._ergebnis(daten)}"`
                 + ' target="_blank" rel="noopener">'
                 + '<i class="fas fa-eye"></i> Ergebnis</a>'
                 + (daten.bvh_file
                     ? ` <a class="btn btn-sm btn-secondary" href="/api/bvh/${this.id}/"`
                       + ' download><i class="fas fa-download"></i> BVH</a>' : '');
         }
-        this._ergebnislink();
+        this._ergebnislink(daten);
+    }
+
+    /**
+     * Die Ergebnisseite heißt nach der Auftragskennung (Datum und Uhrzeit,
+     * 16.09.2026) — sie steht im Zustands-JSON, nicht in der Zeile.
+     */
+    _ergebnis(daten) {
+        return `/process/${daten.kennung}/result/`;
     }
 
     /** In der Tabellenzeile einen "Ergebnis"-Link ergaenzen, falls er fehlt. */
-    _ergebnislink() {
+    _ergebnislink(daten) {
         const zelle = this.zeile()?.querySelector('td:last-child');
         if (!zelle || zelle.querySelector('a[href*="result"]')) return;
         const link = document.createElement('a');
         link.className = 'btn btn-sm btn-primary';
-        link.href = `/process/${this.id}/result/`;
+        link.href = this._ergebnis(daten);
         link.target = '_blank';
         link.rel = 'noopener';
         link.innerHTML = '<i class="fas fa-eye"></i> Ergebnis';

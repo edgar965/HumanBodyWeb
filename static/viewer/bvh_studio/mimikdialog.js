@@ -161,8 +161,7 @@ export class Mimikdialog {
         if (!spur) return;
         const staerke = Number(document.getElementById('mimik-staerke')?.value ?? 100) / 100;
         spur._vorschau = pose ? Mimikdialog._skaliert(pose.gewichte, staerke) : null;
-        const skelett = Mimikanwendung.skelett(spur);
-        if (skelett) Mimikanwendung.setzen(skelett, spur._vorschau || {});
+        Mimikanwendung.anwenden(spur._modellIdx, spur._vorschau || {});
     }
 
     static _skaliert(gewichte, staerke) {

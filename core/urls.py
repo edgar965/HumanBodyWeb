@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, register_converter
 from django.views.decorators.csrf import csrf_exempt
 from .api import einstellungen, seiten, buendel
 # Die drei Seiten MIT Logik stehen als je eine Klasse in eigenen Modulen —
@@ -10,6 +10,8 @@ from .api.testfigur import Testendpunkte, Testverwaltung
 from .api.dateien import Auftragsdateien
 from .api.personendateien import Personendateien
 from .api.auftraege import Auftragsendpunkte
+from .api.auftragsformulare import Auftragsformulare
+from .api.auftragsweiterleitung import Auftragsweiterleitung
 from .api.seiten_web import Webseiten
 from .api.retarget import Retargetendpunkte
 from .api.smpl import Smplendpunkte
@@ -35,6 +37,9 @@ from .api.studio_video import Theatrevideo
 from .api.figurvideo import Figurvideoendpunkte
 from .api.effekte import Effektendpunkte
 from .urls_charakter import CHARAKTER
+from .daten.kennungskonverter import Kennungskonverter
+
+register_converter(Kennungskonverter, 'kennung')
 
 urlpatterns = [
     path('', Webseiten.start, name='dashboard'),
@@ -55,14 +60,19 @@ urlpatterns = [
     path('api/effekte/<uuid:auftrag_id>/video/', Effektendpunkte.video,
          name='effekte_video'),
     path('process/result/', Webseiten.ergebnisauswahl, name='standalone_result'),
-    path('process/<uuid:job_id>/', Webseiten.auftragsseite, name='job_status'),
-    path('process/<uuid:job_id>/start/', Auftragsendpunkte.starten_formular,
+    # Die Auftragsseiten heissen nach Datum und Uhrzeit der Anlage
+    # (`Auftragskennung`, 16.09.2026); alte UUID-Adressen leiten dorthin.
+    path('process/<kennung:kennung>/', Webseiten.auftragsseite, name='job_status'),
+    path('process/<kennung:kennung>/start/', Auftragsformulare.starten,
          name='start_processing'),
-    path('process/<uuid:job_id>/stop/', Auftragsendpunkte.anhalten_formular,
+    path('process/<kennung:kennung>/stop/', Auftragsformulare.anhalten,
          name='stop_processing'),
-    path('process/<uuid:job_id>/result/', Webseiten.ergebnisseite, name='job_result'),
-    path('process/<uuid:job_id>/delete/', Auftragsendpunkte.loeschen_formular,
+    path('process/<kennung:kennung>/result/', Webseiten.ergebnisseite,
+         name='job_result'),
+    path('process/<kennung:kennung>/delete/', Auftragsformulare.loeschen,
          name='delete_job'),
+    path('process/<uuid:job_id>/', Auftragsweiterleitung.alt),
+    path('process/<uuid:job_id>/<path:rest>', Auftragsweiterleitung.alt),
     path('api/bvh/<uuid:job_id>/', Auftragsdateien.bvh, name='serve_bvh'),
     path('api/bvh-face/<uuid:job_id>/', Auftragsdateien.bvh_gesicht,
          name='serve_bvh_face'),

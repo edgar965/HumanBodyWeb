@@ -24,6 +24,9 @@
  */
 export class Cliplaenge {
 
+    /** Clips ohne Quelle: `totalFrames` IST die Länge (Modell, Script). */
+    static OHNE_QUELLE = ['model', 'script'];
+
     /** Wenigstens ein Bild bzw. eine Zehntelsekunde bleibt immer. */
     static MINDESTBILDER = 1;
     static MINDESTSEKUNDEN = 0.1;
@@ -38,7 +41,7 @@ export class Cliplaenge {
         }
         const bilder = clip.totalFrames - (clip.trimIn || 0) - (clip.trimOut || 0);
         const teiler = (clip.fps || 30) * (clip.speed || 1);
-        if (clip.type === 'model') {
+        if (Cliplaenge.OHNE_QUELLE.includes(clip.type)) {
             const ganz = bezug || clip.totalFrames;
             return { sekunden: bilder / teiler, prozent: 100 * bilder / ganz,
                      bilder, ganz: ganz / teiler };
@@ -56,7 +59,9 @@ export class Cliplaenge {
             return Cliplaenge.stand(clip);
         }
         const teiler = (clip.fps || 30) * (clip.speed || 1);
-        if (clip.type === 'model') return Cliplaenge.modell(clip, sekunden * teiler, bezug);
+        if (Cliplaenge.OHNE_QUELLE.includes(clip.type)) {
+            return Cliplaenge.modell(clip, sekunden * teiler, bezug);
+        }
         return Cliplaenge.bilder(clip, Math.round(sekunden * teiler));
     }
 
@@ -67,7 +72,7 @@ export class Cliplaenge {
             clip.data.audioDuration = Math.max(Cliplaenge.MINDESTSEKUNDEN, Math.min(ganz, ganz * prozent / 100));
             return Cliplaenge.stand(clip);
         }
-        if (clip.type === 'model') {
+        if (Cliplaenge.OHNE_QUELLE.includes(clip.type)) {
             return Cliplaenge.modell(clip, (bezug || clip.totalFrames) * prozent / 100, bezug);
         }
         return Cliplaenge.bilder(clip, Math.round(clip.totalFrames * prozent / 100));

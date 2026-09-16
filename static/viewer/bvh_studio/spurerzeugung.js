@@ -5,7 +5,6 @@ import { Track } from './models.js';
 import { pushUndo } from './undo.js';
 import { createLightHelper } from './spur_lichter.js';
 import { Spurauswahl } from './spurauswahl.js';
-import { Lebendigkeit } from './lebendigkeit.js';
 import { Mimikbasis } from './mimikbasis.js';
 
 /**
@@ -25,7 +24,8 @@ export class Spurerzeugung {
 
     static ERSATZMODELL = 'Rig2';
     static ERSATZKOERPER = 'Female_Caucasian';
-    static NAMEN = { camera: 'Kamera', light: 'Licht', audio: 'Audio', mimik: 'Mimik' };
+    static NAMEN = { camera: 'Kamera', light: 'Licht', audio: 'Audio', mimik: 'Mimik',
+                     script: 'Script' };
     static OBJEKTFARBE = '#7c5cbf';
 
     /** Eine Animationsspur (BVH-Clips). */
@@ -95,9 +95,13 @@ export class Spurerzeugung {
         },
         mimik(spur) {
             // Gesichtsspur (14.09.2026): Modell setzt der Aufrufer (`Mimikspur`,
-            // Wiederherstellung); Lebendigkeit ist an, die Bibliothek wird geholt.
+            // Wiederherstellung); die Bibliothek wird geholt.
             spur._modellIdx = -1;
-            spur.lebendigkeit = Lebendigkeit.vorgabe();
+            Mimikbasis.laden().then(() => fn.applyPlayhead?.());
+        },
+        script(spur) {
+            // Script-Spur (15.09.2026): Lebendigkeit als Clips, am Modell wie die Mimik.
+            spur._modellIdx = -1;
             Mimikbasis.laden().then(() => fn.applyPlayhead?.());
         },
         scene_object(spur) {

@@ -22,10 +22,11 @@ export class Figurkataloge {
     static QUELLEN = {
         modell: { titel: 'HumanBody', adresse: '/api/character/models/',
                   leer: 'Keine Modelle vorhanden.', pflege: true },
-        // SMPL-Referenzkörper von GarmentCode: Upstream-Dateien, deshalb
-        // ohne Umbenennen und Löschen.
-        smpl: { titel: 'SMPL', adresse: '/api/character/smpl-figur/',
-                leer: 'Keine SMPL-Körper im GarmentCode-Klon.', pflege: false },
+        // GarmentCodes Referenzkörper und die SMPL-X-Durchschnitte (seit
+        // 15.09.2026 SMPL-X: Kiefer, Augen, Finger) — Upstream- bzw. erzeugte
+        // Dateien, deshalb ohne Umbenennen und Löschen.
+        smpl: { titel: 'SMPL-X', adresse: '/api/character/smpl-figur/',
+                leer: 'Keine SMPL-X-Körper (Modelldateien fehlen).', pflege: false },
         // MakeHuman-Basiskörper: eine Datei des Projekts, ohne Pflege.
         makehuman: { titel: 'MakeHuman', adresse: '/api/character/mh-figur/',
                      leer: 'MakeHuman/base.obj fehlt.', pflege: false },
@@ -62,7 +63,7 @@ export class Figurkataloge {
         smpl: (daten) => (daten.figuren || []).map(f => ({
             name: f.name,
             anzeige: f.anzeige || f.name,
-            unterzeile: `${f.geschlecht} · ${f.smpl ? 'SMPL' : 'GarmentCode-Modell'} · `
+            unterzeile: `${f.geschlecht} · ${f.smpl ? 'SMPL-X' : 'GarmentCode-Modell'} · `
                 + (f.masse_vorhanden ? 'Maße vorgegeben' : 'ohne Maße'),
         })),
         makehuman: (daten) => (daten.figuren || []).map(f => ({

@@ -17,7 +17,7 @@ MB-Lab-Ausdrücke sind gut … die letzte Mimik bleibt am Modell"):
 4. `Mimikspuren.spuren`: Gewichte je Bild → Delta-Quaternionen je Knochen;
    Bild ohne Gewichte = Einheit; `schreiben` legt die Nebendatei, leer löscht sie.
 5. Studio-Verdrahtung: `applyPlayhead` ruft `Mimikanwendung.alle(t)` NACH der
-   Spurschleife; Speichern/Laden führen `_modellIdx`/`lebendigkeit`;
+   Spurschleife; Speichern/Laden führen `_modellIdx` (Mimik UND Script);
    `Retargetdaten.holen` mischt die Mimik; das Menü hat die fünf Einträge.
 
 Sabotage-Gegenprobe: in `Knochendeltas._nach_threejs` `-t_eltern[1]` →
@@ -158,18 +158,20 @@ class MimikTest(SimpleTestCase):
         schleife_ende = rumpf.rindex("applySceneObjectTrack(track, t);\n    }")
         self.assertGreater(rumpf.index('Mimikanwendung.alle(t);'), schleife_ende)
         speichern = _text(STUDIO / 'projekt_daten.js')
-        self.assertIn("td._modellIdx = gespeichert.indexOf(", speichern)
-        self.assertIn('td.lebendigkeit = t.lebendigkeit;', speichern)
+        self.assertIn("td._modellIdx = Projektdaten._stelle(t._modellIdx)", speichern)
+        # dieselbe Rechnung für Modell → Animation (15.09.2026)
+        self.assertIn("td._linkedAnimIdx = Projektdaten._stelle(t._linkedAnimIdx)", speichern)
+        self.assertIn("t.type === 'mimik' || t.type === 'script'", speichern)
+        self.assertNotIn('td.lebendigkeit', speichern)   # seit 15.09.2026 am Script-Clip
         laden = _text(STUDIO / 'projekt_wiederherstellung.js')
-        self.assertIn('_mimikZuordnen(eingang, angelegt)', laden)
-        self.assertIn("spur.type === 'mimik' && spuren[spur._modellIdx]?.type",
-                      _text(STUDIO / 'modellgruppen.js'))
+        self.assertIn('_zuordnen(eingang, angelegt)', laden)
+        self.assertIn("AM_MODELL = ['mimik', 'script']", _text(STUDIO / 'modellgruppen.js'))
         retarget = _text(settings.BASE_DIR / 'core' / 'dienste' / 'retargetdaten.py')
         self.assertIn('self._mimik_dazu(self._gesicht_dazu(', retarget)
         vorlage = _text(settings.BASE_DIR / 'templates' / 'bvh_studio.html')
         for aktion in ('ctx-mimik-pose', 'ctx-mimik-neutral', 'ctx-mimik-loeschen',
-                       'ctx-mimik-lebendigkeit', 'ctx-mimik-einrechnen',
-                       'ctx-mimik-track'):
+                       'ctx-mimik-einrechnen', 'ctx-mimik-track',
+                       'ctx-script-track', 'ctx-script-clip'):
             self.assertIn('data-action="%s"' % aktion, vorlage)
         menue = _text(STUDIO / 'zeitleiste_menue.js')
         self.assertLess(menue.index("spur.type === 'mimik'"),

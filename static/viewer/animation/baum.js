@@ -9,6 +9,7 @@ import { loadBVHAnimation } from './wiedergabe.js';
 import { Animationsverwaltung } from './verwaltung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Kategoriekasten } from '../gemeinsam/kategoriekasten.js';
+import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
 
 
 // =========================================================================
@@ -90,8 +91,11 @@ export function showAnimCtx(menuId, x, y) {
 
 export async function bvhManage(action, data) {
     try {
-        return await Serverabruf.senden('/api/character/bvh-manage/',
-                                        { action, ...data });
+        const antwort = await Serverabruf.senden('/api/character/bvh-manage/',
+                                                 { action, ...data });
+        // Die anderen Tabs (Szene, Studio) holen ihren Baum neu.
+        Bibliothekskanal.melden(action, data);
+        return antwort;
     } catch (e) {
         alert('Fehler: ' + e.message);
         return null;
@@ -104,6 +108,8 @@ export async function bvhManage(action, data) {
  * ausgeschrieben, einmal für das Kontextmenü und einmal für die Knöpfe.
  */
 export function setupAnimManagement() {
+    // Ein anderer Tab (Szene, Studio) hat die Bibliothek geändert.
+    Bibliothekskanal.hoeren(() => loadAnimationTree());
     return new Animationsverwaltung({
         ziel: () => _animCtxTarget,
         neuLaden: () => loadAnimationTree(),

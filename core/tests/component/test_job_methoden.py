@@ -26,7 +26,9 @@ class JobMethodenTest(TestCase):
     """Kein DB-Eintrag nötig: Der Methodenschutz greift VOR der Ansicht."""
 
     def setUp(self):
-        self.job_id = uuid.uuid4()
+        # Eine Kennung, die es nicht gibt (die Seiten heißen seit dem
+        # 16.09.2026 nach Datum und Uhrzeit, nicht nach der UUID).
+        self.job_id = '2001.01.01.00.00.00'
 
     def test_start_per_get_ist_nicht_moeglich(self):
         a = self.client.get(reverse('start_processing', args=[self.job_id]))
@@ -49,7 +51,7 @@ class JobMethodenTest(TestCase):
 
     def test_api_stopp_prueft_die_methode_selbst(self):
         """Die AJAX-Fassung hat ihre eigene Prüfung (405) — die bleibt gültig."""
-        a = self.client.get(reverse('api_stop_processing', args=[self.job_id]))
+        a = self.client.get(reverse('api_stop_processing', args=[uuid.uuid4()]))
         self.assertEqual(a.status_code, 405)
 
     def test_delete_job_ist_nur_per_post_erreichbar(self):

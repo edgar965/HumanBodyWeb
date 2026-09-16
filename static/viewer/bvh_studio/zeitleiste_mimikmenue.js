@@ -10,8 +10,9 @@ import { Mimikdialog } from './mimikdialog.js';
  * Edgar, 13.09.2026: „eine Spur für die Gesichtsposen, mit Rechtsklick —
  * Kontextmenü zum Setzen der Pose, die Pose im Popup-Dialog." Einträge:
  * Pose setzen… (Dialog an der Klickzeit), Neutral setzen, Schlüsselbild
- * löschen (nur auf einem Schlüsselbild), Lebendigkeit… (Eigenschaften der
- * Spur), Mimik einrechnen (Nebendatei zur BVH, `Mimikeinrechnen`).
+ * löschen (nur auf einem Schlüsselbild), Mimik einrechnen (Nebendatei zur
+ * BVH, `Mimikeinrechnen`). Die Lebendigkeit ist seit 15.09.2026 ein
+ * Script-Clip auf der Script-Spur (`Scriptmenue`).
  */
 export class Mimikmenue {
 
@@ -41,11 +42,6 @@ export class Mimikmenue {
             'ctx-mimik-pose': () => Mimikdialog.oeffnen(spur, frame, clip),
             'ctx-mimik-neutral': () => Mimikspur.neutral(spur, frame),
             'ctx-mimik-loeschen': () => { if (clip) Mimikspur.loeschen(spur, clip); },
-            'ctx-mimik-lebendigkeit': () => {
-                state.selectedClipIdx = -1;
-                fn.updateProperties();
-                fn.switchPropsTab?.('props');
-            },
             'ctx-mimik-einrechnen': () => fn.mimikEinrechnen?.(spur),
             'ctx-playhead': () => Zeitleistenziehen.abspielkopfSetzen(Mimikmenue.mausX),
         };

@@ -3,6 +3,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Clipfehlt } from './clipfehlt.js';
+import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
 
 /**
  * Bibliothekablage — Dateioperationen auf der BVH-Bibliothek.
@@ -34,8 +35,11 @@ export class Bibliothekablage {
      */
     static async senden(aktion, daten) {
         try {
-            return await Serverabruf.senden(Bibliothekablage.ENDPUNKT,
-                                            { action: aktion, ...daten });
+            const antwort = await Serverabruf.senden(Bibliothekablage.ENDPUNKT,
+                                                     { action: aktion, ...daten });
+            // Die anderen Tabs (Szene, Animationen) holen ihren Baum neu.
+            Bibliothekskanal.melden(aktion, daten);
+            return antwort;
         } catch (fehler) {
             alert('Fehler: ' + fehler.message);
             return null;

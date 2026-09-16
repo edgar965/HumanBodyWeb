@@ -117,6 +117,7 @@ export class Bibliothekmenues {
         if (await Bibliothekablage.senden('delete', {
                 category: ziel.category, name: ziel.name })) {
             Bibliothekablage.clipsEntfernen(ziel.category, ziel.name);
+            this.baum.eintragEntfernen(ziel.category, ziel.name);
             this.baum.laden();
         }
     }

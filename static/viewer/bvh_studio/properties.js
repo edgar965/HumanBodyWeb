@@ -20,6 +20,7 @@ import { Bodeneigenschaften } from './eigenschaften/boden.js';
 import { Objekteigenschaften } from './eigenschaften/objekt.js';
 import { Klipeigenschaften } from './eigenschaften/klip.js';
 import { Mimikeigenschaften } from './eigenschaften/mimik.js';
+import { Scripteigenschaften } from './eigenschaften/script.js';
 import { Maskenbausteine as M } from './eigenschaften/bausteine.js';
 import { Schaltknopf } from './schaltknopf.js';
 import { Modellspur } from './modellspur.js';
@@ -89,6 +90,7 @@ export class Eigenschaftsfeld {
         }
         if (track.type === 'light') return Lichteigenschaften.maske(track);
         if (track.type === 'mimik') return Mimikeigenschaften.maske(track);
+        if (track.type === 'script') return Scripteigenschaften.maske(track);
         if (track.type === 'model') {
             const verbunden = state.project.getLinkedAnimation(track);
             const preset = Modellspur.aktives(track, state.playheadFrame / state.project.fps);

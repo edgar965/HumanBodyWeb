@@ -48,19 +48,35 @@ export const HILFE_SPUREN = {
 </ul>
 <h4 class="hilfe-untertitel"><i class="fas fa-smile"></i> Mimik</h4>
 <ul>
-<li><b>Rechtsklick auf die Modellspur &rarr; Mimikspur hinzufügen</b>: die Gesichtsspur steht
-    eingerückt unter der Modellspur</li>
+<li><b>Rechtsklick auf die Modellspur &rarr; Animation hinzufügen &rarr; Mimik</b>: die Gesichtsspur
+    steht eingerückt unter der Modellspur, der Pose-Dialog öffnet sich für die Klickstelle</li>
 <li><b>Rechtsklick auf die Mimikspur &rarr; Pose setzen…</b>: Dialog mit zehn Gruppen (Freude, Trauer,
     Ärger, Überraschung/Angst, Abneigung, Aufmerksamkeit, Augen, Mund, Phoneme, Eigene) — 76 Posen aus
     MB-Lab, dazu eigene Mischungen; Stärke, Übergang (weich/linear) und Haltezeit je Schlüsselbild</li>
 <li>Zwischen zwei Schlüsselbildern wird überblendet, vor dem ersten ist das Gesicht neutral, die
     letzte Pose bleibt bis zum Ende</li>
-<li><b>Lebendigkeit</b> (rechts unter Eigenschaften): Blinzeln, Blick, Atmen, Variation um die Pose,
-    Zucken, Schlucken — je An/Aus, Stärke, Abstand; feste Saat, also wiederholbar</li>
 <li><b>Mimik einrechnen (zur BVH)</b>: legt <code>&lt;name&gt;_mimik.json</code> neben die
-    Bewegungsclips der Figur — danach trägt die Animation die Mimik auf jeder Seite</li>
+    Bewegungsclips der Figur — danach trägt die Animation Mimik und Scripts auf jeder Seite</li>
 </ul>
-<p class="hilfe-abstand"><b>Hinzufügen:</b> Klick auf "+ Hinzufügen" in der Toolbar, dann Typ wählen.</p>
+<h4 class="hilfe-untertitel"><i class="fas fa-scroll"></i> Script</h4>
+<ul>
+<li><b>Rechtsklick auf die Modellspur &rarr; Animation hinzufügen &rarr; Script</b>: die Script-Spur
+    steht eingerückt unter der Modellspur, ein Script ab der Klickstelle bis zum Projektende</li>
+<li>Ein Script wirkt, solange der Abspielkopf in seinem Clip steht: <b>Lebendigkeit</b> — Blinzeln,
+    Blick, Atmen, Variation um die Pose, Zucken, Schlucken; je An/Aus, Stärke, Abstand; feste Saat,
+    also wiederholbar. Die Zeit zählt ab dem Clipanfang</li>
+<li>Mit der ersten Mimikspur entsteht ein Script (Blinzeln, Blick an) — ausschalten, kürzen oder
+    löschen wie jeder Clip; mehrere Scripts hintereinander mit anderen Einstellungen sind möglich</li>
+<li>Ein Script ohne Mimikspur (Blinzeln beim Tanzen) setzt nur die Knochen, an denen es dreht — das
+    übrige Gesicht bleibt, wie die Animation es bringt</li>
+</ul>
+<p class="hilfe-abstand"><b>Hinzufügen:</b> Klick auf "+ Hinzufügen" in der Toolbar, dann Typ wählen —
+    oder Rechtsklick auf die Modellspur (Kopf oder Fläche): <b>Modell hinzufügen</b>, unterteilt nach
+    Figurart (HumanBody, SMPL-X, MakeHuman, UMA, UMA Python — jede mit ihrem Katalog), und
+    <b>Animation hinzufügen</b> (Animation aus der BVH-Bibliothek, Mimik, Script). Beim Wechsel der
+    Figurart wird die Bewegung auf das neue Skelett umgerechnet. Mimik und Script wirken auf
+    HumanBody-Figuren (DEF-Gesichtsknochen) und auf SMPL-X-Figuren (die MB-Lab-Ausdrücke sind
+    dort als Netzverschiebungen des Kopfes übertragen); MakeHuman und UMA haben keine Mimik.</p>
 <p><b>Löschen:</b> Track auswählen, dann Papierkorb-Button.</p>
 `},
     camera: {

@@ -19,6 +19,7 @@ import { Abspielsteuerung } from './abspielsteuerung.js';
 import { Figurmerker } from './figurmerker.js';
 import { Animationsentfernung } from './animationsentfernung.js';
 import { Bvhladen } from './bvhladen.js';
+import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
 
 /** Play/Stop/Zeitleiste — und Play meint die ausgewählte Figur (Klassendoku dort). */
 const abspielsteuerung = new Abspielsteuerung(state, fn);
@@ -220,6 +221,7 @@ export function _initSaveAnimDialog() {
             state.currentAnimUrl = `/api/character/bvh/`
                 + `${encodeURIComponent(category)}/${encodeURIComponent(name)}/`;
             state.currentAnimName = name;
+            Bibliothekskanal.melden('save', { category, name });
             loadAnimationUI();
         } catch (e) { alert('Speichern fehlgeschlagen: ' + e.message); }
     });
@@ -261,14 +263,17 @@ export async function loadAnimationUI() {
                 // heisst dann anders oder ist weg. Das Loeschen stoppt
                 // dazu die laufende Animation und waehlt den Nachfolger
                 // (`Animationsentfernung`, 12.09.2026).
-                Animationsmenue.binden(item, cat, anim.name, (aktion) => (
-                    aktion === 'delete'
-                        ? Animationsentfernung.nach(anim, cat, {
-                            eintraege: Animationsentfernung.eintraege(tree),
-                            state, fn, merker: Figurmerker,
-                            baumNeu: loadAnimationUI,
-                            meldung: (text) => abspielsteuerung.meldung(text) })
-                        : loadAnimationUI()));
+                Animationsmenue.binden(item, cat, anim.name, (aktion) => {
+                    if (aktion !== 'delete') return loadAnimationUI();
+                    const eintraege = Animationsentfernung.eintraege(tree);
+                    // Sofort aus dem Baum — der Neubau kann unter Last
+                    // Sekunden dauern (16.09.2026: 9 s, Eintrag stand noch da).
+                    item.remove();
+                    return Animationsentfernung.nach(anim, cat, {
+                        eintraege, state, fn, merker: Figurmerker,
+                        baumNeu: loadAnimationUI,
+                        meldung: (text) => abspielsteuerung.meldung(text) });
+                });
                 body.appendChild(item);
             }
             tree.appendChild(catDiv);
@@ -280,6 +285,9 @@ export async function loadAnimationUI() {
     // einmal; früher hingen danach zwei Zuhörer am Play-Knopf.
     abspielsteuerung.verdrahten();
 }
+
+// Ein anderer Tab (Studio, Animationen) hat die Bibliothek geändert.
+Bibliothekskanal.hoeren(() => loadAnimationUI());
 
 fn.loadAnimationUI = loadAnimationUI;
 fn.loadBVHAnimation = loadBVHAnimation;

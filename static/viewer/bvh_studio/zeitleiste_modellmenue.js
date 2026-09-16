@@ -9,9 +9,9 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { pushUndo } from './undo.js';
 import { Clip } from './models.js';
-import { _populateTrackAddSubmenu } from './zeitleiste_spurmenue.js';
 import { Zeitleistenziehen } from './zeitleiste_ziehen.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Modellhinzufuegen } from './zeitleiste_modellhinzufuegen.js';
 
 /** Kleinste Laenge eines neu angelegten Modellclips in Bildern. */
 const MINDESTLAENGE = 300;
@@ -19,6 +19,8 @@ const MINDESTLAENGE = 300;
 export class Modellmenue {
     /** Maus-X des Rechtsklicks, von Zeitleistenmenue gesetzt. */
     static mausX = 0;
+    /** Bild unter der Maus beim Rechtsklick — dort landen Mimik und Script. */
+    static klickbild = 0;
 
     /** Die Vorlagen werden nur einmal vom Server geholt. */
     static geholt = false;
@@ -30,14 +32,21 @@ export class Modellmenue {
     /** Menue fuer eine Modellspur aufbauen und zeigen. */
     static zeigen(e, spur, spurNr, treffer, klickbild, anzeigen) {
         const menue = Modellmenue.menue;
-        _populateTrackAddSubmenu(spur, spurNr, menue, klickbild,
-                                 'model-ctx-add-submenu');
+        Modellmenue.klickbild = klickbild;
+        // „Hinzufügen" zweigeteilt (Edgar, 15.09.2026): Modell — und Animation
+        // mit normaler Animation (BVH-Bibliothek), Mimik und Script.
+        Modellhinzufuegen.fuellen(spur, spurNr, menue, klickbild,
+                                 { modell: 'model-ctx-add-submenu', bvh: 'model-ctx-bvh-submenu' });
         Modellmenue._vorlagenListe(spurNr);
         Modellmenue._aktuelleHervorheben(
             menue, treffer ? spur.clips[treffer.clipIdx]?.data?.preset : null);
         // „Länge“ gilt dem getroffenen Clip (Edgar, 13.09.2026: „Länge einstellen
         // soll auch beim Modell-Eintrag als Kontextmenü kommen“).
         menue.querySelector('#model-ctx-laenge')?.classList.toggle('hb-versteckt', !treffer);
+        // Split und Löschen gelten dem getroffenen Clip — ohne Clip nicht anbieten.
+        for (const aktion of ['ctx-split', 'ctx-delete']) {
+            menue.querySelector(`[data-action="${aktion}"]`)?.classList.toggle('hb-versteckt', !treffer);
+        }
         Modellmenue._befehleBinden(menue);
         anzeigen(menue, e);
     }
@@ -66,11 +75,11 @@ export class Modellmenue {
                     fn.clipLaenge('prozent', Number(eintrag.dataset.wert) || null);
                 } else if (aktion === 'ctx-laenge-sekunden') {
                     fn.clipLaenge('sekunden');
-                } else if (aktion === 'ctx-mimik-track') {
-                    fn.addMimikTrack(state.selectedTrackIdx);
                 }
             };
         });
+        // Mimik und Script — dieselben Befehle wie im Spurkopfmenü.
+        Modellhinzufuegen.binden(menue, state.selectedTrackIdx, Modellmenue.klickbild);
     }
 
     static _vorlagenListe(spurNr) {
@@ -106,7 +115,7 @@ export class Modellmenue {
      * `if (!Clip) return;` ab. Genau dann braucht man sie aber: Es gibt noch
      * keinen Clip, der eine Vorlage tragen koennte.
      */
-    static vorlageSetzen(spurNr, vorlage) {
+    static vorlageSetzen(spurNr, vorlage, quelle = 'modell') {
         const spur = state.project.tracks[spurNr];
         if (!spur || spur.type !== 'model') return;
         pushUndo('Preset ändern');
@@ -114,6 +123,7 @@ export class Modellmenue {
         if (clip) {
             clip.data = clip.data || {};
             clip.data.preset = vorlage;
+            clip.data.quelle = quelle;
             clip.name = vorlage;
         } else {
             const laenge = Math.max(MINDESTLAENGE,
@@ -121,7 +131,7 @@ export class Modellmenue {
             const neu = new Clip(null, vorlage, laenge, state.project.fps);
             neu.type = 'model';
             neu.startFrame = 0;
-            neu.data = { preset: vorlage, bodyType: 'Female_Caucasian' };
+            neu.data = { preset: vorlage, quelle, bodyType: 'Female_Caucasian' };
             spur.clips.push(neu);
         }
         spur._currentPreset = null;          // erzwingt das Neuladen des Modells

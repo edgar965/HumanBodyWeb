@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { sharedState } from '../character_core.js';
-import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { HumanbodyModell } from '../gemeinsam/humanbodymodell.js';
+import { Spurfigurarten } from './spurfigurarten.js';
 
 /**
- * Spurfigur — die Figur einer Spur im BVH-Studio: ein `HumanbodyModell`
- * (`gemeinsam/humanbodymodell.js`), in die Gruppe der Spur gesetzt.
+ * Spurfigur — die Figur einer Spur im BVH-Studio: ein Modell nach der
+ * Quelle der Spur (`Spurfigurarten`: HumanBody, UMA, MakeHuman, SMPL, UMA
+ * Python), in die Gruppe der Spur gesetzt.
  *
  * SEIT 13.09.2026 BAUT DAS STUDIO NICHTS MEHR SELBST (Edgar: „Alle HTML-
  * Seiten … sollen die Figur NICHT selber bauen, sondern eine globale Klasse
@@ -15,6 +15,7 @@ import { HumanbodyModell } from '../gemeinsam/humanbodymodell.js';
  * Lippen, Brauen und Nagelfarben (`details`) auf die Bühne. Jetzt gibt die
  * Spur dem Modell, was das Studio hat (Skelett, Gewichte, Farbtabellen aus
  * `sharedState`), und übernimmt Netz, Skelett und Mischer aus dem Modell.
+ * Seit 15.09.2026 gilt das für alle fünf Figurarten.
  *
  * Die Knochennamen werden wie bisher entschärft (`namenSaeubern`, Punkte →
  * Unterstriche), weil die Clips des Studios sie so führen.
@@ -34,32 +35,14 @@ export class Spurfigur {
 
     async laden() {
         try {
-            const vorgabe = await this._vorgabe();
-            // Export1 liest `bone_parts` später von hier.
-            this.spur.modelData = vorgabe;
-            // Eine Vorgabe darf eine andere Körperart nennen als die Spur.
-            this.spur.bodyType = vorgabe.body_type || this.spur.bodyType
-                                 || Spurfigur.VORGABE_KOERPERART;
-            const modell = new HumanbodyModell(this.spur.name, { ...vorgabe, body_type: this.spur.bodyType });
-            await modell.bauen({
-                skelettdaten: sharedState.rigifySkeletonData,
-                gewichte: sharedState.skinWeightData,
-                hautfarben: sharedState.skinColors,
-                haarfarben: sharedState.hairColorData,
-                beiKoerper: (m) => this._einsetzen(m),
-            });
-            Protokoll.debug('BVH Studio', `Figur geladen: ${this.spur.preset} `
-                        + `für ${this.spur.name}`);
+            await Spurfigurarten.bauen(this.spur, (m) => this._einsetzen(m));
+            Protokoll.debug('BVH Studio', `Figur geladen: ${this.spur.quelle || 'modell'}/`
+                        + `${this.spur.preset} für ${this.spur.name}`);
             return this.spur.mesh;
         } catch (fehler) {
             console.error('[BVH Studio] Figur nicht ladbar:', fehler);
             return null;
         }
-    }
-
-    async _vorgabe() {
-        return Serverabruf.json('/api/character/model/'
-            + encodeURIComponent(this.spur.preset) + '/');
     }
 
     // --------------------------------------------------------------- Einsetzen
@@ -83,12 +66,14 @@ export class Spurfigur {
         if (modell.skelett) {
             this.spur.skeleton = modell.skelett;
             this.namenSaeubern(this.spur.skeleton);
+            this.spur.group.updateMatrixWorld(true);
+            this.spur.figurHoehe = Spurfigurarten.hoehe(this.spur.skeleton);
         }
         // Das Netz selbst bleibt sichtbar; über die Sichtbarkeit der Gruppe
         // entscheiden `applyModelTrack`/`applyBvhTrack` — sie deckt Netz,
         // Kleidung und Haare zusammen ab.
-        this.spur.mesh.visible = true;
-        this.spur.mixer = new THREE.AnimationMixer(this.spur.mesh);
+        if (this.spur.mesh) this.spur.mesh.visible = true;
+        this.spur.mixer = new THREE.AnimationMixer(Spurfigurarten.mischerWurzel(this.spur));
         this.spur._activeClip = null;
         this.spur._activeAction = null;
     }

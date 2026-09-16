@@ -8,6 +8,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import * as THREE from 'three';
 import { Protokoll } from '../gemeinsam/protokoll.js';
+import { Modellzustaendigkeit } from './modellzustaendigkeit.js';
 
 
 // Preload-Cache: lädt Preset-Assets im Hintergrund via Shadow-Track.
@@ -16,10 +17,12 @@ import { Protokoll } from '../gemeinsam/protokoll.js';
 export async function _preloadPreset(animTrack, preset) {
     if (!animTrack._preloadCache) animTrack._preloadCache = {};
     if (animTrack._preloadCache[preset]) return animTrack._preloadCache[preset];
+    const teile = Modellzustaendigkeit.zerlegen(preset);
     const shadow = {
         name: `${animTrack.name}_preload_${preset}`,
         type: animTrack.type,
-        preset: preset,
+        preset: teile.preset,
+        quelle: teile.quelle,
         bodyType: animTrack.bodyType,
         group: new THREE.Group(),
     };
@@ -27,6 +30,7 @@ export async function _preloadPreset(animTrack, preset) {
     state.scene.add(shadow.group);
     const promise = fn.loadTrackCharacter(shadow).then(() => ({
         group: shadow.group, mesh: shadow.mesh, skeleton: shadow.skeleton, mixer: shadow.mixer,
+        modell: shadow.modell, figurHoehe: shadow.figurHoehe,
     })).catch(e => {
         state.scene.remove(shadow.group);
         delete animTrack._preloadCache[preset];
@@ -52,6 +56,9 @@ export function _swapToPreloaded(animTrack, assets, activePreset) {
     animTrack.group = assets.group;
     animTrack.group.visible = true;
     animTrack.mesh = assets.mesh;
+    animTrack.modell = assets.modell;
+    animTrack.figurHoehe = assets.figurHoehe;
+    Object.assign(animTrack, Modellzustaendigkeit.zerlegen(activePreset));
     animTrack.skeleton = assets.skeleton;
     animTrack.mixer = assets.mixer;
     animTrack._activeClip = null;
@@ -75,7 +82,7 @@ export function _schedulePreloads(t) {
             const cs = clip.startFrame / state.project.fps;
             // Clip beginnt innerhalb lookahead-Fensters — bereits geladen oder am Laden? Skip.
             if (cs > t && cs - t <= lookahead) {
-                const preset = clip.data.preset;
+                const preset = Modellzustaendigkeit.schluessel(clip.data);
                 if (animTrack.meshActive === preset) continue;
                 if (animTrack._loadingPreset === preset) continue;
                 if (animTrack._preloadCache?.[preset]) continue;

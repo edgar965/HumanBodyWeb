@@ -16,7 +16,7 @@ Geprüft am Text der Module (sie importieren `three`, in Node nicht ladbar):
    implementieren `async bauen(`; keine hängt an `scene/state.js`.
 2. `HumanbodyModell.koerper`: Lippen VOR der Häutung und den Details,
    Details nach dem Einhängen; `bauen` ruft `Modellzubehoer`.
-3. Die Seiten bauen nicht selbst: BVH Studio (`spurfigur.js`), Theatre
+3. Die Seiten bauen nicht selbst: BVH Studio (`spurfigurarten.js`), Theatre
    (`vorgabefigur.js`, `figurwahl.js` für UMA), Ergebnisseite
    (`mesh_loading.js`), Animationsseite (`animation/netz.js`), Modellseite
    (`viewer/mesh.js`) und Szene (`CharacterInstance extends HumanbodyModell`,
@@ -44,7 +44,8 @@ ARTEN = {
 }
 #: Seite → (Datei, was sie vom Modell ruft)
 SEITEN = {
-    'BVH Studio': (VIEWER / 'bvh_studio' / 'spurfigur.js', 'await modell.bauen({'),
+    # Seit 15.09.2026 wählt `spurfigurarten.js` die Klasse je Figurart — dort steht der Bau.
+    'BVH Studio': (VIEWER / 'bvh_studio' / 'spurfigurarten.js', 'await modell.bauen({'),
     'Theatre': (THEATRE / 'laden' / 'vorgabefigur.js',
                 'await modell.bauen({ zubehoer: true })'),
     'Theatre UMA': (THEATRE / 'studio' / 'figurwahl.js', 'new UmaModell('),

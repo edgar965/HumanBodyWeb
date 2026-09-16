@@ -16,6 +16,7 @@ import './zeitleiste_zeichnen.js';
 import './properties.js';
 import './vorschau.js';
 import './mimikspur.js';
+import './scriptspur.js';
 import './mimikeinrechnen.js';
 import { Projektdatei } from './project.js';
 import { Sitzung } from './sitzung.js';

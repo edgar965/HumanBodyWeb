@@ -45,19 +45,21 @@ class Webseiten:
     # --------------------------------------------------------- Ein Auftrag
 
     @staticmethod
-    def _auftrag(job_id):
-        return get_object_or_404(BVHJob, id=job_id)
+    def _auftrag(kennung):
+        """Die Seiten heissen nach der `Auftragskennung` (Datum und Uhrzeit
+        der Anlage, 16.09.2026), nicht nach der UUID."""
+        return get_object_or_404(BVHJob, kennung=kennung)
 
     @classmethod
-    def auftragsseite(cls, request, job_id):
+    def auftragsseite(cls, request, kennung):
         """Der Fortschritt eines laufenden Auftrags."""
         return render(request, 'job_status.html',
-                      {'job': cls._auftrag(job_id)})
+                      {'job': cls._auftrag(kennung)})
 
     @classmethod
-    def ergebnisseite(cls, request, job_id):
+    def ergebnisseite(cls, request, kennung):
         """Ergebnis-Ansicht mit Video und BVH-Skelett."""
-        auftrag = cls._auftrag(job_id)
+        auftrag = cls._auftrag(kennung)
         return render(request, 'job_result.html',
                       {'job': auftrag,
                        'bibliothekskopie': Ergebnisablage.kopie_von(auftrag)})

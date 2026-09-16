@@ -3,6 +3,7 @@ import { fn } from '../gemeinsam/registrierung.js';
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Menueanimationen } from './menue_animationen.js';
+import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
 
 /**
  * Bibliotheksbaum — der Ordnerbaum der BVH-Bibliothek in der Seitenleiste.
@@ -31,6 +32,22 @@ export class Bibliotheksbaum {
         this.auswahl = null;
         /** Worauf das Kontextmenü zeigt. */
         this.menueziel = null;
+        // Ein anderer Tab hat gelöscht, umbenannt, gespeichert (16.09.2026).
+        Bibliothekskanal.hoeren(() => this.laden());
+    }
+
+    /**
+     * Einen Eintrag sofort aus dem Baum nehmen — der Server hat das Löschen
+     * bestätigt, und das Neuladen kann unter Last Sekunden dauern (gemessen
+     * 9 s am 16.09.2026); so lange stand der gelöschte Eintrag noch da.
+     */
+    eintragEntfernen(kategorie, name) {
+        const baum = document.getElementById('lib-tree');
+        for (const zeile of baum?.querySelectorAll('.lib-item') || []) {
+            if (zeile.dataset.category === kategorie && zeile.dataset.name === name) {
+                zeile.remove();
+            }
+        }
     }
 
     // -------------------------------------------------------------- Kontextmenü

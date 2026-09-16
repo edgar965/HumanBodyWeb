@@ -107,7 +107,7 @@ class DieAuftragstabelle(TestCase):
     def test_zustand_und_fortschritt_stehen_in_der_zeile(self):
         tabelle = self.tabelle(self.seite(self.DREID))
         self.assertIn('data-sort="Fertig"', tabelle)
-        self.assertIn('/process/%s/result/' % self.fertig.id, tabelle)
+        self.assertIn('/process/%s/result/' % self.fertig.kennung, tabelle)
         self.assertIn('data-sort="läuft 047"', tabelle)
         self.assertIn('style="width:47%"', tabelle)
-        self.assertIn('href="/process/%s/"' % self.laeuft.id, tabelle)
+        self.assertIn('href="/process/%s/"' % self.laeuft.kennung, tabelle)

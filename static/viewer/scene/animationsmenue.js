@@ -1,4 +1,5 @@
 import { Serverabruf } from '../gemeinsam/serverabruf.js';
+import { Bibliothekskanal } from '../gemeinsam/bibliothekskanal.js';
 
 /**
  * Kontextmenü auf den Animationen im Szene-Reiter — umbenennen und löschen.
@@ -122,6 +123,8 @@ export class Animationsmenue {
         try {
             await Serverabruf.senden(Animationsmenue.ENDPUNKT,
                                      { action: aktion, ...daten });
+            // Die anderen Tabs (Studio, Animationen) holen ihren Baum neu.
+            Bibliothekskanal.melden(aktion, daten);
             return true;
         } catch (fehler) {
             alert(`Fehler: ${fehler.message || fehler}`);

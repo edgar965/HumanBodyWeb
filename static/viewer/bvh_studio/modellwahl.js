@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { Figurwahldialog } from '../gemeinsam/figurwahldialog.js';
+import { Figurkataloge } from '../gemeinsam/figurkataloge.js';
 import { Katalogpflege } from '../scene/katalogpflege.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Spurerzeugung } from './spurerzeugung.js';
@@ -19,8 +20,8 @@ import { pushUndo } from './undo.js';
  * Eigenschaften der Animationsspur.
  *
  * Jetzt derselbe Dialog wie in der Szene und im Theatre
- * (`gemeinsam/figurwahldialog.js`): Reiter HumanBody (nur den kann das
- * Studio häuten — `Spurfigur` holt Netz und Gewichte je Modellvorgabe),
+ * (`gemeinsam/figurwahldialog.js`): alle fünf Reiter (HumanBody, SMPL,
+ * MakeHuman, UMA, UMA Python — seit 15.09.2026, `Spurfigurarten`),
  * Position X mit der Vorgabe der Szene (1,5 m rechts neben der zuletzt
  * angelegten Figur), OHNE „Größe angleichen": Im Studio bestimmt die
  * Bewegung die Größe der Figur, ein Kästchen ohne Wirkung wäre eine
@@ -41,8 +42,14 @@ export class Modellwahl {
 
     static dialog() {
         if (!Modellwahl._dialog) {
+            // Alle fünf Figurarten (15.09.2026) — das Studio baut sie über
+            // `Spurfigurarten`, der Retarget kennt ihre Skelette (`Retargetziel`).
+            const lader = {};
+            for (const quelle of Figurkataloge.REIHENFOLGE) {
+                lader[quelle] = (name, lage) => Modellwahl.hinzufuegen(name, lage, quelle);
+            }
             Modellwahl._dialog = new Figurwahldialog({
-                lader: { modell: (name, lage) => Modellwahl.hinzufuegen(name, lage) },
+                lader,
                 vorgaben: () => Modellwahl.vorgaben(),
                 pflege: Katalogpflege,
                 titel: 'Modell hinzufügen',
@@ -71,7 +78,7 @@ export class Modellwahl {
      * @param {string} name  Modellvorgabe (Name unter `data/models/`)
      * @param {Object} lage  { x } aus dem Dialog
      */
-    static hinzufuegen(name, lage) {
+    static hinzufuegen(name, lage, quelle = 'modell') {
         const x = Number(lage?.x) || 0;
         pushUndo('Modell hinzufügen');
         state._undoSuppressed = true;
@@ -81,11 +88,12 @@ export class Modellwahl {
                                                          state.selectedTrackIdx)
                 || Spurerzeugung.animation();
             bewegung.preset = name;
+            bewegung.quelle = quelle;
             bewegung.position = [x, 0, bewegung.position?.[2] || 0];
             bewegung.group.position.set(x, 0, bewegung.position[2]);
             modell = Spurerzeugung.modell(name);
             modell._linkedAnimIdx = state.project.indexOf(bewegung);
-            Modellmenue.vorlageSetzen(state.project.indexOf(modell), name);
+            Modellmenue.vorlageSetzen(state.project.indexOf(modell), name, quelle);
         } finally {
             state._undoSuppressed = false;
         }

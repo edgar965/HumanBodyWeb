@@ -79,8 +79,10 @@ export const HILFE_ZEITLEISTE = {
     },
     clip_model: {
         titel: 'Modell-Clip',
-        text: 'Ab hier spielt die Animation mit dieser Figur. <b>Rechtsklick</b> → anderes '
-            + 'Modell wählen; Ziehen verschiebt, <b>Entf</b> löscht.',
+        text: 'Ab hier spielt die Animation mit dieser Figur. <b>Rechtsklick</b> → „Modell '
+            + 'hinzufügen“ (HumanBody, SMPL-X, MakeHuman, UMA, UMA Python), „Animation hinzufügen“ '
+            + '(Animation, Mimik, Script) oder anderes Modell wählen; Ziehen verschiebt, '
+            + '<b>Entf</b> löscht.',
     },
     clip_camera_kf: {
         titel: 'Kameraposition',
@@ -92,9 +94,20 @@ export const HILFE_ZEITLEISTE = {
         titel: 'Mimik',
         text: 'Gesichtsposen für die Figur der Modellspur. <b>Rechtsklick</b> → „Pose setzen…“: '
             + 'der Dialog mit zehn Gruppen (Freude, Trauer, Ärger, … Phoneme, Eigene); zwischen zwei '
-            + 'Posen wird weich überblendet, die letzte bleibt. „Lebendigkeit…“ (Blinzeln, Blick, '
-            + 'Atmen, Variation, Zucken, Schlucken) rechts unter Eigenschaften. „Mimik einrechnen“ '
-            + 'legt sie zur BVH, dann hat jede Seite sie.',
+            + 'Posen wird weich überblendet, die letzte bleibt. Blinzeln und Blick kommen aus der '
+            + 'Script-Spur. „Mimik einrechnen“ legt alles zur BVH, dann hat jede Seite es.',
+    },
+    script: {
+        titel: 'Script',
+        text: 'Lebendigkeit für die Figur der Modellspur, als Clips: Solange der Abspielkopf in '
+            + 'einem Script steht, laufen Blinzeln, Blick, Atmen, Variation, Zucken und Schlucken '
+            + '(je An/Aus, Stärke, Abstand; feste Saat, also wiederholbar). <b>Rechtsklick</b> → '
+            + '„Script hinzufügen“ ab der Klickstelle; Klick auf den Clip zeigt seine Einstellungen.',
+    },
+    clip_script: {
+        titel: 'Script-Clip',
+        text: 'Klick wählt ihn: rechts Start, Dauer und die Bausteine der Lebendigkeit. Ziehen '
+            + 'verschiebt (die Blinzelfolge wandert mit), <b>Rechtsklick</b> → Länge, Split, Löschen.',
     },
     clip_mimik_kf: {
         titel: 'Mimik-Schlüsselbild',

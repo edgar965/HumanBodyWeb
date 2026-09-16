@@ -37,7 +37,7 @@
                 </button>
             </td>
             <td>
-                <a class="btn btn-sm btn-primary" href="{% url 'job_result' job.id %}">
+                <a class="btn btn-sm btn-primary" href="{% url 'job_result' job.kennung %}">
                     <i class="fas fa-play-circle"></i> Video + Rig
                 </a>
             </td>
@@ -66,7 +66,7 @@
                 {# … #} geht NUR einzeilig; mehrzeilig rendert Django den Text als
                 Seiteninhalt — er stand sichtbar in jeder Zeile der Tabelle
                 (gefunden im Browser, 17.08.2026).{% endcomment %}
-                <form method="post" action="{% url 'delete_job' job.id %}"
+                <form method="post" action="{% url 'delete_job' job.kennung %}"
                       class="d-inline"
                       onsubmit="return confirm('Delete {{ job.name }}?')">
                     {% csrf_token %}

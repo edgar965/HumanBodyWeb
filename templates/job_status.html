@@ -85,7 +85,7 @@
         <p id="progressDetail">{{ job.progress_detail }}</p>
 
         {% if job.status == 'pending' %}
-        <form method="post" action="{% url 'start_processing' job.id %}">
+        <form method="post" action="{% url 'start_processing' job.kennung %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-primary">
                 <i class="fas fa-play"></i> Start Processing
@@ -111,7 +111,7 @@
 
         {% if job.bvh_file %}
         <div class="actions">
-            <a href="{% url 'job_result' job.id %}" class="btn btn-primary">
+            <a href="{% url 'job_result' job.kennung %}" class="btn btn-primary">
                 <i class="fas fa-eye"></i> View Result
             </a>
             <a href="{% url 'serve_bvh' job.id %}" class="btn btn-secondary" download>

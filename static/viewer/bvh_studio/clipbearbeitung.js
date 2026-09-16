@@ -5,6 +5,7 @@ import { pushUndo } from './undo.js';
 import { Protokoll } from '../gemeinsam/protokoll.js';
 import { Studioanzeige } from './studioanzeige.js';
 import { Cliplaenge } from './cliplaenge.js';
+import { Spurfigurarten } from './spurfigurarten.js';
 
 /**
  * Clipbearbeitung — Clips duplizieren, löschen, kürzen, teilen.
@@ -47,11 +48,21 @@ export class Clipbearbeitung {
         const { spur, clip } = wahl;
         const kopie = new Clip(clip.category, clip.name, clip.totalFrames,
                                clip.fps);
+        kopie.type = clip.type;
         kopie.startFrame = clip.endFrame;
         Clipbearbeitung._eigenschaften(clip, kopie);
+        if (clip.data) kopie.data = Clipbearbeitung._datenKopie(clip);
         spur.clips.push(kopie);
         Clipbearbeitung._nachtragen();
         fn.serverLog('clip_duplicated');
+    }
+
+    /**
+     * `data` eines Clips kopieren — Script-Einstellungen sind verschachtelt
+     * (Blinzeln, Blick, …), eine flache Kopie teilte sie zwischen den Hälften.
+     */
+    static _datenKopie(clip) {
+        return clip.type === 'script' ? JSON.parse(JSON.stringify(clip.data)) : { ...clip.data };
     }
 
     /** Die Bearbeitungswerte eines Clips auf einen anderen übertragen. */
@@ -129,7 +140,7 @@ export class Clipbearbeitung {
             spur.group.visible = false;
         }
         // Zurück in die Ruhelage, sonst bleibt die letzte Haltung stehen.
-        spur.skeleton?.skeleton.pose();
+        Spurfigurarten.ruhelage(spur);
     }
 
     static _wiedergabeAnhalten() {
@@ -200,7 +211,7 @@ export class Clipbearbeitung {
         zweite.startFrame = state.playheadFrame;
         Clipbearbeitung._eigenschaften(clip, zweite);
         zweite.trimIn = stelle;
-        if (clip.data) zweite.data = { ...clip.data };
+        if (clip.data) zweite.data = Clipbearbeitung._datenKopie(clip);
         return zweite;
     }
 
@@ -213,12 +224,13 @@ export class Clipbearbeitung {
      */
     static laenge(art, wert = null) {
         const wahl = Clipbearbeitung.auswahl();
-        if (!wahl || !['bvh', 'audio', 'model'].includes(wahl.clip.type)) return;
+        if (!wahl || !['bvh', 'audio', 'model', 'script'].includes(wahl.clip.type)) return;
         const clip = wahl.clip;
-        const bezug = clip.type === 'model' ? Clipbearbeitung._modellbezug(clip) : null;
+        const ohneQuelle = Cliplaenge.OHNE_QUELLE.includes(clip.type);
+        const bezug = ohneQuelle ? Clipbearbeitung._modellbezug(clip) : null;
         const vorher = Cliplaenge.stand(clip, bezug);
         if (wert == null) {
-            const ganzes = clip.type === 'model' ? 'des Projektendes (ohne diesen Clip)' : 'der ganzen Animation';
+            const ganzes = ohneQuelle ? 'des Projektendes (ohne diesen Clip)' : 'der ganzen Animation';
             const frage = art === 'prozent'
                 ? `Länge in Prozent ${ganzes} (jetzt ${vorher.prozent.toFixed(0)} %):`
                 : `Länge in Sekunden (jetzt ${vorher.sekunden.toFixed(1)} s, ganz ${vorher.ganz.toFixed(1)} s):`;

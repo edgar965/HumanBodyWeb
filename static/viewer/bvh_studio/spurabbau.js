@@ -40,7 +40,34 @@ export class Spurabbau {
         Spurabbau._licht(spur);
         if (spur.type === 'audio') fn.stopAudioTrack(spur);
         Spurabbau._objekt(spur);
+        const kinder = Spurabbau._kindspuren(spur, index);
         Spurabbau._nachziehen(index);
+        Spurabbau._kinderEntfernen(kinder);
+    }
+
+    /**
+     * Mimik- und Script-Spuren hängen an ihrer Modellspur — ohne sie sind
+     * sie sinnlos und gehen mit (15.09.2026). Vor dem Entfernen gemerkt, denn
+     * danach stimmen die Nummern nicht mehr.
+     */
+    static _kindspuren(spur, index) {
+        if (spur.type !== 'model') return [];
+        return state.project.tracks.filter(
+            s => (s.type === 'mimik' || s.type === 'script') && s._modellIdx === index);
+    }
+
+    static _kinderEntfernen(kinder) {
+        if (!kinder.length) return;
+        const unterdrueckt = state._undoSuppressed;
+        state._undoSuppressed = true;
+        try {
+            for (const kind of kinder) {
+                const stelle = state.project.tracks.indexOf(kind);
+                if (stelle >= 0) Spurabbau.entfernen(stelle);
+            }
+        } finally {
+            state._undoSuppressed = unterdrueckt;
+        }
     }
 
     /** Eine Modellspur nimmt die Figur ihrer Animationsspur mit aus dem Bild. */

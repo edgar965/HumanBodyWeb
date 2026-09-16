@@ -30,6 +30,8 @@ class Auftragsattrappe:
     def __init__(self, name='Tanz.mp4', status='complete', pipeline='gem',
                  progress=0, detail='', groesse=4990294):
         self.id = uuid.uuid4()
+        # Die Seiten heißen nach der Kennung (Datum.Uhrzeit, 16.09.2026).
+        self.kennung = '2026.09.12.17.26.46'
         self.name = name
         self.status = status
         self.pipeline = pipeline
@@ -119,7 +121,8 @@ class DieZeile(SimpleTestCase):
 
     def test_aktionen_je_zustand(self):
         job, fertig = self.zeile(status='complete')
-        self.assertIn('/process/%s/result/' % job.id, fertig['html'])
+        self.assertIn('/process/%s/result/' % job.kennung, fertig['html'])
+        self.assertNotIn(str(job.id) + '/result', fertig['html'])
         self.assertIn('Ergebnis', fertig['html'])
         # Ergebnis in einem neuen Tab (Edgar, 12.09.2026) — auch im JS
         # (`Auftragszeile._fertig`, `_ergebnislink`), das den Knopf nachträgt
@@ -128,7 +131,7 @@ class DieZeile(SimpleTestCase):
         self.assertEqual(js.count("target=\"_blank\""), 1, 'Knopf nach dem Lauf')
         self.assertEqual(js.count("link.target = '_blank'"), 1, 'Link in der Zeile')
         job, gescheitert = self.zeile(status='failed')
-        self.assertIn('href="/process/%s/"' % job.id, gescheitert['html'])
+        self.assertIn('href="/process/%s/"' % job.kennung, gescheitert['html'])
         self.assertIn('> Status</a>', gescheitert['html'])
         self.assertNotIn('result', gescheitert['html'])
         _, wartet = self.zeile(status='pending')

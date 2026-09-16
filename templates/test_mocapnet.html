@@ -79,7 +79,7 @@
                 </td>
                 <td>{{ job.created_at|date:"d.m.Y H:i" }}</td>
                 <td>
-                    <a href="{% url 'job_status' job.id %}">Details</a>
+                    <a href="{% url 'job_status' job.kennung %}">Details</a>
                 </td>
             </tr>
             {% endfor %}

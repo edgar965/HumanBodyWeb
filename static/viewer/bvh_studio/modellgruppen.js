@@ -24,6 +24,8 @@ export class Modellgruppen {
 
     /** Spurarten, die in eigenen Gruppen stehen — nicht Teil der Nutzerreihen. */
     static GRUPPIERT = ['light', 'scene_object'];
+    /** Spurarten, die an einer Modellspur hängen (`_modellIdx`). */
+    static AM_MODELL = ['mimik', 'script'];
 
     /** Die Modellspur, unter der die Animationsspur `stelle` steht — oder -1. */
     static traeger(spuren, stelle) {
@@ -42,8 +44,9 @@ export class Modellgruppen {
             const spur = spuren[i];
             if (Modellgruppen.GRUPPIERT.includes(spur.type)) continue;
             if (spur.type === 'bvh' && Modellgruppen.traeger(spuren, i) >= 0) continue;
-            // Mimikspuren stehen unter ihrer Modellspur (14.09.2026), nicht oben.
-            if (spur.type === 'mimik' && spuren[spur._modellIdx]?.type === 'model') continue;
+            // Mimik- und Script-Spuren stehen unter ihrer Modellspur (14./15.09.2026).
+            if (Modellgruppen.AM_MODELL.includes(spur.type)
+                && spuren[spur._modellIdx]?.type === 'model') continue;
             const reihe = { trackIdx: i };
             const unter = spur.type === 'model' ? Modellgruppen._unterreihe(spuren, i) : -1;
             if (unter >= 0) {
@@ -54,7 +57,9 @@ export class Modellgruppen {
             if (unter >= 0 && !reihe.collapsed) reihen.push({ trackIdx: unter, indent: true });
             if (spur.type === 'model' && !reihe.collapsed) {
                 spuren.forEach((s, j) => {
-                    if (s.type === 'mimik' && s._modellIdx === i) reihen.push({ trackIdx: j, indent: true });
+                    if (Modellgruppen.AM_MODELL.includes(s.type) && s._modellIdx === i) {
+                        reihen.push({ trackIdx: j, indent: true });
+                    }
                 });
             }
         }

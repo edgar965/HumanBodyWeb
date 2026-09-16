@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { fn } from '../gemeinsam/registrierung.js';
 import { _populateTrackAddSubmenu } from './zeitleiste_spurmenue.js';
 import { pushUndo } from './undo.js';
+import { Modellhinzufuegen } from './zeitleiste_modellhinzufuegen.js';
 
 /**
  * Das Rechtsklickmenü einer Spur in der Kopfspalte.
@@ -23,7 +24,7 @@ export class Spurkontextmenue {
     static oeffnen(spur, index, e) {
         const menue = document.getElementById('track-context-menu');
         if (!menue) return;
-        _populateTrackAddSubmenu(spur, index, menue);
+        Spurkontextmenue._hinzufuegen(spur, index, menue);
         Spurkontextmenue._stummschrift(spur);
         Spurkontextmenue._verknuepfung(spur, menue);
         // `block`, nicht '' — die Klasse `.hb-kontextmenue` versteckt sonst
@@ -34,6 +35,27 @@ export class Spurkontextmenue {
         menue.style.top = Math.min(
             e.clientY,
             window.innerHeight - hoehe - Spurkontextmenue.RANDABSTAND) + 'px';
+    }
+
+    /**
+     * „Hinzufügen" — bei einer Modellspur zweigeteilt (Edgar, 15.09.2026:
+     * „Rechtsklick bei Modell — Hinzufügen ist nicht geändert!!!"): „Modell
+     * hinzufügen" mit den Figurarten und „Animation hinzufügen" mit
+     * Animation, Mimik, Script — am Abspielkopf, der Spurkopf hat keine Zeit.
+     */
+    static _hinzufuegen(spur, index, menue) {
+        const modell = spur.type === 'model';
+        const schrift = document.getElementById('track-ctx-add-label');
+        if (schrift) schrift.textContent = modell ? 'Modell hinzufügen' : 'Hinzufügen';
+        document.getElementById('track-ctx-anim')?.classList.toggle('hb-versteckt', !modell);
+        if (!modell) {
+            _populateTrackAddSubmenu(spur, index, menue);
+            return;
+        }
+        const bild = state.playheadFrame;
+        Modellhinzufuegen.fuellen(spur, index, menue, bild,
+                                 { modell: 'track-ctx-add-submenu', bvh: 'track-ctx-bvh-submenu' });
+        Modellhinzufuegen.binden(menue, index, bild);
     }
 
     /** „Ausschalten" oder „Einschalten" — je nachdem, wie die Spur steht. */

@@ -23,9 +23,9 @@ console.log(JSON.stringify(HILFE_ZEITLEISTE));
 """
 
 SPURARTEN = ('bvh', 'model', 'camera', 'light', 'audio', 'scene_object', 'floor',
-             'mimik')
+             'mimik', 'script')
 CLIPARTEN = ('bvh', 'model', 'camera_kf', 'light_kf', 'audio', 'object_clip',
-             'mimik_kf')
+             'mimik_kf', 'script')
 
 #: Was ein Text nennt → wo es im Studio steht: (Wort im Text, Datei, Suchtext).
 BELEGE = {
@@ -50,10 +50,19 @@ BELEGE = {
     'clip_camera_kf': [('„Aktuelle Ansicht übernehmen"', 'eigenschaften/klip_schluesselbilder.js',
                         'Aktuelle Ansicht übernehmen')],
     'mimik': [('„Pose setzen…“', '../../../templates/bvh_studio.html', 'Pose setzen…'),
-              ('„Lebendigkeit…“', '../../../templates/bvh_studio.html', 'Lebendigkeit…'),
+              ('Script-Spur', 'scriptspur.js', "spur.type = 'script'"),
               ('„Mimik einrechnen“', '../../../templates/bvh_studio.html',
                'Mimik einrechnen (zur BVH)'),
               ('zehn Gruppen', 'mimikdialog.js', 'mimik-gruppe')],
+    'script': [('„Script hinzufügen“', '../../../templates/bvh_studio.html', 'Script hinzufügen'),
+               ('Blinzeln', 'eigenschaften/script.js', "'Blinzeln'"),
+               ('Saat', 'scriptzuschlag.js', 'Lebendigkeit.zuschlag(clip.data, t, pose)')],
+    'clip_script': [('Länge', '../../../templates/bvh_studio.html', 'script-ctx-laenge'),
+                    ('Blinzelfolge', 'scriptzuschlag.js', 'clip.trimIn')],
+    'clip_model': [('„Modell hinzufügen“', '../../../templates/bvh_studio.html', 'Modell hinzufügen'),
+                   ('„Animation hinzufügen“', '../../../templates/bvh_studio.html',
+                    'Animation hinzufügen'),
+                   ('Script', '../../../templates/bvh_studio.html', 'ctx-script-track')],
     'lineal': [('<b>Leertaste</b>', 'playback.js', "e.code === 'Space'"),
                ('<b>Alt+Ziehen</b>', 'zeitleiste_ziehen.js', "e.button === 0 && e.altKey")],
 }

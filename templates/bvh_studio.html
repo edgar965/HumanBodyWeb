@@ -970,12 +970,27 @@
     <div class="ctx-item" data-action="ctx-ground"><i class="fas fa-shoe-prints hb-symbolspalte"></i> Bodenniveau</div>
 </div>
 
-<!-- Model Context Menu (for model track clips) -->
+<!-- Model Context Menu (for model track clips).
+     Hinzufügen zweigeteilt (Edgar, 15.09.2026): Modell — und Animation mit
+     normaler Animation (BVH-Bibliothek der verknüpften Spur), Mimik, Script. -->
 <div id="model-context-menu" class="hb-display-none">
     <div class="ctx-item has-submenu" id="model-ctx-add">
-        <i class="fas fa-plus hb-symbolspalte"></i> Hinzufügen
+        <i class="fas fa-user hb-symbolspalte"></i> Modell hinzufügen
         <i class="fas fa-caret-right hb-kuerzel"></i>
         <div id="model-ctx-add-submenu" class="ctx-submenu"></div>
+    </div>
+    <div class="ctx-item has-submenu" id="model-ctx-anim">
+        <i class="fas fa-plus hb-symbolspalte"></i> Animation hinzufügen
+        <i class="fas fa-caret-right hb-kuerzel"></i>
+        <div id="model-ctx-anim-submenu" class="ctx-submenu">
+            <div class="ctx-item has-submenu" id="model-ctx-bvh">
+                <i class="fas fa-running hb-symbolspalte"></i> Animation
+                <i class="fas fa-caret-right hb-kuerzel"></i>
+                <div id="model-ctx-bvh-submenu" class="ctx-submenu"></div>
+            </div>
+            <div class="ctx-item" data-action="ctx-mimik-track"><i class="fas fa-smile hb-symbolspalte"></i> Mimik</div>
+            <div class="ctx-item" data-action="ctx-script-track"><i class="fas fa-scroll hb-symbolspalte"></i> Script</div>
+        </div>
     </div>
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-playhead"><i
@@ -985,8 +1000,6 @@
     <div id="model-preset-list">
         <!-- Populated dynamically -->
     </div>
-    <div class="hb-trennlinie"></div>
-    <div class="ctx-item" data-action="ctx-mimik-track"><i class="fas fa-smile hb-symbolspalte"></i> Mimikspur hinzufügen</div>
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut hb-symbolspalte"></i> Split an Playhead</div>
     <div class="ctx-item has-submenu" id="model-ctx-laenge" data-action="ctx-laenge">
@@ -1007,6 +1020,33 @@
     <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
 </div>
 
+<!-- Script Context Menu (Lebendigkeit als Clip, 15.09.2026) -->
+<div id="script-context-menu" class="hb-kontextmenue">
+    <div class="ctx-item" data-action="ctx-script-clip"><i class="fas fa-scroll hb-symbolspalte"></i> Script hinzufügen</div>
+    <div class="ctx-item" data-action="ctx-script-einstellungen"><i class="fas fa-sliders-h hb-symbolspalte"></i> Einstellungen…</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt hb-symbolspalte"></i> Playhead hierher</div>
+    <div class="ctx-item" data-action="ctx-split"><i class="fas fa-cut hb-symbolspalte"></i> Split an Playhead</div>
+    <div class="ctx-item has-submenu" id="script-ctx-laenge" data-action="ctx-laenge">
+        <i class="fas fa-ruler-horizontal hb-symbolspalte"></i> Länge
+        <i class="fas fa-caret-right hb-kuerzel"></i>
+        <div id="script-ctx-laenge-submenu" class="ctx-submenu">
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="25">25 %</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="50">50 %</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="75">75 %</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent" data-wert="100">100 % (Projektende)</div>
+            <div class="hb-trennlinie"></div>
+            <div class="ctx-item" data-action="ctx-laenge-sekunden"><i
+                 class="fas fa-clock hb-symbolspalte"></i> Sekunden eingeben…</div>
+            <div class="ctx-item" data-action="ctx-laenge-prozent"><i
+                 class="fas fa-percent hb-symbolspalte"></i> Prozent eingeben…</div>
+        </div>
+    </div>
+    <div class="ctx-item" data-action="ctx-delete"><i class="fas fa-trash hb-symbolspalte"></i> L&ouml;schen</div>
+    <div class="hb-trennlinie"></div>
+    <div class="ctx-item" data-action="ctx-mimik-einrechnen"><i class="fas fa-file-export hb-symbolspalte"></i> Mimik einrechnen (zur BVH)</div>
+</div>
+
 <!-- Mimik Context Menu (Gesichtsspur, 14.09.2026) -->
 <div id="mimik-context-menu" class="hb-kontextmenue">
     <div class="ctx-item" data-action="ctx-mimik-pose"><i class="fas fa-smile hb-symbolspalte"></i> Pose setzen…</div>
@@ -1014,7 +1054,6 @@
     <div class="ctx-item" data-action="ctx-mimik-loeschen"><i class="fas fa-trash hb-symbolspalte"></i> Schlüsselbild löschen</div>
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-playhead"><i class="fas fa-map-marker-alt hb-symbolspalte"></i> Playhead hierher</div>
-    <div class="ctx-item" data-action="ctx-mimik-lebendigkeit"><i class="fas fa-heartbeat hb-symbolspalte"></i> Lebendigkeit…</div>
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" data-action="ctx-mimik-einrechnen"><i class="fas fa-file-export hb-symbolspalte"></i> Mimik einrechnen (zur BVH)</div>
 </div>
@@ -1030,9 +1069,23 @@
 <!-- Track Context Menu -->
 <div id="track-context-menu" class="hb-kontextmenue">
     <div class="ctx-item has-submenu" id="track-ctx-add">
-        <i class="fas fa-plus hb-symbolspalte"></i> Hinzufügen
+        <i class="fas fa-plus hb-symbolspalte"></i> <span id="track-ctx-add-label">Hinzufügen</span>
         <i class="fas fa-caret-right hb-kuerzel"></i>
         <div id="track-ctx-add-submenu" class="ctx-submenu"></div>
+    </div>
+    <!-- Nur Modellspuren (Edgar, 15.09.2026): Hinzufügen zweigeteilt — Modell / Animation -->
+    <div class="ctx-item has-submenu hb-versteckt" id="track-ctx-anim">
+        <i class="fas fa-plus hb-symbolspalte"></i> Animation hinzufügen
+        <i class="fas fa-caret-right hb-kuerzel"></i>
+        <div id="track-ctx-anim-submenu" class="ctx-submenu">
+            <div class="ctx-item has-submenu" id="track-ctx-bvh">
+                <i class="fas fa-running hb-symbolspalte"></i> Animation
+                <i class="fas fa-caret-right hb-kuerzel"></i>
+                <div id="track-ctx-bvh-submenu" class="ctx-submenu"></div>
+            </div>
+            <div class="ctx-item" data-action="ctx-mimik-track"><i class="fas fa-smile hb-symbolspalte"></i> Mimik</div>
+            <div class="ctx-item" data-action="ctx-script-track"><i class="fas fa-scroll hb-symbolspalte"></i> Script</div>
+        </div>
     </div>
     <div class="hb-trennlinie"></div>
     <div class="ctx-item" id="track-ctx-rename"><i class="fas fa-pen hb-symbolspalte"></i> Umbenennen</div>

@@ -46,7 +46,8 @@ class SpurhautTest(SimpleTestCase):
         for schritt in ('this.kleidungsstueck(', 'this.garmentcode()', 'this.haare()'):
             self.assertLess(rumpf.index(schritt), maske,
                             'die Maske muss NACH dem Zubehör laufen: ' + schritt)
-        figur = SpurhautTest._lies_modul(STUDIO, 'spurfigur.js')
+        # Seit 15.09.2026 baut `spurfigurarten.js` die Figur je Art; HumanBody dort.
+        figur = SpurhautTest._lies_modul(STUDIO, 'spurfigurarten.js')
         self.assertIn("import { HumanbodyModell } "
                       "from '../gemeinsam/humanbodymodell.js';", figur)
         self.assertIn('await modell.bauen({', figur)

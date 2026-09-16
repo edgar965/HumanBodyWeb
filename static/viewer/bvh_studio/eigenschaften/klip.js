@@ -9,6 +9,7 @@ import { fn } from '../../gemeinsam/registrierung.js';
 import { Maskenbausteine as M } from './bausteine.js';
 import { Schluesselbildeigenschaften } from './klip_schluesselbilder.js';
 import { Mimikeigenschaften } from './mimik.js';
+import { Scripteigenschaften } from './script.js';
 
 /** Vorgabelaenge, wenn ein Dauerfeld leer gelassen wird. */
 const VORGABE_BILDER = 300;
@@ -19,6 +20,7 @@ export class Klipeigenschaften {
             return Schluesselbildeigenschaften.maske(clip);
         }
         if (clip.type === 'mimik_kf') return Mimikeigenschaften.schluesselMaske(clip);
+        if (clip.type === 'script') return Scripteigenschaften.clipMaske(clip);
         if (clip.type === 'audio') return Klipeigenschaften._ton(clip);
         if (clip.type === 'object_clip') return Klipeigenschaften._objekt(clip);
         if (clip.type === 'model') return Klipeigenschaften._modell(clip);
@@ -31,6 +33,8 @@ export class Klipeigenschaften {
             Schluesselbildeigenschaften.binden(track, clip);
         } else if (art === 'mimik_kf') {
             Mimikeigenschaften.schluesselBinden(track, clip);
+        } else if (art === 'script') {
+            Scripteigenschaften.clipBinden(track, clip);
         } else if (art === 'audio') {
             Klipeigenschaften._tonBinden(clip);
         } else if (art === 'object_clip') {
@@ -71,6 +75,7 @@ export class Klipeigenschaften {
     static _modell(clip) {
         const f = ' <span class="winzig">f</span>';
         return M.gruppe('Modell Clip', `
+            ${M.zeile('Figurart', `<span class="marke-akzent">${clip.data?.quelle || 'modell'}</span>`)}
             ${M.zeile('Preset', `<input type="text" value="${clip.data?.preset || ''}" id="prop-model-preset"
                 placeholder="z.B. FemaleGarment">`)}
             ${M.zeile('Body Type', `<input type="text" value="${clip.data?.bodyType || 'Female_Caucasian'}"

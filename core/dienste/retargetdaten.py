@@ -75,6 +75,12 @@ class Retargetdaten:
         if self.figur:
             # je Figur ein eigenes Skelett, eine eigene Ablage
             merkmal += f'_{self.figur}'
+        if self.ziel == self.ZIEL_SMPL:
+            # Das Skelett der SMPL-Figur hat eine eigene Fassung (seit dem
+            # 15.09.2026 SMPL-X mit 55 Gelenken) — sonst liefern Ablagen
+            # mit 24 Gelenken weiter das alte Ergebnis (`Smplfiguren`).
+            from .smplfigur import Smplfiguren
+            merkmal += f'_sx{Smplfiguren.SKELETTFASSUNG}'
         if self.formung is not None:
             # Je Reglerstellung ein eigenes Skelett: Ohne diesen Teil im
             # Namen laege die Bewegung der schlanken Figur in derselben
@@ -187,21 +193,23 @@ class Retargetdaten:
     # ------------------------------------------------- SMPL und MakeHuman
 
     def _auf_smpl(self, bvh, bauart):
-        u"""Ziel ist das SMPL-Skelett der Figur in der Szene (07.09.2026).
+        u"""Ziel ist das SMPL-X-Skelett der Figur in der Szene (07.09.2026,
+        seit dem 15.09.2026 SMPL-X mit Fingern, Kiefer und Augen).
 
-        Es braucht keine neue Zuordnungstabelle: Die 24 Gelenke heissen
-        genau so, wie der Motor SMPL schon kennt (`SkeletonAIST_SMPL`), und
-        `Smplzuordnung` kehrt dessen Tabelle um. Die Geometrie kommt aus
+        Es braucht keine neue Zuordnungstabelle: Die 22 Koerpergelenke
+        heissen genau so, wie der Motor SMPL schon kennt
+        (`SkeletonAIST_SMPL`), die Finger wie in `SkeletonSMPLX`;
+        `Smplxzuordnung` kehrt beide Tabellen um. Die Geometrie kommt aus
         derselben Kette, aus der auch der Browser seine Knochen baut
         (`Smplfiguren.kette`) — sonst rechnete der Motor gegen eine
         Ruhelage, die die Figur gar nicht hat.
         """
-        from humanbody_core.skeleton.formats.smpl_knochen import Smplzuordnung
         from .smplfigur import Smplfiguren
+        from .smplxzuordnung import Smplxzuordnung
         kette = Smplfiguren.kette(self.figur)
         if kette is None:
-            raise ValueError('Kein SMPL-Skelett fuer %r' % (self.figur,))
-        return self._auf_kette(bvh, bauart, kette.geometrie(), Smplzuordnung)
+            raise ValueError('Kein SMPL-X-Skelett fuer %r' % (self.figur,))
+        return self._auf_kette(bvh, bauart, kette.geometrie(), Smplxzuordnung)
 
     def _auf_makehuman(self, bvh, bauart):
         u"""Ziel ist das MakeHuman-Rig (`default.mhskel`) DIESER Reglerstellung."""

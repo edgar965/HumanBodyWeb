@@ -42,7 +42,7 @@ pruefe('uma', Figurkataloge.zeilen('uma', {
 pruefe('smpl', Figurkataloge.zeilen('smpl', {
     figuren: [{ name: 'mean_all', geschlecht: 'neutral', smpl: true, masse_vorhanden: true },
               { name: 'f_body', anzeige: 'Frau', geschlecht: 'weiblich', smpl: false }],
-}), [{ name: 'mean_all', anzeige: 'mean_all', unterzeile: 'neutral · SMPL · Maße vorgegeben' },
+}), [{ name: 'mean_all', anzeige: 'mean_all', unterzeile: 'neutral · SMPL-X · Maße vorgegeben' },
      { name: 'f_body', anzeige: 'Frau', unterzeile: 'weiblich · GarmentCode-Modell · ohne Maße' }]);
 
 // --- MakeHuman: Punkte und Hoehe in cm --------------------------------------
